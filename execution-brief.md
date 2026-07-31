@@ -432,6 +432,14 @@ simulator 的最小事件样本是两个 Thread branch、前台与后台 child�
 - worker 升级是否需要与整个应用锁步；
 - 一条连接是否足以复用控制和数据。
 
+本探针分三条互不替代的证据链：固定 shell seam 源码只判断 system-SSH operation injection 与失败边界；固定 structured-protocol 源码分别运行 request/reconnect、host FS/process/watch/capability、search、PTY、SSH policy/auth logic 和本机 loopback integration；固定 local-durable backend 运行其声明的真实 multiplexer integration 与 state/event tests。每条 suite 单列 revision、命令、passed/skipped/failed；平台不适用必须给出 exact test 名和原因。
+
+本机 loopback SSH 不能扩张成真实 Remote。首次 host key、changed key、interactive auth、jump host、网络抖动、真实 Linux target、HPC 与三控制平台只能由对应真实场景证明；unit/mock 只能证明 parser/policy/failure branch。协议有 request ID、binary FS、search/watch/process/PTY 或 reconnect tests，也不能推断它拥有 CAS precondition、scheduler、artifact transaction 或 helper generation。
+
+产品外部 simulator 的固定样本是一个 binary remote file、一个 stale observation、一个可关联和一个不可关联的 submit、queued/running/completed/failed/cancelled Jobs、分离的 login/execution node、512 KiB log、断点 artifact download 与两代 helper。失败注入顺序是 concurrent file change、submit ack loss、connection loss without correlation、App restart、cancel 未确认、download 中断/错误 digest、new-generation health failure。成功条件是：CAS 拒绝陈旧写；有 token 只 dispatch 一次并能 reconcile；无 token 进入 `outcome_unknown`；cancel request/ack 分离；日志只形成 bounded read offset/`OutputRef`；`.partial` 通过 exact size/hash 后才 rename；旧 lease 不热替换；失败 generation quarantine 并回滚 LKG。simulator 不证明 donor 或真实 scheduler。
+
+provisional route 必须明确三种所有者：system SSH 拥有凭据、host trust 与交互认证；helper 只拥有结构化 execution capabilities；产品 journal 拥有 intent/receipt/generation/reconcile。Remote 仍是按需 `ExecutionTarget`，不创建模式或第二状态真相。取得足以排除 shell-only、完整 protocol fork 与 multiplexer-as-Job 的证据后停止；真实 Linux/system-SSH、ProxyJump/2FA/host-key-change、三平台和首个 scheduler matrix 作为进入 production adoption 的复验门，不做无界 donor 考古。
+
 ### 7.5 探针 E：知识与扩展自动更新
 
 目标：同时证伪默认重型检索和不可维护的 package 更新路径。

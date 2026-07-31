@@ -1649,9 +1649,9 @@ Evidence level：除后续 probe 小节明确升级的行以外，下列候选�
 | HTTP/web | `pi-web-access` `c702b3be11bfbc832489eb7cfe31d9bbbbb2cc27` | SSRF、manual redirect、extraction、error handling | bounded transplant；拒绝 research/curator/credential 复合 runtime |
 | Optional semantic knowledge | `pi-knowledge` `c18a6bf4f6468566e8ed878dd971c98c2ccf471d` | parser、FTS、symbol、optional embedding、staging/locks | recall probe 后的 curated optional；不默认内置 |
 | External knowledge | WeKnora `e99a4dd498d6847817b7c568e7cb4f1d0460179e` | durable queue、retry/dead-letter、revision、source/citation | ordinary external connector + bounded donor；拒绝整套捆绑 |
-| Remote shell probe | `pi-ssh` `426baa1223ebad0ec399045a4b3675babbaab293` | 系统 SSH、operation replacement、ControlMaster | disposable protocol probe；shell-only 不足以成为 Remote |
-| Remote protocol | Distant `ba58064593ecb9e1b046c7e0d4626f39aa5c2633` | structured FS/search/watch/process/PTY 与 reconnect | strongest protocol donor；alpha，缺 CAS/scheduler，不 fork |
-| Local durable backend | `pi-tmux-task` `4514689b7b4917dff8d4bc130d781c2e5f2e7014` | tmux 权威、restart scan、real integration tests | curated optional backend；不定义通用 Job |
+| Remote shell probe | `pi-ssh` `426baa1223ebad0ec399045a4b3675babbaab293` | 系统 SSH、operation replacement、ControlMaster | 只作 system-SSH seam 证据；拒绝 package runtime，shell-only 不足以成为 Remote |
+| Remote protocol | Distant `ba58064593ecb9e1b046c7e0d4626f39aa5c2633` | structured FS/search/watch/process/PTY、capability 与 reconnect | bounded protocol/host mechanism donor；不 fork，产品补 CAS、artifact、generation 与 scheduler receipt |
+| Local durable backend | `pi-tmux-task` `4514689b7b4917dff8d4bc130d781c2e5f2e7014` | tmux 权威、restart scan、real integration tests | curated optional local backend；不定义通用 Job、日志或 receipt |
 | Workbench | Proma `aa02c16819399e7683533f15cfe202754d6b156c` | renderer、event coalescing、background activity、file change UI | 新 shell + bounded component-domain transplant；完整 renderer 仅作 shell/机制参考，不承接产品状态 |
 
 明确拒绝的模式：独立 Todo/Team task DB、固定 DAG/YAML Workflow、模型自报 Goal 完成、自动 commit/merge、用户 Git 上 reset/clean checkpoint、复制 transcript 的 memory、默认向量/RAG、完整远程产品 server、透明目录 mirror、MCP 作为唯一扩展协议、capability manifest 冒充 sandbox、在 active work 中热更新。
@@ -1808,3 +1808,49 @@ Focused command 只运行外部 pure-function matrix 与以下 donor tests：col
 进入 M2 前不搬入 donor renderer；第一条真实 vertical slice 决定具体采用文件。性能门至少覆盖 first visible/first delta、high-frequency stream batching、100k+ character Thread、bounded DOM、background update、500k+ text/unknown/binary viewer、watcher storm 与内存增长。恢复门必须 crash/restart 后逐 Chat 精确还原 tabs/open files/split。平台门必须在 macOS、Windows、Linux 的 package runtime 走同一 folderless Chat、folder-bound Thread、generated-file open、child control 与 local/Remote-on-demand 场景。viewer 还要覆盖 oversized、corrupt、unknown binary、missing 与 concurrent change。只有 bounded 文件/依赖/rights、adapter contract、targeted source tests 和这些产品门都明确后，才把实际代码写入 source adoption。
 
 止损点已经达到：完整 renderer transplant 作为 M2 状态底座被排除；新 shell 与哪些机制值得继续移植已经足够施工。仍保持 open 的是最终视觉 approval、实际 vertical slice 文件选择、长列表/stream 基准、durable temporary question、viewer failure matrix 与三平台 package runtime；这些不能由本次 build、53 tests 或临时 UI 冒充通过。
+
+### 22.14 M1 Probe D：system-SSH transport、结构化 helper 与外部 Job receipt
+
+> Probe 日期：2026-08-01
+>
+> 范围：Remote 文件/进程/PTY、连接恢复、本地耐久 backend、submit-ack-loss、外部 Job 对账、日志/下载与 helper generation。本节是 M2/M3 的 provisional implementation choice；没有真实 HPC/Slurm 运行、生产代码或 source adoption。
+
+**固定源码与 artifact lineage。** 三个 donor 都从精确 revision `git archive` 到独立临时目录，首行核对物理路径、revision 与 manifest；依赖只进入 archive。`pi-ssh@0.3.2` registry `gitHead` 与源码 `426baa1223ebad0ec399045a4b3675babbaab293` 相同，integrity 为 `sha512-0VVyGrUctKu7d1rnETw9phBtt6eHA0T1z+9dcnuEfqIuAkQpWOYphN68HbNYIW3FR1sh72TitbrVtq9BPhBs9g==`，上游为 `https://github.com/hjanuschka/pi-ssh.git`。`pi-tmux-task@0.2.1` 的 `gitHead` 与源码 `4514689b7b4917dff8d4bc130d781c2e5f2e7014` 相同，integrity 为 `sha512-XHREK5HPzbRG6/+19xvbQLMKCqQryOwzCNE++5xi/iT3VS7GUAJxCcgFPLkRIzWRFvzsSezCfw5jFZriWz7msA==`，上游为 `https://github.com/ttttmr/pi-tmux-task.git`。Distant 使用本地镜像的固定源码 `ba58064593ecb9e1b046c7e0d4626f39aa5c2633`，上游为 `https://github.com/chipsenkbeil/distant`；本 probe 没有把它的源码行为越级写成任何发布 artifact 行为。
+
+**实际运行 suite。** 每行只证明该命令覆盖的固定源码路径；passed/skipped/failed 不跨行相加成未运行能力。
+
+| 固定 revision | 实际命令 | Passed / skipped / failed | 证据边界 |
+| --- | --- | --- | --- |
+| Distant `ba5806…` | `cargo test -p distant-core --test api_tests -- --nocapture` | 6 / 0 / 0 | single、parallel 与 sequence request，失败继续/中断语义 |
+| Distant `ba5806…` | `cargo test -p distant-core --lib reconnect -- --nocapture` | 50 / 0 / 0 | reconnect state/strategy、typed/untyped failure triggers、in-memory/TCP/Unix reconnect；不等于真实 SSH/HPC 漫游 |
+| Distant `ba5806…` | `cargo test -p distant-host --lib api::tests -- --nocapture` | 68 / 1 / 0 | FS metadata/read/write/append/copy/rename/remove、watch、process、stdin/kill、version/capability。唯一 skipped 是 `set_permissions_should_set_readonly_flag_if_not_on_unix_platform`，因为当前测试主机是 Unix，该非 Unix 分支不适用 |
+| Distant `ba5806…` | `cargo test -p distant-host --lib api::state::search::tests` | 32 / 0 / 0 | path/content、pagination/limit/depth/include/exclude、binary match、cancel 与 search state |
+| Distant `ba5806…` | `cargo test -p distant-host --lib api::state::process::instance::tests::spawn_should_succeed_with_pty` | 1 / 0 / 0 | 当前主机的 local PTY spawn；不证明远端 PTY/resize |
+| Distant `ba5806…` | `cargo test -p distant-ssh --lib -- --nocapture` | 318 / 0 / 0 | SSH config/ProxyJump parsing、host-key policy、first-key record、changed-key reject、keyboard/password/key auth logic、binary helpers 与 failure paths；大部分是 unit/mock，不是实际 jump/2FA/host-key-change connection |
+| Distant `ba5806…` | `cargo test -p distant-ssh --test lib connect_with_verbose_should_succeed -- --nocapture` | 1 / 0 / 0 | 本机临时 OpenSSH server 的 key-auth loopback connect |
+| Distant `ba5806…` | `cargo test -p distant-ssh --test lib read_file_should_send_blob_with_file_contents` | 1 / 0 / 0 | 同一类本机 loopback 的 SFTP blob read |
+| Distant `ba5806…` | `cargo test -p distant-ssh --test lib proc_spawn_should_send_back_stdout_periodically_when_available -- --nocapture` | 1 / 0 / 0 | 同一类本机 loopback 的 process stdout |
+| Distant `ba5806…` | `cargo test --test stress_tests should_handle_abrupt_client_disconnects -- --nocapture` | 1 / 0 / 0 | loopback manager/server 在一个 client 强退后仍可接受新 write/read；不证明已 dispatch side effect 的 settlement |
+| `pi-tmux-task` `451468…` | `npm ci --ignore-scripts && npm run check` | 10 个 shell integration checkpoints、5 个 Node test scripts 与最终 import 均通过；0 个命令失败 | tmux window create/reuse/output、explicit session、C-locale snapshot、delayed task、start/exit/input/disappear events、stale scan 与 cleanup。没有统一 test case 计数，不伪造总数 |
+
+三条本机 OpenSSH integration 只证明当前 macOS 环回 server 上的 connect/blob/process 路径；不证明真实远端、system OpenSSH client、ProxyJump、2FA、host-key change、网络抖动、Windows/Linux 控制端或 HPC。`distant-ssh` 自己使用 `russh` 并拥有一套认证/host-trust 实现；这与产品已经冻结的“system OpenSSH 拥有认证、host trust、agent、2FA 与 ProxyJump”边界不同，所以整套 SSH client 不进入产品。
+
+**候选边界。** `pi-ssh` 的全部实现是一个 943-line `index.ts`，直接替换 read/write/edit/bash 四个工具、改写 system prompt，并以 `/tmp/pi-ssh-%C` ControlPath/600-second ControlPersist 复用 system SSH。它没有源码测试、capability/version handshake、request correlation、CAS、artifact、reconcile 或 scheduler；timeout/abort 只杀本地 SSH child，不能证明远端副作用未发生。它准确证明 system-SSH + operation injection seam 可行，但 package runtime 会把 Remote 变成引擎 mode，故拒绝直接采用。
+
+Distant 的 request 有唯一 ID，response 有 `origin_id`；host 与 SSH backend 暴露 protocol version/capabilities，实际源码和上表 tests 覆盖 FS/search/watch/process/PTY/reconnect。其 `FileWrite` 是普通 overwrite，protocol 没有 observed-version/CAS precondition，也没有 scheduler submit token、artifact download transaction、helper generation lease 或 Job receipt；manager/server/SSH client/CLI 又远大于产品需要。因此不 fork 整体，只把 protocol framing、request correlation、capability negotiation、binary stream、watch/search/process/PTY 与 reconnect failure handling作为 bounded mechanism donor。
+
+`pi-tmux-task` 的固定源码能从 tmux 权威扫描 running/dead/disappeared 状态，并在 app/session shutdown 后保留 active window；但 runtime session map 在内存，日志只有 `capture-pane -S -20` preview，没有 cursor/完整 OutputRef、submit receipt、idempotency token、remote reconcile 或 scheduler state。它可作为 curated local process backend 的机制参考，不能定义通用 Job，也不能替代 native local process 与 Slurm adapter。
+
+**产品外部 simulator。** 一个不含 donor 的 disposable Node probe 运行 10/10 tests。它以真实临时文件和 append-only JSONL 验证：固定 protocol/capability/artifact manifest；binary observed-version CAS、staging 与 concurrent-change rejection；submit intent 在 ack 丢失后按 token reconcile 且只 dispatch 一次；没有 correlation token 的 disconnect 留下 `outcome_unknown` 且不盲重试；App restart 后从 scheduler authority 恢复 running Job；queued/running/completed/failed/cancel-requested/cancel-acknowledged 分离；512 KiB log 只返回 digest/size/4 KiB preview/cursor；download 在断连后保留 `.partial`，续传后校验 exact size/hash 再 atomic rename，错误 digest 不激活；旧 Job 保留 helper generation lease，新 generation health check 失败 quarantine 并回滚 LKG；journal 只保存 redacted connection ref。它证明 OmniMind 的 receipt/reconcile seam 可实现与可证伪，不证明 Distant、tmux、真实 Remote 或 Slurm。
+
+**M2/M3 provisional implementation choice。** Remote 保持普通、按需出现的 `ExecutionTarget`，不创造 Remote mode、Workspace 或 dashboard。连接分成三个所有者：
+
+1. 本机 system OpenSSH 只拥有 host trust、config、ProxyJump、agent、2FA、ControlMaster 与 credential interaction；凭据不传给 helper，不进入 journal、日志、错误或 UI；
+2. content-addressed、可版本并存的极小 helper 只拥有 capability/version handshake、stat/list/read/search/watch、observed-version CAS write、PTY/process、binary stream 与 bounded cursor；helper 没有账号、模型、Thread、Todo、Job DB 或 updater；
+3. 产品 Thread/Attempt journal 唯一拥有 Action intent/receipt、connection ref、helper generation lease、`OutputRef` 与 reconcile state；native local process 是第一个 backend，first-party Slurm adapter 是第一个外部 scheduler，Slurm ID/state/log/artifact 保持远端权威。
+
+submit 必须先写 intent 与 idempotency/correlation token，再 dispatch；ack 丢失只能按 token、用户与有界时间窗向 scheduler 对账。可定位同一 Job 才写 acknowledged/reconciled；无法定位则 `outcome_unknown`，禁止自动重提。cancel requested 与 scheduler acknowledged 分开。大日志按 cursor 读取，下载使用 `.partial → size/hash → atomic rename`。helper 更新遵守 exact artifact、generation coexistence、safe boundary、health check、quarantine 与 LKG rollback；活跃 process/Job 始终租用旧 generation 到结清。
+
+**复验门与真实未决风险。** 进入生产 adoption 前，必须在一台非本机 Linux target 上用 system OpenSSH 实跑首次 host key、changed key reject、key/agent/交互认证、ProxyJump、断连/重连与 binary CAS；在 macOS/Windows/Linux 控制端核路径、权限、watch、PTY、sleep/wake 与 helper bootstrap/rollback。必须对真实 Slurm 实跑 submit response 丢失后的 token reconcile、queued/running/completed/failed、login/execute node 分离、cancel request/ack、App 强退、长日志 cursor、artifact partial resume/hash/rename。还要注入 helper health failure、两代并存和 LKG rollback。当前机器没有 `sbatch`/`squeue`/`sacct`/`scancel`/`slurmrestd`，所以真实 Slurm、真实远端 ProxyJump/2FA/host-key-change/HPC 全部保持 open；网络或环境缺失不算能力失败，也不允许 simulator 代替实测。
+
+止损点已经达到：M2/M3 不再在“shell package”“完整 remote protocol fork”“tmux 定义 Job”与“产品 receipt + system SSH + bounded helper”之间分叉。生产路线选择最后一项；未决项已经变成上述明确的真实环境复验门，没有 donor 代码或 artifact 进入仓库。
