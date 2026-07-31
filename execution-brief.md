@@ -300,6 +300,16 @@ README.md
 
 选择总边界最小、事实最清楚的一条，不优先“改动最少”。
 
+证据必须拆成三条不可混用的链：
+
+1. **固定源码链**：从精确 revision 的洁净 archive 开始，记录依赖安装、生成输入、构建命令、失败退出码和目标测试；缺失的生成输入或联网前置属于源码复现性事实；
+2. **发布 artifact 链**：固定版本、content digest、registry provenance、`gitHead`、公开入口和实际运行行为；只有 revision 可对应时，artifact 行为才能反证或支持该源码；
+3. **临时本地产物链**：记录额外输入、生成方式和与固定源码/官方 artifact 的差异；它只能证明实际覆盖的源码路径，不得冒充官方发布物或正式 runtime compatibility。
+
+本探针的最小证伪样本固定包含：一个被选工具和一个未选工具、运行时工具切换、128 KiB 工具结果、持久恢复、分支、损坏尾部、取消，以及跨工作目录 session replacement。生态样本另含普通工具、Todo、child Agent、Dynamic Workflow 和一个加载前拒绝案例；兼容报告必须说明 public/headless/UI/session-control/second-truth 依赖。
+
+停止条件：一旦证据足以在 package + thin adapter、package + bounded patch、managed fork 与 bounded transplant 之间选择，就冻结引擎路线；不得为了把源码和发布物强行说成一致而进行无界构建考古。生态 package matrix 未实际运行以前，不能把“引擎核心路线已选”扩张成“首发生态兼容已完成”。
+
 ### 7.2 探针 B：工作台移植
 
 必须同时做两条路径：

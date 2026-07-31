@@ -1688,3 +1688,40 @@ Evidence level：下列候选均为固定源码和相关测试文件已经阅读
 - artifact staging、generation lease、health check 与 LKG rollback。
 
 这些是工程证据问题，不再反问创立者做技术偏好选择。若 probe 推翻当前主线，先改本 README，再改实现。
+
+### 22.11 M1 Probe A：引擎核心与 artifact provisional choice
+
+> Probe 日期：2026-08-01
+>
+> 范围：引擎生命周期、context cost、源码/发布物 lineage 与采用方式。真实生态 package matrix 仍按 22.10 保持未完成；本节不能被解释成首发生态兼容已经验收。
+
+**固定源码链。** 从 Pi `74caa2649f10ed71b4378ce69f5d9fbfd2466ca5` 的洁净 archive 运行 `npm ci --ignore-scripts`。该 revision 不携带 `packages/ai/src/providers/data`，声明的 `build:offline` 会在 model-data check 处失败；`hydrate:model-data` 的目录请求本次超时，命令却以 0 退出且没有生成数据。这是源码复现性与失败语义缺口，不是 runtime 行为失败。
+
+为覆盖固定源码路径，probe 明确从官方 0.83.0 `pi-ai` artifact 复制生成数据；其 manifest SHA-256 为 `68fddb01b38c7abc7c579103da455475593fd788b3dbbf79c04b95bb5a4bb3a7`。该临时产物随后完成 workspace build。它不是官方发布物，只能证明“`74caa…` 源码 + 该外来生成输入”这条路径。
+
+实际目标测试命令只覆盖 `agent-session-dynamic-tools`、`agent-session-runtime-events`、`sdk-session-manager`、`session-file-invalid`、`suite/agent-session-runtime`、`6162-extension-active-tools-next-turn` 与 `7187-malformed-package-manifest`：
+
+```text
+npm --prefix packages/coding-agent exec vitest -- --run test/agent-session-dynamic-tools.test.ts test/agent-session-runtime-events.test.ts test/sdk-session-manager.test.ts test/session-file-invalid.test.ts test/suite/agent-session-runtime.test.ts test/suite/regressions/6162-extension-active-tools-next-turn.test.ts test/suite/regressions/7187-malformed-package-manifest.test.ts
+npm --prefix packages/coding-agent exec vitest -- --run test/suite/agent-session-runtime.test.ts -t 'updates the runtime session cwd on cross-cwd session replacement' --testTimeout=20000
+```
+
+第一条实际运行 28 个测试：27 passed；跨 cwd session replacement 在默认 5 秒 timeout。第二条只复跑该项，在 20 秒仍 timeout。这个计数不证明未运行的 provider、真实 package、UI/headless、Remote 或 live model 行为，不得写成上游测试全绿。
+
+**发布 artifact 链。** registry 中 `@earendil-works/pi-coding-agent@0.83.0` 的 integrity 是 `sha512-uYhF+FsZxogoSX/AxBcUdiY+ZklubwaXyAoEGA2eQwsHcyEAhUYIKh/WLXe/a8+k8eTCmxb+ZN2Zo9mzQtzbWw==`；`@earendil-works/pi-ai@0.83.0` 是 `sha512-m3IZD4g3er0V8TC9+Vpgw/sjTKqcJlkcIBy/JvsgRubuuik3tAVzyugUg4rVrShIkkOT69mEd34NEqKUIsl6JQ==`。两者 registry `gitHead` 都是 `845d6ff1f6643aba440341cce877ce1c43ebbc39`，不是冻结源码；二者之间有 36 个 commits，`packages/ai`、`packages/agent`、`packages/coding-agent` 共 49 个文件变化。因此 0.83.0 的运行结果不能自动证明 `74caa…`。
+
+0.83.0 artifact 的确定性实际运行覆盖创建、流式事件、工具开始/结束、运行时 active-tools 切换、取消、持久恢复、分支和损坏尾部。一个 active schema 的序列化大小为 152 bytes；未选择工具没有进入请求。128 KiB 工具文本在下一次 provider context 中变为 131,781 bytes，session 文件为 133,643 bytes；引擎不会自动把大结果变成引用。6 条消息可恢复，分支上下文为 2 条，非法末行被忽略且保留 6 条有效消息，取消在 127 ms 内得到 `aborted`。
+
+artifact 的 shrinkwrap 在 probe consumer 中产生了顶层与嵌套的同版本模型包实例；通过顶层公开包注册的测试 provider 没有进入引擎实际使用的 registry。改从 artifact 私有嵌套路径注入后上述行为成立。私有路径只用于覆盖 artifact 内部运行，不能成为生产 adapter 合同；这也是当前发布物不能直接采用的原因之一。
+
+**M1 provisional implementation choice。** 当前 package + thin adapter 不足：公开 artifact 与已审源码无法对应，源码构建输入不自足，公开包实例无法可靠注入 probe transport，且跨 cwd replacement 的固定源码测试稳定挂起。暂选以 `74caa…` 为基线的最小 managed fork / upstream patch branch；它不是永久 fork 宪法，也不是生产 adoption。补丁面只限于：
+
+- 让生成输入 content-addressed、可离线验证，并让 hydrate 失败非零退出；
+- 修复并锁定跨 cwd session replacement；
+- 生成 source revision、artifact digest 与测试结果可对应的 exact artifact；
+- 保持 public package 单实例或提供公开、实例安全的 provider/transport 注入边界；
+- 保留上游更新价值，差异按复现性、嵌入边界和错误路径拆分，不把 fork 身份带进产品 namespace。
+
+这条小分支优于 bounded transplant 或重写，因为已运行的核心生命周期路径大部分成立，当前负证据集中在 artifact lineage、生成输入、registry 边界和一个 session replacement 路径；局部移植会迫使产品接管内部 session tree、extension loader 与更新合并，重写则重复已经成立的流式、工具、取消、恢复和分支行为。若这些缺口能作为有界上游补丁解决，fork 只承担出包和补丁所有权。§8.3、§15 与 §22.2 已定义 thin adapter、transcript、Thread/journal 和 `OutputRef` 权威；本 probe 只证明 128 KiB 结果会真实穿透到下一次 context，因此既有大输出 fence 是进入 M2 的硬门，不另造一套 doctrine。
+
+**回退与重新验证。** `source-adoptions` 保持为空，因为本 probe 没有把 donor 代码或 artifact 放入生产仓库。降回正式 package 的门是：source 与 artifact 的 `gitHead` 或等价 provenance 可核；同一 revision 能用 content-addressed 生成输入复现；public transport/registry 保持单实例或提供正式注入点；跨 cwd replacement 稳定通过；上述目标 lifecycle tests 在对应 artifact/source 上通过；真实 ecosystem package matrix 通过。满足后删除 patch branch，采用 package + thin adapter。若小分支开始接管 transcript、Thread、位置、第二状态真相，或 maintained delta 不再有界，则拒绝该路线，重新比较 bounded transplant 与替代引擎。
