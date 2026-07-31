@@ -21,10 +21,13 @@ Deliver an independent, production-grade OmniMind V1 that proves the product con
 - a restrained but powerful desktop workbench;
 - local and remote files, terminals, processes and durable batch execution;
 - file-native, inspectable and recoverable Wiki knowledge work;
-- one neutral capability mechanism for scientific and general tools;
+- one neutral capability mechanism for all external and professional tools;
+- first-class compatibility with the selected engine ecosystem without importing its product ontology;
+- bundled first-party strategies and adapters that remain lazy, replaceable and state-neutral;
+- automatic, staged and rollback-safe extension updates;
 - honest trust, side-effect, recovery and provenance semantics;
 - measured performance;
-- a real research-first vertical workflow without scientific concepts in the core.
+- several materially different real workloads succeeding on the same domain-neutral core.
 
 This Campaign is not complete when a demo runs or when the producer believes the architecture is sound. It is complete only when every required claim is verified on one frozen final SHA, the relevant final gate passes, no blocker remains, and a fresh-context completion audit finds no material issue.
 
@@ -50,26 +53,21 @@ Do not create another mission, ledger, manifest, decision register, handoff, pro
 
 ## 3. Locked decisions
 
-The following are fixed unless new evidence is strong enough to amend `README.md` first:
+Product decisions are not copied into this Campaign. They are locked by the root `README.md`, especially:
 
-- this repository is a clean product, not a compatibility rewrite;
-- no old runtime or permanent dual track;
-- no existing users or state constrain the design;
-- product-authored surfaces contain no external product identity outside the root disclosure;
-- package, fork, full-directory transplant, adaptation and rewrite are equally legitimate;
-- source and rights remain honestly disclosed;
-- `Thread` and `ExecutionTarget` are the only initial durable aggregate roots;
-- local and remote locations use the same product semantics;
-- Remote is an early core surface;
-- a concrete batch scheduler comes before a scheduler framework;
-- personal knowledge defaults to file-native Wiki and agentic search;
-- scientific systems enter through the neutral capability mechanism;
-- the workbench may reuse a complete donor surface if the transplant probe proves it superior;
-- trusted locations allow full Agent execution without per-command theater;
-- third-party extension trust and irreversible external authorization remain separate;
-- no fake sandbox;
-- no native custom-UI extension ABI before two real consumers;
-- performance, recovery and identity cleanliness are architecture constraints.
+- `Product identity` and `Product invariants`;
+- `Product-native and external capabilities`;
+- `Domain is only a workload`;
+- `E0 ecosystem seven-category source freeze`;
+- `Unified layering`, `single state authority`, `automatic update` and `behavioral acceptance`.
+
+This Campaign locks only completion mechanics:
+
+- M1 contains five disposable probes;
+- a probe may disprove a technical choice but cannot silently change product doctrine;
+- any product-decision change amends `README.md` first;
+- this file alone records claims, status, evidence and candidate SHA;
+- no producer self-certifies Campaign completion.
 
 ## 4. Authorization and boundaries
 
@@ -113,30 +111,14 @@ If a required proof needs one of these actions, mark the affected item `blocked`
 
 ### 5.1 Maintainer taste as an execution constraint
 
-Every implementation decision is judged simultaneously on:
+`AGENTS.md › 工程判断` is the sole resident taste contract. The Campaign does not restate it.
 
-- **user value**: a real user can understand, control, verify and recover the work;
-- **clarity**: one concept has one name, one owner and one truth source;
-- **restraint**: no speculative framework, compatibility theater or decorative UI;
-- **performance**: critical paths are short by construction and measured before claims;
-- **visual quality**: dense, calm, precise and stable workbench behavior;
-- **code quality**: small cohesive units, explicit boundaries, local reasoning and easy deletion;
-- **naming quality**: short, durable domain names that remain correct when providers, implementations and research topics change;
-- **future fitness**: extension comes from narrow stable seams, not vague containers;
-- **evidence**: important claims survive adversarial tests rather than persuasive prose.
+At every candidate boundary, evidence must still answer four Campaign questions:
 
-Reject code that merely works when it:
-
-- introduces `Manager`, `Helper`, `Utils`, `GeneralContext` or another vague container;
-- uses multiple terms for the same lifecycle;
-- hides cost, remote authority, side effects or failure;
-- solves an implementation convenience at the expense of user control;
-- adds visual elements without a user function;
-- optimizes an unmeasured path;
-- copies donor structure after its original responsibility has disappeared;
-- leaves a temporary name or adapter as a permanent public contract.
-
-Comments explain non-obvious invariants and tradeoffs, not restate syntax. Public names receive a durability review before merge.
+- can a user understand, control, verify and recover the work;
+- does each concept have one durable name, owner and truth source;
+- are performance and visible interaction measured rather than asserted;
+- can the implementation, donor adaptation and compatibility layer be replaced or deleted without preserving a false abstraction.
 
 ### 5.2 Continuous drift supervision
 
@@ -198,13 +180,15 @@ Exit:
 - the repository contains no accidental external identity outside allowed surfaces;
 - no product implementation has been copied before source and boundary review.
 
-### M1 — Three disposable probes
+### M1 — Five disposable probes
 
 Run outside the production author surface:
 
-1. embedded Agent engine lifecycle and recovery;
+1. embedded Agent engine lifecycle plus ecosystem compatibility and context cost;
 2. full-workbench transplant versus clean vertical-slice reconstruction;
-3. remote files, terminal and durable batch execution through a minimal worker.
+3. durable runtime primitives: Todo, child Agent, Team mailbox, Dynamic Workflow, files, checkpoint and attention;
+4. remote files, terminal and durable external execution through a minimal worker;
+5. file-native knowledge recall plus extension artifact staging, automatic update and rollback.
 
 Each probe records:
 
@@ -219,7 +203,7 @@ Each probe records:
 
 Exit:
 
-- the three decisions are written into the relevant stable doctrine or the evidence section below;
+- the five decisions are written into the relevant stable doctrine or the evidence section below;
 - failed probe code is deleted;
 - adopted sources are disclosed only in the root README;
 - M2 has no unresolved architecture fork.
@@ -239,9 +223,17 @@ Deliver one complete local path:
 9. recover exact state;
 10. branch and continue.
 
+The same skeleton also proves:
+
+- Todo is reconstructed from the active Thread branch;
+- one foreground and one background child Thread share the same lifecycle reducer;
+- a file write fails cleanly when its observed version is stale;
+- checkpoint restore survives interruption without touching user Git state;
+- attention and `outcome_unknown` return to the correct Attempt.
+
 Exit:
 
-- F-03 through F-06 are at least `candidate`;
+- F-03 through F-06, F-22 and F-26 are at least `candidate`;
 - no duplicate transcript truth;
 - crash injection covers admission, attempt, action and file-write boundaries.
 
@@ -289,39 +281,43 @@ Exit:
 
 Deliver:
 
-- one capability contract for general and scientific tools;
+- one capability contract for all external and professional tools;
 - discovery without resident schema overload;
 - progress, cancellation, structured errors and output references;
 - execution-location and trust requirements;
 - one external knowledge capability;
 - one data or analysis capability;
-- one dynamic workflow using the engine ecosystem;
+- launch-grade compatibility for tool, skill, prompt and extension lifecycle with an explicit fail-fast report for unsupported host behavior;
+- one dynamic workflow that changes route after intermediate evidence;
+- one delegated Agent and one explicit Team mailbox scenario;
+- bundled Browser, HTTP/web and MCP-like adapters using native Action receipts;
+- content-addressed artifacts, Auto/Staged/Pinned, trust-envelope diff, safe-boundary activation and LKG rollback;
 - graceful degradation when an external capability fails.
 
 Exit:
 
-- F-13 through F-15 are at least `candidate`;
-- no external scientific product becomes a core type;
+- F-13 through F-15 and F-23 through F-25 and F-27 are at least `candidate`;
+- no external or domain product becomes a core type;
 - no custom UI ABI is added without two proven consumers.
 
-### M6 — Research-first vertical product
+### M6 — Cross-domain product validation
 
-Deliver one real biomedical research workflow using the same general core:
+Deliver at least three materially different workloads using the same general core. The set may include biomedical analysis, but no workload receives a product mode or domain ontology:
 
-- local or remote project;
-- source Wiki;
-- knowledge, data and analysis capabilities;
-- remote analysis and a durable long task;
-- human redirection or rejection;
-- branchable work history;
-- reproducible report, files, logs and source links;
-- no patient-level autonomous action.
-
-Also prove that a non-research engineering task uses the same domain core.
+- a Chat without a folder;
+- a folder-backed coding or editing task with live file inspection;
+- a mixed-document knowledge task using visible Wiki and agentic search;
+- a remote durable execution scenario;
+- automatic child delegation and a user-steered child conversation;
+- a Dynamic Workflow that replans;
+- branchable work history and human redirection;
+- reproducible files, logs, source links and receipts;
+- safe automatic extension update and rollback;
+- no patient-level, financial, publishing or production side effect without its separately scoped authority.
 
 Exit:
 
-- F-16 through F-18 are at least `candidate`;
+- F-16 through F-18 and F-28 are at least `candidate`;
 - product performance is measured along admission, engine, provider, tool, persistence, IPC, remote and render segments;
 - the UI remains a restrained workbench rather than a chat or marketing surface.
 
@@ -353,16 +349,23 @@ Exit only when the Done formula is true.
 | F-09 | Remote file conflicts, caches, transfers, large output and reconnect do not create a second authority or silent overwrite | adversarial remote tests | open | — | — |
 | F-10 | Wiki ingestion never modifies source files and all durable synthesis is visible, inspectable Markdown | source hash proof + file review | open | — | — |
 | F-11 | Wiki provenance, staleness, multi-page updates, user edits, rebuild and rollback are correct under interruption | corpus tests + crash matrix | open | — | — |
-| F-12 | Approximately thousand-document personal knowledge work is useful without a mandatory heavy retrieval backend | measured corpus evaluation + fresh evaluator | open | — | — |
-| F-13 | General and scientific tools use one capability contract without entering the core ontology | multiple real capabilities + API review | open | — | — |
+| F-12 | Approximately thousand-file mixed knowledge work is useful without a mandatory heavy retrieval backend | measured corpus evaluation + fresh evaluator | open | — | — |
+| F-13 | All external and professional tools use one capability contract without entering the core ontology | multiple real capabilities + API review | open | — | — |
 | F-14 | Trusted locations avoid per-command confirmation while untrusted code and third-party extensions cannot execute by implication | trust matrix + adversarial tests | open | — | — |
 | F-15 | Irreversible or high-cost external actions require separate, accurately scoped authorization | policy tests + scenario review | open | — | — |
 | F-16 | Startup, first delta, streaming, long Thread, background work, large output and remote latency meet measured budgets with attributable spans | performance suite + raw measurements | open | — | — |
 | F-17 | The repository has no old-runtime compatibility track, speculative framework, hidden provider identity or duplicate product implementation | dependency/search audit + fresh evaluator | open | — | — |
-| F-18 | One real research workflow and one general engineering workflow succeed on the same core without scientific domain types | end-to-end scenarios + fresh evaluator | open | — | — |
+| F-18 | Materially different workloads succeed on the same core without research, coding, knowledge or Remote product modes and domain types | end-to-end scenarios + fresh evaluator | open | — | — |
 | F-19 | Relevant final gates pass once on the frozen final SHA | deterministic final gate | open | — | — |
 | F-20 | Fresh-context completion audit reports no material finding on the frozen final SHA | independent completion audit | open | — | — |
 | F-21 | Production code, public names and visible interaction form one coherent, elegant and maintainable system with no vague containers or avoidable performance debt | static checks + architecture/name review + measured UI + fresh evaluator | open | — | — |
+| F-22 | Todo, child Agent, Team, Dynamic Workflow, explicit Goal and Review have non-overlapping state authority and survive branch/restart correctly | reducer/replay tests + state-authority review | open | — | — |
+| F-23 | Dynamic Workflow is generated and revised from live evidence, obeys hard limits, preserves retry lineage and never blindly replays an uncertain side effect | scenario tests + crash/receipt matrix | open | — | — |
+| F-24 | The launch compatibility bridge runs supported ecosystem packages, reports unsupported host behavior before activation and never imports host ontology into product state or UI | real package matrix + identity/API review | open | — | — |
+| F-25 | Bundled, curated and arbitrary extension artifacts update automatically within approved trust envelopes, activate only at safe boundaries and roll back to LKG without changing an active generation | update/migration/fault-injection matrix | open | — | — |
+| F-26 | File writes use observed-version preconditions; Git stays optional authority; checkpoint restore covers create/modify/delete/rename and fails recoverably without destructive user-Git operations | filesystem/Git concurrency + recovery matrix | open | — | — |
+| F-27 | Browser, HTTP, MCP-like and external actions produce native receipts and preserve `outcome_unknown` after post-dispatch disconnect, timeout or cancellation | protocol fault injection + real adapter scenarios | open | — | — |
+| F-28 | Per-Chat workbench state, live file viewing, child conversations, temporary question branches, multi-format preview and platform conventions remain coherent, fast and recoverable on macOS, Windows and Linux | cross-platform UI scenarios + measured fresh evaluator | open | — | — |
 
 ## 9. Milestone evidence
 
@@ -420,16 +423,17 @@ No evidence yet.
 
 ## 10. Current next action
 
-The first executor must:
+The next executor must:
 
-1. verify the repository path, `origin/main`, clean status and founding baseline;
-2. run the existing identity scan over all non-root documentation;
-3. implement M0's generic identity cleanliness checker without copying the denylist into source;
-4. establish the smallest reproducible quality command;
-5. move F-01 and F-02 only when exact evidence exists;
-6. then prepare the three M1 probes outside the production author surface.
+1. verify repository path, `origin/main`, clean status and the final doctrine-freeze SHA;
+2. run `npm run quality`, plus any later documentation-anchor or task-governance checks that actually exist in the current tree;
+3. read the root cross-category freeze instead of reconstructing decisions from historical chats;
+4. prepare the five M1 probes outside the production author surface with one owner and one falsifiable success condition each;
+5. prove engine-ecosystem compatibility and artifact governance before opening general package installation;
+6. freeze probe choices into the governing doctrine or this Campaign evidence, delete failed probe code, then begin M2;
+7. leave F-01/F-02 historical evidence intact but rerun affected checks before claiming a new candidate SHA.
 
-Do not begin by importing a complete old product, building a plugin framework, implementing every provider or polishing a full UI.
+Do not begin by importing a complete old product, building a speculative public SDK, implementing every provider, turning Remote into a product mode, defaulting to heavy retrieval, or polishing a full UI before the interaction skeleton has evidence.
 
 ## 11. Blockers
 
@@ -438,7 +442,7 @@ None at Campaign start.
 ## 12. Done
 
 ```text
-DONE = F-01..F-21 all verified on the final SHA
+DONE = F-01..F-28 all verified on the final SHA
        && blocked = 0
        && relevant final gates pass on that SHA
        && fresh completion audit has no material finding

@@ -4,7 +4,7 @@
 >
 > 仓库状态：本仓库就是文中定义的独立新产品仓库；创立文档已经迁入，生产实现尚未开始
 >
-> 适用对象：未来创建独立 OmniMind 仓库、选择移植物、搭建第一版内核与工作台的执行者
+> 适用对象：未来在本独立仓库选择移植物、验证探针、搭建第一版内核与工作台的执行者
 >
 > 附件：[施工任务书](execution-brief.md) · [决策与纠偏记录](discovery-record.md)
 >
@@ -19,7 +19,7 @@
 - “本仓库”指独立新产品；
 - “当前仓库”或“旧仓库”指创立研究发生时的旧产品仓库；
 - “创建新仓库”类表述从现在起视为已经完成；
-- 尚未完成的是来源核实、三个可丢弃探针、生产技术骨架和任何功能移植。
+- 尚未完成的是进入生产前的逐来源权利核实、五个可丢弃探针、生产技术骨架和任何功能移植。
 
 新 OmniMind 应在全新的 Git 仓库中诞生。当前仓库继续作为另一个产品独立存在，二者不共享运行时代码、不维持兼容层、不做双向同步。当前产品在对外产生名称冲突以前应改名或明确标记为 Classic；新产品保留 `OmniMind` 名称。
 
@@ -45,7 +45,7 @@
 7. 用户偏好极度激进、犀利、未来化、可扩展、高性能、优雅和易维护。执行者不应主动把这个偏好降格成“风险最小的常规重构”。
 8. 简洁不是功能少，也不是把所有能力塞进一个类或一个进程。简洁是：少量稳定概念、清楚的所有权、单一事实来源、可删除的适配层。
 9. 用户个人通常愿意给 Agent 最大权限。产品不应制造逐命令确认的权限戏剧，但必须如实区分工作区信任、第三方代码信任和不可逆外部动作。
-10. 产品最终服务所有能从通用 Agent 获益的人，科研用户优先，尤其重视生物医学科研；“科研优先”不得演变成在通用内核中硬编码生物医学对象。
+10. 产品服务所有能从通用 Agent 获益的人。科研、生物医学、软件开发、合同分析、训练和仿真都只是 workload；任何领域都不得成为一级产品模式、运行时或内核本体。高强度科研任务可以做压力测试，但不能定义产品。
 
 这些不是情绪性修辞，而是范围、兼容性、复用、权限和产品定位的正式输入。
 
@@ -109,15 +109,15 @@ lm-studio
 
 ## 3. 一句话产品定义
 
-**OmniMind 是一个本地优先、可连接远程计算环境、以可持续工作状态为中心的通用 Agent 工作台；它首先把科研和复杂工程工作做深，但不把任何模型供应商、科学领域或知识库后端变成产品本体。**
+**OmniMind 是一个本地优先、可连接远程执行环境、以可持续工作状态为中心的通用 Agent 工作台；不同领域共享同一套文件、工具、编排、恢复和外部执行能力。**
 
 这句话包含六个不能拆开的判断：
 
 - **本地优先**：界面、用户状态、凭据、信任决策和主要模型接入默认留在用户电脑；
 - **远程可达**：文件、终端、进程和调度任务可以在 SSH/HPC 环境执行，且是第一阶段能力，不是以后再补的插件；
 - **工作状态中心**：产品保存一项工作为什么走到这里、执行过什么、哪些副作用仍未知，而不只是聊天消息；
-- **通用 Agent**：编码、科研、写作、数据分析和其他复杂工作共享同一内核；
-- **科研优先**：用科研任务决定可靠性、远程计算、知识工作和可复现输出的优先级；
+- **通用 Agent**：编码、科研、写作、数据分析、合同处理和其他复杂工作共享同一内核；
+- **领域中立**：领域任务只验证能力强度，不产生 Research Mode、Scientific Thread、科研专用 Agent、记忆、Workflow 或 Remote；
 - **能力开放**：OmniData、OmniEngine、OmniScholar 等以标准工具能力进入，不塑造 OmniMind 的内部本体。
 
 OmniMind 不是：
@@ -128,21 +128,22 @@ OmniMind 不是：
 - 一个内置全套 RAG/知识库/生物医学平台的巨型套件；
 - 一个把所有能力都插件化、自己不承担产品体验的空壳；
 - 一个为了展示“多 Agent”而堆叠编排术语的框架；
+- 一个以科研、编码、知识库或 Remote 为一级模式切割用户心智的套件；
 - OmniHarness 的新实现。新产品中不创建 `OmniHarness` 模块、接口、兼容别名、占位符或未来扩展点。
 
 ## 4. 产品不变量
 
-### 3.1 模型和执行引擎可更换
+### 4.1 模型和执行引擎可更换
 
 模型供应商是来源，不是身份。OpenAI、Anthropic、国产模型、兼容端点、Ollama、LM Studio 和未来来源应处于同一层级。
 
 Pi 是当前最有希望的 Agent 引擎和生态入口，但也只是引擎。产品的持久状态、远程位置、信任决策、外部任务和文件所有权不能被 Pi 的暂时数据结构吞掉。
 
-### 3.2 用户的文件仍是用户的文件
+### 4.2 用户的文件仍是用户的文件
 
 本地文件以本地文件系统为权威；远程文件以远程文件系统为权威。OmniMind 不偷偷复制一套“真正版本”，不透明全量同步，也不让数据库成为用户文档的唯一出口。
 
-### 3.3 一件事实只有一个权威
+### 4.3 一件事实只有一个权威
 
 - 对话消息在第一阶段由固定版本的 Pi session 格式拥有；
 - 产品 journal 记录接纳、策略、动作、副作用、检查点、外部任务、恢复和分支；
@@ -153,7 +154,7 @@ Pi 是当前最有希望的 Agent 引擎和生态入口，但也只是引擎。�
 
 不得为了方便 UI 或“统一存储”再复制一套平行真相。
 
-### 3.4 失败必须能被准确命名
+### 4.4 失败必须能被准确命名
 
 “没有收到完成消息”不等于“没有执行”。副作用状态至少要能区分：
 
@@ -161,7 +162,7 @@ Pi 是当前最有希望的 Agent 引擎和生态入口，但也只是引擎。�
 
 SSH 断开不等于远程进程失败，界面关闭不等于 Slurm 任务终止，模型流中断不等于已启动的工具没有产生副作用。恢复逻辑不能用乐观猜测填补事实空洞。
 
-### 3.5 扩展能力不得污染核心
+### 4.5 扩展能力不得污染核心
 
 Omni 系列科学能力、MCP、Skills、函数工具、外部服务和未来生态都通过统一的能力描述与调用路径进入。核心不因工具叫 OmniScholar 就出现 Scholar 专用类型，也不因工具能做生物信息学就出现生物医学分支。
 
@@ -169,7 +170,7 @@ Omni 系列科学能力、MCP、Skills、函数工具、外部服务和未来生
 
 ## 5. 产品原生能力与外部能力的边界
 
-### 4.1 必须原生
+### 5.1 产品必须原生负责
 
 以下能力定义了 OmniMind 是什么，应由产品自己承担：
 
@@ -184,11 +185,18 @@ Omni 系列科学能力、MCP、Skills、函数工具、外部服务和未来生
 - 能力发现、启用和本次 Thread 的最小工具注入；
 - 性能、持久化和故障恢复所需的基础设施。
 
-“原生”指产品对行为和用户体验负责，不要求所有实现都从零自写。原生能力完全可以由移植的优秀代码组成。
+“原生”指产品对行为和用户体验负责，不等于全部硬编码进 kernel、常驻模型上下文或运行在同一进程。正确分层是：
 
-### 4.2 应作为外部能力进入
+- kernel 持有少量稳定原语、唯一状态权威、生命周期和回执；
+- bundled first-party capability/strategy modules 随产品交付、无需安装、按需激活、可关闭；
+- compatibility adapters 把外部生态映射到同一原语；
+- 第三方 package 不得夺取 Thread、Todo、Team、Workflow、文件、外部任务或更新治理的状态权威。
 
-以下能力默认是工具、函数、MCP、Skill 或受控外部连接：
+原生能力完全可以由 package、fork、移植或重写组成。实现来源不决定产品所有权。
+
+### 5.2 应作为外部能力进入
+
+以下能力默认是工具、函数、MCP、Skill、Pi package 或受控外部连接：
 
 - OmniData；
 - OmniEngine；
@@ -198,11 +206,11 @@ Omni 系列科学能力、MCP、Skills、函数工具、外部服务和未来生
 - 用户现有的 WeKnora；
 - 其他机构数据、软件、实验和知识服务。
 
-这些能力共享同一套能力协议：描述输入输出、进度、取消、错误、输出引用和信任需求。第一版不为每类能力创建专用插件框架。
+这些能力共享同一套能力协议：描述输入输出、进度、取消、错误、输出引用、执行位置和信任需求。第一版不为每类能力创建专用插件框架，也不因能力属于某个领域而获得内核特权。
 
-### 4.3 暂不建立原生 UI 插件 ABI
+### 5.3 暂不建立原生 UI 插件 ABI
 
-第一版扩展返回统一的进度、日志、结构化结果和 `OutputRef`，并可在工作区写入普通文件。只有至少两个真实扩展无法用公共呈现方式表达时，才设计自定义 UI 插槽。
+第一版扩展返回统一的进度、日志、结构化结果和 `OutputRef`，并可在工作区写入普通文件。第一方 bundled modules 可以使用产品内部 UI contract，但这不等于对第三方承诺稳定 ABI。只有至少两个真实第三方扩展无法用公共呈现方式表达时，才冻结自定义 UI 插槽。
 
 现在提前定义复杂 UI 插件 ABI，会把尚未理解的产品形态冻结成长期兼容负担。
 
@@ -210,7 +218,7 @@ Omni 系列科学能力、MCP、Skills、函数工具、外部服务和未来生
 
 丰富的产品不需要丰富的持久领域本体。第一版只承认两个聚合根。
 
-### 5.1 `Thread`
+### 6.1 `Thread`
 
 `Thread` 是一段可持续、可分支、可审计的人机协作历史。它不是一个临时网络 session，也不等于单次模型请求。
 
@@ -234,7 +242,7 @@ Thread 之下可以产生：
 
 这些是精确引用或 journal 事件，不应被升级成万能聚合。
 
-### 5.2 `ExecutionTarget`
+### 6.2 `ExecutionTarget`
 
 `ExecutionTarget` 表示文件和执行实际发生的环境：
 
@@ -247,7 +255,7 @@ Thread 之下可以产生：
 
 这一个引用应统一表达本地目录、远程目录、附加位置和 Wiki 所在位置。不要再造一个含混的 Workspace 数据库对象去复制文件系统事实。
 
-### 5.3 明确拒绝的核心聚合
+### 6.3 明确拒绝的核心聚合
 
 以下名称在证明不可替代以前不得成为持久核心对象：
 
@@ -266,7 +274,7 @@ Thread 之下可以产生：
 
 同样避免 `Manager`、`Helper`、`Utils`、`GeneralContext`、`GeneralAgentEngine` 这类把边界含混化的命名。
 
-### 5.4 Journal 的职责
+### 6.4 Journal 的职责
 
 产品 journal 追加记录：
 
@@ -283,7 +291,7 @@ Journal 不复制 Pi 的完整消息文本，不复制远程文件内容，不�
 
 ## 7. 第一版运行时形态
 
-### 6.1 默认技术形态
+### 7.1 默认技术形态
 
 第一版优先采用：
 
@@ -307,7 +315,7 @@ Journal 不复制 Pi 的完整消息文本，不复制远程文件内容，不�
 
 这不是对 Electron 的永久宗教承诺，而是当前最少边界、最容易直接使用 Pi TypeScript 生态、最适合移植 Proma 工作台的起点。
 
-### 6.2 何时拆出 Pi 进程
+### 7.2 何时拆出 Pi 进程
 
 只有出现可测证据时，才把 Pi 移到 Electron utility process 或独立本地服务，例如：
 
@@ -319,7 +327,7 @@ Journal 不复制 Pi 的完整消息文本，不复制远程文件内容，不�
 
 不能用“架构看起来更专业”作为多进程理由。
 
-### 6.3 进程和状态原则
+### 7.3 进程和状态原则
 
 - renderer 不拥有业务真相；
 - main 不创建第二份 Pi transcript；
@@ -331,9 +339,9 @@ Journal 不复制 Pi 的完整消息文本，不复制远程文件内容，不�
 
 ## 8. Pi 的角色
 
-### 7.1 当前裁决
+### 8.1 当前裁决
 
-Pi 是新内核的首选 Agent 引擎和生态入口。第一版应围绕成熟、可用的 `pi-coding-agent` session SDK 做一个很薄的 `PiAdapter`，而不是复刻旧 OmniMind Agent loop。
+Pi 是新内核的首选 Agent 引擎，也是首发必须可用的生态入口。第一版既要围绕成熟 session SDK 建立很薄的中立引擎边界，也要提供 Pi-compatible package bridge；不能以“OmniMind 公共 SDK 尚未冻结”为由把最有价值的现成生态推迟到以后。
 
 可以：
 
@@ -346,7 +354,9 @@ Pi 是新内核的首选 Agent 引擎和生态入口。第一版应围绕成熟�
 
 不需要为了“独立感”重新实现 Pi 已经做得好的部分。
 
-### 7.2 不能交给 Pi 的事情
+“一起打包”指最重要的第一方能力随 OmniMind 发布、无需另装，但不意味着全部扩展常驻、全部塞进一个 mega extension 或全部注入模型上下文。Agent 按任务激活，用户可以查看、关闭、停止或固定；状态仍由 OmniMind 原生运行时拥有。
+
+### 8.2 不能交给 Pi 的事情
 
 Pi 当前自我定位仍偏最小终端 coding harness。以下内容必须由 OmniMind 保持所有权：
 
@@ -362,7 +372,7 @@ Pi 当前自我定位仍偏最小终端 coding harness。以下内容必须由 O
 
 Pi 的 API、实验性 remote protocol 和未来 `AgentHarness` 抽象可以演化，不能直接当作 OmniMind 永久宪法。
 
-### 7.3 集成纪律
+### 8.3 集成纪律
 
 - 第一轮只做可丢弃集成探针；
 - 固定 Pi repo、SHA、包版本和许可证；
@@ -372,12 +382,16 @@ Pi 的 API、实验性 remote protocol 和未来 `AgentHarness` 抽象可以演�
 - 证明 Pi 单 cwd 限制如何通过 LocationRef/ExecutionTarget 在产品层表达；
 - 不在探针通过以前大规模搬旧 UI 或旧 runtime；
 - 不为了兼容多个引擎提前造抽象森林。第二个真实引擎出现后，再从差异中提炼接口。
+- 首发兼容 Pi 的 tool、skill、prompt、extension lifecycle、动态注册、active tools、AbortSignal、stream update、command、headless 降级和必要 journal 映射；
+- 依赖 raw TUI、provider mutation、私有 session control、monkeypatch 或第二状态真相的 package 可以 fail-fast，但必须在加载前给出清楚 compatibility report；
+- 不宣称虚假的“100% 所有 package 兼容”，也不因少数不兼容包而放弃生态；
+- Pi compatibility surface 可以早期稳定，OmniMind 对第三方公开的原生 SDK 等多个 bundled modules 与真实 Pi package 验证后再冻结。
 
 ## 9. 本地与远程执行
 
-远程服务器不是附属功能。对生物信息学和许多科研任务，它与本地文件一样基础。
+Remote 预计只占总体使用的一部分，但它是不能后补的高价值通用能力。生物信息、训练、构建、仿真、部署和数据处理共享同一语义。Remote 不是独立模式、特殊 Workspace 或永久导航；只有当前位置、终端、文件或外部任务实际位于远端时才进入用户视野。
 
-### 8.1 默认拓扑
+### 9.1 默认拓扑
 
 默认形态是：
 
@@ -390,7 +404,7 @@ Pi 的 API、实验性 remote protocol 和未来 `AgentHarness` 抽象可以演�
 
 这与“把完整 OmniMind server 安装到远端”是两种不同架构。后者不是默认。
 
-### 8.2 OpenSSH 与凭据
+### 9.2 OpenSSH 与凭据
 
 优先复用系统能力：
 
@@ -406,7 +420,7 @@ Pi 的 API、实验性 remote protocol 和未来 `AgentHarness` 抽象可以演�
 
 主机密钥变化默认 fail closed。不能为了“连接顺滑”静默接受中间人风险。
 
-### 8.3 远程 worker 的最小职责
+### 9.3 远程 worker 的最小职责
 
 第一版 worker 只承担结构化远程原语：
 
@@ -419,6 +433,8 @@ Pi 的 API、实验性 remote protocol 和未来 `AgentHarness` 抽象可以演�
 - Slurm submit/query/cancel/log/reconcile；
 - worker 版本和能力协商。
 
+所有 helper 都按 OS/arch、协议版本和 content digest 固定。活跃 Attempt 或外部任务租用既有 generation；更新不得中途替换其 helper 或 adapter。
+
 它不承担：
 
 - 模型供应商配置；
@@ -429,9 +445,9 @@ Pi 的 API、实验性 remote protocol 和未来 `AgentHarness` 抽象可以演�
 - UI；
 - 用户全部扩展的自动镜像。
 
-### 8.4 Slurm 是第一个具体调度器
+### 9.4 先做本地耐久进程与一个具体调度器
 
-不要先建 `SchedulerFramework`。先把 Slurm 做对：
+不要先建 `SchedulerFramework`。先把本地进程的 PID/日志/退出状态/重启对账做对，再把 Slurm 做成第一个外部调度器：
 
 - 登录节点与计算节点分离；
 - 提交产生远程 manifest 和本地 `ExternalExecutionRef`；
@@ -444,7 +460,7 @@ Pi 的 API、实验性 remote protocol 和未来 `AgentHarness` 抽象可以演�
 
 第二个真实调度器出现以后，再提炼公共接口。
 
-### 8.5 文件权威与同步
+### 9.5 文件权威与同步
 
 远程文件留在远程。编辑、搜索、Wiki 生成和分析都可在原位置执行。
 
@@ -462,15 +478,15 @@ Pi 的 API、实验性 remote protocol 和未来 `AgentHarness` 抽象可以演�
 - 用 base64 JSON 搬运大二进制；
 - 因网络断开把缓存误写回旧版本。
 
-## 10. 文件原生 LLM Wiki
+## 10. 文件原生知识与 Agentic Wiki
 
-### 9.1 产品判断
+### 10.1 产品判断
 
-OmniMind 不默认把个人资料库送进传统 chunk-embedding-vector RAG。对几十到约一千篇文献、笔记、网页、数据说明和项目资料，优先采用文件原生的 LLM Wiki + agentic search。
+OmniMind 不默认把个人或项目资料送进传统 chunk-embedding-vector RAG。对几十到约一千份论文、代码、合同、笔记、网页、数据说明、会议材料和混合文件，优先采用可见 Markdown Wiki + exact/FTS + agentic search。
 
-这不是宣称 RAG 永远无效。超大规模知识库、机构检索和已有专业系统可以通过外部能力提供。OmniMind 自己不因为那些场景背负一个重型知识库后端。
+这不是宣称 RAG 永远无效。OCR/扫描件、多语言语义召回、超大规模知识库、机构权限检索和已有专业系统可以通过按需 bundled backend、curated extension 或外部能力提供。是否升级必须由真实 recall、latency、更新成本和权限边界证明，不能由“文件数量超过某阈值”决定。
 
-### 9.2 信息所有权
+### 10.2 信息所有权
 
 - 原始来源文件不可被 Wiki 修改；
 - source manifest 记录来源位置、哈希、版本和摄取时间；
@@ -479,12 +495,12 @@ OmniMind 不默认把个人资料库送进传统 chunk-embedding-vector RAG。�
 - `log.md` 记录重要摄取、刷新、修复和来源变化；
 - 搜索索引、缓存和 FTS 数据可删除重建；
 - 来源变更使依赖页面变成 stale，而不是静默覆盖；
-- 生成内容是综合与导航，不替代原始证据；
+- 生成内容是综合与导航，不替代原始材料；
 - Wiki 中的结论必须能回到来源引用或明确标为未核实综合。
 
-### 9.3 原生但模块化
+### 10.3 原生但模块化
 
-Wiki 是 OmniMind 的原生产品能力，因为用户需要统一的初始化、摄取、查询、保存、刷新、lint、diff 和恢复体验。
+文件原生知识是 OmniMind 原生负责的产品能力，因为用户需要统一的初始化、摄取、查询、保存、刷新、lint、diff 和恢复体验。其实现可以是 bundled first-party module，不要求所有知识逻辑驻留 kernel。
 
 它不需要成为领域聚合或独立知识平台。实现可由普通文件、manifest、Git/检查点、FTS 和一组确定性 helper 组成。
 
@@ -499,7 +515,7 @@ Wiki 是 OmniMind 的原生产品能力，因为用户需要统一的初始化�
 
 这些不一定成为公开 CLI 命令，但行为边界应清楚。
 
-### 9.4 Agent 与确定性 helper 的分工
+### 10.4 Agent 与确定性 helper 的分工
 
 Agent 负责：
 
@@ -522,13 +538,13 @@ Agent 负责：
 
 不要让 LLM 负责本可确定验证的完整性，也不要让数据库吞掉人可读的 Wiki。
 
-### 9.5 编辑与后台行为
+### 10.5 编辑与后台行为
 
 在受信工作区，Agent 可以一次修改多个 Wiki 页面，不逐文件弹确认；所有变化都通过普通 diff、journal 和回滚可见。
 
 第一版不默认静默夜间重写。定时 refresh/lint 必须由用户显式开启，并有范围、预算和失败可见性。
 
-### 9.6 搜索演进
+### 10.6 搜索演进
 
 初始使用：
 
@@ -537,17 +553,17 @@ Agent 负责：
 - 文件名、标题、链接与引用；
 - SQLite FTS 或同等级本地全文索引。
 
-Embeddings、QMD、reranker 或混合检索是按真实召回失败加入的可选投影，不设武断的“超过 N 篇就切 RAG”阈值。
+Embeddings、QMD、reranker、语义索引或混合检索是按真实召回失败加入的可删除投影，不设武断的“超过 N 篇就切 RAG”阈值。外部大型知识服务保持自己的数据库、权限和生命周期；删除连接不能删除外部知识。
 
 ## 11. 权限与信任
 
-### 10.1 基本立场
+### 11.1 基本立场
 
 受信工作区中的 Agent 默认拥有完成工作所需的完整文件和命令权限。产品不把每一个 `git diff`、测试或普通编辑变成确认仪式。
 
 但“我信任 Agent”不等于“我信任任何第三方代码”，也不等于“任何不可逆外部动作都无需边界”。
 
-### 10.2 三种不同信任
+### 11.2 三种不同信任
 
 1. **工作区信任**
 
@@ -565,7 +581,7 @@ Embeddings、QMD、reranker 或混合检索是按真实召回失败加入的可�
 
 ## 12. 工作台与交互
 
-### 11.1 不是聊天应用
+### 12.1 不是聊天应用
 
 界面应围绕“正在做的工作”组织，而不是围绕消息气泡组织。稳定骨架包括：
 
@@ -575,7 +591,7 @@ Embeddings、QMD、reranker 或混合检索是按真实召回失败加入的可�
 - 后台 Thread 的运行、阻塞和未读状态；
 - 能力与信任的渐进披露。
 
-### 11.2 Proma 的地位
+### 12.2 Proma 的地位
 
 Proma 是首要工作台设计与代码移植物来源之一，不只是灵感板。
 
@@ -598,7 +614,7 @@ Proma 是首要工作台设计与代码移植物来源之一，不只是灵感�
 
 判断单位可以是一组文件、一个组件域、一个完整 renderer，甚至 fork；不人为限定为“只能搬纯函数”。真正标准是移植后的概念纯度和总维护成本。
 
-### 11.3 必须保留的交互能力
+### 12.3 必须保留的交互能力
 
 - 工作按位置组织，但不把位置变成臃肿 Workspace 聚合；
 - running / blocked / unread 一眼可见；
@@ -614,9 +630,48 @@ Proma 是首要工作台设计与代码移植物来源之一，不只是灵感�
 
 视觉上追求克制、精确、密集、有秩序的 IDE 工作台；拒绝营销式 hero、渐变光球、装饰卡片和只为“AI 感”存在的动画。
 
+### 12.4 已锁定的工作台心智
+
+- 普通 Chat 可以没有文件夹；工作型 Thread 的主要位置通常是一个目录，但目录不是聊天的强制前提；
+- 每个 Chat 独立保存自己的工作台标签、打开文件、分屏和浏览上下文，离开后重新进入可以恢复；
+- 主 Thread 是稳定中心，右侧是按需出现的上下文工作台，不是永久 Dashboard、Remote 面板或编排控制台；
+- 用户在 Agent 运行时随时可以打开它刚生成或修改的文件，“审阅”首先就是普通查看，不创造新的 Review 对象；
+- 文件、diff、终端、浏览器、子 Agent、临时问题和输出共享标签系统，不为每种能力建立一个一级产品区；
+- 文件树、标签与内容视图之间保持熟悉的 IDE 心智，同时允许更少步骤、更好的恢复和更自然的 Agent 活动投影；
+- Remote 只有在当前位置或动作实际位于远端时才通过轻量位置标识、连接状态和相关操作出现，不支配默认布局；
+- 所有稳定控制尺寸固定、状态切换不跳动；动效短、快、可打断，只解释空间关系。
+
+### 12.5 文件与输出查看
+
+第一版查看契约：
+
+- Markdown 原生渲染标题、代码、表格、引用、公式和内嵌图片；
+- 图片支持缩放、平移、多图切换、比较、尺寸和来源；区域选择后交给 Agent 修改属于后续可插拔能力，不把科学图像标注硬编码进 viewer；
+- PDF、Office、表格、音视频和其他常见文件尽量在工作台内高质量预览；
+- 未知文件至少提供元数据、可提取文本、十六进制或安全摘要，并可调用系统默认应用打开；
+- 大文件、二进制和流式日志不得完整塞进 renderer、transcript 或模型上下文；
+- 所有 viewer 都使用同一 `Open / Preview / Reveal / System Open` 语义，自定义 renderer 在真实消费者出现后再扩展。
+
+### 12.6 Agent、临时问题与通讯
+
+- 子 Agent 是完整、可进入、可追问、可纠偏、可停止的 child Thread，不是只显示最终摘要的黑箱；
+- 用户可以给父子或同级 Agent 发送消息；所有 message、delivered/read/ack 和 attention 都进入同一原生 message event stream，Thread/Attempt journal 只通过相同 event ID 引用，不另存第二份消息；
+- 子 Agent 可以继续委派，但必须受深度、并发、预算、权限、停止和单一集成所有者约束；
+- 临时提问是轻量分支，可以把结论带回主 Thread，不必总是创建新的普通 Chat；
+- 子 Agent、临时分支和动态编排只在发生时进入活动树；普通任务不展示团队、Workflow 或多 Agent 术语；
+- 同一工作区写入默认只有一个明确 owner；并行读取可以 fan-out，隔离写入必须由唯一 integration owner 收口。
+
+### 12.7 视觉、性能与跨平台
+
+- 气质：冷静、精确、克制，在高信息密度中保留少量温度；
+- 动效：快、短、可打断，只解释层级、展开、切换和返回关系；
+- 性能：建立可测预算和回归门，严重退化不能靠“体感尚可”交付；
+- 平台：macOS、Windows、Linux 保持相同品质和语义，同时尊重各自窗口、快捷键、菜单、文件选择、通知和系统打开习惯；
+- 创新必须降低理解或操作成本。不能因为追求“未来感”破坏已有成熟工作台心智。
+
 ## 13. 移植原则
 
-### 12.1 搬运是一等工程手段
+### 13.1 搬运是一等工程手段
 
 允许并鼓励：
 
@@ -630,7 +685,7 @@ Proma 是首要工作台设计与代码移植物来源之一，不只是灵感�
 
 不设置“目录级搬运禁止”“只能参考不能复制”“必须 clean-room 重写”一类形式主义约束。
 
-### 12.2 源码证据先于项目叙事
+### 13.2 源码证据先于项目叙事
 
 README、包页面、作者宣传、示例截图、功能清单、自报 benchmark、stars 和下载量只能用于发现候选、理解作者声称和判断生态采用度，不能证明实现质量。
 
@@ -646,7 +701,7 @@ README、包页面、作者宣传、示例截图、功能清单、自报 benchma
 
 文档与代码冲突时，以固定 revision 的源码和可复现实验证据为准。源码无法取得或声称无法核验时，标记为 `unverified`，不得进入推荐结论。主动淘汰只有 prompt wrapper、不可恢复内存态、无终止边界、无真实测试或已经失养，却用完整叙事包装的项目。
 
-### 12.3 每块移植物的四个判断
+### 13.3 每块移植物的四个判断
 
 1. **目标适配**：它是否直接服务本宪法定义的产品；
 2. **解耦成本**：切掉宿主概念后是否仍比重写更划算；
@@ -655,7 +710,7 @@ README、包页面、作者宣传、示例截图、功能清单、自报 benchma
 
 一块代码可以很大，只要四项都成立。一个函数也可以被拒绝，只要它把错误概念带进核心。
 
-### 12.4 受治理 fork
+### 13.4 受治理 fork
 
 受治理 fork 是一等工程路径，不是最后不得已的补丁。一个实现的主体已经优秀，瑕疵属于可以逐条命名的性能、交互、可靠性、测试、发布节奏或局部边界问题，并且长期分叉成本低于最小重写时，应当果断 fork 后接管。
 
@@ -688,7 +743,7 @@ fork 的 `origin` 指向受控仓库，`upstream` 指向原仓库；产品始终
 
 受控 fork 仓库必须诚实保留 upstream 关系、历史、作者和法律文本，不能伪装原创。OmniMind 产品作者区仍按稳定领域职责命名；来源、固定 revision、采用路径、主要删改与授权集中在根 README 披露，法定原文进入 `LICENSES/`。身份洁净阻止 donor 支配产品本体，不抹除真实来源。
 
-### 12.5 真正禁止的事情
+### 13.5 真正禁止的事情
 
 - 来源不明或授权不清却冒充原创；
 - 未审阅依赖图就整仓吞入；
@@ -752,27 +807,22 @@ Proma 的额外授权必须写下来；同时核查被移植文件是否含第�
 
 任何移植物进入后都要接受这些约束；“上游就是这样”不是豁免理由。
 
-## 16. 科研优先但核心通用
+## 16. 领域只是 workload
 
-科研优先体现在任务选择和验收上：
+OmniMind 不设置科研优先的产品层。科研、生物医学、编码、合同审阅、数据分析、训练、仿真和部署都使用同一套：
 
-- 千篇级文献和项目资料可形成可检查 Wiki；
-- 本地 Agent 能在远程服务器工作；
-- Slurm 任务能跨断线恢复；
-- 分析输出有来源、有文件、有日志、可重复；
-- 科学工具通过能力接口进入；
-- 人可以在关键判断点接管、修改和否定；
-- 最终输出可被复查，而不是只有一段回答。
+- Thread / Attempt / Action；
+- 文件、终端、浏览器和外部能力；
+- Todo、Delegated Agent、Team 与 Dynamic Workflow；
+- 本地/远程 `ExecutionTarget`；
+- checkpoint、receipt、恢复和耐久外部执行；
+- 文件原生知识与按需检索。
 
-它不体现在：
+领域任务可以作为高强度验收，例如千篇混合资料、远程长计算、复杂代码修改或多文件合同审阅；但不得由此创建 Research Mode、Scientific Thread、领域专用 Agent、记忆、Workflow、Remote 或导航入口。
 
-- 给 Thread 增加 `Hypothesis` 字段；
-- 在核心数据库建立 `Evidence`、`Paper`、`Cohort`、`Gene`；
-- 让 OmniScholar 成为所有知识的唯一入口；
-- 把生物医学流程硬编码成通用 Agent loop；
-- 用 Omni 前缀为每个模块命名。
+领域系统通过普通 capability/function-call 进入，与 Git、浏览器、MCP server 和 CLI 同级。它们可以返回结构化结果和来源引用，但不拥有 OmniMind 的 Thread、Todo、验收、文件或外部任务状态。
 
-临床研究可以使用同一通用工作台；患者级诊断、治疗建议和自主临床动作若未来进入产品，必须作为独立治理表面处理，不能借“科研 Agent”默认获得授权。
+患者级诊断、治疗建议、金融交易、生产发布等高后果行为若未来进入产品，应按外部副作用和专业治理单独处理；不能借某个领域标签自动获得或失去权限。
 
 ## 17. 明确斩断的旧路径
 
@@ -798,35 +848,53 @@ Proma 的额外授权必须写下来；同时核查被移植文件是否含第�
 
 ## 18. 第一阶段的成功定义
 
-第一阶段不是“功能与旧产品相同”，而是三个可丢弃探针和一个极薄 walking skeleton 给出可信答案：
+第一阶段不是“功能与旧产品相同”，而是五个可丢弃探针和一个极薄 walking skeleton 给出可信答案：
 
-### 探针 A：Pi 集成
+### 探针 A：引擎与 Pi 生态兼容
 
-- 创建并恢复 Pi session；
-- 本地文件/终端工具可用；
-- stream、cancel、branch 和 tool lifecycle 可映射；
+- 创建、恢复和分支引擎 session；
+- stream、cancel、tool lifecycle、dynamic registration 和 headless 降级可映射；
 - transcript 不重复存储；
 - Thread/Turn/Attempt/Action 关联清楚；
-- Proma 候选工作台能消费这一事件流。
+- 至少一个 Todo、一个 delegated Agent、一个 dynamic workflow 和一个普通工具 package 经过兼容报告；
+- raw TUI、session control 和第二状态真相能够在加载前被准确拒绝；
+- 只把当前任务需要的 tool schema 放入上下文。
 
-### 探针 B：远程与 Slurm
+### 探针 B：工作台移植与交互骨架
 
-- 使用真实 OpenSSH 配置连接测试主机；
-- 远程文件与 PTY 可操作；
-- 提交一个 Slurm 任务；
-- 关闭 OmniMind/断开 SSH 后任务继续；
-- 重开后准确对账并查看日志；
-- 未知副作用不被误报。
+- 完整 renderer transplant 与新状态边界垂直切片同场比较；
+- 每 Chat tabs 恢复、文件查看、右侧上下文工作台、diff/terminal/browser/child Thread 成立；
+- queue、append、interrupt、临时问题分支和 background attention 可用；
+- 长 Thread、Markdown 表格、图片和大输出有测量证据；
+- macOS、Windows、Linux 语义一致且尊重平台习惯。
 
-### 探针 C：持久内核与 Wiki
+### 探针 C：持久运行时、文件与恢复
 
 - Thread 接纳先于引擎执行落盘；
-- 崩溃后能恢复到准确状态；
-- 文件改动能 checkpoint/branch/rollback；
-- 一组真实资料生成可见 Markdown Wiki；
-- 来源改变触发 stale；
-- FTS/索引可删后重建；
-- 远程位置也能原地执行同一流程。
+- Todo 只是可重建计划投影；
+- child Thread、Team message 和 Dynamic Workflow 引用不复制彼此状态；
+- observed-version/CAS 写入阻止盲目覆盖；
+- checkpoint 覆盖新增、修改、删除、rename 和未跟踪文件；
+- restart、rewind、branch、notification 和 `outcome_unknown` 准确；
+- Git 存在时只是外部权威投影，不自动 commit/stash/reset/clean。
+
+### 探针 D：Remote 与耐久外部执行
+
+- 使用真实 OpenSSH 配置连接测试主机；
+- 版本化 helper 提供远程文件、PTY、进程、binary transfer 与 CAS write；
+- 提交一个 Slurm 任务；
+- 关闭 OmniMind/断开 SSH 后任务继续；
+- 重开后准确对账并查看日志、产物与取消回执；
+- submit acknowledgement 丢失、传输中断和 helper 升级都不伪造结果。
+
+### 探针 E：知识、扩展 artifact 与自动更新
+
+- 混合资料生成可见 Markdown Wiki；
+- exact/FTS/agentic search 与按需语义检索做真实 recall/latency 对比；
+- 来源改变触发 stale，用户编辑不被静默覆盖，索引可删除重建；
+- bundled、curated 和任意第三方 artifact 经过 staging、trust-envelope diff、safe-boundary activation 与 LKG rollback；
+- active Attempt、browser target 或 external execution 能继续租用旧 generation；
+- 新 generation 只接新工作，失败可自动恢复上一版本。
 
 探针代码可删除。探针的目的不是成为第一版生产架构，而是让真正昂贵的决定在大规模移植前有证据。
 
@@ -838,7 +906,7 @@ Proma 的额外授权必须写下来；同时核查被移植文件是否含第�
 2. 哪个选择让事实所有权更单一？
 3. 哪个选择删除更多错误概念和边界？
 4. 哪个选择更容易在本地与远程同时成立？
-5. 哪个选择让科研任务更可靠，同时不污染通用核心？
+5. 哪个选择能支撑多个差异很大的高强度 workload，而不引入领域专用核心？
 6. 哪个选择可以通过移植成熟实现更快获得高质量，而不带来宿主债？
 7. 哪个选择的失败和恢复更可解释？
 8. 哪个选择能用真实探针证伪？
@@ -854,17 +922,17 @@ Proma 的额外授权必须写下来；同时核查被移植文件是否含第�
 正确动作是：
 
 - 先建立独立仓库和来源纪律；
-- 先做三个可丢弃探针；
+- 先做五个可丢弃探针；
 - 用探针决定 Pi、Proma、远程和 Wiki 的真实移植边界；
 - 每一次只引入一块有明确所有权的能力；
 - 搬来后立即删除宿主概念和重复真相；
 - 没有旧用户，就不要花未来维护成本保护过去；
-- 不要把“简洁”误解为牺牲远程、恢复、知识工作和科研质量；
+- 不要把“简洁”误解为牺牲远程、恢复、知识工作和高强度任务质量；
 - 不要把“生态”误解为把所有扩展预装进核心；
 - 不要把“授权充分”误解为可以省略来源和质量判断；
 - 不要重新发明一个披着中性名词的 Claude Code。
 
-新 OmniMind 的优势不应来自功能列表更长，而应来自：内核小、工作台强、远程真实、知识可积累、能力开放、失败诚实、移植果断。
+新 OmniMind 的优势不应来自功能列表更长，而应来自：内核小、工作台强、生态可吃、远程真实、知识可积累、能力开放、更新自动、失败诚实、移植果断。
 
 ## 21. 来源与移植物披露
 
@@ -1367,3 +1435,256 @@ Deletion/rollback plan:
 - pi-dynamic-workflows 等生态按需启用。
 
 它们只是首选实验组合。最终仓库只披露实际采用者，并在生产作者区保持零身份残留。
+
+## 22. Pi 生态七类源码审判冻结
+
+> 冻结日期：2026-07-31
+>
+> 本节把跨会话研究转成产品约束。它记录源码判断和探针入口，不表示任何候选已经进入生产；`source-adoptions` 仍是实际采用的唯一机器清单。
+
+研究覆盖：Todo/plan、delegation/team、dynamic workflow/goal、package governance、file/Git/checkpoint/review/notification、browser/web/MCP、knowledge/remote/durable external execution。下载量、stars 和 gallery 排名只用于发现候选；永久判断来自固定 revision 的入口、状态权威、错误路径、依赖和测试。
+
+### 22.1 一个统一分层
+
+| 层 | 职责 | 更新与状态纪律 |
+| --- | --- | --- |
+| Native durable primitives | Thread/Attempt/Action、journal、message、receipt、cancel/resume、引用、权限和 generation lease | 状态唯一、最少、可恢复；不按 donor 或领域命名 |
+| Bundled first-party modules | 文件工作台、Dynamic Orchestration、Delegation/Team、Durable Goal、Review、Browser、HTTP、MCP bridge、知识和 Remote adapters | 随 App 发布、无需安装、按需加载、可关闭；不要求常驻或同进程 |
+| Pi compatibility bridge | 翻译 Pi tool/skill/prompt/extension lifecycle 与通用 UI/headless 行为 | 首发可用；不继承 Pi TUI、session ontology、provider mutation 或第二状态真相 |
+| Curated optional packages | 经真实场景证明有独特价值、可被清楚治理的 package | exact artifact；默认可在既有 trust envelope 内自动更新；可随时禁用和回滚 |
+| Arbitrary third-party packages | 用户选择的任意完整权限代码 | 首次 exact artifact 明确选择；加载前 compatibility report；不伪称 sandbox |
+| External services | 机构知识库、远程调度器、MCP server、浏览器和其他系统 | 外部系统继续拥有自己的数据、会话、任务和凭据；OmniMind 只保存引用、观察和回执 |
+
+“零第三方默认 runtime”只表示核心状态不依赖某个社区包，不表示排斥 Pi 生态。Pi compatibility 是首发产品要求；能直接运行的包直接运行，优秀但有有界瑕疵的实现可以 fork，边界不合适的只移植机制。
+
+### 22.2 唯一状态权威总表
+
+| 事实 | 唯一权威 | 其他层只保存什么 |
+| --- | --- | --- |
+| 对话内容 | engine transcript / child transcript | parent 只保存 child ref、摘要和 attention，不复制全文 |
+| 产品动作与副作用 | Thread/Attempt journal | UI、通知和扩展只投影 lifecycle/receipt |
+| 当前执行计划 | product journal 中属于当前 Thread branch 的 canonical plan event stream | engine transcript 只保存 ref；Todo 是可重建投影；Team、Workflow、Goal 不复制正文 |
+| child Agent 内容 | child Thread | parent journal 保存 relation、lifecycle、steer/stop/follow-up |
+| Team | 单一 native message event stream + membership/assignment index | Thread journal 共享 event ID；只保存 member、assignmentRef、owner、delivered/read/ack；无第二 mailbox 或通用 task board |
+| Dynamic Workflow | parent Attempt 的 run/step/attempt journal | child 内容在 child Thread；外部任务状态在外部系统 |
+| 显式 Durable Goal | product journal 中的 `GoalRef`、claim 与 verification events | Goal strategy 负责 continuation，不拥有独立聚合或模型自证完成权；普通 Chat 不自动成为 Goal |
+| 文件 bytes/metadata | local 或 remote filesystem | watcher、hash、cache、diff 都是观察或投影 |
+| Git commit/index/ref | 用户 Git repository | status/diff/history 是投影；默认不自动 commit/stash/reset/clean |
+| checkpoint | journal 中的 `CheckpointRef` + immutable recovery material | recovery material 不是第二个日常工作区 |
+| review | 当前文件/Git/diff/receipt 的临时投影 | 不建立 comments database、acceptance ledger 或第二任务状态 |
+| attention/unread | Thread/Attempt journal | OS toast、terminal/tmux 通知只是传输投影 |
+| Browser tab/profile/cookie/DOM | browser process/profile | journal 保存 TargetRef、Action receipt 和 ownership/handoff |
+| MCP resource/tool/session | MCP server | adapter 保存 connection generation 和可丢 metadata cache |
+| 原始知识资料 | 用户文件或外部知识服务 | saved Wiki 是可见 Markdown；FTS/vector/cache 可删除重建 |
+| 本地/远程进程和调度任务 | OS process / external scheduler | `ExternalExecutionRef` 保存 ID、观察、日志/产物引用和回执 |
+| 凭据 | OS credential store、ssh-agent 或外部 provider | journal、argv、日志、截图和证据不保存秘密 |
+| extension artifact | content-addressed artifact store + activation pointer | project 只请求 artifact；Attempt 租用精确 generation |
+
+### 22.3 Todo、Agent、Team、Workflow、Goal 与 Review
+
+**Todo**
+
+- canonical mutation/checkpoint 是 product journal 中、按 Thread branch 归属的 plan event；Todo UI 和 tool result 都是该 event stream 的可见、可纠偏、可重建投影；engine transcript 只保存 event ref，不复制完整计划；
+- 最小状态为 pending / in-progress / completed / deleted，加必要 dependency 引用；
+- 悬空、自依赖和环必须被 reducer 拒绝；branch、reload、compaction 和 child isolation 必须可重放；
+- 不创建独立 Todo 数据库、核心 Task 聚合、验收系统或第二完成治理。
+
+**Delegated Agent**
+
+- 一个委派产生一个真正的 child Thread，可前台或后台运行；
+- 支持进入、追问、steer、stop、continue、resume 和 crash reconciliation；
+- child 只向 parent 返回 compact result/attention ref，不把完整 transcript 灌回父上下文；
+- 允许嵌套委派，但必须有深度、并发、turn、duration、cost 和 spawn 上限；
+- 读可 fan-out；共享写入和最终集成只有一个 owner。
+
+**Persistent Team**
+
+- 只在用户明确创建或任务确实需要持续协作时出现；
+- 增加成员生命周期、assignmentRef 和对单一 native message event stream 的 typed projection，包括 delivered/read/ack、TTL、idempotency 和 bounded attention；
+- 不增加第二 Todo、依赖图、acceptance、Workflow DAG、自动 commit 或自动 merge；
+- 用户可以向父子或同级 Agent 发消息，所有通讯进入同一可审计 ledger。
+
+**Dynamic Workflow**
+
+- Agent 根据当前任务和实时结果即时生成、追加、删除、改序、分支、循环、并行、汇总和终止编排；
+- 普通任务直接完成，不要求用户写 DAG、YAML、模板或理解 Workflow；
+- 固定的是 journal、resume、cancel、hard caps、retry lineage、receipt、single integration owner 与 `outcome_unknown`，不是工作步骤；
+- retry 创建新 attempt，不覆盖旧 attempt；只有纯、幂等或有外部 receipt 的动作可自动 replay；
+- 成功运行可以保存为 Skill/策略模板，但不冻结机器路径、凭据、外部状态或整次运行真相。
+
+**Durable Goal**
+
+- 是显式创建的 first-party strategy，不是每个普通 Chat 的默认包装；
+- `GoalRef`、claim、预算、验证引用和状态变化仍是 product journal events，不创建 Thread/ExecutionTarget 之外的第三聚合；strategy module 只负责长期 continuation；
+- 不能把模型自报“完成”当成完成权；完成必须来自声明的外部验证或人类裁决；
+- repository Campaign 是开发治理机制，不应被社区 Goal package 偷换成产品 Todo 或 Workflow 状态。
+
+**Review**
+
+- 默认含义是打开文件、查看结果和 diff；不创造 Review 聚合；
+- 动态多 Agent review 可以作为按需 first-party strategy，无感调度 child Agent，并把发现投影到同一活动树；
+- review extension 不拥有 transcript、comments database、acceptance ledger、checkpoint 或任务板。
+
+### 22.4 文件、Git、checkpoint 与通知
+
+文件读取返回 observation token，至少包含 identity/type/size/mtime/content hash。create/replace/edit/delete 必须携带 expected observation；外部变化导致 conflict，而不是盲目覆盖。
+
+写入和恢复纪律：
+
+1. 同目录临时文件；
+2. 写入并校验；
+3. fsync；
+4. atomic rename；
+5. journal 写 settled receipt；
+6. 无法确认则 `outcome_unknown`。
+
+多文件 checkpoint 使用 `prepared → applying → verifying → committed`；restore 前建立 safety checkpoint，失败进入 rollback，rollback 也失败时保持未知。第一探针可以使用 per-Location/per-Attempt 私有 bare Git 作为 recovery material，但不得触碰用户 repo 的 HEAD、index、refs 或 stash。
+
+Exact search 首选固定版本的 rg/fd 或小型 library；fuzzy navigation 是 UI 能力；语义索引只有真实规模和召回证据后按需出现。Notification 只表达 completed / attention / failed / outcome_unknown，去重、前台抑制、无敏感内容，并能跳回原 Thread/Attempt。
+
+### 22.5 Browser、Web 与 MCP
+
+- 人类浏览器 view 与 Agent browser control 可以共享一个可见 target，但 ownership 和 lifecycle 分开；用户已有 tab 默认不归 Agent 所有；
+- Browser、HTTP/web 和 MCP 是 bundled first-party adapters，不是新的 Thread、Workflow 或产品身份；
+- 首发 MCP 支持 tools/resources/prompts、stdio、Streamable HTTP 和 OAuth；legacy SSE 只作 fallback；sampling、elicitation、interactive app UI 和 experimental tasks 等真实消费者出现后再开；
+- 只暴露当前任务需要的 tools；大量 server schema 不得常驻模型上下文；
+- 下载成功必须有 filesystem `OutputRef`、path、size、digest 和 source；“浏览器报告路径”不等于文件已落盘；
+- 上传、提交、支付、删除等动作在用户意图明确时可以安静执行，但必须留 receipt；意图不明确才询问；
+- dispatch 后 timeout、disconnect、cancel 或 process exit 不能自动解释为未执行；非幂等动作在 `outcome_unknown` 时禁止盲目重试。
+
+最小外部 Action receipt：
+
+```text
+actionId / attemptId
+adapterGeneration / artifactDigest
+targetRef / connectionRef
+operationClass / idempotencyKey?
+redactedRequestFingerprint
+proposed / policyDecided / started / dispatched / settled timestamps
+dispatchCertainty = not_dispatched | dispatched | acknowledged
+settlement = settled | failed_before_dispatch | outcome_unknown
+externalReceiptRef / outputRefs / reconcile method
+```
+
+### 22.6 Knowledge、Remote 与耐久外部执行
+
+正确分类是 `knowledge / remote / durable external execution`。已撤回 `research / knowledge / remote / long compute`；领域只是 workload。
+
+**Knowledge**
+
+- 默认路径是 visible Markdown Wiki + source manifest + filename/glob/ripgrep + links/metadata/FTS + agentic search；
+- 原始资料保持权威；用户编辑的 Wiki Markdown 是可见持久综合；FTS/vector/cache 是可删除投影；
+- source 变化标 stale，不能静默覆盖人工修订；
+- embeddings、reranker 或外部知识服务只有 recall、latency、权限或规模证据后加入；
+- transcript memory package 不得逐轮复制并注入第二份隐藏记忆真相。
+
+**Remote**
+
+- UI、Agent loop、模型调用、Thread 和凭据默认留在本机；远端是普通 `ExecutionTarget`；
+- `LocationRef = executionTargetId + absolutePath`；Remote 不创建特殊 Workspace 或 Thread；
+- 系统 OpenSSH 处理 host key、ProxyJump、2FA、agent 和连接复用；
+- shell-only 只用于 bootstrap/诊断；结构化 helper 负责 stat/list/read/search/watch、CAS write、PTY/process、binary stream、bounded logs、scheduler 与 capability negotiation；
+- helper 按 OS/arch/protocol/content digest 固定，可版本并存、可回滚，无独立账号、UI、任务系统或模型配置；
+- 远端文件保持权威，默认不透明镜像；上传、下载和 opt-in sync 都必须显式、可校验和可恢复。
+
+**Durable external execution**
+
+- 第一版只做 native local process 与一个 Slurm adapter，不先造 Scheduler Framework；
+- submit intent 先入 journal，取得 external ID 后记录 acknowledged receipt；ack 丢失时按 token/用户/时间窗 reconcile，不能直接重提；
+- observe 使用事件流或指数退避；完整日志用 cursor/`OutputRef` 按需读取，不塞进模型上下文；
+- cancel requested 与 cancel acknowledged 分开；SSH 断开、本地 timeout 或 App 退出都不等于远端取消；
+- artifact 下载使用 `.partial`、size/hash 校验、原子 rename，并能续传或明确丢弃 partial；
+- macOS、Windows、Linux 控制端共享协议；首个 remote target 是 Linux/OpenSSH。tmux、PowerShell 和未来其他 scheduler 只是 backend/donor，不定义通用 Job 本体。
+
+### 22.7 自动更新是首发机制
+
+此前“禁止静默更新”的准确含义是：禁止未经验证、越过 trust envelope 的静默激活；不禁止安全、可回滚的自动更新。
+
+```text
+observed
+→ exact_candidate_resolved
+→ staged
+→ inspected
+→ compatible
+→ waiting_safe_boundary
+→ activating_generation
+→ health_check
+→ current (LKG)
+```
+
+异常分支：
+
+- owner/source/license/install script/native dependency/capability/state schema 实质扩张：`blocked_for_decision`；
+- ABI、测试、迁移或健康检查失败：`quarantined`；
+- 激活失败：`rollback_to_LKG`；
+- Pinned 只观察；Staged 下载和验证但不激活；Auto 在已批准 envelope 内完整自动运行。
+
+默认时机：App ready 后异步检查；距上次检查超过 24 小时才访问 registry；长期开机每日带 jitter 检查；打开扩展管理或用户手动操作时可即时刷新。Registry/gallery 只是 discovery projection，最终 artifact 必须由官方 metadata/source、exact revision 和 content digest 解析。
+
+Bundled first-party 随 App 原子更新和整版回滚。Curated package 在既有 envelope 内默认 Auto。任意第三方第一次选择 exact artifact；以后可 Auto/Staged/Pinned。任何 package 自带 updater 必须关闭或被 immutability 检测拒绝。
+
+一个 Attempt 从开始到结束租用同一 generation。Browser lease 绑定 target/profile/connection 的完整 lifetime，直到 target 关闭或显式迁移，而不只绑定单次 Action；MCP 等待旧 connection drain；HTTP 等待零请求；remote helper 与 scheduler Job 保留旧 generation 直到引用结清或显式迁移。活跃工作中绝不热替换。
+
+### 22.8 固定源码证据与当前采用裁决
+
+下表是研究 evidence，不是 `source-adoptions`。`runtime = none` 表示没有社区 package 成为默认状态权威，不表示其生态被排除。
+
+Evidence level：下列候选均为固定源码和相关测试文件已经阅读，**研究任务没有执行上游测试**。表中结论只能升级为 probe candidate，不能写成“测试已通过”。Metadata-only、源码与发布物无法对应或仓库不可取得的候选不进入本表。
+
+| 类别 | 固定来源 | 已观察价值 | 当前裁决 |
+| --- | --- | --- | --- |
+| Engine / extension seam | Pi `74caa2649f10ed71b4378ce69f5d9fbfd2466ca5` | session、tool lifecycle、dynamic tools、AbortSignal、headless、operation injection | thin engine/compatibility adapter；首发兼容，产品状态原生 |
+| Package governance | `pi-extmgr` `9a0cf32ab83dcf00d6878c09c80aad85a4dd5687` + Pi core `74caa2649f10ed71b4378ce69f5d9fbfd2466ca5` | discovery、package lifecycle、mutable checkout 与更新风险的真实边界 | 原生 immutable artifact/LKG 治理；只移植机制，不采用第三方 manager runtime |
+| Todo | `@99percentpeople/pi-todo` `0d85185fc1af2c66df54fcd9347c6e53d10e83f6` | reducer、branch/replay 基线 | native Todo + bounded transplant；无社区 Todo runtime |
+| Delegation | `pi-submarine` `5bebbc52ef18f0da092b28f404cd389cfd3577f0` | child transcript、episode、replay/resume | child Thread donor；补 background、locks、limits |
+| Background Agent | `pi-subagents` `89de10e4bc8895e7948704c38620a5b35ddcd17e` | reconcile、steer ack、supervisor、control inbox | 只移植 lifecycle/reducer；拒绝巨型 runtime |
+| Team mailbox | `pi-agentteam` `3b3b1e4b599cbc6dad2c6202eec5025edb4ed363` | typed message、outbox、TTL、idempotency、attention | 移植 mailbox/receipt；拒绝 task board 与 tmux 本体 |
+| Dynamic Workflow | `pi-dynamic-workflows` `31b2aca0f1cb195aafbfc5e3ee2b8c83ad3f21a2` | Agent 现场生成 JS 编排、条件/并行/pipeline | 灵魂正确；native + bounded transplant；补 journal/replan/receipt/hard caps |
+| Workflow reliability donors | `pi-extensible-workflows` `1e05e223e5894ad7d81eb8fe615504607df7b9ef` + `@agwab/pi-workflow` `c3fb83cc3204bf171b4461b84a6e0b7532a7bed7` | reducer、launch snapshot、journal/replay、lease、stop intent、非幂等 fence | 只移植可靠性不变量；固定图 ontology 不定义产品 Workflow |
+| File rendering | `pi-tool-display` `91cef7580078371f8dc49a8607222807ad6a424d` | Unicode/BOM/CRLF/binary 边界、pending diff | bounded renderer transplant |
+| Diff review | `pi-diff-review` `de3fa5983a64cd98f09c95af7426152253f5ed4c` | parser、split view、stale relocation | 只移植 parser/interaction；拒绝 comments 状态 |
+| Checkpoint | `oh-my-pi` checkpoint `c84e9c020035c7814a834e91993a7ce15865a3b7` | private bare repo、lock、snapshot/replay | 第一 recovery donor；必须补 safety transaction 和失败回滚 |
+| Conditional search | FFF `686a84959ddc72185a7cacaf00145af5ccac7a83` | Rust index/watch/fuzzy/frecency | 只在大仓性能 probe 证明需要后采用底层 library |
+| MCP | `pi-mcp-adapter` `6a3e840219a49f9ae5350542b7a707aa1e83fedf` | connection owner、stdio/HTTP、OAuth、recovery、schema conversion | 最强 donor/compatibility probe；不原样成为内核 |
+| Browser | `pi-agent-browser-native` `211a012c9b199d758768e8ba729f35e11e661f65` | process cleanup、session/page projection、真实 contract tests | disposable adapter probe；移植不变量，非默认 runtime |
+| HTTP/web | `pi-web-access` `c702b3be11bfbc832489eb7cfe31d9bbbbb2cc27` | SSRF、manual redirect、extraction、error handling | bounded transplant；拒绝 research/curator/credential 复合 runtime |
+| Optional semantic knowledge | `pi-knowledge` `c18a6bf4f6468566e8ed878dd971c98c2ccf471d` | parser、FTS、symbol、optional embedding、staging/locks | recall probe 后的 curated optional；不默认内置 |
+| External knowledge | WeKnora `e99a4dd498d6847817b7c568e7cb4f1d0460179e` | durable queue、retry/dead-letter、revision、source/citation | ordinary external connector + bounded donor；拒绝整套捆绑 |
+| Remote shell probe | `pi-ssh` `426baa1223ebad0ec399045a4b3675babbaab293` | 系统 SSH、operation replacement、ControlMaster | disposable protocol probe；shell-only 不足以成为 Remote |
+| Remote protocol | Distant `ba58064593ecb9e1b046c7e0d4626f39aa5c2633` | structured FS/search/watch/process/PTY 与 reconnect | strongest protocol donor；alpha，缺 CAS/scheduler，不 fork |
+| Local durable backend | `pi-tmux-task` `4514689b7b4917dff8d4bc130d781c2e5f2e7014` | tmux 权威、restart scan、real integration tests | curated optional backend；不定义通用 Job |
+| Workbench | Proma `aa02c16819399e7683533f15cfe202754d6b156c` | renderer、event coalescing、background activity、file change UI | 继续 full-renderer vs vertical-slice probe；旧 SDK 只属迁移，不是未来方向 |
+
+明确拒绝的模式：独立 Todo/Team task DB、固定 DAG/YAML Workflow、模型自报 Goal 完成、自动 commit/merge、用户 Git 上 reset/clean checkpoint、复制 transcript 的 memory、默认向量/RAG、完整远程产品 server、透明目录 mirror、MCP 作为唯一扩展协议、capability manifest 冒充 sandbox、在 active work 中热更新。
+
+### 22.9 行为验收而不是竞品功能表
+
+外部优秀产品只提供可观察行为 oracle，不提供生产命名、模式或内部数据结构。V1 至少必须通过以下品牌中立场景：
+
+1. 一个普通任务不显示 Workflow/Team，却能自然完成；
+2. 一个复杂任务自动委派并并行读取，用户可进入、追问、停止任一 child Thread；
+3. 新证据出现后 Dynamic Workflow 能中途改路，而不是继续执行冻结步骤；
+4. App 重启后 Todo、child lifecycle、checkpoint、attention 和外部任务引用准确恢复；
+5. dispatch 后断连的非幂等动作显示 `outcome_unknown`，不盲重试；
+6. 用户在 Agent 运行时打开刚生成的 Markdown、表格、图片、PDF 或未知文件；
+7. local/remote 共享同一 Thread 和工作台，Remote 不变成独立产品；
+8. 一个长期 Goal 经过多次会话继续，但普通 Chat 不被强制 Goal 化；
+9. 一个 Pi package 成功兼容，另一个因 raw TUI/第二状态真相在加载前得到准确拒绝报告；
+10. 一个 package 在 safe boundary 自动升级并通过健康检查，另一个因 trust envelope 扩张停在 Staged；
+11. 一个约千份混合资料目录先用 exact/FTS/agentic search，只有真实召回失败才启用可选语义投影；
+12. 同一内核完成代码、知识、Remote 长任务和另一种非科研工作，不出现领域专用类型。
+
+### 22.10 仍必须由 disposable probe 决定
+
+- Pi bridge 对真实 package 的兼容范围、headless/UI 降级和 schema cost；
+- Dynamic Workflow 真正的 mid-run replan、crash resume、receipt、hard caps 和副作用 fence；
+- child Agent 后台恢复、跨进程锁、steer/stop/supervisor 与嵌套上限；
+- private recovery backend 对新增/删除/rename/大文件/restore failure 的事务行为；
+- Browser crash、MCP disconnect、Remote submit-ack loss 的 `outcome_unknown`；
+- exact/FTS/agentic knowledge 与可选语义检索的真实 recall/latency/storage；
+- OpenSSH helper 的 CAS write、binary integrity、reconnect、host-key、跨平台和版本并存；
+- Slurm submit/query/cancel/log/artifact reconciliation；
+- full renderer transplant 与 clean vertical slice 的六个月维护成本；
+- artifact staging、generation lease、health check 与 LKG rollback。
+
+这些是工程证据问题，不再反问创立者做技术偏好选择。若 probe 推翻当前主线，先改本 README，再改实现。

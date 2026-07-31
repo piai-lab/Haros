@@ -11,7 +11,7 @@
 未来接手者很容易做三种“合理化”：
 
 1. 把激进重建改成低风险渐进迁移；
-2. 把简洁理解成少做 Remote、恢复、Wiki 和科研深度；
+2. 把简洁理解成少做 Remote、恢复、知识和高强度任务；
 3. 把来源洁净理解成拒绝搬运，或反过来把允许搬运理解成可以不披露来源。
 
 这三种解释都违背创立者的真实意思。
@@ -90,23 +90,23 @@
 
 ## 3. 产品定位的形成
 
-### 3.1 不是只做科研用户
+### 3.1 领域不是产品维度
 
-创立者明确纠正过“科学家专用产品”的理解：
+创立者先纠正过“科学家专用产品”的理解，随后又进一步纠正“科研优先”被反复写进架构的问题：
 
 - 所有人都能用；
-- 科研用户优先；
-- 生物医学是最重要的优先场景之一；
-- 未来主要方向是 general agent；
-- 通用性不能牺牲科研任务的深度。
+- OmniMind 是 general agent；
+- 科研、生物医学、软件开发、合同分析、训练和仿真本质上都是 workload；
+- 科研可以作为高强度压力测试，但不应成为一级模式、导航、Thread、Agent、Workflow、memory 或 Remote；
+- 通用性不能通过牺牲任何高强度任务的深度来获得。
 
 最终含义：
 
-- 核心领域对象必须通用；
-- 科研能力通过公共 capability 进入；
-- 优先做 Remote、长任务、知识、可复现输出和恢复；
-- 用科研任务作为高标准验收；
-- 不在 core 中建立领域词汇表。
+- 核心领域对象必须完全通用；
+- 数据、知识、分析和其他专业能力通过公共 capability 进入；
+- Remote、耐久任务、知识、可复现输出和恢复按通用价值排序；
+- 使用多种差异很大的真实任务验收同一内核；
+- 不在 core 中建立任何领域词汇表，也不再使用“research-first vertical”定义产品阶段。
 
 ### 3.2 不是再造一个领域 Agent 外壳
 
@@ -178,7 +178,7 @@
 - 进程边界少；
 - 具体 adapter 先于框架；
 - 产品原生体验可以很强；
-- 复杂科研工作必须被做好；
+- 复杂、高强度工作必须被做好；
 - 复杂性应留在确实拥有它的模块，而不是扩散到全局。
 
 ## 6. 产品原生与外部 capability 的纠偏
@@ -199,7 +199,7 @@
 - 科学问题形成与其他领域能力；
 - 外部机构或用户已有服务。
 
-不必外置的是定义产品体验的能力：
+产品必须原生负责的是定义产品体验的能力：
 
 - Thread；
 - 文件、diff、恢复；
@@ -210,7 +210,16 @@
 - 文件原生 Wiki；
 - capability 发现和公共结果呈现。
 
-“科学工具走统一入口”和“所有东西插件化”是两件事。
+随后又出现了第二次需要纠正的着相：把“原生”理解成全部写死在 kernel 或常驻进程。
+
+最终分层是：
+
+- kernel 只保存稳定原语、生命周期、唯一状态权威和 receipt；
+- 文件、Review、Dynamic Workflow、Delegation/Team、Goal、Browser、MCP、知识与 Remote adapter 可以是随产品交付、无需安装、按需激活的 first-party modules；
+- `E0` compatibility bridge 首发存在；
+- 第三方 package 可以直接运行、curated、fork、移植或拒绝，但不得拥有第二状态真相。
+
+“专业工具走统一入口”“产品原生负责体验”“实现可模块化”是三件不同的事。
 
 ### 6.3 被明确删除的旧执行框架概念
 
@@ -238,6 +247,8 @@
 - πCode 中已经收集很多远程参考仓库；
 - 对 Remote 也要大胆删除旧设计。
 
+随后又纠正了 UI 权重：Remote 预计只占整体需求约 20%，重要不等于让它成为永久面板、产品模式或默认中心。
+
 最终裁决：
 
 - Remote 是早期 core surface；
@@ -251,6 +262,7 @@
 - 断线、休眠和应用退出不应杀死外部任务；
 - 远程文件保持权威；
 - 只明确下载输出，不默认透明同步。
+- Remote 只在当前位置或动作实际位于远端时渐进出现；普通本地工作不背负 Remote 心智。
 
 ## 8. 知识与 Wiki 的决策
 
@@ -264,6 +276,8 @@
 - 用户的大知识库可以由用户现有系统管理；
 - 即使约一千篇文献，也应认真尝试 Wiki 路线；
 - 不应武断认为到某个篇数就必须切换。
+
+后续纠偏把“文献”进一步还原为规模样例：代码、合同、PPT、会议记录、网页和混合文件都使用同一知识能力；不能把 Agentic Wiki 写成科研知识库功能。
 
 这不是禁止 embeddings 或混合检索。它们可以作为可重建投影，在真实召回失败后加入。
 
@@ -287,7 +301,7 @@
 - 默认不静默夜间改写；
 - 远程文件原地工作；
 - PDF/Office 解析由 capability 提供；
-- Wiki 是产品原生体验，但不成为巨型领域聚合。
+- Wiki/知识是产品原生负责的体验，但实现可以是 bundled first-party module，不成为巨型领域聚合或 kernel 特权。
 
 ## 9. `K0` 的角色纠偏
 
@@ -395,17 +409,20 @@
 | 仓库 | 全新独立仓库 |
 | 名称 | 新产品保留 OmniMind |
 | 旧仓库 | 独立继续，未来避免公开名称冲突 |
-| 用户 | 所有人可用，科研优先 |
+| 用户 | 所有人可用；领域只是 workload，不设科研优先产品层 |
 | 核心 | 极小通用内核 |
 | 引擎 | `E0` 首选，无旧内核双轨 |
 | 工作台 | `U0` 可整块移植，探针决定边界 |
 | Remote | 早期一等能力，本地产品控制远端执行 |
 | 调度 | 先做一个具体批处理调度器 |
-| Wiki | 文件原生、Agentic、可见 Markdown |
+| Knowledge | 文件原生、Agentic、可见 Markdown，语义/RAG 按证据启用 |
 | RAG | 非默认；按证据加可重建检索投影 |
-| 科学能力 | 公共 capability，不进 core |
+| 专业能力 | 公共 capability，不进 core |
 | 知识系统 | 外部连接 + 可选模块移植 |
-| 动态工作流 | 先吃引擎生态，不升为核心本体 |
+| 动态工作流 | Agent 实时生成/改写；原生可靠性原语 + 生态 donor；拒绝固定 DAG/YAML 默认 |
+| `E0` 生态 | 首发一级兼容；不是以后再接的可选项 |
+| First-party modules | 随产品交付、无需安装、按需激活，不等于常驻 kernel |
+| 自动更新 | exact artifact、staging、trust envelope、safe boundary、generation lease、LKG rollback |
 | 权限 | 受信全权，扩展信任与外部不可逆授权分离 |
 | 兼容 | 默认零兼容、零同步 |
 | 移植 | package/fork/整块搬/改造/重写均可 |
@@ -432,9 +449,9 @@
 
 ## 16. 仍需执行者核实的事实
 
-这不是产品分叉，只是开工核查：
+这不是产品分叉，只是执行核查。独立仓库的绝对路径和远端已经确定，不得再次询问或另建仓库；仍需按实际施工阶段核实：
 
-- 新仓库的绝对路径、远端和发布许可证；
+- 永久分发许可证；
 - 各来源开工时最新 revision；
 - `U0` 额外授权的文字证据与第三方贡献覆盖；
 - 其他来源的逐文件许可证；
@@ -454,7 +471,105 @@
 - 外部身份是否只剩根 README 的诚实披露；
 - 宿主概念是否被切干净；
 - 事实是否只有一个权威；
-- Remote、恢复、Wiki 和科研重任务是否真的成立；
+- Remote、恢复、知识和异构高强度任务是否真的成立；
 - 未来的人是否看得懂、改得动、删得掉。
 
 若答案是否定的，即使功能很多也应删除。若答案是肯定的，即使整块来自优秀现成实现也应果断采用。
+
+## 18. `E0` 生态不是“以后再说”
+
+在讨论 first-party modules 和公共扩展 ABI 时，曾出现一种错误顺序：先完成 OmniMind 原生 API，等稳定以后再考虑 `E0` package。
+
+创立者明确否定：`E0` 的成熟扩展生态恰恰是更换内核最有价值的理由，不能在架构抽象时被顺手排除。
+
+最终态度：
+
+- `E0` compatibility 是首发需求；
+- 最重要的第一方能力可以随产品一起打包，无需用户安装；
+- “一起打包”不等于全部常驻、全部塞进一个 mega extension 或全部注入上下文；
+- `E0` package 可以直接运行、适配、局部移植、curated、fork 或拒绝；
+- 优秀但有有界瑕疵的仓库可以 fork 后持续改进；
+- 不因“必须原创”重复造轮子，也不因生态成熟让 package 夺取产品状态权威；
+- 公共 OmniMind SDK 可以等多个真实 first-party modules 与 `E0` bridge 验证以后冻结，但兼容面不能因此缺席。
+
+## 19. Dynamic Workflow 的重大纠偏
+
+研究中一度把“运行时必须确定、可恢复”错误地推成“Workflow 应预定义 DAG、YAML 或模板”。创立者明确指出这是传统自动化思维，违背 Agent 时代。
+
+正确理解：
+
+- Agent 根据当前上下文和实时结果即时生成编排；
+- 可以追加、删除、改序、分支、循环、并行和终止；
+- child Agent 返回新证据后，路径可以中途改变；
+- 用户可以 steer、stop、接管或继续；
+- 普通任务不显示 Workflow；
+- 固定的是 journal、resume、cancel、hard caps、receipt、single integration owner 和准确失败语义，不是工作步骤。
+
+一个 donor 证明了“调用时由 Agent 现场生成脚本”和脚本内条件分支，但尚未证明真正的 mid-run replan、crash resume 和副作用治理。因此选择它是因为思想正确，不是因为生产可靠性已经成立。
+
+固定图引擎仍可捐赠 lease、retry、journal、replay 和 invalidation，不得重新定义产品本体。
+
+## 20. Todo、Agent、Team、Goal 与 Review 的去重
+
+七类生态审判最终得到以下边界：
+
+- Todo：当前 Thread/Attempt 的计划投影，不是独立任务数据库；
+- child Agent：拥有独立 transcript 的 child Thread，可进入、追问、纠偏、停止和恢复；
+- Team：只增加 member、assignmentRef、owner 和 typed mailbox，不复制 Todo、acceptance 或依赖图；
+- Dynamic Workflow：拥有动态 run/step/attempt 编排，不拥有 child transcript、Team member 或外部 Job 状态；
+- Durable Goal：显式创建的长期策略，不自动包装普通 Chat，也不能靠模型自报获得完成权；
+- Review：默认只是看文件、结果和 diff；多 Agent review 是按需策略，不建立第二状态真相；
+- Campaign：仓库开发完成治理，与普通产品 Todo/Goal/Workflow 分开。
+
+Agent 之间可以通讯，用户也可以进入 child conversation 直接追问；所有消息和回执必须可审计。读可以 fan-out，共享写入与最终集成只有一个 owner。
+
+## 21. 自动更新不是自动信任
+
+创立者明确要求扩展未来能够自动更新。此前“禁止静默更新”若被写成“只检查、每天提醒用户手动处理”，同样违背用户体验。
+
+最终纠偏：
+
+- 自动发现、下载到 staging、检查、兼容验证和 safe-boundary activation 都应产品化；
+- bundled first-party modules 随 App 原子更新；
+- curated 和已经批准 trust envelope 的第三方 package 默认可以 Auto；
+- owner、source、license、install script、native dependency、capability 或 state schema 实质扩张时停在 Staged；
+- active Attempt、child Agent、browser target、MCP connection、remote process 或 scheduler Job 使用旧 generation 时不得热替换；
+- 新 generation 失败自动回到 LKG；
+- capability manifest 只解释变化，不是安全 sandbox；第三方扩展实际拥有完整用户权限；
+- 已批准 artifact 正常运行不制造逐命令确认和重复授权戏剧。
+
+真正禁止的是未经验证越过信任边界的静默激活，不是自动更新本身。
+
+## 22. UI 心智的连续纠偏
+
+早期原型过度围绕 Remote、对象工作台和“审阅”概念设计，被创立者明确否定。必须记住用户已经使用过成熟 coding-agent GUI，心智迁移本身有价值。
+
+锁定结果：
+
+- 普通 Chat 可以没有文件夹；工作型 Thread 通常对应一个目录；
+- 每个 Chat 独立保存 tabs、打开文件和工作台上下文，重新进入时恢复；
+- 右侧是按需上下文工作台，可查看任何文件、diff、终端、浏览器、child Agent 和临时问题，不是永久 Remote/Workflow dashboard；
+- Agent 运行时用户随时打开刚生成的文件；“审阅”首先只是查看；
+- Markdown 表格、代码、图片和来源必须高质量呈现；图片支持缩放、平移、多图和比较，区域选择修改以后作为可插拔能力；
+- 未知文件至少有 metadata/文本预览、系统打开和 viewer 扩展点；
+- child Agent 是完整对话，可追问、纠偏和停止；不同 Agent/会话可以通过可审计消息通讯；
+- 临时提问是轻量分支，可以把结论带回主 Thread；
+- Remote 只占少数但重要场景，不支配默认布局；
+- 气质冷静、精确、克制；动效快、短、可打断；性能有预算和回归门；macOS、Windows、Linux 语义统一但尊重平台习惯。
+
+创立者允许创新，但标准不是“长得不一样”，而是让人眼前一亮的质感、简洁、高级、丝滑和更少认知负担。
+
+## 23. 七类研究结束后的最终纪律
+
+`E0` 生态七类研究已经完成。结论不应继续留在长对话里，也不能为每类另建一份平行报告。
+
+- 产品和架构真相进入根 README；
+- 永久执行约束进入 AGENTS；
+- 施工、probe 和 proof 进入 execution brief；
+- 用户态度、误解和撤回进入本文；
+- Campaign 只保存 milestone、claim、status、evidence 和 SHA；
+- 固定来源、许可证和采用方式只在根 README 披露；
+- 易变下载量和 stars 不进入永久 doctrine；
+- 测试文件存在不等于测试已运行；所有生产裁决仍需 disposable probe。
+
+后续新会话不需要重新询问已经锁定的 taste。它应直接验证尚未证明的技术事实，并在证据推翻主线时先改 README，再改实现。

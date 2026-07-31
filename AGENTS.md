@@ -11,15 +11,16 @@
 3. `discovery-record.md`
 4. `missions/independent-omnimind-v1.md` when its status is active
 
-`README.md` 是唯一产品与架构真相。另两份文件只提供施工顺序与纠偏背景。
+`README.md` 是唯一产品与架构真相。其余文件分别只提供施工顺序、纠偏背景与 Campaign 完成状态。
 
 ## 当前状态
 
-- 仓库只有创立文档与一个 active Campaign spec；
+- 仓库只有创立文档、active Campaign spec 与 M0 身份/来源质量地基；
 - 生产实现尚未开始；
 - 不存在需要兼容的用户、状态或 API；
 - Campaign 状态只写入 `missions/independent-omnimind-v1.md`，不得创建平行 ledger、handoff 或进度报告；
-- 第一轮工作应完成仓库外研究冻结、身份洁净检查器和三个可丢弃探针；
+- `E0` 生态七类源码审判已经完成；结论必须从根 README 与现有附件读取，不能依赖历史对话；
+- 第一轮生产工作应核对研究冻结、身份洁净检查器和 Campaign 定义的可丢弃探针；
 - 探针冻结以前不得大规模搬入旧代码。
 
 ## 身份洁净
@@ -44,8 +45,14 @@
 - 一件事实只有一个权威；
 - 第一位真实消费者使用具体实现，第二位出现后再提炼抽象；
 - 极小领域内核不等于弱工作台；
-- Remote、恢复、文件原生 Wiki 和科研重任务属于早期验收；
-- 科学能力使用统一 capability 入口，不进入通用核心；
+- OmniMind 是 general agent；领域只提供压力测试，不创建科研、编码或其他专用模式、本体和运行时；
+- Remote 约占少数但重要的工作场景：它是通用执行目标，不是永久产品模式，也不能支配默认 UI；
+- 恢复、文件原生知识、异构高强度任务和耐久外部执行属于早期验收；
+- 数据、知识、分析和其他领域能力使用同一 capability 入口，不进入通用核心；
+- 产品原生指产品对体验负责，不等于全部硬编码进 kernel：稳定原语原生，策略和适配器优先作为随产品发布、按需激活的 first-party modules；
+- `E0` 扩展生态是首发一级兼容目标；兼容桥不得继承其宿主身份、TUI、本体或第二状态真相；
+- Todo 是当前执行计划投影；Delegated Agent 是 child Thread；Team 只增加成员和消息；Dynamic Workflow 由 Agent 实时生成和改写，拒绝默认固定 DAG/YAML；
+- 扩展自动更新使用 exact artifact、staging、trust envelope、safe-boundary activation、generation lease 与 LKG rollback；活跃 Attempt 或外部任务中不得热替换；
 - 不建立兼容双轨、重型默认知识库或虚假安全边界。
 
 ## Git

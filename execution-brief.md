@@ -5,6 +5,8 @@
 > 产品与架构真相只在 [README](README.md)。本文只规定施工顺序、证据和停止条件。
 >
 > 外部来源一律使用 README 定义的研究代号；不得把这些代号带进生产代码。
+>
+> 当前执行状态：独立仓库已经创建，阶段 0 的固定源码审判与阶段 1 的身份/质量地基已经完成。阶段 0–1 以下保留为历史门槛，不得再次创建仓库、重做初始化或把旧产品搬进来。下一执行入口是阶段 2 的五个可丢弃探针。
 
 ## 1. 任务的正确理解
 
@@ -19,30 +21,32 @@
 
 目标是：
 
-1. 创建一个全新、干净、独立的 Git 仓库；
-2. 先证明三个高风险边界，再确定生产结构；
+1. 在这个已经创建并通过初始质量门的独立 Git 仓库中继续建设；
+2. 先证明五个高风险边界，再确定生产结构；
 3. 从多个来源果断移植最好的实现；
 4. 在进入生产作者区以前切掉所有来源身份和宿主概念；
 5. 建立极小领域内核、强工作台、真实远程执行和文件原生 Wiki；
-6. 用科研重任务检验通用 Agent，而不把科研名词硬编码进内核。
+6. 用多种差异很大的高强度 workload 检验同一个 general Agent，不为任何领域建立专用模式或内核。
 
-当前仓库继续独立存在。新仓库不维护双向同步、兼容 adapter、旧状态迁移或功能对齐。
+创立研究发生时的旧产品仓库继续独立存在。本仓库不与其维护双向同步、兼容 adapter、旧状态迁移或功能对齐。
 
 ## 2. 开工前必须完整读取
 
 按顺序：
 
-1. 本文件；
+1. [常驻执行约束](AGENTS.md)；
 2. [README](README.md)全文，包括来源披露；
-3. [决策与纠偏记录](discovery-record.md)；
-4. README 披露的目标来源中，与当前探针直接相关的最小路径；
-5. 当前仓库中仅与 Remote、安全或测试 oracle 相关的精确入口。
+3. 本文件；
+4. [决策与纠偏记录](discovery-record.md)；
+5. [Campaign 状态源](missions/independent-omnimind-v1.md)；
+6. README 披露的目标来源中，与当前探针直接相关的最小路径；
+7. 旧产品仓库中仅与 Remote、安全或测试 oracle 相关的精确入口。
 
-不要扫描当前仓库所有历史文档来“补全背景”。旧产品的概念密度会把新产品重新拖回原路径。
+不要扫描旧产品仓库所有历史文档来“补全背景”。旧产品的概念密度会把新产品重新拖回原路径。
 
 ## 3. 不可协商的施工纪律
 
-### 3.1 新仓库身份洁净
+### 3.1 独立仓库身份洁净
 
 产品作者区中，外部产品、供应商、前代产品和模型家族名称只允许出现在根 README 的来源披露。法定原文只允许出现在 `LICENSES/`。
 
@@ -61,7 +65,7 @@
 - Markdown 和其他说明文件；
 - build artifacts 中可由作者代码控制的内容。
 
-新仓库第一条可执行质量门应是通用的 identity cleanliness checker。checker 从根 README 的机器可读披露块加载禁用身份，不在自身源码中复制名单。
+本仓库的第一条可执行质量门是通用 identity cleanliness checker。checker 从根 README 的机器可读披露块加载禁用身份，不在自身源码中复制名单。
 
 允许的动态事实：
 
@@ -73,7 +77,7 @@
 
 ### 3.2 探针与生产隔离
 
-需要直接引用外部 package 名、旧路径或 donor 类型的探针，放在新仓库之外的临时研究目录。新仓库只接收：
+需要直接引用外部 package 名、旧路径或 donor 类型的探针，放在本仓库之外的临时研究目录。本仓库只接收：
 
 - 经选择的中性实现；
 - 中性 contract tests；
@@ -131,11 +135,11 @@ README 的来源披露定义：
 
 不得创建 `E0Adapter`、`U0Shell`、`K0Connector` 等生产名称。
 
-## 5. 阶段 0：冻结研究输入
+## 5. 阶段 0：冻结研究输入（已完成，保留为历史门）
 
 ### 5.1 建立一次性研究清单
 
-在当前仓库外创建临时研究目录，记录：
+在本仓库外创建临时研究目录，记录：
 
 - 每个候选来源 URL、revision、许可证；
 - 实际准备读取的路径；
@@ -144,7 +148,7 @@ README 的来源披露定义：
 - 探针入口与删除日期；
 - 对应 README 来源代号。
 
-这份研究清单不进入新产品仓库。最终只有实际采用来源进入新仓库 README。
+完整候选清单、下载量和临时笔记不进入产品仓库。跨类别架构结论、被采用为探针入口的固定源码证据和重新验证条件可以进入根 README；真正进入生产代码的来源仍只有 `source-adoptions` 机器块拥有采用事实。
 
 ### 5.2 固定真实样本
 
@@ -154,7 +158,7 @@ README 的来源披露定义：
 - 一个有大输出、长 Thread 和取消行为的任务；
 - 一个需要交互式认证或跳板的测试远程；
 - 一个可提交批处理任务的测试环境；
-- 一个包含 Markdown、PDF、表格、图片和约千篇文献/资料的 corpus；
+- 一个包含 Markdown、代码、PDF、Office、表格、图片和约千份混合资料的 corpus；
 - 一个会在处理期间修改、删除和新增来源的增量场景；
 - 一组旧产品中已经证明重要的安全/恢复 fixtures。
 
@@ -165,10 +169,10 @@ README 的来源披露定义：
 - 所有候选 revision 固定；
 - 权利路径可描述；
 - 样本可重复；
-- 三个探针的可观察结论明确；
-- 还没有在新仓库写生产架构。
+- 五个探针的可观察结论明确；
+- 还没有在本仓库写生产架构。
 
-## 6. 阶段 1：创建洁净仓库
+## 6. 阶段 1：创建洁净仓库（已完成，禁止重做）
 
 ### 6.1 第一提交
 
@@ -249,9 +253,9 @@ README.md
 - README 只披露实际已进入的来源；
 - 仓库没有兼容、迁移和旧状态概念。
 
-## 7. 阶段 2：三个可丢弃探针
+## 7. 阶段 2：五个可丢弃探针
 
-三个探针可以并行研究，但每个只有一个所有者。它们在仓库外运行，不合并成生产代码。
+五个探针可以并行研究，但每个只有一个所有者。它们在仓库外运行，不合并成生产代码。
 
 ### 7.1 探针 A：Agent 引擎
 
@@ -271,7 +275,11 @@ README.md
 - provider 错误；
 - 大工具输出；
 - 单工作目录限制；
-- 本地与远程执行环境注入。
+- 本地与远程执行环境注入；
+- `E0`-compatible tool、skill、prompt、extension lifecycle 与 headless 降级；
+- 一个兼容 package 与一个 fail-fast package 的真实报告；
+- Todo、child Agent 和 Dynamic Workflow 的最小边界；
+- tool/schema 按任务激活而不是全部常驻。
 
 采集：
 
@@ -309,7 +317,13 @@ README.md
 - queue/interrupt；
 - 后台 running/blocked/unread；
 - 一张远程外部任务视图；
-- trust 状态。
+- trust 状态；
+- 每 Chat 独立恢复 tabs/open files/split；
+- 运行中打开 Agent 生成文件；
+- 可进入、追问、纠偏和停止的 child Thread；
+- 临时问题分支和结论回带；
+- Markdown 表格、图片、多格式与未知文件 viewer contract；
+- Remote 仅在实际使用时渐进出现。
 
 记录：
 
@@ -326,7 +340,26 @@ README.md
 
 决策可以是完整 renderer、多个组件域或新壳；不得预先限制移植大小。
 
-### 7.3 探针 C：远程与批处理
+### 7.3 探针 C：持久运行时、文件与编排
+
+目标：证明内核原语足够小，同时能承担 Todo、child Agent、Team message、Dynamic Workflow、文件并发和恢复。
+
+必须覆盖：
+
+- Todo 从当前 Thread branch 重放，不建立第二数据库；
+- foreground/background child Thread 使用同一 lifecycle reducer；
+- steer、stop、continue、crash reconcile 与嵌套 hard caps；
+- Team mailbox 的 message ID、delivered/read/ack、TTL 和 idempotency；
+- Dynamic Workflow 中途 replan、retry lineage、cancel、hard caps 和 single integration owner；
+- observed-version/CAS file write；
+- 新增、修改、删除、rename、symlink、未跟踪文件和大文件 checkpoint；
+- restore safety checkpoint、失败 rollback 与 `outcome_unknown`；
+- Git 只作可选权威投影，不自动 commit/stash/reset/clean；
+- attention 四态、去重、前台抑制和 deep link。
+
+探针必须证明各状态只有一个所有者，不能因为 package 已经实现就接受其私有 Todo、task board、workflow graph、comments database 或 transcript copy。
+
+### 7.4 探针 D：远程与批处理
 
 目标：证明本地产品能对远程文件、终端和长寿命批处理任务保持准确状态。
 
@@ -368,9 +401,33 @@ README.md
 - worker 升级是否需要与整个应用锁步；
 - 一条连接是否足以复用控制和数据。
 
-### 7.4 阶段 2 退出条件
+### 7.5 探针 E：知识与扩展自动更新
 
-每个探针有一页结论：
+目标：同时证伪默认重型检索和不可维护的 package 更新路径。
+
+知识样本使用论文、代码、合同、PPT、会议材料和混合文件，不把本探针写成科研专用能力。必须比较：
+
+- visible Markdown Wiki + manifest + exact search；
+- FTS；
+- Agent 按需导航与回到原文；
+- 可选语义索引或外部知识服务；
+- 初始化、增量、删除、staleness、人工编辑、召回、延迟、存储和远程原地运行。
+
+更新样本至少包含 bundled、curated 和任意第三方三种 artifact：
+
+- registry metadata 自动发现；
+- exact source/revision/content digest；
+- staging 与 compatibility/headless/recovery checks；
+- owner/source/license/install script/native dependency/capability/state schema diff；
+- trust envelope 内 Auto；扩张时 Staged；用户可 Pinned；
+- safe-boundary activation；
+- active Attempt/browser target/MCP connection/remote process/external job generation lease；
+- health check、quarantine、LKG rollback；
+- package self-updater 被关闭或 immutability 检测拒绝。
+
+### 7.6 阶段 2 退出条件
+
+每个探针有一个简洁结论，直接写入 Campaign evidence 或稳定 doctrine，不创建平行报告：
 
 - 选择；
 - 证据；
@@ -510,9 +567,9 @@ wiki/
 11. refresh 生成可审查 diff；
 12. rollback 恢复整次多页改动。
 
-### 10.3 千篇级压力
+### 10.3 千份级混合资料压力
 
-真实约千篇 corpus 至少测：
+真实约千份混合 corpus 至少测：
 
 - 初始化耗时；
 - 增量一篇/十篇/删除一篇；
@@ -523,7 +580,8 @@ wiki/
 - 中断恢复；
 - 用户手工页面；
 - 远程原地运行；
-- PDF/Office 解析作为外部 capability 失败时的降级。
+- PDF/Office 解析作为外部 capability 失败时的降级；
+- 论文、代码、合同、会议材料和混合目录是否使用同一知识语义。
 
 没有召回证据，不加入 embeddings；加入后也只是可重建投影。
 
@@ -563,7 +621,7 @@ wiki/
 - cost/irreversibility hints；
 - error categories。
 
-科学数据、分析、知识和问题形成能力都用同一 contract。
+数据、分析、知识、浏览器、外部工具和其他专业能力都用同一 contract。
 
 ### 11.2 上下文纪律
 
@@ -575,44 +633,67 @@ wiki/
 - 删除连接不删除外部系统数据；
 - 第一版没有自定义 UI ABI。
 
+实现层分为 native durable primitives、bundled first-party modules、`E0` compatibility bridge、curated optional、任意第三方和 external service。产品原生负责不等于所有能力常驻 kernel；bundled 也不等于 mega extension、独立状态权威或全量 prompt 注入。
+
 ### 11.3 动态工作流
 
-先通过 `E1` 生态验证真实工作流：
+先通过 `E1` 生态验证 Agent 动态编排，而不是传统固定工作流：
 
-- 是否有可恢复状态；
-- 循环是否有终止条件和硬上限；
+- 主 Agent 能否按实时结果生成、追加、删除、改序、分支、循环和并行；
+- child 结果返回以后能否 mid-run replan；
+- 是否有可恢复 run/step/attempt journal；
+- retry 是否创建新 attempt，并只 replay 纯、幂等或有 receipt 的动作；
+- 循环是否有机器可解释的终止条件和 steps/workers/concurrency/wall/cost 硬上限；
 - 多 Agent 写入是否只有一个集成所有者；
-- 是否能使用远程位置；
+- 是否能调度远程或外部任务而不复制其状态权威；
+- 普通任务是否完全不暴露 Workflow；
 - 公共进度/日志/输出是否足够。
 
-不要因工作流成熟就把其内部对象升级为 OmniMind 核心聚合。
+不要因固定 DAG 引擎恢复成熟就让它重新定义 Workflow，也不要因动态 donor 思想正确就把其内存实现误当生产证据。
 
-## 12. 阶段 7：科研优先的通用验收
+### 11.4 扩展 artifact 与自动更新
 
-选择一个真实生物医学任务，但生产代码中不用领域专名做本体：
+先实现治理，再开放生态安装：
 
-1. 建立本地或远程位置；
-2. 初始化资料 Wiki；
-3. 查询知识能力；
-4. 读取数据；
-5. 在远程运行分析；
-6. 提交长任务；
-7. 断线后恢复；
-8. 比较中间结果；
-9. 用户否定或修改方向；
-10. 输出可复现报告、文件、日志和来源；
-11. branch 尝试另一条路径；
-12. 确认通用工程任务仍可使用同一内核。
+1. content-addressed artifact store；
+2. exact revision/digest resolver；
+3. installed/activation pointer 与 generation lease；
+4. staging 与 trust-envelope diff；
+5. focused compatibility/headless/recovery check；
+6. safe-boundary atomic activation；
+7. health observation；
+8. quarantine 与 LKG rollback；
+9. Auto / Staged / Pinned 策略；
+10. 24 小时异步 metadata refresh 与手动即时刷新。
+
+Bundled 随 App 原子更新。Curated 与已经批准 envelope 的第三方默认可以 Auto；扩张时停在 Staged。任何 package self-updater 必须关闭或被 immutability check 拒绝。一个 Attempt、browser target、connection、remote process 或 external job 从开始到结束使用同一 generation。
+
+## 12. 阶段 7：跨领域通用验收
+
+选择至少三个差异显著的真实任务，例如代码改造、混合资料综合和远程长任务。可以包含生物医学任务，但它只作为 workload：
+
+1. 普通 Chat 在无目录时完成轻量任务；
+2. 工作型 Thread 打开一个本地目录，运行 Agent 并随时查看生成文件；
+3. 复杂任务自动委派 child Agent，用户进入、追问、停止或纠偏；
+4. Dynamic Workflow 根据中间结果改变路线；
+5. 混合资料使用 visible Wiki、exact/FTS/agentic search，不默认启用 RAG；
+6. 远程位置运行文件、PTY 和长任务；
+7. 提交一个外部调度任务，断线和 App 重启后恢复观察；
+8. 用户否定或修改方向，branch 尝试另一条路径；
+9. 打开 Markdown 表格、图片、PDF/Office 和未知文件；
+10. 输出可复现的文件、日志、来源和回执；
+11. 一个生态 package 成功兼容，另一个在加载前得到准确 compatibility report；
+12. package 在 safe boundary 自动升级，失败后回到 LKG。
 
 验收关注：
 
-- 数据/知识/方法都只是 capability；
+- 数据/知识/方法和其他专业工具都只是 capability；
 - Thread 保留判断过程；
 - 文件与任务有权威来源；
 - 人可以接管；
 - 外部系统可替换；
 - 失败可解释；
-- 没有生物医学字段进入 core。
+- 没有任何领域字段或模式进入 core。
 
 ## 13. 性能验证
 
@@ -638,7 +719,7 @@ wiki/
 - 多个后台 Thread；
 - 远程高延迟；
 - 大目录搜索；
-- 千篇 Wiki；
+- 千份混合资料 Wiki；
 - 大日志；
 - renderer crash/reload。
 
@@ -666,6 +747,10 @@ wiki/
 - 不宣称不存在的 sandbox；
 - 不可逆外部动作有独立授权；
 - 高费用长任务范围清楚。
+- compatibility manifest 只解释能力，不宣称 sandbox；
+- exact artifact 在已批准 trust envelope 内安静运行，不重复逐命令授权；
+- owner/source/license/install script/native dependency/capability/state schema 扩张时停止自动激活；
+- active Attempt 或外部任务不热替换 extension/helper generation。
 
 ### 14.2 秘密
 
@@ -723,7 +808,7 @@ wiki/
 
 | ID | Claim | Proof |
 | --- | --- | --- |
-| F-01 | 新仓库身份洁净 | checker 扫描 tracked 作者区 |
+| F-01 | 独立仓库身份洁净 | checker 扫描 tracked 作者区 |
 | F-02 | 来源诚实且集中 | README 披露 + 法定文本 |
 | F-03 | 领域内核只有必要事实 | schema/API review + persistence tests |
 | F-04 | 引擎 transcript 不重复 | recovery/branch inspection |
@@ -734,13 +819,13 @@ wiki/
 | F-09 | 远程文件保持权威 | conflict/cache tests |
 | F-10 | Wiki 原始资料不变 | hash proof |
 | F-11 | Wiki 可见、可追溯、可回滚 | corpus scenario |
-| F-12 | 千篇级不依赖默认重型 RAG | scale/search evidence |
-| F-13 | 科学能力使用统一入口 | multiple capability contract tests |
+| F-12 | 千份级混合资料不依赖默认重型 RAG | scale/search evidence |
+| F-13 | 所有专业能力使用统一入口 | multiple capability contract tests |
 | F-14 | 受信工作区无确认戏剧 | end-to-end policy test |
 | F-15 | 第三方扩展信任独立 | untrusted extension test |
 | F-16 | 性能路径可归因 | flow spans + UI measurement |
 | F-17 | 没有旧兼容双轨 | dependency/search audit |
-| F-18 | 科研任务不污染通用 core | domain surface audit |
+| F-18 | 多种异构 workload 使用同一 core，无领域模式或本体 | domain surface audit + scenarios |
 
 任何 claim 只能由与它同一 frozen SHA 的证据证明。
 
@@ -761,16 +846,15 @@ wiki/
 
 ## 18. 给新会话的启动指令
 
-新会话不应一次承诺完成全部产品。第一轮只做：
+新会话不应一次承诺完成全部产品，也不得重新执行已经完成的阶段 0–1。第一轮只做：
 
-1. 核对当前仓库这三份文档仍一致；
-2. 核对来源 revisions 和权利；
-3. 确定新仓库绝对路径与远端；
-4. 创建阶段 0 的仓库外研究目录；
-5. 创建洁净新仓库第一提交；
-6. 先实现 identity cleanliness checker；
-7. 启动三个可丢弃探针；
-8. 每个探针产出选择证据；
-9. 冻结以后才进入 walking skeleton。
+1. 确认工作目录就是本独立仓库，分支、工作树和远端状态可解释；
+2. 按本文件第 2 节读取五份权威文档，确认 README 的七类源码审判冻结仍是当前决策；
+3. 运行现有 `npm run quality`，确认身份、来源和最小测试地基没有退化；
+4. 只为即将开始的探针核对固定 revision、许可证与真实代码入口；不根据上游宣传文档替代源码和测试审判；
+5. 为五个探针分别写清一个可证伪问题、样本、失败注入、成功条件、停止条件和临时目录；
+6. 先运行最便宜且最可能推翻架构的探针，不把探针代码写入生产作者区；
+7. 每个探针只把稳定结论、固定证据和重新验证条件回写到根 README；临时候选清单、下载量和过程笔记留在仓库外；
+8. 五个边界有足够证据以后，才进入阶段 3 walking skeleton；未完成的 Campaign claim 只进入 `candidate`，不得由生产者自证完成。
 
-如果新会话试图先搬旧仓库、先做完整 UI、先造通用插件系统、先做所有 provider 或先复刻全部功能，应立即停下，重新读取创立宪法。
+如果新会话试图再建仓库、重做第一提交、先搬旧仓库、先做完整 UI、先造通用插件系统、先做所有 provider 或先复刻全部功能，应立即停下，重新读取创立宪法。
