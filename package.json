@@ -1,0 +1,15 @@
+{
+  "name": "omnimind",
+  "version": "0.0.0",
+  "private": true,
+  "type": "module",
+  "engines": {
+    "node": ">=22"
+  },
+  "scripts": {
+    "check:identity": "node scripts/check-identity.mjs",
+    "check:sources": "node scripts/check-sources.mjs",
+    "test": "node --test",
+    "quality": "npm run check:identity && npm run check:sources && npm test"
+  }
+}
