@@ -1692,7 +1692,7 @@ Evidence level：除后续 probe 小节明确升级的行以外，下列候选�
 
 > Probe 日期：2026-08-01
 >
-> 范围：引擎生命周期、context cost、源码/发布物 lineage 与采用方式。真实生态 package matrix 仍按 22.10 保持未完成；本节不能被解释成首发生态兼容已经验收。
+> 范围：引擎生命周期、context cost、源码/发布物 lineage、真实生态 package matrix 与采用方式。本节收口 M1 的 launch route，不表示生产 compatibility bridge 或 F-24 已验收。
 
 **固定源码链。** 从 Pi `74caa2649f10ed71b4378ce69f5d9fbfd2466ca5` 的洁净 archive 运行 `npm ci --ignore-scripts`。该 revision 不携带 `packages/ai/src/providers/data`，声明的 `build:offline` 会在 model-data check 处失败；`hydrate:model-data` 的目录请求本次超时，命令却以 0 退出且没有生成数据。这是源码复现性与失败语义缺口，不是 runtime 行为失败。
 
@@ -1724,6 +1724,49 @@ artifact 的 shrinkwrap 在 probe consumer 中产生了顶层与嵌套的同版�
 这条小分支优于 bounded transplant 或重写，因为已运行的核心生命周期路径大部分成立，当前负证据集中在 artifact lineage、生成输入、registry 边界和一个 session replacement 路径；局部移植会迫使产品接管内部 session tree、extension loader 与更新合并，重写则重复已经成立的流式、工具、取消、恢复和分支行为。若这些缺口能作为有界上游补丁解决，fork 只承担出包和补丁所有权。§8.3、§15 与 §22.2 已定义 thin adapter、transcript、Thread/journal 和 `OutputRef` 权威；本 probe 只证明 128 KiB 结果会真实穿透到下一次 context，因此既有大输出 fence 是进入 M2 的硬门，不另造一套 doctrine。
 
 **回退与重新验证。** `source-adoptions` 保持为空，因为本 probe 没有把 donor 代码或 artifact 放入生产仓库。降回正式 package 的门是：source 与 artifact 的 `gitHead` 或等价 provenance 可核；同一 revision 能用 content-addressed 生成输入复现；public transport/registry 保持单实例或提供正式注入点；跨 cwd replacement 稳定通过；上述目标 lifecycle tests 在对应 artifact/source 上通过；真实 ecosystem package matrix 通过。满足后删除 patch branch，采用 package + thin adapter。若小分支开始接管 transcript、Thread、位置、第二状态真相，或 maintained delta 不再有界，则拒绝该路线，重新比较 bounded transplant 与替代引擎。
+
+**真实 ecosystem package matrix。** 首轮脚本错误地从 package 根请求 `loadExtensions`；0.83.0 根导出实际为 `undefined`，所以六个样本都在载入前失败。根公开导出中 `discoverAndLoadExtensions`、`DefaultResourceLoader`、`createAgentSession` 和 `ExtensionRunner` 均存在。该失败保留为 host API evidence；正式矩阵只使用这些根公开 API 和 manifest 声明的 extension/skill/prompt 路径，没有从私有 deep import 猎取绿色。
+
+发布物在一个仓库外临时 consumer 中用 exact versions 物化；命令边界是 `npm install --ignore-scripts --legacy-peer-deps`，随后每个样本以独立 Node 进程、独立 `mktemp` workspace/agent/config 目录运行 `node matrix-case.mjs <package>`。`--legacy-peer-deps` 只允许观察不满足 peer range 的 artifact，不豁免产品预检；所有 lifecycle scripts 均被关闭。矩阵没有运行下表 package 自带的 upstream test scripts，不能把“存在 test script”写成测试已通过；对应 fixed-source test 结果仍只由 §22.12 等已记录证据承担。
+
+| 样本 | fixed source ↔ official artifact | 完整 integrity | manifest、依赖与 lifecycle 事实 |
+| --- | --- | --- | --- |
+| ordinary HTTP/web tool：`pi-web-access@0.17.1` | source `c702b3be11bfbc832489eb7cfe31d9bbbbb2cc27`；artifact `gitHead 2a186dbebab7be605d8c615ae33dd3f2e649666b`，lineage 未证明 | `sha512-AZaDlr6HE4Mn3P7/bokbukGcTqlqGqy/Am+vurxfk9g6L2iZMERLIEAMcZI7aFamrNBBcJ+js1B70ZSgye2xEQ==` | 7 个 runtime deps：`@mozilla/readability`、`linkedom`、`p-limit`、`promise.try`、`turndown`、`typebox`、`unpdf`；三个 0.83.0 host peers 满足；无 install lifecycle script |
+| Todo：`@99percentpeople/pi-todo@1.2.3` | source / `gitHead 0d85185fc1af2c66df54fcd9347c6e53d10e83f6`，matched | `sha512-bTSQNUFjrB3ENxe/HsBeLJRQMdONJ6jh6K7telu4v2tQi6zxQ1AYUgtt1dmSq6IuRnMAJ2fbKCUgCGt9hCpBmA==` | 1 个 runtime dep；四个 host/type peers 满足；有 `prepack` / `prepublishOnly`，本轮均未执行 |
+| child/background Agent：`pi-subagents@0.38.0` | source / `gitHead 89de10e4bc8895e7948704c38620a5b35ddcd17e`，matched | `sha512-8wGQiX6rkR5J4V+AnWtQg3+LmC+cHnZIM1f/VWTjCTkVmcoKdeLsTAYG6BS2yKAugyEUjNUGj3vE5d9nj9m61A==` | 3 个 runtime deps：`jiti`、`typebox`、`yaml`；四个 peers 满足；无 install lifecycle script |
+| Dynamic Workflow：`pi-dynamic-workflows@1.0.1` | source `31b2aca0f1cb195aafbfc5e3ee2b8c83ad3f21a2`；artifact `gitHead dbc6800d1f725f7439e51705e2664c59484afcd1`，lineage 未证明 | `sha512-mZMhco86q3xdwKl5pohfwCJwe2mL15bJ4b+8aacprWq8KFu+W80vK63Xa436yrhAZfq7VRdQULR+49Awcrq16A==` | 1 个 runtime dep `acorn`；三个 host peers 只声明 `^0.78.0`，均排除 0.83.0；无 install lifecycle script |
+| browser/web-like：`pi-agent-browser-native@0.2.72` | source / `gitHead 211a012c9b199d758768e8ba729f35e11e661f65`，matched | `sha512-p3uLyFD0RUYbVJII/URooQxRozmKxQdJdVkkIyzHgF/biXcuH9QRzYCXifSjkW3AGX6NVcMDTMjwdA6Y9/xtkw==` | 0 个 runtime deps；四个 peers 满足；manifest 有 `prepare`，本轮关闭；真实 browser process、binary 和三平台 smoke 未运行 |
+| Team fail-fast：`pi-agentteam@0.6.8` | source / `gitHead 3b3b1e4b599cbc6dad2c6202eec5025edb4ed363`，matched | `sha512-2U78q5vOjLCk0GUHoWqfxBbXK19IM0kclyoGDLM1GM4uj5R/sZYipOmYch5zxuDbO9mO7fJEvoc7lP+VCv+63w==` | 0 个 runtime deps；四个 peers 满足；无 install lifecycle script，但 artifact 自带 task/mailbox/outbox/team stores 与 tmux host ontology |
+| renderer fail-fast：`pi-tool-display@0.5.0` | source / `gitHead 91cef7580078371f8dc49a8607222807ad6a424d`，matched | `sha512-XiDiQ+pCiiR977DZgGKrOTDhGfJO/t8mmMM46tW+9G+BWHmvEl2fxlGpdhSGcvj++m37zvCS/CQG4xKg87Lsuw==` | 0 个 runtime deps；两个 host peers 的声明上限为 0.80，排除 0.83.0；存在 `postinstall` mutation，并截获七个 builtin tool owners |
+| shell seam fail-fast：`pi-ssh@0.3.2` | source / `gitHead 426baa1223ebad0ec399045a4b3675babbaab293`，matched | `sha512-0VVyGrUctKu7d1rnETw9phBtt6eHA0T1z+9dcnuEfqIuAkQpWOYphN68HbNYIW3FR1sh72TitbrVtq9BPhBs9g==` | 0 个 runtime deps；唯一 peer 指向另一 host package scope，在本 consumer 中不存在；无 lifecycle script；shell-only 仍不满足 §22.14 的结构化 Remote 边界 |
+
+正式矩阵先解析 identity、integrity、source lineage、peer、scripts、resources、UI/headless、provider/session mutation 和持久状态 footprint，再决定是否允许执行 package code。下表中的 load 时间只是同一台机器的一次局部观测，不是启动性能 benchmark：
+
+| 样本 | public discover/load 与资源 | 实际 tool / failure / cancel 路径 | context、UI 与状态权威 | provisional route |
+| --- | --- | --- | --- | --- |
+| ordinary HTTP/web tool | 19.345 ms，0 loader errors；4 tools、4 commands；无 skill/prompt | `fetch_content` 对非 HTTP(S) 输入发出 1 次 stream update 后返回错误文本；预先取消在 0.229 ms 返回 `Error: Aborted`。两者都错误地保持 `isError=false`，并各写一条私有 result entry | 四个 tools 共 8,627 bytes；公开 session allowlist 只激活 `fetch_content` 2,476 bytes，另外三个未进入 active set；源码 footprint 有 UI/headless guards 和 session-entry/result store | `compatible-with-adapter` 行为成立，但 source/artifact lineage 阻止 adoption；adapter 必须规范化 failure、把大内容映射为 `OutputRef`，不接受私有 result store 为权威 |
+| Todo | 5.110 ms，0 loader errors；1 tool、1 command | revision 0 写入得到 revision 1；第二次仍带 base revision 0，准确抛出 stale revision | active descriptor 2,286 bytes；headless 可执行，但 plan state 留在 package closure，并在 lifecycle 中用 session entry/message 恢复 | `bounded-transplant` reducer、CAS 与 renderer；canonical plan 仍是 product journal event stream，不运行社区 Todo state owner |
+| child/background Agent | 64.422 ms，0 loader errors；2 tools、18 commands、1 skill、7 prompts | `list` 在 175.307 ms 返回可执行 child 定义；不存在的 run status 以 `isError=true` 返回 | 只激活 `subagent`，仍有 24,504 bytes，其中 schema 14,981 bytes；未激活的 wait tool 被排除。artifact 有大量 UI/headless、session mutation、provider/model 和 private status/session/artifact store 路径 | `bounded-transplant` lifecycle/control/reconcile；不加载其完整 runtime，不让其拥有 child transcript、worktree、acceptance 或 workflow graph |
+| Dynamic Workflow | 31.304 ms，0 loader errors，尽管三个 peer ranges 均不接受 0.83.0 | 静态脚本被拒绝为“必须调用 agent”；预先取消的有效脚本抛 `Workflow was aborted`，但先流出一次 `Workflow completed`，暴露进度诚实度缺口 | active descriptor 4,067 bytes；有 headless guards，无 durable journal；artifact 与 fixed source 无 lineage | `bounded-transplant` parser/现场 JS 编排/display；M2 用 product Attempt journal 补 mid-run replan、receipt、hard caps 与 truthful terminal state |
+| browser/web-like | 26.776 ms，0 loader errors；1 tool；未启动 browser | 空输入准确 `isError=true`；预先取消在输入校验前不改变相同错误，AbortSignal 仍需在真实 process 路径复验 | descriptor 22,123 bytes，其中 schema 19,283 bytes；artifact 管理 process/session/page/output files，不能常驻默认 context | `curated-optional`，由 target ownership、generation lease、receipt/`OutputRef` adapter 包住；真实 binary、crash、download 与三平台仍 open |
+| Team fail-fast | 正式矩阵未调用 loader；早期无治理 discovery 曾能载入，反证“host loader 成功”等于产品兼容 | machine report：`SECOND_TASK_AND_MAILBOX_STATE_AUTHORITY`、`TMUX_HOST_ONTOLOGY_AND_PLATFORM_LIMIT`、`PRODUCT_TEAM_IS_NATIVE_MESSAGE_PROJECTION` | wildcard peers 不能证明状态边界；源码扫描命中 task/mailbox 持久状态、UI 与 session-entry mutation | `reject-before-activation`；只保留 §22.12 已验证的 mailbox/receipt 不变量作为 bounded transplant |
+| renderer fail-fast | 未调用 loader | machine report：`ENGINE_PEER_RANGE_EXCLUDES_0_83`、`POSTINSTALL_MUTATION_PRESENT`、`BUILTIN_TOOL_OWNERSHIP_INTERCEPTION` | raw TUI、builtin ownership 和 install mutation 超过 compatibility bridge 边界 | `reject-before-activation`；renderer 机制仍按 §22.8 作 bounded transplant donor，不等于生态失败 |
+| shell seam fail-fast | 未调用 loader | machine report：`HOST_PACKAGE_SCOPE_MISMATCH`、`SHELL_ONLY_REMOTE_TOOL_DOES_NOT_SATISFY_STRUCTURED_REMOTE` | 依赖失败与产品能力不足分开；没有把网络或远端环境缺失误写为行为失败 | `reject-before-activation`；system-SSH seam 证据仍由 §22.14 承担 |
+
+五个 admitted observations 的 tool set 在 resource load 与 session startup 前后没有发生变化；manifest skill/prompt 实际由公开 resource loader 载入，child 样本得到 1 skill 和 7 prompts。这个结果只说明本轮 lifecycle 没有发生 late registration，不能推断所有 package 都是静态注册；M2 仍必须在 dynamic registration 后重算 registry、policy、active set 和 request context。
+
+这组样本没有任何 artifact 直接晋级 `direct-compatible`：不是“生态不兼容”，而是本轮恰好每个可运行样本仍有 lineage、错误规范化、context 体积或状态 ownership 的额外边界。`direct-compatible` 类继续保留给无 install mutation、peer/API 相容、headless 完整、错误语义正确且不触碰 provider/session/产品状态的纯 package；不能为了填满分类而伪造一个绿色样本。
+
+**Launch route 与 M2 唯一入口。** M1 选择“最小 managed engine fork / upstream patch branch + 产品拥有的 compatibility bridge”，不是 full ecosystem runtime，也不是每个 package 各写一条兼容轨：
+
+1. artifact resolver 先固定 version/source/`gitHead`/integrity，再复用 §22.15 的 immutable generation、trust diff、safe boundary 与 LKG；任意 package code 执行前生成机器报告；
+2. preflight 拒绝 host scope/peer 不相容、install mutation、native dependency/权限扩张、provider/session control、builtin interception 和第二状态权威；被拒绝项不进入 resource loader；arbitrary third-party 仍是完整权限代码，不伪称 sandbox；
+3. 通过预检后只走 package 根公开 resource loader；extension lifecycle、tools、skills、prompts、commands、dynamic registration、AbortSignal 与 stream update 映射到一条中性 bridge；UI 只有 capability view contract，raw TUI 不进入产品本体；
+4. model request 只取得当前 Action 允许的 active tools。前述 0.83.0 deterministic provider request 已证明未选择 schema 不进入 request；本矩阵再用公开 session allowlist 证明真实 package registry 只激活指定 tool。每次 request 记录 active schema/description bytes。22,123-byte browser 和 24,504-byte child monolith 不得默认常驻，必须按任务激活或由更窄 first-party facade 承接；
+5. `appendEntry`、`sendMessage`、provider mutation、session replacement 和 package 持久目录默认是 compatibility effects，不自动成为事实。adapter 只可写 product journal refs、`OutputRef`、external target refs 与 generation receipt；Todo/Team/Workflow/transcript 仍遵守 §22.2；
+6. 分类只有 `direct-compatible`、`compatible-with-adapter`、`bounded-transplant`、`curated-optional` 与 `reject-before-activation`。单包失败按 host API、lineage、dependency/environment、behavior 和 state-authority 分因，不扩张成整个生态失败，也不声称 100% 兼容。
+
+M2 的第一条生产切片因此固定为：content-addressed engine/extension generation → machine preflight → public resource load → 一个 ordinary tool 的 active-only schema → stream/cancel/failure normalization → product journal/`OutputRef` receipt → Thread workbench 投影。随后才接 Todo projection 与一个 child Thread；Team、Dynamic Workflow、browser、Remote 和知识能力都复用同一 seam。M2 重新验证门是：正式生成物 lineage；public API 不再靠私有实例；supported 与 rejected exact artifacts 各一；inactive schema 确实不进 provider payload；dynamic registration 后 active set 仍准确；abort/stream/error/result ref 诚实；provider/session mutation 被拦截或显式适配；App restart 后无 package 第二真相；macOS/Windows/Linux headless 与有 UI 路径。失败时 pin 旧 generation、卸载 package projection，并保留 product journal；若 bridge 为兼容一个包开始接管 package 私有 ontology，则降为 bounded transplant 或拒绝。
 
 ### 22.12 M1 Probe C：原生 journal、动态编排与 recovery seam
 

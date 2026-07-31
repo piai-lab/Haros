@@ -308,7 +308,18 @@ README.md
 
 本探针的最小证伪样本固定包含：一个被选工具和一个未选工具、运行时工具切换、128 KiB 工具结果、持久恢复、分支、损坏尾部、取消，以及跨工作目录 session replacement。生态样本另含普通工具、Todo、child Agent、Dynamic Workflow 和一个加载前拒绝案例；兼容报告必须说明 public/headless/UI/session-control/second-truth 依赖。
 
-停止条件：一旦证据足以在 package + thin adapter、package + bounded patch、managed fork 与 bounded transplant 之间选择，就冻结引擎路线；不得为了把源码和发布物强行说成一致而进行无界构建考古。生态 package matrix 未实际运行以前，不能把“引擎核心路线已选”扩张成“首发生态兼容已完成”。
+生态 package matrix 的施工顺序固定为：
+
+1. 把 fixed source revision、official artifact version、`gitHead`、integrity 和本地产物分开；只在 lineage 可核时让 artifact 行为证明对应源码；
+2. 在可删除 consumer 中以 exact versions、关闭 lifecycle scripts 的方式物化，记录 manifest dependencies、peer ranges、scripts 和资源声明；不满足 peer 的 artifact 只能进入 disposable observation，不能靠忽略依赖冲突获得产品许可；
+3. 在执行 package code 前扫描 host package scope/API、install mutation、native dependency、tool ownership、UI/headless、provider/session control 和持久状态 footprint，先产出机器可解释报告；被拒绝样本不得再调用 loader；
+4. admitted 样本每项使用独立进程、workspace、agent/config 目录，只走 host package 根公开 resource loader；记录 discover/load error、tool/skill/prompt/command、dynamic registration、active tools、schema/description bytes 和 lifecycle handlers；
+5. 每项至少执行一个无秘密、无外部副作用的正常或预期失败路径；全矩阵覆盖 `AbortSignal`、stream update、headless fallback、UI dependency、错误分类和 adapter effect；加载成功与状态 adoption 分别裁决；
+6. 报告只使用 `direct-compatible`、`compatible-with-adapter`、`bounded-transplant`、`curated-optional` 和 `reject-before-activation`。host API、artifact lineage、dependency/environment、behavior 与 state-authority failure 分栏，不能从一个失败 package 推断整个生态失败。
+
+context cost 以实际 request 的 active allowlist 为准：同时记录 registry 中全部 descriptor bytes 与 active descriptor bytes，并验证未选 tool 不进入 provider payload。单个巨型 schema 即使可加载也不得默认常驻；先按任务激活，仍过重时用中性 first-party facade 或 bounded transplant 缩小，而不是复制 package 状态。
+
+停止条件：一旦证据足以在 package + thin adapter、package + bounded patch、managed fork 与 bounded transplant 之间选择，且普通工具、Todo、child/background Agent、Dynamic Workflow、browser/web-like 与 pre-load rejection 的 package matrix 已给出唯一 launch route，就冻结 M1；不得为了把源码和发布物强行说成一致而进行无界构建考古。M1 `candidate` 只表示五条架构路线已消除分叉，不表示生产 compatibility bridge、真实 browser/Remote、跨平台或任何产品验收项已经通过。
 
 ### 7.2 探针 B：工作台移植
 
