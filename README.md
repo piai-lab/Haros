@@ -2,9 +2,9 @@
 
 > 状态：新产品的唯一产品与架构真相源
 >
-> 仓库状态：本仓库就是文中定义的独立新产品仓库；创立文档已经迁入，生产实现尚未开始
+> 仓库状态：本仓库就是文中定义的独立新产品仓库；M1 五个可丢弃探针已经形成 `candidate` 路线，生产实现尚未开始
 >
-> 适用对象：未来在本独立仓库选择移植物、验证探针、搭建第一版内核与工作台的执行者
+> 适用对象：从已冻结 M1 路线搭建第一版内核与工作台、并继续验证生产验收的执行者
 >
 > 附件：[施工任务书](execution-brief.md) · [决策与纠偏记录](discovery-record.md)
 >
@@ -19,7 +19,8 @@
 - “本仓库”指独立新产品；
 - “当前仓库”或“旧仓库”指创立研究发生时的旧产品仓库；
 - “创建新仓库”类表述从现在起视为已经完成；
-- 尚未完成的是进入生产前的逐来源权利核实、五个可丢弃探针、生产技术骨架和任何功能移植。
+- M1 五个可丢弃探针已经在 `7041ccbaaf9eb0ecddb171408a59ed0bf42f6843` 形成 `candidate` 路线；§22.11–§22.15 保留其问题、证据、裁决与复验门，不得重新准备或运行同一轮研究；
+- 尚未完成的是 M2 及后续生产实现、实际进入产品来源的逐项权利/采用核实和产品验收；`source-adoptions` 仍为 0，F-24 等 production claims 仍为 `open`。
 
 新 OmniMind 应在全新的 Git 仓库中诞生。当前仓库继续作为另一个产品独立存在，二者不共享运行时代码、不维持兼容层、不做双向同步。当前产品在对外产生名称冲突以前应改名或明确标记为 Classic；新产品保留 `OmniMind` 名称。
 
@@ -374,13 +375,13 @@ Pi 的 API、实验性 remote protocol 和未来 `AgentHarness` 抽象可以演�
 
 ### 8.3 集成纪律
 
-- 第一轮只做可丢弃集成探针；
+- 第一轮可丢弃集成探针已经完成并进入 M1 `candidate`；后续执行者直接使用冻结结论，不重开同一轮研究；
 - 固定 Pi repo、SHA、包版本和许可证；
 - 证明 session 创建、流式事件、工具注册、取消、恢复和 branch；
 - 证明如何关联 `ThreadId/TurnId/AttemptId/ActionId`；
 - 证明不复制 transcript；
 - 证明 Pi 单 cwd 限制如何通过 LocationRef/ExecutionTarget 在产品层表达；
-- 不在探针通过以前大规模搬旧 UI 或旧 runtime；
+- M2 首个 focused slice 通过以前不大规模搬旧 UI 或旧 runtime；
 - 不为了兼容多个引擎提前造抽象森林。第二个真实引擎出现后，再从差异中提炼接口。
 - 首发兼容 Pi 的 tool、skill、prompt、extension lifecycle、动态注册、active tools、AbortSignal、stream update、command、headless 降级和必要 journal 映射；
 - 依赖 raw TUI、provider mutation、私有 session control、monkeypatch 或第二状态真相的 package 可以 fail-fast，但必须在加载前给出清楚 compatibility report；
@@ -850,6 +851,8 @@ OmniMind 不设置科研优先的产品层。科研、生物医学、编码、�
 
 第一阶段不是“功能与旧产品相同”，而是五个可丢弃探针和一个极薄 walking skeleton 给出可信答案：
 
+当前导航：下列五个探针定义保留为历史验收结构；其路线已经是 M1 `candidate`，不是下一执行入口，也不等于生产通过。尚未开始的是 M2 walking skeleton。
+
 ### 探针 A：引擎与 Pi 生态兼容
 
 - 创建、恢复和分支引擎 session；
@@ -921,9 +924,9 @@ OmniMind 不设置科研优先的产品层。科研、生物医学、编码、�
 
 正确动作是：
 
-- 先建立独立仓库和来源纪律；
-- 先做五个可丢弃探针；
-- 用探针决定 Pi、Proma、远程和 Wiki 的真实移植边界；
+- 独立仓库、来源纪律和 M1 五个可丢弃探针已经完成到 `candidate`，不要重复；
+- 从 §22.11 已冻结的唯一 M2 slice 开始，以 focused proof 把研究路线变成生产边界；
+- 使用探针已经裁决的引擎、工作台、远程和文件原生知识边界；
 - 每一次只引入一块有明确所有权的能力；
 - 搬来后立即删除宿主概念和重复真相；
 - 没有旧用户，就不要花未来维护成本保护过去；
@@ -1941,4 +1944,4 @@ M5 按 §22.7 直接施工五个清楚边界：metadata resolver、content-addre
 
 **复验门与回退。** M2 进入生产前必须在一份可公开重建但更接近真实分布的 corpus 上，使用真实 PDF/Office parser（不能只用 fixture metadata），于 macOS/Windows/Linux 和一个 remote-in-place target 复跑初始化、1/10-file incremental、delete/stale/rebuild、人工页保护、source trace 与 query-set metrics；必须再用真实 Agent/model分别跑 deterministic navigation 与 semantic projection。semantic 只有在预注册失败 query 上改善 recall，且 latency/storage/离线/来源可核成本可接受时才进入 curated optional；否则删除 semantic projection，回退 filename/`rg`/FTS。
 
-M5 进入 production adoption 前必须用 bundled、curated、任意第三方三个正式 exact artifacts，核 registry provenance/digest、install-script/native dependency/permission/state-schema diff、无 UI headless check、真实状态迁移、App crash during staging/activation、五类活跃 lease、三平台 rollback 与 restart LKG；self-updater 必须在实际安装路径被禁用或拒绝。任何失败都回退旧 LKG 并 pin 当前 generation；无法复核 lineage 的 artifact 不进入 staging。Probe E 已消除 M2/M5 的默认重型 RAG、整套外部服务和 mutable package-manager 分叉，但 M1 仍等待 Probe A 的真实 ecosystem package matrix，不能置为 `candidate`。
+M5 进入 production adoption 前必须用 bundled、curated、任意第三方三个正式 exact artifacts，核 registry provenance/digest、install-script/native dependency/permission/state-schema diff、无 UI headless check、真实状态迁移、App crash during staging/activation、五类活跃 lease、三平台 rollback 与 restart LKG；self-updater 必须在实际安装路径被禁用或拒绝。任何失败都回退旧 LKG 并 pin 当前 generation；无法复核 lineage 的 artifact 不进入 staging。Probe E 已消除 M2/M5 的默认重型 RAG、整套外部服务和 mutable package-manager 分叉；Probe A 的真实 ecosystem package matrix 随后在 §22.11 收口并使 M1 成为 `candidate`。这不表示 M5 或 production adoption 已通过。

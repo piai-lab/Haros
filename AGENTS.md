@@ -15,13 +15,14 @@
 
 ## 当前状态
 
-- 仓库只有创立文档、active Campaign spec 与 M0 身份/来源质量地基；
-- 生产实现尚未开始；
+- 仓库只有创立文档、active Campaign spec、M0 身份/来源质量地基与 M1 `candidate` 路线证据；
+- 生产实现尚未开始，`source-adoptions` 仍为 0，F-24 等 production claims 仍为 `open`；
 - 不存在需要兼容的用户、状态或 API；
 - Campaign 状态只写入 `missions/independent-omnimind-v1.md`，不得创建平行 ledger、handoff 或进度报告；
 - `E0` 生态七类源码审判已经完成；结论必须从根 README 与现有附件读取，不能依赖历史对话；
-- 第一轮生产工作应核对研究冻结、身份洁净检查器和 Campaign 定义的可丢弃探针；
-- 探针冻结以前不得大规模搬入旧代码。
+- M1 五个可丢弃探针已经是 `candidate`；不得重新准备或运行同一轮研究，也不得把 `candidate` 写成生产兼容、跨平台或产品验收已通过；
+- 下一唯一入口是根 README §22.11 冻结的 M2 slice：content-addressed generation → machine preflight → public resource load → one ordinary active-only tool → normalized stream/cancel/failure → journal/`OutputRef` receipt → Thread workbench projection；
+- M2 首个实现必须使用 focused proof；该 slice 通过以前不得大规模搬入旧代码或完整 UI。
 
 ## 身份洁净
 

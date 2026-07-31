@@ -461,13 +461,13 @@ No evidence yet.
 
 The next executor must:
 
-1. verify repository path, `origin/main`, clean status and the final doctrine-freeze SHA;
-2. run `npm run quality`, plus any later documentation-anchor or task-governance checks that actually exist in the current tree;
-3. read the root cross-category freeze instead of reconstructing decisions from historical chats;
-4. prepare the five M1 probes outside the production author surface with one owner and one falsifiable success condition each;
-5. prove engine-ecosystem compatibility and artifact governance before opening general package installation;
-6. freeze probe choices into the governing doctrine or this Campaign evidence, delete failed probe code, then begin M2;
-7. leave F-01/F-02 historical evidence intact but rerun affected checks before claiming a new candidate SHA.
+1. verify the exact repository path, `main == origin/main`, clean status, and that M1 route evidence `7041ccbaaf9eb0ecddb171408a59ed0bf42f6843` plus its `candidate` declaration remain in current history;
+2. run `npm run quality` and the current Markdown/document structure check before editing; preserve F-01/F-02 historical evidence and keep F-24 plus every other unimplemented production claim `open`;
+3. do not prepare or rerun the five M1 probes. Read their frozen evidence and begin only the M2 slice defined in `README.md §22.11`;
+4. implement the smallest focused path: content-addressed generation → machine preflight → public resource load → one ordinary active-only tool → normalized stream/cancel/failure → journal/`OutputRef` receipt → Thread workbench projection;
+5. prove that path with supported and rejected exact artifacts, inactive-schema exclusion, cancellation/error honesty, durable receipt/restart behavior and the smallest visible Thread projection; M1 `candidate` is not production proof;
+6. add a source to root `source-adoptions` only when code actually enters production, with the required rights text in the same commit; do not promote a research candidate by implication;
+7. stop and correct the governing README first if this focused slice disproves the frozen seam; otherwise continue M2 without opening a parallel engine, state authority, full UI or speculative SDK.
 
 Do not begin by importing a complete old product, building a speculative public SDK, implementing every provider, turning Remote into a product mode, defaulting to heavy retrieval, or polishing a full UI before the interaction skeleton has evidence.
 

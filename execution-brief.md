@@ -6,7 +6,7 @@
 >
 > 外部来源一律使用 README 定义的研究代号；不得把这些代号带进生产代码。
 >
-> 当前执行状态：独立仓库已经创建，阶段 0 的固定源码审判与阶段 1 的身份/质量地基已经完成。阶段 0–1 以下保留为历史门槛，不得再次创建仓库、重做初始化或把旧产品搬进来。下一执行入口是阶段 2 的五个可丢弃探针。
+> 当前执行状态：独立仓库、阶段 0–1 地基和阶段 2 / M1 五个可丢弃探针路线已经完成到 `candidate`；生产实现与 `source-adoptions` 仍为 0，F-24 等 production claims 仍为 `open`。阶段 0–2 以下保留为历史门槛和证据方法，不得重建仓库、重做初始化、重新准备同一轮探针或把旧产品搬进来。下一唯一入口是阶段 3 / M2 walking skeleton 的首个 focused slice。
 
 ## 1. 任务的正确理解
 
@@ -22,7 +22,7 @@
 目标是：
 
 1. 在这个已经创建并通过初始质量门的独立 Git 仓库中继续建设；
-2. 先证明五个高风险边界，再确定生产结构；
+2. 使用已经冻结的五个高风险边界结论建设 M2，并以 focused proof 验证生产结构；
 3. 从多个来源果断移植最好的实现；
 4. 在进入生产作者区以前切掉所有来源身份和宿主概念；
 5. 建立极小领域内核、强工作台、真实远程执行和文件原生 Wiki；
@@ -254,6 +254,8 @@ README.md
 - 仓库没有兼容、迁移和旧状态概念。
 
 ## 7. 阶段 2：五个可丢弃探针
+
+> 当前状态：本阶段已经形成 M1 `candidate`。本节保留 probe 方法、样本、失败注入、停止条件和证据等级，不是新会话的执行入口。
 
 五个探针可以并行研究，但每个只有一个所有者。它们在仓库外运行，不合并成生产代码。
 
@@ -502,6 +504,20 @@ provisional route 必须明确三种所有者：system SSH 拥有凭据、host t
 没有结论的探针不能因“已经写了很多”进入生产。
 
 ## 8. 阶段 3：极薄 walking skeleton
+
+当前唯一施工入口严格沿用 README §22.11 已冻结的 slice：
+
+```text
+content-addressed generation
+→ machine preflight
+→ public resource load
+→ one ordinary active-only tool
+→ normalized stream/cancel/failure
+→ journal/OutputRef receipt
+→ Thread workbench projection
+```
+
+M1 `candidate` 只消除了架构分叉，不证明生产 bridge 已通过。首个实现只做这条最小端到端路径及最窄可证伪检查：exact generation 与 rejection report、公开 loader、inactive schema 缺席、stream/cancel/failure 规范化、journal/`OutputRef` receipt 和 Thread 投影。任何失败先修正这条 seam，不扩张到完整 UI、Team、Remote、知识或通用 SDK。
 
 只实现一条端到端路径：
 
@@ -908,15 +924,15 @@ Bundled 随 App 原子更新。Curated 与已经批准 envelope 的第三方默�
 
 ## 18. 给新会话的启动指令
 
-新会话不应一次承诺完成全部产品，也不得重新执行已经完成的阶段 0–1。第一轮只做：
+新会话不得重新执行已经完成的阶段 0–2，也不能把 M1 `candidate` 当成 production pass。第一轮只做：
 
 1. 确认工作目录就是本独立仓库，分支、工作树和远端状态可解释；
-2. 按本文件第 2 节读取五份权威文档，确认 README 的七类源码审判冻结仍是当前决策；
+2. 按本文件第 2 节读取五份权威文档，确认 M1 route evidence `7041ccbaaf9eb0ecddb171408a59ed0bf42f6843` 与 Campaign `candidate` 状态仍在当前 `main` 历史中；
 3. 运行现有 `npm run quality`，确认身份、来源和最小测试地基没有退化；
-4. 只为即将开始的探针核对固定 revision、许可证与真实代码入口；不根据上游宣传文档替代源码和测试审判；
-5. 为五个探针分别写清一个可证伪问题、样本、失败注入、成功条件、停止条件和临时目录；
-6. 先运行最便宜且最可能推翻架构的探针，不把探针代码写入生产作者区；
-7. 每个探针只把稳定结论、固定证据和重新验证条件回写到根 README；临时候选清单、下载量和过程笔记留在仓库外；
-8. 五个边界有足够证据以后，才进入阶段 3 walking skeleton；未完成的 Campaign claim 只进入 `candidate`，不得由生产者自证完成。
+4. 从本文件 §8 和 README §22.11 的唯一 M2 slice 开始，不重新选择引擎、工作台、恢复、Remote、知识或更新路线；
+5. 先实现 content-addressed generation 与 machine preflight，再接 public resource load 和一个 ordinary active-only tool；
+6. 用 focused proof 验证 supported/rejected exact artifact、inactive schema、stream/cancel/failure normalization、journal/`OutputRef` receipt 与 Thread workbench projection；
+7. 只把实际进入生产的来源加入根 README `source-adoptions`，并在同一提交加入必要法定文本；M1 研究候选不因 `candidate` 自动成为 adoption；
+8. 保持 F-24 等 production claims 为 `open`，直到真实 M2 实现和对应验收产生 candidate evidence；生产者不得自证整个 Campaign 完成。
 
-如果新会话试图再建仓库、重做第一提交、先搬旧仓库、先做完整 UI、先造通用插件系统、先做所有 provider 或先复刻全部功能，应立即停下，重新读取创立宪法。
+如果新会话试图再建仓库、重做 M1、先搬旧仓库、先做完整 UI、先造通用插件系统、先做所有 provider 或先复刻全部功能，应立即停下，重新读取当前状态与 M2 唯一入口。
