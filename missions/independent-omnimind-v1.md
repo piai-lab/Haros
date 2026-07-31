@@ -109,6 +109,55 @@ If a required proof needs one of these actions, mark the affected item `blocked`
 - An unchanged candidate is not repeatedly audited.
 - If two work cycles produce no acceptance-state transition, stop narration, update this spec with the actual blocker or new hypothesis, and use a fresh executor.
 
+### 5.1 Maintainer taste as an execution constraint
+
+Every implementation decision is judged simultaneously on:
+
+- **user value**: a real user can understand, control, verify and recover the work;
+- **clarity**: one concept has one name, one owner and one truth source;
+- **restraint**: no speculative framework, compatibility theater or decorative UI;
+- **performance**: critical paths are short by construction and measured before claims;
+- **visual quality**: dense, calm, precise and stable workbench behavior;
+- **code quality**: small cohesive units, explicit boundaries, local reasoning and easy deletion;
+- **naming quality**: short, durable domain names that remain correct when providers, implementations and research topics change;
+- **future fitness**: extension comes from narrow stable seams, not vague containers;
+- **evidence**: important claims survive adversarial tests rather than persuasive prose.
+
+Reject code that merely works when it:
+
+- introduces `Manager`, `Helper`, `Utils`, `GeneralContext` or another vague container;
+- uses multiple terms for the same lifecycle;
+- hides cost, remote authority, side effects or failure;
+- solves an implementation convenience at the expense of user control;
+- adds visual elements without a user function;
+- optimizes an unmeasured path;
+- copies donor structure after its original responsibility has disappeared;
+- leaves a temporary name or adapter as a permanent public contract.
+
+Comments explain non-obvious invariants and tradeoffs, not restate syntax. Public names receive a durability review before merge.
+
+### 5.2 Continuous drift supervision
+
+The active development thread is subject to recurring read-only supervision:
+
+- compare current work with `README.md` and this spec;
+- inspect actual diff, tests and evidence rather than progress prose;
+- challenge architecture drift, identity leakage, duplicate truth, premature abstractions, weak naming, unmeasured performance and user-hostile interaction;
+- correct the executor with concrete findings and the smallest next proof;
+- avoid commentary when work is aligned;
+- never mark Campaign completion from supervision alone.
+
+At every milestone boundary, record a concise drift verdict in that milestone's evidence section:
+
+```text
+Drift review: aligned | corrected
+User value:
+Architecture/naming:
+Performance:
+Visual/product quality:
+Material correction, if any:
+```
+
 ## 6. Evidence conventions
 
 Evidence cells contain:
@@ -311,6 +360,7 @@ Exit only when the Done formula is true.
 | F-18 | One real research workflow and one general engineering workflow succeed on the same core without scientific domain types | end-to-end scenarios + fresh evaluator | open | — | — |
 | F-19 | Relevant final gates pass once on the frozen final SHA | deterministic final gate | open | — | — |
 | F-20 | Fresh-context completion audit reports no material finding on the frozen final SHA | independent completion audit | open | — | — |
+| F-21 | Production code, public names and visible interaction form one coherent, elegant and maintainable system with no vague containers or avoidable performance debt | static checks + architecture/name review + measured UI + fresh evaluator | open | — | — |
 
 ## 9. Milestone evidence
 
@@ -368,7 +418,7 @@ None at Campaign start.
 ## 12. Done
 
 ```text
-DONE = F-01..F-20 all verified on the final SHA
+DONE = F-01..F-21 all verified on the final SHA
        && blocked = 0
        && relevant final gates pass on that SHA
        && fresh completion audit has no material finding
