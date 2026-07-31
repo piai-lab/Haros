@@ -9,14 +9,16 @@
 1. `README.md`
 2. `execution-brief.md`
 3. `discovery-record.md`
+4. `missions/independent-omnimind-v1.md` when its status is active
 
 `README.md` 是唯一产品与架构真相。另两份文件只提供施工顺序与纠偏背景。
 
 ## 当前状态
 
-- 仓库只有创立文档；
+- 仓库只有创立文档与一个 active Campaign spec；
 - 生产实现尚未开始；
 - 不存在需要兼容的用户、状态或 API；
+- Campaign 状态只写入 `missions/independent-omnimind-v1.md`，不得创建平行 ledger、handoff 或进度报告；
 - 第一轮工作应完成仓库外研究冻结、身份洁净检查器和三个可丢弃探针；
 - 探针冻结以前不得大规模搬入旧代码。
 
