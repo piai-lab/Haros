@@ -68,8 +68,12 @@ export async function preflightExtension({
   if (typeof manifest.id !== "string" || manifest.id.length === 0) {
     addFinding(findings, "IDENTITY_INVALID", "extension id is missing");
   }
-  if (!safeEntry(manifest.entry) || path.extname(manifest.entry ?? "") !== ".mjs") {
-    addFinding(findings, "ENTRY_INVALID", "extension entry must be a relative public module");
+  if (
+    !safeEntry(manifest.entry) ||
+    path.extname(manifest.entry ?? "") !== ".mjs" ||
+    path.posix.dirname(manifest.entry.replaceAll("\\", "/")) !== "."
+  ) {
+    addFinding(findings, "ENTRY_INVALID", "extension entry must be a public root module");
   }
   if (manifest.headless !== true) {
     addFinding(findings, "HEADLESS_UNSUPPORTED", "extension must support headless loading");

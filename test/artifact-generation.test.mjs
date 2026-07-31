@@ -172,3 +172,23 @@ test("detects mutation of a stored generation before activation", async () => {
   assert.equal(report.verdict, "rejected");
   assert.equal(report.findings[0].code, "GENERATION_STORE_CORRUPT");
 });
+
+test("rejects a private subpath as the extension loading contract", async () => {
+  const temporaryRoot = await mkdtemp(path.join(tmpdir(), "generation-private-entry-"));
+  const artifactRoot = path.join(temporaryRoot, "artifact");
+  const manifest = await createArtifact(artifactRoot, { entry: "internal/index.mjs" });
+  const generation = await materializeGeneration({
+    artifactRoot,
+    expectedDigest: await digestArtifact(artifactRoot),
+    expectedLineage: manifest.lineage,
+    storeRoot: path.join(temporaryRoot, "store"),
+  });
+  const report = await preflightExtension({
+    generation,
+    allowedPermissions: ["write-output"],
+    allowedCapabilities: ["tools"],
+  });
+
+  assert.equal(report.verdict, "rejected");
+  assert.ok(report.findings.some((finding) => finding.code === "ENTRY_INVALID"));
+});
