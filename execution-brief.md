@@ -464,6 +464,18 @@ provisional route 必须明确三种所有者：system SSH 拥有凭据、host t
 - health check、quarantine、LKG rollback；
 - package self-updater 被关闭或 immutability 检测拒绝。
 
+本 probe 固定分成三条不可互相替代的证据链：
+
+1. **固定源码链**：更新候选只运行 update/install 的 focused suites，并直接检查 metadata 读取、下载、解包、最终路径 mutation 与 reload；可选检索候选运行其 unit suite，按 passed/failed 记录默认模型与 engine failure；外部知识候选只读 queue/retry/dead-letter/revision/CAS/citation 最小源码与 tests，依赖构建未进入测试时明确记为未运行，不做整仓考古；
+2. **file-native chain**：每次生成 1000-source、无秘密 corpus。固定组成为 250 code、250 Markdown、250 contract text、243 meeting Markdown，以及 paper/code/contract/meeting、presentation、PDF metadata、document metadata 七个命中样本；manifest 对每个原件记录 source/projection digest、size、mtime、extractor 与可见 Wiki path；
+3. **update-contract chain**：每次真实打包 bundled、curated、任意第三方三个最小 exact artifacts，并增加 recovery-check failure、active-health failure 与 self-updater fault 版本；动态 digest 只属于该次 run，不冒充正式 registry artifact。
+
+知识施工顺序固定为：先生成 corpus 与 source manifest；测 filename、glob、直接 exact、真实文本搜索和 FTS 的冻结 query set；再测带 source ref 的 deterministic navigation；随后依次注入单篇修改、十篇修改、删除、source 改变未更新、人工页与生成区冲突、manifest/index 丢失全重建；最后记录初始化/增量/重建 latency、recall 与 projection bytes。索引与可见 Wiki 必须在目标位置原地生成，不能透明复制 source。没有真实 Agent/model 时，deterministic navigation 不得写成 agentic；semantic synonym miss 只形成真实模型复验样本，不因文件数自动启用语义 projection。
+
+更新施工顺序固定为：metadata discovery cadence（24h + stable jitter）→ exact revision/digest resolve → content-addressed store → isolated staging → compatibility/headless/recovery/health 子进程 → trust-envelope diff → Auto/Staged/Pinned decision → safe-boundary activation → active generation leases → post-activation health → quarantine/LKG。失败注入依次包含 digest mismatch、recovery check failure、owner/source/license/install script/native dependency/capability/state-schema 扩张、Pinned、unsafe boundary、五类 active lease、active health failure 与 self-update mutation。任何 package 自带 current/updater 都不是第二权威。
+
+成功条件是同时得到两个可施工 route：M2 能用可重建 manifest + visible Wiki + FTS + source navigation 完成默认 file-native slice，并把真实 Agent/semantic 留作有 query-set 的可选门；M5 能把三类 artifact 放入同一 immutable generation pipeline，旧活跃工作不热替换，失败可 quarantine 并恢复 LKG。停止条件是默认重型检索、整套外部知识服务、mutable package manager 与 native bounded pipeline 的分叉已消除；不继续追求整仓 donor build，也不把 simulator 提升为 registry/package proof。临时 corpus、index、artifacts 与脚本在结论落盘后删除。
+
 ### 7.6 阶段 2 退出条件
 
 每个探针有一个简洁结论，直接写入 Campaign evidence 或稳定 doctrine，不创建平行报告：

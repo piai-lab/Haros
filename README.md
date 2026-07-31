@@ -1634,7 +1634,7 @@ Evidence level：除后续 probe 小节明确升级的行以外，下列候选�
 | 类别 | 固定来源 | 已观察价值 | 当前裁决 |
 | --- | --- | --- | --- |
 | Engine / extension seam | Pi `74caa2649f10ed71b4378ce69f5d9fbfd2466ca5` | session、tool lifecycle、dynamic tools、AbortSignal、headless、operation injection | thin engine/compatibility adapter；首发兼容，产品状态原生 |
-| Package governance | `pi-extmgr` `9a0cf32ab83dcf00d6878c09c80aad85a4dd5687` + Pi core `74caa2649f10ed71b4378ce69f5d9fbfd2466ca5` | discovery、package lifecycle、mutable checkout 与更新风险的真实边界 | 原生 immutable artifact/LKG 治理；只移植机制，不采用第三方 manager runtime |
+| Package governance | `pi-extmgr` `9a0cf32ab83dcf00d6878c09c80aad85a4dd5687` + Pi core `74caa2649f10ed71b4378ce69f5d9fbfd2466ca5` | 31/31 fixed-source update/install tests 与实际 mutation 路径证明 discovery、package lifecycle、mutable checkout 边界；不证明正式 artifact runtime | 原生 immutable artifact/LKG 治理；只移植 discovery/source-normalization/error-display 机制，不采用第三方 manager runtime |
 | Todo | `@99percentpeople/pi-todo` `0d85185fc1af2c66df54fcd9347c6e53d10e83f6` | reducer、branch/replay 基线 | native Todo + bounded transplant；无社区 Todo runtime |
 | Delegation | `pi-submarine` `5bebbc52ef18f0da092b28f404cd389cfd3577f0` | child transcript、episode、replay/resume | child Thread donor；补 background、locks、limits |
 | Background Agent | `pi-subagents` `89de10e4bc8895e7948704c38620a5b35ddcd17e` | reconcile、steer ack、supervisor、control inbox | 只移植 lifecycle/reducer；拒绝巨型 runtime |
@@ -1647,8 +1647,8 @@ Evidence level：除后续 probe 小节明确升级的行以外，下列候选�
 | MCP | `pi-mcp-adapter` `6a3e840219a49f9ae5350542b7a707aa1e83fedf` | connection owner、stdio/HTTP、OAuth、recovery、schema conversion | 最强 donor/compatibility probe；不原样成为内核 |
 | Browser | `pi-agent-browser-native` `211a012c9b199d758768e8ba729f35e11e661f65` | process cleanup、session/page projection、真实 contract tests | disposable adapter probe；移植不变量，非默认 runtime |
 | HTTP/web | `pi-web-access` `c702b3be11bfbc832489eb7cfe31d9bbbbb2cc27` | SSRF、manual redirect、extraction、error handling | bounded transplant；拒绝 research/curator/credential 复合 runtime |
-| Optional semantic knowledge | `pi-knowledge` `c18a6bf4f6468566e8ed878dd971c98c2ccf471d` | parser、FTS、symbol、optional embedding、staging/locks | recall probe 后的 curated optional；不默认内置 |
-| External knowledge | WeKnora `e99a4dd498d6847817b7c568e7cb4f1d0460179e` | durable queue、retry/dead-letter、revision、source/citation | ordinary external connector + bounded donor；拒绝整套捆绑 |
+| Optional semantic knowledge | `pi-knowledge` `c18a6bf4f6468566e8ed878dd971c98c2ccf471d` | 183 个 fixed-source unit 中 126 passed / 57 failed：parser、FTS、symbol、watch 与 contract 路径成立，默认本地模型 fetch 使 engine suite 失败 | parser/FTS 可作 bounded donor；semantic 只在真实 recall probe 后成为 curated optional，不默认内置 |
+| External knowledge | WeKnora `e99a4dd498d6847817b7c568e7cb4f1d0460179e` | fixed source 显示 durable queue、retry/dead-letter、revision CAS 与 citation；本轮 Go test 未进入执行，不能写成 passed | ordinary external connector + bounded mechanism donor；拒绝整套捆绑，不定义默认知识本体 |
 | Remote shell probe | `pi-ssh` `426baa1223ebad0ec399045a4b3675babbaab293` | 系统 SSH、operation replacement、ControlMaster | 只作 system-SSH seam 证据；拒绝 package runtime，shell-only 不足以成为 Remote |
 | Remote protocol | Distant `ba58064593ecb9e1b046c7e0d4626f39aa5c2633` | structured FS/search/watch/process/PTY、capability 与 reconnect | bounded protocol/host mechanism donor；不 fork，产品补 CAS、artifact、generation 与 scheduler receipt |
 | Local durable backend | `pi-tmux-task` `4514689b7b4917dff8d4bc130d781c2e5f2e7014` | tmux 权威、restart scan、real integration tests | curated optional local backend；不定义通用 Job、日志或 receipt |
@@ -1854,3 +1854,48 @@ submit 必须先写 intent 与 idempotency/correlation token，再 dispatch；ac
 **复验门与真实未决风险。** 进入生产 adoption 前，必须在一台非本机 Linux target 上用 system OpenSSH 实跑首次 host key、changed key reject、key/agent/交互认证、ProxyJump、断连/重连与 binary CAS；在 macOS/Windows/Linux 控制端核路径、权限、watch、PTY、sleep/wake 与 helper bootstrap/rollback。必须对真实 Slurm 实跑 submit response 丢失后的 token reconcile、queued/running/completed/failed、login/execute node 分离、cancel request/ack、App 强退、长日志 cursor、artifact partial resume/hash/rename。还要注入 helper health failure、两代并存和 LKG rollback。当前机器没有 `sbatch`/`squeue`/`sacct`/`scancel`/`slurmrestd`，所以真实 Slurm、真实远端 ProxyJump/2FA/host-key-change/HPC 全部保持 open；网络或环境缺失不算能力失败，也不允许 simulator 代替实测。
 
 止损点已经达到：M2/M3 不再在“shell package”“完整 remote protocol fork”“tmux 定义 Job”与“产品 receipt + system SSH + bounded helper”之间分叉。生产路线选择最后一项；未决项已经变成上述明确的真实环境复验门，没有 donor 代码或 artifact 进入仓库。
+
+### 22.15 M1 Probe E：文件原生知识与 immutable extension generations
+
+> Probe 日期：2026-08-01
+>
+> 范围：约千份 mixed corpus 的 filename/glob/exact/FTS/来源导航边界，以及 bundled、curated、任意第三方 extension 的自动更新治理。本节给出 M2/M5 provisional implementation choice；临时 corpus、索引、artifact 和 donor 代码均未进入仓库，真实 Agent/model 与正式 registry/package 仍按下列复验门保持 open。
+
+**固定源码、发布 metadata 与测试等级分离。** 三个候选都从固定 revision 导出到全新临时目录；安装只发生在 archive。实际结果如下：
+
+| 固定证据 | 实际命令与结果 | 已证明 | 未证明 / 负证据 |
+| --- | --- | --- | --- |
+| `pi-extmgr` source `9a0cf32ab83dcf00d6878c09c80aad85a4dd5687` | `pnpm install --frozen-lockfile --ignore-scripts && node --import=tsx --test ./test/auto-update.test.ts ./test/install-remove.test.ts`：31 passed / 0 skipped / 0 failed | update discovery、source identity normalization、宿主 install/update 调用、失败历史、reload 提示、URL timeout、临时解包 cleanup 与依赖缺失拒绝的固定源码路径 | registry 只读取 version/tarball URL；standalone 路径未核 integrity，直接 URL 写最终路径，本地安装先删目标再复制，managed update 原地委托宿主。没有 trust-envelope diff、safe-boundary activation、generation lease、health/quarantine 或 LKG；不能采用为更新权威 |
+| `pi-extmgr@0.3.0` registry metadata | integrity `sha512-5vR0qFFhIBYvfzBHfp4jAe2saMtvFF8lNP/V/23w6VbRQShC8AP/HE+qRWinZM8b1EnaBNneCYAsO7LsUJUGPg==`，`gitHead dfc30ff8afbf8c70ea850ec981bdeb0c580b7e2c`；它是固定源码的父 commit，二者 `src/` 与 `test/` 无 diff，release commit 只改 package/changelog | source/runtime files 的 lineage 差异可界定 | 本轮没有下载、检查或运行该正式 artifact；31 tests 仍是 source evidence，不得越级成为发布物 runtime proof |
+| `pi-knowledge` source `c18a6bf4f6468566e8ed878dd971c98c2ccf471d` | `npm ci && npm test -- --reporter=verbose`：17 个 test files 中 16 passed / 1 failed；183 tests 中 126 passed / 57 failed / 0 skipped | SQLite FTS/CJK、vector storage primitives、parser/chunker、symbol、watch exclusions、diagnostics/tool contract、API failure/abort 与 model-worker failure paths | 57 个 engine tests 都以 model worker `fetch failed` 失败；初始化/增量/删除/staleness/semantic engine 不能写成 passed。默认本地模型仍需 fetch，直接证伪“默认重型语义索引可离线可靠启动” |
+| WeKnora source `e99a4dd498d6847817b7c568e7cb4f1d0460179e` | 固定源码核对 `internal/types/task.go`、`task_dead_letter.go`、`internal/application/repository/task_queue.go`、`chunk.go`、`wiki_page.go`、`internal/application/service/knowledge_process.go`、`chat_pipeline/references.go` 与对应 tests。两次有界 `go test ... ./internal/types` 都只停在依赖下载/编译，未进入任何 test，随后主动终止 | 源码存在独立 worker-pool/queue registry、持久 pending/dead-letter、有限 retry、chunk/wiki optimistic revision 与 source/citation mapping；tests 定义了 queue uniqueness、dead-letter、CAS/revision 与 citation 场景 | 没有 passed/skipped/failed 计数，不能把 test 文件存在写成运行通过；这些机制不证明整套服务应接入，也不定义 OmniMind 默认知识本体 |
+
+**文件原生实际 probe。** 仓库外 disposable Node probe 每次生成无秘密、可重建的 1000-source corpus：250 个 filler code、250 个 filler Markdown、250 个 filler contract text、243 个 filler meeting Markdown，加上 paper、code、contract、meeting 四个命中样本、一个真实 zip OOXML presentation、一个安全 PDF fixture + extraction metadata、一个真实 zip OOXML document + extraction metadata。source manifest 对每个原件记录相对路径、source digest、projection digest（如有）、size、mtime、extractor 与可见 Wiki path；SQLite FTS 和 1000 个可见 Markdown pages 全部位于同一 `Location` 的 `.omnimind` projection，不复制原件。
+
+真实命令 `node --test ./probe-e-native.test.mjs` 运行 15/15 tests；其中 6 条属于 knowledge。最后一次运行结果：
+
+- 初始化 1000 sources：629.054 ms；manifest 1000 条、可见 Wiki 1000 页，projection 总计 1,002,334 bytes；
+- filename 查询 1/1，0.898 ms；glob 查询 251/251，0.783 ms；四个 content query 的直接 exact scan 为 4/4，47.066 ms，真实 `rg --fixed-strings` 为 4/4，60.219 ms；七个含 PDF/Office projection 的 FTS query 为 7/7，1.025 ms；这些是本机单次 deterministic probe，不是跨平台 benchmark；
+- 修改单篇后只重建 1、复用 999：17.823 ms，1,002,307 bytes；修改十篇后只重建 10、复用 990：28.571 ms，1,002,327 bytes；
+- 删除原件后 manifest、FTS 与生成页同时移除；源文件在更新前改变会明确列为 stale；更新生成区时保留人工保护区；
+- 删除 manifest/index 后全重建 1000 条：635.575 ms、1,002,350 bytes；FTS 命中和人工保护区仍成立；
+- FTS 结果携带 source path，deterministic navigation 实际回读原件；索引被断言留在目标位置且没有 `sources/` mirror。这不等于真实 Agent/model 已经按需导航，agentic search 仍未实测；
+- synonym query `maximum damages` 对只含 `LiabilityCap` 的合同，exact 与 FTS 都是 0。该真实 recall gap 只打开“评估可选 semantic projection”的门，不自动证明某个 embedding/model 会改善它，也不因 1000 files 默认启用 RAG。
+
+**自动更新 contract probe。** 同一外部脚本生成并真实打包三个最小 tar artifacts，分别代表 bundled、curated 和任意第三方；每次以 registry metadata 中的 exact revision、artifact path 与 SHA-256 resolver 驱动 content-addressed store。另加 recovery-check failure、active-health failure 与 self-updater 三个故障版本。9/9 update tests 实际通过：
+
+- digest mismatch 在解包前拒绝；正确 artifact 进入独立 staging，逐项运行 compatibility、headless、recovery 与 stage-health 子进程；
+- owner/source/license/install script/native dependency/capability/state schema 全部进入 trust-envelope diff；任一扩张停在 `Staged`，`Pinned` 不激活，unsafe boundary 也只保持 staged；
+- envelope 内版本在 safe boundary 激活；已经开始的 Attempt、browser target、MCP connection、remote process 与 external Job 五类 lease 都继续引用旧 generation，新 Attempt 才取得当前 generation；
+- activation 后 health failure 将新 generation quarantine 并恢复 LKG；recovery check failure 在 staging quarantine；package self-updater 无法静默改变 immutable generation，写入被拒绝或一旦检测到 tree digest 变化即 quarantine + LKG rollback；
+- 100 个 artifact ID 的 discovery schedule 都落在 24 小时到 26 小时之间，同一 ID 的 jitter 稳定且样本分散；即时手动 refresh 仍由 §22.7 定义。
+
+这 9 tests 只证明 OmniMind 计划中的 update contract 可实现和可证伪，不证明真实 registry、签名、任意 package 安装脚本、native ABI、状态迁移或三平台激活已经通过。`pi-extmgr` 的现有 auto-update 只做 discovery/timer，不提供上述 artifact authority；因此只能 bounded transplant source normalization、discovery projection 与错误呈现，不能持有第二套 package/current 状态。
+
+**M2/M5 provisional implementation choice。** M2 先实现 file-native vertical slice：原文件保持唯一内容权威；同位置的 manifest、FTS 与可见 Markdown Wiki 都是可删除重建的 projection，人工区用明确 ownership fence 保留。默认查询顺序是 filename/glob/`rg`/exact → FTS → 带 source path 的 deterministic navigation；真实 Agent navigation 在 M2 用同一 source ref 实跑以后才可声称 agentic。semantic index 和 WeKnora 之类外部知识服务都是普通、按需 capability，不进入 kernel、不创建知识模式；只有冻结 query set 显示 lexical recall 不足，且真实 semantic probe 在 recall、latency、storage、离线与来源回溯上净胜，才生成可删除 projection。
+
+M5 按 §22.7 直接施工五个清楚边界：metadata resolver、content-addressed artifact store、staging inspector、generation activator、LKG/quarantine registry。产品 journal/extension state 是 current/pinned/envelope/lease 的唯一权威；package manager 或 package 自带 updater不得持有第二真相。Bundled 跟随 App 原子版本；curated 与第三方都走同一 exact-artifact pipeline，只在批准 envelope 与 safe boundary 上有不同自动化策略。
+
+**复验门与回退。** M2 进入生产前必须在一份可公开重建但更接近真实分布的 corpus 上，使用真实 PDF/Office parser（不能只用 fixture metadata），于 macOS/Windows/Linux 和一个 remote-in-place target 复跑初始化、1/10-file incremental、delete/stale/rebuild、人工页保护、source trace 与 query-set metrics；必须再用真实 Agent/model分别跑 deterministic navigation 与 semantic projection。semantic 只有在预注册失败 query 上改善 recall，且 latency/storage/离线/来源可核成本可接受时才进入 curated optional；否则删除 semantic projection，回退 filename/`rg`/FTS。
+
+M5 进入 production adoption 前必须用 bundled、curated、任意第三方三个正式 exact artifacts，核 registry provenance/digest、install-script/native dependency/permission/state-schema diff、无 UI headless check、真实状态迁移、App crash during staging/activation、五类活跃 lease、三平台 rollback 与 restart LKG；self-updater 必须在实际安装路径被禁用或拒绝。任何失败都回退旧 LKG 并 pin 当前 generation；无法复核 lineage 的 artifact 不进入 staging。Probe E 已消除 M2/M5 的默认重型 RAG、整套外部服务和 mutable package-manager 分叉，但 M1 仍等待 Probe A 的真实 ecosystem package matrix，不能置为 `candidate`。
