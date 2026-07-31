@@ -1,6 +1,10 @@
 import { createHash } from "node:crypto";
 import { mkdir, open, readFile } from "node:fs/promises";
 import path from "node:path";
+import {
+  isRevealedWorkbenchSplit,
+  isWorkbenchLayout,
+} from "./thread-workbench.mjs";
 
 const THREAD_ID_PATTERN = /^[a-zA-Z0-9][a-zA-Z0-9_-]{0,127}$/;
 const EVENT_TYPES = new Set([
@@ -18,6 +22,10 @@ const EVENT_TYPES = new Set([
   "generation_activated",
   "generation_pinned",
   "extension_projection_unloaded",
+  "workbench_output_opened",
+  "workbench_output_closed",
+  "workbench_output_activated",
+  "workbench_layout_changed",
 ]);
 
 export class ThreadJournalError extends Error {
@@ -31,6 +39,45 @@ export class ThreadJournalError extends Error {
 
 function digestRecord(body) {
   return createHash("sha256").update(JSON.stringify(body)).digest("hex");
+}
+
+function requireEventId(event, key) {
+  if (typeof event[key] !== "string" || !THREAD_ID_PATTERN.test(event[key])) {
+    throw new ThreadJournalError("EVENT_INVALID", `journal event ${key} is invalid`, {
+      type: event.type,
+      key,
+    });
+  }
+}
+
+function validateEvent(event) {
+  switch (event.type) {
+    case "workbench_output_opened":
+    case "workbench_output_activated":
+      requireEventId(event, "outputId");
+      if (!isRevealedWorkbenchSplit(event.split)) {
+        throw new ThreadJournalError(
+          "EVENT_INVALID",
+          "workbench output event requires a revealed semantic split",
+          { type: event.type },
+        );
+      }
+      break;
+    case "workbench_output_closed":
+      requireEventId(event, "outputId");
+      break;
+    case "workbench_layout_changed":
+      if (!isWorkbenchLayout(event.split, event.activePane)) {
+        throw new ThreadJournalError(
+          "EVENT_INVALID",
+          "workbench layout event is invalid or internally contradictory",
+          { type: event.type },
+        );
+      }
+      break;
+    default:
+      break;
+  }
 }
 
 function cloneEvent(event) {
@@ -54,11 +101,12 @@ function cloneEvent(event) {
       type: cloned.type,
     });
   }
+  validateEvent(cloned);
   return cloned;
 }
 
 function journalPath(root, threadId) {
-  if (!THREAD_ID_PATTERN.test(threadId)) {
+  if (typeof threadId !== "string" || !THREAD_ID_PATTERN.test(threadId)) {
     throw new ThreadJournalError("THREAD_ID_INVALID", "thread id is invalid");
   }
   return path.join(root, "threads", `${threadId}.jsonl`);
@@ -106,14 +154,20 @@ export async function recoverThreadJournal({ root, threadId, strict = true }) {
       event: record.event,
     };
     const expectedSequence = records.length + 1;
+    let eventInvalid = false;
+    try {
+      if (!record.event || !EVENT_TYPES.has(record.event.type)) eventInvalid = true;
+      else validateEvent(record.event);
+    } catch {
+      eventInvalid = true;
+    }
     if (
       record.version !== 1 ||
       record.sequence !== expectedSequence ||
       record.previousDigest !== previousDigest ||
       record.threadId !== threadId ||
       record.digest !== digestRecord(body) ||
-      !record.event ||
-      !EVENT_TYPES.has(record.event.type)
+      eventInvalid
     ) {
       tailIssue = { code: "JOURNAL_CHAIN_INVALID", line: index + 1 };
       break;

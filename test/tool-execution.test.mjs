@@ -22,6 +22,7 @@ import {
   ThreadJournal,
 } from "../packages/journal/thread-journal.mjs";
 import { projectThread } from "../packages/journal/thread-projection.mjs";
+import { openWorkbenchOutput } from "../packages/journal/thread-workbench.mjs";
 import { OutputStore } from "../packages/outputs/output-store.mjs";
 
 const ENTRY_SOURCE = `
@@ -155,6 +156,22 @@ test("streams an ordinary tool, persists an OutputRef, and restores the same Thr
   const execution = await executeActiveTool(
     invocation(runtime, { onEvent: (event) => visibleEvents.push(event) }),
   );
+  await openWorkbenchOutput({
+    journal: runtime.journal,
+    outputRef: execution.receipt.outputRefs[0],
+  });
+  const whileAttemptRuns = await recoverThreadJournal({
+    root: runtime.journalRoot,
+    threadId: "thread-1",
+  });
+  const liveProjection = projectThread("thread-1", whileAttemptRuns.events);
+  assert.equal(liveProjection.status, "running");
+  assert.equal(
+    liveProjection.workbench.activeTabKey,
+    `output:${execution.receipt.outputRefs[0].outputId}`,
+  );
+  assert.equal(liveProjection.workbench.split, "balanced");
+
   await runtime.journal.append({
     type: "attempt_settled",
     turnId: "turn-1",
@@ -316,7 +333,11 @@ test("fences a large tool result behind a durable OutputRef", async () => {
 
 test("pins the last known generation and unloads only its projection without losing journal facts", async () => {
   const runtime = await createRuntime();
-  await executeActiveTool(invocation(runtime));
+  const execution = await executeActiveTool(invocation(runtime));
+  await openWorkbenchOutput({
+    journal: runtime.journal,
+    outputRef: execution.receipt.outputRefs[0],
+  });
   const nextGenerationId = runtime.generation.generationId === "e".repeat(64)
     ? "d".repeat(64)
     : "e".repeat(64);
@@ -338,6 +359,7 @@ test("pins the last known generation and unloads only its projection without los
   assert.equal(state.generation.pinned, runtime.generation.generationId);
   assert.deepEqual(state.generation.unloaded, [nextGenerationId]);
   assert.equal(state.actions["action-1"].outcome, "succeeded");
+  assert.equal(state.workbench.activeTabKey, `output:${state.outputs[0].outputId}`);
   assert.equal((await runtime.outputStore.read(state.outputs[0])).toString(), "# Durable note\n");
 });
 

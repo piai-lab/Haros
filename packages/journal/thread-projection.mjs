@@ -13,11 +13,53 @@ function initialProjection(threadId) {
       pinned: null,
       unloaded: [],
     },
+    workbench: {
+      tabs: [],
+      activeTabKey: null,
+      activePane: "conversation",
+      split: "conversation",
+    },
   };
+}
+
+export class ThreadProjectionError extends Error {
+  constructor(code, message, details = {}) {
+    super(message);
+    this.name = "ThreadProjectionError";
+    this.code = code;
+    this.details = details;
+  }
 }
 
 function action(state, actionId) {
   return state.actions[actionId] ?? null;
+}
+
+function outputTabKey(outputId) {
+  return `output:${outputId}`;
+}
+
+function requireOutput(state, outputId, eventType) {
+  if (!state.outputs.some((outputRef) => outputRef.outputId === outputId)) {
+    throw new ThreadProjectionError(
+      "WORKBENCH_OUTPUT_MISSING",
+      "workbench event references an output absent from the Thread journal",
+      { eventType, outputId },
+    );
+  }
+}
+
+function requireOpenTab(state, outputId, eventType) {
+  const key = outputTabKey(outputId);
+  const index = state.workbench.tabs.findIndex((tab) => tab.key === key);
+  if (index === -1) {
+    throw new ThreadProjectionError(
+      "WORKBENCH_TAB_MISSING",
+      "workbench event references an output that is not open",
+      { eventType, outputId },
+    );
+  }
+  return { index, key };
 }
 
 export function projectThread(threadId, events, { recoverInterrupted = false } = {}) {
@@ -113,6 +155,41 @@ export function projectThread(threadId, events, { recoverInterrupted = false } =
         if (!state.generation.unloaded.includes(event.generationId)) {
           state.generation.unloaded.push(event.generationId);
         }
+        break;
+      case "workbench_output_opened": {
+        requireOutput(state, event.outputId, event.type);
+        const key = outputTabKey(event.outputId);
+        if (!state.workbench.tabs.some((tab) => tab.key === key)) {
+          state.workbench.tabs.push({ key, kind: "output", outputId: event.outputId });
+        }
+        state.workbench.activeTabKey = key;
+        state.workbench.activePane = "workbench";
+        state.workbench.split = event.split;
+        break;
+      }
+      case "workbench_output_closed": {
+        const { index, key } = requireOpenTab(state, event.outputId, event.type);
+        state.workbench.tabs.splice(index, 1);
+        if (state.workbench.tabs.length === 0) {
+          state.workbench.activeTabKey = null;
+          state.workbench.activePane = "conversation";
+          state.workbench.split = "conversation";
+        } else if (state.workbench.activeTabKey === key) {
+          const next = state.workbench.tabs[Math.min(index, state.workbench.tabs.length - 1)];
+          state.workbench.activeTabKey = next.key;
+        }
+        break;
+      }
+      case "workbench_output_activated": {
+        const { key } = requireOpenTab(state, event.outputId, event.type);
+        state.workbench.activeTabKey = key;
+        state.workbench.activePane = "workbench";
+        state.workbench.split = event.split;
+        break;
+      }
+      case "workbench_layout_changed":
+        state.workbench.activePane = event.activePane;
+        state.workbench.split = event.split;
         break;
       default:
         break;
