@@ -395,7 +395,24 @@ Material correction, if any: the M0 exit text previously included F-03 even thou
 
 ### M1
 
-No evidence yet.
+Probe A engine-core/artifact route provisional choice: `2f4ded82582ee91155d64d4aa5e0aa5721ce28eb`
+
+- Fixed source `74caa2649f10ed71b4378ce69f5d9fbfd2466ca5`: a clean archive could not run its declared offline build without untracked generated model data. With the exact generated-data input and limitation recorded in `README.md §22.11`, the focused seven-suite command ran 28 tests: 27 passed and the cross-cwd session-replacement test timed out at 5 seconds; its isolated 20-second rerun also timed out.
+- Published 0.83.0 artifacts resolve to `gitHead 845d6ff1f6643aba440341cce877ce1c43ebbc39`, 36 commits before the reviewed source, so artifact behavior was kept separate. Deterministic artifact execution covered session creation, streaming/tool lifecycle, active-tool switching, cancellation, persistence, branching and invalid-tail recovery; a 128 KiB tool result produced a 131,781-byte next-request context.
+- Provisional route: minimal managed fork/upstream patch branch plus thin product adapter. It remains research evidence, not `source-adoptions`; current direct-package lineage, build inputs, public registry injection and cross-cwd behavior are insufficient. The exact downgrade-to-package gates are in `README.md §22.11`.
+- Still open inside Probe A: the real ordinary-tool/Todo/child-Agent/Dynamic-Workflow/fail-fast package matrix and its headless/UI/session-control/second-truth reports. M1 is not `candidate` and no acceptance item changed status.
+
+Drift review: aligned
+
+User value: avoids freezing an artifact that cannot be tied to the reviewed source and prevents large tool output from silently consuming the next model request.
+
+Architecture/naming: the choice preserves product-owned state and does not add donor code, adoption inventory entries or production names.
+
+Performance: selected-tool schema injection was measured; the large-output context cost is concrete rather than inferred.
+
+Visual/product quality: not in this probe scope.
+
+Material correction, if any: separated fixed source, official artifact and locally generated build evidence; the provisional fork choice cannot be promoted to permanent doctrine or M1 completion.
 
 ### M2
 
