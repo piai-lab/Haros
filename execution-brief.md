@@ -350,6 +350,21 @@ README.md
 
 决策可以是完整 renderer、多个组件域或新壳；不得预先限制移植大小。
 
+本探针先固定一份工作台源码 archive，并在 archive 内核对物理路径、revision 与 manifest 后安装依赖；不得在研究镜像中安装。样本分成四栏，互不替代：
+
+1. renderer shell/state/IPC：统计 shell spine、atom/state owner、direct host calls、persist/restore 与 message mapping；
+2. viewer/stream/activity：读取实际 format dispatch、watcher、large-file/unknown-file failure path、stream batching、scroll anchoring、queue/background activity 与对应 tests；
+3. pure-function failure matrix：只验证目标 per-Thread state contract 和固定源码暴露的持久化缺口，不替 donor 证明 runtime；
+4. UI hypothesis search：ordinary Chat、work Thread、child control、recovery/location 四个 feature family 各做两个真实 workflow archetype；micro-axis 只能检验信息密度、motion、control placement 等单变量，不能凑数。
+
+失败注入至少包含：preview/open-file memory map 在 restart 时清空、切换 session 后顶层 entry replacement、unknown/binary/oversized/missing viewer、file change during Attempt、watch storm、长 Thread 无界 DOM、child running 时 follow-up/interrupt/stop、temporary question 在 App restart 后恢复、Remote 未使用时不占默认布局。不能实际运行的项保持 open，不得用源码机制推断通过。
+
+施工顺序固定为：先证伪完整 renderer 的状态/IPC/性能边界；再按 viewer、stream feedback、diff/file change、activity/queue 四个组件域确定可抽取文件和依赖；随后比较“保留 shell、替换状态边界”与“新 shell、移植组件域”的文件数、host concepts、adapter、平台/build ownership 和六个月维护成本；最后才用临时 UI 检验该路线是否能承载产品语义。先不做完整生产 UI，也不把被否定的 object-workbench 原型当候选。
+
+成功条件是得到一个可施工的 provisional route：明确 M2 第一条工作台切片、Thread-owned persistence、message virtualization、viewer contract、generated-file refresh、child/temporary-question control、local-default/Remote-on-demand 与三平台复验门。若 full renderer 能在一个有界 adapter seam 后准确满足这些 contract，可以选择它；若状态、IPC 和 host ontology 横跨 renderer，则保留确有证据的 shell/组件机制，状态与 message list 由产品拥有。
+
+停止条件是路线已足以消除 M2 的 full-renderer/new-shell 分叉，并列出 bounded transplant 与 open gates；不继续为布局/配色生成近重复候选，不等待视觉批准，也不把临时原型扩成产品。临时源码 archive、UI artifacts、failure matrix 与过程笔记在稳定结论落盘后删除。
+
 ### 7.3 探针 C：持久运行时、文件与编排
 
 目标：证明内核原语足够小，同时能承担 Todo、child Agent、Team message、Dynamic Workflow、文件并发和恢复。

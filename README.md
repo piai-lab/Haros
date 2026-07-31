@@ -1652,7 +1652,7 @@ Evidence level：除后续 probe 小节明确升级的行以外，下列候选�
 | Remote shell probe | `pi-ssh` `426baa1223ebad0ec399045a4b3675babbaab293` | 系统 SSH、operation replacement、ControlMaster | disposable protocol probe；shell-only 不足以成为 Remote |
 | Remote protocol | Distant `ba58064593ecb9e1b046c7e0d4626f39aa5c2633` | structured FS/search/watch/process/PTY 与 reconnect | strongest protocol donor；alpha，缺 CAS/scheduler，不 fork |
 | Local durable backend | `pi-tmux-task` `4514689b7b4917dff8d4bc130d781c2e5f2e7014` | tmux 权威、restart scan、real integration tests | curated optional backend；不定义通用 Job |
-| Workbench | Proma `aa02c16819399e7683533f15cfe202754d6b156c` | renderer、event coalescing、background activity、file change UI | 继续 full-renderer vs vertical-slice probe；旧 SDK 只属迁移，不是未来方向 |
+| Workbench | Proma `aa02c16819399e7683533f15cfe202754d6b156c` | renderer、event coalescing、background activity、file change UI | 新 shell + bounded component-domain transplant；完整 renderer 仅作 shell/机制参考，不承接产品状态 |
 
 明确拒绝的模式：独立 Todo/Team task DB、固定 DAG/YAML Workflow、模型自报 Goal 完成、自动 commit/merge、用户 Git 上 reset/clean checkpoint、复制 transcript 的 memory、默认向量/RAG、完整远程产品 server、透明目录 mirror、MCP 作为唯一扩展协议、capability manifest 冒充 sandbox、在 active work 中热更新。
 
@@ -1754,3 +1754,57 @@ artifact 的 shrinkwrap 在 probe consumer 中产生了顶层与嵌套的同版�
 **M2 provisional implementation choice。** 采用一个产品自有 append-only Thread/Attempt journal 加小型纯 reducer；Todo、child lifecycle、Team receipt、Workflow run/step/attempt、attention 与 `CheckpointRef` 都是同一事件流的不同投影，不建立社区 Todo DB、Team task board、固定 Workflow graph 或 transcript copy。first-party modules 可以 bounded transplant 上表已执行的不变量，但 package 不拥有 canonical state。Dynamic Workflow 固定的是 journal、caps、retry/receipt/fence，步骤继续由 Agent 根据 evidence 实时改写。checkpoint backend 保持可替换 seam；首个实现可以使用 per-Location/per-Attempt private recovery store，但必须由产品实现 safety transaction，不再依赖当前不可验证 donor。
 
 止损点已经达到：Probe C 足以排除“直接采用状态型 package”“固定 DAG/YAML”“用户 Git checkpoint”和“每种编排一个数据库”，不再扩大 donor 考古。仍保持 open 的是生产 journal 的并发/损坏尾部/跨进程实现、真实 engine package bridge、跨 OS 文件权限与锁、目录/更大文件性能，以及 production recovery backend 的 crash-at-every-boundary matrix；这些属于 M2 实现验收，不允许把 8-test simulator 冒充生产通过。
+
+### 22.13 M1 Probe B：Thread-owned workbench 与有界 renderer 移植
+
+> Probe 日期：2026-08-01
+>
+> 范围：固定 workbench 源码的 renderer、状态、IPC、stream/scroll、viewer、file change、background activity 与 child control；以及仓库外的交互假设搜索。本节是 M2 的 provisional implementation choice，不是视觉批准、源码采用或跨平台验收。
+
+**固定源码与实际命令边界。** 从 Proma `aa02c16819399e7683533f15cfe202754d6b156c` 的全新 `git archive` 运行 `bun install --ignore-scripts`，安装 1,184 packages；`bun run --cwd apps/electron build:renderer` 通过，Vite 处理 5,382 modules，用时 9.72 秒。产物共 22,548,793 bytes，其中 356 个 JavaScript 文件合计 18,266,249 bytes，最大两个 chunk 为 4,421,937 与 1,542,127 bytes。该命令只证明固定源码在本次 macOS 主机可构建，不证明首屏、长 Thread、viewer runtime 或 macOS/Windows/Linux 打包运行。
+
+Focused command 只运行外部 pure-function matrix 与以下 donor tests：collaboration utils、agent atoms、session-list merge、external run、completion presence、process grouping 和 default-app fallback。结果是 8 files、53/53 tests、113 expects、53 ms；其中 donor tests 49 个，probe matrix 4 个。它们覆盖 delegation idempotency、retry/stream state、child-preserving session merge、external activation freshness、background completion presence、process grouping 与 fallback label。没有运行或证明 viewer 渲染、watcher 集成、长滚动、三平台 package 或 durable temporary-question recovery。
+
+外部 matrix 直接调用固定源码的纯函数，实际证明四个状态边界：持久化会丢弃 preview/open-file 并把 active preview 映回 agent tab；同进程 memory map 能重建 preview；清空 memory 模拟重启后 preview contract 消失；打开另一 session 会替换之前的顶层 session entry。它只证伪现有 state contract，不能替 donor 或未来产品证明恢复能力。
+
+**为什么完整 renderer 不能承接 M2 状态。** renderer 有 434 files，其中 339 个 TS/TSX/CSS 文件；111 files 直接调用 `window.electronAPI`，共 620 occurrences，公开 host surface 有 335 property signatures。135 files 导入 Jotai；31 个 atom 文件共 3,882 lines。`AppShell`、`Panel`、`LeftSidebar`、`MainArea`、`TabBar`、`TabContent` 与 renderer `main` 这条 shell/state spine 共 6,769 lines，其中 `LeftSidebar.tsx` 单文件 4,517 lines，并以持久化的全局 app mode 区分 Chat/Agent。
+
+失败不是“一个 session store 不够好”这么局部，而是六个相互耦合的边界：
+
+| 边界 | 固定源码事实 | 对完整移植的影响 |
+| --- | --- | --- |
+| Session store | `apps/electron/src/renderer/main.tsx:704-855` 只持久化 tabs 与 active tab；启动时只恢复一个有效 session 加 scratch | 无法准确恢复每 Chat 的完整工作台 |
+| Per-Chat workbench | `atoms/tab-atoms.ts` 明示 session view map 只在 runtime memory；`atoms/preview-atoms.ts` 的 open-file map 也只在内存，split/mode 反而是全局 storage | tabs/open files/active pane/split 没有同一个 Thread-owned authority |
+| IPC | renderer 跨 111 个文件直接依赖 335-property host surface | “替换宿主边界”会变成广域侵入式重构，难以证明没有第二状态真相 |
+| Message mapping | `AgentMessages` 同步读取整份 JSONL，合并、分组、过滤后把全部可见 group 与 minimap 映射到 DOM | 无 virtualization、pagination 或 history cap；长 Thread 性能未成立 |
+| Streaming/scroll | `packages/ui/src/hooks/useSmoothStream.ts` 使用 `Intl.Segmenter`、`requestAnimationFrame` 与动态 drain；Conversation 使用 stick-to-bottom | 可移植的是 batching/anchoring 机制，不是无界 message list |
+| Platform/build ownership | scripts 声明 mac/win/linux，但固定 revision 的 release CI 只构建 macOS arm64/x64 与 Windows x64；本次只构建 renderer | Linux 与三平台 runtime、window chrome、shortcut/path/watch 行为仍是产品责任 |
+
+因此“保留 renderer shell、替换状态边界”最多是一个有界 shell 选项：三栏几何和 panel chrome 可作为参考或在清除全局 mode、host identity 与直接 IPC 后移植；若保留现有 6,769-line spine，则必须重写散布的 atoms、message mapping 与 IPC，预计比表面复制更难持续合并上游。它不是零成本复用，也不能让 donor settings 或 JSONL 成为产品状态真相。
+
+**可有界移植的组件域。** 当前证据也不支持“状态有缺陷，所以全部重写”。以下固定源码域有可抽出的机制，但生产采用前仍须缩到明确文件、依赖、adapter 和 rights 边界：
+
+- viewer/file change：`apps/electron/src/renderer/components/diff/` 19 files、5,724 lines、19 次直接 IPC；`components/file-browser/` 11 files、2,584 lines、29 次直接 IPC。`DiffTabContent.tsx` 已有 text/Markdown/PDF/Office/image 分流、50-entry LRU、per-session/file scroll cache、500,000-character plain-text fallback 与 refresh-version reload；workspace watcher 用 recursive `fs.watch`、300 ms debounce、噪声目录过滤与 error restart。它证明值得抽取 renderer/viewer contract 与 watcher mechanics，不证明整目录可直接复制：未知文件仍按最多 50 MB UTF-8 读取，错误和 binary contract 不完整，scroll cache 也不耐久。
+- stream feedback：`useSmoothStream.ts` 的 segment batching 与 rAF drain、Conversation 的 scroll anchoring 可以 bounded transplant；新的 message list 必须另行 virtualization/pagination，不能继承整份同步 JSONL 与全量 DOM mapping。
+- diff/file activity：file write 后的 refresh-version、process block grouping、background completion presence 与 default-app fallback 有源码和本次 targeted tests 支撑；产品以 `OutputRef`、journal projection 与 capability adapter 接入，不复制 donor atoms。
+- queue/activity：message queue、external run、process group、background/active task surface 合计候选约 1,407 lines。只采用 retry/activation/grouping/presence 的纯机制与组件行为；本次没有运行 message-queue 自身测试，不能把整个 queue 记为已验证。
+- child control：侧栏按 `parentSessionId + sourceDelegationId` 建一层 child tree，点击能进入真实 child session；Thread 内已有 follow-up、interrupt/stop 路径。父级 child row 没有专用 steer/stop/ask 控件；AskUser 仅是 main-process 内存 Map，App 进程重启会丢失。因此 M2 要保留“compact row → real child Thread”的交互基因，自行实现 durable temporary-question branch 与 receipt。
+
+**交互假设搜索。** 仓库外共生成 8 个真实 workflow candidates，覆盖 ordinary Chat、folder-bound work Thread、child control 与 recovery/location 四个 feature family，每组两个不同 archetype；另做 micro-axis 与重复饱和轮。桌面 1440×900、light/dark、normal/reduced-motion 共审计 80 种组合，最终是 0 errors、0 warnings；首轮发现 workbench 关闭态仍有 clipped Close control，修正后复跑通过。这个结果只证明临时原型自洽，不能证明产品 UI 已获 maintainer approval。
+
+暂留三个交互基因：普通 Chat 使用安静、熟悉的 conversation-first 导航且可无目录；工作 Thread 以 chat 为主、右侧工作台按需打开，balanced split 是同一 Thread 的持久状态而非另一种 shell；child 以 compact row 出现并可进入 focused child Thread。淘汰 focus-card 的 card-inside-card、永久 child tree/dashboard、独立 recovery route、永久 Remote/Workflow dashboard、装饰性差异和重复候选。Location inspector 只在实际 remote/external execution 时渐进出现；旧 object-workbench prototype 不复活。临时 UI artifacts 已删除，不进入仓库。
+
+**M2 provisional route。** 选择“产品新 shell + bounded component-domain transplant”，不是“全部重写”：
+
+1. 普通 folderless Chat 与通常绑定文件夹的 work Thread 共用一个 Thread 模型，不再以全局 app mode 分裂产品；
+2. Thread journal projection 唯一拥有 tabs、open files、active pane、semantic split 与 execution location，filesystem 继续拥有文件 bytes；
+3. 新 message list 采用 batched stream、bounded DOM virtualization/pagination 与 scroll anchoring；
+4. watcher event 通过小型 capability adapter 刷新 exact generated-file `OutputRef`，让 Attempt 运行中可以打开刚生成文件；
+5. 右侧 workbench 按需出现，先交付 text/unknown fallback 与 diff，再把 Markdown、image、PDF、table/office 等放进显式 viewer adapter；
+6. compact child row 进入真实 child Thread；follow-up、interrupt、stop 作用于当前 child；temporary question 是可重放分支，结论带 back-reference 回父 Thread；
+7. local 是默认 execution location；Remote/external inspector 只在需要时出现，不成为永久模式；
+8. layout 使用平台中立的语义状态，window chrome、shortcut、path 与 file watching 由 OS adapter 承担。
+
+进入 M2 前不搬入 donor renderer；第一条真实 vertical slice 决定具体采用文件。性能门至少覆盖 first visible/first delta、high-frequency stream batching、100k+ character Thread、bounded DOM、background update、500k+ text/unknown/binary viewer、watcher storm 与内存增长。恢复门必须 crash/restart 后逐 Chat 精确还原 tabs/open files/split。平台门必须在 macOS、Windows、Linux 的 package runtime 走同一 folderless Chat、folder-bound Thread、generated-file open、child control 与 local/Remote-on-demand 场景。viewer 还要覆盖 oversized、corrupt、unknown binary、missing 与 concurrent change。只有 bounded 文件/依赖/rights、adapter contract、targeted source tests 和这些产品门都明确后，才把实际代码写入 source adoption。
+
+止损点已经达到：完整 renderer transplant 作为 M2 状态底座被排除；新 shell 与哪些机制值得继续移植已经足够施工。仍保持 open 的是最终视觉 approval、实际 vertical slice 文件选择、长列表/stream 基准、durable temporary question、viewer failure matrix 与三平台 package runtime；这些不能由本次 build、53 tests 或临时 UI 冒充通过。
