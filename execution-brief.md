@@ -369,6 +369,12 @@ README.md
 
 探针必须证明各状态只有一个所有者，不能因为 package 已经实现就接受其私有 Todo、task board、workflow graph、comments database 或 transcript copy。
 
+本探针按两条互不替代的证据链施工：先在全新固定源码 archive 中运行 plan reducer、child lifecycle、mailbox/receipt 和动态编排的最窄目标测试，记录精确命令、通过计数与首个停止位置；再用不含 donor 的 disposable native simulator 验证产品自己的 journal/filesystem/recovery 不变量。source test 不能证明产品 reducer，simulator 也不能证明 donor。
+
+simulator 的最小事件样本是两个 Thread branch、前台与后台 child、重复/过期 Team message、一次 evidence-driven route replacement、同一步的两个 attempt、一次 dispatched 未 settled 的非幂等动作，以及四态 attention。文件样本固定含 create/modify/delete/rename/symlink/untracked/large file，并在动作前后记录用户 Git 的 HEAD、index tree、refs 与 stash。
+
+失败注入顺序固定为 plan 自依赖/悬空/环、旧 observation CAS write、crash replay、未确认 dispatch、step hard cap、restore 中途失败和 rollback 再失败。成功条件是 restart projection 相同、route 真正换路、retry lineage 保留、未知副作用不重放、用户 Git 元数据不变、单次 restore 失败回到 safety checkpoint、双重失败留下 `outcome_unknown`。达到这些条件并能决定 M2 的唯一 journal/recovery seam 后立即停止；不继续为不可取得的 checkpoint 候选做来源考古，也不把 simulator 扩成生产 runtime。
+
 ### 7.4 探针 D：远程与批处理
 
 目标：证明本地产品能对远程文件、终端和长寿命批处理任务保持准确状态。

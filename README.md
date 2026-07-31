@@ -1629,7 +1629,7 @@ Bundled first-party 随 App 原子更新和整版回滚。Curated package 在既
 
 下表是研究 evidence，不是 `source-adoptions`。`runtime = none` 表示没有社区 package 成为默认状态权威，不表示其生态被排除。
 
-Evidence level：下列候选均为固定源码和相关测试文件已经阅读，**研究任务没有执行上游测试**。表中结论只能升级为 probe candidate，不能写成“测试已通过”。Metadata-only、源码与发布物无法对应或仓库不可取得的候选不进入本表。
+Evidence level：除后续 probe 小节明确升级的行以外，下列候选均只表示固定源码和相关测试文件已经阅读，**不能写成“测试已通过”**。实际运行命令、计数和停止位置只以对应 probe 小节为准。Metadata-only、源码与发布物无法对应或仓库不可取得的候选不进入本表。
 
 | 类别 | 固定来源 | 已观察价值 | 当前裁决 |
 | --- | --- | --- | --- |
@@ -1643,7 +1643,6 @@ Evidence level：下列候选均为固定源码和相关测试文件已经阅读
 | Workflow reliability donors | `pi-extensible-workflows` `1e05e223e5894ad7d81eb8fe615504607df7b9ef` + `@agwab/pi-workflow` `c3fb83cc3204bf171b4461b84a6e0b7532a7bed7` | reducer、launch snapshot、journal/replay、lease、stop intent、非幂等 fence | 只移植可靠性不变量；固定图 ontology 不定义产品 Workflow |
 | File rendering | `pi-tool-display` `91cef7580078371f8dc49a8607222807ad6a424d` | Unicode/BOM/CRLF/binary 边界、pending diff | bounded renderer transplant |
 | Diff review | `pi-diff-review` `de3fa5983a64cd98f09c95af7426152253f5ed4c` | parser、split view、stale relocation | 只移植 parser/interaction；拒绝 comments 状态 |
-| Checkpoint | `oh-my-pi` checkpoint `c84e9c020035c7814a834e91993a7ce15865a3b7` | private bare repo、lock、snapshot/replay | 第一 recovery donor；必须补 safety transaction 和失败回滚 |
 | Conditional search | FFF `686a84959ddc72185a7cacaf00145af5ccac7a83` | Rust index/watch/fuzzy/frecency | 只在大仓性能 probe 证明需要后采用底层 library |
 | MCP | `pi-mcp-adapter` `6a3e840219a49f9ae5350542b7a707aa1e83fedf` | connection owner、stdio/HTTP、OAuth、recovery、schema conversion | 最强 donor/compatibility probe；不原样成为内核 |
 | Browser | `pi-agent-browser-native` `211a012c9b199d758768e8ba729f35e11e661f65` | process cleanup、session/page projection、真实 contract tests | disposable adapter probe；移植不变量，非默认 runtime |
@@ -1725,3 +1724,33 @@ artifact 的 shrinkwrap 在 probe consumer 中产生了顶层与嵌套的同版�
 这条小分支优于 bounded transplant 或重写，因为已运行的核心生命周期路径大部分成立，当前负证据集中在 artifact lineage、生成输入、registry 边界和一个 session replacement 路径；局部移植会迫使产品接管内部 session tree、extension loader 与更新合并，重写则重复已经成立的流式、工具、取消、恢复和分支行为。若这些缺口能作为有界上游补丁解决，fork 只承担出包和补丁所有权。§8.3、§15 与 §22.2 已定义 thin adapter、transcript、Thread/journal 和 `OutputRef` 权威；本 probe 只证明 128 KiB 结果会真实穿透到下一次 context，因此既有大输出 fence 是进入 M2 的硬门，不另造一套 doctrine。
 
 **回退与重新验证。** `source-adoptions` 保持为空，因为本 probe 没有把 donor 代码或 artifact 放入生产仓库。降回正式 package 的门是：source 与 artifact 的 `gitHead` 或等价 provenance 可核；同一 revision 能用 content-addressed 生成输入复现；public transport/registry 保持单实例或提供正式注入点；跨 cwd replacement 稳定通过；上述目标 lifecycle tests 在对应 artifact/source 上通过；真实 ecosystem package matrix 通过。满足后删除 patch branch，采用 package + thin adapter。若小分支开始接管 transcript、Thread、位置、第二状态真相，或 maintained delta 不再有界，则拒绝该路线，重新比较 bounded transplant 与替代引擎。
+
+### 22.12 M1 Probe C：原生 journal、动态编排与 recovery seam
+
+> Probe 日期：2026-08-01
+>
+> 范围：Todo、child Agent、Team message、Dynamic Workflow、文件 CAS、checkpoint 与崩溃恢复。本节是 M2 的 provisional implementation choice；没有生产代码或 donor 进入 `source-adoptions`，也不把 M1 推进为完成。
+
+**固定源码 / artifact 证据。** 每个源码候选都从冻结 SHA `git archive` 到新的 `mktemp`，首行核对物理路径、manifest 与 revision；依赖只安装在 archive。发布 artifact 另以 registry `gitHead` 与 tarball digest 固定。实际结果如下，不得跨列扩张：
+
+| 候选 | 实际运行证据 | 只证明什么 | 不证明什么 |
+| --- | --- | --- | --- |
+| `@99percentpeople/pi-todo` source `0d85185fc1af2c66df54fcd9347c6e53d10e83f6` / artifact `1.2.3` | registry `gitHead` 与 source 相同；artifact integrity `sha512-bTSQNUFjrB3ENxe/HsBeLJRQMdONJ6jh6K7telu4v2tQi6zxQ1AYUgtt1dmSq6IuRnMAJ2fbKCUgCGt9hCpBmA==`。固定源码先 build shared package，再运行 `node --import tsx --test --test-isolation=process tests/todo.test.ts`：14/14 passed | snapshot 原子更新、stale revision、自依赖/环/悬空依赖拒绝、branch replay、compaction checkpoint 和 read-only UI 基线 | 包只公开默认 extension 与 schema version，reducer 不是公共 adapter contract；不能让 package transcript entry 成为产品 plan 权威 |
+| `pi-subagents` source `89de10e4bc8895e7948704c38620a5b35ddcd17e` / artifact `0.38.0` | registry `gitHead` 与 source 相同；artifact integrity `sha512-8wGQiX6rkR5J4V+AnWtQg3+LmC+cHnZIM1f/VWTjCTkVmcoKdeLsTAYG6BS2yKAugyEUjNUGj3vE5d9nj9m61A==`。10 个 targeted unit files 共 107/107 passed | resume ownership、stop/steer inbox、ack、stale-run reconcile、session lease、nested routing 和 spawn budget 的源码路径 | 约 2.7 MB unpacked artifact 还包含自己的 runtime、TUI、acceptance、workflow graph 和 worktree ontology；没有证明可原样成为 child Thread runtime |
+| `pi-agentteam` source `3b3b1e4b599cbc6dad2c6202eec5025edb4ed363` / artifact `0.6.8` | registry `gitHead` 与 source 相同；artifact integrity `sha512-2U78q5vOjLCk0GUHoWqfxBbXK19IM0kclyoGDLM1GM4uj5R/sZYipOmYch5zxuDbO9mO7fJEvoc7lP+VCv+63w==`。固定 archive 不含 lockfile；test runner 还硬编码作者机器的 TypeScript fallback。仅在 archive 临时补 TypeScript 后，前 17 suites（含 message policy、outbox idempotency/retry/claim、mailbox attention）通过；随后因 archive 缺少 `docs/baseline-v0.5.0.md` 停止 | typed message、idempotent outbox、claim recovery、compact attention projection 的被执行路径 | 不能称全套测试通过；自带 task store、task history、mailbox/outbox/team stores 和 tmux/runtime 会制造第二状态真相，只可移植 mailbox/receipt 不变量 |
+| `pi-dynamic-workflows` source `31b2aca0f1cb195aafbfc5e3ee2b8c83ad3f21a2` | 固定 archive 的 `npm ci --ignore-scripts` 后运行声明的 `npm test`，`check + build + 24/24 unit tests` passed | runtime-created phase、条件/循环 phase、parser hazard rejection、abort 和未等待 child promise 拒绝 | 发布 artifact 的 lineage 不对应此 SHA；源码 runtime 以内存 route 为主，没有证明 mid-run replan、crash resume、receipt、retry lineage 或副作用 fence |
+
+此前 §22.8 的 checkpoint 行已降级并移除：原研究披露没有可核来源 URL，错误候选 `https://github.com/acidsugarx/oh-my-pi.git` 不存在；纠正后的可能上游 `https://github.com/can1357/oh-my-pi.git` 也不包含冻结 SHA `c84e9c020035c7814a834e91993a7ce15865a3b7`，GitHub commit API 返回 `422 No commit found for SHA`。因此该 SHA 不能继续被称作固定源码已阅读、不能承担 adoption 或 probe proof。网络/lineage 失败不说明 private bare Git 机制好坏；重新进入候选表的门是来源 URL、固定 revision、许可证、完整 archive 与目标 recovery tests 全部可复核。
+
+**原生 simulator 证据。** 仓库外 disposable Node probe 以一个 append-only JSONL journal、可重建 reducers、真实 filesystem 和独立 private bare Git recovery store 运行 8/8 tests；它没有导入上述 donor，也不证明 donor。覆盖矩阵为：
+
+- main 与 question branch 分别 replay Todo；自依赖、悬空依赖和环 fail-fast；restart 前后 projection 完全相同；
+- foreground/background child 共用一个 lifecycle reducer，steer、stop、settle 可重放；Team message ID 去重并投影 delivered/read/ack/expired，attention 的 completed/attention/failed/outcome_unknown 四态去重并保留 deep link；
+- 初始 route 在收到真实 evidence ref 后删除 route A、加入 route B；retry 创建带 `retryOf` 的新 attempt，hard cap 停止继续生成；已 dispatched 未 settled 的非幂等 attempt 在 replay 后成为 `outcome_unknown`，没有自动重放；
+- observed-version token 含 identity/type/size/mtime/digest，外部修改后 CAS write 被拒绝；fresh observation 才能原子替换；
+- private recovery store 实际覆盖 create/modify/delete/rename/symlink/untracked 与 1 MiB 文件；两次 restore 前后用户 repo 的 HEAD、index tree、refs 与 stash 完全不变；
+- restore 中途失败会恢复 safety checkpoint；restore 与 rollback 都注入失败时保持 `outcome_unknown`。
+
+**M2 provisional implementation choice。** 采用一个产品自有 append-only Thread/Attempt journal 加小型纯 reducer；Todo、child lifecycle、Team receipt、Workflow run/step/attempt、attention 与 `CheckpointRef` 都是同一事件流的不同投影，不建立社区 Todo DB、Team task board、固定 Workflow graph 或 transcript copy。first-party modules 可以 bounded transplant 上表已执行的不变量，但 package 不拥有 canonical state。Dynamic Workflow 固定的是 journal、caps、retry/receipt/fence，步骤继续由 Agent 根据 evidence 实时改写。checkpoint backend 保持可替换 seam；首个实现可以使用 per-Location/per-Attempt private recovery store，但必须由产品实现 safety transaction，不再依赖当前不可验证 donor。
+
+止损点已经达到：Probe C 足以排除“直接采用状态型 package”“固定 DAG/YAML”“用户 Git checkpoint”和“每种编排一个数据库”，不再扩大 donor 考古。仍保持 open 的是生产 journal 的并发/损坏尾部/跨进程实现、真实 engine package bridge、跨 OS 文件权限与锁、目录/更大文件性能，以及 production recovery backend 的 crash-at-every-boundary matrix；这些属于 M2 实现验收，不允许把 8-test simulator 冒充生产通过。
