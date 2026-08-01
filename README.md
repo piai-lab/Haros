@@ -21,7 +21,7 @@
 - “创建新仓库”类表述从现在起视为已经完成；
 - M1 五个可丢弃探针已经在 `7041ccbaaf9eb0ecddb171408a59ed0bf42f6843` 形成 `candidate` 路线；§22.11–§22.15 保留其问题、证据、裁决与复验门，不得重新准备或运行同一轮研究；
 - 当前仓库已有一条 M2 focused skeleton，但它仍是可删除、可改写的局部证据，不是 UI、桌面宿主或扩展 ABI 的冻结答案；
-- UI 母体、ACP-first、多引擎、权限真实性、四层运行投影、专业双语与前端身份边界已经收敛；当前唯一入口是 `execution-brief.md §8` 的完整母体接管与 ACP 垂直 slice；
+- UI 母体、`Agent | Chat` 一级导航、Conversation-owned timeline、Run snapshot、ACP-first、多引擎、权限真实性、Models/Agents 设置、四层运行投影、专业双语与前端身份边界已经收敛；当前唯一入口是 `execution-brief.md §8` 的完整母体接管与真实状态垂直 slice；
 - 尚未完成的是实际进入产品来源的逐项权利/采用核实和产品验收；`source-adoptions` 仍为 0，F-24 等 production claims 仍为 `open`。
 
 新 OmniMind 应在全新的 Git 仓库中诞生。当前仓库继续作为另一个产品独立存在，二者不共享运行时代码、不维持兼容层、不做双向同步。当前产品在对外产生名称冲突以前应改名或明确标记为 Classic；新产品保留 `OmniMind` 名称。
@@ -108,7 +108,7 @@ ollama
 lm-studio
 ```
 
-完整源码树导入只是未提交的接管工位，不获得永久目录结构豁免。固定来源必须先在隔离环境恢复可运行并留下可复验证据；进入首个 adoption commit 以前，作者区必须完成结构净化、稳定职责重命名、宿主本体删除和重复实现清除。不能把 donor 路径镜像、品牌缩写、研究代号、一次 Goal/波次/验收编号或迁移阶段写进生产 namespace，也不能用 alias、wrapper 或旧目录保留迁移考古。来源、revision、权利、主要删改和致谢仍在本 README 与 `LICENSES/` 如实保留；洁净不是洗白。
+完整源码树可以在一个隔离的 Campaign branch/worktree 中形成唯一、精确、可复现的 provenance baseline commit，用来证明固定来源 unchanged build/run 并防止隐性行为丢失；这个提交必须同时记录 revision、权利、法定文本和人可读致谢，但不获得生产目录结构或 identity gate 的永久豁免。baseline 之后立即进入同一条换脑链，在进入 main/production candidate 前完成结构净化、稳定职责重命名、宿主本体删除和重复实现清除。不能把 donor 路径镜像、品牌缩写、研究代号、一次 Goal/波次/验收编号或迁移阶段留在最终生产 namespace，也不能用 alias、wrapper 或旧目录保留迁移考古。最终树与可控生成物必须通过 identity/structure gate；Git 历史中的来源事实继续由本 README 与 `LICENSES/` 如实解释，洁净不是洗白。
 
 文件树遵守可执行的最小下限：顶层作者目录受控；作者源码目录深度有硬上限；目录和文件名不得使用垃圾桶、迁移态或含混职责 token。自动门只是下限，不替代设计审查：即使通过检查，目录仍须少、层级浅、职责单一，名称须短、精确且在研究题目、供应商、模型和实现路线改变后继续准确。首个实际移植物提交必须同时给出 source、path/name、generated-output 和 structure scan 证据。
 
@@ -133,13 +133,13 @@ lm-studio
 }
 ```
 
-`check:identity` 从本 README 同时读取 denylist 与结构策略，扫描 Git 跟踪/未忽略的作者输入、完整相对路径和源码文本，并自动发现上述常见生成目录；非标准构建目录必须通过显式 generated-root 进入同一门。生成输出不能因被 `.gitignore` 忽略而逃逸。运行时外部名称只允许通过显式 fixture 注入测试，不能成为静态默认值。
+`check:identity` 从本 README 同时读取 denylist 与结构策略，扫描当前树中 Git 跟踪/未忽略的作者输入、完整相对路径和源码文本，并自动发现上述常见生成目录；非标准构建目录必须通过显式 generated-root 进入同一门。生成输出不能因被 `.gitignore` 忽略而逃逸。运行时外部名称只允许通过显式 fixture 注入测试，不能成为静态默认值。唯一 raw baseline commit 可以暂时不满足作者区 gate，但不得成为 main/production candidate；后续提交不得用这一例外承载新产品代码。
 
 调度器、provider 和模型的真实名称可由用户配置或外部探测动态进入 UI。生产源码使用协议与职责名，例如 `batch-scheduler`、`chat-completions`、`messages`、`local-model`；不要把动态显示名写回 schema 枚举。
 
 ## 3. 一句话产品定义
 
-**OmniMind 是一个本地优先、可连接远程执行环境、能在同一工作区运行多个真实 Agent Engine、以可持续工作状态为中心的通用 Agent 工作台；不同领域共享同一套文件、工具、编排、恢复和外部执行能力。**
+**OmniMind 是一个本地优先、可连接远程执行环境、让同一 Conversation 在多个真实 Agent Engine 之间自然继续、以可持续工作状态为中心的通用 Agent 工作台；不同领域共享同一套文件、工具、编排、恢复和外部执行能力。**
 
 这句话包含七个不能拆开的判断：
 
@@ -177,14 +177,16 @@ Pi 是默认、最深集成的 Agent 引擎和首要生态入口，但不是唯�
 
 ### 4.3 一件事实只有一个权威
 
-- 对话消息由对应 Agent Engine 的原生 Session 拥有；OmniMind 只保存 Session 引用、必要游标、能力快照和产品投影，不复制第二份完整 transcript；
-- 产品 journal 记录接纳、策略、动作、副作用、检查点、外部任务、恢复和分支；
+- Conversation 及其用户可见 timeline 由 OmniMind 拥有：用户消息、Assistant 可见内容、附件/资源引用、结构化问答、Run/Activity/Output/Diff 引用以及中断、失败和恢复结果是产品真相；
+- 每次 Run 由 OmniMind 拥有并冻结 Engine、Model、Reasoning、权限策略与强制真实性、ExecutionTarget、workspace revision、资源引用和创建时间；
+- Agent Engine 原生 Session 只拥有自己的执行 lineage/cache。OmniMind 不复制全部隐藏 reasoning、私有 tool chatter 或完整原生日志，但产品 UI 和恢复绝不依赖某个 Engine transcript 才能重建；
+- 产品 journal 记录 Conversation/Run 接纳、策略、动作、副作用、检查点、外部任务、恢复和分支；
 - 远程文件由远程主机拥有；
 - Slurm 等调度任务由调度器拥有；
 - LLM Wiki 的可读 Markdown 是 Wiki 内容本体，可重建索引不是本体；
 - 原始资料永远是资料事实源，生成 Wiki 只是可审查的综合物。
 
-不得为了方便 UI 或“统一存储”再复制一套平行真相。
+Engine 可以物理保存自己的原生 transcript，但它不能与 OmniMind Conversation 竞争产品权威。“不复制第二份 transcript”指不建立两个竞争真相，不是禁止产品保存用户自己的规范对话。无法关联到当前 Run 的迟到 Engine 事件只能进入有界隔离证据，不能篡改 timeline。
 
 ### 4.4 失败必须能被准确命名
 
@@ -206,16 +208,16 @@ Omni 系列科学能力、MCP、Skills、函数工具、外部服务和未来生
 
 以下能力定义了 OmniMind 是什么，应由产品自己承担：
 
-- Thread 的创建、分支、恢复、重开和可审查历史；
+- Conversation 的创建、分支、恢复、重开和可审查历史；
 - 本地与远程 `ExecutionTarget`；
 - 文件浏览、搜索、打开、编辑、diff、检查点和恢复；
 - 终端、进程、端口转发和远程任务可见性；
 - 受信工作区与第三方扩展的信任状态；
 - Agent 动作、工具进度、失败、未知副作用和恢复的呈现；
 - 面向个人资料的文件原生 LLM Wiki；
-- 工作台布局、导航、后台运行、排队、打断和通知；
-- 能力发现、启用和本次 Thread 的最小工具注入；
-- 多引擎发现、ACP/Bridge 生命周期、Thread 与外部 Session 的关联、显式 Handoff 和能力真实性；
+- `Agent | Chat` 导航、工作台布局、后台运行、排队、打断和通知；
+- 能力发现、启用和本次 Conversation/Run 的最小工具注入；
+- 多引擎发现、ACP/Bridge 生命周期、Conversation/Run 与外部 Session lineage 的关联、Continuation Envelope、显式跨产品 Handoff 和能力真实性；
 - 同一位置的 writer admission、隔离写入与唯一 integration owner；
 - 原始运行证据到强类型产品事实、增量读投影和 UI view model 的可追溯管线；
 - 性能、持久化和故障恢复所需的基础设施。
@@ -225,7 +227,7 @@ Omni 系列科学能力、MCP、Skills、函数工具、外部服务和未来生
 - kernel 持有少量稳定原语、唯一状态权威、生命周期和回执；
 - bundled first-party capability/strategy modules 随产品交付、无需安装、按需激活、可关闭；
 - compatibility adapters 把外部生态映射到同一原语；
-- Thread、ExecutionTarget、写入准入、权限决定、跨引擎关系和恢复回执保持产品权威；引擎或 package 可以拥有自己的 Todo、Team、Workflow 与子 Agent 状态，OmniMind 只做来源明确的投影，除非某项能力被显式提升为跨引擎产品事实，绝不双写一份看似统一的第二真相。
+- Conversation、Run、ExecutionTarget、写入准入、权限决定、跨引擎关系和恢复回执保持产品权威；引擎或 package 可以拥有自己的原生 Session、Todo、Team、Workflow 与子 Agent 状态，OmniMind 只做来源明确的投影，除非某项能力被显式提升为跨引擎产品事实，绝不双写一份看似统一的第二真相。
 
 原生能力完全可以由 package、fork、移植或重写组成。实现来源不决定产品所有权。
 
@@ -251,31 +253,32 @@ Omni 系列科学能力、MCP、Skills、函数工具、外部服务和未来生
 
 ## 6. 极小而耐久的领域内核
 
-丰富的产品不需要丰富的持久领域本体。第一版只承认两个聚合根。
+丰富的产品不需要丰富的持久领域本体。第一版只承认 Conversation 与 ExecutionTarget 两个长期聚合根；Run 是 Conversation 下不可变、必须持久的执行事实。
 
-### 6.1 `Thread`
+### 6.1 `Conversation` 与 `Run`
 
-`Thread` 是一段可持续、可分支、可审计的人机协作历史。它不是一个临时网络 session，也不等于单次模型请求。
+`Conversation` 是用户拥有的一段可持续、可分支、可审计的人机协作历史。它不是临时网络 session，也不绑定某一个 Engine。产品 UI 使用 Conversation；若框架或外部 API 使用 Thread 一词，只能在边界翻译，不能反过来定义产品本体。
 
 最小字段：
 
-- `ThreadId`
-- 主要 `LocationRef`
-- 可选父 `ThreadId` 与分支起点事件
-- `engineKind`
-- `engineSessionRef`
+- `ConversationId`
+- `kind = agent | chat`
+- Agent 的可选 Primary `LocationRef`；Chat 永远没有 Primary Folder
+- 可选父 `ConversationId` 与分支起点事件
 - 创建、更新和归档时间
 
-Thread 之下可以产生：
+Conversation 之下可以产生：
 
-- `TurnId`：用户接纳的一轮意图；
-- `AttemptId`：为完成某一 Turn 发起的一次引擎尝试；
+- `RunId`：一次被接纳、具有冻结执行选择的顶层执行；
+- `AttemptId`：一次 Run 内的尝试、重试或 child 执行；
 - `ActionId`：有可观察后果的一个动作；
 - `CheckpointRef`：文件/状态恢复点引用；
 - `OutputRef`：大输出、报告、图片、数据或其他产物引用；
 - `ExternalExecutionRef`：外部进程或调度任务引用。
 
-这些是精确引用或 journal 事件，不应被升级成万能聚合。
+Run 至少冻结 Engine/版本、ModelConnection+Model/版本、Reasoning、Permission policy、enforcement truth、ExecutionTarget、workspace revision、资源引用与创建时间。用户在 Run 活跃期间更改 Composer 选择，只影响 next Run；队列中的每条消息保存自己的冻结快照。
+
+Engine Session 是 Run 可引用的 opaque execution lineage。一个 compatible Session 可以服务多个连续 Run，但它可抛弃、可重建，不是 Conversation 主键或产品历史。跨 Engine 分叉后返回旧 Engine，默认从当前 Conversation、workspace facts 与 Continuation Envelope 创建新 Session，不恢复陈旧 lineage。
 
 ### 6.2 `ExecutionTarget`
 
@@ -296,8 +299,8 @@ Thread 之下可以产生：
 
 - `Workspace`：用 `LocationRef`、信任/授权和 UI 投影表达；
 - `Work`：语义过宽；
-- 持久 `Session`：持久协作叫 Thread，Session 留给短命协议、进程、SSH、MCP 或引擎会话；
-- `Run`：通常只是 Turn/Attempt 的投影；
+- 持久 `Session`：持久协作叫 Conversation，Session 留给短命协议、进程、SSH、MCP 或引擎 lineage；
+- `Turn`：用户意图直接由 Conversation entry 与 Run 表达，不再与 Run/Attempt 建立重叠层级；
 - `Resource`：改用精确引用；
 - `Job`：调度器拥有 Job，核心只保存 `ExternalExecutionRef`；
 - `Artifact`：生产者或文件系统拥有实体，核心保存 `OutputRef`；
@@ -313,8 +316,8 @@ Thread 之下可以产生：
 
 产品 journal 追加记录：
 
-- turn 被接纳；
-- 引擎尝试与相关 ID；
+- Conversation entry 与 Run 被接纳；
+- Run snapshot、Engine lineage 与相关 ID；
 - 动作提出、策略决定、开始、完成或结果未知；
 - 检查点与恢复；
 - 输出引用；
@@ -322,7 +325,7 @@ Thread 之下可以产生：
 - 中断、崩溃恢复和分支；
 - 位置、信任与能力选择的必要变化。
 
-Journal 不复制 Pi 的完整消息文本，不复制远程文件内容，不伪造调度器状态。它保存的是产品必须独立掌握的行为事实。
+Journal 与 Conversation store 保存规范用户可见 timeline 和产品必须独立掌握的行为事实；不复制 Engine 的隐藏 reasoning/私有日志，不复制远程文件内容，不伪造调度器状态。
 
 ## 7. 第一版运行时形态
 
@@ -360,11 +363,11 @@ Pi 和外部 Agent 首版都遵守同一 ACP 行为契约。只有测量证明 B
 ### 7.3 进程、状态与更新原则
 
 - renderer 不拥有业务真相；
-- main 不创建第二份任一 Engine transcript；
+- main 持有 canonical Conversation/timeline，但不复制任一 Engine 的隐藏 reasoning、私有 tool chatter 或原生 session log；
 - 所有跨边界命令有 request/correlation ID；
 - 大输出写入文件或对象存储，由 `OutputRef` 引用；
 - IPC 传输增量、摘要和引用，不搬运巨型全文；
-- 后台 Thread 只推送摘要状态，激活 Thread 才接收细粒度流；
+- 后台 Conversation 只推送摘要状态，激活 Conversation 才接收细粒度流；
 - 恢复先根据 journal 重建产品状态，再重新观察外部权威。
 - 活跃 Attempt 不热替换 Engine、Bridge、ACP SDK 或 package generation；更新先 stage、验证兼容，再在安全边界激活并保留 last-known-good。
 
@@ -393,7 +396,7 @@ Pi 是默认、最深集成的 Agent 引擎，也是首发必须可用的生态�
 
 Pi 当前自我定位仍偏最小终端 coding harness。以下内容必须由 OmniMind 保持所有权：
 
-- Thread 的稳定身份和产品生命周期；
+- Conversation 的稳定身份和产品生命周期；
 - ExecutionTarget 与 LocationRef；
 - 远程连接与 HPC 调度；
 - 信任和不可逆外部授权；
@@ -410,7 +413,7 @@ Pi 的 API、实验性 remote protocol 和未来 `AgentHarness` 抽象可以演�
 - 第一轮可丢弃集成探针已经完成并进入 M1 `candidate`；后续执行者直接使用冻结结论，不重开同一轮研究；
 - 固定 Pi repo、SHA、包版本和许可证；
 - 证明 session 创建、流式事件、工具注册、取消、恢复和 branch；
-- 证明如何关联 `ThreadId/TurnId/AttemptId/ActionId`；
+- 证明如何关联 `ConversationId/RunId/AttemptId/ActionId` 与 opaque Engine lineage；
 - 证明不复制 transcript；
 - 证明 Pi 单 cwd 限制如何通过 LocationRef/ExecutionTarget 在产品层表达；
 - Agent 接入已经有多个真实消费者，直接采用 ACP；不再自创与 ACP 重叠的通用 adapter 树；
@@ -428,9 +431,11 @@ ACP 是首选 Agent 接入标准，不是 OmniMind 的产品状态协议或前�
 2. 有正式 headless/app-server/SDK/RPC 协议的 Agent 使用薄 ACP Bridge；
 3. 只有终端交互或权限边界无法验证的 Agent 只能作为受限 guest，不能伪装成完整受管 Engine。
 
-一个 Thread 在第一次真实执行后绑定一个主 Engine Session。后续继续对话回到同一 Session；跨引擎审查、挑战或继续使用 child、fork、compare 或显式 Handoff，不在活跃 Thread 内热换 Engine，也不拼接两个 transcript 冒充连续心智。
+一个 Conversation 可以跨多个真实 Engine 和 Model。用户在 Composer 主动切换只改变 next Run：不新建 Conversation、不弹确认、不生成 Handoff，也不在 Timeline 或 Toast 复述“已切换”。当前 Run 的 snapshot 永不热换；历史 Run 继续保留其 Engine/Model/Permission/Target 事实。
 
-Handoff 是有界事实包，至少包含目标、成功条件、LocationRef、ExecutionTarget、Git/Diff、已验证事实、当前 Todo、未决问题、禁止事项、审批状态、写入所有权和未知副作用。它不声称隐藏思维或原生 Session 被无损迁移。
+同一 Engine 的 compatible Session 可以延续多个 Run；跨 Engine 已产生新事实后再返回旧 Engine 时，旧 Session 视为陈旧 lineage，默认从 canonical Conversation、当前 Workspace 事实和 Continuation Envelope 新建 Session。只有期间没有分叉且 compatibility 明确时才复用。Engine 不可用、认证失效或能力不匹配时必须在执行前原地说明，绝不静默 fallback。
+
+Continuation Envelope 是水下有界事实包，至少包含目标、成功条件、LocationRef、ExecutionTarget、Git/Diff、已验证事实、当前 Todo、未决问题、禁止事项、审批状态、写入所有权和未知副作用。它不声称隐藏思维或原生 Session 被无损迁移。只有 Chat → Agent、Primary Folder 变更后的新 Agent Conversation 或用户明确 fork/promote 时才产生产品级 Handoff；普通 Engine/Model 切换不制造仪式。
 
 ### 8.5 ACP-first ingress，OmniMind-owned experience
 
@@ -447,9 +452,9 @@ ACP `ToolKind`、状态、位置、Diff、终端、文本、图片和资源为�
 
 ### 8.6 Pi 调度其他 Agent
 
-Pi 可以通过其扩展生态调度其他 ACP Agent。这类执行默认是当前 Pi Attempt 下的 child Attempt/Thread 投影，记录 parent、origin、depth、cost、权限和 ExecutionTarget，并受深度、并发、turn、duration、cost 和循环检测上限约束。
+Pi 可以通过其扩展生态调度其他 ACP Agent。这类执行默认是当前父 Run 下的 child Attempt/Conversation 投影，记录 parent、origin、depth、cost、权限和 ExecutionTarget，并受深度、并发、turn、duration、cost 和循环检测上限约束。
 
-同一外部 Agent 即使既能被 OmniMind 直接启动、也能被 Pi 间接启动，两条路径也不能自动互相回入。被 Pi 调度的 Agent 未经显式 promote 或 Handoff 不成为并列主 Thread；用户仍可在工作台进入、查看、追问、纠偏和停止它。Pi package 的 DAG、mailbox、task 和 worktree 状态继续由 package 自己拥有，OmniMind 只投影可观察事实，不双写一套 Team/Workflow/Todo 真相。
+同一外部 Agent 即使既能被 OmniMind 直接启动、也能被 Pi 间接启动，两条路径也不能自动互相回入。被 Pi 调度的 Agent 未经显式 promote 或 Handoff 不成为并列顶层 Conversation；用户仍可在工作台进入、查看、追问、纠偏和停止它。Pi package 的 DAG、mailbox、task 和 worktree 状态继续由 package 自己拥有，OmniMind 只投影可观察事实，不双写一套 Team/Workflow/Todo 真相。
 
 ## 9. 本地与远程执行
 
@@ -504,7 +509,7 @@ Remote 预计只占总体使用的一部分，但它是不能后补的高价值�
 - 模型供应商配置；
 - OmniMind 用户设置；
 - 完整插件商店；
-- 本地 Thread 数据库；
+- 本地 Conversation/Run store；
 - 完整 Pi runtime；
 - UI；
 - 用户全部扩展的自动镜像。
@@ -520,7 +525,7 @@ Remote 预计只占总体使用的一部分，但它是不能后补的高价值�
 - stdout/stderr 和产物可增量查看；
 - cancel 是显式外部副作用；
 - 状态不确定时显示 `outcome_unknown`，不伪造失败或成功；
-- Thread attempt 结束不自动杀死已提交任务，除非用户明确选择并获得相应授权。
+- Run/Attempt 结束不自动杀死已提交任务，除非用户明确选择并获得相应授权。
 
 第二个真实调度器出现以后，再提炼公共接口。
 
@@ -658,15 +663,21 @@ ACP permission request 是协作通道，不是安全证明。未经路径审计
 
 ## 12. 工作台与交互
 
-### 12.1 不是聊天应用
+### 12.1 `Agent | Chat` 是唯一一级入口
 
-界面应围绕“正在做的工作”组织，而不是围绕消息气泡组织。稳定骨架包括：
+一级入口的顺序固定为 **`Agent | Chat`**：Agent 在左，Chat 在右。导航、默认入口、键盘顺序、可访问名称和自动化测试不得交换。没有 Projects、This Mac、Cloud、Remote、Research 或 Dashboard 作为并列产品世界。
 
-- 导航与位置；
-- 当前 Thread 和 Agent 过程；
-- 文件、预览、终端、diff、输出和远程任务；
-- 后台 Thread 的运行、阻塞和未读状态；
-- 能力与信任的渐进披露。
+Agent 与 Chat 共享同一套 Conversation、Composer、Engine、Model、Reasoning、Timeline、Activity、队列和文件引用交互。两者的稳定区别只有主要工作文件夹和由此产生的执行权威：
+
+- **Agent**：侧栏依次提供 New Agent、Search、Kanban、Pull Requests、Automations、Pinned、OMStudio 与真实 Folder groups；没有用户 Folder 的 Conversation 位于 OMStudio，每个 OMStudio Conversation 有独立受管目录；可使用 Git、Terminal、Remote 和文件写入；
+- **Chat**：侧栏只提供 New Chat、Search 与普通时间序历史；没有 Primary Folder，不按位置分组；`@file`、`@folder`、粘贴路径和拖放只形成只读引用，不偷偷创建 Project 或迁移为 Agent；
+- `+` 与 `@` 是同一资源引用系统的鼠标与键盘入口；粘贴有效路径立即成为可用引用，不增加无意义的二次授权 chip；Agent 可以在权限策略下读写额外引用位置，但引用永远不改变 Primary Folder；
+- 新 Chat 立即打开空 Conversation 且不创建目录。Engine 首次真正需要 cwd 时，才创建不可见、可回收、不是用户 Workspace 的内部 scratch；生成结果进入 content-addressed Output store 并由 `OutputRef` 引用；
+- 新 Agent 立即在 OMStudio 打开空 Conversation，不强迫用户先选 Folder；用户之后可 Open Folder；
+- Chat 需要修改用户文件时使用 `Send to Agent`：创建新的 Agent Conversation，生成可编辑的完整任务输入；若只有一个 Folder 引用可建议为 Primary Folder，但不得静默绑定；
+- Agent 已产生实质执行状态后改变 Primary Folder，必须创建新的 Agent Conversation/Handoff，不能静默交换 cwd；普通资源引用永远不改变 Primary Folder。
+
+界面仍围绕“正在做的工作”组织：Conversation 是稳定中心，右侧是按需出现的文件、预览、终端、Diff、输出和 Agent 过程；后台运行、阻塞、未读、能力与信任通过渐进披露出现。
 
 ### 12.2 UI 母体与源码接管
 
@@ -676,7 +687,7 @@ Synara 是已批准的 UI 母体，不是普通参考图或可选灵感板。它
 
 M2 的 `quiet-inline` / `balanced-tabs` 方向已被用户明确否决，不再是候选路线。旧探针、旧文档和旧代码只能提供失败案例与可证明的领域约束，不得作为保护已投入工作的理由。
 
-UI 母体不自动获得产品状态和 Agent 内核权威。已经收敛的边界是：Pi 生态是首要 Agent 能力来源；OmniMind 拥有 Thread/Attempt 关系、权限决定、writer admission、receipt、跨引擎关系与恢复投影；Engine/package 可以继续拥有自己的 transcript、Todo、Team 和 Workflow。完整源码树先保持可运行，再以 ACP-first 和四层运行事实逐条替换 provider/runtime/Activity 边界；符合单一权威与恢复契约的 server、transport 或 SQLite 机制可以保留，不符合者整层删除，不形成长期双轨。
+UI 母体不自动获得产品状态和 Agent 内核权威。已经收敛的边界是：Pi 生态是首要 Agent 能力来源；OmniMind 拥有 Conversation/timeline、Run snapshot、权限决定、writer admission、receipt、跨引擎关系与恢复投影；Engine/package 可以继续拥有自己的原生 Session、Todo、Team 和 Workflow。完整源码树先保持可运行，再以 ACP-first 和四层运行事实逐条替换 provider/runtime/Activity 边界；符合单一权威与恢复契约的 server、transport 或 SQLite 机制可以保留，不符合者整层删除，不形成长期双轨。
 
 Proma 降为次级机制和组件 donor：只在某个已证明子系统显著优于 UI 母体或补齐其缺口时采用，不再定义整体工作台心智。所有冲突都必须明说、原型化并收敛，不在实现中偷偷折中或建第二套视觉语言。
 
@@ -699,15 +710,19 @@ Proma 降为次级机制和组件 donor：只在某个已证明子系统显著�
 
 ### 12.4 已锁定的工作台心智
 
-- 普通 Chat 可以没有文件夹；工作型 Thread 的主要位置通常是一个目录，但目录不是聊天的强制前提；
-- 每个 Chat 独立保存自己的工作台标签、打开文件、分屏和浏览上下文，离开后重新进入可以恢复；
-- 主 Thread 是稳定中心，右侧是按需出现的上下文工作台，不是永久 Dashboard、Remote 面板或编排控制台；
+- `Agent | Chat` 顺序固定；Agent 在左，Chat 在右；
+- Agent Conversations 按 Primary Folder 分组，无 Folder 者归入 OMStudio；Chat 是独立时间序列表，不显示 Folder 分组；
+- 本地 Folder 只显示文件夹名，远程位置在必要处显示 `folder · host`；UI 使用 Folder，Workspace 主要留在内部架构；
+- 每个 Conversation 独立保存自己的工作台标签、打开文件、分屏和浏览上下文，离开后重新进入可以恢复；
+- Conversation 是稳定中心，右侧 Files、Review、Terminal、Browser、Source Control、Side Chat 和 Subagents 按需出现，不是永久 Dashboard、Remote 面板或编排控制台；
 - 用户在 Agent 运行时随时可以打开它刚生成或修改的文件，“审阅”首先就是普通查看，不创造新的 Review 对象；
 - 文件、diff、终端、浏览器、子 Agent、临时问题和输出共享标签系统，不为每种能力建立一个一级产品区；
 - 文件树、标签与内容视图之间保持熟悉的 IDE 心智，同时允许更少步骤、更好的恢复和更自然的 Agent 活动投影；
 - Remote 只有在当前位置或动作实际位于远端时才通过轻量位置标识、连接状态和相关操作出现，不支配默认布局；
 - 所有稳定控制尺寸固定、状态切换不跳动；动效短、快、可打断，只解释空间关系。
-- 默认导航、Chat、运行状态、Todo、Team、Workflow、Viewer 和错误文案以 OmniMind 的中性产品语言表达，不让首选引擎的品牌、TUI 术语或实现结构支配前端；Engine 名称只在用户需要选择、诊断或核实来源时渐进披露。
+- 默认导航、Chat、运行状态、Todo、Team、Workflow、Viewer 和错误文案以 OmniMind 的中性产品语言表达，不让首选引擎的品牌、TUI 术语或实现结构支配前端；内置选择显示为 `OmniMind Agent`，真实 Engine 名称只在用户主动选择外部 Agent、诊断或核实来源时渐进披露；
+- Chat 与 Agent 的 Composer 尽量完全一致：`+`、`@`、附件、Engine、Model、Reasoning、队列和发送位置相同；Chat 在权限位置呈现真实只读边界，Agent 提供 Approval required / Auto / Full access；
+- 用户主动改变 Engine/Model 后直接改变选择器和 next Run，不增加 Toast、Timeline 行或“Continued with…”复述；运行详情仍保留 frozen provenance。
 
 ### 12.5 文件与输出查看
 
@@ -722,12 +737,15 @@ Proma 降为次级机制和组件 donor：只在某个已证明子系统显著�
 
 ### 12.6 Agent、临时问题与通讯
 
-- 子 Agent 是完整、可进入、可追问、可纠偏、可停止的 child Thread，不是只显示最终摘要的黑箱；
-- 用户可以给父子或同级 Agent 发送消息；所有 message、delivered/read/ack 和 attention 都进入同一原生 message event stream，Thread/Attempt journal 只通过相同 event ID 引用，不另存第二份消息；
+- 每个 Agent Conversation 同时只有一个顶层前台 Run；离开当前界面不停止它，多个 Conversation 可以并行运行；
+- 运行中普通发送进入可见、可编辑、可删除、可排序的队列，每条消息冻结自己的 Engine、Model、Reasoning、Permission、ExecutionTarget 与资源引用。当前 Run 正常完成后才自动取下一条；等待授权/用户、失败、中断或停止时队列暂停；
+- 用户可以把队列消息明确设为立即纠偏，系统在安全边界传给当前 Run，不暗中创建第二个共享写入者。Stop 只停止当前 Run，已经发生的文件变化和 Partial Diff 保留；Undo/Checkpoint/Recovery 是独立动作；
+- 子 Agent 是完整、可进入、可追问、可纠偏、可停止的 child Conversation/Run，不是只显示最终摘要的黑箱；
+- 用户可以给父子或同级 Agent 发送消息；所有 message、delivered/read/ack 和 attention 进入同一可审计 event stream，父 Conversation 只通过相同 event ID 引用 child 关系和结果，不复制隐藏 transcript；
 - 子 Agent 可以继续委派，但必须受深度、并发、预算、权限、停止和单一集成所有者约束；
-- 临时提问是轻量分支，可以把结论带回主 Thread，不必总是创建新的普通 Chat；
+- Side Chat/临时提问是轻量只读分支，可以读取当前已提交事实和可见产物，把结论显式带回主 Conversation，不必总是创建新的普通 Chat，也不抢占当前 Run；
 - 子 Agent、临时分支和动态编排只在发生时进入活动树；普通任务不展示团队、Workflow 或多 Agent 术语；
-- 同一工作区写入默认只有一个明确 owner；并行读取可以 fan-out，隔离写入必须由唯一 integration owner 收口。
+- 同一 Folder 写入默认只有一个明确 owner；并行读取可以 fan-out，隔离写入必须由唯一 integration owner 收口。
 
 ### 12.7 视觉、性能与跨平台
 
@@ -744,7 +762,7 @@ Proma 降为次级机制和组件 donor：只在某个已证明子系统显著�
 UI 母体当前的单语言假设不具有继承权。OmniMind 第一版必须让简体中文和英文用户都能顺畅完成关键工作，但目标是功能与理解等价，不是追求“每一个英文词都被翻译”的覆盖率：
 
 - 稳定产品文案、菜单、快捷键说明、空态、权限、错误、通知、更新和恢复路径使用集中、类型安全的 locale resources，不允许在组件中散落无法治理的硬编码字符串；
-- 首次启动默认跟随操作系统语言，用户可在设置中即时切换；选择持久化，切换不要求重启，也不改变 Workspace、Thread 或 Engine 状态；
+- 首次启动默认跟随操作系统语言，用户可在设置中即时切换；选择持久化，切换不要求重启，也不改变 Workspace、Conversation、Run 或 Engine 状态；
 - 产品文案本地化与工作内容分离：不自动翻译用户文件、终端输出、Git 内容、Agent 原始回答、实时 Thinking/Planning 叙述或外部资源；动态内容使用其原始语言，稳定的动作骨架和解释可以本地化；
 - `Thinking`、`Planning`、Git、Diff、PR、Token、ACP、API、模型名、命令、代码、路径和文件名等专业词保留英文更自然、更精确时不强译。中文界面允许“中文动作/说明 + 英文技术对象”的克制混排，避免生硬术语和身份错乱；
 - 建立小而明确的术语表，逐项决定“翻译、保留英文、首次双写、跟随外部名称”。同一个稳定概念在同一语境保持一致，但不以语言纯度压过专业用户心智；
@@ -754,6 +772,23 @@ UI 母体当前的单语言假设不具有继承权。OmniMind 第一版必须�
 - 两种语言共享同一信息架构和功能集合。不得出现中文用户无法理解或无法到达的关键操作、只有一种语言存在的功能，或用自动机器翻译掩盖产品文案判断；允许两种 locale 对同一专业词都使用英文。
 
 国际化基础设施应在完整 UI 母体导入后的第一轮改造中建立，早于大规模文案和组件重命名；否则后续每次 UI 修改都会扩大硬编码债务。
+
+### 12.9 Timeline、Composer 与设置边界
+
+Timeline 默认仍是一段自然对话，不把每个 Run 包成厚重工程卡片。活跃 Run 只显示稳定的轻量状态和增量 Activity；完成后过程克制折叠，关键结果、问题、失败和文件变化继续可见。点击状态或 Activity 才在详情层检查 Engine/Model/Reasoning、权限真实性、ExecutionTarget、工具输入输出、Token、耗时、Session lineage 与原始证据。
+
+用户主动切换 Engine/Model 时，选择器本身就是反馈，不插入 Timeline 行、Toast 或大段 handoff。空闲时 Composer 选择表示下一 Run；运行中当前 Run provenance 固定显示在活动详情，Composer 明确表示 next selection。队列项只在自己的 frozen snapshot 与当前 next selection 不同时展示必要差异，避免标签噪声。
+
+Settings 分成两个事实边界：
+
+- **Models** 管理 OmniMind 原生运行面使用的 `ModelConnection`，同时服务 Chat 和内置 `OmniMind Agent`。模型身份是 `connectionId + modelId`，不是全局裸 model ID；连接 metadata、secret 与 catalog 分离，Secret 只进 OS Secret Store，无法安全保存时 fail closed；
+- **Agents** 管理外部 Agent 的发现、安装、官方认证、版本、ACP capabilities、更新与权限真实性。OmniMind 不复制外部 Agent Token、账号或原生配置，也不重建其模型目录；
+- Connection Test 使用当前未保存值，最小请求、超时/代理、分类和脱敏错误；第三方 endpoint 的确认绑定 normalized endpoint，endpoint 变化后失效；
+- Fetch Models 成功时保留手工项和既有 enabled 状态，新发现默认 disabled；失败不清空 catalog；OAuth 有取消、重登、登出、expiry/refresh、single-flight 与原子保存；
+- 全局 default 只影响新 Conversation，既有 Conversation 记住 next selection；Connection/Model 停用或删除不改写历史 Run；任何 unavailable 都不得静默 fallback；
+- Composer 先选 Engine，再展示该 Engine 实际可用的 Model。内置 Engine 使用 Models catalog，外部 Engine 使用自身通过 ACP/正式接口公布的 catalog。
+
+Chat 的只读不是视觉假设：受控 Engine 可通过 host filesystem boundary 读取资源；无法证明隔离的 Engine 只能得到受控内容副本或被禁用该能力，不能获得用户原始可写路径。Chat 生成的文件进入产品 Output store 并由 `OutputRef` 引用，可查看、下载或显式 Send to Agent。
 
 ## 13. 移植原则
 
@@ -884,7 +919,7 @@ Proma 的额外授权必须写下来；同时核查被移植文件是否含第�
 1. Provider stream 只读取一次、规范化一次。
 2. main → renderer 增量帧批量发送，禁止逐 token JSON/WS 往返。
 3. 文本增量缓存；长 Markdown、语法高亮和 Mermaid 不在每个 token 全量重算。
-4. 长 Thread 虚拟化；激活 Thread 细粒度更新，后台 Thread 只更新摘要。
+4. 长 Conversation 虚拟化；激活 Conversation 细粒度更新，后台 Conversation 只更新摘要。
 5. 启动路径不探测远程、不全量扫描插件、不加载重解析器/高亮器。
 6. 大工具输出落盘并返回 `OutputRef`，不塞进 transcript、journal 或 IPC。
 7. 远程二进制使用流，不使用 base64 JSON。
@@ -899,7 +934,7 @@ Proma 的额外授权必须写下来；同时核查被移植文件是否含第�
 
 OmniMind 不设置科研优先的产品层。科研、生物医学、编码、合同审阅、数据分析、训练、仿真和部署都使用同一套：
 
-- Thread / Attempt / Action；
+- Conversation / Run / Attempt / Action；
 - 文件、终端、浏览器和外部能力；
 - Todo、Delegated Agent、Team 与 Dynamic Workflow；
 - 本地/远程 `ExecutionTarget`；
@@ -908,7 +943,7 @@ OmniMind 不设置科研优先的产品层。科研、生物医学、编码、�
 
 领域任务可以作为高强度验收，例如千篇混合资料、远程长计算、复杂代码修改或多文件合同审阅；但不得由此创建 Research Mode、Scientific Thread、领域专用 Agent、记忆、Workflow、Remote 或导航入口。
 
-领域系统通过普通 capability/function-call 进入，与 Git、浏览器、MCP server 和 CLI 同级。它们可以返回结构化结果和来源引用，但不拥有 OmniMind 的 Thread、Todo、验收、文件或外部任务状态。
+领域系统通过普通 capability/function-call 进入，与 Git、浏览器、MCP server 和 CLI 同级。它们可以返回结构化结果和来源引用，但不拥有 OmniMind 的 Conversation、Run、Todo、验收、文件或外部任务状态。
 
 患者级诊断、治疗建议、金融交易、生产发布等高后果行为若未来进入产品，应按外部副作用和专业治理单独处理；不能借某个领域标签自动获得或失去权限。
 
@@ -942,10 +977,10 @@ OmniMind 不设置科研优先的产品层。科研、生物医学、编码、�
 
 ### 探针 A：引擎与 Pi 生态兼容
 
-- 通过 ACP 创建、恢复和分支引擎 session；
+- 通过 ACP 创建、恢复、重建和分支 Engine Session lineage；
 - stream、cancel、tool lifecycle、dynamic registration 和 headless 降级可映射；
-- transcript 不重复存储；
-- Thread/Turn/Attempt/Action 关联清楚；
+- canonical Conversation/timeline 在 Engine 缺失后仍可恢复，Engine 隐藏 transcript 不成为第二产品权威；
+- Conversation/Run/Attempt/Action 与 Engine lineage 关联清楚；
 - 至少两个真实 Engine 通过同一 conformance contract，Pi Bridge 不形成私有快速语义；
 - 至少一个 Todo、一个 delegated Agent、一个 dynamic workflow 和一个普通工具 package 经过兼容报告；
 - Pi 调度另一个 ACP Agent 时 child relation、循环上限、权限、成本和写入 owner 可观察；
@@ -955,18 +990,18 @@ OmniMind 不设置科研优先的产品层。科研、生物医学、编码、�
 ### 探针 B：工作台移植与交互骨架
 
 - 完整 renderer transplant 与新状态边界垂直切片同场比较；
-- 每 Chat tabs 恢复、文件查看、右侧上下文工作台、diff/terminal/browser/child Thread 成立；
+- `Agent | Chat` 顺序、两类 Conversation 的一致 Composer、每 Conversation tabs 恢复、文件查看、右侧上下文工作台、diff/terminal/browser/child Conversation 成立；
 - queue、append、interrupt、临时问题分支和 background attention 可用；
 - ACP 原始证据经过强类型事实与增量投影进入 UI，React 不解析 ACP 或 Engine 私有 wire event；
-- 长 Thread、Markdown 表格、图片和大输出有测量证据；
+- 长 Conversation、Markdown 表格、图片和大输出有测量证据；
 - 简体中文与英文关键旅程功能等价，可即时切换，CJK 输入/排版和较长英文布局均通过；
 - macOS、Windows、Linux 语义一致且尊重平台习惯。
 
 ### 探针 C：持久运行时、文件与恢复
 
-- Thread 接纳先于引擎执行落盘；
+- Conversation entry 与 Run snapshot 接纳先于引擎执行落盘；
 - Todo 只是可重建计划投影；
-- child Thread、Team message 和 Dynamic Workflow 引用不复制彼此状态；
+- child Conversation/Run、Team message 和 Dynamic Workflow 引用不复制彼此状态；
 - observed-version/CAS 写入阻止盲目覆盖；
 - checkpoint 覆盖新增、修改、删除、rename 和未跟踪文件；
 - restart、rewind、branch、notification 和 `outcome_unknown` 准确；
@@ -1102,7 +1137,7 @@ OmniMind 不设置科研优先的产品层。科研、生物医学、编码、�
 
 不能直接冻结为 OmniMind 本体：
 
-- Pi session 等同 Thread；
+- Pi session 等同 Conversation；
 - Pi 单 cwd 等同产品工作位置；
 - Pi CLI 心智等同桌面产品；
 - 实验性 `pi-protocol` / `pi-server` 成为永久远程协议；
@@ -1235,7 +1270,7 @@ ACP 官方协议与架构：`https://agentclientprotocol.com/`。当前研究以
 
 2. **保留设计和组件，用新状态边界重建垂直切片**
 
-   实现位置/Thread 导航、一个流式 Thread、文件树、diff/preview、后台状态和远程任务；尽量直接搬组件与交互机制。
+   实现位置/Conversation 导航、一个流式 Conversation、文件树、diff/preview、后台状态和远程任务；尽量直接搬组件与交互机制。
 
 比较标准：
 
@@ -1250,7 +1285,7 @@ ACP 官方协议与架构：`https://agentclientprotocol.com/`。当前研究以
 应保留的设计合同：
 
 - 导航 / 当前工作 / 上下文与输出三域；
-- Thread 按位置组织；
+- Agent Conversation 按 Primary Folder/OMStudio 组织，Chat Conversation 按时间组织；
 - running / blocked / unread；
 - 后台执行可见；
 - queue / append / interrupt；
@@ -1583,9 +1618,9 @@ Deletion/rollback plan:
 
 | 层 | 职责 | 更新与状态纪律 |
 | --- | --- | --- |
-| Native durable primitives | Thread/Attempt/Action、journal、receipt、cancel/resume、引用、权限、writer admission 和 generation lease | 状态唯一、最少、可恢复；只拥有跨引擎产品事实，不抢夺 Engine/package 私有状态 |
+| Native durable primitives | Conversation/Run/Attempt/Action、canonical timeline、journal、receipt、cancel/resume、引用、权限、writer admission 和 generation lease | 状态唯一、最少、可恢复；拥有用户可见 Conversation 与跨引擎产品事实，不抢夺 Engine/package 隐藏私有状态 |
 | Bundled first-party modules | 文件工作台、Handoff、必要的跨引擎投影、Review、Browser、HTTP、MCP bridge、知识和 Remote adapters | 随 App 发布、无需安装、按需加载、可关闭；不要求常驻或同进程；已有成熟生态能力不重造 |
-| ACP ingress + managed Bridge | 翻译 Session、tool、permission、plan、content、usage 与 capability；Pi 也经受同一语义约束 | 首发可用；ACP 不直通 React；Bridge 不继承 Engine TUI、session ontology、provider mutation 或第二状态真相 |
+| ACP ingress + managed Bridge | 翻译 Session lineage、tool、permission、plan、content、usage 与 capability；Pi 也经受同一语义约束 | 首发可用；ACP 不直通 React；Bridge 不继承 Engine TUI、session ontology、provider mutation 或第二状态真相 |
 | Curated optional packages | 经真实场景证明有独特价值、可被清楚治理的 package | exact artifact；默认可在既有 trust envelope 内自动更新；可随时禁用和回滚 |
 | Arbitrary third-party packages | 用户选择的任意完整权限代码 | 首次 exact artifact 明确选择；加载前 compatibility report；不伪称 sandbox |
 | External services | 机构知识库、远程调度器、MCP server、浏览器和其他系统 | 外部系统继续拥有自己的数据、会话、任务和凭据；OmniMind 只保存引用、观察和回执 |
@@ -1596,10 +1631,10 @@ Deletion/rollback plan:
 
 | 事实 | 唯一权威 | 其他层只保存什么 |
 | --- | --- | --- |
-| 对话内容 | engine transcript / child transcript | parent 只保存 child ref、摘要和 attention，不复制全文 |
-| 产品动作与副作用 | Thread/Attempt journal | UI、通知和扩展只投影 lifecycle/receipt |
+| 用户可见对话与历史 | OmniMind canonical Conversation/timeline | Engine Session 只持有可抛弃执行 cache；隐藏 reasoning/tool chatter 不复制为产品正文 |
+| 产品动作与副作用 | Conversation/Run/Attempt journal | UI、通知和扩展只投影 lifecycle/receipt |
 | 当前执行计划 | 创建它的 Engine/package；若用户创建跨引擎计划，则为 product journal | OmniMind 保存来源引用和可重建投影；不把各生态 Todo 强行双写成统一数据库 |
-| child Agent 内容 | child Thread | parent journal 保存 relation、lifecycle、steer/stop/follow-up |
+| child Agent 内容 | child Conversation/Run；Engine 隐藏执行细节仍归 Engine | parent journal 保存 relation、lifecycle、steer/stop/follow-up 与用户可见结果，不复制隐藏 transcript |
 | Team | 创建它的 Engine/package；显式跨引擎 Team 才由 product message event stream 拥有 | OmniMind 投影 member、assignment、message receipt 和 attention；不复制 Engine mailbox/task board |
 | Dynamic Workflow | 创建它的 Engine/package run journal；显式跨引擎 Workflow 才进入 product journal | OmniMind 保存 child relation、Action receipt、hard-cap 和恢复引用；不复制步骤正文 |
 | 显式 Durable Goal | product journal 中的 `GoalRef`、claim 与 verification events | Goal strategy 负责 continuation，不拥有独立聚合或模型自证完成权；普通 Chat 不自动成为 Goal |
@@ -1607,7 +1642,7 @@ Deletion/rollback plan:
 | Git commit/index/ref | 用户 Git repository | status/diff/history 是投影；默认不自动 commit/stash/reset/clean |
 | checkpoint | journal 中的 `CheckpointRef` + immutable recovery material | recovery material 不是第二个日常工作区 |
 | review | 当前文件/Git/diff/receipt 的临时投影 | 不建立 comments database、acceptance ledger 或第二任务状态 |
-| attention/unread | Thread/Attempt journal | OS toast、terminal/tmux 通知只是传输投影 |
+| attention/unread | Conversation/Run/Attempt journal | OS toast、terminal/tmux 通知只是传输投影 |
 | Browser tab/profile/cookie/DOM | browser process/profile | journal 保存 TargetRef、Action receipt 和 ownership/handoff |
 | MCP resource/tool/session | MCP server | adapter 保存 connection generation 和可丢 metadata cache |
 | 原始知识资料 | 用户文件或外部知识服务 | saved Wiki 是可见 Markdown；FTS/vector/cache 可删除重建 |
@@ -1626,9 +1661,9 @@ Deletion/rollback plan:
 
 **Delegated Agent**
 
-- 一个委派产生一个真正的 child Thread，可前台或后台运行；
+- 一个委派产生一个真正的 child Conversation/Run，可前台或后台运行；
 - 支持进入、追问、steer、stop、continue、resume 和 crash reconciliation；
-- child 只向 parent 返回 compact result/attention ref，不把完整 transcript 灌回父上下文；
+- child 只向 parent 返回 compact result/attention ref 和显式可见结果，不把隐藏 reasoning/原生 transcript 灌回父上下文；
 - 允许嵌套委派，但必须有深度、并发、turn、duration、cost 和 spawn 上限；
 - 读可 fan-out；共享写入和最终集成只有一个 owner。
 
@@ -1650,7 +1685,7 @@ Deletion/rollback plan:
 **Durable Goal**
 
 - 是显式创建的 first-party strategy，不是每个普通 Chat 的默认包装；
-- `GoalRef`、claim、预算、验证引用和状态变化仍是 product journal events，不创建 Thread/ExecutionTarget 之外的第三聚合；strategy module 只负责长期 continuation；
+- `GoalRef`、claim、预算、验证引用和状态变化仍是 product journal events，不创建 Conversation/ExecutionTarget 之外的第三聚合；strategy module 只负责长期 continuation；
 - 不能把模型自报“完成”当成完成权；完成必须来自声明的外部验证或人类裁决；
 - repository Campaign 是开发治理机制，不应被社区 Goal package 偷换成产品 Todo 或 Workflow 状态。
 
@@ -1675,12 +1710,12 @@ Deletion/rollback plan:
 
 多文件 checkpoint 使用 `prepared → applying → verifying → committed`；restore 前建立 safety checkpoint，失败进入 rollback，rollback 也失败时保持未知。第一探针可以使用 per-Location/per-Attempt 私有 bare Git 作为 recovery material，但不得触碰用户 repo 的 HEAD、index、refs 或 stash。
 
-Exact search 首选固定版本的 rg/fd 或小型 library；fuzzy navigation 是 UI 能力；语义索引只有真实规模和召回证据后按需出现。Notification 只表达 completed / attention / failed / outcome_unknown，去重、前台抑制、无敏感内容，并能跳回原 Thread/Attempt。
+Exact search 首选固定版本的 rg/fd 或小型 library；fuzzy navigation 是 UI 能力；语义索引只有真实规模和召回证据后按需出现。Notification 只表达 completed / attention / failed / outcome_unknown，去重、前台抑制、无敏感内容，并能跳回原 Conversation/Run/Attempt。
 
 ### 22.5 Browser、Web 与 MCP
 
 - 人类浏览器 view 与 Agent browser control 可以共享一个可见 target，但 ownership 和 lifecycle 分开；用户已有 tab 默认不归 Agent 所有；
-- Browser、HTTP/web 和 MCP 是 bundled first-party adapters，不是新的 Thread、Workflow 或产品身份；
+- Browser、HTTP/web 和 MCP 是 bundled first-party adapters，不是新的 Conversation、Workflow 或产品身份；
 - 首发 MCP 支持 tools/resources/prompts、stdio、Streamable HTTP 和 OAuth；legacy SSE 只作 fallback；sampling、elicitation、interactive app UI 和 experimental tasks 等真实消费者出现后再开；
 - 只暴露当前任务需要的 tools；大量 server schema 不得常驻模型上下文；
 - 下载成功必须有 filesystem `OutputRef`、path、size、digest 和 source；“浏览器报告路径”不等于文件已落盘；
@@ -1715,8 +1750,8 @@ externalReceiptRef / outputRefs / reconcile method
 
 **Remote**
 
-- UI、Agent loop、模型调用、Thread 和凭据默认留在本机；远端是普通 `ExecutionTarget`；
-- `LocationRef = executionTargetId + absolutePath`；Remote 不创建特殊 Workspace 或 Thread；
+- UI、Agent loop、模型调用、Conversation/Run 和凭据默认留在本机；远端是普通 `ExecutionTarget`；
+- `LocationRef = executionTargetId + absolutePath`；Remote 不创建特殊 Workspace 或 Conversation；
 - 系统 OpenSSH 处理 host key、ProxyJump、2FA、agent 和连接复用；
 - shell-only 只用于 bootstrap/诊断；结构化 helper 负责 stat/list/read/search/watch、CAS write、PTY/process、binary stream、bounded logs、scheduler 与 capability negotiation；
 - helper 按 OS/arch/protocol/content digest 固定，可版本并存、可回滚，无独立账号、UI、任务系统或模型配置；
@@ -1771,7 +1806,7 @@ Evidence level：除后续 probe 小节明确升级的行以外，下列候选�
 | Engine / extension seam | Pi `74caa2649f10ed71b4378ce69f5d9fbfd2466ca5` | session、tool lifecycle、dynamic tools、AbortSignal、headless、operation injection | thin engine/compatibility adapter；首发兼容，产品状态原生 |
 | Package governance | `pi-extmgr` `9a0cf32ab83dcf00d6878c09c80aad85a4dd5687` + Pi core `74caa2649f10ed71b4378ce69f5d9fbfd2466ca5` | 31/31 fixed-source update/install tests 与实际 mutation 路径证明 discovery、package lifecycle、mutable checkout 边界；不证明正式 artifact runtime | 原生 immutable artifact/LKG 治理；只移植 discovery/source-normalization/error-display 机制，不采用第三方 manager runtime |
 | Todo | `@99percentpeople/pi-todo` `0d85185fc1af2c66df54fcd9347c6e53d10e83f6` | reducer、branch/replay 基线 | native Todo + bounded transplant；无社区 Todo runtime |
-| Delegation | `pi-submarine` `5bebbc52ef18f0da092b28f404cd389cfd3577f0` | child transcript、episode、replay/resume | child Thread donor；补 background、locks、limits |
+| Delegation | `pi-submarine` `5bebbc52ef18f0da092b28f404cd389cfd3577f0` | child transcript、episode、replay/resume | child Conversation/Run donor；补 background、locks、limits |
 | Background Agent | `pi-subagents` `89de10e4bc8895e7948704c38620a5b35ddcd17e` | reconcile、steer ack、supervisor、control inbox | 只移植 lifecycle/reducer；拒绝巨型 runtime |
 | Team mailbox | `pi-agentteam` `3b3b1e4b599cbc6dad2c6202eec5025edb4ed363` | typed message、outbox、TTL、idempotency、attention | 移植 mailbox/receipt；拒绝 task board 与 tmux 本体 |
 | Dynamic Workflow | `pi-dynamic-workflows` `31b2aca0f1cb195aafbfc5e3ee2b8c83ad3f21a2` | Agent 现场生成 JS 编排、条件/并行/pipeline | 灵魂正确；native + bounded transplant；补 journal/replan/receipt/hard caps |
@@ -1796,12 +1831,12 @@ Evidence level：除后续 probe 小节明确升级的行以外，下列候选�
 外部优秀产品只提供可观察行为 oracle，不提供生产命名、模式或内部数据结构。V1 至少必须通过以下品牌中立场景：
 
 1. 一个普通任务不显示 Workflow/Team，却能自然完成；
-2. 一个复杂任务自动委派并并行读取，用户可进入、追问、停止任一 child Thread；
+2. 一个复杂任务自动委派并并行读取，用户可进入、追问、停止任一 child Conversation/Run；
 3. 新证据出现后 Dynamic Workflow 能中途改路，而不是继续执行冻结步骤；
 4. App 重启后 Todo、child lifecycle、checkpoint、attention 和外部任务引用准确恢复；
 5. dispatch 后断连的非幂等动作显示 `outcome_unknown`，不盲重试；
 6. 用户在 Agent 运行时打开刚生成的 Markdown、表格、图片、PDF 或未知文件；
-7. local/remote 共享同一 Thread 和工作台，Remote 不变成独立产品；
+7. local/remote 共享同一 Conversation/Run 和工作台，Remote 不变成独立产品；
 8. 一个长期 Goal 经过多次会话继续，但普通 Chat 不被强制 Goal 化；
 9. 一个 Pi package 成功兼容，另一个因 raw TUI/第二状态真相在加载前得到准确拒绝报告；
 10. 一个 package 在 safe boundary 自动升级并通过健康检查，另一个因 trust envelope 扩张停在 Staged；
@@ -1914,7 +1949,7 @@ artifact 的 shrinkwrap 在 probe consumer 中产生了顶层与嵌套的同版�
 | 候选 | 实际运行证据 | 只证明什么 | 不证明什么 |
 | --- | --- | --- | --- |
 | `@99percentpeople/pi-todo` source `0d85185fc1af2c66df54fcd9347c6e53d10e83f6` / artifact `1.2.3` | registry `gitHead` 与 source 相同；artifact integrity `sha512-bTSQNUFjrB3ENxe/HsBeLJRQMdONJ6jh6K7telu4v2tQi6zxQ1AYUgtt1dmSq6IuRnMAJ2fbKCUgCGt9hCpBmA==`。固定源码先 build shared package，再运行 `node --import tsx --test --test-isolation=process tests/todo.test.ts`：14/14 passed | snapshot 原子更新、stale revision、自依赖/环/悬空依赖拒绝、branch replay、compaction checkpoint 和 read-only UI 基线 | 包只公开默认 extension 与 schema version，reducer 不是公共 adapter contract；不能让 package transcript entry 成为产品 plan 权威 |
-| `pi-subagents` source `89de10e4bc8895e7948704c38620a5b35ddcd17e` / artifact `0.38.0` | registry `gitHead` 与 source 相同；artifact integrity `sha512-8wGQiX6rkR5J4V+AnWtQg3+LmC+cHnZIM1f/VWTjCTkVmcoKdeLsTAYG6BS2yKAugyEUjNUGj3vE5d9nj9m61A==`。10 个 targeted unit files 共 107/107 passed | resume ownership、stop/steer inbox、ack、stale-run reconcile、session lease、nested routing 和 spawn budget 的源码路径 | 约 2.7 MB unpacked artifact 还包含自己的 runtime、TUI、acceptance、workflow graph 和 worktree ontology；没有证明可原样成为 child Thread runtime |
+| `pi-subagents` source `89de10e4bc8895e7948704c38620a5b35ddcd17e` / artifact `0.38.0` | registry `gitHead` 与 source 相同；artifact integrity `sha512-8wGQiX6rkR5J4V+AnWtQg3+LmC+cHnZIM1f/VWTjCTkVmcoKdeLsTAYG6BS2yKAugyEUjNUGj3vE5d9nj9m61A==`。10 个 targeted unit files 共 107/107 passed | resume ownership、stop/steer inbox、ack、stale-run reconcile、session lease、nested routing 和 spawn budget 的源码路径 | 约 2.7 MB unpacked artifact 还包含自己的 runtime、TUI、acceptance、workflow graph 和 worktree ontology；没有证明可原样成为 child Conversation/Run runtime |
 | `pi-agentteam` source `3b3b1e4b599cbc6dad2c6202eec5025edb4ed363` / artifact `0.6.8` | registry `gitHead` 与 source 相同；artifact integrity `sha512-2U78q5vOjLCk0GUHoWqfxBbXK19IM0kclyoGDLM1GM4uj5R/sZYipOmYch5zxuDbO9mO7fJEvoc7lP+VCv+63w==`。固定 archive 不含 lockfile；test runner 还硬编码作者机器的 TypeScript fallback。仅在 archive 临时补 TypeScript 后，前 17 suites（含 message policy、outbox idempotency/retry/claim、mailbox attention）通过；随后因 archive 缺少 `docs/baseline-v0.5.0.md` 停止 | typed message、idempotent outbox、claim recovery、compact attention projection 的被执行路径 | 不能称全套测试通过；自带 task store、task history、mailbox/outbox/team stores 和 tmux/runtime 会制造第二状态真相，只可移植 mailbox/receipt 不变量 |
 | `pi-dynamic-workflows` source `31b2aca0f1cb195aafbfc5e3ee2b8c83ad3f21a2` | 固定 archive 的 `npm ci --ignore-scripts` 后运行声明的 `npm test`，`check + build + 24/24 unit tests` passed | runtime-created phase、条件/循环 phase、parser hazard rejection、abort 和未等待 child promise 拒绝 | 发布 artifact 的 lineage 不对应此 SHA；源码 runtime 以内存 route 为主，没有证明 mid-run replan、crash resume、receipt、retry lineage 或副作用 fence |
 
@@ -1929,7 +1964,7 @@ artifact 的 shrinkwrap 在 probe consumer 中产生了顶层与嵌套的同版�
 - private recovery store 实际覆盖 create/modify/delete/rename/symlink/untracked 与 1 MiB 文件；两次 restore 前后用户 repo 的 HEAD、index tree、refs 与 stash 完全不变；
 - restore 中途失败会恢复 safety checkpoint；restore 与 rollback 都注入失败时保持 `outcome_unknown`。
 
-**M2 provisional implementation choice。** 采用一个产品自有 append-only Thread/Attempt journal 加小型纯 reducer；Todo、child lifecycle、Team receipt、Workflow run/step/attempt、attention 与 `CheckpointRef` 都是同一事件流的不同投影，不建立社区 Todo DB、Team task board、固定 Workflow graph 或 transcript copy。first-party modules 可以 bounded transplant 上表已执行的不变量，但 package 不拥有 canonical state。Dynamic Workflow 固定的是 journal、caps、retry/receipt/fence，步骤继续由 Agent 根据 evidence 实时改写。checkpoint backend 保持可替换 seam；首个实现可以使用 per-Location/per-Attempt private recovery store，但必须由产品实现 safety transaction，不再依赖当前不可验证 donor。
+**M2 provisional implementation choice（经最终 Converge 修正）。** 采用产品自有 canonical Conversation/timeline、immutable Run 和 append-only Run/Attempt journal 加小型纯 reducer；Todo、child lifecycle、Team receipt、Workflow run/step/attempt、attention 与 `CheckpointRef` 都是同一事实脊柱的不同投影，不建立社区 Todo DB、Team task board、固定 Workflow graph 或隐藏 transcript copy。first-party modules 可以 bounded transplant 上表已执行的不变量，但 package 不拥有 canonical product state。Dynamic Workflow 固定的是 journal、caps、retry/receipt/fence，步骤继续由 Agent 根据 evidence 实时改写。checkpoint backend 保持可替换 seam；首个实现可以使用 per-Location/per-Attempt private recovery store，但必须由产品实现 safety transaction，不再依赖当前不可验证 donor。
 
 止损点已经达到：Probe C 足以排除“直接采用状态型 package”“固定 DAG/YAML”“用户 Git checkpoint”和“每种编排一个数据库”，不再扩大 donor 考古。仍保持 open 的是生产 journal 的并发/损坏尾部/跨进程实现、真实 engine package bridge、跨 OS 文件权限与锁、目录/更大文件性能，以及 production recovery backend 的 crash-at-every-boundary matrix；这些属于 M2 实现验收，不允许把 8-test simulator 冒充生产通过。
 
@@ -1937,7 +1972,7 @@ artifact 的 shrinkwrap 在 probe consumer 中产生了顶层与嵌套的同版�
 
 > Probe 日期：2026-08-01
 >
-> 范围：固定 workbench 源码的 renderer、状态、IPC、stream/scroll、viewer、file change、background activity 与 child control；以及仓库外的交互假设搜索。本节是 M2 的 provisional implementation choice，不是视觉批准、源码采用或跨平台验收。
+> 范围：固定 workbench 源码的 renderer、状态、IPC、stream/scroll、viewer、file change、background activity 与 child control；以及仓库外的交互假设搜索。本节保留 M1 当时证据，后续产品收敛已经推翻其“新 shell + bounded transplant”施工结论：M2 采用 §12.2 的完整固定 UI 母体物理导入，再按本节负证据换掉状态权威。历史结论不得重新覆盖当前路线。
 
 **固定源码与实际命令边界。** 从 Proma `aa02c16819399e7683533f15cfe202754d6b156c` 的全新 `git archive` 运行 `bun install --ignore-scripts`，安装 1,184 packages；`bun run --cwd apps/electron build:renderer` 通过，Vite 处理 5,382 modules，用时 9.72 秒。产物共 22,548,793 bytes，其中 356 个 JavaScript 文件合计 18,266,249 bytes，最大两个 chunk 为 4,421,937 与 1,542,127 bytes。该命令只证明固定源码在本次 macOS 主机可构建，不证明首屏、长 Thread、viewer runtime 或 macOS/Windows/Linux 打包运行。
 
@@ -1952,7 +1987,7 @@ Focused command 只运行外部 pure-function matrix 与以下 donor tests：col
 | 边界 | 固定源码事实 | 对完整移植的影响 |
 | --- | --- | --- |
 | Session store | `apps/electron/src/renderer/main.tsx:704-855` 只持久化 tabs 与 active tab；启动时只恢复一个有效 session 加 scratch | 无法准确恢复每 Chat 的完整工作台 |
-| Per-Chat workbench | `atoms/tab-atoms.ts` 明示 session view map 只在 runtime memory；`atoms/preview-atoms.ts` 的 open-file map 也只在内存，split/mode 反而是全局 storage | tabs/open files/active pane/split 没有同一个 Thread-owned authority |
+| Per-Chat workbench | `atoms/tab-atoms.ts` 明示 session view map 只在 runtime memory；`atoms/preview-atoms.ts` 的 open-file map 也只在内存，split/mode 反而是全局 storage | tabs/open files/active pane/split 没有同一个 Conversation-owned authority |
 | IPC | renderer 跨 111 个文件直接依赖 335-property host surface | “替换宿主边界”会变成广域侵入式重构，难以证明没有第二状态真相 |
 | Message mapping | `AgentMessages` 同步读取整份 JSONL，合并、分组、过滤后把全部可见 group 与 minimap 映射到 DOM | 无 virtualization、pagination 或 history cap；长 Thread 性能未成立 |
 | Streaming/scroll | `packages/ui/src/hooks/useSmoothStream.ts` 使用 `Intl.Segmenter`、`requestAnimationFrame` 与动态 drain；Conversation 使用 stick-to-bottom | 可移植的是 batching/anchoring 机制，不是无界 message list |
@@ -1966,26 +2001,26 @@ Focused command 只运行外部 pure-function matrix 与以下 donor tests：col
 - stream feedback：`useSmoothStream.ts` 的 segment batching 与 rAF drain、Conversation 的 scroll anchoring 可以 bounded transplant；新的 message list 必须另行 virtualization/pagination，不能继承整份同步 JSONL 与全量 DOM mapping。
 - diff/file activity：file write 后的 refresh-version、process block grouping、background completion presence 与 default-app fallback 有源码和本次 targeted tests 支撑；产品以 `OutputRef`、journal projection 与 capability adapter 接入，不复制 donor atoms。
 - queue/activity：message queue、external run、process group、background/active task surface 合计候选约 1,407 lines。只采用 retry/activation/grouping/presence 的纯机制与组件行为；本次没有运行 message-queue 自身测试，不能把整个 queue 记为已验证。
-- child control：侧栏按 `parentSessionId + sourceDelegationId` 建一层 child tree，点击能进入真实 child session；Thread 内已有 follow-up、interrupt/stop 路径。父级 child row 没有专用 steer/stop/ask 控件；AskUser 仅是 main-process 内存 Map，App 进程重启会丢失。因此 M2 要保留“compact row → real child Thread”的交互基因，自行实现 durable temporary-question branch 与 receipt。
+- child control：侧栏按 `parentSessionId + sourceDelegationId` 建一层 child tree，点击能进入真实 child session；Conversation 内已有 follow-up、interrupt/stop 路径。父级 child row 没有专用 steer/stop/ask 控件；AskUser 仅是 main-process 内存 Map，App 进程重启会丢失。因此 M2 要保留“compact row → real child Conversation/Run”的交互基因，自行实现 durable temporary-question branch 与 receipt。
 
 **交互假设搜索。** 仓库外共生成 8 个真实 workflow candidates，覆盖 ordinary Chat、folder-bound work Thread、child control 与 recovery/location 四个 feature family，每组两个不同 archetype；另做 micro-axis 与重复饱和轮。桌面 1440×900、light/dark、normal/reduced-motion 共审计 80 种组合，最终是 0 errors、0 warnings；首轮发现 workbench 关闭态仍有 clipped Close control，修正后复跑通过。这个结果只证明临时原型自洽，不能证明产品 UI 已获 maintainer approval。
 
-暂留三个交互基因：普通 Chat 使用安静、熟悉的 conversation-first 导航且可无目录；工作 Thread 以 chat 为主、右侧工作台按需打开，balanced split 是同一 Thread 的持久状态而非另一种 shell；child 以 compact row 出现并可进入 focused child Thread。淘汰 focus-card 的 card-inside-card、永久 child tree/dashboard、独立 recovery route、永久 Remote/Workflow dashboard、装饰性差异和重复候选。Location inspector 只在实际 remote/external execution 时渐进出现；旧 object-workbench prototype 不复活。临时 UI artifacts 已删除，不进入仓库。
+M1 当时暂留三个交互基因：普通 Chat 使用安静、熟悉的 conversation-first 导航且可无目录；工作 Conversation 以 chat 为主、右侧工作台按需打开；child 以 compact row 出现并可进入 focused child Conversation。最终 Converge 已否决 `balanced-tabs` 作为产品方向，仅保留“每 Conversation 可恢复工作台状态”这一行为要求。继续淘汰 focus-card 的 card-inside-card、永久 child tree/dashboard、独立 recovery route、永久 Remote/Workflow dashboard、装饰性差异和重复候选。Location inspector 只在实际 remote/external execution 时渐进出现；旧 object-workbench prototype 不复活。临时 UI artifacts 已删除，不进入仓库。
 
-**M2 provisional route。** 选择“产品新 shell + bounded component-domain transplant”，不是“全部重写”：
+**M1 当时的 provisional route（已被后续收敛替代）。** 当时选择“产品新 shell + bounded component-domain transplant”；以下行为门仍有效，但物理施工已改为完整固定 UI 母体先恢复可运行，再换脑、删减和重构：
 
-1. 普通 folderless Chat 与通常绑定文件夹的 work Thread 共用一个 Thread 模型，不再以全局 app mode 分裂产品；
-2. Thread journal projection 唯一拥有 tabs、open files、active pane、semantic split 与 execution location，filesystem 继续拥有文件 bytes；
+1. 一级入口固定为 `Agent | Chat`，两者共用 Conversation/Composer/Run 系统，但 Agent 以 Primary Folder/OMStudio 组织，Chat 是无 Primary Folder 的时间序历史；
+2. Conversation workbench projection 唯一拥有 tabs、open files、active pane、semantic split 与 execution location association，filesystem 继续拥有文件 bytes；
 3. 新 message list 采用 batched stream、bounded DOM virtualization/pagination 与 scroll anchoring；
 4. watcher event 通过小型 capability adapter 刷新 exact generated-file `OutputRef`，让 Attempt 运行中可以打开刚生成文件；
 5. 右侧 workbench 按需出现，先交付 text/unknown fallback 与 diff，再把 Markdown、image、PDF、table/office 等放进显式 viewer adapter；
-6. compact child row 进入真实 child Thread；follow-up、interrupt、stop 作用于当前 child；temporary question 是可重放分支，结论带 back-reference 回父 Thread；
+6. compact child row 进入真实 child Conversation/Run；follow-up、interrupt、stop 作用于当前 child；temporary question 是可重放只读分支，结论带 back-reference 回父 Conversation；
 7. local 是默认 execution location；Remote/external inspector 只在需要时出现，不成为永久模式；
 8. layout 使用平台中立的语义状态，window chrome、shortcut、path 与 file watching 由 OS adapter 承担。
 
-进入 M2 前不搬入 donor renderer；第一条真实 vertical slice 决定具体采用文件。性能门至少覆盖 first visible/first delta、high-frequency stream batching、100k+ character Thread、bounded DOM、background update、500k+ text/unknown/binary viewer、watcher storm 与内存增长。恢复门必须 crash/restart 后逐 Chat 精确还原 tabs/open files/split。平台门必须在 macOS、Windows、Linux 的 package runtime 走同一 folderless Chat、folder-bound Thread、generated-file open、child control 与 local/Remote-on-demand 场景。viewer 还要覆盖 oversized、corrupt、unknown binary、missing 与 concurrent change。只有 bounded 文件/依赖/rights、adapter contract、targeted source tests 和这些产品门都明确后，才把实际代码写入 source adoption。
+当前 M2 必须先完整导入固定 UI 母体、记录来源与法定文本并恢复 unchanged runnable baseline；导入不赋予 donor runtime、ontology、state 或目录结构永久权威。随后第一条真实 vertical slice 建立 `Agent | Chat`、canonical Conversation、frozen Run、ACP 四层事实链和 per-Conversation workbench，并在同一路径删除 donor 双轨。性能门至少覆盖 first visible/first delta、high-frequency stream batching、100k+ character Conversation、bounded DOM、background update、500k+ text/unknown/binary viewer、watcher storm 与内存增长。恢复门必须 crash/restart 后逐 Conversation 精确还原 timeline/tabs/open files/split。平台门必须在 macOS、Windows、Linux 走同一 Chat、Folder/OMStudio Agent、generated-file open、child control 与 local/Remote-on-demand 场景。viewer 还要覆盖 oversized、corrupt、unknown binary、missing 与 concurrent change。
 
-止损点已经达到：完整 renderer transplant 作为 M2 状态底座被排除；新 shell 与哪些机制值得继续移植已经足够施工。仍保持 open 的是最终视觉 approval、实际 vertical slice 文件选择、长列表/stream 基准、durable temporary question、viewer failure matrix 与三平台 package runtime；这些不能由本次 build、53 tests 或临时 UI 冒充通过。
+止损点已经达到：完整 UI 母体是批准的物理与视觉起点，但完整 renderer state 作为产品权威仍被排除。仍保持 open 的是实际 adoption、canonical Conversation/Run、长列表/stream 基准、durable temporary question、viewer failure matrix 与三平台 package runtime；这些不能由本次 build、53 tests 或临时 UI 冒充通过。
 
 ### 22.14 M1 Probe D：system-SSH transport、结构化 helper 与外部 Job receipt
 
@@ -2025,7 +2060,7 @@ Distant 的 request 有唯一 ID，response 有 `origin_id`；host 与 SSH backe
 
 1. 本机 system OpenSSH 只拥有 host trust、config、ProxyJump、agent、2FA、ControlMaster 与 credential interaction；凭据不传给 helper，不进入 journal、日志、错误或 UI；
 2. content-addressed、可版本并存的极小 helper 只拥有 capability/version handshake、stat/list/read/search/watch、observed-version CAS write、PTY/process、binary stream 与 bounded cursor；helper 没有账号、模型、Thread、Todo、Job DB 或 updater；
-3. 产品 Thread/Attempt journal 唯一拥有 Action intent/receipt、connection ref、helper generation lease、`OutputRef` 与 reconcile state；native local process 是第一个 backend，first-party Slurm adapter 是第一个外部 scheduler，Slurm ID/state/log/artifact 保持远端权威。
+3. 产品 Conversation/Run/Attempt journal 唯一拥有 Action intent/receipt、connection ref、helper generation lease、`OutputRef` 与 reconcile state；native local process 是第一个 backend，first-party Slurm adapter 是第一个外部 scheduler，Slurm ID/state/log/artifact 保持远端权威。
 
 submit 必须先写 intent 与 idempotency/correlation token，再 dispatch；ack 丢失只能按 token、用户与有界时间窗向 scheduler 对账。可定位同一 Job 才写 acknowledged/reconciled；无法定位则 `outcome_unknown`，禁止自动重提。cancel requested 与 scheduler acknowledged 分开。大日志按 cursor 读取，下载使用 `.partial → size/hash → atomic rename`。helper 更新遵守 exact artifact、generation coexistence、safe boundary、health check、quarantine 与 LKG rollback；活跃 process/Job 始终租用旧 generation 到结清。
 

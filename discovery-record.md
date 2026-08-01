@@ -30,6 +30,7 @@
 - 不因旧代码量、测试量和投入而保留；
 - 希望执行者代替外行用户做技术判断，而不是把每个细节反问回来；
 - 宁可做一次真正的大手术，也不能留下令人厌恶的前代身份残影。
+- 这份授权覆盖代码、测试、文档、目录、状态 schema、产品功能和既有施工产物；执行者不得把“用户没有逐文件点名”当成保守保留的借口。
 
 ### 2.2 对判断风格
 
@@ -68,6 +69,8 @@
 - 只有根 README 可以披露来源；
 - 所有设计都要极其干净；
 - 这是一种对一切产品设计和工程身份的强洁癖。
+
+最终反方审判对“只有根 README”作了必要的事实边界修正：法定许可证、技术必需的 manifest/lockfile，以及用户主动进入的真实 Engine/Package 选择、来源、诊断、版本、权限和兼容界面必须诚实显示外部事实。这个例外不是放松洁净，而是防止洁净滑向许可证缺失和来源造假；通用领域命名、普通 UI、内部架构和作者说明仍保持纯净 OmniMind 身份。
 
 因此后续执行不能只清 UI 文案。需要检查：
 
@@ -413,6 +416,10 @@
 | 核心 | 极小通用内核 |
 | 引擎 | `E0` 首选，无旧内核双轨 |
 | 工作台 | `U0` 可整块移植，探针决定边界 |
+| 一级入口 | `Agent | Chat`，Agent 在左、Chat 在右；顺序进入导航与测试契约 |
+| Conversation | OmniMind 拥有 canonical timeline；一个 Conversation 可跨多个 Engine/Model |
+| Run | 每次执行冻结 Engine/Model/Reasoning/Permission/Target/workspace revision |
+| Engine Session | 可抛弃、可重建的 lineage/cache，不是 Conversation 身份或产品真相 |
 | Remote | 早期一等能力，本地产品控制远端执行 |
 | 调度 | 先做一个具体批处理调度器 |
 | Knowledge | 文件原生、Agentic、可见 Markdown，语义/RAG 按证据启用 |
@@ -513,8 +520,8 @@
 
 七类生态审判最终得到以下边界：
 
-- Todo：当前 Thread/Attempt 的计划投影，不是独立任务数据库；
-- child Agent：拥有独立 transcript 的 child Thread，可进入、追问、纠偏、停止和恢复；
+- Todo：当前 Conversation/Run/Attempt 的计划投影，不是独立任务数据库；
+- child Agent：拥有独立执行 lineage 的 child Conversation/Run，可进入、追问、纠偏、停止和恢复；用户可见结果进入 canonical timeline，隐藏 reasoning 不复制；
 - Team：只增加 member、assignmentRef、owner 和 typed mailbox，不复制 Todo、acceptance 或依赖图；
 - Dynamic Workflow：拥有动态 run/step/attempt 编排，不拥有 child transcript、Team member 或外部 Job 状态；
 - Durable Goal：显式创建的长期策略，不自动包装普通 Chat，也不能靠模型自报获得完成权；
@@ -546,14 +553,17 @@ Agent 之间可以通讯，用户也可以进入 child conversation 直接追问
 
 锁定结果：
 
-- 普通 Chat 可以没有文件夹；工作型 Thread 通常对应一个目录；
-- 每个 Chat 独立保存 tabs、打开文件和工作台上下文，重新进入时恢复；
+- 一级入口固定为 `Agent | Chat`，Agent 在左、Chat 在右；
+- Agent 与 Chat 共用 Engine、Model、Reasoning、Composer、Timeline、Activity 和队列，不再为了概念纯度维护两套运行时；
+- Chat 没有 Primary Folder，按时间展示历史；Agent 按 Primary Folder/OMStudio 分组；
+- 新 Chat 不创建目录，Engine 真正需要 cwd 时才按需建立不可见可回收 scratch；Chat 引用必须保持技术上可证明的只读；
+- 每个 Conversation 独立保存 tabs、打开文件和工作台上下文，重新进入时恢复；
 - 右侧是按需上下文工作台，可查看任何文件、diff、终端、浏览器、child Agent 和临时问题，不是永久 Remote/Workflow dashboard；
 - Agent 运行时用户随时打开刚生成的文件；“审阅”首先只是查看；
 - Markdown 表格、代码、图片和来源必须高质量呈现；图片支持缩放、平移、多图和比较，区域选择修改以后作为可插拔能力；
 - 未知文件至少有 metadata/文本预览、系统打开和 viewer 扩展点；
 - child Agent 是完整对话，可追问、纠偏和停止；不同 Agent/会话可以通过可审计消息通讯；
-- 临时提问是轻量分支，可以把结论带回主 Thread；
+- 临时提问是轻量只读分支，可以把结论带回主 Conversation；
 - Remote 只占少数但重要场景，不支配默认布局；
 - 气质冷静、精确、克制；动效快、短、可打断；性能有预算和回归门；macOS、Windows、Linux 语义统一但尊重平台习惯。
 
@@ -561,7 +571,7 @@ Agent 之间可以通讯，用户也可以进入 child conversation 直接追问
 
 ## 23. UI 母体与旧 M2 的决绝纠偏
 
-后续深入研究后，创立者不再接受“从多个项目抽取一点风格，再自己慢慢搭 UI”的保守路线。`U1` 被批准为 UI 母体；旧 M2 `quiet-inline` / `balanced-tabs` 被明确否决。
+后续深入研究后，创立者不再接受“从多个项目抽取一点风格，再自己慢慢搭 UI”的保守路线。`U1` 被批准为 UI 母体；旧 M2 `quiet-inline` / `balanced-tabs` 被明确否决。此前独立 object-workbench HTML 同样被否决并清理，不得以原型历史复活。
 
 这不是一次风格偏好微调，而是权威变更：
 
@@ -587,22 +597,28 @@ Agent 之间可以通讯，用户也可以进入 child conversation 直接追问
 
 在 UI 母体接管以后，创立者把视角再次提高：OmniMind 不应只做首选引擎的桌面 GUI，也不应为了“多引擎”重新发明协议。最终锁定的是工作区优先、ACP-first、默认引擎最深集成但前端身份独立的路线。
 
-创立者连续确认的决策为：
+创立者连续确认并在最终 Converge 中修正后的决策为：
 
 - ACP 是 Agent 第一接入标准；原生 ACP 直接接，有正式 headless/SDK/RPC 的用薄 Bridge，没有可靠协议的只作受限 guest；
 - 已有 Pi ACP Bridge 应优先治理性 fork、深改和回馈上游；无测量证据不造一条语义不同的进程内私有快速路径；
-- 一个 Thread 绑定一个主 Engine Session，跨引擎使用 child、fork、compare 或显式 Handoff，不热换引擎、不拼 transcript；
+- 一个 Conversation 可以在 Run 边界直接切换 Engine/Model。用户主动切换不创建 Conversation、不提示、不生成 Handoff、不写 Timeline；当前 Run 保持冻结，选择只影响 next Run；
+- 跨 Engine 产生新事实后返回旧 Engine，不恢复陈旧 Session，而从 canonical Conversation、Workspace 当前事实和 Continuation Envelope 新建 lineage；
+- OmniMind 拥有用户可见 canonical Conversation/timeline；Engine Session 只拥有可抛弃执行 cache。原来“Engine transcript 是对话权威、一个 Thread 绑定一个 Session”的结论被明确撤回；
 - UI 母体的 local/worktree、Git、Kanban、Automations 和 pull request 机制应保留；共享写入增加 writer admission/lease 和唯一 integration owner；
-- Pi 可以通过 ACP orchestration 生态指挥其他 Agent。被调度者默认属于当前 Pi Attempt 的 child，带 parent/origin/depth/cost/权限/位置和循环上限；未经显式提升不成为并列主 Thread；
+- Pi 可以通过 ACP orchestration 生态指挥其他 Agent。被调度者默认属于当前父 Run 的 child，带 parent/origin/depth/cost/权限/位置和循环上限；未经显式提升不成为并列顶层 Conversation；
 - 权限交互可以统一为 Approval required / Auto / Full access，但真实强制边界必须另外标记为 `host-enforced` / `agent-enforced` / `mixed` / `unverified`。ACP permission 不是安全证明；
 - ACP 不能成为 React 数据模型。运行链必须是原始证据 → 强类型产品事实 → 增量读投影 → UI view model；Engine 私有能力可增强局部投影，但不能形成两套产品壳；
-- 默认运行 UI 采用稳定、简洁的 inline 摘要，按需展开时间线、Todo、child Agent、Terminal、Diff 和文件；未知事件保留且可检查，但不把 raw noise 全部倾倒给用户。
+- Timeline 保持自然对话；运行过程用稳定轻量 Activity 增量呈现，按需展开 Todo、child Agent、Terminal、Diff、文件和 provenance。用户主动选择的变化不再用系统消息复述；未知事件保留且可检查，但不把 raw noise 全部倾倒给用户。
 
 创立者随后纠正了“护城河”叙事。当前没有必要为了形成独门优势而重造工作台、Team、Workflow 或 Automation。正确目标是先把已批准 UI 母体完整接管，把首选引擎和成熟生态接好，做到好用、丝滑、漂亮、稳定。优势若产生，应来自长期产品质量，而不是预先发明一个宏大的核心模块。执行者不得把“OmniMind 必须拥有状态权威”误读成“所有生态能力都要由 OmniMind 重写”：Engine/package 私有 Todo、Team、Workflow 可以继续由来源拥有，产品只在需要跨引擎组织时建立最小事实与投影，绝不双写。
 
 语言判断也经过一次纠偏。OmniMind 首发必须让中文和英文用户都能完整工作，但这不是全面汉化或翻译覆盖率项目。中文界面可以保留 `Thinking`、`Planning`、Git、Diff、PR、Token、ACP、路径、代码和 Agent 原始过程语言；理想气质是中文动作与说明承载可理解性，英文专业对象在更准确、更自然时保留。不能机械翻译，也不能让中文用户因为关键设置、错误或恢复路径只有英文而无法工作。
 
 最后，首选引擎必须停留在实现和生态层，不能成为 OmniMind 的前端身份。日常界面说 Agent、Chat、Tool、Skill、Package、Team、Workflow，不说宿主化的 Session/Tool/Team。真实引擎名称只在用户选择与安装、Package 来源、兼容诊断、权限边界、版本和法定披露中按需出现。此原则不是洗白来源；根 README 和许可证仍必须完整、诚实地感谢和披露上游。
+
+Chat/Agent 边界也经历了最后一次纠偏。最初为了“纯 Chat”曾提出 Chat 直接调用模型、不显示 Engine；创立者指出这破坏了 UI 母体已经验证的一致心智。最终裁决是两者共享 Engine/Model/Reasoning/Composer/Run 系统，区别只在 Primary Folder 与执行权威。Chat 的无 Folder 不是弱模型模式；它仍能思考、搜索、读取引用和生成 Artifact，但不能修改用户引用位置。需要写入时显式 Send to Agent。
+
+Models/Agents 设置因此分离：Models 管理 Chat 与内置 OmniMind Agent 使用的 ModelConnection，Agents 管理外部 Agent 的发现、官方认证、版本、能力和权限真实性。外部凭据仍归外部 Agent；模型或 Engine 不可用时绝不静默 fallback。
 
 创立者还要求用冰山法则做全局判断：表面追求极简、高级和丝滑，水下必须同时完成状态、权限、写入、恢复、性能、跨平台、双语、更新和失败路径。执行者不能因为用户只看见一行 Planning 或一个活动图标，就把底层实现降格成字符串猜测和假进度；也不能把所有底层机制暴露给用户来证明工程复杂。真正的质量是复杂性被系统承担，控制与证据在需要时可达，日常使用仍然安静。
 
@@ -636,3 +652,21 @@ Agent 之间可以通讯，用户也可以进入 child conversation 直接追问
 - 冰山法则与身份/结构洁净同级：表面的极简和质感必须由真实状态、权限、writer ownership、恢复、性能、失败与跨平台证据支撑，不能以漂亮模拟换取视觉完成度。
 
 这次纠偏不是要求在 README 隐藏来源。恰好相反：产品作者区越洁净，根 README 的 adoption 记录、固定 revision、人可读致谢和 `LICENSES/` 法定原文越必须完整。洁净阻止 donor 继续定义产品，不抹除 donor 的真实贡献。
+
+## 27. 最终 Converge：一致交互、跨 Engine Conversation 与冰山完成度
+
+2026-08-01 的最终多轮 Converge 又推翻了三项看似“架构更纯”、实际让用户更累的判断。创立者明确要求执行者不要着相：抽象边界服务用户，不允许用户为了架构洁癖理解更多概念。
+
+第一，产品一级入口不是 Home/Projects/Studio/This Mac/Remote 的组合，而是固定顺序 **`Agent | Chat`**。Agent 在左、Chat 在右；这是导航、默认入口、键盘与测试契约。Chat 保持普通时间序历史，Agent 按真实 Folder 与 OMStudio 组织。Open Folder、`@folder` 和粘贴路径共享熟悉交互，但引用永远不偷偷改写 Primary Folder 或 Conversation 身份。
+
+第二，Chat 与 Agent 不应因为产品边界而产生两套 Composer 或运行时。两者共同使用 Engine、Model、Reasoning、Timeline、Activity、队列、附件、`+` 和 `@`。区别不是“Agent 更聪明”，而是 Agent 有 Primary Folder/OMStudio 写入权威，Chat 没有。Chat 新建时不创建目录；只有 Engine 真正需要 cwd 时才按需建立内部 scratch。Chat 引用保持只读，生成内容进入 Output store 并由 `OutputRef` 引用；需要修改用户文件时 Send to Agent。这个边界必须由 sandbox、host filesystem boundary 或受控内容副本证明，不能只写 `Read only`。
+
+第三，一个用户 Conversation 必须能够自然跨多个 Engine 与 Model。早先“一个 Thread 绑定一个主 Engine Session、对话内容由 Engine transcript 拥有”的路线已经被撤回，因为它会把统一 Timeline 切碎在多个外部 Session 中。OmniMind 现在拥有 canonical Conversation/timeline；每次 Run 冻结执行选择；Engine Session 是 opaque、可抛弃 lineage。用户切换 Engine/Model 后直接继续，不创建 Conversation、不弹窗、不生成 Handoff、不写 `Continued with…`，因为选择器本身已是反馈。只有 Engine 不可用、认证失效、能力不匹配或发生隐含副作用时才额外说明。
+
+运行中切换只影响 next Run。普通发送进入带 frozen snapshot 的可编辑队列；立即纠偏必须显式并在安全边界送入当前 Run。一个 Agent Conversation 只有一个顶层前台 Run；真正并行通过 child、Team、Workflow、新 Conversation 或隔离 worktree，读可 fan-out，共享写入和最终集成只有一个 owner。Stop 不冒充 rollback，Partial Diff 和已发生副作用继续可见。
+
+创立者进一步确认，世界级完成度不能靠功能表自证。UI 母体完整搬入是为了保住成熟手感与隐性耦合，不是为了逃避删除；ACP、多 Engine、Pi 生态和自动更新都是基础能力，不是护城河口号；真正应赢的是长期一致的用户体验、状态可信、恢复、文件/Git/Remote、编排和细节。Electron/TypeScript 作为 UI 母体的物理起点优于宗教式全 Rust 重写；Rust 只有在 profiling 证明窄热点后才作为可替换 helper 进入。
+
+最后一次反方审判还锁定：完整复制不等于全部保留；多 Engine 不等于虚假齐平；隐藏默认引擎不等于伪造来源；身份洁净允许根 README、法定文本、lockfile、真实集成/选择/诊断边界出现外部事实；自动更新不等于热替换；UI first 不等于静态 HTML；没有用户允许激进删除，但不允许失去每个里程碑可运行、可回退、可证伪的施工脊柱。
+
+创立者对“完美”的要求应被理解为 Done 公式而非无限抛光：所有 required claims 在同一 final SHA verified、blocked=0、相关 final gate 通过、fresh-context completion audit 无 material finding。生产者不能用局部绿色、漂亮原型或自我评价提前宣布完成。

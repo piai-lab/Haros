@@ -17,6 +17,8 @@
 Deliver an independent, production-grade OmniMind V1 that proves the product constitution end to end:
 
 - a small, durable domain core;
+- a fixed `Agent | Chat` product shell with Agent on the left, Chat on the right, shared interaction grammar and distinct Folder authority;
+- product-owned canonical Conversations and immutable Run snapshots that remain readable across Engine changes and Engine loss;
 - multiple real Agent engines behind ACP-first ingress, with one bundled default engine and honest capability differences;
 - a restrained but powerful desktop workbench;
 - local and remote files, terminals, processes and durable batch execution;
@@ -60,7 +62,7 @@ Product decisions are not copied into this Campaign. They are locked by the root
 - `Domain is only a workload`;
 - `E0 ecosystem seven-category source freeze`;
 - `Unified layering`, `single state authority`, `automatic update` and `behavioral acceptance`.
-- `ACP-first multi-engine boundary`, `ACP-first ingress, OmniMind-owned experience`, `permission enforcement truth`, `UI source takeover` and `bilingual usability contract`.
+- `Agent | Chat product ontology`, `Conversation and Run authority`, `ACP-first multi-engine boundary`, `Models and Agents settings`, `permission enforcement truth`, `UI source takeover` and `bilingual usability contract`.
 
 This Campaign locks only completion mechanics:
 
@@ -216,18 +218,18 @@ Deliver one complete local path on the approved full UI source baseline:
 1. import the fixed complete UI source tree with exact provenance, legal text and a reproducible runnable baseline;
 2. remove donor product identity and donor tree shape from authored surfaces without hiding provenance; the first adoption commit must pass source, path/name, generated-output and structure scans;
 3. establish locale resources and a terminology policy that makes Simplified Chinese and English key journeys equally usable without mechanically translating technical terms;
-4. trust a local location, create a Thread and bind it to one managed ACP Engine Session;
-5. persist turn admission and start one Engine attempt;
+4. render the fixed `Agent | Chat` order, create one folderless Chat and one OMStudio/Folder-backed Agent Conversation using the same Composer/Engine/Model/Reasoning system;
+5. persist a canonical Conversation entry and immutable Run snapshot, then create or rebuild one managed ACP Engine lineage and start one Attempt;
 6. map raw ACP/Bridge evidence into typed product facts, incremental projections and UI view models;
 7. read and modify a file, stream one message/tool/permission/output path, and expose Diff/Terminal/File through the workbench;
-8. show a stable concise live summary with expandable detail while keeping the default UI engine-neutral;
+8. show a stable concise live summary with expandable detail while keeping the default UI engine-neutral; an explicit Engine/Model switch changes next Run without creating a Conversation, Handoff, Toast or Timeline notice;
 9. create checkpoint and diff, cancel or inject failure, restart the application and recover exact state;
-10. branch and continue without a duplicate transcript, runtime or weak Activity state bus.
+10. restart and continue from the canonical Conversation without depending on an Engine transcript, duplicate runtime or weak Activity state bus; after cross-Engine divergence, returning to the old Engine rebuilds rather than resumes stale lineage.
 
 The same skeleton also proves:
 
-- Todo is reconstructed from the active Thread branch;
-- one foreground and one background child Thread share the same lifecycle reducer;
+- Todo is reconstructed from the active Conversation branch;
+- one foreground and one background child Conversation/Run share the same lifecycle reducer;
 - a file write fails cleanly when its observed version is stale;
 - checkpoint restore survives interruption without touching user Git state;
 - attention and `outcome_unknown` return to the correct Attempt.
@@ -238,7 +240,7 @@ The same skeleton also proves:
 Exit:
 
 - F-03 through F-06, F-22, F-26 and F-29 through F-31 are at least `candidate`;
-- no duplicate transcript truth;
+- one canonical user-visible Conversation truth; Engine-private transcripts remain non-authoritative caches;
 - crash injection covers admission, attempt, action and file-write boundaries.
 
 ### M3 — Remote parity and durable external execution
@@ -342,12 +344,12 @@ Exit only when the Done formula is true.
 
 | ID | Required claim | Proof type | Status | Evidence | SHA |
 | --- | --- | --- | --- | --- | --- |
-| F-01 | Product-authored paths, names, source text and controllable generated output contain no forbidden external identity outside the root disclosure and legal texts | deterministic source/path/generated scan | candidate | On `48c2fa919d2ea29702fa4b59971a67004945eba0`, `npm run quality` passed in a fresh local clone: 25 source files, 0 current generated files, 26 README-derived identity rules and the README-derived max depth 7; 31/31 tests include separate path/source/generated-output findings, automatic build-root discovery outside dependency trees, runtime-fixture fencing, forbidden-name/root/depth failures and source-inventory validation. The first adoption commit must repeat this gate against its actual generated output. | `48c2fa919d2ea29702fa4b59971a67004945eba0` |
+| F-01 | Product-authored paths, names, source text and controllable generated output contain no forbidden external identity outside the root disclosure, legal/manifest facts and explicit real-integration boundaries | deterministic source/path/generated scan | candidate | On `48c2fa919d2ea29702fa4b59971a67004945eba0`, `npm run quality` passed in a fresh local clone: 25 source files, 0 current generated files, 26 README-derived identity rules and the README-derived max depth 7; 31/31 tests include separate path/source/generated-output findings, automatic build-root discovery outside dependency trees, runtime-fixture fencing, forbidden-name/root/depth failures and source-inventory validation. The exact provenance baseline may temporarily fail author-tree identity by doctrine; the first production adoption candidate must repeat and pass this gate against its actual tree and generated output. | `48c2fa919d2ea29702fa4b59971a67004945eba0` |
 | F-02 | Every adopted source has accurate revision, path, rights, mode, divergence and update policy in the root disclosure | deterministic inventory + legal review | candidate | `npm run check:sources` validated the root `source-adoptions` inventory; result: 0 adopted sources, so no legal text is currently required; malformed/missing-rights paths are covered by the quality tests | `99192d8fbfad41c0e6fc3fb36291f1ec9a242531` |
-| F-03 | Durable domain state contains only necessary product facts with one authority per fact | schema review + persistence tests + fresh evaluator | open | — | — |
-| F-04 | Engine transcript is not duplicated and Thread/Turn/Attempt/Action correlations survive restart and branch | recovery and corruption tests | open | — | — |
+| F-03 | Durable domain state contains only necessary product facts with one authority per fact: OmniMind owns canonical Conversation/timeline and immutable Run snapshots; files, Git, external jobs and Engine-private state retain their real authorities | schema review + persistence tests + fresh evaluator | open | — | — |
+| F-04 | Conversation/Run/Attempt/Action and opaque Engine lineage correlations survive restart, branch, Engine switching and Engine loss; Engine-private transcripts never become a competing product truth | recovery, replay and corruption tests across two Engines | open | — | — |
 | F-05 | Side effects follow proposed/decided/started/settled-or-unknown semantics and are never blindly replayed | adversarial crash matrix | open | — | — |
-| F-06 | The desktop workbench supports long streaming work, files, preview, diff, queue, interrupt and background status without unstable UI | UI tests + measured real scenario + fresh evaluator | open | — | — |
+| F-06 | The desktop workbench preserves the fixed `Agent | Chat` order, shared Composer/Engine/Model interaction, Folder/OMStudio distinction, long streaming work, file preview, diff, durable queue, interrupt and background status without unstable UI | UI tests + measured real scenario + fresh evaluator | open | — | — |
 | F-07 | Local and remote locations share one product model while credentials and remote files keep correct ownership | contract tests + real remote scenario | open | — | — |
 | F-08 | A batch task survives network loss, sleep and application restart and reconciles from its external authority | real scheduler scenario | open | — | — |
 | F-09 | Remote file conflicts, caches, transfers, large output and reconnect do not create a second authority or silent overwrite | adversarial remote tests | open | — | — |
@@ -357,22 +359,22 @@ Exit only when the Done formula is true.
 | F-13 | All external and professional tools use one capability contract without entering the core ontology | multiple real capabilities + API review | open | — | — |
 | F-14 | Trusted locations avoid per-command confirmation while untrusted code and third-party extensions cannot execute by implication | trust matrix + adversarial tests | open | — | — |
 | F-15 | Irreversible or high-cost external actions require separate, accurately scoped authorization | policy tests + scenario review | open | — | — |
-| F-16 | Startup, first delta, streaming, long Thread, background work, large output and remote latency meet measured budgets with attributable spans | performance suite + raw measurements | open | — | — |
+| F-16 | Startup, first delta, streaming, long Conversation, background work, large output and remote latency meet measured budgets with attributable spans | performance suite + raw measurements | open | — | — |
 | F-17 | The repository has no old-runtime compatibility track, speculative framework, hidden provider identity or duplicate product implementation | dependency/search audit + fresh evaluator | open | — | — |
 | F-18 | Materially different workloads succeed on the same core without research, coding, knowledge or Remote product modes and domain types | end-to-end scenarios + fresh evaluator | open | — | — |
 | F-19 | Relevant final gates pass once on the frozen final SHA | deterministic final gate | open | — | — |
 | F-20 | Fresh-context completion audit reports no material finding on the frozen final SHA | independent completion audit | open | — | — |
-| F-21 | Production code, public names, file tree and visible interaction form one coherent, elegant and maintainable system: shallow single-duty structure, durable precise names, no donor mirror/migration archaeology/vague containers, and no avoidable performance debt | structure/static checks + architecture/name review + measured UI + fresh evaluator | open | — | — |
+| F-21 | Production code, public names, file tree and visible interaction form one coherent, elegant and maintainable system: `Agent | Chat` order is invariant, visible actions are not redundantly narrated, structure is shallow and single-duty, names are durable and precise, and no donor mirror/migration archaeology/vague container or avoidable performance debt remains | structure/static checks + architecture/name review + measured UI + fresh evaluator | open | — | — |
 | F-22 | Todo, child Agent, Team, Dynamic Workflow, explicit Goal and Review have non-overlapping state authority and survive branch/restart correctly | reducer/replay tests + state-authority review | open | — | — |
 | F-23 | Dynamic Workflow is generated and revised from live evidence, obeys hard limits, preserves retry lineage and never blindly replays an uncertain side effect | scenario tests + crash/receipt matrix | open | — | — |
 | F-24 | The launch compatibility bridge runs supported ecosystem packages, reports unsupported host behavior before activation and never imports host ontology into product state or UI | real package matrix + identity/API review | open | — | — |
 | F-25 | Bundled, curated and arbitrary extension artifacts update automatically within approved trust envelopes, activate only at safe boundaries and roll back to LKG without changing an active generation | update/migration/fault-injection matrix | open | — | — |
 | F-26 | File writes use observed-version preconditions; Git stays optional authority; checkpoint restore covers create/modify/delete/rename and fails recoverably without destructive user-Git operations | filesystem/Git concurrency + recovery matrix | open | — | — |
 | F-27 | Browser, HTTP, MCP-like and external actions produce native receipts and preserve `outcome_unknown` after post-dispatch disconnect, timeout or cancellation | protocol fault injection + real adapter scenarios | open | — | — |
-| F-28 | Per-Chat workbench state, live file viewing, child conversations, temporary question branches, multi-format preview and platform conventions remain coherent, fast and recoverable on macOS, Windows and Linux | cross-platform UI scenarios + measured fresh evaluator | open | — | — |
-| F-29 | Native ACP and at least one thin Bridge drive the same Thread/Session contract; raw Engine events remain traceable but reach React only through typed facts, incremental projections and presentation view models | two-engine conformance + event replay + type/API audit | open | — | — |
+| F-28 | Per-Conversation workbench state, folderless Chat scratch/read-only boundaries, Folder/OMStudio Agent behavior, live file viewing, child conversations, temporary questions, multi-format preview and platform conventions remain coherent, fast and recoverable on macOS, Windows and Linux | cross-platform UI scenarios + measured fresh evaluator | open | — | — |
+| F-29 | Native ACP and at least one thin Bridge drive the same Conversation/Run/Engine-lineage contract; idle and next-Run Engine switching, stale-lineage rebuild, raw-event traceability and typed-fact/projection/view-model isolation are proven without wire data reaching React | two-engine conformance + event replay + type/API audit | open | — | — |
 | F-30 | Approval-required, Auto and Full-access policy never overstate technical control; every Engine/ExecutionTarget reports host-enforced, agent-enforced, mixed or unverified from tested execution paths | per-engine permission matrix + deny side-effect tests + fresh evaluator | open | — | — |
-| F-31 | Simplified Chinese and English users can complete every critical workbench journey with coherent terminology, input, layout, errors and recovery; technical English remains where clearer and the default UI does not expose the bundled Engine as product identity | dual-locale end-to-end UI tests + CJK/long-label/accessibility checks + fresh evaluator | open | — | — |
+| F-31 | Simplified Chinese and English users can complete every critical `Agent | Chat`, Engine/Model selection, Folder/OMStudio, workbench and recovery journey with coherent terminology; technical English remains where clearer and the default UI does not expose the bundled Engine as product identity | dual-locale end-to-end UI tests + CJK/long-label/accessibility checks + fresh evaluator | open | — | — |
 | F-32 | A bundled-engine orchestration package can dispatch another ACP Agent as a bounded child with parent/origin/depth/cost/permission/target, cycle limits and one writer/integration owner without duplicating package Team/Workflow/Todo state | real nested-agent scenario + state-authority/write-admission audit | open | — | — |
 
 ## 9. Milestone evidence
@@ -423,7 +425,7 @@ Probe A engine-core/artifact route provisional choice: `2f4ded82582ee91155d64d4a
 - Probe B provisionally selects a product-owned Thread shell and message/state boundary plus bounded viewer, stream-feedback, file-change and activity mechanisms. A full renderer remains eligible only as stripped geometry/chrome, not as the product state authority. The exact M2 vertical slice and performance/restart/macOS-Windows-Linux revalidation gates are in `README.md §22.13`; no donor code, temporary UI artifact, visual approval or source adoption entered the repository.
 - Probe D remote/durable route: `64ae06d22f370f02c94e8e8a2886403d3a965ecc`. Fixed-source suites were kept separate: request handling 6/6, reconnect 50/50, host API 68 passed with one named platform-inapplicable test skipped and zero failed, search 32/32, local PTY 1/1, transport policy/authentication unit and mock coverage 318/318, three loopback integrations 1/1 each, abrupt-disconnect stress 1/1, and the local durable backend's exact command completed 10 shell checkpoints, five Node test scripts and its final import with zero command failures. Loopback evidence does not prove a real remote host, jump authentication, changed host keys, HPC or scheduler behavior.
 - The repository-external Probe D simulator ran 10/10 tests for submit-intent acknowledgement loss and token reconciliation, cancellation phases, bounded log reads and output references, partial-download hash verification and atomic activation, helper-generation coexistence and failed-health LKG rollback, restart reconciliation, and uncorrelatable disconnect as `outcome_unknown`. It proves the planned product contract is falsifiable, not donor or real-scheduler capability.
-- Probe D provisionally selects system transport ownership of credentials and host trust, a bounded content-addressed capability helper, and product-owned Thread/Attempt journal receipts and reconciliation. Remote remains an on-demand execution target; no source adoption or acceptance status changed. The real-host, cross-platform and scheduler revalidation gates are in `README.md §22.14`.
+- Probe D provisionally selects system transport ownership of credentials and host trust, a bounded content-addressed capability helper, and product-owned Conversation/Run/Attempt journal receipts and reconciliation. Remote remains an on-demand execution target; no source adoption or acceptance status changed. The real-host, cross-platform and scheduler revalidation gates are in `README.md §22.14`.
 - Probe E file-native knowledge and extension-generation route: `1c6ceb36bea1da8287c4c66ef12adac313adc7e1`. Fixed-source levels remain separate: the update/install suites ran 31/31; the optional knowledge unit command ran 126 passed / 57 failed / 0 skipped, with all 57 engine failures reporting model-worker fetch failure; the external-service source and test definitions were inspected, but two bounded Go commands never entered test execution and therefore have no passed/skipped/failed claim. Registry metadata for the update candidate was inspected separately and its official artifact was not run.
 - The repository-external Probe E script ran 15/15 tests: six generated a reproducible 1000-source mixed corpus and verified manifest/visible Wiki/FTS initialization, source navigation, one- and ten-file incremental updates, delete/stale/manual-section protection, rebuild and a lexical synonym miss; nine used real minimal tar artifacts to verify exact digest, staging checks, material trust-envelope diff, Auto/Staged/Pinned and 24-hour-plus-jitter discovery, safe-boundary activation, five active generation leases, health quarantine/LKG rollback and self-updater rejection. The measured local initialization was 629.054 ms and 1,002,334 projection bytes; these are single-host probe values, not a cross-platform benchmark.
 - Probe E provisionally selects source files as authority with deletable in-place manifest/Wiki/FTS projections, deterministic source references before any optional semantic projection, and one product-owned immutable artifact-generation pipeline. Real Agent/model navigation, semantic recall, production artifacts, migrations and cross-platform rollback remain explicit M2/M5 revalidation gates. No temporary corpus, index, artifact, donor code, source adoption or acceptance status entered the repository.
@@ -474,14 +476,14 @@ The next executor must:
 
 1. verify the exact repository path, `main == origin/main`, clean status, and that this Campaign plus the final doctrine commit remain in current history;
 2. read the five authority documents in order and run the existing focused quality/document gates before changing production; preserve historical evidence and keep every unimplemented claim `open`;
-3. before full source import, keep the resident identity/tree doctrine and README-driven path/name/source/generated-output checker green; the first adoption commit must include identity/structure scan evidence and may not preserve a donor path mirror;
-4. do not rerun M1 or protect the current M2 skeleton. Start from `execution-brief.md §8`: import the complete fixed UI source, preserve provenance/legal text, and first restore its runnable baseline;
-5. in one vertical path establish locale resources, professional Chinese/English terminology, managed ACP Session, raw-evidence/typed-fact/projection/view-model layers, one message/tool/permission/output, inline progress, expanded Diff/Terminal/File, cancel/failure/restart and honest enforcement level;
+3. before full source import, keep the resident identity/tree doctrine and README-driven checker green; use at most one Campaign branch/worktree. One exact provenance baseline commit may temporarily contain the unchanged fixed source and fail author-tree identity/structure rules, but it must contain source/rights/legal disclosure, prove unchanged build/run, carry no new product code, never become a main/production candidate and be followed immediately by purification on the same branch;
+4. do not rerun M1 or protect the current M2 skeleton. Start from `execution-brief.md §8`: import the complete fixed UI source, preserve provenance/legal text, restore its runnable baseline, then remove donor path mirrors and recover all identity/structure gates before the first production candidate;
+5. in one vertical path establish locale resources, the invariant `Agent | Chat` order, one folderless Chat plus one OMStudio/Folder-backed Agent Conversation, canonical timeline, frozen Run, managed ACP lineage, raw-evidence/typed-fact/projection/view-model layers, one message/tool/permission/output, inline progress, expanded Diff/Terminal/File, durable queue, cancel/failure/restart and honest enforcement level;
 6. keep the default UI engine-neutral; only reveal real Engine names in user choice, source, diagnostics, permission truth and legal surfaces. Do not mechanically translate Thinking/Planning, Git, Diff, PR, Token, ACP, code, paths or raw Agent process when English is clearer;
 7. delete the same path's old M2, Provider-first and weak Activity dual tracks after the replacement is proven. Preserve important UI surfaces such as Git, PR, Kanban and Automations even if later milestones connect their full runtime;
 8. add actual adoptions to root `source-adoptions` with exact rights and attribution in the same commit; move only affected claims to `candidate` with commands, artifacts and SHA. Never self-certify Campaign completion.
 
-Do not begin by redesigning the approved UI from screenshots, protecting sunk cost, exposing the bundled Engine as product identity, routing ACP wire data into React, creating a generic `payload: unknown` state bus, building a speculative public SDK, implementing every provider, turning Remote into a product mode, or defaulting to heavy retrieval.
+Do not begin by redesigning the approved UI from screenshots, protecting sunk cost, swapping the `Agent | Chat` order, reviving Projects/Studio/This Mac ontology, binding a Conversation to one permanent Engine Session, narrating explicit user switches with Toast/Timeline noise, exposing the bundled Engine as product identity, routing ACP wire data into React, creating a generic `payload: unknown` state bus, building a speculative public SDK, implementing every provider, turning Remote into a product mode, or defaulting to heavy retrieval.
 
 ## 11. Blockers
 

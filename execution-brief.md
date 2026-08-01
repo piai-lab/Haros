@@ -6,7 +6,7 @@
 >
 > 外部来源一律使用 README 定义的研究代号；不得把这些代号带进生产代码。
 >
-> 当前执行状态：独立仓库、阶段 0–1 地基和阶段 2 / M1 五个可丢弃探针路线已经完成到 `candidate`；UI 母体、ACP-first、多真实 Engine、默认原生引擎、权限真实性、四层运行投影和中英双语策略已经收敛进根 README。仓库现有 M2 focused skeleton 可删除，`source-adoptions` 仍为 0，所有 production claims 仍按 Campaign 状态执行。下一唯一入口是本文件阶段 3：固定完整 UI 母体导入并保持可运行，先建立双语地基与 ACP 端到端 slice，再逐层换脑；不得重跑 M1 或保护旧 M2 投入。
+> 当前执行状态：独立仓库、阶段 0–1 地基和阶段 2 / M1 五个可丢弃探针路线已经完成到 `candidate`；UI 母体、`Agent | Chat` 一级导航、Conversation-owned timeline、frozen Run、ACP-first、多真实 Engine、默认原生引擎、Models/Agents 设置、权限真实性、四层运行投影和中英双语策略已经收敛进根 README。仓库现有 M2 focused skeleton 可删除，`source-adoptions` 仍为 0，所有 production claims 仍按 Campaign 状态执行。下一唯一入口是本文件阶段 3：固定完整 UI 母体导入并保持可运行，先建立双语地基、Conversation/Run 权威与 ACP 端到端 slice，再逐层换脑；不得重跑 M1 或保护旧 M2 投入。
 
 ## 1. 任务的正确理解
 
@@ -48,7 +48,7 @@
 
 ### 3.1 独立仓库身份洁净
 
-产品作者区中，外部产品、供应商、前代产品和模型家族名称只允许出现在根 README 的来源披露。法定原文只允许出现在 `LICENSES/`。
+产品作者区中，外部产品、供应商、前代产品和模型家族名称只允许出现在根 README 的来源披露、`LICENSES/` 法定原文、技术必需的 manifest/lockfile，以及用户主动进入的真实 Engine/Package 选择、来源、诊断、版本、权限与兼容边界。不能为了字面洁净伪造来源或隐藏真实集成；除此之外的生产领域命名和普通 UI 必须零无关身份。
 
 检查范围至少包括：
 
@@ -125,7 +125,8 @@ README 的来源披露定义：
 这些代号只属于研究文档。生产中使用领域职责：
 
 - `AgentEngine`
-- `Thread`
+- `Conversation`
+- `Run`
 - `ExecutionTarget`
 - `LocationRef`
 - `Capability`
@@ -155,7 +156,7 @@ README 的来源披露定义：
 准备最小但有杀伤力的样本：
 
 - 一个普通本地代码目录；
-- 一个有大输出、长 Thread 和取消行为的任务；
+- 一个有大输出、长 Conversation 和取消行为的任务；
 - 一个需要交互式认证或跳板的测试远程；
 - 一个可提交批处理任务的测试环境；
 - 一个包含 Markdown、代码、PDF、Office、表格、图片和约千份混合资料的 corpus；
@@ -222,7 +223,7 @@ README.md
 
 - `domain` 只放两个聚合根与精确 ref/value types；
 - `journal` 不放 UI 状态；
-- `engine` 不拥有 Thread；
+- `engine` 不拥有 Conversation；
 - `remote` 不拥有模型配置；
 - `wiki` 不拥有原始资料；
 - `capabilities` 不为领域工具建专用本体；
@@ -332,7 +333,7 @@ context cost 以实际 request 的 active allowlist 为准：同时记录 regist
 
 统一垂直切片：
 
-- 位置/Thread 导航；
+- 位置/Conversation 导航；
 - 流式回复；
 - 文件树；
 - 预览；
@@ -343,7 +344,7 @@ context cost 以实际 request 的 active allowlist 为准：同时记录 regist
 - trust 状态；
 - 每 Chat 独立恢复 tabs/open files/split；
 - 运行中打开 Agent 生成文件；
-- 可进入、追问、纠偏和停止的 child Thread；
+- 可进入、追问、纠偏和停止的 child Conversation/Run；
 - 临时问题分支和结论回带；
 - Markdown 表格、图片、多格式与未知文件 viewer contract；
 - Remote 仅在实际使用时渐进出现。
@@ -356,8 +357,8 @@ context cost 以实际 request 的 active allowlist 为准：同时记录 regist
 - 新增 adapter 数；
 - 首屏启动；
 - 流式渲染；
-- 长 Thread 滚动；
-- 后台 Thread 更新；
+- 长 Conversation 滚动；
+- 后台 Conversation 更新；
 - Remote/Wiki 接入自然度；
 - 六个月维护判断。
 
@@ -367,14 +368,14 @@ context cost 以实际 request 的 active allowlist 为准：同时记录 regist
 
 1. renderer shell/state/IPC：统计 shell spine、atom/state owner、direct host calls、persist/restore 与 message mapping；
 2. viewer/stream/activity：读取实际 format dispatch、watcher、large-file/unknown-file failure path、stream batching、scroll anchoring、queue/background activity 与对应 tests；
-3. pure-function failure matrix：只验证目标 per-Thread state contract 和固定源码暴露的持久化缺口，不替 donor 证明 runtime；
-4. UI hypothesis search：ordinary Chat、work Thread、child control、recovery/location 四个 feature family 各做两个真实 workflow archetype；micro-axis 只能检验信息密度、motion、control placement 等单变量，不能凑数。
+3. pure-function failure matrix：只验证目标 per-Conversation state contract 和固定源码暴露的持久化缺口，不替 donor 证明 runtime；
+4. UI hypothesis search：ordinary Chat、work Conversation、child control、recovery/location 四个 feature family 各做两个真实 workflow archetype；micro-axis 只能检验信息密度、motion、control placement 等单变量，不能凑数。
 
-失败注入至少包含：preview/open-file memory map 在 restart 时清空、切换 session 后顶层 entry replacement、unknown/binary/oversized/missing viewer、file change during Attempt、watch storm、长 Thread 无界 DOM、child running 时 follow-up/interrupt/stop、temporary question 在 App restart 后恢复、Remote 未使用时不占默认布局。不能实际运行的项保持 open，不得用源码机制推断通过。
+失败注入至少包含：preview/open-file memory map 在 restart 时清空、切换 session 后顶层 entry replacement、unknown/binary/oversized/missing viewer、file change during Attempt、watch storm、长 Conversation 无界 DOM、child running 时 follow-up/interrupt/stop、temporary question 在 App restart 后恢复、Remote 未使用时不占默认布局。不能实际运行的项保持 open，不得用源码机制推断通过。
 
 施工顺序固定为：先证伪完整 renderer 的状态/IPC/性能边界；再按 viewer、stream feedback、diff/file change、activity/queue 四个组件域确定可抽取文件和依赖；随后比较“保留 shell、替换状态边界”与“新 shell、移植组件域”的文件数、host concepts、adapter、平台/build ownership 和六个月维护成本；最后才用临时 UI 检验该路线是否能承载产品语义。先不做完整生产 UI，也不把被否定的 object-workbench 原型当候选。
 
-成功条件是得到一个可施工的 provisional route：明确 M2 第一条工作台切片、Thread-owned persistence、message virtualization、viewer contract、generated-file refresh、child/temporary-question control、local-default/Remote-on-demand 与三平台复验门。若 full renderer 能在一个有界 adapter seam 后准确满足这些 contract，可以选择它；若状态、IPC 和 host ontology 横跨 renderer，则保留确有证据的 shell/组件机制，状态与 message list 由产品拥有。
+成功条件是得到一个可施工的 provisional route：明确 M2 第一条工作台切片、Conversation-owned persistence、message virtualization、viewer contract、generated-file refresh、child/temporary-question control、local-default/Remote-on-demand 与三平台复验门。若 full renderer 能在一个有界 adapter seam 后准确满足这些 contract，可以选择它；若状态、IPC 和 host ontology 横跨 renderer，则保留确有证据的 shell/组件机制，状态与 message list 由产品拥有。
 
 停止条件是路线已足以消除 M2 的 full-renderer/new-shell 分叉，并列出 bounded transplant 与 open gates；不继续为布局/配色生成近重复候选，不等待视觉批准，也不把临时原型扩成产品。临时源码 archive、UI artifacts、failure matrix 与过程笔记在稳定结论落盘后删除。
 
@@ -384,8 +385,8 @@ context cost 以实际 request 的 active allowlist 为准：同时记录 regist
 
 必须覆盖：
 
-- Todo 从当前 Thread branch 重放，不建立第二数据库；
-- foreground/background child Thread 使用同一 lifecycle reducer；
+- Todo 从当前 Conversation branch 重放，不建立第二数据库；
+- foreground/background child Conversation/Run 使用同一 lifecycle reducer；
 - steer、stop、continue、crash reconcile 与嵌套 hard caps；
 - Team mailbox 的 message ID、delivered/read/ack、TTL 和 idempotency；
 - Dynamic Workflow 中途 replan、retry lineage、cancel、hard caps 和 single integration owner；
@@ -399,7 +400,7 @@ context cost 以实际 request 的 active allowlist 为准：同时记录 regist
 
 本探针按两条互不替代的证据链施工：先在全新固定源码 archive 中运行 plan reducer、child lifecycle、mailbox/receipt 和动态编排的最窄目标测试，记录精确命令、通过计数与首个停止位置；再用不含 donor 的 disposable native simulator 验证产品自己的 journal/filesystem/recovery 不变量。source test 不能证明产品 reducer，simulator 也不能证明 donor。
 
-simulator 的最小事件样本是两个 Thread branch、前台与后台 child、重复/过期 Team message、一次 evidence-driven route replacement、同一步的两个 attempt、一次 dispatched 未 settled 的非幂等动作，以及四态 attention。文件样本固定含 create/modify/delete/rename/symlink/untracked/large file，并在动作前后记录用户 Git 的 HEAD、index tree、refs 与 stash。
+simulator 的最小事件样本是两个 Conversation branch、前台与后台 child、重复/过期 Team message、一次 evidence-driven route replacement、同一步的两个 attempt、一次 dispatched 未 settled 的非幂等动作，以及四态 attention。文件样本固定含 create/modify/delete/rename/symlink/untracked/large file，并在动作前后记录用户 Git 的 HEAD、index tree、refs 与 stash。
 
 失败注入顺序固定为 plan 自依赖/悬空/环、旧 observation CAS write、crash replay、未确认 dispatch、step hard cap、restore 中途失败和 rollback 再失败。成功条件是 restart projection 相同、route 真正换路、retry lineage 保留、未知副作用不重放、用户 Git 元数据不变、单次 restore 失败回到 safety checkpoint、双重失败留下 `outcome_unknown`。达到这些条件并能决定 M2 的唯一 journal/recovery seam 后立即停止；不继续为不可取得的 checkpoint 候选做来源考古，也不把 simulator 扩成生产 runtime。
 
@@ -511,80 +512,87 @@ provisional route 必须明确三种所有者：system SSH 拥有凭据、host t
 fixed full source import + source/legal record
 → unchanged runnable baseline
 → product identity and locale foundation
-→ one managed ACP Engine session
+→ Agent | Chat + canonical Conversation + frozen Run
+→ one managed ACP Engine lineage
 → raw evidence → typed facts → incremental projections
 → one message + one tool + one permission + one output
 → concise live UI + expandable Diff/Terminal/File
 → restart/cancel/failure recovery
 ```
 
-物理导入必须保留固定 revision、许可证、Git 来源和人可读致谢，在同一提交更新 `source-adoptions`；不把完整复制伪装成原创。导入后的第一条证据是 donor baseline 在隔离环境可构建、可启动、基础 UI 可操作。随后只在一个垂直 slice 上切换状态权威，不并行维护 donor runtime 与 OmniMind runtime。
+物理导入在唯一 Campaign branch/worktree 上形成一个 exact provenance baseline commit：保留固定 revision、许可证、Git 来源和人可读致谢，在同一提交更新 `source-adoptions`，不把完整复制伪装成原创。该提交的唯一职责是证明 unchanged baseline 可构建、可启动、基础 UI 可操作；它可以暂时不满足作者区 identity/structure gate，但不得进入 main/production candidate，也不得承载新产品功能。随后立即在同一条链换脑和净化，只在一个垂直 slice 上切换状态权威，不并行维护 donor runtime 与 OmniMind runtime；最终 adoption candidate 必须恢复全部 gate。
 
 首个 slice 必须同时证明：
 
 - 简体中文和英文可以即时切换，关键操作可理解；中文允许保留 Thinking、Planning、Git、Diff、PR、Token、ACP、代码、路径与 Agent 原始过程语言，不做机械汉化；
 - 默认界面不暴露首选引擎品牌或宿主术语；真实名称只在 Engine/Package 来源、诊断、权限真实性和法定披露中出现；
 - ACP wire event 不进入 React；raw envelope 有界脱敏，typed fact 是可判别联合，projection 可增量重建，UI view model 只负责图标、分组、折叠、动效和 locale；
-- 一个 Thread 绑定一个主 Engine Session；stream、tool lifecycle、permission、cancel、failure、restart 和 `outcome_unknown` 可追踪；
+- 一级导航固定为 `Agent | Chat`，Agent 在左、Chat 在右；两者共用 Composer、Engine、Model、Reasoning、Timeline、Activity 与队列；
+- canonical Conversation/timeline 不依赖 Engine transcript 恢复；一次 Run 冻结 Engine/Model/Reasoning/Permission/Target/workspace revision，Engine Session 只是可重建 lineage；
+- 用户在同一 Conversation 切换 Engine/Model 只影响 next Run，不提示、不新建 Conversation、不生成 Handoff；跨 Engine 分叉后返回旧 Engine 重建 Session 而不是恢复陈旧 lineage；
 - `Approval required / Auto / Full access` 与 `host-enforced / agent-enforced / mixed / unverified` 分离；
 - 运行中可以打开生成文件，默认显示稳定 inline 摘要，展开后查看 Tool、Diff、Terminal 和原始诊断；
+- 运行中普通消息进入保存 frozen selection 的 durable queue；等待授权/用户、失败、中断或停止时暂停。Stop 保留已发生写入和 Partial Diff，不冒充 rollback；
+- Chat 无 Primary Folder，新建时不创建目录；首次执行按需创建不可见 scratch，文件引用保持可证明的只读。Agent 以 Primary Folder 或独立 OMStudio 目录执行；
 - 旧 M2 `quiet-inline` / `balanced-tabs`、弱类型 Activity payload、Provider-first 状态和重复 runtime 被删除，而不是包 compatibility wrapper。
 
 M1 `candidate` 和源码阅读都不证明 production bridge、双语、权限或 UI 已通过。任何失败先修复上述单链，不提前展开 Team、Automation、Remote、知识或公共 SDK；但 UI 母体中这些重要工作面保留，不因尚未接线而从信息架构中删除。
 
-只实现一条端到端路径：
+首个里程碑实现两条共用同一状态脊柱的最窄真实路径：
 
-1. 用户打开一个受信本地位置；
-2. 创建 Thread；
-3. 输入被 journal 接纳；
-4. Agent 引擎开始 Attempt；
-5. 工具读取/修改一个文件；
-6. renderer 批量显示增量与动作；
-7. 生成 checkpoint 与 diff；
-8. 应用重启；
-9. Thread 准确恢复；
-10. 用户 branch 并继续。
+1. `Agent | Chat` 导航以锁定顺序出现；
+2. 新建 Chat，不创建用户目录；选择 Engine/Model，引用一个文件并完成只读 Run；
+3. Send to Agent 创建新的 Agent Conversation 与可编辑任务输入；或者直接新建 OMStudio Agent 后 Open Folder；
+4. Conversation entry 与 frozen Run 先持久化，Agent 引擎再开始 Attempt；
+5. 工具读取/修改一个文件，renderer 批量显示增量与动作；
+6. 运行中改变 next Engine/Model，当前 Run 不变；下一 Run 在同一 Conversation 继续且历史 provenance 正确；
+7. 生成 checkpoint 与 diff，运行中打开生成文件；
+8. 注入 cancel、failure 与一个迟到/无法关联事件，分别得到准确状态；
+9. 应用重启，Conversation/timeline、队列、tabs、打开文件、split 与 provenance 准确恢复；
+10. 用户 branch/child 或改变 Primary Folder，只有这些真实分叉创建新 Conversation/Handoff。
 
 ### 8.1 最小持久对象
 
 只允许：
 
-- `Thread`
+- `Conversation`
+- `Run`
 - `ExecutionTarget`
 - `LocationRef`
-- `TurnId`
 - `AttemptId`
 - `ActionId`
 - `CheckpointRef`
 - `OutputRef`
 - `ExternalExecutionRef`
+- canonical conversation entries
 - append-only journal events
 
-新增对象必须证明不能由这些事实投影。
+Conversation 是 canonical user-visible timeline；Run 是不可变执行 snapshot；Engine Session 只作为可重建 lineage ref。新增对象必须证明不能由这些事实投影。
 
 ### 8.2 写入顺序
 
 必须满足：
 
-1. persist turn accepted；
-2. start engine attempt；
+1. persist conversation entry + frozen Run accepted；
+2. start/rebuild Engine lineage and attempt；
 3. persist action proposed；
 4. persist policy decision；
 5. persist action started；
 6. 执行副作用；
 7. persist settled 或 outcome unknown；
-8. persist output/checkpoint refs。
+8. persist visible response、output/checkpoint refs 与 projection position。
 
 对只读动作可以安全重试；对副作用只有在有 idempotency key 或远程 receipt 时自动对账。其余保持未知。
 
 ### 8.3 恢复
 
-- 重启不把旧 Attempt 显示为仍在运行；
+- 重启不把旧 Run/Attempt 显示为仍在运行；
 - journal 损坏尾部可在展示层跳过，但恢复操作 strict fail；
 - rewind 创建分支，不改写历史；
 - 大输出只存引用；
-- engine transcript 和产品 journal 不互相复制；
-- active Thread 与 background summary 分开订阅。
+- Engine 隐藏 transcript 与产品 canonical Conversation 不竞争权威；
+- 外部 Engine 缺失时 canonical timeline 仍完整可读；
+- active Conversation 与 background summary 分开订阅。
 
 ### 8.4 阶段 3 退出条件
 
@@ -599,7 +607,7 @@ M1 `candidate` 和源码阅读都不证明 production bridge、双语、权限�
 
 把阶段 3 同一条路径放到远程位置，不创建第二套 Remote 产品：
 
-- 同一个 Thread；
+- 同一个 Conversation/Run 模型；
 - `LocationRef` 指向远程；
 - 文件树/搜索/编辑走 worker；
 - 终端走 PTY；
@@ -720,7 +728,7 @@ wiki/
 - 大 schema 延迟加载；
 - capability discovery 不等于全部 prompt 注入；
 - 结果过大时返回引用；
-- 外部能力失败不拖垮 Thread；
+- 外部能力失败不拖垮 Conversation；
 - 删除连接不删除外部系统数据；
 - 第一版没有自定义 UI ABI。
 
@@ -764,7 +772,7 @@ Bundled 随 App 原子更新。Curated 与已经批准 envelope 的第三方默�
 选择至少三个差异显著的真实任务，例如代码改造、混合资料综合和远程长任务。可以包含生物医学任务，但它只作为 workload：
 
 1. 普通 Chat 在无目录时完成轻量任务；
-2. 工作型 Thread 打开一个本地目录，运行 Agent 并随时查看生成文件；
+2. Folder-backed Agent Conversation 打开一个本地目录，运行 Agent 并随时查看生成文件；
 3. 复杂任务自动委派 child Agent，用户进入、追问、停止或纠偏；
 4. Dynamic Workflow 根据中间结果改变路线；
 5. 混合资料使用 visible Wiki、exact/FTS/agentic search，不默认启用 RAG；
@@ -779,7 +787,7 @@ Bundled 随 App 原子更新。Curated 与已经批准 envelope 的第三方默�
 验收关注：
 
 - 数据/知识/方法和其他专业工具都只是 capability；
-- Thread 保留判断过程；
+- Conversation 保留判断过程；
 - 文件与任务有权威来源；
 - 人可以接管；
 - 外部系统可替换；
@@ -803,11 +811,11 @@ Bundled 随 App 原子更新。Curated 与已经批准 envelope 的第三方默�
 至少验证：
 
 - 首次启动；
-- 首次 Thread；
-- 100k+ 字符长 Thread；
+- 首次 Conversation；
+- 100k+ 字符长 Conversation；
 - 每秒高频增量；
 - 大工具输出；
-- 多个后台 Thread；
+- 多个后台 Conversation；
 - 远程高延迟；
 - 大目录搜索；
 - 千份混合资料 Wiki；
@@ -902,9 +910,9 @@ Bundled 随 App 原子更新。Curated 与已经批准 envelope 的第三方默�
 | F-01 | 独立仓库身份洁净 | checker 扫描 tracked 作者区 |
 | F-02 | 来源诚实且集中 | README 披露 + 法定文本 |
 | F-03 | 领域内核只有必要事实 | schema/API review + persistence tests |
-| F-04 | 引擎 transcript 不重复 | recovery/branch inspection |
+| F-04 | canonical Conversation/Run 可跨 Engine 恢复，Engine transcript 不成为竞争权威 | recovery/branch/switch inspection |
 | F-05 | 动作副作用状态准确 | crash matrix |
-| F-06 | 工作台可承担真实长任务 | vertical slice + measured UI |
+| F-06 | `Agent | Chat` 顺序、统一 Composer、Folder/OMStudio、队列和长任务工作台成立 | vertical slice + measured UI |
 | F-07 | Remote 是同一产品位置 | local/remote parity tests |
 | F-08 | 外部任务跨断线存活 | 真实调度环境重连 |
 | F-09 | 远程文件保持权威 | conflict/cache tests |
@@ -943,9 +951,9 @@ Bundled 随 App 原子更新。Curated 与已经批准 envelope 的第三方默�
 2. 按本文件第 2 节读取五份权威文档，确认 M1 route evidence `7041ccbaaf9eb0ecddb171408a59ed0bf42f6843` 与 Campaign `candidate` 状态仍在当前 `main` 历史中；
 3. 运行现有 `npm run quality`，确认身份、来源和最小测试地基没有退化；
 4. 从本文件阶段 3 开始：固定完整 UI 母体源码树导入，记录来源/权利并先恢复 donor baseline；不要手工挑组件，也不要把 donor Agent/runtime/state 当成永久真相；
-5. 在同一垂直 slice 建立 locale foundation、managed ACP Engine session、四层运行事实链和默认 inline/展开式工作过程 UI；中文采用专业混排，不机械汉化，默认前端不暴露首选引擎身份；
-6. 让一个 message、tool、permission、Diff/Terminal/File、cancel/failure/restart 真实贯通，再删除该路径上的旧 M2、Provider-first 和弱类型 Activity 双轨；
+5. 在同一垂直 slice 建立 locale foundation、固定 `Agent | Chat` 顺序、folderless Chat、OMStudio/Folder-backed Agent、canonical Conversation、frozen Run、managed ACP lineage、四层运行事实链和默认 inline/展开式工作过程 UI；中文采用专业混排，不机械汉化，默认前端不暴露首选引擎身份；
+6. 让 Engine/Model next-Run 切换、durable queue、一个 message/tool/permission、Diff/Terminal/File、cancel/failure/restart 真实贯通；用户主动切换不得产生新 Conversation、Handoff、Toast 或 Timeline 复述，再删除该路径上的旧 M2、Provider-first、Engine-transcript authority 和弱类型 Activity 双轨；
 7. 只把实际进入生产的来源加入根 README `source-adoptions`，并在同一提交加入必要法定文本与人可读致谢；研究候选不因 `candidate` 自动成为 adoption；
 8. 按 Campaign 将受影响 claims 从 `open` 推进到 `candidate` 并附命令、产物与 SHA；生产者不得自证整个 Campaign 完成，最终仍需 frozen SHA、相关总门和 fresh-context completion audit。
 
-如果新会话试图再建仓库、重做 M1、保护旧 M2 UI、按截图重写而不是接管完整母体、让 ACP/Engine wire event 直通 React、把双语做成机械汉化、让首选引擎品牌支配前端、先造通用插件系统或建第二状态真相，应立即停下，重新读取根 README §7–§8、§11–§12 与当前唯一入口。
+如果新会话试图再建仓库、重做 M1、保护旧 M2 UI、交换 `Agent | Chat` 顺序、复活 Projects/Studio/This Mac、把 Conversation 永久绑定一个 Engine Session、为用户主动切换增加系统消息、按截图重写而不是接管完整母体、让 ACP/Engine wire event 直通 React、把双语做成机械汉化、让首选引擎品牌支配前端、先造通用插件系统或建第二状态真相，应立即停下，重新读取根 README §6–§8、§11–§12 与当前唯一入口。
