@@ -17,7 +17,7 @@
 Deliver an independent, production-grade OmniMind V1 that proves the product constitution end to end:
 
 - a small, durable domain core;
-- an embedded general Agent engine behind a stable responsibility boundary;
+- multiple real Agent engines behind ACP-first ingress, with one bundled default engine and honest capability differences;
 - a restrained but powerful desktop workbench;
 - local and remote files, terminals, processes and durable batch execution;
 - file-native, inspectable and recoverable Wiki knowledge work;
@@ -60,6 +60,7 @@ Product decisions are not copied into this Campaign. They are locked by the root
 - `Domain is only a workload`;
 - `E0 ecosystem seven-category source freeze`;
 - `Unified layering`, `single state authority`, `automatic update` and `behavioral acceptance`.
+- `ACP-first multi-engine boundary`, `ACP-first ingress, OmniMind-owned experience`, `permission enforcement truth`, `UI source takeover` and `bilingual usability contract`.
 
 This Campaign locks only completion mechanics:
 
@@ -210,18 +211,18 @@ Exit:
 
 ### M2 — Local walking skeleton
 
-Deliver one complete local path:
+Deliver one complete local path on the approved full UI source baseline:
 
-1. trust a local location;
-2. create a Thread;
-3. persist turn admission;
-4. start one engine attempt;
-5. read and modify a file;
-6. stream batched output and action state;
-7. create checkpoint and diff;
-8. restart the application;
-9. recover exact state;
-10. branch and continue.
+1. import the fixed complete UI source tree with exact provenance, legal text and a reproducible runnable baseline;
+2. remove donor product identity from authored surfaces without hiding provenance;
+3. establish locale resources and a terminology policy that makes Simplified Chinese and English key journeys equally usable without mechanically translating technical terms;
+4. trust a local location, create a Thread and bind it to one managed ACP Engine Session;
+5. persist turn admission and start one Engine attempt;
+6. map raw ACP/Bridge evidence into typed product facts, incremental projections and UI view models;
+7. read and modify a file, stream one message/tool/permission/output path, and expose Diff/Terminal/File through the workbench;
+8. show a stable concise live summary with expandable detail while keeping the default UI engine-neutral;
+9. create checkpoint and diff, cancel or inject failure, restart the application and recover exact state;
+10. branch and continue without a duplicate transcript, runtime or weak Activity state bus.
 
 The same skeleton also proves:
 
@@ -230,10 +231,13 @@ The same skeleton also proves:
 - a file write fails cleanly when its observed version is stale;
 - checkpoint restore survives interruption without touching user Git state;
 - attention and `outcome_unknown` return to the correct Attempt.
+- `Approval required / Auto / Full access` is stored separately from `host-enforced / agent-enforced / mixed / unverified`;
+- Chinese input/CJK layout and longer English labels both survive the critical path; Thinking/Planning, Git, Diff, PR, Token, ACP, paths, code and raw Agent process may remain English where clearer;
+- the default surface does not present the bundled Engine as OmniMind's product identity.
 
 Exit:
 
-- F-03 through F-06, F-22 and F-26 are at least `candidate`;
+- F-03 through F-06, F-22, F-26 and F-29 through F-31 are at least `candidate`;
 - no duplicate transcript truth;
 - crash injection covers admission, attempt, action and file-write boundaries.
 
@@ -296,7 +300,7 @@ Deliver:
 
 Exit:
 
-- F-13 through F-15 and F-23 through F-25 and F-27 are at least `candidate`;
+- F-13 through F-15, F-23 through F-25, F-27 and F-32 are at least `candidate`;
 - no external or domain product becomes a core type;
 - no custom UI ABI is added without two proven consumers.
 
@@ -366,6 +370,10 @@ Exit only when the Done formula is true.
 | F-26 | File writes use observed-version preconditions; Git stays optional authority; checkpoint restore covers create/modify/delete/rename and fails recoverably without destructive user-Git operations | filesystem/Git concurrency + recovery matrix | open | — | — |
 | F-27 | Browser, HTTP, MCP-like and external actions produce native receipts and preserve `outcome_unknown` after post-dispatch disconnect, timeout or cancellation | protocol fault injection + real adapter scenarios | open | — | — |
 | F-28 | Per-Chat workbench state, live file viewing, child conversations, temporary question branches, multi-format preview and platform conventions remain coherent, fast and recoverable on macOS, Windows and Linux | cross-platform UI scenarios + measured fresh evaluator | open | — | — |
+| F-29 | Native ACP and at least one thin Bridge drive the same Thread/Session contract; raw Engine events remain traceable but reach React only through typed facts, incremental projections and presentation view models | two-engine conformance + event replay + type/API audit | open | — | — |
+| F-30 | Approval-required, Auto and Full-access policy never overstate technical control; every Engine/ExecutionTarget reports host-enforced, agent-enforced, mixed or unverified from tested execution paths | per-engine permission matrix + deny side-effect tests + fresh evaluator | open | — | — |
+| F-31 | Simplified Chinese and English users can complete every critical workbench journey with coherent terminology, input, layout, errors and recovery; technical English remains where clearer and the default UI does not expose the bundled Engine as product identity | dual-locale end-to-end UI tests + CJK/long-label/accessibility checks + fresh evaluator | open | — | — |
+| F-32 | A bundled-engine orchestration package can dispatch another ACP Agent as a bounded child with parent/origin/depth/cost/permission/target, cycle limits and one writer/integration owner without duplicating package Team/Workflow/Todo state | real nested-agent scenario + state-authority/write-admission audit | open | — | — |
 
 ## 9. Milestone evidence
 
@@ -418,8 +426,8 @@ Probe A engine-core/artifact route provisional choice: `2f4ded82582ee91155d64d4a
 - Probe E provisionally selects source files as authority with deletable in-place manifest/Wiki/FTS projections, deterministic source references before any optional semantic projection, and one product-owned immutable artifact-generation pipeline. Real Agent/model navigation, semantic recall, production artifacts, migrations and cross-platform rollback remain explicit M2/M5 revalidation gates. No temporary corpus, index, artifact, donor code, source adoption or acceptance status entered the repository.
 - Probe A package matrix kept source, artifact and local consumer evidence separate. Eight exact artifacts were materialized with lifecycle scripts disabled; five admitted observations used independent processes and only package-root public resource/session APIs, while three machine reports rejected code before loader activation. The public root mismatch from the first attempt remains negative host-API evidence rather than being bypassed with a deep import.
 - The five admitted observations had zero loader errors. Actual paths covered ordinary web-tool failure and cancellation updates, stale plan revision, child discovery and missing-run status, dynamic-script validation and cancellation, browser input validation, skill/prompt resource loading, and active-only tool selection. Two behavior defects remain explicit: ordinary web failures returned error text without `isError`, and the dynamic sample streamed a completed label before surfacing cancellation. The main child and browser descriptors measured 24,504 and 22,123 bytes respectively, so they are not default context.
-- The launch route is one product-owned compatibility bridge over the provisional managed engine fork: exact immutable generation, machine preflight before code, public resource loading, task-scoped active schemas, normalized stream/cancel/failure, and product journal/output references. Package behavior and state authority are separate; no package owns plan, Team, Workflow or transcript truth. No sampled artifact earned direct-compatible status, which is not generalized into an ecosystem failure or a 100% compatibility claim.
-- All five M1 probe routes are now sufficiently bounded to remove the M2 architecture fork, so M1 is `candidate` on the SHA above. F-24 and every other open product acceptance item remain `open`: the matrix proves the launch route, not a production bridge. M2 starts at the single path frozen in `README.md §22.11`: content-addressed engine/extension generation → machine preflight → public resource load → one ordinary active-only tool → normalized stream/cancel/failure → product journal/`OutputRef` receipt → Thread workbench projection.
+- The launch route at that SHA was a product-owned compatibility bridge over the provisional managed engine fork: exact immutable generation, machine preflight before code, public resource loading, task-scoped active schemas, normalized stream/cancel/failure, and product journal/output references. Package behavior and cross-engine product truth were kept separate; package-private plan, Team or Workflow state was not adopted or duplicated. No sampled artifact earned direct-compatible status, which is not generalized into an ecosystem failure or a 100% compatibility claim.
+- All five M1 probe routes are sufficiently bounded for `candidate` on the SHA above. Later maintainer convergence superseded the single-engine adapter entry with ACP-first ingress, approved a complete fixed UI source takeover, and made bilingual usability plus engine-neutral front-end identity part of M2. This does not invalidate M1 measurements and does not promote any production claim: F-24 and every other unimplemented item remain `open`. Current M2 entry is `execution-brief.md §8`, not the older §22.11 slice alone.
 
 Drift review: aligned
 
@@ -461,15 +469,15 @@ No evidence yet.
 
 The next executor must:
 
-1. verify the exact repository path, `main == origin/main`, clean status, and that M1 route evidence `7041ccbaaf9eb0ecddb171408a59ed0bf42f6843` plus its `candidate` declaration remain in current history;
-2. run `npm run quality` and the current Markdown/document structure check before editing; preserve F-01/F-02 historical evidence and keep F-24 plus every other unimplemented production claim `open`;
-3. do not prepare or rerun the five M1 probes. Read their frozen evidence and begin only the M2 slice defined in `README.md §22.11`;
-4. implement the smallest focused path: content-addressed generation → machine preflight → public resource load → one ordinary active-only tool → normalized stream/cancel/failure → journal/`OutputRef` receipt → Thread workbench projection;
-5. prove that path with supported and rejected exact artifacts, inactive-schema exclusion, cancellation/error honesty, durable receipt/restart behavior and the smallest visible Thread projection; M1 `candidate` is not production proof;
-6. add a source to root `source-adoptions` only when code actually enters production, with the required rights text in the same commit; do not promote a research candidate by implication;
-7. stop and correct the governing README first if this focused slice disproves the frozen seam; otherwise continue M2 without opening a parallel engine, state authority, full UI or speculative SDK.
+1. verify the exact repository path, `main == origin/main`, clean status, and that this Campaign plus the final doctrine commit remain in current history;
+2. read the five authority documents in order and run the existing focused quality/document gates before changing production; preserve historical evidence and keep every unimplemented claim `open`;
+3. do not rerun M1 or protect the current M2 skeleton. Start from `execution-brief.md §8`: import the complete fixed UI source, preserve provenance/legal text, and first restore its runnable baseline;
+4. in one vertical path establish locale resources, professional Chinese/English terminology, managed ACP Session, raw-evidence/typed-fact/projection/view-model layers, one message/tool/permission/output, inline progress, expanded Diff/Terminal/File, cancel/failure/restart and honest enforcement level;
+5. keep the default UI engine-neutral; only reveal real Engine names in user choice, source, diagnostics, permission truth and legal surfaces. Do not mechanically translate Thinking/Planning, Git, Diff, PR, Token, ACP, code, paths or raw Agent process when English is clearer;
+6. delete the same path's old M2, Provider-first and weak Activity dual tracks after the replacement is proven. Preserve important UI surfaces such as Git, PR, Kanban and Automations even if later milestones connect their full runtime;
+7. add actual adoptions to root `source-adoptions` with exact rights and attribution in the same commit; move only affected claims to `candidate` with commands, artifacts and SHA. Never self-certify Campaign completion.
 
-Do not begin by importing a complete old product, building a speculative public SDK, implementing every provider, turning Remote into a product mode, defaulting to heavy retrieval, or polishing a full UI before the interaction skeleton has evidence.
+Do not begin by redesigning the approved UI from screenshots, protecting sunk cost, exposing the bundled Engine as product identity, routing ACP wire data into React, creating a generic `payload: unknown` state bus, building a speculative public SDK, implementing every provider, turning Remote into a product mode, or defaulting to heavy retrieval.
 
 ## 11. Blockers
 
@@ -478,7 +486,7 @@ None at Campaign start.
 ## 12. Done
 
 ```text
-DONE = F-01..F-28 all verified on the final SHA
+DONE = F-01..F-32 all verified on the final SHA
        && blocked = 0
        && relevant final gates pass on that SHA
        && fresh completion audit has no material finding

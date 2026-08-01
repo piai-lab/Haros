@@ -20,7 +20,9 @@
 - “当前仓库”或“旧仓库”指创立研究发生时的旧产品仓库；
 - “创建新仓库”类表述从现在起视为已经完成；
 - M1 五个可丢弃探针已经在 `7041ccbaaf9eb0ecddb171408a59ed0bf42f6843` 形成 `candidate` 路线；§22.11–§22.15 保留其问题、证据、裁决与复验门，不得重新准备或运行同一轮研究；
-- 尚未完成的是 M2 及后续生产实现、实际进入产品来源的逐项权利/采用核实和产品验收；`source-adoptions` 仍为 0，F-24 等 production claims 仍为 `open`。
+- 当前仓库已有一条 M2 focused skeleton，但它仍是可删除、可改写的局部证据，不是 UI、桌面宿主或扩展 ABI 的冻结答案；
+- UI 母体、ACP-first、多引擎、权限真实性、四层运行投影、专业双语与前端身份边界已经收敛；当前唯一入口是 `execution-brief.md §8` 的完整母体接管与 ACP 垂直 slice；
+- 尚未完成的是实际进入产品来源的逐项权利/采用核实和产品验收；`source-adoptions` 仍为 0，F-24 等 production claims 仍为 `open`。
 
 新 OmniMind 应在全新的 Git 仓库中诞生。当前仓库继续作为另一个产品独立存在，二者不共享运行时代码、不维持兼容层、不做双向同步。当前产品在对外产生名称冲突以前应改名或明确标记为 Classic；新产品保留 `OmniMind` 名称。
 
@@ -110,13 +112,14 @@ lm-studio
 
 ## 3. 一句话产品定义
 
-**OmniMind 是一个本地优先、可连接远程执行环境、以可持续工作状态为中心的通用 Agent 工作台；不同领域共享同一套文件、工具、编排、恢复和外部执行能力。**
+**OmniMind 是一个本地优先、可连接远程执行环境、能在同一工作区运行多个真实 Agent Engine、以可持续工作状态为中心的通用 Agent 工作台；不同领域共享同一套文件、工具、编排、恢复和外部执行能力。**
 
-这句话包含六个不能拆开的判断：
+这句话包含七个不能拆开的判断：
 
 - **本地优先**：界面、用户状态、凭据、信任决策和主要模型接入默认留在用户电脑；
 - **远程可达**：文件、终端、进程和调度任务可以在 SSH/HPC 环境执行，且是第一阶段能力，不是以后再补的插件；
 - **工作状态中心**：产品保存一项工作为什么走到这里、执行过什么、哪些副作用仍未知，而不只是聊天消息；
+- **真实多引擎**：默认原生引擎集成最深，其他真实 Agent 通过 ACP 或薄 Bridge 进入；调用相同模型 API 不冒充兼容某个 Agent；
 - **通用 Agent**：编码、科研、写作、数据分析、合同处理和其他复杂工作共享同一内核；
 - **领域中立**：领域任务只验证能力强度，不产生 Research Mode、Scientific Thread、科研专用 Agent、记忆、Workflow 或 Remote；
 - **能力开放**：OmniData、OmniEngine、OmniScholar 等以标准工具能力进入，不塑造 OmniMind 的内部本体。
@@ -129,6 +132,7 @@ OmniMind 不是：
 - 一个内置全套 RAG/知识库/生物医学平台的巨型套件；
 - 一个把所有能力都插件化、自己不承担产品体验的空壳；
 - 一个为了展示“多 Agent”而堆叠编排术语的框架；
+- 一个把 Agent 品牌、Provider 切换器或 ACP 调试信息放在用户工作之前的控制台；
 - 一个以科研、编码、知识库或 Remote 为一级模式切割用户心智的套件；
 - OmniHarness 的新实现。新产品中不创建 `OmniHarness` 模块、接口、兼容别名、占位符或未来扩展点。
 
@@ -138,7 +142,7 @@ OmniMind 不是：
 
 模型供应商是来源，不是身份。OpenAI、Anthropic、国产模型、兼容端点、Ollama、LM Studio 和未来来源应处于同一层级。
 
-Pi 是当前最有希望的 Agent 引擎和生态入口，但也只是引擎。产品的持久状态、远程位置、信任决策、外部任务和文件所有权不能被 Pi 的暂时数据结构吞掉。
+Pi 是默认、最深集成的 Agent 引擎和首要生态入口，但不是唯一引擎。其他真实 Agent 通过 ACP 或薄 Bridge 进入同一工作台。产品的持久状态、远程位置、信任决策、跨引擎关系、外部任务和文件所有权不能被任一引擎的暂时数据结构吞掉。
 
 ### 4.2 用户的文件仍是用户的文件
 
@@ -146,7 +150,7 @@ Pi 是当前最有希望的 Agent 引擎和生态入口，但也只是引擎。�
 
 ### 4.3 一件事实只有一个权威
 
-- 对话消息在第一阶段由固定版本的 Pi session 格式拥有；
+- 对话消息由对应 Agent Engine 的原生 Session 拥有；OmniMind 只保存 Session 引用、必要游标、能力快照和产品投影，不复制第二份完整 transcript；
 - 产品 journal 记录接纳、策略、动作、副作用、检查点、外部任务、恢复和分支；
 - 远程文件由远程主机拥有；
 - Slurm 等调度任务由调度器拥有；
@@ -184,6 +188,9 @@ Omni 系列科学能力、MCP、Skills、函数工具、外部服务和未来生
 - 面向个人资料的文件原生 LLM Wiki；
 - 工作台布局、导航、后台运行、排队、打断和通知；
 - 能力发现、启用和本次 Thread 的最小工具注入；
+- 多引擎发现、ACP/Bridge 生命周期、Thread 与外部 Session 的关联、显式 Handoff 和能力真实性；
+- 同一位置的 writer admission、隔离写入与唯一 integration owner；
+- 原始运行证据到强类型产品事实、增量读投影和 UI view model 的可追溯管线；
 - 性能、持久化和故障恢复所需的基础设施。
 
 “原生”指产品对行为和用户体验负责，不等于全部硬编码进 kernel、常驻模型上下文或运行在同一进程。正确分层是：
@@ -191,7 +198,7 @@ Omni 系列科学能力、MCP、Skills、函数工具、外部服务和未来生
 - kernel 持有少量稳定原语、唯一状态权威、生命周期和回执；
 - bundled first-party capability/strategy modules 随产品交付、无需安装、按需激活、可关闭；
 - compatibility adapters 把外部生态映射到同一原语；
-- 第三方 package 不得夺取 Thread、Todo、Team、Workflow、文件、外部任务或更新治理的状态权威。
+- Thread、ExecutionTarget、写入准入、权限决定、跨引擎关系和恢复回执保持产品权威；引擎或 package 可以拥有自己的 Todo、Team、Workflow 与子 Agent 状态，OmniMind 只做来源明确的投影，除非某项能力被显式提升为跨引擎产品事实，绝不双写一份看似统一的第二真相。
 
 原生能力完全可以由 package、fork、移植或重写组成。实现来源不决定产品所有权。
 
@@ -299,7 +306,8 @@ Journal 不复制 Pi 的完整消息文本，不复制远程文件内容，不�
 - Electron；
 - React renderer；
 - TypeScript/Node 主进程；
-- Pi SDK 直接运行在 Electron main；
+- Agent Engine 默认以独立进程通过 ACP 连接；
+- Pi 随产品提供并通过受治理的 ACP Bridge 进入，与外部 ACP Agent 使用同一套可观察语义；
 - 本地持久化与文件访问由主进程承担；
 - renderer 与 main 之间使用窄、版本化、类型明确的 IPC；
 - 远程通过系统 OpenSSH 建立一条连接，在其上运行一个极小 worker 和一条复用协议。
@@ -309,40 +317,37 @@ Journal 不复制 Pi 的完整消息文本，不复制远程文件内容，不�
 - Tauri + Bun sidecar；
 - 本地 HTTP server；
 - 本地 WebSocket；
-- Pi RPC；
-- 一开始就拆独立 daemon；
+- 为 Pi 发明第二套私有 Session/Event/Approval 协议；
+- 一开始就拆常驻通用 daemon；
 - REST + WebSocket + gRPC 三套远程协议；
 - 为将来可能需要而建的微服务。
 
-这不是对 Electron 的永久宗教承诺，而是当前最少边界、最容易直接使用 Pi TypeScript 生态、最适合移植 Proma 工作台的起点。
+这不是对 Electron 的永久宗教承诺，而是最适合接管已批准 UI 母体、保持桌面体验完整的物理起点。ACP 是 Agent ingress，不是本地桌面传输万能化：renderer 仍只消费 OmniMind 的强类型 IPC 投影，不直接读取 ACP JSON-RPC。
 
-### 7.2 何时拆出 Pi 进程
+### 7.2 何时允许原生快速路径
 
-只有出现可测证据时，才把 Pi 移到 Electron utility process 或独立本地服务，例如：
+Pi 和外部 Agent 首版都遵守同一 ACP 行为契约。只有测量证明 Bridge/进程边界造成不可接受的启动、流式延迟、资源开销或扩展能力损失，才允许为默认引擎增加进程内或专用 transport 快速路径。
 
-- Agent 崩溃显著拖垮桌面；
-- 主进程长任务阻塞无法通过 worker/异步边界解决；
-- 需要独立热升级；
-- 多窗口/多客户端确实共享一个长寿命 Agent；
-- 安全边界需要操作系统级隔离。
+快速路径必须通过同一 conformance suite，并保持 Session、Update、Tool、Permission、Cancellation、Recovery 和错误的可观察语义一致。它是可删除的性能优化，不是 Pi 专用产品内核，也不能产生第二套 UI。
 
-不能用“架构看起来更专业”作为多进程理由。
-
-### 7.3 进程和状态原则
+### 7.3 进程、状态与更新原则
 
 - renderer 不拥有业务真相；
-- main 不创建第二份 Pi transcript；
+- main 不创建第二份任一 Engine transcript；
 - 所有跨边界命令有 request/correlation ID；
 - 大输出写入文件或对象存储，由 `OutputRef` 引用；
 - IPC 传输增量、摘要和引用，不搬运巨型全文；
 - 后台 Thread 只推送摘要状态，激活 Thread 才接收细粒度流；
 - 恢复先根据 journal 重建产品状态，再重新观察外部权威。
+- 活跃 Attempt 不热替换 Engine、Bridge、ACP SDK 或 package generation；更新先 stage、验证兼容，再在安全边界激活并保留 last-known-good。
 
 ## 8. Pi 的角色
 
 ### 8.1 当前裁决
 
-Pi 是新内核的首选 Agent 引擎，也是首发必须可用的生态入口。第一版既要围绕成熟 session SDK 建立很薄的中立引擎边界，也要提供 Pi-compatible package bridge；不能以“OmniMind 公共 SDK 尚未冻结”为由把最有价值的现成生态推迟到以后。
+Pi 是默认、最深集成的 Agent 引擎，也是首发必须可用的生态入口；它不是唯一 Engine，也不需要被 OmniMind 重写。第一版优先治理性 fork 已有 Pi ACP Bridge，并让 Pi 与外部 Agent 共用 ACP 语义；不能以“OmniMind 公共 SDK 尚未冻结”为由把最有价值的现成生态推迟到以后。
+
+“默认、最深集成”是内部工程和生态判断，不是前端品牌。普通用户不需要知道当前能力由 Pi 实现，日常界面不得使用 Pi Session、Pi Tool、Pi Team、Pi Workflow 等宿主化命名，也不得复刻 Pi 的 TUI 心智。只有当用户主动选择/安装 Engine、查看 Package 来源、兼容诊断、权限真实性、版本或许可证时，才按事实显示真实名称。来源必须诚实，产品身份也必须独立。
 
 可以：
 
@@ -355,7 +360,7 @@ Pi 是新内核的首选 Agent 引擎，也是首发必须可用的生态入口�
 
 不需要为了“独立感”重新实现 Pi 已经做得好的部分。
 
-“一起打包”指最重要的第一方能力随 OmniMind 发布、无需另装，但不意味着全部扩展常驻、全部塞进一个 mega extension 或全部注入模型上下文。Agent 按任务激活，用户可以查看、关闭、停止或固定；状态仍由 OmniMind 原生运行时拥有。
+“一起打包”指默认 Engine 和经过选择的第一方能力随 OmniMind 发布、无需另装，但不意味着全部扩展常驻、全部塞进一个 mega extension 或全部注入模型上下文。Agent 按任务激活，用户可以查看、关闭、停止或固定。Pi package 可以保留自己的内部状态；OmniMind 只拥有跨 Engine 的产品关系、写入秩序、权限决定和可恢复投影。
 
 ### 8.2 不能交给 Pi 的事情
 
@@ -381,12 +386,43 @@ Pi 的 API、实验性 remote protocol 和未来 `AgentHarness` 抽象可以演�
 - 证明如何关联 `ThreadId/TurnId/AttemptId/ActionId`；
 - 证明不复制 transcript；
 - 证明 Pi 单 cwd 限制如何通过 LocationRef/ExecutionTarget 在产品层表达；
-- M2 首个 focused slice 通过以前不大规模搬旧 UI 或旧 runtime；
-- 不为了兼容多个引擎提前造抽象森林。第二个真实引擎出现后，再从差异中提炼接口。
+- Agent 接入已经有多个真实消费者，直接采用 ACP；不再自创与 ACP 重叠的通用 adapter 树；
 - 首发兼容 Pi 的 tool、skill、prompt、extension lifecycle、动态注册、active tools、AbortSignal、stream update、command、headless 降级和必要 journal 映射；
 - 依赖 raw TUI、provider mutation、私有 session control、monkeypatch 或第二状态真相的 package 可以 fail-fast，但必须在加载前给出清楚 compatibility report；
 - 不宣称虚假的“100% 所有 package 兼容”，也不因少数不兼容包而放弃生态；
-- Pi compatibility surface 可以早期稳定，OmniMind 对第三方公开的原生 SDK 等多个 bundled modules 与真实 Pi package 验证后再冻结。
+- Pi compatibility surface 可以早期稳定，OmniMind 对第三方公开的原生 SDK 等多个 bundled modules 与真实 Pi package 验证后再冻结；
+- 已有 Bridge 和编排 package 优先 fork、修正并回馈通用改进，不为了“原创”重写；但 README、测试数量和功能清单不替代真实源码、失败路径与 probe。
+
+### 8.4 ACP-first 多引擎边界
+
+ACP 是首选 Agent 接入标准，不是 OmniMind 的产品状态协议或前端数据模型：
+
+1. 原生支持 ACP 的 Agent 直接接入；
+2. 有正式 headless/app-server/SDK/RPC 协议的 Agent 使用薄 ACP Bridge；
+3. 只有终端交互或权限边界无法验证的 Agent 只能作为受限 guest，不能伪装成完整受管 Engine。
+
+一个 Thread 在第一次真实执行后绑定一个主 Engine Session。后续继续对话回到同一 Session；跨引擎审查、挑战或继续使用 child、fork、compare 或显式 Handoff，不在活跃 Thread 内热换 Engine，也不拼接两个 transcript 冒充连续心智。
+
+Handoff 是有界事实包，至少包含目标、成功条件、LocationRef、ExecutionTarget、Git/Diff、已验证事实、当前 Todo、未决问题、禁止事项、审批状态、写入所有权和未知副作用。它不声称隐藏思维或原生 Session 被无损迁移。
+
+### 8.5 ACP-first ingress，OmniMind-owned experience
+
+运行数据必须经过四层，而不是让协议事件直通 React：
+
+1. **Raw run evidence**：版本化保存必要的原始 ACP/Bridge envelope，经大小限制和脱敏，可追到来源；
+2. **Typed product facts**：把可证明事实归一为 Attempt、Action、Tool、Permission、Question、Plan、Output、Terminal 和 Outcome 等强类型事件；
+3. **Incremental projections**：派生当前活动摘要、时间线、工具数量、Todo、child tree、Diff、Viewer 引用、成本和恢复状态；
+4. **Presentation view model**：决定图标、标签、折叠、分组、动效、布局和本地化文案。
+
+ACP `ToolKind`、状态、位置、Diff、终端、文本、图片和资源为统一基础体验提供语义，但不是最终视觉 taxonomy。Engine 特有能力通过版本化、带命名空间的 capability projection/renderer 增强局部界面；不能形成 Pi 专用高级外壳和其他 Engine 的阉割外壳。
+
+未知事件必须保留为有界、脱敏、可检查的原始证据，不能静默丢失；但“保留”不等于把全部 wire noise 倾倒进默认时间线。永久状态总线不得退化成 `Activity { kind, payload: unknown }`，UI 也不得按某个 Engine 的私有事件名分支。
+
+### 8.6 Pi 调度其他 Agent
+
+Pi 可以通过其扩展生态调度其他 ACP Agent。这类执行默认是当前 Pi Attempt 下的 child Attempt/Thread 投影，记录 parent、origin、depth、cost、权限和 ExecutionTarget，并受深度、并发、turn、duration、cost 和循环检测上限约束。
+
+同一外部 Agent 即使既能被 OmniMind 直接启动、也能被 Pi 间接启动，两条路径也不能自动互相回入。被 Pi 调度的 Agent 未经显式 promote 或 Handoff 不成为并列主 Thread；用户仍可在工作台进入、查看、追问、纠偏和停止它。Pi package 的 DAG、mailbox、task 和 worktree 状态继续由 package 自己拥有，OmniMind 只投影可观察事实，不双写一套 Team/Workflow/Todo 真相。
 
 ## 9. 本地与远程执行
 
@@ -580,6 +616,19 @@ Embeddings、QMD、reranker、语义索引或混合检索是按真实召回失�
 
 第一版不为了形式完整实现巨大跨平台 sandbox 矩阵。先保证信任语义真实、默认简单、危险外部后果可控。
 
+### 11.3 权限交互与真实强制边界
+
+所有 Engine 使用同一组用户心智：`Approval required`、`Auto`、`Full access`。这三个选项描述用户希望采用的策略，不自动证明宿主技术上能拦截 Agent 的全部操作。
+
+每个 Engine/ExecutionTarget 组合必须另外记录并可检查：
+
+- `host-enforced`：敏感文件、终端、网络或进程能力确实由 OmniMind/受控宿主执行和拦截，拒绝可被证明为不执行；
+- `agent-enforced`：依赖 Agent 自身权限系统，OmniMind 可以呈现请求但不能独立证明所有副作用；
+- `mixed`：部分能力由宿主强制，部分由 Agent 执行；界面必须显示具体分界；
+- `unverified`：当前无法证明完整拦截，只能在用户明确知情的受限模式运行。
+
+ACP permission request 是协作通道，不是安全证明。未经路径审计和拒绝副作用测试，不得把支持 ACP 宣称成 `host-enforced`。需要更强保证时，使用进程沙箱、ExecutionTarget 隔离、文件边界和 writer admission 增强，而不是改一行 UI 标签。
+
 ## 12. 工作台与交互
 
 ### 12.1 不是聊天应用
@@ -592,28 +641,17 @@ Embeddings、QMD、reranker、语义索引或混合检索是按真实召回失�
 - 后台 Thread 的运行、阻塞和未读状态；
 - 能力与信任的渐进披露。
 
-### 12.2 Proma 的地位
+### 12.2 UI 母体与源码接管
 
-Proma 是首要工作台设计与代码移植物来源之一，不只是灵感板。
+Synara 是已批准的 UI 母体，不是普通参考图或可选灵感板。它的 renderer、设计系统、布局、导航、交互、执行过程表达和必要的桌面桥接构成默认基线。默认物理施工方式不是人工挑拣若干组件，而是把固定 revision 的完整源码树作为可运行基线导入 OmniMind，保留溯源后再大规模换脑、删减和重构。这样可以先保住跨 UI、事件、桥接和服务的隐性耦合，再用测试证明哪些应保留。
 
-可以直接移植：
+“完整复制”只冻结物理起点，不冻结产品权威。边界审判未批准的 provider runtime、Agent loop、工具/扩展生命周期、持久状态或产品 ontology 仍必须在导入后整层删除或替换；不得把“为了不 miss 信息而完整搬入”偷换成“永久保留整仓架构”。
 
-- 整个 renderer 子树；
-- 布局和组件；
-- 状态逻辑；
-- stream/scroll/diff/queue 等机制；
-- preview、文件树、会话导航、后台状态和用户提问交互；
-- 其他经探针证明值得保留的前端块。
+M2 的 `quiet-inline` / `balanced-tabs` 方向已被用户明确否决，不再是候选路线。旧探针、旧文档和旧代码只能提供失败案例与可证明的领域约束，不得作为保护已投入工作的理由。
 
-移植时必须剥离：
+UI 母体不自动获得产品状态和 Agent 内核权威。已经收敛的边界是：Pi 生态是首要 Agent 能力来源；OmniMind 拥有 Thread/Attempt 关系、权限决定、writer admission、receipt、跨引擎关系与恢复投影；Engine/package 可以继续拥有自己的 transcript、Todo、Team 和 Workflow。完整源码树先保持可运行，再以 ACP-first 和四层运行事实逐条替换 provider/runtime/Activity 边界；符合单一权威与恢复契约的 server、transport 或 SQLite 机制可以保留，不符合者整层删除，不形成长期双轨。
 
-- Claude SDK/Claude Code 产品概念；
-- Proma 自己的巨型 `electronAPI` 边界；
-- 把所有状态聚进一个会话对象的设计；
-- 与旧 IPC、Jotai 全局状态、旧 runtime router、旧模型注册表的无必要耦合；
-- 与新领域内核冲突的命名。
-
-判断单位可以是一组文件、一个组件域、一个完整 renderer，甚至 fork；不人为限定为“只能搬纯函数”。真正标准是移植后的概念纯度和总维护成本。
+Proma 降为次级机制和组件 donor：只在某个已证明子系统显著优于 UI 母体或补齐其缺口时采用，不再定义整体工作台心智。所有冲突都必须明说、原型化并收敛，不在实现中偷偷折中或建第二套视觉语言。
 
 ### 12.3 必须保留的交互能力
 
@@ -623,6 +661,7 @@ Proma 是首要工作台设计与代码移植物来源之一，不只是灵感�
 - 用户可以 queue、append、interrupt；
 - Agent 可在流程中提出结构化问题；
 - 文件树、搜索、reveal、拖拽和多标签/分屏；
+- Kanban、Automations、Git 和 pull request 都是重要工作面；具体首发深度由固定源码与产品边界决定，不得仅因后端尚未接线就在 UI 中删除、隐藏或降格；
 - Markdown、PDF、Office、图片等预览；
 - changes、diff、checkpoint、recovery；
 - 本地/远程位置和能力状态清楚；
@@ -641,6 +680,7 @@ Proma 是首要工作台设计与代码移植物来源之一，不只是灵感�
 - 文件树、标签与内容视图之间保持熟悉的 IDE 心智，同时允许更少步骤、更好的恢复和更自然的 Agent 活动投影；
 - Remote 只有在当前位置或动作实际位于远端时才通过轻量位置标识、连接状态和相关操作出现，不支配默认布局；
 - 所有稳定控制尺寸固定、状态切换不跳动；动效短、快、可打断，只解释空间关系。
+- 默认导航、Chat、运行状态、Todo、Team、Workflow、Viewer 和错误文案以 OmniMind 的中性产品语言表达，不让首选引擎的品牌、TUI 术语或实现结构支配前端；Engine 名称只在用户需要选择、诊断或核实来源时渐进披露。
 
 ### 12.5 文件与输出查看
 
@@ -670,6 +710,24 @@ Proma 是首要工作台设计与代码移植物来源之一，不只是灵感�
 - 平台：macOS、Windows、Linux 保持相同品质和语义，同时尊重各自窗口、快捷键、菜单、文件选择、通知和系统打开习惯；
 - 创新必须降低理解或操作成本。不能因为追求“未来感”破坏已有成熟工作台心智。
 
+界面遵守冰山法则：用户看到的是少量稳定、丝滑、容易理解的表面，水下必须有准确的状态权威、事件证据、权限强制等级、writer ownership、恢复路径、性能预算和失败语义。不能把水下复杂度全部暴露成控制台，也不能用漂亮动画、假进度、乐观状态或静态 UI 掩盖没有实现的能力。每个重要可见状态都应能回答“事实来自哪里、断电后怎样恢复、失败时显示什么、性能由什么证据保证”。
+
+### 12.8 中英双语是一开始的可用性契约
+
+UI 母体当前的单语言假设不具有继承权。OmniMind 第一版必须让简体中文和英文用户都能顺畅完成关键工作，但目标是功能与理解等价，不是追求“每一个英文词都被翻译”的覆盖率：
+
+- 稳定产品文案、菜单、快捷键说明、空态、权限、错误、通知、更新和恢复路径使用集中、类型安全的 locale resources，不允许在组件中散落无法治理的硬编码字符串；
+- 首次启动默认跟随操作系统语言，用户可在设置中即时切换；选择持久化，切换不要求重启，也不改变 Workspace、Thread 或 Engine 状态；
+- 产品文案本地化与工作内容分离：不自动翻译用户文件、终端输出、Git 内容、Agent 原始回答、实时 Thinking/Planning 叙述或外部资源；动态内容使用其原始语言，稳定的动作骨架和解释可以本地化；
+- `Thinking`、`Planning`、Git、Diff、PR、Token、ACP、API、模型名、命令、代码、路径和文件名等专业词保留英文更自然、更精确时不强译。中文界面允许“中文动作/说明 + 英文技术对象”的克制混排，避免生硬术语和身份错乱；
+- 建立小而明确的术语表，逐项决定“翻译、保留英文、首次双写、跟随外部名称”。同一个稳定概念在同一语境保持一致，但不以语言纯度压过专业用户心智；
+- 日期、时间、数字、相对时间、复数、排序、搜索和快捷键按 locale 与平台处理，不能只替换字符串；
+- 中文验证 CJK 字体回退、标点、换行、混排、输入法 composition、搜索和文件名；英文验证较长标签、窄窗口、截断和可访问名称；
+- 所有关键旅程以中文和英文各跑一次：打开文件夹、创建 Chat、启动/停止 Agent、审批、查看文件/Diff/Terminal、Todo/child Agent、Git、Remote、错误恢复和更新；
+- 两种语言共享同一信息架构和功能集合。不得出现中文用户无法理解或无法到达的关键操作、只有一种语言存在的功能，或用自动机器翻译掩盖产品文案判断；允许两种 locale 对同一专业词都使用英文。
+
+国际化基础设施应在完整 UI 母体导入后的第一轮改造中建立，早于大规模文案和组件重命名；否则后续每次 UI 修改都会扩大硬编码债务。
+
 ## 13. 移植原则
 
 ### 13.1 搬运是一等工程手段
@@ -685,6 +743,8 @@ Proma 是首要工作台设计与代码移植物来源之一，不只是灵感�
 - 把多个来源的最好部分组合。
 
 不设置“目录级搬运禁止”“只能参考不能复制”“必须 clean-room 重写”一类形式主义约束。
+
+不害怕大规模复制或引发架构争论；应害怕的是在“原创感”掩护下重造更差的轮子，或在“整仓搬运”掩护下吞入第二状态真相。对真正提供了产品基础的上游，根 README 应以人可读的方式说明贡献并真诚致谢，同时完整保留来源、固定 revision、版权和许可证；感谢不代替权利核实，身份洁净也不允许洗白来源。
 
 ### 13.2 源码证据先于项目叙事
 
@@ -851,15 +911,17 @@ OmniMind 不设置科研优先的产品层。科研、生物医学、编码、�
 
 第一阶段不是“功能与旧产品相同”，而是五个可丢弃探针和一个极薄 walking skeleton 给出可信答案：
 
-当前导航：下列五个探针定义保留为历史验收结构；其路线已经是 M1 `candidate`，不是下一执行入口，也不等于生产通过。尚未开始的是 M2 walking skeleton。
+当前导航：下列五个探针定义保留为历史验收结构；其路线已经是 M1 `candidate`，不是下一执行入口，也不等于生产通过。M1 之后的 UI 母体、ACP-first、多引擎、权限真实性和双语裁决已经收敛；下一入口是 M2 完整 UI 母体接管与 ACP 垂直 slice。
 
 ### 探针 A：引擎与 Pi 生态兼容
 
-- 创建、恢复和分支引擎 session；
+- 通过 ACP 创建、恢复和分支引擎 session；
 - stream、cancel、tool lifecycle、dynamic registration 和 headless 降级可映射；
 - transcript 不重复存储；
 - Thread/Turn/Attempt/Action 关联清楚；
+- 至少两个真实 Engine 通过同一 conformance contract，Pi Bridge 不形成私有快速语义；
 - 至少一个 Todo、一个 delegated Agent、一个 dynamic workflow 和一个普通工具 package 经过兼容报告；
+- Pi 调度另一个 ACP Agent 时 child relation、循环上限、权限、成本和写入 owner 可观察；
 - raw TUI、session control 和第二状态真相能够在加载前被准确拒绝；
 - 只把当前任务需要的 tool schema 放入上下文。
 
@@ -868,7 +930,9 @@ OmniMind 不设置科研优先的产品层。科研、生物医学、编码、�
 - 完整 renderer transplant 与新状态边界垂直切片同场比较；
 - 每 Chat tabs 恢复、文件查看、右侧上下文工作台、diff/terminal/browser/child Thread 成立；
 - queue、append、interrupt、临时问题分支和 background attention 可用；
+- ACP 原始证据经过强类型事实与增量投影进入 UI，React 不解析 ACP 或 Engine 私有 wire event；
 - 长 Thread、Markdown 表格、图片和大输出有测量证据；
+- 简体中文与英文关键旅程功能等价，可即时切换，CJK 输入/排版和较长英文布局均通过；
 - macOS、Windows、Linux 语义一致且尊重平台习惯。
 
 ### 探针 C：持久运行时、文件与恢复
@@ -925,7 +989,7 @@ OmniMind 不设置科研优先的产品层。科研、生物医学、编码、�
 正确动作是：
 
 - 独立仓库、来源纪律和 M1 五个可丢弃探针已经完成到 `candidate`，不要重复；
-- 从 §22.11 已冻结的唯一 M2 slice 开始，以 focused proof 把研究路线变成生产边界；
+- 从 `execution-brief.md §8` 开始：完整导入固定 UI 母体并恢复可运行基线，再建立 locale、ACP 和四层运行投影的 focused vertical slice；
 - 使用探针已经裁决的引擎、工作台、远程和文件原生知识边界；
 - 每一次只引入一块有明确所有权的能力；
 - 搬来后立即删除宿主概念和重复真相；
@@ -935,7 +999,7 @@ OmniMind 不设置科研优先的产品层。科研、生物医学、编码、�
 - 不要把“授权充分”误解为可以省略来源和质量判断；
 - 不要重新发明一个披着中性名词的 Claude Code。
 
-新 OmniMind 的优势不应来自功能列表更长，而应来自：内核小、工作台强、生态可吃、远程真实、知识可积累、能力开放、更新自动、失败诚实、移植果断。
+当前不需要凭空设计“核心优势”或护城河。先把成熟工作台和首选生态接好，做到好用、丝滑、漂亮、稳定；内核小、生态可吃、远程真实、知识可积累、更新自动和失败诚实都是产品质量，不是要求团队重造已有能力的口号。
 
 ## 21. 来源与移植物披露
 
@@ -980,6 +1044,7 @@ OmniMind 不设置科研优先的产品层。科研、生物医学、编码、�
 | `E0` | Pi 引擎仓库 |
 | `E1` | pi-dynamic-workflows 与同类引擎生态 |
 | `U0` | Proma 工作台仓库 |
+| `U1` | Synara 工作台仓库 |
 | `L0` | 当前 OmniMind 旧产品仓库 |
 | `K0` | WeKnora |
 | `K1` | Karpathy LLM Wiki 提案 |
@@ -1033,6 +1098,28 @@ OmniMind 不设置科研优先的产品层。科研、生物医学、编码、�
 
 ### 21.3 Pi 生态
 
+#### ACP 正向 Bridge
+
+- 上游：`https://github.com/svkozak/pi-acp.git`
+- 固定研究 revision：`d1cffc047ab37a096ee70ca39cfc1de463db8d12`
+- 许可证：MIT。
+- 方向：把 Pi 作为 ACP Agent 暴露给 Workbench；通过 ACP JSON-RPC/stdio 驱动 `pi --mode rpc`。
+- 已观察价值：Session 映射与恢复、消息流、tool lifecycle、文件位置、结构化 Diff、终端、模型/思考配置、skills/prompts/extensions 和部分交互映射。
+- 已观察缺口：官方也明确标为 MVP；ACP filesystem/terminal delegation 尚未接入，MCP 配置没有注入 Pi，独立 thought stream 与部分扩展命令/输入 UI 不完整，若干路径仍是 best-effort。
+- 裁决：优先治理性 fork 并补 conformance、权限真实性、恢复和扩展兼容；通用修复尽量回馈上游。它是高价值基础，不是未经验证即可宣称“Pi GUI 全兼容”的完成品。
+
+#### ACP 反向 Orchestrator
+
+- 上游：`https://github.com/buihongduc132/pi-acp-agents.git`
+- 固定研究 revision：`cb4315135b1fbbc529399bc0f598e5ee356d9060`
+- 许可证：MIT。
+- 方向：让 Pi 作为 ACP Client 启动、控制和协调其他 ACP Agent；它与“把 Pi 暴露为 ACP Agent”的正向 Bridge 方向相反，可以同时存在。
+- 已观察价值：Session lifecycle、delegate/broadcast/compare、DAG、persistent workers、mailbox、health monitor、circuit breaker、取消、超时和 worktree 等机制。
+- 已观察风险：拥有自己的 task/team/session/worktree 状态；部分清理和 shell 路径需要重新审判；包页面和 README 只用于发现，最终以固定源码、测试和失败路径为准。
+- 裁决：作为可安装的 Pi 能力、managed fork 或机制 donor；它可以让 Pi 指挥其他 Agent，但不能成为 OmniMind 的跨引擎状态权威，也不能绕过 writer admission、权限等级、嵌套上限和唯一 integration owner。
+
+ACP 官方协议与架构：`https://agentclientprotocol.com/`。当前研究以稳定 v1 的 capability negotiation、Session update、tool call/update、permission、Diff、location、terminal 和 content 语义为基线；实验能力必须显式降级，不得提前冻结进产品持久化。
+
 本地研究池包括：
 
 - `/Users/liuzaoqu/Desktop/Develop/πCode/pi-dynamic-workflows`
@@ -1068,14 +1155,29 @@ OmniMind 不设置科研优先的产品层。科研、生物医学、编码、�
 
 生态是能力池，不是预装清单。新仓库不应为了展示生态而装入全部扩展。
 
-### 21.4 Proma
+### 21.4 工作台来源
+
+#### Synara
+
+- 本地研究镜像：`/Users/liuzaoqu/Desktop/Develop/πCode/synara`
+- 上游：`https://github.com/Emanuele-web04/Synara.git`
+- 当前固定研究 revision：`ab33931da4c8da884b1445244085f4eeee3eafb6`
+- 仓库许可证：MIT；实际采用前仍要核第三方贡献与资产。
+- 已批准角色：UI 母体，包括 renderer、设计系统、工作台布局、导航、交互、执行过程投影与必要桌面桥接。
+- 允许方式：fork、整个 renderer/子系统 transplant、adapt，或在证据支持时接管更广的桌面宿主机制。
+- 已收敛边界：固定完整源码树先作为可运行物理基线接管；renderer、设计系统、布局、导航、执行表达和必要桌面桥接默认保留。server、transport、SQLite、runtime event 与 orchestration 只可作为过渡实现或经测试证明的机制 donor，生产状态必须服从 ACP-first、四层运行事实、单一权威和恢复契约；不符合者整层删除，不维持双轨。
+- 硬边界：不得夺取 Pi 的 Agent 引擎/生态地位，不得夺取 OmniMind 的产品状态权威，不得把旧 provider/产品 ontology 移入生产命名。
+
+该裁决不表示已有代码进入生产。`source-adoptions` 仍为空；真正移植时必须在同一提交增加采用路径、法定文本、主要删改、回退方式与人可读致谢。
+
+#### Proma
 
 - 本地研究镜像：`/Users/liuzaoqu/Desktop/Develop/πCode/Proma`
 - 上游：`https://github.com/ErlichLiu/Proma.git`
 - 本次 SHA：`aa02c16819399e7683533f15cfe202754d6b156c`
 - 仓库许可证：AGPL-3.0
 - 额外事实：用户是核心参与者并已取得作者完整授权；作者明确表示 Claude SDK 只用于用户迁移，未来不再使用 Claude SDK。
-- 候选角色：工作台和前端的首要代码移植物。
+- 候选角色：次级工作台机制和组件 donor；只在具体子系统证明更优或能补齐 UI 母体缺口时采用。
 - 允许方式：完整 renderer、多个组件域、状态逻辑、纯机制、Electron shell，均可探针后直接移植。
 
 权利要求：
@@ -1149,7 +1251,9 @@ OmniMind 不设置科研优先的产品层。科研、生物医学、编码、�
 
 - 本次研究基线 SHA：`5f37d75542b53152c215349c8b1c12b7e7482d22`
 - 上游：`https://github.com/SolvingLab/OmniMind.git`
-- 候选角色：Remote 安全机制、失败案例和测试 oracle。
+- 候选角色：Remote 安全机制、失败案例、测试 oracle，以及可选的 OmniMind icon 几何母形/品牌资产来源。
+
+旧 icon 只是候选资产：使用前要核实溯源与权利，并重做小尺寸辨识、单色、深浅主题、macOS/Windows/Linux 应用图标与托盘适配。旧配色、视觉令牌、界面风格和工程架构没有继承权，可以全部删除并重建。
 
 独立审计量级：
 
@@ -1426,8 +1530,9 @@ Deletion/rollback plan:
 探针开始前的首选假设：
 
 - Electron + React；
-- Pi session SDK；
-- Proma renderer 或组件域；
+- managed Pi ACP Bridge；
+- Synara renderer、工作台或更广桌面宿主机制（实际边界等固定源码审判收敛）；
+- Proma 中经证明更优或能补齐缺口的有界机制/组件域；
 - 当前 OmniMind Remote 的安全与重连机制；
 - 极小 TypeScript remote worker；
 - Slurm；
@@ -1451,9 +1556,9 @@ Deletion/rollback plan:
 
 | 层 | 职责 | 更新与状态纪律 |
 | --- | --- | --- |
-| Native durable primitives | Thread/Attempt/Action、journal、message、receipt、cancel/resume、引用、权限和 generation lease | 状态唯一、最少、可恢复；不按 donor 或领域命名 |
-| Bundled first-party modules | 文件工作台、Dynamic Orchestration、Delegation/Team、Durable Goal、Review、Browser、HTTP、MCP bridge、知识和 Remote adapters | 随 App 发布、无需安装、按需加载、可关闭；不要求常驻或同进程 |
-| Pi compatibility bridge | 翻译 Pi tool/skill/prompt/extension lifecycle 与通用 UI/headless 行为 | 首发可用；不继承 Pi TUI、session ontology、provider mutation 或第二状态真相 |
+| Native durable primitives | Thread/Attempt/Action、journal、receipt、cancel/resume、引用、权限、writer admission 和 generation lease | 状态唯一、最少、可恢复；只拥有跨引擎产品事实，不抢夺 Engine/package 私有状态 |
+| Bundled first-party modules | 文件工作台、Handoff、必要的跨引擎投影、Review、Browser、HTTP、MCP bridge、知识和 Remote adapters | 随 App 发布、无需安装、按需加载、可关闭；不要求常驻或同进程；已有成熟生态能力不重造 |
+| ACP ingress + managed Bridge | 翻译 Session、tool、permission、plan、content、usage 与 capability；Pi 也经受同一语义约束 | 首发可用；ACP 不直通 React；Bridge 不继承 Engine TUI、session ontology、provider mutation 或第二状态真相 |
 | Curated optional packages | 经真实场景证明有独特价值、可被清楚治理的 package | exact artifact；默认可在既有 trust envelope 内自动更新；可随时禁用和回滚 |
 | Arbitrary third-party packages | 用户选择的任意完整权限代码 | 首次 exact artifact 明确选择；加载前 compatibility report；不伪称 sandbox |
 | External services | 机构知识库、远程调度器、MCP server、浏览器和其他系统 | 外部系统继续拥有自己的数据、会话、任务和凭据；OmniMind 只保存引用、观察和回执 |
@@ -1466,10 +1571,10 @@ Deletion/rollback plan:
 | --- | --- | --- |
 | 对话内容 | engine transcript / child transcript | parent 只保存 child ref、摘要和 attention，不复制全文 |
 | 产品动作与副作用 | Thread/Attempt journal | UI、通知和扩展只投影 lifecycle/receipt |
-| 当前执行计划 | product journal 中属于当前 Thread branch 的 canonical plan event stream | engine transcript 只保存 ref；Todo 是可重建投影；Team、Workflow、Goal 不复制正文 |
+| 当前执行计划 | 创建它的 Engine/package；若用户创建跨引擎计划，则为 product journal | OmniMind 保存来源引用和可重建投影；不把各生态 Todo 强行双写成统一数据库 |
 | child Agent 内容 | child Thread | parent journal 保存 relation、lifecycle、steer/stop/follow-up |
-| Team | 单一 native message event stream + membership/assignment index | Thread journal 共享 event ID；只保存 member、assignmentRef、owner、delivered/read/ack；无第二 mailbox 或通用 task board |
-| Dynamic Workflow | parent Attempt 的 run/step/attempt journal | child 内容在 child Thread；外部任务状态在外部系统 |
+| Team | 创建它的 Engine/package；显式跨引擎 Team 才由 product message event stream 拥有 | OmniMind 投影 member、assignment、message receipt 和 attention；不复制 Engine mailbox/task board |
+| Dynamic Workflow | 创建它的 Engine/package run journal；显式跨引擎 Workflow 才进入 product journal | OmniMind 保存 child relation、Action receipt、hard-cap 和恢复引用；不复制步骤正文 |
 | 显式 Durable Goal | product journal 中的 `GoalRef`、claim 与 verification events | Goal strategy 负责 continuation，不拥有独立聚合或模型自证完成权；普通 Chat 不自动成为 Goal |
 | 文件 bytes/metadata | local 或 remote filesystem | watcher、hash、cache、diff 都是观察或投影 |
 | Git commit/index/ref | 用户 Git repository | status/diff/history 是投影；默认不自动 commit/stash/reset/clean |
@@ -1487,9 +1592,9 @@ Deletion/rollback plan:
 
 **Todo**
 
-- canonical mutation/checkpoint 是 product journal 中、按 Thread branch 归属的 plan event；Todo UI 和 tool result 都是该 event stream 的可见、可纠偏、可重建投影；engine transcript 只保存 event ref，不复制完整计划；
+- Todo 首先是来源明确的计划投影：Pi/package 原生 Todo 继续由其原生 session/state 拥有，OmniMind 显示和纠偏它；只有用户创建的跨引擎 Todo 才由 product journal 拥有；
 - 最小状态为 pending / in-progress / completed / deleted，加必要 dependency 引用；
-- 悬空、自依赖和环必须被 reducer 拒绝；branch、reload、compaction 和 child isolation 必须可重放；
+- 产品拥有的计划中，悬空、自依赖和环必须被 reducer 拒绝；Engine-owned 计划按 capability 与真实性降级，不能谎称可编辑或可恢复；
 - 不创建独立 Todo 数据库、核心 Task 聚合、验收系统或第二完成治理。
 
 **Delegated Agent**
@@ -1502,14 +1607,14 @@ Deletion/rollback plan:
 
 **Persistent Team**
 
-- 只在用户明确创建或任务确实需要持续协作时出现；
-- 增加成员生命周期、assignmentRef 和对单一 native message event stream 的 typed projection，包括 delivered/read/ack、TTL、idempotency 和 bounded attention；
+- 优先使用已经审判通过的 Pi Team/ACP orchestration 生态；只在用户明确创建、任务需要持续协作或跨引擎能力确实缺失时建立产品级 Team；
+- 对 Engine-owned Team 只做成员、assignment、message、delivered/read/ack、attention 与成本的 typed projection；跨引擎产品 Team 才拥有自己的 native message event stream；
 - 不增加第二 Todo、依赖图、acceptance、Workflow DAG、自动 commit 或自动 merge；
 - 用户可以向父子或同级 Agent 发消息，所有通讯进入同一可审计 ledger。
 
 **Dynamic Workflow**
 
-- Agent 根据当前任务和实时结果即时生成、追加、删除、改序、分支、循环、并行、汇总和终止编排；
+- 优先由 Pi 的成熟 Workflow/automation 生态根据当前任务和实时结果生成、追加、删除、改序、分支、循环、并行、汇总和终止编排；OmniMind 负责展示、用户干预、权限、写入和恢复真相，不先重写一个竞争 runtime；
 - 普通任务直接完成，不要求用户写 DAG、YAML、模板或理解 Workflow；
 - 固定的是 journal、resume、cancel、hard caps、retry lineage、receipt、single integration owner 与 `outcome_unknown`，不是工作步骤；
 - retry 创建新 attempt，不覆盖旧 attempt；只有纯、幂等或有外部 receipt 的动作可自动 replay；
@@ -1748,7 +1853,7 @@ artifact 的 shrinkwrap 在 probe consumer 中产生了顶层与嵌套的同版�
 | 样本 | public discover/load 与资源 | 实际 tool / failure / cancel 路径 | context、UI 与状态权威 | provisional route |
 | --- | --- | --- | --- | --- |
 | ordinary HTTP/web tool | 19.345 ms，0 loader errors；4 tools、4 commands；无 skill/prompt | `fetch_content` 对非 HTTP(S) 输入发出 1 次 stream update 后返回错误文本；预先取消在 0.229 ms 返回 `Error: Aborted`。两者都错误地保持 `isError=false`，并各写一条私有 result entry | 四个 tools 共 8,627 bytes；公开 session allowlist 只激活 `fetch_content` 2,476 bytes，另外三个未进入 active set；源码 footprint 有 UI/headless guards 和 session-entry/result store | `compatible-with-adapter` 行为成立，但 source/artifact lineage 阻止 adoption；adapter 必须规范化 failure、把大内容映射为 `OutputRef`，不接受私有 result store 为权威 |
-| Todo | 5.110 ms，0 loader errors；1 tool、1 command | revision 0 写入得到 revision 1；第二次仍带 base revision 0，准确抛出 stale revision | active descriptor 2,286 bytes；headless 可执行，但 plan state 留在 package closure，并在 lifecycle 中用 session entry/message 恢复 | `bounded-transplant` reducer、CAS 与 renderer；canonical plan 仍是 product journal event stream，不运行社区 Todo state owner |
+| Todo | 5.110 ms，0 loader errors；1 tool、1 command | revision 0 写入得到 revision 1；第二次仍带 base revision 0，准确抛出 stale revision | active descriptor 2,286 bytes；headless 可执行，plan state 留在 package closure，并在 lifecycle 中用 session entry/message 恢复 | `bounded-transplant` renderer/CAS 机制或直接 Engine-owned projection；不复制社区 Todo state，只有显式跨引擎计划才进入 product journal |
 | child/background Agent | 64.422 ms，0 loader errors；2 tools、18 commands、1 skill、7 prompts | `list` 在 175.307 ms 返回可执行 child 定义；不存在的 run status 以 `isError=true` 返回 | 只激活 `subagent`，仍有 24,504 bytes，其中 schema 14,981 bytes；未激活的 wait tool 被排除。artifact 有大量 UI/headless、session mutation、provider/model 和 private status/session/artifact store 路径 | `bounded-transplant` lifecycle/control/reconcile；不加载其完整 runtime，不让其拥有 child transcript、worktree、acceptance 或 workflow graph |
 | Dynamic Workflow | 31.304 ms，0 loader errors，尽管三个 peer ranges 均不接受 0.83.0 | 静态脚本被拒绝为“必须调用 agent”；预先取消的有效脚本抛 `Workflow was aborted`，但先流出一次 `Workflow completed`，暴露进度诚实度缺口 | active descriptor 4,067 bytes；有 headless guards，无 durable journal；artifact 与 fixed source 无 lineage | `bounded-transplant` parser/现场 JS 编排/display；M2 用 product Attempt journal 补 mid-run replan、receipt、hard caps 与 truthful terminal state |
 | browser/web-like | 26.776 ms，0 loader errors；1 tool；未启动 browser | 空输入准确 `isError=true`；预先取消在输入校验前不改变相同错误，AbortSignal 仍需在真实 process 路径复验 | descriptor 22,123 bytes，其中 schema 19,283 bytes；artifact 管理 process/session/page/output files，不能常驻默认 context | `curated-optional`，由 target ownership、generation lease、receipt/`OutputRef` adapter 包住；真实 binary、crash、download 与三平台仍 open |
@@ -1760,7 +1865,7 @@ artifact 的 shrinkwrap 在 probe consumer 中产生了顶层与嵌套的同版�
 
 这组样本没有任何 artifact 直接晋级 `direct-compatible`：不是“生态不兼容”，而是本轮恰好每个可运行样本仍有 lineage、错误规范化、context 体积或状态 ownership 的额外边界。`direct-compatible` 类继续保留给无 install mutation、peer/API 相容、headless 完整、错误语义正确且不触碰 provider/session/产品状态的纯 package；不能为了填满分类而伪造一个绿色样本。
 
-**Launch route 与 M2 唯一入口。** M1 选择“最小 managed engine fork / upstream patch branch + 产品拥有的 compatibility bridge”，不是 full ecosystem runtime，也不是每个 package 各写一条兼容轨：
+**M1 当时的 launch route。** M1 选择“最小 managed engine fork / upstream patch branch + 产品拥有的 compatibility bridge”，不是 full ecosystem runtime，也不是每个 package 各写一条兼容轨。后续收敛已经把通用 Agent ingress 修正为 ACP-first，并把整体 M2 入口移到 `execution-brief.md §8`；下列内容仍作为 package compatibility 子链证据保留：
 
 1. artifact resolver 先固定 version/source/`gitHead`/integrity，再复用 §22.15 的 immutable generation、trust diff、safe boundary 与 LKG；任意 package code 执行前生成机器报告；
 2. preflight 拒绝 host scope/peer 不相容、install mutation、native dependency/权限扩张、provider/session control、builtin interception 和第二状态权威；被拒绝项不进入 resource loader；arbitrary third-party 仍是完整权限代码，不伪称 sandbox；
@@ -1769,7 +1874,7 @@ artifact 的 shrinkwrap 在 probe consumer 中产生了顶层与嵌套的同版�
 5. `appendEntry`、`sendMessage`、provider mutation、session replacement 和 package 持久目录默认是 compatibility effects，不自动成为事实。adapter 只可写 product journal refs、`OutputRef`、external target refs 与 generation receipt；Todo/Team/Workflow/transcript 仍遵守 §22.2；
 6. 分类只有 `direct-compatible`、`compatible-with-adapter`、`bounded-transplant`、`curated-optional` 与 `reject-before-activation`。单包失败按 host API、lineage、dependency/environment、behavior 和 state-authority 分因，不扩张成整个生态失败，也不声称 100% 兼容。
 
-M2 的第一条生产切片因此固定为：content-addressed engine/extension generation → machine preflight → public resource load → 一个 ordinary tool 的 active-only schema → stream/cancel/failure normalization → product journal/`OutputRef` receipt → Thread workbench 投影。随后才接 Todo projection 与一个 child Thread；Team、Dynamic Workflow、browser、Remote 和知识能力都复用同一 seam。M2 重新验证门是：正式生成物 lineage；public API 不再靠私有实例；supported 与 rejected exact artifacts 各一；inactive schema 确实不进 provider payload；dynamic registration 后 active set 仍准确；abort/stream/error/result ref 诚实；provider/session mutation 被拦截或显式适配；App restart 后无 package 第二真相；macOS/Windows/Linux headless 与有 UI 路径。失败时 pin 旧 generation、卸载 package projection，并保留 product journal；若 bridge 为兼容一个包开始接管 package 私有 ontology，则降为 bounded transplant 或拒绝。
+这条链现在是 M2 内的 extension/package compatibility 子切片：content-addressed generation → machine preflight → public resource load → active-only schema → stream/cancel/failure normalization → receipt/`OutputRef` → workbench projection。整体 M2 必须先按 `execution-brief.md §8` 接管完整 UI 母体并贯通 managed ACP Session。子切片重新验证门仍是：正式生成物 lineage；public API 不靠私有实例；supported 与 rejected exact artifacts 各一；inactive schema 不进 provider payload；dynamic registration 后 active set 准确；abort/stream/error/result ref 诚实；provider/session mutation 被拦截或显式适配；App restart 后不复制 package 私有真相；macOS/Windows/Linux headless 与有 UI 路径。失败时 pin 旧 generation、卸载 package projection并保留产品 receipt；若 Bridge 为兼容一个包开始接管其私有 ontology，则降为 bounded transplant 或拒绝。
 
 ### 22.12 M1 Probe C：原生 journal、动态编排与 recovery seam
 

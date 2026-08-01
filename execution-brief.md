@@ -6,7 +6,7 @@
 >
 > 外部来源一律使用 README 定义的研究代号；不得把这些代号带进生产代码。
 >
-> 当前执行状态：独立仓库、阶段 0–1 地基和阶段 2 / M1 五个可丢弃探针路线已经完成到 `candidate`；生产实现与 `source-adoptions` 仍为 0，F-24 等 production claims 仍为 `open`。阶段 0–2 以下保留为历史门槛和证据方法，不得重建仓库、重做初始化、重新准备同一轮探针或把旧产品搬进来。下一唯一入口是阶段 3 / M2 walking skeleton 的首个 focused slice。
+> 当前执行状态：独立仓库、阶段 0–1 地基和阶段 2 / M1 五个可丢弃探针路线已经完成到 `candidate`；UI 母体、ACP-first、多真实 Engine、默认原生引擎、权限真实性、四层运行投影和中英双语策略已经收敛进根 README。仓库现有 M2 focused skeleton 可删除，`source-adoptions` 仍为 0，所有 production claims 仍按 Campaign 状态执行。下一唯一入口是本文件阶段 3：固定完整 UI 母体导入并保持可运行，先建立双语地基与 ACP 端到端 slice，再逐层换脑；不得重跑 M1 或保护旧 M2 投入。
 
 ## 1. 任务的正确理解
 
@@ -22,7 +22,7 @@
 目标是：
 
 1. 在这个已经创建并通过初始质量门的独立 Git 仓库中继续建设；
-2. 使用已经冻结的五个高风险边界结论建设 M2，并以 focused proof 验证生产结构；
+2. 使用已经冻结的五个 M1 结论和最终多引擎裁决，接管 UI 母体并把默认引擎通过 managed ACP Bridge 接入，不再重新讨论单引擎私有 adapter；
 3. 从多个来源果断移植最好的实现；
 4. 在进入生产作者区以前切掉所有来源身份和宿主概念；
 5. 建立极小领域内核、强工作台、真实远程执行和文件原生 Wiki；
@@ -395,7 +395,7 @@ context cost 以实际 request 的 active allowlist 为准：同时记录 regist
 - Git 只作可选权威投影，不自动 commit/stash/reset/clean；
 - attention 四态、去重、前台抑制和 deep link。
 
-探针必须证明各状态只有一个所有者，不能因为 package 已经实现就接受其私有 Todo、task board、workflow graph、comments database 或 transcript copy。
+探针必须证明各状态只有一个所有者。Engine/package 私有 Todo、task board、workflow graph 或 transcript 可以继续由其来源拥有并被产品投影；不能因为 package 已经实现，就把其私有状态复制成 OmniMind 的第二份 canonical truth，或冒充跨引擎产品事实。
 
 本探针按两条互不替代的证据链施工：先在全新固定源码 archive 中运行 plan reducer、child lifecycle、mailbox/receipt 和动态编排的最窄目标测试，记录精确命令、通过计数与首个停止位置；再用不含 donor 的 disposable native simulator 验证产品自己的 journal/filesystem/recovery 不变量。source test 不能证明产品 reducer，simulator 也不能证明 donor。
 
@@ -505,19 +505,32 @@ provisional route 必须明确三种所有者：system SSH 拥有凭据、host t
 
 ## 8. 阶段 3：极薄 walking skeleton
 
-当前唯一施工入口严格沿用 README §22.11 已冻结的 slice：
+阶段 3 不从旧 M2 小界面继续堆功能。当前唯一施工入口是“完整 UI 母体可运行接管 + 双语地基 + ACP 垂直事实链”：
 
 ```text
-content-addressed generation
-→ machine preflight
-→ public resource load
-→ one ordinary active-only tool
-→ normalized stream/cancel/failure
-→ journal/OutputRef receipt
-→ Thread workbench projection
+fixed full source import + source/legal record
+→ unchanged runnable baseline
+→ product identity and locale foundation
+→ one managed ACP Engine session
+→ raw evidence → typed facts → incremental projections
+→ one message + one tool + one permission + one output
+→ concise live UI + expandable Diff/Terminal/File
+→ restart/cancel/failure recovery
 ```
 
-M1 `candidate` 只消除了架构分叉，不证明生产 bridge 已通过。首个实现只做这条最小端到端路径及最窄可证伪检查：exact generation 与 rejection report、公开 loader、inactive schema 缺席、stream/cancel/failure 规范化、journal/`OutputRef` receipt 和 Thread 投影。任何失败先修正这条 seam，不扩张到完整 UI、Team、Remote、知识或通用 SDK。
+物理导入必须保留固定 revision、许可证、Git 来源和人可读致谢，在同一提交更新 `source-adoptions`；不把完整复制伪装成原创。导入后的第一条证据是 donor baseline 在隔离环境可构建、可启动、基础 UI 可操作。随后只在一个垂直 slice 上切换状态权威，不并行维护 donor runtime 与 OmniMind runtime。
+
+首个 slice 必须同时证明：
+
+- 简体中文和英文可以即时切换，关键操作可理解；中文允许保留 Thinking、Planning、Git、Diff、PR、Token、ACP、代码、路径与 Agent 原始过程语言，不做机械汉化；
+- 默认界面不暴露首选引擎品牌或宿主术语；真实名称只在 Engine/Package 来源、诊断、权限真实性和法定披露中出现；
+- ACP wire event 不进入 React；raw envelope 有界脱敏，typed fact 是可判别联合，projection 可增量重建，UI view model 只负责图标、分组、折叠、动效和 locale；
+- 一个 Thread 绑定一个主 Engine Session；stream、tool lifecycle、permission、cancel、failure、restart 和 `outcome_unknown` 可追踪；
+- `Approval required / Auto / Full access` 与 `host-enforced / agent-enforced / mixed / unverified` 分离；
+- 运行中可以打开生成文件，默认显示稳定 inline 摘要，展开后查看 Tool、Diff、Terminal 和原始诊断；
+- 旧 M2 `quiet-inline` / `balanced-tabs`、弱类型 Activity payload、Provider-first 状态和重复 runtime 被删除，而不是包 compatibility wrapper。
+
+M1 `candidate` 和源码阅读都不证明 production bridge、双语、权限或 UI 已通过。任何失败先修复上述单链，不提前展开 Team、Automation、Remote、知识或公共 SDK；但 UI 母体中这些重要工作面保留，不因尚未接线而从信息架构中删除。
 
 只实现一条端到端路径：
 
@@ -929,10 +942,10 @@ Bundled 随 App 原子更新。Curated 与已经批准 envelope 的第三方默�
 1. 确认工作目录就是本独立仓库，分支、工作树和远端状态可解释；
 2. 按本文件第 2 节读取五份权威文档，确认 M1 route evidence `7041ccbaaf9eb0ecddb171408a59ed0bf42f6843` 与 Campaign `candidate` 状态仍在当前 `main` 历史中；
 3. 运行现有 `npm run quality`，确认身份、来源和最小测试地基没有退化；
-4. 从本文件 §8 和 README §22.11 的唯一 M2 slice 开始，不重新选择引擎、工作台、恢复、Remote、知识或更新路线；
-5. 先实现 content-addressed generation 与 machine preflight，再接 public resource load 和一个 ordinary active-only tool；
-6. 用 focused proof 验证 supported/rejected exact artifact、inactive schema、stream/cancel/failure normalization、journal/`OutputRef` receipt 与 Thread workbench projection；
-7. 只把实际进入生产的来源加入根 README `source-adoptions`，并在同一提交加入必要法定文本；M1 研究候选不因 `candidate` 自动成为 adoption；
-8. 保持 F-24 等 production claims 为 `open`，直到真实 M2 实现和对应验收产生 candidate evidence；生产者不得自证整个 Campaign 完成。
+4. 从本文件阶段 3 开始：固定完整 UI 母体源码树导入，记录来源/权利并先恢复 donor baseline；不要手工挑组件，也不要把 donor Agent/runtime/state 当成永久真相；
+5. 在同一垂直 slice 建立 locale foundation、managed ACP Engine session、四层运行事实链和默认 inline/展开式工作过程 UI；中文采用专业混排，不机械汉化，默认前端不暴露首选引擎身份；
+6. 让一个 message、tool、permission、Diff/Terminal/File、cancel/failure/restart 真实贯通，再删除该路径上的旧 M2、Provider-first 和弱类型 Activity 双轨；
+7. 只把实际进入生产的来源加入根 README `source-adoptions`，并在同一提交加入必要法定文本与人可读致谢；研究候选不因 `candidate` 自动成为 adoption；
+8. 按 Campaign 将受影响 claims 从 `open` 推进到 `candidate` 并附命令、产物与 SHA；生产者不得自证整个 Campaign 完成，最终仍需 frozen SHA、相关总门和 fresh-context completion audit。
 
-如果新会话试图再建仓库、重做 M1、先搬旧仓库、先做完整 UI、先造通用插件系统、先做所有 provider 或先复刻全部功能，应立即停下，重新读取当前状态与 M2 唯一入口。
+如果新会话试图再建仓库、重做 M1、保护旧 M2 UI、按截图重写而不是接管完整母体、让 ACP/Engine wire event 直通 React、把双语做成机械汉化、让首选引擎品牌支配前端、先造通用插件系统或建第二状态真相，应立即停下，重新读取根 README §7–§8、§11–§12 与当前唯一入口。
