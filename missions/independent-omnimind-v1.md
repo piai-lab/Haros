@@ -170,7 +170,7 @@ Deliver:
 
 - minimal workspace/package structure;
 - one reproducible quality command;
-- identity cleanliness checker that reads the root disclosure;
+- identity and structure checker that reads the root disclosure, scans path/name/source/generated-output surfaces and enforces the minimum tree policy;
 - source and license handling path;
 - no unnecessary empty frameworks;
 - clean checkout verification.
@@ -214,7 +214,7 @@ Exit:
 Deliver one complete local path on the approved full UI source baseline:
 
 1. import the fixed complete UI source tree with exact provenance, legal text and a reproducible runnable baseline;
-2. remove donor product identity from authored surfaces without hiding provenance;
+2. remove donor product identity and donor tree shape from authored surfaces without hiding provenance; the first adoption commit must pass source, path/name, generated-output and structure scans;
 3. establish locale resources and a terminology policy that makes Simplified Chinese and English key journeys equally usable without mechanically translating technical terms;
 4. trust a local location, create a Thread and bind it to one managed ACP Engine Session;
 5. persist turn admission and start one Engine attempt;
@@ -342,7 +342,7 @@ Exit only when the Done formula is true.
 
 | ID | Required claim | Proof type | Status | Evidence | SHA |
 | --- | --- | --- | --- | --- | --- |
-| F-01 | Product-authored files contain no forbidden external identity outside the root disclosure and legal texts | deterministic scan + filename scan | candidate | `npm run quality` scanned 11 candidate files against 26 README-derived rules; filename/content and explicit runtime-fixture tests passed in the working repository and a fresh local clone | `99192d8fbfad41c0e6fc3fb36291f1ec9a242531` |
+| F-01 | Product-authored paths, names, source text and controllable generated output contain no forbidden external identity outside the root disclosure and legal texts | deterministic source/path/generated scan | open | Scope strengthened before full source takeover; pre-adoption checker evidence is required on the new implementation SHA | — |
 | F-02 | Every adopted source has accurate revision, path, rights, mode, divergence and update policy in the root disclosure | deterministic inventory + legal review | candidate | `npm run check:sources` validated the root `source-adoptions` inventory; result: 0 adopted sources, so no legal text is currently required; malformed/missing-rights paths are covered by the quality tests | `99192d8fbfad41c0e6fc3fb36291f1ec9a242531` |
 | F-03 | Durable domain state contains only necessary product facts with one authority per fact | schema review + persistence tests + fresh evaluator | open | — | — |
 | F-04 | Engine transcript is not duplicated and Thread/Turn/Attempt/Action correlations survive restart and branch | recovery and corruption tests | open | — | — |
@@ -362,7 +362,7 @@ Exit only when the Done formula is true.
 | F-18 | Materially different workloads succeed on the same core without research, coding, knowledge or Remote product modes and domain types | end-to-end scenarios + fresh evaluator | open | — | — |
 | F-19 | Relevant final gates pass once on the frozen final SHA | deterministic final gate | open | — | — |
 | F-20 | Fresh-context completion audit reports no material finding on the frozen final SHA | independent completion audit | open | — | — |
-| F-21 | Production code, public names and visible interaction form one coherent, elegant and maintainable system with no vague containers or avoidable performance debt | static checks + architecture/name review + measured UI + fresh evaluator | open | — | — |
+| F-21 | Production code, public names, file tree and visible interaction form one coherent, elegant and maintainable system: shallow single-duty structure, durable precise names, no donor mirror/migration archaeology/vague containers, and no avoidable performance debt | structure/static checks + architecture/name review + measured UI + fresh evaluator | open | — | — |
 | F-22 | Todo, child Agent, Team, Dynamic Workflow, explicit Goal and Review have non-overlapping state authority and survive branch/restart correctly | reducer/replay tests + state-authority review | open | — | — |
 | F-23 | Dynamic Workflow is generated and revised from live evidence, obeys hard limits, preserves retry lineage and never blindly replays an uncertain side effect | scenario tests + crash/receipt matrix | open | — | — |
 | F-24 | The launch compatibility bridge runs supported ecosystem packages, reports unsupported host behavior before activation and never imports host ontology into product state or UI | real package matrix + identity/API review | open | — | — |
@@ -443,7 +443,7 @@ Material correction, if any: separated fixed source, official artifact and local
 
 ### M2
 
-No evidence yet.
+No production evidence yet. Full source takeover is gated on the strengthened F-01/F-21 checker and resident doctrine landing on `main` first.
 
 ### M3
 
@@ -471,11 +471,12 @@ The next executor must:
 
 1. verify the exact repository path, `main == origin/main`, clean status, and that this Campaign plus the final doctrine commit remain in current history;
 2. read the five authority documents in order and run the existing focused quality/document gates before changing production; preserve historical evidence and keep every unimplemented claim `open`;
-3. do not rerun M1 or protect the current M2 skeleton. Start from `execution-brief.md §8`: import the complete fixed UI source, preserve provenance/legal text, and first restore its runnable baseline;
-4. in one vertical path establish locale resources, professional Chinese/English terminology, managed ACP Session, raw-evidence/typed-fact/projection/view-model layers, one message/tool/permission/output, inline progress, expanded Diff/Terminal/File, cancel/failure/restart and honest enforcement level;
-5. keep the default UI engine-neutral; only reveal real Engine names in user choice, source, diagnostics, permission truth and legal surfaces. Do not mechanically translate Thinking/Planning, Git, Diff, PR, Token, ACP, code, paths or raw Agent process when English is clearer;
-6. delete the same path's old M2, Provider-first and weak Activity dual tracks after the replacement is proven. Preserve important UI surfaces such as Git, PR, Kanban and Automations even if later milestones connect their full runtime;
-7. add actual adoptions to root `source-adoptions` with exact rights and attribution in the same commit; move only affected claims to `candidate` with commands, artifacts and SHA. Never self-certify Campaign completion.
+3. before full source import, keep the resident identity/tree doctrine and README-driven path/name/source/generated-output checker green; the first adoption commit must include identity/structure scan evidence and may not preserve a donor path mirror;
+4. do not rerun M1 or protect the current M2 skeleton. Start from `execution-brief.md §8`: import the complete fixed UI source, preserve provenance/legal text, and first restore its runnable baseline;
+5. in one vertical path establish locale resources, professional Chinese/English terminology, managed ACP Session, raw-evidence/typed-fact/projection/view-model layers, one message/tool/permission/output, inline progress, expanded Diff/Terminal/File, cancel/failure/restart and honest enforcement level;
+6. keep the default UI engine-neutral; only reveal real Engine names in user choice, source, diagnostics, permission truth and legal surfaces. Do not mechanically translate Thinking/Planning, Git, Diff, PR, Token, ACP, code, paths or raw Agent process when English is clearer;
+7. delete the same path's old M2, Provider-first and weak Activity dual tracks after the replacement is proven. Preserve important UI surfaces such as Git, PR, Kanban and Automations even if later milestones connect their full runtime;
+8. add actual adoptions to root `source-adoptions` with exact rights and attribution in the same commit; move only affected claims to `candidate` with commands, artifacts and SHA. Never self-certify Campaign completion.
 
 Do not begin by redesigning the approved UI from screenshots, protecting sunk cost, exposing the bundled Engine as product identity, routing ACP wire data into React, creating a generic `payload: unknown` state bus, building a speculative public SDK, implementing every provider, turning Remote into a product mode, or defaulting to heavy retrieval.
 

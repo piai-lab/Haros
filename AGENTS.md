@@ -26,14 +26,15 @@
 - 下一唯一入口是根 README 与 `execution-brief.md` 定义的 M2 接管 slice：固定完整源码树导入并保持可运行，先建立中英双语地基、ACP ingress 和强类型运行投影，再按裁决换脑、重命名、删除和重构；
 - 不手工挑拣组件以致遗失隐性行为，也不因为物理上搬入就默认保留 donor 的 Agent loop、状态权威、Provider ontology 或弱类型 Activity payload。
 
-## 身份洁净
+## 身份、结构与冰山
 
-- 外部产品、供应商、前代产品和模型家族名称只允许出现在根 `README.md` 的披露区、法定材料，以及由用户选择或外部协议动态提供名称的必要集成 UI/测试边界；
-- 法定版权和许可证原文只允许进入 `LICENSES/`；
-- 其他源码、注释、测试、fixture、配置、schema、事件、日志、错误、UI 文案和说明文件必须保持零外部产品身份；
-- 外部来源在研究附件中只用根 README 定义的中性代号；
-- 中性代号不得进入生产 namespace；
-- 运行时显示名必须来自用户配置或外部数据，不能成为静态产品本体。
+- 外部产品、供应商、前代产品、模型、作者和 donor 身份只允许进入根 `README.md` 的来源/致谢/固定 revision/权利披露、`LICENSES/` 法定原文，以及用户主动进入的真实 Engine/Package 选择、来源、诊断和权限真相边界；动态显示名必须来自外部数据。
+- 生产源码、路径、目录、文件名、package、类型、事件、schema、持久字段、IPC、注释、测试、fixture、snapshot、日志、错误、UI 文案、普通说明和可控生成物保持零无关身份；研究代号不得进入生产 namespace。
+- 大规模搬入前先扩展并通过 identity/structure checker。完整固定源码树只是不遗漏隐性行为的临时物理工位；首个 adoption commit 前必须恢复可运行、完成稳定职责重命名和结构净化，并同时留下 source、path/name、generated-output 与 structure scan 证据。
+- 文件树必须少、浅、单责；名称必须短、精确、耐久。禁止 donor 路径镜像、品牌缩写、研究题目、一次 Goal/波次/编号、`legacy`、`misc`、`common`、`utils`、`manager`、`helper`、`adapter2`、`new-ui`、`temp-migration` 等进入生产树。自动规则以根 README 的机器策略为下限。
+- 坏命名直接重命名并删除旧名；除非已证明存在外部公共兼容义务，不留 alias、wrapper、deprecated 双轨或迁移考古。
+- 洁净不能洗白来源：实际采用时在同一提交更新根 README 披露与 `LICENSES/`，受控 fork 保留上游历史和作者权利。
+- 冰山法则是实现门：日常表面克制、精确、丝滑；每个可见状态、进度、权限、恢复和动效都必须由水下唯一权威、writer admission、回执、失败语义、性能和跨平台证据支撑。不得用字符串猜测、假进度或漂亮模拟代替真实能力，也不得把内部复杂度倾倒给用户。
 
 ## 工程判断
 

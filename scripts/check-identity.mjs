@@ -1,21 +1,33 @@
 #!/usr/bin/env node
 
 import { spawnSync } from "node:child_process";
+import { readFile, readdir, stat } from "node:fs/promises";
 import path from "node:path";
 import process from "node:process";
 import { fileURLToPath } from "node:url";
-import { scanIdentity } from "./identity.mjs";
+import { parseStructurePolicy, scanIdentity } from "./identity.mjs";
+
+const WALK_EXCLUSIONS = new Set([".git", ".pnpm", ".yarn", "node_modules"]);
 
 function parseArguments(argv) {
   const runtimeFixtures = [];
+  const generatedRoots = [];
   for (let index = 0; index < argv.length; index += 1) {
-    if (argv[index] !== "--runtime-fixture" || !argv[index + 1]) {
+    if (argv[index] === "--runtime-fixture" && argv[index + 1]) {
+      runtimeFixtures.push(argv[index + 1]);
+      index += 1;
+      continue;
+    }
+    if (argv[index] === "--generated-root" && argv[index + 1]) {
+      generatedRoots.push(argv[index + 1]);
+      index += 1;
+      continue;
+    }
+    {
       throw new Error(`unknown or incomplete argument: ${argv[index]}`);
     }
-    runtimeFixtures.push(argv[index + 1]);
-    index += 1;
   }
-  return runtimeFixtures;
+  return { generatedRoots, runtimeFixtures };
 }
 
 function candidateFiles(root) {
@@ -29,13 +41,75 @@ function candidateFiles(root) {
   return [...new Set(result.stdout.split("\0").filter(Boolean))];
 }
 
+function withinRoot(root, candidate) {
+  const relative = path.relative(root, candidate);
+  return relative !== "" && !relative.startsWith("..") && !path.isAbsolute(relative);
+}
+
+async function collectFiles(root, directory, files) {
+  for (const entry of await readdir(directory, { withFileTypes: true })) {
+    const absolute = path.join(directory, entry.name);
+    if (entry.isDirectory()) {
+      await collectFiles(root, absolute, files);
+    } else if (entry.isFile()) {
+      files.add(path.relative(root, absolute).split(path.sep).join("/"));
+    }
+  }
+}
+
+async function discoverGeneratedRoots(root, directoryNames, explicitRoots) {
+  const roots = new Set();
+  const generatedNames = new Set(directoryNames);
+
+  for (const requested of explicitRoots) {
+    const absolute = path.resolve(root, requested);
+    if (!withinRoot(root, absolute) || !(await stat(absolute)).isDirectory()) {
+      throw new Error(`generated root must be an existing directory inside the repository: ${requested}`);
+    }
+    roots.add(absolute);
+  }
+
+  async function walk(directory) {
+    for (const entry of await readdir(directory, { withFileTypes: true })) {
+      if (!entry.isDirectory() || WALK_EXCLUSIONS.has(entry.name)) continue;
+      const absolute = path.join(directory, entry.name);
+      if (generatedNames.has(entry.name)) {
+        roots.add(absolute);
+      } else {
+        await walk(absolute);
+      }
+    }
+  }
+
+  await walk(root);
+  return [...roots];
+}
+
+export async function discoverGeneratedFiles(root, policy, explicitRoots = []) {
+  const files = new Set();
+  const roots = await discoverGeneratedRoots(
+    root,
+    policy.generatedDirectoryNames,
+    explicitRoots,
+  );
+  for (const directory of roots) {
+    await collectFiles(root, directory, files);
+  }
+  return [...files].sort();
+}
+
 export async function main(argv = process.argv.slice(2)) {
   const root = path.resolve(path.dirname(fileURLToPath(import.meta.url)), "..");
-  const runtimeFixtures = parseArguments(argv);
-  const files = candidateFiles(root);
+  const { generatedRoots, runtimeFixtures } = parseArguments(argv);
+  const readme = await readFile(path.join(root, "README.md"), "utf8");
+  const structurePolicy = parseStructurePolicy(readme);
+  const generated = await discoverGeneratedFiles(root, structurePolicy, generatedRoots);
+  const generatedSet = new Set(generated);
+  const source = candidateFiles(root).filter((file) => !generatedSet.has(file));
   const result = await scanIdentity({
     root,
-    trackedFiles: files,
+    sourceFiles: source,
+    generatedFiles: generated,
     runtimeFixtures,
   });
 
@@ -51,7 +125,9 @@ export async function main(argv = process.argv.slice(2)) {
   }
 
   process.stdout.write(
-    `identity check passed: ${files.length} candidate file(s), ${result.rules.length} rule(s)\n`,
+    `identity/structure check passed: ${source.length} source file(s), ` +
+      `${generated.length} generated file(s), ${result.rules.length} identity rule(s), ` +
+      `max depth ${result.structurePolicy.maxDirectoryDepth}\n`,
   );
   return 0;
 }

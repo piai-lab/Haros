@@ -108,6 +108,33 @@ ollama
 lm-studio
 ```
 
+完整源码树导入只是未提交的接管工位，不获得永久目录结构豁免。固定来源必须先在隔离环境恢复可运行并留下可复验证据；进入首个 adoption commit 以前，作者区必须完成结构净化、稳定职责重命名、宿主本体删除和重复实现清除。不能把 donor 路径镜像、品牌缩写、研究代号、一次 Goal/波次/验收编号或迁移阶段写进生产 namespace，也不能用 alias、wrapper 或旧目录保留迁移考古。来源、revision、权利、主要删改和致谢仍在本 README 与 `LICENSES/` 如实保留；洁净不是洗白。
+
+文件树遵守可执行的最小下限：顶层作者目录受控；作者源码目录深度有硬上限；目录和文件名不得使用垃圾桶、迁移态或含混职责 token。自动门只是下限，不替代设计审查：即使通过检查，目录仍须少、层级浅、职责单一，名称须短、精确且在研究题目、供应商、模型和实现路线改变后继续准确。首个实际移植物提交必须同时给出 source、path/name、generated-output 和 structure scan 证据。
+
+```structure-policy
+{
+  "authorRoots": ["apps", "packages", "scripts", "test", "missions", "LICENSES"],
+  "generatedDirectoryNames": ["build", "coverage", "dist", "out", "release"],
+  "maxDirectoryDepth": 7,
+  "forbiddenNameTokens": [
+    "adapter2",
+    "common",
+    "helper",
+    "legacy",
+    "manager",
+    "misc",
+    "migration",
+    "new",
+    "old",
+    "temp",
+    "utils"
+  ]
+}
+```
+
+`check:identity` 从本 README 同时读取 denylist 与结构策略，扫描 Git 跟踪/未忽略的作者输入、完整相对路径和源码文本，并自动发现上述常见生成目录；非标准构建目录必须通过显式 generated-root 进入同一门。生成输出不能因被 `.gitignore` 忽略而逃逸。运行时外部名称只允许通过显式 fixture 注入测试，不能成为静态默认值。
+
 调度器、provider 和模型的真实名称可由用户配置或外部探测动态进入 UI。生产源码使用协议与职责名，例如 `batch-scheduler`、`chat-completions`、`messages`、`local-model`；不要把动态显示名写回 schema 枚举。
 
 ## 3. 一句话产品定义
