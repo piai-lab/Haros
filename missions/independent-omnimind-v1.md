@@ -342,7 +342,7 @@ Exit only when the Done formula is true.
 
 | ID | Required claim | Proof type | Status | Evidence | SHA |
 | --- | --- | --- | --- | --- | --- |
-| F-01 | Product-authored paths, names, source text and controllable generated output contain no forbidden external identity outside the root disclosure and legal texts | deterministic source/path/generated scan | open | Scope strengthened before full source takeover; pre-adoption checker evidence is required on the new implementation SHA | — |
+| F-01 | Product-authored paths, names, source text and controllable generated output contain no forbidden external identity outside the root disclosure and legal texts | deterministic source/path/generated scan | candidate | On `48c2fa919d2ea29702fa4b59971a67004945eba0`, `npm run quality` passed in a fresh local clone: 25 source files, 0 current generated files, 26 README-derived identity rules and the README-derived max depth 7; 31/31 tests include separate path/source/generated-output findings, automatic build-root discovery outside dependency trees, runtime-fixture fencing, forbidden-name/root/depth failures and source-inventory validation. The first adoption commit must repeat this gate against its actual generated output. | `48c2fa919d2ea29702fa4b59971a67004945eba0` |
 | F-02 | Every adopted source has accurate revision, path, rights, mode, divergence and update policy in the root disclosure | deterministic inventory + legal review | candidate | `npm run check:sources` validated the root `source-adoptions` inventory; result: 0 adopted sources, so no legal text is currently required; malformed/missing-rights paths are covered by the quality tests | `99192d8fbfad41c0e6fc3fb36291f1ec9a242531` |
 | F-03 | Durable domain state contains only necessary product facts with one authority per fact | schema review + persistence tests + fresh evaluator | open | — | — |
 | F-04 | Engine transcript is not duplicated and Thread/Turn/Attempt/Action correlations survive restart and branch | recovery and corruption tests | open | — | — |
@@ -383,11 +383,14 @@ Append concise milestone evidence here. Do not create separate reports.
 
 Implementation candidate: `99192d8fbfad41c0e6fc3fb36291f1ec9a242531`
 
+Strengthened pre-adoption gate: `48c2fa919d2ea29702fa4b59971a67004945eba0`
+
 - `npm run quality`: identity scan passed for 11 candidate files and 26 README-derived rules; source inventory passed with 0 adopted sources; 4 tests passed.
 - Fresh checkout proof: `git clone --local --no-hardlinks . <temporary>/repo` followed by `npm --prefix <temporary>/repo run quality`; the clone resolved to the implementation candidate and the same gate passed.
 - The checker scans Git tracked and unignored candidate files, covers filenames and text, reports author versus generated/vendor metadata separately, and permits runtime-origin identity only through an explicit fixture argument.
 - The root README now owns the machine-readable adoption inventory. Adopted source entries must carry revision, paths, rights, mode, changes, update policy and tracked legal texts before the gate passes.
 - No product implementation, donor code, compatibility path or empty framework entered the repository.
+- `npm run quality` on the strengthened gate passed in the working repository and a fresh no-hardlink local clone: 25 source files, 0 current generated files, 26 identity rules, max author depth 7 and 31/31 tests. The checker now separates path, source, generated-path and generated-output findings; discovers configured build roots even when ordinary source enumeration would omit them; excludes dependency trees; and enforces README-owned author roots, depth and forbidden naming tokens.
 
 Drift review: aligned
 
@@ -399,7 +402,7 @@ Performance: one Git candidate-file enumeration and one read per scanned file; n
 
 Visual/product quality: no user-visible surface was introduced in this milestone.
 
-Material correction, if any: the M0 exit text previously included F-03 even though M2 owns the first durable domain core. It now matches the milestone boundaries and leaves F-03 open until persistence evidence exists.
+Material correction, if any: the M0 exit text previously included F-03 even though M2 owns the first durable domain core. It now matches the milestone boundaries and leaves F-03 open until persistence evidence exists. Before full UI source takeover, the founding constraint was strengthened from content/filename identity scanning to resident identity plus tree cleanliness over source, path/name and generated output; F-21 remains open until the adopted production tree and visible system receive their own review.
 
 ### M1
 
