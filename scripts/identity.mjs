@@ -1,12 +1,15 @@
 import { readFile } from "node:fs/promises";
 import path from "node:path";
+import { pathContains } from "./sources.mjs";
 
 const LETTER_OR_NUMBER = "[\\p{L}\\p{N}]";
 const DISCLOSURE_PATH = "README.md";
 const LEGAL_PREFIX = "LICENSES/";
+const RESEARCH_PREFIX = "research/";
 
 const REQUIRED_STRUCTURE_FIELDS = [
   "authorRoots",
+  "toolRoots",
   "generatedDirectoryNames",
   "maxDirectoryDepth",
   "forbiddenNameTokens",
@@ -43,7 +46,7 @@ export function parseStructurePolicy(readme) {
     }
   }
 
-  for (const field of ["authorRoots", "generatedDirectoryNames", "forbiddenNameTokens"]) {
+  for (const field of ["authorRoots", "toolRoots", "generatedDirectoryNames", "forbiddenNameTokens"]) {
     const values = policy[field];
     if (
       !Array.isArray(values) ||
@@ -72,9 +75,13 @@ export function compileRule(rule) {
   return new RegExp(`(?<!${LETTER_OR_NUMBER})${body}(?!${LETTER_OR_NUMBER})`, "giu");
 }
 
-export function isDisclosurePath(relativePath) {
+export function isIdentityEvidencePath(relativePath) {
   const portable = relativePath.split(path.sep).join("/");
-  return portable === DISCLOSURE_PATH || portable.startsWith(LEGAL_PREFIX);
+  return (
+    portable === DISCLOSURE_PATH ||
+    portable.startsWith(LEGAL_PREFIX) ||
+    portable.startsWith(RESEARCH_PREFIX)
+  );
 }
 
 export function classifyPath(relativePath) {
@@ -98,29 +105,42 @@ function nameTokens(segment) {
     .map((token) => token.toLowerCase());
 }
 
-function structureFinding(relativePath, rule) {
+function structureFinding(relativePath, rule, category = "author") {
   return {
     path: relativePath,
     surface: "structure",
-    category: "author",
+    category,
     rule,
     line: 1,
     column: 1,
   };
 }
 
-export function scanStructure(paths, policy) {
+export function scanStructure(paths, policy, { category = "author", exactRoots = [] } = {}) {
   const findings = [];
   const allowedRoots = new Set(policy.authorRoots);
+  const toolRoots = policy.toolRoots.map(portablePath);
   const forbiddenTokens = new Set(policy.forbiddenNameTokens.map((token) => token.toLowerCase()));
 
   for (const relativePath of paths) {
     const portable = portablePath(relativePath);
     const segments = portable.split("/").filter(Boolean);
     if (segments.length === 0) continue;
+    if (
+      exactRoots.some((exactRoot) => pathContains(exactRoot, portable)) ||
+      toolRoots.some((toolRoot) => pathContains(toolRoot, portable))
+    ) {
+      continue;
+    }
 
     if (segments.length > 1 && !allowedRoots.has(segments[0])) {
-      findings.push(structureFinding(portable, `unapproved author root ${JSON.stringify(segments[0])}`));
+      findings.push(
+        structureFinding(
+          portable,
+          `unapproved author root ${JSON.stringify(segments[0])}`,
+          category,
+        ),
+      );
     }
 
     const directoryDepth = segments.length - 1;
@@ -129,6 +149,7 @@ export function scanStructure(paths, policy) {
         structureFinding(
           portable,
           `directory depth ${directoryDepth} exceeds ${policy.maxDirectoryDepth}`,
+          category,
         ),
       );
     }
@@ -136,7 +157,9 @@ export function scanStructure(paths, policy) {
     for (const segment of segments) {
       const rejected = nameTokens(segment).find((token) => forbiddenTokens.has(token));
       if (rejected) {
-        findings.push(structureFinding(portable, `forbidden name token ${JSON.stringify(rejected)}`));
+        findings.push(
+          structureFinding(portable, `forbidden name token ${JSON.stringify(rejected)}`, category),
+        );
         break;
       }
     }
@@ -174,16 +197,37 @@ export async function scanIdentity({
   sourceFiles = trackedFiles,
   generatedFiles = [],
   runtimeFixtures = [],
+  exactRoots = [],
   read = readFile,
 }) {
   const readme = await read(path.join(root, DISCLOSURE_PATH), "utf8");
   const rules = parseDenylist(readme);
   const structurePolicy = parseStructurePolicy(readme);
   const allowedRuntime = new Set(runtimeFixtures.map((file) => path.resolve(root, file)));
-  const findings = scanStructure(sourceFiles, structurePolicy);
+  const toolRoots = structurePolicy.toolRoots.map(portablePath);
+  const findings = [...scanStructure(sourceFiles, structurePolicy, { exactRoots })];
+
+  for (const relativePath of generatedFiles) {
+    const portable = portablePath(relativePath);
+    const exempt =
+      exactRoots.some((exactRoot) => pathContains(exactRoot, portable)) ||
+      toolRoots.some((toolRoot) => pathContains(toolRoot, portable));
+    if (!exempt && portable.startsWith("vendor/")) {
+      findings.push(
+        structureFinding(portable, "undeclared vendor generated content", "generated"),
+      );
+    }
+  }
 
   for (const relativePath of sourceFiles) {
-    if (isDisclosurePath(relativePath)) continue;
+    const portable = portablePath(relativePath);
+    if (
+      exactRoots.some((exactRoot) => pathContains(exactRoot, portable)) ||
+      toolRoots.some((toolRoot) => pathContains(toolRoot, portable))
+    ) {
+      continue;
+    }
+    if (isIdentityEvidencePath(relativePath)) continue;
     const absolutePath = path.resolve(root, relativePath);
     if (allowedRuntime.has(absolutePath)) continue;
 
@@ -195,6 +239,13 @@ export async function scanIdentity({
   }
 
   for (const relativePath of generatedFiles) {
+    const portable = portablePath(relativePath);
+    if (
+      exactRoots.some((exactRoot) => pathContains(exactRoot, portable)) ||
+      toolRoots.some((toolRoot) => pathContains(toolRoot, portable))
+    ) {
+      continue;
+    }
     const absolutePath = path.resolve(root, relativePath);
     findings.push(
       ...inspectText(relativePath, relativePath, rules, "generated-path").map((finding) => ({

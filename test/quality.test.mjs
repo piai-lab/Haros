@@ -1,13 +1,19 @@
 import assert from "node:assert/strict";
 import { spawnSync } from "node:child_process";
-import { mkdtemp, mkdir, unlink, writeFile } from "node:fs/promises";
+import { mkdtemp, mkdir, rm, unlink, writeFile } from "node:fs/promises";
 import { tmpdir } from "node:os";
 import path from "node:path";
 import test from "node:test";
 import { fileURLToPath } from "node:url";
 import { discoverGeneratedFiles } from "../scripts/check-identity.mjs";
 import { parseDenylist, parseStructurePolicy, scanIdentity } from "../scripts/identity.mjs";
-import { parseSourceAdoptions, validateSourceAdoptions } from "../scripts/sources.mjs";
+import {
+  ignoredVendorSourceFiles,
+  parseSourceAdoptions,
+  trackedRepositoryFiles,
+  validateSourceAdoptions,
+  validateSourceRepository,
+} from "../scripts/sources.mjs";
 import { repositoryFiles } from "../scripts/repository-files.mjs";
 
 const root = path.resolve(path.dirname(fileURLToPath(import.meta.url)), "..");
@@ -20,6 +26,55 @@ const structurePolicyBlock = governingReadme.match(/```structure-policy\s*\n[\s\
 
 function policyReadme(rule) {
   return `\`\`\`identity-denylist\n${rule}\n\`\`\`\n${structurePolicyBlock}\n`;
+}
+
+function runGit(repositoryRoot, args) {
+  const result = spawnSync("git", args, { cwd: repositoryRoot, encoding: "utf8" });
+  assert.equal(result.status, 0, result.stderr);
+  return result.stdout.trim();
+}
+
+function sourceAdoption(overrides = {}) {
+  return {
+    id: "source-one",
+    url: "https://example.com/source.git",
+    revision: "a".repeat(40),
+    paths: ["vendor/source"],
+    rights: "MIT",
+    mode: "adapt",
+    changes: "none",
+    updatePolicy: "manual",
+    licenseFiles: ["LICENSES/source.txt"],
+    ...overrides,
+  };
+}
+
+async function exactSourceRepository(t) {
+  const temporaryRoot = await mkdtemp(path.join(tmpdir(), "exact-source-"));
+  t.after(() => rm(temporaryRoot, { force: true, recursive: true }));
+  await mkdir(path.join(temporaryRoot, "vendor", "source"), { recursive: true });
+  await mkdir(path.join(temporaryRoot, "LICENSES"));
+  await writeFile(path.join(temporaryRoot, "vendor", "source", "value.txt"), "fixed\n");
+  await writeFile(path.join(temporaryRoot, "LICENSES", "source.txt"), "MIT\n");
+  runGit(temporaryRoot, ["init", "--quiet"]);
+  runGit(temporaryRoot, ["add", "."]);
+  runGit(temporaryRoot, [
+    "-c",
+    "user.name=Quality Fixture",
+    "-c",
+    "user.email=quality@localhost",
+    "commit",
+    "--quiet",
+    "-m",
+    "fixed source",
+  ]);
+  const commit = runGit(temporaryRoot, ["rev-parse", "HEAD"]);
+  const tree = runGit(temporaryRoot, ["rev-parse", "HEAD:vendor/source"]);
+  const adoption = sourceAdoption({
+    provenance: { repositoryCommit: commit, trees: { "vendor/source": tree } },
+  });
+  const inventoryFiles = ["LICENSES/source.txt", "vendor/source/value.txt"];
+  return { adoption, commit, inventoryFiles, temporaryRoot, tree };
 }
 
 test("identity scan detects separated variants without printing source text", async () => {
@@ -67,6 +122,23 @@ test("identity scan permits only explicitly injected runtime fixtures", async ()
   assert.equal(allowed.findings.length, 0);
 });
 
+test("identity scan permits auditable external identities in disclosure, legal, and research evidence", async () => {
+  const temporaryRoot = await mkdtemp(path.join(tmpdir(), "identity-research-"));
+  const rule = rules[0];
+  await writeFile(path.join(temporaryRoot, "README.md"), policyReadme(rule));
+  await mkdir(path.join(temporaryRoot, "LICENSES"));
+  await mkdir(path.join(temporaryRoot, "research"));
+  await writeFile(path.join(temporaryRoot, "LICENSES", "source.txt"), `${rule}\n`);
+  await writeFile(path.join(temporaryRoot, "research", "source-review.md"), `${rule}\n`);
+
+  const result = await scanIdentity({
+    root: temporaryRoot,
+    trackedFiles: ["README.md", "LICENSES/source.txt", "research/source-review.md"],
+  });
+
+  assert.equal(result.findings.length, 0);
+});
+
 test("identity scan covers paths, source text, and generated output separately", async () => {
   const temporaryRoot = await mkdtemp(path.join(tmpdir(), "identity-surfaces-"));
   const rule = rules[0];
@@ -93,13 +165,22 @@ test("generated output discovery includes ignored-style build roots but excludes
   const temporaryRoot = await mkdtemp(path.join(tmpdir(), "generated-surface-"));
   await mkdir(path.join(temporaryRoot, "apps", "desktop", "dist"), { recursive: true });
   await mkdir(path.join(temporaryRoot, "node_modules", "package", "dist"), { recursive: true });
+  await mkdir(path.join(temporaryRoot, "vendor", "ui", "dist"), { recursive: true });
+  await mkdir(path.join(temporaryRoot, ".omp-flow", "dist"), { recursive: true });
   await writeFile(path.join(temporaryRoot, "apps", "desktop", "dist", "bundle.js"), "export {};\n");
   await writeFile(
     path.join(temporaryRoot, "node_modules", "package", "dist", "dependency.js"),
     "export {};\n",
   );
+  await writeFile(path.join(temporaryRoot, "vendor", "ui", "dist", "bundle.js"), "export {};\n");
+  await writeFile(path.join(temporaryRoot, ".omp-flow", "dist", "bundle.js"), "export {};\n");
 
-  const generated = await discoverGeneratedFiles(temporaryRoot, structurePolicy);
+  const generated = await discoverGeneratedFiles(
+    temporaryRoot,
+    structurePolicy,
+    [],
+    ["vendor/ui", ".omp-flow"],
+  );
 
   assert.deepEqual(generated, ["apps/desktop/dist/bundle.js"]);
 });
@@ -128,6 +209,24 @@ test("structure policy rejects garbage containers and excessive nesting", async 
   assert.ok(structureRules.includes('unapproved author root "foreign"'));
 });
 
+test("structure policy keeps installed workflow tooling outside production naming rules", async () => {
+  const temporaryRoot = await mkdtemp(path.join(tmpdir(), "structure-tooling-"));
+  const rule = rules[0];
+  await writeFile(path.join(temporaryRoot, "README.md"), policyReadme(rule));
+  await mkdir(path.join(temporaryRoot, ".omp-flow", "scripts", "common"), { recursive: true });
+  await writeFile(
+    path.join(temporaryRoot, ".omp-flow", "scripts", "common", "runtime.py"),
+    "pass\n",
+  );
+
+  const result = await scanIdentity({
+    root: temporaryRoot,
+    sourceFiles: ["README.md", ".omp-flow/scripts/common/runtime.py"],
+  });
+
+  assert.equal(result.findings.length, 0);
+});
+
 test("source inventory accepts an empty adoption set", () => {
   const document = `\`\`\`source-adoptions\n{"adopted":[]}\n\`\`\``;
   const adoptions = parseSourceAdoptions(document);
@@ -139,20 +238,13 @@ test("source inventory requires complete adoption and tracked legal text", () =>
   const errors = validateSourceAdoptions([{ id: "source-one", licenseFiles: ["outside.txt"] }], []);
   assert.ok(errors.some((error) => error.includes("revision")));
   assert.ok(errors.some((error) => error.includes("LICENSES/")));
+  assert.ok(errors.some((error) => error.includes("rights")));
+  assert.ok(errors.some((error) => error.includes("changes")));
+  assert.ok(errors.some((error) => error.includes("updatePolicy")));
 });
 
 test("source inventory validates exact repository paths, mode, URL, and legal text", () => {
-  const adoption = {
-    id: "source-one",
-    url: "https://example.com/source.git",
-    revision: "a".repeat(40),
-    paths: ["vendor/source"],
-    rights: "MIT",
-    mode: "adapt",
-    changes: "none",
-    updatePolicy: "manual",
-    licenseFiles: ["LICENSES/source.txt"],
-  };
+  const adoption = sourceAdoption();
   const tracked = ["vendor/source/index.ts", "LICENSES/source.txt"];
 
   assert.deepEqual(validateSourceAdoptions([adoption], tracked), []);
@@ -167,6 +259,459 @@ test("source inventory validates exact repository paths, mode, URL, and legal te
       error.includes("no tracked files"),
     ),
   );
+  assert.ok(
+    validateSourceAdoptions([{ ...adoption, paths: ["."] }], tracked).some((error) =>
+      error.includes("invalid adopted path"),
+    ),
+  );
+});
+
+test("real exact-source entry rejects empty-host HTTPS and moving revisions before privilege", () => {
+  const inventoryFiles = repositoryFiles(root);
+  const trackedFiles = trackedRepositoryFiles(root);
+  const [adoption] = parseSourceAdoptions(governingReadme);
+  const cases = [
+    {
+      adoption: { ...adoption, url: "https://" },
+      message: "parsed https URL with a host",
+    },
+    {
+      adoption: { ...adoption, revision: "main" },
+      message: "revision must be immutable",
+    },
+  ];
+
+  for (const entry of cases) {
+    const result = validateSourceRepository({
+      root,
+      adoptions: [entry.adoption],
+      trackedFiles,
+      inventoryFiles,
+      toolRoots: structurePolicy.toolRoots,
+    });
+    assert.deepEqual(result.exactRoots, []);
+    assert.ok(result.errors.some((error) => error.includes(entry.message)));
+  }
+});
+
+test("source inventory requires complete path-bound provenance metadata", () => {
+  const tracked = ["vendor/source/index.ts", "LICENSES/source.txt"];
+  const valid = sourceAdoption({
+    provenance: {
+      repositoryCommit: "b".repeat(40),
+      trees: { "vendor/source": "c".repeat(40) },
+    },
+  });
+  assert.deepEqual(validateSourceAdoptions([valid], tracked), []);
+
+  const incomplete = {
+    ...valid,
+    provenance: { repositoryCommit: "short", trees: { "vendor/other": "bad" } },
+  };
+  const errors = validateSourceAdoptions([incomplete], tracked);
+  assert.ok(errors.some((error) => error.includes("repositoryCommit")));
+  assert.ok(errors.some((error) => error.includes("missing adopted path vendor/source")));
+  assert.ok(errors.some((error) => error.includes("not adopted vendor/other")));
+
+  const duplicateTreePath = {
+    ...valid,
+    provenance: {
+      ...valid.provenance,
+      trees: {
+        "vendor/source": "c".repeat(40),
+        "vendor\\source": "c".repeat(40),
+      },
+    },
+  };
+  assert.ok(
+    validateSourceAdoptions([duplicateTreePath], tracked).some((error) =>
+      error.includes("duplicate provenance tree path vendor/source"),
+    ),
+  );
+});
+
+test("exact provenance roots and tool roots must be ancestry-disjoint", () => {
+  const adoption = sourceAdoption({
+    provenance: {
+      repositoryCommit: "b".repeat(40),
+      trees: { "vendor/source": "c".repeat(40) },
+    },
+  });
+  const tracked = ["vendor/source/index.ts", "LICENSES/source.txt"];
+
+  const equal = validateSourceAdoptions([adoption], tracked, { toolRoots: ["vendor/source"] });
+  const exactBelowTool = validateSourceAdoptions([adoption], tracked, { toolRoots: ["vendor"] });
+  const toolBelowExact = validateSourceAdoptions([adoption], tracked, {
+    toolRoots: ["vendor/source/tools"],
+  });
+  const disjoint = validateSourceAdoptions([adoption], tracked, { toolRoots: [".omp-flow"] });
+
+  assert.ok(equal.some((error) => error.includes("vendor/source and vendor/source")));
+  assert.ok(exactBelowTool.some((error) => error.includes("vendor/source and vendor")));
+  assert.ok(toolBelowExact.some((error) => error.includes("vendor/source and vendor/source/tools")));
+  assert.deepEqual(disjoint, []);
+});
+
+test("ordinary adoption paths and tool roots reject equality and both ancestry directions", async (t) => {
+  const fixture = await exactSourceRepository(t);
+  const ordinaryAdoption = { ...fixture.adoption };
+  delete ordinaryAdoption.provenance;
+  const cases = [
+    ["vendor/source", "vendor/source"],
+    ["vendor", "vendor/source"],
+    ["vendor/source/tools", "vendor/source"],
+  ];
+
+  for (const [toolRoot, adoptedPath] of cases) {
+    const adoption = { ...ordinaryAdoption, paths: [adoptedPath] };
+    const trackedFiles =
+      adoptedPath === "vendor/source"
+        ? fixture.inventoryFiles
+        : [...fixture.inventoryFiles, `${adoptedPath}/declared.txt`];
+    const result = validateSourceRepository({
+      root: fixture.temporaryRoot,
+      adoptions: [adoption],
+      trackedFiles,
+      inventoryFiles: trackedFiles,
+      toolRoots: [toolRoot],
+    });
+
+    assert.deepEqual(result.exactRoots, []);
+    assert.ok(
+      result.errors.some(
+        (error) =>
+          error.includes("adopted source path and tool root overlap") &&
+          error.includes(adoptedPath) &&
+          error.includes(toolRoot),
+      ),
+    );
+  }
+});
+
+test("exact provenance roots cannot duplicate, overlap, or nest", () => {
+  const first = sourceAdoption({
+    paths: ["vendor/source", "vendor/source/nested"],
+    provenance: {
+      repositoryCommit: "b".repeat(40),
+      trees: {
+        "vendor/source": "c".repeat(40),
+        "vendor/source/nested": "d".repeat(40),
+      },
+    },
+  });
+  const second = sourceAdoption({
+    id: "source-two",
+    provenance: {
+      repositoryCommit: "b".repeat(40),
+      trees: { "vendor/source": "c".repeat(40) },
+    },
+  });
+  const tracked = [
+    "vendor/source/index.ts",
+    "vendor/source/nested/index.ts",
+    "LICENSES/source.txt",
+  ];
+  const errors = validateSourceAdoptions([first, second], tracked, { toolRoots: [".omp-flow"] });
+
+  assert.ok(errors.filter((error) => error.includes("exact provenance roots overlap")).length >= 2);
+
+  const disjoint = sourceAdoption({
+    id: "source-three",
+    paths: ["vendor/other"],
+    provenance: {
+      repositoryCommit: "b".repeat(40),
+      trees: { "vendor/other": "e".repeat(40) },
+    },
+  });
+  assert.deepEqual(
+    validateSourceAdoptions([second, disjoint], [...tracked, "vendor/other/index.ts"], {
+      toolRoots: [".omp-flow"],
+    }),
+    [],
+  );
+});
+
+test("exact provenance validation detects working modification, addition, and deletion", async (t) => {
+  const fixture = await exactSourceRepository(t);
+  const validate = () =>
+    validateSourceRepository({
+      root: fixture.temporaryRoot,
+      adoptions: [fixture.adoption],
+      trackedFiles: fixture.inventoryFiles,
+      inventoryFiles: fixture.inventoryFiles,
+      toolRoots: [".omp-flow"],
+    });
+
+  assert.deepEqual(validate(), { errors: [], exactRoots: ["vendor/source"] });
+
+  const fixedFile = path.join(fixture.temporaryRoot, "vendor", "source", "value.txt");
+  await writeFile(fixedFile, "modified\n");
+  assert.ok(validate().errors.some((error) => error.includes('M "vendor/source/value.txt"')));
+  await writeFile(fixedFile, "fixed\n");
+
+  const addedFile = path.join(fixture.temporaryRoot, "vendor", "source", "added.txt");
+  await writeFile(addedFile, "added\n");
+  assert.ok(validate().errors.some((error) => error.includes('A "vendor/source/added.txt"')));
+  await unlink(addedFile);
+
+  await unlink(fixedFile);
+  assert.ok(validate().errors.some((error) => error.includes('D "vendor/source/value.txt"')));
+  await writeFile(fixedFile, "fixed\n");
+  assert.deepEqual(validate(), { errors: [], exactRoots: ["vendor/source"] });
+});
+
+test("exact provenance validation rejects candidate drift and missing Git objects", async (t) => {
+  const fixture = await exactSourceRepository(t);
+  await writeFile(
+    path.join(fixture.temporaryRoot, "vendor", "source", "value.txt"),
+    "next candidate\n",
+  );
+  runGit(fixture.temporaryRoot, ["add", "vendor/source/value.txt"]);
+  runGit(fixture.temporaryRoot, [
+    "-c",
+    "user.name=Quality Fixture",
+    "-c",
+    "user.email=quality@localhost",
+    "commit",
+    "--quiet",
+    "-m",
+    "candidate drift",
+  ]);
+
+  const drifted = validateSourceRepository({
+    root: fixture.temporaryRoot,
+    adoptions: [fixture.adoption],
+    trackedFiles: fixture.inventoryFiles,
+    inventoryFiles: fixture.inventoryFiles,
+    toolRoots: [".omp-flow"],
+  });
+  assert.ok(drifted.errors.some((error) => error.includes("candidate tree mismatch")));
+
+  const missingCommit = sourceAdoption({
+    provenance: {
+      repositoryCommit: "f".repeat(40),
+      trees: { "vendor/source": fixture.tree },
+    },
+  });
+  const missing = validateSourceRepository({
+    root: fixture.temporaryRoot,
+    adoptions: [missingCommit],
+    trackedFiles: fixture.inventoryFiles,
+    inventoryFiles: fixture.inventoryFiles,
+    toolRoots: [".omp-flow"],
+  });
+  assert.ok(missing.errors.some((error) => error.includes("missing provenance commit")));
+
+  const wrongBaselineTree = sourceAdoption({
+    provenance: {
+      repositoryCommit: fixture.commit,
+      trees: { "vendor/source": "e".repeat(40) },
+    },
+  });
+  const wrongTree = validateSourceRepository({
+    root: fixture.temporaryRoot,
+    adoptions: [wrongBaselineTree],
+    trackedFiles: fixture.inventoryFiles,
+    inventoryFiles: fixture.inventoryFiles,
+    toolRoots: [".omp-flow"],
+    candidate: fixture.commit,
+  });
+  assert.ok(wrongTree.errors.some((error) => error.includes("provenance tree mismatch")));
+
+  const missingPath = sourceAdoption({
+    paths: ["vendor/missing"],
+    provenance: {
+      repositoryCommit: fixture.commit,
+      trees: { "vendor/missing": fixture.tree },
+    },
+  });
+  const missingTree = validateSourceRepository({
+    root: fixture.temporaryRoot,
+    adoptions: [missingPath],
+    trackedFiles: ["LICENSES/source.txt", "vendor/missing/declared.txt"],
+    inventoryFiles: ["LICENSES/source.txt", "vendor/missing/declared.txt"],
+    toolRoots: [".omp-flow"],
+    candidate: fixture.commit,
+  });
+  assert.ok(missingTree.errors.some((error) => error.includes("provenance path is not a tree")));
+});
+
+test("vendor content without a complete exact declaration is rejected", async (t) => {
+  const fixture = await exactSourceRepository(t);
+  const unbound = sourceAdoption();
+  const result = validateSourceRepository({
+    root: fixture.temporaryRoot,
+    adoptions: [unbound],
+    trackedFiles: fixture.inventoryFiles,
+    inventoryFiles: [...fixture.inventoryFiles, "vendor/other/file.txt"],
+    toolRoots: [".omp-flow"],
+  });
+
+  assert.deepEqual(result.exactRoots, []);
+  assert.ok(result.errors.some((error) => error.includes("undeclared vendor content vendor/source")));
+  assert.ok(result.errors.some((error) => error.includes("undeclared vendor content vendor/other")));
+});
+
+test("source entry detects ignored vendor source while excluding first-level and nested dependency/build paths", async (t) => {
+  const temporaryRoot = await mkdtemp(path.join(tmpdir(), "ignored-vendor-source-"));
+  t.after(() => rm(temporaryRoot, { force: true, recursive: true }));
+  for (const relativeDirectory of [
+    "vendor/node_modules/package",
+    "vendor/.pnpm/package",
+    "vendor/.yarn/package",
+    "vendor/dist",
+  ]) {
+    await mkdir(path.join(temporaryRoot, relativeDirectory), { recursive: true });
+  }
+  await mkdir(path.join(temporaryRoot, "vendor", "other", "node_modules", "package"), {
+    recursive: true,
+  });
+  await mkdir(path.join(temporaryRoot, "vendor", "other", "dist"), { recursive: true });
+  await writeFile(
+    path.join(temporaryRoot, ".gitignore"),
+    "vendor/other/\nvendor/node_modules/\nvendor/.pnpm/\nvendor/.yarn/\nvendor/dist/\n",
+  );
+  await writeFile(path.join(temporaryRoot, "vendor", "other", "copied.js"), "export {};\n");
+  for (const relativeFile of [
+    "vendor/node_modules/package/index.js",
+    "vendor/.pnpm/package/index.js",
+    "vendor/.yarn/package/index.js",
+    "vendor/dist/bundle.js",
+  ]) {
+    await writeFile(path.join(temporaryRoot, relativeFile), "export {};\n");
+  }
+  await writeFile(
+    path.join(temporaryRoot, "vendor", "other", "node_modules", "package", "index.js"),
+    "export {};\n",
+  );
+  await writeFile(
+    path.join(temporaryRoot, "vendor", "other", "dist", "bundle.js"),
+    "export {};\n",
+  );
+  runGit(temporaryRoot, ["init", "--quiet"]);
+  runGit(temporaryRoot, ["add", ".gitignore"]);
+  runGit(temporaryRoot, [
+    "-c",
+    "user.name=Quality Fixture",
+    "-c",
+    "user.email=quality@localhost",
+    "commit",
+    "--quiet",
+    "-m",
+    "ignored vendor fixture",
+  ]);
+
+  const inventoryFiles = repositoryFiles(temporaryRoot);
+  const ignoredVendorFiles = ignoredVendorSourceFiles(temporaryRoot, ["dist"]);
+  assert.deepEqual(inventoryFiles, [".gitignore"]);
+  assert.deepEqual(ignoredVendorFiles, ["vendor/other/copied.js"]);
+
+  const generatedFiles = await discoverGeneratedFiles(
+    temporaryRoot,
+    { ...structurePolicy, generatedDirectoryNames: ["dist"] },
+  );
+  assert.deepEqual(generatedFiles, [
+    "vendor/dist/bundle.js",
+    "vendor/other/dist/bundle.js",
+  ]);
+
+  const result = validateSourceRepository({
+    root: temporaryRoot,
+    adoptions: [],
+    trackedFiles: trackedRepositoryFiles(temporaryRoot),
+    inventoryFiles,
+    ignoredVendorFiles,
+    toolRoots: [".omp-flow"],
+  });
+  assert.deepEqual(result.exactRoots, []);
+  assert.ok(
+    result.errors.some((error) =>
+      error.includes("undeclared vendor content vendor/other; observed path vendor/other/copied.js"),
+    ),
+  );
+});
+
+test("identity partitions exact, tool, evidence, author, and generated surfaces", async (t) => {
+  const temporaryRoot = await mkdtemp(path.join(tmpdir(), "identity-partitions-"));
+  t.after(() => rm(temporaryRoot, { force: true, recursive: true }));
+  const rule = rules[0];
+  await writeFile(path.join(temporaryRoot, "README.md"), policyReadme(rule));
+  const files = [
+    `vendor/source/${rule}.txt`,
+    `.omp-flow/${rule}.txt`,
+    `research/${rule}.md`,
+    `apps/${rule}.txt`,
+    `vendor/source/dist/${rule}.js`,
+    `.omp-flow/dist/${rule}.js`,
+    `apps/web/dist/${rule}.js`,
+  ];
+  for (const relativePath of files) {
+    await mkdir(path.dirname(path.join(temporaryRoot, relativePath)), { recursive: true });
+    await writeFile(path.join(temporaryRoot, relativePath), `${rule}\n`);
+  }
+
+  const result = await scanIdentity({
+    root: temporaryRoot,
+    sourceFiles: ["README.md", ...files.slice(0, 4)],
+    generatedFiles: files.slice(4),
+    exactRoots: ["vendor/source"],
+  });
+
+  assert.ok(result.findings.some((finding) => finding.path === `apps/${rule}.txt`));
+  assert.ok(result.findings.some((finding) => finding.path === `apps/web/dist/${rule}.js`));
+  assert.ok(result.findings.every((finding) => !finding.path.startsWith("vendor/source/")));
+  assert.ok(result.findings.every((finding) => !finding.path.startsWith(".omp-flow/")));
+  assert.ok(result.findings.every((finding) => !finding.path.startsWith("research/")));
+});
+
+test("identity rejects undeclared vendor source and generated paths", async (t) => {
+  const temporaryRoot = await mkdtemp(path.join(tmpdir(), "identity-vendor-"));
+  t.after(() => rm(temporaryRoot, { force: true, recursive: true }));
+  const rule = rules[0];
+  await writeFile(path.join(temporaryRoot, "README.md"), policyReadme(rule));
+  await mkdir(path.join(temporaryRoot, "vendor", "other", "dist"), { recursive: true });
+  await writeFile(path.join(temporaryRoot, "vendor", "other", "source.txt"), "clean\n");
+  await writeFile(path.join(temporaryRoot, "vendor", "other", "dist", "bundle.js"), "clean\n");
+
+  const result = await scanIdentity({
+    root: temporaryRoot,
+    sourceFiles: ["README.md", "vendor/other/source.txt"],
+    generatedFiles: ["vendor/other/dist/bundle.js"],
+  });
+
+  assert.ok(
+    result.findings.some(
+      (finding) =>
+        finding.path === "vendor/other/source.txt" && finding.rule.includes("unapproved author root"),
+    ),
+  );
+  assert.ok(
+    result.findings.some(
+      (finding) =>
+        finding.path === "vendor/other/dist/bundle.js" &&
+        finding.rule === "undeclared vendor generated content",
+    ),
+  );
+});
+
+test("real repository exact adoption resolves without changing the imported tree", () => {
+  const inventoryFiles = repositoryFiles(root);
+  const trackedFiles = trackedRepositoryFiles(root);
+  const adoptions = parseSourceAdoptions(governingReadme);
+  const ignoredVendorFiles = ignoredVendorSourceFiles(
+    root,
+    structurePolicy.generatedDirectoryNames,
+  );
+  const result = validateSourceRepository({
+    root,
+    adoptions,
+    trackedFiles,
+    inventoryFiles,
+    ignoredVendorFiles,
+    toolRoots: structurePolicy.toolRoots,
+  });
+
+  assert.deepEqual(result, { errors: [], exactRoots: ["vendor/ui"] });
 });
 
 test("repository inventory excludes tracked paths deleted from the working tree", async () => {

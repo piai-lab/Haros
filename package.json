@@ -9,7 +9,7 @@
   "scripts": {
     "check:identity": "node scripts/check-identity.mjs",
     "check:sources": "node scripts/check-sources.mjs",
-    "test": "node --test",
+    "test": "node --test test/*.test.mjs",
     "quality": "npm run check:identity && npm run check:sources && npm test"
   }
 }
