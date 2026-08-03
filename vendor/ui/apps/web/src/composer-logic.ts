@@ -1,0 +1,427 @@
+import { splitPromptIntoComposerSegments } from "./composer-editor-mentions";
+import { isBuiltInComposerSlashCommand, type ComposerSlashCommand } from "./composerSlashCommands";
+import {
+  composerMentionQuotedPathHasClosingQuote,
+  decodeComposerMentionQuotedPath,
+} from "./lib/composerMentions";
+import { INLINE_TERMINAL_CONTEXT_PLACEHOLDER } from "./lib/terminalContext";
+
+export type ComposerTriggerKind = "mention" | "slash-command" | "slash-model" | "skill";
+
+export interface ComposerTrigger {
+  kind: ComposerTriggerKind;
+  query: string;
+  rangeStart: number;
+  rangeEnd: number;
+}
+
+export function stripComposerTriggerText(text: string, trigger: ComposerTrigger | null): string {
+  if (!trigger) {
+    return text;
+  }
+
+  return `${text.slice(0, trigger.rangeStart)}${text.slice(trigger.rangeEnd)}`;
+}
+
+type ComposerSegmentLike =
+  | { type: "text"; text: string }
+  | { type: "mention" }
+  | { type: "skill" }
+  | { type: "slash-command"; command: ComposerSlashCommand }
+  | { type: "terminal-context" }
+  | { type: "agent-mention"; alias: string }
+  | { type: "link"; url: string };
+
+const isInlineTokenSegment = (segment: ComposerSegmentLike): boolean => segment.type !== "text";
+
+function clampCursor(text: string, cursor: number): number {
+  if (!Number.isFinite(cursor)) return text.length;
+  return Math.max(0, Math.min(text.length, Math.floor(cursor)));
+}
+
+function isWhitespace(char: string): boolean {
+  return (
+    char === " " ||
+    char === "\n" ||
+    char === "\t" ||
+    char === "\r" ||
+    char === INLINE_TERMINAL_CONTEXT_PLACEHOLDER
+  );
+}
+
+function tokenStartForCursor(text: string, cursor: number): number {
+  let index = cursor - 1;
+  while (index >= 0 && !isWhitespace(text[index] ?? "")) {
+    index -= 1;
+  }
+  return index + 1;
+}
+
+// Finds the `/` that opens the slash token the cursor sits in. The slash may be
+// at the line start OR immediately after whitespace, so `/command` is detected
+// mid-line (e.g. after an existing chip) — matching how `$skill` and `@mention`
+// already behave. Returns the latest such slash before the cursor on the
+// current line, or -1 when the cursor is not within a slash token region.
+function slashTokenStartForCursor(text: string, lineStart: number, cursor: number): number {
+  let slashStart = -1;
+  for (let index = lineStart; index < cursor; index += 1) {
+    if (text[index] !== "/") {
+      continue;
+    }
+    if (index === lineStart || isWhitespace(text[index - 1] ?? "")) {
+      slashStart = index;
+    }
+  }
+  return slashStart;
+}
+
+export function expandCollapsedComposerCursor(text: string, cursorInput: number): number {
+  const collapsedCursor = clampCursor(text, cursorInput);
+  const segments = splitPromptIntoComposerSegments(text);
+  if (segments.length === 0) {
+    return collapsedCursor;
+  }
+
+  let remaining = collapsedCursor;
+  let expandedCursor = 0;
+
+  for (const segment of segments) {
+    if (segment.type === "mention") {
+      // Quoted tokens (`@"name with spaces"`) are longer than path.length + 1.
+      const expandedLength = segment.tokenLength ?? segment.path.length + 1;
+      if (remaining <= 1) {
+        return expandedCursor + (remaining === 0 ? 0 : expandedLength);
+      }
+      remaining -= 1;
+      expandedCursor += expandedLength;
+      continue;
+    }
+    if (segment.type === "skill") {
+      const expandedLength = segment.name.length + 1;
+      if (remaining <= 1) {
+        return expandedCursor + (remaining === 0 ? 0 : expandedLength);
+      }
+      remaining -= 1;
+      expandedCursor += expandedLength;
+      continue;
+    }
+    if (segment.type === "slash-command") {
+      const expandedLength = segment.command.length + 1;
+      if (remaining <= 1) {
+        return expandedCursor + (remaining === 0 ? 0 : expandedLength);
+      }
+      remaining -= 1;
+      expandedCursor += expandedLength;
+      continue;
+    }
+    if (segment.type === "agent-mention") {
+      // @alias = 1 + alias.length
+      const expandedLength = segment.alias.length + 1;
+      if (remaining <= 1) {
+        return expandedCursor + (remaining === 0 ? 0 : expandedLength);
+      }
+      remaining -= 1;
+      expandedCursor += expandedLength;
+      continue;
+    }
+    if (segment.type === "link") {
+      const expandedLength = segment.url.length;
+      if (remaining <= 1) {
+        return expandedCursor + (remaining === 0 ? 0 : expandedLength);
+      }
+      remaining -= 1;
+      expandedCursor += expandedLength;
+      continue;
+    }
+    if (segment.type === "terminal-context") {
+      if (remaining <= 1) {
+        return expandedCursor + remaining;
+      }
+      remaining -= 1;
+      expandedCursor += 1;
+      continue;
+    }
+
+    const segmentLength = segment.text.length;
+    if (remaining <= segmentLength) {
+      return expandedCursor + remaining;
+    }
+    remaining -= segmentLength;
+    expandedCursor += segmentLength;
+  }
+
+  return expandedCursor;
+}
+
+function collapsedSegmentLength(segment: ComposerSegmentLike): number {
+  if (segment.type === "text") {
+    return segment.text.length;
+  }
+  return 1;
+}
+
+function clampCollapsedComposerCursorForSegments(
+  segments: ReadonlyArray<ComposerSegmentLike>,
+  cursorInput: number,
+): number {
+  const collapsedLength = segments.reduce(
+    (total, segment) => total + collapsedSegmentLength(segment),
+    0,
+  );
+  if (!Number.isFinite(cursorInput)) {
+    return collapsedLength;
+  }
+  return Math.max(0, Math.min(collapsedLength, Math.floor(cursorInput)));
+}
+
+export function clampCollapsedComposerCursor(text: string, cursorInput: number): number {
+  return clampCollapsedComposerCursorForSegments(
+    splitPromptIntoComposerSegments(text),
+    cursorInput,
+  );
+}
+
+export function collapseExpandedComposerCursor(text: string, cursorInput: number): number {
+  const expandedCursor = clampCursor(text, cursorInput);
+  const segments = splitPromptIntoComposerSegments(text);
+  if (segments.length === 0) {
+    return expandedCursor;
+  }
+
+  let remaining = expandedCursor;
+  let collapsedCursor = 0;
+
+  for (const segment of segments) {
+    if (segment.type === "mention") {
+      // Quoted tokens (`@"name with spaces"`) are longer than path.length + 1.
+      const expandedLength = segment.tokenLength ?? segment.path.length + 1;
+      if (remaining === 0) {
+        return collapsedCursor;
+      }
+      if (remaining <= expandedLength) {
+        return collapsedCursor + 1;
+      }
+      remaining -= expandedLength;
+      collapsedCursor += 1;
+      continue;
+    }
+    if (segment.type === "skill") {
+      const expandedLength = segment.name.length + 1;
+      if (remaining === 0) {
+        return collapsedCursor;
+      }
+      if (remaining <= expandedLength) {
+        return collapsedCursor + 1;
+      }
+      remaining -= expandedLength;
+      collapsedCursor += 1;
+      continue;
+    }
+    if (segment.type === "slash-command") {
+      const expandedLength = segment.command.length + 1;
+      if (remaining === 0) {
+        return collapsedCursor;
+      }
+      if (remaining <= expandedLength) {
+        return collapsedCursor + 1;
+      }
+      remaining -= expandedLength;
+      collapsedCursor += 1;
+      continue;
+    }
+    if (segment.type === "agent-mention") {
+      // @alias = 1 + alias.length
+      const expandedLength = segment.alias.length + 1;
+      if (remaining === 0) {
+        return collapsedCursor;
+      }
+      if (remaining <= expandedLength) {
+        return collapsedCursor + 1;
+      }
+      remaining -= expandedLength;
+      collapsedCursor += 1;
+      continue;
+    }
+    if (segment.type === "link") {
+      const expandedLength = segment.url.length;
+      if (remaining === 0) {
+        return collapsedCursor;
+      }
+      if (remaining <= expandedLength) {
+        return collapsedCursor + 1;
+      }
+      remaining -= expandedLength;
+      collapsedCursor += 1;
+      continue;
+    }
+    if (segment.type === "terminal-context") {
+      if (remaining <= 1) {
+        return collapsedCursor + remaining;
+      }
+      remaining -= 1;
+      collapsedCursor += 1;
+      continue;
+    }
+
+    const segmentLength = segment.text.length;
+    if (remaining <= segmentLength) {
+      return collapsedCursor + remaining;
+    }
+    remaining -= segmentLength;
+    collapsedCursor += segmentLength;
+  }
+
+  return collapsedCursor;
+}
+
+export function isCollapsedCursorAdjacentToInlineToken(
+  text: string,
+  cursorInput: number,
+  direction: "left" | "right",
+): boolean {
+  const segments = splitPromptIntoComposerSegments(text);
+  if (!segments.some(isInlineTokenSegment)) {
+    return false;
+  }
+
+  const cursor = clampCollapsedComposerCursorForSegments(segments, cursorInput);
+  let collapsedOffset = 0;
+
+  for (const segment of segments) {
+    if (isInlineTokenSegment(segment)) {
+      if (direction === "left" && cursor === collapsedOffset + 1) {
+        return true;
+      }
+      if (direction === "right" && cursor === collapsedOffset) {
+        return true;
+      }
+    }
+    collapsedOffset += collapsedSegmentLength(segment);
+  }
+
+  return false;
+}
+
+export function detectComposerTrigger(text: string, cursorInput: number): ComposerTrigger | null {
+  const cursor = clampCursor(text, cursorInput);
+  const lineStart = text.lastIndexOf("\n", Math.max(0, cursor - 1)) + 1;
+  const linePrefix = text.slice(lineStart, cursor);
+
+  const slashStart = slashTokenStartForCursor(text, lineStart, cursor);
+  if (slashStart !== -1) {
+    const region = text.slice(slashStart, cursor);
+    const commandMatch = /^\/(\S*)$/.exec(region);
+    if (commandMatch) {
+      const commandQuery = commandMatch[1] ?? "";
+      // Command names are `[a-z-]+` (see parseStandaloneComposerSlashCommand), so a
+      // query containing "/" can never be a command — e.g. a typed path or "/and/or"
+      // after a space. Treat it as plain text instead of opening an empty picker.
+      if (commandQuery.includes("/")) {
+        return null;
+      }
+      // `/model` opens the model picker; every other `/query` (known or unknown)
+      // stays in the slash-command lane so provider-native commands and skills
+      // can be suggested without borrowing the `$skill` flow.
+      if (commandQuery.toLowerCase() === "model") {
+        return {
+          kind: "slash-model",
+          query: "",
+          rangeStart: slashStart,
+          rangeEnd: cursor,
+        };
+      }
+      return {
+        kind: "slash-command",
+        query: commandQuery,
+        rangeStart: slashStart,
+        rangeEnd: cursor,
+      };
+    }
+
+    const modelMatch = /^\/model(?:\s+(.*))?$/.exec(region);
+    if (modelMatch) {
+      return {
+        kind: "slash-model",
+        query: (modelMatch[1] ?? "").trim(),
+        rangeStart: slashStart,
+        rangeEnd: cursor,
+      };
+    }
+  }
+
+  const tokenStart = tokenStartForCursor(text, cursor);
+  const token = text.slice(tokenStart, cursor);
+  if (token.startsWith("$")) {
+    return {
+      kind: "skill",
+      query: token.slice(1),
+      rangeStart: tokenStart,
+      rangeEnd: cursor,
+    };
+  }
+
+  // An unclosed `@"..."` mention spans whitespace, so a pure whitespace-bounded
+  // token won't catch it. Look back on the line for the last `@"` that hasn't
+  // been closed yet and treat everything after it as the active mention query.
+  const quotedMentionStart = linePrefix.lastIndexOf('@"');
+  if (quotedMentionStart !== -1) {
+    const afterOpen = linePrefix.slice(quotedMentionStart + 2);
+    if (!composerMentionQuotedPathHasClosingQuote(afterOpen)) {
+      return {
+        kind: "mention",
+        query: decodeComposerMentionQuotedPath(afterOpen),
+        rangeStart: lineStart + quotedMentionStart,
+        rangeEnd: cursor,
+      };
+    }
+  }
+
+  if (!token.startsWith("@")) {
+    return null;
+  }
+
+  // Support adjacent mentions like `@foo@bar` by anchoring the active trigger
+  // to the last `@` within the whitespace-bounded word. Without this, a chain
+  // like `@foo@b` would expose the whole chain as the replacement range, so
+  // picking an item would clobber the earlier chip. Emails like `user@host`
+  // stay unaffected because the enclosing word doesn't start with `@`.
+  const lastAtInToken = token.lastIndexOf("@");
+  const mentionStart = tokenStart + lastAtInToken;
+  const mentionToken = token.slice(lastAtInToken);
+  if (!/^@[^()\s@]*$/.test(mentionToken)) {
+    return null;
+  }
+
+  return {
+    kind: "mention",
+    query: mentionToken.slice(1),
+    rangeStart: mentionStart,
+    rangeEnd: cursor,
+  };
+}
+
+export function parseStandaloneComposerSlashCommand(
+  text: string,
+): Exclude<ComposerSlashCommand, "model"> | null {
+  const match = /^\/([a-z-]+)\s*$/i.exec(text.trim());
+  if (!match) {
+    return null;
+  }
+  const command = match[1]?.toLowerCase();
+  if (!command || !isBuiltInComposerSlashCommand(command) || command === "model") {
+    return null;
+  }
+  return command;
+}
+
+export function replaceTextRange(
+  text: string,
+  rangeStart: number,
+  rangeEnd: number,
+  replacement: string,
+): { text: string; cursor: number } {
+  const safeStart = Math.max(0, Math.min(text.length, rangeStart));
+  const safeEnd = Math.max(safeStart, Math.min(text.length, rangeEnd));
+  const nextText = `${text.slice(0, safeStart)}${replacement}${text.slice(safeEnd)}`;
+  return { text: nextText, cursor: safeStart + replacement.length };
+}

@@ -17,8 +17,7 @@ OmniMind 是一个 **Powered by Pi** 的本地优先桌面 Agent 产品：Pi 获
 
 - 产品与架构已经围绕 Pi-native 路线重新收敛；
 - 旧的自研 Extension Runtime、Thread Journal、Tool Execution 和 Output skeleton 已被判定为错误本体，应删除而不是迁移；
-- 尚无外部源码进入生产树，`source-adoptions` 仍为空；
-- U1 是批准的完整 UI 物理母体，但其 Provider ontology、Agent loop、状态权威和服务端本体不自动获得继承权；
+- U1 的完整固定源码已进入 Campaign branch 的 provenance baseline；它尚未成为 production candidate，其 Provider ontology、Agent loop、状态权威和服务端本体不自动获得继承权；
 - 下一入口是 `execution-brief.md` 的完整来源接管与 Pi SDK worker 垂直 slice；
 - production compatibility、Package 安全、跨平台、恢复和外部 Engine 等声明在真实证据出现前一律为 `open`。
 
@@ -331,7 +330,19 @@ Remote 是通用 ExecutionTarget，不是独立产品模式。Local 与 Remote �
 
 ```source-adoptions
 {
-  "adopted": []
+  "adopted": [
+    {
+      "id": "ui-mother",
+      "url": "https://github.com/Emanuele-web04/synara.git",
+      "revision": "6aca3dcc505894481430967c2acb762b3dd1b358",
+      "paths": ["vendor/ui"],
+      "rights": "MIT at the fixed revision; continuous original-upstream history retained in the source repository; branded assets are baseline evidence only and are not approved for the production candidate",
+      "mode": "adapt",
+      "changes": "No donor-file changes in the provenance baseline; repository-level disclosure and an exact legal copy were added outside the imported tree",
+      "updatePolicy": "Pinned revision; upstream changes may be discovered automatically but require manual review and a new compatibility decision",
+      "licenseFiles": ["LICENSES/ui-mother-MIT.txt"]
+    }
+  ]
 }
 ```
 
@@ -387,7 +398,9 @@ omni-harness
 - 仓库 LICENSE：MIT，版权文本指向 T3 Tools Inc.；实际采用前必须复核完整 Git 历史、原始 T3Code 来源、第三方贡献和资产权利。
 - 角色：完整 UI/desktop 物理母体，不是 Runtime 或产品 ontology。
 - 候选采用：exact provenance baseline → 保持 runnable → 换脑、重命名、删除和结构净化。
-- 未采用：当前 `source-adoptions` 为空。
+- 当前采用状态：固定 revision 的 6425 个 tracked files 已完整导入 `vendor/ui` 作为 provenance baseline；该路径是短期审计边界，不是最终生产结构。
+- 权利事实：固定 revision 的 LICENSE 与原始上游均为 MIT，版权声明为 T3 Tools Inc.；U1 历史连续包含原始上游和后续多人贡献。曾出现的新版权声明已在固定 revision 前由 U1 维护者恢复为原始声明。
+- 资产边界：现有图标、截图和名称只为 unchanged baseline 保留，进入 production candidate 前全部替换或逐项证明权利与产品需要。
 
 ### 14.3 其他研究来源
 

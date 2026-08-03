@@ -1,0 +1,263 @@
+import { describe, expect, it } from "vitest";
+
+import type {
+  CapturedProcess,
+  CapturedProcessTree,
+  ProcessTreeKiller,
+  TerminalKillSignal,
+} from "../terminal/processTreeKiller";
+import {
+  ProviderProcessExitUnprovenError,
+  teardownProviderProcessTree,
+} from "./supervisedProcessTeardown";
+
+function deterministicClock() {
+  let now = 0;
+  return {
+    now: () => now,
+    sleep: async (milliseconds: number) => {
+      now += milliseconds;
+    },
+  };
+}
+
+describe("teardownProviderProcessTree", () => {
+  it("escalates ignored TERM and returns only after root and descendants prove exit", async () => {
+    const tree: CapturedProcessTree = {
+      descendants: [{ pid: 102, command: "provider-worker" }],
+      captureComplete: true,
+    };
+    const runningDescendants = new Map<number, CapturedProcess>([[102, tree.descendants[0]!]]);
+    const signals: Array<{ signal: TerminalKillSignal; includeRootTree: boolean | undefined }> = [];
+    let resolveRootExit: (() => void) | undefined;
+    const rootExited = new Promise<void>((resolve) => {
+      resolveRootExit = resolve;
+    });
+    const processTreeKiller: ProcessTreeKiller = {
+      capture: () => tree,
+      inspect: () => ({ verified: true, survivors: [...runningDescendants.values()] }),
+      signal: ({ signal, includeRootTree }) => {
+        signals.push({ signal, includeRootTree });
+        if (signal === "SIGKILL") {
+          runningDescendants.clear();
+          resolveRootExit?.();
+        }
+      },
+    };
+    const clock = deterministicClock();
+
+    await expect(
+      teardownProviderProcessTree(
+        { rootPid: 101, rootExited, termGraceMs: 10, forceExitMs: 10, pollMs: 5 },
+        {
+          processTreeKiller,
+          ...clock,
+        },
+      ),
+    ).resolves.toEqual({ escalated: true, signalErrors: [] });
+    expect(signals).toEqual([
+      { signal: "SIGTERM", includeRootTree: true },
+      { signal: "SIGKILL", includeRootTree: true },
+    ]);
+  });
+
+  it("force-kills captured descendants without re-signalling a root that exited after TERM", async () => {
+    const tree: CapturedProcessTree = {
+      descendants: [{ pid: 202, command: "provider-grandchild" }],
+      captureComplete: true,
+    };
+    let descendantsRunning = true;
+    let resolveRootExit: (() => void) | undefined;
+    const rootExited = new Promise<void>((resolve) => {
+      resolveRootExit = resolve;
+    });
+    const signals: Array<{ signal: TerminalKillSignal; includeRootTree: boolean | undefined }> = [];
+    const processTreeKiller: ProcessTreeKiller = {
+      capture: () => tree,
+      inspect: () => ({
+        verified: true,
+        survivors: descendantsRunning ? tree.descendants : [],
+      }),
+      signal: ({ signal, includeRootTree }) => {
+        signals.push({ signal, includeRootTree });
+        if (signal === "SIGTERM") resolveRootExit?.();
+        if (signal === "SIGKILL") descendantsRunning = false;
+      },
+    };
+    const clock = deterministicClock();
+
+    await expect(
+      teardownProviderProcessTree(
+        { rootPid: 201, rootExited, termGraceMs: 10, forceExitMs: 10, pollMs: 5 },
+        {
+          processTreeKiller,
+          ...clock,
+        },
+      ),
+    ).resolves.toEqual({ escalated: true, signalErrors: [] });
+    expect(signals.at(-1)).toEqual({ signal: "SIGKILL", includeRootTree: false });
+  });
+
+  it("does not accept root exit as descendant proof when the snapshot failed", async () => {
+    const tree: CapturedProcessTree = { descendants: [], captureComplete: false };
+    const signals: Array<{ signal: TerminalKillSignal; includeRootTree: boolean | undefined }> = [];
+    const clock = deterministicClock();
+
+    const failure = await teardownProviderProcessTree(
+      {
+        rootPid: 401,
+        rootExited: Promise.resolve(),
+        termGraceMs: 10,
+        forceExitMs: 10,
+        pollMs: 5,
+      },
+      {
+        processTreeKiller: {
+          capture: () => tree,
+          inspect: () => ({ verified: true, survivors: [] }),
+          signal: ({ signal, includeRootTree }) => signals.push({ signal, includeRootTree }),
+        },
+        ...clock,
+      },
+    ).catch((error: unknown) => error);
+
+    expect(failure).toBeInstanceOf(ProviderProcessExitUnprovenError);
+    expect(failure).toMatchObject({
+      rootPid: 401,
+      rootExited: true,
+      captureComplete: false,
+      remainingDescendantPids: null,
+    });
+    expect(signals).toEqual([
+      { signal: "SIGTERM", includeRootTree: true },
+      { signal: "SIGKILL", includeRootTree: false },
+    ]);
+  });
+
+  it("still fails closed on an incomplete snapshot when the root never proves exit", async () => {
+    const tree: CapturedProcessTree = { descendants: [], captureComplete: false };
+    const clock = deterministicClock();
+
+    const failure = await teardownProviderProcessTree(
+      { rootPid: 501, rootExited: new Promise(() => undefined), termGraceMs: 5, forceExitMs: 5 },
+      {
+        processTreeKiller: {
+          capture: () => tree,
+          inspect: () => ({ verified: true, survivors: [] }),
+          signal: () => undefined,
+        },
+        ...clock,
+      },
+    ).catch((error: unknown) => error);
+    expect(failure).toBeInstanceOf(ProviderProcessExitUnprovenError);
+    expect(failure).toMatchObject({ rootPid: 501, rootExited: false, captureComplete: false });
+  });
+
+  it("fails closed when forced termination cannot prove process-tree exit", async () => {
+    const tree: CapturedProcessTree = {
+      descendants: [{ pid: 302, command: "stuck-provider" }],
+      captureComplete: true,
+    };
+    const clock = deterministicClock();
+
+    const failure = await teardownProviderProcessTree(
+      { rootPid: 301, rootExited: new Promise(() => undefined), termGraceMs: 5, forceExitMs: 5 },
+      {
+        processTreeKiller: {
+          capture: () => tree,
+          inspect: () => ({ verified: true, survivors: tree.descendants }),
+          signal: () => undefined,
+        },
+        ...clock,
+      },
+    ).catch((error: unknown) => error);
+    expect(failure).toBeInstanceOf(ProviderProcessExitUnprovenError);
+    expect(failure).toMatchObject({
+      name: "ProviderProcessExitUnprovenError",
+      rootPid: 301,
+      rootExited: false,
+      remainingDescendantPids: [302],
+    });
+  });
+
+  it("does not scan descendants before the root proves exit", async () => {
+    // Each inspection is a synchronous `ps`. Descendant identity cannot end the
+    // wait until the root has exited, so polling it beforehand only blocks the
+    // event loop. Only the two give-up scans that build the failure detail remain.
+    const tree: CapturedProcessTree = {
+      descendants: [{ pid: 602, command: "stuck-provider" }],
+      captureComplete: true,
+    };
+    let inspectCalls = 0;
+    const clock = deterministicClock();
+
+    const failure = await teardownProviderProcessTree(
+      {
+        rootPid: 601,
+        rootExited: new Promise(() => undefined),
+        termGraceMs: 500,
+        forceExitMs: 500,
+      },
+      {
+        processTreeKiller: {
+          capture: () => tree,
+          inspect: () => {
+            inspectCalls += 1;
+            return { verified: true, survivors: tree.descendants };
+          },
+          signal: () => undefined,
+        },
+        ...clock,
+      },
+    ).catch((error: unknown) => error);
+
+    expect(inspectCalls).toBe(2);
+    expect(failure).toMatchObject({ remainingDescendantPids: [602] });
+  });
+
+  it("throttles descendant scans instead of running one per poll", async () => {
+    const tree: CapturedProcessTree = {
+      descendants: [{ pid: 702, command: "provider-worker" }],
+      captureComplete: true,
+    };
+    let inspectCalls = 0;
+    let sleepCalls = 0;
+    let resolveRootExit: (() => void) | undefined;
+    const rootExited = new Promise<void>((resolve) => {
+      resolveRootExit = resolve;
+    });
+    let now = 0;
+
+    await teardownProviderProcessTree(
+      {
+        rootPid: 701,
+        rootExited,
+        termGraceMs: 1_000,
+        forceExitMs: 1_000,
+        pollMs: 25,
+        inspectIntervalMs: 250,
+      },
+      {
+        processTreeKiller: {
+          capture: () => tree,
+          inspect: () => {
+            inspectCalls += 1;
+            return { verified: true, survivors: tree.descendants };
+          },
+          signal: ({ signal }) => {
+            if (signal === "SIGTERM") resolveRootExit?.();
+          },
+        },
+        now: () => now,
+        sleep: async (milliseconds: number) => {
+          sleepCalls += 1;
+          now += milliseconds;
+        },
+      },
+    ).catch(() => undefined);
+
+    // The root exits immediately, so every poll used to trigger its own `ps`.
+    expect(sleepCalls).toBeGreaterThan(60);
+    expect(inspectCalls).toBeLessThanOrEqual(sleepCalls / 4);
+  });
+});

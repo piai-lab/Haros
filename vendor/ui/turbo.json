@@ -1,0 +1,48 @@
+{
+  "$schema": "https://turbo.build/schema.json",
+  "globalEnv": [
+    "PORT",
+    "VITE_WS_URL",
+    "VITE_DEV_SERVER_URL",
+    "ELECTRON_RENDERER_PORT",
+    "SYNARA_HOME",
+    "SYNARA_DESKTOP_WS_URL",
+    "SYNARA_BROWSER_HOST_PIPE_PATH",
+    "SYNARA_BROWSER_USE_PIPE_PATH",
+    "SYNARA_BROWSER_PERF",
+    "SYNARA_PROVIDER_RUNTIME_IDLE_STOP_MS",
+    "SYNARA_GROK_ACP_DEBUG",
+    "SYNARA_WEB_SOURCEMAP",
+    "SYNARA_SERVER_SOURCEMAP",
+    "SYNARA_DESKTOP_SOURCEMAP",
+    "SYNARA_MODE",
+    "SYNARA_PORT",
+    "SYNARA_NO_BROWSER",
+    "SYNARA_AUTH_TOKEN",
+    "SYNARA_PUBLIC_URL",
+    "SYNARA_ALLOW_INSECURE_REMOTE",
+    "SYNARA_LOG_WS_EVENTS",
+    "SYNARA_HOST",
+    "SYNARA_AUTO_BOOTSTRAP_PROJECT_FROM_CWD"
+  ],
+  "tasks": {
+    "build": {
+      "dependsOn": ["^build"],
+      "outputs": ["dist/**", "dist-electron/**"]
+    },
+    "dev": {
+      "cache": false,
+      "persistent": true
+    },
+    "typecheck": {
+      "dependsOn": ["^typecheck"],
+      "outputs": [],
+      "cache": false
+    },
+    "test": {
+      "dependsOn": ["^build"],
+      "cache": false,
+      "outputs": []
+    }
+  }
+}

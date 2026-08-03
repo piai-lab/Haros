@@ -5,8 +5,8 @@
 ## 1. 当前基线
 
 - 仓库没有用户和兼容义务；
-- `source-adoptions` 为 0；
-- Pi 与 U1 仍是研究来源，尚未进入生产树；
+- `source-adoptions` 记录 1 个 U1 provenance baseline；Pi 仍是研究来源，尚未进入生产树；
+- U1 固定 revision 已完整导入短期 `vendor/ui` 审计边界，尚未成为 production candidate；
 - 旧的自研 Extension Runtime、Thread Journal/Projection、Tool Execution 和 Output Store 已被新裁决否决；
 - 旧 M1 probe 只存在于 Git 历史，不再约束生产结构；
 - production claims 全部保持 `open`，直到当前路线在固定 SHA 上形成真实证据。
