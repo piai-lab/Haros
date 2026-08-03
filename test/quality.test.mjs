@@ -1,5 +1,6 @@
 import assert from "node:assert/strict";
-import { mkdtemp, mkdir, writeFile } from "node:fs/promises";
+import { spawnSync } from "node:child_process";
+import { mkdtemp, mkdir, unlink, writeFile } from "node:fs/promises";
 import { tmpdir } from "node:os";
 import path from "node:path";
 import test from "node:test";
@@ -7,6 +8,7 @@ import { fileURLToPath } from "node:url";
 import { discoverGeneratedFiles } from "../scripts/check-identity.mjs";
 import { parseDenylist, parseStructurePolicy, scanIdentity } from "../scripts/identity.mjs";
 import { parseSourceAdoptions, validateSourceAdoptions } from "../scripts/sources.mjs";
+import { repositoryFiles } from "../scripts/repository-files.mjs";
 
 const root = path.resolve(path.dirname(fileURLToPath(import.meta.url)), "..");
 const governingReadme = await import("node:fs/promises").then(({ readFile }) =>
@@ -137,4 +139,20 @@ test("source inventory requires complete adoption and tracked legal text", () =>
   const errors = validateSourceAdoptions([{ id: "source-one", licenseFiles: ["outside.txt"] }], []);
   assert.ok(errors.some((error) => error.includes("revision")));
   assert.ok(errors.some((error) => error.includes("LICENSES/")));
+});
+
+test("repository inventory excludes tracked paths deleted from the working tree", async () => {
+  const temporaryRoot = await mkdtemp(path.join(tmpdir(), "repository-files-"));
+  await writeFile(path.join(temporaryRoot, "kept.txt"), "kept\n");
+  await writeFile(path.join(temporaryRoot, "deleted.txt"), "deleted\n");
+  await writeFile(path.join(temporaryRoot, "untracked.txt"), "untracked\n");
+
+  assert.equal(spawnSync("git", ["init", "--quiet"], { cwd: temporaryRoot }).status, 0);
+  assert.equal(
+    spawnSync("git", ["add", "kept.txt", "deleted.txt"], { cwd: temporaryRoot }).status,
+    0,
+  );
+  await unlink(path.join(temporaryRoot, "deleted.txt"));
+
+  assert.deepEqual(repositoryFiles(temporaryRoot), ["kept.txt", "untracked.txt"]);
 });

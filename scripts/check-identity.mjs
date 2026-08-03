@@ -1,11 +1,11 @@
 #!/usr/bin/env node
 
-import { spawnSync } from "node:child_process";
 import { readFile, readdir, stat } from "node:fs/promises";
 import path from "node:path";
 import process from "node:process";
 import { fileURLToPath } from "node:url";
 import { parseStructurePolicy, scanIdentity } from "./identity.mjs";
+import { repositoryFiles } from "./repository-files.mjs";
 
 const WALK_EXCLUSIONS = new Set([".git", ".pnpm", ".yarn", "node_modules"]);
 
@@ -28,17 +28,6 @@ function parseArguments(argv) {
     }
   }
   return { generatedRoots, runtimeFixtures };
-}
-
-function candidateFiles(root) {
-  const result = spawnSync("git", ["ls-files", "-z", "--cached", "--others", "--exclude-standard"], {
-    cwd: root,
-    encoding: "utf8",
-  });
-  if (result.status !== 0) {
-    throw new Error("cannot enumerate tracked files");
-  }
-  return [...new Set(result.stdout.split("\0").filter(Boolean))];
 }
 
 function withinRoot(root, candidate) {
@@ -105,7 +94,7 @@ export async function main(argv = process.argv.slice(2)) {
   const structurePolicy = parseStructurePolicy(readme);
   const generated = await discoverGeneratedFiles(root, structurePolicy, generatedRoots);
   const generatedSet = new Set(generated);
-  const source = candidateFiles(root).filter((file) => !generatedSet.has(file));
+  const source = repositoryFiles(root).filter((file) => !generatedSet.has(file));
   const result = await scanIdentity({
     root,
     sourceFiles: source,

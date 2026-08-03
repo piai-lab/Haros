@@ -1,672 +1,167 @@
-# 独立 OmniMind：决策与纠偏记录
-
-> 本文记录创立者的态度、确认和对错误理解的纠正。
->
-> 它不定义产品；产品真相以 [README](README.md) 为准。
->
-> 外部来源只使用 README 定义的中性研究代号。
+# OmniMind — Discovery & Decision Record
 
-## 1. 为什么必须保存这份记录
-
-未来接手者很容易做三种“合理化”：
-
-1. 把激进重建改成低风险渐进迁移；
-2. 把简洁理解成少做 Remote、恢复、知识和高强度任务；
-3. 把来源洁净理解成拒绝搬运，或反过来把允许搬运理解成可以不披露来源。
+本文件只保存为什么作出当前裁决，以及哪些判断仍需证据。产品定义和架构以 `README.md` 为唯一真相；本文件不得成为第二份规格。
 
-这三种解释都违背创立者的真实意思。
+## 1. 当前收敛摘要
 
-本记录保留的是决策强度和纠偏原因，让没有前序会话的新 Agent 不会只从一张温和架构图推断意图。
+创立者明确确认：
 
-## 2. 创立者的总体态度
-
-### 2.1 对时间和改动范围
+- 战略上重注 Pi，目标是承接其未来成熟生态；
+- OmniMind 要成为 Pi 使用体验最好的 GUI 和桌面发行层；
+- 产品公开 `Powered by Pi`，不刻意隐藏来源，也不冒充官方产品；
+- Pi 获得唯一 Gold Path；其他 Coding Agent 保持真实 Engine 出口，但不追求同深度；
+- U1 的颜值、交互和多 Engine 心智值得整体吸收，但其 Runtime/Provider ontology 不值得继承；
+- 没有用户和兼容负担，允许删除、重命名、重构全部错误代码、文档、状态与投入；
+- 长期可维护性、真实失败、来源权利和工程证据高于短期拼装速度。
 
-- 不在乎耗时；
-- 可以删除、重构、替换一切；
-- 可以斩断现有功能；
-- 允许新建完全独立的仓库；
-- 没有现有用户需要兼容；
-- 不因旧代码量、测试量和投入而保留；
-- 希望执行者代替外行用户做技术判断，而不是把每个细节反问回来；
-- 宁可做一次真正的大手术，也不能留下令人厌恶的前代身份残影。
-- 这份授权覆盖代码、测试、文档、目录、状态 schema、产品功能和既有施工产物；执行者不得把“用户没有逐文件点名”当成保守保留的借口。
+一句话裁决：
 
-### 2.2 对判断风格
+> OmniMind 是 Pi-native desktop distribution + experience/governance layer + external-engine escape hatch。
 
-反复确认的 taste：
+## 2. 本轮外部与源码证据
 
-- 极度犀利；
-- 极度激进；
-- 面向未来；
-- 可扩展；
-- 高性能；
-- 优雅；
-- 好维护；
-- 简单；
-- 奥卡姆式删除；
-- 不保护垃圾功能；
-- 不把“保留”当默认；
-- 不把“成熟”当正确；
-- 可以深度借鉴和搬运优秀实现。
+### 2.1 Pi 已经从 coding loop 向生态底座演化
 
-这些词落到工程上意味着：
+固定本机研究 revision `c6eb6281a806a9c5d7ec41d2850692f7f7ebcb59` 显示：
 
-- 先删错误本体，再谈功能迁移；
-- 先决定事实所有权，再写 schema；
-- 先做可证伪探针，再锁大架构；
-- 先用真实需求，再造抽象；
-- 允许复用大块优秀代码；
-- 搬入后必须清除宿主概念和外部身份；
-- 每条跨边界链路都能解释失败与恢复。
+- monorepo 已有 AI/provider、agent core、coding agent、TUI、client、protocol、experimental server 和通用 AgentHarness；
+- Provider、Model、Thinking、Session、Compaction、Branch、Tool、Skill、Extension 与 Package 已形成真实生态；
+- AgentHarness 正在加入 repository abstraction、locking、durable accepted prompts/runs、queue、recovery、effect boundary 等能力；
+- durability v2 同时存在不同候选设计，生命周期、settlement 和部分 API 仍明确 provisional；
+- 供应链、固定依赖、发布 artifact 和 smoke test 正在增强。
 
-### 2.3 对产品身份的洁癖
+影响：Pi 已经足够强，OmniMind 不应再建设竞争内核；但 Harness v2 尚不足以成为现在的持久 schema 宪法。
 
-创立者最后给出更强约束：
+### 2.2 Package 数量是机会，也是风险
 
-- 代码中不能出现其他产品名字；
-- 任何说明、注释和 Markdown 也不能出现；
-- 只有根 README 可以披露来源；
-- 所有设计都要极其干净；
-- 这是一种对一切产品设计和工程身份的强洁癖。
+2026-08-03 的官方目录显示数千个 Package，覆盖 MCP、Subagent、Workflow、Permission、Browser、LSP、Memory、Observability 等方向；官方 Model catalog 也已达到千级规模。
 
-最终反方审判对“只有根 README”作了必要的事实边界修正：法定许可证、技术必需的 manifest/lockfile，以及用户主动进入的真实 Engine/Package 选择、来源、诊断、版本、权限和兼容界面必须诚实显示外部事实。这个例外不是放松洁净，而是防止洁净滑向许可证缺失和来源造假；通用领域命名、普通 UI、内部架构和作者说明仍保持纯净 OmniMind 身份。
+同时，Pi Package/Extension 可以执行任意代码，gallery 发现不能证明成熟、兼容或安全。生态真正缺少的是：
 
-因此后续执行不能只清 UI 文案。需要检查：
+- exact artifact 与来源；
+- rights、install scripts、native dependency 和权限检查；
+- Pi/Node/platform 兼容矩阵；
+- Headless、structured UI、PTY 与 unsupported 分级；
+- safe-boundary activation 与 LKG rollback；
+- 面向普通用户的安装、诊断和恢复。
 
-- namespace；
-- package；
-- import；
-- adapter；
-- event；
-- schema；
-- tests；
-- fixtures；
-- errors；
-- logs；
-- comments；
-- generated code；
-- docs；
-- build metadata。
+影响：OmniMind 的核心机会不是复制 Package，而是成为最可信的 Pi 桌面分发与体验层。
 
-来源必须集中诚实披露；法定原文单独保存。洁净不是隐藏来源，而是阻止来源身份支配产品作者区。
+### 2.3 SDK、RPC 与进程边界
 
-## 3. 产品定位的形成
+Pi SDK 能直接访问 native Session、ResourceLoader、Extension lifecycle 和状态；RPC 适合隔离、测试和语言中立，但当前 UI/control/package 管理覆盖不能代表全部 Pi 能力。社区项目给出的共同证据是：
 
-### 3.1 领域不是产品维度
+- 直接把 SDK 放入 Electron Main 会共享崩溃域、环境和第三方代码权限；
+- 成熟实现逐渐转向 Node backend、utility process 或 sidecar；
+- official client/protocol/server 正在形成，但仍是 experimental；
+- 最稳的当前边界是 SDK in isolated worker，产品 IPC 可替换。
 
-创立者先纠正过“科学家专用产品”的理解，随后又进一步纠正“科研优先”被反复写进架构的问题：
+影响：Gold Path 锁为 SDK worker，不锁内部传输；Electron Main 只做桌面控制和监督。
 
-- 所有人都能用；
-- OmniMind 是 general agent；
-- 科研、生物医学、软件开发、合同分析、训练和仿真本质上都是 workload；
-- 科研可以作为高强度压力测试，但不应成为一级模式、导航、Thread、Agent、Workflow、memory 或 Remote；
-- 通用性不能通过牺牲任何高强度任务的深度来获得。
+### 2.4 U1 的价值与危险
 
-最终含义：
+固定候选 revision `6aca3dcc505894481430967c2acb762b3dd1b358` 证明 U1 已有成熟 renderer、设计语言、桌面工作台和多 Engine 体验；也存在大量 provider-specific adapter、静态 defaults/capability 分支和 donor runtime/state 假设。
 
-- 核心领域对象必须完全通用；
-- 数据、知识、分析和其他专业能力通过公共 capability 进入；
-- Remote、耐久任务、知识、可复现输出和恢复按通用价值排序；
-- 使用多种差异很大的真实任务验收同一内核；
-- 不在 core 中建立任何领域词汇表，也不再使用“research-first vertical”定义产品阶段。
+其 LICENSE 文本版权指向 T3 Tools Inc.，README 又说明项目源自另一个上游工作台。实际采用必须复核 Git history、原始来源、第三方贡献和资产，而不能只相信当前仓库的 MIT 标签。
 
-### 3.2 不是再造一个领域 Agent 外壳
+影响：完整接管 UI 物理母体，保留 runnable baseline；随后换脑，不继承 ontology。权利审计是进入条件，不是收尾补文档。
 
-创立者提供的科研基础设施判断强调：
+## 3. 核心推断
 
-- 顶级通用 Agent 加领域能力，可能优于孤立垂直 Agent；
-- 长期值得积累的是可被不同 Agent 调用的数据、方法、知识和工具；
-- 自有产品可以是开放能力之上的一个可选入口；
-- 模型会更换，能力和使用过程应独立积累。
+以下是基于证据的产品/架构推断，不冒充已经验证的事实：
 
-产品方案因此不能：
+1. Pi 最可能持续快速扩大生态，但 API 与 durable Harness 仍会变化；OmniMind 应靠进程和投影边界吸收变化，而不是冻结内部 shape。
+2. Pi 上游如果推出 GUI，单纯“漂亮客户端”会被商品化；Package trust/distribution、桌面工作流、Remote、恢复和跨 Engine 才能形成独立价值。
+3. Engine 平权会迫使产品采用最低公分母，直接损失 Pi Package、Thinking、Branch、Compaction 和 Session 优势。
+4. 产品仍需可见 Conversation 与轻量 Run receipt，否则无法跨 Engine、解释权限/副作用或在 Session 丢失后保持用户工作可读；但这不需要第二套 execution journal。
+5. Package full compatibility 与强安全隔离是冲突目标。首版必须以 trust lane 和诚实能力分级处理，不能用“沙箱”文案掩盖平台不足。
 
-- 把科学工具封死在一个自有 Agent；
-- 把领域服务写进 Agent loop；
-- 用“科研”替代通用工作台的工程质量；
-- 重新与模型公司竞争一个巨型通用内核。
+## 4. 决策账本
 
-## 4. 新仓库与旧产品的关系
+### 已确认
 
-确认结果：
+- Pi 是唯一 bundled-native Gold Path；
+- OmniMind 公开 Powered by Pi；
+- SDK 运行在 isolated worker/sidecar，不进入 Electron Main；
+- Pi 拥有 native Session/Package 执行事实；
+- OmniMind 拥有桌面产品、可见 Conversation、Package 分发治理和跨 Engine 连续性；
+- 外部 Engine 通过 ACP/official protocol 进入，能力不强求齐平；
+- U1 完整源码先作为 runnable UI baseline，再换脑；
+- 旧自研 runtime/journal/extension skeleton 删除；
+- Package Catalog/Curated/Verified 与 Native/Bridged UI/PTY/Unsupported 分级；
+- 无用户兼容义务，不为错误命名和 schema 留迁移双轨。
 
-- 建立全新仓库；
-- 新产品保留 OmniMind 名称；
-- 当前仓库作为另一个产品继续；
-- 当前产品未来应在公开冲突前改名或标记为旧版；
-- 两者不持续同步；
-- 新产品不兼容旧状态、旧插件和旧 API；
-- 当前仓库只作为固定 revision 的来源与测试 oracle；
-- 不合并另一路已完成候选，等待主线协调；
-- 本会话只写创立认知，不写新产品代码。
+### 假设
 
-选择新仓库不是为了掩盖历史，而是因为原地演化会让旧本体、旧拓扑和外部身份持续决定产品。
+只剩两个高影响假设，均有验证方法：
 
-## 5. 内核选择的决策
+1. **Pi SDK 能在隔离 Host 中无损承接首批成熟 Package。** 通过一个 headless Package、一个 raw-UI Package、Session/restart/cancel 和三平台路径验证。
+2. **U1 的权利链允许完整接管并显著改造。** 通过 Git history、原始 upstream、贡献者和资产 license 审计验证；失败则保留交互规格，改用 clean implementation，不带入受疑代码或资产。
 
-### 5.1 首选 `E0`
+### 待验证，不需要创立者先回答
 
-创立者主动提出彻底更换内核，并看重：
+- Pi AgentHarness 当前哪一层 API 已足够稳定；
+- 官方 package/API 与 fixed source/fork 哪条提供最小长期 delta；
+- Host 按 profile、generation 还是 Conversation 隔离的性能/故障最优点；
+- OS Secret Store 注入与 Pi OAuth/AuthStorage 的正式 seam；
+- structured package UI 的最小上游 contract；
+- Windows/Linux 的强制边界和 PTY/worker 差异；
+- 第一个真实 Package 和第一个外部 ACP Engine 的候选。
 
-- 极简；
-- 成熟生态；
-- 动态工作流等扩展；
-- 可与现有能力博弈；
-- 不必重复造完整 Agent 工程底座。
+### 被否决
 
-确认的最终边界：
+- Pi 可替换性优先的中立工作台；
+- 所有 Engine 平权；
+- 隐藏 Pi 身份或冒充 Pi 官方 GUI；
+- Pi SDK in Electron Main；
+- direct RPC 作为 bundled 产品宪法；
+- Pi-through-ACP 作为 bundled 主链；
+- 自研 Extension Loader/Agent Harness/完整 execution journal；
+- U1 Provider/runtime/state 整体继承；
+- Package 数量等于成熟度；
+- 静默信任、静默更新、静默 fallback；
+- 把进程隔离宣传成安全沙箱。
 
-- `E0` 是首选 Agent 引擎；
-- 可以依赖、fork 或移植；
-- 不保留旧 Agent loop 双轨；
-- 产品状态、Remote、信任、journal、文件和外部任务不交给引擎；
-- 先做集成探针；
-- 不提前造宏大的通用引擎抽象。
+## 5. 反方压力测试
 
-### 5.2 简洁的准确含义
+### Strategy
 
-曾经容易滑向的错误理解：
+反方：Pi 可能改变 API、转向别的协议，或上游直接推出 GUI，OmniMind 的投入会被吃掉。
 
-- 引擎简单，所以产品也只需要聊天、文件和终端；
-- 为保持简单，把 Remote、恢复、Wiki 和外部任务推迟；
-- 把所有能力都做成插件，让产品只剩一个 loop。
+裁决：如果价值只来自 embedding，这个反方成立。因此 OmniMind 的独立资产必须是 Package trust/distribution、桌面工作流、文件/Remote、恢复、跨 Engine 和上游关系。Pi integration 只存在于窄 Host 边界，产品事实不依赖某个 wire shape。
 
-创立者的真实意思不是这样。
+### Execution
 
-准确含义：
+反方：完整 U1 接管、Pi 快速演化、Package 任意代码和三平台隔离叠加，范围极易失控。
 
-- 核心对象少；
-- 事实来源少；
-- 进程边界少；
-- 具体 adapter 先于框架；
-- 产品原生体验可以很强；
-- 复杂、高强度工作必须被做好；
-- 复杂性应留在确实拥有它的模块，而不是扩散到全局。
+裁决：不并行做“大平台”。先 provenance baseline，再交付一个 Pi Chat vertical slice，再做一个真实 Package，再接一个外部 Engine。每一步删除替代路径，不建立长期双轨。最脆弱的 U1 rights 和 Pi Host seam 在最前面证伪。
 
-## 6. 产品原生与外部 capability 的纠偏
+### Adoption
 
-### 6.1 第一次错误理解
+反方：只偏爱 Pi 会失去不喜欢 Pi 的用户；暴露真实能力差异会让多 Engine 体验不统一。
 
-曾把“科学基础能力都应通过 plugin/function-call 进入”扩张成“OmniMind 的所有能力都应走同一插件机制”。
+裁决：OmniMind 不需要服务所有人。默认用户选择的是最好用的 Pi 产品；其他 Engine 是逃生口和扩展面。统一的是 Conversation、文件、输出、权限诚实和桌面体验，不是伪造每个 Engine 都有相同 Branch、Package 或 Thinking。
 
-创立者明确指出这是严重误解。
+## 6. 成功与失败信号
 
-### 6.2 正确裁决
+成功信号：
 
-通过统一 capability 进入的是：
+- Pi 新 Model/Thinking/Package 能以小边界更新进入 OmniMind；
+- 一个成熟 Package 无需改包即可原生运行，并能准确报告权限与兼容；
+- worker 崩溃不击穿桌面与产品存储；
+- 可见 Conversation 与 Pi Session 各自恢复且不竞争权威；
+- U1 的流畅体验被保留，donor runtime/identity 被删除；
+- 第二个 Engine 接入没有迫使 native path 重写或产生 switch 蔓延。
 
-- 数据能力；
-- 分析能力；
-- 知识能力；
-- 科学问题形成与其他领域能力；
-- 外部机构或用户已有服务。
+失败信号：
 
-产品必须原生负责的是定义产品体验的能力：
+- OmniMind 开始维护 Provider/Model/Thinking 静态镜像；
+- Package 必须改写成 OmniMind 私有格式；
+- renderer 理解 Pi/ACP raw events；
+- 产品数据库复制 Pi transcript、queue、Todo 或 Workflow；
+- 每加一个 Engine 都增加跨全仓库分支；
+- “安全”“恢复”“兼容”只由 UI 或单元测试宣称，没有真实拒绝/崩溃/跨平台证据。
 
-- Thread；
-- 文件、diff、恢复；
-- 本地/远程 ExecutionTarget；
-- 终端和外部任务；
-- 信任；
-- 工作台；
-- 文件原生 Wiki；
-- capability 发现和公共结果呈现。
+## 7. 本轮收口
 
-随后又出现了第二次需要纠正的着相：把“原生”理解成全部写死在 kernel 或常驻进程。
-
-最终分层是：
-
-- kernel 只保存稳定原语、生命周期、唯一状态权威和 receipt；
-- 文件、Review、Dynamic Workflow、Delegation/Team、Goal、Browser、MCP、知识与 Remote adapter 可以是随产品交付、无需安装、按需激活的 first-party modules；
-- `E0` compatibility bridge 首发存在；
-- 第三方 package 可以直接运行、curated、fork、移植或拒绝，但不得拥有第二状态真相。
-
-“专业工具走统一入口”“产品原生负责体验”“实现可模块化”是三件不同的事。
-
-### 6.3 被明确删除的旧执行框架概念
-
-创立者明确要求忽略旧科研体系中单独命名的执行框架概念。
-
-后续不得：
-
-- 建同名模块；
-- 做兼容接口；
-- 留占位符；
-- 在路线图中说“以后可能恢复”；
-- 用另一个名字复刻同样的大而全执行框架。
-
-新产品只保留具体、必要的 runtime、journal、remote、recovery 和 verification 职责。
-
-## 7. Remote 优先级的形成
-
-创立者强调：
-
-- 连接远程服务器对生物信息分析几乎是刚需；
-- 产品仍运行在用户自己的电脑；
-- 体验应类似成熟本地工作台连接远端项目；
-- Remote 优先级不低；
-- 当前工程可参考但不一定最好；
-- πCode 中已经收集很多远程参考仓库；
-- 对 Remote 也要大胆删除旧设计。
-
-随后又纠正了 UI 权重：Remote 预计只占整体需求约 20%，重要不等于让它成为永久面板、产品模式或默认中心。
-
-最终裁决：
-
-- Remote 是早期 core surface；
-- 本地持有 UI、凭据、主要模型接入和 Thread；
-- 远程持有远程文件、进程和调度任务；
-- 使用系统 SSH 能力；
-- 远端部署最小 worker；
-- 不部署完整产品 server；
-- 不镜像全部 provider、设置和扩展；
-- 首个批处理调度器具体实现优先；
-- 断线、休眠和应用退出不应杀死外部任务；
-- 远程文件保持权威；
-- 只明确下载输出，不默认透明同步。
-- Remote 只在当前位置或动作实际位于远端时渐进出现；普通本地工作不背负 Remote 心智。
-
-## 8. 知识与 Wiki 的决策
-
-### 8.1 对默认 RAG 的看法
-
-创立者明确不看好把个人知识库默认做成传统 RAG：
-
-- 个人知识更适合 agentic search；
-- 文件原生 LLM Wiki 更可能积累长期价值；
-- 只有超大规模知识库，重型检索才相对更有优势；
-- 用户的大知识库可以由用户现有系统管理；
-- 即使约一千篇文献，也应认真尝试 Wiki 路线；
-- 不应武断认为到某个篇数就必须切换。
-
-后续纠偏把“文献”进一步还原为规模样例：代码、合同、PPT、会议记录、网页和混合文件都使用同一知识能力；不能把 Agentic Wiki 写成科研知识库功能。
-
-这不是禁止 embeddings 或混合检索。它们可以作为可重建投影，在真实召回失败后加入。
-
-### 8.2 科学知识能力的纠偏
-
-创立者要求：
-
-- 把科学知识工具理解为普通知识能力；
-- 不要把一个品牌或科学系统神圣化为知识本体；
-- 它和其他科学能力一样通过公共 capability 进入；
-- 不要把产品架构围绕某个 Omni 名字设计。
-
-### 8.3 Wiki 的最终角色
-
-- 原始文件不修改；
-- Wiki 是可见 Markdown；
-- 可检查、可编辑、可版本化；
-- Agent 负责综合、导航和维护；
-- helper 负责哈希、manifest、FTS、lint、staleness、原子写和 rollback；
-- 查询结果可以保存回 Wiki；
-- 默认不静默夜间改写；
-- 远程文件原地工作；
-- PDF/Office 解析由 capability 提供；
-- Wiki/知识是产品原生负责的体验，但实现可以是 bundled first-party module，不成为巨型领域聚合或 kernel 特权。
-
-## 9. `K0` 的角色纠偏
-
-最初存在一种简单方案：把成熟知识系统的核心 Agent 换成新引擎后接入。
-
-深入观察后，最终角色被限定为：
-
-- 用户已经部署时，可以外部连接；
-- 可使用 CLI/MCP/Skill 或最小 API；
-- 可搬其 AutoWiki、队列、版本、引用、lint、恢复等成熟模块；
-- 不默认把完整服务绑进 OmniMind；
-- 不复制租户、RBAC、自有 Agent、模型和 chat 产品；
-- 删除连接不删除外部知识库；
-- 连接失败只降级该能力。
-
-这不是反对搬运。若一条纵向子系统经探针证明完整搬入更优，就可以搬；只是不让无关宿主域一起进入。
-
-## 10. `U0` 的角色纠偏
-
-创立者认为 `U0` 前端做得非常好，甚至可以直接套进来，并确认拥有完整授权。
-
-曾经过度保守地把它降为“设计参考”和“少量纯函数 donor”。创立者后来明确：
-
-- 可以深度借鉴；
-- 可以全部重构；
-- 可以直接搬；
-- 不应因为保留的东西多就假设它们有价值；
-- 授权不是阻碍；
-- 作者已明确迁移期 runtime 不是未来方向。
-
-最终裁决：
-
-- `U0` 是工作台首要代码移植物；
-- 完整 renderer 也在允许范围；
-- 必须与“新状态模型重建垂直切片”做同场探针；
-- 按总边界、身份洁净、性能和维护性选；
-- 不预设只能搬纯函数；
-- 切除旧 runtime、巨型 IPC、会话聚合和假 Remote；
-- 保留其工作台布局、后台状态、queue/interrupt、文件、预览、diff 和恢复等交互品质。
-
-## 11. 搬运禁令的纠偏
-
-曾提出“不要目录级 copying”，出发点是避免整仓吞入，但表述错误。
-
-创立者立即质疑：既然拥有授权且实现优秀，为什么要禁止搬运？
-
-修正后的正式态度：
-
-- 直接搬目录是合法一等手段；
-- 完整子系统、完整 renderer、fork 和源码移植都允许；
-- 允许从多个来源组合最好部分；
-- 不因追求原创而重写成熟实现；
-- 大小不是判断标准；
-- 授权和许可证决定法律路径，不替代技术判断。
-
-真正禁止：
-
-- 来源不明；
-- 授权不清却冒充原创；
-- 未审依赖就整仓吞入；
-- 为迁就移植物污染核心；
-- 保留新旧双轨；
-- 搬入后不再理解和维护；
-- 因授权充分而取消质量判断。
-
-## 12. 权限态度
-
-创立者说明自己通常给 Agent 最大权限，并认同首选引擎不内置繁琐安全权限有其考虑。
-
-最终产品语义：
-
-- 受信工作区默认全权限；
-- 不逐命令弹确认；
-- 未受信工作区不执行；
-- 第三方扩展信任独立；
-- 若扩展以用户权限运行，必须直说；
-- 不制造假 sandbox；
-- 发布、凭据轮换、高费用计算、删除远程持久数据等不可逆外部动作有单独授权；
-- 安全重点是事实诚实、秘密不泄露和外部后果可控，而不是确认框数量。
-
-## 13. 被斩断的保守路径
-
-后续不得重新引入：
-
-- 在当前仓库原地慢慢洗名；
-- 新旧 Agent loop 双轨；
-- 先复刻旧功能再重构；
-- 为不存在的用户做兼容；
-- 以旧测试全绿作为新产品定义；
-- 重型内置知识库；
-- 完整远程产品 server；
-- 多套本地 IPC/HTTP/WS；
-- 为第一个消费者造通用 framework；
-- 把所有能力插件化；
-- 以科研名词建通用 core；
-- 为外部来源保留生产 namespace；
-- 只改 UI 名称，内部仍被旧产品定义；
-- 因许可证麻烦就否定优秀机制；
-- 因获得授权就不做来源披露。
-
-## 14. 已确认的产品决策
-
-| 主题 | 决策 |
-| --- | --- |
-| 仓库 | 全新独立仓库 |
-| 名称 | 新产品保留 OmniMind |
-| 旧仓库 | 独立继续，未来避免公开名称冲突 |
-| 用户 | 所有人可用；领域只是 workload，不设科研优先产品层 |
-| 核心 | 极小通用内核 |
-| 引擎 | `E0` 首选，无旧内核双轨 |
-| 工作台 | `U0` 可整块移植，探针决定边界 |
-| 一级入口 | `Agent | Chat`，Agent 在左、Chat 在右；顺序进入导航与测试契约 |
-| Conversation | OmniMind 拥有 canonical timeline；一个 Conversation 可跨多个 Engine/Model |
-| Run | 每次执行冻结 Engine/Model/Reasoning/Permission/Target/workspace revision |
-| Engine Session | 可抛弃、可重建的 lineage/cache，不是 Conversation 身份或产品真相 |
-| Remote | 早期一等能力，本地产品控制远端执行 |
-| 调度 | 先做一个具体批处理调度器 |
-| Knowledge | 文件原生、Agentic、可见 Markdown，语义/RAG 按证据启用 |
-| RAG | 非默认；按证据加可重建检索投影 |
-| 专业能力 | 公共 capability，不进 core |
-| 知识系统 | 外部连接 + 可选模块移植 |
-| 动态工作流 | Agent 实时生成/改写；原生可靠性原语 + 生态 donor；拒绝固定 DAG/YAML 默认 |
-| `E0` 生态 | 首发一级兼容；不是以后再接的可选项 |
-| First-party modules | 随产品交付、无需安装、按需激活，不等于常驻 kernel |
-| 自动更新 | exact artifact、staging、trust envelope、safe boundary、generation lease、LKG rollback |
-| 权限 | 受信全权，扩展信任与外部不可逆授权分离 |
-| 兼容 | 默认零兼容、零同步 |
-| 移植 | package/fork/整块搬/改造/重写均可 |
-| 来源 | 根 README 唯一披露 |
-| 身份 | 产品作者区零外部产品身份 |
-| 旧执行框架 | 完全忽略，不留占位 |
-
-## 15. 技术细节不是未决产品问题
-
-以下不需要再让创立者做偏好选择，应由探针决定：
-
-- `E0` 采用 package、fork 还是源码移植；
-- `U0` 采用完整 renderer 还是组件域；
-- 本地 Agent 是否需要独立进程；
-- remote worker 的最小协议形态；
-- `L0` Remote 搬多少；
-- Wiki 使用 `K2`–`K4` 哪些模块；
-- FTS 何时不足；
-- 第二个调度器何时触发抽象；
-- 自定义 UI extension 何时出现；
-- 是否需要显式目录同步。
-
-判断标准已经给出。没有证据时选边界最小、事实最清楚、最容易删除的一条。
-
-## 16. 仍需执行者核实的事实
-
-这不是产品分叉，只是执行核查。独立仓库的绝对路径和远端已经确定，不得再次询问或另建仓库；仍需按实际施工阶段核实：
-
-- 永久分发许可证；
-- 各来源开工时最新 revision；
-- `U0` 额外授权的文字证据与第三方贡献覆盖；
-- 其他来源的逐文件许可证；
-- 可用于真实远程和批处理探针的环境；
-- 千篇级真实 corpus；
-- 旧产品何时改名/标记，以避免公开冲突。
-
-核实结果只更新 README 来源披露和施工证据，不重开已经确认的产品方向。
-
-## 17. 最终提醒
-
-创立者不是要一个“看起来不再像别人”的产品，而是要一个内部也不再由别人决定的产品。
-
-同时，创立者也不要求闭门原创。最好的实现可以大胆搬，最好的生态可以直接吃，最好的工作台可以整块留下。真正的标准是：
-
-- 搬过来以后，它是否成为 OmniMind 自己的稳定职责；
-- 外部身份是否只剩根 README 的诚实披露；
-- 宿主概念是否被切干净；
-- 事实是否只有一个权威；
-- Remote、恢复、知识和异构高强度任务是否真的成立；
-- 未来的人是否看得懂、改得动、删得掉。
-
-若答案是否定的，即使功能很多也应删除。若答案是肯定的，即使整块来自优秀现成实现也应果断采用。
-
-## 18. `E0` 生态不是“以后再说”
-
-在讨论 first-party modules 和公共扩展 ABI 时，曾出现一种错误顺序：先完成 OmniMind 原生 API，等稳定以后再考虑 `E0` package。
-
-创立者明确否定：`E0` 的成熟扩展生态恰恰是更换内核最有价值的理由，不能在架构抽象时被顺手排除。
-
-最终态度：
-
-- `E0` compatibility 是首发需求；
-- 最重要的第一方能力可以随产品一起打包，无需用户安装；
-- “一起打包”不等于全部常驻、全部塞进一个 mega extension 或全部注入上下文；
-- `E0` package 可以直接运行、适配、局部移植、curated、fork 或拒绝；
-- 优秀但有有界瑕疵的仓库可以 fork 后持续改进；
-- 不因“必须原创”重复造轮子，也不因生态成熟让 package 夺取产品状态权威；
-- 公共 OmniMind SDK 可以等多个真实 first-party modules 与 `E0` bridge 验证以后冻结，但兼容面不能因此缺席。
-
-## 19. Dynamic Workflow 的重大纠偏
-
-研究中一度把“运行时必须确定、可恢复”错误地推成“Workflow 应预定义 DAG、YAML 或模板”。创立者明确指出这是传统自动化思维，违背 Agent 时代。
-
-正确理解：
-
-- Agent 根据当前上下文和实时结果即时生成编排；
-- 可以追加、删除、改序、分支、循环、并行和终止；
-- child Agent 返回新证据后，路径可以中途改变；
-- 用户可以 steer、stop、接管或继续；
-- 普通任务不显示 Workflow；
-- 固定的是 journal、resume、cancel、hard caps、receipt、single integration owner 和准确失败语义，不是工作步骤。
-
-一个 donor 证明了“调用时由 Agent 现场生成脚本”和脚本内条件分支，但尚未证明真正的 mid-run replan、crash resume 和副作用治理。因此选择它是因为思想正确，不是因为生产可靠性已经成立。
-
-固定图引擎仍可捐赠 lease、retry、journal、replay 和 invalidation，不得重新定义产品本体。
-
-## 20. Todo、Agent、Team、Goal 与 Review 的去重
-
-七类生态审判最终得到以下边界：
-
-- Todo：当前 Conversation/Run/Attempt 的计划投影，不是独立任务数据库；
-- child Agent：拥有独立执行 lineage 的 child Conversation/Run，可进入、追问、纠偏、停止和恢复；用户可见结果进入 canonical timeline，隐藏 reasoning 不复制；
-- Team：只增加 member、assignmentRef、owner 和 typed mailbox，不复制 Todo、acceptance 或依赖图；
-- Dynamic Workflow：拥有动态 run/step/attempt 编排，不拥有 child transcript、Team member 或外部 Job 状态；
-- Durable Goal：显式创建的长期策略，不自动包装普通 Chat，也不能靠模型自报获得完成权；
-- Review：默认只是看文件、结果和 diff；多 Agent review 是按需策略，不建立第二状态真相；
-- Campaign：仓库开发完成治理，与普通产品 Todo/Goal/Workflow 分开。
-
-Agent 之间可以通讯，用户也可以进入 child conversation 直接追问；所有消息和回执必须可审计。读可以 fan-out，共享写入与最终集成只有一个 owner。
-
-## 21. 自动更新不是自动信任
-
-创立者明确要求扩展未来能够自动更新。此前“禁止静默更新”若被写成“只检查、每天提醒用户手动处理”，同样违背用户体验。
-
-最终纠偏：
-
-- 自动发现、下载到 staging、检查、兼容验证和 safe-boundary activation 都应产品化；
-- bundled first-party modules 随 App 原子更新；
-- curated 和已经批准 trust envelope 的第三方 package 默认可以 Auto；
-- owner、source、license、install script、native dependency、capability 或 state schema 实质扩张时停在 Staged；
-- active Attempt、child Agent、browser target、MCP connection、remote process 或 scheduler Job 使用旧 generation 时不得热替换；
-- 新 generation 失败自动回到 LKG；
-- capability manifest 只解释变化，不是安全 sandbox；第三方扩展实际拥有完整用户权限；
-- 已批准 artifact 正常运行不制造逐命令确认和重复授权戏剧。
-
-真正禁止的是未经验证越过信任边界的静默激活，不是自动更新本身。
-
-## 22. UI 心智的连续纠偏
-
-早期原型过度围绕 Remote、对象工作台和“审阅”概念设计，被创立者明确否定。必须记住用户已经使用过成熟 coding-agent GUI，心智迁移本身有价值。
-
-锁定结果：
-
-- 一级入口固定为 `Agent | Chat`，Agent 在左、Chat 在右；
-- Agent 与 Chat 共用 Engine、Model、Reasoning、Composer、Timeline、Activity 和队列，不再为了概念纯度维护两套运行时；
-- Chat 没有 Primary Folder，按时间展示历史；Agent 按 Primary Folder/OMStudio 分组；
-- 新 Chat 不创建目录，Engine 真正需要 cwd 时才按需建立不可见可回收 scratch；Chat 引用必须保持技术上可证明的只读；
-- 每个 Conversation 独立保存 tabs、打开文件和工作台上下文，重新进入时恢复；
-- 右侧是按需上下文工作台，可查看任何文件、diff、终端、浏览器、child Agent 和临时问题，不是永久 Remote/Workflow dashboard；
-- Agent 运行时用户随时打开刚生成的文件；“审阅”首先只是查看；
-- Markdown 表格、代码、图片和来源必须高质量呈现；图片支持缩放、平移、多图和比较，区域选择修改以后作为可插拔能力；
-- 未知文件至少有 metadata/文本预览、系统打开和 viewer 扩展点；
-- child Agent 是完整对话，可追问、纠偏和停止；不同 Agent/会话可以通过可审计消息通讯；
-- 临时提问是轻量只读分支，可以把结论带回主 Conversation；
-- Remote 只占少数但重要场景，不支配默认布局；
-- 气质冷静、精确、克制；动效快、短、可打断；性能有预算和回归门；macOS、Windows、Linux 语义统一但尊重平台习惯。
-
-创立者允许创新，但标准不是“长得不一样”，而是让人眼前一亮的质感、简洁、高级、丝滑和更少认知负担。
-
-## 23. UI 母体与旧 M2 的决绝纠偏
-
-后续深入研究后，创立者不再接受“从多个项目抽取一点风格，再自己慢慢搭 UI”的保守路线。`U1` 被批准为 UI 母体；旧 M2 `quiet-inline` / `balanced-tabs` 被明确否决。此前独立 object-workbench HTML 同样被否决并清理，不得以原型历史复活。
-
-这不是一次风格偏好微调，而是权威变更：
-
-- renderer、设计系统、布局、导航、交互和执行过程投影以 `U1` 为默认答案；
-- 可以整个 renderer、整个子系统、整个桌面宿主机制或 managed fork 接管，不为“原创感”拆碎优秀代码；
-- 当新路线更优时，旧 M2 代码、抽象、命名、文档和测试没有 sunk-cost 豁免，重复实现应整层删除；
-- `U0` 降为次级机制/组件 donor，不再定义整体工作台心智；
-- Kanban、Automations、Git 和 pull request 都是重要工作面，不能仅因后端尚未接线就隐藏或降格；
-- 重大冲突必须摆到台面上讨论和原型化，不得在代码里悄悄做一半保守折中。
-
-创立者随后进一步确认了物理施工方式：不再默认由人逐个挑选 `U1` 组件，而是先把固定 revision 的完整源码树复制到 OmniMind，保持可运行基线，再大幅改写。动机是不遗失跨组件、事件、桌面桥和服务的隐性信息，不是批准其所有内核和状态权威。因此“完整复制”与“整层删除未批准的内核”必须同时成立。
-
-旧产品 `L0` 的 icon 几何或相关品牌资产可作为候选来源，但旧配色已被创立者明确否决，不需要保护或渐进改色。图标若采用也要重新检查多平台、单色和小尺寸质量；旧 UI、颜色令牌、架构和文案不因 icon 被参考而获得继承权。
-
-激进不等于闭眼整仓吞并。源码审判仍要决定 `U1` 的 server、transport、SQLite、runtime event 和 orchestration 机制是否比产品自有实现更值得接管。真正决绝的标准是：
-
-- 若它们能在不损害 `E0` 生态和产品单一状态权威的前提下明显减少代码、边界和长期维护，就连根接管；
-- 若它们带来第二 Agent 内核、第二 journal、第二 provider ontology 或无法证明的恢复语义，就整层拒绝，只保留 UI/机制。
-
-不选双内核与长期双轨，除非固定源码给出极强、可验证且无更简单路径的证据。根 README 必须诚实披露并真诚感谢最终采用的上游；这与生产命名和 UI 保持身份洁净不冲突。
-
-## 24. 多引擎、ACP 与双语收敛
-
-在 UI 母体接管以后，创立者把视角再次提高：OmniMind 不应只做首选引擎的桌面 GUI，也不应为了“多引擎”重新发明协议。最终锁定的是工作区优先、ACP-first、默认引擎最深集成但前端身份独立的路线。
-
-创立者连续确认并在最终 Converge 中修正后的决策为：
-
-- ACP 是 Agent 第一接入标准；原生 ACP 直接接，有正式 headless/SDK/RPC 的用薄 Bridge，没有可靠协议的只作受限 guest；
-- 已有 Pi ACP Bridge 应优先治理性 fork、深改和回馈上游；无测量证据不造一条语义不同的进程内私有快速路径；
-- 一个 Conversation 可以在 Run 边界直接切换 Engine/Model。用户主动切换不创建 Conversation、不提示、不生成 Handoff、不写 Timeline；当前 Run 保持冻结，选择只影响 next Run；
-- 跨 Engine 产生新事实后返回旧 Engine，不恢复陈旧 Session，而从 canonical Conversation、Workspace 当前事实和 Continuation Envelope 新建 lineage；
-- OmniMind 拥有用户可见 canonical Conversation/timeline；Engine Session 只拥有可抛弃执行 cache。原来“Engine transcript 是对话权威、一个 Thread 绑定一个 Session”的结论被明确撤回；
-- UI 母体的 local/worktree、Git、Kanban、Automations 和 pull request 机制应保留；共享写入增加 writer admission/lease 和唯一 integration owner；
-- Pi 可以通过 ACP orchestration 生态指挥其他 Agent。被调度者默认属于当前父 Run 的 child，带 parent/origin/depth/cost/权限/位置和循环上限；未经显式提升不成为并列顶层 Conversation；
-- 权限交互可以统一为 Approval required / Auto / Full access，但真实强制边界必须另外标记为 `host-enforced` / `agent-enforced` / `mixed` / `unverified`。ACP permission 不是安全证明；
-- ACP 不能成为 React 数据模型。运行链必须是原始证据 → 强类型产品事实 → 增量读投影 → UI view model；Engine 私有能力可增强局部投影，但不能形成两套产品壳；
-- Timeline 保持自然对话；运行过程用稳定轻量 Activity 增量呈现，按需展开 Todo、child Agent、Terminal、Diff、文件和 provenance。用户主动选择的变化不再用系统消息复述；未知事件保留且可检查，但不把 raw noise 全部倾倒给用户。
-
-创立者随后纠正了“护城河”叙事。当前没有必要为了形成独门优势而重造工作台、Team、Workflow 或 Automation。正确目标是先把已批准 UI 母体完整接管，把首选引擎和成熟生态接好，做到好用、丝滑、漂亮、稳定。优势若产生，应来自长期产品质量，而不是预先发明一个宏大的核心模块。执行者不得把“OmniMind 必须拥有状态权威”误读成“所有生态能力都要由 OmniMind 重写”：Engine/package 私有 Todo、Team、Workflow 可以继续由来源拥有，产品只在需要跨引擎组织时建立最小事实与投影，绝不双写。
-
-语言判断也经过一次纠偏。OmniMind 首发必须让中文和英文用户都能完整工作，但这不是全面汉化或翻译覆盖率项目。中文界面可以保留 `Thinking`、`Planning`、Git、Diff、PR、Token、ACP、路径、代码和 Agent 原始过程语言；理想气质是中文动作与说明承载可理解性，英文专业对象在更准确、更自然时保留。不能机械翻译，也不能让中文用户因为关键设置、错误或恢复路径只有英文而无法工作。
-
-最后，首选引擎必须停留在实现和生态层，不能成为 OmniMind 的前端身份。日常界面说 Agent、Chat、Tool、Skill、Package、Team、Workflow，不说宿主化的 Session/Tool/Team。真实引擎名称只在用户选择与安装、Package 来源、兼容诊断、权限边界、版本和法定披露中按需出现。此原则不是洗白来源；根 README 和许可证仍必须完整、诚实地感谢和披露上游。
-
-Chat/Agent 边界也经历了最后一次纠偏。最初为了“纯 Chat”曾提出 Chat 直接调用模型、不显示 Engine；创立者指出这破坏了 UI 母体已经验证的一致心智。最终裁决是两者共享 Engine/Model/Reasoning/Composer/Run 系统，区别只在 Primary Folder 与执行权威。Chat 的无 Folder 不是弱模型模式；它仍能思考、搜索、读取引用和生成 Artifact，但不能修改用户引用位置。需要写入时显式 Send to Agent。
-
-Models/Agents 设置因此分离：Models 管理 Chat 与内置 OmniMind Agent 使用的 ModelConnection，Agents 管理外部 Agent 的发现、官方认证、版本、能力和权限真实性。外部凭据仍归外部 Agent；模型或 Engine 不可用时绝不静默 fallback。
-
-创立者还要求用冰山法则做全局判断：表面追求极简、高级和丝滑，水下必须同时完成状态、权限、写入、恢复、性能、跨平台、双语、更新和失败路径。执行者不能因为用户只看见一行 Planning 或一个活动图标，就把底层实现降格成字符串猜测和假进度；也不能把所有底层机制暴露给用户来证明工程复杂。真正的质量是复杂性被系统承担，控制与证据在需要时可达，日常使用仍然安静。
-
-## 25. 七类研究结束后的最终纪律
-
-`E0` 生态七类研究已经完成。结论不应继续留在长对话里，也不能为每类另建一份平行报告。
-
-- 产品和架构真相进入根 README；
-- 永久执行约束进入 AGENTS；
-- 施工、probe 和 proof 进入 execution brief；
-- 用户态度、误解和撤回进入本文；
-- Campaign 只保存 milestone、claim、status、evidence 和 SHA；
-- 固定来源、许可证和采用方式只在根 README 披露；
-- 易变下载量和 stars 不进入永久 doctrine；
-- 测试文件存在不等于测试已运行；所有生产裁决仍需 disposable probe。
-
-后续新会话不需要重新询问已经锁定的 taste。它应直接验证尚未证明的技术事实，并在证据推翻主线时先改 README，再改实现。
-
-## 26. 身份洁净必须同时是树形洁净
-
-在批准完整 `U1` 源码树作为物理接管起点后，出现了一种新的错误滑坡：把“完整导入以保留隐性行为”理解成 donor 目录、文件名和 package 结构可以长期留在产品里，或认为只要源码文本不再出现外部名称就已经洁净。
-
-创立者再次明确，这两件事必须同时成立：
-
-- 完整固定源码树先作为临时工位恢复可运行，来源、权利和致谢必须诚实；
-- 大规模搬入以前，现有 checker 先覆盖 path/name/source/generated-output，并建立最小结构规则；
-- 首个 adoption commit 以前完成目录和命名净化，生产树少、浅、单责，名称短、精确、稳定；
-- donor 路径镜像、品牌缩写、研究代号、一次 Goal/波次/编号、垃圾桶目录和迁移态命名没有永久存在的资格；
-- 坏名称直接替换并删除旧入口，不为尚不存在的兼容义务保留 alias、wrapper 或 deprecated 双轨；
-- 根 `AGENTS.md` 必须把这组约束写成后续会话的常驻硬门，不能只依赖本次 prompt；
-- 冰山法则与身份/结构洁净同级：表面的极简和质感必须由真实状态、权限、writer ownership、恢复、性能、失败与跨平台证据支撑，不能以漂亮模拟换取视觉完成度。
-
-这次纠偏不是要求在 README 隐藏来源。恰好相反：产品作者区越洁净，根 README 的 adoption 记录、固定 revision、人可读致谢和 `LICENSES/` 法定原文越必须完整。洁净阻止 donor 继续定义产品，不抹除 donor 的真实贡献。
-
-## 27. 最终 Converge：一致交互、跨 Engine Conversation 与冰山完成度
-
-2026-08-01 的最终多轮 Converge 又推翻了三项看似“架构更纯”、实际让用户更累的判断。创立者明确要求执行者不要着相：抽象边界服务用户，不允许用户为了架构洁癖理解更多概念。
-
-第一，产品一级入口不是 Home/Projects/Studio/This Mac/Remote 的组合，而是固定顺序 **`Agent | Chat`**。Agent 在左、Chat 在右；这是导航、默认入口、键盘与测试契约。Chat 保持普通时间序历史，Agent 按真实 Folder 与 OMStudio 组织。Open Folder、`@folder` 和粘贴路径共享熟悉交互，但引用永远不偷偷改写 Primary Folder 或 Conversation 身份。
-
-第二，Chat 与 Agent 不应因为产品边界而产生两套 Composer 或运行时。两者共同使用 Engine、Model、Reasoning、Timeline、Activity、队列、附件、`+` 和 `@`。区别不是“Agent 更聪明”，而是 Agent 有 Primary Folder/OMStudio 写入权威，Chat 没有。Chat 新建时不创建目录；只有 Engine 真正需要 cwd 时才按需建立内部 scratch。Chat 引用保持只读，生成内容进入 Output store 并由 `OutputRef` 引用；需要修改用户文件时 Send to Agent。这个边界必须由 sandbox、host filesystem boundary 或受控内容副本证明，不能只写 `Read only`。
-
-第三，一个用户 Conversation 必须能够自然跨多个 Engine 与 Model。早先“一个 Thread 绑定一个主 Engine Session、对话内容由 Engine transcript 拥有”的路线已经被撤回，因为它会把统一 Timeline 切碎在多个外部 Session 中。OmniMind 现在拥有 canonical Conversation/timeline；每次 Run 冻结执行选择；Engine Session 是 opaque、可抛弃 lineage。用户切换 Engine/Model 后直接继续，不创建 Conversation、不弹窗、不生成 Handoff、不写 `Continued with…`，因为选择器本身已是反馈。只有 Engine 不可用、认证失效、能力不匹配或发生隐含副作用时才额外说明。
-
-运行中切换只影响 next Run。普通发送进入带 frozen snapshot 的可编辑队列；立即纠偏必须显式并在安全边界送入当前 Run。一个 Agent Conversation 只有一个顶层前台 Run；真正并行通过 child、Team、Workflow、新 Conversation 或隔离 worktree，读可 fan-out，共享写入和最终集成只有一个 owner。Stop 不冒充 rollback，Partial Diff 和已发生副作用继续可见。
-
-创立者进一步确认，世界级完成度不能靠功能表自证。UI 母体完整搬入是为了保住成熟手感与隐性耦合，不是为了逃避删除；ACP、多 Engine、Pi 生态和自动更新都是基础能力，不是护城河口号；真正应赢的是长期一致的用户体验、状态可信、恢复、文件/Git/Remote、编排和细节。Electron/TypeScript 作为 UI 母体的物理起点优于宗教式全 Rust 重写；Rust 只有在 profiling 证明窄热点后才作为可替换 helper 进入。
-
-最后一次反方审判还锁定：完整复制不等于全部保留；多 Engine 不等于虚假齐平；隐藏默认引擎不等于伪造来源；身份洁净允许根 README、法定文本、lockfile、真实集成/选择/诊断边界出现外部事实；自动更新不等于热替换；UI first 不等于静态 HTML；没有用户允许激进删除，但不允许失去每个里程碑可运行、可回退、可证伪的施工脊柱。
-
-创立者对“完美”的要求应被理解为 Done 公式而非无限抛光：所有 required claims 在同一 final SHA verified、blocked=0、相关 final gate 通过、fresh-context completion audit 无 material finding。生产者不能用局部绿色、漂亮原型或自我评价提前宣布完成。
+Converge gate 已满足：产品身份、主路径、权威、失败边界、阶段、验收和长期维护均已明确；两个剩余高影响假设都有前置验证路径。后续不再重复战略发现，直接按 `execution-brief.md` 施工，只有 U1 rights 失败或 Pi SDK 无法支撑 native Package 这类结构性反证才重新进入收敛。
