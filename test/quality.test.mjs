@@ -141,6 +141,34 @@ test("source inventory requires complete adoption and tracked legal text", () =>
   assert.ok(errors.some((error) => error.includes("LICENSES/")));
 });
 
+test("source inventory validates exact repository paths, mode, URL, and legal text", () => {
+  const adoption = {
+    id: "source-one",
+    url: "https://example.com/source.git",
+    revision: "a".repeat(40),
+    paths: ["vendor/source"],
+    rights: "MIT",
+    mode: "adapt",
+    changes: "none",
+    updatePolicy: "manual",
+    licenseFiles: ["LICENSES/source.txt"],
+  };
+  const tracked = ["vendor/source/index.ts", "LICENSES/source.txt"];
+
+  assert.deepEqual(validateSourceAdoptions([adoption], tracked), []);
+  assert.ok(
+    validateSourceAdoptions(
+      [{ ...adoption, url: "git@example.com:source.git", mode: "copy", paths: ["../source"] }],
+      tracked,
+    ).length >= 3,
+  );
+  assert.ok(
+    validateSourceAdoptions([{ ...adoption, paths: ["vendor/missing"] }], tracked).some((error) =>
+      error.includes("no tracked files"),
+    ),
+  );
+});
+
 test("repository inventory excludes tracked paths deleted from the working tree", async () => {
   const temporaryRoot = await mkdtemp(path.join(tmpdir(), "repository-files-"));
   await writeFile(path.join(temporaryRoot, "kept.txt"), "kept\n");
