@@ -992,6 +992,7 @@ const buildDesktopArtifact = Effect.fn("buildDesktopArtifact")(function* (
     desktopDist: path.join(repoRoot, "apps/desktop/dist-electron"),
     desktopResources: path.join(repoRoot, "apps/desktop/resources"),
     serviceDist: path.join(repoRoot, "apps/service/dist"),
+    nativeHostDist: path.join(repoRoot, "apps/native-host/dist"),
   };
   const bundledClientEntry = path.join(distDirs.serviceDist, "client/index.html");
 
@@ -1025,11 +1026,13 @@ const buildDesktopArtifact = Effect.fn("buildDesktopArtifact")(function* (
 
   yield* fs.makeDirectory(path.join(stageAppDir, "apps/desktop"), { recursive: true });
   yield* fs.makeDirectory(path.join(stageAppDir, "apps/service"), { recursive: true });
+  yield* fs.makeDirectory(path.join(stageAppDir, "apps/native-host"), { recursive: true });
 
   yield* Effect.log("[desktop-artifact] Staging release app...");
   yield* fs.copy(distDirs.desktopDist, path.join(stageAppDir, "apps/desktop/dist-electron"));
   yield* fs.copy(distDirs.desktopResources, stageResourcesDir);
   yield* fs.copy(distDirs.serviceDist, path.join(stageAppDir, "apps/service/dist"));
+  yield* fs.copy(distDirs.nativeHostDist, path.join(stageAppDir, "apps/native-host/dist"));
 
   yield* assertPlatformBuildResources(options.platform, stageResourcesDir, options.verbose);
 

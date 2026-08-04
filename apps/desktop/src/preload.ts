@@ -3,9 +3,11 @@ import type {
   BrowserAnnotationEvent,
   BrowserUseOpenPanelRequest,
   DesktopBridge,
+  DesktopHealthBridge,
 } from "@omnimind/contracts";
 import { normalizeDesktopWsUrl, resolveDesktopWsUrlFromEnv } from "./desktopWsBridge";
 import { DESKTOP_IPC_CHANNELS } from "./ipcChannels";
+import { DESKTOP_HEALTH_IPC_CHANNELS } from "./process/desktopHealthChannels";
 
 const IPC = DESKTOP_IPC_CHANNELS;
 
@@ -110,6 +112,19 @@ contextBridge.exposeInMainWorld("desktopBridge", {
     return () => {
       ipcRenderer.removeListener(IPC.menuAction, wrappedListener);
     };
+  },
+  health: {
+    getSnapshot: () => ipcRenderer.invoke(DESKTOP_HEALTH_IPC_CHANNELS.getSnapshot),
+    retryNativeHost: () => ipcRenderer.invoke(DESKTOP_HEALTH_IPC_CHANNELS.retryNativeHost),
+    onSnapshot: (listener) => {
+      const wrappedListener = (_event: Electron.IpcRendererEvent, snapshot: unknown) => {
+        if (typeof snapshot !== "object" || snapshot === null) return;
+        listener(snapshot as Parameters<typeof listener>[0]);
+      };
+      ipcRenderer.on(DESKTOP_HEALTH_IPC_CHANNELS.snapshot, wrappedListener);
+      return () =>
+        ipcRenderer.removeListener(DESKTOP_HEALTH_IPC_CHANNELS.snapshot, wrappedListener);
+    },
   },
   getZoomFactor: () => {
     const factor = ipcRenderer.sendSync(IPC.zoomFactor);
@@ -255,4 +270,4 @@ contextBridge.exposeInMainWorld("desktopBridge", {
       };
     },
   },
-} satisfies DesktopBridge);
+} satisfies DesktopBridge & DesktopHealthBridge);

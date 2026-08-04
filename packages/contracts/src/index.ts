@@ -36,5 +36,7 @@ export * from "./studio";
 export * from "./filesystem";
 export * from "./rpc";
 export * from "./product";
+export * from "./native-host";
+export * from "./desktop";
 // The explicit export wins over the legacy star export and adds Product RPCs to the moved socket.
 export { ProductWsFeatureRpcGroup as WsFeatureRpcGroup } from "./product/rpc";

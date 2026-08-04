@@ -271,13 +271,35 @@ async function terminateProcessTree(child: ChildProcess): Promise<void> {
   await waitForExit(child, 2_000);
 }
 
-function hasStartupProof(logPath: string): boolean {
+function hasPackagedProcessTree(rootPid: number): boolean {
+  if (process.platform === "win32") return true;
+  const result = spawnSync("ps", ["-axo", "pid=,pgid=,command="], { encoding: "utf8" });
+  if (result.status !== 0) return false;
+  const commands = result.stdout
+    .split("\n")
+    .map((line) => line.match(/^\s*(\d+)\s+(\d+)\s+(.+)$/u))
+    .filter((match): match is RegExpMatchArray => match !== null)
+    .filter((match) => Number(match[2]) === rootPid)
+    .map((match) => match[3]!);
+  return (
+    commands.filter((command) => command.includes("/apps/service/dist/index.mjs")).length === 1 &&
+    commands.filter((command) => command.includes("/apps/native-host/dist/index.mjs")).length ===
+      1 &&
+    commands.some((command) => command.includes("--type=renderer"))
+  );
+}
+
+function hasStartupProof(logPath: string, serviceLogPath: string, rootPid: number): boolean {
   try {
     const log = readFileSync(logPath, "utf8");
+    const serviceLog = readFileSync(serviceLogPath, "utf8");
     return (
       log.includes("app ready") &&
       log.includes("bootstrap main window created") &&
-      log.includes("bootstrap backend ready source=")
+      log.includes("bootstrap backend ready source=") &&
+      log.includes("native host state=ready") &&
+      serviceLog.includes("OMNIMIND_NATIVE_HOST_AUTHENTICATED protocol=1") &&
+      hasPackagedProcessTree(rootPid)
     );
   } catch {
     return false;
@@ -310,6 +332,7 @@ export async function verifyPackagedDesktopStartup(
     const launch = prepareLaunch(options, extractionRoot);
     const env = createPackagedDesktopSmokeEnvironment(join(temporaryRoot, "state"), options);
     const logPath = join(env.OMNIMIND_HOME!, "userdata", "logs", "desktop-main.log");
+    const serviceLogPath = join(env.OMNIMIND_HOME!, "userdata", "logs", "server-child.log");
     child = spawn(launch.command, [...launch.args], {
       cwd: launch.cwd,
       env,
@@ -333,9 +356,9 @@ export async function verifyPackagedDesktopStartup(
 
     const deadline = Date.now() + options.timeoutMs;
     while (Date.now() < deadline) {
-      if (hasStartupProof(logPath)) {
+      if (child.pid && hasStartupProof(logPath, serviceLogPath, child.pid)) {
         console.log(
-          `Packaged ${options.platform}/${options.arch} startup smoke passed from isolated state.`,
+          `Packaged ${options.platform}/${options.arch} startup and Service/Native Host process-tree smoke passed from isolated state.`,
         );
         return;
       }

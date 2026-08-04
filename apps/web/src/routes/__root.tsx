@@ -106,6 +106,7 @@ import { useDiffRouteSearch } from "../hooks/useDiffRouteSearch";
 import { useProviderAuthRefreshOnFocus } from "../hooks/useProviderAuthRefreshOnFocus";
 import { useProviderStatusRefresh } from "../hooks/useProviderStatusRefresh";
 import { ProductProjectionCoordinator } from "../productProjectionCoordinator";
+import { SystemHealthCoordinator } from "../components/system-health/SystemHealthCoordinator";
 import { resolveSplitViewThreadIds, selectSplitView, useSplitViewStore } from "../splitViewStore";
 import { providerModelDiscoveryInvalidationFingerprint } from "../lib/providerDiscoveryInvalidation";
 import { providerDiscoveryQueryKeys } from "../lib/providerDiscoveryReactQuery";
@@ -249,6 +250,7 @@ function RootRouteView() {
           <GitProgressToastPreviewDev />
           <EventRouter />
           <ProductProjectionCoordinator />
+          <SystemHealthCoordinator />
           <ProviderStatusRefreshCoordinator />
           <GlobalShortcutsDialog />
           <GlobalFeedbackDialog />

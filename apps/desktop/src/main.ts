@@ -37,10 +37,12 @@ import type {
 } from "electron";
 import * as Effect from "effect/Effect";
 import type {
+  DesktopHealthSnapshot,
   DesktopTheme,
   DesktopUpdateActionResult,
   DesktopUpdateState,
 } from "@omnimind/contracts";
+import { DESKTOP_HEALTH_PROTOCOL_VERSION } from "@omnimind/contracts";
 import {
   autoUpdater,
   BaseUpdater,
@@ -118,6 +120,18 @@ import {
   summarizeBackendFailureOutput,
 } from "./backendSupervisionPolicy";
 import { captureBackendProcessOutput } from "./backendProcessOutput";
+import {
+  createNativeHostRendezvous,
+  nativeHostChildEnvironment,
+  type NativeHostRendezvous,
+} from "./process/nativeHostRendezvous";
+import {
+  NativeHostProcessSupervisor,
+  type NativeHostSupervisorState,
+} from "./process/nativeHostSupervisor";
+import { NativeHostAuthenticatedReadinessDetector } from "./process/nativeHostAuthenticatedReadiness";
+import { DESKTOP_HEALTH_IPC_CHANNELS } from "./process/desktopHealthChannels";
+import { createNativeHostBaseEnvironment } from "./process/nativeHostEnvironment";
 import { isDisposableSmokeEnvironment, syncShellEnvironment } from "./syncShellEnvironment";
 import {
   RENDERER_MAX_AUTOMATIC_RELOADS,
@@ -262,6 +276,7 @@ const COMMIT_HASH_DISPLAY_LENGTH = 12;
 const LOG_DIR = Path.join(STATE_DIR, "logs");
 const DESKTOP_LOG_FILE_NAME = "desktop-main.log";
 const BACKEND_LOG_FILE_NAME = "server-child.log";
+const NATIVE_HOST_LOG_FILE_NAME = "native-host-child.log";
 const LOG_FILE_MAX_BYTES = 10 * 1024 * 1024;
 const LOG_FILE_MAX_FILES = 10;
 const APP_RUN_ID = Crypto.randomBytes(6).toString("hex");
@@ -308,6 +323,8 @@ type DesktopUpdateErrorContext = DesktopUpdateState["errorContext"];
 
 let mainWindow: BrowserWindow | null = null;
 let backendProcess: ChildProcess.ChildProcess | null = null;
+let nativeHostRendezvous: NativeHostRendezvous | null = null;
+let nativeHostSupervisor: NativeHostProcessSupervisor | null = null;
 let backendPort = 0;
 let backendAuthToken = "";
 let backendHttpUrl = "";
@@ -337,9 +354,21 @@ let aboutCommitHashCache: string | null | undefined;
 let appUpdateYmlCache: Record<string, string> | null | undefined;
 let desktopLogSink: RotatingFileSink | null = null;
 let backendLogSink: RotatingFileSink | null = null;
+let nativeHostLogSink: RotatingFileSink | null = null;
 let restoreStdIoCapture: (() => void) | null = null;
 let unreadBackgroundNotificationCount = 0;
 let browserPerfInterval: ReturnType<typeof setInterval> | null = null;
+let desktopHealthSnapshot: DesktopHealthSnapshot = {
+  protocolVersion: DESKTOP_HEALTH_PROTOCOL_VERSION,
+  renderer: { status: "unavailable", reason: null, restartAttempt: 0 },
+  service: { status: "starting", reason: null, restartAttempt: 0 },
+  nativeHost: { status: "unavailable", reason: null, restartAttempt: 0 },
+  engineSelection: {
+    status: "unsupported",
+    reason: "Native execution is not connected in the Pi-free Host shell.",
+  },
+  updatedAt: new Date().toISOString(),
+};
 const browserManager = new DesktopBrowserManager({
   beforeInputEvent: (event, input) => {
     if (
@@ -460,6 +489,37 @@ function writeBackendSessionBoundary(phase: "START" | "END", details: string): v
   backendLogSink.write(
     `[${logTimestamp()}] ---- APP SESSION ${phase} run=${APP_RUN_ID} ${normalizedDetails} ----\n`,
   );
+}
+
+function publishDesktopHealth(
+  update: Partial<
+    Pick<DesktopHealthSnapshot, "renderer" | "service" | "nativeHost" | "engineSelection">
+  >,
+): DesktopHealthSnapshot {
+  desktopHealthSnapshot = {
+    ...desktopHealthSnapshot,
+    ...update,
+    updatedAt: new Date().toISOString(),
+  };
+  for (const window of BrowserWindow.getAllWindows()) {
+    if (!window.isDestroyed()) {
+      window.webContents.send(DESKTOP_HEALTH_IPC_CHANNELS.snapshot, desktopHealthSnapshot);
+    }
+  }
+  return desktopHealthSnapshot;
+}
+
+function publishNativeHostHealth(state: NativeHostSupervisorState): void {
+  publishDesktopHealth({
+    nativeHost: {
+      status: state.status,
+      reason: state.reason,
+      restartAttempt: state.restartAttempt,
+    },
+  });
+  const description = `native host state=${state.status} restartAttempt=${state.restartAttempt}${state.reason ? ` reason=${sanitizeLogValue(state.reason)}` : ""}`;
+  writeDesktopLogHeader(description);
+  console.info(`[desktop] ${description}`);
 }
 
 function safeConsoleError(...args: Parameters<typeof console.error>): void {
@@ -702,6 +762,11 @@ function initializePackagedLogging(): void {
     });
     backendLogSink = new RotatingFileSink({
       filePath: Path.join(LOG_DIR, BACKEND_LOG_FILE_NAME),
+      maxBytes: LOG_FILE_MAX_BYTES,
+      maxFiles: LOG_FILE_MAX_FILES,
+    });
+    nativeHostLogSink = new RotatingFileSink({
+      filePath: Path.join(LOG_DIR, NATIVE_HOST_LOG_FILE_NAME),
       maxBytes: LOG_FILE_MAX_BYTES,
       maxFiles: LOG_FILE_MAX_FILES,
     });
@@ -1016,11 +1081,55 @@ function resolveBackendEntry(): string {
   return Path.join(resolveAppRoot(), "apps/service/dist/index.mjs");
 }
 
+function resolveNativeHostEntry(): string {
+  return Path.join(resolveAppRoot(), "apps/native-host/dist/index.mjs");
+}
+
 function resolveBackendCwd(): string {
   if (!app.isPackaged) {
     return resolveAppRoot();
   }
   return OS.homedir();
+}
+
+function startNativeHost(): void {
+  if (nativeHostSupervisor) {
+    nativeHostSupervisor.start();
+    return;
+  }
+  if (!nativeHostRendezvous) {
+    publishDesktopHealth({
+      nativeHost: {
+        status: "unavailable",
+        reason: "Native Host rendezvous was not initialized.",
+        restartAttempt: 0,
+      },
+    });
+    return;
+  }
+  const entry = resolveNativeHostEntry();
+  if (!FS.existsSync(entry)) {
+    publishDesktopHealth({
+      nativeHost: {
+        status: "unavailable",
+        reason: "Native Host executable is missing from this build.",
+        restartAttempt: 0,
+      },
+    });
+    return;
+  }
+  nativeHostSupervisor = new NativeHostProcessSupervisor({
+    executable: process.execPath,
+    entry,
+    cwd: resolveBackendCwd(),
+    nodeArgs: backendNodeArgs(),
+    environment: createNativeHostBaseEnvironment(process.env, BASE_DIR),
+    rendezvous: nativeHostRendezvous,
+    onState: publishNativeHostHealth,
+    onStdout: (chunk) => nativeHostLogSink?.write(chunk),
+    onStderr: (chunk) => nativeHostLogSink?.write(chunk),
+  });
+  nativeHostSupervisor.start();
 }
 
 function desktopMigrationRecoveryPaths(): DesktopMigrationRecoveryPaths {
@@ -3037,7 +3146,10 @@ function backendEnv(): NodeJS.ProcessEnv {
   // until it returns, so an unmarked child serializes a second ~1s hydration behind ours.
   // Written explicitly in both directions: an inherited marker must never suppress a
   // probe when our own hydration failed and the child's PATH is the raw launch one.
-  return applyShellEnvironmentHydrationMarker(env, shellEnvironmentSync.pathHydrated);
+  const hydrated = applyShellEnvironmentHydrationMarker(env, shellEnvironmentSync.pathHydrated);
+  return nativeHostRendezvous
+    ? nativeHostChildEnvironment(hydrated, nativeHostRendezvous)
+    : hydrated;
 }
 
 function scheduleBackendRestart(reason: string): void {
@@ -3051,6 +3163,13 @@ function scheduleBackendRestart(reason: string): void {
     case "ignore":
       return;
     case "recover-migration":
+      publishDesktopHealth({
+        service: {
+          status: "degraded",
+          reason: "Product Service migration recovery is required.",
+          restartAttempt: backendSupervision.consecutiveFailures,
+        },
+      });
       // The marker is written mid-session by the migration that just killed the
       // backend, so bootstrap's one-shot check never saw it. Recovery owns the
       // process from here; respawning would only repeat the failed migration.
@@ -3063,6 +3182,13 @@ function scheduleBackendRestart(reason: string): void {
       void runMidSessionMigrationRecovery(reason);
       return;
     case "give-up":
+      publishDesktopHealth({
+        service: {
+          status: "unavailable",
+          reason,
+          restartAttempt: response.failures,
+        },
+      });
       writeDesktopLogHeader(
         `backend supervision gave up failures=${response.failures} reason=${sanitizeLogValue(reason)}`,
       );
@@ -3072,6 +3198,13 @@ function scheduleBackendRestart(reason: string): void {
       presentBackendStartupGiveUp(reason);
       return;
     case "retry":
+      publishDesktopHealth({
+        service: {
+          status: "restarting",
+          reason,
+          restartAttempt: response.attempt,
+        },
+      });
       safeConsoleError(
         `[desktop] backend exited unexpectedly (${reason}); restarting in ${response.delayMs}ms (attempt ${response.attempt}/${BACKEND_MAX_CONSECUTIVE_START_FAILURES})`,
       );
@@ -3263,6 +3396,13 @@ function startBackend(trigger: BackendStartTrigger = "lifecycle"): void {
   if (trigger === "lifecycle") {
     backendSupervision.reset();
   }
+  publishDesktopHealth({
+    service: {
+      status: trigger === "lifecycle" ? "starting" : "restarting",
+      reason: null,
+      restartAttempt: backendSupervision.consecutiveFailures,
+    },
+  });
 
   const backendEntry = resolveBackendEntry();
   if (!FS.existsSync(backendEntry)) {
@@ -3298,6 +3438,13 @@ function startBackend(trigger: BackendStartTrigger = "lifecycle"): void {
     return;
   }
   const listeningDetector = new ServerListeningDetector();
+  const nativeHostReadinessDetector = new NativeHostAuthenticatedReadinessDetector({
+    onReady: () => nativeHostSupervisor?.recordAuthenticatedReadiness(),
+    onUnavailable: () =>
+      nativeHostSupervisor?.recordAuthenticatedUnavailable(
+        "Product Service could not authenticate the Native Host channel.",
+      ),
+  });
   const startupBlockDetector = new BackendStartupBlockDetector();
   const outputTailDetector = new BackendOutputTailDetector();
   backendListeningDetector = listeningDetector;
@@ -3323,7 +3470,12 @@ function startBackend(trigger: BackendStartTrigger = "lifecycle"): void {
     writeStderr: (chunk) => {
       process.stderr.write(chunk);
     },
-    detectors: [listeningDetector, startupBlockDetector, outputTailDetector],
+    detectors: [
+      listeningDetector,
+      nativeHostReadinessDetector,
+      startupBlockDetector,
+      outputTailDetector,
+    ],
   });
 
   // A successful spawn only proves that Electron created the process. Reset the
@@ -3333,6 +3485,9 @@ function startBackend(trigger: BackendStartTrigger = "lifecycle"): void {
     () => {
       if (backendListeningDetector === listeningDetector) {
         backendSupervision.recordReadiness();
+        publishDesktopHealth({
+          service: { status: "ready", reason: null, restartAttempt: 0 },
+        });
       }
     },
     () => undefined,
@@ -3469,6 +3624,7 @@ async function shutdownDesktopRuntime(reason: string): Promise<void> {
   const shutdown = runAfterDesktopShutdown(
     stopBackendAndWaitForExit(),
     async () => {
+      await nativeHostSupervisor?.stop();
       clearUpdateBackgroundBlurTimer();
       clearUpdateCheckTimeoutTimer();
       clearUpdatePollTimer();
@@ -3513,6 +3669,14 @@ function requestGracefulAppQuit(reason: string): void {
 
 function registerIpcHandlers(): void {
   const storageSnapshotPath = resolveOmniMindStorageSnapshotPath(app.getPath("userData"));
+
+  ipcMain.removeHandler(DESKTOP_HEALTH_IPC_CHANNELS.getSnapshot);
+  ipcMain.handle(DESKTOP_HEALTH_IPC_CHANNELS.getSnapshot, async () => desktopHealthSnapshot);
+  ipcMain.removeHandler(DESKTOP_HEALTH_IPC_CHANNELS.retryNativeHost);
+  ipcMain.handle(DESKTOP_HEALTH_IPC_CHANNELS.retryNativeHost, async () => {
+    nativeHostSupervisor?.retry();
+    return desktopHealthSnapshot;
+  });
 
   ipcMain.removeAllListeners(IPC.storageMigration.read);
   ipcMain.on(IPC.storageMigration.read, (event: IpcMainEvent) => {
@@ -3983,6 +4147,9 @@ function createWindow(): BrowserWindow {
   window.webContents.on("did-finish-load", () => {
     window.setTitle(APP_DISPLAY_NAME);
     emitUpdateState();
+    publishDesktopHealth({
+      renderer: { status: "ready", reason: null, restartAttempt: 0 },
+    });
     writeDesktopLogHeader("renderer did finish load");
     console.info("[desktop] renderer did finish load");
   });
@@ -4034,6 +4201,9 @@ function createWindow(): BrowserWindow {
   window.on("closed", () => {
     if (mainWindow === window) {
       mainWindow = null;
+      publishDesktopHealth({
+        renderer: { status: "unavailable", reason: null, restartAttempt: 0 },
+      });
     }
     browserManager.setWindow(null);
   });
@@ -4071,6 +4241,13 @@ function attachRendererCrashRecovery(window: BrowserWindow): void {
       case "ignore":
         return;
       case "reload":
+        publishDesktopHealth({
+          renderer: {
+            status: "recovering",
+            reason: details.reason,
+            restartAttempt: response.attempt,
+          },
+        });
         writeDesktopLogHeader(
           `renderer reload scheduled attempt=${response.attempt}/${RENDERER_MAX_AUTOMATIC_RELOADS} delayMs=${response.delayMs}`,
         );
@@ -4082,6 +4259,13 @@ function attachRendererCrashRecovery(window: BrowserWindow): void {
         }, response.delayMs);
         return;
       case "prompt":
+        publishDesktopHealth({
+          renderer: {
+            status: "crashed",
+            reason: details.reason,
+            restartAttempt: response.crashes,
+          },
+        });
         writeDesktopLogHeader(
           `renderer recovery prompt cause=${response.cause} crashes=${response.crashes}`,
         );
@@ -4257,6 +4441,7 @@ async function bootstrap(): Promise<void> {
   }
 
   backendAuthToken = Crypto.randomBytes(24).toString("hex");
+  nativeHostRendezvous = createNativeHostRendezvous();
   await reserveBackendEndpoint("bootstrap");
 
   registerIpcHandlers();
@@ -4266,8 +4451,9 @@ async function bootstrap(): Promise<void> {
   } catch (error) {
     console.warn("[OmniMind browser] Failed to start browser host pipe", error);
   }
+  startNativeHost();
   startBackend();
-  writeDesktopLogHeader("bootstrap backend start requested");
+  writeDesktopLogHeader("bootstrap service and native host starts requested");
 
   if (isDevelopment) {
     void waitForBackendWindowReady(backendHttpUrl)

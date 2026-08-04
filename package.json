@@ -33,7 +33,7 @@
     "start": "turbo run start --filter=@omnimind/service",
     "start:desktop": "turbo run start --filter=@omnimind/desktop",
     "build": "turbo run build",
-    "build:desktop": "turbo run build --filter=@omnimind/desktop --filter=@omnimind/service",
+    "build:desktop": "turbo run build --filter=@omnimind/desktop --filter=@omnimind/service --filter=@omnimind/native-host",
     "typecheck": "turbo run typecheck",
     "lint": "oxlint --report-unused-disable-directives",
     "test": "turbo run test",

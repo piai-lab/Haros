@@ -57,8 +57,10 @@ the T4 runtime journey.
   capability and supervision but does not proxy or interpret Engine command/fact payloads.
 - Project independent `renderer`, `service`, `nativeHost` and `engineSelection` health through typed
   Product facts/read models. Service-down, Host-down and Engine-unavailable remain distinct.
-- Keep existing Conversation/Workbench snapshots readable while Host restarts. Disable dispatch
-  accurately, preserve draft/Queue and provide bounded retry/re-entry when the restart circuit opens.
+- Keep existing Conversation/Workbench snapshots readable while Host restarts. When Service, Host
+  or the selected Engine cannot dispatch, Composer may still persist an editable Product Queue
+  intent but must not admit or submit a Run. Preserve draft/Queue and provide bounded
+  retry/re-entry when the restart circuit opens.
 - Add real child-process fault tests that separately terminate Renderer, Service and Host, exercise
   graceful shutdown and exceed/recover the Host restart budget. Reject in-process Hosts, fake
   heartbeat children and read-model-only simulations.
@@ -98,6 +100,7 @@ apps/service/package.json
 apps/web/src/routes/__root.tsx                  (typed independent health projection only)
 apps/web/src/components/system-health/**
 apps/web/src/store/**                           (health slice only)
+apps/web/src/components/ChatView.tsx            (Product submit health gate only)
 package.json                                    (workspace/build/test scripts only)
 bun.lock
 turbo.json

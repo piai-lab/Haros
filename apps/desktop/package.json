@@ -4,7 +4,7 @@
   "private": true,
   "main": "dist-electron/main.js",
   "scripts": {
-    "dev": "bun run scripts/dev.mjs",
+    "dev": "bun run --cwd ../native-host build && bun run scripts/dev.mjs",
     "dev:bundle": "tsdown --watch",
     "dev:electron": "bun run scripts/dev-electron.mjs",
     "build": "tsdown",

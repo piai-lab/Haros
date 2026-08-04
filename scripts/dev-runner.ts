@@ -39,7 +39,14 @@ const MODE_ARGS = {
   ],
   "dev:service": ["run", "dev", "--filter=@omnimind/service"],
   "dev:web": ["run", "dev", "--filter=@omnimind/web"],
-  "dev:desktop": ["run", "dev", "--filter=@omnimind/desktop", "--filter=@omnimind/web", "--parallel"],
+  "dev:desktop": [
+    "run",
+    "dev",
+    "--filter=@omnimind/desktop",
+    "--filter=@omnimind/native-host",
+    "--filter=@omnimind/web",
+    "--parallel",
+  ],
 } as const satisfies Record<string, ReadonlyArray<string>>;
 
 type DevMode = keyof typeof MODE_ARGS;

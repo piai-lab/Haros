@@ -53,6 +53,7 @@ import { PullRequestServiceLive } from "./pullRequests/Layers/PullRequestService
 import { ProviderHealthLive } from "./provider/Layers/ProviderHealth";
 import { makeServerProviderLayer } from "./provider/runtimeLayer";
 import { ProductControlPlaneLive } from "./product/ProductControlPlane";
+import { NativeHostHealthMonitorLive } from "./product/health/nativeHostHealthMonitor";
 
 export { makeServerProviderLayer } from "./provider/runtimeLayer";
 
@@ -199,6 +200,7 @@ export function makeServerRuntimeServicesLayer(
     externalMcpGatewayLayer,
     providerHealthLayer,
     ProductControlPlaneLive,
+    NativeHostHealthMonitorLive,
     ProjectPullRequestPinsLive,
     pullRequestServiceLayer,
     orchestrationReactorLayer,

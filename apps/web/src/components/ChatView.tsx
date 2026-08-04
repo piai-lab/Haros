@@ -342,6 +342,7 @@ import {
   presentProductConversationQueue,
 } from "~/productReadModel";
 import { useProductStore } from "~/store/productStore";
+import { canDispatchProductSubmission, useSystemHealthStore } from "~/store/systemHealthStore";
 import {
   confirmProductQueueOwnershipBeforeDraftClear,
   findExactTransferredProductQueueItem,
@@ -8072,6 +8073,23 @@ export default function ChatView({
         });
         productQueueOwnershipTransferred = true;
         setProductQueueEdit(null);
+        // Queue ownership is durable before this fail-closed admission gate. A
+        // non-dispatchable health snapshot leaves that Product intent editable
+        // without creating an Entry, Run, dispatch or operation receipt.
+        if (!canDispatchProductSubmission(useSystemHealthStore.getState().snapshot)) {
+          setOptimisticUserMessages((existing) =>
+            existing.filter((message) => message.id !== messageIdForSend),
+          );
+          setTailAnchor((existing) =>
+            existing?.threadId === threadIdForSend && existing.messageId === messageIdForSend
+              ? null
+              : existing,
+          );
+          tailAnchorScrollInFlightRef.current = false;
+          turnStartSucceeded = true;
+          resetLocalDispatch();
+          return;
+        }
         const entryId = ProductEntryId.makeUnsafe(messageIdForSend);
         let submittedSnapshot;
         try {

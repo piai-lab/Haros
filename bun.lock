@@ -30,6 +30,22 @@
         "wait-on": "^8.0.2",
       },
     },
+    "apps/native-host": {
+      "name": "@omnimind/native-host",
+      "version": "0.1.0-alpha.0",
+      "bin": {
+        "omnimind-native-host": "dist/index.mjs",
+      },
+      "dependencies": {
+        "@omnimind/contracts": "workspace:*",
+      },
+      "devDependencies": {
+        "@types/node": "catalog:",
+        "tsdown": "catalog:",
+        "typescript": "catalog:",
+        "vitest": "catalog:",
+      },
+    },
     "apps/service": {
       "name": "@omnimind/service",
       "version": "0.1.0-alpha.0",
@@ -650,6 +666,8 @@
     "@omnimind/contracts": ["@omnimind/contracts@workspace:packages/contracts"],
 
     "@omnimind/desktop": ["@omnimind/desktop@workspace:apps/desktop"],
+
+    "@omnimind/native-host": ["@omnimind/native-host@workspace:apps/native-host"],
 
     "@omnimind/scripts": ["@omnimind/scripts@workspace:scripts"],
 

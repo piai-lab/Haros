@@ -9,14 +9,18 @@ OmniMind 使用一个产品控制平面协调桌面、可见 Conversation、系�
 ```text
 apps/web       Renderer / Product UI
     │ typed commands and view models
-apps/desktop   Desktop Host: windows, menu, keychain, notifications, supervision
-    │
+apps/desktop   Desktop Host: windows, menu, keychain, notifications
+    ├── separately supervises apps/service
+    └── separately supervises apps/native-host
 apps/service   Product Service: product facts, outbox, projections, system capabilities
-    ├── isolated Native Host worker(s): native SDK, Session and Package code
+    ├── direct typed-protocol client of apps/native-host
     └── External Engine process/connection(s): ACP or official thin protocol
+apps/native-host
+               isolated Native Host executable build target: native SDK, Session and Package code
 ```
 
 这些路径描述代码收敛后的职责，不要求提前制造空目录。共享 `packages/` 只在出现真实复用职责后建立；不得为了匹配 topology 创建占位 package。
+`apps/native-host` 是上述已批准 Native Host 职责的唯一 production executable workspace，不是新的产品对象或执行权威。Desktop Host 以独立 child lifecycle 监督 Product Service 与 Native Host；Product Service 是 Native Host 协议的直接客户端。Desktop Host 只建立有界 rendezvous 和 supervision capability，不代理、解析或转发 Engine command/fact payload。
 
 ```mermaid
 sequenceDiagram
