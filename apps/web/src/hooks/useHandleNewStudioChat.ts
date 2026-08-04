@@ -25,15 +25,21 @@ export function useHandleNewStudioChat() {
         const storedDraft = useComposerDraftStore
           .getState()
           .getDraftThreadByProjectId(projectId, "chat");
-        return handleNewThread(projectId, {
-          ...threadOptions,
-          // Migrate a pre-fix local draft in place: its ordinary reference folder was
-          // stored in worktreePath even though no Git worktree existed.
-          workingDirectory:
-            threadOptions?.fresh === true
-              ? null
-              : (storedDraft?.workingDirectory ?? storedDraft?.worktreePath ?? null),
-        });
+        return handleNewThread(
+          projectId,
+          {
+            ...threadOptions,
+            // Migrate a pre-fix local draft in place: its ordinary reference folder was
+            // stored in worktreePath even though no Git worktree existed.
+            workingDirectory:
+              threadOptions?.fresh === true
+                ? null
+                : (storedDraft?.workingDirectory ?? storedDraft?.worktreePath ?? null),
+          },
+          // T3 route ownership: Chat is a URL-backed product surface. New Chat clears pane-local
+          // search while retaining the one stable surface discriminator.
+          { search: () => ({ surface: "chat" }) },
+        );
       },
       fresh: options?.fresh,
       // Studio owns one durable local workspace. Reopening its stored draft must never

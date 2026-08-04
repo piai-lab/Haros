@@ -57,6 +57,8 @@ export function useProviderModelCatalog(input: {
    * are warm by the time the user browses them.
    */
   discoveryEnabled: boolean;
+  /** Disable even selected-provider discovery when the surface has no provider authority. */
+  selectedDiscoveryEnabled?: boolean;
   /** Effective cwd for providers whose model catalog can be extended by project resources. */
   cwd?: string | null;
   /** Per-provider selected-model hints so an unknown selection still lists itself. */
@@ -97,7 +99,7 @@ export function useProviderModelCatalog(input: {
       return false;
     }
     if (provider === selectedProvider) {
-      return true;
+      return input.selectedDiscoveryEnabled ?? true;
     }
     if (!prefetchRequested) {
       return false;
@@ -418,7 +420,11 @@ export function useProviderModelCatalog(input: {
     () =>
       selectedDynamicAgents.map((agent) =>
         agent.description
-          ? { name: agent.name, displayName: agent.displayName, description: agent.description }
+          ? {
+              name: agent.name,
+              displayName: agent.displayName,
+              description: agent.description,
+            }
           : { name: agent.name, displayName: agent.displayName },
       ),
     [selectedDynamicAgents],

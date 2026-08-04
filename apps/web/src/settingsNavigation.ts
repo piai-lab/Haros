@@ -14,8 +14,8 @@ export const SETTINGS_SECTION_IDS = [
   "worktrees",
   "archived",
   "models",
-  "providers",
-  "skills",
+  "agents",
+  "packages",
   "usage",
   "integrations",
   "advanced",
@@ -129,28 +129,31 @@ export const SETTINGS_NAV_ITEMS: readonly SettingsNavItem[] = [
     eyebrow: "External agents",
   },
   {
-    id: "providers",
-    group: "coding",
-    label: "Agent providers",
-    description: "Choose visible coding agents and manage their installed CLI tools.",
-    icon: "puzzle",
-    eyebrow: "Coding agents",
-  },
-  {
     id: "models",
     group: "coding",
-    label: "Models & writing",
-    description: "Choose the model used for Git writing and add custom model slugs.",
+    label: "Models",
+    description:
+      "Review model connections, selection, thinking support, authentication, and health.",
     icon: "brain",
-    eyebrow: "Model configuration",
+    eyebrow: "Model connections",
   },
   {
-    id: "skills",
+    id: "agents",
     group: "coding",
-    label: "Agent skills",
-    description: "Review reusable workflows discovered across all configured providers.",
+    label: "Agents",
+    description:
+      "Inspect native and external agents, capability evidence, permissions, and diagnostics.",
+    icon: "puzzle",
+    eyebrow: "Execution agents",
+  },
+  {
+    id: "packages",
+    group: "coding",
+    label: "Packages",
+    description:
+      "Review discovery, source evidence, compatibility, activation boundaries, and contained skills.",
     icon: "building-blocks",
-    eyebrow: "Reusable workflows",
+    eyebrow: "Runtime extensions",
   },
   {
     id: "worktrees",
@@ -193,6 +196,8 @@ export function settingRowAnchorId(title: string): string {
 }
 
 export function normalizeSettingsSection(value: unknown): SettingsSectionId {
+  if (value === "providers") return "agents";
+  if (value === "skills") return "packages";
   if (typeof value !== "string") {
     return "general";
   }

@@ -328,27 +328,27 @@ export const SETTINGS_SEARCH_ENTRIES: readonly SettingsSearchEntry[] = [
   // ── Providers ─────────────────────────────────────────────────────────────────
   {
     id: "providers:automatic-cli-update-checks",
-    section: "providers",
+    section: "agents",
     title: "Automatic CLI update checks",
     keywords:
       "Check Codex Claude and other provider CLIs for newer versions in the background. updates upgrade disable nags",
   },
   {
     id: "providers:visible-providers",
-    section: "providers",
+    section: "agents",
     title: "Visible providers",
     keywords:
       "Drag providers into your preferred picker order and hide the ones you don't use. visibility order",
   },
   {
     id: "providers:provider-updates",
-    section: "providers",
+    section: "agents",
     title: "Provider updates",
     keywords: "Update installed provider tools that OmniMind can safely update. upgrade cli",
   },
   {
     id: "providers:installed-clis",
-    section: "providers",
+    section: "agents",
     title: "Installed CLIs",
     keywords: "Review provider versions and update tools. binary overrides path install",
   },
@@ -356,7 +356,7 @@ export const SETTINGS_SEARCH_ENTRIES: readonly SettingsSearchEntry[] = [
   // ── Skills ────────────────────────────────────────────────────────────────────
   {
     id: "skills:skills",
-    section: "skills",
+    section: "packages",
     title: "Skills",
     keywords: "Every skill found across providers, with toggles to control availability. agent",
     target: null,

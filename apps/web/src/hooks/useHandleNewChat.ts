@@ -3,10 +3,11 @@ import { startContainerChat, type StartContainerChatResult } from "../lib/startC
 import { useWorkspacePathsStore } from "../workspacePathsStore";
 import { useHandleNewThread } from "./useHandleNewThread";
 
-export function useHandleNewChat() {
+type HandleNewThread = ReturnType<typeof useHandleNewThread>["handleNewThread"];
+
+function useHandleNewChatFromThreadHandler(handleNewThread: HandleNewThread) {
   const homeDir = useWorkspacePathsStore((state) => state.homeDir);
   const chatWorkspaceRoot = useWorkspacePathsStore((state) => state.chatWorkspaceRoot);
-  const { handleNewThread } = useHandleNewThread();
 
   const handleNewChat = async (options?: {
     fresh?: boolean;
@@ -27,4 +28,13 @@ export function useHandleNewChat() {
   };
 
   return { handleNewChat };
+}
+
+export function useHandleNewChat() {
+  const { handleNewThread } = useHandleNewThread();
+  return useHandleNewChatFromThreadHandler(handleNewThread);
+}
+
+export function useHandleNewChatWithThreadHandler(handleNewThread: HandleNewThread) {
+  return useHandleNewChatFromThreadHandler(handleNewThread);
 }

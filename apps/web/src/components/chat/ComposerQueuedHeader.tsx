@@ -7,7 +7,8 @@
 // Exports: ComposerQueuedHeader
 
 import type { QueuedComposerTurn } from "../../composerDraftStore";
-import { SteerIcon } from "~/lib/icons";
+import type { WorkbenchCopy } from "../../i18n/workbenchCopy";
+import { ListTodoIcon, PencilIcon, SteerIcon } from "~/lib/icons";
 import { cn } from "~/lib/utils";
 import ChatMarkdown from "../ChatMarkdown";
 import {
@@ -37,13 +38,18 @@ function firstNonEmptyLine(value: string): string {
 // Queue previews use the shared markdown renderer for inline chips/emphasis, but
 // must stay a single composer row even when the queued prompt is a heading, list,
 // or fenced code block.
-export function compactQueuedComposerPreviewMarkdown(value: string): string {
+type QueuePreviewCopy = Pick<WorkbenchCopy, "queueQueuedFollowUp" | "queueCodeBlock">;
+
+export function compactQueuedComposerPreviewMarkdown(
+  value: string,
+  copy: QueuePreviewCopy,
+): string {
   const firstLine = firstNonEmptyLine(value);
   if (firstLine.length === 0) {
-    return "Queued follow-up";
+    return copy.queueQueuedFollowUp;
   }
   if (/^(?:`{3,}|~{3,})/.test(firstLine)) {
-    return "Code block";
+    return copy.queueCodeBlock;
   }
   const normalized = firstLine
     .replace(/^#{1,6}\s+/, "")
@@ -52,14 +58,20 @@ export function compactQueuedComposerPreviewMarkdown(value: string): string {
     .replace(/^[-*+]\s+/, "")
     .replace(/^\d+[.)]\s+/, "")
     .trim();
-  return normalized.length > 0 ? normalized : "Queued follow-up";
+  return normalized.length > 0 ? normalized : copy.queueQueuedFollowUp;
 }
 
 interface ComposerQueuedHeaderProps {
   queuedTurns: QueuedComposerTurn[];
-  onSteer: (queuedTurn: QueuedComposerTurn) => void;
+  primaryAction: {
+    kind: "steer" | "move-next";
+    onSelect: (queuedTurn: QueuedComposerTurn) => void;
+  };
   onRemove: (queuedTurnId: string) => void;
   onEdit: (queuedTurn: QueuedComposerTurn) => void;
+  editingTurnId?: string | null;
+  onCancelEdit?: () => void;
+  copy: WorkbenchCopy;
   /** Workspace root used to resolve local file links/mentions inside the parsed preview. */
   cwd?: string | undefined;
   attachedToPrevious?: boolean;
@@ -67,9 +79,12 @@ interface ComposerQueuedHeaderProps {
 
 export const ComposerQueuedHeader = function ComposerQueuedHeader({
   queuedTurns,
-  onSteer,
+  primaryAction,
   onRemove,
   onEdit,
+  editingTurnId,
+  onCancelEdit,
+  copy,
   cwd,
   attachedToPrevious: attachedToPreviousProp,
 }: ComposerQueuedHeaderProps) {
@@ -80,30 +95,49 @@ export const ComposerQueuedHeader = function ComposerQueuedHeader({
 
   return (
     <ComposerStackedPanel attachedToPrevious={attachedToPrevious} className="flex flex-col">
-      {queuedTurns.map((queuedTurn, queuedTurnIndex) => (
-        <ComposerStackedPanelRow
-          key={queuedTurn.id}
-          compact
-          data-testid="queued-follow-up-row"
-          className={cn(queuedTurnIndex > 0 && COMPOSER_STACKED_PANEL_DIVIDER_CLASS_NAME)}
-        >
-          <ComposerStackedPanelRowMain>
-            <SteerIcon className={COMPOSER_STACKED_PANEL_ICON_CLASS_NAME} />
-            <ChatMarkdown
-              text={compactQueuedComposerPreviewMarkdown(queuedTurn.previewText)}
-              cwd={cwd}
-              isStreaming={false}
-              className={COMPOSER_STACKED_PANEL_PREVIEW_MARKDOWN_CLASS_NAME}
+      {queuedTurns.map((queuedTurn, queuedTurnIndex) => {
+        const editing = editingTurnId === queuedTurn.id;
+        const LeadingIcon = editing
+          ? PencilIcon
+          : primaryAction.kind === "move-next"
+            ? ListTodoIcon
+            : SteerIcon;
+        return (
+          <ComposerStackedPanelRow
+            key={queuedTurn.id}
+            compact
+            data-testid="queued-follow-up-row"
+            data-queue-item-kind={primaryAction.kind}
+            data-queue-editing={editing ? "true" : undefined}
+            className={cn(queuedTurnIndex > 0 && COMPOSER_STACKED_PANEL_DIVIDER_CLASS_NAME)}
+          >
+            <ComposerStackedPanelRowMain>
+              <LeadingIcon className={COMPOSER_STACKED_PANEL_ICON_CLASS_NAME} />
+              <ChatMarkdown
+                text={compactQueuedComposerPreviewMarkdown(queuedTurn.previewText, copy)}
+                cwd={cwd}
+                isStreaming={false}
+                className={COMPOSER_STACKED_PANEL_PREVIEW_MARKDOWN_CLASS_NAME}
+              />
+              {editing ? (
+                <span className="shrink-0 text-[10px] font-medium text-muted-foreground">
+                  {copy.queueEditing}
+                </span>
+              ) : null}
+            </ComposerStackedPanelRowMain>
+            <QueuedComposerActions
+              queuedTurn={queuedTurn}
+              primaryAction={primaryAction}
+              primaryActionDisabled={primaryAction.kind === "move-next" && queuedTurnIndex === 0}
+              editing={editing}
+              onCancelEdit={onCancelEdit}
+              onRemove={onRemove}
+              onEdit={onEdit}
+              copy={copy}
             />
-          </ComposerStackedPanelRowMain>
-          <QueuedComposerActions
-            queuedTurn={queuedTurn}
-            onSteer={onSteer}
-            onRemove={onRemove}
-            onEdit={onEdit}
-          />
-        </ComposerStackedPanelRow>
-      ))}
+          </ComposerStackedPanelRow>
+        );
+      })}
     </ComposerStackedPanel>
   );
 };

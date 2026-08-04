@@ -163,11 +163,12 @@ immutable fill/line Git trees
 - registry 对 fixed Git tree、source 与 artifact 做全量 filename+byte comparison，不根据使用面裁剪。
 - resolver 没有 generic lookalike/text fallback；unknown identity 使用 neutral OmniMind-owned mark。
 - Provider/Engine 只在真实 selection/detail 边界使用可靠 official mark/color；Model 无独立 mark 时继承 Provider。
-- T1 使用既有 OmniMind Agent Dock light/dark icon 作为明确 temporary identity，完成 app/favicon/splash/About
-  与 artifact resource wiring；其形态和 palette 不被提升为最终品牌。
+- T1 使用既有 OmniMind Agent Dock light/dark icon 完成 app/favicon/splash/About 与 artifact resource
+  wiring；维护者随后将其锁定为当前一方 identity，source、形态、颜色、生成链和平台输出保持不变。
 
 此 seam 只改变 path/API/product identity，不授权改变母体 geometry、density 或 interaction palette。T1 验证
-尺寸、对齐、contrast、focus、light/dark 与 reduced-motion；最终 mark/palette 与 material visual review 留给 T3。
+尺寸、对齐、contrast、focus、light/dark 与 reduced-motion；T3 的 material visual review 只覆盖真实母体
+接管，不再包含 mark/palette 替换。
 
 ### 4.4 T1 runtime profile
 
@@ -408,9 +409,10 @@ T3 candidate 的具体预算在实现开始时从 T0 同机 profile 冻结为 Bu
 报告必须给出硬件、build mode、fixture、测量方法、absolute number 和 T0/target comparison；“看起来流畅”
 不算 proof。
 
-T1 glyph path/API takeover 已由维护者校准关闭：完整 corpus 保留、temporary prior icon 接线，不再等待
-replacement 方向。T3 material product/brand surgery 仍遵守 Workbench 的人类视觉门：baseline/同状态
-evidence → 维护者校准 → surgery → renewed proof → 删除。QbD 1 不替代该真实候选校准。
+T1 glyph path/API takeover 已由维护者校准关闭：完整 corpus 保留，既有一方 icon 与全部平台输出保持
+锁定，不再等待或授权 replacement。T3 material product surgery 仍遵守 Workbench 的人类视觉门：
+baseline/同状态 evidence → 维护者校准 → surgery → renewed proof → 删除；该门不包含品牌重设计。
+QbD 1 不替代这次真实母体校准。
 
 ## 7. T4 — Pi adoption inside the established Native Host
 
@@ -651,7 +653,7 @@ schema/migration 不进入新 Product Store。
 
 | Risk | Containment | Stop condition |
 | --- | --- | --- |
-| temporary brand or glyph wiring causes material drift | complete registry + same-state review | approved geometry/taste cannot be recovered without new direction |
+| locked brand or glyph wiring drifts | complete registry + digest guard + same-state review | asset/source/platform digest changes without explicit maintainer reopening |
 | Product and donor writers overlap | bounded journey cutover + negative writer scan | 两个 durable writers 可接受同一 command |
 | Host API lacks acceptance truth | queryable Session/operation fact or delivery_unknown | 只能靠猜测判断已送达并需要 blind replay |
 | Main/Service accidentally bundle Pi | package/lock/artifact dependency scans | Pi executable dependency 不能从 Host target 隔离 |

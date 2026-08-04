@@ -9,7 +9,10 @@ import { type DiffRouteSearch, parseDiffRouteSearch } from "../diffRouteSearch";
 
 function diffRouteSearchEquals(left: DiffRouteSearch, right: DiffRouteSearch): boolean {
   return (
+    left.surface === right.surface &&
     left.splitViewId === right.splitViewId &&
+    left.view === right.view &&
+    left.editorFilePath === right.editorFilePath &&
     left.panel === right.panel &&
     left.diff === right.diff &&
     left.diffTurnId === right.diffTurnId &&

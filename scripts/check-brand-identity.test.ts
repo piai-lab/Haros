@@ -2,7 +2,7 @@ import { describe, expect, it } from "vitest";
 
 import { findVisualBrandAssetViolations } from "./check-brand-identity";
 
-describe("temporary brand asset guard", () => {
+describe("locked brand asset guard", () => {
   it("accepts the calibrated digest", () => {
     const contents = new TextEncoder().encode("approved OmniMind icon");
     const digests = new Map([

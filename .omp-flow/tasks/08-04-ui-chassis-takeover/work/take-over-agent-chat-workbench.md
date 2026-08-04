@@ -37,11 +37,14 @@ responsibility.
 - Present the comparable baseline and proposed material deltas to the maintainer. Obtain explicit
   same-state visual calibration before deleting or materially altering a protected anchor. QbD 1
   approval cannot substitute for this decision.
-- Replace the explicitly temporary prior OmniMind Agent Dock icon with a final authored brand system.
-  The prior asset may inform only the three unequal Agent slots and single execution-rail structure;
-  its teal/blue-green, gradients and wordmark treatment are not a palette decision. The rejected
-  bar-chart-like replacement and rejected vermilion/orange-red candidate are not starting points.
-  Present materially distinct real-surface candidates before selecting form or color.
+- The maintainer accepted the real-mother calibration in the active execution session on
+  2026-08-04 with `OK 确认！`. This authorizes the bounded Product UI surgery shown by that
+  calibration; it does not turn the evidence-only overlay into production proof or accept any
+  behavior, accessibility, performance or post-surgery visual result in advance.
+- Preserve the existing first-party OmniMind Agent light/dark icon, colors and deterministic Web,
+  Dock/Taskbar, favicon and splash outputs byte-for-byte. The maintainer explicitly withdrew the
+  Orchestrated O exploration and removed brand replacement from this Work; no identity-review
+  control or evidence-only asset surface may enter production.
 - Make authored routes the sole source and deterministically regenerate the route tree. The only
   top-level product entries are `Agent | Chat`, in that order for visual placement, default route,
   keyboard traversal, accessibility names and automated tests.
@@ -84,7 +87,9 @@ responsibility.
 
 ## Allowed repository paths
 
-Only the Web product UI and its direct tests/build generation may change:
+Only the Web product UI and its direct tests may change. Existing first-party brand source,
+Web/Dock/Taskbar exports and their generation chain are protected unchanged inputs, not writable
+outputs of this Work:
 
 ```text
 apps/web/src/routes/**
@@ -94,12 +99,20 @@ apps/web/src/hooks/**
 apps/web/src/store/**                      (view projection/selectors only)
 apps/web/src/storeState.ts                (view state only)
 apps/web/src/storeSelectors.ts            (view selectors only)
+apps/web/src/productProjectionCoordinator.tsx (typed Product view subscription only)
+apps/web/src/productReadModel.ts           (T3 display-only presenter and tests)
+apps/web/src/productReadModel.test.ts
+apps/web/src/diffRouteSearch.ts            (authored Agent | Chat route search only)
+apps/web/src/diffRouteSearch.test.ts
+apps/web/src/settingsNavigation.ts         (Settings IA routing only)
+apps/web/src/settingsSearchIndex.ts        (Settings IA search mapping only)
+apps/web/src/productCutover.test.ts        (UI cutover guard only)
 apps/web/src/theme/**
 apps/web/src/styles/**
 apps/web/src/i18n/**
 apps/web/src/locales/**
-apps/web/src/lib/icons.tsx                (calibrated presentation only)
-apps/web/src/icons/**                     (calibrated presentation only)
+apps/web/src/lib/icons.tsx                (functional presentation only)
+apps/web/src/icons/**                     (functional presentation only)
 apps/web/src/wsNativeApi.ts               (typed Product/Desktop facade call sites only)
 apps/web/index.html                       (locale/a11y runtime metadata only)
 apps/web/vite.config.ts                   (route generation/performance build only)
@@ -109,7 +122,10 @@ apps/web/package.json                     (UI test/profile scripts and concrete 
 Focused/e2e/profile tests colocated in `apps/web` may change. Task-local visual/performance evidence
 is referenced from, not duplicated outside,
 [`handoffs/take-over-agent-chat-workbench.md`](../handoffs/take-over-agent-chat-workbench.md).
-No Service, Desktop, Host or shared-contract production path belongs to this Work.
+No Service, Desktop code/runtime, Host or shared-contract production path belongs to this Work.
+Existing brand source and platform exports are protected by the current identity guard and must
+remain byte-identical; no process topology, supervision, IPC, release authority or executable
+behavior change is permitted.
 
 ## Done conditions
 
@@ -131,9 +147,8 @@ No Service, Desktop, Host or shared-contract production path belongs to this Wor
   budgets frozen before surgery.
 - Comparable same-state visual review after surgery has no unresolved material finding and the
   maintainer's visual calibration is linked. Source-domain deletions postdate that approval.
-- The temporary T1 icon is gone from product outputs; the accepted final mark and palette work in
-  light/dark, monochrome, Dock/Taskbar and 16/20/24/32px contexts without borrowing semantic status
-  colors or disturbing the UI mother's neutral hierarchy.
+- The existing first-party icon source, colors, generation chain and Web/Dock/Taskbar outputs remain
+  byte-identical, and no evidence-only identity-review surface enters production.
 - The handoff maps every changed/deleted source anchor to target behavior and proof without claiming
   UI completion beyond this slice.
 

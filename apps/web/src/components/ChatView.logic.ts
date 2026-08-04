@@ -722,12 +722,13 @@ export function resolveActiveThreadTitle(input: {
   subagentTitle: string | null;
   isHomeChat: boolean;
   isEmpty: boolean;
+  emptyChatTitle?: string;
 }): string {
   if (input.subagentTitle) {
     return input.subagentTitle;
   }
   if (input.isHomeChat && input.isEmpty && isGenericChatThreadTitle(input.title)) {
-    return "New Chat";
+    return input.emptyChatTitle ?? "New Chat";
   }
   return input.title;
 }

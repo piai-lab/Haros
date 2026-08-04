@@ -9,11 +9,13 @@ import { type KeyboardEvent as ReactKeyboardEvent, useState } from "react";
 
 import { Glyph } from "~/ui/icons";
 import { cn } from "~/lib/utils";
+import { getWorkbenchCopy } from "../i18n/workbenchCopy";
 import { SearchInput } from "./ui/search-input";
 import { SidebarLeadingIcon } from "./SidebarLeadingIcon";
 import {
   SETTINGS_NAV_GROUPS,
   SETTINGS_NAV_ITEMS,
+  type SettingsNavGroupId,
   type SettingsSectionId,
 } from "../settingsNavigation";
 import {
@@ -45,6 +47,40 @@ const SETTINGS_SECTION_ICON_BY_ID = new Map<SettingsSectionId, string>(
   SETTINGS_NAV_ITEMS.map((item) => [item.id, item.icon]),
 );
 
+function localizedSettingsSectionLabel(section: SettingsSectionId, fallback: string): string {
+  const copy = getWorkbenchCopy();
+  const labels: Record<SettingsSectionId, string> = {
+    general: copy.settingsGeneral,
+    profile: copy.settingsProfile,
+    appearance: copy.settingsAppearance,
+    notifications: copy.settingsNotifications,
+    behavior: copy.settingsBehavior,
+    shortcuts: copy.settingsShortcuts,
+    usage: copy.settingsUsage,
+    appsnap: copy.settingsAppSnap,
+    integrations: copy.settingsIntegrations,
+    models: copy.models,
+    agents: copy.agents,
+    packages: copy.packages,
+    worktrees: copy.settingsWorktrees,
+    advanced: copy.settingsAdvanced,
+    archived: copy.settingsArchived,
+  };
+  return labels[section] ?? fallback;
+}
+
+function localizedSettingsGroupLabel(group: SettingsNavGroupId, fallback: string): string {
+  const copy = getWorkbenchCopy();
+  const labels: Record<SettingsNavGroupId, string> = {
+    personal: copy.settingsGroupPersonal,
+    integrations: copy.settingsGroupIntegrations,
+    coding: copy.settingsGroupCoding,
+    system: copy.settingsGroupSystem,
+    archived: copy.settingsGroupArchived,
+  };
+  return labels[group] ?? fallback;
+}
+
 function SettingsSearchResultRow(props: {
   entry: SettingsSearchEntry;
   onSelect: (entry: SettingsSearchEntry) => void;
@@ -64,7 +100,7 @@ function SettingsSearchResultRow(props: {
           <Glyph name={icon} className={SETTINGS_SIDEBAR_ICON_CLASS_NAME} />
         </SidebarLeadingIcon>
         <span className={SETTINGS_SIDEBAR_ITEM_LABEL_CLASS_NAME}>
-          {settingsSectionLabel(entry.section)}
+          {localizedSettingsSectionLabel(entry.section, settingsSectionLabel(entry.section))}
         </span>
       </button>
       <button
@@ -89,6 +125,7 @@ export function SettingsSidebarNav(props: {
   onSelectSection: (section: SettingsSectionId, options?: { target?: string }) => void;
 }) {
   const { onSelectSection } = props;
+  const copy = getWorkbenchCopy();
   const [query, setQuery] = useState("");
   const trimmedQuery = query.trim();
   const isSearching = trimmedQuery.length > 0;
@@ -129,7 +166,7 @@ export function SettingsSidebarNav(props: {
           <SidebarLeadingIcon size="sm" tone="text-inherit">
             <Glyph name="arrow-left" className={SETTINGS_SIDEBAR_ICON_CLASS_NAME} />
           </SidebarLeadingIcon>
-          <span className={SETTINGS_SIDEBAR_ITEM_LABEL_CLASS_NAME}>Back to app</span>
+          <span className={SETTINGS_SIDEBAR_ITEM_LABEL_CLASS_NAME}>{copy.backToApp}</span>
         </button>
       </div>
 
@@ -139,8 +176,8 @@ export function SettingsSidebarNav(props: {
           spellCheck={false}
           autoCorrect="off"
           autoCapitalize="off"
-          placeholder="Search settings..."
-          aria-label="Search settings"
+          placeholder={copy.searchSettings}
+          aria-label={copy.searchSettings}
           onChange={(event) => setQuery(event.target.value)}
           onKeyDown={handleSearchKeyDown}
         />
@@ -148,10 +185,10 @@ export function SettingsSidebarNav(props: {
 
       {isSearching ? (
         results.length === 0 ? (
-          <p className={SETTINGS_SIDEBAR_SECTION_LABEL_CLASS_NAME}>No matching settings.</p>
+          <p className={SETTINGS_SIDEBAR_SECTION_LABEL_CLASS_NAME}>{copy.noMatchingSettings}</p>
         ) : (
           <ul
-            aria-label="Settings search results"
+            aria-label={copy.settingsSearchResults}
             className={cn("flex flex-col", SETTINGS_SIDEBAR_LIST_GAP_CLASS_NAME)}
           >
             {results.map((entry) => (
@@ -160,7 +197,7 @@ export function SettingsSidebarNav(props: {
           </ul>
         )
       ) : (
-        <nav aria-label="Settings sections" className="flex flex-col">
+        <nav aria-label={copy.settingsSections} className="flex flex-col">
           {SETTINGS_NAV_GROUPS.map((group) => {
             const items = SETTINGS_NAV_ITEMS.filter((item) => item.group === group.id);
             if (items.length === 0) {
@@ -177,7 +214,7 @@ export function SettingsSidebarNav(props: {
                   id={`settings-nav-${group.id}`}
                   className={SETTINGS_SIDEBAR_SECTION_LABEL_CLASS_NAME}
                 >
-                  {group.label}
+                  {localizedSettingsGroupLabel(group.id, group.label)}
                 </h2>
                 <ul className={cn("flex flex-col", SETTINGS_SIDEBAR_LIST_GAP_CLASS_NAME)}>
                   {items.map((item) => {
@@ -196,13 +233,10 @@ export function SettingsSidebarNav(props: {
                           onClick={() => props.onSelectSection(item.id)}
                         >
                           <SidebarLeadingIcon size="sm" tone="text-inherit">
-                            <Glyph
-                              name={item.icon}
-                              className={SETTINGS_SIDEBAR_ICON_CLASS_NAME}
-                            />
+                            <Glyph name={item.icon} className={SETTINGS_SIDEBAR_ICON_CLASS_NAME} />
                           </SidebarLeadingIcon>
                           <span className={SETTINGS_SIDEBAR_ITEM_LABEL_CLASS_NAME}>
-                            {item.label}
+                            {localizedSettingsSectionLabel(item.id, item.label)}
                           </span>
                         </button>
                       </li>

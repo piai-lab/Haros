@@ -9,6 +9,13 @@ import {
   EventId,
   MessageId,
   ORCHESTRATION_WS_METHODS,
+  PRODUCT_PROTOCOL_VERSION,
+  PRODUCT_RPC_METHODS,
+  ProductConversationId,
+  type ProductConversationSnapshot,
+  type ProductQueueItem,
+  type ProductShellSnapshot,
+  ProductWorkspaceId,
   type OrchestrationReadModel,
   type ProjectId,
   type ServerConfig,
@@ -16,6 +23,7 @@ import {
   ThreadId,
   TurnId,
   type WsWelcomePayload,
+  type DesktopHealthSnapshot,
   WS_METHODS,
   OrchestrationSessionStatus,
 } from "@omnimind/contracts";
@@ -26,7 +34,7 @@ import {
 import { RouterProvider, createMemoryHistory } from "@tanstack/react-router";
 import { HttpResponse, http, ws } from "msw";
 import { setupWorker } from "msw/browser";
-import { page, userEvent } from "vitest/browser";
+import { commands, page, userEvent } from "vitest/browser";
 import { afterAll, afterEach, beforeAll, beforeEach, describe, expect, it, vi } from "vitest";
 import { render } from "vitest-browser-react";
 
@@ -44,12 +52,16 @@ import {
 import { extractTrailingBrowserAnnotations } from "../lib/browserAnnotations";
 import { isMacPlatform } from "../lib/utils";
 import { readNativeApi } from "../nativeApi";
+import { selectRightDockState, useRightDockStore } from "../rightDockStore";
 import { resetHomeChatProjectPrewarmStateForTests } from "../lib/chatProjects";
 import { resetStudioProjectPrewarmStateForTests } from "../lib/studioProjects";
 import { getRouter } from "../router";
 import { useSplitViewStore } from "../splitViewStore";
 import { useSpacesUiStore } from "../spacesUiStore";
 import { useStore } from "../store";
+import { createThreadSelector } from "../storeSelectors";
+import { useProductStore } from "../store/productStore";
+import { useSystemHealthStore } from "../store/systemHealthStore";
 import {
   createShellSnapshotFromReadModel,
   flattenEffectRpcRequestPayload,
@@ -80,6 +92,9 @@ const STUDIO_DRAFT_THREAD_ID = "thread-studio-draft" as ThreadId;
 const NOW_ISO = "2026-03-04T12:00:00.000Z";
 const BASE_TIME_MS = Date.parse(NOW_ISO);
 const ATTACHMENT_SVG = "<svg xmlns='http://www.w3.org/2000/svg' width='120' height='300'></svg>";
+const browserPerformanceCommands = commands as typeof commands & {
+  collectBrowserHeap(): Promise<{ usedSize: number; totalSize: number }>;
+};
 let attachmentResponseDelayMs = 0;
 let attachmentUploadSequence = 0;
 
@@ -99,6 +114,7 @@ interface TestFixture {
 }
 
 let fixture: TestFixture;
+let productConversationSnapshot: ProductConversationSnapshot | null = null;
 const wsRequests: WsRequestEnvelope["body"][] = [];
 const wsLink = ws.link(/ws(s)?:\/\/.*/);
 
@@ -543,6 +559,53 @@ function createDraftOnlySnapshot(): OrchestrationReadModel {
   return {
     ...snapshot,
     threads: [],
+  };
+}
+
+function createProductChatSnapshot(
+  id = "product-browser-chat",
+  sequence = 1,
+): ProductConversationSnapshot {
+  const conversationId = ProductConversationId.makeUnsafe(id);
+  const workspaceId = ProductWorkspaceId.makeUnsafe(`workspace-${id}`);
+  return {
+    protocolVersion: PRODUCT_PROTOCOL_VERSION,
+    sequence,
+    readModel: {
+      conversation: {
+        id: conversationId,
+        workspaceId,
+        title: "Product browser conversation",
+        workspaceKind: "chat",
+        receiptState: null,
+        createdAt: NOW_ISO,
+        updatedAt: NOW_ISO,
+      },
+      workspace: {
+        id: workspaceId,
+        access: {
+          kind: "chat",
+          managedDirectory: null,
+          primaryFolder: null,
+          executionTarget: null,
+          writeAuthority: "read-only-references",
+        },
+        observedAt: NOW_ISO,
+      },
+      entries: [],
+      runs: [],
+      queue: [],
+    },
+  };
+}
+
+function createProductShellSnapshot(): ProductShellSnapshot {
+  return {
+    protocolVersion: PRODUCT_PROTOCOL_VERSION,
+    sequence: productConversationSnapshot?.sequence ?? 0,
+    conversations: productConversationSnapshot
+      ? [productConversationSnapshot.readModel.conversation]
+      : [],
   };
 }
 
@@ -1045,6 +1108,78 @@ function recordProjectCreateCommand(command: unknown): boolean {
 
 function resolveWsRpc(body: WsRequestEnvelope["body"]): unknown {
   const tag = body._tag;
+  if (tag === PRODUCT_RPC_METHODS.getShellSnapshot) {
+    return createProductShellSnapshot();
+  }
+  if (tag === PRODUCT_RPC_METHODS.getConversationSnapshot) {
+    return productConversationSnapshot ?? {};
+  }
+  if (tag === PRODUCT_RPC_METHODS.putQueueItem) {
+    if (!productConversationSnapshot) return {};
+    const existing = productConversationSnapshot.readModel.queue.find(
+      (item) => item.id === body.itemId,
+    );
+    const item: ProductQueueItem = {
+      id: body.itemId as ProductQueueItem["id"],
+      conversationId: body.conversationId as ProductQueueItem["conversationId"],
+      text: body.text as string,
+      requestedSelection: body.requestedSelection as ProductQueueItem["requestedSelection"],
+      resources: body.resources as ProductQueueItem["resources"],
+      position: existing?.position ?? productConversationSnapshot.readModel.queue.length,
+      revision: existing ? existing.revision + 1 : 1,
+      createdAt: existing?.createdAt ?? NOW_ISO,
+      updatedAt: NOW_ISO,
+    };
+    productConversationSnapshot = {
+      ...productConversationSnapshot,
+      sequence: productConversationSnapshot.sequence + 1,
+      readModel: {
+        ...productConversationSnapshot.readModel,
+        conversation: {
+          ...productConversationSnapshot.readModel.conversation,
+          updatedAt: NOW_ISO,
+        },
+        queue: [
+          ...productConversationSnapshot.readModel.queue.filter(
+            (queueItem) => queueItem.id !== item.id,
+          ),
+          item,
+        ],
+      },
+    };
+    return item;
+  }
+  if (tag === PRODUCT_RPC_METHODS.reorderQueue) {
+    if (!productConversationSnapshot || !Array.isArray(body.orderedItemIds)) return {};
+    const itemById = new Map(
+      productConversationSnapshot.readModel.queue.map((item) => [item.id, item]),
+    );
+    const queue = body.orderedItemIds.map((rawItemId, position) => {
+      const item = itemById.get(rawItemId as ProductQueueItem["id"]);
+      if (!item) throw new Error(`Unknown Product Queue item ${String(rawItemId)}.`);
+      return { ...item, position, updatedAt: NOW_ISO };
+    });
+    productConversationSnapshot = {
+      ...productConversationSnapshot,
+      sequence: productConversationSnapshot.sequence + 1,
+      readModel: { ...productConversationSnapshot.readModel, queue },
+    };
+    return productConversationSnapshot;
+  }
+  if (tag === PRODUCT_RPC_METHODS.deleteQueueItem) {
+    if (!productConversationSnapshot) return {};
+    productConversationSnapshot = {
+      ...productConversationSnapshot,
+      sequence: productConversationSnapshot.sequence + 1,
+      readModel: {
+        ...productConversationSnapshot.readModel,
+        queue: productConversationSnapshot.readModel.queue
+          .filter((item) => item.id !== body.itemId)
+          .map((item, position) => ({ ...item, position })),
+      },
+    };
+    return productConversationSnapshot;
+  }
   if (tag === ORCHESTRATION_WS_METHODS.getShellSnapshot) {
     return createShellSnapshotFromReadModel(fixture.snapshot);
   }
@@ -1879,6 +2014,7 @@ describe("ChatView timeline estimator parity (full app)", () => {
     });
     document.body.innerHTML = "";
     wsRequests.length = 0;
+    productConversationSnapshot = null;
     useComposerDraftStore.setState({
       draftsByThreadId: {},
       draftThreadsByThreadId: {},
@@ -1908,6 +2044,9 @@ describe("ChatView timeline estimator parity (full app)", () => {
       sidebarThreadSummaryById: {},
       threadsHydrated: false,
     });
+    useProductStore.getState().reset();
+    useSystemHealthStore.setState({ snapshot: null });
+    useRightDockStore.setState({ dockStateByThreadId: {} });
     useTemporaryThreadStore.setState({
       temporaryThreadIds: {},
     });
@@ -1924,7 +2063,734 @@ describe("ChatView timeline estimator parity (full app)", () => {
     await resetHomeChatProjectPrewarmStateForTests();
     await resetStudioProjectPrewarmStateForTests();
     resetRetainedThreadDetailSubscriptionsForTests();
+    useProductStore.getState().reset();
+    useSystemHealthStore.setState({ snapshot: null });
+    useRightDockStore.setState({ dockStateByThreadId: {} });
+    productConversationSnapshot = null;
     document.body.innerHTML = "";
+  });
+
+  it("keeps real route-backed Agent and Chat Conversation switches inside the frozen budget", async () => {
+    useComposerDraftStore.setState({
+      draftThreadsByThreadId: {
+        [STUDIO_DRAFT_THREAD_ID]: {
+          projectId: STUDIO_PROJECT_ID,
+          createdAt: NOW_ISO,
+          runtimeMode: "full-access",
+          interactionMode: "default",
+          entryPoint: "chat",
+          branch: null,
+          worktreePath: null,
+          envMode: "local",
+        },
+      },
+      projectDraftThreadIdByProjectId: {
+        [STUDIO_PROJECT_ID]: STUDIO_DRAFT_THREAD_ID,
+      },
+    });
+    useProductStore.setState({
+      shellHydrated: true,
+      shellSequence: 1,
+      conversations: [],
+      shellIssue: null,
+    });
+
+    const mounted = await mountChatView({
+      viewport: DEFAULT_VIEWPORT,
+      snapshot: withStudioProject(
+        createSnapshotForTargetUser({
+          targetMessageId: "msg-user-route-profile" as MessageId,
+          targetText: "route profile",
+        }),
+      ),
+      configureFixture: (nextFixture) => {
+        nextFixture.welcome = {
+          ...nextFixture.welcome,
+          homeDir: "/Users/tester",
+          chatWorkspaceRoot: "/Users/tester/Documents/OmniMind",
+          studioWorkspaceRoot: "/Users/tester/Documents/OmniMind/Studio",
+        };
+      },
+    });
+    const nextFrame = () => new Promise<void>((resolve) => requestAnimationFrame(() => resolve()));
+    const measureSwitch = async (target: "agent" | "chat") => {
+      const button = await waitForElement(
+        () => document.querySelector<HTMLButtonElement>(`#sidebar-surface-tab-${target}`),
+        `Unable to find the ${target} route-backed surface control.`,
+      );
+      const startedAt = performance.now();
+      button.click();
+      const deadline = startedAt + 4_000;
+      let routeCommittedAt = 0;
+      let contentCommittedAt = 0;
+      while (performance.now() < deadline) {
+        const routeMatches =
+          button.getAttribute("aria-selected") === "true" &&
+          mounted.router.state.location.search.surface ===
+            (target === "chat" ? "chat" : undefined) &&
+          mounted.router.state.status === "idle";
+        if (routeMatches && routeCommittedAt === 0) routeCommittedAt = performance.now();
+        const heading = document
+          .querySelector("main [data-active-conversation='true'] h2")
+          ?.textContent?.trim();
+        const contentMatches =
+          routeMatches && (target === "chat" ? heading === "New chat" : heading === THREAD_TITLE);
+        if (contentMatches) {
+          contentCommittedAt = performance.now();
+          break;
+        }
+        await nextFrame();
+      }
+      if (contentCommittedAt === 0) {
+        throw new Error(
+          `The ${target} route did not commit its Conversation before timeout. ` +
+            `route=${mounted.router.state.location.pathname}${JSON.stringify(mounted.router.state.location.search)} ` +
+            `headings=${JSON.stringify(Array.from(document.querySelectorAll("h2")).map((node) => node.textContent?.trim()))} ` +
+            `body=${JSON.stringify(document.body.textContent?.trim().slice(0, 500))}`,
+        );
+      }
+      await nextFrame();
+      await nextFrame();
+      return {
+        routeMs: routeCommittedAt - startedAt,
+        contentMs: contentCommittedAt - startedAt,
+        paintedMs: performance.now() - startedAt,
+      };
+    };
+    const p95 = (values: readonly number[]) => {
+      const sorted = [...values].sort((left, right) => left - right);
+      return sorted[Math.max(0, Math.ceil(sorted.length * 0.95) - 1)] ?? 0;
+    };
+
+    try {
+      for (let index = 0; index < 3; index += 1) {
+        await measureSwitch("chat");
+        await measureSwitch("agent");
+      }
+      const heapBefore = await browserPerformanceCommands.collectBrowserHeap();
+      const longTasks: PerformanceEntry[] = [];
+      const observer = new PerformanceObserver((list) => longTasks.push(...list.getEntries()));
+      observer.observe({ type: "longtask", buffered: false });
+      const chatDurations: number[] = [];
+      const agentDurations: number[] = [];
+      const chatRouteDurations: number[] = [];
+      const agentRouteDurations: number[] = [];
+      const chatContentDurations: number[] = [];
+      const agentContentDurations: number[] = [];
+      for (let index = 0; index < 20; index += 1) {
+        const chat = await measureSwitch("chat");
+        chatDurations.push(chat.paintedMs);
+        chatRouteDurations.push(chat.routeMs);
+        chatContentDurations.push(chat.contentMs);
+        const agent = await measureSwitch("agent");
+        agentDurations.push(agent.paintedMs);
+        agentRouteDurations.push(agent.routeMs);
+        agentContentDurations.push(agent.contentMs);
+      }
+      await measureSwitch("chat");
+      const hiddenBackgroundDurations: number[] = [];
+      const backgroundThread = fixture.snapshot.threads.find((thread) => thread.id === THREAD_ID)!;
+      for (let index = 0; index < 20; index += 1) {
+        const startedAt = performance.now();
+        useStore.getState().syncServerThreadDetailHotPath({
+          ...backgroundThread,
+          messages: backgroundThread.messages.map((message, messageIndex) =>
+            messageIndex === backgroundThread.messages.length - 1
+              ? {
+                  ...message,
+                  text: `${message.text} retained-background-${index}`,
+                  updatedAt: isoAt(3_000 + index),
+                }
+              : message,
+          ),
+          updatedAt: isoAt(3_000 + index),
+        });
+        await nextFrame();
+        await nextFrame();
+        hiddenBackgroundDurations.push(performance.now() - startedAt);
+      }
+      await measureSwitch("agent");
+      longTasks.push(...observer.takeRecords());
+      observer.disconnect();
+      const heapAfter = await browserPerformanceCommands.collectBrowserHeap();
+
+      const result = {
+        samplesPerDirection: 20,
+        method:
+          "real Sidebar tab click -> TanStack route/search transition -> Product/local-draft membership -> idle route -> two animation frames",
+        chatP95Ms: p95(chatDurations),
+        agentP95Ms: p95(agentDurations),
+        chatRouteP95Ms: p95(chatRouteDurations),
+        agentRouteP95Ms: p95(agentRouteDurations),
+        chatContentP95Ms: p95(chatContentDurations),
+        agentContentP95Ms: p95(agentContentDurations),
+        hiddenBackgroundP95Ms: p95(hiddenBackgroundDurations),
+        chatMaxMs: Math.max(...chatDurations),
+        agentMaxMs: Math.max(...agentDurations),
+        hiddenBackgroundMaxMs: Math.max(...hiddenBackgroundDurations),
+        heapBeforeUsedBytes: heapBefore.usedSize,
+        heapAfterUsedBytes: heapAfter.usedSize,
+        heapGrowthBytes: heapAfter.usedSize - heapBefore.usedSize,
+        longTaskCount: longTasks.length,
+        longTaskDurationsMs: longTasks.map((entry) => entry.duration),
+        agentDestination: mounted.router.state.location.pathname,
+        budgetMs: 80,
+        heapBudgetBytes: 24 * 1024 * 1024,
+        proofBoundary: "route-backed Product presentation; Pi-native execution remains T4",
+      };
+      console.info("OMNIMIND_PERF route-backed-surface-switch", JSON.stringify(result));
+      expect(result.chatP95Ms).toBeLessThanOrEqual(result.budgetMs);
+      expect(result.agentP95Ms).toBeLessThanOrEqual(result.budgetMs);
+      expect(result.hiddenBackgroundP95Ms).toBeLessThanOrEqual(result.budgetMs);
+      expect(result.heapGrowthBytes).toBeLessThanOrEqual(result.heapBudgetBytes);
+      expect(result.longTaskCount).toBe(0);
+    } finally {
+      await mounted.cleanup();
+    }
+  });
+
+  it("keeps hidden retained completion unread until the Conversation is active again", async () => {
+    useComposerDraftStore.setState({
+      draftThreadsByThreadId: {
+        [STUDIO_DRAFT_THREAD_ID]: {
+          projectId: STUDIO_PROJECT_ID,
+          createdAt: NOW_ISO,
+          runtimeMode: "full-access",
+          interactionMode: "default",
+          entryPoint: "chat",
+          branch: null,
+          worktreePath: null,
+          envMode: "local",
+        },
+      },
+      projectDraftThreadIdByProjectId: {
+        [STUDIO_PROJECT_ID]: STUDIO_DRAFT_THREAD_ID,
+      },
+    });
+    useProductStore.setState({
+      shellHydrated: true,
+      shellSequence: 1,
+      conversations: [],
+      shellIssue: null,
+    });
+    const mounted = await mountChatView({
+      viewport: DEFAULT_VIEWPORT,
+      snapshot: withStudioProject(
+        createSnapshotForTargetUser({
+          targetMessageId: "msg-user-retained-unread" as MessageId,
+          targetText: "retained unread",
+        }),
+      ),
+    });
+    try {
+      const chatTab = await waitForElement(
+        () => document.querySelector<HTMLButtonElement>("#sidebar-surface-tab-chat"),
+        "Unable to find Chat tab.",
+      );
+      chatTab.click();
+      await vi.waitFor(() => {
+        expect(mounted.router.state.location.search.surface).toBe("chat");
+        expect(
+          document.querySelector(
+            "[data-conversation-surface='chat'][data-active-conversation='true']",
+          ),
+        ).not.toBeNull();
+      });
+      const visitedBeforeCompletion =
+        createThreadSelector(THREAD_ID)(useStore.getState())?.lastVisitedAt ?? null;
+
+      const completedAt = isoAt(2_000);
+      const activeThread = fixture.snapshot.threads.find((thread) => thread.id === THREAD_ID)!;
+      const completedThread: OrchestrationReadModel["threads"][number] = {
+        ...activeThread,
+        latestTurn: {
+          turnId: TurnId.makeUnsafe("turn-retained-background-completion"),
+          state: "completed",
+          requestedAt: isoAt(1_998),
+          startedAt: isoAt(1_999),
+          completedAt,
+          assistantMessageId: null,
+        },
+        session: activeThread.session
+          ? {
+              ...activeThread.session,
+              status: "ready",
+              activeTurnId: null,
+              updatedAt: completedAt,
+            }
+          : null,
+        updatedAt: completedAt,
+      };
+      fixture = {
+        ...fixture,
+        snapshot: {
+          ...fixture.snapshot,
+          snapshotSequence: fixture.snapshot.snapshotSequence + 1,
+          threads: fixture.snapshot.threads.map((thread) =>
+            thread.id === THREAD_ID ? completedThread : thread,
+          ),
+          updatedAt: completedAt,
+        },
+      };
+      useStore.getState().syncServerThreadDetail(completedThread);
+      await waitForLayout();
+      expect(createThreadSelector(THREAD_ID)(useStore.getState())?.lastVisitedAt ?? null).toBe(
+        visitedBeforeCompletion,
+      );
+
+      const agentTab = document.querySelector<HTMLButtonElement>("#sidebar-surface-tab-agent")!;
+      agentTab.click();
+      await vi.waitFor(() => {
+        const lastVisitedAt = createThreadSelector(THREAD_ID)(useStore.getState())?.lastVisitedAt;
+        expect(lastVisitedAt).toBeTruthy();
+        expect(Date.parse(lastVisitedAt!)).toBeGreaterThanOrEqual(Date.parse(completedAt));
+      });
+    } finally {
+      await mounted.cleanup();
+    }
+  });
+
+  it("opens and closes the right dock after the Agent Chat mother is retained", async () => {
+    useComposerDraftStore.setState({
+      draftThreadsByThreadId: {
+        [STUDIO_DRAFT_THREAD_ID]: {
+          projectId: STUDIO_PROJECT_ID,
+          createdAt: NOW_ISO,
+          runtimeMode: "full-access",
+          interactionMode: "default",
+          entryPoint: "chat",
+          branch: null,
+          worktreePath: null,
+          envMode: "local",
+        },
+      },
+      projectDraftThreadIdByProjectId: {
+        [STUDIO_PROJECT_ID]: STUDIO_DRAFT_THREAD_ID,
+      },
+    });
+    useProductStore.setState({
+      shellHydrated: true,
+      shellSequence: 1,
+      conversations: [],
+      shellIssue: null,
+    });
+    const mounted = await mountChatView({
+      viewport: DEFAULT_VIEWPORT,
+      snapshot: withStudioProject(
+        createSnapshotForTargetUser({
+          targetMessageId: "msg-user-retained-dock" as MessageId,
+          targetText: "retained dock",
+        }),
+      ),
+    });
+
+    try {
+      document.querySelector<HTMLButtonElement>("#sidebar-surface-tab-chat")!.click();
+      await vi.waitFor(() => {
+        expect(mounted.router.state.location.search.surface).toBe("chat");
+      });
+      document.querySelector<HTMLButtonElement>("#sidebar-surface-tab-agent")!.click();
+      await vi.waitFor(() => {
+        expect(mounted.router.state.location.search.surface).toBeUndefined();
+      });
+
+      const toggle = await waitForElement(
+        () =>
+          document.querySelector<HTMLButtonElement>(
+            "[data-active-conversation='true'] button[aria-label='Toggle right sidebar']",
+          ),
+        "Unable to find right dock toggle.",
+      );
+      toggle.click();
+      await vi.waitFor(() => {
+        expect(selectRightDockState(THREAD_ID)(useRightDockStore.getState()).open).toBe(true);
+      });
+      toggle.click();
+      await vi.waitFor(() => {
+        expect(selectRightDockState(THREAD_ID)(useRightDockStore.getState()).open).toBe(false);
+      });
+    } finally {
+      await mounted.cleanup();
+    }
+  });
+
+  it("gives real Chat health state one Product notice and restores the global owner on Agent", async () => {
+    const conversationId = ProductConversationId.makeUnsafe("product-browser-health");
+    productConversationSnapshot = createProductChatSnapshot(conversationId);
+    useProductStore.getState().setShellSnapshot(createProductShellSnapshot());
+    useProductStore.getState().setConversationSnapshot(productConversationSnapshot);
+    const unavailableHealth: DesktopHealthSnapshot = {
+      protocolVersion: 1,
+      renderer: { status: "ready", reason: null, restartAttempt: 0 },
+      service: { status: "ready", reason: null, restartAttempt: 0 },
+      nativeHost: { status: "unavailable", reason: "Host process unavailable", restartAttempt: 1 },
+      engineSelection: { status: "unknown", reason: "No runtime catalog" },
+      updatedAt: NOW_ISO,
+    };
+    useSystemHealthStore.setState({ snapshot: unavailableHealth });
+
+    const mounted = await mountChatView({
+      viewport: DEFAULT_VIEWPORT,
+      snapshot: createSnapshotForTargetUser({
+        targetMessageId: "msg-user-product-health-proof" as MessageId,
+        targetText: "health owner fixture",
+      }),
+      initialEntry: `/${conversationId}?surface=chat`,
+    });
+
+    try {
+      await vi.waitFor(() => {
+        expect(
+          document.querySelector(
+            "[data-active-conversation='true'] [data-product-conversation-state='execution_unavailable']",
+          ),
+        ).not.toBeNull();
+        expect(document.querySelectorAll("[data-system-health-owner='global']")).toHaveLength(0);
+      });
+
+      await mounted.router.navigate({
+        to: "/$threadId",
+        params: { threadId: THREAD_ID },
+        search: {},
+      });
+      await waitForLayout();
+      await vi.waitFor(() => {
+        expect(document.querySelectorAll("[data-system-health-owner='global']")).toHaveLength(1);
+      });
+
+      await mounted.router.navigate({
+        to: "/$threadId",
+        params: { threadId: ThreadId.makeUnsafe(conversationId) },
+        search: { surface: "chat" },
+      });
+      await waitForLayout();
+      await vi.waitFor(() => {
+        expect(document.querySelectorAll("[data-system-health-owner='global']")).toHaveLength(0);
+        expect(
+          document.querySelectorAll(
+            "[data-active-conversation='true'] [data-product-conversation-state='execution_unavailable']",
+          ),
+        ).toHaveLength(1);
+      });
+    } finally {
+      await mounted.cleanup();
+    }
+  });
+
+  it("keeps Agent and Chat Search inventories and activation paths strictly separated", async () => {
+    const conversationId = ProductConversationId.makeUnsafe("product-browser-search");
+    productConversationSnapshot = createProductChatSnapshot(conversationId);
+    useProductStore.getState().setShellSnapshot(createProductShellSnapshot());
+    useProductStore.getState().setConversationSnapshot(productConversationSnapshot);
+    const mounted = await mountChatView({
+      viewport: DEFAULT_VIEWPORT,
+      snapshot: createSnapshotForTargetUser({
+        targetMessageId: "msg-user-search-inventory" as MessageId,
+        targetText: "search inventory fixture",
+      }),
+      initialEntry: `/${conversationId}?surface=chat`,
+    });
+
+    const searchItems = () =>
+      Array.from(document.querySelectorAll<HTMLElement>("[data-slot='command-item']"));
+    const openSearch = async () => {
+      await page.getByRole("button", { name: "Search", exact: true }).click();
+      return await waitForElement(
+        () =>
+          document.querySelector<HTMLInputElement>(
+            "input[placeholder='Search projects, threads, and actions']",
+          ),
+        "Unable to find Sidebar Search input.",
+      );
+    };
+
+    try {
+      let input = await openSearch();
+      await userEvent.fill(input, THREAD_TITLE);
+      expect(searchItems().some((item) => item.textContent?.includes(THREAD_TITLE))).toBe(false);
+      await userEvent.fill(input, "Product browser conversation");
+      const productResult = await waitForElement(
+        () =>
+          searchItems().find((item) =>
+            item.textContent?.includes("Product browser conversation"),
+          ) ?? null,
+        "Chat Search did not expose its Product summary.",
+      );
+      productResult.click();
+      await vi.waitFor(() => {
+        expect(mounted.router.state.location.pathname).toBe(`/${conversationId}`);
+        expect(mounted.router.state.location.search.surface).toBe("chat");
+      });
+
+      await mounted.router.navigate({
+        to: "/$threadId",
+        params: { threadId: THREAD_ID },
+        search: {},
+      });
+      await waitForLayout();
+      input = await openSearch();
+      await userEvent.fill(input, "Product browser conversation");
+      expect(
+        searchItems().some((item) => item.textContent?.includes("Product browser conversation")),
+      ).toBe(false);
+      await userEvent.fill(input, THREAD_TITLE);
+      const agentResult = await waitForElement(
+        () => searchItems().find((item) => item.textContent?.includes(THREAD_TITLE)) ?? null,
+        "Agent Search did not expose its donor Agent thread.",
+      );
+      agentResult.click();
+      await vi.waitFor(() => {
+        expect(mounted.router.state.location.pathname).toBe(`/${THREAD_ID}`);
+        expect(mounted.router.state.location.search.surface).toBeUndefined();
+      });
+    } finally {
+      await mounted.cleanup();
+    }
+  });
+
+  it("persists a Product Chat message through Product Queue without donor execution preflight", async () => {
+    const conversationId = ProductConversationId.makeUnsafe("product-browser-chat");
+    const threadId = ThreadId.makeUnsafe(conversationId);
+    const prompt = "Product queue without donor preflight";
+    productConversationSnapshot = createProductChatSnapshot(conversationId);
+    useProductStore.getState().setShellSnapshot(createProductShellSnapshot());
+    useProductStore.getState().setConversationSnapshot(productConversationSnapshot);
+    useComposerDraftStore.getState().setPrompt(threadId, prompt);
+
+    const mounted = await mountChatView({
+      viewport: DEFAULT_VIEWPORT,
+      snapshot: createSnapshotForTargetUser({
+        targetMessageId: "msg-user-product-queue-proof" as MessageId,
+        targetText: "donor fixture must remain unreachable",
+      }),
+      initialEntry: `/${conversationId}?surface=chat`,
+    });
+
+    try {
+      const submitButton = await waitForElement(
+        () =>
+          document.querySelector<HTMLButtonElement>(
+            "[data-active-conversation='true'] button[data-product-submit-mode='queue-only']",
+          ),
+        "Unable to find the Product Queue submit control.",
+      );
+      expect(submitButton.disabled).toBe(false);
+      wsRequests.length = 0;
+
+      const form = submitButton.closest("form");
+      expect(form).not.toBeNull();
+      form!.requestSubmit();
+
+      await vi.waitFor(
+        () => {
+          expect(
+            wsRequests.some((request) => request._tag === PRODUCT_RPC_METHODS.putQueueItem),
+          ).toBe(true);
+          expect(
+            useProductStore.getState().detailByConversation[conversationId]?.queue[0]?.text,
+          ).toBe(prompt);
+          expect(useComposerDraftStore.getState().draftsByThreadId[threadId]?.prompt ?? "").toBe(
+            "",
+          );
+        },
+        { timeout: 8_000, interval: 16 },
+      );
+
+      const putRequest = wsRequests.find(
+        (request) => request._tag === PRODUCT_RPC_METHODS.putQueueItem,
+      );
+      expect(putRequest).toMatchObject({
+        conversationId,
+        text: prompt,
+        requestedSelection: {
+          engineId: "native-engine-unresolved",
+          modelId: null,
+          thinking: null,
+          permissionPolicy: "approval-required",
+          enforcement: "unverified",
+          executionTarget: null,
+          packageGeneration: "unresolved-not-activated",
+        },
+        resources: [],
+        expectedRevision: null,
+      });
+      expect(
+        wsRequests.some((request) => request._tag === ORCHESTRATION_WS_METHODS.dispatchCommand),
+      ).toBe(false);
+      expect(wsRequests.some((request) => request._tag === WS_METHODS.automationCreate)).toBe(
+        false,
+      );
+      expect(
+        wsRequests.some((request) => request._tag === PRODUCT_RPC_METHODS.submitQueueItem),
+      ).toBe(false);
+      expect(document.querySelector("[data-testid='queued-follow-up-row']")?.textContent).toContain(
+        prompt,
+      );
+
+      const secondPrompt = "Second Product Queue intent";
+      useComposerDraftStore.getState().setPrompt(threadId, secondPrompt);
+      await waitForLayout();
+      form!.requestSubmit();
+      await vi.waitFor(
+        () => {
+          expect(
+            useProductStore
+              .getState()
+              .detailByConversation[conversationId]?.queue.map((item) => item.text),
+          ).toEqual([prompt, secondPrompt]);
+          expect(useComposerDraftStore.getState().draftsByThreadId[threadId]?.prompt ?? "").toBe(
+            "",
+          );
+        },
+        { timeout: 8_000, interval: 16 },
+      );
+
+      const queueRows = () =>
+        Array.from(document.querySelectorAll<HTMLElement>("[data-testid='queued-follow-up-row']"));
+      await vi.waitFor(() => expect(queueRows()).toHaveLength(2));
+      expect(queueRows().every((row) => !row.textContent?.includes("Steer"))).toBe(true);
+      const secondRow = queueRows().find((row) => row.textContent?.includes(secondPrompt));
+      const moveNext = secondRow?.querySelector<HTMLButtonElement>(
+        "button[data-queue-action='move-next']",
+      );
+      expect(moveNext).toBeTruthy();
+      expect(moveNext?.disabled).toBe(false);
+
+      wsRequests.length = 0;
+      moveNext!.click();
+      await vi.waitFor(() => {
+        expect(
+          wsRequests.some((request) => request._tag === PRODUCT_RPC_METHODS.reorderQueue),
+        ).toBe(true);
+        expect(
+          useProductStore.getState().detailByConversation[conversationId]?.queue[0]?.text,
+        ).toBe(secondPrompt);
+      });
+      expect(
+        wsRequests.some(
+          (request) =>
+            request._tag === PRODUCT_RPC_METHODS.submitQueueItem ||
+            request._tag === ORCHESTRATION_WS_METHODS.dispatchCommand,
+        ),
+      ).toBe(false);
+
+      const movedRow = queueRows().find((row) => row.textContent?.includes(secondPrompt));
+      movedRow
+        ?.querySelector<HTMLButtonElement>("button[aria-label='Queued follow-up actions']")
+        ?.click();
+      const editAction = await waitForElement(
+        () =>
+          Array.from(document.querySelectorAll<HTMLElement>("[data-slot='menu-item']")).find(
+            (item) => item.textContent?.trim() === "Edit queued prompt",
+          ) ?? null,
+        "Unable to find Product Queue edit action.",
+      );
+      editAction.click();
+      await vi.waitFor(() => {
+        expect(useComposerDraftStore.getState().draftsByThreadId[threadId]?.prompt).toBe(
+          secondPrompt,
+        );
+        const editingRow = queueRows().find((row) => row.textContent?.includes(secondPrompt));
+        expect(editingRow?.dataset.queueEditing).toBe("true");
+        expect(editingRow?.textContent).toContain("Editing");
+        expect(
+          editingRow?.querySelector<HTMLButtonElement>("button[data-queue-action='cancel-edit']"),
+        ).not.toBeNull();
+      });
+
+      await mounted.router.navigate({
+        to: "/$threadId",
+        params: { threadId: THREAD_ID },
+        search: {},
+      });
+      await waitForLayout();
+      await mounted.router.navigate({
+        to: "/$threadId",
+        params: { threadId },
+        search: { surface: "chat" },
+      });
+      await waitForLayout();
+      const reenteredEditingRow = await waitForElement(
+        () =>
+          queueRows().find(
+            (row) => row.textContent?.includes(secondPrompt) && row.dataset.queueEditing === "true",
+          ) ?? null,
+        "Product Queue edit state did not survive Conversation re-entry.",
+      );
+      reenteredEditingRow
+        .querySelector<HTMLButtonElement>("button[data-queue-action='cancel-edit']")!
+        .click();
+      await vi.waitFor(() => {
+        const cancelledRow = queueRows().find((row) => row.textContent?.includes(secondPrompt));
+        expect(cancelledRow).not.toBeNull();
+        expect(cancelledRow?.dataset.queueEditing).toBeUndefined();
+        expect(useComposerDraftStore.getState().draftsByThreadId[threadId]?.prompt).toBe(
+          secondPrompt,
+        );
+      });
+
+      const cancelledRow = queueRows().find((row) => row.textContent?.includes(secondPrompt));
+      cancelledRow
+        ?.querySelector<HTMLButtonElement>("button[aria-label='Queued follow-up actions']")
+        ?.click();
+      const reenterEditAction = await waitForElement(
+        () =>
+          Array.from(document.querySelectorAll<HTMLElement>("[data-slot='menu-item']")).find(
+            (item) => item.textContent?.trim() === "Edit queued prompt",
+          ) ?? null,
+        "Unable to re-enter Product Queue editing after cancel.",
+      );
+      reenterEditAction.click();
+      await vi.waitFor(() => {
+        expect(
+          queueRows().find((row) => row.textContent?.includes(secondPrompt))?.dataset.queueEditing,
+        ).toBe("true");
+      });
+
+      wsRequests.length = 0;
+      await waitForLayout();
+      document
+        .querySelector<HTMLFormElement>(
+          "[data-active-conversation='true'] [data-chat-composer-form='true']",
+        )!
+        .requestSubmit();
+      await vi.waitFor(() => {
+        expect(
+          wsRequests.some(
+            (request) =>
+              request._tag === PRODUCT_RPC_METHODS.putQueueItem &&
+              request.text === secondPrompt &&
+              request.expectedRevision === 1,
+          ),
+        ).toBe(true);
+        expect(useComposerDraftStore.getState().draftsByThreadId[threadId]?.prompt ?? "").toBe("");
+      });
+
+      const rowToDelete = queueRows().find((row) => row.textContent?.includes(prompt));
+      wsRequests.length = 0;
+      rowToDelete
+        ?.querySelector<HTMLButtonElement>("button[aria-label='Delete queued follow-up']")
+        ?.click();
+      await vi.waitFor(() => {
+        expect(
+          wsRequests.some((request) => request._tag === PRODUCT_RPC_METHODS.deleteQueueItem),
+        ).toBe(true);
+        expect(
+          useProductStore
+            .getState()
+            .detailByConversation[conversationId]?.queue.map((item) => item.text),
+        ).toEqual([secondPrompt]);
+      });
+      expect(
+        wsRequests.some(
+          (request) =>
+            request._tag === PRODUCT_RPC_METHODS.submitQueueItem ||
+            request._tag === ORCHESTRATION_WS_METHODS.dispatchCommand,
+        ),
+      ).toBe(false);
+    } finally {
+      await mounted.cleanup();
+    }
   });
 
   it("dispatches a rapid access-mode reversal while the server projection is stale", async () => {

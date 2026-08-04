@@ -1,6 +1,6 @@
 import { describe, expect, it } from "vitest";
 
-import { parseDiffRouteSearch } from "./diffRouteSearch";
+import { parseDiffRouteSearch, resolveProductSurface } from "./diffRouteSearch";
 
 describe("parseDiffRouteSearch", () => {
   it("parses valid diff search values", () => {
@@ -101,5 +101,13 @@ describe("parseDiffRouteSearch", () => {
       panel: "browser",
       splitViewId: "split-1",
     });
+  });
+
+  it("serializes only Chat and keeps Agent as the omitted canonical default", () => {
+    expect(parseDiffRouteSearch({ surface: "chat" })).toEqual({ surface: "chat" });
+    expect(parseDiffRouteSearch({ surface: "agent" })).toEqual({});
+    expect(parseDiffRouteSearch({ surface: "studio" })).toEqual({});
+    expect(resolveProductSurface({})).toBe("agent");
+    expect(resolveProductSurface({ surface: "chat" })).toBe("chat");
   });
 });

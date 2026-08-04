@@ -1,11 +1,22 @@
 import { useEffect, useState } from "react";
 import type { DesktopBridge, DesktopHealthBridge } from "@omnimind/contracts";
 
+import { useDiffRouteSearch } from "../../hooks/useDiffRouteSearch";
+import { getWorkbenchCopy } from "../../i18n/workbenchCopy";
 import { useSystemHealthStore } from "../../store/systemHealthStore";
 import { Button } from "../ui/button";
 
+export type SystemHealthNoticeOwner = "global" | "product-conversation";
+
+export function resolveSystemHealthNoticeOwner(
+  surface: "chat" | undefined,
+): SystemHealthNoticeOwner {
+  return surface === "chat" ? "product-conversation" : "global";
+}
+
 export function SystemHealthCoordinator() {
   const setSnapshot = useSystemHealthStore((state) => state.setSnapshot);
+  const routeSearch = useDiffRouteSearch();
 
   useEffect(() => {
     const bridge = (window.desktopBridge as (DesktopBridge & DesktopHealthBridge) | undefined)
@@ -22,13 +33,14 @@ export function SystemHealthCoordinator() {
     };
   }, [setSnapshot]);
 
-  return <SystemHealthNotice />;
+  return <SystemHealthNotice owner={resolveSystemHealthNoticeOwner(routeSearch.surface)} />;
 }
 
-function SystemHealthNotice() {
+export function SystemHealthNotice({ owner }: { readonly owner: SystemHealthNoticeOwner }) {
   const snapshot = useSystemHealthStore((state) => state.snapshot);
   const [retrying, setRetrying] = useState(false);
-  if (!snapshot) return null;
+  const copy = getWorkbenchCopy();
+  if (!snapshot || owner === "product-conversation") return null;
 
   const hostUnavailable = ["restarting", "circuitOpen", "unavailable"].includes(
     snapshot.nativeHost.status,
@@ -41,18 +53,19 @@ function SystemHealthNotice() {
 
   const hostCircuitOpen = snapshot.nativeHost.status === "circuitOpen";
   const message = serviceUnavailable
-    ? "Product Service is recovering. Existing conversation and workbench state remain available read-only."
+    ? copy.systemHealthServiceRecovering
     : hostCircuitOpen
-      ? "Native Host restart protection is open. Drafts and Queue are preserved; execution remains unavailable."
+      ? copy.systemHealthHostCircuitOpen
       : hostUnavailable
-        ? "Native Host is restarting. Drafts and Queue are preserved; execution is temporarily unavailable."
-        : "Native execution is not connected yet. Drafts and Queue remain available; dispatch is unavailable.";
+        ? copy.systemHealthHostRestarting
+        : copy.systemHealthExecutionUnavailable;
 
   return (
     <aside
       className="fixed right-4 bottom-4 z-[220] flex max-w-md items-center gap-3 rounded-lg border border-border bg-background/95 px-3 py-2 text-xs text-foreground shadow-lg backdrop-blur"
       role="status"
       aria-live="polite"
+      data-system-health-owner="global"
     >
       <span>{message}</span>
       {hostCircuitOpen ? (
@@ -69,7 +82,7 @@ function SystemHealthNotice() {
             void bridge.retryNativeHost().finally(() => setRetrying(false));
           }}
         >
-          Retry Host
+          {copy.systemHealthRetryHost}
         </Button>
       ) : null}
     </aside>

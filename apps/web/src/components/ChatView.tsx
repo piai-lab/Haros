@@ -42,7 +42,6 @@ import {
   ProductDispatchId,
   ProductEntryId,
   ProductOperationReceiptId,
-  type ProductPutQueueItemInput,
   ProductQueueItemId,
   ProductRunId,
   ProductWorkspaceId,
@@ -102,7 +101,10 @@ import {
 import { projectSearchEntriesQueryOptions } from "~/lib/projectReactQuery";
 import { serverConfigQueryOptions, serverQueryKeys } from "~/lib/serverReactQuery";
 import { useRefreshProviderStatusesNow } from "~/hooks/useProviderStatusRefresh";
-import { SINGLE_CHAT_PANE_SCOPE_ID } from "~/lib/chatPaneScope";
+import {
+  type ChatConversationActivitySignal,
+  SINGLE_CHAT_PANE_SCOPE_ID,
+} from "~/lib/chatPaneScope";
 import {
   composerMentionPathNeedsQuoting,
   formatComposerMentionToken,
@@ -166,10 +168,9 @@ import {
   type AutomationDraftWarningId,
 } from "../lib/automationDraft";
 import { dispatchThreadRename } from "../lib/threadRename";
-import { useHandleNewChat } from "../hooks/useHandleNewChat";
+import { useHandleNewChatWithThreadHandler } from "../hooks/useHandleNewChat";
 import { useComposerDropzone } from "../hooks/useComposerDropzone";
 import { useComposerImageIntake } from "../hooks/useComposerImageIntake";
-import { useDiffRouteSearch } from "../hooks/useDiffRouteSearch";
 import {
   buildThreadBreadcrumbs,
   buildTranscriptAutoFollowSignal,
@@ -337,12 +338,16 @@ import { newCommandId, newMessageId, newProjectId, newThreadId } from "~/lib/uti
 import { readNativeApi } from "~/nativeApi";
 import { readProductNativeApi } from "~/wsNativeApi";
 import {
-  presentProductConversationError,
   presentProductConversationMessages,
+  presentProductConversationProject,
   presentProductConversationQueue,
+  presentProductConversationState,
+  presentProductConversationThread,
 } from "~/productReadModel";
 import { useProductStore } from "~/store/productStore";
 import { canDispatchProductSubmission, useSystemHealthStore } from "~/store/systemHealthStore";
+import { ProductConversationNotice } from "./product/ProductConversationNotice";
+import { getWorkbenchCopy } from "~/i18n/workbenchCopy";
 import {
   confirmProductQueueOwnershipBeforeDraftClear,
   findExactTransferredProductQueueItem,
@@ -429,6 +434,7 @@ import { selectThreadTerminalState, useTerminalStateStore } from "../terminalSta
 import {
   resolveSplitViewFocusedThreadId,
   selectSplitView,
+  type SplitViewId,
   type SplitViewPanePanelState,
   useSplitViewStore,
 } from "../splitViewStore";
@@ -589,7 +595,7 @@ import {
 import { useLocalStorage } from "~/hooks/useLocalStorage";
 import { useComposerSlashCommands } from "../hooks/useComposerSlashCommands";
 import { useFeatureFlags } from "../featureFlags";
-import { useHandleNewThread } from "../hooks/useHandleNewThread";
+import { useHandleNewThreadForFocusedContext } from "../hooks/useHandleNewThread";
 import {
   canCreateThreadHandoff,
   resolveAvailableHandoffTargetProviders,
@@ -751,11 +757,19 @@ function automationScheduleActivityPayload(schedule: AutomationSchedule) {
       return { type: "interval", everySeconds: schedule.everySeconds } as const;
     case "daily":
       return schedule.timezone
-        ? { type: "daily", timeOfDay: schedule.timeOfDay, timezone: schedule.timezone }
+        ? {
+            type: "daily",
+            timeOfDay: schedule.timeOfDay,
+            timezone: schedule.timezone,
+          }
         : { type: "daily", timeOfDay: schedule.timeOfDay };
     case "weekdays":
       return schedule.timezone
-        ? { type: "weekdays", timeOfDay: schedule.timeOfDay, timezone: schedule.timezone }
+        ? {
+            type: "weekdays",
+            timeOfDay: schedule.timeOfDay,
+            timezone: schedule.timezone,
+          }
         : { type: "weekdays", timeOfDay: schedule.timeOfDay };
     case "weekly":
       return schedule.timezone
@@ -966,6 +980,7 @@ type ComposerPluginSuggestion = {
 const EMPTY_COMPOSER_PLUGIN_SUGGESTIONS: ComposerPluginSuggestion[] = [];
 
 function buildQueuedComposerPreviewText(input: {
+  queuedFallback: string;
   trimmedPrompt: string;
   images: ReadonlyArray<ComposerImageAttachment>;
   files: ReadonlyArray<ComposerFileAttachment>;
@@ -1005,7 +1020,7 @@ function buildQueuedComposerPreviewText(input: {
   if (pastedTitle) {
     return pastedTitle;
   }
-  return "Queued follow-up";
+  return input.queuedFallback;
 }
 
 function formatPastedTextTitleSeed(pastedTexts: ReadonlyArray<PastedTextDraft>): string | null {
@@ -1095,6 +1110,9 @@ interface LateComposerSendHandlers {
 
 interface ChatViewProps {
   threadId: ThreadId;
+  conversationSurface: "agent" | "chat";
+  conversationActivity?: ChatConversationActivitySignal;
+  splitViewId?: SplitViewId | null;
   paneScopeId?: string;
   surfaceMode?: "single" | "split";
   presentationMode?: "default" | "editor";
@@ -1167,6 +1185,9 @@ function isProductConversationNotFound(error: unknown): boolean {
 
 export default function ChatView({
   threadId,
+  conversationSurface,
+  conversationActivity,
+  splitViewId: splitViewIdProp,
   paneScopeId: paneScopeIdProp,
   surfaceMode: surfaceModeProp,
   presentationMode: presentationModeProp,
@@ -1193,9 +1214,39 @@ export default function ChatView({
   const isFocusedPane = isFocusedPaneProp ?? true;
   const viewModeAction = viewModeActionProp ?? null;
   const productConversationId = ProductConversationId.makeUnsafe(threadId);
+  const isChatProductSurface = conversationSurface === "chat";
   const productReadModel = useProductStore(
     (store) => store.detailByConversation[productConversationId],
   );
+  const productConversationSummary = useProductStore((store) =>
+    store.conversations.find((conversation) => conversation.id === productConversationId),
+  );
+  const isKnownProductConversation = productConversationSummary !== undefined;
+  const productProjectionIssue = useProductStore(
+    (store) => store.detailIssueByConversation[productConversationId] ?? null,
+  );
+  const [productDetailFetchFailed, setProductDetailFetchFailed] = useState(false);
+  const systemHealthSnapshot = useSystemHealthStore((store) => store.snapshot);
+  const productConversationPresentation = useMemo(
+    () =>
+      presentProductConversationState({
+        readModel: productReadModel,
+        isKnownConversation: isKnownProductConversation,
+        projectionIssue:
+          productReadModel === undefined && productDetailFetchFailed
+            ? "history-unavailable"
+            : productProjectionIssue,
+        health: systemHealthSnapshot,
+      }),
+    [
+      isKnownProductConversation,
+      productDetailFetchFailed,
+      productProjectionIssue,
+      productReadModel,
+      systemHealthSnapshot,
+    ],
+  );
+  const workbenchCopy = getWorkbenchCopy();
   const setProductConversationSnapshot = useProductStore((store) => store.setConversationSnapshot);
   const setProductQueueItem = useProductStore((store) => store.setQueueItem);
   const retainProductConversation = useProductStore((store) => store.retainConversation);
@@ -1211,7 +1262,9 @@ export default function ChatView({
     retainedProductConversationRef.current = productConversationId;
   }, [productConversationId, retainProductConversation]);
   useEffect(() => {
+    if (!isKnownProductConversation) return;
     let cancelled = false;
+    ensureProductConversationRetained();
     void readProductNativeApi()
       .getConversationSnapshot({
         protocolVersion: PRODUCT_PROTOCOL_VERSION,
@@ -1219,23 +1272,30 @@ export default function ChatView({
       })
       .then((snapshot) => {
         if (cancelled) return;
-        ensureProductConversationRetained();
+        setProductDetailFetchFailed(false);
         setProductConversationSnapshot(snapshot);
       })
-      .catch(() => undefined);
+      .catch(() => {
+        if (!cancelled) setProductDetailFetchFailed(true);
+      });
     return () => {
       cancelled = true;
+    };
+  }, [
+    ensureProductConversationRetained,
+    isKnownProductConversation,
+    productConversationId,
+    setProductConversationSnapshot,
+  ]);
+  useEffect(
+    () => () => {
       if (retainedProductConversationRef.current === productConversationId) {
         releaseProductConversation(productConversationId);
         retainedProductConversationRef.current = null;
       }
-    };
-  }, [
-    ensureProductConversationRetained,
-    productConversationId,
-    releaseProductConversation,
-    setProductConversationSnapshot,
-  ]);
+    },
+    [productConversationId, releaseProductConversation],
+  );
   const markThreadVisited = useStore((store) => store.markThreadVisited);
   const syncServerShellSnapshot = useStore((store) => store.syncServerShellSnapshot);
   const setStoreThreadError = useStore((store) => store.setError);
@@ -1250,12 +1310,9 @@ export default function ChatView({
   );
   const timestampFormat = settings.timestampFormat;
   const navigate = useNavigate();
-  const { handleNewThread } = useHandleNewThread();
-  const { handleNewChat } = useHandleNewChat();
   const { createThreadHandoff } = useThreadHandoff();
-  const rawSearch = useDiffRouteSearch();
   const activeSplitView = useSplitViewStore(
-    useMemo(() => selectSplitView(rawSearch.splitViewId ?? null), [rawSearch.splitViewId]),
+    useMemo(() => selectSplitView(splitViewIdProp ?? null), [splitViewIdProp]),
   );
   const removeThreadFromSplitViews = useSplitViewStore((store) => store.removeThreadFromSplitViews);
   const { resolvedTheme } = useTheme();
@@ -1601,6 +1658,10 @@ export default function ChatView({
   }, [threadId]);
   const composerEditorRef = useRef<ComposerPromptEditorHandle>(null);
   const composerFormRef = useRef<HTMLFormElement>(null);
+  const isInteractionActive = useCallback(
+    () => conversationActivity?.isActive() ?? true,
+    [conversationActivity],
+  );
   // Set by whichever mounted GitActionsControl instance (header quick-action or the
   // Environment panel row) last registered — either performs the identical commit &
   // push mutation for this thread's repo, so it doesn't matter which one is "current".
@@ -1848,11 +1909,20 @@ export default function ChatView({
         : undefined,
     [draftThread, fallbackDraftProject?.defaultModelSelection, localDraftError, threadId],
   );
-  const activeThread = serverThread ?? localDraftThread;
+  const productPresentationThread = useMemo(
+    () => presentProductConversationThread(productReadModel),
+    [productReadModel],
+  );
+  const activeThread = productConversationSummary
+    ? productPresentationThread
+    : (serverThread ?? localDraftThread ?? productPresentationThread);
   useEffect(() => {
     if (
       !pendingFileUndo ||
-      !hasFileUndoSettled({ pending: pendingFileUndo, thread: activeThread ?? null })
+      !hasFileUndoSettled({
+        pending: pendingFileUndo,
+        thread: activeThread ?? null,
+      })
     ) {
       return;
     }
@@ -1882,12 +1952,17 @@ export default function ChatView({
   }, [runtimeMode, threadId]);
   const interactionMode =
     composerDraft.interactionMode ?? activeThread?.interactionMode ?? DEFAULT_INTERACTION_MODE;
-  const isServerThread = serverThread !== undefined;
-  const isLocalDraftThread = !isServerThread && localDraftThread !== undefined;
+  const isServerThread = serverThread !== undefined && activeThread === serverThread;
+  const isLocalDraftThread =
+    !isServerThread && localDraftThread !== undefined && activeThread === localDraftThread;
+  const isProductConversationThread =
+    productReadModel !== undefined ||
+    productConversationSummary !== undefined ||
+    isLocalDraftThread;
   const canCheckoutPullRequestIntoThread = isLocalDraftThread;
-  const diffOpen = rawSearch.panel === "diff";
-  const browserOpen = rawSearch.panel === "browser";
-  const resolvedDiffOpen = panelState ? panelState.panel === "diff" : diffOpen;
+  const diffOpen = panelState?.panel === "diff";
+  const browserOpen = panelState?.panel === "browser";
+  const resolvedDiffOpen = diffOpen;
   const activeThreadId = activeThread?.id ?? null;
   const activeLatestTurn = activeThread?.latestTurn ?? null;
   // Read once here so memo bodies depend on the turn id instead of the turn object: a
@@ -1935,9 +2010,24 @@ export default function ChatView({
   // appear on a fresh chat just because the repo already has local edits.
   const latestTurnLive = Boolean(activeLatestTurn?.startedAt) && !latestTurnSettled;
   const activeProjectId = activeThread?.projectId ?? draftThread?.projectId ?? null;
-  const activeProject = useStore(
+  const storedActiveProject = useStore(
     useMemo(() => createProjectSelector(activeProjectId), [activeProjectId]),
   );
+  const productPresentationProject = useMemo(
+    () => presentProductConversationProject(productReadModel),
+    [productReadModel],
+  );
+  const activeProject = storedActiveProject ?? productPresentationProject;
+  const { handleNewThread } = useHandleNewThreadForFocusedContext({
+    routeThreadId: threadId,
+    splitView: activeSplitView ?? null,
+    focusedThreadId: threadId,
+    activeThread: activeThread ?? null,
+    activeDraftThread: draftThread,
+    activeProject: activeProject ?? null,
+    activeProjectId,
+  });
+  const { handleNewChat } = useHandleNewChatWithThreadHandler(handleNewThread);
   const deletePlaceholderTerminalThread = useCallback(
     async (terminalThreadId: ThreadId) => {
       const api = readNativeApi();
@@ -2029,6 +2119,7 @@ export default function ChatView({
     activeThread,
     activeProjectPresent: activeProject !== undefined,
     isFocusedPane,
+    isInteractionActive,
     isServerThread,
     confirmTerminalClose: settings.confirmTerminalTabClose,
     onDeletePlaceholderThread: deletePlaceholderTerminalThread,
@@ -2050,10 +2141,13 @@ export default function ChatView({
     chatWorkspaceRoot,
     studioWorkspaceRoot,
   });
-  const isContainerLandingProject = isHomeChatContainer || isStudioContainer;
-  const activeProjectDisplayName = isHomeChatContainer
-    ? activeProject?.folderName
-    : activeProject?.name;
+  const isContainerLandingProject =
+    isHomeChatContainer || isStudioContainer || isChatProductSurface;
+  const activeProjectDisplayName = isChatProductSurface
+    ? undefined
+    : isHomeChatContainer
+      ? activeProject?.folderName
+      : activeProject?.name;
   const isChatProject = isContainerLandingProject;
   const activeProjectScripts =
     activeProject?.kind === "project" ? activeProject.scripts : undefined;
@@ -2208,7 +2302,8 @@ export default function ChatView({
     [openOrReuseProjectDraftThread],
   );
 
-  useEffect(() => {
+  const markLatestSettledTurnVisited = useCallback(() => {
+    if (!isInteractionActive()) return;
     if (!activeThread?.id) return;
     if (!latestTurnSettled) return;
     if (!activeLatestTurn?.completedAt) return;
@@ -2222,9 +2317,16 @@ export default function ChatView({
     activeThread?.id,
     activeThread?.lastVisitedAt,
     activeLatestTurn?.completedAt,
+    isInteractionActive,
     latestTurnSettled,
     markThreadVisited,
   ]);
+  useEffect(() => {
+    markLatestSettledTurnVisited();
+  }, [markLatestSettledTurnVisited]);
+  useEffect(() => {
+    return conversationActivity?.subscribeToActivation(markLatestSettledTurnVisited);
+  }, [conversationActivity, markLatestSettledTurnVisited]);
 
   const sessionProvider = activeThread?.session?.provider ?? null;
   const selectedProviderByThreadId = composerDraft.activeProvider ?? null;
@@ -2290,10 +2392,11 @@ export default function ChatView({
     selectedProviderRuntimeModelDiscoveryPending,
   } = useProviderModelCatalog({
     selectedProvider,
-    discoveryEnabled: isModelPickerOpen,
+    discoveryEnabled: !isProductConversationThread && isModelPickerOpen,
+    selectedDiscoveryEnabled: !isProductConversationThread,
     cwd: providerModelDiscoveryCwd,
     modelHintByProvider: composerModelHintByProvider,
-    agentDiscoveryPolicy: "eager-core",
+    agentDiscoveryPolicy: isProductConversationThread ? "selected" : "eager-core",
   });
   const { modelOptions: composerModelOptions, selectedModel } = useEffectiveComposerModelState({
     threadId,
@@ -2826,7 +2929,10 @@ export default function ChatView({
         backgroundedProviderThreadIds: backgroundedSubagentToolUseIds,
         viewedThreadId: stripParentThread ? (activeThread?.id ?? null) : null,
         parentRow: stripParentThread
-          ? { threadId: stripParentThread.id, label: stripParentThread.title ?? null }
+          ? {
+              threadId: stripParentThread.id,
+              label: stripParentThread.title ?? null,
+            }
           : null,
       }),
     [
@@ -2983,6 +3089,7 @@ export default function ChatView({
   const activeTurnInProgress = activeTurnLayoutLive || keepSettledActiveTurnLayout;
   const isComposerApprovalState = activePendingApproval !== null;
   const isComposerEditorDisabled = isConnecting || isComposerApprovalState;
+  const productDispatchAvailable = canDispatchProductSubmission(systemHealthSnapshot);
   const canCollapsePastedTextToDraft = shouldEnableComposerPastedTextCollapse({
     isComposerApprovalState,
     hasPendingUserInput: pendingUserInputs.length > 0,
@@ -3141,11 +3248,8 @@ export default function ChatView({
     [productReadModel],
   );
   const productQueuedComposerTurns = useMemo(
-    () =>
-      presentProductConversationQueue(productReadModel, selectedModel || "unresolved-model").filter(
-        (turn) => turn.id !== productQueueEdit?.id,
-      ),
-    [productQueueEdit?.id, productReadModel, selectedModel],
+    () => presentProductConversationQueue(productReadModel, selectedModel || "unresolved-model"),
+    [productReadModel, selectedModel],
   );
   const visibleQueuedComposerTurns = productReadModel
     ? productQueuedComposerTurns
@@ -3924,7 +4028,9 @@ export default function ChatView({
         : [],
     [activeThread, providerStatuses],
   );
-  const handoffActionLabel = activeThread ? "Hand off thread" : "Create handoff thread";
+  const handoffActionLabel = activeThread
+    ? workbenchCopy.handOffThread
+    : workbenchCopy.createHandOffThread;
   const activeProviderStatus = useMemo(
     () => findProviderStatus(providerStatuses, selectedProvider),
     [selectedProvider, providerStatuses],
@@ -4169,15 +4275,6 @@ export default function ChatView({
     },
     [setStoreThreadError],
   );
-  const productConversationError = useMemo(
-    () => presentProductConversationError(productReadModel),
-    [productReadModel],
-  );
-  useEffect(() => {
-    if (productReadModel !== undefined) {
-      setThreadError(threadId, productConversationError);
-    }
-  }, [productConversationError, productReadModel, setThreadError, threadId]);
   const composerImageAttachmentCount = useCallback(
     () =>
       effectiveComposerAttachmentCount(useComposerDraftStore.getState().draftsByThreadId[threadId]),
@@ -4398,7 +4495,9 @@ export default function ChatView({
       const update = resolveEnvironmentPanelPreferenceUpdate({ open, persist });
       setEnvironmentPanelPreferenceOpen(update.userPreferenceOpen);
       if (update.settingsDefaultOpen !== null) {
-        updateSettings({ environmentPanelDefaultOpen: update.settingsDefaultOpen });
+        updateSettings({
+          environmentPanelDefaultOpen: update.settingsDefaultOpen,
+        });
       }
     },
     // The state setter is stable, so listing it changes nothing at runtime — but React
@@ -6110,11 +6209,12 @@ export default function ChatView({
   );
 
   useEffect(() => {
-    if (surfaceMode === "split" && !isFocusedPane) {
+    if (!isFocusedPane) {
       return;
     }
 
     const handler = (event: globalThis.KeyboardEvent) => {
+      if (!composerFormRef.current?.closest("[data-active-conversation='true']")) return;
       if (!activeThreadId || event.defaultPrevented) return;
       // Mirror terminal interrupt semantics without stealing regular copy shortcuts.
       if (
@@ -6154,6 +6254,7 @@ export default function ChatView({
         return;
       }
       const composerPickerShortcutActive =
+        !isProductConversationThread &&
         !isTerminalFocused() &&
         !isVoiceRecording &&
         !isVoiceTranscribing &&
@@ -6393,6 +6494,7 @@ export default function ChatView({
     composerSubagentStripItems,
     onBackgroundAllForegroundSubagentStripItems,
     isFocusedPane,
+    isProductConversationThread,
     hasLiveTurn,
     handleModelPickerOpenChange,
     handleTraitsPickerOpenChange,
@@ -7095,7 +7197,7 @@ export default function ChatView({
           .catch((error: unknown) => {
             setThreadError(
               threadId,
-              error instanceof Error ? error.message : "Failed to delete queued prompt.",
+              error instanceof Error ? error.message : workbenchCopy.queueDeleteError,
             );
           });
         return;
@@ -7110,12 +7212,222 @@ export default function ChatView({
       setProductConversationSnapshot,
       setThreadError,
       threadId,
+      workbenchCopy.queueDeleteError,
     ],
   );
 
   // See `LateComposerSendHandlers`: declared here so both `dispatchQueuedComposerTurn` (above)
   // and `onSend` (below) can reach handlers that are only declared further down.
   const lateComposerSendHandlersRef = useRef<LateComposerSendHandlers | null>(null);
+
+  const sendProductConversation = async (
+    e?: { preventDefault: () => void },
+    queuedTurn?: QueuedComposerChatTurn,
+  ): Promise<boolean> => {
+    e?.preventDefault();
+    if (
+      !activeThread ||
+      isSendBusy ||
+      isConnecting ||
+      isVoiceTranscribing ||
+      sendPreflightInFlightRef.current ||
+      sendInFlightRef.current
+    ) {
+      return false;
+    }
+
+    const liveComposerSnapshot =
+      queuedTurn === undefined ? (composerEditorRef.current?.readSnapshot() ?? null) : null;
+    const text = (queuedTurn?.prompt ?? liveComposerSnapshot?.value ?? promptRef.current).trim();
+    const liveDraft = useComposerDraftStore.getState().draftsByThreadId[activeThread.id];
+    const hasUnsupportedContext = queuedTurn
+      ? queuedTurn.images.length > 0 ||
+        queuedTurn.files.length > 0 ||
+        queuedTurn.assistantSelections.length > 0 ||
+        queuedTurn.browserAnnotations.length > 0 ||
+        queuedTurn.terminalContexts.length > 0 ||
+        queuedTurn.fileComments.length > 0 ||
+        queuedTurn.pastedTexts.length > 0 ||
+        queuedTurn.skills.length > 0 ||
+        queuedTurn.mentions.length > 0
+      : Boolean(
+          liveDraft &&
+          (liveDraft.images.length > 0 ||
+            liveDraft.files.length > 0 ||
+            liveDraft.assistantSelections.length > 0 ||
+            liveDraft.browserAnnotations.length > 0 ||
+            liveDraft.terminalContexts.length > 0 ||
+            liveDraft.fileComments.length > 0 ||
+            liveDraft.pastedTexts.length > 0 ||
+            liveDraft.skills.length > 0 ||
+            liveDraft.mentions.length > 0),
+        );
+    if (text.length === 0) return false;
+    if (hasUnsupportedContext) {
+      setThreadError(
+        activeThread.id,
+        "Product Conversations currently accept text only. Your draft and references were preserved.",
+      );
+      return false;
+    }
+
+    const threadIdForSend = activeThread.id;
+    const messageId = newMessageId();
+    const observedAt = new Date().toISOString();
+    const productApi = readProductNativeApi();
+    const executionTarget =
+      isChatProductSurface || !activeProject?.cwd
+        ? null
+        : {
+            kind: "local" as const,
+            targetRef: activeProject.cwd,
+            observedAt,
+          };
+    const workspace =
+      isChatProductSurface || executionTarget === null
+        ? {
+            kind: "chat" as const,
+            managedDirectory: null,
+            primaryFolder: null,
+            executionTarget: null,
+            writeAuthority: "read-only-references" as const,
+          }
+        : activeProject?.kind === "project"
+          ? {
+              kind: "folder-backed" as const,
+              managedDirectory: null,
+              primaryFolder: activeProject.cwd,
+              executionTarget,
+              writeAuthority: "primary-folder" as const,
+            }
+          : {
+              kind: "managed" as const,
+              managedDirectory: activeProject!.cwd,
+              primaryFolder: null,
+              executionTarget,
+              writeAuthority: "managed-directory" as const,
+            };
+    const proposedQueuePutInput = {
+      protocolVersion: PRODUCT_PROTOCOL_VERSION,
+      conversationId: productConversationId,
+      itemId: productQueueEdit?.id ?? ProductQueueItemId.makeUnsafe(messageId),
+      text,
+      requestedSelection: {
+        // T3 has no Engine selection authority. These values explicitly describe an
+        // unresolved native admission request; T4 replaces them with typed Product facts.
+        engineId: "native-engine-unresolved",
+        modelId: null,
+        thinking: null,
+        permissionPolicy: "approval-required" as const,
+        enforcement: "unverified" as const,
+        executionTarget,
+        packageGeneration: "unresolved-not-activated",
+      },
+      resources: [],
+      expectedRevision: productQueueEdit?.revision ?? null,
+    } as const;
+    const queuePutInput = prepareProductQueueTransferAttempt(
+      liveDraft?.productQueueTransfer ?? null,
+      proposedQueuePutInput,
+    );
+
+    const finishDraftClear = (): boolean => {
+      if (queuedTurn !== undefined) return false;
+      const cleared = clearComposerContentForProductQueueTransfer(threadIdForSend, queuePutInput, {
+        preservePreviewUrls: true,
+      });
+      if (!cleared) return false;
+      promptHistoryNavigationRef.current = null;
+      applyingPromptHistoryNavigationRef.current = false;
+      expectedPromptHistoryPromptRef.current = null;
+      promptRef.current = "";
+      setComposerHighlightedItemId(null);
+      setComposerCursor(0);
+      setComposerTrigger(null);
+      scheduleComposerFocus();
+      return true;
+    };
+
+    sendInFlightRef.current = true;
+    beginLocalDispatch({ expectedUserMessageId: messageId });
+    setThreadError(threadIdForSend, null);
+    try {
+      ensureProductConversationRetained();
+      try {
+        setProductConversationSnapshot(
+          await productApi.getConversationSnapshot({
+            protocolVersion: PRODUCT_PROTOCOL_VERSION,
+            conversationId: productConversationId,
+          }),
+        );
+      } catch (error) {
+        if (!isProductConversationNotFound(error)) throw error;
+        setProductConversationSnapshot(
+          await productApi.createConversation({
+            protocolVersion: PRODUCT_PROTOCOL_VERSION,
+            conversationId: productConversationId,
+            workspaceId: ProductWorkspaceId.makeUnsafe(`${threadIdForSend}:workspace`),
+            title: buildPromptThreadTitleFallback(text),
+            workspace,
+          }),
+        );
+      }
+
+      const queueItem = await confirmProductQueueOwnershipBeforeDraftClear({
+        attempted: queuePutInput,
+        stageTransferMarker: (input) => stageComposerProductQueueTransfer(threadIdForSend, input),
+        putQueueItem: (input) => productApi.putQueueItem(input),
+        getConversationSnapshot: () =>
+          productApi.getConversationSnapshot({
+            protocolVersion: PRODUCT_PROTOCOL_VERSION,
+            conversationId: productConversationId,
+          }),
+        publishQueueItem: setProductQueueItem,
+        publishSnapshot: setProductConversationSnapshot,
+        clearDraftIfTransferMatches: finishDraftClear,
+      });
+      setProductQueueEdit(null);
+
+      if (!canDispatchProductSubmission(useSystemHealthStore.getState().snapshot)) {
+        resetLocalDispatch();
+        return true;
+      }
+      const entryId = ProductEntryId.makeUnsafe(messageId);
+      try {
+        const submitted = await productApi.submitQueueItem({
+          protocolVersion: PRODUCT_PROTOCOL_VERSION,
+          conversationId: productConversationId,
+          itemId: queueItem.id,
+          expectedRevision: queueItem.revision,
+          entryId,
+          runId: ProductRunId.makeUnsafe(randomUUID()),
+          dispatchId: ProductDispatchId.makeUnsafe(randomUUID()),
+          receiptId: ProductOperationReceiptId.makeUnsafe(randomUUID()),
+        });
+        setProductConversationSnapshot(submitted.snapshot);
+      } catch (error) {
+        const recovered = await productApi
+          .getConversationSnapshot({
+            protocolVersion: PRODUCT_PROTOCOL_VERSION,
+            conversationId: productConversationId,
+          })
+          .catch(() => null);
+        if (!recovered?.readModel.entries.some((entry) => entry.id === entryId)) throw error;
+        setProductConversationSnapshot(recovered);
+      }
+      resetLocalDispatch();
+      return true;
+    } catch (error) {
+      resetLocalDispatch();
+      setThreadError(
+        threadIdForSend,
+        error instanceof Error ? error.message : workbenchCopy.queuePutError,
+      );
+      return false;
+    } finally {
+      sendInFlightRef.current = false;
+    }
+  };
 
   const onSend = async (
     e?: { preventDefault: () => void },
@@ -7129,6 +7441,9 @@ export default function ChatView({
         hasLiveTurn,
       });
     e?.preventDefault();
+    if (isProductConversationThread) {
+      return sendProductConversation(e, queuedTurn);
+    }
     const api = readNativeApi();
     const lateSendHandlers = lateComposerSendHandlersRef.current;
     if (
@@ -7569,6 +7884,7 @@ export default function ChatView({
         kind: "chat",
         createdAt: new Date().toISOString(),
         previewText: buildQueuedComposerPreviewText({
+          queuedFallback: workbenchCopy.queueQueuedFollowUp,
           trimmedPrompt: trimmed,
           images: queuedImagesForPersistence,
           files: composerFilesForSend,
@@ -7798,7 +8114,10 @@ export default function ChatView({
     beginLocalDispatch({
       expectedUserMessageId: messageIdForSend,
       ...(baseBranchForWorktree
-        ? { worktreeSetupStepId: "create-worktree", setupScriptName: worktreeSetupScriptName }
+        ? {
+            worktreeSetupStepId: "create-worktree",
+            setupScriptName: worktreeSetupScriptName,
+          }
         : {}),
     });
 
@@ -7806,7 +8125,10 @@ export default function ChatView({
     const composerFilesSnapshot = [...composerFilesForSend];
     const composerAssistantSelectionsSnapshot = [...composerAssistantSelectionsForSend];
     const composerBrowserAnnotationsSnapshot = composerBrowserAnnotationsForSend.map(
-      (annotation) => ({ ...annotation, source: { ...annotation.source } }),
+      (annotation) => ({
+        ...annotation,
+        source: { ...annotation.source },
+      }),
     );
     const composerFileCommentsSnapshot = [...composerFileCommentsForSend];
     const composerTerminalContextsSnapshot = [...sendableComposerTerminalContexts];
@@ -7922,7 +8244,6 @@ export default function ChatView({
         description: toastCopy.description,
       });
     }
-    const shouldUseProductConversation = isLocalDraftThread || productReadModel !== undefined;
     const finishLiveComposerClear = () => {
       promptHistoryNavigationRef.current = null;
       applyingPromptHistoryNavigationRef.current = false;
@@ -7941,192 +8262,14 @@ export default function ChatView({
       clearComposerDraftContent(threadIdForSend, { preservePreviewUrls: true });
       finishLiveComposerClear();
     };
-    const clearLiveComposerForProductQueueTransfer = (
-      transfer: ProductPutQueueItemInput,
-    ): boolean => {
-      if (queuedChatTurn !== null) return false;
-      const cleared = clearComposerContentForProductQueueTransfer(threadIdForSend, transfer, {
-        preservePreviewUrls: true,
-      });
-      if (!cleared) return false;
-      finishLiveComposerClear();
-      return true;
-    };
     // Queued turns are dispatched from their captured snapshot, so this send path
     // must not clear a separate live draft the user may already be editing.
-    if (!shouldUseProductConversation) {
-      clearLiveComposerAfterOwnershipTransfer();
-    }
+    clearLiveComposerAfterOwnershipTransfer();
 
     let createdServerThreadForLocalDraft = false;
     let createdWorktreeForSendPath: string | null = null;
     let turnStartSucceeded = false;
-    let productQueueOwnershipTransferred = false;
     await (async () => {
-      // PRODUCT_CONVERSATION_CUTOVER_START: T2 keeps the approved mother UI, while
-      // new draft Conversations and already-open Product Conversations use only
-      // Product commands/read models. T3 removes this bounded presenter branch.
-      if (shouldUseProductConversation) {
-        // Retain synchronously before any await so an unmount cleanup can always
-        // balance this pane's reference, including during first-draft creation.
-        ensureProductConversationRetained();
-        if (baseBranchForWorktree !== null) {
-          throw new Error(
-            "Product Conversations cannot create a new worktree until native Engine target resolution is available. Your draft was preserved.",
-          );
-        }
-        if (
-          optimisticAttachments.length > 0 ||
-          mentionedSkillsForSend.length > 0 ||
-          mentionedPluginMentionsForSend.length > 0 ||
-          sourceProposedPlanForSend !== undefined
-        ) {
-          throw new Error(
-            "This Product Conversation currently accepts text only. Your draft and attachments were preserved.",
-          );
-        }
-        await turnAttachmentsPromise.then(
-          (staged) => staged.cleanup(),
-          () => undefined,
-        );
-
-        const productApi = readProductNativeApi();
-        const workspaceId = ProductWorkspaceId.makeUnsafe(`${threadIdForSend}:workspace`);
-        const observedAt = new Date().toISOString();
-        const executionTarget =
-          targetProjectKindForSend === "chat"
-            ? null
-            : {
-                kind: "local" as const,
-                targetRef: nextThreadWorktreePath ?? targetProjectCwdForSend,
-                observedAt,
-              };
-        const workspace =
-          targetProjectKindForSend === "chat"
-            ? {
-                kind: "chat" as const,
-                managedDirectory: null,
-                primaryFolder: null,
-                executionTarget: null,
-                writeAuthority: "read-only-references" as const,
-              }
-            : {
-                kind: "folder-backed" as const,
-                managedDirectory: null,
-                primaryFolder: targetProjectCwdForSend,
-                executionTarget: executionTarget!,
-                writeAuthority: "primary-folder" as const,
-              };
-
-        try {
-          setProductConversationSnapshot(
-            await productApi.getConversationSnapshot({
-              protocolVersion: PRODUCT_PROTOCOL_VERSION,
-              conversationId: productConversationId,
-            }),
-          );
-        } catch (error) {
-          if (!isProductConversationNotFound(error)) throw error;
-          setProductConversationSnapshot(
-            await productApi.createConversation({
-              protocolVersion: PRODUCT_PROTOCOL_VERSION,
-              conversationId: productConversationId,
-              workspaceId,
-              title,
-              workspace,
-            }),
-          );
-        }
-        const proposedQueuePutInput = {
-          protocolVersion: PRODUCT_PROTOCOL_VERSION,
-          conversationId: productConversationId,
-          itemId: productQueueEdit?.id ?? ProductQueueItemId.makeUnsafe(messageIdForSend),
-          text: outgoingMessageText,
-          requestedSelection: {
-            engineId: "native-engine",
-            modelId: selectedModelForSend || null,
-            thinking: selectedPromptEffortForSend || null,
-            permissionPolicy: nextRuntimeModeForSend,
-            enforcement: "unverified",
-            executionTarget,
-            packageGeneration: "unresolved-not-activated",
-          },
-          resources: [],
-          expectedRevision: productQueueEdit?.revision ?? null,
-        } as const;
-        const queuePutInput = prepareProductQueueTransferAttempt(
-          composerDraft.productQueueTransfer ?? null,
-          proposedQueuePutInput,
-        );
-        const queueItem = await confirmProductQueueOwnershipBeforeDraftClear({
-          attempted: queuePutInput,
-          stageTransferMarker: (input) => stageComposerProductQueueTransfer(threadIdForSend, input),
-          putQueueItem: (input) => productApi.putQueueItem(input),
-          getConversationSnapshot: () =>
-            productApi.getConversationSnapshot({
-              protocolVersion: PRODUCT_PROTOCOL_VERSION,
-              conversationId: productConversationId,
-            }),
-          publishQueueItem: setProductQueueItem,
-          publishSnapshot: setProductConversationSnapshot,
-          clearDraftIfTransferMatches: clearLiveComposerForProductQueueTransfer,
-        });
-        productQueueOwnershipTransferred = true;
-        setProductQueueEdit(null);
-        // Queue ownership is durable before this fail-closed admission gate. A
-        // non-dispatchable health snapshot leaves that Product intent editable
-        // without creating an Entry, Run, dispatch or operation receipt.
-        if (!canDispatchProductSubmission(useSystemHealthStore.getState().snapshot)) {
-          setOptimisticUserMessages((existing) =>
-            existing.filter((message) => message.id !== messageIdForSend),
-          );
-          setTailAnchor((existing) =>
-            existing?.threadId === threadIdForSend && existing.messageId === messageIdForSend
-              ? null
-              : existing,
-          );
-          tailAnchorScrollInFlightRef.current = false;
-          turnStartSucceeded = true;
-          resetLocalDispatch();
-          return;
-        }
-        const entryId = ProductEntryId.makeUnsafe(messageIdForSend);
-        let submittedSnapshot;
-        try {
-          const submitted = await productApi.submitQueueItem({
-            protocolVersion: PRODUCT_PROTOCOL_VERSION,
-            conversationId: productConversationId,
-            itemId: queueItem.id,
-            expectedRevision: queueItem.revision,
-            entryId,
-            runId: ProductRunId.makeUnsafe(randomUUID()),
-            dispatchId: ProductDispatchId.makeUnsafe(randomUUID()),
-            receiptId: ProductOperationReceiptId.makeUnsafe(randomUUID()),
-          });
-          submittedSnapshot = submitted.snapshot;
-        } catch (error) {
-          const recovered = await productApi
-            .getConversationSnapshot({
-              protocolVersion: PRODUCT_PROTOCOL_VERSION,
-              conversationId: productConversationId,
-            })
-            .catch(() => null);
-          if (!recovered?.readModel.entries.some((entry) => entry.id === entryId)) {
-            throw error;
-          }
-          submittedSnapshot = recovered;
-        }
-        setProductConversationSnapshot(submittedSnapshot);
-        setThreadError(
-          threadIdForSend,
-          presentProductConversationError(submittedSnapshot.readModel),
-        );
-        turnStartSucceeded = true;
-        resetLocalDispatch();
-        return;
-      }
-      // PRODUCT_CONVERSATION_CUTOVER_END
-
       // On first message: lock in branch + create worktree if needed.
       if (baseBranchForWorktree) {
         const result = await createWorktreeMutation.mutateAsync({
@@ -8282,7 +8425,10 @@ export default function ChatView({
 
       beginLocalDispatch(
         baseBranchForWorktree
-          ? { worktreeSetupStepId: "start-session", setupScriptName: worktreeSetupScriptName }
+          ? {
+              worktreeSetupStepId: "start-session",
+              setupScriptName: worktreeSetupScriptName,
+            }
           : undefined,
       );
       const stagedTurnAttachments = await turnAttachmentsPromise;
@@ -8403,7 +8549,6 @@ export default function ChatView({
       if (
         queuedChatTurn === null &&
         !turnStartSucceeded &&
-        !productQueueOwnershipTransferred &&
         promptRef.current.length === 0 &&
         composerImagesRef.current.length === 0 &&
         composerFilesRef.current.length === 0 &&
@@ -9027,32 +9172,41 @@ export default function ChatView({
     workflowRunState,
   ]);
 
+  const onMoveProductQueueItemNext = useCallback(
+    async (queuedTurn: QueuedComposerTurn) => {
+      if (!productReadModel) return;
+      const orderedItemIds = productReadModel.queue.map((item) => item.id);
+      const selectedIndex = orderedItemIds.findIndex((itemId) => itemId === queuedTurn.id);
+      if (selectedIndex <= 0) return;
+      orderedItemIds.splice(selectedIndex, 1);
+      orderedItemIds.unshift(ProductQueueItemId.makeUnsafe(queuedTurn.id));
+      try {
+        setProductConversationSnapshot(
+          await readProductNativeApi().reorderQueue({
+            protocolVersion: PRODUCT_PROTOCOL_VERSION,
+            conversationId: productConversationId,
+            orderedItemIds,
+          }),
+        );
+      } catch (error) {
+        setThreadError(
+          threadId,
+          error instanceof Error ? error.message : workbenchCopy.queueReorderError,
+        );
+      }
+    },
+    [
+      productConversationId,
+      productReadModel,
+      setProductConversationSnapshot,
+      setThreadError,
+      threadId,
+      workbenchCopy.queueReorderError,
+    ],
+  );
+
   const onSteerQueuedComposerTurn = useCallback(
     async (queuedTurn: QueuedComposerTurn) => {
-      if (productReadModel) {
-        const orderedItemIds = productReadModel.queue.map((item) => item.id);
-        const selectedIndex = orderedItemIds.findIndex((itemId) => itemId === queuedTurn.id);
-        if (selectedIndex < 0) return;
-        if (selectedIndex > 0) {
-          orderedItemIds.splice(selectedIndex, 1);
-          orderedItemIds.unshift(ProductQueueItemId.makeUnsafe(queuedTurn.id));
-        }
-        try {
-          setProductConversationSnapshot(
-            await readProductNativeApi().reorderQueue({
-              protocolVersion: PRODUCT_PROTOCOL_VERSION,
-              conversationId: productConversationId,
-              orderedItemIds,
-            }),
-          );
-        } catch (error) {
-          setThreadError(
-            threadId,
-            error instanceof Error ? error.message : "Failed to reorder queued prompt.",
-          );
-        }
-        return;
-      }
       const previousQueue = queuedComposerTurnsRef.current;
       const queuedIndex = previousQueue.findIndex((entry) => entry.id === queuedTurn.id);
       if (queuedIndex < 0) {
@@ -9068,11 +9222,7 @@ export default function ChatView({
     [
       dispatchQueuedComposerTurn,
       insertQueuedComposerTurn,
-      productConversationId,
-      productReadModel,
       removeQueuedComposerTurnFromDraft,
-      setProductConversationSnapshot,
-      setThreadError,
       threadId,
     ],
   );
@@ -9091,6 +9241,12 @@ export default function ChatView({
     },
     [productReadModel, removeQueuedComposerTurn, restoreQueuedTurnToComposer],
   );
+  const onCancelProductQueueEdit = useCallback(() => {
+    // The restored composer content remains a normal draft. Cancelling only
+    // releases the durable Queue item from edit mode, so neither input nor the
+    // original Product-owned item is lost.
+    setProductQueueEdit(null);
+  }, []);
 
   // Advance/expire the steer gate as the session moves through the
   // interrupt→steered-turn handoff (or fails out of it).
@@ -9415,26 +9571,63 @@ export default function ChatView({
     },
     [handleModelPickerOpenChange],
   );
-  const composerPickerControls = showComposerModelBootstrapSkeleton ? (
-    useSplitComposerPickerControls ? (
+  const composerPickerControls =
+    isProductConversationThread ? null : showComposerModelBootstrapSkeleton ? (
+      useSplitComposerPickerControls ? (
+        <>
+          {selectedProviderRuntimeModelDiscoveryPending ? (
+            <ComposerModelLoadingControl widthClassName={composerModelPickerWidthClassName} />
+          ) : (
+            <ComposerControlSkeleton widthClassName={composerModelPickerWidthClassName} />
+          )}
+          <ComposerControlSkeleton widthClassName={composerOptionsPickerWidthClassName} />
+        </>
+      ) : selectedProviderRuntimeModelDiscoveryPending ? (
+        <ComposerModelLoadingControl widthClassName={composerModelEffortPickerWidthClassName} />
+      ) : (
+        <ComposerControlSkeleton widthClassName={composerModelEffortPickerWidthClassName} />
+      )
+    ) : useSplitComposerPickerControls ? (
       <>
-        {selectedProviderRuntimeModelDiscoveryPending ? (
-          <ComposerModelLoadingControl widthClassName={composerModelPickerWidthClassName} />
-        ) : (
-          <ComposerControlSkeleton widthClassName={composerModelPickerWidthClassName} />
-        )}
-        <ComposerControlSkeleton widthClassName={composerOptionsPickerWidthClassName} />
+        <ProviderModelPicker
+          compact={isComposerFooterCompact}
+          hideLabel={!composerFooterControlsPlan.showModelLabel}
+          provider={selectedProvider}
+          model={selectedModelForPickerWithCustomFallback}
+          lockedProvider={lockedProvider}
+          providers={providerStatuses}
+          modelOptionsByProvider={modelOptionsByProvider}
+          loadingModelProviders={loadingModelProviders}
+          hiddenProviders={settings.hiddenProviders}
+          providerOrder={settings.providerOrder}
+          onProviderModelChange={onProviderModelSelect}
+          onSelectionCommitted={scheduleComposerFocus}
+          open={isModelPickerOpen}
+          onOpenChange={handleModelPickerOpenChange}
+          shortcutLabel={modelPickerShortcutLabel}
+        />
+        <TraitsPicker
+          provider={selectedProvider}
+          threadId={threadId}
+          model={selectedModelForPickerWithCustomFallback}
+          runtimeModel={selectedRuntimeModel}
+          runtimeModels={runtimeModelsByProvider[selectedProvider]}
+          runtimeAgents={dynamicAgents}
+          modelOptions={selectedProviderModelOptions}
+          prompt={prompt}
+          onPromptChange={setPromptFromTraits}
+          open={isTraitsPickerOpen}
+          onOpenChange={handleTraitsPickerOpenChange}
+          onSelectionCommitted={scheduleComposerFocus}
+          shortcutLabel={traitsPickerShortcutLabel}
+          hideLabel={!composerFooterControlsPlan.showTraitsLabel}
+        />
       </>
-    ) : selectedProviderRuntimeModelDiscoveryPending ? (
-      <ComposerModelLoadingControl widthClassName={composerModelEffortPickerWidthClassName} />
     ) : (
-      <ComposerControlSkeleton widthClassName={composerModelEffortPickerWidthClassName} />
-    )
-  ) : useSplitComposerPickerControls ? (
-    <>
-      <ProviderModelPicker
+      <ComposerModelEffortPicker
         compact={isComposerFooterCompact}
-        hideLabel={!composerFooterControlsPlan.showModelLabel}
+        hideModelLabel={!composerFooterControlsPlan.showModelLabel}
+        hideStatusLabel={!composerFooterControlsPlan.showTraitsLabel}
         provider={selectedProvider}
         model={selectedModelForPickerWithCustomFallback}
         lockedProvider={lockedProvider}
@@ -9443,56 +9636,20 @@ export default function ChatView({
         loadingModelProviders={loadingModelProviders}
         hiddenProviders={settings.hiddenProviders}
         providerOrder={settings.providerOrder}
-        onProviderModelChange={onProviderModelSelect}
-        onSelectionCommitted={scheduleComposerFocus}
-        open={isModelPickerOpen}
-        onOpenChange={handleModelPickerOpenChange}
-        shortcutLabel={modelPickerShortcutLabel}
-      />
-      <TraitsPicker
-        provider={selectedProvider}
         threadId={threadId}
-        model={selectedModelForPickerWithCustomFallback}
         runtimeModel={selectedRuntimeModel}
         runtimeModels={runtimeModelsByProvider[selectedProvider]}
         runtimeAgents={dynamicAgents}
         modelOptions={selectedProviderModelOptions}
         prompt={prompt}
         onPromptChange={setPromptFromTraits}
-        open={isTraitsPickerOpen}
-        onOpenChange={handleTraitsPickerOpenChange}
+        onProviderModelChange={onProviderModelSelect}
         onSelectionCommitted={scheduleComposerFocus}
-        shortcutLabel={traitsPickerShortcutLabel}
-        hideLabel={!composerFooterControlsPlan.showTraitsLabel}
+        open={isComposerModelEffortPickerOpen}
+        onOpenChange={handleComposerModelEffortPickerOpenChange}
+        shortcutLabel={modelPickerShortcutLabel}
       />
-    </>
-  ) : (
-    <ComposerModelEffortPicker
-      compact={isComposerFooterCompact}
-      hideModelLabel={!composerFooterControlsPlan.showModelLabel}
-      hideStatusLabel={!composerFooterControlsPlan.showTraitsLabel}
-      provider={selectedProvider}
-      model={selectedModelForPickerWithCustomFallback}
-      lockedProvider={lockedProvider}
-      providers={providerStatuses}
-      modelOptionsByProvider={modelOptionsByProvider}
-      loadingModelProviders={loadingModelProviders}
-      hiddenProviders={settings.hiddenProviders}
-      providerOrder={settings.providerOrder}
-      threadId={threadId}
-      runtimeModel={selectedRuntimeModel}
-      runtimeModels={runtimeModelsByProvider[selectedProvider]}
-      runtimeAgents={dynamicAgents}
-      modelOptions={selectedProviderModelOptions}
-      prompt={prompt}
-      onPromptChange={setPromptFromTraits}
-      onProviderModelChange={onProviderModelSelect}
-      onSelectionCommitted={scheduleComposerFocus}
-      open={isComposerModelEffortPickerOpen}
-      onOpenChange={handleComposerModelEffortPickerOpenChange}
-      shortcutLabel={modelPickerShortcutLabel}
-    />
-  );
+    );
   const toggleFastMode = useCallback(() => {
     if (!composerTraitSelection.caps.supportsFastMode) {
       scheduleComposerFocus();
@@ -9597,7 +9754,10 @@ export default function ChatView({
           if (!homeDir) {
             throw new Error("Home folder is not available yet.");
           }
-          const homeProjectId = await ensureHomeChatProject({ homeDir, chatWorkspaceRoot });
+          const homeProjectId = await ensureHomeChatProject({
+            homeDir,
+            chatWorkspaceRoot,
+          });
           if (!homeProjectId) {
             throw new Error("Unable to prepare a normal chat.");
           }
@@ -10620,7 +10780,10 @@ export default function ChatView({
     // Keep the editor workspace view (and any open file) across the new-thread
     // navigation; the default new-thread flow clears all search params.
     void handleNewThread(activeProjectIdForNewChat, undefined, {
-      search: (previous) => ({ ...stripDiffSearchParams(previous), view: "editor" }),
+      search: (previous) => ({
+        ...stripDiffSearchParams(previous),
+        view: "editor",
+      }),
     });
   }, [activeProjectIdForNewChat, handleNewThread]);
   const onOpenEditorChat = useCallback(
@@ -10726,6 +10889,9 @@ export default function ChatView({
             <span className="text-xs text-muted-foreground/50">No active thread</span>
           </div>
         )}
+        {productConversationSummary ? (
+          <ProductConversationNotice presentation={productConversationPresentation} />
+        ) : null}
         <div className="flex flex-1 items-center justify-center">
           <div className="text-center">
             <p className="text-sm">Select a thread or create a new one to get started.</p>
@@ -10745,9 +10911,18 @@ export default function ChatView({
       : null,
     isHomeChat: isChatProject,
     isEmpty: timelineEntries.length === 0,
+    emptyChatTitle: workbenchCopy.newChat,
   });
 
   const handleRenameActiveThread = async (newTitle: string) => {
+    if (isProductConversationThread) {
+      toastManager.add({
+        type: "info",
+        title: workbenchCopy.renameUnavailableTitle,
+        description: workbenchCopy.renameUnavailableDescription,
+      });
+      return;
+    }
     const outcome = await dispatchThreadRename({
       threadId: activeThread.id,
       newTitle,
@@ -10804,26 +10979,28 @@ export default function ChatView({
   // indicator). At the narrowest footer tier they relocate from the footer to
   // the branch-toolbar row below the input instead of getting clipped; the
   // relocated variant is icon-only since relocation means space is minimal.
-  const relocateComposerLeadingControls = composerFooterControlsPlan.relocateLeadingControls;
-  const renderComposerLeadingControls = (options: { iconOnly: boolean }) => (
-    <>
-      <ComposerExtrasMenu
-        interactionMode={interactionMode}
-        supportsFastMode={composerTraitSelection.caps.supportsFastMode}
-        fastModeEnabled={composerTraitSelection.fastModeEnabled}
-        onAddPhotos={addComposerImages}
-        onToggleFastMode={toggleFastMode}
-        onSetPlanMode={setPlanMode}
-      />
-      {!isVoiceRecording && !isVoiceTranscribing ? (
-        <RuntimeUsageControls
-          {...runtimeUsageControlsProps}
-          className="shrink-0"
-          hideLabel={options.iconOnly}
+  const relocateComposerLeadingControls =
+    !isProductConversationThread && composerFooterControlsPlan.relocateLeadingControls;
+  const renderComposerLeadingControls = (options: { iconOnly: boolean }) =>
+    isProductConversationThread ? null : (
+      <>
+        <ComposerExtrasMenu
+          interactionMode={interactionMode}
+          supportsFastMode={composerTraitSelection.caps.supportsFastMode}
+          fastModeEnabled={composerTraitSelection.fastModeEnabled}
+          onAddPhotos={addComposerImages}
+          onToggleFastMode={toggleFastMode}
+          onSetPlanMode={setPlanMode}
         />
-      ) : null}
-    </>
-  );
+        {!isVoiceRecording && !isVoiceTranscribing ? (
+          <RuntimeUsageControls
+            {...runtimeUsageControlsProps}
+            className="shrink-0"
+            hideLabel={options.iconOnly}
+          />
+        ) : null}
+      </>
+    );
   const branchToolbarProps = {
     threadId: activeThread.id,
     onEnvModeChange,
@@ -10838,7 +11015,10 @@ export default function ChatView({
       : {}),
   };
   const showEmptyLandingBranchToolbar =
-    isCenteredEmptyLanding && activeProject?.kind === "project" && !isHomeChatContainer;
+    !isProductConversationThread &&
+    isCenteredEmptyLanding &&
+    activeProject?.kind === "project" &&
+    !isHomeChatContainer;
   // Temporary is chosen while starting a chat. Draft metadata covers local reloads;
   // the in-memory marker keeps the badge + auto-delete alive through promotion.
   const isThreadTemporary = draftThread?.isTemporary === true || hasTemporaryThreadMarker;
@@ -10854,7 +11034,7 @@ export default function ChatView({
   const showEmptyLandingProjectPicker =
     isCenteredEmptyLanding && isLocalDraftThread && activeProject?.kind === "project";
   const showContainerChatWorkspacePicker =
-    isEmptyChatLanding && (isHomeChatContainer || isStudioContainer);
+    isEmptyChatLanding && isHomeChatContainer && !isChatProductSurface;
   const emptyLandingProjectChip =
     !showContainerChatWorkspacePicker &&
     !showEmptyLandingProjectPicker &&
@@ -11115,9 +11295,22 @@ export default function ChatView({
               ) : null}
               <ComposerQueuedHeader
                 queuedTurns={visibleQueuedComposerTurns}
-                onSteer={onSteerQueuedComposerTurn}
+                primaryAction={
+                  productReadModel
+                    ? {
+                        kind: "move-next",
+                        onSelect: onMoveProductQueueItemNext,
+                      }
+                    : {
+                        kind: "steer",
+                        onSelect: onSteerQueuedComposerTurn,
+                      }
+                }
                 onRemove={removeQueuedComposerTurn}
                 onEdit={onEditQueuedComposerTurn}
+                editingTurnId={productReadModel ? (productQueueEdit?.id ?? null) : null}
+                onCancelEdit={onCancelProductQueueEdit}
+                copy={workbenchCopy}
                 cwd={threadWorkspaceCwd ?? undefined}
                 attachedToPrevious={
                   showComposerLiveChangesHeader ||
@@ -11293,20 +11486,20 @@ export default function ChatView({
                       : {})}
                     placeholder={
                       isComposerApprovalState
-                        ? "Resolve this approval request to continue"
+                        ? workbenchCopy.composerApproval
                         : activePendingProgress
                           ? activePendingProgress.activeQuestion?.options.length === 0
-                            ? "Type your answer to continue"
-                            : "Type your own answer, or leave this blank to use the selected option"
+                            ? workbenchCopy.composerQuestion
+                            : workbenchCopy.composerQuestionWithOptions
                           : showPlanFollowUpPrompt && activeProposedPlan
-                            ? "Add feedback to refine the plan, or leave this blank to implement it"
+                            ? workbenchCopy.composerPlanFeedback
                             : activeThread?.parentThreadId
-                              ? "Message this subagent while it works"
+                              ? workbenchCopy.composerSubagent
                               : hasLiveTurn
-                                ? "Ask for follow-up changes"
+                                ? workbenchCopy.composerFollowUp
                                 : phase === "disconnected"
-                                  ? "Ask for follow-up changes or attach images"
-                                  : "Ask anything, @tag files/folders, or use / to show available commands"
+                                  ? workbenchCopy.composerFollowUpWithAttachments
+                                  : workbenchCopy.composerDefault
                     }
                     disabled={isComposerEditorDisabled}
                   />
@@ -11529,6 +11722,13 @@ export default function ChatView({
                                 isPreparingComposerImages ||
                                 !composerSendState.hasSendableContent
                               }
+                              data-product-submit-mode={
+                                isProductConversationThread
+                                  ? productDispatchAvailable
+                                    ? "submit"
+                                    : "queue-only"
+                                  : undefined
+                              }
                               aria-label={
                                 isConnecting
                                   ? "Connecting"
@@ -11540,7 +11740,9 @@ export default function ChatView({
                                         ? "Preparing worktree"
                                         : isSendBusy
                                           ? "Sending"
-                                          : "Send message"
+                                          : isProductConversationThread && !productDispatchAvailable
+                                            ? workbenchCopy.queueMessage
+                                            : "Send message"
                               }
                             >
                               {isConnecting || isSendBusy || isPreparingComposerImages ? (
@@ -11636,6 +11838,7 @@ export default function ChatView({
           activeThreadTitle={activeThreadDisplayTitle}
           activeThreadEntryPoint={terminalState.entryPoint}
           activeProvider={activeThread.session?.provider ?? activeThread.modelSelection.provider}
+          hideProviderIdentity={isProductConversationThread}
           activeProjectName={isEditorRail ? undefined : activeProjectDisplayName}
           threadBreadcrumbs={threadBreadcrumbs}
           {...(isEditorRail
@@ -11643,7 +11846,9 @@ export default function ChatView({
             : {})}
           isSidechat={Boolean(activeThread.sidechatSourceThreadId)}
           hideSidebarControls={isEditorRail}
-          hideHandoffControls={terminalWorkspaceTerminalTabActive || isEditorRail}
+          hideHandoffControls={
+            isProductConversationThread || terminalWorkspaceTerminalTabActive || isEditorRail
+          }
           isGitRepo={isGitRepo}
           openInTarget={threadWorkspaceCwd}
           activeProjectScripts={isEditorRail ? undefined : activeProjectScripts}
@@ -11655,6 +11860,8 @@ export default function ChatView({
           diffToggleShortcutLabel={diffPanelShortcutLabel}
           handoffBadgeLabel={handoffBadgeLabel}
           handoffActionLabel={handoffActionLabel}
+          handoffVisibleLabel={workbenchCopy.handOff}
+          handoffToLabel={workbenchCopy.handOffTo}
           handoffDisabled={handoffDisabled}
           handoffActionTargetProviders={handoffTargetProviders}
           handoffBadgeSourceProvider={handoffBadgeSourceProvider}
@@ -11746,8 +11953,15 @@ export default function ChatView({
       ) : null}
 
       {/* Error banner */}
+      {isProductConversationThread ? (
+        <ProductConversationNotice presentation={productConversationPresentation} />
+      ) : null}
       <ProviderHealthBanner
-        status={shouldShowProviderHealthBanner ? visibleActiveProviderStatus : null}
+        status={
+          !isProductConversationThread && shouldShowProviderHealthBanner
+            ? visibleActiveProviderStatus
+            : null
+        }
         onDismiss={dismissActiveProviderHealthBanner}
       />
       <ThreadErrorBanner
@@ -11806,7 +12020,11 @@ export default function ChatView({
                       className="text-[26px] font-normal leading-[1.15] tracking-[-0.015em] text-foreground/95 sm:text-[30px]"
                     >
                       {isEmptyChatLanding ? (
-                        "What should we work on?"
+                        isChatProductSurface ? (
+                          workbenchCopy.chatEmptyHeading
+                        ) : (
+                          workbenchCopy.agentEmptyHeading
+                        )
                       ) : (
                         <>
                           What should we do in{" "}

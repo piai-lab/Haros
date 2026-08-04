@@ -67,11 +67,11 @@ may still physically contain only the pre-enumerated mixed Pi dependency and don
 Pi acceptance or runtime-journey claim is permitted.
 
 The Agent/Chat workbench then consumes only the T2 Product read model. Functional icon and product
-identity direction is incorporated into the source-closure Work, which deliberately uses the prior
-OmniMind icon as a temporary asset after rejecting its first replacement. T3 owns final brand form
-and palette alongside material UI surgery, preserves a comparable baseline and obtains same-state
-visual calibration before deleting an old interaction anchor. Renewed behavior and visual proof
-follows surgery before deletion.
+identity wiring is incorporated into the source-closure Work; the maintainer has since locked the
+existing OmniMind icon, colors, generation chain and platform outputs. T3 owns only material UI
+surgery, not brand replacement or a final-palette exercise. It preserves a comparable baseline and
+obtains same-state visual calibration before deleting an old interaction anchor. Renewed behavior
+and visual proof follows surgery before deletion.
 
 Pi adoption must extend the same Host executable identity, endpoint family, authentication,
 supervisor, health and shutdown contract. Queryable Pi acceptance is its first falsifier. Only after
@@ -129,7 +129,7 @@ Work; it is not repaired by widening the gate or repeating an unchanged T0 probe
 | Final public-surface calibration: canonical inactive origin, capability lineage, truthful gating and separate trust boundaries | Runnable source closure |
 | A-01 exact T1 scan truth | Runnable source closure |
 | A-02 queryable acceptance before destructive deletion | Pi native execution; authority retirement |
-| A-03 calibrated functional icons, temporary brand wiring and final same-state UI/brand verification | Runnable source closure; Agent and Chat workbench |
+| A-03 calibrated functional icons, locked brand wiring and final same-state UI verification | Runnable source closure; Agent and Chat workbench |
 | A-04 historical T0 versus current candidate SHA | Runnable source closure; frozen candidate |
 
 Every Concept below also contains a reverse trace to one or more approved requirements or Design

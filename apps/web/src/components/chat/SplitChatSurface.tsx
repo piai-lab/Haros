@@ -452,6 +452,7 @@ function SplitPaneSurface(props: {
   splitView: SplitView;
   paneId: PaneId;
   threadId: ThreadId | null;
+  conversationSurface: "agent" | "chat";
   panelState: SplitViewPanePanelState;
   isFocused: boolean;
   deferChatMount: boolean;
@@ -526,6 +527,8 @@ function SplitPaneSurface(props: {
           {props.threadId ? (
             <DeferredChatView
               threadId={props.threadId}
+              conversationSurface={props.conversationSurface}
+              splitViewId={props.splitView.id}
               paneScopeId={paneScopeId}
               deferMount={props.deferChatMount}
               surfaceMode="split"
@@ -580,7 +583,11 @@ function SplitPaneSurface(props: {
   );
 }
 
-export function SplitChatSurface(props: { splitViewId: SplitViewId; routeThreadId: ThreadId }) {
+export function SplitChatSurface(props: {
+  splitViewId: SplitViewId;
+  routeThreadId: ThreadId;
+  conversationSurface: "agent" | "chat";
+}) {
   const navigate = useNavigate();
   const { handleNewChat } = useHandleNewChat();
   const selectAllThreads = createAllThreadsSelector();
@@ -952,6 +959,7 @@ export function SplitChatSurface(props: { splitViewId: SplitViewId; routeThreadI
         splitView={activeSplitView}
         paneId={leaf.id}
         threadId={leaf.threadId}
+        conversationSurface={props.conversationSurface}
         panelState={leaf.panel}
         isFocused={isFocused}
         deferChatMount={false}

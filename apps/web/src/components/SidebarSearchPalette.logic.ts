@@ -60,12 +60,31 @@ export interface SidebarSearchThread {
   projectName: string;
   projectRemoteName: string;
   spaceName: string;
-  provider: ProviderKind;
+  provider: ProviderKind | null;
   createdAt: string;
   updatedAt?: string | undefined;
   messages: readonly {
     text: string;
   }[];
+}
+
+export type SidebarSearchSurface = "agent" | "chat";
+
+export function selectSidebarSearchThreadInventory(input: {
+  readonly surface: SidebarSearchSurface;
+  readonly productThreads: readonly SidebarSearchThread[];
+  readonly localChatDraftThreads: readonly SidebarSearchThread[];
+  readonly agentThreads: readonly SidebarSearchThread[];
+}): SidebarSearchThread[] {
+  return input.surface === "chat"
+    ? [...input.productThreads, ...input.localChatDraftThreads]
+    : [...input.agentThreads];
+}
+
+export function resolveSidebarSearchThreadActivation(
+  surface: SidebarSearchSurface,
+): "product-chat-route" | "agent-thread" {
+  return surface === "chat" ? "product-chat-route" : "agent-thread";
 }
 
 export interface SidebarSearchThreadMatch {

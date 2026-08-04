@@ -303,7 +303,8 @@ export function SingleChatSurface(props: {
     toggleSingletonPane(props.threadId, { kind: "browser" });
   };
   const handleToggleRightDock = () => {
-    setDockOpen(props.threadId, !dockState.open);
+    const open = selectRightDockState(props.threadId)(useRightDockStore.getState()).open;
+    setDockOpen(props.threadId, !open);
   };
   const handleOpenBrowserUrl = () => {
     requestImmediateDockHydration("browser");
@@ -789,6 +790,8 @@ export function SingleChatSurface(props: {
         return (
           <DeferredChatView
             threadId={pane.threadId}
+            conversationSurface={props.search.surface === "chat" ? "chat" : "agent"}
+            splitViewId={props.search.splitViewId ?? null}
             paneScopeId={dockSidechatPaneScopeId(pane.id)}
             deferMount={false}
             surfaceMode="split"
@@ -920,6 +923,8 @@ export function SingleChatSurface(props: {
                 >
                   <DeferredChatView
                     threadId={props.threadId}
+                    conversationSurface={props.search.surface === "chat" ? "chat" : "agent"}
+                    splitViewId={props.search.splitViewId ?? null}
                     paneScopeId={EDITOR_CHAT_PANE_SCOPE_ID}
                     deferMount={false}
                     surfaceMode="split"
@@ -954,6 +959,8 @@ export function SingleChatSurface(props: {
           <RouteInsetSurface surfaceClassName={CHAT_BACKGROUND_CLASS_NAME}>
             <DeferredChatView
               threadId={props.threadId}
+              conversationSurface={props.search.surface === "chat" ? "chat" : "agent"}
+              splitViewId={props.search.splitViewId ?? null}
               paneScopeId={SINGLE_CHAT_PANE_SCOPE_ID}
               deferMount={isBrandNewDraftThread}
               surfaceMode="single"

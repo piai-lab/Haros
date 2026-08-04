@@ -18,6 +18,7 @@ export type ProductProjectionIssue =
   | "scope-mismatch";
 
 export interface ProductProjectionState {
+  readonly shellHydrated: boolean;
   readonly shellSequence: number;
   readonly conversations: ProductShellSnapshot["conversations"];
   readonly detailSequenceByConversation: Readonly<Record<string, number>>;
@@ -29,6 +30,7 @@ export interface ProductProjectionState {
 }
 
 export const initialProductProjectionState: ProductProjectionState = {
+  shellHydrated: false,
   shellSequence: 0,
   conversations: [],
   detailSequenceByConversation: {},
@@ -95,6 +97,7 @@ export function applyProductShellSnapshot(
   if (snapshot.sequence < state.shellSequence) return state;
   return {
     ...state,
+    shellHydrated: true,
     shellSequence: snapshot.sequence,
     conversations: snapshot.conversations,
     shellIssue: null,

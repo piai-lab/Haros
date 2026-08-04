@@ -47,8 +47,10 @@ import {
   type ThreadStatusPill,
   shouldShowDebugFeatureFlagsMenu,
   shouldPrunePinnedThreads,
+  shouldPresentLocalChatDraft,
   shouldClearThreadSelectionOnMouseDown,
   sortProjectsForSidebar,
+  sortProductChatConversations,
   sortThreadsForSidebar,
 } from "./Sidebar.logic";
 import { ProjectId, ThreadId } from "@omnimind/contracts";
@@ -79,6 +81,57 @@ describe("isProjectsSidebarSurface", () => {
     expect(isProjectsSidebarSurface({ isOnSettings: false, isOnStudio: false })).toBe(true);
     expect(isProjectsSidebarSurface({ isOnSettings: false, isOnStudio: true })).toBe(false);
     expect(isProjectsSidebarSurface({ isOnSettings: true, isOnStudio: false })).toBe(false);
+  });
+});
+
+describe("Product-owned Chat recents", () => {
+  it("filters to Chat and orders only typed Product summaries by activity", () => {
+    const summaries = [
+      {
+        id: "agent-new",
+        workspaceId: "workspace-agent",
+        title: "Agent",
+        workspaceKind: "managed",
+        receiptState: null,
+        createdAt: "2026-08-04T00:00:00.000Z",
+        updatedAt: "2026-08-04T03:00:00.000Z",
+      },
+      {
+        id: "chat-old",
+        workspaceId: "workspace-old",
+        title: "Old",
+        workspaceKind: "chat",
+        receiptState: null,
+        createdAt: "2026-08-04T00:00:00.000Z",
+        updatedAt: "2026-08-04T01:00:00.000Z",
+      },
+      {
+        id: "chat-new",
+        workspaceId: "workspace-new",
+        title: "New",
+        workspaceKind: "chat",
+        receiptState: "running",
+        createdAt: "2026-08-04T00:00:00.000Z",
+        updatedAt: "2026-08-04T02:00:00.000Z",
+      },
+    ] as never;
+
+    expect(sortProductChatConversations(summaries).map((summary) => summary.id)).toEqual([
+      "chat-new",
+      "chat-old",
+    ]);
+  });
+
+  it("admits a donor row only as an unsent draft absent from Product", () => {
+    expect(shouldPresentLocalChatDraft({ hasLocalDraft: true, hasProductSummary: false })).toBe(
+      true,
+    );
+    expect(shouldPresentLocalChatDraft({ hasLocalDraft: true, hasProductSummary: true })).toBe(
+      false,
+    );
+    expect(shouldPresentLocalChatDraft({ hasLocalDraft: false, hasProductSummary: false })).toBe(
+      false,
+    );
   });
 });
 

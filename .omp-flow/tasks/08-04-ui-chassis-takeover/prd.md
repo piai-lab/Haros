@@ -148,10 +148,11 @@ T1 完整接管 authorized icon corpus，但不接管 donor identity assets：
 - functional icon 只经 source-neutral `Glyph`/`GlyphStyle` API，保留 mask/currentColor/a11y，不维护第二套通用系统；
 - Provider/Engine 使用真实 official mark/color 或 currentColor glyph；Model 无独立 mark 时继承 Provider；unknown
   identity 使用 neutral OmniMind-owned fallback，不用纯文字、lookalike 或其他品牌；
-- 既有 OmniMind Agent Dock light/dark icons 作为明确 temporary identity 接入 app、Dock/Taskbar、favicon、splash、
-  About 与 default Agent；donor binary、被否决的新 mark/color 和 guessed replacement 为零。
+- 既有 OmniMind Agent Dock light/dark icons 作为当前锁定的一方 identity 接入 app、Dock/Taskbar、favicon、
+  splash、About 与 default Agent；其 source、颜色、生成链和平台输出保持不变，donor binary、被否决的新
+  mark/color 和 guessed replacement 为零。
 
-T1 完成 visible product identity/resource wiring；final brand form/palette 留给 T3。Production artifact 从实际 bundle 生成 SBOM/notices，
+T1 完成并锁定 visible product identity/resource wiring；T3 不承担 brand form/palette 替换。Production artifact 从实际 bundle 生成 SBOM/notices，
 覆盖 icon、font、Electron/native dependency 和 redistributed artifact。`routeTree.gen.ts` 从 authored routes 再生成；
 `theme.seed.generated.ts` 必须找到确定性 generator，或去掉虚假 generated 身份并按 authored source 管理。
 
@@ -336,7 +337,7 @@ unchanged probe；没有把 T0、T1 或局部绿色扩张为未覆盖的平台�
 | Checkpoint | 可观察 exit | 明确禁止的声明 |
 | --- | --- | --- |
 | T0 | exact source/tree 与既有 baseline evidence 可读 | production adoption / compatible / tests all pass |
-| T1 | target paths 从 tracked source 构造、complete corpus/product identity/rights/legal hard green、root build/typecheck/macOS launch、无 root→vendor dependency；mixed Pi dependency 与 execution-code identity 仅为枚举的 expected red | final brand / zero-Pi Service / merge or release / visual parity / product candidate |
+| T1 | target paths 从 tracked source 构造、complete corpus/product identity/rights/legal hard green、root build/typecheck/macOS launch、无 root→vendor dependency；mixed Pi dependency 与 execution-code identity 仅为枚举的 expected red | zero-Pi Service / merge or release / visual parity / product candidate |
 | T2 | single Product writer、typed ingress；真实 Pi-free Host shell、认证 channel、独立 supervision/health/fault proof；旧 execution route 对 Product journey 不可达；枚举的 execution-code/Pi-dependency debt 仍明确 red | zero-Pi Service / Pi journey complete / UI complete |
 | T3 | 真实 `Agent | Chat`、母体行为与视觉保全、双语/a11y/perf gate | native execution authority complete |
 | T4 | 在 T2 Host 边界原位接入真实 Pi Chat+Agent，完成 process/dispatch/crash/uncertainty proof；Host 外 Pi dependency、旧 Engine authority 和 donor mirror 为零 | full V1 / cross-platform release / all Packages compatible |
@@ -349,8 +350,8 @@ unchanged probe；没有把 T0、T1 或局部绿色扩张为未覆盖的平台�
   Desktop enforcement、Product receipt 和 Engine invocation 仍分别拥有。
 - Git/checkpoint 是否生成 durable OperationReceipt：仅对需要恢复/解释的已批准副作用持久化；即时查询的
   Git external fact 不复制进产品状态。
-- 最终 brand form/palette：T1 temporary prior icon 不是 palette 决策；T3 必须在真实母体表面提供 material
-  candidates 并经维护者 same-state calibration，且不回收已否决 mark/color。
+- Brand form/palette 不再是当前开放问题：既有一方 icon 与平台输出保持锁定；只有维护者以后明确重开
+  品牌校准时才允许改变，T3 不得自行引入 replacement candidate。
 - Windows/Linux/webview/PTY/update：路径和 identity 改变已触发未来复验，但它们不阻止 macOS first-slice
   design；它们会阻止相应 release claim。
 - donor storage-mock/attachment test failures：受影响测试迁移时归因；不得提前改写为 baseline 全绿，也

@@ -35,6 +35,8 @@ export type ThreadActivationControllerInput = {
   rememberLastThreadRouteNow: (nextLastThreadRoute: LastThreadRoute) => void;
   routeSplitViewId: string | null | undefined;
   routeThreadId: ThreadId | null | undefined;
+  /** Omitted is the canonical Agent route; Chat is serialized as `surface=chat`. */
+  routeSurface?: "chat" | undefined;
   selectedThreadCount: number;
   setOptimisticActiveThreadId: (threadId: ThreadId) => void;
   setSelectionAnchor: (threadId: ThreadId) => void;
@@ -57,6 +59,7 @@ export function activateThreadFromSidebarIntent(
     rememberLastThreadRouteNow,
     routeSplitViewId,
     routeThreadId,
+    routeSurface,
     selectedThreadCount,
     setOptimisticActiveThreadId,
     setSelectionAnchor,
@@ -119,6 +122,7 @@ export function activateThreadFromSidebarIntent(
     search: (previous) => ({
       ...previous,
       splitViewId: activation.splitViewId,
+      surface: routeSurface,
     }),
   });
 }
@@ -176,6 +180,7 @@ function activateSidechatSplit(
     search: (previous) => ({
       ...previous,
       splitViewId,
+      surface: input.routeSurface,
     }),
   });
 }
@@ -207,6 +212,7 @@ function activateThreadSingle(input: ThreadActivationControllerInput, threadId: 
     search: (previous) => ({
       ...previous,
       splitViewId: undefined,
+      surface: input.routeSurface,
     }),
   });
 }
@@ -225,6 +231,7 @@ export function useThreadActivationController(input: ThreadActivationControllerI
     rememberLastThreadRouteNow,
     routeSplitViewId,
     routeThreadId,
+    routeSurface,
     selectedThreadCount,
     setOptimisticActiveThreadId,
     setSelectionAnchor,
@@ -247,6 +254,7 @@ export function useThreadActivationController(input: ThreadActivationControllerI
         rememberLastThreadRouteNow,
         routeSplitViewId,
         routeThreadId,
+        routeSurface,
         selectedThreadCount,
         setOptimisticActiveThreadId,
         setSelectionAnchor,

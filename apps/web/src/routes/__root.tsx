@@ -96,13 +96,13 @@ import { canApplyThreadSnapshot, selectOrphanedThreadDetailIds } from "./-thread
 import { getThreadFromState, getThreadsFromState } from "../threadDerivation";
 import { useAppDensity } from "../hooks/useAppDensity";
 import { useAppTypography } from "../hooks/useAppTypography";
-import { usePreloadRouteChunks } from "../hooks/usePreloadRouteChunks";
 import { useSyncDesktopTopBarTrafficLightGutterZoom } from "../hooks/useDesktopTopBarGutter";
 import { useTheme } from "../hooks/useTheme";
 import { useNativeFontSmoothing } from "../hooks/useNativeFontSmoothing";
 import { invalidateGitQueries, invalidateGitQueriesForCwds } from "../lib/gitReactQuery";
 import { hasLiveThreadsWithMissingProjects } from "../lib/desktopProjectRecovery";
 import { useDiffRouteSearch } from "../hooks/useDiffRouteSearch";
+import { resolveWorkbenchLocale } from "../i18n/workbenchCopy";
 import { useProviderAuthRefreshOnFocus } from "../hooks/useProviderAuthRefreshOnFocus";
 import { useProviderStatusRefresh } from "../hooks/useProviderStatusRefresh";
 import { ProductProjectionCoordinator } from "../productProjectionCoordinator";
@@ -187,10 +187,12 @@ export const Route = createRootRouteWithContext<{
 function RootRouteView() {
   useAppTypography();
   useAppDensity();
-  usePreloadRouteChunks();
   useNativeFontSmoothing();
   useSyncDesktopTopBarTrafficLightGutterZoom();
   useTheme();
+  useLayoutEffect(() => {
+    document.documentElement.lang = resolveWorkbenchLocale(globalThis.navigator?.language);
+  }, []);
   const [compatibilityIssue, setCompatibilityIssue] = useState<WsCompatibilityError | null>(() =>
     readLatestWsCompatibilityIssue(),
   );
@@ -497,6 +499,8 @@ async function runProviderUpdateAll(params: {
 
 function ProviderUpdateNotifications() {
   const navigate = useNavigate();
+  const routeSearch = useDiffRouteSearch();
+  const suppressAutomaticPrompt = routeSearch.surface === "chat";
   const queryClient = useQueryClient();
   const { settings } = useAppSettings();
   const serverConfigQuery = useQuery(serverConfigQueryOptions());
@@ -534,6 +538,13 @@ function ProviderUpdateNotifications() {
 
   useEffect(() => {
     const activeToast = activeToastRef.current;
+    if (suppressAutomaticPrompt) {
+      if (activeToast?.kind === "prompt") {
+        toastManager.close(activeToast.toastId);
+        activeToastRef.current = null;
+      }
+      return;
+    }
     if (activeToast?.kind === "prompt" && activeToast.key !== notificationKey) {
       toastManager.close(activeToast.toastId);
       activeToastRef.current = null;
@@ -587,7 +598,7 @@ function ProviderUpdateNotifications() {
           }
           void navigate({
             to: "/settings",
-            search: { section: "providers", target: SETTINGS_TARGETS.providerUpdates },
+            search: { section: "agents", target: SETTINGS_TARGETS.providerUpdates },
           });
         },
       },
@@ -602,7 +613,15 @@ function ProviderUpdateNotifications() {
       },
     });
     activeToastRef.current = { kind: "prompt", key: notificationKey, toastId };
-  }, [isUpdatingAll, navigate, notificationKey, oneClickProviders, outdatedProviders, updateAll]);
+  }, [
+    isUpdatingAll,
+    navigate,
+    notificationKey,
+    oneClickProviders,
+    outdatedProviders,
+    suppressAutomaticPrompt,
+    updateAll,
+  ]);
 
   return null;
 }

@@ -5,9 +5,10 @@
 // Layer: Chat composer UI primitive
 // Exports: QueuedComposerActions
 
-import { EllipsisIcon, SteerIcon, Trash2 } from "~/lib/icons";
+import { ArrowUpIcon, EllipsisIcon, SteerIcon, Trash2, XIcon } from "~/lib/icons";
 
 import type { QueuedComposerTurn } from "../../composerDraftStore";
+import type { WorkbenchCopy } from "../../i18n/workbenchCopy";
 
 import { Button } from "../ui/button";
 import { IconButton } from "../ui/icon-button";
@@ -16,27 +17,65 @@ import { ComposerPickerMenuPopup } from "./ComposerPickerMenuPopup";
 
 type QueuedComposerActionsProps = {
   queuedTurn: QueuedComposerTurn;
-  onSteer: (queuedTurn: QueuedComposerTurn) => void;
+  primaryAction: {
+    kind: "steer" | "move-next";
+    onSelect: (queuedTurn: QueuedComposerTurn) => void;
+  };
+  primaryActionDisabled?: boolean;
+  editing?: boolean;
+  onCancelEdit?: (() => void) | undefined;
   onRemove: (queuedTurnId: string) => void;
   onEdit: (queuedTurn: QueuedComposerTurn) => void;
+  copy: Pick<
+    WorkbenchCopy,
+    | "queueSteer"
+    | "queueMoveNext"
+    | "queueCancelEdit"
+    | "queueDeleteFollowUp"
+    | "queueActions"
+    | "queueEditPrompt"
+    | "queueDeletePrompt"
+  >;
 };
 
 function QueuedComposerActions({
   queuedTurn,
-  onSteer,
+  primaryAction,
+  primaryActionDisabled,
+  editing,
+  onCancelEdit,
   onRemove,
   onEdit,
+  copy,
 }: QueuedComposerActionsProps) {
   return (
     <div className="flex shrink-0 items-center gap-0">
-      <Button variant="subtle" size="chip" onClick={() => void onSteer(queuedTurn)}>
-        <SteerIcon />
-        <span>Steer</span>
+      <Button
+        variant="subtle"
+        size="chip"
+        disabled={!editing && primaryActionDisabled}
+        data-queue-action={editing ? "cancel-edit" : primaryAction.kind}
+        onClick={() => {
+          if (editing) {
+            onCancelEdit?.();
+            return;
+          }
+          void primaryAction.onSelect(queuedTurn);
+        }}
+      >
+        {editing ? <XIcon /> : primaryAction.kind === "steer" ? <SteerIcon /> : <ArrowUpIcon />}
+        <span>
+          {editing
+            ? copy.queueCancelEdit
+            : primaryAction.kind === "steer"
+              ? copy.queueSteer
+              : copy.queueMoveNext}
+        </span>
       </Button>
       <IconButton
         variant="ghost"
         size="icon-chip"
-        label="Delete queued follow-up"
+        label={copy.queueDeleteFollowUp}
         onClick={() => onRemove(queuedTurn.id)}
       >
         <Trash2 />
@@ -47,7 +86,7 @@ function QueuedComposerActions({
             <Button
               variant="ghost"
               size="icon-chip"
-              aria-label="Queued follow-up actions"
+              aria-label={copy.queueActions}
               className="[&_svg]:mx-0"
             />
           }
@@ -55,8 +94,10 @@ function QueuedComposerActions({
           <EllipsisIcon />
         </MenuTrigger>
         <ComposerPickerMenuPopup align="end" side="top" sideOffset={6}>
-          <MenuItem onClick={() => onEdit(queuedTurn)}>Edit queued prompt</MenuItem>
-          <MenuItem onClick={() => onRemove(queuedTurn.id)}>Delete queued prompt</MenuItem>
+          {editing ? null : (
+            <MenuItem onClick={() => onEdit(queuedTurn)}>{copy.queueEditPrompt}</MenuItem>
+          )}
+          <MenuItem onClick={() => onRemove(queuedTurn.id)}>{copy.queueDeletePrompt}</MenuItem>
         </ComposerPickerMenuPopup>
       </Menu>
     </div>

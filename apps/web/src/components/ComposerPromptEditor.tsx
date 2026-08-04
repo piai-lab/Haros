@@ -560,6 +560,11 @@ function ComposerCommandKeyPlugin(props: {
       if (!props.onCommandKeyDown || !event) {
         return false;
       }
+      // Enter confirms the active IME composition; it is not a send/menu command. Some Chromium
+      // input methods report only the legacy 229 keyCode, so keep both signals fail-closed.
+      if (event.isComposing || event.keyCode === 229) {
+        return false;
+      }
       const handled = props.onCommandKeyDown(key, event);
       if (handled) {
         event.preventDefault();

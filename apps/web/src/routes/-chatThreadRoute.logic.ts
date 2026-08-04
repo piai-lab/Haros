@@ -31,6 +31,59 @@ export interface SplitPaneMaximizeDecision {
   panelState: ChatPanelStateSnapshot | null;
 }
 
+export type MissingThreadRouteAuthority =
+  | "available"
+  | "wait-product-shell"
+  | "product-unavailable"
+  | "legacy-recovery";
+
+export type ThreadSurfaceMembership =
+  | "agent"
+  | "chat"
+  | "canonicalize-chat"
+  | "missing-agent"
+  | "missing-chat";
+
+export function resolveThreadSurfaceMembership(input: {
+  readonly surface?: "chat" | undefined;
+  readonly donorThreadExists: boolean;
+  readonly donorDraftExists: boolean;
+  readonly productChatExists: boolean;
+  readonly productAgentExists: boolean;
+  readonly productLocalChatDraftExists: boolean;
+}): ThreadSurfaceMembership {
+  if (input.surface === "chat") {
+    return input.productChatExists || input.productLocalChatDraftExists ? "chat" : "missing-chat";
+  }
+  if (input.productChatExists || input.productLocalChatDraftExists) return "canonicalize-chat";
+  return input.donorThreadExists || input.donorDraftExists || input.productAgentExists
+    ? "agent"
+    : "missing-agent";
+}
+
+export function isProductChatSplitRestorable(input: {
+  readonly surface?: "chat" | undefined;
+  readonly splitThreadIds: ReadonlyArray<string> | null;
+  readonly productChatThreadIds: ReadonlySet<string>;
+}): boolean {
+  if (input.surface !== "chat" || input.splitThreadIds === null) return true;
+  return (
+    input.splitThreadIds.length > 0 &&
+    input.splitThreadIds.every((threadId) => input.productChatThreadIds.has(threadId))
+  );
+}
+
+/** Chat misses are decided only by typed Product identity; Agent retains donor recovery. */
+export function resolveMissingThreadRouteAuthority(input: {
+  readonly surface?: "chat" | undefined;
+  readonly routeThreadExists: boolean;
+  readonly productShellHydrated: boolean;
+}): MissingThreadRouteAuthority {
+  if (input.routeThreadExists) return "available";
+  if (!input.productShellHydrated) return "wait-product-shell";
+  return input.surface === "chat" ? "product-unavailable" : "legacy-recovery";
+}
+
 export type SplitPaneCloseDecision =
   | {
       kind: "single-thread";

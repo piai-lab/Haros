@@ -92,11 +92,39 @@ describe("SettingsSidebarNav", () => {
     expect(markup).toContain("Archived");
     expect(markup).toContain("Chat behavior");
     expect(markup).toContain("MCP connections");
-    expect(markup).toContain("Agent providers");
+    expect(markup).toContain(">Agents<");
+    expect(markup).toContain(">Packages<");
+    expect(markup).not.toContain("Agent providers");
+    expect(markup).not.toContain("Agent skills");
+    expect(markup.indexOf(">Models<")).toBeLessThan(markup.indexOf(">Agents<"));
+    expect(markup.indexOf(">Agents<")).toBeLessThan(markup.indexOf(">Packages<"));
     expect(markup).toContain("Managed worktrees");
     expect(markup).toContain("System tools");
     expect(markup).toContain("Archived threads");
     expect(markup).not.toContain(">App<");
     expect(markup).not.toContain(">OmniMind<");
+  });
+
+  it("renders the owned Settings navigation contract in zh-CN", () => {
+    vi.stubGlobal("navigator", { language: "zh-CN" });
+    try {
+      const markup = renderToStaticMarkup(
+        <SettingsSidebarNav activeSection="general" onBack={vi.fn()} onSelectSection={vi.fn()} />,
+      );
+
+      expect(markup).toContain('aria-label="搜索设置"');
+      expect(markup).toContain('aria-label="设置分区"');
+      expect(markup).toContain("返回应用");
+      expect(markup).toContain("个人");
+      expect(markup).toContain("集成");
+      expect(markup).toContain("开发");
+      expect(markup).toContain("系统");
+      expect(markup).toContain("归档");
+      expect(markup).toContain(">模型<");
+      expect(markup).toContain(">Agent<");
+      expect(markup).toContain(">Package<");
+    } finally {
+      vi.unstubAllGlobals();
+    }
   });
 });

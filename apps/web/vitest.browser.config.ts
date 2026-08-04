@@ -1,10 +1,23 @@
 import { fileURLToPath } from "node:url";
-import { playwright } from "@vitest/browser-playwright";
+import { defineBrowserCommand, playwright } from "@vitest/browser-playwright";
 import { defineConfig, mergeConfig } from "vitest/config";
 
 import viteConfig from "./vite.config";
 
 const srcPath = fileURLToPath(new URL("./src", import.meta.url));
+
+interface ChromiumCdpSession {
+  send(method: string, params?: Record<string, unknown>): Promise<unknown>;
+}
+
+const collectBrowserHeap = defineBrowserCommand(async ({ provider, sessionId }) => {
+  const session = (await provider.getCDPSession?.(sessionId)) as ChromiumCdpSession | undefined;
+  if (!session) {
+    throw new Error("The browser profile requires Chromium CDP heap access.");
+  }
+  await session.send("HeapProfiler.collectGarbage");
+  return session.send("Runtime.getHeapUsage");
+});
 
 export default mergeConfig(
   viteConfig,
@@ -25,6 +38,7 @@ export default mergeConfig(
         provider: playwright(),
         instances: [{ browser: "chromium" }],
         headless: true,
+        commands: { collectBrowserHeap },
         api: {
           // Vitest's default 63315 falls inside common Windows/Hyper-V
           // excluded-port ranges. Keep the local browser harness on IPv4 and

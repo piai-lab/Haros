@@ -14,6 +14,7 @@ import { applyClaudePromptEffortPrefix } from "@omnimind/shared/model";
 import { memo, useCallback, useEffect, useRef, useState, type ReactNode } from "react";
 import { ChevronDownIcon, FastModeIcon, FastModeOutlineIcon, SettingsIcon } from "~/lib/icons";
 import { cn } from "~/lib/utils";
+import { localizeWorkbenchTraitLabel } from "../../i18n/workbenchCopy";
 import { Button } from "../ui/button";
 import {
   Menu,
@@ -428,7 +429,7 @@ export const TraitsMenuContent = memo(function TraitsMenuContentImpl({
             disabled={ultrathinkPromptControlled}
             options={effortLevels.map((option) => ({
               value: option.value,
-              label: option.label,
+              label: localizeWorkbenchTraitLabel(option.label),
               isDefault: option.value === defaultEffort,
               description: option.description ?? null,
             }))}
@@ -564,6 +565,9 @@ export const TraitsPicker = memo(function TraitsPicker({
   });
 
   const isCodexStyle = provider === "codex";
+  const localizedPrimaryTriggerLabel = visiblePrimaryTriggerLabel
+    ? localizeWorkbenchTraitLabel(visiblePrimaryTriggerLabel)
+    : null;
 
   const triggerButton = (
     <Button
@@ -584,8 +588,8 @@ export const TraitsPicker = memo(function TraitsPicker({
   ) : isCodexStyle ? (
     <span className="flex min-w-0 w-full items-center gap-2 overflow-hidden">
       <span className="min-w-0 flex flex-1 items-center gap-1.5 truncate">
-        {visiblePrimaryTriggerLabel ? (
-          <span className="truncate">{visiblePrimaryTriggerLabel}</span>
+        {localizedPrimaryTriggerLabel ? (
+          <span className="truncate">{localizedPrimaryTriggerLabel}</span>
         ) : (
           <span className="truncate">Options</span>
         )}
@@ -600,7 +604,7 @@ export const TraitsPicker = memo(function TraitsPicker({
         ) : null}
         {contextWindowLabel ? (
           <>
-            {visiblePrimaryTriggerLabel || showsFastBadge ? (
+            {localizedPrimaryTriggerLabel || showsFastBadge ? (
               <span className="shrink-0 text-muted-foreground/45">·</span>
             ) : null}
             <span className="shrink-0">{contextWindowLabel}</span>
@@ -612,7 +616,7 @@ export const TraitsPicker = memo(function TraitsPicker({
   ) : (
     <>
       <span className="inline-flex items-center gap-1.5">
-        <span>{visiblePrimaryTriggerLabel ?? "Options"}</span>
+        <span>{localizedPrimaryTriggerLabel ?? "Options"}</span>
         {showsFastBadge ? (
           <>
             <span className="text-muted-foreground/45">·</span>
@@ -624,7 +628,7 @@ export const TraitsPicker = memo(function TraitsPicker({
         ) : null}
         {contextWindowLabel ? (
           <>
-            {visiblePrimaryTriggerLabel || showsFastBadge ? (
+            {localizedPrimaryTriggerLabel || showsFastBadge ? (
               <span className="text-muted-foreground/45">·</span>
             ) : null}
             <span>{contextWindowLabel}</span>

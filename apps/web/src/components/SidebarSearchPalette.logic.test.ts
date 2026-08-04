@@ -1,10 +1,12 @@
-import { assert, describe, it } from "vitest";
+import { assert, describe, expect, it } from "vitest";
 
 import {
   matchSidebarSearchActions,
   matchSidebarSearchProjects,
   matchSidebarSearchThemes,
   matchSidebarSearchThreads,
+  resolveSidebarSearchThreadActivation,
+  selectSidebarSearchThreadInventory,
   type SidebarSearchAction,
   type SidebarSearchProject,
   type SidebarSearchTheme,
@@ -158,6 +160,40 @@ const threads: SidebarSearchThread[] = [
 ];
 
 describe("SidebarSearchPalette.logic", () => {
+  it("keeps Chat Product/local inventory separate from Agent donor inventory and activation", () => {
+    const productThread: SidebarSearchThread = {
+      ...threads[0]!,
+      id: "product-chat",
+      title: "Product Chat",
+      provider: null,
+      messages: [],
+    };
+    const localDraftThread: SidebarSearchThread = {
+      ...productThread,
+      id: "local-chat-draft",
+      title: "New chat",
+    };
+
+    expect(
+      selectSidebarSearchThreadInventory({
+        surface: "chat",
+        productThreads: [productThread],
+        localChatDraftThreads: [localDraftThread],
+        agentThreads: threads,
+      }).map((thread) => thread.id),
+    ).toEqual(["product-chat", "local-chat-draft"]);
+    expect(
+      selectSidebarSearchThreadInventory({
+        surface: "agent",
+        productThreads: [productThread],
+        localChatDraftThreads: [localDraftThread],
+        agentThreads: threads,
+      }).map((thread) => thread.id),
+    ).toEqual(threads.map((thread) => thread.id));
+    expect(resolveSidebarSearchThreadActivation("chat")).toBe("product-chat-route");
+    expect(resolveSidebarSearchThreadActivation("agent")).toBe("agent-thread");
+  });
+
   it("keeps suggested actions in source order for an empty query", () => {
     const result = matchSidebarSearchActions(actions, "");
 
@@ -308,5 +344,28 @@ describe("SidebarSearchPalette.logic", () => {
     assert.equal(result[0]?.thread.id, "thread-alpha-compose-prompt");
     assert.equal(result[0]?.matchKind, "title");
     assert.equal(result[0]?.messageMatchCount, 2);
+  });
+
+  it("searches Product conversations by title without inventing provider or message facts", () => {
+    const productThread: SidebarSearchThread = {
+      id: "product-conversation",
+      title: "Plan the release train",
+      projectId: "workspace-product",
+      projectName: "Chat",
+      projectRemoteName: "Chat",
+      spaceName: "Global",
+      provider: null,
+      createdAt: "2026-04-09T12:00:00.000Z",
+      updatedAt: "2026-04-09T12:30:00.000Z",
+      messages: [],
+    };
+
+    const titleMatches = matchSidebarSearchThreads([...threads, productThread], "release train");
+    assert.equal(titleMatches[0]?.thread.id, productThread.id);
+    assert.equal(titleMatches[0]?.matchKind, "title");
+    assert.equal(titleMatches[0]?.thread.provider, null);
+    assert.deepEqual(titleMatches[0]?.thread.messages, []);
+
+    assert.deepEqual(matchSidebarSearchThreads([productThread], "dispatch payload"), []);
   });
 });

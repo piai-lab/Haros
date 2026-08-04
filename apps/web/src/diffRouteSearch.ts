@@ -5,8 +5,11 @@
 import { TurnId } from "@omnimind/contracts";
 
 export type ChatRightPanel = "browser" | "diff";
+export type ProductSurface = "agent" | "chat";
 
 export interface DiffRouteSearch {
+  /** `agent` is the canonical default and is therefore omitted from the URL. */
+  surface?: "chat" | undefined;
   splitViewId?: string | undefined;
   view?: "editor" | undefined;
   editorFilePath?: string | undefined;
@@ -42,6 +45,7 @@ export function stripDiffSearchParams<T extends Record<string, unknown>>(
 }
 
 export function parseDiffRouteSearch(search: Record<string, unknown>): DiffRouteSearch {
+  const surface = normalizeSearchString(search.surface) === "chat" ? "chat" : undefined;
   const splitViewId = normalizeSearchString(search.splitViewId);
   const viewRaw = normalizeSearchString(search.view);
   const view = viewRaw === "editor" ? "editor" : undefined;
@@ -56,6 +60,7 @@ export function parseDiffRouteSearch(search: Record<string, unknown>): DiffRoute
   const diffFilePath = diff ? normalizeSearchString(search.diffFilePath) : undefined;
 
   return {
+    ...(surface ? { surface } : {}),
     ...(splitViewId ? { splitViewId } : {}),
     ...(view ? { view } : {}),
     ...(editorFilePath ? { editorFilePath } : {}),
@@ -64,4 +69,8 @@ export function parseDiffRouteSearch(search: Record<string, unknown>): DiffRoute
     ...(diffTurnId ? { diffTurnId } : {}),
     ...(diffFilePath ? { diffFilePath } : {}),
   };
+}
+
+export function resolveProductSurface(search: Pick<DiffRouteSearch, "surface">): ProductSurface {
+  return search.surface === "chat" ? "chat" : "agent";
 }

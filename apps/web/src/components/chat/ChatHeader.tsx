@@ -76,6 +76,8 @@ interface ChatHeaderProps {
   activeThreadTitle: string;
   activeThreadEntryPoint: ThreadPrimarySurface;
   activeProvider: ProviderKind;
+  /** Product surfaces have no provider identity until Engine selection becomes typed truth. */
+  hideProviderIdentity?: boolean;
   activeProjectName: string | undefined;
   threadBreadcrumbs: ReadonlyArray<{
     threadId: ThreadId;
@@ -93,6 +95,8 @@ interface ChatHeaderProps {
   diffToggleShortcutLabel: string | null;
   handoffBadgeLabel: string | null;
   handoffActionLabel: string;
+  handoffVisibleLabel: string;
+  handoffToLabel: string;
   handoffDisabled: boolean;
   handoffActionTargetProviders: ReadonlyArray<ProviderKind>;
   handoffBadgeSourceProvider: ProviderKind | null;
@@ -497,6 +501,7 @@ export function ChatHeader({
   activeThreadTitle,
   activeThreadEntryPoint,
   activeProvider,
+  hideProviderIdentity: hideProviderIdentityProp,
   activeProjectName,
   threadBreadcrumbs,
   className,
@@ -511,6 +516,8 @@ export function ChatHeader({
   diffToggleShortcutLabel,
   handoffBadgeLabel,
   handoffActionLabel,
+  handoffVisibleLabel,
+  handoffToLabel,
   handoffDisabled,
   handoffActionTargetProviders,
   handoffBadgeSourceProvider,
@@ -541,6 +548,7 @@ export function ChatHeader({
   onCloseThreadPane,
 }: ChatHeaderProps) {
   const hideSidebarControls = hideSidebarControlsProp ?? false;
+  const hideProviderIdentity = hideProviderIdentityProp ?? false;
   const hideHandoffControls = hideHandoffControlsProp ?? false;
   const showGitActions = showGitActionsProp ?? true;
   const showDiffToggle = showDiffToggleProp ?? true;
@@ -699,7 +707,7 @@ export function ChatHeader({
                     "rounded-lg bg-secondary py-1 pl-2 pr-1 text-secondary-foreground",
                 )}
               >
-                {threadIconKind === "none" ? null : (
+                {threadIconKind === "none" || hideProviderIdentity ? null : (
                   <span
                     className="inline-flex size-3.5 shrink-0 items-center justify-center"
                     title={
@@ -782,7 +790,7 @@ export function ChatHeader({
         </div>
       </div>
       <div className="flex shrink-0 items-center gap-2 [-webkit-app-region:no-drag]">
-        {!hideHandoffControls && !environment ? (
+        {!hideHandoffControls && !hideProviderIdentity && !environment ? (
           <ProviderUsageMenuControl provider={activeProvider} />
         ) : null}
         {!hideHandoffControls ? (
@@ -802,7 +810,9 @@ export function ChatHeader({
                     }
                   >
                     <HandoffIcon className="size-[1em] shrink-0 opacity-80" />
-                    {!compact ? <span className="truncate font-normal">Hand off</span> : null}
+                    {!compact ? (
+                      <span className="truncate font-normal">{handoffVisibleLabel}</span>
+                    ) : null}
                   </MenuTrigger>
                 }
               />
@@ -813,7 +823,9 @@ export function ChatHeader({
                 <MenuItem key={provider} onClick={() => onCreateHandoff(provider)}>
                   {/* opacity-100 opts brand icons out of the option row's 80% icon dim. */}
                   {renderProviderIcon(provider, "size-3.5 shrink-0 opacity-100")}
-                  <span>Handoff to {PROVIDER_DISPLAY_NAMES[provider]}</span>
+                  <span>
+                    {handoffToLabel} {PROVIDER_DISPLAY_NAMES[provider]}
+                  </span>
                 </MenuItem>
               ))}
             </ComposerPickerMenuPopup>

@@ -278,10 +278,12 @@ const THEME_MODE_ICONS: Record<"system" | "light" | "dark", IconComponent> = {
   dark: MoonIcon,
 };
 
-function ProviderIcon(props: { provider: ProviderKind }) {
+function ProviderIcon(props: { provider: ProviderKind | null }) {
   return (
     <div className="flex size-5 shrink-0 items-center justify-center">
-      <SharedProviderIcon provider={props.provider} className="size-[15px]" />
+      {props.provider ? (
+        <SharedProviderIcon provider={props.provider} className="size-[15px]" />
+      ) : null}
     </div>
   );
 }
@@ -909,7 +911,7 @@ export function SidebarSearchPalette(props: SidebarSearchPaletteProps) {
                               props.onOpenThread(thread.id);
                             }}
                           >
-                            {isGenericChatThreadTitle(thread.title) ? null : (
+                            {isGenericChatThreadTitle(thread.title) || !thread.provider ? null : (
                               <ProviderIcon provider={thread.provider} />
                             )}
                             <div className="min-w-0 flex-1">
@@ -941,16 +943,28 @@ export function SidebarSearchPalette(props: SidebarSearchPaletteProps) {
                                     <HighlightedText text={snippet} query={query} />
                                   </div>
                                   <div className="flex w-[8.5rem] shrink-0 justify-end">
-                                    {threadMatchLabel({ matchKind, messageMatchCount }) ? (
+                                    {threadMatchLabel({
+                                      matchKind,
+                                      messageMatchCount,
+                                    }) ? (
                                       <span className="truncate text-[length:var(--app-font-size-ui-meta,10px)] text-muted-foreground/58">
-                                        {threadMatchLabel({ matchKind, messageMatchCount })}
+                                        {threadMatchLabel({
+                                          matchKind,
+                                          messageMatchCount,
+                                        })}
                                       </span>
                                     ) : null}
                                   </div>
                                 </div>
-                              ) : threadMatchLabel({ matchKind, messageMatchCount }) ? (
+                              ) : threadMatchLabel({
+                                  matchKind,
+                                  messageMatchCount,
+                                }) ? (
                                 <div className="mt-0.5 text-[length:var(--app-font-size-ui-meta,10px)] text-muted-foreground/58">
-                                  {threadMatchLabel({ matchKind, messageMatchCount })}
+                                  {threadMatchLabel({
+                                    matchKind,
+                                    messageMatchCount,
+                                  })}
                                 </div>
                               ) : null}
                             </div>

@@ -6,6 +6,7 @@ import {
   MAX_PINNED_PROJECTS,
   type KeybindingCommand,
   type ProjectId,
+  type ProductConversationSummary,
   type PullRequestReviewRequestCountResult,
   type ThreadId,
 } from "@omnimind/contracts";
@@ -52,6 +53,25 @@ export type SidebarActionBadge = {
   readonly text: string;
   readonly accessibleLabel: string;
 };
+
+export function sortProductChatConversations(
+  conversations: ReadonlyArray<ProductConversationSummary>,
+): ProductConversationSummary[] {
+  return conversations
+    .filter((conversation) => conversation.workspaceKind === "chat")
+    .toSorted(
+      (left, right) =>
+        Date.parse(right.updatedAt) - Date.parse(left.updatedAt) || left.id.localeCompare(right.id),
+    );
+}
+
+/** The sole T3 exception to Product-owned Chat recents: an unsent local draft. */
+export function shouldPresentLocalChatDraft(input: {
+  readonly hasLocalDraft: boolean;
+  readonly hasProductSummary: boolean;
+}): boolean {
+  return input.hasLocalDraft && !input.hasProductSummary;
+}
 
 export function isProjectsSidebarSurface(input: {
   readonly isOnSettings: boolean;

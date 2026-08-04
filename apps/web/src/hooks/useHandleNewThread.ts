@@ -25,7 +25,7 @@ import {
 } from "../lib/stagedDraftNavigation";
 import { newCommandId, newThreadId } from "../lib/utils";
 import { readNativeApi } from "../nativeApi";
-import { useFocusedChatContext } from "../focusedChatContext";
+import { type FocusedChatContext, useFocusedChatContext } from "../focusedChatContext";
 import { useStore } from "../store";
 import { useTemporaryThreadStore } from "../temporaryThreadStore";
 import { useTerminalStateStore } from "../terminalStateStore";
@@ -39,13 +39,13 @@ export interface NewThreadNavigationOptions {
   search?: (previous: Record<string, unknown>) => Record<string, unknown>;
 }
 
-export function useHandleNewThread() {
+function useHandleNewThreadFromFocusedContext(focusedContext: FocusedChatContext) {
   const projects = useStore((store) => store.projects);
   const { settings } = useAppSettings();
   const navigate = useNavigate();
   const router = useRouter();
   const { activeDraftThread, activeProjectId, activeThread, focusedThreadId, routeThreadId } =
-    useFocusedChatContext();
+    focusedContext;
   const openChatThreadPage = useTerminalStateStore((store) => store.openChatThreadPage);
   const openTerminalThreadPage = useTerminalStateStore((store) => store.openTerminalThreadPage);
   const clearTerminalState = useTerminalStateStore((store) => store.clearTerminalState);
@@ -330,4 +330,17 @@ export function useHandleNewThread() {
     projects,
     routeThreadId,
   };
+}
+
+export function useHandleNewThread() {
+  return useHandleNewThreadFromFocusedContext(useFocusedChatContext());
+}
+
+/**
+ * Retained Conversation surfaces already own a stable route/split identity.
+ * Supplying it explicitly prevents hidden surfaces from subscribing to the
+ * globally focused route while preserving the same thread bootstrap behavior.
+ */
+export function useHandleNewThreadForFocusedContext(focusedContext: FocusedChatContext) {
+  return useHandleNewThreadFromFocusedContext(focusedContext);
 }

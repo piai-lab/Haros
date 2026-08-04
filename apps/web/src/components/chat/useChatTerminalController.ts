@@ -26,6 +26,7 @@ interface UseChatTerminalControllerInput {
   readonly activeThread: AutoDeleteCandidateThread | null | undefined;
   readonly activeProjectPresent: boolean;
   readonly isFocusedPane: boolean;
+  readonly isInteractionActive: () => boolean;
   readonly isServerThread: boolean;
   readonly confirmTerminalClose: boolean;
   readonly onDeletePlaceholderThread: (threadId: ThreadId) => Promise<void> | void;
@@ -37,6 +38,7 @@ export function useChatTerminalController({
   activeThread,
   activeProjectPresent,
   isFocusedPane,
+  isInteractionActive,
   isServerThread,
   confirmTerminalClose,
   onDeletePlaceholderThread,
@@ -230,9 +232,10 @@ export function useChatTerminalController({
     const onMenuAction = window.desktopBridge?.onMenuAction;
     if (typeof onMenuAction !== "function" || !isFocusedPane) return;
     return onMenuAction((action) => {
+      if (!isInteractionActive()) return;
       if (action === "new-terminal-tab") createTerminalFromShortcut();
     });
-  }, [createTerminalFromShortcut, isFocusedPane]);
+  }, [createTerminalFromShortcut, isFocusedPane, isInteractionActive]);
 
   const activateTerminal = useCallback(
     (terminalId: string) => {

@@ -2,7 +2,7 @@
 // Purpose: Resolve the active thread route into either a single chat surface or a persisted split view.
 // Layer: Route container
 
-import { type ProjectId, ThreadId } from "@omnimind/contracts";
+import { ProductConversationId, ProjectId, ThreadId } from "@omnimind/contracts";
 import { createFileRoute, useNavigate } from "@tanstack/react-router";
 import { useEffect, useMemo, useRef, useState } from "react";
 
@@ -18,15 +18,32 @@ import {
 import { useComposerDraftStore } from "../composerDraftStore";
 import { parseDiffRouteSearch, stripDiffSearchParams } from "../diffRouteSearch";
 import { readNativeApi } from "../nativeApi";
+import { isStudioContainerProject } from "../lib/studioProjects";
 import { isSplitRoute } from "../splitViewRoute";
-import { selectSplitView, useSplitViewStore } from "../splitViewStore";
+import { resolveSplitViewThreadIds, selectSplitView, useSplitViewStore } from "../splitViewStore";
 import { useStore } from "../store";
-import { createThreadExistsSelector, createThreadProjectIdSelector } from "../storeSelectors";
+import { useProductStore } from "../store/productStore";
+import {
+  createProjectSelector,
+  createThreadExistsSelector,
+  createThreadProjectIdSelector,
+} from "../storeSelectors";
+import { useWorkspacePathsStore } from "../workspacePathsStore";
 import { SingleChatSurface } from "../components/chat/SingleChatSurface";
 import { SplitChatSurface } from "../components/chat/SplitChatSurface";
-import { resolveSingleProjectId } from "./-chatThreadRoute.logic";
+import { ProductConversationRouteState } from "../components/product/ProductConversationRouteState";
+import { useHandleNewStudioChat } from "../hooks/useHandleNewStudioChat";
+import { getWorkbenchCopy } from "../i18n/workbenchCopy";
+import {
+  isProductChatSplitRestorable,
+  resolveMissingThreadRouteAuthority,
+  resolveSingleProjectId,
+  resolveThreadSurfaceMembership,
+} from "./-chatThreadRoute.logic";
 
 function ChatThreadRouteView() {
+  const workbenchCopy = getWorkbenchCopy();
+  const { handleNewStudioChat } = useHandleNewStudioChat();
   const threadsHydrated = useStore((store) => store.threadsHydrated);
   const hasKnownServerThreads = useStore((store) => (store.threadIds?.length ?? 0) > 0);
   const threadId = Route.useParams({
@@ -37,22 +54,93 @@ function ChatThreadRouteView() {
   const threadExistsSelector = createThreadExistsSelector(threadId);
   const threadProjectId: ProjectId | null = useStore(threadProjectIdSelector);
   const threadExists = useStore(threadExistsSelector);
-  const draftThreadState = useComposerDraftStore(
-    (store) => store.draftThreadsByThreadId[threadId] ?? null,
-  );
+  const draftThreadsByThreadId = useComposerDraftStore((store) => store.draftThreadsByThreadId);
+  const draftThreadState = draftThreadsByThreadId[threadId] ?? null;
   const draftThreadExists = draftThreadState !== null;
-  const routeThreadExists = threadExists || draftThreadExists;
+  const projects = useStore((store) => store.projects);
+  const draftProject = useStore(
+    useMemo(
+      () => createProjectSelector(draftThreadState?.projectId ?? null),
+      [draftThreadState?.projectId],
+    ),
+  );
+  const homeDir = useWorkspacePathsStore((store) => store.homeDir);
+  const chatWorkspaceRoot = useWorkspacePathsStore((store) => store.chatWorkspaceRoot);
+  const studioWorkspaceRoot = useWorkspacePathsStore((store) => store.studioWorkspaceRoot);
+  const productLocalDraftExists =
+    draftThreadExists &&
+    isStudioContainerProject(draftProject, { homeDir, chatWorkspaceRoot, studioWorkspaceRoot });
+  const productConversationId = ProductConversationId.makeUnsafe(threadId);
+  const productShellHydrated = useProductStore((store) => store.shellHydrated);
+  const productConversations = useProductStore((store) => store.conversations);
+  const productConversationSummary = productConversations.find(
+    (conversation) => conversation.id === productConversationId,
+  );
+  const surfaceMembership = resolveThreadSurfaceMembership({
+    surface: search.surface,
+    donorThreadExists: threadExists,
+    donorDraftExists: draftThreadExists,
+    productChatExists: productConversationSummary?.workspaceKind === "chat",
+    productAgentExists:
+      productConversationSummary !== undefined &&
+      productConversationSummary.workspaceKind !== "chat",
+    productLocalChatDraftExists: productLocalDraftExists,
+  });
+  const routeThreadExists = surfaceMembership === "agent" || surfaceMembership === "chat";
+  const shouldCanonicalizeToChat = surfaceMembership === "canonicalize-chat";
+  const missingRouteAuthority = resolveMissingThreadRouteAuthority({
+    surface: search.surface,
+    routeThreadExists,
+    productShellHydrated,
+  });
+  const awaitingProductIdentity = missingRouteAuthority === "wait-product-shell";
+  const isMissingProductChatRoute = missingRouteAuthority === "product-unavailable";
   const splitView = useSplitViewStore(
     useMemo(() => selectSplitView(search.splitViewId ?? null), [search.splitViewId]),
   );
-  const splitViewsHydrated = useSplitViewStore((store) => store.hasHydrated);
-  const activeProjectId = resolveSingleProjectId({
-    threadProjectId,
-    draftProjectId: draftThreadState?.projectId ?? null,
+  const productChatThreadIds = useMemo(() => {
+    const ids = new Set<string>(
+      productConversations
+        .filter((conversation) => conversation.workspaceKind === "chat")
+        .map((conversation) => conversation.id),
+    );
+    const projectById = new Map(projects.map((project) => [project.id, project]));
+    for (const [draftId, draft] of Object.entries(draftThreadsByThreadId)) {
+      if (
+        isStudioContainerProject(projectById.get(draft.projectId), {
+          homeDir,
+          chatWorkspaceRoot,
+          studioWorkspaceRoot,
+        })
+      ) {
+        ids.add(draftId);
+      }
+    }
+    return ids;
+  }, [
+    chatWorkspaceRoot,
+    draftThreadsByThreadId,
+    homeDir,
+    productConversations,
+    projects,
+    studioWorkspaceRoot,
+  ]);
+  const productChatSplitRestorable = isProductChatSplitRestorable({
+    surface: search.surface,
+    splitThreadIds: splitView ? resolveSplitViewThreadIds(splitView) : null,
+    productChatThreadIds,
   });
+  const splitViewsHydrated = useSplitViewStore((store) => store.hasHydrated);
+  const activeProjectId = productConversationSummary
+    ? ProjectId.makeUnsafe(productConversationSummary.workspaceId)
+    : resolveSingleProjectId({
+        threadProjectId,
+        draftProjectId: draftThreadState?.projectId ?? null,
+      });
   const navigate = useNavigate();
   const [missingThreadRecoveryState, setMissingThreadRecoveryState] =
     useState<EmptyRouteRestoreRecoveryState>("idle");
+  const [newConversationError, setNewConversationError] = useState<string | null>(null);
   const mountedRef = useRef(true);
   const missingThreadRecoveryRunRef = useRef(0);
   // Synchronous re-entry guard: the "pending" transition below is deferred (async
@@ -88,11 +176,26 @@ function ChatThreadRouteView() {
   }, [missingThreadRecoveryState, routeThreadExists]);
 
   useEffect(() => {
-    if (!threadsHydrated || !splitViewsHydrated) {
+    if (!threadsHydrated || !splitViewsHydrated || awaitingProductIdentity) {
+      return;
+    }
+
+    if (shouldCanonicalizeToChat) {
+      void navigate({
+        to: "/$threadId",
+        params: { threadId },
+        replace: true,
+        search: (previous) => ({ ...previous, surface: "chat" }),
+      });
       return;
     }
 
     if (!routeThreadExists) {
+      // Chat identity belongs to the Product shell. Once that typed inventory is hydrated,
+      // a miss returns to the canonical Chat landing; it never probes the donor runtime.
+      if (isMissingProductChatRoute) {
+        return;
+      }
       if (
         shouldStartMissingThreadRouteRecovery({
           hasKnownServerThreads,
@@ -145,21 +248,36 @@ function ChatThreadRouteView() {
             splitViewId: undefined,
           }),
         });
+      } else if (!productChatSplitRestorable) {
+        void navigate({
+          to: "/$threadId",
+          params: { threadId },
+          replace: true,
+          search: (previous) => ({
+            ...stripDiffSearchParams(previous),
+            splitViewId: undefined,
+            surface: "chat",
+          }),
+        });
       }
       return;
     }
 
     if (!routeThreadExists) {
-      void navigate({ to: "/", replace: true });
+      void navigate({ to: "/", replace: true, search: {} });
     }
   }, [
     hasKnownServerThreads,
+    awaitingProductIdentity,
+    isMissingProductChatRoute,
     missingThreadRecoveryState,
     navigate,
+    productChatSplitRestorable,
     routeThreadExists,
     search,
     splitView,
     splitViewsHydrated,
+    shouldCanonicalizeToChat,
     threadId,
     threadsHydrated,
   ]);
@@ -167,17 +285,50 @@ function ChatThreadRouteView() {
   if (
     !threadsHydrated ||
     !splitViewsHydrated ||
-    shouldHoldMissingThreadRouteFallback({
-      hasKnownServerThreads,
-      recoveryState: missingThreadRecoveryState,
-      routeThreadExists,
-    })
+    awaitingProductIdentity ||
+    (!isMissingProductChatRoute &&
+      shouldHoldMissingThreadRouteFallback({
+        hasKnownServerThreads,
+        recoveryState: missingThreadRecoveryState,
+        routeThreadExists,
+      }))
   ) {
     return null;
   }
 
+  if (isMissingProductChatRoute) {
+    return (
+      <ProductConversationRouteState
+        title={workbenchCopy.conversationMissingTitle}
+        description={workbenchCopy.conversationMissingDescription}
+        error={newConversationError}
+        secondaryAction={{
+          label: workbenchCopy.backToChatRecent,
+          onClick: () => {
+            void navigate({ to: "/", search: { surface: "chat" } });
+          },
+        }}
+        primaryAction={{
+          label: workbenchCopy.startNewConversation,
+          onClick: () => {
+            setNewConversationError(null);
+            void handleNewStudioChat({ fresh: true }).then((result) => {
+              if (!result.ok) setNewConversationError(result.error);
+            });
+          },
+        }}
+      />
+    );
+  }
+
   if (splitView && search.splitViewId) {
-    return <SplitChatSurface splitViewId={search.splitViewId} routeThreadId={threadId} />;
+    return (
+      <SplitChatSurface
+        splitViewId={search.splitViewId}
+        routeThreadId={threadId}
+        conversationSurface={search.surface === "chat" ? "chat" : "agent"}
+      />
+    );
   }
 
   if (!routeThreadExists) {

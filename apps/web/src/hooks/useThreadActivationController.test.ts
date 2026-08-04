@@ -107,6 +107,7 @@ function getFirstNavigateArgs(input: { navigate: ReturnType<typeof vi.fn> }) {
     search: (previous: { splitViewId?: string; keep?: boolean }) => {
       splitViewId?: string | undefined;
       keep?: boolean;
+      surface?: "chat" | undefined;
     };
   };
 }
@@ -197,6 +198,29 @@ describe("activateThreadFromSidebarIntent", () => {
     expect(getFirstNavigateArgs(input).search({ keep: true })).toEqual({
       keep: true,
       splitViewId: "split-background",
+    });
+  });
+
+  it("preserves the canonical Chat surface through split activation", () => {
+    const splitView = makeSplitViewFixture({
+      id: "split-chat",
+      sourceThreadId: THREAD_A,
+      firstThreadId: THREAD_A,
+      secondThreadId: THREAD_B,
+      focusOn: "first",
+    });
+    const input = makeControllerInput({
+      activeSplitView: splitView,
+      routeSplitViewId: "split-chat",
+      routeSurface: "chat",
+    });
+
+    activateThreadFromSidebarIntent(input, THREAD_B);
+
+    expect(getFirstNavigateArgs(input).search({ keep: true })).toEqual({
+      keep: true,
+      splitViewId: "split-chat",
+      surface: "chat",
     });
   });
 

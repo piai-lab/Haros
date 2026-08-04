@@ -17,11 +17,9 @@ import { newCommandId, cn } from "../lib/utils";
 import { readNativeApi } from "../nativeApi";
 import { useComposerDraftStore } from "../composerDraftStore";
 import { useProviderUsageSummary } from "../hooks/useProviderUsageSummary";
+import { getWorkbenchCopy } from "../i18n/workbenchCopy";
 import { resolveThreadEnvironmentPresentation } from "../lib/threadEnvironment";
-import {
-  RUNTIME_MODE_PRESENTATION,
-  providerModelSupportsAutoRuntimeMode,
-} from "../lib/runtimeMode";
+import { providerModelSupportsAutoRuntimeMode } from "../lib/runtimeMode";
 import { useStore } from "../store";
 import {
   createAllThreadsSelector,
@@ -45,6 +43,7 @@ import {
   COMPOSER_PICKER_TRIGGER_TEXT_CLASS_NAME,
   COMPOSER_TOOLBAR_PICKER_TRIGGER_CLASS_NAME,
 } from "./chat/composerPickerStyles";
+
 import {
   ENVIRONMENT_ROW_CLASS_NAME,
   ENVIRONMENT_ROW_ICON_CLASS_NAME,
@@ -68,6 +67,30 @@ import {
   MenuTrigger,
 } from "./ui/menu";
 import type { ThreadWorkspacePatch } from "../types";
+
+function localizedRuntimeModePresentation(mode: RuntimeMode): {
+  readonly label: string;
+  readonly description: string;
+} {
+  const copy = getWorkbenchCopy();
+  switch (mode) {
+    case "approval-required":
+      return {
+        label: copy.permissionApprovalLabel,
+        description: copy.permissionApprovalDescription,
+      };
+    case "auto":
+      return {
+        label: copy.permissionAutoLabel,
+        description: copy.permissionAutoDescription,
+      };
+    case "full-access":
+      return {
+        label: copy.permissionFullAccessLabel,
+        description: copy.permissionFullAccessDescription,
+      };
+  }
+}
 
 function WorktreeGlyph({ className }: { className?: string }) {
   return <WorktreeIcon className={className} />;
@@ -116,7 +139,7 @@ function RuntimeModeMenuItem({
   icon: ReactNode;
   accent?: boolean;
 }) {
-  const presentation = RUNTIME_MODE_PRESENTATION[mode];
+  const presentation = localizedRuntimeModePresentation(mode);
   return (
     <MenuRadioItem
       value={mode}
@@ -194,7 +217,8 @@ export function RuntimeUsageControls({
   const autoModeAvailable =
     provider !== undefined &&
     providerModelSupportsAutoRuntimeMode(provider, runtimeModel, providerStatus);
-  const runtimePresentation = RUNTIME_MODE_PRESENTATION[runtimeMode ?? "approval-required"];
+  const runtimePresentation = localizedRuntimeModePresentation(runtimeMode ?? "approval-required");
+  const copy = getWorkbenchCopy();
   const hideLabel = hideLabelProp ?? false;
   return (
     <div
@@ -216,7 +240,7 @@ export function RuntimeUsageControls({
                   runtimeMode === "auto" && RUNTIME_AUTO_ACCENT_CLASS_NAME,
                   runtimeMode === "full-access" && RUNTIME_FULL_ACCESS_ACCENT_CLASS_NAME,
                 )}
-                title={`${runtimePresentation.label}: ${runtimePresentation.description}. Click to change permissions.`}
+                title={`${runtimePresentation.label}: ${runtimePresentation.description}. ${copy.changePermissions}.`}
               />
             }
           >

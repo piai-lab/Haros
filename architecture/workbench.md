@@ -326,7 +326,7 @@ Donor provider tabs、branding、`Plugin` 作为永久通用产品类别，以�
 
 ### 品牌与 integration identity
 
-默认第一方可见身份是 OmniMind Agent。当前 T1 临时使用既有 OmniMind Agent Dock light/dark icon，完整覆盖 app、Dock/Taskbar、favicon、splash、About 与默认 Agent identity；它的形态、渐变和蓝绿色不是最终品牌或产品 palette。最终 mark 与 palette 只在 Agent/Chat Work 的真实母体表面上校准，当前不得引入已经否决的 bar-chart-like mark、vermilion/orange-red treatment 或另一套猜测方案。
+默认第一方可见身份是 OmniMind Agent。现有 first-party OmniMind Agent light/dark icon 继续原样覆盖 app、Dock/Taskbar、favicon、splash、About 与默认 Agent identity；它的 source 与平台导出由既有 digest guard 锁定。当前产品裁决是不替换其形态、颜色或生成链，Agent/Chat Work 也不承担品牌重设计；此前探索的 bar-chart-like、vermilion/orange-red 与 Orchestrated O 方案均不得进入 production。只有维护者以后明确重开品牌校准时，才允许另行改变这组资产。
 
 功能图标统一通过 source-neutral `Glyph` API 解析完整 line/fill corpus，使用 `currentColor` 继承真实交互语义；不得再暴露来源库命名或维护第二套通用 functional icon system。Provider、Model 与 Engine 行必须始终有真实 identity：有可靠官方 mark/color 时保留；只有 glyph 时使用 `currentColor`；没有独立 mark 的 Model 继承 Provider；unknown 使用中性的 OmniMind-owned fallback。纯文本、借用其他品牌或 lookalike 都不是图标 fallback。
 

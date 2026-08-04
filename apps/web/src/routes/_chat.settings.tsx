@@ -6,7 +6,7 @@
 import { PROVIDER_DISPLAY_NAMES, type ProviderKind } from "@omnimind/contracts";
 import { PROVIDER_DESCRIPTORS } from "@omnimind/shared/providerMetadata";
 import { sameAppSnapShortcut } from "@omnimind/shared/appSnapShortcut";
-import { createFileRoute, useSearch } from "@tanstack/react-router";
+import { createFileRoute, useNavigate, useSearch } from "@tanstack/react-router";
 import { useEffect, useMemo, useState } from "react";
 
 import {
@@ -92,6 +92,7 @@ import {
   SETTINGS_TARGETS,
 } from "../settingsNavigation";
 import { SETTINGS_PAGE_BACKGROUND_CLASS_NAME } from "../settingsPanelStyles";
+import { getWorkbenchCopy } from "../i18n/workbenchCopy";
 
 // ── Settings taxonomy ──────────────────────────────────────────────────────
 
@@ -179,10 +180,28 @@ type BooleanSettingKey = {
 // ── Route screen ───────────────────────────────────────────────────────────
 
 function SettingsRouteView() {
+  const navigate = useNavigate();
+  const workbenchCopy = getWorkbenchCopy();
   const routeSearch = useSearch({ strict: false }) as Record<string, unknown>;
   const activeSection = normalizeSettingsSection(routeSearch.section);
   const settingsTarget = typeof routeSearch.target === "string" ? routeSearch.target : null;
   const activeSectionItem = SETTINGS_NAV_ITEMS.find((item) => item.id === activeSection)!;
+  const activeSectionTitle =
+    activeSection === "models"
+      ? workbenchCopy.models
+      : activeSection === "agents"
+        ? workbenchCopy.agents
+        : activeSection === "packages"
+          ? workbenchCopy.packages
+          : activeSectionItem.label;
+  const activeSectionDescription =
+    activeSection === "models"
+      ? workbenchCopy.modelsDescription
+      : activeSection === "agents"
+        ? workbenchCopy.agentsDescription
+        : activeSection === "packages"
+          ? workbenchCopy.packagesDescription
+          : activeSectionItem.description;
 
   const {
     isDefaultActiveTheme,
@@ -1001,8 +1020,29 @@ function SettingsRouteView() {
         return <KeyboardShortcutsSettingsPanel />;
       case "profile":
         return <ProfileSettingsPanel />;
-      case "skills":
-        return <SkillsSettingsPanel />;
+      case "packages":
+        return (
+          <div className="space-y-6">
+            <section
+              aria-label="Package capability status"
+              className="rounded-xl border border-border/70 bg-background/60 px-4 py-3"
+            >
+              <h2 className="text-sm font-medium text-foreground">{workbenchCopy.packages}</h2>
+              <p className="text-sm leading-6 text-muted-foreground">
+                {workbenchCopy.packagesBoundary}
+              </p>
+              <Button
+                size="xs"
+                variant="outline"
+                className="mt-3"
+                onClick={() => void navigate({ to: "/plugins" })}
+              >
+                {workbenchCopy.openPackageDiscovery}
+              </Button>
+            </section>
+            <SkillsSettingsPanel />
+          </div>
+        );
       case "usage":
         return <ProviderUsageSettingsPanel />;
       default:
@@ -1053,10 +1093,10 @@ function SettingsRouteView() {
                 <div className="mb-8 flex items-start justify-between gap-4">
                   <div className="min-w-0">
                     <h1 className="text-xl font-medium tracking-tight text-foreground">
-                      {activeSectionItem.label}
+                      {activeSectionTitle}
                     </h1>
                     <p className="mt-1.5 text-sm leading-relaxed text-muted-foreground">
-                      {activeSectionItem.description}
+                      {activeSectionDescription}
                     </p>
                   </div>
                   <Button
@@ -1073,6 +1113,17 @@ function SettingsRouteView() {
               ) : null}
 
               {renderRouteOwnedPanel()}
+              {activeSection === "agents" ? (
+                <section
+                  aria-label="Agent capability status"
+                  className="mb-6 rounded-xl border border-border/70 bg-background/60 px-4 py-3"
+                >
+                  <h2 className="text-sm font-medium text-foreground">{workbenchCopy.agents}</h2>
+                  <p className="text-sm leading-6 text-muted-foreground">
+                    {workbenchCopy.agentsBoundary}
+                  </p>
+                </section>
+              ) : null}
               {/* These workflow owners stay mounted so drafts, request guards, and pending
                   mutations retain route lifetime while inactive panels render no DOM. */}
               <div className="contents">
@@ -1098,7 +1149,7 @@ function SettingsRouteView() {
                   resetEpoch={resetEpoch}
                 />
                 <ProvidersSettingsPanel
-                  active={activeSection === "providers"}
+                  active={activeSection === "agents"}
                   settings={settings}
                   defaults={defaults}
                   updateSettings={updateSettings}
