@@ -1,6 +1,6 @@
 # OmniMind
 
-OmniMind 是一个 **Powered by Pi** 的本地优先桌面 Agent 产品：Pi 是唯一 bundled-native Gold Path，OmniMind 把其原生运行时与生态做成普通用户愿意长期使用的桌面产品；其他真实 Agent 可以作为外部 Engine 接入，但不承诺虚假的能力对称。
+OmniMind 是一个本地优先桌面 Agent 产品：默认用户身份是 **OmniMind Agent**，经过策展和调校的 Pi 是内置原生 Gold Path。OmniMind 把其运行时与生态做成普通用户愿意长期使用的桌面产品；其他真实 Agent 可以作为外部 Engine 接入，但不承诺虚假的能力对称。日常工作台保持产品优先；About、Licenses、运行时详情和诊断必须能发现准确的 Pi provenance 与执行权威。
 
 > **Pi-native. OmniMind-owned. Ecosystem-first. Engine-open.**
 
@@ -21,17 +21,19 @@ OmniMind 的价值不是“能启动 Pi”，而是上游没有义务完成的�
 
 每类耐久事实只有一个 owner：
 
-| Fact class | Sole owner |
-| --- | --- |
-| 产品身份、战略不变量与 production adoption | 本 `README.md` |
-| 稳定职责、产品事实、完整 UI 与进程边界 | [`architecture/`](architecture/README.md) 的专题 owner |
-| 固定来源事实、失败、反例与复验触发器 | [`research/`](research/README.md) |
-| 施工顺序、进入/停止条件与阶段 proof | [`execution-brief.md`](execution-brief.md) |
-| Campaign claim 状态与证据指针 | [`missions/independent-omnimind-v1.md`](missions/independent-omnimind-v1.md) |
+| Fact class                                                     | Sole owner                                                                   |
+| -------------------------------------------------------------- | ---------------------------------------------------------------------------- |
+| 产品身份、战略不变量与 production adoption                     | 本 `README.md`                                                               |
+| 稳定职责、产品事实、完整 UI 与进程边界                         | [`architecture/`](architecture/README.md) 的专题 owner                       |
+| canonical public origin、公共出口、激活与独立 trust boundaries | [`architecture/public-surface.md`](architecture/public-surface.md)           |
+| 固定来源事实、失败、反例与复验触发器                           | [`research/`](research/README.md)                                            |
+| 施工顺序、进入/停止条件与阶段 proof                            | [`execution-brief.md`](execution-brief.md)                                   |
+| Campaign claim 状态与证据指针                                  | [`missions/independent-omnimind-v1.md`](missions/independent-omnimind-v1.md) |
 
 专题 owner 必须完整读取：
 
 - [`architecture/workbench.md`](architecture/workbench.md) 是用户可见行为、UI 母体接管门、性能与可访问性的完整契约；
+- [`architecture/public-surface.md`](architecture/public-surface.md) 唯一拥有公共 origin、Registry、激活门、不可用行为、反馈数据边界与发行/更新权威分离；
 - [`architecture/product-state.md`](architecture/product-state.md) 唯一拥有产品事实、durable product objects、Queue-to-Run 转移、receipt 与恢复；
 - [`architecture/execution.md`](architecture/execution.md) 唯一拥有详细进程 topology、target responsibility layout、Native/External Engine 边界与故障域。
 
@@ -39,7 +41,7 @@ OmniMind 的价值不是“能启动 Pi”，而是上游没有义务完成的�
 
 ## 3. 不可协商的产品边界
 
-- OmniMind 公开 `Powered by Pi`，保持独立品牌，不隐藏 Pi，也不冒充 Pi 官方 GUI。
+- OmniMind 以独立产品和 OmniMind Agent 身份面对用户，不冒充 Pi 官方 GUI，也不把 Pi 当作日常品牌口号；准确的 Pi 来源、版本和原生执行权威在 About、Licenses、运行时详情与诊断中逐层可发现。
 - OmniMind 保留用户可见产品事实、桌面体验、Package source/trust/current/LKG、文件/Remote、权限表达、恢复和跨 Engine 连续性；详细事实只以 Product State 为准。
 - 外部 Engine 使用真实官方协议或明确受限路径接入，不反向把 Pi Gold Path 压成最低公分母，也不允许静默 fallback。
 - U1 是获准的完整 UI 物理母体和可运行底盘；采用遵守 Workbench 的逐域 preserve/adapt/delete gate，不按截图另画薄 shell，不因未接线就删除成熟表面。
@@ -65,16 +67,94 @@ OmniMind 的价值不是“能启动 Pi”，而是上游没有义务完成的�
       "id": "ui-mother",
       "url": "https://github.com/Emanuele-web04/synara.git",
       "revision": "6aca3dcc505894481430967c2acb762b3dd1b358",
-      "paths": ["vendor/ui"],
-      "rights": "MIT at the fixed revision; continuous original-upstream history retained in the source repository; branded assets are baseline evidence only and are not approved for the production candidate",
+      "paths": [
+        "apps/web",
+        "apps/desktop",
+        "apps/service",
+        "packages/contracts",
+        "packages/shared",
+        "patches",
+        "scripts",
+        "package.json",
+        "bun.lock",
+        "bunfig.toml",
+        "turbo.json",
+        "tsconfig.base.json",
+        "vitest.config.ts",
+        ".oxfmtrc.json",
+        ".oxlintrc.json"
+      ],
+      "rights": "The fixed source is MIT-licensed under the retained legal text. The maintainer has authorized retention, adaptation and redistribution of the fixed code and the complete 4,014-file icon corpus in source and product artifacts. Former product identity assets are not adopted.",
       "mode": "adapt",
-      "changes": "No donor-file changes in the provenance baseline; repository-level disclosure and an exact legal copy were added outside the imported tree",
+      "changes": "The immutable T0 tree was transplanted into stable Web, Desktop, Product Service, contract, shared, patch and build-tool responsibilities; package, product, environment, protocol and storage identity were replaced; the authorized icon corpus was moved byte-for-byte to source-neutral line/fill paths behind the Glyph API; former product identity, marketing implementation/content and fake release history were removed while public-surface capability lineage retained explicit Product re-entry anchors; existing OmniMind brand assets replace first-party graphics.",
       "updatePolicy": "Pinned revision; upstream changes may be discovered automatically but require manual review and a new compatibility decision",
       "licenseFiles": ["LICENSES/ui-mother-MIT.txt"],
       "provenance": {
         "repositoryCommit": "2445acb987e443b44b7dc819de3de44c3d68b391",
-        "trees": {
+        "historicalTrees": {
           "vendor/ui": "630f17e61abc478114bf83c1d740977c9f68b910"
+        },
+        "origins": {
+          "apps/web": {
+            "sourcePath": "vendor/ui/apps/web",
+            "changes": "Adapted product identity, brand and icon paths/API; removed false public destinations and product history while retaining runnable UI plus fail-closed Docs, Changelog and Feedback re-entry anchors."
+          },
+          "apps/desktop": {
+            "sourcePath": "vendor/ui/apps/desktop",
+            "changes": "Adapted package, bundle, protocol, profile, static-client and platform-brand resource identity."
+          },
+          "apps/service": {
+            "sourcePath": "vendor/ui/apps/server",
+            "changes": "Moved the server package into the stable Product Service responsibility and adapted package, environment, profile and static-client paths."
+          },
+          "packages/contracts": {
+            "sourcePath": "vendor/ui/packages/contracts",
+            "changes": "Adapted package and product identity without changing its current mixed execution semantics."
+          },
+          "packages/shared": {
+            "sourcePath": "vendor/ui/packages/shared",
+            "changes": "Adapted package identity and renamed the product-home responsibility."
+          },
+          "patches": {
+            "sourcePath": "vendor/ui/patches",
+            "changes": "Retained only dependency patches required by the transplanted workspace."
+          },
+          "scripts": {
+            "sourcePath": "vendor/ui/scripts",
+            "changes": "Adapted required build, development, package and release checks; retained repository-owned governance checks and added deterministic glyph validation."
+          },
+          "package.json": {
+            "sourcePath": "vendor/ui/package.json",
+            "changes": "Adapted the workspace graph, package identity and quality gates."
+          },
+          "bun.lock": {
+            "sourcePath": "vendor/ui/bun.lock",
+            "changes": "Regenerated from the adapted workspace with the pinned package manager."
+          },
+          "bunfig.toml": {
+            "sourcePath": "vendor/ui/bunfig.toml",
+            "changes": "Retained required workspace package-manager configuration."
+          },
+          "turbo.json": {
+            "sourcePath": "vendor/ui/turbo.json",
+            "changes": "Adapted workspace task inputs and package responsibility names."
+          },
+          "tsconfig.base.json": {
+            "sourcePath": "vendor/ui/tsconfig.base.json",
+            "changes": "Retained the required TypeScript workspace baseline."
+          },
+          "vitest.config.ts": {
+            "sourcePath": "vendor/ui/vitest.config.ts",
+            "changes": "Retained the required workspace test configuration."
+          },
+          ".oxfmtrc.json": {
+            "sourcePath": "vendor/ui/.oxfmtrc.json",
+            "changes": "Retained and reviewed formatter configuration for the adapted roots."
+          },
+          ".oxlintrc.json": {
+            "sourcePath": "vendor/ui/.oxlintrc.json",
+            "changes": "Retained and reviewed lint configuration for the adapted roots."
+          }
         }
       }
     }
@@ -95,7 +175,7 @@ omni-harness
 
 ```structure-policy
 {
-  "authorRoots": ["apps", "architecture", "assets", "packages", "research", "scripts", "test", "missions", "LICENSES"],
+  "authorRoots": ["apps", "architecture", "assets", "packages", "patches", "research", "scripts", "test", "missions", "LICENSES"],
   "toolRoots": [".agents", ".claude", ".codex", ".cursor", ".obsidian", ".omp", ".omp-flow", ".snow"],
   "generatedDirectoryNames": ["build", "coverage", "dist", "out", "release"],
   "maxDirectoryDepth": 7,
@@ -115,7 +195,7 @@ omni-harness
 }
 ```
 
-当前 adopted UI mother 是 provenance baseline，不是 production candidate。Pi 与其他对照项目仍只是研究来源，除非它们进入上述 adoption 清单。exact revision/tree、rights/lineage/assets、构建/测试/运行观察和兼容限制只以 [`research/source-review.md`](research/source-review.md) 为证据 owner；法定文本保存在 `LICENSES/`。
+当前 adopted UI mother 已进入本地适配后的 author roots，但仍不是 production candidate。`historicalTrees` 只证明 T0 固定输入，`origins` 记录当前适配边界；两者不得互相冒充。Pi 与其他对照项目仍只是研究来源，除非它们进入上述 adoption 清单。exact revision/tree、rights/lineage/assets、构建/测试/运行观察和兼容限制只以 [`research/source-review.md`](research/source-review.md) 为证据 owner；法定文本保存在 `LICENSES/`。
 
 ## 5. 已有证据与当前下一步
 
@@ -123,10 +203,9 @@ Source Review 已记录 imported tree 与 fixed source 的 exact comparison，�
 
 当前顺序是：
 
-1. 冻结并独立复核 architecture/UI authority 与相应 governance contract；
-2. 独立审查已记录的 F-03/F-04 evidence 和尚未闭合的 rights/assets gaps，不由本 README 提升 claim；
-3. 按 Workbench 将 `vendor/ui` 的每个获准 source domain 映射到稳定产品职责并验证行为；
-4. 按 Execution 建立 isolated Native Host，先保持真实语义，再收缩重复 execution authority；
-5. 交付 Product State 定义的第一条真实 Chat/Agent journey 后，再扩展 Package、Remote 与外部 Engine。
+1. 完成本地 T1 source/identity closure 的独立复核，不把它提升为 production candidate；
+2. 在当前适配 roots 上按 Workbench 将每个获准 source domain 映射到稳定产品职责并验证行为；
+3. 按 Execution 建立 isolated Native Host，先保持真实语义，再收缩重复 execution authority；
+4. 交付 Product State 定义的第一条真实 Chat/Agent journey 后，再扩展 Package、Remote 与外部 Engine。
 
 具体进入条件、停止条件和 proof gate 只见 [`execution-brief.md`](execution-brief.md)；当前 claim 状态只见 active Campaign。

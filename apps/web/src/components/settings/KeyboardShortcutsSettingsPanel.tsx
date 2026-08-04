@@ -1,0 +1,119 @@
+// FILE: KeyboardShortcutsSettingsPanel.tsx
+// Purpose: Read-only keyboard-shortcuts reference for the settings screen — the same content
+//          the Mod+/ sheet shows, presented as a searchable Command / Keybinding table.
+// Layer: Settings UI components
+// Depends on: shared shortcut-sheet builder/filter, server keybindings config, and the Kbd pill.
+
+import type { ResolvedKeybindingsConfig } from "@omnimind/contracts";
+import { useState } from "react";
+import { useQuery } from "@tanstack/react-query";
+
+import { Input } from "~/components/ui/input";
+import { ShortcutKbd } from "~/components/ui/shortcut-kbd";
+import { Glyph } from "~/ui/icons";
+import { serverConfigQueryOptions } from "~/lib/serverReactQuery";
+import { cn } from "~/lib/utils";
+import {
+  buildShortcutSheetSections,
+  filterShortcutSheetSections,
+  type ShortcutSheetContext,
+} from "~/shortcutsSheet";
+import {
+  SETTINGS_CARD_ROW_CLASS_NAME,
+  SETTINGS_CARD_ROW_DESCRIPTION_CLASS_NAME,
+  SETTINGS_CARD_ROW_TITLE_CLASS_NAME,
+} from "~/settingsPanelStyles";
+import { SettingsCard, SettingsEmptyState } from "./SettingsPanelPrimitives";
+
+// Stable empty reference while the server config query is still loading.
+const EMPTY_KEYBINDINGS: ResolvedKeybindingsConfig = [];
+
+// The settings reference is intentionally context-free: it lists the chat/sidebar bindings
+// as "available now" plus the workspace-mode set, independent of the live terminal state, so
+// the page reads the same no matter which thread is focused.
+const SETTINGS_SHORTCUT_CONTEXT: ShortcutSheetContext = {
+  terminalFocus: false,
+  terminalOpen: false,
+  terminalWorkspaceOpen: false,
+};
+
+export function KeyboardShortcutsSettingsPanel() {
+  const [query, setQuery] = useState("");
+  const serverConfigQuery = useQuery(serverConfigQueryOptions());
+  const keybindings = serverConfigQuery.data?.keybindings ?? EMPTY_KEYBINDINGS;
+  const platform = typeof navigator === "undefined" ? "" : navigator.platform;
+
+  const sections = buildShortcutSheetSections({
+    keybindings,
+    // Project scripts are per-project and live only in the chat context; the settings
+    // reference stays project-agnostic, so the contextual Mod+/ sheet still owns them.
+    projectScripts: [],
+    platform,
+    context: SETTINGS_SHORTCUT_CONTEXT,
+  });
+
+  const filteredSections = filterShortcutSheetSections(sections, query);
+
+  return (
+    <div className="space-y-4">
+      <div className="relative w-full">
+        <Input
+          type="search"
+          size="sm"
+          variant="soft"
+          nativeInput
+          placeholder="Search shortcuts..."
+          value={query}
+          aria-label="Search shortcuts"
+          onChange={(event) => setQuery(event.target.value)}
+          onKeyDown={(event) => {
+            if (event.key === "Escape" && query.length > 0) {
+              event.preventDefault();
+              event.stopPropagation();
+              setQuery("");
+            }
+          }}
+          className="[&>[data-slot=input]]:pr-9"
+        />
+        <Glyph
+          name="cmd-box"
+          className="pointer-events-none absolute right-2.5 top-1/2 size-4 -translate-y-1/2 text-muted-foreground/70"
+        />
+      </div>
+
+      {filteredSections.length > 0 ? (
+        <SettingsCard>
+          <div className="flex items-center justify-between gap-4 px-3 py-2 text-[11px] font-medium text-muted-foreground">
+            <span>Command</span>
+            <span>Keybinding</span>
+          </div>
+          {filteredSections.flatMap((section) => {
+            const muted = section.tone === "muted";
+            return section.entries.map((entry) => (
+              <div
+                key={`${section.id}:${entry.id}`}
+                className={cn(
+                  SETTINGS_CARD_ROW_CLASS_NAME,
+                  "flex items-center justify-between gap-4",
+                  muted && "opacity-75",
+                )}
+              >
+                <div className="min-w-0 space-y-0.5">
+                  <div className={cn(SETTINGS_CARD_ROW_TITLE_CLASS_NAME, "truncate")}>
+                    {entry.label}
+                  </div>
+                  <div className={cn(SETTINGS_CARD_ROW_DESCRIPTION_CLASS_NAME, "truncate")}>
+                    {entry.description}
+                  </div>
+                </div>
+                <ShortcutKbd shortcutLabel={entry.shortcutLabel} groupClassName="shrink-0" />
+              </div>
+            ));
+          })}
+        </SettingsCard>
+      ) : (
+        <SettingsEmptyState>No shortcuts match &ldquo;{query}&rdquo;.</SettingsEmptyState>
+      )}
+    </div>
+  );
+}

@@ -61,7 +61,7 @@ Agent 侧栏使用母体原生的两个纵向 disclosure：`Projects` 在上、`
 
 首次使用不是品牌欢迎页，而是让用户在真实能力和失败状态下进入可用产品的短路径：
 
-1. 说明 OmniMind 是独立产品、`Powered by Pi`，Pi 是默认 bundled-native Engine；既不冒充 Pi 官方产品，也不隐藏运行时来源。
+1. 以 OmniMind Agent 的独立产品身份开始；Pi 是默认 bundled-native Engine，但不作为日常品牌口号。About、Licenses、运行时详情和 diagnostics 必须逐层披露准确来源、版本与原生执行权威。
 2. 解释 Agent 与 Chat 的稳定差别；Remote、Package 或先选 Folder 都不是开始普通 Chat 的前置仪式。
 3. 根据运行时真实能力连接受支持的 Provider/Model，或选择受支持的本地路径；不展示产品静态镜像伪造的可用项。
 4. 在第一次实质文件或命令操作前，解释用户权限策略与实际 enforcement source 是两件事。
@@ -77,8 +77,26 @@ Agent 侧栏使用母体原生的两个纵向 disclosure：`Projects` 在上、`
 - Package detail 显示 source、rights、exact artifact，并说明 Native Package 运行在 Pi runtime；
 - Agent detail 显示实现来源、版本、协议和 capability evidence；
 - About、Licenses 与 diagnostics 显示产品和 runtime 的 exact version/source、上游 attribution、法定文本与证据质量。
+- Licenses 提供当前 build 的 third-party notices、exact dependency inventory 与 CycloneDX SBOM；开发态副本必须明确是
+  当前 host snapshot，不能冒充其他 platform/arch 的发行闭包。
 
 缺失或无法核验的来源、版本和能力显示为 unknown/unverified，不能从 display name 猜测，也不能被隐藏。普通 Conversation row 不反复刷品牌 badge；完整来源与复杂诊断沉入对应详情层，但真实性不能因界面克制而省略。
+
+### 公共表面出口
+
+公共 origin、capability registry、激活门、反馈数据边界与发行/更新 authority separation 只由
+[`public-surface.md`](public-surface.md) 定义。Workbench 只负责其可见行为：Docs、Changelog 等已保全入口在
+未激活时保持可发现但 disabled，并解释 unavailable；不能打开猜测 URL、显示假页面或用 broken link 代替状态。
+
+Feedback 可以保留本地 draft 与显式提交入口，但无 production-gated、独立获批 endpoint 时，必须从首次渲染
+直接显示 unavailable、保持 Submit disabled 且不得发起网络请求。未激活文案只说明未来显式提交时的发送内容
+和不发送项，不能声称 recipient 已存在；激活后才准确披露 recipient。任何失败都保留 draft、不显示 success、
+不后台重试，并且不附带 prompt、message、code、file/path、credential、environment variable、terminal、log、
+screenshot 或 attachment。发送边界逐字段 allowlist，并对 details 与最终 body 实施硬长度上限；公共能力不可用
+不得阻塞本地 Agent/Chat、Conversation、Composer 或 Settings。
+
+激活后的发送中状态必须提供明确 `Cancel sending`；取消中止当前 request，保留 dialog 与 draft，并呈现准确失败状态。
+它不是关闭对话框，也不能清空输入、后台重试或显示 success。
 
 ## 3. 统一交互语言
 
@@ -251,18 +269,18 @@ Package private state 与 loading lifecycle 仍由 native runtime/Package 拥有
 
 影响 Run、Agent、Package 或实质操作时，界面把用户策略和实际强制来源作为两个字段：
 
-| User policy | 用户看到的含义 |
-| --- | --- |
-| `Approval required` | 覆盖范围内的操作先询问 |
-| `Auto` | 按已配置自动策略处理 |
-| `Full access` | 用户策略允许广泛操作；不代表 sandbox |
+| User policy         | 用户看到的含义                       |
+| ------------------- | ------------------------------------ |
+| `Approval required` | 覆盖范围内的操作先询问               |
+| `Auto`              | 按已配置自动策略处理                 |
+| `Full access`       | 用户策略允许广泛操作；不代表 sandbox |
 
-| Enforcement source | 产品可以声称的含义 |
-| --- | --- |
-| `host-enforced` | 经过拒绝副作用测试的 Host 路径实际阻止了被禁行为 |
-| `engine-enforced` | Engine contract 执行约束，Host 没有相同强制 |
-| `mixed` | 两侧分别强制，详情必须说明职责边界 |
-| `unverified` | 产品不能证明强制，界面不得暗示 containment |
+| Enforcement source | 产品可以声称的含义                               |
+| ------------------ | ------------------------------------------------ |
+| `host-enforced`    | 经过拒绝副作用测试的 Host 路径实际阻止了被禁行为 |
+| `engine-enforced`  | Engine contract 执行约束，Host 没有相同强制      |
+| `mixed`            | 两侧分别强制，详情必须说明职责边界               |
+| `unverified`       | 产品不能证明强制，界面不得暗示 containment       |
 
 Enforcement source 来自实际 call path 和 deny-side-effect evidence，不来自 renderer 回传、协议名称或“进程已隔离”的推断。denied action、approval cancellation、dispatch 前失败和 post-dispatch uncertainty 必须使用各自准确的可见结果；`Full access` 与进程隔离都不得包装成 filesystem/network sandbox。
 
@@ -283,9 +301,9 @@ Composer 的 Engine selector 和相关控制使用真实 capability data。unsup
 固定母体包含一个受保护的 discovery lineage：
 
 ```text
-vendor/ui/apps/web/src/routes/_chat.plugins.tsx
-vendor/ui/apps/web/src/routeTree.gen.ts                  (/plugins registration)
-vendor/ui/apps/web/src/components/PluginLibrary.tsx
+apps/web/src/routes/_chat.plugins.tsx
+apps/web/src/routeTree.gen.ts                  (/plugins registration)
+apps/web/src/components/PluginLibrary.tsx
 ```
 
 该域需要保全或有证据地替代 browse/search、plugin 与 skill 的有意义区分、installed/enabled 状态、capability-driven availability、loading/empty/error、source/marketplace failure 和 Skill working-directory requirement。产品映射是：
@@ -305,6 +323,12 @@ Donor provider tabs、branding、`Plugin` 作为永久通用产品类别，以�
 母体审查必须逐项覆盖：窗口几何、sidebar 和主内容宽度、workbench 展开方式、Composer 位置与高度、Header 克制度、列表密度、字体层级、字重、spacing、radius、border、shadow、surface hierarchy、light/dark theme、hover、selected、focus、disclosure、loading、empty、error、disabled、motion timing、stream smoothing 和 scroll anchoring。
 
 拒绝到处胶囊、重复 icon/title/status、大片装饰色、过度卡片化、badge 化内部对象、技术名词堆叠、每个 Activity 独占大卡片，以及千篇一律的紫色“AI 风”。动效短、快、可打断，只解释空间关系；`prefers-reduced-motion` 下保持完整语义。
+
+### 品牌与 integration identity
+
+默认第一方可见身份是 OmniMind Agent。当前 T1 临时使用既有 OmniMind Agent Dock light/dark icon，完整覆盖 app、Dock/Taskbar、favicon、splash、About 与默认 Agent identity；它的形态、渐变和蓝绿色不是最终品牌或产品 palette。最终 mark 与 palette 只在 Agent/Chat Work 的真实母体表面上校准，当前不得引入已经否决的 bar-chart-like mark、vermilion/orange-red treatment 或另一套猜测方案。
+
+功能图标统一通过 source-neutral `Glyph` API 解析完整 line/fill corpus，使用 `currentColor` 继承真实交互语义；不得再暴露来源库命名或维护第二套通用 functional icon system。Provider、Model 与 Engine 行必须始终有真实 identity：有可靠官方 mark/color 时保留；只有 glyph 时使用 `currentColor`；没有独立 mark 的 Model 继承 Provider；unknown 使用中性的 OmniMind-owned fallback。纯文本、借用其他品牌或 lookalike 都不是图标 fallback。
 
 ## 15. 性能是正确性
 

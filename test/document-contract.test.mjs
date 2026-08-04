@@ -12,14 +12,15 @@ const DOCUMENT_CONTRACT_PATHS = [
   "README.md",
   "architecture/README.md",
   "architecture/workbench.md",
+  "architecture/public-surface.md",
   "architecture/product-state.md",
   "architecture/execution.md",
   "execution-brief.md",
   "missions/independent-omnimind-v1.md",
   "research/README.md",
-  "vendor/ui/apps/web/src/routes/_chat.plugins.tsx",
-  "vendor/ui/apps/web/src/routeTree.gen.ts",
-  "vendor/ui/apps/web/src/components/PluginLibrary.tsx",
+  "apps/web/src/routes/_chat.plugins.tsx",
+  "apps/web/src/routeTree.gen.ts",
+  "apps/web/src/components/PluginLibrary.tsx",
 ];
 
 async function createFixture(t) {
@@ -29,10 +30,7 @@ async function createFixture(t) {
   for (const relativePath of DOCUMENT_CONTRACT_PATHS) {
     const destination = path.join(root, relativePath);
     await mkdir(path.dirname(destination), { recursive: true });
-    await writeFile(
-      destination,
-      await readFile(path.join(REPOSITORY_ROOT, relativePath), "utf8"),
-    );
+    await writeFile(destination, await readFile(path.join(REPOSITORY_ROOT, relativePath), "utf8"));
   }
 
   return root;
@@ -127,6 +125,13 @@ test("a broken local owner route is reported against the routing document", asyn
 });
 
 const COVERAGE_CASES = [
+  {
+    name: "Public Surface registry",
+    rule: "ui.public-surface",
+    path: "architecture/public-surface.md",
+    before: "**Future reserved candidate:** `POST /api/v1/feedback`",
+    after: "Feedback endpoint",
+  },
   {
     name: "owner graph",
     rule: "owner.root",
@@ -250,19 +255,11 @@ const COVERAGE_CASES = [
 for (const coverageCase of COVERAGE_CASES) {
   test(`rejects loss of ${coverageCase.name}`, async (t) => {
     const root = await createFixture(t);
-    await replaceText(
-      root,
-      coverageCase.path,
-      coverageCase.before,
-      coverageCase.after,
-      { all: coverageCase.all },
-    );
+    await replaceText(root, coverageCase.path, coverageCase.before, coverageCase.after, {
+      all: coverageCase.all,
+    });
 
-    assertFinding(
-      await validateDocumentContract({ root }),
-      coverageCase.rule,
-      coverageCase.path,
-    );
+    assertFinding(await validateDocumentContract({ root }), coverageCase.rule, coverageCase.path);
   });
 }
 
@@ -389,9 +386,9 @@ for (const settingsCase of COMPLETE_SENTINEL_LABEL_BAG_CASES) {
 }
 
 for (const anchorPath of [
-  "vendor/ui/apps/web/src/routes/_chat.plugins.tsx",
-  "vendor/ui/apps/web/src/routeTree.gen.ts",
-  "vendor/ui/apps/web/src/components/PluginLibrary.tsx",
+  "apps/web/src/routes/_chat.plugins.tsx",
+  "apps/web/src/routeTree.gen.ts",
+  "apps/web/src/components/PluginLibrary.tsx",
 ]) {
   test(`reports a missing protected anchor at ${anchorPath}`, async (t) => {
     const root = await createFixture(t);
@@ -409,15 +406,15 @@ for (const anchorPath of [
 
 const TOKEN_ONLY_ANCHOR_CASES = [
   {
-    path: "vendor/ui/apps/web/src/routes/_chat.plugins.tsx",
+    path: "apps/web/src/routes/_chat.plugins.tsx",
     content: "// PluginLibrary createFileRoute /_chat/plugins\n",
   },
   {
-    path: "vendor/ui/apps/web/src/routeTree.gen.ts",
+    path: "apps/web/src/routeTree.gen.ts",
     content: "export const routeTokens = '/plugins /_chat/plugins';\n",
   },
   {
-    path: "vendor/ui/apps/web/src/components/PluginLibrary.tsx",
+    path: "apps/web/src/components/PluginLibrary.tsx",
     content:
       "export const labels = 'plugins skills Search isLoading marketplaceLoadErrors discoveryCwd';\n",
   },
@@ -440,19 +437,16 @@ for (const anchorCase of TOKEN_ONLY_ANCHOR_CASES) {
 
 const QUOTED_INERT_ANCHOR_CASES = [
   {
-    path: "vendor/ui/apps/web/src/routes/_chat.plugins.tsx",
-    content:
-      `export const inert = 'import { createFileRoute } from "@tanstack/react-router"; import { PluginLibrary } from "@/components/PluginLibrary"; export const Route = createFileRoute("/_chat/plugins")({ component: PluginLibrary });';\n`,
+    path: "apps/web/src/routes/_chat.plugins.tsx",
+    content: `export const inert = 'import { createFileRoute } from "@tanstack/react-router"; import { PluginLibrary } from "@/components/PluginLibrary"; export const Route = createFileRoute("/_chat/plugins")({ component: PluginLibrary });';\n`,
   },
   {
-    path: "vendor/ui/apps/web/src/routeTree.gen.ts",
-    content:
-      `export const inert = 'import { Route as ChatPluginsRouteImport } from "./routes/_chat.plugins"; const ChatPluginsRoute = ChatPluginsRouteImport.update({ id: "/plugins", path: "/plugins", getParentRoute: () => ChatRoute }); "/_chat/plugins": { id: "/_chat/plugins", path: "/plugins", preLoaderRoute: typeof ChatPluginsRouteImport }';\n`,
+    path: "apps/web/src/routeTree.gen.ts",
+    content: `export const inert = 'import { Route as ChatPluginsRouteImport } from "./routes/_chat.plugins"; const ChatPluginsRoute = ChatPluginsRouteImport.update({ id: "/plugins", path: "/plugins", getParentRoute: () => ChatRoute }); "/_chat/plugins": { id: "/_chat/plugins", path: "/plugins", preLoaderRoute: typeof ChatPluginsRouteImport }';\n`,
   },
   {
-    path: "vendor/ui/apps/web/src/components/PluginLibrary.tsx",
-    content:
-      `export const inert = 'export function PluginLibrary() { const [selectedTab, setSelectedTab] = useState<DiscoveryTab>("plugins"); providerPluginsQueryOptions({ enabled: selectedTab === "plugins" }); providerSkillsQueryOptions({ enabled: selectedTab === "skills", discoveryCwd !== null }); rankProviderDiscoveryItems(buildPluginSearchFields); rankProviderDiscoveryItems(buildSkillSearchFields); <InstalledStatus installed={isInstalledProviderPlugin(item)} />; <InstalledStatus installed={skill.enabled} />; <TabButton label="Plugins" /><TabButton label="Skills" />; pluginsQuery.isLoading filteredPluginEntries.length === 0; skillsQuery.isLoading filteredSkills.length === 0; marketplaceLoadErrors InlineWarning; !discoveryCwd && selectedTab === "skills" Skills need a workspace path; }';\n`,
+    path: "apps/web/src/components/PluginLibrary.tsx",
+    content: `export const inert = 'export function PluginLibrary() { const [selectedTab, setSelectedTab] = useState<DiscoveryTab>("plugins"); providerPluginsQueryOptions({ enabled: selectedTab === "plugins" }); providerSkillsQueryOptions({ enabled: selectedTab === "skills", discoveryCwd !== null }); rankProviderDiscoveryItems(buildPluginSearchFields); rankProviderDiscoveryItems(buildSkillSearchFields); <InstalledStatus installed={isInstalledProviderPlugin(item)} />; <InstalledStatus installed={skill.enabled} />; <TabButton label="Plugins" /><TabButton label="Skills" />; pluginsQuery.isLoading filteredPluginEntries.length === 0; skillsQuery.isLoading filteredSkills.length === 0; marketplaceLoadErrors InlineWarning; !discoveryCwd && selectedTab === "skills" Skills need a workspace path; }';\n`,
   },
 ];
 
@@ -496,9 +490,9 @@ test("headings, labels, and protected anchor names alone cannot satisfy the UI c
 Agent | Chat · Projects · Groups · Models · Agents · Packages · Queue · Timeline
 
 ${[
-  "vendor/ui/apps/web/src/routes/_chat.plugins.tsx",
-  "vendor/ui/apps/web/src/routeTree.gen.ts",
-  "vendor/ui/apps/web/src/components/PluginLibrary.tsx",
+  "apps/web/src/routes/_chat.plugins.tsx",
+  "apps/web/src/routeTree.gen.ts",
+  "apps/web/src/components/PluginLibrary.tsx",
 ].join("\n")}
 `,
   );
@@ -515,6 +509,7 @@ ${[
     "ui.packages",
     "ui.permission",
     "ui.external-engine",
+    "ui.public-surface",
     "ui.plugin-skill-lineage",
     "ui.plugin-skill-mapping",
     "quality.ui",
@@ -545,13 +540,21 @@ for (const [rule, contradiction] of CONTRADICTION_CASES) {
   });
 }
 
-test("rejects explicit Queue replay even when the affirmative contract remains", async (t) => {
+test("rejects a reserved origin being promoted to an active Feedback API", async (t) => {
   const root = await createFixture(t);
   await appendText(
     root,
-    "architecture/product-state.md",
-    "delivery_unknown 可以自动重放。",
+    "architecture/public-surface.md",
+    "保留 origin 意味着 Feedback API 已上线。",
   );
+  const findings = await validateDocumentContract({ root });
+  assertFinding(findings, "owner.public-surface", "architecture/public-surface.md");
+  assertFinding(findings, "ui.public-surface", "architecture/public-surface.md");
+});
+
+test("rejects explicit Queue replay even when the affirmative contract remains", async (t) => {
+  const root = await createFixture(t);
+  await appendText(root, "architecture/product-state.md", "delivery_unknown 可以自动重放。");
   assertFinding(
     await validateDocumentContract({ root }),
     "queue.ownership",
@@ -565,7 +568,7 @@ test("harmless frontmatter, heading, and section-order editorial changes pass", 
   const content = await readFile(filePath, "utf8");
   const renamedHeadings = content.replace(/^#{1,6} .+$/gm, "## Editorial section");
   const sections = renamedHeadings.split(/(?=^## Editorial section$)/m);
-  const reordered = [sections[0], ...sections.slice(1).reverse()].join("");
+  const reordered = [sections[0], ...sections.slice(1).toReversed()].join("");
   await writeFile(filePath, `---\neditorial: true\n---\n\n${reordered}`);
 
   assert.deepEqual(await validateDocumentContract({ root }), []);

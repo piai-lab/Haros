@@ -1,10 +1,11 @@
 #!/usr/bin/env node
 
+import { createHash } from "node:crypto";
 import { readFile, readdir, stat } from "node:fs/promises";
 import path from "node:path";
 import process from "node:process";
 import { fileURLToPath } from "node:url";
-import { parseStructurePolicy, scanIdentity } from "./identity.mjs";
+import { parsePublicSurfaceDenylist, parseStructurePolicy, scanIdentity } from "./identity.mjs";
 import { repositoryFiles } from "./repository-files.mjs";
 import {
   ignoredVendorSourceFiles,
@@ -15,6 +16,17 @@ import {
 } from "./sources.mjs";
 
 const WALK_EXCLUSIONS = new Set([".git", ".pnpm", ".yarn", "node_modules"]);
+const EXPECTED_STRUCTURE_DEBT = {
+  count: 53,
+  sha256: "b8d8d1a7c8454c2cfe7bea32c362a9b680df7d50a4c467fe719ceab0d6d2521f",
+};
+
+export function structureDebtDigest(findings) {
+  const records = findings
+    .map((finding) => `${finding.path}\t${JSON.stringify(finding.rule)}\n`)
+    .toSorted();
+  return createHash("sha256").update(records.join("")).digest("hex");
+}
 
 function parseArguments(argv) {
   const runtimeFixtures = [];
@@ -66,7 +78,9 @@ async function discoverGeneratedRoots(root, directoryNames, explicitRoots, exclu
   for (const requested of explicitRoots) {
     const absolute = path.resolve(root, requested);
     if (!withinRoot(root, absolute) || !(await stat(absolute)).isDirectory()) {
-      throw new Error(`generated root must be an existing directory inside the repository: ${requested}`);
+      throw new Error(
+        `generated root must be an existing directory inside the repository: ${requested}`,
+      );
     }
     roots.add(absolute);
   }
@@ -89,12 +103,7 @@ async function discoverGeneratedRoots(root, directoryNames, explicitRoots, exclu
   return [...roots];
 }
 
-export async function discoverGeneratedFiles(
-  root,
-  policy,
-  explicitRoots = [],
-  excludedRoots = [],
-) {
+export async function discoverGeneratedFiles(root, policy, explicitRoots = [], excludedRoots = []) {
   const files = new Set();
   const roots = await discoverGeneratedRoots(
     root,
@@ -105,13 +114,15 @@ export async function discoverGeneratedFiles(
   for (const directory of roots) {
     await collectFiles(root, directory, files);
   }
-  return [...files].sort();
+  return [...files].toSorted();
 }
 
 export async function main(argv = process.argv.slice(2)) {
   const root = path.resolve(path.dirname(fileURLToPath(import.meta.url)), "..");
   const { candidate, generatedRoots, runtimeFixtures } = parseArguments(argv);
   const readme = await readFile(path.join(root, "README.md"), "utf8");
+  const publicSurface = await readFile(path.join(root, "architecture/public-surface.md"), "utf8");
+  const publicSurfaceRules = parsePublicSurfaceDenylist(publicSurface);
   const structurePolicy = parseStructurePolicy(readme);
   const inventoryFiles = repositoryFiles(root);
   const trackedFiles = trackedRepositoryFiles(root);
@@ -152,24 +163,53 @@ export async function main(argv = process.argv.slice(2)) {
     generatedFiles: generated,
     runtimeFixtures,
     exactRoots: sourcePolicy.exactRoots,
+    restrictedRules: publicSurfaceRules,
+    restrictedRoots: ["apps"],
   });
 
-  if (result.findings.length > 0) {
-    for (const finding of result.findings) {
+  const structureFindings = result.findings.filter((finding) => finding.surface === "structure");
+  const hardFindings = result.findings.filter((finding) => finding.surface !== "structure");
+  const structureDigest = structureDebtDigest(structureFindings);
+  const structureDebtMatches =
+    structureFindings.length === EXPECTED_STRUCTURE_DEBT.count &&
+    structureDigest === EXPECTED_STRUCTURE_DEBT.sha256;
+
+  if (hardFindings.length > 0 || !structureDebtMatches) {
+    for (const finding of hardFindings) {
       process.stderr.write(
         `${finding.path}:${finding.line}:${finding.column} ` +
           `[${finding.category}/${finding.surface}] repository policy rule ` +
           `${JSON.stringify(finding.rule)}\n`,
       );
     }
-    process.stderr.write(`identity check failed with ${result.findings.length} finding(s)\n`);
+    if (!structureDebtMatches) {
+      for (const finding of structureFindings) {
+        process.stderr.write(
+          `${finding.path}:${finding.line}:${finding.column} ` +
+            `[${finding.category}/${finding.surface}] repository policy rule ` +
+            `${JSON.stringify(finding.rule)}\n`,
+        );
+      }
+      process.stderr.write(
+        `structure debt differs from the bounded T1 set: expected ` +
+          `${EXPECTED_STRUCTURE_DEBT.count}/${EXPECTED_STRUCTURE_DEBT.sha256}, observed ` +
+          `${structureFindings.length}/${structureDigest}\n`,
+      );
+    }
+    process.stderr.write(
+      `identity check failed with ${hardFindings.length} hard finding(s)` +
+        (structureDebtMatches ? "" : " and changed structure debt") +
+        `\n`,
+    );
     return 1;
   }
 
   process.stdout.write(
-    `identity/structure check passed: ${source.length} source file(s), ` +
+    `identity hard-green: ${source.length} source file(s), ` +
       `${generated.length} generated file(s), ${result.rules.length} identity rule(s), ` +
-      `max depth ${result.structurePolicy.maxDirectoryDepth}\n`,
+      `${result.restrictedRules.length} public-surface destination rule(s), ` +
+      `max depth ${result.structurePolicy.maxDirectoryDepth}; expected-red structure debt ` +
+      `${structureFindings.length} finding(s), sha256 ${structureDigest}\n`,
   );
   return 0;
 }

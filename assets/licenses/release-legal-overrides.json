@@ -1,0 +1,220 @@
+{
+  "schemaVersion": 1,
+  "entries": [
+    {
+      "packageIds": [
+        "@earendil-works/pi-agent-core@0.81.1",
+        "@earendil-works/pi-ai@0.81.1",
+        "@earendil-works/pi-coding-agent@0.81.1",
+        "@earendil-works/pi-tui@0.81.1"
+      ],
+      "license": "MIT",
+      "kind": "exact-upstream",
+      "assetPath": "assets/licenses/pi-MIT.txt",
+      "sha256": "0457f5bcec3b3b211605dfb5d1a49042fd638f3686a410fe099c24a25af13c48",
+      "manifestSha256ByPackageId": {
+        "@earendil-works/pi-agent-core@0.81.1": "a01386451a247c90693ee2c59d9998585caa71cbc528efe554ee01e941851c18",
+        "@earendil-works/pi-ai@0.81.1": "3038beb8acdc2202b21b16339a188acc6b8e216e40c41f51cfd2d996682bfff5",
+        "@earendil-works/pi-coding-agent@0.81.1": "09c53e8de6d5e475715d88d489c825e03f71ee18bbc0d2e33d05c92108b09571",
+        "@earendil-works/pi-tui@0.81.1": "eded5f50740f0cb8f08ac17224402c5907d1734cde72aa52732f688acfd1f305"
+      },
+      "revision": "20be4b18d4c57487f8993d2762bace129f0cf7c6",
+      "sourcePath": "LICENSE",
+      "sourceUrl": "https://github.com/earendil-works/pi/blob/20be4b18d4c57487f8993d2762bace129f0cf7c6/LICENSE",
+      "upstreamLegalTextAbsent": false
+    },
+    {
+      "packageIds": [
+        "@aws-sdk/credential-provider-http@3.972.59",
+        "@aws-sdk/credential-provider-login@3.972.63",
+        "@aws-sdk/nested-clients@3.997.31"
+      ],
+      "license": "Apache-2.0",
+      "kind": "exact-upstream",
+      "assetPath": "assets/licenses/aws-sdk-Apache-2.0.txt",
+      "sha256": "edea91454b811f127fbdea3d86f378f6719bd372ed440abf82b232f6fca06c3d",
+      "manifestSha256ByPackageId": {
+        "@aws-sdk/credential-provider-http@3.972.59": "6aa19753c43a1a1b188fc541e5269f5271b2a3e7b8c081b60a0498780f72cd85",
+        "@aws-sdk/credential-provider-login@3.972.63": "b51c9ba96688c9d7cbb5b0db82e22c0f030d7426294f121598845a144e658b99",
+        "@aws-sdk/nested-clients@3.997.31": "193b4d1ae3681b3ce5d316e72d391b851752d9bda32421e5d7e67e785023d1cd"
+      },
+      "revision": "ceb9aeec0cc3c34d2713ef09a6ee61fb1595ea19",
+      "sourcePath": "LICENSE",
+      "sourceUrl": "https://github.com/aws/aws-sdk-js-v3/blob/ceb9aeec0cc3c34d2713ef09a6ee61fb1595ea19/LICENSE",
+      "upstreamLegalTextAbsent": false
+    },
+    {
+      "packageIds": ["@msgpackr-extract/msgpackr-extract-darwin-arm64@3.0.3"],
+      "license": "MIT",
+      "kind": "exact-upstream",
+      "assetPath": "assets/licenses/msgpackr-extract-MIT.txt",
+      "sha256": "2b41a50a006ffc7770db2450283956e4cb1aae567c193aeb1e65e8aef6c9f1f6",
+      "manifestSha256ByPackageId": {
+        "@msgpackr-extract/msgpackr-extract-darwin-arm64@3.0.3": "2e29113880e01d2bbdd5b73acfe868c4c1e8e33895141dbf30ae746cc00b2118"
+      },
+      "revision": "db8f5b97e7aaab0bcad95f10582915d417153689",
+      "sourcePath": "LICENSE",
+      "sourceUrl": "https://github.com/kriszyp/msgpackr-extract/blob/db8f5b97e7aaab0bcad95f10582915d417153689/LICENSE",
+      "upstreamLegalTextAbsent": false
+    },
+    {
+      "packageIds": ["@opencode-ai/sdk@1.15.13"],
+      "license": "MIT",
+      "kind": "exact-upstream",
+      "assetPath": "assets/licenses/opencode-MIT.txt",
+      "sha256": "22340582fd58b5e5591fdf93d2389028ea4625c8a07398d80973532980698de7",
+      "manifestSha256ByPackageId": {
+        "@opencode-ai/sdk@1.15.13": "389f3fe4b859309ff51efbe8253c1968fecc4e9d148dfd555b4d6bcfd3e20fb5"
+      },
+      "revision": "385cb694419f98103af0e8fc6187ddcbcbb6eecb",
+      "sourcePath": "LICENSE",
+      "sourceUrl": "https://github.com/anomalyco/opencode/blob/385cb694419f98103af0e8fc6187ddcbcbb6eecb/LICENSE",
+      "upstreamLegalTextAbsent": false
+    },
+    {
+      "packageIds": ["@pierre/theming@0.0.2"],
+      "license": "apache-2.0",
+      "kind": "exact-upstream",
+      "assetPath": "assets/licenses/pierre-Apache-2.0.txt",
+      "sha256": "14d11b262bd66e97458207a1abaa38164e6c85000a14d8bf4dd133f41d9ed618",
+      "manifestSha256ByPackageId": {
+        "@pierre/theming@0.0.2": "35f9e9a771aab1e45a468b8c42d7a797d45e68b0a85e3c5404926f1c97ace2f3"
+      },
+      "revision": "0d40be4920992b2a1fb0a64153970dcbdb01f22a",
+      "sourcePath": "packages/diffs/LICENSE.md",
+      "sourceUrl": "https://github.com/pierrecomputer/pierre/blob/0d40be4920992b2a1fb0a64153970dcbdb01f22a/packages/diffs/LICENSE.md",
+      "upstreamLegalTextAbsent": false
+    },
+    {
+      "packageIds": ["@xterm/headless@6.0.0"],
+      "license": "MIT",
+      "kind": "exact-upstream",
+      "assetPath": "assets/licenses/xterm-MIT.txt",
+      "sha256": "3474bccef5e42b233c8241e6b4fc2b78555f8a775a9e5a84d0d4b1cf724b20d9",
+      "manifestSha256ByPackageId": {
+        "@xterm/headless@6.0.0": "6c39530ee759998113bd8bcc306d1b725c0b1d5b0cdc04e071f6945a5f5edf1a"
+      },
+      "revision": "f447274f430fd22513f6adbf9862d19524471c04",
+      "sourcePath": "LICENSE",
+      "sourceUrl": "https://github.com/xtermjs/xterm.js/blob/f447274f430fd22513f6adbf9862d19524471c04/LICENSE",
+      "upstreamLegalTextAbsent": false
+    },
+    {
+      "packageIds": ["data-uri-to-buffer@4.0.1"],
+      "license": "MIT",
+      "kind": "exact-upstream",
+      "assetPath": "assets/licenses/data-uri-to-buffer-MIT.txt",
+      "sha256": "ba2491b7586f4c41bfcc52d2b9a954b7798d8e3e096cb4d1c4adf73edef119c9",
+      "manifestSha256ByPackageId": {
+        "data-uri-to-buffer@4.0.1": "ad4f90a737ab5d8af4dad265e9218456e3779ca5beb70df38dd5feecf80121dd"
+      },
+      "revision": "85cd8c854aefbf1bb636789d80364cfac8ea1583",
+      "sourcePath": "README.md#license",
+      "sourceUrl": "https://github.com/TooTallNate/node-data-uri-to-buffer/blob/85cd8c854aefbf1bb636789d80364cfac8ea1583/README.md#license",
+      "upstreamLegalTextAbsent": false
+    },
+    {
+      "packageIds": ["lru_map@0.4.1"],
+      "license": "MIT",
+      "kind": "exact-upstream",
+      "assetPath": "assets/licenses/lru-map-MIT.txt",
+      "sha256": "977ca8457bc85819dc6a11201b4a7863670d990e90beab8e145a5edb0c599944",
+      "manifestSha256ByPackageId": {
+        "lru_map@0.4.1": "4de9809234c0ef8378d55736cf5ce55677934b5d4e6a150532640afbfc08bdad"
+      },
+      "revision": "77c51e90dbcf4ffc0d27e6bc04a012a6b54a05e1",
+      "sourcePath": "README.md#mit-license",
+      "sourceUrl": "https://github.com/rsms/js-lru/blob/77c51e90dbcf4ffc0d27e6bc04a012a6b54a05e1/README.md#mit-license",
+      "upstreamLegalTextAbsent": false
+    },
+    {
+      "packageIds": ["standardwebhooks@1.0.0"],
+      "license": "MIT",
+      "kind": "exact-upstream",
+      "assetPath": "assets/licenses/standard-webhooks-MIT.txt",
+      "sha256": "174cd5a52ded13b11ead8d347c95173b6448f0b9133c49dd5efcc4fa9251f4c9",
+      "manifestSha256ByPackageId": {
+        "standardwebhooks@1.0.0": "bd74e59fd554715c321fef0be1a8fc301b5a188f6d1c090c583eeaa66b9e6b11"
+      },
+      "revision": "929bf0c1928b188287eaf88d0a9f0a4e87df6499",
+      "sourcePath": "libraries/LICENSE",
+      "sourceUrl": "https://github.com/standard-webhooks/standard-webhooks/blob/929bf0c1928b188287eaf88d0a9f0a4e87df6499/libraries/LICENSE",
+      "upstreamLegalTextAbsent": false
+    },
+    {
+      "packageIds": ["@mariozechner/clipboard@0.3.9"],
+      "license": "MIT",
+      "kind": "canonical-spdx-recovery",
+      "assetPath": "assets/licenses/canonical-MIT.txt",
+      "sha256": "07c7993a082dd28479b2f48dd4ab9fac71bd97aeeecaa4cd89ef863fb3867c67",
+      "revision": "3a0f58eb7250a9a46ad77863bc4618eee099a248",
+      "sourcePath": "package.json",
+      "sourceUrl": "https://github.com/badlogic/clipboard/blob/3a0f58eb7250a9a46ad77863bc4618eee099a248/package.json",
+      "manifestSha256ByPackageId": {
+        "@mariozechner/clipboard@0.3.9": "780f1b41356ce9e5bb0d31d3ce111af941d141e9a96ac8e1b8ca0a298add4547"
+      },
+      "canonicalTextSource": "https://github.com/spdx/license-list-data/blob/c4a7237ec8f4654e867546f9f409749300f1bf4c/text/MIT.txt",
+      "upstreamLegalTextAbsent": true
+    },
+    {
+      "packageIds": ["@mariozechner/clipboard-darwin-arm64@0.3.9"],
+      "license": "MIT",
+      "kind": "canonical-spdx-recovery",
+      "assetPath": "assets/licenses/canonical-MIT.txt",
+      "sha256": "07c7993a082dd28479b2f48dd4ab9fac71bd97aeeecaa4cd89ef863fb3867c67",
+      "revision": "3a0f58eb7250a9a46ad77863bc4618eee099a248",
+      "sourcePath": "npm/darwin-arm64/package.json",
+      "sourceUrl": "https://github.com/badlogic/clipboard/tree/3a0f58eb7250a9a46ad77863bc4618eee099a248/npm/darwin-arm64",
+      "manifestSha256ByPackageId": {
+        "@mariozechner/clipboard-darwin-arm64@0.3.9": "dc0c63bcf5aab62e50c114aa22cd78afe5666ccb67bae713164260c0ed5b3957"
+      },
+      "canonicalTextSource": "https://github.com/spdx/license-list-data/blob/c4a7237ec8f4654e867546f9f409749300f1bf4c/text/MIT.txt",
+      "upstreamLegalTextAbsent": true
+    },
+    {
+      "packageIds": ["@mariozechner/clipboard-darwin-universal@0.3.9"],
+      "license": "MIT",
+      "kind": "canonical-spdx-recovery",
+      "assetPath": "assets/licenses/canonical-MIT.txt",
+      "sha256": "07c7993a082dd28479b2f48dd4ab9fac71bd97aeeecaa4cd89ef863fb3867c67",
+      "revision": "3a0f58eb7250a9a46ad77863bc4618eee099a248",
+      "sourcePath": "npm/darwin-universal/package.json",
+      "sourceUrl": "https://github.com/badlogic/clipboard/tree/3a0f58eb7250a9a46ad77863bc4618eee099a248/npm/darwin-universal",
+      "manifestSha256ByPackageId": {
+        "@mariozechner/clipboard-darwin-universal@0.3.9": "01e49ef4ddc4494a99a26b94d7e3130cfc8d782223da99674fd0d7eca09fb3d5"
+      },
+      "canonicalTextSource": "https://github.com/spdx/license-list-data/blob/c4a7237ec8f4654e867546f9f409749300f1bf4c/text/MIT.txt",
+      "upstreamLegalTextAbsent": true
+    },
+    {
+      "packageIds": ["kubernetes-types@1.30.0"],
+      "license": "Apache-2.0",
+      "kind": "canonical-spdx-recovery",
+      "assetPath": "assets/licenses/canonical-Apache-2.0.txt",
+      "sha256": "c274f80372d90c012937370f0e1f15087d22e308ef98b27cea5dc0d2d088366c",
+      "revision": "a46eb94629404af98a6758cd843b31816237d7d0",
+      "sourcePath": "package.json",
+      "sourceUrl": "https://github.com/silverlyra/kubernetes-types/blob/a46eb94629404af98a6758cd843b31816237d7d0/package.json",
+      "manifestSha256ByPackageId": {
+        "kubernetes-types@1.30.0": "2e23caf0261433c70ddaff7a11de94f05c888c8f0433d2909253ae34a48ab306"
+      },
+      "canonicalTextSource": "https://github.com/spdx/license-list-data/blob/c4a7237ec8f4654e867546f9f409749300f1bf4c/text/Apache-2.0.txt",
+      "upstreamLegalTextAbsent": true
+    },
+    {
+      "packageIds": ["lazy-val@1.0.5"],
+      "license": "MIT",
+      "kind": "canonical-spdx-recovery",
+      "assetPath": "assets/licenses/canonical-MIT.txt",
+      "sha256": "07c7993a082dd28479b2f48dd4ab9fac71bd97aeeecaa4cd89ef863fb3867c67",
+      "revision": "b69ad4119f1b19bdab13c61ee2fcc88d46b89071",
+      "sourcePath": "package.json",
+      "sourceUrl": "https://github.com/develar/lazy-val/blob/b69ad4119f1b19bdab13c61ee2fcc88d46b89071/package.json",
+      "manifestSha256ByPackageId": {
+        "lazy-val@1.0.5": "a5096f95098452cf6fe5c8ac9be8f13f59ab7c9f605ba5ef92c91b2c505744f0"
+      },
+      "canonicalTextSource": "https://github.com/spdx/license-list-data/blob/c4a7237ec8f4654e867546f9f409749300f1bf4c/text/MIT.txt",
+      "upstreamLegalTextAbsent": true
+    }
+  ]
+}

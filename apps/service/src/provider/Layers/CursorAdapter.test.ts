@@ -1,0 +1,26 @@
+// FILE: CursorAdapter.test.ts
+// Purpose: Characterizes Cursor's private OmniMind host-policy delivery.
+// Layer: Provider adapter tests
+
+import { OMNIMIND_HARNESS_POLICY_MARKER } from "../../agentGateway/harnessPolicy.ts";
+import { describe, expect, it } from "vitest";
+
+import { takeCursorOmniMindHarnessPolicyTextPart } from "./CursorAdapter.ts";
+
+describe("Cursor OmniMind harness policy", () => {
+  it("delivers scoped MCP host context exactly once per fresh/load/fork session", () => {
+    for (const lifecycle of ["fresh", "load", "fork"] as const) {
+      const state: { harnessPolicyDelivered?: boolean } = {};
+      const first = takeCursorOmniMindHarnessPolicyTextPart(state, true);
+      expect(first?.text, lifecycle).toContain(OMNIMIND_HARNESS_POLICY_MARKER);
+      expect(first?.text, lifecycle).toContain("Use the omnimind_* tools");
+      expect(takeCursorOmniMindHarnessPolicyTextPart(state, true), lifecycle).toBeNull();
+    }
+  });
+
+  it("stays truthful without a scoped gateway connection", () => {
+    expect(takeCursorOmniMindHarnessPolicyTextPart({}, false)?.text).toContain(
+      "OmniMind MCP control is unavailable",
+    );
+  });
+});

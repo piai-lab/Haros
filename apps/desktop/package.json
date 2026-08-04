@@ -1,0 +1,32 @@
+{
+  "name": "@omnimind/desktop",
+  "version": "0.1.0-alpha.0",
+  "private": true,
+  "main": "dist-electron/main.js",
+  "scripts": {
+    "dev": "bun run scripts/dev.mjs",
+    "dev:bundle": "tsdown --watch",
+    "dev:electron": "bun run scripts/dev-electron.mjs",
+    "build": "tsdown",
+    "start": "bun run scripts/start-electron.mjs",
+    "typecheck": "tsc --noEmit",
+    "test": "vitest run --passWithNoTests",
+    "smoke-process-test": "node --test scripts/smoke-process.test.mjs scripts/smoke-environment.test.mjs",
+    "smoke-test": "node scripts/smoke-test.mjs"
+  },
+  "dependencies": {
+    "effect": "catalog:",
+    "electron": "40.10.6",
+    "electron-updater": "^6.6.2"
+  },
+  "devDependencies": {
+    "@omnimind/contracts": "workspace:*",
+    "@omnimind/shared": "workspace:*",
+    "@types/node": "catalog:",
+    "tsdown": "catalog:",
+    "typescript": "catalog:",
+    "vitest": "catalog:",
+    "wait-on": "^8.0.2"
+  },
+  "productName": "OmniMind"
+}

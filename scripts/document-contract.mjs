@@ -6,6 +6,7 @@ const DOCUMENT_PATHS = [
   "README.md",
   "architecture/README.md",
   "architecture/workbench.md",
+  "architecture/public-surface.md",
   "architecture/product-state.md",
   "architecture/execution.md",
   "execution-brief.md",
@@ -14,9 +15,9 @@ const DOCUMENT_PATHS = [
 ];
 
 const PLUGIN_ANCHOR_PATHS = [
-  "vendor/ui/apps/web/src/routes/_chat.plugins.tsx",
-  "vendor/ui/apps/web/src/routeTree.gen.ts",
-  "vendor/ui/apps/web/src/components/PluginLibrary.tsx",
+  "apps/web/src/routes/_chat.plugins.tsx",
+  "apps/web/src/routeTree.gen.ts",
+  "apps/web/src/components/PluginLibrary.tsx",
 ];
 
 const P = {
@@ -24,14 +25,15 @@ const P = {
   root: "README.md",
   architecture: "architecture/README.md",
   workbench: "architecture/workbench.md",
+  publicSurface: "architecture/public-surface.md",
   productState: "architecture/product-state.md",
   execution: "architecture/execution.md",
   brief: "execution-brief.md",
   campaign: "missions/independent-omnimind-v1.md",
   research: "research/README.md",
-  pluginRoute: "vendor/ui/apps/web/src/routes/_chat.plugins.tsx",
-  routeTree: "vendor/ui/apps/web/src/routeTree.gen.ts",
-  pluginLibrary: "vendor/ui/apps/web/src/components/PluginLibrary.tsx",
+  pluginRoute: "apps/web/src/routes/_chat.plugins.tsx",
+  routeTree: "apps/web/src/routeTree.gen.ts",
+  pluginLibrary: "apps/web/src/components/PluginLibrary.tsx",
 };
 
 const RULE_MESSAGES = {
@@ -43,20 +45,29 @@ const RULE_MESSAGES = {
   "owner.campaign": "Campaign acceptance ownership is incomplete or contradictory",
   "owner.product-state": "product-state object ownership is incomplete or contradictory",
   "owner.execution": "execution topology ownership is incomplete or contradictory",
+  "owner.public-surface": "public-surface ownership is incomplete or contradictory",
   "route.mandatory": "mandatory reading route is incomplete or out of order",
   "route.local-link": "required local owner route is missing or changed",
-  "ui.product-entry": "product entry and workspace hierarchy contract is incomplete or contradictory",
+  "ui.product-entry":
+    "product entry and workspace hierarchy contract is incomplete or contradictory",
   "ui.shared-work": "shared work surface contract is incomplete or contradictory",
   "ui.workbench": "Workbench domain coverage is incomplete or contradictory",
   "ui.onboarding": "onboarding and failure recovery contract is incomplete or contradictory",
-  "ui.provenance": "source, rights, and diagnostic provenance contract is incomplete or contradictory",
+  "ui.provenance":
+    "source, rights, and diagnostic provenance contract is incomplete or contradictory",
   "ui.models": "Models settings contract is incomplete or contradictory",
   "ui.agents": "Agents settings contract is incomplete or contradictory",
   "ui.packages": "Packages settings contract is incomplete or contradictory",
-  "ui.permission": "permission policy and enforcement-source contract is incomplete or contradictory",
-  "ui.external-engine": "external Engine capability and no-fallback contract is incomplete or contradictory",
-  "ui.plugin-skill-lineage": "protected plugin and skill lineage contract is incomplete or contradictory",
-  "ui.plugin-skill-anchor": "protected plugin and skill source anchor is missing or no longer recognizable",
+  "ui.permission":
+    "permission policy and enforcement-source contract is incomplete or contradictory",
+  "ui.external-engine":
+    "external Engine capability and no-fallback contract is incomplete or contradictory",
+  "ui.public-surface":
+    "public-surface registry and fail-closed product contract is incomplete or contradictory",
+  "ui.plugin-skill-lineage":
+    "protected plugin and skill lineage contract is incomplete or contradictory",
+  "ui.plugin-skill-anchor":
+    "protected plugin and skill source anchor is missing or no longer recognizable",
   "ui.plugin-skill-mapping": "plugin and skill product-destination mapping is incomplete",
   "queue.ownership": "Queue ownership and no-replay contract is incomplete or contradictory",
   "quality.ui": "UI quality and bounded-rendering contract is incomplete or contradictory",
@@ -141,9 +152,7 @@ function hasAny(text, terms) {
 
 function hasClause(text, groups) {
   const blocks = text.split(/\n\s*\n/);
-  return blocks.some((block) =>
-    groups.every((alternatives) => hasAny(block, alternatives)),
-  );
+  return blocks.some((block) => groups.every((alternatives) => hasAny(block, alternatives)));
 }
 
 function clausesSpanDistinctBlocks(text, clauses, minimumDistinctBlocks) {
@@ -163,10 +172,7 @@ function clausesSpanDistinctBlocks(text, clauses, minimumDistinctBlocks) {
       if (visitedBlocks.has(blockIndex)) continue;
       visitedBlocks.add(blockIndex);
       const assignedClause = clauseByBlock.get(blockIndex);
-      if (
-        assignedClause === undefined ||
-        assignDistinctBlock(assignedClause, visitedBlocks)
-      ) {
+      if (assignedClause === undefined || assignDistinctBlock(assignedClause, visitedBlocks)) {
         clauseByBlock.set(blockIndex, clauseIndex);
         return true;
       }
@@ -220,6 +226,7 @@ function validateOwners(findings, documents, available) {
   const root = textOf(documents, P.root);
   const architecture = textOf(documents, P.architecture);
   const productState = textOf(documents, P.productState);
+  const publicSurface = textOf(documents, P.publicSurface);
   const execution = textOf(documents, P.execution);
   const brief = textOf(documents, P.brief);
   const campaign = textOf(documents, P.campaign);
@@ -275,11 +282,32 @@ function validateOwners(findings, documents, available) {
       "workbench.md",
       "product-state.md",
       "execution.md",
+      "public-surface.md",
       "所有用户可见行为",
       "七个 durable product objects",
       "完整进程 topology",
+    ]) && hasAny(architecture, ["长期约束实现", "稳定职责"]),
+  );
+
+  check(
+    findings,
+    available,
+    "owner.public-surface",
+    P.publicSurface,
+    hasAll(publicSurface, [
+      "唯一架构 owner",
+      "https://omnimind.wisdomeyes.cn",
+      "只被保留，尚未激活",
+      "Public site origin",
+      "Feedback endpoint",
+      "Release/update authority",
+      "当前不是 public API",
     ]) &&
-      hasAny(architecture, ["长期约束实现", "稳定职责"]),
+      hasClause(publicSurface, [["三者"], ["独立激活", "独立"], ["撤销"], ["失败"]]) &&
+      !contradicts(publicSurface, [
+        /保留[^。\n]*(?:等于|意味着|证明)[^。\n]*(?:Feedback API|website|网站|Docs|Changelog)[^。\n]*(?:已上线|已激活)/i,
+        /Feedback endpoint[^。\n]*(?:从|继承)[^。\n]*public origin[^。\n]*(?:推导|授权)/i,
+      ]),
   );
 
   check(
@@ -289,7 +317,9 @@ function validateOwners(findings, documents, available) {
     P.research,
     hasAll(research, ["证据", "source-review.md", "decision-record.md"]) &&
       hasAny(research, ["不拥有产品 doctrine", "不拥有稳定 contract", "可推翻"]) &&
-      !contradicts(research, [/research\s*(?:拥有|定义)\s*(?:产品 doctrine|稳定 contract|施工顺序)/i]),
+      !contradicts(research, [
+        /research\s*(?:拥有|定义)\s*(?:产品 doctrine|稳定 contract|施工顺序)/i,
+      ]),
   );
 
   check(
@@ -299,9 +329,7 @@ function validateOwners(findings, documents, available) {
     P.brief,
     hasAll(brief, ["施工顺序", "先完成并独立复核 Stage 0", "何时停止", "需要什么 proof"]) &&
       hasClause(brief, [["只回答"], ["施工"], ["停止"], ["proof"]]) &&
-      !contradicts(brief, [
-        /本文件\s*(?:拥有|定义)\s*(?:完整进程拓扑|产品对象全集|完整 UI 契约)/,
-      ]),
+      !contradicts(brief, [/本文件\s*(?:拥有|定义)\s*(?:完整进程拓扑|产品对象全集|完整 UI 契约)/]),
   );
 
   check(
@@ -311,9 +339,7 @@ function validateOwners(findings, documents, available) {
     P.campaign,
     hasAll(campaign, ["Claim", "Proof type", "Status", "Evidence", "SHA"]) &&
       hasClause(campaign, [["只拥有 Campaign claim 状态"], ["不定义产品"], ["施工计划"]]) &&
-      !contradicts(campaign, [
-        /本文件\s*(?:拥有|定义)\s*(?:产品 doctrine|稳定 contract|施工顺序)/,
-      ]),
+      !contradicts(campaign, [/本文件\s*(?:拥有|定义)\s*(?:产品 doctrine|稳定 contract|施工顺序)/]),
   );
 
   const productObjects = [
@@ -325,7 +351,10 @@ function validateOwners(findings, documents, available) {
     "ResourceRef",
     "OperationReceipt",
   ];
-  const declaredObjects = productState.match(/^- `(?:Workspace|Conversation|Entry|Run|EngineBinding|ResourceRef|OperationReceipt)`：/gm) ?? [];
+  const declaredObjects =
+    productState.match(
+      /^- `(?:Workspace|Conversation|Entry|Run|EngineBinding|ResourceRef|OperationReceipt)`：/gm,
+    ) ?? [];
   check(
     findings,
     available,
@@ -333,7 +362,12 @@ function validateOwners(findings, documents, available) {
     P.productState,
     hasAll(productState, productObjects) &&
       declaredObjects.length === productObjects.length &&
-      hasClause(productState, [["Package generation"], ["不是", "不增加"], ["独立", "第八个"], ["lease", "LKG"]]) &&
+      hasClause(productState, [
+        ["Package generation"],
+        ["不是", "不增加"],
+        ["独立", "第八个"],
+        ["lease", "LKG"],
+      ]) &&
       hasAny(productState, ["不增加第八个 durable product object", "不增加第八个"]),
   );
 
@@ -349,14 +383,21 @@ function validateOwners(findings, documents, available) {
       "External Engine",
       "进程 topology",
       "target responsibility layout",
-    ]) &&
-      hasAny(execution, ["不要求提前制造空目录", "不得为了匹配 topology 创建占位 package"]),
+    ]) && hasAny(execution, ["不要求提前制造空目录", "不得为了匹配 topology 创建占位 package"]),
   );
 }
 
 function validateRoutes(findings, documents, available) {
   const mandatoryRoutes = [
-    [P.agents, ["README.md", "architecture/README.md", "execution-brief.md", "missions/independent-omnimind-v1.md"]],
+    [
+      P.agents,
+      [
+        "README.md",
+        "architecture/README.md",
+        "execution-brief.md",
+        "missions/independent-omnimind-v1.md",
+      ],
+    ],
     [P.brief, ["README →", "architecture index", "本 brief", "active Campaign"]],
     [P.campaign, ["README.md", "architecture/README.md", "execution-brief.md"]],
   ];
@@ -372,20 +413,28 @@ function validateRoutes(findings, documents, available) {
   }
 
   const requiredLinks = [
-    [P.root, [
-      "architecture/README.md",
-      "research/README.md",
-      "execution-brief.md",
-      "missions/independent-omnimind-v1.md",
-    ]],
-    [P.architecture, ["workbench.md", "product-state.md", "execution.md"]],
-    [P.brief, [
-      "README.md",
-      "architecture/workbench.md",
-      "architecture/product-state.md",
-      "architecture/execution.md",
-      "research/source-review.md",
-    ]],
+    [
+      P.root,
+      [
+        "architecture/README.md",
+        "architecture/public-surface.md",
+        "research/README.md",
+        "execution-brief.md",
+        "missions/independent-omnimind-v1.md",
+      ],
+    ],
+    [P.architecture, ["workbench.md", "public-surface.md", "product-state.md", "execution.md"]],
+    [
+      P.brief,
+      [
+        "README.md",
+        "architecture/workbench.md",
+        "architecture/public-surface.md",
+        "architecture/product-state.md",
+        "architecture/execution.md",
+        "research/source-review.md",
+      ],
+    ],
     [P.campaign, ["../execution-brief.md", "../research/source-review.md"]],
   ];
 
@@ -402,15 +451,129 @@ function validateRoutes(findings, documents, available) {
 
 function validateUiContract(findings, documents, available) {
   const workbench = textOf(documents, P.workbench);
+  const publicSurface = textOf(documents, P.publicSurface);
+
+  const registryHeaders = [
+    "Surface",
+    "Canonical route",
+    "Product entry",
+    "Direction",
+    "Data",
+    "Activation gate",
+    "Unavailable behavior",
+    "Authority/owner",
+  ];
+  const registrySurfaces = [
+    "Home",
+    "Docs",
+    "Changelog",
+    "Download",
+    "Privacy",
+    "Support",
+    "Feedback",
+    "Share/social",
+    "Update discovery",
+    "Future deep link",
+  ];
+  const registryRows = publicSurface
+    .split("\n")
+    .filter((line) => line.startsWith("|"))
+    .map((line) =>
+      line
+        .split("|")
+        .slice(1, -1)
+        .map((cell) => cell.trim()),
+    );
+  const registryHeaderValid =
+    registryRows[0]?.length === registryHeaders.length &&
+    registryRows[0].every((header, index) => header === registryHeaders[index]);
+  const surfaceRows = registryRows.filter((row) => registrySurfaces.includes(row[0]));
+  const publicOwnerValid =
+    hasAll(publicSurface, [
+      "**Future reserved candidate:** `POST /api/v1/feedback`",
+      "当前不是 public API",
+      "production-approved",
+      "不从 public origin 推导",
+      "调用 `fetch` 前失败",
+      "保留 draft",
+      "不后台重试",
+      "allowlist diagnostics",
+      "不得加入",
+    ]) &&
+    registryHeaderValid &&
+    surfaceRows.length === registrySurfaces.length &&
+    registrySurfaces.every((surface) =>
+      surfaceRows.some((row) => row[0] === surface && row.length === registryHeaders.length),
+    ) &&
+    hasClause(publicSurface, [["Feedback"], ["production"], ["disabled"], ["不发请求"]]) &&
+    hasClause(publicSurface, [
+      ["prompt"],
+      ["message"],
+      ["code"],
+      ["file content/path"],
+      ["credential"],
+      ["terminal"],
+      ["log"],
+    ]) &&
+    !contradicts(publicSurface, [
+      /保留[^。\n]*(?:等于|意味着|证明)[^。\n]*Feedback API[^。\n]*(?:已上线|已激活)/i,
+      /(?:失败|无配置)[^。\n]*(?:可以|允许|会|应当|必须)[^。\n]*(?:清空|丢弃)[^。\n]*draft/i,
+      /(?:可以|允许|会|应当|必须)[^。\n]*(?:自动|后台)[^。\n]*重试/i,
+    ]);
+  const workbenchPublicValid =
+    hasAll(workbench, [
+      "public-surface.md",
+      "Docs",
+      "Changelog",
+      "disabled",
+      "unavailable",
+      "猜测 URL",
+      "Feedback",
+      "不得发起网络请求",
+      "保留",
+      "draft",
+      "不显示 success",
+      "不后台重试",
+      "prompt",
+      "message",
+      "code",
+      "file/path",
+      "credential",
+      "environment",
+      "terminal",
+      "log",
+    ]) &&
+    hasClause(workbench, [
+      ["Feedback"],
+      ["未激活", "无独立获批 endpoint"],
+      ["disabled"],
+      ["发送内容"],
+      ["不发送"],
+    ]) &&
+    !contradicts(workbench, [
+      /(?:Docs|Changelog)[^。\n]*(?:fallback|猜测)[^。\n]*URL/i,
+      /Feedback[^。\n]*(?:无独立获批 endpoint|未激活)[^。\n]*(?:仍可|允许)[^。\n]*(?:提交|发起网络请求)/i,
+    ]);
+
+  check(findings, available, "ui.public-surface", P.publicSurface, publicOwnerValid);
+  check(findings, available, "ui.public-surface", P.workbench, workbenchPublicValid);
 
   check(
     findings,
     available,
     "ui.product-entry",
     P.workbench,
-    hasClause(workbench, [["Agent | Chat"], ["Agent 在左", "Agent 左"], ["Chat 在右", "Chat 右"]]) &&
+    hasClause(workbench, [
+      ["Agent | Chat"],
+      ["Agent 在左", "Agent 左"],
+      ["Chat 在右", "Chat 右"],
+    ]) &&
       hasClause(workbench, [["Projects"], ["Groups"], ["上", "先于"]]) &&
-      hasClause(workbench, [["Chat"], ["无 Primary Folder", "没有 Primary Folder"], ["Send to Agent"]]) &&
+      hasClause(workbench, [
+        ["Chat"],
+        ["无 Primary Folder", "没有 Primary Folder"],
+        ["Send to Agent"],
+      ]) &&
       hasClause(workbench, [["Agent"], ["Primary Folder"], ["写入", "write"]]) &&
       !contradicts(workbench, [
         /Chat[^\n]{0,80}(?:必须|应当|可以)?\s*(?:拥有|具有)\s*Primary Folder/i,
@@ -464,8 +627,7 @@ function validateUiContract(findings, documents, available) {
       "真实 PTY",
       "stale diff",
       "Remote 延迟",
-    ]) &&
-      hasAny(workbench, ["失败局部", "失败保持局部", "局部失败"]),
+    ]) && hasAny(workbench, ["失败局部", "失败保持局部", "局部失败"]),
   );
 
   check(
@@ -473,10 +635,22 @@ function validateUiContract(findings, documents, available) {
     available,
     "ui.onboarding",
     P.workbench,
-    hasClause(workbench, [["Powered by Pi"], ["bundled-native", "默认"]]) &&
+    hasClause(workbench, [
+      ["OmniMind Agent"],
+      ["bundled-native"],
+      ["日常品牌口号"],
+      ["About"],
+      ["Licenses"],
+    ]) &&
       hasClause(workbench, [["Provider"], ["Model"], ["local path", "本地路径"]]) &&
       hasClause(workbench, [["权限策略"], ["enforcement source", "实际 enforcement"]]) &&
-      hasAll(workbench, ["认证取消或过期", "离线", "Runtime 缺失", "没有兼容 Model", "版本不匹配"]) &&
+      hasAll(workbench, [
+        "认证取消或过期",
+        "离线",
+        "Runtime 缺失",
+        "没有兼容 Model",
+        "版本不匹配",
+      ]) &&
       hasClause(workbench, [["保留"], ["步骤", "输入"], ["重试", "设置入口"]]) &&
       !contradicts(workbench, [
         /所有\s*Package\s*(?:都|均)?\s*(?:安全|受信任)/i,
@@ -503,7 +677,13 @@ function validateUiContract(findings, documents, available) {
       "diagnostics",
       "unknown/unverified",
     ]) &&
-      hasClause(workbench, [["Package detail"], ["source"], ["rights"], ["exact artifact"], ["Pi runtime"]]) &&
+      hasClause(workbench, [
+        ["Package detail"],
+        ["source"],
+        ["rights"],
+        ["exact artifact"],
+        ["Pi runtime"],
+      ]) &&
       !contradicts(workbench, [
         /(?:允许|可以|应当).{0,80}(?:从\s*)?(?:display name|显示名称).{0,40}(?:猜测|推断)(?:source|来源)?/i,
         /unknown\/unverified.*(?:可以|应当).*(?:隐藏|改写|猜测)/i,
@@ -524,18 +704,46 @@ function validateUiContract(findings, documents, available) {
       "当前 Run receipt",
       "静态 catalog",
     ]) &&
-      hasClause(workbench, [["Models 使用 runtime-backed"], ["连接"], ["重新认证"], ["断开"], ["下一次发送"], ["诊断"]]) &&
-      hasClause(workbench, [["connection 的 authenticated"], ["expired"], ["unavailable"], ["misconfigured"]]) &&
-      hasClause(workbench, [["Model 的 available"], ["temporarily unavailable"], ["unsupported"]]) &&
+      hasClause(workbench, [
+        ["Models 使用 runtime-backed"],
+        ["连接"],
+        ["重新认证"],
+        ["断开"],
+        ["下一次发送"],
+        ["诊断"],
+      ]) &&
+      hasClause(workbench, [
+        ["connection 的 authenticated"],
+        ["expired"],
+        ["unavailable"],
+        ["misconfigured"],
+      ]) &&
+      hasClause(workbench, [
+        ["Model 的 available"],
+        ["temporarily unavailable"],
+        ["unsupported"],
+      ]) &&
       hasClause(workbench, [["Thinking level 的 supported"], ["unsupported"], ["unknown"]]) &&
       hasClause(workbench, [["下一次发送请求的选择"], ["当前 Run receipt"], ["冻结"]]) &&
       hasClause(workbench, [["Runtime 事实"], ["静态 catalog"], ["不得", "不能"], ["覆盖"]]) &&
-      hasClause(workbench, [["next-Run 规则"], ["不确认"], ["Toast/Timeline"], ["不热换当前 Run"], ["不丢输入"]]) &&
+      hasClause(workbench, [
+        ["next-Run 规则"],
+        ["不确认"],
+        ["Toast/Timeline"],
+        ["不热换当前 Run"],
+        ["不丢输入"],
+      ]) &&
       clausesSpanDistinctBlocks(
         workbench,
         [
           [["Models 使用 runtime-backed"], ["重新认证"], ["下一次发送"], ["诊断"]],
-          [["connection 的 authenticated"], ["expired"], ["Model 的 available"], ["Thinking level 的 supported"], ["当前 Run receipt"]],
+          [
+            ["connection 的 authenticated"],
+            ["expired"],
+            ["Model 的 available"],
+            ["Thinking level 的 supported"],
+            ["当前 Run receipt"],
+          ],
           [["Runtime 事实"], ["静态 catalog"], ["next-Run 规则"], ["不热换当前 Run"], ["不丢输入"]],
         ],
         3,
@@ -568,14 +776,54 @@ function validateUiContract(findings, documents, available) {
       "版本不匹配",
     ]) &&
       hasClause(workbench, [["bundled native Agent"], ["external Agents"], ["不宣称能力齐平"]]) &&
-      hasClause(workbench, [["source"], ["version"], ["status"], ["protocol"], ["Model/Session 限制"], ["capability"], ["enforcement source"], ["diagnostics"]]) &&
-      hasClause(workbench, [["正面和负面事实"], ["Thinking"], ["结构化 Question"], ["queue/steer/follow-up/cancel"], ["files/write"], ["Terminal"], ["namespaced UI"]]) &&
-      hasClause(workbench, [["available"], ["unavailable"], ["unsupported"], ["degraded"], ["unknown"], ["evidence/reason"]]) &&
-      hasClause(workbench, [["进程缺失"], ["连接离线"], ["协议不匹配"], ["版本不匹配"], ["不同故障"], ["重新连接"], ["更新"], ["改选"], ["诊断入口"]]) &&
+      hasClause(workbench, [
+        ["source"],
+        ["version"],
+        ["status"],
+        ["protocol"],
+        ["Model/Session 限制"],
+        ["capability"],
+        ["enforcement source"],
+        ["diagnostics"],
+      ]) &&
+      hasClause(workbench, [
+        ["正面和负面事实"],
+        ["Thinking"],
+        ["结构化 Question"],
+        ["queue/steer/follow-up/cancel"],
+        ["files/write"],
+        ["Terminal"],
+        ["namespaced UI"],
+      ]) &&
+      hasClause(workbench, [
+        ["available"],
+        ["unavailable"],
+        ["unsupported"],
+        ["degraded"],
+        ["unknown"],
+        ["evidence/reason"],
+      ]) &&
+      hasClause(workbench, [
+        ["进程缺失"],
+        ["连接离线"],
+        ["协议不匹配"],
+        ["版本不匹配"],
+        ["不同故障"],
+        ["重新连接"],
+        ["更新"],
+        ["改选"],
+        ["诊断入口"],
+      ]) &&
       clausesSpanDistinctBlocks(
         workbench,
         [
-          [["bundled native Agent"], ["external Agents"], ["不宣称能力齐平"], ["source"], ["protocol"]],
+          [
+            ["bundled native Agent"],
+            ["external Agents"],
+            ["不宣称能力齐平"],
+            ["source"],
+            ["protocol"],
+          ],
           [["正面和负面事实"], ["available"], ["unavailable"], ["degraded"], ["evidence/reason"]],
           [["进程缺失"], ["协议不匹配"], ["版本不匹配"], ["不同故障"], ["重新连接"], ["诊断入口"]],
         ],
@@ -604,20 +852,74 @@ function validateUiContract(findings, documents, available) {
       "sandbox",
     ]) &&
       hasClause(workbench, [["Catalog/Curated/Verified"], ["discovery"], ["evidence"]]) &&
-      hasClause(workbench, [["source"], ["rights"], ["publisher"], ["exact artifact digest"], ["verification generation"]]) &&
-      hasClause(workbench, [["Native/Bridged UI/PTY/Unsupported compatibility"], ["Pi/Node/platform/UI 要求"]]) &&
-      hasClause(workbench, [["install script"], ["native dependency"], ["network/file/command permission"], ["private-state review"]]) &&
-      hasClause(workbench, [["install/stage"], ["approve"], ["安全边界 activate"], ["active lease"], ["update"], ["retry"], ["rollback to LKG"]]) &&
+      hasClause(workbench, [
+        ["source"],
+        ["rights"],
+        ["publisher"],
+        ["exact artifact digest"],
+        ["verification generation"],
+      ]) &&
+      hasClause(workbench, [
+        ["Native/Bridged UI/PTY/Unsupported compatibility"],
+        ["Pi/Node/platform/UI 要求"],
+      ]) &&
+      hasClause(workbench, [
+        ["install script"],
+        ["native dependency"],
+        ["network/file/command permission"],
+        ["private-state review"],
+      ]) &&
+      hasClause(workbench, [
+        ["install/stage"],
+        ["approve"],
+        ["安全边界 activate"],
+        ["active lease"],
+        ["update"],
+        ["retry"],
+        ["rollback to LKG"],
+      ]) &&
       hasClause(workbench, [["Unsupported Package"], ["activation 前"], ["具体原因拒绝"]]) &&
-      hasClause(workbench, [["失败"], ["current/LKG generation"], ["leased generation"], ["绝不热替换"], ["fault"], ["新 lease"], ["恢复和 LKG 状态"]]) &&
+      hasClause(workbench, [
+        ["失败"],
+        ["current/LKG generation"],
+        ["leased generation"],
+        ["绝不热替换"],
+        ["fault"],
+        ["新 lease"],
+        ["恢复和 LKG 状态"],
+      ]) &&
       hasClause(workbench, [["进程隔离", "process isolation"], ["不", "不是"], ["sandbox"]]) &&
-      hasClause(workbench, [["private state"], ["loading lifecycle"], ["native runtime/Package"], ["不创建竞争 loader"]]) &&
+      hasClause(workbench, [
+        ["private state"],
+        ["loading lifecycle"],
+        ["native runtime/Package"],
+        ["不创建竞争 loader"],
+      ]) &&
       clausesSpanDistinctBlocks(
         workbench,
         [
-          [["Catalog/Curated/Verified"], ["exact artifact digest"], ["Native/Bridged UI/PTY/Unsupported compatibility"], ["install/stage"], ["rollback to LKG"]],
-          [["Unsupported Package"], ["activation 前"], ["current/LKG generation"], ["leased generation"], ["绝不热替换"], ["fault"], ["恢复和 LKG 状态"]],
-          [["private state"], ["loading lifecycle"], ["native runtime/Package"], ["不创建竞争 loader"]],
+          [
+            ["Catalog/Curated/Verified"],
+            ["exact artifact digest"],
+            ["Native/Bridged UI/PTY/Unsupported compatibility"],
+            ["install/stage"],
+            ["rollback to LKG"],
+          ],
+          [
+            ["Unsupported Package"],
+            ["activation 前"],
+            ["current/LKG generation"],
+            ["leased generation"],
+            ["绝不热替换"],
+            ["fault"],
+            ["恢复和 LKG 状态"],
+          ],
+          [
+            ["private state"],
+            ["loading lifecycle"],
+            ["native runtime/Package"],
+            ["不创建竞争 loader"],
+          ],
         ],
         3,
       ) &&
@@ -649,15 +951,48 @@ function validateUiContract(findings, documents, available) {
       hasClause(workbench, [["engine-enforced"], ["Engine contract"], ["Host 没有相同强制"]]) &&
       hasClause(workbench, [["mixed"], ["两侧分别强制"], ["职责边界"]]) &&
       hasClause(workbench, [["unverified"], ["不得", "不"], ["sandbox", "containment"]]) &&
-      hasClause(workbench, [["actual call path", "实际 call path"], ["deny-side-effect evidence"], ["不来自 renderer"], ["协议名称"], ["进程已隔离"]]) &&
-      hasClause(workbench, [["denied action"], ["approval cancellation"], ["dispatch 前失败"], ["post-dispatch uncertainty"], ["准确的可见结果"]]) &&
+      hasClause(workbench, [
+        ["actual call path", "实际 call path"],
+        ["deny-side-effect evidence"],
+        ["不来自 renderer"],
+        ["协议名称"],
+        ["进程已隔离"],
+      ]) &&
+      hasClause(workbench, [
+        ["denied action"],
+        ["approval cancellation"],
+        ["dispatch 前失败"],
+        ["post-dispatch uncertainty"],
+        ["准确的可见结果"],
+      ]) &&
       clausesSpanDistinctBlocks(
         workbench,
         [
           [["用户策略"], ["实际强制来源"], ["两个字段"]],
-          [["Approval required"], ["操作先询问"], ["Auto"], ["自动策略"], ["Full access"], ["不代表 sandbox"]],
-          [["host-enforced"], ["实际阻止"], ["engine-enforced"], ["Host 没有相同强制"], ["mixed"], ["职责边界"], ["unverified"]],
-          [["actual call path", "实际 call path"], ["deny-side-effect evidence"], ["denied action"], ["approval cancellation"], ["post-dispatch uncertainty"]],
+          [
+            ["Approval required"],
+            ["操作先询问"],
+            ["Auto"],
+            ["自动策略"],
+            ["Full access"],
+            ["不代表 sandbox"],
+          ],
+          [
+            ["host-enforced"],
+            ["实际阻止"],
+            ["engine-enforced"],
+            ["Host 没有相同强制"],
+            ["mixed"],
+            ["职责边界"],
+            ["unverified"],
+          ],
+          [
+            ["actual call path", "实际 call path"],
+            ["deny-side-effect evidence"],
+            ["denied action"],
+            ["approval cancellation"],
+            ["post-dispatch uncertainty"],
+          ],
         ],
         4,
       ) &&
@@ -682,7 +1017,12 @@ function validateUiContract(findings, documents, available) {
       "自动重放",
     ]) &&
       hasClause(workbench, [["不得改由 Pi"], ["保留输入"], ["用户主动改选"]]) &&
-      hasClause(workbench, [["delivery_unknown"], ["outcome_unknown"], ["不经 Pi"], ["自动重放"]]) &&
+      hasClause(workbench, [
+        ["delivery_unknown"],
+        ["outcome_unknown"],
+        ["不经 Pi"],
+        ["自动重放"],
+      ]) &&
       !contradicts(workbench, [
         /(?:静默|自动|silently)\s*fallback.*Pi/i,
         /不可用.*自动.*Pi/i,
@@ -708,9 +1048,7 @@ function validateUiContract(findings, documents, available) {
       "working-directory requirement",
       "truthful unavailable",
     ]) &&
-      !contradicts(workbench, [
-        /永久(?:地)?\s*unavailable.*(?:允许|可以|足以).*(?:删除|移除)/i,
-      ]),
+      !contradicts(workbench, [/永久(?:地)?\s*unavailable.*(?:允许|可以|足以).*(?:删除|移除)/i]),
   );
 
   check(
@@ -719,8 +1057,20 @@ function validateUiContract(findings, documents, available) {
     "ui.plugin-skill-mapping",
     P.workbench,
     hasAll(workbench, [P.pluginRoute, P.routeTree, P.pluginLibrary]) &&
-      hasClause(workbench, [["donor /plugins discovery"], ["Settings › Packages"], ["Package detail"], ["Settings › Agents"], ["Composer"]]) &&
-      hasClause(workbench, [["三个 source anchor"], ["映射"], ["Packages"], ["Agents"], ["Composer"]]),
+      hasClause(workbench, [
+        ["donor /plugins discovery"],
+        ["Settings › Packages"],
+        ["Package detail"],
+        ["Settings › Agents"],
+        ["Composer"],
+      ]) &&
+      hasClause(workbench, [
+        ["三个 source anchor"],
+        ["映射"],
+        ["Packages"],
+        ["Agents"],
+        ["Composer"],
+      ]),
   );
 
   check(
@@ -756,7 +1106,11 @@ function validateUiContract(findings, documents, available) {
       "受保护 ontology",
       "re-entry proof",
     ]) &&
-      hasClause(workbench, [["删除", "移除"], ["direct transplant", "behavior replacement"], ["proof", "视觉复核"]]) &&
+      hasClause(workbench, [
+        ["删除", "移除"],
+        ["direct transplant", "behavior replacement"],
+        ["proof", "视觉复核"],
+      ]) &&
       !contradicts(workbench, [
         /unavailable.*(?:允许|可以|足以).*(?:删除|移除)/i,
         /未完成.*(?:允许|可以).*(?:删除|移除)/i,
@@ -872,11 +1226,12 @@ export async function validateDocumentContract({ root, read = readFile }) {
       available.add(documentPath);
     } catch (error) {
       if (error?.code !== "ENOENT") throw error;
+      const protectedAnchor = PLUGIN_ANCHOR_PATHS.includes(documentPath);
       addFinding(
         findings,
-        documentPath.startsWith("vendor/") ? "ui.plugin-skill-anchor" : "document.required",
+        protectedAnchor ? "ui.plugin-skill-anchor" : "document.required",
         documentPath,
-        documentPath.startsWith("vendor/")
+        protectedAnchor
           ? RULE_MESSAGES["ui.plugin-skill-anchor"]
           : "required contract input is missing",
       );

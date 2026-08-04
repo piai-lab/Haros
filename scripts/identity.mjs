@@ -4,8 +4,7 @@ import { pathContains } from "./sources.mjs";
 
 const LETTER_OR_NUMBER = "[\\p{L}\\p{N}]";
 const DISCLOSURE_PATH = "README.md";
-const LEGAL_PREFIX = "LICENSES/";
-const RESEARCH_PREFIX = "research/";
+const IMMUTABLE_ASSET_ROOTS = ["apps/web/public/icons/line", "apps/web/public/icons/fill"];
 
 const REQUIRED_STRUCTURE_FIELDS = [
   "authorRoots",
@@ -26,10 +25,31 @@ export function parseDenylist(readme) {
     .map((line) => line.trim())
     .filter((line) => line && !line.startsWith("#"));
 
-  if (rules.length === 0 || new Set(rules.map((rule) => rule.toLowerCase())).size !== rules.length) {
+  if (
+    rules.length === 0 ||
+    new Set(rules.map((rule) => rule.toLowerCase())).size !== rules.length
+  ) {
     throw new Error("identity-denylist must contain unique rules");
   }
 
+  return rules;
+}
+
+export function parsePublicSurfaceDenylist(document) {
+  const blocks = [...document.matchAll(/```public-surface-denylist\s*\n([\s\S]*?)```/g)];
+  if (blocks.length !== 1) {
+    throw new Error(`expected one public-surface-denylist block, found ${blocks.length}`);
+  }
+  const rules = blocks[0][1]
+    .split(/\r?\n/)
+    .map((line) => line.trim())
+    .filter((line) => line && !line.startsWith("#"));
+  if (
+    rules.length === 0 ||
+    new Set(rules.map((rule) => rule.toLowerCase())).size !== rules.length
+  ) {
+    throw new Error("public-surface-denylist must contain unique rules");
+  }
   return rules;
 }
 
@@ -46,7 +66,12 @@ export function parseStructurePolicy(readme) {
     }
   }
 
-  for (const field of ["authorRoots", "toolRoots", "generatedDirectoryNames", "forbiddenNameTokens"]) {
+  for (const field of [
+    "authorRoots",
+    "toolRoots",
+    "generatedDirectoryNames",
+    "forbiddenNameTokens",
+  ]) {
     const values = policy[field];
     if (
       !Array.isArray(values) ||
@@ -70,18 +95,17 @@ function escapePattern(value) {
 }
 
 export function compileRule(rule) {
-  const segments = rule.split(/[\s_-]+/).filter(Boolean).map(escapePattern);
+  const segments = rule
+    .split(/[\s_-]+/)
+    .filter(Boolean)
+    .map(escapePattern);
   const body = segments.join("[\\s_-]*");
   return new RegExp(`(?<!${LETTER_OR_NUMBER})${body}(?!${LETTER_OR_NUMBER})`, "giu");
 }
 
 export function isIdentityEvidencePath(relativePath) {
   const portable = relativePath.split(path.sep).join("/");
-  return (
-    portable === DISCLOSURE_PATH ||
-    portable.startsWith(LEGAL_PREFIX) ||
-    portable.startsWith(RESEARCH_PREFIX)
-  );
+  return portable === DISCLOSURE_PATH;
 }
 
 export function classifyPath(relativePath) {
@@ -191,6 +215,11 @@ function inspectText(relativePath, text, rules, surface) {
   return findings;
 }
 
+function markGenerated(findings) {
+  for (const finding of findings) finding.category = "generated";
+  return findings;
+}
+
 export async function scanIdentity({
   root,
   trackedFiles,
@@ -198,33 +227,36 @@ export async function scanIdentity({
   generatedFiles = [],
   runtimeFixtures = [],
   exactRoots = [],
+  restrictedRules = [],
+  restrictedRoots = [],
   read = readFile,
 }) {
   const readme = await read(path.join(root, DISCLOSURE_PATH), "utf8");
   const rules = parseDenylist(readme);
   const structurePolicy = parseStructurePolicy(readme);
   const allowedRuntime = new Set(runtimeFixtures.map((file) => path.resolve(root, file)));
-  const toolRoots = structurePolicy.toolRoots.map(portablePath);
-  const findings = [...scanStructure(sourceFiles, structurePolicy, { exactRoots })];
+  const normalizedRestrictedRoots = restrictedRoots.map(portablePath);
+  const isRestrictedPath = (relativePath) =>
+    normalizedRestrictedRoots.some((restrictedRoot) =>
+      pathContains(restrictedRoot, portablePath(relativePath)),
+    );
+  const findings = [
+    ...scanStructure(sourceFiles, structurePolicy, {
+      exactRoots: [...exactRoots, ...IMMUTABLE_ASSET_ROOTS],
+    }),
+  ];
 
   for (const relativePath of generatedFiles) {
     const portable = portablePath(relativePath);
-    const exempt =
-      exactRoots.some((exactRoot) => pathContains(exactRoot, portable)) ||
-      toolRoots.some((toolRoot) => pathContains(toolRoot, portable));
+    const exempt = exactRoots.some((exactRoot) => pathContains(exactRoot, portable));
     if (!exempt && portable.startsWith("vendor/")) {
-      findings.push(
-        structureFinding(portable, "undeclared vendor generated content", "generated"),
-      );
+      findings.push(structureFinding(portable, "undeclared vendor generated content", "generated"));
     }
   }
 
   for (const relativePath of sourceFiles) {
     const portable = portablePath(relativePath);
-    if (
-      exactRoots.some((exactRoot) => pathContains(exactRoot, portable)) ||
-      toolRoots.some((toolRoot) => pathContains(toolRoot, portable))
-    ) {
+    if (exactRoots.some((exactRoot) => pathContains(exactRoot, portable))) {
       continue;
     }
     if (isIdentityEvidencePath(relativePath)) continue;
@@ -232,35 +264,49 @@ export async function scanIdentity({
     if (allowedRuntime.has(absolutePath)) continue;
 
     findings.push(...inspectText(relativePath, relativePath, rules, "path"));
+    if (restrictedRules.length > 0 && isRestrictedPath(relativePath)) {
+      findings.push(
+        ...inspectText(relativePath, relativePath, restrictedRules, "public-surface-path"),
+      );
+    }
 
     const buffer = await read(absolutePath);
     if (buffer.includes(0)) continue;
-    findings.push(...inspectText(relativePath, buffer.toString("utf8"), rules, "source"));
+    const text = buffer.toString("utf8");
+    findings.push(...inspectText(relativePath, text, rules, "source"));
+    if (restrictedRules.length > 0 && isRestrictedPath(relativePath)) {
+      findings.push(...inspectText(relativePath, text, restrictedRules, "public-surface-source"));
+    }
   }
 
   for (const relativePath of generatedFiles) {
     const portable = portablePath(relativePath);
-    if (
-      exactRoots.some((exactRoot) => pathContains(exactRoot, portable)) ||
-      toolRoots.some((toolRoot) => pathContains(toolRoot, portable))
-    ) {
+    if (exactRoots.some((exactRoot) => pathContains(exactRoot, portable))) {
       continue;
     }
     const absolutePath = path.resolve(root, relativePath);
     findings.push(
-      ...inspectText(relativePath, relativePath, rules, "generated-path").map((finding) => ({
-        ...finding,
-        category: "generated",
-      })),
+      ...markGenerated(inspectText(relativePath, relativePath, rules, "generated-path")),
     );
+    if (restrictedRules.length > 0 && isRestrictedPath(relativePath)) {
+      findings.push(
+        ...markGenerated(
+          inspectText(relativePath, relativePath, restrictedRules, "public-surface-generated-path"),
+        ),
+      );
+    }
 
     const buffer = await read(absolutePath);
-    findings.push(
-      ...inspectText(relativePath, buffer.toString("utf8"), rules, "generated-output").map(
-        (finding) => ({ ...finding, category: "generated" }),
-      ),
-    );
+    const text = buffer.toString("utf8");
+    findings.push(...markGenerated(inspectText(relativePath, text, rules, "generated-output")));
+    if (restrictedRules.length > 0 && isRestrictedPath(relativePath)) {
+      findings.push(
+        ...markGenerated(
+          inspectText(relativePath, text, restrictedRules, "public-surface-generated"),
+        ),
+      );
+    }
   }
 
-  return { findings, rules, structurePolicy };
+  return { findings, restrictedRules, rules, structurePolicy };
 }

@@ -17,6 +17,7 @@
 ## 任务路由
 
 - UI、信息架构、视觉、交互、stream/scroll、性能或可访问性：`architecture/workbench.md`。
+- canonical public origin、公共出口、激活门、反馈数据边界或发行/更新 authority separation：`architecture/public-surface.md`。
 - Workspace、Conversation、Entry、Run、Queue、权限、receipt、恢复或产品事实：`architecture/product-state.md`。
 - 进程、Host、Product Control Plane、Native/External Engine 或 ExecutionTarget：`architecture/execution.md`。
 - 当前施工顺序、进入/停止条件和阶段 proof：`execution-brief.md`。

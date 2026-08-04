@@ -1,0 +1,24 @@
+{
+  "$schema": "https://turbo.build/schema.json",
+  "extends": ["//"],
+  "tasks": {
+    "build": {
+      "dependsOn": ["^build"],
+      "outputs": ["dist-electron/**"],
+    },
+    "dev": {
+      "dependsOn": ["@omnimind/service#build"],
+      "persistent": true,
+    },
+    "start": {
+      "dependsOn": ["build", "@omnimind/web#build", "@omnimind/service#build"],
+      "cache": false,
+      "persistent": true,
+    },
+    "smoke-test": {
+      "dependsOn": ["build", "@omnimind/web#build", "@omnimind/service#build"],
+      "cache": false,
+      "outputs": [],
+    },
+  },
+}

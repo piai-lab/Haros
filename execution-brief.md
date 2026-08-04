@@ -1,10 +1,10 @@
 # OmniMind V1 — Execution Brief
 
-本文件只回答“按什么顺序施工、何时进入、何时停止、需要什么 proof”。产品宪法以 [`README.md`](README.md) 为准；完整 UI、产品事实和详细 topology 分别以 [`architecture/workbench.md`](architecture/workbench.md)、[`architecture/product-state.md`](architecture/product-state.md) 和 [`architecture/execution.md`](architecture/execution.md) 为准；claim 状态只见 active Campaign。
+本文件只回答“按什么顺序施工、何时进入、何时停止、需要什么 proof”。产品宪法以 [`README.md`](README.md) 为准；完整 UI、公共表面、产品事实和详细 topology 分别以 [`architecture/workbench.md`](architecture/workbench.md)、[`architecture/public-surface.md`](architecture/public-surface.md)、[`architecture/product-state.md`](architecture/product-state.md) 和 [`architecture/execution.md`](architecture/execution.md) 为准；claim 状态只见 active Campaign。
 
 ## 1. 读取与施工规则
 
-施工前按统一路由读取：README → architecture index 与全部相关专题 owner → 本 brief → active Campaign（仅状态）→ 与来源、既往裁决或潜在反证相关的 research evidence。
+施工前按统一路由读取：README → architecture index 与全部相关专题 owner（公共出口任务包含 Public Surface owner）→ 本 brief → active Campaign（仅状态）→ 与来源、既往裁决或潜在反证相关的 research evidence。
 
 阶段文本只能引用 owner，不得在这里创建产品对象、物理树、Engine 语义或 UI 行为。若 owner 冲突、进入条件不成立、proof 不可执行或新证据命中结构性 falsifier，停止并修复权威图；不得靠本 brief 覆盖架构。
 

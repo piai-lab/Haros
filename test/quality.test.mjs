@@ -6,7 +6,13 @@ import path from "node:path";
 import test from "node:test";
 import { fileURLToPath } from "node:url";
 import { discoverGeneratedFiles } from "../scripts/check-identity.mjs";
-import { parseDenylist, parseStructurePolicy, scanIdentity } from "../scripts/identity.mjs";
+import { assertDispositionClosure } from "../scripts/check-source-closure.mjs";
+import {
+  parseDenylist,
+  parsePublicSurfaceDenylist,
+  parseStructurePolicy,
+  scanIdentity,
+} from "../scripts/identity.mjs";
 import {
   ignoredVendorSourceFiles,
   parseSourceAdoptions,
@@ -122,7 +128,7 @@ test("identity scan permits only explicitly injected runtime fixtures", async ()
   assert.equal(allowed.findings.length, 0);
 });
 
-test("identity scan permits auditable external identities in disclosure, legal, and research evidence", async () => {
+test("identity scan permits donor identity only in the root disclosure", async () => {
   const temporaryRoot = await mkdtemp(path.join(tmpdir(), "identity-research-"));
   const rule = rules[0];
   await writeFile(path.join(temporaryRoot, "README.md"), policyReadme(rule));
@@ -136,7 +142,13 @@ test("identity scan permits auditable external identities in disclosure, legal, 
     trackedFiles: ["README.md", "LICENSES/source.txt", "research/source-review.md"],
   });
 
-  assert.equal(result.findings.length, 0);
+  assert.deepEqual(
+    result.findings.map((finding) => [finding.path, finding.surface]),
+    [
+      ["LICENSES/source.txt", "source"],
+      ["research/source-review.md", "source"],
+    ],
+  );
 });
 
 test("identity scan covers paths, source text, and generated output separately", async () => {
@@ -145,9 +157,18 @@ test("identity scan covers paths, source text, and generated output separately",
   await writeFile(path.join(temporaryRoot, "README.md"), policyReadme(rule));
   await mkdir(path.join(temporaryRoot, "packages", `${rule}-path`), { recursive: true });
   await mkdir(path.join(temporaryRoot, "dist"));
-  await writeFile(path.join(temporaryRoot, "packages", `${rule}-path`, "clean.mjs"), "export {};\n");
-  await writeFile(path.join(temporaryRoot, "packages", "source.mjs"), `export const value = ${JSON.stringify(rule)};\n`);
-  await writeFile(path.join(temporaryRoot, "dist", "bundle.js"), `globalThis.name = ${JSON.stringify(rule)};\n`);
+  await writeFile(
+    path.join(temporaryRoot, "packages", `${rule}-path`, "clean.mjs"),
+    "export {};\n",
+  );
+  await writeFile(
+    path.join(temporaryRoot, "packages", "source.mjs"),
+    `export const value = ${JSON.stringify(rule)};\n`,
+  );
+  await writeFile(
+    path.join(temporaryRoot, "dist", "bundle.js"),
+    `globalThis.name = ${JSON.stringify(rule)};\n`,
+  );
 
   const result = await scanIdentity({
     root: temporaryRoot,
@@ -159,6 +180,50 @@ test("identity scan covers paths, source text, and generated output separately",
     new Set(result.findings.map((finding) => finding.surface)),
     new Set(["path", "source", "generated-output"]),
   );
+});
+
+test("public-surface destination rules reject authored and built product leakage", async (t) => {
+  const temporaryRoot = await mkdtemp(path.join(tmpdir(), "public-surface-identity-"));
+  t.after(() => rm(temporaryRoot, { recursive: true, force: true }));
+  const blockedRules = [
+    ["try", "omnimind.com"].join(""),
+    ["try", "sy", "nara.com"].join(""),
+    ["@try", "Sy", "nara"].join(""),
+  ];
+  await writeFile(path.join(temporaryRoot, "README.md"), policyReadme(rules[0]));
+  await mkdir(path.join(temporaryRoot, "apps", "web", "dist"), { recursive: true });
+  await writeFile(
+    path.join(temporaryRoot, "apps", "web", "source.ts"),
+    `export const destination = ${JSON.stringify(blockedRules[0])};\n`,
+  );
+  await writeFile(
+    path.join(temporaryRoot, "apps", "web", "dist", "bundle.js"),
+    `globalThis.destinations = ${JSON.stringify(blockedRules.slice(1))};\n`,
+  );
+
+  const result = await scanIdentity({
+    root: temporaryRoot,
+    sourceFiles: ["README.md", "apps/web/source.ts"],
+    generatedFiles: ["apps/web/dist/bundle.js"],
+    restrictedRules: blockedRules,
+    restrictedRoots: ["apps"],
+  });
+
+  assert.deepEqual(
+    result.findings
+      .filter((finding) => finding.surface.startsWith("public-surface-"))
+      .map((finding) => finding.rule)
+      .toSorted((left, right) => left.localeCompare(right)),
+    blockedRules.toSorted((left, right) => left.localeCompare(right)),
+  );
+});
+
+test("public-surface denylist requires one unique owner block", () => {
+  const rules = parsePublicSurfaceDenylist(
+    `\`\`\`public-surface-denylist\nfirst.example\nsecond.example\n\`\`\``,
+  );
+  assert.deepEqual(rules, ["first.example", "second.example"]);
+  assert.throws(() => parsePublicSurfaceDenylist(""), /expected one/u);
 });
 
 test("generated output discovery includes ignored-style build roots but excludes dependencies", async () => {
@@ -330,6 +395,45 @@ test("source inventory requires complete path-bound provenance metadata", () => 
   );
 });
 
+test("source inventory binds adapted roots to immutable historical Git origins", () => {
+  const tracked = ["apps/web/index.ts", "apps/service/index.ts", "LICENSES/source.txt"];
+  const valid = sourceAdoption({
+    paths: ["apps/web", "apps/service"],
+    provenance: {
+      repositoryCommit: "b".repeat(40),
+      historicalTrees: { "vendor/source": "c".repeat(40) },
+      origins: {
+        "apps/web": {
+          sourcePath: "vendor/source/apps/web",
+          changes: "adapted product identity",
+        },
+        "apps/service": {
+          sourcePath: "vendor/source/apps/server",
+          changes: "renamed stable responsibility",
+        },
+      },
+    },
+  });
+
+  assert.deepEqual(validateSourceAdoptions([valid], tracked), []);
+
+  const invalid = {
+    ...valid,
+    provenance: {
+      ...valid.provenance,
+      origins: {
+        "apps/web": {
+          sourcePath: "outside/source",
+          changes: "adapted",
+        },
+      },
+    },
+  };
+  const errors = validateSourceAdoptions([invalid], tracked);
+  assert.ok(errors.some((error) => error.includes("outside historical trees")));
+  assert.ok(errors.some((error) => error.includes("missing adopted path apps/service")));
+});
+
 test("exact provenance roots and tool roots must be ancestry-disjoint", () => {
   const adoption = sourceAdoption({
     provenance: {
@@ -348,7 +452,9 @@ test("exact provenance roots and tool roots must be ancestry-disjoint", () => {
 
   assert.ok(equal.some((error) => error.includes("vendor/source and vendor/source")));
   assert.ok(exactBelowTool.some((error) => error.includes("vendor/source and vendor")));
-  assert.ok(toolBelowExact.some((error) => error.includes("vendor/source and vendor/source/tools")));
+  assert.ok(
+    toolBelowExact.some((error) => error.includes("vendor/source and vendor/source/tools")),
+  );
   assert.deepEqual(disjoint, []);
 });
 
@@ -548,8 +654,12 @@ test("vendor content without a complete exact declaration is rejected", async (t
   });
 
   assert.deepEqual(result.exactRoots, []);
-  assert.ok(result.errors.some((error) => error.includes("undeclared vendor content vendor/source")));
-  assert.ok(result.errors.some((error) => error.includes("undeclared vendor content vendor/other")));
+  assert.ok(
+    result.errors.some((error) => error.includes("undeclared vendor content vendor/source")),
+  );
+  assert.ok(
+    result.errors.some((error) => error.includes("undeclared vendor content vendor/other")),
+  );
 });
 
 test("source entry detects ignored vendor source while excluding first-level and nested dependency/build paths", async (t) => {
@@ -584,10 +694,7 @@ test("source entry detects ignored vendor source while excluding first-level and
     path.join(temporaryRoot, "vendor", "other", "node_modules", "package", "index.js"),
     "export {};\n",
   );
-  await writeFile(
-    path.join(temporaryRoot, "vendor", "other", "dist", "bundle.js"),
-    "export {};\n",
-  );
+  await writeFile(path.join(temporaryRoot, "vendor", "other", "dist", "bundle.js"), "export {};\n");
   runGit(temporaryRoot, ["init", "--quiet"]);
   runGit(temporaryRoot, ["add", ".gitignore"]);
   runGit(temporaryRoot, [
@@ -606,14 +713,11 @@ test("source entry detects ignored vendor source while excluding first-level and
   assert.deepEqual(inventoryFiles, [".gitignore"]);
   assert.deepEqual(ignoredVendorFiles, ["vendor/other/copied.js"]);
 
-  const generatedFiles = await discoverGeneratedFiles(
-    temporaryRoot,
-    { ...structurePolicy, generatedDirectoryNames: ["dist"] },
-  );
-  assert.deepEqual(generatedFiles, [
-    "vendor/dist/bundle.js",
-    "vendor/other/dist/bundle.js",
-  ]);
+  const generatedFiles = await discoverGeneratedFiles(temporaryRoot, {
+    ...structurePolicy,
+    generatedDirectoryNames: ["dist"],
+  });
+  assert.deepEqual(generatedFiles, ["vendor/dist/bundle.js", "vendor/other/dist/bundle.js"]);
 
   const result = validateSourceRepository({
     root: temporaryRoot,
@@ -626,7 +730,9 @@ test("source entry detects ignored vendor source while excluding first-level and
   assert.deepEqual(result.exactRoots, []);
   assert.ok(
     result.errors.some((error) =>
-      error.includes("undeclared vendor content vendor/other; observed path vendor/other/copied.js"),
+      error.includes(
+        "undeclared vendor content vendor/other; observed path vendor/other/copied.js",
+      ),
     ),
   );
 });
@@ -659,9 +765,10 @@ test("identity partitions exact, tool, evidence, author, and generated surfaces"
 
   assert.ok(result.findings.some((finding) => finding.path === `apps/${rule}.txt`));
   assert.ok(result.findings.some((finding) => finding.path === `apps/web/dist/${rule}.js`));
+  assert.ok(result.findings.some((finding) => finding.path === `.omp-flow/${rule}.txt`));
+  assert.ok(result.findings.some((finding) => finding.path === `.omp-flow/dist/${rule}.js`));
+  assert.ok(result.findings.some((finding) => finding.path === `research/${rule}.md`));
   assert.ok(result.findings.every((finding) => !finding.path.startsWith("vendor/source/")));
-  assert.ok(result.findings.every((finding) => !finding.path.startsWith(".omp-flow/")));
-  assert.ok(result.findings.every((finding) => !finding.path.startsWith("research/")));
 });
 
 test("identity rejects undeclared vendor source and generated paths", async (t) => {
@@ -682,7 +789,8 @@ test("identity rejects undeclared vendor source and generated paths", async (t) 
   assert.ok(
     result.findings.some(
       (finding) =>
-        finding.path === "vendor/other/source.txt" && finding.rule.includes("unapproved author root"),
+        finding.path === "vendor/other/source.txt" &&
+        finding.rule.includes("unapproved author root"),
     ),
   );
   assert.ok(
@@ -694,7 +802,7 @@ test("identity rejects undeclared vendor source and generated paths", async (t) 
   );
 });
 
-test("real repository exact adoption resolves without changing the imported tree", () => {
+test("real repository adapted adoption resolves historical origins without exact roots", () => {
   const inventoryFiles = repositoryFiles(root);
   const trackedFiles = trackedRepositoryFiles(root);
   const adoptions = parseSourceAdoptions(governingReadme);
@@ -711,7 +819,7 @@ test("real repository exact adoption resolves without changing the imported tree
     toolRoots: structurePolicy.toolRoots,
   });
 
-  assert.deepEqual(result, { errors: [], exactRoots: ["vendor/ui"] });
+  assert.deepEqual(result, { errors: [], exactRoots: [] });
 });
 
 test("repository inventory excludes tracked paths deleted from the working tree", async () => {
@@ -728,4 +836,56 @@ test("repository inventory excludes tracked paths deleted from the working tree"
   await unlink(path.join(temporaryRoot, "deleted.txt"));
 
   assert.deepEqual(repositoryFiles(temporaryRoot), ["kept.txt", "untracked.txt"]);
+});
+
+test("source closure rejects target loss, origin loss, and unapproved exclusion", () => {
+  const result = spawnSync(process.execPath, ["scripts/check-source-closure.mjs", "--json"], {
+    cwd: root,
+    encoding: "utf8",
+    maxBuffer: 64 * 1024 * 1024,
+  });
+  assert.equal(result.status, 0, result.stderr);
+  const baseline = JSON.parse(result.stdout).dispositions;
+  assert.doesNotThrow(() => assertDispositionClosure(baseline));
+
+  const missingTarget = structuredClone(baseline);
+  const present = missingTarget.find((entry) => entry.disposition === "adapted-present");
+  present.disposition = "adapted-removed";
+  assert.throws(() => assertDispositionClosure(missingTarget), /disposition counts drifted/u);
+
+  const missingOrigin = baseline.map((entry) =>
+    entry.source.startsWith("apps/web/") && entry.disposition.startsWith("adapted-")
+      ? { source: entry.source, target: null, disposition: "excluded-non-product" }
+      : { ...entry },
+  );
+  assert.throws(() => assertDispositionClosure(missingOrigin), /disposition counts drifted/u);
+
+  const unapprovedExclusion = structuredClone(baseline);
+  const excluded = unapprovedExclusion.find((entry) => entry.disposition === "adapted-present");
+  excluded.target = null;
+  excluded.disposition = "excluded-non-product";
+  assert.throws(() => assertDispositionClosure(unapprovedExclusion), /disposition counts drifted/u);
+
+  const retargeted = structuredClone(baseline);
+  retargeted.find((entry) => entry.disposition === "adapted-present").target += ".moved";
+  assert.throws(() => assertDispositionClosure(retargeted), /disposition map drifted/u);
+
+  const publicSurfaceLineage = baseline.filter(
+    (entry) => entry.disposition === "public-surface-lineage",
+  );
+  assert.equal(publicSurfaceLineage.length, 14);
+  assert.ok(publicSurfaceLineage.every((entry) => entry.source.startsWith("apps/marketing/")));
+  assert.ok(
+    publicSurfaceLineage.every((entry) => entry.target === "architecture/public-surface.md"),
+  );
+
+  const washedLineage = structuredClone(baseline);
+  washedLineage.find((entry) => entry.disposition === "public-surface-lineage").disposition =
+    "excluded-non-product";
+  assert.throws(() => assertDispositionClosure(washedLineage), /disposition counts drifted/u);
+
+  const extraLineage = structuredClone(baseline);
+  extraLineage.find((entry) => entry.disposition === "adapted-present").disposition =
+    "public-surface-lineage";
+  assert.throws(() => assertDispositionClosure(extraLineage), /disposition counts drifted/u);
 });

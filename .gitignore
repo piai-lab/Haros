@@ -1,0 +1,34 @@
+.DS_Store
+
+# Workspace dependencies and package-manager links
+node_modules/
+**/node_modules/
+
+# Local tool and editor profiles
+.agents/
+.claude/
+.codex/
+.cursor/
+.obsidian/
+.omp/
+.snow/
+
+# Local product profiles and caches
+.omnimind/
+.turbo/
+**/.turbo/
+*.tsbuildinfo
+
+# Generated build, test, and package output
+build/
+**/build/
+coverage/
+**/coverage/
+dist/
+**/dist/
+dist-electron/
+**/dist-electron/
+out/
+**/out/
+release/
+**/release/
