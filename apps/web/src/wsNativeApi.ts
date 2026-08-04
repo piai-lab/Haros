@@ -25,6 +25,8 @@ import {
   type ThreadBrowserState,
   type GitActionProgressEvent,
   type OrchestrationEvent,
+  type OrchestrationReadModel,
+  type OrchestrationShellSnapshot,
   type OrchestrationShellStreamItem,
   type OrchestrationThreadStreamItem,
   type ProjectDevServerEvent,
@@ -42,6 +44,20 @@ import {
   WS_METHODS,
   type WsWelcomePayload,
   type AutomationStreamEvent,
+  PRODUCT_RPC_METHODS,
+  ProductConversationId,
+  type ProductConversationSnapshot,
+  type ProductCreateConversationInput,
+  type ProductDeleteQueueItemInput,
+  type ProductFactBatch,
+  type ProductGetConversationInput,
+  type ProductPutQueueItemInput,
+  type ProductQueueItem,
+  type ProductReadFactsInput,
+  type ProductReorderQueueInput,
+  type ProductShellSnapshot,
+  type ProductSubmitQueueItemInput,
+  type ProductSubmitResult,
 } from "@omnimind/contracts";
 import { VOICE_TRANSCRIPTION_UPLOAD_ROUTE_PATH } from "@omnimind/shared/binaryTransfer";
 
@@ -55,6 +71,101 @@ import { resolveWsHttpUrl } from "./lib/wsHttpUrl";
 export type { WsThreadStreamFailure } from "./wsTransport";
 
 let instance: { api: NativeApi; transport: WsTransport } | null = null;
+const productConversationIds = new Set<ProductConversationId>();
+const productConversationRegistryListeners = new Set<() => void>();
+let productConversationRegistryVersion = 0;
+
+function registerProductConversation(conversationId: ProductConversationId): void {
+  if (productConversationIds.has(conversationId)) return;
+  productConversationIds.add(conversationId);
+  productConversationRegistryVersion += 1;
+  for (const listener of productConversationRegistryListeners) listener();
+}
+
+export function isProductConversationId(conversationId: string): boolean {
+  return productConversationIds.has(ProductConversationId.makeUnsafe(conversationId));
+}
+
+export function getProductConversationRegistryVersion(): number {
+  return productConversationRegistryVersion;
+}
+
+export function subscribeProductConversationRegistry(listener: () => void): () => void {
+  productConversationRegistryListeners.add(listener);
+  return () => productConversationRegistryListeners.delete(listener);
+}
+
+function rememberProductConversation(
+  snapshot: ProductConversationSnapshot,
+): ProductConversationSnapshot {
+  registerProductConversation(snapshot.readModel.conversation.id);
+  return snapshot;
+}
+
+function withoutProductShellThreads<
+  TThread extends { readonly id: string },
+  TSnapshot extends { readonly threads: ReadonlyArray<TThread> },
+>(snapshot: TSnapshot): TSnapshot {
+  const threads = snapshot.threads.filter((thread) => !isProductConversationId(thread.id));
+  return threads.length === snapshot.threads.length
+    ? snapshot
+    : ({ ...snapshot, threads } as TSnapshot);
+}
+
+function filterDonorShellStreamItem(
+  item: OrchestrationShellStreamItem,
+): OrchestrationShellStreamItem | null {
+  if (item.kind === "snapshot") {
+    return { ...item, snapshot: withoutProductShellThreads(item.snapshot) };
+  }
+  if (item.kind === "thread-upserted" && isProductConversationId(item.thread.id)) return null;
+  if (item.kind === "thread-removed" && isProductConversationId(item.threadId)) return null;
+  return item;
+}
+
+function isDonorOrchestrationEvent(event: OrchestrationEvent): boolean {
+  return event.aggregateKind !== "thread" || !isProductConversationId(String(event.aggregateId));
+}
+
+function isDonorThreadStreamItem(item: OrchestrationThreadStreamItem): boolean {
+  return item.kind === "snapshot"
+    ? !isProductConversationId(item.snapshot.thread.id)
+    : isDonorOrchestrationEvent(item.event);
+}
+
+interface LegacyConversationReferenceCarrier {
+  readonly threadId?: string | null;
+  readonly sourceThreadId?: string | null;
+  readonly parentThreadId?: string | null;
+  readonly sidechatSourceThreadId?: string | null;
+}
+
+function legacyRouteProductConversationId(input: object): ProductConversationId | null {
+  const references = input as LegacyConversationReferenceCarrier;
+  for (const field of [
+    "threadId",
+    "sourceThreadId",
+    "parentThreadId",
+    "sidechatSourceThreadId",
+  ] as const) {
+    const value = references[field];
+    if (typeof value !== "string") continue;
+    const conversationId = ProductConversationId.makeUnsafe(value);
+    if (productConversationIds.has(conversationId)) return conversationId;
+  }
+  return null;
+}
+
+function rejectLegacyProductConversationRoute(input: object): Promise<never> | null {
+  const conversationId = legacyRouteProductConversationId(input);
+  return conversationId
+    ? Promise.reject(
+        new Error(
+          `Legacy orchestration routes are disabled for Product Conversation ${conversationId}.`,
+        ),
+      )
+    : null;
+}
 
 function createListenerRegistry<T>() {
   const listeners = new Set<(payload: T) => void>();
@@ -383,6 +494,72 @@ export function onThreadStreamFailure(
   return () => void unsubscribe();
 }
 
+export interface ProductNativeApi {
+  readonly createConversation: (
+    input: ProductCreateConversationInput,
+  ) => Promise<ProductConversationSnapshot>;
+  readonly getShellSnapshot: () => Promise<ProductShellSnapshot>;
+  readonly getConversationSnapshot: (
+    input: ProductGetConversationInput,
+  ) => Promise<ProductConversationSnapshot>;
+  readonly putQueueItem: (input: ProductPutQueueItemInput) => Promise<ProductQueueItem>;
+  readonly reorderQueue: (input: ProductReorderQueueInput) => Promise<ProductConversationSnapshot>;
+  readonly deleteQueueItem: (
+    input: ProductDeleteQueueItemInput,
+  ) => Promise<ProductConversationSnapshot>;
+  readonly submitQueueItem: (input: ProductSubmitQueueItemInput) => Promise<ProductSubmitResult>;
+  readonly readFacts: (input: ProductReadFactsInput) => Promise<ProductFactBatch>;
+}
+
+/** Responsibility-scoped Product client over the existing authenticated/versioned socket. */
+export function readProductNativeApi(): ProductNativeApi {
+  if (!instance || instance.transport.getState() === "disposed") {
+    createWsNativeApi();
+  }
+  const transport = instance?.transport;
+  if (!transport) throw new Error("Product transport is unavailable.");
+  return {
+    createConversation: (input) =>
+      transport
+        .request<ProductConversationSnapshot>(PRODUCT_RPC_METHODS.createConversation, input)
+        .then(rememberProductConversation),
+    getShellSnapshot: () =>
+      transport
+        .request<ProductShellSnapshot>(PRODUCT_RPC_METHODS.getShellSnapshot)
+        .then((snapshot) => {
+          for (const conversation of snapshot.conversations) {
+            registerProductConversation(conversation.id);
+          }
+          return snapshot;
+        }),
+    getConversationSnapshot: (input) =>
+      transport
+        .request<ProductConversationSnapshot>(PRODUCT_RPC_METHODS.getConversationSnapshot, input)
+        .then(rememberProductConversation),
+    putQueueItem: (input) =>
+      transport.request<ProductQueueItem>(PRODUCT_RPC_METHODS.putQueueItem, input).then((item) => {
+        registerProductConversation(item.conversationId);
+        return item;
+      }),
+    reorderQueue: (input) =>
+      transport
+        .request<ProductConversationSnapshot>(PRODUCT_RPC_METHODS.reorderQueue, input)
+        .then(rememberProductConversation),
+    deleteQueueItem: (input) =>
+      transport
+        .request<ProductConversationSnapshot>(PRODUCT_RPC_METHODS.deleteQueueItem, input)
+        .then(rememberProductConversation),
+    submitQueueItem: (input) =>
+      transport
+        .request<ProductSubmitResult>(PRODUCT_RPC_METHODS.submitQueueItem, input)
+        .then((result) => ({
+          ...result,
+          snapshot: rememberProductConversation(result.snapshot),
+        })),
+    readFacts: (input) => transport.request<ProductFactBatch>(PRODUCT_RPC_METHODS.readFacts, input),
+  };
+}
+
 export function createWsNativeApi(): NativeApi {
   if (instance) {
     if (instance.transport.getState() !== "disposed") {
@@ -426,10 +603,13 @@ export function createWsNativeApi(): NativeApi {
     automationEventListeners.emit(message.data);
   });
   transport.subscribe(ORCHESTRATION_WS_CHANNELS.shellEvent, (message) => {
-    orchestrationShellEventListeners.emit(message.data);
+    const item = filterDonorShellStreamItem(message.data);
+    if (item) orchestrationShellEventListeners.emit(item);
   });
   transport.subscribe(ORCHESTRATION_WS_CHANNELS.threadEvent, (message) => {
-    orchestrationThreadEventListeners.emit(message.data);
+    if (isDonorThreadStreamItem(message.data)) {
+      orchestrationThreadEventListeners.emit(message.data);
+    }
   });
   transport.onThreadStreamFailure((failure) => {
     threadStreamFailureListeners.emit(failure);
@@ -676,32 +856,47 @@ export function createWsNativeApi(): NativeApi {
       listAgents: (input) => transport.request(WS_METHODS.providerListAgents, input),
     },
     orchestration: {
-      getSnapshot: () => transport.request(ORCHESTRATION_WS_METHODS.getSnapshot),
-      getShellSnapshot: () => transport.request(ORCHESTRATION_WS_METHODS.getShellSnapshot),
+      getSnapshot: () =>
+        transport
+          .request<OrchestrationReadModel>(ORCHESTRATION_WS_METHODS.getSnapshot)
+          .then((snapshot) => withoutProductShellThreads(snapshot)),
+      getShellSnapshot: () =>
+        transport
+          .request<OrchestrationShellSnapshot>(ORCHESTRATION_WS_METHODS.getShellSnapshot)
+          .then((snapshot) => withoutProductShellThreads(snapshot)),
       getThreadDetailSnapshot: (input) =>
+        rejectLegacyProductConversationRoute(input) ??
         transport.request(ORCHESTRATION_WS_METHODS.getThreadDetailSnapshot, input),
       dispatchCommand: (command) => {
+        const blocked = rejectLegacyProductConversationRoute(command);
+        if (blocked) return blocked;
         return transport.request(ORCHESTRATION_WS_METHODS.dispatchCommand, {
           command: omitNullUserInputAnswers(command),
         });
       },
-      importThread: (input) => transport.request(ORCHESTRATION_WS_METHODS.importThread, input),
+      importThread: (input) =>
+        rejectLegacyProductConversationRoute(input) ??
+        transport.request(ORCHESTRATION_WS_METHODS.importThread, input),
       repairState: () => transport.request(ORCHESTRATION_WS_METHODS.repairState),
       getTurnDiff: (input) => transport.request(ORCHESTRATION_WS_METHODS.getTurnDiff, input),
       getFullThreadDiff: (input) =>
         transport.request(ORCHESTRATION_WS_METHODS.getFullThreadDiff, input),
       replayEvents: (fromSequenceExclusive) =>
-        transport.request(ORCHESTRATION_WS_METHODS.replayEvents, {
-          fromSequenceExclusive,
-        }),
+        transport
+          .request<OrchestrationEvent[]>(ORCHESTRATION_WS_METHODS.replayEvents, {
+            fromSequenceExclusive,
+          })
+          .then((events) => events.filter(isDonorOrchestrationEvent)),
       listProviderDeliveryBlockers: (input = {}) =>
         transport.request(ORCHESTRATION_WS_METHODS.listProviderDeliveryBlockers, input),
       reconcileProviderDelivery: (input) =>
+        rejectLegacyProductConversationRoute(input) ??
         transport.request(ORCHESTRATION_WS_METHODS.reconcileProviderDelivery, input),
       subscribeShell: () => transport.request<void>(ORCHESTRATION_WS_METHODS.subscribeShell, {}),
       unsubscribeShell: () =>
         transport.request<void>(ORCHESTRATION_WS_METHODS.unsubscribeShell, {}),
       subscribeThread: (input) =>
+        rejectLegacyProductConversationRoute(input) ??
         transport.request<void>(ORCHESTRATION_WS_METHODS.subscribeThread, input),
       unsubscribeThread: (input) =>
         transport.request<void>(ORCHESTRATION_WS_METHODS.unsubscribeThread, input),
@@ -711,7 +906,11 @@ export function createWsNativeApi(): NativeApi {
         if (shouldStartTransport) {
           unsubscribeDomainEventTransport = transport.subscribe(
             ORCHESTRATION_WS_CHANNELS.domainEvent,
-            (message) => orchestrationDomainEventListeners.emit(message.data),
+            (message) => {
+              if (isDonorOrchestrationEvent(message.data)) {
+                orchestrationDomainEventListeners.emit(message.data);
+              }
+            },
           );
         }
         return () => {

@@ -570,6 +570,72 @@ export const createComposerDraftStoreState =
         return { draftsByThreadId: nextDraftsByThreadId };
       });
     },
+    stageProductQueueTransfer: (threadId, transfer) => {
+      if (threadId.length === 0) {
+        throw new Error("A Product Queue transfer requires a Composer draft id.");
+      }
+      set((state) => {
+        const existing = state.draftsByThreadId[threadId] ?? createEmptyThreadDraft();
+        if (existing.productQueueTransfer === transfer) {
+          return state;
+        }
+        return {
+          draftsByThreadId: {
+            ...state.draftsByThreadId,
+            [threadId]: { ...existing, productQueueTransfer: transfer },
+          },
+        };
+      });
+      // Product put may follow immediately. Force the same Composer draft blob
+      // containing the marker through storage before crossing that boundary.
+      flushPersistStorage();
+    },
+    clearComposerContentForProductQueueTransfer: (threadId, transfer, options) => {
+      if (threadId.length === 0) {
+        return false;
+      }
+      let clearedDraft: ComposerThreadDraftState | undefined;
+      set((state) => {
+        const current = state.draftsByThreadId[threadId];
+        if (!current || !Equal.equals(current.productQueueTransfer, transfer)) {
+          return state;
+        }
+        clearedDraft = current;
+        const nextDraft: ComposerThreadDraftState = {
+          ...current,
+          prompt: "",
+          productQueueTransfer: null,
+          promptHistorySavedDraft: null,
+          images: [],
+          files: [],
+          nonPersistedImageIds: [],
+          persistedAttachments: [],
+          assistantSelections: [],
+          browserAnnotations: [],
+          terminalContexts: [],
+          fileComments: [],
+          pastedTexts: [],
+          skills: [],
+          mentions: [],
+          restoredSourceProposedPlan: null,
+        };
+        const nextDraftsByThreadId = { ...state.draftsByThreadId };
+        if (shouldRemoveDraft(nextDraft)) {
+          delete nextDraftsByThreadId[threadId];
+        } else {
+          nextDraftsByThreadId[threadId] = nextDraft;
+        }
+        return { draftsByThreadId: nextDraftsByThreadId };
+      });
+      if (!clearedDraft) {
+        return false;
+      }
+      deleteDraftComposerImageBlobs(clearedDraft, () => get().draftsByThreadId);
+      if (options?.preservePreviewUrls !== true) {
+        revokeDraftComposerImagePreviewUrls(clearedDraft);
+      }
+      return true;
+    },
     setPromptHistorySavedDraft: (threadId, savedDraft) => {
       if (threadId.length === 0) {
         return;
@@ -1911,6 +1977,7 @@ export const createComposerDraftStoreState =
         const nextDraft: ComposerThreadDraftState = {
           ...current,
           prompt: "",
+          productQueueTransfer: null,
           promptHistorySavedDraft: null,
           images: [],
           files: [],

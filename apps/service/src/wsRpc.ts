@@ -4,6 +4,7 @@ import {
   CommandId,
   DEFAULT_TERMINAL_ID,
   ORCHESTRATION_WS_METHODS,
+  PRODUCT_RPC_METHODS,
   ThreadId,
   WS_BOOTSTRAP_METHOD,
   WS_BOOTSTRAP_PATH,
@@ -129,6 +130,8 @@ import { bufferLiveUiStream, type LiveUiStreamDropReport } from "./wsStreamBackp
 import { makeCursorSafeSnapshotLiveStream } from "./wsSnapshotLiveStream";
 import { PullRequestService } from "./pullRequests/Services/PullRequestService";
 import { resolveGitHubRepository } from "./pullRequests/repositoryResolution";
+import { ProductControlPlane, ProductControlPlaneError } from "./product/ProductControlPlane";
+import { assertLegacyConversationRouteAvailable } from "./product/legacyConversationGuard";
 
 export function canManageExternalMcp(role: "owner" | "client"): boolean {
   return role === "owner";
@@ -318,6 +321,7 @@ const makeWsRpcHandlersLayer = () =>
       const path = yield* Path.Path;
       const pullRequests = yield* PullRequestService;
       const profileStatsQuery = yield* ProfileStatsQuery;
+      const productControlPlane = yield* ProductControlPlane;
       const projectionReadModelQuery = yield* ProjectionSnapshotQuery;
       const providerAdapterRegistry = yield* ProviderAdapterRegistry;
       const providerDiscoveryService = yield* ProviderDiscoveryService;
@@ -744,6 +748,18 @@ const makeWsRpcHandlersLayer = () =>
       const rpcEffect = <A, E, R>(effect: Effect.Effect<A, E, R>, fallbackMessage: string) =>
         effect.pipe(Effect.mapError((cause) => toWsRpcError(cause, fallbackMessage)));
 
+      const productRpcEffect = <A>(productEffect: Effect.Effect<A, ProductControlPlaneError>) =>
+        productEffect.pipe(
+          Effect.mapError(
+            (cause) =>
+              new WsRpcError({
+                message: cause.message,
+                code: cause.code,
+                retryable: cause.retryable,
+              }),
+          ),
+        );
+
       const requireOwner = Effect.gen(function* () {
         if (!canManageExternalMcp(yield* CurrentWsSessionRole)) {
           return yield* Effect.fail(
@@ -760,9 +776,28 @@ const makeWsRpcHandlersLayer = () =>
       });
 
       return AdmittedWsFeatureRpcGroup.of({
+        [PRODUCT_RPC_METHODS.createConversation]: (input) =>
+          productRpcEffect(productControlPlane.createConversation(input)),
+        [PRODUCT_RPC_METHODS.getShellSnapshot]: () =>
+          productRpcEffect(productControlPlane.getShellSnapshot()),
+        [PRODUCT_RPC_METHODS.getConversationSnapshot]: (input) =>
+          productRpcEffect(productControlPlane.getConversationSnapshot(input)),
+        [PRODUCT_RPC_METHODS.putQueueItem]: (input) =>
+          productRpcEffect(productControlPlane.putQueueItem(input)),
+        [PRODUCT_RPC_METHODS.reorderQueue]: (input) =>
+          productRpcEffect(productControlPlane.reorderQueue(input)),
+        [PRODUCT_RPC_METHODS.deleteQueueItem]: (input) =>
+          productRpcEffect(productControlPlane.deleteQueueItem(input)),
+        [PRODUCT_RPC_METHODS.submitQueueItem]: (input) =>
+          productRpcEffect(productControlPlane.submitQueueItem(input)),
+        [PRODUCT_RPC_METHODS.readFacts]: (input) =>
+          productRpcEffect(productControlPlane.readFacts(input)),
         [ORCHESTRATION_WS_METHODS.dispatchCommand]: (command) =>
           rpcEffect(
             Effect.gen(function* () {
+              yield* productRpcEffect(
+                assertLegacyConversationRouteAvailable(command, productControlPlane),
+              );
               const { command: normalizedCommand, prepareWorkspaceRoot } =
                 yield* normalizeDispatchCommand({ command });
               const result = yield* dispatchOrchestrationCommand(normalizedCommand);
@@ -780,7 +815,15 @@ const makeWsRpcHandlersLayer = () =>
             "Failed to dispatch orchestration command",
           ),
         [ORCHESTRATION_WS_METHODS.importThread]: (input) =>
-          rpcEffect(importThread(input), "Failed to import thread"),
+          rpcEffect(
+            Effect.gen(function* () {
+              yield* productRpcEffect(
+                assertLegacyConversationRouteAvailable(input, productControlPlane),
+              );
+              return yield* importThread(input);
+            }),
+            "Failed to import thread",
+          ),
         [ORCHESTRATION_WS_METHODS.getSnapshot]: () =>
           rpcEffect(
             projectionReadModelQuery.getSnapshot(),
@@ -830,6 +873,9 @@ const makeWsRpcHandlersLayer = () =>
         [ORCHESTRATION_WS_METHODS.reconcileProviderDelivery]: (input) =>
           rpcEffect(
             Effect.gen(function* () {
+              yield* productRpcEffect(
+                assertLegacyConversationRouteAvailable(input, productControlPlane),
+              );
               const principal = yield* CurrentManagedAttachmentPrincipal;
               const result = yield* providerCommandReactor.reconcileDelivery({
                 eventSequence: input.eventSequence,

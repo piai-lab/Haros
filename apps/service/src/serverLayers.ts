@@ -52,6 +52,7 @@ import { ManagedAttachmentCleanupLive } from "./managedAttachmentCleanup";
 import { PullRequestServiceLive } from "./pullRequests/Layers/PullRequestService";
 import { ProviderHealthLive } from "./provider/Layers/ProviderHealth";
 import { makeServerProviderLayer } from "./provider/runtimeLayer";
+import { ProductControlPlaneLive } from "./product/ProductControlPlane";
 
 export { makeServerProviderLayer } from "./provider/runtimeLayer";
 
@@ -197,6 +198,7 @@ export function makeServerRuntimeServicesLayer(
     externalMcpServiceLayer,
     externalMcpGatewayLayer,
     providerHealthLayer,
+    ProductControlPlaneLive,
     ProjectPullRequestPinsLive,
     pullRequestServiceLayer,
     orchestrationReactorLayer,

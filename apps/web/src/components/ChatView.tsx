@@ -37,6 +37,15 @@ import {
   OrchestrationThreadActivity,
   ProviderInteractionMode,
   RuntimeMode,
+  PRODUCT_PROTOCOL_VERSION,
+  ProductConversationId,
+  ProductDispatchId,
+  ProductEntryId,
+  ProductOperationReceiptId,
+  type ProductPutQueueItemInput,
+  ProductQueueItemId,
+  ProductRunId,
+  ProductWorkspaceId,
 } from "@omnimind/contracts";
 import { automationRequiresTargetThread } from "@omnimind/shared/automationMode";
 import { providerSupportsNativeTurnSteering } from "@omnimind/shared/providerMetadata";
@@ -326,6 +335,18 @@ import {
 import { runProjectCommandInTerminal } from "~/projectTerminalRunner";
 import { newCommandId, newMessageId, newProjectId, newThreadId } from "~/lib/utils";
 import { readNativeApi } from "~/nativeApi";
+import { readProductNativeApi } from "~/wsNativeApi";
+import {
+  presentProductConversationError,
+  presentProductConversationMessages,
+  presentProductConversationQueue,
+} from "~/productReadModel";
+import { useProductStore } from "~/store/productStore";
+import {
+  confirmProductQueueOwnershipBeforeDraftClear,
+  findExactTransferredProductQueueItem,
+  prepareProductQueueTransferAttempt,
+} from "~/productQueueReconciliation";
 import { promoteThreadCreate } from "~/lib/threadCreatePromotion";
 import { readFavoriteModelSlugs } from "~/lib/modelFavorites";
 import {
@@ -1134,6 +1155,15 @@ function makeAutomationSetupBubble(role: "user" | "assistant", text: string): Ch
   };
 }
 
+function isProductConversationNotFound(error: unknown): boolean {
+  return (
+    typeof error === "object" &&
+    error !== null &&
+    "code" in error &&
+    error.code === "PRODUCT_CONVERSATION_NOT_FOUND"
+  );
+}
+
 export default function ChatView({
   threadId,
   paneScopeId: paneScopeIdProp,
@@ -1161,6 +1191,50 @@ export default function ChatView({
   const presentationMode = presentationModeProp ?? "default";
   const isFocusedPane = isFocusedPaneProp ?? true;
   const viewModeAction = viewModeActionProp ?? null;
+  const productConversationId = ProductConversationId.makeUnsafe(threadId);
+  const productReadModel = useProductStore(
+    (store) => store.detailByConversation[productConversationId],
+  );
+  const setProductConversationSnapshot = useProductStore((store) => store.setConversationSnapshot);
+  const setProductQueueItem = useProductStore((store) => store.setQueueItem);
+  const retainProductConversation = useProductStore((store) => store.retainConversation);
+  const releaseProductConversation = useProductStore((store) => store.releaseConversation);
+  const retainedProductConversationRef = useRef<ProductConversationId | null>(null);
+  const [productQueueEdit, setProductQueueEdit] = useState<{
+    readonly id: ProductQueueItemId;
+    readonly revision: number;
+  } | null>(null);
+  const ensureProductConversationRetained = useCallback(() => {
+    if (retainedProductConversationRef.current === productConversationId) return;
+    retainProductConversation(productConversationId);
+    retainedProductConversationRef.current = productConversationId;
+  }, [productConversationId, retainProductConversation]);
+  useEffect(() => {
+    let cancelled = false;
+    void readProductNativeApi()
+      .getConversationSnapshot({
+        protocolVersion: PRODUCT_PROTOCOL_VERSION,
+        conversationId: productConversationId,
+      })
+      .then((snapshot) => {
+        if (cancelled) return;
+        ensureProductConversationRetained();
+        setProductConversationSnapshot(snapshot);
+      })
+      .catch(() => undefined);
+    return () => {
+      cancelled = true;
+      if (retainedProductConversationRef.current === productConversationId) {
+        releaseProductConversation(productConversationId);
+        retainedProductConversationRef.current = null;
+      }
+    };
+  }, [
+    ensureProductConversationRetained,
+    productConversationId,
+    releaseProductConversation,
+    setProductConversationSnapshot,
+  ]);
   const markThreadVisited = useStore((store) => store.markThreadVisited);
   const syncServerShellSnapshot = useStore((store) => store.syncServerShellSnapshot);
   const setStoreThreadError = useStore((store) => store.setError);
@@ -1231,6 +1305,12 @@ export default function ChatView({
   const nonPersistedComposerImageIds = composerDraft.nonPersistedImageIds;
   const durablyPersistedComposerImageIds = composerDraft.persistedAttachments;
   const setComposerDraftPrompt = useComposerDraftStore((store) => store.setPrompt);
+  const stageComposerProductQueueTransfer = useComposerDraftStore(
+    (store) => store.stageProductQueueTransfer,
+  );
+  const clearComposerContentForProductQueueTransfer = useComposerDraftStore(
+    (store) => store.clearComposerContentForProductQueueTransfer,
+  );
   const setComposerDraftPromptHistorySavedDraft = useComposerDraftStore(
     (store) => store.setPromptHistorySavedDraft,
   );
@@ -2153,6 +2233,7 @@ export default function ChatView({
     activeThread &&
     (activeThread.latestTurn !== null ||
       activeThread.messages.length > 0 ||
+      (productReadModel?.entries.length ?? 0) > 0 ||
       activeThread.session !== null),
   );
   const lockedProvider: ProviderKind | null = hasThreadStarted
@@ -3054,7 +3135,21 @@ export default function ChatView({
       }
     }, ATTACHMENT_PREVIEW_HANDOFF_TTL_MS);
   }, []);
-  const serverMessages = activeThread?.messages;
+  const productMessages = useMemo(
+    () => presentProductConversationMessages(productReadModel),
+    [productReadModel],
+  );
+  const productQueuedComposerTurns = useMemo(
+    () =>
+      presentProductConversationQueue(productReadModel, selectedModel || "unresolved-model").filter(
+        (turn) => turn.id !== productQueueEdit?.id,
+      ),
+    [productQueueEdit?.id, productReadModel, selectedModel],
+  );
+  const visibleQueuedComposerTurns = productReadModel
+    ? productQueuedComposerTurns
+    : queuedComposerTurns;
+  const serverMessages = productReadModel ? productMessages : activeThread?.messages;
   const timelineMessages = useMemo(() => {
     const messages = filterSidechatTranscriptMessages(
       serverMessages ?? [],
@@ -3130,7 +3225,7 @@ export default function ChatView({
     threadId,
   ]);
   const promptHistory = useMemo(() => {
-    const activeMessages = activeThread?.messages ?? EMPTY_MESSAGES;
+    const activeMessages = serverMessages ?? EMPTY_MESSAGES;
     // Optimistic messages exist only briefly after a send; skip the full-transcript
     // id Set on the common (streaming-flush) path where there is nothing to reconcile.
     if (optimisticUserMessages.length === 0) {
@@ -3141,7 +3236,7 @@ export default function ChatView({
       (message) => !activeMessageIds.has(message.id),
     );
     return derivePromptHistoryFromMessages([...activeMessages, ...pendingOptimisticMessages]);
-  }, [activeThread?.messages, optimisticUserMessages]);
+  }, [serverMessages, optimisticUserMessages]);
   const timelineEntries = useMemo(
     () =>
       deriveTimelineEntries(
@@ -3411,6 +3506,27 @@ export default function ChatView({
         workingDirectory: resolvedThreadWorkingDirectory,
       })
     : null;
+  useEffect(() => {
+    if (!productReadModel || prompt.length === 0) return;
+    const transferred = findExactTransferredProductQueueItem(
+      productReadModel.queue,
+      composerDraft.productQueueTransfer ?? null,
+    );
+    if (!transferred) return;
+
+    // Product already owns the stable item named by this exact durable draft
+    // marker. Clear both in one Composer store write.
+    promptRef.current = "";
+    clearComposerDraftContent(threadId, { preservePreviewUrls: true });
+    setComposerCursor(0);
+    setComposerTrigger(null);
+  }, [
+    clearComposerDraftContent,
+    composerDraft.productQueueTransfer,
+    productReadModel,
+    prompt,
+    threadId,
+  ]);
   const threadArtifactWorkspaceRoot = resolveThreadArtifactWorkspaceRoot({
     isStudioContainer,
     projectCwd: activeProject?.cwd ?? null,
@@ -3830,10 +3946,9 @@ export default function ChatView({
   const activeThreadWorktreePath = isStudioContainer ? null : (activeThread?.worktreePath ?? null);
   const hasNativeUserMessages = useMemo(
     () =>
-      activeThread?.messages.some(
-        (message) => message.role === "user" && message.source === "native",
-      ) ?? false,
-    [activeThread?.messages],
+      serverMessages?.some((message) => message.role === "user" && message.source === "native") ??
+      false,
+    [serverMessages],
   );
   // Left to React Compiler instead of a manual `useMemo`: the hand-written dep array could
   // not be preserved (the compiler cannot prove `threadWorkspaceCwd` is never mutated), which
@@ -3985,7 +4100,7 @@ export default function ChatView({
 
   const envLocked = Boolean(
     activeThread &&
-    (activeThread.messages.length > 0 ||
+    ((serverMessages?.length ?? 0) > 0 ||
       (activeThread.session !== null && activeThread.session.status !== "closed")),
   );
   const isTerminalPrimarySurface = terminalState.entryPoint === "terminal";
@@ -4053,6 +4168,15 @@ export default function ChatView({
     },
     [setStoreThreadError],
   );
+  const productConversationError = useMemo(
+    () => presentProductConversationError(productReadModel),
+    [productReadModel],
+  );
+  useEffect(() => {
+    if (productReadModel !== undefined) {
+      setThreadError(threadId, productConversationError);
+    }
+  }, [productConversationError, productReadModel, setThreadError, threadId]);
   const composerImageAttachmentCount = useCallback(
     () =>
       effectiveComposerAttachmentCount(useComposerDraftStore.getState().draftsByThreadId[threadId]),
@@ -5392,7 +5516,7 @@ export default function ChatView({
 
   useEffect(() => {
     if (!activeThread?.id) return;
-    if (activeThread.messages.length === 0) {
+    if (!serverMessages || serverMessages.length === 0) {
       return;
     }
     // No optimistic messages → nothing to reconcile; skip the full-transcript id Set
@@ -5400,7 +5524,7 @@ export default function ChatView({
     if (optimisticUserMessages.length === 0) {
       return;
     }
-    const serverIds = new Set(activeThread.messages.map((message) => message.id));
+    const serverIds = new Set(serverMessages.map((message) => message.id));
     const removedMessages = optimisticUserMessages.filter((message) => serverIds.has(message.id));
     if (removedMessages.length === 0) {
       return;
@@ -5421,7 +5545,7 @@ export default function ChatView({
     return () => {
       window.clearTimeout(timer);
     };
-  }, [activeThread?.id, activeThread?.messages, handoffAttachmentPreviews, optimisticUserMessages]);
+  }, [activeThread?.id, handoffAttachmentPreviews, optimisticUserMessages, serverMessages]);
 
   useEffect(() => {
     promptRef.current = prompt;
@@ -6953,9 +7077,39 @@ export default function ChatView({
 
   const removeQueuedComposerTurn = useCallback(
     (queuedTurnId: string) => {
+      if (productReadModel) {
+        const item = productReadModel.queue.find((candidate) => candidate.id === queuedTurnId);
+        if (!item) return;
+        void readProductNativeApi()
+          .deleteQueueItem({
+            protocolVersion: PRODUCT_PROTOCOL_VERSION,
+            conversationId: productConversationId,
+            itemId: item.id,
+            expectedRevision: item.revision,
+          })
+          .then((snapshot) => {
+            setProductConversationSnapshot(snapshot);
+            if (productQueueEdit?.id === item.id) setProductQueueEdit(null);
+          })
+          .catch((error: unknown) => {
+            setThreadError(
+              threadId,
+              error instanceof Error ? error.message : "Failed to delete queued prompt.",
+            );
+          });
+        return;
+      }
       removeQueuedComposerTurnFromDraft(threadId, queuedTurnId);
     },
-    [removeQueuedComposerTurnFromDraft, threadId],
+    [
+      productConversationId,
+      productQueueEdit?.id,
+      productReadModel,
+      removeQueuedComposerTurnFromDraft,
+      setProductConversationSnapshot,
+      setThreadError,
+      threadId,
+    ],
   );
 
   // See `LateComposerSendHandlers`: declared here so both `dispatchQueuedComposerTurn` (above)
@@ -7767,29 +7921,194 @@ export default function ChatView({
         description: toastCopy.description,
       });
     }
-    // Queued turns are dispatched from their captured snapshot, so this send path
-    // must not clear a separate live draft the user may already be editing.
-    if (queuedChatTurn === null) {
+    const shouldUseProductConversation = isLocalDraftThread || productReadModel !== undefined;
+    const finishLiveComposerClear = () => {
       promptHistoryNavigationRef.current = null;
       applyingPromptHistoryNavigationRef.current = false;
       expectedPromptHistoryPromptRef.current = null;
       promptRef.current = "";
-      clearComposerDraftContent(threadIdForSend, { preservePreviewUrls: true });
       if (isLivePlanFollowUpSubmission) {
         setComposerDraftInteractionMode(threadIdForSend, interactionModeForSend);
       }
       setComposerHighlightedItemId(null);
       setComposerCursor(0);
       setComposerTrigger(null);
-      // A clicked submit button steals focus; return it after the controlled
-      // draft reset so rapid follow-up typing lands in the composer.
       scheduleComposerFocus();
+    };
+    const clearLiveComposerAfterOwnershipTransfer = () => {
+      if (queuedChatTurn !== null) return;
+      clearComposerDraftContent(threadIdForSend, { preservePreviewUrls: true });
+      finishLiveComposerClear();
+    };
+    const clearLiveComposerForProductQueueTransfer = (
+      transfer: ProductPutQueueItemInput,
+    ): boolean => {
+      if (queuedChatTurn !== null) return false;
+      const cleared = clearComposerContentForProductQueueTransfer(threadIdForSend, transfer, {
+        preservePreviewUrls: true,
+      });
+      if (!cleared) return false;
+      finishLiveComposerClear();
+      return true;
+    };
+    // Queued turns are dispatched from their captured snapshot, so this send path
+    // must not clear a separate live draft the user may already be editing.
+    if (!shouldUseProductConversation) {
+      clearLiveComposerAfterOwnershipTransfer();
     }
 
     let createdServerThreadForLocalDraft = false;
     let createdWorktreeForSendPath: string | null = null;
     let turnStartSucceeded = false;
+    let productQueueOwnershipTransferred = false;
     await (async () => {
+      // PRODUCT_CONVERSATION_CUTOVER_START: T2 keeps the approved mother UI, while
+      // new draft Conversations and already-open Product Conversations use only
+      // Product commands/read models. T3 removes this bounded presenter branch.
+      if (shouldUseProductConversation) {
+        // Retain synchronously before any await so an unmount cleanup can always
+        // balance this pane's reference, including during first-draft creation.
+        ensureProductConversationRetained();
+        if (baseBranchForWorktree !== null) {
+          throw new Error(
+            "Product Conversations cannot create a new worktree until native Engine target resolution is available. Your draft was preserved.",
+          );
+        }
+        if (
+          optimisticAttachments.length > 0 ||
+          mentionedSkillsForSend.length > 0 ||
+          mentionedPluginMentionsForSend.length > 0 ||
+          sourceProposedPlanForSend !== undefined
+        ) {
+          throw new Error(
+            "This Product Conversation currently accepts text only. Your draft and attachments were preserved.",
+          );
+        }
+        await turnAttachmentsPromise.then(
+          (staged) => staged.cleanup(),
+          () => undefined,
+        );
+
+        const productApi = readProductNativeApi();
+        const workspaceId = ProductWorkspaceId.makeUnsafe(`${threadIdForSend}:workspace`);
+        const observedAt = new Date().toISOString();
+        const executionTarget =
+          targetProjectKindForSend === "chat"
+            ? null
+            : {
+                kind: "local" as const,
+                targetRef: nextThreadWorktreePath ?? targetProjectCwdForSend,
+                observedAt,
+              };
+        const workspace =
+          targetProjectKindForSend === "chat"
+            ? {
+                kind: "chat" as const,
+                managedDirectory: null,
+                primaryFolder: null,
+                executionTarget: null,
+                writeAuthority: "read-only-references" as const,
+              }
+            : {
+                kind: "folder-backed" as const,
+                managedDirectory: null,
+                primaryFolder: targetProjectCwdForSend,
+                executionTarget: executionTarget!,
+                writeAuthority: "primary-folder" as const,
+              };
+
+        try {
+          setProductConversationSnapshot(
+            await productApi.getConversationSnapshot({
+              protocolVersion: PRODUCT_PROTOCOL_VERSION,
+              conversationId: productConversationId,
+            }),
+          );
+        } catch (error) {
+          if (!isProductConversationNotFound(error)) throw error;
+          setProductConversationSnapshot(
+            await productApi.createConversation({
+              protocolVersion: PRODUCT_PROTOCOL_VERSION,
+              conversationId: productConversationId,
+              workspaceId,
+              title,
+              workspace,
+            }),
+          );
+        }
+        const proposedQueuePutInput = {
+          protocolVersion: PRODUCT_PROTOCOL_VERSION,
+          conversationId: productConversationId,
+          itemId: productQueueEdit?.id ?? ProductQueueItemId.makeUnsafe(messageIdForSend),
+          text: outgoingMessageText,
+          requestedSelection: {
+            engineId: "native-engine",
+            modelId: selectedModelForSend || null,
+            thinking: selectedPromptEffortForSend || null,
+            permissionPolicy: nextRuntimeModeForSend,
+            enforcement: "unverified",
+            executionTarget,
+            packageGeneration: "unresolved-not-activated",
+          },
+          resources: [],
+          expectedRevision: productQueueEdit?.revision ?? null,
+        } as const;
+        const queuePutInput = prepareProductQueueTransferAttempt(
+          composerDraft.productQueueTransfer ?? null,
+          proposedQueuePutInput,
+        );
+        const queueItem = await confirmProductQueueOwnershipBeforeDraftClear({
+          attempted: queuePutInput,
+          stageTransferMarker: (input) => stageComposerProductQueueTransfer(threadIdForSend, input),
+          putQueueItem: (input) => productApi.putQueueItem(input),
+          getConversationSnapshot: () =>
+            productApi.getConversationSnapshot({
+              protocolVersion: PRODUCT_PROTOCOL_VERSION,
+              conversationId: productConversationId,
+            }),
+          publishQueueItem: setProductQueueItem,
+          publishSnapshot: setProductConversationSnapshot,
+          clearDraftIfTransferMatches: clearLiveComposerForProductQueueTransfer,
+        });
+        productQueueOwnershipTransferred = true;
+        setProductQueueEdit(null);
+        const entryId = ProductEntryId.makeUnsafe(messageIdForSend);
+        let submittedSnapshot;
+        try {
+          const submitted = await productApi.submitQueueItem({
+            protocolVersion: PRODUCT_PROTOCOL_VERSION,
+            conversationId: productConversationId,
+            itemId: queueItem.id,
+            expectedRevision: queueItem.revision,
+            entryId,
+            runId: ProductRunId.makeUnsafe(randomUUID()),
+            dispatchId: ProductDispatchId.makeUnsafe(randomUUID()),
+            receiptId: ProductOperationReceiptId.makeUnsafe(randomUUID()),
+          });
+          submittedSnapshot = submitted.snapshot;
+        } catch (error) {
+          const recovered = await productApi
+            .getConversationSnapshot({
+              protocolVersion: PRODUCT_PROTOCOL_VERSION,
+              conversationId: productConversationId,
+            })
+            .catch(() => null);
+          if (!recovered?.readModel.entries.some((entry) => entry.id === entryId)) {
+            throw error;
+          }
+          submittedSnapshot = recovered;
+        }
+        setProductConversationSnapshot(submittedSnapshot);
+        setThreadError(
+          threadIdForSend,
+          presentProductConversationError(submittedSnapshot.readModel),
+        );
+        turnStartSucceeded = true;
+        resetLocalDispatch();
+        return;
+      }
+      // PRODUCT_CONVERSATION_CUTOVER_END
+
       // On first message: lock in branch + create worktree if needed.
       if (baseBranchForWorktree) {
         const result = await createWorktreeMutation.mutateAsync({
@@ -8066,6 +8385,7 @@ export default function ChatView({
       if (
         queuedChatTurn === null &&
         !turnStartSucceeded &&
+        !productQueueOwnershipTransferred &&
         promptRef.current.length === 0 &&
         composerImagesRef.current.length === 0 &&
         composerFilesRef.current.length === 0 &&
@@ -8691,6 +9011,30 @@ export default function ChatView({
 
   const onSteerQueuedComposerTurn = useCallback(
     async (queuedTurn: QueuedComposerTurn) => {
+      if (productReadModel) {
+        const orderedItemIds = productReadModel.queue.map((item) => item.id);
+        const selectedIndex = orderedItemIds.findIndex((itemId) => itemId === queuedTurn.id);
+        if (selectedIndex < 0) return;
+        if (selectedIndex > 0) {
+          orderedItemIds.splice(selectedIndex, 1);
+          orderedItemIds.unshift(ProductQueueItemId.makeUnsafe(queuedTurn.id));
+        }
+        try {
+          setProductConversationSnapshot(
+            await readProductNativeApi().reorderQueue({
+              protocolVersion: PRODUCT_PROTOCOL_VERSION,
+              conversationId: productConversationId,
+              orderedItemIds,
+            }),
+          );
+        } catch (error) {
+          setThreadError(
+            threadId,
+            error instanceof Error ? error.message : "Failed to reorder queued prompt.",
+          );
+        }
+        return;
+      }
       const previousQueue = queuedComposerTurnsRef.current;
       const queuedIndex = previousQueue.findIndex((entry) => entry.id === queuedTurn.id);
       if (queuedIndex < 0) {
@@ -8706,17 +9050,28 @@ export default function ChatView({
     [
       dispatchQueuedComposerTurn,
       insertQueuedComposerTurn,
+      productConversationId,
+      productReadModel,
       removeQueuedComposerTurnFromDraft,
+      setProductConversationSnapshot,
+      setThreadError,
       threadId,
     ],
   );
 
   const onEditQueuedComposerTurn = useCallback(
     (queuedTurn: QueuedComposerTurn) => {
+      if (productReadModel) {
+        const item = productReadModel.queue.find((candidate) => candidate.id === queuedTurn.id);
+        if (!item) return;
+        setProductQueueEdit({ id: item.id, revision: item.revision });
+        restoreQueuedTurnToComposer(queuedTurn);
+        return;
+      }
       removeQueuedComposerTurn(queuedTurn.id);
       restoreQueuedTurnToComposer(queuedTurn);
     },
-    [removeQueuedComposerTurn, restoreQueuedTurnToComposer],
+    [productReadModel, removeQueuedComposerTurn, restoreQueuedTurnToComposer],
   );
 
   // Advance/expire the steer gate as the session moves through the
@@ -10741,7 +11096,7 @@ export default function ChatView({
                 />
               ) : null}
               <ComposerQueuedHeader
-                queuedTurns={queuedComposerTurns}
+                queuedTurns={visibleQueuedComposerTurns}
                 onSteer={onSteerQueuedComposerTurn}
                 onRemove={removeQueuedComposerTurn}
                 onEdit={onEditQueuedComposerTurn}

@@ -9,9 +9,12 @@ import {
   AutomationRunId,
   CommandId,
   type ContextMenuItem,
+  type ClientOrchestrationCommand,
   EventId,
   ORCHESTRATION_WS_CHANNELS,
   ORCHESTRATION_WS_METHODS,
+  PRODUCT_PROTOCOL_VERSION,
+  PRODUCT_RPC_METHODS,
   type OrchestrationEvent,
   ProjectId,
   ThreadId,
@@ -24,6 +27,8 @@ import {
   type ServerProviderStatus,
 } from "@omnimind/contracts";
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
+
+import { makeDomainEvent } from "./storeTestFixtures";
 
 const requestMock = vi.fn<(...args: Array<unknown>) => Promise<unknown>>();
 const disposeMock = vi.fn();
@@ -149,7 +154,11 @@ describe("wsNativeApi", () => {
     const listener = vi.fn();
     onServerWelcome(listener);
 
-    const payload = { cwd: "/tmp/workspace", homeDir: "/Users/tester", projectName: "omnimind-code" };
+    const payload = {
+      cwd: "/tmp/workspace",
+      homeDir: "/Users/tester",
+      projectName: "omnimind-code",
+    };
     emitPush(WS_CHANNELS.serverWelcome, payload);
 
     expect(listener).toHaveBeenCalledTimes(1);
@@ -498,6 +507,174 @@ describe("wsNativeApi", () => {
     expect(requestMock).toHaveBeenCalledWith(ORCHESTRATION_WS_METHODS.dispatchCommand, {
       command,
     });
+  });
+
+  it("blocks legacy dispatch for registered Product Conversations before transport", async () => {
+    const productThreadId = ThreadId.makeUnsafe("product-conversation-1");
+    requestMock.mockImplementation(async (method) => {
+      if (method === PRODUCT_RPC_METHODS.getShellSnapshot) {
+        return {
+          protocolVersion: PRODUCT_PROTOCOL_VERSION,
+          sequence: 1,
+          conversations: [
+            {
+              id: productThreadId,
+              workspaceId: "product-workspace-1",
+              title: "Product Conversation",
+              workspaceKind: "chat",
+              receiptState: null,
+              createdAt: "2026-08-04T00:00:00.000Z",
+              updatedAt: "2026-08-04T00:00:00.000Z",
+            },
+          ],
+        };
+      }
+      return undefined;
+    });
+    const { createWsNativeApi, readProductNativeApi } = await import("./wsNativeApi");
+    const api = createWsNativeApi();
+    await readProductNativeApi().getShellSnapshot();
+    requestMock.mockClear();
+
+    await expect(
+      api.orchestration.dispatchCommand({
+        type: "thread.delete",
+        commandId: CommandId.makeUnsafe("delete-product-conversation"),
+        threadId: productThreadId,
+      }),
+    ).rejects.toThrow("Legacy orchestration routes are disabled");
+    const productSourceCommand = {
+      type: "thread.create",
+      commandId: CommandId.makeUnsafe("fork-from-product-conversation"),
+      threadId: ThreadId.makeUnsafe("legacy-child-conversation"),
+      projectId: ProjectId.makeUnsafe("legacy-project"),
+      title: "Legacy child",
+      modelSelection: { provider: "codex", model: "gpt-5" },
+      runtimeMode: "approval-required",
+      interactionMode: "default",
+      envMode: "local",
+      branch: null,
+      worktreePath: null,
+      sourceThreadId: productThreadId,
+      createdAt: "2026-08-04T00:00:00.000Z",
+    } satisfies Extract<ClientOrchestrationCommand, { type: "thread.create" }>;
+    await expect(api.orchestration.dispatchCommand(productSourceCommand)).rejects.toThrow(
+      "Legacy orchestration routes are disabled",
+    );
+    await expect(
+      api.orchestration.importThread({
+        threadId: productThreadId,
+        externalId: "provider-session-1",
+      }),
+    ).rejects.toThrow("Legacy orchestration routes are disabled");
+    expect(requestMock).not.toHaveBeenCalledWith(
+      ORCHESTRATION_WS_METHODS.dispatchCommand,
+      expect.anything(),
+    );
+
+    const legacyCommand = {
+      type: "thread.delete",
+      commandId: CommandId.makeUnsafe("delete-legacy-conversation"),
+      threadId: ThreadId.makeUnsafe("legacy-conversation-1"),
+    } as const;
+    await api.orchestration.dispatchCommand(legacyCommand);
+    expect(requestMock).toHaveBeenCalledWith(ORCHESTRATION_WS_METHODS.dispatchCommand, {
+      command: legacyCommand,
+    });
+  });
+
+  it("dynamically excludes Product ids from donor subscriptions, snapshots, events, and reducers", async () => {
+    const productThreadId = ThreadId.makeUnsafe("product-isolated-conversation");
+    const legacyThreadId = ThreadId.makeUnsafe("legacy-visible-conversation");
+    requestMock.mockImplementation(async (method) => {
+      if (method === PRODUCT_RPC_METHODS.getShellSnapshot) {
+        return {
+          protocolVersion: PRODUCT_PROTOCOL_VERSION,
+          sequence: 1,
+          conversations: [
+            {
+              id: productThreadId,
+              workspaceId: "product-workspace-isolated",
+              title: "Product isolated",
+              workspaceKind: "chat",
+              receiptState: null,
+              createdAt: "2026-08-04T00:00:00.000Z",
+              updatedAt: "2026-08-04T00:00:00.000Z",
+            },
+          ],
+        };
+      }
+      return undefined;
+    });
+    const { createWsNativeApi, readProductNativeApi } = await import("./wsNativeApi");
+    const api = createWsNativeApi();
+    const onThreadEvent = vi.fn();
+    const onShellEvent = vi.fn();
+    const onDomainEvent = vi.fn();
+    api.orchestration.onThreadEvent(onThreadEvent);
+    api.orchestration.onShellEvent(onShellEvent);
+    api.orchestration.onDomainEvent(onDomainEvent);
+
+    await readProductNativeApi().getShellSnapshot();
+    requestMock.mockClear();
+    requestMock.mockResolvedValue(undefined);
+
+    await expect(api.orchestration.subscribeThread({ threadId: productThreadId })).rejects.toThrow(
+      "Legacy orchestration routes are disabled",
+    );
+    await expect(
+      api.orchestration.getThreadDetailSnapshot({ threadId: productThreadId }),
+    ).rejects.toThrow("Legacy orchestration routes are disabled");
+    expect(requestMock).not.toHaveBeenCalled();
+
+    await api.orchestration.subscribeThread({ threadId: legacyThreadId });
+    await api.orchestration.getThreadDetailSnapshot({ threadId: legacyThreadId });
+    expect(requestMock).toHaveBeenCalledWith(ORCHESTRATION_WS_METHODS.subscribeThread, {
+      threadId: legacyThreadId,
+    });
+    expect(requestMock).toHaveBeenCalledWith(ORCHESTRATION_WS_METHODS.getThreadDetailSnapshot, {
+      threadId: legacyThreadId,
+    });
+
+    const productEvent = makeDomainEvent("thread.deleted", {
+      threadId: productThreadId,
+      deletedAt: "2026-08-04T00:01:00.000Z",
+    });
+    const legacyEvent = makeDomainEvent("thread.deleted", {
+      threadId: legacyThreadId,
+      deletedAt: "2026-08-04T00:01:00.000Z",
+    });
+    emitPush(ORCHESTRATION_WS_CHANNELS.threadEvent, {
+      kind: "event",
+      event: productEvent,
+    });
+    emitPush(ORCHESTRATION_WS_CHANNELS.threadEvent, {
+      kind: "event",
+      event: legacyEvent,
+    });
+    emitPush(ORCHESTRATION_WS_CHANNELS.shellEvent, {
+      kind: "thread-removed",
+      sequence: 1,
+      threadId: productThreadId,
+    });
+    emitPush(ORCHESTRATION_WS_CHANNELS.shellEvent, {
+      kind: "thread-removed",
+      sequence: 2,
+      threadId: legacyThreadId,
+    });
+    emitPush(ORCHESTRATION_WS_CHANNELS.domainEvent, productEvent);
+    emitPush(ORCHESTRATION_WS_CHANNELS.domainEvent, legacyEvent);
+
+    expect(onThreadEvent).toHaveBeenCalledTimes(1);
+    expect(onThreadEvent).toHaveBeenCalledWith({ kind: "event", event: legacyEvent });
+    expect(onShellEvent).toHaveBeenCalledTimes(1);
+    expect(onShellEvent).toHaveBeenCalledWith({
+      kind: "thread-removed",
+      sequence: 2,
+      threadId: legacyThreadId,
+    });
+    expect(onDomainEvent).toHaveBeenCalledTimes(1);
+    expect(onDomainEvent).toHaveBeenCalledWith(legacyEvent);
   });
 
   it("forwards terminal output ACKs to the websocket transport", async () => {

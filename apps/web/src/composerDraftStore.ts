@@ -67,7 +67,12 @@ export { partializeComposerDraftStoreState } from "./composerDraftPersistence";
 
 const COMPOSER_PERSIST_DEBOUNCE_MS = 300;
 const composerBaseStorage: StateStorage =
-  typeof localStorage !== "undefined" ? localStorage : createMemoryStorage();
+  typeof localStorage !== "undefined" &&
+  typeof localStorage.getItem === "function" &&
+  typeof localStorage.setItem === "function" &&
+  typeof localStorage.removeItem === "function"
+    ? localStorage
+    : createMemoryStorage();
 const composerPersistStorage = createDeferredPersistStorage<
   ComposerDraftStoreState,
   PersistedComposerDraftStoreState
@@ -112,6 +117,30 @@ export const useComposerDraftStore = create<ComposerDraftStoreState>()(
     },
   ),
 );
+
+// A staged Product Queue marker owns one exact snapshot of the Composer draft.
+// Any later draft mutation makes that association stale. Invalidate it in the
+// same synchronous store turn so deferred persistence can never serialize new
+// draft content beside an old transfer identity.
+useComposerDraftStore.subscribe((state, previousState) => {
+  let draftsByThreadId: ComposerDraftStoreState["draftsByThreadId"] | null = null;
+  for (const [rawThreadId, draft] of Object.entries(state.draftsByThreadId)) {
+    if (draft.productQueueTransfer == null) continue;
+    const threadId = rawThreadId as ThreadId;
+    const previousDraft = previousState.draftsByThreadId[threadId];
+    if (
+      previousDraft === draft ||
+      previousDraft?.productQueueTransfer !== draft.productQueueTransfer
+    ) {
+      continue;
+    }
+    draftsByThreadId ??= { ...state.draftsByThreadId };
+    draftsByThreadId[threadId] = { ...draft, productQueueTransfer: null };
+  }
+  if (draftsByThreadId !== null) {
+    useComposerDraftStore.setState({ draftsByThreadId });
+  }
+});
 
 export function useComposerThreadDraft(threadId: ThreadId): ComposerThreadDraftState {
   return useComposerDraftStore((state) => selectComposerThreadDraft(state, threadId));

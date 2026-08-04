@@ -90,6 +90,7 @@ apps/service/package.json
 apps/web/src/routes/__root.tsx
 apps/web/src/routes/_chat*.tsx
 apps/web/src/components/ChatView.tsx
+apps/web/src/composerDraft*.ts                    (durable ownership-transfer association only)
 apps/web/src/storeState.ts
 apps/web/src/storeSelectors.ts
 apps/web/src/store/**

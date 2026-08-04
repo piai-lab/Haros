@@ -12,6 +12,7 @@ import {
   type ProviderMentionReference,
   type ProviderModelOptions,
   type ProviderSkillReference,
+  type ProductPutQueueItemInput,
   type ProviderStartOptions,
   type RuntimeMode,
   type ThreadId,
@@ -44,7 +45,7 @@ import {
 } from "./types";
 
 export const COMPOSER_DRAFT_STORAGE_KEY = "omnimind:composer-drafts:v1";
-export const COMPOSER_DRAFT_STORAGE_VERSION = 6;
+export const COMPOSER_DRAFT_STORAGE_VERSION = 7;
 export type DraftThreadEnvMode = "local" | "worktree";
 const TERMINAL_DRAFT_THREAD_MAPPING_SUFFIX = "::terminal";
 
@@ -162,6 +163,12 @@ export type QueuedComposerTurn = QueuedComposerChatTurn | QueuedComposerPlanFoll
 
 export interface ComposerThreadDraftState {
   prompt: string;
+  /**
+   * Present only while this exact draft is transferring to the durable Product
+   * Queue. The stable item id and frozen intent let reload recovery distinguish
+   * this transfer from a later independent draft with identical content.
+   */
+  productQueueTransfer?: ProductPutQueueItemInput | null;
   // Non-null only while composer prompt-history browsing is active: the user's
   // real draft, kept safe while `prompt` temporarily holds a recalled history
   // entry. Restored (and cleared) when a browse is interrupted by a thread
@@ -282,6 +289,12 @@ export interface ComposerDraftStoreState {
   clearDraftThread: (threadId: ThreadId) => void;
   setStickyModelSelection: (modelSelection: ModelSelection | null | undefined) => void;
   setPrompt: (threadId: ThreadId, prompt: string) => void;
+  stageProductQueueTransfer: (threadId: ThreadId, transfer: ProductPutQueueItemInput) => void;
+  clearComposerContentForProductQueueTransfer: (
+    threadId: ThreadId,
+    transfer: ProductPutQueueItemInput,
+    options?: { readonly preservePreviewUrls?: boolean },
+  ) => boolean;
   setPromptHistorySavedDraft: (
     threadId: ThreadId,
     savedDraft: ComposerPromptHistorySavedDraft | null,
@@ -507,6 +520,7 @@ export function removeProjectDraftMappingsForThread(
 export function createEmptyThreadDraft(): ComposerThreadDraftState {
   return {
     prompt: "",
+    productQueueTransfer: null,
     promptHistorySavedDraft: null,
     images: [],
     files: [],
@@ -739,6 +753,7 @@ export function buildTransferredComposerDraft(input: {
   return {
     ...base,
     prompt: sourceDraft.prompt,
+    productQueueTransfer: null,
     promptHistorySavedDraft: clonePromptHistorySavedDraft(
       sourceDraft.promptHistorySavedDraft,
       targetThreadId,
@@ -806,6 +821,7 @@ function clonePromptHistorySavedDraft(
 export function shouldRemoveDraft(draft: ComposerThreadDraftState): boolean {
   return (
     draft.prompt.length === 0 &&
+    draft.productQueueTransfer == null &&
     draft.promptHistorySavedDraft === null &&
     draft.images.length === 0 &&
     draft.files.length === 0 &&
@@ -858,6 +874,7 @@ const EMPTY_MODEL_SELECTION_BY_PROVIDER: Partial<Record<ProviderKind, ModelSelec
 
 const EMPTY_THREAD_DRAFT = Object.freeze<ComposerThreadDraftState>({
   prompt: "",
+  productQueueTransfer: null,
   promptHistorySavedDraft: null,
   images: EMPTY_IMAGES,
   files: EMPTY_FILES,

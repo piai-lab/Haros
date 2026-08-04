@@ -1,5 +1,5 @@
 // FILE: composerDraftPersistence.ts
-// Purpose: Owns composer draft schema v6, migrations, partialization, merge normalization, and hydration.
+// Purpose: Owns composer draft schema v7, migrations, partialization, merge normalization, and hydration.
 // Exports: Persist middleware transitions and persisted state type.
 
 import {
@@ -13,6 +13,7 @@ import {
   ProviderModelOptions,
   ProviderSkillReference,
   ProviderStartOptions,
+  ProductPutQueueItemInput,
   RuntimeMode,
   ThreadId,
 } from "@omnimind/contracts";
@@ -67,6 +68,21 @@ function cloneBrowserAnnotation(annotation: BrowserAnnotationDraft): BrowserAnno
   return {
     ...annotation,
     source: { ...annotation.source },
+  };
+}
+
+function cloneProductQueueTransfer(
+  transfer: ProductPutQueueItemInput,
+): DeepMutable<ProductPutQueueItemInput> {
+  return {
+    ...transfer,
+    requestedSelection: {
+      ...transfer.requestedSelection,
+      executionTarget: transfer.requestedSelection.executionTarget
+        ? { ...transfer.requestedSelection.executionTarget }
+        : null,
+    },
+    resources: transfer.resources.map((resource) => ({ ...resource })),
   };
 }
 
@@ -222,6 +238,7 @@ type PersistedComposerPromptHistorySavedDraft =
 
 const PersistedComposerThreadDraftState = Schema.Struct({
   prompt: Schema.String,
+  productQueueTransfer: Schema.optionalKey(ProductPutQueueItemInput),
   // Set only while composer prompt-history browsing is active: the user's real
   // draft snapshot, kept safe while `prompt` temporarily holds a recalled history entry.
   promptHistorySavedDraft: Schema.optionalKey(PersistedComposerPromptHistorySavedDraft),
@@ -826,6 +843,11 @@ function normalizePersistedDraftsByThreadId(
     }
     const draftCandidate = draftValue as PersistedComposerThreadDraftState;
     const promptCandidate = typeof draftCandidate.prompt === "string" ? draftCandidate.prompt : "";
+    const productQueueTransfer =
+      Schema.is(ProductPutQueueItemInput)(draftCandidate.productQueueTransfer) &&
+      draftCandidate.productQueueTransfer.conversationId === threadId
+        ? cloneProductQueueTransfer(draftCandidate.productQueueTransfer)
+        : null;
     const promptHistorySavedDraft = normalizePersistedPromptHistorySavedDraft(
       draftCandidate.promptHistorySavedDraft,
     );
@@ -938,6 +960,7 @@ function normalizePersistedDraftsByThreadId(
     const hasReferenceData = skills.length > 0 || mentions.length > 0;
     if (
       promptCandidate.length === 0 &&
+      productQueueTransfer === null &&
       promptHistorySavedDraft === null &&
       attachments.length === 0 &&
       terminalContexts.length === 0 &&
@@ -956,6 +979,7 @@ function normalizePersistedDraftsByThreadId(
     }
     nextDraftsByThreadId[threadId as ThreadId] = {
       prompt,
+      ...(productQueueTransfer !== null ? { productQueueTransfer } : {}),
       ...(promptHistorySavedDraft !== null ? { promptHistorySavedDraft } : {}),
       attachments,
       ...(assistantSelections.length > 0 ? { assistantSelections } : {}),
@@ -1096,6 +1120,7 @@ export function partializeComposerDraftStoreState(
     const hasReferenceData = draft.skills.length > 0 || draft.mentions.length > 0;
     if (
       draft.prompt.length === 0 &&
+      draft.productQueueTransfer == null &&
       draft.promptHistorySavedDraft === null &&
       draft.persistedAttachments.length === 0 &&
       draft.assistantSelections.length === 0 &&
@@ -1114,6 +1139,9 @@ export function partializeComposerDraftStoreState(
     }
     const persistedDraft: DeepMutable<PersistedComposerThreadDraftState> = {
       prompt: draft.prompt,
+      ...(draft.productQueueTransfer != null
+        ? { productQueueTransfer: cloneProductQueueTransfer(draft.productQueueTransfer) }
+        : {}),
       ...(draft.promptHistorySavedDraft !== null
         ? {
             promptHistorySavedDraft: {
@@ -1397,6 +1425,7 @@ export function toHydratedThreadDraft(
 
   return {
     prompt: persistedDraft.prompt,
+    productQueueTransfer: persistedDraft.productQueueTransfer ?? null,
     promptHistorySavedDraft: hydratePromptHistorySavedDraft(persistedDraft.promptHistorySavedDraft),
     images: hydrateImagesFromPersisted(persistedDraft.attachments),
     files: [],

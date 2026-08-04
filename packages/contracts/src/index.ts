@@ -35,3 +35,6 @@ export * from "./project";
 export * from "./studio";
 export * from "./filesystem";
 export * from "./rpc";
+export * from "./product";
+// The explicit export wins over the legacy star export and adds Product RPCs to the moved socket.
+export { ProductWsFeatureRpcGroup as WsFeatureRpcGroup } from "./product/rpc";
