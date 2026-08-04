@@ -25,6 +25,7 @@ import { afterEach, describe, expect, it } from "vitest";
 import {
   PRODUCT_DATABASE_FILENAME,
   ProductControlPlane,
+  ProductControlPlaneError,
   ProductExecutionUnavailable,
   makeProductControlPlaneLayer,
   makeProductExecutionFixture,
@@ -304,7 +305,7 @@ describe("ProductControlPlane", () => {
     expect(tables).not.toContain("migrations");
   });
 
-  it("rolls back admission atomically and keeps the remaining Queue item editable", async () => {
+  it("rejects a second active admission atomically and keeps the Queue item editable", async () => {
     const system = await makeSystem();
     try {
       const conversation = createInput("atomic");
@@ -325,7 +326,7 @@ describe("ProductControlPlane", () => {
       const failure = await system.run(
         system.controlPlane.admitQueueItem(conflicting).pipe(Effect.flip),
       );
-      expect(failure.code).toBe("PRODUCT_STORE_FAILURE");
+      expect(failure.code).toBe("PRODUCT_RUN_ACTIVE");
 
       const snapshot = await system.run(
         system.controlPlane.getConversationSnapshot({
@@ -338,6 +339,287 @@ describe("ProductControlPlane", () => {
       expect(snapshot.readModel.queue.map((item) => item.id)).toEqual([second.id]);
     } finally {
       await system.dispose();
+    }
+  });
+
+  it("blocks a new admission while delivery is unresolved and never replays either Run", async () => {
+    const boundary = makeProductExecutionFixture([
+      {
+        crossesSendBoundary: true,
+        observation: {
+          kind: "indeterminate",
+          lastConfirmedBoundary: "sent",
+          reconciliationHint: "pi-pending:unresolved-one",
+        },
+      },
+    ]);
+    const system = await makeSystem(":memory:", boundary);
+    try {
+      const conversation = createInput("unresolved-admission");
+      await system.run(system.controlPlane.createConversation(conversation));
+      const first = await putQueueItem(system, conversation, "unresolved-one");
+      const firstResult = await system.run(
+        system.controlPlane.submitQueueItem(
+          submitInput(
+            conversation.conversationId,
+            first.id,
+            first.revision,
+            "unresolved-one",
+          ),
+        ),
+      );
+      expect(firstResult.automaticReplayCount).toBe(0);
+      expect(firstResult.snapshot.readModel.runs[0]?.receipt.receipt).toMatchObject({
+        state: "delivery_unknown",
+        reconciliationHint: "pi-pending:unresolved-one",
+      });
+
+      const second = await putQueueItem(system, conversation, "unresolved-two");
+      const failure = await system.run(
+        system.controlPlane
+          .submitQueueItem(
+            submitInput(
+              conversation.conversationId,
+              second.id,
+              second.revision,
+              "unresolved-two",
+            ),
+          )
+          .pipe(Effect.flip),
+      );
+      expect(failure.code).toBe("PRODUCT_RUN_UNRESOLVED");
+      expect(boundary.attemptCount()).toBe(1);
+      const snapshot = await system.run(
+        system.controlPlane.getConversationSnapshot({
+          protocolVersion: PRODUCT_PROTOCOL_VERSION,
+          conversationId: conversation.conversationId,
+        }),
+      );
+      expect(snapshot.readModel.queue.map((item) => item.id)).toEqual([second.id]);
+      expect(snapshot.readModel.runs).toHaveLength(1);
+      expect(await system.run(system.controlPlane.inspectOutbox())).toEqual([
+        expect.objectContaining({ automaticReplayCount: 0, attemptCount: 1 }),
+      ]);
+    } finally {
+      await system.dispose();
+    }
+  });
+
+  it("reconciles delivery_unknown to accepted and then outcome_unknown without replay", async () => {
+    let listener:
+      | Parameters<NonNullable<ProductExecutionBoundary["subscribeFacts"]>>[0]
+      | undefined;
+    const fixture = makeProductExecutionFixture([
+      {
+        crossesSendBoundary: true,
+        observation: {
+          kind: "indeterminate",
+          lastConfirmedBoundary: "sent",
+          reconciliationHint: "pi-pending:late-accepted",
+        },
+      },
+    ]);
+    const boundary: ProductExecutionBoundary = {
+      ...fixture,
+      subscribeFacts: (next) => {
+        listener = next;
+        return () => {
+          listener = undefined;
+        };
+      },
+    };
+    const system = await makeSystem(":memory:", boundary);
+    try {
+      const conversation = createInput("late-accepted");
+      await system.run(system.controlPlane.createConversation(conversation));
+      const queued = await putQueueItem(system, conversation, "late-accepted");
+      const submitted = submitInput(
+        conversation.conversationId,
+        queued.id,
+        queued.revision,
+        "late-accepted",
+      );
+      const result = await system.run(system.controlPlane.submitQueueItem(submitted));
+      expect(result.snapshot.readModel.runs[0]?.receipt.receipt).toMatchObject({
+        state: "delivery_unknown",
+        reconciliationHint: "pi-pending:late-accepted",
+      });
+
+      listener?.(submitted.runId, {
+        kind: "delivery-accepted",
+        operationRef: "pi-op:late-session:late-entry",
+        lineageRef: "pi-session:late-session",
+        resolvedSelection: {
+          engineId: "pi",
+          modelId: "faux-native/faux-thinker",
+          thinking: "medium",
+          permissionPolicy: "approval-required",
+          enforcement: "unverified",
+          packageGeneration: "package-proof",
+        },
+      });
+      let snapshot = await system.run(
+        system.controlPlane.getConversationSnapshot({
+          protocolVersion: PRODUCT_PROTOCOL_VERSION,
+          conversationId: conversation.conversationId,
+        }),
+      );
+      expect(snapshot.readModel.runs[0]?.receipt.receipt).toMatchObject({
+        state: "accepted",
+        operationRef: "pi-op:late-session:late-entry",
+        engineBinding: { engineId: "pi", lineageRef: "pi-session:late-session" },
+      });
+
+      listener?.(submitted.runId, { kind: "outcome-unknown" });
+      snapshot = await system.run(
+        system.controlPlane.getConversationSnapshot({
+          protocolVersion: PRODUCT_PROTOCOL_VERSION,
+          conversationId: conversation.conversationId,
+        }),
+      );
+      expect(snapshot.readModel.runs[0]?.receipt.receipt).toMatchObject({
+        state: "outcome_unknown",
+        operationRef: "pi-op:late-session:late-entry",
+        lastConfirmedBoundary: "accepted",
+      });
+      expect(fixture.attemptCount()).toBe(1);
+      expect(await system.run(system.controlPlane.inspectOutbox())).toEqual([
+        expect.objectContaining({ attemptCount: 1, automaticReplayCount: 0 }),
+      ]);
+    } finally {
+      await system.dispose();
+    }
+  });
+
+  it("rejects an accepted-outcome observation while delivery remains unknown", async () => {
+    let listener:
+      | Parameters<NonNullable<ProductExecutionBoundary["subscribeFacts"]>>[0]
+      | undefined;
+    const fixture = makeProductExecutionFixture([
+      {
+        crossesSendBoundary: true,
+        observation: {
+          kind: "indeterminate",
+          lastConfirmedBoundary: "sent",
+          reconciliationHint: "pi-pending:orphaned-product",
+        },
+      },
+    ]);
+    const system = await makeSystem(":memory:", {
+      ...fixture,
+      subscribeFacts: (next) => {
+        listener = next;
+        return () => {
+          listener = undefined;
+        };
+      },
+    });
+    try {
+      const conversation = createInput("orphaned-product");
+      await system.run(system.controlPlane.createConversation(conversation));
+      const queued = await putQueueItem(system, conversation, "orphaned-product");
+      const submitted = submitInput(
+        conversation.conversationId,
+        queued.id,
+        queued.revision,
+        "orphaned-product",
+      );
+      await system.run(system.controlPlane.submitQueueItem(submitted));
+      listener?.(submitted.runId, { kind: "outcome-unknown" });
+      const snapshot = await system.run(
+        system.controlPlane.getConversationSnapshot({
+          protocolVersion: PRODUCT_PROTOCOL_VERSION,
+          conversationId: conversation.conversationId,
+        }),
+      );
+      expect(snapshot.readModel.runs[0]?.receipt.receipt).toEqual({
+        state: "delivery_unknown",
+        lastConfirmedBoundary: "sent",
+        reconciliationHint: "pi-pending:orphaned-product",
+      });
+      expect(fixture.attemptCount()).toBe(1);
+      expect(await system.run(system.controlPlane.inspectOutbox())).toEqual([
+        expect.objectContaining({ attemptCount: 1, automaticReplayCount: 0 }),
+      ]);
+    } finally {
+      await system.dispose();
+    }
+  });
+
+  it("resumes a persisted pending hint on startup and applies a late rejection without replay", async () => {
+    const root = await fs.mkdtemp(path.join(os.tmpdir(), "omnimind-pending-reconcile-"));
+    temporaryRoots.push(root);
+    const filename = path.join(root, PRODUCT_DATABASE_FILENAME);
+    const firstBoundary = makeProductExecutionFixture([
+      {
+        crossesSendBoundary: true,
+        observation: {
+          kind: "indeterminate",
+          lastConfirmedBoundary: "sent",
+          reconciliationHint: "pi-pending:startup-rejected",
+        },
+      },
+    ]);
+    const first = await makeSystem(filename, firstBoundary);
+    const conversation = createInput("startup-rejected");
+    await first.run(first.controlPlane.createConversation(conversation));
+    const queued = await putQueueItem(first, conversation, "startup-rejected");
+    const submitted = submitInput(
+      conversation.conversationId,
+      queued.id,
+      queued.revision,
+      "startup-rejected",
+    );
+    await first.run(first.controlPlane.submitQueueItem(submitted));
+    await first.dispose();
+
+    let listener:
+      | Parameters<NonNullable<ProductExecutionBoundary["subscribeFacts"]>>[0]
+      | undefined;
+    const resumed: Array<{ readonly runId: ProductRunId; readonly operationRef: string }> = [];
+    let attemptCount = 0;
+    const recoveryBoundary: ProductExecutionBoundary = {
+      attempt: () => {
+        attemptCount += 1;
+        return Effect.die("startup reconciliation must not replay execution");
+      },
+      subscribeFacts: (next) => {
+        listener = next;
+        return () => {
+          listener = undefined;
+        };
+      },
+      resumeFacts: (runId, operationRef) => resumed.push({ runId, operationRef }),
+    };
+    const reopened = await makeSystem(filename, recoveryBoundary);
+    try {
+      expect(resumed).toEqual([
+        { runId: submitted.runId, operationRef: "pi-pending:startup-rejected" },
+      ]);
+      listener?.(submitted.runId, {
+        kind: "delivery-rejected",
+        code: "PI_DISPATCH_NOT_ACCEPTED",
+        message: "Pi did not persist a user entry.",
+        retryable: false,
+      });
+      const snapshot = await reopened.run(
+        reopened.controlPlane.getConversationSnapshot({
+          protocolVersion: PRODUCT_PROTOCOL_VERSION,
+          conversationId: conversation.conversationId,
+        }),
+      );
+      expect(snapshot.readModel.runs[0]?.receipt.receipt).toEqual({
+        state: "rejected",
+        code: "PI_DISPATCH_NOT_ACCEPTED",
+        message: "Pi did not persist a user entry.",
+        retryable: false,
+      });
+      expect(attemptCount).toBe(0);
+      expect(await reopened.run(reopened.controlPlane.inspectOutbox())).toEqual([
+        expect.objectContaining({ attemptCount: 1, automaticReplayCount: 0 }),
+      ]);
+    } finally {
+      await reopened.dispose();
     }
   });
 
@@ -648,6 +930,269 @@ describe("ProductControlPlane", () => {
       ]);
     } finally {
       releaseAttempt();
+      await system.dispose();
+    }
+  });
+
+  it("atomically preserves a second submit in Queue while one Conversation dispatch is active", async () => {
+    let attemptCount = 0;
+    let signalEntered!: () => void;
+    let releaseAttempt!: () => void;
+    const entered = new Promise<void>((resolve) => {
+      signalEntered = resolve;
+    });
+    const release = new Promise<void>((resolve) => {
+      releaseAttempt = resolve;
+    });
+    const boundary: ProductExecutionBoundary = {
+      attempt: ({ markSent }) =>
+        Effect.gen(function* () {
+          attemptCount += 1;
+          yield* markSent();
+          signalEntered();
+          yield* Effect.promise(() => release);
+          return acceptedObservation("single-owner");
+        }),
+    };
+    const system = await makeSystem(":memory:", boundary);
+    try {
+      const conversation = createInput("single-owner");
+      await system.run(system.controlPlane.createConversation(conversation));
+      const first = await putQueueItem(system, conversation, "single-owner-one");
+      const second = await putQueueItem(system, conversation, "single-owner-two");
+      const firstTask = system.run(
+        system.controlPlane.submitQueueItem(
+          submitInput(
+            conversation.conversationId,
+            first.id,
+            first.revision,
+            "single-owner-one",
+          ),
+        ),
+      );
+      await entered;
+      const secondFailure = await system.run(
+        system.controlPlane
+          .submitQueueItem(
+            submitInput(
+              conversation.conversationId,
+              second.id,
+              second.revision,
+              "single-owner-two",
+            ),
+          )
+          .pipe(Effect.flip),
+      );
+      expect(secondFailure.code).toBe("PRODUCT_RUN_ACTIVE");
+      releaseAttempt();
+      await firstTask;
+
+      const snapshot = await system.run(
+        system.controlPlane.getConversationSnapshot({
+          protocolVersion: PRODUCT_PROTOCOL_VERSION,
+          conversationId: conversation.conversationId,
+        }),
+      );
+      expect(attemptCount).toBe(1);
+      expect(snapshot.readModel.runs).toHaveLength(1);
+      expect(snapshot.readModel.queue.map((item) => item.id)).toEqual([second.id]);
+    } finally {
+      releaseAttempt?.();
+      await system.dispose();
+    }
+  });
+
+  it("rejects an oversized native request before admission and preserves the editable Queue item", async () => {
+    let attemptCount = 0;
+    const boundary: ProductExecutionBoundary = {
+      preflight: () => {
+        throw new ProductControlPlaneError({
+          code: "NATIVE_HOST_REQUEST_OVERSIZED",
+          message: "Edit the Queue item before sending.",
+          retryable: false,
+        });
+      },
+      attempt: () => {
+        attemptCount += 1;
+        return Effect.succeed(acceptedObservation("must-not-send"));
+      },
+    };
+    const system = await makeSystem(":memory:", boundary);
+    try {
+      const conversation = createInput("oversized-preflight");
+      await system.run(system.controlPlane.createConversation(conversation));
+      const queued = await putQueueItem(system, conversation, "oversized-preflight");
+      const failure = await system.run(
+        system.controlPlane
+          .submitQueueItem(
+            submitInput(
+              conversation.conversationId,
+              queued.id,
+              queued.revision,
+              "oversized-preflight",
+            ),
+          )
+          .pipe(Effect.flip),
+      );
+      expect(failure.code).toBe("NATIVE_HOST_REQUEST_OVERSIZED");
+      expect(attemptCount).toBe(0);
+      const snapshot = await system.run(
+        system.controlPlane.getConversationSnapshot({
+          protocolVersion: PRODUCT_PROTOCOL_VERSION,
+          conversationId: conversation.conversationId,
+        }),
+      );
+      expect(snapshot.readModel.queue.map((item) => item.id)).toEqual([queued.id]);
+      expect(snapshot.readModel.runs).toEqual([]);
+      expect(await system.run(system.controlPlane.inspectOutbox())).toEqual([]);
+    } finally {
+      await system.dispose();
+    }
+  });
+
+  it("routes typed native controls only to the accepted operation and preserves distinct results", async () => {
+    const controls: string[] = [];
+    const boundary: ProductExecutionBoundary = {
+      ...makeProductExecutionFixture([
+        { crossesSendBoundary: true, observation: acceptedObservation("controls") },
+      ]),
+      control: (input) => {
+        controls.push(`${input.operationRef}:${input.control}:${input.text ?? ""}`);
+        return Effect.succeed({
+          operationRef: input.operationRef,
+          control: input.control,
+          result: input.control === "cancel" ? "unsupported" : "applied",
+          code: input.control === "cancel" ? "control-unsupported" : "control-applied",
+          message: input.control === "cancel" ? "Pi has no distinct cancel." : "Applied.",
+        });
+      },
+    };
+    const system = await makeSystem(":memory:", boundary);
+    try {
+      const conversation = createInput("controls");
+      await system.run(system.controlPlane.createConversation(conversation));
+      const item = await putQueueItem(system, conversation, "controls");
+      const submit = submitInput(
+        conversation.conversationId,
+        item.id,
+        item.revision,
+        "controls",
+      );
+      await system.run(system.controlPlane.submitQueueItem(submit));
+      await expect(
+        system.run(
+          system.controlPlane.controlRun({
+            protocolVersion: PRODUCT_PROTOCOL_VERSION,
+            conversationId: conversation.conversationId,
+            runId: submit.runId,
+            control: "steer",
+            text: "new direction",
+          }),
+        ),
+      ).resolves.toMatchObject({ result: "applied", control: "steer" });
+      await expect(
+        system.run(
+          system.controlPlane.controlRun({
+            protocolVersion: PRODUCT_PROTOCOL_VERSION,
+            conversationId: conversation.conversationId,
+            runId: submit.runId,
+            control: "cancel",
+            text: null,
+          }),
+        ),
+      ).resolves.toMatchObject({ result: "unsupported", control: "cancel" });
+      expect(controls).toEqual([
+        "operation-controls:steer:new direction",
+        "operation-controls:cancel:",
+      ]);
+    } finally {
+      await system.dispose();
+    }
+  });
+
+  it("idempotently replaces a partial assistant from a native Session snapshot", async () => {
+    let listener:
+      | Parameters<NonNullable<ProductExecutionBoundary["subscribeFacts"]>>[0]
+      | undefined;
+    const boundary: ProductExecutionBoundary = {
+      ...makeProductExecutionFixture([
+        { crossesSendBoundary: true, observation: acceptedObservation("snapshot-recovery") },
+      ]),
+      subscribeFacts: (next) => {
+        listener = next;
+        return () => {
+          listener = undefined;
+        };
+      },
+    };
+    const system = await makeSystem(":memory:", boundary);
+    try {
+      const conversation = createInput("snapshot-recovery");
+      await system.run(system.controlPlane.createConversation(conversation));
+      const queued = await putQueueItem(system, conversation, "snapshot-recovery");
+      await system.run(
+        system.controlPlane.submitQueueItem(
+          submitInput(
+            conversation.conversationId,
+            queued.id,
+            queued.revision,
+            "snapshot-recovery",
+          ),
+        ),
+      );
+      const runId = ProductRunId.makeUnsafe("run-snapshot-recovery");
+      listener?.(runId, {
+        kind: "facts",
+        facts: [
+          {
+            operationRef: "operation-snapshot-recovery",
+            sequence: 1,
+            emittedAt: "2026-08-05T00:00:00.000Z",
+            kind: "assistant.delta",
+            text: "partial tail",
+          },
+        ],
+      });
+      const snapshotObservation = {
+        kind: "snapshot" as const,
+        snapshot: {
+          version: 1 as const,
+          operationRef: "operation-snapshot-recovery",
+          source: "pi-session-reopen" as const,
+          acceptanceEntryId: "accepted-entry",
+          assistant: "Complete answer from before Service returned.",
+          settlement: {
+            outcome: "succeeded" as const,
+            message: "Completed.",
+            settledAt: "2026-08-05T00:00:01.000Z",
+          },
+        },
+      };
+      listener?.(runId, snapshotObservation);
+      listener?.(runId, snapshotObservation);
+
+      const snapshot = await system.run(
+        system.controlPlane.getConversationSnapshot({
+          protocolVersion: PRODUCT_PROTOCOL_VERSION,
+          conversationId: conversation.conversationId,
+        }),
+      );
+      expect(snapshot.readModel.entries.at(-1)?.text).toBe(
+        "Complete answer from before Service returned.",
+      );
+      expect(snapshot.readModel.streamingEntryIds).toEqual([]);
+      expect(snapshot.readModel.recoveries).toEqual([
+        expect.objectContaining({
+          runId,
+          snapshotVersion: 1,
+          kind: "visible-result",
+        }),
+      ]);
+      expect(snapshot.readModel.runs[0]?.receipt.receipt).toMatchObject({
+        state: "settled",
+        outcome: "succeeded",
+      });
+    } finally {
       await system.dispose();
     }
   });

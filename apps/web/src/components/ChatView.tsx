@@ -6,6 +6,9 @@ import {
   EventId,
   MessageId,
   type ModelSelection,
+  type PiThinkingLevel,
+  type ProductRuntimeCatalog,
+  type ProductControlRunResult,
   type NativeApi,
   type OrchestrationShellSnapshot,
   type ProjectScript,
@@ -71,6 +74,7 @@ import {
   useCallback,
   useEffect,
   useLayoutEffect,
+  useId,
   useMemo,
   useRef,
   useState,
@@ -315,8 +319,12 @@ import {
 } from "~/lib/icons";
 import { ComposerQueuedHeader } from "./chat/ComposerQueuedHeader";
 import { ComposerLiveChangesHeader } from "./chat/ComposerLiveChangesHeader";
-import { ComposerPickerMenuPopup } from "./chat/ComposerPickerMenuPopup";
+import {
+  ComposerPickerMenuPopup,
+  ComposerPickerSelectPopup,
+} from "./chat/ComposerPickerMenuPopup";
 import { Button } from "./ui/button";
+import { Select, SelectItem, SelectTrigger, SelectValue } from "./ui/select";
 import { Skeleton } from "./ui/skeleton";
 import { Menu, MenuItem, MenuTrigger } from "./ui/menu";
 import { randomTerminalId } from "./terminal/terminalIds";
@@ -347,7 +355,11 @@ import {
 import { useProductStore } from "~/store/productStore";
 import { canDispatchProductSubmission, useSystemHealthStore } from "~/store/systemHealthStore";
 import { ProductConversationNotice } from "./product/ProductConversationNotice";
-import { getWorkbenchCopy } from "~/i18n/workbenchCopy";
+import {
+  getWorkbenchCopy,
+  localizeWorkbenchTraitLabel,
+  type WorkbenchCopy,
+} from "~/i18n/workbenchCopy";
 import {
   confirmProductQueueOwnershipBeforeDraftClear,
   findExactTransferredProductQueueItem,
@@ -1076,6 +1088,100 @@ function ComposerModelLoadingControl(props: { widthClassName: string }) {
   );
 }
 
+function ProductRuntimePicker(props: {
+  readonly catalog: ProductRuntimeCatalog | null;
+  readonly copy: WorkbenchCopy;
+  readonly modelId: string | null;
+  readonly thinking: string | null;
+  readonly onModelChange: (modelId: string) => void;
+  readonly onThinkingChange: (thinking: string) => void;
+}) {
+  const modelLabelId = useId();
+  const thinkingLabelId = useId();
+  const selected = props.catalog?.models.find((model) => model.id === props.modelId) ?? null;
+  return (
+    <div className="flex min-w-0 items-center gap-1" data-testid="product-runtime-picker">
+      <span className="sr-only" id={modelLabelId}>
+        Pi {props.copy.models}
+      </span>
+      <Select
+        value={selected?.id ?? ""}
+        onValueChange={(value) => {
+          if (typeof value === "string") props.onModelChange(value);
+        }}
+      >
+        <SelectTrigger
+          size="sm"
+          className="max-w-52"
+          aria-labelledby={modelLabelId}
+          disabled={!props.catalog}
+        >
+          <SelectValue>
+            {selected?.name ??
+              (props.catalog ? props.copy.models : props.copy.executionUnavailableLabel)}
+          </SelectValue>
+        </SelectTrigger>
+        <ComposerPickerSelectPopup align="start">
+          {props.catalog?.models.map((model) => (
+            <SelectItem key={model.id} value={model.id} disabled={!model.available}>
+              {model.name} · {model.provider}
+              {!model.available ? ` · ${props.copy.executionUnavailableLabel}` : ""}
+            </SelectItem>
+          ))}
+        </ComposerPickerSelectPopup>
+      </Select>
+      {selected && selected.thinkingLevels.length > 0 ? (
+        <>
+          <span className="sr-only" id={thinkingLabelId}>
+            {props.copy.thinkingLevelLabel}
+          </span>
+          <Select
+            value={
+              props.thinking && selected.thinkingLevels.includes(props.thinking as never)
+                ? props.thinking
+                : selected.thinkingLevels[0]
+            }
+            onValueChange={(value) => {
+              if (typeof value === "string") props.onThinkingChange(value);
+            }}
+          >
+            <SelectTrigger size="sm" aria-labelledby={thinkingLabelId}>
+              <SelectValue>
+                {localizeWorkbenchTraitLabel(
+                  props.thinking ?? selected.thinkingLevels[0] ?? "off",
+                )}
+              </SelectValue>
+            </SelectTrigger>
+            <ComposerPickerSelectPopup align="start">
+              {selected.thinkingLevels.map((level) => (
+                <SelectItem key={level} value={level}>
+                  {localizeWorkbenchTraitLabel(level)}
+                </SelectItem>
+              ))}
+            </ComposerPickerSelectPopup>
+          </Select>
+        </>
+      ) : null}
+    </div>
+  );
+}
+
+function productControlFailureMessage(
+  result: ProductControlRunResult,
+  copy: WorkbenchCopy,
+): string {
+  switch (result.code) {
+    case "control-unsupported":
+      return copy.productControlUnsupported;
+    case "control-too-late":
+      return copy.productControlTooLate;
+    case "operation-unknown":
+      return copy.productControlUnknown;
+    default:
+      return copy.productStopFailedDescription;
+  }
+}
+
 interface PlanFollowUpSubmission {
   text: string;
   interactionMode: "default" | "plan";
@@ -1221,6 +1327,7 @@ export default function ChatView({
   const productConversationSummary = useProductStore((store) =>
     store.conversations.find((conversation) => conversation.id === productConversationId),
   );
+  const productRuntimeCatalog = useProductStore((store) => store.runtimeCatalog);
   const isKnownProductConversation = productConversationSummary !== undefined;
   const productProjectionIssue = useProductStore(
     (store) => store.detailIssueByConversation[productConversationId] ?? null,
@@ -1248,6 +1355,7 @@ export default function ChatView({
   );
   const workbenchCopy = getWorkbenchCopy();
   const setProductConversationSnapshot = useProductStore((store) => store.setConversationSnapshot);
+  const setProductShellSnapshot = useProductStore((store) => store.setShellSnapshot);
   const setProductQueueItem = useProductStore((store) => store.setQueueItem);
   const retainProductConversation = useProductStore((store) => store.retainConversation);
   const releaseProductConversation = useProductStore((store) => store.releaseConversation);
@@ -1959,6 +2067,16 @@ export default function ChatView({
     productReadModel !== undefined ||
     productConversationSummary !== undefined ||
     isLocalDraftThread;
+  const hasProductActiveRun =
+    productReadModel?.runs.some(
+      (run) => run.receipt.receipt.state === "accepted" || run.receipt.receipt.state === "running",
+    ) ?? false;
+  const hasProductUnresolvedRun =
+    productReadModel?.runs.some(
+      (run) =>
+        run.receipt.receipt.state === "delivery_unknown" ||
+        run.receipt.receipt.state === "outcome_unknown",
+    ) ?? false;
   const canCheckoutPullRequestIntoThread = isLocalDraftThread;
   const diffOpen = panelState?.panel === "diff";
   const browserOpen = panelState?.panel === "browser";
@@ -2448,6 +2566,52 @@ export default function ChatView({
     [composerModelOptions, prompt, selectedModel, selectedProvider, selectedRuntimeModel],
   );
   const selectedPromptEffort = composerProviderState.promptEffort;
+  const productDraftSelectionCandidate = composerDraft.modelSelectionByProvider.pi ?? null;
+  const productDraftSelection =
+    productDraftSelectionCandidate?.provider === "pi" ? productDraftSelectionCandidate : null;
+  const productRuntimeModelId = productDraftSelection?.model ?? null;
+  const productRuntimeThinking = productDraftSelection?.options?.thinkingLevel ?? null;
+  const availableProductRuntimeModels = useMemo(
+    () => productRuntimeCatalog?.models.filter((model) => model.available) ?? [],
+    [productRuntimeCatalog],
+  );
+  const commitProductRuntimeSelection = useCallback(
+    (modelId: string, requestedThinking?: string | null) => {
+      const model = productRuntimeCatalog?.models.find(
+        (candidate) => candidate.id === modelId && candidate.available,
+      );
+      if (!model) return;
+      const thinking =
+        requestedThinking && model.thinkingLevels.includes(requestedThinking as never)
+          ? requestedThinking
+          : model.thinkingLevels.includes("medium")
+            ? "medium"
+            : (model.thinkingLevels[0] ?? null);
+      setComposerDraftModelSelection(
+        threadId,
+        buildModelSelection(
+          "pi",
+          model.id,
+          thinking === null ? undefined : { thinkingLevel: thinking as PiThinkingLevel },
+        ),
+      );
+    },
+    [productRuntimeCatalog, setComposerDraftModelSelection, threadId],
+  );
+  useEffect(() => {
+    if (!isProductConversationThread) return;
+    const currentAvailable = availableProductRuntimeModels.some(
+      (model) => model.id === productRuntimeModelId,
+    );
+    if (!currentAvailable && availableProductRuntimeModels.length > 0) {
+      commitProductRuntimeSelection(availableProductRuntimeModels[0]!.id);
+    }
+  }, [
+    availableProductRuntimeModels,
+    commitProductRuntimeSelection,
+    isProductConversationThread,
+    productRuntimeModelId,
+  ]);
   const selectedModelOptionsForDispatch = composerProviderState.modelOptionsForDispatch;
   const selectedModelSelection = useMemo<ModelSelection>(() => {
     if (selectedProvider === "pi" && draftModelSelectionForSelectedProvider?.provider === "pi") {
@@ -3022,7 +3186,7 @@ export default function ChatView({
   const isSendBusy = localDispatch !== null && !serverAcknowledgedLocalDispatch;
   const activeWorktreeSetup = localDispatch?.worktreeSetup ?? null;
   const isPreparingWorktree = activeWorktreeSetup !== null;
-  const hasLiveTurn = phase === "running";
+  const hasLiveTurn = isProductConversationThread ? hasProductActiveRun : phase === "running";
   // Providers that clear `activeTurnId` on every terminal event (Claude) would
   // otherwise leave the transcript with no active turn while work is still in
   // progress, collapsing the newest answer into a closed "Worked for" disclosure.
@@ -3086,7 +3250,8 @@ export default function ChatView({
       : null;
   const activeTurnLayoutKey =
     activeThreadId === null ? null : `${activeThreadId}:${activeLatestTurn?.turnId ?? "idle"}`;
-  const activeTurnInProgress = activeTurnLayoutLive || keepSettledActiveTurnLayout;
+  const activeTurnInProgress =
+    hasProductActiveRun || activeTurnLayoutLive || keepSettledActiveTurnLayout;
   const isComposerApprovalState = activePendingApproval !== null;
   const isComposerEditorDisabled = isConnecting || isComposerApprovalState;
   const productDispatchAvailable = canDispatchProductSubmission(systemHealthSnapshot);
@@ -6040,6 +6205,26 @@ export default function ChatView({
   ]);
 
   const onInterrupt = useCallback(async () => {
+    if (isProductConversationThread && productReadModel) {
+      const activeRun = [...productReadModel.runs]
+        .reverse()
+        .find(
+          (run) =>
+            run.receipt.receipt.state === "accepted" || run.receipt.receipt.state === "running",
+        );
+      if (!activeRun) return;
+      const result = await readProductNativeApi().controlRun({
+        protocolVersion: PRODUCT_PROTOCOL_VERSION,
+        conversationId: productReadModel.conversation.id,
+        runId: activeRun.id,
+        control: "abort",
+        text: null,
+      });
+      if (result.result !== "applied") {
+        throw new Error(productControlFailureMessage(result, workbenchCopy));
+      }
+      return;
+    }
     const api = readNativeApi();
     if (!api || !activeThread) return;
     await api.orchestration.dispatchCommand({
@@ -6048,7 +6233,7 @@ export default function ChatView({
       threadId: activeThread.id,
       createdAt: new Date().toISOString(),
     });
-  }, [activeThread]);
+  }, [activeThread, isProductConversationThread, productReadModel, workbenchCopy]);
 
   // A rejected interrupt (orchestration dispatch timeout, dead runtime) leaves the
   // UI spinning with no explanation, so the stop affordances report it.
@@ -6056,14 +6241,14 @@ export default function ChatView({
     void onInterrupt().catch((error: unknown) => {
       toastManager.add({
         type: "error",
-        title: "Could not stop the current response",
+        title: workbenchCopy.productStopFailedTitle,
         description:
           error instanceof Error
             ? error.message
-            : "The interrupt request failed. Try again in a moment.",
+            : workbenchCopy.productStopFailedDescription,
       });
     });
-  }, [onInterrupt]);
+  }, [onInterrupt, workbenchCopy]);
 
   const onStopWorkflowRun = useCallback(async () => {
     const api = readNativeApi();
@@ -7223,6 +7408,7 @@ export default function ChatView({
   const sendProductConversation = async (
     e?: { preventDefault: () => void },
     queuedTurn?: QueuedComposerChatTurn,
+    requestedDispatchMode: "queue" | "steer" = "queue",
   ): Promise<boolean> => {
     e?.preventDefault();
     if (
@@ -7275,6 +7461,49 @@ export default function ChatView({
     const messageId = newMessageId();
     const observedAt = new Date().toISOString();
     const productApi = readProductNativeApi();
+    const activeProductRun = [...(productReadModel?.runs ?? [])]
+      .reverse()
+      .find(
+        (run) =>
+          run.receipt.receipt.state === "accepted" || run.receipt.receipt.state === "running",
+      );
+    const unresolvedProductRun = [...(productReadModel?.runs ?? [])]
+      .reverse()
+      .find(
+        (run) =>
+          run.receipt.receipt.state === "delivery_unknown" ||
+          run.receipt.receipt.state === "outcome_unknown",
+      );
+    if (requestedDispatchMode === "steer" && activeProductRun) {
+      try {
+        const result = await productApi.controlRun({
+          protocolVersion: PRODUCT_PROTOCOL_VERSION,
+          conversationId: productConversationId,
+          runId: activeProductRun.id,
+          control: "steer",
+          text,
+        });
+        if (result.result !== "applied") {
+          throw new Error(productControlFailureMessage(result, workbenchCopy));
+        }
+        if (queuedTurn === undefined) clearComposerInput(threadIdForSend);
+        scheduleComposerFocus();
+        return true;
+      } catch (error) {
+        setThreadError(
+          threadIdForSend,
+          error instanceof Error ? error.message : workbenchCopy.productControlUnsupported,
+        );
+        return false;
+      }
+    }
+    const freshRuntimeCatalog = await productApi
+      .getShellSnapshot()
+      .then((snapshot) => {
+        setProductShellSnapshot(snapshot);
+        return snapshot.runtimeCatalog;
+      })
+      .catch(() => null);
     const executionTarget =
       isChatProductSurface || !activeProject?.cwd
         ? null
@@ -7307,21 +7536,36 @@ export default function ChatView({
               executionTarget,
               writeAuthority: "managed-directory" as const,
             };
+    const availableRuntimeModels =
+      freshRuntimeCatalog?.models.filter((model) => model.available) ?? [];
+    const requestedRuntimeModel =
+      availableRuntimeModels.find((model) => model.id === productRuntimeModelId) ??
+      availableRuntimeModels[0] ??
+      null;
+    const requestedThinking =
+      requestedRuntimeModel === null
+        ? null
+        : productRuntimeThinking &&
+            requestedRuntimeModel.thinkingLevels.includes(
+              productRuntimeThinking as (typeof requestedRuntimeModel.thinkingLevels)[number],
+            )
+          ? productRuntimeThinking
+          : requestedRuntimeModel.thinkingLevels.includes("medium")
+            ? "medium"
+            : (requestedRuntimeModel.thinkingLevels[0] ?? null);
     const proposedQueuePutInput = {
       protocolVersion: PRODUCT_PROTOCOL_VERSION,
       conversationId: productConversationId,
       itemId: productQueueEdit?.id ?? ProductQueueItemId.makeUnsafe(messageId),
       text,
       requestedSelection: {
-        // T3 has no Engine selection authority. These values explicitly describe an
-        // unresolved native admission request; T4 replaces them with typed Product facts.
-        engineId: "native-engine-unresolved",
-        modelId: null,
-        thinking: null,
+        engineId: freshRuntimeCatalog?.engineId ?? "pi-unavailable",
+        modelId: requestedRuntimeModel?.id ?? null,
+        thinking: requestedThinking,
         permissionPolicy: "approval-required" as const,
         enforcement: "unverified" as const,
         executionTarget,
-        packageGeneration: "unresolved-not-activated",
+        packageGeneration: freshRuntimeCatalog?.packageGeneration ?? "pi-catalog-unavailable",
       },
       resources: [],
       expectedRevision: productQueueEdit?.revision ?? null,
@@ -7388,6 +7632,20 @@ export default function ChatView({
       });
       setProductQueueEdit(null);
 
+      if (activeProductRun) {
+        resetLocalDispatch();
+        return true;
+      }
+      if (unresolvedProductRun) {
+        setThreadError(threadIdForSend, workbenchCopy.productRunUnresolved);
+        resetLocalDispatch();
+        return true;
+      }
+      if (!requestedRuntimeModel) {
+        setThreadError(threadIdForSend, workbenchCopy.productModelRequired);
+        resetLocalDispatch();
+        return true;
+      }
       if (!canDispatchProductSubmission(useSystemHealthStore.getState().snapshot)) {
         resetLocalDispatch();
         return true;
@@ -7442,7 +7700,7 @@ export default function ChatView({
       });
     e?.preventDefault();
     if (isProductConversationThread) {
-      return sendProductConversation(e, queuedTurn);
+      return sendProductConversation(e, queuedTurn, dispatchMode);
     }
     const api = readNativeApi();
     const lateSendHandlers = lateComposerSendHandlersRef.current;
@@ -9205,6 +9463,51 @@ export default function ChatView({
     ],
   );
 
+  const onRunProductQueueItemNext = useCallback(
+    async (queuedTurn: QueuedComposerTurn) => {
+      if (!productReadModel) return;
+      const queueItem = productReadModel.queue[0];
+      if (!queueItem || queueItem.id !== queuedTurn.id) return;
+      if (hasProductUnresolvedRun) {
+        setThreadError(threadId, workbenchCopy.productRunUnresolved);
+        return;
+      }
+      if (hasProductActiveRun) return;
+      if (!canDispatchProductSubmission(useSystemHealthStore.getState().snapshot)) {
+        setThreadError(threadId, workbenchCopy.executionUnavailableDescription);
+        return;
+      }
+      try {
+        const result = await readProductNativeApi().submitQueueItem({
+          protocolVersion: PRODUCT_PROTOCOL_VERSION,
+          conversationId: productConversationId,
+          itemId: queueItem.id,
+          expectedRevision: queueItem.revision,
+          entryId: ProductEntryId.makeUnsafe(randomUUID()),
+          runId: ProductRunId.makeUnsafe(randomUUID()),
+          dispatchId: ProductDispatchId.makeUnsafe(randomUUID()),
+          receiptId: ProductOperationReceiptId.makeUnsafe(randomUUID()),
+        });
+        setProductConversationSnapshot(result.snapshot);
+      } catch (error) {
+        setThreadError(
+          threadId,
+          error instanceof Error ? error.message : workbenchCopy.queuePutError,
+        );
+      }
+    },
+    [
+      hasProductActiveRun,
+      hasProductUnresolvedRun,
+      productConversationId,
+      productReadModel,
+      setProductConversationSnapshot,
+      setThreadError,
+      threadId,
+      workbenchCopy,
+    ],
+  );
+
   const onSteerQueuedComposerTurn = useCallback(
     async (queuedTurn: QueuedComposerTurn) => {
       const previousQueue = queuedComposerTurnsRef.current;
@@ -9572,7 +9875,20 @@ export default function ChatView({
     [handleModelPickerOpenChange],
   );
   const composerPickerControls =
-    isProductConversationThread ? null : showComposerModelBootstrapSkeleton ? (
+    isProductConversationThread ? (
+      <ProductRuntimePicker
+        catalog={productRuntimeCatalog}
+        copy={workbenchCopy}
+        modelId={productRuntimeModelId}
+        thinking={productRuntimeThinking}
+        onModelChange={(modelId) => commitProductRuntimeSelection(modelId)}
+        onThinkingChange={(thinking) =>
+          productRuntimeModelId
+            ? commitProductRuntimeSelection(productRuntimeModelId, thinking)
+            : undefined
+        }
+      />
+    ) : showComposerModelBootstrapSkeleton ? (
       useSplitComposerPickerControls ? (
         <>
           {selectedProviderRuntimeModelDiscoveryPending ? (
@@ -11298,8 +11614,10 @@ export default function ChatView({
                 primaryAction={
                   productReadModel
                     ? {
-                        kind: "move-next",
-                        onSelect: onMoveProductQueueItemNext,
+                        kind: "run-next",
+                        disabled: hasProductActiveRun || hasProductUnresolvedRun,
+                        onSelect: onRunProductQueueItemNext,
+                        onMoveNext: onMoveProductQueueItemNext,
                       }
                     : {
                         kind: "steer",
@@ -11636,7 +11954,7 @@ export default function ChatView({
                               ? "Submit answers"
                               : "Next question"}
                         </Button>
-                      ) : phase === "running" ? (
+                      ) : phase === "running" || hasProductActiveRun ? (
                         <Button
                           type="button"
                           variant="prominent"

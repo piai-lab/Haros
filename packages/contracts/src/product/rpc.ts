@@ -5,6 +5,8 @@ import * as RpcGroup from "effect/unstable/rpc/RpcGroup";
 import { WsFeatureRpcGroup as ExistingFeatureRpcGroup, WsRpcError } from "../rpc";
 import {
   ProductConversationSnapshot,
+  ProductControlRunInput,
+  ProductControlRunResult,
   ProductCreateConversationInput,
   ProductDeleteQueueItemInput,
   ProductFactBatch,
@@ -26,6 +28,7 @@ export const PRODUCT_RPC_METHODS = {
   reorderQueue: "product.queue.reorder",
   deleteQueueItem: "product.queue.delete",
   submitQueueItem: "product.queue.submit",
+  controlRun: "product.run.control",
   readFacts: "product.facts.read",
 } as const;
 
@@ -67,6 +70,11 @@ export const ProductSubmitQueueItemRpc = Rpc.make(PRODUCT_RPC_METHODS.submitQueu
   success: ProductSubmitResult,
   error: WsRpcError,
 });
+export const ProductControlRunRpc = Rpc.make(PRODUCT_RPC_METHODS.controlRun, {
+  payload: ProductControlRunInput,
+  success: ProductControlRunResult,
+  error: WsRpcError,
+});
 export const ProductReadFactsRpc = Rpc.make(PRODUCT_RPC_METHODS.readFacts, {
   payload: ProductReadFactsInput,
   success: ProductFactBatch,
@@ -81,6 +89,7 @@ export const ProductRpcGroup = RpcGroup.make(
   ProductReorderQueueRpc,
   ProductDeleteQueueItemRpc,
   ProductSubmitQueueItemRpc,
+  ProductControlRunRpc,
   ProductReadFactsRpc,
 );
 

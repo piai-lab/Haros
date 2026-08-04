@@ -7,16 +7,25 @@ import {
   NATIVE_HOST_PROTOCOL_VERSION,
   decodeNativeHostFrame,
   encodeNativeHostFrame,
+  nativeHostBrokerClientProofPayload,
+  nativeHostBrokerServerProofPayload,
   nativeHostClientProofPayload,
   nativeHostServerProofPayload,
   type NativeHostClientHello,
+  type NativeHostBrokerHello,
+  type NativeHostBrokerServerHello,
+  type NativeHostFrame,
   type NativeHostRequest,
   type NativeHostResponse,
 } from "@omnimind/contracts/native-host";
+import { NativeCredentialBroker } from "./credentialBroker";
+import { PI_RUNTIME_VERSION, PiNativeRuntime } from "./piRuntime";
+import { fitNativeHostResponseFrame } from "./responseFrame";
 
 const ENDPOINT_ENV = "OMNIMIND_NATIVE_HOST_ENDPOINT";
 const AUTH_ENV = "OMNIMIND_NATIVE_HOST_AUTH";
 const INSTANCE_ENV = "OMNIMIND_NATIVE_HOST_INSTANCE";
+const BROKER_AUTH_ENV = "OMNIMIND_NATIVE_HOST_BROKER_AUTH";
 const READY_LINE = `OMNIMIND_NATIVE_HOST_READY protocol=${NATIVE_HOST_PROTOCOL_VERSION}`;
 const startedAt = Date.now();
 
@@ -24,6 +33,7 @@ interface NativeHostConfig {
   readonly endpoint: string;
   readonly authentication: string;
   readonly hostInstanceId: string;
+  readonly brokerAuthentication: string | null;
 }
 
 function requiredEnvironment(name: string): string {
@@ -34,13 +44,18 @@ function requiredEnvironment(name: string): string {
 
 function readConfig(): NativeHostConfig {
   const authentication = requiredEnvironment(AUTH_ENV);
+  const brokerAuthentication = process.env[BROKER_AUTH_ENV]?.trim() || null;
   if (authentication.length < 32) {
     throw new Error("Native Host authentication material was invalid.");
+  }
+  if (brokerAuthentication !== null && brokerAuthentication.length < 32) {
+    throw new Error("Native Host broker authentication material was invalid.");
   }
   return {
     endpoint: requiredEnvironment(ENDPOINT_ENV),
     authentication,
     hostInstanceId: requiredEnvironment(INSTANCE_ENV),
+    brokerAuthentication,
   };
 }
 
@@ -60,10 +75,7 @@ function removeSocketFile(endpoint: string): void {
   }
 }
 
-function writeFrame(
-  socket: Socket,
-  frame: NativeHostResponse | ReturnType<typeof makeServerHello>,
-): void {
+function writeFrame(socket: Socket, frame: NativeHostFrame): void {
   socket.write(encodeNativeHostFrame(frame));
 }
 
@@ -89,6 +101,31 @@ function makeServerHello(config: NativeHostConfig, hello: NativeHostClientHello)
   };
 }
 
+function makeBrokerServerHello(
+  config: NativeHostConfig,
+  hello: NativeHostBrokerHello,
+): NativeHostBrokerServerHello {
+  const hostChallenge = randomBytes(32).toString("base64url");
+  return {
+    protocolVersion: NATIVE_HOST_PROTOCOL_VERSION,
+    kind: "host.broker-hello",
+    desktopInstanceId: hello.desktopInstanceId,
+    hostInstanceId: config.hostInstanceId,
+    challenge: hello.challenge,
+    hostChallenge,
+    proof: proof(
+      config.brokerAuthentication!,
+      nativeHostBrokerServerProofPayload({
+        desktopInstanceId: hello.desktopInstanceId,
+        hostInstanceId: config.hostInstanceId,
+        challenge: hello.challenge,
+        hostChallenge,
+      }),
+    ),
+    ready: true,
+  };
+}
+
 function responseEnvelope(request: NativeHostRequest) {
   return {
     protocolVersion: NATIVE_HOST_PROTOCOL_VERSION,
@@ -98,7 +135,10 @@ function responseEnvelope(request: NativeHostRequest) {
   } as const;
 }
 
-function responseFor(request: NativeHostRequest): NativeHostResponse {
+async function responseFor(
+  request: NativeHostRequest,
+  runtime: PiNativeRuntime,
+): Promise<NativeHostResponse> {
   const envelope = responseEnvelope(request);
   switch (request.kind) {
     case "liveness.request":
@@ -108,17 +148,23 @@ function responseFor(request: NativeHostRequest): NativeHostResponse {
         ...envelope,
         kind: "health.response",
         status: "ready",
-        execution: "unsupported",
+        execution: "available",
         uptimeMs: Math.max(0, Date.now() - startedAt),
+        runtime: "pi",
+        runtimeVersion: PI_RUNTIME_VERSION,
       };
+    case "runtime.catalog.request":
+      return { ...envelope, ...(await runtime.catalog()) };
     case "execution.request":
+      return { ...envelope, ...(await runtime.execute(request)) };
+    case "runtime.facts.request":
+      return { ...envelope, ...runtime.facts(request.operationRef, request.afterSequence) };
+    case "runtime.control.request":
+      return { ...envelope, ...(await runtime.control(request)) };
+    case "runtime.reconcile.request":
       return {
         ...envelope,
-        kind: "execution.unsupported",
-        code: "NATIVE_HOST_EXECUTION_UNSUPPORTED",
-        message:
-          "Execution is unavailable until the isolated Native Host is extended with the native runtime.",
-        retryable: false,
+        ...(await runtime.reconcile(request.operationRef, request.afterSequence)),
       };
     case "shutdown.request":
       return { ...envelope, kind: "shutdown.ack" };
@@ -128,10 +174,13 @@ function responseFor(request: NativeHostRequest): NativeHostResponse {
 function attachConnection(
   socket: Socket,
   config: NativeHostConfig,
+  runtime: PiNativeRuntime,
+  credentialBroker: NativeCredentialBroker,
   requestShutdown: () => void,
 ): void {
   let buffered = Buffer.alloc(0);
   let hello: NativeHostClientHello | null = null;
+  let brokerHello: NativeHostBrokerHello | null = null;
   let complete = false;
 
   const reject = () => {
@@ -139,24 +188,31 @@ function attachConnection(
     socket.destroy();
   };
 
-  socket.on("data", (chunk: Buffer) => {
-    if (complete) return;
-    buffered = Buffer.concat([buffered, chunk]);
-    if (buffered.byteLength > NATIVE_HOST_MAX_FRAME_BYTES) {
-      reject();
-      return;
-    }
-    const newline = buffered.indexOf(0x0a);
-    if (newline < 0) return;
-    if (newline !== buffered.byteLength - 1) {
-      reject();
-      return;
-    }
-
+  const receiveFrame = (frameBytes: Buffer) => {
     try {
-      const frame = decodeNativeHostFrame(buffered.subarray(0, newline), "service-to-host");
-      buffered = Buffer.alloc(0);
-      if (hello === null) {
+      const frame = decodeNativeHostFrame(frameBytes, "service-to-host");
+      if (hello === null && brokerHello === null) {
+        if (frame.kind === "broker.hello") {
+          if (!config.brokerAuthentication) {
+            reject();
+            return;
+          }
+          const expected = proof(
+            config.brokerAuthentication,
+            nativeHostBrokerClientProofPayload({
+              desktopInstanceId: frame.desktopInstanceId,
+              challenge: frame.challenge,
+            }),
+          );
+          if (!equalProof(expected, frame.proof)) {
+            reject();
+            return;
+          }
+          brokerHello = frame;
+          credentialBroker.attach(socket, frame.desktopInstanceId);
+          writeFrame(socket, makeBrokerServerHello(config, frame));
+          return;
+        }
         if (frame.kind !== "client.hello") {
           reject();
           return;
@@ -177,31 +233,62 @@ function attachConnection(
         return;
       }
 
-      if (
-        !["liveness.request", "health.request", "execution.request", "shutdown.request"].includes(
-          frame.kind,
-        )
-      ) {
+      if (brokerHello) {
+        if (
+          frame.kind !== "broker.availability.response" &&
+          frame.kind !== "broker.credential.response"
+        ) {
+          reject();
+          return;
+        }
+        if (!credentialBroker.receive(frame)) reject();
+        return;
+      }
+
+      if (!frame.kind.endsWith(".request")) {
         reject();
         return;
       }
       const request = frame as NativeHostRequest;
       if (
-        request.serviceInstanceId !== hello.serviceInstanceId ||
+        request.serviceInstanceId !== hello!.serviceInstanceId ||
         request.hostInstanceId !== config.hostInstanceId
       ) {
         reject();
         return;
       }
       const shouldShutdown = request.kind === "shutdown.request";
-      writeFrame(socket, responseFor(request));
       complete = true;
-      socket.end(() => {
-        if (shouldShutdown) requestShutdown();
-      });
+      void responseFor(request, runtime).then(
+        (response) => {
+          writeFrame(socket, fitNativeHostResponseFrame(response));
+          socket.end(() => {
+            if (shouldShutdown) requestShutdown();
+          });
+        },
+        () => socket.destroy(),
+      );
     } catch {
       reject();
     }
+  };
+
+  socket.on("data", (chunk: Buffer) => {
+    if (complete) return;
+    buffered = Buffer.concat([buffered, chunk]);
+    for (;;) {
+      const newline = buffered.indexOf(0x0a);
+      if (newline < 0) break;
+      if (newline > NATIVE_HOST_MAX_FRAME_BYTES) {
+        reject();
+        return;
+      }
+      const frameBytes = buffered.subarray(0, newline);
+      buffered = buffered.subarray(newline + 1);
+      receiveFrame(frameBytes);
+      if (complete) return;
+    }
+    if (buffered.byteLength > NATIVE_HOST_MAX_FRAME_BYTES) reject();
   });
 
   socket.on("error", () => {
@@ -211,9 +298,16 @@ function attachConnection(
 
 async function main(): Promise<void> {
   let config: NativeHostConfig;
+  let runtime: PiNativeRuntime;
+  let credentialBroker: NativeCredentialBroker;
   try {
     config = readConfig();
     removeSocketFile(config.endpoint);
+    credentialBroker = new NativeCredentialBroker(config.hostInstanceId);
+    runtime = await PiNativeRuntime.create({
+      productHome: requiredEnvironment("OMNIMIND_HOME"),
+      credentialBroker,
+    });
   } catch {
     process.stderr.write("Native Host configuration failed.\n");
     process.exitCode = 1;
@@ -234,7 +328,10 @@ async function main(): Promise<void> {
     if (closing) return;
     closing = true;
     for (const socket of sockets) socket.end();
-    server.close(finish);
+    void runtime.shutdown().finally(() => {
+      credentialBroker.disconnect();
+      server.close(finish);
+    });
   };
 
   server = createServer((socket) => {
@@ -244,7 +341,7 @@ async function main(): Promise<void> {
     }
     sockets.add(socket);
     socket.once("close", () => sockets.delete(socket));
-    attachConnection(socket, config, shutdown);
+    attachConnection(socket, config, runtime, credentialBroker, shutdown);
   });
   server.on("error", () => {
     process.stderr.write("Native Host endpoint failed.\n");

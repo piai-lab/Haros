@@ -21,6 +21,7 @@ export interface ProductProjectionState {
   readonly shellHydrated: boolean;
   readonly shellSequence: number;
   readonly conversations: ProductShellSnapshot["conversations"];
+  readonly runtimeCatalog: ProductShellSnapshot["runtimeCatalog"];
   readonly detailSequenceByConversation: Readonly<Record<string, number>>;
   readonly detailByConversation: Readonly<Record<string, ProductConversationReadModel>>;
   readonly detailRetainCountByConversation: Readonly<Record<string, number>>;
@@ -33,6 +34,7 @@ export const initialProductProjectionState: ProductProjectionState = {
   shellHydrated: false,
   shellSequence: 0,
   conversations: [],
+  runtimeCatalog: null,
   detailSequenceByConversation: {},
   detailByConversation: {},
   detailRetainCountByConversation: {},
@@ -71,6 +73,85 @@ function applyDetailFact(
       : [...readModel.runs, change.run];
     return { ...readModel, entries, runs };
   }
+  if (change.kind === "entry-delta") {
+    const existing = readModel.entries.find((entry) => entry.id === change.entryId);
+    const updated = existing
+      ? { ...existing, text: `${existing.text}${change.delta}` }
+      : {
+          id: change.entryId,
+          conversationId: change.conversationId,
+          runId: change.runId,
+          role: "assistant" as const,
+          text: change.delta,
+          createdAt: change.createdAt,
+        };
+    return {
+      ...readModel,
+      entries: existing
+        ? readModel.entries.map((entry) => (entry.id === change.entryId ? updated : entry))
+        : [...readModel.entries, updated],
+      streamingEntryIds: readModel.streamingEntryIds.includes(change.entryId)
+        ? readModel.streamingEntryIds
+        : [...readModel.streamingEntryIds, change.entryId],
+    };
+  }
+  if (change.kind === "entry-replaced") {
+    const exists = readModel.entries.some((entry) => entry.id === change.entry.id);
+    return {
+      ...readModel,
+      entries: exists
+        ? readModel.entries.map((entry) =>
+            entry.id === change.entry.id ? change.entry : entry,
+          )
+        : [...readModel.entries, change.entry],
+    };
+  }
+  if (change.kind === "entry-removed") {
+    return {
+      ...readModel,
+      entries: readModel.entries.filter((entry) => entry.id !== change.entryId),
+      streamingEntryIds: readModel.streamingEntryIds.filter(
+        (entryId) => entryId !== change.entryId,
+      ),
+    };
+  }
+  if (change.kind === "entry-streaming") {
+    return {
+      ...readModel,
+      streamingEntryIds: change.streaming
+        ? readModel.streamingEntryIds.includes(change.entryId)
+          ? readModel.streamingEntryIds
+          : [...readModel.streamingEntryIds, change.entryId]
+        : readModel.streamingEntryIds.filter((entryId) => entryId !== change.entryId),
+    };
+  }
+  if (change.kind === "runtime-activity") {
+    const exists = readModel.activities.some(
+      (activity) =>
+        activity.runId === change.activity.runId &&
+        activity.nativeSequence === change.activity.nativeSequence,
+    );
+    return exists
+      ? readModel
+      : {
+          ...readModel,
+          activities: [
+            ...readModel.activities,
+            change.activity,
+          ],
+        };
+  }
+  if (change.kind === "runtime-recovered") {
+    const recoveries = readModel.recoveries ?? [];
+    const exists = recoveries.some(
+      (recovery) =>
+        recovery.runId === change.recovery.runId &&
+        recovery.snapshotVersion === change.recovery.snapshotVersion,
+    );
+    return exists
+      ? readModel
+      : { ...readModel, recoveries: [...recoveries, change.recovery] };
+  }
   if (change.kind === "dispatch-changed") {
     return {
       ...readModel,
@@ -100,6 +181,7 @@ export function applyProductShellSnapshot(
     shellHydrated: true,
     shellSequence: snapshot.sequence,
     conversations: snapshot.conversations,
+    runtimeCatalog: snapshot.runtimeCatalog,
     shellIssue: null,
   };
 }
@@ -260,8 +342,20 @@ export function applyProductFactBatch(
     !isShell && conversationId && detail
       ? { ...state.detailByConversation, [conversationId]: detail }
       : state.detailByConversation;
+  const catalogFact = isShell
+    ? [...batch.facts].reverse().find((fact) => fact.change.kind === "runtime-catalog")
+    : undefined;
   let nextState: ProductProjectionState = isShell
-    ? { ...state, conversations, shellSequence: cursor, shellIssue: null }
+    ? {
+        ...state,
+        conversations,
+        runtimeCatalog:
+          catalogFact?.change.kind === "runtime-catalog"
+            ? catalogFact.change.catalog
+            : state.runtimeCatalog,
+        shellSequence: cursor,
+        shellIssue: null,
+      }
     : {
         ...state,
         detailByConversation,

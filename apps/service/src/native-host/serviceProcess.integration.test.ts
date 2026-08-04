@@ -132,6 +132,7 @@ describe("production Service and Native Host fault boundary", () => {
       OMNIMIND_NATIVE_HOST_ENDPOINT: endpoint,
       OMNIMIND_NATIVE_HOST_AUTH: authentication,
       OMNIMIND_NATIVE_HOST_INSTANCE: `host-${identity}`,
+      OMNIMIND_HOME: root,
     };
     const host = spawn(process.execPath, [hostEntry], {
       env: sharedEnv,

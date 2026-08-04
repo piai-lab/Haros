@@ -3,15 +3,19 @@ import path from "node:path";
 
 import {
   PRODUCT_MAX_FACTS_PER_BATCH,
+  PRODUCT_MAX_TEXT_CHARS,
   PRODUCT_PROTOCOL_VERSION,
   ProductConversationId,
   ProductConversationReadModel,
   ProductConversationSnapshot,
   ProductConversationSummary,
+  ProductControlRunInput,
+  ProductControlRunResult,
   ProductCreateConversationInput,
   ProductDeleteQueueItemInput,
   ProductDispatchReceipt,
   ProductEntry,
+  ProductEngineBindingId,
   ProductExecutionObservation,
   ProductFactBatch,
   ProductDetailFactChange,
@@ -28,12 +32,19 @@ import {
   ProductResourceRef,
   ProductRun,
   ProductRunObservation,
+  ProductRuntimeActivity,
+  ProductRuntimeActivityDetail,
+  ProductRuntimeCatalog,
+  ProductRuntimeRecovery,
   ProductShellSnapshot,
   ProductSubmitQueueItemInput,
   ProductSubmitResult,
   ProductWorkspace,
   ProductWorkspaceAccess,
+  type NativeHostRuntimeFact,
+  type NativeHostRuntimeSnapshot,
   type ProductDispatchId,
+  type ProductResolvedSelection,
   type ProductRunId,
 } from "@omnimind/contracts";
 import { Effect, Layer, Schema, ServiceMap } from "effect";
@@ -132,6 +143,32 @@ const productSchemaSql = `
     run_id TEXT NOT NULL UNIQUE REFERENCES product_runs(run_id) ON DELETE CASCADE,
     receipt_json TEXT NOT NULL,
     updated_at TEXT NOT NULL
+  );
+
+  CREATE TABLE IF NOT EXISTS product_runtime_activities (
+    run_id TEXT NOT NULL REFERENCES product_runs(run_id) ON DELETE CASCADE,
+    native_sequence INTEGER NOT NULL CHECK (native_sequence > 0),
+    kind TEXT NOT NULL,
+    summary TEXT NOT NULL,
+    created_at TEXT NOT NULL,
+    PRIMARY KEY (run_id, native_sequence)
+  );
+
+  CREATE TABLE IF NOT EXISTS product_runtime_recoveries (
+    run_id TEXT NOT NULL REFERENCES product_runs(run_id) ON DELETE CASCADE,
+    snapshot_version INTEGER NOT NULL CHECK (snapshot_version > 0),
+    kind TEXT NOT NULL CHECK (kind = 'visible-result'),
+    created_at TEXT NOT NULL,
+    PRIMARY KEY (run_id, snapshot_version)
+  );
+
+  CREATE TABLE IF NOT EXISTS product_streaming_entries (
+    entry_id TEXT PRIMARY KEY REFERENCES product_entries(entry_id) ON DELETE CASCADE
+  );
+
+  CREATE TABLE IF NOT EXISTS product_runtime_fact_cursors (
+    run_id TEXT PRIMARY KEY REFERENCES product_runs(run_id) ON DELETE CASCADE,
+    native_sequence INTEGER NOT NULL CHECK (native_sequence >= 0)
   );
 
   CREATE TABLE IF NOT EXISTS product_queue_items (
@@ -244,15 +281,52 @@ const requiredNumber = (row: Record<string, unknown>, key: string): number => {
 };
 
 export interface ProductExecutionBoundary {
+  readonly preflight?: (input: {
+    readonly dispatchId: ProductDispatchId;
+    readonly run: ProductRun;
+    readonly text: string;
+    readonly priorLineageRef: string | null;
+  }) => void;
   readonly attempt: (input: {
     readonly dispatchId: ProductDispatchId;
     readonly run: ProductRun;
+    readonly text: string;
+    readonly priorLineageRef: string | null;
     /** Must complete before any non-idempotent send crosses the process boundary. */
     readonly markSent: () => Effect.Effect<void, ProductControlPlaneError>;
   }) => Effect.Effect<ProductExecutionObservation, ProductControlPlaneError>;
+  readonly subscribeFacts?: (
+    listener: (
+      runId: ProductRunId,
+      observation:
+        | { readonly kind: "facts"; readonly facts: ReadonlyArray<NativeHostRuntimeFact> }
+        | { readonly kind: "snapshot"; readonly snapshot: NativeHostRuntimeSnapshot }
+        | { readonly kind: "outcome-unknown" }
+        | {
+            readonly kind: "delivery-accepted";
+            readonly operationRef: string;
+            readonly lineageRef: string;
+            readonly resolvedSelection: Omit<ProductResolvedSelection, "executionTarget">;
+          }
+        | {
+            readonly kind: "delivery-rejected";
+            readonly code: string;
+            readonly message: string;
+            readonly retryable: boolean;
+          },
+    ) => void,
+  ) => () => void;
+  readonly resumeFacts?: (runId: ProductRunId, operationRef: string) => void;
+  readonly control?: (input: {
+    readonly operationRef: string;
+    readonly control: ProductControlRunInput["control"];
+    readonly text: string | null;
+  }) => Effect.Effect<ProductControlRunResult, ProductControlPlaneError>;
+  readonly close?: () => Promise<void>;
+  readonly catalog?: () => Effect.Effect<ProductRuntimeCatalog | null, ProductControlPlaneError>;
 }
 
-/** T2 production behavior: the real Pi-free path cannot accept execution. */
+/** Closed boundary used when no authenticated native execution client is attached. */
 export const ProductExecutionUnavailable: ProductExecutionBoundary = {
   attempt: () =>
     Effect.succeed({
@@ -351,6 +425,9 @@ export interface ProductControlPlaneShape {
   readonly submitQueueItem: (
     input: ProductSubmitQueueItemInput,
   ) => Effect.Effect<ProductSubmitResult, ProductControlPlaneError>;
+  readonly controlRun: (
+    input: ProductControlRunInput,
+  ) => Effect.Effect<ProductControlRunResult, ProductControlPlaneError>;
   readonly readFacts: (
     input: ProductReadFactsInput,
   ) => Effect.Effect<ProductFactBatch, ProductControlPlaneError>;
@@ -394,7 +471,9 @@ function initializeSchema(database: PortableDatabase): void {
 function makeControlPlane(
   database: PortableDatabase,
   executionBoundary: ProductExecutionBoundary,
+  initialRuntimeCatalog: ProductRuntimeCatalog | null,
 ): ProductControlPlaneShape {
+  let runtimeCatalog = initialRuntimeCatalog;
   const statement = (sql: string) => database.prepare(sql);
   const generatedId = () => randomUUID();
 
@@ -580,11 +659,58 @@ function makeControlPlane(
     )
       .all(conversationId)
       .map((raw) => requiredString(asRecord(raw), "run_id"));
+    const activities = statement(
+      `SELECT a.run_id, a.native_sequence, a.kind, a.summary AS detail_json, a.created_at
+       FROM product_runtime_activities a
+       JOIN product_runs r ON r.run_id = a.run_id
+       WHERE r.conversation_id = ?
+       ORDER BY a.created_at ASC, a.run_id ASC, a.native_sequence ASC`,
+    )
+      .all(conversationId)
+      .map((raw) => {
+        const row = asRecord(raw);
+        return decode(ProductRuntimeActivity, {
+          runId: requiredString(row, "run_id"),
+          nativeSequence: requiredNumber(row, "native_sequence"),
+          kind: requiredString(row, "kind"),
+          detail: decodeJson(
+            ProductRuntimeActivityDetail,
+            requiredString(row, "detail_json"),
+          ),
+          createdAt: requiredString(row, "created_at"),
+        });
+      });
+    const recoveries = statement(
+      `SELECT rr.run_id, rr.snapshot_version, rr.kind, rr.created_at
+       FROM product_runtime_recoveries rr
+       JOIN product_runs r ON r.run_id = rr.run_id
+       WHERE r.conversation_id = ?
+       ORDER BY rr.created_at ASC, rr.run_id ASC, rr.snapshot_version ASC`,
+    )
+      .all(conversationId)
+      .map((raw) => {
+        const row = asRecord(raw);
+        return decode(ProductRuntimeRecovery, {
+          runId: requiredString(row, "run_id"),
+          snapshotVersion: requiredNumber(row, "snapshot_version"),
+          kind: requiredString(row, "kind"),
+          createdAt: requiredString(row, "created_at"),
+        });
+      });
     return decode(ProductConversationReadModel, {
       conversation: summary,
       workspace: readWorkspace(summary.workspaceId),
       entries,
+      streamingEntryIds: statement(
+        `SELECT s.entry_id FROM product_streaming_entries s
+         JOIN product_entries e ON e.entry_id = s.entry_id
+         WHERE e.conversation_id = ? ORDER BY s.entry_id ASC`,
+      )
+        .all(conversationId)
+        .map((raw) => requiredString(asRecord(raw), "entry_id")),
       runs: runIds.map(readRun),
+      activities,
+      recoveries,
       queue: readQueue(conversationId),
     });
   };
@@ -692,25 +818,87 @@ function makeControlPlane(
     );
 
   const getShellSnapshot: ProductControlPlaneShape["getShellSnapshot"] = () =>
-    effect(() => {
-      const ids = statement(
-        `SELECT conversation_id FROM product_conversations
+    Effect.gen(function* () {
+      if (executionBoundary.catalog) {
+        runtimeCatalog = yield* executionBoundary
+          .catalog()
+          .pipe(Effect.catch(() => Effect.succeed(null)));
+      }
+      return yield* effect(() => {
+        const ids = statement(
+          `SELECT conversation_id FROM product_conversations
          ORDER BY updated_at DESC, conversation_id ASC`,
-      )
-        .all()
-        .map((raw) => requiredString(asRecord(raw), "conversation_id"));
-      const highWater = statement(
-        "SELECT COALESCE(MAX(global_sequence), 0) AS high_water FROM product_facts",
-      ).get();
-      return decode(ProductShellSnapshot, {
-        protocolVersion: PRODUCT_PROTOCOL_VERSION,
-        sequence: highWater ? requiredNumber(asRecord(highWater), "high_water") : 0,
-        conversations: ids.map(readSummary),
+        )
+          .all()
+          .map((raw) => requiredString(asRecord(raw), "conversation_id"));
+        const highWater = statement(
+          "SELECT COALESCE(MAX(global_sequence), 0) AS high_water FROM product_facts",
+        ).get();
+        return decode(ProductShellSnapshot, {
+          protocolVersion: PRODUCT_PROTOCOL_VERSION,
+          sequence: highWater ? requiredNumber(asRecord(highWater), "high_water") : 0,
+          conversations: ids.map(readSummary),
+          runtimeCatalog,
+        });
       });
     });
 
   const getConversationSnapshot: ProductControlPlaneShape["getConversationSnapshot"] = (input) =>
     effect(() => snapshot(input.conversationId));
+
+  const controlRun: ProductControlPlaneShape["controlRun"] = (input) =>
+    Effect.gen(function* () {
+      const run = yield* effect(() => readRun(input.runId));
+      if (run.conversationId !== input.conversationId) {
+        return yield* Effect.fail(
+          new ProductControlPlaneError({
+            code: "PRODUCT_CONTROL_TARGET_MISMATCH",
+            message: "The selected Run does not belong to this Conversation.",
+            retryable: false,
+          }),
+        );
+      }
+      const receipt = run.receipt.receipt;
+      if (receipt.state !== "accepted" && receipt.state !== "running") {
+        return decode(ProductControlRunResult, {
+          operationRef:
+            "operationRef" in receipt ? receipt.operationRef : `unaccepted:${input.runId}`,
+          control: input.control,
+          result: receipt.state === "settled" ? "too-late" : "unknown",
+          code: receipt.state === "settled" ? "control-too-late" : "operation-unknown",
+          message:
+            receipt.state === "settled"
+              ? "The Product Run has already settled."
+              : "The Product Run has no confirmed accepted operation.",
+        });
+      }
+      if (
+        (input.control === "steer" || input.control === "follow-up") &&
+        input.text === null
+      ) {
+        return decode(ProductControlRunResult, {
+          operationRef: receipt.operationRef,
+          control: input.control,
+          result: "unsupported",
+          code: "control-unsupported",
+          message: "This native control requires text.",
+        });
+      }
+      if (!executionBoundary.control) {
+        return decode(ProductControlRunResult, {
+          operationRef: receipt.operationRef,
+          control: input.control,
+          result: "unsupported",
+          code: "control-unsupported",
+          message: "The active execution boundary does not expose native controls.",
+        });
+      }
+      return yield* executionBoundary.control({
+        operationRef: receipt.operationRef,
+        control: input.control,
+        text: input.text,
+      });
+    });
 
   const putQueueItem: ProductControlPlaneShape["putQueueItem"] = (input) =>
     effect(() =>
@@ -863,6 +1051,48 @@ function makeControlPlane(
   const admitQueueItem: ProductControlPlaneShape["admitQueueItem"] = (input) =>
     effect(() =>
       withTransaction(() => {
+        const blockingReceipt = statement(
+          `SELECT o.state, r.receipt_json
+           FROM product_runs pr
+           JOIN product_outbox o ON o.run_id = pr.run_id
+           JOIN product_operation_receipts r ON r.run_id = pr.run_id
+           WHERE pr.conversation_id = ?`,
+        )
+          .all(input.conversationId)
+          .map((raw) => {
+            const row = asRecord(raw);
+            const receipt = decodeJson(
+              ProductDispatchReceipt,
+              requiredString(row, "receipt_json"),
+            );
+            return {
+              receipt,
+              blocks:
+              requiredString(row, "state") !== "terminal" ||
+              receipt.state === "accepted" ||
+              receipt.state === "running" ||
+              receipt.state === "delivery_unknown" ||
+              receipt.state === "outcome_unknown",
+            };
+          })
+          .find((candidate) => candidate.blocks)?.receipt;
+        if (blockingReceipt) {
+          if (
+            blockingReceipt.state === "delivery_unknown" ||
+            blockingReceipt.state === "outcome_unknown"
+          ) {
+            throw new ProductFailure(
+              "PRODUCT_RUN_UNRESOLVED",
+              "This Conversation has an unresolved Engine dispatch. The item remains in the editable Queue until reconciliation settles it.",
+              true,
+            );
+          }
+          throw new ProductFailure(
+            "PRODUCT_RUN_ACTIVE",
+            "This Conversation already owns a nonterminal Engine dispatch. The item remains in the editable Queue.",
+            true,
+          );
+        }
         const queueItem = readQueue(input.conversationId).find((item) => item.id === input.itemId);
         if (!queueItem)
           throw new ProductFailure("PRODUCT_QUEUE_ITEM_NOT_FOUND", "Queue item was not found.");
@@ -870,6 +1100,13 @@ function makeControlPlane(
           throw new ProductFailure(
             "PRODUCT_QUEUE_REVISION_CONFLICT",
             "The Queue item changed before admission.",
+            true,
+          );
+        }
+        if (queueItem.requestedSelection.modelId === null) {
+          throw new ProductFailure(
+            "PRODUCT_MODEL_SELECTION_REQUIRED",
+            "A currently available runtime model must be selected before admission.",
             true,
           );
         }
@@ -929,10 +1166,22 @@ function makeControlPlane(
              automatic_replay_count, updated_at
            ) VALUES (?, ?, 'pending', 'pre-send', 0, 0, ?)`,
         ).run(input.dispatchId, input.runId, timestamp);
+        const run = readRun(input.runId);
+        const priorBinding = statement(
+          `SELECT lineage_ref FROM product_engine_bindings
+           WHERE conversation_id = ? ORDER BY rowid DESC LIMIT 1`,
+        ).get(run.conversationId);
+        executionBoundary.preflight?.({
+          dispatchId: input.dispatchId,
+          run,
+          text: queueItem.text,
+          priorLineageRef: priorBinding
+            ? requiredString(asRecord(priorBinding), "lineage_ref")
+            : null,
+        });
         statement(
           "DELETE FROM product_queue_items WHERE queue_item_id = ? AND conversation_id = ?",
         ).run(input.itemId, input.conversationId);
-        const run = readRun(input.runId);
         const entry = decode(ProductEntry, {
           id: input.entryId,
           conversationId: input.conversationId,
@@ -1072,6 +1321,23 @@ function makeControlPlane(
             `UPDATE product_outbox
              SET state = 'sending', attempt_count = attempt_count + 1, updated_at = ?
              WHERE dispatch_id = ? AND state = 'pending' AND send_boundary = 'pre-send'
+               AND NOT EXISTS (
+                 SELECT 1
+                 FROM product_runs current_run
+                 JOIN product_runs other_run
+                   ON other_run.conversation_id = current_run.conversation_id
+                  AND other_run.run_id <> current_run.run_id
+                 JOIN product_outbox other_outbox ON other_outbox.run_id = other_run.run_id
+                 JOIN product_operation_receipts other_receipt
+                   ON other_receipt.run_id = other_run.run_id
+                 WHERE current_run.run_id = product_outbox.run_id
+                   AND (
+                     other_outbox.state = 'sending'
+                     OR json_extract(other_receipt.receipt_json, '$.state') IN (
+                       'accepted', 'running', 'delivery_unknown', 'outcome_unknown'
+                     )
+                   )
+               )
              RETURNING dispatch_id`,
           ).get(productIsoNow(), currentDispatchId),
         );
@@ -1080,6 +1346,27 @@ function makeControlPlane(
           .attempt({
             dispatchId: currentDispatchId,
             run: yield* effect(() => readRun(runId)),
+            text: yield* effect(() => {
+              const run = readRun(runId);
+              const row = statement("SELECT body FROM product_entries WHERE entry_id = ?").get(
+                run.entryId,
+              );
+              if (!row) {
+                throw new ProductFailure(
+                  "PRODUCT_ENTRY_NOT_FOUND",
+                  "The admitted Product entry was not found.",
+                );
+              }
+              return requiredString(asRecord(row), "body");
+            }),
+            priorLineageRef: yield* effect(() => {
+              const run = readRun(runId);
+              const row = statement(
+                `SELECT lineage_ref FROM product_engine_bindings
+                 WHERE conversation_id = ? ORDER BY rowid DESC LIMIT 1`,
+              ).get(run.conversationId);
+              return row ? requiredString(asRecord(row), "lineage_ref") : null;
+            }),
             markSent: () =>
               effect(() =>
                 withTransaction(() => {
@@ -1340,6 +1627,430 @@ function makeControlPlane(
       }),
     );
 
+  const applyRuntimeFacts = (
+    runId: ProductRunId,
+    facts: ReadonlyArray<NativeHostRuntimeFact>,
+  ): void => {
+    const run = readRun(runId);
+    const cursorRow = statement(
+      "SELECT native_sequence FROM product_runtime_fact_cursors WHERE run_id = ?",
+    ).get(runId);
+    let nativeCursor = cursorRow ? requiredNumber(asRecord(cursorRow), "native_sequence") : 0;
+    for (const fact of facts) {
+      if (fact.sequence <= nativeCursor) continue;
+      if (fact.kind === "assistant.delta") {
+        const entryId = `${runId}:assistant`;
+        const existing = statement(
+          "SELECT body, created_at FROM product_entries WHERE entry_id = ?",
+        ).get(entryId);
+        const currentText = existing ? requiredString(asRecord(existing), "body") : "";
+        const appendedText = fact.text.slice(
+          0,
+          Math.max(0, PRODUCT_MAX_TEXT_CHARS - currentText.length),
+        );
+        if (!appendedText) {
+          nativeCursor = fact.sequence;
+          statement(
+            `INSERT INTO product_runtime_fact_cursors(run_id, native_sequence) VALUES (?, ?)
+             ON CONFLICT(run_id) DO UPDATE SET native_sequence = excluded.native_sequence`,
+          ).run(runId, nativeCursor);
+          continue;
+        }
+        const nextText = `${currentText}${appendedText}`;
+        if (existing) {
+          statement("UPDATE product_entries SET body = ? WHERE entry_id = ?").run(
+            nextText,
+            entryId,
+          );
+        } else {
+          statement(
+            `INSERT INTO product_entries(entry_id, conversation_id, run_id, role, body, created_at)
+             VALUES (?, ?, ?, 'assistant', ?, ?)`,
+          ).run(entryId, run.conversationId, runId, nextText, fact.emittedAt);
+        }
+        statement("INSERT OR IGNORE INTO product_streaming_entries(entry_id) VALUES (?)").run(
+          entryId,
+        );
+        appendFact(run.conversationId, {
+          kind: "entry-delta",
+          conversationId: run.conversationId,
+          entryId: decode(ProductEntry.fields.id, entryId),
+          runId,
+          delta: appendedText,
+          createdAt: existing ? requiredString(asRecord(existing), "created_at") : fact.emittedAt,
+        });
+        nativeCursor = fact.sequence;
+        statement(
+          `INSERT INTO product_runtime_fact_cursors(run_id, native_sequence) VALUES (?, ?)
+           ON CONFLICT(run_id) DO UPDATE SET native_sequence = excluded.native_sequence`,
+        ).run(runId, nativeCursor);
+        continue;
+      }
+
+      const activity = (() => {
+        switch (fact.kind) {
+          case "session.bound":
+            return {
+              kind: "session" as const,
+              detail: { code: "session-bound" as const, lineage: fact.lineage },
+            };
+          case "package.loaded":
+            return {
+              kind: "package" as const,
+              detail: { code: "package-loaded" as const, count: fact.count },
+            };
+          case "package.failed":
+            return {
+              kind: "package" as const,
+              detail: { code: "package-failed" as const, count: fact.count },
+            };
+          case "thinking.delta":
+            return {
+              kind: "thinking" as const,
+              detail: { code: "thinking-delta" as const, text: fact.text },
+            };
+          case "question.requested":
+            return {
+              kind: "question" as const,
+              detail: { code: "question-requested" as const, question: fact.question },
+            };
+          case "control.applied":
+            return {
+              kind: "control" as const,
+              detail: {
+                code: "control-applied" as const,
+                control: fact.control,
+                text: fact.text,
+              },
+            };
+          case "tool.started":
+            return {
+              kind: "tool" as const,
+              detail: { code: "tool-started" as const, toolName: fact.toolName },
+            };
+          case "tool.settled":
+            return {
+              kind: "tool" as const,
+              detail: {
+                code: "tool-settled" as const,
+                toolName: fact.toolName,
+                outcome: fact.outcome,
+              },
+            };
+          case "usage":
+            return {
+              kind: "usage" as const,
+              detail: {
+                code: "usage-observed" as const,
+                input: fact.input,
+                output: fact.output,
+                cacheRead: fact.cacheRead,
+                cacheWrite: fact.cacheWrite,
+                total: fact.total,
+              },
+            };
+          case "settlement":
+            return {
+              kind: "settlement" as const,
+              detail: { code: "run-settled" as const, outcome: fact.outcome },
+            };
+          default:
+            return null;
+        }
+      })();
+      if (!activity) continue;
+      const exists = statement(
+        `SELECT native_sequence FROM product_runtime_activities
+         WHERE run_id = ? AND native_sequence = ?`,
+      ).get(runId, fact.sequence);
+      if (!exists) {
+        statement(
+          `INSERT INTO product_runtime_activities(
+             run_id, native_sequence, kind, summary, created_at
+           ) VALUES (?, ?, ?, ?, ?)`,
+        ).run(
+          runId,
+          fact.sequence,
+          activity.kind,
+          encodeJson(ProductRuntimeActivityDetail, activity.detail),
+          fact.emittedAt,
+        );
+        appendFact(run.conversationId, {
+          kind: "runtime-activity",
+          conversationId: run.conversationId,
+          activity: decode(ProductRuntimeActivity, {
+            runId,
+            nativeSequence: fact.sequence,
+            kind: activity.kind,
+            detail: activity.detail,
+            createdAt: fact.emittedAt,
+          }),
+        });
+      }
+      if (fact.kind === "settlement") {
+        const assistantEntryId = `${runId}:assistant`;
+        const assistantEntry = statement(
+          "SELECT entry_id FROM product_entries WHERE entry_id = ?",
+        ).get(assistantEntryId);
+        if (assistantEntry) {
+          statement("DELETE FROM product_streaming_entries WHERE entry_id = ?").run(
+            assistantEntryId,
+          );
+          appendFact(run.conversationId, {
+            kind: "entry-streaming",
+            conversationId: run.conversationId,
+            entryId: decode(ProductEntry.fields.id, assistantEntryId),
+            streaming: false,
+          });
+        }
+        const current = readRun(runId).receipt.receipt;
+        if (current.state === "accepted" || current.state === "running") {
+          updateReceipt(
+            runId,
+            {
+              state: "settled",
+              operationRef: current.operationRef,
+              engineBinding: current.engineBinding,
+              resolvedSelection: current.resolvedSelection,
+              outcome: fact.outcome,
+              settledAt: fact.emittedAt,
+            },
+            "terminal",
+            "accepted",
+          );
+        }
+      }
+      nativeCursor = fact.sequence;
+      statement(
+        `INSERT INTO product_runtime_fact_cursors(run_id, native_sequence) VALUES (?, ?)
+         ON CONFLICT(run_id) DO UPDATE SET native_sequence = excluded.native_sequence`,
+      ).run(runId, nativeCursor);
+    }
+  };
+
+  const applyRuntimeSnapshot = (
+    runId: ProductRunId,
+    nativeSnapshot: NativeHostRuntimeSnapshot,
+  ): void => {
+    const run = readRun(runId);
+    const current = run.receipt.receipt;
+    if (
+      (current.state !== "accepted" && current.state !== "running") ||
+      current.operationRef !== nativeSnapshot.operationRef
+    ) {
+      return;
+    }
+    const entryId = decode(ProductEntry.fields.id, `${runId}:assistant`);
+    const existingRaw = statement(
+      "SELECT body, created_at FROM product_entries WHERE entry_id = ?",
+    ).get(entryId);
+    const existing = existingRaw ? asRecord(existingRaw) : null;
+    const wasStreaming = Boolean(
+      statement("SELECT entry_id FROM product_streaming_entries WHERE entry_id = ?").get(entryId),
+    );
+    if (nativeSnapshot.assistant.length > 0) {
+      const createdAt = existing
+        ? requiredString(existing, "created_at")
+        : nativeSnapshot.settlement.settledAt;
+      if (existing) {
+        if (requiredString(existing, "body") !== nativeSnapshot.assistant) {
+          statement("UPDATE product_entries SET body = ? WHERE entry_id = ?").run(
+            nativeSnapshot.assistant,
+            entryId,
+          );
+          appendFact(run.conversationId, {
+            kind: "entry-replaced",
+            conversationId: run.conversationId,
+            entry: decode(ProductEntry, {
+              id: entryId,
+              conversationId: run.conversationId,
+              runId,
+              role: "assistant",
+              text: nativeSnapshot.assistant,
+              createdAt,
+            }),
+          });
+        }
+      } else {
+        statement(
+          `INSERT INTO product_entries(entry_id, conversation_id, run_id, role, body, created_at)
+           VALUES (?, ?, ?, 'assistant', ?, ?)`,
+        ).run(entryId, run.conversationId, runId, nativeSnapshot.assistant, createdAt);
+        appendFact(run.conversationId, {
+          kind: "entry-replaced",
+          conversationId: run.conversationId,
+          entry: decode(ProductEntry, {
+            id: entryId,
+            conversationId: run.conversationId,
+            runId,
+            role: "assistant",
+            text: nativeSnapshot.assistant,
+            createdAt,
+          }),
+        });
+      }
+    } else if (existing) {
+      statement("DELETE FROM product_entries WHERE entry_id = ?").run(entryId);
+      appendFact(run.conversationId, {
+        kind: "entry-removed",
+        conversationId: run.conversationId,
+        entryId,
+      });
+    }
+    if (wasStreaming) {
+      statement("DELETE FROM product_streaming_entries WHERE entry_id = ?").run(entryId);
+      if (nativeSnapshot.assistant.length > 0) {
+        appendFact(run.conversationId, {
+          kind: "entry-streaming",
+          conversationId: run.conversationId,
+          entryId,
+          streaming: false,
+        });
+      }
+    }
+    const recoveryExists = statement(
+      `SELECT snapshot_version FROM product_runtime_recoveries
+       WHERE run_id = ? AND snapshot_version = ?`,
+    ).get(runId, nativeSnapshot.version);
+    if (!recoveryExists) {
+      const recovery = decode(ProductRuntimeRecovery, {
+        runId,
+        snapshotVersion: nativeSnapshot.version,
+        kind: "visible-result",
+        createdAt: nativeSnapshot.settlement.settledAt,
+      });
+      statement(
+        `INSERT INTO product_runtime_recoveries(
+           run_id, snapshot_version, kind, created_at
+         ) VALUES (?, ?, ?, ?)`,
+      ).run(
+        recovery.runId,
+        recovery.snapshotVersion,
+        recovery.kind,
+        recovery.createdAt,
+      );
+      appendFact(run.conversationId, {
+        kind: "runtime-recovered",
+        conversationId: run.conversationId,
+        recovery,
+      });
+    }
+    updateReceipt(
+      runId,
+      {
+        state: "settled",
+        operationRef: current.operationRef,
+        engineBinding: current.engineBinding,
+        resolvedSelection: current.resolvedSelection,
+        outcome: nativeSnapshot.settlement.outcome,
+        settledAt: nativeSnapshot.settlement.settledAt,
+      },
+      "terminal",
+      "accepted",
+    );
+  };
+
+  executionBoundary.subscribeFacts?.((runId, observation) => {
+    withTransaction(() => {
+      if (observation.kind === "delivery-accepted") {
+        const run = readRun(runId);
+        const current = run.receipt.receipt;
+        if (current.state !== "delivery_unknown") return;
+        const engineBinding = {
+          id: ProductEngineBindingId.makeUnsafe(`pi-binding:${run.id}`),
+          engineId: observation.resolvedSelection.engineId,
+          lineageRef: observation.lineageRef,
+        };
+        statement(
+          `INSERT INTO product_engine_bindings(
+             binding_id, conversation_id, run_id, engine_id, lineage_ref
+           ) VALUES (?, ?, ?, ?, ?)`,
+        ).run(
+          engineBinding.id,
+          run.conversationId,
+          runId,
+          engineBinding.engineId,
+          engineBinding.lineageRef,
+        );
+        updateReceipt(
+          runId,
+          {
+            state: "accepted",
+            operationRef: observation.operationRef,
+            engineBinding,
+            resolvedSelection: {
+              ...observation.resolvedSelection,
+              executionTarget: run.requestedSelection.executionTarget,
+            },
+          },
+          "terminal",
+          "accepted",
+        );
+        return;
+      }
+      if (observation.kind === "delivery-rejected") {
+        const current = readRun(runId).receipt.receipt;
+        if (current.state !== "delivery_unknown") return;
+        updateReceipt(
+          runId,
+          {
+            state: "rejected",
+            code: observation.code,
+            message: observation.message,
+            retryable: observation.retryable,
+          },
+          "terminal",
+          "sent",
+        );
+        return;
+      }
+      if (observation.kind === "facts") {
+        applyRuntimeFacts(runId, observation.facts);
+        return;
+      }
+      if (observation.kind === "snapshot") {
+        applyRuntimeSnapshot(runId, observation.snapshot);
+        return;
+      }
+      const current = readRun(runId).receipt.receipt;
+      if (current.state !== "accepted" && current.state !== "running") return;
+      updateReceipt(
+        runId,
+        {
+          state: "outcome_unknown",
+          operationRef: current.operationRef,
+          engineBinding: current.engineBinding,
+          resolvedSelection: current.resolvedSelection,
+          lastConfirmedBoundary: "accepted",
+        },
+        "terminal",
+        "accepted",
+      );
+    });
+  });
+
+  if (executionBoundary.resumeFacts) {
+    const accepted = statement(
+      `SELECT run_id, receipt_json FROM product_operation_receipts ORDER BY updated_at ASC`,
+    ).all();
+    for (const raw of accepted) {
+      const row = asRecord(raw);
+      const receipt = decodeJson(ProductDispatchReceipt, requiredString(row, "receipt_json"));
+      if (
+        receipt.state === "accepted" ||
+        receipt.state === "running" ||
+        (receipt.state === "delivery_unknown" && receipt.reconciliationHint)
+      ) {
+        executionBoundary.resumeFacts(
+          decode(ProductRun.fields.id, requiredString(row, "run_id")),
+          receipt.state === "delivery_unknown"
+            ? receipt.reconciliationHint!
+            : receipt.operationRef,
+        );
+      }
+    }
+  }
+
   const inspectOutbox: ProductControlPlaneShape["inspectOutbox"] = () =>
     effect(() =>
       statement(
@@ -1374,6 +2085,7 @@ function makeControlPlane(
     deleteQueueItem,
     admitQueueItem,
     submitQueueItem,
+    controlRun,
     readFacts,
     recoverDispatches,
     dispatchPending,
@@ -1385,6 +2097,7 @@ function makeControlPlane(
 export function makeProductControlPlaneLayer(
   filename: string,
   executionBoundary: ProductExecutionBoundary = ProductExecutionUnavailable,
+  runtimeCatalog: ProductRuntimeCatalog | null = null,
 ): Layer.Layer<ProductControlPlane, ProductControlPlaneError> {
   const acquire = Effect.promise(async () => {
     if (filename !== ":memory:") ensurePrivateFileSync(filename);
@@ -1396,9 +2109,12 @@ export function makeProductControlPlaneLayer(
     ProductControlPlane,
     Effect.gen(function* () {
       const database = yield* Effect.acquireRelease(acquire, (openedDatabase) =>
-        Effect.sync(() => openedDatabase.close()),
+        Effect.promise(async () => {
+          await executionBoundary.close?.();
+          openedDatabase.close();
+        }),
       );
-      const controlPlane = makeControlPlane(database, executionBoundary);
+      const controlPlane = makeControlPlane(database, executionBoundary, runtimeCatalog);
       yield* controlPlane.recoverDispatches();
       // Only pre-send pending rows are eligible. Unknown/accepted rows are terminal and never replayed.
       yield* controlPlane.dispatchPending();

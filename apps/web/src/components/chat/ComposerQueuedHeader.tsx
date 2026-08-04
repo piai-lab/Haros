@@ -8,7 +8,7 @@
 
 import type { QueuedComposerTurn } from "../../composerDraftStore";
 import type { WorkbenchCopy } from "../../i18n/workbenchCopy";
-import { ListTodoIcon, PencilIcon, SteerIcon } from "~/lib/icons";
+import { ListTodoIcon, PencilIcon, PlayIcon, SteerIcon } from "~/lib/icons";
 import { cn } from "~/lib/utils";
 import ChatMarkdown from "../ChatMarkdown";
 import {
@@ -64,8 +64,10 @@ export function compactQueuedComposerPreviewMarkdown(
 interface ComposerQueuedHeaderProps {
   queuedTurns: QueuedComposerTurn[];
   primaryAction: {
-    kind: "steer" | "move-next";
+    kind: "steer" | "move-next" | "run-next";
+    disabled?: boolean;
     onSelect: (queuedTurn: QueuedComposerTurn) => void;
+    onMoveNext?: (queuedTurn: QueuedComposerTurn) => void;
   };
   onRemove: (queuedTurnId: string) => void;
   onEdit: (queuedTurn: QueuedComposerTurn) => void;
@@ -97,9 +99,20 @@ export const ComposerQueuedHeader = function ComposerQueuedHeader({
     <ComposerStackedPanel attachedToPrevious={attachedToPrevious} className="flex flex-col">
       {queuedTurns.map((queuedTurn, queuedTurnIndex) => {
         const editing = editingTurnId === queuedTurn.id;
+        const rowPrimaryAction =
+          primaryAction.kind === "run-next" &&
+          queuedTurnIndex > 0 &&
+          primaryAction.onMoveNext
+            ? {
+                kind: "move-next" as const,
+                onSelect: primaryAction.onMoveNext,
+              }
+            : primaryAction;
         const LeadingIcon = editing
           ? PencilIcon
-          : primaryAction.kind === "move-next"
+          : rowPrimaryAction.kind === "run-next"
+            ? PlayIcon
+          : rowPrimaryAction.kind === "move-next"
             ? ListTodoIcon
             : SteerIcon;
         return (
@@ -107,7 +120,7 @@ export const ComposerQueuedHeader = function ComposerQueuedHeader({
             key={queuedTurn.id}
             compact
             data-testid="queued-follow-up-row"
-            data-queue-item-kind={primaryAction.kind}
+            data-queue-item-kind={rowPrimaryAction.kind}
             data-queue-editing={editing ? "true" : undefined}
             className={cn(queuedTurnIndex > 0 && COMPOSER_STACKED_PANEL_DIVIDER_CLASS_NAME)}
           >
@@ -127,8 +140,12 @@ export const ComposerQueuedHeader = function ComposerQueuedHeader({
             </ComposerStackedPanelRowMain>
             <QueuedComposerActions
               queuedTurn={queuedTurn}
-              primaryAction={primaryAction}
-              primaryActionDisabled={primaryAction.kind === "move-next" && queuedTurnIndex === 0}
+              primaryAction={rowPrimaryAction}
+              primaryActionDisabled={
+                rowPrimaryAction.disabled ||
+                (rowPrimaryAction.kind === "move-next" && queuedTurnIndex === 0) ||
+                (rowPrimaryAction.kind === "run-next" && queuedTurnIndex !== 0)
+              }
               editing={editing}
               onCancelEdit={onCancelEdit}
               onRemove={onRemove}

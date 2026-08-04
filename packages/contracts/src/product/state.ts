@@ -40,6 +40,11 @@ export const ProductTitle = TrimmedNonEmptyString.check(Schema.isMaxLength(256))
 export type ProductTitle = typeof ProductTitle.Type;
 export const ProductText = TrimmedNonEmptyString.check(Schema.isMaxLength(PRODUCT_MAX_TEXT_CHARS));
 export type ProductText = typeof ProductText.Type;
+export const ProductVisibleText = Schema.String.check(
+  Schema.isMinLength(1),
+  Schema.isMaxLength(PRODUCT_MAX_TEXT_CHARS),
+);
+export type ProductVisibleText = typeof ProductVisibleText.Type;
 export const ProductPath = TrimmedNonEmptyString.check(Schema.isMaxLength(8_192));
 export type ProductPath = typeof ProductPath.Type;
 
@@ -203,7 +208,7 @@ export const ProductEntry = Schema.Struct({
   conversationId: ProductConversationId,
   runId: Schema.NullOr(ProductRunId),
   role: Schema.Literals(["user", "assistant", "system"]),
-  text: ProductText,
+  text: ProductVisibleText,
   createdAt: ProductIsoDateTime,
 });
 export type ProductEntry = typeof ProductEntry.Type;
@@ -256,19 +261,110 @@ export const ProductConversationSummary = Schema.Struct({
 });
 export type ProductConversationSummary = typeof ProductConversationSummary.Type;
 
+export const ProductRuntimeActivityDetail = Schema.Union([
+  Schema.Struct({
+    code: Schema.Literal("session-bound"),
+    lineage: Schema.Literals(["continued", "new", "missing", "divergent"]),
+  }),
+  Schema.Struct({
+    code: Schema.Literals(["package-loaded", "package-failed"]),
+    count: NonNegativeInt,
+  }),
+  Schema.Struct({ code: Schema.Literal("thinking-delta"), text: ProductVisibleText }),
+  Schema.Struct({ code: Schema.Literal("question-requested"), question: ProductVisibleText }),
+  Schema.Struct({
+    code: Schema.Literal("control-applied"),
+    control: Schema.Literals(["steer", "follow-up", "abort", "cancel"]),
+    text: Schema.NullOr(Schema.String.check(Schema.isMaxLength(4_096))),
+  }),
+  Schema.Struct({ code: Schema.Literal("tool-started"), toolName: ProductVisibleText }),
+  Schema.Struct({
+    code: Schema.Literal("tool-settled"),
+    toolName: ProductVisibleText,
+    outcome: Schema.Literals(["succeeded", "failed"]),
+  }),
+  Schema.Struct({
+    code: Schema.Literal("usage-observed"),
+    input: NonNegativeInt,
+    output: NonNegativeInt,
+    cacheRead: NonNegativeInt,
+    cacheWrite: NonNegativeInt,
+    total: NonNegativeInt,
+  }),
+  Schema.Struct({
+    code: Schema.Literal("run-settled"),
+    outcome: Schema.Literals(["succeeded", "failed", "cancelled"]),
+  }),
+]);
+export type ProductRuntimeActivityDetail = typeof ProductRuntimeActivityDetail.Type;
+
+export const ProductRuntimeActivity = Schema.Struct({
+  runId: ProductRunId,
+  nativeSequence: PositiveInt,
+  kind: Schema.Literals([
+    "session",
+    "package",
+    "thinking",
+    "question",
+    "control",
+    "tool",
+    "usage",
+    "settlement",
+  ]),
+  detail: ProductRuntimeActivityDetail,
+  createdAt: ProductIsoDateTime,
+});
+export type ProductRuntimeActivity = typeof ProductRuntimeActivity.Type;
+
+export const ProductRuntimeRecovery = Schema.Struct({
+  runId: ProductRunId,
+  snapshotVersion: PositiveInt,
+  kind: Schema.Literal("visible-result"),
+  createdAt: ProductIsoDateTime,
+});
+export type ProductRuntimeRecovery = typeof ProductRuntimeRecovery.Type;
+
 export const ProductConversationReadModel = Schema.Struct({
   conversation: ProductConversationSummary,
   workspace: ProductWorkspace,
   entries: Schema.Array(ProductEntry),
+  streamingEntryIds: Schema.Array(ProductEntryId),
   runs: Schema.Array(ProductRun),
+  activities: Schema.Array(ProductRuntimeActivity),
+  recoveries: Schema.optional(Schema.Array(ProductRuntimeRecovery)),
   queue: Schema.Array(ProductQueueItem).check(Schema.isMaxLength(PRODUCT_MAX_QUEUE_ITEMS)),
 });
 export type ProductConversationReadModel = typeof ProductConversationReadModel.Type;
+
+export const ProductRuntimeModel = Schema.Struct({
+  id: TrimmedNonEmptyString.check(Schema.isMaxLength(512)),
+  provider: TrimmedNonEmptyString.check(Schema.isMaxLength(256)),
+  modelId: TrimmedNonEmptyString.check(Schema.isMaxLength(256)),
+  name: TrimmedNonEmptyString.check(Schema.isMaxLength(512)),
+  reasoning: Schema.Boolean,
+  thinkingLevels: Schema.Array(
+    Schema.Literals(["off", "minimal", "low", "medium", "high", "xhigh", "max"]),
+  ).check(Schema.isMaxLength(7)),
+  available: Schema.Boolean,
+  auth: Schema.Literals(["configured", "missing", "unavailable"]),
+});
+export type ProductRuntimeModel = typeof ProductRuntimeModel.Type;
+
+/** Sanitized Host-owned catalog snapshot; Product never reconstructs provider capability. */
+export const ProductRuntimeCatalog = Schema.Struct({
+  engineId: TrimmedNonEmptyString.check(Schema.isMaxLength(256)),
+  runtimeVersion: TrimmedNonEmptyString.check(Schema.isMaxLength(128)),
+  packageGeneration: TrimmedNonEmptyString.check(Schema.isMaxLength(256)),
+  models: Schema.Array(ProductRuntimeModel).check(Schema.isMaxLength(128)),
+  truncated: Schema.Boolean,
+});
+export type ProductRuntimeCatalog = typeof ProductRuntimeCatalog.Type;
 
 export const ProductShellSnapshot = Schema.Struct({
   protocolVersion: Schema.Literal(PRODUCT_PROTOCOL_VERSION),
   sequence: NonNegativeInt,
   conversations: Schema.Array(ProductConversationSummary),
+  runtimeCatalog: Schema.NullOr(ProductRuntimeCatalog),
 }).pipe(closedBoundary);
 export type ProductShellSnapshot = typeof ProductShellSnapshot.Type;
 
@@ -341,6 +437,29 @@ export const ProductSubmitResult = Schema.Struct({
 }).pipe(closedBoundary);
 export type ProductSubmitResult = typeof ProductSubmitResult.Type;
 
+export const ProductControlRunInput = Schema.Struct({
+  protocolVersion: Schema.Literal(PRODUCT_PROTOCOL_VERSION),
+  conversationId: ProductConversationId,
+  runId: ProductRunId,
+  control: Schema.Literals(["steer", "follow-up", "abort", "cancel"]),
+  text: Schema.NullOr(ProductText),
+}).pipe(closedBoundary);
+export type ProductControlRunInput = typeof ProductControlRunInput.Type;
+
+export const ProductControlRunResult = Schema.Struct({
+  operationRef: TrimmedNonEmptyString.check(Schema.isMaxLength(1_024)),
+  control: Schema.Literals(["steer", "follow-up", "abort", "cancel"]),
+  result: Schema.Literals(["applied", "unsupported", "too-late", "unknown"]),
+  code: Schema.Literals([
+    "control-applied",
+    "control-unsupported",
+    "control-too-late",
+    "operation-unknown",
+  ]),
+  message: TrimmedNonEmptyString.check(Schema.isMaxLength(2_000)),
+}).pipe(closedBoundary);
+export type ProductControlRunResult = typeof ProductControlRunResult.Type;
+
 export const ProductShellFactChange = Schema.Union([
   Schema.Struct({
     kind: Schema.Literal("conversation-summary"),
@@ -349,6 +468,10 @@ export const ProductShellFactChange = Schema.Union([
   Schema.Struct({
     kind: Schema.Literal("conversation-tombstone"),
     conversationId: ProductConversationId,
+  }),
+  Schema.Struct({
+    kind: Schema.Literal("runtime-catalog"),
+    catalog: ProductRuntimeCatalog,
   }),
 ]);
 export type ProductShellFactChange = typeof ProductShellFactChange.Type;
@@ -372,6 +495,40 @@ export const ProductDetailFactChange = Schema.Union([
     conversationId: ProductConversationId,
     entry: ProductEntry,
     run: ProductRun,
+  }),
+  Schema.Struct({
+    kind: Schema.Literal("entry-delta"),
+    conversationId: ProductConversationId,
+    entryId: ProductEntryId,
+    runId: ProductRunId,
+    delta: Schema.String.check(Schema.isMinLength(1), Schema.isMaxLength(4_096)),
+    createdAt: ProductIsoDateTime,
+  }),
+  Schema.Struct({
+    kind: Schema.Literal("entry-replaced"),
+    conversationId: ProductConversationId,
+    entry: ProductEntry,
+  }),
+  Schema.Struct({
+    kind: Schema.Literal("entry-removed"),
+    conversationId: ProductConversationId,
+    entryId: ProductEntryId,
+  }),
+  Schema.Struct({
+    kind: Schema.Literal("entry-streaming"),
+    conversationId: ProductConversationId,
+    entryId: ProductEntryId,
+    streaming: Schema.Boolean,
+  }),
+  Schema.Struct({
+    kind: Schema.Literal("runtime-activity"),
+    conversationId: ProductConversationId,
+    activity: ProductRuntimeActivity,
+  }),
+  Schema.Struct({
+    kind: Schema.Literal("runtime-recovered"),
+    conversationId: ProductConversationId,
+    recovery: ProductRuntimeRecovery,
   }),
   Schema.Struct({
     kind: Schema.Literal("dispatch-changed"),
@@ -443,7 +600,7 @@ export const ProductFactBatch = Schema.Union([ProductShellFactBatch, ProductDeta
 );
 export type ProductFactBatch = typeof ProductFactBatch.Type;
 
-/** Closed, validated observations at the future Host ingress. Production T2 emits unsupported only. */
+/** Closed, validated observations crossing the Product-to-native execution boundary. */
 export const ProductExecutionObservation = Schema.Union([
   Schema.Struct({
     kind: Schema.Literal("pre-send-failure"),

@@ -47,6 +47,8 @@ import {
   PRODUCT_RPC_METHODS,
   ProductConversationId,
   type ProductConversationSnapshot,
+  type ProductControlRunInput,
+  type ProductControlRunResult,
   type ProductCreateConversationInput,
   type ProductDeleteQueueItemInput,
   type ProductFactBatch,
@@ -508,6 +510,7 @@ export interface ProductNativeApi {
     input: ProductDeleteQueueItemInput,
   ) => Promise<ProductConversationSnapshot>;
   readonly submitQueueItem: (input: ProductSubmitQueueItemInput) => Promise<ProductSubmitResult>;
+  readonly controlRun: (input: ProductControlRunInput) => Promise<ProductControlRunResult>;
   readonly readFacts: (input: ProductReadFactsInput) => Promise<ProductFactBatch>;
 }
 
@@ -556,6 +559,8 @@ export function readProductNativeApi(): ProductNativeApi {
           ...result,
           snapshot: rememberProductConversation(result.snapshot),
         })),
+    controlRun: (input) =>
+      transport.request<ProductControlRunResult>(PRODUCT_RPC_METHODS.controlRun, input),
     readFacts: (input) => transport.request<ProductFactBatch>(PRODUCT_RPC_METHODS.readFacts, input),
   };
 }

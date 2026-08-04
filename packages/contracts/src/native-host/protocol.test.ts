@@ -43,4 +43,45 @@ describe("Native Host protocol boundary", () => {
       expect.objectContaining({ code: "FRAME_OVERSIZED" }),
     );
   });
+
+  it("round-trips a typed late-acceptance reconciliation", () => {
+    const response = {
+      protocolVersion: NATIVE_HOST_PROTOCOL_VERSION,
+      kind: "runtime.reconcile.response",
+      requestId: "request-reconcile-1",
+      serviceInstanceId: "service-1",
+      hostInstanceId: "host-1",
+      operationRef: "pi-pending:dispatch-1",
+      status: "unknown",
+      highWaterSequence: 0,
+      facts: [],
+      resnapshotRequired: true,
+      snapshot: null,
+      resnapshotReason: "native-history-incomplete",
+      resolution: {
+        kind: "accepted",
+        operationRef: "pi-op:session-1:entry-1",
+        lineageRef: "pi-session:session-1",
+        acceptance: {
+          sessionId: "session-1",
+          entryId: "entry-1",
+          query: "session-manager-reopen",
+        },
+        resolvedSelection: {
+          engineId: "pi",
+          modelId: "provider/model",
+          thinking: "medium",
+          permissionPolicy: "approval-required",
+          enforcement: "unverified",
+          packageGeneration: "package-1",
+        },
+      },
+    } as const;
+    expect(
+      decodeNativeHostFrame(
+        encodeNativeHostFrame(response).subarray(0, -1),
+        "host-to-service",
+      ),
+    ).toEqual(response);
+  });
 });

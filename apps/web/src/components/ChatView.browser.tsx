@@ -12,8 +12,18 @@ import {
   PRODUCT_PROTOCOL_VERSION,
   PRODUCT_RPC_METHODS,
   ProductConversationId,
+  ProductDispatchId,
+  ProductEngineBindingId,
+  ProductEntryId,
+  ProductOperationReceiptId,
+  ProductRunId,
   type ProductConversationSnapshot,
+  type ProductDispatchReceipt,
   type ProductQueueItem,
+  type ProductRequestedSelection,
+  type ProductRun,
+  type ProductRuntimeCatalog,
+  type ProductControlRunResult,
   type ProductShellSnapshot,
   ProductWorkspaceId,
   type OrchestrationReadModel,
@@ -115,6 +125,8 @@ interface TestFixture {
 
 let fixture: TestFixture;
 let productConversationSnapshot: ProductConversationSnapshot | null = null;
+let productRuntimeCatalog: ProductRuntimeCatalog | null = null;
+let productControlResult: ProductControlRunResult | null = null;
 const wsRequests: WsRequestEnvelope["body"][] = [];
 const wsLink = ws.link(/ws(s)?:\/\/.*/);
 
@@ -593,7 +605,9 @@ function createProductChatSnapshot(
         observedAt: NOW_ISO,
       },
       entries: [],
+      streamingEntryIds: [],
       runs: [],
+      activities: [],
       queue: [],
     },
   };
@@ -606,6 +620,120 @@ function createProductShellSnapshot(): ProductShellSnapshot {
     conversations: productConversationSnapshot
       ? [productConversationSnapshot.readModel.conversation]
       : [],
+    runtimeCatalog: productRuntimeCatalog,
+  };
+}
+
+function createProductRuntimeCatalog(): ProductRuntimeCatalog {
+  return {
+    engineId: "pi",
+    runtimeVersion: "0.81.1",
+    packageGeneration: "pi-runtime-0.81.1-package-browser",
+    models: [
+      {
+        id: "aaa-unavailable/model",
+        provider: "aaa-unavailable",
+        modelId: "model",
+        name: "Unavailable model",
+        reasoning: false,
+        thinkingLevels: ["off"],
+        available: false,
+        auth: "missing",
+      },
+      {
+        id: "pi-browser/default",
+        provider: "pi-browser",
+        modelId: "default",
+        name: "Pi Browser Default",
+        reasoning: true,
+        thinkingLevels: ["low", "medium", "high"],
+        available: true,
+        auth: "configured",
+      },
+    ],
+    truncated: false,
+  };
+}
+
+function withProductRun(
+  snapshot: ProductConversationSnapshot,
+  state: "accepted" | "delivery_unknown",
+  includeControlActivity = false,
+): ProductConversationSnapshot {
+  const runId = ProductRunId.makeUnsafe("run-product-browser");
+  const selection: ProductRequestedSelection = {
+    engineId: "pi",
+    modelId: "pi-browser/default",
+    thinking: "medium",
+    permissionPolicy: "approval-required" as const,
+    enforcement: "unverified" as const,
+    executionTarget: null,
+    packageGeneration: "pi-runtime-0.81.1-package-browser",
+  };
+  const receipt: ProductDispatchReceipt =
+    state === "accepted"
+      ? {
+          state,
+          operationRef: "pi-op:browser:entry",
+          engineBinding: {
+            id: ProductEngineBindingId.makeUnsafe("binding-product-browser"),
+            engineId: "pi",
+            lineageRef: "pi-session:browser",
+          },
+          resolvedSelection: selection,
+        }
+      : {
+          state,
+          lastConfirmedBoundary: "sent" as const,
+          reconciliationHint: "pi-pending:browser",
+        };
+  const run: ProductRun = {
+    id: runId,
+    conversationId: snapshot.readModel.conversation.id,
+    entryId: ProductEntryId.makeUnsafe("entry-product-browser"),
+    requestedSelection: selection,
+    workspaceObservation: snapshot.readModel.workspace,
+    resources: [],
+    packageGeneration: selection.packageGeneration,
+    receipt: {
+      id: ProductOperationReceiptId.makeUnsafe("receipt-product-browser"),
+      dispatchId: ProductDispatchId.makeUnsafe("dispatch-product-browser"),
+      runId,
+      receipt,
+      updatedAt: NOW_ISO,
+    },
+    createdAt: NOW_ISO,
+    updatedAt: NOW_ISO,
+  };
+  return {
+    ...snapshot,
+    readModel: {
+      ...snapshot.readModel,
+      conversation: { ...snapshot.readModel.conversation, receiptState: state },
+      runs: [run],
+      activities: includeControlActivity
+        ? [
+            {
+              runId,
+              nativeSequence: 1,
+              kind: "control",
+              detail: { code: "control-applied", control: "abort", text: null },
+              createdAt: NOW_ISO,
+            },
+          ]
+        : [],
+    },
+  };
+}
+
+function readyProductHealth(): DesktopHealthSnapshot {
+  return {
+    protocolVersion: 1,
+    renderer: { status: "ready", reason: null, restartAttempt: 0 },
+    service: { status: "ready", reason: null, restartAttempt: 0 },
+    nativeHost: { status: "ready", reason: null, restartAttempt: 0 },
+    engineSelection: { status: "available", reason: null },
+    updatedAt: NOW_ISO,
   };
 }
 
@@ -1179,6 +1307,31 @@ function resolveWsRpc(body: WsRequestEnvelope["body"]): unknown {
       },
     };
     return productConversationSnapshot;
+  }
+  if (tag === PRODUCT_RPC_METHODS.submitQueueItem) {
+    if (!productConversationSnapshot) return {};
+    productConversationSnapshot = {
+      ...productConversationSnapshot,
+      sequence: productConversationSnapshot.sequence + 1,
+      readModel: {
+        ...productConversationSnapshot.readModel,
+        queue: productConversationSnapshot.readModel.queue
+          .filter((item) => item.id !== body.itemId)
+          .map((item, position) => ({ ...item, position })),
+      },
+    };
+    return { snapshot: productConversationSnapshot, automaticReplayCount: 0 };
+  }
+  if (tag === PRODUCT_RPC_METHODS.controlRun) {
+    return (
+      productControlResult ?? {
+        operationRef: "pi-op:browser:entry",
+        control: body.control,
+        result: "applied",
+        code: "control-applied",
+        message: "diagnostic-only",
+      }
+    );
   }
   if (tag === ORCHESTRATION_WS_METHODS.getShellSnapshot) {
     return createShellSnapshotFromReadModel(fixture.snapshot);
@@ -2015,6 +2168,8 @@ describe("ChatView timeline estimator parity (full app)", () => {
     document.body.innerHTML = "";
     wsRequests.length = 0;
     productConversationSnapshot = null;
+    productRuntimeCatalog = null;
+    productControlResult = null;
     useComposerDraftStore.setState({
       draftsByThreadId: {},
       draftThreadsByThreadId: {},
@@ -2067,6 +2222,8 @@ describe("ChatView timeline estimator parity (full app)", () => {
     useSystemHealthStore.setState({ snapshot: null });
     useRightDockStore.setState({ dockStateByThreadId: {} });
     productConversationSnapshot = null;
+    productRuntimeCatalog = null;
+    productControlResult = null;
     document.body.innerHTML = "";
   });
 
@@ -2603,13 +2760,13 @@ describe("ChatView timeline estimator parity (full app)", () => {
         conversationId,
         text: prompt,
         requestedSelection: {
-          engineId: "native-engine-unresolved",
+          engineId: "pi-unavailable",
           modelId: null,
           thinking: null,
           permissionPolicy: "approval-required",
           enforcement: "unverified",
           executionTarget: null,
-          packageGeneration: "unresolved-not-activated",
+          packageGeneration: "pi-catalog-unavailable",
         },
         resources: [],
         expectedRevision: null,
@@ -2649,11 +2806,17 @@ describe("ChatView timeline estimator parity (full app)", () => {
         Array.from(document.querySelectorAll<HTMLElement>("[data-testid='queued-follow-up-row']"));
       await vi.waitFor(() => expect(queueRows()).toHaveLength(2));
       expect(queueRows().every((row) => !row.textContent?.includes("Steer"))).toBe(true);
+      const firstRow = queueRows().find((row) => row.textContent?.includes(prompt));
       const secondRow = queueRows().find((row) => row.textContent?.includes(secondPrompt));
+      const firstRunNext = firstRow?.querySelector<HTMLButtonElement>(
+        "button[data-queue-action='run-next']",
+      );
       const moveNext = secondRow?.querySelector<HTMLButtonElement>(
         "button[data-queue-action='move-next']",
       );
-      expect(moveNext).toBeTruthy();
+      expect(firstRunNext?.textContent).toContain("Run next");
+      expect(firstRunNext?.disabled).toBe(false);
+      expect(moveNext?.textContent).toContain("Move next");
       expect(moveNext?.disabled).toBe(false);
 
       wsRequests.length = 0;
@@ -2675,6 +2838,9 @@ describe("ChatView timeline estimator parity (full app)", () => {
       ).toBe(false);
 
       const movedRow = queueRows().find((row) => row.textContent?.includes(secondPrompt));
+      expect(
+        movedRow?.querySelector<HTMLButtonElement>("button[data-queue-action='run-next']"),
+      ).not.toBeNull();
       movedRow
         ?.querySelector<HTMLButtonElement>("button[aria-label='Queued follow-up actions']")
         ?.click();
@@ -2788,6 +2954,190 @@ describe("ChatView timeline estimator parity (full app)", () => {
             request._tag === ORCHESTRATION_WS_METHODS.dispatchCommand,
         ),
       ).toBe(false);
+    } finally {
+      await mounted.cleanup();
+    }
+  });
+
+  it("defaults the authenticated Pi picker and dispatches the first Product Queue item explicitly", async () => {
+    const conversationId = ProductConversationId.makeUnsafe("product-browser-runtime-picker");
+    const threadId = ThreadId.makeUnsafe(conversationId);
+    productRuntimeCatalog = createProductRuntimeCatalog();
+    productConversationSnapshot = createProductChatSnapshot(conversationId);
+    useProductStore.getState().setShellSnapshot(createProductShellSnapshot());
+    useProductStore.getState().setConversationSnapshot(productConversationSnapshot);
+    useSystemHealthStore.setState({
+      snapshot: {
+        ...readyProductHealth(),
+        engineSelection: { status: "unknown", reason: "fixture queue-first proof" },
+      },
+    });
+    useComposerDraftStore.getState().setPrompt(threadId, "Run with the authenticated default");
+
+    const mounted = await mountChatView({
+      viewport: DEFAULT_VIEWPORT,
+      snapshot: createSnapshotForTargetUser({
+        targetMessageId: "msg-user-product-picker-proof" as MessageId,
+        targetText: "donor picker must remain unreachable",
+      }),
+      initialEntry: `/${conversationId}?surface=chat`,
+    });
+
+    try {
+      await vi.waitFor(() => {
+        expect(
+          document.querySelector("[data-testid='product-runtime-picker']")?.textContent,
+        ).toContain("Pi Browser Default");
+      });
+      const submitButton = await waitForElement(
+        () =>
+          document.querySelector<HTMLButtonElement>(
+            "[data-active-conversation='true'] button[data-product-submit-mode='queue-only']",
+          ),
+        "Unable to find the Product Queue-first submit control.",
+      );
+      wsRequests.length = 0;
+      submitButton.closest("form")!.requestSubmit();
+      await vi.waitFor(() =>
+        expect(wsRequests.some((request) => request._tag === PRODUCT_RPC_METHODS.putQueueItem)).toBe(
+          true,
+        ),
+      );
+      expect(
+        wsRequests.some((request) => request._tag === PRODUCT_RPC_METHODS.submitQueueItem),
+      ).toBe(false);
+      const put = wsRequests.find((request) => request._tag === PRODUCT_RPC_METHODS.putQueueItem);
+      expect(put).toMatchObject({
+        requestedSelection: {
+          engineId: "pi",
+          modelId: "pi-browser/default",
+          thinking: "medium",
+          packageGeneration: "pi-runtime-0.81.1-package-browser",
+        },
+      });
+      expect(
+        wsRequests.some((request) => request._tag === ORCHESTRATION_WS_METHODS.dispatchCommand),
+      ).toBe(false);
+      useSystemHealthStore.setState({ snapshot: readyProductHealth() });
+      const runNext = await waitForElement(
+        () =>
+          document.querySelector<HTMLButtonElement>("button[data-queue-action='run-next']") ?? null,
+        "Unable to find the first Product Queue Run next action.",
+      );
+      await vi.waitFor(() => expect(runNext.disabled).toBe(false));
+      wsRequests.length = 0;
+      runNext.click();
+      await vi.waitFor(() =>
+        expect(
+          wsRequests.some((request) => request._tag === PRODUCT_RPC_METHODS.submitQueueItem),
+        ).toBe(true),
+      );
+      expect(
+        wsRequests.some((request) => request._tag === ORCHESTRATION_WS_METHODS.dispatchCommand),
+      ).toBe(false);
+    } finally {
+      await mounted.cleanup();
+    }
+  });
+
+  it("keeps unknown Product Runs Queue-only and localizes typed activity in zh-CN", async () => {
+    const language = vi.spyOn(window.navigator, "language", "get").mockReturnValue("zh-CN");
+    const conversationId = ProductConversationId.makeUnsafe("product-browser-unknown-zh");
+    const threadId = ThreadId.makeUnsafe(conversationId);
+    productRuntimeCatalog = createProductRuntimeCatalog();
+    productConversationSnapshot = withProductRun(
+      createProductChatSnapshot(conversationId),
+      "delivery_unknown",
+      true,
+    );
+    useProductStore.getState().setShellSnapshot(createProductShellSnapshot());
+    useProductStore.getState().setConversationSnapshot(productConversationSnapshot);
+    useSystemHealthStore.setState({ snapshot: readyProductHealth() });
+    useComposerDraftStore.getState().setPrompt(threadId, "未知状态不得重放");
+
+    const mounted = await mountChatView({
+      viewport: DEFAULT_VIEWPORT,
+      snapshot: createSnapshotForTargetUser({
+        targetMessageId: "msg-user-product-unknown-proof" as MessageId,
+        targetText: "donor unknown state must remain unreachable",
+      }),
+      initialEntry: `/${conversationId}?surface=chat`,
+    });
+
+    try {
+      await vi.waitFor(() => expect(document.body.textContent).toContain("已应用控制：中止"));
+      const submitButton = await waitForElement(
+        () =>
+          document.querySelector<HTMLButtonElement>(
+            "[data-active-conversation='true'] button[data-product-submit-mode='submit']",
+          ),
+        "Unable to find the Product Queue control for an unknown Run.",
+      );
+      wsRequests.length = 0;
+      submitButton.closest("form")!.requestSubmit();
+      await vi.waitFor(() => {
+        expect(
+          wsRequests.some((request) => request._tag === PRODUCT_RPC_METHODS.putQueueItem),
+        ).toBe(true);
+      });
+      expect(
+        wsRequests.some((request) => request._tag === PRODUCT_RPC_METHODS.submitQueueItem),
+      ).toBe(false);
+      expect(
+        document.querySelector<HTMLButtonElement>("button[data-queue-action='run-next']")?.disabled,
+      ).toBe(true);
+    } finally {
+      language.mockRestore();
+      await mounted.cleanup();
+    }
+  });
+
+  it("routes Product stop through typed native control codes without showing Host diagnostics", async () => {
+    const conversationId = ProductConversationId.makeUnsafe("product-browser-stop");
+    productRuntimeCatalog = createProductRuntimeCatalog();
+    productConversationSnapshot = withProductRun(
+      createProductChatSnapshot(conversationId),
+      "accepted",
+      true,
+    );
+    productControlResult = {
+      operationRef: "pi-op:browser:entry",
+      control: "abort",
+      result: "unsupported",
+      code: "control-unsupported",
+      message: "HOST-DIAGNOSTIC-MUST-NOT-RENDER",
+    };
+    useProductStore.getState().setShellSnapshot(createProductShellSnapshot());
+    useProductStore.getState().setConversationSnapshot(productConversationSnapshot);
+    useSystemHealthStore.setState({ snapshot: readyProductHealth() });
+
+    const mounted = await mountChatView({
+      viewport: DEFAULT_VIEWPORT,
+      snapshot: createSnapshotForTargetUser({
+        targetMessageId: "msg-user-product-stop-proof" as MessageId,
+        targetText: "donor stop must remain unreachable",
+      }),
+      initialEntry: `/${conversationId}?surface=chat`,
+    });
+
+    try {
+      await vi.waitFor(() => expect(document.body.textContent).toContain("Control applied: abort"));
+      const stop = await waitForElement(
+        () => document.querySelector<HTMLButtonElement>("button[aria-label='Stop generation']"),
+        "Unable to find the Product stop control.",
+      );
+      wsRequests.length = 0;
+      stop.click();
+      await vi.waitFor(() => {
+        expect(
+          wsRequests.some(
+            (request) =>
+              request._tag === PRODUCT_RPC_METHODS.controlRun && request.control === "abort",
+          ),
+        ).toBe(true);
+        expect(document.body.textContent).toContain("Could not stop the current response");
+      });
+      expect(document.body.textContent).not.toContain("HOST-DIAGNOSTIC-MUST-NOT-RENDER");
     } finally {
       await mounted.cleanup();
     }

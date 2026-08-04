@@ -9,19 +9,22 @@ import {
   nativeHostClientProofPayload,
   nativeHostServerProofPayload,
   type NativeHostFrame,
+  type NativeHostControlRequest,
+  type NativeHostExecutionRequest,
   type NativeHostRequest,
   type NativeHostResponse,
 } from "@omnimind/contracts/native-host";
 
 const CONNECT_TIMEOUT_MS = 2_000;
-const RESPONSE_TIMEOUT_MS = 3_000;
+const RESPONSE_TIMEOUT_MS = 15_000;
 
 export class NativeHostClientError extends Error {
   readonly code:
     | "NATIVE_HOST_UNCONFIGURED"
     | "NATIVE_HOST_UNAVAILABLE"
     | "NATIVE_HOST_AUTHENTICATION_FAILED"
-    | "NATIVE_HOST_PROTOCOL_FAILURE";
+    | "NATIVE_HOST_PROTOCOL_FAILURE"
+    | "NATIVE_HOST_REQUEST_OVERSIZED";
   readonly retryable: boolean;
 
   constructor(code: NativeHostClientError["code"], message: string, retryable: boolean) {
@@ -52,6 +55,18 @@ function equalProof(expected: string, presented: string): boolean {
   const left = Buffer.from(expected, "utf8");
   const right = Buffer.from(presented, "utf8");
   return left.byteLength === right.byteLength && timingSafeEqual(left, right);
+}
+
+function encodeRequest(frame: NativeHostRequest): Buffer {
+  try {
+    return encodeNativeHostFrame(frame);
+  } catch {
+    throw new NativeHostClientError(
+      "NATIVE_HOST_REQUEST_OVERSIZED",
+      "The selected Run is too large for one Native Host request. Edit the Queue item before sending.",
+      false,
+    );
+  }
 }
 
 function connectSocket(endpoint: string): Promise<Socket> {
@@ -267,9 +282,18 @@ export class NativeHostClient {
 
   async #request(
     kind: NativeHostRequest["kind"],
-    options: { readonly dispatchId?: string; readonly beforeSend?: () => Promise<void> } = {},
+    options: {
+      readonly execution?: Omit<
+        NativeHostExecutionRequest,
+        "protocolVersion" | "kind" | "requestId" | "serviceInstanceId" | "hostInstanceId"
+      >;
+      readonly operationRef?: string;
+      readonly afterSequence?: number;
+      readonly control?: NativeHostControlRequest["control"];
+      readonly text?: string | null;
+      readonly beforeSend?: () => Promise<void>;
+    } = {},
   ): Promise<NativeHostResponse> {
-    const connection = await this.#connect();
     const requestId = `request-${randomUUID()}`;
     const base = {
       protocolVersion: NATIVE_HOST_PROTOCOL_VERSION,
@@ -285,22 +309,55 @@ export class NativeHostClient {
       case "health.request":
         request = { ...base, kind };
         break;
+      case "runtime.catalog.request":
+        request = { ...base, kind };
+        break;
       case "execution.request":
-        request = { ...base, kind, dispatchId: options.dispatchId ?? "missing-dispatch" };
+        if (!options.execution) {
+          throw new NativeHostClientError(
+            "NATIVE_HOST_PROTOCOL_FAILURE",
+            "Native Host execution request payload was missing.",
+            false,
+          );
+        }
+        request = { ...base, kind, ...options.execution };
+        break;
+      case "runtime.facts.request":
+        request = {
+          ...base,
+          kind,
+          operationRef: options.operationRef ?? "missing-operation",
+          afterSequence: options.afterSequence ?? 0,
+        };
+        break;
+      case "runtime.control.request":
+        request = {
+          ...base,
+          kind,
+          operationRef: options.operationRef ?? "missing-operation",
+          control: options.control ?? "cancel",
+          text: options.text ?? null,
+        };
+        break;
+      case "runtime.reconcile.request":
+        request = {
+          ...base,
+          kind,
+          operationRef: options.operationRef ?? "missing-operation",
+          afterSequence: options.afterSequence ?? 0,
+        };
         break;
       case "shutdown.request":
         request = { ...base, kind };
         break;
     }
+    const encodedRequest = encodeRequest(request);
+    const connection = await this.#connect();
     try {
       await options.beforeSend?.();
-      connection.socket.write(encodeNativeHostFrame(request));
+      connection.socket.write(encodedRequest);
       const response = await connection.readFrame();
-      if (
-        !response.kind.endsWith(".response") &&
-        response.kind !== "execution.unsupported" &&
-        response.kind !== "shutdown.ack"
-      ) {
+      if (!("requestId" in response)) {
         throw new NativeHostClientError(
           "NATIVE_HOST_PROTOCOL_FAILURE",
           "Native Host returned an unexpected response type.",
@@ -344,15 +401,105 @@ export class NativeHostClient {
     return response;
   }
 
-  async executeUnsupported(
-    dispatchId: string,
-    beforeSend: () => Promise<void>,
-  ): Promise<Extract<NativeHostResponse, { kind: "execution.unsupported" }>> {
-    const response = await this.#request("execution.request", { dispatchId, beforeSend });
-    if (response.kind !== "execution.unsupported") {
+  async catalog(): Promise<Extract<NativeHostResponse, { kind: "runtime.catalog.response" }>> {
+    const response = await this.#request("runtime.catalog.request");
+    if (response.kind !== "runtime.catalog.response") {
       throw new NativeHostClientError(
         "NATIVE_HOST_PROTOCOL_FAILURE",
-        "Pi-free Native Host returned execution evidence other than unsupported.",
+        "Native Host returned the wrong runtime catalog response.",
+        false,
+      );
+    }
+    return response;
+  }
+
+  async execute(
+    execution: Omit<
+      NativeHostExecutionRequest,
+      "protocolVersion" | "kind" | "requestId" | "serviceInstanceId" | "hostInstanceId"
+    >,
+    beforeSend: () => Promise<void>,
+  ): Promise<
+    Extract<
+      NativeHostResponse,
+      { kind: "execution.accepted" | "execution.rejected" | "execution.indeterminate" }
+    >
+  > {
+    const response = await this.#request("execution.request", { execution, beforeSend });
+    if (
+      response.kind !== "execution.accepted" &&
+      response.kind !== "execution.rejected" &&
+      response.kind !== "execution.indeterminate"
+    ) {
+      throw new NativeHostClientError(
+        "NATIVE_HOST_PROTOCOL_FAILURE",
+        "Native Host returned the wrong execution response.",
+        false,
+      );
+    }
+    return response;
+  }
+
+  preflightExecution(
+    execution: Omit<
+      NativeHostExecutionRequest,
+      "protocolVersion" | "kind" | "requestId" | "serviceInstanceId" | "hostInstanceId"
+    >,
+  ): void {
+    encodeRequest({
+      protocolVersion: NATIVE_HOST_PROTOCOL_VERSION,
+      kind: "execution.request",
+      requestId: "request-00000000-0000-4000-8000-000000000000",
+      serviceInstanceId: this.#config.serviceInstanceId,
+      hostInstanceId: this.#config.hostInstanceId,
+      ...execution,
+    });
+  }
+
+  async facts(operationRef: string, afterSequence: number) {
+    const response = await this.#request("runtime.facts.request", {
+      operationRef,
+      afterSequence,
+    });
+    if (response.kind !== "runtime.facts.response") {
+      throw new NativeHostClientError(
+        "NATIVE_HOST_PROTOCOL_FAILURE",
+        "Native Host returned the wrong runtime fact response.",
+        false,
+      );
+    }
+    return response;
+  }
+
+  async control(
+    operationRef: string,
+    control: NativeHostControlRequest["control"],
+    text: string | null,
+  ) {
+    const response = await this.#request("runtime.control.request", {
+      operationRef,
+      control,
+      text,
+    });
+    if (response.kind !== "runtime.control.response") {
+      throw new NativeHostClientError(
+        "NATIVE_HOST_PROTOCOL_FAILURE",
+        "Native Host returned the wrong runtime control response.",
+        false,
+      );
+    }
+    return response;
+  }
+
+  async reconcile(operationRef: string, afterSequence: number) {
+    const response = await this.#request("runtime.reconcile.request", {
+      operationRef,
+      afterSequence,
+    });
+    if (response.kind !== "runtime.reconcile.response") {
+      throw new NativeHostClientError(
+        "NATIVE_HOST_PROTOCOL_FAILURE",
+        "Native Host returned the wrong runtime reconciliation response.",
         false,
       );
     }

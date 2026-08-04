@@ -5,7 +5,7 @@
 // Layer: Chat composer UI primitive
 // Exports: QueuedComposerActions
 
-import { ArrowUpIcon, EllipsisIcon, SteerIcon, Trash2, XIcon } from "~/lib/icons";
+import { ArrowUpIcon, EllipsisIcon, PlayIcon, SteerIcon, Trash2, XIcon } from "~/lib/icons";
 
 import type { QueuedComposerTurn } from "../../composerDraftStore";
 import type { WorkbenchCopy } from "../../i18n/workbenchCopy";
@@ -18,7 +18,8 @@ import { ComposerPickerMenuPopup } from "./ComposerPickerMenuPopup";
 type QueuedComposerActionsProps = {
   queuedTurn: QueuedComposerTurn;
   primaryAction: {
-    kind: "steer" | "move-next";
+    kind: "steer" | "move-next" | "run-next";
+    disabled?: boolean;
     onSelect: (queuedTurn: QueuedComposerTurn) => void;
   };
   primaryActionDisabled?: boolean;
@@ -30,6 +31,7 @@ type QueuedComposerActionsProps = {
     WorkbenchCopy,
     | "queueSteer"
     | "queueMoveNext"
+    | "queueRunNext"
     | "queueCancelEdit"
     | "queueDeleteFollowUp"
     | "queueActions"
@@ -63,13 +65,23 @@ function QueuedComposerActions({
           void primaryAction.onSelect(queuedTurn);
         }}
       >
-        {editing ? <XIcon /> : primaryAction.kind === "steer" ? <SteerIcon /> : <ArrowUpIcon />}
+        {editing ? (
+          <XIcon />
+        ) : primaryAction.kind === "steer" ? (
+          <SteerIcon />
+        ) : primaryAction.kind === "run-next" ? (
+          <PlayIcon />
+        ) : (
+          <ArrowUpIcon />
+        )}
         <span>
           {editing
             ? copy.queueCancelEdit
             : primaryAction.kind === "steer"
               ? copy.queueSteer
-              : copy.queueMoveNext}
+              : primaryAction.kind === "run-next"
+                ? copy.queueRunNext
+                : copy.queueMoveNext}
         </span>
       </Button>
       <IconButton

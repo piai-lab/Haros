@@ -1,21 +1,109 @@
 import {
+  EventId,
   MessageId,
   ProjectId,
   ThreadId,
+  TurnId,
   type DesktopHealthSnapshot,
   type ProductConversationReadModel,
+  type ProductRuntimeActivity,
 } from "@omnimind/contracts";
 
 import type { QueuedComposerTurn } from "./composerDraftStore";
-import { getWorkbenchCopy, type WorkbenchLocale } from "./i18n/workbenchCopy";
+import {
+  getWorkbenchCopy,
+  type WorkbenchCopy,
+  type WorkbenchLocale,
+} from "./i18n/workbenchCopy";
 import type { ProductProjectionIssue } from "./store/productStore";
 import type { ChatMessage } from "./types";
 import { DEFAULT_INTERACTION_MODE, type Project, type Thread } from "./types";
 
+function fillCopy(template: string, fields: Readonly<Record<string, string | number>>): string {
+  return Object.entries(fields).reduce(
+    (result, [key, value]) => result.replaceAll(`{${key}}`, String(value)),
+    template,
+  );
+}
+
+function runtimeControlLabel(
+  control: "steer" | "follow-up" | "abort" | "cancel",
+  copy: WorkbenchCopy,
+): string {
+  switch (control) {
+    case "steer":
+      return copy.productControlSteer;
+    case "follow-up":
+      return copy.productControlFollowUp;
+    case "abort":
+      return copy.productControlAbort;
+    case "cancel":
+      return copy.productControlCancel;
+  }
+}
+
+function runtimeLineageLabel(
+  lineage: "continued" | "new" | "missing" | "divergent",
+  copy: WorkbenchCopy,
+): string {
+  switch (lineage) {
+    case "continued":
+      return copy.productLineageContinued;
+    case "new":
+      return copy.productLineageNew;
+    case "missing":
+      return copy.productLineageMissing;
+    case "divergent":
+      return copy.productLineageDivergent;
+  }
+}
+
+function runtimeActivitySummary(
+  activity: ProductRuntimeActivity,
+  copy: WorkbenchCopy,
+): string {
+  const detail = activity.detail;
+  switch (detail.code) {
+    case "session-bound":
+      return fillCopy(copy.productActivitySessionBound, {
+        lineage: runtimeLineageLabel(detail.lineage, copy),
+      });
+    case "package-loaded":
+      return fillCopy(copy.productActivityPackagesLoaded, { count: detail.count });
+    case "package-failed":
+      return fillCopy(copy.productActivityPackagesFailed, { count: detail.count });
+    case "thinking-delta":
+      return detail.text;
+    case "question-requested":
+      return detail.question;
+    case "control-applied":
+      return fillCopy(copy.productActivityControlApplied, {
+        control: runtimeControlLabel(detail.control, copy),
+        text: detail.text === null ? "" : ` — ${detail.text}`,
+      });
+    case "tool-started":
+      return fillCopy(copy.productActivityToolStarted, { tool: detail.toolName });
+    case "tool-settled":
+      return fillCopy(
+        detail.outcome === "succeeded"
+          ? copy.productActivityToolSucceeded
+          : copy.productActivityToolFailed,
+        { tool: detail.toolName },
+      );
+    case "usage-observed":
+      return fillCopy(copy.productActivityUsage, detail);
+    case "run-settled":
+      return detail.outcome === "succeeded"
+        ? copy.productActivitySettledSucceeded
+        : detail.outcome === "cancelled"
+          ? copy.productActivitySettledCancelled
+          : copy.productActivitySettledFailed;
+  }
+}
+
 /**
- * T3 display-only presenter into the existing mother. Product facts remain the
- * source of truth; this module has no writer and must be deleted when the T4
- * Agent | Chat read model supplies native component props directly.
+ * Stateless presentation into the existing message components. Product facts remain the source
+ * of truth; this module has no cache, subscription, writer, or Engine state.
  */
 export function presentProductConversationMessages(
   readModel: ProductConversationReadModel | undefined,
@@ -26,12 +114,12 @@ export function presentProductConversationMessages(
     role: entry.role,
     text: entry.text,
     createdAt: entry.createdAt,
-    streaming: false,
+    streaming: readModel.streamingEntryIds.includes(entry.id),
     source: "native",
   }));
 }
 
-/** T3-only projection into the approved Queue mother; ownership stays in Product Store. */
+/** Stateless Queue-row presentation; ordering and ownership stay in Product Store. */
 export function presentProductConversationQueue(
   readModel: ProductConversationReadModel | undefined,
   fallbackModelId: string,
@@ -66,13 +154,15 @@ export function presentProductConversationQueue(
 }
 
 /**
- * T3 deletion point: a view-only Thread-shaped adapter for Product conversations that no longer
- * have donor Thread state after reload. It is never inserted into either store.
+ * View-only Thread-shaped props for the existing conversation component mother. This function
+ * never enters either store and carries no authority; Product state is re-projected on render.
  */
 export function presentProductConversationThread(
   readModel: ProductConversationReadModel | undefined,
+  locale?: WorkbenchLocale,
 ): Thread | undefined {
   if (!readModel) return undefined;
+  const copy = getWorkbenchCopy(locale);
   const selection =
     readModel.runs.at(-1)?.requestedSelection ?? readModel.queue.at(-1)?.requestedSelection;
   return {
@@ -100,11 +190,40 @@ export function presentProductConversationThread(
     workingDirectory: null,
     handoff: null,
     turnDiffSummaries: [],
-    activities: [],
+    activities: [
+      ...(readModel.activities ?? []).map((activity) => ({
+        id: EventId.makeUnsafe(`${activity.runId}:${activity.nativeSequence}`),
+        tone:
+          activity.kind === "tool"
+            ? ("tool" as const)
+            : activity.kind === "question"
+              ? ("approval" as const)
+              : ("info" as const),
+        kind: `native.${activity.kind}`,
+        summary: runtimeActivitySummary(activity, copy),
+        payload: { source: "native-host" },
+        turnId: TurnId.makeUnsafe(activity.runId),
+        sequence: activity.nativeSequence,
+        createdAt: activity.createdAt,
+      })),
+      ...(readModel.recoveries ?? []).map((recovery) => ({
+        id: EventId.makeUnsafe(`${recovery.runId}:snapshot:${recovery.snapshotVersion}`),
+        tone: "info" as const,
+        kind: "native.recovery",
+        summary: copy.productRuntimeRecoverySummary,
+        payload: {
+          source: "native-host",
+          snapshotVersion: recovery.snapshotVersion,
+          activityHistoryComplete: false,
+        },
+        turnId: TurnId.makeUnsafe(recovery.runId),
+        createdAt: recovery.createdAt,
+      })),
+    ].toSorted((left, right) => left.createdAt.localeCompare(right.createdAt)),
   };
 }
 
-/** T3 deletion point: view-only project chrome input derived from Product workspace truth. */
+/** View-only project chrome input derived from Product workspace truth. */
 export function presentProductConversationProject(
   readModel: ProductConversationReadModel | undefined,
 ): Project | undefined {
@@ -138,7 +257,7 @@ export function presentProductConversationError(
     return "Delivery could not be confirmed. OmniMind will not replay this request automatically.";
   }
   if (receipt.state === "outcome_unknown") {
-    return "The Engine accepted this request, but its final outcome could not be confirmed.";
+    return "The request outcome could not be confirmed. OmniMind will not replay it automatically.";
   }
   return null;
 }

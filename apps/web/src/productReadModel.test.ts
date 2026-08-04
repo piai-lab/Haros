@@ -1,7 +1,8 @@
-import type {
-  DesktopHealthSnapshot,
-  ProductConversationReadModel,
-  ProductDispatchReceipt,
+import {
+  ProductRunId,
+  type DesktopHealthSnapshot,
+  type ProductConversationReadModel,
+  type ProductDispatchReceipt,
 } from "@omnimind/contracts";
 import { describe, expect, it } from "vitest";
 
@@ -53,6 +54,9 @@ function readModel(receipt?: ProductDispatchReceipt): ProductConversationReadMod
       observedAt: "2026-08-04T00:00:00.000Z",
     },
     entries: [],
+    streamingEntryIds: [],
+    activities: [],
+    recoveries: [],
     queue: [],
     runs: receipt
       ? [
@@ -189,5 +193,65 @@ describe("Product Conversation presenter", () => {
     const thread = presentProductConversationThread(readModel());
 
     expect(thread?.runtimeMode).toBe("approval-required");
+  });
+
+  it("localizes typed native activity and recovery facts at render time", () => {
+    const base = readModel();
+    const model: ProductConversationReadModel = {
+      ...base,
+      activities: [
+        ...base.activities,
+        {
+          runId: ProductRunId.makeUnsafe("run-1"),
+          nativeSequence: 1,
+          kind: "session",
+          detail: { code: "session-bound", lineage: "continued" },
+          createdAt: "2026-08-04T00:00:00.500Z",
+        },
+        {
+          runId: ProductRunId.makeUnsafe("run-1"),
+          nativeSequence: 2,
+          kind: "control",
+          detail: { code: "control-applied", control: "abort", text: null },
+          createdAt: "2026-08-04T00:00:01.000Z",
+        },
+        {
+          runId: ProductRunId.makeUnsafe("run-1"),
+          nativeSequence: 3,
+          kind: "settlement",
+          detail: { code: "run-settled", outcome: "cancelled" },
+          createdAt: "2026-08-04T00:00:02.000Z",
+        },
+      ],
+      recoveries: [
+        ...(base.recoveries ?? []),
+        {
+          runId: ProductRunId.makeUnsafe("run-1"),
+          snapshotVersion: 1,
+          kind: "visible-result",
+          createdAt: "2026-08-04T00:00:03.000Z",
+        },
+      ],
+    };
+    expect(
+      presentProductConversationThread(model, "en")?.activities.map(
+        (activity) => activity.summary,
+      ),
+    ).toEqual([
+      "Native Session lineage: continued.",
+      "Control applied: abort.",
+      "Run cancelled.",
+      "Final reply recovered from the native Session; fine-grained runtime activity history is incomplete.",
+    ]);
+    expect(
+      presentProductConversationThread(model, "zh-CN")?.activities.map(
+        (activity) => activity.summary,
+      ),
+    ).toEqual([
+      "原生 Session 血缘：已续接。",
+      "已应用控制：中止。",
+      "Run 已取消。",
+      "已从原生 Session 恢复最终答复；细粒度运行活动记录并不完整。",
+    ]);
   });
 });

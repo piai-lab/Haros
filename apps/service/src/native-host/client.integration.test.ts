@@ -22,6 +22,7 @@ function rendezvous() {
   temporaryDirectories.add(directory);
   const id = randomUUID();
   return {
+    home: directory,
     endpoint:
       process.platform === "win32"
         ? `\\\\.\\pipe\\omnimind-native-host-test-${id}`
@@ -39,6 +40,7 @@ async function startHost(config: ReturnType<typeof rendezvous>) {
       OMNIMIND_NATIVE_HOST_ENDPOINT: config.endpoint,
       OMNIMIND_NATIVE_HOST_AUTH: config.authentication,
       OMNIMIND_NATIVE_HOST_INSTANCE: config.hostInstanceId,
+      OMNIMIND_HOME: config.home,
     },
     stdio: ["ignore", "pipe", "pipe"],
   });
@@ -102,7 +104,7 @@ afterEach(async () => {
 });
 
 describe("production Native Host protocol", () => {
-  it("mutually authenticates, reports health, refuses execution and shuts down", async () => {
+  it("mutually authenticates, reports the Pi runtime, rejects unresolved execution and shuts down", async () => {
     const config = rendezvous();
     const { child, readOutput } = await startHost(config);
     expect(child.spawnargs.join(" ")).not.toContain(config.authentication);
@@ -126,16 +128,71 @@ describe("production Native Host protocol", () => {
     await expect(client.health()).resolves.toMatchObject({
       kind: "health.response",
       status: "ready",
-      execution: "unsupported",
+      execution: "available",
+      runtime: "pi",
     });
+    const catalog = await client.catalog();
+    expect(catalog).toMatchObject({
+      kind: "runtime.catalog.response",
+      engineId: "pi",
+      runtimeVersion: "0.81.1",
+    });
+    let oversizedPersisted = 0;
+    await expect(
+      client.execute(
+        {
+          dispatchId: "dispatch-unicode-oversized",
+          conversationId: "conversation-unicode-oversized",
+          runId: "run-unicode-oversized",
+          text: "😀".repeat(16_384),
+          selection: {
+            engineId: "pi",
+            modelId: null,
+            thinking: null,
+            permissionPolicy: "approval-required",
+            enforcement: "unverified",
+            packageGeneration: catalog.packageGeneration,
+          },
+          workspace: { kind: "chat", cwd: null },
+          priorLineageRef: null,
+        },
+        async () => {
+          oversizedPersisted += 1;
+        },
+      ),
+    ).rejects.toMatchObject({
+      code: "NATIVE_HOST_REQUEST_OVERSIZED",
+      retryable: false,
+    });
+    expect(oversizedPersisted).toBe(0);
+    await expect(client.liveness()).resolves.toBe(true);
+
     let persisted = 0;
     await expect(
-      client.executeUnsupported("dispatch-1", async () => {
-        persisted += 1;
-      }),
+      client.execute(
+        {
+          dispatchId: "dispatch-1",
+          conversationId: "conversation-1",
+          runId: "run-1",
+          text: "hello",
+          selection: {
+            engineId: "pi",
+            modelId: null,
+            thinking: null,
+            permissionPolicy: "approval-required",
+            enforcement: "unverified",
+            packageGeneration: catalog.packageGeneration,
+          },
+          workspace: { kind: "chat", cwd: null },
+          priorLineageRef: null,
+        },
+        async () => {
+          persisted += 1;
+        },
+      ),
     ).resolves.toMatchObject({
-      kind: "execution.unsupported",
-      code: "NATIVE_HOST_EXECUTION_UNSUPPORTED",
+      kind: "execution.rejected",
+      code: "PI_MODEL_UNAVAILABLE",
       retryable: false,
     });
     expect(persisted).toBe(1);

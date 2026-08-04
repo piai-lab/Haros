@@ -51,7 +51,10 @@ function conversationSnapshot(id = "conversation-1", sequence = 0) {
         observedAt: "2026-08-04T00:00:00.000Z",
       },
       entries: [],
+      streamingEntryIds: [],
       runs: [],
+      activities: [],
+      recoveries: [],
       queue: [],
     },
   });
@@ -145,6 +148,7 @@ describe("Product projection store", () => {
         protocolVersion: PRODUCT_PROTOCOL_VERSION,
         sequence: 1,
         conversations: [],
+        runtimeCatalog: null,
       }),
     );
     const cursorAhead = applyProductFactBatch(
@@ -173,12 +177,14 @@ describe("Product projection store", () => {
       protocolVersion: PRODUCT_PROTOCOL_VERSION,
       sequence: 2,
       conversations: [summary("conversation-1", "2026-08-04T00:00:02.000Z")],
+      runtimeCatalog: null,
     });
     const shellState = applyProductShellSnapshot(initialProductProjectionState, shell);
     const stale = decodeShell({
       protocolVersion: PRODUCT_PROTOCOL_VERSION,
       sequence: 1,
       conversations: [summary("stale")],
+      runtimeCatalog: null,
     });
     expect(applyProductShellSnapshot(shellState, stale)).toBe(shellState);
 

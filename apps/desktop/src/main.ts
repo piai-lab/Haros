@@ -42,7 +42,9 @@ import type {
   DesktopUpdateActionResult,
   DesktopUpdateState,
 } from "@omnimind/contracts";
-import { DESKTOP_HEALTH_PROTOCOL_VERSION } from "@omnimind/contracts";
+import {
+  DESKTOP_HEALTH_PROTOCOL_VERSION,
+} from "@omnimind/contracts";
 import {
   autoUpdater,
   BaseUpdater,
@@ -126,12 +128,17 @@ import {
   type NativeHostRendezvous,
 } from "./process/nativeHostRendezvous";
 import {
+  NATIVE_HOST_READY_TEXT,
   NativeHostProcessSupervisor,
   type NativeHostSupervisorState,
 } from "./process/nativeHostSupervisor";
 import { NativeHostAuthenticatedReadinessDetector } from "./process/nativeHostAuthenticatedReadiness";
 import { DESKTOP_HEALTH_IPC_CHANNELS } from "./process/desktopHealthChannels";
 import { createNativeHostBaseEnvironment } from "./process/nativeHostEnvironment";
+import {
+  createPiKeychainLookup,
+  NativeHostCredentialBroker,
+} from "./process/nativeHostCredentialBroker";
 import { isDisposableSmokeEnvironment, syncShellEnvironment } from "./syncShellEnvironment";
 import {
   RENDERER_MAX_AUTOMATIC_RELOADS,
@@ -282,6 +289,8 @@ const LOG_FILE_MAX_FILES = 10;
 const APP_RUN_ID = Crypto.randomBytes(6).toString("hex");
 const DESKTOP_BACKEND_SHUTDOWN_TOKEN = Crypto.randomBytes(32).toString("hex");
 const DESKTOP_BROWSER_HOST_CAPABILITY = Crypto.randomBytes(32).toString("base64url");
+const NATIVE_HOST_BROKER_AUTHENTICATION = Crypto.randomBytes(32).toString("base64url");
+const NATIVE_HOST_BROKER_DESKTOP_INSTANCE = `desktop-${Crypto.randomUUID()}`;
 const DESKTOP_BROWSER_HOST_CAPABILITY_FD = 3;
 // Electron's single-instance lock is scoped through userData on Windows/Linux.
 // Set the flavor-specific profile first so Stable, Dev, and Canary never contend
@@ -325,6 +334,9 @@ let mainWindow: BrowserWindow | null = null;
 let backendProcess: ChildProcess.ChildProcess | null = null;
 let nativeHostRendezvous: NativeHostRendezvous | null = null;
 let nativeHostSupervisor: NativeHostProcessSupervisor | null = null;
+let nativeHostCredentialBroker: NativeHostCredentialBroker | null = null;
+let nativeHostProcessReady = false;
+let nativeHostStdoutBuffer = "";
 let backendPort = 0;
 let backendAuthToken = "";
 let backendHttpUrl = "";
@@ -364,8 +376,8 @@ let desktopHealthSnapshot: DesktopHealthSnapshot = {
   service: { status: "starting", reason: null, restartAttempt: 0 },
   nativeHost: { status: "unavailable", reason: null, restartAttempt: 0 },
   engineSelection: {
-    status: "unsupported",
-    reason: "Native execution is not connected in the Pi-free Host shell.",
+    status: "unknown",
+    reason: "Native runtime catalog and selected credential have not been confirmed.",
   },
   updatedAt: new Date().toISOString(),
 };
@@ -509,6 +521,31 @@ function publishDesktopHealth(
   return desktopHealthSnapshot;
 }
 
+function disconnectNativeHostCredentialBroker(): void {
+  nativeHostCredentialBroker?.stop();
+}
+
+function startNativeHostCredentialBroker(): void {
+  if (nativeHostProcessReady) nativeHostCredentialBroker?.start();
+}
+
+function observeNativeHostStdout(chunk: Buffer): void {
+  nativeHostStdoutBuffer = `${nativeHostStdoutBuffer}${chunk.toString("utf8").replace(/\r/gu, "")}`;
+  for (;;) {
+    const newline = nativeHostStdoutBuffer.indexOf("\n");
+    if (newline < 0) break;
+    const line = nativeHostStdoutBuffer.slice(0, newline).trim();
+    nativeHostStdoutBuffer = nativeHostStdoutBuffer.slice(newline + 1);
+    if (line === NATIVE_HOST_READY_TEXT) {
+      nativeHostProcessReady = true;
+      startNativeHostCredentialBroker();
+    }
+  }
+  if (nativeHostStdoutBuffer.length > 2_048) {
+    nativeHostStdoutBuffer = nativeHostStdoutBuffer.slice(-2_048);
+  }
+}
+
 function publishNativeHostHealth(state: NativeHostSupervisorState): void {
   publishDesktopHealth({
     nativeHost: {
@@ -520,6 +557,13 @@ function publishNativeHostHealth(state: NativeHostSupervisorState): void {
   const description = `native host state=${state.status} restartAttempt=${state.restartAttempt}${state.reason ? ` reason=${sanitizeLogValue(state.reason)}` : ""}`;
   writeDesktopLogHeader(description);
   console.info(`[desktop] ${description}`);
+  if (state.pid === null || state.status === "restarting" || state.status === "circuitOpen") {
+    nativeHostProcessReady = false;
+    nativeHostStdoutBuffer = "";
+    disconnectNativeHostCredentialBroker();
+  } else if (nativeHostProcessReady) {
+    startNativeHostCredentialBroker();
+  }
 }
 
 function safeConsoleError(...args: Parameters<typeof console.error>): void {
@@ -1118,15 +1162,28 @@ function startNativeHost(): void {
     });
     return;
   }
+  nativeHostCredentialBroker ??= new NativeHostCredentialBroker({
+    endpoint: nativeHostRendezvous.endpoint,
+    hostInstanceId: nativeHostRendezvous.hostInstanceId,
+    authentication: NATIVE_HOST_BROKER_AUTHENTICATION,
+    desktopInstanceId: NATIVE_HOST_BROKER_DESKTOP_INSTANCE,
+    keychain: createPiKeychainLookup(),
+  });
   nativeHostSupervisor = new NativeHostProcessSupervisor({
     executable: process.execPath,
     entry,
     cwd: resolveBackendCwd(),
     nodeArgs: backendNodeArgs(),
-    environment: createNativeHostBaseEnvironment(process.env, BASE_DIR),
+    environment: {
+      ...createNativeHostBaseEnvironment(process.env, BASE_DIR),
+      OMNIMIND_NATIVE_HOST_BROKER_AUTH: NATIVE_HOST_BROKER_AUTHENTICATION,
+    },
     rendezvous: nativeHostRendezvous,
     onState: publishNativeHostHealth,
-    onStdout: (chunk) => nativeHostLogSink?.write(chunk),
+    onStdout: (chunk) => {
+      nativeHostLogSink?.write(chunk);
+      observeNativeHostStdout(chunk);
+    },
     onStderr: (chunk) => nativeHostLogSink?.write(chunk),
   });
   nativeHostSupervisor.start();
@@ -3465,6 +3522,17 @@ function startBackend(trigger: BackendStartTrigger = "lifecycle"): void {
     stderr: child.stderr,
     ...(backendLogDestination ? { writeLog: (chunk) => backendLogDestination.write(chunk) } : {}),
     writeStdout: (chunk) => {
+      const output = chunk.toString("utf8");
+      if (output.includes("OMNIMIND_NATIVE_HOST_EXECUTION_AVAILABLE protocol=1")) {
+        publishDesktopHealth({ engineSelection: { status: "available", reason: null } });
+      } else if (output.includes("OMNIMIND_NATIVE_HOST_EXECUTION_UNAVAILABLE protocol=1")) {
+        publishDesktopHealth({
+          engineSelection: {
+            status: "unauthenticated",
+            reason: "No credential-backed Pi model is currently available.",
+          },
+        });
+      }
       process.stdout.write(chunk);
     },
     writeStderr: (chunk) => {
@@ -3624,6 +3692,7 @@ async function shutdownDesktopRuntime(reason: string): Promise<void> {
   const shutdown = runAfterDesktopShutdown(
     stopBackendAndWaitForExit(),
     async () => {
+      disconnectNativeHostCredentialBroker();
       await nativeHostSupervisor?.stop();
       clearUpdateBackgroundBlurTimer();
       clearUpdateCheckTimeoutTimer();

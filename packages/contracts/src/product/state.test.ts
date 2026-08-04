@@ -164,5 +164,12 @@ describe("Product State boundary", () => {
         lastConfirmedBoundary: "accepted",
       }),
     ).toMatchObject({ state: "outcome_unknown", operationRef: "operation-1" });
+    expect(() =>
+      decode({
+        state: "outcome_unknown",
+        lastConfirmedBoundary: "sent",
+        reconciliationHint: "pi-pending:dispatch-1",
+      }),
+    ).toThrow();
   });
 });
