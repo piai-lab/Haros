@@ -236,3 +236,75 @@ and makes the zero-Long-Task claim honest while preserving the 40 measured commi
 - predecessor review: `../reviews/retire-competing-execution-authority.md`
 - promised output: `../handoffs/retire-competing-execution-authority.md`
 - operation conclusion: implementation candidate ready for independent review; no Campaign claim self-verified
+
+## Bounded typecheck-closure correction — 2026-08-05
+
+### Outcome
+
+`CANDIDATE` for independent review. The Freeze attempt identified four tracked ACP-only Service
+scripts that remained inside the Service TypeScript compilation boundary after
+`@agentclientprotocol/sdk` had been removed from Service ownership. The amended Work explicitly
+authorizes retiring exactly those orphan fixture/benchmark files. This correction physically
+deletes them; it does not restore the SDK, exclude `scripts` from TypeScript, add a shim, or change
+the current Product/Native Host mechanism.
+
+The existing handoff history above is preserved. This appended correction is linked to the same
+[`Retire competing execution authority`](../work/retire-competing-execution-authority.md) Work and
+addresses the typecheck blocker recorded by
+[`Freeze the first production candidate`](freeze-first-production-candidate.md).
+
+### Exact changed paths
+
+Deleted by this correction:
+
+```text
+apps/service/scripts/acp-conformance-agent.ts
+apps/service/scripts/acp-mock-agent.ts
+apps/service/scripts/acp-wire-benchmark.ts
+apps/service/scripts/compare-acp-wire-benchmarks.ts
+```
+
+Appended only:
+
+```text
+.omp-flow/tasks/08-04-ui-chassis-takeover/handoffs/retire-competing-execution-authority.md
+```
+
+The Work allowlist amendment was already present when this operation began and is not attributed
+to this implementer. No package manifest, lockfile, tsconfig, runtime/session record, review,
+Harness configuration, stage, commit, push or merge was changed.
+
+### Verification
+
+| Command / inspection | Result |
+| --- | --- |
+| tracked-path/status inspection plus repository reference scan before deletion | PASS; all four files were tracked and unmodified; no runtime entrypoint, package script or other code consumer referenced them; three imported the removed SDK and the fourth was only the orphan benchmark companion |
+| physical absence plus scoped negative scan excluding task history: `rg` for all four script names and `@agentclientprotocol/sdk` | PASS; zero current source hits |
+| manifest/lock scan for all four script names and `agentclientprotocol` | PASS; zero hits across root/workspace package manifests and `bun.lock` |
+| `bun run typecheck` in `apps/service` | PASS, exit 0; `tsc --noEmit` |
+| `bun test scripts/execution-authority-boundary.test.ts` | PASS, exit 0; 1 file / 6 tests / 32 assertions |
+| two focused `ProductControlPlane.test.ts` cases: reopen seven Product responsibilities without donor migrations; reconcile `delivery_unknown` without replay | PASS, exit 0; 1 file / 2 tests, 30 skipped |
+| root `bun run typecheck` | PASS, exit 0; 7/7 workspace tasks, cache bypassed |
+| before/after SHA-256 plus `git diff --exit-code -- apps/service/package.json package.json bun.lock` | PASS; hashes stayed `14134aed...`, `bb9fe997...`, `789bc579...`; dependency owners and lock graph are byte-unchanged |
+| scoped `git diff --check` and deletion stat | PASS; four script deletions only, 1,330 lines removed, no whitespace error |
+
+### Decisions and caveats
+
+- These scripts encoded superseded Service-side ACP execution/conformance authority and had no
+  current owner or consumer after the accepted Native Host/Product authority cutover. Physical
+  deletion closes the buildable residue without inventing compatibility state.
+- Focused current-mechanism checks prove the authority boundary and two directly relevant Product
+  recovery/persistence behaviors only. No live Provider journey, UI/visual gate, package build,
+  repository-wide test/quality gate, final-SHA gate or Campaign completion audit was run here.
+- This producer does not self-accept the correction. Freeze must select and verify a new coherent
+  candidate after independent review and integration.
+
+### Correction dispatch identity
+
+- role: `implementer`
+- actorId: `authority_retirement_typecheck_closure_implementer_r1`
+- receipt: `cde4f34e307e4f8a88c5e178aa62f92e`
+- predecessor receipt: `c8e3de64aeda4b3a87b45927af8590fe`
+- predecessor review: `../reviews/align-product-completion-signals.md`
+- promised output: `../handoffs/retire-competing-execution-authority.md`
+- operation conclusion: bounded correction candidate ready for independent review; no Work or Campaign claim self-verified

@@ -4,13 +4,14 @@ title: "Final review: Retire competing execution authority"
 work: "../work/retire-competing-execution-authority.md"
 handoff: "../handoffs/retire-competing-execution-authority.md"
 verdict: "PASS"
-revision: "review-retire-competing-execution-authority-20260805-r3"
-actor_id: "retire_competing_execution_authority_reviewer_r3"
-dispatch_receipt: "32801247ef5c4686925c3a7b70537b4e"
-predecessor_receipt: "aee22d5ec855416da1bcc24182202f15"
+revision: "review-retire-competing-execution-authority-20260805-r4"
+actor_id: "authority_retirement_typecheck_closure_reviewer_r1"
+dispatch_receipt: "cdda7d13ad904f45b5aab1e03886ebfe"
+predecessor_receipt: "cde4f34e307e4f8a88c5e178aa62f92e"
 predecessor_output: "../handoffs/retire-competing-execution-authority.md"
 reviewed_failure_receipt: "0a8729dd4f414cd29b5de90451542eae"
-reviewed_revision: "handoff-retire-competing-execution-authority-20260805-r5"
+reviewed_revision: "handoff-retire-competing-execution-authority-20260805-r5 plus bounded typecheck-closure correction"
+supersedes_revision: "review-retire-competing-execution-authority-20260805-r3"
 ---
 
 # Final review: Retire competing execution authority
@@ -109,3 +110,93 @@ recorded above; this was an inspection harness limit, not a product gate failure
 - predecessor receipt: `aee22d5ec855416da1bcc24182202f15`
 - predecessor output: `../handoffs/retire-competing-execution-authority.md`
 - reviewed failure receipt: `0a8729dd4f414cd29b5de90451542eae`
+
+## Bounded typecheck-closure re-review — 2026-08-05
+
+### Findings
+
+No blocking or non-blocking finding within this four-file typecheck-closure correction.
+
+### Verdict
+
+`PASS`.
+
+This bounded verdict supersedes r3 as the current Review Concept revision under reviewer operation
+`cdda7d13ad904f45b5aab1e03886ebfe`; it does not invalidate or relabel the prior r3 evidence. The
+four deleted Service scripts are orphan ACP-only fixtures/benchmark utilities, not current Product,
+system-capability or Native Host mechanisms:
+
+- `acp-conformance-agent.ts` identifies itself as an official-SDK transport conformance subprocess
+  and imports only Node streams/files, `@agentclientprotocol/sdk` and Zod;
+- `acp-mock-agent.ts` identifies itself as a deterministic ACP runtime-integration fixture, exports
+  no API and imports only Node streams/files, the removed ACP SDK and Effect;
+- `acp-wire-benchmark.ts` is a standalone official-SDK wire benchmark with CLI/output handling and
+  no Product or system import;
+- `compare-acp-wire-benchmarks.ts` only compares benchmark JSON files and has no production import.
+
+A current-tree scan excluding task history finds no reference to any of the four names or to
+`@agentclientprotocol/sdk`. Root and Service package scripts likewise have no command referring to
+them. The only remaining file in `apps/service/scripts` is the active `cli.ts`; the deleted scripts
+have no replacement shim, alias, tsconfig exclusion or dependency restoration. Their removal closes
+the exact Service TypeScript failure recorded by the blocked Freeze handoff while leaving the
+current Product/Host boundary unchanged.
+
+### Predecessor, Work and diff boundary
+
+The reviewer operation record resolves completed implementation predecessor
+`cde4f34e307e4f8a88c5e178aa62f92e`. Its output is
+`../handoffs/retire-competing-execution-authority.md`, whose bounded correction links back to the
+assigned `../work/retire-competing-execution-authority.md` Work and to the blocked
+`../handoffs/freeze-first-production-candidate.md` evidence. Implementer actor
+`authority_retirement_typecheck_closure_implementer_r1` differs from reviewer actor
+`authority_retirement_typecheck_closure_reviewer_r1`.
+
+The actual production diff contains exactly four deletions and no other deleted path:
+
+```text
+apps/service/scripts/acp-conformance-agent.ts
+apps/service/scripts/acp-mock-agent.ts
+apps/service/scripts/acp-wire-benchmark.ts
+apps/service/scripts/compare-acp-wire-benchmarks.ts
+```
+
+Together they remove 1,330 lines. The amended Work adds exactly these four paths to its allowlist,
+and the appended handoff records the correction. `package.json`, `apps/service/package.json`,
+`bun.lock`, `apps/service/tsconfig.json` and `tsconfig.base.json` are byte-identical to `HEAD`; no
+Product/System/Native Host source, package configuration, lock graph, compiler boundary or runtime
+record changed. Other pre-existing dirty and untracked paths were left untouched.
+
+### Independent verification
+
+| Command / inspection | Result |
+| --- | --- |
+| operation JSON inspection for `cde4f34e307e4f8a88c5e178aa62f92e` and `cdda7d13ad904f45b5aab1e03886ebfe`; Work/handoff link inspection | PASS; completed predecessor, exact output, same Work and different actors |
+| current `rg` scan excluding `.git`, task history and the deleted files for the four filenames plus `@agentclientprotocol/sdk`; `git grep` at `HEAD` excluding the four files | PASS; zero consumer/reference hits |
+| root and Service package-script inspection for ACP fixture/benchmark names; manifest/lock scan | PASS; zero script or dependency hits |
+| `git show HEAD:<path>` import/purpose inspection for all four deleted files | PASS; three self-contained ACP SDK fixtures/benchmark files and one self-contained benchmark comparator; no Product/System/current-mechanism imports |
+| `git diff --diff-filter=D --name-only --`; scoped numstat and physical-absence checks | PASS; exactly four deleted paths, 1,330 removed lines, all four absent |
+| `git diff --exit-code -- package.json apps/service/package.json bun.lock apps/service/tsconfig.json tsconfig.base.json` plus worktree/`HEAD` blob hashes | PASS; no manifest, lockfile or tsconfig change; each worktree hash equals its `HEAD` blob |
+| `bun run typecheck` in `apps/service` | PASS, exit 0; `tsc --noEmit` |
+| `bun test scripts/execution-authority-boundary.test.ts` | PASS, exit 0; 1 file / 6 tests / 32 assertions |
+| `bun run test -- src/product/ProductControlPlane.test.ts -t 'reopens the seven Product responsibilities without donor migrations\|reconciles delivery_unknown to accepted and then outcome_unknown without replay'` in `apps/service` | PASS, exit 0; Vitest 1 file / 2 tests, 30 skipped |
+| root `bun run typecheck` | PASS, exit 0; 7/7 workspace tasks, zero cached |
+| scoped `git diff --check --` over Work, handoff and four scripts | PASS; no output |
+
+An initial reviewer invocation used `bun test` directly for the Product file. Bun's native runner
+could not resolve that Node-SQLite fixture and collected zero tests. The package contract explicitly
+uses Vitest, so the reviewer reran the identical two title filters through `bun run test --`; both
+tests passed. This was a disclosed runner-selection error, not an implementation assertion failure.
+
+### Scope limits and dispatch identity
+
+This review accepts only the four-file typecheck-closure correction. It does not freeze a new SHA,
+rerun the full Freeze matrix, renew live Provider/UI/package evidence, approve release actions or
+verify a Campaign claim. No production repair was made by the reviewer; no stage, commit, push,
+merge, runtime/session record or Evidence ledger was changed. There is no explicitly allowed
+reviewer fix.
+
+- actorId: `authority_retirement_typecheck_closure_reviewer_r1`
+- receipt: `cdda7d13ad904f45b5aab1e03886ebfe`
+- predecessor receipt: `cde4f34e307e4f8a88c5e178aa62f92e`
+- predecessor output: `../handoffs/retire-competing-execution-authority.md`
+- verdict: bounded `PASS`; return to integration/Freeze for a new coherent candidate

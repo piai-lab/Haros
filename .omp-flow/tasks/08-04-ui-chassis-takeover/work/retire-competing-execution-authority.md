@@ -106,6 +106,10 @@ apps/service/src/main.ts                     (deleted-domain composition/import 
 apps/service/src/effectServer.ts             (deleted-domain route/service removal only)
 apps/service/src/wsRpc.ts
 apps/service/src/http.ts                       (preserved transport regression only)
+apps/service/scripts/acp-conformance-agent.ts  (retire orphan ACP execution fixture only)
+apps/service/scripts/acp-mock-agent.ts         (retire orphan ACP execution fixture only)
+apps/service/scripts/acp-wire-benchmark.ts     (retire orphan ACP execution benchmark only)
+apps/service/scripts/compare-acp-wire-benchmarks.ts (retire orphan ACP benchmark companion only)
 apps/service/src/git/runtimeLayer.ts           (orchestration dependency decoupling only)
 apps/service/src/managedWorktrees.ts           (orchestration dependency decoupling only)
 apps/service/src/profileStatsArchive.ts        (orchestration dependency decoupling only)
