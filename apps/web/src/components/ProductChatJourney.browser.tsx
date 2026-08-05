@@ -123,6 +123,7 @@ function productSnapshot(queue: ReadonlyArray<ProductQueueItem>): ProductConvers
         notes: "",
         boardState: "active",
         boardStateChangedAt: null,
+        latestRunId: null,
         receiptState: null,
         createdAt: NOW,
         updatedAt: NOW,

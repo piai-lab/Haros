@@ -72,6 +72,69 @@ describe("resolveVisibleToastThreadIds", () => {
       }),
     ).toEqual(new Set([THREAD_A, THREAD_B]));
   });
+
+  it("includes only the rendered active sidechat dock pane", () => {
+    const dockState = {
+      open: true,
+      activePaneId: "sidechat-b",
+      panes: [
+        {
+          id: "sidechat-b",
+          kind: "sidechat" as const,
+          threadId: THREAD_B,
+          diffTurnId: null,
+          diffFilePath: null,
+          filePath: null,
+          pullRequestWorkspaceId: null,
+          pullRequestRepository: null,
+          pullRequestNumber: null,
+          pullRequestInitialTab: null,
+        },
+      ],
+    };
+    expect(
+      resolveVisibleToastThreadIds({
+        activeThreadId: THREAD_A,
+        splitView: null,
+        rightDockState: dockState,
+      }),
+    ).toEqual(new Set([THREAD_A, THREAD_B]));
+
+    expect(
+      resolveVisibleToastThreadIds({
+        activeThreadId: THREAD_A,
+        splitView: null,
+        rightDockState: { ...dockState, open: false },
+      }),
+    ).toEqual(new Set([THREAD_A]));
+  });
+
+  it("ignores persisted dock state when a split route owns the rendered panes", () => {
+    expect(
+      resolveVisibleToastThreadIds({
+        activeThreadId: THREAD_A,
+        splitView: createSplitView(),
+        rightDockState: {
+          open: true,
+          activePaneId: "sidechat-hidden",
+          panes: [
+            {
+              id: "sidechat-hidden",
+              kind: "sidechat",
+              threadId: ThreadId.makeUnsafe("thread-hidden"),
+              diffTurnId: null,
+              diffFilePath: null,
+              filePath: null,
+              pullRequestWorkspaceId: null,
+              pullRequestRepository: null,
+              pullRequestNumber: null,
+              pullRequestInitialTab: null,
+            },
+          ],
+        },
+      }),
+    ).toEqual(new Set([THREAD_A, THREAD_B]));
+  });
 });
 
 describe("shouldRenderToastForVisibleThreads", () => {

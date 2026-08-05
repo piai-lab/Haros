@@ -5,15 +5,24 @@
 
 import type { ThreadId } from "@omnimind/contracts";
 import { resolveSplitViewThreadIds, type SplitView } from "../../splitViewStore";
+import { resolveActivePane, type RightDockThreadState } from "../../rightDockStore.logic";
 
 export function resolveVisibleToastThreadIds(input: {
   activeThreadId: ThreadId | null;
   splitView: SplitView | null;
+  rightDockState?: RightDockThreadState | null;
 }): ReadonlySet<ThreadId> {
   if (input.splitView) {
     return new Set(resolveSplitViewThreadIds(input.splitView));
   }
-  return input.activeThreadId ? new Set([input.activeThreadId]) : new Set<ThreadId>();
+  const visibleThreadIds = input.activeThreadId
+    ? new Set<ThreadId>([input.activeThreadId])
+    : new Set<ThreadId>();
+  const activeDockPane = input.rightDockState ? resolveActivePane(input.rightDockState) : null;
+  if (activeDockPane?.kind === "sidechat" && activeDockPane.threadId) {
+    visibleThreadIds.add(activeDockPane.threadId);
+  }
+  return visibleThreadIds;
 }
 
 export function shouldRenderToastForVisibleThreads(input: {

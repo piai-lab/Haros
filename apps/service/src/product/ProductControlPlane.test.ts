@@ -941,6 +941,152 @@ describe("ProductControlPlane", () => {
     expect(tables).not.toContain("migrations");
   });
 
+  it("pairs the latest Run identity with receipt state across shell, detail, and reopen", async () => {
+    const root = await fs.mkdtemp(path.join(os.tmpdir(), "omnimind-product-latest-run-"));
+    temporaryRoots.push(root);
+    const filename = path.join(root, PRODUCT_DATABASE_FILENAME);
+    let listener:
+      | Parameters<NonNullable<ProductExecutionBoundary["subscribeFacts"]>>[0]
+      | undefined;
+    const fixture = makeProductExecutionFixture([
+      { crossesSendBoundary: true, observation: acceptedObservation("latest-1") },
+      {
+        crossesSendBoundary: false,
+        observation: {
+          kind: "rejected",
+          code: "ENGINE_REJECTED",
+          message: "Rejected by fixture.",
+          retryable: false,
+        },
+      },
+      { crossesSendBoundary: true, failAfterBoundary: true },
+      { crossesSendBoundary: true, observation: acceptedObservation("latest-4") },
+    ]);
+    const boundary: ProductExecutionBoundary = {
+      ...fixture,
+      subscribeFacts: (next) => {
+        listener = next;
+        return () => {
+          listener = undefined;
+        };
+      },
+    };
+    const first = await makeSystem(filename, boundary);
+    const conversation = createInput("latest-run-identity");
+    const readPair = async (system: Awaited<ReturnType<typeof makeSystem>>) => {
+      const shell = await system.run(system.controlPlane.getShellSnapshot());
+      const shellSummary = shell.conversations.find(
+        (candidate) => candidate.id === conversation.conversationId,
+      );
+      const detail = await system.run(
+        system.controlPlane.getConversationSnapshot({
+          protocolVersion: PRODUCT_PROTOCOL_VERSION,
+          conversationId: conversation.conversationId,
+        }),
+      );
+      return {
+        shell: {
+          latestRunId: shellSummary?.latestRunId,
+          receiptState: shellSummary?.receiptState,
+        },
+        detail: {
+          latestRunId: detail.readModel.conversation.latestRunId,
+          receiptState: detail.readModel.conversation.receiptState,
+        },
+      };
+    };
+    const expectPair = async (
+      system: Awaited<ReturnType<typeof makeSystem>>,
+      latestRunId: ProductRunId | null,
+      receiptState:
+        | "pending"
+        | "rejected"
+        | "accepted"
+        | "delivery_unknown"
+        | "running"
+        | "settled"
+        | "outcome_unknown"
+        | null,
+    ) => {
+      expect(await readPair(system)).toEqual({
+        shell: { latestRunId, receiptState },
+        detail: { latestRunId, receiptState },
+      });
+    };
+
+    await first.run(first.controlPlane.createConversation(conversation));
+    await expectPair(first, null, null);
+
+    const firstItem = await putQueueItem(first, conversation, "latest-1");
+    const firstInput = submitInput(
+      conversation.conversationId,
+      firstItem.id,
+      firstItem.revision,
+      "latest-1",
+    );
+    await first.run(first.controlPlane.admitQueueItem(firstInput));
+    await expectPair(first, firstInput.runId, "pending");
+    await first.run(first.controlPlane.dispatchPending(firstInput.dispatchId));
+    await first.run(first.controlPlane.observeRun(firstInput.runId, { kind: "running" }));
+    await expectPair(first, firstInput.runId, "running");
+    await first.run(
+      first.controlPlane.observeRun(firstInput.runId, {
+        kind: "settled",
+        outcome: "succeeded",
+        settledAt: "2026-08-05T00:00:01.000Z",
+      }),
+    );
+    await expectPair(first, firstInput.runId, "settled");
+
+    const rejectedItem = await putQueueItem(first, conversation, "latest-2");
+    const rejectedInput = submitInput(
+      conversation.conversationId,
+      rejectedItem.id,
+      rejectedItem.revision,
+      "latest-2",
+    );
+    await first.run(first.controlPlane.submitQueueItem(rejectedInput));
+    await expectPair(first, rejectedInput.runId, "rejected");
+
+    const deliveryUnknownItem = await putQueueItem(first, conversation, "latest-3");
+    const deliveryUnknownInput = submitInput(
+      conversation.conversationId,
+      deliveryUnknownItem.id,
+      deliveryUnknownItem.revision,
+      "latest-3",
+    );
+    await first.run(first.controlPlane.submitQueueItem(deliveryUnknownInput));
+    await expectPair(first, deliveryUnknownInput.runId, "delivery_unknown");
+    listener?.(deliveryUnknownInput.runId, {
+      kind: "delivery-rejected",
+      code: "DELIVERY_REJECTED_AFTER_RECONCILIATION",
+      message: "Rejected after reconciliation.",
+      retryable: false,
+    });
+    await expectPair(first, deliveryUnknownInput.runId, "rejected");
+
+    const outcomeUnknownItem = await putQueueItem(first, conversation, "latest-4");
+    const outcomeUnknownInput = submitInput(
+      conversation.conversationId,
+      outcomeUnknownItem.id,
+      outcomeUnknownItem.revision,
+      "latest-4",
+    );
+    await first.run(first.controlPlane.submitQueueItem(outcomeUnknownInput));
+    await first.run(
+      first.controlPlane.observeRun(outcomeUnknownInput.runId, { kind: "outcome_unknown" }),
+    );
+    await expectPair(first, outcomeUnknownInput.runId, "outcome_unknown");
+    await first.dispose();
+
+    const reopened = await makeSystem(filename);
+    try {
+      await expectPair(reopened, outcomeUnknownInput.runId, "outcome_unknown");
+    } finally {
+      await reopened.dispose();
+    }
+  });
+
   it("rejects a second active admission atomically and keeps the Queue item editable", async () => {
     const system = await makeSystem();
     try {

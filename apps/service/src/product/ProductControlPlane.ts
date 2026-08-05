@@ -1137,12 +1137,17 @@ function makeControlPlane(
               c.archived_at, c.is_pinned, c.notes, c.board_state,
               c.board_state_changed_at, w.access_json,
               c.created_at, c.updated_at,
-              (SELECT receipt_json FROM product_operation_receipts r
-               JOIN product_runs pr ON pr.run_id = r.run_id
-               WHERE pr.conversation_id = c.conversation_id
-               ORDER BY pr.created_at DESC, pr.run_id DESC LIMIT 1) AS latest_receipt_json
+              latest_run.run_id AS latest_run_id,
+              latest_receipt.receipt_json AS latest_receipt_json
        FROM product_conversations c
        JOIN product_workspaces w ON w.workspace_id = c.workspace_id
+       LEFT JOIN product_runs latest_run ON latest_run.run_id = (
+         SELECT pr.run_id FROM product_runs pr
+         WHERE pr.conversation_id = c.conversation_id
+         ORDER BY pr.created_at DESC, pr.run_id DESC LIMIT 1
+       )
+       LEFT JOIN product_operation_receipts latest_receipt
+         ON latest_receipt.run_id = latest_run.run_id
        WHERE c.conversation_id = ? AND c.deleted_at IS NULL`,
     ).get(conversationId);
     if (!raw) {
@@ -1167,6 +1172,7 @@ function makeControlPlane(
       boardState: requiredString(row, "board_state"),
       boardStateChangedAt:
         typeof row.board_state_changed_at === "string" ? row.board_state_changed_at : null,
+      latestRunId: typeof row.latest_run_id === "string" ? row.latest_run_id : null,
       receiptState,
       createdAt: requiredString(row, "created_at"),
       updatedAt: requiredString(row, "updated_at"),

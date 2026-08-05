@@ -33,6 +33,7 @@ function summary(id: string, updatedAt = "2026-08-04T00:00:00.000Z") {
     notes: "",
     boardState: "active" as const,
     boardStateChangedAt: null,
+    latestRunId: null,
     receiptState: null,
     createdAt: "2026-08-04T00:00:00.000Z",
     updatedAt,
@@ -322,6 +323,189 @@ describe("Product projection store", () => {
     expect(applied.state.detailByConversation["conversation-title"]?.conversation).toEqual(
       renamed,
     );
+  });
+
+  it("projects dispatch receipt state with its exact latest Run identity", () => {
+    const initial = applyProductConversationSnapshot(
+      initialProductProjectionState,
+      conversationSnapshot("conversation-dispatch", 0),
+    );
+    const batch = decodeBatch({
+      protocolVersion: PRODUCT_PROTOCOL_VERSION,
+      scope: { kind: "conversation", conversationId: "conversation-dispatch" },
+      afterSequence: 0,
+      highWaterSequence: 1,
+      facts: [
+        {
+          protocolVersion: PRODUCT_PROTOCOL_VERSION,
+          sequence: 1,
+          factId: "detail-dispatch-1",
+          conversationId: "conversation-dispatch",
+          emittedAt: "2026-08-04T00:00:01.000Z",
+          change: {
+            kind: "dispatch-changed",
+            conversationId: "conversation-dispatch",
+            runId: "run-dispatch-1",
+            receipt: {
+              id: "receipt-dispatch-1",
+              dispatchId: "dispatch-1",
+              runId: "run-dispatch-1",
+              receipt: { state: "pending", lastConfirmedBoundary: "pre-send" },
+              updatedAt: "2026-08-04T00:00:01.000Z",
+            },
+          },
+        },
+      ],
+      resnapshotRequired: false,
+    });
+
+    const applied = applyProductFactBatch(initial, batch);
+    expect(applied.state.detailByConversation["conversation-dispatch"]?.conversation).toMatchObject(
+      {
+        latestRunId: "run-dispatch-1",
+        receiptState: "pending",
+      },
+    );
+  });
+
+  it("atomically advances the latest Run pair when an Entry is admitted", () => {
+    const conversationId = "conversation-admission";
+    const selectedRuntime = {
+      state: "selected",
+      engineId: "native-engine",
+      runtimeModelId: "provider/model",
+      thinking: null,
+      permissionPolicy: "approval-required",
+      enforcement: "unverified",
+      executionTarget: null,
+      packageGeneration: "generation-1",
+    } as const;
+    const empty = conversationSnapshot(conversationId, 0);
+    const prior = decodeConversation({
+      ...empty,
+      readModel: {
+        ...empty.readModel,
+        conversation: {
+          ...empty.readModel.conversation,
+          latestRunId: "run-prior",
+          receiptState: "settled",
+        },
+        entries: [
+          {
+            id: "entry-prior",
+            conversationId,
+            runId: "run-prior",
+            role: "user",
+            text: "prior",
+            createdAt: "2026-08-04T00:00:00.000Z",
+          },
+        ],
+        runs: [
+          {
+            id: "run-prior",
+            conversationId,
+            entryId: "entry-prior",
+            requestedSelection: selectedRuntime,
+            workspaceObservation: empty.readModel.workspace,
+            resources: [],
+            packageGeneration: "generation-1",
+            receipt: {
+              id: "receipt-prior",
+              dispatchId: "dispatch-prior",
+              runId: "run-prior",
+              receipt: {
+                state: "settled",
+                operationRef: "operation-prior",
+                engineBinding: {
+                  id: "binding-prior",
+                  engineId: "native-engine",
+                  lineageRef: "lineage-prior",
+                },
+                resolvedSelection: {
+                  engineId: "native-engine",
+                  runtimeModelId: "provider/model",
+                  thinking: null,
+                  permissionPolicy: "approval-required",
+                  enforcement: "unverified",
+                  executionTarget: null,
+                  packageGeneration: "generation-1",
+                },
+                outcome: "succeeded",
+                settledAt: "2026-08-04T00:00:01.000Z",
+              },
+              updatedAt: "2026-08-04T00:00:01.000Z",
+            },
+            createdAt: "2026-08-04T00:00:00.000Z",
+            updatedAt: "2026-08-04T00:00:01.000Z",
+          },
+        ],
+      },
+    });
+    const admitted = decodeBatch({
+      protocolVersion: PRODUCT_PROTOCOL_VERSION,
+      scope: { kind: "conversation", conversationId },
+      afterSequence: 0,
+      highWaterSequence: 1,
+      facts: [
+        {
+          protocolVersion: PRODUCT_PROTOCOL_VERSION,
+          sequence: 1,
+          factId: "fact-admitted",
+          conversationId,
+          emittedAt: "2026-08-04T00:00:02.000Z",
+          change: {
+            kind: "entry-admitted",
+            conversationId,
+            entry: {
+              id: "entry-admitted",
+              conversationId,
+              runId: "run-admitted",
+              role: "user",
+              text: "admitted",
+              createdAt: "2026-08-04T00:00:02.000Z",
+            },
+            run: {
+              id: "run-admitted",
+              conversationId,
+              entryId: "entry-admitted",
+              requestedSelection: selectedRuntime,
+              workspaceObservation: empty.readModel.workspace,
+              resources: [],
+              packageGeneration: "generation-1",
+              receipt: {
+                id: "receipt-admitted",
+                dispatchId: "dispatch-admitted",
+                runId: "run-admitted",
+                receipt: { state: "pending", lastConfirmedBoundary: "pre-send" },
+                updatedAt: "2026-08-04T00:00:02.000Z",
+              },
+              createdAt: "2026-08-04T00:00:02.000Z",
+              updatedAt: "2026-08-04T00:00:02.000Z",
+            },
+          },
+        },
+      ],
+      resnapshotRequired: false,
+    });
+
+    for (const initialSnapshot of [empty, prior]) {
+      const initial = applyProductConversationSnapshot(
+        initialProductProjectionState,
+        initialSnapshot,
+      );
+      const applied = applyProductFactBatch(initial, admitted);
+      expect(applied.result).toBe("applied");
+      const detail = applied.state.detailByConversation[conversationId];
+      expect(detail?.conversation).toMatchObject({
+        latestRunId: "run-admitted",
+        receiptState: "pending",
+      });
+      expect(detail?.entries.at(-1)?.id).toBe("entry-admitted");
+      expect(detail?.runs.at(-1)).toMatchObject({
+        id: "run-admitted",
+        receipt: { receipt: { state: "pending" } },
+      });
+    }
   });
 
   it("marks reconnect generations and clears only the inactive detail projection", () => {

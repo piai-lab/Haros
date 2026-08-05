@@ -45,6 +45,7 @@ function readModel(receipt?: ProductDispatchReceipt): ProductConversationReadMod
       notes: "",
       boardState: "active",
       boardStateChangedAt: null,
+      latestRunId: receipt ? ProductRunId.makeUnsafe("run-1") : null,
       receiptState: receipt?.state ?? null,
       createdAt: "2026-08-04T00:00:00.000Z",
       updatedAt: "2026-08-04T00:00:01.000Z",

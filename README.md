@@ -172,6 +172,9 @@ OmniMind 的价值不是“能启动 Pi”，而是上游没有义务完成的�
               "apps/web/src/components/Sidebar.tsx",
               "apps/web/src/components/SidebarActivityView.logic.ts",
               "apps/web/src/components/SidebarActivityView.tsx",
+              "apps/web/src/components/ui/toastRouteVisibility.ts",
+              "apps/web/src/notifications/taskCompletion.logic.ts",
+              "apps/web/src/notifications/taskCompletion.tsx",
               "apps/web/src/lib/desktopZoom.ts",
               "apps/web/src/lib/projectShortcutTargets.ts",
               "apps/web/src/storeSelectors.ts",
@@ -185,10 +188,12 @@ OmniMind 的价值不是“能启动 Pi”，而是上游没有义务完成的�
               "apps/web/src/components/terminal/terminalSession.ts",
               "apps/web/src/hooks/useTerminalSurfaceController.ts",
               "apps/web/src/lib/terminalContextComposerRegistry.ts",
-              "apps/web/src/terminalStateStore.ts"
+              "apps/web/src/terminalStateStore.ts",
+              "apps/desktop/src/main.ts",
+              "packages/contracts/src/ipc.ts"
             ],
             "sourceRevision": "be6dcad3f63fa121fbe3180f257ba1ff128696c4",
-            "summary": "Adapted the approved v0.6.7 Workbench hardening mechanisms into current OmniMind owners: bounded exact-once Conversation mounting, live model provenance, opaque browser annotation presentation and zoom-correct native bounds, non-replaying transcript recovery and user-activity Project ranking, plus pane-scoped terminal Composer routing and natural-exit cleanup with fresh dock replacement. Donor execution authority, identity and deferred capabilities were not adopted.",
+            "summary": "Adapted the approved v0.6.7 Workbench and completion-signal mechanisms into current OmniMind owners: bounded exact-once Conversation mounting, live model provenance, opaque browser annotation presentation and zoom-correct native bounds, non-replaying transcript recovery and user-activity Project ranking, pane-scoped terminal Composer routing and natural-exit cleanup with fresh dock replacement, plus Product Conversation/Run/receipt completion identity, rendered-route suppression and Desktop-owned foreground defense. Donor Thread/Turn completion authority, execution authority, identity and deferred capabilities were not adopted.",
             "targetPaths": [
               "apps/web/src/components/BrowserPanel.logic.ts",
               "apps/web/src/components/BrowserPanel.tsx",
@@ -202,6 +207,11 @@ OmniMind 的价值不是“能启动 Pi”，而是上游没有义务完成的�
               "apps/web/src/components/chat/deferredChatMount.ts",
               "apps/web/src/components/chat/useChatTerminalController.ts",
               "apps/web/src/components/chat/useRetainedConversationBoundary.ts",
+              "apps/web/src/components/ui/toastRouteVisibility.ts",
+              "apps/web/src/notifications/productCompletion.logic.ts",
+              "apps/web/src/notifications/productCompletion.tsx",
+              "apps/web/src/notifications/taskCompletion.logic.ts",
+              "apps/web/src/notifications/taskCompletion.tsx",
               "apps/web/src/components/terminal/terminalRuntime.ts",
               "apps/web/src/components/terminal/terminalRuntimeTypes.ts",
               "apps/web/src/components/terminal/terminalSelectionActions.ts",
@@ -210,10 +220,13 @@ OmniMind 的价值不是“能启动 Pi”，而是上游没有义务完成的�
               "apps/web/src/lib/desktopZoom.ts",
               "apps/web/src/lib/projectShortcutTargets.ts",
               "apps/web/src/lib/terminalContextComposerRegistry.ts",
+              "apps/web/src/routes/__root.tsx",
               "apps/web/src/routes/_chat.tsx",
               "apps/web/src/storeSelectors.ts",
               "apps/web/src/terminalStateStore.ts",
-              "packages/shared/src/desktopChrome.ts"
+              "packages/shared/src/desktopChrome.ts",
+              "apps/desktop/src/main.ts",
+              "packages/contracts/src/ipc.ts"
             ]
           }
         ]

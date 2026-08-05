@@ -63,6 +63,7 @@ function submitResult(receipt: ProductDispatchReceipt): ProductSubmitResult {
           notes: "",
           boardState: "active",
           boardStateChangedAt: null,
+          latestRunId: runId,
           receiptState: receipt.state,
           createdAt: NOW,
           updatedAt: NOW,

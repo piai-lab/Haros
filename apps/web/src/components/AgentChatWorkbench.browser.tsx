@@ -33,6 +33,7 @@ const PRODUCT_CHAT: ProductConversationSummary = {
   notes: "",
   boardState: "active",
   boardStateChangedAt: null,
+  latestRunId: null,
   receiptState: null,
   createdAt: "2026-08-04T00:00:00.000Z",
   updatedAt: "2026-08-04T00:00:01.000Z",

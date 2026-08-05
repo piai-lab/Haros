@@ -1,5 +1,5 @@
 // FILE: taskCompletion.tsx
-// Purpose: Bridges thread completion and attention-needed events to in-app toasts and OS notifications.
+// Purpose: Bridges concrete attention-needed and Terminal events to toast/OS notifications.
 // Layer: Notification runtime
 // Exports: TaskCompletionNotifications and browser permission helpers
 
@@ -12,6 +12,7 @@ import { useAppSettings } from "../appSettings";
 import { isElectron } from "../env";
 import { useDiffRouteSearch } from "../hooks/useDiffRouteSearch";
 import { selectSplitView, useSplitViewStore } from "../splitViewStore";
+import { selectRightDockState, useRightDockStore } from "../rightDockStore";
 import { useStore } from "../store";
 import { createAllThreadsSelector } from "../storeSelectors";
 import { useTerminalStateStore } from "../terminalStateStore";
@@ -20,8 +21,6 @@ import {
   buildTerminalAttentionCopy,
   buildTerminalCompletionCopy,
   buildInputNeededCopy,
-  buildTaskCompletionCopy,
-  collectCompletedThreadCandidates,
   collectCompletedTerminalCandidates,
   collectInputNeededThreadCandidates,
   collectTerminalAttentionCandidates,
@@ -97,7 +96,13 @@ async function showSystemThreadNotification(
     if (!supported) {
       return false;
     }
-    return window.desktopBridge.notifications.show({ title, body, silent: false, threadId });
+    return window.desktopBridge.notifications.show({
+      title,
+      body,
+      silent: false,
+      threadId,
+      suppressWhenForeground: true,
+    });
   }
 
   if (readBrowserNotificationPermissionState() !== "granted") {
@@ -152,11 +157,17 @@ export function TaskCompletionNotifications() {
   const splitView = useSplitViewStore(
     useMemo(() => selectSplitView(routeSearch.splitViewId ?? null), [routeSearch.splitViewId]),
   );
+  const rightDockState = useRightDockStore((store) =>
+    activeThreadId ? selectRightDockState(activeThreadId)(store) : null,
+  );
   const [allThreadsSelector] = useState(() => createAllThreadsSelector());
   const threads = useStore(allThreadsSelector);
   const threadsHydrated = useStore((store) => store.threadsHydrated);
   const terminalStateByThreadId = useTerminalStateStore((store) => store.terminalStateByThreadId);
-  const visibleThreadIds = resolveVisibleToastThreadIds({ activeThreadId, splitView });
+  const visibleThreadIds = useMemo(
+    () => resolveVisibleToastThreadIds({ activeThreadId, splitView, rightDockState }),
+    [activeThreadId, rightDockState, splitView],
+  );
   const previousThreadsRef = useRef<readonly Thread[]>([]);
   const previousTerminalStateRef = useRef(terminalStateByThreadId);
   // Lazy state init: evaluated once, keeping the impure Date.now() call out
@@ -199,12 +210,6 @@ export function TaskCompletionNotifications() {
       return;
     }
 
-    const completions = collectCompletedThreadCandidates(
-      previousThreadsRef.current,
-      threads,
-    ).filter((candidate) =>
-      isNotificationRuntimeFreshTimestamp(candidate.completedAt, runtimeStartedAtMs),
-    );
     const terminalCompletions = collectCompletedTerminalCandidates(
       previousTerminalStateRef.current,
       terminalStateByThreadId,
@@ -223,7 +228,6 @@ export function TaskCompletionNotifications() {
     previousTerminalStateRef.current = terminalStateByThreadId;
 
     if (
-      completions.length === 0 &&
       inputNeededCandidates.length === 0 &&
       terminalCompletions.length === 0 &&
       terminalAttentionCandidates.length === 0
@@ -232,25 +236,7 @@ export function TaskCompletionNotifications() {
     }
 
     const shouldAttemptSystemNotification =
-      settings.enableSystemTaskCompletionNotifications &&
-      (window.desktopBridge ? true : !isWindowForeground());
-
-    for (const completion of completions) {
-      const copy = buildTaskCompletionCopy(completion);
-      if (
-        settings.enableTaskCompletionToasts &&
-        shouldShowThreadNotificationToast({
-          threadId: completion.threadId,
-          visibleThreadIds,
-        })
-      ) {
-        showThreadToast(copy, completion.threadId, "success", navigate);
-      }
-
-      if (shouldAttemptSystemNotification) {
-        void showSystemThreadNotification(copy, completion.threadId, navigate);
-      }
-    }
+      settings.enableSystemTaskCompletionNotifications && !isWindowForeground();
 
     for (const candidate of inputNeededCandidates) {
       const copy = buildInputNeededCopy(candidate);

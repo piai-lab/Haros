@@ -5,10 +5,12 @@ import {
   PRODUCT_MAX_TEXT_CHARS,
   PRODUCT_PROTOCOL_VERSION,
   ProductCreateConversationInput,
+  ProductConversationSummary,
   ProductDispatchReceipt,
   ProductFactBatch,
   ProductPutQueueItemInput,
   ProductReadFactsInput,
+  ProductShellSnapshot,
 } from "./state";
 
 const requestedSelection = {
@@ -23,6 +25,43 @@ const requestedSelection = {
 };
 
 describe("Product State boundary", () => {
+  it("requires latest Run identity and receipt state as one fail-closed summary pair", () => {
+    const summary = {
+      id: "conversation-1",
+      workspaceId: "workspace-1",
+      title: "Conversation 1",
+      workspaceKind: "chat",
+      revision: 1,
+      archivedAt: null,
+      isPinned: false,
+      notes: "",
+      boardState: "active",
+      boardStateChangedAt: null,
+      latestRunId: null,
+      receiptState: null,
+      createdAt: "2026-08-05T00:00:00.000Z",
+      updatedAt: "2026-08-05T00:00:00.000Z",
+    };
+    const decodeSummary = Schema.decodeUnknownSync(ProductConversationSummary);
+    expect(decodeSummary(summary)).toMatchObject({ latestRunId: null, receiptState: null });
+    expect(
+      decodeSummary({ ...summary, latestRunId: "run-1", receiptState: "running" }),
+    ).toMatchObject({ latestRunId: "run-1", receiptState: "running" });
+    expect(() => decodeSummary({ ...summary, latestRunId: "run-1" })).toThrow();
+    expect(() => decodeSummary({ ...summary, receiptState: "running" })).toThrow();
+    const { latestRunId: _omittedLatestRunId, ...summaryWithoutLatestRunId } = summary;
+    expect(() =>
+      Schema.decodeUnknownSync(ProductShellSnapshot)({
+        protocolVersion: PRODUCT_PROTOCOL_VERSION,
+        sequence: 0,
+        workspaces: [],
+        groups: [],
+        conversations: [summaryWithoutLatestRunId],
+        runtimeCatalog: null,
+      }),
+    ).toThrow();
+  });
+
   it("decodes folder-backed and no-Primary-Folder Chat workspaces", () => {
     const decode = Schema.decodeUnknownSync(ProductCreateConversationInput);
     const folder = decode({

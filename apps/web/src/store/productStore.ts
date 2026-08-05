@@ -104,7 +104,16 @@ function applyDetailFact(
     const runs = readModel.runs.some((run) => run.id === change.run.id)
       ? readModel.runs
       : [...readModel.runs, change.run];
-    return { ...readModel, entries, runs };
+    return {
+      ...readModel,
+      conversation: {
+        ...readModel.conversation,
+        latestRunId: change.run.id,
+        receiptState: change.run.receipt.receipt.state,
+      },
+      entries,
+      runs,
+    };
   }
   if (change.kind === "entry-delta") {
     const existing = readModel.entries.find((entry) => entry.id === change.entryId);
@@ -188,7 +197,11 @@ function applyDetailFact(
   if (change.kind === "dispatch-changed") {
     return {
       ...readModel,
-      conversation: { ...readModel.conversation, receiptState: change.receipt.receipt.state },
+      conversation: {
+        ...readModel.conversation,
+        latestRunId: change.runId,
+        receiptState: change.receipt.receipt.state,
+      },
       runs: readModel.runs.map((run) =>
         run.id === change.runId
           ? { ...run, receipt: change.receipt, updatedAt: change.receipt.updatedAt }

@@ -246,3 +246,109 @@ reconciliation、并发 dispatcher 单一 claim 与旧 writer negative reachabil
 - receipt: `8638fa665ae3437ca556d7a91b69f4db`
 - predecessor receipt: `705391e3ac3146a19f8d75ef5a258e3c`
 - predecessor output: `../reviews/establish-product-facts-and-typed-ingress.md`
+
+## Latest-Run identity correction — 2026-08-05
+
+### Bounded outcome
+
+Revision `handoff-product-facts-latest-run-identity-20260805-r2` adds one durable Product summary
+fact to the existing contract: `latestRunId: ProductRunId | null`. It is paired with
+`receiptState` on `ProductConversationSummary`; the schema rejects either half without the other.
+An empty Conversation therefore projects `null / null`, while every Conversation with Run history
+projects the exact latest Run identity and that Run's receipt state.
+
+The r1 independent review `5344669e60ee426faf2e75810c3c0c9b` found one bounded live-projection
+gap: `entry-admitted` appended the new Entry and pending Run without advancing the same detail
+summary from `null / null` or the previous terminal Run. Revision r2 closes only that finding.
+
+The completion-signal review `6eb1088ffd1d4159bf8ea53fcd6b79ad` proved that global shell and
+per-Conversation detail cursors cannot be compared and that Conversation revision does not move
+with Run/receipt state. The completion Work stopped rather than inventing a clock, cursor
+translation or notification-local identity. Main returned the missing Product fact to this Product
+owner and amended the Work allowlist only for the exact Service/Web summary fixtures exposed by
+compile or runtime decoding. This correction does not modify completion tracking or notification
+behavior; those remain with the successor completion operation.
+
+### Exact implementation
+
+- `packages/contracts/src/product/state.ts` keeps the existing summary object and adds the branded
+  nullable Run identity. A cross-field schema check requires `latestRunId` and `receiptState` to be
+  simultaneously null or non-null; nested shell wire decoding therefore fails closed when an older
+  producer omits the new required field.
+- `apps/service/src/product/ProductControlPlane.ts` selects the latest durable `product_runs` row
+  once, then joins that exact row's `product_operation_receipts` record. `readSummary` decodes the
+  resulting RunId and receipt state together. No schema migration, writer, clock, notification
+  state, public object or enum was added.
+- `apps/web/src/store/productStore.ts` advances the existing detail summary pair from both typed
+  producer paths: `entry-admitted` uses the admitted Run's `id` and receipt state in the same
+  reducer result that appends Entry/Run, while `dispatch-changed` keeps advancing the pair for later
+  receipt transitions. Shell and detail snapshots continue to have independent cursors; identity,
+  rather than cursor or timestamp inference, is now available to their consumer.
+- Required Product summary fixtures were updated with exact `null / null` or RunId/state pairs.
+  No donor Thread/Turn field, Provider event or raw payload entered the contract, Service query or
+  Web projection.
+
+### Proof
+
+| Command / inspection | Result |
+| --- | --- |
+| `bunx vitest run packages/contracts/src/product/state.test.ts apps/service/src/product/ProductControlPlane.test.ts apps/web/src/store/productStore.test.ts apps/web/src/productReadModel.test.ts apps/web/src/productConversationMutations.test.ts apps/web/src/productQueueReconciliation.test.ts apps/web/src/productEntryDecorationsRecovery.test.ts --maxWorkers=1 --no-file-parallelism` | PASS, exit 0; 7 files / 79 tests. Covers required-field wire failure, half-pair rejection, empty `null/null`, admitted `pending`, running, settled, rejected, `delivery_unknown`, `outcome_unknown`, exact shell/detail pairs, detail fact projection and SQLite close/reopen consistency. The r2 regression applies one valid `entry-admitted` batch from both empty detail and a prior-settled Run, then proves summary, appended Entry and latest Run agree on the new pending Run. |
+| `bun run --cwd packages/contracts typecheck && bun run --cwd apps/service typecheck && bun run --cwd apps/web typecheck` | PASS, exit 0; all three affected package typechecks. |
+| `bunx vitest run --config vitest.browser.config.ts` over the five amended Workbench/Product fixture files | PASS, exit 0; 5 files / 19 tests. |
+| `bunx vitest run src/chatRouteRecovery.test.ts --maxWorkers=1 --no-file-parallelism` and browser `ProductProjectionCoordinator.browser.tsx` | PASS, exit 0; 1 file / 1 test each. The first run before the owner amendment failed exactly on missing `latestRunId`, proving the runtime fixture requirement. |
+| `bunx vitest run apps/service/src/main.test.ts -t "records a startup heartbeat with Product conversation counts" --maxWorkers=1 --no-file-parallelism` | PASS, exit 0; 1 selected test / 32 skipped. |
+| `bunx vitest run apps/web/src/lib/kanbanDispatch.test.ts --maxWorkers=1 --no-file-parallelism` | PASS, exit 0; 1 file / 9 tests. |
+| scoped `oxlint` over all correction paths | PASS, exit 0; 0 errors. Existing warnings are outside the added lines. |
+| scoped added-import/donor-authority scan and final diff inspection | PASS; no production import, donor authority, raw payload, writer, clock or notification abstraction was added. |
+
+R2-specific focused gates also passed: `apps/web/src/store/productStore.test.ts` ran 11/11 tests,
+`bun run --cwd apps/web typecheck` exited 0, scoped `oxlint` over the Store and test reported 0
+errors with one pre-existing `no-array-reverse` warning, and scoped `git diff --check` exited 0.
+
+The combined full `apps/service/src/main.test.ts` plus Kanban fixture probe was also run: Kanban
+passed, while two pre-existing CLI/environment tests failed because MCP serve unexpectedly
+succeeded and a provider log directory was absent. The exact amended startup-heartbeat test passes;
+this correction does not alter CLI startup, MCP or provider log directory creation and does not
+claim that unrelated suite green.
+
+### Changed files for this correction
+
+- `packages/contracts/src/product/state.ts`
+- `packages/contracts/src/product/state.test.ts`
+- `apps/service/src/product/ProductControlPlane.ts`
+- `apps/service/src/product/ProductControlPlane.test.ts`
+- `apps/service/src/main.test.ts` (fixture only)
+- `apps/web/src/store/productStore.ts`
+- `apps/web/src/store/productStore.test.ts`
+- `apps/web/src/chatRouteRecovery.test.ts` (fixture only)
+- `apps/web/src/components/ProductProjectionCoordinator.browser.tsx` (fixture only)
+- `apps/web/src/components/AgentChatWorkbench.browser.tsx` (fixture only)
+- `apps/web/src/components/product/ProductGroupsList.browser.tsx` (fixture only)
+- `apps/web/src/components/ProductChatJourney.browser.tsx` (fixture only)
+- `apps/web/src/components/ProductConversationLifecycle.browser.tsx` (fixture only)
+- `apps/web/src/components/ProductRoutePerformance.browser.tsx` (fixture only)
+- `apps/web/src/lib/kanbanDispatch.test.ts` (fixture only)
+- `apps/web/src/productConversationMutations.test.ts`
+- `apps/web/src/productEntryDecorationsRecovery.test.ts`
+- `apps/web/src/productQueueReconciliation.test.ts`
+- `apps/web/src/productReadModel.test.ts`
+- this handoff Concept
+
+### Residual boundary
+
+This is only the missing Product fact and its projection proof. It does not repair or independently
+review the successor completion tracker, compare shell/detail cursors, prove a notification, add a
+real Engine observation, or change any Campaign claim. The two untracked completion-owned fixtures
+remain for that successor operation to update with exact Run identity. Existing T2/T3/T4 and
+checkpoint limitations recorded above remain unchanged.
+
+### Correction dispatch identity
+
+- role: `implementer`
+- actorId: `product_latest_run_identity_implementer_r2`
+- receipt: `883abd86f25c405aae28ace201c20b65`
+- predecessor receipt: `5344669e60ee426faf2e75810c3c0c9b`
+- predecessor output: `../reviews/establish-product-facts-latest-run-identity.md`
+- prior implementation receipt: `d613213b84b342939fc3ec1990203c63`
+- output revision: `handoff-product-facts-latest-run-identity-20260805-r2`
+- status: `DONE_WITH_CONCERNS` (bounded Product correction complete; successor completion operation and independent review remain)

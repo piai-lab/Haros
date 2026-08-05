@@ -359,7 +359,7 @@ export const ProductGroupSummary = Schema.Struct({
 });
 export type ProductGroupSummary = typeof ProductGroupSummary.Type;
 
-export const ProductConversationSummary = Schema.Struct({
+const ProductConversationSummaryFields = Schema.Struct({
   id: ProductConversationId,
   workspaceId: ProductWorkspaceId,
   title: ProductTitle,
@@ -370,6 +370,7 @@ export const ProductConversationSummary = Schema.Struct({
   notes: Schema.String.check(Schema.isMaxLength(PRODUCT_CONVERSATION_NOTES_MAX_CHARS)),
   boardState: Schema.Literals(["active", "done"]),
   boardStateChangedAt: Schema.NullOr(ProductIsoDateTime),
+  latestRunId: Schema.NullOr(ProductRunId),
   receiptState: Schema.NullOr(
     Schema.Literals([
       "pending",
@@ -384,6 +385,13 @@ export const ProductConversationSummary = Schema.Struct({
   createdAt: ProductIsoDateTime,
   updatedAt: ProductIsoDateTime,
 });
+export const ProductConversationSummary = ProductConversationSummaryFields.check(
+  Schema.makeFilter(
+    (summary: typeof ProductConversationSummaryFields.Type) =>
+      (summary.latestRunId === null) === (summary.receiptState === null),
+    { identifier: "ProductConversationSummaryLatestRunReceiptPair" },
+  ),
+);
 export type ProductConversationSummary = typeof ProductConversationSummary.Type;
 
 export const ProductRuntimeActivityDetail = Schema.Union([

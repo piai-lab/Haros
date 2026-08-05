@@ -87,10 +87,19 @@ apps/service/src/index.ts
 apps/service/src/serverLayers.ts                (Product writer composition only)
 apps/service/src/wsRpc.ts                       (Product command/read-model endpoints only)
 apps/service/package.json
+apps/service/src/main.test.ts                    (Product shell fixture only)
 apps/web/src/routes/__root.tsx
 apps/web/src/routes/_chat*.tsx
 apps/web/src/components/ChatView.tsx
+apps/web/src/components/AgentChatWorkbench.browser.tsx              (Product summary fixture only)
+apps/web/src/components/product/ProductGroupsList.browser.tsx       (Product summary fixture only)
+apps/web/src/components/ProductChatJourney.browser.tsx              (Product summary fixture only)
+apps/web/src/components/ProductConversationLifecycle.browser.tsx    (Product summary fixture only)
+apps/web/src/components/ProductRoutePerformance.browser.tsx         (Product summary fixture only)
+apps/web/src/components/ProductProjectionCoordinator.browser.tsx    (Product summary fixture only)
+apps/web/src/chatRouteRecovery.test.ts                               (Product summary fixture only)
 apps/web/src/composerDraft*.ts                    (durable ownership-transfer association only)
+apps/web/src/lib/kanbanDispatch.test.ts            (Product summary fixture only)
 apps/web/src/storeState.ts
 apps/web/src/storeSelectors.ts
 apps/web/src/store/**

@@ -49,6 +49,7 @@ function snapshot(input: {
         notes: "",
         boardState: "active",
         boardStateChangedAt: null,
+        latestRunId: null,
         receiptState: null,
         createdAt: now,
         updatedAt: now,

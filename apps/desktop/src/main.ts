@@ -1752,6 +1752,13 @@ function isMainWindowForeground(window: BrowserWindow | null): boolean {
   return window.isVisible() && !window.isMinimized() && window.isFocused();
 }
 
+function shouldSuppressDesktopNotification(
+  suppressWhenForeground: boolean,
+  window: BrowserWindow | null,
+): boolean {
+  return suppressWhenForeground && isMainWindowForeground(window);
+}
+
 function incrementUnreadNotificationBadge(): void {
   unreadBackgroundNotificationCount = Math.min(unreadBackgroundNotificationCount + 1, 99);
   syncUnreadNotificationBadge();
@@ -1794,11 +1801,19 @@ function showDesktopNotification(input: {
   body?: string;
   silent?: boolean;
   threadId?: string;
+  suppressWhenForeground?: boolean;
+  productConversationId?: string;
+  productSurface?: "agent" | "chat";
 }): boolean {
   const title = typeof input.title === "string" ? input.title.trim() : "";
   const body = typeof input.body === "string" ? input.body.trim() : "";
   const threadId = typeof input.threadId === "string" ? input.threadId.trim() : "";
+  const productConversationId =
+    typeof input.productConversationId === "string" ? input.productConversationId.trim() : "";
   if (title.length === 0 || !Notification.isSupported()) {
+    return false;
+  }
+  if (shouldSuppressDesktopNotification(input.suppressWhenForeground === true, mainWindow)) {
     return false;
   }
 
@@ -1819,7 +1834,12 @@ function showDesktopNotification(input: {
     if (!mainWindow) {
       return;
     }
-    if (threadId.length > 0) {
+    if (productConversationId.length > 0 && input.productSurface) {
+      mainWindow.webContents.send(
+        IPC.menuAction,
+        `notification-open-product-${input.productSurface}:${productConversationId}`,
+      );
+    } else if (threadId.length > 0) {
       mainWindow.webContents.send(IPC.menuAction, `notification-open-thread:${threadId}`);
     }
   });
@@ -3760,6 +3780,9 @@ function registerIpcHandlers(): void {
             body?: unknown;
             silent?: unknown;
             threadId?: unknown;
+            suppressWhenForeground?: unknown;
+            productConversationId?: unknown;
+            productSurface?: unknown;
           }
         | null
         | undefined,
@@ -3768,7 +3791,14 @@ function registerIpcHandlers(): void {
         title: typeof input?.title === "string" ? input.title : "",
         body: typeof input?.body === "string" ? input.body : "",
         silent: input?.silent === true,
+        suppressWhenForeground: input?.suppressWhenForeground === true,
         ...(typeof input?.threadId === "string" ? { threadId: input.threadId } : {}),
+        ...(typeof input?.productConversationId === "string"
+          ? { productConversationId: input.productConversationId }
+          : {}),
+        ...(input?.productSurface === "agent" || input?.productSurface === "chat"
+          ? { productSurface: input.productSurface }
+          : {}),
       }),
   );
   if (appSnapManager) {

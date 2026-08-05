@@ -138,6 +138,7 @@ import type {
 } from "./terminal";
 import type { EditorId } from "./editor";
 import type { ThreadId } from "./baseSchemas";
+import type { ProductConversationId } from "./product/state";
 import type {
   StatsGetProfileStatsInput,
   StatsGetProfileStatsResult,
@@ -384,6 +385,10 @@ export interface DesktopNotificationInput {
   body?: string;
   silent?: boolean;
   threadId?: ThreadId;
+  /** Request policy only. Desktop Main independently resolves actual BrowserWindow focus. */
+  suppressWhenForeground?: boolean;
+  productConversationId?: ProductConversationId;
+  productSurface?: "agent" | "chat";
 }
 
 export interface DesktopWindowState {

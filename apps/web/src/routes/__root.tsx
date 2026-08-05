@@ -30,6 +30,7 @@ import {
   readLatestWsCompatibilityIssue,
 } from "../wsTransportEvents";
 import { TaskCompletionNotifications } from "../notifications/taskCompletion";
+import { ProductCompletionNotifications } from "../notifications/productCompletion";
 import { useAppDensity } from "../hooks/useAppDensity";
 import { useAppTypography } from "../hooks/useAppTypography";
 import { useSyncDesktopTopBarTrafficLightGutterZoom } from "../hooks/useDesktopTopBarGutter";
@@ -119,6 +120,7 @@ function RootRouteView() {
           <SystemHealthCoordinator />
           <GlobalShortcutsDialog />
           <GlobalFeedbackDialog />
+          <ProductCompletionNotifications />
           <TaskCompletionNotifications />
           <AppSnapWelcomeDialog />
           <AppSnapCoordinator />
