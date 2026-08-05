@@ -1,12 +1,12 @@
 ---
 type: "Implementation Handoff"
-title: "Authorized runnable source closure — final identity and structure correction"
+title: "Authorized runnable source closure — exact disposition rebaseline"
 work: "../work/transplant-runnable-source-closure.md"
 status: "DONE"
-revision: "handoff-transplant-runnable-source-closure-20260805-r5"
-actor_id: "final_identity_structure_closure_implementer_r2"
-dispatch_receipt: "bbff5b24c549476aa094ad39d79c7d79"
-predecessor_receipt: "7240924c8ea0459b8a5aeff247c67b36"
+revision: "handoff-transplant-runnable-source-closure-20260805-r6"
+actor_id: "source_closure_rebaseline_implementer_r1"
+dispatch_receipt: "b44b3deb33ec4b96ae8e6af89395e38c"
+predecessor_receipt: "40cf2029f80d49e3936f1f91ffb2d85a"
 predecessor_review: "../reviews/transplant-runnable-source-closure.md"
 ---
 
@@ -14,94 +14,85 @@ predecessor_review: "../reviews/transplant-runnable-source-closure.md"
 
 ## Current outcome
 
-The bounded T1 identity/structure correction is implemented and ready for a new independent review. Production
-identity scanning is strict, source structure has zero findings without a debt baseline, the existing first-party
-OmniMind icon is the locked current icon, and AppSnap uses bridge terminology end to end. This handoff does not
-promote a Campaign claim, commit, publish, or alter runtime/session records.
+The bounded source-closure rebaseline is implemented and ready for independent review. Root quality is now green on
+the current committed source at `f950372695023bbcd24c355a326f48442a22b768`. The checker still derives every one of
+the `6,425` records from immutable tree `630f17e61abc478114bf83c1d740977c9f68b910` and the unchanged README origin
+mapping; only the exact current disposition counts and full sorted-record digest changed.
 
-Root quality is currently red only at the separately owned source-closure disposition check: the checker expects
-`2,250` present and `20` removed adapted paths but observes `1,499` present and `771` removed. No source-closure
-constant or disposition record was changed by this correction.
+No product code, README mapping, source tree, glyph rule, public-surface lineage rule, non-product exclusion,
+algorithm, wildcard, compatibility path, runtime/session record, Campaign claim, commit, publish, or release action
+was changed by this correction.
 
-## Identity and structure truth
+## Exact disposition truth
 
-`scripts/identity.mjs` permits historical product/source identity only in these four evidence zones, exactly:
+| Disposition              | Current count |
+| ------------------------ | ------------: |
+| `adapted-present`        |       `1,499` |
+| `adapted-removed`        |         `771` |
+| `authorized-fill-glyph`  |       `2,035` |
+| `authorized-line-glyph`  |       `1,979` |
+| `excluded-non-product`   |         `127` |
+| `public-surface-lineage` |          `14` |
+| **Total**                |   **`6,425`** |
 
-1. `README.md`
-2. root `AGENTS.md`
-3. `research/**`
-4. `.omp-flow/tasks/**`
+The SHA-256 of all sorted `source\0target\0disposition` records is
+`8bae0a85911e3eb3080763ddce2cbd4411a7a19777ca52d342897616be965166`. Missing, extra, retargeted, reclassified,
+washed public-surface, or newly excluded records still fail closed through count and full-map digest comparison.
 
-All other authored or generated production surfaces remain subject to the identity deny rules. Evidence exemptions
-do not apply to product code, tests, comments, diagnostics, build metadata, or generated Web/Service output.
+The authorized glyph closure remains byte- and filename-exact: `1,979` line glyphs plus `2,035` fill glyphs,
+`4,014` total. The fourteen fixed-source public-surface records still resolve to the existing sole re-entry owner,
+and all fifteen README origin mappings are unchanged.
 
-`scripts/check-identity.mjs` now treats every structure finding as a hard failure. There is no structure allowlist,
-debt count, digest, or compatibility path; the current result is `0` findings. Thirty offending paths were renamed
-to stable responsibility names and their imports, exports, configs, and tests moved with them. Old names have no
-alias, wrapper, or dual export.
+## T1-to-current delta audit
 
-## Locked icon
+The T1 implementation commit `5d2158974` recorded `2,250` present and `20` removed adapted targets. Comparing the
+same immutable `6,425`-record population with current committed HEAD `f95037269` proves exactly `751` mapped targets
+moved from `adapted-present` to `adapted-removed`; every other disposition count is unchanged.
 
-The existing first-party OmniMind light/dark icon is the accepted and locked current identity asset. It drives the
-Web and Desktop first-party surfaces; there is no deferred replacement or palette obligation in this Work.
+Two related audit views must not be conflated:
 
-| Asset | SHA-256                                                            |
-| ----- | ------------------------------------------------------------------ |
-| light | `c7f97d279356a6cf35b6eb8583b93449fd3082cb4e261c6f3fd9724fb69dd7aa` |
-| dark  | `469171d55f39005f4eef1e1783105460b15c37aa0f392b5d184bcf1d4bd6e560` |
+1. Raw per-commit Git name-status under the adoption roots contains `753` old-path removals:
+   - `1f09baa8`: `711` deletions plus `6` detected renames;
+   - `7431d8b4`: `2` deletions;
+   - `013dd43d2`: `4` deletions;
+   - `f95037269`: `1` deletion plus `29` detected renames.
+2. The immutable T0 disposition population contains exactly `751` transitions:
+   - `1f09baa8`: `709` deletions plus `6` detected renames, `715` total;
+   - `7431d8b4`: `2` deletions;
+   - `013dd43d2`: `4` deletions;
+   - `f95037269`: `1` deletion plus `29` detected renames, `30` total.
 
-The authorized glyph corpus remains byte- and filename-exact: `1,979` line glyphs plus `2,035` fill glyphs,
-`4,014` total.
-
-## AppSnap terminology closure
-
-AppSnap production code, native protocol code, comments, diagnostics, user-facing error copy, and tests consistently
-name the executable responsibility as the bridge. The unexpected-stop and catch-all protocol codes are
-`bridge-stopped` and `bridge_failed`; the former names are absent and no compatibility alias is registered. The macOS
-bundle directory `Contents/Helpers` remains unchanged because it is the platform-defined packaging location, not an
-AppSnap responsibility name.
-
-## Changed responsibility groups
-
-- Identity gates: `scripts/identity.mjs`, `scripts/check-identity.mjs`, and focused quality tests.
-- Desktop: AppSnap bridge/supervisor, browser host, storage upgrade, and their imports/configs/tests.
-- Service: authentication, checkpoint reference/workspace resolution, dev-server supervision, terminal supervision,
-  and their imports/tests.
-- Web: create-action/dialog/hook names, storage upgrade, split style/platform/identifier utilities, and consumers/tests.
-- Contracts: `browserToolContract.ts` plus exports and consumers.
-- This review repair changed exactly this sole handoff plus
-  `apps/desktop/{scripts/build-appsnap-bridge.mjs,src/appSnapSupervisor.ts,src/appSnapSupervisor.test.ts}`,
-  `apps/desktop/native/appsnap/{AppSnapProtocol.swift,ExternalTriggerListener.swift,OptionChordMonitor.swift,main.swift}`,
-  and `apps/web/src/components/AppSnapCoordinator.tsx`.
+The two additional raw deletions in `1f09baa8` are
+`apps/service/src/product/legacyConversationGuard.ts` and
+`apps/web/src/components/product/ProductGroupsUnavailable.tsx`. They were introduced after T1 and are not targets
+in the immutable T0 map, so they cannot alter its disposition count. The `f95037269` classification reflects Git's
+actual `1D + 29R` detection; its mixed-container decomposition and responsibility renames are not rewritten as a
+different synthetic name-status total.
 
 ## Verification
 
-The following results are from the current working tree. Focused reruns for this review repair are recorded before
-handoff delivery; earlier closure-wide gates were also rerun after the identity/structure implementation.
+All results below are from the current working tree after the exact baseline update.
 
-| Check                             | Result                                                                                          |
-| --------------------------------- | ----------------------------------------------------------------------------------------------- |
-| `bun run check:identity`          | PASS — `5,865` source files, `17,149` generated files, structure `0`                            |
-| `bun run typecheck`               | PASS — `7/7` workspace tasks                                                                    |
-| `bun run build`                   | PASS — `5/5` workspace tasks; existing `bun:sqlite` external warning only                       |
-| Desktop AppSnap tests             | PASS — `1` file / `18` tests                                                                    |
-| Service focused tests             | PASS — `5` files / `72` tests                                                                   |
-| Web AppSnap tests                 | PASS — `3` files / `20` tests                                                                   |
-| Contracts affected test           | PASS — `1` file / `1` test                                                                      |
-| AppSnap Swift bridge build        | PASS — native sources compiled for current architecture and strict codesign verification passed |
-| Identity/structure focused subset | PASS — `8/8` tests                                                                              |
-| Glyph corpus gate                 | PASS — `4,014` glyphs                                                                           |
-| Legal gate                        | PASS — `230` components                                                                         |
-| Formatter check                   | PASS — `337` files                                                                              |
-| Root quality                      | FAIL — source-closure only: expected `2,250/20`, observed `1,499/771`                           |
+| Check                                   | Result                                                                                         |
+| --------------------------------------- | ---------------------------------------------------------------------------------------------- |
+| `node scripts/check-source-closure.mjs` | PASS, exit `0`; `6,425` records, `1,499/771`, exact digest `8bae0a…5166`                       |
+| `node --test test/quality.test.mjs`     | PASS, exit `0`; `28/28` tests                                                                  |
+| `bun run quality`                       | PASS, exit `0`; identity, sources, closure, glyphs, legal metadata and quality tests all green |
+| independent disposition recomputation   | PASS; independently reproduced all counts, mappings and the full-record digest                 |
+
+The quality suite's existing adversarial closure test still proves target loss, origin loss, unapproved exclusion,
+retargeting, public-surface washout and extra lineage all fail. No test or assertion was weakened or removed.
 
 ## Decisions and caveats
 
-- Source-closure constants and disposition records were deliberately left untouched; their correction belongs to
-  the separately assigned source-closure owner.
-- The quality failure above is the only known unproven done condition for the wider T1 work. The bounded
-  identity/structure/AppSnap correction is otherwise verified but is not independent review.
-- No staged changes, commit, push, merge, release action, or external side effect is part of this handoff.
+- The current constants are a candidate for independent review, not self-accepted evidence and not a Campaign
+  promotion.
+- Earlier identity/structure/AppSnap acceptance remains linked through predecessor review
+  `40cf2029f80d49e3936f1f91ffb2d85a`; this operation changed none of that implementation.
+- The present/removed split describes exact survival of original T0 target paths. It does not claim that removed
+  donor paths represent lost product capability; accepted later Works deliberately deleted or renamed obsolete
+  execution authority and mixed responsibility paths.
+- No staged changes, commit, push, merge, release artifact, or external side effect is part of this handoff.
 
 ## Essential immutable evidence
 
@@ -110,7 +101,8 @@ handoff delivery; earlier closure-wide gates were also rerun after the identity/
 | Repository checkpoint containing T0 | `2445acb987e443b44b7dc819de3de44c3d68b391` |
 | Historical runnable source tree     | `630f17e61abc478114bf83c1d740977c9f68b910` |
 | Fixed upstream revision             | `6aca3dcc505894481430967c2acb762b3dd1b358` |
-| Selective intake checkpoint         | `be6dcad3f63fa121fbe3180f257ba1ff128696c4` |
+| T1 implementation baseline          | `5d2158974`                                |
+| Current committed source            | `f950372695023bbcd24c355a326f48442a22b768` |
 
 The authoritative adoption/source evidence remains in the root `README.md`, `research/source-review.md`, and the
-linked Work Concept. Earlier handoff prose is superseded by this document; Git objects retain the detailed history.
+linked Work Concept. Git objects retain the complete implementation history.
