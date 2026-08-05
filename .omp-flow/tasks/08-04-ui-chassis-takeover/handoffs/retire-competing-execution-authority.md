@@ -308,3 +308,135 @@ Harness configuration, stage, commit, push or merge was changed.
 - predecessor review: `../reviews/align-product-completion-signals.md`
 - promised output: `../handoffs/retire-competing-execution-authority.md`
 - operation conclusion: bounded correction candidate ready for independent review; no Work or Campaign claim self-verified
+
+
+## Bounded Product-owned Plugin/Skill anchor correction — 2026-08-05
+
+### Outcome
+
+`CANDIDATE` for independent review. The protected `PluginLibrary.tsx` document-contract anchor
+still required the donor Provider marketplace/discovery implementation after that authority had
+been physically retired. The validator now recognizes the executable current source: the
+route-backed Packages/Skill re-entry remains reachable, current discovery is truthfully
+unavailable, runtime capabilities come from the Native Host, no Provider marketplace or
+cross-Provider fallback is queried, and future discovery/trust/compatibility/activation is
+explicitly Product-owned.
+
+This correction does not restore discovery, change `PluginLibrary.tsx`, create a catalog, or modify
+any Product/runtime code. The route and generated route-tree anchors, fixed read boundary, stable
+rule/path/message, and `executableSource` rejection of comments and quoted inert source remain
+unchanged. Seven exact retired donor discovery identifiers now fail the same protected-anchor rule
+if executable source reintroduces them; generic future Product query names are not denied.
+
+### Exact changed paths
+
+Changed by this correction:
+
+```text
+scripts/document-contract.mjs
+test/document-contract.test.mjs
+.omp-flow/tasks/08-04-ui-chassis-takeover/handoffs/retire-competing-execution-authority.md
+```
+
+The existing Work allowlist amendment for `test/document-contract.test.mjs` was present when this
+operation began and is preserved without further editing. No product source, route, route-tree,
+runtime/session record, Harness configuration, package manifest, lockfile, stage, commit, push or
+merge was changed.
+
+### Verification
+
+| Command / inspection                                                                            | Result                                                                                                                                                                                                                                                                                                                                         |
+| ----------------------------------------------------------------------------------------------- | ---------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| `node --check scripts/document-contract.mjs` and `node --check test/document-contract.test.mjs` | PASS, both files parse                                                                                                                                                                                                                                                                                                                         |
+| `node --test test/document-contract.test.mjs`                                                   | PASS, 70/70; real repository green; fixed read/non-mutation behavior retained; token-only and quoted-inert anchors fail; removal and contradiction of each of four truthful current clauses fail; seven exact donor symbols and a restored donor component fail                                                                                |
+| `node --test test/document-contract.test.mjs test/quality.test.mjs`                             | PASS, 98/98; document and governance quality fixtures are jointly green                                                                                                                                                                                                                                                                        |
+| `bun run test`                                                                                  | FAIL, exit 1 in the existing shared Web candidate: 7/9 Turbo tasks succeeded, Web reported 46 failures across stale retired-authority expectations, storage fixtures, runtime provenance and compiler coverage; no failure references the two changed validator/test files, so this broader red is reported rather than modified outside scope |
+| `bunx oxfmt --check scripts/document-contract.mjs test/document-contract.test.mjs`              | PASS                                                                                                                                                                                                                                                                                                                                           |
+| scoped `git diff --check` and changed-path inspection                                           | PASS before handoff append; final scoped check repeated after this append                                                                                                                                                                                                                                                                      |
+
+### Decisions and caveats
+
+- The component anchor requires executable React structure plus four truthful consequences; it does
+  not accept a bag of labels or an inert source-shaped string.
+- The negative authority scan names only confirmed retired donor discovery symbols. It intentionally
+  does not reject generic `pluginsQuery`/`skillsQuery` identifiers that a future Product-owned
+  catalog may legitimately use.
+- The repository-wide test red is not caused by this bounded document-contract change and remains a
+  shared candidate blocker for its owning Works. This producer does not relabel the root suite green
+  or broaden scope to repair those product tests.
+- No independent acceptance, candidate SHA, Freeze gate or Campaign status is claimed here.
+
+### Correction dispatch identity
+
+- role: `implementer`
+- actorId: `document_contract_product_anchor_implementer_r1`
+- receipt: `b46fc8372aa54166b343def2d8f60236`
+- predecessor receipt: `9085da975bde4724b77182c8a4f9a721`
+- work: `../work/retire-competing-execution-authority.md`
+- promised output: `../handoffs/retire-competing-execution-authority.md`
+- operation conclusion: bounded correction candidate ready for independent review; no Work or Campaign claim self-verified
+
+## Bounded Plugin/Skill anchor contradiction-boundary correction r2 — 2026-08-05
+
+### Outcome
+
+`CANDIDATE` for renewed independent review. Review receipt
+`54a6b547974d4b819f5fa7adb8e21240` found one fail-open boundary in the r1 contradiction predicate:
+an otherwise truthful component could add `<p>Provider marketplace is queried.</p>` as a standalone
+executable JSX text node and still pass because the old negative regex recognized only source or
+punctuation boundaries, not the opening-element `>` boundary.
+
+The validator now uses one local `hasExecutableTextStatement` predicate for the two exact retired
+discovery statements. It normalizes sentence whitespace, escapes the exact statement, recognizes
+source, sentence and JSX opening-element boundaries, and requires an end-of-source or JSX closing
+element boundary. It still operates only on `executableSource`, so comments and quoted inert source
+remain unavailable as proof. Both standalone reviewer-form counterexamples now fail with the same
+stable `ui.plugin-skill-anchor` rule, path and message.
+
+### Exact changed paths
+
+This r2 correction changes only:
+
+```text
+scripts/document-contract.mjs
+test/document-contract.test.mjs
+.omp-flow/tasks/08-04-ui-chassis-takeover/handoffs/retire-competing-execution-authority.md
+```
+
+No Product component, route, generated route tree, fixed input list, other validator family,
+runtime/session record, Harness configuration, manifest, lockfile, stage, commit, push or merge was
+changed.
+
+### Verification
+
+| Command / inspection | Result |
+| --- | --- |
+| `node --check scripts/document-contract.mjs` and `node --check test/document-contract.test.mjs` | PASS; both files parse |
+| `node --test test/document-contract.test.mjs` | PASS, 72/72; includes direct `<p>Provider marketplace is queried.</p>` and `<p>cross-Provider fallback is queried.</p>` regressions while retaining all r1 fixtures |
+| `node --test test/document-contract.test.mjs test/quality.test.mjs` | PASS, 100/100; document and governance quality fixtures are jointly green |
+| `bunx oxfmt --check scripts/document-contract.mjs test/document-contract.test.mjs` | PASS |
+| scoped `git diff --check` and changed-path inspection | PASS before this handoff append; repeated after append |
+
+The repository-wide `bun run test` was not repeated because r2 changes only the bounded validator
+and its Node fixture. The r1 handoff and FAIL review already record the same shared Web candidate as
+red with 46 failures; this correction neither causes nor relabels that integration blocker.
+
+### Decisions and caveats
+
+- The fix is statement- and boundary-specific. It does not add generic marketplace, query, Provider
+  or JSX token matching that could block a future Product-owned catalog.
+- Route/routeTree predicates, fixed 14-file reads, source-literal filtering, seven retired-symbol
+  negatives and all affirmative Product-owned surface clauses are byte-unchanged by r2.
+- This producer does not self-accept the repair or claim a candidate SHA, Freeze gate or Campaign
+  status.
+
+### r2 correction dispatch identity
+
+- role: `implementer`
+- actorId: `document_contract_product_anchor_implementer_r2`
+- receipt: `bceb0f3021304d29ac6988ebf2c1ce6a`
+- mechanical predecessor receipt: `b46fc8372aa54166b343def2d8f60236`
+- triggering review receipt: `54a6b547974d4b819f5fa7adb8e21240`
+- work: `../work/retire-competing-execution-authority.md`
+- promised output: `../handoffs/retire-competing-execution-authority.md`
+- operation conclusion: bounded r2 candidate ready for renewed independent review; no Work or Campaign claim self-verified

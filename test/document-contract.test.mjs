@@ -424,7 +424,7 @@ const TOKEN_ONLY_ANCHOR_CASES = [
   {
     path: "apps/web/src/components/PluginLibrary.tsx",
     content:
-      "export const labels = 'plugins skills Search isLoading marketplaceLoadErrors discoveryCwd';\n",
+      "export const labels = 'Packages Package and Skill discovery is unavailable in this build. Runtime capabilities come from the Native Host; no Provider marketplace or cross-Provider fallback is queried. Product-owned catalog, trust, compatibility, and activation surface';\n",
   },
 ];
 
@@ -454,7 +454,7 @@ const QUOTED_INERT_ANCHOR_CASES = [
   },
   {
     path: "apps/web/src/components/PluginLibrary.tsx",
-    content: `export const inert = 'export function PluginLibrary() { const [selectedTab, setSelectedTab] = useState<DiscoveryTab>("plugins"); providerPluginsQueryOptions({ enabled: selectedTab === "plugins" }); providerSkillsQueryOptions({ enabled: selectedTab === "skills", discoveryCwd !== null }); rankProviderDiscoveryItems(buildPluginSearchFields); rankProviderDiscoveryItems(buildSkillSearchFields); <InstalledStatus installed={isInstalledProviderPlugin(item)} />; <InstalledStatus installed={skill.enabled} />; <TabButton label="Plugins" /><TabButton label="Skills" />; pluginsQuery.isLoading filteredPluginEntries.length === 0; skillsQuery.isLoading filteredSkills.length === 0; marketplaceLoadErrors InlineWarning; !discoveryCwd && selectedTab === "skills" Skills need a workspace path; }';\n`,
+    content: `export const inert = 'import { RouteInsetSurface } from "./RouteInsetSurface"; export function PluginLibrary() { return (<RouteInsetSurface><h1>Packages</h1><p>Package and Skill discovery is unavailable in this build. Runtime capabilities come from the Native Host; no Provider marketplace or cross-Provider fallback is queried.</p><p>Return here after a Product-owned catalog, trust, compatibility, and activation surface is connected.</p></RouteInsetSurface>); }';\n`,
   },
 ];
 
@@ -472,6 +472,138 @@ for (const anchorCase of QUOTED_INERT_ANCHOR_CASES) {
     ]);
   });
 }
+
+const TRUTHFUL_PLUGIN_LIBRARY_CLAUSES = [
+  {
+    name: "current discovery availability",
+    text: "Package and Skill discovery is unavailable in this build.",
+    contradiction: "Package and Skill discovery is available in this build.",
+  },
+  {
+    name: "Native Host runtime authority",
+    text: "Runtime capabilities come from\n          the Native Host",
+    contradiction: "Runtime capabilities also come from the renderer",
+  },
+  {
+    name: "no donor Provider discovery fallback",
+    text: "no Provider marketplace or cross-Provider fallback is queried.",
+    contradiction: "Provider marketplace is queried.",
+  },
+  {
+    name: "Product-owned future re-entry",
+    text: "Product-owned catalog, trust, compatibility, and activation surface",
+    contradiction: "Provider-owned catalog, trust, compatibility, and activation surface",
+  },
+];
+
+for (const clause of TRUTHFUL_PLUGIN_LIBRARY_CLAUSES) {
+  test(`rejects removal of PluginLibrary ${clause.name}`, async (t) => {
+    const root = await createFixture(t);
+    await replaceText(root, "apps/web/src/components/PluginLibrary.tsx", clause.text, "");
+
+    assert.deepEqual(await validateDocumentContract({ root }), [
+      {
+        rule: "ui.plugin-skill-anchor",
+        path: "apps/web/src/components/PluginLibrary.tsx",
+        message: "protected plugin and skill source anchor is missing or no longer recognizable",
+      },
+    ]);
+  });
+
+  test(`rejects contradiction of PluginLibrary ${clause.name}`, async (t) => {
+    const root = await createFixture(t);
+    await replaceText(
+      root,
+      "apps/web/src/components/PluginLibrary.tsx",
+      clause.text,
+      `${clause.text} ${clause.contradiction}`,
+    );
+
+    assert.deepEqual(await validateDocumentContract({ root }), [
+      {
+        rule: "ui.plugin-skill-anchor",
+        path: "apps/web/src/components/PluginLibrary.tsx",
+        message: "protected plugin and skill source anchor is missing or no longer recognizable",
+      },
+    ]);
+  });
+}
+
+for (const contradiction of [
+  "<p>Provider marketplace is queried.</p>",
+  "<p>cross-Provider fallback is queried.</p>",
+]) {
+  test(`rejects standalone executable PluginLibrary contradiction ${contradiction}`, async (t) => {
+    const root = await createFixture(t);
+    await replaceText(
+      root,
+      "apps/web/src/components/PluginLibrary.tsx",
+      "      </section>",
+      `        ${contradiction}\n      </section>`,
+    );
+
+    assert.deepEqual(await validateDocumentContract({ root }), [
+      {
+        rule: "ui.plugin-skill-anchor",
+        path: "apps/web/src/components/PluginLibrary.tsx",
+        message: "protected plugin and skill source anchor is missing or no longer recognizable",
+      },
+    ]);
+  });
+}
+
+const RETIRED_PROVIDER_DISCOVERY_SYMBOLS = [
+  "providerPluginsQueryOptions",
+  "providerSkillsQueryOptions",
+  "rankProviderDiscoveryItems",
+  "buildPluginSearchFields",
+  "buildSkillSearchFields",
+  "isInstalledProviderPlugin",
+  "marketplaceLoadErrors",
+];
+
+for (const symbol of RETIRED_PROVIDER_DISCOVERY_SYMBOLS) {
+  test(`rejects retired Provider discovery authority ${symbol}`, async (t) => {
+    const root = await createFixture(t);
+    await replaceText(
+      root,
+      "apps/web/src/components/PluginLibrary.tsx",
+      "export function PluginLibrary() {",
+      `const ${symbol} = () => undefined;\n\nexport function PluginLibrary() {`,
+    );
+
+    assert.deepEqual(await validateDocumentContract({ root }), [
+      {
+        rule: "ui.plugin-skill-anchor",
+        path: "apps/web/src/components/PluginLibrary.tsx",
+        message: "protected plugin and skill source anchor is missing or no longer recognizable",
+      },
+    ]);
+  });
+}
+
+test("rejects restoration of the donor Provider discovery component", async (t) => {
+  const root = await createFixture(t);
+  await writeFile(
+    path.join(root, "apps/web/src/components/PluginLibrary.tsx"),
+    `import { providerPluginsQueryOptions, providerSkillsQueryOptions } from "../providerDiscovery";
+
+export function PluginLibrary() {
+  const pluginsQuery = providerPluginsQueryOptions({ enabled: true });
+  const skillsQuery = providerSkillsQueryOptions({ enabled: true });
+  return <div>{pluginsQuery.data.length + skillsQuery.data.length}</div>;
+}
+`,
+  );
+
+  assert.deepEqual(await validateDocumentContract({ root }), [
+    {
+      rule: "ui.plugin-skill-anchor",
+      path: "apps/web/src/components/PluginLibrary.tsx",
+      message: "protected plugin and skill source anchor is missing or no longer recognizable",
+    },
+  ]);
+});
 
 test("source anchors without the product mapping do not pass", async (t) => {
   const root = await createFixture(t);

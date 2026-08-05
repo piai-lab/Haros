@@ -142,6 +142,15 @@ function executableSource(value) {
   return result;
 }
 
+function hasExecutableTextStatement(value, statement) {
+  const source = statement
+    .trim()
+    .split(/\s+/)
+    .map((part) => part.replace(/[.*+?^${}()|[\]\\]/g, "\\$&"))
+    .join("\\s+");
+  return new RegExp(`(?:^|>\\s*|[.;]\\s+)${source}(?=\\s*(?:$|<))`, "i").test(value);
+}
+
 function contains(text, term) {
   return term instanceof RegExp ? term.test(text) : text.includes(term);
 }
@@ -1227,20 +1236,31 @@ function validatePluginAnchors(findings, documents, available) {
     "ui.plugin-skill-anchor",
     P.pluginLibrary,
     matchesAll(pluginLibrary, [
+      /import\s*\{\s*RouteInsetSurface\s*\}\s*from\s*["'][^"']+["']\s*;/,
       /export\s+function\s+PluginLibrary\s*\(\s*\)\s*\{/,
-      /const\s*\[\s*selectedTab\s*,\s*setSelectedTab\s*\]\s*=\s*useState<DiscoveryTab>\s*\(\s*["']plugins["']\s*\)/,
-      /providerPluginsQueryOptions\s*\(\s*\{[\s\S]{0,300}enabled\s*:\s*selectedTab\s*===\s*["']plugins["']/,
-      /providerSkillsQueryOptions\s*\(\s*\{[\s\S]{0,300}enabled\s*:\s*selectedTab\s*===\s*["']skills["'][\s\S]{0,120}discoveryCwd\s*!==\s*null/,
-      /rankProviderDiscoveryItems\s*\([\s\S]{0,240}buildPluginSearchFields/,
-      /rankProviderDiscoveryItems\s*\([\s\S]{0,180}buildSkillSearchFields/,
-      /<InstalledStatus\s+installed=\{isInstalledProviderPlugin\([^)]*\)\}\s*\/>/,
-      /<InstalledStatus\s+installed=\{skill\.enabled\}\s*\/>/,
-      /<TabButton[\s\S]{0,180}label=["']Plugins["'][\s\S]{0,260}<TabButton[\s\S]{0,180}label=["']Skills["']/,
-      /pluginsQuery\.isLoading[\s\S]{0,500}filteredPluginEntries\.length\s*===\s*0/,
-      /skillsQuery\.isLoading[\s\S]{0,500}filteredSkills\.length\s*===\s*0/,
-      /marketplaceLoadErrors[\s\S]{0,500}InlineWarning/,
-      /!discoveryCwd\s*&&\s*selectedTab\s*===\s*["']skills["'][\s\S]{0,500}Skills need a workspace path/,
-    ]),
+      /return\s*\(\s*<RouteInsetSurface>[\s\S]{0,1600}<\/RouteInsetSurface>\s*\)\s*;/,
+      /<h1[^>]*>\s*Packages\s*<\/h1>/,
+      /Package\s+and\s+Skill\s+discovery\s+is\s+unavailable\s+in\s+this\s+build\./,
+      /Runtime\s+capabilities\s+come\s+from\s+the\s+Native\s+Host/,
+      /no\s+Provider\s+marketplace\s+or\s+cross-Provider\s+fallback\s+is\s+queried\./,
+      /Return\s+here\s+after\s+a\s+Product-owned\s+catalog,\s*trust,\s*compatibility,\s*and\s+activation\s+surface\s+is\s+connected\./,
+    ]) &&
+      !hasAny(pluginLibrary, [
+        /\bproviderPluginsQueryOptions\b/,
+        /\bproviderSkillsQueryOptions\b/,
+        /\brankProviderDiscoveryItems\b/,
+        /\bbuildPluginSearchFields\b/,
+        /\bbuildSkillSearchFields\b/,
+        /\bisInstalledProviderPlugin\b/,
+        /\bmarketplaceLoadErrors\b/,
+      ]) &&
+      !hasAny(pluginLibrary, [
+        /Package\s+and\s+Skill\s+discovery\s+is\s+available\s+in\s+this\s+build/i,
+        /Runtime\s+capabilities\s+(?:also\s+)?come\s+from\s+(?:the\s+)?(?:renderer|Electron\s+Main|Web|Product\s+Service)/i,
+        /(?:Provider|donor)-owned\s+catalog/i,
+      ]) &&
+      !hasExecutableTextStatement(pluginLibrary, "Provider marketplace is queried.") &&
+      !hasExecutableTextStatement(pluginLibrary, "cross-Provider fallback is queried."),
   );
 }
 

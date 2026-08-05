@@ -146,6 +146,7 @@ bun.lock
 turbo.json
 scripts/**                                     (dependency/source/identity/second-path checks only)
 test/quality.test.mjs                          (final negative fixtures only)
+test/document-contract.test.mjs                (Provider-retirement update to the existing protected Plugin/Skill source anchor only)
 README.md                                      (existing source-adoptions machine block only, if required)
 LICENSES/**                                    (actual final notice corrections only)
 ```
