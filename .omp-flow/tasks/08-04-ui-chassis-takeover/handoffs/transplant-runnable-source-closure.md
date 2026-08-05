@@ -1,39 +1,61 @@
 ---
 type: "Implementation Handoff"
-title: "Authorized runnable source closure — mandatory agent route correction"
+title: "Authorized runnable source closure — browser proof alignment"
 work: "../work/transplant-runnable-source-closure.md"
 status: "DONE"
-revision: "handoff-transplant-runnable-source-closure-20260805-r8"
-actor_id: "agent_route_contract_implementer_r1"
-dispatch_receipt: "843bd10a25e4467f9caadd2fbb5455b4"
-predecessor_receipt: "1cec56fb8b5046c3ac758efa65ef7593"
+revision: "handoff-transplant-runnable-source-closure-20260805-r9"
+actor_id: "source_closure_browser_proof_implementer_r9"
+dispatch_receipt: "b8b18b539ac940e4beb0a174f5bcece4"
+predecessor_receipt: "6cddc875a83f449ba8dd6a528b69052a"
 predecessor_review: "../reviews/transplant-runnable-source-closure.md"
+supersedes_revision: "handoff-transplant-runnable-source-closure-20260805-r8"
 ---
 
 # Authorized runnable source closure
 
 ## Current outcome
 
-Committed source `3c2d226c44530ef883964aaf81b849925cab59e9` closed the repository-level test, provenance,
-legal-copy and source-disposition gaps described below, but a clean detached Freeze r3 found one document-owner
-falsifier before browser/live/artifact verification: its tracked `AGENTS.md` omitted the validator-required route to
-`research/source-update-intake.md`.
+Committed source `ba96b074a64962e33660c8a7db85d00062bafe22` contains the independently accepted r8
+adopted-source route correction. A fresh detached Freeze r4 then passed install, build, typecheck,
+quality, root tests, document/brand checks and the focused execution boundary before its first stable
+browser falsifier: the archived-conversation browser fixture still populated donor Thread shells even
+though production `ArchivedSettingsPanel` now reads Product-owned Conversation summaries.
 
-This bounded correction integrates only the two-line maintainer-authored adopted-source intake route. The other
-observable root `AGENTS.md` edits about live-provider resources and secret-handling remain protected user-owned
-working-tree changes: they are not staged, reviewed or claimed by this operation. Product source, runtime, state,
-tests and assets are unchanged. The correction remains uncommitted until a different actor independently reviews
-the exact staged blob and linked handoff.
+This bounded r9 correction migrates only that archived fixture to the real Product store and
+`workspaceId` contract. The worktree-association proof deliberately retains its existing donor shell
+lineage because `WorktreesSettingsPanel` still consumes shell metadata for display-only association.
+No production UI, Product state, execution route or donor authority changed.
 
-The correction does not restore the retired donor execution authority. Product capability remains owned by Product
-facts and the isolated Native Host. Pi executable dependencies remain exact direct dependencies of Native Host and
-are absent from Electron Main, the renderer and Product Service. The old MCP CLI path, Provider log expectation,
-orchestration WebSocket capabilities, `/fast` command, Provider-agent invocation syntax and orphan thread diagnostics
-bus remain retired.
+The browser runner is also made truthful: the default browser profile excludes the three
+performance-only files that require dedicated commands, serial execution and budgets; the performance
+profile explicitly re-enables exactly those files. An independently reproduced Environment disclosure
+failure was a stale fixture querying an `svg`; the locked Glyph API renders `[data-slot="glyph"]`, so
+only that DOM assertion changed. The disclosure component and motion remain untouched.
 
-This handoff supersedes r7 in place. It preserves the immutable source tree, README adoption mapping, authorized
-glyph corpus, test/authority closure and exact-source reconstruction already accepted by review receipt
-`1cec56fb8b5046c3ac758efa65ef7593` while recording the single candidate route correction.
+This handoff supersedes r8 in place. It preserves the immutable source tree, README adoption mapping,
+authorized glyph corpus, exact-source reconstruction and retired execution authority. The four r9
+files and this handoff remain an uncommitted review candidate. Root `AGENTS.md`, the 08-03 audit,
+`.omp-flow` tooling and the blocked Freeze handoff are protected unrelated working-tree state and are
+not claimed.
+
+## Freeze r4 browser falsifiers and correction
+
+Freeze operation `ed5eb53ac39d4ee3b2a5eabe6bc46c3b` tested exact candidate `ba96b074a…` in a
+new disposable clone. Its stable archived-settings proof rendered neither asserted title because the
+test fed `harness.threadShells` while production grouped `useProductStore(...conversations)` by
+`workspaceId`. The fixture now uses fully typed `ProductConversationSummary` records with branded
+Conversation and Workspace identities, including an orphan Workspace, and resets Product state after
+each test. The direct/associated worktree test continues to use shell records.
+
+The broad default browser profile had also collected performance files without the performance-only
+`readPerformanceHost` command and budgets. Exact exclusion/inclusion now assigns those files to one
+profile. The earlier broad-profile failure is therefore not reported as a product failure, and the
+dedicated performance run below proves that the files still execute.
+
+`EnvironmentRow.browser.tsx` failed independently before correction because the test searched for an
+old SVG chevron. The production `DisclosureChevron` already uses the byte-locked Glyph system and
+renders a masked span. Pointing the assertion at its stable `data-slot="glyph"` contract preserves the
+same class/motion checks before and after collapse.
 
 ## Freeze r3 falsifier and correction
 
@@ -159,10 +181,16 @@ reclassified into an exclusion.
 
 ## Verification
 
-All current results below were produced after the complete combined correction in this working tree.
+The first four results below were produced after the complete r9 correction in this working tree. The
+remaining accepted source-closure results are retained from the committed r7/r8 candidate history and
+are not presented as rerun by r9.
 
 | Check | Result |
 | --- | --- |
+| Archived settings + Environment disclosure focused browser proof | PASS, exit `0`; `2/2` files, `3/3` tests |
+| Dedicated performance browser profile | PASS, exit `0`; `3/3` files, `7/7` tests; all frozen budgets green |
+| Default stable browser profile | PASS, exit `0`; `55/55` files, `150/150` tests; performance-only files excluded |
+| Web typecheck and repository diff check | PASS, exit `0`; no TypeScript errors or whitespace errors |
 | Web full unit suite | PASS, exit `0`; `262/262` files, `3,022/3,022` tests |
 | Service full unit/integration suite | PASS, exit `0`; `103` files passed, `1` skipped; `994` tests passed, `1` skipped |
 | `bun run test` | PASS, exit `0`; Turbo `9/9` tasks successful |
@@ -185,13 +213,17 @@ Those failed runs are diagnosis evidence only and are not reported as green.
 
 ## Scope and residual gates
 
-- The exact two-line adopted-source route in root `AGENTS.md` belongs to this correction. User-owned live-provider
-  and secret-handling edits in the same working file, `.omp-flow` tooling and 08-03 audit material do not.
+- This r9 candidate owns only the two corrected browser fixtures, the default/performance browser
+  configuration split and this linked handoff. Root `AGENTS.md`, `.omp-flow` tooling, the 08-03 audit
+  and Freeze handoff do not belong to it.
+- Failure attachments and screenshots created by the pre-correction Environment run were removed;
+  the final residue scan is empty.
 - No release artifact, publish, push, merge, Campaign claim promotion or production-freeze acceptance occurred.
-- This implementer reports a review candidate only. A different actor must inspect the entire actual diff, rebuild
-  the source map independently, verify retired authority stayed absent, and write the linked review.
-- If that review passes, this correction may be committed atomically. Only then may a new Freeze run start from the exact
-  clean commit and rerun install/build/typecheck/quality/test/live/UI/artifact gates without inheriting evidence.
+- This implementer reports a review candidate only. A different actor must inspect the exact r9 diff
+  and write the linked review; the prior r8 PASS does not accept these new files.
+- If that review passes, the r9 correction may be committed atomically. Only then may a new Freeze
+  start from the exact clean commit and rerun install/build/typecheck/quality/test/live/UI/artifact
+  gates without inheriting evidence from the blocked r4 attempt.
 - A successful freeze would establish the first macOS Pi-native vertical slice, not OmniMind V1 completion.
 
 ## Immutable evidence
@@ -202,7 +234,7 @@ Those failed runs are diagnosis evidence only and are not reported as green.
 | Historical runnable source tree | `630f17e61abc478114bf83c1d740977c9f68b910` |
 | Fixed upstream revision | `6aca3dcc505894481430967c2acb762b3dd1b358` |
 | T1 implementation baseline | `5d2158974` |
-| Current committed base | `3c2d226c44530ef883964aaf81b849925cab59e9` |
+| Current committed base | `ba96b074a64962e33660c8a7db85d00062bafe22` |
 
 The root README and `research/source-review.md` remain the source/adoption evidence owners. Git objects retain the
 complete implementation history.

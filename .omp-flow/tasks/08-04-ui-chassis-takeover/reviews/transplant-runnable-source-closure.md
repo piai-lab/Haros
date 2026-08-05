@@ -1,34 +1,37 @@
 ---
 type: "Implementation Review"
-title: "Review: mandatory adopted-source route correction"
+title: "Review: source-closure browser proof alignment"
 work: "../work/transplant-runnable-source-closure.md"
 handoff: "../handoffs/transplant-runnable-source-closure.md"
 verdict: "PASS"
-actor_id: "agent_route_contract_reviewer_r1"
-dispatch_receipt: "6cddc875a83f449ba8dd6a528b69052a"
-predecessor_receipt: "843bd10a25e4467f9caadd2fbb5455b4"
+actor_id: "source_closure_browser_proof_reviewer_r9"
+dispatch_receipt: "b57d3ac797084f8ea196e643869895d0"
+predecessor_receipt: "b8b18b539ac940e4beb0a174f5bcece4"
+supersedes_revision: "review-mandatory-adopted-source-route-correction-r8"
 ---
 
-# Review: mandatory adopted-source route correction
+# Review: source-closure browser proof alignment
 
 ## Verdict
 
-`PASS`. No material finding remains in the bounded r8 correction. The exact staged index contains
-only the two-line `AGENTS.md` route required by the existing adopted-source intake contract. It
-preserves the canonical `README.md` → `architecture/README.md` → `execution-brief.md` → active
-Campaign reading order and sends maintainer-requested source review through read-only research,
-human discussion and explicit approval of the current intake set before product mutation.
+`PASS`. No material finding remains in the exact five-file r9 staged candidate. The archived
+settings proof now drives the real Product projection with branded Conversation/Workspace identity;
+the worktree-association proof remains scoped to its production display-only shell source; the
+Environment disclosure assertion follows the current locked Glyph DOM contract; and the ordinary
+and performance browser profiles partition all 58 matching files without hiding or dropping the
+three performance proofs.
 
-This verdict accepts only that uncommitted routing correction. It does not accept Freeze r3,
-freeze a production SHA, inherit skipped browser/live/artifact evidence, promote a Campaign claim
-or declare the first Pi-native vertical slice or OmniMind V1 complete. After an atomic commit, a
-new Freeze must start from the new exact clean SHA and rerun its own gates.
+This review supersedes the prior r8 route-correction review in this path. It accepts only the r9
+browser-proof/configuration correction over committed base
+`ba96b074a64962e33660c8a7db85d00062bafe22`. It does not accept blocked Freeze r4, freeze a new
+production SHA, inherit skipped live/Electron/artifact evidence, promote a Campaign claim, or
+declare the Pi-native vertical slice or OmniMind V1 complete.
 
-Implementation receipt `843bd10a25e4467f9caadd2fbb5455b4` is completed and resolves to the
-linked r8 handoff, authored by `agent_route_contract_implementer_r1`. Reviewer
-`agent_route_contract_reviewer_r1` is different from the implementer. Review receipt
-`6cddc875a83f449ba8dd6a528b69052a` names that implementation receipt as predecessor and this file
-as its sole output.
+Implementation operation `b8b18b539ac940e4beb0a174f5bcece4` is completed and resolves to the
+linked r9 handoff. Implementer `source_closure_browser_proof_implementer_r9` differs from reviewer
+`source_closure_browser_proof_reviewer_r9`. Review operation
+`b57d3ac797084f8ea196e643869895d0` names the completed implementation receipt as predecessor and
+this Review Concept as its sole output.
 
 ## Findings
 
@@ -36,74 +39,93 @@ None.
 
 ## Reviewed boundary
 
-The review inspected the index rather than treating the shared working tree as candidate source:
+The exact index tree is `632db53d5b271e09ccccec3d1171ddc00eb93370`. Its five paths are:
 
-- `git diff --cached --name-status` contains only `M AGENTS.md`;
-- `git diff --cached --numstat -- AGENTS.md` is exactly `2  0  AGENTS.md`;
-- the staged delta adds only the adopted-source task route and its continuation line;
-- `git diff -- AGENTS.md` still contains the maintainer's live-provider and secret-handling edits
-  as a separate unstaged `+5/-1` working-tree delta;
-- no Product, Runtime, test, asset, architecture owner, Campaign or release file is staged.
+1. the linked r9 implementation handoff;
+2. `ConversationStorageSettingsPanels.browser.tsx`;
+3. `EnvironmentRow.browser.tsx`;
+4. the default browser config; and
+5. the dedicated performance browser config.
 
-The exact staged tree reviewed here is `62c4ca693fcb62176035483e0cb0eefb4396710b` over committed base
-`3c2d226c44530ef883964aaf81b849925cab59e9`. The r8 handoff and this Review Concept are workflow
-outputs, not evidence that the user's unrelated working-tree hunks belong to the code candidate.
+There is no unstaged delta on those five paths. Root `AGENTS.md`, the 08-03 audit, blocked Freeze
+handoff, `.omp-flow` tooling/wiki files and all other protected unstaged/untracked state remain
+outside this verdict. No production component, Product store, Runtime, contract, asset or package
+file changed.
 
-## Contract and correctness review
+## Correctness review
 
-The staged route is a routing rule, not a second source-adoption owner. It points to the existing
-`research/source-update-intake.md`, whose durable contract keeps actual adoption truth in the root
-README, makes source review maintainer-initiated, separates read-only Gate A from explicitly
-approved implementation Gate B, and requires exact revision/risk/rights investigation. The new
-route summarizes those consequences without duplicating the protocol or granting automatic intake.
+### Product archived fixture and shell-display boundary
 
-The staged blob keeps the original global read order unchanged. Direct staged-blob inspection found
-the four canonical terms in order and exactly one `research/source-update-intake.md` route. The
-route contains both required boundaries: read-only research plus human discussion first, and
-product mutation only after the maintainer confirms the exact current intake set.
+Production `ArchivedSettingsPanel` reads `useProductStore((store) => store.conversations)`, filters
+`archivedAt`, groups known projects by `String(conversation.workspaceId) === String(project.id)`,
+keeps unknown Workspaces in an explicit orphan group, and sorts within each group by the existing
+archived/updated/created comparator.
 
-No execution authority, Provider catalog, Pi dependency, package capability, credential behavior
-or public-surface state changes. The correction therefore needs contract and identity verification,
-not a replay of previously accepted Product/Runtime suites.
+The migrated fixture now writes fully shaped `ProductConversationSummary` values to that real
+store. Conversation IDs and Workspace IDs use the contract brand constructors. The third record
+uses a missing `workspaceId`, so the assertion genuinely proves the production orphan path rather
+than reviving donor `projectId` behavior. `afterEach` calls the real Product store `reset`, whose
+implementation restores `initialProductProjectionState`; no Conversation state leaks to another
+test.
 
-## Freeze r3 evidence boundary
+The separate Worktrees proof continues to populate only `harness.threadShells`. That matches
+production `WorktreesSettingsPanel`, which deliberately uses `createThreadShellsSelector` for
+display-only worktree labels while deletion admission obtains authoritative Product snapshots.
+The archived test no longer populates shell state, and the worktree test does not populate Product
+state. The correction therefore separates the two current owners instead of creating a mixed
+compatibility fixture.
 
-Freeze operation `abe2b131de554790a06a3288ec819799` is mechanically recorded as failed; its linked
-handoff reports `BLOCKED` for candidate
-`3c2d226c44530ef883964aaf81b849925cab59e9`. Frozen install, build, typecheck, quality, root tests
-and the correctly routed focused Vitest boundary suite passed before the document gate. The first
-real candidate red gate was the bounded document-contract command: candidate `AGENTS.md` lacked
-`research/source-update-intake.md`, producing one stable `route.mandatory` finding and causing the
-mutation fixtures to fail. Brand, browser, live-provider and artifact gates after that compound
-command were not reached and remain unproven.
+### Environment disclosure glyph
 
-That attribution matches the current validator: `validateRoutes` requires the canonical four-term
-read order and separately requires `research/source-update-intake.md` in `AGENTS.md`. Exporting the
-exact staged index now makes all 72 document-contract tests pass, including the base repository
-case and the negative adopted-source approval-boundary fixture. This closes the owning document
-falsifier without weakening the validator.
+Production `EnvironmentCollapsibleSection` renders `DisclosureChevron`, which delegates to the
+locked `ChevronRightIcon` Glyph API. Its rendered primitive is a masked element with
+`data-slot="glyph"`, not an SVG. The changed query selects that stable contract while preserving the
+existing assertions for `duration-220`, expanded `rotate-90`, collapse, and `aria-expanded`.
+Neither the disclosure component nor its motion classes changed.
 
-The earlier `bun test` collection failure remains excluded from product evidence. The affected
-macOS artifact configuration suite imports `assert`, `describe` and `it` from `@effect/vitest`, so
-it belongs to Vitest rather than Bun's test runner. The Freeze handoff records that the corrected
-Vitest invocation passed the nine-file suite `38/38`. Neither the invalid runner failure nor its
-later corrected result is used to prove this two-line route correction.
+### Browser profile partition
+
+The default browser globs match 58 current files. Its new exclude list contains exactly:
+
+- `src/components/chat/ConversationPerformance.browser.tsx`;
+- `src/components/WorkbenchPerformance.browser.tsx`;
+- `src/components/ProductRoutePerformance.browser.tsx`.
+
+The performance config replaces its inherited broad include with exactly the same three-path set
+and clears the inherited exclude after `mergeConfig`. Direct config evaluation proved
+`base.exclude === performance.include` as sets and `performance.exclude.length === 0`. Therefore
+the default/stable profile owns 55 ordinary files and the serial performance profile owns all three
+special files. The real runs collected 55 and 3 files respectively; no performance proof was
+silently skipped and no ordinary file was removed.
+
+## Freeze r4 evidence boundary
+
+Freeze operation `ed5eb53ac39d4ee3b2a5eabe6bc46c3b` remains `BLOCKED` on candidate
+`ba96b074a64962e33660c8a7db85d00062bafe22`. Its stable archived-settings failure is correctly
+attributed: the old fixture populated donor shell state while production read Product summaries,
+so neither asserted title rendered. The current focused Chromium proof executes that same file
+against Product store state and passes.
+
+The r4 broad-profile performance failure lacked the dedicated `readPerformanceHost` command; the
+new partition assigns those files to the profile that provides the command, serial execution,
+viewport and budgets. The dedicated performance run passes all seven current tests. The earlier
+isolated port collision and transient parallel transcript count remain runner noise, not product
+evidence. Live-provider, Electron journey and artifact gates skipped by r4 remain unproven and must
+be rerun by a new Freeze from the later clean commit.
 
 ## Independent verification
 
-The reviewer materialized the complete Git index into a disposable directory using
-`git checkout-index --all --prefix=<fixture>/`; the current working `AGENTS.md` was therefore not an
-input to the following gates.
-
 | Command / proof | Result |
 | --- | --- |
-| `git diff --cached --name-status` and `git diff --cached --numstat -- AGENTS.md` | PASS; only `AGENTS.md`, exactly `+2/-0` |
-| direct `git show :AGENTS.md` order/count/gate assertion | PASS; canonical four-term order preserved, intake route exactly once, both approval boundaries present |
-| exact-index fixture `node --test test/document-contract.test.mjs` | PASS, exit `0`; `72/72` tests |
-| exact-index fixture `bun run brand:check` | PASS, exit `0`; `12` locked source/platform assets |
+| exact staged diff and production-owner inspection | PASS; five paths only, no production change, no unstaged overlap on them |
+| `bunx vitest run --config vitest.browser.config.ts src/components/settings/ConversationStorageSettingsPanels.browser.tsx src/components/chat/environment/EnvironmentRow.browser.tsx --reporter=verbose` | PASS, exit `0`; 2 files / 3 tests |
+| `bunx vitest run --config vitest.browser.performance.config.ts --reporter=verbose` | PASS, exit `0`; 3 files / 7 tests; all frozen interaction, DOM, commit, long-task and heap budgets green |
+| `bunx vitest run --config vitest.browser.stable.config.ts --reporter=verbose` | PASS, exit `0`; 55 ordinary files collected; r9 handoff count 150 tests agrees with the completed run |
+| direct config evaluation and current file inventory | PASS; 58 matching files = 55 default + exact 3 performance, inverse sets equal, performance exclude empty |
+| `bun run typecheck` in `apps/web` | PASS, exit `0` |
 | `git diff --cached --check` | PASS, exit `0` |
-| `git diff -- AGENTS.md` separation inspection | PASS; live-provider/secret rules remain unstaged and unclaimed |
+| failure attachment/screenshot residue scan | PASS; none present |
 
 No implementation, handoff, Work, runtime/session record, Evidence ledger, Campaign state, Git
-index or user-owned working file was modified by this reviewer. The only authored output is this
+index, commit or protected user file was modified by this reviewer. The only authored output is this
 Review Concept.

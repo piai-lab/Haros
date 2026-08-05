@@ -62,5 +62,8 @@ performanceConfig.test.include = [
   "src/components/WorkbenchPerformance.browser.tsx",
   "src/components/ProductRoutePerformance.browser.tsx",
 ];
+// The base profile excludes these files so the ordinary browser suite cannot run them
+// without their required commands and budgets. This dedicated profile owns the inverse.
+performanceConfig.test.exclude = [];
 
 export default performanceConfig;

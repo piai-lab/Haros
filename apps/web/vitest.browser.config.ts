@@ -33,6 +33,14 @@ export default mergeConfig(
         "src/lib/**/*.browser.ts",
         "src/lib/**/*.browser.tsx",
       ],
+      // Performance proofs require their dedicated command surface, serial execution,
+      // host metadata and longer budgets. The performance profile explicitly re-enables
+      // these exact files after inheriting this default exclusion.
+      exclude: [
+        "src/components/chat/ConversationPerformance.browser.tsx",
+        "src/components/WorkbenchPerformance.browser.tsx",
+        "src/components/ProductRoutePerformance.browser.tsx",
+      ],
       browser: {
         enabled: true,
         provider: playwright(),
