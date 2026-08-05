@@ -1,12 +1,12 @@
 ---
 type: "Implementation Handoff"
-title: "Authorized runnable source closure — candidate test and authority closure"
+title: "Authorized runnable source closure — mandatory agent route correction"
 work: "../work/transplant-runnable-source-closure.md"
 status: "DONE"
-revision: "handoff-transplant-runnable-source-closure-20260805-r7"
-actor_id: "root_test_candidate_closure_implementer_r1"
-dispatch_receipt: "381c26df65184dc1a862875cb475e18c"
-predecessor_receipt: "c3fe88f8a56a4b168a910ae7452ee2a9"
+revision: "handoff-transplant-runnable-source-closure-20260805-r8"
+actor_id: "agent_route_contract_implementer_r1"
+dispatch_receipt: "843bd10a25e4467f9caadd2fbb5455b4"
+predecessor_receipt: "1cec56fb8b5046c3ac758efa65ef7593"
 predecessor_review: "../reviews/transplant-runnable-source-closure.md"
 ---
 
@@ -14,10 +14,16 @@ predecessor_review: "../reviews/transplant-runnable-source-closure.md"
 
 ## Current outcome
 
-The current working candidate closes the repository-level test, provenance, legal-copy and source-disposition gaps
-that blocked a fresh production freeze. It is based on committed source
-`a29e2e5c1b3c967b80ceffe5357bc88d2b2cdb5d`; the changes described here remain uncommitted until a different actor
-independently reviews this exact diff.
+Committed source `3c2d226c44530ef883964aaf81b849925cab59e9` closed the repository-level test, provenance,
+legal-copy and source-disposition gaps described below, but a clean detached Freeze r3 found one document-owner
+falsifier before browser/live/artifact verification: its tracked `AGENTS.md` omitted the validator-required route to
+`research/source-update-intake.md`.
+
+This bounded correction integrates only the two-line maintainer-authored adopted-source intake route. The other
+observable root `AGENTS.md` edits about live-provider resources and secret-handling remain protected user-owned
+working-tree changes: they are not staged, reviewed or claimed by this operation. Product source, runtime, state,
+tests and assets are unchanged. The correction remains uncommitted until a different actor independently reviews
+the exact staged blob and linked handoff.
 
 The correction does not restore the retired donor execution authority. Product capability remains owned by Product
 facts and the isolated Native Host. Pi executable dependencies remain exact direct dependencies of Native Host and
@@ -25,9 +31,29 @@ are absent from Electron Main, the renderer and Product Service. The old MCP CLI
 orchestration WebSocket capabilities, `/fast` command, Provider-agent invocation syntax and orphan thread diagnostics
 bus remain retired.
 
-This handoff supersedes the earlier r6 account in place. It preserves the immutable source tree, README adoption
-mapping, authorized glyph corpus and previous exact-source reconstruction while recording the actual post-retirement
-test candidate and its new exact source disposition.
+This handoff supersedes r7 in place. It preserves the immutable source tree, README adoption mapping, authorized
+glyph corpus, test/authority closure and exact-source reconstruction already accepted by review receipt
+`1cec56fb8b5046c3ac758efa65ef7593` while recording the single candidate route correction.
+
+## Freeze r3 falsifier and correction
+
+Freeze operation `abe2b131de554790a06a3288ec819799` tested detached candidate `3c2d226c4` in a clean disposable
+clone. Frozen install (`2,185` packages), build (`5/5`), typecheck (`7/7`), quality, root test (`9/9`) and the
+correctly routed nine-file boundary suite (`38/38`) passed. The first real red gate was:
+
+```text
+node --test test/document-contract.test.mjs test/quality.test.mjs && bun run brand:check
+```
+
+It exited `1`: `61/100` tests passed and `39/100` failed because one stable
+`route.mandatory` finding on candidate `AGENTS.md` contaminated the exact-finding mutation fixtures. Brand did not
+run, and later browser/live/artifact gates correctly did not run. A prior `bun test` invocation against Vitest files
+was an invalid runner probe, not candidate evidence; the corrected Vitest command passed `38/38`.
+
+The staged route now makes adopted-source review deterministic for a fresh agent: when the maintainer asks to review,
+borrow, absorb or update Synara or another adopted source, the agent must read `research/source-update-intake.md`,
+perform read-only research and human discussion first, and modify product source only after confirmation of that
+exact intake set. This is routing only; it adds no new source intake, design work or runtime authority.
 
 ## Baseline failures reproduced
 
@@ -151,17 +177,20 @@ All current results below were produced after the complete combined correction i
 | `licenses:check` | PASS; deterministic metadata for `230` components |
 | source-closure checker | PASS; `6,425`, `1,496/774`, digest `368f2a…9a13` |
 | `git diff --check` | PASS |
+| exact staged-tree document contract | PASS, exit `0`; `72/72` tests |
+| exact staged-tree locked-brand guard | PASS, exit `0`; `12` source/platform assets |
 
 The repository test PASS is later than, and supersedes, the two deliberately retained failed runs described above.
 Those failed runs are diagnosis evidence only and are not reported as green.
 
 ## Scope and residual gates
 
-- No user-owned `.omp-flow` tooling, 08-03 audit material or root `AGENTS.md` change belongs to this candidate.
+- The exact two-line adopted-source route in root `AGENTS.md` belongs to this correction. User-owned live-provider
+  and secret-handling edits in the same working file, `.omp-flow` tooling and 08-03 audit material do not.
 - No release artifact, publish, push, merge, Campaign claim promotion or production-freeze acceptance occurred.
 - This implementer reports a review candidate only. A different actor must inspect the entire actual diff, rebuild
   the source map independently, verify retired authority stayed absent, and write the linked review.
-- If that review passes, this correction may be committed atomically. Only then may Freeze r3 start from the exact
+- If that review passes, this correction may be committed atomically. Only then may a new Freeze run start from the exact
   clean commit and rerun install/build/typecheck/quality/test/live/UI/artifact gates without inheriting evidence.
 - A successful freeze would establish the first macOS Pi-native vertical slice, not OmniMind V1 completion.
 
@@ -173,7 +202,7 @@ Those failed runs are diagnosis evidence only and are not reported as green.
 | Historical runnable source tree | `630f17e61abc478114bf83c1d740977c9f68b910` |
 | Fixed upstream revision | `6aca3dcc505894481430967c2acb762b3dd1b358` |
 | T1 implementation baseline | `5d2158974` |
-| Current committed base | `a29e2e5c1b3c967b80ceffe5357bc88d2b2cdb5d` |
+| Current committed base | `3c2d226c44530ef883964aaf81b849925cab59e9` |
 
 The root README and `research/source-review.md` remain the source/adoption evidence owners. Git objects retain the
 complete implementation history.

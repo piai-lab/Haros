@@ -23,6 +23,8 @@
 - 当前施工顺序、进入/停止条件和阶段 proof：`execution-brief.md`。
 - Claim 状态与已有证据指针：active Campaign。
 - 固定来源、版本、权利、构建/运行观察或结构性反证：`research/README.md` 路由的对应 evidence owner。
+- 用户主动要求审查、借鉴、吸收或更新 Synara/其他 adopted source：必须读取
+  `research/source-update-intake.md`，先完成只读研究与人类讨论；只有用户对当次明确更新集再次确认后才能修改产品。
 
 新会话不能用历史聊天、自动摘要或旧 handoff 补齐权威文档缺口。实现意图仍不能唯一推出时，先修 owner；当前任务未授权该修复时，停止并指出精确冲突。
 
