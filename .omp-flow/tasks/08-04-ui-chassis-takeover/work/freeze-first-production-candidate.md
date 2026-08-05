@@ -48,11 +48,14 @@ This conditional gate does not authorize upstream merge, Product mutation, a spe
 Work, a new public ontology or another Converge/QbD round. Gate A remains read-only, and Freeze must
 not absorb or repair source-update work itself.
 
-**Current status (2026-08-05): blocked on accepted intake implementation.** The maintainer approved
-the exact Synara `v0.6.7` intake recorded in `research/source-review.md`. Complete the already active
-authority-retirement Work at its coherent reviewed commit boundary, then implement and independently
-review the two linked intake Works in authored order. Explicitly deferred source changes do not block
-this candidate and must not be pulled into either Work without a new maintainer decision.
+**Current status (2026-08-05): entry gate satisfied.** The maintainer-approved Synara `v0.6.7`
+intake recorded in `research/source-review.md` has been implemented through both linked Works in
+authored order. [`Harden active Workbench mechanisms`](harden-active-workbench-mechanisms.md) has a
+different-actor `PASS` at review receipt `08e05ad3b1d34b51930ee123244d43f7` and committed boundary
+`7431d8b4`; [`Align completion signals with Product facts`](align-product-completion-signals.md) has
+a different-actor `PASS` at review receipt `c8e3de64aeda4b3a87b45927af8590fe` and committed boundary
+`2bfd0d6c9`. Explicitly deferred source changes still do not block this candidate and must not be
+pulled into Freeze without a new maintainer decision.
 
 ## In scope
 
