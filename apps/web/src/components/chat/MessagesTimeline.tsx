@@ -497,8 +497,15 @@ export const MessagesTimeline = memo(function MessagesTimeline({
   const threadMarkers = threadMarkersProp ?? EMPTY_MESSAGE_MARKERS;
   const enteringUserMessageIds = enteringUserMessageIdsProp ?? EMPTY_MESSAGE_ID_SET;
   const tailAnchorMessageId = tailAnchorMessageIdProp ?? null;
+  // An anchor already present at mount survived a prior completed slide. Re-entry
+  // lands at the end directly instead of replaying movement through history.
+  const [inheritedTailAnchorMessageId] = useState<MessageId | null>(
+    () => tailAnchorMessageIdProp ?? null,
+  );
+  const hasInheritedTailAnchor =
+    inheritedTailAnchorMessageId !== null && tailAnchorMessageId === inheritedTailAnchorMessageId;
   const [settledTailAnchorMessageId, setSettledTailAnchorMessageId] = useState<MessageId | null>(
-    null,
+    () => inheritedTailAnchorMessageId,
   );
   const tailAnchorSlideInFlight =
     tailAnchorMessageId !== null && tailAnchorMessageId !== settledTailAnchorMessageId;
@@ -620,7 +627,7 @@ export const MessagesTimeline = memo(function MessagesTimeline({
   useTailAnchorScroll({
     listRef: resolvedListRef,
     timelineRootRef,
-    anchorMessageId: tailAnchorMessageId,
+    anchorMessageId: hasInheritedTailAnchor ? null : tailAnchorMessageId,
     anchorScrollInFlightRef: tailAnchorScrollInFlightRef,
     onAnchorSlideFinished: handleTailAnchorSlideFinished,
     contentChangeSignal: timelineEntries,
@@ -1528,7 +1535,12 @@ export const MessagesTimeline = memo(function MessagesTimeline({
             ...new Map(
               allTurnWorkEntries.flatMap((entry) =>
                 entry.omnimindThreadCreation
-                  ? [[entry.omnimindThreadCreation.operationId, entry.omnimindThreadCreation] as const]
+                  ? [
+                      [
+                        entry.omnimindThreadCreation.operationId,
+                        entry.omnimindThreadCreation,
+                      ] as const,
+                    ]
                   : [],
               ),
             ).values(),
@@ -2164,7 +2176,7 @@ export const MessagesTimeline = memo(function MessagesTimeline({
         // LegendList caches rendered rows, so every local expansion map that changes row content
         // has to be surfaced through extraData.
         extraData={timelineExtraData}
-        initialScrollAtEnd={tailAnchorMessageId === null}
+        initialScrollAtEnd={tailAnchorMessageId === null || hasInheritedTailAnchor}
         {...(anchoredEndSpace ? { anchoredEndSpace } : {})}
         maintainScrollAtEnd={followLiveOutput && !tailAnchorSlideInFlight}
         maintainScrollAtEndThreshold={0.1}
@@ -2418,6 +2430,7 @@ function useSettledTurnCollapseTransitions(
   const [transitions, setTransitions] = useState<Record<string, SettledTurnCollapseTransition>>({});
   const previousAssistantMessageIdsRef = useRef<ReadonlySet<string>>(new Set());
   const previousCollapsedSignaturesRef = useRef<ReadonlyMap<string, string>>(new Map());
+  const watchedLiveMessageIdsRef = useRef(new Set<string>());
   const timersRef = useRef(new Map<string, SettledTurnCollapseTimer>());
 
   const clearTransitionTimer = useCallback((messageId: string) => {
@@ -2477,6 +2490,7 @@ function useSettledTurnCollapseTransitions(
       rows,
       previousAssistantMessageIdsRef,
       previousCollapsedSignaturesRef,
+      watchedLiveMessageIdsRef,
       clearTransitionTimer,
       scheduleTransitionClose,
       setTransitions,
@@ -2503,6 +2517,7 @@ function applySettledTurnCollapseTransitions(params: {
   rows: readonly MessagesTimelineRow[];
   previousAssistantMessageIdsRef: RefObject<ReadonlySet<string>>;
   previousCollapsedSignaturesRef: RefObject<ReadonlyMap<string, string>>;
+  watchedLiveMessageIdsRef: RefObject<Set<string>>;
   clearTransitionTimer: (messageId: string) => void;
   scheduleTransitionClose: (messageId: string) => void;
   setTransitions: Dispatch<SetStateAction<Record<string, SettledTurnCollapseTransition>>>;
@@ -2511,14 +2526,17 @@ function applySettledTurnCollapseTransitions(params: {
     rows,
     previousAssistantMessageIdsRef,
     previousCollapsedSignaturesRef,
+    watchedLiveMessageIdsRef,
     clearTransitionTimer,
     scheduleTransitionClose,
     setTransitions,
   } = params;
   const currentAssistantMessageIds = new Set<string>();
-  const currentCollapsed = new Map<string,
+  const currentCollapsed = new Map<
+    string,
     { signature: string; items: readonly CollapsedTurnItem[] }
   >();
+  const watchedLiveMessageIds = watchedLiveMessageIdsRef.current;
 
   for (const row of rows) {
     if (row.kind !== "message" || row.message.role !== "assistant") {
@@ -2526,12 +2544,21 @@ function applySettledTurnCollapseTransitions(params: {
     }
     const messageId = row.message.id;
     currentAssistantMessageIds.add(messageId);
+    // Only a row observed live has an expanded layout worth animating away.
+    // A newer Run or thread-wide working flag cannot qualify historical rows.
+    if (row.assistantTurnInProgress || row.message.streaming) {
+      watchedLiveMessageIds.add(messageId);
+    }
     if (row.collapsedTurnItems && row.collapsedTurnItems.length > 0) {
       currentCollapsed.set(messageId, {
         signature: collapsedTurnItemsSignature(row.collapsedTurnItems),
         items: row.collapsedTurnItems,
       });
     }
+  }
+
+  for (const messageId of watchedLiveMessageIds) {
+    if (!currentAssistantMessageIds.has(messageId)) watchedLiveMessageIds.delete(messageId);
   }
 
   const previousAssistantMessageIds = previousAssistantMessageIdsRef.current;
@@ -2542,7 +2569,11 @@ function applySettledTurnCollapseTransitions(params: {
   }> = [];
 
   for (const [messageId, collapsed] of currentCollapsed) {
-    if (previousAssistantMessageIds.has(messageId) && !previousCollapsedSignatures.has(messageId)) {
+    if (
+      watchedLiveMessageIds.has(messageId) &&
+      previousAssistantMessageIds.has(messageId) &&
+      !previousCollapsedSignatures.has(messageId)
+    ) {
       startedTransitions.push({ messageId, items: collapsed.items });
     }
   }

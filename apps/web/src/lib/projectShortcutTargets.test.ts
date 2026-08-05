@@ -94,6 +94,40 @@ describe("project shortcut targets", () => {
     ).toBe(LATEST_PROJECT_ID);
   });
 
+  it("prefers actual user activity over a newer create or rename timestamp", () => {
+    const written = {
+      ...makeProject(CURRENT_PROJECT_ID),
+      createdAt: "2026-07-10T09:00:00.000Z",
+      updatedAt: "2026-07-10T09:00:00.000Z",
+    };
+    const renamed = {
+      ...makeProject(LATEST_PROJECT_ID),
+      createdAt: "2026-07-15T10:00:00.000Z",
+      updatedAt: "2026-07-15T10:00:00.000Z",
+    };
+    expect(
+      resolveLatestProjectTargetIdWithFallback(
+        [written, renamed],
+        "project-from-another-space" as ProjectId,
+        new Map([[CURRENT_PROJECT_ID, "2026-07-15T11:00:00.000Z"]]),
+      ),
+    ).toBe(CURRENT_PROJECT_ID);
+  });
+
+  it("uses a stable id tie-break for equal activity", () => {
+    const sameTime = "2026-07-15T11:00:00.000Z";
+    expect(
+      resolveLatestProjectTargetIdWithFallback(
+        [makeProject(LATEST_PROJECT_ID), makeProject(CURRENT_PROJECT_ID)],
+        null,
+        new Map([
+          [LATEST_PROJECT_ID, sameTime],
+          [CURRENT_PROJECT_ID, sameTime],
+        ]),
+      ),
+    ).toBe(CURRENT_PROJECT_ID);
+  });
+
   it("returns no target when no projects exist", () => {
     expect(
       resolveNewThreadTarget({

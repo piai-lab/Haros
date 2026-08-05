@@ -151,7 +151,7 @@ describe("BrowserPanel annotations", () => {
     root.classList.add("dark");
     root.style.setProperty("--color-text-accent", "#123456");
     root.style.setProperty(
-      "--composer-surface",
+      "--color-background-control-opaque",
       "color-mix(in srgb, rgb(0 0 0) 25%, rgb(255 255 255))",
     );
     document.body.append(root);
@@ -163,6 +163,15 @@ describe("BrowserPanel annotations", () => {
     });
     expect(theme.surface).toMatch(/^(?:rgba?\(|color\(srgb)/);
     expect(theme.surface).not.toBe("rgb(27, 27, 29)");
+    root.remove();
+  });
+
+  it("ignores translucent composer glass when resolving the guest overlay", () => {
+    const root = document.createElement("div");
+    root.style.setProperty("--composer-surface", "rgba(255, 255, 255, 0.14)");
+    root.style.setProperty("--color-background-control-opaque", "rgb(247, 247, 248)");
+    document.body.append(root);
+    expect(browserAnnotationTheme(root).surface).toBe("rgb(247, 247, 248)");
     root.remove();
   });
 
@@ -308,7 +317,7 @@ describe("BrowserPanel annotations", () => {
       />,
     );
     const annotate = mounted.getByRole("button", { name: "Annotate page" });
-    const pointer = annotate.element().querySelector("svg");
+    const pointer = annotate.element().querySelector("[data-slot='glyph']");
 
     expect(pointer).not.toBeNull();
     expect(annotate.element().classList.contains("bg-primary")).toBe(false);
@@ -321,7 +330,7 @@ describe("BrowserPanel annotations", () => {
     );
     const cancel = mounted.getByRole("button", { name: "Cancel annotation" });
 
-    expect(cancel.element().querySelector("svg")).toBe(pointer);
+    expect(cancel.element().querySelector("[data-slot='glyph']")).toBe(pointer);
     expect(cancel.element().querySelector(".animate-spin")).toBeNull();
     expect(cancel.element().classList.contains("bg-primary")).toBe(true);
     await expect.element(cancel).toHaveAttribute("aria-busy", "true");

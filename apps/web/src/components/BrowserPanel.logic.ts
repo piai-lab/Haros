@@ -273,7 +273,13 @@ export function browserAnnotationTheme(
   return {
     mode,
     accent: resolvedBrowserAnnotationColor(root, "--color-text-accent", fallback.accent),
-    surface: resolvedBrowserAnnotationColor(root, "--composer-surface", fallback.surface),
+    // Guest-page cards do not have the composer's backdrop blur, so use the
+    // opaque control fill instead of the translucent composer glass.
+    surface: resolvedBrowserAnnotationColor(
+      root,
+      "--color-background-control-opaque",
+      fallback.surface,
+    ),
     text: resolvedBrowserAnnotationColor(root, "--color-text-foreground", fallback.text),
     mutedText: resolvedBrowserAnnotationColor(
       root,

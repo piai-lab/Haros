@@ -47,6 +47,8 @@ const theme: BrowserAnnotationTheme = {
 
 describe("browser annotation protocol", () => {
   it("accepts only bounded resolved colors for the guest annotation theme", () => {
+    expect(isGuestAnnotationCommand({ version: 1, kind: "request-ready" })).toBe(true);
+    expect(isGuestAnnotationCommand({ version: 2, kind: "request-ready" })).toBe(false);
     expect(parseBrowserAnnotationTheme(theme)).toEqual(theme);
     expect(
       parseBrowserAnnotationTheme({

@@ -1591,6 +1591,7 @@ export class DesktopBrowserManager {
       this.runtimes.set(key, runtime);
     }
     this.rendererOnlyRuntimeKeys.add(key);
+    this.annotations.requestReady(input.threadId, tab.id, webContents.id);
 
     const bounds = this.getVisibleBoundsForThread(input.threadId);
     const runtime = this.runtimes.get(key);

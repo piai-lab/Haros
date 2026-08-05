@@ -57,14 +57,41 @@ export const MAC_DESKTOP_TOP_BAR_TRAFFIC_LIGHT_GUTTER_CSS_PX = 90;
 export const DESKTOP_TOP_BAR_TRAFFIC_LIGHT_GUTTER_CSS_VAR =
   "--desktop-top-bar-traffic-light-gutter";
 
+/** Invalid bridge data degrades to no zoom, never zero/NaN geometry. */
+export function normalizeDesktopZoomFactor(zoomFactor: unknown): number {
+  return typeof zoomFactor === "number" && Number.isFinite(zoomFactor) && zoomFactor > 0
+    ? zoomFactor
+    : 1;
+}
+
 /**
  * Gutter width in layout CSS pixels for the current page zoom factor.
  * Inverse-scales so the on-screen gap stays aligned with the native lights.
  */
 export function resolveMacDesktopTopBarTrafficLightGutterCssPx(zoomFactor: number): number {
-  const safeZoom =
-    typeof zoomFactor === "number" && Number.isFinite(zoomFactor) && zoomFactor > 0
-      ? zoomFactor
-      : 1;
-  return Math.round(MAC_DESKTOP_TOP_BAR_TRAFFIC_LIGHT_GUTTER_CSS_PX / safeZoom);
+  return Math.round(
+    MAC_DESKTOP_TOP_BAR_TRAFFIC_LIGHT_GUTTER_CSS_PX / normalizeDesktopZoomFactor(zoomFactor),
+  );
+}
+
+export interface DesktopRect {
+  x: number;
+  y: number;
+  width: number;
+  height: number;
+}
+
+/** Convert renderer layout CSS pixels into Electron window-relative DIPs. */
+export function resolveDesktopDipRectFromCssRect(
+  rect: DesktopRect,
+  zoomFactor: number,
+): DesktopRect {
+  const safeZoom = normalizeDesktopZoomFactor(zoomFactor);
+  if (safeZoom === 1) return rect;
+  return {
+    x: rect.x * safeZoom,
+    y: rect.y * safeZoom,
+    width: rect.width * safeZoom,
+    height: rect.height * safeZoom,
+  };
 }

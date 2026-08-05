@@ -31,6 +31,7 @@ import {
 } from "~/lib/icons";
 
 import { localServerPrimaryLabel } from "@omnimind/shared/localServers";
+import { resolveDesktopDipRectFromCssRect } from "@omnimind/shared/desktopChrome";
 import {
   BROWSER_BLANK_URL,
   isBlankBrowserTabUrl,
@@ -42,6 +43,7 @@ import {
 } from "@omnimind/shared/browserShortcuts";
 
 import { isElectron } from "~/env";
+import { readDesktopZoomFactor, subscribeDesktopZoomFactor } from "~/lib/desktopZoom";
 import { readNativeApi } from "~/nativeApi";
 import type { DockPaneRuntimeMode } from "~/lib/dockPaneActivation";
 import { PANEL_RESIZE_OVERLAY_SYNC_EVENT } from "~/lib/panelResize";
@@ -1053,12 +1055,10 @@ export function BrowserPanel({
             if (rect.width <= 0 || rect.height <= 0) {
               return null;
             }
-            return {
-              x: rect.left,
-              y: rect.top,
-              width: rect.width,
-              height: rect.height,
-            };
+            return resolveDesktopDipRectFromCssRect(
+              { x: rect.left, y: rect.top, width: rect.width, height: rect.height },
+              readDesktopZoomFactor(),
+            );
           })();
       const nextKey = bounds
         ? `renderer:${Math.round(bounds.x)}:${Math.round(bounds.y)}:${Math.round(bounds.width)}:${Math.round(bounds.height)}`
@@ -1153,6 +1153,7 @@ export function BrowserPanel({
       scheduleSyncBounds();
     });
     observer.observe(element);
+    const unsubscribeZoom = subscribeDesktopZoomFactor(scheduleSyncBounds);
     window.addEventListener("resize", scheduleSyncBounds);
     window.addEventListener(PANEL_RESIZE_OVERLAY_SYNC_EVENT, scheduleSyncBounds);
     document.addEventListener("transitionrun", handleTransitionBounds, true);
@@ -1162,6 +1163,7 @@ export function BrowserPanel({
     return () => {
       setBrowserWebviewOverlayOcclusion(browserWebviewRef.current, false);
       observer.disconnect();
+      unsubscribeZoom();
       window.removeEventListener("resize", scheduleSyncBounds);
       window.removeEventListener(PANEL_RESIZE_OVERLAY_SYNC_EVENT, scheduleSyncBounds);
       document.removeEventListener("transitionrun", handleTransitionBounds, true);
@@ -1319,9 +1321,7 @@ export function BrowserPanel({
     const attachmentCount =
       composerDraftImageCount + composerDraftFileCount + composerDraftAssistantSelectionCount;
     if (attachmentCount >= CHAT_TURN_MAX_ATTACHMENTS) {
-      setLocalError(
-        `You can attach up to ${CHAT_TURN_MAX_ATTACHMENTS} references per message.`,
-      );
+      setLocalError(`You can attach up to ${CHAT_TURN_MAX_ATTACHMENTS} references per message.`);
       return;
     }
 
@@ -1835,7 +1835,11 @@ export function BrowserPanel({
             </div>
           ) : null}
           {isLiveRuntime ? (
-            <div ref={browserViewportRef} className="absolute inset-0 bg-[#0d0d0d]" />
+            <div
+              ref={browserViewportRef}
+              data-omnimind-browser-viewport
+              className="absolute inset-0 bg-[#0d0d0d]"
+            />
           ) : null}
           {showLocalServersHome ? (
             <BrowserLocalServersHome

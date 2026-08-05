@@ -118,6 +118,7 @@ import {
 } from "../keybindings";
 import {
   createAllThreadsSelector,
+  createProjectLastActivityAtSelector,
   createSidebarDisplayThreadsSelector,
   createSidebarThreadSummariesSelector,
   createSidebarTreeThreadsSelector,
@@ -188,9 +189,7 @@ import {
 } from "./SidebarThreadRowContent";
 import { RenameDialog } from "./RenameDialog";
 import { RenameThreadDialog } from "./RenameThreadDialog";
-import {
-  SidebarSearchPalette,
-} from "./SidebarSearchPalette";
+import { SidebarSearchPalette } from "./SidebarSearchPalette";
 import { useHandleNewChat } from "../hooks/useHandleNewChat";
 import { useHandleNewStudioChat } from "../hooks/useHandleNewStudioChat";
 import { useHandleNewThread } from "../hooks/useHandleNewThread";
@@ -315,9 +314,7 @@ import {
 } from "~/lib/disclosureMotion";
 import { createClientPointMenuAnchor } from "~/lib/clientPointMenuAnchor";
 import { resolveThreadModelSummary } from "~/lib/threadModelSummary";
-import {
-  resolveThreadHandoffBadgeLabel,
-} from "../lib/threadHandoff";
+import { resolveThreadHandoffBadgeLabel } from "../lib/threadHandoff";
 import { isTerminalFocused } from "../lib/terminalFocus";
 import { useDiffRouteSearch } from "../hooks/useDiffRouteSearch";
 import { getWorkbenchCopy } from "../i18n/workbenchCopy";
@@ -1509,9 +1506,7 @@ export default function Sidebar() {
   const groupsDisclosureExpanded = useProductGroupsUiStore(
     (state) => state.groupsDisclosureExpanded,
   );
-  const toggleGroupsDisclosure = useProductGroupsUiStore(
-    (state) => state.toggleGroupsDisclosure,
-  );
+  const toggleGroupsDisclosure = useProductGroupsUiStore((state) => state.toggleGroupsDisclosure);
   const [groupCreateRequest, setGroupCreateRequest] = useState(0);
   const [chatThreadListExtraPages, setChatThreadListExtraPages] = useState(
     () => readSidebarUiState().chatThreadListExtraPages,
@@ -1612,6 +1607,8 @@ export default function Sidebar() {
   const selectSidebarTreeThreads = useMemo(() => createSidebarTreeThreadsSelector(), []);
   const sidebarThreads = useStore(selectSidebarThreads);
   const sidebarTreeThreads = useStore(selectSidebarTreeThreads);
+  const selectProjectLastActivityAt = useMemo(() => createProjectLastActivityAtSelector(), []);
+  const projectLastActivityAt = useStore(selectProjectLastActivityAt);
   const studioProjectIdSet = useMemo(
     () =>
       collectStudioProjectIds(projects, {
@@ -2113,8 +2110,7 @@ export default function Sidebar() {
       ),
       localDrafts: [...studioDraftThreadIds].map((threadId) => ({
         id: threadId,
-        createdAt:
-          draftThreadsByThreadId[ThreadId.makeUnsafe(threadId)]?.createdAt ?? "",
+        createdAt: draftThreadsByThreadId[ThreadId.makeUnsafe(threadId)]?.createdAt ?? "",
       })),
     });
     return resolveSettingsBackTarget({
@@ -2274,10 +2270,7 @@ export default function Sidebar() {
   }, [handleNewStudioChat]);
 
   const addProjectFromPath = useCallback(
-    async (
-      rawCwd: string,
-      options: { createIfMissing?: boolean } = {},
-    ) => {
+    async (rawCwd: string, options: { createIfMissing?: boolean } = {}) => {
       const cwd = rawCwd.trim();
       if (!cwd) {
         throw new Error("Project folder path is empty.");
@@ -2343,12 +2336,7 @@ export default function Sidebar() {
         throw error instanceof Error ? error : new Error(description);
       }
     },
-    [
-      isAddingProject,
-      openOrCreateProductWorkspaceConversation,
-      projects,
-      setProductShellSnapshot,
-    ],
+    [isAddingProject, openOrCreateProductWorkspaceConversation, projects, setProductShellSnapshot],
   );
 
   const handleStartAddProject = useCallback(() => {
@@ -2360,8 +2348,13 @@ export default function Sidebar() {
     [focusedProjectId, locationProjects],
   );
   const latestUsableProjectId = useMemo(
-    () => resolveLatestProjectTargetIdWithFallback(locationProjects, latestProjectId),
-    [latestProjectId, locationProjects],
+    () =>
+      resolveLatestProjectTargetIdWithFallback(
+        locationProjects,
+        latestProjectId,
+        projectLastActivityAt,
+      ),
+    [latestProjectId, locationProjects, projectLastActivityAt],
   );
   const primaryNewThreadTarget = useMemo(
     () =>
@@ -2917,9 +2910,7 @@ export default function Sidebar() {
 
         const productApi = readProductNativeApi();
         await deleteProductWorkspace(projectId, productApi);
-        useProductStore
-          .getState()
-          .setShellSnapshot(await productApi.getShellSnapshot());
+        useProductStore.getState().setShellSnapshot(await productApi.getShellSnapshot());
         removeDeletedProjectFromClientState(projectId);
         clearProjectDraftThreads(projectId);
         toastManager.add({
@@ -5447,47 +5438,47 @@ export default function Sidebar() {
                             onToggle: toggleProjectsDisclosure,
                             toolbar: (
                               <>
-                              {standardProjects.length > 0 ? (
-                                <SidebarIconButton
-                                  icon={allProjectsExpanded ? CollapseAllIcon : ExpandAllIcon}
-                                  label={
-                                    allProjectsExpanded
-                                      ? focusedProjectId
-                                        ? "Collapse all projects except the active project"
-                                        : "Collapse all projects"
-                                      : "Expand all projects"
-                                  }
-                                  className="disabled:cursor-default disabled:opacity-45"
-                                  onClick={handleToggleProjects}
-                                  tooltip={
-                                    allProjectsExpanded
-                                      ? focusedProjectId
-                                        ? "Collapse all projects except the active chat's project"
-                                        : "Collapse all projects"
-                                      : "Expand all projects"
-                                  }
-                                  tooltipSide="bottom"
+                                {standardProjects.length > 0 ? (
+                                  <SidebarIconButton
+                                    icon={allProjectsExpanded ? CollapseAllIcon : ExpandAllIcon}
+                                    label={
+                                      allProjectsExpanded
+                                        ? focusedProjectId
+                                          ? "Collapse all projects except the active project"
+                                          : "Collapse all projects"
+                                        : "Expand all projects"
+                                    }
+                                    className="disabled:cursor-default disabled:opacity-45"
+                                    onClick={handleToggleProjects}
+                                    tooltip={
+                                      allProjectsExpanded
+                                        ? focusedProjectId
+                                          ? "Collapse all projects except the active chat's project"
+                                          : "Collapse all projects"
+                                        : "Expand all projects"
+                                    }
+                                    tooltipSide="bottom"
+                                  />
+                                ) : null}
+                                <ProjectSortMenu
+                                  projectSortOrder={appSettings.sidebarProjectSortOrder}
+                                  threadSortOrder={appSettings.sidebarThreadSortOrder}
+                                  onProjectSortOrderChange={(sortOrder) => {
+                                    updateSettings({
+                                      sidebarProjectSortOrder: sortOrder,
+                                    });
+                                  }}
+                                  onThreadSortOrderChange={(sortOrder) => {
+                                    updateSettings({ sidebarThreadSortOrder: sortOrder });
+                                  }}
                                 />
-                              ) : null}
-                              <ProjectSortMenu
-                                projectSortOrder={appSettings.sidebarProjectSortOrder}
-                                threadSortOrder={appSettings.sidebarThreadSortOrder}
-                                onProjectSortOrderChange={(sortOrder) => {
-                                  updateSettings({
-                                    sidebarProjectSortOrder: sortOrder,
-                                  });
-                                }}
-                                onThreadSortOrderChange={(sortOrder) => {
-                                  updateSettings({ sidebarThreadSortOrder: sortOrder });
-                                }}
-                              />
-                              <SidebarIconButton
-                                icon={AddPlusIcon}
-                                label="Add project"
-                                onClick={handleStartAddProject}
-                                tooltip="Add project"
-                                tooltipSide="right"
-                              />
+                                <SidebarIconButton
+                                  icon={AddPlusIcon}
+                                  label="Add project"
+                                  onClick={handleStartAddProject}
+                                  tooltip="Add project"
+                                  tooltipSide="right"
+                                />
                               </>
                             ),
                           })}

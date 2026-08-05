@@ -1,6 +1,6 @@
 import { EventEmitter } from "node:events";
 
-import { ThreadId } from "@omnimind/contracts";
+import { ThreadId, type BrowserAnnotationTheme } from "@omnimind/contracts";
 import type { BrowserWindow, WebContents } from "electron";
 import { beforeEach, describe, expect, it, vi } from "vitest";
 
@@ -35,6 +35,7 @@ vi.mock("electron", () => ({
 }));
 
 import { DesktopBrowserManager } from "./browserManager";
+import { BROWSER_ANNOTATION_GUEST_COMMAND_CHANNEL } from "./ipcChannels";
 
 interface WindowOpenDetails {
   url: string;
@@ -56,6 +57,7 @@ class FakeWebContents extends EventEmitter {
   windowOpenHandler: WindowOpenHandler | null = null;
 
   setUserAgent = vi.fn();
+  send = vi.fn();
   isDestroyed = () => false;
   currentUrl = "https://example.test/";
   getURL = () => this.currentUrl;
@@ -143,6 +145,17 @@ interface BrowserManagerCharacterizationAccess {
 }
 
 const THREAD_ID = ThreadId.makeUnsafe("thread-1");
+const ANNOTATION_THEME: BrowserAnnotationTheme = {
+  mode: "light",
+  accent: "rgb(82, 111, 255)",
+  surface: "rgb(255, 255, 255)",
+  text: "rgb(23, 23, 23)",
+  mutedText: "rgb(113, 113, 122)",
+  border: "rgb(212, 212, 216)",
+  focusBorder: "rgb(82, 111, 255)",
+  primary: "rgb(23, 23, 23)",
+  primaryText: "rgb(255, 255, 255)",
+};
 
 function asCharacterizationAccess(
   manager: DesktopBrowserManager,
@@ -154,6 +167,46 @@ describe("DesktopBrowserManager repeated workflow characterization", () => {
   beforeEach(() => {
     vi.clearAllMocks();
     rendererWebContentsById.clear();
+  });
+
+  it("re-requests annotation readiness after adopting a guest that announced too early", () => {
+    const manager = new DesktopBrowserManager();
+    const guest = new FakeRendererWebContents(16);
+    guest.currentUrl = "https://example.test/app";
+    const opened = manager.open({ threadId: THREAD_ID, initialUrl: guest.currentUrl });
+    const tabId = opened.activeTabId;
+    expect(tabId).not.toBeNull();
+    if (!tabId) return;
+
+    manager.handleAnnotationGuestMessage(guest as unknown as WebContents, {
+      version: 1,
+      kind: "ready",
+      documentToken: "document-before-attach",
+      source: { url: guest.currentUrl, pageTitle: "Early guest" },
+    });
+    expect(() =>
+      manager.startAnnotation({ threadId: THREAD_ID, tabId, theme: ANNOTATION_THEME }),
+    ).toThrow(/not (?:ready|attached)/i);
+
+    rendererWebContentsById.set(guest.id, guest);
+    manager.attachWebview(
+      { threadId: THREAD_ID, tabId, webContentsId: guest.id },
+      guest.hostWebContents.id,
+    );
+    expect(guest.send).toHaveBeenCalledWith(BROWSER_ANNOTATION_GUEST_COMMAND_CHANNEL, {
+      version: 1,
+      kind: "request-ready",
+    });
+
+    manager.handleAnnotationGuestMessage(guest as unknown as WebContents, {
+      version: 1,
+      kind: "ready",
+      documentToken: "document-after-attach",
+      source: { url: guest.currentUrl, pageTitle: "Attached guest" },
+    });
+    expect(() =>
+      manager.startAnnotation({ threadId: THREAD_ID, tabId, theme: ANNOTATION_THEME }),
+    ).not.toThrow();
   });
 
   it("invalidates a destroyed renderer and reattaches the same tab to a new guest", async () => {

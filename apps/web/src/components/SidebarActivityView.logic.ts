@@ -275,7 +275,9 @@ export type ActivityProjectGroup =
 export function groupActivityThreadsByProject(
   threads: readonly SidebarThreadSummary[],
   isRealProject: (projectId: ProjectId) => boolean,
+  options: { nowMs: number },
 ): ActivityProjectGroup[] {
+  const dayStartMs = resolveActivityDayStartMs(options.nowMs);
   const groupByKey = new Map<string, ActivityProjectGroup>();
   for (const thread of threads) {
     const key = isRealProject(thread.projectId) ? `project:${thread.projectId}` : "chats";
@@ -304,12 +306,26 @@ export function groupActivityThreadsByProject(
           },
     );
   }
-  return Array.from(groupByKey.values()).toSorted(
-    (left, right) =>
-      Math.max(...right.threads.map(resolveActivityRecencyMs)) -
-        Math.max(...left.threads.map(resolveActivityRecencyMs)) ||
-      left.key.localeCompare(right.key),
-  );
+  const rankByKey = new Map<string, { untouchedToday: number; recencyMs: number }>();
+  for (const group of groupByKey.values()) {
+    let recencyMs = 0;
+    let untouchedToday = 1;
+    for (const thread of group.threads) {
+      recencyMs = Math.max(recencyMs, resolveActivityRecencyMs(thread));
+      if (resolveActivityInteractionMs(thread) >= dayStartMs) untouchedToday = 0;
+    }
+    rankByKey.set(group.key, { untouchedToday, recencyMs });
+  }
+
+  return Array.from(groupByKey.values()).toSorted((left, right) => {
+    const leftRank = rankByKey.get(left.key)!;
+    const rightRank = rankByKey.get(right.key)!;
+    return (
+      leftRank.untouchedToday - rightRank.untouchedToday ||
+      rightRank.recencyMs - leftRank.recencyMs ||
+      left.key.localeCompare(right.key)
+    );
+  });
 }
 
 export type ActivityScopeOption =

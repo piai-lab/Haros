@@ -334,6 +334,50 @@ export function createSidebarTreeThreadsSelector(): (
   };
 }
 
+/**
+ * Last user activity per Project. This deliberately ignores thread `updatedAt`,
+ * which advances on background streaming and would reorder the user's target.
+ */
+export function createProjectLastActivityAtSelector(): (
+  state: AppState,
+) => ReadonlyMap<ProjectId, string> {
+  let previousThreadIds: AppState["threadIds"] | undefined;
+  let previousSummaryById: AppState["sidebarThreadSummaryById"] | undefined;
+  let previousActivity: ReadonlyMap<ProjectId, string> = new Map();
+
+  return (state) => {
+    const threadIds = state.threadIds;
+    const summaryById = state.sidebarThreadSummaryById;
+    if (threadIds === previousThreadIds && summaryById === previousSummaryById) {
+      return previousActivity;
+    }
+    previousThreadIds = threadIds;
+    previousSummaryById = summaryById;
+
+    const nextActivity = new Map<ProjectId, string>();
+    for (const threadId of threadIds ?? []) {
+      const thread = summaryById[threadId];
+      if (!thread) continue;
+      const activityAt = thread.latestUserMessageAt ?? thread.createdAt;
+      const current = nextActivity.get(thread.projectId);
+      if (current === undefined || current < activityAt) {
+        nextActivity.set(thread.projectId, activityAt);
+      }
+    }
+
+    if (
+      nextActivity.size === previousActivity.size &&
+      [...nextActivity].every(
+        ([projectId, activityAt]) => previousActivity.get(projectId) === activityAt,
+      )
+    ) {
+      return previousActivity;
+    }
+    previousActivity = nextActivity;
+    return previousActivity;
+  };
+}
+
 export function createFirstProjectSelector(): (state: AppState) => Project | undefined {
   let previousProjects: readonly Project[] | undefined;
   let previousFirstProject: Project | undefined;

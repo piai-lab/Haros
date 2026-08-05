@@ -38,6 +38,7 @@ import { serverConfigQueryOptions } from "../lib/serverReactQuery";
 import { startFreshChatForActiveSurface } from "../lib/startContainerChat";
 import { isKeyboardShortcutsHelpShortcut, resolveShortcutCommand } from "../keybindings";
 import { useStore } from "../store";
+import { createProjectLastActivityAtSelector } from "../storeSelectors";
 import { selectThreadTerminalState, useTerminalStateStore } from "../terminalStateStore";
 import { useThreadSelectionStore } from "../threadSelectionStore";
 import { onServerMaintenanceUpdated } from "../wsNativeApi";
@@ -241,6 +242,8 @@ function ChatRouteGlobalShortcuts() {
   const setLatestProjectId = useLatestProjectStore((state) => state.setLatestProjectId);
   const clearLatestProjectId = useLatestProjectStore((state) => state.clearLatestProjectId);
   const threadsHydrated = useStore((state) => state.threadsHydrated);
+  const selectProjectLastActivityAt = useMemo(() => createProjectLastActivityAtSelector(), []);
+  const projectLastActivityAt = useStore(selectProjectLastActivityAt);
   useTemporaryThreadLifecycle(activeContextThreadId);
   const serverConfigQuery = useQuery(serverConfigQueryOptions());
   const keybindings = serverConfigQuery.data?.keybindings ?? EMPTY_KEYBINDINGS;
@@ -267,8 +270,13 @@ function ChatRouteGlobalShortcuts() {
     activeProject?.id ?? null,
   );
   const latestUsableProjectId = useMemo(
-    () => resolveLatestProjectTargetIdWithFallback(locationProjects, latestProjectId),
-    [latestProjectId, locationProjects],
+    () =>
+      resolveLatestProjectTargetIdWithFallback(
+        locationProjects,
+        latestProjectId,
+        projectLastActivityAt,
+      ),
+    [latestProjectId, locationProjects, projectLastActivityAt],
   );
   const persistedLatestProjectStillExists = resolveLatestProjectTargetId(projects, latestProjectId);
   const handleNewChatForActiveSurface = useCallback(
@@ -500,8 +508,7 @@ const SIDEBAR_INNER_CLASS = "app-sidebar-surface";
 
 function ChatRouteLayout() {
   const threadRouteMatch = useRouterState({
-    select: (state) =>
-      state.matches.find((match) => match.routeId === "/_chat/$threadId") ?? null,
+    select: (state) => state.matches.find((match) => match.routeId === "/_chat/$threadId") ?? null,
   });
   const routeThreadId =
     typeof threadRouteMatch?.params.threadId === "string"

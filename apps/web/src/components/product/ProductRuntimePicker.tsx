@@ -20,6 +20,27 @@ export function isProductRuntimeModelSelectable(model: ProductRuntimeModel): boo
   return model.available && model.auth === "configured";
 }
 
+function humanizeProviderSegment(value: string): string {
+  return value
+    .trim()
+    .split(/[-_.\s]+/u)
+    .filter(Boolean)
+    .map((segment) => segment.charAt(0).toUpperCase() + segment.slice(1))
+    .join(" ");
+}
+
+/** Live catalog provenance, with a source-id fallback and no static capability table. */
+export function productRuntimeModelProvenanceLabel(model: ProductRuntimeModel): string {
+  const liveProvider = model.provider.trim();
+  if (liveProvider) return liveProvider;
+  const providerSegment = model.id.split("/", 1)[0]?.trim() ?? "";
+  return humanizeProviderSegment(providerSegment) || "Unknown source";
+}
+
+function productRuntimeModelAccessibleName(model: ProductRuntimeModel): string {
+  return `${model.name} — ${productRuntimeModelProvenanceLabel(model)}`;
+}
+
 /** Keep an explicit Host selection durable across catalog/auth changes. */
 export function reconcileProductRuntimeSelection(
   catalog: ProductRuntimeCatalog | null,
@@ -119,7 +140,7 @@ export function ProductRuntimePicker(props: {
         >
           <SelectValue>
             {selected
-              ? `${selected.name}${selectedUnavailableLabel ? ` · ${selectedUnavailableLabel}` : ""}`
+              ? `${productRuntimeModelAccessibleName(selected)}${selectedUnavailableLabel ? ` · ${selectedUnavailableLabel}` : ""}`
               : props.catalog
                 ? copy.models
                 : copy.executionUnavailableLabel}
@@ -132,7 +153,7 @@ export function ProductRuntimePicker(props: {
               value={model.id}
               disabled={!isProductRuntimeModelSelectable(model)}
             >
-              {model.name} · {model.provider}
+              {productRuntimeModelAccessibleName(model)}
               {runtimeUnavailableLabel(model, copy)
                 ? ` · ${runtimeUnavailableLabel(model, copy)}`
                 : ""}
@@ -140,7 +161,9 @@ export function ProductRuntimePicker(props: {
           ))}
         </ComposerPickerSelectPopup>
       </Select>
-      {selected && isProductRuntimeModelSelectable(selected) && selected.thinkingLevels.length > 0 ? (
+      {selected &&
+      isProductRuntimeModelSelectable(selected) &&
+      selected.thinkingLevels.length > 0 ? (
         <>
           <span className="sr-only" id={thinkingLabelId}>
             {copy.thinkingLevelLabel}

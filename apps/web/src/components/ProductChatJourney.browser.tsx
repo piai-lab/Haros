@@ -333,21 +333,25 @@ describe("Product Chat current journey", () => {
     await rows()[1]!
       .querySelector<HTMLButtonElement>("button[data-queue-action='move-next']")!
       .click();
-    await expect.element(page.getByTestId("matrix-order")).toHaveTextContent(
-      "Second Product intent|First Product intent",
-    );
+    await expect
+      .element(page.getByTestId("matrix-order"))
+      .toHaveTextContent("Second Product intent|First Product intent");
 
     rows()[0]!
       .querySelector<HTMLButtonElement>("button[aria-label='Queued follow-up actions']")!
       .click();
     await page.getByText("Edit queued prompt", { exact: true }).click();
-    await expect.element(page.getByTestId("matrix-draft")).toHaveTextContent("Second Product intent");
+    await expect
+      .element(page.getByTestId("matrix-draft"))
+      .toHaveTextContent("Second Product intent");
     expect(rows()[0]?.dataset.queueEditing).toBe("true");
     await rows()[0]!
       .querySelector<HTMLButtonElement>("button[data-queue-action='cancel-edit']")!
       .click();
     expect(rows()[0]?.dataset.queueEditing).toBeUndefined();
-    await expect.element(page.getByTestId("matrix-draft")).toHaveTextContent("Second Product intent");
+    await expect
+      .element(page.getByTestId("matrix-draft"))
+      .toHaveTextContent("Second Product intent");
 
     await rows()[1]!
       .querySelector<HTMLButtonElement>("button[aria-label='Delete queued follow-up']")!
@@ -373,11 +377,42 @@ describe("Product Chat current journey", () => {
     expect(document.querySelector("[data-testid='product-runtime-picker']")?.textContent).toContain(
       "Current Host model",
     );
-    await page.getByRole("combobox", { name: /Pi Models/i }).first().click();
-    expect(page.getByText("Current Host model · host-a", { exact: true })).toBeInTheDocument();
-    expect(page.getByText(/Unavailable Host model · host-b · Execution unavailable/)).toBeInTheDocument();
+    await page
+      .getByRole("combobox", { name: /Pi Models/i })
+      .first()
+      .click();
+    expect(page.getByRole("option", { name: "Current Host model — host-a" })).toBeInTheDocument();
+    expect(
+      page.getByText(/Unavailable Host model — host-b · Execution unavailable/),
+    ).toBeInTheDocument();
     expect(document.body.textContent).not.toContain("codex");
     expect(document.body.textContent).not.toContain("claudeAgent");
+  });
+
+  it("visually and accessibly distinguishes equal-name models by live provider", async () => {
+    const duplicateNameCatalog: ProductRuntimeCatalog = {
+      ...catalog,
+      models: [
+        { ...catalog.models[0]!, id: "deepseek/v4-flash", provider: "DeepSeek", name: "V4 Flash" },
+        { ...catalog.models[0]!, id: "mimo/v4-flash", provider: "Xiaomi MiMo", name: "V4 Flash" },
+      ],
+    };
+    await render(
+      <ProductRuntimePicker
+        catalog={duplicateNameCatalog}
+        modelId={duplicateNameCatalog.models[0]!.id}
+        thinking="medium"
+        onModelChange={() => undefined}
+        onThinkingChange={() => undefined}
+      />,
+    );
+    await page.getByRole("combobox", { name: /Pi Models/i }).click();
+    await expect
+      .element(page.getByRole("option", { name: "V4 Flash — DeepSeek" }))
+      .toBeInTheDocument();
+    await expect
+      .element(page.getByRole("option", { name: "V4 Flash — Xiaomi MiMo" }))
+      .toBeInTheDocument();
   });
 
   it("keeps an available Host model with missing auth unselectable and preserves the draft", async () => {
@@ -413,7 +448,7 @@ describe("Product Chat current journey", () => {
 
     await render(<MissingAuthHarness />);
     expect(document.body.textContent).toContain(
-      "Missing auth Host model · authentication required",
+      "Missing auth Host model — host-c · authentication required",
     );
     expect(page.getByRole("button", { name: "Admit runtime" })).toBeDisabled();
     expect(page.getByTestId("missing-auth-selection")).toHaveTextContent(
@@ -422,13 +457,11 @@ describe("Product Chat current journey", () => {
     await page.getByRole("combobox", { name: /Pi Models/i }).click();
     expect(
       page.getByRole("option", {
-        name: /Missing auth Host model · host-c · authentication required/i,
+        name: /Missing auth Host model — host-c · authentication required/i,
       }),
     ).toBeDisabled();
     expect(onModelChange).not.toHaveBeenCalled();
-    expect(page.getByTestId("missing-auth-draft")).toHaveTextContent(
-      "Preserve this Product draft",
-    );
+    expect(page.getByTestId("missing-auth-draft")).toHaveTextContent("Preserve this Product draft");
   });
 
   it("keeps execution-unavailable and unknown Run state truthful and Queue-only", async () => {

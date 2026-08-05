@@ -59,6 +59,10 @@ export type AnnotationGuestMessage =
 export type AnnotationGuestCommand =
   | {
       readonly version: 1;
+      readonly kind: "request-ready";
+    }
+  | {
+      readonly version: 1;
       readonly kind: "start";
       readonly documentToken: string;
       readonly sessionId: string;

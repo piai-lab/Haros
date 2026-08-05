@@ -334,6 +334,22 @@ export class BrowserAnnotationCoordinator {
     });
   }
 
+  requestReady(threadId: ThreadId, tabId: string, webContentsId: number): void {
+    const runtime = this.options.resolveRuntimeByWebContentsId(webContentsId);
+    if (
+      !runtime ||
+      runtime.threadId !== threadId ||
+      runtime.tabId !== tabId ||
+      runtime.webContents.isDestroyed()
+    ) {
+      return;
+    }
+    runtime.webContents.send(BROWSER_ANNOTATION_GUEST_COMMAND_CHANNEL, {
+      version: BROWSER_ANNOTATION_PROTOCOL_VERSION,
+      kind: "request-ready",
+    });
+  }
+
   isInteractive(threadId: ThreadId): boolean {
     for (const session of this.sessionsByRuntimeKey.values()) {
       if (session.runtime.threadId === threadId) return true;

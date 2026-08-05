@@ -7,6 +7,7 @@ import {
   createAllThreadsSelector,
   createAllThreadsMessagelessSelector,
   createComposerThreadMentionSourcesSelector,
+  createProjectLastActivityAtSelector,
   createThreadExistsSelector,
   createThreadProjectIdSelector,
   createThreadShellsSelector,
@@ -89,6 +90,45 @@ describe("createThreadShellsSelector", () => {
 
     expect(after).not.toBe(before);
     expect(after[0]?.title).toBe("renamed");
+  });
+});
+
+describe("createProjectLastActivityAtSelector", () => {
+  it("keeps the newest user message per project and ignores background churn", () => {
+    const selectActivity = createProjectLastActivityAtSelector();
+    const activity = selectActivity(
+      makeState({
+        threadIds: [threadIdA, threadIdB],
+        sidebarThreadSummaryById: {
+          [threadIdA]: { ...summaryA, latestUserMessageAt: "2026-02-01T00:00:00.000Z" },
+          [threadIdB]: {
+            ...summaryA,
+            id: threadIdB,
+            updatedAt: "2026-04-01T00:00:00.000Z",
+            latestUserMessageAt: "2026-03-01T00:00:00.000Z",
+          },
+        },
+      }),
+    );
+    expect(activity.get(projectId)).toBe("2026-03-01T00:00:00.000Z");
+  });
+
+  it("falls back to thread creation and preserves identity when activity is unchanged", () => {
+    const selectActivity = createProjectLastActivityAtSelector();
+    const before = selectActivity(
+      makeState({
+        threadIds: [threadIdA],
+        sidebarThreadSummaryById: { [threadIdA]: summaryA },
+      }),
+    );
+    const after = selectActivity(
+      makeState({
+        threadIds: [threadIdA],
+        sidebarThreadSummaryById: { [threadIdA]: { ...summaryA, title: "renamed" } },
+      }),
+    );
+    expect(before.get(projectId)).toBe("2026-01-01T00:00:00.000Z");
+    expect(after).toBe(before);
   });
 });
 

@@ -518,6 +518,7 @@ describe("project filter", () => {
         }),
       ],
       (projectId) => projectId === PROJECT_ID,
+      { nowMs: new Date(2026, 7, 1, 15, 0, 0).getTime() },
     );
 
     expect(groups.map((group) => [group.kind, group.threads.map((thread) => thread.id)])).toEqual([
@@ -529,6 +530,29 @@ describe("project filter", () => {
       kind: "chats",
       projectIds: [CHAT_PROJECT_A, CHAT_PROJECT_B],
     });
+  });
+
+  it("ranks a Project touched by the user today above newer background output", () => {
+    const nowMs = new Date(2026, 7, 1, 15, 0, 0).getTime();
+    const userProject = makeThread({
+      id: "user-project",
+      projectId: PROJECT_ID,
+      latestTurn: completedTurn("2026-08-01T10:00:00.000Z"),
+      lastVisitedAt: "2026-08-01T11:00:00.000Z",
+    });
+    const backgroundProject = makeThread({
+      id: "background-project",
+      projectId: OTHER_PROJECT_ID,
+      latestTurn: completedTurn("2026-08-01T14:00:00.000Z"),
+      lastVisitedAt: "2026-07-31T12:00:00.000Z",
+    });
+    const groups = groupActivityThreadsByProject([backgroundProject, userProject], () => true, {
+      nowMs,
+    });
+    expect(groups.map((group) => group.key)).toEqual([
+      `project:${PROJECT_ID}`,
+      `project:${OTHER_PROJECT_ID}`,
+    ]);
   });
 });
 

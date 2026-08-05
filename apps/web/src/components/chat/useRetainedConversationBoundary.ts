@@ -9,6 +9,7 @@ import {
   SINGLE_CHAT_PANE_SCOPE_ID,
 } from "../../lib/chatPaneScope";
 import type { SplitViewId } from "../../splitViewStore";
+import { scheduleDeferredChatMount } from "./deferredChatMount";
 
 export interface RetainedConversationIdentity {
   readonly threadId: ThreadId;
@@ -84,15 +85,7 @@ export function useRetainedConversationBoundary(input: {
 
   useEffect(() => {
     if (!input.deferMount) return;
-    let firstFrame = 0;
-    let secondFrame = 0;
-    firstFrame = window.requestAnimationFrame(() => {
-      secondFrame = window.requestAnimationFrame(() => setReadyMountKey(mountKey));
-    });
-    return () => {
-      window.cancelAnimationFrame(firstFrame);
-      window.cancelAnimationFrame(secondFrame);
-    };
+    return scheduleDeferredChatMount(window, () => setReadyMountKey(mountKey));
   }, [input.deferMount, mountKey]);
 
   useEffect(() => {

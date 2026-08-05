@@ -1,25 +1,40 @@
 import * as path from "node:path";
 
 import { app, BrowserWindow, ipcMain } from "electron";
-import type { BrowserAnnotationEvent, ThreadBrowserState, ThreadId } from "@omnimind/contracts";
+import type {
+  BrowserAnnotationEvent,
+  BrowserSetPanelBoundsInput,
+  ThreadBrowserState,
+  ThreadId,
+} from "@omnimind/contracts";
 
 import {
   BROWSER_SESSION_PARTITION,
   DesktopBrowserManager,
 } from "../../../desktop/src/browserManager";
-import { BrowserUsePipeServer } from "../../../desktop/src/browserUsePipeServer";
+import {
+  registerBrowserIpcHandlers,
+  sendBrowserAnnotationEvent,
+  sendBrowserState,
+} from "../../../desktop/src/browserIpc";
 import { BROWSER_IPC_CHANNELS } from "../../../desktop/src/ipcChannels";
 import { hardenBrowserAnnotationWebviewPreferences } from "../../../desktop/src/browserAnnotations/webviewSecurity";
-import { createBrowserPanelHideScheduler } from "../../src/components/BrowserPanel.logic";
 
-const pipePath = process.env.OMNIMIND_BROWSER_HOST_PIPE_PATH;
-const capability = process.env.OMNIMIND_BROWSER_HOST_CAPABILITY;
 const shellPath = process.env.OMNIMIND_E2E_SHELL_PATH;
 const threadId = process.env.OMNIMIND_E2E_THREAD_ID as ThreadId | undefined;
 const omnimindHome = process.env.OMNIMIND_HOME;
+const initialUrl = process.env.OMNIMIND_E2E_INITIAL_URL;
+const rendererPreloadPath = process.env.OMNIMIND_E2E_BROWSER_PANEL_PRELOAD;
 const annotationPreloadPath = process.env.OMNIMIND_E2E_BROWSER_ANNOTATION_PRELOAD;
 
-if (!pipePath || !capability || !shellPath || !threadId || !omnimindHome || !annotationPreloadPath) {
+if (
+  !shellPath ||
+  !threadId ||
+  !omnimindHome ||
+  !initialUrl ||
+  !rendererPreloadPath ||
+  !annotationPreloadPath
+) {
   throw new Error("The visible-browser Electron fixture requires its isolated E2E environment.");
 }
 
@@ -28,12 +43,14 @@ app.setPath("userData", path.join(omnimindHome, "electron-userdata"));
 const browserManager = new DesktopBrowserManager();
 let mainWindow: BrowserWindow | null = null;
 let latestState: ThreadBrowserState | null = null;
-let shellReady = false;
 const annotationEvents: BrowserAnnotationEvent[] = [];
-const rendererLifecycleHide = createBrowserPanelHideScheduler();
+const boundsPublications: Array<{
+  readonly input: BrowserSetPanelBoundsInput;
+  readonly zoomFactor: number;
+}> = [];
 function pushState(): void {
-  if (shellReady && latestState && mainWindow && !mainWindow.isDestroyed()) {
-    mainWindow.webContents.send("omnimind-e2e:browser-state", latestState);
+  if (latestState && mainWindow && !mainWindow.isDestroyed()) {
+    sendBrowserState(mainWindow.webContents, latestState);
   }
 }
 
@@ -42,50 +59,37 @@ browserManager.subscribe((state) => {
   pushState();
 });
 
-ipcMain.on("omnimind-e2e:shell-ready", () => {
-  shellReady = true;
-  pushState();
-});
-
-ipcMain.handle(
-  "omnimind-e2e:attach-webview",
-  (event, input: { readonly tabId: string; readonly webContentsId: number }) =>
-    browserManager.attachWebview({ threadId, ...input }, event.sender.id),
-);
-ipcMain.on(BROWSER_IPC_CHANNELS.annotations.guestMessage, (event, payload: unknown) => {
-  if (!event.senderFrame || event.senderFrame !== event.sender.mainFrame) return;
-  browserManager.handleAnnotationGuestMessage(event.sender, payload);
-});
 browserManager.subscribeAnnotationEvents((event) => {
   annotationEvents.push(event);
+  sendBrowserAnnotationEvent(mainWindow?.webContents, event);
 });
 
-const pipeServer = new BrowserUsePipeServer(browserManager, {
-  pipePath,
-  capability,
-  requestOpenPanel: (requestedThreadId) => {
-    if (requestedThreadId !== threadId) throw new Error("Unexpected E2E thread scope.");
-    // Exercise React development's setup/cleanup/setup sequence against the
-    // real desktop human-control boundary. The remount must cancel the passive
-    // cleanup before it can masquerade as a user takeover.
-    rendererLifecycleHide.schedule(threadId, () => browserManager.hide({ threadId }));
-    rendererLifecycleHide.cancel(threadId);
-    browserManager.setPanelBounds({
-      threadId,
-      surface: "renderer",
-      bounds: { x: 0, y: 34, width: 1_000, height: 726 },
-    });
-    pushState();
-    mainWindow?.webContents.send("omnimind-e2e:open-panel");
-  },
+registerBrowserIpcHandlers(ipcMain, browserManager);
+ipcMain.removeAllListeners(BROWSER_IPC_CHANNELS.setBounds);
+ipcMain.on(BROWSER_IPC_CHANNELS.setBounds, (_event, input: BrowserSetPanelBoundsInput) => {
+  boundsPublications.push({
+    input,
+    zoomFactor: mainWindow?.webContents.getZoomFactor() ?? 1,
+  });
+  browserManager.setPanelBounds(input);
+});
+ipcMain.on("omnimind-e2e:get-zoom-factor", (event) => {
+  event.returnValue = mainWindow?.webContents.getZoomFactor() ?? 1;
 });
 
 Object.assign(globalThis, {
   __omnimindVisibleBrowserE2E: {
     browserManager,
     annotationEvents,
+    boundsPublications,
     threadId,
-    pipePath,
+    setRendererZoomFactor: (zoomFactor: number) => {
+      if (!mainWindow || mainWindow.isDestroyed()) {
+        throw new Error("The BrowserPanel renderer is not available.");
+      }
+      mainWindow.webContents.setZoomFactor(zoomFactor);
+      mainWindow.webContents.send("omnimind-e2e:zoom-factor-changed", zoomFactor);
+    },
   },
 });
 
@@ -95,8 +99,9 @@ app.whenReady().then(async () => {
     height: 760,
     show: true,
     webPreferences: {
-      nodeIntegration: true,
-      contextIsolation: false,
+      preload: rendererPreloadPath,
+      nodeIntegration: false,
+      contextIsolation: true,
       sandbox: false,
       webviewTag: true,
     },
@@ -114,11 +119,11 @@ app.whenReady().then(async () => {
       event.preventDefault();
     }
   });
-  await mainWindow.loadFile(shellPath);
-  await pipeServer.start();
+  browserManager.open({ threadId, initialUrl });
+  await mainWindow.loadFile(shellPath, { query: { threadId } });
+  pushState();
 });
 
 app.on("before-quit", () => {
   browserManager.dispose();
-  void pipeServer.dispose();
 });

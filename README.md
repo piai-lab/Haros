@@ -155,7 +155,68 @@ OmniMind 的价值不是“能启动 Pi”，而是上游没有义务完成的�
             "sourcePath": "vendor/ui/.oxlintrc.json",
             "changes": "Retained and reviewed lint configuration for the adapted roots."
           }
-        }
+        },
+        "selectiveIntakes": [
+          {
+            "evidence": "research/source-review.md",
+            "mode": "adapt",
+            "rights": "The selectively adopted mechanisms remain covered by the source repository's MIT license; the retained legal text now includes both copyright notices present at the reviewed source revision.",
+            "sourcePaths": [
+              "apps/web/src/components/chat/ChatThreadSurfacePrimitives.tsx",
+              "apps/web/src/components/chat/deferredChatMount.ts",
+              "apps/web/src/components/chat/ProviderModelOptionGroupList.tsx",
+              "apps/web/src/providerModelOptions.ts",
+              "apps/web/src/components/BrowserPanel.logic.ts",
+              "apps/web/src/components/BrowserPanel.tsx",
+              "apps/web/src/components/chat/MessagesTimeline.tsx",
+              "apps/web/src/components/Sidebar.tsx",
+              "apps/web/src/components/SidebarActivityView.logic.ts",
+              "apps/web/src/components/SidebarActivityView.tsx",
+              "apps/web/src/lib/desktopZoom.ts",
+              "apps/web/src/lib/projectShortcutTargets.ts",
+              "apps/web/src/storeSelectors.ts",
+              "packages/shared/src/desktopChrome.ts",
+              "apps/web/src/components/ChatView.tsx",
+              "apps/web/src/components/ThreadTerminalDrawer.tsx",
+              "apps/web/src/components/chat/DockTerminalPane.tsx",
+              "apps/web/src/components/chat/useChatTerminalController.ts",
+              "apps/web/src/components/terminal/terminalRuntime.ts",
+              "apps/web/src/components/terminal/terminalRuntimeTypes.ts",
+              "apps/web/src/components/terminal/terminalSession.ts",
+              "apps/web/src/hooks/useTerminalSurfaceController.ts",
+              "apps/web/src/lib/terminalContextComposerRegistry.ts",
+              "apps/web/src/terminalStateStore.ts"
+            ],
+            "sourceRevision": "be6dcad3f63fa121fbe3180f257ba1ff128696c4",
+            "summary": "Adapted the approved v0.6.7 Workbench hardening mechanisms into current OmniMind owners: bounded exact-once Conversation mounting, live model provenance, opaque browser annotation presentation and zoom-correct native bounds, non-replaying transcript recovery and user-activity Project ranking, plus pane-scoped terminal Composer routing and natural-exit cleanup with fresh dock replacement. Donor execution authority, identity and deferred capabilities were not adopted.",
+            "targetPaths": [
+              "apps/web/src/components/BrowserPanel.logic.ts",
+              "apps/web/src/components/BrowserPanel.tsx",
+              "apps/web/src/components/product/ProductRuntimePicker.tsx",
+              "apps/web/src/components/Sidebar.tsx",
+              "apps/web/src/components/SidebarActivityView.logic.ts",
+              "apps/web/src/components/SidebarActivityView.tsx",
+              "apps/web/src/components/ThreadTerminalDrawer.tsx",
+              "apps/web/src/components/chat/DockTerminalPane.tsx",
+              "apps/web/src/components/chat/MessagesTimeline.tsx",
+              "apps/web/src/components/chat/deferredChatMount.ts",
+              "apps/web/src/components/chat/useChatTerminalController.ts",
+              "apps/web/src/components/chat/useRetainedConversationBoundary.ts",
+              "apps/web/src/components/terminal/terminalRuntime.ts",
+              "apps/web/src/components/terminal/terminalRuntimeTypes.ts",
+              "apps/web/src/components/terminal/terminalSelectionActions.ts",
+              "apps/web/src/components/terminal/terminalSession.ts",
+              "apps/web/src/hooks/useTerminalSurfaceController.ts",
+              "apps/web/src/lib/desktopZoom.ts",
+              "apps/web/src/lib/projectShortcutTargets.ts",
+              "apps/web/src/lib/terminalContextComposerRegistry.ts",
+              "apps/web/src/routes/_chat.tsx",
+              "apps/web/src/storeSelectors.ts",
+              "apps/web/src/terminalStateStore.ts",
+              "packages/shared/src/desktopChrome.ts"
+            ]
+          }
+        ]
       }
     }
   ]
