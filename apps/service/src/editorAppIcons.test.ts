@@ -84,21 +84,6 @@ function writeFakeWindowsStorePackageIcon(input: {
   fs.writeFileSync(path.join(assetsDir, input.iconFileName), input.bytes);
 }
 
-function shellSingleQuote(value: string): string {
-  return `'${value.replaceAll("'", "'\\''")}'`;
-}
-
-function writeFakePowerShellAppxRegistration(input: {
-  readonly binDir: string;
-  readonly installLocation: string;
-}): void {
-  fs.mkdirSync(input.binDir, { recursive: true });
-  const script = `#!/bin/sh\nprintf '%s\\n' ${shellSingleQuote(input.installLocation)}\n`;
-  const scriptPath = path.join(input.binDir, "powershell.exe");
-  fs.writeFileSync(scriptPath, script);
-  fs.chmodSync(scriptPath, 0o755);
-}
-
 describe("resolveCachedEditorIcon", () => {
   it("copies a macOS app PNG icon into the cache", async () => {
     const homeDir = makeTempDir("omnimind-editor-icon-home-");
@@ -155,7 +140,6 @@ describe("resolveCachedEditorIcon", () => {
   it("copies a Windows Store package PNG icon for VS Code", async () => {
     const programFilesDir = makeTempDir("omnimind-editor-icon-win-program-files-");
     const cacheDir = makeTempDir("omnimind-editor-icon-win-cache-");
-    const powershellBinDir = makeTempDir("omnimind-editor-icon-win-powershell-");
     const localAppData = makeTempDir("omnimind-editor-icon-win-local-appdata-");
     const packageDirName = "Microsoft.VisualStudioCode_1.0.0.0_x64__8wekyb3d8bbwe";
     const installLocation = path.join(programFilesDir, "WindowsApps", packageDirName);
@@ -166,7 +150,6 @@ describe("resolveCachedEditorIcon", () => {
       iconFileName: "Square44x44Logo.targetsize-256_altform-unplated.png",
       bytes,
     });
-    writeFakePowerShellAppxRegistration({ binDir: powershellBinDir, installLocation });
     fs.mkdirSync(
       path.join(
         localAppData,
@@ -176,6 +159,7 @@ describe("resolveCachedEditorIcon", () => {
       ),
       { recursive: true },
     );
+    let lookupCount = 0;
 
     const icon = await resolveCachedEditorIcon({
       editorId: "vscode",
@@ -183,14 +167,22 @@ describe("resolveCachedEditorIcon", () => {
       platform: "win32",
       env: {
         LOCALAPPDATA: localAppData,
-        PATH: powershellBinDir,
+        PATH: "",
         PATHEXT: ".EXE",
         ProgramFiles: programFilesDir,
         ProgramW6432: "",
         SystemDrive: "",
       },
+      executeWindowsStoreLookup: (file, args, options) => {
+        lookupCount += 1;
+        expect(file).toBe("powershell.exe");
+        expect(options.env.ProgramFiles).toBe(programFilesDir);
+        expect(String(args[2])).toContain("Microsoft.VisualStudioCode_8wekyb3d8bbwe");
+        return `${installLocation}\r\n`;
+      },
     });
 
+    expect(lookupCount).toBe(1);
     expect(icon?.contentType).toBe("image/png");
     expect(icon?.path.startsWith(cacheDir)).toBe(true);
     expect(icon ? fs.readFileSync(icon.path) : null).toEqual(Buffer.from(bytes));

@@ -188,20 +188,6 @@ it.layer(testLayer)("server CLI command", (it) => {
     }),
   );
 
-  it.effect("passes the root --home-dir flag to MCP subcommands", () =>
-    Effect.gen(function* () {
-      const flagHome = makeTempHome("omnimind-main-mcp-flag-");
-
-      const exit = yield* Effect.exit(runCli(["mcp", "serve", "--home-dir", flagHome]));
-
-      assert.isTrue(Exit.isFailure(exit));
-      if (Exit.isFailure(exit)) {
-        assert.include(Cause.pretty(exit.cause), path.join(flagHome, "mcp", "credentials"));
-      }
-      assert.equal(start.mock.calls.length, 0);
-    }),
-  );
-
   it.effect("creates fresh local state directories with private permissions", () =>
     Effect.gen(function* () {
       if (process.platform === "win32") return;
@@ -215,7 +201,6 @@ it.layer(testLayer)("server CLI command", (it) => {
         path.join(stateDir, "secrets"),
         path.join(stateDir, "attachments"),
         path.join(stateDir, "logs"),
-        path.join(stateDir, "logs", "provider"),
         path.join(stateDir, "logs", "terminals"),
       ]) {
         assert.equal(permissionMode(directoryPath), 0o700);

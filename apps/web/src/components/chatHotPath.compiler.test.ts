@@ -81,14 +81,13 @@ const HOT_PATH_MODULES: readonly HotPathModule[] = [
   // The composer surface: these three render or re-render on keystrokes while a
   // picker or the slash-command menu is open.
   { relativePath: "chat/ComposerCommandMenu.tsx", allowedBailoutReasons: [] },
-  { relativePath: "chat/TraitsPicker.tsx", allowedBailoutReasons: [] },
+  { relativePath: "product/ProductRuntimePicker.tsx", allowedBailoutReasons: [] },
   { relativePath: "chat/ProjectPicker.tsx", allowedBailoutReasons: [] },
   // Not chat-specific, but rendered inside every message row and sidebar row.
   { relativePath: "ui/button.tsx", allowedBailoutReasons: [] },
   // Hooks called from the chat and sidebar render paths. A bailing hook does not
   // stop its caller from compiling, but it does lose its own memoization, and
   // these run on every composer keystroke and every sidebar action.
-  { relativePath: "../hooks/useComposerSlashCommands.ts", allowedBailoutReasons: [] },
   { relativePath: "../hooks/useLocalStorage.ts", allowedBailoutReasons: [] },
   { relativePath: "../hooks/useSidebarThreadActions.ts", allowedBailoutReasons: [] },
 ];

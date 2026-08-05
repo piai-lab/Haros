@@ -44,7 +44,7 @@ The maintainer has supplied the controlling rights and visual facts for this Wor
   visual envelope; path/API/identity takeover is not permission to redraw it;
 - the first newly drawn Agent-slot/rail mark and its vermilion/orange-red treatment were rejected
   after real-surface review. This Work therefore wires the existing OmniMind Agent Dock light/dark
-  icons as explicit temporary identity assets and does not guess another palette;
+  icons as the locked first-party identity and does not guess another palette;
 - Provider, Model and Engine rows always have a truthful icon. Reliable official marks and colors
   remain truthful integration facts; glyph-only sources use `currentColor`; unknown identities use
   a neutral first-party fallback and never borrow another brand;
@@ -65,9 +65,9 @@ The maintainer has supplied the controlling rights and visual facts for this Wor
 - inactive public capability must fail closed as unavailable, disabled or feature-gated. It may not
   become a broken link, guessed endpoint, fake page, fake payload, fake success or background retry.
 
-This is the completed icon/runtime identity calibration and the current temporary brand decision.
-It removes the prior replacement gate; final brand form and palette remain owned by the later
-Agent/Chat Work and post-change same-state review may still reject material drift.
+This is the completed icon/runtime identity calibration and the current locked brand decision. It
+removes the prior replacement gate: no later Work owns a brand-form or palette replacement. The
+identity may change only if the maintainer explicitly reopens that decision in the future.
 
 ## Requirement traceability
 
@@ -109,10 +109,10 @@ its historical source SHA.
 - Replace all first-party product/package/environment/protocol/storage/update/bundle identifiers
   with stable OmniMind identity. Remove old aliases and dual registrations; there are no users or
   published compatibility obligations.
-- Place the previously authored OmniMind Agent Dock light/dark icons under `assets/brand` as a
-  temporary source and wire favicon, application, Dock/Taskbar, splash and required product exports
-  to it. Preserve its bytes and prove coherent light/dark plus 16/20/24/32px behavior. Its existing
-  color and gradient treatment is an explicit temporary exception, not the final palette.
+- Place the previously authored OmniMind Agent Dock light/dark icons under `assets/brand` as the
+  locked source and wire favicon, application, Dock/Taskbar, splash and required product exports to
+  it. Preserve its bytes and prove coherent light/dark plus 16/20/24/32px behavior. Its existing
+  color and gradient treatment remains identity-local and does not define product semantic tokens.
 - Make OmniMind Agent the default first-party visible identity without renaming or relocating Pi
   execution authority. Daily shell/Composer/empty-state/navigation surfaces do not repeatedly brand
   the runtime; About, Licenses, runtime detail and diagnostics keep exact Pi provenance discoverable.
@@ -173,7 +173,7 @@ its historical source SHA.
 - Changing Pi native Session, Package or execution authority; placing Pi runtime code in Electron
   Main or renderer; or creating a second Agent Runtime.
 - Rebuilding the UI mother as a new visual system, changing its approved geometry, or spreading the
-  temporary icon colors into product accent, success, warning, error or diff tokens.
+  identity icon colors into product accent, success, warning, error or diff tokens.
 - Implementing complete custom Profiles, Package marketplace, Remote, external Engine framework,
   Windows/Linux packaging or the clean-public-repository cutover.
 - Re-running unchanged T0 build/smoke without a trigger, importing prior product data, publishing
@@ -240,10 +240,10 @@ Bundle prose, but it does not authorize unrelated product expansion.
   correctly in light/dark and packaged/static paths without a second functional icon system.
 - Current Provider/Engine surfaces contain truthful icons; Model inheritance and neutral unknown
   fallback work; pure-text fallback and lookalike-brand substitution are zero.
-- The temporary OmniMind Agent Dock light/dark source drives app icon, favicon, splash, About and
+- The locked OmniMind Agent Dock light/dark source drives app icon, favicon, splash, About and
   default Agent identity coherently at micro sizes. The rejected replacement mark and its rejected
   vermilion/orange-red output are zero.
-- Temporary icon colors do not become interaction/status/diff tokens and do not disturb the mother's
+- Identity icon colors do not become interaction/status/diff tokens and do not disturb the mother's
   neutral surfaces, density, geometry, focus or selection behavior.
 - Donor logo/screenshots/share/marketing assets and product copy are absent from authored and tested
   artifacts. Public-surface capability lineage remains explicitly classified and re-enterable;
@@ -283,7 +283,7 @@ Bundle prose, but it does not authorize unrelated product expansion.
   the complete 4,014 files, or if a second long-lived functional icon library is required.
 - Stop if reliable Provider/Engine identity cannot be represented without a guessed official color,
   borrowed mark or plain-text fallback; use verified currentColor or the neutral fallback instead.
-- Stop if the temporary prior icon cannot be wired coherently at micro size or on light/dark OS and
+- Stop if the locked icon cannot be wired coherently at micro size or on light/dark OS and
   product surfaces, or if the rejected replacement mark/color remains in output. Do not redesign a
   second speculative mark inside this Work.
 - Stop if T0 Git evidence cannot be resolved, the root adoption record cannot express historical
@@ -309,7 +309,7 @@ git diff --check -- <allowed-paths>
 ```
 
 Also run path-map completeness; line/fill per-file digest comparison; source/static/artifact icon
-count; old-path/API negative scans; Provider/Model/Engine icon matrices; temporary brand light/dark/
+count; old-path/API negative scans; Provider/Model/Engine icon matrices; locked brand light/dark/
 16–32px wiring review; donor-identity scans over tracked and generated/artifact output;
 root-to-vendor scans; deterministic generation; notice/SBOM production; disposable-profile guards;
 Public Surface document-contract mutations; disabled Docs/Changelog actions; and feedback no-config
@@ -321,11 +321,11 @@ not perform a live public request or build/deploy a website/backend in this Work
 On the T1 checkpoint commit, run one affected-path frozen install, root build, typecheck, static and
 packaged-path check, macOS desktop launch and focused UI asset/identity journey. Verify the complete
 icon corpus is in the tested artifact, source and artifact are README-only for donor identity, the
-temporary OmniMind identity is coherent with the UI mother, and no release artifact is promoted. Keep unchanged T0
+locked OmniMind identity is coherent with the UI mother, and no release artifact is promoted. Keep unchanged T0
 evidence tied to its source SHA.
 
 Independent review must inspect the complete path map, authorized corpus digest proof, root adoption
-record, first-party/product/integration identity, temporary brand wiring, package/storage/protocol
+record, first-party/product/integration identity, locked brand wiring, package/storage/protocol
 renames, generated and packaged output, and the exact hard-green/expected-red split.
 
 ## Expected handoff
@@ -336,7 +336,7 @@ The handoff contains:
 - complete tracked-path disposition and current adapted roots;
 - line/fill count, filename and per-file byte proof in source and tested artifact;
 - stable icon API, Provider/Model/Engine icon matrix and old-path/API negative scans;
-- temporary prior Agent Dock source, real surface wiring evidence and an explicit unresolved final-brand debt;
+- locked Agent Dock source and real-surface wiring evidence, with no implicit later replacement authority;
 - README-only identity proof across tree/generated/artifact output;
 - exact public-surface lineage disposition, sole-owner registry, inactive link behavior, feedback
   no-fetch/failure proof and separate website/feedback/update boundaries;

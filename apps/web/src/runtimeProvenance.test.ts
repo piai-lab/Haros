@@ -8,9 +8,19 @@ import {
   RELEASE_LEGAL_ARTIFACTS,
 } from "./runtimeProvenance";
 
-const serviceManifest = JSON.parse(
-  readFileSync(new URL("../../service/package.json", import.meta.url), "utf8"),
+const nativeHostManifest = JSON.parse(
+  readFileSync(new URL("../../native-host/package.json", import.meta.url), "utf8"),
 ) as { dependencies: Record<string, string> };
+const nonRuntimeManifests = [
+  "../../desktop/package.json",
+  "../../service/package.json",
+  "../package.json",
+].map(
+  (manifestPath) =>
+    JSON.parse(readFileSync(new URL(manifestPath, import.meta.url), "utf8")) as {
+      dependencies?: Record<string, string>;
+    },
+);
 const lockfile = readFileSync(new URL("../../../bun.lock", import.meta.url), "utf8");
 const legalOverrides = JSON.parse(
   readFileSync(
@@ -25,7 +35,7 @@ const releaseInventory = JSON.parse(
 ) as { components: ReadonlyArray<{ id: string }> };
 
 describe("runtime provenance", () => {
-  it("binds the disclosed Pi generation to the shipped service dependency closure", () => {
+  it("binds the disclosed Pi generation to the isolated Native Host dependency closure", () => {
     const version = BUNDLED_PI_PROVENANCE.packageVersion;
     const directPackages = [
       "@earendil-works/pi-agent-core",
@@ -34,7 +44,10 @@ describe("runtime provenance", () => {
     ] as const;
 
     for (const packageName of directPackages) {
-      expect(serviceManifest.dependencies[packageName]).toBe(`^${version}`);
+      expect(nativeHostManifest.dependencies[packageName]).toBe(version);
+      for (const manifest of nonRuntimeManifests) {
+        expect(manifest.dependencies?.[packageName]).toBeUndefined();
+      }
     }
 
     expect(BUNDLED_PI_PROVENANCE.packages).toEqual([
@@ -57,12 +70,17 @@ describe("runtime provenance", () => {
     expect(BUNDLED_PI_PROVENANCE.revisionTruth).toContain(BUNDLED_PI_PROVENANCE.sourceRevision);
   });
 
-  it("states the current process boundary without claiming the future Native Host", () => {
+  it("states the implemented Native Host as a fault boundary rather than a sandbox", () => {
     expect(BUNDLED_PI_PROVENANCE.authority).toContain("Pi owns native Session behavior");
     expect(BUNDLED_PI_PROVENANCE.currentBoundary).toContain(
-      "isolated Native Host is not implemented",
+      "Pi executes in a supervised, isolated Native Host",
     );
-    expect(BUNDLED_PI_PROVENANCE.currentBoundary).toContain("process isolation is not claimed");
+    expect(BUNDLED_PI_PROVENANCE.currentBoundary).toContain(
+      "absent from Electron Main, the renderer, and Product Service",
+    );
+    expect(BUNDLED_PI_PROVENANCE.currentBoundary).toContain(
+      "fault boundary, not a filesystem or network sandbox",
+    );
   });
 
   it("serves the adopted-source notice byte-for-byte from its disclosed route", () => {

@@ -1017,7 +1017,7 @@ describe("MessagesTimeline", () => {
     expect(markup).not.toContain("$check-code</div>");
   });
 
-  it("renders trailing user subagent mentions with the composer agent pill UI", async () => {
+  it("renders retired parenthesized agent syntax as literal user text", async () => {
     const { MessagesTimeline } = await import("./MessagesTimeline");
     const markup = renderToStaticMarkup(
       <MessagesTimeline
@@ -1055,12 +1055,9 @@ describe("MessagesTimeline", () => {
       />,
     );
 
-    expect(markup).toContain("@spark");
-    expect(markup).toContain("inline-flex max-w-full select-none items-center gap-0.5");
-    expect(markup).toContain("mx-0.5");
-    expect(markup).toContain("rounded-md px-1.5 py-0.5");
-    expect(markup).toContain("(check the UI)");
-    expect(markup).not.toContain("@spark(check the UI)</div>");
+    expect(markup).toContain("@spark(check the UI)");
+    expect(markup).not.toContain("folder-2.svg");
+    expect(markup).not.toContain("title=\"spark\"");
   });
 
   it("renders context compaction entries in the normal work log", async () => {

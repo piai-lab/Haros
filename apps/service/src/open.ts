@@ -21,6 +21,7 @@ import {
   resolveAvailableMacApplication,
   resolveWindowsStorePackageInstallLocation,
   type EditorDefinition,
+  type WindowsStorePackageLookupExecutor,
 } from "./editorAppDiscovery";
 import { resolveExecutable } from "./executableLookup.ts";
 
@@ -275,6 +276,7 @@ export function isCommandAvailable(
 export function resolveAvailableEditors(
   platform: NodeJS.Platform = process.platform,
   env: NodeJS.ProcessEnv = process.env,
+  executeWindowsStoreLookup?: WindowsStorePackageLookupExecutor,
 ): ReadonlyArray<EditorId> {
   const available: EditorId[] = [];
 
@@ -296,6 +298,7 @@ export function resolveAvailableEditors(
         getEditorWindowsStorePackages(editor),
         platform,
         env,
+        executeWindowsStoreLookup,
       ) !== null
     ) {
       available.push(editor.id);

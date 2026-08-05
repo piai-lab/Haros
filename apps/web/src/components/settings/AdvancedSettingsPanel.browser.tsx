@@ -77,8 +77,13 @@ describe("AdvancedSettingsPanel", () => {
     expect(document.body.textContent).toContain("Bundled Pi distribution");
     expect(document.body.textContent).toContain("@earendil-works/pi-coding-agent@0.81.1");
     expect(document.body.textContent).toContain("Pi owns native Session behavior");
-    expect(document.body.textContent).toContain("isolated Native Host is not implemented");
-    expect(document.body.textContent).toContain("process isolation is not claimed");
+    expect(document.body.textContent).toContain("Pi executes in a supervised, isolated Native Host");
+    expect(document.body.textContent).toContain(
+      "absent from Electron Main, the renderer, and Product Service",
+    );
+    expect(document.body.textContent).toContain(
+      "fault boundary, not a filesystem or network sandbox",
+    );
 
     const source = page.getByRole("link", { name: "earendil-works/pi package repository" });
     expect(source.element().getAttribute("href")).toBe("https://github.com/earendil-works/pi");

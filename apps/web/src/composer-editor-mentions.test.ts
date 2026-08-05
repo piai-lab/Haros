@@ -82,6 +82,12 @@ describe("matchComposerSlashCommandChipToken", () => {
 });
 
 describe("splitPromptIntoComposerSegments", () => {
+  it("keeps a parenthesized retired agent invocation as one literal display segment", () => {
+    expect(splitPromptIntoDisplaySegments("@spark(check the UI)")).toEqual([
+      { type: "text", text: "@spark(check the UI)" },
+    ]);
+  });
+
   it("marks structured thread mentions as thread chips", () => {
     expect(
       splitPromptIntoComposerSegments(

@@ -214,26 +214,26 @@ describe("SidebarSearchPalette.logic", () => {
     );
   });
 
-  it("hides requiresQuery actions from the empty palette but matches them once typed", () => {
-    const withSpaceJump: SidebarSearchAction[] = [
+  it("hides location jumps from the empty palette but matches them once typed", () => {
+    const withLocationJump: SidebarSearchAction[] = [
       ...actions,
       {
-        id: "switch-space-work",
+        id: "switch-location-work",
         label: "Switch to Work",
-        description: "Jump to this space.",
-        keywords: ["space", "switch", "Work"],
+        description: "Jump to this location.",
+        keywords: ["location", "switch", "Work"],
         requiresQuery: true,
       },
     ];
 
-    const emptyQuery = matchSidebarSearchActions(withSpaceJump, "");
+    const emptyQuery = matchSidebarSearchActions(withLocationJump, "");
     assert.equal(
-      emptyQuery.some((action) => action.id === "switch-space-work"),
+      emptyQuery.some((action) => action.id === "switch-location-work"),
       false,
     );
 
-    const typed = matchSidebarSearchActions(withSpaceJump, "work");
-    assert.equal(typed[0]?.id, "switch-space-work");
+    const typed = matchSidebarSearchActions(withLocationJump, "work");
+    assert.equal(typed[0]?.id, "switch-location-work");
   });
 
   it("matches usage settings by keyword", () => {
@@ -278,13 +278,13 @@ describe("SidebarSearchPalette.logic", () => {
     assert.equal(result[0]?.project.id, "project-beta");
   });
 
-  it("matches projects and threads through their space label", () => {
+  it("matches projects and threads through their location label", () => {
     assert.deepEqual(
       matchSidebarSearchProjects(projects, "work").map((match) => match.project.id),
       ["project-alpha"],
     );
     assert.deepEqual(
-      matchSidebarSearchThreads(threads, "void").map((match) => match.thread.id),
+      matchSidebarSearchThreads(threads, "global").map((match) => match.thread.id),
       ["thread-beta-settings"],
     );
   });

@@ -245,7 +245,10 @@ describe("composerAutomation", () => {
     const draft = buildComposerAutomationDraft({
       resolution: decision.resolution,
       projectId: PROJECT_ID,
-      requestedSelection: REQUESTED_SELECTION,
+      requestedSelection: {
+        ...REQUESTED_SELECTION,
+        permissionPolicy: "full-access",
+      },
       targetThreadId: THREAD_ID,
       hasEphemeralContext: false,
     });
@@ -305,7 +308,9 @@ describe("composerAutomation", () => {
     expect(draft.form).toMatchObject({
       mode: "heartbeat",
       targetThreadId: THREAD_ID,
-      runtimeMode: "approval-required",
+      requestedSelection: {
+        permissionPolicy: "approval-required",
+      },
       maxIterations: "3",
       prompt: "say hi",
     });

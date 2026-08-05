@@ -1812,7 +1812,7 @@ export default function ChatView({
         executionTarget: null,
       });
     },
-    [productRuntimeCatalog],
+    [productRuntimeCatalog, setProductRequestedSelection],
   );
   const phase = derivePhase(activeThread?.session ?? null);
   const isConnecting = isLocalConnecting || phase === "connecting";
@@ -5541,6 +5541,7 @@ export default function ChatView({
       setComposerDraftModelSelection,
       setComposerDraftPrompt,
       setComposerDraftRuntimeMode,
+      setProductRequestedSelection,
       updateSelectedComposerMentions,
       updateSelectedComposerSkills,
     ],

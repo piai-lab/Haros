@@ -31,8 +31,9 @@ describe("WebSocket compatibility bootstrap", () => {
     });
     expect(result.serverBuild.length).toBeGreaterThan(0);
     expect(result.serverInstanceId.length).toBeGreaterThan(0);
-    expect(result.capabilities).toContain("orchestration.cursor-safe-streams");
-    expect(result.capabilities).toContain("orchestration.thread-detail-snapshot");
+    expect(result.capabilities).toEqual([...WS_SERVER_CAPABILITIES]);
+    expect(result.capabilities).toContain("product.cursor-safe-facts");
+    expect(result.capabilities).toContain("product.conversation-snapshot");
   });
 
   it("returns terminal update guidance and rejects feature calls without negotiated query data", async () => {

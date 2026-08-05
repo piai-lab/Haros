@@ -21,6 +21,7 @@ import {
   resolveMacApplicationBundlePath,
   resolveWindowsStorePackageInstallLocation,
   type EditorDefinition,
+  type WindowsStorePackageLookupExecutor,
 } from "./editorAppDiscovery";
 
 export { EDITOR_ICON_ROUTE_PATH };
@@ -511,6 +512,7 @@ async function resolveWindowsStoreEditorIconSource(input: {
   readonly editor: EditorDefinition;
   readonly platform: NodeJS.Platform;
   readonly env: NodeJS.ProcessEnv;
+  readonly executeWindowsStoreLookup?: WindowsStorePackageLookupExecutor;
 }): Promise<EditorIconSource | null> {
   const packages = getEditorWindowsStorePackages(input.editor);
   const findIconSource = async (packageDir: string): Promise<EditorIconSource | null> => {
@@ -538,6 +540,7 @@ async function resolveWindowsStoreEditorIconSource(input: {
     packages,
     input.platform,
     input.env,
+    input.executeWindowsStoreLookup,
   );
   if (appxPackageDir) return findIconSource(appxPackageDir);
 
@@ -548,6 +551,7 @@ async function resolveWindowsEditorIconSource(input: {
   readonly editor: EditorDefinition;
   readonly platform: NodeJS.Platform;
   readonly env: NodeJS.ProcessEnv;
+  readonly executeWindowsStoreLookup?: WindowsStorePackageLookupExecutor;
 }): Promise<EditorIconSource | null> {
   if (input.platform !== "win32") return null;
   const storeSource = await resolveWindowsStoreEditorIconSource(input);
@@ -571,6 +575,7 @@ async function resolveEditorIconSource(input: {
   readonly editor: EditorDefinition;
   readonly platform: NodeJS.Platform;
   readonly env: NodeJS.ProcessEnv;
+  readonly executeWindowsStoreLookup?: WindowsStorePackageLookupExecutor;
 }): Promise<EditorIconSource | null> {
   return (
     (await resolveMacEditorIconSource(input)) ??
@@ -668,6 +673,7 @@ async function resolveCachedEditorIconUncached(input: {
   readonly cacheDir: string;
   readonly platform?: NodeJS.Platform;
   readonly env?: NodeJS.ProcessEnv;
+  readonly executeWindowsStoreLookup?: WindowsStorePackageLookupExecutor;
 }): Promise<CachedEditorIcon | null> {
   const editor = resolveEditor(input.editorId);
   if (!editor) return null;
@@ -675,6 +681,9 @@ async function resolveCachedEditorIconUncached(input: {
     editor,
     platform: input.platform ?? process.platform,
     env: input.env ?? process.env,
+    ...(input.executeWindowsStoreLookup
+      ? { executeWindowsStoreLookup: input.executeWindowsStoreLookup }
+      : {}),
   });
   if (!source) return null;
 
@@ -717,6 +726,7 @@ export async function resolveCachedEditorIcon(input: {
   readonly cacheDir: string;
   readonly platform?: NodeJS.Platform;
   readonly env?: NodeJS.ProcessEnv;
+  readonly executeWindowsStoreLookup?: WindowsStorePackageLookupExecutor;
 }): Promise<CachedEditorIcon | null> {
   const key = iconLookupCacheKey(input);
   const negativeUntil = negativeCache.get(key);

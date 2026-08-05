@@ -21,7 +21,7 @@ export function createComposerMentionTokenRegex(options: {
 }): RegExp {
   const suffix = options.includeTrailingTokenAtEnd ? "(?=\\s|$)" : "(?=\\s)";
   return new RegExp(
-    `(^|\\s)@(?:"${QUOTED_MENTION_PATH_SOURCE}"|([^\\s@]+))${suffix}`,
+    `(^|\\s)@(?:"${QUOTED_MENTION_PATH_SOURCE}"|([^\\s@()]+))${suffix}`,
     options.global === false ? "" : "g",
   );
 }

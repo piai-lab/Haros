@@ -18,7 +18,7 @@ export interface WindowsStorePackageDefinition {
   readonly publisherId: string;
 }
 
-type ExecFileSyncLike = (
+export type WindowsStorePackageLookupExecutor = (
   file: string,
   args: readonly string[],
   options: {
@@ -254,7 +254,7 @@ export function resolveWindowsStorePackageDirectoryFromPowerShell(
   packages: readonly WindowsStorePackageDefinition[] | undefined,
   platform: NodeJS.Platform,
   env: NodeJS.ProcessEnv,
-  execFile: ExecFileSyncLike = execFileSync,
+  execFile: WindowsStorePackageLookupExecutor = execFileSync,
   options: WindowsStorePowerShellLookupOptions = {},
 ): string | null {
   if (platform !== "win32" || !packages) return null;
@@ -316,7 +316,7 @@ export function resolveWindowsStorePackageInstallLocation(
   packages: readonly WindowsStorePackageDefinition[] | undefined,
   platform: NodeJS.Platform,
   env: NodeJS.ProcessEnv,
-  execFile: ExecFileSyncLike = execFileSync,
+  execFile: WindowsStorePackageLookupExecutor = execFileSync,
   options: WindowsStorePowerShellLookupOptions = {},
 ): string | null {
   return resolveWindowsStorePackageDirectoryFromPowerShell(

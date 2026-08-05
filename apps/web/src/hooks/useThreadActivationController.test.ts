@@ -54,7 +54,6 @@ function makeControllerInput(
   openChatThreadPage: ReturnType<typeof vi.fn>;
   openSidechatSplit: ReturnType<typeof vi.fn>;
   openTerminalThreadPage: ReturnType<typeof vi.fn>;
-  prewarmThreadDetailForIntent: ReturnType<typeof vi.fn>;
   rememberLastThreadRouteNow: ReturnType<typeof vi.fn>;
   setOptimisticActiveThreadId: ReturnType<typeof vi.fn>;
   setSelectionAnchor: ReturnType<typeof vi.fn>;
@@ -67,7 +66,6 @@ function makeControllerInput(
     openChatThreadPage: vi.fn(),
     openSidechatSplit: vi.fn(() => "split-sidechat"),
     openTerminalThreadPage: vi.fn(),
-    prewarmThreadDetailForIntent: vi.fn(),
     rememberLastThreadRouteNow: vi.fn(),
     routeSplitViewId: undefined,
     routeThreadId: THREAD_A,
@@ -89,7 +87,6 @@ function makeControllerInput(
     openChatThreadPage: ReturnType<typeof vi.fn>;
     openSidechatSplit: ReturnType<typeof vi.fn>;
     openTerminalThreadPage: ReturnType<typeof vi.fn>;
-    prewarmThreadDetailForIntent: ReturnType<typeof vi.fn>;
     rememberLastThreadRouteNow: ReturnType<typeof vi.fn>;
     setOptimisticActiveThreadId: ReturnType<typeof vi.fn>;
     setSelectionAnchor: ReturnType<typeof vi.fn>;
@@ -129,7 +126,6 @@ describe("activateThreadFromSidebarIntent", () => {
 
     activateThreadFromSidebarIntent(input, THREAD_B);
 
-    expect(input.prewarmThreadDetailForIntent).toHaveBeenCalledWith(THREAD_B);
     expect(input.clearSelection).toHaveBeenCalledOnce();
     expect(input.setSplitFocusedPane).toHaveBeenCalledWith(
       "split-active",

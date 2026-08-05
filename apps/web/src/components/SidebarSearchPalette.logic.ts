@@ -12,12 +12,12 @@ export interface SidebarSearchAction {
   description: string;
   keywords?: readonly string[];
   shortcutLabel?: string | null;
-  /** Dynamic actions (e.g. "Switch to <space>") execute this instead of a wired-up prop. */
+  /** Dynamic actions (e.g. "Switch to <location>") execute this instead of a wired-up prop. */
   run?: () => void;
-  /** Overrides the id-keyed icon map for actions whose glyph is data (a space's icon). */
+  /** Overrides the id-keyed icon map for actions whose glyph is data (a location icon). */
   icon?: ComponentType<{ className?: string }>;
   /**
-   * Type-to-jump targets (one per space) only appear once the user types; listing them
+   * Type-to-jump targets (one per location) only appear once the user types; listing them
    * all in the empty palette would push threads and projects below the fold.
    */
   requiresQuery?: boolean;

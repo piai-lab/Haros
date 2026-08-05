@@ -13,7 +13,7 @@ export const BUNDLED_PI_PROVENANCE = {
   authority:
     "Pi owns native Session behavior, Package loading and lifecycle, and Agent execution semantics.",
   currentBoundary:
-    "T1 local checkpoint: Pi dependencies still execute in Product Service. The isolated Native Host is not implemented, so process isolation is not claimed.",
+    "Pi executes in a supervised, isolated Native Host. Pi executable dependencies are absent from Electron Main, the renderer, and Product Service. This process isolation is a fault boundary, not a filesystem or network sandbox.",
   revisionTruth:
     "Resolved package generation is 0.81.1; exact npm artifact provenance resolves to upstream Git revision 20be4b18d4c57487f8993d2762bace129f0cf7c6.",
 } as const;
