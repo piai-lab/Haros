@@ -17,11 +17,19 @@ Later maintainer calibration merged product identity, authorized assets and the 
 closure into one atomic T1 Work. This reduced the catalog without changing the approved T0-T4
 meanings or reopening either QbD audit.
 
+On 2026-08-05 the maintainer separately initiated and approved the exact Synara `v0.6.7`
+source-update intake recorded in
+[`research/source-review.md`](../../../../research/source-review.md#8-maintainer-initiated-synara-v067-intake).
+That post-QbD calibration adds two bounded, independently reviewed Works after T4 authority
+retirement and before candidate freezing. It does not change the approved architecture, reopen
+Converge/QbD or authorize any deferred upstream capability.
+
 The work preserves the approved T0–T4 meanings. Splitting one checkpoint into several Work
 Concepts creates independently implementable and reviewable responsibilities; it does not create
 extra product checkpoints, a machine dependency graph or permission to promote an intermediate
 SHA. T1–T3 remain non-candidate construction states. The first production candidate can exist only
-after every T4 replacement and deletion gate is satisfied on one frozen SHA.
+after every T4 replacement/deletion gate and both approved post-T4 source-intake Works have been
+satisfied; only then may one frozen SHA be selected.
 
 ## Work Concepts
 
@@ -42,9 +50,19 @@ after every T4 replacement and deletion gate is satisfied on one frozen SHA.
 - [Adopt Pi native execution](adopt-pi-native-execution.md) extends the exact T2 Host boundary in
   place with Pi-native catalog, Session, acceptance, stream, controls, credentials and one real
   Chat plus folder-backed Agent journey.
+- [Establish the Product and system command surface](establish-product-system-command-surface.md)
+  reconnects the mature Web mother to durable Product mutations, responsibility-scoped system
+  capabilities and Host-observed runtime facts, removing its need for the donor orchestration bus
+  and static Provider authority before physical deletion resumes.
 - [Retire competing execution authority](retire-competing-execution-authority.md) deletes the old
   Provider/Session/accepted-queue/Package/raw-payload authority only after replacement proof and
   makes Host-external Pi dependency and unrelated identity scans green at T4.
+- [Harden active Workbench mechanisms](harden-active-workbench-mechanisms.md) absorbs the approved
+  active-surface lifecycle, model identity, browser geometry, transcript/activity and Terminal
+  mechanisms through current OmniMind owners after the deletion tree is coherent.
+- [Align completion signals with Product facts](align-product-completion-signals.md) translates the
+  approved notification identity, deduplication, outcome and foreground insights into Product
+  Conversation/Run/receipt truth without restoring donor execution state.
 - [Freeze the first production candidate](freeze-first-production-candidate.md) binds current
   acceptance evidence, final artifact and independent review to one clean frozen SHA without
   reinterpreting historical T0 evidence or promoting Campaign claims.
@@ -75,16 +93,25 @@ and visual proof follows surgery before deletion.
 
 Pi adoption must extend the same Host executable identity, endpoint family, authentication,
 supervisor, health and shutdown contract. Queryable Pi acceptance is its first falsifier. Only after
-the real replacement journey and fault matrix pass may the authority-retirement Work remove old
-execution domains and dependency debt. The two T4 Works form one checkpoint: the first cannot be
-promoted while duplicate physical authority remains, and the second cannot delete before the first
-has supplied normal, failure and recovery proof.
+the real replacement journey and fault matrix pass may the Product/system command-surface Work
+remove the mature Web mother's remaining dependency on the donor aggregate. Authority retirement
+then resumes to remove old execution domains and dependency debt. These three T4 Works form one
+checkpoint: Pi adoption cannot be promoted while duplicate physical authority remains, the command
+surface cannot restore a second Runtime or generic bus, and authority retirement cannot finish
+until both replacement Works have supplied normal, failure and recovery proof.
 
 The frozen-candidate Work begins only after every implementation handoff has a current independent
 review and any required visual calibration is recorded. It runs current-candidate gates on one SHA,
 keeps historical T0 object evidence tied to its source SHA, and hands the immutable candidate to
 Finish. A content change after freezing invalidates the candidate evidence and returns to the owning
 Work; it is not repaired by widening the gate or repeating an unchanged T0 probe.
+
+The maintainer-approved source intake follows the accepted authority-retirement commit rather than
+overlapping its large shared Web/Service deletion diff. Active Workbench hardening runs first;
+Product completion signals then consume its final route/dock visibility truth. Each has its own
+handoff and different-actor review. Deferred Browser Agent runtime, Voice, Sidechat, GitHub import,
+file relocation and External Engine mechanisms remain research triggers, not hidden prerequisites
+or speculative Works.
 
 ### Path ownership and intentional succession
 
@@ -107,8 +134,9 @@ Work; it is not repaired by widening the gate or repeating an unchanged T0 probe
   ingress may share package metadata, so their Works are sequenced and each review checks that no
   catch-all barrel reappears.
 - Root lock/build/source/adoption files are changed only by the source-closure Work and, for
-  dependency deletion, the authority-retirement Work. Candidate freezing verifies them but does not
-  redesign them.
+  dependency deletion, the authority-retirement Work. The two approved source-intake Works may
+  update only the existing source-adoption/legal disclosure required by bytes they actually adopt.
+  Candidate freezing verifies the result but does not redesign it.
 
 ## Requirement coverage
 
@@ -120,12 +148,12 @@ Work; it is not repaired by widening the gate or repeating an unchanged T0 probe
 | R4 single production-adoption disclosure | Runnable source closure; authority retirement verification |
 | R5 Product facts, atomic outbox, single writer and typed ingress | Product facts and typed ingress; Pi native execution for real acceptance proof |
 | R6 independent health and real Pi-free Host | Isolated Host boundary |
-| R7 approved `Agent | Chat` mother | Agent and Chat workbench |
+| R7 approved `Agent | Chat` mother | Agent and Chat workbench; active Workbench mechanisms |
 | R8 same Host boundary and Pi-native authority | Pi native execution; authority retirement |
-| R9 truthful uncertainty and controls | Product facts and typed ingress; Pi native execution; frozen candidate fault gate |
-| R10 old authority deletion after replacement | Authority retirement |
-| R11 mature non-Engine behavior remains in lineage | Runnable source closure; Product facts; Agent and Chat workbench; authority retirement |
-| R12 same-SHA bounded candidate verification | Frozen candidate |
+| R9 truthful uncertainty and controls | Product facts and typed ingress; Pi native execution; Product completion signals; frozen candidate fault gate |
+| R10 old authority deletion after replacement | Product and system command surface; authority retirement |
+| R11 mature non-Engine behavior remains in lineage | Runnable source closure; Product facts; Agent and Chat workbench; authority retirement; active Workbench mechanisms; Product completion signals |
+| R12 same-SHA bounded candidate verification | Active Workbench mechanisms; Product completion signals; frozen candidate |
 | Final public-surface calibration: canonical inactive origin, capability lineage, truthful gating and separate trust boundaries | Runnable source closure |
 | A-01 exact T1 scan truth | Runnable source closure |
 | A-02 queryable acceptance before destructive deletion | Pi native execution; authority retirement |
@@ -139,8 +167,9 @@ decisions. No Work exists only for workflow symmetry.
 
 This work map is complete only when all implementation Concepts have linked handoffs and current
 independent reviews, the maintainer has accepted every required same-state visual calibration, the
-old execution authority and second-path scans are green, and the frozen-candidate Work has verified
-one clean immutable SHA. Finish may then land that same reviewed commit and archive the Bundle.
+old execution authority and second-path scans are green, both approved source-intake Works are
+accepted, and the frozen-candidate Work has verified one clean immutable SHA. Finish may then land
+that same reviewed commit and archive the Bundle.
 
 This outcome is the first UI-chassis/Pi-native vertical-slice candidate, not OmniMind V1 completion.
 It does not prove all Packages, Remote, external Engines, Windows/Linux packaging, installation,

@@ -7,22 +7,13 @@ import type { ServerManagedWorktree } from "@omnimind/contracts";
 import { Effect } from "effect";
 
 import type { GitCoreShape } from "./git/Services/GitCore.ts";
-import type { ProjectionSnapshotQueryShape } from "./orchestration/Services/ProjectionSnapshotQuery.ts";
 
 const MANAGED_WORKTREE_SCAN_DEPTH = 6;
 export const MANAGED_WORKTREE_RETENTION_COUNT = 15;
 
-/**
- * The only thread state managed-worktree retention reads. Structural on purpose so
- * both the narrow projection row and a full `OrchestrationThread` satisfy it, and so
- * the prune path never pulls a whole read model into memory just to look at four
- * columns.
- */
+/** The minimal persisted conversation state required by managed-worktree retention. */
 export interface ManagedWorktreeThreadRef {
   readonly id: string;
-  // Widened with `| undefined` so both the narrow reader's normalized rows and a
-  // full `OrchestrationThread` (whose optional columns are `?: T | null` under
-  // `exactOptionalPropertyTypes`) structurally satisfy this ref.
   readonly archivedAt?: string | null | undefined;
   readonly worktreePath?: string | null | undefined;
   readonly associatedWorktreePath?: string | null | undefined;
@@ -236,24 +227,5 @@ export function pruneArchivedManagedWorktrees(input: {
       { discard: true, concurrency: 1 },
     );
     return inventory.filter((entry) => !removedPaths.has(entry.path));
-  });
-}
-
-export function pruneProjectedArchivedManagedWorktrees(input: {
-  readonly homeDir: string;
-  readonly worktreesDir: string;
-  readonly snapshotQuery: ProjectionSnapshotQueryShape;
-  readonly git: GitCoreShape;
-}): Effect.Effect<ReadonlyArray<ServerManagedWorktree>, Error> {
-  return Effect.gen(function* () {
-    // Deliberately not the shell snapshot: it hides soft-deleted threads, and a
-    // retention-deleted thread still owns a worktree that must be reclaimed.
-    const threads = yield* input.snapshotQuery.listManagedWorktreeThreads();
-    return yield* pruneArchivedManagedWorktrees({
-      worktreesDir: input.worktreesDir,
-      snapshotsDir: path.join(input.homeDir, "worktree-snapshots"),
-      threads,
-      git: input.git,
-    });
   });
 }

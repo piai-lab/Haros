@@ -93,7 +93,7 @@ export interface NativeHostCatalogRequest extends NativeHostAuthenticatedEnvelop
 
 export interface NativeHostExecutionSelection {
   readonly engineId: string;
-  readonly modelId: string | null;
+  readonly runtimeModelId: string;
   readonly thinking: string | null;
   readonly permissionPolicy: "approval-required" | "auto" | "full-access";
   readonly enforcement: "host-enforced" | "engine-enforced" | "mixed" | "unverified";
@@ -176,12 +176,33 @@ export interface NativeHostRuntimeModel {
   readonly auth: "configured" | "missing" | "unavailable";
 }
 
+export interface NativeHostRuntimeCapabilities {
+  readonly ingress: "typed-native-host";
+  readonly lineage: {
+    readonly continue: "available" | "unavailable" | "unknown";
+    readonly rebuild: "available" | "unavailable" | "unknown";
+  };
+  readonly controls: {
+    readonly steer: "available" | "unavailable" | "unknown";
+    readonly followUp: "available" | "unavailable" | "unknown";
+    readonly abort: "available" | "unavailable" | "unknown";
+    readonly cancel: "available" | "unavailable" | "unknown";
+  };
+  readonly structuredQuestions: "available" | "unavailable" | "unknown";
+  readonly packages: "available" | "unavailable" | "unknown";
+  readonly filesRead: "available" | "unavailable" | "unknown";
+  readonly filesWrite: "available" | "unavailable" | "unknown";
+  readonly terminal: "available" | "unavailable" | "unknown";
+  readonly enforcement: "host-enforced" | "engine-enforced" | "mixed" | "unverified";
+}
+
 export interface NativeHostCatalogResponse extends NativeHostAuthenticatedEnvelope {
   readonly kind: "runtime.catalog.response";
   readonly engineId: "pi";
   readonly runtimeVersion: "0.81.1";
   readonly packageGeneration: string;
   readonly models: ReadonlyArray<NativeHostRuntimeModel>;
+  readonly capabilities: NativeHostRuntimeCapabilities;
   readonly truncated: boolean;
 }
 
@@ -462,13 +483,13 @@ function isSelection(value: unknown): value is NativeHostExecutionSelection {
     hasExactKeys(value, [
       "engineId",
       "enforcement",
-      "modelId",
       "packageGeneration",
       "permissionPolicy",
+      "runtimeModelId",
       "thinking",
     ]) &&
     isBoundedText(value.engineId, 256) &&
-    isNullableBoundedText(value.modelId, 256) &&
+    isBoundedText(value.runtimeModelId, 512) &&
     isNullableBoundedText(value.thinking, 128) &&
     ["approval-required", "auto", "full-access"].includes(String(value.permissionPolicy)) &&
     ["host-enforced", "engine-enforced", "mixed", "unverified"].includes(
@@ -549,6 +570,45 @@ function isRuntimeModel(value: unknown): value is NativeHostRuntimeModel {
     value.thinkingLevels.length <= 7 &&
     value.thinkingLevels.every((level) =>
       ["off", "minimal", "low", "medium", "high", "xhigh", "max"].includes(String(level)),
+    )
+  );
+}
+
+function isRuntimeCapabilities(value: unknown): value is NativeHostRuntimeCapabilities {
+  const availability = (candidate: unknown) =>
+    ["available", "unavailable", "unknown"].includes(String(candidate));
+  if (
+    !isRecord(value) ||
+    !hasExactKeys(value, [
+      "controls",
+      "enforcement",
+      "filesRead",
+      "filesWrite",
+      "ingress",
+      "lineage",
+      "packages",
+      "structuredQuestions",
+      "terminal",
+    ]) ||
+    value.ingress !== "typed-native-host" ||
+    !isRecord(value.lineage) ||
+    !hasExactKeys(value.lineage, ["continue", "rebuild"]) ||
+    !availability(value.lineage.continue) ||
+    !availability(value.lineage.rebuild) ||
+    !isRecord(value.controls) ||
+    !hasExactKeys(value.controls, ["abort", "cancel", "followUp", "steer"]) ||
+    !Object.values(value.controls).every(availability)
+  ) {
+    return false;
+  }
+  return (
+    availability(value.structuredQuestions) &&
+    availability(value.packages) &&
+    availability(value.filesRead) &&
+    availability(value.filesWrite) &&
+    availability(value.terminal) &&
+    ["host-enforced", "engine-enforced", "mixed", "unverified"].includes(
+      String(value.enforcement),
     )
   );
 }
@@ -889,6 +949,7 @@ export function decodeNativeHostFrame(
           response &&
           hasExactKeys(value, [
             ...common,
+            "capabilities",
             "engineId",
             "models",
             "packageGeneration",
@@ -898,6 +959,7 @@ export function decodeNativeHostFrame(
           authenticated &&
           value.engineId === "pi" &&
           value.runtimeVersion === "0.81.1" &&
+          isRuntimeCapabilities(value.capabilities) &&
           isBoundedText(value.packageGeneration, 256) &&
           typeof value.truncated === "boolean" &&
           Array.isArray(value.models) &&

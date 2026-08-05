@@ -7,7 +7,6 @@
 import type {
   GitPullRequestCheck,
   GitPullRequestComment,
-  ProjectId,
   ThreadId,
 } from "@omnimind/contracts";
 import { parseGitHubRepositoryNameWithOwnerFromPullRequestUrl } from "@omnimind/shared/githubRepository";
@@ -36,6 +35,7 @@ import { formatRelativeTime } from "~/lib/relativeTime";
 import { cn } from "~/lib/utils";
 import { ELEVATED_HOVER_SURFACE_CLASS_NAME } from "~/surfaceStyles";
 import { useRightDockStore } from "~/rightDockStore";
+import { useProductStore } from "~/store/productStore";
 import {
   ENVIRONMENT_ROW_CLASS_NAME,
   ENVIRONMENT_ROW_ICON_CLASS_NAME,
@@ -196,7 +196,6 @@ export function EnvironmentPullRequestSection({
   gitCwd,
   enabled,
   activeThreadId,
-  projectId,
   configuredRepositories,
   onOpenUrl,
   onClose,
@@ -205,13 +204,19 @@ export function EnvironmentPullRequestSection({
   /** Gate polling on the panel being open (mirrors the Local Servers section). */
   enabled: boolean;
   activeThreadId: ThreadId | null;
-  projectId: ProjectId | null;
   configuredRepositories: ReadonlyArray<{ readonly nameWithOwner: string }>;
   /** Open non-PR URLs in the in-app browser panel. */
   onOpenUrl: (url: string) => void;
   onClose: () => void;
 }) {
   const openPane = useRightDockStore((store) => store.openPane);
+  const workspaceId = useProductStore(
+    (store) =>
+      store.workspaces.find(
+        (workspace) =>
+          (workspace.access.primaryFolder ?? workspace.access.managedDirectory) === gitCwd,
+      )?.id ?? null,
+  );
   // Shares the cached git status the git block already fetches — no extra RPC.
   const { data: gitStatus } = useQuery(gitStatusQueryOptions(gitCwd));
   const pr = gitStatus?.pr ?? null;
@@ -243,10 +248,10 @@ export function EnvironmentPullRequestSection({
     (repository) => repository.nameWithOwner.toLowerCase() === pullRequestRepository?.toLowerCase(),
   );
   const openPullRequest = (initialTab: "summary" | "code" = "summary") => {
-    if (activeThreadId && projectId && pullRequestRepository && repositoryBelongsToProject) {
+    if (activeThreadId && workspaceId && pullRequestRepository && repositoryBelongsToProject) {
       openPane(activeThreadId, {
         kind: "pullRequest",
-        pullRequestProjectId: projectId,
+        pullRequestWorkspaceId: workspaceId,
         pullRequestRepository,
         pullRequestNumber: displayPr.number,
         pullRequestInitialTab: initialTab,

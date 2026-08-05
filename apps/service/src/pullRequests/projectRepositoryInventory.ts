@@ -1,30 +1,33 @@
-import type { OrchestrationProject, ProjectId, PullRequestsListResult } from "@omnimind/contracts";
+import type { ProductWorkspaceId, PullRequestsListResult } from "@omnimind/contracts";
 import { Effect } from "effect";
 
 import type {
-  ProjectPullRequestPin,
-  ProjectPullRequestPinsShape,
-} from "../persistence/Services/ProjectPullRequestPins";
+  WorkspacePullRequestPin,
+  WorkspacePullRequestPinsShape,
+} from "../persistence/Services/WorkspacePullRequestPins";
 import type { GitHubRepositoryInventory, GitHubRepositoryLink } from "./repositoryResolution";
+import type { PullRequestWorkspaceContext } from "./workspaceContext";
 
 export type ProjectRepositoryResolution = {
-  readonly project: OrchestrationProject;
+  readonly project: PullRequestWorkspaceContext;
   readonly error: unknown | null;
   readonly inventory: GitHubRepositoryInventory;
 };
 
 export type ProjectRepositoryIndex = {
   readonly errors: PullRequestsListResult["errors"];
-  readonly repositoryKeysByProject: ReadonlyMap<ProjectId, Set<string>>;
+  readonly repositoryKeysByWorkspace: ReadonlyMap<ProductWorkspaceId, Set<string>>;
   readonly uniqueRepositories: ReadonlyMap<
     string,
-    { repository: GitHubRepositoryLink; projects: OrchestrationProject[] }
+    { repository: GitHubRepositoryLink; projects: PullRequestWorkspaceContext[] }
   >;
 };
 
 export function resolveProjectRepositoryInventories(input: {
-  projects: ReadonlyArray<OrchestrationProject>;
-  resolve: (project: OrchestrationProject) => Effect.Effect<GitHubRepositoryInventory, unknown>;
+  projects: ReadonlyArray<PullRequestWorkspaceContext>;
+  resolve: (
+    project: PullRequestWorkspaceContext,
+  ) => Effect.Effect<GitHubRepositoryInventory, unknown>;
 }) {
   return Effect.forEach(
     input.projects,
@@ -54,8 +57,8 @@ export function indexProjectRepositoryInventories(
     error
       ? [
           {
-            projectId: project.id,
-            projectTitle: project.title,
+            workspaceId: project.workspaceId,
+            workspaceTitle: project.workspaceTitle,
             message: error instanceof Error ? error.message : "Repository lookup failed.",
           },
         ]
@@ -63,13 +66,13 @@ export function indexProjectRepositoryInventories(
   );
   const uniqueRepositories = new Map<
     string,
-    { repository: GitHubRepositoryLink; projects: OrchestrationProject[] }
+    { repository: GitHubRepositoryLink; projects: PullRequestWorkspaceContext[] }
   >();
-  const repositoryKeysByProject = new Map<ProjectId, Set<string>>();
+  const repositoryKeysByWorkspace = new Map<ProductWorkspaceId, Set<string>>();
 
   for (const item of resolved) {
-    repositoryKeysByProject.set(
-      item.project.id,
+    repositoryKeysByWorkspace.set(
+      item.project.workspaceId,
       new Set(
         item.inventory.repositories.map((repository) => repository.nameWithOwner.toLowerCase()),
       ),
@@ -78,7 +81,7 @@ export function indexProjectRepositoryInventories(
       const key = repository.nameWithOwner.toLowerCase();
       const existing = uniqueRepositories.get(key);
       if (existing) {
-        if (!existing.projects.some((project) => project.id === item.project.id)) {
+        if (!existing.projects.some((project) => project.workspaceId === item.project.workspaceId)) {
           existing.projects.push(item.project);
         }
       } else {
@@ -87,24 +90,24 @@ export function indexProjectRepositoryInventories(
     }
   }
 
-  return { errors, repositoryKeysByProject, uniqueRepositories };
+  return { errors, repositoryKeysByWorkspace, uniqueRepositories };
 }
 
 /** Remove pins only when an explicitly authoritative inventory proves ownership ended. */
 export function cleanupUnconfiguredPullRequestPins(input: {
-  pins: ProjectPullRequestPinsShape;
-  pinnedRows: ReadonlyArray<ProjectPullRequestPin>;
-  projectById: ReadonlyMap<ProjectId, OrchestrationProject>;
-  repositoryKeysByProject: ReadonlyMap<ProjectId, Set<string>>;
+  pins: WorkspacePullRequestPinsShape;
+  pinnedRows: ReadonlyArray<WorkspacePullRequestPin>;
+  workspaceById: ReadonlyMap<ProductWorkspaceId, PullRequestWorkspaceContext>;
+  repositoryKeysByWorkspace: ReadonlyMap<ProductWorkspaceId, Set<string>>;
   resolved: ReadonlyArray<ProjectRepositoryResolution>;
 }) {
-  const resolutionByProject = new Map(input.resolved.map((item) => [item.project.id, item]));
+  const resolutionByProject = new Map(input.resolved.map((item) => [item.project.workspaceId, item]));
   const unconfiguredPins = input.pinnedRows.filter((row) => {
-    const resolution = resolutionByProject.get(row.projectId);
+    const resolution = resolutionByProject.get(row.workspaceId);
     return (
       resolution?.error === null &&
       resolution.inventory.authoritative &&
-      input.repositoryKeysByProject.get(row.projectId)?.has(row.repositoryKey.toLowerCase()) !==
+      input.repositoryKeysByWorkspace.get(row.workspaceId)?.has(row.repositoryKey.toLowerCase()) !==
         true
     );
   });
@@ -114,7 +117,7 @@ export function cleanupUnconfiguredPullRequestPins(input: {
     (row) =>
       input.pins
         .setPinned({
-          projectId: row.projectId,
+          workspaceId: row.workspaceId,
           repositoryKey: row.repositoryKey,
           number: row.number,
           isPinned: false,
@@ -122,12 +125,12 @@ export function cleanupUnconfiguredPullRequestPins(input: {
         .pipe(
           Effect.map((): PullRequestsListResult["errors"][number] | null => null),
           Effect.catch((error) => {
-            const project = input.projectById.get(row.projectId);
+            const project = input.workspaceById.get(row.workspaceId);
             return Effect.succeed(
               project
                 ? {
-                    projectId: project.id,
-                    projectTitle: project.title,
+                    workspaceId: project.workspaceId,
+                    workspaceTitle: project.workspaceTitle,
                     message: `Stale pull request pin cleanup failed: ${error.message}`,
                   }
                 : null,

@@ -1,7 +1,6 @@
 import { assert, it } from "@effect/vitest";
 import { Effect, Schema } from "effect";
 
-import { ORCHESTRATION_WS_CHANNELS, ORCHESTRATION_WS_METHODS } from "./orchestration";
 import { WebSocketRequest, WsResponse, WS_CHANNELS, WS_METHODS } from "./ws";
 
 const decode = <S extends Schema.Top>(
@@ -14,54 +13,20 @@ const decode = <S extends Schema.Top>(
     never
   >;
 
-it.effect("accepts getTurnDiff requests when fromTurnCount <= toTurnCount", () =>
-  Effect.gen(function* () {
-    const parsed = yield* decode(WebSocketRequest, {
-      id: "req-1",
-      body: {
-        _tag: ORCHESTRATION_WS_METHODS.getTurnDiff,
-        threadId: "thread-1",
-        fromTurnCount: 1,
-        toTurnCount: 2,
-      },
-    });
-    assert.strictEqual(parsed.body._tag, ORCHESTRATION_WS_METHODS.getTurnDiff);
-  }),
-);
-
-it.effect("rejects getTurnDiff requests when fromTurnCount > toTurnCount", () =>
+it.effect("rejects retired orchestration requests", () =>
   Effect.gen(function* () {
     const result = yield* Effect.exit(
       decode(WebSocketRequest, {
         id: "req-1",
         body: {
-          _tag: ORCHESTRATION_WS_METHODS.getTurnDiff,
+          _tag: "orchestration.getTurnDiff",
           threadId: "thread-1",
-          fromTurnCount: 3,
+          fromTurnCount: 1,
           toTurnCount: 2,
         },
       }),
     );
     assert.strictEqual(result._tag, "Failure");
-  }),
-);
-
-it.effect("trims websocket request id and nested orchestration ids", () =>
-  Effect.gen(function* () {
-    const parsed = yield* decode(WebSocketRequest, {
-      id: " req-1 ",
-      body: {
-        _tag: ORCHESTRATION_WS_METHODS.getTurnDiff,
-        threadId: " thread-1 ",
-        fromTurnCount: 0,
-        toTurnCount: 0,
-      },
-    });
-    assert.strictEqual(parsed.id, "req-1");
-    assert.strictEqual(parsed.body._tag, ORCHESTRATION_WS_METHODS.getTurnDiff);
-    if (parsed.body._tag === ORCHESTRATION_WS_METHODS.getTurnDiff) {
-      assert.strictEqual(parsed.body.threadId, "thread-1");
-    }
   }),
 );
 
@@ -104,9 +69,13 @@ it.effect("accepts automation create requests", () =>
         projectId: "project-1",
         prompt: "Check stale dependencies.",
         schedule: { type: "manual" },
-        modelSelection: {
-          provider: "codex",
-          model: "gpt-5-codex",
+        requestedSelection: {
+          state: "unavailable",
+          reason: "catalog-unavailable",
+          requestedRuntimeModelId: null,
+          permissionPolicy: "approval-required",
+          enforcement: "unverified",
+          executionTarget: null,
         },
       },
     });
@@ -218,13 +187,13 @@ it.effect("accepts automation.event push envelopes", () =>
   }),
 );
 
-it.effect("rejects push envelopes when channel payload does not match the channel schema", () =>
+it.effect("rejects retired orchestration push channels", () =>
   Effect.gen(function* () {
     const result = yield* Effect.exit(
       decode(WsResponse, {
         type: "push",
         sequence: 2,
-        channel: ORCHESTRATION_WS_CHANNELS.domainEvent,
+        channel: "orchestration.domainEvent",
         data: {
           cwd: "/tmp/workspace",
           projectName: "workspace",

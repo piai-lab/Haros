@@ -93,6 +93,7 @@ async function main(): Promise<void> {
     runtimeVersion: catalog.runtimeVersion,
     packageGeneration: catalog.packageGeneration,
     models: catalog.models,
+    capabilities: catalog.capabilities,
     truncated: catalog.truncated,
   };
   const boundary = makeNativeHostExecutionBoundary(client);
@@ -108,8 +109,9 @@ async function main(): Promise<void> {
   const selection = (
     executionTarget: ProductRequestedSelection["executionTarget"],
   ): ProductRequestedSelection => ({
+    state: "selected",
     engineId: catalog.engineId,
-    modelId: selected.id,
+    runtimeModelId: selected.id,
     thinking: selected.thinkingLevels.includes("medium")
       ? "medium"
       : (selected.thinkingLevels[0] ?? null),

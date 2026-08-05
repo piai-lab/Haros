@@ -36,6 +36,7 @@ import {
   resolvePullRequestReviewBadge,
   resolveSidebarThreadListPaging,
   resolveProjectEmptyState,
+  resolveLatestChatThreadId,
   resolveSettingsBackTarget,
   resolveProjectStatusIndicator,
   resolveSidebarNewThreadEnvMode,
@@ -337,6 +338,31 @@ describe("resolveSidebarNewThreadEnvMode", () => {
 });
 
 describe("resolveSettingsBackTarget", () => {
+  it("selects the newest local Chat draft directly when Product has no summaries", () => {
+    expect(
+      resolveLatestChatThreadId({
+        orderedProductConversationIds: [],
+        localDrafts: [
+          { id: "thread-draft-older", createdAt: "2026-08-05T01:00:00.000Z" },
+          { id: "thread-draft-newest", createdAt: "2026-08-05T03:00:00.000Z" },
+          { id: "thread-draft-middle", createdAt: "2026-08-05T02:00:00.000Z" },
+        ],
+      }),
+    ).toBe("thread-draft-newest");
+  });
+
+  it("uses a stable id tie-break for equally recent local Chat drafts", () => {
+    expect(
+      resolveLatestChatThreadId({
+        orderedProductConversationIds: [],
+        localDrafts: [
+          { id: "thread-draft-b", createdAt: "2026-08-05T03:00:00.000Z" },
+          { id: "thread-draft-a", createdAt: "2026-08-05T03:00:00.000Z" },
+        ],
+      }),
+    ).toBe("thread-draft-a");
+  });
+
   it("keeps fresh draft chats available as settings back targets", () => {
     // Mirrors the sidebar's settings-back wiring: persisted thread summaries plus the
     // segment's draft thread ids form the restorable set.
@@ -653,9 +679,7 @@ describe("pin helpers", () => {
       folderName: id,
       localName: null,
       cwd: `/tmp/${id}`,
-      defaultModelSelection: null,
       expanded: true,
-      spaceId: null,
       createdAt: "2026-03-09T10:00:00.000Z",
       updatedAt: "2026-03-09T10:00:00.000Z",
       scripts: [],
@@ -1582,7 +1606,6 @@ describe("createSidebarThreadHoverAnchorId", () => {
 });
 
 function makeProject(overrides: Partial<Project> = {}): Project {
-  const { defaultModelSelection, ...rest } = overrides;
   return {
     id: ProjectId.makeUnsafe("project-1"),
     kind: "project",
@@ -1591,17 +1614,11 @@ function makeProject(overrides: Partial<Project> = {}): Project {
     folderName: "project",
     localName: null,
     cwd: "/tmp/project",
-    defaultModelSelection: {
-      provider: "codex",
-      model: "gpt-5.4",
-      ...defaultModelSelection,
-    },
     expanded: true,
-    spaceId: null,
     createdAt: "2026-03-09T10:00:00.000Z",
     updatedAt: "2026-03-09T10:00:00.000Z",
     scripts: [],
-    ...rest,
+    ...overrides,
   };
 }
 

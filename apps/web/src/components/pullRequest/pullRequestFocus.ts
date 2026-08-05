@@ -10,7 +10,7 @@ export function isFocusInsideRightDock(activeElement: Element | null): boolean {
  * the detail URL is cleared. */
 export function focusPullRequestRow(
   root: ParentNode,
-  input: Pick<PullRequestDetailInput, "projectId" | "repository" | "number">,
+  input: Pick<PullRequestDetailInput, "workspaceId" | "repository" | "number">,
 ): boolean {
   const repository = input.repository.toLowerCase();
   const candidates = Array.from(
@@ -21,7 +21,7 @@ export function focusPullRequestRow(
       candidate.dataset.pullRequestNumber === String(input.number),
   );
   const row =
-    candidates.find((candidate) => candidate.dataset.projectId === input.projectId) ??
+    candidates.find((candidate) => candidate.dataset.workspaceId === input.workspaceId) ??
     candidates[0];
   if (!row) return false;
   row.focus({ preventScroll: true });

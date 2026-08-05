@@ -1,15 +1,35 @@
 import * as OS from "node:os";
+import { mkdir, realpath, stat } from "node:fs/promises";
 
-import { Effect, FileSystem, Layer, Path } from "effect";
+import { Clock, Effect, Layer, Path } from "effect";
 
 import {
   WorkspacePathOutsideRootError,
   WorkspacePaths,
   WorkspaceRootCreateFailedError,
+  WorkspaceRootDeadlineExceededError,
   WorkspaceRootNotDirectoryError,
+  WorkspaceRootInspectFailedError,
   WorkspaceRootNotExistsError,
+  WorkspaceRootInvalidError,
   type WorkspacePathsShape,
 } from "../Services/WorkspacePaths";
+
+export const WORKSPACE_ROOT_PRE_ADMISSION_DEADLINE_MS = 10_000;
+
+type WorkspaceStat = Awaited<ReturnType<typeof stat>>;
+
+export interface WorkspacePathOperations {
+  readonly stat: (path: string) => Promise<WorkspaceStat>;
+  readonly mkdir: (path: string) => Promise<unknown>;
+  readonly realpath: (path: string) => Promise<string>;
+}
+
+const liveOperations: WorkspacePathOperations = {
+  stat,
+  mkdir: (input) => mkdir(input, { recursive: true }),
+  realpath,
+};
 
 function toPosixRelativePath(input: string): string {
   return input.replaceAll("\\", "/");
@@ -25,83 +45,147 @@ function expandHomePath(input: string, path: Path.Path): string {
   return input;
 }
 
-export const makeWorkspacePaths = Effect.gen(function* () {
-  const fileSystem = yield* FileSystem.FileSystem;
-  const path = yield* Path.Path;
+function nodeErrorCode(error: unknown): string | null {
+  return error && typeof error === "object" && "code" in error && typeof error.code === "string"
+    ? error.code
+    : null;
+}
 
-  const normalizeWorkspaceRoot: WorkspacePathsShape["normalizeWorkspaceRoot"] = Effect.fn(
-    "WorkspacePaths.normalizeWorkspaceRoot",
-  )(function* (workspaceRoot, options) {
-    const normalizedWorkspaceRoot = path.resolve(expandHomePath(workspaceRoot.trim(), path));
-    let workspaceStat = yield* fileSystem
-      .stat(normalizedWorkspaceRoot)
-      .pipe(Effect.catch(() => Effect.succeed(null)));
+export const makeWorkspacePathsWith = (options?: {
+  readonly operations?: WorkspacePathOperations;
+  readonly preAdmissionDeadlineMs?: number;
+}) =>
+  Effect.gen(function* () {
+    const path = yield* Path.Path;
+    const operations = options?.operations ?? liveOperations;
+    const preAdmissionDeadlineMs =
+      options?.preAdmissionDeadlineMs ?? WORKSPACE_ROOT_PRE_ADMISSION_DEADLINE_MS;
 
-    if (!workspaceStat && options?.createIfMissing) {
-      yield* fileSystem.makeDirectory(normalizedWorkspaceRoot, { recursive: true }).pipe(
-        Effect.mapError(
-          () =>
-            new WorkspaceRootCreateFailedError({
-              workspaceRoot,
-              normalizedWorkspaceRoot,
-            }),
-        ),
+    const normalizeWorkspaceRoot: WorkspacePathsShape["normalizeWorkspaceRoot"] = Effect.fn(
+      "WorkspacePaths.normalizeWorkspaceRoot",
+    )(function* (workspaceRoot, options) {
+      const expandedWorkspaceRoot = expandHomePath(workspaceRoot.trim(), path);
+      if (!expandedWorkspaceRoot || !path.isAbsolute(expandedWorkspaceRoot)) {
+        return yield* new WorkspaceRootInvalidError({ workspaceRoot });
+      }
+      const normalizedWorkspaceRoot = path.resolve(expandedWorkspaceRoot);
+      const deadlineAt = (yield* Clock.currentTimeMillis) + preAdmissionDeadlineMs;
+      const deadlineError = () =>
+        new WorkspaceRootDeadlineExceededError({ workspaceRoot, normalizedWorkspaceRoot });
+      const beforeMutationDeadline = <A, E>(operation: Effect.Effect<A, E>) =>
+        Effect.gen(function* () {
+          const remainingMs = deadlineAt - (yield* Clock.currentTimeMillis);
+          if (remainingMs <= 0) return yield* Effect.fail(deadlineError());
+          return yield* Effect.timeoutOrElse(operation, {
+            duration: remainingMs,
+            onTimeout: () => Effect.fail(deadlineError()),
+          });
+        });
+
+      let workspaceStat = yield* beforeMutationDeadline(
+        Effect.tryPromise({
+          try: () => operations.stat(normalizedWorkspaceRoot),
+          catch: (cause) =>
+            nodeErrorCode(cause) === "ENOENT"
+              ? new WorkspaceRootNotExistsError({ workspaceRoot, normalizedWorkspaceRoot })
+              : new WorkspaceRootInspectFailedError({ workspaceRoot, normalizedWorkspaceRoot }),
+        }).pipe(Effect.catchTag("WorkspaceRootNotExistsError", () => Effect.succeed(null))),
       );
-      workspaceStat = yield* fileSystem
-        .stat(normalizedWorkspaceRoot)
-        .pipe(Effect.catch(() => Effect.succeed(null)));
-    }
 
-    if (!workspaceStat) {
-      return yield* new WorkspaceRootNotExistsError({
-        workspaceRoot,
-        normalizedWorkspaceRoot,
-      });
-    }
-    if (workspaceStat.type !== "Directory") {
-      return yield* new WorkspaceRootNotDirectoryError({
-        workspaceRoot,
-        normalizedWorkspaceRoot,
-      });
-    }
-    return normalizedWorkspaceRoot;
-  });
-
-  const resolveRelativePathWithinRoot: WorkspacePathsShape["resolveRelativePathWithinRoot"] =
-    Effect.fn("WorkspacePaths.resolveRelativePathWithinRoot")(function* (input) {
-      const normalizedInputPath = input.relativePath.trim();
-      if (path.isAbsolute(normalizedInputPath)) {
-        return yield* new WorkspacePathOutsideRootError({
-          workspaceRoot: input.workspaceRoot,
-          relativePath: input.relativePath,
-        });
+      if (!workspaceStat && options?.createIfMissing) {
+        // Mutation admission is the semantic boundary: before it, interruption or
+        // deadline means mkdir never started. After it, Node's fs mutation cannot
+        // be cancelled truthfully, so the region is uninterruptible and waits for
+        // the real mkdir + postcondition instead of reporting a false timeout.
+        const remainingMs = deadlineAt - (yield* Clock.currentTimeMillis);
+        if (remainingMs <= 0) return yield* Effect.fail(deadlineError());
+        return yield* Effect.uninterruptible(
+          Effect.gen(function* () {
+            yield* Effect.tryPromise({
+              try: () => operations.mkdir(normalizedWorkspaceRoot),
+              catch: () =>
+                new WorkspaceRootCreateFailedError({ workspaceRoot, normalizedWorkspaceRoot }),
+            });
+            const createdStat = yield* Effect.tryPromise({
+              try: () => operations.stat(normalizedWorkspaceRoot),
+              catch: () =>
+                new WorkspaceRootInspectFailedError({ workspaceRoot, normalizedWorkspaceRoot }),
+            });
+            if (!createdStat.isDirectory()) {
+              return yield* new WorkspaceRootNotDirectoryError({
+                workspaceRoot,
+                normalizedWorkspaceRoot,
+              });
+            }
+            return yield* Effect.tryPromise({
+              try: () => operations.realpath(normalizedWorkspaceRoot),
+              catch: () =>
+                new WorkspaceRootInspectFailedError({ workspaceRoot, normalizedWorkspaceRoot }),
+            });
+          }),
+        );
       }
 
-      const absolutePath = path.resolve(input.workspaceRoot, normalizedInputPath);
-      const relativeToRoot = toPosixRelativePath(path.relative(input.workspaceRoot, absolutePath));
-      if (
-        relativeToRoot.length === 0 ||
-        relativeToRoot === "." ||
-        relativeToRoot.startsWith("../") ||
-        relativeToRoot === ".." ||
-        path.isAbsolute(relativeToRoot)
-      ) {
-        return yield* new WorkspacePathOutsideRootError({
-          workspaceRoot: input.workspaceRoot,
-          relativePath: input.relativePath,
+      if (!workspaceStat) {
+        return yield* new WorkspaceRootNotExistsError({
+          workspaceRoot,
+          normalizedWorkspaceRoot,
         });
       }
-
-      return {
-        absolutePath,
-        relativePath: relativeToRoot,
-      };
+      if (!workspaceStat.isDirectory()) {
+        return yield* new WorkspaceRootNotDirectoryError({
+          workspaceRoot,
+          normalizedWorkspaceRoot,
+        });
+      }
+      return yield* beforeMutationDeadline(
+        Effect.tryPromise({
+          try: () => operations.realpath(normalizedWorkspaceRoot),
+          catch: () =>
+            new WorkspaceRootInspectFailedError({ workspaceRoot, normalizedWorkspaceRoot }),
+        }),
+      );
     });
 
-  return {
-    normalizeWorkspaceRoot,
-    resolveRelativePathWithinRoot,
-  } satisfies WorkspacePathsShape;
-});
+    const resolveRelativePathWithinRoot: WorkspacePathsShape["resolveRelativePathWithinRoot"] =
+      Effect.fn("WorkspacePaths.resolveRelativePathWithinRoot")(function* (input) {
+        const normalizedInputPath = input.relativePath.trim();
+        if (path.isAbsolute(normalizedInputPath)) {
+          return yield* new WorkspacePathOutsideRootError({
+            workspaceRoot: input.workspaceRoot,
+            relativePath: input.relativePath,
+          });
+        }
+
+        const absolutePath = path.resolve(input.workspaceRoot, normalizedInputPath);
+        const relativeToRoot = toPosixRelativePath(
+          path.relative(input.workspaceRoot, absolutePath),
+        );
+        if (
+          relativeToRoot.length === 0 ||
+          relativeToRoot === "." ||
+          relativeToRoot.startsWith("../") ||
+          relativeToRoot === ".." ||
+          path.isAbsolute(relativeToRoot)
+        ) {
+          return yield* new WorkspacePathOutsideRootError({
+            workspaceRoot: input.workspaceRoot,
+            relativePath: input.relativePath,
+          });
+        }
+
+        return {
+          absolutePath,
+          relativePath: relativeToRoot,
+        };
+      });
+
+    return {
+      normalizeWorkspaceRoot,
+      resolveRelativePathWithinRoot,
+    } satisfies WorkspacePathsShape;
+  });
+
+export const makeWorkspacePaths = makeWorkspacePathsWith();
 
 export const WorkspacePathsLive = Layer.effect(WorkspacePaths, makeWorkspacePaths);

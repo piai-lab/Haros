@@ -11,22 +11,18 @@ import {
   type AutomationStreamEvent,
   type AutomationUpdateInput,
   type AutomationWorktreeMode,
-  type ModelSelection,
-  type ProviderKind,
-  type RuntimeMode,
+  type ProductRequestedSelection,
   type ThreadId,
 } from "@omnimind/contracts";
 import { automationRequiresTargetThread } from "@omnimind/shared/automationMode";
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import { useCallback, useEffect, useState } from "react";
 
-import { useAppSettings } from "~/appSettings";
 import type { Thread } from "~/types";
 import {
   ComposerPickerMenuPopup,
   ComposerPickerMenuSubPopup,
 } from "~/components/chat/ComposerPickerMenuPopup";
-import { ProviderModelPicker } from "~/components/chat/ProviderModelPicker";
 import { RUNTIME_AUTO_ICON_ACCENT_CLASS_NAME } from "~/components/chat/composerPickerStyles";
 import { Alert, AlertDescription, AlertTitle } from "~/components/ui/alert";
 import { Button } from "~/components/ui/button";
@@ -58,7 +54,7 @@ import {
   buildAutomationFormWarnings,
   createInputFromForm,
   datetimeLocalFromIso,
-  defaultModelSelection,
+  defaultRequestedSelection,
   formatCadence,
   formatCadenceLong,
   formatClockTime,
@@ -70,10 +66,6 @@ import {
   automationsForThread,
   isFormSubmittable,
   isoFromDatetimeLocal,
-  modelSelectionForProjectChange,
-  projectModelSelection,
-  providerOptionsForAutomationEdit,
-  providerOptionsForAutomationModelSelection,
   scheduleFromForm,
   scheduleFromKind,
   scheduleKindFromSchedule,
@@ -89,20 +81,8 @@ import {
 } from "~/lib/automationForm";
 import { SkillCubeIcon, WorktreeIcon } from "~/lib/icons";
 import { Glyph } from "~/ui/icons";
-import { resolveRuntimeModelDescriptor } from "~/components/chat/runtimeModelCapabilities";
-import { resolveProviderDiscoveryCwd } from "~/lib/providerDiscovery";
-import {
-  normalizeRuntimeModeForProvider,
-  providerModelSupportsAutoRuntimeMode,
-  providerSupportsAutoRuntimeMode,
-} from "~/lib/runtimeMode";
-import { findProviderStatus } from "~/lib/providerAvailability";
 import { cn } from "~/lib/utils";
-import { serverConfigQueryOptions } from "~/lib/serverReactQuery";
 import { ensureNativeApi } from "~/nativeApi";
-import { buildModelSelection } from "~/providerModelOptions";
-import { useProviderModelCatalog } from "~/hooks/useProviderModelCatalog";
-import { useProviderStatusesForLocalConfig } from "~/hooks/useProviderStatusesForLocalConfig";
 import { useStore } from "~/store";
 import { resolveThreadPickerTitle } from "./-chatThreadRoute.logic";
 
@@ -120,7 +100,7 @@ export {
   buildAutomationFormWarnings,
   createInputFromForm,
   datetimeLocalFromIso,
-  defaultModelSelection,
+  defaultRequestedSelection,
   formatCadence,
   formatCadenceLong,
   formatClockTime,
@@ -132,10 +112,6 @@ export {
   automationsForThread,
   isFormSubmittable,
   isoFromDatetimeLocal,
-  modelSelectionForProjectChange,
-  projectModelSelection,
-  providerOptionsForAutomationEdit,
-  providerOptionsForAutomationModelSelection,
   scheduleFromForm,
   scheduleFromKind,
   scheduleKindFromSchedule,
@@ -794,7 +770,7 @@ export function AutomationApprovalBanner({
   warnings,
   busy,
   onApprove,
-  onApproveAndRun,
+  onApproveAndRun: _onApproveAndRun,
 }: {
   readonly warnings: readonly AutomationDraftWarning[];
   readonly busy: boolean;
@@ -809,8 +785,8 @@ export function AutomationApprovalBanner({
       <AlertTitle>Approval needed</AlertTitle>
       <AlertDescription>
         <span>
-          This automation needs your approval once before OmniMind can save changes. When a warning
-          blocks manual runs, Run now stays disabled until you approve it.
+          This automation needs your approval once before OmniMind can save changes. Execution
+          remains unavailable until scheduled work uses Product Queue admission.
         </span>
         <ul className="flex flex-col gap-1.5">
           {warnings.map((warning) => (
@@ -824,8 +800,13 @@ export function AutomationApprovalBanner({
           <Button type="button" variant="ghost" size="sm" disabled={busy} onClick={onApprove}>
             Approve
           </Button>
-          <Button type="button" size="sm" disabled={busy} onClick={onApproveAndRun}>
-            Approve &amp; run now
+          <Button
+            type="button"
+            size="sm"
+            disabled
+            title="Automation execution is unavailable until Product Queue admission is implemented"
+          >
+            Run unavailable
           </Button>
         </div>
       </AlertDescription>
@@ -835,95 +816,22 @@ export function AutomationApprovalBanner({
 
 export function AutomationModelPicker({
   value,
-  projectCwd,
-  onChange,
-  onAutoModeSupportChange,
 }: {
-  readonly value: ModelSelection;
-  readonly projectCwd: string | null;
-  readonly onChange: (value: ModelSelection) => void;
-  readonly onAutoModeSupportChange?: (supported: boolean) => void;
+  readonly value: ProductRequestedSelection;
 }) {
-  const { settings } = useAppSettings();
-  const serverConfigQuery = useQuery(serverConfigQueryOptions());
-  const providerStatuses = useProviderStatusesForLocalConfig();
-  const [open, setOpen] = useState(false);
-  const modelHintByProvider: Partial<Record<ProviderKind, string | null>> = {
-    [value.provider]: value.model,
-  };
-  const providerModelDiscoveryCwd = resolveProviderDiscoveryCwd({
-    activeThreadWorktreePath: null,
-    activeProjectCwd: projectCwd,
-    serverCwd: serverConfigQuery.data?.cwd ?? null,
-  });
-  const {
-    modelOptionsByProvider,
-    loadingModelProviders,
-    runtimeModelsByProvider,
-    selectedRuntimeModel,
-  } = useProviderModelCatalog({
-    selectedProvider: value.provider,
-    discoveryEnabled: open,
-    cwd: providerModelDiscoveryCwd,
-    modelHintByProvider,
-  });
-  const providerStatus = findProviderStatus(providerStatuses, value.provider);
-  const persistedRuntimeModel =
-    value.provider === "claudeAgent" && typeof value.supportsAutoMode === "boolean"
-      ? {
-          slug: value.model,
-          name: value.model,
-          supportsAutoMode: value.supportsAutoMode,
-        }
-      : undefined;
-  const autoModeSupported = providerModelSupportsAutoRuntimeMode(
-    value.provider,
-    selectedRuntimeModel ?? persistedRuntimeModel,
-    providerStatus,
-  );
-  useEffect(() => {
-    onAutoModeSupportChange?.(autoModeSupported);
-  }, [autoModeSupported, onAutoModeSupportChange]);
-
   return (
-    <ProviderModelPicker
-      compact
-      provider={value.provider}
-      model={value.model}
-      lockedProvider={null}
-      providers={providerStatuses}
-      modelOptionsByProvider={modelOptionsByProvider}
-      loadingModelProviders={loadingModelProviders}
-      hiddenProviders={settings.hiddenProviders}
-      providerOrder={settings.providerOrder}
-      open={open}
-      onOpenChange={setOpen}
-      onProviderModelChange={(provider, model) => {
-        const runtimeModel = resolveRuntimeModelDescriptor({
-          provider,
-          model,
-          runtimeModels: runtimeModelsByProvider[provider],
-        });
-        onChange(buildModelSelection(provider, model, undefined, runtimeModel?.supportsAutoMode));
-      }}
-    />
+    <div className="rounded-md border border-border/70 bg-muted/30 px-3 py-2 text-xs text-muted-foreground">
+      <div className="font-medium text-foreground">Automation execution unavailable</div>
+      <div className="mt-1">
+        {value.state === "selected"
+          ? `Host runtime: ${value.runtimeModelId}${value.thinking ? ` · ${value.thinking}` : ""}.`
+          : `Host runtime unavailable: ${value.reason}${
+              value.requestedRuntimeModelId ? ` · requested ${value.requestedRuntimeModelId}` : ""
+            }.`}{" "}
+        Scheduled work stays paused until Product Queue admission is implemented.
+      </div>
+    </div>
   );
-}
-
-export function reconcileAutomationFormAutoModeSupport(
-  form: AutomationFormState,
-  supported: boolean,
-): AutomationFormState {
-  const modelSelection =
-    form.modelSelection.provider === "claudeAgent" &&
-    form.modelSelection.supportsAutoMode !== supported
-      ? { ...form.modelSelection, supportsAutoMode: supported }
-      : form.modelSelection;
-  const runtimeMode =
-    !supported && form.runtimeMode === "auto" ? "approval-required" : form.runtimeMode;
-  return modelSelection !== form.modelSelection || runtimeMode !== form.runtimeMode
-    ? { ...form, modelSelection, runtimeMode }
-    : form;
 }
 
 export function AutomationDialog({
@@ -960,21 +868,6 @@ export function AutomationDialog({
     onFormChange({ ...form, [key]: value });
   const projectThreads = threads.filter((thread) => thread.projectId === form.projectId);
   const selectedProject = projects.find((project) => project.id === form.projectId);
-  const [selectedModelSupportsAuto, setSelectedModelSupportsAuto] = useState(() =>
-    form.modelSelection.provider === "claudeAgent"
-      ? form.modelSelection.supportsAutoMode !== false
-      : providerSupportsAutoRuntimeMode(form.modelSelection.provider),
-  );
-  const handleAutoModeSupportChange = useCallback(
-    (supported: boolean) => {
-      setSelectedModelSupportsAuto(supported);
-      const reconciled = reconcileAutomationFormAutoModeSupport(form, supported);
-      if (reconciled !== form) {
-        onFormChange(reconciled);
-      }
-    },
-    [form, onFormChange],
-  );
   const schedule = scheduleFromForm(form);
   const fastIntervalLimitMessage = automationFastIntervalLimitMessage(form);
   const hasBlockingWarning = hasBlockingAutomationDraftWarnings(warnings, acknowledgedWarningIds);
@@ -1001,17 +894,9 @@ export function AutomationDialog({
     const targetStillMatches =
       form.targetThreadId.length > 0 &&
       threads.some((thread) => thread.id === form.targetThreadId && thread.projectId === projectId);
-    const modelSelection = modelSelectionForProjectChange(
-      projects,
-      form.projectId,
-      projectId,
-      form.modelSelection,
-    );
     onFormChange({
       ...form,
       projectId,
-      modelSelection,
-      runtimeMode: normalizeRuntimeModeForProvider(form.runtimeMode, modelSelection.provider),
       targetThreadId: targetStillMatches ? form.targetThreadId : "",
     });
   };
@@ -1178,16 +1063,7 @@ export function AutomationDialog({
             </Menu>
 
             <AutomationModelPicker
-              value={form.modelSelection}
-              projectCwd={selectedProject?.cwd ?? null}
-              onChange={(value) => {
-                onFormChange({
-                  ...form,
-                  modelSelection: value,
-                  runtimeMode: normalizeRuntimeModeForProvider(form.runtimeMode, value.provider),
-                });
-              }}
-              onAutoModeSupportChange={handleAutoModeSupportChange}
+              value={form.requestedSelection}
             />
 
             <Menu>
@@ -1438,51 +1314,6 @@ export function AutomationDialog({
               </ComposerPickerMenuPopup>
             </Menu>
 
-            <Menu>
-              <MenuTrigger
-                render={
-                  <Button
-                    variant="ghost"
-                    size="icon-sm"
-                    aria-label="Permissions"
-                    title="Permissions"
-                    className="rounded-lg text-[var(--color-text-foreground-secondary)]"
-                  />
-                }
-              >
-                <Glyph
-                  name={
-                    form.runtimeMode === "auto"
-                      ? "shield-code"
-                      : form.runtimeMode === "full-access"
-                        ? "shield-access"
-                        : "brain"
-                  }
-                  className={cn(
-                    "size-4",
-                    form.runtimeMode === "auto" && RUNTIME_AUTO_ICON_ACCENT_CLASS_NAME,
-                  )}
-                />
-              </MenuTrigger>
-              <ComposerPickerMenuPopup align="start" className="w-48">
-                <MenuRadioGroup
-                  value={form.runtimeMode}
-                  onValueChange={(value) => setField("runtimeMode", value as RuntimeMode)}
-                >
-                  <MenuRadioItem value="approval-required">Approval required</MenuRadioItem>
-                  {selectedModelSupportsAuto ? (
-                    <MenuRadioItem value="auto">
-                      <Glyph
-                        name="shield-code"
-                        className={cn("size-4", RUNTIME_AUTO_ICON_ACCENT_CLASS_NAME)}
-                      />
-                      Auto
-                    </MenuRadioItem>
-                  ) : null}
-                  <MenuRadioItem value="full-access">Full access</MenuRadioItem>
-                </MenuRadioGroup>
-              </ComposerPickerMenuPopup>
-            </Menu>
           </div>
 
           <div className="flex shrink-0 items-center gap-2">

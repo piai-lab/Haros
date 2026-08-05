@@ -1,27 +1,24 @@
+import type { ConversationPullRequestSummary } from "~/historicalConversation";
 // FILE: threadBootstrap.ts
 // Purpose: Pure helpers for draft reuse and terminal-thread promotion payloads.
 // Layer: Web bootstrap/domain helpers
 // Exports: draft patching, reuse checks, and terminal creation state resolution.
 
 import {
-  DEFAULT_RUNTIME_MODE,
-  type ModelSelection,
-  type OrchestrationThreadPullRequest,
   type ProjectId,
-  type ProviderInteractionMode,
-  type ProviderKind,
   type RuntimeMode,
-  type ThreadEnvironmentMode,
+  type WorkspaceEnvironmentMode,
   type ThreadId,
 } from "@omnimind/contracts";
 import { resolveThreadEnvironmentMode } from "@omnimind/shared/threadEnvironment";
+import { type DraftThreadEnvMode, type DraftThreadState } from "../composerDraftStore";
 import {
-  type ComposerThreadDraftState,
-  type DraftThreadEnvMode,
-  type DraftThreadState,
-  resolvePreferredComposerModelSelection,
-} from "../composerDraftStore";
-import { DEFAULT_INTERACTION_MODE, type Thread, type ThreadPrimarySurface } from "../types";
+  DEFAULT_INTERACTION_MODE,
+  DEFAULT_RUNTIME_MODE,
+  type ConversationInteractionMode,
+  type Thread,
+  type ThreadPrimarySurface,
+} from "../types";
 
 export interface NewThreadOptions {
   branch?: string | null;
@@ -30,7 +27,6 @@ export interface NewThreadOptions {
   envMode?: DraftThreadEnvMode;
   entryPoint?: ThreadPrimarySurface;
   temporary?: boolean;
-  provider?: ProviderKind;
   fresh?: boolean;
 }
 
@@ -76,11 +72,10 @@ export function resolveInheritedThreadContext(input: {
 
 interface ActiveThreadSnapshot {
   projectId: ProjectId;
-  modelSelection: ModelSelection;
   runtimeMode: RuntimeMode;
-  interactionMode: ProviderInteractionMode;
-  envMode?: ThreadEnvironmentMode | undefined;
-  lastKnownPr?: OrchestrationThreadPullRequest | null;
+  interactionMode: ConversationInteractionMode;
+  envMode?: WorkspaceEnvironmentMode | undefined;
+  lastKnownPr?: ConversationPullRequestSummary | null;
 }
 
 export interface DraftReusePlanStored {
@@ -104,20 +99,16 @@ export type ThreadBootstrapPlan = DraftReusePlanStored | DraftReusePlanRoute | D
 interface ResolveTerminalThreadCreationStateInput {
   activeDraftThread: DraftThreadState | null;
   activeThread: ActiveThreadSnapshot | null;
-  defaultProvider?: ProviderKind | null | undefined;
-  draftComposerState: ComposerThreadDraftState | null;
   draftThread: DraftThreadState | null;
   options: NewThreadOptions | undefined;
-  projectDefaultModelSelection: ModelSelection | null;
   projectId: ProjectId;
 }
 
 export interface TerminalThreadCreationState {
   branch: string | null;
   envMode: DraftThreadEnvMode;
-  interactionMode: ProviderInteractionMode;
-  lastKnownPr: OrchestrationThreadPullRequest | null;
-  modelSelection: ModelSelection;
+  interactionMode: ConversationInteractionMode;
+  lastKnownPr: ConversationPullRequestSummary | null;
   runtimeMode: RuntimeMode;
   worktreePath: string | null;
   workingDirectory: string | null;
@@ -127,12 +118,11 @@ export interface TerminalThreadCreationState {
 export function createActiveThreadSnapshot(
   activeThread:
     | {
-        interactionMode: ProviderInteractionMode;
-        modelSelection: ModelSelection;
+        interactionMode: ConversationInteractionMode;
         projectId: ProjectId;
         runtimeMode: RuntimeMode;
-        envMode?: ThreadEnvironmentMode | undefined;
-        lastKnownPr?: OrchestrationThreadPullRequest | null;
+        envMode?: WorkspaceEnvironmentMode | undefined;
+        lastKnownPr?: ConversationPullRequestSummary | null;
       }
     | null
     | undefined,
@@ -143,7 +133,6 @@ export function createActiveThreadSnapshot(
   }
   return {
     projectId: activeThread.projectId,
-    modelSelection: activeThread.modelSelection,
     runtimeMode: activeThread.runtimeMode,
     interactionMode: activeThread.interactionMode,
     envMode: activeThread.envMode,
@@ -302,15 +291,6 @@ export function resolveTerminalThreadCreationState(
           : undefined;
 
   return {
-    modelSelection: resolvePreferredComposerModelSelection({
-      draft: input.draftComposerState,
-      threadModelSelection:
-        input.activeThread?.projectId === input.projectId
-          ? input.activeThread.modelSelection
-          : null,
-      projectModelSelection: input.projectDefaultModelSelection,
-      defaultProvider: input.defaultProvider,
-    }),
     runtimeMode:
       input.draftThread?.runtimeMode ??
       (input.activeThread?.projectId === input.projectId ? input.activeThread.runtimeMode : null) ??

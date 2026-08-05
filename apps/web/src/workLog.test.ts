@@ -1,4 +1,5 @@
-import { MessageId, TurnId, type OrchestrationThreadActivity } from "@omnimind/contracts";
+import type { ConversationHistoryActivity } from "~/historicalConversation";
+import { MessageId, TurnId } from "@omnimind/contracts";
 import { describe, expect, it } from "vitest";
 
 import {
@@ -12,7 +13,7 @@ import { makeActivity } from "./storeTestFixtures";
 
 describe("deriveWorkLogEntries", () => {
   it("keeps started tool entries so pending Cursor calls appear immediately", () => {
-    const activities: OrchestrationThreadActivity[] = [
+    const activities: ConversationHistoryActivity[] = [
       makeActivity({
         id: "tool-start",
         createdAt: "2026-02-23T00:00:02.000Z",
@@ -26,7 +27,7 @@ describe("deriveWorkLogEntries", () => {
   });
 
   it("omits task start and completion lifecycle entries", () => {
-    const activities: OrchestrationThreadActivity[] = [
+    const activities: ConversationHistoryActivity[] = [
       makeActivity({
         id: "task-start",
         createdAt: "2026-02-23T00:00:01.000Z",
@@ -55,7 +56,7 @@ describe("deriveWorkLogEntries", () => {
   });
 
   it("omits quiet turn lifecycle entries while keeping failed turn state visible", () => {
-    const activities: OrchestrationThreadActivity[] = [
+    const activities: ConversationHistoryActivity[] = [
       makeActivity({
         id: "turn-success",
         createdAt: "2026-02-23T00:00:01.000Z",
@@ -93,7 +94,7 @@ describe("deriveWorkLogEntries", () => {
   });
 
   it("filters by turn id when provided", () => {
-    const activities: OrchestrationThreadActivity[] = [
+    const activities: ConversationHistoryActivity[] = [
       makeActivity({ id: "turn-1", turnId: "turn-1", summary: "Tool call", kind: "tool.started" }),
       makeActivity({
         id: "turn-2",
@@ -109,7 +110,7 @@ describe("deriveWorkLogEntries", () => {
   });
 
   it("keeps work for every visible transcript turn when requested", () => {
-    const activities: OrchestrationThreadActivity[] = [
+    const activities: ConversationHistoryActivity[] = [
       makeActivity({ id: "turn-1", turnId: "turn-1", summary: "First tool", kind: "tool.started" }),
       makeActivity({
         id: "turn-2",
@@ -136,7 +137,7 @@ describe("deriveWorkLogEntries", () => {
   });
 
   it("falls back to the latest-turn filter when visible turn ids are empty", () => {
-    const activities: OrchestrationThreadActivity[] = [
+    const activities: ConversationHistoryActivity[] = [
       makeActivity({ id: "turn-1", turnId: "turn-1", summary: "First tool", kind: "tool.started" }),
       makeActivity({
         id: "turn-2",
@@ -158,7 +159,7 @@ describe("deriveWorkLogEntries", () => {
   });
 
   it("keeps created-automation milestones and exposes their card fields despite a null turn id", () => {
-    const activities: OrchestrationThreadActivity[] = [
+    const activities: ConversationHistoryActivity[] = [
       makeActivity({
         id: "turn-1",
         turnId: "turn-1",
@@ -194,7 +195,7 @@ describe("deriveWorkLogEntries", () => {
   });
 
   it("carries pending proposal state into automation transcript cards", () => {
-    const activities: OrchestrationThreadActivity[] = [
+    const activities: ConversationHistoryActivity[] = [
       makeActivity({
         id: "automation-proposal",
         createdAt: "2026-02-23T00:00:05.000Z",
@@ -220,7 +221,7 @@ describe("deriveWorkLogEntries", () => {
   });
 
   it("exposes a provider-independent OmniMind thread creation recap", () => {
-    const activities: OrchestrationThreadActivity[] = [
+    const activities: ConversationHistoryActivity[] = [
       makeActivity({
         id: "omnimind-created-threads",
         createdAt: "2026-02-23T00:00:05.000Z",
@@ -281,7 +282,7 @@ describe("deriveWorkLogEntries", () => {
   });
 
   it("omits checkpoint captured info entries", () => {
-    const activities: OrchestrationThreadActivity[] = [
+    const activities: ConversationHistoryActivity[] = [
       makeActivity({
         id: "checkpoint",
         createdAt: "2026-02-23T00:00:01.000Z",
@@ -302,7 +303,7 @@ describe("deriveWorkLogEntries", () => {
   });
 
   it("omits passive rate-limit refresh entries from the chat work log", () => {
-    const activities: OrchestrationThreadActivity[] = [
+    const activities: ConversationHistoryActivity[] = [
       makeActivity({
         id: "rate-limits-updated",
         createdAt: "2026-02-23T00:00:01.000Z",
@@ -324,7 +325,7 @@ describe("deriveWorkLogEntries", () => {
   });
 
   it("shows runtime warning messages and collapses repeated identical warning rows", () => {
-    const activities: OrchestrationThreadActivity[] = [
+    const activities: ConversationHistoryActivity[] = [
       makeActivity({
         id: "opencode-retry-1",
         createdAt: "2026-02-23T00:00:01.000Z",
@@ -368,7 +369,7 @@ describe("deriveWorkLogEntries", () => {
   });
 
   it("does not collapse identical runtime warnings across turn boundaries", () => {
-    const activities: OrchestrationThreadActivity[] = [
+    const activities: ConversationHistoryActivity[] = [
       makeActivity({
         id: "turn-1-retry",
         createdAt: "2026-02-23T00:00:01.000Z",
@@ -408,7 +409,7 @@ describe("deriveWorkLogEntries", () => {
       projectedTurnId: "turn-stale",
       runtimeTurnId: null,
     };
-    const activities: OrchestrationThreadActivity[] = [
+    const activities: ConversationHistoryActivity[] = [
       makeActivity({
         id: "recovery-first",
         createdAt: "2026-02-23T00:00:01.000Z",
@@ -439,7 +440,7 @@ describe("deriveWorkLogEntries", () => {
   });
 
   it("keeps recovery rows for different turns, actions, or runtime turns", () => {
-    const activities: OrchestrationThreadActivity[] = [
+    const activities: ConversationHistoryActivity[] = [
       makeActivity({
         id: "settle-turn-a",
         createdAt: "2026-02-23T00:00:01.000Z",
@@ -514,7 +515,7 @@ describe("deriveWorkLogEntries", () => {
   });
 
   it("does not collapse recovery rows whose identity payload is incomplete", () => {
-    const activities: OrchestrationThreadActivity[] = [
+    const activities: ConversationHistoryActivity[] = [
       makeActivity({
         id: "malformed-recovery-1",
         createdAt: "2026-02-23T00:00:01.000Z",
@@ -546,7 +547,7 @@ describe("deriveWorkLogEntries", () => {
   });
 
   it("keeps reconciliation rows with delimiter-shaped but distinct turn ids", () => {
-    const activities: OrchestrationThreadActivity[] = [
+    const activities: ConversationHistoryActivity[] = [
       makeActivity({
         id: "recovery-delimited-projected",
         createdAt: "2026-02-23T00:00:01.000Z",
@@ -580,7 +581,7 @@ describe("deriveWorkLogEntries", () => {
   });
 
   it("omits ExitPlanMode lifecycle entries once the plan card is shown", () => {
-    const activities: OrchestrationThreadActivity[] = [
+    const activities: ConversationHistoryActivity[] = [
       makeActivity({
         id: "exit-plan-updated",
         createdAt: "2026-02-23T00:00:01.000Z",
@@ -616,7 +617,7 @@ describe("deriveWorkLogEntries", () => {
   });
 
   it("collapses interleaved parallel tool calls into one row per tool-call id", () => {
-    const activities: OrchestrationThreadActivity[] = [
+    const activities: ConversationHistoryActivity[] = [
       makeActivity({
         id: "a-started",
         createdAt: "2026-02-23T00:00:00.000Z",
@@ -671,7 +672,7 @@ describe("deriveWorkLogEntries", () => {
   });
 
   it("keeps distinct calls of the same tool separate by tool-call id", () => {
-    const activities: OrchestrationThreadActivity[] = [
+    const activities: ConversationHistoryActivity[] = [
       makeActivity({
         id: "first-started",
         createdAt: "2026-02-23T00:00:00.000Z",
@@ -723,7 +724,7 @@ describe("deriveWorkLogEntries", () => {
   });
 
   it("orders work log by activity sequence when present", () => {
-    const activities: OrchestrationThreadActivity[] = [
+    const activities: ConversationHistoryActivity[] = [
       makeActivity({
         id: "second",
         createdAt: "2026-02-23T00:00:03.000Z",
@@ -745,7 +746,7 @@ describe("deriveWorkLogEntries", () => {
   });
 
   it("extracts command text for command tool activities", () => {
-    const activities: OrchestrationThreadActivity[] = [
+    const activities: ConversationHistoryActivity[] = [
       makeActivity({
         id: "command-tool",
         kind: "tool.completed",
@@ -766,7 +767,7 @@ describe("deriveWorkLogEntries", () => {
   });
 
   it("keeps full command output details for command tool activities", () => {
-    const activities: OrchestrationThreadActivity[] = [
+    const activities: ConversationHistoryActivity[] = [
       makeActivity({
         id: "command-tool-details",
         kind: "tool.completed",
@@ -803,7 +804,7 @@ describe("deriveWorkLogEntries", () => {
   });
 
   it("keeps command output details when rawOutput is stored as a string", () => {
-    const activities: OrchestrationThreadActivity[] = [
+    const activities: ConversationHistoryActivity[] = [
       makeActivity({
         id: "command-tool-string-output",
         kind: "tool.completed",
@@ -833,7 +834,7 @@ describe("deriveWorkLogEntries", () => {
   });
 
   it("merges command detail payloads across started and completed lifecycle rows", () => {
-    const activities: OrchestrationThreadActivity[] = [
+    const activities: ConversationHistoryActivity[] = [
       makeActivity({
         id: "command-start",
         createdAt: "2026-02-23T00:00:01.000Z",
@@ -877,7 +878,7 @@ describe("deriveWorkLogEntries", () => {
   });
 
   it("falls back to command-like detail when structured command metadata is missing", () => {
-    const activities: OrchestrationThreadActivity[] = [
+    const activities: ConversationHistoryActivity[] = [
       makeActivity({
         id: "command-tool-detail-only",
         kind: "tool.completed",
@@ -898,7 +899,7 @@ describe("deriveWorkLogEntries", () => {
   });
 
   it("humanizes generic command titles for better readability", () => {
-    const activities: OrchestrationThreadActivity[] = [
+    const activities: ConversationHistoryActivity[] = [
       makeActivity({
         id: "command-tool",
         kind: "tool.completed",
@@ -920,7 +921,7 @@ describe("deriveWorkLogEntries", () => {
   });
 
   it("recovers Cursor tool details from stored rawOutput when rawInput is empty", () => {
-    const activities: OrchestrationThreadActivity[] = [
+    const activities: ConversationHistoryActivity[] = [
       makeActivity({
         id: "cursor-find",
         kind: "tool.completed",
@@ -973,7 +974,7 @@ describe("deriveWorkLogEntries", () => {
   });
 
   it("recovers readable Cursor labels from older generic Tool projections", () => {
-    const activities: OrchestrationThreadActivity[] = [
+    const activities: ConversationHistoryActivity[] = [
       makeActivity({
         id: "cursor-tool-find",
         kind: "tool.updated",
@@ -1020,7 +1021,7 @@ describe("deriveWorkLogEntries", () => {
   });
 
   it("collapses Cursor tool lifecycle rows by toolCallId even when titles and details change", () => {
-    const activities: OrchestrationThreadActivity[] = [
+    const activities: ConversationHistoryActivity[] = [
       makeActivity({
         id: "cursor-searching",
         createdAt: "2026-05-05T15:39:01.000Z",
@@ -1069,7 +1070,7 @@ describe("deriveWorkLogEntries", () => {
   });
 
   it("keeps same-toolCallId rows collapsed even if later command metadata changes", () => {
-    const activities: OrchestrationThreadActivity[] = [
+    const activities: ConversationHistoryActivity[] = [
       makeActivity({
         id: "cursor-command-start",
         createdAt: "2026-05-05T15:40:01.000Z",
@@ -1116,7 +1117,7 @@ describe("deriveWorkLogEntries", () => {
   });
 
   it("recovers Codex command text from nested JSON tool arguments", () => {
-    const activities: OrchestrationThreadActivity[] = [
+    const activities: ConversationHistoryActivity[] = [
       makeActivity({
         id: "codex-command-json-args",
         kind: "tool.started",
@@ -1146,7 +1147,7 @@ describe("deriveWorkLogEntries", () => {
   });
 
   it("recovers Codex command text from rawInput command payloads", () => {
-    const activities: OrchestrationThreadActivity[] = [
+    const activities: ConversationHistoryActivity[] = [
       makeActivity({
         id: "codex-command-raw-input",
         kind: "tool.completed",
@@ -1173,7 +1174,7 @@ describe("deriveWorkLogEntries", () => {
   });
 
   it("prefers Codex commandActions over the shell wrapper command", () => {
-    const activities: OrchestrationThreadActivity[] = [
+    const activities: ConversationHistoryActivity[] = [
       makeActivity({
         id: "codex-command-actions",
         kind: "tool.updated",
@@ -1213,7 +1214,7 @@ describe("deriveWorkLogEntries", () => {
   });
 
   it("rebuilds Codex search labels from commandActions", () => {
-    const activities: OrchestrationThreadActivity[] = [
+    const activities: ConversationHistoryActivity[] = [
       makeActivity({
         id: "codex-search-action",
         kind: "tool.completed",
@@ -1253,7 +1254,7 @@ describe("deriveWorkLogEntries", () => {
   });
 
   it("humanizes Codex commands when commandActions.type is unknown", () => {
-    const activities: OrchestrationThreadActivity[] = [
+    const activities: ConversationHistoryActivity[] = [
       makeActivity({
         id: "codex-unknown-action",
         kind: "tool.completed",
@@ -1286,7 +1287,7 @@ describe("deriveWorkLogEntries", () => {
   });
 
   it("humanizes Codex commands with the full real-world DB payload shape", () => {
-    const activities: OrchestrationThreadActivity[] = [
+    const activities: ConversationHistoryActivity[] = [
       makeActivity({
         id: "codex-full-db-shape",
         kind: "tool.completed",
@@ -1326,7 +1327,7 @@ describe("deriveWorkLogEntries", () => {
   });
 
   it("collapses generic Codex start rows into completed rows by item id", () => {
-    const activities: OrchestrationThreadActivity[] = [
+    const activities: ConversationHistoryActivity[] = [
       makeActivity({
         id: "codex-start-generic",
         createdAt: "2026-05-08T21:00:00.000Z",
@@ -1379,7 +1380,7 @@ describe("deriveWorkLogEntries", () => {
   });
 
   it("omits uninformative generic Codex command start rows", () => {
-    const activities: OrchestrationThreadActivity[] = [
+    const activities: ConversationHistoryActivity[] = [
       makeActivity({
         id: "codex-start-no-command",
         kind: "tool.started",
@@ -1403,7 +1404,7 @@ describe("deriveWorkLogEntries", () => {
   });
 
   it("retains a filtered Codex command start timestamp after lifecycle correlation", () => {
-    const activities: OrchestrationThreadActivity[] = [
+    const activities: ConversationHistoryActivity[] = [
       makeActivity({
         id: "codex-start-no-command",
         createdAt: "2026-02-23T00:00:01.000Z",
@@ -1583,7 +1584,7 @@ describe("deriveWorkLogEntries", () => {
   });
 
   it("reads Codex commandActions from the raw data envelope", () => {
-    const activities: OrchestrationThreadActivity[] = [
+    const activities: ConversationHistoryActivity[] = [
       makeActivity({
         id: "codex-direct-command-actions",
         kind: "tool.updated",
@@ -1619,7 +1620,7 @@ describe("deriveWorkLogEntries", () => {
   });
 
   it("keeps compact Codex tool metadata used for icons and labels", () => {
-    const activities: OrchestrationThreadActivity[] = [
+    const activities: ConversationHistoryActivity[] = [
       makeActivity({
         id: "tool-with-metadata",
         kind: "tool.completed",
@@ -1652,7 +1653,7 @@ describe("deriveWorkLogEntries", () => {
   });
 
   it("extracts changed file paths for file-change tool activities", () => {
-    const activities: OrchestrationThreadActivity[] = [
+    const activities: ConversationHistoryActivity[] = [
       makeActivity({
         id: "file-tool",
         kind: "tool.completed",
@@ -1680,7 +1681,7 @@ describe("deriveWorkLogEntries", () => {
   });
 
   it("does not create tool details from a path-only file-change input", () => {
-    const activities: OrchestrationThreadActivity[] = [
+    const activities: ConversationHistoryActivity[] = [
       makeActivity({
         id: "file-tool-path-only-input",
         kind: "tool.completed",
@@ -1713,7 +1714,7 @@ describe("deriveWorkLogEntries", () => {
       "-old line",
       "+new line",
     ].join("\n");
-    const activities: OrchestrationThreadActivity[] = [
+    const activities: ConversationHistoryActivity[] = [
       makeActivity({
         id: "file-tool-details",
         kind: "tool.completed",
@@ -1780,7 +1781,7 @@ describe("deriveWorkLogEntries", () => {
   });
 
   it("extracts Cursor read targets from rawInput and ACP locations", () => {
-    const activities: OrchestrationThreadActivity[] = [
+    const activities: ConversationHistoryActivity[] = [
       makeActivity({
         id: "cursor-read-raw-input",
         kind: "tool.completed",
@@ -1823,7 +1824,7 @@ describe("deriveWorkLogEntries", () => {
   });
 
   it("does not treat arbitrary rawOutput file strings as changed files", () => {
-    const activities: OrchestrationThreadActivity[] = [
+    const activities: ConversationHistoryActivity[] = [
       makeActivity({
         id: "cursor-search-output",
         kind: "tool.completed",
@@ -1848,7 +1849,7 @@ describe("deriveWorkLogEntries", () => {
   });
 
   it("keeps root-level file names as changed file paths", () => {
-    const activities: OrchestrationThreadActivity[] = [
+    const activities: ConversationHistoryActivity[] = [
       makeActivity({
         id: "root-file-tool",
         kind: "tool.completed",
@@ -1869,7 +1870,7 @@ describe("deriveWorkLogEntries", () => {
   });
 
   it("does not collapse fallback lifecycle rows for different files without toolCallId", () => {
-    const activities: OrchestrationThreadActivity[] = [
+    const activities: ConversationHistoryActivity[] = [
       makeActivity({
         id: "read-one",
         createdAt: "2026-05-05T15:41:01.000Z",
@@ -1909,7 +1910,7 @@ describe("deriveWorkLogEntries", () => {
   });
 
   it("collapses repeated lifecycle updates for the same tool call into one entry", () => {
-    const activities: OrchestrationThreadActivity[] = [
+    const activities: ConversationHistoryActivity[] = [
       makeActivity({
         id: "tool-update-1",
         createdAt: "2026-02-23T00:00:01.000Z",
@@ -1965,7 +1966,7 @@ describe("deriveWorkLogEntries", () => {
   });
 
   it("merges provider tool lifecycle updates into one universal live activity", () => {
-    const activities: OrchestrationThreadActivity[] = [
+    const activities: ConversationHistoryActivity[] = [
       makeActivity({
         id: "activity-start",
         createdAt: "2026-02-23T00:00:01.000Z",
@@ -2028,7 +2029,7 @@ describe("deriveWorkLogEntries", () => {
   });
 
   it("correlates Claude progress events by toolUseId with the surrounding lifecycle", () => {
-    const activities: OrchestrationThreadActivity[] = [
+    const activities: ConversationHistoryActivity[] = [
       makeActivity({
         id: "claude-tool-start",
         createdAt: "2026-02-23T00:00:01.000Z",
@@ -2429,7 +2430,7 @@ describe("deriveWorkLogEntries", () => {
   });
 
   it("normalizes canonical declined status and percentage fields", () => {
-    const activities: OrchestrationThreadActivity[] = [
+    const activities: ConversationHistoryActivity[] = [
       makeActivity({
         id: "activity-declined",
         createdAt: "2026-02-23T00:00:01.000Z",
@@ -2456,7 +2457,7 @@ describe("deriveWorkLogEntries", () => {
   });
 
   it("uses MCP tool names from preserved payload data", () => {
-    const activities: OrchestrationThreadActivity[] = [
+    const activities: ConversationHistoryActivity[] = [
       makeActivity({
         id: "mcp-progress",
         kind: "tool.updated",
@@ -2483,7 +2484,7 @@ describe("deriveWorkLogEntries", () => {
   });
 
   it("presents OmniMind MCP activity consistently across provider item shapes", () => {
-    const activities: OrchestrationThreadActivity[] = [
+    const activities: ConversationHistoryActivity[] = [
       makeActivity({
         id: "omnimind-mcp-create-thread-progress",
         kind: "tool.updated",
@@ -2566,7 +2567,7 @@ describe("deriveWorkLogEntries", () => {
   });
 
   it("uses present-tense command headings while the command is still running", () => {
-    const activities: OrchestrationThreadActivity[] = [
+    const activities: ConversationHistoryActivity[] = [
       makeActivity({
         id: "running-command-tool",
         kind: "tool.updated",
@@ -2588,7 +2589,7 @@ describe("deriveWorkLogEntries", () => {
   });
 
   it("collapses Claude-style partial tool-input updates into the final lifecycle row", () => {
-    const activities: OrchestrationThreadActivity[] = [
+    const activities: ConversationHistoryActivity[] = [
       makeActivity({
         id: "claude-update-1",
         createdAt: "2026-02-23T00:00:01.000Z",
@@ -2656,7 +2657,7 @@ describe("deriveWorkLogEntries", () => {
   });
 
   it("keeps separate tool entries when an identical call starts after the prior one completed", () => {
-    const activities: OrchestrationThreadActivity[] = [
+    const activities: ConversationHistoryActivity[] = [
       makeActivity({
         id: "tool-1-update",
         createdAt: "2026-02-23T00:00:01.000Z",
@@ -2709,7 +2710,7 @@ describe("deriveWorkLogEntries", () => {
   });
 
   it("collapses same-timestamp lifecycle rows even when completed sorts before updated by id", () => {
-    const activities: OrchestrationThreadActivity[] = [
+    const activities: ConversationHistoryActivity[] = [
       makeActivity({
         id: "z-update-earlier",
         createdAt: "2026-02-23T00:00:01.000Z",
@@ -2752,7 +2753,7 @@ describe("deriveWorkLogEntries", () => {
   });
 
   it("omits routed collab subagent tool lifecycle rows from the transcript", () => {
-    const activities: OrchestrationThreadActivity[] = [
+    const activities: ConversationHistoryActivity[] = [
       makeActivity({
         id: "collab-update",
         createdAt: "2026-02-23T00:00:01.000Z",
@@ -2804,7 +2805,7 @@ describe("deriveWorkLogEntries", () => {
   // Providers stream the agent tool call before its receivers, so the routed
   // entry only becomes recognizable once the later update merges into it.
   it("omits routed collab entries that gain their receivers from a merged update", () => {
-    const activities: OrchestrationThreadActivity[] = [
+    const activities: ConversationHistoryActivity[] = [
       makeActivity({
         id: "collab-start",
         createdAt: "2026-02-23T00:00:01.000Z",
@@ -2846,7 +2847,7 @@ describe("deriveWorkLogEntries", () => {
   });
 
   it("keeps routed collab subagent rows for the composer strip source", () => {
-    const activities: OrchestrationThreadActivity[] = [
+    const activities: ConversationHistoryActivity[] = [
       makeActivity({
         id: "routed-agent-update",
         createdAt: "2026-02-23T00:00:01.000Z",
@@ -2876,7 +2877,7 @@ describe("deriveWorkLogEntries", () => {
   });
 
   it("keeps generic OpenCode task tool rows when no subagent route is available", () => {
-    const activities: OrchestrationThreadActivity[] = [
+    const activities: ConversationHistoryActivity[] = [
       makeActivity({
         id: "opencode-task-update",
         createdAt: "2026-02-23T00:00:01.000Z",
@@ -2917,7 +2918,7 @@ describe("deriveWorkLogEntries", () => {
   });
 
   it("uses completed generic agent task output instead of truncated task wrapper text", () => {
-    const activities: OrchestrationThreadActivity[] = [
+    const activities: ConversationHistoryActivity[] = [
       makeActivity({
         id: "opencode-task-complete",
         createdAt: "2026-02-23T00:00:02.000Z",
@@ -2959,7 +2960,7 @@ describe("deriveWorkLogEntries", () => {
   });
 
   it("preserves the OpenCode task description when the generic completion row collapses", () => {
-    const activities: OrchestrationThreadActivity[] = [
+    const activities: ConversationHistoryActivity[] = [
       makeActivity({
         id: "opencode-task-started",
         createdAt: "2026-02-23T00:00:00.000Z",
@@ -3046,7 +3047,7 @@ describe("deriveWorkLogEntries", () => {
   });
 
   it("collapses an OpenCode task across an interleaved runtime error by tool-call id", () => {
-    const activities: OrchestrationThreadActivity[] = [
+    const activities: ConversationHistoryActivity[] = [
       makeActivity({
         id: "opencode-task-update",
         createdAt: "2026-02-23T00:00:01.000Z",
@@ -3117,7 +3118,7 @@ describe("deriveWorkLogEntries", () => {
   });
 
   it("uses completed Claude task result content for generic agent task rows", () => {
-    const activities: OrchestrationThreadActivity[] = [
+    const activities: ConversationHistoryActivity[] = [
       makeActivity({
         id: "claude-task-complete",
         createdAt: "2026-02-23T00:00:03.000Z",
@@ -3455,7 +3456,7 @@ describe("deriveWorkLogEntries context window handling", () => {
 
 describe("deriveWorkLogEntries Codex find regression", () => {
   it("humanizes Codex find commands from real DB payload (regression)", () => {
-    const activities: OrchestrationThreadActivity[] = [
+    const activities: ConversationHistoryActivity[] = [
       makeActivity({
         id: "5ae75cbe-5cb5-471a-a6ba-d9712170f1c0",
         kind: "tool.started",

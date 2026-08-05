@@ -123,6 +123,12 @@ const DockFilePane = lazy(() =>
 const DIFF_INLINE_DEFAULT_WIDTH = "max(28rem, calc(50vw - 8rem))";
 const SINGLE_PANEL_MIN_WIDTH = 26 * 16;
 
+export function toggleRightDockOpen(threadId: ThreadId): void {
+  const store = useRightDockStore.getState();
+  const open = selectRightDockState(threadId)(store).open;
+  store.setDockOpen(threadId, !open);
+}
+
 const allowAnySplitDirection = (_direction: SplitDirection) => true;
 
 function shouldAcceptDockWidth({
@@ -303,8 +309,7 @@ export function SingleChatSurface(props: {
     toggleSingletonPane(props.threadId, { kind: "browser" });
   };
   const handleToggleRightDock = () => {
-    const open = selectRightDockState(props.threadId)(useRightDockStore.getState()).open;
-    setDockOpen(props.threadId, !open);
+    toggleRightDockOpen(props.threadId);
   };
   const handleOpenBrowserUrl = () => {
     requestImmediateDockHydration("browser");

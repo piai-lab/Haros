@@ -8,7 +8,7 @@ import {
   isWorkerTierSubagentRole,
   resolveSubagentIdentityFromDirectory,
 } from "@omnimind/shared/subagents";
-import { formatModelDisplayName } from "@omnimind/shared/model";
+import { historicalModelDisplayName } from "~/historicalSourcePresentation";
 
 const SUBAGENT_ACCENT_PALETTE = [
   "#b84e44",
@@ -367,7 +367,7 @@ export function humanizeSubagentStatus(
 // model name ("Haiku 4.5" reads as well as "Claude Haiku 4.5" and halves the
 // label), and non-Claude names pass through unchanged.
 export function formatSubagentModelLabel(model: string | null | undefined): string | undefined {
-  const displayName = formatModelDisplayName(normalizeWhitespace(model));
+  const displayName = historicalModelDisplayName(normalizeWhitespace(model));
   return displayName?.startsWith("Claude ") ? displayName.slice("Claude ".length) : displayName;
 }
 

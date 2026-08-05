@@ -85,7 +85,8 @@ const harness = vi.hoisted(() => ({
   stopDevServer: vi.fn(),
   listDevServers: vi.fn(),
   openExternal: vi.fn(),
-  dispatchCommand: vi.fn(),
+  updateWorkspaceRunCommand: vi.fn(),
+  getProductShellSnapshot: vi.fn(),
   toast: vi.fn(),
   localServers: [] as unknown[],
   discoveredTargetsByQuery: [[]] as unknown[][],
@@ -127,8 +128,15 @@ vi.mock("../nativeApi", () => ({
       listDevServers: harness.listDevServers,
     },
     shell: { openExternal: harness.openExternal },
-    orchestration: { dispatchCommand: harness.dispatchCommand },
   }),
+}));
+
+vi.mock("../productWorkspaceMutations", () => ({
+  updateProductWorkspaceRunCommand: harness.updateWorkspaceRunCommand,
+}));
+
+vi.mock("../wsNativeApi", () => ({
+  readProductNativeApi: () => ({ getShellSnapshot: harness.getProductShellSnapshot }),
 }));
 
 vi.mock("../components/ui/toast", () => ({ toastManager: { add: harness.toast } }));
@@ -157,7 +165,6 @@ const PROJECT: Project = {
   folderName: "repo",
   localName: null,
   cwd: "/repo",
-  defaultModelSelection: null,
   expanded: true,
   scripts: [
     {
@@ -205,7 +212,8 @@ beforeEach(() => {
     harness.stopDevServer,
     harness.listDevServers,
     harness.openExternal,
-    harness.dispatchCommand,
+    harness.updateWorkspaceRunCommand,
+    harness.getProductShellSnapshot,
     harness.toast,
   ]) {
     mock.mockReset();
@@ -222,7 +230,15 @@ beforeEach(() => {
   });
   harness.stopDevServer.mockResolvedValue(undefined);
   harness.listDevServers.mockResolvedValue({ servers: [] });
-  harness.dispatchCommand.mockResolvedValue(undefined);
+  harness.updateWorkspaceRunCommand.mockResolvedValue(undefined);
+  harness.getProductShellSnapshot.mockResolvedValue({
+    protocolVersion: 1,
+    sequence: 0,
+    workspaces: [],
+    groups: [],
+    conversations: [],
+    runtimeCatalog: null,
+  });
   vi.stubGlobal("window", {
     setTimeout: (callback: () => void) => {
       callback();
@@ -391,7 +407,7 @@ describe("useSidebarProjectRunController", () => {
   });
 
   it("seeds and trims dialog commands while persistence failure does not block launch", async () => {
-    harness.dispatchCommand.mockRejectedValue(new Error("metadata unavailable"));
+    harness.updateWorkspaceRunCommand.mockRejectedValue(new Error("metadata unavailable"));
     let controller = render();
     controller.openProjectRunDialog(PROJECT_ID);
     render();
@@ -403,8 +419,10 @@ describe("useSidebarProjectRunController", () => {
     controller.handleConfirmProjectRun();
     await vi.waitFor(() => expect(harness.runDevServer).toHaveBeenCalled());
 
-    expect(harness.dispatchCommand).toHaveBeenCalledWith(
-      expect.objectContaining({ type: "project.meta.update", projectId: PROJECT_ID }),
+    expect(harness.updateWorkspaceRunCommand).toHaveBeenCalledWith(
+      PROJECT_ID,
+      "bun custom",
+      expect.objectContaining({ getShellSnapshot: harness.getProductShellSnapshot }),
     );
     expect(harness.runDevServer).toHaveBeenCalledWith(
       expect.objectContaining({ command: "bun custom" }),

@@ -75,7 +75,7 @@ function extensionFor(input: {
 
 export function reserveManagedAttachmentUpload(input: {
   readonly type: "image" | "file";
-  readonly threadId: string;
+  readonly conversationId: string;
   readonly name: string;
   readonly mimeType: string;
   readonly reservedBytes: number;
@@ -100,7 +100,7 @@ export function reserveManagedAttachmentUpload(input: {
     const relativePath = `objects/${attachmentId.slice(MANAGED_ATTACHMENT_ID_PREFIX.length, MANAGED_ATTACHMENT_ID_PREFIX.length + 2)}/${attachmentId}${extension}`;
     const result = yield* input.repository.reserve({
       attachmentId,
-      ownerThreadId: input.threadId,
+      conversationId: input.conversationId,
       ownerKind: input.principal.ownerKind,
       ownerId: input.principal.ownerId,
       kind: input.type,
@@ -235,7 +235,7 @@ export function persistReservedManagedAttachment(input: {
     ).toISOString();
     const finalized = yield* input.repository.finalizeStaged({
       attachmentId: input.reservation.attachmentId,
-      ownerThreadId: input.reservation.ownerThreadId,
+      conversationId: input.reservation.conversationId,
       ownerKind: input.principal.ownerKind,
       ownerId: input.principal.ownerId,
       sizeBytes: input.bytes.byteLength,

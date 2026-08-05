@@ -7,13 +7,12 @@ import {
   type EditorId,
   type ProjectId,
   type ProjectScript,
-  PROVIDER_DISPLAY_NAMES,
-  type ProviderKind,
   type ResolvedKeybindingsConfig,
   type ThreadId,
 } from "@omnimind/contracts";
 import { isGenericChatThreadTitle } from "@omnimind/shared/chatThreads";
 import React, { type Dispatch, type SetStateAction, useEffect, useRef, useState } from "react";
+import { historicalSourceDisplayName } from "../../historicalSourcePresentation";
 import type { ThreadPrimarySurface } from "../../types";
 import GitActionsControl from "../GitActionsControl";
 import {
@@ -21,7 +20,6 @@ import {
   CheckIcon,
   ExchangeIcon,
   GitBranchIcon,
-  HandoffIcon,
   HistoryIcon,
   MessageCircleIcon,
   Maximize2,
@@ -75,7 +73,7 @@ interface ChatHeaderProps {
   activeThreadId: ThreadId;
   activeThreadTitle: string;
   activeThreadEntryPoint: ThreadPrimarySurface;
-  activeProvider: ProviderKind;
+  activeProvider: string | null;
   /** Product surfaces have no provider identity until Engine selection becomes typed truth. */
   hideProviderIdentity?: boolean;
   activeProjectName: string | undefined;
@@ -94,13 +92,8 @@ interface ChatHeaderProps {
   availableEditors: ReadonlyArray<EditorId>;
   diffToggleShortcutLabel: string | null;
   handoffBadgeLabel: string | null;
-  handoffActionLabel: string;
-  handoffVisibleLabel: string;
-  handoffToLabel: string;
-  handoffDisabled: boolean;
-  handoffActionTargetProviders: ReadonlyArray<ProviderKind>;
-  handoffBadgeSourceProvider: ProviderKind | null;
-  handoffBadgeTargetProvider: ProviderKind | null;
+  handoffBadgeSourceProvider: string | null;
+  handoffBadgeTargetProvider: string | null;
   gitCwd: string | null;
   diffTotals: RepoDiffTotals;
   showGitActions?: boolean;
@@ -144,7 +137,6 @@ interface ChatHeaderProps {
   onDeleteProjectScript: (scriptId: string) => Promise<void>;
   onToggleDiff: () => void;
   onRegisterCommitAndPushTrigger?: (trigger: (() => void) | null) => void;
-  onCreateHandoff: (targetProvider: ProviderKind) => void;
   onNavigateToThread: (threadId: ThreadId) => void;
   onRenameThread: () => void;
   onCloseThreadPane?: () => void;
@@ -210,7 +202,7 @@ function EditorChatHistoryMenu(props: {
               }}
             >
               <ProviderIcon
-                provider={thread.session?.provider ?? thread.modelSelection.provider}
+                provider={thread.session?.provider ?? thread.modelSelection?.provider ?? null}
                 tone="header"
                 className="size-3.5 shrink-0"
               />
@@ -234,7 +226,7 @@ function EditorRailTabs(props: {
   projectId: ProjectId;
   activeThreadId: ThreadId;
   activeThreadTitle: string;
-  activeProvider: ProviderKind;
+  activeProvider: string;
   activeSurface: "chat" | "terminal";
   terminalAvailable: boolean;
   terminalHasRunningActivity: boolean;
@@ -343,7 +335,7 @@ function EditorRailTabs(props: {
       {
         id: thread.id,
         title: thread.title,
-        provider: thread.session?.provider ?? thread.modelSelection.provider,
+        provider: thread.session?.provider ?? thread.modelSelection?.provider ?? props.activeProvider,
       },
     ]),
   );
@@ -374,7 +366,10 @@ function EditorRailTabs(props: {
       const nextTab = {
         id: sidebarThread.id,
         title: sidebarThread.title,
-        provider: sidebarThread.session?.provider ?? sidebarThread.modelSelection.provider,
+        provider:
+          sidebarThread.session?.provider ??
+          sidebarThread.modelSelection?.provider ??
+          props.activeProvider,
       };
       setAndStoreOpenChatTabs((current) =>
         current.some((thread) => thread.id === threadId) ? current : [...current, nextTab],
@@ -515,11 +510,6 @@ export function ChatHeader({
   availableEditors,
   diffToggleShortcutLabel,
   handoffBadgeLabel,
-  handoffActionLabel,
-  handoffVisibleLabel,
-  handoffToLabel,
-  handoffDisabled,
-  handoffActionTargetProviders,
   handoffBadgeSourceProvider,
   handoffBadgeTargetProvider,
   gitCwd,
@@ -542,7 +532,6 @@ export function ChatHeader({
   onDeleteProjectScript,
   onToggleDiff,
   onRegisterCommitAndPushTrigger,
-  onCreateHandoff,
   onNavigateToThread,
   onRenameThread,
   onCloseThreadPane,
@@ -596,7 +585,7 @@ export function ChatHeader({
     return () => observer.disconnect();
   }, [isSplitPane]);
 
-  const renderProviderIcon = (provider: ProviderKind | null, className: string) => {
+  const renderProviderIcon = (provider: string | null, className: string) => {
     return (
       <ProviderIcon
         provider={provider}
@@ -707,13 +696,13 @@ export function ChatHeader({
                     "rounded-lg bg-secondary py-1 pl-2 pr-1 text-secondary-foreground",
                 )}
               >
-                {threadIconKind === "none" || hideProviderIdentity ? null : (
+                {threadIconKind === "none" || hideProviderIdentity || activeProvider === null ? null : (
                   <span
                     className="inline-flex size-3.5 shrink-0 items-center justify-center"
                     title={
                       threadIconKind === "terminal"
                         ? "Terminal"
-                        : PROVIDER_DISPLAY_NAMES[activeProvider]
+                        : historicalSourceDisplayName(activeProvider)
                     }
                   >
                     {threadIconKind === "terminal" ? (
@@ -747,7 +736,7 @@ export function ChatHeader({
                   </IconButton>
                 ) : null}
               </div>
-              {editorChatControls ? (
+              {editorChatControls && activeProvider ? (
                 <EditorRailTabs
                   projectId={editorChatControls.projectId}
                   activeThreadId={activeThreadId}
@@ -790,46 +779,8 @@ export function ChatHeader({
         </div>
       </div>
       <div className="flex shrink-0 items-center gap-2 [-webkit-app-region:no-drag]">
-        {!hideHandoffControls && !hideProviderIdentity && !environment ? (
+        {!hideHandoffControls && !hideProviderIdentity && !environment && activeProvider ? (
           <ProviderUsageMenuControl provider={activeProvider} />
-        ) : null}
-        {!hideHandoffControls ? (
-          <Menu modal={false}>
-            <Tooltip>
-              <TooltipTrigger
-                render={
-                  <MenuTrigger
-                    render={
-                      <ChatHeaderButton
-                        type="button"
-                        tone="outline"
-                        className={compact ? "gap-1" : "gap-1.5"}
-                        aria-label={handoffActionLabel}
-                        disabled={handoffDisabled || handoffActionTargetProviders.length === 0}
-                      />
-                    }
-                  >
-                    <HandoffIcon className="size-[1em] shrink-0 opacity-80" />
-                    {!compact ? (
-                      <span className="truncate font-normal">{handoffVisibleLabel}</span>
-                    ) : null}
-                  </MenuTrigger>
-                }
-              />
-              <TooltipPopup side="bottom">{handoffActionLabel}</TooltipPopup>
-            </Tooltip>
-            <ComposerPickerMenuPopup align="end" side="bottom" className="w-48 min-w-48">
-              {handoffActionTargetProviders.map((provider) => (
-                <MenuItem key={provider} onClick={() => onCreateHandoff(provider)}>
-                  {/* opacity-100 opts brand icons out of the option row's 80% icon dim. */}
-                  {renderProviderIcon(provider, "size-3.5 shrink-0 opacity-100")}
-                  <span>
-                    {handoffToLabel} {PROVIDER_DISPLAY_NAMES[provider]}
-                  </span>
-                </MenuItem>
-              ))}
-            </ComposerPickerMenuPopup>
-          </Menu>
         ) : null}
         {activeProjectScripts ? (
           <ProjectScriptsControl

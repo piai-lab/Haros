@@ -3,13 +3,13 @@
 // Exports: Sidebar row state derivation, add-project error helpers, sort utilities, and visibility helpers.
 
 import {
-  MAX_PINNED_PROJECTS,
   type KeybindingCommand,
   type ProjectId,
   type ProductConversationSummary,
   type PullRequestReviewRequestCountResult,
   type ThreadId,
 } from "@omnimind/contracts";
+import { MAX_PINNED_SIDEBAR_WORKSPACES } from "../pinnedProjectsStore";
 import { pluralize } from "@omnimind/shared/text";
 import { resolveThreadEnvironmentMode } from "@omnimind/shared/threadEnvironment";
 import { isWorkspaceRootWithin, workspaceRootsEqual } from "@omnimind/shared/threadWorkspace";
@@ -63,6 +63,20 @@ export function sortProductChatConversations(
       (left, right) =>
         Date.parse(right.updatedAt) - Date.parse(left.updatedAt) || left.id.localeCompare(right.id),
     );
+}
+
+export function resolveLatestChatThreadId(input: {
+  readonly orderedProductConversationIds: readonly string[];
+  readonly localDrafts: ReadonlyArray<{ readonly id: string; readonly createdAt: string }>;
+}): string | null {
+  const productConversationId = input.orderedProductConversationIds[0];
+  if (productConversationId) return productConversationId;
+  return (
+    input.localDrafts.toSorted(
+      (left, right) =>
+        Date.parse(right.createdAt) - Date.parse(left.createdAt) || left.id.localeCompare(right.id),
+    )[0]?.id ?? null
+  );
 }
 
 /** The sole T3 exception to Product-owned Chat recents: an unsent local draft. */
@@ -1017,7 +1031,7 @@ export function derivePinnedProjectIdsForSidebar<
     items: input.projects,
     persistedPinnedIds: input.persistedPinnedProjectIds,
     optimisticPinnedStateById: input.optimisticPinnedStateByProjectId,
-    maxCount: MAX_PINNED_PROJECTS,
+    maxCount: MAX_PINNED_SIDEBAR_WORKSPACES,
   });
 }
 

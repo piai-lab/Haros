@@ -17,15 +17,14 @@ import { toastManager } from "../components/ui/toast";
 import { isHomeChatContainerProject } from "../lib/chatProjects";
 import { projectDiscoverScriptsQueryOptions } from "../lib/projectReactQuery";
 import { serverQueryKeys, sidebarLocalServersQueryOptions } from "../lib/serverReactQuery";
-import { newCommandId } from "../lib/utils";
 import { readNativeApi } from "../nativeApi";
 import { useProjectRunStore, type ProjectRunState } from "../projectRunStore";
-import {
-  selectPrimaryProjectRunCommand,
-  upsertProjectRunCommandScripts,
-} from "../projectRunTargets";
+import { selectPrimaryProjectRunCommand } from "../projectRunTargets";
 import { projectScriptRuntimeEnv } from "../projectScripts";
+import { updateProductWorkspaceRunCommand } from "../productWorkspaceMutations";
+import { useProductStore } from "../store/productStore";
 import type { Project } from "../types";
+import { readProductNativeApi } from "../wsNativeApi";
 
 export function firstLocalServerUrl(server: ServerLocalServerProcess): string | null {
   return server.addresses.find((address) => address.url)?.url ?? null;
@@ -235,18 +234,12 @@ export function useSidebarProjectRunController(input: {
 
   const persistProjectRunCommand = useCallback(
     async (projectId: ProjectId, command: string) => {
-      const api = readNativeApi();
       const project = input.projectById.get(projectId);
-      if (!api || !project) return;
-      const nextScripts = upsertProjectRunCommandScripts({ scripts: project.scripts, command });
-      if (!nextScripts) return;
+      if (!project) return;
       try {
-        await api.orchestration.dispatchCommand({
-          type: "project.meta.update",
-          commandId: newCommandId(),
-          projectId,
-          scripts: nextScripts,
-        });
+        const api = readProductNativeApi();
+        await updateProductWorkspaceRunCommand(projectId, command, api);
+        useProductStore.getState().setShellSnapshot(await api.getShellSnapshot());
       } catch (error) {
         console.error("Failed to save project run command", { projectId, error });
       }

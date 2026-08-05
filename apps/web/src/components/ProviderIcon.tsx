@@ -4,7 +4,6 @@
  * Centralizes provider-to-icon mapping so new providers do not need repeated
  * branching across every UI surface.
  */
-import { type ProviderKind } from "@omnimind/contracts";
 import type { ReactNode, SVGProps } from "react";
 
 import { Glyph } from "~/ui/icons";
@@ -64,7 +63,7 @@ const OpenCodeProviderIcon = ({
   );
 };
 
-export const PROVIDER_ICON_COMPONENT_BY_PROVIDER: Record<ProviderKind, Icon> = {
+export const PROVIDER_ICON_COMPONENT_BY_PROVIDER: Record<string, Icon> = {
   codex: OpenAI,
   claudeAgent: ClaudeAI,
   cursor: CursorIcon,
@@ -77,7 +76,7 @@ export const PROVIDER_ICON_COMPONENT_BY_PROVIDER: Record<ProviderKind, Icon> = {
 };
 
 export function providerIconToneClassName(
-  provider: ProviderKind | null | undefined,
+  provider: string | null | undefined,
   tone: ProviderIconTone = "default",
 ): string {
   if (provider === "kilo" || provider === "opencode") {
@@ -90,7 +89,7 @@ export function providerIconToneClassName(
 }
 
 export type ProviderIconProps = Omit<SVGProps<SVGSVGElement>, "ref"> & {
-  readonly provider: ProviderKind | null | undefined;
+  readonly provider: string | null | undefined;
   readonly fallback?: ReactNode;
   readonly tone?: ProviderIconTone;
 };
@@ -117,30 +116,14 @@ export function ProviderIcon({
   }
 
   const Icon = PROVIDER_ICON_COMPONENT_BY_PROVIDER[provider];
+  if (!Icon) {
+    return fallback;
+  }
   return (
     <Icon
       aria-hidden={ariaHidden}
       {...svgProps}
       className={cn(providerIconToneClassName(provider, tone), className)}
     />
-  );
-}
-
-export function ProviderOptionLabel({
-  provider,
-  label,
-  className,
-  iconClassName,
-}: {
-  provider: ProviderKind;
-  label: ReactNode;
-  className?: string;
-  iconClassName?: string;
-}) {
-  return (
-    <span className={cn("flex min-w-0 items-center gap-2", className)}>
-      <ProviderIcon provider={provider} className={cn("size-3.5", iconClassName)} />
-      <span className="min-w-0 truncate">{label}</span>
-    </span>
   );
 }

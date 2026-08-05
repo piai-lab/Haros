@@ -177,11 +177,7 @@ const publishCmd = Command.make(
       const serviceDir = path.join(repoRoot, "apps/service");
 
       // Assert build assets exist
-      for (const relPath of [
-        "dist/index.mjs",
-        "dist/restoreMigrationBackup.mjs",
-        "dist/client/index.html",
-      ]) {
+      for (const relPath of ["dist/index.mjs", "dist/client/index.html"]) {
         const abs = path.join(serviceDir, relPath);
         if (!(yield* fs.exists(abs))) {
           return yield* new CliError({

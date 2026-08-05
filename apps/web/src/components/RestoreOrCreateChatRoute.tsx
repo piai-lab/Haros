@@ -110,7 +110,7 @@ export function RestoreOrCreateChatRoute({
         const recoveryRun = (emptyRestoreRecoveryRunRef.current += 1);
         setEmptyRestoreRecoveryState("pending");
         await Promise.all([
-          refreshEmptyRouteRestoreSnapshot(readNativeApi()).catch(() => false),
+          refreshEmptyRouteRestoreSnapshot().catch(() => false),
           waitForEmptyRouteRestoreFallbackDelay(),
         ]);
         if (mountedRef.current && emptyRestoreRecoveryRunRef.current === recoveryRun) {

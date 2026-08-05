@@ -47,7 +47,6 @@ import {
   COMPOSER_INLINE_CHIP_TOKEN_ICON_CLASS_NAME,
 } from "./composerInlineChip";
 import { LinkChipIcon } from "./LinkChipIcon";
-import { InlineAgentChip } from "./chat/InlineAgentChip";
 import { InlineLinkChip } from "./InlineLinkChip";
 import { InlineMentionChip } from "./chat/InlineMentionChip";
 import { InlineSkillChip } from "./chat/InlineSkillChip";
@@ -811,9 +810,6 @@ function ComposerChipElement(props: {
         {...(segment.kind ? { kind: segment.kind } : {})}
       />
     );
-  }
-  if (segment.type === "agent-mention") {
-    return <InlineAgentChip alias={segment.alias} color={segment.color} />;
   }
   return <InlineLinkChip url={segment.url} interactive />;
 }

@@ -34,24 +34,12 @@ import { ServerAuth } from "./auth/Services/ServerAuth";
 import * as SqlitePersistence from "./persistence/Layers/Sqlite";
 import { makeServerApplicationLayers } from "./serverLayers";
 import { startServerMemoryDiagnostics } from "./memoryDiagnostics";
-import { startClaudeCredentialKeepalive } from "./provider/claudeCredentialKeepalive";
-import { ProjectionSnapshotQuery } from "./orchestration/Services/ProjectionSnapshotQuery";
-import { ProviderSessionReaperLive } from "./provider/Layers/ProviderSessionReaper";
-import { ProviderRuntimeReconcilerLive } from "./provider/Layers/ProviderRuntimeReconciler";
 import { Server } from "./effectServer";
 import { ServerLoggerLive } from "./serverLogger";
-import { ServerSettingsService } from "./serverSettings";
 import { formatHostForUrl, isLoopbackHost, isWildcardHost } from "./startupAccess";
 import { AnalyticsServiceLayerLive } from "./telemetry/Layers/AnalyticsService";
 import { AnalyticsService } from "./telemetry/Services/AnalyticsService";
-import { OrchestrationEngineService } from "./orchestration/Services/OrchestrationEngine";
-import { startThreadRetentionJob } from "./threadRetention";
-import {
-  pairExternalMcpClient,
-  resolveExternalMcpBaseDir,
-  serveExternalMcpStdio,
-} from "./externalMcp/bridge";
-import { externalMcpLauncher, externalMcpShellCommand } from "./externalMcp/launcher";
+import { ProductControlPlane } from "./product/ProductControlPlane";
 
 export class StartupError extends Data.TaggedError("StartupError")<{
   readonly message: string;
@@ -88,7 +76,6 @@ interface CliInput {
   readonly noBrowser: BooleanFlagInput;
   readonly authToken: Option.Option<string>;
   readonly autoBootstrapProjectFromCwd: BooleanFlagInput;
-  readonly logProviderEvents: BooleanFlagInput;
   readonly logWebSocketEvents: BooleanFlagInput;
 }
 
@@ -163,7 +150,6 @@ const CliEnvConfig = Config.all({
   autoBootstrapProjectFromCwd: optionalBooleanEnvironmentConfig(
     "OMNIMIND_AUTO_BOOTSTRAP_PROJECT_FROM_CWD",
   ),
-  logProviderEvents: optionalBooleanEnvironmentConfig("OMNIMIND_LOG_PROVIDER_EVENTS"),
   logWebSocketEvents: optionalBooleanEnvironmentConfig("OMNIMIND_LOG_WS_EVENTS"),
 });
 
@@ -231,13 +217,6 @@ const ServerConfigLive = (input: CliInput) =>
         env.autoBootstrapProjectFromCwd,
         mode === "web",
       );
-      // Provider event NDJSON logging is helpful for debugging, but it is too
-      // expensive to keep enabled on the streaming hot path by default.
-      const logProviderEvents = resolveBooleanConfig(
-        input.logProviderEvents,
-        env.logProviderEvents,
-        false,
-      );
       // Keep websocket payload logging opt-in in dev. Terminal/TUI traffic is
       // high-volume enough that automatic logging adds noticeable CPU and I/O.
       const logWebSocketEvents = resolveBooleanConfig(
@@ -284,7 +263,6 @@ const ServerConfigLive = (input: CliInput) =>
         authToken,
         desktopShutdownToken,
         autoBootstrapProjectFromCwd,
-        logProviderEvents,
         logWebSocketEvents,
       } satisfies ServerConfigShape;
 
@@ -293,23 +271,10 @@ const ServerConfigLive = (input: CliInput) =>
   );
 
 const LayerLive = (input: CliInput) => {
-  const { runtimeServicesLayer, providerLayer } = makeServerApplicationLayers();
-  const providerSessionReaperLayer = ProviderSessionReaperLive.pipe(
-    // The reaper coordinates orchestration state with live provider sessions,
-    // so it belongs at the top level where both layers are available.
-    Layer.provideMerge(runtimeServicesLayer),
-    Layer.provideMerge(providerLayer),
-  );
-  const providerRuntimeReconcilerLayer = ProviderRuntimeReconcilerLive.pipe(
-    Layer.provideMerge(runtimeServicesLayer),
-    Layer.provideMerge(providerLayer),
-  );
+  const { runtimeServicesLayer } = makeServerApplicationLayers();
 
   return Layer.empty.pipe(
     Layer.provideMerge(runtimeServicesLayer),
-    Layer.provideMerge(providerLayer),
-    Layer.provideMerge(providerSessionReaperLayer),
-    Layer.provideMerge(providerRuntimeReconcilerLayer),
     Layer.provideMerge(SqlitePersistence.layerConfig),
     Layer.provideMerge(ServerLoggerLive),
     Layer.provideMerge(AnalyticsServiceLayerLive),
@@ -319,22 +284,19 @@ const LayerLive = (input: CliInput) => {
 
 export const recordStartupHeartbeat = Effect.gen(function* () {
   const analytics = yield* AnalyticsService;
-  const projectionSnapshotQuery = yield* ProjectionSnapshotQuery;
+  const productControlPlane = yield* ProductControlPlane;
 
-  const { threadCount, projectCount } = yield* projectionSnapshotQuery.getCounts().pipe(
+  const conversationCount = yield* productControlPlane.getShellSnapshot().pipe(
+    Effect.map((snapshot) => snapshot.conversations.length),
     Effect.catch((cause) =>
-      Effect.logWarning("failed to gather startup projection counts for telemetry", { cause }).pipe(
-        Effect.as({
-          threadCount: 0,
-          projectCount: 0,
-        }),
+      Effect.logWarning("failed to gather startup Product counts for telemetry", { cause }).pipe(
+        Effect.as(0),
       ),
     ),
   );
 
   yield* analytics.record("server.boot.heartbeat", {
-    threadCount,
-    projectCount,
+    conversationCount,
   });
 });
 
@@ -357,7 +319,6 @@ const makeServerProgram = (input: CliInput) =>
     const { start, stopSignal } = yield* Server;
     const openDeps = yield* Open;
     const serverAuth = yield* ServerAuth;
-    const serverSettings = yield* ServerSettingsService;
     yield* cliConfig.fixPath;
 
     const config = yield* ServerConfig;
@@ -393,30 +354,7 @@ const makeServerProgram = (input: CliInput) =>
           )
         : undefined;
 
-    const orchestrationEngine = yield* OrchestrationEngineService;
-    const projectionSnapshotQuery = yield* ProjectionSnapshotQuery;
-    // Start the retention loop after the server is live so startup can serve
-    // existing history first, then hide inactive threads from the app in the background.
-    yield* startThreadRetentionJob(orchestrationEngine, projectionSnapshotQuery);
     yield* Effect.forkChild(recordStartupHeartbeat);
-    // Optional Claude OAuth keepalive. Disabled by default because it touches
-    // Claude Code auth data in the background; users can opt in with
-    // OMNIMIND_CLAUDE_KEEPALIVE=1.
-    yield* Effect.forkChild(
-      Effect.gen(function* () {
-        const settings = yield* serverSettings.getSettings;
-        if (settings.providers.claudeAgent.enabled === false) {
-          return;
-        }
-        yield* Effect.sync(() =>
-          startClaudeCredentialKeepalive({
-            binaryPath: settings.providers.claudeAgent.binaryPath,
-            homeDir: config.homeDir,
-            log: (message) => Effect.runFork(Effect.logInfo(message)),
-          }),
-        );
-      }),
-    );
 
     yield* Effect.logInfo("OmniMind running", makeServerStartupLogData(config));
     if (startupPairingUrl) {
@@ -507,28 +445,12 @@ const authTokenFlag = Flag.string("auth-token").pipe(
 const autoBootstrapProjectFromCwdFlag = optionalBooleanFlag("auto-bootstrap-project-from-cwd", {
   description: "Create a project for the current working directory on startup when missing.",
 });
-const logProviderEventsFlag = optionalBooleanFlag("log-provider-events", {
-  description:
-    "Emit native/canonical provider NDJSON logs for debugging (equivalent to OMNIMIND_LOG_PROVIDER_EVENTS).",
-});
 const logWebSocketEventsFlag = optionalBooleanFlag("log-websocket-events", {
   description:
     "Emit server-side logs for outbound WebSocket push traffic (equivalent to OMNIMIND_LOG_WS_EVENTS).",
   aliases: ["log-ws-events"],
 });
 
-const mcpIntegrationFlag = Flag.string("integration").pipe(
-  Flag.withDescription(
-    "Paired integration id to serve (required only when more than one is stored).",
-  ),
-  Flag.optional,
-);
-
-// Base `omnimind` command defined before the MCP subcommands so they can yield
-// its parsed input (notably `--home-dir` / `omnimindHome`) via Effect's command
-// context. This avoids a duplicate `--home-dir` flag between the root command
-// and its MCP subcommands, which the Effect CLI assigns to the parent and
-// leaves the subcommand flag unset.
 const baseServerCommand = Command.make("omnimind", {
   mode: modeFlag,
   port: portFlag,
@@ -540,71 +462,11 @@ const baseServerCommand = Command.make("omnimind", {
   noBrowser: noBrowserFlag,
   authToken: authTokenFlag,
   autoBootstrapProjectFromCwd: autoBootstrapProjectFromCwdFlag,
-  logProviderEvents: logProviderEventsFlag,
   logWebSocketEvents: logWebSocketEventsFlag,
 }).pipe(Command.withDescription("Run the OmniMind server."));
 
-const mcpServeCommand = Command.make(
-  "serve",
-  { integration: mcpIntegrationFlag },
-  ({ integration }) =>
-    Effect.gen(function* () {
-      const parent = yield* baseServerCommand;
-      const baseDir = resolveExternalMcpBaseDir(Option.getOrUndefined(parent.omnimindHome));
-      yield* Effect.tryPromise({
-        try: () =>
-          serveExternalMcpStdio({
-            baseDir,
-            ...(Option.isSome(integration) ? { integrationId: integration.value } : {}),
-          }),
-        catch: (cause) =>
-          new StartupError({ message: "External MCP stdio bridge stopped.", cause }),
-      });
-    }),
-).pipe(
-  Command.withDescription(
-    "Serve the paired OmniMind external MCP integration over stdio for Codex, Claude, and other MCP clients.",
-  ),
-);
-
-const mcpPairCommand = Command.make(
-  "pair",
-  {
-    code: Flag.string("code").pipe(
-      Flag.withDescription("Short-lived pairing code issued by OmniMind Settings."),
-    ),
-  },
-  ({ code }) =>
-    Effect.gen(function* () {
-      const parent = yield* baseServerCommand;
-      const baseDir = resolveExternalMcpBaseDir(Option.getOrUndefined(parent.omnimindHome));
-      const paired = yield* Effect.tryPromise({
-        try: () =>
-          pairExternalMcpClient({
-            baseDir,
-            pairingCode: code,
-          }),
-        catch: (cause) => new StartupError({ message: "External MCP pairing failed.", cause }),
-      });
-      process.stdout.write(
-        `Paired OmniMind external MCP integration "${paired.paired.name}".\nCredential stored privately at ${paired.storePath}.\nConfigure the MCP client command as: ${externalMcpShellCommand(externalMcpLauncher(["mcp", "serve", "--integration", paired.paired.integrationId, "--home-dir", baseDir]))}\n`,
-      );
-      if (process.platform === "win32") {
-        process.stdout.write(
-          "Windows note: OmniMind stores this credential under your user profile, but Windows does not expose POSIX 0600 permission checks. Protect the profile and its OmniMind data directory.\n",
-        );
-      }
-    }),
-).pipe(Command.withDescription("Pair this CLI with a user-approved OmniMind MCP integration."));
-
-const mcpCommand = Command.make("mcp").pipe(
-  Command.withDescription("Manage OmniMind's loopback external MCP bridge."),
-  Command.withSubcommands([mcpServeCommand, mcpPairCommand]),
-);
-
 const serverCommand = baseServerCommand.pipe(
   Command.withHandler((input) => makeServerProgram(input)),
-  Command.withSubcommands([mcpCommand]),
 );
 
 export const omnimindCli = serverCommand;

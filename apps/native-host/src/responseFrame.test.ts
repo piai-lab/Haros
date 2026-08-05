@@ -81,6 +81,22 @@ describe("fitNativeHostResponseFrame", () => {
       engineId: "pi",
       runtimeVersion: "0.81.1",
       packageGeneration: "pi-sdk-0.81.1",
+      capabilities: {
+        ingress: "typed-native-host",
+        lineage: { continue: "available", rebuild: "available" },
+        controls: {
+          steer: "available",
+          followUp: "available",
+          abort: "available",
+          cancel: "unavailable",
+        },
+        structuredQuestions: "available",
+        packages: "available",
+        filesRead: "unknown",
+        filesWrite: "unknown",
+        terminal: "unknown",
+        enforcement: "unverified",
+      },
       models: Array.from({ length: 128 }, (_, index) => ({
         id: `provider/model-${index}`,
         provider: "provider",

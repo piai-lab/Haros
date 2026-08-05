@@ -1,21 +1,11 @@
 import type {
   ProjectEntry,
-  ProviderAgentDescriptor,
-  ProviderNativeCommandDescriptor,
-  ProviderKind,
   ProviderMentionReference,
-  ProviderPluginDescriptor,
-  ProviderSkillDescriptor,
 } from "@omnimind/contracts";
-import { getAgentMentionAutocompleteAliases } from "@omnimind/contracts";
 import {
-  buildCommandSearchFields,
-  buildPluginSearchFields,
-  buildSkillSearchFields,
-  isInstalledProviderPlugin,
-  normalizeProviderDiscoveryText,
-  rankProviderDiscoveryItems,
-} from "~/lib/providerDiscovery";
+  normalizeSearchText,
+  rankSearchItems,
+} from "~/lib/searchRanking";
 import {
   LOCAL_FOLDER_MENTION_NAME,
   matchesLocalFolderMentionShortcut,
@@ -25,31 +15,11 @@ import type { ComposerTrigger } from "../composer-logic";
 import {
   filterComposerSlashCommands,
   getAvailableComposerSlashCommands,
-  getProviderNativeSlashCommandSearchTerms,
-  shouldHideProviderNativeCommandFromComposerMenu,
 } from "../composerSlashCommands";
 import { threadMentionPathForThreadId } from "@omnimind/shared/threadMentions";
 
 import type { ComposerCommandItem } from "../components/chat/ComposerCommandMenu";
-import type { ProviderModelOption } from "../providerModelOptions";
-import { compareProvidersByOrder } from "../providerOrdering";
 import type { ComposerThreadMentionSource, Project } from "../types";
-
-type ComposerPluginSuggestion = {
-  plugin: ProviderPluginDescriptor;
-  mention: ProviderMentionReference;
-};
-
-export type SearchableModelOption = {
-  provider: ProviderKind;
-  providerLabel: string;
-  slug: string;
-  name: string;
-  searchSlug: string;
-  searchName: string;
-  searchProvider: string;
-  searchUpstreamProvider: string;
-};
 
 const THREAD_MENTION_SUGGESTION_LIMIT = 20;
 
@@ -182,10 +152,10 @@ export function buildThreadMentionComposerItems(input: {
         projectName: threadSuggestionContainerName(projectById.get(thread.projectId)),
       })),
   );
-  const query = normalizeProviderDiscoveryText(input.query);
+  const query = normalizeSearchText(input.query);
   const ranked = (
     query
-      ? rankProviderDiscoveryItems(candidates, query, ({ title }) => [{ value: title }])
+      ? rankSearchItems(candidates, query, ({ title }) => [{ value: title }])
       : candidates.toSorted((left, right) =>
           threadSuggestionRecency(right.thread).localeCompare(threadSuggestionRecency(left.thread)),
         )
@@ -202,57 +172,11 @@ export function buildThreadMentionComposerItems(input: {
   }));
 }
 
-export function buildSearchableModelOptions(input: {
-  providerOptions: ReadonlyArray<{ value: ProviderKind; label: string }>;
-  modelOptionsByProvider: Record<ProviderKind, ReadonlyArray<ProviderModelOption>>;
-  providerOrder: readonly ProviderKind[];
-  hiddenProviders: readonly ProviderKind[];
-  protectedProviders: readonly ProviderKind[];
-  lockedProvider?: ProviderKind | null;
-}): SearchableModelOption[] {
-  const hiddenProviderSet = new Set(input.hiddenProviders);
-  const protectedProviderSet = new Set(input.protectedProviders);
-  return input.providerOptions
-    .toSorted((left, right) =>
-      compareProvidersByOrder(input.providerOrder, left.value, right.value),
-    )
-    .filter((option) =>
-      input.lockedProvider
-        ? option.value === input.lockedProvider
-        : protectedProviderSet.has(option.value) || !hiddenProviderSet.has(option.value),
-    )
-    .flatMap((option) =>
-      input.modelOptionsByProvider[option.value].map(
-        ({ slug, name, upstreamProviderId, upstreamProviderName }) => ({
-          provider: option.value,
-          providerLabel: option.label,
-          slug,
-          name,
-          searchSlug: slug.toLowerCase(),
-          searchName: name.toLowerCase(),
-          searchProvider: option.label.toLowerCase(),
-          searchUpstreamProvider: (upstreamProviderName ?? upstreamProviderId ?? "").toLowerCase(),
-        }),
-      ),
-    );
-}
-
 export function useComposerCommandMenuItems(input: {
   composerTrigger: ComposerTrigger | null;
-  provider: ProviderKind;
-  providerPlugins: readonly ComposerPluginSuggestion[];
-  providerNativeCommands: readonly ProviderNativeCommandDescriptor[];
-  providerSkills: readonly ProviderSkillDescriptor[];
   workspaceEntries: readonly ProjectEntry[];
-  searchableModelOptions: readonly SearchableModelOption[];
-  supportsFastSlashCommand: boolean;
-  canOfferCompactCommand: boolean;
-  canOfferReviewCommand: boolean;
-  canOfferForkCommand: boolean;
-  canOfferSideCommand: boolean;
   canOfferExportCommand: boolean;
   surfaceAppSlashCommands?: ReadonlySet<string>;
-  dynamicAgents: readonly ProviderAgentDescriptor[];
   threadMentionSources?: {
     readonly threads: readonly ComposerThreadMentionSource[];
     readonly projects: readonly Project[];
@@ -261,20 +185,9 @@ export function useComposerCommandMenuItems(input: {
 }): ComposerCommandItem[] {
   const {
     composerTrigger,
-    provider,
-    providerPlugins,
-    providerNativeCommands,
-    providerSkills,
     workspaceEntries,
-    searchableModelOptions,
-    supportsFastSlashCommand,
-    canOfferCompactCommand,
-    canOfferReviewCommand,
-    canOfferForkCommand,
-    canOfferSideCommand,
     canOfferExportCommand,
     surfaceAppSlashCommands,
-    dynamicAgents,
     threadMentionSources,
   } = input;
 
@@ -282,52 +195,6 @@ export function useComposerCommandMenuItems(input: {
 
   // Keep trigger-specific discovery outside ChatView so the view mostly orchestrates state.
   if (composerTrigger.kind === "mention") {
-    const query = normalizeProviderDiscoveryText(composerTrigger.query);
-
-    const agentItems: ComposerCommandItem[] = (() => {
-      // Use dynamic agents when available, fallback to static
-      if (dynamicAgents.length > 0) {
-        return rankProviderDiscoveryItems(dynamicAgents, query, ({ name, displayName }) => [
-          { value: name },
-          { value: displayName },
-        ]).map(({ name, displayName }) => ({
-          id: `agent:${provider}:${name}`,
-          type: "agent" as const,
-          provider,
-          alias: name,
-          color: "violet" as const,
-          label: `@${name}`,
-          description: displayName,
-        }));
-      }
-      // Static fallback
-      return rankProviderDiscoveryItems(
-        getAgentMentionAutocompleteAliases(provider),
-        query,
-        ({ alias, displayName }) => [{ value: alias }, { value: displayName }],
-      ).map(({ alias, displayName, color }) => ({
-        id: `agent:${provider}:${alias}`,
-        type: "agent" as const,
-        provider,
-        alias,
-        color,
-        label: `@${alias}`,
-        description: displayName,
-      }));
-    })();
-
-    const pluginItems = rankProviderDiscoveryItems(
-      providerPlugins.filter(({ plugin }) => isInstalledProviderPlugin(plugin)),
-      query,
-      ({ plugin }) => buildPluginSearchFields(plugin),
-    ).map(({ plugin, mention }) => ({
-      id: `plugin:${plugin.id}`,
-      type: "plugin" as const,
-      plugin,
-      mention,
-      label: plugin.interface?.displayName ?? plugin.name,
-      description: plugin.interface?.shortDescription ?? plugin.source.path,
-    }));
     const localRootItems =
       matchesLocalFolderMentionShortcut(composerTrigger.query) && composerTrigger.query !== "/"
         ? [
@@ -353,28 +220,17 @@ export function useComposerCommandMenuItems(input: {
           query: composerTrigger.query,
         })
       : [];
-    // Keep mention suggestions ordered by primary intent: plugins and chats
-    // first, then local context, then subagent delegation targets.
-    return [...pluginItems, ...threadItems, ...localRootItems, ...pathItems, ...agentItems];
+    return [...threadItems, ...localRootItems, ...pathItems];
   }
 
   if (composerTrigger.kind === "slash-command") {
-    const query = normalizeProviderDiscoveryText(composerTrigger.query);
     const availableCommands = getAvailableComposerSlashCommands({
-      provider,
-      supportsFastSlashCommand,
-      canOfferCompactCommand,
-      canOfferReviewCommand,
-      canOfferForkCommand,
-      canOfferSideCommand,
       canOfferExportCommand,
-      providerNativeCommandNames: providerNativeCommands.map((command) => command.name),
     });
     const visibleAppCommands = surfaceAppSlashCommands
       ? availableCommands.filter((command) => surfaceAppSlashCommands.has(command))
       : availableCommands;
-    const visibleAppCommandSet = new Set(visibleAppCommands);
-    const builtInItems = filterComposerSlashCommands(composerTrigger.query, visibleAppCommands).map(
+    return filterComposerSlashCommands(composerTrigger.query, visibleAppCommands).map(
       (definition) => ({
         id: `slash:${definition.command}`,
         type: "slash-command" as const,
@@ -384,76 +240,7 @@ export function useComposerCommandMenuItems(input: {
         source: definition.source,
       }),
     );
-    const providerCommandItems = providerNativeCommands
-      .filter(
-        (command) =>
-          !shouldHideProviderNativeCommandFromComposerMenu(provider, command.name, {
-            availableAppCommands: visibleAppCommandSet,
-          }),
-      )
-      .map((command) => ({
-        command,
-        aliasFields: getProviderNativeSlashCommandSearchTerms(provider, command.name).map(
-          (term) => ({
-            value: term,
-          }),
-        ),
-      }));
-    const rankedProviderCommandItems = rankProviderDiscoveryItems(
-      providerCommandItems,
-      query,
-      ({ command, aliasFields }) => [...aliasFields, ...buildCommandSearchFields(command)],
-    ).map(({ command }) => ({
-      id: `provider-command:${provider}:${command.name}`,
-      type: "provider-native-command" as const,
-      provider,
-      command: command.name,
-      label: `/${command.name}`,
-      description: command.description ?? `Run ${provider} native command`,
-    }));
-    // `/` is the universal picker surface; provider dispatch can adapt the
-    // visible slash token to backend-specific skill syntax when needed.
-    const skillItems: ComposerCommandItem[] = rankProviderDiscoveryItems(
-      providerSkills,
-      query,
-      buildSkillSearchFields,
-    ).map((skill) => ({
-      id: `skill:${skill.path}`,
-      type: "skill" as const,
-      skill,
-      label: skill.interface?.displayName ?? skill.name,
-      description: skill.interface?.shortDescription ?? skill.description ?? skill.path,
-    }));
-    return [...builtInItems, ...rankedProviderCommandItems, ...skillItems];
   }
 
-  if (composerTrigger.kind === "skill") {
-    const query = normalizeProviderDiscoveryText(composerTrigger.query);
-    return rankProviderDiscoveryItems(providerSkills, query, buildSkillSearchFields).map(
-      (skill) => ({
-        id: `skill:${skill.path}`,
-        type: "skill" as const,
-        skill,
-        label: skill.interface?.displayName ?? skill.name,
-        description: skill.interface?.shortDescription ?? skill.description ?? skill.path,
-      }),
-    );
-  }
-
-  return rankProviderDiscoveryItems(searchableModelOptions, composerTrigger.query, (option) => [
-    { value: option.name },
-    { value: option.slug },
-    { value: option.searchName },
-    { value: option.searchSlug },
-    { value: option.providerLabel, weight: 200 },
-    { value: option.searchProvider, weight: 200 },
-    { value: option.searchUpstreamProvider, weight: 200 },
-  ]).map(({ provider, providerLabel, slug, name }) => ({
-    id: `model:${provider}:${slug}`,
-    type: "model" as const,
-    provider,
-    model: slug,
-    label: name,
-    description: `${providerLabel} · ${slug}`,
-  }));
+  return [];
 }

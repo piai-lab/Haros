@@ -112,3 +112,70 @@ Re-run only the affected review when any of these changes:
 - native Host process boundary;
 - structured UI bridge contract;
 - a previously unsupported Package produces a reproducible counterexample.
+
+## 8. Maintainer-initiated Synara v0.6.7 intake
+
+### 8.1 Exact review boundary
+
+This is a maintainer-initiated Gate A review and explicit Gate B decision under
+[`source-update-intake.md`](source-update-intake.md). It does not replace the production adoption
+record or claim that the full upstream range enters OmniMind.
+
+- Production UI-mother baseline: `6aca3dcc505894481430967c2acb762b3dd1b358`.
+- Reviewed source: the same repository URL owned by the root `README.md` adoption record.
+- Frozen review candidate: `be6dcad3f63fa121fbe3180f257ba1ff128696c4`, tag `v0.6.7`, resolved
+  from `origin/main` on 2026-08-05.
+- Exact range: 26 commits, 223 changed files, 14,241 insertions and 1,550 deletions.
+- The separately inspected local source tree was at `93545c979a0da74365e4134b361f4556f473d46f`
+  and contained an unrelated untracked `.codegraph/`; it was not modified. Remote inspection used a
+  disposable clone that was removed after review.
+- Upstream `v0.6.7` release notes report its own full build/release/test gates green. This is an
+  upstream claim useful for confidence and discovery, not OmniMind compatibility or acceptance
+  proof. No OmniMind product gate was run during the read-only review.
+- The candidate retains the MIT license and adds Emanuele Di Pietro to its copyright notice.
+  OmniMind must preserve applicable attribution for actual copied or substantial adapted portions;
+  it must not import Synara identity or release history.
+
+The candidate is frozen for this intake even if upstream moves again. A future maintainer-initiated
+review starts change discovery after `be6dcad3`, carries the deferred decisions below and reopens
+them only when their trigger holds. `reviewed through` is not `adopted through`: production adoption
+changes only after accepted implementation, provenance, legal closure and review.
+
+### 8.2 Author-intent reconstruction and decision
+
+The review separated source code form, mechanism/failure model, and underlying product judgment.
+Incompatible donor nouns or deleted authority therefore caused semantic translation or a trigger,
+not automatic rejection. Conversely, upstream quality did not authorize assumptions that are false
+in OmniMind.
+
+| Upstream change | Problem and strongest insight | Current OmniMind owner/evidence | Proposed disposition | Cost or risk | Required proof | Maintainer decision |
+| --- | --- | --- | --- | --- | --- | --- |
+| `28ca8dc`, `8c032e0`, `3da77360` | A deferred chat must never wait forever; detached favourite models need provider identity; guest-page annotation cards cannot rely on translucent composer glass | Workbench; current deferred mount has only double-rAF, favourites lack provenance, annotation surface still uses `--composer-surface` | Direct/locally semantic adoption in active Workbench Work | Shared Chat lifecycle and accessibility regressions if copied mechanically | Exact-once fallback/cleanup, equal-name model a11y, opaque guest overlay | Accepted |
+| Selected `bb0ebf57` active UI mechanisms | Re-entry must not replay completed scroll/collapse motion; activity and latest Project must follow user work; native browser bounds require CSS-to-DIP zoom conversion | Workbench and Desktop system capability; current tree has partial working-day/gutter logic but lacks live-only collapse watch, user-activity Project ranking and browser rect conversion | Semantic/direct adoption in active Workbench Work | Large mixed commit also contains deleted AgentGateway/browser authority | Per-mechanism tests, real zoom geometry, unchanged route/performance budgets, negative authority scan | Accepted only for enumerated active UI mechanisms |
+| `325bfdf`, `92b77fe`, terminal portion of `93545c97` | Terminal selection belongs to the exact adjacent Composer; unavailable capability must disappear; natural exit is not a destructive user close and must not issue a second `exit` | Workbench Terminal/system capability; current dock passes a no-op `Add to chat` target and lacks explicit exited lifecycle | Direct/semantic adoption in active Workbench Work | Global callback could leak across split/dock; exit cleanup can destroy placeholders or resurrect tabs | Pane-scoped target, no-target action absence, natural-exit process proof, final-dock replacement | Accepted |
+| `e2efe48`, `210d6df`, notification portion of `93545c97` | Completion identity must be stable across timestamp/status wobble; failure is not success; visible/focused product and native browser should not notify redundantly | Product State owns Conversation/Run/receipt; Desktop owns system notification and focus truth | Translate to Product facts in separate completion-signal Work | Direct Thread/Turn port would restore donor authority or miss Product unknown states | Product Run identity/outcome matrix, resnapshot dedupe, route/dock visibility, renderer+Desktop focus defense, unread preservation | Accepted |
+| Browser runtime portion of `bb0ebf57` | Agent browser execution must not depend on a visible panel; hidden runtimes need bounded LRU, in-flight protection, popup safety and explicit human-takeover epochs | Desktop system capability; current T4 deletes AgentGateway and no Pi browser tool path is accepted | Defer with trigger: real Pi/system browser capability wiring | Direct port now would restore deleted invocation authority or advertise an inactive capability | Same visible runtime, max-budget/restore, human takeover, popup/download and cancellation proof under Pi path | Deferred, insight retained |
+| `33bc59fc` Mic/Voice | Avoid merged/resampled peak allocations; make start/cancel generation-safe; cancel on identity change; prewarm; admit uploads before buffering; constrain outbound transport | Workbench plus scoped Service capability; current recorder still merges arrays and has startup/provider-switch gaps, but first slice has no accepted active Pi voice contract | Defer with trigger: truthful first-party voice capability is activated | Provider-specific prewarm/auth can become false Pi capability; upstream still uses deprecated ScriptProcessor | Encoder parity/benchmark, startup cancel, identity switch, admission/transport, real capability truth | Deferred, mechanism accepted in principle |
+| `7529084`, sidechat/detail parts of `425a2d5` | Sidechat creation is one deduplicated lifecycle with immediate activation, retained detail and prompt-failure isolation; only actually visible embedded chats lease detail; lease identity should be stable | Product State lacks accepted Product-owned sidechat fork/origin lifecycle; old orchestration is deleted | Defer with trigger: Product Conversation fork/origin and Run admission exist | Direct code calls donor orchestration and would create a competing navigation/state model | Concurrent create/dedupe, fork-before-prompt, retention/recovery, visible-only detail and stable subscription proof | Deferred, insight retained |
+| `115144a`, `877b66`, `3a58f51`, `1fa1c61` | External Engine discovery/interaction/update must use registry truth, containment, generation identity, provider acknowledgement, live version evidence and exact install-source updater | Execution assigns External Engines and Package private lifecycle outside Product Service; these paths are not in the first slice | Defer to External Claude/OpenCode Engine and Package Works | Direct import would recreate Provider authority or mislabel Claude plugins as Pi Packages | Exact registry precedence/containment, stale-settlement rejection, acknowledgement race, live-refresh/update-source matrix | Deferred, exact falsifiers retained |
+| `4db2587` GitHub Project import | Clone only into owned staging, lock destinations, bound concurrency/output, verify origin, promote atomically, cancel safely and recover a checkout when registration fails | Product Workspace/Project plus scoped Git capability; feature is not in the first candidate | Defer with trigger: GitHub source is added to Create Project | External side effects, auth, disk and recovery expand product scope; old input includes donor model selection | Real clone cancellation, conflict/race, recovery, credential-safe errors and atomic Product registration | Deferred, design retained |
+| File relocation and pending-interaction parts of `6c4153c` | Agents may emit ancestor-relative paths; durable interactions need reclaimable claim states without letting stale resolutions win | Workspace containment and future Product structured interaction owner | Split disposition: interaction invariants defer to structured Question/approval; file lookup defers to privacy/permission design | Ancestor search can discover files outside workspace; current preview grant is not strong evidence of human approval | Explicit scope/consent, symlink/home containment and replacement-generation tests | Deferred, high caution |
+| `e96845a` runtime quarantine | Unreplayable or externally claimed work must be quarantined and reconciled, never reconsidered blindly after restart | Product outbox/receipt/unknown-delivery path already forbids automatic replay and requires reconciliation | Already covered semantically; keep upstream cases as falsifiers | Reintroducing donor runtime would create a second writer | Existing Product crash/send-boundary/concurrent-claim/unknown tests remain green after deletion | Accepted as already covered; no code port |
+| `95db14f` temporary-thread bubbles | Ephemerality should be visible rather than surprising | OmniMind local draft becomes a durable Product Conversation on send; no equivalent leave-and-disappear thread contract is accepted | Decline exact dashed-bubble code; reopen for a future scratch Conversation and express at the most truthful boundary | Dashed sent bubbles would communicate a false lifetime and add visual noise | A real ephemeral Conversation contract plus same-state visual review | Exact code declined; product insight retained |
+| `29f8ed8`, `e5ae7d4`, `3ccaa8e`, `8f8258f`, `be6dcad3` | Use consistent icons, permit legal attribution, publish accurate release metadata | Source-neutral Pointer glyph and root legal/adoption owners already exist | Pointer change already covered; apply only actual MIT attribution; do not import brand/release identity | Identity leakage or false claim that the whole release was adopted | Source/identity/legal checks against actual changed bytes | Accepted only as provenance/legal obligation |
+
+### 8.3 Authorized implementation boundary
+
+The maintainer explicitly approved this table on 2026-08-05. Implementation is limited to two
+new bounded Works after the accepted authority-retirement commit and before Freeze:
+
+1. [`Harden active Workbench mechanisms`](../.omp-flow/tasks/08-04-ui-chassis-takeover/work/harden-active-workbench-mechanisms.md).
+2. [`Align completion signals with Product facts`](../.omp-flow/tasks/08-04-ui-chassis-takeover/work/align-product-completion-signals.md).
+
+Every deferred row remains evidence with a concrete trigger, not current backlog, public ontology or
+permission to widen either Work. Every direct or translated adoption must bind its actual source
+commit/file, preserve required MIT attribution, pass its current OmniMind normal/failure/recovery
+proof and receive a different-actor review. The root `revision` remains the immutable physical
+baseline until the existing production adoption disclosure is deliberately updated to describe
+actual selectively adopted bytes; it must never be changed to `be6dcad3` as if the whole range had
+been merged.

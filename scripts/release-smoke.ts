@@ -123,13 +123,10 @@ function verifyCanonicalIdentity(): void {
       `Expected Service package @omnimind/service, got ${servicePackage.name ?? "<missing>"}.`,
     );
   }
-  const expectedBinaries = {
-    omnimind: "dist/index.mjs",
-    "omnimind-restore-migration-backup": "dist/restoreMigrationBackup.mjs",
-  };
+  const expectedBinaries = { omnimind: "dist/index.mjs" };
   if (JSON.stringify(servicePackage.bin ?? {}) !== JSON.stringify(expectedBinaries)) {
     throw new Error(
-      "Expected the Service package to expose only its local entry point and recovery binary.",
+      "Expected the Service package to expose only its local entry point.",
     );
   }
   if (OMNIMIND_PRODUCTION_BUNDLE_ID !== "app.omnimind.desktop") {

@@ -3,12 +3,10 @@
 // Layer: Header action control
 // Depends on: git React Query hooks, native shell bridges, and shared picker/menu primitives.
 
-import { DEFAULT_GIT_TEXT_GENERATION_MODEL } from "@omnimind/contracts";
 import type {
   GitActionProgressEvent,
   GitStackedAction,
   GitStatusResult,
-  ModelSelection,
   ThreadId,
 } from "@omnimind/contracts";
 import { useIsMutating, useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
@@ -43,7 +41,6 @@ import {
   shouldOfferCreateBranchPrompt,
   summarizeGitResult,
 } from "./GitActionsControl.logic";
-import { getProviderStartOptions, useAppSettings } from "~/appSettings";
 import { formatClockDuration } from "~/session-logic";
 import { Button } from "~/components/ui/button";
 import {
@@ -334,16 +331,6 @@ export default function GitActionsControl({
   const hideQuickActionLabel = hideQuickActionLabelProp ?? false;
   const variant = variantProp ?? "header";
   const isPanel = variant === "panel";
-  const { settings } = useAppSettings();
-  // Manual memoization kept: this file does not compile under React Compiler (see compile-report).
-  const providerOptions = useMemo(() => getProviderStartOptions(settings), [settings]);
-  const gitTextGenerationModelSelection = useMemo(
-    (): ModelSelection => ({
-      provider: settings.textGenerationProvider ?? "codex",
-      model: settings.textGenerationModel ?? DEFAULT_GIT_TEXT_GENERATION_MODEL,
-    }),
-    [settings.textGenerationModel, settings.textGenerationProvider],
-  );
   const activeThread = useStore(
     useMemo(() => createThreadSelector(activeThreadId), [activeThreadId]),
   );
@@ -419,10 +406,6 @@ export default function GitActionsControl({
     gitRunStackedActionMutationOptions({
       cwd: gitCwd,
       queryClient,
-      codexHomePath: settings.codexHomePath || null,
-      model: settings.textGenerationModel ?? null,
-      modelSelection: gitTextGenerationModelSelection,
-      ...(providerOptions ? { providerOptions } : {}),
     }),
   );
   const pullMutation = useMutation(gitPullMutationOptions({ cwd: gitCwd, queryClient }));
@@ -443,16 +426,7 @@ export default function GitActionsControl({
       if (!activeThreadId) {
         return;
       }
-      const api = readNativeApi();
-      if (!api) {
-        return;
-      }
-      await api.orchestration.dispatchCommand({
-        type: "thread.meta.update",
-        commandId: newCommandId(),
-        threadId: activeThreadId,
-        lastKnownPr: pr,
-      });
+      void pr;
     },
     [activeThreadId],
   );
@@ -1036,18 +1010,6 @@ export default function GitActionsControl({
 
       if (trimmedName.toLowerCase() === normalizedCurrentBranchName) {
         if (activeThreadId) {
-          void api.orchestration
-            .dispatchCommand({
-              type: "thread.meta.update",
-              commandId: newCommandId(),
-              threadId: activeThreadId,
-              createBranchFlowCompleted: true,
-            })
-            .catch(() => {
-              setThreadWorkspaceAction(activeThreadId, {
-                createBranchFlowCompleted: false,
-              });
-            });
           setThreadWorkspaceAction(activeThreadId, {
             createBranchFlowCompleted: true,
           });
@@ -1072,22 +1034,6 @@ export default function GitActionsControl({
         await api.git.createBranch({ cwd: gitCwd, branch: trimmedName, publish: hasOriginRemote });
         await api.git.checkout({ cwd: gitCwd, branch: trimmedName });
         if (activeThreadId) {
-          void api.orchestration
-            .dispatchCommand({
-              type: "thread.meta.update",
-              commandId: newCommandId(),
-              threadId: activeThreadId,
-              branch: trimmedName,
-              worktreePath: activeThread?.worktreePath ?? null,
-              associatedWorktreeBranch: trimmedName,
-              associatedWorktreeRef: trimmedName,
-              createBranchFlowCompleted: true,
-            })
-            .catch(() => {
-              setThreadWorkspaceAction(activeThreadId, {
-                createBranchFlowCompleted: false,
-              });
-            });
           setThreadWorkspaceAction(activeThreadId, {
             branch: trimmedName,
             associatedWorktreeBranch: trimmedName,

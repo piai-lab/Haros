@@ -3,18 +3,19 @@
 // Layer: Web route lifecycle hook
 // Exports: useTemporaryThreadLifecycle
 
-import type { ThreadId } from "@omnimind/contracts";
+import { PRODUCT_PROTOCOL_VERSION, ProductConversationId, type ThreadId } from "@omnimind/contracts";
 import { useEffect, useRef } from "react";
 import { useComposerDraftStore } from "../composerDraftStore";
 import { reconcileDeletedThreadFromClient } from "../lib/deletedThreadClientReconciliation";
 import { resolveTemporaryThreadIdToDelete } from "../lib/temporaryThread";
-import { newCommandId } from "../lib/utils";
+import { deleteProductConversation } from "../productConversationMutations";
 import { readNativeApi } from "../nativeApi";
 import { useSplitViewStore } from "../splitViewStore";
 import { useStore } from "../store";
+import { useProductStore } from "../store/productStore";
 import { useTemporaryThreadStore } from "../temporaryThreadStore";
 import { useTerminalStateStore } from "../terminalStateStore";
-import { getThreadFromState } from "../threadDerivation";
+import { readProductNativeApi } from "../wsNativeApi";
 
 export function useTemporaryThreadLifecycle(activeThreadId: ThreadId | null): void {
   const clearDraftThread = useComposerDraftStore((store) => store.clearDraftThread);
@@ -91,41 +92,44 @@ async function disposeTemporaryThread(input: {
   const { temporaryThreadId } = input;
   try {
     const api = readNativeApi();
-    const storeState = useStore.getState();
-    const serverThread = getThreadFromState(storeState, temporaryThreadId) ?? null;
+    const productConversation = useProductStore
+      .getState()
+      .conversations.find((conversation) => String(conversation.id) === String(temporaryThreadId));
+    if (productConversation && !api) return;
 
     if (api) {
-      if (serverThread?.session && serverThread.session.status !== "closed") {
-        await api.orchestration
-          .dispatchCommand({
-            type: "thread.session.stop",
-            commandId: newCommandId(),
-            threadId: temporaryThreadId,
-            createdAt: new Date().toISOString(),
-          })
-          .catch(() => undefined);
-      }
-
       await api.terminal
         .close({ threadId: temporaryThreadId, deleteHistory: true })
         .catch(() => undefined);
 
-      if (serverThread) {
-        const deletedOnServer = await api.orchestration
-          .dispatchCommand({
-            type: "thread.delete",
-            commandId: newCommandId(),
-            threadId: temporaryThreadId,
-          })
-          .then(() => true)
-          .catch(() => false);
-        if (deletedOnServer) {
-          void reconcileDeletedThreadFromClient({
-            threadId: temporaryThreadId,
-            removeDeletedThreadFromClientState:
-              useStore.getState().removeDeletedThreadFromClientState,
+      if (productConversation) {
+        const productApi = readProductNativeApi();
+        const snapshot = await productApi.getConversationSnapshot({
+          protocolVersion: PRODUCT_PROTOCOL_VERSION,
+          conversationId: ProductConversationId.makeUnsafe(temporaryThreadId),
+        });
+        const latestRun = snapshot.readModel.runs.at(-1);
+        const receiptState = latestRun?.receipt.receipt.state ?? null;
+        if (latestRun && (receiptState === "accepted" || receiptState === "running")) {
+          const stopped = await productApi.controlRun({
+            protocolVersion: PRODUCT_PROTOCOL_VERSION,
+            conversationId: snapshot.readModel.conversation.id,
+            runId: latestRun.id,
+            control: "abort",
+            text: null,
           });
+          if (stopped.result === "unsupported" || stopped.result === "unknown") {
+            throw new Error(stopped.message);
+          }
+        } else if (receiptState === "pending" || receiptState === "delivery_unknown") {
+          throw new Error("Temporary Conversation cleanup is waiting for Run delivery truth.");
         }
+        await deleteProductConversation(temporaryThreadId, productApi);
+        void reconcileDeletedThreadFromClient({
+          threadId: temporaryThreadId,
+          removeDeletedThreadFromClientState:
+            useStore.getState().removeDeletedThreadFromClientState,
+        });
       }
     }
 

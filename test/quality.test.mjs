@@ -434,6 +434,47 @@ test("source inventory binds adapted roots to immutable historical Git origins",
   assert.ok(errors.some((error) => error.includes("missing adopted path apps/service")));
 });
 
+test("source inventory validates exact selective intake provenance without claiming a whole release", () => {
+  const tracked = ["vendor/source/index.ts", "LICENSES/source.txt", "research/source-review.md"];
+  const valid = sourceAdoption({
+    provenance: {
+      repositoryCommit: "b".repeat(40),
+      trees: { "vendor/source": "c".repeat(40) },
+      selectiveIntakes: [
+        {
+          sourceRevision: "d".repeat(40),
+          sourcePaths: ["apps/web/src/feature.ts"],
+          targetPaths: ["vendor/source/index.ts"],
+          mode: "adapt",
+          summary: "Preserve the bounded interaction invariant under the current owner.",
+          rights: "Covered by the retained MIT legal text.",
+          evidence: "research/source-review.md",
+        },
+      ],
+    },
+  });
+
+  assert.deepEqual(validateSourceAdoptions([valid], tracked), []);
+
+  const invalid = structuredClone(valid);
+  invalid.provenance.selectiveIntakes[0] = {
+    ...invalid.provenance.selectiveIntakes[0],
+    sourceRevision: "moving-tag",
+    sourcePaths: [],
+    targetPaths: ["outside/product.ts"],
+    mode: "direct",
+    evidence: "notes/review.md",
+    unvalidated: true,
+  };
+  const errors = validateSourceAdoptions([invalid], tracked);
+  assert.ok(errors.some((error) => error.includes("only the required provenance fields")));
+  assert.ok(errors.some((error) => error.includes("40-character Git OID")));
+  assert.ok(errors.some((error) => error.includes("sourcePaths must be a non-empty array")));
+  assert.ok(errors.some((error) => error.includes("outside adopted paths")));
+  assert.ok(errors.some((error) => error.includes("unsupported mode")));
+  assert.ok(errors.some((error) => error.includes("tracked research path")));
+});
+
 test("exact provenance roots and tool roots must be ancestry-disjoint", () => {
   const adoption = sourceAdoption({
     provenance: {

@@ -1,9 +1,7 @@
 // FILE: sidebarContextMenuStyles.tsx
-// Purpose: Shared chrome for sidebar right-click menus (projects, spaces).
+// Purpose: Shared chrome for sidebar right-click menus.
 // Layer: Sidebar UI styling
-// Why: The project context menu and the Space tab context menu are the same object to a user —
-//      a right-click menu on a sidebar item. They were styled independently and drifted (panel
-//      width, item colour, icon slot). Both now read their chrome from here.
+// Why: Sidebar item menus use one panel, item, and icon treatment.
 
 import type { GlyphComponent } from "~/lib/icons";
 

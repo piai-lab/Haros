@@ -1,14 +1,7 @@
 import { Effect, Layer, FileSystem, Path } from "effect";
 import * as SqlClient from "effect/unstable/sql/SqlClient";
 
-import { runMigrations } from "../Migrations.ts";
-import {
-  inspectPendingMigrationRecovery,
-  reclaimOrphanedMigrationArtifacts,
-  resumeMarkedMigration,
-  runWithPreMigrationBackup,
-  type MigrationRecoveryMarker,
-} from "../MigrationBackup.ts";
+import { initializeSystemCapabilitySchema } from "../SystemCapabilitySchema.ts";
 import { ensurePrivateFileSync, repairPrivateFile } from "../../privatePathPermissions.ts";
 import { ServerConfig } from "../../config.ts";
 import {
@@ -53,7 +46,7 @@ const repairSqliteFilePermissions = (dbPath: string) =>
     }
   });
 
-const makeSetup = (dbPath?: string, pendingRecovery: MigrationRecoveryMarker | null = null) =>
+const makeSetup = (dbPath?: string) =>
   Layer.effectDiscard(
     Effect.gen(function* () {
       const sql = yield* SqlClient.SqlClient;
@@ -101,15 +94,7 @@ const makeSetup = (dbPath?: string, pendingRecovery: MigrationRecoveryMarker | n
         yield* sql`BEGIN EXCLUSIVE;`;
         yield* sql`COMMIT;`;
       }
-      // A pending marker means an earlier startup was interrupted mid-migration.
-      // Resuming reuses that attempt's snapshot instead of taking a second one,
-      // so the fallback stays the last known-good database.
-      const migrations = dbPath
-        ? pendingRecovery
-          ? resumeMarkedMigration(dbPath, pendingRecovery, runMigrations())
-          : runWithPreMigrationBackup(dbPath, runMigrations())
-        : runMigrations();
-      yield* migrations;
+      yield* initializeSystemCapabilitySchema;
     }),
   );
 
@@ -122,11 +107,6 @@ export const makeSqlitePersistenceLive = (dbPath: string) =>
         const fs = yield* FileSystem.FileSystem;
         const path = yield* Path.Path;
         yield* fs.makeDirectory(path.dirname(dbPath), { recursive: true });
-        // Ahead of the guard on purpose: a database that fails closed below
-        // never reaches the backup path, so this is the only opportunity to
-        // reclaim artifacts stranded by an earlier failed startup or restore.
-        yield* reclaimOrphanedMigrationArtifacts(dbPath);
-        const pendingRecovery = yield* inspectPendingMigrationRecovery(dbPath);
         // Set the mode before SQLite opens the database. Never reopen the
         // database, WAL, or SHM merely to chmod them while this connection is
         // live: closing any descriptor for the same inode releases POSIX
@@ -136,7 +116,7 @@ export const makeSqlitePersistenceLive = (dbPath: string) =>
         yield* repairSqliteFilePermissions(dbPath);
 
         return Layer.provideMerge(
-          makeSetup(dbPath, pendingRecovery),
+          makeSetup(dbPath),
           makeRuntimeSqliteLayer({ filename: dbPath }),
         );
       }),

@@ -3,7 +3,6 @@
 // message-content hits while still surfacing a useful snippet for chat matches.
 import type { ComponentType } from "react";
 
-import type { ProviderKind } from "@omnimind/contracts";
 import { basenameOfPath } from "../file-icons";
 import type { ThemeMode, ThemeVariant } from "../theme/theme.logic";
 
@@ -43,7 +42,7 @@ export interface SidebarSearchProject {
   folderName: string;
   localName: string | null;
   cwd: string;
-  spaceName: string;
+  locationName: string;
   createdAt?: string | undefined;
   updatedAt?: string | undefined;
 }
@@ -59,8 +58,8 @@ export interface SidebarSearchThread {
   projectId: string;
   projectName: string;
   projectRemoteName: string;
-  spaceName: string;
-  provider: ProviderKind | null;
+  locationName: string;
+  provider: string | null;
   createdAt: string;
   updatedAt?: string | undefined;
   messages: readonly {
@@ -248,7 +247,7 @@ function scoreProject(project: SidebarSearchProject, query: string): number | nu
   const remoteName = normalizeText(project.remoteName);
   const cwd = normalizeText(project.cwd);
   const folder = normalizeText(project.folderName || basenameOfPath(project.cwd));
-  const spaceName = normalizeText(project.spaceName);
+  const locationName = normalizeText(project.locationName);
 
   if (name === query) return 150;
   if (remoteName === query) return 150;
@@ -259,9 +258,9 @@ function scoreProject(project: SidebarSearchProject, query: string): number | nu
   if (name.includes(query)) return 105;
   if (remoteName.includes(query)) return 105;
   if (folder.includes(query)) return 95;
-  if (spaceName === query) return 90;
+  if (locationName === query) return 90;
   if (cwd.includes(query)) return 70;
-  if (spaceName.includes(query)) return 60;
+  if (locationName.includes(query)) return 60;
   return null;
 }
 
@@ -371,7 +370,7 @@ export function matchSidebarSearchThreads(
       const title = normalizeText(thread.title);
       const projectName = normalizeText(thread.projectName);
       const projectRemoteName = normalizeText(thread.projectRemoteName);
-      const spaceName = normalizeText(thread.spaceName);
+      const locationName = normalizeText(thread.locationName);
       const messageMatch = scoreMessage(thread.messages, normalizedQuery, queryTokens);
       let score: number | null = null;
       let matchKind: SidebarSearchThreadMatch["matchKind"] = "title";
@@ -402,7 +401,7 @@ export function matchSidebarSearchThreads(
       ) {
         score = 65;
         matchKind = "project";
-      } else if (spaceName.includes(normalizedQuery)) {
+      } else if (locationName.includes(normalizedQuery)) {
         score = 55;
         matchKind = "project";
       }

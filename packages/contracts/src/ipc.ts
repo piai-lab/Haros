@@ -12,13 +12,7 @@ import type {
   AuthSessionState,
   AuthWebSocketTokenResult,
 } from "./auth";
-import type {
-  ExternalMcpCreateIntegrationInput,
-  ExternalMcpCreateIntegrationResult,
-  ExternalMcpIntegration,
-  ExternalMcpRefreshPairingInput,
-  ExternalMcpRevokeIntegrationInput,
-} from "./externalMcp";
+import type { WorkspaceEnsureRootInput, WorkspaceEnsureRootResult } from "./filesystem";
 import type {
   AutomationCancelRunInput,
   AutomationCancelRunResult,
@@ -77,8 +71,6 @@ import type {
   GitStashInfoResult,
   GitStatusInput,
   GitStatusResult,
-  GitSummarizeDiffInput,
-  GitSummarizeDiffResult,
   GitUnstageFilesInput,
   GitUnstageFilesResult,
 } from "./git";
@@ -123,25 +115,11 @@ import type { StudioListThreadOutputsInput, StudioListThreadOutputsResult } from
 import type {
   ServerConfig,
   ServerDiagnosticsResult,
-  ServerGenerateAutomationIntentInput,
-  ServerGenerateAutomationIntentResult,
-  ServerGenerateThreadRecapInput,
-  ServerGenerateThreadRecapResult,
   ServerGetEnvironmentResult,
-  ServerGetProviderUsageSnapshotInput,
-  ServerGetProviderUsageSnapshotResult,
-  ServerListProviderUsageInput,
-  ServerListProviderUsageResult,
-  ServerGetSettingsResult,
   ServerListLocalServersResult,
   ServerListWorktreesResult,
-  ServerProviderUpdateInput,
-  ServerProviderUpdateResult,
-  ServerRefreshProvidersResult,
   ServerStopLocalServerInput,
   ServerStopLocalServerResult,
-  ServerUpdateSettingsInput,
-  ServerUpdateSettingsResult,
   ServerUpsertKeybindingInput,
   ServerUpsertKeybindingResult,
   ServerVoiceTranscriptionInput,
@@ -158,49 +136,8 @@ import type {
   TerminalSessionSnapshot,
   TerminalWriteInput,
 } from "./terminal";
-import type {
-  ClientOrchestrationCommand,
-  OrchestrationGetFullThreadDiffInput,
-  OrchestrationGetFullThreadDiffResult,
-  OrchestrationGetThreadDetailSnapshotInput,
-  OrchestrationGetThreadDetailSnapshotResult,
-  OrchestrationImportThreadInput,
-  OrchestrationImportThreadResult,
-  OrchestrationListProviderDeliveryBlockersInput,
-  OrchestrationListProviderDeliveryBlockersResult,
-  OrchestrationReconcileProviderDeliveryInput,
-  OrchestrationReconcileProviderDeliveryResult,
-  OrchestrationGetTurnDiffInput,
-  OrchestrationGetTurnDiffResult,
-  OrchestrationEvent,
-  OrchestrationReadModel,
-  OrchestrationShellSnapshot,
-  OrchestrationShellStreamItem,
-  OrchestrationSubscribeThreadInput,
-  OrchestrationThreadStreamItem,
-  OrchestrationUnsubscribeThreadInput,
-} from "./orchestration";
 import type { EditorId } from "./editor";
 import type { ThreadId } from "./baseSchemas";
-import type {
-  ProviderComposerCapabilities,
-  ProviderGetComposerCapabilitiesInput,
-  ProviderListAgentsInput,
-  ProviderListAgentsResult,
-  ProviderListCommandsInput,
-  ProviderListCommandsResult,
-  ProviderListModelsInput,
-  ProviderListModelsResult,
-  ProviderListPluginsInput,
-  ProviderListPluginsResult,
-  ProviderListSkillsInput,
-  ProviderListSkillsResult,
-  ProviderSkillsCatalogInput,
-  ProviderSkillsCatalogResult,
-  ProviderReadPluginInput,
-  ProviderReadPluginResult,
-} from "./providerDiscovery";
-import type { ProviderCompactThreadInput } from "./provider";
 import type {
   StatsGetProfileStatsInput,
   StatsGetProfileStatsResult,
@@ -578,6 +515,7 @@ export interface NativeApi {
   };
   filesystem: {
     browse: (input: FilesystemBrowseInput) => Promise<FilesystemBrowseResult>;
+    ensureWorkspaceRoot: (input: WorkspaceEnsureRootInput) => Promise<WorkspaceEnsureRootResult>;
   };
   studio: {
     listThreadOutputs: (
@@ -624,7 +562,6 @@ export interface NativeApi {
     workingTreeDiffStats: (
       input: GitReadWorkingTreeDiffInput,
     ) => Promise<GitWorkingTreeDiffStatsResult>;
-    summarizeDiff: (input: GitSummarizeDiffInput) => Promise<GitSummarizeDiffResult>;
     runStackedAction: (input: GitRunStackedActionInput) => Promise<GitRunStackedActionResult>;
     onActionProgress: (callback: (event: GitActionProgressEvent) => void) => () => void;
   };
@@ -648,8 +585,6 @@ export interface NativeApi {
   server: {
     getConfig: () => Promise<ServerConfig>;
     getEnvironment: () => Promise<ServerGetEnvironmentResult>;
-    getSettings: () => Promise<ServerGetSettingsResult>;
-    updateSettings: (input: ServerUpdateSettingsInput) => Promise<ServerUpdateSettingsResult>;
     getAuthSession: () => Promise<AuthSessionState>;
     bootstrapAuth: (input: AuthBootstrapInput) => Promise<AuthBootstrapResult>;
     bootstrapBearerAuth: (input: AuthBootstrapInput) => Promise<AuthBearerBootstrapResult>;
@@ -663,34 +598,10 @@ export interface NativeApi {
     revokeAuthClient: (input: AuthRevokeClientSessionInput) => Promise<{ revoked: boolean }>;
     revokeOtherAuthClients: () => Promise<{ revokedCount: number }>;
     logoutAuthSession: () => Promise<AuthLogoutResult>;
-    listExternalMcpIntegrations: () => Promise<ReadonlyArray<ExternalMcpIntegration>>;
-    createExternalMcpIntegration: (
-      input: ExternalMcpCreateIntegrationInput,
-    ) => Promise<ExternalMcpCreateIntegrationResult>;
-    revokeExternalMcpIntegration: (
-      input: ExternalMcpRevokeIntegrationInput,
-    ) => Promise<{ revoked: boolean }>;
-    refreshExternalMcpPairing: (
-      input: ExternalMcpRefreshPairingInput,
-    ) => Promise<ExternalMcpCreateIntegrationResult>;
-    refreshProviders: () => Promise<ServerRefreshProvidersResult>;
-    updateProvider: (input: ServerProviderUpdateInput) => Promise<ServerProviderUpdateResult>;
     listWorktrees: () => Promise<ServerListWorktreesResult>;
     listLocalServers: () => Promise<ServerListLocalServersResult>;
     stopLocalServer: (input: ServerStopLocalServerInput) => Promise<ServerStopLocalServerResult>;
-    getProviderUsageSnapshot: (
-      input: ServerGetProviderUsageSnapshotInput,
-    ) => Promise<ServerGetProviderUsageSnapshotResult>;
-    listProviderUsage: (
-      input: ServerListProviderUsageInput,
-    ) => Promise<ServerListProviderUsageResult>;
     getDiagnostics: () => Promise<ServerDiagnosticsResult>;
-    generateThreadRecap: (
-      input: ServerGenerateThreadRecapInput,
-    ) => Promise<ServerGenerateThreadRecapResult>;
-    generateAutomationIntent: (
-      input: ServerGenerateAutomationIntentInput,
-    ) => Promise<ServerGenerateAutomationIntentResult>;
     transcribeVoice: (
       input: ServerVoiceTranscriptionInput,
     ) => Promise<ServerVoiceTranscriptionResult>;
@@ -701,49 +612,6 @@ export interface NativeApi {
     getProfileTokenStats: (
       input: StatsGetProfileTokenStatsInput,
     ) => Promise<StatsGetProfileTokenStatsResult>;
-  };
-  provider: {
-    getComposerCapabilities: (
-      input: ProviderGetComposerCapabilitiesInput,
-    ) => Promise<ProviderComposerCapabilities>;
-    compactThread: (input: ProviderCompactThreadInput) => Promise<void>;
-    listCommands: (input: ProviderListCommandsInput) => Promise<ProviderListCommandsResult>;
-    listSkills: (input: ProviderListSkillsInput) => Promise<ProviderListSkillsResult>;
-    listSkillsCatalog: (input: ProviderSkillsCatalogInput) => Promise<ProviderSkillsCatalogResult>;
-    listPlugins: (input: ProviderListPluginsInput) => Promise<ProviderListPluginsResult>;
-    readPlugin: (input: ProviderReadPluginInput) => Promise<ProviderReadPluginResult>;
-    listModels: (input: ProviderListModelsInput) => Promise<ProviderListModelsResult>;
-    listAgents: (input: ProviderListAgentsInput) => Promise<ProviderListAgentsResult>;
-  };
-  orchestration: {
-    getSnapshot: () => Promise<OrchestrationReadModel>;
-    getShellSnapshot: () => Promise<OrchestrationShellSnapshot>;
-    getThreadDetailSnapshot: (
-      input: OrchestrationGetThreadDetailSnapshotInput,
-    ) => Promise<OrchestrationGetThreadDetailSnapshotResult>;
-    dispatchCommand: (command: ClientOrchestrationCommand) => Promise<{ sequence: number }>;
-    importThread: (
-      input: OrchestrationImportThreadInput,
-    ) => Promise<OrchestrationImportThreadResult>;
-    repairState: () => Promise<OrchestrationReadModel>;
-    getTurnDiff: (input: OrchestrationGetTurnDiffInput) => Promise<OrchestrationGetTurnDiffResult>;
-    getFullThreadDiff: (
-      input: OrchestrationGetFullThreadDiffInput,
-    ) => Promise<OrchestrationGetFullThreadDiffResult>;
-    replayEvents: (fromSequenceExclusive: number) => Promise<OrchestrationEvent[]>;
-    listProviderDeliveryBlockers: (
-      input?: OrchestrationListProviderDeliveryBlockersInput,
-    ) => Promise<OrchestrationListProviderDeliveryBlockersResult>;
-    reconcileProviderDelivery: (
-      input: OrchestrationReconcileProviderDeliveryInput,
-    ) => Promise<OrchestrationReconcileProviderDeliveryResult>;
-    subscribeShell: () => Promise<void>;
-    unsubscribeShell: () => Promise<void>;
-    subscribeThread: (input: OrchestrationSubscribeThreadInput) => Promise<void>;
-    unsubscribeThread: (input: OrchestrationUnsubscribeThreadInput) => Promise<void>;
-    onDomainEvent: (callback: (event: OrchestrationEvent) => void) => () => void;
-    onShellEvent: (callback: (event: OrchestrationShellStreamItem) => void) => () => void;
-    onThreadEvent: (callback: (event: OrchestrationThreadStreamItem) => void) => () => void;
   };
   automation: {
     list: (input?: AutomationListInput) => Promise<AutomationListResult>;

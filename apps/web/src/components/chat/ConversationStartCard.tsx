@@ -2,19 +2,20 @@
 // Purpose: End-of-turn recap for conversations created through a product integration.
 // Layer: Chat transcript UI
 
-import { PROVIDER_DISPLAY_NAMES } from "@omnimind/contracts";
-import { formatModelDisplayName } from "@omnimind/shared/model";
 import { memo } from "react";
 
+import {
+  historicalModelDisplayName,
+  historicalSourceDisplayName,
+} from "~/historicalSourcePresentation";
 import type { WorkLogOmniMindThreadCreation } from "../../session-logic";
-import { ProviderIcon } from "../ProviderIcon";
 import { BrandMark } from "../BrandMark";
 import { Button } from "../ui/button";
 
 function threadMeta(thread: WorkLogOmniMindThreadCreation["threads"][number]): string {
-  const model = formatModelDisplayName(thread.model) ?? thread.model;
+  const model = historicalModelDisplayName(thread.model) ?? thread.model;
   const environment = thread.environment === "worktree" ? "Worktree" : "Local";
-  return `${PROVIDER_DISPLAY_NAMES[thread.provider]} · ${model} · ${environment}`;
+  return `${historicalSourceDisplayName(thread.provider)} · ${model} · ${environment}`;
 }
 
 export const ConversationStartCard = memo(function ConversationStartCard({
@@ -48,7 +49,7 @@ export const ConversationStartCard = memo(function ConversationStartCard({
           </p>
           {singleThread ? (
             <div className="mt-1 flex min-w-0 items-center gap-1.5 text-[length:var(--app-font-size-ui-xs,10px)] text-muted-foreground/52">
-              <ProviderIcon provider={singleThread.provider} className="size-3 shrink-0" />
+              <BrandMark aria-hidden="true" className="size-3 shrink-0" />
               <span className="truncate">{threadMeta(singleThread)}</span>
             </div>
           ) : null}
@@ -73,7 +74,7 @@ export const ConversationStartCard = memo(function ConversationStartCard({
               key={thread.threadId}
               className="flex min-w-0 items-center gap-2.5 border-t border-[color:var(--color-border-light)] px-3 py-2 first:border-t-0"
             >
-              <ProviderIcon provider={thread.provider} className="size-4 shrink-0" />
+              <BrandMark aria-hidden="true" className="size-4 shrink-0" />
               <div className="min-w-0 flex-1">
                 <p className="truncate font-system-ui text-[length:var(--app-font-size-ui,12px)] font-medium text-foreground/90">
                   {thread.title}

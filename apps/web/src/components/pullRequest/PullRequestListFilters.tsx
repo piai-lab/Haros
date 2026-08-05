@@ -3,9 +3,9 @@
 //          involvement and state tabs (chip background on the active option only), and the
 //          project filter popover behind the header's filter icon.
 // Layer: Pull request presentation
-// Exports: PullRequestFilterPillGroup, PullRequestProjectFilterPopover
+// Exports: PullRequestFilterPillGroup, PullRequestWorkspaceFilterPopover
 
-import type { ProjectId } from "@omnimind/contracts";
+import type { ProductWorkspaceId } from "@omnimind/contracts";
 import { useState } from "react";
 
 import { CHAT_SURFACE_CONTROL_ACTIVE_CLASS_NAME } from "~/components/chat/chatHeaderControls";
@@ -66,19 +66,19 @@ export function PullRequestFilterPillGroup<T extends string>({
   );
 }
 
-export function PullRequestProjectFilterPopover({
+export function PullRequestWorkspaceFilterPopover({
   projects,
   value,
   onChange,
 }: {
-  projects: ReadonlyArray<readonly [ProjectId, string]>;
-  value: ProjectId | undefined;
-  onChange: (projectId: ProjectId | undefined) => void;
+  projects: ReadonlyArray<readonly [ProductWorkspaceId, string]>;
+  value: ProductWorkspaceId | undefined;
+  onChange: (workspaceId: ProductWorkspaceId | undefined) => void;
 }) {
   const [open, setOpen] = useState(false);
   const active = value !== undefined;
   const selectedProjectName = value
-    ? projects.find(([projectId]) => projectId === value)?.[1]
+    ? projects.find(([workspaceId]) => workspaceId === value)?.[1]
     : undefined;
   const triggerLabel = `Filter pull requests by project: ${selectedProjectName ?? "All projects"}`;
   return (

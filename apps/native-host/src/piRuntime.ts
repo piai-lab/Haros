@@ -368,13 +368,19 @@ export interface PiNativeRuntimeOptions {
 }
 
 export interface PiCredentialBroker {
-  readonly available: (provider: string) => Promise<boolean>;
-  readonly credential: (provider: string, runId: string) => Promise<string | null>;
+  readonly available: (provider: string) => Promise<PiCredentialAvailability>;
+  readonly credential: (provider: string, runId: string) => Promise<PiCredentialResult>;
 }
 
+export type PiCredentialAvailability = "configured" | "missing" | "unavailable";
+
+export type PiCredentialResult =
+  | { readonly status: "configured"; readonly credential: string }
+  | { readonly status: "missing" | "unavailable" };
+
 const unavailableCredentialBroker: PiCredentialBroker = {
-  available: async () => false,
-  credential: async () => null,
+  available: async () => "unavailable",
+  credential: async () => ({ status: "unavailable" }),
 };
 
 export class PiNativeRuntime {
@@ -394,7 +400,7 @@ export class PiNativeRuntime {
   readonly #availabilityCacheTtlMs: number;
   readonly #providerAvailability = new Map<
     string,
-    { readonly available: boolean; readonly expiresAt: number }
+    { readonly availability: PiCredentialAvailability; readonly expiresAt: number }
   >();
   readonly #operations = new Map<string, ActiveOperation>();
   readonly #sessionIndex = new Map<string, SessionIndexRecord>();
@@ -679,27 +685,29 @@ export class PiNativeRuntime {
   > {
     const all = this.#modelRuntime.getModels();
     const available = new Set<string>();
-    const auth = new Map<string, boolean>();
+    const auth = new Map<string, PiCredentialAvailability>();
     await Promise.all(
       this.#modelRuntime.getProviders().map(async (provider) => {
         const configured = this.#usesInjectedRuntime
           ? this.#modelRuntime.getProviderAuthStatus(provider.id).configured
+            ? "configured"
+            : "missing"
           : await (async () => {
               const cached = this.#providerAvailability.get(provider.id);
               if (!refreshAvailability && cached && cached.expiresAt > Date.now()) {
-                return cached.available;
+                return cached.availability;
               }
-              const observed = await this.#credentialBroker
-                .available(provider.id)
-                .catch(() => false);
+              const observed = await this.#credentialBroker.available(provider.id).catch(
+                (): PiCredentialAvailability => "unavailable",
+              );
               this.#providerAvailability.set(provider.id, {
-                available: observed,
+                availability: observed,
                 expiresAt: Date.now() + this.#availabilityCacheTtlMs,
               });
               return observed;
             })();
         auth.set(provider.id, configured);
-        if (configured) {
+        if (configured === "configured") {
           for (const model of this.#modelRuntime.getModels(provider.id)) {
             available.add(`${model.provider}/${model.id}`);
           }
@@ -716,7 +724,7 @@ export class PiNativeRuntime {
           reasoning: model.reasoning,
           thinkingLevels: thinkingLevels(model),
           available: available.has(`${model.provider}/${model.id}`),
-          auth: auth.get(model.provider) ? "configured" : "missing",
+          auth: auth.get(model.provider) ?? "unavailable",
         }),
       )
       .toSorted(
@@ -731,6 +739,22 @@ export class PiNativeRuntime {
       runtimeVersion: PI_RUNTIME_VERSION,
       packageGeneration: this.#packageSnapshot().generation,
       models: models.slice(0, 128),
+      capabilities: {
+        ingress: "typed-native-host",
+        lineage: { continue: "available", rebuild: "available" },
+        controls: {
+          steer: "available",
+          followUp: "available",
+          abort: "available",
+          cancel: "unavailable",
+        },
+        structuredQuestions: "unknown",
+        packages: "available",
+        filesRead: "unknown",
+        filesWrite: "unknown",
+        terminal: "unknown",
+        enforcement: "unverified",
+      },
       truncated: models.length > 128,
     };
   }
@@ -750,11 +774,11 @@ export class PiNativeRuntime {
   }
 
   #resolveModel(request: NativeHostExecutionRequest): Model<string> | null {
-    if (request.selection.engineId !== PI_ENGINE_ID || !request.selection.modelId) return null;
-    const slash = request.selection.modelId.indexOf("/");
-    if (slash <= 0 || slash === request.selection.modelId.length - 1) return null;
-    const provider = request.selection.modelId.slice(0, slash);
-    const modelId = request.selection.modelId.slice(slash + 1);
+    if (request.selection.engineId !== PI_ENGINE_ID) return null;
+    const slash = request.selection.runtimeModelId.indexOf("/");
+    if (slash <= 0 || slash === request.selection.runtimeModelId.length - 1) return null;
+    const provider = request.selection.runtimeModelId.slice(0, slash);
+    const modelId = request.selection.runtimeModelId.slice(slash + 1);
     const model = this.#modelRuntime.getModel(provider, modelId) as Model<string> | undefined;
     if (!model) return null;
     return model;
@@ -1166,22 +1190,45 @@ export class PiNativeRuntime {
           retryable: false,
         };
       }
-      exactCredentialForRedaction = await this.#credentialBroker
+      const credential = await this.#credentialBroker
         .credential(model.provider, request.runId)
-        .catch(() => null);
-    } else {
-      let credential = await this.#credentialBroker
-        .credential(model.provider, request.runId)
-        .catch(() => null);
-      if (!credential) {
+        .catch((): PiCredentialResult => ({ status: "unavailable" }));
+      if (credential.status !== "configured") {
         return {
           kind: "execution.rejected",
           dispatchId: request.dispatchId,
-          code: "PI_CREDENTIAL_UNAVAILABLE",
-          message: "The selected Run has no available credential for this Pi provider.",
-          retryable: false,
+          code:
+            credential.status === "unavailable"
+              ? "PI_CREDENTIAL_BROKER_UNAVAILABLE"
+              : "PI_CREDENTIAL_UNAVAILABLE",
+          message:
+            credential.status === "unavailable"
+              ? "The credential broker is temporarily unavailable for this Pi Run."
+              : "The selected Run has no available credential for this Pi provider.",
+          retryable: credential.status === "unavailable",
         };
       }
+      exactCredentialForRedaction = credential.credential;
+    } else {
+      const credentialResult = await this.#credentialBroker
+        .credential(model.provider, request.runId)
+        .catch((): PiCredentialResult => ({ status: "unavailable" }));
+      if (credentialResult.status !== "configured") {
+        return {
+          kind: "execution.rejected",
+          dispatchId: request.dispatchId,
+          code:
+            credentialResult.status === "unavailable"
+              ? "PI_CREDENTIAL_BROKER_UNAVAILABLE"
+              : "PI_CREDENTIAL_UNAVAILABLE",
+          message:
+            credentialResult.status === "unavailable"
+              ? "The credential broker is temporarily unavailable for this Pi Run."
+              : "The selected Run has no available credential for this Pi provider.",
+          retryable: credentialResult.status === "unavailable",
+        };
+      }
+      let credential: string | null = credentialResult.credential;
       exactCredentialForRedaction = credential;
       const credentials = new InMemoryCredentialStore();
       await credentials.modify(model.provider, async () => ({ type: "api_key", key: credential! }));
@@ -1230,7 +1277,7 @@ export class PiNativeRuntime {
     }
     const resolvedSelection: NativeHostExecutionAccepted["resolvedSelection"] = {
       engineId: PI_ENGINE_ID,
-      modelId: `${model.provider}/${model.id}`,
+      runtimeModelId: `${model.provider}/${model.id}`,
       thinking: thinking.resolved,
       permissionPolicy: request.selection.permissionPolicy,
       enforcement: "unverified",
@@ -1738,9 +1785,10 @@ export class PiNativeRuntime {
         (record) => record.phase === "accepted" && record.operationRef === operationRef,
       );
       if (acceptedRecord?.credentialDigest) {
-        let credential = await this.#credentialBroker
+        const credentialResult = await this.#credentialBroker
           .credential(acceptedRecord.provider, acceptedRecord.runId)
-          .catch(() => null);
+          .catch((): PiCredentialResult => ({ status: "unavailable" }));
+        let credential = credentialResult.status === "configured" ? credentialResult.credential : null;
         if (
           credential &&
           credentialDigestMatches(acceptedRecord.credentialDigest, credential)

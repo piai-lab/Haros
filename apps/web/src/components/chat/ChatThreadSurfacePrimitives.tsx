@@ -5,10 +5,6 @@ import {
   memo,
   type ReactNode,
   Suspense,
-  useEffect,
-  useLayoutEffect,
-  useMemo,
-  useState,
 } from "react";
 
 import ChatView from "../ChatView";
@@ -20,13 +16,11 @@ import {
   type DiffPanelMode,
 } from "../DiffPanelShell";
 import type { SplitViewId, SplitViewPanePanelState } from "../../splitViewStore";
-import {
-  createChatConversationActivitySignal,
-  SINGLE_CHAT_PANE_SCOPE_ID,
-} from "../../lib/chatPaneScope";
+import { SINGLE_CHAT_PANE_SCOPE_ID } from "../../lib/chatPaneScope";
 import { CHAT_BACKGROUND_CLASS_NAME } from "./composerPickerStyles";
 import { Spinner } from "../ui/spinner";
 import { cn } from "~/lib/utils";
+import { useRetainedConversationBoundary } from "./useRetainedConversationBoundary";
 
 const DiffPanel = lazy(() => import("../DiffPanel"));
 export const LazyBrowserPanel = lazy(() => import("../BrowserPanel"));
@@ -154,99 +148,26 @@ export function DeferredChatView(props: {
   onMounted?: () => void;
 }) {
   const onMounted = props.onMounted ?? noopChatSurfaceAction;
-  const mountKey = `${props.paneScopeId}:${props.conversationSurface}:${props.threadId}`;
-  const [readyMountKey, setReadyMountKey] = useState<string | null>(() =>
-    props.deferMount ? null : mountKey,
-  );
-  const canMountChatView = !props.deferMount || readyMountKey === mountKey;
-  const currentConversation = useMemo(
-    () => ({
-      threadId: props.threadId,
-      surface: props.conversationSurface,
-      splitViewId: props.splitViewId ?? null,
-      // Activity is committed by the parent layout effect. A render that is
-      // abandoned must never publish this Conversation as globally active.
-      activity: createChatConversationActivitySignal(false),
-    }),
-    [props.conversationSurface, props.splitViewId, props.threadId],
-  );
   const shouldRetainConversation =
     props.surfaceMode === "single" && props.paneScopeId === SINGLE_CHAT_PANE_SCOPE_ID;
-  const [retainedConversations, setRetainedConversations] = useState<
-    ReadonlyArray<typeof currentConversation>
-  >(() => [currentConversation]);
-  const currentConversationIndex = retainedConversations.findIndex(
-    (conversation) =>
-      conversation.threadId === currentConversation.threadId &&
-      conversation.surface === currentConversation.surface,
-  );
-  const visibleConversations = shouldRetainConversation
-    ? currentConversationIndex >= 0
-      ? retainedConversations
-      : [...retainedConversations.slice(-1), currentConversation]
-    : [currentConversation];
-  for (const conversation of visibleConversations) {
-    conversation.activity.setActive(
-      conversation.threadId === props.threadId &&
-        conversation.surface === props.conversationSurface,
-    );
-  }
-
-  useLayoutEffect(() => {
-    for (const conversation of visibleConversations) {
-      conversation.activity.flushActivation();
-    }
-  }, [props.conversationSurface, props.threadId, visibleConversations]);
-
-  useEffect(() => {
-    if (!props.deferMount) {
-      return;
-    }
-    // readyMountKey is keyed by mountKey, so a changed mountKey already makes
-    // canMountChatView false (loader) without an eager reset here; the double
-    // rAF then stamps the new key once the paint has settled.
-    let firstFrame = 0;
-    let secondFrame = 0;
-    firstFrame = window.requestAnimationFrame(() => {
-      secondFrame = window.requestAnimationFrame(() => setReadyMountKey(mountKey));
-    });
-    return () => {
-      window.cancelAnimationFrame(firstFrame);
-      window.cancelAnimationFrame(secondFrame);
-    };
-  }, [mountKey, props.deferMount]);
-
-  useEffect(() => {
-    if (
-      visibleConversations.length === retainedConversations.length &&
-      visibleConversations.every(
-        (conversation, index) =>
-          conversation.threadId === retainedConversations[index]?.threadId &&
-          conversation.surface === retainedConversations[index]?.surface &&
-          conversation.splitViewId === retainedConversations[index]?.splitViewId,
-      )
-    ) {
-      return;
-    }
-    // Keep exactly the previous and current Conversation only for the primary
-    // route-backed Agent | Chat surface. Split/editor/dock panes render their current
-    // Conversation normally so retention cannot multiply expensive surfaces.
-    setRetainedConversations(visibleConversations);
-  }, [retainedConversations, visibleConversations]);
-
-  useEffect(() => {
-    if (canMountChatView) {
-      onMounted();
-    }
-  }, [canMountChatView, onMounted]);
-
-  if (!canMountChatView) {
-    return <ChatMountLoader />;
-  }
+  const retainedBoundary = useRetainedConversationBoundary({
+    threadId: props.threadId,
+    surface: props.conversationSurface,
+    splitViewId: props.splitViewId ?? null,
+    paneScopeId: props.paneScopeId,
+    deferMount: props.deferMount,
+    surfaceMode: props.surfaceMode,
+    onMounted,
+  });
 
   return (
     <div className="relative flex min-h-0 min-w-0 flex-1">
-      {visibleConversations.map((conversation) => {
+      {!retainedBoundary.canMount ? (
+        <div className="absolute inset-0 z-20 flex">
+          <ChatMountLoader />
+        </div>
+      ) : null}
+      {retainedBoundary.conversations.map((conversation) => {
         const active =
           conversation.threadId === props.threadId &&
           conversation.surface === props.conversationSurface;
@@ -264,33 +185,37 @@ export function DeferredChatView(props: {
           >
             {shouldRetainConversation ? (
               <RetainedChatView
-                threadId={conversation.threadId}
-                conversationSurface={conversation.surface}
-                conversationActivity={conversation.activity}
-                splitViewId={conversation.splitViewId}
-                paneScopeId={props.paneScopeId}
-                surfaceMode={props.surfaceMode}
-                presentationMode={props.presentationMode ?? "default"}
-                // Visibility belongs to the retained layer, not the 13k-line ChatView.
-                // Keeping pane focus stable prevents a route switch from rerendering both
-                // cached Conversations. Global/menu handlers still fail closed against the
-                // active retained DOM boundary before acting.
-                isFocusedPane={props.isFocusedPane}
-                panelState={props.panelState}
-                onToggleDiffPanel={props.onToggleDiff}
-                {...(props.onToggleRightDock ? { onToggleRightDock: props.onToggleRightDock } : {})}
-                onToggleBrowserPanel={props.onToggleBrowser}
-                onOpenBrowserUrl={props.onOpenBrowserUrl}
-                onOpenTurnDiffPanel={props.onOpenTurnDiff}
-                {...(props.onSplitSurface ? { onSplitSurface: props.onSplitSurface } : {})}
-                {...(props.onMaximize ? { onMaximizeSurface: props.onMaximize } : {})}
-                {...(props.viewModeAction !== undefined
-                  ? { viewModeAction: props.viewModeAction }
-                  : {})}
-                {...(props.onChangeThread
-                  ? { onChangeThreadInSplitPane: props.onChangeThread }
-                  : {})}
-                {...(props.onCloseThreadPane ? { onCloseThreadPane: props.onCloseThreadPane } : {})}
+                  threadId={conversation.threadId}
+                  conversationSurface={conversation.surface}
+                  conversationActivity={conversation.activity}
+                  splitViewId={conversation.splitViewId}
+                  paneScopeId={props.paneScopeId}
+                  surfaceMode={props.surfaceMode}
+                  presentationMode={props.presentationMode ?? "default"}
+                  // Visibility belongs to the retained layer, not the 13k-line ChatView.
+                  // Keeping pane focus stable prevents a route switch from rerendering both
+                  // cached Conversations. Global/menu handlers still fail closed against the
+                  // active retained DOM boundary before acting.
+                  isFocusedPane={props.isFocusedPane}
+                  panelState={props.panelState}
+                  onToggleDiffPanel={props.onToggleDiff}
+                  {...(props.onToggleRightDock
+                    ? { onToggleRightDock: props.onToggleRightDock }
+                    : {})}
+                  onToggleBrowserPanel={props.onToggleBrowser}
+                  onOpenBrowserUrl={props.onOpenBrowserUrl}
+                  onOpenTurnDiffPanel={props.onOpenTurnDiff}
+                  {...(props.onSplitSurface ? { onSplitSurface: props.onSplitSurface } : {})}
+                  {...(props.onMaximize ? { onMaximizeSurface: props.onMaximize } : {})}
+                  {...(props.viewModeAction !== undefined
+                    ? { viewModeAction: props.viewModeAction }
+                    : {})}
+                  {...(props.onChangeThread
+                    ? { onChangeThreadInSplitPane: props.onChangeThread }
+                    : {})}
+                  {...(props.onCloseThreadPane
+                    ? { onCloseThreadPane: props.onCloseThreadPane }
+                    : {})}
               />
             ) : (
               <ChatView

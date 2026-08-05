@@ -15,10 +15,8 @@ import type {
   AutomationSchedule,
   AutomationUpdateInput,
   AutomationWorktreeMode,
-  ModelSelection,
+  ProductRequestedSelection,
   ProjectId,
-  ProviderStartOptions,
-  RuntimeMode,
   ThreadId,
 } from "@omnimind/contracts";
 
@@ -37,9 +35,13 @@ import {
   type AutomationDraftWarningId,
 } from "./automationDraft";
 
-export const defaultModelSelection: ModelSelection = {
-  provider: "codex",
-  model: "gpt-5-codex",
+export const defaultRequestedSelection: ProductRequestedSelection = {
+  state: "unavailable",
+  reason: "catalog-unavailable",
+  requestedRuntimeModelId: null,
+  permissionPolicy: "approval-required",
+  enforcement: "unverified",
+  executionTarget: null,
 };
 
 export const TIME_OF_DAY_PATTERN = /^([01]\d|2[0-3]):[0-5]\d$/;
@@ -85,20 +87,14 @@ export type AutomationFormState = {
   readonly onceRunAt: string;
   readonly cronExpression: string;
   readonly timezone: string;
-  readonly runtimeMode: RuntimeMode;
   readonly worktreeMode: AutomationWorktreeMode;
-  readonly modelSelection: ModelSelection;
+  readonly requestedSelection: ProductRequestedSelection;
   readonly mode: AutomationMode;
   readonly notificationPolicy: AutomationNotificationPolicy;
   readonly targetThreadId: string;
   readonly maxIterations: string;
   readonly stopOnError: boolean;
   readonly stopWhen: string;
-};
-
-export type AutomationProjectModelSelectionSource = {
-  readonly id: string;
-  readonly defaultModelSelection?: ModelSelection | null;
 };
 
 function localTimezone(): string {
@@ -390,7 +386,7 @@ function intervalFormPartsFromSeconds(everySeconds: number): {
 export function formFromDefinition(
   definition: AutomationDefinition | null,
   fallbackProjectId: string,
-  fallbackModelSelection: ModelSelection = defaultModelSelection,
+  fallbackRequestedSelection: ProductRequestedSelection = defaultRequestedSelection,
 ): AutomationFormState {
   // New automations default to a daily schedule; existing definitions keep their saved cadence.
   const schedule = definition?.schedule ?? { type: "daily" as const, timeOfDay: "09:00" };
@@ -423,9 +419,8 @@ export function formFromDefinition(
         : datetimeLocalFromIso(new Date(Date.now() + 15 * 60_000).toISOString()),
     cronExpression: schedule.type === "cron" ? schedule.expression : "0 9 * * *",
     timezone,
-    runtimeMode: definition?.runtimeMode ?? "approval-required",
     worktreeMode: definition?.worktreeMode ?? "auto",
-    modelSelection: definition?.modelSelection ?? fallbackModelSelection,
+    requestedSelection: definition?.requestedSelection ?? fallbackRequestedSelection,
     mode: definition?.mode ?? "standalone",
     notificationPolicy: definition?.notificationPolicy ?? "all",
     targetThreadId: definition?.targetThreadId ?? "",
@@ -518,69 +513,8 @@ export function automationFastIntervalLimitMessage(form: AutomationFormState): s
   return null;
 }
 
-export function projectModelSelection(
-  projects: readonly AutomationProjectModelSelectionSource[],
-  projectId: string,
-): ModelSelection {
-  return (
-    projects.find((project) => project.id === projectId)?.defaultModelSelection ??
-    defaultModelSelection
-  );
-}
-
-function modelSelectionsMatch(left: ModelSelection, right: ModelSelection): boolean {
-  const leftOptions = "options" in left ? left.options : undefined;
-  const rightOptions = "options" in right ? right.options : undefined;
-  return (
-    left.provider === right.provider &&
-    left.model === right.model &&
-    JSON.stringify(leftOptions ?? null) === JSON.stringify(rightOptions ?? null)
-  );
-}
-
-function modelIdentityMatches(left: ModelSelection, right: ModelSelection): boolean {
-  return left.provider === right.provider && left.model === right.model;
-}
-
-// Automation edits keep saved provider start options unless the provider/model identity changes.
-export function providerOptionsForAutomationModelSelection(
-  definition: Pick<AutomationDefinition, "modelSelection" | "providerOptions">,
-  nextModelSelection: ModelSelection,
-  currentProviderOptions?: ProviderStartOptions,
-): ProviderStartOptions | undefined {
-  return modelIdentityMatches(definition.modelSelection, nextModelSelection)
-    ? definition.providerOptions
-    : (currentProviderOptions ?? {});
-}
-
-export function providerOptionsForAutomationEdit(
-  definition: Pick<AutomationDefinition, "modelSelection" | "providerOptions">,
-  form: Pick<AutomationFormState, "modelSelection">,
-  currentProviderOptions?: ProviderStartOptions,
-): ProviderStartOptions | undefined {
-  return providerOptionsForAutomationModelSelection(
-    definition,
-    form.modelSelection,
-    currentProviderOptions,
-  );
-}
-
-export function modelSelectionForProjectChange(
-  projects: readonly AutomationProjectModelSelectionSource[],
-  currentProjectId: string,
-  nextProjectId: string,
-  currentModelSelection: ModelSelection,
-): ModelSelection {
-  const currentDefaultModelSelection = projectModelSelection(projects, currentProjectId);
-  const nextDefaultModelSelection = projectModelSelection(projects, nextProjectId);
-  return modelSelectionsMatch(currentModelSelection, currentDefaultModelSelection)
-    ? nextDefaultModelSelection
-    : currentModelSelection;
-}
-
 export function createInputFromForm(
   form: AutomationFormState,
-  providerOptions?: ProviderStartOptions,
   acknowledgedRisks?: AutomationCreateInput["acknowledgedRisks"],
   sourceThreadId?: ThreadId | null,
 ): AutomationCreateInput {
@@ -593,11 +527,8 @@ export function createInputFromForm(
     prompt: form.prompt.trim(),
     schedule: scheduleFromForm(form),
     enabled: form.enabled,
-    modelSelection: form.modelSelection,
-    runtimeMode: form.runtimeMode,
-    interactionMode: "default",
+    requestedSelection: form.requestedSelection,
     worktreeMode: form.worktreeMode,
-    ...(providerOptions ? { providerOptions } : {}),
     mode: form.mode,
     notificationPolicy: form.notificationPolicy,
     // Only heartbeat carries a thread the user picked; a dedicated automation is given
@@ -615,12 +546,11 @@ export function createInputFromForm(
 export function updateInputFromForm(
   definition: AutomationDefinition,
   form: AutomationFormState,
-  providerOptions?: ProviderStartOptions,
   acknowledgedRisks?: AutomationCreateInput["acknowledgedRisks"],
 ): AutomationUpdateInput {
   return {
     id: definition.id,
-    ...createInputFromForm(form, providerOptions, acknowledgedRisks),
+    ...createInputFromForm(form, acknowledgedRisks),
   };
 }
 
@@ -628,7 +558,7 @@ export function buildAutomationFormWarnings(form: AutomationFormState) {
   return buildAutomationDraftWarnings({
     schedule: scheduleFromForm(form),
     mode: form.mode,
-    runtimeMode: form.runtimeMode,
+    permissionPolicy: form.requestedSelection.permissionPolicy,
     worktreeMode: form.worktreeMode,
     hasEphemeralContext: false,
     generatedConfidence: null,

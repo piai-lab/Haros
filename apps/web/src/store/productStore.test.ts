@@ -27,6 +27,12 @@ function summary(id: string, updatedAt = "2026-08-04T00:00:00.000Z") {
     workspaceId: `workspace-${id}`,
     title: `Conversation ${id}`,
     workspaceKind: "chat" as const,
+    revision: 1,
+    archivedAt: null,
+    isPinned: false,
+    notes: "",
+    boardState: "active" as const,
+    boardStateChangedAt: null,
     receiptState: null,
     createdAt: "2026-08-04T00:00:00.000Z",
     updatedAt,
@@ -56,6 +62,8 @@ function conversationSnapshot(id = "conversation-1", sequence = 0) {
       activities: [],
       recoveries: [],
       queue: [],
+      entryPins: [],
+      entryMarkers: [],
     },
   });
 }
@@ -80,7 +88,12 @@ function shellBatch(input: {
             protocolVersion: PRODUCT_PROTOCOL_VERSION,
             sequence,
             factId: `fact-${sequence}`,
-            conversationId: "conversation-1",
+            ...(typeof input.change === "object" &&
+            input.change !== null &&
+            "kind" in input.change &&
+            input.change.kind === "runtime-catalog"
+              ? {}
+              : { conversationId: "conversation-1" }),
             emittedAt: "2026-08-04T00:00:00.000Z",
             change: input.change,
           },
@@ -120,6 +133,54 @@ describe("Product projection store", () => {
     expect(removed.state.conversations).toEqual([]);
   });
 
+  it("projects changing and unavailable Host catalogs without reconnecting", () => {
+    const catalog = {
+      engineId: "pi",
+      runtimeVersion: "0.81.1",
+      packageGeneration: "package-next",
+      models: [
+        {
+          id: "provider/model-next",
+          provider: "provider",
+          modelId: "model-next",
+          name: "Model next",
+          reasoning: true,
+          thinkingLevels: ["medium"],
+          available: false,
+          auth: "missing",
+        },
+      ],
+      capabilities: {
+        ingress: "typed-native-host",
+        lineage: { continue: "available", rebuild: "available" },
+        controls: {
+          steer: "available",
+          followUp: "available",
+          abort: "available",
+          cancel: "unavailable",
+        },
+        structuredQuestions: "unknown",
+        packages: "available",
+        filesRead: "unknown",
+        filesWrite: "unknown",
+        terminal: "unknown",
+        enforcement: "unverified",
+      },
+      truncated: false,
+    } as const;
+    const changed = applyProductFactBatch(
+      initialProductProjectionState,
+      shellBatch({ after: 0, change: { kind: "runtime-catalog", catalog } }),
+    );
+    expect(changed.state.runtimeCatalog).toEqual(catalog);
+
+    const lost = applyProductFactBatch(
+      changed.state,
+      shellBatch({ after: 1, change: { kind: "runtime-catalog", catalog: null } }),
+    );
+    expect(lost.state.runtimeCatalog).toBeNull();
+  });
+
   it("requires resnapshot for gaps, overflow, cursor-ahead, and unknown versions", () => {
     const gap = applyProductFactBatch(
       initialProductProjectionState,
@@ -147,6 +208,8 @@ describe("Product projection store", () => {
       decodeShell({
         protocolVersion: PRODUCT_PROTOCOL_VERSION,
         sequence: 1,
+        workspaces: [],
+        groups: [],
         conversations: [],
         runtimeCatalog: null,
       }),
@@ -176,6 +239,8 @@ describe("Product projection store", () => {
     const shell = decodeShell({
       protocolVersion: PRODUCT_PROTOCOL_VERSION,
       sequence: 2,
+      workspaces: [],
+      groups: [],
       conversations: [summary("conversation-1", "2026-08-04T00:00:02.000Z")],
       runtimeCatalog: null,
     });
@@ -183,6 +248,8 @@ describe("Product projection store", () => {
     const stale = decodeShell({
       protocolVersion: PRODUCT_PROTOCOL_VERSION,
       sequence: 1,
+      workspaces: [],
+      groups: [],
       conversations: [summary("stale")],
       runtimeCatalog: null,
     });
@@ -221,6 +288,40 @@ describe("Product projection store", () => {
 
     const staleDetail = conversationSnapshot("conversation-1", 0);
     expect(applyProductConversationSnapshot(detail.state, staleDetail)).toBe(detail.state);
+  });
+
+  it("applies a durable Conversation title fact to the active Product detail", () => {
+    const initial = applyProductConversationSnapshot(
+      initialProductProjectionState,
+      conversationSnapshot("conversation-title", 0),
+    );
+    const renamed = {
+      ...summary("conversation-title", "2026-08-04T00:00:01.000Z"),
+      title: "Renamed conversation",
+      revision: 2,
+    };
+    const batch = decodeBatch({
+      protocolVersion: PRODUCT_PROTOCOL_VERSION,
+      scope: { kind: "conversation", conversationId: "conversation-title" },
+      afterSequence: 0,
+      highWaterSequence: 1,
+      facts: [
+        {
+          protocolVersion: PRODUCT_PROTOCOL_VERSION,
+          sequence: 1,
+          factId: "detail-title-1",
+          conversationId: "conversation-title",
+          emittedAt: "2026-08-04T00:00:01.000Z",
+          change: { kind: "conversation-updated", conversation: renamed },
+        },
+      ],
+      resnapshotRequired: false,
+    });
+
+    const applied = applyProductFactBatch(initial, batch);
+    expect(applied.state.detailByConversation["conversation-title"]?.conversation).toEqual(
+      renamed,
+    );
   });
 
   it("marks reconnect generations and clears only the inactive detail projection", () => {
@@ -264,8 +365,9 @@ describe("Product projection store", () => {
       conversationId: snapshot.readModel.conversation.id,
       text: "durable before draft clear",
       requestedSelection: {
+        state: "selected" as const,
         engineId: "native-engine",
-        modelId: "model-1",
+        runtimeModelId: "provider/model",
         thinking: null,
         permissionPolicy: "approval-required" as const,
         enforcement: "unverified" as const,

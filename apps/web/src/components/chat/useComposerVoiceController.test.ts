@@ -2,7 +2,7 @@
 // Purpose: Covers voice transcription request identity and recorder action guards.
 // Layer: Chat composer hook tests
 
-import { ProjectId, ThreadId, type ProviderKind } from "@omnimind/contracts";
+import { ProjectId, ThreadId } from "@omnimind/contracts";
 import { beforeEach, describe, expect, it, vi } from "vitest";
 
 const reactHarness = vi.hoisted(() => {
@@ -136,7 +136,6 @@ const PROJECT: Project = {
   folderName: "project",
   localName: null,
   cwd: "/workspace/project",
-  defaultModelSelection: null,
   expanded: true,
   scripts: [],
 };
@@ -181,11 +180,8 @@ describe("useComposerVoiceController", () => {
       activeProject: PROJECT,
       activeThreadId: THREAD_A,
       threadId: THREAD_A,
-      selectedProvider: "codex",
-      activeProviderStatus: null,
       pendingUserInputCount: 0,
       onTranscriptReady: vi.fn(),
-      refreshVoiceStatus: vi.fn(),
     };
     render();
     await Promise.resolve();
@@ -199,7 +195,7 @@ describe("useComposerVoiceController", () => {
     expect(options.onTranscriptReady).toHaveBeenCalledWith("transcribed once");
   });
 
-  it.each(["thread", "provider", "cancel"] as const)(
+  it.each(["thread", "cancel"] as const)(
     "ignores a stale transcription after %s changes",
     async (staleCause) => {
       const transcription = deferred<{ text: string }>();
@@ -210,8 +206,6 @@ describe("useComposerVoiceController", () => {
 
       if (staleCause === "thread") {
         render({ activeThreadId: THREAD_B, threadId: THREAD_B });
-      } else if (staleCause === "provider") {
-        render({ selectedProvider: "claudeAgent" as ProviderKind });
       } else {
         result.cancelComposerVoiceRecording();
       }
@@ -260,21 +254,6 @@ describe("useComposerVoiceController", () => {
     });
   });
 
-  it("refreshes status for expired auth and keeps the refresh action available", async () => {
-    nativeApi.transcribeVoice.mockRejectedValueOnce(new Error("session expired"));
-
-    await result.submitComposerVoiceRecording();
-
-    expect(options.refreshVoiceStatus).toHaveBeenCalledTimes(1);
-    const failureToast = toast.add.mock.calls.at(-1)?.[0];
-    expect(failureToast).toMatchObject({
-      title: "Sign in to ChatGPT again",
-      actionProps: { children: "Refresh status" },
-    });
-    failureToast?.actionProps?.onClick();
-    expect(options.refreshVoiceStatus).toHaveBeenCalledTimes(2);
-  });
-
   it("cancels and invalidates transcription when voice becomes unavailable", async () => {
     const transcription = deferred<{ text: string }>();
     nativeApi.transcribeVoice.mockReturnValueOnce(transcription.promise);
@@ -286,16 +265,7 @@ describe("useComposerVoiceController", () => {
     await vi.waitFor(() => expect(nativeApi.transcribeVoice).toHaveBeenCalledTimes(1));
 
     voiceAvailability.canStartVoiceNotes = false;
-    render({
-      activeProviderStatus: {
-        provider: "codex",
-        status: "error",
-        available: false,
-        authStatus: "unauthenticated",
-        voiceTranscriptionAvailable: false,
-        checkedAt: "2026-07-20T00:00:00.000Z",
-      },
-    });
+    render();
     await vi.waitFor(() => expect(recorder.cancelRecording).toHaveBeenCalledTimes(1));
     render();
 

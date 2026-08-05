@@ -4,31 +4,23 @@
 // Depends on: wsTransport mock plus contracts channel constants.
 
 import {
-  ApprovalRequestId,
   AutomationId,
   AutomationRunId,
-  CommandId,
   type ContextMenuItem,
-  type ClientOrchestrationCommand,
-  EventId,
-  ORCHESTRATION_WS_CHANNELS,
-  ORCHESTRATION_WS_METHODS,
   PRODUCT_PROTOCOL_VERSION,
   PRODUCT_RPC_METHODS,
-  type OrchestrationEvent,
   ProjectId,
   ThreadId,
   type WsPushChannel,
   type WsPushData,
   type WsPushMessage,
+  SYSTEM_RPC_METHODS,
   WS_CHANNELS,
   WS_METHODS,
   type WsPush,
-  type ServerProviderStatus,
 } from "@omnimind/contracts";
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 
-import { makeDomainEvent } from "./storeTestFixtures";
 
 const requestMock = vi.fn<(...args: Array<unknown>) => Promise<unknown>>();
 const disposeMock = vi.fn();
@@ -119,16 +111,6 @@ function getWindowForTest(): Window & typeof globalThis & { desktopBridge?: unkn
   return testGlobal.window;
 }
 
-const defaultProviders: ReadonlyArray<ServerProviderStatus> = [
-  {
-    provider: "codex",
-    status: "ready",
-    available: true,
-    authStatus: "authenticated",
-    checkedAt: "2026-01-01T00:00:00.000Z",
-  },
-];
-
 beforeEach(() => {
   vi.resetModules();
   requestMock.mockReset();
@@ -147,6 +129,32 @@ afterEach(() => {
 });
 
 describe("wsNativeApi", () => {
+  it("sends pull-request operations through the exact scoped System RPC methods", async () => {
+    requestMock.mockResolvedValue(undefined);
+    const { createWsNativeApi } = await import("./wsNativeApi");
+    const api = createWsNativeApi();
+    const workspaceId = "workspace-pr-wire" as never;
+    const detailInput = { workspaceId, repository: "acme/widgets", number: 42 };
+
+    await api.pullRequests.list({ state: "open", workspaceId });
+    await api.pullRequests.reviewRequestCount({ workspaceId });
+    await api.pullRequests.detail(detailInput);
+    await api.pullRequests.diff(detailInput);
+    await api.pullRequests.action({ ...detailInput, action: "close" });
+    await api.pullRequests.comment({ ...detailInput, body: "Looks good." });
+    await api.pullRequests.setPinned({ ...detailInput, isPinned: true });
+
+    expect(requestMock.mock.calls).toEqual([
+      [SYSTEM_RPC_METHODS.pullRequestsList, { state: "open", workspaceId }],
+      [SYSTEM_RPC_METHODS.pullRequestsReviewRequestCount, { workspaceId }],
+      [SYSTEM_RPC_METHODS.pullRequestsDetail, detailInput],
+      [SYSTEM_RPC_METHODS.pullRequestsDiff, detailInput],
+      [SYSTEM_RPC_METHODS.pullRequestsAction, { ...detailInput, action: "close" }, { timeoutMs: null }],
+      [SYSTEM_RPC_METHODS.pullRequestsComment, { ...detailInput, body: "Looks good." }],
+      [SYSTEM_RPC_METHODS.pullRequestsSetPinned, { ...detailInput, isPinned: true }],
+    ]);
+  });
+
   it("delivers and caches valid server.welcome payloads", async () => {
     const { createWsNativeApi, onServerWelcome } = await import("./wsNativeApi");
 
@@ -241,7 +249,6 @@ describe("wsNativeApi", () => {
           message: "Entry at index 1 is invalid.",
         },
       ],
-      providers: defaultProviders,
     } as const;
     emitPush(WS_CHANNELS.serverConfigUpdated, payload);
 
@@ -263,105 +270,25 @@ describe("wsNativeApi", () => {
 
     emitPush(WS_CHANNELS.serverConfigUpdated, {
       issues: [{ kind: "keybindings.malformed-config", message: "bad json" }],
-      providers: defaultProviders,
     });
     emitPush(WS_CHANNELS.serverConfigUpdated, {
       issues: [],
-      providers: defaultProviders,
     });
 
     expect(listener).toHaveBeenCalledTimes(2);
     expect(listener).toHaveBeenLastCalledWith({
       issues: [],
-      providers: defaultProviders,
     });
   });
 
-  it("delivers and caches provider-only status updates", async () => {
-    const { createWsNativeApi, onServerProviderStatusesUpdated } = await import("./wsNativeApi");
-
-    createWsNativeApi();
-    const listener = vi.fn();
-    onServerProviderStatusesUpdated(listener);
-
-    const payload = {
-      providers: defaultProviders,
-    } as const;
-    emitPush(WS_CHANNELS.serverProviderStatusesUpdated, payload);
-
-    expect(listener).toHaveBeenCalledTimes(1);
-    expect(listener).toHaveBeenCalledWith(payload);
-
-    const lateListener = vi.fn();
-    onServerProviderStatusesUpdated(lateListener);
-    expect(lateListener).toHaveBeenCalledTimes(1);
-    expect(lateListener).toHaveBeenCalledWith(payload);
-  });
-
-  it("delivers and caches server settings updates", async () => {
-    const { createWsNativeApi, onServerSettingsUpdated } = await import("./wsNativeApi");
-
-    createWsNativeApi();
-    const listener = vi.fn();
-    onServerSettingsUpdated(listener);
-
-    const payload = {
-      settings: {
-        enableAssistantStreaming: true,
-        enableProviderUpdateChecks: true,
-        defaultThreadEnvMode: "local",
-        addProjectBaseDirectory: "",
-        textGenerationModelSelection: { provider: "codex", model: "gpt-5.4-mini" },
-        providers: {
-          codex: { enabled: true, binaryPath: "codex", homePath: "", customModels: [] },
-          claudeAgent: { enabled: true, binaryPath: "claude", launchArgs: "", customModels: [] },
-          cursor: { enabled: false, binaryPath: "agent", apiEndpoint: "", customModels: [] },
-          antigravity: { enabled: true, binaryPath: "agy", customModels: [] },
-          grok: { enabled: true, binaryPath: "grok", customModels: [] },
-          droid: { enabled: true, binaryPath: "droid", customModels: [] },
-          kilo: {
-            enabled: true,
-            binaryPath: "kilo",
-            serverUrl: "",
-            serverPasswordConfigured: false,
-            customModels: [],
-          },
-          opencode: {
-            enabled: true,
-            binaryPath: "opencode",
-            serverUrl: "",
-            serverPasswordConfigured: false,
-            experimentalWebSockets: false,
-            customModels: [],
-          },
-          pi: { enabled: true, binaryPath: "pi", agentDir: "", customModels: [] },
-        },
-        skills: { disabled: [] },
-      },
-    } as const;
-    emitPush(WS_CHANNELS.serverSettingsUpdated, payload);
-
-    expect(listener).toHaveBeenCalledTimes(1);
-    expect(listener).toHaveBeenCalledWith(payload);
-
-    const lateListener = vi.fn();
-    onServerSettingsUpdated(lateListener);
-    expect(lateListener).toHaveBeenCalledTimes(1);
-    expect(lateListener).toHaveBeenCalledWith(payload);
-  });
-
-  it("forwards valid terminal and orchestration events", async () => {
+  it("forwards valid terminal and git events", async () => {
     const { createWsNativeApi } = await import("./wsNativeApi");
 
     const api = createWsNativeApi();
     const onTerminalEvent = vi.fn();
-    const onDomainEvent = vi.fn();
     const onActionProgress = vi.fn();
 
     api.terminal.onEvent(onTerminalEvent);
-    expect(channelListeners.has(ORCHESTRATION_WS_CHANNELS.domainEvent)).toBe(false);
-    const unsubscribeDomainEvent = api.orchestration.onDomainEvent(onDomainEvent);
-    expect(channelListeners.get(ORCHESTRATION_WS_CHANNELS.domainEvent)?.size).toBe(1);
     api.git.onActionProgress(onActionProgress);
 
     const terminalEvent = {
@@ -373,29 +300,6 @@ describe("wsNativeApi", () => {
     } as const;
     emitPush(WS_CHANNELS.terminalEvent, terminalEvent);
 
-    const orchestrationEvent = {
-      sequence: 1,
-      eventId: EventId.makeUnsafe("event-1"),
-      aggregateKind: "project",
-      aggregateId: ProjectId.makeUnsafe("project-1"),
-      occurredAt: "2026-02-24T00:00:00.000Z",
-      commandId: null,
-      causationEventId: null,
-      correlationId: null,
-      metadata: {},
-      type: "project.created",
-      payload: {
-        projectId: ProjectId.makeUnsafe("project-1"),
-        kind: "project",
-        title: "Project",
-        workspaceRoot: "/tmp/workspace",
-        defaultModelSelection: null,
-        scripts: [],
-        createdAt: "2026-02-24T00:00:00.000Z",
-        updatedAt: "2026-02-24T00:00:00.000Z",
-      },
-    } satisfies Extract<OrchestrationEvent, { type: "project.created" }>;
-    emitPush(ORCHESTRATION_WS_CHANNELS.domainEvent, orchestrationEvent);
     emitPush(WS_CHANNELS.gitActionProgress, {
       actionId: "action-1",
       cwd: "/repo",
@@ -407,10 +311,6 @@ describe("wsNativeApi", () => {
 
     expect(onTerminalEvent).toHaveBeenCalledTimes(1);
     expect(onTerminalEvent).toHaveBeenCalledWith(terminalEvent);
-    expect(onDomainEvent).toHaveBeenCalledTimes(1);
-    expect(onDomainEvent).toHaveBeenCalledWith(orchestrationEvent);
-    unsubscribeDomainEvent();
-    expect(channelListeners.has(ORCHESTRATION_WS_CHANNELS.domainEvent)).toBe(false);
     expect(onActionProgress).toHaveBeenCalledTimes(1);
     expect(onActionProgress).toHaveBeenCalledWith({
       actionId: "action-1",
@@ -484,199 +384,6 @@ describe("wsNativeApi", () => {
     expect(onAutomationEvent).toHaveBeenCalledWith(event);
   });
 
-  it("wraps orchestration dispatch commands in the command envelope", async () => {
-    requestMock.mockResolvedValue(undefined);
-    const { createWsNativeApi } = await import("./wsNativeApi");
-
-    const api = createWsNativeApi();
-    const command = {
-      type: "project.create",
-      commandId: CommandId.makeUnsafe("cmd-1"),
-      projectId: ProjectId.makeUnsafe("project-1"),
-      kind: "project",
-      title: "Project",
-      workspaceRoot: "/tmp/project",
-      defaultModelSelection: {
-        provider: "codex",
-        model: "gpt-5-codex",
-      },
-      createdAt: "2026-02-24T00:00:00.000Z",
-    } as const;
-    await api.orchestration.dispatchCommand(command);
-
-    expect(requestMock).toHaveBeenCalledWith(ORCHESTRATION_WS_METHODS.dispatchCommand, {
-      command,
-    });
-  });
-
-  it("blocks legacy dispatch for registered Product Conversations before transport", async () => {
-    const productThreadId = ThreadId.makeUnsafe("product-conversation-1");
-    requestMock.mockImplementation(async (method) => {
-      if (method === PRODUCT_RPC_METHODS.getShellSnapshot) {
-        return {
-          protocolVersion: PRODUCT_PROTOCOL_VERSION,
-          sequence: 1,
-          conversations: [
-            {
-              id: productThreadId,
-              workspaceId: "product-workspace-1",
-              title: "Product Conversation",
-              workspaceKind: "chat",
-              receiptState: null,
-              createdAt: "2026-08-04T00:00:00.000Z",
-              updatedAt: "2026-08-04T00:00:00.000Z",
-            },
-          ],
-        };
-      }
-      return undefined;
-    });
-    const { createWsNativeApi, readProductNativeApi } = await import("./wsNativeApi");
-    const api = createWsNativeApi();
-    await readProductNativeApi().getShellSnapshot();
-    requestMock.mockClear();
-
-    await expect(
-      api.orchestration.dispatchCommand({
-        type: "thread.delete",
-        commandId: CommandId.makeUnsafe("delete-product-conversation"),
-        threadId: productThreadId,
-      }),
-    ).rejects.toThrow("Legacy orchestration routes are disabled");
-    const productSourceCommand = {
-      type: "thread.create",
-      commandId: CommandId.makeUnsafe("fork-from-product-conversation"),
-      threadId: ThreadId.makeUnsafe("legacy-child-conversation"),
-      projectId: ProjectId.makeUnsafe("legacy-project"),
-      title: "Legacy child",
-      modelSelection: { provider: "codex", model: "gpt-5" },
-      runtimeMode: "approval-required",
-      interactionMode: "default",
-      envMode: "local",
-      branch: null,
-      worktreePath: null,
-      sourceThreadId: productThreadId,
-      createdAt: "2026-08-04T00:00:00.000Z",
-    } satisfies Extract<ClientOrchestrationCommand, { type: "thread.create" }>;
-    await expect(api.orchestration.dispatchCommand(productSourceCommand)).rejects.toThrow(
-      "Legacy orchestration routes are disabled",
-    );
-    await expect(
-      api.orchestration.importThread({
-        threadId: productThreadId,
-        externalId: "provider-session-1",
-      }),
-    ).rejects.toThrow("Legacy orchestration routes are disabled");
-    expect(requestMock).not.toHaveBeenCalledWith(
-      ORCHESTRATION_WS_METHODS.dispatchCommand,
-      expect.anything(),
-    );
-
-    const legacyCommand = {
-      type: "thread.delete",
-      commandId: CommandId.makeUnsafe("delete-legacy-conversation"),
-      threadId: ThreadId.makeUnsafe("legacy-conversation-1"),
-    } as const;
-    await api.orchestration.dispatchCommand(legacyCommand);
-    expect(requestMock).toHaveBeenCalledWith(ORCHESTRATION_WS_METHODS.dispatchCommand, {
-      command: legacyCommand,
-    });
-  });
-
-  it("dynamically excludes Product ids from donor subscriptions, snapshots, events, and reducers", async () => {
-    const productThreadId = ThreadId.makeUnsafe("product-isolated-conversation");
-    const legacyThreadId = ThreadId.makeUnsafe("legacy-visible-conversation");
-    requestMock.mockImplementation(async (method) => {
-      if (method === PRODUCT_RPC_METHODS.getShellSnapshot) {
-        return {
-          protocolVersion: PRODUCT_PROTOCOL_VERSION,
-          sequence: 1,
-          conversations: [
-            {
-              id: productThreadId,
-              workspaceId: "product-workspace-isolated",
-              title: "Product isolated",
-              workspaceKind: "chat",
-              receiptState: null,
-              createdAt: "2026-08-04T00:00:00.000Z",
-              updatedAt: "2026-08-04T00:00:00.000Z",
-            },
-          ],
-        };
-      }
-      return undefined;
-    });
-    const { createWsNativeApi, readProductNativeApi } = await import("./wsNativeApi");
-    const api = createWsNativeApi();
-    const onThreadEvent = vi.fn();
-    const onShellEvent = vi.fn();
-    const onDomainEvent = vi.fn();
-    api.orchestration.onThreadEvent(onThreadEvent);
-    api.orchestration.onShellEvent(onShellEvent);
-    api.orchestration.onDomainEvent(onDomainEvent);
-
-    await readProductNativeApi().getShellSnapshot();
-    requestMock.mockClear();
-    requestMock.mockResolvedValue(undefined);
-
-    await expect(api.orchestration.subscribeThread({ threadId: productThreadId })).rejects.toThrow(
-      "Legacy orchestration routes are disabled",
-    );
-    await expect(
-      api.orchestration.getThreadDetailSnapshot({ threadId: productThreadId }),
-    ).rejects.toThrow("Legacy orchestration routes are disabled");
-    expect(requestMock).not.toHaveBeenCalled();
-
-    await api.orchestration.subscribeThread({ threadId: legacyThreadId });
-    await api.orchestration.getThreadDetailSnapshot({ threadId: legacyThreadId });
-    expect(requestMock).toHaveBeenCalledWith(ORCHESTRATION_WS_METHODS.subscribeThread, {
-      threadId: legacyThreadId,
-    });
-    expect(requestMock).toHaveBeenCalledWith(ORCHESTRATION_WS_METHODS.getThreadDetailSnapshot, {
-      threadId: legacyThreadId,
-    });
-
-    const productEvent = makeDomainEvent("thread.deleted", {
-      threadId: productThreadId,
-      deletedAt: "2026-08-04T00:01:00.000Z",
-    });
-    const legacyEvent = makeDomainEvent("thread.deleted", {
-      threadId: legacyThreadId,
-      deletedAt: "2026-08-04T00:01:00.000Z",
-    });
-    emitPush(ORCHESTRATION_WS_CHANNELS.threadEvent, {
-      kind: "event",
-      event: productEvent,
-    });
-    emitPush(ORCHESTRATION_WS_CHANNELS.threadEvent, {
-      kind: "event",
-      event: legacyEvent,
-    });
-    emitPush(ORCHESTRATION_WS_CHANNELS.shellEvent, {
-      kind: "thread-removed",
-      sequence: 1,
-      threadId: productThreadId,
-    });
-    emitPush(ORCHESTRATION_WS_CHANNELS.shellEvent, {
-      kind: "thread-removed",
-      sequence: 2,
-      threadId: legacyThreadId,
-    });
-    emitPush(ORCHESTRATION_WS_CHANNELS.domainEvent, productEvent);
-    emitPush(ORCHESTRATION_WS_CHANNELS.domainEvent, legacyEvent);
-
-    expect(onThreadEvent).toHaveBeenCalledTimes(1);
-    expect(onThreadEvent).toHaveBeenCalledWith({ kind: "event", event: legacyEvent });
-    expect(onShellEvent).toHaveBeenCalledTimes(1);
-    expect(onShellEvent).toHaveBeenCalledWith({
-      kind: "thread-removed",
-      sequence: 2,
-      threadId: legacyThreadId,
-    });
-    expect(onDomainEvent).toHaveBeenCalledTimes(1);
-    expect(onDomainEvent).toHaveBeenCalledWith(legacyEvent);
-  });
-
   it("forwards terminal output ACKs to the websocket transport", async () => {
     requestMock.mockResolvedValue(undefined);
     const { createWsNativeApi } = await import("./wsNativeApi");
@@ -685,36 +392,7 @@ describe("wsNativeApi", () => {
     const input = { threadId: "thread-1", terminalId: "default", bytes: 4096 };
     await api.terminal.ackOutput(input);
 
-    expect(requestMock).toHaveBeenCalledWith(WS_METHODS.terminalAckOutput, input);
-  });
-
-  it("omits null user-input answers before dispatching to orchestration", async () => {
-    requestMock.mockResolvedValue(undefined);
-    const { createWsNativeApi } = await import("./wsNativeApi");
-
-    const api = createWsNativeApi();
-
-    const command = {
-      type: "thread.user-input.respond",
-      commandId: CommandId.makeUnsafe("cmd-user-input-null"),
-      threadId: ThreadId.makeUnsafe("thread-1"),
-      requestId: ApprovalRequestId.makeUnsafe("request-1"),
-      answers: {
-        Language: null,
-        Runtime: "Bun",
-      },
-      createdAt: "2026-02-24T00:00:00.000Z",
-    } as const;
-    await api.orchestration.dispatchCommand(command);
-
-    expect(requestMock).toHaveBeenCalledWith(ORCHESTRATION_WS_METHODS.dispatchCommand, {
-      command: {
-        ...command,
-        answers: {
-          Runtime: "Bun",
-        },
-      },
-    });
+    expect(requestMock).toHaveBeenCalledWith(SYSTEM_RPC_METHODS.terminalAckOutput, input);
   });
 
   it("forwards workspace file writes to the websocket project method", async () => {
@@ -728,7 +406,7 @@ describe("wsNativeApi", () => {
       contents: "# Plan\n",
     });
 
-    expect(requestMock).toHaveBeenCalledWith(WS_METHODS.projectsWriteFile, {
+    expect(requestMock).toHaveBeenCalledWith(SYSTEM_RPC_METHODS.writeFile, {
       cwd: "/tmp/project",
       relativePath: "plan.md",
       contents: "# Plan\n",
@@ -749,7 +427,7 @@ describe("wsNativeApi", () => {
       relativePath: "src/app.ts",
     });
 
-    expect(requestMock).toHaveBeenCalledWith(WS_METHODS.projectsReadFile, {
+    expect(requestMock).toHaveBeenCalledWith(SYSTEM_RPC_METHODS.readFile, {
       cwd: "/tmp/project",
       relativePath: "src/app.ts",
     });
@@ -767,7 +445,7 @@ describe("wsNativeApi", () => {
       path: "/Users/tester/Downloads/shot.png",
     });
 
-    expect(requestMock).toHaveBeenCalledWith(WS_METHODS.projectsCreateLocalFilePreviewGrant, {
+    expect(requestMock).toHaveBeenCalledWith(SYSTEM_RPC_METHODS.createLocalFilePreviewGrant, {
       path: "/Users/tester/Downloads/shot.png",
     });
   });
@@ -782,7 +460,7 @@ describe("wsNativeApi", () => {
       depth: 2,
     });
 
-    expect(requestMock).toHaveBeenCalledWith(WS_METHODS.projectsDiscoverScripts, {
+    expect(requestMock).toHaveBeenCalledWith(SYSTEM_RPC_METHODS.discoverScripts, {
       cwd: "/tmp/project",
       depth: 2,
     });
@@ -802,42 +480,6 @@ describe("wsNativeApi", () => {
     await api.server.getEnvironment();
 
     expect(requestMock).toHaveBeenCalledWith(WS_METHODS.serverGetEnvironment);
-  });
-
-  it("uses websocket RPC for external MCP management in packaged and browser builds", async () => {
-    requestMock
-      .mockResolvedValueOnce([])
-      .mockResolvedValueOnce({ integration: { integrationId: "integration-1" } })
-      .mockResolvedValueOnce({ revoked: true })
-      .mockResolvedValueOnce({ integration: { integrationId: "integration-1" } });
-    const fetchMock = vi.fn();
-    vi.stubGlobal("fetch", fetchMock);
-    const { createWsNativeApi } = await import("./wsNativeApi");
-    const api = createWsNativeApi();
-    const createInput = {
-      name: "Desktop MCP",
-      capabilities: ["projects:read", "tasks:create", "tasks:read"] as const,
-      projectIds: [ProjectId.makeUnsafe("project-1")],
-    };
-
-    await api.server.listExternalMcpIntegrations();
-    await api.server.createExternalMcpIntegration(createInput);
-    await api.server.revokeExternalMcpIntegration({ integrationId: "integration-1" });
-    await api.server.refreshExternalMcpPairing({ integrationId: "integration-1" });
-
-    expect(requestMock).toHaveBeenNthCalledWith(1, WS_METHODS.serverListExternalMcpIntegrations);
-    expect(requestMock).toHaveBeenNthCalledWith(
-      2,
-      WS_METHODS.serverCreateExternalMcpIntegration,
-      createInput,
-    );
-    expect(requestMock).toHaveBeenNthCalledWith(3, WS_METHODS.serverRevokeExternalMcpIntegration, {
-      integrationId: "integration-1",
-    });
-    expect(requestMock).toHaveBeenNthCalledWith(4, WS_METHODS.serverRefreshExternalMcpPairing, {
-      integrationId: "integration-1",
-    });
-    expect(fetchMock).not.toHaveBeenCalled();
   });
 
   it("fetches auth session state over HTTP", async () => {
@@ -938,52 +580,6 @@ describe("wsNativeApi", () => {
       { actionId: "action-1", cwd: "/repo", action: "commit" },
       { timeoutMs: null },
     );
-  });
-
-  it("forwards full-thread diff requests to the orchestration websocket method", async () => {
-    requestMock.mockResolvedValue({ diff: "patch" });
-    const { createWsNativeApi } = await import("./wsNativeApi");
-
-    const api = createWsNativeApi();
-    await api.orchestration.getFullThreadDiff({
-      threadId: ThreadId.makeUnsafe("thread-1"),
-      toTurnCount: 1,
-    });
-
-    expect(requestMock).toHaveBeenCalledWith(ORCHESTRATION_WS_METHODS.getFullThreadDiff, {
-      threadId: "thread-1",
-      toTurnCount: 1,
-    });
-  });
-
-  it("forwards provider delivery inspection and reconciliation", async () => {
-    requestMock.mockResolvedValue([]);
-    const { createWsNativeApi } = await import("./wsNativeApi");
-    const api = createWsNativeApi();
-
-    await api.orchestration.listProviderDeliveryBlockers({
-      threadId: ThreadId.makeUnsafe("thread-1"),
-      limit: 10,
-    });
-    await api.orchestration.reconcileProviderDelivery({
-      eventSequence: 42,
-      threadId: ThreadId.makeUnsafe("thread-1"),
-      expectedState: "uncertain",
-      outcome: "safe_retry",
-      note: "The provider confirms it did not accept the command.",
-    });
-
-    expect(requestMock).toHaveBeenCalledWith(
-      ORCHESTRATION_WS_METHODS.listProviderDeliveryBlockers,
-      { threadId: "thread-1", limit: 10 },
-    );
-    expect(requestMock).toHaveBeenCalledWith(ORCHESTRATION_WS_METHODS.reconcileProviderDelivery, {
-      eventSequence: 42,
-      threadId: "thread-1",
-      expectedState: "uncertain",
-      outcome: "safe_retry",
-      note: "The provider confirms it did not accept the command.",
-    });
   });
 
   it("forwards browser webview detach requests to the desktop bridge", async () => {
@@ -1152,7 +748,6 @@ describe("wsNativeApi", () => {
     const { createWsNativeApi } = await import("./wsNativeApi");
     const api = createWsNativeApi();
     await api.server.transcribeVoice({
-      provider: "codex",
       cwd: "/repo",
       audioBase64: "UklGRgAAAAAAAAAAAAAAAAAAAAA=",
       mimeType: "audio/wav",
@@ -1161,7 +756,6 @@ describe("wsNativeApi", () => {
     });
 
     expect(transcribeVoice).toHaveBeenCalledWith({
-      provider: "codex",
       cwd: "/repo",
       audioBase64: "UklGRgAAAAAAAAAAAAAAAAAAAAA=",
       mimeType: "audio/wav",
@@ -1191,7 +785,6 @@ describe("wsNativeApi", () => {
     const { createWsNativeApi } = await import("./wsNativeApi");
     const api = createWsNativeApi();
     const result = await api.server.transcribeVoice({
-      provider: "codex",
       cwd: "/repo",
       audioBase64: "AQID",
       mimeType: "audio/wav",

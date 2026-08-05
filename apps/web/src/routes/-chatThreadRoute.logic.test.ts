@@ -1,5 +1,6 @@
 import { ProjectId, ThreadId, TurnId } from "@omnimind/contracts";
 import { describe, expect, it } from "vitest";
+import { shouldHoldMissingThreadRouteFallback } from "../chatRouteRestore";
 
 import {
   collectParentDirectoryPaths,
@@ -9,6 +10,8 @@ import {
   resolveMissingThreadRouteAuthority,
   resolveRoutePanelBootstrap,
   resolveSingleProjectId,
+  resolveThreadRouteConversationError,
+  resolveThreadRouteRecoveryState,
   resolveSplitPaneCloseDecision,
   resolveSplitPaneMaximizeDecision,
   resolveThreadPickerTitle,
@@ -185,6 +188,30 @@ describe("single chat route helpers", () => {
         productShellHydrated: true,
       }),
     ).toBe("legacy-recovery");
+  });
+
+  it("starts missing thread B with an independent recovery and no early home fallback", () => {
+    const recoveryState = resolveThreadRouteRecoveryState({
+      threadId: OTHER_THREAD_ID,
+      episodeThreadId: THREAD_ID,
+      episodeState: "done",
+    });
+
+    expect(recoveryState).toBe("idle");
+    expect(
+      shouldHoldMissingThreadRouteFallback({
+        hasKnownServerThreads: false,
+        recoveryState,
+        routeThreadExists: false,
+      }),
+    ).toBe(true);
+    expect(
+      resolveThreadRouteConversationError({
+        threadId: OTHER_THREAD_ID,
+        episodeThreadId: THREAD_ID,
+        episodeError: "Thread A failed",
+      }),
+    ).toBeNull();
   });
 
   it("prefers the server thread project and falls back to the draft project", () => {

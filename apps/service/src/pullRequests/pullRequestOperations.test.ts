@@ -1,25 +1,19 @@
-import { ProjectId, type OrchestrationProject } from "@omnimind/contracts";
+import { ProductWorkspaceId } from "@omnimind/contracts";
 import { Deferred, Effect, Fiber } from "effect";
 import { describe, expect, it } from "vitest";
 
 import type { GitHubPullRequestDetailData } from "../git/Services/GitHubCli";
 import { createGitHubCliWithFakeGh } from "../git/testing/fakeGitHubCli";
-import type { ProjectPullRequestPinsShape } from "../persistence/Services/ProjectPullRequestPins";
+import type { WorkspacePullRequestPinsShape } from "../persistence/Services/WorkspacePullRequestPins";
 import { makePullRequestOperations } from "./pullRequestOperations";
+import type { PullRequestWorkspaceContext } from "./workspaceContext";
 
 const now = "2026-07-15T00:00:00.000Z";
 
-const project: OrchestrationProject = {
-  id: ProjectId.makeUnsafe("project-detail"),
-  kind: "project",
-  title: "Detail",
+const project: PullRequestWorkspaceContext = {
+  workspaceId: ProductWorkspaceId.makeUnsafe("project-detail"),
+  workspaceTitle: "Detail",
   workspaceRoot: "/tmp/detail",
-  defaultModelSelection: null,
-  scripts: [],
-  isPinned: false,
-  createdAt: now,
-  updatedAt: now,
-  deletedAt: null,
 };
 
 const detail: GitHubPullRequestDetailData = {
@@ -67,8 +61,8 @@ describe("makePullRequestOperations", () => {
               return value;
             });
           const base = createGitHubCliWithFakeGh().service;
-          const pins: ProjectPullRequestPinsShape = {
-            listByProjectIds: () => Effect.succeed([]),
+          const pins: WorkspacePullRequestPinsShape = {
+            listByWorkspaceIds: () => Effect.succeed([]),
             setPinned: () => Effect.void,
           };
           const operations = makePullRequestOperations({
@@ -94,7 +88,7 @@ describe("makePullRequestOperations", () => {
           });
 
           const fiber = yield* operations
-            .detail({ projectId: project.id, repository: "acme/widgets", number: 42 })
+            .detail({ workspaceId: project.workspaceId, repository: "acme/widgets", number: 42 })
             .pipe(Effect.forkChild);
           yield* Effect.all([Deferred.await(detailStarted), Deferred.await(capabilitiesStarted)], {
             concurrency: 2,

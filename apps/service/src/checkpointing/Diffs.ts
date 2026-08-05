@@ -3,7 +3,6 @@
 // Layer: Server checkpointing helper
 // Exports: turn diff file parsers used by checkpoint capture and provider live-diff ingestion
 
-import type { OrchestrationCheckpointFile } from "@omnimind/contracts";
 import { Effect } from "effect";
 
 import { lazyModule } from "../lazyModule.ts";
@@ -20,6 +19,10 @@ export interface TurnDiffFileSummary {
   readonly path: string;
   readonly additions: number;
   readonly deletions: number;
+}
+
+export interface CheckpointFileSummary extends TurnDiffFileSummary {
+  readonly kind: string;
 }
 
 function summarizeParsedPatches(parsedPatches: ParsedPatches): ReadonlyArray<TurnDiffFileSummary> {
@@ -63,10 +66,10 @@ export function parseTurnDiffFilesFromUnifiedDiff(
 
 export function parseCheckpointFilesFromUnifiedDiff(
   diff: string,
-): Effect.Effect<OrchestrationCheckpointFile[]> {
+): Effect.Effect<CheckpointFileSummary[]> {
   return Effect.map(parseTurnDiffFilesFromUnifiedDiff(diff), (files) =>
     files.map(
-      (file): OrchestrationCheckpointFile => ({
+      (file): CheckpointFileSummary => ({
         path: file.path,
         kind: "modified",
         additions: file.additions,

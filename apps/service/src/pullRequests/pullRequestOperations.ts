@@ -1,11 +1,12 @@
-import type { OrchestrationProject, PullRequestDetail } from "@omnimind/contracts";
+import type { PullRequestDetail } from "@omnimind/contracts";
 import { githubAvatarUrlForLogin } from "@omnimind/shared/githubAvatar";
 import { Effect } from "effect";
 
 import type { GitHubCliShape } from "../git/Services/GitHubCli";
-import type { ProjectPullRequestPinsShape } from "../persistence/Services/ProjectPullRequestPins";
+import type { WorkspacePullRequestPinsShape } from "../persistence/Services/WorkspacePullRequestPins";
 import { isPullRequestMergeMethodAllowed } from "../pullRequests.logic";
 import type { PullRequestServiceShape } from "./Services/PullRequestService";
+import type { PullRequestWorkspaceContext } from "./workspaceContext";
 
 type PullRequestOperations = Pick<
   PullRequestServiceShape,
@@ -14,13 +15,13 @@ type PullRequestOperations = Pick<
 
 export function makePullRequestOperations(dependencies: {
   github: GitHubCliShape;
-  pins: ProjectPullRequestPinsShape;
+  pins: WorkspacePullRequestPinsShape;
   findProject: (
-    projectId: Parameters<PullRequestServiceShape["detail"]>[0]["projectId"],
-  ) => Effect.Effect<OrchestrationProject, unknown>;
+    workspaceId: Parameters<PullRequestServiceShape["detail"]>[0]["workspaceId"],
+  ) => Effect.Effect<PullRequestWorkspaceContext, unknown>;
   validateRepository: (repository: string) => Effect.Effect<string, Error>;
   validateProjectRepository: (
-    project: OrchestrationProject,
+    project: PullRequestWorkspaceContext,
     repository: string,
   ) => Effect.Effect<string, unknown>;
   loadMergeCapabilities: (
@@ -34,7 +35,11 @@ export function makePullRequestOperations(dependencies: {
     options: { readonly invalidateReviewMatches: boolean },
   ) => Effect.Effect<void, never>;
 }): PullRequestOperations {
-  const loadDetail = (project: OrchestrationProject, repositoryInput: string, number: number) =>
+  const loadDetail = (
+    project: PullRequestWorkspaceContext,
+    repositoryInput: string,
+    number: number,
+  ) =>
     Effect.gen(function* () {
       const repository = yield* dependencies.validateProjectRepository(project, repositoryInput);
       const [owner = "", repo = ""] = repository.split("/");
@@ -89,8 +94,8 @@ export function makePullRequestOperations(dependencies: {
         })),
       ].toSorted((left, right) => left.createdAt.localeCompare(right.createdAt));
       return {
-        projectId: project.id,
-        projectTitle: project.title,
+        workspaceId: project.workspaceId,
+        workspaceTitle: project.workspaceTitle,
         workspaceRoot: project.workspaceRoot,
         repository,
         ...detail,
@@ -103,12 +108,12 @@ export function makePullRequestOperations(dependencies: {
 
   const detail: PullRequestServiceShape["detail"] = (input) =>
     dependencies
-      .findProject(input.projectId)
+      .findProject(input.workspaceId)
       .pipe(Effect.flatMap((project) => loadDetail(project, input.repository, input.number)));
 
   const diff: PullRequestServiceShape["diff"] = (input) =>
     Effect.gen(function* () {
-      const project = yield* dependencies.findProject(input.projectId);
+      const project = yield* dependencies.findProject(input.workspaceId);
       const repository = yield* dependencies.validateProjectRepository(project, input.repository);
       return yield* dependencies.withGitHubRead(
         dependencies.github.getPullRequestDiff({
@@ -121,7 +126,7 @@ export function makePullRequestOperations(dependencies: {
 
   const action: PullRequestServiceShape["action"] = (input) =>
     Effect.gen(function* () {
-      const project = yield* dependencies.findProject(input.projectId);
+      const project = yield* dependencies.findProject(input.workspaceId);
       const repository = yield* dependencies.validateProjectRepository(project, input.repository);
       if (input.action === "merge") {
         const mergeMethod = input.mergeMethod ?? "merge";
@@ -151,7 +156,7 @@ export function makePullRequestOperations(dependencies: {
           ),
         );
       return {
-        projectId: project.id,
+        workspaceId: project.workspaceId,
         repository,
         number: input.number,
         workspaceRoot: project.workspaceRoot,
@@ -160,7 +165,7 @@ export function makePullRequestOperations(dependencies: {
 
   const comment: PullRequestServiceShape["comment"] = (input) =>
     Effect.gen(function* () {
-      const project = yield* dependencies.findProject(input.projectId);
+      const project = yield* dependencies.findProject(input.workspaceId);
       const repository = yield* dependencies.validateProjectRepository(project, input.repository);
       yield* dependencies.github
         .commentOnPullRequest({
@@ -177,7 +182,7 @@ export function makePullRequestOperations(dependencies: {
           ),
         );
       return {
-        projectId: project.id,
+        workspaceId: project.workspaceId,
         repository,
         number: input.number,
         workspaceRoot: project.workspaceRoot,
@@ -186,19 +191,19 @@ export function makePullRequestOperations(dependencies: {
 
   const setPinned: PullRequestServiceShape["setPinned"] = (input) =>
     Effect.gen(function* () {
-      const project = yield* dependencies.findProject(input.projectId);
+      const project = yield* dependencies.findProject(input.workspaceId);
       // Clearing an orphaned pin intentionally requires only a valid canonical repository key.
       const repository = yield* input.isPinned
         ? dependencies.validateProjectRepository(project, input.repository)
         : dependencies.validateRepository(input.repository);
       yield* dependencies.pins.setPinned({
-        projectId: project.id,
+        workspaceId: project.workspaceId,
         repositoryKey: repository.toLowerCase(),
         number: input.number,
         isPinned: input.isPinned,
       });
       return {
-        projectId: project.id,
+        workspaceId: project.workspaceId,
         repository,
         number: input.number,
         isPinned: input.isPinned,

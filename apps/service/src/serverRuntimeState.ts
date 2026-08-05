@@ -3,7 +3,6 @@ import { Effect, FileSystem, Option, Schema } from "effect";
 import { writeFileStringAtomically } from "./atomicWrite";
 import type { ServerConfigShape } from "./config";
 import { formatHostForUrl, isWildcardHost } from "./startupAccess";
-import { externalMcpRuntimeSecret } from "./externalMcp/runtimeProof.ts";
 
 export const PersistedServerRuntimeState = Schema.Struct({
   version: Schema.Literal(1),
@@ -12,7 +11,6 @@ export const PersistedServerRuntimeState = Schema.Struct({
   port: Schema.Int,
   origin: Schema.String,
   startedAt: Schema.String,
-  externalMcpRuntimeSecret: Schema.String,
 });
 export type PersistedServerRuntimeState = typeof PersistedServerRuntimeState.Type;
 
@@ -39,7 +37,6 @@ export const makePersistedServerRuntimeState = (input: {
   port: input.port,
   origin: runtimeOriginForConfig(input.config, input.port),
   startedAt: new Date().toISOString(),
-  externalMcpRuntimeSecret,
 });
 
 export const persistServerRuntimeState = (input: {

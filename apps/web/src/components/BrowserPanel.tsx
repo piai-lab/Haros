@@ -9,7 +9,7 @@
 import { useCallback, useEffect, useLayoutEffect, useRef, useState } from "react";
 import { useQuery } from "@tanstack/react-query";
 import {
-  PROVIDER_SEND_TURN_MAX_ATTACHMENTS,
+  CHAT_TURN_MAX_ATTACHMENTS,
   type ServerLocalServerProcess,
   type ThreadBrowserState,
   type ThreadId,
@@ -1318,9 +1318,9 @@ export function BrowserPanel({
 
     const attachmentCount =
       composerDraftImageCount + composerDraftFileCount + composerDraftAssistantSelectionCount;
-    if (attachmentCount >= PROVIDER_SEND_TURN_MAX_ATTACHMENTS) {
+    if (attachmentCount >= CHAT_TURN_MAX_ATTACHMENTS) {
       setLocalError(
-        `You can attach up to ${PROVIDER_SEND_TURN_MAX_ATTACHMENTS} references per message.`,
+        `You can attach up to ${CHAT_TURN_MAX_ATTACHMENTS} references per message.`,
       );
       return;
     }
@@ -1338,7 +1338,7 @@ export function BrowserPanel({
         );
         if (!inserted) {
           throw new Error(
-            `You can attach up to ${PROVIDER_SEND_TURN_MAX_ATTACHMENTS} references per message.`,
+            `You can attach up to ${CHAT_TURN_MAX_ATTACHMENTS} references per message.`,
           );
         }
         setLocalError(null);

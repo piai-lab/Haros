@@ -11,8 +11,8 @@ import * as Readline from "node:readline";
 import type { Readable, Writable } from "node:stream";
 
 import {
-  PROVIDER_SEND_TURN_MAX_ATTACHMENTS,
-  PROVIDER_SEND_TURN_MAX_IMAGE_BYTES,
+  CHAT_TURN_MAX_ATTACHMENTS,
+  CHAT_IMAGE_MAX_BYTES,
   type DesktopAppSnapCapture,
   type DesktopAppSnapErrorEvent,
   type DesktopAppSnapPermission,
@@ -30,7 +30,7 @@ import {
   sameAppSnapShortcut,
 } from "@omnimind/shared/appSnapShortcut";
 
-const MAX_PENDING_CAPTURES = PROVIDER_SEND_TURN_MAX_ATTACHMENTS;
+const MAX_PENDING_CAPTURES = CHAT_TURN_MAX_ATTACHMENTS;
 const MAX_HELPER_STDERR_CHARS = 4_096;
 const MAX_PENDING_CAPTURE_METADATA_BYTES = 512 * 1024;
 const PENDING_CAPTURE_STORAGE_VERSION = 1;
@@ -169,7 +169,7 @@ function parseStoredPendingCapture(value: unknown): StoredPendingAppSnapCapture 
     typeof sizeBytes !== "number" ||
     !Number.isSafeInteger(sizeBytes) ||
     sizeBytes <= 0 ||
-    sizeBytes > PROVIDER_SEND_TURN_MAX_IMAGE_BYTES
+    sizeBytes > CHAT_IMAGE_MAX_BYTES
   ) {
     return null;
   }
@@ -213,7 +213,7 @@ async function readRegularFile(
 }
 
 async function readValidatedPendingPng(filePath: string, expectedBytes?: number): Promise<Buffer> {
-  const bytes = await readRegularFile(filePath, PROVIDER_SEND_TURN_MAX_IMAGE_BYTES, expectedBytes);
+  const bytes = await readRegularFile(filePath, CHAT_IMAGE_MAX_BYTES, expectedBytes);
   if (!bytes.subarray(0, PNG_SIGNATURE.length).equals(PNG_SIGNATURE)) {
     throw new Error("The file is not a valid PNG image.");
   }

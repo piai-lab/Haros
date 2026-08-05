@@ -22,7 +22,7 @@ describe("automation draft warnings", () => {
     const warnings = buildAutomationDraftWarnings({
       schedule: { type: "interval", everySeconds: 300 },
       mode: "standalone",
-      runtimeMode: "approval-required",
+      permissionPolicy: "approval-required",
       worktreeMode: "worktree",
       hasEphemeralContext: false,
       generatedConfidence: null,
@@ -37,7 +37,7 @@ describe("automation draft warnings", () => {
     const warnings = buildAutomationDraftWarnings({
       schedule: { type: "interval", everySeconds: 300 },
       mode: "heartbeat",
-      runtimeMode: "approval-required",
+      permissionPolicy: "approval-required",
       worktreeMode: "auto",
       hasEphemeralContext: true,
       generatedConfidence: null,
@@ -59,7 +59,7 @@ describe("automation draft warnings", () => {
     const warnings = buildAutomationDraftWarnings({
       schedule: { type: "interval", everySeconds: 300 },
       mode: "standalone",
-      runtimeMode: "approval-required",
+      permissionPolicy: "approval-required",
       worktreeMode: "auto",
       hasEphemeralContext: false,
       generatedConfidence: null,
@@ -86,7 +86,7 @@ describe("automation draft warnings", () => {
     const warnings = buildAutomationDraftWarnings({
       schedule: { type: "interval", everySeconds: 30 },
       mode: "standalone",
-      runtimeMode: "full-access",
+      permissionPolicy: "full-access",
       worktreeMode: "local",
       hasEphemeralContext: false,
       generatedConfidence: null,
@@ -124,7 +124,7 @@ describe("automation draft warnings", () => {
     const warnings = buildAutomationDraftWarnings({
       schedule: { type: "interval", everySeconds: 30 },
       mode: "standalone",
-      runtimeMode: "full-access",
+      permissionPolicy: "full-access",
       worktreeMode: "local",
       hasEphemeralContext: false,
       generatedConfidence: null,
@@ -145,7 +145,7 @@ describe("automation draft warnings", () => {
     const threadWarnings = buildAutomationDraftWarnings({
       schedule: { type: "interval", everySeconds: 15 },
       mode: "heartbeat",
-      runtimeMode: "approval-required",
+      permissionPolicy: "approval-required",
       worktreeMode: "auto",
       hasEphemeralContext: false,
       generatedConfidence: null,
@@ -173,7 +173,7 @@ describe("automation draft warnings", () => {
     const standaloneWarnings = buildAutomationDraftWarnings({
       schedule: { type: "interval", everySeconds: 15 },
       mode: "standalone",
-      runtimeMode: "approval-required",
+      permissionPolicy: "approval-required",
       worktreeMode: "auto",
       hasEphemeralContext: false,
       generatedConfidence: null,
@@ -193,7 +193,7 @@ describe("automation draft warnings", () => {
     const warnings = buildAutomationDraftWarnings({
       schedule: { type: "interval", everySeconds: 300 },
       mode: "heartbeat",
-      runtimeMode: "approval-required",
+      permissionPolicy: "approval-required",
       worktreeMode: "auto",
       hasEphemeralContext: false,
       generatedConfidence: null,
@@ -212,7 +212,7 @@ describe("automationApprovalGaps", () => {
     enabled: true,
     maxIterations: null,
     mode: "standalone" as const,
-    runtimeMode: "approval-required" as const,
+    permissionPolicy: "approval-required" as const,
     worktreeMode: "worktree" as const,
     prompt: "Check the build.",
   };
@@ -220,7 +220,7 @@ describe("automationApprovalGaps", () => {
   it("requires full-access approval when unacknowledged", () => {
     const gaps = automationApprovalGaps({
       ...base,
-      runtimeMode: "full-access",
+      permissionPolicy: "full-access",
       acknowledgedRisks: [],
     });
     expect(gaps.warnings.map((warning) => warning.id)).toEqual(["full-access"]);
@@ -242,7 +242,7 @@ describe("automationApprovalGaps", () => {
   it("reports both blocking risks together", () => {
     const gaps = automationApprovalGaps({
       ...base,
-      runtimeMode: "full-access",
+      permissionPolicy: "full-access",
       worktreeMode: "local",
       acknowledgedRisks: [],
     });
@@ -258,7 +258,7 @@ describe("automationApprovalGaps", () => {
   it("clears the banner once the risks are acknowledged", () => {
     const gaps = automationApprovalGaps({
       ...base,
-      runtimeMode: "full-access",
+      permissionPolicy: "full-access",
       worktreeMode: "local",
       acknowledgedRisks: ["full-access", "local-checkout"],
     });
@@ -279,7 +279,7 @@ describe("automationApprovalGaps", () => {
     // dispatch. It is still surfaced so automation.update accepts a local heartbeat.
     const gaps = automationApprovalGaps({
       ...base,
-      runtimeMode: "full-access",
+      permissionPolicy: "full-access",
       worktreeMode: "local",
       mode: "heartbeat",
       acknowledgedRisks: [],
@@ -308,7 +308,7 @@ describe("automationApprovalGaps", () => {
     // full-access. The banner still shows the local-checkout fallback risk that approval saves.
     const gaps = automationApprovalGaps({
       ...base,
-      runtimeMode: "full-access",
+      permissionPolicy: "full-access",
       worktreeMode: "auto",
       mode: "standalone",
       acknowledgedRisks: [],
@@ -339,7 +339,7 @@ describe("automationApprovalGaps", () => {
     const gaps = automationApprovalGaps({
       ...base,
       schedule: { type: "interval", everySeconds: 15 },
-      runtimeMode: "full-access",
+      permissionPolicy: "full-access",
       acknowledgedRisks: [],
     });
     expect(new Set(gaps.warnings.map((warning) => warning.id))).toEqual(
@@ -379,7 +379,7 @@ describe("automationApprovalGaps", () => {
     const gaps = automationApprovalGaps({
       ...base,
       schedule: { type: "interval", everySeconds: 15 },
-      runtimeMode: "full-access",
+      permissionPolicy: "full-access",
       acknowledgedRisks: [],
       maxIterations: 3,
     });

@@ -1,3 +1,4 @@
+import type { ConversationHistoryActivity } from "~/historicalConversation";
 // FILE: WorkflowRunCard.logic.ts
 // Purpose: Derives the workflow run panel (Claude dynamic workflows) from task
 // activities: the workflow header plus one row per member agent with status and
@@ -9,7 +10,7 @@
 // Exports: deriveWorkflowRunState, WorkflowRunState, WorkflowAgentRow,
 // workflowElapsedMs, and buildWorkflowResumePrompt
 
-import { ThreadId, type OrchestrationThreadActivity } from "@omnimind/contracts";
+import { ThreadId } from "@omnimind/contracts";
 
 import { orderedActivities } from "../../session-logic";
 import { formatSubagentModelLabel, type SubagentStatusKind } from "../../lib/subagentPresentation";
@@ -290,7 +291,7 @@ function completionStatus(status: string | null): TaskSnapshot["status"] {
 // Folds the task lifecycle activities into one snapshot per task id. Later
 // activities win on status/usage; identity fields stick from task.started.
 function collectTaskSnapshots(
-  activities: ReadonlyArray<OrchestrationThreadActivity>,
+  activities: ReadonlyArray<ConversationHistoryActivity>,
 ): Map<string, TaskSnapshot> {
   const snapshots = new Map<string, TaskSnapshot>();
   for (const activity of orderedActivities(activities)) {
@@ -453,7 +454,7 @@ export function workflowElapsedMs(
 const OTHER_PHASE_TITLE = "Other";
 
 export function deriveWorkflowRunState(input: {
-  activities: ReadonlyArray<OrchestrationThreadActivity>;
+  activities: ReadonlyArray<ConversationHistoryActivity>;
   subagentThreadsByToolUseId?: ReadonlyMap<string, WorkflowSubagentThreadRef>;
   // Transient client flags keyed by workflow task id (not persisted server-side).
   pausedByUserTaskIds?: ReadonlySet<string>;

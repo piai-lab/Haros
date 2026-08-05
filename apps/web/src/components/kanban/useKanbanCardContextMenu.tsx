@@ -19,7 +19,8 @@ import { gitRemoveWorktreeMutationOptions } from "~/lib/gitReactQuery";
 import { pinActionLabel } from "~/lib/pin";
 import { archiveThreadFromClient } from "~/lib/threadArchive";
 import { dispatchThreadRename } from "~/lib/threadRename";
-import { newCommandId } from "~/lib/utils";
+import { setProductConversationPinned } from "~/productConversationMutations";
+import { readProductNativeApi } from "~/wsNativeApi";
 import { useComposerDraftStore } from "../../composerDraftStore";
 import { useKanbanUiStore } from "../../kanbanUiStore";
 import { readNativeApi } from "../../nativeApi";
@@ -59,18 +60,11 @@ async function archiveCardThread(threadId: ThreadId) {
   // Archived threads leave the board's thread feed, so a live optimistic
   // dispatch entry could never reconcile — drop it with the card.
   useKanbanUiStore.getState().clearOptimisticDispatch(threadId);
-  await archiveThreadFromClient(api.orchestration, threadId);
+  await archiveThreadFromClient(readProductNativeApi(), threadId);
 }
 
 async function setThreadPinned(threadId: ThreadId, isPinned: boolean) {
-  const api = readNativeApi();
-  if (!api) return;
-  await api.orchestration.dispatchCommand({
-    type: "thread.meta.update",
-    commandId: newCommandId(),
-    threadId,
-    isPinned,
-  });
+  await setProductConversationPinned(threadId, isPinned);
 }
 
 export function useKanbanCardContextMenu(): KanbanCardContextMenuController {

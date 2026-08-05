@@ -1,19 +1,18 @@
+import type { HistoricalModelSelection, HistoricalModelSlug } from "~/historicalModelSelection";
+import type {
+  ConversationHistoryPlanId,
+  ConversationPullRequestSummary,
+} from "~/historicalConversation";
 // FILE: composerDraftPersistence.ts
 // Purpose: Owns composer draft schema v7, migrations, partialization, merge normalization, and hydration.
 // Exports: Persist middleware transitions and persisted state type.
 
 import {
-  ModelSelection,
-  OrchestrationProposedPlanId,
-  OrchestrationThreadPullRequest,
   ProjectId,
-  ProviderInteractionMode,
-  ProviderKind,
   ProviderMentionReference,
-  ProviderModelOptions,
   ProviderSkillReference,
-  ProviderStartOptions,
   ProductPutQueueItemInput,
+  ProductRequestedSelection,
   RuntimeMode,
   ThreadId,
 } from "@omnimind/contracts";
@@ -35,6 +34,7 @@ import {
   projectDraftThreadEntryPointFromKey,
   projectIdFromDraftThreadMappingKey,
   PersistedComposerImageAttachment,
+  ComposerInteractionModeSchema,
   type ComposerDraftStoreState,
   type ComposerPromptHistorySavedDraft,
   type ComposerThreadDraftState,
@@ -42,14 +42,9 @@ import {
   type QueuedComposerTurn,
 } from "./composerDraftDomain";
 import {
-  LegacyCodexFields,
-  legacyMergeModelSelectionIntoProviderModelOptions,
-  legacySyncModelSelectionOptions,
-  legacyToModelSelectionByProvider,
-  normalizeModelSelection,
-  normalizeProviderKind,
-  normalizeProviderModelOptions,
-  sanitizeStickyModelSelectionMap,
+  normalizeHistoricalModelSelection,
+  normalizeHistoricalSourceId,
+  sanitizeHistoricalModelSelectionMap,
 } from "./composerDraftModels";
 import { normalizeAssistantSelectionAttachment } from "./lib/assistantSelections";
 import { type BrowserAnnotationDraft, normalizeBrowserAnnotations } from "./lib/browserAnnotations";
@@ -63,6 +58,31 @@ import { DEFAULT_INTERACTION_MODE, DEFAULT_RUNTIME_MODE } from "./types";
 
 const DraftThreadEnvModeSchema = Schema.Literals(["local", "worktree"]);
 const DraftThreadEntryPointSchema = Schema.Literals(["chat", "terminal"]);
+const ConversationHistoryPlanIdSchema = Schema.String;
+const HistoricalSourceIdSchema = Schema.String;
+const HistoricalModelOptionsSchema = Schema.Record(
+  Schema.String,
+  Schema.Union([Schema.String, Schema.Boolean]),
+);
+const HistoricalModelSelectionSchema = Schema.Struct({
+  provider: HistoricalSourceIdSchema,
+  model: Schema.String,
+  options: Schema.optionalKey(HistoricalModelOptionsSchema),
+  supportsAutoMode: Schema.optionalKey(Schema.Boolean),
+});
+const ConversationPullRequestSummarySchema = Schema.Struct({
+  number: Schema.Number,
+  title: Schema.String,
+  url: Schema.String,
+  baseBranch: Schema.String,
+  headBranch: Schema.String,
+  state: Schema.Literals(["open", "closed", "merged"]),
+  isDraft: Schema.optionalKey(Schema.Boolean),
+  mergeability: Schema.optionalKey(Schema.Literals(["mergeable", "conflicting", "unknown"])),
+  additions: Schema.optionalKey(Schema.NullOr(Schema.Number)),
+  deletions: Schema.optionalKey(Schema.NullOr(Schema.Number)),
+  changedFiles: Schema.optionalKey(Schema.NullOr(Schema.Number)),
+});
 
 function cloneBrowserAnnotation(annotation: BrowserAnnotationDraft): BrowserAnnotationDraft {
   return {
@@ -131,7 +151,7 @@ type PersistedPastedTextDraft = typeof PersistedPastedTextDraft.Type;
 
 const PersistedSourceProposedPlanReference = Schema.Struct({
   threadId: ThreadId,
-  planId: OrchestrationProposedPlanId,
+  planId: ConversationHistoryPlanIdSchema,
 });
 
 const PersistedRestoredSourceProposedPlan = Schema.Struct({
@@ -181,14 +201,13 @@ const PersistedQueuedComposerChatTurn = Schema.Struct({
   pastedTexts: Schema.optionalKey(Schema.Array(PersistedPastedTextDraft)),
   skills: Schema.Array(ProviderSkillReference),
   mentions: Schema.Array(ProviderMentionReference),
-  selectedProvider: ProviderKind,
+  selectedProvider: Schema.String,
   selectedModel: Schema.NullOr(Schema.String),
   selectedPromptEffort: Schema.NullOr(Schema.String),
-  modelSelection: ModelSelection,
-  providerOptionsForDispatch: Schema.optionalKey(ProviderStartOptions),
+  modelSelection: HistoricalModelSelectionSchema,
   sourceProposedPlan: Schema.optionalKey(PersistedSourceProposedPlanReference),
   runtimeMode: RuntimeMode,
-  interactionMode: ProviderInteractionMode,
+  interactionMode: ComposerInteractionModeSchema,
   envMode: DraftThreadEnvModeSchema,
 });
 
@@ -200,12 +219,11 @@ const PersistedQueuedComposerPlanFollowUp = Schema.Struct({
   createdAt: Schema.String,
   previewText: Schema.String,
   text: Schema.String,
-  interactionMode: ProviderInteractionMode,
-  selectedProvider: ProviderKind,
+  interactionMode: ComposerInteractionModeSchema,
+  selectedProvider: Schema.String,
   selectedModel: Schema.NullOr(Schema.String),
   selectedPromptEffort: Schema.NullOr(Schema.String),
-  modelSelection: ModelSelection,
-  providerOptionsForDispatch: Schema.optionalKey(ProviderStartOptions),
+  modelSelection: HistoricalModelSelectionSchema,
   runtimeMode: RuntimeMode,
 });
 
@@ -261,63 +279,29 @@ const PersistedComposerThreadDraftState = Schema.Struct({
   queuedTurns: Schema.optionalKey(Schema.Array(PersistedQueuedComposerTurn)),
   restoredSourceProposedPlan: Schema.optionalKey(PersistedRestoredSourceProposedPlan),
   modelSelectionByProvider: Schema.optionalKey(
-    Schema.Record(ProviderKind, Schema.optionalKey(ModelSelection)),
+    Schema.Record(HistoricalSourceIdSchema, HistoricalModelSelectionSchema),
   ),
-  activeProvider: Schema.optionalKey(Schema.NullOr(ProviderKind)),
+  activeProvider: Schema.optionalKey(Schema.NullOr(HistoricalSourceIdSchema)),
   runtimeMode: Schema.optionalKey(RuntimeMode),
-  interactionMode: Schema.optionalKey(ProviderInteractionMode),
+  interactionMode: Schema.optionalKey(ComposerInteractionModeSchema),
 });
 
 type PersistedComposerThreadDraftState = typeof PersistedComposerThreadDraftState.Type;
-
-const LegacyThreadModelFields = Schema.Struct({
-  provider: Schema.optionalKey(ProviderKind),
-  model: Schema.optionalKey(Schema.String),
-  modelOptions: Schema.optionalKey(Schema.NullOr(ProviderModelOptions)),
-});
-
-type LegacyThreadModelFields = typeof LegacyThreadModelFields.Type;
-
-type LegacyV2ThreadDraftFields = {
-  modelSelection?: ModelSelection | null;
-  modelOptions?: ProviderModelOptions | null;
-};
-
-type LegacyPersistedComposerThreadDraftState = PersistedComposerThreadDraftState &
-  LegacyCodexFields &
-  LegacyThreadModelFields &
-  LegacyV2ThreadDraftFields;
-
-const LegacyStickyModelFields = Schema.Struct({
-  stickyProvider: Schema.optionalKey(ProviderKind),
-  stickyModel: Schema.optionalKey(Schema.String),
-  stickyModelOptions: Schema.optionalKey(Schema.NullOr(ProviderModelOptions)),
-});
-
-type LegacyStickyModelFields = typeof LegacyStickyModelFields.Type;
-
-type LegacyV2StoreFields = {
-  stickyModelSelection?: ModelSelection | null;
-  stickyModelOptions?: ProviderModelOptions | null;
-};
-
-type LegacyPersistedComposerDraftStoreState = PersistedComposerDraftStoreState &
-  LegacyStickyModelFields &
-  LegacyV2StoreFields;
 
 const PersistedDraftThreadState = Schema.Struct({
   projectId: ProjectId,
   createdAt: Schema.String,
   runtimeMode: RuntimeMode,
-  interactionMode: ProviderInteractionMode,
+  interactionMode: ComposerInteractionModeSchema,
   entryPoint: DraftThreadEntryPointSchema.pipe(Schema.withDecodingDefault(() => "chat")),
   branch: Schema.NullOr(Schema.String),
   worktreePath: Schema.NullOr(Schema.String),
   workingDirectory: Schema.optionalKey(Schema.NullOr(Schema.String)),
-  lastKnownPr: Schema.optionalKey(Schema.NullOr(OrchestrationThreadPullRequest)),
+  lastKnownPr: Schema.optionalKey(Schema.NullOr(ConversationPullRequestSummarySchema)),
   envMode: DraftThreadEnvModeSchema,
   isTemporary: Schema.optionalKey(Schema.Boolean),
   promotedTo: Schema.optionalKey(ThreadId),
+  requestedSelection: Schema.optionalKey(ProductRequestedSelection),
 });
 
 type PersistedDraftThreadState = typeof PersistedDraftThreadState.Type;
@@ -327,9 +311,9 @@ const PersistedComposerDraftStoreState = Schema.Struct({
   draftThreadsByThreadId: Schema.Record(ThreadId, PersistedDraftThreadState),
   projectDraftThreadIdByProjectId: Schema.Record(ProjectId, ThreadId),
   stickyModelSelectionByProvider: Schema.optionalKey(
-    Schema.Record(ProviderKind, Schema.optionalKey(ModelSelection)),
+    Schema.Record(HistoricalSourceIdSchema, HistoricalModelSelectionSchema),
   ),
-  stickyActiveProvider: Schema.optionalKey(Schema.NullOr(ProviderKind)),
+  stickyActiveProvider: Schema.optionalKey(Schema.NullOr(HistoricalSourceIdSchema)),
 });
 
 export type PersistedComposerDraftStoreState = typeof PersistedComposerDraftStoreState.Type;
@@ -549,7 +533,7 @@ function normalizePersistedQueuedTurns(
     const kind = candidate.kind;
     const createdAt = typeof candidate.createdAt === "string" ? candidate.createdAt : "";
     const previewText = typeof candidate.previewText === "string" ? candidate.previewText : "";
-    const selectedProvider = normalizeProviderKind(candidate.selectedProvider);
+    const selectedProvider = normalizeHistoricalSourceId(candidate.selectedProvider);
     const selectedModel =
       candidate.selectedModel === null
         ? null
@@ -562,12 +546,7 @@ function normalizePersistedQueuedTurns(
         : typeof candidate.selectedPromptEffort === "string"
           ? candidate.selectedPromptEffort
           : null;
-    const modelSelection = normalizeModelSelection(candidate.modelSelection);
-    const providerOptionsForDispatch = Schema.is(ProviderStartOptions)(
-      candidate.providerOptionsForDispatch,
-    )
-      ? candidate.providerOptionsForDispatch
-      : undefined;
+    const modelSelection = normalizeHistoricalModelSelection(candidate.modelSelection);
     const sourceProposedPlan = Schema.is(PersistedSourceProposedPlanReference)(
       candidate.sourceProposedPlan,
     )
@@ -657,7 +636,6 @@ function normalizePersistedQueuedTurns(
         selectedModel,
         selectedPromptEffort,
         modelSelection,
-        ...(providerOptionsForDispatch ? { providerOptionsForDispatch } : {}),
         ...(sourceProposedPlan ? { sourceProposedPlan } : {}),
         runtimeMode,
         interactionMode,
@@ -686,7 +664,6 @@ function normalizePersistedQueuedTurns(
         selectedModel,
         selectedPromptEffort,
         modelSelection,
-        ...(providerOptionsForDispatch ? { providerOptionsForDispatch } : {}),
         runtimeMode,
       });
       seenIds.add(id);
@@ -729,13 +706,13 @@ function normalizePersistedDraftThreads(
       const branch = candidateDraftThread.branch;
       const worktreePath = candidateDraftThread.worktreePath;
       const workingDirectory = candidateDraftThread.workingDirectory;
-      let lastKnownPr: OrchestrationThreadPullRequest | null = null;
+      let lastKnownPr: ConversationPullRequestSummary | null = null;
       if (
         candidateDraftThread.lastKnownPr &&
         typeof candidateDraftThread.lastKnownPr === "object"
       ) {
         try {
-          lastKnownPr = Schema.decodeUnknownSync(OrchestrationThreadPullRequest)(
+          lastKnownPr = Schema.decodeUnknownSync(ConversationPullRequestSummarySchema)(
             candidateDraftThread.lastKnownPr,
           );
         } catch {
@@ -761,11 +738,9 @@ function normalizePersistedDraftThreads(
         runtimeMode: Schema.is(RuntimeMode)(candidateDraftThread.runtimeMode)
           ? candidateDraftThread.runtimeMode
           : DEFAULT_RUNTIME_MODE,
-        interactionMode:
-          candidateDraftThread.interactionMode === "plan" ||
-          candidateDraftThread.interactionMode === "default"
-            ? candidateDraftThread.interactionMode
-            : DEFAULT_INTERACTION_MODE,
+        // Draft threads are current Product conversations. Retain donor modes
+        // only in historical thread schemas, never in executable draft state.
+        interactionMode: DEFAULT_INTERACTION_MODE,
         entryPoint: normalizeDraftThreadEntryPoint(candidateDraftThread.entryPoint),
         branch: typeof branch === "string" ? branch : null,
         worktreePath: normalizedWorktreePath,
@@ -902,51 +877,10 @@ function normalizePersistedDraftsByThreadId(
       promptCandidate,
       terminalContexts.length,
     );
-    // If the draft already has the v3 shape, use it directly
-    const legacyDraftCandidate = draftValue as LegacyPersistedComposerThreadDraftState;
-    let modelSelectionByProvider: Partial<Record<ProviderKind, ModelSelection>> = {};
-    let activeProvider: ProviderKind | null = null;
-
-    if (
-      draftCandidate.modelSelectionByProvider &&
-      typeof draftCandidate.modelSelectionByProvider === "object"
-    ) {
-      // v3 format
-      modelSelectionByProvider = draftCandidate.modelSelectionByProvider as Partial<
-        Record<ProviderKind, ModelSelection>
-      >;
-      activeProvider = normalizeProviderKind(draftCandidate.activeProvider);
-    } else {
-      // v2 or legacy format: migrate
-      const normalizedModelOptions =
-        normalizeProviderModelOptions(
-          legacyDraftCandidate.modelOptions,
-          undefined,
-          legacyDraftCandidate,
-        ) ?? null;
-      const normalizedModelSelection = normalizeModelSelection(
-        legacyDraftCandidate.modelSelection,
-        {
-          provider: legacyDraftCandidate.provider,
-          model: legacyDraftCandidate.model,
-          modelOptions: normalizedModelOptions ?? legacyDraftCandidate.modelOptions,
-          legacyCodex: legacyDraftCandidate,
-        },
-      );
-      const mergedModelOptions = legacyMergeModelSelectionIntoProviderModelOptions(
-        normalizedModelSelection,
-        normalizedModelOptions,
-      );
-      const modelSelection = legacySyncModelSelectionOptions(
-        normalizedModelSelection,
-        mergedModelOptions,
-      );
-      modelSelectionByProvider = legacyToModelSelectionByProvider(
-        modelSelection,
-        mergedModelOptions,
-      );
-      activeProvider = modelSelection?.provider ?? null;
-    }
+    const modelSelectionByProvider = sanitizeHistoricalModelSelectionMap(
+      draftCandidate.modelSelectionByProvider ?? {},
+    );
+    const activeProvider = normalizeHistoricalSourceId(draftCandidate.activeProvider);
 
     const normalizedQueuedTurns = queuedTurns ?? [];
     const restoredSourceProposedPlan = Schema.is(PersistedRestoredSourceProposedPlan)(
@@ -1085,9 +1019,6 @@ export function partializeComposerDraftStoreState(
           selectedModel: queuedTurn.selectedModel,
           selectedPromptEffort: queuedTurn.selectedPromptEffort,
           modelSelection: queuedTurn.modelSelection,
-          ...(queuedTurn.providerOptionsForDispatch
-            ? { providerOptionsForDispatch: queuedTurn.providerOptionsForDispatch }
-            : {}),
           ...(queuedTurn.sourceProposedPlan
             ? { sourceProposedPlan: queuedTurn.sourceProposedPlan }
             : {}),
@@ -1108,9 +1039,6 @@ export function partializeComposerDraftStoreState(
         selectedModel: queuedTurn.selectedModel,
         selectedPromptEffort: queuedTurn.selectedPromptEffort,
         modelSelection: queuedTurn.modelSelection,
-        ...(queuedTurn.providerOptionsForDispatch
-          ? { providerOptionsForDispatch: queuedTurn.providerOptionsForDispatch }
-          : {}),
         runtimeMode: queuedTurn.runtimeMode,
       });
     }
@@ -1266,7 +1194,9 @@ export function partializeComposerDraftStoreState(
         : {}),
       ...(hasModelData
         ? {
-            modelSelectionByProvider: draft.modelSelectionByProvider,
+            modelSelectionByProvider: sanitizeHistoricalModelSelectionMap(
+              draft.modelSelectionByProvider,
+            ),
             activeProvider: draft.activeProvider,
           }
         : {}),
@@ -1279,7 +1209,9 @@ export function partializeComposerDraftStoreState(
     draftsByThreadId: persistedDraftsByThreadId,
     draftThreadsByThreadId: state.draftThreadsByThreadId,
     projectDraftThreadIdByProjectId: state.projectDraftThreadIdByProjectId,
-    stickyModelSelectionByProvider: state.stickyModelSelectionByProvider,
+    stickyModelSelectionByProvider: sanitizeHistoricalModelSelectionMap(
+      state.stickyModelSelectionByProvider,
+    ),
     stickyActiveProvider: state.stickyActiveProvider,
   };
 }
@@ -1290,57 +1222,25 @@ export function normalizeCurrentPersistedComposerDraftStoreState(
   if (!persistedState || typeof persistedState !== "object") {
     return EMPTY_PERSISTED_DRAFT_STORE_STATE;
   }
-  const normalizedPersistedState = persistedState as LegacyPersistedComposerDraftStoreState;
+  const normalizedPersistedState = persistedState as PersistedComposerDraftStoreState;
   const { draftThreadsByThreadId, projectDraftThreadIdByProjectId } =
     normalizePersistedDraftThreads(
       normalizedPersistedState.draftThreadsByThreadId,
       normalizedPersistedState.projectDraftThreadIdByProjectId,
     );
 
-  // Handle both v3 (modelSelectionByProvider) and v2/legacy formats
-  let stickyModelSelectionByProvider: Partial<Record<ProviderKind, ModelSelection>> = {};
-  let stickyActiveProvider: ProviderKind | null = null;
-  if (
-    normalizedPersistedState.stickyModelSelectionByProvider &&
-    typeof normalizedPersistedState.stickyModelSelectionByProvider === "object"
-  ) {
-    stickyModelSelectionByProvider =
-      normalizedPersistedState.stickyModelSelectionByProvider as Partial<
-        Record<ProviderKind, ModelSelection>
-      >;
-    stickyActiveProvider = normalizeProviderKind(normalizedPersistedState.stickyActiveProvider);
-  } else {
-    // Legacy migration path
-    const stickyModelOptions =
-      normalizeProviderModelOptions(normalizedPersistedState.stickyModelOptions) ?? {};
-    const normalizedStickyModelSelection = normalizeModelSelection(
-      normalizedPersistedState.stickyModelSelection,
-      {
-        provider: normalizedPersistedState.stickyProvider ?? "codex",
-        model: normalizedPersistedState.stickyModel,
-        modelOptions: stickyModelOptions,
-      },
-    );
-    const nextStickyModelOptions = legacyMergeModelSelectionIntoProviderModelOptions(
-      normalizedStickyModelSelection,
-      stickyModelOptions,
-    );
-    const stickyModelSelection = legacySyncModelSelectionOptions(
-      normalizedStickyModelSelection,
-      nextStickyModelOptions,
-    );
-    stickyModelSelectionByProvider = legacyToModelSelectionByProvider(
-      stickyModelSelection,
-      nextStickyModelOptions,
-    );
-    stickyActiveProvider = normalizeProviderKind(normalizedPersistedState.stickyProvider);
-  }
+  const stickyModelSelectionByProvider = sanitizeHistoricalModelSelectionMap(
+    normalizedPersistedState.stickyModelSelectionByProvider,
+  );
+  const stickyActiveProvider = normalizeHistoricalSourceId(
+    normalizedPersistedState.stickyActiveProvider,
+  );
 
   return {
     draftsByThreadId: normalizePersistedDraftsByThreadId(normalizedPersistedState.draftsByThreadId),
     draftThreadsByThreadId,
     projectDraftThreadIdByProjectId,
-    stickyModelSelectionByProvider: sanitizeStickyModelSelectionMap(stickyModelSelectionByProvider),
+    stickyModelSelectionByProvider: sanitizeHistoricalModelSelectionMap(stickyModelSelectionByProvider),
     stickyActiveProvider,
   };
 }
@@ -1419,9 +1319,9 @@ export function toHydratedThreadDraft(
   persistedDraft: PersistedComposerThreadDraftState,
 ): ComposerThreadDraftState {
   // The persisted draft is already in v3 shape (migration handles older formats)
-  const modelSelectionByProvider: Partial<Record<ProviderKind, ModelSelection>> =
-    persistedDraft.modelSelectionByProvider ?? {};
-  const activeProvider = normalizeProviderKind(persistedDraft.activeProvider) ?? null;
+  const modelSelectionByProvider: Partial<Record<string, HistoricalModelSelection>> =
+    sanitizeHistoricalModelSelectionMap(persistedDraft.modelSelectionByProvider ?? {});
+  const activeProvider = normalizeHistoricalSourceId(persistedDraft.activeProvider) ?? null;
 
   return {
     prompt: persistedDraft.prompt,

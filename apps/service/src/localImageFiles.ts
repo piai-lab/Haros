@@ -2,7 +2,7 @@
 // Purpose: Resolves local preview-file (image/PDF) requests without exposing arbitrary files.
 // Layer: Server HTTP utility
 // Exports: local image route constants and allowlisted path resolver
-// Depends on: fs realpath/stat, Codex generated image roots, safe preview extensions
+// Depends on: fs realpath/stat, workspace/temp roots, safe preview extensions
 
 import crypto from "node:crypto";
 import fs from "node:fs/promises";
@@ -15,8 +15,6 @@ import {
   isSupportedLocalPreviewFilePath,
 } from "@omnimind/shared/localPreviewFiles";
 import { SCRATCH_WORKSPACES_DIRNAME } from "@omnimind/shared/threadWorkspace";
-
-import { resolveCodexGeneratedImagesRoots } from "./codexGeneratedImages.ts";
 
 export { LOCAL_IMAGE_ROUTE_PATH };
 
@@ -124,7 +122,6 @@ async function resolveWorkspaceRoot(cwd: string | null): Promise<string | null> 
 export async function resolveAllowedLocalPreviewFile(input: {
   readonly requestedPath: string | null;
   readonly cwd: string | null;
-  readonly codexHomePath?: string;
   readonly allowAbsoluteLocalPreviewFile?: boolean;
   readonly previewGrant?: string | null;
 }): Promise<ResolvedLocalPreviewFile | null> {
@@ -184,17 +181,12 @@ export async function resolveAllowedLocalPreviewFile(input: {
     return resolved;
   }
 
-  // The generated-image and temp-dir roots exist for agent-produced images in
-  // chat markdown; keep them image-only so they never serve documents.
+  // Temp roots support agent-produced images in Product markdown; keep the
+  // allowance image-only so arbitrary documents are never exposed.
   if (!isSupportedLocalImagePath(realFilePath)) {
     return null;
   }
-  const generatedImagesRoots = await Promise.all(
-    resolveCodexGeneratedImagesRoots(input.codexHomePath).map(realpathOrNull),
-  ).then((roots) => roots.filter((root): root is string => root !== null));
-  const allowed =
-    generatedImagesRoots.some((root) => isPathInside(realFilePath, root)) ||
-    tempRoots.some((root) => isPathInside(realFilePath, root));
+  const allowed = tempRoots.some((root) => isPathInside(realFilePath, root));
   return allowed ? resolved : null;
 }
 

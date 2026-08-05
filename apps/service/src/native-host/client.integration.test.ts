@@ -147,7 +147,7 @@ describe("production Native Host protocol", () => {
           text: "😀".repeat(16_384),
           selection: {
             engineId: "pi",
-            modelId: null,
+            runtimeModelId: "provider/missing",
             thinking: null,
             permissionPolicy: "approval-required",
             enforcement: "unverified",
@@ -177,7 +177,7 @@ describe("production Native Host protocol", () => {
           text: "hello",
           selection: {
             engineId: "pi",
-            modelId: null,
+            runtimeModelId: "provider/missing",
             thinking: null,
             permissionPolicy: "approval-required",
             enforcement: "unverified",

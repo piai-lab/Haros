@@ -1,14 +1,34 @@
 import { assert, it } from "@effect/vitest";
 import { Effect } from "effect";
+import { PRODUCT_RPC_METHODS, SYSTEM_RPC_METHODS } from "@omnimind/contracts";
 import { vi } from "vitest";
 
 import { AuthError } from "./auth/Services/ServerAuth";
-import { authenticateRpcWebSocketUpgrade, canManageExternalMcp } from "./wsRpc";
+import { authenticateRpcWebSocketUpgrade, requireSystemRpcOwner } from "./wsRpc";
+import { CurrentWsSessionRole } from "./wsConnectionSessions";
 
-it("reserves external MCP management for owner sessions", () => {
-  assert.isTrue(canManageExternalMcp("owner"));
-  assert.isFalse(canManageExternalMcp("client"));
-});
+it.effect("allows owner System RPCs and rejects paired clients while leaving Product RPCs open", () =>
+  Effect.gen(function* () {
+    const operation = Effect.succeed("allowed");
+    const owner = yield* requireSystemRpcOwner(
+      SYSTEM_RPC_METHODS.ensureWorkspaceRoot,
+      operation,
+    ).pipe(Effect.provideService(CurrentWsSessionRole, "owner"));
+    assert.equal(owner, "allowed");
+
+    const rejected = yield* requireSystemRpcOwner(
+      SYSTEM_RPC_METHODS.ensureWorkspaceRoot,
+      operation,
+    ).pipe(Effect.provideService(CurrentWsSessionRole, "client"), Effect.flip);
+    assert.equal(rejected.code, "SYSTEM_RPC_OWNER_REQUIRED");
+
+    const product = yield* requireSystemRpcOwner(
+      PRODUCT_RPC_METHODS.getShellSnapshot,
+      operation,
+    ).pipe(Effect.provideService(CurrentWsSessionRole, "client"));
+    assert.equal(product, "allowed");
+  }),
+);
 
 it.effect("rejects an unauthorized websocket upgrade on a non-loopback bind", () =>
   Effect.gen(function* () {

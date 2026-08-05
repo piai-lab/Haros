@@ -6,7 +6,7 @@
 // Exports: PullRequestRow
 
 import type { PullRequestListEntry } from "@omnimind/contracts";
-import { pullRequestListProjectContexts } from "@omnimind/shared/githubRepository";
+import { pullRequestListWorkspaceContexts } from "@omnimind/shared/githubRepository";
 
 import { Tooltip, TooltipPopup, TooltipTrigger } from "~/components/ui/tooltip";
 import { PinStatusIcon, pinActionLabel } from "~/lib/pin";
@@ -45,25 +45,25 @@ function TruncatedTitle({ title, number }: { title: string; number: number }) {
 export const PullRequestRow = function PullRequestRow({
   entry,
   selected,
-  showProjectTitle: showProjectTitleProp,
+  showWorkspaceTitle: showWorkspaceTitleProp,
   onClick,
   onTogglePinned,
 }: {
   entry: PullRequestListEntry;
   selected: boolean;
   /** All-projects view: identifies the preferred local context used when opening the remote PR. */
-  showProjectTitle?: boolean;
+  showWorkspaceTitle?: boolean;
   onClick: (entry: PullRequestListEntry) => void;
   onTogglePinned: (entry: PullRequestListEntry) => void;
 }) {
-  const showProjectTitle = showProjectTitleProp ?? false;
+  const showWorkspaceTitle = showWorkspaceTitleProp ?? false;
   const isPinned = entry.isPinned === true;
-  const projectContexts = pullRequestListProjectContexts(entry);
+  const workspaceContexts = pullRequestListWorkspaceContexts(entry);
   const projectLabel =
-    projectContexts.length > 1 ? `${projectContexts.length} projects` : entry.projectTitle;
-  const projectTitle = projectContexts.map((context) => context.projectTitle).join(", ");
+    workspaceContexts.length > 1 ? `${workspaceContexts.length} projects` : entry.workspaceTitle;
+  const workspaceTitle = workspaceContexts.map((context) => context.workspaceTitle).join(", ");
   const pinLabel = pinActionLabel(
-    showProjectTitle
+    showWorkspaceTitle
       ? `pull request #${entry.number} in ${projectLabel}`
       : `pull request #${entry.number}`,
     isPinned,
@@ -84,7 +84,7 @@ export const PullRequestRow = function PullRequestRow({
       <button
         type="button"
         data-pull-request-row
-        data-project-id={entry.projectId}
+        data-project-id={entry.workspaceId}
         data-repository={entry.repository}
         data-pull-request-number={entry.number}
         aria-current={selected ? "true" : undefined}
@@ -115,8 +115,8 @@ export const PullRequestRow = function PullRequestRow({
                 isn't one of the dot-separated facts about the PR. */}
             <PullRequestAvatar actor={entry.author} size="sm" className="shrink-0" />
             <PullRequestMetaLine className="flex-1">
-              {showProjectTitle ? (
-                <span className="max-w-[12rem] truncate" title={projectTitle}>
+              {showWorkspaceTitle ? (
+                <span className="max-w-[12rem] truncate" title={workspaceTitle}>
                   {projectLabel}
                 </span>
               ) : null}

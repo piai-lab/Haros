@@ -1,55 +1,10 @@
-import { Effect, Layer } from "effect";
+import { Layer } from "effect";
 
 import { GitCoreLive } from "./Layers/GitCore";
 import { GitHubCliLive } from "./Layers/GitHubCli";
-import { GitManagerLive } from "./Layers/GitManager";
-import { GitStatusBroadcasterLive } from "./Layers/GitStatusBroadcaster";
-import { CodexTextGenerationServiceLive } from "./Layers/CodexTextGeneration";
-import { CursorTextGenerationServiceLive } from "./Layers/CursorTextGeneration";
-import {
-  makeKiloTextGenerationServiceLive,
-  makeOpenCodeTextGenerationServiceLive,
-} from "./Layers/OpenCodeTextGeneration";
-import { ProviderTextGenerationLive } from "./Layers/ProviderTextGeneration";
-import { OpenCodeRuntimeLive } from "../provider/opencodeRuntime";
-import {
-  makeProviderServerPasswordResolver,
-  ProviderCredentials,
-  ProviderCredentialsLive,
-} from "../providerCredentials";
 
-const textGenerationProviderLayers = Effect.gen(function* () {
-  const credentials = yield* ProviderCredentials;
-  const resolveProviderServerPassword = makeProviderServerPasswordResolver(credentials);
-  return Layer.mergeAll(
-    makeKiloTextGenerationServiceLive(resolveProviderServerPassword).pipe(
-      Layer.provide(OpenCodeRuntimeLive),
-    ),
-    makeOpenCodeTextGenerationServiceLive(resolveProviderServerPassword).pipe(
-      Layer.provide(OpenCodeRuntimeLive),
-    ),
-  );
-}).pipe(Effect.provide(ProviderCredentialsLive.pipe(Layer.orDie)), Layer.unwrap);
-
-export const TextGenerationLayerLive = ProviderTextGenerationLive.pipe(
-  Layer.provide(CodexTextGenerationServiceLive),
-  Layer.provide(CursorTextGenerationServiceLive),
-  Layer.provide(textGenerationProviderLayers),
-);
-
-export const GitManagerLayerLive = GitManagerLive.pipe(
-  Layer.provideMerge(GitCoreLive),
-  Layer.provideMerge(GitHubCliLive),
-  Layer.provideMerge(TextGenerationLayerLive),
-);
-
-export const GitStatusBroadcasterLayerLive = GitStatusBroadcasterLive.pipe(
-  Layer.provide(Layer.mergeAll(GitCoreLive, GitManagerLayerLive)),
-);
-
-export const GitLayerLive = Layer.mergeAll(
-  GitCoreLive,
-  GitHubCliLive,
-  GitManagerLayerLive,
-  GitStatusBroadcasterLayerLive,
-);
+/**
+ * Product Service Git capability boundary. Provider-backed text generation and
+ * orchestration-owned branch flows are intentionally not composed here.
+ */
+export const GitLayerLive = Layer.mergeAll(GitCoreLive, GitHubCliLive);

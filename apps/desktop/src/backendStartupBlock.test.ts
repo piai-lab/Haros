@@ -22,14 +22,6 @@ describe("BackendStartupBlockDetector", () => {
     expect(detector.read()).toEqual({ kind: "database-locked", ownerPid: null });
   });
 
-  it("recognizes migration recovery as a relaunch-only startup block", () => {
-    const detector = new BackendStartupBlockDetector();
-
-    detector.push("MigrationRecoveryRequiredError: Migration recovery is required");
-
-    expect(detector.read()).toEqual({ kind: "migration-recovery-required" });
-  });
-
   it("ignores unrelated startup failures", () => {
     const detector = new BackendStartupBlockDetector();
 

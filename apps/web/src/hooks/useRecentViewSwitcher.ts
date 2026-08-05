@@ -26,7 +26,6 @@ import { useRecentViewsStore } from "../recentViewsStore";
 import { collectLeaves } from "../splitView.logic";
 import { useSplitViewStore } from "../splitViewStore";
 import { useStore } from "../store";
-import { useThreadDetailPrewarm } from "../threadDetailPrewarm";
 import { selectThreadTerminalState, useTerminalStateStore } from "../terminalStateStore";
 import {
   resolveTerminalVisualIdentityMap,
@@ -64,7 +63,6 @@ export function useRecentViewSwitcher(input: UseRecentViewSwitcherInput) {
   const recentViews = useRecentViewsStore((state) => state.recentViews);
   const recordRecentView = useRecentViewsStore((state) => state.recordRecentView);
   const pruneRecentViewsStore = useRecentViewsStore((state) => state.pruneRecentViews);
-  const { prewarmThreadDetail, prewarmThreadDetails } = useThreadDetailPrewarm();
   const persistedPinnedThreadIds = usePinnedThreadsStore((state) => state.pinnedThreadIds);
   const draftThreadsByThreadId = useComposerDraftStore((state) => state.draftThreadsByThreadId);
   const sidebarThreadSummaryById = useStore((state) => state.sidebarThreadSummaryById);
@@ -83,9 +81,6 @@ export function useRecentViewSwitcher(input: UseRecentViewSwitcherInput) {
     settingsSection,
   });
   const currentRecentViewKey = currentRecentView ? recentViewKey(currentRecentView) : null;
-  const recentThreadIds = recentViews.flatMap((view) =>
-    view.kind === "thread" ? [view.threadId] : [],
-  );
   const switcherOpen = recentSwitcherState !== null;
   let recentViewEntries: RecentViewDisplayEntry[] = EMPTY_RECENT_VIEW_ENTRIES;
   if (switcherOpen) {
@@ -208,10 +203,6 @@ export function useRecentViewSwitcher(input: UseRecentViewSwitcherInput) {
   }, [currentRecentView, currentRecentViewKey, recordRecentView]);
 
   useEffect(() => {
-    prewarmThreadDetails(recentThreadIds);
-  }, [prewarmThreadDetails, recentThreadIds]);
-
-  useEffect(() => {
     if (!threadsHydrated || didHydrationPruneRef.current) return;
     didHydrationPruneRef.current = true;
     pruneRecentViewsStore(buildRecentViewAvailability());
@@ -223,7 +214,6 @@ export function useRecentViewSwitcher(input: UseRecentViewSwitcherInput) {
         if (!buildRecentViewAvailability().availableThreadIds.has(view.threadId)) {
           return;
         }
-        prewarmThreadDetail(view.threadId);
         const splitActivation = resolveRecentThreadSplitActivation({
           view,
           splitViewsById: useSplitViewStore.getState().splitViewsById,
@@ -299,10 +289,6 @@ export function useRecentViewSwitcher(input: UseRecentViewSwitcherInput) {
     const selectedView = views[selectedIndex];
     if (!selectedView) {
       return false;
-    }
-
-    if (selectedView.kind === "thread") {
-      prewarmThreadDetail(selectedView.threadId);
     }
 
     setRecentSwitcherState({

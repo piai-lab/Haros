@@ -1,5 +1,9 @@
 import { Schema } from "effect";
 
+export const PRODUCT_RESOURCE_MAX_IMAGE_BYTES = 10 * 1024 * 1024;
+export const PRODUCT_RESOURCE_MAX_FILE_BYTES = 25 * 1024 * 1024;
+export const PRODUCT_CONVERSATION_NOTES_MAX_CHARS = 16_384;
+
 import { NonNegativeInt, PositiveInt, TrimmedNonEmptyString } from "../baseSchemas";
 
 const closedBoundary = <A extends Schema.Top>(schema: A): A =>
@@ -10,6 +14,14 @@ export const PRODUCT_MAX_TEXT_CHARS = 65_536;
 export const PRODUCT_MAX_FACTS_PER_BATCH = 256;
 export const PRODUCT_MAX_QUEUE_ITEMS = 128;
 export const PRODUCT_MAX_RESOURCE_REFS = 32;
+export const PRODUCT_MAX_GROUPS = 50;
+export const PRODUCT_GROUP_NAME_MAX_CHARS = 32;
+export const PRODUCT_GROUP_MEMBERSHIP_MAX_COUNT = 200;
+export const PRODUCT_ENTRY_PINS_MAX_COUNT = 100;
+export const PRODUCT_ENTRY_PIN_LABEL_MAX_CHARS = 60;
+export const PRODUCT_ENTRY_MARKERS_MAX_COUNT = 200;
+export const PRODUCT_ENTRY_MARKER_LABEL_MAX_CHARS = 60;
+export const PRODUCT_ENTRY_MARKER_SELECTED_TEXT_MAX_CHARS = 4_000;
 
 const ProductIdText = TrimmedNonEmptyString.check(Schema.isMaxLength(128));
 const makeProductId = <Brand extends string>(brand: Brand) =>
@@ -33,6 +45,12 @@ export const ProductQueueItemId = makeProductId("ProductQueueItemId");
 export type ProductQueueItemId = typeof ProductQueueItemId.Type;
 export const ProductDispatchId = makeProductId("ProductDispatchId");
 export type ProductDispatchId = typeof ProductDispatchId.Type;
+export const ProductMutationId = makeProductId("ProductMutationId");
+export type ProductMutationId = typeof ProductMutationId.Type;
+export const ProductGroupId = makeProductId("ProductGroupId");
+export type ProductGroupId = typeof ProductGroupId.Type;
+export const ProductEntryMarkerId = makeProductId("ProductEntryMarkerId");
+export type ProductEntryMarkerId = typeof ProductEntryMarkerId.Type;
 
 export const ProductIsoDateTime = TrimmedNonEmptyString.check(Schema.isMaxLength(64));
 export type ProductIsoDateTime = typeof ProductIsoDateTime.Type;
@@ -92,6 +110,20 @@ export const ProductWorkspace = Schema.Struct({
 });
 export type ProductWorkspace = typeof ProductWorkspace.Type;
 
+export const ProductWorkspaceSummary = Schema.Struct({
+  id: ProductWorkspaceId,
+  title: ProductTitle,
+  access: ProductWorkspaceAccess,
+  revision: PositiveInt,
+  visibleInSidebar: Schema.Boolean,
+  isPinned: Schema.Boolean,
+  runCommand: Schema.NullOr(TrimmedNonEmptyString.check(Schema.isMaxLength(8_192))),
+  archivedAt: Schema.NullOr(ProductIsoDateTime),
+  createdAt: ProductIsoDateTime,
+  updatedAt: ProductIsoDateTime,
+});
+export type ProductWorkspaceSummary = typeof ProductWorkspaceSummary.Type;
+
 export const ProductResourceRef = Schema.Struct({
   id: ProductResourceRefId,
   kind: Schema.Literals([
@@ -111,20 +143,48 @@ export const ProductResourceRef = Schema.Struct({
 });
 export type ProductResourceRef = typeof ProductResourceRef.Type;
 
-export const ProductRequestedSelection = Schema.Struct({
-  engineId: TrimmedNonEmptyString.check(Schema.isMaxLength(256)),
-  modelId: Schema.NullOr(TrimmedNonEmptyString.check(Schema.isMaxLength(256))),
-  thinking: Schema.NullOr(TrimmedNonEmptyString.check(Schema.isMaxLength(128))),
+const ProductSelectionPolicy = {
   permissionPolicy: Schema.Literals(["approval-required", "auto", "full-access"]),
   enforcement: Schema.Literals(["host-enforced", "engine-enforced", "mixed", "unverified"]),
   executionTarget: Schema.NullOr(ProductExecutionTarget),
+};
+
+export const ProductSelectedRuntime = Schema.Struct({
+  state: Schema.Literal("selected"),
+  engineId: TrimmedNonEmptyString.check(Schema.isMaxLength(256)),
+  runtimeModelId: TrimmedNonEmptyString.check(Schema.isMaxLength(512)),
+  thinking: Schema.NullOr(TrimmedNonEmptyString.check(Schema.isMaxLength(128))),
   packageGeneration: TrimmedNonEmptyString.check(Schema.isMaxLength(256)),
+  ...ProductSelectionPolicy,
 });
+export type ProductSelectedRuntime = typeof ProductSelectedRuntime.Type;
+
+export const ProductUnavailableRuntime = Schema.Struct({
+  state: Schema.Literal("unavailable"),
+  reason: Schema.Literals([
+    "catalog-unavailable",
+    "model-not-selected",
+    "model-unavailable",
+    "auth-missing",
+    "thinking-unsupported",
+  ]),
+  requestedRuntimeModelId: Schema.NullOr(
+    TrimmedNonEmptyString.check(Schema.isMaxLength(512)),
+  ),
+  ...ProductSelectionPolicy,
+});
+export type ProductUnavailableRuntime = typeof ProductUnavailableRuntime.Type;
+
+/** Product-owned next-Run intent. Unavailable is durable and never silently falls back. */
+export const ProductRequestedSelection = Schema.Union([
+  ProductSelectedRuntime,
+  ProductUnavailableRuntime,
+]);
 export type ProductRequestedSelection = typeof ProductRequestedSelection.Type;
 
 export const ProductResolvedSelection = Schema.Struct({
   engineId: TrimmedNonEmptyString.check(Schema.isMaxLength(256)),
-  modelId: Schema.NullOr(TrimmedNonEmptyString.check(Schema.isMaxLength(256))),
+  runtimeModelId: TrimmedNonEmptyString.check(Schema.isMaxLength(512)),
   thinking: Schema.NullOr(TrimmedNonEmptyString.check(Schema.isMaxLength(128))),
   permissionPolicy: Schema.Literals(["approval-required", "auto", "full-access"]),
   enforcement: Schema.Literals(["host-enforced", "engine-enforced", "mixed", "unverified"]),
@@ -213,11 +273,44 @@ export const ProductEntry = Schema.Struct({
 });
 export type ProductEntry = typeof ProductEntry.Type;
 
+export const ProductEntryPin = Schema.Struct({
+  entryId: ProductEntryId,
+  label: Schema.NullOr(
+    TrimmedNonEmptyString.check(Schema.isMaxLength(PRODUCT_ENTRY_PIN_LABEL_MAX_CHARS)),
+  ),
+  done: Schema.Boolean,
+  pinnedAt: ProductIsoDateTime,
+});
+export type ProductEntryPin = typeof ProductEntryPin.Type;
+
+export const ProductEntryMarker = Schema.Struct({
+  id: ProductEntryMarkerId,
+  entryId: ProductEntryId,
+  startOffset: NonNegativeInt,
+  endOffset: NonNegativeInt,
+  selectedText: Schema.String.check(
+    Schema.isMinLength(1),
+    Schema.isMaxLength(PRODUCT_ENTRY_MARKER_SELECTED_TEXT_MAX_CHARS),
+  ),
+  selectedTextDigest: Schema.String.check(
+    Schema.isPattern(/^sha256:[0-9a-f]{64}$/),
+  ),
+  style: Schema.Literals(["highlight", "underline"]),
+  color: Schema.Literals(["yellow", "blue", "green", "pink"]),
+  label: Schema.NullOr(
+    TrimmedNonEmptyString.check(Schema.isMaxLength(PRODUCT_ENTRY_MARKER_LABEL_MAX_CHARS)),
+  ),
+  done: Schema.Boolean,
+  createdAt: ProductIsoDateTime,
+  updatedAt: ProductIsoDateTime,
+});
+export type ProductEntryMarker = typeof ProductEntryMarker.Type;
+
 export const ProductRun = Schema.Struct({
   id: ProductRunId,
   conversationId: ProductConversationId,
   entryId: ProductEntryId,
-  requestedSelection: ProductRequestedSelection,
+  requestedSelection: ProductSelectedRuntime,
   workspaceObservation: ProductWorkspace,
   resources: Schema.Array(ProductResourceRef).check(Schema.isMaxLength(PRODUCT_MAX_RESOURCE_REFS)),
   packageGeneration: TrimmedNonEmptyString.check(Schema.isMaxLength(256)),
@@ -240,11 +333,43 @@ export const ProductQueueItem = Schema.Struct({
 });
 export type ProductQueueItem = typeof ProductQueueItem.Type;
 
+export const ProductGroupColor = Schema.Literals([
+  "gray",
+  "red",
+  "orange",
+  "yellow",
+  "green",
+  "blue",
+  "purple",
+  "pink",
+]);
+export type ProductGroupColor = typeof ProductGroupColor.Type;
+
+export const ProductGroupSummary = Schema.Struct({
+  id: ProductGroupId,
+  name: TrimmedNonEmptyString.check(Schema.isMaxLength(PRODUCT_GROUP_NAME_MAX_CHARS)),
+  color: ProductGroupColor,
+  sortOrder: NonNegativeInt,
+  revision: PositiveInt,
+  conversationIds: Schema.Array(ProductConversationId).check(
+    Schema.isMaxLength(PRODUCT_GROUP_MEMBERSHIP_MAX_COUNT),
+  ),
+  createdAt: ProductIsoDateTime,
+  updatedAt: ProductIsoDateTime,
+});
+export type ProductGroupSummary = typeof ProductGroupSummary.Type;
+
 export const ProductConversationSummary = Schema.Struct({
   id: ProductConversationId,
   workspaceId: ProductWorkspaceId,
   title: ProductTitle,
   workspaceKind: Schema.Literals(["managed", "folder-backed", "chat"]),
+  revision: PositiveInt,
+  archivedAt: Schema.NullOr(ProductIsoDateTime),
+  isPinned: Schema.Boolean,
+  notes: Schema.String.check(Schema.isMaxLength(PRODUCT_CONVERSATION_NOTES_MAX_CHARS)),
+  boardState: Schema.Literals(["active", "done"]),
+  boardStateChangedAt: Schema.NullOr(ProductIsoDateTime),
   receiptState: Schema.NullOr(
     Schema.Literals([
       "pending",
@@ -333,6 +458,12 @@ export const ProductConversationReadModel = Schema.Struct({
   activities: Schema.Array(ProductRuntimeActivity),
   recoveries: Schema.optional(Schema.Array(ProductRuntimeRecovery)),
   queue: Schema.Array(ProductQueueItem).check(Schema.isMaxLength(PRODUCT_MAX_QUEUE_ITEMS)),
+  entryPins: Schema.Array(ProductEntryPin).check(
+    Schema.isMaxLength(PRODUCT_ENTRY_PINS_MAX_COUNT),
+  ),
+  entryMarkers: Schema.Array(ProductEntryMarker).check(
+    Schema.isMaxLength(PRODUCT_ENTRY_MARKERS_MAX_COUNT),
+  ),
 });
 export type ProductConversationReadModel = typeof ProductConversationReadModel.Type;
 
@@ -350,12 +481,34 @@ export const ProductRuntimeModel = Schema.Struct({
 });
 export type ProductRuntimeModel = typeof ProductRuntimeModel.Type;
 
+export const ProductRuntimeCapabilities = Schema.Struct({
+  ingress: Schema.Literal("typed-native-host"),
+  lineage: Schema.Struct({
+    continue: Schema.Literals(["available", "unavailable", "unknown"]),
+    rebuild: Schema.Literals(["available", "unavailable", "unknown"]),
+  }),
+  controls: Schema.Struct({
+    steer: Schema.Literals(["available", "unavailable", "unknown"]),
+    followUp: Schema.Literals(["available", "unavailable", "unknown"]),
+    abort: Schema.Literals(["available", "unavailable", "unknown"]),
+    cancel: Schema.Literals(["available", "unavailable", "unknown"]),
+  }),
+  structuredQuestions: Schema.Literals(["available", "unavailable", "unknown"]),
+  packages: Schema.Literals(["available", "unavailable", "unknown"]),
+  filesRead: Schema.Literals(["available", "unavailable", "unknown"]),
+  filesWrite: Schema.Literals(["available", "unavailable", "unknown"]),
+  terminal: Schema.Literals(["available", "unavailable", "unknown"]),
+  enforcement: Schema.Literals(["host-enforced", "engine-enforced", "mixed", "unverified"]),
+});
+export type ProductRuntimeCapabilities = typeof ProductRuntimeCapabilities.Type;
+
 /** Sanitized Host-owned catalog snapshot; Product never reconstructs provider capability. */
 export const ProductRuntimeCatalog = Schema.Struct({
   engineId: TrimmedNonEmptyString.check(Schema.isMaxLength(256)),
   runtimeVersion: TrimmedNonEmptyString.check(Schema.isMaxLength(128)),
   packageGeneration: TrimmedNonEmptyString.check(Schema.isMaxLength(256)),
   models: Schema.Array(ProductRuntimeModel).check(Schema.isMaxLength(128)),
+  capabilities: ProductRuntimeCapabilities,
   truncated: Schema.Boolean,
 });
 export type ProductRuntimeCatalog = typeof ProductRuntimeCatalog.Type;
@@ -363,6 +516,8 @@ export type ProductRuntimeCatalog = typeof ProductRuntimeCatalog.Type;
 export const ProductShellSnapshot = Schema.Struct({
   protocolVersion: Schema.Literal(PRODUCT_PROTOCOL_VERSION),
   sequence: NonNegativeInt,
+  workspaces: Schema.Array(ProductWorkspaceSummary),
+  groups: Schema.Array(ProductGroupSummary).check(Schema.isMaxLength(PRODUCT_MAX_GROUPS)),
   conversations: Schema.Array(ProductConversationSummary),
   runtimeCatalog: Schema.NullOr(ProductRuntimeCatalog),
 }).pipe(closedBoundary);
@@ -383,6 +538,265 @@ export const ProductCreateConversationInput = Schema.Struct({
   workspace: ProductWorkspaceAccess,
 }).pipe(closedBoundary);
 export type ProductCreateConversationInput = typeof ProductCreateConversationInput.Type;
+
+export const ProductCreateWorkspaceInput = Schema.Struct({
+  protocolVersion: Schema.Literal(PRODUCT_PROTOCOL_VERSION),
+  workspaceId: ProductWorkspaceId,
+  title: ProductTitle,
+  access: ProductWorkspaceAccess,
+  visibleInSidebar: Schema.Boolean,
+}).pipe(closedBoundary);
+export type ProductCreateWorkspaceInput = typeof ProductCreateWorkspaceInput.Type;
+
+export const ProductCreateGroupInput = Schema.Struct({
+  protocolVersion: Schema.Literal(PRODUCT_PROTOCOL_VERSION),
+  groupId: ProductGroupId,
+  name: TrimmedNonEmptyString.check(Schema.isMaxLength(PRODUCT_GROUP_NAME_MAX_CHARS)),
+  color: ProductGroupColor,
+}).pipe(closedBoundary);
+export type ProductCreateGroupInput = typeof ProductCreateGroupInput.Type;
+
+const ProductGroupMutationTarget = {
+  protocolVersion: Schema.Literal(PRODUCT_PROTOCOL_VERSION),
+  mutationId: ProductMutationId,
+  groupId: ProductGroupId,
+  expectedRevision: PositiveInt,
+};
+
+export const ProductUpdateGroupInput = Schema.Struct({
+  ...ProductGroupMutationTarget,
+  name: TrimmedNonEmptyString.check(Schema.isMaxLength(PRODUCT_GROUP_NAME_MAX_CHARS)),
+  color: ProductGroupColor,
+}).pipe(closedBoundary);
+export type ProductUpdateGroupInput = typeof ProductUpdateGroupInput.Type;
+
+export const ProductReorderGroupsInput = Schema.Struct({
+  protocolVersion: Schema.Literal(PRODUCT_PROTOCOL_VERSION),
+  mutationId: ProductMutationId,
+  expectedGroups: Schema.Array(
+    Schema.Struct({ groupId: ProductGroupId, revision: PositiveInt }),
+  ).check(
+    Schema.isMinLength(1),
+    Schema.isMaxLength(PRODUCT_MAX_GROUPS),
+  ),
+  orderedGroupIds: Schema.Array(ProductGroupId).check(
+    Schema.isMinLength(1),
+    Schema.isMaxLength(PRODUCT_MAX_GROUPS),
+  ),
+}).pipe(closedBoundary);
+export type ProductReorderGroupsInput = typeof ProductReorderGroupsInput.Type;
+
+export const ProductDeleteGroupInput = Schema.Struct({
+  ...ProductGroupMutationTarget,
+}).pipe(closedBoundary);
+export type ProductDeleteGroupInput = typeof ProductDeleteGroupInput.Type;
+
+export const ProductDeleteGroupResult = Schema.Struct({
+  protocolVersion: Schema.Literal(PRODUCT_PROTOCOL_VERSION),
+  groupId: ProductGroupId,
+  revision: PositiveInt,
+  sequence: PositiveInt,
+}).pipe(closedBoundary);
+export type ProductDeleteGroupResult = typeof ProductDeleteGroupResult.Type;
+
+const ProductConversationMembershipExpectation = Schema.Struct({
+  conversationId: ProductConversationId,
+  groupIds: Schema.Array(ProductGroupId).check(Schema.isMaxLength(PRODUCT_MAX_GROUPS)),
+});
+
+const ProductConversationGroupsMutationTarget = {
+  protocolVersion: Schema.Literal(PRODUCT_PROTOCOL_VERSION),
+  mutationId: ProductMutationId,
+  expectedMemberships: Schema.Array(ProductConversationMembershipExpectation).check(
+    Schema.isMinLength(1),
+    Schema.isMaxLength(PRODUCT_GROUP_MEMBERSHIP_MAX_COUNT),
+  ),
+  groupIds: Schema.Array(ProductGroupId).check(Schema.isMaxLength(PRODUCT_MAX_GROUPS)),
+};
+
+/** Replaces each target Conversation's complete Group membership set atomically. */
+export const ProductSetConversationGroupsInput = Schema.Struct({
+  ...ProductConversationGroupsMutationTarget,
+}).pipe(closedBoundary);
+export type ProductSetConversationGroupsInput = typeof ProductSetConversationGroupsInput.Type;
+
+/** Adds Groups without removing a Conversation's existing memberships. */
+export const ProductAddConversationGroupsInput = Schema.Struct({
+  ...ProductConversationGroupsMutationTarget,
+}).pipe(closedBoundary);
+export type ProductAddConversationGroupsInput = typeof ProductAddConversationGroupsInput.Type;
+
+export const ProductGroupMembershipResult = Schema.Struct({
+  protocolVersion: Schema.Literal(PRODUCT_PROTOCOL_VERSION),
+  groups: Schema.Array(ProductGroupSummary).check(Schema.isMaxLength(PRODUCT_MAX_GROUPS)),
+  sequence: NonNegativeInt,
+}).pipe(closedBoundary);
+export type ProductGroupMembershipResult = typeof ProductGroupMembershipResult.Type;
+
+const ProductWorkspaceMutationTarget = {
+  protocolVersion: Schema.Literal(PRODUCT_PROTOCOL_VERSION),
+  mutationId: ProductMutationId,
+  workspaceId: ProductWorkspaceId,
+  expectedRevision: PositiveInt,
+};
+
+export const ProductUpdateWorkspaceTitleInput = Schema.Struct({
+  ...ProductWorkspaceMutationTarget,
+  title: ProductTitle,
+}).pipe(closedBoundary);
+export type ProductUpdateWorkspaceTitleInput = typeof ProductUpdateWorkspaceTitleInput.Type;
+
+export const ProductSetWorkspacePinnedInput = Schema.Struct({
+  ...ProductWorkspaceMutationTarget,
+  isPinned: Schema.Boolean,
+}).pipe(closedBoundary);
+export type ProductSetWorkspacePinnedInput = typeof ProductSetWorkspacePinnedInput.Type;
+
+export const ProductUpdateWorkspaceRunCommandInput = Schema.Struct({
+  ...ProductWorkspaceMutationTarget,
+  runCommand: Schema.NullOr(TrimmedNonEmptyString.check(Schema.isMaxLength(8_192))),
+}).pipe(closedBoundary);
+export type ProductUpdateWorkspaceRunCommandInput =
+  typeof ProductUpdateWorkspaceRunCommandInput.Type;
+
+export const ProductDeleteWorkspaceInput = Schema.Struct({
+  ...ProductWorkspaceMutationTarget,
+}).pipe(closedBoundary);
+export type ProductDeleteWorkspaceInput = typeof ProductDeleteWorkspaceInput.Type;
+
+export const ProductDeleteWorkspaceResult = Schema.Struct({
+  protocolVersion: Schema.Literal(PRODUCT_PROTOCOL_VERSION),
+  workspaceId: ProductWorkspaceId,
+  revision: PositiveInt,
+  sequence: PositiveInt,
+}).pipe(closedBoundary);
+export type ProductDeleteWorkspaceResult = typeof ProductDeleteWorkspaceResult.Type;
+
+const ProductConversationMutationTarget = {
+  protocolVersion: Schema.Literal(PRODUCT_PROTOCOL_VERSION),
+  mutationId: ProductMutationId,
+  conversationId: ProductConversationId,
+  expectedRevision: PositiveInt,
+};
+
+export const ProductUpdateConversationTitleInput = Schema.Struct({
+  ...ProductConversationMutationTarget,
+  title: ProductTitle,
+}).pipe(closedBoundary);
+export type ProductUpdateConversationTitleInput =
+  typeof ProductUpdateConversationTitleInput.Type;
+
+export const ProductArchiveConversationInput = Schema.Struct({
+  ...ProductConversationMutationTarget,
+}).pipe(closedBoundary);
+export type ProductArchiveConversationInput = typeof ProductArchiveConversationInput.Type;
+
+export const ProductRestoreConversationInput = Schema.Struct({
+  ...ProductConversationMutationTarget,
+}).pipe(closedBoundary);
+export type ProductRestoreConversationInput = typeof ProductRestoreConversationInput.Type;
+
+export const ProductDeleteConversationInput = Schema.Struct({
+  ...ProductConversationMutationTarget,
+}).pipe(closedBoundary);
+export type ProductDeleteConversationInput = typeof ProductDeleteConversationInput.Type;
+
+export const ProductDeleteConversationResult = Schema.Struct({
+  protocolVersion: Schema.Literal(PRODUCT_PROTOCOL_VERSION),
+  conversationId: ProductConversationId,
+  revision: PositiveInt,
+  sequence: PositiveInt,
+}).pipe(closedBoundary);
+export type ProductDeleteConversationResult = typeof ProductDeleteConversationResult.Type;
+
+export const ProductSetConversationPinnedInput = Schema.Struct({
+  ...ProductConversationMutationTarget,
+  isPinned: Schema.Boolean,
+}).pipe(closedBoundary);
+export type ProductSetConversationPinnedInput = typeof ProductSetConversationPinnedInput.Type;
+
+export const ProductUpdateConversationNotesInput = Schema.Struct({
+  ...ProductConversationMutationTarget,
+  notes: Schema.String.check(Schema.isMaxLength(PRODUCT_CONVERSATION_NOTES_MAX_CHARS)),
+}).pipe(closedBoundary);
+export type ProductUpdateConversationNotesInput = typeof ProductUpdateConversationNotesInput.Type;
+
+export const ProductSetConversationBoardStateInput = Schema.Struct({
+  ...ProductConversationMutationTarget,
+  boardState: Schema.Literals(["active", "done"]),
+}).pipe(closedBoundary);
+export type ProductSetConversationBoardStateInput =
+  typeof ProductSetConversationBoardStateInput.Type;
+
+const ProductEntryAnnotationMutationTarget = {
+  ...ProductConversationMutationTarget,
+  entryId: ProductEntryId,
+};
+
+export const ProductAddEntryPinInput = Schema.Struct({
+  ...ProductEntryAnnotationMutationTarget,
+}).pipe(closedBoundary);
+export type ProductAddEntryPinInput = typeof ProductAddEntryPinInput.Type;
+
+export const ProductRemoveEntryPinInput = Schema.Struct({
+  ...ProductEntryAnnotationMutationTarget,
+}).pipe(closedBoundary);
+export type ProductRemoveEntryPinInput = typeof ProductRemoveEntryPinInput.Type;
+
+export const ProductSetEntryPinDoneInput = Schema.Struct({
+  ...ProductEntryAnnotationMutationTarget,
+  done: Schema.Boolean,
+}).pipe(closedBoundary);
+export type ProductSetEntryPinDoneInput = typeof ProductSetEntryPinDoneInput.Type;
+
+export const ProductSetEntryPinLabelInput = Schema.Struct({
+  ...ProductEntryAnnotationMutationTarget,
+  label: Schema.NullOr(
+    TrimmedNonEmptyString.check(Schema.isMaxLength(PRODUCT_ENTRY_PIN_LABEL_MAX_CHARS)),
+  ),
+}).pipe(closedBoundary);
+export type ProductSetEntryPinLabelInput = typeof ProductSetEntryPinLabelInput.Type;
+
+export const ProductAddEntryMarkerInput = Schema.Struct({
+  ...ProductEntryAnnotationMutationTarget,
+  markerId: ProductEntryMarkerId,
+  startOffset: NonNegativeInt,
+  endOffset: NonNegativeInt,
+  selectedText: Schema.String.check(
+    Schema.isMinLength(1),
+    Schema.isMaxLength(PRODUCT_ENTRY_MARKER_SELECTED_TEXT_MAX_CHARS),
+  ),
+  selectedTextDigest: Schema.String.check(
+    Schema.isPattern(/^sha256:[0-9a-f]{64}$/),
+  ),
+  style: ProductEntryMarker.fields.style,
+  color: ProductEntryMarker.fields.color,
+}).pipe(closedBoundary);
+export type ProductAddEntryMarkerInput = typeof ProductAddEntryMarkerInput.Type;
+
+const ProductEntryMarkerMutationTarget = {
+  ...ProductConversationMutationTarget,
+  markerId: ProductEntryMarkerId,
+};
+
+export const ProductRemoveEntryMarkerInput = Schema.Struct({
+  ...ProductEntryMarkerMutationTarget,
+}).pipe(closedBoundary);
+export type ProductRemoveEntryMarkerInput = typeof ProductRemoveEntryMarkerInput.Type;
+
+export const ProductSetEntryMarkerDoneInput = Schema.Struct({
+  ...ProductEntryMarkerMutationTarget,
+  done: Schema.Boolean,
+}).pipe(closedBoundary);
+export type ProductSetEntryMarkerDoneInput = typeof ProductSetEntryMarkerDoneInput.Type;
+
+export const ProductSetEntryMarkerLabelInput = Schema.Struct({
+  ...ProductEntryMarkerMutationTarget,
+  label: Schema.NullOr(
+    TrimmedNonEmptyString.check(Schema.isMaxLength(PRODUCT_ENTRY_MARKER_LABEL_MAX_CHARS)),
+  ),
+}).pipe(closedBoundary);
+export type ProductSetEntryMarkerLabelInput = typeof ProductSetEntryMarkerLabelInput.Type;
 
 export const ProductGetConversationInput = Schema.Struct({
   protocolVersion: Schema.Literal(PRODUCT_PROTOCOL_VERSION),
@@ -460,7 +874,7 @@ export const ProductControlRunResult = Schema.Struct({
 }).pipe(closedBoundary);
 export type ProductControlRunResult = typeof ProductControlRunResult.Type;
 
-export const ProductShellFactChange = Schema.Union([
+const ProductConversationShellFactChange = Schema.Union([
   Schema.Struct({
     kind: Schema.Literal("conversation-summary"),
     conversation: ProductConversationSummary,
@@ -469,12 +883,68 @@ export const ProductShellFactChange = Schema.Union([
     kind: Schema.Literal("conversation-tombstone"),
     conversationId: ProductConversationId,
   }),
+]);
+const ProductWorkspaceShellFactChange = Schema.Union([
   Schema.Struct({
-    kind: Schema.Literal("runtime-catalog"),
-    catalog: ProductRuntimeCatalog,
+    kind: Schema.Literal("workspace-summary"),
+    workspace: ProductWorkspaceSummary,
+  }),
+  Schema.Struct({
+    kind: Schema.Literal("workspace-tombstone"),
+    workspaceId: ProductWorkspaceId,
   }),
 ]);
+const ProductGroupShellFactChange = Schema.Union([
+  Schema.Struct({
+    kind: Schema.Literal("group-summary"),
+    group: ProductGroupSummary,
+  }),
+  Schema.Struct({
+    kind: Schema.Literal("group-tombstone"),
+    groupId: ProductGroupId,
+  }),
+]);
+const ProductRuntimeShellFactChange = Schema.Struct({
+  kind: Schema.Literal("runtime-catalog"),
+  catalog: Schema.NullOr(ProductRuntimeCatalog),
+});
+export const ProductShellFactChange = Schema.Union([
+  ProductConversationShellFactChange,
+  ProductWorkspaceShellFactChange,
+  ProductGroupShellFactChange,
+  ProductRuntimeShellFactChange,
+]);
 export type ProductShellFactChange = typeof ProductShellFactChange.Type;
+
+/*
+ * Shell facts name exactly one Product scope. Runtime catalog refreshes are
+ * Host observations and therefore carry neither a Workspace nor Conversation id.
+ */
+const ProductShellFactBase = {
+  protocolVersion: Schema.Literal(PRODUCT_PROTOCOL_VERSION),
+  sequence: PositiveInt,
+  factId: TrimmedNonEmptyString.check(Schema.isMaxLength(128)),
+  emittedAt: ProductIsoDateTime,
+};
+const ProductConversationShellFact = Schema.Struct({
+  ...ProductShellFactBase,
+  conversationId: ProductConversationId,
+  change: ProductConversationShellFactChange,
+});
+const ProductWorkspaceShellFact = Schema.Struct({
+  ...ProductShellFactBase,
+  workspaceId: ProductWorkspaceId,
+  change: ProductWorkspaceShellFactChange,
+});
+const ProductGroupShellFact = Schema.Struct({
+  ...ProductShellFactBase,
+  groupId: ProductGroupId,
+  change: ProductGroupShellFactChange,
+});
+const ProductRuntimeShellFact = Schema.Struct({
+  ...ProductShellFactBase,
+  change: ProductRuntimeShellFactChange,
+});
 
 export const ProductDetailFactChange = Schema.Union([
   Schema.Struct({
@@ -486,9 +956,27 @@ export const ProductDetailFactChange = Schema.Union([
     conversationId: ProductConversationId,
   }),
   Schema.Struct({
+    kind: Schema.Literal("conversation-updated"),
+    conversation: ProductConversationSummary,
+  }),
+  Schema.Struct({
     kind: Schema.Literal("queue-changed"),
     conversationId: ProductConversationId,
     queue: Schema.Array(ProductQueueItem).check(Schema.isMaxLength(PRODUCT_MAX_QUEUE_ITEMS)),
+  }),
+  Schema.Struct({
+    kind: Schema.Literal("entry-pins-changed"),
+    conversationId: ProductConversationId,
+    pins: Schema.Array(ProductEntryPin).check(
+      Schema.isMaxLength(PRODUCT_ENTRY_PINS_MAX_COUNT),
+    ),
+  }),
+  Schema.Struct({
+    kind: Schema.Literal("entry-markers-changed"),
+    conversationId: ProductConversationId,
+    markers: Schema.Array(ProductEntryMarker).check(
+      Schema.isMaxLength(PRODUCT_ENTRY_MARKERS_MAX_COUNT),
+    ),
   }),
   Schema.Struct({
     kind: Schema.Literal("entry-admitted"),
@@ -539,20 +1027,22 @@ export const ProductDetailFactChange = Schema.Union([
 ]);
 export type ProductDetailFactChange = typeof ProductDetailFactChange.Type;
 
-const ProductFactBase = {
+const ProductDetailFactBase = {
   protocolVersion: Schema.Literal(PRODUCT_PROTOCOL_VERSION),
   sequence: PositiveInt,
   factId: TrimmedNonEmptyString.check(Schema.isMaxLength(128)),
   conversationId: ProductConversationId,
   emittedAt: ProductIsoDateTime,
 };
-export const ProductShellFact = Schema.Struct({
-  ...ProductFactBase,
-  change: ProductShellFactChange,
-});
+export const ProductShellFact = Schema.Union([
+  ProductConversationShellFact,
+  ProductWorkspaceShellFact,
+  ProductGroupShellFact,
+  ProductRuntimeShellFact,
+]);
 export type ProductShellFact = typeof ProductShellFact.Type;
 export const ProductDetailFact = Schema.Struct({
-  ...ProductFactBase,
+  ...ProductDetailFactBase,
   change: ProductDetailFactChange,
 });
 export type ProductDetailFact = typeof ProductDetailFact.Type;

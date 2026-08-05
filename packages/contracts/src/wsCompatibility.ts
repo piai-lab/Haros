@@ -37,8 +37,8 @@ export const WS_NEGOTIATE_QUERY = {
 // the advertised server list so a newer client can still negotiate with an
 // older server (over the legacy bootstrap socket) during a rollout window.
 export const WS_CLIENT_REQUIRED_CAPABILITIES = [
-  "orchestration.cursor-safe-streams",
-  "orchestration.thread-detail-snapshot",
+  "product.cursor-safe-facts",
+  "product.conversation-snapshot",
   "rpc.typed-errors",
 ] as const;
 

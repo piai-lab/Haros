@@ -18,6 +18,7 @@ const DOCUMENT_CONTRACT_PATHS = [
   "execution-brief.md",
   "missions/independent-omnimind-v1.md",
   "research/README.md",
+  "research/source-update-intake.md",
   "apps/web/src/routes/_chat.plugins.tsx",
   "apps/web/src/routeTree.gen.ts",
   "apps/web/src/components/PluginLibrary.tsx",
@@ -249,6 +250,13 @@ const COVERAGE_CASES = [
     before: "direct transplant",
     after: "informal port",
     all: true,
+  },
+  {
+    name: "adopted-source update approval boundary",
+    rule: "owner.source-update-intake",
+    path: "research/source-update-intake.md",
+    before: "Source update review is **maintainer initiated only**.",
+    after: "Source update review runs automatically.",
   },
 ];
 

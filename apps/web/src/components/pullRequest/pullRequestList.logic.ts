@@ -13,7 +13,7 @@ import type {
   PullRequestSetPinnedInput,
 } from "@omnimind/contracts";
 import {
-  pullRequestListProjectContexts,
+  pullRequestListWorkspaceContexts,
   pullRequestListRepositoryIdentity,
 } from "@omnimind/shared/githubRepository";
 
@@ -45,17 +45,17 @@ export function pullRequestPinToggleInputs(
   if (!aggregate) {
     return [
       {
-        projectId: entry.projectId,
+        workspaceId: entry.workspaceId,
         repository: entry.repository,
         number: entry.number,
         isPinned: !entry.isPinned,
       },
     ];
   }
-  return pullRequestListProjectContexts(entry)
+  return pullRequestListWorkspaceContexts(entry)
     .filter((context) => !entry.isPinned || context.isPinned)
     .map((context) => ({
-      projectId: context.projectId,
+      workspaceId: context.workspaceId,
       repository: entry.repository,
       number: entry.number,
       isPinned: !entry.isPinned,

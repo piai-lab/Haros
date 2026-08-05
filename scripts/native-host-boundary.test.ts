@@ -9,23 +9,30 @@ const read = (path: string) => readFileSync(resolve(repositoryRoot, path), "utf8
 const readJson = (path: string) => JSON.parse(read(path)) as Record<string, unknown>;
 
 describe("isolated Native Host production boundary", () => {
-  it("has one Pi-free executable package and one production artifact entry", () => {
+  it("keeps the executable Pi runtime in the Native Host package only", () => {
     const hostPackage = readJson("apps/native-host/package.json") as {
       name: string;
       bin: Record<string, string>;
       dependencies: Record<string, string>;
     };
     const hostSource = read("apps/native-host/src/index.ts");
+    const piRuntimeSource = read("apps/native-host/src/piRuntime.ts");
     const hostArtifact = read("apps/native-host/dist/index.mjs");
-    const forbiddenRuntime =
-      /@earendil-works\/pi-|pi-agent|pi-ai|pi-coding-agent|ResourceLoader|ExtensionRunner|PackageManager|SessionManager|ToolExecution|AgentLoop/iu;
+    const piDependencies = Object.keys(hostPackage.dependencies)
+      .filter((name) => name.startsWith("@earendil-works/pi-"))
+      .sort();
 
     expect(hostPackage.name).toBe("@omnimind/native-host");
     expect(hostPackage.bin).toEqual({ "omnimind-native-host": "dist/index.mjs" });
-    expect(hostPackage.dependencies).toEqual({ "@omnimind/contracts": "workspace:*" });
+    expect(piDependencies).toEqual([
+      "@earendil-works/pi-agent-core",
+      "@earendil-works/pi-ai",
+      "@earendil-works/pi-coding-agent",
+    ]);
+    expect(hostPackage.dependencies["@omnimind/contracts"]).toBe("workspace:*");
     expect(readdirSync(resolve(repositoryRoot, "apps/native-host/dist"))).toEqual(["index.mjs"]);
-    expect(`${hostSource}\n${hostArtifact}\n${JSON.stringify(hostPackage)}`).not.toMatch(
-      forbiddenRuntime,
+    expect(`${hostSource}\n${piRuntimeSource}\n${hostArtifact}`).toMatch(
+      /@earendil-works\/pi-(?:ai|coding-agent)/u,
     );
   });
 
@@ -53,6 +60,7 @@ describe("isolated Native Host production boundary", () => {
   it("stages that same Host and keeps endpoint/authentication out of Product and renderer state", () => {
     const buildScript = read("scripts/build-desktop-artifact.ts");
     const releaseManifests = read("scripts/lib/release-workspace-manifests.ts");
+    const releaseLegalMetadata = read("scripts/lib/release-legal-metadata.ts");
     const rendererAndProductState = [
       read("apps/web/src/store/systemHealthStore.ts"),
       read("apps/web/src/components/system-health/SystemHealthCoordinator.tsx"),
@@ -64,27 +72,54 @@ describe("isolated Native Host production boundary", () => {
       'fs.copy(distDirs.nativeHostDist, path.join(stageAppDir, "apps/native-host/dist"))',
     );
     expect(releaseManifests).toContain('"apps/native-host/package.json"');
+    expect(buildScript).toContain("...resolvedNativeHostDependencies");
+    expect(releaseLegalMetadata).toContain(
+      'join(packageRoot, "apps/native-host/package.json")',
+    );
     expect(rendererAndProductState).not.toMatch(
       /OMNIMIND_NATIVE_HOST_(?:AUTH|ENDPOINT)|omnimind-native-host-[a-f0-9-]+\.sock/iu,
     );
   });
 
-  it("keeps the approved Product Service Pi debt outside the Host", () => {
-    const servicePackage = readJson("apps/service/package.json") as {
-      dependencies: Record<string, string>;
-    };
+  it("keeps every Host-external production package free of Pi runtime dependencies", () => {
     const hostPackage = readJson("apps/native-host/package.json") as {
       dependencies: Record<string, string>;
     };
-    const servicePiDependencies = Object.keys(servicePackage.dependencies)
-      .filter((name) => name.startsWith("@earendil-works/pi-"))
-      .sort();
+    const externalManifestPaths = [
+      "apps/desktop/package.json",
+      "apps/service/package.json",
+      "apps/web/package.json",
+      "packages/contracts/package.json",
+      "packages/shared/package.json",
+    ];
+    const externalManifests = externalManifestPaths.map((path) => ({
+      path,
+      manifest: readJson(path) as {
+        dependencies?: Record<string, string>;
+        optionalDependencies?: Record<string, string>;
+      },
+    }));
 
-    expect(servicePiDependencies).toEqual([
-      "@earendil-works/pi-agent-core",
-      "@earendil-works/pi-ai",
-      "@earendil-works/pi-coding-agent",
-    ]);
-    expect(Object.keys(hostPackage.dependencies).some((name) => name.includes("pi-"))).toBe(false);
+    expect(Object.keys(hostPackage.dependencies).some((name) => name.startsWith("@earendil-works/pi-"))).toBe(true);
+    for (const { path, manifest } of externalManifests) {
+      const runtimeDependencies = {
+        ...manifest.dependencies,
+        ...manifest.optionalDependencies,
+      };
+      expect(
+        Object.keys(runtimeDependencies).filter((name) => name.startsWith("@earendil-works/pi-")),
+        path,
+      ).toEqual([]);
+    }
+
+    const externalProductionSource = [
+      read("apps/service/src/native-host/client.ts"),
+      read("apps/service/src/native-host/executionBoundary.ts"),
+      read("apps/desktop/src/main.ts"),
+      read("apps/desktop/src/preload.ts"),
+      read("apps/web/src/wsNativeApi.ts"),
+      read("packages/contracts/src/native-host/protocol.ts"),
+    ].join("\n");
+    expect(externalProductionSource).not.toMatch(/@earendil-works\/pi-/u);
   });
 });

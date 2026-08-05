@@ -4,7 +4,7 @@
 
 import {
   PINNED_MESSAGE_LABEL_MAX_CHARS,
-  THREAD_NOTES_MAX_CHARS,
+  CONVERSATION_NOTES_MAX_CHARS,
   type MessageId,
   type PinnedMessage,
 } from "@omnimind/contracts";
@@ -111,5 +111,5 @@ export function setPinnedMessageLabel(
 }
 
 export function clampThreadNotes(notes: string): string {
-  return notes.length > THREAD_NOTES_MAX_CHARS ? notes.slice(0, THREAD_NOTES_MAX_CHARS) : notes;
+  return notes.length > CONVERSATION_NOTES_MAX_CHARS ? notes.slice(0, CONVERSATION_NOTES_MAX_CHARS) : notes;
 }

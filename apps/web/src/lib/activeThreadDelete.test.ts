@@ -8,6 +8,9 @@ import { beforeEach, describe, expect, it, vi } from "vitest";
 const harness = vi.hoisted(() => ({
   events: [] as string[],
   dispatchCommand: vi.fn(),
+  getConversationSnapshot: vi.fn(),
+  deleteConversation: vi.fn(),
+  controlRun: vi.fn(),
   confirm: vi.fn(),
   disposeThread: vi.fn(),
   reconcile: vi.fn(),
@@ -29,7 +32,13 @@ const THREAD = {
 vi.mock("../nativeApi", () => ({
   readNativeApi: () => ({
     dialogs: { confirm: harness.confirm },
-    orchestration: { dispatchCommand: harness.dispatchCommand },
+  }),
+}));
+vi.mock("../wsNativeApi", () => ({
+  readProductNativeApi: () => ({
+    getConversationSnapshot: harness.getConversationSnapshot,
+    deleteConversation: harness.deleteConversation,
+    controlRun: harness.controlRun,
   }),
 }));
 
@@ -72,9 +81,13 @@ beforeEach(() => {
   harness.threads = [THREAD];
   harness.orphanResolver.mockReset().mockImplementation(() => harness.orphanedWorktreePath);
   harness.confirm.mockReset().mockResolvedValue(false);
-  harness.dispatchCommand.mockReset().mockImplementation(async (command: { type: string }) => {
-    harness.events.push(command.type);
+  harness.getConversationSnapshot.mockReset().mockResolvedValue({
+    readModel: { conversation: { revision: 1 }, runs: [] },
   });
+  harness.deleteConversation.mockReset().mockImplementation(async () => {
+    harness.events.push("product.conversation.delete");
+  });
+  harness.controlRun.mockReset();
   harness.disposeThread.mockReset().mockImplementation(() => {
     harness.events.push("terminal.dispose");
   });
@@ -102,7 +115,7 @@ describe("deleteActiveThreadFromClient", () => {
 
     expect(harness.events).toEqual([
       "prepare",
-      "thread.delete",
+      "product.conversation.delete",
       "terminal.dispose",
       "reconcile",
       "onDeleted",
@@ -111,9 +124,9 @@ describe("deleteActiveThreadFromClient", () => {
   });
 
   it("leaves client state untouched when the server rejects deletion", async () => {
-    harness.dispatchCommand.mockImplementation(async (command: { type: string }) => {
-      harness.events.push(command.type);
-      if (command.type === "thread.delete") throw new Error("delete rejected");
+    harness.deleteConversation.mockImplementation(async () => {
+      harness.events.push("product.conversation.delete");
+      throw new Error("delete rejected");
     });
     const onDeleted = vi.fn();
 

@@ -6,7 +6,8 @@
 
 import { useEffect, useMemo, useRef, useState, type MouseEvent, type ReactNode } from "react";
 
-import type { OrchestrationThreadPullRequest, ProjectId, ThreadId } from "@omnimind/contracts";
+import type { ProjectId, ThreadId } from "@omnimind/contracts";
+import type { ConversationPullRequestSummary } from "~/historicalConversation";
 
 import {
   AddPlusIcon,
@@ -102,7 +103,7 @@ function ActivityThreadRow({
   isActive: boolean;
   isSettled: boolean;
   isPinned: boolean;
-  pr: OrchestrationThreadPullRequest | null;
+  pr: ConversationPullRequestSummary | null;
   status: ThreadStatusPill | null;
   onOpen: () => void;
   onSetSettled: (settled: boolean) => void;
@@ -110,7 +111,7 @@ function ActivityThreadRow({
   onArchive: () => void;
   renderHoverCard: (anchorId: string) => ReactNode;
 }) {
-  const provider = thread.session?.provider ?? thread.modelSelection.provider;
+  const provider = thread.session?.provider ?? thread.modelSelection?.provider ?? null;
   const branch = thread.associatedWorktreeBranch?.trim() || thread.branch?.trim() || null;
   const hoverAnchorId = createSidebarThreadHoverAnchorId({
     scope: "activity",
@@ -477,7 +478,7 @@ export function SidebarActivityView({
   pinnedThreadIdSet: ReadonlySet<ThreadId>;
   settledOverrideByThreadId: ReadonlyMap<ThreadId, boolean>;
   threadsHydrated: boolean;
-  prByThreadId: ReadonlyMap<ThreadId, OrchestrationThreadPullRequest | null>;
+  prByThreadId: ReadonlyMap<ThreadId, ConversationPullRequestSummary | null>;
   onVisibleThreadIdsChange: (threadIds: readonly ThreadId[]) => void;
   resolveThreadStatus: (thread: SidebarThreadSummary) => ThreadStatusPill | null;
   onOpenThread: (threadId: ThreadId) => void;

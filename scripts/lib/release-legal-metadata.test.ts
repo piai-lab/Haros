@@ -8,6 +8,7 @@ import { afterEach, describe, expect, it } from "vitest";
 import {
   collectReleaseDependencyInventory,
   renderReleaseLegalMetadata,
+  resolveReleaseDependencyRoots,
   type ReleaseDependencyInventory,
 } from "./release-legal-metadata";
 
@@ -86,6 +87,37 @@ afterEach(() => {
 });
 
 describe("release legal metadata", () => {
+  it("includes the isolated Native Host as a release dependency owner", () => {
+    const root = mkdtempSync(join(tmpdir(), "omnimind-release-roots-"));
+    temporaryRoots.push(root);
+    write(
+      join(root, "apps/native-host/package.json"),
+      JSON.stringify({
+        dependencies: {
+          "@earendil-works/pi-agent-core": "0.81.1",
+          "@omnimind/contracts": "workspace:*",
+        },
+      }),
+    );
+    write(
+      join(root, "apps/service/package.json"),
+      JSON.stringify({ dependencies: { effect: "1.0.0" } }),
+    );
+    write(
+      join(root, "apps/desktop/package.json"),
+      JSON.stringify({ dependencies: { electron: "40.10.6", "electron-updater": "6.6.2" } }),
+    );
+
+    expect(resolveReleaseDependencyRoots(root)).toEqual([
+      {
+        name: "@earendil-works/pi-agent-core",
+        fromDirectory: join(root, "apps/native-host"),
+      },
+      { name: "effect", fromDirectory: join(root, "apps/service") },
+      { name: "electron-updater", fromDirectory: join(root, "apps/desktop") },
+    ]);
+  });
+
   it("accepts an exact legal source only for the locked package manifest", () => {
     const inventory = collectReleaseDependencyInventory(fixture());
     const target = inventory.components.find(

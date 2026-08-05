@@ -7,7 +7,6 @@ import type { MessageId, ThreadId, TurnId } from "@omnimind/contracts";
 import type {
   ChatMessage,
   Project,
-  Space,
   SidebarThreadSummary,
   Thread,
   ThreadSession,
@@ -24,7 +23,6 @@ export type ThreadDetailSyncState = "synced" | "failed";
 export interface AppState {
   /** Highest authoritative snapshot integrated by this store instance. */
   shellSnapshotSequence?: number;
-  spaces: Space[];
   projects: Project[];
   sidebarThreadSummaryById: Record<string, SidebarThreadSummary>;
   threadsHydrated: boolean;
@@ -79,7 +77,6 @@ export const EMPTY_TURN_DIFF_BY_THREAD: Record<
 
 export const initialState: AppState = {
   shellSnapshotSequence: 0,
-  spaces: [],
   projects: [],
   sidebarThreadSummaryById: {},
   threadsHydrated: false,

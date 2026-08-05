@@ -18,15 +18,7 @@ import {
 } from "@dnd-kit/core";
 import { useRef, useState } from "react";
 
-import {
-  getProviderStartOptions,
-  resolveAssistantDeliveryMode,
-  useAppSettings,
-} from "~/appSettings";
 import { toastManager } from "~/components/ui/toast";
-import { useProviderStatusesForLocalConfig } from "~/hooks/useProviderStatusesForLocalConfig";
-import { useRefreshProviderStatusesNow } from "~/hooks/useProviderStatusRefresh";
-import { resolveProviderSendAvailabilityWithRefresh } from "~/lib/providerAvailability";
 import { dispatchKanbanDraftCard } from "../../lib/kanbanDispatch";
 import { KanbanCardView } from "./KanbanCardView";
 import { KanbanColumn, parseKanbanColumnDropId } from "./KanbanColumn";
@@ -37,6 +29,7 @@ import {
   type KanbanProjectBoard,
 } from "./kanban.logic";
 import { useKanbanUiStore } from "../../kanbanUiStore";
+import { useKanbanDraftDispatchAdmission } from "./useKanbanDraftDispatchAdmission";
 
 function resolveDropColumn(board: KanbanProjectBoard, overId: string): KanbanColumnKey | null {
   const columnDrop = parseKanbanColumnDropId(overId);
@@ -68,11 +61,7 @@ export function KanbanProjectBoardView({
   onNewTask: () => void;
   nowMs?: number;
 }) {
-  const { settings } = useAppSettings();
-  const assistantDeliveryMode = resolveAssistantDeliveryMode(settings);
-  const providerOptionsForDispatch = getProviderStartOptions(settings);
-  const providerStatuses = useProviderStatusesForLocalConfig();
-  const refreshProviderStatuses = useRefreshProviderStatusesNow();
+  const resolveDispatchAdmission = useKanbanDraftDispatchAdmission();
   const setDraftOrder = useKanbanUiStore((state) => state.setDraftOrder);
   const [activeCard, setActiveCard] = useState<KanbanCard | null>(null);
   // A completed drag still emits a click on the source card; swallow exactly that one
@@ -92,27 +81,15 @@ export function KanbanProjectBoardView({
   };
 
   const handleDispatchDrop = async (card: KanbanCard) => {
-    const targetProvider = card.provider ?? settings.defaultProvider;
-    const sendAvailability = await resolveProviderSendAvailabilityWithRefresh({
-      provider: targetProvider,
-      statuses: providerStatuses,
-      refreshStatuses: () => refreshProviderStatuses({ silent: true }),
-    });
-    if (!sendAvailability.usable) {
+    const runtimeAvailability = resolveDispatchAdmission(card);
+    if (!runtimeAvailability.usable) {
       toastManager.add({
         type: "error",
-        title: sendAvailability.unavailableReason,
+        title: runtimeAvailability.reason,
       });
       return;
     }
-    // The dispatch marks the optimistic overlay synchronously, so the card jumps
-    // to In Progress before any round-trip; failure results revert it.
-    const result = await dispatchKanbanDraftCard({
-      card,
-      defaultProvider: settings.defaultProvider,
-      assistantDeliveryMode,
-      providerOptions: providerOptionsForDispatch,
-    });
+    const result = await dispatchKanbanDraftCard({ card });
     if (result.kind === "dispatched") {
       toastManager.add({
         type: "success",
@@ -127,13 +104,47 @@ export function KanbanProjectBoardView({
           ? "Nothing to send yet — write the prompt in the composer."
           : result.reason === "worktree-pending"
             ? "Open the chat to create the worktree with the normal send flow."
-            : "Open the chat to continue this task.";
+            : result.reason === "unsupported-execution-options"
+              ? "Open the chat to send skills or structured mentions."
+              : "Open the chat to continue this task.";
       toastManager.add({
         type: "info",
         title: "Finish this draft in the chat",
         description,
       });
       onOpenCard(card);
+      return;
+    }
+    if (result.kind === "pending") {
+      toastManager.add({
+        type: "info",
+        title: "Draft is waiting for admission",
+        description: "It remains in Draft until the Host confirms the run was accepted.",
+      });
+      return;
+    }
+    if (result.kind === "delivery-unknown") {
+      toastManager.add({
+        type: "warning",
+        title: "Delivery could not be confirmed",
+        description: "The draft was not resent. Reconciliation must confirm what happened.",
+      });
+      return;
+    }
+    if (result.kind === "rejected") {
+      toastManager.add({
+        type: "error",
+        title: "Draft was rejected",
+        description: result.message,
+      });
+      return;
+    }
+    if (result.kind === "draft-changed") {
+      toastManager.add({
+        type: "info",
+        title: "Edited draft was not sent",
+        description: "The earlier transfer was only rechecked; your current draft was preserved.",
+      });
       return;
     }
     if (result.kind === "unavailable") {

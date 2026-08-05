@@ -1,3 +1,4 @@
+import type { ConversationHistoryActivity } from "~/historicalConversation";
 // FILE: WorkflowRunCard.logic.test.ts
 // Purpose: Locks workflow run panel derivation to task-activity folding: workflow
 // identity, agent rows from progress descriptions and tagged member tasks, phase
@@ -5,7 +6,7 @@
 // Layer: Web chat composer tests
 // Depends on: deriveWorkflowRunState
 
-import { EventId, type OrchestrationThreadActivity } from "@omnimind/contracts";
+import { EventId } from "@omnimind/contracts";
 import { describe, expect, it } from "vitest";
 
 import {
@@ -18,8 +19,8 @@ function activity(overrides: {
   id: string;
   createdAt: string;
   kind: string;
-  payload: OrchestrationThreadActivity["payload"];
-}): OrchestrationThreadActivity {
+  payload: ConversationHistoryActivity["payload"];
+}): ConversationHistoryActivity {
   return {
     id: EventId.makeUnsafe(overrides.id),
     createdAt: overrides.createdAt,
@@ -37,7 +38,7 @@ function workflowStarted(overrides?: {
   workflowPhases?: Array<{ title: string; detail?: string }>;
   workflowAgentPhases?: Record<string, string>;
   workflowAgentPlans?: Record<string, { phase?: string; model?: string; effort?: string }>;
-}): OrchestrationThreadActivity {
+}): ConversationHistoryActivity {
   return activity({
     id: overrides?.id ?? "workflow-started",
     createdAt: "2026-07-14T00:00:00.000Z",
@@ -62,7 +63,7 @@ function workflowLiveAgents(overrides: {
   id: string;
   createdAt: string;
   agents: Array<Record<string, string | number | string[]>>;
-}): OrchestrationThreadActivity {
+}): ConversationHistoryActivity {
   return activity({
     id: overrides.id,
     createdAt: overrides.createdAt,
@@ -79,7 +80,7 @@ function workflowProgress(overrides: {
   id: string;
   createdAt: string;
   description: string;
-}): OrchestrationThreadActivity {
+}): ConversationHistoryActivity {
   return activity({
     id: overrides.id,
     createdAt: overrides.createdAt,
@@ -98,7 +99,7 @@ function agentStarted(overrides?: {
   toolUseId?: string;
   workflowTaskId?: string | null;
   subagentType?: string | null;
-}): OrchestrationThreadActivity {
+}): ConversationHistoryActivity {
   return activity({
     id: `${overrides?.taskId ?? "agent-1"}-started`,
     createdAt: "2026-07-14T00:00:05.000Z",
@@ -329,7 +330,7 @@ describe("deriveWorkflowRunState", () => {
         agentStarted({ taskId: "agent-early" }),
         agentStarted({ taskId: "agent-1" }),
         agentStarted({ taskId: "agent-late" }),
-      ].map((entry, index): OrchestrationThreadActivity => {
+      ].map((entry, index): ConversationHistoryActivity => {
         if (entry.kind !== "task.started" || index === 0) {
           return entry;
         }

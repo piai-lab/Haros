@@ -4,8 +4,6 @@ import {
   type KeybindingShortcut,
   type KeybindingWhenNode,
   type ResolvedKeybindingsConfig,
-  SPACE_JUMP_KEYBINDING_COMMANDS,
-  type SpaceJumpKeybindingCommand,
   THREAD_JUMP_KEYBINDING_COMMANDS,
   type ThreadJumpKeybindingCommand,
 } from "@omnimind/contracts";
@@ -94,11 +92,6 @@ export const DEFAULT_SHORTCUT_FALLBACKS: ResolvedKeybindingsConfig = [
     whenAst: whenNotTerminalFocus,
   },
   {
-    command: "sidebar.importThread",
-    shortcut: commandShortcut("i"),
-    whenAst: whenNotTerminalFocus,
-  },
-  {
     command: "chat.new",
     shortcut: commandShortcut("n"),
     whenAst: whenCreationAllowed,
@@ -109,11 +102,6 @@ export const DEFAULT_SHORTCUT_FALLBACKS: ResolvedKeybindingsConfig = [
     whenAst: whenCreationAllowed,
   },
   {
-    command: "chat.newClaude",
-    shortcut: commandShortcut("c", { altKey: true }),
-    whenAst: whenCreationAllowed,
-  },
-  {
     command: "chat.newChat",
     shortcut: commandShortcut("n", { altKey: true }),
     whenAst: whenCreationAllowed,
@@ -121,16 +109,6 @@ export const DEFAULT_SHORTCUT_FALLBACKS: ResolvedKeybindingsConfig = [
   {
     command: "chat.newTerminal",
     shortcut: commandShortcut("t", { shiftKey: true }),
-    whenAst: whenCreationAllowed,
-  },
-  {
-    command: "chat.newCodex",
-    shortcut: commandShortcut("x", { altKey: true }),
-    whenAst: whenCreationAllowed,
-  },
-  {
-    command: "chat.newCursor",
-    shortcut: commandShortcut("r", { altKey: true }),
     whenAst: whenCreationAllowed,
   },
   {
@@ -151,26 +129,6 @@ export const DEFAULT_SHORTCUT_FALLBACKS: ResolvedKeybindingsConfig = [
   {
     command: "view.recent.previous",
     shortcut: commandShortcut("tab", { ctrlKey: true, shiftKey: true, modKey: false }),
-  },
-  {
-    command: "modelPicker.toggle",
-    shortcut: commandShortcut("m", { shiftKey: true }),
-    whenAst: whenNotTerminalFocus,
-  },
-  {
-    command: "model.next",
-    shortcut: commandShortcut("]", { altKey: true, modKey: false }),
-    whenAst: whenNotTerminalFocus,
-  },
-  {
-    command: "model.previous",
-    shortcut: commandShortcut("[", { altKey: true, modKey: false }),
-    whenAst: whenNotTerminalFocus,
-  },
-  {
-    command: "traitsPicker.toggle",
-    shortcut: commandShortcut("e", { shiftKey: true }),
-    whenAst: whenNotTerminalFocus,
   },
   // Cmd-only instead of mod so Ctrl+L remains available to shells on non-macOS.
   {
@@ -196,14 +154,6 @@ export const DEFAULT_SHORTCUT_FALLBACKS: ResolvedKeybindingsConfig = [
     shortcut: commandShortcut("p", { ctrlKey: true, altKey: true, modKey: false }),
     whenAst: whenAnd(whenNotTerminalFocus, whenNot(whenIdentifier("isMac"))),
   },
-  // Numbered space jumps target the switcher's visual tab order (mod+alt+1 = Void).
-  // Same guard as the creation chords: Cmd+Alt never reaches the PTY on macOS, while
-  // Ctrl+Alt+digit doubles as AltGr input on Linux/Windows and must yield to terminals.
-  ...SPACE_JUMP_KEYBINDING_COMMANDS.map((command, index) => ({
-    command,
-    shortcut: commandShortcut(String(index + 1), { altKey: true }),
-    whenAst: whenCreationAllowed,
-  })),
   {
     command: "thread.jump.1",
     shortcut: commandShortcut("1"),
@@ -603,15 +553,6 @@ export function threadJumpCommandForIndex(index: number): ThreadJumpKeybindingCo
 
 export function threadJumpIndexFromCommand(command: string): number | null {
   const index = THREAD_JUMP_KEYBINDING_COMMANDS.indexOf(command as ThreadJumpKeybindingCommand);
-  return index === -1 ? null : index;
-}
-
-export function spaceJumpCommandForIndex(index: number): SpaceJumpKeybindingCommand | null {
-  return SPACE_JUMP_KEYBINDING_COMMANDS[index] ?? null;
-}
-
-export function spaceJumpIndexFromCommand(command: string): number | null {
-  const index = SPACE_JUMP_KEYBINDING_COMMANDS.indexOf(command as SpaceJumpKeybindingCommand);
   return index === -1 ? null : index;
 }
 

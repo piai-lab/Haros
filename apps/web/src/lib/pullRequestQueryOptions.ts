@@ -1,5 +1,5 @@
 import type {
-  ProjectId,
+  ProductWorkspaceId,
   PullRequestDetailInput,
   PullRequestInvolvement,
   PullRequestState,
@@ -10,22 +10,22 @@ import { ensureNativeApi } from "~/nativeApi";
 
 export const pullRequestQueryKeys = {
   all: ["pull-requests"] as const,
-  list: (input: { state: PullRequestState; projectId: ProjectId | null }) =>
-    ["pull-requests", "list", input.state, input.projectId] as const,
+  list: (input: { state: PullRequestState; workspaceId: ProductWorkspaceId | null }) =>
+    ["pull-requests", "list", input.state, input.workspaceId] as const,
   exactList: (input: {
     involvement: PullRequestInvolvement;
     state: PullRequestState;
-    projectId: ProjectId | null;
+    workspaceId: ProductWorkspaceId | null;
   }) =>
-    ["pull-requests", "list-involvement", input.involvement, input.state, input.projectId] as const,
+    ["pull-requests", "list-involvement", input.involvement, input.state, input.workspaceId] as const,
   reviewRequestCounts: ["pull-requests", "review-request-count"] as const,
-  reviewRequestCount: (projectId: ProjectId | null) =>
-    [...pullRequestQueryKeys.reviewRequestCounts, projectId] as const,
+  reviewRequestCount: (workspaceId: ProductWorkspaceId | null) =>
+    [...pullRequestQueryKeys.reviewRequestCounts, workspaceId] as const,
   detail: (input: PullRequestDetailInput | null) =>
     [
       "pull-requests",
       "detail",
-      input?.projectId ?? null,
+      input?.workspaceId ?? null,
       input?.repository ?? null,
       input?.number ?? null,
     ] as const,
@@ -33,7 +33,7 @@ export const pullRequestQueryKeys = {
     [
       "pull-requests",
       "diff",
-      input?.projectId ?? null,
+      input?.workspaceId ?? null,
       input?.repository ?? null,
       input?.number ?? null,
     ] as const,
@@ -54,11 +54,11 @@ export function pullRequestQueryErrorState<TData, TError>(
 
 export function normalizePullRequestListKeyInput(input: {
   state: PullRequestState;
-  projectId?: ProjectId | null | undefined;
+  workspaceId?: ProductWorkspaceId | null | undefined;
 }) {
   return {
     state: input.state,
-    projectId: input.projectId ?? null,
+    workspaceId: input.workspaceId ?? null,
   };
 }
 
@@ -76,7 +76,7 @@ export function shouldLoadExactPullRequestInvolvement(input: {
 
 export function pullRequestsListQueryOptions(input: {
   state: PullRequestState;
-  projectId: ProjectId | null;
+  workspaceId: ProductWorkspaceId | null;
 }) {
   return queryOptions({
     queryKey: pullRequestQueryKeys.list(input),
@@ -84,7 +84,7 @@ export function pullRequestsListQueryOptions(input: {
       ensureNativeApi().pullRequests.list({
         involvement: "all",
         state: input.state,
-        projectId: input.projectId,
+        workspaceId: input.workspaceId,
       }),
     staleTime: 60_000,
     gcTime: 30 * 60_000,
@@ -98,7 +98,7 @@ export function pullRequestsListQueryOptions(input: {
 export function pullRequestsExactInvolvementQueryOptions(input: {
   involvement: PullRequestInvolvement;
   state: PullRequestState;
-  projectId: ProjectId | null;
+  workspaceId: ProductWorkspaceId | null;
 }) {
   return queryOptions({
     queryKey: pullRequestQueryKeys.exactList(input),
@@ -111,9 +111,9 @@ export function pullRequestsExactInvolvementQueryOptions(input: {
   });
 }
 
-export function pullRequestReviewRequestCountQueryOptions(input: { projectId: ProjectId | null }) {
+export function pullRequestReviewRequestCountQueryOptions(input: { workspaceId: ProductWorkspaceId | null }) {
   return queryOptions({
-    queryKey: pullRequestQueryKeys.reviewRequestCount(input.projectId),
+    queryKey: pullRequestQueryKeys.reviewRequestCount(input.workspaceId),
     queryFn: () => ensureNativeApi().pullRequests.reviewRequestCount(input),
     staleTime: 5 * 60_000,
     refetchInterval: 5 * 60_000,
@@ -125,7 +125,7 @@ export function pullRequestReviewRequestCountQueryOptions(input: { projectId: Pr
 /** Warm one destination state only after the user points at or focuses its tab. */
 export function prefetchPullRequestListState(
   queryClient: QueryClient,
-  input: { state: PullRequestState; projectId: ProjectId | null },
+  input: { state: PullRequestState; workspaceId: ProductWorkspaceId | null },
 ) {
   return queryClient.prefetchQuery(pullRequestsListQueryOptions(input));
 }

@@ -4,14 +4,6 @@
   "private": true,
   "type": "module",
   "exports": {
-    "./model": {
-      "types": "./src/model.ts",
-      "import": "./src/model.ts"
-    },
-    "./runtimeMode": {
-      "types": "./src/runtimeMode.ts",
-      "import": "./src/runtimeMode.ts"
-    },
     "./git": {
       "types": "./src/git.ts",
       "import": "./src/git.ts"
@@ -108,10 +100,6 @@
       "types": "./src/Struct.ts",
       "import": "./src/Struct.ts"
     },
-    "./serverSettings": {
-      "types": "./src/serverSettings.ts",
-      "import": "./src/serverSettings.ts"
-    },
     "./terminalThreads": {
       "types": "./src/terminalThreads.ts",
       "import": "./src/terminalThreads.ts"
@@ -119,10 +107,6 @@
     "./threadEnvironment": {
       "types": "./src/threadEnvironment.ts",
       "import": "./src/threadEnvironment.ts"
-    },
-    "./threadSummary": {
-      "types": "./src/threadSummary.ts",
-      "import": "./src/threadSummary.ts"
     },
     "./projectContainers": {
       "types": "./src/projectContainers.ts",
@@ -147,10 +131,6 @@
     "./subagents": {
       "types": "./src/subagents.ts",
       "import": "./src/subagents.ts"
-    },
-    "./agentMentions": {
-      "types": "./src/agentMentions.ts",
-      "import": "./src/agentMentions.ts"
     },
     "./automationCompletionPolicy": {
       "types": "./src/automationCompletionPolicy.ts",
@@ -208,14 +188,6 @@
       "types": "./src/editorIcons.ts",
       "import": "./src/editorIcons.ts"
     },
-    "./providerUsage": {
-      "types": "./src/providerUsage.ts",
-      "import": "./src/providerUsage.ts"
-    },
-    "./providerMetadata": {
-      "types": "./src/providerMetadata.ts",
-      "import": "./src/providerMetadata.ts"
-    },
     "./formatBytes": {
       "types": "./src/formatBytes.ts",
       "import": "./src/formatBytes.ts"
@@ -223,10 +195,6 @@
     "./cli": {
       "types": "./src/cli.ts",
       "import": "./src/cli.ts"
-    },
-    "./migrationRecovery": {
-      "types": "./src/migrationRecovery.ts",
-      "import": "./src/migrationRecovery.ts"
     },
     "./threadMentions": {
       "types": "./src/threadMentions.ts",
@@ -251,10 +219,6 @@
     "./unifiedPatchStats": {
       "types": "./src/unifiedPatchStats.ts",
       "import": "./src/unifiedPatchStats.ts"
-    },
-    "./providerDeliveryBlock": {
-      "types": "./src/providerDeliveryBlock.ts",
-      "import": "./src/providerDeliveryBlock.ts"
     },
     "./browserAnnotations": {
       "types": "./src/browserAnnotations.ts",

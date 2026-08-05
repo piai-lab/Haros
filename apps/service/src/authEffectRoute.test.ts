@@ -27,7 +27,6 @@ import {
   authEffectRouteLayer,
   binaryUploadEffectRouteLayer,
 } from "./http";
-import { ProviderAdapterRegistry } from "./provider/Services/ProviderAdapterRegistry";
 
 const currentSessionId = AuthSessionId.makeUnsafe("11111111-1111-4111-8111-111111111111");
 const otherSessionId = AuthSessionId.makeUnsafe("22222222-2222-4222-8222-222222222222");
@@ -120,10 +119,6 @@ async function withAuthEffectServer(
           Layer.succeed(ServerConfig, config),
           Layer.succeed(ServerAuth, serverAuth),
           Layer.succeed(SessionCredentialService, makeSessionCredentialService()),
-          Layer.succeed(ProviderAdapterRegistry, {
-            getByProvider: () => Effect.die("voice adapter not used in this test"),
-            listProviders: () => Effect.succeed([]),
-          }),
           ManagedAttachmentRepositoryLive.pipe(Layer.provideMerge(SqlitePersistenceMemory)),
           NodeServices.layer,
         ),
@@ -390,7 +385,7 @@ describe("binaryUploadEffectRouteLayer", () => {
         async (serverOrigin) => {
           const params = new URLSearchParams({
             type: "image",
-            threadId: "thread-1",
+            conversationId: "conversation-1",
             name: "screen.png",
             mimeType: "image/png",
           });

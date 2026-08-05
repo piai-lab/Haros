@@ -2,17 +2,14 @@ import * as fs from "node:fs/promises";
 import { tmpdir } from "node:os";
 import * as path from "node:path";
 
-import type { OrchestrationThread } from "@omnimind/contracts";
 import { Effect } from "effect";
 import { afterEach, describe, expect, it } from "vitest";
 
 import type { GitCoreShape } from "./git/Services/GitCore.ts";
-import type { ProjectionSnapshotQueryShape } from "./orchestration/Services/ProjectionSnapshotQuery.ts";
 import {
   listManagedWorktrees,
   MANAGED_WORKTREE_RETENTION_COUNT,
   pruneArchivedManagedWorktrees,
-  pruneProjectedArchivedManagedWorktrees,
 } from "./managedWorktrees.ts";
 
 const temporaryRoots: string[] = [];
@@ -78,7 +75,7 @@ describe("managed worktrees", () => {
           worktreePath,
           associatedWorktreePath: worktreePath,
           archivedAt: new Date(Date.UTC(2026, 0, index + 1)).toISOString(),
-        }) as unknown as OrchestrationThread,
+        }),
     );
     const snapshotsDir = path.join(root, "snapshots");
 
@@ -130,7 +127,7 @@ describe("managed worktrees", () => {
             path.relative(canonicalRoot, worktreePath),
           ),
           archivedAt: new Date(Date.UTC(2026, 0, index + 1)).toISOString(),
-        }) as unknown as OrchestrationThread,
+        }),
     );
 
     await Effect.runPromise(
@@ -145,48 +142,4 @@ describe("managed worktrees", () => {
     expect(removals).toEqual([paths[0]]);
   });
 
-  it("still prunes worktrees owned by retention-deleted threads", async () => {
-    const count = MANAGED_WORKTREE_RETENTION_COUNT + 1;
-    const { root, paths } = await makeManagedRoot(count);
-    const removals: string[] = [];
-    const git = {
-      execute: ({ cwd }: { cwd: string }) =>
-        Effect.succeed({
-          code: 0,
-          stdout: `worktree /repo/project\nHEAD abc\nbranch refs/heads/main\n\nworktree ${cwd}\nHEAD abc\ndetached\n`,
-          stderr: "",
-        }),
-      withMutation: (_cwd: string, effect: Effect.Effect<unknown, unknown, unknown>) => effect,
-      snapshotWorktree: () => Effect.void,
-      removeWorktree: ({ path: worktreePath }: { path: string }) =>
-        Effect.sync(() => removals.push(worktreePath)),
-    } as unknown as GitCoreShape;
-
-    // The oldest archived thread was soft-deleted by retention. `getShellSnapshot`
-    // would hide it and silently strand its worktree on disk forever, so the prune
-    // path must read a projection query that keeps soft-deleted threads visible.
-    const snapshotQuery = {
-      listManagedWorktreeThreads: () =>
-        Effect.succeed(
-          paths.map((worktreePath, index) => ({
-            id: `thread-${index}`,
-            archivedAt: new Date(Date.UTC(2026, 0, index + 1)).toISOString(),
-            worktreePath,
-            associatedWorktreePath: worktreePath,
-          })),
-        ),
-      getSnapshot: () => Effect.die(new Error("getSnapshot must not be used by worktree prune")),
-    } as unknown as ProjectionSnapshotQueryShape;
-
-    await Effect.runPromise(
-      pruneProjectedArchivedManagedWorktrees({
-        homeDir: root,
-        worktreesDir: root,
-        snapshotQuery,
-        git,
-      }),
-    );
-
-    expect(removals).toEqual([paths[0]]);
-  });
 });

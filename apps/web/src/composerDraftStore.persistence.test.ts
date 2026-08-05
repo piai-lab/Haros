@@ -1,4 +1,5 @@
-import { OrchestrationProposedPlanId, ProjectId, ThreadId } from "@omnimind/contracts";
+import type { ConversationHistoryPlanId } from "~/historicalConversation";
+import { ProjectId, ThreadId } from "@omnimind/contracts";
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 import { partializeComposerDraftStoreState, useComposerDraftStore } from "./composerDraftStore";
 import { normalizeCurrentPersistedComposerDraftStoreState } from "./composerDraftPersistence";
@@ -133,7 +134,7 @@ describe("composerDraftStore restored source proposed plan", () => {
       restoredPrompt: "Implement the accepted plan",
       sourceProposedPlan: {
         threadId,
-        planId: OrchestrationProposedPlanId.makeUnsafe("plan-restored-source"),
+        planId: "plan-restored-source",
       },
     };
     const store = useComposerDraftStore.getState();
@@ -393,68 +394,6 @@ describe("composerDraftStore terminal contexts", () => {
     expect(mergedState.draftsByThreadId[threadId]).toBeUndefined();
     expect(mergedState.draftThreadsByThreadId).toEqual({});
     expect(mergedState.projectDraftThreadIdByProjectId).toEqual({});
-  });
-
-  it("drops unsupported restored Grok reasoning efforts from legacy draft storage", () => {
-    const persistApi = useComposerDraftStore.persist as unknown as {
-      getOptions: () => {
-        merge: (
-          persistedState: unknown,
-          currentState: ReturnType<typeof useComposerDraftStore.getState>,
-        ) => ReturnType<typeof useComposerDraftStore.getState>;
-      };
-    };
-    const mergedState = persistApi.getOptions().merge(
-      {
-        draftsByThreadId: {
-          [threadId]: {
-            provider: "grok",
-            model: "grok-build",
-            modelOptions: {
-              grok: {
-                reasoningEffort: "xhigh",
-              },
-            },
-          },
-        },
-        draftThreadsByThreadId: {},
-        projectDraftThreadIdByProjectId: {},
-      },
-      useComposerDraftStore.getInitialState(),
-    );
-
-    expect(mergedState.draftsByThreadId[threadId]?.modelSelectionByProvider.grok).toEqual(
-      modelSelection("grok", "grok-build"),
-    );
-  });
-
-  it("trims a runtime-discovered Codex effort from legacy draft storage", () => {
-    const persistApi = useComposerDraftStore.persist as unknown as {
-      getOptions: () => {
-        merge: (
-          persistedState: unknown,
-          currentState: ReturnType<typeof useComposerDraftStore.getState>,
-        ) => ReturnType<typeof useComposerDraftStore.getState>;
-      };
-    };
-    const mergedState = persistApi.getOptions().merge(
-      {
-        draftsByThreadId: {
-          [threadId]: {
-            provider: "codex",
-            model: "gpt-5.6-sol",
-            effort: "  ultra  ",
-          },
-        },
-        draftThreadsByThreadId: {},
-        projectDraftThreadIdByProjectId: {},
-      },
-      useComposerDraftStore.getInitialState(),
-    );
-
-    expect(mergedState.draftsByThreadId[threadId]?.modelSelectionByProvider.codex).toEqual(
-      modelSelection("codex", "gpt-5.6-sol", { reasoningEffort: "ultra" }),
-    );
   });
 
   it("restores provider-scoped selections without leaking effort across providers", () => {

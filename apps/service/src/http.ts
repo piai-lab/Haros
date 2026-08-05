@@ -6,18 +6,14 @@ import {
   AuthCreatePairingCredentialInput,
   AuthRevokeClientSessionInput,
   AuthRevokePairingLinkInput,
-  PROVIDER_SEND_TURN_MAX_FILE_BYTES,
-  PROVIDER_SEND_TURN_MAX_IMAGE_BYTES,
-  SERVER_VOICE_TRANSCRIPTION_MAX_AUDIO_BYTES,
-  ThreadId,
+  PRODUCT_RESOURCE_MAX_FILE_BYTES,
+  PRODUCT_RESOURCE_MAX_IMAGE_BYTES,
 } from "@omnimind/contracts";
 import {
   ATTACHMENT_CANCEL_ROUTE_PATH,
   ATTACHMENT_UPLOAD_ROUTE_PATH,
-  VOICE_TRANSCRIPTION_UPLOAD_ROUTE_PATH,
 } from "@omnimind/shared/binaryTransfer";
 import { EDITOR_ICON_ROUTE_PATH } from "@omnimind/shared/editorIcons";
-import { threadExportBlockedReason } from "@omnimind/shared/threadExport";
 import { Cause, DateTime, Effect, FileSystem, Layer, Option, Path, Schema, Stream } from "effect";
 import { HttpRouter, HttpServerRequest, HttpServerResponse } from "effect/unstable/http";
 
@@ -35,9 +31,6 @@ import { ServerConfig, type ServerConfigShape } from "./config";
 import { resolveCachedEditorIcon } from "./editorAppIcons";
 import { LOCAL_IMAGE_ROUTE_PATH, resolveAllowedLocalPreviewFile } from "./localImageFiles.ts";
 import { ProjectFaviconResolver } from "./project/Services/ProjectFaviconResolver";
-import { ProjectionSnapshotQuery } from "./orchestration/Services/ProjectionSnapshotQuery";
-import { ProviderAdapterRegistry } from "./provider/Services/ProviderAdapterRegistry";
-import { threadArchiveChunks, threadArchiveFileName } from "./orchestration/exportThreadArchive";
 import type { ServerReadiness } from "./server/readiness";
 import { isLoopbackHost } from "./startupAccess";
 import {
@@ -192,7 +185,6 @@ export function makeEffectHttpRouteLayer(
     makeDesktopShutdownEffectRouteLayer(shutdownController),
     authEffectRouteLayer,
     projectFaviconEffectRouteLayer,
-    threadExportEffectRouteLayer,
     siteFaviconEffectRouteLayer,
     editorIconEffectRouteLayer,
     localImageEffectRouteLayer,
@@ -245,8 +237,7 @@ export function makeHealthEffectRouteLayer(readiness: ServerReadiness) {
             startupReady: snapshot.startupReady,
             pushBusReady: snapshot.pushBusReady,
             keybindingsReady: snapshot.keybindingsReady,
-            terminalSubscriptionsReady: snapshot.terminalSubscriptionsReady,
-            orchestrationSubscriptionsReady: snapshot.orchestrationSubscriptionsReady,
+            productControlPlaneReady: snapshot.productControlPlaneReady,
           },
           { status: 200 },
         ),
@@ -669,65 +660,6 @@ const siteFaviconEffectRouteLayer = HttpRouter.add(
   }).pipe(Effect.catchTag("AuthError", (error) => Effect.succeed(authErrorResponse(error)))),
 );
 
-// Builds a ZIP export of a single thread (thread.json + transcript.md) and streams
-// it back as a download. Loads only the requested thread detail so the export cost
-// scales with that thread rather than the whole projection; mirrors the auth shape
-// of the other binary GET routes (favicon/attachments).
-const threadExportEffectRouteLayer = HttpRouter.add(
-  "GET",
-  "/api/thread-export",
-  Effect.gen(function* () {
-    const request = yield* HttpServerRequest.HttpServerRequest;
-    const url = HttpServerRequest.toURL(request);
-    if (!url) return HttpServerResponse.text("Bad Request", { status: 400 });
-
-    const config = yield* ServerConfig;
-    if (!isLegacyTokenAuthorized({ config, url })) {
-      yield* requireAuthenticatedRequest;
-    }
-
-    // Error responses need the trusted-origin CORS headers too: the desktop
-    // app fetches cross-origin (omnimind://app), and without them the browser masks
-    // a 400/404/409 body as an opaque network failure.
-    const corsHeaders = localPreviewCorsHeaders({ config, request, url });
-
-    const threadIdParam = url.searchParams.get("threadId")?.trim();
-    if (!threadIdParam)
-      return HttpServerResponse.text("Missing threadId parameter", {
-        status: 400,
-        headers: corsHeaders,
-      });
-
-    const snapshotQuery = yield* ProjectionSnapshotQuery;
-    const threadOption = yield* snapshotQuery.getThreadDetailForExportById(
-      ThreadId.makeUnsafe(threadIdParam),
-    );
-    if (Option.isNone(threadOption))
-      return HttpServerResponse.text("Not Found", { status: 404, headers: corsHeaders });
-    const thread = threadOption.value;
-
-    const blockedReason = threadExportBlockedReason(thread);
-    if (blockedReason !== null) {
-      return HttpServerResponse.text(blockedReason, { status: 409, headers: corsHeaders });
-    }
-
-    const fileName = threadArchiveFileName({ title: thread.title, isoTimestamp: thread.updatedAt });
-    return HttpServerResponse.stream(
-      Stream.fromAsyncIterable(threadArchiveChunks(thread), (cause) => cause),
-      {
-        status: 200,
-        contentType: "application/zip",
-        headers: {
-          "Content-Disposition": `attachment; filename="${fileName.replaceAll('"', "")}"`,
-          "Cache-Control": "no-store",
-          ...corsHeaders,
-          "Access-Control-Expose-Headers": "Content-Disposition",
-        },
-      },
-    );
-  }).pipe(Effect.catchTag("AuthError", (error) => Effect.succeed(authErrorResponse(error)))),
-);
-
 export const editorIconEffectRouteLayer = HttpRouter.add(
   "GET",
   EDITOR_ICON_ROUTE_PATH,
@@ -847,17 +779,17 @@ const binaryUploadEffectHandler = Effect.gen(function* () {
 
   if (url.pathname === ATTACHMENT_UPLOAD_ROUTE_PATH) {
     const type = url.searchParams.get("type");
-    const threadId = url.searchParams.get("threadId")?.trim() ?? "";
+    const conversationId = url.searchParams.get("conversationId")?.trim() ?? "";
     const name = url.searchParams.get("name") ?? "";
     const mimeType = url.searchParams.get("mimeType") ?? "";
-    if ((type !== "image" && type !== "file") || !threadId || !name || !mimeType) {
+    if ((type !== "image" && type !== "file") || !conversationId || !name || !mimeType) {
       return HttpServerResponse.jsonUnsafe(
         { error: "Attachment upload metadata is invalid." },
         { status: 400, headers: corsHeaders },
       );
     }
     const maxBytes =
-      type === "image" ? PROVIDER_SEND_TURN_MAX_IMAGE_BYTES : PROVIDER_SEND_TURN_MAX_FILE_BYTES;
+      type === "image" ? PRODUCT_RESOURCE_MAX_IMAGE_BYTES : PRODUCT_RESOURCE_MAX_FILE_BYTES;
     const declaredLength = Number(request.headers["content-length"] ?? "0");
     if (Number.isFinite(declaredLength) && declaredLength > maxBytes) {
       return HttpServerResponse.jsonUnsafe(
@@ -873,7 +805,7 @@ const binaryUploadEffectHandler = Effect.gen(function* () {
     const now = new Date().toISOString();
     const reservation = yield* reserveManagedAttachmentUpload({
       type,
-      threadId,
+      conversationId,
       name,
       mimeType,
       reservedBytes,
@@ -943,46 +875,6 @@ const binaryUploadEffectHandler = Effect.gen(function* () {
     );
   }
 
-  if (url.pathname === VOICE_TRANSCRIPTION_UPLOAD_ROUTE_PATH) {
-    const provider = url.searchParams.get("provider")?.trim() ?? "";
-    const cwd = url.searchParams.get("cwd")?.trim() ?? "";
-    const threadId = url.searchParams.get("threadId")?.trim() || undefined;
-    const mimeType = url.searchParams.get("mimeType")?.trim() ?? "";
-    const sampleRateHz = Number(url.searchParams.get("sampleRateHz"));
-    const durationMs = Number(url.searchParams.get("durationMs"));
-    if (
-      !provider ||
-      !cwd ||
-      !mimeType ||
-      !Number.isSafeInteger(sampleRateHz) ||
-      !Number.isSafeInteger(durationMs)
-    ) {
-      return HttpServerResponse.jsonUnsafe(
-        { error: "Voice transcription metadata is invalid." },
-        { status: 400, headers: corsHeaders },
-      );
-    }
-    const bytes = yield* readEffectBinary(request, SERVER_VOICE_TRANSCRIPTION_MAX_AUDIO_BYTES);
-    const registry = yield* ProviderAdapterRegistry;
-    const adapter = yield* registry.getByProvider(provider as never);
-    if (!adapter.transcribeVoice) {
-      return HttpServerResponse.jsonUnsafe(
-        { error: `Voice transcription is unavailable for provider '${provider}'.` },
-        { status: 400, headers: corsHeaders },
-      );
-    }
-    const result = yield* adapter.transcribeVoice({
-      provider: provider as never,
-      cwd,
-      ...(threadId ? { threadId: ThreadId.makeUnsafe(threadId) } : {}),
-      mimeType,
-      sampleRateHz,
-      durationMs,
-      audioBase64: Buffer.from(bytes).toString("base64"),
-    });
-    return HttpServerResponse.jsonUnsafe(result, { status: 200, headers: corsHeaders });
-  }
-
   return HttpServerResponse.text("Not Found", { status: 404, headers: corsHeaders });
 }).pipe(
   Effect.catch((error) =>
@@ -1009,10 +901,7 @@ const binaryUploadEffectHandler = Effect.gen(function* () {
 
 export const binaryUploadEffectRouteLayer = Layer.merge(
   HttpRouter.add("*", ATTACHMENT_UPLOAD_ROUTE_PATH, binaryUploadEffectHandler),
-  Layer.merge(
-    HttpRouter.add("*", ATTACHMENT_CANCEL_ROUTE_PATH, binaryUploadEffectHandler),
-    HttpRouter.add("*", VOICE_TRANSCRIPTION_UPLOAD_ROUTE_PATH, binaryUploadEffectHandler),
-  ),
+  HttpRouter.add("*", ATTACHMENT_CANCEL_ROUTE_PATH, binaryUploadEffectHandler),
 );
 
 export const attachmentsEffectRouteLayer = HttpRouter.add(

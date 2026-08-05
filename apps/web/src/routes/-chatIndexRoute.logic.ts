@@ -1,28 +1,12 @@
 // FILE: chatIndexRoute.logic.ts
 // Purpose: The "/" landing's restore policy — which remembered thread route the home-chat
-//          surface may reopen, and under which Space.
+//          surface may reopen.
 // Layer: Route UI logic helpers
 // Exports: home-chat restore-route resolution.
 
-import type { ProjectId, SpaceId, ThreadId } from "@omnimind/contracts";
+import type { ProjectId, ThreadId } from "@omnimind/contracts";
 
 import { resolveRestorableThreadRoute, type LastThreadRoute } from "../chatRouteRestore";
-import type { ServerWorkspacePaths } from "../lib/serverWorkspacePaths";
-import { isThreadReachableFromSpace } from "../lib/spaceNavigation";
-import type { Project } from "../types";
-
-/**
- * Set only when "/" was reached by *selecting* a Space. The landing then restores threads that
- * Space can reach and nothing else. Without it — cold start, a deep link, a plain refresh — the
- * remembered route decides the Space instead: `activeSpaceId` lives in sessionStorage and is
- * empty on a fresh launch, while the remembered route lives in localStorage and survives, so
- * scoping unconditionally would drop the user out of the Space they left the app in.
- */
-export interface ChatIndexLandingSpace {
-  readonly spaceId: SpaceId | null;
-  readonly projectById: ReadonlyMap<ProjectId, Project>;
-  readonly workspacePaths: ServerWorkspacePaths;
-}
 
 export function resolveChatIndexRestoreRoute(input: {
   readonly lastThreadRoute: LastThreadRoute | null;
@@ -38,15 +22,10 @@ export function resolveChatIndexRestoreRoute(input: {
    * start on "/" can reopen an unsent draft instead of always minting a new one.
    */
   readonly draftProjectIdByThreadId: ReadonlyMap<string, ProjectId>;
-  /**
-   * Populated panes from the split named by `lastThreadRoute`. `undefined` means the current
-   * client state could not resolve that split, so a Space-scoped restore must fail closed.
-   */
+  /** Populated panes from the split named by `lastThreadRoute`. */
   readonly rememberedSplitViewThreadIds: readonly ThreadId[] | undefined;
-  readonly landingSpace: ChatIndexLandingSpace | null;
 }): LastThreadRoute | null {
-  const { draftProjectIdByThreadId, landingSpace, sidebarThreadSummaryById, studioProjectIds } =
-    input;
+  const { draftProjectIdByThreadId, sidebarThreadSummaryById, studioProjectIds } = input;
 
   const availableThreadIds = new Set<string>();
   for (const threadId of [...input.threadIds, ...draftProjectIdByThreadId.keys()]) {
@@ -59,16 +38,6 @@ export function resolveChatIndexRestoreRoute(input: {
     // Studio threads belong to the /studio surface; restoring one from "/" would silently
     // switch the user into that segment.
     if (studioProjectIds.has(projectId)) continue;
-    if (
-      landingSpace &&
-      !isThreadReachableFromSpace({
-        project: landingSpace.projectById.get(projectId),
-        spaceId: landingSpace.spaceId,
-        paths: landingSpace.workspacePaths,
-      })
-    ) {
-      continue;
-    }
     availableThreadIds.add(threadId);
   }
 
@@ -77,7 +46,7 @@ export function resolveChatIndexRestoreRoute(input: {
     availableThreadIds,
     availableSplitViewIds: input.availableSplitViewIds,
   });
-  if (!landingSpace || !restorableRoute?.splitViewId) {
+  if (!restorableRoute?.splitViewId) {
     return restorableRoute;
   }
 

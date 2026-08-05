@@ -1,4 +1,5 @@
-import { ThreadId, TurnId, type OrchestrationThreadActivity } from "@omnimind/contracts";
+import type { ConversationHistoryActivity } from "~/historicalConversation";
+import { ThreadId, TurnId } from "@omnimind/contracts";
 import { describe, expect, it } from "vitest";
 
 import {
@@ -12,13 +13,12 @@ import {
   hasLiveLatestTurn,
   hasLiveTurnTailWork,
   isLatestTurnSettled,
-  PROVIDER_OPTIONS,
 } from "./session-logic";
 import { makeActivity } from "./storeTestFixtures";
 
 describe("deriveActiveTaskListState", () => {
   it("returns the latest plan update for the active turn", () => {
-    const activities: OrchestrationThreadActivity[] = [
+    const activities: ConversationHistoryActivity[] = [
       makeActivity({
         id: "plan-old",
         createdAt: "2026-02-23T00:00:01.000Z",
@@ -54,7 +54,7 @@ describe("deriveActiveTaskListState", () => {
   });
 
   it("falls back to the most recent plan from a previous turn", () => {
-    const activities: OrchestrationThreadActivity[] = [
+    const activities: ConversationHistoryActivity[] = [
       makeActivity({
         id: "plan-from-turn-1",
         createdAt: "2026-02-23T00:00:01.000Z",
@@ -76,7 +76,7 @@ describe("deriveActiveTaskListState", () => {
   });
 
   it("does not revive a completed prior-turn plan on a new turn", () => {
-    const activities: OrchestrationThreadActivity[] = [
+    const activities: ConversationHistoryActivity[] = [
       makeActivity({
         id: "completed-plan-from-turn-1",
         createdAt: "2026-02-23T00:00:01.000Z",
@@ -94,7 +94,7 @@ describe("deriveActiveTaskListState", () => {
   });
 
   it("keeps an unfinished task list visible after its turn completes", () => {
-    const activities: OrchestrationThreadActivity[] = [
+    const activities: ConversationHistoryActivity[] = [
       makeActivity({
         id: "unfinished-plan-from-turn-1",
         createdAt: "2026-02-23T00:00:01.000Z",
@@ -134,7 +134,7 @@ describe("deriveActiveTaskListState", () => {
 
   it("uses sequence rather than a random activity id for same-millisecond snapshots", () => {
     const createdAt = "2026-02-23T00:00:01.000Z";
-    const activities: OrchestrationThreadActivity[] = [
+    const activities: ConversationHistoryActivity[] = [
       makeActivity({
         id: "z-stale",
         sequence: 10,
@@ -163,7 +163,7 @@ describe("deriveActiveTaskListState", () => {
   });
 
   it("treats an empty task update as an explicit clear", () => {
-    const activities: OrchestrationThreadActivity[] = [
+    const activities: ConversationHistoryActivity[] = [
       makeActivity({
         id: "plan-with-task",
         createdAt: "2026-02-23T00:00:01.000Z",
@@ -194,7 +194,7 @@ describe("deriveActiveTaskListState", () => {
 
 describe("deriveActiveBackgroundTasksState", () => {
   it("counts only still-active non-plan background tasks for the current turn", () => {
-    const activities: OrchestrationThreadActivity[] = [
+    const activities: ConversationHistoryActivity[] = [
       makeActivity({
         id: "plan-task-start",
         createdAt: "2026-02-23T00:00:01.000Z",
@@ -250,7 +250,7 @@ describe("deriveActiveBackgroundTasksState", () => {
   });
 
   it("retires paused tasks from active background work", () => {
-    const activities: OrchestrationThreadActivity[] = [
+    const activities: ConversationHistoryActivity[] = [
       makeActivity({
         id: "background-task-start-paused",
         createdAt: "2026-02-23T00:00:01.000Z",
@@ -848,63 +848,5 @@ describe("hasLiveTurnTailWork", () => {
         session: { orchestrationStatus: "ready" },
       }),
     ).toBe(false);
-  });
-});
-
-describe("PROVIDER_OPTIONS", () => {
-  it("lists available providers", () => {
-    const claude = PROVIDER_OPTIONS.find((option) => option.value === "claudeAgent");
-    const cursor = PROVIDER_OPTIONS.find((option) => option.value === "cursor");
-    const grok = PROVIDER_OPTIONS.find((option) => option.value === "grok");
-    const droid = PROVIDER_OPTIONS.find((option) => option.value === "droid");
-    const kilo = PROVIDER_OPTIONS.find((option) => option.value === "kilo");
-    const opencode = PROVIDER_OPTIONS.find((option) => option.value === "opencode");
-    const pi = PROVIDER_OPTIONS.find((option) => option.value === "pi");
-    expect(PROVIDER_OPTIONS).toEqual([
-      { value: "codex", label: "Codex", available: true },
-      { value: "claudeAgent", label: "Claude", available: true },
-      { value: "cursor", label: "Cursor", available: true },
-      { value: "antigravity", label: "Antigravity", available: true },
-      { value: "grok", label: "Grok", available: true },
-      { value: "droid", label: "Droid", available: true },
-      { value: "kilo", label: "Kilo", available: true },
-      { value: "opencode", label: "OpenCode", available: true },
-      { value: "pi", label: "Pi", available: true },
-    ]);
-    expect(claude).toEqual({
-      value: "claudeAgent",
-      label: "Claude",
-      available: true,
-    });
-    expect(cursor).toEqual({
-      value: "cursor",
-      label: "Cursor",
-      available: true,
-    });
-    expect(grok).toEqual({
-      value: "grok",
-      label: "Grok",
-      available: true,
-    });
-    expect(droid).toEqual({
-      value: "droid",
-      label: "Droid",
-      available: true,
-    });
-    expect(kilo).toEqual({
-      value: "kilo",
-      label: "Kilo",
-      available: true,
-    });
-    expect(opencode).toEqual({
-      value: "opencode",
-      label: "OpenCode",
-      available: true,
-    });
-    expect(pi).toEqual({
-      value: "pi",
-      label: "Pi",
-      available: true,
-    });
   });
 });

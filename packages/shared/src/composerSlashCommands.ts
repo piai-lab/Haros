@@ -6,16 +6,11 @@
 
 export const BUILT_IN_COMPOSER_SLASH_COMMANDS = [
   "clear",
-  "compact",
   "model",
   "plan",
   "default",
-  "review",
-  "fork",
-  "side",
   "status",
   "subagents",
-  "fast",
   "export",
   "feedback",
   "automation",

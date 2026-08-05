@@ -76,13 +76,11 @@ import {
   ComposerMentionNode,
   ComposerSkillNode,
   ComposerSlashCommandNode,
-  ComposerAgentMentionNode,
   ComposerTerminalContextNode,
   ComposerLinkNode,
   $createComposerMentionNode,
   $createComposerSkillNode,
   $createComposerSlashCommandNode,
-  $createComposerAgentMentionNode,
   $createComposerTerminalContextNode,
   $createComposerLinkNode,
   isComposerInlineTokenNode,
@@ -232,8 +230,7 @@ function getAbsoluteOffsetForPoint(node: LexicalNode, pointOffset: number): numb
     if (
       node instanceof ComposerMentionNode ||
       node instanceof ComposerSkillNode ||
-      node instanceof ComposerSlashCommandNode ||
-      node instanceof ComposerAgentMentionNode
+      node instanceof ComposerSlashCommandNode
     ) {
       return getAbsoluteOffsetForInlineTokenPoint(node, offset, pointOffset);
     }
@@ -285,8 +282,7 @@ function getExpandedAbsoluteOffsetForPoint(node: LexicalNode, pointOffset: numbe
     if (
       node instanceof ComposerMentionNode ||
       node instanceof ComposerSkillNode ||
-      node instanceof ComposerSlashCommandNode ||
-      node instanceof ComposerAgentMentionNode
+      node instanceof ComposerSlashCommandNode
     ) {
       return getExpandedAbsoluteOffsetForInlineTokenPoint(node, offset, pointOffset);
     }
@@ -319,7 +315,6 @@ function findSelectionPointAtOffset(
     node instanceof ComposerMentionNode ||
     node instanceof ComposerSkillNode ||
     node instanceof ComposerSlashCommandNode ||
-    node instanceof ComposerAgentMentionNode ||
     node instanceof ComposerLinkNode ||
     node instanceof ComposerTerminalContextNode
   ) {
@@ -456,7 +451,7 @@ function $setComposerEditorPrompt(
         : undefined;
       const provider = thread ? resolveThreadDisplayProvider(thread) : undefined;
       paragraph.append(
-        $createComposerMentionNode(segment.path, segment.kind, provider, segment.threadId),
+        $createComposerMentionNode(segment.path, segment.kind, provider ?? undefined, segment.threadId),
       );
       continue;
     }
@@ -473,10 +468,6 @@ function $setComposerEditorPrompt(
       if (segment.context) {
         paragraph.append($createComposerTerminalContextNode(segment.context));
       }
-      continue;
-    }
-    if (segment.type === "agent-mention") {
-      paragraph.append($createComposerAgentMentionNode(segment.alias, segment.color));
       continue;
     }
     if (segment.type === "link") {
@@ -862,7 +853,7 @@ function ComposerLinkPastePlugin() {
 // which may not be loaded yet when a draft is restored (and can change after a
 // provider handoff). Refresh the stored provider on existing chips whenever the
 // summaries change so the icon never stays stale.
-function ComposerThreadMentionProviderPlugin() {
+function ComposerThreadMentionSourceSyncPlugin() {
   const [editor] = useLexicalComposerContext();
   const threadMentionSources = useStore(
     useMemo(() => createComposerThreadMentionSourcesSelector(), []),
@@ -1241,7 +1232,7 @@ function ComposerPromptEditorInner({
         <ComposerSlashCommandTransformPlugin />
         <ComposerLinkTransformPlugin />
         <ComposerLinkPastePlugin />
-        <ComposerThreadMentionProviderPlugin />
+        <ComposerThreadMentionSourceSyncPlugin />
         {onCollapsePastedText ? (
           <ComposerBigPastePlugin onCollapsePastedText={onCollapsePastedText} />
         ) : null}

@@ -32,7 +32,7 @@ export function makeNativeHostExecutionBoundary(
       text: input.text,
       selection: {
         engineId: input.run.requestedSelection.engineId,
-        modelId: input.run.requestedSelection.modelId,
+        runtimeModelId: input.run.requestedSelection.runtimeModelId,
         thinking: input.run.requestedSelection.thinking,
         permissionPolicy: input.run.requestedSelection.permissionPolicy,
         enforcement: input.run.requestedSelection.enforcement,
@@ -300,6 +300,7 @@ export function makeNativeHostExecutionBoundary(
           runtimeVersion: response.runtimeVersion,
           packageGeneration: response.packageGeneration,
           models: response.models,
+          capabilities: response.capabilities,
           truncated: response.truncated,
         })),
         Effect.mapError(
@@ -330,6 +331,7 @@ export const NativeHostProductControlPlaneLive = Layer.unwrap(
             runtimeVersion: response.runtimeVersion,
             packageGeneration: response.packageGeneration,
             models: response.models,
+            capabilities: response.capabilities,
             truncated: response.truncated,
           })),
           Effect.catch(() => Effect.succeed(null)),

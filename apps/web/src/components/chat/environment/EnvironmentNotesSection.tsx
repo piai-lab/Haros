@@ -2,7 +2,7 @@
 // Purpose: "Notes" section of the Environment panel — a per-thread freeform scratchpad.
 // Layer: Environment panel section
 
-import { THREAD_NOTES_MAX_CHARS, type ThreadId } from "@omnimind/contracts";
+import { CONVERSATION_NOTES_MAX_CHARS, type ThreadId } from "@omnimind/contracts";
 
 import { Textarea } from "~/components/ui/textarea";
 
@@ -36,7 +36,7 @@ export function EnvironmentNotesSection({
           onFocus={autosave.onFocus}
           onBlur={autosave.onBlur}
           placeholder="Type here"
-          maxLength={THREAD_NOTES_MAX_CHARS}
+          maxLength={CONVERSATION_NOTES_MAX_CHARS}
         />
       </div>
     </EnvironmentCollapsibleSection>

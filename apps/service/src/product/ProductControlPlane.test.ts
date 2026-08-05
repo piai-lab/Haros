@@ -1,3 +1,4 @@
+import { createHash } from "node:crypto";
 import fs from "node:fs/promises";
 import os from "node:os";
 import path from "node:path";
@@ -10,17 +11,22 @@ import {
   ProductDispatchId,
   ProductEngineBindingId,
   ProductEntryId,
+  ProductEntryMarkerId,
+  ProductGroupId,
+  ProductMutationId,
   ProductOperationReceiptId,
   ProductQueueItemId,
   ProductResourceRefId,
   ProductRunId,
+  type ProductRuntimeCatalog,
   ProductWorkspaceId,
   type ProductCreateConversationInput,
+  type ProductCreateWorkspaceInput,
   type ProductExecutionObservation,
   type ProductRequestedSelection,
 } from "@omnimind/contracts";
 import { Effect, ManagedRuntime } from "effect";
-import { afterEach, describe, expect, it } from "vitest";
+import { afterEach, describe, expect, it, vi } from "vitest";
 
 import {
   PRODUCT_DATABASE_FILENAME,
@@ -31,11 +37,11 @@ import {
   makeProductExecutionFixture,
   type ProductExecutionBoundary,
 } from "./ProductControlPlane";
-import { assertLegacyConversationRouteAvailable } from "./legacyConversationGuard";
 
 const temporaryRoots: string[] = [];
 
 afterEach(async () => {
+  vi.restoreAllMocks();
   await Promise.all(
     temporaryRoots.splice(0).map((root) => fs.rm(root, { recursive: true, force: true })),
   );
@@ -45,7 +51,9 @@ async function makeSystem(
   filename = ":memory:",
   boundary: ProductExecutionBoundary = ProductExecutionUnavailable,
 ) {
-  const runtime = ManagedRuntime.make(makeProductControlPlaneLayer(filename, boundary));
+  const runtime = ManagedRuntime.make(
+    makeProductControlPlaneLayer(filename, boundary, runtimeCatalog),
+  );
   const controlPlane = await runtime.runPromise(Effect.service(ProductControlPlane));
   return {
     controlPlane,
@@ -104,8 +112,9 @@ function requestedSelection(
   withoutExecutionTarget = false,
 ): ProductRequestedSelection {
   return {
+    state: "selected",
     engineId: "native-engine",
-    modelId: `model-${suffix}`,
+    runtimeModelId: "provider/model",
     thinking: "high",
     permissionPolicy: "approval-required",
     enforcement: "unverified",
@@ -120,6 +129,41 @@ function requestedSelection(
   };
 }
 
+const runtimeCatalog: ProductRuntimeCatalog = {
+  engineId: "native-engine",
+  runtimeVersion: "test-runtime",
+  packageGeneration: "unresolved-not-activated",
+  models: [
+    {
+      id: "provider/model",
+      provider: "provider",
+      modelId: "model",
+      name: "Test model",
+      reasoning: true,
+      available: true,
+      thinkingLevels: ["high", "medium"],
+      auth: "configured",
+    },
+  ],
+  capabilities: {
+    ingress: "typed-native-host",
+    lineage: { continue: "available", rebuild: "available" },
+    controls: {
+      steer: "available",
+      followUp: "available",
+      abort: "available",
+      cancel: "unavailable",
+    },
+    structuredQuestions: "available",
+    packages: "available",
+    filesRead: "unknown",
+    filesWrite: "unknown",
+    terminal: "unknown",
+    enforcement: "unverified",
+  },
+  truncated: false,
+};
+
 function acceptedObservation(suffix: string): ProductExecutionObservation {
   return {
     kind: "accepted",
@@ -129,7 +173,15 @@ function acceptedObservation(suffix: string): ProductExecutionObservation {
       engineId: "native-engine",
       lineageRef: `lineage-${suffix}`,
     },
-    resolvedSelection: requestedSelection(suffix),
+    resolvedSelection: {
+      engineId: "native-engine",
+      runtimeModelId: "provider/model",
+      thinking: "high",
+      permissionPolicy: "approval-required",
+      enforcement: "unverified",
+      executionTarget: null,
+      packageGeneration: "unresolved-not-activated",
+    },
   };
 }
 
@@ -180,38 +232,622 @@ function submitInput(
 }
 
 describe("ProductControlPlane", () => {
-  it("authoritatively guards every explicit legacy Conversation writer reference", async () => {
+  it("publishes throttled Host runtime catalog changes as shell facts and clears Host loss", async () => {
+    let now = 0;
+    vi.spyOn(Date, "now").mockImplementation(() => now);
+    let observed: ProductRuntimeCatalog | null = runtimeCatalog;
+    let catalogCalls = 0;
+    const boundary: ProductExecutionBoundary = {
+      ...ProductExecutionUnavailable,
+      catalog: () => {
+        catalogCalls += 1;
+        return Effect.succeed(observed);
+      },
+    };
+    const system = await makeSystem(":memory:", boundary);
+    const read = (afterSequence: number) =>
+      system.run(
+        system.controlPlane.readFacts({
+          protocolVersion: PRODUCT_PROTOCOL_VERSION,
+          scope: { kind: "shell" },
+          afterSequence,
+          limit: PRODUCT_MAX_FACTS_PER_BATCH,
+        }),
+      );
+    try {
+      expect((await read(0)).facts).toEqual([]);
+      expect(catalogCalls).toBe(1);
+      now += 1_500;
+      expect((await read(0)).facts).toEqual([]);
+      expect(catalogCalls).toBe(1);
+
+      observed = {
+        ...runtimeCatalog,
+        packageGeneration: "package-next",
+        models: runtimeCatalog.models.map((model) => ({
+          ...model,
+          id: "provider/model-next",
+          modelId: "model-next",
+          auth: "missing" as const,
+          available: false,
+        })),
+      };
+      now += 5_000;
+      const changed = await read(0);
+      expect(changed.facts).toHaveLength(1);
+      expect(changed.facts[0]?.change).toEqual({ kind: "runtime-catalog", catalog: observed });
+
+      now += 5_000;
+      expect((await read(changed.highWaterSequence)).facts).toEqual([]);
+
+      observed = {
+        ...observed,
+        models: observed.models.map((model) => ({ ...model, auth: "unavailable" as const })),
+      };
+      now += 5_000;
+      const unavailable = await read(changed.highWaterSequence);
+      expect(unavailable.facts[0]?.change).toEqual({
+        kind: "runtime-catalog",
+        catalog: observed,
+      });
+
+      observed = null;
+      now += 5_000;
+      const lost = await read(unavailable.highWaterSequence);
+      expect(lost.facts[0]?.change).toEqual({ kind: "runtime-catalog", catalog: null });
+      expect((await system.run(system.controlPlane.getShellSnapshot())).runtimeCatalog).toBeNull();
+      expect(catalogCalls).toBe(5);
+    } finally {
+      await system.dispose();
+    }
+  });
+
+  it("preserves Product tables but resets incompatible pre-release fact history on reopen", async () => {
+    const root = await fs.mkdtemp(path.join(os.tmpdir(), "omnimind-product-v1-facts-"));
+    temporaryRoots.push(root);
+    const filename = path.join(root, PRODUCT_DATABASE_FILENAME);
+    const conversation = createInput("pre-release-facts");
+    const first = await makeSystem(filename);
+    await first.run(first.controlPlane.createConversation(conversation));
+    await first.dispose();
+
+    const database = new DatabaseSync(filename);
+    database.exec(`
+      PRAGMA foreign_keys = OFF;
+      BEGIN IMMEDIATE;
+      ALTER TABLE product_facts RENAME TO product_facts_current;
+      CREATE TABLE product_facts (
+        global_sequence INTEGER PRIMARY KEY AUTOINCREMENT,
+        fact_id TEXT NOT NULL UNIQUE,
+        conversation_id TEXT REFERENCES product_conversations(conversation_id) ON DELETE CASCADE,
+        workspace_id TEXT REFERENCES product_workspaces(workspace_id) ON DELETE CASCADE,
+        group_id TEXT REFERENCES product_groups(group_id) ON DELETE CASCADE,
+        conversation_sequence INTEGER CHECK (conversation_sequence > 0),
+        emitted_at TEXT NOT NULL,
+        shell_change_json TEXT NOT NULL,
+        detail_change_json TEXT,
+        UNIQUE (conversation_id, conversation_sequence),
+        CHECK (
+          (conversation_id IS NOT NULL AND workspace_id IS NULL AND group_id IS NULL AND
+           conversation_sequence IS NOT NULL AND detail_change_json IS NOT NULL) OR
+          (conversation_id IS NULL AND workspace_id IS NOT NULL AND group_id IS NULL AND
+           conversation_sequence IS NULL AND detail_change_json IS NULL) OR
+          (conversation_id IS NULL AND workspace_id IS NULL AND group_id IS NOT NULL AND
+           conversation_sequence IS NULL AND detail_change_json IS NULL)
+        )
+      );
+      INSERT INTO product_facts
+      SELECT * FROM product_facts_current;
+      DROP TABLE product_facts_current;
+      COMMIT;
+      PRAGMA foreign_keys = ON;
+    `);
+    database.close();
+
+    const reopened = await makeSystem(filename);
+    try {
+      const shell = await reopened.run(reopened.controlPlane.getShellSnapshot());
+      expect(shell.conversations.map((candidate) => candidate.id)).toContain(
+        conversation.conversationId,
+      );
+      const oldCursor = await reopened.run(
+        reopened.controlPlane.readFacts({
+          protocolVersion: PRODUCT_PROTOCOL_VERSION,
+          scope: { kind: "shell" },
+          afterSequence: 1,
+          limit: PRODUCT_MAX_FACTS_PER_BATCH,
+        }),
+      );
+      expect(oldCursor).toMatchObject({
+        highWaterSequence: 0,
+        facts: [],
+        resnapshotRequired: true,
+        reason: "cursor-ahead",
+      });
+      const fresh = await reopened.run(
+        reopened.controlPlane.readFacts({
+          protocolVersion: PRODUCT_PROTOCOL_VERSION,
+          scope: { kind: "shell" },
+          afterSequence: 0,
+          limit: PRODUCT_MAX_FACTS_PER_BATCH,
+        }),
+      );
+      expect(fresh).toMatchObject({ highWaterSequence: 0, facts: [], resnapshotRequired: false });
+    } finally {
+      await reopened.dispose();
+    }
+  });
+
+  it("updates a Conversation title with durable CAS and mutation-id idempotency", async () => {
+    const root = await fs.mkdtemp(path.join(os.tmpdir(), "omnimind-product-title-"));
+    temporaryRoots.push(root);
+    const filename = path.join(root, PRODUCT_DATABASE_FILENAME);
+    const conversation = createInput("title");
+    const mutationId = ProductMutationId.makeUnsafe("mutation-title-1");
+    const first = await makeSystem(filename);
+    const created = await first.run(first.controlPlane.createConversation(conversation));
+    expect(created.readModel.conversation.revision).toBe(1);
+
+    const mutation = {
+      protocolVersion: PRODUCT_PROTOCOL_VERSION,
+      mutationId,
+      conversationId: conversation.conversationId,
+      expectedRevision: 1,
+      title: "Renamed conversation",
+    } as const;
+    const updated = await first.run(first.controlPlane.updateConversationTitle(mutation));
+    expect(updated.readModel.conversation).toMatchObject({
+      title: "Renamed conversation",
+      revision: 2,
+    });
+    const secondMutation = await first.run(
+      first.controlPlane.updateConversationTitle({
+        ...mutation,
+        mutationId: ProductMutationId.makeUnsafe("mutation-title-2"),
+        expectedRevision: 2,
+        title: "Renamed conversation twice",
+      }),
+    );
+    expect(secondMutation.readModel.conversation).toMatchObject({
+      title: "Renamed conversation twice",
+      revision: 3,
+    });
+    await expect(first.run(first.controlPlane.updateConversationTitle(mutation))).resolves.toEqual(
+      secondMutation,
+    );
+
+    const reusedIdentity = await first.run(
+      first.controlPlane
+        .updateConversationTitle({ ...mutation, title: "Conflicting retry" })
+        .pipe(Effect.flip),
+    );
+    expect(reusedIdentity.code).toBe("PRODUCT_MUTATION_ID_CONFLICT");
+    const stale = await first.run(
+      first.controlPlane
+        .updateConversationTitle({
+          ...mutation,
+          mutationId: ProductMutationId.makeUnsafe("mutation-title-stale"),
+          title: "Stale update",
+        })
+        .pipe(Effect.flip),
+    );
+    expect(stale).toMatchObject({
+      code: "PRODUCT_CONVERSATION_REVISION_CONFLICT",
+      retryable: true,
+    });
+    await first.dispose();
+
+    const reopened = await makeSystem(filename);
+    try {
+      const snapshot = await reopened.run(
+        reopened.controlPlane.getConversationSnapshot({
+          protocolVersion: PRODUCT_PROTOCOL_VERSION,
+          conversationId: conversation.conversationId,
+        }),
+      );
+      expect(snapshot.readModel.conversation).toMatchObject({
+        title: "Renamed conversation twice",
+        revision: 3,
+      });
+      const facts = await reopened.run(
+        reopened.controlPlane.readFacts({
+          protocolVersion: PRODUCT_PROTOCOL_VERSION,
+          scope: { kind: "conversation", conversationId: conversation.conversationId },
+          afterSequence: 0,
+          limit: PRODUCT_MAX_FACTS_PER_BATCH,
+        }),
+      );
+      expect(facts.facts.map((fact) => fact.change.kind)).toContain("conversation-updated");
+    } finally {
+      await reopened.dispose();
+    }
+  });
+
+  it("preserves an unavailable stale Model intent in Queue but never dispatches it", async () => {
     const system = await makeSystem();
     try {
-      const conversation = createInput("legacy-guard");
+      const conversation = createInput("stale-model-intent", "chat");
       await system.run(system.controlPlane.createConversation(conversation));
+      const queued = await system.run(
+        system.controlPlane.putQueueItem({
+          protocolVersion: PRODUCT_PROTOCOL_VERSION,
+          conversationId: conversation.conversationId,
+          itemId: ProductQueueItemId.makeUnsafe("queue-stale-model-intent"),
+          text: "Keep my stale selection visible",
+          requestedSelection: {
+            state: "unavailable",
+            reason: "model-unavailable",
+            requestedRuntimeModelId: "retired-provider/retired-model",
+            permissionPolicy: "approval-required",
+            enforcement: "unverified",
+            executionTarget: null,
+          },
+          resources: [],
+          expectedRevision: null,
+        }),
+      );
+      expect(queued.requestedSelection).toMatchObject({
+        state: "unavailable",
+        requestedRuntimeModelId: "retired-provider/retired-model",
+      });
+      const failure = await system.run(
+        system.controlPlane
+          .submitQueueItem(
+            submitInput(
+              conversation.conversationId,
+              queued.id,
+              queued.revision,
+              "stale-model-intent",
+            ),
+          )
+          .pipe(Effect.flip),
+      );
+      expect(failure).toMatchObject({
+        code: "PRODUCT_RUNTIME_SELECTION_UNAVAILABLE",
+        retryable: true,
+      });
+    } finally {
+      await system.dispose();
+    }
+  });
+
+  it("persists the closed Conversation lifecycle and emits a durable tombstone", async () => {
+    const system = await makeSystem();
+    const conversation = createInput("lifecycle");
+    try {
+      await system.run(system.controlPlane.createConversation(conversation));
+      const mutation = (suffix: string, expectedRevision: number) =>
+        ({
+          protocolVersion: PRODUCT_PROTOCOL_VERSION,
+          mutationId: ProductMutationId.makeUnsafe(`mutation-lifecycle-${suffix}`),
+          conversationId: conversation.conversationId,
+          expectedRevision,
+        }) as const;
+
+      const archived = await system.run(
+        system.controlPlane.archiveConversation(mutation("archive", 1)),
+      );
+      expect(archived.readModel.conversation).toMatchObject({ revision: 2 });
+      expect(archived.readModel.conversation.archivedAt).not.toBeNull();
+
+      const restored = await system.run(
+        system.controlPlane.restoreConversation(mutation("restore", 2)),
+      );
+      expect(restored.readModel.conversation).toMatchObject({ revision: 3, archivedAt: null });
+
+      const pinned = await system.run(
+        system.controlPlane.setConversationPinned({
+          ...mutation("pin", 3),
+          isPinned: true,
+        }),
+      );
+      expect(pinned.readModel.conversation).toMatchObject({ revision: 4, isPinned: true });
+
+      const noted = await system.run(
+        system.controlPlane.updateConversationNotes({
+          ...mutation("notes", 4),
+          notes: "Preserve the Product-owned note.",
+        }),
+      );
+      expect(noted.readModel.conversation).toMatchObject({
+        revision: 5,
+        notes: "Preserve the Product-owned note.",
+      });
+
+      const done = await system.run(
+        system.controlPlane.setConversationBoardState({
+          ...mutation("done", 5),
+          boardState: "done",
+        }),
+      );
+      expect(done.readModel.conversation).toMatchObject({ revision: 6, boardState: "done" });
+      expect(done.readModel.conversation.boardStateChangedAt).not.toBeNull();
+
+      const deleted = await system.run(
+        system.controlPlane.deleteConversation(mutation("delete", 6)),
+      );
+      expect(deleted).toMatchObject({
+        conversationId: conversation.conversationId,
+        revision: 7,
+      });
+      await expect(
+        system.run(system.controlPlane.deleteConversation(mutation("delete", 6))),
+      ).resolves.toEqual(deleted);
       expect(
         await system.run(system.controlPlane.hasConversation(conversation.conversationId)),
-      ).toBe(true);
-      for (const reference of [
-        { threadId: conversation.conversationId },
-        { sourceThreadId: conversation.conversationId },
-        { parentThreadId: conversation.conversationId },
-        { sidechatSourceThreadId: conversation.conversationId },
-      ]) {
-        const failure = await system.run(
-          assertLegacyConversationRouteAvailable(reference, system.controlPlane).pipe(Effect.flip),
-        );
-        expect(failure.code).toBe("PRODUCT_CONVERSATION_LEGACY_ROUTE_FORBIDDEN");
-      }
-      const importFailure = await system.run(
-        assertLegacyConversationRouteAvailable(
-          { threadId: conversation.conversationId, externalId: "provider-session" },
-          system.controlPlane,
-        ).pipe(Effect.flip),
+      ).toBe(false);
+      const shell = await system.run(system.controlPlane.getShellSnapshot());
+      expect(shell.conversations).toEqual([]);
+      const facts = await system.run(
+        system.controlPlane.readFacts({
+          protocolVersion: PRODUCT_PROTOCOL_VERSION,
+          scope: { kind: "conversation", conversationId: conversation.conversationId },
+          afterSequence: 0,
+          limit: PRODUCT_MAX_FACTS_PER_BATCH,
+        }),
       );
-      expect(importFailure.code).toBe("PRODUCT_CONVERSATION_LEGACY_ROUTE_FORBIDDEN");
-      await system.run(
-        assertLegacyConversationRouteAvailable(
-          { threadId: "legacy-conversation", sourceThreadId: "legacy-source" },
-          system.controlPlane,
+      expect(facts.facts.at(-1)?.change).toEqual({
+        kind: "conversation-tombstone",
+        conversationId: conversation.conversationId,
+      });
+    } finally {
+      await system.dispose();
+    }
+  });
+
+  it("creates one durable Workspace fact and replays the same create identity without duplication", async () => {
+    const system = await makeSystem();
+    const input = {
+      protocolVersion: PRODUCT_PROTOCOL_VERSION,
+      workspaceId: ProductWorkspaceId.makeUnsafe("workspace-create-proof"),
+      title: "Create proof",
+      access: {
+        kind: "folder-backed",
+        managedDirectory: null,
+        primaryFolder: "/workspace/create-proof",
+        executionTarget: {
+          kind: "local",
+          targetRef: "/workspace/create-proof",
+          observedAt: "2026-08-05T00:00:00.000Z",
+        },
+        writeAuthority: "primary-folder",
+      },
+      visibleInSidebar: true,
+    } satisfies ProductCreateWorkspaceInput;
+    try {
+      const created = await system.run(system.controlPlane.createWorkspace(input));
+      const replayed = await system.run(system.controlPlane.createWorkspace(input));
+      expect(replayed).toEqual(created);
+      const recoveredByRoot = await system.run(
+        system.controlPlane.createWorkspace({
+          ...input,
+          workspaceId: ProductWorkspaceId.makeUnsafe("workspace-create-proof-racing-id"),
+          access: {
+            ...input.access,
+            primaryFolder: "/workspace//create-proof/",
+            executionTarget: {
+              ...input.access.executionTarget,
+              targetRef: "/workspace/create-proof/",
+            },
+          },
+        }),
+      );
+      expect(recoveredByRoot.id).toBe(input.workspaceId);
+      expect(recoveredByRoot.access.primaryFolder).toBe("/workspace/create-proof");
+
+      const shell = await system.run(system.controlPlane.getShellSnapshot());
+      expect(shell.workspaces).toEqual([created]);
+      expect(shell.sequence).toBe(1);
+      const facts = await system.run(
+        system.controlPlane.readFacts({
+          protocolVersion: PRODUCT_PROTOCOL_VERSION,
+          scope: { kind: "shell" },
+          afterSequence: 0,
+          limit: PRODUCT_MAX_FACTS_PER_BATCH,
+        }),
+      );
+      expect(facts.facts).toEqual(
+        expect.arrayContaining([
+          expect.objectContaining({
+            workspaceId: input.workspaceId,
+            change: { kind: "workspace-summary", workspace: created },
+          }),
+        ]),
+      );
+
+      await expect(
+        system.run(
+          system.controlPlane.createWorkspace({
+            ...input,
+            access: {
+              ...input.access,
+              primaryFolder: "/workspace/other-root",
+              executionTarget: {
+                ...input.access.executionTarget,
+                targetRef: "/workspace/other-root",
+              },
+            },
+          }),
         ),
+      ).rejects.toMatchObject({ code: "PRODUCT_WORKSPACE_ID_CONFLICT" });
+
+      const renamed = await system.run(
+        system.controlPlane.updateWorkspaceTitle({
+          protocolVersion: PRODUCT_PROTOCOL_VERSION,
+          mutationId: ProductMutationId.makeUnsafe("workspace-title-1"),
+          workspaceId: input.workspaceId,
+          expectedRevision: 1,
+          title: "Renamed Workspace",
+        }),
       );
+      const pinned = await system.run(
+        system.controlPlane.setWorkspacePinned({
+          protocolVersion: PRODUCT_PROTOCOL_VERSION,
+          mutationId: ProductMutationId.makeUnsafe("workspace-pin-1"),
+          workspaceId: input.workspaceId,
+          expectedRevision: renamed.revision,
+          isPinned: true,
+        }),
+      );
+      const withRunCommand = await system.run(
+        system.controlPlane.updateWorkspaceRunCommand({
+          protocolVersion: PRODUCT_PROTOCOL_VERSION,
+          mutationId: ProductMutationId.makeUnsafe("workspace-run-command-1"),
+          workspaceId: input.workspaceId,
+          expectedRevision: pinned.revision,
+          runCommand: "bun run dev",
+        }),
+      );
+      expect(withRunCommand).toMatchObject({
+        revision: 4,
+        title: "Renamed Workspace",
+        isPinned: true,
+        runCommand: "bun run dev",
+      });
+
+      const replayedRename = await system.run(
+        system.controlPlane.updateWorkspaceTitle({
+          protocolVersion: PRODUCT_PROTOCOL_VERSION,
+          mutationId: ProductMutationId.makeUnsafe("workspace-title-1"),
+          workspaceId: input.workspaceId,
+          expectedRevision: 1,
+          title: "Renamed Workspace",
+        }),
+      );
+      expect(replayedRename.revision).toBe(4);
+      await expect(
+        system.run(
+          system.controlPlane.setWorkspacePinned({
+            protocolVersion: PRODUCT_PROTOCOL_VERSION,
+            mutationId: ProductMutationId.makeUnsafe("workspace-pin-stale"),
+            workspaceId: input.workspaceId,
+            expectedRevision: 1,
+            isPinned: false,
+          }),
+        ),
+      ).rejects.toMatchObject({ code: "PRODUCT_WORKSPACE_REVISION_CONFLICT" });
+
+      const deleteInput = {
+        protocolVersion: PRODUCT_PROTOCOL_VERSION,
+        mutationId: ProductMutationId.makeUnsafe("workspace-delete-1"),
+        workspaceId: input.workspaceId,
+        expectedRevision: 4,
+      } as const;
+      const deleted = await system.run(system.controlPlane.deleteWorkspace(deleteInput));
+      expect(deleted).toMatchObject({ revision: 5, sequence: 5 });
+      await expect(system.run(system.controlPlane.deleteWorkspace(deleteInput))).resolves.toEqual(
+        deleted,
+      );
+      expect((await system.run(system.controlPlane.getShellSnapshot())).workspaces).toEqual([]);
+    } finally {
+      await system.dispose();
+    }
+  });
+
+  it.skipIf(process.platform !== "darwin")(
+    "recovers the same durable Workspace through the macOS private-var alias",
+    async () => {
+      const system = await makeSystem();
+      const input = {
+        protocolVersion: PRODUCT_PROTOCOL_VERSION,
+        workspaceId: ProductWorkspaceId.makeUnsafe("workspace-darwin-alias"),
+        title: "Darwin alias",
+        access: {
+          kind: "folder-backed",
+          managedDirectory: null,
+          primaryFolder: "/private/var/folders/omnimind-proof",
+          executionTarget: {
+            kind: "local",
+            targetRef: "/private/var/folders/omnimind-proof",
+            observedAt: "2026-08-05T00:00:00.000Z",
+          },
+          writeAuthority: "primary-folder",
+        },
+        visibleInSidebar: true,
+      } satisfies ProductCreateWorkspaceInput;
+      try {
+        const created = await system.run(system.controlPlane.createWorkspace(input));
+        const recovered = await system.run(
+          system.controlPlane.createWorkspace({
+            ...input,
+            workspaceId: ProductWorkspaceId.makeUnsafe("workspace-darwin-alias-race"),
+            access: {
+              ...input.access,
+              primaryFolder: "/var/folders/omnimind-proof",
+              executionTarget: {
+                ...input.access.executionTarget,
+                targetRef: "/var/folders/omnimind-proof",
+              },
+            },
+          }),
+        );
+        expect(recovered.id).toBe(created.id);
+        expect(recovered.access.primaryFolder).toBe("/private/var/folders/omnimind-proof");
+      } finally {
+        await system.dispose();
+      }
+    },
+  );
+
+  it("shares one Workspace across Conversations only when access and canonical root agree", async () => {
+    const system = await makeSystem();
+    const first = createInput("shared-first");
+    const second = {
+      ...createInput("shared-second"),
+      workspaceId: first.workspaceId,
+      workspace: first.workspace,
+    } satisfies ProductCreateConversationInput;
+    try {
+      await system.run(system.controlPlane.createConversation(first));
+      await system.run(system.controlPlane.createConversation(second));
+
+      const shell = await system.run(system.controlPlane.getShellSnapshot());
+      expect(shell.conversations).toHaveLength(2);
+      expect(shell.conversations.map((conversation) => conversation.id)).toEqual(
+        expect.arrayContaining([first.conversationId, second.conversationId]),
+      );
+      expect(
+        shell.conversations.every((conversation) => conversation.workspaceId === first.workspaceId),
+      ).toBe(true);
+      const secondSnapshot = await system.run(
+        system.controlPlane.getConversationSnapshot({
+          protocolVersion: PRODUCT_PROTOCOL_VERSION,
+          conversationId: second.conversationId,
+        }),
+      );
+      expect(secondSnapshot.readModel.workspace).toMatchObject({
+        id: first.workspaceId,
+        access: {
+          kind: "folder-backed",
+          primaryFolder: "/workspace/shared-first",
+        },
+      });
+
+      const differentRoot = {
+        ...createInput("shared-root-conflict"),
+        workspaceId: first.workspaceId,
+      };
+      await expect(
+        system.run(system.controlPlane.createConversation(differentRoot)),
+      ).rejects.toMatchObject({ code: "PRODUCT_WORKSPACE_ACCESS_CONFLICT" });
+
+      const differentAccess = {
+        ...createInput("shared-access-conflict", "chat"),
+        workspaceId: first.workspaceId,
+      };
+      await expect(
+        system.run(system.controlPlane.createConversation(differentAccess)),
+      ).rejects.toMatchObject({ code: "PRODUCT_WORKSPACE_ACCESS_CONFLICT" });
+      await expect(
+        system.run(
+          system.controlPlane.deleteWorkspace({
+            protocolVersion: PRODUCT_PROTOCOL_VERSION,
+            mutationId: ProductMutationId.makeUnsafe("workspace-delete-not-empty"),
+            workspaceId: first.workspaceId,
+            expectedRevision: 1,
+          }),
+        ),
+      ).rejects.toMatchObject({ code: "PRODUCT_WORKSPACE_NOT_EMPTY" });
     } finally {
       await system.dispose();
     }
@@ -360,12 +996,7 @@ describe("ProductControlPlane", () => {
       const first = await putQueueItem(system, conversation, "unresolved-one");
       const firstResult = await system.run(
         system.controlPlane.submitQueueItem(
-          submitInput(
-            conversation.conversationId,
-            first.id,
-            first.revision,
-            "unresolved-one",
-          ),
+          submitInput(conversation.conversationId, first.id, first.revision, "unresolved-one"),
         ),
       );
       expect(firstResult.automaticReplayCount).toBe(0);
@@ -378,12 +1009,7 @@ describe("ProductControlPlane", () => {
       const failure = await system.run(
         system.controlPlane
           .submitQueueItem(
-            submitInput(
-              conversation.conversationId,
-              second.id,
-              second.revision,
-              "unresolved-two",
-            ),
+            submitInput(conversation.conversationId, second.id, second.revision, "unresolved-two"),
           )
           .pipe(Effect.flip),
       );
@@ -451,7 +1077,7 @@ describe("ProductControlPlane", () => {
         lineageRef: "pi-session:late-session",
         resolvedSelection: {
           engineId: "pi",
-          modelId: "faux-native/faux-thinker",
+          runtimeModelId: "faux-native/faux-thinker",
           thinking: "medium",
           permissionPolicy: "approval-required",
           enforcement: "unverified",
@@ -596,6 +1222,9 @@ describe("ProductControlPlane", () => {
       expect(resumed).toEqual([
         { runId: submitted.runId, operationRef: "pi-pending:startup-rejected" },
       ]);
+      const rechecked = await reopened.run(reopened.controlPlane.submitQueueItem(submitted));
+      expect(rechecked.snapshot.readModel.runs[0]?.receipt.receipt.state).toBe("delivery_unknown");
+      expect(attemptCount).toBe(0);
       listener?.(submitted.runId, {
         kind: "delivery-rejected",
         code: "PI_DISPATCH_NOT_ACCEPTED",
@@ -754,7 +1383,13 @@ describe("ProductControlPlane", () => {
         }),
       );
       expect(shell.scope.kind).toBe("shell");
-      expect(shell.facts.every((fact) => fact.change.kind === "conversation-summary")).toBe(true);
+      expect(shell.facts.some((fact) => fact.change.kind === "workspace-summary")).toBe(true);
+      expect(
+        shell.facts.every(
+          (fact) =>
+            fact.change.kind === "workspace-summary" || fact.change.kind === "conversation-summary",
+        ),
+      ).toBe(true);
       expect(
         shell.facts.every(
           (fact) =>
@@ -785,11 +1420,13 @@ describe("ProductControlPlane", () => {
       const conversation = createInput("same-process-unknown");
       await system.run(system.controlPlane.createConversation(conversation));
       const item = await putQueueItem(system, conversation, "same-process-unknown");
-      const result = await system.run(
-        system.controlPlane.submitQueueItem(
-          submitInput(conversation.conversationId, item.id, item.revision, "same-process-unknown"),
-        ),
+      const input = submitInput(
+        conversation.conversationId,
+        item.id,
+        item.revision,
+        "same-process-unknown",
       );
+      const result = await system.run(system.controlPlane.submitQueueItem(input));
       expect(result.snapshot.readModel.runs[0]?.receipt.receipt).toEqual({
         state: "delivery_unknown",
         lastConfirmedBoundary: "sent",
@@ -803,7 +1440,8 @@ describe("ProductControlPlane", () => {
           automaticReplayCount: 0,
         }),
       ]);
-      await system.run(system.controlPlane.dispatchPending());
+      const rechecked = await system.run(system.controlPlane.submitQueueItem(input));
+      expect(rechecked.snapshot.readModel.runs[0]?.receipt.receipt.state).toBe("delivery_unknown");
       expect(fixture.attemptCount()).toBe(1);
     } finally {
       await system.dispose();
@@ -836,11 +1474,8 @@ describe("ProductControlPlane", () => {
       const conversation = createInput("pre-send");
       await system.run(system.controlPlane.createConversation(conversation));
       const item = await putQueueItem(system, conversation, "pre-send");
-      const submitted = await system.run(
-        system.controlPlane.submitQueueItem(
-          submitInput(conversation.conversationId, item.id, item.revision, "pre-send"),
-        ),
-      );
+      const input = submitInput(conversation.conversationId, item.id, item.revision, "pre-send");
+      const submitted = await system.run(system.controlPlane.submitQueueItem(input));
       expect(submitted.snapshot.readModel.runs[0]?.receipt.receipt).toEqual({
         state: "pending",
         lastConfirmedBoundary: "pre-send",
@@ -848,18 +1483,22 @@ describe("ProductControlPlane", () => {
       expect(await system.run(system.controlPlane.inspectOutbox())).toEqual([
         expect.objectContaining({ state: "pending", sendBoundary: "pre-send", attemptCount: 1 }),
       ]);
-      await system.run(system.controlPlane.dispatchPending());
-      const retried = await system.run(
-        system.controlPlane.getConversationSnapshot({
-          protocolVersion: PRODUCT_PROTOCOL_VERSION,
-          conversationId: conversation.conversationId,
-        }),
-      );
-      expect(retried.readModel.runs[0]?.receipt.receipt).toMatchObject({
+      const retried = await system.run(system.controlPlane.submitQueueItem(input));
+      expect(retried.snapshot.readModel.runs[0]?.receipt.receipt).toMatchObject({
         state: "rejected",
         code: "ENGINE_UNAVAILABLE",
       });
       expect(fixture.attemptCount()).toBe(2);
+
+      const conflict = await system.run(
+        system.controlPlane
+          .submitQueueItem({
+            ...input,
+            receiptId: ProductOperationReceiptId.makeUnsafe("receipt-pre-send-mismatch"),
+          })
+          .pipe(Effect.flip),
+      );
+      expect(conflict.code).toBe("PRODUCT_SUBMIT_IDENTITY_CONFLICT");
     } finally {
       await system.dispose();
     }
@@ -962,12 +1601,7 @@ describe("ProductControlPlane", () => {
       const second = await putQueueItem(system, conversation, "single-owner-two");
       const firstTask = system.run(
         system.controlPlane.submitQueueItem(
-          submitInput(
-            conversation.conversationId,
-            first.id,
-            first.revision,
-            "single-owner-one",
-          ),
+          submitInput(conversation.conversationId, first.id, first.revision, "single-owner-one"),
         ),
       );
       await entered;
@@ -1072,12 +1706,7 @@ describe("ProductControlPlane", () => {
       const conversation = createInput("controls");
       await system.run(system.controlPlane.createConversation(conversation));
       const item = await putQueueItem(system, conversation, "controls");
-      const submit = submitInput(
-        conversation.conversationId,
-        item.id,
-        item.revision,
-        "controls",
-      );
+      const submit = submitInput(conversation.conversationId, item.id, item.revision, "controls");
       await system.run(system.controlPlane.submitQueueItem(submit));
       await expect(
         system.run(
@@ -1132,12 +1761,7 @@ describe("ProductControlPlane", () => {
       const queued = await putQueueItem(system, conversation, "snapshot-recovery");
       await system.run(
         system.controlPlane.submitQueueItem(
-          submitInput(
-            conversation.conversationId,
-            queued.id,
-            queued.revision,
-            "snapshot-recovery",
-          ),
+          submitInput(conversation.conversationId, queued.id, queued.revision, "snapshot-recovery"),
         ),
       );
       const runId = ProductRunId.makeUnsafe("run-snapshot-recovery");
@@ -1177,7 +1801,7 @@ describe("ProductControlPlane", () => {
           conversationId: conversation.conversationId,
         }),
       );
-      expect(snapshot.readModel.entries.at(-1)?.text).toBe(
+      expect(snapshot.readModel.entries.find((entry) => entry.role === "assistant")?.text).toBe(
         "Complete answer from before Service returned.",
       );
       expect(snapshot.readModel.streamingEntryIds).toEqual([]);
@@ -1358,6 +1982,270 @@ describe("ProductControlPlane", () => {
         engineBinding: { id: "binding-outcome-unknown" },
         resolvedSelection: { engineId: "native-engine" },
       });
+    } finally {
+      await system.dispose();
+    }
+  });
+
+  it("keeps multi-Group membership through archive and returns current state on mutation replay", async () => {
+    const system = await makeSystem();
+    try {
+      const conversation = createInput("groups-membership");
+      await system.run(system.controlPlane.createConversation(conversation));
+      const alphaId = ProductGroupId.makeUnsafe("group-alpha");
+      const betaId = ProductGroupId.makeUnsafe("group-beta");
+      await system.run(
+        system.controlPlane.createGroup({
+          protocolVersion: PRODUCT_PROTOCOL_VERSION,
+          groupId: alphaId,
+          name: "Alpha",
+          color: "blue",
+        }),
+      );
+      await system.run(
+        system.controlPlane.createGroup({
+          protocolVersion: PRODUCT_PROTOCOL_VERSION,
+          groupId: betaId,
+          name: "Beta",
+          color: "green",
+        }),
+      );
+      const setInput = {
+        protocolVersion: PRODUCT_PROTOCOL_VERSION,
+        mutationId: ProductMutationId.makeUnsafe("mutation-groups-set"),
+        expectedMemberships: [{ conversationId: conversation.conversationId, groupIds: [] }],
+        groupIds: [alphaId],
+      } as const;
+      await system.run(system.controlPlane.setConversationGroups(setInput));
+      const added = await system.run(
+        system.controlPlane.addConversationGroups({
+          protocolVersion: PRODUCT_PROTOCOL_VERSION,
+          mutationId: ProductMutationId.makeUnsafe("mutation-groups-add"),
+          expectedMemberships: [
+            { conversationId: conversation.conversationId, groupIds: [alphaId] },
+          ],
+          groupIds: [betaId],
+        }),
+      );
+      expect(
+        added.groups
+          .filter((group) => group.conversationIds.includes(conversation.conversationId))
+          .map((group) => group.id),
+      ).toEqual([alphaId, betaId]);
+
+      const replayedSet = await system.run(system.controlPlane.setConversationGroups(setInput));
+      expect(
+        replayedSet.groups
+          .filter((group) => group.conversationIds.includes(conversation.conversationId))
+          .map((group) => group.id),
+      ).toEqual([alphaId, betaId]);
+
+      const archived = await system.run(
+        system.controlPlane.archiveConversation({
+          protocolVersion: PRODUCT_PROTOCOL_VERSION,
+          mutationId: ProductMutationId.makeUnsafe("mutation-groups-archive"),
+          conversationId: conversation.conversationId,
+          expectedRevision: 1,
+        }),
+      );
+      expect(archived.readModel.conversation.archivedAt).not.toBeNull();
+      let shell = await system.run(system.controlPlane.getShellSnapshot());
+      expect(
+        shell.groups.every((group) => group.conversationIds.includes(conversation.conversationId)),
+      ).toBe(true);
+      await system.run(
+        system.controlPlane.restoreConversation({
+          protocolVersion: PRODUCT_PROTOCOL_VERSION,
+          mutationId: ProductMutationId.makeUnsafe("mutation-groups-restore"),
+          conversationId: conversation.conversationId,
+          expectedRevision: 2,
+        }),
+      );
+      shell = await system.run(system.controlPlane.getShellSnapshot());
+      expect(
+        shell.groups.every((group) => group.conversationIds.includes(conversation.conversationId)),
+      ).toBe(true);
+    } finally {
+      await system.dispose();
+    }
+  });
+
+  it("uses the complete active Group set as reorder CAS and never replays a stale order", async () => {
+    const system = await makeSystem();
+    try {
+      const createGroup = (suffix: string, name: string) =>
+        system.run(
+          system.controlPlane.createGroup({
+            protocolVersion: PRODUCT_PROTOCOL_VERSION,
+            groupId: ProductGroupId.makeUnsafe(`group-order-${suffix}`),
+            name,
+            color: "gray",
+          }),
+        );
+      await createGroup("a", "Order A");
+      await createGroup("b", "Order B");
+      const beforeCreate = (await system.run(system.controlPlane.getShellSnapshot())).groups;
+      const createdC = await createGroup("c", "Order C");
+      const createConflict = await system.run(
+        system.controlPlane
+          .reorderGroups({
+            protocolVersion: PRODUCT_PROTOCOL_VERSION,
+            mutationId: ProductMutationId.makeUnsafe("mutation-order-create-conflict"),
+            expectedGroups: beforeCreate.map((group) => ({
+              groupId: group.id,
+              revision: group.revision,
+            })),
+            orderedGroupIds: beforeCreate.map((group) => group.id).reverse(),
+          })
+          .pipe(Effect.flip),
+      );
+      expect(createConflict).toMatchObject({
+        code: "PRODUCT_GROUP_ORDER_CONFLICT",
+        retryable: true,
+      });
+
+      const beforeDelete = (await system.run(system.controlPlane.getShellSnapshot())).groups;
+      await system.run(
+        system.controlPlane.deleteGroup({
+          protocolVersion: PRODUCT_PROTOCOL_VERSION,
+          mutationId: ProductMutationId.makeUnsafe("mutation-order-delete-c"),
+          groupId: createdC.id,
+          expectedRevision: createdC.revision,
+        }),
+      );
+      const deleteConflict = await system.run(
+        system.controlPlane
+          .reorderGroups({
+            protocolVersion: PRODUCT_PROTOCOL_VERSION,
+            mutationId: ProductMutationId.makeUnsafe("mutation-order-delete-conflict"),
+            expectedGroups: beforeDelete.map((group) => ({
+              groupId: group.id,
+              revision: group.revision,
+            })),
+            orderedGroupIds: beforeDelete.map((group) => group.id).reverse(),
+          })
+          .pipe(Effect.flip),
+      );
+      expect(deleteConflict).toMatchObject({
+        code: "PRODUCT_GROUP_ORDER_CONFLICT",
+        retryable: true,
+      });
+
+      const initial = (await system.run(system.controlPlane.getShellSnapshot())).groups;
+      const firstInput = {
+        protocolVersion: PRODUCT_PROTOCOL_VERSION,
+        mutationId: ProductMutationId.makeUnsafe("mutation-order-first"),
+        expectedGroups: initial.map((group) => ({ groupId: group.id, revision: group.revision })),
+        orderedGroupIds: initial.map((group) => group.id).reverse(),
+      } as const;
+      const first = await system.run(system.controlPlane.reorderGroups(firstInput));
+      const second = await system.run(
+        system.controlPlane.reorderGroups({
+          protocolVersion: PRODUCT_PROTOCOL_VERSION,
+          mutationId: ProductMutationId.makeUnsafe("mutation-order-second"),
+          expectedGroups: first.map((group) => ({ groupId: group.id, revision: group.revision })),
+          orderedGroupIds: first.map((group) => group.id).reverse(),
+        }),
+      );
+      const replayedFirst = await system.run(system.controlPlane.reorderGroups(firstInput));
+      expect(replayedFirst.map((group) => group.id)).toEqual(second.map((group) => group.id));
+    } finally {
+      await system.dispose();
+    }
+  });
+
+  it("persists concrete Entry pins and validates marker text, digest, and overlap replacement", async () => {
+    const system = await makeSystem();
+    try {
+      const conversation = createInput("entry-annotations");
+      await system.run(system.controlPlane.createConversation(conversation));
+      const item = await putQueueItem(system, conversation, "entry-annotations");
+      const admission = submitInput(
+        conversation.conversationId,
+        item.id,
+        item.revision,
+        "entry-annotations",
+      );
+      await system.run(system.controlPlane.admitQueueItem(admission));
+      let snapshot = await system.run(
+        system.controlPlane.getConversationSnapshot({
+          protocolVersion: PRODUCT_PROTOCOL_VERSION,
+          conversationId: conversation.conversationId,
+        }),
+      );
+      const entry = snapshot.readModel.entries[0]!;
+      const pinInput = {
+        protocolVersion: PRODUCT_PROTOCOL_VERSION,
+        mutationId: ProductMutationId.makeUnsafe("mutation-entry-pin"),
+        conversationId: conversation.conversationId,
+        expectedRevision: snapshot.readModel.conversation.revision,
+        entryId: entry.id,
+      } as const;
+      snapshot = await system.run(system.controlPlane.addEntryPin(pinInput));
+      expect(snapshot.readModel.entryPins).toEqual([
+        expect.objectContaining({ entryId: entry.id, done: false, label: null }),
+      ]);
+
+      const selectedText = entry.text.slice(0, 7);
+      snapshot = await system.run(
+        system.controlPlane.addEntryMarker({
+          protocolVersion: PRODUCT_PROTOCOL_VERSION,
+          mutationId: ProductMutationId.makeUnsafe("mutation-entry-marker-one"),
+          conversationId: conversation.conversationId,
+          expectedRevision: snapshot.readModel.conversation.revision,
+          entryId: entry.id,
+          markerId: ProductEntryMarkerId.makeUnsafe("marker-one"),
+          startOffset: 0,
+          endOffset: 7,
+          selectedText,
+          selectedTextDigest: `sha256:${createHash("sha256").update(selectedText).digest("hex")}`,
+          style: "highlight",
+          color: "yellow",
+        }),
+      );
+      expect(snapshot.readModel.entryMarkers.map((marker) => marker.id)).toEqual(["marker-one"]);
+
+      const overlappingText = entry.text.slice(4, 11);
+      snapshot = await system.run(
+        system.controlPlane.addEntryMarker({
+          protocolVersion: PRODUCT_PROTOCOL_VERSION,
+          mutationId: ProductMutationId.makeUnsafe("mutation-entry-marker-two"),
+          conversationId: conversation.conversationId,
+          expectedRevision: snapshot.readModel.conversation.revision,
+          entryId: entry.id,
+          markerId: ProductEntryMarkerId.makeUnsafe("marker-two"),
+          startOffset: 4,
+          endOffset: 11,
+          selectedText: overlappingText,
+          selectedTextDigest: `sha256:${createHash("sha256").update(overlappingText).digest("hex")}`,
+          style: "underline",
+          color: "blue",
+        }),
+      );
+      expect(snapshot.readModel.entryMarkers.map((marker) => marker.id)).toEqual(["marker-two"]);
+
+      const digestFailure = await system.run(
+        system.controlPlane
+          .addEntryMarker({
+            protocolVersion: PRODUCT_PROTOCOL_VERSION,
+            mutationId: ProductMutationId.makeUnsafe("mutation-entry-marker-invalid"),
+            conversationId: conversation.conversationId,
+            expectedRevision: snapshot.readModel.conversation.revision,
+            entryId: entry.id,
+            markerId: ProductEntryMarkerId.makeUnsafe("marker-invalid"),
+            startOffset: 0,
+            endOffset: 7,
+            selectedText,
+            selectedTextDigest: `sha256:${"0".repeat(64)}`,
+            style: "highlight",
+            color: "pink",
+          })
+          .pipe(Effect.flip),
+      );
+      expect(digestFailure.code).toBe("PRODUCT_ENTRY_MARKER_DIGEST_INVALID");
+
+      const replayedPin = await system.run(system.controlPlane.addEntryPin(pinInput));
+      expect(replayedPin.readModel.entryMarkers.map((marker) => marker.id)).toEqual(["marker-two"]);
     } finally {
       await system.dispose();
     }

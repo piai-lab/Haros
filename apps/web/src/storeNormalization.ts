@@ -1,21 +1,18 @@
+import type {
+  ConversationHistoryActivity,
+  ConversationHistorySessionStatus,
+  HistoricalWorkspaceReadModel,
+  HistoricalWorkspaceSnapshot,
+} from "~/historicalConversation";
 // FILE: storeNormalization.ts
 // Purpose: Normalizes orchestration projects, threads, messages, and activities with stable identity.
 // Exports: Pure normalization and equality helpers consumed by projection and event reduction.
 
-import {
-  MessageId,
-  type OrchestrationReadModel,
-  type OrchestrationSpaceShell,
-  type OrchestrationSessionStatus,
-  type OrchestrationShellSnapshot,
-  type OrchestrationThreadActivity,
-  type ProviderKind,
-  ThreadId,
-  type TurnId,
-} from "@omnimind/contracts";
+import { MessageId, ThreadId, type TurnId } from "@omnimind/contracts";
 import { resolveThreadBranchRegressionGuard } from "@omnimind/shared/git";
-import { normalizeModelSlug } from "@omnimind/shared/model";
-import { deriveThreadSummaryMetadata } from "@omnimind/shared/threadSummary";
+import { normalizeModelIdentifier } from "./modelIdentifier";
+import { deriveConversationSummaryMetadata } from "~/conversationHistorySummary";
+import { normalizeHistoricalSourceId } from "~/historicalSourcePresentation";
 
 import { isStalePendingRequestFailureDetail } from "./lib/pendingInteraction";
 import { toAttachmentPreviewUrl } from "./lib/wsHttpUrl";
@@ -25,7 +22,6 @@ import type {
   ChatAttachment,
   ChatMessage,
   Project,
-  Space,
   SidebarThreadSummary,
   Thread,
   ThreadSession,
@@ -33,23 +29,13 @@ import type {
   ThreadTurnState,
 } from "./types";
 
-type ReadModelProject = OrchestrationReadModel["projects"][number];
-type ReadModelSpace = OrchestrationReadModel["spaces"][number];
-type ReadModelThread = OrchestrationReadModel["threads"][number];
+type ReadModelProject = HistoricalWorkspaceReadModel["projects"][number];
+type ReadModelThread = HistoricalWorkspaceReadModel["threads"][number];
 type ReadModelMessage = ReadModelThread["messages"][number];
-type ShellSnapshotThread = OrchestrationShellSnapshot["threads"][number];
+type ShellSnapshotThread = HistoricalWorkspaceSnapshot["threads"][number];
 export type ProjectNormalizationInput = Pick<
   ReadModelProject,
-  | "id"
-  | "kind"
-  | "title"
-  | "workspaceRoot"
-  | "defaultModelSelection"
-  | "scripts"
-  | "isPinned"
-  | "spaceId"
-  | "createdAt"
-  | "updatedAt"
+  "id" | "kind" | "title" | "workspaceRoot" | "scripts" | "isPinned" | "createdAt" | "updatedAt"
 >;
 
 export const MAX_THREAD_MESSAGES = 2_000;
@@ -291,11 +277,11 @@ export function deepEqualJson(left: unknown, right: unknown): boolean {
   return true;
 }
 
-export function normalizeModelSelection<T extends { provider: ProviderKind; model: string }>(
+export function normalizeModelSelection<T extends { provider: string; model: string }>(
   value: T,
   previous: T | null | undefined,
 ): T {
-  const normalizedModel = normalizeModelSlug(value.model, value.provider) ?? value.model;
+  const normalizedModel = normalizeModelIdentifier(value.model) ?? value.model;
   const next = normalizedModel === value.model ? value : { ...value, model: normalizedModel };
   return previous && deepEqualJson(previous, next) ? previous : next;
 }
@@ -320,10 +306,6 @@ export function normalizeProject(
   const folderName = basenameOfPath(incoming.workspaceRoot) ?? incoming.title;
   const localName =
     previous?.localName ?? rememberedUiState.projectNameForCwd(workspaceRootKey) ?? null;
-  const defaultModelSelection =
-    incoming.defaultModelSelection === null
-      ? null
-      : normalizeModelSelection(incoming.defaultModelSelection, previous?.defaultModelSelection);
   const scripts = normalizeProjectScripts(incoming.scripts, previous?.scripts);
   const expanded =
     previous?.expanded ??
@@ -340,10 +322,8 @@ export function normalizeProject(
     previous.folderName === folderName &&
     previous.localName === localName &&
     previous.cwd === incoming.workspaceRoot &&
-    previous.defaultModelSelection === defaultModelSelection &&
     previous.expanded === expanded &&
     (previous.isPinned ?? false) === (incoming.isPinned ?? false) &&
-    (previous.spaceId ?? null) === (incoming.spaceId ?? null) &&
     previous.createdAt === incoming.createdAt &&
     previous.updatedAt === incoming.updatedAt &&
     previous.scripts === scripts
@@ -359,50 +339,12 @@ export function normalizeProject(
     folderName,
     localName,
     cwd: incoming.workspaceRoot,
-    defaultModelSelection,
     expanded,
     isPinned: incoming.isPinned ?? false,
-    spaceId: incoming.spaceId ?? null,
     createdAt: incoming.createdAt,
     updatedAt: incoming.updatedAt,
     scripts,
   } satisfies Project;
-}
-
-export function normalizeSpace(
-  incoming: ReadModelSpace | OrchestrationSpaceShell,
-  previous: Space | undefined,
-): Space {
-  if (
-    previous &&
-    previous.id === incoming.id &&
-    previous.name === incoming.name &&
-    previous.icon === incoming.icon &&
-    previous.sortOrder === incoming.sortOrder &&
-    previous.createdAt === incoming.createdAt &&
-    previous.updatedAt === incoming.updatedAt
-  ) {
-    return previous;
-  }
-  return {
-    id: incoming.id,
-    name: incoming.name,
-    icon: incoming.icon,
-    sortOrder: incoming.sortOrder,
-    createdAt: incoming.createdAt,
-    updatedAt: incoming.updatedAt,
-  };
-}
-
-export function mapSpaces(
-  incoming: ReadonlyArray<ReadModelSpace | OrchestrationSpaceShell>,
-  previous: Space[],
-): Space[] {
-  const previousById = new Map(previous.map((space) => [space.id, space] as const));
-  const next = incoming
-    .map((space) => normalizeSpace(space, previousById.get(space.id)))
-    .toSorted((left, right) => left.sortOrder - right.sortOrder || left.id.localeCompare(right.id));
-  return arraysShallowEqual(previous, next) ? previous : next;
 }
 
 function normalizeChatAttachments(
@@ -1186,9 +1128,9 @@ export function createThreadActivityAccumulator(
 }
 
 export function withOrchestrationEventSequence(
-  activity: OrchestrationThreadActivity,
+  activity: ConversationHistoryActivity,
   sequence: number,
-): OrchestrationThreadActivity {
+): ConversationHistoryActivity {
   return { ...activity, sequence };
 }
 
@@ -1375,7 +1317,7 @@ export function normalizeThreadSession(
       ? incoming.lastError
       : undefined;
   const nextSession = {
-    provider: toLegacyProvider(incoming.providerName),
+    provider: normalizeHistoricalSourceId(incoming.providerName),
     status: toLegacySessionStatus(incoming.status),
     orchestrationStatus: incoming.status,
     activeTurnId: incoming.activeTurnId ?? undefined,
@@ -1788,7 +1730,7 @@ export function mapProjects(
 }
 
 function toLegacySessionStatus(
-  status: OrchestrationSessionStatus,
+  status: ConversationHistorySessionStatus,
 ): "connecting" | "ready" | "running" | "error" | "closed" {
   switch (status) {
     case "starting":
@@ -1804,23 +1746,6 @@ function toLegacySessionStatus(
     case "stopped":
       return "closed";
   }
-}
-
-function toLegacyProvider(providerName: string | null): ProviderKind {
-  if (
-    providerName === "codex" ||
-    providerName === "claudeAgent" ||
-    providerName === "cursor" ||
-    providerName === "antigravity" ||
-    providerName === "grok" ||
-    providerName === "droid" ||
-    providerName === "kilo" ||
-    providerName === "opencode" ||
-    providerName === "pi"
-  ) {
-    return providerName;
-  }
-  return "codex";
 }
 
 function attachmentPreviewRoutePath(attachmentId: string): string {
@@ -1843,7 +1768,7 @@ export function resolveThreadSidebarMetadata(
     thread.hasPendingUserInput === undefined ||
     thread.hasActionableProposedPlan === undefined;
   const derivedMetadata = needsDerivedMetadata
-    ? deriveThreadSummaryMetadata({
+    ? deriveConversationSummaryMetadata({
         messages: thread.messages,
         activities: thread.activities,
         proposedPlans: thread.proposedPlans,

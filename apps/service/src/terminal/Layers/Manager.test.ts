@@ -662,8 +662,8 @@ describe("TerminalManager", () => {
     const { manager } = makeManager(5, {
       subprocessChecker: async () => ({
         cliKind: "codex",
-        hasNonProviderSubprocess: true,
-        hasProviderDescendant: true,
+        hasOtherSubprocess: true,
+        hasAgentDescendant: true,
         hasRunningSubprocess: true,
       }),
       subprocessPollIntervalMs: 20,
@@ -736,14 +736,14 @@ describe("TerminalManager", () => {
   it("clears unmanaged provider identity as soon as an observed provider process disappears", async () => {
     let subprocessActivity: TerminalSubprocessActivity = {
       cliKind: null,
-      hasNonProviderSubprocess: false,
-      hasProviderDescendant: false,
+      hasOtherSubprocess: false,
+      hasAgentDescendant: false,
       hasRunningSubprocess: false,
     };
     let providerDescendantPolls = 0;
     const { manager } = makeManager(5, {
       subprocessChecker: async () => {
-        if (subprocessActivity.hasProviderDescendant) {
+        if (subprocessActivity.hasAgentDescendant) {
           providerDescendantPolls += 1;
         }
         return subprocessActivity;
@@ -763,16 +763,16 @@ describe("TerminalManager", () => {
 
     subprocessActivity = {
       cliKind: "codex",
-      hasNonProviderSubprocess: false,
-      hasProviderDescendant: true,
+      hasOtherSubprocess: false,
+      hasAgentDescendant: true,
       hasRunningSubprocess: true,
     };
     await waitFor(() => providerDescendantPolls > 0, 1_200);
 
     subprocessActivity = {
       cliKind: null,
-      hasNonProviderSubprocess: false,
-      hasProviderDescendant: false,
+      hasOtherSubprocess: false,
+      hasAgentDescendant: false,
       hasRunningSubprocess: false,
     };
     await waitFor(

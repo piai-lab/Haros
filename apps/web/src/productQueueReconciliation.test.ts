@@ -20,8 +20,9 @@ import {
 } from "./productQueueReconciliation";
 
 const requestedSelection = {
+  state: "selected" as const,
   engineId: "native-engine",
-  modelId: "model-1",
+  runtimeModelId: "provider/model-1",
   thinking: "high",
   permissionPolicy: "approval-required" as const,
   enforcement: "unverified" as const,
@@ -53,6 +54,12 @@ function snapshot(text = "hello", revision = 3, includeQueue = true) {
         workspaceId: "workspace-1",
         title: "Conversation",
         workspaceKind: "folder-backed",
+        revision: 1,
+        archivedAt: null,
+        isPinned: false,
+        notes: "",
+        boardState: "active",
+        boardStateChangedAt: null,
         receiptState: null,
         createdAt: "2026-08-04T00:00:00.000Z",
         updatedAt: "2026-08-04T00:00:01.000Z",
@@ -69,7 +76,10 @@ function snapshot(text = "hello", revision = 3, includeQueue = true) {
         observedAt: "2026-08-04T00:00:00.000Z",
       },
       entries: [],
+      streamingEntryIds: [],
       runs: [],
+      activities: [],
+      recoveries: [],
       queue: includeQueue
         ? [
             {
@@ -85,6 +95,8 @@ function snapshot(text = "hello", revision = 3, includeQueue = true) {
             },
           ]
         : [],
+      entryPins: [],
+      entryMarkers: [],
     },
   });
 }
@@ -103,7 +115,10 @@ describe("Product Queue put response-loss reconciliation", () => {
     expect(
       reconcileProductQueuePutResponseLoss(snapshot(), {
         ...attempted,
-        requestedSelection: { ...attempted.requestedSelection, modelId: "model-2" },
+        requestedSelection:
+          attempted.requestedSelection.state === "selected"
+            ? { ...attempted.requestedSelection, runtimeModelId: "provider/model-2" }
+            : attempted.requestedSelection,
       }),
     ).toBeNull();
   });
@@ -160,7 +175,7 @@ describe("Product Queue put response-loss reconciliation", () => {
     expect(transferred?.id).toBe(attempted.itemId);
     expect(draftCleared).toBe(true);
     expect(
-      presentProductConversationQueue(durableSnapshot.readModel, "fallback-model"),
+      presentProductConversationQueue(durableSnapshot.readModel),
     ).toHaveLength(1);
   });
 
@@ -197,7 +212,7 @@ describe("Product Queue put response-loss reconciliation", () => {
     expect(
       useComposerDraftStore.getState().draftsByThreadId[threadId]?.productQueueTransfer,
     ).toBeUndefined();
-    expect(presentProductConversationQueue(durableSnapshot.readModel, "fallback-model")).toEqual([
+    expect(presentProductConversationQueue(durableSnapshot.readModel)).toEqual([
       expect.objectContaining({ id: "queue-1", prompt: "hello" }),
     ]);
   });
@@ -244,7 +259,7 @@ describe("Product Queue put response-loss reconciliation", () => {
     expect(currentDraft.prompt).toBe(attempted.text);
     expect(currentDraft.productQueueTransfer).toBeNull();
     expect(publishedItem).toBe(durableItem);
-    expect(presentProductConversationQueue(durableSnapshot.readModel, "fallback-model")).toEqual([
+    expect(presentProductConversationQueue(durableSnapshot.readModel)).toEqual([
       expect.objectContaining({ id: attempted.itemId, prompt: attempted.text }),
     ]);
   });

@@ -1,4 +1,4 @@
-import { PROVIDER_SEND_TURN_MAX_IMAGE_BYTES } from "@omnimind/contracts";
+import { CHAT_IMAGE_MAX_BYTES } from "@omnimind/contracts";
 import { describe, expect, it } from "vitest";
 
 import { prepareComposerImageFile } from "./composerImagePreparation";
@@ -34,14 +34,14 @@ async function highDetailPng(name: string, transparent: boolean): Promise<File> 
 describe("composer image preparation in Chromium", () => {
   it("decodes and re-encodes a genuinely oversized clipboard PNG", async () => {
     const source = await highDetailPng("CleanShot@2x.png", true);
-    expect(source.size).toBeGreaterThan(PROVIDER_SEND_TURN_MAX_IMAGE_BYTES);
+    expect(source.size).toBeGreaterThan(CHAT_IMAGE_MAX_BYTES);
 
     const prepared = await prepareComposerImageFile(source);
 
     expect(prepared.name).toBe("CleanShot@2x.webp");
     expect(prepared.type).toBe("image/webp");
     expect(prepared.size).toBeGreaterThan(0);
-    expect(prepared.size).toBeLessThanOrEqual(PROVIDER_SEND_TURN_MAX_IMAGE_BYTES);
+    expect(prepared.size).toBeLessThanOrEqual(CHAT_IMAGE_MAX_BYTES);
     const bitmap = await createImageBitmap(prepared);
     const sampleCanvas = document.createElement("canvas");
     sampleCanvas.width = 1;
@@ -55,13 +55,13 @@ describe("composer image preparation in Chromium", () => {
 
   it("uses the faster JPEG encoder when a clipboard PNG is fully opaque", async () => {
     const source = await highDetailPng("CleanShot@2x.png", false);
-    expect(source.size).toBeGreaterThan(PROVIDER_SEND_TURN_MAX_IMAGE_BYTES);
+    expect(source.size).toBeGreaterThan(CHAT_IMAGE_MAX_BYTES);
 
     const prepared = await prepareComposerImageFile(source);
 
     expect(prepared.name).toBe("CleanShot@2x.jpg");
     expect(prepared.type).toBe("image/jpeg");
     expect(prepared.size).toBeGreaterThan(0);
-    expect(prepared.size).toBeLessThanOrEqual(PROVIDER_SEND_TURN_MAX_IMAGE_BYTES);
+    expect(prepared.size).toBeLessThanOrEqual(CHAT_IMAGE_MAX_BYTES);
   });
 });

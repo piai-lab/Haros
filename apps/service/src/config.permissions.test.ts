@@ -19,10 +19,6 @@ import {
   repairPrivateFileSync,
 } from "./privatePathPermissions";
 import { writeFileStringAtomically } from "./atomicWrite";
-import {
-  resolveProviderStatusCachePath,
-  writeProviderStatusCache,
-} from "./provider/providerStatusCache";
 
 const tempDirs = new Set<string>();
 
@@ -60,7 +56,6 @@ describe.skipIf(process.platform === "win32")("private server state permissions"
       paths.secretsDir,
       paths.attachmentsDir,
       paths.logsDir,
-      paths.providerLogsDir,
       paths.terminalLogsDir,
     ]) {
       expect(mode(directoryPath)).toBe(PRIVATE_DIRECTORY_MODE);
@@ -72,11 +67,6 @@ describe.skipIf(process.platform === "win32")("private server state permissions"
   it("creates representative fresh state files with owner-only permissions", async () => {
     const paths = derivePaths(makeTempDir());
     preparePrivateServerPaths(paths);
-    const providerCachePath = resolveProviderStatusCachePath({
-      stateDir: paths.stateDir,
-      provider: "codex",
-    });
-
     await Effect.runPromise(
       Effect.gen(function* () {
         for (const filePath of [
@@ -87,16 +77,6 @@ describe.skipIf(process.platform === "win32")("private server state permissions"
         ]) {
           yield* writeFileStringAtomically({ filePath, contents: "private\n" });
         }
-        yield* writeProviderStatusCache({
-          filePath: providerCachePath,
-          provider: {
-            provider: "codex",
-            status: "ready",
-            available: true,
-            authStatus: "authenticated",
-            checkedAt: new Date().toISOString(),
-          },
-        });
       }).pipe(Effect.provide(NodeServices.layer)),
     );
 
@@ -106,11 +86,9 @@ describe.skipIf(process.platform === "win32")("private server state permissions"
       paths.serverRuntimeStatePath,
       paths.anonymousIdPath,
       paths.environmentIdPath,
-      providerCachePath,
     ]) {
       expect(mode(filePath)).toBe(PRIVATE_FILE_MODE);
     }
-    expect(mode(path.dirname(providerCachePath))).toBe(PRIVATE_DIRECTORY_MODE);
   });
 
   it("repairs an upgraded home without following symlinks", () => {

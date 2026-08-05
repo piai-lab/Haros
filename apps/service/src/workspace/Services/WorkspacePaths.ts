@@ -12,6 +12,15 @@ export class WorkspaceRootNotExistsError extends Schema.TaggedErrorClass<Workspa
   }
 }
 
+export class WorkspaceRootInvalidError extends Schema.TaggedErrorClass<WorkspaceRootInvalidError>()(
+  "WorkspaceRootInvalidError",
+  { workspaceRoot: Schema.String },
+) {
+  override get message(): string {
+    return "Workspace root must be a non-empty absolute local path.";
+  }
+}
+
 export class WorkspaceRootCreateFailedError extends Schema.TaggedErrorClass<WorkspaceRootCreateFailedError>()(
   "WorkspaceRootCreateFailedError",
   {
@@ -36,6 +45,36 @@ export class WorkspaceRootNotDirectoryError extends Schema.TaggedErrorClass<Work
   }
 }
 
+export class WorkspaceRootInspectFailedError extends Schema.TaggedErrorClass<WorkspaceRootInspectFailedError>()(
+  "WorkspaceRootInspectFailedError",
+  {
+    workspaceRoot: Schema.String,
+    normalizedWorkspaceRoot: Schema.String,
+  },
+) {
+  override get message(): string {
+    return `Failed to inspect workspace root: ${this.normalizedWorkspaceRoot}`;
+  }
+}
+
+/**
+ * The Service deadline elapsed before a create mutation was admitted. Because
+ * no mkdir started, callers may safely report that this request did not create
+ * the root. Once creation is admitted the Service waits for its real outcome
+ * instead of returning this error.
+ */
+export class WorkspaceRootDeadlineExceededError extends Schema.TaggedErrorClass<WorkspaceRootDeadlineExceededError>()(
+  "WorkspaceRootDeadlineExceededError",
+  {
+    workspaceRoot: Schema.String,
+    normalizedWorkspaceRoot: Schema.String,
+  },
+) {
+  override get message(): string {
+    return "Workspace root inspection exceeded its Service deadline before creation admission; no directory creation was started.";
+  }
+}
+
 export class WorkspacePathOutsideRootError extends Schema.TaggedErrorClass<WorkspacePathOutsideRootError>()(
   "WorkspacePathOutsideRootError",
   {
@@ -54,7 +93,12 @@ export interface WorkspacePathsShape {
     options?: { readonly createIfMissing?: boolean },
   ) => Effect.Effect<
     string,
-    WorkspaceRootNotExistsError | WorkspaceRootCreateFailedError | WorkspaceRootNotDirectoryError
+    | WorkspaceRootNotExistsError
+    | WorkspaceRootInvalidError
+    | WorkspaceRootCreateFailedError
+    | WorkspaceRootNotDirectoryError
+    | WorkspaceRootInspectFailedError
+    | WorkspaceRootDeadlineExceededError
   >;
   readonly resolveRelativePathWithinRoot: (input: {
     readonly workspaceRoot: string;

@@ -23,13 +23,25 @@ function requestedSelectionsEqual(
   left: ProductRequestedSelection,
   right: ProductRequestedSelection,
 ): boolean {
+  if (left.state !== right.state) return false;
+  if (
+    left.permissionPolicy !== right.permissionPolicy ||
+    left.enforcement !== right.enforcement ||
+    !executionTargetsEqual(left.executionTarget, right.executionTarget)
+  ) {
+    return false;
+  }
+  if (left.state === "unavailable" && right.state === "unavailable") {
+    return (
+      left.reason === right.reason &&
+      left.requestedRuntimeModelId === right.requestedRuntimeModelId
+    );
+  }
+  if (left.state !== "selected" || right.state !== "selected") return false;
   return (
     left.engineId === right.engineId &&
-    left.modelId === right.modelId &&
+    left.runtimeModelId === right.runtimeModelId &&
     left.thinking === right.thinking &&
-    left.permissionPolicy === right.permissionPolicy &&
-    left.enforcement === right.enforcement &&
-    executionTargetsEqual(left.executionTarget, right.executionTarget) &&
     left.packageGeneration === right.packageGeneration
   );
 }
@@ -46,13 +58,25 @@ function requestedSelectionIntentsEqual(
   left: ProductRequestedSelection,
   right: ProductRequestedSelection,
 ): boolean {
+  if (left.state !== right.state) return false;
+  if (
+    left.permissionPolicy !== right.permissionPolicy ||
+    left.enforcement !== right.enforcement ||
+    !executionTargetIntentsEqual(left.executionTarget, right.executionTarget)
+  ) {
+    return false;
+  }
+  if (left.state === "unavailable" && right.state === "unavailable") {
+    return (
+      left.reason === right.reason &&
+      left.requestedRuntimeModelId === right.requestedRuntimeModelId
+    );
+  }
+  if (left.state !== "selected" || right.state !== "selected") return false;
   return (
     left.engineId === right.engineId &&
-    left.modelId === right.modelId &&
+    left.runtimeModelId === right.runtimeModelId &&
     left.thinking === right.thinking &&
-    left.permissionPolicy === right.permissionPolicy &&
-    left.enforcement === right.enforcement &&
-    executionTargetIntentsEqual(left.executionTarget, right.executionTarget) &&
     left.packageGeneration === right.packageGeneration
   );
 }

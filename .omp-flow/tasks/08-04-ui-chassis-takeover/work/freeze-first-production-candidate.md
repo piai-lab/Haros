@@ -18,6 +18,11 @@ Finish without widening claims or repeating unchanged T0 evidence.
 - [Design §9 frozen-candidate gate and stop conditions](../design.md)
 - [Execution Brief proof gates](../../../../execution-brief.md)
 - [Active Campaign status and producer boundary](../../../../missions/independent-omnimind-v1.md)
+- [Maintainer-initiated source update intake protocol](../../../../research/source-update-intake.md),
+  when an adopted-source review is active
+- Accepted source-intake Works:
+  [active Workbench mechanisms](harden-active-workbench-mechanisms.md) and
+  [Product completion signals](align-product-completion-signals.md)
 - [QbD A-04 evidence-SHA distinction](../qbd/design-audit.md)
 - [Final QbD 1 approval conditions](../decisions/qbd-1-approval.md)
 - All preceding Work Concepts, accepted implementation handoffs, current independent reviews and
@@ -29,6 +34,25 @@ This Work owns R12 and verifies, without reimplementing, the combined acceptance
 directly carries A-04 by binding historical T0 evidence to its source SHA and current product,
 artifact, journey, fault and UI evidence to the frozen candidate SHA. It does not grant a producer
 authority to mark Campaign claims verified.
+
+## Entry gate
+
+Before selecting candidate SHA `C`, determine whether the maintainer has initiated an adopted-source
+update review under the linked intake protocol. If no such review is active, this gate adds no work.
+If one is active, Freeze is blocked until the maintainer has explicitly accepted, deferred or
+declined the exact proposed intake set. Every accepted source change must be implemented through an
+owning bounded Work and have a current handoff and independent review before it can enter `C`;
+explicitly deferred changes belong to a later candidate and do not block this one.
+
+This conditional gate does not authorize upstream merge, Product mutation, a speculative update
+Work, a new public ontology or another Converge/QbD round. Gate A remains read-only, and Freeze must
+not absorb or repair source-update work itself.
+
+**Current status (2026-08-05): blocked on accepted intake implementation.** The maintainer approved
+the exact Synara `v0.6.7` intake recorded in `research/source-review.md`. Complete the already active
+authority-retirement Work at its coherent reviewed commit boundary, then implement and independently
+review the two linked intake Works in authored order. Explicitly deferred source changes do not block
+this candidate and must not be pulled into either Work without a new maintainer decision.
 
 ## In scope
 
@@ -111,6 +135,9 @@ by the preceding Works' allowed paths.
 
 ## Falsifiers and stop conditions
 
+- Stop before selecting `C` while a maintainer-initiated source update review has no explicit
+  accepted, deferred or declined intake decision, or while an accepted intake lacks its owning
+  handoff and independent review.
 - Stop if any implementation review is stale, a human visual gate is missing, the branch/tree differs
   from reviewed bytes or a changed path has no owning Work.
 - Stop on any red source/right/dependency/identity/secret/fault/UI gate. Do not add an exclusion or
@@ -168,4 +195,5 @@ This Work is last and begins only after all implementation/deletion reviews are 
 freeze and verification responsibility, not a place for fixes. The independent reviewer receives
 the immutable commit and evidence without an implementation role. After acceptance, load
 `omp-flow-finish` to land/report that same candidate and archive the Bundle; do not manufacture a
-new delivery SHA during Finish.
+new delivery SHA during Finish. A currently active maintainer-initiated source update review must
+first satisfy the Entry gate above; it is not bypassed merely because the preceding Works are green.

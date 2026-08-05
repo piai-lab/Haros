@@ -19,7 +19,6 @@ import { ComposerColumnFrame } from "./chat/ComposerColumnFrame";
 import { getWorkbenchCopy } from "../i18n/workbenchCopy";
 import { ProductConversationNotice } from "./product/ProductConversationNotice";
 import { ProductConversationRouteState } from "./product/ProductConversationRouteState";
-import { ProductGroupsUnavailable } from "./product/ProductGroupsUnavailable";
 import { ProductChatRecentList } from "./product/ProductChatRecentList";
 import { SidebarProvider } from "./ui/sidebar";
 
@@ -28,6 +27,12 @@ const PRODUCT_CHAT: ProductConversationSummary = {
   workspaceId: ProductWorkspaceId.makeUnsafe("workspace-chat-1"),
   title: "Product conversation",
   workspaceKind: "chat",
+  revision: 1,
+  archivedAt: null,
+  isPinned: false,
+  notes: "",
+  boardState: "active",
+  boardStateChangedAt: null,
   receiptState: null,
   createdAt: "2026-08-04T00:00:00.000Z",
   updatedAt: "2026-08-04T00:00:01.000Z",
@@ -102,15 +107,6 @@ describe("Agent | Chat workbench boundaries", () => {
     ).toHaveAttribute("aria-current", "page");
     await page.getByRole("button", { name: /Product conversation/u }).click();
     expect(onOpen).toHaveBeenCalledWith(ThreadId.makeUnsafe("product-chat-1"));
-  });
-
-  it("exposes Groups as unavailable with no Space mutation control", async () => {
-    await render(<ProductGroupsUnavailable />);
-
-    const boundary = document.querySelector('[data-product-domain="groups"]');
-    expect(boundary?.getAttribute("aria-disabled")).toBe("true");
-    expect(document.querySelector("button")).toBeNull();
-    expect(document.body.textContent).toContain("Product Group facts");
   });
 
   it("does not replay missing or uncertain Product state", async () => {

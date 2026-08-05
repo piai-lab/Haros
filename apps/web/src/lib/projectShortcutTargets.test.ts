@@ -23,7 +23,6 @@ function makeProject(id: ProjectId, kind: Project["kind"] = "project"): Project 
     folderName: id,
     localName: null,
     cwd: `/workspace/${id}`,
-    defaultModelSelection: null,
     expanded: false,
     scripts: [],
   };

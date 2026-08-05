@@ -1,11 +1,10 @@
 // FILE: ProviderUsageMenuControl.tsx
 // Purpose: Shared provider-usage chip/menu used in the chat header and Environment panel.
 
-import { PROVIDER_DISPLAY_NAMES, type ProviderKind } from "@omnimind/contracts";
 import { type ReactNode } from "react";
 
-import { useAppSettings } from "~/appSettings";
-import { useProviderUsageSummary } from "~/hooks/useProviderUsageSummary";
+import { historicalUsageLabel } from "~/historicalSourcePresentation";
+import { useHistoricalActivityUsageSummary } from "~/hooks/useHistoricalActivityUsageSummary";
 import {
   deriveProviderUsageDisplayRows,
   selectPrimaryProviderUsageDisplayRow,
@@ -32,15 +31,12 @@ export interface ProviderUsageMenuModel {
   isLoading: boolean;
 }
 
-export function useProviderUsageMenuModel(provider: ProviderKind): ProviderUsageMenuModel | null {
-  const { settings } = useAppSettings();
+export function useProviderUsageMenuModel(provider: string): ProviderUsageMenuModel | null {
   const selectAllThreads = createAllThreadsSelector();
   const threads = useStore(selectAllThreads);
-  const usageSummary = useProviderUsageSummary({
-    provider,
-    threads,
-    codexHomePath: settings.codexHomePath || null,
-    fetchProviderData: false,
+  const usageSummary = useHistoricalActivityUsageSummary({
+    sourceId: provider,
+    conversations: threads,
   });
   const usageRows = deriveProviderUsageDisplayRows(usageSummary.rateLimits);
   const primaryRow = selectPrimaryProviderUsageDisplayRow(usageRows);
@@ -50,7 +46,7 @@ export function useProviderUsageMenuModel(provider: ProviderKind): ProviderUsage
   }
 
   return {
-    menuTitle: `${PROVIDER_DISPLAY_NAMES[provider]} usage`,
+    menuTitle: historicalUsageLabel(provider),
     primaryRow,
     rateLimits: usageSummary.rateLimits,
     usageLines: usageSummary.usageLines,
@@ -65,7 +61,7 @@ export function ProviderUsageMenuPopup({
   align: alignProp,
   children,
 }: {
-  provider: ProviderKind;
+  provider: string;
   model: ProviderUsageMenuModel;
   align?: "start" | "end";
   children: ReactNode;
@@ -90,7 +86,7 @@ export function ProviderUsageMenuPopup({
   );
 }
 
-export function ProviderUsageMenuControl({ provider }: { provider: ProviderKind }) {
+export function ProviderUsageMenuControl({ provider }: { provider: string }) {
   const model = useProviderUsageMenuModel(provider);
 
   if (!model) {

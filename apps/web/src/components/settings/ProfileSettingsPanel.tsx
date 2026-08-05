@@ -7,7 +7,8 @@
 
 import { useState } from "react";
 import { useQuery } from "@tanstack/react-query";
-import { type ProfileStats, type ProfileTokenStats, type ProviderKind } from "@omnimind/contracts";
+import { type ProfileStats, type ProfileTokenStats } from "@omnimind/contracts";
+import { historicalSourceDisplayName } from "~/historicalSourcePresentation";
 import {
   serverProfileStatsQueryOptions,
   serverProfileTokenStatsQueryOptions,
@@ -310,7 +311,7 @@ function formatMostWorkedProjectLabel(project: ProfileStats["mostWorkedProject"]
   return `${project.title} · ${formatNumber(project.promptCount)} ${promptLabel}`;
 }
 
-function formatProviderLabel(provider: ProviderKind): string {
+function formatProviderLabel(provider: string): string {
   switch (provider) {
     case "codex":
       return "Codex";
@@ -331,6 +332,7 @@ function formatProviderLabel(provider: ProviderKind): string {
     case "pi":
       return "Pi";
   }
+  return historicalSourceDisplayName(provider);
 }
 
 function ModelUsageRow({
@@ -338,7 +340,7 @@ function ModelUsageRow({
   model,
   percent,
 }: {
-  provider: ProviderKind | "unknown";
+  provider: string | "unknown";
   model: string;
   percent: number;
 }) {

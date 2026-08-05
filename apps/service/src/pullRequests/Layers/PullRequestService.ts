@@ -1,34 +1,30 @@
 import {
-  type OrchestrationProject,
-  type OrchestrationProjectShell,
-  type ProjectId,
+  type ProductWorkspaceId,
+  type ProductWorkspaceSummary,
   type PullRequestDetail,
   type PullRequestInvolvement,
   type PullRequestListEntry,
   type PullRequestsListResult,
 } from "@omnimind/contracts";
 import { coalescePullRequestListEntries } from "@omnimind/shared/githubRepository";
-import { Effect, Layer, Scope, Semaphore } from "effect";
+import { Effect, Scope, Semaphore } from "effect";
 
-import { ServerConfig } from "../../config";
 import { GitHubCliError } from "../../git/Errors";
-import { GitCore } from "../../git/Services/GitCore";
 import {
   GitHubCli,
   type GitHubCliShape,
   type GitHubPullRequestListItem,
 } from "../../git/Services/GitHubCli";
-import { ProjectionSnapshotQuery } from "../../orchestration/Services/ProjectionSnapshotQuery";
 import {
-  ProjectPullRequestPins,
-  type ProjectPullRequestPinsShape,
-} from "../../persistence/Services/ProjectPullRequestPins";
+  WorkspacePullRequestPins,
+  type WorkspacePullRequestPinsShape,
+} from "../../persistence/Services/WorkspacePullRequestPins";
 import {
   buildPullRequestListEntry,
   isValidGitHubRepositoryNameWithOwner,
   isViewerReviewRequested,
   orderPullRequestListEntries,
-  projectPullRequestIdentityKey,
+  workspacePullRequestIdentityKey,
   pullRequestListCacheKey,
   pullRequestListForceRefreshCacheKeys,
   repositoryPullRequestIdentityKey,
@@ -43,6 +39,10 @@ import {
   resolveProjectRepositoryInventories,
 } from "../projectRepositoryInventory";
 import { makePullRequestOperations } from "../pullRequestOperations";
+import {
+  pullRequestWorkspaceContext,
+  type PullRequestWorkspaceContext,
+} from "../workspaceContext";
 import {
   PULL_REQUEST_REVIEW_MATCH_LIMIT,
   recoverPinnedPullRequests,
@@ -68,24 +68,16 @@ type PullRequestListError = PullRequestsListResult["errors"][number];
 export interface PullRequestServiceDependencies {
   readonly homeDir: string;
   readonly github: GitHubCliShape;
-  readonly pins: ProjectPullRequestPinsShape;
+  readonly pins: WorkspacePullRequestPinsShape;
   /**
    * Live (non-soft-deleted) projects. Deliberately not the full read model: the PR
    * service only ever reads `snapshot.projects`, and hydrating every thread body for a
    * five-minute review-count poll blocked the whole SQLite connection for seconds.
    */
-  readonly listProjects: () => Effect.Effect<ReadonlyArray<OrchestrationProject>, unknown>;
+  readonly listWorkspaces: () => Effect.Effect<ReadonlyArray<ProductWorkspaceSummary>, unknown>;
   readonly resolveRepositories: (
-    project: OrchestrationProject,
+    workspace: PullRequestWorkspaceContext,
   ) => Effect.Effect<GitHubRepositoryInventory, unknown>;
-}
-
-/**
- * The shell snapshot already excludes soft-deleted projects, so the field it omits is
- * known to be null. Restoring it keeps the shared PR helpers on one project type.
- */
-export function liveProjectFromShell(shell: OrchestrationProjectShell): OrchestrationProject {
-  return { ...shell, deletedAt: null };
 }
 
 /** Exact gh error shape for a PR number that is known not to exist. Generic 404/auth failures are
@@ -178,7 +170,7 @@ export const makePullRequestService = (
         ),
       );
 
-    const resolveProjectRepositories = (project: OrchestrationProject) =>
+    const resolveProjectRepositories = (project: PullRequestWorkspaceContext) =>
       repositoryCache.get(project.workspaceRoot, dependencies.resolveRepositories(project));
 
     const loadViewer = () =>
@@ -261,15 +253,12 @@ export const makePullRequestService = (
       );
     };
 
-    const findProject = (projectId: ProjectId) =>
-      dependencies.listProjects().pipe(
-        Effect.flatMap((allProjects) => {
-          const project = allProjects.find(
-            (candidate) =>
-              candidate.id === projectId &&
-              candidate.kind === "project" &&
-              candidate.deletedAt === null,
-          );
+    const findProject = (workspaceId: ProductWorkspaceId) =>
+      dependencies.listWorkspaces().pipe(
+        Effect.flatMap((allWorkspaces) => {
+          const project = allWorkspaces
+            .map(pullRequestWorkspaceContext)
+            .find((candidate) => candidate?.workspaceId === workspaceId);
           return project ? Effect.succeed(project) : Effect.fail(new Error("Project not found."));
         }),
       );
@@ -281,8 +270,8 @@ export const makePullRequestService = (
         : Effect.fail(new Error("Invalid GitHub repository identity."));
     };
 
-    const validateProjectPullRequestRepository = (
-      project: OrchestrationProject,
+    const validateWorkspacePullRequestRepository = (
+      project: PullRequestWorkspaceContext,
       repositoryInput: string,
     ) =>
       Effect.gen(function* () {
@@ -312,13 +301,13 @@ export const makePullRequestService = (
       Effect.gen(function* () {
         const forceRefresh = input.forceRefresh === true;
         const involvement = input.involvement ?? "all";
-        const projects = (yield* dependencies.listProjects()).filter(
-          (project) =>
-            project.deletedAt === null &&
-            project.kind === "project" &&
-            (input.projectId == null || project.id === input.projectId),
-        );
-        const projectById = new Map(projects.map((project) => [project.id, project]));
+        const projects = (yield* dependencies.listWorkspaces())
+          .map(pullRequestWorkspaceContext)
+          .filter(
+            (project): project is PullRequestWorkspaceContext =>
+              project !== null && (input.workspaceId == null || project.workspaceId === input.workspaceId),
+          );
+        const workspaceById = new Map(projects.map((project) => [project.workspaceId, project]));
         if (forceRefresh) {
           // The viewer participates in involvement filtering and list cache keys. A manual refresh
           // must observe a recent `gh auth switch/login` instead of retaining the previous account
@@ -337,16 +326,16 @@ export const makePullRequestService = (
               projects,
               resolve: resolveProjectRepositories,
             }),
-            dependencies.pins.listByProjectIds({
-              projectIds: projects.map((project) => project.id),
+            dependencies.pins.listByWorkspaceIds({
+              workspaceIds: projects.map((project) => project.workspaceId),
             }),
           ],
           { concurrency: 2 },
         );
         const pinnedKeys = new Set(
           pinnedRows.map((row) =>
-            projectPullRequestIdentityKey({
-              projectId: row.projectId,
+            workspacePullRequestIdentityKey({
+              workspaceId: row.workspaceId,
               repository: row.repositoryKey,
               number: row.number,
             }),
@@ -355,14 +344,14 @@ export const makePullRequestService = (
 
         const {
           errors: inventoryErrors,
-          repositoryKeysByProject,
+          repositoryKeysByWorkspace,
           uniqueRepositories,
         } = indexProjectRepositoryInventories(resolved);
         const cleanupErrors = yield* cleanupUnconfiguredPullRequestPins({
           pins: dependencies.pins,
           pinnedRows,
-          projectById,
-          repositoryKeysByProject,
+          workspaceById,
+          repositoryKeysByWorkspace,
           resolved,
         });
         const errors: PullRequestListError[] = [...inventoryErrors, ...cleanupErrors];
@@ -432,8 +421,8 @@ export const makePullRequestService = (
                           involvement === "reviewing" || reviewingNumbers.has(pullRequest.number),
                         ),
                         isPinned: pinnedKeys.has(
-                          projectPullRequestIdentityKey({
-                            projectId: project.id,
+                          workspacePullRequestIdentityKey({
+                            workspaceId: project.workspaceId,
                             repository: repository.nameWithOwner,
                             number: pullRequest.number,
                           }),
@@ -444,8 +433,8 @@ export const makePullRequestService = (
                 // The list cap belongs to the remote repository. Reporting one batch per local
                 // worktree made the all-projects UI overcount truncated repositories.
                 repositoryBatches: repositoryProjects.slice(0, 1).map((project) => ({
-                  projectId: project.id,
-                  projectTitle: project.title,
+                  workspaceId: project.workspaceId,
+                  workspaceTitle: project.workspaceTitle,
                   repository: repository.nameWithOwner,
                   truncated: result.truncated,
                 })),
@@ -467,8 +456,8 @@ export const makePullRequestService = (
                       entries: [] as PullRequestListEntry[],
                       repositoryBatches: [],
                       errors: repositoryProjects.map((project) => ({
-                        projectId: project.id,
-                        projectTitle: project.title,
+                        workspaceId: project.workspaceId,
+                        workspaceTitle: project.workspaceTitle,
                         message: error.message,
                       })),
                       recovery: null,
@@ -487,8 +476,8 @@ export const makePullRequestService = (
           pinStore: dependencies.pins,
           batchEntries,
           recoveryContexts: batches.flatMap((batch) => (batch.recovery ? [batch.recovery] : [])),
-          repositoryKeysByProject,
-          projectById,
+          repositoryKeysByWorkspace,
+          workspaceById,
           isGlobalError: isGlobalGitHubCliError,
           invalidateReviewMatches: (repository, viewerLogin) =>
             reviewMatchCache.invalidate(
@@ -513,12 +502,12 @@ export const makePullRequestService = (
 
     const reviewRequestCount: PullRequestServiceShape["reviewRequestCount"] = (input) =>
       Effect.gen(function* () {
-        const projects = (yield* dependencies.listProjects()).filter(
-          (project) =>
-            project.deletedAt === null &&
-            project.kind === "project" &&
-            (input.projectId == null || project.id === input.projectId),
-        );
+        const projects = (yield* dependencies.listWorkspaces())
+          .map(pullRequestWorkspaceContext)
+          .filter(
+            (project): project is PullRequestWorkspaceContext =>
+              project !== null && (input.workspaceId == null || project.workspaceId === input.workspaceId),
+          );
         const resolved = yield* resolveProjectRepositoryInventories({
           projects,
           resolve: resolveProjectRepositories,
@@ -564,7 +553,7 @@ export const makePullRequestService = (
       pins: dependencies.pins,
       findProject,
       validateRepository: validatePullRequestRepository,
-      validateProjectRepository: validateProjectPullRequestRepository,
+      validateProjectRepository: validateWorkspacePullRequestRepository,
       loadMergeCapabilities,
       withGitHubRead,
       finalizeMutationCaches: pullRequestMutationCacheFinalizer,
@@ -576,24 +565,3 @@ export const makePullRequestService = (
       ...operations,
     } satisfies PullRequestServiceShape;
   });
-
-export const PullRequestServiceLive = Layer.effect(
-  PullRequestService,
-  Effect.gen(function* () {
-    const config = yield* ServerConfig;
-    const git = yield* GitCore;
-    const github = yield* GitHubCli;
-    const pins = yield* ProjectPullRequestPins;
-    const projection = yield* ProjectionSnapshotQuery;
-    return yield* makePullRequestService({
-      homeDir: config.homeDir,
-      github,
-      pins,
-      listProjects: () =>
-        projection
-          .getShellSnapshot()
-          .pipe(Effect.map((snapshot) => snapshot.projects.map(liveProjectFromShell))),
-      resolveRepositories: (project) => resolveGitHubRepositories(git, project.workspaceRoot),
-    });
-  }),
-);

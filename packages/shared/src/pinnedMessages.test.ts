@@ -1,5 +1,5 @@
 import type { PinnedMessage } from "@omnimind/contracts";
-import { MessageId, THREAD_NOTES_MAX_CHARS } from "@omnimind/contracts";
+import { MessageId, CONVERSATION_NOTES_MAX_CHARS } from "@omnimind/contracts";
 import { describe, expect, it } from "vitest";
 
 import {
@@ -66,8 +66,8 @@ describe("pinnedMessages", () => {
 
   it("clamps thread notes to the persisted limit", () => {
     expect(clampThreadNotes("short")).toBe("short");
-    expect(clampThreadNotes("x".repeat(THREAD_NOTES_MAX_CHARS + 1))).toHaveLength(
-      THREAD_NOTES_MAX_CHARS,
+    expect(clampThreadNotes("x".repeat(CONVERSATION_NOTES_MAX_CHARS + 1))).toHaveLength(
+      CONVERSATION_NOTES_MAX_CHARS,
     );
   });
 });

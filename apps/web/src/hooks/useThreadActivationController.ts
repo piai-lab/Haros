@@ -31,7 +31,6 @@ export type ThreadActivationControllerInput = {
     ownerProjectId: ProjectId;
   }) => SplitViewId;
   openTerminalThreadPage: (threadId: ThreadId) => void;
-  prewarmThreadDetailForIntent: (threadId: ThreadId) => void;
   rememberLastThreadRouteNow: (nextLastThreadRoute: LastThreadRoute) => void;
   routeSplitViewId: string | null | undefined;
   routeThreadId: ThreadId | null | undefined;
@@ -55,7 +54,6 @@ export function activateThreadFromSidebarIntent(
     activeSplitView,
     clearSelection,
     navigate,
-    prewarmThreadDetailForIntent,
     rememberLastThreadRouteNow,
     routeSplitViewId,
     routeThreadId,
@@ -105,7 +103,6 @@ export function activateThreadFromSidebarIntent(
     return;
   }
 
-  prewarmThreadDetailForIntent(activation.threadId);
   setOptimisticActiveThreadId(activation.threadId);
   if (selectedThreadCount > 0) {
     clearSelection();
@@ -157,8 +154,6 @@ function activateSidechatSplit(
     ownerProjectId: ProjectId;
   },
 ): void {
-  input.prewarmThreadDetailForIntent(activation.sourceThreadId);
-  input.prewarmThreadDetailForIntent(activation.threadId);
   input.setOptimisticActiveThreadId(activation.threadId);
   if (input.selectedThreadCount > 0) {
     input.clearSelection();
@@ -189,7 +184,6 @@ function activateSidechatSplit(
 function activateThreadSingle(input: ThreadActivationControllerInput, threadId: ThreadId): void {
   if (!input.sidebarThreadSummaryById[threadId]) return;
 
-  input.prewarmThreadDetailForIntent(threadId);
   input.setOptimisticActiveThreadId(threadId);
   if (input.selectedThreadCount > 0) {
     input.clearSelection();
@@ -227,7 +221,6 @@ export function useThreadActivationController(input: ThreadActivationControllerI
     openChatThreadPage,
     openSidechatSplit,
     openTerminalThreadPage,
-    prewarmThreadDetailForIntent,
     rememberLastThreadRouteNow,
     routeSplitViewId,
     routeThreadId,
@@ -250,7 +243,6 @@ export function useThreadActivationController(input: ThreadActivationControllerI
         openChatThreadPage,
         openSidechatSplit,
         openTerminalThreadPage,
-        prewarmThreadDetailForIntent,
         rememberLastThreadRouteNow,
         routeSplitViewId,
         routeThreadId,

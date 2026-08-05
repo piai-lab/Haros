@@ -63,7 +63,7 @@ describe("pull request pane", () => {
     const first = openPaneInState(createDefaultRightDockState(), {
       paneId: "pr-1",
       kind: "pullRequest",
-      pullRequestProjectId: "project-1" as never,
+      pullRequestWorkspaceId: "project-1" as never,
       pullRequestRepository: "acme/one",
       pullRequestNumber: 12,
       pullRequestInitialTab: "summary",
@@ -71,14 +71,14 @@ describe("pull request pane", () => {
     const reopened = openPaneInState(first, {
       paneId: "pr-2",
       kind: "pullRequest",
-      pullRequestProjectId: "project-2" as never,
+      pullRequestWorkspaceId: "project-2" as never,
       pullRequestRepository: "acme/two",
       pullRequestNumber: 24,
       pullRequestInitialTab: "code",
     });
     expect(reopened.panes).toHaveLength(1);
     expect(reopened.activePaneId).toBe("pr-1");
-    expect(reopened.panes[0]?.pullRequestProjectId).toBe("project-2");
+    expect(reopened.panes[0]?.pullRequestWorkspaceId).toBe("project-2");
     expect(reopened.panes[0]?.pullRequestRepository).toBe("acme/two");
     expect(reopened.panes[0]?.pullRequestNumber).toBe(24);
     expect(reopened.panes[0]?.pullRequestInitialTab).toBe("code");

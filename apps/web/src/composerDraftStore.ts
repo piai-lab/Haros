@@ -2,7 +2,7 @@
 // Purpose: Public Zustand facade for composer drafts, model choices, attachments, and persistence.
 // Exports: Stable composer draft API, hooks, and promotion helpers.
 
-import { type ModelSelection, type ProviderKind, type ThreadId } from "@omnimind/contracts";
+import { type ThreadId } from "@omnimind/contracts";
 import { create } from "zustand";
 import { persist } from "zustand/middleware";
 
@@ -14,10 +14,6 @@ import {
   type ComposerDraftStoreState,
   type ComposerThreadDraftState,
 } from "./composerDraftDomain";
-import {
-  deriveEffectiveComposerModelState,
-  type EffectiveComposerModelState,
-} from "./composerDraftModels";
 import {
   migratePersistedComposerDraftStoreState,
   normalizeCurrentPersistedComposerDraftStoreState,
@@ -46,6 +42,7 @@ export type {
   ComposerAssistantSelectionAttachment,
   ComposerAttachmentPersistenceResult,
   ComposerDraftStoreState,
+  ComposerInteractionMode,
   ComposerFileAttachment,
   ComposerImageAttachment,
   ComposerPromptHistorySavedDraft,
@@ -58,11 +55,6 @@ export type {
   RestoredComposerSourceProposedPlan,
 } from "./composerDraftDomain";
 export type { BrowserAnnotationDraft } from "./lib/browserAnnotations";
-export {
-  deriveEffectiveComposerModelState,
-  resolvePreferredComposerModelSelection,
-} from "./composerDraftModels";
-export type { EffectiveComposerModelState } from "./composerDraftModels";
 export { partializeComposerDraftStoreState } from "./composerDraftPersistence";
 
 const COMPOSER_PERSIST_DEBOUNCE_MS = 300;
@@ -144,29 +136,6 @@ useComposerDraftStore.subscribe((state, previousState) => {
 
 export function useComposerThreadDraft(threadId: ThreadId): ComposerThreadDraftState {
   return useComposerDraftStore((state) => selectComposerThreadDraft(state, threadId));
-}
-
-export function useEffectiveComposerModelState(input: {
-  threadId: ThreadId;
-  selectedProvider: ProviderKind;
-  threadModelSelection: ModelSelection | null | undefined;
-  projectModelSelection: ModelSelection | null | undefined;
-  customModelsByProvider: Record<ProviderKind, readonly string[]>;
-  availableModelOptionsByProvider?: Partial<
-    Record<ProviderKind, ReadonlyArray<{ slug: string; name: string }>>
-  >;
-}): EffectiveComposerModelState {
-  const draft = useComposerThreadDraft(input.threadId);
-  return deriveEffectiveComposerModelState({
-    draft,
-    selectedProvider: input.selectedProvider,
-    threadModelSelection: input.threadModelSelection,
-    projectModelSelection: input.projectModelSelection,
-    customModelsByProvider: input.customModelsByProvider,
-    ...(input.availableModelOptionsByProvider !== undefined
-      ? { availableModelOptionsByProvider: input.availableModelOptionsByProvider }
-      : {}),
-  });
 }
 
 // Mark drafts as promoted first; route/composer cleanup happens after the server thread starts.

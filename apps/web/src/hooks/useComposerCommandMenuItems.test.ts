@@ -1,7 +1,10 @@
 import { describe, expect, it } from "vitest";
 
 import type { ComposerThreadMentionSource, Project } from "../types";
-import { buildThreadMentionComposerItems } from "./useComposerCommandMenuItems";
+import {
+  buildThreadMentionComposerItems,
+  useComposerCommandMenuItems,
+} from "./useComposerCommandMenuItems";
 
 function project(id: string, kind: Project["kind"], name: string): Project {
   return {
@@ -12,7 +15,6 @@ function project(id: string, kind: Project["kind"], name: string): Project {
     folderName: name,
     localName: null,
     cwd: `/workspace/${id}`,
-    defaultModelSelection: null,
     expanded: true,
     scripts: [],
   } as unknown as Project;
@@ -188,5 +190,20 @@ describe("buildThreadMentionComposerItems", () => {
 
     const names = items.map((item) => (item.type === "thread" ? item.mention.name : ""));
     expect(names).toEqual(["Release (aaaaaa)", "release (bbbbbb)"]);
+  });
+});
+
+describe("Product closed-world Composer inventory", () => {
+  const items = (kind: "slash-command" | "mention") =>
+    useComposerCommandMenuItems({
+      composerTrigger: { kind, query: "", rangeStart: 0, rangeEnd: 1 },
+      workspaceEntries: [],
+      canOfferExportCommand: false,
+      surfaceAppSlashCommands: new Set(),
+    });
+
+  it("does not manufacture app commands or static provider agents without typed facts", () => {
+    expect(items("slash-command")).toEqual([]);
+    expect(items("mention").map((item) => item.type)).toEqual(["local-root"]);
   });
 });

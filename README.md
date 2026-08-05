@@ -87,7 +87,7 @@ OmniMind 的价值不是“能启动 Pi”，而是上游没有义务完成的�
       "rights": "The fixed source is MIT-licensed under the retained legal text. The maintainer has authorized retention, adaptation and redistribution of the fixed code and the complete 4,014-file icon corpus in source and product artifacts. Former product identity assets are not adopted.",
       "mode": "adapt",
       "changes": "The immutable T0 tree was transplanted into stable Web, Desktop, Product Service, contract, shared, patch and build-tool responsibilities; package, product, environment, protocol and storage identity were replaced; the authorized icon corpus was moved byte-for-byte to source-neutral line/fill paths behind the Glyph API; former product identity, marketing implementation/content and fake release history were removed while public-surface capability lineage retained explicit Product re-entry anchors; existing OmniMind brand assets replace first-party graphics.",
-      "updatePolicy": "Pinned revision; upstream changes may be discovered automatically but require manual review and a new compatibility decision",
+      "updatePolicy": "Pinned revision; upstream review starts only when the maintainer explicitly requests it, remains read-only through discussion, and requires explicit approval of the current intake set before implementation",
       "licenseFiles": ["LICENSES/ui-mother-MIT.txt"],
       "provenance": {
         "repositoryCommit": "2445acb987e443b44b7dc819de3de44c3d68b391",

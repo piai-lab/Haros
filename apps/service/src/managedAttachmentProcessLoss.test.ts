@@ -61,7 +61,7 @@ describe("managed attachment process-loss recovery", () => {
       const reserved = await firstRuntime.runPromise(
         repository.reserve({
           attachmentId,
-          ownerThreadId: "thread-recovery",
+          conversationId: "thread-recovery",
           ownerKind: "session",
           ownerId: "session-recovery",
           kind: "file",
@@ -93,7 +93,7 @@ describe("managed attachment process-loss recovery", () => {
       const finalized = await firstRuntime.runPromise(
         repository.finalizeStaged({
           attachmentId,
-          ownerThreadId: "thread-recovery",
+          conversationId: "thread-recovery",
           ownerKind: "session",
           ownerId: "session-recovery",
           sizeBytes: 4,
@@ -106,13 +106,13 @@ describe("managed attachment process-loss recovery", () => {
       expect(finalized.status).toBe("staged");
     }
     const claim = await firstRuntime.runPromise(
-      repository.claimForAcceptedTurn({
+      repository.claimForProductRun({
         attachmentIds: [ids.claimed],
-        ownerThreadId: "thread-recovery",
+        conversationId: "thread-recovery",
         ownerKind: "session",
         ownerId: "session-recovery",
-        commandId: "command-recovery",
-        messageId: "message-recovery",
+        runId: "command-recovery",
+        entryId: "message-recovery",
         now: "2020-01-01T00:00:01.000Z",
       }),
     );

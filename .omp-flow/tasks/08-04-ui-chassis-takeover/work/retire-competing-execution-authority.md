@@ -24,6 +24,12 @@ second-Host and unrelated donor-identity scans green without exceptions.
 - [QbD A-02 and A-03](../qbd/design-audit.md)
 - [Approved T4 no-exception boundary](../decisions/qbd-1-approval.md)
 - Accepted handoff from [Pi native execution](adopt-pi-native-execution.md)
+- Accepted handoff and independent review from
+  [Product and system command surface](establish-product-system-command-surface.md)
+- Maintainer-approved successor intake in
+  [`research/source-review.md` §8](../../../../research/source-review.md#8-maintainer-initiated-synara-v067-intake)
+- Next Work after this Work is accepted:
+  [Harden active Workbench mechanisms](harden-active-workbench-mechanisms.md)
 
 ## Requirement traceability
 
@@ -33,6 +39,11 @@ for any user-visible anchor removal. It also verifies the T1/T2 expected-red deb
 instead of being renamed or hidden.
 
 ## In scope
+
+This Work may resume only after the Product/system command-surface Work has independently passed on
+the same coherent tree. Its handoff/review becomes the replacement proof for the protected Web
+consumers and runtime-backed catalog; a failed or partial predecessor is a hard stop, not permission
+to keep a compatibility orchestration facade.
 
 - Expand each Design deletion row in the handoff with old source anchor, current conflict/value,
   target owner/interface, normal replacement proof, failure/recovery proof, applicable visual proof,
@@ -74,6 +85,8 @@ instead of being renamed or hidden.
   rollback is Git and there are no old users.
 - Completing Package marketplace, Remote, external Engine, Windows/Linux release or unrelated
   Workbench activation.
+- Implementing the approved Synara `v0.6.7` mechanism intake inside this already active deletion
+  diff. It begins only after this Work has a coherent accepted commit.
 
 ## Allowed repository paths
 
@@ -89,8 +102,16 @@ apps/service/src/persistence/Migrations/**
 apps/service/src/persistence/**                 (remove donor schema composition only)
 apps/service/src/serverLayers.ts
 apps/service/src/index.ts
+apps/service/src/main.ts                     (deleted-domain composition/import removal only)
+apps/service/src/effectServer.ts             (deleted-domain route/service removal only)
 apps/service/src/wsRpc.ts
 apps/service/src/http.ts                       (preserved transport regression only)
+apps/service/src/git/runtimeLayer.ts           (orchestration dependency decoupling only)
+apps/service/src/managedWorktrees.ts           (orchestration dependency decoupling only)
+apps/service/src/profileStatsArchive.ts        (orchestration dependency decoupling only)
+apps/service/src/serverRuntimeState.ts         (deleted runtime-state dependency removal only)
+apps/service/src/studioGeneratedImages.ts      (orchestration dependency decoupling only)
+apps/service/src/threadRetention.ts            (orchestration dependency decoupling only)
 apps/service/src/workspace/**                  (authority decoupling only)
 apps/service/src/checkpointing/**              (authority decoupling only)
 apps/service/src/terminal/**                   (authority decoupling only)
@@ -101,6 +122,9 @@ apps/web/src/routes/__root.tsx
 apps/web/src/components/ChatView.tsx
 apps/web/src/components/chat/**                (raw/generic execution presentation only)
 apps/web/src/components/PluginLibrary.tsx      (obsolete provider execution/discovery path only)
+apps/web/src/components/settings/*Provider*    (obsolete Provider authority removal only)
+apps/web/src/hooks/useProvider*                (obsolete Provider authority removal only)
+apps/web/src/provider*.ts                      (obsolete Provider authority removal only)
 apps/web/src/wsNativeApi.ts
 apps/web/src/store/**                          (raw donor reducer deletion only)
 apps/web/package.json
@@ -121,6 +145,21 @@ test/quality.test.mjs                          (final negative fixtures only)
 README.md                                      (existing source-adoptions machine block only, if required)
 LICENSES/**                                    (actual final notice corrections only)
 ```
+
+The list above names the known anchors, but it must not make the mandatory deletion set
+unbuildable. An existing direct consumer outside those patterns may also change only when all of
+the following are true:
+
+1. it directly imports, composes or type-references a symbol that this Work deletes;
+2. the change is limited to removing that dependency, reconnecting an already-approved
+   Product/Host/system interface, or relocating one concrete preserved mechanism to its precise
+   owner;
+3. the handoff enumerates the file, deleted dependency and replacement proof; and
+4. no unrelated behavior, public ontology or compatibility wrapper is added.
+
+This bounded direct-consumer rule is part of the allowlist. It does not authorize repository-wide
+cleanup, but it takes precedence over leaving a no-op alias, translator or buildable donor stub merely
+because an exhaustive transitive consumer list was not known when this Work was authored.
 
 Colocated characterization/regression tests for the listed domains may change. The handoff may be
 written only to
@@ -202,11 +241,16 @@ both over-deletion and hidden retained authority.
 The handoff contains the expanded deletion table, exact changed/deleted paths, preserved mechanism
 locations, pre/post behavior and fault results, source/lock/artifact dependency scans, identity/
 second-path negatives, current legal/source disclosure and any visual approval reference. It states
-that T4 implementation is ready for candidate freezing but no Campaign claim is self-verified.
+that T4 authority retirement is ready for the two approved source-intake successors but no Campaign
+claim is self-verified and candidate freezing has not begun.
 
 ## Ordering and review
 
 This Work starts only after the real Pi replacement handoff and its independent review establish
 normal, failure, recovery and A-02 acceptance truth. Deletion proceeds by coherent domain, not one
 large unreviewable purge. A separate reviewer must accept the final production graph before the
-frozen-candidate Work begins.
+source-intake successors begin. This Work's implementation scope and current review are not widened
+by that later intake. After its coherent commit and independent acceptance, proceed to
+[Harden active Workbench mechanisms](harden-active-workbench-mechanisms.md), then
+[Align completion signals with Product facts](align-product-completion-signals.md); only their
+accepted handoffs permit the frozen-candidate Work to begin.

@@ -69,7 +69,7 @@ describe("Native Host protocol boundary", () => {
         },
         resolvedSelection: {
           engineId: "pi",
-          modelId: "provider/model",
+          runtimeModelId: "provider/model",
           thinking: "medium",
           permissionPolicy: "approval-required",
           enforcement: "unverified",

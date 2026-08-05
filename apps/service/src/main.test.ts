@@ -5,7 +5,7 @@ import * as os from "node:os";
 import * as path from "node:path";
 import * as NodeServices from "@effect/platform-node/NodeServices";
 import { assert, it } from "@effect/vitest";
-import type { OrchestrationReadModel } from "@omnimind/contracts";
+import { ProductConversationId, ProductWorkspaceId } from "@omnimind/contracts";
 import * as Cause from "effect/Cause";
 import * as ConfigProvider from "effect/ConfigProvider";
 import * as Effect from "effect/Effect";
@@ -20,18 +20,13 @@ import { NetService } from "@omnimind/shared/Net";
 
 import { ServerConfig, type ServerConfigShape } from "./config";
 import { Open, type OpenShape } from "./open";
-import { ProjectionSnapshotQuery } from "./orchestration/Services/ProjectionSnapshotQuery";
-import { fakeProjectionSnapshotQuery } from "./orchestration/testing/fakeProjectionSnapshotQuery";
+import {
+  ProductControlPlane,
+  type ProductControlPlaneShape,
+} from "./product/ProductControlPlane";
 import { AnalyticsService } from "./telemetry/Services/AnalyticsService";
 import { Server, type ServerShape } from "./effectServer";
 import { makeServerShutdownController } from "./serverShutdown";
-
-vi.mock("./threadRetention", async () => {
-  const Effect = await import("effect/Effect");
-  return {
-    startThreadRetentionJob: () => Effect.void,
-  };
-});
 
 import {
   CliConfig,
@@ -179,7 +174,6 @@ it.layer(testLayer)("server CLI command", (it) => {
       assert.equal(resolvedConfig?.publicUrl, undefined);
       assert.equal(resolvedConfig?.allowInsecureRemote, false);
       assert.equal(resolvedConfig?.autoBootstrapProjectFromCwd, false);
-      assert.equal(resolvedConfig?.logProviderEvents, false);
       assert.equal(resolvedConfig?.logWebSocketEvents, false);
       assert.equal(stop.mock.calls.length, 1);
     }),
@@ -276,7 +270,6 @@ it.layer(testLayer)("server CLI command", (it) => {
       assert.equal(resolvedConfig?.authToken, "env-token");
       assert.equal(resolvedConfig?.desktopShutdownToken, "shutdown-token");
       assert.equal(resolvedConfig?.autoBootstrapProjectFromCwd, false);
-      assert.equal(resolvedConfig?.logProviderEvents, false);
       assert.equal(resolvedConfig?.logWebSocketEvents, false);
       assert.equal(findAvailablePort.mock.calls.length, 0);
     }),
@@ -460,21 +453,18 @@ it.layer(testLayer)("server CLI command", (it) => {
         [
           "--browser",
           "--no-auto-bootstrap-project-from-cwd",
-          "--no-log-provider-events",
           "--no-log-websocket-events",
         ],
         {
           OMNIMIND_MODE: "desktop",
           OMNIMIND_NO_BROWSER: "true",
           OMNIMIND_AUTO_BOOTSTRAP_PROJECT_FROM_CWD: "true",
-          OMNIMIND_LOG_PROVIDER_EVENTS: "true",
           OMNIMIND_LOG_WS_EVENTS: "true",
         },
       );
 
       assert.equal(resolvedConfig?.noBrowser, false);
       assert.equal(resolvedConfig?.autoBootstrapProjectFromCwd, false);
-      assert.equal(resolvedConfig?.logProviderEvents, false);
       assert.equal(resolvedConfig?.logWebSocketEvents, false);
     }),
   );
@@ -698,11 +688,10 @@ it.layer(testLayer)("server CLI command", (it) => {
     }),
   );
 
-  it.effect("supports CLI and env for bootstrap/provider-log/websocket toggles", () =>
+  it.effect("supports CLI and env for bootstrap/websocket toggles", () =>
     Effect.gen(function* () {
       yield* runCli(["--auto-bootstrap-project-from-cwd"], {
         OMNIMIND_MODE: "desktop",
-        OMNIMIND_LOG_PROVIDER_EVENTS: "true",
         OMNIMIND_LOG_WS_EVENTS: "false",
         OMNIMIND_AUTO_BOOTSTRAP_PROJECT_FROM_CWD: "false",
         OMNIMIND_NO_BROWSER: "true",
@@ -710,7 +699,6 @@ it.layer(testLayer)("server CLI command", (it) => {
 
       assert.equal(start.mock.calls.length, 1);
       assert.equal(resolvedConfig?.autoBootstrapProjectFromCwd, true);
-      assert.equal(resolvedConfig?.logProviderEvents, true);
       assert.equal(resolvedConfig?.logWebSocketEvents, false);
     }),
   );
@@ -719,7 +707,7 @@ it.layer(testLayer)("server CLI command", (it) => {
     Effect.gen(function* () {
       const error = yield* Effect.flip(
         runCli([], {
-          OMNIMIND_LOG_PROVIDER_EVENTS: "sometimes",
+          OMNIMIND_LOG_WS_EVENTS: "sometimes",
         }),
       );
 
@@ -728,42 +716,80 @@ it.layer(testLayer)("server CLI command", (it) => {
     }),
   );
 
-  it.effect("records a startup heartbeat with thread/project counts", () =>
+  it.effect("records a startup heartbeat with Product conversation counts", () =>
     Effect.gen(function* () {
       const recordTelemetry = vi.fn(
         (_event: string, _properties?: Readonly<Record<string, unknown>>) => Effect.void,
       );
-      const getCounts = vi.fn(() =>
-        Effect.succeed({
-          threadCount: 2,
-          projectCount: 1,
-        }),
-      );
+      const notUsed = () => Effect.die("Product operation is not used by this test");
+      const productControlPlane: ProductControlPlaneShape = {
+        createWorkspace: notUsed,
+        updateWorkspaceTitle: notUsed,
+        setWorkspacePinned: notUsed,
+        updateWorkspaceRunCommand: notUsed,
+        deleteWorkspace: notUsed,
+        createGroup: notUsed,
+        updateGroup: notUsed,
+        reorderGroups: notUsed,
+        deleteGroup: notUsed,
+        setConversationGroups: notUsed,
+        addConversationGroups: notUsed,
+        hasConversation: notUsed,
+        createConversation: notUsed,
+        updateConversationTitle: notUsed,
+        archiveConversation: notUsed,
+        restoreConversation: notUsed,
+        deleteConversation: notUsed,
+        setConversationPinned: notUsed,
+        updateConversationNotes: notUsed,
+        setConversationBoardState: notUsed,
+        addEntryPin: notUsed,
+        removeEntryPin: notUsed,
+        setEntryPinDone: notUsed,
+        setEntryPinLabel: notUsed,
+        addEntryMarker: notUsed,
+        removeEntryMarker: notUsed,
+        setEntryMarkerDone: notUsed,
+        setEntryMarkerLabel: notUsed,
+        getShellSnapshot: () =>
+          Effect.succeed({
+            protocolVersion: 1,
+            sequence: 0,
+            workspaces: [],
+            groups: [],
+            conversations: ["one", "two"].map((suffix) => ({
+              id: ProductConversationId.makeUnsafe(`conversation-${suffix}`),
+              workspaceId: ProductWorkspaceId.makeUnsafe(`workspace-${suffix}`),
+              title: `Conversation ${suffix}`,
+              workspaceKind: "chat" as const,
+              revision: 1,
+              archivedAt: null,
+              isPinned: false,
+              notes: "",
+              boardState: "active" as const,
+              boardStateChangedAt: null,
+              receiptState: null,
+              createdAt: "2026-08-05T00:00:00.000Z",
+              updatedAt: "2026-08-05T00:00:00.000Z",
+            })),
+            runtimeCatalog: null,
+          }),
+        getConversationSnapshot: notUsed,
+        putQueueItem: notUsed,
+        reorderQueue: notUsed,
+        deleteQueueItem: notUsed,
+        admitQueueItem: notUsed,
+        submitQueueItem: notUsed,
+        controlRun: notUsed,
+        readFacts: notUsed,
+        recoverDispatches: notUsed,
+        dispatchPending: notUsed,
+        observeRun: notUsed,
+        inspectOutbox: notUsed,
+      };
 
       yield* recordStartupHeartbeat.pipe(
-        Effect.provideService(
-          ProjectionSnapshotQuery,
-          fakeProjectionSnapshotQuery({
-            getSnapshot: () =>
-              Effect.succeed({
-                snapshotSequence: 0,
-                spaces: [],
-                projects: [] as OrchestrationReadModel["projects"],
-                threads: [] as OrchestrationReadModel["threads"],
-                updatedAt: new Date(0).toISOString(),
-              }),
-            getCommandReadModel: () =>
-              Effect.succeed({
-                snapshotSequence: 0,
-                spaces: [],
-                projects: [] as OrchestrationReadModel["projects"],
-                threads: [] as OrchestrationReadModel["threads"],
-                updatedAt: new Date(0).toISOString(),
-              }),
-            getCounts,
-            getSnapshotSequence: () => Effect.succeed({ snapshotSequence: 0 }),
-          }),
-        ),
+        Effect.provideService(ProductControlPlane, productControlPlane),
         Effect.provideService(AnalyticsService, {
           record: recordTelemetry,
           flush: Effect.void,
@@ -773,8 +799,7 @@ it.layer(testLayer)("server CLI command", (it) => {
       assert.deepEqual(recordTelemetry.mock.calls[0], [
         "server.boot.heartbeat",
         {
-          threadCount: 2,
-          projectCount: 1,
+          conversationCount: 2,
         },
       ]);
     }),

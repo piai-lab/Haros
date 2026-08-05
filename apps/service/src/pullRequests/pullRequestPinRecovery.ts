@@ -1,6 +1,5 @@
 import type {
-  OrchestrationProject,
-  ProjectId,
+  ProductWorkspaceId,
   PullRequestInvolvement,
   PullRequestListEntry,
   PullRequestState,
@@ -11,20 +10,21 @@ import { Effect } from "effect";
 import type { GitHubCliError } from "../git/Errors";
 import type { GitHubPullRequestListItem } from "../git/Services/GitHubCli";
 import {
-  PROJECT_PULL_REQUEST_PIN_LIMIT,
-  type ProjectPullRequestPin,
-  type ProjectPullRequestPinsShape,
-} from "../persistence/Services/ProjectPullRequestPins";
+  WORKSPACE_PULL_REQUEST_PIN_LIMIT,
+  type WorkspacePullRequestPin,
+  type WorkspacePullRequestPinsShape,
+} from "../persistence/Services/WorkspacePullRequestPins";
 import {
   buildPullRequestListEntry,
   isViewerReviewRequested,
-  projectPullRequestIdentityKey,
+  workspacePullRequestIdentityKey,
   pullRequestMatchesInvolvement,
   repositoryPullRequestIdentityKey,
   selectRecoverablePullRequestPins,
 } from "../pullRequests.logic";
+import type { PullRequestWorkspaceContext } from "./workspaceContext";
 
-export const PULL_REQUEST_PIN_RECOVERY_LIMIT = PROJECT_PULL_REQUEST_PIN_LIMIT + 4;
+export const PULL_REQUEST_PIN_RECOVERY_LIMIT = WORKSPACE_PULL_REQUEST_PIN_LIMIT + 4;
 export const PULL_REQUEST_REVIEW_MATCH_LIMIT = 1_000;
 
 export type RecoveredPullRequest =
@@ -39,7 +39,7 @@ export type ReviewRequestedMatches = {
 export type PullRequestPinRecoveryContext = {
   readonly cwd: string;
   readonly repository: string;
-  readonly projects: ReadonlyArray<OrchestrationProject>;
+  readonly projects: ReadonlyArray<PullRequestWorkspaceContext>;
   readonly truncated: boolean;
   readonly reviewingNumbers: ReadonlySet<number>;
   readonly reviewingTruncated: boolean;
@@ -52,12 +52,12 @@ export function recoverPinnedPullRequests(input: {
   involvement: PullRequestInvolvement;
   viewer: string;
   forceRefresh: boolean;
-  pins: ReadonlyArray<ProjectPullRequestPin>;
-  pinStore: ProjectPullRequestPinsShape;
+  pins: ReadonlyArray<WorkspacePullRequestPin>;
+  pinStore: WorkspacePullRequestPinsShape;
   batchEntries: ReadonlyArray<PullRequestListEntry>;
   recoveryContexts: ReadonlyArray<PullRequestPinRecoveryContext>;
-  repositoryKeysByProject: ReadonlyMap<ProjectId, Set<string>>;
-  projectById: ReadonlyMap<ProjectId, OrchestrationProject>;
+  repositoryKeysByWorkspace: ReadonlyMap<ProductWorkspaceId, Set<string>>;
+  workspaceById: ReadonlyMap<ProductWorkspaceId, PullRequestWorkspaceContext>;
   // Deliberately boolean, not a type predicate: callers check values already typed
   // GitHubCliError, and a predicate would narrow the false branch to `never`.
   isGlobalError: (error: unknown) => boolean;
@@ -76,10 +76,10 @@ export function recoverPinnedPullRequests(input: {
 }) {
   return Effect.gen(function* () {
     const errors = new Map<string, PullRequestListError>();
-    const addError = (project: OrchestrationProject, message: string) => {
-      errors.set(`${project.id}\u0000${message}`, {
-        projectId: project.id,
-        projectTitle: project.title,
+    const addError = (project: PullRequestWorkspaceContext, message: string) => {
+      errors.set(`${project.workspaceId}\u0000${message}`, {
+        workspaceId: project.workspaceId,
+        workspaceTitle: project.workspaceTitle,
         message,
       });
     };
@@ -91,16 +91,16 @@ export function recoverPinnedPullRequests(input: {
       input.recoveryContexts.map((context) => [context.repository.toLowerCase(), context]),
     );
     const presentKeys = new Set(
-      input.batchEntries.map((entry) => projectPullRequestIdentityKey(entry)),
+      input.batchEntries.map((entry) => workspacePullRequestIdentityKey(entry)),
     );
     const allMissingPins = selectRecoverablePullRequestPins({
       pins: input.pins,
       presentKeys,
-      repositoryKeysByProject: input.repositoryKeysByProject,
+      repositoryKeysByWorkspace: input.repositoryKeysByWorkspace,
       batches: input.recoveryContexts.map((context) => ({
         repository: context.repository,
         truncated: context.truncated,
-        projectIds: context.projects.map((project) => project.id),
+        workspaceIds: context.projects.map((project) => project.workspaceId),
       })),
     });
 
@@ -121,7 +121,7 @@ export function recoverPinnedPullRequests(input: {
     const lookupGroups = [...pinsByLookup.values()];
     const missingPins = lookupGroups.slice(0, PULL_REQUEST_PIN_RECOVERY_LIMIT).flat();
     for (const row of lookupGroups.slice(PULL_REQUEST_PIN_RECOVERY_LIMIT).flat()) {
-      const project = input.projectById.get(row.projectId);
+      const project = input.workspaceById.get(row.workspaceId);
       if (project) {
         addError(
           project,
@@ -178,13 +178,13 @@ export function recoverPinnedPullRequests(input: {
     );
     for (const [repositoryKey, result] of reviewMatches) {
       if (!result.error && !result.incomplete) continue;
-      const affectedProjectIds = new Set(
+      const affectedProductWorkspaceIds = new Set(
         missingPins
           .filter((row) => row.repositoryKey.trim().toLowerCase() === repositoryKey)
-          .map((row) => row.projectId),
+          .map((row) => row.workspaceId),
       );
-      for (const projectId of affectedProjectIds) {
-        const project = input.projectById.get(projectId);
+      for (const workspaceId of affectedProductWorkspaceIds) {
+        const project = input.workspaceById.get(workspaceId);
         if (project) {
           addError(
             project,
@@ -201,7 +201,7 @@ export function recoverPinnedPullRequests(input: {
     const lookupInputs = new Map<string, { cwd: string; repository: string; number: number }>();
     for (const row of missingPins) {
       const recovery = recoveryByRepository.get(row.repositoryKey.trim().toLowerCase());
-      const project = input.projectById.get(row.projectId);
+      const project = input.workspaceById.get(row.workspaceId);
       if (!recovery || !project) continue;
       const lookupKey = repositoryPullRequestIdentityKey({
         repository: recovery.repository,
@@ -257,14 +257,14 @@ export function recoverPinnedPullRequests(input: {
       (row) =>
         input.pinStore
           .setPinned({
-            projectId: row.projectId,
+            workspaceId: row.workspaceId,
             repositoryKey: row.repositoryKey,
             number: row.number,
             isPinned: false,
           })
           .pipe(
             Effect.catch((error) => {
-              const project = input.projectById.get(row.projectId);
+              const project = input.workspaceById.get(row.workspaceId);
               if (project) {
                 addError(project, `Missing pull request pin cleanup failed: ${error.message}`);
               }
@@ -277,7 +277,7 @@ export function recoverPinnedPullRequests(input: {
     const entries = missingPins.flatMap((row) => {
       const repositoryKey = row.repositoryKey.trim().toLowerCase();
       const recovery = recoveryByRepository.get(repositoryKey);
-      const project = input.projectById.get(row.projectId);
+      const project = input.workspaceById.get(row.workspaceId);
       if (!recovery || !project) return [];
       const lookup = recoveredByLookup.get(
         repositoryPullRequestIdentityKey({

@@ -1,5 +1,6 @@
+import type { ConversationHistoryActivity } from "~/historicalConversation";
 import { describe, expect, it } from "vitest";
-import { EventId, type OrchestrationThreadActivity, TurnId } from "@omnimind/contracts";
+import { EventId, TurnId } from "@omnimind/contracts";
 
 import {
   deriveAccountRateLimits,
@@ -10,9 +11,9 @@ import {
 function makeActivity(
   id: string,
   kind: string,
-  payload: OrchestrationThreadActivity["payload"],
+  payload: ConversationHistoryActivity["payload"],
   createdAt = "2099-04-08T18:00:00.000Z",
-): OrchestrationThreadActivity {
+): ConversationHistoryActivity {
   return {
     id: EventId.makeUnsafe(id),
     tone: "info",

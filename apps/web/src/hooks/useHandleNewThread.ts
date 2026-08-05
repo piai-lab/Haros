@@ -1,8 +1,6 @@
 import { type ProjectId, ThreadId } from "@omnimind/contracts";
-import { getDefaultModel } from "@omnimind/shared/model";
 import { useNavigate, useRouter } from "@tanstack/react-router";
 import { startTransition } from "react";
-import { useAppSettings } from "../appSettings";
 import {
   type ComposerThreadDraftState,
   type DraftThreadState,
@@ -41,7 +39,6 @@ export interface NewThreadNavigationOptions {
 
 function useHandleNewThreadFromFocusedContext(focusedContext: FocusedChatContext) {
   const projects = useStore((store) => store.projects);
-  const { settings } = useAppSettings();
   const navigate = useNavigate();
   const router = useRouter();
   const { activeDraftThread, activeProjectId, activeThread, focusedThreadId, routeThreadId } =
@@ -59,19 +56,6 @@ function useHandleNewThreadFromFocusedContext(focusedContext: FocusedChatContext
   ): Promise<ThreadId | null> => {
     const entryPoint = options?.entryPoint ?? "chat";
     const wantsTemporaryThread = options?.temporary === true;
-    const applyProviderOverride = (threadId: ThreadId) => {
-      if (!options?.provider) {
-        return;
-      }
-      const defaultModel = getDefaultModel(options.provider);
-      if (!defaultModel) {
-        return;
-      }
-      setModelSelection(threadId, {
-        provider: options.provider,
-        model: defaultModel,
-      });
-    };
     const restoreComposerDraft = (
       threadId: ThreadId,
       draftState: ComposerThreadDraftState | null,
@@ -106,7 +90,6 @@ function useHandleNewThreadFromFocusedContext(focusedContext: FocusedChatContext
       registerDraftThread,
       setDraftThreadContext,
       setProjectDraftThreadId,
-      setModelSelection,
     } = useComposerDraftStore.getState();
     const shouldForceFreshThread = options?.fresh === true;
 
@@ -133,10 +116,6 @@ function useHandleNewThreadFromFocusedContext(focusedContext: FocusedChatContext
       projectId,
       routeThreadId: focusedThreadId,
     });
-    // Read from the store at call time so post-sync sidebar flows can use the latest project defaults.
-    const projectDefaultModelSelection =
-      useStore.getState().projects.find((project) => project.id === projectId)
-        ?.defaultModelSelection ?? null;
     const activeThreadSnapshot = createActiveThreadSnapshot(activeThread, projectId);
     const activeDraftThreadSnapshot = createActiveDraftThreadSnapshot(activeDraftThread, projectId);
     const resolveCreationState = (
@@ -147,12 +126,8 @@ function useHandleNewThreadFromFocusedContext(focusedContext: FocusedChatContext
       resolveTerminalThreadCreationState({
         activeDraftThread: activeDraftThreadSnapshot,
         activeThread: activeThreadSnapshot,
-        defaultProvider: options?.provider ?? settings.defaultProvider,
-        draftComposerState:
-          useComposerDraftStore.getState().draftsByThreadId[targetThreadId] ?? null,
         draftThread,
         options: creationOptions,
-        projectDefaultModelSelection,
         projectId,
       });
     // Terminal-first threads need a real orchestration thread immediately so
@@ -161,28 +136,18 @@ function useHandleNewThreadFromFocusedContext(focusedContext: FocusedChatContext
       threadId: ThreadId,
       creationState: ReturnType<typeof resolveCreationState>,
     ): Promise<void> => {
-      const api = readNativeApi();
-      if (!api) {
+      if (!readNativeApi()) {
         return;
       }
       await promoteThreadCreate(
         {
-          type: "thread.create",
-          commandId: newCommandId(),
           threadId,
           projectId,
           title: "New terminal",
-          modelSelection: creationState.modelSelection,
-          runtimeMode: creationState.runtimeMode,
-          interactionMode: creationState.interactionMode,
-          envMode: creationState.envMode,
-          branch: creationState.branch,
           worktreePath: creationState.worktreePath,
           workingDirectory: creationState.workingDirectory,
-          lastKnownPr: creationState.lastKnownPr,
           createdAt: new Date().toISOString(),
         },
-        api,
       );
     };
     if (bootstrapPlan.kind === "stored") {
@@ -203,7 +168,6 @@ function useHandleNewThreadFromFocusedContext(focusedContext: FocusedChatContext
           setDraftThreadContext(bootstrapPlan.threadId, draftContextPatch);
           resolvedStoredDraftThread = getDraftThread(bootstrapPlan.threadId);
         }
-        applyProviderOverride(bootstrapPlan.threadId);
         setProjectDraftThreadId(projectId, bootstrapPlan.threadId, { entryPoint });
         restoreComposerDraft(bootstrapPlan.threadId, preservedComposerDraft);
         activateThreadEntryPoint(bootstrapPlan.threadId);
@@ -253,7 +217,6 @@ function useHandleNewThreadFromFocusedContext(focusedContext: FocusedChatContext
           setDraftThreadContext(bootstrapPlan.threadId, draftContextPatch);
           resolvedActiveDraftThread = getDraftThread(bootstrapPlan.threadId);
         }
-        applyProviderOverride(bootstrapPlan.threadId);
         setProjectDraftThreadId(projectId, bootstrapPlan.threadId, { entryPoint });
         restoreComposerDraft(bootstrapPlan.threadId, preservedComposerDraft);
         activateThreadEntryPoint(bootstrapPlan.threadId);
@@ -281,7 +244,6 @@ function useHandleNewThreadFromFocusedContext(focusedContext: FocusedChatContext
           registerDraftThread(threadId, { projectId, ...draftSeed });
           activateThreadEntryPoint(threadId);
           applyStickyState(threadId);
-          applyProviderOverride(threadId);
         },
         // Mark the draft-landing navigation as a transition so the new route
         // subtree renders interruptibly and the browser can paint the chat

@@ -1,8 +1,8 @@
+import type { HistoricalWorkspaceReadModel } from "~/historicalConversation";
 // FILE: projectCreateRecovery.ts
 // Purpose: Centralizes duplicate `project.create` error parsing and recovery helpers.
 // Exports: duplicate-create error guards plus snapshot matching for import recovery.
 
-import type { OrchestrationReadModel } from "@omnimind/contracts";
 import { workspaceRootsEqual } from "@omnimind/shared/threadWorkspace";
 
 const DUPLICATE_PROJECT_CREATE_ERROR_PREFIX =
@@ -191,7 +191,7 @@ export function findRecoverableProjectForDuplicateCreate<
 
 export async function waitForRecoverableProjectInReadModel<
   TSnapshot extends SnapshotWithProjects<DuplicateProjectCreateRecoveryCandidate> =
-    OrchestrationReadModel,
+    HistoricalWorkspaceReadModel,
 >(
   input: ProjectLookupInput & {
     readonly loadSnapshot: () => Promise<TSnapshot | null>;

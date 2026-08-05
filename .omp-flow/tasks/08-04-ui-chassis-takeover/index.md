@@ -25,8 +25,9 @@ okf_version: "0.2"
   checkpoint conflicts and carried downstream obligations.
 - [QbD 1 approval](decisions/qbd-1-approval.md) — maintainer authorization to enter Decompose,
   QbD 2 and Execute under the repaired Design.
-- [Implementation work map](work/index.md) — seven bounded Work Concepts, ordered path ownership,
-  requirement coverage and the first-candidate completion boundary.
+- [Implementation work map](work/index.md) — ten bounded Work Concepts, ordered path ownership,
+  requirement coverage, the maintainer-approved Synara `v0.6.7` intake and the first-candidate
+  completion boundary.
 - [QbD 2 work-map audit](qbd/work-map-audit.md) — independent execution-map challenge and its
   single architecture-owner gap.
 - [QbD 2 human calibration](decisions/qbd-2-calibration.md) — accepted WM-01 repair and conditional

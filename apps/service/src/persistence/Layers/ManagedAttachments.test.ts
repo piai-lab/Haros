@@ -44,7 +44,7 @@ const resetSchema = Effect.gen(function* () {
 const reserveInput = (
   overrides: Partial<{
     attachmentId: string;
-    ownerThreadId: string;
+    conversationId: string;
     ownerKind: string;
     ownerId: string;
     reservedBytes: number;
@@ -52,7 +52,7 @@ const reserveInput = (
   }> = {},
 ) => ({
   attachmentId: overrides.attachmentId ?? "attachment-1",
-  ownerThreadId: overrides.ownerThreadId ?? "thread-1",
+  conversationId: overrides.conversationId ?? "thread-1",
   ownerKind: overrides.ownerKind ?? "principal",
   ownerId: overrides.ownerId ?? "principal-1",
   kind: "file",
@@ -74,7 +74,7 @@ const reserveAndStage = (
     assert.strictEqual(reserved.status, "reserved");
     const staged = yield* repository.finalizeStaged({
       attachmentId: input.attachmentId,
-      ownerThreadId: input.ownerThreadId,
+      conversationId: input.conversationId,
       ownerKind: input.ownerKind,
       ownerId: input.ownerId,
       sizeBytes: input.reservedBytes,
@@ -93,25 +93,25 @@ layer("ManagedAttachmentRepository", (it) => {
       const repository = yield* ManagedAttachmentRepository;
       yield* reserveAndStage(repository, {
         attachmentId: "opaque-a",
-        ownerThreadId: "Thread Delete.Files",
+        conversationId: "Thread Delete.Files",
         relativePath: "attachments/opaque-a.txt",
       });
       yield* reserveAndStage(repository, {
         attachmentId: "opaque-b",
-        ownerThreadId: "thread-delete-files",
+        conversationId: "thread-delete-files",
         relativePath: "attachments/opaque-b.txt",
       });
 
       const crossOwner = yield* repository.findServerOwned({
         attachmentId: "opaque-a",
-        ownerThreadId: "thread-delete-files",
+        conversationId: "thread-delete-files",
         ownerKind: "principal",
         ownerId: "principal-1",
         now: "2026-07-14T10:01:00.000Z",
       });
       const exact = yield* repository.findServerOwned({
         attachmentId: "opaque-a",
-        ownerThreadId: "Thread Delete.Files",
+        conversationId: "Thread Delete.Files",
         ownerKind: "principal",
         ownerId: "principal-1",
         now: "2026-07-14T10:01:00.000Z",
@@ -171,13 +171,13 @@ layer("ManagedAttachmentRepository", (it) => {
           relativePath: "attachments/claim-b",
         });
 
-        const mixed = yield* repository.claimForAcceptedTurn({
+        const mixed = yield* repository.claimForProductRun({
           attachmentIds: ["claim-a", "claim-b"],
-          ownerThreadId: "thread-1",
+          conversationId: "thread-1",
           ownerKind: "principal",
           ownerId: "principal-1",
-          commandId: "command-1",
-          messageId: "message-1",
+          runId: "command-1",
+          entryId: "message-1",
           now: "2026-07-14T10:02:00.000Z",
         });
         assert.deepStrictEqual(mixed, { status: "rejected", reason: "owner-mismatch" });
@@ -190,13 +190,13 @@ layer("ManagedAttachmentRepository", (it) => {
         yield* sql
           .withTransaction(
             Effect.gen(function* () {
-              const claimed = yield* repository.claimForAcceptedTurn({
+              const claimed = yield* repository.claimForProductRun({
                 attachmentIds: ["claim-a"],
-                ownerThreadId: "thread-1",
+                conversationId: "thread-1",
                 ownerKind: "principal",
                 ownerId: "principal-1",
-                commandId: "command-rollback",
-                messageId: "message-rollback",
+                runId: "command-rollback",
+                entryId: "message-rollback",
                 now: "2026-07-14T10:03:00.000Z",
               });
               assert.strictEqual(claimed.status, "claimed");
@@ -222,33 +222,33 @@ layer("ManagedAttachmentRepository", (it) => {
       });
       const claim = {
         attachmentIds: ["idem"],
-        ownerThreadId: "thread-1",
+        conversationId: "thread-1",
         ownerKind: "principal",
         ownerId: "principal-1",
-        commandId: "command-idem",
-        messageId: "message-idem",
+        runId: "command-idem",
+        entryId: "message-idem",
         now: "2026-07-14T10:02:00.000Z",
       } as const;
 
-      assert.strictEqual((yield* repository.claimForAcceptedTurn(claim)).status, "claimed");
-      assert.strictEqual((yield* repository.claimForAcceptedTurn(claim)).status, "claimed");
+      assert.strictEqual((yield* repository.claimForProductRun(claim)).status, "claimed");
+      assert.strictEqual((yield* repository.claimForProductRun(claim)).status, "claimed");
       assert.strictEqual(
-        (yield* repository.claimForAcceptedTurn({
+        (yield* repository.claimForProductRun({
           ...claim,
-          commandId: "edit-resend-command",
+          runId: "edit-resend-command",
         })).status,
         "claimed",
       );
       assert.deepStrictEqual(
-        yield* repository.claimForAcceptedTurn({
+        yield* repository.claimForProductRun({
           ...claim,
-          commandId: "different-command",
-          messageId: "different-message",
+          runId: "different-command",
+          entryId: "different-message",
         }),
         { status: "rejected", reason: "already-claimed" },
       );
       assert.deepStrictEqual(
-        (yield* repository.findClaimedForCommand({ commandId: claim.commandId })).map(
+        (yield* repository.findClaimedForRun({ runId: claim.runId })).map(
           (attachment) => attachment.attachmentId,
         ),
         ["idem"],
@@ -266,13 +266,13 @@ layer("ManagedAttachmentRepository", (it) => {
         "2026-07-14T10:00:02.000Z",
       );
 
-      const result = yield* repository.claimForAcceptedTurn({
+      const result = yield* repository.claimForProductRun({
         attachmentIds: ["expired"],
-        ownerThreadId: "thread-1",
+        conversationId: "thread-1",
         ownerKind: "principal",
         ownerId: "principal-1",
-        commandId: "command-expired",
-        messageId: "message-expired",
+        runId: "command-expired",
+        entryId: "message-expired",
         now: "2026-07-14T10:00:03.000Z",
       });
       assert.deepStrictEqual(result, { status: "rejected", reason: "expired" });
@@ -327,7 +327,7 @@ layer("ManagedAttachmentRepository", (it) => {
       );
       const fresh = yield* repository.findServerOwned({
         attachmentId: "fresh-upload",
-        ownerThreadId: "thread-1",
+        conversationId: "thread-1",
         ownerKind: "principal",
         ownerId: "principal-1",
         now: "2026-07-14T10:10:00.000Z",
@@ -384,13 +384,13 @@ layer("ManagedAttachmentRepository", (it) => {
         attachmentId: "committed",
         relativePath: "attachments/committed",
       });
-      yield* repository.claimForAcceptedTurn({
+      yield* repository.claimForProductRun({
         attachmentIds: ["committed"],
-        ownerThreadId: "thread-1",
+        conversationId: "thread-1",
         ownerKind: "principal",
         ownerId: "principal-1",
-        commandId: "command-committed",
-        messageId: "message-committed",
+        runId: "command-committed",
+        entryId: "message-committed",
         now: "2026-07-14T10:04:00.000Z",
       });
       assert.deepStrictEqual(
@@ -417,13 +417,13 @@ layer("ManagedAttachmentRepository", (it) => {
       });
       yield* reserveAndStage(repository, {
         attachmentId: "cleanup-other",
-        ownerThreadId: "thread-2",
+        conversationId: "thread-2",
         relativePath: "attachments/cleanup-other",
       });
       const marked = yield* sql.withTransaction(
         repository.markCleanupByIds({
           attachmentIds: ["cleanup", "cleanup-other"],
-          ownerThreadId: "thread-1",
+          conversationId: "thread-1",
           reason: "message-removed",
           requestedAt: "2026-07-14T10:05:00.000Z",
         }),
@@ -433,7 +433,7 @@ layer("ManagedAttachmentRepository", (it) => {
         Option.isSome(
           yield* repository.findServerOwned({
             attachmentId: "cleanup-other",
-            ownerThreadId: "thread-2",
+            conversationId: "thread-2",
             ownerKind: "principal",
             ownerId: "principal-1",
             now: "2026-07-14T10:05:00.000Z",
@@ -509,7 +509,7 @@ layer("ManagedAttachmentRepository", (it) => {
       yield* sql.withTransaction(
         repository.markCleanupByIds({
           attachmentIds: ["poisoned-cleanup"],
-          ownerThreadId: "thread-1",
+          conversationId: "thread-1",
           reason: "message-removed",
           requestedAt: "2026-07-14T10:05:00.000Z",
         }),
@@ -569,7 +569,7 @@ layer("ManagedAttachmentRepository", (it) => {
       yield* sql.withTransaction(
         repository.markCleanupByIds({
           attachmentIds: ["old-deleted", "recent-deleted", "poison-retained"],
-          ownerThreadId: "thread-1",
+          conversationId: "thread-1",
           reason: "retention-test",
           requestedAt: "2020-01-01T00:00:00.000Z",
         }),
@@ -639,24 +639,24 @@ layer("ManagedAttachmentRepository", (it) => {
       yield* resetSchema;
       const repository = yield* ManagedAttachmentRepository;
       const sql = yield* SqlClient.SqlClient;
-      for (const [attachmentId, ownerThreadId, commandId] of [
+      for (const [attachmentId, conversationId, runId] of [
         ["retained", "thread-1", "command-retained"],
         ["removed", "thread-1", "command-removed"],
         ["other-thread", "thread-2", "command-other-thread"],
       ] as const) {
         yield* reserveAndStage(repository, {
           attachmentId,
-          ownerThreadId,
+          conversationId,
           reservedBytes: 2,
           relativePath: `attachments/${attachmentId}`,
         });
-        const claim = yield* repository.claimForAcceptedTurn({
+        const claim = yield* repository.claimForProductRun({
           attachmentIds: [attachmentId],
-          ownerThreadId,
+          conversationId,
           ownerKind: "principal",
           ownerId: "principal-1",
-          commandId,
-          messageId: `message-${attachmentId}`,
+          runId,
+          entryId: `message-${attachmentId}`,
           now: "2026-07-14T10:04:00.000Z",
         });
         assert.strictEqual(claim.status, "claimed");
@@ -664,7 +664,7 @@ layer("ManagedAttachmentRepository", (it) => {
 
       const marked = yield* sql.withTransaction(
         repository.markUnreferencedClaimedForCleanup({
-          ownerThreadId: "thread-1",
+          conversationId: "thread-1",
           retainedAttachmentIds: ["retained"],
           reason: "conversation-rolled-back",
           requestedAt: "2026-07-14T10:05:00.000Z",
@@ -692,12 +692,12 @@ layer("ManagedAttachmentRepository", (it) => {
       const repository = yield* ManagedAttachmentRepository;
       const sql = yield* SqlClient.SqlClient;
       const principal = attachmentPrincipalForSession("process-loss-session");
-      const threadId = "process-loss-thread";
+      const conversationId = "process-loss-conversation";
       const committedAt = new Date().toISOString();
 
       const committedReservation = yield* reserveManagedAttachmentUpload({
         type: "file",
-        threadId,
+        conversationId,
         name: "committed.txt",
         mimeType: "text/plain",
         reservedBytes: 4,
@@ -713,13 +713,13 @@ layer("ManagedAttachmentRepository", (it) => {
         principal,
         repository,
       });
-      const claimed = yield* repository.claimForAcceptedTurn({
+      const claimed = yield* repository.claimForProductRun({
         attachmentIds: [committedReservation.attachmentId],
-        ownerThreadId: threadId,
+        conversationId,
         ownerKind: principal.ownerKind,
         ownerId: principal.ownerId,
-        commandId: "process-loss-command",
-        messageId: "process-loss-message",
+        runId: "process-loss-command",
+        entryId: "process-loss-message",
         now: committedAt,
       });
       assert.strictEqual(claimed.status, "claimed");
@@ -735,7 +735,7 @@ layer("ManagedAttachmentRepository", (it) => {
       ] as const) {
         const reserved = yield* repository.reserve({
           attachmentId,
-          ownerThreadId: threadId,
+          conversationId,
           ownerKind: principal.ownerKind,
           ownerId: principal.ownerId,
           kind: "file",

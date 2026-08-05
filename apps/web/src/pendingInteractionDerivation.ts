@@ -1,13 +1,12 @@
-import {
-  ApprovalRequestId,
-  type OrchestrationPendingInteraction,
-  type OrchestrationThreadActivity,
-  type UserInputQuestion,
-} from "@omnimind/contracts";
+import type {
+  ConversationHistoryActivity,
+  ConversationPendingInteraction,
+} from "~/historicalConversation";
+import { ApprovalRequestId, type UserInputQuestion } from "@omnimind/contracts";
 import {
   approvalRequestKindFromRequestType,
-  pendingRequestInstanceKey,
-} from "@omnimind/shared/threadSummary";
+  pendingConversationRequestInstanceKey,
+} from "~/conversationHistorySummary";
 
 import { isStalePendingRequestFailureDetail } from "./lib/pendingInteraction";
 import { orderedActivities } from "./workLog";
@@ -29,7 +28,7 @@ export interface PendingUserInput {
   questions: ReadonlyArray<UserInputQuestion>;
 }
 
-type PendingInteractionKind = OrchestrationPendingInteraction["interactionKind"];
+type PendingInteractionKind = ConversationPendingInteraction["interactionKind"];
 
 interface PendingInteractionReplay<T extends { requestId: ApprovalRequestId }> {
   interactionKind: PendingInteractionKind;
@@ -37,14 +36,14 @@ interface PendingInteractionReplay<T extends { requestId: ApprovalRequestId }> {
   resolvedActivityKind: string;
   responseFailedActivityKind: string;
   parseRequested: (input: {
-    activity: OrchestrationThreadActivity;
+    activity: ConversationHistoryActivity;
     payload: Record<string, unknown> | null;
     requestId: ApprovalRequestId;
     lifecycleGeneration: string | undefined;
   }) => T | null;
 }
 
-function activityPayload(activity: OrchestrationThreadActivity): Record<string, unknown> | null {
+function activityPayload(activity: ConversationHistoryActivity): Record<string, unknown> | null {
   return activity.payload && typeof activity.payload === "object"
     ? (activity.payload as Record<string, unknown>)
     : null;
@@ -61,7 +60,7 @@ function deletePendingInteraction<T extends { requestId: ApprovalRequestId }>(
   lifecycleGeneration: string | undefined,
 ): void {
   if (lifecycleGeneration !== undefined) {
-    openByInstance.delete(pendingRequestInstanceKey(requestId, lifecycleGeneration));
+    openByInstance.delete(pendingConversationRequestInstanceKey(requestId, lifecycleGeneration));
     return;
   }
   for (const [key, pending] of openByInstance) {
@@ -75,12 +74,15 @@ function replacePendingInteraction<T extends { requestId: ApprovalRequestId }>(
   lifecycleGeneration: string | undefined,
 ): void {
   deletePendingInteraction(openByInstance, pending.requestId, undefined);
-  openByInstance.set(pendingRequestInstanceKey(pending.requestId, lifecycleGeneration), pending);
+  openByInstance.set(
+    pendingConversationRequestInstanceKey(pending.requestId, lifecycleGeneration),
+    pending,
+  );
 }
 
 function retainActionableSettlements<T extends { requestId: ApprovalRequestId }>(
   openByInstance: Map<string, T>,
-  settlements: ReadonlyArray<OrchestrationPendingInteraction> | undefined,
+  settlements: ReadonlyArray<ConversationPendingInteraction> | undefined,
   interactionKind: PendingInteractionKind,
 ): void {
   if (settlements === undefined) {
@@ -94,7 +96,7 @@ function retainActionableSettlements<T extends { requestId: ApprovalRequestId }>
           (settlement.status === "pending" || settlement.status === "retryable"),
       )
       .map((settlement) =>
-        pendingRequestInstanceKey(
+        pendingConversationRequestInstanceKey(
           settlement.requestId,
           settlement.lifecycleGeneration ?? undefined,
         ),
@@ -108,8 +110,8 @@ function retainActionableSettlements<T extends { requestId: ApprovalRequestId }>
 }
 
 function replayPendingInteractions<T extends { requestId: ApprovalRequestId; createdAt: string }>(
-  activities: ReadonlyArray<OrchestrationThreadActivity>,
-  settlements: ReadonlyArray<OrchestrationPendingInteraction> | undefined,
+  activities: ReadonlyArray<ConversationHistoryActivity>,
+  settlements: ReadonlyArray<ConversationPendingInteraction> | undefined,
   replay: PendingInteractionReplay<T>,
 ): T[] {
   const openByInstance = new Map<string, T>();
@@ -206,8 +208,8 @@ function parseUserInputQuestions(
 }
 
 export function derivePendingApprovals(
-  activities: ReadonlyArray<OrchestrationThreadActivity>,
-  settlements?: ReadonlyArray<OrchestrationPendingInteraction>,
+  activities: ReadonlyArray<ConversationHistoryActivity>,
+  settlements?: ReadonlyArray<ConversationPendingInteraction>,
 ): PendingApproval[] {
   return replayPendingInteractions(activities, settlements, {
     interactionKind: "approval",
@@ -250,8 +252,8 @@ export function derivePendingApprovals(
 }
 
 export function derivePendingUserInputs(
-  activities: ReadonlyArray<OrchestrationThreadActivity>,
-  settlements?: ReadonlyArray<OrchestrationPendingInteraction>,
+  activities: ReadonlyArray<ConversationHistoryActivity>,
+  settlements?: ReadonlyArray<ConversationPendingInteraction>,
 ): PendingUserInput[] {
   return replayPendingInteractions(activities, settlements, {
     interactionKind: "userInput",

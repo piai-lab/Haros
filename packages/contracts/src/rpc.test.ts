@@ -1,46 +1,20 @@
 import { describe, expect, it } from "vitest";
 
-import {
-  WsAutomationCreateRpc,
-  WsAutomationGetMemoryRpc,
-  WsAutomationResolveProposalRpc,
-  WsBootstrapRpcGroup,
-  WsFeatureRpcGroup,
-  WsProjectsDiscoverScriptsRpc,
-  WsPullRequestsReviewRequestCountRpc,
-  WsRpcError,
-  WsRpcGroup,
-} from "./rpc";
-import { ORCHESTRATION_WS_METHODS } from "./orchestration";
+import { SystemRpcGroup } from "./rpc";
+import { SYSTEM_RPC_METHODS } from "./ws";
 
-describe("WS RPC contracts", () => {
-  it("exports the additive Effect RPC group", () => {
-    expect(WsRpcGroup).toBeDefined();
-    expect(WsBootstrapRpcGroup.requests.has("bootstrap.negotiate")).toBe(true);
-    expect(WsFeatureRpcGroup.requests.has("bootstrap.negotiate")).toBe(false);
-    expect(
-      WsFeatureRpcGroup.requests.has(ORCHESTRATION_WS_METHODS.listProviderDeliveryBlockers),
-    ).toBe(true);
-    expect(WsFeatureRpcGroup.requests.has(ORCHESTRATION_WS_METHODS.reconcileProviderDelivery)).toBe(
-      true,
-    );
-  });
+describe("SystemRpcGroup pull-request capability", () => {
+  it("publishes every pull-request method on the scoped system wire", () => {
+    const methods = [
+      SYSTEM_RPC_METHODS.pullRequestsList,
+      SYSTEM_RPC_METHODS.pullRequestsReviewRequestCount,
+      SYSTEM_RPC_METHODS.pullRequestsDetail,
+      SYSTEM_RPC_METHODS.pullRequestsDiff,
+      SYSTEM_RPC_METHODS.pullRequestsAction,
+      SYSTEM_RPC_METHODS.pullRequestsComment,
+      SYSTEM_RPC_METHODS.pullRequestsSetPinned,
+    ];
 
-  it("uses a schema-backed transport error", () => {
-    expect(new WsRpcError({ message: "failed" }).message).toBe("failed");
-  });
-
-  it("exports the project script discovery RPC", () => {
-    expect(WsProjectsDiscoverScriptsRpc).toBeDefined();
-  });
-
-  it("exports the automation create RPC", () => {
-    expect(WsAutomationCreateRpc).toBeDefined();
-    expect(WsAutomationGetMemoryRpc).toBeDefined();
-    expect(WsAutomationResolveProposalRpc).toBeDefined();
-  });
-
-  it("exports the count-only pull request review RPC", () => {
-    expect(WsPullRequestsReviewRequestCountRpc).toBeDefined();
+    expect(methods.every((method) => SystemRpcGroup.requests.has(method))).toBe(true);
   });
 });

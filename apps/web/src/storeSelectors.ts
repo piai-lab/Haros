@@ -2,7 +2,7 @@
 // Purpose: Stable Zustand selectors for entity lookups and lightweight sidebar projections.
 // Exports: Selector factories used by routes and sidebar-heavy components.
 
-import type { ProjectId, ThreadEnvironmentMode, ThreadId } from "@omnimind/contracts";
+import type { ProjectId, WorkspaceEnvironmentMode, ThreadId } from "@omnimind/contracts";
 
 import type { AppState } from "./storeState";
 import { resolveThreadDisplayProvider } from "./lib/threadDisplayProvider";
@@ -18,7 +18,7 @@ import type {
 const EMPTY_THREAD_SHELLS: ThreadShell[] = [];
 
 export interface ThreadWorkspaceMetadata {
-  envMode: ThreadEnvironmentMode | undefined;
+  envMode: WorkspaceEnvironmentMode | undefined;
   worktreePath: string | null;
   workingDirectory: string | null;
 }
@@ -169,7 +169,7 @@ export function createThreadProjectIdSelector(
 export function createThreadWorkspaceMetadataSelector(
   threadId: ThreadId | null | undefined,
 ): (state: AppState) => ThreadWorkspaceMetadata {
-  let previousEnvMode: ThreadEnvironmentMode | undefined = undefined;
+  let previousEnvMode: WorkspaceEnvironmentMode | undefined = undefined;
   let previousWorktreePath: string | null = null;
   let previousWorkingDirectory: string | null = null;
   let previousResult = EMPTY_THREAD_WORKSPACE_METADATA;

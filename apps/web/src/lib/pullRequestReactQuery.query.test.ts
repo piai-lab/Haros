@@ -1,4 +1,4 @@
-import type { ProjectId } from "@omnimind/contracts";
+import type { ProductWorkspaceId } from "@omnimind/contracts";
 import { QueryClient } from "@tanstack/react-query";
 import { afterEach, describe, expect, it, vi } from "vitest";
 
@@ -23,13 +23,13 @@ describe("pull request list query options", () => {
     // Cross-key placeholders rendered actionable rows under the wrong state/involvement
     // heading; both list options must go to the network (or warm cache) instead.
     expect(
-      pullRequestsListQueryOptions({ state: "closed", projectId: null }).placeholderData,
+      pullRequestsListQueryOptions({ state: "closed", workspaceId: null }).placeholderData,
     ).toBeUndefined();
     expect(
       pullRequestsExactInvolvementQueryOptions({
         involvement: "reviewing",
         state: "open",
-        projectId: null,
+        workspaceId: null,
       }).placeholderData,
     ).toBeUndefined();
   });
@@ -38,7 +38,7 @@ describe("pull request list query options", () => {
     const options = pullRequestsExactInvolvementQueryOptions({
       involvement: "authored",
       state: "open",
-      projectId: null,
+      workspaceId: null,
     });
 
     expect(options.refetchInterval).toBe(60_000);
@@ -49,7 +49,7 @@ describe("pull request list query options", () => {
   it("disables detail polling and focus refresh while its dock is collapsed", () => {
     const options = pullRequestDetailQueryOptions(
       {
-        projectId: "project-a" as ProjectId,
+        workspaceId: "project-a" as ProductWorkspaceId,
         repository: "acme/widgets",
         number: 42,
       },
@@ -77,21 +77,21 @@ describe("pull request list query options", () => {
   it("prefetches only the state named by user intent", async () => {
     const queryClient = new QueryClient();
     const prefetchQuery = vi.spyOn(queryClient, "prefetchQuery").mockResolvedValue(undefined);
-    const projectA = "project-a" as ProjectId;
+    const projectA = "project-a" as ProductWorkspaceId;
 
     await prefetchPullRequestListState(queryClient, {
       state: "closed",
-      projectId: projectA,
+      workspaceId: projectA,
     });
 
     expect(prefetchQuery).toHaveBeenCalledTimes(1);
     expect(prefetchQuery.mock.calls[0]?.[0].queryKey).toEqual(
-      pullRequestQueryKeys.list({ state: "closed", projectId: projectA }),
+      pullRequestQueryKeys.list({ state: "closed", workspaceId: projectA }),
     );
   });
 
   it("uses a compact, independently cached review-request count query", () => {
-    const options = pullRequestReviewRequestCountQueryOptions({ projectId: null });
+    const options = pullRequestReviewRequestCountQueryOptions({ workspaceId: null });
     expect(options.queryKey).toEqual(pullRequestQueryKeys.reviewRequestCount(null));
     expect(options.staleTime).toBe(5 * 60_000);
     expect(options.refetchInterval).toBe(5 * 60_000);
@@ -125,18 +125,18 @@ describe("pull request list query options", () => {
 describe("invalidateOtherPullRequestListQueries", () => {
   it("invalidates only same-state, same-project list siblings", async () => {
     const queryClient = new QueryClient();
-    const projectA = "project-a" as ProjectId;
-    const projectB = "project-b" as ProjectId;
-    const refreshedKey = pullRequestQueryKeys.list({ state: "open", projectId: projectA });
+    const projectA = "project-a" as ProductWorkspaceId;
+    const projectB = "project-b" as ProductWorkspaceId;
+    const refreshedKey = pullRequestQueryKeys.list({ state: "open", workspaceId: projectA });
     const exactSiblingKey = pullRequestsExactInvolvementQueryOptions({
       involvement: "reviewing",
       state: "open",
-      projectId: projectA,
+      workspaceId: projectA,
     }).queryKey;
-    const otherStateKey = pullRequestQueryKeys.list({ state: "merged", projectId: projectA });
-    const otherProjectKey = pullRequestQueryKeys.list({ state: "open", projectId: projectB });
+    const otherStateKey = pullRequestQueryKeys.list({ state: "merged", workspaceId: projectA });
+    const otherProjectKey = pullRequestQueryKeys.list({ state: "open", workspaceId: projectB });
     const detailInput = {
-      projectId: projectA,
+      workspaceId: projectA,
       repository: "acme/widgets",
       number: 42,
     } as const;

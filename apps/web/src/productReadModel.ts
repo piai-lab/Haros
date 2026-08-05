@@ -3,13 +3,15 @@ import {
   MessageId,
   ProjectId,
   ThreadId,
+  ThreadMarkerId,
   TurnId,
   type DesktopHealthSnapshot,
   type ProductConversationReadModel,
   type ProductRuntimeActivity,
+  type ProductWorkspaceSummary,
 } from "@omnimind/contracts";
 
-import type { QueuedComposerTurn } from "./composerDraftStore";
+import type { QueuedComposerChatTurn, QueuedComposerTurn } from "./composerDraftStore";
 import {
   getWorkbenchCopy,
   type WorkbenchCopy,
@@ -17,9 +19,16 @@ import {
 } from "./i18n/workbenchCopy";
 import type { ProductProjectionIssue } from "./store/productStore";
 import type { ChatMessage } from "./types";
-import { DEFAULT_INTERACTION_MODE, type Project, type Thread } from "./types";
+import {
+  DEFAULT_INTERACTION_MODE,
+  type ConversationPresentation,
+  type Project,
+} from "./types";
 
-function fillCopy(template: string, fields: Readonly<Record<string, string | number>>): string {
+function fillCopy(
+  template: string,
+  fields: Readonly<Record<string, string | number>>,
+): string {
   return Object.entries(fields).reduce(
     (result, [key, value]) => result.replaceAll(`{${key}}`, String(value)),
     template,
@@ -120,10 +129,32 @@ export function presentProductConversationMessages(
 }
 
 /** Stateless Queue-row presentation; ordering and ownership stay in Product Store. */
+export interface ProductQueuedTurnPresentation {
+  readonly id: string;
+  readonly kind: "chat";
+  readonly createdAt: string;
+  readonly previewText: string;
+  readonly prompt: string;
+  readonly images: QueuedComposerChatTurn["images"];
+  readonly files: QueuedComposerChatTurn["files"];
+  readonly assistantSelections: QueuedComposerChatTurn["assistantSelections"];
+  readonly browserAnnotations: QueuedComposerChatTurn["browserAnnotations"];
+  readonly terminalContexts: QueuedComposerChatTurn["terminalContexts"];
+  readonly fileComments: QueuedComposerChatTurn["fileComments"];
+  readonly pastedTexts: QueuedComposerChatTurn["pastedTexts"];
+  readonly skills: QueuedComposerChatTurn["skills"];
+  readonly mentions: QueuedComposerChatTurn["mentions"];
+  readonly requestedSelection: ProductConversationReadModel["queue"][number]["requestedSelection"];
+  readonly runtimeMode: QueuedComposerChatTurn["runtimeMode"];
+  readonly interactionMode: QueuedComposerChatTurn["interactionMode"];
+  readonly envMode: QueuedComposerChatTurn["envMode"];
+}
+
+export type WorkbenchQueuedTurn = QueuedComposerTurn | ProductQueuedTurnPresentation;
+
 export function presentProductConversationQueue(
   readModel: ProductConversationReadModel | undefined,
-  fallbackModelId: string,
-): QueuedComposerTurn[] {
+): ProductQueuedTurnPresentation[] {
   if (!readModel) return [];
   return readModel.queue.map((item) => ({
     id: item.id,
@@ -140,13 +171,7 @@ export function presentProductConversationQueue(
     pastedTexts: [],
     skills: [],
     mentions: [],
-    selectedProvider: "pi",
-    selectedModel: item.requestedSelection.modelId,
-    selectedPromptEffort: item.requestedSelection.thinking,
-    modelSelection: {
-      provider: "pi",
-      model: item.requestedSelection.modelId ?? fallbackModelId,
-    },
+    requestedSelection: item.requestedSelection,
     runtimeMode: item.requestedSelection.permissionPolicy,
     interactionMode: "default",
     envMode: "local",
@@ -160,17 +185,29 @@ export function presentProductConversationQueue(
 export function presentProductConversationThread(
   readModel: ProductConversationReadModel | undefined,
   locale?: WorkbenchLocale,
-): Thread | undefined {
+): ConversationPresentation | undefined {
   if (!readModel) return undefined;
   const copy = getWorkbenchCopy(locale);
   const selection =
     readModel.runs.at(-1)?.requestedSelection ?? readModel.queue.at(-1)?.requestedSelection;
+  const selectedModel =
+    selection?.state === "selected"
+      ? selection.runtimeModelId
+      : selection?.requestedRuntimeModelId ?? "";
   return {
     id: ThreadId.makeUnsafe(readModel.conversation.id),
     codexThreadId: null,
     projectId: ProjectId.makeUnsafe(readModel.workspace.id),
     title: readModel.conversation.title,
-    modelSelection: { provider: "pi", model: selection?.modelId ?? "unresolved-model" },
+    runtimeIdentity:
+      selection?.state === "selected"
+        ? {
+            kind: "product",
+            engineId: selection.engineId,
+            runtimeModelId: selection.runtimeModelId,
+            thinking: selection.thinking,
+          }
+        : null,
     // Thread requires a donor-shaped runtime mode, but Product has not selected
     // or verified one here. Fail closed; Product controls stay hidden until typed
     // execution facts exist.
@@ -181,6 +218,32 @@ export function presentProductConversationThread(
     proposedPlans: [],
     error: null,
     createdAt: readModel.conversation.createdAt,
+    archivedAt: readModel.conversation.archivedAt,
+    settledAt:
+      readModel.conversation.boardState === "done"
+        ? readModel.conversation.boardStateChangedAt
+        : null,
+    isPinned: readModel.conversation.isPinned,
+    pinnedMessages: readModel.entryPins.map((pin) => ({
+      messageId: MessageId.makeUnsafe(pin.entryId),
+      label: pin.label,
+      done: pin.done,
+      pinnedAt: pin.pinnedAt,
+    })),
+    threadMarkers: readModel.entryMarkers.map((marker) => ({
+      id: ThreadMarkerId.makeUnsafe(marker.id),
+      messageId: MessageId.makeUnsafe(marker.entryId),
+      startOffset: marker.startOffset,
+      endOffset: marker.endOffset,
+      selectedText: marker.selectedText,
+      style: marker.style,
+      color: marker.color,
+      label: marker.label,
+      done: marker.done,
+      createdAt: marker.createdAt,
+      updatedAt: marker.updatedAt,
+    })),
+    notes: readModel.conversation.notes,
     updatedAt: readModel.conversation.updatedAt,
     latestTurn: null,
     lastVisitedAt: readModel.conversation.updatedAt,
@@ -239,11 +302,44 @@ export function presentProductConversationProject(
     folderName: name,
     localName: null,
     cwd,
-    defaultModelSelection: null,
     expanded: true,
     createdAt: readModel.conversation.createdAt,
     updatedAt: readModel.conversation.updatedAt,
     scripts: [],
+  };
+}
+
+/** View-only donor-shaped project chrome derived from a Product Workspace shell fact. */
+export function presentProductWorkspaceProject(
+  workspace: ProductWorkspaceSummary,
+): Project | null {
+  if (!workspace.visibleInSidebar || workspace.archivedAt !== null) return null;
+  const cwd = workspace.access.primaryFolder ?? workspace.access.managedDirectory;
+  if (!cwd) return null;
+  return {
+    id: ProjectId.makeUnsafe(workspace.id),
+    kind: "project",
+    name: workspace.title,
+    remoteName: workspace.title,
+    folderName: workspace.title,
+    localName: null,
+    cwd,
+    expanded: true,
+    isPinned: workspace.isPinned,
+    createdAt: workspace.createdAt,
+    updatedAt: workspace.updatedAt,
+    scripts:
+      workspace.runCommand === null
+        ? []
+        : [
+            {
+              id: "product-workspace-run",
+              name: "Run",
+              command: workspace.runCommand,
+              icon: "play",
+              runOnWorktreeCreate: false,
+            },
+          ],
   };
 }
 

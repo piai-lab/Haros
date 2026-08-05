@@ -4,10 +4,10 @@ import {
   IsoDateTime,
   NonNegativeInt,
   PositiveInt,
-  ProjectId,
   TrimmedNonEmptyString,
 } from "./baseSchemas";
 import { GitPullRequestMergeability } from "./git";
+import { ProductWorkspaceId } from "./product/state";
 
 export const PullRequestInvolvement = Schema.Literals(["all", "reviewing", "authored"]);
 export type PullRequestInvolvement = typeof PullRequestInvolvement.Type;
@@ -92,16 +92,16 @@ export const PullRequestMergeCapabilities = Schema.Struct({
 });
 export type PullRequestMergeCapabilities = typeof PullRequestMergeCapabilities.Type;
 
-export const PullRequestProjectContext = Schema.Struct({
-  projectId: ProjectId,
-  projectTitle: TrimmedNonEmptyString,
+export const PullRequestWorkspaceContext = Schema.Struct({
+  workspaceId: ProductWorkspaceId,
+  workspaceTitle: TrimmedNonEmptyString,
   isPinned: Schema.Boolean,
 });
-export type PullRequestProjectContext = typeof PullRequestProjectContext.Type;
+export type PullRequestWorkspaceContext = typeof PullRequestWorkspaceContext.Type;
 
 export const PullRequestListEntry = Schema.Struct({
-  projectId: ProjectId,
-  projectTitle: TrimmedNonEmptyString,
+  workspaceId: ProductWorkspaceId,
+  workspaceTitle: TrimmedNonEmptyString,
   repository: TrimmedNonEmptyString,
   number: PositiveInt,
   title: TrimmedNonEmptyString,
@@ -120,7 +120,7 @@ export const PullRequestListEntry = Schema.Struct({
   isPinned: Schema.optional(Schema.Boolean).pipe(Schema.withDecodingDefault(() => false)),
   // A repository-level row can belong to several local projects/worktrees. The fallback keeps a
   // newer client compatible with a server that still sends one project-local row at a time.
-  projectContexts: Schema.optional(Schema.Array(PullRequestProjectContext)).pipe(
+  workspaceContexts: Schema.optional(Schema.Array(PullRequestWorkspaceContext)).pipe(
     Schema.withDecodingDefault(() => []),
   ),
   // Decoding default keeps a newer client compatible with an older server that predates
@@ -135,20 +135,20 @@ export type PullRequestListEntry = typeof PullRequestListEntry.Type;
 export const PullRequestsListInput = Schema.Struct({
   involvement: Schema.optional(PullRequestInvolvement),
   state: PullRequestState,
-  projectId: Schema.optional(Schema.NullOr(ProjectId)),
+  workspaceId: Schema.optional(Schema.NullOr(ProductWorkspaceId)),
   forceRefresh: Schema.optional(Schema.Boolean),
 });
 export type PullRequestsListInput = typeof PullRequestsListInput.Type;
 
 export const PullRequestsListError = Schema.Struct({
-  projectId: ProjectId,
-  projectTitle: TrimmedNonEmptyString,
+  workspaceId: ProductWorkspaceId,
+  workspaceTitle: TrimmedNonEmptyString,
   message: TrimmedNonEmptyString,
 });
 
 export const PullRequestsListRepositoryBatch = Schema.Struct({
-  projectId: ProjectId,
-  projectTitle: TrimmedNonEmptyString,
+  workspaceId: ProductWorkspaceId,
+  workspaceTitle: TrimmedNonEmptyString,
   repository: TrimmedNonEmptyString,
   truncated: Schema.Boolean,
 });
@@ -163,7 +163,7 @@ export const PullRequestsListResult = Schema.Struct({
 export type PullRequestsListResult = typeof PullRequestsListResult.Type;
 
 export const PullRequestReviewRequestCountInput = Schema.Struct({
-  projectId: Schema.optional(Schema.NullOr(ProjectId)),
+  workspaceId: Schema.optional(Schema.NullOr(ProductWorkspaceId)),
 });
 export type PullRequestReviewRequestCountInput = typeof PullRequestReviewRequestCountInput.Type;
 
@@ -175,15 +175,15 @@ export const PullRequestReviewRequestCountResult = Schema.Struct({
 export type PullRequestReviewRequestCountResult = typeof PullRequestReviewRequestCountResult.Type;
 
 export const PullRequestDetailInput = Schema.Struct({
-  projectId: ProjectId,
+  workspaceId: ProductWorkspaceId,
   repository: TrimmedNonEmptyString,
   number: PositiveInt,
 });
 export type PullRequestDetailInput = typeof PullRequestDetailInput.Type;
 
 export const PullRequestDetail = Schema.Struct({
-  projectId: ProjectId,
-  projectTitle: TrimmedNonEmptyString,
+  workspaceId: ProductWorkspaceId,
+  workspaceTitle: TrimmedNonEmptyString,
   workspaceRoot: TrimmedNonEmptyString,
   repository: TrimmedNonEmptyString,
   number: PositiveInt,
@@ -229,7 +229,7 @@ export const PullRequestDiffResult = Schema.Struct({
 export type PullRequestDiffResult = typeof PullRequestDiffResult.Type;
 
 export const PullRequestActionInput = Schema.Struct({
-  projectId: ProjectId,
+  workspaceId: ProductWorkspaceId,
   repository: TrimmedNonEmptyString,
   number: PositiveInt,
   action: PullRequestAction,
@@ -238,7 +238,7 @@ export const PullRequestActionInput = Schema.Struct({
 export type PullRequestActionInput = typeof PullRequestActionInput.Type;
 
 export const PullRequestCommentInput = Schema.Struct({
-  projectId: ProjectId,
+  workspaceId: ProductWorkspaceId,
   repository: TrimmedNonEmptyString,
   number: PositiveInt,
   // GitHub rejects comment bodies past 65536 characters; enforcing it here keeps oversized
@@ -248,7 +248,7 @@ export const PullRequestCommentInput = Schema.Struct({
 export type PullRequestCommentInput = typeof PullRequestCommentInput.Type;
 
 export const PullRequestSetPinnedInput = Schema.Struct({
-  projectId: ProjectId,
+  workspaceId: ProductWorkspaceId,
   repository: TrimmedNonEmptyString,
   number: PositiveInt,
   isPinned: Schema.Boolean,
@@ -256,7 +256,7 @@ export const PullRequestSetPinnedInput = Schema.Struct({
 export type PullRequestSetPinnedInput = typeof PullRequestSetPinnedInput.Type;
 
 export const PullRequestSetPinnedResult = Schema.Struct({
-  projectId: ProjectId,
+  workspaceId: ProductWorkspaceId,
   repository: TrimmedNonEmptyString,
   number: PositiveInt,
   isPinned: Schema.Boolean,
@@ -266,7 +266,7 @@ export type PullRequestSetPinnedResult = typeof PullRequestSetPinnedResult.Type;
 // Actions acknowledge the mutation independently from the follow-up detail refetch. This keeps
 // a successful GitHub mutation from being reported as failed when a later read is unavailable.
 export const PullRequestActionResult = Schema.Struct({
-  projectId: ProjectId,
+  workspaceId: ProductWorkspaceId,
   repository: TrimmedNonEmptyString,
   number: PositiveInt,
   workspaceRoot: TrimmedNonEmptyString,

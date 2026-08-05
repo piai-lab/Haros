@@ -2,7 +2,6 @@ import { type AutomationDefinition, type AutomationRun } from "@omnimind/contrac
 import { createFileRoute, useNavigate } from "@tanstack/react-router";
 import { useEffect, useState, type ReactNode } from "react";
 
-import { getProviderStartOptions, useAppSettings } from "~/appSettings";
 import {
   CHAT_SURFACE_HEADER_DIVIDER_CLASS_NAME,
   CHAT_SURFACE_HEADER_HEIGHT_CLASS,
@@ -44,8 +43,6 @@ import {
   isLiveRun,
   isRowInteractiveEventTarget,
   isUnresolvedTriageResult,
-  providerOptionsForAutomationEdit,
-  projectModelSelection,
   runStatusLabel,
   updateInputFromForm,
   useAutomations,
@@ -180,7 +177,6 @@ function rowSubtitle(
 
 function AutomationsRouteView() {
   const navigate = useNavigate();
-  const { settings } = useAppSettings();
   const desktopTopBarTrafficLightGutterClassName = useDesktopTopBarTrafficLightGutterClassName();
   const desktopTopBarWindowControlsGutterClassName =
     useDesktopTopBarWindowControlsGutterClassName();
@@ -201,7 +197,7 @@ function AutomationsRouteView() {
   }, []);
   const fallbackProjectId = projects[0]?.id ?? "";
   const [form, setForm] = useState<AutomationFormState>(() =>
-    formFromDefinition(null, fallbackProjectId, projectModelSelection(projects, fallbackProjectId)),
+    formFromDefinition(null, fallbackProjectId),
   );
 
   const {
@@ -213,7 +209,6 @@ function AutomationsRouteView() {
     deleteMutation,
     runsByAutomationId,
   } = useAutomations((threadId) => void navigate({ to: "/$threadId", params: { threadId } }));
-  const providerOptionsForDispatch = getProviderStartOptions(settings);
 
   const updateDialogForm = (nextForm: AutomationFormState) => {
     setForm(nextForm);
@@ -228,11 +223,7 @@ function AutomationsRouteView() {
 
   const openCreateDialog = () => {
     setEditingDefinition(null);
-    const nextForm = formFromDefinition(
-      null,
-      fallbackProjectId,
-      projectModelSelection(projects, fallbackProjectId),
-    );
+    const nextForm = formFromDefinition(null, fallbackProjectId);
     setForm(nextForm);
     setDialogWarnings(buildAutomationFormWarnings(nextForm));
     setAcknowledgedWarningIds(new Set());
@@ -249,18 +240,13 @@ function AutomationsRouteView() {
     const closeOnSuccess = { onSuccess: () => setDialogOpen(false) };
     if (editingDefinition) {
       updateMutation.mutate(
-        updateInputFromForm(
-          editingDefinition,
-          form,
-          providerOptionsForAutomationEdit(editingDefinition, form, providerOptionsForDispatch),
-          acknowledgedRisks,
-        ),
+        updateInputFromForm(editingDefinition, form, acknowledgedRisks),
         closeOnSuccess,
       );
       return;
     }
     createMutation.mutate(
-      createInputFromForm(form, providerOptionsForDispatch, acknowledgedRisks),
+      createInputFromForm(form, acknowledgedRisks),
       closeOnSuccess,
     );
   };

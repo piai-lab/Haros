@@ -3,7 +3,7 @@
 // Layer: UI state helpers
 // Exports: dock pane types, default-state factory, and immutable open/close/activate helpers.
 
-import type { ProjectId, ThreadId, TurnId } from "@omnimind/contracts";
+import type { ProductWorkspaceId, ThreadId, TurnId } from "@omnimind/contracts";
 import { isPlainObject, sanitizeStringKeyedRecord } from "./persistedRecord";
 
 // Single source of truth for the dock pane kinds. The union type, the runtime
@@ -35,7 +35,7 @@ export interface RightDockPane {
   diffFilePath: string | null;
   // file panes preview one workspace-relative file.
   filePath: string | null;
-  pullRequestProjectId: ProjectId | null;
+  pullRequestWorkspaceId: ProductWorkspaceId | null;
   pullRequestRepository: string | null;
   pullRequestNumber: number | null;
   pullRequestInitialTab: PullRequestInitialTab | null;
@@ -92,9 +92,9 @@ function sanitizePersistedPane(value: unknown): RightDockPane | null {
     diffTurnId: typeof candidate.diffTurnId === "string" ? (candidate.diffTurnId as TurnId) : null,
     diffFilePath: typeof candidate.diffFilePath === "string" ? candidate.diffFilePath : null,
     filePath: typeof candidate.filePath === "string" ? candidate.filePath : null,
-    pullRequestProjectId:
-      typeof candidate.pullRequestProjectId === "string"
-        ? (candidate.pullRequestProjectId as ProjectId)
+    pullRequestWorkspaceId:
+      typeof candidate.pullRequestWorkspaceId === "string"
+        ? (candidate.pullRequestWorkspaceId as ProductWorkspaceId)
         : null,
     pullRequestRepository:
       typeof candidate.pullRequestRepository === "string" ? candidate.pullRequestRepository : null,
@@ -150,7 +150,7 @@ export interface OpenPaneInput {
   diffTurnId?: TurnId | null;
   diffFilePath?: string | null;
   filePath?: string | null;
-  pullRequestProjectId?: ProjectId | null;
+  pullRequestWorkspaceId?: ProductWorkspaceId | null;
   pullRequestRepository?: string | null;
   pullRequestNumber?: number | null;
   pullRequestInitialTab?: PullRequestInitialTab | null;
@@ -164,7 +164,7 @@ function createPane(input: OpenPaneInput): RightDockPane {
     diffTurnId: input.diffTurnId ?? null,
     diffFilePath: input.diffFilePath ?? null,
     filePath: input.filePath ?? null,
-    pullRequestProjectId: input.pullRequestProjectId ?? null,
+    pullRequestWorkspaceId: input.pullRequestWorkspaceId ?? null,
     pullRequestRepository: input.pullRequestRepository ?? null,
     pullRequestNumber: input.pullRequestNumber ?? null,
     pullRequestInitialTab: input.pullRequestInitialTab ?? null,
@@ -183,13 +183,13 @@ function singletonPaneReopenPatch(input: OpenPaneInput): Partial<RightDockPane> 
   }
   if (
     input.kind === "pullRequest" &&
-    (input.pullRequestProjectId !== undefined ||
+    (input.pullRequestWorkspaceId !== undefined ||
       input.pullRequestRepository !== undefined ||
       input.pullRequestNumber !== undefined ||
       input.pullRequestInitialTab !== undefined)
   ) {
     return {
-      pullRequestProjectId: input.pullRequestProjectId ?? null,
+      pullRequestWorkspaceId: input.pullRequestWorkspaceId ?? null,
       pullRequestRepository: input.pullRequestRepository ?? null,
       pullRequestNumber: input.pullRequestNumber ?? null,
       pullRequestInitialTab: input.pullRequestInitialTab ?? null,
@@ -327,7 +327,7 @@ export function updatePaneInState(
       | "diffFilePath"
       | "filePath"
       | "threadId"
-      | "pullRequestProjectId"
+      | "pullRequestWorkspaceId"
       | "pullRequestRepository"
       | "pullRequestNumber"
       | "pullRequestInitialTab"
@@ -345,7 +345,7 @@ export function updatePaneInState(
       nextPane.diffFilePath !== pane.diffFilePath ||
       nextPane.filePath !== pane.filePath ||
       nextPane.threadId !== pane.threadId ||
-      nextPane.pullRequestProjectId !== pane.pullRequestProjectId ||
+      nextPane.pullRequestWorkspaceId !== pane.pullRequestWorkspaceId ||
       nextPane.pullRequestRepository !== pane.pullRequestRepository ||
       nextPane.pullRequestNumber !== pane.pullRequestNumber ||
       nextPane.pullRequestInitialTab !== pane.pullRequestInitialTab

@@ -31,7 +31,6 @@ import { SettingsRow, SettingsSection } from "./SettingsPanelPrimitives";
 export function AdvancedSettingsPanel(props: { active: boolean; resetEpoch: number }) {
   const configQuery = useQuery(serverConfigQueryOptions());
   const authSessionQuery = useQuery(serverAuthSessionQueryOptions());
-  const syncServerReadModel = useStore((store) => store.syncServerReadModel);
   // Keep these subscriptions inside the only panel that uses recovery eligibility.
   const threadShells = useStore(useMemo(() => createThreadShellsSelector(), []));
   const allThreadsMessageless = useStore(useMemo(() => createAllThreadsMessagelessSelector(), []));
@@ -91,27 +90,13 @@ export function AdvancedSettingsPanel(props: { active: boolean; resetEpoch: numb
     if (!confirmed) return;
 
     setIsRepairingLocalState(true);
-    await api.orchestration
-      .repairState()
-      .then((snapshot) => {
-        syncServerReadModel(snapshot);
-        toastManager.add({
-          type: "success",
-          title: "Local state repaired",
-          description: "Project indexes were rebuilt without clearing existing chats.",
-        });
-      })
-      .catch((error: unknown) => {
-        toastManager.add({
-          type: "error",
-          title: "Repair failed",
-          description: error instanceof Error ? error.message : "Unable to repair local state.",
-        });
-      })
-      .finally(() => {
-        setIsRepairingLocalState(false);
-      });
-  }, [isRepairingLocalState, syncServerReadModel]);
+    toastManager.add({
+      type: "warning",
+      title: "Re-entry required",
+      description: "Legacy projection repair is unavailable. Reopen the Product workspace to resnapshot.",
+    });
+    setIsRepairingLocalState(false);
+  }, [isRepairingLocalState]);
 
   const logoutCurrentSession = useCallback(async () => {
     if (isLoggingOut) return;

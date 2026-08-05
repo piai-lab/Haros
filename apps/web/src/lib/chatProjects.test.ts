@@ -1,67 +1,112 @@
-// FILE: chatProjects.test.ts
-// Purpose: Verifies home chat-container project recognition across new and legacy roots.
+import {
+  PRODUCT_PROTOCOL_VERSION,
+  ProductShellSnapshot,
+  ProductWorkspaceId,
+  type ProductWorkspaceSummary,
+} from "@omnimind/contracts";
+import { Schema } from "effect";
+import { beforeEach, describe, expect, it, vi } from "vitest";
 
-import { ProjectId, type OrchestrationShellSnapshot } from "@omnimind/contracts";
-import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
+import { initialProductProjectionState, useProductStore } from "../store/productStore";
+import {
+  ensureHomeChatProject,
+  isHomeChatContainerProject,
+  resetHomeChatProjectPrewarmStateForTests,
+} from "./chatProjects";
 
-import { useStore } from "../store";
-import { ensureHomeChatProject, isHomeChatContainerProject } from "./chatProjects";
-import { PROJECT_SNAPSHOT_HYDRATION_TIMEOUT_MS } from "./projectSnapshotHydration";
+const wsMock = vi.hoisted(() => ({ getShellSnapshot: vi.fn() }));
 
-const NOW = "2026-06-26T21:00:00.000Z";
+vi.mock("../wsNativeApi", () => ({
+  readProductNativeApi: () => ({ getShellSnapshot: wsMock.getShellSnapshot }),
+}));
 
-function makeShellProject(
-  overrides: Partial<OrchestrationShellSnapshot["projects"][number]> = {},
-): OrchestrationShellSnapshot["projects"][number] {
+const NOW = "2026-08-05T00:00:00.000Z";
+
+function chatWorkspace(id = "workspace-chat"): ProductWorkspaceSummary {
   return {
-    id: ProjectId.makeUnsafe("project-home-existing"),
-    kind: "chat",
-    title: "Home",
-    workspaceRoot: "/Users/tester",
-    defaultModelSelection: null,
-    scripts: [],
+    id: ProductWorkspaceId.makeUnsafe(id),
+    title: "Chat",
+    access: {
+      kind: "chat",
+      managedDirectory: null,
+      primaryFolder: null,
+      executionTarget: null,
+      writeAuthority: "read-only-references",
+    },
+    revision: 1,
+    visibleInSidebar: false,
     isPinned: false,
+    runCommand: null,
+    archivedAt: null,
     createdAt: NOW,
     updatedAt: NOW,
-    ...overrides,
   };
 }
 
-function makeShellSnapshot(
-  projects: OrchestrationShellSnapshot["projects"],
-): OrchestrationShellSnapshot {
-  return {
-    snapshotSequence: 1,
-    spaces: [],
-    projects,
-    threads: [],
-    updatedAt: NOW,
-  };
+function shell(workspaces: readonly ProductWorkspaceSummary[]) {
+  return Schema.decodeUnknownSync(ProductShellSnapshot)({
+    protocolVersion: PRODUCT_PROTOCOL_VERSION,
+    sequence: workspaces.length,
+    workspaces,
+    groups: [],
+    conversations: [],
+    runtimeCatalog: null,
+  });
 }
 
-beforeEach(() => {
-  // ensureHomeChatProject waits for the first shell snapshot before deciding to create.
-  useStore.setState({ threadsHydrated: true });
+beforeEach(async () => {
+  await resetHomeChatProjectPrewarmStateForTests();
+  useProductStore.setState(initialProductProjectionState);
+  wsMock.getShellSnapshot.mockReset();
 });
 
-afterEach(() => {
-  vi.unstubAllGlobals();
-  useStore.setState({
-    projects: [],
-    threadIds: [],
-    threadShellById: {},
+describe("Product Chat Workspace resolution", () => {
+  it("uses the existing Chat Workspace from Product shell truth", async () => {
+    const workspace = chatWorkspace();
+    useProductStore.getState().setShellSnapshot(shell([workspace]));
+
+    await expect(ensureHomeChatProject({ homeDir: "/Users/tester" })).resolves.toBe(
+      workspace.id,
+    );
+    expect(wsMock.getShellSnapshot).not.toHaveBeenCalled();
+  });
+
+  it("hydrates Product shell once before resolving an existing Chat Workspace", async () => {
+    const workspace = chatWorkspace("workspace-hydrated-chat");
+    wsMock.getShellSnapshot.mockResolvedValue(shell([workspace]));
+
+    await expect(ensureHomeChatProject({ homeDir: "/Users/tester" })).resolves.toBe(
+      workspace.id,
+    );
+    expect(wsMock.getShellSnapshot).toHaveBeenCalledOnce();
+    expect(useProductStore.getState().workspaces).toEqual([workspace]);
+  });
+
+  it("returns one stable provisional id without fabricating a hidden Home project", async () => {
+    wsMock.getShellSnapshot.mockResolvedValue(shell([]));
+    const paths = { homeDir: "/Users/tester" };
+
+    const [first, second] = await Promise.all([
+      ensureHomeChatProject(paths),
+      ensureHomeChatProject(paths),
+    ]);
+
+    expect(first).toBeTruthy();
+    expect(second).toBe(first);
+    expect(useProductStore.getState().workspaces).toEqual([]);
+    expect(wsMock.getShellSnapshot).toHaveBeenCalledOnce();
   });
 });
 
-describe("isHomeChatContainerProject", () => {
-  it("matches the managed Documents/OmniMind general-chat root used by older drafts", () => {
+describe("legacy Chat view classifier", () => {
+  it("recognizes donor-shaped Chat rows under the configured chat root", () => {
     expect(
       isHomeChatContainerProject(
         {
-          cwd: "/Users/tester/Documents/OmniMind",
+          cwd: "/Users/tester/Documents/OmniMind/2026-08-05/chat",
           kind: "chat",
-          name: "Home",
-          remoteName: "Home",
+          name: "Chat",
+          remoteName: "Chat",
         },
         {
           homeDir: "/Users/tester",
@@ -71,68 +116,7 @@ describe("isHomeChatContainerProject", () => {
     ).toBe(true);
   });
 
-  it("matches Codex-style date/slug chat workspaces under Documents/OmniMind", () => {
-    expect(
-      isHomeChatContainerProject(
-        {
-          cwd: "/Users/tester/Documents/OmniMind/2026-06-11/yes-it-takes-all-the-skills",
-          kind: "chat",
-          name: "Yes it takes",
-          remoteName: "Yes it takes",
-        },
-        {
-          homeDir: "/Users/tester",
-          chatWorkspaceRoot: "/Users/tester/Documents/OmniMind",
-        },
-      ),
-    ).toBe(true);
-  });
-
-  it("keeps recognizing the legacy home-directory chat container during migration", () => {
-    expect(
-      isHomeChatContainerProject(
-        {
-          cwd: "/Users/tester",
-          kind: "chat",
-          name: "Home",
-          remoteName: "Home",
-        },
-        {
-          homeDir: "/Users/tester",
-          chatWorkspaceRoot: "/Users/tester/Documents/OmniMind",
-        },
-      ),
-    ).toBe(true);
-  });
-
-  it("trusts the chat kind before any server workspace path resolves", () => {
-    // Boot window: neither homeDir nor chatWorkspaceRoot known yet — the kind alone decides,
-    // mirroring isStudioContainerProject, so chat rows aren't mis-partitioned during startup.
-    expect(
-      isHomeChatContainerProject(
-        {
-          cwd: "/Users/tester/Documents/OmniMind/2026-06-11/some-chat",
-          kind: "chat",
-          name: "Some chat",
-          remoteName: "Some chat",
-        },
-        { homeDir: null },
-      ),
-    ).toBe(true);
-    expect(
-      isHomeChatContainerProject(
-        {
-          cwd: "/Users/tester/Developer/app",
-          kind: "project",
-          name: "App",
-          remoteName: "App",
-        },
-        { homeDir: null },
-      ),
-    ).toBe(false);
-  });
-
-  it("does not classify ordinary projects under Documents/OmniMind as home chat containers", () => {
+  it("never classifies an ordinary project as the hidden Home container", () => {
     expect(
       isHomeChatContainerProject(
         {
@@ -147,237 +131,5 @@ describe("isHomeChatContainerProject", () => {
         },
       ),
     ).toBe(false);
-  });
-
-  it("does not classify ordinary projects under date/slug chat folders", () => {
-    expect(
-      isHomeChatContainerProject(
-        {
-          cwd: "/Users/tester/Documents/OmniMind/2026-06-11/yes-it-takes-all-the-skills",
-          kind: "project",
-          name: "yes-it-takes-all-the-skills",
-          remoteName: "yes-it-takes-all-the-skills",
-        },
-        {
-          homeDir: "/Users/tester",
-          chatWorkspaceRoot: "/Users/tester/Documents/OmniMind",
-        },
-      ),
-    ).toBe(false);
-  });
-
-  it("waits for the shell snapshot before creating a Home chat project", async () => {
-    const dispatchCommand = vi.fn(async (_command: { type: string }) => {});
-    vi.stubGlobal("window", {
-      nativeApi: { orchestration: { dispatchCommand, getShellSnapshot: vi.fn() } },
-    });
-    useStore.setState({ projects: [], threadsHydrated: false });
-
-    const projectPromise = ensureHomeChatProject({
-      homeDir: "/Users/tester",
-      chatWorkspaceRoot: "/Users/tester/Documents/OmniMind",
-    });
-    await Promise.resolve();
-
-    expect(dispatchCommand).not.toHaveBeenCalled();
-
-    // Hydration reveals an already-persisted container: no duplicate create is dispatched.
-    const existingProject = {
-      id: ProjectId.makeUnsafe("project-home-hydrated"),
-      kind: "chat" as const,
-      name: "Home",
-      remoteName: "Home",
-      folderName: "Home",
-      localName: null,
-      cwd: "/Users/tester",
-      defaultModelSelection: null,
-      expanded: false,
-      scripts: [],
-    };
-    useStore.setState({ projects: [existingProject], threadsHydrated: true });
-
-    await expect(projectPromise).resolves.toBe(existingProject.id);
-    expect(dispatchCommand).not.toHaveBeenCalledWith(
-      expect.objectContaining({ type: "project.create" }),
-    );
-  });
-
-  it("gives up and returns null without dispatching once the hydration wait times out", async () => {
-    vi.useFakeTimers();
-    try {
-      const dispatchCommand = vi.fn(async (_command: { type: string }) => {});
-      vi.stubGlobal("window", {
-        nativeApi: { orchestration: { dispatchCommand, getShellSnapshot: vi.fn() } },
-      });
-      useStore.setState({ projects: [], threadsHydrated: false });
-
-      const projectPromise = ensureHomeChatProject({
-        homeDir: "/Users/tester",
-        chatWorkspaceRoot: "/Users/tester/Documents/OmniMind",
-      });
-
-      await vi.advanceTimersByTimeAsync(PROJECT_SNAPSHOT_HYDRATION_TIMEOUT_MS);
-
-      await expect(projectPromise).resolves.toBeNull();
-      expect(dispatchCommand).not.toHaveBeenCalled();
-    } finally {
-      vi.useRealTimers();
-    }
-  });
-
-  it("deduplicates concurrent Home chat creation requests while hydration is pending", async () => {
-    const dispatchCommand = vi.fn(async (_command: { type: string }) => {});
-    vi.stubGlobal("window", {
-      nativeApi: { orchestration: { dispatchCommand, getShellSnapshot: vi.fn() } },
-    });
-    useStore.setState({ projects: [], threadsHydrated: false });
-
-    const paths = {
-      homeDir: "/Users/tester",
-      chatWorkspaceRoot: "/Users/tester/Documents/OmniMind",
-    };
-    const firstProjectPromise = ensureHomeChatProject(paths);
-    const secondProjectPromise = ensureHomeChatProject(paths);
-    await Promise.resolve();
-
-    expect(dispatchCommand).not.toHaveBeenCalled();
-
-    useStore.setState({ projects: [], threadsHydrated: true });
-    const [firstProjectId, secondProjectId] = await Promise.all([
-      firstProjectPromise,
-      secondProjectPromise,
-    ]);
-
-    expect(firstProjectId).toBe(secondProjectId);
-    const createCommands = dispatchCommand.mock.calls
-      .map(([command]) => command)
-      .filter((command) => command.type === "project.create");
-    expect(createCommands).toHaveLength(1);
-    expect(createCommands[0]).toMatchObject({ type: "project.create", kind: "chat" });
-  });
-
-  it("recovers a stale duplicate when the snapshot shows an existing Home chat container", async () => {
-    const existingProjectId = ProjectId.makeUnsafe("project-home-existing");
-    const dispatchCommand = vi.fn(async (command: { type: string }) => {
-      if (command.type === "project.create") {
-        throw new Error(
-          `Orchestration command invariant failed (project.create): Project '${existingProjectId}' already uses workspace root '/Users/tester'.`,
-        );
-      }
-    });
-    const getShellSnapshot = vi.fn(async () =>
-      makeShellSnapshot([makeShellProject({ id: existingProjectId })]),
-    );
-    vi.stubGlobal("window", {
-      nativeApi: {
-        orchestration: {
-          dispatchCommand,
-          getShellSnapshot,
-        },
-      },
-    });
-
-    const projectId = await ensureHomeChatProject({
-      homeDir: "/Users/tester",
-      chatWorkspaceRoot: "/Users/tester/Documents/OmniMind",
-    });
-
-    expect(projectId).toBe(existingProjectId);
-    expect(dispatchCommand).toHaveBeenCalledWith(
-      expect.objectContaining({
-        type: "project.create",
-        kind: "chat",
-        workspaceRoot: "/Users/tester",
-      }),
-    );
-    expect(dispatchCommand).not.toHaveBeenCalledWith(
-      expect.objectContaining({
-        type: "project.meta.update",
-      }),
-    );
-  });
-
-  it("normalizes a recognizable legacy Home duplicate before returning it", async () => {
-    const existingProjectId = ProjectId.makeUnsafe("project-home-existing");
-    const dispatchCommand = vi.fn(async (command: { type: string }) => {
-      if (command.type === "project.create") {
-        throw new Error(
-          `Orchestration command invariant failed (project.create): Project '${existingProjectId}' already uses workspace root '/Users/tester'.`,
-        );
-      }
-    });
-    const getShellSnapshot = vi.fn(async () =>
-      makeShellSnapshot([
-        makeShellProject({
-          id: existingProjectId,
-          kind: "project",
-          title: "Home",
-        }),
-      ]),
-    );
-    vi.stubGlobal("window", {
-      nativeApi: {
-        orchestration: {
-          dispatchCommand,
-          getShellSnapshot,
-        },
-      },
-    });
-
-    const projectId = await ensureHomeChatProject({
-      homeDir: "/Users/tester",
-      chatWorkspaceRoot: "/Users/tester/Documents/OmniMind",
-    });
-
-    expect(projectId).toBe(existingProjectId);
-    expect(dispatchCommand).toHaveBeenCalledWith(
-      expect.objectContaining({
-        type: "project.meta.update",
-        projectId: existingProjectId,
-        kind: "chat",
-        title: "Home",
-      }),
-    );
-  });
-
-  it("does not convert an ordinary duplicate home-folder project into Home chat", async () => {
-    const existingProjectId = ProjectId.makeUnsafe("project-home-existing");
-    const duplicateError = new Error(
-      `Orchestration command invariant failed (project.create): Project '${existingProjectId}' already uses workspace root '/Users/tester'.`,
-    );
-    const dispatchCommand = vi.fn(async (command: { type: string }) => {
-      if (command.type === "project.create") {
-        throw duplicateError;
-      }
-    });
-    const getShellSnapshot = vi.fn(async () =>
-      makeShellSnapshot([
-        makeShellProject({
-          id: existingProjectId,
-          kind: "project",
-          title: "tester",
-        }),
-      ]),
-    );
-    vi.stubGlobal("window", {
-      nativeApi: {
-        orchestration: {
-          dispatchCommand,
-          getShellSnapshot,
-        },
-      },
-    });
-
-    await expect(
-      ensureHomeChatProject({
-        homeDir: "/Users/tester",
-        chatWorkspaceRoot: "/Users/tester/Documents/OmniMind",
-      }),
-    ).rejects.toThrow(duplicateError.message);
-    expect(dispatchCommand).not.toHaveBeenCalledWith(
-      expect.objectContaining({
-        type: "project.meta.update",
-      }),
-    );
   });
 });

@@ -3,8 +3,7 @@
   "version": "0.1.0-alpha.0",
   "license": "MIT",
   "bin": {
-    "omnimind": "dist/index.mjs",
-    "omnimind-restore-migration-backup": "dist/restoreMigrationBackup.mjs"
+    "omnimind": "dist/index.mjs"
   },
   "files": [
     "dist"
@@ -19,15 +18,8 @@
     "test": "vitest run --maxWorkers=1 --no-file-parallelism"
   },
   "dependencies": {
-    "@agentclientprotocol/sdk": "1.2.1",
-    "@anthropic-ai/claude-agent-sdk": "0.3.207",
-    "@anthropic-ai/sdk": "^0.100.0",
-    "@earendil-works/pi-agent-core": "^0.81.1",
-    "@earendil-works/pi-ai": "^0.81.1",
-    "@earendil-works/pi-coding-agent": "^0.81.1",
     "@effect/platform-node": "catalog:",
     "@effect/sql-sqlite-bun": "catalog:",
-    "@opencode-ai/sdk": "^1.15.13",
     "@pierre/diffs": "^1.2.12",
     "@xterm/headless": "^6.0.0",
     "effect": "catalog:",

@@ -12,6 +12,7 @@ const DOCUMENT_PATHS = [
   "execution-brief.md",
   "missions/independent-omnimind-v1.md",
   "research/README.md",
+  "research/source-update-intake.md",
 ];
 
 const PLUGIN_ANCHOR_PATHS = [
@@ -31,6 +32,7 @@ const P = {
   brief: "execution-brief.md",
   campaign: "missions/independent-omnimind-v1.md",
   research: "research/README.md",
+  sourceUpdateIntake: "research/source-update-intake.md",
   pluginRoute: "apps/web/src/routes/_chat.plugins.tsx",
   routeTree: "apps/web/src/routeTree.gen.ts",
   pluginLibrary: "apps/web/src/components/PluginLibrary.tsx",
@@ -41,6 +43,8 @@ const RULE_MESSAGES = {
   "owner.root": "root product constitution ownership is incomplete or contradictory",
   "owner.architecture-index": "architecture owner index is incomplete or contradictory",
   "owner.research": "research evidence ownership is incomplete or contradictory",
+  "owner.source-update-intake":
+    "adopted-source update review and approval boundary is incomplete or contradictory",
   "owner.execution-brief": "execution ordering ownership is incomplete or contradictory",
   "owner.campaign": "Campaign acceptance ownership is incomplete or contradictory",
   "owner.product-state": "product-state object ownership is incomplete or contradictory",
@@ -231,6 +235,7 @@ function validateOwners(findings, documents, available) {
   const brief = textOf(documents, P.brief);
   const campaign = textOf(documents, P.campaign);
   const research = textOf(documents, P.research);
+  const sourceUpdateIntake = textOf(documents, P.sourceUpdateIntake);
 
   check(
     findings,
@@ -315,10 +320,45 @@ function validateOwners(findings, documents, available) {
     available,
     "owner.research",
     P.research,
-    hasAll(research, ["证据", "source-review.md", "decision-record.md"]) &&
+    hasAll(research, [
+      "证据",
+      "source-review.md",
+      "source-update-intake.md",
+      "decision-record.md",
+    ]) &&
       hasAny(research, ["不拥有产品 doctrine", "不拥有稳定 contract", "可推翻"]) &&
       !contradicts(research, [
         /research\s*(?:拥有|定义)\s*(?:产品 doctrine|稳定 contract|施工顺序)/i,
+      ]),
+  );
+
+  check(
+    findings,
+    available,
+    "owner.source-update-intake",
+    P.sourceUpdateIntake,
+    hasAll(sourceUpdateIntake, [
+      "maintainer initiated only",
+      "Gate A",
+      "Gate B",
+      "read-only review and discussion",
+      "explicit implementation approval",
+      "descendant",
+      "merge base",
+      "Understanding and retaining an insight does not create an",
+      "implementation obligation",
+      "ongoing ownership and divergence cost",
+      "selective intake",
+      "risk escalator",
+    ]) &&
+      hasClause(sourceUpdateIntake, [
+        ["Do not schedule it"],
+        ["automatically fetch"],
+        ["merely because a newer upstream revision exists"],
+      ]) &&
+      !contradicts(sourceUpdateIntake, [
+        /Source update review (?:runs|starts|is) automatically/i,
+        /Implementation begins before the maintainer/i,
       ]),
   );
 
@@ -400,6 +440,7 @@ function validateRoutes(findings, documents, available) {
     ],
     [P.brief, ["README →", "architecture index", "本 brief", "active Campaign"]],
     [P.campaign, ["README.md", "architecture/README.md", "execution-brief.md"]],
+    [P.agents, ["research/source-update-intake.md"]],
   ];
 
   for (const [documentPath, terms] of mandatoryRoutes) {
@@ -436,6 +477,7 @@ function validateRoutes(findings, documents, available) {
       ],
     ],
     [P.campaign, ["../execution-brief.md", "../research/source-review.md"]],
+    [P.research, ["source-review.md", "source-update-intake.md", "decision-record.md"]],
   ];
 
   for (const [documentPath, targets] of requiredLinks) {

@@ -1,7 +1,9 @@
-import { ProjectId } from "@omnimind/contracts";
-import type { OrchestrationProject } from "@omnimind/contracts";
+import {
+  ProductWorkspaceId,
+  type ProductWorkspaceSummary,
+} from "@omnimind/contracts";
 import { Deferred, Effect, Fiber } from "effect";
-import { describe, expect, it } from "vitest";
+import { describe, expect, it, vi } from "vitest";
 
 import { GitHubCliError } from "../../git/Errors";
 import type {
@@ -10,27 +12,40 @@ import type {
   GitHubPullRequestListItem,
 } from "../../git/Services/GitHubCli";
 import { createGitHubCliWithFakeGh } from "../../git/testing/fakeGitHubCli";
-import type { ProjectPullRequestPinsShape } from "../../persistence/Services/ProjectPullRequestPins";
+import type { WorkspacePullRequestPinsShape } from "../../persistence/Services/WorkspacePullRequestPins";
 import {
   PULL_REQUEST_PIN_RECOVERY_LIMIT,
   isDefinitivePullRequestNotFound,
   makePullRequestService,
 } from "./PullRequestService";
+import type { PullRequestWorkspaceContext } from "../workspaceContext";
 
 const now = "2026-07-15T00:00:00.000Z";
 
-function makeProject(id: string, title: string, workspaceRoot: string): OrchestrationProject {
+type TestWorkspace = ProductWorkspaceSummary;
+
+function makeProject(id: string, title: string, workspaceRoot: string): TestWorkspace {
   return {
-    id: ProjectId.makeUnsafe(id),
-    kind: "project",
+    id: ProductWorkspaceId.makeUnsafe(id),
     title,
-    workspaceRoot,
-    defaultModelSelection: null,
-    scripts: [],
+    access: {
+      kind: "folder-backed",
+      managedDirectory: null,
+      primaryFolder: workspaceRoot,
+      executionTarget: {
+        kind: "local",
+        targetRef: "local",
+        observedAt: now,
+      },
+      writeAuthority: "primary-folder",
+    },
+    revision: 1,
+    visibleInSidebar: true,
     isPinned: false,
+    runCommand: null,
+    archivedAt: null,
     createdAt: now,
     updatedAt: now,
-    deletedAt: null,
   };
 }
 
@@ -63,34 +78,34 @@ function makeBatch(
 }
 
 function makePins(
-  rows: ReadonlyArray<{ projectId: ProjectId; repositoryKey: string; number: number }> = [],
+  rows: ReadonlyArray<{ workspaceId: ProductWorkspaceId; repositoryKey: string; number: number }> = [],
   onSetPinned?: (input: {
-    projectId: ProjectId;
+    workspaceId: ProductWorkspaceId;
     repositoryKey: string;
     number: number;
     isPinned: boolean;
   }) => void,
-): ProjectPullRequestPinsShape {
+): WorkspacePullRequestPinsShape {
   return {
-    listByProjectIds: ({ projectIds }) =>
-      Effect.succeed(rows.filter((row) => projectIds.includes(row.projectId))),
+    listByWorkspaceIds: ({ workspaceIds }) =>
+      Effect.succeed(rows.filter((row) => workspaceIds.includes(row.workspaceId))),
     setPinned: (input) => Effect.sync(() => onSetPinned?.(input)),
   };
 }
 
 function makeDependencies(input: {
-  projects: OrchestrationProject[];
-  repositories: ReadonlyMap<ProjectId, string>;
+  projects: ProductWorkspaceSummary[];
+  repositories: ReadonlyMap<ProductWorkspaceId, string>;
   github: GitHubCliShape;
-  pins?: ProjectPullRequestPinsShape;
+  pins?: WorkspacePullRequestPinsShape;
 }) {
   return {
     homeDir: "/tmp",
     github: input.github,
     pins: input.pins ?? makePins(),
-    listProjects: () => Effect.succeed(input.projects),
-    resolveRepositories: (project: OrchestrationProject) => {
-      const repository = input.repositories.get(project.id);
+    listWorkspaces: () => Effect.succeed(input.projects),
+    resolveRepositories: (project: PullRequestWorkspaceContext) => {
+      const repository = input.repositories.get(project.workspaceId);
       return Effect.succeed({
         repositories: repository
           ? [{ nameWithOwner: repository, url: `https://github.com/${repository}` }]
@@ -102,6 +117,66 @@ function makeDependencies(input: {
 }
 
 describe("PullRequestService", () => {
+  it("fails closed for an unknown Product Workspace before any GitHub mutation", async () => {
+    const base = createGitHubCliWithFakeGh().service;
+    const runPullRequestAction = vi.fn(base.runPullRequestAction);
+    const github: GitHubCliShape = { ...base, runPullRequestAction };
+
+    const exit = await Effect.runPromiseExit(
+      Effect.scoped(
+        Effect.gen(function* () {
+          const service = yield* makePullRequestService(
+            makeDependencies({ projects: [], repositories: new Map(), github }),
+          );
+          return yield* service.action({
+            workspaceId: ProductWorkspaceId.makeUnsafe("workspace-unknown"),
+            repository: "acme/widgets",
+            number: 42,
+            action: "close",
+          });
+        }),
+      ),
+    );
+
+    expect(exit._tag).toBe("Failure");
+    expect(runPullRequestAction).not.toHaveBeenCalled();
+  });
+
+  it("admits a valid Product Workspace to the GitHub mutation", async () => {
+    const workspace = makeProject("workspace-valid-action", "Valid", "/tmp/valid-action");
+    const base = createGitHubCliWithFakeGh().service;
+    const runPullRequestAction = vi.fn(base.runPullRequestAction);
+    const github: GitHubCliShape = { ...base, runPullRequestAction };
+
+    const result = await Effect.runPromise(
+      Effect.scoped(
+        Effect.gen(function* () {
+          const service = yield* makePullRequestService(
+            makeDependencies({
+              projects: [workspace],
+              repositories: new Map([[workspace.id, "acme/widgets"]]),
+              github,
+            }),
+          );
+          return yield* service.action({
+            workspaceId: workspace.id,
+            repository: "acme/widgets",
+            number: 42,
+            action: "close",
+          });
+        }),
+      ),
+    );
+
+    expect(result.workspaceId).toBe(workspace.id);
+    expect(runPullRequestAction).toHaveBeenCalledExactlyOnceWith({
+      cwd: workspace.access.primaryFolder,
+      repository: "acme/widgets",
+      number: 42,
+      action: "close",
+    });
+  });
+
   it("returns one repository-level row for projects sharing a repository", async () => {
     const projectA = makeProject("project-list-a", "List A", "/tmp/list-a");
     const projectB = makeProject("project-list-b", "feature-1", "/tmp/list-b");
@@ -136,8 +211,8 @@ describe("PullRequestService", () => {
 
     expect(listReads).toBe(1);
     expect(result.entries).toHaveLength(1);
-    expect(result.entries[0]?.projectId).toBe(projectB.id);
-    expect(result.entries[0]?.projectContexts).toHaveLength(2);
+    expect(result.entries[0]?.workspaceId).toBe(projectB.id);
+    expect(result.entries[0]?.workspaceContexts).toHaveLength(2);
     expect(result.repositoryBatches).toHaveLength(1);
   });
 
@@ -174,7 +249,7 @@ describe("PullRequestService", () => {
               github,
             }),
           );
-          return yield* service.reviewRequestCount({ projectId: null });
+          return yield* service.reviewRequestCount({ workspaceId: null });
         }),
       ),
     );
@@ -199,7 +274,7 @@ describe("PullRequestService", () => {
             ...dependencies,
             resolveRepositories: () => Effect.succeed({ repositories: [], authoritative: false }),
           });
-          return yield* service.reviewRequestCount({ projectId: null });
+          return yield* service.reviewRequestCount({ workspaceId: null });
         }),
       ),
     );
@@ -283,8 +358,8 @@ describe("PullRequestService", () => {
     const project = makeProject("project-orphan", "Orphan", "/tmp/orphan");
     const base = createGitHubCliWithFakeGh().service;
     const writes: Array<{ repositoryKey: string; isPinned: boolean }> = [];
-    const pins: ProjectPullRequestPinsShape = {
-      listByProjectIds: () => Effect.succeed([]),
+    const pins: WorkspacePullRequestPinsShape = {
+      listByWorkspaceIds: () => Effect.succeed([]),
       setPinned: (input) =>
         Effect.sync(() => {
           writes.push({ repositoryKey: input.repositoryKey, isPinned: input.isPinned });
@@ -303,7 +378,7 @@ describe("PullRequestService", () => {
             }),
           );
           return yield* service.setPinned({
-            projectId: project.id,
+            workspaceId: project.id,
             repository: " Acme/Removed ",
             number: 42,
             isPinned: false,
@@ -321,8 +396,8 @@ describe("PullRequestService", () => {
     const writes: Array<{ repositoryKey: string; number: number; isPinned: boolean }> = [];
     const pins = makePins(
       [
-        { projectId: project.id, repositoryKey: "acme/removed", number: 9 },
-        { projectId: project.id, repositoryKey: "acme/current", number: 10 },
+        { workspaceId: project.id, repositoryKey: "acme/removed", number: 9 },
+        { workspaceId: project.id, repositoryKey: "acme/current", number: 10 },
       ],
       (input) => writes.push(input),
     );
@@ -344,7 +419,7 @@ describe("PullRequestService", () => {
     );
 
     expect(writes).toEqual([
-      { projectId: project.id, repositoryKey: "acme/removed", number: 9, isPinned: false },
+      { workspaceId: project.id, repositoryKey: "acme/removed", number: 9, isPinned: false },
     ]);
   });
 
@@ -356,7 +431,7 @@ describe("PullRequestService", () => {
       repositories: new Map(),
       github: createGitHubCliWithFakeGh().service,
       pins: makePins(
-        [{ projectId: project.id, repositoryKey: "acme/possibly-current", number: 11 }],
+        [{ workspaceId: project.id, repositoryKey: "acme/possibly-current", number: 11 }],
         (input) => writes.push(input),
       ),
     });
@@ -387,7 +462,7 @@ describe("PullRequestService", () => {
       repositories: new Map(),
       github: createGitHubCliWithFakeGh().service,
       pins: makePins(
-        [{ projectId: project.id, repositoryKey: "acme/possibly-current", number: 11 }],
+        [{ workspaceId: project.id, repositoryKey: "acme/possibly-current", number: 11 }],
         (input) => writes.push(input),
       ),
     });
@@ -434,7 +509,7 @@ describe("PullRequestService", () => {
               projects: [project],
               repositories: new Map([[project.id, "acme/shared"]]),
               github,
-              pins: makePins([{ projectId: project.id, repositoryKey: "acme/shared", number: 99 }]),
+              pins: makePins([{ workspaceId: project.id, repositoryKey: "acme/shared", number: 99 }]),
             }),
           );
           return yield* service.list({ state: "open", involvement: "authored" });
@@ -466,12 +541,12 @@ describe("PullRequestService", () => {
     };
     const pins = [
       ...Array.from({ length: 15 }, (_, index) => ({
-        projectId: projectA.id,
+        workspaceId: projectA.id,
         repositoryKey: "acme/shared",
         number: 100 + index,
       })),
       ...Array.from({ length: 15 }, (_, index) => ({
-        projectId: projectB.id,
+        workspaceId: projectB.id,
         repositoryKey: "acme/shared",
         number: 115 + index,
       })),
@@ -501,7 +576,7 @@ describe("PullRequestService", () => {
       true,
     );
     expect(
-      result.entries.filter((entry) => entry.number === 100).map((entry) => entry.projectId),
+      result.entries.filter((entry) => entry.number === 100).map((entry) => entry.workspaceId),
     ).toEqual([projectA.id]);
   });
 
@@ -523,7 +598,7 @@ describe("PullRequestService", () => {
     };
     const repositories = new Map(projects.map((project) => [project.id, "acme/shared"]));
     const pins = projects.map((project) => ({
-      projectId: project.id,
+      workspaceId: project.id,
       repositoryKey: "acme/shared",
       number: 99,
     }));
@@ -576,7 +651,7 @@ describe("PullRequestService", () => {
               projects: [project],
               repositories: new Map([[project.id, "acme/shared"]]),
               github,
-              pins: makePins([{ projectId: project.id, repositoryKey: "acme/shared", number: 99 }]),
+              pins: makePins([{ workspaceId: project.id, repositoryKey: "acme/shared", number: 99 }]),
             }),
           );
           return [
@@ -594,7 +669,7 @@ describe("PullRequestService", () => {
   it("deletes a pin only after exact recovery proves the pull request is missing", async () => {
     const project = makeProject("project-missing-pin", "Missing pin", "/tmp/missing-pin");
     const writes: Array<{
-      projectId: ProjectId;
+      workspaceId: ProductWorkspaceId;
       repositoryKey: string;
       number: number;
       isPinned: boolean;
@@ -623,7 +698,7 @@ describe("PullRequestService", () => {
               repositories: new Map([[project.id, "acme/shared"]]),
               github,
               pins: makePins(
-                [{ projectId: project.id, repositoryKey: "acme/shared", number: 99 }],
+                [{ workspaceId: project.id, repositoryKey: "acme/shared", number: 99 }],
                 (input) => writes.push(input),
               ),
             }),
@@ -634,7 +709,7 @@ describe("PullRequestService", () => {
     );
 
     expect(writes).toEqual([
-      { projectId: project.id, repositoryKey: "acme/shared", number: 99, isPinned: false },
+      { workspaceId: project.id, repositoryKey: "acme/shared", number: 99, isPinned: false },
     ]);
   });
 
@@ -669,7 +744,7 @@ describe("PullRequestService", () => {
               repositories: new Map([[project.id, "acme/shared"]]),
               github,
               pins: makePins(
-                [{ projectId: project.id, repositoryKey: "acme/shared", number: 99 }],
+                [{ workspaceId: project.id, repositoryKey: "acme/shared", number: 99 }],
                 (input) => pinWrites.push(input),
               ),
             }),
@@ -715,7 +790,7 @@ describe("PullRequestService", () => {
               projects: [project],
               repositories: new Map([[project.id, "acme/shared"]]),
               github,
-              pins: makePins([{ projectId: project.id, repositoryKey: "acme/shared", number: 99 }]),
+              pins: makePins([{ workspaceId: project.id, repositoryKey: "acme/shared", number: 99 }]),
             }),
           );
           return yield* service.list({ state: "open", involvement: "reviewing" });
@@ -757,7 +832,7 @@ describe("PullRequestService", () => {
           yield* service.list(listInput);
           yield* service.list(listInput);
           yield* service.action({
-            projectId: projectA.id,
+            workspaceId: projectA.id,
             repository: "acme/one",
             number: 1,
             action: "close",
@@ -804,7 +879,7 @@ describe("PullRequestService", () => {
           yield* service.list(listInput);
           const actionFiber = yield* service
             .action({
-              projectId: project.id,
+              workspaceId: project.id,
               repository: "acme/cancelled",
               number: 1,
               action: "close",
@@ -853,14 +928,14 @@ describe("PullRequestService", () => {
               projects: [project],
               repositories: new Map([[project.id, "acme/shared"]]),
               github,
-              pins: makePins([{ projectId: project.id, repositoryKey: "acme/shared", number: 99 }]),
+              pins: makePins([{ workspaceId: project.id, repositoryKey: "acme/shared", number: 99 }]),
             }),
           );
           const listInput = { state: "open" as const, involvement: "authored" as const };
           yield* service.list(listInput);
           const commentFiber = yield* service
             .comment({
-              projectId: project.id,
+              workspaceId: project.id,
               repository: "acme/shared",
               number: 99,
               body: "Looks good",

@@ -14,7 +14,6 @@ import {
   withDatabaseLifecycleLock,
 } from "./DatabaseLifecycleLock.ts";
 import { makeSqlitePersistenceLive } from "./Layers/Sqlite.ts";
-import { restoreMarkedMigrationBackup } from "./MigrationBackup.ts";
 
 const tempDirectories: Array<string> = [];
 
@@ -141,27 +140,7 @@ describe("database lifecycle lock", () => {
     expect((await fs.lstat(path.join(lockPath, "owner.json"))).isSymbolicLink()).toBe(true);
   });
 
-  it("makes recovery refuse while a server layer owns the database", async () => {
-    const dbPath = await makeDbPath();
-
-    const recoveryExit = await Effect.runPromise(
-      Effect.scoped(
-        Effect.gen(function* () {
-          yield* Layer.build(
-            makeSqlitePersistenceLive(dbPath).pipe(Layer.provide(NodeServices.layer)),
-          );
-          return yield* Effect.exit(restoreMarkedMigrationBackup(dbPath));
-        }),
-      ),
-    );
-
-    expect(recoveryExit._tag).toBe("Failure");
-    if (recoveryExit._tag === "Failure") {
-      expect(String(recoveryExit.cause)).toContain("DatabaseLifecycleLockedError");
-    }
-  });
-
-  it("makes server startup refuse while recovery owns the database", async () => {
+  it("makes server startup refuse while another lifecycle owner holds the database", async () => {
     const dbPath = await makeDbPath();
 
     const startupExit = await Effect.runPromise(

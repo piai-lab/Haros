@@ -207,7 +207,7 @@ export function beginPullRequestRefresh(
 
 export function beginPullRequestActionProtection(
   queryClient: QueryClient,
-  input: Pick<PullRequestDetailInput, "projectId" | "repository" | "number">,
+  input: Pick<PullRequestDetailInput, "workspaceId" | "repository" | "number">,
   patch: PullRequestActionListPatch,
 ): PullRequestActionProtectionContext {
   const coordinator = getPinMutationCoordinator(queryClient);

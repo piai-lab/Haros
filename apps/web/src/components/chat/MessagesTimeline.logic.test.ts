@@ -1,4 +1,5 @@
-import { CheckpointRef, MessageId, OrchestrationProposedPlanId, TurnId } from "@omnimind/contracts";
+import type { ConversationHistoryPlanId } from "~/historicalConversation";
+import { CheckpointRef, MessageId, TurnId } from "@omnimind/contracts";
 import { describe, expect, it } from "vitest";
 import {
   buildTurnDiffSummaryByAssistantMessageId,
@@ -907,7 +908,7 @@ describe("deriveMessagesTimelineRows", () => {
     kind: "proposed-plan",
     createdAt,
     proposedPlan: {
-      id: OrchestrationProposedPlanId.makeUnsafe(id),
+      id,
       turnId: TurnId.makeUnsafe(turnId),
       planMarkdown: "# Plan",
       implementedAt: null,

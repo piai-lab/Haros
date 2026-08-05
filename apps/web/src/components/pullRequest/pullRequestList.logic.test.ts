@@ -18,8 +18,8 @@ function makeActor(login: string): PullRequestActor {
 
 function makeEntry(overrides: Partial<PullRequestListEntry> = {}): PullRequestListEntry {
   const entry: PullRequestListEntry = {
-    projectId: "project-1" as PullRequestListEntry["projectId"],
-    projectTitle: "Project One",
+    workspaceId: "project-1" as PullRequestListEntry["workspaceId"],
+    workspaceTitle: "Project One",
     repository: "acme/widgets",
     number: 1,
     title: "Untitled",
@@ -36,17 +36,17 @@ function makeEntry(overrides: Partial<PullRequestListEntry> = {}): PullRequestLi
     reviewDecision: null,
     viewerReviewRequested: false,
     isPinned: false,
-    projectContexts: [],
+    workspaceContexts: [],
     mergeability: "unknown",
     labels: [],
     ...overrides,
   };
   return {
     ...entry,
-    projectContexts: overrides.projectContexts ?? [
+    workspaceContexts: overrides.workspaceContexts ?? [
       {
-        projectId: entry.projectId,
-        projectTitle: entry.projectTitle,
+        workspaceId: entry.workspaceId,
+        workspaceTitle: entry.workspaceTitle,
         isPinned: entry.isPinned ?? false,
       },
     ],
@@ -145,8 +145,8 @@ describe("pull request list identity", () => {
   it("uses one stable row identity across projects sharing a repository", () => {
     const first = makeEntry();
     const second = makeEntry({
-      projectId: "project-2" as PullRequestListEntry["projectId"],
-      projectTitle: "Project Two",
+      workspaceId: "project-2" as PullRequestListEntry["workspaceId"],
+      workspaceTitle: "Project Two",
     });
     expect(pullRequestListEntryKey(first)).toBe(pullRequestListEntryKey(second));
   });
@@ -154,7 +154,7 @@ describe("pull request list identity", () => {
   it("counts one review request once across shared-project rows", () => {
     const first = makeEntry({ viewerReviewRequested: true });
     const duplicate = makeEntry({
-      projectId: "project-2" as PullRequestListEntry["projectId"],
+      workspaceId: "project-2" as PullRequestListEntry["workspaceId"],
       viewerReviewRequested: true,
     });
     const other = makeEntry({ number: 2, viewerReviewRequested: true });
@@ -166,15 +166,15 @@ describe("pullRequestPinToggleInputs", () => {
   it("clears every owning project from an aggregate pinned row", () => {
     const entry = makeEntry({
       isPinned: true,
-      projectContexts: [
+      workspaceContexts: [
         {
-          projectId: "project-1" as PullRequestListEntry["projectId"],
-          projectTitle: "Project One",
+          workspaceId: "project-1" as PullRequestListEntry["workspaceId"],
+          workspaceTitle: "Project One",
           isPinned: true,
         },
         {
-          projectId: "project-2" as PullRequestListEntry["projectId"],
-          projectTitle: "Project Two",
+          workspaceId: "project-2" as PullRequestListEntry["workspaceId"],
+          workspaceTitle: "Project Two",
           isPinned: true,
         },
       ],
@@ -182,13 +182,13 @@ describe("pullRequestPinToggleInputs", () => {
 
     expect(pullRequestPinToggleInputs(entry, true)).toEqual([
       {
-        projectId: "project-1",
+        workspaceId: "project-1",
         repository: "acme/widgets",
         number: 1,
         isPinned: false,
       },
       {
-        projectId: "project-2",
+        workspaceId: "project-2",
         repository: "acme/widgets",
         number: 1,
         isPinned: false,
@@ -200,7 +200,7 @@ describe("pullRequestPinToggleInputs", () => {
     const entry = makeEntry({ isPinned: true });
     expect(pullRequestPinToggleInputs(entry, false)).toEqual([
       {
-        projectId: entry.projectId,
+        workspaceId: entry.workspaceId,
         repository: entry.repository,
         number: entry.number,
         isPinned: false,
@@ -210,28 +210,28 @@ describe("pullRequestPinToggleInputs", () => {
 
   it("pins every associated project from an aggregate unpinned row", () => {
     const entry = makeEntry({
-      projectContexts: [
+      workspaceContexts: [
         {
-          projectId: "project-1" as PullRequestListEntry["projectId"],
-          projectTitle: "Project One",
+          workspaceId: "project-1" as PullRequestListEntry["workspaceId"],
+          workspaceTitle: "Project One",
           isPinned: false,
         },
         {
-          projectId: "project-2" as PullRequestListEntry["projectId"],
-          projectTitle: "Project Two",
+          workspaceId: "project-2" as PullRequestListEntry["workspaceId"],
+          workspaceTitle: "Project Two",
           isPinned: false,
         },
       ],
     });
     expect(pullRequestPinToggleInputs(entry, true)).toEqual([
       {
-        projectId: "project-1",
+        workspaceId: "project-1",
         repository: "acme/widgets",
         number: 1,
         isPinned: true,
       },
       {
-        projectId: "project-2",
+        workspaceId: "project-2",
         repository: "acme/widgets",
         number: 1,
         isPinned: true,

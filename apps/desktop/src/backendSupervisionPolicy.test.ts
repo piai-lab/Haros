@@ -11,12 +11,11 @@ import {
 
 const failure = (
   policy: BackendSupervisionPolicy,
-  overrides?: { readonly migrationRecoveryMarkerPresent?: boolean; readonly quitting?: boolean },
+  overrides?: { readonly quitting?: boolean },
 ) =>
   policy.respondToStartFailure({
     quitting: overrides?.quitting ?? false,
     restartPending: false,
-    migrationRecoveryMarkerPresent: overrides?.migrationRecoveryMarkerPresent ?? false,
   });
 
 describe("backendRestartDelayMs", () => {
@@ -64,7 +63,6 @@ describe("BackendSupervisionPolicy backoff", () => {
       policy.respondToStartFailure({
         quitting: false,
         restartPending: true,
-        migrationRecoveryMarkerPresent: false,
       }),
     ).toEqual({ kind: "ignore" });
     expect(policy.consecutiveFailures).toBe(0);
@@ -132,60 +130,15 @@ describe("BackendSupervisionPolicy circuit breaker", () => {
   });
 });
 
-describe("BackendSupervisionPolicy mid-session migration recovery", () => {
-  it("hands a crash to recovery when the marker appears mid-session", () => {
-    const policy = new BackendSupervisionPolicy();
-
-    expect(failure(policy)).toMatchObject({ kind: "retry" });
-    expect(failure(policy, { migrationRecoveryMarkerPresent: true })).toEqual({
-      kind: "recover-migration",
-    });
-  });
-
-  it("prompts once per app run and falls back to supervised restarts afterwards", () => {
-    const policy = new BackendSupervisionPolicy();
-
-    expect(failure(policy, { migrationRecoveryMarkerPresent: true })).toEqual({
-      kind: "recover-migration",
-    });
-    expect(policy.hasPromptedMigrationRecovery).toBe(true);
-    // The marker is still on disk, but the prompt must not be shown again.
-    expect(failure(policy, { migrationRecoveryMarkerPresent: true })).toMatchObject({
-      kind: "retry",
-      delayMs: 500,
-    });
-  });
-
-  it("does not consume a restart attempt when recovery takes over", () => {
-    const policy = new BackendSupervisionPolicy();
-
-    failure(policy, { migrationRecoveryMarkerPresent: true });
-
-    expect(policy.consecutiveFailures).toBe(0);
-  });
-
-  it("keeps the once-per-run latch across legitimate restarts", () => {
-    const policy = new BackendSupervisionPolicy();
-
-    failure(policy, { migrationRecoveryMarkerPresent: true });
-    policy.reset();
-    policy.recordReadiness();
-
-    expect(failure(policy, { migrationRecoveryMarkerPresent: true })).toMatchObject({
-      kind: "retry",
-    });
-  });
-});
-
 describe("BackendOutputTailDetector", () => {
   it("keeps the tail of the output across chunks", () => {
     const detector = new BackendOutputTailDetector();
 
     detector.push(Buffer.from("first line\r\n", "utf8"));
-    detector.push("MigrationRecoveryRequiredError: backup verification failed\n");
+    detector.push("BackendStartupError: startup verification failed\n");
 
     expect(detector.read()).toBe(
-      "first line\nMigrationRecoveryRequiredError: backup verification failed\n",
+      "first line\nBackendStartupError: startup verification failed\n",
     );
   });
 
@@ -205,15 +158,15 @@ describe("summarizeBackendFailureOutput", () => {
     const summary = summarizeBackendFailureOutput(
       [
         "starting server",
-        "running migrations",
-        "MigrationRecoveryRequiredError: migration 0007 aborted",
-        "    at applyMigration (index.mjs:1:1)",
+        "starting services",
+        "BackendStartupError: capability initialization aborted",
+        "    at initializeCapability (index.mjs:1:1)",
         "",
       ].join("\n"),
     );
 
     expect(summary).toBe(
-      "MigrationRecoveryRequiredError: migration 0007 aborted\n    at applyMigration (index.mjs:1:1)",
+      "BackendStartupError: capability initialization aborted\n    at initializeCapability (index.mjs:1:1)",
     );
   });
 

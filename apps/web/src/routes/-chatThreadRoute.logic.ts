@@ -3,10 +3,11 @@
 // Layer: Route UI logic helpers.
 // Exports: thread title fallback, deep-link bootstrap replay handling, and panel toggle helpers.
 
-import type { ProjectId, ThreadEnvironmentMode, ThreadId, TurnId } from "@omnimind/contracts";
+import type { ProjectId, WorkspaceEnvironmentMode, ThreadId, TurnId } from "@omnimind/contracts";
 import { resolveThreadWorkspaceCwd } from "@omnimind/shared/threadEnvironment";
 
 import type { ChatRightPanel, DiffRouteSearch } from "../diffRouteSearch";
+import type { EmptyRouteRestoreRecoveryState } from "../chatRouteRestore";
 
 export interface ChatPanelStateSnapshot {
   panel: ChatRightPanel | null;
@@ -43,6 +44,22 @@ export type ThreadSurfaceMembership =
   | "canonicalize-chat"
   | "missing-agent"
   | "missing-chat";
+
+export function resolveThreadRouteRecoveryState(input: {
+  readonly threadId: ThreadId;
+  readonly episodeThreadId: ThreadId;
+  readonly episodeState: EmptyRouteRestoreRecoveryState;
+}): EmptyRouteRestoreRecoveryState {
+  return input.episodeThreadId === input.threadId ? input.episodeState : "idle";
+}
+
+export function resolveThreadRouteConversationError(input: {
+  readonly threadId: ThreadId;
+  readonly episodeThreadId: ThreadId;
+  readonly episodeError: string | null;
+}): string | null {
+  return input.episodeThreadId === input.threadId ? input.episodeError : null;
+}
 
 export function resolveThreadSurfaceMembership(input: {
   readonly surface?: "chat" | undefined;
@@ -106,7 +123,7 @@ export function resolveThreadPickerTitle(title: string | null): string {
 // File previews follow the thread runtime cwd so worktree chats open the files they actually edit.
 export function resolveFilePreviewWorkspaceRoot(input: {
   projectCwd?: string | null | undefined;
-  threadEnvMode?: ThreadEnvironmentMode | null | undefined;
+  threadEnvMode?: WorkspaceEnvironmentMode | null | undefined;
   threadWorktreePath?: string | null | undefined;
   threadWorkingDirectory?: string | null | undefined;
 }): string | null {

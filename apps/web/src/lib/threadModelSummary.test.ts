@@ -20,7 +20,7 @@ describe("resolveThreadModelSummary", () => {
     expect(summary?.statusLabel?.toLowerCase()).toBe("high");
   });
 
-  it("falls back to the model's default effort when none is stored", () => {
+  it("does not invent a current default for historical rows without options", () => {
     const withEffort = resolveThreadModelSummary({
       provider: "codex",
       model: "gpt-5.5",
@@ -32,8 +32,7 @@ describe("resolveThreadModelSummary", () => {
     });
 
     expect(withEffort?.statusLabel?.toLowerCase()).toBe("low");
-    expect(withoutOptions?.statusLabel).not.toBeNull();
-    expect(withoutOptions?.statusLabel).not.toBe(withEffort?.statusLabel);
+    expect(withoutOptions?.statusLabel).toBeNull();
   });
 
   it("summarizes a claude selection", () => {

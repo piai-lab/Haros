@@ -1,16 +1,13 @@
+import type { HistoricalModelOptions, HistoricalModelSelection, HistoricalModelSlug } from "~/historicalModelSelection";
 import {
   ProjectId,
   ThreadId,
-  type ModelSelection,
-  type ModelSlug,
   type ProviderApprovalDecision,
-  type ProviderKind,
   type ProviderRequestKind,
   type RuntimeMode,
-  type ServerProviderAuthStatus,
   type ThreadId as ThreadIdType,
 } from "@omnimind/contracts";
-import { normalizeModelSlug } from "@omnimind/shared/model";
+import { normalizeModelIdentifier } from "../modelIdentifier";
 import { buildOmniMindBranchName } from "@omnimind/shared/git";
 import { isGenericChatThreadTitle } from "@omnimind/shared/chatThreads";
 import { isGenericTerminalThreadTitle } from "@omnimind/shared/terminalThreads";
@@ -43,14 +40,11 @@ import {
   type WorkLogEntry,
 } from "../session-logic";
 import { localSubagentThreadId } from "./ChatView.selectors";
-import type { ProviderModelOption } from "../providerModelOptions";
 
 export const LAST_INVOKED_SCRIPT_BY_PROJECT_KEY = "omnimind:last-invoked-script-by-project";
-export const DISMISSED_PROVIDER_HEALTH_BANNERS_KEY = "omnimind:dismissed-provider-health-banners";
 export const PROMPT_HISTORY_MAX_ENTRIES = 100;
 
 export const LastInvokedScriptByProjectSchema = Schema.Record(ProjectId, Schema.String);
-export const DismissedProviderHealthBannersSchema = Schema.Array(Schema.String);
 
 export interface PendingFileUndo {
   readonly threadId: ThreadIdType;
@@ -188,7 +182,7 @@ export function createRuntimeModePersistenceQueue(
   };
 }
 
-export function modelSelectionsEqual(left: ModelSelection, right: ModelSelection): boolean {
+export function modelSelectionsEqual(left: HistoricalModelSelection, right: HistoricalModelSelection): boolean {
   return (
     left.provider === right.provider &&
     left.model === right.model &&
@@ -205,11 +199,11 @@ export function modelSelectionsEqual(left: ModelSelection, right: ModelSelection
  * incompatible replacement model is not rejected by the old policy.
  */
 export async function persistModelSelectionBeforeRuntimeMode(input: {
-  currentModelSelection: ModelSelection;
-  nextModelSelection?: ModelSelection;
+  currentModelSelection: HistoricalModelSelection;
+  nextModelSelection?: HistoricalModelSelection;
   currentRuntimeMode: RuntimeMode;
   nextRuntimeMode: RuntimeMode;
-  persistModelSelection: (selection: ModelSelection) => Promise<unknown>;
+  persistModelSelection: (selection: HistoricalModelSelection) => Promise<unknown>;
   persistRuntimeMode: (mode: RuntimeMode) => Promise<unknown>;
 }): Promise<void> {
   const nextModelSelection = input.nextModelSelection;
@@ -229,13 +223,6 @@ export async function persistModelSelectionBeforeRuntimeMode(input: {
   if (runtimeChanged && !downgradesFromAuto) {
     await input.persistRuntimeMode(input.nextRuntimeMode);
   }
-}
-
-export function shouldRenderProviderHealthBanner(input: {
-  threadEntryPoint: ThreadPrimarySurface;
-  terminalWorkspaceTerminalTabActive: boolean;
-}): boolean {
-  return input.threadEntryPoint === "chat" && !input.terminalWorkspaceTerminalTabActive;
 }
 
 // Big-paste cards are sent only by the normal chat path; non-chat composer flows
@@ -502,7 +489,7 @@ export function resolveDefaultEnvironmentPanelOpen(input: {
   );
 }
 
-// Build the ordered model list used by model.next / model.previous: favorites first
+// Build the ordered model list used by the current picker: favorites first
 // (stable user order), then remaining discovered options. Returns null when cycling is
 // a no-op (fewer than two selectable models).
 export function resolveCycledModelSlug(input: {
@@ -688,7 +675,7 @@ export function resolveThreadDetailHydration(input: {
 export function buildLocalDraftThread(
   threadId: ThreadId,
   draftThread: DraftThreadState,
-  fallbackModelSelection: ModelSelection,
+  fallbackModelSelection: HistoricalModelSelection,
   error: string | null,
 ): Thread {
   return {
@@ -841,7 +828,6 @@ export function describeVoiceRecordingStartError(error: unknown): string {
 }
 
 export function deriveComposerVoiceState(input: {
-  authStatus: ServerProviderAuthStatus | null | undefined;
   voiceTranscriptionAvailable: boolean | undefined;
   isRecording: boolean;
   isTranscribing: boolean;
@@ -850,8 +836,8 @@ export function deriveComposerVoiceState(input: {
   canStartVoiceNotes: boolean;
   showVoiceNotesControl: boolean;
 } {
-  const canRenderVoiceNotes = input.authStatus !== "unauthenticated";
-  const canStartVoiceNotes = canRenderVoiceNotes && input.voiceTranscriptionAvailable !== false;
+  const canRenderVoiceNotes = input.voiceTranscriptionAvailable === true;
+  const canStartVoiceNotes = canRenderVoiceNotes;
 
   return {
     canRenderVoiceNotes,
@@ -861,10 +847,10 @@ export function deriveComposerVoiceState(input: {
 }
 
 export function shouldShowComposerModelBootstrapSkeleton(input: {
-  selectedProvider: ProviderKind;
+  selectedProvider: string;
   selectedModel: string | null | undefined;
-  persistedModelSelection: ModelSelection | null | undefined;
-  draftModelSelection: ModelSelection | null | undefined;
+  persistedModelSelection: HistoricalModelSelection | null | undefined;
+  draftModelSelection: HistoricalModelSelection | null | undefined;
   providerModelsLoading: boolean;
   requiresDiscoveredModels?: boolean;
 }): boolean {
@@ -891,23 +877,11 @@ export function shouldShowComposerModelBootstrapSkeleton(input: {
   }
 
   const normalizedSelectedModel =
-    normalizeModelSlug(input.selectedModel, input.selectedProvider) ?? input.selectedModel;
+    normalizeModelIdentifier(input.selectedModel) ?? input.selectedModel;
   const normalizedPersistedModel =
-    normalizeModelSlug(persistedSelection.model, persistedSelection.provider) ??
-    persistedSelection.model;
+    normalizeModelIdentifier(persistedSelection.model) ?? persistedSelection.model;
 
   return normalizedSelectedModel !== normalizedPersistedModel;
-}
-
-export function resolveCommittedProviderModel(input: {
-  selectedModel: ModelSlug;
-  availableOptions: ReadonlyArray<ProviderModelOption>;
-  fallback: () => string;
-}): string {
-  const directRuntimeOption = input.availableOptions.find(
-    (option) => option.slug === input.selectedModel,
-  );
-  return directRuntimeOption?.slug ?? input.fallback();
 }
 
 // Lets a pending custom binary path re-check a session that was already observed ready.

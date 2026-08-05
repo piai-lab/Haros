@@ -2,7 +2,7 @@
 // Purpose: Serializes image preparation, exposes pending UI state, and cancels stale draft work.
 // Layer: Web composer hook
 
-import { PROVIDER_SEND_TURN_MAX_ATTACHMENTS, type ThreadId } from "@omnimind/contracts";
+import { CHAT_TURN_MAX_ATTACHMENTS, type ThreadId } from "@omnimind/contracts";
 import { useCallback, useEffect, useMemo, useSyncExternalStore } from "react";
 
 import type { ComposerImageAttachment } from "../composerDraftStore";
@@ -11,7 +11,7 @@ import {
   type ComposerImageBuildResult,
 } from "../lib/composerSend";
 
-const ATTACHMENT_LIMIT_ERROR = `You can attach up to ${PROVIDER_SEND_TURN_MAX_ATTACHMENTS} references per message.`;
+const ATTACHMENT_LIMIT_ERROR = `You can attach up to ${CHAT_TURN_MAX_ATTACHMENTS} references per message.`;
 
 function revokePreparedImages(images: readonly ComposerImageAttachment[]): void {
   if (typeof URL === "undefined") return;
@@ -67,7 +67,7 @@ export class ComposerImageIntakeQueue {
         const acceptedCount = job.commitImages(result.images);
         const rejectedAtCapacity =
           acceptedCount < result.images.length &&
-          job.existingAttachmentCount() >= PROVIDER_SEND_TURN_MAX_ATTACHMENTS;
+          job.existingAttachmentCount() >= CHAT_TURN_MAX_ATTACHMENTS;
         const error = rejectedAtCapacity ? ATTACHMENT_LIMIT_ERROR : result.error;
         job.onError(error);
       })

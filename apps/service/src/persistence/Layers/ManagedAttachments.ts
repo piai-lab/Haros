@@ -16,7 +16,7 @@ import {
 
 const blobColumns = (sql: SqlClient.SqlClient) => sql`
   attachment_id AS "attachmentId",
-  owner_thread_id AS "ownerThreadId",
+  conversation_id AS "conversationId",
   owner_kind AS "ownerKind",
   owner_id AS "ownerId",
   kind,
@@ -28,8 +28,8 @@ const blobColumns = (sql: SqlClient.SqlClient) => sql`
   relative_path AS "relativePath",
   state,
   staging_expires_at AS "stagingExpiresAt",
-  claim_command_id AS "claimCommandId",
-  claim_message_id AS "claimMessageId",
+  claim_run_id AS "claimRunId",
+  claim_entry_id AS "claimEntryId",
   claimed_at AS "claimedAt",
   delete_reason AS "deleteReason",
   delete_requested_at AS "deleteRequestedAt",
@@ -46,15 +46,15 @@ const makeRepository = (limits: ManagedAttachmentLimits) =>
       Effect.gen(function* () {
         const inserted = yield* sql<ManagedAttachmentBlob>`
           INSERT INTO managed_attachment_blobs (
-            attachment_id, owner_thread_id, owner_kind, owner_id,
+            attachment_id, conversation_id, owner_kind, owner_id,
             kind, original_name, mime_type, reserved_bytes, size_bytes, sha256,
             relative_path, state, staging_expires_at,
-            claim_command_id, claim_message_id, claimed_at,
+            claim_run_id, claim_entry_id, claimed_at,
             delete_reason, delete_requested_at, deleted_at,
             created_at, updated_at
           )
           SELECT
-            ${input.attachmentId}, ${input.ownerThreadId}, ${input.ownerKind}, ${input.ownerId},
+            ${input.attachmentId}, ${input.conversationId}, ${input.ownerKind}, ${input.ownerId},
             ${input.kind}, ${input.originalName}, ${input.mimeType}, ${input.reservedBytes}, NULL, NULL,
             ${input.relativePath}, 'uploading', NULL,
             NULL, NULL, NULL,
@@ -118,7 +118,7 @@ const makeRepository = (limits: ManagedAttachmentLimits) =>
             staging_expires_at = ${input.stagingExpiresAt},
             updated_at = ${input.now}
         WHERE attachment_id = ${input.attachmentId}
-          AND owner_thread_id = ${input.ownerThreadId}
+          AND conversation_id = ${input.conversationId}
           AND owner_kind = ${input.ownerKind}
           AND owner_id = ${input.ownerId}
           AND state = 'uploading'
@@ -139,7 +139,7 @@ const makeRepository = (limits: ManagedAttachmentLimits) =>
         SELECT ${blobColumns(sql)}
         FROM managed_attachment_blobs
         WHERE attachment_id = ${input.attachmentId}
-          AND owner_thread_id = ${input.ownerThreadId}
+          AND conversation_id = ${input.conversationId}
           AND owner_kind = ${input.ownerKind}
           AND owner_id = ${input.ownerId}
           AND (
@@ -162,19 +162,19 @@ const makeRepository = (limits: ManagedAttachmentLimits) =>
         Effect.mapError(toPersistenceSqlError("ManagedAttachment.findClaimedById")),
       );
 
-    const findClaimedForCommand: ManagedAttachmentRepositoryShape["findClaimedForCommand"] = (
+    const findClaimedForRun: ManagedAttachmentRepositoryShape["findClaimedForRun"] = (
       input,
     ) =>
       sql<ManagedAttachmentBlob>`
           SELECT ${blobColumns(sql)}
           FROM managed_attachment_blobs
-          WHERE claim_command_id = ${input.commandId}
+          WHERE claim_run_id = ${input.runId}
             AND state = 'claimed'
           ORDER BY attachment_id ASC
-        `.pipe(Effect.mapError(toPersistenceSqlError("ManagedAttachment.findClaimedForCommand")));
+        `.pipe(Effect.mapError(toPersistenceSqlError("ManagedAttachment.findClaimedForRun")));
 
     const classifyClaimRejection = (
-      input: Parameters<ManagedAttachmentRepositoryShape["claimForAcceptedTurn"]>[0],
+      input: Parameters<ManagedAttachmentRepositoryShape["claimForProductRun"]>[0],
     ): Effect.Effect<ClaimManagedAttachmentsResult, unknown> =>
       Effect.gen(function* () {
         const rows = yield* sql<ManagedAttachmentBlob>`
@@ -188,7 +188,7 @@ const makeRepository = (limits: ManagedAttachmentLimits) =>
         if (
           rows.some(
             (row) =>
-              row.ownerThreadId !== input.ownerThreadId ||
+              row.conversationId !== input.conversationId ||
               row.ownerKind !== input.ownerKind ||
               row.ownerId !== input.ownerId,
           )
@@ -207,7 +207,7 @@ const makeRepository = (limits: ManagedAttachmentLimits) =>
         return { status: "rejected", reason: "already-claimed" } as const;
       });
 
-    const claimForAcceptedTurn: ManagedAttachmentRepositoryShape["claimForAcceptedTurn"] = (
+    const claimForProductRun: ManagedAttachmentRepositoryShape["claimForProductRun"] = (
       input,
     ) => {
       if (input.attachmentIds.length === 0) {
@@ -219,34 +219,34 @@ const makeRepository = (limits: ManagedAttachmentLimits) =>
       return sql<ManagedAttachmentBlob>`
           UPDATE managed_attachment_blobs
           SET state = 'claimed',
-              claim_command_id = COALESCE(claim_command_id, ${input.commandId}),
-              claim_message_id = ${input.messageId},
+              claim_run_id = COALESCE(claim_run_id, ${input.runId}),
+              claim_entry_id = ${input.entryId},
               claimed_at = COALESCE(claimed_at, ${input.now}),
               staging_expires_at = NULL,
               updated_at = ${input.now}
           WHERE attachment_id IN ${sql.in(input.attachmentIds)}
-            AND owner_thread_id = ${input.ownerThreadId}
+            AND conversation_id = ${input.conversationId}
             AND owner_kind = ${input.ownerKind}
             AND owner_id = ${input.ownerId}
             AND (
               (state = 'staged' AND staging_expires_at > ${input.now})
               OR (
                 state = 'claimed'
-                AND claim_message_id = ${input.messageId}
+                AND claim_entry_id = ${input.entryId}
               )
             )
             AND (
               SELECT COUNT(*)
               FROM managed_attachment_blobs AS eligible
               WHERE eligible.attachment_id IN ${sql.in(input.attachmentIds)}
-                AND eligible.owner_thread_id = ${input.ownerThreadId}
+                AND eligible.conversation_id = ${input.conversationId}
                 AND eligible.owner_kind = ${input.ownerKind}
                 AND eligible.owner_id = ${input.ownerId}
                 AND (
                   (eligible.state = 'staged' AND eligible.staging_expires_at > ${input.now})
                   OR (
                     eligible.state = 'claimed'
-                    AND eligible.claim_message_id = ${input.messageId}
+                    AND eligible.claim_entry_id = ${input.entryId}
                   )
                 )
             ) = ${input.attachmentIds.length}
@@ -257,7 +257,7 @@ const makeRepository = (limits: ManagedAttachmentLimits) =>
             ? Effect.succeed({ status: "claimed" as const, attachments: rows })
             : classifyClaimRejection(input),
         ),
-        Effect.mapError(toPersistenceSqlError("ManagedAttachment.claimForAcceptedTurn")),
+        Effect.mapError(toPersistenceSqlError("ManagedAttachment.claimForProductRun")),
       );
     };
 
@@ -332,7 +332,7 @@ const makeRepository = (limits: ManagedAttachmentLimits) =>
               delete_requested_at = COALESCE(delete_requested_at, ${input.requestedAt}),
               updated_at = ${input.requestedAt}
           WHERE attachment_id IN ${sql.in(uniqueIds)}
-            AND owner_thread_id = ${input.ownerThreadId}
+            AND conversation_id = ${input.conversationId}
             AND state <> 'deleted'
           RETURNING attachment_id AS "attachmentId"
         `;
@@ -344,7 +344,7 @@ const makeRepository = (limits: ManagedAttachmentLimits) =>
       }).pipe(Effect.mapError(toPersistenceSqlError("ManagedAttachment.markCleanupByIds")));
     };
 
-    const markCleanupByThread: ManagedAttachmentRepositoryShape["markCleanupByThread"] = (input) =>
+    const markCleanupByConversation: ManagedAttachmentRepositoryShape["markCleanupByConversation"] = (input) =>
       Effect.gen(function* () {
         const rows = yield* sql<{ readonly attachmentId: string }>`
           UPDATE managed_attachment_blobs
@@ -352,7 +352,7 @@ const makeRepository = (limits: ManagedAttachmentLimits) =>
               delete_reason = COALESCE(delete_reason, ${input.reason}),
               delete_requested_at = COALESCE(delete_requested_at, ${input.requestedAt}),
               updated_at = ${input.requestedAt}
-          WHERE owner_thread_id = ${input.ownerThreadId}
+          WHERE conversation_id = ${input.conversationId}
             AND state <> 'deleted'
           RETURNING attachment_id AS "attachmentId"
         `;
@@ -361,7 +361,7 @@ const makeRepository = (limits: ManagedAttachmentLimits) =>
           yield* enqueueCleanupRows({ ...input, attachmentIds });
         }
         return attachmentIds;
-      }).pipe(Effect.mapError(toPersistenceSqlError("ManagedAttachment.markCleanupByThread")));
+      }).pipe(Effect.mapError(toPersistenceSqlError("ManagedAttachment.markCleanupByConversation")));
 
     const markUnreferencedClaimedForCleanup: ManagedAttachmentRepositoryShape["markUnreferencedClaimedForCleanup"] =
       (input) => {
@@ -375,7 +375,7 @@ const makeRepository = (limits: ManagedAttachmentLimits) =>
                     delete_reason = COALESCE(delete_reason, ${input.reason}),
                     delete_requested_at = COALESCE(delete_requested_at, ${input.requestedAt}),
                     updated_at = ${input.requestedAt}
-                WHERE owner_thread_id = ${input.ownerThreadId}
+                WHERE conversation_id = ${input.conversationId}
                   AND state = 'claimed'
                 RETURNING attachment_id AS "attachmentId"
               `
@@ -385,7 +385,7 @@ const makeRepository = (limits: ManagedAttachmentLimits) =>
                     delete_reason = COALESCE(delete_reason, ${input.reason}),
                     delete_requested_at = COALESCE(delete_requested_at, ${input.requestedAt}),
                     updated_at = ${input.requestedAt}
-                WHERE owner_thread_id = ${input.ownerThreadId}
+                WHERE conversation_id = ${input.conversationId}
                   AND state = 'claimed'
                   AND attachment_id NOT IN ${sql.in(retainedAttachmentIds)}
                 RETURNING attachment_id AS "attachmentId"
@@ -606,11 +606,11 @@ const makeRepository = (limits: ManagedAttachmentLimits) =>
       finalizeStaged,
       findServerOwned,
       findClaimedById,
-      findClaimedForCommand,
+      findClaimedForRun,
       cancelStaged,
-      claimForAcceptedTurn,
+      claimForProductRun,
       markCleanupByIds,
-      markCleanupByThread,
+      markCleanupByConversation,
       markUnreferencedClaimedForCleanup,
       markExpiredForCleanup,
       leaseCleanup,

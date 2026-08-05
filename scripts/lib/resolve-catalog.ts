@@ -29,3 +29,22 @@ export function resolveCatalogDependencies(
     }),
   );
 }
+
+/**
+ * Resolve dependencies that must remain beside a bundled workspace artifact.
+ * Workspace-only imports are compiled into that artifact and must not become
+ * broken workspace links in the standalone application stage.
+ */
+export function resolvePackagedWorkspaceRuntimeDependencies(
+  dependencies: Record<string, unknown>,
+  catalog: Record<string, unknown>,
+  label: string,
+): Record<string, unknown> {
+  const externalRuntimeDependencies = Object.fromEntries(
+    Object.entries(dependencies).filter(
+      ([, specification]) =>
+        typeof specification !== "string" || !specification.startsWith("workspace:"),
+    ),
+  );
+  return resolveCatalogDependencies(externalRuntimeDependencies, catalog, label);
+}

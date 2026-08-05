@@ -55,9 +55,9 @@ function makeTimelineSource() {
 }
 
 describe("pullRequestDetailInputKey", () => {
-  it("builds a stable projectId:repository#number identity", () => {
+  it("builds a stable workspaceId:repository#number identity", () => {
     const input: PullRequestDetailInput = {
-      projectId: "project-1" as PullRequestDetailInput["projectId"],
+      workspaceId: "project-1" as PullRequestDetailInput["workspaceId"],
       repository: "acme/widgets",
       number: 350,
     };
@@ -140,7 +140,7 @@ describe("pullRequestDetailInputFromPane", () => {
     diffTurnId: null,
     diffFilePath: null,
     filePath: null,
-    pullRequestProjectId: "project-1" as RightDockPane["pullRequestProjectId"],
+    pullRequestWorkspaceId: "project-1" as RightDockPane["pullRequestWorkspaceId"],
     pullRequestRepository: "acme/widgets",
     pullRequestNumber: 350,
     pullRequestInitialTab: null,
@@ -148,7 +148,7 @@ describe("pullRequestDetailInputFromPane", () => {
 
   it("builds the detail input from a fully-populated pull request pane", () => {
     expect(pullRequestDetailInputFromPane(basePane)).toEqual({
-      projectId: "project-1",
+      workspaceId: "project-1",
       repository: "acme/widgets",
       number: 350,
     });

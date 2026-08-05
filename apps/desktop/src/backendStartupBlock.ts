@@ -7,9 +7,6 @@ export type BackendStartupBlock =
   | {
       readonly kind: "database-locked";
       readonly ownerPid: number | null;
-    }
-  | {
-      readonly kind: "migration-recovery-required";
     };
 
 export class BackendStartupBlockDetector {
@@ -23,11 +20,6 @@ export class BackendStartupBlockDetector {
     this.output = `${this.output}${text.replace(/\r/g, "")}`;
     if (this.output.length > MAX_STARTUP_OUTPUT_CHARS) {
       this.output = this.output.slice(-MAX_STARTUP_OUTPUT_CHARS);
-    }
-
-    if (this.output.includes("MigrationRecoveryRequiredError:")) {
-      this.block = { kind: "migration-recovery-required" };
-      return;
     }
 
     const lockErrorIndex = this.output.indexOf("DatabaseLifecycleLockedError:");

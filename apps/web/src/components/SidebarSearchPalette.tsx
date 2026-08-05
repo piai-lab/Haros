@@ -6,8 +6,6 @@
  */
 import {
   BugIcon,
-  ArrowDownToLineIcon,
-  ArrowLeftIcon,
   ChatBubbleIcon,
   CheckIcon,
   CornerLeftUpIcon,
@@ -20,7 +18,7 @@ import {
   SettingsIcon,
   SunIcon,
 } from "~/lib/icons";
-import { type FilesystemBrowseResult, type ProviderKind } from "@omnimind/contracts";
+import { type FilesystemBrowseResult } from "@omnimind/contracts";
 import { isGenericChatThreadTitle } from "@omnimind/shared/chatThreads";
 import { type ComponentType, useEffect, useState, type KeyboardEvent } from "react";
 import { useQuery } from "@tanstack/react-query";
@@ -70,15 +68,10 @@ import {
   CommandSeparator,
 } from "./ui/command";
 import { Button } from "./ui/button";
-import { Input } from "./ui/input";
 import { ShortcutKbd } from "./ui/shortcut-kbd";
-
-export type SidebarSearchPaletteMode = "search" | "import";
 
 interface SidebarSearchPaletteProps {
   open: boolean;
-  mode: SidebarSearchPaletteMode;
-  onModeChange: (mode: SidebarSearchPaletteMode) => void;
   onOpenChange: (open: boolean) => void;
   actions: readonly SidebarSearchAction[];
   projects: readonly SidebarSearchProject[];
@@ -92,14 +85,7 @@ interface SidebarSearchPaletteProps {
   onOpenUsageSettings: () => void;
   onOpenProject: (projectId: string) => void;
   onOpenThread: (threadId: string) => void;
-  importProviders: readonly ImportProviderKind[];
-  onImportThread: (provider: ImportProviderKind, externalId: string) => Promise<void>;
 }
-
-export type ImportProviderKind = Extract<
-  ProviderKind,
-  "codex" | "claudeAgent" | "cursor" | "kilo" | "opencode"
->;
 
 function actionHandler(
   actionId: string,
@@ -130,7 +116,6 @@ const ACTION_ICONS: Record<string, IconComponent> = {
   "new-chat": ChatBubbleIcon,
   "new-thread": NewThreadIcon,
   "add-project": FolderClosed,
-  "import-thread": ArrowDownToLineIcon,
   feedback: BugIcon,
   settings: SettingsIcon,
   "usage-settings": SettingsIcon,
@@ -278,7 +263,7 @@ const THEME_MODE_ICONS: Record<"system" | "light" | "dark", IconComponent> = {
   dark: MoonIcon,
 };
 
-function ProviderIcon(props: { provider: ProviderKind | null }) {
+function ProviderIcon(props: { provider: string | null }) {
   return (
     <div className="flex size-5 shrink-0 items-center justify-center">
       {props.provider ? (
@@ -357,17 +342,6 @@ export function SidebarSearchPalette(props: SidebarSearchPaletteProps) {
   const { activeTheme, resolvedTheme, setCodeThemeId, setTheme, theme } = useTheme();
   const [query, setQuery] = useState("");
   const [highlightedItemValue, setHighlightedItemValue] = useState<string | null>(null);
-  const [importProviderState, setImportProvider] = useState<ImportProviderKind>(
-    props.importProviders[0] ?? "codex",
-  );
-  const [importId, setImportId] = useState("");
-  const [importError, setImportError] = useState<string | null>(null);
-  const [isImporting, setIsImporting] = useState(false);
-  // Derived fallback (no syncing effect): an unavailable provider renders as
-  // the first available one, and the user's pick resurfaces if it comes back.
-  const importProvider = props.importProviders.includes(importProviderState)
-    ? importProviderState
-    : (props.importProviders[0] ?? "codex");
   // Error keyed to the query it was produced for: editing the query derives
   // straight back to null with no state-clearing effect.
   const [addProjectErrorState, setAddProjectErrorState] = useState<{
@@ -391,15 +365,11 @@ export function SidebarSearchPalette(props: SidebarSearchPaletteProps) {
     const timeoutId = window.setTimeout(() => {
       setQuery("");
       setHighlightedItemValue(null);
-      setImportProvider(props.importProviders[0] ?? "codex");
-      setImportId("");
-      setImportError(null);
-      setIsImporting(false);
       setAddProjectError(null);
       setIsAddingProject(false);
     }, 0);
     return () => window.clearTimeout(timeoutId);
-  }, [props.importProviders, props.open]);
+  }, [props.open]);
 
   const platform = typeof navigator === "undefined" ? "" : navigator.platform;
   const trimmedQuery = query.trim();
@@ -475,17 +445,6 @@ export function SidebarSearchPalette(props: SidebarSearchPaletteProps) {
     matchedCurrentThemes.length > 0 ||
     matchedProjects.length > 0 ||
     matchedThreads.length > 0;
-  const importFieldLabel = importProvider === "codex" ? "Thread ID" : "Session ID";
-  const importPlaceholder =
-    importProvider === "claudeAgent"
-      ? "Paste a Claude session id"
-      : importProvider === "cursor"
-        ? "Paste a Cursor session id"
-        : importProvider === "kilo"
-          ? "Paste a Kilo session id"
-          : importProvider === "opencode"
-            ? "Paste an OpenCode session id"
-            : "Paste a Codex thread id";
 
   const hasHighlightedFolderItem =
     highlightedItemValue !== null && highlightedItemValue.startsWith("folder:");
@@ -578,142 +537,10 @@ export function SidebarSearchPalette(props: SidebarSearchPaletteProps) {
     }
   };
 
-  const submitImport = () => {
-    const normalizedImportId = importId.trim();
-    if (!normalizedImportId || isImporting) {
-      return;
-    }
-    setImportError(null);
-    setIsImporting(true);
-    void Promise.resolve(props.onImportThread(importProvider, normalizedImportId))
-      .then(() => {
-        props.onOpenChange(false);
-      })
-      .catch((error: unknown) => {
-        setImportError(error instanceof Error ? error.message : "Failed to import thread.");
-      })
-      .finally(() => {
-        setIsImporting(false);
-      });
-  };
 
   return (
     <CommandDialog open={props.open} onOpenChange={props.onOpenChange}>
       <CommandDialogPopup className="max-w-2xl">
-        {props.mode === "import" ? (
-          <div className="flex flex-col overflow-hidden">
-            <div className="border-b border-border/70 px-4 py-3">
-              <div className="flex items-start gap-3">
-                <Button
-                  size="icon"
-                  variant="ghost"
-                  className="-ml-1 mt-[-2px] size-8 shrink-0"
-                  onClick={() => {
-                    setImportError(null);
-                    props.onModeChange("search");
-                  }}
-                >
-                  <ArrowLeftIcon className="size-4" />
-                </Button>
-                <div>
-                  <p className="text-sm font-medium text-foreground">Import thread from provider</p>
-                  <p className="mt-1 text-xs text-muted-foreground">
-                    Create a local app thread and resume it from an existing provider id.
-                  </p>
-                </div>
-              </div>
-            </div>
-            <div className="space-y-4 px-4 py-4">
-              <div className="space-y-2">
-                <p className="text-xs font-medium text-muted-foreground">Provider</p>
-                <div className="flex gap-2">
-                  {props.importProviders.map((provider) => (
-                    <Button
-                      key={provider}
-                      className={
-                        importProvider === provider
-                          ? "flex-1 justify-start border-border bg-muted text-foreground hover:bg-muted/80"
-                          : "flex-1 justify-start"
-                      }
-                      variant="outline"
-                      onClick={() => setImportProvider(provider)}
-                    >
-                      <ProviderIcon provider={provider} />
-                      {provider === "claudeAgent"
-                        ? "Claude"
-                        : provider === "cursor"
-                          ? "Cursor"
-                          : provider === "kilo"
-                            ? "Kilo"
-                            : provider === "opencode"
-                              ? "OpenCode"
-                              : "Codex"}
-                    </Button>
-                  ))}
-                </div>
-                {props.importProviders.length === 0 ? (
-                  <p className="text-xs text-muted-foreground">
-                    No connected providers expose chat import in this build.
-                  </p>
-                ) : null}
-              </div>
-              <div className="space-y-2">
-                <p className="text-xs font-medium text-muted-foreground">{importFieldLabel}</p>
-                <Input
-                  autoFocus
-                  nativeInput
-                  placeholder={importPlaceholder}
-                  value={importId}
-                  disabled={props.importProviders.length === 0}
-                  onChange={(event) => setImportId(event.currentTarget.value)}
-                  onKeyDown={(event) => {
-                    if (event.key === "Enter") {
-                      event.preventDefault();
-                      void submitImport();
-                    }
-                  }}
-                />
-                <p className="text-xs text-muted-foreground">
-                  {importProvider === "claudeAgent"
-                    ? "Claude resumes a persisted session by session id."
-                    : importProvider === "cursor"
-                      ? "Cursor resumes a persisted session by session id."
-                      : importProvider === "kilo"
-                        ? "Kilo resumes a persisted session by session id."
-                        : importProvider === "opencode"
-                          ? "OpenCode resumes a persisted session by session id."
-                          : "Codex resumes a persisted thread by thread id."}
-                </p>
-              </div>
-              {importError ? (
-                <p className="rounded-md border border-destructive/20 bg-destructive/5 px-3 py-2 text-sm text-destructive">
-                  {importError}
-                </p>
-              ) : null}
-              <div className="flex justify-end gap-2">
-                <Button
-                  variant="ghost"
-                  onClick={() => {
-                    setImportError(null);
-                    props.onOpenChange(false);
-                  }}
-                >
-                  Cancel
-                </Button>
-                <Button
-                  disabled={
-                    props.importProviders.length === 0 ||
-                    importId.trim().length === 0 ||
-                    isImporting
-                  }
-                  onClick={submitImport}
-                >
-                  {isImporting ? "Importing..." : "Import"}
-                </Button>
-              </div>
-            </div>
-          </div>
-        ) : (
           <>
             <Command
               autoHighlight={isBrowsing ? false : "always"}
@@ -858,13 +685,6 @@ export function SidebarSearchPalette(props: SidebarSearchPaletteProps) {
                               event.preventDefault();
                             }}
                             onClick={() => {
-                              if (action.id === "import-thread") {
-                                setImportError(null);
-                                setImportId("");
-                                setImportProvider(props.importProviders[0] ?? "codex");
-                                props.onModeChange("import");
-                                return;
-                              }
                               if (!onSelect) return;
                               props.onOpenChange(false);
                               onSelect();
@@ -922,10 +742,7 @@ export function SidebarSearchPalette(props: SidebarSearchPaletteProps) {
                                     query={query}
                                   />
                                 </div>
-                                {/* Project only, not "project · space": this column is
-                                    96px, and a thread's Space is already implied by its
-                                    project. Space stays searchable — it just does not
-                                    get to eat the name the user is scanning for. */}
+                                {/* Keep the parent Project in a fixed-width metadata column. */}
                                 <span className="w-24 shrink-0 truncate text-right text-[length:var(--app-font-size-ui-meta,10px)] text-muted-foreground/79">
                                   {thread.projectName}
                                 </span>
@@ -1002,12 +819,9 @@ export function SidebarSearchPalette(props: SidebarSearchPaletteProps) {
                               <div className="min-w-0 flex-1 truncate text-[length:var(--app-font-size-ui,12px)] text-foreground">
                                 {project.name || "Untitled project"}
                               </div>
-                              {/* Opening a project from here can switch Space, so the
-                                  destination is worth naming. It rides in the same right-hand
-                                  column the thread rows use for their parent, rather than
-                                  in front of the path, which is what identifies a project. */}
+                              {/* Keep the Project section in the same metadata column as rows above. */}
                               <span className="w-24 shrink-0 truncate text-right text-[length:var(--app-font-size-ui-meta,10px)] text-muted-foreground/79">
-                                {project.spaceName}
+                                {project.locationName}
                               </span>
                             </div>
                             <div className="truncate text-[length:var(--app-font-size-ui-meta,10px)] text-muted-foreground/79">
@@ -1149,7 +963,6 @@ export function SidebarSearchPalette(props: SidebarSearchPaletteProps) {
               </CommandFooter>
             </Command>
           </>
-        )}
       </CommandDialogPopup>
     </CommandDialog>
   );

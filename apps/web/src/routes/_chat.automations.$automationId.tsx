@@ -3,23 +3,15 @@ import {
   type AutomationRun,
   type AutomationUpdateInput,
   type AutomationWorktreeMode,
-  type ModelSelection,
-  type ProviderOptionDescriptor,
 } from "@omnimind/contracts";
 import {
   automationContinuationThreadId,
   automationRequiresTargetThread,
 } from "@omnimind/shared/automationMode";
-import {
-  getModelCapabilities,
-  getProviderOptionCurrentValue,
-  getProviderOptionDescriptors,
-} from "@omnimind/shared/model";
 import { useQuery } from "@tanstack/react-query";
 import { createFileRoute, useNavigate } from "@tanstack/react-router";
 import { useState } from "react";
 
-import { getProviderStartOptions, useAppSettings } from "~/appSettings";
 import { AutomationProposalActions } from "~/components/automation/AutomationProposalActions";
 import {
   CHAT_SURFACE_HEADER_DIVIDER_CLASS_NAME,
@@ -49,12 +41,6 @@ import {
 } from "~/hooks/useDesktopTopBarGutter";
 import { Glyph } from "~/ui/icons";
 import { cn } from "~/lib/utils";
-import {
-  buildModelSelection,
-  buildNextProviderOptions,
-  buildProviderOptionPatch,
-  type ProviderOptions,
-} from "~/providerModelOptions";
 import { ensureNativeApi } from "~/nativeApi";
 import { useStore } from "~/store";
 import { createAllThreadsSelector } from "~/storeSelectors";
@@ -74,8 +60,6 @@ import {
   isTriageRun,
   isFormSubmittable,
   maxIterationOptions,
-  providerOptionsForAutomationEdit,
-  providerOptionsForAutomationModelSelection,
   runResultSummary,
   runResultTitle,
   runStatusLabel,
@@ -188,7 +172,6 @@ function intervalOptions(current: number): readonly SelectOption[] {
 function AutomationDetailView() {
   const { automationId } = Route.useParams();
   const navigate = useNavigate();
-  const { settings } = useAppSettings();
   const desktopTopBarTrafficLightGutterClassName = useDesktopTopBarTrafficLightGutterClassName();
   const desktopTopBarWindowControlsGutterClassName =
     useDesktopTopBarWindowControlsGutterClassName();
@@ -227,7 +210,6 @@ function AutomationDetailView() {
   const streamedMemory =
     (data.memories ?? []).find((candidate) => candidate.automationId === automationId) ?? null;
   const memory = streamedMemory ?? memoryQuery.data ?? null;
-  const providerOptionsForDispatch = getProviderStartOptions(settings);
 
   if (!definition) {
     return (
@@ -297,7 +279,7 @@ function AutomationDetailView() {
     enabled: definition.enabled,
     maxIterations: definition.maxIterations,
     mode: definition.mode,
-    runtimeMode: definition.runtimeMode,
+    permissionPolicy: definition.requestedSelection.permissionPolicy,
     worktreeMode: definition.worktreeMode,
     prompt: definition.prompt,
     acknowledgedRisks: definition.acknowledgedRisks,
@@ -321,20 +303,6 @@ function AutomationDetailView() {
     runNowMutation.mutate(definition);
   };
   const approvalBusy = updateMutation.isPending || runNowMutation.isPending;
-
-  // Applying a new model selection (model swap or a capability tweak) refreshes the saved
-  // provider start options the same way the model picker does, then patches both at once.
-  const applyModelSelection = (nextModelSelection: ModelSelection) => {
-    const providerOptions = providerOptionsForAutomationModelSelection(
-      definition,
-      nextModelSelection,
-      providerOptionsForDispatch,
-    );
-    patch({
-      modelSelection: nextModelSelection,
-      ...(providerOptions ? { providerOptions } : {}),
-    });
-  };
 
   const openEditDialog = (overrides: Partial<AutomationFormState> = {}) => {
     const nextForm = {
@@ -366,12 +334,7 @@ function AutomationDetailView() {
       acknowledgedWarningIds,
     );
     updateMutation.mutate(
-      updateInputFromForm(
-        definition,
-        form,
-        providerOptionsForAutomationEdit(definition, form, providerOptionsForDispatch),
-        acknowledgedRisks,
-      ),
+      updateInputFromForm(definition, form, acknowledgedRisks),
       {
         onSuccess: () => setDialogOpen(false),
       },
@@ -505,26 +468,11 @@ function AutomationDetailView() {
                   type="button"
                   size="sm"
                   className="ml-1.5"
-                  disabled={
-                    runNowMutation.isPending ||
-                    pendingProposal ||
-                    // Stay disabled while an approval update is in flight: the cache merges
-                    // acknowledgedRisks optimistically, so warnings clears before the server
-                    // persists and a run dispatched in that window hits the old definition.
-                    updateMutation.isPending ||
-                    approvalGaps.runBlockingWarnings.length > 0
-                  }
-                  title={
-                    pendingProposal
-                      ? "Accept the automation proposal first"
-                      : approvalGaps.runBlockingWarnings.length > 0
-                        ? "Approve the automation first"
-                        : undefined
-                  }
-                  onClick={() => runNowMutation.mutate(definition)}
+                  disabled
+                  title="Automation execution is unavailable until Product Queue admission is implemented"
                 >
                   <Glyph name="play" className="size-4" />
-                  Run now
+                  Run unavailable
                 </Button>
               </div>
             </div>
@@ -753,15 +701,9 @@ function AutomationDetailView() {
                 ) : null}
                 <EditRow label="Model">
                   <AutomationModelPicker
-                    value={definition.modelSelection}
-                    projectCwd={project?.cwd ?? null}
-                    onChange={applyModelSelection}
+                    value={definition.requestedSelection}
                   />
                 </EditRow>
-                <ModelOptionRows
-                  modelSelection={definition.modelSelection}
-                  onChange={applyModelSelection}
-                />
                 <DetailRow label="Mode">{MODE_LABELS[definition.mode]}</DetailRow>
                 <EditRow label="Notify">
                   <InlineSelect
@@ -969,97 +911,6 @@ function InlineSelect({
         className="pointer-events-none absolute right-1 size-3 text-muted-foreground"
       />
     </div>
-  );
-}
-
-function InlineToggle({
-  value,
-  onChange,
-}: {
-  readonly value: boolean;
-  readonly onChange: (value: boolean) => void;
-}) {
-  return (
-    <button
-      type="button"
-      onClick={() => onChange(!value)}
-      className={cn(INLINE_CONTROL_CLASS, "min-w-[3rem]")}
-    >
-      {value ? "On" : "Off"}
-    </button>
-  );
-}
-
-/**
- * Inline edit rows for the selected model's capabilities — reasoning effort, fast mode,
- * thinking, context window, etc. The knobs are derived from the provider's capability
- * descriptors, so each provider surfaces exactly the controls it supports (and none when it
- * supports nothing). Changing a value reuses the same model-selection patch path as the
- * model picker, keeping provider start options in sync.
- */
-function ModelOptionRows({
-  modelSelection,
-  onChange,
-}: {
-  readonly modelSelection: ModelSelection;
-  readonly onChange: (next: ModelSelection) => void;
-}) {
-  const { provider, model } = modelSelection;
-  const caps = getModelCapabilities(provider, model);
-  const descriptors = getProviderOptionDescriptors({
-    provider,
-    caps,
-    selections: modelSelection.options as Record<string, unknown> | undefined,
-  });
-  if (descriptors.length === 0) {
-    return null;
-  }
-
-  const setOption = (descriptor: ProviderOptionDescriptor, value: string | boolean) => {
-    const optionPatch = buildProviderOptionPatch(provider, descriptor.id, value);
-    const nextOptions = buildNextProviderOptions(
-      provider,
-      modelSelection.options as ProviderOptions | undefined,
-      optionPatch,
-    );
-    onChange(
-      buildModelSelection(
-        provider,
-        model,
-        nextOptions,
-        modelSelection.provider === "claudeAgent" ? modelSelection.supportsAutoMode : undefined,
-      ),
-    );
-  };
-
-  return (
-    <>
-      {descriptors.map((descriptor) => {
-        if (descriptor.type === "boolean") {
-          return (
-            <EditRow key={descriptor.id} label={descriptor.label}>
-              <InlineToggle
-                value={getProviderOptionCurrentValue(descriptor) === true}
-                onChange={(checked) => setOption(descriptor, checked)}
-              />
-            </EditRow>
-          );
-        }
-        const current = getProviderOptionCurrentValue(descriptor);
-        return (
-          <EditRow key={descriptor.id} label={descriptor.label}>
-            <InlineSelect
-              value={typeof current === "string" ? current : ""}
-              options={descriptor.options.map((option) => ({
-                value: option.id,
-                label: option.label,
-              }))}
-              onChange={(value) => setOption(descriptor, value)}
-            />
-          </EditRow>
-        );
-      })}
-    </>
   );
 }
 

@@ -80,8 +80,6 @@ export interface ServerDerivedPaths {
   readonly logsDir: string;
   readonly serverLogPath: string;
   readonly serverRuntimeStatePath: string;
-  readonly providerLogsDir: string;
-  readonly providerEventLogPath: string;
   readonly terminalLogsDir: string;
   readonly anonymousIdPath: string;
   readonly environmentIdPath: string;
@@ -107,7 +105,6 @@ export interface ServerConfigShape extends ServerDerivedPaths {
   readonly authToken: string | undefined;
   readonly desktopShutdownToken?: string | undefined;
   readonly autoBootstrapProjectFromCwd: boolean;
-  readonly logProviderEvents: boolean;
   readonly logWebSocketEvents: boolean;
 }
 
@@ -120,7 +117,6 @@ export function preparePrivateServerPaths(
     paths.secretsDir,
     paths.attachmentsDir,
     paths.logsDir,
-    paths.providerLogsDir,
     paths.terminalLogsDir,
   ]) {
     ensurePrivateDirectorySync(directoryPath, platform);
@@ -147,7 +143,6 @@ export const deriveServerPaths = Effect.fn(function* (
   const dbPath = join(stateDir, "state.sqlite");
   const attachmentsDir = join(stateDir, "attachments");
   const logsDir = join(stateDir, "logs");
-  const providerLogsDir = join(logsDir, "provider");
   return {
     stateDir,
     secretsDir,
@@ -159,8 +154,6 @@ export const deriveServerPaths = Effect.fn(function* (
     logsDir,
     serverLogPath: join(logsDir, "server.log"),
     serverRuntimeStatePath: join(stateDir, "server-runtime.json"),
-    providerLogsDir,
-    providerEventLogPath: join(providerLogsDir, "events.log"),
     terminalLogsDir: join(logsDir, "terminals"),
     anonymousIdPath: join(stateDir, "anonymous-id"),
     environmentIdPath: join(stateDir, "environment-id"),
@@ -257,7 +250,6 @@ export class ServerConfig extends ServiceMap.Service<ServerConfig, ServerConfigS
           ...derivedPaths,
           mode: "web",
           autoBootstrapProjectFromCwd: false,
-          logProviderEvents: false,
           logWebSocketEvents: false,
           port: 0,
           host: undefined,

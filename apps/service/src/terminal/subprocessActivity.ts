@@ -1,5 +1,5 @@
 // FILE: subprocessActivity.ts
-// Purpose: Detects subprocess and coding-provider activity below terminal PTY processes.
+// Purpose: Detects subprocess and Agent CLI activity below terminal PTY processes.
 // Layer: Terminal infrastructure
 
 import path from "node:path";
@@ -17,8 +17,8 @@ const POSIX_SUBPROCESS_TREE_WALK_MAX_VISITED = 256;
 export interface TerminalSubprocessActivity {
   cliKind: TerminalCliKind | null;
   hasRunningSubprocess: boolean;
-  hasProviderDescendant: boolean;
-  hasNonProviderSubprocess: boolean;
+  hasAgentDescendant: boolean;
+  hasOtherSubprocess: boolean;
 }
 
 async function checkWindowsSubprocessActivity(
@@ -42,15 +42,15 @@ async function checkWindowsSubprocessActivity(
     );
     return {
       cliKind: null,
-      hasNonProviderSubprocess: false,
-      hasProviderDescendant: false,
+      hasOtherSubprocess: false,
+      hasAgentDescendant: false,
       hasRunningSubprocess: result.code === 0,
     };
   } catch {
     return {
       cliKind: null,
-      hasNonProviderSubprocess: false,
-      hasProviderDescendant: false,
+      hasOtherSubprocess: false,
+      hasAgentDescendant: false,
       hasRunningSubprocess: false,
     };
   }
@@ -74,8 +74,8 @@ const SHELL_LIKE_PROCESS_NAMES = new Set([
 function emptySubprocessActivity(): TerminalSubprocessActivity {
   return {
     cliKind: null,
-    hasNonProviderSubprocess: false,
-    hasProviderDescendant: false,
+    hasOtherSubprocess: false,
+    hasAgentDescendant: false,
     hasRunningSubprocess: false,
   };
 }
@@ -94,14 +94,14 @@ function includeChildActivity(
   const isShellLike = isShellLikeProcessName(command);
   return {
     cliKind: activity.cliKind ?? childCliKind ?? nestedActivity.cliKind,
-    hasProviderDescendant:
-      activity.hasProviderDescendant ||
+    hasAgentDescendant:
+      activity.hasAgentDescendant ||
       childCliKind !== null ||
-      nestedActivity.hasProviderDescendant,
-    hasNonProviderSubprocess:
-      activity.hasNonProviderSubprocess ||
+      nestedActivity.hasAgentDescendant,
+    hasOtherSubprocess:
+      activity.hasOtherSubprocess ||
       (!childCliKind && !isShellLike) ||
-      nestedActivity.hasNonProviderSubprocess,
+      nestedActivity.hasOtherSubprocess,
     hasRunningSubprocess:
       activity.hasRunningSubprocess || !isShellLike || nestedActivity.hasRunningSubprocess,
   };
@@ -192,8 +192,8 @@ async function checkPosixSubprocessActivityByTreeWalk(
     if (visited >= POSIX_SUBPROCESS_TREE_WALK_MAX_VISITED) {
       return {
         cliKind: null,
-        hasNonProviderSubprocess: true,
-        hasProviderDescendant: false,
+        hasOtherSubprocess: true,
+        hasAgentDescendant: false,
         hasRunningSubprocess: true,
       };
     }

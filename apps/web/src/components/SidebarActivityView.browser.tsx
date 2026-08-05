@@ -1,10 +1,11 @@
+import type { ConversationPullRequestSummary } from "~/historicalConversation";
 // FILE: SidebarActivityView.browser.tsx
 // Purpose: Browser regressions for Activity paging, stateful actions, scope fallback, and live PR data.
 // Layer: Sidebar Activity UI test
 
 import "../index.css";
 
-import { ProjectId, ThreadId, type OrchestrationThreadPullRequest } from "@omnimind/contracts";
+import { ProjectId, ThreadId } from "@omnimind/contracts";
 import { page, userEvent } from "vitest/browser";
 import { afterEach, describe, expect, it, vi } from "vitest";
 import { render } from "vitest-browser-react";
@@ -25,7 +26,6 @@ function makeProject(id: ProjectId, name: string): Project {
     folderName: name,
     localName: null,
     cwd: `/tmp/${id}`,
-    defaultModelSelection: null,
     expanded: true,
     scripts: [],
   };
@@ -71,7 +71,7 @@ function renderActivity(input: {
   activeThreadId?: ThreadId | null;
   pinnedThreadIdSet?: ReadonlySet<ThreadId>;
   settledOverrideByThreadId?: ReadonlyMap<ThreadId, boolean>;
-  prByThreadId?: ReadonlyMap<ThreadId, OrchestrationThreadPullRequest | null>;
+  prByThreadId?: ReadonlyMap<ThreadId, ConversationPullRequestSummary | null>;
   onVisibleThreadIdsChange?: (threadIds: readonly ThreadId[]) => void;
   onSetThreadSettled?: (threadId: ThreadId, settled: boolean) => void;
   onMarkThreadRead?: (threadId: ThreadId, completedAt?: string) => void;
@@ -118,7 +118,7 @@ describe("SidebarActivityView", () => {
         state: "open",
       },
     });
-    const livePr: OrchestrationThreadPullRequest = {
+    const livePr: ConversationPullRequestSummary = {
       number: 42,
       title: "Live merged PR",
       url: "https://github.com/acme/omnimind/pull/42",

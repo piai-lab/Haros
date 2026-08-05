@@ -19,9 +19,7 @@ function makeProject(): Project {
     folderName: "project",
     localName: null,
     cwd: "/tmp/project",
-    defaultModelSelection: { provider: "codex", model: "gpt-5.4-mini" },
     expanded: true,
-    spaceId: null,
     scripts: [],
   };
 }

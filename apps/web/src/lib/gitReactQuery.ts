@@ -2,9 +2,7 @@ import type {
   GitHandoffThreadInput,
   GitReadWorkingTreeDiffInput,
   GitStackedAction,
-  ModelSelection,
   NativeApi,
-  ProviderStartOptions,
 } from "@omnimind/contracts";
 import { mutationOptions, queryOptions, type QueryClient } from "@tanstack/react-query";
 import { ensureNativeApi } from "../nativeApi";
@@ -38,24 +36,6 @@ export const gitQueryKeys = {
     cwd: string | null,
     scope: GitReadWorkingTreeDiffInput["scope"] = "workingTree",
   ) => ["git", "working-tree-diff", cwd, scope, "stats"] as const,
-  diffSummary: (
-    cacheScope: string | null,
-    model: string | null,
-    modelSelectionKey: string | null,
-    codexHomePath: string | null,
-    providerOptionsKey: string | null,
-    patchKey: string | null,
-  ) =>
-    [
-      "git",
-      "diff-summary",
-      cacheScope,
-      model,
-      modelSelectionKey,
-      codexHomePath,
-      providerOptionsKey,
-      patchKey,
-    ] as const,
 };
 
 export const gitMutationKeys = {
@@ -343,10 +323,6 @@ export function gitUnstageFilesMutationOptions(input: {
 export function gitRunStackedActionMutationOptions(input: {
   cwd: string | null;
   queryClient: QueryClient;
-  model?: string | null;
-  modelSelection?: ModelSelection | null;
-  codexHomePath?: string | null;
-  providerOptions?: ProviderStartOptions | null;
 }) {
   return makeGitMutationOptions<
     {
@@ -370,10 +346,6 @@ export function gitRunStackedActionMutationOptions(input: {
         ...(commitMessage ? { commitMessage } : {}),
         ...(featureBranch ? { featureBranch } : {}),
         ...(filePaths ? { filePaths } : {}),
-        ...(input.codexHomePath ? { codexHomePath: input.codexHomePath } : {}),
-        ...(input.model ? { textGenerationModel: input.model } : {}),
-        ...(input.modelSelection ? { textGenerationModelSelection: input.modelSelection } : {}),
-        ...(input.providerOptions ? { providerOptions: input.providerOptions } : {}),
       }),
   });
 }

@@ -629,54 +629,6 @@ it.layer(NodeServices.layer)("keybindings", (it) => {
     }).pipe(Effect.provide(makeKeybindingsLayer())),
   );
 
-  it.effect("accepts synced composer picker keybindings without startup issues", () =>
-    Effect.gen(function* () {
-      const fs = yield* FileSystem.FileSystem;
-      const { keybindingsConfigPath } = yield* ServerConfig;
-      yield* fs.writeFileString(
-        keybindingsConfigPath,
-        JSON.stringify([
-          { key: "mod+shift+m", command: "modelPicker.toggle" },
-          { key: "mod+shift+e", command: "effortPicker.toggle" },
-        ]),
-      );
-
-      const configState = yield* Effect.gen(function* () {
-        const keybindings = yield* Keybindings;
-        return yield* keybindings.loadConfigState;
-      });
-
-      assert.deepEqual(configState.issues, []);
-      assert.isTrue(
-        configState.keybindings.some(
-          (entry) => entry.command === "modelPicker.toggle" && entry.shortcut.key === "m",
-        ),
-      );
-      assert.isTrue(
-        configState.keybindings.some(
-          (entry) => entry.command === "traitsPicker.toggle" && entry.shortcut.key === "e",
-        ),
-      );
-
-      yield* Effect.gen(function* () {
-        const keybindings = yield* Keybindings;
-        yield* keybindings.syncDefaultKeybindingsOnStartup;
-      });
-
-      const persisted = yield* readKeybindingsConfig(keybindingsConfigPath);
-      assert.isTrue(
-        persisted.some(
-          (entry) => entry.key === "mod+shift+m" && entry.command === "modelPicker.toggle",
-        ),
-      );
-      assert.isTrue(
-        persisted.some(
-          (entry) => entry.key === "mod+shift+e" && entry.command === "traitsPicker.toggle",
-        ),
-      );
-    }).pipe(Effect.provide(makeKeybindingsLayer())),
-  );
-
   it.effect("drops retired legacy keybindings without startup issues", () =>
     Effect.gen(function* () {
       const fs = yield* FileSystem.FileSystem;
@@ -687,6 +639,17 @@ it.layer(NodeServices.layer)("keybindings", (it) => {
           { key: "mod+1", command: "modelPicker.jump.1" },
           { key: "mod+2", command: "composer.modelPicker.jump.2" },
           { key: "mod+alt+g", command: "chat.newGemini" },
+          { key: "mod+alt+c", command: "chat.newClaude" },
+          { key: "mod+alt+x", command: "chat.newCodex" },
+          { key: "mod+alt+r", command: "chat.newCursor" },
+          { key: "mod+shift+m", command: "modelPicker.toggle" },
+          { key: "alt+]", command: "model.next" },
+          { key: "alt+[", command: "model.previous" },
+          { key: "mod+shift+e", command: "traitsPicker.toggle" },
+          { key: "mod+e", command: "composer.effortPicker.toggle" },
+          { key: "mod+m", command: "composer.modelPicker.toggle" },
+          { key: "mod+alt+e", command: "effortPicker.toggle" },
+          { key: "mod+alt+t", command: "reasoningPicker.toggle" },
           { key: "mod+k", command: "sidebar.search" },
         ]),
       );
@@ -705,10 +668,21 @@ it.layer(NodeServices.layer)("keybindings", (it) => {
       assert.isFalse(
         configState.keybindings.some((entry) => String(entry.command) === "chat.newGemini"),
       );
-      assert.isTrue(
-        configState.keybindings.some(
-          (entry) => entry.command === "modelPicker.toggle" && entry.shortcut.key === "m",
-        ),
+      const retiredCommands = new Set([
+        "chat.newClaude",
+        "chat.newCodex",
+        "chat.newCursor",
+        "modelPicker.toggle",
+        "model.next",
+        "model.previous",
+        "traitsPicker.toggle",
+        "composer.effortPicker.toggle",
+        "composer.modelPicker.toggle",
+        "effortPicker.toggle",
+        "reasoningPicker.toggle",
+      ]);
+      assert.isFalse(
+        configState.keybindings.some((entry) => retiredCommands.has(String(entry.command))),
       );
       assert.isTrue(
         configState.keybindings.some(
@@ -727,12 +701,7 @@ it.layer(NodeServices.layer)("keybindings", (it) => {
       );
       assert.isFalse(persisted.some((entry) => String(entry.command) === "chat.newGemini"));
       assert.isFalse(
-        persisted.some((entry) => entry.command === "modelPicker.toggle" && entry.key === "mod+1"),
-      );
-      assert.isTrue(
-        persisted.some(
-          (entry) => entry.key === "mod+shift+m" && entry.command === "modelPicker.toggle",
-        ),
+        persisted.some((entry) => retiredCommands.has(String(entry.command))),
       );
       assert.isTrue(
         persisted.some((entry) => entry.key === "mod+1" && entry.command === "thread.jump.1"),

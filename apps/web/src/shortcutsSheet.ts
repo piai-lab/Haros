@@ -44,19 +44,6 @@ interface ShortcutDefinition {
   description: string;
 }
 
-// Space jumps address the switcher's visual tab order, so slot 1 is always Void.
-const SPACE_JUMP_DEFINITIONS: readonly ShortcutDefinition[] = Array.from(
-  { length: 9 },
-  (_, index) => ({
-    command: `space.jump.${index + 1}` as KeybindingCommand,
-    label: index === 0 ? "Jump to Void" : `Jump to space ${index + 1}`,
-    description:
-      index === 0
-        ? "Switch straight to the Void tab of the space switcher."
-        : "Switch straight to this tab of the space switcher.",
-  }),
-);
-
 const AVAILABLE_NOW_DEFINITIONS: readonly ShortcutDefinition[] = [
   {
     command: "sidebar.addProject",
@@ -73,22 +60,6 @@ const AVAILABLE_NOW_DEFINITIONS: readonly ShortcutDefinition[] = [
     label: "Toggle Activity",
     description: "Show or hide running tasks, completed work, and items that need attention.",
   },
-  {
-    command: "sidebar.importThread",
-    label: "Import thread",
-    description: "Bring an existing conversation into the current workspace.",
-  },
-  {
-    command: "space.previous",
-    label: "Previous space",
-    description: "Switch to the previous project space and restore its last working context.",
-  },
-  {
-    command: "space.next",
-    label: "Next space",
-    description: "Switch to the next project space and restore its last working context.",
-  },
-  ...SPACE_JUMP_DEFINITIONS,
   {
     command: "chat.new",
     label: "New thread",
@@ -110,21 +81,6 @@ const AVAILABLE_NOW_DEFINITIONS: readonly ShortcutDefinition[] = [
     description: "Create a thread that opens directly into terminal mode.",
   },
   {
-    command: "chat.newClaude",
-    label: "New Claude thread",
-    description: "Start a fresh thread with Claude selected.",
-  },
-  {
-    command: "chat.newCodex",
-    label: "New Codex thread",
-    description: "Start a fresh thread with Codex selected.",
-  },
-  {
-    command: "chat.newCursor",
-    label: "New Cursor thread",
-    description: "Start a fresh thread with Cursor selected.",
-  },
-  {
     command: "chat.split",
     label: "Split chat",
     description: "Open the current conversation in a second pane.",
@@ -138,28 +94,6 @@ const AVAILABLE_NOW_DEFINITIONS: readonly ShortcutDefinition[] = [
     command: "view.recent.next",
     label: "Next recent view",
     description: "Cycle forward through recently opened primary views.",
-  },
-  {
-    command: "modelPicker.toggle",
-    label: "Model picker",
-    description: "Open the composer provider and model picker.",
-  },
-  {
-    command: "model.next",
-    label: "Next model",
-    description:
-      "Cycle to the next model for the active provider (favorites first, then remaining models).",
-  },
-  {
-    command: "model.previous",
-    label: "Previous model",
-    description:
-      "Cycle to the previous model for the active provider (favorites first, then remaining models).",
-  },
-  {
-    command: "traitsPicker.toggle",
-    label: "Reasoning picker",
-    description: "Open the composer reasoning and trait controls.",
   },
   {
     command: "composer.focus.toggle",

@@ -9,10 +9,8 @@ import type {
   AutomationMode,
   AutomationSchedule,
   AutomationWorktreeMode,
-  ModelSelection,
+  ProductRequestedSelection,
   ProjectId,
-  ProviderInteractionMode,
-  RuntimeMode,
   ThreadId,
 } from "@omnimind/contracts";
 import { automationRequiresTargetThread } from "@omnimind/shared/automationMode";
@@ -54,9 +52,7 @@ export interface AutomationCreationDraft {
   readonly mode: AutomationMode;
   readonly targetThreadId: ThreadId | null;
   readonly projectId: ProjectId;
-  readonly modelSelection: ModelSelection;
-  readonly runtimeMode: RuntimeMode;
-  readonly interactionMode: ProviderInteractionMode;
+  readonly requestedSelection: ProductRequestedSelection;
   readonly worktreeMode: AutomationWorktreeMode;
   readonly maxIterations: number | null;
   readonly stopOnError: boolean;
@@ -70,7 +66,7 @@ export function containsAutomationSkillReference(prompt: string): boolean {
 export function buildAutomationDraftWarnings(input: {
   readonly schedule: AutomationSchedule;
   readonly mode: AutomationMode;
-  readonly runtimeMode: RuntimeMode;
+  readonly permissionPolicy: ProductRequestedSelection["permissionPolicy"];
   readonly worktreeMode: AutomationWorktreeMode;
   readonly hasEphemeralContext: boolean;
   readonly generatedConfidence: number | null;
@@ -103,7 +99,7 @@ export function buildAutomationDraftWarnings(input: {
       requiresAcknowledgement: true,
     });
   }
-  if (input.runtimeMode === "full-access") {
+  if (input.permissionPolicy === "full-access") {
     warnings.push({
       id: "full-access",
       title: "Full access",
@@ -168,7 +164,7 @@ export function automationApprovalGaps(input: {
   readonly enabled: boolean;
   readonly maxIterations: number | null;
   readonly mode: AutomationMode;
-  readonly runtimeMode: RuntimeMode;
+  readonly permissionPolicy: ProductRequestedSelection["permissionPolicy"];
   readonly worktreeMode: AutomationWorktreeMode;
   readonly prompt: string;
   readonly acknowledgedRisks: readonly AutomationAcknowledgedRiskId[];
@@ -185,7 +181,7 @@ export function automationApprovalGaps(input: {
   // Heartbeats reuse their target thread, so local-checkout consent is needed for updates
   // but not dispatch.
   const runBlockingIds = new Set<AutomationDraftWarningId>();
-  if (input.runtimeMode === "full-access" && !acknowledged.has("full-access")) {
+  if (input.permissionPolicy === "full-access" && !acknowledged.has("full-access")) {
     approvalIds.add("full-access");
     runBlockingIds.add("full-access");
   }
@@ -226,7 +222,7 @@ export function automationApprovalGaps(input: {
   const warnings = buildAutomationDraftWarnings({
     schedule: input.schedule,
     mode: input.mode,
-    runtimeMode: input.runtimeMode,
+    permissionPolicy: input.permissionPolicy,
     worktreeMode: input.worktreeMode,
     hasEphemeralContext: false,
     generatedConfidence: null,

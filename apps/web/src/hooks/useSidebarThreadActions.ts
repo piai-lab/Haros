@@ -30,11 +30,15 @@ import {
   createOptimisticSettledMutation,
   recordOptimisticSettledMutationSequence,
   reconcileOptimisticSettledMutation,
-  setThreadSettledFromClient,
   type OptimisticSettledMutation,
 } from "../lib/threadSettle";
-import { newCommandId, randomUUID } from "../lib/utils";
+import { randomUUID } from "../lib/utils";
 import { readNativeApi } from "../nativeApi";
+import {
+  setProductConversationBoardState,
+  setProductConversationPinned,
+} from "../productConversationMutations";
+import { readProductNativeApi } from "../wsNativeApi";
 import { usePinnedThreadsStore } from "../pinnedThreadsStore";
 import { reconcileOptimisticPinState } from "../pinning.logic";
 import {
@@ -70,7 +74,7 @@ async function unarchiveThreadIgnoringAlreadyRestored(threadId: ThreadId): Promi
   try {
     const api = readNativeApi();
     if (!api) throw new Error("Unable to connect to the app server.");
-    await unarchiveThreadFromClient(api.orchestration, threadId);
+    await unarchiveThreadFromClient(readProductNativeApi(), threadId);
   } catch (error) {
     if (!isThreadAlreadyUnarchivedError(error, threadId)) throw error;
   }
@@ -173,19 +177,10 @@ export function useSidebarThreadActions(input: {
     });
   }, []);
   const dispatchThreadPinnedState = useCallback(async (threadId: ThreadId, isPinned: boolean) => {
-    const api = readNativeApi();
-    if (!api) return;
-    await api.orchestration.dispatchCommand({
-      type: "thread.meta.update",
-      commandId: newCommandId(),
-      threadId,
-      isPinned,
-    });
+    await setProductConversationPinned(threadId, isPinned);
   }, []);
   const setThreadPinned = useCallback(
     async (threadId: ThreadId, isPinned: boolean) => {
-      const api = readNativeApi();
-      if (!api) return;
       const requestVersion =
         (latestPinnedMutationVersionByThreadIdRef.current.get(threadId) ?? 0) + 1;
       latestPinnedMutationVersionByThreadIdRef.current.set(threadId, requestVersion);
@@ -256,8 +251,6 @@ export function useSidebarThreadActions(input: {
 
   const setThreadSettled = useCallback(
     async (threadId: ThreadId, isSettled: boolean) => {
-      const api = readNativeApi();
-      if (!api) throw new Error("Unable to connect to the app server.");
       const requestVersion =
         (latestSettledMutationVersionByThreadIdRef.current.get(threadId) ?? 0) + 1;
       latestSettledMutationVersionByThreadIdRef.current.set(threadId, requestVersion);
@@ -282,12 +275,10 @@ export function useSidebarThreadActions(input: {
         );
         return next;
       });
+      const boardState = isSettled ? "done" : "active";
       try {
-        const commandSequence = await setThreadSettledFromClient(
-          api.orchestration,
-          threadId,
-          isSettled,
-        );
+        const commandSequence = (await setProductConversationBoardState(threadId, boardState))
+          .sequence;
         if (isLatestRequest()) {
           setOptimisticSettledMutationByThreadId((current) => {
             const mutation = current.get(threadId);
@@ -572,7 +563,7 @@ export function useSidebarThreadActions(input: {
 
       pendingThreadIds.add(threadId);
       const runArchive = async (): Promise<boolean> => {
-        await archiveThreadFromClient(api.orchestration, threadId);
+        await archiveThreadFromClient(readProductNativeApi(), threadId);
         if (routeThreadId === threadId) {
           const fallbackThreadId = getFallbackThreadIdAfterDelete({
             threads: sidebarThreads,

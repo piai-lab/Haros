@@ -57,12 +57,21 @@ describe("Product projection reconnect recovery", () => {
     harness.shellSnapshot = Schema.decodeUnknownSync(ProductShellSnapshot)({
       protocolVersion: PRODUCT_PROTOCOL_VERSION,
       sequence: 1,
+      runtimeCatalog: null,
+      workspaces: [],
+      groups: [],
       conversations: [
         {
           id: CONVERSATION_ID,
           workspaceId: "workspace-reconnect",
           title: "Reconnect proof",
           workspaceKind: "chat",
+          revision: 1,
+          archivedAt: null,
+          isPinned: false,
+          notes: "",
+          boardState: "active",
+          boardStateChangedAt: null,
           receiptState: null,
           createdAt: "2026-08-04T00:00:00.000Z",
           updatedAt: "2026-08-04T00:00:01.000Z",
@@ -78,6 +87,12 @@ describe("Product projection reconnect recovery", () => {
           workspaceId: "workspace-reconnect",
           title: "Reconnect proof",
           workspaceKind: "chat",
+          revision: 1,
+          archivedAt: null,
+          isPinned: false,
+          notes: "",
+          boardState: "active",
+          boardStateChangedAt: null,
           receiptState: null,
           createdAt: "2026-08-04T00:00:00.000Z",
           updatedAt: "2026-08-04T00:00:02.000Z",
@@ -94,8 +109,13 @@ describe("Product projection reconnect recovery", () => {
           observedAt: "2026-08-04T00:00:00.000Z",
         },
         entries: [],
+        streamingEntryIds: [],
         runs: [],
+        activities: [],
+        recoveries: [],
         queue: [],
+        entryPins: [],
+        entryMarkers: [],
       },
     });
     // ChatView retains before its first direct detail fetch. The coordinator must continue to see
@@ -124,4 +144,5 @@ describe("Product projection reconnect recovery", () => {
     expect(useProductStore.getState().reconnectGeneration).toBe(1);
     expect(useProductStore.getState().detailRetainCountByConversation[CONVERSATION_ID]).toBe(1);
   });
+
 });

@@ -23,7 +23,6 @@ import {
   resolveShortcutCommand,
   shouldShowThreadJumpHints,
   shortcutLabelForCommand,
-  spaceJumpIndexFromCommand,
   terminalNavigationShortcutData,
   threadJumpCommandForIndex,
   threadJumpIndexFromCommand,
@@ -279,26 +278,6 @@ const DEFAULT_BINDINGS = compile([
     whenAst: whenNot(whenIdentifier("terminalFocus")),
   },
   {
-    shortcut: modShortcut("m", { shiftKey: true }),
-    command: "modelPicker.toggle",
-    whenAst: whenNot(whenIdentifier("terminalFocus")),
-  },
-  {
-    shortcut: modShortcut("]", { altKey: true, modKey: false }),
-    command: "model.next",
-    whenAst: whenNot(whenIdentifier("terminalFocus")),
-  },
-  {
-    shortcut: modShortcut("[", { altKey: true, modKey: false }),
-    command: "model.previous",
-    whenAst: whenNot(whenIdentifier("terminalFocus")),
-  },
-  {
-    shortcut: modShortcut("e", { shiftKey: true }),
-    command: "traitsPicker.toggle",
-    whenAst: whenNot(whenIdentifier("terminalFocus")),
-  },
-  {
     shortcut: modShortcut("l", { metaKey: true, modKey: false }),
     command: "composer.focus.toggle",
     whenAst: whenNot(whenIdentifier("terminalFocus")),
@@ -311,11 +290,6 @@ const DEFAULT_BINDINGS = compile([
   {
     shortcut: modShortcut("o", { shiftKey: true }),
     command: "sidebar.addProject",
-    whenAst: whenNot(whenIdentifier("terminalFocus")),
-  },
-  {
-    shortcut: modShortcut("i"),
-    command: "sidebar.importThread",
     whenAst: whenNot(whenIdentifier("terminalFocus")),
   },
   {
@@ -336,21 +310,6 @@ const DEFAULT_BINDINGS = compile([
   {
     shortcut: modShortcut("t", { shiftKey: true }),
     command: "chat.newTerminal",
-    whenAst: whenCreationAllowed,
-  },
-  {
-    shortcut: modShortcut("c", { altKey: true }),
-    command: "chat.newClaude",
-    whenAst: whenCreationAllowed,
-  },
-  {
-    shortcut: modShortcut("x", { altKey: true }),
-    command: "chat.newCodex",
-    whenAst: whenCreationAllowed,
-  },
-  {
-    shortcut: modShortcut("r", { altKey: true }),
-    command: "chat.newCursor",
     whenAst: whenCreationAllowed,
   },
   {
@@ -780,66 +739,6 @@ describe("thread jump shortcuts", () => {
   });
 });
 
-describe("space jump shortcuts", () => {
-  it("maps space jump commands to strip indices", () => {
-    assert.strictEqual(spaceJumpIndexFromCommand("space.jump.1"), 0);
-    assert.strictEqual(spaceJumpIndexFromCommand("space.jump.9"), 8);
-    assert.isNull(spaceJumpIndexFromCommand("thread.jump.1"));
-  });
-
-  it("resolves Cmd+Alt+digit even when Option shifts event.key on macOS", () => {
-    assert.strictEqual(
-      resolveShortcutCommand(
-        event({ code: "Digit2", key: "™", metaKey: true, altKey: true }),
-        DEFAULT_BINDINGS,
-        {
-          platform: "MacIntel",
-          context: { terminalFocus: false, terminalWorkspaceOpen: false },
-        },
-      ),
-      "space.jump.2",
-    );
-  });
-
-  it("resolves space jumps from the built-in fallbacks when no config is present", () => {
-    assert.strictEqual(
-      resolveShortcutCommand(event({ code: "Digit1", key: "1", metaKey: true, altKey: true }), [], {
-        platform: "MacIntel",
-        context: { terminalFocus: false },
-      }),
-      "space.jump.1",
-    );
-  });
-
-  it("does not shadow plain numbered thread jumps", () => {
-    assert.strictEqual(
-      resolveShortcutCommand(event({ key: "2", metaKey: true }), DEFAULT_BINDINGS, {
-        platform: "MacIntel",
-        context: { terminalFocus: false, terminalWorkspaceOpen: false },
-      }),
-      "thread.jump.2",
-    );
-  });
-
-  it("fires from a focused terminal on macOS but yields to it elsewhere", () => {
-    assert.strictEqual(
-      resolveShortcutCommand(
-        event({ code: "Digit3", key: "3", metaKey: true, altKey: true }),
-        DEFAULT_BINDINGS,
-        { platform: "MacIntel", context: { terminalFocus: true } },
-      ),
-      "space.jump.3",
-    );
-    assert.isNull(
-      resolveShortcutCommand(
-        event({ code: "Digit3", key: "3", ctrlKey: true, altKey: true }),
-        DEFAULT_BINDINGS,
-        { platform: "Linux", context: { terminalFocus: true } },
-      ),
-    );
-  });
-});
-
 describe("workspace terminal tab shortcuts", () => {
   it("resolves the full-width terminal shortcut", () => {
     assert.strictEqual(
@@ -1001,19 +900,6 @@ describe("shortcutLabelForCommand", () => {
       "⇧⌘B",
     );
     assert.strictEqual(
-      shortcutLabelForCommand(DEFAULT_BINDINGS, "modelPicker.toggle", "MacIntel"),
-      "⇧⌘M",
-    );
-    assert.strictEqual(shortcutLabelForCommand(DEFAULT_BINDINGS, "model.next", "MacIntel"), "⌥]");
-    assert.strictEqual(
-      shortcutLabelForCommand(DEFAULT_BINDINGS, "model.previous", "MacIntel"),
-      "⌥[",
-    );
-    assert.strictEqual(
-      shortcutLabelForCommand(DEFAULT_BINDINGS, "traitsPicker.toggle", "MacIntel"),
-      "⇧⌘E",
-    );
-    assert.strictEqual(
       shortcutLabelForCommand(DEFAULT_BINDINGS, "composer.focus.toggle", "MacIntel"),
       "⌘L",
     );
@@ -1130,63 +1016,6 @@ describe("chat/editor shortcuts", () => {
     );
   });
 
-  it("resolves provider-specific new chat shortcuts", () => {
-    assert.strictEqual(
-      resolveShortcutCommand(event({ key: "c", metaKey: true, altKey: true }), DEFAULT_BINDINGS, {
-        platform: "MacIntel",
-        context: { terminalFocus: false },
-      }),
-      "chat.newClaude",
-    );
-    assert.strictEqual(
-      resolveShortcutCommand(event({ key: "x", metaKey: true, altKey: true }), DEFAULT_BINDINGS, {
-        platform: "MacIntel",
-        context: { terminalFocus: false },
-      }),
-      "chat.newCodex",
-    );
-    assert.strictEqual(
-      resolveShortcutCommand(event({ key: "r", metaKey: true, altKey: true }), DEFAULT_BINDINGS, {
-        platform: "MacIntel",
-        context: { terminalFocus: false },
-      }),
-      "chat.newCursor",
-    );
-    assert.strictEqual(
-      resolveShortcutCommand(
-        event({ code: "KeyC", key: "ç", metaKey: true, altKey: true }),
-        DEFAULT_BINDINGS,
-        {
-          platform: "MacIntel",
-          context: { terminalFocus: false },
-        },
-      ),
-      "chat.newClaude",
-    );
-    assert.strictEqual(
-      resolveShortcutCommand(
-        event({ code: "KeyX", key: "≈", metaKey: true, altKey: true }),
-        DEFAULT_BINDINGS,
-        {
-          platform: "MacIntel",
-          context: { terminalFocus: false },
-        },
-      ),
-      "chat.newCodex",
-    );
-    assert.strictEqual(
-      resolveShortcutCommand(
-        event({ code: "KeyR", key: "®", metaKey: true, altKey: true }),
-        DEFAULT_BINDINGS,
-        {
-          platform: "MacIntel",
-          context: { terminalFocus: false },
-        },
-      ),
-      "chat.newCursor",
-    );
-  });
-
   it("resolves new-surface chords from terminal focus on macOS but not on other platforms", () => {
     const macTerminal = { platform: "MacIntel", context: { terminalFocus: true } } as const;
     const linuxTerminal = { platform: "Linux", context: { terminalFocus: true } } as const;
@@ -1216,26 +1045,10 @@ describe("chat/editor shortcuts", () => {
       ),
       "chat.newChat",
     );
-    assert.strictEqual(
-      resolveShortcutCommand(
-        event({ key: "c", metaKey: true, altKey: true }),
-        DEFAULT_BINDINGS,
-        macTerminal,
-      ),
-      "chat.newClaude",
-    );
-
     // Linux/Windows: the same chords are real shell input, so terminal focus blocks them.
     assert.isNull(
       resolveShortcutCommand(
         event({ key: "t", ctrlKey: true, shiftKey: true }),
-        DEFAULT_BINDINGS,
-        linuxTerminal,
-      ),
-    );
-    assert.isNull(
-      resolveShortcutCommand(
-        event({ key: "c", ctrlKey: true, altKey: true }),
         DEFAULT_BINDINGS,
         linuxTerminal,
       ),
@@ -1471,41 +1284,6 @@ describe("cross-command precedence", () => {
 });
 
 describe("resolveShortcutCommand", () => {
-  it("resolves model cycle commands outside terminal focus", () => {
-    assert.strictEqual(
-      resolveShortcutCommand(event({ key: "]", altKey: true }), DEFAULT_BINDINGS, {
-        platform: "MacIntel",
-        context: { terminalFocus: false },
-      }),
-      "model.next",
-    );
-    assert.strictEqual(
-      resolveShortcutCommand(event({ key: "[", altKey: true }), DEFAULT_BINDINGS, {
-        platform: "MacIntel",
-        context: { terminalFocus: false },
-      }),
-      "model.previous",
-    );
-    assert.strictEqual(
-      resolveShortcutCommand(
-        event({ key: "‘", code: "BracketRight", altKey: true }),
-        DEFAULT_BINDINGS,
-        {
-          platform: "MacIntel",
-          context: { terminalFocus: false },
-        },
-      ),
-      "model.next",
-    );
-    assert.strictEqual(
-      resolveShortcutCommand(event({ key: "]", altKey: true }), DEFAULT_BINDINGS, {
-        platform: "MacIntel",
-        context: { terminalFocus: true },
-      }),
-      null,
-    );
-  });
-
   it("returns dynamic script commands", () => {
     const keybindings = compile([{ shortcut: modShortcut("r"), command: "script.setup.run" }]);
 
@@ -1514,82 +1292,6 @@ describe("resolveShortcutCommand", () => {
         platform: "Linux",
       }),
       "script.setup.run",
-    );
-  });
-
-  it("resolves configurable composer picker commands", () => {
-    const keybindings = compile([
-      {
-        shortcut: modShortcut("m", { altKey: true }),
-        command: "modelPicker.toggle",
-        whenAst: whenNot(whenIdentifier("terminalFocus")),
-      },
-      {
-        shortcut: modShortcut("e", { altKey: true }),
-        command: "traitsPicker.toggle",
-        whenAst: whenNot(whenIdentifier("terminalFocus")),
-      },
-    ]);
-
-    assert.strictEqual(
-      resolveShortcutCommand(event({ key: "m", metaKey: true, altKey: true }), keybindings, {
-        platform: "MacIntel",
-        context: { terminalFocus: false },
-      }),
-      "modelPicker.toggle",
-    );
-    assert.strictEqual(
-      resolveShortcutCommand(event({ key: "e", metaKey: true, altKey: true }), keybindings, {
-        platform: "MacIntel",
-        context: { terminalFocus: false },
-      }),
-      "traitsPicker.toggle",
-    );
-    assert.strictEqual(
-      resolveShortcutCommand(event({ key: "m", metaKey: true, altKey: true }), keybindings, {
-        platform: "MacIntel",
-        context: { terminalFocus: true },
-      }),
-      null,
-    );
-  });
-
-  it("falls back to composer picker defaults when runtime config is missing them", () => {
-    const legacyBindings = DEFAULT_BINDINGS.filter(
-      (binding) =>
-        binding.command !== "modelPicker.toggle" &&
-        binding.command !== "model.next" &&
-        binding.command !== "model.previous" &&
-        binding.command !== "traitsPicker.toggle",
-    );
-
-    assert.strictEqual(
-      resolveShortcutCommand(event({ key: "m", metaKey: true, shiftKey: true }), legacyBindings, {
-        platform: "MacIntel",
-        context: { terminalFocus: false },
-      }),
-      "modelPicker.toggle",
-    );
-    assert.strictEqual(
-      resolveShortcutCommand(event({ key: "e", metaKey: true, shiftKey: true }), legacyBindings, {
-        platform: "MacIntel",
-        context: { terminalFocus: false },
-      }),
-      "traitsPicker.toggle",
-    );
-    assert.strictEqual(
-      resolveShortcutCommand(event({ key: "]", altKey: true }), legacyBindings, {
-        platform: "MacIntel",
-        context: { terminalFocus: false },
-      }),
-      "model.next",
-    );
-    assert.strictEqual(
-      resolveShortcutCommand(event({ key: "[", altKey: true }), legacyBindings, {
-        platform: "MacIntel",
-        context: { terminalFocus: false },
-      }),
-      "model.previous",
     );
   });
 
@@ -1631,69 +1333,6 @@ describe("resolveShortcutCommand", () => {
     );
   });
 
-  it("falls back to provider-specific new chat defaults when runtime config is missing them", () => {
-    const legacyBindings = DEFAULT_BINDINGS.filter(
-      (binding) =>
-        binding.command !== "chat.newClaude" &&
-        binding.command !== "chat.newCodex" &&
-        binding.command !== "chat.newCursor",
-    );
-
-    assert.strictEqual(
-      resolveShortcutCommand(event({ key: "c", metaKey: true, altKey: true }), legacyBindings, {
-        platform: "MacIntel",
-        context: { terminalFocus: false },
-      }),
-      "chat.newClaude",
-    );
-    assert.strictEqual(
-      resolveShortcutCommand(event({ key: "x", metaKey: true, altKey: true }), legacyBindings, {
-        platform: "MacIntel",
-        context: { terminalFocus: false },
-      }),
-      "chat.newCodex",
-    );
-    assert.strictEqual(
-      resolveShortcutCommand(event({ key: "r", metaKey: true, altKey: true }), legacyBindings, {
-        platform: "MacIntel",
-        context: { terminalFocus: false },
-      }),
-      "chat.newCursor",
-    );
-    assert.strictEqual(
-      resolveShortcutCommand(
-        event({ code: "KeyC", key: "ç", metaKey: true, altKey: true }),
-        legacyBindings,
-        {
-          platform: "MacIntel",
-          context: { terminalFocus: false },
-        },
-      ),
-      "chat.newClaude",
-    );
-    assert.strictEqual(
-      resolveShortcutCommand(
-        event({ code: "KeyX", key: "≈", metaKey: true, altKey: true }),
-        legacyBindings,
-        {
-          platform: "MacIntel",
-          context: { terminalFocus: false },
-        },
-      ),
-      "chat.newCodex",
-    );
-    assert.strictEqual(
-      resolveShortcutCommand(
-        event({ code: "KeyR", key: "®", metaKey: true, altKey: true }),
-        legacyBindings,
-        {
-          platform: "MacIntel",
-          context: { terminalFocus: false },
-        },
-      ),
-      "chat.newCursor",
-    );
-  });
 });
 
 describe("formatShortcutLabel", () => {

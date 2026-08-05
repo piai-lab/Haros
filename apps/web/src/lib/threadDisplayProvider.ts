@@ -3,12 +3,11 @@
 // Layer: Web display helper
 // Exports: resolveThreadDisplayProvider
 
-import type { ProviderKind } from "@omnimind/contracts";
 
 /** The live session's provider wins over the configured model selection. */
 export function resolveThreadDisplayProvider(thread: {
-  readonly session?: { readonly provider: ProviderKind } | null;
-  readonly modelSelection: { readonly provider: ProviderKind };
-}): ProviderKind {
-  return thread.session?.provider ?? thread.modelSelection.provider;
+  readonly session?: { readonly provider: string | null } | null;
+  readonly modelSelection?: { readonly provider: string };
+}): string | null {
+  return thread.session?.provider ?? thread.modelSelection?.provider ?? null;
 }

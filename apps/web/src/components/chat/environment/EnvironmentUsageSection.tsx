@@ -1,7 +1,6 @@
 // FILE: EnvironmentUsageSection.tsx
 // Purpose: "Usage" section of the Environment panel — same menu as the header chip.
 
-import type { ProviderKind } from "@omnimind/contracts";
 
 import {
   ProviderUsageMenuPopup,
@@ -18,7 +17,7 @@ import {
   EnvironmentRowChevron,
 } from "./EnvironmentRow";
 
-export function EnvironmentUsageSection({ provider }: { provider: ProviderKind }) {
+export function EnvironmentUsageSection({ provider }: { provider: string }) {
   const model = useProviderUsageMenuModel(provider);
 
   if (!model) {

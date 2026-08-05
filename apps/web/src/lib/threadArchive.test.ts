@@ -4,8 +4,8 @@
 // Exports: Vitest cases for threadArchive helpers
 
 import { ThreadId } from "@omnimind/contracts";
-import { THREAD_NOT_ARCHIVED_INVARIANT_MARKER } from "@omnimind/shared/errorMessages";
 import { assert, describe, expect, it, vi } from "vitest";
+import type { ProductConversationArchiveApi } from "../productConversationMutations";
 
 import {
   archiveThreadFromClient,
@@ -16,42 +16,49 @@ import {
 const THREAD_ID = ThreadId.makeUnsafe("thread-archive");
 
 describe("threadArchive client helpers", () => {
-  it("dispatches archive and unarchive commands", async () => {
-    const dispatchCommand = vi.fn(async () => ({ sequence: 1 }));
-    const api = { dispatchCommand };
+  it("dispatches closed Product archive and restore mutations with current revision", async () => {
+    const getConversationSnapshot = vi.fn(async () => ({
+      readModel: { conversation: { revision: 4 } },
+    }) as never);
+    const archiveConversation = vi.fn(async () => ({}) as never);
+    const restoreConversation = vi.fn(async () => ({}) as never);
+    const api: ProductConversationArchiveApi = {
+      getConversationSnapshot,
+      archiveConversation,
+      restoreConversation,
+    };
 
     await archiveThreadFromClient(api, THREAD_ID);
     await unarchiveThreadFromClient(api, THREAD_ID);
 
-    expect(dispatchCommand).toHaveBeenNthCalledWith(
-      1,
+    expect(archiveConversation).toHaveBeenCalledWith(
       expect.objectContaining({
-        type: "thread.archive",
-        threadId: THREAD_ID,
+        protocolVersion: 1,
+        conversationId: THREAD_ID,
+        expectedRevision: 4,
+        mutationId: expect.any(String),
       }),
     );
-    expect(dispatchCommand).toHaveBeenNthCalledWith(
-      2,
+    expect(restoreConversation).toHaveBeenCalledWith(
       expect.objectContaining({
-        type: "thread.unarchive",
-        threadId: THREAD_ID,
+        protocolVersion: 1,
+        conversationId: THREAD_ID,
+        expectedRevision: 4,
+        mutationId: expect.any(String),
       }),
     );
+    expect(getConversationSnapshot).toHaveBeenCalledTimes(2);
   });
 
   it("recognizes the already-unarchived invariant returned by the server", () => {
-    // Build the message from the shared marker so this stays coupled to the
-    // exact phrase the server embeds (see commandInvariants.requireThreadArchived).
-    const error = new Error(
-      `Orchestration command invariant failed (thread.unarchive): Thread '${THREAD_ID}' ${THREAD_NOT_ARCHIVED_INVARIANT_MARKER} 'thread.unarchive'.`,
-    );
+    const error = new Error("PRODUCT_CONVERSATION_NOT_ARCHIVED: Conversation is not archived.");
 
     assert.equal(isThreadAlreadyUnarchivedError(error, THREAD_ID), true);
   });
 
   it("does not treat unrelated invariant errors as already restored", () => {
     const error = new Error(
-      "Orchestration command invariant failed (thread.archive): Thread 'thread-archive' is already archived and cannot handle command 'thread.archive'.",
+      "PRODUCT_CONVERSATION_ALREADY_ARCHIVED: Conversation is already archived.",
     );
 
     assert.equal(isThreadAlreadyUnarchivedError(error, THREAD_ID), false);

@@ -65,7 +65,7 @@ const dialogFooterButtonClassName = dialogActionButtonClassName
   .map((className) => `${dialogFooterButtonSlotSelector}:${className.replace(/!/g, "\\!")}`)
   .join(" ");
 
-/** Shared label style for form fields inside dialogs (SpaceEditorDialog, CreateProjectDialog). */
+/** Shared label style for form fields inside dialogs. */
 const dialogFieldLabelClassName =
   "text-[length:var(--app-font-size-ui-sm,11px)] font-medium text-foreground/80";
 

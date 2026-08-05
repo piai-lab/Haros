@@ -84,7 +84,7 @@ describe("resolveDiffPanelThread", () => {
         threadId: THREAD_ID,
         serverThread,
         draftThread: makeDraftThread({ branch: "feature/draft" }),
-        fallbackModelSelection: { provider: "codex", model: "gpt-5.4-mini" },
+        draftModelSelection: { provider: "codex", model: "gpt-5.4-mini" },
       }),
     ).toBe(serverThread);
   });
@@ -98,7 +98,7 @@ describe("resolveDiffPanelThread", () => {
         worktreePath: "/tmp/worktree",
         envMode: "worktree",
       }),
-      fallbackModelSelection: { provider: "codex", model: "gpt-5.4-mini" },
+      draftModelSelection: { provider: "codex", model: "gpt-5.4-mini" },
     });
 
     expect(resolved).toMatchObject({
@@ -118,7 +118,7 @@ describe("resolveDiffPanelThread", () => {
         threadId: THREAD_ID,
         serverThread: undefined,
         draftThread: null,
-        fallbackModelSelection: null,
+        draftModelSelection: null,
       }),
     ).toBeUndefined();
   });

@@ -4,7 +4,7 @@
 // Layer: Route/UI support
 // Exports: entry type, the index, section label lookup, and the ranking helper
 
-import { rankProviderDiscoveryItems } from "~/lib/providerDiscovery";
+import { rankSearchItems } from "~/lib/searchRanking";
 import {
   settingRowAnchorId,
   SETTINGS_NAV_ITEMS,
@@ -422,7 +422,7 @@ export function rankSettingsSearchEntries(
   if (trimmed.length === 0) {
     return [];
   }
-  const ranked = rankProviderDiscoveryItems(SETTINGS_SEARCH_ENTRIES, trimmed, (entry) => [
+  const ranked = rankSearchItems(SETTINGS_SEARCH_ENTRIES, trimmed, (entry) => [
     { value: entry.title },
     { value: entry.keywords, weight: 200 },
     { value: settingsSectionLabel(entry.section), weight: 400 },

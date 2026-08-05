@@ -230,7 +230,7 @@ describe("makeNativeHostExecutionBoundary recovery", () => {
                 },
                 resolvedSelection: {
                   engineId: "pi",
-                  modelId: "faux-native/faux-thinker",
+                  runtimeModelId: "faux-native/faux-thinker",
                   thinking: "medium",
                   permissionPolicy: "approval-required" as const,
                   enforcement: "unverified" as const,

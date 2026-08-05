@@ -88,16 +88,6 @@ import {
   type UpdateInstallPreparationAttempt,
 } from "./updateInstallPreparation";
 import {
-  hasPendingDesktopMigrationRecovery,
-  requiresDesktopMigrationRecovery,
-  recoverDesktopMigrationIfRequired,
-  resolveDesktopMigrationRecoveryPaths,
-  restoreDesktopMigrationBackup,
-  type DesktopMigrationRecoveryDecision,
-  type DesktopMigrationRecoveryOutcome,
-  type DesktopMigrationRecoveryPaths,
-} from "./desktopMigrationRecovery";
-import {
   LSREGISTER_PATH,
   parseLastLaunchVersion,
   resolveLaunchVersionRecordPath,
@@ -255,7 +245,7 @@ const startupBundleIdentity = captureStartupBundleIdentity();
 // `BASE_DIR` prefers OMNIMIND_HOME, which the Windows registry read hydrates whenever the
 // user set it persistently. Resolving either against an unhydrated environment would
 // silently relocate an existing user's profile and data directory.
-// (The probe also carries PATH, SSH_AUTH_SOCK and HOMEBREW_* for later provider spawns.
+// (The probe also carries PATH, SSH_AUTH_SOCK and HOMEBREW_* for supervised child processes.
 // APPDATA on Windows is inherited from the process env, not hydrated here.)
 const shellEnvironmentSync = isDisposableSmokeEnvironment(process.env)
   ? { pathHydrated: true }
@@ -315,7 +305,6 @@ const AUTO_UPDATE_INSTALL_WATCHDOG_MS = 15 * 1000;
 const AUTO_UPDATE_DIAGNOSTICS_TIMEOUT_MS = 2_800;
 // User-driven like the menu and renderer reasons, so it must not be filtered
 // out by the automatic-activity suppression a previous install failure arms.
-const UPDATE_CHECK_REASON_MIGRATION_RECOVERY = "migration recovery";
 const UPDATE_INSTALL_MARKER_FILE_NAME = "pending-update-install.json";
 const BACKEND_FORCE_KILL_DELAY_MS = 8_000;
 const BACKEND_SHUTDOWN_TIMEOUT_MS = 10_000;
@@ -359,7 +348,6 @@ let isUpdaterInstallPreparing = false;
 let isUpdaterQuitAndInstallInFlight = false;
 const updateInstallPreparation = makeUpdateInstallPreparationCoordinator();
 let desktopShutdownPromise: Promise<void> | null = null;
-let desktopStartupBlockedForMigrationRecovery = false;
 let desktopShutdownComplete = false;
 let desktopProtocolRegistered = false;
 let aboutCommitHashCache: string | null | undefined;
@@ -1187,136 +1175,6 @@ function startNativeHost(): void {
     onStderr: (chunk) => nativeHostLogSink?.write(chunk),
   });
   nativeHostSupervisor.start();
-}
-
-function desktopMigrationRecoveryPaths(): DesktopMigrationRecoveryPaths {
-  return resolveDesktopMigrationRecoveryPaths({
-    baseDir: BASE_DIR,
-    appRoot: resolveAppRoot(),
-    isDevelopment,
-  });
-}
-
-function isDesktopMigrationRecoveryPending(): boolean {
-  try {
-    // Deliberately not "a marker exists": while the backend still has resume
-    // attempts left, a failed start is an ordinary restart, not a recovery
-    // prompt. Escalating early would bury the self-heal under a dialog.
-    return requiresDesktopMigrationRecovery(desktopMigrationRecoveryPaths());
-  } catch (error) {
-    // An unreadable marker path must not break crash supervision.
-    writeDesktopLogHeader(
-      `migration recovery marker check failed message=${formatErrorMessage(error)}`,
-    );
-    return false;
-  }
-}
-
-/** Joins user-facing options as "a, b or c". */
-function formatRecoveryOptionList(options: ReadonlyArray<string>): string {
-  if (options.length <= 1) return options[0] ?? "";
-  return `${options.slice(0, -1).join(", ")} or ${options[options.length - 1]}`;
-}
-
-async function handleDesktopMigrationRecovery(): Promise<DesktopMigrationRecoveryOutcome> {
-  const paths = desktopMigrationRecoveryPaths();
-  desktopStartupBlockedForMigrationRecovery = true;
-  const outcome = await recoverDesktopMigrationIfRequired({
-    // The gate opens only once the backend has spent its resume budget, while
-    // the post-restore verification checks the marker file itself.
-    requiresRecovery: () => requiresDesktopMigrationRecovery(paths),
-    markerRemains: () => hasPendingDesktopMigrationRecovery(paths),
-    choose: async ({ previousFailure }) => {
-      // The user is here because OmniMind cannot open its database, so the
-      // in-app update button is unreachable by definition. A newer build is
-      // often the actual fix, and this dialog is the only surface left to
-      // offer it from: installing it in place when the updater can reach the
-      // feed, and handing over the download page otherwise.
-      const releaseUrl = updateState.releaseUrl;
-      const canInstallUpdate = canInstallUpdateFromRecovery();
-      const restoreFailed = previousFailure?.attempt === "restore";
-      const choices: Array<{
-        readonly label: string;
-        readonly detail: string;
-        readonly decision: DesktopMigrationRecoveryDecision;
-      }> = [
-        restoreFailed
-          ? {
-              label: "Try restore again",
-              detail: "retry the verified backup restore",
-              decision: "restore",
-            }
-          : {
-              label: "Restore backup and restart",
-              detail: "restore the verified pre-migration backup and restart",
-              decision: "restore",
-            },
-      ];
-      if (canInstallUpdate) {
-        choices.push({
-          label: "Update OmniMind and restart",
-          detail: "install the newest OmniMind release, which may already contain the fix",
-          decision: "install-update",
-        });
-      }
-      if (releaseUrl !== null) {
-        choices.push({
-          label: "Download latest release",
-          detail: `${canInstallUpdate ? "download that release" : "download the latest OmniMind release"} in a browser`,
-          decision: "open-release-page",
-        });
-      }
-      choices.push({
-        label: "Quit",
-        detail: "quit without opening the database",
-        decision: "quit",
-      });
-
-      const options = formatRecoveryOptionList(choices.map((choice) => choice.detail));
-      const result = await dialog.showMessageBox({
-        type: previousFailure === null ? "warning" : "error",
-        title:
-          previousFailure === null
-            ? "OmniMind needs to recover its database"
-            : restoreFailed
-              ? "Migration recovery failed"
-              : "OmniMind could not update itself",
-        message:
-          previousFailure === null
-            ? "OmniMind stopped a database migration before it could finish safely."
-            : restoreFailed
-              ? "The saved database backup could not be restored."
-              : "The newest OmniMind release could not be installed.",
-        detail: `${previousFailure === null ? "" : `${previousFailure.message}\n\n`}You can ${options}. No provider or chat process will start until recovery succeeds.`,
-        buttons: choices.map((choice) => choice.label),
-        defaultId: 0,
-        cancelId: choices.length - 1,
-        noLink: true,
-      });
-      return choices[result.response]?.decision ?? "quit";
-    },
-    installUpdate: installLatestUpdateForMigrationRecovery,
-    openReleasePage: () => {
-      const releaseUrl = updateState.releaseUrl;
-      if (releaseUrl !== null) void shell.openExternal(releaseUrl);
-    },
-    restore: () =>
-      restoreDesktopMigrationBackup({
-        executablePath: process.execPath,
-        nodeArgs: backendNodeArgs(),
-        paths,
-        cwd: resolveBackendCwd(),
-        env: process.env,
-      }),
-    requestRestart: () => app.relaunch(),
-    requestQuit: (reason) => requestGracefulAppQuit(reason),
-    formatError: formatErrorMessage,
-    log: writeDesktopLogHeader,
-  });
-  if (outcome === "continue") {
-    desktopStartupBlockedForMigrationRecovery = false;
-  }
-  return outcome;
 }
 
 function resolveDesktopStaticDir(): string | null {
@@ -2253,9 +2111,7 @@ function scheduleUpdatePoll(): void {
 }
 
 function isExplicitUpdateCheckReason(reason: string): boolean {
-  return (
-    reason === "menu" || reason === "renderer" || reason === UPDATE_CHECK_REASON_MIGRATION_RECOVERY
-  );
+  return reason === "menu" || reason === "renderer";
 }
 
 function emitUpdateState(): void {
@@ -2759,84 +2615,6 @@ function prepareAvailableUpdateInBackground(reason: string): void {
   activeUpdatePreparation = preparation;
 }
 
-/**
- * Whether the recovery prompt can offer an in-place update.
- *
- * Deliberately permissive about the current status: the check has usually not
- * run yet at this point in startup, so "we do not know of an update" is not a
- * reason to hide the option. Only a completed check that found nothing newer
- * is, because then updating provably cannot repair anything.
- */
-function canInstallUpdateFromRecovery(): boolean {
-  return updaterConfigured && updateState.status !== "up-to-date";
-}
-
-/**
- * Drives check → download → install for an install whose database is wedged.
- *
- * This is the only recovery option that needs nothing from the user afterwards,
- * so it runs the whole updater sequence rather than stopping at "an update is
- * available". Resolves to a message to show in the next prompt when the update
- * could not be installed, or to null once the install handoff has started.
- */
-async function installLatestUpdateForMigrationRecovery(): Promise<string | null> {
-  if (!updaterConfigured) {
-    return resolveAutoUpdateDisabledReason() ?? "Automatic updates are not available.";
-  }
-
-  if (updateState.status !== "downloaded") {
-    // The automatic startup check is armed before this prompt appears, so one
-    // may already be running. Joining it is what gets a real answer: starting a
-    // second check here would return without doing anything and leave the
-    // status at "checking", which reads as a download failure below.
-    const inFlightCheck = activeUpdateCheck;
-    if (inFlightCheck === null) {
-      await checkForUpdates(UPDATE_CHECK_REASON_MIGRATION_RECOVERY);
-    } else {
-      await inFlightCheck;
-    }
-    // A successful check starts the download itself; await that one rather
-    // than starting a competing transfer.
-    const preparation = activeUpdatePreparation;
-    if (preparation !== null) {
-      await preparation;
-    } else if (updateState.status === "available") {
-      await downloadAvailableUpdate();
-    }
-  }
-
-  if (updateState.status === "up-to-date") {
-    return `OmniMind ${app.getVersion()} is already the newest release, so updating cannot repair this database.`;
-  }
-  if (updateState.status !== "downloaded") {
-    return updateState.message ?? "The update could not be downloaded.";
-  }
-
-  await installDownloadedUpdate();
-  // quitAndInstall never resolves — the process exits under it. A handoff that
-  // silently fails is cleared by the install watchdog instead, and waiting for
-  // that verdict is what keeps a failed install from leaving a live app with
-  // no window and no way back to this prompt.
-  await waitForMigrationRecoveryInstallHandoff();
-  if (isUpdaterQuitAndInstallInFlight) {
-    return null;
-  }
-  return updateState.message ?? "The downloaded update could not be installed.";
-}
-
-/**
- * Waits out the install watchdog window, which is the earliest a failed handoff
- * can be known: nothing else clears `isUpdaterQuitAndInstallInFlight`, so there
- * is nothing to poll for. A successful handoff exits the process well before
- * this resolves.
- */
-async function waitForMigrationRecoveryInstallHandoff(): Promise<void> {
-  if (!isUpdaterQuitAndInstallInFlight) return;
-  await new Promise<void>((resolve) => {
-    setTimeout(resolve, AUTO_UPDATE_INSTALL_WATCHDOG_MS + 2_000).unref();
-  });
-}
-
 async function runDownloadedUpdateInstall(
   preparationAttempt: UpdateInstallPreparationAttempt,
 ): Promise<{
@@ -3168,7 +2946,7 @@ function configureAutoUpdater(): void {
 
   scheduleUpdatePoll();
 }
-// Builds process-local Node args so provider/tool children do not inherit OmniMind's heap guard.
+// Builds process-local Node args so supervised tool children do not inherit OmniMind's heap guard.
 function backendNodeArgs(): string[] {
   const configuredMaxOldSpaceMb =
     BACKEND_MAX_OLD_SPACE_ENV_KEYS.map((key) => process.env[key]).find(
@@ -3213,30 +2991,10 @@ function scheduleBackendRestart(reason: string): void {
   const response = backendSupervision.respondToStartFailure({
     quitting: isQuitting,
     restartPending: restartTimer !== null,
-    migrationRecoveryMarkerPresent: isDesktopMigrationRecoveryPending(),
   });
 
   switch (response.kind) {
     case "ignore":
-      return;
-    case "recover-migration":
-      publishDesktopHealth({
-        service: {
-          status: "degraded",
-          reason: "Product Service migration recovery is required.",
-          restartAttempt: backendSupervision.consecutiveFailures,
-        },
-      });
-      // The marker is written mid-session by the migration that just killed the
-      // backend, so bootstrap's one-shot check never saw it. Recovery owns the
-      // process from here; respawning would only repeat the failed migration.
-      writeDesktopLogHeader(
-        `migration recovery marker detected after backend failure reason=${sanitizeLogValue(reason)}`,
-      );
-      safeConsoleError(
-        `[desktop] backend failed with a pending migration recovery (${reason}); opening recovery`,
-      );
-      void runMidSessionMigrationRecovery(reason);
       return;
     case "give-up":
       publishDesktopHealth({
@@ -3271,17 +3029,6 @@ function scheduleBackendRestart(reason: string): void {
       }, response.delayMs);
       return;
   }
-}
-
-// Runs the same recovery flow bootstrap uses, but for a marker that appeared while
-// the app was already running. Shown once per app run — the policy owns that latch.
-async function runMidSessionMigrationRecovery(reason: string): Promise<void> {
-  const outcome = await handleDesktopMigrationRecovery();
-  if (outcome !== "continue") return;
-
-  // The marker vanished between the crash check and the recovery run (another
-  // process cleared it), so fall back to the normal supervised restart.
-  await restartBackendAfterCrash(reason);
 }
 
 function backendFailureDialogDetail(reason: string): string {
@@ -3354,27 +3101,6 @@ function handleBackendStartupBlock(block: BackendStartupBlock): void {
   if (isQuitting || backendLifecycleDialogInFlight) return;
 
   const task = (async () => {
-    if (block.kind === "migration-recovery-required") {
-      const result = await dialog.showMessageBox({
-        type: "warning",
-        title: "OmniMind needs to recover its database",
-        message: "A database migration did not finish safely.",
-        detail:
-          "Restart OmniMind to open the verified backup recovery flow. Provider and chat processes will remain stopped until recovery completes.",
-        buttons: ["Restart and recover", "Quit"],
-        defaultId: 0,
-        cancelId: 1,
-        noLink: true,
-      });
-      if (result.response === 0) {
-        app.relaunch();
-        requestGracefulAppQuit("migration recovery required");
-      } else {
-        requestGracefulAppQuit("migration recovery declined");
-      }
-      return;
-    }
-
     const processDetail =
       block.ownerPid === null
         ? "Another OmniMind server is already using this database."
@@ -3442,13 +3168,6 @@ type BackendStartTrigger = "lifecycle" | "crash-restart";
 
 function startBackend(trigger: BackendStartTrigger = "lifecycle"): void {
   if (isQuitting || backendProcess) return;
-  // Recovery owns the database until it clears the marker. Callers that restart
-  // the backend after an unrelated failure — a given-up update install, say —
-  // must not hand it a database the user is being asked how to repair.
-  if (desktopStartupBlockedForMigrationRecovery) {
-    writeDesktopLogHeader("backend start suppressed while migration recovery is pending");
-    return;
-  }
 
   if (trigger === "lifecycle") {
     backendSupervision.reset();
@@ -3681,7 +3400,7 @@ async function disposeBrowserHostPipeServerForShutdown(reason: string): Promise<
   }
 }
 
-// Keeps Electron alive long enough for backend finalizers to reap provider child processes.
+// Keeps Electron alive long enough for backend finalizers to reap supervised child processes.
 async function shutdownDesktopRuntime(reason: string): Promise<void> {
   if (desktopShutdownPromise) {
     return desktopShutdownPromise;
@@ -4497,17 +4216,7 @@ if (!hasSingleInstanceLock) {
 
 async function bootstrap(): Promise<void> {
   writeDesktopLogHeader("bootstrap start");
-  // Ahead of the recovery gate on purpose. A startup that blocks below returns
-  // early, and every path that could ship the fix for whatever blocked it lives
-  // after that return: an install wedged on a bad migration would be unable to
-  // update out of it, which is exactly how 0.6.0 stranded its users. The
-  // updater touches no database state, so configuring it first is safe.
   configureAutoUpdater();
-
-  const migrationRecoveryOutcome = await handleDesktopMigrationRecovery();
-  if (migrationRecoveryOutcome !== "continue") {
-    return;
-  }
 
   backendAuthToken = Crypto.randomBytes(24).toString("hex");
   nativeHostRendezvous = createNativeHostRendezvous();
@@ -4638,7 +4347,7 @@ if (hasSingleInstanceLock) {
       });
 
       app.on("activate", () => {
-        if (desktopStartupBlockedForMigrationRecovery || isQuitting) {
+        if (isQuitting) {
           return;
         }
         handleDesktopAppForegrounded();

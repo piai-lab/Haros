@@ -7,7 +7,7 @@
 
 import { ArrowUpIcon, EllipsisIcon, PlayIcon, SteerIcon, Trash2, XIcon } from "~/lib/icons";
 
-import type { QueuedComposerTurn } from "../../composerDraftStore";
+import type { WorkbenchQueuedTurn } from "../../productReadModel";
 import type { WorkbenchCopy } from "../../i18n/workbenchCopy";
 
 import { Button } from "../ui/button";
@@ -16,17 +16,17 @@ import { Menu, MenuItem, MenuTrigger } from "../ui/menu";
 import { ComposerPickerMenuPopup } from "./ComposerPickerMenuPopup";
 
 type QueuedComposerActionsProps = {
-  queuedTurn: QueuedComposerTurn;
+  queuedTurn: WorkbenchQueuedTurn;
   primaryAction: {
     kind: "steer" | "move-next" | "run-next";
     disabled?: boolean;
-    onSelect: (queuedTurn: QueuedComposerTurn) => void;
+    onSelect: (queuedTurn: WorkbenchQueuedTurn) => void;
   };
   primaryActionDisabled?: boolean;
   editing?: boolean;
   onCancelEdit?: (() => void) | undefined;
   onRemove: (queuedTurnId: string) => void;
-  onEdit: (queuedTurn: QueuedComposerTurn) => void;
+  onEdit: (queuedTurn: WorkbenchQueuedTurn) => void;
   copy: Pick<
     WorkbenchCopy,
     | "queueSteer"

@@ -3,7 +3,7 @@
 // Layer: Web domain helpers
 // Exports: thread env resolution + `/fork` target planning
 
-import type { ThreadEnvironmentMode } from "@omnimind/contracts";
+import type { WorkspaceEnvironmentMode } from "@omnimind/contracts";
 import {
   isPendingThreadWorktree,
   resolveThreadEnvironmentMode,
@@ -18,7 +18,7 @@ export type ForkThreadTarget = "local" | "worktree";
 
 export interface ResolvedForkThreadEnvironment {
   target: ForkThreadTarget;
-  envMode: ThreadEnvironmentMode;
+  envMode: WorkspaceEnvironmentMode;
   branch: string | null;
   worktreePath: string | null;
   associatedWorktreePath: string | null;
@@ -33,7 +33,7 @@ export {
 } from "@omnimind/shared/threadEnvironment";
 
 export interface ThreadEnvironmentPresentation {
-  mode: ThreadEnvironmentMode;
+  mode: WorkspaceEnvironmentMode;
   workspaceState: ResolvedThreadWorkspaceState;
   shortLabel: "Local" | "Worktree";
   localOptionLabel: "Local project";
@@ -42,7 +42,7 @@ export interface ThreadEnvironmentPresentation {
 }
 
 export function resolveThreadEnvironmentPresentation(input: {
-  envMode?: ThreadEnvironmentMode | null | undefined;
+  envMode?: WorkspaceEnvironmentMode | null | undefined;
   worktreePath?: string | null | undefined;
 }): ThreadEnvironmentPresentation {
   const mode = resolveThreadEnvironmentMode(input);
@@ -72,7 +72,7 @@ export interface DiffEnvironmentState {
 // Diff surfaces stay disabled while a worktree-intended chat is still waiting for its path.
 export function resolveDiffEnvironmentState(input: {
   projectCwd?: string | null | undefined;
-  envMode?: ThreadEnvironmentMode | null | undefined;
+  envMode?: WorkspaceEnvironmentMode | null | undefined;
   worktreePath?: string | null | undefined;
 }): DiffEnvironmentState {
   const pending = isPendingThreadWorktree(input);

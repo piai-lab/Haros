@@ -2,8 +2,7 @@
 // Purpose: Render a provider usage summary panel that can show both classic
 // rate-limit rows and archive-derived local usage lines in the same popover.
 
-import type { ProviderKind } from "@omnimind/contracts";
-import { providerUsageLabel } from "@omnimind/shared/providerUsage";
+import { historicalUsageLabel } from "~/historicalSourcePresentation";
 
 import { ExternalLinkIcon, TriangleAlertIcon } from "~/lib/icons";
 import type { OpenUsageUsageLine } from "~/lib/openUsageRateLimits";
@@ -18,10 +17,8 @@ import { cn } from "~/lib/utils";
 import { ProviderUsageLimitRows } from "./ProviderUsageLimitRows";
 import { ProviderUsageLineList } from "./ProviderUsageLineList";
 
-export { providerUsageLabel };
-
 export function ProviderUsagePanelContent(props: {
-  provider: ProviderKind | null | undefined;
+  provider: string | null | undefined;
   rateLimits: ReadonlyArray<ProviderRateLimit>;
   usageLines?: ReadonlyArray<OpenUsageUsageLine> | undefined;
   notice?: string | null | undefined;
@@ -42,7 +39,7 @@ export function ProviderUsagePanelContent(props: {
     <div className={cn("space-y-2", props.className)}>
       {props.showTitle !== false ? (
         <div className="text-[length:var(--app-font-size-chat-meta,10px)] font-medium text-muted-foreground">
-          {providerUsageLabel(props.provider)}
+          {historicalUsageLabel(props.provider)}
         </div>
       ) : null}
       {props.notice ? (
@@ -60,13 +57,13 @@ export function ProviderUsagePanelContent(props: {
         />
       ) : visibleRows.length === 0 && props.isLoading ? (
         <p className="text-[length:var(--app-font-size-chat-meta,10px)] leading-relaxed text-muted-foreground">
-          Scanning local usage data for the selected provider.
+          Reading recorded usage from conversation activity.
         </p>
       ) : visibleRows.length === 0 ? (
         <p className="text-[length:var(--app-font-size-chat-meta,10px)] leading-relaxed text-muted-foreground">
           {props.provider
-            ? "No local usage data was found yet for the selected provider."
-            : "No local usage data was found yet."}
+            ? "No usage was recorded in conversation activity for the selected source."
+            : "No usage was recorded in conversation activity."}
         </p>
       ) : null}
       {props.showLearnMore === true && learnMoreHref ? (

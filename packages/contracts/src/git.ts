@@ -6,8 +6,6 @@ import {
   ThreadId,
   TrimmedNonEmptyString,
 } from "./baseSchemas";
-import { DEFAULT_GIT_TEXT_GENERATION_MODEL } from "./model";
-import { ModelSelection, ProviderStartOptions } from "./orchestration";
 
 const TrimmedNonEmptyStringSchema = TrimmedNonEmptyString;
 
@@ -147,21 +145,6 @@ export const GitPullInput = Schema.Struct({
 });
 export type GitPullInput = typeof GitPullInput.Type;
 
-// Read-only diff summary requests reuse the shared git text-generation model settings.
-export const GitSummarizeDiffInput = Schema.Struct({
-  cwd: TrimmedNonEmptyStringSchema,
-  scope: Schema.optional(Schema.Literals(["workingTree", "unstaged", "staged", "branch"])).pipe(
-    Schema.withConstructorDefault(() => Option.some("workingTree" as const)),
-  ),
-  codexHomePath: Schema.optional(TrimmedNonEmptyStringSchema),
-  providerOptions: Schema.optional(ProviderStartOptions),
-  textGenerationModel: Schema.optional(TrimmedNonEmptyStringSchema).pipe(
-    Schema.withConstructorDefault(() => Option.some(DEFAULT_GIT_TEXT_GENERATION_MODEL)),
-  ),
-  textGenerationModelSelection: Schema.optional(ModelSelection),
-});
-export type GitSummarizeDiffInput = typeof GitSummarizeDiffInput.Type;
-
 export const GitRunStackedActionInput = Schema.Struct({
   actionId: TrimmedNonEmptyStringSchema,
   cwd: TrimmedNonEmptyStringSchema,
@@ -171,12 +154,6 @@ export const GitRunStackedActionInput = Schema.Struct({
   filePaths: Schema.optional(
     Schema.Array(TrimmedNonEmptyStringSchema).check(Schema.isMinLength(1)),
   ),
-  codexHomePath: Schema.optional(TrimmedNonEmptyStringSchema),
-  providerOptions: Schema.optional(ProviderStartOptions),
-  textGenerationModel: Schema.optional(TrimmedNonEmptyStringSchema).pipe(
-    Schema.withConstructorDefault(() => Option.some(DEFAULT_GIT_TEXT_GENERATION_MODEL)),
-  ),
-  textGenerationModelSelection: Schema.optional(ModelSelection),
 });
 export type GitRunStackedActionInput = typeof GitRunStackedActionInput.Type;
 
@@ -503,11 +480,6 @@ export const GitPullResult = Schema.Struct({
   upstreamBranch: TrimmedNonEmptyStringSchema.pipe(Schema.NullOr),
 });
 export type GitPullResult = typeof GitPullResult.Type;
-
-export const GitSummarizeDiffResult = Schema.Struct({
-  summary: TrimmedNonEmptyStringSchema,
-});
-export type GitSummarizeDiffResult = typeof GitSummarizeDiffResult.Type;
 
 const GitActionProgressBase = Schema.Struct({
   actionId: TrimmedNonEmptyStringSchema,

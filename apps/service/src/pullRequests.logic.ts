@@ -8,6 +8,7 @@ import type {
 } from "@omnimind/contracts";
 
 import type { GitHubPullRequestListItem } from "./git/Services/GitHubCli.ts";
+import type { PullRequestWorkspaceContext } from "./pullRequests/workspaceContext.ts";
 export { isValidGitHubRepositoryNameWithOwner } from "@omnimind/shared/githubRepository";
 
 export function pullRequestListCacheKey(
@@ -42,12 +43,12 @@ export function repositoryPullRequestIdentityKey(input: {
 /** Stable project-local identity for a pull request. Repository casing is not significant on
  * GitHub, while the project id deliberately remains part of the key so two projects pointing at
  * the same repository can prioritize the same PR independently. */
-export function projectPullRequestIdentityKey(input: {
-  projectId: string;
+export function workspacePullRequestIdentityKey(input: {
+  workspaceId: string;
   repository: string;
   number: number;
 }): string {
-  return `${input.projectId}\u0000${input.repository.trim().toLowerCase()}\u0000${input.number}`;
+  return `${input.workspaceId}\u0000${input.repository.trim().toLowerCase()}\u0000${input.number}`;
 }
 
 /** Select only pins whose own project/repository batch was cut off by the list cap. This keeps
@@ -55,15 +56,15 @@ export function projectPullRequestIdentityKey(input: {
  * repository that happens to be configured by a different project in the same aggregate request. */
 export function selectRecoverablePullRequestPins<
   P extends string,
-  T extends { projectId: P; repositoryKey: string; number: number },
+  T extends { workspaceId: P; repositoryKey: string; number: number },
 >(input: {
   pins: ReadonlyArray<T>;
   presentKeys: ReadonlySet<string>;
-  repositoryKeysByProject: ReadonlyMap<P, ReadonlySet<string>>;
+  repositoryKeysByWorkspace: ReadonlyMap<P, ReadonlySet<string>>;
   batches: ReadonlyArray<{
     repository: string;
     truncated: boolean;
-    projectIds: ReadonlyArray<P>;
+    workspaceIds: ReadonlyArray<P>;
   }>;
 }): T[] {
   const batches = new Map(
@@ -74,11 +75,11 @@ export function selectRecoverablePullRequestPins<
     const batch = batches.get(repository);
     return (
       batch?.truncated === true &&
-      batch.projectIds.includes(pin.projectId) &&
-      input.repositoryKeysByProject.get(pin.projectId)?.has(repository) === true &&
+      batch.workspaceIds.includes(pin.workspaceId) &&
+      input.repositoryKeysByWorkspace.get(pin.workspaceId)?.has(repository) === true &&
       !input.presentKeys.has(
-        projectPullRequestIdentityKey({
-          projectId: pin.projectId,
+        workspacePullRequestIdentityKey({
+          workspaceId: pin.workspaceId,
           repository,
           number: pin.number,
         }),
@@ -90,7 +91,7 @@ export function selectRecoverablePullRequestPins<
 /** One mapping from a gh list item to the wire entry, shared by the capped batch path and the
  * individual pinned-PR recovery path so the two can never drift. */
 export function buildPullRequestListEntry(input: {
-  project: { id: PullRequestListEntry["projectId"]; title: string };
+  project: PullRequestWorkspaceContext;
   repository: string;
   pullRequest: GitHubPullRequestListItem;
   viewerReviewRequested: boolean;
@@ -98,8 +99,8 @@ export function buildPullRequestListEntry(input: {
 }): PullRequestListEntry {
   const { pullRequest } = input;
   return {
-    projectId: input.project.id,
-    projectTitle: input.project.title,
+    workspaceId: input.project.workspaceId,
+    workspaceTitle: input.project.workspaceTitle,
     repository: input.repository,
     number: pullRequest.number,
     title: pullRequest.title,
@@ -116,10 +117,10 @@ export function buildPullRequestListEntry(input: {
     reviewDecision: pullRequest.reviewDecision,
     viewerReviewRequested: input.viewerReviewRequested,
     isPinned: input.isPinned,
-    projectContexts: [
+    workspaceContexts: [
       {
-        projectId: input.project.id,
-        projectTitle: input.project.title,
+        workspaceId: input.project.workspaceId,
+        workspaceTitle: input.project.workspaceTitle,
         isPinned: input.isPinned,
       },
     ],

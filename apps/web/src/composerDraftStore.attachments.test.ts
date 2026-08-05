@@ -1,8 +1,5 @@
-import {
-  OrchestrationProposedPlanId,
-  PROVIDER_SEND_TURN_MAX_ATTACHMENTS,
-  ThreadId,
-} from "@omnimind/contracts";
+import type { ConversationHistoryPlanId } from "~/historicalConversation";
+import { CHAT_TURN_MAX_ATTACHMENTS, ThreadId } from "@omnimind/contracts";
 import * as Schema from "effect/Schema";
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 import { pendingComposerAttachmentSyncGenerationCount } from "./composerDraftAttachments";
@@ -112,17 +109,15 @@ describe("composerDraftStore addImages", () => {
 
   it("enforces the attachment limit atomically when another reference wins the last slot", () => {
     const store = useComposerDraftStore.getState();
-    const initialImages = Array.from(
-      { length: PROVIDER_SEND_TURN_MAX_ATTACHMENTS - 1 },
-      (_, index) =>
-        makeImage({
-          id: `img-${index}`,
-          name: `image-${index}.png`,
-          sizeBytes: index + 1,
-          previewUrl: `blob:image-${index}`,
-        }),
+    const initialImages = Array.from({ length: CHAT_TURN_MAX_ATTACHMENTS - 1 }, (_, index) =>
+      makeImage({
+        id: `img-${index}`,
+        name: `image-${index}.png`,
+        sizeBytes: index + 1,
+        previewUrl: `blob:image-${index}`,
+      }),
     );
-    expect(store.addImages(threadId, initialImages)).toBe(PROVIDER_SEND_TURN_MAX_ATTACHMENTS - 1);
+    expect(store.addImages(threadId, initialImages)).toBe(CHAT_TURN_MAX_ATTACHMENTS - 1);
     expect(store.addFiles(threadId, [makeFile({ id: "last-slot" })])).toBe(1);
 
     const lateImage = makeImage({
@@ -134,7 +129,7 @@ describe("composerDraftStore addImages", () => {
 
     const draft = useComposerDraftStore.getState().draftsByThreadId[threadId];
     expect((draft?.images.length ?? 0) + (draft?.files.length ?? 0)).toBe(
-      PROVIDER_SEND_TURN_MAX_ATTACHMENTS,
+      CHAT_TURN_MAX_ATTACHMENTS,
     );
     expect(revokeSpy).toHaveBeenCalledWith("blob:late-image");
   });
@@ -374,7 +369,10 @@ describe("composerDraftStore prompt history saved draft", () => {
     const persistedState = partializeComposerDraftStoreState(
       useComposerDraftStore.getState(),
     ) as unknown as {
-      draftsByThreadId?: Record<string, { promptHistorySavedDraft?: Record<string, unknown> }>;
+      draftsByThreadId?: Record<
+        string,
+        { promptHistorySavedDraft?: Record<string, unknown> }
+      >;
     };
 
     expect(
@@ -813,7 +811,7 @@ describe("composerDraftStore copyTransferableComposerState", () => {
       restoredPrompt: "Implement the accepted plan",
       sourceProposedPlan: {
         threadId: sourceThreadId,
-        planId: OrchestrationProposedPlanId.makeUnsafe("plan-source-transfer"),
+        planId: "plan-source-transfer",
       },
     });
 

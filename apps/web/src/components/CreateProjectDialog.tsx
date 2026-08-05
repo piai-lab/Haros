@@ -1,10 +1,9 @@
 // FILE: CreateProjectDialog.tsx
 // Purpose: Single entry point for adding a project — typed path, source folder
-//          (drag/drop or native browse), and destination Space.
+//          (drag/drop or native browse), then resolves one canonical Product Workspace root.
 // Layer: Web UI dialog
 // Exports: CreateProjectDialog, CreateProjectSubmitValue
 
-import { type SpaceId } from "@omnimind/contracts";
 import { useCallback, useEffect, useId, useRef, useState, type KeyboardEvent } from "react";
 
 import { isElectron } from "../env";
@@ -12,17 +11,11 @@ import {
   isDroppedComposerDirectory,
   resolveDroppedFileAbsolutePath,
 } from "../lib/composerDropPaths";
-import { VOID_SPACE_KEY, spaceKey, toSpaceIconName } from "../lib/spaceGrouping";
-import { createSpace } from "../lib/spaces";
 import { readNativeApi } from "../nativeApi";
-import type { Space } from "../types";
-import { useVoidSpace } from "../voidSpaceStore";
 import { cn } from "~/lib/utils";
 
 import { FolderClosed } from "./FolderClosed";
 import { describeAddProjectError } from "./Sidebar.logic";
-import { SpaceEditorDialog, type SpaceEditorValue } from "./SpaceEditorDialog";
-import { SpaceIcon } from "./SpaceIcon";
 import { Button } from "./ui/button";
 import {
   Dialog,
@@ -33,9 +26,7 @@ import {
   DialogTitle,
   dialogFieldLabelClassName,
 } from "./ui/dialog";
-import { ComposerPickerSelectPopup } from "./chat/ComposerPickerMenuPopup";
 import { InputGroup, InputGroupAddon, InputGroupInput } from "./ui/input-group";
-import { Select, SelectItem, SelectTrigger, SelectValue } from "./ui/select";
 import { Glyph } from "~/ui/icons";
 
 // Inputs share one fixed height + radius so every control in the dialog reads
@@ -64,16 +55,12 @@ function resolveDroppedFolder(dataTransfer: DataTransfer): DroppedFolderResult |
 
 export interface CreateProjectSubmitValue {
   readonly workspaceRoot: string;
-  /** Destination Space; `null` is Void (unassigned). */
-  readonly spaceId: SpaceId | null;
   /** True when the path was typed/edited by hand, so a missing folder may be created. */
   readonly createIfMissing: boolean;
 }
 
 export function CreateProjectDialog(props: {
   open: boolean;
-  spaces: ReadonlyArray<Space>;
-  activeSpaceId: SpaceId | null;
   onOpenChange: (open: boolean) => void;
   onSubmit: (value: CreateProjectSubmitValue) => Promise<void>;
 }) {
@@ -84,14 +71,6 @@ export function CreateProjectDialog(props: {
    * opt into create-if-missing — the same split the old Browse/Type-path pair had.
    */
   const [pickedPath, setPickedPath] = useState<string | null>(null);
-  const [selectedSpaceKey, setSelectedSpaceKey] = useState<string>(VOID_SPACE_KEY);
-  const [spaceEditorOpen, setSpaceEditorOpen] = useState(false);
-  /**
-   * A space created from this dialog, kept locally until the refreshed shell
-   * snapshot delivers it through `props.spaces` — otherwise submitting right
-   * after creating would not find the id and silently fall back to Void.
-   */
-  const [createdSpace, setCreatedSpace] = useState<Space | null>(null);
   const [isPickingFolder, setIsPickingFolder] = useState(false);
   const [isDropTarget, setIsDropTarget] = useState(false);
   const [submitting, setSubmitting] = useState(false);
@@ -101,19 +80,15 @@ export function CreateProjectDialog(props: {
   const pathInputId = `${fieldId}-path`;
   const submitButtonId = `${fieldId}-submit`;
   const sourceFolderLabelId = `${fieldId}-source-folder`;
-  const spaceLabelId = `${fieldId}-space`;
   const errorId = `${fieldId}-error`;
 
   useEffect(() => {
-    // Seed on the closed -> open transition only, mirroring SpaceEditorDialog.
+    // Seed only on the closed -> open transition so edits stay local while the dialog is open.
     if (props.open === openedRef.current) return;
     openedRef.current = props.open;
     if (!props.open) return;
     setPath("");
     setPickedPath(null);
-    setSelectedSpaceKey(spaceKey(props.activeSpaceId));
-    setSpaceEditorOpen(false);
-    setCreatedSpace(null);
     setIsPickingFolder(false);
     setIsDropTarget(false);
     setSubmitting(false);
@@ -122,15 +97,10 @@ export function CreateProjectDialog(props: {
     // path field has to happen after that lands or it is immediately undone.
     const frame = requestAnimationFrame(() => document.getElementById(pathInputId)?.focus());
     return () => cancelAnimationFrame(frame);
-  }, [pathInputId, props.activeSpaceId, props.open]);
+  }, [pathInputId, props.open]);
 
   const trimmedPath = path.trim();
   const formErrorMeaning = formError ? describeAddProjectError(formError) : null;
-  const spaces =
-    createdSpace && !props.spaces.some((space) => space.id === createdSpace.id)
-      ? [...props.spaces, createdSpace]
-      : props.spaces;
-  const voidSpace = useVoidSpace();
 
   const applyPickedFolder = useCallback(
     (picked: string) => {
@@ -221,7 +191,6 @@ export function CreateProjectDialog(props: {
     try {
       await props.onSubmit({
         workspaceRoot: trimmedPath,
-        spaceId: spaces.find((space) => space.id === selectedSpaceKey)?.id ?? null,
         createIfMissing: trimmedPath !== pickedPath,
       });
       props.onOpenChange(false);
@@ -239,28 +208,8 @@ export function CreateProjectDialog(props: {
     void submit();
   };
 
-  // The space is created right away (same command the sidebar uses) and picked
-  // as the destination, so one Create click ships the project into it.
-  const handleCreateSpace = async (value: SpaceEditorValue) => {
-    const api = readNativeApi();
-    if (!api) throw new Error("The app server is unavailable.");
-    const icon = toSpaceIconName(value.icon);
-    const { spaceId } = await createSpace({ api, name: value.name, icon });
-    const createdAt = new Date().toISOString();
-    setCreatedSpace({
-      id: spaceId,
-      name: value.name,
-      icon,
-      sortOrder: Number.MAX_SAFE_INTEGER,
-      createdAt,
-      updatedAt: createdAt,
-    });
-    setSelectedSpaceKey(spaceId);
-  };
-
-  const selectedSpace = spaces.find((space) => space.id === selectedSpaceKey) ?? null;
   // Only echo the drop/browse result while the path field still matches it;
-  // hand-editing the path afterwards puts the box back in its idle state.
+  // hand-editing may name an existing or new local folder, resolved by System on submit.
   const pickedFolderName =
     pickedPath !== null && trimmedPath === pickedPath
       ? (pickedPath.split(/[/\\]/).filter(Boolean).at(-1) ?? pickedPath)
@@ -335,68 +284,6 @@ export function CreateProjectDialog(props: {
             </div>
           ) : null}
 
-          <div className="space-y-2">
-            <span
-              id={spaceLabelId}
-              className={cn(
-                "block",
-                dialogFieldLabelClassName,
-                "text-[length:var(--app-font-size-ui,12px)] text-foreground",
-              )}
-            >
-              Space
-            </span>
-            <div className="flex items-center gap-2">
-              <Select
-                value={selectedSpaceKey}
-                onValueChange={(next) => {
-                  if (typeof next === "string") setSelectedSpaceKey(next);
-                }}
-              >
-                <SelectTrigger
-                  aria-labelledby={spaceLabelId}
-                  className={cn(fieldControlClassName, "min-w-0 flex-1")}
-                >
-                  <SelectValue>
-                    <span className="flex items-center gap-2">
-                      <SpaceIcon
-                        icon={selectedSpace?.icon ?? voidSpace.icon}
-                        className="size-3.5"
-                      />
-                      {selectedSpace?.name ?? voidSpace.name}
-                    </span>
-                  </SelectValue>
-                </SelectTrigger>
-                <ComposerPickerSelectPopup align="start">
-                  <SelectItem value={VOID_SPACE_KEY}>
-                    <span className="flex items-center gap-2">
-                      <SpaceIcon icon={voidSpace.icon} className="size-3.5" />
-                      {voidSpace.name}
-                    </span>
-                  </SelectItem>
-                  {spaces.map((space) => (
-                    <SelectItem key={space.id} value={space.id}>
-                      <span className="flex items-center gap-2">
-                        <SpaceIcon icon={space.icon} className="size-3.5" />
-                        {space.name}
-                      </span>
-                    </SelectItem>
-                  ))}
-                </ComposerPickerSelectPopup>
-              </Select>
-              <Button
-                variant="outline"
-                size="icon"
-                aria-label="New space"
-                disabled={submitting}
-                className={cn(fieldControlClassName, "w-9 shrink-0 sm:h-9")}
-                onClick={() => setSpaceEditorOpen(true)}
-              >
-                <Glyph name="plus-medium" className="size-4" aria-hidden="true" />
-              </Button>
-            </div>
-          </div>
-
           {formError ? (
             <div id={errorId} role="alert" className="space-y-1">
               <p className="text-[length:var(--app-font-size-ui-xs,10px)] text-destructive">
@@ -430,13 +317,6 @@ export function CreateProjectDialog(props: {
             {submitting ? "Creating…" : "Create project"}
           </Button>
         </DialogFooter>
-        <SpaceEditorDialog
-          open={spaceEditorOpen}
-          mode="create"
-          existingNames={[...spaces.map((space) => space.name), voidSpace.name]}
-          onOpenChange={setSpaceEditorOpen}
-          onSubmit={handleCreateSpace}
-        />
       </DialogPopup>
     </Dialog>
   );

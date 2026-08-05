@@ -16,50 +16,69 @@ import {
   type AuthRevokePairingLinkInput,
   type AuthSessionState,
   type AuthWebSocketTokenResult,
-  type ExternalMcpCreateIntegrationInput,
-  type ExternalMcpCreateIntegrationResult,
-  type ExternalMcpIntegration,
-  type ExternalMcpRefreshPairingInput,
-  type ExternalMcpRevokeIntegrationInput,
   type ThreadId,
   type ThreadBrowserState,
   type GitActionProgressEvent,
-  type OrchestrationEvent,
-  type OrchestrationReadModel,
-  type OrchestrationShellSnapshot,
-  type OrchestrationShellStreamItem,
-  type OrchestrationThreadStreamItem,
   type ProjectDevServerEvent,
-  type ServerProviderStatusesUpdatedPayload,
   type ServerLifecycleStreamEvent,
-  type ServerSettingsUpdatedPayload,
   type ServerVoiceTranscriptionResult,
   type TerminalEvent,
-  ORCHESTRATION_WS_CHANNELS,
-  ORCHESTRATION_WS_METHODS,
   type ContextMenuItem,
   type NativeApi,
   ServerConfigUpdatedPayload,
+  SYSTEM_RPC_METHODS,
   WS_CHANNELS,
   WS_METHODS,
   type WsWelcomePayload,
   type AutomationStreamEvent,
   PRODUCT_RPC_METHODS,
+  type ProductArchiveConversationInput,
+  type ProductAddConversationGroupsInput,
+  type ProductAddEntryMarkerInput,
+  type ProductAddEntryPinInput,
   ProductConversationId,
   type ProductConversationSnapshot,
   type ProductControlRunInput,
   type ProductControlRunResult,
   type ProductCreateConversationInput,
+  type ProductCreateGroupInput,
+  type ProductCreateWorkspaceInput,
+  type ProductDeleteConversationInput,
+  type ProductDeleteGroupInput,
+  type ProductDeleteGroupResult,
+  type ProductDeleteConversationResult,
+  type ProductDeleteWorkspaceInput,
+  type ProductDeleteWorkspaceResult,
   type ProductDeleteQueueItemInput,
   type ProductFactBatch,
   type ProductGetConversationInput,
+  type ProductGroupMembershipResult,
+  type ProductGroupSummary,
   type ProductPutQueueItemInput,
   type ProductQueueItem,
   type ProductReadFactsInput,
+  type ProductRemoveEntryMarkerInput,
+  type ProductRemoveEntryPinInput,
+  type ProductReorderGroupsInput,
   type ProductReorderQueueInput,
+  type ProductRestoreConversationInput,
+  type ProductSetConversationBoardStateInput,
+  type ProductSetConversationGroupsInput,
+  type ProductSetConversationPinnedInput,
+  type ProductSetEntryMarkerDoneInput,
+  type ProductSetEntryMarkerLabelInput,
+  type ProductSetEntryPinDoneInput,
+  type ProductSetEntryPinLabelInput,
+  type ProductSetWorkspacePinnedInput,
   type ProductShellSnapshot,
   type ProductSubmitQueueItemInput,
   type ProductSubmitResult,
+  type ProductUpdateConversationNotesInput,
+  type ProductUpdateConversationTitleInput,
+  type ProductUpdateGroupInput,
+  type ProductUpdateWorkspaceRunCommandInput,
+  type ProductUpdateWorkspaceTitleInput,
+  type ProductWorkspaceSummary,
 } from "@omnimind/contracts";
 import { VOICE_TRANSCRIPTION_UPLOAD_ROUTE_PATH } from "@omnimind/shared/binaryTransfer";
 
@@ -102,71 +121,6 @@ function rememberProductConversation(
 ): ProductConversationSnapshot {
   registerProductConversation(snapshot.readModel.conversation.id);
   return snapshot;
-}
-
-function withoutProductShellThreads<
-  TThread extends { readonly id: string },
-  TSnapshot extends { readonly threads: ReadonlyArray<TThread> },
->(snapshot: TSnapshot): TSnapshot {
-  const threads = snapshot.threads.filter((thread) => !isProductConversationId(thread.id));
-  return threads.length === snapshot.threads.length
-    ? snapshot
-    : ({ ...snapshot, threads } as TSnapshot);
-}
-
-function filterDonorShellStreamItem(
-  item: OrchestrationShellStreamItem,
-): OrchestrationShellStreamItem | null {
-  if (item.kind === "snapshot") {
-    return { ...item, snapshot: withoutProductShellThreads(item.snapshot) };
-  }
-  if (item.kind === "thread-upserted" && isProductConversationId(item.thread.id)) return null;
-  if (item.kind === "thread-removed" && isProductConversationId(item.threadId)) return null;
-  return item;
-}
-
-function isDonorOrchestrationEvent(event: OrchestrationEvent): boolean {
-  return event.aggregateKind !== "thread" || !isProductConversationId(String(event.aggregateId));
-}
-
-function isDonorThreadStreamItem(item: OrchestrationThreadStreamItem): boolean {
-  return item.kind === "snapshot"
-    ? !isProductConversationId(item.snapshot.thread.id)
-    : isDonorOrchestrationEvent(item.event);
-}
-
-interface LegacyConversationReferenceCarrier {
-  readonly threadId?: string | null;
-  readonly sourceThreadId?: string | null;
-  readonly parentThreadId?: string | null;
-  readonly sidechatSourceThreadId?: string | null;
-}
-
-function legacyRouteProductConversationId(input: object): ProductConversationId | null {
-  const references = input as LegacyConversationReferenceCarrier;
-  for (const field of [
-    "threadId",
-    "sourceThreadId",
-    "parentThreadId",
-    "sidechatSourceThreadId",
-  ] as const) {
-    const value = references[field];
-    if (typeof value !== "string") continue;
-    const conversationId = ProductConversationId.makeUnsafe(value);
-    if (productConversationIds.has(conversationId)) return conversationId;
-  }
-  return null;
-}
-
-function rejectLegacyProductConversationRoute(input: object): Promise<never> | null {
-  const conversationId = legacyRouteProductConversationId(input);
-  return conversationId
-    ? Promise.reject(
-        new Error(
-          `Legacy orchestration routes are disabled for Product Conversation ${conversationId}.`,
-        ),
-      )
-    : null;
 }
 
 function createListenerRegistry<T>() {
@@ -214,34 +168,12 @@ function subscribeWithReplay<T>(input: {
 
 const welcomeListeners = createListenerRegistry<WsWelcomePayload>();
 const serverConfigUpdatedListeners = createListenerRegistry<ServerConfigUpdatedPayload>();
-const serverProviderStatusesUpdatedListeners =
-  createListenerRegistry<ServerProviderStatusesUpdatedPayload>();
 const serverMaintenanceUpdatedListeners = createListenerRegistry<ServerLifecycleStreamEvent>();
-const serverSettingsUpdatedListeners = createListenerRegistry<ServerSettingsUpdatedPayload>();
 const gitActionProgressListeners = createListenerRegistry<GitActionProgressEvent>();
 
-function omitNullUserInputAnswers(
-  command: Parameters<NativeApi["orchestration"]["dispatchCommand"]>[0],
-) {
-  if (command.type !== "thread.user-input.respond") {
-    return command;
-  }
-
-  return {
-    ...command,
-    answers: Object.fromEntries(
-      Object.entries(command.answers).filter(
-        ([, answer]) => answer !== null && answer !== undefined,
-      ),
-    ),
-  };
-}
 const terminalEventListeners = createListenerRegistry<TerminalEvent>();
 const projectDevServerEventListeners = createListenerRegistry<ProjectDevServerEvent>();
 const automationEventListeners = createListenerRegistry<AutomationStreamEvent>();
-const orchestrationDomainEventListeners = createListenerRegistry<OrchestrationEvent>();
-const orchestrationShellEventListeners = createListenerRegistry<OrchestrationShellStreamItem>();
-const orchestrationThreadEventListeners = createListenerRegistry<OrchestrationThreadStreamItem>();
 const threadStreamFailureListeners = createListenerRegistry<WsThreadStreamFailure>();
 const fallbackBrowserStateListeners = createListenerRegistry<ThreadBrowserState>();
 const fallbackBrowserStates = new Map<ThreadId, ThreadBrowserState>();
@@ -249,16 +181,11 @@ const fallbackBrowserStates = new Map<ThreadId, ThreadBrowserState>();
 function clearWsNativeApiListeners(): void {
   welcomeListeners.clear();
   serverConfigUpdatedListeners.clear();
-  serverProviderStatusesUpdatedListeners.clear();
   serverMaintenanceUpdatedListeners.clear();
-  serverSettingsUpdatedListeners.clear();
   gitActionProgressListeners.clear();
   terminalEventListeners.clear();
   projectDevServerEventListeners.clear();
   automationEventListeners.clear();
-  orchestrationDomainEventListeners.clear();
-  orchestrationShellEventListeners.clear();
-  orchestrationThreadEventListeners.clear();
   threadStreamFailureListeners.clear();
   fallbackBrowserStateListeners.clear();
 }
@@ -321,7 +248,6 @@ async function requestVoiceTranscriptionUpload(
   input: Parameters<NativeApi["server"]["transcribeVoice"]>[0],
 ) {
   const params = new URLSearchParams({
-    provider: input.provider,
     cwd: input.cwd,
     mimeType: input.mimeType,
     sampleRateHz: String(input.sampleRateHz),
@@ -445,21 +371,6 @@ export function onServerConfigUpdated(
   });
 }
 
-/**
- * Subscribe to provider status updates without forcing a full config reload.
- */
-export function onServerProviderStatusesUpdated(
-  listener: (payload: ServerProviderStatusesUpdatedPayload) => void,
-): () => void {
-  const latestProviderStatuses =
-    instance?.transport.getLatestPush(WS_CHANNELS.serverProviderStatusesUpdated)?.data ?? null;
-  return subscribeWithReplay({
-    registry: serverProviderStatusesUpdatedListeners,
-    listener,
-    latest: latestProviderStatuses,
-  });
-}
-
 export function onServerMaintenanceUpdated(
   listener: (payload: ServerLifecycleStreamEvent) => void,
 ): () => void {
@@ -469,18 +380,6 @@ export function onServerMaintenanceUpdated(
     registry: serverMaintenanceUpdatedListeners,
     listener,
     latest: latestMaintenance,
-  });
-}
-
-export function onServerSettingsUpdated(
-  listener: (payload: ServerSettingsUpdatedPayload) => void,
-): () => void {
-  const latestSettings =
-    instance?.transport.getLatestPush(WS_CHANNELS.serverSettingsUpdated)?.data ?? null;
-  return subscribeWithReplay({
-    registry: serverSettingsUpdatedListeners,
-    listener,
-    latest: latestSettings,
   });
 }
 
@@ -497,8 +396,78 @@ export function onThreadStreamFailure(
 }
 
 export interface ProductNativeApi {
+  readonly createWorkspace: (
+    input: ProductCreateWorkspaceInput,
+  ) => Promise<ProductWorkspaceSummary>;
+  readonly updateWorkspaceTitle: (
+    input: ProductUpdateWorkspaceTitleInput,
+  ) => Promise<ProductWorkspaceSummary>;
+  readonly setWorkspacePinned: (
+    input: ProductSetWorkspacePinnedInput,
+  ) => Promise<ProductWorkspaceSummary>;
+  readonly updateWorkspaceRunCommand: (
+    input: ProductUpdateWorkspaceRunCommandInput,
+  ) => Promise<ProductWorkspaceSummary>;
+  readonly deleteWorkspace: (
+    input: ProductDeleteWorkspaceInput,
+  ) => Promise<ProductDeleteWorkspaceResult>;
+  readonly createGroup: (input: ProductCreateGroupInput) => Promise<ProductGroupSummary>;
+  readonly updateGroup: (input: ProductUpdateGroupInput) => Promise<ProductGroupSummary>;
+  readonly reorderGroups: (
+    input: ProductReorderGroupsInput,
+  ) => Promise<ReadonlyArray<ProductGroupSummary>>;
+  readonly deleteGroup: (input: ProductDeleteGroupInput) => Promise<ProductDeleteGroupResult>;
+  readonly setConversationGroups: (
+    input: ProductSetConversationGroupsInput,
+  ) => Promise<ProductGroupMembershipResult>;
+  readonly addConversationGroups: (
+    input: ProductAddConversationGroupsInput,
+  ) => Promise<ProductGroupMembershipResult>;
   readonly createConversation: (
     input: ProductCreateConversationInput,
+  ) => Promise<ProductConversationSnapshot>;
+  readonly updateConversationTitle: (
+    input: ProductUpdateConversationTitleInput,
+  ) => Promise<ProductConversationSnapshot>;
+  readonly archiveConversation: (
+    input: ProductArchiveConversationInput,
+  ) => Promise<ProductConversationSnapshot>;
+  readonly restoreConversation: (
+    input: ProductRestoreConversationInput,
+  ) => Promise<ProductConversationSnapshot>;
+  readonly deleteConversation: (
+    input: ProductDeleteConversationInput,
+  ) => Promise<ProductDeleteConversationResult>;
+  readonly setConversationPinned: (
+    input: ProductSetConversationPinnedInput,
+  ) => Promise<ProductConversationSnapshot>;
+  readonly updateConversationNotes: (
+    input: ProductUpdateConversationNotesInput,
+  ) => Promise<ProductConversationSnapshot>;
+  readonly setConversationBoardState: (
+    input: ProductSetConversationBoardStateInput,
+  ) => Promise<ProductConversationSnapshot>;
+  readonly addEntryPin: (input: ProductAddEntryPinInput) => Promise<ProductConversationSnapshot>;
+  readonly removeEntryPin: (
+    input: ProductRemoveEntryPinInput,
+  ) => Promise<ProductConversationSnapshot>;
+  readonly setEntryPinDone: (
+    input: ProductSetEntryPinDoneInput,
+  ) => Promise<ProductConversationSnapshot>;
+  readonly setEntryPinLabel: (
+    input: ProductSetEntryPinLabelInput,
+  ) => Promise<ProductConversationSnapshot>;
+  readonly addEntryMarker: (
+    input: ProductAddEntryMarkerInput,
+  ) => Promise<ProductConversationSnapshot>;
+  readonly removeEntryMarker: (
+    input: ProductRemoveEntryMarkerInput,
+  ) => Promise<ProductConversationSnapshot>;
+  readonly setEntryMarkerDone: (
+    input: ProductSetEntryMarkerDoneInput,
+  ) => Promise<ProductConversationSnapshot>;
+  readonly setEntryMarkerLabel: (
+    input: ProductSetEntryMarkerLabelInput,
   ) => Promise<ProductConversationSnapshot>;
   readonly getShellSnapshot: () => Promise<ProductShellSnapshot>;
   readonly getConversationSnapshot: (
@@ -522,9 +491,107 @@ export function readProductNativeApi(): ProductNativeApi {
   const transport = instance?.transport;
   if (!transport) throw new Error("Product transport is unavailable.");
   return {
+    createWorkspace: (input) =>
+      transport.request<ProductWorkspaceSummary>(PRODUCT_RPC_METHODS.createWorkspace, input),
+    updateWorkspaceTitle: (input) =>
+      transport.request<ProductWorkspaceSummary>(PRODUCT_RPC_METHODS.updateWorkspaceTitle, input),
+    setWorkspacePinned: (input) =>
+      transport.request<ProductWorkspaceSummary>(PRODUCT_RPC_METHODS.setWorkspacePinned, input),
+    updateWorkspaceRunCommand: (input) =>
+      transport.request<ProductWorkspaceSummary>(
+        PRODUCT_RPC_METHODS.updateWorkspaceRunCommand,
+        input,
+      ),
+    deleteWorkspace: (input) =>
+      transport.request<ProductDeleteWorkspaceResult>(PRODUCT_RPC_METHODS.deleteWorkspace, input),
+    createGroup: (input) =>
+      transport.request<ProductGroupSummary>(PRODUCT_RPC_METHODS.createGroup, input),
+    updateGroup: (input) =>
+      transport.request<ProductGroupSummary>(PRODUCT_RPC_METHODS.updateGroup, input),
+    reorderGroups: (input) =>
+      transport.request<ReadonlyArray<ProductGroupSummary>>(
+        PRODUCT_RPC_METHODS.reorderGroups,
+        input,
+      ),
+    deleteGroup: (input) =>
+      transport.request<ProductDeleteGroupResult>(PRODUCT_RPC_METHODS.deleteGroup, input),
+    setConversationGroups: (input) =>
+      transport.request<ProductGroupMembershipResult>(
+        PRODUCT_RPC_METHODS.setConversationGroups,
+        input,
+      ),
+    addConversationGroups: (input) =>
+      transport.request<ProductGroupMembershipResult>(
+        PRODUCT_RPC_METHODS.addConversationGroups,
+        input,
+      ),
     createConversation: (input) =>
       transport
         .request<ProductConversationSnapshot>(PRODUCT_RPC_METHODS.createConversation, input)
+        .then(rememberProductConversation),
+    updateConversationTitle: (input) =>
+      transport
+        .request<ProductConversationSnapshot>(PRODUCT_RPC_METHODS.updateConversationTitle, input)
+        .then(rememberProductConversation),
+    archiveConversation: (input) =>
+      transport
+        .request<ProductConversationSnapshot>(PRODUCT_RPC_METHODS.archiveConversation, input)
+        .then(rememberProductConversation),
+    restoreConversation: (input) =>
+      transport
+        .request<ProductConversationSnapshot>(PRODUCT_RPC_METHODS.restoreConversation, input)
+        .then(rememberProductConversation),
+    deleteConversation: (input) =>
+      transport.request<ProductDeleteConversationResult>(
+        PRODUCT_RPC_METHODS.deleteConversation,
+        input,
+      ),
+    setConversationPinned: (input) =>
+      transport
+        .request<ProductConversationSnapshot>(PRODUCT_RPC_METHODS.setConversationPinned, input)
+        .then(rememberProductConversation),
+    updateConversationNotes: (input) =>
+      transport
+        .request<ProductConversationSnapshot>(PRODUCT_RPC_METHODS.updateConversationNotes, input)
+        .then(rememberProductConversation),
+    setConversationBoardState: (input) =>
+      transport
+        .request<ProductConversationSnapshot>(
+          PRODUCT_RPC_METHODS.setConversationBoardState,
+          input,
+        )
+        .then(rememberProductConversation),
+    addEntryPin: (input) =>
+      transport
+        .request<ProductConversationSnapshot>(PRODUCT_RPC_METHODS.addEntryPin, input)
+        .then(rememberProductConversation),
+    removeEntryPin: (input) =>
+      transport
+        .request<ProductConversationSnapshot>(PRODUCT_RPC_METHODS.removeEntryPin, input)
+        .then(rememberProductConversation),
+    setEntryPinDone: (input) =>
+      transport
+        .request<ProductConversationSnapshot>(PRODUCT_RPC_METHODS.setEntryPinDone, input)
+        .then(rememberProductConversation),
+    setEntryPinLabel: (input) =>
+      transport
+        .request<ProductConversationSnapshot>(PRODUCT_RPC_METHODS.setEntryPinLabel, input)
+        .then(rememberProductConversation),
+    addEntryMarker: (input) =>
+      transport
+        .request<ProductConversationSnapshot>(PRODUCT_RPC_METHODS.addEntryMarker, input)
+        .then(rememberProductConversation),
+    removeEntryMarker: (input) =>
+      transport
+        .request<ProductConversationSnapshot>(PRODUCT_RPC_METHODS.removeEntryMarker, input)
+        .then(rememberProductConversation),
+    setEntryMarkerDone: (input) =>
+      transport
+        .request<ProductConversationSnapshot>(PRODUCT_RPC_METHODS.setEntryMarkerDone, input)
+        .then(rememberProductConversation),
+    setEntryMarkerLabel: (input) =>
+      transport
+        .request<ProductConversationSnapshot>(PRODUCT_RPC_METHODS.setEntryMarkerLabel, input)
         .then(rememberProductConversation),
     getShellSnapshot: () =>
       transport
@@ -574,7 +641,6 @@ export function createWsNativeApi(): NativeApi {
   }
 
   const transport = new WsTransport();
-  let unsubscribeDomainEventTransport: (() => void) | null = null;
   transport.onStateChange((state) => emitWsTransportState(state));
   transport.onCompatibilityIssue((issue) => emitWsCompatibilityIssue(issue), {
     replayCurrent: true,
@@ -586,14 +652,8 @@ export function createWsNativeApi(): NativeApi {
   transport.subscribe(WS_CHANNELS.serverConfigUpdated, (message) => {
     serverConfigUpdatedListeners.emit(message.data);
   });
-  transport.subscribe(WS_CHANNELS.serverProviderStatusesUpdated, (message) => {
-    serverProviderStatusesUpdatedListeners.emit(message.data);
-  });
   transport.subscribe(WS_CHANNELS.serverMaintenanceUpdated, (message) => {
     serverMaintenanceUpdatedListeners.emit(message.data);
-  });
-  transport.subscribe(WS_CHANNELS.serverSettingsUpdated, (message) => {
-    serverSettingsUpdatedListeners.emit(message.data);
   });
   transport.subscribe(WS_CHANNELS.gitActionProgress, (message) => {
     gitActionProgressListeners.emit(message.data);
@@ -606,15 +666,6 @@ export function createWsNativeApi(): NativeApi {
   });
   transport.subscribe(WS_CHANNELS.automationEvent, (message) => {
     automationEventListeners.emit(message.data);
-  });
-  transport.subscribe(ORCHESTRATION_WS_CHANNELS.shellEvent, (message) => {
-    const item = filterDonorShellStreamItem(message.data);
-    if (item) orchestrationShellEventListeners.emit(item);
-  });
-  transport.subscribe(ORCHESTRATION_WS_CHANNELS.threadEvent, (message) => {
-    if (isDonorThreadStreamItem(message.data)) {
-      orchestrationThreadEventListeners.emit(message.data);
-    }
   });
   transport.onThreadStreamFailure((failure) => {
     threadStreamFailureListeners.emit(failure);
@@ -646,39 +697,41 @@ export function createWsNativeApi(): NativeApi {
       },
     },
     terminal: {
-      open: (input) => transport.request(WS_METHODS.terminalOpen, input),
-      write: (input) => transport.request(WS_METHODS.terminalWrite, input),
-      ackOutput: (input) => transport.request(WS_METHODS.terminalAckOutput, input),
-      resize: (input) => transport.request(WS_METHODS.terminalResize, input),
-      clear: (input) => transport.request(WS_METHODS.terminalClear, input),
-      restart: (input) => transport.request(WS_METHODS.terminalRestart, input),
-      close: (input) => transport.request(WS_METHODS.terminalClose, input),
+      open: (input) => transport.request(SYSTEM_RPC_METHODS.terminalOpen, input),
+      write: (input) => transport.request(SYSTEM_RPC_METHODS.terminalWrite, input),
+      ackOutput: (input) => transport.request(SYSTEM_RPC_METHODS.terminalAckOutput, input),
+      resize: (input) => transport.request(SYSTEM_RPC_METHODS.terminalResize, input),
+      clear: (input) => transport.request(SYSTEM_RPC_METHODS.terminalClear, input),
+      restart: (input) => transport.request(SYSTEM_RPC_METHODS.terminalRestart, input),
+      close: (input) => transport.request(SYSTEM_RPC_METHODS.terminalClose, input),
       onEvent: terminalEventListeners.subscribe,
     },
     projects: {
-      discoverScripts: (input) => transport.request(WS_METHODS.projectsDiscoverScripts, input),
-      listDirectories: (input) => transport.request(WS_METHODS.projectsListDirectories, input),
-      searchEntries: (input) => transport.request(WS_METHODS.projectsSearchEntries, input),
+      discoverScripts: (input) => transport.request(SYSTEM_RPC_METHODS.discoverScripts, input),
+      listDirectories: (input) => transport.request(SYSTEM_RPC_METHODS.listDirectories, input),
+      searchEntries: (input) => transport.request(SYSTEM_RPC_METHODS.searchEntries, input),
       searchLocalEntries: (input) =>
-        transport.request(WS_METHODS.projectsSearchLocalEntries, input),
-      readFile: (input) => transport.request(WS_METHODS.projectsReadFile, input),
+        transport.request(SYSTEM_RPC_METHODS.searchLocalEntries, input),
+      readFile: (input) => transport.request(SYSTEM_RPC_METHODS.readFile, input),
       createLocalFilePreviewGrant: (input) =>
-        transport.request(WS_METHODS.projectsCreateLocalFilePreviewGrant, input),
-      writeFile: (input) => transport.request(WS_METHODS.projectsWriteFile, input),
-      runDevServer: (input) => transport.request(WS_METHODS.projectsRunDevServer, input),
-      stopDevServer: (input) => transport.request(WS_METHODS.projectsStopDevServer, input),
-      listDevServers: () => transport.request(WS_METHODS.projectsListDevServers),
+        transport.request(SYSTEM_RPC_METHODS.createLocalFilePreviewGrant, input),
+      writeFile: (input) => transport.request(SYSTEM_RPC_METHODS.writeFile, input),
+      runDevServer: (input) => transport.request(SYSTEM_RPC_METHODS.runDevServer, input),
+      stopDevServer: (input) => transport.request(SYSTEM_RPC_METHODS.stopDevServer, input),
+      listDevServers: () => transport.request(SYSTEM_RPC_METHODS.listDevServers),
       onDevServerEvent: projectDevServerEventListeners.subscribe,
     },
     filesystem: {
-      browse: (input) => transport.request(WS_METHODS.filesystemBrowse, input),
+      browse: (input) => transport.request(SYSTEM_RPC_METHODS.browseFilesystem, input),
+      ensureWorkspaceRoot: (input) =>
+        transport.request(SYSTEM_RPC_METHODS.ensureWorkspaceRoot, input),
     },
     studio: {
       listThreadOutputs: (input) => transport.request(WS_METHODS.studioListThreadOutputs, input),
     },
     shell: {
       openInEditor: (cwd, editor) =>
-        transport.request(WS_METHODS.shellOpenInEditor, { cwd, editor }),
+        transport.request(SYSTEM_RPC_METHODS.openInEditor, { cwd, editor }),
       openExternal: async (url) => {
         const externalUrl = requireHttpExternalUrl(url);
         if (window.desktopBridge) {
@@ -702,32 +755,28 @@ export function createWsNativeApi(): NativeApi {
     },
     git: {
       githubRepository: (input) => transport.request(WS_METHODS.gitGithubRepository, input),
-      pull: (input) => transport.request(WS_METHODS.gitPull, input),
-      status: (input) => transport.request(WS_METHODS.gitStatus, input),
-      readWorkingTreeDiff: (input) => transport.request(WS_METHODS.gitReadWorkingTreeDiff, input),
-      workingTreeDiffStats: (input) => transport.request(WS_METHODS.gitWorkingTreeDiffStats, input),
-      summarizeDiff: (input) =>
-        transport.request(WS_METHODS.gitSummarizeDiff, input, {
-          timeoutMs: null,
-        }),
+      pull: (input) => transport.request(SYSTEM_RPC_METHODS.gitPull, input),
+      status: (input) => transport.request(SYSTEM_RPC_METHODS.gitStatus, input),
+      readWorkingTreeDiff: (input) => transport.request(SYSTEM_RPC_METHODS.gitReadDiff, input),
+      workingTreeDiffStats: (input) => transport.request(SYSTEM_RPC_METHODS.gitDiffStats, input),
       runStackedAction: (input) =>
         transport.request(WS_METHODS.gitRunStackedAction, input, {
           timeoutMs: null,
         }),
-      listBranches: (input) => transport.request(WS_METHODS.gitListBranches, input),
-      createWorktree: (input) => transport.request(WS_METHODS.gitCreateWorktree, input),
+      listBranches: (input) => transport.request(SYSTEM_RPC_METHODS.gitListBranches, input),
+      createWorktree: (input) => transport.request(SYSTEM_RPC_METHODS.gitCreateWorktree, input),
       createDetachedWorktree: (input) =>
-        transport.request(WS_METHODS.gitCreateDetachedWorktree, input),
-      removeWorktree: (input) => transport.request(WS_METHODS.gitRemoveWorktree, input),
-      createBranch: (input) => transport.request(WS_METHODS.gitCreateBranch, input),
-      checkout: (input) => transport.request(WS_METHODS.gitCheckout, input),
-      stashAndCheckout: (input) => transport.request(WS_METHODS.gitStashAndCheckout, input),
-      stashDrop: (input) => transport.request(WS_METHODS.gitStashDrop, input),
-      stashInfo: (input) => transport.request(WS_METHODS.gitStashInfo, input),
-      removeIndexLock: (input) => transport.request(WS_METHODS.gitRemoveIndexLock, input),
-      init: (input) => transport.request(WS_METHODS.gitInit, input),
-      stageFiles: (input) => transport.request(WS_METHODS.gitStageFiles, input),
-      unstageFiles: (input) => transport.request(WS_METHODS.gitUnstageFiles, input),
+        transport.request(SYSTEM_RPC_METHODS.gitCreateDetachedWorktree, input),
+      removeWorktree: (input) => transport.request(SYSTEM_RPC_METHODS.gitRemoveWorktree, input),
+      createBranch: (input) => transport.request(SYSTEM_RPC_METHODS.gitCreateBranch, input),
+      checkout: (input) => transport.request(SYSTEM_RPC_METHODS.gitCheckout, input),
+      stashAndCheckout: (input) => transport.request(SYSTEM_RPC_METHODS.gitStashAndCheckout, input),
+      stashDrop: (input) => transport.request(SYSTEM_RPC_METHODS.gitStashDrop, input),
+      stashInfo: (input) => transport.request(SYSTEM_RPC_METHODS.gitStashInfo, input),
+      removeIndexLock: (input) => transport.request(SYSTEM_RPC_METHODS.gitRemoveIndexLock, input),
+      init: (input) => transport.request(SYSTEM_RPC_METHODS.gitInit, input),
+      stageFiles: (input) => transport.request(SYSTEM_RPC_METHODS.gitStageFiles, input),
+      unstageFiles: (input) => transport.request(SYSTEM_RPC_METHODS.gitUnstageFiles, input),
       handoffThread: (input) => transport.request(WS_METHODS.gitHandoffThread, input),
       resolvePullRequest: (input) => transport.request(WS_METHODS.gitResolvePullRequest, input),
       pullRequestSnapshot: (input) => transport.request(WS_METHODS.gitPullRequestSnapshot, input),
@@ -736,15 +785,15 @@ export function createWsNativeApi(): NativeApi {
       onActionProgress: gitActionProgressListeners.subscribe,
     },
     pullRequests: {
-      list: (input) => transport.request(WS_METHODS.pullRequestsList, input),
+      list: (input) => transport.request(SYSTEM_RPC_METHODS.pullRequestsList, input),
       reviewRequestCount: (input) =>
-        transport.request(WS_METHODS.pullRequestsReviewRequestCount, input),
-      detail: (input) => transport.request(WS_METHODS.pullRequestsDetail, input),
-      diff: (input) => transport.request(WS_METHODS.pullRequestsDiff, input),
+        transport.request(SYSTEM_RPC_METHODS.pullRequestsReviewRequestCount, input),
+      detail: (input) => transport.request(SYSTEM_RPC_METHODS.pullRequestsDetail, input),
+      diff: (input) => transport.request(SYSTEM_RPC_METHODS.pullRequestsDiff, input),
       action: (input) =>
-        transport.request(WS_METHODS.pullRequestsAction, input, { timeoutMs: null }),
-      comment: (input) => transport.request(WS_METHODS.pullRequestsComment, input),
-      setPinned: (input) => transport.request(WS_METHODS.pullRequestsSetPinned, input),
+        transport.request(SYSTEM_RPC_METHODS.pullRequestsAction, input, { timeoutMs: null }),
+      comment: (input) => transport.request(SYSTEM_RPC_METHODS.pullRequestsComment, input),
+      setPinned: (input) => transport.request(SYSTEM_RPC_METHODS.pullRequestsSetPinned, input),
     },
     contextMenu: {
       show: async <T extends string>(
@@ -760,8 +809,6 @@ export function createWsNativeApi(): NativeApi {
     server: {
       getConfig: () => transport.request(WS_METHODS.serverGetConfig),
       getEnvironment: () => transport.request(WS_METHODS.serverGetEnvironment),
-      getSettings: () => transport.request(WS_METHODS.serverGetSettings),
-      updateSettings: (input) => transport.request(WS_METHODS.serverUpdateSettings, input),
       getAuthSession: () => requestAuthJson<AuthSessionState>("/api/auth/session"),
       bootstrapAuth: (input: AuthBootstrapInput) =>
         requestAuthJson<AuthBootstrapResult>("/api/auth/bootstrap", {
@@ -804,34 +851,10 @@ export function createWsNativeApi(): NativeApi {
         await transport.dispose();
         return result;
       },
-      listExternalMcpIntegrations: () =>
-        transport.request(WS_METHODS.serverListExternalMcpIntegrations),
-      createExternalMcpIntegration: (input: ExternalMcpCreateIntegrationInput) =>
-        transport.request(WS_METHODS.serverCreateExternalMcpIntegration, input),
-      revokeExternalMcpIntegration: (input: ExternalMcpRevokeIntegrationInput) =>
-        transport.request(WS_METHODS.serverRevokeExternalMcpIntegration, input),
-      refreshExternalMcpPairing: (input: ExternalMcpRefreshPairingInput) =>
-        transport.request(WS_METHODS.serverRefreshExternalMcpPairing, input),
-      refreshProviders: () => transport.request(WS_METHODS.serverRefreshProviders),
-      // Provider updates run up to 2 minutes server-side; callers wrap this in
-      // withProviderUpdateTimeout, which owns the client-side watchdog.
-      updateProvider: (input) =>
-        transport.request(WS_METHODS.serverUpdateProvider, input, { timeoutMs: null }),
       listWorktrees: () => transport.request(WS_METHODS.serverListWorktrees),
       listLocalServers: () => transport.request(WS_METHODS.serverListLocalServers),
       stopLocalServer: (input) => transport.request(WS_METHODS.serverStopLocalServer, input),
-      getProviderUsageSnapshot: (input) =>
-        transport.request(WS_METHODS.serverGetProviderUsageSnapshot, input),
-      listProviderUsage: (input) => transport.request(WS_METHODS.serverListProviderUsage, input),
       getDiagnostics: () => transport.request(WS_METHODS.serverGetDiagnostics),
-      generateThreadRecap: (input) =>
-        transport.request(WS_METHODS.serverGenerateThreadRecap, input, {
-          timeoutMs: null,
-        }),
-      generateAutomationIntent: (input) =>
-        transport.request(WS_METHODS.serverGenerateAutomationIntent, input, {
-          timeoutMs: null,
-        }),
       transcribeVoice: (input) => {
         if (window.desktopBridge?.server?.transcribeVoice) {
           return window.desktopBridge.server.transcribeVoice(input);
@@ -844,90 +867,6 @@ export function createWsNativeApi(): NativeApi {
       getProfileStats: (input) => transport.request(WS_METHODS.statsGetProfileStats, input),
       getProfileTokenStats: (input) =>
         transport.request(WS_METHODS.statsGetProfileTokenStats, input),
-    },
-    provider: {
-      getComposerCapabilities: (input) =>
-        transport.request(WS_METHODS.providerGetComposerCapabilities, input),
-      // Compaction is capped server-side per provider (ACP providers allow up
-      // to the 10-minute turn-idle ceiling), so the server owns this bound.
-      compactThread: (input) =>
-        transport.request(WS_METHODS.providerCompactThread, input, { timeoutMs: null }),
-      listCommands: (input) => transport.request(WS_METHODS.providerListCommands, input),
-      listSkills: (input) => transport.request(WS_METHODS.providerListSkills, input),
-      listSkillsCatalog: (input) => transport.request(WS_METHODS.providerListSkillsCatalog, input),
-      listPlugins: (input) => transport.request(WS_METHODS.providerListPlugins, input),
-      readPlugin: (input) => transport.request(WS_METHODS.providerReadPlugin, input),
-      listModels: (input) => transport.request(WS_METHODS.providerListModels, input),
-      listAgents: (input) => transport.request(WS_METHODS.providerListAgents, input),
-    },
-    orchestration: {
-      getSnapshot: () =>
-        transport
-          .request<OrchestrationReadModel>(ORCHESTRATION_WS_METHODS.getSnapshot)
-          .then((snapshot) => withoutProductShellThreads(snapshot)),
-      getShellSnapshot: () =>
-        transport
-          .request<OrchestrationShellSnapshot>(ORCHESTRATION_WS_METHODS.getShellSnapshot)
-          .then((snapshot) => withoutProductShellThreads(snapshot)),
-      getThreadDetailSnapshot: (input) =>
-        rejectLegacyProductConversationRoute(input) ??
-        transport.request(ORCHESTRATION_WS_METHODS.getThreadDetailSnapshot, input),
-      dispatchCommand: (command) => {
-        const blocked = rejectLegacyProductConversationRoute(command);
-        if (blocked) return blocked;
-        return transport.request(ORCHESTRATION_WS_METHODS.dispatchCommand, {
-          command: omitNullUserInputAnswers(command),
-        });
-      },
-      importThread: (input) =>
-        rejectLegacyProductConversationRoute(input) ??
-        transport.request(ORCHESTRATION_WS_METHODS.importThread, input),
-      repairState: () => transport.request(ORCHESTRATION_WS_METHODS.repairState),
-      getTurnDiff: (input) => transport.request(ORCHESTRATION_WS_METHODS.getTurnDiff, input),
-      getFullThreadDiff: (input) =>
-        transport.request(ORCHESTRATION_WS_METHODS.getFullThreadDiff, input),
-      replayEvents: (fromSequenceExclusive) =>
-        transport
-          .request<OrchestrationEvent[]>(ORCHESTRATION_WS_METHODS.replayEvents, {
-            fromSequenceExclusive,
-          })
-          .then((events) => events.filter(isDonorOrchestrationEvent)),
-      listProviderDeliveryBlockers: (input = {}) =>
-        transport.request(ORCHESTRATION_WS_METHODS.listProviderDeliveryBlockers, input),
-      reconcileProviderDelivery: (input) =>
-        rejectLegacyProductConversationRoute(input) ??
-        transport.request(ORCHESTRATION_WS_METHODS.reconcileProviderDelivery, input),
-      subscribeShell: () => transport.request<void>(ORCHESTRATION_WS_METHODS.subscribeShell, {}),
-      unsubscribeShell: () =>
-        transport.request<void>(ORCHESTRATION_WS_METHODS.unsubscribeShell, {}),
-      subscribeThread: (input) =>
-        rejectLegacyProductConversationRoute(input) ??
-        transport.request<void>(ORCHESTRATION_WS_METHODS.subscribeThread, input),
-      unsubscribeThread: (input) =>
-        transport.request<void>(ORCHESTRATION_WS_METHODS.unsubscribeThread, input),
-      onDomainEvent: (callback) => {
-        const shouldStartTransport = orchestrationDomainEventListeners.size === 0;
-        const unsubscribe = orchestrationDomainEventListeners.subscribe(callback);
-        if (shouldStartTransport) {
-          unsubscribeDomainEventTransport = transport.subscribe(
-            ORCHESTRATION_WS_CHANNELS.domainEvent,
-            (message) => {
-              if (isDonorOrchestrationEvent(message.data)) {
-                orchestrationDomainEventListeners.emit(message.data);
-              }
-            },
-          );
-        }
-        return () => {
-          unsubscribe();
-          if (orchestrationDomainEventListeners.size === 0) {
-            unsubscribeDomainEventTransport?.();
-            unsubscribeDomainEventTransport = null;
-          }
-        };
-      },
-      onShellEvent: orchestrationShellEventListeners.subscribe,
-      onThreadEvent: orchestrationThreadEventListeners.subscribe,
     },
     automation: {
       list: (input) => transport.request(WS_METHODS.automationList, input),

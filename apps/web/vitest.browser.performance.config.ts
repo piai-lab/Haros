@@ -60,6 +60,7 @@ performanceConfig.test ??= {};
 performanceConfig.test.include = [
   "src/components/chat/ConversationPerformance.browser.tsx",
   "src/components/WorkbenchPerformance.browser.tsx",
+  "src/components/ProductRoutePerformance.browser.tsx",
 ];
 
 export default performanceConfig;

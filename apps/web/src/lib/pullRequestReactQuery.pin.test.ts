@@ -1,4 +1,4 @@
-import type { ProjectId } from "@omnimind/contracts";
+import type { ProductWorkspaceId } from "@omnimind/contracts";
 import { QueryClient, type QueryKey } from "@tanstack/react-query";
 import { afterEach, describe, expect, it, vi } from "vitest";
 
@@ -17,7 +17,7 @@ afterEach(() => {
 describe("pullRequestSetPinnedMutationOptions", () => {
   it("serializes rapid toggles per identity without blocking a different pull request", async () => {
     const queryClient = new QueryClient();
-    const projectId = "project-a" as ProjectId;
+    const workspaceId = "project-a" as ProductWorkspaceId;
     const firstGate = deferred<Record<string, unknown>>();
     const secondGate = deferred<Record<string, unknown>>();
     const otherGate = deferred<Record<string, unknown>>();
@@ -39,7 +39,7 @@ describe("pullRequestSetPinnedMutationOptions", () => {
     const second = mutationCache.build(queryClient, options);
     const other = mutationCache.build(queryClient, options);
     const firstInput = {
-      projectId,
+      workspaceId,
       repository: "acme/widgets",
       number: 42,
       isPinned: true,
@@ -69,14 +69,14 @@ describe("pullRequestSetPinnedMutationOptions", () => {
     "reconciles All and exact membership when an exact-only row is $label ned",
     async ({ previous, next }) => {
       const queryClient = new QueryClient();
-      const projectId = "project-a" as ProjectId;
-      const listKey = pullRequestQueryKeys.list({ state: "open", projectId });
+      const workspaceId = "project-a" as ProductWorkspaceId;
+      const listKey = pullRequestQueryKeys.list({ state: "open", workspaceId });
       const exactKey = pullRequestsExactInvolvementQueryOptions({
         involvement: "authored",
         state: "open",
-        projectId,
+        workspaceId,
       }).queryKey;
-      const identity = { projectId, repository: "acme/widgets", number: 42 } as const;
+      const identity = { workspaceId, repository: "acme/widgets", number: 42 } as const;
       queryClient.setQueryData(listKey, { entries: [] });
       queryClient.setQueryData(exactKey as QueryKey, {
         entries: [{ ...identity, isPinned: previous }],
@@ -101,27 +101,27 @@ describe("pullRequestSetPinnedMutationOptions", () => {
 
   it("patches one project context inside a repository-level global row", async () => {
     const queryClient = new QueryClient();
-    const projectA = "project-a" as ProjectId;
-    const projectB = "project-b" as ProjectId;
-    const listKey = pullRequestQueryKeys.list({ state: "open", projectId: null });
+    const projectA = "project-a" as ProductWorkspaceId;
+    const projectB = "project-b" as ProductWorkspaceId;
+    const listKey = pullRequestQueryKeys.list({ state: "open", workspaceId: null });
     queryClient.setQueryData(listKey, {
       entries: [
         {
-          projectId: projectB,
-          projectTitle: "Project B",
+          workspaceId: projectB,
+          workspaceTitle: "Project B",
           headBranch: "feature",
           repository: "Acme/Widgets",
           number: 42,
           isPinned: false,
-          projectContexts: [
-            { projectId: projectA, projectTitle: "Project A", isPinned: false },
-            { projectId: projectB, projectTitle: "Project B", isPinned: false },
+          workspaceContexts: [
+            { workspaceId: projectA, workspaceTitle: "Project A", isPinned: false },
+            { workspaceId: projectB, workspaceTitle: "Project B", isPinned: false },
           ],
         },
       ],
     });
     const input = {
-      projectId: projectA,
+      workspaceId: projectA,
       repository: "acme/widgets",
       number: 42,
       isPinned: true,
@@ -135,15 +135,15 @@ describe("pullRequestSetPinnedMutationOptions", () => {
     expect(queryClient.getQueryData(listKey)).toEqual({
       entries: [
         {
-          projectId: projectB,
-          projectTitle: "Project B",
+          workspaceId: projectB,
+          workspaceTitle: "Project B",
           headBranch: "feature",
           repository: "Acme/Widgets",
           number: 42,
           isPinned: true,
-          projectContexts: [
-            { projectId: projectA, projectTitle: "Project A", isPinned: true },
-            { projectId: projectB, projectTitle: "Project B", isPinned: false },
+          workspaceContexts: [
+            { workspaceId: projectA, workspaceTitle: "Project A", isPinned: true },
+            { workspaceId: projectB, workspaceTitle: "Project B", isPinned: false },
           ],
         },
       ],
@@ -153,15 +153,15 @@ describe("pullRequestSetPinnedMutationOptions", () => {
     expect(queryClient.getQueryData(listKey)).toEqual({
       entries: [
         {
-          projectId: projectB,
-          projectTitle: "Project B",
+          workspaceId: projectB,
+          workspaceTitle: "Project B",
           headBranch: "feature",
           repository: "Acme/Widgets",
           number: 42,
           isPinned: true,
-          projectContexts: [
-            { projectId: projectA, projectTitle: "Project A", isPinned: true },
-            { projectId: projectB, projectTitle: "Project B", isPinned: false },
+          workspaceContexts: [
+            { workspaceId: projectA, workspaceTitle: "Project A", isPinned: true },
+            { workspaceId: projectB, workspaceTitle: "Project B", isPinned: false },
           ],
         },
       ],
@@ -170,14 +170,14 @@ describe("pullRequestSetPinnedMutationOptions", () => {
 
   it("rolls each cache key back to its own divergent previous pin value", async () => {
     const queryClient = new QueryClient();
-    const projectId = "project-a" as ProjectId;
-    const listKey = pullRequestQueryKeys.list({ state: "open", projectId });
+    const workspaceId = "project-a" as ProductWorkspaceId;
+    const listKey = pullRequestQueryKeys.list({ state: "open", workspaceId });
     const exactKey = pullRequestsExactInvolvementQueryOptions({
       involvement: "reviewing",
       state: "open",
-      projectId,
+      workspaceId,
     }).queryKey;
-    const identity = { projectId, repository: "acme/widgets", number: 42 } as const;
+    const identity = { workspaceId, repository: "acme/widgets", number: 42 } as const;
     queryClient.setQueryData(listKey, {
       entries: [{ ...identity, isPinned: false }],
     });
@@ -214,9 +214,9 @@ describe("pullRequestSetPinnedMutationOptions", () => {
 
   it("does not let older callbacks overwrite a newer toggle for the same PR", async () => {
     const queryClient = new QueryClient();
-    const projectId = "project-a" as ProjectId;
-    const listKey = pullRequestQueryKeys.list({ state: "open", projectId });
-    const identity = { projectId, repository: "acme/widgets", number: 42 } as const;
+    const workspaceId = "project-a" as ProductWorkspaceId;
+    const listKey = pullRequestQueryKeys.list({ state: "open", workspaceId });
+    const identity = { workspaceId, repository: "acme/widgets", number: 42 } as const;
     queryClient.setQueryData(listKey, {
       entries: [{ ...identity, isPinned: false }],
     });
@@ -244,14 +244,14 @@ describe("pullRequestSetPinnedMutationOptions", () => {
 
   it("restores each first-writer baseline when two rapid toggles both fail", async () => {
     const queryClient = new QueryClient();
-    const projectId = "project-a" as ProjectId;
-    const listKey = pullRequestQueryKeys.list({ state: "open", projectId });
+    const workspaceId = "project-a" as ProductWorkspaceId;
+    const listKey = pullRequestQueryKeys.list({ state: "open", workspaceId });
     const exactKey = pullRequestsExactInvolvementQueryOptions({
       involvement: "reviewing",
       state: "open",
-      projectId,
+      workspaceId,
     }).queryKey;
-    const identity = { projectId, repository: "acme/widgets", number: 42 } as const;
+    const identity = { workspaceId, repository: "acme/widgets", number: 42 } as const;
     queryClient.setQueryData(listKey, {
       entries: [{ ...identity, isPinned: false }],
     });
@@ -304,14 +304,14 @@ describe("pullRequestSetPinnedMutationOptions", () => {
 
   it("restores the last acknowledged pin when only the newer rapid toggle fails", async () => {
     const queryClient = new QueryClient();
-    const projectId = "project-a" as ProjectId;
-    const listKey = pullRequestQueryKeys.list({ state: "open", projectId });
+    const workspaceId = "project-a" as ProductWorkspaceId;
+    const listKey = pullRequestQueryKeys.list({ state: "open", workspaceId });
     const exactKey = pullRequestsExactInvolvementQueryOptions({
       involvement: "authored",
       state: "open",
-      projectId,
+      workspaceId,
     }).queryKey;
-    const identity = { projectId, repository: "acme/widgets", number: 42 } as const;
+    const identity = { workspaceId, repository: "acme/widgets", number: 42 } as const;
     queryClient.setQueryData(listKey, {
       entries: [{ ...identity, isPinned: false }],
     });
@@ -358,9 +358,9 @@ describe("pullRequestSetPinnedMutationOptions", () => {
 
   it("does not roll back a pin value replaced after its optimistic write", async () => {
     const queryClient = new QueryClient();
-    const projectId = "project-a" as ProjectId;
-    const listKey = pullRequestQueryKeys.list({ state: "open", projectId });
-    const identity = { projectId, repository: "acme/widgets", number: 42 } as const;
+    const workspaceId = "project-a" as ProductWorkspaceId;
+    const listKey = pullRequestQueryKeys.list({ state: "open", workspaceId });
+    const identity = { workspaceId, repository: "acme/widgets", number: 42 } as const;
     const input = { ...identity, isPinned: true } as const;
     queryClient.setQueryData(listKey, { entries: [input] });
     const options = pullRequestSetPinnedMutationOptions(queryClient);
@@ -388,16 +388,16 @@ describe("pullRequestSetPinnedMutationOptions", () => {
 
   it("leaves unrelated project refetches running while a pin is reconciled", async () => {
     const queryClient = new QueryClient();
-    const projectA = "project-pin-scope-a" as ProjectId;
-    const projectB = "project-pin-scope-b" as ProjectId;
-    const identity = { projectId: projectA, repository: "acme/widgets", number: 42 } as const;
-    const listA = pullRequestQueryKeys.list({ state: "open", projectId: projectA });
-    const listB = pullRequestQueryKeys.list({ state: "open", projectId: projectB });
+    const projectA = "project-pin-scope-a" as ProductWorkspaceId;
+    const projectB = "project-pin-scope-b" as ProductWorkspaceId;
+    const identity = { workspaceId: projectA, repository: "acme/widgets", number: 42 } as const;
+    const listA = pullRequestQueryKeys.list({ state: "open", workspaceId: projectA });
+    const listB = pullRequestQueryKeys.list({ state: "open", workspaceId: projectB });
     queryClient.setQueryData(listA, { entries: [{ ...identity, isPinned: false }] });
     queryClient.setQueryData(listB, {
       entries: [
         {
-          projectId: projectB,
+          workspaceId: projectB,
           repository: "other/repository",
           number: 7,
           isPinned: false,

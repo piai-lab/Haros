@@ -20,6 +20,8 @@ export type ProductProjectionIssue =
 export interface ProductProjectionState {
   readonly shellHydrated: boolean;
   readonly shellSequence: number;
+  readonly workspaces: ProductShellSnapshot["workspaces"];
+  readonly groups: ProductShellSnapshot["groups"];
   readonly conversations: ProductShellSnapshot["conversations"];
   readonly runtimeCatalog: ProductShellSnapshot["runtimeCatalog"];
   readonly detailSequenceByConversation: Readonly<Record<string, number>>;
@@ -33,6 +35,8 @@ export interface ProductProjectionState {
 export const initialProductProjectionState: ProductProjectionState = {
   shellHydrated: false,
   shellSequence: 0,
+  workspaces: [],
+  groups: [],
   conversations: [],
   runtimeCatalog: null,
   detailSequenceByConversation: {},
@@ -56,13 +60,42 @@ function upsertConversation(
   );
 }
 
+function upsertWorkspace(
+  workspaces: ProductShellSnapshot["workspaces"],
+  workspace: ProductShellSnapshot["workspaces"][number],
+): ProductShellSnapshot["workspaces"] {
+  const remaining = workspaces.filter((candidate) => candidate.id !== workspace.id);
+  return [workspace, ...remaining].toSorted(
+    (left, right) =>
+      Date.parse(right.updatedAt) - Date.parse(left.updatedAt) || left.id.localeCompare(right.id),
+  );
+}
+
+function upsertGroup(
+  groups: ProductShellSnapshot["groups"],
+  group: ProductShellSnapshot["groups"][number],
+): ProductShellSnapshot["groups"] {
+  return [...groups.filter((candidate) => candidate.id !== group.id), group].toSorted(
+    (left, right) => left.sortOrder - right.sortOrder || left.id.localeCompare(right.id),
+  );
+}
+
 function applyDetailFact(
   readModel: ProductConversationReadModel,
   fact: ProductFact,
 ): ProductConversationReadModel {
   const change = fact.change;
+  if (change.kind === "conversation-updated") {
+    return { ...readModel, conversation: change.conversation };
+  }
   if (change.kind === "queue-changed") {
     return { ...readModel, queue: change.queue };
+  }
+  if (change.kind === "entry-pins-changed") {
+    return { ...readModel, entryPins: change.pins };
+  }
+  if (change.kind === "entry-markers-changed") {
+    return { ...readModel, entryMarkers: change.markers };
   }
   if (change.kind === "entry-admitted") {
     const entries = readModel.entries.some((entry) => entry.id === change.entry.id)
@@ -180,6 +213,8 @@ export function applyProductShellSnapshot(
     ...state,
     shellHydrated: true,
     shellSequence: snapshot.sequence,
+    workspaces: snapshot.workspaces,
+    groups: snapshot.groups,
     conversations: snapshot.conversations,
     runtimeCatalog: snapshot.runtimeCatalog,
     shellIssue: null,
@@ -271,12 +306,17 @@ export function applyProductFactBatch(
     };
   }
 
+  let workspaces = state.workspaces;
+  let groups = state.groups;
   let conversations = state.conversations;
   let detail = conversationId ? state.detailByConversation[conversationId] : undefined;
   let applied = false;
   let detailTombstoned = false;
   for (const fact of batch.facts) {
-    if (!isShell && fact.conversationId !== conversationId) {
+    if (
+      !isShell &&
+      (!("conversationId" in fact) || fact.conversationId !== conversationId)
+    ) {
       return {
         state: {
           ...state,
@@ -313,6 +353,18 @@ export function applyProductFactBatch(
         conversations = conversations.filter(
           (conversation) => conversation.id !== tombstoneConversationId,
         );
+      } else if (fact.change.kind === "workspace-summary") {
+        workspaces = upsertWorkspace(workspaces, fact.change.workspace);
+      } else if (fact.change.kind === "workspace-tombstone") {
+        const tombstoneWorkspaceId = fact.change.workspaceId;
+        workspaces = workspaces.filter(
+          (workspace) => workspace.id !== tombstoneWorkspaceId,
+        );
+      } else if (fact.change.kind === "group-summary") {
+        groups = upsertGroup(groups, fact.change.group);
+      } else if (fact.change.kind === "group-tombstone") {
+        const tombstoneGroupId = fact.change.groupId;
+        groups = groups.filter((group) => group.id !== tombstoneGroupId);
       }
     } else {
       if (fact.change.kind === "conversation-tombstone") {
@@ -348,6 +400,8 @@ export function applyProductFactBatch(
   let nextState: ProductProjectionState = isShell
     ? {
         ...state,
+        workspaces,
+        groups,
         conversations,
         runtimeCatalog:
           catalogFact?.change.kind === "runtime-catalog"

@@ -3,7 +3,7 @@
 // Layer: UI state store
 // Exports: usePinnedProjectsStore
 
-import { MAX_PINNED_PROJECTS, type ProjectId } from "@omnimind/contracts";
+import type { ProjectId } from "@omnimind/contracts";
 import { create } from "zustand";
 import { createJSONStorage, persist } from "zustand/middleware";
 import { normalizePinnedIds, pinId, prunePinnedIds, unpinId } from "./pinning.logic";
@@ -15,8 +15,9 @@ interface PinnedProjectsStoreState {
   prunePinnedProjects: (projectIds: readonly ProjectId[]) => void;
 }
 
+export const MAX_PINNED_SIDEBAR_WORKSPACES = 3;
 const PINNED_PROJECTS_STORAGE_KEY = "omnimind:pinned-projects:v1";
-const PINNED_PROJECTS_OPTIONS = { maxCount: MAX_PINNED_PROJECTS } as const;
+const PINNED_PROJECTS_OPTIONS = { maxCount: MAX_PINNED_SIDEBAR_WORKSPACES } as const;
 
 export const usePinnedProjectsStore = create<PinnedProjectsStoreState>()(
   persist(
@@ -49,7 +50,7 @@ export const usePinnedProjectsStore = create<PinnedProjectsStoreState>()(
         set((state) => {
           const nextPinnedProjectIds = prunePinnedIds(state.pinnedProjectIds, projectIds).slice(
             0,
-            MAX_PINNED_PROJECTS,
+            MAX_PINNED_SIDEBAR_WORKSPACES,
           );
           return nextPinnedProjectIds.length === state.pinnedProjectIds.length &&
             nextPinnedProjectIds.every((id, index) => id === state.pinnedProjectIds[index])

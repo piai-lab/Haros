@@ -34,7 +34,7 @@ function ProviderAvatarWithTerminal({
   terminalStatus: SidebarThreadTerminalStatus | null;
   terminalCount: number;
 }) {
-  const provider = thread.session?.provider ?? thread.modelSelection.provider;
+  const provider = thread.session?.provider ?? thread.modelSelection?.provider ?? null;
   const handoffSourceProvider = thread.handoff?.sourceProvider ?? null;
   const handoffTooltip = resolveThreadHandoffBadgeLabel(thread);
   const showBadge = terminalCount > 1 || terminalStatus !== null;

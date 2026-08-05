@@ -19,6 +19,26 @@ const ProjectEntryKind = Schema.Literals(["file", "directory"]);
 export const ProjectKind = Schema.Literals(["project", "chat", "studio"]);
 export type ProjectKind = typeof ProjectKind.Type;
 
+export const ProjectScriptIcon = Schema.Literals([
+  "play",
+  "test",
+  "lint",
+  "configure",
+  "build",
+  "debug",
+]);
+export type ProjectScriptIcon = typeof ProjectScriptIcon.Type;
+
+/** User-authored workspace command; execution remains a scoped system capability. */
+export const ProjectScript = Schema.Struct({
+  id: TrimmedNonEmptyString,
+  name: TrimmedNonEmptyString,
+  command: TrimmedNonEmptyString,
+  icon: ProjectScriptIcon,
+  runOnWorktreeCreate: Schema.Boolean,
+});
+export type ProjectScript = typeof ProjectScript.Type;
+
 export const ProjectSearchEntriesInput = Schema.Struct({
   cwd: TrimmedNonEmptyString,
   query: TrimmedNonEmptyString.check(Schema.isMaxLength(256)),
@@ -232,3 +252,5 @@ export const ProjectDevServerEvent = Schema.Union([
   }),
 ]);
 export type ProjectDevServerEvent = typeof ProjectDevServerEvent.Type;
+export const WorkspaceEnvironmentMode = Schema.Literals(["local", "worktree"]);
+export type WorkspaceEnvironmentMode = typeof WorkspaceEnvironmentMode.Type;

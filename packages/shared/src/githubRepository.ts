@@ -48,9 +48,9 @@ export function parseGitHubRepositoryNameWithOwnerFromPullRequestUrl(
 // restart when the helper set grows.
 export {
   coalescePullRequestListEntries,
-  pullRequestListEntryHasProject,
-  pullRequestListProjectContexts,
-  pullRequestListProjectPin,
+  pullRequestListEntryHasWorkspace,
+  pullRequestListWorkspaceContexts,
+  pullRequestListWorkspacePin,
   pullRequestListRepositoryIdentity,
-  updatePullRequestListEntryProjectPin,
+  updatePullRequestListEntryWorkspacePin,
 } from "./pullRequestList";

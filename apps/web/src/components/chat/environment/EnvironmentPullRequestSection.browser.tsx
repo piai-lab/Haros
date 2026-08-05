@@ -99,7 +99,6 @@ describe("EnvironmentPullRequestSection", () => {
           gitCwd={cwd}
           enabled
           activeThreadId={threadId}
-          projectId={null}
           configuredRepositories={[{ nameWithOwner: "example/omnimind" }]}
           onOpenUrl={vi.fn()}
           onClose={onClose}

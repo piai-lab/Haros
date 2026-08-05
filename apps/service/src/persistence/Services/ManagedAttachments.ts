@@ -7,7 +7,7 @@ export type ManagedAttachmentState = "uploading" | "staged" | "claimed" | "delet
 
 export interface ManagedAttachmentBlob {
   readonly attachmentId: string;
-  readonly ownerThreadId: string;
+  readonly conversationId: string;
   readonly ownerKind: string;
   readonly ownerId: string;
   readonly kind: string;
@@ -19,8 +19,8 @@ export interface ManagedAttachmentBlob {
   readonly relativePath: string;
   readonly state: ManagedAttachmentState;
   readonly stagingExpiresAt: string | null;
-  readonly claimCommandId: string | null;
-  readonly claimMessageId: string | null;
+  readonly claimRunId: string | null;
+  readonly claimEntryId: string | null;
   readonly claimedAt: string | null;
   readonly deleteReason: string | null;
   readonly deleteRequestedAt: string | null;
@@ -94,7 +94,7 @@ export interface ManagedAttachmentUsage {
 export interface ManagedAttachmentRepositoryShape {
   readonly reserve: (input: {
     readonly attachmentId: string;
-    readonly ownerThreadId: string;
+    readonly conversationId: string;
     readonly ownerKind: string;
     readonly ownerId: string;
     readonly kind: string;
@@ -106,7 +106,7 @@ export interface ManagedAttachmentRepositoryShape {
   }) => Effect.Effect<ReserveManagedAttachmentResult, PersistenceSqlError>;
   readonly finalizeStaged: (input: {
     readonly attachmentId: string;
-    readonly ownerThreadId: string;
+    readonly conversationId: string;
     readonly ownerKind: string;
     readonly ownerId: string;
     readonly sizeBytes: number;
@@ -116,7 +116,7 @@ export interface ManagedAttachmentRepositoryShape {
   }) => Effect.Effect<FinalizeManagedAttachmentResult, PersistenceSqlError>;
   readonly findServerOwned: (input: {
     readonly attachmentId: string;
-    readonly ownerThreadId: string;
+    readonly conversationId: string;
     readonly ownerKind: string;
     readonly ownerId: string;
     readonly now: string;
@@ -124,8 +124,8 @@ export interface ManagedAttachmentRepositoryShape {
   readonly findClaimedById: (input: {
     readonly attachmentId: string;
   }) => Effect.Effect<Option.Option<ManagedAttachmentBlob>, PersistenceSqlError>;
-  readonly findClaimedForCommand: (input: {
-    readonly commandId: string;
+  readonly findClaimedForRun: (input: {
+    readonly runId: string;
   }) => Effect.Effect<ReadonlyArray<ManagedAttachmentBlob>, PersistenceSqlError>;
   readonly cancelStaged: (input: {
     readonly attachmentId: string;
@@ -134,31 +134,31 @@ export interface ManagedAttachmentRepositoryShape {
     readonly reason: string;
     readonly requestedAt: string;
   }) => Effect.Effect<CancelManagedAttachmentResult, PersistenceSqlError>;
-  readonly claimForAcceptedTurn: (input: {
+  readonly claimForProductRun: (input: {
     readonly attachmentIds: ReadonlyArray<string>;
-    readonly ownerThreadId: string;
+    readonly conversationId: string;
     readonly ownerKind: string;
     readonly ownerId: string;
-    readonly commandId: string;
-    readonly messageId: string;
+    readonly runId: string;
+    readonly entryId: string;
     readonly now: string;
   }) => Effect.Effect<ClaimManagedAttachmentsResult, PersistenceSqlError>;
   /** Compose this operation inside the transaction that removes the durable reference. */
   readonly markCleanupByIds: (input: {
     readonly attachmentIds: ReadonlyArray<string>;
-    readonly ownerThreadId: string;
+    readonly conversationId: string;
     readonly reason: string;
     readonly requestedAt: string;
   }) => Effect.Effect<ReadonlyArray<string>, PersistenceSqlError>;
   /** Compose this operation inside the transaction that hard-deletes the thread. */
-  readonly markCleanupByThread: (input: {
-    readonly ownerThreadId: string;
+  readonly markCleanupByConversation: (input: {
+    readonly conversationId: string;
     readonly reason: string;
     readonly requestedAt: string;
   }) => Effect.Effect<ReadonlyArray<string>, PersistenceSqlError>;
   /** Compose inside the projection transaction after computing exact retained managed IDs. */
   readonly markUnreferencedClaimedForCleanup: (input: {
-    readonly ownerThreadId: string;
+    readonly conversationId: string;
     readonly retainedAttachmentIds: ReadonlyArray<string>;
     readonly reason: string;
     readonly requestedAt: string;

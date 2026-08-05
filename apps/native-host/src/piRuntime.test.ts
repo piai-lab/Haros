@@ -46,6 +46,7 @@ async function fixture(options?: {
   readonly settledOperationGraceMs?: number;
   readonly maxSettledOperations?: number;
   readonly credential?: string | null;
+  readonly credentialBrokerFailure?: "disconnect" | "timeout";
 }) {
   const productHome = mkdtempSync(path.join(tmpdir(), "omnimind-pi-runtime-"));
   temporaryDirectories.add(productHome);
@@ -70,8 +71,22 @@ async function fixture(options?: {
     productHome,
     modelRuntime,
     credentialBroker: {
-      available: async () => true,
-      credential: async () => options?.credential ?? "fixture-recovery-credential",
+      available: async () => "configured",
+      credential: async () => {
+        if (options?.credentialBrokerFailure === "disconnect") {
+          return { status: "unavailable" as const };
+        }
+        if (options?.credentialBrokerFailure === "timeout") {
+          throw new Error("broker timeout");
+        }
+        const credential =
+          options && "credential" in options
+            ? options.credential
+            : "fixture-recovery-credential";
+        return credential === null
+          ? { status: "missing" as const }
+          : { status: "configured" as const, credential };
+      },
     },
     ...(options?.acceptanceTimeoutMs === undefined
       ? {}
@@ -110,7 +125,7 @@ function request(input?: {
     text: input?.text ?? "Respond with the fixture answer.",
     selection: {
       engineId: "pi",
-      modelId: "faux-native/faux-thinker",
+      runtimeModelId: "faux-native/faux-thinker",
       thinking: input?.thinking ?? "medium",
       permissionPolicy: "approval-required",
       enforcement: "unverified",
@@ -177,8 +192,8 @@ describe("PiNativeRuntime", () => {
     const runtime = await PiNativeRuntime.create({
       productHome,
       credentialBroker: {
-        available: async (provider) => provider === "xai",
-        credential: async () => null,
+        available: async (provider) => (provider === "xai" ? "configured" : "missing"),
+        credential: async () => ({ status: "missing" }),
       },
     });
 
@@ -190,6 +205,22 @@ describe("PiNativeRuntime", () => {
     expect(catalog.models.find((model) => model.provider === "xai")).toMatchObject({
       available: true,
       auth: "configured",
+    });
+    expect(catalog.capabilities).toEqual({
+      ingress: "typed-native-host",
+      lineage: { continue: "available", rebuild: "available" },
+      controls: {
+        steer: "available",
+        followUp: "available",
+        abort: "available",
+        cancel: "unavailable",
+      },
+      structuredQuestions: "unknown",
+      packages: "available",
+      filesRead: "unknown",
+      filesWrite: "unknown",
+      terminal: "unknown",
+      enforcement: "unverified",
     });
     await runtime.shutdown();
   });
@@ -204,9 +235,9 @@ describe("PiNativeRuntime", () => {
       credentialBroker: {
         available: async (provider) => {
           observations.set(provider, (observations.get(provider) ?? 0) + 1);
-          return false;
+          return "missing";
         },
-        credential: async () => null,
+        credential: async () => ({ status: "missing" }),
       },
     });
 
@@ -220,6 +251,56 @@ describe("PiNativeRuntime", () => {
     expect([...observations.values()].every((count) => count === 2)).toBe(true);
     await runtime.shutdown();
   });
+
+  it("distinguishes configured, missing, and unavailable broker catalog observations", async () => {
+    const productHome = mkdtempSync(path.join(tmpdir(), "omnimind-pi-auth-state-"));
+    temporaryDirectories.add(productHome);
+    let availability: "configured" | "missing" | "unavailable" = "configured";
+    const runtime = await PiNativeRuntime.create({
+      productHome,
+      availabilityCacheTtlMs: 60_000,
+      credentialBroker: {
+        available: async () => availability,
+        credential: async () => ({ status: "missing" }),
+      },
+    });
+
+    const configuredCatalog = await runtime.catalog(true);
+    const provider = configuredCatalog.models[0]!.provider;
+    const authFor = async () =>
+      (await runtime.catalog(true)).models.find((model) => model.provider === provider)?.auth;
+    expect(configuredCatalog.models.find((model) => model.provider === provider)?.auth).toBe(
+      "configured",
+    );
+    availability = "missing";
+    expect(await authFor()).toBe("missing");
+    availability = "unavailable";
+    expect(await authFor()).toBe("unavailable");
+    await runtime.shutdown();
+  });
+
+  it("keeps genuine missing credentials non-retryable", async () => {
+    const { runtime } = await fixture({ credential: null });
+    expect(await runtime.execute(request({ runId: "credential-missing" }))).toMatchObject({
+      kind: "execution.rejected",
+      code: "PI_CREDENTIAL_UNAVAILABLE",
+      retryable: false,
+    });
+    await runtime.shutdown();
+  });
+
+  it.each(["disconnect", "timeout"] as const)(
+    "makes credential broker %s failures distinctly retryable",
+    async (credentialBrokerFailure) => {
+      const { runtime } = await fixture({ credentialBrokerFailure });
+      expect(await runtime.execute(request({ runId: `credential-${credentialBrokerFailure}` }))).toMatchObject({
+        kind: "execution.rejected",
+        code: "PI_CREDENTIAL_BROKER_UNAVAILABLE",
+        retryable: true,
+      });
+      await runtime.shutdown();
+    },
+  );
 
   it("accepts only after SessionManager reopen and emits exact redacted sequenced facts", async () => {
     const { productHome, faux, runtime } = await fixture();
@@ -288,8 +369,11 @@ describe("PiNativeRuntime", () => {
       productHome,
       modelRuntime,
       credentialBroker: {
-        available: async () => true,
-        credential: async () => "fixture-recovery-credential",
+        available: async () => "configured",
+        credential: async () => ({
+          status: "configured",
+          credential: "fixture-recovery-credential",
+        }),
       },
     });
     expect(
@@ -349,8 +433,11 @@ describe("PiNativeRuntime", () => {
       productHome,
       modelRuntime,
       credentialBroker: {
-        available: async () => true,
-        credential: async () => "fixture-recovery-credential",
+        available: async () => "configured",
+        credential: async () => ({
+          status: "configured",
+          credential: "fixture-recovery-credential",
+        }),
       },
     });
     expect(await restarted.reconcile("pi-pending:dispatch-no-entry", 0)).toMatchObject({
@@ -449,7 +536,17 @@ describe("PiNativeRuntime", () => {
     });
     modelRuntime.registerNativeProvider(faux.provider);
     await modelRuntime.setRuntimeApiKey("faux-native", "fixture-key", { allowNetwork: false });
-    const runtime = await PiNativeRuntime.create({ productHome, modelRuntime });
+    const runtime = await PiNativeRuntime.create({
+      productHome,
+      modelRuntime,
+      credentialBroker: {
+        available: async () => "configured",
+        credential: async () => ({
+          status: "configured",
+          credential: "fixture-recovery-credential",
+        }),
+      },
+    });
     const packageGeneration = (await runtime.catalog()).packageGeneration;
     expect(packageGeneration).not.toBe(PI_PACKAGE_GENERATION);
     expect(
@@ -574,8 +671,11 @@ describe("PiNativeRuntime", () => {
       productHome,
       modelRuntime,
       credentialBroker: {
-        available: async () => true,
-        credential: async () => "fixture-recovery-credential",
+        available: async () => "configured",
+        credential: async () => ({
+          status: "configured",
+          credential: "fixture-recovery-credential",
+        }),
       },
     });
     const recovered = await restarted.reconcile(first.operationRef, 0);
@@ -625,8 +725,8 @@ describe("PiNativeRuntime", () => {
       productHome,
       modelRuntime,
       credentialBroker: {
-        available: async () => true,
-        credential: async () => rotatedCredential,
+        available: async () => "configured",
+        credential: async () => ({ status: "configured", credential: rotatedCredential }),
       },
     });
     const failClosed = await rotated.reconcile(accepted.operationRef, 0);
@@ -644,8 +744,8 @@ describe("PiNativeRuntime", () => {
       productHome,
       modelRuntime,
       credentialBroker: {
-        available: async () => true,
-        credential: async () => opaqueCanary,
+        available: async () => "configured",
+        credential: async () => ({ status: "configured", credential: opaqueCanary }),
       },
     });
     const recovered = await matched.reconcile(accepted.operationRef, 0);

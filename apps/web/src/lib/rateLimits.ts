@@ -1,9 +1,7 @@
+import type { ConversationHistory } from "~/historicalConversation";
 // FILE: rateLimits.ts
 // Purpose: Centralizes rate-limit parsing, normalization, formatting, and row derivation
 // for provider runtime events so UI components can stay presentation-only.
-
-import type { OrchestrationThread } from "@omnimind/contracts";
-import { providerUsageLearnMoreHref } from "@omnimind/shared/providerUsage";
 
 export interface RateLimitWindow {
   window: string;
@@ -258,7 +256,7 @@ function extractFallbackLimits(payload: Record<string, unknown>): RateLimitWindo
 }
 
 export function deriveAccountRateLimits(
-  threads: ReadonlyArray<Pick<OrchestrationThread, "activities">>,
+  threads: ReadonlyArray<Pick<ConversationHistory, "activities">>,
 ): ProviderRateLimit[] {
   const byProvider = new Map<string, ProviderRateLimit>();
   const nowMs = Date.now();
@@ -397,9 +395,9 @@ export function deriveRateLimitLearnMoreHref(
 }
 
 export function deriveProviderUsageLearnMoreHref(
-  provider: string | null | undefined,
+  _provider: string | null | undefined,
 ): string | null {
-  return providerUsageLearnMoreHref(provider);
+  return null;
 }
 
 function timestampMs(value: string | undefined): number {

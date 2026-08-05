@@ -3,7 +3,7 @@
 // Layer: Web orchestration helper
 // Exports: deleteActiveThreadFromClient
 
-import type { ThreadId } from "@omnimind/contracts";
+import { PRODUCT_PROTOCOL_VERSION, ProductConversationId, type ThreadId } from "@omnimind/contracts";
 
 import { toastManager } from "../components/ui/toast";
 import { readNativeApi } from "../nativeApi";
@@ -12,7 +12,9 @@ import { getThreadFromState, getThreadsFromState } from "../threadDerivation";
 import type { Thread } from "../types";
 import { formatWorktreePathForDisplay, getOrphanedWorktreePathForThread } from "../worktreeCleanup";
 import { reconcileDeletedThreadFromClient } from "./deletedThreadClientReconciliation";
-import { newCommandId } from "./utils";
+import { deleteProductConversation } from "../productConversationMutations";
+import { presentProductConversationThread } from "../productReadModel";
+import { readProductNativeApi } from "../wsNativeApi";
 
 // The terminal runtime pulls in xterm and its addons (~223 KB gzip). Importing it
 // statically here anchored the whole terminal stack into the eager sidebar/router
@@ -51,8 +53,15 @@ export async function deleteActiveThreadFromClient<TPrepared = undefined>(input:
 }): Promise<void> {
   const api = readNativeApi();
   if (!api) return;
+  const productApi = readProductNativeApi();
+  const productSnapshot = await productApi.getConversationSnapshot({
+    protocolVersion: PRODUCT_PROTOCOL_VERSION,
+    conversationId: ProductConversationId.makeUnsafe(input.threadId),
+  });
   const state = useStore.getState();
-  const thread = getThreadFromState(state, input.threadId);
+  const thread =
+    getThreadFromState(state, input.threadId) ??
+    presentProductConversationThread(productSnapshot.readModel);
   if (!thread) return;
   const project = state.projects.find((candidate) => candidate.id === thread.projectId) ?? null;
   const allThreads = getThreadsFromState(state);
@@ -81,14 +90,25 @@ export async function deleteActiveThreadFromClient<TPrepared = undefined>(input:
     ));
 
   const prepared = input.prepareForDelete?.(thread);
-  await api.orchestration.dispatchCommand({
-    type: "thread.delete",
-    commandId: newCommandId(),
-    threadId: input.threadId,
-  });
-  // Provider and terminal cleanup are owned by the server-side lifecycle
-  // reactor. Dispose only the local renderer after the durable delete intent
-  // was accepted, so a rejected delete never tears down a live client session.
+  const latestRun = productSnapshot.readModel.runs.at(-1);
+  const receiptState = latestRun?.receipt.receipt.state ?? null;
+  if (latestRun && (receiptState === "accepted" || receiptState === "running")) {
+    const stopped = await productApi.controlRun({
+      protocolVersion: PRODUCT_PROTOCOL_VERSION,
+      conversationId: productSnapshot.readModel.conversation.id,
+      runId: latestRun.id,
+      control: "abort",
+      text: null,
+    });
+    if (stopped.result === "unsupported" || stopped.result === "unknown") {
+      throw new Error(stopped.message);
+    }
+  } else if (receiptState === "pending" || receiptState === "delivery_unknown") {
+    throw new Error("Conversation deletion is unavailable while Run delivery is unresolved.");
+  }
+  await deleteProductConversation(input.threadId, productApi);
+  // Dispose only the local renderer after the durable Product tombstone lands,
+  // so a rejected delete never tears down a live client session.
   await disposeThreadTerminalRuntimes(input.threadId);
   if (input.reconcileDeletedThread ?? true) {
     void reconcileDeletedThreadFromClient({

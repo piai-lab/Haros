@@ -6,7 +6,7 @@
 // Layer: Chat composer UI
 // Exports: ComposerQueuedHeader
 
-import type { QueuedComposerTurn } from "../../composerDraftStore";
+import type { WorkbenchQueuedTurn } from "../../productReadModel";
 import type { WorkbenchCopy } from "../../i18n/workbenchCopy";
 import { ListTodoIcon, PencilIcon, PlayIcon, SteerIcon } from "~/lib/icons";
 import { cn } from "~/lib/utils";
@@ -62,15 +62,15 @@ export function compactQueuedComposerPreviewMarkdown(
 }
 
 interface ComposerQueuedHeaderProps {
-  queuedTurns: QueuedComposerTurn[];
+  queuedTurns: WorkbenchQueuedTurn[];
   primaryAction: {
     kind: "steer" | "move-next" | "run-next";
     disabled?: boolean;
-    onSelect: (queuedTurn: QueuedComposerTurn) => void;
-    onMoveNext?: (queuedTurn: QueuedComposerTurn) => void;
+    onSelect: (queuedTurn: WorkbenchQueuedTurn) => void;
+    onMoveNext?: (queuedTurn: WorkbenchQueuedTurn) => void;
   };
   onRemove: (queuedTurnId: string) => void;
-  onEdit: (queuedTurn: QueuedComposerTurn) => void;
+  onEdit: (queuedTurn: WorkbenchQueuedTurn) => void;
   editingTurnId?: string | null;
   onCancelEdit?: () => void;
   copy: WorkbenchCopy;

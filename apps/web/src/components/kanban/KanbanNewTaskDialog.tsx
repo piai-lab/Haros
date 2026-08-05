@@ -1,35 +1,23 @@
 // FILE: KanbanNewTaskDialog.tsx
 // Purpose: Linear-style "New task" dialog — a compact composer that drafts a task
-//          (prompt + provider/model/effort + permissions + mode + environment + voice)
+//          (prompt + Host model/thinking + permissions + mode + environment + voice)
 //          and drops it into the board's Draft column. Model state is driven through
 //          a scratch composer-draft-store thread so the split model + effort/options
 //          pickers work exactly like a fresh chat composer; the project's regular
-//          composer draft is untouched.
+//          composer draft is untouched. Execution choices come only from the
+//          sanitized Product runtime catalog.
 // Layer: Kanban UI component
 // Exports: KanbanNewTaskDialog
 
-import type {
-  ProjectId,
-  ProviderInteractionMode,
-  ProviderKind,
-  RuntimeMode,
-} from "@omnimind/contracts";
+import type { ProjectId } from "@omnimind/contracts";
 import { useQuery } from "@tanstack/react-query";
 import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 
-import {
-  getProviderStartOptions,
-  resolveAssistantDeliveryMode,
-  useAppSettings,
-} from "~/appSettings";
-import { RuntimeUsageControls } from "~/components/BranchToolbar";
 import {
   ComposerPromptEditor,
   type ComposerPromptEditorHandle,
 } from "~/components/ComposerPromptEditor";
 import { ComposerCommandMenu } from "~/components/chat/ComposerCommandMenu";
-import { ProviderModelPicker } from "~/components/chat/ProviderModelPicker";
-import { TraitsPicker } from "~/components/chat/TraitsPicker";
 import {
   ComposerLocalDirectoryMenu,
   type ComposerLocalDirectoryMenuHandle,
@@ -38,7 +26,6 @@ import { ComposerReferenceAttachments } from "~/components/chat/ComposerReferenc
 import { ComposerVoiceButton } from "~/components/chat/ComposerVoiceButton";
 import { ComposerVoiceRecorderBar } from "~/components/chat/ComposerVoiceRecorderBar";
 import { useComposerVoiceController } from "~/components/chat/useComposerVoiceController";
-import { resolveRuntimeModelDescriptor } from "~/components/chat/runtimeModelCapabilities";
 import {
   COMPOSER_COMMAND_MENU_INLINE_WRAPPER_CLASS_NAME,
   COMPOSER_EDITOR_MIN_HEIGHT_CLASS_NAME,
@@ -54,35 +41,23 @@ import {
   DialogTitle,
 } from "~/components/ui/dialog";
 import { Switch } from "~/components/ui/switch";
-import { useProviderModelCatalog } from "~/hooks/useProviderModelCatalog";
-import { useRefreshProviderStatusesNow } from "~/hooks/useProviderStatusRefresh";
-import { useProviderStatusesForLocalConfig } from "~/hooks/useProviderStatusesForLocalConfig";
 import { useComposerDropzone } from "~/hooks/useComposerDropzone";
 import { toastManager } from "~/components/ui/toast";
 import { useTheme } from "~/hooks/useTheme";
 import { ChevronRightIcon, LoaderCircleIcon, PaperclipIcon } from "~/lib/icons";
 import { formatComposerMentionToken } from "~/lib/composerMentions";
-import { findProviderStatus } from "~/lib/providerAvailability";
-import { resolveProviderDiscoveryCwd } from "~/lib/providerDiscovery";
-import {
-  normalizeRuntimeModeForProvider,
-  providerModelSupportsAutoRuntimeMode,
-} from "~/lib/runtimeMode";
 import { serverConfigQueryOptions } from "~/lib/serverReactQuery";
 import { cn } from "~/lib/utils";
-import {
-  type ComposerFileAttachment,
-  type DraftThreadEnvMode,
-  useComposerDraftStore,
-} from "../../composerDraftStore";
-import { buildModelSelection } from "../../providerModelOptions";
+import { type ComposerFileAttachment, type DraftThreadEnvMode } from "../../composerDraftStore";
 import { type ExpandedImagePreview } from "../chat/ExpandedImagePreview";
 import { ExpandedImageOverlay } from "../chat/ExpandedImageOverlay";
 import { useStore } from "../../store";
-import { DEFAULT_INTERACTION_MODE, DEFAULT_RUNTIME_MODE } from "../../types";
+import { useProductStore } from "../../store/productStore";
 import { appendKanbanTaskTranscript, buildKanbanTaskPreview } from "./KanbanNewTaskDialog.logic";
 import { KanbanTaskExtrasMenu } from "./KanbanTaskExtrasMenu";
 import { KanbanTaskProjectPicker } from "./KanbanTaskProjectPicker";
+import { KanbanRuntimePicker } from "./KanbanRuntimePicker";
+import { resolveKanbanRuntimeAvailability } from "./kanbanRuntimeSelection";
 import { useKanbanTaskComposerMenu } from "./useKanbanTaskComposerMenu";
 import { useKanbanTaskScratchDraft } from "./useKanbanTaskScratchDraft";
 import { useKanbanTaskSubmit } from "./useKanbanTaskSubmit";
@@ -116,14 +91,10 @@ export function KanbanNewTaskDialog({
   initialSendAsDraft: initialSendAsDraftProp,
 }: KanbanNewTaskDialogProps) {
   const initialSendAsDraft = initialSendAsDraftProp ?? false;
-  const { settings } = useAppSettings();
   const { resolvedTheme } = useTheme();
-  const assistantDeliveryMode = resolveAssistantDeliveryMode(settings);
-  const providerOptionsForDispatch = useMemo(() => getProviderStartOptions(settings), [settings]);
   const projects = useStore((state) => state.projects);
+  const runtimeCatalog = useProductStore((state) => state.runtimeCatalog);
   const serverConfigQuery = useQuery(serverConfigQueryOptions());
-  const providerStatuses = useProviderStatusesForLocalConfig();
-  const refreshProviderStatuses = useRefreshProviderStatusesNow();
   const composerEditorRef = useRef<ComposerPromptEditorHandle>(null);
   const localDirectoryMenuRef = useRef<ComposerLocalDirectoryMenuHandle | null>(null);
   const fileInputRef = useRef<HTMLInputElement | null>(null);
@@ -145,107 +116,42 @@ export function KanbanNewTaskDialog({
     isPreparingImages,
     pendingImageCount,
     waitForPendingImages,
-    selectedProvider,
-    selectedModel,
-    selectedModelSupportsAutoMode,
-    selectedProviderModelOptions,
+    requestedSelection,
     setPrompt,
-    handleProviderModelChange: setScratchProviderModel,
+    handleRuntimeSelectionChange,
     addComposerImages,
     removeComposerImage,
     clearComposerAssistantSelections,
     clearComposerFileComments,
     removeComposerTerminalContext,
-  } = useKanbanTaskScratchDraft({ defaultProvider: settings.defaultProvider });
+  } = useKanbanTaskScratchDraft(runtimeCatalog);
   const promptRef = useRef(prompt);
 
-  const [runtimeMode, setRuntimeMode] = useState<RuntimeMode>(DEFAULT_RUNTIME_MODE);
-  const [interactionMode, setInteractionMode] =
-    useState<ProviderInteractionMode>(DEFAULT_INTERACTION_MODE);
   const [envMode, setEnvMode] = useState<DraftThreadEnvMode>("local");
   // Off by default: a new task is sent straight to In Progress (like starting a
   // fresh chat). The Draft column's "+" opens the dialog with the toggle on, so
   // the task parks in Draft — matching where the user clicked.
   const [sendAsDraft, setSendAsDraft] = useState(initialSendAsDraft);
-  const [isModelPickerOpen, setIsModelPickerOpen] = useState(false);
-  const [isTraitsPickerOpen, setIsTraitsPickerOpen] = useState(false);
   const [isDragOverComposer, setIsDragOverComposer] = useState(false);
   const [expandedImage, setExpandedImage] = useState<ExpandedImagePreview | null>(null);
   const selectedProject = useMemo(
     () => projects.find((project) => project.id === selectedProjectId) ?? null,
     [projects, selectedProjectId],
   );
-  const providerModelDiscoveryCwd = resolveProviderDiscoveryCwd({
-    activeThreadWorktreePath: null,
-    activeProjectCwd: selectedProject?.cwd ?? null,
-    serverCwd: serverConfigQuery.data?.cwd ?? null,
-  });
-
-  // Voice transcription always rides on the Codex ChatGPT session, regardless of
-  // which provider the task targets — gate the mic on the Codex status.
-  const voiceProviderStatus = useMemo(
-    () => findProviderStatus(providerStatuses, "codex"),
-    [providerStatuses],
+  const selectedProvider = "pi" as const;
+  const runtimeAvailability = useMemo(
+    () => resolveKanbanRuntimeAvailability(runtimeCatalog, requestedSelection),
+    [requestedSelection, runtimeCatalog],
   );
-  const selectedProviderStatus = useMemo(
-    () => findProviderStatus(providerStatuses, selectedProvider),
-    [providerStatuses, selectedProvider],
-  );
-
-  const modelHintByProvider = useMemo<Partial<Record<ProviderKind, string | null>>>(
-    () => ({ [selectedProvider]: selectedModel }),
-    [selectedProvider, selectedModel],
-  );
-  const {
-    modelOptionsByProvider,
-    loadingModelProviders,
-    runtimeModelsByProvider,
-    selectedRuntimeModel,
-    selectedRuntimeAgents,
-  } = useProviderModelCatalog({
-    selectedProvider,
-    // Keep discovery warm whenever either picker can open so cursor/codex effort
-    // and fast-mode controls are populated, not just the model list.
-    discoveryEnabled: isModelPickerOpen || isTraitsPickerOpen,
-    cwd: providerModelDiscoveryCwd,
-    modelHintByProvider,
-  });
-  const selectedRuntimeModelForCapabilities = useMemo(
-    () =>
-      selectedRuntimeModel ??
-      (selectedProvider === "claudeAgent" && typeof selectedModelSupportsAutoMode === "boolean"
-        ? {
-            slug: selectedModel ?? "default",
-            name: selectedModel ?? "default",
-            supportsAutoMode: selectedModelSupportsAutoMode,
-          }
-        : undefined),
-    [selectedModel, selectedModelSupportsAutoMode, selectedProvider, selectedRuntimeModel],
-  );
-  const handleProviderModelChange = useCallback(
-    (provider: ProviderKind, model: Parameters<typeof setScratchProviderModel>[1]) => {
-      const runtimeModel = resolveRuntimeModelDescriptor({
-        provider,
-        model,
-        runtimeModels: runtimeModelsByProvider[provider],
-      });
-      setRuntimeMode((current) => normalizeRuntimeModeForProvider(current, provider));
-      setScratchProviderModel(provider, model, runtimeModel?.supportsAutoMode);
+  const handleRuntimePickerChange = useCallback(
+    (
+      model: Parameters<typeof handleRuntimeSelectionChange>[0],
+      thinking: string | null,
+    ) => {
+      handleRuntimeSelectionChange(model, thinking);
     },
-    [runtimeModelsByProvider, setScratchProviderModel],
+    [handleRuntimeSelectionChange],
   );
-  useEffect(() => {
-    if (
-      runtimeMode === "auto" &&
-      !providerModelSupportsAutoRuntimeMode(
-        selectedProvider,
-        selectedRuntimeModelForCapabilities,
-        selectedProviderStatus,
-      )
-    ) {
-      setRuntimeMode("approval-required");
-    }
-  }, [runtimeMode, selectedProvider, selectedProviderStatus, selectedRuntimeModelForCapabilities]);
   const trimmedPrompt = prompt.trim();
   const hasSendableContent =
     trimmedPrompt.length > 0 ||
@@ -261,20 +167,13 @@ export function KanbanNewTaskDialog({
   const { canCreate, isCreating, handleCreate } = useKanbanTaskSubmit({
     selectedProjectId,
     hasSendableContent,
-    selectedProvider,
-    selectedModel,
-    selectedModelSupportsAutoMode: selectedRuntimeModelForCapabilities?.supportsAutoMode,
+    requestedSelection,
+    runtimeCatalog,
     taskPreview,
     trimmedPrompt,
     scratchThreadId,
-    runtimeMode,
-    interactionMode,
     envMode,
     sendAsDraft,
-    defaultProvider: settings.defaultProvider,
-    assistantDeliveryMode,
-    providerOptionsForDispatch,
-    providerStatuses,
     isPreparingImages,
     waitForPendingImages,
     onOpenChange,
@@ -311,49 +210,11 @@ export function KanbanNewTaskDialog({
     composerMentions,
     scratchThreadId,
     selectedProvider,
-    modelOptionsByProvider,
-    selectedRuntimeAgents,
     selectedProjectCwd: selectedProject?.cwd ?? null,
     serverCwd: serverConfigQuery.data?.cwd ?? null,
     serverHomeDir: serverConfigQuery.data?.homeDir ?? null,
-    providerOptionsForDispatch,
-    hiddenProviders: settings.hiddenProviders,
-    providerOrder: settings.providerOrder,
-    piAgentDir: settings.piAgentDir || null,
-    handleProviderModelChange,
-    setInteractionMode,
     onCreate: handleCreateRequest,
   });
-
-  // Providers without a static default (e.g. Pi) resolve their model once
-  // discovery delivers the catalog.
-  useEffect(() => {
-    if (selectedModel !== null) {
-      return;
-    }
-    const firstOption = modelOptionsByProvider[selectedProvider][0];
-    if (firstOption) {
-      useComposerDraftStore.getState().setModelSelection(
-        scratchThreadId,
-        buildModelSelection(
-          selectedProvider,
-          firstOption.slug,
-          undefined,
-          resolveRuntimeModelDescriptor({
-            provider: selectedProvider,
-            model: firstOption.slug,
-            runtimeModels: runtimeModelsByProvider[selectedProvider],
-          })?.supportsAutoMode,
-        ),
-      );
-    }
-  }, [
-    modelOptionsByProvider,
-    runtimeModelsByProvider,
-    scratchThreadId,
-    selectedModel,
-    selectedProvider,
-  ]);
 
   const handleTranscriptReady = useCallback(
     (transcript: string) => {
@@ -366,11 +227,8 @@ export function KanbanNewTaskDialog({
     activeProject: selectedProject ?? undefined,
     activeThreadId: null,
     threadId: scratchThreadId,
-    selectedProvider,
-    activeProviderStatus: voiceProviderStatus,
     pendingUserInputCount: 0,
     onTranscriptReady: handleTranscriptReady,
-    refreshVoiceStatus: refreshProviderStatuses,
   });
 
   useEffect(() => {
@@ -572,49 +430,13 @@ export function KanbanNewTaskDialog({
             ) : (
               <div className="flex w-full items-center justify-between gap-2">
                 <div className="flex min-w-0 items-center gap-1">
-                  <KanbanTaskExtrasMenu
-                    interactionMode={interactionMode}
-                    onInteractionModeChange={setInteractionMode}
-                    envMode={envMode}
-                    onEnvModeChange={setEnvMode}
-                  />
-                  <RuntimeUsageControls
-                    provider={selectedProvider}
-                    runtimeModel={selectedRuntimeModelForCapabilities}
-                    providerStatus={selectedProviderStatus}
-                    runtimeMode={runtimeMode}
-                    onRuntimeModeChange={setRuntimeMode}
-                  />
+                  <KanbanTaskExtrasMenu envMode={envMode} onEnvModeChange={setEnvMode} />
                 </div>
                 <div className="flex shrink-0 items-center gap-1.5">
-                  {/* Same split controls as a fresh chat composer: model picker plus
-                      the separate effort/thinking/speed picker. */}
-                  <ProviderModelPicker
-                    compact
-                    provider={selectedProvider}
-                    model={selectedModel ?? ""}
-                    lockedProvider={null}
-                    providers={providerStatuses}
-                    modelOptionsByProvider={modelOptionsByProvider}
-                    loadingModelProviders={loadingModelProviders}
-                    hiddenProviders={settings.hiddenProviders}
-                    providerOrder={settings.providerOrder}
-                    onProviderModelChange={handleProviderModelChange}
-                    open={isModelPickerOpen}
-                    onOpenChange={setIsModelPickerOpen}
-                  />
-                  <TraitsPicker
-                    provider={selectedProvider}
-                    threadId={scratchThreadId}
-                    model={selectedModel}
-                    runtimeModel={selectedRuntimeModel}
-                    runtimeModels={runtimeModelsByProvider[selectedProvider]}
-                    runtimeAgents={selectedRuntimeAgents}
-                    modelOptions={selectedProviderModelOptions}
-                    prompt={prompt}
-                    onPromptChange={setPrompt}
-                    open={isTraitsPickerOpen}
-                    onOpenChange={setIsTraitsPickerOpen}
+                  <KanbanRuntimePicker
+                    catalog={runtimeCatalog}
+                    selection={requestedSelection}
+                    onSelectionChange={handleRuntimePickerChange}
                   />
                 </div>
               </div>
@@ -666,6 +488,11 @@ export function KanbanNewTaskDialog({
               </Button>
             </div>
           </div>
+          {!sendAsDraft && !runtimeAvailability.usable ? (
+            <p className="px-4 pb-2 text-xs text-muted-foreground" role="status">
+              {runtimeAvailability.reason}
+            </p>
+          ) : null}
         </div>
         <ExpandedImageOverlay
           expandedImage={expandedImage}

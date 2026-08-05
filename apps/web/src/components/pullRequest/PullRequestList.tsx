@@ -6,7 +6,7 @@
 // Layer: Pull request presentation
 // Exports: PullRequestList
 
-import type { ProjectId, PullRequestListEntry } from "@omnimind/contracts";
+import type { ProductWorkspaceId, PullRequestListEntry } from "@omnimind/contracts";
 import { pullRequestListEntryKey, type PullRequestListGroup } from "./pullRequestList.logic";
 import { PullRequestRow } from "./PullRequestRow";
 import { PR_FINE_TEXT_CLASS_NAME, PR_QUIET_INK_CLASS_NAME } from "./pullRequestText";
@@ -15,30 +15,30 @@ import { cn } from "~/lib/utils";
 export const PullRequestList = function PullRequestList({
   entries,
   grouped,
-  selectedProjectId,
+  selectedWorkspaceId,
   selectedRepo,
   selectedNumber,
-  showProjectTitle: showProjectTitleProp,
+  showWorkspaceTitle: showWorkspaceTitleProp,
   onSelect,
   onTogglePinned,
 }: {
   entries: PullRequestListEntry[];
   grouped: PullRequestListGroup[] | null;
-  selectedProjectId: ProjectId | undefined;
+  selectedWorkspaceId: ProductWorkspaceId | undefined;
   selectedRepo: string | undefined;
   selectedNumber: number | undefined;
-  showProjectTitle?: boolean;
+  showWorkspaceTitle?: boolean;
   onSelect: (entry: PullRequestListEntry) => void;
   onTogglePinned: (entry: PullRequestListEntry) => void;
 }) {
-  const showProjectTitle = showProjectTitleProp ?? false;
+  const showWorkspaceTitle = showWorkspaceTitleProp ?? false;
   const renderEntry = (entry: PullRequestListEntry) => (
     <PullRequestRow
       key={pullRequestListEntryKey(entry)}
       entry={entry}
-      showProjectTitle={showProjectTitle}
+      showWorkspaceTitle={showWorkspaceTitle}
       selected={
-        selectedProjectId === entry.projectId &&
+        selectedWorkspaceId === entry.workspaceId &&
         selectedRepo === entry.repository &&
         selectedNumber === entry.number
       }

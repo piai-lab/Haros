@@ -68,7 +68,6 @@ import { ReviewChangesButton } from "./ReviewChangesButton";
 import { FileEntryIcon } from "./FileEntryIcon";
 import { InlineMentionChip } from "./InlineMentionChip";
 import { InlineSkillChip } from "./InlineSkillChip";
-import { InlineAgentChip } from "./InlineAgentChip";
 import { MessageActionButton, MESSAGE_ACTION_ICON_CLASS_NAME } from "./MessageActionButton";
 import { MessageCopyButton } from "./MessageCopyButton";
 import { AssistantSelectionsSummaryChip } from "./AssistantSelectionsSummaryChip";
@@ -2517,8 +2516,7 @@ function applySettledTurnCollapseTransitions(params: {
     setTransitions,
   } = params;
   const currentAssistantMessageIds = new Set<string>();
-  const currentCollapsed = new Map<
-    string,
+  const currentCollapsed = new Map<string,
     { signature: string; items: readonly CollapsedTurnItem[] }
   >();
 
@@ -2681,9 +2679,6 @@ function renderUserMessageInlineText(
           {...(segment.kind ? { kind: segment.kind } : {})}
         />,
       ];
-    }
-    if (segment.type === "agent-mention") {
-      return [<InlineAgentChip key={`${key}:agent`} alias={segment.alias} color={segment.color} />];
     }
     if (segment.type === "link") {
       return [<InlineLinkChip key={`${key}:link`} url={segment.url} interactive />];

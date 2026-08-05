@@ -11,9 +11,7 @@ import {
   type AutomationCreateInput,
 } from "@omnimind/contracts";
 import { Effect, Layer, Option } from "effect";
-import * as SqlClient from "effect/unstable/sql/SqlClient";
 
-import { runMigrations } from "../Migrations.ts";
 import { AutomationRepositoryLive } from "./AutomationRepository.ts";
 import { SqlitePersistenceMemory } from "./Sqlite.ts";
 import { AutomationRepository } from "../Services/AutomationRepository.ts";
@@ -25,9 +23,13 @@ const createInput = {
   projectId: ProjectId.makeUnsafe("project-1"),
   prompt: "Check stale dependencies.",
   schedule: { type: "manual" },
-  modelSelection: {
-    provider: "codex",
-    model: "gpt-5-codex",
+  requestedSelection: {
+    state: "unavailable",
+    reason: "catalog-unavailable",
+    requestedRuntimeModelId: null,
+    permissionPolicy: "approval-required",
+    enforcement: "unverified",
+    executionTarget: null,
   },
 } satisfies AutomationCreateInput;
 
@@ -37,23 +39,23 @@ const createInputForProject = (projectId: string) => ({
 });
 
 const permissionSnapshot = {
-  provider: "codex",
-  modelSelection: {
-    provider: "codex",
-    model: "gpt-5-codex",
+  requestedSelection: {
+    state: "unavailable",
+    reason: "catalog-unavailable",
+    requestedRuntimeModelId: null,
+    permissionPolicy: "approval-required",
+    enforcement: "unverified",
+    executionTarget: null,
   },
-  runtimeMode: "approval-required",
-  interactionMode: "default",
   worktreeMode: "worktree",
   allowedCapabilities: ["send-turn", "create-worktree"],
   createdAt: "2026-06-16T10:00:00.000Z",
 } as const;
 
 layer("AutomationRepository", (it) => {
-  it.effect("creates and lists automation definitions with approval-required defaults", () =>
+  it.effect("creates and lists automation definitions with Product selection", () =>
     Effect.gen(function* () {
       const repository = yield* AutomationRepository;
-      yield* runMigrations();
 
       const created = yield* repository.createDefinition({
         id: AutomationId.makeUnsafe("automation-1"),
@@ -62,94 +64,16 @@ layer("AutomationRepository", (it) => {
       });
       const listed = yield* repository.list({ includeArchived: false });
 
-      assert.strictEqual(created.runtimeMode, "approval-required");
+      assert.strictEqual(created.requestedSelection.permissionPolicy, "approval-required");
       assert.strictEqual(created.worktreeMode, "auto");
       assert.strictEqual(listed.definitions.length, 1);
       assert.strictEqual(listed.definitions[0]?.id, created.id);
     }),
   );
 
-  it.effect("decodes a pre-007 persisted definition row with additive defaults", () =>
-    Effect.gen(function* () {
-      const repository = yield* AutomationRepository;
-      const sql = yield* SqlClient.SqlClient;
-      yield* runMigrations();
-      yield* sql`
-        INSERT INTO automation_definitions (
-          automation_id,
-          project_id,
-          name,
-          prompt,
-          schedule_json,
-          enabled,
-          next_run_at,
-          model_selection_json,
-          runtime_mode,
-          interaction_mode,
-          worktree_mode,
-          mode,
-          target_thread_id,
-          max_iterations,
-          stop_on_error,
-          completion_policy_json,
-          completion_policy_version,
-          minimum_interval_seconds,
-          max_runtime_seconds,
-          retry_policy_json,
-          misfire_policy,
-          acknowledged_risks_json,
-          iteration_count,
-          created_at,
-          updated_at,
-          archived_at
-        ) VALUES (
-          'automation-pre-007',
-          'project-pre-007',
-          'Legacy definition',
-          'Keep working.',
-          '{"type":"manual"}',
-          1,
-          NULL,
-          '{"provider":"codex","model":"gpt-5-codex"}',
-          'approval-required',
-          'default',
-          'auto',
-          'standalone',
-          NULL,
-          NULL,
-          1,
-          '{"type":"none"}',
-          0,
-          60,
-          3600,
-          '{"type":"none"}',
-          'coalesce',
-          '[]',
-          0,
-          '2026-06-16T10:00:00.000Z',
-          '2026-06-16T10:00:00.000Z',
-          NULL
-        )
-      `;
-
-      const loaded = yield* repository.getDefinitionById({
-        id: AutomationId.makeUnsafe("automation-pre-007"),
-      });
-
-      assert.isTrue(Option.isSome(loaded));
-      if (Option.isNone(loaded)) {
-        assert.fail("Expected the pre-007 row to load.");
-      }
-      assert.isNull(loaded.value.proposalState);
-      assert.strictEqual(loaded.value.notificationPolicy, "all");
-      assert.strictEqual(loaded.value.heartbeatCooldownSeconds, 60);
-    }),
-  );
-
   it.effect("claims only expired scheduler leases", () =>
     Effect.gen(function* () {
       const repository = yield* AutomationRepository;
-      yield* runMigrations();
 
       const firstClaim = yield* repository.tryAcquireSchedulerLease({
         leaseKey: "automation-scheduler",
@@ -179,7 +103,6 @@ layer("AutomationRepository", (it) => {
   it.effect("persists automation memory without including bodies in list snapshots", () =>
     Effect.gen(function* () {
       const repository = yield* AutomationRepository;
-      yield* runMigrations();
       const automationId = AutomationId.makeUnsafe("automation-memory");
       yield* repository.createDefinition({
         id: automationId,
@@ -212,7 +135,6 @@ layer("AutomationRepository", (it) => {
   it.effect("creates one stable installation salt", () =>
     Effect.gen(function* () {
       const repository = yield* AutomationRepository;
-      yield* runMigrations();
 
       const first = yield* repository.getOrCreateInstallSalt();
       const second = yield* repository.getOrCreateInstallSalt();
@@ -225,7 +147,6 @@ layer("AutomationRepository", (it) => {
   it.effect("stores deferred runs and makes them due at their retry time", () =>
     Effect.gen(function* () {
       const repository = yield* AutomationRepository;
-      yield* runMigrations();
       const automationId = AutomationId.makeUnsafe("automation-deferred");
       yield* repository.createDefinition({
         id: automationId,
@@ -289,7 +210,6 @@ layer("AutomationRepository", (it) => {
   it.effect("does not recover deferred runs before their retry time", () =>
     Effect.gen(function* () {
       const repository = yield* AutomationRepository;
-      yield* runMigrations();
       const automationId = AutomationId.makeUnsafe("automation-deferred-recovery");
       yield* repository.createDefinition({
         id: automationId,
@@ -318,7 +238,6 @@ layer("AutomationRepository", (it) => {
   it.effect("atomically reserves only one deferred run for a target thread", () =>
     Effect.gen(function* () {
       const repository = yield* AutomationRepository;
-      yield* runMigrations();
       const targetThreadId = ThreadId.makeUnsafe("thread-shared-deferred-target");
       const automationIds = [
         AutomationId.makeUnsafe("automation-deferred-reservation-a"),
@@ -375,7 +294,6 @@ layer("AutomationRepository", (it) => {
   it.effect("lists run history directly for one automation", () =>
     Effect.gen(function* () {
       const repository = yield* AutomationRepository;
-      yield* runMigrations();
       const targetAutomationId = AutomationId.makeUnsafe("automation-history-target");
       const noisyAutomationId = AutomationId.makeUnsafe("automation-history-noise");
       yield* Effect.forEach(
@@ -429,7 +347,6 @@ layer("AutomationRepository", (it) => {
   it.effect("dedupes scheduled runs by automation and scheduled time", () =>
     Effect.gen(function* () {
       const repository = yield* AutomationRepository;
-      yield* runMigrations();
 
       yield* repository.createDefinition({
         id: AutomationId.makeUnsafe("automation-2"),
@@ -465,7 +382,6 @@ layer("AutomationRepository", (it) => {
   it.effect("marks a run started with thread and command references", () =>
     Effect.gen(function* () {
       const repository = yield* AutomationRepository;
-      yield* runMigrations();
 
       yield* repository.createDefinition({
         id: AutomationId.makeUnsafe("automation-3"),
@@ -506,7 +422,6 @@ layer("AutomationRepository", (it) => {
   it.effect("lists only enabled due definitions", () =>
     Effect.gen(function* () {
       const repository = yield* AutomationRepository;
-      yield* runMigrations();
 
       yield* repository.createDefinition({
         id: AutomationId.makeUnsafe("automation-4-due"),
@@ -556,7 +471,6 @@ layer("AutomationRepository", (it) => {
   it.effect("resolves a pending proposal exactly once", () =>
     Effect.gen(function* () {
       const repository = yield* AutomationRepository;
-      yield* runMigrations();
       const id = AutomationId.makeUnsafe("automation-proposal-race");
       yield* repository.createDefinition({
         id,
@@ -595,7 +509,6 @@ layer("AutomationRepository", (it) => {
   it.effect("transitions a run through the terminal mark helpers", () =>
     Effect.gen(function* () {
       const repository = yield* AutomationRepository;
-      yield* runMigrations();
 
       yield* repository.createDefinition({
         id: AutomationId.makeUnsafe("automation-marks"),
@@ -674,7 +587,6 @@ layer("AutomationRepository", (it) => {
   it.effect("admits at most one active run for a thread", () =>
     Effect.gen(function* () {
       const repository = yield* AutomationRepository;
-      yield* runMigrations();
 
       yield* repository.createDefinition({
         id: AutomationId.makeUnsafe("automation-by-thread"),
@@ -742,7 +654,6 @@ layer("AutomationRepository", (it) => {
   it.effect("counts only active runs for a definition", () =>
     Effect.gen(function* () {
       const repository = yield* AutomationRepository;
-      yield* runMigrations();
 
       yield* repository.createDefinition({
         id: AutomationId.makeUnsafe("automation-active-count"),
@@ -800,7 +711,6 @@ layer("AutomationRepository", (it) => {
   it.effect("disables a definition and clears its next run", () =>
     Effect.gen(function* () {
       const repository = yield* AutomationRepository;
-      yield* runMigrations();
 
       yield* repository.createDefinition({
         id: AutomationId.makeUnsafe("automation-disable"),
@@ -828,7 +738,6 @@ layer("AutomationRepository", (it) => {
   it.effect("increments the iteration count", () =>
     Effect.gen(function* () {
       const repository = yield* AutomationRepository;
-      yield* runMigrations();
 
       yield* repository.createDefinition({
         id: AutomationId.makeUnsafe("automation-iteration"),
@@ -855,7 +764,6 @@ layer("AutomationRepository", (it) => {
   it.effect("never dedupes manual runs sharing a scheduledFor", () =>
     Effect.gen(function* () {
       const repository = yield* AutomationRepository;
-      yield* runMigrations();
 
       yield* repository.createDefinition({
         id: AutomationId.makeUnsafe("automation-manual-dup"),
@@ -896,7 +804,6 @@ layer("AutomationRepository", (it) => {
   it.effect("persists the new definition fields with defaults", () =>
     Effect.gen(function* () {
       const repository = yield* AutomationRepository;
-      yield* runMigrations();
 
       const created = yield* repository.createDefinition({
         id: AutomationId.makeUnsafe("automation-defaults"),
@@ -944,7 +851,6 @@ layer("AutomationRepository", (it) => {
   it.effect("preserves explicit null maxRuntimeSeconds on create", () =>
     Effect.gen(function* () {
       const repository = yield* AutomationRepository;
-      yield* runMigrations();
 
       yield* repository.createDefinition({
         id: AutomationId.makeUnsafe("automation-null-runtime"),
@@ -967,7 +873,6 @@ layer("AutomationRepository", (it) => {
   it.effect("keeps a standalone completion policy and drops only its thread", () =>
     Effect.gen(function* () {
       const repository = yield* AutomationRepository;
-      yield* runMigrations();
 
       const policy = {
         type: "ai-evaluated" as const,
@@ -999,7 +904,6 @@ layer("AutomationRepository", (it) => {
   it.effect("gives a dedicated definition its thread exactly once", () =>
     Effect.gen(function* () {
       const repository = yield* AutomationRepository;
-      yield* runMigrations();
 
       const id = AutomationId.makeUnsafe("automation-dedicated-thread");
       const firstThreadId = ThreadId.makeUnsafe("dedicated-thread-first");
@@ -1038,7 +942,6 @@ layer("AutomationRepository", (it) => {
   it.effect("persists explicit heartbeat definition fields", () =>
     Effect.gen(function* () {
       const repository = yield* AutomationRepository;
-      yield* runMigrations();
 
       yield* repository.createDefinition({
         id: AutomationId.makeUnsafe("automation-heartbeat"),
@@ -1093,7 +996,6 @@ layer("AutomationRepository", (it) => {
   it.effect("lists only post-policy heartbeat runs that still need stop evaluation", () =>
     Effect.gen(function* () {
       const repository = yield* AutomationRepository;
-      yield* runMigrations();
       const automationId = AutomationId.makeUnsafe("automation-stop-backfill");
       const projectId = ProjectId.makeUnsafe("project-stop-backfill");
       const threadId = ThreadId.makeUnsafe("thread-stop-backfill");
@@ -1150,7 +1052,7 @@ layer("AutomationRepository", (it) => {
         turnStartCommandId: CommandId.makeUnsafe("command-stop-backfill-in-flight-before-policy"),
         startedAt: "2026-06-16T10:01:40.000Z",
       });
-      yield* repository.saveDefinition({
+      const updatedDefinition = yield* repository.saveDefinition({
         ...definition,
         completionPolicy: {
           type: "ai-evaluated",
@@ -1180,7 +1082,10 @@ layer("AutomationRepository", (it) => {
         threadId,
         trigger: { type: "manual" },
         scheduledFor: "2026-06-16T10:03:00.000Z",
-        permissionSnapshot,
+        permissionSnapshot: {
+          ...permissionSnapshot,
+          completionPolicyVersion: updatedDefinition.completionPolicyVersion,
+        },
         now: "2026-06-16T10:03:00.000Z",
       });
       yield* repository.markRunSucceeded({
@@ -1231,7 +1136,6 @@ layer("AutomationRepository", (it) => {
   it.effect("updates run triage result read and archive state", () =>
     Effect.gen(function* () {
       const repository = yield* AutomationRepository;
-      yield* runMigrations();
 
       yield* repository.createDefinition({
         id: AutomationId.makeUnsafe("automation-result-actions"),
@@ -1291,7 +1195,6 @@ layer("AutomationRepository", (it) => {
   it.effect("markRunCompletionResult preserves archive/read state from the current row", () =>
     Effect.gen(function* () {
       const repository = yield* AutomationRepository;
-      yield* runMigrations();
 
       yield* repository.createDefinition({
         id: AutomationId.makeUnsafe("automation-completion-merge"),
@@ -1355,7 +1258,6 @@ layer("AutomationRepository", (it) => {
   it.effect("markRunCompletionResult preserves a read run that was not archived", () =>
     Effect.gen(function* () {
       const repository = yield* AutomationRepository;
-      yield* runMigrations();
 
       yield* repository.createDefinition({
         id: AutomationId.makeUnsafe("automation-read-merge"),
@@ -1413,7 +1315,6 @@ layer("AutomationRepository", (it) => {
   it.effect("returns the earliest enabled next run, including overdue rows", () =>
     Effect.gen(function* () {
       const repository = yield* AutomationRepository;
-      yield* runMigrations();
 
       yield* repository.createDefinition({
         id: AutomationId.makeUnsafe("automation-earliest-overdue"),
@@ -1465,7 +1366,6 @@ layer("AutomationRepository", (it) => {
   it.effect("keeps due heartbeats selectable while a stop evaluation is pending", () =>
     Effect.gen(function* () {
       const repository = yield* AutomationRepository;
-      yield* runMigrations();
       const automationId = AutomationId.makeUnsafe("automation-earliest-pending-stop");
       const threadId = ThreadId.makeUnsafe("thread-earliest-pending-stop");
       const runId = AutomationRunId.makeUnsafe("run-earliest-pending-stop");
@@ -1554,7 +1454,6 @@ layer("AutomationRepository", (it) => {
   it.effect("returns pending-stop heartbeats so the service can defer them", () =>
     Effect.gen(function* () {
       const repository = yield* AutomationRepository;
-      yield* runMigrations();
 
       const createBlockedHeartbeat = (suffix: string, nextRunAt: string) =>
         Effect.gen(function* () {
@@ -1649,7 +1548,6 @@ layer("AutomationRepository", (it) => {
   it.effect("dedupes a scheduled occurrence past a manual run sharing its scheduledFor", () =>
     Effect.gen(function* () {
       const repository = yield* AutomationRepository;
-      yield* runMigrations();
 
       yield* repository.createDefinition({
         id: AutomationId.makeUnsafe("automation-occurrence"),
@@ -1693,7 +1591,6 @@ layer("AutomationRepository", (it) => {
   it.effect("leaves a terminal run untouched when cancel is requested", () =>
     Effect.gen(function* () {
       const repository = yield* AutomationRepository;
-      yield* runMigrations();
 
       yield* repository.createDefinition({
         id: AutomationId.makeUnsafe("automation-cancel"),

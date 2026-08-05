@@ -7,8 +7,8 @@ import { describe, expect, it } from "vitest";
 const sourceRoot = path.dirname(fileURLToPath(import.meta.url));
 const read = (relativePath: string) => fs.readFileSync(path.join(sourceRoot, relativePath), "utf8");
 
-describe("Product Conversation cutover reachability", () => {
-  it("routes new draft submission through Product only while retaining donor physical debt", () => {
+describe("Product Conversation authority closure", () => {
+  it("routes draft submission through Product without a donor execution fallback", () => {
     const chatView = read("components/ChatView.tsx");
     const start = chatView.indexOf("const sendProductConversation = async");
     const end = chatView.indexOf("const onSend = async", start);
@@ -16,28 +16,25 @@ describe("Product Conversation cutover reachability", () => {
     expect(end).toBeGreaterThan(start);
     const productJourney = chatView.slice(start, end);
     expect(productJourney).toContain("ensureProductConversationRetained();");
-    expect(productJourney).toContain("productApi.createConversation");
+    expect(productJourney).toContain("createProductConversationWithRecovery");
     expect(productJourney).toContain("confirmProductQueueOwnershipBeforeDraftClear");
     expect(productJourney).toContain("productApi.putQueueItem");
     expect(productJourney).toContain("productApi.submitQueueItem");
     expect(productJourney).not.toMatch(
       /readNativeApi|resolveComposerAutomationRequest|resolveProviderSendAvailabilityWithRefresh|maybeResolveBrowserPromptAttachment|thread\.turn\.start|promoteThreadCreate/u,
     );
-    const genericJourney = chatView.slice(end);
-    const productGuard = genericJourney.indexOf("if (isProductConversationThread)");
-    const legacyApi = genericJourney.indexOf("const api = readNativeApi();");
-    expect(productGuard).toBeGreaterThanOrEqual(0);
-    expect(legacyApi).toBeGreaterThan(productGuard);
-    expect(genericJourney).toContain('type: "thread.turn.start"');
+    expect(chatView).not.toContain('type: "thread.turn.start"');
+    expect(chatView).not.toContain("resolveProviderSendAvailabilityWithRefresh");
   });
 
   it("maps the durable Product Queue into the approved mother and typed controls", () => {
     const chatView = read("components/ChatView.tsx");
     const presenter = read("productReadModel.ts");
+    const queueActions = read("components/product/productQueueActions.ts");
     expect(presenter).toContain("presentProductConversationQueue");
     expect(chatView).toContain("queuedTurns={visibleQueuedComposerTurns}");
-    expect(chatView).toContain(".deleteQueueItem({");
-    expect(chatView).toContain(".reorderQueue({");
+    expect(queueActions).toContain("input.api.deleteQueueItem({");
+    expect(queueActions).toContain("input.api.reorderQueue({");
     expect(chatView).toContain("expectedRevision: productQueueEdit?.revision ?? null");
     expect(chatView).not.toContain("enqueueQueuedComposerTurn(productConversationId");
   });
@@ -56,46 +53,35 @@ describe("Product Conversation cutover reachability", () => {
     expect(release).toBeGreaterThan(fetch);
   });
 
-  it("fails closed for registered Product ids before the legacy transport request", () => {
+  it("exposes Product transport without a buildable legacy dispatcher", () => {
     const nativeApi = read("wsNativeApi.ts");
-    expect(nativeApi).toContain("productConversationIds.add");
-    const dispatchStart = nativeApi.indexOf("dispatchCommand: (command) => {");
-    const dispatchEnd = nativeApi.indexOf("importThread:", dispatchStart);
-    const dispatch = nativeApi.slice(dispatchStart, dispatchEnd);
-    const guard = dispatch.indexOf("rejectLegacyProductConversationRoute(command)");
-    const transport = dispatch.indexOf(
-      "transport.request(ORCHESTRATION_WS_METHODS.dispatchCommand",
-    );
-    expect(guard).toBeGreaterThanOrEqual(0);
-    expect(transport).toBeGreaterThan(guard);
-    expect(nativeApi).toContain("Promise.reject");
+    expect(nativeApi).toContain("PRODUCT_RPC_METHODS.submitQueueItem");
+    expect(nativeApi).toContain("PRODUCT_RPC_METHODS.controlRun");
+    expect(nativeApi).not.toContain("ORCHESTRATION_WS_METHODS");
+    expect(nativeApi).not.toContain("rejectLegacyProductConversationRoute");
+    expect(nativeApi).not.toContain("dispatchCommand:");
   });
 
-  it("wires the authoritative Product Store guard into every legacy Service writer", () => {
+  it("composes Product and scoped System RPC without legacy Service writers", () => {
     const serviceRpc = read("../../service/src/wsRpc.ts");
-    expect(
-      serviceRpc.match(/assertLegacyConversationRouteAvailable\(/gu)?.length,
-    ).toBeGreaterThanOrEqual(3);
-    for (const method of ["dispatchCommand", "importThread", "reconcileProviderDelivery"]) {
-      const handler = serviceRpc.indexOf(`[ORCHESTRATION_WS_METHODS.${method}]`);
-      expect(handler).toBeGreaterThan(0);
-      expect(serviceRpc.indexOf("assertLegacyConversationRouteAvailable", handler)).toBeGreaterThan(
-        handler,
-      );
-    }
+    expect(serviceRpc).toContain("PRODUCT_RPC_METHODS.putQueueItem");
+    expect(serviceRpc).toContain("PRODUCT_RPC_METHODS.submitQueueItem");
+    expect(serviceRpc).toContain("SYSTEM_RPC_METHODS.ensureWorkspaceRoot");
+    expect(serviceRpc).not.toContain("ORCHESTRATION_WS_METHODS");
+    expect(serviceRpc).not.toContain("assertLegacyConversationRouteAvailable");
+    expect(serviceRpc).not.toMatch(/\b(?:dispatchCommand|importThread|reconcileProviderDelivery)\b/u);
   });
 
-  it("preserves the approved mother and non-Product EventRouter responsibilities", () => {
+  it("preserves the approved mother under Product and scoped system owners", () => {
     const root = read("routes/__root.tsx");
     const chatRoute = read("routes/_chat.tsx");
     const chatView = read("components/ChatView.tsx");
-    expect(root).toContain("<EventRouter />");
     expect(root).toContain("<ProductProjectionCoordinator />");
-    expect(root).toContain("<DesktopProjectBootstrap />");
-    expect(root).toContain("resolveSplitViewThreadIds");
-    expect(root).toContain("!isProductConversationId(threadId)");
-    expect(root).toContain("productDraftThreadsById[threadId] === undefined");
-    expect(root).toContain("isProductConversationId(String(event.aggregateId))");
+    expect(root).toContain("<SystemHealthCoordinator />");
+    expect(root).toContain("<AppSnapCoordinator />");
+    expect(root).toContain("<Outlet />");
+    expect(root).not.toContain("<EventRouter />");
+    expect(root).not.toContain("<DesktopProjectBootstrap />");
     expect(chatRoute).toContain("<ThreadSidebar />");
     expect(chatView).toContain("ChatTranscriptPane");
     expect(chatView).toContain('label: "Split chat"');

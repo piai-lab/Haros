@@ -78,21 +78,6 @@ export const DEFAULT_KEYBINDINGS: ReadonlyArray<KeybindingRule> = [
   { key: "mod+alt+u", command: "sidebar.activity", when: "!terminalFocus || isMac" },
   { key: "mod+shift+o", command: "sidebar.addProject", when: "!terminalFocus" },
   { key: "mod+i", command: "sidebar.importThread", when: "!terminalFocus" },
-  { key: "mod+alt+arrowleft", command: "space.previous", when: "!terminalFocus" },
-  { key: "mod+alt+arrowright", command: "space.next", when: "!terminalFocus" },
-  // Numbered space jumps address tabs in the switcher's visual order, so mod+alt+1 is
-  // always Void. Same `|| isMac` escape hatch as the new-surface chords below: Cmd
-  // chords never reach the PTY on macOS, while Ctrl+Alt+digit is AltGr territory on
-  // Linux/Windows layouts and must keep yielding to focused terminals there.
-  { key: "mod+alt+1", command: "space.jump.1", when: "!terminalFocus || isMac" },
-  { key: "mod+alt+2", command: "space.jump.2", when: "!terminalFocus || isMac" },
-  { key: "mod+alt+3", command: "space.jump.3", when: "!terminalFocus || isMac" },
-  { key: "mod+alt+4", command: "space.jump.4", when: "!terminalFocus || isMac" },
-  { key: "mod+alt+5", command: "space.jump.5", when: "!terminalFocus || isMac" },
-  { key: "mod+alt+6", command: "space.jump.6", when: "!terminalFocus || isMac" },
-  { key: "mod+alt+7", command: "space.jump.7", when: "!terminalFocus || isMac" },
-  { key: "mod+alt+8", command: "space.jump.8", when: "!terminalFocus || isMac" },
-  { key: "mod+alt+9", command: "space.jump.9", when: "!terminalFocus || isMac" },
   { key: "mod+j", command: "terminal.toggle" },
   { key: "mod+d", command: "terminal.split", when: "terminalFocus" },
   { key: "mod+shift+arrowright", command: "terminal.splitRight", when: "terminalFocus" },
@@ -110,11 +95,6 @@ export const DEFAULT_KEYBINDINGS: ReadonlyArray<KeybindingRule> = [
   { key: "mod+d", command: "diff.toggle", when: "!terminalFocus" },
   // Cmd-only instead of mod so Ctrl+L remains available to shells on non-macOS.
   { key: "cmd+l", command: "composer.focus.toggle", when: "!terminalFocus" },
-  { key: "mod+shift+m", command: "modelPicker.toggle", when: "!terminalFocus" },
-  // Cycle models within the active provider (favorites first, then remaining list).
-  { key: "alt+]", command: "model.next", when: "!terminalFocus" },
-  { key: "alt+[", command: "model.previous", when: "!terminalFocus" },
-  { key: "mod+shift+e", command: "traitsPicker.toggle", when: "!terminalFocus" },
   { key: "mod+shift+u", command: "settings.usage", when: "!terminalFocus" },
   // New thread (chat.new) is the primary create action; it falls back to the most
   // recent project when no project is active.
@@ -128,9 +108,6 @@ export const DEFAULT_KEYBINDINGS: ReadonlyArray<KeybindingRule> = [
   { key: "mod+shift+n", command: "chat.newLatestProject", when: "!terminalFocus || isMac" },
   { key: "mod+alt+n", command: "chat.newChat", when: "!terminalFocus || isMac" },
   { key: "mod+shift+t", command: "chat.newTerminal", when: "!terminalFocus || isMac" },
-  { key: "mod+alt+c", command: "chat.newClaude", when: "!terminalFocus || isMac" },
-  { key: "mod+alt+x", command: "chat.newCodex", when: "!terminalFocus || isMac" },
-  { key: "mod+alt+r", command: "chat.newCursor", when: "!terminalFocus || isMac" },
   { key: "mod+\\", command: "chat.split", when: "!terminalFocus || isMac" },
   // Recent-view switcher (Ctrl+Tab) is an installed-app feature only: Electron and
   // standalone PWA windows have no tab strip, so the chord reaches the page. It remains
@@ -584,17 +561,26 @@ function invalidEntryIssue(index: number, detail: string): ServerConfigIssue {
 
 const LEGACY_KEYBINDING_COMMAND_ALIASES = {
   "commandPalette.toggle": "sidebar.search",
-  "composer.effortPicker.toggle": "traitsPicker.toggle",
-  "composer.modelPicker.toggle": "modelPicker.toggle",
-  "effortPicker.toggle": "traitsPicker.toggle",
-  "reasoningPicker.toggle": "traitsPicker.toggle",
   "thread.previous": "chat.visible.previous",
   "thread.next": "chat.visible.next",
 } as const satisfies Record<string, KeybindingRule["command"]>;
 
 // Commands removed without a direct replacement are dropped during startup so
 // persisted configs from older releases do not produce validation warnings.
-const RETIRED_LEGACY_KEYBINDING_COMMANDS = new Set(["chat.newGemini"]);
+const RETIRED_LEGACY_KEYBINDING_COMMANDS = new Set([
+  "chat.newGemini",
+  "chat.newClaude",
+  "chat.newCodex",
+  "chat.newCursor",
+  "modelPicker.toggle",
+  "model.next",
+  "model.previous",
+  "traitsPicker.toggle",
+  "composer.effortPicker.toggle",
+  "composer.modelPicker.toggle",
+  "effortPicker.toggle",
+  "reasoningPicker.toggle",
+]);
 const RETIRED_LEGACY_KEYBINDING_COMMAND_PATTERN = /^(?:composer\.)?modelPicker\.jump\.[1-9]$/;
 const OUTDATED_RECENT_VIEW_TERMINAL_GUARD = "!terminalFocus";
 const OUTDATED_SIDEBAR_SEARCH_SHORTCUT = "mod+k";
@@ -616,9 +602,6 @@ const CREATION_COMMANDS_WITH_TERMINAL_ESCAPE = new Set<KeybindingRule["command"]
   "chat.newChat",
   "chat.newLocal",
   "chat.newTerminal",
-  "chat.newClaude",
-  "chat.newCodex",
-  "chat.newCursor",
   "chat.split",
 ]);
 

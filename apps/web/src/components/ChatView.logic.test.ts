@@ -1,10 +1,10 @@
+import type { HistoricalModelOptions, HistoricalModelSelection, HistoricalModelSlug } from "~/historicalModelSelection";
 import {
   CheckpointRef,
   EventId,
   MessageId,
   ThreadId,
   TurnId,
-  type ModelSlug,
   type RuntimeMode,
 } from "@omnimind/contracts";
 import { describe, expect, it } from "vitest";
@@ -35,7 +35,6 @@ import {
   isVoiceAuthExpiredMessage,
   resolveActiveThreadTitle,
   resolveActiveTurnLiveDiffState,
-  resolveCommittedProviderModel,
   resolveCycledModelSlug,
   resolveDefaultEnvironmentPanelOpen,
   resolveEnvironmentPanelOpen,
@@ -55,7 +54,6 @@ import {
   shouldConsumePendingCustomBinaryConfirmation,
   shouldEnableComposerPastedTextCollapse,
   shouldHandlePromptHistoryNavigationKey,
-  shouldRenderProviderHealthBanner,
   shouldShowComposerModelBootstrapSkeleton,
   shouldStartActiveTurnLayoutGrace,
   shouldRenderTerminalWorkspace,
@@ -805,10 +803,9 @@ describe("voice helpers", () => {
     expect(describeVoiceRecordingStartError(error)).toContain("Microphone access was denied");
   });
 
-  it("derives voice-note availability from provider auth and runtime state", () => {
+  it("fails voice notes closed without a System-owned capability", () => {
     expect(
       deriveComposerVoiceState({
-        authStatus: "authenticated",
         voiceTranscriptionAvailable: true,
         isRecording: false,
         isTranscribing: false,
@@ -821,8 +818,7 @@ describe("voice helpers", () => {
 
     expect(
       deriveComposerVoiceState({
-        authStatus: "unauthenticated",
-        voiceTranscriptionAvailable: true,
+        voiceTranscriptionAvailable: false,
         isRecording: true,
         isTranscribing: false,
       }),
@@ -1348,33 +1344,6 @@ describe("shouldShowComposerModelBootstrapSkeleton", () => {
   });
 });
 
-describe("resolveCommittedProviderModel", () => {
-  it("preserves the exact runtime-discovered slug when the picker selected it", () => {
-    expect(
-      resolveCommittedProviderModel({
-        selectedModel: "grok-code-fast-1-0825" as ModelSlug,
-        availableOptions: [
-          {
-            slug: "grok-code-fast-1-0825" as ModelSlug,
-            name: "Grok Code Fast 1 0825",
-          },
-        ],
-        fallback: () => "grok-build-0.1",
-      }),
-    ).toBe("grok-code-fast-1-0825");
-  });
-
-  it("falls back to static alias resolution when the selected slug is not in the options", () => {
-    expect(
-      resolveCommittedProviderModel({
-        selectedModel: "code-fast" as ModelSlug,
-        availableOptions: [],
-        fallback: () => "grok-build-0.1",
-      }),
-    ).toBe("grok-build-0.1");
-  });
-});
-
 describe("shouldConsumePendingCustomBinaryConfirmation", () => {
   it("still processes a pending path for a session that was already checked", () => {
     expect(
@@ -1610,35 +1579,6 @@ describe("resolveProjectScriptTerminalTarget", () => {
       shouldCreateNewTerminal: true,
       terminalId: "forced-script-terminal",
     });
-  });
-});
-
-describe("shouldRenderProviderHealthBanner", () => {
-  it("does not show chat provider health while a terminal thread is active", () => {
-    expect(
-      shouldRenderProviderHealthBanner({
-        threadEntryPoint: "terminal",
-        terminalWorkspaceTerminalTabActive: false,
-      }),
-    ).toBe(false);
-  });
-
-  it("does not show chat provider health while the terminal workspace tab is active", () => {
-    expect(
-      shouldRenderProviderHealthBanner({
-        threadEntryPoint: "chat",
-        terminalWorkspaceTerminalTabActive: true,
-      }),
-    ).toBe(false);
-  });
-
-  it("shows chat provider health only on the chat surface", () => {
-    expect(
-      shouldRenderProviderHealthBanner({
-        threadEntryPoint: "chat",
-        terminalWorkspaceTerminalTabActive: false,
-      }),
-    ).toBe(true);
   });
 });
 

@@ -1,4 +1,4 @@
-import { type ProjectId, type ProviderKind, type ThreadId, type TurnId } from "@omnimind/contracts";
+import { type ProjectId, type ThreadId, type TurnId } from "@omnimind/contracts";
 import { useNavigate } from "@tanstack/react-router";
 import {
   type CSSProperties,
@@ -52,6 +52,7 @@ import {
 } from "../../splitViewStore";
 import { useStore } from "../../store";
 import { createAllThreadsSelector } from "../../storeSelectors";
+import type { Thread } from "../../types";
 import {
   normalizeSingleSearchFromPane,
   resolveSplitPaneCloseDecision,
@@ -234,7 +235,7 @@ function SplitPaneEmptyState(props: {
     id: ThreadId;
     title: string | null;
     projectId: ProjectId;
-    modelSelection: { provider: ProviderKind };
+    modelSelection: { provider: string };
   }[];
   projects: readonly { id: ProjectId; name: string }[];
   excludedThreadIds: ReadonlySet<ThreadId>;
@@ -462,7 +463,7 @@ function SplitPaneSurface(props: {
     id: ThreadId;
     title: string | null;
     projectId: ProjectId;
-    modelSelection: { provider: ProviderKind };
+    modelSelection: { provider: string };
   }[];
   projects: readonly { id: ProjectId; name: string }[];
   onFocus: () => void;
@@ -906,10 +907,16 @@ export function SplitChatSurface(props: {
     });
   };
 
-  const selectableThreads = threads.toSorted(
-    (left, right) =>
-      Date.parse(right.updatedAt ?? right.createdAt) - Date.parse(left.updatedAt ?? left.createdAt),
-  );
+  const selectableThreads = threads
+    .filter(
+      (thread): thread is Thread & { modelSelection: NonNullable<Thread["modelSelection"]> } =>
+        thread.modelSelection !== undefined,
+    )
+    .toSorted(
+      (left, right) =>
+        Date.parse(right.updatedAt ?? right.createdAt) -
+        Date.parse(left.updatedAt ?? left.createdAt),
+    );
   const splitThreadIds = new Set(activeSplitView ? resolveSplitViewThreadIds(activeSplitView) : []);
 
   if (!activeSplitView) {

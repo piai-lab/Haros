@@ -5,7 +5,7 @@ import {
   isValidGitHubRepositoryNameWithOwner,
   isViewerReviewRequested,
   orderPullRequestListEntries,
-  projectPullRequestIdentityKey,
+  workspacePullRequestIdentityKey,
   pullRequestMatchesInvolvement,
   pullRequestListCacheKey,
   pullRequestListForceRefreshCacheKeys,
@@ -18,8 +18,8 @@ import type { PullRequestListEntry } from "@omnimind/contracts";
 
 function makeEntry(overrides: Partial<PullRequestListEntry> = {}): PullRequestListEntry {
   return {
-    projectId: "project-1" as PullRequestListEntry["projectId"],
-    projectTitle: "Project One",
+    workspaceId: "project-1" as PullRequestListEntry["workspaceId"],
+    workspaceTitle: "Project One",
     repository: "acme/widgets",
     number: 1,
     title: "Untitled",
@@ -36,10 +36,10 @@ function makeEntry(overrides: Partial<PullRequestListEntry> = {}): PullRequestLi
     reviewDecision: null,
     viewerReviewRequested: false,
     isPinned: false,
-    projectContexts: [
+    workspaceContexts: [
       {
-        projectId: "project-1" as PullRequestListEntry["projectId"],
-        projectTitle: "Project One",
+        workspaceId: "project-1" as PullRequestListEntry["workspaceId"],
+        workspaceTitle: "Project One",
         isPinned: false,
       },
     ],
@@ -99,21 +99,21 @@ describe("pullRequestListCacheKey", () => {
 
 describe("project pull request priority", () => {
   it("keeps identical repository PRs independent across projects and repository casing", () => {
-    const first = projectPullRequestIdentityKey({
-      projectId: "project-1",
+    const first = workspacePullRequestIdentityKey({
+      workspaceId: "project-1",
       repository: " Acme/Widgets ",
       number: 42,
     });
     expect(first).toBe(
-      projectPullRequestIdentityKey({
-        projectId: "project-1",
+      workspacePullRequestIdentityKey({
+        workspaceId: "project-1",
         repository: "acme/widgets",
         number: 42,
       }),
     );
     expect(first).not.toBe(
-      projectPullRequestIdentityKey({
-        projectId: "project-2",
+      workspacePullRequestIdentityKey({
+        workspaceId: "project-2",
         repository: "acme/widgets",
         number: 42,
       }),
@@ -122,14 +122,14 @@ describe("project pull request priority", () => {
 
   it("recovers only missing pins from truncated batches owned by the same project", () => {
     const pins = [
-      { projectId: "project-a", repositoryKey: "acme/widgets", number: 1 },
-      { projectId: "project-b", repositoryKey: "acme/widgets", number: 2 },
-      { projectId: "project-a", repositoryKey: "acme/complete", number: 3 },
-      { projectId: "project-a", repositoryKey: "acme/widgets", number: 4 },
+      { workspaceId: "project-a", repositoryKey: "acme/widgets", number: 1 },
+      { workspaceId: "project-b", repositoryKey: "acme/widgets", number: 2 },
+      { workspaceId: "project-a", repositoryKey: "acme/complete", number: 3 },
+      { workspaceId: "project-a", repositoryKey: "acme/widgets", number: 4 },
     ];
     const presentKeys = new Set([
-      projectPullRequestIdentityKey({
-        projectId: "project-a",
+      workspacePullRequestIdentityKey({
+        workspaceId: "project-a",
         repository: "acme/widgets",
         number: 4,
       }),
@@ -137,7 +137,7 @@ describe("project pull request priority", () => {
     const recovered = selectRecoverablePullRequestPins({
       pins,
       presentKeys,
-      repositoryKeysByProject: new Map([
+      repositoryKeysByWorkspace: new Map([
         ["project-a", new Set(["acme/widgets", "acme/complete"])],
         ["project-b", new Set(["acme/other"])],
       ]),
@@ -145,12 +145,12 @@ describe("project pull request priority", () => {
         {
           repository: "Acme/Widgets",
           truncated: true,
-          projectIds: ["project-a"],
+          workspaceIds: ["project-a"],
         },
         {
           repository: "acme/complete",
           truncated: false,
-          projectIds: ["project-a"],
+          workspaceIds: ["project-a"],
         },
       ],
     });

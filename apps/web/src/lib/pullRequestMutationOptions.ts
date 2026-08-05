@@ -1,5 +1,5 @@
 import type {
-  ProjectId,
+  ProductWorkspaceId,
   PullRequestActionInput,
   PullRequestCommentInput,
   PullRequestSetPinnedInput,
@@ -98,16 +98,16 @@ function actionListScopes(
   const scopes = listScopesContainingPullRequestRepository(queryClient, input);
   if (targetState === undefined) return scopes;
   const byKey = new Map(
-    scopes.map((scope) => [`${scope.state}\u0000${scope.projectId ?? ""}`, scope] as const),
+    scopes.map((scope) => [`${scope.state}\u0000${scope.workspaceId ?? ""}`, scope] as const),
   );
-  const projectIds = new Set<ProjectId | null>([
-    input.projectId,
+  const projectIds = new Set<ProductWorkspaceId | null>([
+    input.workspaceId,
     null,
-    ...scopes.map((scope) => scope.projectId),
+    ...scopes.map((scope) => scope.workspaceId),
   ]);
-  for (const projectId of projectIds) {
-    const target = { state: targetState, projectId };
-    byKey.set(`${target.state}\u0000${target.projectId ?? ""}`, target);
+  for (const workspaceId of projectIds) {
+    const target = { state: targetState, workspaceId };
+    byKey.set(`${target.state}\u0000${target.workspaceId ?? ""}`, target);
   }
   return [...byKey.values()];
 }
@@ -330,8 +330,8 @@ export function pullRequestCommentMutationOptions(queryClient: QueryClient) {
         // A new comment updates GitHub's `updatedAt` and can move an out-of-cap PR into either
         // aggregate. Include those destination scopes even when no cached row proves membership.
         affectedScopes.push(
-          { state: detailState, projectId: input.projectId },
-          { state: detailState, projectId: null },
+          { state: detailState, workspaceId: input.workspaceId },
+          { state: detailState, workspaceId: null },
         );
       }
       await Promise.all([
@@ -352,11 +352,11 @@ export function pullRequestsForceRefreshMutationOptions(queryClient: QueryClient
     // merged field-by-field through the retained identity protection below.
     scope: { id: PULL_REQUEST_ACTION_REFRESH_SCOPE_ID },
     networkMode: "always",
-    mutationFn: (input: { state: PullRequestState; projectId: ProjectId | null }) =>
+    mutationFn: (input: { state: PullRequestState; workspaceId: ProductWorkspaceId | null }) =>
       ensureNativeApi().pullRequests.list({
         involvement: "all",
         state: input.state,
-        projectId: input.projectId,
+        workspaceId: input.workspaceId,
         forceRefresh: true,
       }),
     onMutate: async (input) => {

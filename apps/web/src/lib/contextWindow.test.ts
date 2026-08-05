@@ -1,5 +1,6 @@
+import type { ConversationHistoryActivity } from "~/historicalConversation";
 import { describe, expect, it } from "vitest";
-import { EventId, type OrchestrationThreadActivity, TurnId } from "@omnimind/contracts";
+import { EventId, TurnId } from "@omnimind/contracts";
 
 import {
   deriveContextWindowSelectionStatus,
@@ -15,8 +16,8 @@ import {
 function makeActivity(
   id: string,
   kind: string,
-  payload: OrchestrationThreadActivity["payload"],
-): OrchestrationThreadActivity {
+  payload: ConversationHistoryActivity["payload"],
+): ConversationHistoryActivity {
   return {
     id: EventId.makeUnsafe(id),
     tone: "info",

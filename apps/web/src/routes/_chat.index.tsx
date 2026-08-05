@@ -1,10 +1,9 @@
 // FILE: _chat.index.tsx
 // Purpose: Restores the last chat route on app launch, falling back to a fresh home-chat draft.
-//          Also the landing for a Space that has nothing to open.
 // Layer: Routing
 // Depends on: the shared restore/create route surface plus the home-chat new-chat handler.
 
-import { SpaceId, ThreadId, type ProjectId } from "@omnimind/contracts";
+import { ThreadId, type ProjectId } from "@omnimind/contracts";
 import { createFileRoute, useNavigate } from "@tanstack/react-router";
 import { useEffect, useMemo, useRef, useState } from "react";
 
@@ -17,34 +16,25 @@ import { SplashScreen } from "../components/SplashScreen";
 import { useComposerDraftStore } from "../composerDraftStore";
 import { useHandleNewChat } from "../hooks/useHandleNewChat";
 import { useHandleNewStudioChat } from "../hooks/useHandleNewStudioChat";
-import { VOID_SPACE_KEY } from "../lib/spaceGrouping";
 import { collectStudioProjectIds, findStudioDraftThreadId } from "../lib/studioProjects";
 import { resolveSplitViewThreadIds, useSplitViewStore } from "../splitViewStore";
 import { EMPTY_THREAD_IDS, useStore } from "../store";
 import { useProductStore } from "../store/productStore";
 import { useWorkspacePathsStore } from "../workspacePathsStore";
-import { resolveChatIndexRestoreRoute, type ChatIndexLandingSpace } from "./-chatIndexRoute.logic";
+import { resolveChatIndexRestoreRoute } from "./-chatIndexRoute.logic";
 import {
   createProductChatDraftOnce,
   resolveProductChatLanding,
 } from "./-productChatIndexRoute.logic";
 import { getWorkbenchCopy } from "../i18n/workbenchCopy";
 
-/**
- * Set by the Space switcher when the selected Space has nothing to open (`spaceKey`, so Void
- * survives as a string). It scopes the restore below to that Space — without it this landing
- * happily reopens the *previous* Space's thread, and the route-to-Space sync then writes that
- * Space back over the user's click.
- */
 export interface ChatIndexSearch {
-  readonly space?: string | undefined;
   /** Agent is the canonical default and is omitted. */
   readonly surface?: "chat" | undefined;
 }
 
 function AgentIndexRouteView() {
   const { handleNewChat } = useHandleNewChat();
-  const landingSpaceKey = Route.useSearch({ select: (search) => search.space });
   const threadIds = useStore((state) => state.threadIds ?? EMPTY_THREAD_IDS);
   const projects = useStore((state) => state.projects);
   const sidebarThreadSummaryById = useStore((state) => state.sidebarThreadSummaryById);
@@ -52,11 +42,7 @@ function AgentIndexRouteView() {
   const homeDir = useWorkspacePathsStore((state) => state.homeDir);
   const chatWorkspaceRoot = useWorkspacePathsStore((state) => state.chatWorkspaceRoot);
   const studioWorkspaceRoot = useWorkspacePathsStore((state) => state.studioWorkspaceRoot);
-  // A Space landing reuses the stored home-chat draft instead of minting one (same reasoning as
-  // the /studio landing): a fresh draft per visit would litter the Chats container every time
-  // someone clicked through their empty Spaces.
-  const createFreshChat = () =>
-    landingSpaceKey === undefined ? handleNewChat({ fresh: true }) : handleNewChat();
+  const createFreshChat = () => handleNewChat({ fresh: true });
 
   const workspacePaths = { homeDir, chatWorkspaceRoot, studioWorkspaceRoot };
   // Home chats restore the last visited route, except Studio threads — those belong to the
@@ -73,15 +59,6 @@ function AgentIndexRouteView() {
     }
   }
 
-  const landingSpace: ChatIndexLandingSpace | null =
-    landingSpaceKey === undefined
-      ? null
-      : {
-          spaceId: landingSpaceKey === VOID_SPACE_KEY ? null : SpaceId.makeUnsafe(landingSpaceKey),
-          projectById: new Map(projects.map((project) => [project.id, project])),
-          workspacePaths,
-        };
-
   const resolveRestoreRoute: RestoreRouteResolver = ({ availableSplitViewIds }) => {
     const lastThreadRoute = readSidebarUiState().lastThreadRoute;
     const rememberedSplitView = lastThreadRoute?.splitViewId
@@ -97,7 +74,6 @@ function AgentIndexRouteView() {
       rememberedSplitViewThreadIds: rememberedSplitView
         ? resolveSplitViewThreadIds(rememberedSplitView)
         : undefined,
-      landingSpace,
     });
   };
 

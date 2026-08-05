@@ -153,7 +153,7 @@ export function useChatAutomationSetup({
           : buildAutomationDraftWarnings({
               schedule: scheduleFromForm(nextForm),
               mode: nextForm.mode,
-              runtimeMode: nextForm.runtimeMode,
+              permissionPolicy: nextForm.requestedSelection.permissionPolicy,
               worktreeMode: nextForm.worktreeMode,
               hasEphemeralContext: automationDraftWarningContext.hasEphemeralContext,
               generatedConfidence: automationDraftWarningContext.generatedConfidence,

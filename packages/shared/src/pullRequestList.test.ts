@@ -4,13 +4,13 @@ import { describe, expect, it } from "vitest";
 import {
   coalescePullRequestListEntries,
   pullRequestListRepositoryIdentity,
-  updatePullRequestListEntryProjectPin,
+  updatePullRequestListEntryWorkspacePin,
 } from "./pullRequestList";
 
 function makeEntry(overrides: Partial<PullRequestListEntry> = {}): PullRequestListEntry {
   const entry: PullRequestListEntry = {
-    projectId: "project-1" as PullRequestListEntry["projectId"],
-    projectTitle: "Project One",
+    workspaceId: "project-1" as PullRequestListEntry["workspaceId"],
+    workspaceTitle: "Project One",
     repository: "acme/widgets",
     number: 1,
     title: "PR 1",
@@ -27,17 +27,17 @@ function makeEntry(overrides: Partial<PullRequestListEntry> = {}): PullRequestLi
     reviewDecision: null,
     viewerReviewRequested: false,
     isPinned: false,
-    projectContexts: [],
+    workspaceContexts: [],
     mergeability: "unknown",
     labels: [],
     ...overrides,
   };
   return {
     ...entry,
-    projectContexts: overrides.projectContexts ?? [
+    workspaceContexts: overrides.workspaceContexts ?? [
       {
-        projectId: entry.projectId,
-        projectTitle: entry.projectTitle,
+        workspaceId: entry.workspaceId,
+        workspaceTitle: entry.workspaceTitle,
         isPinned: entry.isPinned ?? false,
       },
     ],
@@ -54,22 +54,22 @@ describe("pull request list coalescing", () => {
   it("collapses shared-worktree rows and prefers the head-branch worktree", () => {
     const fallback = makeEntry();
     const branchWorktree = makeEntry({
-      projectId: "project-2" as PullRequestListEntry["projectId"],
-      projectTitle: "feature-1",
+      workspaceId: "project-2" as PullRequestListEntry["workspaceId"],
+      workspaceTitle: "feature-1",
     });
 
     expect(coalescePullRequestListEntries([fallback, branchWorktree])).toEqual([
       {
         ...branchWorktree,
-        projectContexts: [
+        workspaceContexts: [
           {
-            projectId: "project-2",
-            projectTitle: "feature-1",
+            workspaceId: "project-2",
+            workspaceTitle: "feature-1",
             isPinned: false,
           },
           {
-            projectId: "project-1",
-            projectTitle: "Project One",
+            workspaceId: "project-1",
+            workspaceTitle: "Project One",
             isPinned: false,
           },
         ],
@@ -78,20 +78,20 @@ describe("pull request list coalescing", () => {
   });
 
   it("prefers pinned context and keeps different remote PRs distinct", () => {
-    const first = makeEntry({ projectTitle: "feature-1" });
+    const first = makeEntry({ workspaceTitle: "feature-1" });
     const pinned = makeEntry({
-      projectId: "project-2" as PullRequestListEntry["projectId"],
-      projectTitle: "Pinned workspace",
+      workspaceId: "project-2" as PullRequestListEntry["workspaceId"],
+      workspaceTitle: "Pinned workspace",
       isPinned: true,
     });
     const otherRepository = makeEntry({ repository: "acme/other" });
 
     const [shared, other] = coalescePullRequestListEntries([first, pinned, otherRepository]);
     expect(shared).toMatchObject({
-      projectId: first.projectId,
+      workspaceId: first.workspaceId,
       isPinned: true,
-      projectContexts: expect.arrayContaining([
-        expect.objectContaining({ projectId: pinned.projectId, isPinned: true }),
+      workspaceContexts: expect.arrayContaining([
+        expect.objectContaining({ workspaceId: pinned.workspaceId, isPinned: true }),
       ]),
     });
     expect(other).toMatchObject({ repository: "acme/other" });
@@ -100,33 +100,33 @@ describe("pull request list coalescing", () => {
   it("keeps an explicitly selected project context stable", () => {
     const first = makeEntry();
     const second = makeEntry({
-      projectId: "project-2" as PullRequestListEntry["projectId"],
-      projectTitle: "Project Two",
-      projectContexts: [
+      workspaceId: "project-2" as PullRequestListEntry["workspaceId"],
+      workspaceTitle: "Project Two",
+      workspaceContexts: [
         {
-          projectId: "project-2" as PullRequestListEntry["projectId"],
-          projectTitle: "Project Two",
+          workspaceId: "project-2" as PullRequestListEntry["workspaceId"],
+          workspaceTitle: "Project Two",
           isPinned: false,
         },
       ],
     });
     expect(
       coalescePullRequestListEntries([first, second], {
-        preferredProjectId: second.projectId,
-      })[0]?.projectId,
-    ).toBe(second.projectId);
+        preferredWorkspaceId: second.workspaceId,
+      })[0]?.workspaceId,
+    ).toBe(second.workspaceId);
   });
 
   it("updates one project pin while preserving aggregate pin state", () => {
     const first = makeEntry({ isPinned: true });
     const second = makeEntry({
-      projectId: "project-2" as PullRequestListEntry["projectId"],
-      projectTitle: "Project Two",
+      workspaceId: "project-2" as PullRequestListEntry["workspaceId"],
+      workspaceTitle: "Project Two",
       isPinned: true,
     });
     const aggregate = coalescePullRequestListEntries([first, second])[0]!;
-    const firstCleared = updatePullRequestListEntryProjectPin(aggregate, first.projectId, false);
-    const allCleared = updatePullRequestListEntryProjectPin(firstCleared, second.projectId, false);
+    const firstCleared = updatePullRequestListEntryWorkspacePin(aggregate, first.workspaceId, false);
+    const allCleared = updatePullRequestListEntryWorkspacePin(firstCleared, second.workspaceId, false);
 
     expect(firstCleared.isPinned).toBe(true);
     expect(allCleared.isPinned).toBe(false);

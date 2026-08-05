@@ -3,25 +3,14 @@
 // Layer: Kanban UI component
 // Exports: KanbanTaskExtrasMenu
 
-import type { ProviderInteractionMode } from "@omnimind/contracts";
-
 import { ComposerPickerMenuPopup } from "~/components/chat/ComposerPickerMenuPopup";
 import { Button } from "~/components/ui/button";
-import {
-  Menu,
-  MenuCheckboxItem,
-  MenuRadioGroup,
-  MenuRadioItem,
-  MenuSeparator,
-  MenuTrigger,
-} from "~/components/ui/menu";
+import { Menu, MenuRadioGroup, MenuRadioItem, MenuTrigger } from "~/components/ui/menu";
 import { Glyph } from "~/ui/icons";
-import { ListTodoIcon, PlusIcon, WorktreeIcon } from "~/lib/icons";
+import { PlusIcon, WorktreeIcon } from "~/lib/icons";
 import type { DraftThreadEnvMode } from "../../composerDraftStore";
 
 interface KanbanTaskExtrasMenuProps {
-  readonly interactionMode: ProviderInteractionMode;
-  readonly onInteractionModeChange: (mode: ProviderInteractionMode) => void;
   readonly envMode: DraftThreadEnvMode;
   readonly onEnvModeChange: (mode: DraftThreadEnvMode) => void;
 }
@@ -31,12 +20,7 @@ interface KanbanTaskExtrasMenuProps {
  * toggles (Plan mode and Local/Worktree environment), mirroring how the
  * composer's ComposerExtrasMenu collapses mode switches behind one `+`.
  */
-export function KanbanTaskExtrasMenu({
-  interactionMode,
-  onInteractionModeChange,
-  envMode,
-  onEnvModeChange,
-}: KanbanTaskExtrasMenuProps) {
+export function KanbanTaskExtrasMenu({ envMode, onEnvModeChange }: KanbanTaskExtrasMenuProps) {
   return (
     <Menu>
       <MenuTrigger
@@ -52,19 +36,6 @@ export function KanbanTaskExtrasMenu({
         <PlusIcon aria-hidden="true" className="size-4" />
       </MenuTrigger>
       <ComposerPickerMenuPopup align="start">
-        <MenuCheckboxItem
-          checked={interactionMode === "plan"}
-          variant="switch"
-          onCheckedChange={(checked) => {
-            onInteractionModeChange(checked === true ? "plan" : "default");
-          }}
-        >
-          <span className="inline-flex items-center gap-2">
-            <ListTodoIcon className="size-4 shrink-0" />
-            Plan mode
-          </span>
-        </MenuCheckboxItem>
-        <MenuSeparator />
         <MenuRadioGroup
           value={envMode}
           onValueChange={(value) => {

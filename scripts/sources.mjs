@@ -14,6 +14,7 @@ const REQUIRED_FIELDS = [
 ];
 
 const ADOPTION_MODES = new Set(["package", "fork", "transplant", "adapt", "mechanism-only"]);
+const SELECTIVE_INTAKE_MODES = new Set(["transplant", "adapt", "mechanism-only"]);
 const GIT_OID = /^[0-9a-f]{40}$/i;
 const CONTENT_DIGEST = /^(?:sha256:)?[0-9a-f]{64}$/i;
 const EXACT_VERSION = /^v?\d+\.\d+\.\d+(?:-[0-9A-Za-z.-]+)?(?:\+[0-9A-Za-z.-]+)?$/;
@@ -162,7 +163,8 @@ export function validateSourceAdoptions(adoptions, trackedFiles, { toolRoots = [
     }
     if (!ADOPTION_MODES.has(adoption?.mode)) errors.push(`${label}: unsupported adoption mode`);
     for (const field of ["rights", "changes", "updatePolicy"]) {
-      if (!nonEmptyString(adoption?.[field])) errors.push(`${label}: ${field} must be non-empty text`);
+      if (!nonEmptyString(adoption?.[field]))
+        errors.push(`${label}: ${field} must be non-empty text`);
     }
 
     if (!Array.isArray(adoption?.paths)) errors.push(`${label}: paths must be an array`);
@@ -177,7 +179,8 @@ export function validateSourceAdoptions(adoptions, trackedFiles, { toolRoots = [
         errors.push(`${label}: invalid adopted path ${JSON.stringify(requestedPath)}`);
         continue;
       }
-      if (normalizedPaths.has(portable)) errors.push(`${label}: duplicate adopted path ${portable}`);
+      if (normalizedPaths.has(portable))
+        errors.push(`${label}: duplicate adopted path ${portable}`);
       normalizedPaths.add(portable);
       adoptedPathRecords.push({ adoptionId: label, path: portable });
       if (!trackedPathExists(portable, tracked)) {
@@ -204,7 +207,9 @@ export function validateSourceAdoptions(adoptions, trackedFiles, { toolRoots = [
         errors.push(`${label}: provenance repositoryCommit must be a 40-character Git OID`);
       }
       const hasExactTrees =
-        provenance.trees && typeof provenance.trees === "object" && !Array.isArray(provenance.trees);
+        provenance.trees &&
+        typeof provenance.trees === "object" &&
+        !Array.isArray(provenance.trees);
       const hasHistoricalTrees =
         provenance.historicalTrees &&
         typeof provenance.historicalTrees === "object" &&
@@ -284,7 +289,9 @@ export function validateSourceAdoptions(adoptions, trackedFiles, { toolRoots = [
           if (!source) {
             errors.push(`${label}: adapted origin ${target} has invalid sourcePath`);
           } else if (![...historicalPaths].some((root) => pathContains(root, source))) {
-            errors.push(`${label}: adapted origin ${target} is outside historical trees: ${source}`);
+            errors.push(
+              `${label}: adapted origin ${target} is outside historical trees: ${source}`,
+            );
           }
           if (!nonEmptyString(origin?.changes)) {
             errors.push(`${label}: adapted origin ${target} requires material changes text`);
@@ -293,6 +300,110 @@ export function validateSourceAdoptions(adoptions, trackedFiles, { toolRoots = [
         for (const adoptedPath of normalizedPaths) {
           if (!originTargets.has(adoptedPath)) {
             errors.push(`${label}: adapted origins is missing adopted path ${adoptedPath}`);
+          }
+        }
+      }
+
+      if (provenance.selectiveIntakes !== undefined) {
+        const intakes = provenance.selectiveIntakes;
+        if (!Array.isArray(intakes) || intakes.length === 0) {
+          errors.push(`${label}: selectiveIntakes must be a non-empty array when present`);
+        } else {
+          const requiredKeys = [
+            "evidence",
+            "mode",
+            "rights",
+            "sourcePaths",
+            "sourceRevision",
+            "summary",
+            "targetPaths",
+          ];
+          const signatures = new Set();
+
+          for (const [intakeIndex, intake] of intakes.entries()) {
+            const intakeLabel = `${label}: selectiveIntakes[${intakeIndex}]`;
+            if (!intake || typeof intake !== "object" || Array.isArray(intake)) {
+              errors.push(`${intakeLabel} must be an object`);
+              continue;
+            }
+            const keys = Object.keys(intake).toSorted();
+            if (
+              keys.length !== requiredKeys.length ||
+              keys.some((key, keyIndex) => key !== requiredKeys[keyIndex])
+            ) {
+              errors.push(`${intakeLabel} must contain only the required provenance fields`);
+            }
+            if (!GIT_OID.test(intake.sourceRevision ?? "")) {
+              errors.push(`${intakeLabel} sourceRevision must be a 40-character Git OID`);
+            }
+            if (!SELECTIVE_INTAKE_MODES.has(intake.mode)) {
+              errors.push(`${intakeLabel} has unsupported mode`);
+            }
+            for (const field of ["summary", "rights"]) {
+              if (!nonEmptyString(intake[field])) {
+                errors.push(`${intakeLabel} ${field} must be non-empty text`);
+              }
+            }
+
+            const evidence = repositoryPath(intake.evidence);
+            if (!evidence || !evidence.startsWith("research/") || !tracked.has(evidence)) {
+              errors.push(`${intakeLabel} evidence must be a tracked research path`);
+            }
+
+            const normalizedSourcePaths = [];
+            if (!Array.isArray(intake.sourcePaths) || intake.sourcePaths.length === 0) {
+              errors.push(`${intakeLabel} sourcePaths must be a non-empty array`);
+            } else {
+              const seen = new Set();
+              for (const sourcePath of intake.sourcePaths) {
+                const portable = repositoryPath(sourcePath);
+                if (!portable) {
+                  errors.push(
+                    `${intakeLabel} has invalid source path ${JSON.stringify(sourcePath)}`,
+                  );
+                } else if (seen.has(portable)) {
+                  errors.push(`${intakeLabel} has duplicate source path ${portable}`);
+                } else {
+                  seen.add(portable);
+                  normalizedSourcePaths.push(portable);
+                }
+              }
+            }
+
+            const normalizedTargetPaths = [];
+            if (!Array.isArray(intake.targetPaths) || intake.targetPaths.length === 0) {
+              errors.push(`${intakeLabel} targetPaths must be a non-empty array`);
+            } else {
+              const seen = new Set();
+              for (const targetPath of intake.targetPaths) {
+                const portable = repositoryPath(targetPath);
+                if (!portable) {
+                  errors.push(
+                    `${intakeLabel} has invalid target path ${JSON.stringify(targetPath)}`,
+                  );
+                } else if (seen.has(portable)) {
+                  errors.push(`${intakeLabel} has duplicate target path ${portable}`);
+                } else {
+                  seen.add(portable);
+                  normalizedTargetPaths.push(portable);
+                  if (![...normalizedPaths].some((root) => pathContains(root, portable))) {
+                    errors.push(`${intakeLabel} target path is outside adopted paths: ${portable}`);
+                  } else if (!trackedPathExists(portable, tracked)) {
+                    errors.push(`${intakeLabel} target path has no tracked files: ${portable}`);
+                  }
+                }
+              }
+            }
+
+            const signature = JSON.stringify([
+              intake.sourceRevision,
+              normalizedSourcePaths.toSorted(),
+              normalizedTargetPaths.toSorted(),
+            ]);
+            if (signatures.has(signature)) {
+              errors.push(`${intakeLabel} duplicates an earlier selective intake`);
+            }
+            signatures.add(signature);
           }
         }
       }
@@ -510,7 +621,9 @@ export function validateSourceRepository({
     if (!baselineCommit) continue;
     for (const [target, origin] of Object.entries(origins)) {
       const sourcePath = repositoryPath(origin?.sourcePath);
-      const sourceObject = sourcePath ? resolveObject(root, `${baselineCommit}:${sourcePath}`) : null;
+      const sourceObject = sourcePath
+        ? resolveObject(root, `${baselineCommit}:${sourcePath}`)
+        : null;
       if (!sourceObject) {
         errors.push(`${adoption.id}: adapted origin ${target} is missing at ${sourcePath}`);
       }

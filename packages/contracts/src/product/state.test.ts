@@ -12,8 +12,9 @@ import {
 } from "./state";
 
 const requestedSelection = {
+  state: "selected" as const,
   engineId: "native-engine",
-  modelId: "model-1",
+  runtimeModelId: "provider/model",
   thinking: "high",
   permissionPolicy: "approval-required" as const,
   enforcement: "unverified" as const,

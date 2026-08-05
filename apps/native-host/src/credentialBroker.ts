@@ -10,7 +10,11 @@ import {
   type NativeHostBrokerCredentialResponse,
 } from "@omnimind/contracts/native-host";
 
-import type { PiCredentialBroker } from "./piRuntime";
+import type {
+  PiCredentialAvailability,
+  PiCredentialBroker,
+  PiCredentialResult,
+} from "./piRuntime";
 
 const BROKER_RESPONSE_TIMEOUT_MS = 5_000;
 
@@ -128,22 +132,26 @@ export class NativeCredentialBroker implements PiCredentialBroker {
     return response.catch(() => null);
   }
 
-  async available(provider: string): Promise<boolean> {
+  async available(provider: string): Promise<PiCredentialAvailability> {
     const response = await this.#request({
       kind: "broker.availability.request",
       provider,
     });
-    return response?.kind === "broker.availability.response" && response.available;
+    if (response?.kind !== "broker.availability.response") return "unavailable";
+    return response.available ? "configured" : "missing";
   }
 
-  async credential(provider: string, runId: string): Promise<string | null> {
+  async credential(provider: string, runId: string): Promise<PiCredentialResult> {
     const response = await this.#request({
       kind: "broker.credential.request",
       provider,
       runId,
     });
-    return response?.kind === "broker.credential.response" && response.runId === runId
-      ? response.credential
-      : null;
+    if (response?.kind !== "broker.credential.response" || response.runId !== runId) {
+      return { status: "unavailable" };
+    }
+    return response.credential === null
+      ? { status: "missing" }
+      : { status: "configured", credential: response.credential };
   }
 }

@@ -24,8 +24,9 @@ const READY_HEALTH: DesktopHealthSnapshot = {
 
 function readModel(receipt?: ProductDispatchReceipt): ProductConversationReadModel {
   const selection = {
+    state: "selected" as const,
     engineId: "native-engine",
-    modelId: "model-1",
+    runtimeModelId: "provider/model-1",
     thinking: "high",
     permissionPolicy: "approval-required" as const,
     enforcement: "unverified" as const,
@@ -38,6 +39,12 @@ function readModel(receipt?: ProductDispatchReceipt): ProductConversationReadMod
       workspaceId: "workspace-1",
       title: "Typed Product chat",
       workspaceKind: "chat",
+      revision: 1,
+      archivedAt: null,
+      isPinned: false,
+      notes: "",
+      boardState: "active",
+      boardStateChangedAt: null,
       receiptState: receipt?.state ?? null,
       createdAt: "2026-08-04T00:00:00.000Z",
       updatedAt: "2026-08-04T00:00:01.000Z",
@@ -58,6 +65,8 @@ function readModel(receipt?: ProductDispatchReceipt): ProductConversationReadMod
     activities: [],
     recoveries: [],
     queue: [],
+    entryPins: [],
+    entryMarkers: [],
     runs: receipt
       ? [
           {

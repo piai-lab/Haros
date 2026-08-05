@@ -19,7 +19,7 @@ const BROWSER_PANE: RightDockPane = {
   diffTurnId: null,
   diffFilePath: null,
   filePath: null,
-  pullRequestProjectId: null,
+  pullRequestWorkspaceId: null,
   pullRequestRepository: null,
   pullRequestNumber: null,
   pullRequestInitialTab: null,

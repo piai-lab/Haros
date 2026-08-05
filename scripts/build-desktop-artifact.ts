@@ -12,6 +12,7 @@ import { join } from "node:path";
 
 import rootPackageJson from "../package.json" with { type: "json" };
 import desktopPackageJson from "../apps/desktop/package.json" with { type: "json" };
+import nativeHostPackageJson from "../apps/native-host/package.json" with { type: "json" };
 import servicePackageJson from "../apps/service/package.json" with { type: "json" };
 
 import { BRAND_ASSET_PATHS } from "./lib/brand-assets.ts";
@@ -31,7 +32,10 @@ import {
   RELEASE_PATCHES_PATH,
   RELEASE_WORKSPACE_MANIFEST_PATHS,
 } from "./lib/release-workspace-manifests.ts";
-import { resolveCatalogDependencies } from "./lib/resolve-catalog.ts";
+import {
+  resolveCatalogDependencies,
+  resolvePackagedWorkspaceRuntimeDependencies,
+} from "./lib/resolve-catalog.ts";
 
 import * as NodeRuntime from "@effect/platform-node/NodeRuntime";
 import * as NodeServices from "@effect/platform-node/NodeServices";
@@ -885,6 +889,13 @@ const buildDesktopArtifact = Effect.fn("buildDesktopArtifact")(function* (
     });
   }
 
+  const nativeHostDependencies = nativeHostPackageJson.dependencies;
+  if (!nativeHostDependencies || Object.keys(nativeHostDependencies).length === 0) {
+    return yield* new BuildScriptError({
+      message: "Could not resolve production dependencies from apps/native-host/package.json.",
+    });
+  }
+
   const resolvedOverrides = yield* Effect.try({
     try: () =>
       resolveCatalogDependencies(
@@ -909,6 +920,19 @@ const buildDesktopArtifact = Effect.fn("buildDesktopArtifact")(function* (
     catch: (cause) =>
       new BuildScriptError({
         message: "Could not resolve production dependencies from apps/service/package.json.",
+        cause,
+      }),
+  });
+  const resolvedNativeHostDependencies = yield* Effect.try({
+    try: () =>
+      resolvePackagedWorkspaceRuntimeDependencies(
+        nativeHostDependencies,
+        rootPackageJson.workspaces.catalog,
+        "apps/native-host",
+      ),
+    catch: (cause) =>
+      new BuildScriptError({
+        message: "Could not resolve production dependencies from apps/native-host/package.json.",
         cause,
       }),
   });
@@ -1067,6 +1091,7 @@ const buildDesktopArtifact = Effect.fn("buildDesktopArtifact")(function* (
     build: resolvedBuildConfig.buildConfig,
     dependencies: {
       ...resolvedServiceDependencies,
+      ...resolvedNativeHostDependencies,
       ...resolvedDesktopRuntimeDependencies,
     },
     devDependencies: {

@@ -2,7 +2,6 @@ import { Effect, Fiber } from "effect";
 import { describe, expect, it } from "vitest";
 
 import type { ServerConfigShape } from "./config";
-import { buildProviderChildEnvironment } from "./providerChildEnvironment";
 import {
   authorizeDesktopShutdown,
   isDesktopShutdownLoopbackPeer,
@@ -136,16 +135,4 @@ describe("desktop shutdown authorization", () => {
     expect(isDesktopShutdownLoopbackPeer("::ffff:127.0.0.2")).toBe(false);
   });
 
-  it("does not grant the shutdown secret to provider descendants", () => {
-    const providerEnvironment = buildProviderChildEnvironment({
-      provider: "codex",
-      baseEnv: {
-        PATH: process.env.PATH,
-        OMNIMIND_DESKTOP_SHUTDOWN_TOKEN: SHUTDOWN_TOKEN,
-      },
-    });
-
-    expect(providerEnvironment.PATH).toBe(process.env.PATH);
-    expect(providerEnvironment.OMNIMIND_DESKTOP_SHUTDOWN_TOKEN).toBeUndefined();
-  });
 });

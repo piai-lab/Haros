@@ -1,4 +1,4 @@
-import type { ProjectId } from "@omnimind/contracts";
+import type { ProductWorkspaceId } from "@omnimind/contracts";
 import { QueryClient, type QueryKey } from "@tanstack/react-query";
 import { afterEach, describe, expect, it, vi } from "vitest";
 
@@ -32,7 +32,7 @@ describe("pullRequestsForceRefreshMutationOptions", () => {
 
   it("does not dispatch a forced snapshot until a concurrent action settles", async () => {
     const queryClient = new QueryClient();
-    const projectId = "project-a" as ProjectId;
+    const workspaceId = "project-a" as ProductWorkspaceId;
     const actionGate = deferred<Record<string, never>>();
     const callOrder: string[] = [];
     const action = vi.fn(async () => {
@@ -59,14 +59,14 @@ describe("pullRequestsForceRefreshMutationOptions", () => {
       pullRequestsForceRefreshMutationOptions(queryClient),
     );
     const actionPromise = actionMutation.execute({
-      projectId,
+      workspaceId,
       repository: "acme/widgets",
       number: 42,
       action: "merge",
     });
     await vi.waitFor(() => expect(action).toHaveBeenCalledOnce());
 
-    const refreshPromise = refreshMutation.execute({ state: "open", projectId });
+    const refreshPromise = refreshMutation.execute({ state: "open", workspaceId });
     await Promise.resolve();
     expect(list).not.toHaveBeenCalled();
 
@@ -78,9 +78,9 @@ describe("pullRequestsForceRefreshMutationOptions", () => {
 
   it("does not let a refresh that started first repaint an action's optimistic fields", async () => {
     const queryClient = new QueryClient();
-    const projectId = "project-a" as ProjectId;
-    const identity = { projectId, repository: "acme/widgets", number: 42 } as const;
-    const listKey = pullRequestQueryKeys.list({ state: "open", projectId });
+    const workspaceId = "project-a" as ProductWorkspaceId;
+    const identity = { workspaceId, repository: "acme/widgets", number: 42 } as const;
+    const listKey = pullRequestQueryKeys.list({ state: "open", workspaceId });
     queryClient.setQueryData(listKey, {
       viewer: "octocat",
       entries: [{ ...identity, state: "open", isDraft: false, isPinned: false }],
@@ -109,7 +109,7 @@ describe("pullRequestsForceRefreshMutationOptions", () => {
       queryClient,
       pullRequestActionMutationOptions(queryClient),
     );
-    const refreshPromise = refreshMutation.execute({ state: "open", projectId });
+    const refreshPromise = refreshMutation.execute({ state: "open", workspaceId });
     await vi.waitFor(() => expect(list).toHaveBeenCalledOnce());
 
     const actionPromise = actionMutation.execute({ ...identity, action: "draft" });
@@ -138,14 +138,14 @@ describe("pullRequestsForceRefreshMutationOptions", () => {
 
   it("stores the forced response and invalidates only its exact-list sibling", async () => {
     const queryClient = new QueryClient();
-    const projectId = "project-a" as ProjectId;
-    const input = { state: "open", projectId } as const;
+    const workspaceId = "project-a" as ProductWorkspaceId;
+    const input = { state: "open", workspaceId } as const;
     const refreshedKey = pullRequestQueryKeys.list(input);
     const exactSiblingKey = pullRequestsExactInvolvementQueryOptions({
       involvement: "authored",
       ...input,
     }).queryKey;
-    const otherStateKey = pullRequestQueryKeys.list({ state: "merged", projectId });
+    const otherStateKey = pullRequestQueryKeys.list({ state: "merged", workspaceId });
     queryClient.setQueryData(refreshedKey, { entries: [] });
     queryClient.setQueryData(exactSiblingKey as QueryKey, { entries: [] });
     queryClient.setQueryData(otherStateKey, { entries: [] });
@@ -154,7 +154,7 @@ describe("pullRequestsForceRefreshMutationOptions", () => {
     if (!options.onMutate || !options.onSuccess) throw new Error("Refresh hooks are missing.");
     expect(options.networkMode).toBe("always");
     const context = await Reflect.apply(options.onMutate, undefined, [input, undefined]);
-    const fresh = { entries: [{ projectId, repository: "acme/widgets", number: 7 }] };
+    const fresh = { entries: [{ workspaceId, repository: "acme/widgets", number: 7 }] };
     await Reflect.apply(options.onSuccess, undefined, [fresh, input, context, undefined]);
 
     expect(queryClient.getQueryData(refreshedKey)).toEqual(fresh);
@@ -165,10 +165,10 @@ describe("pullRequestsForceRefreshMutationOptions", () => {
 
   it("preserves a pin started before refresh even when it settles before a stale response", async () => {
     const queryClient = new QueryClient();
-    const projectId = "project-a" as ProjectId;
-    const input = { state: "open", projectId } as const;
+    const workspaceId = "project-a" as ProductWorkspaceId;
+    const input = { state: "open", workspaceId } as const;
     const refreshedKey = pullRequestQueryKeys.list(input);
-    const identity = { projectId, repository: "acme/widgets", number: 42 } as const;
+    const identity = { workspaceId, repository: "acme/widgets", number: 42 } as const;
     queryClient.setQueryData(refreshedKey, {
       entries: [{ ...identity, title: "old", isPinned: false }],
     });
@@ -219,10 +219,10 @@ describe("pullRequestsForceRefreshMutationOptions", () => {
 
   it("preserves a pin that begins while refresh is in flight", async () => {
     const queryClient = new QueryClient();
-    const projectId = "project-a" as ProjectId;
-    const input = { state: "open", projectId } as const;
+    const workspaceId = "project-a" as ProductWorkspaceId;
+    const input = { state: "open", workspaceId } as const;
     const refreshedKey = pullRequestQueryKeys.list(input);
-    const identity = { projectId, repository: "acme/widgets", number: 42 } as const;
+    const identity = { workspaceId, repository: "acme/widgets", number: 42 } as const;
     queryClient.setQueryData(refreshedKey, {
       entries: [{ ...identity, isPinned: false }],
     });
@@ -254,10 +254,10 @@ describe("pullRequestsForceRefreshMutationOptions", () => {
 
   it("does not resurrect a reconciled out-of-cap row from a stale forced snapshot", async () => {
     const queryClient = new QueryClient();
-    const projectId = "project-refresh-membership" as ProjectId;
-    const input = { state: "open", projectId } as const;
+    const workspaceId = "project-refresh-membership" as ProductWorkspaceId;
+    const input = { state: "open", workspaceId } as const;
     const refreshedKey = pullRequestQueryKeys.list(input);
-    const identity = { projectId, repository: "acme/widgets", number: 99 } as const;
+    const identity = { workspaceId, repository: "acme/widgets", number: 99 } as const;
     queryClient.setQueryData(refreshedKey, {
       entries: [{ ...identity, isPinned: true }],
     });
@@ -303,19 +303,19 @@ describe("pullRequestsForceRefreshMutationOptions", () => {
 
   it("does not resurrect a fully unpinned aggregate out-of-cap row", async () => {
     const queryClient = new QueryClient();
-    const projectA = "project-refresh-membership-a" as ProjectId;
-    const projectB = "project-refresh-membership-b" as ProjectId;
-    const input = { state: "open", projectId: null } as const;
+    const projectA = "project-refresh-membership-a" as ProductWorkspaceId;
+    const projectB = "project-refresh-membership-b" as ProductWorkspaceId;
+    const input = { state: "open", workspaceId: null } as const;
     const refreshedKey = pullRequestQueryKeys.list(input);
     const staleEntry = {
-      projectId: projectA,
-      projectTitle: "Project A",
+      workspaceId: projectA,
+      workspaceTitle: "Project A",
       repository: "acme/widgets",
       number: 99,
       isPinned: true,
-      projectContexts: [
-        { projectId: projectA, projectTitle: "Project A", isPinned: true },
-        { projectId: projectB, projectTitle: "Project B", isPinned: true },
+      workspaceContexts: [
+        { workspaceId: projectA, workspaceTitle: "Project A", isPinned: true },
+        { workspaceId: projectB, workspaceTitle: "Project B", isPinned: true },
       ],
     };
     queryClient.setQueryData(refreshedKey, { entries: [staleEntry] });
@@ -335,9 +335,9 @@ describe("pullRequestsForceRefreshMutationOptions", () => {
       input,
       undefined,
     ]);
-    for (const projectId of [projectA, projectB]) {
+    for (const workspaceId of [projectA, projectB]) {
       const unpin = {
-        projectId,
+        workspaceId,
         repository: staleEntry.repository,
         number: staleEntry.number,
         isPinned: false,
@@ -366,10 +366,10 @@ describe("pullRequestsForceRefreshMutationOptions", () => {
 
   it("does not remove a newly pinned out-of-cap row when an older refresh settles", async () => {
     const queryClient = new QueryClient();
-    const projectId = "project-refresh-new-pin" as ProjectId;
-    const input = { state: "open", projectId } as const;
+    const workspaceId = "project-refresh-new-pin" as ProductWorkspaceId;
+    const input = { state: "open", workspaceId } as const;
     const refreshedKey = pullRequestQueryKeys.list(input);
-    const identity = { projectId, repository: "acme/widgets", number: 99 } as const;
+    const identity = { workspaceId, repository: "acme/widgets", number: 99 } as const;
     queryClient.setQueryData(refreshedKey, { entries: [] });
     const refreshOptions = pullRequestsForceRefreshMutationOptions(queryClient);
     const pinOptions = pullRequestSetPinnedMutationOptions(queryClient);

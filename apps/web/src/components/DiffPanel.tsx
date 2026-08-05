@@ -17,7 +17,7 @@ import {
 import {
   checkpointDiffQueryOptions,
   resolveCheckpointDiffQueryDisplayState,
-} from "~/lib/providerReactQuery";
+} from "~/lib/checkpointDiffQuery";
 import { stripDiffSearchParams } from "../diffRouteSearch";
 import { useTheme } from "../hooks/useTheme";
 import { useDiffRouteSearch } from "../hooks/useDiffRouteSearch";
@@ -445,10 +445,13 @@ export default function DiffPanel({
   const draftThread = useComposerDraftStore((store) =>
     activeThreadId ? (store.draftThreadsByThreadId[activeThreadId] ?? null) : null,
   );
-  const fallbackDraftProjectId = draftThread?.projectId ?? null;
-  const fallbackDraftProject = useStore(
-    useMemo(() => createProjectSelector(fallbackDraftProjectId), [fallbackDraftProjectId]),
-  );
+  const draftModelSelection = useComposerDraftStore((store) => {
+    if (!activeThreadId) return null;
+    const draft = store.draftsByThreadId[activeThreadId];
+    return draft?.activeProvider
+      ? (draft.modelSelectionByProvider[draft.activeProvider] ?? null)
+      : null;
+  });
   // Keep draft-backed thread context available before the first server turn exists.
   const activeThreadContext = useMemo((): DiffPanelThreadCatalog | undefined => {
     if (serverThreadCatalog) {
@@ -458,13 +461,13 @@ export default function DiffPanel({
       threadId: activeThreadId,
       serverThread: undefined,
       draftThread,
-      fallbackModelSelection: fallbackDraftProject?.defaultModelSelection ?? null,
+      draftModelSelection,
     });
     return draftBackedThread ? toDiffPanelThreadCatalog(draftBackedThread) : undefined;
   }, [
     activeThreadId,
     draftThread,
-    fallbackDraftProject?.defaultModelSelection,
+    draftModelSelection,
     serverThreadCatalog,
   ]);
   const activeProjectId = activeThreadContext?.projectId ?? draftThread?.projectId ?? null;

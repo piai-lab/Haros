@@ -14,5 +14,5 @@
 ## 索引
 
 - [source-review.md](source-review.md)：固定 UI 母体及其原生 Engine 接入的源码、权利、构建和兼容事实。
+- [source-update-intake.md](source-update-intake.md)：维护者主动发起 adopted source 更新时的长期 taste、只读审查、共同裁决与显式施工授权协议。
 - [decision-record.md](decision-record.md)：从两个极端判断收敛到当前路线的理由、反方压力测试和复验条件。
-

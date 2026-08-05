@@ -72,7 +72,6 @@ function makeConfig(overrides: Partial<ServerConfigShape> = {}): ServerConfigSha
     noBrowser: true,
     authToken: undefined,
     autoBootstrapProjectFromCwd: false,
-    logProviderEvents: false,
     logWebSocketEvents: false,
     ...overrides,
   } as ServerConfigShape;
@@ -83,14 +82,12 @@ const readiness: ServerReadiness = {
   markHttpListening: Effect.void,
   markPushBusReady: Effect.void,
   markKeybindingsReady: Effect.void,
-  markTerminalSubscriptionsReady: Effect.void,
-  markOrchestrationSubscriptionsReady: Effect.void,
+  markProductControlPlaneReady: Effect.void,
   getSnapshot: Effect.succeed({
     httpListening: true,
     pushBusReady: true,
     keybindingsReady: true,
-    terminalSubscriptionsReady: false,
-    orchestrationSubscriptionsReady: false,
+    productControlPlaneReady: false,
     startupReady: false,
   }),
 };

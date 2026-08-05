@@ -1,10 +1,20 @@
-import { randomUUID } from "node:crypto";
+import { createHash, randomUUID } from "node:crypto";
 import path from "node:path";
 
+import { workspaceRootsEqual } from "@omnimind/shared/threadWorkspace";
+
 import {
+  PRODUCT_ENTRY_MARKERS_MAX_COUNT,
+  PRODUCT_ENTRY_PINS_MAX_COUNT,
+  PRODUCT_GROUP_MEMBERSHIP_MAX_COUNT,
   PRODUCT_MAX_FACTS_PER_BATCH,
+  PRODUCT_MAX_GROUPS,
   PRODUCT_MAX_TEXT_CHARS,
   PRODUCT_PROTOCOL_VERSION,
+  ProductArchiveConversationInput,
+  ProductAddConversationGroupsInput,
+  ProductAddEntryMarkerInput,
+  ProductAddEntryPinInput,
   ProductConversationId,
   ProductConversationReadModel,
   ProductConversationSnapshot,
@@ -12,9 +22,19 @@ import {
   ProductControlRunInput,
   ProductControlRunResult,
   ProductCreateConversationInput,
+  ProductCreateGroupInput,
+  ProductCreateWorkspaceInput,
+  ProductDeleteConversationInput,
+  ProductDeleteGroupInput,
+  ProductDeleteGroupResult,
+  ProductDeleteConversationResult,
+  ProductDeleteWorkspaceInput,
+  ProductDeleteWorkspaceResult,
   ProductDeleteQueueItemInput,
   ProductDispatchReceipt,
   ProductEntry,
+  ProductEntryMarker,
+  ProductEntryPin,
   ProductEngineBindingId,
   ProductExecutionObservation,
   ProductFactBatch,
@@ -23,11 +43,17 @@ import {
   ProductShellFactChange,
   ProductShellFact,
   ProductGetConversationInput,
+  ProductGroupMembershipResult,
+  ProductGroupSummary,
   ProductOperationReceipt,
   ProductPutQueueItemInput,
   ProductQueueItem,
   ProductReadFactsInput,
+  ProductRemoveEntryMarkerInput,
+  ProductRemoveEntryPinInput,
+  ProductReorderGroupsInput,
   ProductReorderQueueInput,
+  ProductRestoreConversationInput,
   ProductRequestedSelection,
   ProductResourceRef,
   ProductRun,
@@ -36,11 +62,26 @@ import {
   ProductRuntimeActivityDetail,
   ProductRuntimeCatalog,
   ProductRuntimeRecovery,
+  ProductSelectedRuntime,
+  ProductSetConversationBoardStateInput,
+  ProductSetConversationGroupsInput,
+  ProductSetConversationPinnedInput,
+  ProductSetEntryMarkerDoneInput,
+  ProductSetEntryMarkerLabelInput,
+  ProductSetEntryPinDoneInput,
+  ProductSetEntryPinLabelInput,
+  ProductSetWorkspacePinnedInput,
   ProductShellSnapshot,
   ProductSubmitQueueItemInput,
   ProductSubmitResult,
+  ProductUpdateConversationTitleInput,
+  ProductUpdateConversationNotesInput,
+  ProductUpdateGroupInput,
+  ProductUpdateWorkspaceRunCommandInput,
+  ProductUpdateWorkspaceTitleInput,
   ProductWorkspace,
   ProductWorkspaceAccess,
+  ProductWorkspaceSummary,
   type NativeHostRuntimeFact,
   type NativeHostRuntimeSnapshot,
   type ProductDispatchId,
@@ -54,6 +95,7 @@ import { ensurePrivateFileSync } from "../privatePathPermissions";
 
 export const PRODUCT_DATABASE_FILENAME = "product-state-v1.sqlite";
 export const PRODUCT_SCHEMA_VERSION = 1;
+const RUNTIME_CATALOG_OBSERVATION_INTERVAL_MS = 5_000;
 const productIsoNow = () => new Date().toISOString();
 
 interface PortableStatement {
@@ -88,14 +130,41 @@ const productSchemaSql = `
 
   CREATE TABLE IF NOT EXISTS product_workspaces (
     workspace_id TEXT PRIMARY KEY,
+    title TEXT NOT NULL DEFAULT 'Workspace',
     access_json TEXT NOT NULL,
-    observed_at TEXT NOT NULL
+    observed_at TEXT NOT NULL,
+    revision INTEGER NOT NULL DEFAULT 1 CHECK (revision > 0),
+    visible_in_sidebar INTEGER NOT NULL DEFAULT 1 CHECK (visible_in_sidebar IN (0, 1)),
+    is_pinned INTEGER NOT NULL DEFAULT 0 CHECK (is_pinned IN (0, 1)),
+    run_command TEXT,
+    archived_at TEXT,
+    deleted_at TEXT,
+    created_at TEXT NOT NULL DEFAULT '1970-01-01T00:00:00.000Z',
+    updated_at TEXT NOT NULL DEFAULT '1970-01-01T00:00:00.000Z'
+  );
+
+  CREATE TABLE IF NOT EXISTS product_groups (
+    group_id TEXT PRIMARY KEY,
+    name TEXT NOT NULL COLLATE NOCASE,
+    color TEXT NOT NULL,
+    sort_order INTEGER NOT NULL CHECK (sort_order >= 0),
+    revision INTEGER NOT NULL DEFAULT 1 CHECK (revision > 0),
+    deleted_at TEXT,
+    created_at TEXT NOT NULL,
+    updated_at TEXT NOT NULL
   );
 
   CREATE TABLE IF NOT EXISTS product_conversations (
     conversation_id TEXT PRIMARY KEY,
     workspace_id TEXT NOT NULL REFERENCES product_workspaces(workspace_id) ON DELETE RESTRICT,
     title TEXT NOT NULL,
+    revision INTEGER NOT NULL DEFAULT 1 CHECK (revision > 0),
+    archived_at TEXT,
+    is_pinned INTEGER NOT NULL DEFAULT 0 CHECK (is_pinned IN (0, 1)),
+    notes TEXT NOT NULL DEFAULT '',
+    board_state TEXT NOT NULL DEFAULT 'active' CHECK (board_state IN ('active', 'done')),
+    board_state_changed_at TEXT,
+    deleted_at TEXT,
     detail_sequence INTEGER NOT NULL DEFAULT 0,
     created_at TEXT NOT NULL,
     updated_at TEXT NOT NULL
@@ -108,6 +177,38 @@ const productSchemaSql = `
     role TEXT NOT NULL CHECK (role IN ('user', 'assistant', 'system')),
     body TEXT NOT NULL,
     created_at TEXT NOT NULL
+  );
+
+  CREATE TABLE IF NOT EXISTS product_group_conversations (
+    group_id TEXT NOT NULL REFERENCES product_groups(group_id) ON DELETE CASCADE,
+    conversation_id TEXT NOT NULL REFERENCES product_conversations(conversation_id) ON DELETE CASCADE,
+    created_at TEXT NOT NULL,
+    PRIMARY KEY (group_id, conversation_id)
+  );
+
+  CREATE TABLE IF NOT EXISTS product_entry_pins (
+    conversation_id TEXT NOT NULL REFERENCES product_conversations(conversation_id) ON DELETE CASCADE,
+    entry_id TEXT NOT NULL REFERENCES product_entries(entry_id) ON DELETE CASCADE,
+    label TEXT,
+    done INTEGER NOT NULL DEFAULT 0 CHECK (done IN (0, 1)),
+    pinned_at TEXT NOT NULL,
+    PRIMARY KEY (conversation_id, entry_id)
+  );
+
+  CREATE TABLE IF NOT EXISTS product_entry_markers (
+    marker_id TEXT PRIMARY KEY,
+    conversation_id TEXT NOT NULL REFERENCES product_conversations(conversation_id) ON DELETE CASCADE,
+    entry_id TEXT NOT NULL REFERENCES product_entries(entry_id) ON DELETE CASCADE,
+    start_offset INTEGER NOT NULL CHECK (start_offset >= 0),
+    end_offset INTEGER NOT NULL CHECK (end_offset > start_offset),
+    selected_text TEXT NOT NULL,
+    selected_text_digest TEXT NOT NULL,
+    style TEXT NOT NULL CHECK (style IN ('highlight', 'underline')),
+    color TEXT NOT NULL CHECK (color IN ('yellow', 'blue', 'green', 'pink')),
+    label TEXT,
+    done INTEGER NOT NULL DEFAULT 0 CHECK (done IN (0, 1)),
+    created_at TEXT NOT NULL,
+    updated_at TEXT NOT NULL
   );
 
   CREATE TABLE IF NOT EXISTS product_runs (
@@ -194,15 +295,40 @@ const productSchemaSql = `
     updated_at TEXT NOT NULL
   );
 
+  CREATE TABLE IF NOT EXISTS product_submit_admissions (
+    dispatch_id TEXT PRIMARY KEY REFERENCES product_outbox(dispatch_id) ON DELETE CASCADE,
+    request_json TEXT NOT NULL
+  );
+
   CREATE TABLE IF NOT EXISTS product_facts (
     global_sequence INTEGER PRIMARY KEY AUTOINCREMENT,
     fact_id TEXT NOT NULL UNIQUE,
-    conversation_id TEXT NOT NULL REFERENCES product_conversations(conversation_id) ON DELETE CASCADE,
-    conversation_sequence INTEGER NOT NULL CHECK (conversation_sequence > 0),
+    conversation_id TEXT REFERENCES product_conversations(conversation_id) ON DELETE CASCADE,
+    workspace_id TEXT REFERENCES product_workspaces(workspace_id) ON DELETE CASCADE,
+    group_id TEXT REFERENCES product_groups(group_id) ON DELETE CASCADE,
+    conversation_sequence INTEGER CHECK (conversation_sequence > 0),
     emitted_at TEXT NOT NULL,
     shell_change_json TEXT NOT NULL,
-    detail_change_json TEXT NOT NULL,
-    UNIQUE (conversation_id, conversation_sequence)
+    detail_change_json TEXT,
+    UNIQUE (conversation_id, conversation_sequence),
+    CHECK (
+      (conversation_id IS NOT NULL AND workspace_id IS NULL AND group_id IS NULL AND
+       conversation_sequence IS NOT NULL AND detail_change_json IS NOT NULL) OR
+      (conversation_id IS NULL AND workspace_id IS NOT NULL AND group_id IS NULL AND
+       conversation_sequence IS NULL AND detail_change_json IS NULL) OR
+      (conversation_id IS NULL AND workspace_id IS NULL AND group_id IS NOT NULL AND
+       conversation_sequence IS NULL AND detail_change_json IS NULL) OR
+      (conversation_id IS NULL AND workspace_id IS NULL AND group_id IS NULL AND
+       conversation_sequence IS NULL AND detail_change_json IS NULL)
+    )
+  );
+
+  CREATE TABLE IF NOT EXISTS product_mutations (
+    mutation_id TEXT PRIMARY KEY,
+    mutation_kind TEXT NOT NULL,
+    request_json TEXT NOT NULL,
+    response_json TEXT NOT NULL,
+    created_at TEXT NOT NULL
   );
 
   CREATE INDEX IF NOT EXISTS product_entries_by_conversation
@@ -211,6 +337,10 @@ const productSchemaSql = `
     ON product_runs(conversation_id, created_at, run_id);
   CREATE INDEX IF NOT EXISTS product_queue_by_conversation
     ON product_queue_items(conversation_id, position);
+  CREATE UNIQUE INDEX IF NOT EXISTS product_groups_active_name
+    ON product_groups(name COLLATE NOCASE) WHERE deleted_at IS NULL;
+  CREATE INDEX IF NOT EXISTS product_group_conversations_by_conversation
+    ON product_group_conversations(conversation_id, group_id);
   CREATE INDEX IF NOT EXISTS product_facts_by_conversation
     ON product_facts(conversation_id, conversation_sequence);
 `;
@@ -400,11 +530,89 @@ export interface ProductOutboxDiagnostic {
 }
 
 export interface ProductControlPlaneShape {
+  readonly createWorkspace: (
+    input: ProductCreateWorkspaceInput,
+  ) => Effect.Effect<ProductWorkspaceSummary, ProductControlPlaneError>;
+  readonly updateWorkspaceTitle: (
+    input: ProductUpdateWorkspaceTitleInput,
+  ) => Effect.Effect<ProductWorkspaceSummary, ProductControlPlaneError>;
+  readonly setWorkspacePinned: (
+    input: ProductSetWorkspacePinnedInput,
+  ) => Effect.Effect<ProductWorkspaceSummary, ProductControlPlaneError>;
+  readonly updateWorkspaceRunCommand: (
+    input: ProductUpdateWorkspaceRunCommandInput,
+  ) => Effect.Effect<ProductWorkspaceSummary, ProductControlPlaneError>;
+  readonly deleteWorkspace: (
+    input: ProductDeleteWorkspaceInput,
+  ) => Effect.Effect<ProductDeleteWorkspaceResult, ProductControlPlaneError>;
+  readonly createGroup: (
+    input: ProductCreateGroupInput,
+  ) => Effect.Effect<ProductGroupSummary, ProductControlPlaneError>;
+  readonly updateGroup: (
+    input: ProductUpdateGroupInput,
+  ) => Effect.Effect<ProductGroupSummary, ProductControlPlaneError>;
+  readonly reorderGroups: (
+    input: ProductReorderGroupsInput,
+  ) => Effect.Effect<ReadonlyArray<ProductGroupSummary>, ProductControlPlaneError>;
+  readonly deleteGroup: (
+    input: ProductDeleteGroupInput,
+  ) => Effect.Effect<ProductDeleteGroupResult, ProductControlPlaneError>;
+  readonly setConversationGroups: (
+    input: ProductSetConversationGroupsInput,
+  ) => Effect.Effect<ProductGroupMembershipResult, ProductControlPlaneError>;
+  readonly addConversationGroups: (
+    input: ProductAddConversationGroupsInput,
+  ) => Effect.Effect<ProductGroupMembershipResult, ProductControlPlaneError>;
   readonly hasConversation: (
     conversationId: ProductConversationId,
   ) => Effect.Effect<boolean, ProductControlPlaneError>;
   readonly createConversation: (
     input: ProductCreateConversationInput,
+  ) => Effect.Effect<ProductConversationSnapshot, ProductControlPlaneError>;
+  readonly updateConversationTitle: (
+    input: ProductUpdateConversationTitleInput,
+  ) => Effect.Effect<ProductConversationSnapshot, ProductControlPlaneError>;
+  readonly archiveConversation: (
+    input: ProductArchiveConversationInput,
+  ) => Effect.Effect<ProductConversationSnapshot, ProductControlPlaneError>;
+  readonly restoreConversation: (
+    input: ProductRestoreConversationInput,
+  ) => Effect.Effect<ProductConversationSnapshot, ProductControlPlaneError>;
+  readonly deleteConversation: (
+    input: ProductDeleteConversationInput,
+  ) => Effect.Effect<ProductDeleteConversationResult, ProductControlPlaneError>;
+  readonly setConversationPinned: (
+    input: ProductSetConversationPinnedInput,
+  ) => Effect.Effect<ProductConversationSnapshot, ProductControlPlaneError>;
+  readonly updateConversationNotes: (
+    input: ProductUpdateConversationNotesInput,
+  ) => Effect.Effect<ProductConversationSnapshot, ProductControlPlaneError>;
+  readonly setConversationBoardState: (
+    input: ProductSetConversationBoardStateInput,
+  ) => Effect.Effect<ProductConversationSnapshot, ProductControlPlaneError>;
+  readonly addEntryPin: (
+    input: ProductAddEntryPinInput,
+  ) => Effect.Effect<ProductConversationSnapshot, ProductControlPlaneError>;
+  readonly removeEntryPin: (
+    input: ProductRemoveEntryPinInput,
+  ) => Effect.Effect<ProductConversationSnapshot, ProductControlPlaneError>;
+  readonly setEntryPinDone: (
+    input: ProductSetEntryPinDoneInput,
+  ) => Effect.Effect<ProductConversationSnapshot, ProductControlPlaneError>;
+  readonly setEntryPinLabel: (
+    input: ProductSetEntryPinLabelInput,
+  ) => Effect.Effect<ProductConversationSnapshot, ProductControlPlaneError>;
+  readonly addEntryMarker: (
+    input: ProductAddEntryMarkerInput,
+  ) => Effect.Effect<ProductConversationSnapshot, ProductControlPlaneError>;
+  readonly removeEntryMarker: (
+    input: ProductRemoveEntryMarkerInput,
+  ) => Effect.Effect<ProductConversationSnapshot, ProductControlPlaneError>;
+  readonly setEntryMarkerDone: (
+    input: ProductSetEntryMarkerDoneInput,
+  ) => Effect.Effect<ProductConversationSnapshot, ProductControlPlaneError>;
+  readonly setEntryMarkerLabel: (
+    input: ProductSetEntryMarkerLabelInput,
   ) => Effect.Effect<ProductConversationSnapshot, ProductControlPlaneError>;
   readonly getShellSnapshot: () => Effect.Effect<ProductShellSnapshot, ProductControlPlaneError>;
   readonly getConversationSnapshot: (
@@ -452,6 +660,112 @@ export class ProductControlPlane extends ServiceMap.Service<
 
 function initializeSchema(database: PortableDatabase): void {
   database.exec(productSchemaSql);
+  const workspaceColumns = database.prepare("PRAGMA table_info(product_workspaces)").all();
+  const workspaceColumnNames = new Set(workspaceColumns.map((raw) => String(asRecord(raw).name)));
+  for (const [name, definition] of [
+    ["title", "title TEXT NOT NULL DEFAULT 'Workspace'"],
+    ["revision", "revision INTEGER NOT NULL DEFAULT 1 CHECK (revision > 0)"],
+    [
+      "visible_in_sidebar",
+      "visible_in_sidebar INTEGER NOT NULL DEFAULT 1 CHECK (visible_in_sidebar IN (0, 1))",
+    ],
+    ["is_pinned", "is_pinned INTEGER NOT NULL DEFAULT 0 CHECK (is_pinned IN (0, 1))"],
+    ["run_command", "run_command TEXT"],
+    ["archived_at", "archived_at TEXT"],
+    ["deleted_at", "deleted_at TEXT"],
+    ["created_at", "created_at TEXT NOT NULL DEFAULT '1970-01-01T00:00:00.000Z'"],
+    ["updated_at", "updated_at TEXT NOT NULL DEFAULT '1970-01-01T00:00:00.000Z'"],
+  ] as const) {
+    if (!workspaceColumnNames.has(name)) {
+      database.exec(`ALTER TABLE product_workspaces ADD COLUMN ${definition}`);
+    }
+  }
+  database.exec(
+    `UPDATE product_workspaces
+     SET created_at = observed_at
+     WHERE created_at = '1970-01-01T00:00:00.000Z';
+     UPDATE product_workspaces
+     SET updated_at = observed_at
+     WHERE updated_at = '1970-01-01T00:00:00.000Z';`,
+  );
+
+  const factColumns = database.prepare("PRAGMA table_info(product_facts)").all();
+  const factGroupColumn = factColumns.find((raw) => String(asRecord(raw).name) === "group_id");
+  const factTable = database
+    .prepare("SELECT sql FROM sqlite_master WHERE type = 'table' AND name = 'product_facts'")
+    .get();
+  const factTableSql = factTable ? asRecord(factTable).sql : null;
+  const supportsRuntimeFacts =
+    typeof factTableSql === "string" &&
+    factTableSql.includes("conversation_id IS NULL AND workspace_id IS NULL AND group_id IS NULL");
+  if (!factGroupColumn || !supportsRuntimeFacts) {
+    database.exec("PRAGMA foreign_keys = OFF");
+    try {
+      database.exec(`
+        BEGIN IMMEDIATE;
+        DROP TABLE product_facts;
+        CREATE TABLE product_facts (
+          global_sequence INTEGER PRIMARY KEY AUTOINCREMENT,
+          fact_id TEXT NOT NULL UNIQUE,
+          conversation_id TEXT REFERENCES product_conversations(conversation_id) ON DELETE CASCADE,
+          workspace_id TEXT REFERENCES product_workspaces(workspace_id) ON DELETE CASCADE,
+          group_id TEXT REFERENCES product_groups(group_id) ON DELETE CASCADE,
+          conversation_sequence INTEGER CHECK (conversation_sequence > 0),
+          emitted_at TEXT NOT NULL,
+          shell_change_json TEXT NOT NULL,
+          detail_change_json TEXT,
+          UNIQUE (conversation_id, conversation_sequence),
+          CHECK (
+            (conversation_id IS NOT NULL AND workspace_id IS NULL AND group_id IS NULL AND
+             conversation_sequence IS NOT NULL AND detail_change_json IS NOT NULL) OR
+            (conversation_id IS NULL AND workspace_id IS NOT NULL AND group_id IS NULL AND
+             conversation_sequence IS NULL AND detail_change_json IS NULL) OR
+            (conversation_id IS NULL AND workspace_id IS NULL AND group_id IS NOT NULL AND
+             conversation_sequence IS NULL AND detail_change_json IS NULL) OR
+            (conversation_id IS NULL AND workspace_id IS NULL AND group_id IS NULL AND
+             conversation_sequence IS NULL AND detail_change_json IS NULL)
+          )
+        );
+        UPDATE product_conversations SET detail_sequence = 0;
+        DELETE FROM sqlite_sequence WHERE name = 'product_facts';
+        COMMIT;
+      `);
+    } catch (error) {
+      database.exec("ROLLBACK");
+      throw error;
+    } finally {
+      database.exec("PRAGMA foreign_keys = ON");
+    }
+  }
+  database.exec(
+    `CREATE INDEX IF NOT EXISTS product_facts_by_conversation
+       ON product_facts(conversation_id, conversation_sequence);
+     CREATE INDEX IF NOT EXISTS product_facts_by_workspace
+       ON product_facts(workspace_id, global_sequence);
+     CREATE INDEX IF NOT EXISTS product_facts_by_group
+       ON product_facts(group_id, global_sequence);`,
+  );
+
+  const conversationColumns = database.prepare("PRAGMA table_info(product_conversations)").all();
+  const conversationColumnNames = new Set(
+    conversationColumns.map((raw) => String(asRecord(raw).name)),
+  );
+  for (const [name, definition] of [
+    ["revision", "revision INTEGER NOT NULL DEFAULT 1 CHECK (revision > 0)"],
+    ["archived_at", "archived_at TEXT"],
+    ["is_pinned", "is_pinned INTEGER NOT NULL DEFAULT 0 CHECK (is_pinned IN (0, 1))"],
+    ["notes", "notes TEXT NOT NULL DEFAULT ''"],
+    [
+      "board_state",
+      "board_state TEXT NOT NULL DEFAULT 'active' CHECK (board_state IN ('active', 'done'))",
+    ],
+    ["board_state_changed_at", "board_state_changed_at TEXT"],
+    ["deleted_at", "deleted_at TEXT"],
+  ] as const) {
+    if (!conversationColumnNames.has(name)) {
+      database.exec(`ALTER TABLE product_conversations ADD COLUMN ${definition}`);
+    }
+  }
   const versionRows = database.prepare("SELECT schema_version FROM product_meta").all();
   if (versionRows.length === 0) {
     database
@@ -474,6 +788,7 @@ function makeControlPlane(
   initialRuntimeCatalog: ProductRuntimeCatalog | null,
 ): ProductControlPlaneShape {
   let runtimeCatalog = initialRuntimeCatalog;
+  let lastRuntimeCatalogObservationAt = Number.NEGATIVE_INFINITY;
   const statement = (sql: string) => database.prepare(sql);
   const generatedId = () => randomUUID();
 
@@ -491,7 +806,8 @@ function makeControlPlane(
 
   const readWorkspace = (workspaceId: string): ProductWorkspace => {
     const raw = statement(
-      "SELECT workspace_id, access_json, observed_at FROM product_workspaces WHERE workspace_id = ?",
+      `SELECT workspace_id, access_json, observed_at FROM product_workspaces
+       WHERE workspace_id = ? AND deleted_at IS NULL`,
     ).get(workspaceId);
     if (!raw) throw new ProductFailure("PRODUCT_WORKSPACE_NOT_FOUND", "Workspace was not found.");
     const row = asRecord(raw);
@@ -500,6 +816,111 @@ function makeControlPlane(
       access: decodeJson(ProductWorkspaceAccess, requiredString(row, "access_json")),
       observedAt: requiredString(row, "observed_at"),
     });
+  };
+
+  const workspaceAccessMatches = (
+    existing: ProductWorkspace["access"],
+    requested: ProductWorkspace["access"],
+  ): boolean => {
+    const rootsEqual = (left: string | null, right: string | null): boolean =>
+      (left === null && right === null) ||
+      (left !== null &&
+        right !== null &&
+        workspaceRootsEqual(left, right, { platform: process.platform }));
+    const existingTarget = existing.executionTarget;
+    const requestedTarget = requested.executionTarget;
+    return (
+      existing.kind === requested.kind &&
+      rootsEqual(existing.managedDirectory, requested.managedDirectory) &&
+      rootsEqual(existing.primaryFolder, requested.primaryFolder) &&
+      existing.writeAuthority === requested.writeAuthority &&
+      ((existingTarget === null && requestedTarget === null) ||
+        (existingTarget !== null &&
+          requestedTarget !== null &&
+          existingTarget.kind === requestedTarget.kind &&
+          workspaceRootsEqual(existingTarget.targetRef, requestedTarget.targetRef, {
+            platform: process.platform,
+          })))
+    );
+  };
+
+  const readWorkspaceSummary = (workspaceId: string): ProductWorkspaceSummary => {
+    const raw = statement(
+      `SELECT workspace_id, title, access_json, revision, visible_in_sidebar,
+              is_pinned, run_command, archived_at, created_at, updated_at
+       FROM product_workspaces WHERE workspace_id = ? AND deleted_at IS NULL`,
+    ).get(workspaceId);
+    if (!raw) throw new ProductFailure("PRODUCT_WORKSPACE_NOT_FOUND", "Workspace was not found.");
+    const row = asRecord(raw);
+    return decode(ProductWorkspaceSummary, {
+      id: requiredString(row, "workspace_id"),
+      title: requiredString(row, "title"),
+      access: decodeJson(ProductWorkspaceAccess, requiredString(row, "access_json")),
+      revision: requiredNumber(row, "revision"),
+      visibleInSidebar: requiredNumber(row, "visible_in_sidebar") === 1,
+      isPinned: requiredNumber(row, "is_pinned") === 1,
+      runCommand: typeof row.run_command === "string" ? row.run_command : null,
+      archivedAt: typeof row.archived_at === "string" ? row.archived_at : null,
+      createdAt: requiredString(row, "created_at"),
+      updatedAt: requiredString(row, "updated_at"),
+    });
+  };
+
+  const readGroupSummary = (groupId: string): ProductGroupSummary => {
+    const raw = statement(
+      `SELECT group_id, name, color, sort_order, revision, created_at, updated_at
+       FROM product_groups WHERE group_id = ? AND deleted_at IS NULL`,
+    ).get(groupId);
+    if (!raw) throw new ProductFailure("PRODUCT_GROUP_NOT_FOUND", "Group was not found.");
+    const row = asRecord(raw);
+    const conversationIds = statement(
+      `SELECT gc.conversation_id
+       FROM product_group_conversations gc
+       JOIN product_conversations c ON c.conversation_id = gc.conversation_id
+       WHERE gc.group_id = ? AND c.deleted_at IS NULL
+       ORDER BY gc.created_at ASC, gc.conversation_id ASC`,
+    )
+      .all(groupId)
+      .map((membership) => requiredString(asRecord(membership), "conversation_id"));
+    return decode(ProductGroupSummary, {
+      id: requiredString(row, "group_id"),
+      name: requiredString(row, "name"),
+      color: requiredString(row, "color"),
+      sortOrder: requiredNumber(row, "sort_order"),
+      revision: requiredNumber(row, "revision"),
+      conversationIds,
+      createdAt: requiredString(row, "created_at"),
+      updatedAt: requiredString(row, "updated_at"),
+    });
+  };
+
+  const readGroups = (): ReadonlyArray<ProductGroupSummary> =>
+    statement(
+      `SELECT group_id FROM product_groups
+       WHERE deleted_at IS NULL ORDER BY sort_order ASC, group_id ASC`,
+    )
+      .all()
+      .map((raw) => readGroupSummary(requiredString(asRecord(raw), "group_id")));
+
+  const inferredWorkspaceTitle = (access: ProductWorkspaceAccess, fallback: string): string => {
+    const root = access.primaryFolder ?? access.managedDirectory;
+    return root?.split(/[/\\]/).findLast((segment) => segment.length > 0) ?? fallback;
+  };
+
+  const findWorkspaceByAccess = (
+    access: ProductWorkspaceAccess,
+  ): ProductWorkspaceSummary | null => {
+    const ids = statement(
+      `SELECT workspace_id FROM product_workspaces
+       WHERE deleted_at IS NULL ORDER BY workspace_id ASC`,
+    )
+      .all()
+      .map((raw) => requiredString(asRecord(raw), "workspace_id"));
+    return (
+      ids
+        .map(readWorkspaceSummary)
+        .find((workspace) => workspaceAccessMatches(workspace.access, access)) ?? null
+    );
   };
 
   const assertResourceAuthority = (
@@ -513,6 +934,73 @@ function makeControlPlane(
       throw new ProductFailure(
         "PRODUCT_CHAT_RESOURCE_WRITE_FORBIDDEN",
         "Chat accepts only read-only file and folder references.",
+      );
+    }
+  };
+
+  const validateCatalogSelection = (selection: ProductRequestedSelection): void => {
+    if (selection.state === "unavailable") {
+      return;
+    }
+    if (!runtimeCatalog) {
+      throw new ProductFailure(
+        "PRODUCT_RUNTIME_CATALOG_UNAVAILABLE",
+        "The Native Host runtime catalog is unavailable.",
+        true,
+      );
+    }
+    if (
+      selection.engineId !== runtimeCatalog.engineId ||
+      selection.packageGeneration !== runtimeCatalog.packageGeneration
+    ) {
+      throw new ProductFailure(
+        "PRODUCT_RUNTIME_SELECTION_STALE",
+        "The requested Engine or Package generation is no longer current.",
+        true,
+      );
+    }
+    const model = runtimeCatalog.models.find(
+      (candidate) => candidate.id === selection.runtimeModelId,
+    );
+    if (!model) {
+      throw new ProductFailure(
+        "PRODUCT_RUNTIME_MODEL_UNKNOWN",
+        "The requested runtime Model is not present in the current Native Host catalog.",
+        true,
+      );
+    }
+    if (!model.available || model.auth !== "configured") {
+      throw new ProductFailure(
+        model.auth === "missing"
+          ? "PRODUCT_RUNTIME_AUTH_MISSING"
+          : "PRODUCT_RUNTIME_MODEL_UNAVAILABLE",
+        model.auth === "missing"
+          ? "The selected runtime Model requires authentication."
+          : "The selected runtime Model is currently unavailable.",
+        true,
+      );
+    }
+    if (
+      selection.thinking !== null &&
+      !model.thinkingLevels.includes(selection.thinking as (typeof model.thinkingLevels)[number])
+    ) {
+      throw new ProductFailure(
+        "PRODUCT_RUNTIME_THINKING_UNSUPPORTED",
+        "The selected runtime Model does not support the requested Thinking level.",
+        true,
+      );
+    }
+  };
+
+  const assertDispatchableSelection: (
+    selection: ProductRequestedSelection,
+  ) => asserts selection is ProductSelectedRuntime = (selection) => {
+    validateCatalogSelection(selection);
+    if (selection.state === "unavailable") {
+      throw new ProductFailure(
+        "PRODUCT_RUNTIME_SELECTION_UNAVAILABLE",
+        "The queued Product intent has no dispatchable Native Host selection.",
+        true,
       );
     }
   };
@@ -557,7 +1045,7 @@ function makeControlPlane(
       conversationId: requiredString(row, "conversation_id"),
       entryId: requiredString(row, "entry_id"),
       requestedSelection: decodeJson(
-        ProductRequestedSelection,
+        ProductSelectedRuntime,
         requiredString(row, "requested_selection_json"),
       ),
       workspaceObservation: decodeJson(
@@ -601,9 +1089,53 @@ function makeControlPlane(
         });
       });
 
+  const readEntryPins = (conversationId: string): ReadonlyArray<ProductEntryPin> =>
+    statement(
+      `SELECT entry_id, label, done, pinned_at FROM product_entry_pins
+       WHERE conversation_id = ? ORDER BY pinned_at ASC, entry_id ASC`,
+    )
+      .all(conversationId)
+      .map((raw) => {
+        const row = asRecord(raw);
+        return decode(ProductEntryPin, {
+          entryId: requiredString(row, "entry_id"),
+          label: typeof row.label === "string" ? row.label : null,
+          done: requiredNumber(row, "done") === 1,
+          pinnedAt: requiredString(row, "pinned_at"),
+        });
+      });
+
+  const readEntryMarkers = (conversationId: string): ReadonlyArray<ProductEntryMarker> =>
+    statement(
+      `SELECT marker_id, entry_id, start_offset, end_offset, selected_text,
+              selected_text_digest, style, color, label, done, created_at, updated_at
+       FROM product_entry_markers WHERE conversation_id = ?
+       ORDER BY created_at ASC, marker_id ASC`,
+    )
+      .all(conversationId)
+      .map((raw) => {
+        const row = asRecord(raw);
+        return decode(ProductEntryMarker, {
+          id: requiredString(row, "marker_id"),
+          entryId: requiredString(row, "entry_id"),
+          startOffset: requiredNumber(row, "start_offset"),
+          endOffset: requiredNumber(row, "end_offset"),
+          selectedText: requiredString(row, "selected_text"),
+          selectedTextDigest: requiredString(row, "selected_text_digest"),
+          style: requiredString(row, "style"),
+          color: requiredString(row, "color"),
+          label: typeof row.label === "string" ? row.label : null,
+          done: requiredNumber(row, "done") === 1,
+          createdAt: requiredString(row, "created_at"),
+          updatedAt: requiredString(row, "updated_at"),
+        });
+      });
+
   const readSummary = (conversationId: string): ProductConversationSummary => {
     const raw = statement(
-      `SELECT c.conversation_id, c.workspace_id, c.title, w.access_json,
+      `SELECT c.conversation_id, c.workspace_id, c.title, c.revision,
+              c.archived_at, c.is_pinned, c.notes, c.board_state,
+              c.board_state_changed_at, w.access_json,
               c.created_at, c.updated_at,
               (SELECT receipt_json FROM product_operation_receipts r
                JOIN product_runs pr ON pr.run_id = r.run_id
@@ -611,7 +1143,7 @@ function makeControlPlane(
                ORDER BY pr.created_at DESC, pr.run_id DESC LIMIT 1) AS latest_receipt_json
        FROM product_conversations c
        JOIN product_workspaces w ON w.workspace_id = c.workspace_id
-       WHERE c.conversation_id = ?`,
+       WHERE c.conversation_id = ? AND c.deleted_at IS NULL`,
     ).get(conversationId);
     if (!raw) {
       throw new ProductFailure("PRODUCT_CONVERSATION_NOT_FOUND", "Conversation was not found.");
@@ -628,6 +1160,13 @@ function makeControlPlane(
       workspaceId: requiredString(row, "workspace_id"),
       title: requiredString(row, "title"),
       workspaceKind: access.kind,
+      revision: requiredNumber(row, "revision"),
+      archivedAt: typeof row.archived_at === "string" ? row.archived_at : null,
+      isPinned: requiredNumber(row, "is_pinned") === 1,
+      notes: requiredString(row, "notes"),
+      boardState: requiredString(row, "board_state"),
+      boardStateChangedAt:
+        typeof row.board_state_changed_at === "string" ? row.board_state_changed_at : null,
       receiptState,
       createdAt: requiredString(row, "created_at"),
       updatedAt: requiredString(row, "updated_at"),
@@ -673,10 +1212,7 @@ function makeControlPlane(
           runId: requiredString(row, "run_id"),
           nativeSequence: requiredNumber(row, "native_sequence"),
           kind: requiredString(row, "kind"),
-          detail: decodeJson(
-            ProductRuntimeActivityDetail,
-            requiredString(row, "detail_json"),
-          ),
+          detail: decodeJson(ProductRuntimeActivityDetail, requiredString(row, "detail_json")),
           createdAt: requiredString(row, "created_at"),
         });
       });
@@ -712,6 +1248,8 @@ function makeControlPlane(
       activities,
       recoveries,
       queue: readQueue(conversationId),
+      entryPins: readEntryPins(conversationId),
+      entryMarkers: readEntryMarkers(conversationId),
     });
   };
 
@@ -742,6 +1280,14 @@ function makeControlPlane(
       throw new ProductFailure("PRODUCT_CONVERSATION_NOT_FOUND", "Conversation was not found.");
     }
     const sequence = requiredNumber(asRecord(updated), "detail_sequence");
+    const shellChange: ProductShellFactChange =
+      change.kind === "conversation-tombstone"
+        ? { kind: "conversation-tombstone", conversationId: change.conversationId }
+        : { kind: "conversation-summary", conversation: readSummary(conversationId) };
+    const detailChange: ProductDetailFactChange =
+      change.kind === "conversation-updated"
+        ? { kind: "conversation-updated", conversation: readSummary(conversationId) }
+        : change;
     statement(
       `INSERT INTO product_facts(
          fact_id, conversation_id, conversation_sequence, emitted_at,
@@ -752,11 +1298,90 @@ function makeControlPlane(
       conversationId,
       sequence,
       productIsoNow(),
-      encodeJson(ProductShellFactChange, {
-        kind: "conversation-summary",
-        conversation: readSummary(conversationId),
-      }),
-      encodeJson(ProductDetailFactChange, change),
+      encodeJson(ProductShellFactChange, shellChange),
+      encodeJson(ProductDetailFactChange, detailChange),
+    );
+  };
+
+  const appendWorkspaceShellFact = (
+    workspaceId: string,
+    change: ProductShellFactChange,
+  ): number => {
+    statement(
+      `INSERT INTO product_facts(
+         fact_id, conversation_id, workspace_id, conversation_sequence,
+         emitted_at, shell_change_json, detail_change_json
+       ) VALUES (?, NULL, ?, NULL, ?, ?, NULL)`,
+    ).run(generatedId(), workspaceId, productIsoNow(), encodeJson(ProductShellFactChange, change));
+    const highWater = statement(
+      "SELECT COALESCE(MAX(global_sequence), 0) AS sequence FROM product_facts",
+    ).get();
+    return highWater ? requiredNumber(asRecord(highWater), "sequence") : 0;
+  };
+
+  const appendWorkspaceFact = (workspaceId: string): number =>
+    appendWorkspaceShellFact(workspaceId, {
+      kind: "workspace-summary",
+      workspace: readWorkspaceSummary(workspaceId),
+    });
+
+  const appendGroupShellFact = (groupId: string, change: ProductShellFactChange): number => {
+    statement(
+      `INSERT INTO product_facts(
+         fact_id, conversation_id, workspace_id, group_id, conversation_sequence,
+         emitted_at, shell_change_json, detail_change_json
+       ) VALUES (?, NULL, NULL, ?, NULL, ?, ?, NULL)`,
+    ).run(generatedId(), groupId, productIsoNow(), encodeJson(ProductShellFactChange, change));
+    const highWater = statement(
+      "SELECT COALESCE(MAX(global_sequence), 0) AS sequence FROM product_facts",
+    ).get();
+    return highWater ? requiredNumber(asRecord(highWater), "sequence") : 0;
+  };
+
+  const appendGroupFact = (groupId: string): number =>
+    appendGroupShellFact(groupId, {
+      kind: "group-summary",
+      group: readGroupSummary(groupId),
+    });
+
+  const appendRuntimeCatalogFact = (catalog: ProductRuntimeCatalog | null): number => {
+    statement(
+      `INSERT INTO product_facts(
+         fact_id, conversation_id, workspace_id, group_id, conversation_sequence,
+         emitted_at, shell_change_json, detail_change_json
+       ) VALUES (?, NULL, NULL, NULL, NULL, ?, ?, NULL)`,
+    ).run(
+      generatedId(),
+      productIsoNow(),
+      encodeJson(ProductShellFactChange, { kind: "runtime-catalog", catalog }),
+    );
+    const highWater = statement(
+      "SELECT COALESCE(MAX(global_sequence), 0) AS sequence FROM product_facts",
+    ).get();
+    return highWater ? requiredNumber(asRecord(highWater), "sequence") : 0;
+  };
+
+  const observeRuntimeCatalog = (): Effect.Effect<void, ProductControlPlaneError> => {
+    if (!executionBoundary.catalog) return Effect.void;
+    const observedAt = Date.now();
+    if (observedAt - lastRuntimeCatalogObservationAt < RUNTIME_CATALOG_OBSERVATION_INTERVAL_MS) {
+      return Effect.void;
+    }
+    lastRuntimeCatalogObservationAt = observedAt;
+    return executionBoundary.catalog().pipe(
+      Effect.catch(() => Effect.succeed(null)),
+      Effect.flatMap((observed) =>
+        effect(() => {
+          const catalogSchema = Schema.NullOr(ProductRuntimeCatalog);
+          if (encodeJson(catalogSchema, runtimeCatalog) === encodeJson(catalogSchema, observed)) {
+            return;
+          }
+          withTransaction(() => {
+            runtimeCatalog = observed;
+            appendRuntimeCatalogFact(observed);
+          });
+        }),
+      ),
     );
   };
 
@@ -786,20 +1411,676 @@ function makeControlPlane(
   const effect = <A>(operation: () => A): Effect.Effect<A, ProductControlPlaneError> =>
     Effect.try({ try: operation, catch: toControlPlaneError });
 
+  const readRecordedMutation = (
+    mutationId: string,
+    mutationKind: string,
+    requestJson: string,
+  ): string | undefined => {
+    const recorded = statement(
+      `SELECT mutation_kind, request_json, response_json
+       FROM product_mutations WHERE mutation_id = ?`,
+    ).get(mutationId);
+    if (!recorded) return undefined;
+    const row = asRecord(recorded);
+    if (
+      requiredString(row, "mutation_kind") !== mutationKind ||
+      requiredString(row, "request_json") !== requestJson
+    ) {
+      throw new ProductFailure(
+        "PRODUCT_MUTATION_ID_CONFLICT",
+        "The Product mutation identity is already bound to different input.",
+      );
+    }
+    return requiredString(row, "response_json");
+  };
+
+  const recordMutation = (input: {
+    mutationId: string;
+    mutationKind: string;
+    requestJson: string;
+    responseJson: string;
+  }): void => {
+    statement(
+      `INSERT INTO product_mutations(
+         mutation_id, mutation_kind, request_json, response_json, created_at
+       ) VALUES (?, ?, ?, ?, ?)`,
+    ).run(
+      input.mutationId,
+      input.mutationKind,
+      input.requestJson,
+      input.responseJson,
+      productIsoNow(),
+    );
+  };
+
+  const conversationMutationFailure = (
+    conversationId: string,
+    expectedRevision: number,
+    stateFailure?: { readonly code: string; readonly message: string },
+  ): never => {
+    const current = statement(
+      `SELECT revision, archived_at, deleted_at
+       FROM product_conversations WHERE conversation_id = ?`,
+    ).get(conversationId);
+    if (!current || typeof asRecord(current).deleted_at === "string") {
+      throw new ProductFailure("PRODUCT_CONVERSATION_NOT_FOUND", "Conversation was not found.");
+    }
+    if (requiredNumber(asRecord(current), "revision") !== expectedRevision) {
+      throw new ProductFailure(
+        "PRODUCT_CONVERSATION_REVISION_CONFLICT",
+        "The Conversation changed before the mutation was applied.",
+        true,
+      );
+    }
+    if (stateFailure) throw new ProductFailure(stateFailure.code, stateFailure.message);
+    throw new ProductFailure("PRODUCT_CONVERSATION_MUTATION_REJECTED", "Mutation was rejected.");
+  };
+
+  const workspaceMutationFailure = (
+    workspaceId: string,
+    expectedRevision: number,
+    stateFailure?: { readonly code: string; readonly message: string },
+  ): never => {
+    const current = statement(
+      `SELECT revision, deleted_at FROM product_workspaces WHERE workspace_id = ?`,
+    ).get(workspaceId);
+    if (!current || typeof asRecord(current).deleted_at === "string") {
+      throw new ProductFailure("PRODUCT_WORKSPACE_NOT_FOUND", "Workspace was not found.");
+    }
+    if (requiredNumber(asRecord(current), "revision") !== expectedRevision) {
+      throw new ProductFailure(
+        "PRODUCT_WORKSPACE_REVISION_CONFLICT",
+        "The Workspace changed before the mutation was applied.",
+        true,
+      );
+    }
+    if (stateFailure) throw new ProductFailure(stateFailure.code, stateFailure.message);
+    throw new ProductFailure("PRODUCT_WORKSPACE_MUTATION_REJECTED", "Mutation was rejected.");
+  };
+
+  const groupMutationFailure = (groupId: string, expectedRevision: number): never => {
+    const current = statement(
+      "SELECT revision, deleted_at FROM product_groups WHERE group_id = ?",
+    ).get(groupId);
+    if (!current || typeof asRecord(current).deleted_at === "string") {
+      throw new ProductFailure("PRODUCT_GROUP_NOT_FOUND", "Group was not found.");
+    }
+    if (requiredNumber(asRecord(current), "revision") !== expectedRevision) {
+      throw new ProductFailure(
+        "PRODUCT_GROUP_REVISION_CONFLICT",
+        "The Group changed before the mutation was applied.",
+        true,
+      );
+    }
+    throw new ProductFailure("PRODUCT_GROUP_MUTATION_REJECTED", "Group mutation was rejected.");
+  };
+
+  const currentMemberships = (conversationId: string): ReadonlyArray<string> =>
+    statement(
+      `SELECT gc.group_id FROM product_group_conversations gc
+       JOIN product_groups g ON g.group_id = gc.group_id
+       WHERE gc.conversation_id = ? AND g.deleted_at IS NULL
+       ORDER BY gc.group_id ASC`,
+    )
+      .all(conversationId)
+      .map((raw) => requiredString(asRecord(raw), "group_id"));
+
+  const sameStrings = (left: ReadonlyArray<string>, right: ReadonlyArray<string>): boolean =>
+    left.length === right.length && left.every((value, index) => value === right[index]);
+
+  const uniqueSorted = (values: ReadonlyArray<string>): ReadonlyArray<string> =>
+    [...new Set(values)].sort((left, right) => left.localeCompare(right));
+
+  const createWorkspace: ProductControlPlaneShape["createWorkspace"] = (input) =>
+    effect(() =>
+      withTransaction(() => {
+        const existing = statement(
+          "SELECT workspace_id FROM product_workspaces WHERE workspace_id = ? AND deleted_at IS NULL",
+        ).get(input.workspaceId);
+        if (existing) {
+          const current = readWorkspaceSummary(input.workspaceId);
+          if (
+            current.title !== input.title ||
+            current.visibleInSidebar !== input.visibleInSidebar ||
+            !workspaceAccessMatches(current.access, input.access)
+          ) {
+            throw new ProductFailure(
+              "PRODUCT_WORKSPACE_ID_CONFLICT",
+              "Workspace identity is already bound to different metadata, access or canonical root.",
+            );
+          }
+          return current;
+        }
+        const tombstone = statement(
+          "SELECT workspace_id FROM product_workspaces WHERE workspace_id = ?",
+        ).get(input.workspaceId);
+        if (tombstone) {
+          throw new ProductFailure(
+            "PRODUCT_WORKSPACE_ID_CONFLICT",
+            "Workspace identity is already bound to a deleted Workspace.",
+          );
+        }
+        const rootOwner = findWorkspaceByAccess(input.access);
+        if (rootOwner) {
+          if (rootOwner.visibleInSidebar === input.visibleInSidebar) return rootOwner;
+          throw new ProductFailure(
+            "PRODUCT_WORKSPACE_ROOT_OWNED",
+            "The canonical root is already owned by a Workspace with different visibility.",
+          );
+        }
+        const timestamp = productIsoNow();
+        statement(
+          `INSERT INTO product_workspaces(
+             workspace_id, title, access_json, observed_at, revision,
+             visible_in_sidebar, is_pinned, run_command, archived_at,
+             deleted_at, created_at, updated_at
+           ) VALUES (?, ?, ?, ?, 1, ?, 0, NULL, NULL, NULL, ?, ?)`,
+        ).run(
+          input.workspaceId,
+          input.title,
+          encodeJson(ProductWorkspaceAccess, input.access),
+          timestamp,
+          input.visibleInSidebar ? 1 : 0,
+          timestamp,
+          timestamp,
+        );
+        appendWorkspaceFact(input.workspaceId);
+        return readWorkspaceSummary(input.workspaceId);
+      }),
+    );
+
+  const updateWorkspaceTitle: ProductControlPlaneShape["updateWorkspaceTitle"] = (input) =>
+    effect(() =>
+      withTransaction(() => {
+        const mutationKind = "workspace-title-update";
+        const requestJson = encodeJson(ProductUpdateWorkspaceTitleInput, input);
+        if (readRecordedMutation(input.mutationId, mutationKind, requestJson) !== undefined) {
+          return readWorkspaceSummary(input.workspaceId);
+        }
+        const updated = statement(
+          `UPDATE product_workspaces
+           SET title = ?, revision = revision + 1, updated_at = ?
+           WHERE workspace_id = ? AND revision = ? AND deleted_at IS NULL
+           RETURNING workspace_id`,
+        ).get(input.title, productIsoNow(), input.workspaceId, input.expectedRevision);
+        if (!updated) workspaceMutationFailure(input.workspaceId, input.expectedRevision);
+        appendWorkspaceFact(input.workspaceId);
+        const result = readWorkspaceSummary(input.workspaceId);
+        recordMutation({
+          mutationId: input.mutationId,
+          mutationKind,
+          requestJson,
+          responseJson: encodeJson(ProductWorkspaceSummary, result),
+        });
+        return result;
+      }),
+    );
+
+  const setWorkspacePinned: ProductControlPlaneShape["setWorkspacePinned"] = (input) =>
+    effect(() =>
+      withTransaction(() => {
+        const mutationKind = "workspace-pinned-set";
+        const requestJson = encodeJson(ProductSetWorkspacePinnedInput, input);
+        if (readRecordedMutation(input.mutationId, mutationKind, requestJson) !== undefined) {
+          return readWorkspaceSummary(input.workspaceId);
+        }
+        const updated = statement(
+          `UPDATE product_workspaces
+           SET is_pinned = ?, revision = revision + 1, updated_at = ?
+           WHERE workspace_id = ? AND revision = ? AND deleted_at IS NULL
+           RETURNING workspace_id`,
+        ).get(input.isPinned ? 1 : 0, productIsoNow(), input.workspaceId, input.expectedRevision);
+        if (!updated) workspaceMutationFailure(input.workspaceId, input.expectedRevision);
+        appendWorkspaceFact(input.workspaceId);
+        const result = readWorkspaceSummary(input.workspaceId);
+        recordMutation({
+          mutationId: input.mutationId,
+          mutationKind,
+          requestJson,
+          responseJson: encodeJson(ProductWorkspaceSummary, result),
+        });
+        return result;
+      }),
+    );
+
+  const updateWorkspaceRunCommand: ProductControlPlaneShape["updateWorkspaceRunCommand"] = (
+    input,
+  ) =>
+    effect(() =>
+      withTransaction(() => {
+        const mutationKind = "workspace-run-command-update";
+        const requestJson = encodeJson(ProductUpdateWorkspaceRunCommandInput, input);
+        if (readRecordedMutation(input.mutationId, mutationKind, requestJson) !== undefined) {
+          return readWorkspaceSummary(input.workspaceId);
+        }
+        const updated = statement(
+          `UPDATE product_workspaces
+           SET run_command = ?, revision = revision + 1, updated_at = ?
+           WHERE workspace_id = ? AND revision = ? AND deleted_at IS NULL
+           RETURNING workspace_id`,
+        ).get(input.runCommand, productIsoNow(), input.workspaceId, input.expectedRevision);
+        if (!updated) workspaceMutationFailure(input.workspaceId, input.expectedRevision);
+        appendWorkspaceFact(input.workspaceId);
+        const result = readWorkspaceSummary(input.workspaceId);
+        recordMutation({
+          mutationId: input.mutationId,
+          mutationKind,
+          requestJson,
+          responseJson: encodeJson(ProductWorkspaceSummary, result),
+        });
+        return result;
+      }),
+    );
+
+  const deleteWorkspace: ProductControlPlaneShape["deleteWorkspace"] = (input) =>
+    effect(() =>
+      withTransaction(() => {
+        const mutationKind = "workspace-delete";
+        const requestJson = encodeJson(ProductDeleteWorkspaceInput, input);
+        const recorded = readRecordedMutation(input.mutationId, mutationKind, requestJson);
+        if (recorded !== undefined) return decodeJson(ProductDeleteWorkspaceResult, recorded);
+        const activeConversationCount = statement(
+          `SELECT COUNT(*) AS count FROM product_conversations
+           WHERE workspace_id = ? AND deleted_at IS NULL`,
+        ).get(input.workspaceId);
+        if (
+          activeConversationCount &&
+          requiredNumber(asRecord(activeConversationCount), "count") > 0
+        ) {
+          workspaceMutationFailure(input.workspaceId, input.expectedRevision, {
+            code: "PRODUCT_WORKSPACE_NOT_EMPTY",
+            message: "Workspace cannot be deleted while it contains Conversations.",
+          });
+        }
+        const deletedAt = productIsoNow();
+        const updated = statement(
+          `UPDATE product_workspaces
+           SET deleted_at = ?, revision = revision + 1, updated_at = ?
+           WHERE workspace_id = ? AND revision = ? AND deleted_at IS NULL
+           RETURNING revision`,
+        ).get(deletedAt, deletedAt, input.workspaceId, input.expectedRevision);
+        if (!updated) workspaceMutationFailure(input.workspaceId, input.expectedRevision);
+        const revision = requiredNumber(asRecord(updated), "revision");
+        const sequence = appendWorkspaceShellFact(input.workspaceId, {
+          kind: "workspace-tombstone",
+          workspaceId: input.workspaceId,
+        });
+        const result = decode(ProductDeleteWorkspaceResult, {
+          protocolVersion: PRODUCT_PROTOCOL_VERSION,
+          workspaceId: input.workspaceId,
+          revision,
+          sequence,
+        });
+        recordMutation({
+          mutationId: input.mutationId,
+          mutationKind,
+          requestJson,
+          responseJson: encodeJson(ProductDeleteWorkspaceResult, result),
+        });
+        return result;
+      }),
+    );
+
+  const createGroup: ProductControlPlaneShape["createGroup"] = (input) =>
+    effect(() =>
+      withTransaction(() => {
+        const existing = statement(
+          "SELECT group_id FROM product_groups WHERE group_id = ? AND deleted_at IS NULL",
+        ).get(input.groupId);
+        if (existing) {
+          const group = readGroupSummary(input.groupId);
+          if (group.name !== input.name || group.color !== input.color) {
+            throw new ProductFailure(
+              "PRODUCT_GROUP_ID_CONFLICT",
+              "Group identity is already bound to different metadata.",
+            );
+          }
+          return group;
+        }
+        if (
+          statement("SELECT group_id FROM product_groups WHERE group_id = ?").get(input.groupId)
+        ) {
+          throw new ProductFailure(
+            "PRODUCT_GROUP_ID_CONFLICT",
+            "Group identity is already bound to a deleted Group.",
+          );
+        }
+        const activeCount = statement(
+          "SELECT COUNT(*) AS count FROM product_groups WHERE deleted_at IS NULL",
+        ).get();
+        if (activeCount && requiredNumber(asRecord(activeCount), "count") >= PRODUCT_MAX_GROUPS) {
+          throw new ProductFailure("PRODUCT_GROUP_LIMIT", "The Product Group limit was reached.");
+        }
+        if (
+          statement(
+            "SELECT group_id FROM product_groups WHERE name = ? COLLATE NOCASE AND deleted_at IS NULL",
+          ).get(input.name)
+        ) {
+          throw new ProductFailure("PRODUCT_GROUP_NAME_CONFLICT", "Group name is already in use.");
+        }
+        const maxOrder = statement(
+          "SELECT COALESCE(MAX(sort_order), -1) AS sort_order FROM product_groups WHERE deleted_at IS NULL",
+        ).get();
+        const sortOrder = (maxOrder ? requiredNumber(asRecord(maxOrder), "sort_order") : -1) + 1;
+        const timestamp = productIsoNow();
+        statement(
+          `INSERT INTO product_groups(
+             group_id, name, color, sort_order, revision, deleted_at, created_at, updated_at
+           ) VALUES (?, ?, ?, ?, 1, NULL, ?, ?)`,
+        ).run(input.groupId, input.name, input.color, sortOrder, timestamp, timestamp);
+        appendGroupFact(input.groupId);
+        return readGroupSummary(input.groupId);
+      }),
+    );
+
+  const updateGroup: ProductControlPlaneShape["updateGroup"] = (input) =>
+    effect(() =>
+      withTransaction(() => {
+        const mutationKind = "group-update";
+        const requestJson = encodeJson(ProductUpdateGroupInput, input);
+        if (readRecordedMutation(input.mutationId, mutationKind, requestJson) !== undefined) {
+          return readGroupSummary(input.groupId);
+        }
+        const nameOwner = statement(
+          `SELECT group_id FROM product_groups
+           WHERE name = ? COLLATE NOCASE AND group_id <> ? AND deleted_at IS NULL`,
+        ).get(input.name, input.groupId);
+        if (nameOwner) {
+          throw new ProductFailure("PRODUCT_GROUP_NAME_CONFLICT", "Group name is already in use.");
+        }
+        const updated = statement(
+          `UPDATE product_groups SET name = ?, color = ?, revision = revision + 1, updated_at = ?
+           WHERE group_id = ? AND revision = ? AND deleted_at IS NULL RETURNING group_id`,
+        ).get(input.name, input.color, productIsoNow(), input.groupId, input.expectedRevision);
+        if (!updated) groupMutationFailure(input.groupId, input.expectedRevision);
+        appendGroupFact(input.groupId);
+        const result = readGroupSummary(input.groupId);
+        recordMutation({
+          mutationId: input.mutationId,
+          mutationKind,
+          requestJson,
+          responseJson: encodeJson(ProductGroupSummary, result),
+        });
+        return result;
+      }),
+    );
+
+  const reorderGroups: ProductControlPlaneShape["reorderGroups"] = (input) =>
+    effect(() =>
+      withTransaction(() => {
+        const mutationKind = "groups-reorder";
+        const requestJson = encodeJson(ProductReorderGroupsInput, input);
+        const recorded = readRecordedMutation(input.mutationId, mutationKind, requestJson);
+        if (recorded !== undefined) {
+          return readGroups();
+        }
+        const current = readGroups();
+        const expectedMatches =
+          input.expectedGroups.length === current.length &&
+          input.expectedGroups.every(
+            (expected, index) =>
+              expected.groupId === current[index]?.id &&
+              expected.revision === current[index]?.revision,
+          );
+        const orderedUnique = uniqueSorted(input.orderedGroupIds);
+        const currentUnique = uniqueSorted(current.map((group) => group.id));
+        if (
+          !expectedMatches ||
+          orderedUnique.length !== input.orderedGroupIds.length ||
+          !sameStrings(orderedUnique, currentUnique)
+        ) {
+          throw new ProductFailure(
+            "PRODUCT_GROUP_ORDER_CONFLICT",
+            "The active Group set or order changed before reorder was applied.",
+            true,
+          );
+        }
+        if (
+          !sameStrings(
+            input.orderedGroupIds,
+            current.map((group) => group.id),
+          )
+        ) {
+          const timestamp = productIsoNow();
+          input.orderedGroupIds.forEach((groupId, sortOrder) => {
+            statement(
+              `UPDATE product_groups
+               SET sort_order = ?, revision = revision + 1, updated_at = ?
+               WHERE group_id = ? AND deleted_at IS NULL`,
+            ).run(sortOrder, timestamp, groupId);
+          });
+          input.orderedGroupIds.forEach((groupId) => appendGroupFact(groupId));
+        }
+        const result = readGroups();
+        recordMutation({
+          mutationId: input.mutationId,
+          mutationKind,
+          requestJson,
+          responseJson: encodeJson(Schema.Array(ProductGroupSummary), result),
+        });
+        return result;
+      }),
+    );
+
+  const deleteGroup: ProductControlPlaneShape["deleteGroup"] = (input) =>
+    effect(() =>
+      withTransaction(() => {
+        const mutationKind = "group-delete";
+        const requestJson = encodeJson(ProductDeleteGroupInput, input);
+        const recorded = readRecordedMutation(input.mutationId, mutationKind, requestJson);
+        if (recorded !== undefined) return decodeJson(ProductDeleteGroupResult, recorded);
+        const timestamp = productIsoNow();
+        const updated = statement(
+          `UPDATE product_groups SET deleted_at = ?, revision = revision + 1, updated_at = ?
+           WHERE group_id = ? AND revision = ? AND deleted_at IS NULL RETURNING revision`,
+        ).get(timestamp, timestamp, input.groupId, input.expectedRevision);
+        if (!updated) groupMutationFailure(input.groupId, input.expectedRevision);
+        statement("DELETE FROM product_group_conversations WHERE group_id = ?").run(input.groupId);
+        const sequence = appendGroupShellFact(input.groupId, {
+          kind: "group-tombstone",
+          groupId: input.groupId,
+        });
+        const result = decode(ProductDeleteGroupResult, {
+          protocolVersion: PRODUCT_PROTOCOL_VERSION,
+          groupId: input.groupId,
+          revision: requiredNumber(asRecord(updated), "revision"),
+          sequence,
+        });
+        recordMutation({
+          mutationId: input.mutationId,
+          mutationKind,
+          requestJson,
+          responseJson: encodeJson(ProductDeleteGroupResult, result),
+        });
+        return result;
+      }),
+    );
+
+  const mutateConversationGroups = (
+    input: ProductSetConversationGroupsInput | ProductAddConversationGroupsInput,
+    mode: "set" | "add",
+  ): ProductGroupMembershipResult => {
+    const mutationKind = mode === "set" ? "conversation-groups-set" : "conversation-groups-add";
+    const inputSchema =
+      mode === "set" ? ProductSetConversationGroupsInput : ProductAddConversationGroupsInput;
+    const requestJson = encodeJson(inputSchema, input);
+    const recorded = readRecordedMutation(input.mutationId, mutationKind, requestJson);
+    if (recorded !== undefined) {
+      const sequenceRow = statement(
+        "SELECT COALESCE(MAX(global_sequence), 0) AS sequence FROM product_facts",
+      ).get();
+      return decode(ProductGroupMembershipResult, {
+        protocolVersion: PRODUCT_PROTOCOL_VERSION,
+        groups: readGroups(),
+        sequence: sequenceRow ? requiredNumber(asRecord(sequenceRow), "sequence") : 0,
+      });
+    }
+    const conversationIds = input.expectedMemberships.map((item) => item.conversationId);
+    if (uniqueSorted(conversationIds).length !== conversationIds.length) {
+      throw new ProductFailure(
+        "PRODUCT_GROUP_MEMBERSHIP_CONFLICT",
+        "Conversation membership expectations must be unique.",
+        true,
+      );
+    }
+    if (uniqueSorted(input.groupIds).length !== input.groupIds.length) {
+      throw new ProductFailure("PRODUCT_GROUP_MEMBERSHIP_INVALID", "Target Groups must be unique.");
+    }
+    for (const groupId of input.groupIds) readGroupSummary(groupId);
+
+    const currentByConversation = new Map<string, ReadonlyArray<string>>();
+    const desiredByConversation = new Map<string, ReadonlyArray<string>>();
+    for (const expected of input.expectedMemberships) {
+      if (
+        !statement(
+          "SELECT conversation_id FROM product_conversations WHERE conversation_id = ? AND deleted_at IS NULL",
+        ).get(expected.conversationId)
+      ) {
+        throw new ProductFailure("PRODUCT_CONVERSATION_NOT_FOUND", "Conversation was not found.");
+      }
+      const currentIds = currentMemberships(expected.conversationId);
+      const expectedIds = uniqueSorted(expected.groupIds);
+      if (
+        expectedIds.length !== expected.groupIds.length ||
+        !sameStrings(currentIds, expectedIds)
+      ) {
+        throw new ProductFailure(
+          "PRODUCT_GROUP_MEMBERSHIP_CONFLICT",
+          "Conversation Group membership changed before the mutation was applied.",
+          true,
+        );
+      }
+      currentByConversation.set(expected.conversationId, currentIds);
+      desiredByConversation.set(
+        expected.conversationId,
+        mode === "set"
+          ? uniqueSorted(input.groupIds)
+          : uniqueSorted([...currentIds, ...input.groupIds]),
+      );
+    }
+
+    const touchedGroupIds = uniqueSorted(
+      [...currentByConversation.values(), ...desiredByConversation.values()].flat(),
+    );
+    for (const groupId of touchedGroupIds) {
+      const currentCountRow = statement(
+        "SELECT COUNT(*) AS count FROM product_group_conversations WHERE group_id = ?",
+      ).get(groupId);
+      let finalCount = currentCountRow ? requiredNumber(asRecord(currentCountRow), "count") : 0;
+      for (const conversationId of conversationIds) {
+        const before = currentByConversation.get(conversationId)?.includes(groupId) ?? false;
+        const after = desiredByConversation.get(conversationId)?.includes(groupId) ?? false;
+        if (before !== after) finalCount += after ? 1 : -1;
+      }
+      if (finalCount > PRODUCT_GROUP_MEMBERSHIP_MAX_COUNT) {
+        throw new ProductFailure(
+          "PRODUCT_GROUP_MEMBERSHIP_LIMIT",
+          "A Group cannot contain more Conversations.",
+        );
+      }
+    }
+
+    const changedGroupIds = new Set<string>();
+    const timestamp = productIsoNow();
+    for (const conversationId of conversationIds) {
+      const before = currentByConversation.get(conversationId) ?? [];
+      const after = desiredByConversation.get(conversationId) ?? [];
+      if (sameStrings(before, after)) continue;
+      for (const groupId of before) {
+        if (!after.includes(groupId)) {
+          statement(
+            "DELETE FROM product_group_conversations WHERE group_id = ? AND conversation_id = ?",
+          ).run(groupId, conversationId);
+          changedGroupIds.add(groupId);
+        }
+      }
+      for (const groupId of after) {
+        if (!before.includes(groupId)) {
+          statement(
+            `INSERT INTO product_group_conversations(group_id, conversation_id, created_at)
+             VALUES (?, ?, ?)`,
+          ).run(groupId, conversationId, timestamp);
+          changedGroupIds.add(groupId);
+        }
+      }
+    }
+    for (const groupId of changedGroupIds) {
+      statement(
+        `UPDATE product_groups SET revision = revision + 1, updated_at = ?
+         WHERE group_id = ? AND deleted_at IS NULL`,
+      ).run(timestamp, groupId);
+      appendGroupFact(groupId);
+    }
+    const sequenceRow = statement(
+      "SELECT COALESCE(MAX(global_sequence), 0) AS sequence FROM product_facts",
+    ).get();
+    const result = decode(ProductGroupMembershipResult, {
+      protocolVersion: PRODUCT_PROTOCOL_VERSION,
+      groups: readGroups(),
+      sequence: sequenceRow ? requiredNumber(asRecord(sequenceRow), "sequence") : 0,
+    });
+    recordMutation({
+      mutationId: input.mutationId,
+      mutationKind,
+      requestJson,
+      responseJson: encodeJson(ProductGroupMembershipResult, result),
+    });
+    return result;
+  };
+
+  const setConversationGroups: ProductControlPlaneShape["setConversationGroups"] = (input) =>
+    effect(() => withTransaction(() => mutateConversationGroups(input, "set")));
+
+  const addConversationGroups: ProductControlPlaneShape["addConversationGroups"] = (input) =>
+    effect(() => withTransaction(() => mutateConversationGroups(input, "add")));
+
   const createConversation: ProductControlPlaneShape["createConversation"] = (input) =>
     effect(() =>
       withTransaction(() => {
         const timestamp = productIsoNow();
-        const workspaceId = input.workspaceId;
+        let workspaceId: string = input.workspaceId;
         const conversationId = input.conversationId;
-        statement(
-          `INSERT INTO product_workspaces(workspace_id, access_json, observed_at)
-           VALUES (?, ?, ?)`,
-        ).run(workspaceId, encodeJson(ProductWorkspaceAccess, input.workspace), timestamp);
+        const existingWorkspace = statement(
+          "SELECT workspace_id FROM product_workspaces WHERE workspace_id = ?",
+        ).get(workspaceId);
+        if (existingWorkspace) {
+          if (!workspaceAccessMatches(readWorkspace(workspaceId).access, input.workspace)) {
+            throw new ProductFailure(
+              "PRODUCT_WORKSPACE_ACCESS_CONFLICT",
+              "Workspace identity is already bound to different access or a different canonical root.",
+            );
+          }
+        } else {
+          const rootOwner = findWorkspaceByAccess(input.workspace);
+          if (rootOwner) {
+            workspaceId = rootOwner.id;
+          } else {
+            const workspaceTitle = inferredWorkspaceTitle(
+              input.workspace,
+              input.workspace.kind === "chat" ? "Chat" : input.title,
+            );
+            statement(
+              `INSERT INTO product_workspaces(
+                 workspace_id, title, access_json, observed_at, revision,
+                 visible_in_sidebar, is_pinned, run_command, archived_at,
+                 deleted_at, created_at, updated_at
+               ) VALUES (?, ?, ?, ?, 1, ?, 0, NULL, NULL, NULL, ?, ?)`,
+            ).run(
+              workspaceId,
+              workspaceTitle,
+              encodeJson(ProductWorkspaceAccess, input.workspace),
+              timestamp,
+              input.workspace.kind === "chat" ? 0 : 1,
+              timestamp,
+              timestamp,
+            );
+            appendWorkspaceFact(workspaceId);
+          }
+        }
         statement(
           `INSERT INTO product_conversations(
-             conversation_id, workspace_id, title, detail_sequence, created_at, updated_at
-           ) VALUES (?, ?, ?, 0, ?, ?)`,
+             conversation_id, workspace_id, title, revision, detail_sequence, created_at, updated_at
+           ) VALUES (?, ?, ?, 1, 0, ?, ?)`,
         ).run(conversationId, workspaceId, input.title, timestamp, timestamp);
         appendFact(conversationId, {
           kind: "conversation-created",
@@ -809,24 +2090,699 @@ function makeControlPlane(
       }),
     );
 
+  const updateConversationTitle: ProductControlPlaneShape["updateConversationTitle"] = (input) =>
+    effect(() =>
+      withTransaction(() => {
+        const mutationKind = "conversation-title-update";
+        const requestJson = encodeJson(ProductUpdateConversationTitleInput, input);
+        const recorded = statement(
+          `SELECT mutation_kind, request_json, response_json
+           FROM product_mutations WHERE mutation_id = ?`,
+        ).get(input.mutationId);
+        if (recorded) {
+          const row = asRecord(recorded);
+          if (
+            requiredString(row, "mutation_kind") !== mutationKind ||
+            requiredString(row, "request_json") !== requestJson
+          ) {
+            throw new ProductFailure(
+              "PRODUCT_MUTATION_ID_CONFLICT",
+              "The Product mutation identity is already bound to different input.",
+            );
+          }
+          return snapshot(input.conversationId);
+        }
+        const updated = statement(
+          `UPDATE product_conversations
+           SET title = ?, revision = revision + 1, updated_at = ?
+           WHERE conversation_id = ? AND revision = ?
+           RETURNING conversation_id`,
+        ).get(input.title, productIsoNow(), input.conversationId, input.expectedRevision);
+        if (!updated) {
+          const exists = statement(
+            "SELECT revision FROM product_conversations WHERE conversation_id = ?",
+          ).get(input.conversationId);
+          if (!exists) {
+            throw new ProductFailure(
+              "PRODUCT_CONVERSATION_NOT_FOUND",
+              "Conversation was not found.",
+            );
+          }
+          throw new ProductFailure(
+            "PRODUCT_CONVERSATION_REVISION_CONFLICT",
+            "The Conversation changed before its title was updated.",
+            true,
+          );
+        }
+        const summary = readSummary(input.conversationId);
+        appendFact(input.conversationId, {
+          kind: "conversation-updated",
+          conversation: summary,
+        });
+        const result = snapshot(input.conversationId);
+        statement(
+          `INSERT INTO product_mutations(
+             mutation_id, mutation_kind, request_json, response_json, created_at
+           ) VALUES (?, ?, ?, ?, ?)`,
+        ).run(
+          input.mutationId,
+          mutationKind,
+          requestJson,
+          encodeJson(ProductConversationSnapshot, result),
+          productIsoNow(),
+        );
+        return result;
+      }),
+    );
+
+  const archiveConversation: ProductControlPlaneShape["archiveConversation"] = (input) =>
+    effect(() =>
+      withTransaction(() => {
+        const mutationKind = "conversation-archive";
+        const requestJson = encodeJson(ProductArchiveConversationInput, input);
+        if (readRecordedMutation(input.mutationId, mutationKind, requestJson) !== undefined) {
+          return snapshot(input.conversationId);
+        }
+        const updated = statement(
+          `UPDATE product_conversations
+           SET archived_at = ?, revision = revision + 1, updated_at = ?
+           WHERE conversation_id = ? AND revision = ?
+             AND archived_at IS NULL AND deleted_at IS NULL
+           RETURNING conversation_id`,
+        ).get(productIsoNow(), productIsoNow(), input.conversationId, input.expectedRevision);
+        if (!updated) {
+          conversationMutationFailure(input.conversationId, input.expectedRevision, {
+            code: "PRODUCT_CONVERSATION_ALREADY_ARCHIVED",
+            message: "Conversation is already archived.",
+          });
+        }
+        appendFact(input.conversationId, {
+          kind: "conversation-updated",
+          conversation: readSummary(input.conversationId),
+        });
+        const result = snapshot(input.conversationId);
+        recordMutation({
+          mutationId: input.mutationId,
+          mutationKind,
+          requestJson,
+          responseJson: encodeJson(ProductConversationSnapshot, result),
+        });
+        return result;
+      }),
+    );
+
+  const restoreConversation: ProductControlPlaneShape["restoreConversation"] = (input) =>
+    effect(() =>
+      withTransaction(() => {
+        const mutationKind = "conversation-restore";
+        const requestJson = encodeJson(ProductRestoreConversationInput, input);
+        if (readRecordedMutation(input.mutationId, mutationKind, requestJson) !== undefined) {
+          return snapshot(input.conversationId);
+        }
+        const updated = statement(
+          `UPDATE product_conversations
+           SET archived_at = NULL, revision = revision + 1, updated_at = ?
+           WHERE conversation_id = ? AND revision = ?
+             AND archived_at IS NOT NULL AND deleted_at IS NULL
+           RETURNING conversation_id`,
+        ).get(productIsoNow(), input.conversationId, input.expectedRevision);
+        if (!updated) {
+          conversationMutationFailure(input.conversationId, input.expectedRevision, {
+            code: "PRODUCT_CONVERSATION_NOT_ARCHIVED",
+            message: "Conversation is not archived.",
+          });
+        }
+        appendFact(input.conversationId, {
+          kind: "conversation-updated",
+          conversation: readSummary(input.conversationId),
+        });
+        const result = snapshot(input.conversationId);
+        recordMutation({
+          mutationId: input.mutationId,
+          mutationKind,
+          requestJson,
+          responseJson: encodeJson(ProductConversationSnapshot, result),
+        });
+        return result;
+      }),
+    );
+
+  const setConversationPinned: ProductControlPlaneShape["setConversationPinned"] = (input) =>
+    effect(() =>
+      withTransaction(() => {
+        const mutationKind = "conversation-pinned-set";
+        const requestJson = encodeJson(ProductSetConversationPinnedInput, input);
+        if (readRecordedMutation(input.mutationId, mutationKind, requestJson) !== undefined) {
+          return snapshot(input.conversationId);
+        }
+        const updated = statement(
+          `UPDATE product_conversations
+           SET is_pinned = ?, revision = revision + 1, updated_at = ?
+           WHERE conversation_id = ? AND revision = ? AND deleted_at IS NULL
+           RETURNING conversation_id`,
+        ).get(
+          input.isPinned ? 1 : 0,
+          productIsoNow(),
+          input.conversationId,
+          input.expectedRevision,
+        );
+        if (!updated) conversationMutationFailure(input.conversationId, input.expectedRevision);
+        appendFact(input.conversationId, {
+          kind: "conversation-updated",
+          conversation: readSummary(input.conversationId),
+        });
+        const result = snapshot(input.conversationId);
+        recordMutation({
+          mutationId: input.mutationId,
+          mutationKind,
+          requestJson,
+          responseJson: encodeJson(ProductConversationSnapshot, result),
+        });
+        return result;
+      }),
+    );
+
+  const updateConversationNotes: ProductControlPlaneShape["updateConversationNotes"] = (input) =>
+    effect(() =>
+      withTransaction(() => {
+        const mutationKind = "conversation-notes-update";
+        const requestJson = encodeJson(ProductUpdateConversationNotesInput, input);
+        if (readRecordedMutation(input.mutationId, mutationKind, requestJson) !== undefined) {
+          return snapshot(input.conversationId);
+        }
+        const updated = statement(
+          `UPDATE product_conversations
+           SET notes = ?, revision = revision + 1, updated_at = ?
+           WHERE conversation_id = ? AND revision = ? AND deleted_at IS NULL
+           RETURNING conversation_id`,
+        ).get(input.notes, productIsoNow(), input.conversationId, input.expectedRevision);
+        if (!updated) conversationMutationFailure(input.conversationId, input.expectedRevision);
+        appendFact(input.conversationId, {
+          kind: "conversation-updated",
+          conversation: readSummary(input.conversationId),
+        });
+        const result = snapshot(input.conversationId);
+        recordMutation({
+          mutationId: input.mutationId,
+          mutationKind,
+          requestJson,
+          responseJson: encodeJson(ProductConversationSnapshot, result),
+        });
+        return result;
+      }),
+    );
+
+  const setConversationBoardState: ProductControlPlaneShape["setConversationBoardState"] = (
+    input,
+  ) =>
+    effect(() =>
+      withTransaction(() => {
+        const mutationKind = "conversation-board-state-set";
+        const requestJson = encodeJson(ProductSetConversationBoardStateInput, input);
+        if (readRecordedMutation(input.mutationId, mutationKind, requestJson) !== undefined) {
+          return snapshot(input.conversationId);
+        }
+        const changedAt = productIsoNow();
+        const updated = statement(
+          `UPDATE product_conversations
+             SET board_state = ?, board_state_changed_at = ?,
+                 revision = revision + 1, updated_at = ?
+             WHERE conversation_id = ? AND revision = ? AND deleted_at IS NULL
+             RETURNING conversation_id`,
+        ).get(input.boardState, changedAt, changedAt, input.conversationId, input.expectedRevision);
+        if (!updated) conversationMutationFailure(input.conversationId, input.expectedRevision);
+        appendFact(input.conversationId, {
+          kind: "conversation-updated",
+          conversation: readSummary(input.conversationId),
+        });
+        const result = snapshot(input.conversationId);
+        recordMutation({
+          mutationId: input.mutationId,
+          mutationKind,
+          requestJson,
+          responseJson: encodeJson(ProductConversationSnapshot, result),
+        });
+        return result;
+      }),
+    );
+
+  const assertEntryMutationTarget = (
+    conversationId: string,
+    expectedRevision: number,
+    entryId: string,
+  ): string => {
+    const summary = readSummary(conversationId);
+    if (summary.revision !== expectedRevision) {
+      throw new ProductFailure(
+        "PRODUCT_CONVERSATION_REVISION_CONFLICT",
+        "The Conversation changed before the annotation mutation was applied.",
+        true,
+      );
+    }
+    const entry = statement(
+      "SELECT body FROM product_entries WHERE entry_id = ? AND conversation_id = ?",
+    ).get(entryId, conversationId);
+    if (!entry) {
+      throw new ProductFailure(
+        "PRODUCT_ENTRY_NOT_FOUND",
+        "Entry was not found in the target Conversation.",
+      );
+    }
+    return requiredString(asRecord(entry), "body");
+  };
+
+  const advanceConversationRevision = (conversationId: string, expectedRevision: number): void => {
+    const updated = statement(
+      `UPDATE product_conversations SET revision = revision + 1, updated_at = ?
+       WHERE conversation_id = ? AND revision = ? AND deleted_at IS NULL RETURNING conversation_id`,
+    ).get(productIsoNow(), conversationId, expectedRevision);
+    if (!updated) conversationMutationFailure(conversationId, expectedRevision);
+  };
+
+  const finishEntryAnnotationMutation = (input: {
+    readonly mutationId: string;
+    readonly mutationKind: string;
+    readonly requestJson: string;
+    readonly conversationId: string;
+  }): ProductConversationSnapshot => {
+    const result = snapshot(input.conversationId);
+    recordMutation({
+      mutationId: input.mutationId,
+      mutationKind: input.mutationKind,
+      requestJson: input.requestJson,
+      responseJson: encodeJson(ProductConversationSnapshot, result),
+    });
+    return result;
+  };
+
+  const addEntryPin: ProductControlPlaneShape["addEntryPin"] = (input) =>
+    effect(() =>
+      withTransaction(() => {
+        const mutationKind = "entry-pin-add";
+        const requestJson = encodeJson(ProductAddEntryPinInput, input);
+        if (readRecordedMutation(input.mutationId, mutationKind, requestJson) !== undefined) {
+          return snapshot(input.conversationId);
+        }
+        assertEntryMutationTarget(input.conversationId, input.expectedRevision, input.entryId);
+        if (
+          statement(
+            "SELECT entry_id FROM product_entry_pins WHERE conversation_id = ? AND entry_id = ?",
+          ).get(input.conversationId, input.entryId)
+        ) {
+          return finishEntryAnnotationMutation({
+            mutationId: input.mutationId,
+            mutationKind,
+            requestJson,
+            conversationId: input.conversationId,
+          });
+        }
+        const countRow = statement(
+          "SELECT COUNT(*) AS count FROM product_entry_pins WHERE conversation_id = ?",
+        ).get(input.conversationId);
+        if (
+          countRow &&
+          requiredNumber(asRecord(countRow), "count") >= PRODUCT_ENTRY_PINS_MAX_COUNT
+        ) {
+          throw new ProductFailure("PRODUCT_ENTRY_PIN_LIMIT", "The Entry pin limit was reached.");
+        }
+        statement(
+          `INSERT INTO product_entry_pins(conversation_id, entry_id, label, done, pinned_at)
+           VALUES (?, ?, NULL, 0, ?)`,
+        ).run(input.conversationId, input.entryId, productIsoNow());
+        advanceConversationRevision(input.conversationId, input.expectedRevision);
+        appendFact(input.conversationId, {
+          kind: "entry-pins-changed",
+          conversationId: input.conversationId,
+          pins: readEntryPins(input.conversationId),
+        });
+        return finishEntryAnnotationMutation({
+          mutationId: input.mutationId,
+          mutationKind,
+          requestJson,
+          conversationId: input.conversationId,
+        });
+      }),
+    );
+
+  const removeEntryPin: ProductControlPlaneShape["removeEntryPin"] = (input) =>
+    effect(() =>
+      withTransaction(() => {
+        const mutationKind = "entry-pin-remove";
+        const requestJson = encodeJson(ProductRemoveEntryPinInput, input);
+        if (readRecordedMutation(input.mutationId, mutationKind, requestJson) !== undefined) {
+          return snapshot(input.conversationId);
+        }
+        assertEntryMutationTarget(input.conversationId, input.expectedRevision, input.entryId);
+        const removed = statement(
+          "DELETE FROM product_entry_pins WHERE conversation_id = ? AND entry_id = ? RETURNING entry_id",
+        ).get(input.conversationId, input.entryId);
+        if (removed) {
+          advanceConversationRevision(input.conversationId, input.expectedRevision);
+          appendFact(input.conversationId, {
+            kind: "entry-pins-changed",
+            conversationId: input.conversationId,
+            pins: readEntryPins(input.conversationId),
+          });
+        }
+        return finishEntryAnnotationMutation({
+          mutationId: input.mutationId,
+          mutationKind,
+          requestJson,
+          conversationId: input.conversationId,
+        });
+      }),
+    );
+
+  const setEntryPinDone: ProductControlPlaneShape["setEntryPinDone"] = (input) =>
+    effect(() =>
+      withTransaction(() => {
+        const mutationKind = "entry-pin-done-set";
+        const requestJson = encodeJson(ProductSetEntryPinDoneInput, input);
+        if (readRecordedMutation(input.mutationId, mutationKind, requestJson) !== undefined) {
+          return snapshot(input.conversationId);
+        }
+        assertEntryMutationTarget(input.conversationId, input.expectedRevision, input.entryId);
+        const updated = statement(
+          `UPDATE product_entry_pins SET done = ?
+           WHERE conversation_id = ? AND entry_id = ? RETURNING entry_id`,
+        ).get(input.done ? 1 : 0, input.conversationId, input.entryId);
+        if (!updated)
+          throw new ProductFailure("PRODUCT_ENTRY_PIN_NOT_FOUND", "Entry pin was not found.");
+        advanceConversationRevision(input.conversationId, input.expectedRevision);
+        appendFact(input.conversationId, {
+          kind: "entry-pins-changed",
+          conversationId: input.conversationId,
+          pins: readEntryPins(input.conversationId),
+        });
+        return finishEntryAnnotationMutation({
+          mutationId: input.mutationId,
+          mutationKind,
+          requestJson,
+          conversationId: input.conversationId,
+        });
+      }),
+    );
+
+  const setEntryPinLabel: ProductControlPlaneShape["setEntryPinLabel"] = (input) =>
+    effect(() =>
+      withTransaction(() => {
+        const mutationKind = "entry-pin-label-set";
+        const requestJson = encodeJson(ProductSetEntryPinLabelInput, input);
+        if (readRecordedMutation(input.mutationId, mutationKind, requestJson) !== undefined) {
+          return snapshot(input.conversationId);
+        }
+        assertEntryMutationTarget(input.conversationId, input.expectedRevision, input.entryId);
+        const updated = statement(
+          `UPDATE product_entry_pins SET label = ?
+           WHERE conversation_id = ? AND entry_id = ? RETURNING entry_id`,
+        ).get(input.label, input.conversationId, input.entryId);
+        if (!updated)
+          throw new ProductFailure("PRODUCT_ENTRY_PIN_NOT_FOUND", "Entry pin was not found.");
+        advanceConversationRevision(input.conversationId, input.expectedRevision);
+        appendFact(input.conversationId, {
+          kind: "entry-pins-changed",
+          conversationId: input.conversationId,
+          pins: readEntryPins(input.conversationId),
+        });
+        return finishEntryAnnotationMutation({
+          mutationId: input.mutationId,
+          mutationKind,
+          requestJson,
+          conversationId: input.conversationId,
+        });
+      }),
+    );
+
+  const addEntryMarker: ProductControlPlaneShape["addEntryMarker"] = (input) =>
+    effect(() =>
+      withTransaction(() => {
+        const mutationKind = "entry-marker-add";
+        const requestJson = encodeJson(ProductAddEntryMarkerInput, input);
+        if (readRecordedMutation(input.mutationId, mutationKind, requestJson) !== undefined) {
+          return snapshot(input.conversationId);
+        }
+        const body = assertEntryMutationTarget(
+          input.conversationId,
+          input.expectedRevision,
+          input.entryId,
+        );
+        if (
+          input.endOffset <= input.startOffset ||
+          input.endOffset > body.length ||
+          body.slice(input.startOffset, input.endOffset) !== input.selectedText
+        ) {
+          throw new ProductFailure(
+            "PRODUCT_ENTRY_MARKER_RANGE_INVALID",
+            "Marker offsets and selected text do not match the Entry.",
+          );
+        }
+        const digest = `sha256:${createHash("sha256").update(input.selectedText).digest("hex")}`;
+        if (digest !== input.selectedTextDigest) {
+          throw new ProductFailure(
+            "PRODUCT_ENTRY_MARKER_DIGEST_INVALID",
+            "Marker selected-text digest does not match the selection.",
+          );
+        }
+        const existing = statement(
+          `SELECT conversation_id, entry_id, start_offset, end_offset, selected_text_digest,
+                  style, color FROM product_entry_markers WHERE marker_id = ?`,
+        ).get(input.markerId);
+        if (existing) {
+          const row = asRecord(existing);
+          if (
+            requiredString(row, "conversation_id") !== input.conversationId ||
+            requiredString(row, "entry_id") !== input.entryId ||
+            requiredNumber(row, "start_offset") !== input.startOffset ||
+            requiredNumber(row, "end_offset") !== input.endOffset ||
+            requiredString(row, "selected_text_digest") !== input.selectedTextDigest ||
+            requiredString(row, "style") !== input.style ||
+            requiredString(row, "color") !== input.color
+          ) {
+            throw new ProductFailure(
+              "PRODUCT_ENTRY_MARKER_ID_CONFLICT",
+              "Marker identity is already bound to a different selection.",
+            );
+          }
+          return finishEntryAnnotationMutation({
+            mutationId: input.mutationId,
+            mutationKind,
+            requestJson,
+            conversationId: input.conversationId,
+          });
+        }
+        const countRow = statement(
+          "SELECT COUNT(*) AS count FROM product_entry_markers WHERE conversation_id = ?",
+        ).get(input.conversationId);
+        const overlapRows = statement(
+          `SELECT marker_id FROM product_entry_markers
+           WHERE conversation_id = ? AND entry_id = ?
+             AND start_offset < ? AND end_offset > ?`,
+        ).all(input.conversationId, input.entryId, input.endOffset, input.startOffset);
+        const count = countRow ? requiredNumber(asRecord(countRow), "count") : 0;
+        if (count - overlapRows.length >= PRODUCT_ENTRY_MARKERS_MAX_COUNT) {
+          throw new ProductFailure(
+            "PRODUCT_ENTRY_MARKER_LIMIT",
+            "The Entry marker limit was reached.",
+          );
+        }
+        statement(
+          `DELETE FROM product_entry_markers
+           WHERE conversation_id = ? AND entry_id = ?
+             AND start_offset < ? AND end_offset > ?`,
+        ).run(input.conversationId, input.entryId, input.endOffset, input.startOffset);
+        const timestamp = productIsoNow();
+        statement(
+          `INSERT INTO product_entry_markers(
+             marker_id, conversation_id, entry_id, start_offset, end_offset,
+             selected_text, selected_text_digest, style, color, label, done, created_at, updated_at
+           ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, NULL, 0, ?, ?)`,
+        ).run(
+          input.markerId,
+          input.conversationId,
+          input.entryId,
+          input.startOffset,
+          input.endOffset,
+          input.selectedText,
+          input.selectedTextDigest,
+          input.style,
+          input.color,
+          timestamp,
+          timestamp,
+        );
+        advanceConversationRevision(input.conversationId, input.expectedRevision);
+        appendFact(input.conversationId, {
+          kind: "entry-markers-changed",
+          conversationId: input.conversationId,
+          markers: readEntryMarkers(input.conversationId),
+        });
+        return finishEntryAnnotationMutation({
+          mutationId: input.mutationId,
+          mutationKind,
+          requestJson,
+          conversationId: input.conversationId,
+        });
+      }),
+    );
+
+  const removeEntryMarker: ProductControlPlaneShape["removeEntryMarker"] = (input) =>
+    effect(() =>
+      withTransaction(() => {
+        const mutationKind = "entry-marker-remove";
+        const requestJson = encodeJson(ProductRemoveEntryMarkerInput, input);
+        if (readRecordedMutation(input.mutationId, mutationKind, requestJson) !== undefined) {
+          return snapshot(input.conversationId);
+        }
+        readSummary(input.conversationId).revision === input.expectedRevision ||
+          conversationMutationFailure(input.conversationId, input.expectedRevision);
+        const removed = statement(
+          `DELETE FROM product_entry_markers
+           WHERE marker_id = ? AND conversation_id = ? RETURNING marker_id`,
+        ).get(input.markerId, input.conversationId);
+        if (removed) {
+          advanceConversationRevision(input.conversationId, input.expectedRevision);
+          appendFact(input.conversationId, {
+            kind: "entry-markers-changed",
+            conversationId: input.conversationId,
+            markers: readEntryMarkers(input.conversationId),
+          });
+        }
+        return finishEntryAnnotationMutation({
+          mutationId: input.mutationId,
+          mutationKind,
+          requestJson,
+          conversationId: input.conversationId,
+        });
+      }),
+    );
+
+  const setEntryMarkerDone: ProductControlPlaneShape["setEntryMarkerDone"] = (input) =>
+    effect(() =>
+      withTransaction(() => {
+        const mutationKind = "entry-marker-done-set";
+        const requestJson = encodeJson(ProductSetEntryMarkerDoneInput, input);
+        if (readRecordedMutation(input.mutationId, mutationKind, requestJson) !== undefined) {
+          return snapshot(input.conversationId);
+        }
+        const current = readSummary(input.conversationId);
+        if (current.revision !== input.expectedRevision) {
+          conversationMutationFailure(input.conversationId, input.expectedRevision);
+        }
+        const updated = statement(
+          `UPDATE product_entry_markers SET done = ?, updated_at = ?
+           WHERE marker_id = ? AND conversation_id = ? RETURNING marker_id`,
+        ).get(input.done ? 1 : 0, productIsoNow(), input.markerId, input.conversationId);
+        if (!updated) {
+          throw new ProductFailure("PRODUCT_ENTRY_MARKER_NOT_FOUND", "Entry marker was not found.");
+        }
+        advanceConversationRevision(input.conversationId, input.expectedRevision);
+        appendFact(input.conversationId, {
+          kind: "entry-markers-changed",
+          conversationId: input.conversationId,
+          markers: readEntryMarkers(input.conversationId),
+        });
+        return finishEntryAnnotationMutation({
+          mutationId: input.mutationId,
+          mutationKind,
+          requestJson,
+          conversationId: input.conversationId,
+        });
+      }),
+    );
+
+  const setEntryMarkerLabel: ProductControlPlaneShape["setEntryMarkerLabel"] = (input) =>
+    effect(() =>
+      withTransaction(() => {
+        const mutationKind = "entry-marker-label-set";
+        const requestJson = encodeJson(ProductSetEntryMarkerLabelInput, input);
+        if (readRecordedMutation(input.mutationId, mutationKind, requestJson) !== undefined) {
+          return snapshot(input.conversationId);
+        }
+        const current = readSummary(input.conversationId);
+        if (current.revision !== input.expectedRevision) {
+          conversationMutationFailure(input.conversationId, input.expectedRevision);
+        }
+        const updated = statement(
+          `UPDATE product_entry_markers SET label = ?, updated_at = ?
+           WHERE marker_id = ? AND conversation_id = ? RETURNING marker_id`,
+        ).get(input.label, productIsoNow(), input.markerId, input.conversationId);
+        if (!updated) {
+          throw new ProductFailure("PRODUCT_ENTRY_MARKER_NOT_FOUND", "Entry marker was not found.");
+        }
+        advanceConversationRevision(input.conversationId, input.expectedRevision);
+        appendFact(input.conversationId, {
+          kind: "entry-markers-changed",
+          conversationId: input.conversationId,
+          markers: readEntryMarkers(input.conversationId),
+        });
+        return finishEntryAnnotationMutation({
+          mutationId: input.mutationId,
+          mutationKind,
+          requestJson,
+          conversationId: input.conversationId,
+        });
+      }),
+    );
+
+  const deleteConversation: ProductControlPlaneShape["deleteConversation"] = (input) =>
+    effect(() =>
+      withTransaction(() => {
+        const mutationKind = "conversation-delete";
+        const requestJson = encodeJson(ProductDeleteConversationInput, input);
+        const recorded = readRecordedMutation(input.mutationId, mutationKind, requestJson);
+        if (recorded !== undefined) {
+          return decodeJson(ProductDeleteConversationResult, recorded);
+        }
+        const deletedAt = productIsoNow();
+        const updated = statement(
+          `UPDATE product_conversations
+           SET deleted_at = ?, revision = revision + 1, updated_at = ?
+           WHERE conversation_id = ? AND revision = ? AND deleted_at IS NULL
+           RETURNING revision`,
+        ).get(deletedAt, deletedAt, input.conversationId, input.expectedRevision);
+        if (!updated) conversationMutationFailure(input.conversationId, input.expectedRevision);
+        appendFact(input.conversationId, {
+          kind: "conversation-tombstone",
+          conversationId: input.conversationId,
+        });
+        const result = decode(ProductDeleteConversationResult, {
+          protocolVersion: PRODUCT_PROTOCOL_VERSION,
+          conversationId: input.conversationId,
+          revision: requiredNumber(asRecord(updated), "revision"),
+          sequence: detailSequence(input.conversationId),
+        });
+        recordMutation({
+          mutationId: input.mutationId,
+          mutationKind,
+          requestJson,
+          responseJson: encodeJson(ProductDeleteConversationResult, result),
+        });
+        return result;
+      }),
+    );
+
   const hasConversation: ProductControlPlaneShape["hasConversation"] = (conversationId) =>
     effect(
       () =>
         statement(
-          "SELECT conversation_id FROM product_conversations WHERE conversation_id = ?",
+          `SELECT conversation_id FROM product_conversations
+           WHERE conversation_id = ? AND deleted_at IS NULL`,
         ).get(conversationId) !== undefined,
     );
 
   const getShellSnapshot: ProductControlPlaneShape["getShellSnapshot"] = () =>
     Effect.gen(function* () {
-      if (executionBoundary.catalog) {
-        runtimeCatalog = yield* executionBoundary
-          .catalog()
-          .pipe(Effect.catch(() => Effect.succeed(null)));
-      }
+      yield* observeRuntimeCatalog();
       return yield* effect(() => {
+        const workspaceIds = statement(
+          `SELECT workspace_id FROM product_workspaces
+           WHERE deleted_at IS NULL
+           ORDER BY updated_at DESC, workspace_id ASC`,
+        )
+          .all()
+          .map((raw) => requiredString(asRecord(raw), "workspace_id"));
         const ids = statement(
           `SELECT conversation_id FROM product_conversations
+         WHERE deleted_at IS NULL
          ORDER BY updated_at DESC, conversation_id ASC`,
         )
           .all()
@@ -837,6 +2793,8 @@ function makeControlPlane(
         return decode(ProductShellSnapshot, {
           protocolVersion: PRODUCT_PROTOCOL_VERSION,
           sequence: highWater ? requiredNumber(asRecord(highWater), "high_water") : 0,
+          workspaces: workspaceIds.map(readWorkspaceSummary),
+          groups: readGroups(),
           conversations: ids.map(readSummary),
           runtimeCatalog,
         });
@@ -872,10 +2830,7 @@ function makeControlPlane(
               : "The Product Run has no confirmed accepted operation.",
         });
       }
-      if (
-        (input.control === "steer" || input.control === "follow-up") &&
-        input.text === null
-      ) {
+      if ((input.control === "steer" || input.control === "follow-up") && input.text === null) {
         return decode(ProductControlRunResult, {
           operationRef: receipt.operationRef,
           control: input.control,
@@ -905,6 +2860,7 @@ function makeControlPlane(
       withTransaction(() => {
         const conversation = readSummary(input.conversationId);
         assertResourceAuthority(readWorkspace(conversation.workspaceId), input.resources);
+        validateCatalogSelection(input.requestedSelection);
         const existing = statement(
           `SELECT revision, position, created_at FROM product_queue_items
            WHERE queue_item_id = ? AND conversation_id = ?`,
@@ -1061,18 +3017,15 @@ function makeControlPlane(
           .all(input.conversationId)
           .map((raw) => {
             const row = asRecord(raw);
-            const receipt = decodeJson(
-              ProductDispatchReceipt,
-              requiredString(row, "receipt_json"),
-            );
+            const receipt = decodeJson(ProductDispatchReceipt, requiredString(row, "receipt_json"));
             return {
               receipt,
               blocks:
-              requiredString(row, "state") !== "terminal" ||
-              receipt.state === "accepted" ||
-              receipt.state === "running" ||
-              receipt.state === "delivery_unknown" ||
-              receipt.state === "outcome_unknown",
+                requiredString(row, "state") !== "terminal" ||
+                receipt.state === "accepted" ||
+                receipt.state === "running" ||
+                receipt.state === "delivery_unknown" ||
+                receipt.state === "outcome_unknown",
             };
           })
           .find((candidate) => candidate.blocks)?.receipt;
@@ -1103,13 +3056,7 @@ function makeControlPlane(
             true,
           );
         }
-        if (queueItem.requestedSelection.modelId === null) {
-          throw new ProductFailure(
-            "PRODUCT_MODEL_SELECTION_REQUIRED",
-            "A currently available runtime model must be selected before admission.",
-            true,
-          );
-        }
+        assertDispatchableSelection(queueItem.requestedSelection);
         const workspaceId = readSummary(input.conversationId).workspaceId;
         const workspace = readWorkspace(workspaceId);
         assertResourceAuthority(workspace, queueItem.resources);
@@ -1131,7 +3078,7 @@ function makeControlPlane(
           input.runId,
           input.conversationId,
           input.entryId,
-          encodeJson(ProductRequestedSelection, queueItem.requestedSelection),
+          encodeJson(ProductSelectedRuntime, queueItem.requestedSelection),
           encodeJson(ProductWorkspace, workspace),
           queueItem.requestedSelection.packageGeneration,
           input.receiptId,
@@ -1166,6 +3113,10 @@ function makeControlPlane(
              automatic_replay_count, updated_at
            ) VALUES (?, ?, 'pending', 'pre-send', 0, 0, ?)`,
         ).run(input.dispatchId, input.runId, timestamp);
+        statement(
+          `INSERT INTO product_submit_admissions(dispatch_id, request_json)
+           VALUES (?, ?)`,
+        ).run(input.dispatchId, encodeJson(ProductSubmitQueueItemInput, input));
         const run = readRun(input.runId);
         const priorBinding = statement(
           `SELECT lineage_ref FROM product_engine_bindings
@@ -1447,7 +3398,25 @@ function makeControlPlane(
 
   const submitQueueItem: ProductControlPlaneShape["submitQueueItem"] = (input) =>
     Effect.gen(function* () {
-      yield* admitQueueItem(input);
+      const recordedAdmission = yield* effect(() =>
+        statement("SELECT request_json FROM product_submit_admissions WHERE dispatch_id = ?").get(
+          input.dispatchId,
+        ),
+      );
+      if (recordedAdmission) {
+        const requestJson = requiredString(asRecord(recordedAdmission), "request_json");
+        if (requestJson !== encodeJson(ProductSubmitQueueItemInput, input)) {
+          return yield* Effect.fail(
+            new ProductControlPlaneError({
+              code: "PRODUCT_SUBMIT_IDENTITY_CONFLICT",
+              message: "Dispatch identity was already admitted with different Queue input.",
+              retryable: false,
+            }),
+          );
+        }
+      } else {
+        yield* admitQueueItem(input);
+      }
       yield* dispatchPending(input.dispatchId);
       return decode(ProductSubmitResult, {
         snapshot: yield* getConversationSnapshot({
@@ -1459,91 +3428,105 @@ function makeControlPlane(
     });
 
   const readFacts: ProductControlPlaneShape["readFacts"] = (input) =>
-    effect(() => {
+    Effect.gen(function* () {
       const isShell = input.scope.kind === "shell";
-      const highWaterRaw = isShell
-        ? statement(
-            "SELECT COALESCE(MAX(global_sequence), 0) AS high_water FROM product_facts",
-          ).get()
-        : statement(
-            `SELECT detail_sequence AS high_water FROM product_conversations
+      if (isShell) yield* observeRuntimeCatalog();
+      return yield* effect(() => {
+        const highWaterRaw = isShell
+          ? statement(
+              "SELECT COALESCE(MAX(global_sequence), 0) AS high_water FROM product_facts",
+            ).get()
+          : statement(
+              `SELECT detail_sequence AS high_water FROM product_conversations
              WHERE conversation_id = ?`,
-          ).get(input.scope.conversationId);
-      if (!highWaterRaw) {
-        throw new ProductFailure("PRODUCT_CONVERSATION_NOT_FOUND", "Conversation was not found.");
-      }
-      const highWaterSequence = requiredNumber(asRecord(highWaterRaw), "high_water");
-      if (input.afterSequence > highWaterSequence) {
-        return decode(ProductFactBatch, {
-          protocolVersion: PRODUCT_PROTOCOL_VERSION,
-          scope: input.scope,
-          afterSequence: input.afterSequence,
-          highWaterSequence,
-          facts: [],
-          resnapshotRequired: true,
-          reason: "cursor-ahead",
-        });
-      }
-      const countRaw = isShell
-        ? statement("SELECT COUNT(*) AS count FROM product_facts WHERE global_sequence > ?").get(
-            input.afterSequence,
-          )
-        : statement(
-            `SELECT COUNT(*) AS count FROM product_facts
+            ).get(input.scope.conversationId);
+        if (!highWaterRaw) {
+          throw new ProductFailure("PRODUCT_CONVERSATION_NOT_FOUND", "Conversation was not found.");
+        }
+        const highWaterSequence = requiredNumber(asRecord(highWaterRaw), "high_water");
+        if (input.afterSequence > highWaterSequence) {
+          return decode(ProductFactBatch, {
+            protocolVersion: PRODUCT_PROTOCOL_VERSION,
+            scope: input.scope,
+            afterSequence: input.afterSequence,
+            highWaterSequence,
+            facts: [],
+            resnapshotRequired: true,
+            reason: "cursor-ahead",
+          });
+        }
+        const countRaw = isShell
+          ? statement("SELECT COUNT(*) AS count FROM product_facts WHERE global_sequence > ?").get(
+              input.afterSequence,
+            )
+          : statement(
+              `SELECT COUNT(*) AS count FROM product_facts
              WHERE conversation_id = ? AND conversation_sequence > ?`,
-          ).get(input.scope.conversationId, input.afterSequence);
-      const count = countRaw ? requiredNumber(asRecord(countRaw), "count") : 0;
-      if (count > input.limit || count > PRODUCT_MAX_FACTS_PER_BATCH) {
-        return decode(ProductFactBatch, {
-          protocolVersion: PRODUCT_PROTOCOL_VERSION,
-          scope: input.scope,
-          afterSequence: input.afterSequence,
-          highWaterSequence,
-          facts: [],
-          resnapshotRequired: true,
-          reason: "overflow",
-        });
-      }
-      const rows = isShell
-        ? statement(
-            `SELECT global_sequence AS sequence, fact_id, conversation_id, emitted_at,
+            ).get(input.scope.conversationId, input.afterSequence);
+        const count = countRaw ? requiredNumber(asRecord(countRaw), "count") : 0;
+        if (count > input.limit || count > PRODUCT_MAX_FACTS_PER_BATCH) {
+          return decode(ProductFactBatch, {
+            protocolVersion: PRODUCT_PROTOCOL_VERSION,
+            scope: input.scope,
+            afterSequence: input.afterSequence,
+            highWaterSequence,
+            facts: [],
+            resnapshotRequired: true,
+            reason: "overflow",
+          });
+        }
+        const rows = isShell
+          ? statement(
+              `SELECT global_sequence AS sequence, fact_id, conversation_id, workspace_id, group_id,
+                    emitted_at,
                     shell_change_json AS change_json
              FROM product_facts WHERE global_sequence > ?
              ORDER BY global_sequence ASC LIMIT ?`,
-          ).all(input.afterSequence, input.limit)
-        : statement(
-            `SELECT conversation_sequence AS sequence, fact_id, conversation_id,
+            ).all(input.afterSequence, input.limit)
+          : statement(
+              `SELECT conversation_sequence AS sequence, fact_id, conversation_id,
                     emitted_at, detail_change_json AS change_json
              FROM product_facts
              WHERE conversation_id = ? AND conversation_sequence > ?
              ORDER BY conversation_sequence ASC LIMIT ?`,
-          ).all(input.scope.conversationId, input.afterSequence, input.limit);
-      const facts = rows.map((raw) => {
-        const row = asRecord(raw);
-        const base = {
-          protocolVersion: PRODUCT_PROTOCOL_VERSION,
-          sequence: requiredNumber(row, "sequence"),
-          factId: requiredString(row, "fact_id"),
-          conversationId: requiredString(row, "conversation_id"),
-          emittedAt: requiredString(row, "emitted_at"),
-        };
-        return isShell
-          ? decode(ProductShellFact, {
-              ...base,
+            ).all(input.scope.conversationId, input.afterSequence, input.limit);
+        const facts = rows.map((raw) => {
+          const row = asRecord(raw);
+          const common = {
+            protocolVersion: PRODUCT_PROTOCOL_VERSION,
+            sequence: requiredNumber(row, "sequence"),
+            factId: requiredString(row, "fact_id"),
+            emittedAt: requiredString(row, "emitted_at"),
+          };
+          if (isShell) {
+            const scopeIdentity =
+              typeof row.conversation_id === "string"
+                ? { conversationId: row.conversation_id }
+                : typeof row.workspace_id === "string"
+                  ? { workspaceId: row.workspace_id }
+                  : typeof row.group_id === "string"
+                    ? { groupId: row.group_id }
+                    : {};
+            return decode(ProductShellFact, {
+              ...common,
+              ...scopeIdentity,
               change: decodeJson(ProductShellFactChange, requiredString(row, "change_json")),
-            })
-          : decode(ProductDetailFact, {
-              ...base,
-              change: decodeJson(ProductDetailFactChange, requiredString(row, "change_json")),
             });
-      });
-      return decode(ProductFactBatch, {
-        protocolVersion: PRODUCT_PROTOCOL_VERSION,
-        scope: input.scope,
-        afterSequence: input.afterSequence,
-        highWaterSequence,
-        facts,
-        resnapshotRequired: false,
+          }
+          return decode(ProductDetailFact, {
+            ...common,
+            conversationId: requiredString(row, "conversation_id"),
+            change: decodeJson(ProductDetailFactChange, requiredString(row, "change_json")),
+          });
+        });
+        return decode(ProductFactBatch, {
+          protocolVersion: PRODUCT_PROTOCOL_VERSION,
+          scope: input.scope,
+          afterSequence: input.afterSequence,
+          highWaterSequence,
+          facts,
+          resnapshotRequired: false,
+        });
       });
     });
 
@@ -1923,12 +3906,7 @@ function makeControlPlane(
         `INSERT INTO product_runtime_recoveries(
            run_id, snapshot_version, kind, created_at
          ) VALUES (?, ?, ?, ?)`,
-      ).run(
-        recovery.runId,
-        recovery.snapshotVersion,
-        recovery.kind,
-        recovery.createdAt,
-      );
+      ).run(recovery.runId, recovery.snapshotVersion, recovery.kind, recovery.createdAt);
       appendFact(run.conversationId, {
         kind: "runtime-recovered",
         conversationId: run.conversationId,
@@ -2043,9 +4021,7 @@ function makeControlPlane(
       ) {
         executionBoundary.resumeFacts(
           decode(ProductRun.fields.id, requiredString(row, "run_id")),
-          receipt.state === "delivery_unknown"
-            ? receipt.reconciliationHint!
-            : receipt.operationRef,
+          receipt.state === "delivery_unknown" ? receipt.reconciliationHint! : receipt.operationRef,
         );
       }
     }
@@ -2076,8 +4052,34 @@ function makeControlPlane(
     );
 
   return {
+    createWorkspace,
+    updateWorkspaceTitle,
+    setWorkspacePinned,
+    updateWorkspaceRunCommand,
+    deleteWorkspace,
+    createGroup,
+    updateGroup,
+    reorderGroups,
+    deleteGroup,
+    setConversationGroups,
+    addConversationGroups,
     hasConversation,
     createConversation,
+    updateConversationTitle,
+    archiveConversation,
+    restoreConversation,
+    deleteConversation,
+    setConversationPinned,
+    updateConversationNotes,
+    setConversationBoardState,
+    addEntryPin,
+    removeEntryPin,
+    setEntryPinDone,
+    setEntryPinLabel,
+    addEntryMarker,
+    removeEntryMarker,
+    setEntryMarkerDone,
+    setEntryMarkerLabel,
     getShellSnapshot,
     getConversationSnapshot,
     putQueueItem,

@@ -1,4 +1,4 @@
-import { ORCHESTRATION_WS_METHODS, WS_METHODS } from "@omnimind/contracts";
+import { PRODUCT_RPC_METHODS, SYSTEM_RPC_METHODS } from "@omnimind/contracts";
 import { Deferred, Effect, Fiber } from "effect";
 import { describe, expect, it } from "vitest";
 
@@ -6,23 +6,22 @@ import { classifyWsRequest, makeWsRequestAdmission } from "./wsRequestAdmission"
 
 describe("WsRequestAdmission", () => {
   it("keeps lightweight shell reads out of the expensive lane", () => {
-    expect(classifyWsRequest(ORCHESTRATION_WS_METHODS.getShellSnapshot)).toBe("standard");
-    expect(classifyWsRequest(ORCHESTRATION_WS_METHODS.getThreadDetailSnapshot)).toBe(
+    expect(classifyWsRequest(PRODUCT_RPC_METHODS.getShellSnapshot)).toBe("standard");
+    expect(classifyWsRequest(PRODUCT_RPC_METHODS.getConversationSnapshot)).toBe(
       "expensive-read",
     );
-    expect(classifyWsRequest(ORCHESTRATION_WS_METHODS.getTurnDiff)).toBe("expensive-read");
-    expect(classifyWsRequest(ORCHESTRATION_WS_METHODS.repairState)).toBe("expensive-read");
-    expect(classifyWsRequest(WS_METHODS.terminalAckOutput)).toBe("control");
+    expect(classifyWsRequest(PRODUCT_RPC_METHODS.readFacts)).toBe("expensive-read");
+    expect(classifyWsRequest(SYSTEM_RPC_METHODS.terminalAckOutput)).toBe("control");
   });
 
   it("reserves independent capacity for control traffic during an expensive-read flood", async () => {
     await Effect.runPromise(
       Effect.gen(function* () {
         const admission = yield* makeWsRequestAdmission;
-        const first = yield* admission.acquire(1, ORCHESTRATION_WS_METHODS.getSnapshot);
-        const second = yield* admission.acquire(1, WS_METHODS.statsGetProfileStats);
+        const first = yield* admission.acquire(1, PRODUCT_RPC_METHODS.getConversationSnapshot);
+        const second = yield* admission.acquire(1, SYSTEM_RPC_METHODS.readFile);
         const rejected = yield* admission
-          .acquire(1, WS_METHODS.gitReadWorkingTreeDiff)
+          .acquire(1, SYSTEM_RPC_METHODS.gitReadDiff)
           .pipe(Effect.exit);
 
         expect(rejected._tag).toBe("Failure");
@@ -30,7 +29,7 @@ describe("WsRequestAdmission", () => {
           expect(String(rejected.cause)).toContain("RPC_EXPENSIVE_READ_CAPACITY_EXCEEDED");
         }
 
-        const control = yield* admission.acquire(1, WS_METHODS.terminalAckOutput);
+        const control = yield* admission.acquire(1, SYSTEM_RPC_METHODS.terminalAckOutput);
         expect(control.requestClass).toBe("control");
         yield* admission.release(first);
         yield* admission.release(first);
@@ -50,11 +49,11 @@ describe("WsRequestAdmission", () => {
     await Effect.runPromise(
       Effect.gen(function* () {
         const admission = yield* makeWsRequestAdmission;
-        const clientOne = yield* admission.acquire(1, ORCHESTRATION_WS_METHODS.getSnapshot);
-        const clientTwo = yield* admission.acquire(2, ORCHESTRATION_WS_METHODS.getSnapshot);
+        const clientOne = yield* admission.acquire(1, PRODUCT_RPC_METHODS.getConversationSnapshot);
+        const clientTwo = yield* admission.acquire(2, PRODUCT_RPC_METHODS.getConversationSnapshot);
 
         const failed = yield* admission
-          .guard(1, WS_METHODS.gitStatus, Effect.fail("expected"))
+          .guard(1, SYSTEM_RPC_METHODS.gitStatus, Effect.fail("expected"))
           .pipe(Effect.exit);
         expect(failed._tag).toBe("Failure");
 
@@ -78,7 +77,7 @@ describe("WsRequestAdmission", () => {
         const fiber = yield* admission
           .guard(
             1,
-            ORCHESTRATION_WS_METHODS.getSnapshot,
+            PRODUCT_RPC_METHODS.getConversationSnapshot,
             Deferred.succeed(started, undefined).pipe(Effect.andThen(Effect.never)),
           )
           .pipe(Effect.forkChild);

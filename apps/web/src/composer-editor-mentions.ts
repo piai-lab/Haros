@@ -15,7 +15,6 @@ import {
   normalizeComposerLinkUrl,
   trimTrailingLinkPunctuation,
 } from "./lib/linkChips";
-import { resolveAgentAlias } from "@omnimind/contracts";
 import type { ProviderMentionReference } from "@omnimind/contracts";
 import { threadIdFromThreadMentionPath } from "@omnimind/shared/threadMentions";
 
@@ -49,12 +48,6 @@ export type ComposerPromptSegment =
       context: TerminalContextDraft | null;
     }
   | {
-      /** Agent mention: @alias - chip for subagent reference (parens are plain text) */
-      type: "agent-mention";
-      alias: string;
-      color: string;
-    }
-  | {
       /** URL/domain rendered as a tappable link chip. */
       type: "link";
       url: string;
@@ -80,9 +73,6 @@ const DISPLAY_LINK_TOKEN_REGEX = new RegExp(LINK_TOKEN_DISPLAY_PATTERN, "g");
 const LINK_TOKEN_FIRST_REGEX = new RegExp(LINK_TOKEN_TYPING_PATTERN);
 const DISPLAY_LINK_TOKEN_FIRST_REGEX = new RegExp(LINK_TOKEN_DISPLAY_PATTERN);
 
-// Agent mention chip: @alias(
-// Keep plain @alias text editable while typing so the picker can stay open.
-const AGENT_MENTION_TOKEN_REGEX = /(^|\s)@([a-zA-Z0-9._-]+)(?=\()/g;
 
 /**
  * Finds the first bare-URL token in `text` using the same rules as the segment split: while
@@ -136,13 +126,6 @@ type InlineTokenMatch =
   | {
       kind: "slash-command";
       command: ComposerSlashCommand;
-      start: number;
-      end: number;
-    }
-  | {
-      kind: "agent-mention";
-      alias: string;
-      color: string;
       start: number;
       end: number;
     }
@@ -206,42 +189,6 @@ function collectInlineTokenMatches(
     matches.push({ kind: "link", url, start, end });
   }
 
-  // Track positions covered by agent mentions to avoid double-matching
-  const agentMentionRanges: Array<{ start: number; end: number }> = [];
-
-  // First, match agent mentions: @alias (just the alias, parens are plain text)
-  for (const match of text.matchAll(AGENT_MENTION_TOKEN_REGEX)) {
-    const whitespace = match[1] ?? "";
-    const alias = match[2] ?? "";
-    const matchIndex = match.index ?? 0;
-    const start = matchIndex + whitespace.length;
-    const end = start + 1 + alias.length; // @alias
-
-    // Skip if this falls inside a URL token
-    if (isReserved(start)) continue;
-
-    // Try to resolve the alias
-    const resolved = resolveAgentAlias(alias);
-    if (!resolved) {
-      // Not a valid agent alias, skip - will be handled as regular mention
-      continue;
-    }
-
-    agentMentionRanges.push({ start, end });
-
-    matches.push({
-      kind: "agent-mention",
-      alias,
-      color: resolved.color,
-      start,
-      end,
-    });
-  }
-
-  // Helper to check if a position is inside an agent mention
-  const isInsideAgentMention = (pos: number): boolean =>
-    agentMentionRanges.some((range) => pos >= range.start && pos < range.end);
-
   for (const match of text.matchAll(mentionRegex)) {
     const fullMatch = match[0];
     const prefix = match[1] ?? "";
@@ -250,8 +197,9 @@ function collectInlineTokenMatches(
     const start = matchIndex + prefix.length;
     const end = start + fullMatch.length - prefix.length;
 
-    // Skip if this overlaps with an agent mention or sits inside a URL
-    if (isInsideAgentMention(start) || isReserved(start)) continue;
+    if (isReserved(start)) continue;
+    // Retired provider-agent syntax remains literal text; it is not a file/thread mention.
+    if (text[end] === "(") continue;
 
     if (path.length > 0) {
       matches.push({ kind: "mention", value: path, start, end });
@@ -267,8 +215,7 @@ function collectInlineTokenMatches(
     const start = matchIndex + whitespace.length;
     const end = start + fullMatch.length - whitespace.length;
 
-    // Skip if this overlaps with an agent mention or sits inside a URL
-    if (isInsideAgentMention(start) || isReserved(start)) continue;
+    if (isReserved(start)) continue;
 
     if (name.length === 0) {
       continue;
@@ -315,12 +262,6 @@ function splitTextIntoPromptSegments(
 
     if (match.kind === "link") {
       segments.push({ type: "link", url: match.url });
-    } else if (match.kind === "agent-mention") {
-      segments.push({
-        type: "agent-mention",
-        alias: match.alias,
-        color: match.color,
-      });
     } else if (match.kind === "mention") {
       const threadMention = findThreadProviderMentionReferenceForToken(
         match.value,

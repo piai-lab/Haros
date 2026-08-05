@@ -1,9 +1,9 @@
+import type { ConversationHistoryActivity } from "~/historicalConversation";
 // FILE: RateLimitBanner.tsx
 // Purpose: Derives and renders provider rate-limit warnings for the active chat.
 // Layer: Chat status presentation
 // Exports: RateLimitBanner and rate-limit derivation helpers.
 
-import type { OrchestrationThreadActivity } from "@omnimind/contracts";
 import { Alert, AlertAction, AlertDescription } from "../ui/alert";
 import { IconButton } from "../ui/icon-button";
 import { CircleAlertIcon, XIcon } from "~/lib/icons";
@@ -20,7 +20,7 @@ function asRecord(value: unknown): Record<string, unknown> | null {
 }
 
 export function deriveLatestRateLimitStatus(
-  activities: ReadonlyArray<OrchestrationThreadActivity>,
+  activities: ReadonlyArray<ConversationHistoryActivity>,
 ): RateLimitStatus | null {
   const now = Date.now();
   for (let i = activities.length - 1; i >= 0; i--) {

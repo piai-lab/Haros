@@ -12,15 +12,15 @@ import { useState } from "react";
 
 import { PullRequestAvatar } from "./PullRequestAvatar";
 import { PullRequestList } from "./PullRequestList";
-import { PullRequestProjectFilterPopover } from "./PullRequestListFilters";
+import { PullRequestWorkspaceFilterPopover } from "./PullRequestListFilters";
 import { PullRequestRow } from "./PullRequestRow";
 import { groupPullRequestEntriesByInvolvement } from "./pullRequestList.logic";
 import { focusPullRequestRow, isFocusInsideRightDock } from "./pullRequestFocus";
 
 function makeEntry(isPinned: boolean): PullRequestListEntry {
   return {
-    projectId: "project-1" as PullRequestListEntry["projectId"],
-    projectTitle: "Project One",
+    workspaceId: "project-1" as PullRequestListEntry["workspaceId"],
+    workspaceTitle: "Project One",
     repository: "acme/widgets",
     number: 42,
     title: "Prioritize this pull request",
@@ -37,10 +37,10 @@ function makeEntry(isPinned: boolean): PullRequestListEntry {
     reviewDecision: null,
     viewerReviewRequested: false,
     isPinned,
-    projectContexts: [
+    workspaceContexts: [
       {
-        projectId: "project-1" as PullRequestListEntry["projectId"],
-        projectTitle: "Project One",
+        workspaceId: "project-1" as PullRequestListEntry["workspaceId"],
+        workspaceTitle: "Project One",
         isPinned,
       },
     ],
@@ -55,7 +55,7 @@ function StatefulGroupedList() {
     <PullRequestList
       entries={[entry]}
       grouped={groupPullRequestEntriesByInvolvement([entry], null)}
-      selectedProjectId={undefined}
+      selectedWorkspaceId={undefined}
       selectedRepo={undefined}
       selectedNumber={undefined}
       onSelect={() => {}}
@@ -175,7 +175,7 @@ describe("PullRequestRow pin control", () => {
       <PullRequestRow
         entry={makeEntry(false)}
         selected={false}
-        showProjectTitle
+        showWorkspaceTitle
         onClick={vi.fn()}
         onTogglePinned={vi.fn()}
       />,
@@ -191,17 +191,17 @@ describe("PullRequestRow pin control", () => {
       <PullRequestRow
         entry={{
           ...entry,
-          projectContexts: [
-            ...(entry.projectContexts ?? []),
+          workspaceContexts: [
+            ...(entry.workspaceContexts ?? []),
             {
-              projectId: "project-2" as PullRequestListEntry["projectId"],
-              projectTitle: "Project Two",
+              workspaceId: "project-2" as PullRequestListEntry["workspaceId"],
+              workspaceTitle: "Project Two",
               isPinned: false,
             },
           ],
         }}
         selected={false}
-        showProjectTitle
+        showWorkspaceTitle
         onClick={vi.fn()}
         onTogglePinned={vi.fn()}
       />,
@@ -234,7 +234,7 @@ describe("PullRequestRow pin control", () => {
     expect(
       focusPullRequestRow(document, {
         ...entry,
-        projectId: "different-project" as PullRequestListEntry["projectId"],
+        workspaceId: "different-project" as PullRequestListEntry["workspaceId"],
       }),
     ).toBe(true);
     expect(document.activeElement?.getAttribute("data-pull-request-number")).toBe("42");
@@ -253,17 +253,17 @@ describe("PullRequestRow pin control", () => {
   });
 });
 
-describe("PullRequestProjectFilterPopover", () => {
+describe("PullRequestWorkspaceFilterPopover", () => {
   afterEach(() => {
     document.body.innerHTML = "";
   });
 
   it("announces the selected project on both the trigger and options", async () => {
-    const projectId = "project-1" as PullRequestListEntry["projectId"];
+    const workspaceId = "project-1" as PullRequestListEntry["workspaceId"];
     await render(
-      <PullRequestProjectFilterPopover
-        projects={[[projectId, "Project One"]]}
-        value={projectId}
+      <PullRequestWorkspaceFilterPopover
+        projects={[[workspaceId, "Project One"]]}
+        value={workspaceId}
         onChange={vi.fn()}
       />,
     );

@@ -3,9 +3,12 @@
 // Layer: Kanban UI hook
 // Exports: useKanbanTaskScratchDraft
 
-import type { ModelSlug, ProviderKind } from "@omnimind/contracts";
-import { getDefaultModel } from "@omnimind/shared/model";
-import { useCallback, useEffect, useRef, useState } from "react";
+import type {
+  ProductRequestedSelection,
+  ProductRuntimeCatalog,
+  ProductRuntimeModel,
+} from "@omnimind/contracts";
+import { useCallback, useEffect, useState } from "react";
 
 import {
   filterPromptProviderMentionReferences,
@@ -21,10 +24,9 @@ import {
   useComposerDraftStore,
   useComposerThreadDraft,
 } from "../../composerDraftStore";
-import { buildModelSelection } from "../../providerModelOptions";
 import { toastManager } from "../ui/toast";
 
-export function useKanbanTaskScratchDraft(input: { readonly defaultProvider: ProviderKind }) {
+export function useKanbanTaskScratchDraft(runtimeCatalog: ProductRuntimeCatalog | null) {
   // Scratch composer draft backing the dialog: model/effort/speed state lives in
   // the composer draft store under this throwaway thread id, exactly like chat.
   const [scratchThreadId] = useState(() => newThreadId());
@@ -49,27 +51,12 @@ export function useKanbanTaskScratchDraft(input: { readonly defaultProvider: Pro
     useComposerDraftStore.getState().setPrompt(scratchThreadId, nextPrompt);
   };
 
-  const stickyActiveProvider = useComposerDraftStore((state) => state.stickyActiveProvider);
-  const stickyModelSelectionByProvider = useComposerDraftStore(
-    (state) => state.stickyModelSelectionByProvider,
+  const [requestedSelection, setRequestedSelection] = useState<ProductRequestedSelection | null>(
+    null,
   );
-  const selectedProvider: ProviderKind =
-    scratchDraft.activeProvider ?? stickyActiveProvider ?? input.defaultProvider;
-  const draftModelSelection =
-    scratchDraft.modelSelectionByProvider[selectedProvider] ??
-    stickyModelSelectionByProvider[selectedProvider];
-  const selectedModel: ModelSlug | null =
-    draftModelSelection?.model ?? getDefaultModel(selectedProvider);
-  const selectedProviderModelOptions = draftModelSelection?.options;
-  const selectedModelSupportsAutoMode =
-    draftModelSelection?.provider === "claudeAgent"
-      ? draftModelSelection.supportsAutoMode
-      : undefined;
-
-  const previousSelectedProviderRef = useRef<{
-    threadId: string;
-    provider: ProviderKind;
-  } | null>(null);
+  const selectedProvider = "pi" as const;
+  const selectedModel =
+    requestedSelection?.state === "selected" ? requestedSelection.runtimeModelId : null;
 
   useEffect(() => {
     const nextSkills = filterPromptSkillReferences(prompt, composerSkills, selectedProvider);
@@ -85,32 +72,21 @@ export function useKanbanTaskScratchDraft(input: { readonly defaultProvider: Pro
     }
   }, [composerMentions, prompt, scratchThreadId]);
 
-  useEffect(() => {
-    const previous = previousSelectedProviderRef.current;
-    previousSelectedProviderRef.current = {
-      threadId: scratchThreadId,
-      provider: selectedProvider,
-    };
-    if (
-      !previous ||
-      previous.threadId !== scratchThreadId ||
-      previous.provider === selectedProvider
-    ) {
-      return;
-    }
-    useComposerDraftStore.getState().setSkills(scratchThreadId, []);
-    useComposerDraftStore.getState().setMentions(scratchThreadId, []);
-  }, [scratchThreadId, selectedProvider]);
-
-  const handleProviderModelChange = (
-    provider: ProviderKind,
-    model: ModelSlug,
-    supportsAutoMode?: boolean,
+  const handleRuntimeSelectionChange = (
+    model: ProductRuntimeModel,
+    thinking: string | null,
   ) => {
-    const store = useComposerDraftStore.getState();
-    const nextSelection = buildModelSelection(provider, model, undefined, supportsAutoMode);
-    // Mirrors the composer: update the scratch draft and persist the sticky selection.
-    store.setModelSelectionAndSticky(scratchThreadId, nextSelection);
+    if (!runtimeCatalog) return;
+    setRequestedSelection({
+      state: "selected",
+      engineId: runtimeCatalog.engineId,
+      runtimeModelId: model.id,
+      thinking,
+      packageGeneration: runtimeCatalog.packageGeneration,
+      permissionPolicy: "approval-required",
+      enforcement: runtimeCatalog.capabilities.enforcement,
+      executionTarget: null,
+    });
   };
 
   const existingAttachmentCount = useCallback(
@@ -177,10 +153,9 @@ export function useKanbanTaskScratchDraft(input: { readonly defaultProvider: Pro
     waitForPendingImages,
     selectedProvider,
     selectedModel,
-    selectedModelSupportsAutoMode,
-    selectedProviderModelOptions,
+    requestedSelection,
     setPrompt,
-    handleProviderModelChange,
+    handleRuntimeSelectionChange,
     addComposerImages,
     removeComposerImage,
     clearComposerAssistantSelections,

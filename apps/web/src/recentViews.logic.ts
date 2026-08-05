@@ -3,7 +3,7 @@
 // Layer: UI state logic
 // Exports: recent view types plus MRU update, pruning, and display derivation helpers
 
-import type { ProjectId, ProviderKind, ThreadId } from "@omnimind/contracts";
+import type { ProjectId, ThreadId } from "@omnimind/contracts";
 import type {
   ResolvedTerminalVisualIdentity,
   TerminalIconKey,
@@ -37,13 +37,13 @@ export interface RecentViewDisplayEntry {
   isPinned: boolean;
   isSplit: boolean;
   isTerminal: boolean;
-  provider?: ProviderKind | undefined;
+  provider?: string | undefined;
   terminalVisualIdentity?: ResolvedTerminalVisualIdentity | undefined;
 }
 
 export type RecentViewDisplayIcon =
   | { kind: "chat" }
-  | { kind: "provider"; provider: ProviderKind }
+  | { kind: "provider"; provider: string }
   | { kind: "terminal"; iconKey: TerminalIconKey }
   | { kind: "settings" }
   | { kind: "plugins" };
@@ -180,7 +180,7 @@ function normalizeAvailableView(
 }
 
 function resolveThreadDisplayIcon(input: {
-  provider?: ProviderKind | undefined;
+  provider?: string | undefined;
   terminalVisualIdentity?: ResolvedTerminalVisualIdentity | null | undefined;
 }): RecentViewDisplayIcon {
   if (input.terminalVisualIdentity) {
@@ -246,7 +246,7 @@ export function buildRecentViewDisplayEntries(input: {
         const summary = input.threadsById[view.threadId];
         const thread = summary ?? input.draftThreadsById?.[view.threadId];
         const projectName = thread ? projectNameById.get(thread.projectId) : null;
-        const provider = summary?.modelSelection.provider;
+        const provider = summary?.modelSelection?.provider;
         const title = normalizeOptionalId(thread?.title) ?? "New chat";
         const subtitleParts = [
           projectName ?? "Chat",

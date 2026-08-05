@@ -1,18 +1,17 @@
-import {
-  ApprovalRequestId,
-  ThreadId,
-  type OrchestrationPendingInteraction,
-  type OrchestrationThreadActivity,
-} from "@omnimind/contracts";
+import type {
+  ConversationHistoryActivity,
+  ConversationPendingInteraction,
+} from "~/historicalConversation";
+import { ApprovalRequestId, ThreadId } from "@omnimind/contracts";
 import { describe, expect, it } from "vitest";
 
 import { derivePendingApprovals, derivePendingUserInputs } from "./pendingInteractionDerivation";
 import { makeActivity } from "./storeTestFixtures";
 
 function makePendingInteraction(
-  interactionKind: OrchestrationPendingInteraction["interactionKind"],
-  status: OrchestrationPendingInteraction["status"],
-): OrchestrationPendingInteraction {
+  interactionKind: ConversationPendingInteraction["interactionKind"],
+  status: ConversationPendingInteraction["status"],
+): ConversationPendingInteraction {
   return {
     interactionKind,
     requestId: ApprovalRequestId.makeUnsafe("req-settlement"),
@@ -30,7 +29,7 @@ function makePendingInteraction(
 
 describe("derivePendingApprovals", () => {
   it("shows only actionable durable approval settlements", () => {
-    const activities: OrchestrationThreadActivity[] = [
+    const activities: ConversationHistoryActivity[] = [
       makeActivity({
         id: "approval-settlement",
         createdAt: "2026-02-23T00:00:01.000Z",
@@ -57,7 +56,7 @@ describe("derivePendingApprovals", () => {
   });
 
   it("tracks open approvals and removes resolved ones", () => {
-    const activities: OrchestrationThreadActivity[] = [
+    const activities: ConversationHistoryActivity[] = [
       makeActivity({
         id: "approval-open",
         createdAt: "2026-02-23T00:00:01.000Z",
@@ -99,7 +98,7 @@ describe("derivePendingApprovals", () => {
   });
 
   it("maps canonical requestType payloads into pending approvals", () => {
-    const activities: OrchestrationThreadActivity[] = [
+    const activities: ConversationHistoryActivity[] = [
       makeActivity({
         id: "approval-open-request-type",
         createdAt: "2026-02-23T00:00:01.000Z",
@@ -125,7 +124,7 @@ describe("derivePendingApprovals", () => {
   });
 
   it("preserves the requested permission profile for approval rendering", () => {
-    const activities: OrchestrationThreadActivity[] = [
+    const activities: ConversationHistoryActivity[] = [
       makeActivity({
         id: "permission-approval-open",
         createdAt: "2026-02-23T00:00:01.000Z",
@@ -161,7 +160,7 @@ describe("derivePendingApprovals", () => {
   });
 
   it("clears stale pending approvals when provider reports unknown pending request", () => {
-    const activities: OrchestrationThreadActivity[] = [
+    const activities: ConversationHistoryActivity[] = [
       makeActivity({
         id: "approval-open-stale",
         createdAt: "2026-02-23T00:00:01.000Z",
@@ -190,7 +189,7 @@ describe("derivePendingApprovals", () => {
   });
 
   it("clears stale pending approvals when the backend marks them stale after restart", () => {
-    const activities: OrchestrationThreadActivity[] = [
+    const activities: ConversationHistoryActivity[] = [
       makeActivity({
         id: "approval-open-stale-restart",
         createdAt: "2026-02-23T00:00:01.000Z",
@@ -220,7 +219,7 @@ describe("derivePendingApprovals", () => {
   });
 
   it("does not let an old generation resolve a replacement approval with the same request id", () => {
-    const activities: OrchestrationThreadActivity[] = [
+    const activities: ConversationHistoryActivity[] = [
       makeActivity({
         id: "approval-generation-a",
         createdAt: "2026-02-23T00:00:01.000Z",
@@ -271,7 +270,7 @@ describe("derivePendingApprovals", () => {
 
 describe("derivePendingUserInputs", () => {
   it("shows only actionable durable user-input settlements", () => {
-    const activities: OrchestrationThreadActivity[] = [
+    const activities: ConversationHistoryActivity[] = [
       makeActivity({
         id: "user-input-settlement",
         createdAt: "2026-02-23T00:00:01.000Z",
@@ -305,7 +304,7 @@ describe("derivePendingUserInputs", () => {
   });
 
   it("tracks open structured prompts and removes resolved ones", () => {
-    const activities: OrchestrationThreadActivity[] = [
+    const activities: ConversationHistoryActivity[] = [
       makeActivity({
         id: "user-input-open",
         createdAt: "2026-02-23T00:00:01.000Z",
@@ -389,7 +388,7 @@ describe("derivePendingUserInputs", () => {
   });
 
   it("clears stale pending user-input prompts when the provider reports an orphaned request", () => {
-    const activities: OrchestrationThreadActivity[] = [
+    const activities: ConversationHistoryActivity[] = [
       makeActivity({
         id: "user-input-open-stale",
         createdAt: "2026-02-23T00:00:01.000Z",
@@ -437,7 +436,7 @@ describe("derivePendingUserInputs", () => {
       question: "Which mode?",
       options: [{ label: "safe", description: "Use safe mode" }],
     };
-    const activities: OrchestrationThreadActivity[] = [
+    const activities: ConversationHistoryActivity[] = [
       makeActivity({
         id: "user-input-generation-a",
         createdAt: "2026-02-23T00:00:01.000Z",
@@ -486,7 +485,7 @@ describe("derivePendingUserInputs", () => {
   });
 
   it("preserves multi-select user-input question metadata", () => {
-    const activities: OrchestrationThreadActivity[] = [
+    const activities: ConversationHistoryActivity[] = [
       makeActivity({
         id: "user-input-open-multi",
         createdAt: "2026-02-23T00:00:01.000Z",
@@ -517,7 +516,7 @@ describe("derivePendingUserInputs", () => {
   });
 
   it("keeps text-only user-input questions so the composer can collect the answer", () => {
-    const activities: OrchestrationThreadActivity[] = [
+    const activities: ConversationHistoryActivity[] = [
       makeActivity({
         id: "user-input-open-text",
         createdAt: "2026-02-23T00:00:01.000Z",

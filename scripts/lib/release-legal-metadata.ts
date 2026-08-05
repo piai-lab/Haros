@@ -585,14 +585,17 @@ export function renderReleaseLegalMetadata(
 
 export function resolveReleaseDependencyRoots(packageRoot: string): ReleaseDependencyRoot[] {
   const manifests = [
+    join(packageRoot, "apps/native-host/package.json"),
     join(packageRoot, "apps/service/package.json"),
     join(packageRoot, "apps/desktop/package.json"),
   ];
   const roots: ReleaseDependencyRoot[] = [];
   for (const manifestPath of manifests) {
     const manifest = readJson(manifestPath);
-    for (const name of Object.keys(manifest.dependencies ?? {}).toSorted()) {
-      if (name === "electron") continue;
+    for (const [name, specification] of Object.entries(manifest.dependencies ?? {}).toSorted(
+      ([left], [right]) => left.localeCompare(right),
+    )) {
+      if (name === "electron" || String(specification).startsWith("workspace:")) continue;
       roots.push({ name, fromDirectory: dirname(manifestPath) });
     }
   }
