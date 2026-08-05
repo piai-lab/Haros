@@ -2,9 +2,9 @@ import { assert, describe, it } from "@effect/vitest";
 
 import {
   createDesktopPlatformBuildConfig,
-  MAC_APPSNAP_HELPER_ASAR_EXCLUSION,
-  MAC_APPSNAP_HELPER_BUNDLE_PATH,
-  MAC_APPSNAP_HELPER_STAGE_PATH,
+  MAC_APPSNAP_BRIDGE_ASAR_EXCLUSION,
+  MAC_APPSNAP_BRIDGE_BUNDLE_PATH,
+  MAC_APPSNAP_BRIDGE_STAGE_PATH,
   MAC_ENTITLEMENTS_PATH,
   MAC_INHERITED_ENTITLEMENTS_PATH,
   MICROPHONE_USAGE_DESCRIPTION,
@@ -34,19 +34,19 @@ describe("createDesktopPlatformBuildConfig", () => {
     assert.equal(dmg.writeUpdateInfo, false);
     assert.equal(mac.entitlements, MAC_ENTITLEMENTS_PATH);
     assert.equal(mac.entitlementsInherit, MAC_INHERITED_ENTITLEMENTS_PATH);
-    assert.equal(MAC_APPSNAP_HELPER_BUNDLE_PATH, "Contents/Helpers/omnimind-appsnap-helper");
-    assert.deepStrictEqual(mac.binaries, ["Contents/Helpers/omnimind-appsnap-helper"]);
-    assert.equal(mac.x64ArchFiles, "Contents/Helpers/omnimind-appsnap-helper");
+    assert.equal(MAC_APPSNAP_BRIDGE_BUNDLE_PATH, "Contents/Helpers/omnimind-appsnap-bridge");
+    assert.deepStrictEqual(mac.binaries, ["Contents/Helpers/omnimind-appsnap-bridge"]);
+    assert.equal(mac.x64ArchFiles, "Contents/Helpers/omnimind-appsnap-bridge");
     assert.equal(
-      MAC_APPSNAP_HELPER_STAGE_PATH,
-      "apps/desktop/native/appsnap/build/omnimind-appsnap-helper",
+      MAC_APPSNAP_BRIDGE_STAGE_PATH,
+      "apps/desktop/native/appsnap/build/omnimind-appsnap-bridge",
     );
-    assert.equal(MAC_APPSNAP_HELPER_ASAR_EXCLUSION, "!apps/desktop/native/appsnap/build/**");
-    assert.deepStrictEqual(config.files, ["**/*", MAC_APPSNAP_HELPER_ASAR_EXCLUSION]);
+    assert.equal(MAC_APPSNAP_BRIDGE_ASAR_EXCLUSION, "!apps/desktop/native/appsnap/build/**");
+    assert.deepStrictEqual(config.files, ["**/*", MAC_APPSNAP_BRIDGE_ASAR_EXCLUSION]);
     assert.deepStrictEqual(config.extraFiles, [
       {
-        from: "apps/desktop/native/appsnap/build/omnimind-appsnap-helper",
-        to: "Helpers/omnimind-appsnap-helper",
+        from: "apps/desktop/native/appsnap/build/omnimind-appsnap-bridge",
+        to: "Helpers/omnimind-appsnap-bridge",
       },
     ]);
     assert.equal(extendInfo.NSMicrophoneUsageDescription, MICROPHONE_USAGE_DESCRIPTION);
@@ -157,7 +157,7 @@ describe("createDesktopPlatformBuildConfig", () => {
     assert.ok(issue?.includes("Build linux/x64 on a matching Linux host"));
   });
 
-  it("requires a macOS host for the native Swift AppSnap helper", () => {
+  it("requires a macOS host for the native Swift AppSnap bridge", () => {
     assert.equal(
       validateDesktopNativeBuildHost({
         platform: "mac",
@@ -178,10 +178,7 @@ describe("createDesktopPlatformBuildConfig", () => {
   });
 
   it("uses the OmniMind app icon source for current macOS icon outputs", () => {
-    assert.equal(
-      BRAND_ASSET_PATHS.productionMacIconPng,
-      "assets/brand/exports/app-icon-512.png",
-    );
+    assert.equal(BRAND_ASSET_PATHS.productionMacIconPng, "assets/brand/exports/app-icon-512.png");
     assert.equal(
       BRAND_ASSET_PATHS.productionMacLegacyIconPng,
       "assets/brand/exports/app-icon-512.png",

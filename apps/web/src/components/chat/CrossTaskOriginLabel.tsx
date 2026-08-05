@@ -6,7 +6,7 @@ import { type ThreadId } from "@omnimind/contracts";
 import { memo, type ReactNode } from "react";
 
 import { BrandMark } from "../BrandMark";
-import { cn } from "~/lib/utils";
+import { cn } from "~/lib/styles";
 
 export interface CrossTaskOrigin {
   readonly sourceThreadId: ThreadId;

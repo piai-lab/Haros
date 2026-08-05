@@ -34,7 +34,7 @@ vi.mock("electron", () => ({
   WebContentsView: class {},
 }));
 
-import { DesktopBrowserManager } from "./browserManager";
+import { DesktopBrowserHost } from "./browserHost";
 import { BROWSER_ANNOTATION_GUEST_COMMAND_CHANNEL } from "./ipcChannels";
 
 interface WindowOpenDetails {
@@ -105,7 +105,7 @@ class FakePopupWindow extends EventEmitter {
   destroy = vi.fn();
 }
 
-interface BrowserManagerCharacterizationAccess {
+interface BrowserHostCharacterizationAccess {
   runtimes: Map<
     string,
     {
@@ -157,20 +157,18 @@ const ANNOTATION_THEME: BrowserAnnotationTheme = {
   primaryText: "rgb(255, 255, 255)",
 };
 
-function asCharacterizationAccess(
-  manager: DesktopBrowserManager,
-): BrowserManagerCharacterizationAccess {
-  return manager as unknown as BrowserManagerCharacterizationAccess;
+function asCharacterizationAccess(manager: DesktopBrowserHost): BrowserHostCharacterizationAccess {
+  return manager as unknown as BrowserHostCharacterizationAccess;
 }
 
-describe("DesktopBrowserManager repeated workflow characterization", () => {
+describe("DesktopBrowserHost repeated workflow characterization", () => {
   beforeEach(() => {
     vi.clearAllMocks();
     rendererWebContentsById.clear();
   });
 
   it("re-requests annotation readiness after adopting a guest that announced too early", () => {
-    const manager = new DesktopBrowserManager();
+    const manager = new DesktopBrowserHost();
     const guest = new FakeRendererWebContents(16);
     guest.currentUrl = "https://example.test/app";
     const opened = manager.open({ threadId: THREAD_ID, initialUrl: guest.currentUrl });
@@ -210,7 +208,7 @@ describe("DesktopBrowserManager repeated workflow characterization", () => {
   });
 
   it("invalidates a destroyed renderer and reattaches the same tab to a new guest", async () => {
-    const manager = new DesktopBrowserManager();
+    const manager = new DesktopBrowserHost();
     const opened = manager.open({ threadId: THREAD_ID });
     const tabId = opened.activeTabId;
     expect(tabId).not.toBeNull();
@@ -268,7 +266,7 @@ describe("DesktopBrowserManager repeated workflow characterization", () => {
   });
 
   it("emits one state change when a different tab becomes active", () => {
-    const manager = new DesktopBrowserManager();
+    const manager = new DesktopBrowserHost();
     const initial = manager.open({ threadId: THREAD_ID });
     const firstTabId = initial.activeTabId;
     const withSecondTab = manager.newTab({
@@ -294,7 +292,7 @@ describe("DesktopBrowserManager repeated workflow characterization", () => {
   });
 
   it("applies the same popup, tab-open, and scheme-denial policy to tabs and popups", async () => {
-    const manager = new DesktopBrowserManager();
+    const manager = new DesktopBrowserHost();
     const initial = manager.open({ threadId: THREAD_ID });
     const tabId = initial.activeTabId;
     expect(tabId).not.toBeNull();
@@ -367,7 +365,7 @@ describe("DesktopBrowserManager repeated workflow characterization", () => {
   });
 
   it("blocks page-driven main-frame navigations and redirects outside web schemes", () => {
-    const manager = new DesktopBrowserManager();
+    const manager = new DesktopBrowserHost();
     const initial = manager.open({ threadId: THREAD_ID });
     const tabId = initial.activeTabId!;
     const tabContents = new FakeWebContents();
@@ -443,7 +441,7 @@ describe("DesktopBrowserManager repeated workflow characterization", () => {
   });
 
   it("translates an explicit file URL before loading the visible browser guest", async () => {
-    const manager = new DesktopBrowserManager();
+    const manager = new DesktopBrowserHost();
     const initial = manager.open({ threadId: THREAD_ID });
     const tabId = initial.activeTabId!;
     const guest = new FakeRendererWebContents(83);
@@ -467,7 +465,7 @@ describe("DesktopBrowserManager repeated workflow characterization", () => {
   });
 
   it("preserves an initial file URL while the blank guest starts its preview load", async () => {
-    const manager = new DesktopBrowserManager();
+    const manager = new DesktopBrowserHost();
     const sourceUrl = "file:///tmp/omnimind-preview/index.html";
     const initial = manager.open({ threadId: THREAD_ID, initialUrl: sourceUrl });
     const tabId = initial.activeTabId!;
@@ -517,7 +515,7 @@ describe("DesktopBrowserManager repeated workflow characterization", () => {
   });
 
   it("keeps the load error when an initial local file is not HTML", async () => {
-    const manager = new DesktopBrowserManager();
+    const manager = new DesktopBrowserHost();
     const sourceUrl = "file:///tmp/omnimind-preview/notes.txt";
     const initial = manager.open({ threadId: THREAD_ID, initialUrl: sourceUrl });
     const tabId = initial.activeTabId!;
@@ -546,7 +544,7 @@ describe("DesktopBrowserManager repeated workflow characterization", () => {
   });
 
   it("treats keyboard and pointer interaction inside an OAuth popup as human control", () => {
-    const manager = new DesktopBrowserManager();
+    const manager = new DesktopBrowserHost();
     const initial = manager.open({ threadId: THREAD_ID });
     const tabId = initial.activeTabId!;
     const popup = new FakePopupWindow();
@@ -598,7 +596,7 @@ describe("DesktopBrowserManager repeated workflow characterization", () => {
       event.preventDefault();
       return true;
     });
-    const manager = new DesktopBrowserManager({ beforeInputEvent });
+    const manager = new DesktopBrowserHost({ beforeInputEvent });
     const initial = manager.open({ threadId: THREAD_ID });
     const tabId = initial.activeTabId;
     expect(tabId).not.toBeNull();

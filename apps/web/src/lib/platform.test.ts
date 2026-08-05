@@ -1,6 +1,6 @@
 import { assert, describe, it } from "vitest";
 
-import { isMacPlatform, isWindowsPlatform } from "./utils";
+import { isMacPlatform, isWindowsPlatform } from "./platform";
 
 describe("isMacPlatform", () => {
   it("matches browser and Node.js macOS platform identifiers", () => {

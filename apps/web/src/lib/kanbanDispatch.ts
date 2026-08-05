@@ -50,7 +50,7 @@ import {
 } from "./terminalContext";
 import { resolveTerminalThreadCreationState } from "./threadBootstrap";
 import { promoteThreadCreate } from "./threadCreatePromotion";
-import { newMessageId, randomUUID } from "./utils";
+import { createMessageId, randomUUID } from "./identifiers";
 
 export type KanbanDraftDispatchResult =
   /** The drafted prompt is on its way; runtime events move the card to In Progress. */
@@ -263,7 +263,7 @@ async function dispatchKanbanDraftThreadOnce(
       : "") ||
     "New task";
   const fallbackTitle = buildPromptThreadTitleFallback(titleSeed);
-  const messageId = newMessageId();
+  const messageId = createMessageId();
   // Browser annotations serialize outermost so display extraction can validate
   // their message-bound transport before unwrapping the remaining context blocks.
   const messageText = appendBrowserAnnotationsToPrompt(

@@ -5,7 +5,7 @@
 
 import { type HTMLAttributes, type ReactNode, type Ref } from "react";
 
-import { cn } from "~/lib/utils";
+import { cn } from "~/lib/styles";
 import { ComposerStackedHeaderFrame } from "./ComposerColumnFrame";
 import { COMPOSER_STACKED_PANEL_CHROME_CLASS_NAME } from "./composerStackedPanelStyles";
 

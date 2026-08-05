@@ -4,11 +4,7 @@
 // Layer: Environment panel section
 // Depends on: git status/PR-snapshot React Query helpers and the shared Environment row skin.
 
-import type {
-  GitPullRequestCheck,
-  GitPullRequestComment,
-  ThreadId,
-} from "@omnimind/contracts";
+import type { GitPullRequestCheck, GitPullRequestComment, ThreadId } from "@omnimind/contracts";
 import { parseGitHubRepositoryNameWithOwnerFromPullRequestUrl } from "@omnimind/shared/githubRepository";
 import { useQuery } from "@tanstack/react-query";
 import type { ReactNode } from "react";
@@ -32,7 +28,7 @@ import {
   RefreshCwIcon,
 } from "~/lib/icons";
 import { formatRelativeTime } from "~/lib/relativeTime";
-import { cn } from "~/lib/utils";
+import { cn } from "~/lib/styles";
 import { ELEVATED_HOVER_SURFACE_CLASS_NAME } from "~/surfaceStyles";
 import { useRightDockStore } from "~/rightDockStore";
 import { useProductStore } from "~/store/productStore";

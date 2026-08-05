@@ -16,7 +16,7 @@ import type { AppSettingsBinding } from "~/appSettings";
 import { createLatestAppSnapRequestGuard } from "~/appSnap.logic";
 import { playAppSnapCaptureSound } from "~/lib/appSnapSound";
 import { Glyph } from "~/ui/icons";
-import { cn } from "~/lib/utils";
+import { cn } from "~/lib/styles";
 import { isElectron } from "~/env";
 import {
   buildNotificationSettingsSupportText,

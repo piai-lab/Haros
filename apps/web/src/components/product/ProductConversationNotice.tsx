@@ -1,5 +1,5 @@
 import type { ProductConversationPresentation } from "../../productReadModel";
-import { cn } from "../../lib/utils";
+import { cn } from "../../lib/styles";
 
 export function ProductConversationNotice({
   presentation,

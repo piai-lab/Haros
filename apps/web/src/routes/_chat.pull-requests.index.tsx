@@ -69,7 +69,7 @@ import {
   pullRequestSetPinnedMutationOptions,
   shouldLoadExactPullRequestInvolvement,
 } from "~/lib/pullRequestReactQuery";
-import { cn } from "~/lib/utils";
+import { cn } from "~/lib/styles";
 import {
   createDefaultRightDockState,
   openPaneInState,

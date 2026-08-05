@@ -97,7 +97,7 @@ const harness = vi.hoisted(() => ({
   removeThreadFromSplitViews: vi.fn(),
   clearTemporaryThread: vi.fn(),
   clearTerminalState: vi.fn(),
-  handleNewChat: vi.fn(),
+  createChat: vi.fn(),
   removeDeletedThreadFromClientState: vi.fn(),
   resolveSplitViewPaneIdForThread: vi.fn(),
   resolveSplitViewFocusedThreadId: vi.fn(),
@@ -248,7 +248,7 @@ function render(
       sidebarThreadSortOrder: "updated_at",
     },
     clearTerminalState: harness.clearTerminalState,
-    handleNewChat: harness.handleNewChat,
+    createChat: harness.createChat,
     projectById: new Map([[PROJECT_ID, PROJECT]]),
     routeSplitViewId: overrides.routeSplitViewId ?? null,
     routeThreadId: overrides.routeThreadId ?? null,
@@ -288,7 +288,7 @@ beforeEach(() => {
     harness.removeThreadFromSplitViews,
     harness.clearTemporaryThread,
     harness.clearTerminalState,
-    harness.handleNewChat,
+    harness.createChat,
     harness.resolveSplitViewPaneIdForThread,
     harness.resolveSplitViewFocusedThreadId,
   ]) {
@@ -306,7 +306,7 @@ beforeEach(() => {
   harness.archiveThread.mockResolvedValue(undefined);
   harness.unarchiveThread.mockResolvedValue(undefined);
   harness.confirm.mockResolvedValue(true);
-  harness.handleNewChat.mockResolvedValue({ ok: true });
+  harness.createChat.mockResolvedValue({ ok: true });
   harness.activeThreadDelete.mockImplementation(async (input: unknown) => {
     const action = input as {
       prepareForDelete?: () => unknown;
@@ -515,6 +515,6 @@ describe("useSidebarThreadActions", () => {
     }).deleteThread(THREAD_ID);
 
     expect(harness.navigate).not.toHaveBeenCalled();
-    expect(harness.handleNewChat).toHaveBeenCalledWith({ fresh: true });
+    expect(harness.createChat).toHaveBeenCalledWith({ fresh: true });
   });
 });

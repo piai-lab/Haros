@@ -105,7 +105,12 @@ export function compileRule(rule) {
 
 export function isIdentityEvidencePath(relativePath) {
   const portable = relativePath.split(path.sep).join("/");
-  return portable === DISCLOSURE_PATH;
+  return (
+    portable === DISCLOSURE_PATH ||
+    portable === "AGENTS.md" ||
+    portable.startsWith("research/") ||
+    portable.startsWith(".omp-flow/tasks/")
+  );
 }
 
 export function classifyPath(relativePath) {

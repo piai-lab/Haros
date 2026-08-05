@@ -5,7 +5,7 @@
 
 import { AppNavigationButtons } from "./AppNavigationButtons";
 import { SidebarTrigger, useSidebar } from "./ui/sidebar";
-import { cn } from "~/lib/utils";
+import { cn } from "~/lib/styles";
 
 /**
  * The leading chrome cluster: the sidebar toggle followed by the route nav arrows.

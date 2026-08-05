@@ -37,7 +37,7 @@ import { isElectron } from "~/env";
 import { basenameOfPath } from "~/file-icons";
 import type { RepoDiffTotals } from "~/hooks/useRepoDiffTotals";
 import { ArrowUpRightIcon, ChangesIcon, GitHubIcon, SettingsIcon } from "~/lib/icons";
-import { cn } from "~/lib/utils";
+import { cn } from "~/lib/styles";
 import { readNativeApi } from "~/nativeApi";
 
 import { EnvironmentEditorSection } from "./EnvironmentEditorSection";

@@ -15,7 +15,7 @@ import { deleteArchivedThreadsFromClient } from "~/lib/archivedThreadDelete";
 import { formatRelativeTime } from "~/lib/relativeTime";
 import { serverQueryKeys, serverWorktreesQueryOptions } from "~/lib/serverReactQuery";
 import { unarchiveThreadFromClient } from "~/lib/threadArchive";
-import { cn } from "~/lib/utils";
+import { cn } from "~/lib/styles";
 import { ensureNativeApi, readNativeApi } from "~/nativeApi";
 import { SETTINGS_CARD_ROW_DESCRIPTION_CLASS_NAME } from "~/settingsPanelStyles";
 import { useStore } from "~/store";
@@ -290,7 +290,9 @@ export function ArchivedSettingsPanel({ active }: { readonly active: boolean }) 
   const conversations = useProductStore((store) => store.conversations);
   const projects = useStore((store) => store.projects);
   const archivedGroups = useMemo(() => {
-    const archivedThreads = conversations.filter((conversation) => conversation.archivedAt !== null);
+    const archivedThreads = conversations.filter(
+      (conversation) => conversation.archivedAt !== null,
+    );
     const knownProjectIds = new Set(projects.map((project) => String(project.id)));
     const groups: Array<{
       project: (typeof projects)[number] | null;

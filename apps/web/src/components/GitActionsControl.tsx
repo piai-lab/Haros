@@ -92,7 +92,8 @@ import {
   gitStatusQueryOptions,
   invalidateGitQueries,
 } from "~/lib/gitReactQuery";
-import { cn, newCommandId, randomUUID } from "~/lib/utils";
+import { cn } from "~/lib/styles";
+import { createCommandId, randomUUID } from "~/lib/identifiers";
 import { resolvePathLinkTarget } from "~/terminal-links";
 import { readNativeApi } from "~/nativeApi";
 import { createThreadSelector } from "~/storeSelectors";

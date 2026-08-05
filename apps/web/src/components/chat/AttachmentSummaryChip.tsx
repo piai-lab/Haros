@@ -8,7 +8,7 @@
 
 import { type ComponentType, type ReactNode } from "react";
 
-import { cn } from "~/lib/utils";
+import { cn } from "~/lib/styles";
 import { COMPOSER_ATTACHMENT_CHIP_CLASS_NAME } from "../composerInlineChip";
 import { Tooltip, TooltipPopup, TooltipTrigger } from "../ui/tooltip";
 import { AttachmentRemoveButton } from "./AttachmentRemoveButton";

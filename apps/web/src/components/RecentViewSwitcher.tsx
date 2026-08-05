@@ -13,7 +13,7 @@ import {
   PluginIcon,
   SettingsIcon,
 } from "../lib/icons";
-import { cn } from "../lib/utils";
+import { cn } from "../lib/styles";
 import type { RecentViewDisplayEntry } from "../recentViews.logic";
 import { ProviderIcon } from "./ProviderIcon";
 import TerminalIdentityIcon from "./terminal/TerminalIdentityIcon";

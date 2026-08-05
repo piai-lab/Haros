@@ -7,7 +7,7 @@
 import type { ReactNode, SVGProps } from "react";
 
 import { Glyph } from "~/ui/icons";
-import { cn } from "~/lib/utils";
+import { cn } from "~/lib/styles";
 import { BrandMark } from "./BrandMark";
 import {
   AntigravityIcon,

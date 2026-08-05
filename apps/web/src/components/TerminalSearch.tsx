@@ -7,7 +7,7 @@ import type { SearchAddon, ISearchOptions } from "@xterm/addon-search";
 import { useEffect, useRef, useState } from "react";
 import { IconButton } from "~/components/ui/icon-button";
 import { ChevronDownIcon, ChevronUpIcon, XIcon } from "~/lib/icons";
-import { cn } from "~/lib/utils";
+import { cn } from "~/lib/styles";
 
 interface TerminalSearchProps {
   searchAddon: SearchAddon | null;

@@ -8,7 +8,7 @@
 import { type KeyboardEvent as ReactKeyboardEvent, useState } from "react";
 
 import { Glyph } from "~/ui/icons";
-import { cn } from "~/lib/utils";
+import { cn } from "~/lib/styles";
 import { getWorkbenchCopy } from "../i18n/workbenchCopy";
 import { SearchInput } from "./ui/search-input";
 import { SidebarLeadingIcon } from "./SidebarLeadingIcon";

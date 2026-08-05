@@ -20,7 +20,8 @@ import {
 import { useNowMs } from "~/hooks/useNowMs";
 import { splitShortcutLabel } from "~/keybindings";
 import { ArrowLeftIcon, PlusIcon } from "~/lib/icons";
-import { cn, isMacPlatform } from "~/lib/utils";
+import { cn } from "~/lib/styles";
+import { isMacPlatform } from "~/lib/platform";
 
 // Kanban-scoped "Create task" shortcut: ⌘⌥T on macOS, Ctrl+Alt+T elsewhere —
 // matching the app's mod convention (meta on mac, ctrl otherwise) and the ⌘⌥
@@ -48,7 +49,7 @@ import {
   CHAT_SURFACE_HEADER_PADDING_X_CLASS,
 } from "../chat/chatHeaderControls";
 import { CHAT_BACKGROUND_CLASS_NAME } from "../chat/composerPickerStyles";
-import { KanbanNewTaskDialog } from "./KanbanNewTaskDialog";
+import { KanbanTaskCreateDialog } from "./KanbanTaskCreateDialog";
 import { KanbanOverview } from "./KanbanOverview";
 import { KanbanProjectBoardView } from "./KanbanProjectBoardView";
 import { useKanbanBoard } from "./useKanbanBoard";
@@ -237,7 +238,7 @@ export default function KanbanView({ projectId }: { projectId: string | null }) 
       </div>
 
       {newTaskDialog ? (
-        <KanbanNewTaskDialog
+        <KanbanTaskCreateDialog
           key={newTaskDialog.key}
           onOpenChange={(open) => {
             if (!open) {

@@ -55,7 +55,7 @@ import {
   storeEditorRailChatTabs,
   type EditorRailChatTabSnapshot,
 } from "../../editorViewState";
-import { cn } from "~/lib/utils";
+import { cn } from "~/lib/styles";
 import { useOpenFavoriteEditorShortcut } from "~/hooks/useOpenFavoriteEditorShortcut";
 import type { RepoDiffTotals } from "~/hooks/useRepoDiffTotals";
 import { ProviderIcon } from "../ProviderIcon";
@@ -335,7 +335,8 @@ function EditorRailTabs(props: {
       {
         id: thread.id,
         title: thread.title,
-        provider: thread.session?.provider ?? thread.modelSelection?.provider ?? props.activeProvider,
+        provider:
+          thread.session?.provider ?? thread.modelSelection?.provider ?? props.activeProvider,
       },
     ]),
   );
@@ -696,7 +697,9 @@ export function ChatHeader({
                     "rounded-lg bg-secondary py-1 pl-2 pr-1 text-secondary-foreground",
                 )}
               >
-                {threadIconKind === "none" || hideProviderIdentity || activeProvider === null ? null : (
+                {threadIconKind === "none" ||
+                hideProviderIdentity ||
+                activeProvider === null ? null : (
                   <span
                     className="inline-flex size-3.5 shrink-0 items-center justify-center"
                     title={

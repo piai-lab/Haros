@@ -1,7 +1,7 @@
 import { type ThreadId } from "@omnimind/contracts";
 import { useCallback, useEffect, useState } from "react";
 
-import { resolveTerminalNewAction } from "../../lib/terminalNewAction";
+import { resolveTerminalCreateAction } from "../../lib/terminalCreateAction";
 import { selectThreadTerminalState, useTerminalStateStore } from "../../terminalStateStore";
 import { collectTerminalIdsFromLayout } from "../../terminalPaneLayout";
 import { MAX_TERMINALS_PER_GROUP, type Thread } from "../../types";
@@ -193,13 +193,13 @@ export function useChatTerminalController({
     [activeThreadId, newTerminalTabInStore, requestTerminalFocus],
   );
   const createTerminalFromShortcut = useCallback(() => {
-    const action = resolveTerminalNewAction({
+    const action = resolveTerminalCreateAction({
       terminalOpen: terminalState.terminalOpen,
       activeTerminalId: terminalState.activeTerminalId,
       activeTerminalGroupId: terminalState.activeTerminalGroupId,
       terminalGroups: terminalState.terminalGroups,
     });
-    if (action.kind === "new-group") {
+    if (action.kind === "create-group") {
       if (!terminalState.terminalOpen) setTerminalOpen(true);
       createNewTerminal();
       return;

@@ -5,7 +5,7 @@
 //          useSettingsRestoreSignal
 
 import { type ReactNode, useEffect, useEffectEvent, useRef } from "react";
-import { cn } from "~/lib/utils";
+import { cn } from "~/lib/styles";
 import { Button } from "~/components/ui/button";
 import { Select, SelectTrigger, SelectValue } from "~/components/ui/select";
 import { Tooltip, TooltipPopup, TooltipTrigger } from "~/components/ui/tooltip";

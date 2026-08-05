@@ -1,19 +1,19 @@
 import { collectTerminalIdsFromLayout } from "../terminalPaneLayout";
 import type { ThreadTerminalGroup } from "../types";
 
-export interface ResolveTerminalNewActionInput {
+export interface ResolveTerminalCreateActionInput {
   terminalOpen: boolean;
   activeTerminalId: string;
   activeTerminalGroupId: string;
   terminalGroups: ThreadTerminalGroup[];
 }
 
-export type TerminalNewAction =
-  | { kind: "new-group" }
-  | { kind: "new-tab"; targetTerminalId: string };
+export type TerminalCreateAction =
+  | { kind: "create-group" }
+  | { kind: "create-tab"; targetTerminalId: string };
 
 function resolveActiveTerminalGroup(
-  input: ResolveTerminalNewActionInput,
+  input: ResolveTerminalCreateActionInput,
 ): ThreadTerminalGroup | null {
   return (
     input.terminalGroups.find((group) => group.id === input.activeTerminalGroupId) ??
@@ -25,9 +25,11 @@ function resolveActiveTerminalGroup(
   );
 }
 
-export function resolveTerminalNewAction(input: ResolveTerminalNewActionInput): TerminalNewAction {
+export function resolveTerminalCreateAction(
+  input: ResolveTerminalCreateActionInput,
+): TerminalCreateAction {
   if (!input.terminalOpen) {
-    return { kind: "new-group" };
+    return { kind: "create-group" };
   }
 
   const activeGroup = resolveActiveTerminalGroup(input);
@@ -38,31 +40,31 @@ export function resolveTerminalNewAction(input: ResolveTerminalNewActionInput): 
 
   if (activeGroup && activeGroupTerminalIds.includes(activeGroup.activeTerminalId)) {
     return {
-      kind: "new-tab",
+      kind: "create-tab",
       targetTerminalId: activeGroup.activeTerminalId,
     };
   }
 
   if (activeGroupTerminalIds.includes(normalizedActiveTerminalId)) {
     return {
-      kind: "new-tab",
+      kind: "create-tab",
       targetTerminalId: normalizedActiveTerminalId,
     };
   }
 
   if (activeGroupTerminalIds[0]) {
     return {
-      kind: "new-tab",
+      kind: "create-tab",
       targetTerminalId: activeGroupTerminalIds[0],
     };
   }
 
   if (normalizedActiveTerminalId.length > 0) {
     return {
-      kind: "new-tab",
+      kind: "create-tab",
       targetTerminalId: normalizedActiveTerminalId,
     };
   }
 
-  return { kind: "new-group" };
+  return { kind: "create-group" };
 }

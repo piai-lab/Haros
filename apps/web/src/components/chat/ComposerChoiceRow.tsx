@@ -7,7 +7,7 @@
 // Exports: ComposerChoiceRow, ComposerChoiceTone
 
 import { type ReactNode } from "react";
-import { cn } from "~/lib/utils";
+import { cn } from "~/lib/styles";
 
 /** Semantic accent for a choice row. `neutral` reads like a plain list control;
  *  `primary` nudges the recommended action; `destructive` marks a rejecting action. */

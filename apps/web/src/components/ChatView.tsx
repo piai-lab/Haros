@@ -103,7 +103,7 @@ import {
   type AutomationDraftWarningId,
 } from "../lib/automationDraft";
 import { dispatchThreadRename } from "../lib/threadRename";
-import { useHandleNewChatWithThreadHandler } from "../hooks/useHandleNewChat";
+import { useCreateChatWithThreadHandler } from "../hooks/useCreateChat";
 import { useComposerDropzone } from "../hooks/useComposerDropzone";
 import { useComposerImageIntake } from "../hooks/useComposerImageIntake";
 import {
@@ -213,7 +213,9 @@ import { ComposerPickerMenuPopup } from "./chat/ComposerPickerMenuPopup";
 import { Button } from "./ui/button";
 import { Menu, MenuItem, MenuTrigger } from "./ui/menu";
 import { randomTerminalId } from "./terminal/terminalIds";
-import { cn, isMacPlatform, randomUUID } from "~/lib/utils";
+import { cn } from "~/lib/styles";
+import { isMacPlatform } from "~/lib/platform";
+import { randomUUID } from "~/lib/identifiers";
 import { toastManager } from "./ui/toast";
 import { type NewProjectScriptInput } from "./ProjectScriptsControl";
 import {
@@ -225,7 +227,7 @@ import {
   type ProjectScriptRunResult,
 } from "~/projectScripts";
 import { runProjectCommandInTerminal } from "~/projectTerminalRunner";
-import { newCommandId, newMessageId, newThreadId } from "~/lib/utils";
+import { createCommandId, createMessageId, createThreadId } from "~/lib/identifiers";
 import { readNativeApi } from "~/nativeApi";
 import { readProductNativeApi } from "~/wsNativeApi";
 import { createProductConversationWithRecovery } from "~/productConversationMutations";
@@ -434,7 +436,7 @@ import {
 import { useLocalStorage } from "~/hooks/useLocalStorage";
 import { presentHistoricalConversation } from "../conversationPresentation";
 import { useFeatureFlags } from "../featureFlags";
-import { useHandleNewThreadForFocusedContext } from "../hooks/useHandleNewThread";
+import { useCreateThreadForFocusedContext } from "../hooks/useCreateThread";
 import { resolveThreadHandoffBadgeLabel } from "../lib/threadHandoff";
 import {
   resolveDiffEnvironmentState,
@@ -1481,7 +1483,7 @@ export default function ChatView({
     [productReadModel],
   );
   const activeProject = storedActiveProject ?? productPresentationProject;
-  const { handleNewThread } = useHandleNewThreadForFocusedContext({
+  const { createThread } = useCreateThreadForFocusedContext({
     routeThreadId: threadId,
     splitView: activeSplitView ?? null,
     focusedThreadId: threadId,
@@ -1490,7 +1492,7 @@ export default function ChatView({
     activeProject: activeProject ?? null,
     activeProjectId,
   });
-  const { handleNewChat } = useHandleNewChatWithThreadHandler(handleNewThread);
+  const { createChat } = useCreateChatWithThreadHandler(createThread);
   const deletePlaceholderTerminalThread = useCallback(
     async (terminalThreadId: ThreadId) => {
       const deleteEmptyTerminalThread = async () => {
@@ -1512,7 +1514,7 @@ export default function ChatView({
             return;
           }
         }
-        await handleNewChat({ fresh: true });
+        await createChat({ fresh: true });
       };
 
       try {
@@ -1524,7 +1526,7 @@ export default function ChatView({
         });
       }
     },
-    [activeSplitView, handleNewChat, navigate, removeThreadFromSplitViews],
+    [activeSplitView, createChat, navigate, removeThreadFromSplitViews],
   );
   const {
     terminalState,
@@ -1710,7 +1712,7 @@ export default function ChatView({
       }
 
       clearProjectDraftThreadId(activeProject.id);
-      const nextThreadId = newThreadId();
+      const nextThreadId = createThreadId();
       setProjectDraftThreadId(activeProject.id, nextThreadId, {
         ...draftThreadContext,
         createdAt: new Date().toISOString(),
@@ -5636,7 +5638,7 @@ export default function ChatView({
     }
 
     const threadIdForSend = activeThread.id;
-    const messageId = newMessageId();
+    const messageId = createMessageId();
     const observedAt = new Date().toISOString();
     const productApi = readProductNativeApi();
     const activeProductRun = [...(productReadModel?.runs ?? [])]
@@ -6146,7 +6148,7 @@ export default function ChatView({
         return;
       }
       if (!isHomeChatContainer) {
-        await handleNewChat({ fresh: true });
+        await createChat({ fresh: true });
         return;
       }
       setDraftThreadContext(threadId, {
@@ -6175,7 +6177,7 @@ export default function ChatView({
   }, [
     activeThread,
     hasNativeUserMessages,
-    handleNewChat,
+    createChat,
     isHomeChatContainer,
     isLocalDraftThread,
     isStudioContainer,
@@ -6833,13 +6835,13 @@ export default function ChatView({
     }
     // Keep the editor workspace view (and any open file) across the new-thread
     // navigation; the default new-thread flow clears all search params.
-    void handleNewThread(activeProjectIdForNewChat, undefined, {
+    void createThread(activeProjectIdForNewChat, undefined, {
       search: (previous) => ({
         ...stripDiffSearchParams(previous),
         view: "editor",
       }),
     });
-  }, [activeProjectIdForNewChat, handleNewThread]);
+  }, [activeProjectIdForNewChat, createThread]);
   const onOpenEditorChat = useCallback(
     (nextThreadId: ThreadId) => {
       storeOpenChatThreadPage(nextThreadId);

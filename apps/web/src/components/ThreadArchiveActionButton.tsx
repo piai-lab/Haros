@@ -7,7 +7,7 @@
 import type { ThreadId } from "@omnimind/contracts";
 
 import { ArchiveIcon } from "~/lib/icons";
-import { cn } from "~/lib/utils";
+import { cn } from "~/lib/styles";
 import { SIDEBAR_TRAILING_ICON_CLASS, sidebarGlyphClass } from "./sidebarGlyphs";
 import { SidebarIconButton } from "./SidebarIconButton";
 

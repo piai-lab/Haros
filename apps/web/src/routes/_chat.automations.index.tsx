@@ -23,7 +23,7 @@ import {
   useDesktopTopBarWindowControlsGutterClassName,
 } from "~/hooks/useDesktopTopBarGutter";
 import { Glyph } from "~/ui/icons";
-import { cn } from "~/lib/utils";
+import { cn } from "~/lib/styles";
 import { ELEVATED_HOVER_SURFACE_CLASS_NAME } from "~/surfaceStyles";
 import { ensureNativeApi } from "~/nativeApi";
 import { useStore } from "~/store";
@@ -245,10 +245,7 @@ function AutomationsRouteView() {
       );
       return;
     }
-    createMutation.mutate(
-      createInputFromForm(form, acknowledgedRisks),
-      closeOnSuccess,
-    );
+    createMutation.mutate(createInputFromForm(form, acknowledgedRisks), closeOnSuccess);
   };
 
   const deleteDefinition = async (definition: AutomationDefinition) => {

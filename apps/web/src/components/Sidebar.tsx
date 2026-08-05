@@ -96,7 +96,8 @@ import {
 } from "../appSettings";
 import { isElectron } from "../env";
 import { formatRelativeTime } from "../lib/relativeTime";
-import { isMacPlatform, newCommandId, newThreadId, randomUUID } from "../lib/utils";
+import { isMacPlatform } from "../lib/platform";
+import { createCommandId, createThreadId, randomUUID } from "../lib/identifiers";
 import { reconcileDeletedThreadsFromClient } from "../lib/deletedThreadClientReconciliation";
 import { persistAppStateNow, useStore } from "../store";
 import { useProductStore } from "../store/productStore";
@@ -190,9 +191,9 @@ import {
 import { RenameDialog } from "./RenameDialog";
 import { RenameThreadDialog } from "./RenameThreadDialog";
 import { SidebarSearchPalette } from "./SidebarSearchPalette";
-import { useHandleNewChat } from "../hooks/useHandleNewChat";
-import { useHandleNewStudioChat } from "../hooks/useHandleNewStudioChat";
-import { useHandleNewThread } from "../hooks/useHandleNewThread";
+import { useCreateChat } from "../hooks/useCreateChat";
+import { useCreateStudioChat } from "../hooks/useCreateStudioChat";
+import { useCreateThread } from "../hooks/useCreateThread";
 import { useFeedbackDialogStore } from "../feedbackDialogStore";
 import { openExternalLink } from "~/lib/linkChips";
 import { resolvePublicSiteLink, type PublicSiteSurface } from "~/publicSurface";
@@ -306,7 +307,7 @@ import {
 import type { LastThreadRoute } from "../chatRouteRestore";
 import { useCopyPathToClipboard, useCopyThreadIdToClipboard } from "~/hooks/useCopyToClipboard";
 import { DESKTOP_TOP_BAR_TRAFFIC_LIGHT_GUTTER_CLASS } from "~/hooks/useDesktopTopBarGutter";
-import { cn } from "~/lib/utils";
+import { cn } from "~/lib/styles";
 import {
   disclosureContentClassName,
   disclosureShellClassName,
@@ -1366,9 +1367,9 @@ export default function Sidebar() {
   // Agent | Chat is fixed product navigation. The donor Studio visibility preference no longer
   // controls whether the Chat product surface exists.
   const studioSectionVisible = true;
-  const { handleNewThread } = useHandleNewThread();
-  const { handleNewChat } = useHandleNewChat();
-  const { handleNewStudioChat } = useHandleNewStudioChat();
+  const { createThread } = useCreateThread();
+  const { createChat } = useCreateChat();
+  const { createStudioChat } = useCreateStudioChat();
   const routeThreadId = useParams({
     strict: false,
     select: (params) => (params.threadId ? ThreadId.makeUnsafe(params.threadId) : null),
@@ -1749,7 +1750,7 @@ export default function Sidebar() {
     activeSplitView,
     appSettings,
     clearTerminalState,
-    handleNewChat,
+    createChat,
     projectById,
     routeSplitViewId: routeSearch.splitViewId ?? null,
     routeThreadId,
@@ -2014,13 +2015,13 @@ export default function Sidebar() {
         return;
       }
       setProjectExpanded(projectId, true);
-      void handleNewThread(projectId, {
+      void createThread(projectId, {
         envMode: appSettings.defaultThreadEnvMode,
       }).catch(() => undefined);
     },
     [
       appSettings.defaultThreadEnvMode,
-      handleNewThread,
+      createThread,
       navigate,
       productConversationSummaries,
       setProjectExpanded,
@@ -2036,7 +2037,7 @@ export default function Sidebar() {
         return;
       }
 
-      void handleNewThread(typedProjectId, {
+      void createThread(typedProjectId, {
         envMode: resolveSidebarNewThreadEnvMode({
           defaultEnvMode: appSettings.defaultThreadEnvMode,
         }),
@@ -2045,7 +2046,7 @@ export default function Sidebar() {
     [
       appSettings.defaultThreadEnvMode,
       focusMostRecentThreadForProject,
-      handleNewThread,
+      createThread,
       sidebarThreads,
     ],
   );
@@ -2169,16 +2170,16 @@ export default function Sidebar() {
     lastActiveSidebarSegmentRef.current = isOnStudio ? "studio" : "threads";
   }, [isOnSettings, isOnStudio]);
 
-  // Shared Studio fallback: reopen/create via handleNewStudioChat and, on failure, land on
+  // Shared Studio fallback: reopen/create via createStudioChat and, on failure, land on
   // /studio — its splash already displays the error with a retry. Swallowing the result here
   // would make the segment click appear dead and hide the cross-kind conflict message.
   const openStudioChatFallback = useCallback(() => {
-    void handleNewStudioChat().then((result) => {
+    void createStudioChat().then((result) => {
       if (!result.ok) {
         void navigate({ to: "/", search: { surface: "chat" } });
       }
     });
-  }, [handleNewStudioChat, navigate]);
+  }, [createStudioChat, navigate]);
 
   const handleBackToAppFromSettings = useCallback(() => {
     const fromStudio = lastActiveSidebarSegmentRef.current === "studio";
@@ -2208,7 +2209,7 @@ export default function Sidebar() {
       if (view === "studio") {
         // Remembered route first — it already treats the stored Studio draft as a valid target
         // (resolveBackToStudioTarget includes studioDraftThreadIds), so switching back to Studio
-        // returns to the thread you were on, not an old empty draft. handleNewStudioChat stays
+        // returns to the thread you were on, not an old empty draft. createStudioChat stays
         // the fallback and reopens the stored draft when there is nothing to restore.
         if (navigateToBackTarget(resolveBackToStudioTarget(), "chat")) {
           return;
@@ -2221,10 +2222,10 @@ export default function Sidebar() {
         return;
       }
 
-      void handleNewChat({ fresh: true });
+      void createChat({ fresh: true });
     },
     [
-      handleNewChat,
+      createChat,
       navigateToBackTarget,
       openStudioChatFallback,
       resolveBackToStudioTarget,
@@ -2263,11 +2264,11 @@ export default function Sidebar() {
   // Opens a fresh home-chat draft directly on the draft thread route so the first send
   // does not need a second route swap from "/" to "/$threadId".
   const handleCreateHomeChat = useCallback(async () => {
-    await handleNewChat({ fresh: true });
-  }, [handleNewChat]);
+    await createChat({ fresh: true });
+  }, [createChat]);
   const handleCreateStudioChat = useCallback(async () => {
-    await handleNewStudioChat({ fresh: true });
-  }, [handleNewStudioChat]);
+    await createStudioChat({ fresh: true });
+  }, [createStudioChat]);
 
   const addProjectFromPath = useCallback(
     async (rawCwd: string, options: { createIfMissing?: boolean } = {}) => {
@@ -2367,7 +2368,7 @@ export default function Sidebar() {
 
   const handlePrimaryNewThread = useCallback(() => {
     if (primaryNewThreadTarget) {
-      void handleNewThread(primaryNewThreadTarget.projectId, {
+      void createThread(primaryNewThreadTarget.projectId, {
         envMode: resolveSidebarNewThreadEnvMode({
           defaultEnvMode: appSettings.defaultThreadEnvMode,
         }),
@@ -2383,7 +2384,7 @@ export default function Sidebar() {
     handleStartAddProject();
   }, [
     appSettings.defaultThreadEnvMode,
-    handleNewThread,
+    createThread,
     handleStartAddProject,
     primaryNewThreadTarget,
     threadsHydrated,
@@ -4351,7 +4352,7 @@ export default function Sidebar() {
                 onClick={(event) => {
                   event.preventDefault();
                   event.stopPropagation();
-                  void handleNewThread(project.id, {
+                  void createThread(project.id, {
                     envMode: resolveSidebarNewThreadEnvMode({
                       defaultEnvMode: appSettings.defaultThreadEnvMode,
                     }),
@@ -4370,7 +4371,7 @@ export default function Sidebar() {
                 onClick={(event) => {
                   event.preventDefault();
                   event.stopPropagation();
-                  void handleNewThread(project.id, {
+                  void createThread(project.id, {
                     envMode: resolveSidebarNewThreadEnvMode({
                       defaultEnvMode: appSettings.defaultThreadEnvMode,
                     }),

@@ -7,7 +7,7 @@
 //      at the same semantic slot; this module is the one place to tune that.
 
 import type { ComponentType } from "react";
-import { cn } from "~/lib/utils";
+import { cn } from "~/lib/styles";
 
 /** Tailwind classes per semantic icon slot in the sidebar chrome. */
 export const SIDEBAR_GLYPH = {

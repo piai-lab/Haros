@@ -16,7 +16,7 @@ function createMemoryStorage(): Storage {
   } as Storage;
 }
 
-describe("storageOriginMigration", () => {
+describe("storageOriginUpgrade", () => {
   beforeEach(() => {
     globalThis.localStorage = createMemoryStorage();
   });
@@ -29,7 +29,7 @@ describe("storageOriginMigration", () => {
 
   it("imports missing keys without overwriting current-origin state", async () => {
     globalThis.localStorage.setItem("omnimind:theme", "current");
-    const { importOmniMindStorageSnapshot } = await import("./storageOriginMigration");
+    const { importOmniMindStorageSnapshot } = await import("./storageOriginUpgrade");
 
     expect(
       importOmniMindStorageSnapshot({
@@ -46,7 +46,7 @@ describe("storageOriginMigration", () => {
   });
 
   it("rejects an invalid snapshot before writing any entry", async () => {
-    const { importOmniMindStorageSnapshot } = await import("./storageOriginMigration");
+    const { importOmniMindStorageSnapshot } = await import("./storageOriginUpgrade");
     expect(
       importOmniMindStorageSnapshot({
         version: 1,
@@ -61,7 +61,7 @@ describe("storageOriginMigration", () => {
   });
 
   it("imports snapshots containing large composer drafts", async () => {
-    const { importOmniMindStorageSnapshot } = await import("./storageOriginMigration");
+    const { importOmniMindStorageSnapshot } = await import("./storageOriginUpgrade");
     const largeDraft = "x".repeat(2 * 1024 * 1024);
 
     expect(
@@ -75,7 +75,7 @@ describe("storageOriginMigration", () => {
   });
 
   it("keeps the snapshot retryable after a partial storage failure", async () => {
-    const { importOmniMindStorageSnapshot } = await import("./storageOriginMigration");
+    const { importOmniMindStorageSnapshot } = await import("./storageOriginUpgrade");
     let writes = 0;
     const storage = createMemoryStorage();
     const setItem = storage.setItem.bind(storage);
@@ -100,7 +100,7 @@ describe("storageOriginMigration", () => {
     const acknowledgeSnapshot = vi.fn(async () => undefined);
     vi.stubGlobal("window", {
       desktopBridge: {
-        storageMigration: {
+        storageUpgrade: {
           readSnapshot: () => ({
             version: 1,
             exportedAt: "2026-07-09T00:00:00.000Z",
@@ -111,7 +111,7 @@ describe("storageOriginMigration", () => {
       },
     });
 
-    await import("./storageOriginMigration");
+    await import("./storageOriginUpgrade");
     await vi.waitFor(() => expect(acknowledgeSnapshot).toHaveBeenCalledOnce());
     expect(globalThis.localStorage.getItem("omnimind:theme")).toBe("dark");
   });
@@ -126,7 +126,7 @@ describe("storageOriginMigration", () => {
     } as Storage;
     vi.stubGlobal("window", {
       desktopBridge: {
-        storageMigration: {
+        storageUpgrade: {
           readSnapshot: () => ({
             version: 1,
             exportedAt: "2026-07-09T00:00:00.000Z",
@@ -137,7 +137,7 @@ describe("storageOriginMigration", () => {
       },
     });
 
-    await import("./storageOriginMigration");
+    await import("./storageOriginUpgrade");
     expect(acknowledgeSnapshot).not.toHaveBeenCalled();
   });
 });

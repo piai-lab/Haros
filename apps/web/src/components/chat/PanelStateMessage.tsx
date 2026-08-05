@@ -8,7 +8,7 @@
 
 import { type ReactNode } from "react";
 
-import { cn } from "~/lib/utils";
+import { cn } from "~/lib/styles";
 
 // `comfortable` matches the larger pane placeholders (text-sm, p-6); `compact`
 // matches dense in-panel hints (text-xs, dimmer). `fill` chooses between filling

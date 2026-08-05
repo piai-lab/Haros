@@ -4,7 +4,7 @@
 // Layer: Chat composer presentation
 
 import { XIcon } from "~/lib/icons";
-import { cn } from "~/lib/utils";
+import { cn } from "~/lib/styles";
 
 export type AttachmentRemoveButtonSize = "sm" | "md";
 export type AttachmentRemoveButtonPlacement = "corner" | "center-right";

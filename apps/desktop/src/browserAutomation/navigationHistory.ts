@@ -5,7 +5,7 @@ import type {
   BrowserTabId,
 } from "@omnimind/contracts";
 
-import type { BrowserAutomationVisibleRuntime } from "../browserManager";
+import type { BrowserAutomationVisibleRuntime } from "../browserHost";
 import { abortReason, sendCdpCommand, throwIfAborted } from "./cdpRuntime";
 import { browserHostError } from "./hostErrors";
 import { getBrowserNavigationTracker, stopBrowserNavigation } from "./navigationTracker";

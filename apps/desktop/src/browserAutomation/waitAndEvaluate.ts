@@ -7,7 +7,7 @@ import type {
   BrowserWaitOutput,
 } from "@omnimind/contracts";
 
-import type { BrowserAutomationVisibleRuntime } from "../browserManager";
+import type { BrowserAutomationVisibleRuntime } from "../browserHost";
 import {
   abortReason,
   evaluateInContext,

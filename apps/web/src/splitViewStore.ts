@@ -8,7 +8,7 @@ import { create } from "zustand";
 import { createJSONStorage, persist } from "zustand/middleware";
 
 import { type ChatRightPanel } from "./diffRouteSearch";
-import { randomUUID } from "./lib/utils";
+import { randomUUID } from "./lib/identifiers";
 import {
   canSubdividePane,
   collectLeaves,

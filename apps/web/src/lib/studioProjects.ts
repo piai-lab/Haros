@@ -15,7 +15,7 @@ import {
   resolveServerStudioWorkspaceRoot,
   type ServerWorkspacePaths,
 } from "./serverWorkspacePaths";
-import { newProjectId } from "./utils";
+import { createProjectId } from "./identifiers";
 
 const pendingStudioCreationByWorkspaceRoot = new Map<string, Promise<ProjectId | null>>();
 
@@ -107,7 +107,7 @@ export async function ensureStudioProject(paths: ServerWorkspacePaths): Promise<
   if (pending) return pending;
   const creation = createProductWorkspace(
     {
-      workspaceId: ProductWorkspaceId.makeUnsafe(newProjectId()),
+      workspaceId: ProductWorkspaceId.makeUnsafe(createProjectId()),
       title: "Studio",
       access: {
         kind: "managed",

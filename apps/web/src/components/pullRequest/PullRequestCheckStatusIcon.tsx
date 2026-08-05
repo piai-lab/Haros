@@ -8,7 +8,7 @@ import type { PullRequestCheckStatus } from "@omnimind/contracts";
 
 import { Glyph } from "~/ui/icons";
 import { Loader2Icon } from "~/lib/icons";
-import { cn } from "~/lib/utils";
+import { cn } from "~/lib/styles";
 
 // One footprint for every branch: the glyphs head a row of text and must share an optical
 // box, so the dashed placeholder is centered inside the same size rather than sized down.

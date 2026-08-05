@@ -1,4 +1,4 @@
-// FILE: KanbanNewTaskDialog.tsx
+// FILE: KanbanTaskCreateDialog.tsx
 // Purpose: Linear-style "New task" dialog — a compact composer that drafts a task
 //          (prompt + Host model/thinking + permissions + mode + environment + voice)
 //          and drops it into the board's Draft column. Model state is driven through
@@ -7,7 +7,7 @@
 //          composer draft is untouched. Execution choices come only from the
 //          sanitized Product runtime catalog.
 // Layer: Kanban UI component
-// Exports: KanbanNewTaskDialog
+// Exports: KanbanTaskCreateDialog
 
 import type { ProjectId } from "@omnimind/contracts";
 import { useQuery } from "@tanstack/react-query";
@@ -47,13 +47,13 @@ import { useTheme } from "~/hooks/useTheme";
 import { ChevronRightIcon, LoaderCircleIcon, PaperclipIcon } from "~/lib/icons";
 import { formatComposerMentionToken } from "~/lib/composerMentions";
 import { serverConfigQueryOptions } from "~/lib/serverReactQuery";
-import { cn } from "~/lib/utils";
+import { cn } from "~/lib/styles";
 import { type ComposerFileAttachment, type DraftThreadEnvMode } from "../../composerDraftStore";
 import { type ExpandedImagePreview } from "../chat/ExpandedImagePreview";
 import { ExpandedImageOverlay } from "../chat/ExpandedImageOverlay";
 import { useStore } from "../../store";
 import { useProductStore } from "../../store/productStore";
-import { appendKanbanTaskTranscript, buildKanbanTaskPreview } from "./KanbanNewTaskDialog.logic";
+import { appendKanbanTaskTranscript, buildKanbanTaskPreview } from "./KanbanTaskCreateDialog.logic";
 import { KanbanTaskExtrasMenu } from "./KanbanTaskExtrasMenu";
 import { KanbanTaskProjectPicker } from "./KanbanTaskProjectPicker";
 import { KanbanRuntimePicker } from "./KanbanRuntimePicker";
@@ -66,15 +66,15 @@ const EMPTY_COMPOSER_FILES: ReadonlyArray<ComposerFileAttachment> = [];
 
 function ignoreComposerFileRemoval(_fileId: string): void {}
 
-export interface KanbanNewTaskProjectOption {
+export interface KanbanTaskCreateProjectOption {
   id: ProjectId;
   name: string;
 }
 
-export interface KanbanNewTaskDialogProps {
+export interface KanbanTaskCreateDialogProps {
   onOpenChange: (open: boolean) => void;
   /** Boards available as task destinations, in board display order. */
-  projectOptions: ReadonlyArray<KanbanNewTaskProjectOption>;
+  projectOptions: ReadonlyArray<KanbanTaskCreateProjectOption>;
   initialProjectId: ProjectId | null;
   /** Seeds the "Send as draft" toggle — true when opened from the Draft column's "+". */
   initialSendAsDraft?: boolean;
@@ -84,12 +84,12 @@ export interface KanbanNewTaskDialogProps {
  * Mount with a fresh `key` per open so all draft state initializes lazily; closing
  * is signalled through onOpenChange(false) and the parent unmounts the dialog.
  */
-export function KanbanNewTaskDialog({
+export function KanbanTaskCreateDialog({
   onOpenChange,
   projectOptions,
   initialProjectId,
   initialSendAsDraft: initialSendAsDraftProp,
-}: KanbanNewTaskDialogProps) {
+}: KanbanTaskCreateDialogProps) {
   const initialSendAsDraft = initialSendAsDraftProp ?? false;
   const { resolvedTheme } = useTheme();
   const projects = useStore((state) => state.projects);
@@ -144,10 +144,7 @@ export function KanbanNewTaskDialog({
     [requestedSelection, runtimeCatalog],
   );
   const handleRuntimePickerChange = useCallback(
-    (
-      model: Parameters<typeof handleRuntimeSelectionChange>[0],
-      thinking: string | null,
-    ) => {
+    (model: Parameters<typeof handleRuntimeSelectionChange>[0], thinking: string | null) => {
       handleRuntimeSelectionChange(model, thinking);
     },
     [handleRuntimeSelectionChange],

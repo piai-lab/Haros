@@ -4,7 +4,7 @@
 // Depends on: keybinding label resolution, project script command mapping, and platform helpers.
 
 import type { KeybindingCommand, ResolvedKeybindingsConfig } from "@omnimind/contracts";
-import { isMacPlatform } from "./lib/utils";
+import { isMacPlatform } from "./lib/platform";
 import { shortcutLabelForCommand } from "./keybindings";
 import { commandForProjectScript } from "./projectScripts";
 import type { ProjectScript } from "./types";

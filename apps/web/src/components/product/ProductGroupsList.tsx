@@ -13,7 +13,7 @@ import { useProductGroupsController } from "../useProductGroupsController";
 import { PencilIcon, Trash2 } from "../../lib/icons";
 import { formatRelativeTime } from "../../lib/relativeTime";
 import { getWorkbenchCopy } from "../../i18n/workbenchCopy";
-import { cn } from "../../lib/utils";
+import { cn } from "../../lib/styles";
 import { useProductGroupsUiStore } from "../../productGroupsUiStore";
 import {
   SIDEBAR_ROW_ACTIVE_CLASS_NAME,
@@ -99,10 +99,7 @@ function GroupEditor(props: {
   }, [groupId, open, props.group?.color, props.group?.name]);
 
   return (
-    <Dialog
-      open={open}
-      onOpenChange={props.onOpenChange}
-    >
+    <Dialog open={open} onOpenChange={props.onOpenChange}>
       <DialogPopup key={groupId ?? "new-group"}>
         <DialogHeader>
           <DialogTitle>{props.group ? copy.editGroup : copy.newGroup}</DialogTitle>
@@ -227,7 +224,9 @@ export function ProductGroupsList(props: {
             const expanded = expandedIds.includes(group.id);
             const conversations = group.conversationIds
               .map((id) => conversationsById.get(id))
-              .filter((conversation): conversation is ProductConversationSummary => Boolean(conversation))
+              .filter((conversation): conversation is ProductConversationSummary =>
+                Boolean(conversation),
+              )
               .filter((conversation) => conversation.archivedAt === null);
             return (
               <SidebarMenuItem key={group.id} className="rounded-md">
@@ -242,7 +241,9 @@ export function ProductGroupsList(props: {
                     event.dataTransfer.dropEffect = event.altKey || event.metaKey ? "copy" : "move";
                     setDropGroupId(group.id);
                   }}
-                  onDragLeave={() => setDropGroupId((current) => (current === group.id ? null : current))}
+                  onDragLeave={() =>
+                    setDropGroupId((current) => (current === group.id ? null : current))
+                  }
                   onDrop={(event) => {
                     event.preventDefault();
                     setDropGroupId(null);
@@ -321,10 +322,12 @@ export function ProductGroupsList(props: {
                         variant="ghost"
                         disabled={controller.pending}
                         onClick={() =>
-                          runMutation(() => controller.addConversations(
-                            [ThreadId.makeUnsafe(props.activeConversationId!)],
-                            group.id,
-                          ))
+                          runMutation(() =>
+                            controller.addConversations(
+                              [ThreadId.makeUnsafe(props.activeConversationId!)],
+                              group.id,
+                            ),
+                          )
                         }
                       >
                         {copy.groupAddCurrent}
@@ -332,7 +335,10 @@ export function ProductGroupsList(props: {
                     ) : null}
                   </div>
                   {expanded ? (
-                    <SidebarMenu className="gap-1 border-l border-sidebar-border/60 pl-2" aria-label={group.name}>
+                    <SidebarMenu
+                      className="gap-1 border-l border-sidebar-border/60 pl-2"
+                      aria-label={group.name}
+                    >
                       {conversations.length === 0 ? (
                         <p className="px-2 py-1.5 text-[10px] text-muted-foreground/50">
                           {copy.groupDragHint}

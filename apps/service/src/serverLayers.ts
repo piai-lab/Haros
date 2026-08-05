@@ -9,7 +9,7 @@ import { ServerSecretStoreLive } from "./auth/Layers/ServerSecretStore";
 import { SessionCredentialServiceLive } from "./auth/Layers/SessionCredentialService";
 import { AutomationSchedulerLive } from "./automation/Layers/AutomationScheduler";
 import { AutomationServiceLive } from "./automation/Layers/AutomationService";
-import { DevServerManagerLive } from "./devServerManager";
+import { DevServerSupervisorLive } from "./devServerSupervisor";
 import { ServerEnvironmentLive } from "./environment/Layers/ServerEnvironment";
 import { GitLayerLive } from "./git/runtimeLayer";
 import { KeybindingsLive } from "./keybindings";
@@ -58,13 +58,11 @@ export function makeServerRuntimeServicesLayer() {
   const managedAttachmentCleanupLayer = ManagedAttachmentCleanupLive.pipe(
     Layer.provideMerge(ManagedAttachmentRepositoryLive),
   );
-  const devServerManagerLayer = DevServerManagerLive.pipe(Layer.provide(TerminalLayerLive));
+  const devServerSupervisorLayer = DevServerSupervisorLive.pipe(Layer.provide(TerminalLayerLive));
   const automationServiceLayer = AutomationServiceLive.pipe(
     Layer.provideMerge(AutomationRepositoryLive),
   );
-  const automationLayer = AutomationSchedulerLive.pipe(
-    Layer.provideMerge(automationServiceLayer),
-  );
+  const automationLayer = AutomationSchedulerLive.pipe(Layer.provideMerge(automationServiceLayer));
   const pullRequestServiceLayer = Layer.effect(
     PullRequestService,
     Effect.gen(function* () {
@@ -81,8 +79,7 @@ export function makeServerRuntimeServicesLayer() {
           productControlPlane
             .getShellSnapshot()
             .pipe(Effect.map((snapshot) => snapshot.workspaces)),
-        resolveRepositories: (workspace) =>
-          resolveGitHubRepositories(git, workspace.workspaceRoot),
+        resolveRepositories: (workspace) => resolveGitHubRepositories(git, workspace.workspaceRoot),
       });
     }),
   ).pipe(
@@ -94,7 +91,7 @@ export function makeServerRuntimeServicesLayer() {
   return Layer.mergeAll(
     automationLayer,
     authServicesLayer,
-    devServerManagerLayer,
+    devServerSupervisorLayer,
     GitLayerLive,
     KeybindingsLive,
     ManagedAttachmentRepositoryLive,

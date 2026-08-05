@@ -3,7 +3,7 @@ import type { WebContents } from "electron";
 import { EventEmitter } from "node:events";
 import { describe, expect, it, vi } from "vitest";
 
-import type { BrowserAutomationVisibleRuntime } from "../browserManager";
+import type { BrowserAutomationVisibleRuntime } from "../browserHost";
 import { beginBrowserNavigation } from "./navigationTracker";
 import {
   boundedGlobMatches,

@@ -5,7 +5,7 @@
 
 import { getAttachmentIconName, getFileIconName } from "../../file-icons";
 import { Glyph } from "~/ui/icons";
-import { cn } from "~/lib/utils";
+import { cn } from "~/lib/styles";
 import { FolderClosed, FolderOpen } from "../FolderClosed";
 
 const FILE_ICON_COLOR_CLASS_BY_ICON_NAME: Record<string, string> = {
@@ -84,9 +84,6 @@ export const FileEntryIcon = function FileEntryIcon(props: {
         FILE_ICON_COLOR_CLASS_BY_ICON_NAME["code-brackets"]);
 
   return (
-    <Glyph
-      name={iconName}
-      className={cn("size-4 shrink-0", props.className, colorClassName)}
-    />
+    <Glyph name={iconName} className={cn("size-4 shrink-0", props.className, colorClassName)} />
   );
 };

@@ -5,7 +5,7 @@
 //          SettingsListRow, SettingsRow, SettingsSelectPopup
 
 import { type ComponentProps, type ReactNode } from "react";
-import { cn } from "~/lib/utils";
+import { cn } from "~/lib/styles";
 import { settingRowAnchorId } from "~/settingsNavigation";
 import {
   SETTINGS_CARD_CLASS_NAME,

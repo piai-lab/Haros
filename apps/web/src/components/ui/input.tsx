@@ -3,7 +3,7 @@
 import { Input as InputPrimitive } from "@base-ui/react/input";
 import { forwardRef, type ComponentPropsWithoutRef } from "react";
 
-import { cn } from "~/lib/utils";
+import { cn } from "~/lib/styles";
 import { SOFT_SURFACE_FILL_CLASS_NAME } from "~/surfaceStyles";
 
 type InputProps = Omit<ComponentPropsWithoutRef<typeof InputPrimitive>, "size"> & {

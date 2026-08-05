@@ -7,7 +7,7 @@ import {
   gitPreparePullRequestThreadMutationOptions,
   gitResolvePullRequestQueryOptions,
 } from "~/lib/gitReactQuery";
-import { cn } from "~/lib/utils";
+import { cn } from "~/lib/styles";
 import { parsePullRequestReference } from "~/pullRequestReference";
 import { Button } from "./ui/button";
 import {

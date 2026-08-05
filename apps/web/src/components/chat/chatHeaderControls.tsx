@@ -17,7 +17,7 @@ import { CHAT_SURFACE_HEADER_HEIGHT_PX } from "@omnimind/shared/desktopChrome";
 
 import { Glyph } from "~/ui/icons";
 import { type GlyphComponent } from "~/lib/icons";
-import { cn } from "~/lib/utils";
+import { cn } from "~/lib/styles";
 
 import { Button } from "../ui/button";
 

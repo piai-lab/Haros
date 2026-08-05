@@ -22,7 +22,7 @@ import { readEditorViewState, storeEditorViewState } from "../../editorViewState
 import { basenameOfPath } from "../../file-icons";
 import { useBrowserPanelDesktopBridge } from "../../hooks/useBrowserPanelDesktopBridge";
 import { useDockPaneRuntimeActivation } from "../../hooks/useDockPaneRuntimeActivation";
-import { useHandleNewThread } from "../../hooks/useHandleNewThread";
+import { useCreateThread } from "../../hooks/useCreateThread";
 import { useRepoDiffTotals } from "../../hooks/useRepoDiffTotals";
 import {
   addChatFileComment,
@@ -99,7 +99,7 @@ import {
   resolveRoutePanelBootstrap,
   stripEditorViewSearchParams,
 } from "../../routes/-chatThreadRoute.logic";
-import { cn } from "~/lib/utils";
+import { cn } from "~/lib/styles";
 
 const PullRequestDockPane = lazy(() => import("../pullRequest/PullRequestDockPane"));
 const EditorWorkspaceView = lazy(() =>
@@ -227,7 +227,7 @@ export function SingleChatSurface(props: {
   const availableDockPaneKinds = dockLauncherItems.map(({ kind }) => kind);
   const projects = useStore((store) => store.projects);
   const { settings: appSettings } = useAppSettings();
-  const { handleNewThread } = useHandleNewThread();
+  const { createThread } = useCreateThread();
   const queryClient = useQueryClient();
   const lastAppliedRoutePanelSearchKeyRef = useRef<string | null>(null);
   const [editorExpandedDirectories, setEditorExpandedDirectories] = useState<ReadonlySet<string>>(
@@ -600,7 +600,7 @@ export function SingleChatSurface(props: {
       return;
     }
 
-    await handleNewThread(
+    await createThread(
       projectId,
       {
         envMode: appSettings.defaultThreadEnvMode,

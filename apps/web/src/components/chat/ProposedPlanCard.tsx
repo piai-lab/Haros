@@ -6,7 +6,7 @@ import {
 } from "../../proposedPlan";
 import ChatMarkdown from "../ChatMarkdown";
 import { Button } from "../ui/button";
-import { cn } from "~/lib/utils";
+import { cn } from "~/lib/styles";
 import { Badge } from "../ui/badge";
 import { ProposedPlanActions } from "./ProposedPlanActions";
 

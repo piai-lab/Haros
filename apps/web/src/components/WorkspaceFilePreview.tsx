@@ -50,7 +50,7 @@ import {
   getSyntaxLanguageForPath,
   highlightCodeToHtmlWithFallback,
 } from "~/lib/syntaxHighlighting";
-import { cn } from "~/lib/utils";
+import { cn } from "~/lib/styles";
 import { readNativeApi } from "~/nativeApi";
 import ChatMarkdown from "./ChatMarkdown";
 import { FileLineCommentBox } from "./chat/FileLineCommentBox";

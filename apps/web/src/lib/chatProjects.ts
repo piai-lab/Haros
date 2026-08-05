@@ -8,7 +8,7 @@ import { useProductStore } from "../store/productStore";
 import type { Project } from "../types";
 import { readProductNativeApi } from "../wsNativeApi";
 import type { ServerWorkspacePaths } from "./serverWorkspacePaths";
-import { newProjectId } from "./utils";
+import { createProjectId } from "./identifiers";
 
 let provisionalChatWorkspaceId: ProjectId | null = null;
 let pendingChatWorkspaceResolution: Promise<ProjectId | null> | null = null;
@@ -36,7 +36,7 @@ export async function ensureHomeChatProject(
       const hydrated = readChatWorkspaceId();
       if (hydrated) return hydrated;
     }
-    provisionalChatWorkspaceId ??= newProjectId();
+    provisionalChatWorkspaceId ??= createProjectId();
     return provisionalChatWorkspaceId;
   })().finally(() => {
     pendingChatWorkspaceResolution = null;

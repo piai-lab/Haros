@@ -7,7 +7,7 @@ import type { BrowserCssSelector } from "@omnimind/contracts";
 import type { WebContents } from "electron";
 import { afterEach, describe, expect, it, vi } from "vitest";
 
-import type { BrowserAutomationVisibleRuntime } from "../browserManager";
+import type { BrowserAutomationVisibleRuntime } from "../browserHost";
 import {
   configureWorkspaceUploadForTests,
   resolveWorkspaceUploadFiles,

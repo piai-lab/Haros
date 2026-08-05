@@ -45,7 +45,7 @@ vi.mock("electron", () => ({
   },
 }));
 
-import { DesktopBrowserManager } from "../browserManager";
+import { DesktopBrowserHost } from "../browserHost";
 import { dispatchTrustedClick } from "./trustedInput";
 
 const THREAD_ID = ThreadId.makeUnsafe("thread-visible-runtime");
@@ -59,6 +59,7 @@ class FakeWebContents extends EventEmitter {
     detach: vi.fn(),
   };
   isDestroyed = () => false;
+  send = vi.fn();
   setUserAgent = vi.fn();
   windowOpenHandler:
     | ((details: { url: string; frameName: string; features: string; disposition: string }) => {
@@ -77,9 +78,9 @@ class FakeWebContents extends EventEmitter {
   loadURL = vi.fn(() => Promise.resolve());
 }
 
-describe("DesktopBrowserManager automation runtime boundary", () => {
+describe("DesktopBrowserHost automation runtime boundary", () => {
   it("refuses a native fallback and returns only an adopted renderer webview", () => {
-    const manager = new DesktopBrowserManager();
+    const manager = new DesktopBrowserHost();
     const state = manager.open({ threadId: THREAD_ID });
     const tabId = state.activeTabId;
     expect(tabId).not.toBeNull();
@@ -130,7 +131,7 @@ describe("DesktopBrowserManager automation runtime boundary", () => {
   });
 
   it("prepares a renderer tab without constructing a WebContentsView fallback", () => {
-    const manager = new DesktopBrowserManager();
+    const manager = new DesktopBrowserHost();
     const state = manager.prepareAutomationTab({
       threadId: THREAD_ID,
       url: "https://example.test",
@@ -149,7 +150,7 @@ describe("DesktopBrowserManager automation runtime boundary", () => {
   });
 
   it("adopts only a webview owned by the exact OmniMind window and browser partition", () => {
-    const manager = new DesktopBrowserManager();
+    const manager = new DesktopBrowserHost();
     const state = manager.prepareAutomationTab({ threadId: THREAD_ID, reuse: true });
     const tabId = state.activeTabId!;
     const guest = Object.assign(new FakeWebContents(), {
@@ -181,7 +182,7 @@ describe("DesktopBrowserManager automation runtime boundary", () => {
   });
 
   it("routes automation only after the adopted renderer guest is the visible panel surface", () => {
-    const manager = new DesktopBrowserManager();
+    const manager = new DesktopBrowserHost();
     const hostWindow = {
       webContents: Object.assign(new EventEmitter(), { id: 41, isDestroyed: () => false }),
       contentView: { addChildView: vi.fn(), removeChildView: vi.fn() },
@@ -217,7 +218,7 @@ describe("DesktopBrowserManager automation runtime boundary", () => {
   });
 
   it("rejects stale or duplicate renderer bindings instead of stealing visible tab affinity", () => {
-    const manager = new DesktopBrowserManager();
+    const manager = new DesktopBrowserHost();
     const state = manager.prepareAutomationTab({ threadId: THREAD_ID, reuse: true });
     const tabId = state.activeTabId!;
     const firstGuest = Object.assign(new FakeWebContents(17), {
@@ -254,7 +255,7 @@ describe("DesktopBrowserManager automation runtime boundary", () => {
   });
 
   it("keeps the CDP session when one renderer webview is rebound to another tab", () => {
-    const manager = new DesktopBrowserManager();
+    const manager = new DesktopBrowserHost();
     const first = manager.prepareAutomationTab({ threadId: THREAD_ID, reuse: true });
     const firstTabId = first.activeTabId!;
     const detachDebugger = vi.fn();
@@ -299,7 +300,7 @@ describe("DesktopBrowserManager automation runtime boundary", () => {
   });
 
   it("detaches CDP and defers publication before removing the final renderer webview", async () => {
-    const manager = new DesktopBrowserManager();
+    const manager = new DesktopBrowserHost();
     const state = manager.prepareAutomationTab({ threadId: THREAD_ID, reuse: true });
     const tabId = state.activeTabId!;
     const detachDebugger = vi.fn();
@@ -335,7 +336,7 @@ describe("DesktopBrowserManager automation runtime boundary", () => {
   });
 
   it("projects navigation from the blank launcher before a renderer guest attaches", () => {
-    const manager = new DesktopBrowserManager();
+    const manager = new DesktopBrowserHost();
     const opened = manager.prepareAutomationTab({
       threadId: THREAD_ID,
       reuse: true,
@@ -356,7 +357,7 @@ describe("DesktopBrowserManager automation runtime boundary", () => {
   });
 
   it("separates dedicated agent projection from manual browser control epochs", () => {
-    const manager = new DesktopBrowserManager();
+    const manager = new DesktopBrowserHost();
     const prepared = manager.prepareAutomationTab({ threadId: THREAD_ID, reuse: true });
     const tabId = prepared.activeTabId!;
     manager.prepareAutomationNavigation({
@@ -376,7 +377,7 @@ describe("DesktopBrowserManager automation runtime boundary", () => {
   });
 
   it("does not republish browser state when automation reselects the already active tab", () => {
-    const manager = new DesktopBrowserManager();
+    const manager = new DesktopBrowserHost();
     const prepared = manager.prepareAutomationTab({ threadId: THREAD_ID, reuse: true });
     const tabId = prepared.activeTabId!;
     const publication = vi.fn();
@@ -389,7 +390,7 @@ describe("DesktopBrowserManager automation runtime boundary", () => {
   });
 
   it("still treats a real panel hide as human takeover", () => {
-    const manager = new DesktopBrowserManager();
+    const manager = new DesktopBrowserHost();
     manager.prepareAutomationTab({ threadId: THREAD_ID, reuse: true });
     expect(manager.getAutomationHumanControlEpoch(THREAD_ID)).toBe(0);
 
@@ -399,7 +400,7 @@ describe("DesktopBrowserManager automation runtime boundary", () => {
   });
 
   it("publishes direct native keyboard and mouse takeover from the visible guest", () => {
-    const manager = new DesktopBrowserManager();
+    const manager = new DesktopBrowserHost();
     const prepared = manager.prepareAutomationTab({ threadId: THREAD_ID, reuse: true });
     const tabId = prepared.activeTabId!;
     const webContents = new FakeWebContents();
@@ -455,7 +456,7 @@ describe("DesktopBrowserManager automation runtime boundary", () => {
   });
 
   it("consumes only the exact short-lived native inputs registered by browser automation", () => {
-    const manager = new DesktopBrowserManager();
+    const manager = new DesktopBrowserHost();
     const prepared = manager.prepareAutomationTab({ threadId: THREAD_ID, reuse: true });
     const tabId = prepared.activeTabId!;
     const webContents = new FakeWebContents();
@@ -561,7 +562,7 @@ describe("DesktopBrowserManager automation runtime boundary", () => {
   ] as const)(
     "preserves download containment across native-to-renderer migration %s",
     (_, releaseBeforeMigration) => {
-      const manager = new DesktopBrowserManager();
+      const manager = new DesktopBrowserHost();
       const prepared = manager.prepareAutomationTab({ threadId: THREAD_ID, reuse: true });
       const tabId = prepared.activeTabId!;
       const nativeWebContents = new FakeWebContents();
@@ -611,7 +612,7 @@ describe("DesktopBrowserManager automation runtime boundary", () => {
   );
 
   it("contains delayed agent downloads until human control advances the runtime epoch", () => {
-    const manager = new DesktopBrowserManager();
+    const manager = new DesktopBrowserHost();
     const prepared = manager.prepareAutomationTab({ threadId: THREAD_ID, reuse: true });
     const tabId = prepared.activeTabId!;
     const webContents = new FakeWebContents();
@@ -687,7 +688,7 @@ describe("DesktopBrowserManager automation runtime boundary", () => {
   });
 
   it("does not classify a native mouseDown delivered after CDP acknowledges the click as human", async () => {
-    const manager = new DesktopBrowserManager();
+    const manager = new DesktopBrowserHost();
     const prepared = manager.prepareAutomationTab({ threadId: THREAD_ID, reuse: true });
     const tabId = prepared.activeTabId!;
     const webContents = new FakeWebContents();
@@ -757,7 +758,7 @@ describe("DesktopBrowserManager automation runtime boundary", () => {
     let now = 10_000;
     dateNow.mockImplementation(() => now);
     try {
-      const manager = new DesktopBrowserManager();
+      const manager = new DesktopBrowserHost();
       const prepared = manager.prepareAutomationTab({ threadId: THREAD_ID, reuse: true });
       const tabId = prepared.activeTabId!;
       const webContents = new FakeWebContents();
@@ -805,7 +806,7 @@ describe("DesktopBrowserManager automation runtime boundary", () => {
   });
 
   it("routes an agent-triggered target=_blank tab after the native handler returns", async () => {
-    const manager = new DesktopBrowserManager();
+    const manager = new DesktopBrowserHost();
     const prepared = manager.prepareAutomationTab({ threadId: THREAD_ID, reuse: true });
     const sourceTabId = prepared.activeTabId!;
     const webContents = new FakeWebContents();
@@ -910,7 +911,7 @@ describe("DesktopBrowserManager automation runtime boundary", () => {
   });
 
   it("reports an agent-opened OAuth popup without converting it into a tab", () => {
-    const manager = new DesktopBrowserManager();
+    const manager = new DesktopBrowserHost();
     const prepared = manager.prepareAutomationTab({ threadId: THREAD_ID, reuse: true });
     const sourceTabId = prepared.activeTabId!;
     const webContents = new FakeWebContents();
@@ -959,7 +960,7 @@ describe("DesktopBrowserManager automation runtime boundary", () => {
 
   it("cancels a deferred window-open when its source tab or manager is torn down", async () => {
     for (const teardown of ["tab", "manager"] as const) {
-      const manager = new DesktopBrowserManager();
+      const manager = new DesktopBrowserHost();
       const prepared = manager.prepareAutomationTab({ threadId: THREAD_ID, reuse: true });
       const sourceTabId = prepared.activeTabId!;
       const webContents = new FakeWebContents();
@@ -1019,7 +1020,7 @@ describe("DesktopBrowserManager automation runtime boundary", () => {
 
   it("does not create a transient fallback when the renderer opens a projected agent URL", () => {
     webContentsViewConstructor.mockClear();
-    const manager = new DesktopBrowserManager();
+    const manager = new DesktopBrowserHost();
     const blank = manager.prepareAutomationTab({ threadId: THREAD_ID, reuse: true });
     const tabId = blank.activeTabId!;
     manager.prepareAutomationNavigation({

@@ -8,7 +8,7 @@ import { useQuery } from "@tanstack/react-query";
 import { useEditorLaunchers } from "~/hooks/useEditorLaunchers";
 import { ChevronDownIcon } from "~/lib/icons";
 import { serverConfigQueryOptions } from "~/lib/serverReactQuery";
-import { cn } from "~/lib/utils";
+import { cn } from "~/lib/styles";
 import {
   Menu,
   MenuRadioGroup,

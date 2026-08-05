@@ -15,7 +15,7 @@ import {
   MessageCircleIcon,
   TerminalIcon,
 } from "~/lib/icons";
-import { cn } from "~/lib/utils";
+import { cn } from "~/lib/styles";
 import {
   Command,
   CommandGroup,
@@ -40,9 +40,7 @@ function humanizeProviderCommandName(command: string): string {
     .join(" ");
 }
 
-function commandMenuTitle(
-  item: Extract<ComposerCommandItem, { type: "slash-command" }>,
-): string {
+function commandMenuTitle(item: Extract<ComposerCommandItem, { type: "slash-command" }>): string {
   switch (item.command) {
     case "clear":
       return "Clear";

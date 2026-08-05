@@ -11,7 +11,7 @@ import { memo, useMemo, useState } from "react";
 
 import { Button } from "~/components/ui/button";
 import { PlusIcon } from "~/lib/icons";
-import { cn } from "~/lib/utils";
+import { cn } from "~/lib/styles";
 import { KanbanCardView } from "./KanbanCardView";
 import { KanbanStatusIcon } from "./KanbanStatusIcon";
 import {

@@ -6,7 +6,8 @@ import { CheckIcon, ChevronDownIcon, HandoffIcon, WorktreeIcon } from "~/lib/ico
 import { Glyph } from "~/ui/icons";
 import { useCallback, useMemo, useState, type ReactNode } from "react";
 
-import { newCommandId, cn } from "../lib/utils";
+import { cn } from "../lib/styles";
+import { createCommandId } from "../lib/identifiers";
 import { readNativeApi } from "../nativeApi";
 import { useComposerDraftStore } from "../composerDraftStore";
 import { useHistoricalActivityUsageSummary } from "../hooks/useHistoricalActivityUsageSummary";
@@ -41,14 +42,7 @@ import { ComposerPickerMenuPopup } from "./chat/ComposerPickerMenuPopup";
 import { Button } from "./ui/button";
 import { Collapsible, CollapsiblePanel } from "./ui/collapsible";
 import { DisclosureChevron } from "./ui/DisclosureChevron";
-import {
-  Menu,
-  MenuGroup,
-  MenuGroupLabel,
-  MenuItem,
-  MenuSeparator,
-  MenuTrigger,
-} from "./ui/menu";
+import { Menu, MenuGroup, MenuGroupLabel, MenuItem, MenuSeparator, MenuTrigger } from "./ui/menu";
 import type { ThreadWorkspacePatch } from "../types";
 
 function WorktreeGlyph({ className }: { className?: string }) {

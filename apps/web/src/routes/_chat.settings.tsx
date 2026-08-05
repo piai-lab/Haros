@@ -76,7 +76,8 @@ import { useDesktopTopBarTrafficLightGutterClassName } from "../hooks/useDesktop
 import { useTheme } from "../hooks/useTheme";
 import { isUiDensity } from "../lib/appDensity";
 import { DeviceLaptopIcon, MoonIcon, RotateCcwIcon, SunIcon } from "../lib/icons";
-import { cn, isMacPlatform } from "../lib/utils";
+import { cn } from "../lib/styles";
+import { isMacPlatform } from "../lib/platform";
 import { ensureNativeApi, readNativeApi } from "../nativeApi";
 import {
   normalizeSettingsSection,
@@ -130,7 +131,6 @@ const THEME_OPTIONS = [
     icon: <DeviceLaptopIcon />,
   },
 ] as const;
-
 
 const TIMESTAMP_FORMAT_LABELS = {
   locale: "System default",
@@ -1066,12 +1066,8 @@ function SettingsRouteView() {
                 />
                 <WorktreesSettingsPanel active={activeSection === "worktrees"} />
                 <ArchivedSettingsPanel active={activeSection === "archived"} />
-                <ModelsSettingsPanel
-                  active={activeSection === "models"}
-                />
-                <ProvidersSettingsPanel
-                  active={activeSection === "agents"}
-                />
+                <ModelsSettingsPanel active={activeSection === "models"} />
+                <ProvidersSettingsPanel active={activeSection === "agents"} />
                 <ExternalMcpSettingsPanel active={activeSection === "integrations"} />
                 <AdvancedSettingsPanel
                   active={activeSection === "advanced"}

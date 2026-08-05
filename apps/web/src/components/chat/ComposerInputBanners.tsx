@@ -9,7 +9,7 @@
 
 import { type ReactNode } from "react";
 
-import { cn } from "~/lib/utils";
+import { cn } from "~/lib/styles";
 import { ComposerAutomationSetupBanner } from "./ComposerAutomationSetupBanner";
 import { ComposerPlanFollowUpBanner } from "./ComposerPlanFollowUpBanner";
 import { COMPOSER_INPUT_SURFACE_BANNER_CLASS_NAME } from "./composerPickerStyles";

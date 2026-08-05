@@ -7,7 +7,7 @@
 import type { ProjectId } from "@omnimind/contracts";
 import { Button } from "~/components/ui/button";
 import { ChevronRightIcon, PlusIcon } from "~/lib/icons";
-import { cn } from "~/lib/utils";
+import { cn } from "~/lib/styles";
 import { KanbanCardView } from "./KanbanCardView";
 import {
   flattenProjectBoardForOverview,

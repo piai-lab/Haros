@@ -19,10 +19,10 @@ import {
 } from "../Services/PTY";
 import {
   __terminalHistorySanitizeTesting,
-  __terminalManagerShellTesting,
-  TerminalManagerRuntime,
+  __terminalSupervisorShellTesting,
+  TerminalSupervisorRuntime,
   type TerminalSubprocessActivity,
-} from "./Manager";
+} from "./Supervisor";
 import type { ProcessTreeKiller } from "../processTreeKiller";
 import { Effect, Encoding } from "effect";
 
@@ -184,7 +184,7 @@ function multiTerminalHistoryLogPath(
   return path.join(logsDir, multiTerminalHistoryLogName(threadId, terminalId));
 }
 
-describe("TerminalManager", () => {
+describe("TerminalSupervisor", () => {
   const tempDirs: string[] = [];
 
   afterEach(() => {
@@ -195,8 +195,8 @@ describe("TerminalManager", () => {
   });
 
   it("prefers PowerShell for new Windows terminals before cmd.exe fallbacks", () => {
-    const candidates = __terminalManagerShellTesting.resolveShellCandidates(
-      () => __terminalManagerShellTesting.windowsDefaultTerminalShell,
+    const candidates = __terminalSupervisorShellTesting.resolveShellCandidates(
+      () => __terminalSupervisorShellTesting.windowsDefaultTerminalShell,
       {
         envComSpec: "C:\\Windows\\System32\\cmd.exe",
         platform: "win32",
@@ -211,7 +211,7 @@ describe("TerminalManager", () => {
   });
 
   it("keeps explicit Windows shell requests ahead of PowerShell defaults", () => {
-    const candidates = __terminalManagerShellTesting.resolveShellCandidates(() => "pwsh.exe", {
+    const candidates = __terminalSupervisorShellTesting.resolveShellCandidates(() => "pwsh.exe", {
       envComSpec: "C:\\Windows\\System32\\cmd.exe",
       platform: "win32",
     });
@@ -241,7 +241,7 @@ describe("TerminalManager", () => {
     tempDirs.push(logsDir);
     options.prepareLogs?.(logsDir);
     const ptyAdapter = options.ptyAdapter ?? new FakePtyAdapter();
-    const manager = new TerminalManagerRuntime({
+    const manager = new TerminalSupervisorRuntime({
       logsDir,
       ptyAdapter,
       historyLineLimit,

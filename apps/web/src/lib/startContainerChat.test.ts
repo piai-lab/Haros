@@ -19,8 +19,8 @@ function successfulHandler() {
 
 describe("startFreshChatForActiveSurface", () => {
   it("keeps the global New chat action in Studio", async () => {
-    const handleNewChat = successfulHandler();
-    const handleNewStudioChat = successfulHandler();
+    const createChat = successfulHandler();
+    const createStudioChat = successfulHandler();
 
     await startFreshChatForActiveSurface({
       activeProject: {
@@ -29,29 +29,29 @@ describe("startFreshChatForActiveSurface", () => {
       },
       isStudioRoute: false,
       paths,
-      handleNewChat,
-      handleNewStudioChat,
+      createChat,
+      createStudioChat,
     });
 
-    expect(handleNewStudioChat).toHaveBeenCalledOnce();
-    expect(handleNewStudioChat).toHaveBeenCalledWith({ fresh: true });
-    expect(handleNewChat).not.toHaveBeenCalled();
+    expect(createStudioChat).toHaveBeenCalledOnce();
+    expect(createStudioChat).toHaveBeenCalledWith({ fresh: true });
+    expect(createChat).not.toHaveBeenCalled();
   });
 
   it("keeps the global New chat action on the Studio landing route", async () => {
-    const handleNewChat = successfulHandler();
-    const handleNewStudioChat = successfulHandler();
+    const createChat = successfulHandler();
+    const createStudioChat = successfulHandler();
 
     await startFreshChatForActiveSurface({
       activeProject: null,
       isStudioRoute: true,
       paths,
-      handleNewChat,
-      handleNewStudioChat,
+      createChat,
+      createStudioChat,
     });
 
-    expect(handleNewStudioChat).toHaveBeenCalledOnce();
-    expect(handleNewChat).not.toHaveBeenCalled();
+    expect(createStudioChat).toHaveBeenCalledOnce();
+    expect(createChat).not.toHaveBeenCalled();
   });
 
   it("keeps the global New chat action in Projects for ordinary or missing projects", async () => {
@@ -59,20 +59,20 @@ describe("startFreshChatForActiveSurface", () => {
       { kind: "project" as const, cwd: "/Users/tester/Developer/app" },
       null,
     ]) {
-      const handleNewChat = successfulHandler();
-      const handleNewStudioChat = successfulHandler();
+      const createChat = successfulHandler();
+      const createStudioChat = successfulHandler();
 
       await startFreshChatForActiveSurface({
         activeProject,
         isStudioRoute: false,
         paths,
-        handleNewChat,
-        handleNewStudioChat,
+        createChat,
+        createStudioChat,
       });
 
-      expect(handleNewChat).toHaveBeenCalledOnce();
-      expect(handleNewChat).toHaveBeenCalledWith({ fresh: true });
-      expect(handleNewStudioChat).not.toHaveBeenCalled();
+      expect(createChat).toHaveBeenCalledOnce();
+      expect(createChat).toHaveBeenCalledWith({ fresh: true });
+      expect(createStudioChat).not.toHaveBeenCalled();
     }
   });
 });
@@ -81,18 +81,18 @@ describe("startContainerChat", () => {
   it("returns the created thread so callers can attach context deterministically", async () => {
     const projectId = ProjectId.makeUnsafe("project-1");
     const threadId = ThreadId.makeUnsafe("thread-1");
-    const handleNewThread = vi.fn(async () => threadId);
+    const createThread = vi.fn(async () => threadId);
 
     await expect(
       startContainerChat({
         ensureProjectId: async () => projectId,
-        handleNewThread,
+        createThread,
         fresh: true,
         errorLabel: "failed",
       }),
     ).resolves.toEqual({ ok: true, threadId });
 
-    expect(handleNewThread).toHaveBeenCalledWith(projectId, {
+    expect(createThread).toHaveBeenCalledWith(projectId, {
       fresh: true,
       envMode: "local",
       branch: null,
@@ -103,16 +103,16 @@ describe("startContainerChat", () => {
   it("clears a stored Studio draft's inherited worktree metadata without overriding its cwd", async () => {
     const projectId = ProjectId.makeUnsafe("studio-project");
     const threadId = ThreadId.makeUnsafe("studio-thread");
-    const handleNewThread = vi.fn(async () => threadId);
+    const createThread = vi.fn(async () => threadId);
 
     await startContainerChat({
       ensureProjectId: async () => projectId,
-      handleNewThread,
+      createThread,
       forceLocalWorkspace: true,
       errorLabel: "failed",
     });
 
-    expect(handleNewThread).toHaveBeenCalledWith(projectId, {
+    expect(createThread).toHaveBeenCalledWith(projectId, {
       envMode: "local",
       branch: null,
       worktreePath: null,

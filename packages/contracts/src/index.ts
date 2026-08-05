@@ -9,7 +9,7 @@ export * from "./browserAutomationIds";
 export * from "./browserAutomationErrors";
 export * from "./browserAutomationCssSelector";
 export * from "./browserAutomationTargets";
-export { BrowserLoadState } from "./browserAutomationToolCommon";
+export { BrowserLoadState } from "./browserToolContract";
 export * from "./browserAutomationToolInputs";
 export * from "./browserAutomationToolOutputs";
 export * from "./browserAutomationToolCatalogue";

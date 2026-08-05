@@ -15,7 +15,7 @@ import {
   XIcon,
 } from "~/lib/icons";
 
-import { cn } from "~/lib/utils";
+import { cn } from "~/lib/styles";
 import { Button, buttonVariants } from "~/components/ui/button";
 import { APP_TOOLTIP_SURFACE_CLASS_NAME } from "~/components/chat/composerPickerStyles";
 import { useCopyToClipboard } from "~/hooks/useCopyToClipboard";

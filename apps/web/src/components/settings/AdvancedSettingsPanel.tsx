@@ -16,7 +16,7 @@ import { Button } from "~/components/ui/button";
 import { toastManager } from "~/components/ui/toast";
 import { ensureNativeApi, readNativeApi } from "~/nativeApi";
 import { serverAuthSessionQueryOptions, serverConfigQueryOptions } from "~/lib/serverReactQuery";
-import { cn } from "~/lib/utils";
+import { cn } from "~/lib/styles";
 import {
   BUNDLED_PI_PROVENANCE,
   OPEN_SOURCE_NOTICE,
@@ -93,7 +93,8 @@ export function AdvancedSettingsPanel(props: { active: boolean; resetEpoch: numb
     toastManager.add({
       type: "warning",
       title: "Re-entry required",
-      description: "Legacy projection repair is unavailable. Reopen the Product workspace to resnapshot.",
+      description:
+        "Legacy projection repair is unavailable. Reopen the Product workspace to resnapshot.",
     });
     setIsRepairingLocalState(false);
   }, [isRepairingLocalState]);

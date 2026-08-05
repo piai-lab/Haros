@@ -31,7 +31,7 @@ import {
   WorkflowIcon,
   XIcon,
 } from "~/lib/icons";
-import { cn } from "~/lib/utils";
+import { cn } from "~/lib/styles";
 import { useCopyToClipboard } from "~/hooks/useCopyToClipboard";
 import { formatClockDuration } from "../../session-logic";
 import { Button } from "../ui/button";

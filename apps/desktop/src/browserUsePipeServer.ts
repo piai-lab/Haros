@@ -15,7 +15,7 @@ import {
   type BrowserAutomationToolRequest,
 } from "./browserAutomation/desktopBrowserAutomationHost";
 import { BrowserAutomationHostError } from "./browserAutomation/hostErrors";
-import type { DesktopBrowserManager } from "./browserManager";
+import type { DesktopBrowserHost } from "./browserHost";
 
 const FRAME_HEADER_BYTES = 4;
 // 8 MiB PNG sidecars expand to about 10.7 MiB in base64; 12 MiB keeps the
@@ -232,7 +232,7 @@ export class BrowserHostPipeServer {
   private started = false;
 
   constructor(
-    browserManager: DesktopBrowserManager,
+    browserHost: DesktopBrowserHost,
     options: BrowserHostPipeServerOptions | string = OMNIMIND_BROWSER_HOST_PIPE_PATH,
   ) {
     const normalized = typeof options === "string" ? { pipePath: options } : options;
@@ -249,7 +249,7 @@ export class BrowserHostPipeServer {
       ? { requestOpenPanel: normalized.requestOpenPanel }
       : {};
     this.automationHost =
-      normalized.automationHost ?? new DesktopBrowserAutomationHost(browserManager, hostOptions);
+      normalized.automationHost ?? new DesktopBrowserAutomationHost(browserHost, hostOptions);
     this.server = Net.createServer((socket) => this.handleConnection(socket));
   }
 

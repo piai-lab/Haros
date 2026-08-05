@@ -5,7 +5,7 @@
 
 import { useEffect } from "react";
 import { useAppSettings } from "../appSettings";
-import { isMacPlatform } from "../lib/utils";
+import { isMacPlatform } from "../lib/platform";
 
 export function useNativeFontSmoothing() {
   const { settings } = useAppSettings();

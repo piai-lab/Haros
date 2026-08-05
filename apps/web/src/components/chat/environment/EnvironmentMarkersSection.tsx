@@ -5,7 +5,7 @@
 import type { MessageId, ThreadMarker, ThreadMarkerId } from "@omnimind/contracts";
 import { isThreadMarkerAvailable } from "@omnimind/shared/threadMarkers";
 
-import { cn } from "~/lib/utils";
+import { cn } from "~/lib/styles";
 import { deriveThreadMarkerLabel } from "~/threadMarkers";
 
 import { EnvironmentEditableChecklistRow } from "./EnvironmentEditableChecklistRow";

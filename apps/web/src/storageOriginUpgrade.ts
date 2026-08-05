@@ -1,4 +1,4 @@
-// FILE: storageOriginMigration.ts
+// FILE: storageOriginUpgrade.ts
 // Purpose: Imports OmniMind browser state before renderer stores hydrate after a desktop origin move.
 
 import type { OmniMindStorageSnapshot } from "@omnimind/contracts";
@@ -54,8 +54,8 @@ export function importOmniMindStorageSnapshot(
   }
 }
 
-export function bootstrapOmniMindStorageOriginMigration(): void {
-  const bridge = globalThis.window?.desktopBridge?.storageMigration;
+export function bootstrapOmniMindStorageOriginUpgrade(): void {
+  const bridge = globalThis.window?.desktopBridge?.storageUpgrade;
   if (!bridge) return;
 
   try {
@@ -68,4 +68,4 @@ export function bootstrapOmniMindStorageOriginMigration(): void {
   }
 }
 
-bootstrapOmniMindStorageOriginMigration();
+bootstrapOmniMindStorageOriginUpgrade();

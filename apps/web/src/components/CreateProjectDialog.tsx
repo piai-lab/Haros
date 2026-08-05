@@ -12,7 +12,7 @@ import {
   resolveDroppedFileAbsolutePath,
 } from "../lib/composerDropPaths";
 import { readNativeApi } from "../nativeApi";
-import { cn } from "~/lib/utils";
+import { cn } from "~/lib/styles";
 
 import { FolderClosed } from "./FolderClosed";
 import { describeAddProjectError } from "./Sidebar.logic";

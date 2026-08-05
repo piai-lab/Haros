@@ -11,11 +11,11 @@ import { OMNIMIND_DEVELOPMENT_BUNDLE_ID } from "@omnimind/shared/desktopIdentity
 import { describe, expect, it, vi } from "vitest";
 
 import {
-  DesktopAppSnapManager,
+  DesktopAppSnapSupervisor,
   desktopAppSnapPlatform,
   isPathInsideDirectory,
-  parseAppSnapHelperMessage,
-} from "./appSnapManager";
+  parseAppSnapBridgeMessage,
+} from "./appSnapSupervisor";
 
 type FakeChildProcess = ChildProcess.ChildProcessWithoutNullStreams & {
   stdin: PassThrough;
@@ -41,9 +41,9 @@ async function flushPromises(): Promise<void> {
 describe("desktop AppSnap platform state", () => {
   it("exposes an explicit unsupported state outside macOS", async () => {
     const onState = vi.fn();
-    const manager = new DesktopAppSnapManager({
+    const manager = new DesktopAppSnapSupervisor({
       platform: "win32",
-      helperPath: "C:\\missing\\omnimind-appsnap-helper.exe",
+      bridgePath: "C:\\missing\\omnimind-appsnap-bridge.exe",
       captureDirectory: "C:\\tmp\\appsnap",
       excludedBundleId: OMNIMIND_DEVELOPMENT_BUNDLE_ID,
       onState,
@@ -63,10 +63,10 @@ describe("desktop AppSnap platform state", () => {
     expect(onState).not.toHaveBeenCalled();
   });
 
-  it("preserves a missing-helper error instead of reporting a permission problem", async () => {
-    const manager = new DesktopAppSnapManager({
+  it("preserves a missing-bridge error instead of reporting a permission problem", async () => {
+    const manager = new DesktopAppSnapSupervisor({
       platform: "darwin",
-      helperPath: "/tmp/omnimind-appsnap-helper-that-does-not-exist",
+      bridgePath: "/tmp/omnimind-appsnap-bridge-that-does-not-exist",
       captureDirectory: "/tmp/omnimind-appsnap-test",
       excludedBundleId: OMNIMIND_DEVELOPMENT_BUNDLE_ID,
       onState: vi.fn(),
@@ -77,7 +77,7 @@ describe("desktop AppSnap platform state", () => {
     expect(await manager.setEnabled(true)).toMatchObject({
       status: "error",
       shortcut: { kind: "both-option-keys" },
-      message: "The AppSnap native helper is missing from this desktop build.",
+      message: "The AppSnap native bridge is missing from this desktop build.",
     });
   });
 });
@@ -86,9 +86,9 @@ describe("AppSnap shortcut availability", () => {
   it("probes macOS registration and stores an available two-key shortcut", async () => {
     const register = vi.fn(() => true);
     const unregister = vi.fn();
-    const manager = new DesktopAppSnapManager({
+    const manager = new DesktopAppSnapSupervisor({
       platform: "darwin",
-      helperPath: "/tmp/missing-appsnap-helper",
+      bridgePath: "/tmp/missing-appsnap-bridge",
       captureDirectory: "/tmp/omnimind-appsnap-test",
       excludedBundleId: OMNIMIND_DEVELOPMENT_BUNDLE_ID,
       shortcutRegistry: { register, unregister },
@@ -108,9 +108,9 @@ describe("AppSnap shortcut availability", () => {
   });
 
   it("rejects a shortcut already owned by macOS or another app", () => {
-    const manager = new DesktopAppSnapManager({
+    const manager = new DesktopAppSnapSupervisor({
       platform: "darwin",
-      helperPath: "/tmp/missing-appsnap-helper",
+      bridgePath: "/tmp/missing-appsnap-bridge",
       captureDirectory: "/tmp/omnimind-appsnap-test",
       excludedBundleId: OMNIMIND_DEVELOPMENT_BUNDLE_ID,
       shortcutRegistry: { register: () => false, unregister: vi.fn() },
@@ -142,9 +142,9 @@ describe("AppSnap shortcut availability", () => {
       .mockReturnValueOnce(watchChild) as unknown as typeof ChildProcess.spawn;
     const register = vi.fn((_accelerator: string, _callback: () => void) => true);
     const unregister = vi.fn();
-    const manager = new DesktopAppSnapManager({
+    const manager = new DesktopAppSnapSupervisor({
       platform: "darwin",
-      helperPath: process.execPath,
+      bridgePath: process.execPath,
       captureDirectory: "/tmp/omnimind-appsnap-test",
       excludedBundleId: OMNIMIND_DEVELOPMENT_BUNDLE_ID,
       spawn,
@@ -184,7 +184,7 @@ describe("AppSnap shortcut availability", () => {
     expect(register).toHaveBeenLastCalledWith("Alt+S", expect.any(Function));
 
     // The reserved accelerator's callback drives the capture: pressing the
-    // chord writes a trigger line to the helper's stdin.
+    // chord writes a trigger line to the bridge's stdin.
     const reservationCallback = register.mock.calls.at(-1)?.[1] as (() => void) | undefined;
     reservationCallback?.();
     expect(watchChild.stdin.read()?.toString()).toBe("trigger\n");
@@ -195,10 +195,10 @@ describe("AppSnap shortcut availability", () => {
   });
 });
 
-describe("AppSnap helper protocol", () => {
+describe("AppSnap bridge protocol", () => {
   it("accepts typed permission and capture messages", () => {
     expect(
-      parseAppSnapHelperMessage(
+      parseAppSnapBridgeMessage(
         JSON.stringify({
           type: "permissions",
           inputMonitoring: "granted",
@@ -212,7 +212,7 @@ describe("AppSnap helper protocol", () => {
     });
 
     expect(
-      parseAppSnapHelperMessage(
+      parseAppSnapBridgeMessage(
         JSON.stringify({
           type: "captured",
           id: "capture-1",
@@ -232,12 +232,12 @@ describe("AppSnap helper protocol", () => {
     });
   });
 
-  it("rejects malformed or unknown helper output", () => {
-    expect(parseAppSnapHelperMessage("not-json")).toBeNull();
-    expect(parseAppSnapHelperMessage(JSON.stringify({ type: "captured", path: "/tmp/x" }))).toBe(
+  it("rejects malformed or unknown bridge output", () => {
+    expect(parseAppSnapBridgeMessage("not-json")).toBeNull();
+    expect(parseAppSnapBridgeMessage(JSON.stringify({ type: "captured", path: "/tmp/x" }))).toBe(
       null,
     );
-    expect(parseAppSnapHelperMessage(JSON.stringify({ type: "surprise" }))).toBeNull();
+    expect(parseAppSnapBridgeMessage(JSON.stringify({ type: "surprise" }))).toBeNull();
   });
 
   it("serializes permission commands and waits for stdout to drain", async () => {
@@ -247,9 +247,9 @@ describe("AppSnap helper protocol", () => {
       .fn()
       .mockReturnValueOnce(checkChild)
       .mockReturnValueOnce(requestChild) as unknown as typeof ChildProcess.spawn;
-    const manager = new DesktopAppSnapManager({
+    const manager = new DesktopAppSnapSupervisor({
       platform: "darwin",
-      helperPath: process.execPath,
+      bridgePath: process.execPath,
       captureDirectory: "/tmp/omnimind-appsnap-test",
       excludedBundleId: OMNIMIND_DEVELOPMENT_BUNDLE_ID,
       spawn,
@@ -320,9 +320,9 @@ describe("AppSnap helper protocol", () => {
       .mockReturnValueOnce(restartedWatchChild) as unknown as typeof ChildProcess.spawn;
     const register = vi.fn(() => true);
     const unregister = vi.fn();
-    const manager = new DesktopAppSnapManager({
+    const manager = new DesktopAppSnapSupervisor({
       platform: "darwin",
-      helperPath: process.execPath,
+      bridgePath: process.execPath,
       captureDirectory: "/tmp/omnimind-appsnap-test",
       excludedBundleId: OMNIMIND_DEVELOPMENT_BUNDLE_ID,
       spawn,
@@ -391,9 +391,9 @@ describe("AppSnap helper protocol", () => {
       .fn()
       .mockReturnValueOnce(checkChild)
       .mockReturnValueOnce(watchChild) as unknown as typeof ChildProcess.spawn;
-    const manager = new DesktopAppSnapManager({
+    const manager = new DesktopAppSnapSupervisor({
       platform: "darwin",
-      helperPath: process.execPath,
+      bridgePath: process.execPath,
       captureDirectory: "/tmp/omnimind-appsnap-test",
       excludedBundleId: OMNIMIND_DEVELOPMENT_BUNDLE_ID,
       spawn,
@@ -435,9 +435,9 @@ describe("AppSnap helper protocol", () => {
     const onError = vi.fn();
     const register = vi.fn(() => true);
     const unregister = vi.fn();
-    const manager = new DesktopAppSnapManager({
+    const manager = new DesktopAppSnapSupervisor({
       platform: "darwin",
-      helperPath: process.execPath,
+      bridgePath: process.execPath,
       captureDirectory: "/tmp/omnimind-appsnap-test",
       excludedBundleId: OMNIMIND_DEVELOPMENT_BUNDLE_ID,
       spawn,
@@ -468,12 +468,12 @@ describe("AppSnap helper protocol", () => {
     expect(manager.getState()).toMatchObject({
       enabled: true,
       status: "error",
-      message: "The AppSnap helper stopped unexpectedly (exit 1).",
+      message: "The AppSnap bridge stopped unexpectedly (exit 1).",
     });
     expect(onError).toHaveBeenCalledWith(
       expect.objectContaining({
-        code: "helper-stopped",
-        message: "The AppSnap helper stopped unexpectedly (exit 1).",
+        code: "bridge-stopped",
+        message: "The AppSnap bridge stopped unexpectedly (exit 1).",
       }),
       false,
     );
@@ -499,9 +499,9 @@ describe("AppSnap helper protocol", () => {
       await mkdirGate;
       return undefined;
     });
-    const manager = new DesktopAppSnapManager({
+    const manager = new DesktopAppSnapSupervisor({
       platform: "darwin",
-      helperPath: process.execPath,
+      bridgePath: process.execPath,
       captureDirectory,
       excludedBundleId: OMNIMIND_DEVELOPMENT_BUNDLE_ID,
       spawn,
@@ -570,9 +570,9 @@ describe("AppSnap helper protocol", () => {
       .mockReturnValueOnce(watchChild) as unknown as typeof ChildProcess.spawn;
     const onCaptured = vi.fn();
     const onError = vi.fn();
-    const manager = new DesktopAppSnapManager({
+    const manager = new DesktopAppSnapSupervisor({
       platform: "darwin",
-      helperPath: process.execPath,
+      bridgePath: process.execPath,
       captureDirectory,
       excludedBundleId: OMNIMIND_DEVELOPMENT_BUNDLE_ID,
       spawn,
@@ -636,9 +636,9 @@ describe("AppSnap helper protocol", () => {
       .mockReturnValueOnce(checkChild)
       .mockReturnValueOnce(watchChild) as unknown as typeof ChildProcess.spawn;
     const onError = vi.fn();
-    const manager = new DesktopAppSnapManager({
+    const manager = new DesktopAppSnapSupervisor({
       platform: "darwin",
-      helperPath: process.execPath,
+      bridgePath: process.execPath,
       captureDirectory: "/tmp/omnimind-appsnap-test",
       excludedBundleId: OMNIMIND_DEVELOPMENT_BUNDLE_ID,
       spawn,
@@ -692,7 +692,7 @@ describe("AppSnap helper protocol", () => {
     }
   });
 
-  it("keeps the helper capture file when persisting the pending copy fails", async () => {
+  it("keeps the bridge capture file when persisting the pending copy fails", async () => {
     const captureDirectory = mkdtempSync(join(tmpdir(), "omnimind-appsnap-persist-fail-"));
     const checkChild = createFakeChildProcess();
     const watchChild = createFakeChildProcess();
@@ -703,9 +703,9 @@ describe("AppSnap helper protocol", () => {
     const onCaptured = vi.fn();
     const onError = vi.fn();
     const rename = vi.spyOn(FS.promises, "rename").mockRejectedValueOnce(new Error("disk full"));
-    const manager = new DesktopAppSnapManager({
+    const manager = new DesktopAppSnapSupervisor({
       platform: "darwin",
-      helperPath: process.execPath,
+      bridgePath: process.execPath,
       captureDirectory,
       excludedBundleId: OMNIMIND_DEVELOPMENT_BUNDLE_ID,
       spawn,
@@ -770,9 +770,9 @@ describe("AppSnap helper protocol", () => {
       .mockReturnValueOnce(checkChild)
       .mockReturnValueOnce(watchChild) as unknown as typeof ChildProcess.spawn;
     const onCaptured = vi.fn();
-    const firstManager = new DesktopAppSnapManager({
+    const firstManager = new DesktopAppSnapSupervisor({
       platform: "darwin",
-      helperPath: process.execPath,
+      bridgePath: process.execPath,
       captureDirectory,
       excludedBundleId: OMNIMIND_DEVELOPMENT_BUNDLE_ID,
       spawn,
@@ -813,9 +813,9 @@ describe("AppSnap helper protocol", () => {
       await vi.waitFor(() => expect(onCaptured).toHaveBeenCalledTimes(1));
       firstManager.dispose();
 
-      const restoredManager = new DesktopAppSnapManager({
+      const restoredManager = new DesktopAppSnapSupervisor({
         platform: "darwin",
-        helperPath: process.execPath,
+        bridgePath: process.execPath,
         captureDirectory,
         excludedBundleId: OMNIMIND_DEVELOPMENT_BUNDLE_ID,
         onState: vi.fn(),
@@ -837,9 +837,9 @@ describe("AppSnap helper protocol", () => {
       expect(await restoredManager.listPendingCaptures()).toEqual([]);
       restoredManager.dispose();
 
-      const finalManager = new DesktopAppSnapManager({
+      const finalManager = new DesktopAppSnapSupervisor({
         platform: "darwin",
-        helperPath: process.execPath,
+        bridgePath: process.execPath,
         captureDirectory,
         excludedBundleId: OMNIMIND_DEVELOPMENT_BUNDLE_ID,
         onState: vi.fn(),
@@ -854,16 +854,16 @@ describe("AppSnap helper protocol", () => {
     }
   });
 
-  it("recovers a helper PNG left behind before pending metadata was persisted", async () => {
-    const captureDirectory = mkdtempSync(join(tmpdir(), "omnimind-appsnap-helper-recovery-"));
+  it("recovers a bridge capture PNG left behind before pending metadata was persisted", async () => {
+    const captureDirectory = mkdtempSync(join(tmpdir(), "omnimind-appsnap-bridge-recovery-"));
     const captureId = "6b981032-c848-4d0b-94f1-6de335391aa2";
-    const helperPath = join(captureDirectory, `appsnap-${captureId}.png`);
+    const capturePath = join(captureDirectory, `appsnap-${captureId}.png`);
     const captureBytes = Buffer.from([0x89, 0x50, 0x4e, 0x47, 0x0d, 0x0a, 0x1a, 0x0a, 0x01]);
-    writeFileSync(helperPath, captureBytes);
+    writeFileSync(capturePath, captureBytes);
     const now = () => new Date("2026-07-13T23:30:00.000Z");
-    const manager = new DesktopAppSnapManager({
+    const manager = new DesktopAppSnapSupervisor({
       platform: "darwin",
-      helperPath: process.execPath,
+      bridgePath: process.execPath,
       captureDirectory,
       excludedBundleId: OMNIMIND_DEVELOPMENT_BUNDLE_ID,
       onState: vi.fn(),
@@ -882,12 +882,12 @@ describe("AppSnap helper protocol", () => {
         sourceAppName: null,
       });
       expect(Buffer.from(recovered[0]!.bytes)).toEqual(captureBytes);
-      expect(FS.existsSync(helperPath)).toBe(false);
+      expect(FS.existsSync(capturePath)).toBe(false);
       manager.dispose();
 
-      const restartedManager = new DesktopAppSnapManager({
+      const restartedManager = new DesktopAppSnapSupervisor({
         platform: "darwin",
-        helperPath: process.execPath,
+        bridgePath: process.execPath,
         captureDirectory,
         excludedBundleId: OMNIMIND_DEVELOPMENT_BUNDLE_ID,
         onState: vi.fn(),

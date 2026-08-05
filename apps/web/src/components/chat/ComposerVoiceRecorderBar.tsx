@@ -5,7 +5,7 @@
 
 import { useEffect, useRef, useState } from "react";
 import { ArrowUpIcon, Loader2Icon, StopFilledIcon } from "~/lib/icons";
-import { cn } from "~/lib/utils";
+import { cn } from "~/lib/styles";
 
 interface ComposerVoiceRecorderBarProps {
   disabled?: boolean;

@@ -75,8 +75,8 @@ import {
   pullRequestDetailQueryOptions,
   pullRequestQueryErrorState,
 } from "~/lib/pullRequestReactQuery";
-import { cn } from "~/lib/utils";
-import { newThreadId, randomUUID } from "~/lib/utils";
+import { cn } from "~/lib/styles";
+import { createThreadId, randomUUID } from "~/lib/identifiers";
 import { ensureNativeApi } from "~/nativeApi";
 import { copyTextToClipboard } from "~/hooks/useCopyToClipboard";
 import { createProductConversationWithRecovery } from "~/productConversationMutations";
@@ -234,13 +234,14 @@ export function PullRequestDetailPanel({
         if (prepared.worktreePath === null) {
           throw new Error("Git did not return the requested pull-request worktree.");
         }
-        const threadId = newThreadId();
+        const threadId = createThreadId();
         const conversationId = ProductConversationId.makeUnsafe(threadId);
         const observedAt = new Date().toISOString();
-        const title = `${kind === "findings" ? "Fix" : "Resolve conflicts in"} PR #${detail.number}: ${detail.title}`.slice(
-          0,
-          256,
-        );
+        const title =
+          `${kind === "findings" ? "Fix" : "Resolve conflicts in"} PR #${detail.number}: ${detail.title}`.slice(
+            0,
+            256,
+          );
         const snapshot = await createProductConversationWithRecovery({
           protocolVersion: PRODUCT_PROTOCOL_VERSION,
           conversationId,

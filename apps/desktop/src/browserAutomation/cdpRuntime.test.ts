@@ -2,7 +2,7 @@ import { ThreadId } from "@omnimind/contracts";
 import type { WebContents } from "electron";
 import { describe, expect, it, vi } from "vitest";
 
-import type { BrowserAutomationVisibleRuntime } from "../browserManager";
+import type { BrowserAutomationVisibleRuntime } from "../browserHost";
 import { callFunctionOn, drainOnAbort, evaluateInContext } from "./cdpRuntime";
 
 const runtimeWithFailure = (): BrowserAutomationVisibleRuntime => ({

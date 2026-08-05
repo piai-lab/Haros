@@ -9,7 +9,7 @@ import {
   type ThreadId,
 } from "@omnimind/contracts";
 
-import { randomUUID } from "./lib/utils";
+import { randomUUID } from "./lib/identifiers";
 import { useProductStore } from "./store/productStore";
 import { readProductNativeApi, type ProductNativeApi } from "./wsNativeApi";
 

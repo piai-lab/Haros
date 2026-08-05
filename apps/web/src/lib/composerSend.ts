@@ -29,7 +29,7 @@ import {
   prepareComposerImageFile,
 } from "./composerImagePreparation";
 import { normalizeComposerImageSource } from "./composerImageSource";
-import { randomUUID } from "./utils";
+import { randomUUID } from "./identifiers";
 import { resolveWsHttpUrl } from "./wsHttpUrl";
 
 const ATTACHMENT_CANCEL_CONCURRENCY = 2;

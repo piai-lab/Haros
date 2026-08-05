@@ -18,7 +18,7 @@ import {
 } from "~/lib/composerMentions";
 import { effectiveComposerAttachmentCount } from "~/lib/composerSend";
 import { useComposerImageIntake } from "~/hooks/useComposerImageIntake";
-import { newThreadId } from "~/lib/utils";
+import { createThreadId } from "~/lib/identifiers";
 import {
   type ComposerImageAttachment,
   useComposerDraftStore,
@@ -29,7 +29,7 @@ import { toastManager } from "../ui/toast";
 export function useKanbanTaskScratchDraft(runtimeCatalog: ProductRuntimeCatalog | null) {
   // Scratch composer draft backing the dialog: model/effort/speed state lives in
   // the composer draft store under this throwaway thread id, exactly like chat.
-  const [scratchThreadId] = useState(() => newThreadId());
+  const [scratchThreadId] = useState(() => createThreadId());
   useEffect(() => {
     useComposerDraftStore.getState().applyStickyState(scratchThreadId);
     return () => {
@@ -72,10 +72,7 @@ export function useKanbanTaskScratchDraft(runtimeCatalog: ProductRuntimeCatalog 
     }
   }, [composerMentions, prompt, scratchThreadId]);
 
-  const handleRuntimeSelectionChange = (
-    model: ProductRuntimeModel,
-    thinking: string | null,
-  ) => {
+  const handleRuntimeSelectionChange = (model: ProductRuntimeModel, thinking: string | null) => {
     if (!runtimeCatalog) return;
     setRequestedSelection({
       state: "selected",

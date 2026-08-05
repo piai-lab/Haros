@@ -65,7 +65,7 @@ import type { ProviderMentionReference } from "@omnimind/contracts";
 import { useStore } from "~/store";
 import { createComposerThreadMentionSourcesSelector } from "~/storeSelectors";
 import { resolveThreadDisplayProvider } from "~/lib/threadDisplayProvider";
-import { cn } from "~/lib/utils";
+import { cn } from "~/lib/styles";
 import {
   COMPOSER_EDITOR_CONTENT_RESET_CLASS_NAME,
   COMPOSER_EDITOR_MIN_HEIGHT_CLASS_NAME,
@@ -451,7 +451,12 @@ function $setComposerEditorPrompt(
         : undefined;
       const provider = thread ? resolveThreadDisplayProvider(thread) : undefined;
       paragraph.append(
-        $createComposerMentionNode(segment.path, segment.kind, provider ?? undefined, segment.threadId),
+        $createComposerMentionNode(
+          segment.path,
+          segment.kind,
+          provider ?? undefined,
+          segment.threadId,
+        ),
       );
       continue;
     }

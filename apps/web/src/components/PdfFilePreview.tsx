@@ -20,7 +20,7 @@ import { useContainerSize } from "~/lib/pdf/useContainerSize";
 import { usePdfDocument } from "~/lib/pdf/usePdfDocument";
 import { usePdfPageNavigation } from "~/lib/pdf/usePdfPageNavigation";
 import { usePdfZoomController } from "~/lib/pdf/usePdfZoomController";
-import { cn } from "~/lib/utils";
+import { cn } from "~/lib/styles";
 import { PdfPageView } from "./pdf/PdfPageView";
 import { PdfViewerToolbar } from "./pdf/PdfViewerToolbar";
 

@@ -5,9 +5,9 @@ import { BrowserElementRef, BrowserSnapshotId, BrowserTabId } from "./browserAut
 import { BrowserAriaRole, BrowserPoint } from "./browserAutomationTargets";
 import {
   BrowserLoadState,
-  browserBoundedInt as boundedInt,
-  browserClosedStruct as closedStruct,
-} from "./browserAutomationToolCommon";
+  boundedBrowserInteger as boundedInt,
+  strictBrowserStruct as closedStruct,
+} from "./browserToolContract";
 
 const BoundedUrl = BoundedUtf8String(8_192, 1);
 const BoundedTitle = BoundedUtf8String(2_048);

@@ -8,7 +8,7 @@
 
 import type { PullRequestCheck, PullRequestCheckStatus } from "@omnimind/contracts";
 
-import { cn } from "~/lib/utils";
+import { cn } from "~/lib/styles";
 
 type RingBucket = "success" | "failure" | "pending" | "neutral";
 

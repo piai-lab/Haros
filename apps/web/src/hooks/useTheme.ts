@@ -5,7 +5,7 @@
 
 import { useEffect, useSyncExternalStore } from "react";
 import { isElectron } from "../env";
-import { isMacPlatform } from "../lib/utils";
+import { isMacPlatform } from "../lib/platform";
 import {
   DEFAULT_THEME_STATE,
   type ChromeTheme,

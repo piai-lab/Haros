@@ -6,7 +6,7 @@ import { tmpdir } from "node:os";
 import { join } from "node:path";
 import { describe, expect, it, vi } from "vitest";
 
-import type { BrowserAutomationVisibleRuntime, DesktopBrowserManager } from "../browserManager";
+import type { BrowserAutomationVisibleRuntime, DesktopBrowserHost } from "../browserHost";
 import { DesktopBrowserAutomationHost } from "./desktopBrowserAutomationHost";
 import { BrowserAutomationHostError } from "./hostErrors";
 import { resolveBrowserTarget } from "./targets";
@@ -345,7 +345,7 @@ const createManager = () => {
     ),
     closeAutomationTab: vi.fn(() => ({ ...state, activeTabId: null, tabs: [] })),
   };
-  return { manager: manager as unknown as DesktopBrowserManager, raw: manager, webContents };
+  return { manager: manager as unknown as DesktopBrowserHost, raw: manager, webContents };
 };
 
 describe("DesktopBrowserAutomationHost", () => {

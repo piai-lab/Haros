@@ -14,7 +14,7 @@ import {
   PanelLeftIcon,
   SlidersIcon,
 } from "~/lib/icons";
-import { cn } from "~/lib/utils";
+import { cn } from "~/lib/styles";
 import { Button } from "../ui/button";
 import {
   ComposerStackedPanelHeaderRow,
@@ -97,11 +97,7 @@ export function ActiveTaskListCard({
             aria-label={compact ? "Expand task banner" : "Collapse task banner"}
             title={compact ? "Expand task banner" : "Collapse task banner"}
           >
-            {compact ? (
-              <Maximize2 className="size-3" />
-            ) : (
-              <Minimize2 className="size-3" />
-            )}
+            {compact ? <Maximize2 className="size-3" /> : <Minimize2 className="size-3" />}
           </Button>
         </div>
       </ComposerStackedPanelHeaderRow>

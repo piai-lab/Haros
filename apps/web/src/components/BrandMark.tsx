@@ -3,7 +3,7 @@
 // Layer: Shared app branding primitive
 
 import type { HTMLAttributes } from "react";
-import { cn } from "~/lib/utils";
+import { cn } from "~/lib/styles";
 
 export type BrandMarkProps = Omit<HTMLAttributes<HTMLSpanElement>, "children">;
 

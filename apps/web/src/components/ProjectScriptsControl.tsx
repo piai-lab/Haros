@@ -25,7 +25,8 @@ import {
   primaryProjectScript,
 } from "~/projectScripts";
 import { shortcutLabelForCommand } from "~/keybindings";
-import { cn, isMacPlatform } from "~/lib/utils";
+import { cn } from "~/lib/styles";
+import { isMacPlatform } from "~/lib/platform";
 import {
   AlertDialog,
   AlertDialogClose,

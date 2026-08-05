@@ -7,7 +7,7 @@ import { useEffect, useRef, type DragEvent as ReactDragEvent, type ReactNode } f
 import { type ThreadId } from "@omnimind/contracts";
 
 import { type SplitDirection, type SplitDropSide } from "../../splitViewStore";
-import { cn } from "../../lib/utils";
+import { cn } from "../../lib/styles";
 
 // Custom MIME so external file drops on the composer (which listen for `Files`) cannot trigger us.
 export const THREAD_DRAG_MIME = "application/x-omnimind-thread";

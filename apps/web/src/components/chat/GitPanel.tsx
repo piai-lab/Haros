@@ -29,7 +29,7 @@ import {
   gitWorkingTreeDiffQueryOptions,
 } from "~/lib/gitReactQuery";
 import { PlusIcon, RefreshCwIcon, RotateCcwIcon } from "~/lib/icons";
-import { cn } from "~/lib/utils";
+import { cn } from "~/lib/styles";
 import { useStore } from "~/store";
 import { createProjectSelector, createThreadSelector } from "~/storeSelectors";
 import { Alert } from "../ui/alert";

@@ -11,7 +11,7 @@ import { pullRequestListWorkspaceContexts } from "@omnimind/shared/githubReposit
 import { Tooltip, TooltipPopup, TooltipTrigger } from "~/components/ui/tooltip";
 import { PinStatusIcon, pinActionLabel } from "~/lib/pin";
 import { formatRelativeTime } from "~/lib/relativeTime";
-import { cn } from "~/lib/utils";
+import { cn } from "~/lib/styles";
 import {
   PR_BODY_TEXT_CLASS_NAME,
   PR_FINE_TEXT_CLASS_NAME,

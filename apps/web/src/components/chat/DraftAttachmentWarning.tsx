@@ -10,7 +10,7 @@
 import { forwardRef, type ComponentPropsWithoutRef } from "react";
 
 import { CircleAlertIcon } from "~/lib/icons";
-import { cn } from "~/lib/utils";
+import { cn } from "~/lib/styles";
 
 /** Accessible label on the warning glyph. */
 export const DRAFT_ATTACHMENT_WARNING_LABEL = "Draft attachment may not persist";

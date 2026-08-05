@@ -7,7 +7,7 @@ import {
   resolveSessionCookieName,
   signPayload,
   timingSafeEqualBase64Url,
-} from "./utils";
+} from "./clientAuthentication";
 
 describe("auth utils", () => {
   it("resolves stable web and port-scoped desktop cookie names", () => {

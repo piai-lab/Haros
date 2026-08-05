@@ -5,7 +5,7 @@ import { tmpdir } from "node:os";
 import path from "node:path";
 import test from "node:test";
 import { fileURLToPath } from "node:url";
-import { discoverGeneratedFiles } from "../scripts/check-identity.mjs";
+import { discoverGeneratedFiles, identityGatePasses } from "../scripts/check-identity.mjs";
 import { assertDispositionClosure } from "../scripts/check-source-closure.mjs";
 import {
   parseDenylist,
@@ -128,26 +128,42 @@ test("identity scan permits only explicitly injected runtime fixtures", async ()
   assert.equal(allowed.findings.length, 0);
 });
 
-test("identity scan permits donor identity only in the root disclosure", async () => {
+test("identity scan permits donor identity only on exact evidence surfaces", async (t) => {
   const temporaryRoot = await mkdtemp(path.join(tmpdir(), "identity-research-"));
+  t.after(() => rm(temporaryRoot, { force: true, recursive: true }));
   const rule = rules[0];
   await writeFile(path.join(temporaryRoot, "README.md"), policyReadme(rule));
-  await mkdir(path.join(temporaryRoot, "LICENSES"));
-  await mkdir(path.join(temporaryRoot, "research"));
-  await writeFile(path.join(temporaryRoot, "LICENSES", "source.txt"), `${rule}\n`);
-  await writeFile(path.join(temporaryRoot, "research", "source-review.md"), `${rule}\n`);
+  const evidenceFiles = [
+    "README.md",
+    "AGENTS.md",
+    `research/${rule}-source-review.md`,
+    `.omp-flow/tasks/task-one/${rule}-handoff.md`,
+  ];
+  const authoredFiles = [
+    `apps/${rule}-product.ts`,
+    `packages/${rule}-contract.ts`,
+    `scripts/${rule}-check.mjs`,
+  ];
+  const generatedFiles = [`apps/web/dist/${rule}-bundle.js`];
+  for (const relativePath of [...evidenceFiles.slice(1), ...authoredFiles, ...generatedFiles]) {
+    await mkdir(path.dirname(path.join(temporaryRoot, relativePath)), { recursive: true });
+    await writeFile(path.join(temporaryRoot, relativePath), `${rule}\n`);
+  }
 
   const result = await scanIdentity({
     root: temporaryRoot,
-    trackedFiles: ["README.md", "LICENSES/source.txt", "research/source-review.md"],
+    sourceFiles: [...evidenceFiles, ...authoredFiles],
+    generatedFiles,
   });
 
-  assert.deepEqual(
-    result.findings.map((finding) => [finding.path, finding.surface]),
-    [
-      ["LICENSES/source.txt", "source"],
-      ["research/source-review.md", "source"],
-    ],
+  assert.ok(result.findings.every((finding) => !evidenceFiles.includes(finding.path)));
+  for (const relativePath of authoredFiles) {
+    assert.ok(result.findings.some((finding) => finding.path === relativePath));
+  }
+  assert.ok(
+    result.findings.some(
+      (finding) => finding.path === generatedFiles[0] && finding.surface === "generated-output",
+    ),
   );
 });
 
@@ -272,6 +288,7 @@ test("structure policy rejects garbage containers and excessive nesting", async 
   assert.ok(structureRules.includes('forbidden name token "common"'));
   assert.ok(structureRules.some((finding) => finding.startsWith("directory depth")));
   assert.ok(structureRules.includes('unapproved author root "foreign"'));
+  assert.equal(identityGatePasses(result.findings), false);
 });
 
 test("structure policy keeps installed workflow tooling outside production naming rules", async () => {
@@ -808,7 +825,7 @@ test("identity partitions exact, tool, evidence, author, and generated surfaces"
   assert.ok(result.findings.some((finding) => finding.path === `apps/web/dist/${rule}.js`));
   assert.ok(result.findings.some((finding) => finding.path === `.omp-flow/${rule}.txt`));
   assert.ok(result.findings.some((finding) => finding.path === `.omp-flow/dist/${rule}.js`));
-  assert.ok(result.findings.some((finding) => finding.path === `research/${rule}.md`));
+  assert.ok(result.findings.every((finding) => finding.path !== `research/${rule}.md`));
   assert.ok(result.findings.every((finding) => !finding.path.startsWith("vendor/source/")));
 });
 

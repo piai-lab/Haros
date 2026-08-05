@@ -1,6 +1,6 @@
 import { Effect, FileSystem, Layer, Path } from "effect";
 
-import { TerminalManagerLive } from "./Layers/Manager";
+import { TerminalSupervisorLive } from "./Layers/Supervisor";
 import { PtyAdapter } from "./Services/PTY";
 
 type RuntimePtyAdapterLoader = {
@@ -20,6 +20,6 @@ const makeRuntimePtyAdapterLayer = () =>
     return ptyAdapterModule.layer;
   }).pipe(Layer.unwrap);
 
-export const TerminalLayerLive = TerminalManagerLive.pipe(
+export const TerminalLayerLive = TerminalSupervisorLive.pipe(
   Layer.provide(makeRuntimePtyAdapterLayer()),
 );

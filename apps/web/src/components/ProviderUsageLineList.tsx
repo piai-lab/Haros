@@ -3,7 +3,7 @@
 // Keeps label/value/subtitle semantics consistent while allowing each surface its own density.
 
 import type { OpenUsageUsageLine } from "~/lib/openUsageRateLimits";
-import { cn } from "~/lib/utils";
+import { cn } from "~/lib/styles";
 
 type ProviderUsageLineListSurface = "settings" | "popover";
 

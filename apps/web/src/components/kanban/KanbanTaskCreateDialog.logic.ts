@@ -1,4 +1,4 @@
-// FILE: KanbanNewTaskDialog.logic.ts
+// FILE: KanbanTaskCreateDialog.logic.ts
 // Purpose: Pure helpers for the kanban new-task composer dialog.
 // Layer: Kanban UI logic (no React/store side effects)
 // Exports: transcript merge and task preview helpers.

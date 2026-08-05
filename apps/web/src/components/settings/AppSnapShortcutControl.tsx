@@ -22,7 +22,7 @@ import { useRef, useState, type KeyboardEvent } from "react";
 
 import { appSnapShortcutConflictCommand } from "~/appSnapShortcut";
 import { shortcutSheetCommandLabel } from "~/shortcutsSheet";
-import { cn } from "~/lib/utils";
+import { cn } from "~/lib/styles";
 import { Button } from "~/components/ui/button";
 import { Kbd, KbdGroup } from "~/components/ui/kbd";
 import { toastManager } from "~/components/ui/toast";

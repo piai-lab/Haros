@@ -36,7 +36,7 @@ import { useWorkspacePathsStore } from "../workspacePathsStore";
 import { SingleChatSurface } from "../components/chat/SingleChatSurface";
 import { SplitChatSurface } from "../components/chat/SplitChatSurface";
 import { ProductConversationRouteState } from "../components/product/ProductConversationRouteState";
-import { useHandleNewStudioChat } from "../hooks/useHandleNewStudioChat";
+import { useCreateStudioChat } from "../hooks/useCreateStudioChat";
 import { getWorkbenchCopy } from "../i18n/workbenchCopy";
 import {
   isProductChatSplitRestorable,
@@ -47,12 +47,9 @@ import {
   resolveThreadSurfaceMembership,
 } from "./-chatThreadRoute.logic";
 
-export function ChatThreadRouteView(props: {
-  threadId: ThreadId;
-  search: DiffRouteSearch;
-}) {
+export function ChatThreadRouteView(props: { threadId: ThreadId; search: DiffRouteSearch }) {
   const workbenchCopy = getWorkbenchCopy();
-  const { handleNewStudioChat } = useHandleNewStudioChat();
+  const { createStudioChat } = useCreateStudioChat();
   const threadsHydrated = useStore((store) => store.threadsHydrated);
   const hasKnownServerThreads = useStore((store) => (store.threadIds?.length ?? 0) > 0);
   const threadId = props.threadId;
@@ -83,7 +80,9 @@ export function ChatThreadRouteView(props: {
   const productConversationSummary = productConversations.find(
     (conversation) => conversation.id === productConversationId,
   );
-  const routeInventoryHydrated = productConversationSummary ? productShellHydrated : threadsHydrated;
+  const routeInventoryHydrated = productConversationSummary
+    ? productShellHydrated
+    : threadsHydrated;
   const surfaceMembership = resolveThreadSurfaceMembership({
     surface: search.surface,
     donorThreadExists: threadExists,
@@ -337,7 +336,7 @@ export function ChatThreadRouteView(props: {
           label: workbenchCopy.startNewConversation,
           onClick: () => {
             setNewConversationErrorEpisode({ threadId, error: null });
-            void handleNewStudioChat({ fresh: true }).then((result) => {
+            void createStudioChat({ fresh: true }).then((result) => {
               if (!result.ok) {
                 setNewConversationErrorEpisode({ threadId, error: result.error });
               }

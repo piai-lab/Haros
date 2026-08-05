@@ -8,7 +8,7 @@
 // must not drag the xterm runtime (~223 KB gzip) into the initial bundle, so it
 // cannot live alongside the registry-touching helpers in `terminalSession.ts`.
 
-import { randomUUID } from "~/lib/utils";
+import { randomUUID } from "~/lib/identifiers";
 
 // Stable, collision-resistant id for a new terminal pane/tab/split.
 export function randomTerminalId(): string {

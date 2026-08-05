@@ -1,4 +1,4 @@
-// FILE: Manager.ts
+// FILE: Supervisor.ts
 // Purpose: Implements server-side terminal sessions, cleanup orchestration, history persistence, and PTY output flow control.
 // Layer: Terminal infrastructure
 // Depends on: PTY adapters, process-tree cleanup helpers, shared terminal contracts, and server config.
@@ -45,12 +45,12 @@ import {
 import {
   ShellCandidate,
   TerminalError,
-  TerminalManager,
-  TerminalManagerShape,
+  TerminalSupervisor,
+  TerminalSupervisorShape,
   type TerminalCloseOpenedAtOrBeforeInput,
   TerminalSessionState,
   TerminalStartInput,
-} from "../Services/Manager";
+} from "../Services/Supervisor";
 import {
   capHistoryByLimits,
   DEFAULT_HISTORY_BYTE_LIMIT,
@@ -79,7 +79,7 @@ const DEFAULT_SUBPROCESS_POLL_INTERVAL_MS = 1_000;
  * When every running terminal is idle (no live subprocess and no recent
  * input/output) the subprocess poll backs off to this multiple of the base
  * interval, cutting the per-`ps` idle drain. Any activity pulls the cadence back
- * to the base interval via {@link TerminalManagerRuntime#bumpSubprocessPolling}.
+ * to the base interval via {@link TerminalSupervisorRuntime#bumpSubprocessPolling}.
  */
 const SUBPROCESS_IDLE_POLL_MULTIPLIER = 8;
 const DEFAULT_PROCESS_KILL_GRACE_MS = 1_000;
@@ -305,7 +305,7 @@ function resolveShellCandidates(
   ]);
 }
 
-export const __terminalManagerShellTesting = {
+export const __terminalSupervisorShellTesting = {
   resolveShellCandidates,
   windowsDefaultTerminalShell: WINDOWS_DEFAULT_TERMINAL_SHELL,
 };
@@ -732,11 +732,11 @@ function sanitizePersistedTerminalHistory(history: string): string {
   return sanitizeTerminalHistoryChunk("", history).visibleText;
 }
 
-interface TerminalManagerEvents {
+interface TerminalSupervisorEvents {
   event: [event: TerminalEvent];
 }
 
-interface TerminalManagerOptions {
+interface TerminalSupervisorOptions {
   logsDir?: string;
   historyLineLimit?: number;
   historyByteLimit?: number;
@@ -756,7 +756,7 @@ interface KillEscalationHandle {
   rootExited: boolean;
 }
 
-export class TerminalManagerRuntime extends EventEmitter<TerminalManagerEvents> {
+export class TerminalSupervisorRuntime extends EventEmitter<TerminalSupervisorEvents> {
   private readonly sessions = new Map<string, TerminalSessionState>();
   private readonly logsDir: string;
   private managedWrapperBinDir: string | null;
@@ -790,7 +790,7 @@ export class TerminalManagerRuntime extends EventEmitter<TerminalManagerEvents> 
   private readonly killEscalationTimers = new Map<PtyProcess, KillEscalationHandle>();
   private readonly logger = createLogger("terminal");
 
-  constructor(options: TerminalManagerOptions) {
+  constructor(options: TerminalSupervisorOptions) {
     super();
     this.logsDir = options.logsDir ?? path.resolve(process.cwd(), ".logs", "terminals");
     this.managedWrapperBinDir =
@@ -2149,8 +2149,7 @@ export class TerminalManagerRuntime extends EventEmitter<TerminalManagerEvents> 
             } else {
               // No hooks observed — fall back to process-tree + output heuristic.
               hasRunningSubprocess = subprocessActivity.hasAgentDescendant
-                ? subprocessActivity.hasOtherSubprocess ||
-                  isTerminalLeaseBusy(session, Date.now())
+                ? subprocessActivity.hasOtherSubprocess || isTerminalLeaseBusy(session, Date.now())
                 : subprocessActivity.hasRunningSubprocess;
             }
           } catch (error) {
@@ -2344,14 +2343,14 @@ export class TerminalManagerRuntime extends EventEmitter<TerminalManagerEvents> 
   }
 }
 
-export const TerminalManagerLive = Layer.effect(
-  TerminalManager,
+export const TerminalSupervisorLive = Layer.effect(
+  TerminalSupervisor,
   Effect.gen(function* () {
     const { terminalLogsDir } = yield* ServerConfig;
 
     const ptyAdapter = yield* PtyAdapter;
     const runtime = yield* Effect.acquireRelease(
-      Effect.sync(() => new TerminalManagerRuntime({ logsDir: terminalLogsDir, ptyAdapter })),
+      Effect.sync(() => new TerminalSupervisorRuntime({ logsDir: terminalLogsDir, ptyAdapter })),
       (r) => Effect.promise(() => r.disposeForShutdown()),
     );
 
@@ -2405,6 +2404,6 @@ export const TerminalManagerLive = Layer.effect(
           };
         }),
       dispose: Effect.promise(() => runtime.disposeForShutdown()),
-    } satisfies TerminalManagerShape;
+    } satisfies TerminalSupervisorShape;
   }),
 );

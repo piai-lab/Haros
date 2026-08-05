@@ -24,7 +24,7 @@ import {
   noopChatSurfaceAction,
 } from "./ChatThreadSurfacePrimitives";
 import { useBrowserPanelDesktopBridge } from "../../hooks/useBrowserPanelDesktopBridge";
-import { useHandleNewChat } from "../../hooks/useHandleNewChat";
+import { useCreateChat } from "../../hooks/useCreateChat";
 import type { ChatRightPanel } from "../../diffRouteSearch";
 import { stripDiffSearchParams } from "../../diffRouteSearch";
 import {
@@ -78,7 +78,7 @@ import {
   CHAT_MAIN_VIEWPORT_SHELL_CLASS_NAME,
 } from "./composerPickerStyles";
 import { routeSplitBrowserPanelOpenRequest } from "./browserPanelOpenRequest";
-import { cn } from "~/lib/utils";
+import { cn } from "~/lib/styles";
 
 const SPLIT_PANE_PANEL_DEFAULT_WIDTH_PX = 22 * 16;
 const BROWSER_SPLIT_PANE_PANEL_DEFAULT_WIDTH_PX = 30 * 16;
@@ -590,7 +590,7 @@ export function SplitChatSurface(props: {
   conversationSurface: "agent" | "chat";
 }) {
   const navigate = useNavigate();
-  const { handleNewChat } = useHandleNewChat();
+  const { createChat } = useCreateChat();
   const selectAllThreads = createAllThreadsSelector();
   const threads = useStore(selectAllThreads);
   const projects = useStore((store) => store.projects);
@@ -631,7 +631,7 @@ export function SplitChatSurface(props: {
       removeSplitView(activeSplitView.id);
       const fallbackThreadId = onlyThreadId ?? props.routeThreadId;
       if (!fallbackThreadId) {
-        void handleNewChat({ fresh: true });
+        void createChat({ fresh: true });
         return;
       }
       void navigate({
@@ -673,7 +673,7 @@ export function SplitChatSurface(props: {
     }
   }, [
     activeSplitView,
-    handleNewChat,
+    createChat,
     navigate,
     props.routeThreadId,
     removeSplitView,
@@ -794,7 +794,7 @@ export function SplitChatSurface(props: {
     }
 
     removeSplitView(activeSplitView.id);
-    void handleNewChat({ fresh: true });
+    void createChat({ fresh: true });
   };
 
   const closePaneThread = (paneId: PaneId) => {
@@ -872,7 +872,7 @@ export function SplitChatSurface(props: {
       return;
     }
 
-    void handleNewChat({ fresh: true });
+    void createChat({ fresh: true });
   };
 
   const handleSetRatio = (nodeId: PaneId, ratio: number) => {

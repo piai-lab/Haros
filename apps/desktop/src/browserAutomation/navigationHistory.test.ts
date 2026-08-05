@@ -4,7 +4,7 @@ import { ThreadId, type BrowserBackInput } from "@omnimind/contracts";
 import type { WebContents } from "electron";
 import { describe, expect, it, vi } from "vitest";
 
-import type { BrowserAutomationVisibleRuntime } from "../browserManager";
+import type { BrowserAutomationVisibleRuntime } from "../browserHost";
 import { navigateBrowserHistory } from "./navigationHistory";
 
 const THREAD_ID = ThreadId.makeUnsafe("thread-history");

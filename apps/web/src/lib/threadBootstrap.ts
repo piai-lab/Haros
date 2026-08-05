@@ -20,7 +20,7 @@ import {
   type ThreadPrimarySurface,
 } from "../types";
 
-export interface NewThreadOptions {
+export interface CreateThreadOptions {
   branch?: string | null;
   worktreePath?: string | null;
   workingDirectory?: string | null;
@@ -100,7 +100,7 @@ interface ResolveTerminalThreadCreationStateInput {
   activeDraftThread: DraftThreadState | null;
   activeThread: ActiveThreadSnapshot | null;
   draftThread: DraftThreadState | null;
-  options: NewThreadOptions | undefined;
+  options: CreateThreadOptions | undefined;
   projectId: ProjectId;
 }
 
@@ -199,7 +199,7 @@ export function resolveThreadBootstrapPlan(input: {
 export function createFreshDraftThreadSeed(input: {
   createdAt: string;
   entryPoint: ThreadPrimarySurface;
-  options: NewThreadOptions | undefined;
+  options: CreateThreadOptions | undefined;
 }): Omit<DraftThreadState, "projectId" | "interactionMode"> {
   return {
     createdAt: input.createdAt,
@@ -214,7 +214,7 @@ export function createFreshDraftThreadSeed(input: {
 }
 
 // Detect whether the caller wants to override stored draft context before reuse.
-export function hasDraftContextOverrides(options?: NewThreadOptions): boolean {
+export function hasDraftContextOverrides(options?: CreateThreadOptions): boolean {
   return (
     options?.branch !== undefined ||
     options?.worktreePath !== undefined ||
@@ -226,7 +226,7 @@ export function hasDraftContextOverrides(options?: NewThreadOptions): boolean {
 // Build the exact patch we should apply to an existing draft before reusing it.
 export function buildDraftThreadContextPatch(
   entryPoint: ThreadPrimarySurface,
-  options?: NewThreadOptions,
+  options?: CreateThreadOptions,
 ): {
   branch?: string | null;
   entryPoint: ThreadPrimarySurface;

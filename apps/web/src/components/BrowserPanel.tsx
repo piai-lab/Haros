@@ -48,7 +48,8 @@ import { readNativeApi } from "~/nativeApi";
 import type { DockPaneRuntimeMode } from "~/lib/dockPaneActivation";
 import { PANEL_RESIZE_OVERLAY_SYNC_EVENT } from "~/lib/panelResize";
 import { serverLocalServersQueryOptions } from "~/lib/serverReactQuery";
-import { cn, isMacPlatform } from "~/lib/utils";
+import { cn } from "~/lib/styles";
+import { isMacPlatform } from "~/lib/platform";
 
 import {
   useBrowserStateStore,
@@ -833,7 +834,7 @@ export function BrowserPanel({
       // A <webview> blocks window.open() unless `allowpopups` is set. Without it, clicking
       // "Continue with Google" (and any OAuth/popup flow) is silently dropped before the main
       // process's window-open handler ever runs. Enabling it lets the popup classifier in
-      // browserManager decide popup-vs-tab and keep the OAuth `window.opener` handshake alive.
+      // browserHost decide popup-vs-tab and keep the OAuth `window.opener` handshake alive.
       webview.setAttribute("allowpopups", "true");
       // No `useragent` attribute on purpose: the desktop main process spoofs a desktop Chrome
       // UA on the shared persistent partition, so this webview (and OAuth popups) inherit the

@@ -12,7 +12,7 @@ import { Input } from "~/components/ui/input";
 import { ShortcutKbd } from "~/components/ui/shortcut-kbd";
 import { Glyph } from "~/ui/icons";
 import { serverConfigQueryOptions } from "~/lib/serverReactQuery";
-import { cn } from "~/lib/utils";
+import { cn } from "~/lib/styles";
 import {
   buildShortcutSheetSections,
   filterShortcutSheetSections,

@@ -1,17 +1,15 @@
 import { ensureHomeChatProject } from "../lib/chatProjects";
 import { startContainerChat, type StartContainerChatResult } from "../lib/startContainerChat";
 import { useWorkspacePathsStore } from "../workspacePathsStore";
-import { useHandleNewThread } from "./useHandleNewThread";
+import { useCreateThread } from "./useCreateThread";
 
-type HandleNewThread = ReturnType<typeof useHandleNewThread>["handleNewThread"];
+type CreateThread = ReturnType<typeof useCreateThread>["createThread"];
 
-function useHandleNewChatFromThreadHandler(handleNewThread: HandleNewThread) {
+function useCreateChatFromThreadHandler(createThread: CreateThread) {
   const homeDir = useWorkspacePathsStore((state) => state.homeDir);
   const chatWorkspaceRoot = useWorkspacePathsStore((state) => state.chatWorkspaceRoot);
 
-  const handleNewChat = async (options?: {
-    fresh?: boolean;
-  }): Promise<StartContainerChatResult> => {
+  const createChat = async (options?: { fresh?: boolean }): Promise<StartContainerChatResult> => {
     if (!homeDir) {
       return {
         ok: false,
@@ -21,20 +19,20 @@ function useHandleNewChatFromThreadHandler(handleNewThread: HandleNewThread) {
 
     return startContainerChat({
       ensureProjectId: () => ensureHomeChatProject({ homeDir, chatWorkspaceRoot }),
-      handleNewThread,
+      createThread,
       fresh: options?.fresh,
       errorLabel: "Unable to prepare a new chat.",
     });
   };
 
-  return { handleNewChat };
+  return { createChat };
 }
 
-export function useHandleNewChat() {
-  const { handleNewThread } = useHandleNewThread();
-  return useHandleNewChatFromThreadHandler(handleNewThread);
+export function useCreateChat() {
+  const { createThread } = useCreateThread();
+  return useCreateChatFromThreadHandler(createThread);
 }
 
-export function useHandleNewChatWithThreadHandler(handleNewThread: HandleNewThread) {
-  return useHandleNewChatFromThreadHandler(handleNewThread);
+export function useCreateChatWithThreadHandler(createThread: CreateThread) {
+  return useCreateChatFromThreadHandler(createThread);
 }

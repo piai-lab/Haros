@@ -5,7 +5,7 @@
 
 import { ChevronRightIcon } from "~/lib/icons";
 import { disclosureChevronClassName } from "~/lib/disclosureMotion";
-import { cn } from "~/lib/utils";
+import { cn } from "~/lib/styles";
 
 export function DisclosureChevron(props: { open: boolean; className?: string | undefined }) {
   const { open, className } = props;

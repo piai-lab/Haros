@@ -3,7 +3,7 @@
 // Layer: web UI primitive
 
 import { forwardRef, type CSSProperties, type HTMLAttributes, type ReactElement } from "react";
-import { cn } from "~/lib/utils";
+import { cn } from "~/lib/styles";
 import { hasGlyph } from "./registry.generated";
 
 const GLYPH_BASE_PATHS = {

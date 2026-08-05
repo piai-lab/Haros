@@ -1,12 +1,16 @@
-// FILE: devServerManager.test.ts
+// FILE: devServerSupervisor.test.ts
 // Purpose: Covers project dev-server registry helpers without starting PTYs.
-// Layer: Server unit tests for DevServerManager support logic.
+// Layer: Server unit tests for DevServerSupervisor support logic.
 
 import { describe, expect, it } from "vitest";
 
-import { ProjectId, type ProjectDevServer, type ServerLocalServerProcess } from "@omnimind/contracts";
+import {
+  ProjectId,
+  type ProjectDevServer,
+  type ServerLocalServerProcess,
+} from "@omnimind/contracts";
 
-import { findProjectDevServerForLocalServer } from "./devServerManager";
+import { findProjectDevServerForLocalServer } from "./devServerSupervisor";
 
 function makeDevServer(overrides: Partial<ProjectDevServer> = {}): ProjectDevServer {
   return {

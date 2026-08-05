@@ -4,7 +4,7 @@ import {
   isWindowsAbsolutePath,
   isWindowsDrivePath,
 } from "@omnimind/shared/path";
-import { isWindowsPlatform } from "./utils";
+import { isWindowsPlatform } from "./platform";
 
 function isRootPath(value: string): boolean {
   return value === "/" || value === "\\" || /^[a-zA-Z]:[/\\]?$/.test(value);

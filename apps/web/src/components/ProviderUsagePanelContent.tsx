@@ -12,7 +12,7 @@ import {
   type ProviderRateLimit,
 } from "~/lib/rateLimits";
 import { deriveProviderUsageDisplayRows } from "~/lib/providerUsageDisplay";
-import { cn } from "~/lib/utils";
+import { cn } from "~/lib/styles";
 
 import { ProviderUsageLimitRows } from "./ProviderUsageLimitRows";
 import { ProviderUsageLineList } from "./ProviderUsageLineList";

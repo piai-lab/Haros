@@ -10,7 +10,7 @@ import {
   localServerPrimaryLabel,
 } from "@omnimind/shared/localServers";
 
-import { cn } from "~/lib/utils";
+import { cn } from "~/lib/styles";
 
 /**
  * Visual context the identity column renders into. Both surfaces share an

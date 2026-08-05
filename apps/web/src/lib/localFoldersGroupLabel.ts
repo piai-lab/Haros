@@ -1,4 +1,4 @@
-import { isMacPlatform, isWindowsPlatform } from "./utils";
+import { isMacPlatform, isWindowsPlatform } from "./platform";
 
 function isWindowsAbsolutePath(value: string): boolean {
   return /^[a-z]:[\\/]/i.test(value) || value.startsWith("\\\\");

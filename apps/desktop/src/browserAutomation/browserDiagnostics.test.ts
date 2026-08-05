@@ -4,7 +4,7 @@ import { ThreadId } from "@omnimind/contracts";
 import type { WebContents } from "electron";
 import { describe, expect, it, vi } from "vitest";
 
-import type { BrowserAutomationVisibleRuntime } from "../browserManager";
+import type { BrowserAutomationVisibleRuntime } from "../browserHost";
 import { BrowserDiagnosticsStore } from "./browserDiagnostics";
 
 const THREAD_ID = ThreadId.makeUnsafe("thread-diagnostics");

@@ -16,7 +16,7 @@ import { isWorkspaceRootWithin, workspaceRootsEqual } from "@omnimind/shared/thr
 import type { SidebarProjectSortOrder, SidebarThreadSortOrder } from "../appSettings";
 import { resolveRestorableThreadRoute, type LastThreadRoute } from "../chatRouteRestore";
 import type { ChatMessage, Project, SidebarThreadSummary, Thread } from "../types";
-import { cn } from "../lib/utils";
+import { cn } from "../lib/styles";
 import {
   derivePinnedIds,
   getPinnedItems,

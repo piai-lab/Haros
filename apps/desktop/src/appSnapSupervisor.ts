@@ -1,7 +1,7 @@
-// FILE: appSnapManager.ts
-// Purpose: Owns the macOS AppSnap helper lifecycle, permission state, and pending captures.
+// FILE: appSnapSupervisor.ts
+// Purpose: Owns the macOS AppSnap bridge lifecycle, permission state, and pending captures.
 // Layer: Desktop main-process service
-// Depends on: A signed Swift helper plus narrow filesystem/process adapters.
+// Depends on: A signed Swift bridge plus narrow filesystem/process adapters.
 
 import * as ChildProcess from "node:child_process";
 import * as Crypto from "node:crypto";
@@ -31,16 +31,16 @@ import {
 } from "@omnimind/shared/appSnapShortcut";
 
 const MAX_PENDING_CAPTURES = CHAT_TURN_MAX_ATTACHMENTS;
-const MAX_HELPER_STDERR_CHARS = 4_096;
+const MAX_BRIDGE_STDERR_CHARS = 4_096;
 const MAX_PENDING_CAPTURE_METADATA_BYTES = 512 * 1024;
 const PENDING_CAPTURE_STORAGE_VERSION = 1;
 const PENDING_CAPTURE_FILE_PATTERN = /^pending-([a-f0-9]{64})\.json$/;
 const PENDING_CAPTURE_IMAGE_PATTERN = /^pending-([a-f0-9]{64})\.png$/;
-const HELPER_CAPTURE_IMAGE_PATTERN =
+const BRIDGE_CAPTURE_IMAGE_PATTERN =
   /^appsnap-([a-f0-9]{8}-[a-f0-9]{4}-[a-f0-9]{4}-[a-f0-9]{4}-[a-f0-9]{12})\.png$/;
 const PNG_SIGNATURE = Buffer.from([0x89, 0x50, 0x4e, 0x47, 0x0d, 0x0a, 0x1a, 0x0a]);
 
-type AppSnapHelperProcess = ChildProcess.ChildProcessByStdio<Writable | null, Readable, Readable>;
+type AppSnapBridgeProcess = ChildProcess.ChildProcessByStdio<Writable | null, Readable, Readable>;
 
 interface PendingAppSnapCaptureRecord {
   capture: DesktopAppSnapCapture;
@@ -61,7 +61,7 @@ interface StoredPendingAppSnapCapture {
   sourceWindowTitle: string | null;
 }
 
-type AppSnapHelperMessage =
+type AppSnapBridgeMessage =
   | {
       type: "permissions";
       inputMonitoring: "granted" | "denied";
@@ -88,9 +88,9 @@ type AppSnapHelperMessage =
       capturedAt?: string;
     };
 
-export interface DesktopAppSnapManagerOptions {
+export interface DesktopAppSnapSupervisorOptions {
   platform: NodeJS.Platform;
-  helperPath: string;
+  bridgePath: string;
   captureDirectory: string;
   excludedBundleId: string;
   onState: (state: DesktopAppSnapState) => void;
@@ -242,7 +242,7 @@ export function desktopAppSnapPlatform(platform: NodeJS.Platform): DesktopAppSna
   return "other";
 }
 
-export function parseAppSnapHelperMessage(line: string): AppSnapHelperMessage | null {
+export function parseAppSnapBridgeMessage(line: string): AppSnapBridgeMessage | null {
   let parsed: unknown;
   try {
     parsed = JSON.parse(line);
@@ -344,20 +344,20 @@ function isBenignCaptureErrorCode(code: string): boolean {
   return code === "capture_in_progress" || code === "capture-in-progress";
 }
 
-export class DesktopAppSnapManager {
-  readonly #options: Required<Pick<DesktopAppSnapManagerOptions, "now" | "spawn">> &
-    Omit<DesktopAppSnapManagerOptions, "now" | "spawn">;
+export class DesktopAppSnapSupervisor {
+  readonly #options: Required<Pick<DesktopAppSnapSupervisorOptions, "now" | "spawn">> &
+    Omit<DesktopAppSnapSupervisorOptions, "now" | "spawn">;
   readonly #platform: DesktopAppSnapPlatform;
   #enabled = false;
   #inputMonitoringPermission: DesktopAppSnapPermission = "unknown";
   #screenRecordingPermission: DesktopAppSnapPermission = "unknown";
   #status: DesktopAppSnapState["status"];
   #message: string | null;
-  #watchProcess: AppSnapHelperProcess | null = null;
+  #watchProcess: AppSnapBridgeProcess | null = null;
   #watchOutputLines: Readline.Interface | null = null;
   #watchReconcilePromise: Promise<void> | null = null;
   #watchReconcileRequested = false;
-  #permissionProcess: AppSnapHelperProcess | null = null;
+  #permissionProcess: AppSnapBridgeProcess | null = null;
   #permissionCommandQueue: Promise<void> = Promise.resolve();
   #disposed = false;
   #intentionalWatchStop = false;
@@ -367,7 +367,7 @@ export class DesktopAppSnapManager {
   #shortcut: DesktopAppSnapShortcut = DEFAULT_APP_SNAP_SHORTCUT;
   #registeredAccelerator: string | null = null;
 
-  constructor(options: DesktopAppSnapManagerOptions) {
+  constructor(options: DesktopAppSnapSupervisorOptions) {
     this.#options = {
       ...options,
       now: options.now ?? (() => new Date()),
@@ -583,25 +583,25 @@ export class DesktopAppSnapManager {
       }
     }
 
-    // The helper writes its PNG before Electron can durably create the
+    // The bridge writes its PNG before Electron can durably create the
     // pending pair. Recover that original after a crash in the narrow gap.
     for (const entry of entries) {
-      const captureId = HELPER_CAPTURE_IMAGE_PATTERN.exec(entry)?.[1];
+      const captureId = BRIDGE_CAPTURE_IMAGE_PATTERN.exec(entry)?.[1];
       if (!captureId) continue;
-      const helperImagePath = Path.join(this.#options.captureDirectory, entry);
+      const bridgeCapturePath = Path.join(this.#options.captureDirectory, entry);
       if (records.some((record) => record.capture.id === captureId)) {
-        await FS.promises.unlink(helperImagePath).catch(() => undefined);
+        await FS.promises.unlink(bridgeCapturePath).catch(() => undefined);
         continue;
       }
 
       let bytes: Buffer;
       try {
-        bytes = await readValidatedPendingPng(helperImagePath);
+        bytes = await readValidatedPendingPng(bridgeCapturePath);
       } catch (error) {
         console.warn(
-          `[desktop-appsnap] Removing unreadable helper capture ${entry}: ${error instanceof Error ? error.message : String(error)}`,
+          `[desktop-appsnap] Removing unreadable bridge capture ${entry}: ${error instanceof Error ? error.message : String(error)}`,
         );
-        await FS.promises.unlink(helperImagePath).catch(() => undefined);
+        await FS.promises.unlink(bridgeCapturePath).catch(() => undefined);
         continue;
       }
 
@@ -620,11 +620,11 @@ export class DesktopAppSnapManager {
       };
       try {
         records.push(await this.#persistPendingCapture(capture));
-        await FS.promises.unlink(helperImagePath).catch(() => undefined);
+        await FS.promises.unlink(bridgeCapturePath).catch(() => undefined);
       } catch (error) {
-        // Keep the helper image as the recovery source for the next startup.
+        // Keep the bridge capture as the recovery source for the next startup.
         console.warn(
-          `[desktop-appsnap] Could not recover helper capture ${entry}: ${error instanceof Error ? error.message : String(error)}`,
+          `[desktop-appsnap] Could not recover bridge capture ${entry}: ${error instanceof Error ? error.message : String(error)}`,
         );
       }
     }
@@ -729,10 +729,10 @@ export class DesktopAppSnapManager {
       );
       return;
     }
-    if (!FS.existsSync(this.#options.helperPath)) {
+    if (!FS.existsSync(this.#options.bridgePath)) {
       this.#stopWatchProcess();
       this.#releaseShortcutReservation();
-      this.#setState("error", "The AppSnap native helper is missing from this desktop build.");
+      this.#setState("error", "The AppSnap native bridge is missing from this desktop build.");
       return;
     }
     if (this.#shortcut.kind === "key-chord" && !this.#reserveShortcut(this.#shortcut)) {
@@ -768,11 +768,11 @@ export class DesktopAppSnapManager {
   #startWatchProcess(): void {
     this.#intentionalWatchStop = false;
     this.#setState("starting", null);
-    // Key chords are detected by Electron's reserved accelerator; the helper
+    // Key chords are detected by Electron's reserved accelerator; the bridge
     // only captures on demand, driven by "trigger" lines on its stdin.
     const shortcutArguments = this.#shortcut.kind === "key-chord" ? ["--external-trigger"] : [];
     const child = this.#options.spawn(
-      this.#options.helperPath,
+      this.#options.bridgePath,
       [
         "--watch",
         "--output-dir",
@@ -783,10 +783,10 @@ export class DesktopAppSnapManager {
       ],
       { stdio: ["pipe", "pipe", "pipe"] },
     );
-    // A helper that dies mid-write must not surface as an unhandled stream error.
+    // A bridge that dies mid-write must not surface as an unhandled stream error.
     child.stdin?.on("error", () => undefined);
     this.#watchProcess = child;
-    this.#watchOutputLines = this.#wireHelperOutput(child, (message) =>
+    this.#watchOutputLines = this.#wireBridgeOutput(child, (message) =>
       this.#handleWatchMessage(child, message),
     );
     child.once("error", (error) => {
@@ -797,7 +797,7 @@ export class DesktopAppSnapManager {
       this.#releaseShortcutReservation();
       const message = `Could not start AppSnap: ${error.message}`;
       this.#setState("error", message);
-      this.#emitCaptureError("helper-stopped", message, undefined, false);
+      this.#emitCaptureError("bridge-stopped", message, undefined, false);
     });
     child.once("exit", (code, signal) => {
       if (this.#watchProcess !== child) return;
@@ -806,9 +806,9 @@ export class DesktopAppSnapManager {
       this.#watchOutputLines = null;
       if (this.#disposed || this.#intentionalWatchStop || !this.#enabled) return;
       this.#releaseShortcutReservation();
-      const message = `The AppSnap helper stopped unexpectedly (${signal ?? `exit ${code ?? "unknown"}`}).`;
+      const message = `The AppSnap bridge stopped unexpectedly (${signal ?? `exit ${code ?? "unknown"}`}).`;
       this.#setState("error", message);
-      this.#emitCaptureError("helper-stopped", message, undefined, false);
+      this.#emitCaptureError("bridge-stopped", message, undefined, false);
     });
   }
 
@@ -841,7 +841,7 @@ export class DesktopAppSnapManager {
     try {
       this.#watchProcess?.stdin?.write("trigger\n");
     } catch {
-      // The helper exit handler owns recovery; a lost trigger is acceptable.
+      // The bridge exit handler owns recovery; a lost trigger is acceptable.
     }
   }
 
@@ -856,25 +856,25 @@ export class DesktopAppSnapManager {
     }
   }
 
-  #wireHelperOutput(
-    child: AppSnapHelperProcess,
-    onMessage: (message: AppSnapHelperMessage) => void,
+  #wireBridgeOutput(
+    child: AppSnapBridgeProcess,
+    onMessage: (message: AppSnapBridgeMessage) => void,
   ): Readline.Interface {
     const lines = Readline.createInterface({ input: child.stdout, crlfDelay: Infinity });
     lines.on("line", (line) => {
-      const message = parseAppSnapHelperMessage(line);
+      const message = parseAppSnapBridgeMessage(line);
       if (message) onMessage(message);
     });
     let stderr = "";
     child.stderr.setEncoding("utf8");
     child.stderr.on("data", (chunk: string) => {
-      if (stderr.length >= MAX_HELPER_STDERR_CHARS) return;
-      stderr = `${stderr}${chunk}`.slice(0, MAX_HELPER_STDERR_CHARS);
+      if (stderr.length >= MAX_BRIDGE_STDERR_CHARS) return;
+      stderr = `${stderr}${chunk}`.slice(0, MAX_BRIDGE_STDERR_CHARS);
     });
     child.once("close", (code) => {
       const diagnostic = stderr.trim();
       if (code !== 0 && diagnostic.length > 0) {
-        console.warn(`[desktop-appsnap] Native helper: ${diagnostic}`);
+        console.warn(`[desktop-appsnap] Native bridge: ${diagnostic}`);
       }
     });
     return lines;
@@ -895,15 +895,15 @@ export class DesktopAppSnapManager {
     command: "--check-permissions" | "--request-permissions",
   ): Promise<boolean> {
     if (this.#disposed || this.#platform !== "macos") return false;
-    if (!FS.existsSync(this.#options.helperPath)) {
-      this.#setState("error", "The AppSnap native helper is missing from this desktop build.");
+    if (!FS.existsSync(this.#options.bridgePath)) {
+      this.#setState("error", "The AppSnap native bridge is missing from this desktop build.");
       return false;
     }
 
     return await new Promise<boolean>((resolve) => {
-      let child: AppSnapHelperProcess;
+      let child: AppSnapBridgeProcess;
       try {
-        child = this.#options.spawn(this.#options.helperPath, [command], {
+        child = this.#options.spawn(this.#options.bridgePath, [command], {
           stdio: ["ignore", "pipe", "pipe"],
         });
       } catch (error) {
@@ -918,7 +918,7 @@ export class DesktopAppSnapManager {
       let receivedPermissions = false;
       let reportedError: string | null = null;
       let spawnFailed = false;
-      this.#wireHelperOutput(child, (message) => {
+      this.#wireBridgeOutput(child, (message) => {
         if (message.type === "permissions") {
           receivedPermissions = true;
           this.#inputMonitoringPermission = message.inputMonitoring;
@@ -943,7 +943,7 @@ export class DesktopAppSnapManager {
         if (!receivedPermissions && !spawnFailed) {
           this.#setState(
             "error",
-            reportedError ?? "The AppSnap helper did not report its permission state.",
+            reportedError ?? "The AppSnap bridge did not report its permission state.",
           );
         }
         resolve(receivedPermissions);
@@ -951,7 +951,7 @@ export class DesktopAppSnapManager {
     });
   }
 
-  #handleWatchMessage(child: AppSnapHelperProcess, message: AppSnapHelperMessage): void {
+  #handleWatchMessage(child: AppSnapBridgeProcess, message: AppSnapBridgeMessage): void {
     if (this.#disposed || this.#watchProcess !== child) return;
     if (message.type === "ready") {
       // `ready` only proves the event tap installed, i.e. Input Monitoring.
@@ -989,7 +989,7 @@ export class DesktopAppSnapManager {
       return;
     }
 
-    console.warn(`[desktop-appsnap] Helper error ${message.code}: ${message.message}`);
+    console.warn(`[desktop-appsnap] Bridge error ${message.code}: ${message.message}`);
 
     if (message.code === "input-monitoring-required") {
       this.#inputMonitoringPermission = "denied";
@@ -1016,11 +1016,11 @@ export class DesktopAppSnapManager {
   }
 
   async #consumeCapture(
-    message: Extract<AppSnapHelperMessage, { type: "captured" }>,
+    message: Extract<AppSnapBridgeMessage, { type: "captured" }>,
   ): Promise<void> {
     const capturePath = Path.resolve(message.path);
     if (!isPathInsideDirectory(this.#options.captureDirectory, capturePath)) {
-      throw new Error("The AppSnap helper returned a capture outside its private directory.");
+      throw new Error("The AppSnap bridge returned a capture outside its private directory.");
     }
 
     await this.#ensurePendingCapturesLoaded();
@@ -1041,7 +1041,7 @@ export class DesktopAppSnapManager {
       sourceWindowTitle: normalizeOptionalText(message.sourceWindowTitle),
     };
     const pendingRecord = await this.#persistPendingCapture(capture);
-    // Only delete the helper's temporary file once the pending copy durably
+    // Only delete the bridge's temporary file once the pending copy durably
     // owns the capture; deleting it earlier would destroy the only on-disk
     // copy when persistence fails transiently.
     await FS.promises.unlink(capturePath).catch(() => undefined);

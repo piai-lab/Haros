@@ -12,7 +12,7 @@ import { type ImgHTMLAttributes, type MouseEvent, useState } from "react";
 import { downloadUrlAsBlob } from "~/lib/browserDownload";
 import { DownloadIcon, Loader2Icon, TriangleAlertIcon } from "~/lib/icons";
 import { buildLocalImageUrl, localImageFileName } from "~/lib/localImageUrls";
-import { cn } from "~/lib/utils";
+import { cn } from "~/lib/styles";
 import { toastManager } from "./ui/toast";
 
 export type LocalImagePreviewStatus = "loading" | "ready" | "error";

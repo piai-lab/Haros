@@ -5,7 +5,7 @@
 import { pluralize } from "@omnimind/shared/text";
 
 import type { BrowserAnnotationDraft } from "~/lib/browserAnnotations";
-import { cn } from "~/lib/utils";
+import { cn } from "~/lib/styles";
 import { COMPOSER_ATTACHMENT_CHIP_CLASS_NAME } from "../composerInlineChip";
 import { Popover, PopoverPopup, PopoverTrigger } from "../ui/popover";
 import { BrowserAnnotationChip } from "./BrowserAnnotationChip";

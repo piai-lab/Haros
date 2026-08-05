@@ -5,7 +5,7 @@
 
 import { goBackInAppHistory, goForwardInAppHistory, useAppNavigationState } from "~/appNavigation";
 import { isElectron } from "~/env";
-import { cn } from "~/lib/utils";
+import { cn } from "~/lib/styles";
 import { ArrowLeftIcon, ArrowRightIcon } from "~/lib/icons";
 import { Button } from "./ui/button";
 import { Tooltip, TooltipPopup, TooltipTrigger } from "./ui/tooltip";

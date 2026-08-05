@@ -9,7 +9,7 @@
 import type { WorkbenchQueuedTurn } from "../../productReadModel";
 import type { WorkbenchCopy } from "../../i18n/workbenchCopy";
 import { ListTodoIcon, PencilIcon, PlayIcon, SteerIcon } from "~/lib/icons";
-import { cn } from "~/lib/utils";
+import { cn } from "~/lib/styles";
 import ChatMarkdown from "../ChatMarkdown";
 import {
   ComposerStackedPanelRow,
@@ -100,9 +100,7 @@ export const ComposerQueuedHeader = function ComposerQueuedHeader({
       {queuedTurns.map((queuedTurn, queuedTurnIndex) => {
         const editing = editingTurnId === queuedTurn.id;
         const rowPrimaryAction =
-          primaryAction.kind === "run-next" &&
-          queuedTurnIndex > 0 &&
-          primaryAction.onMoveNext
+          primaryAction.kind === "run-next" && queuedTurnIndex > 0 && primaryAction.onMoveNext
             ? {
                 kind: "move-next" as const,
                 onSelect: primaryAction.onMoveNext,
@@ -112,9 +110,9 @@ export const ComposerQueuedHeader = function ComposerQueuedHeader({
           ? PencilIcon
           : rowPrimaryAction.kind === "run-next"
             ? PlayIcon
-          : rowPrimaryAction.kind === "move-next"
-            ? ListTodoIcon
-            : SteerIcon;
+            : rowPrimaryAction.kind === "move-next"
+              ? ListTodoIcon
+              : SteerIcon;
         return (
           <ComposerStackedPanelRow
             key={queuedTurn.id}

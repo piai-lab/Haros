@@ -40,7 +40,7 @@ import {
   useDesktopTopBarWindowControlsGutterClassName,
 } from "~/hooks/useDesktopTopBarGutter";
 import { Glyph } from "~/ui/icons";
-import { cn } from "~/lib/utils";
+import { cn } from "~/lib/styles";
 import { ensureNativeApi } from "~/nativeApi";
 import { useStore } from "~/store";
 import { createAllThreadsSelector } from "~/storeSelectors";
@@ -333,12 +333,9 @@ function AutomationDetailView() {
       dialogWarnings,
       acknowledgedWarningIds,
     );
-    updateMutation.mutate(
-      updateInputFromForm(definition, form, acknowledgedRisks),
-      {
-        onSuccess: () => setDialogOpen(false),
-      },
-    );
+    updateMutation.mutate(updateInputFromForm(definition, form, acknowledgedRisks), {
+      onSuccess: () => setDialogOpen(false),
+    });
   };
 
   const togglePause = () => {
@@ -700,9 +697,7 @@ function AutomationDetailView() {
                   </EditRow>
                 ) : null}
                 <EditRow label="Model">
-                  <AutomationModelPicker
-                    value={definition.requestedSelection}
-                  />
+                  <AutomationModelPicker value={definition.requestedSelection} />
                 </EditRow>
                 <DetailRow label="Mode">{MODE_LABELS[definition.mode]}</DetailRow>
                 <EditRow label="Notify">

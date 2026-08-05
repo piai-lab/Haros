@@ -12,7 +12,7 @@ import {
   useState,
 } from "react";
 
-import { cn } from "~/lib/utils";
+import { cn } from "~/lib/styles";
 import {
   type DockPaneRuntimeMode,
   EMPTY_PANE_ID_SET,

@@ -9,7 +9,7 @@
 
 import type { PullRequestActor } from "@omnimind/contracts";
 
-import { cn } from "~/lib/utils";
+import { cn } from "~/lib/styles";
 import { PullRequestAvatar } from "./PullRequestAvatar";
 
 export function PullRequestActorLabel({

@@ -2,7 +2,7 @@
 // Purpose: Keep thread status glyphs identical across classic and Activity sidebar rows.
 // Layer: Sidebar UI primitive
 
-import { cn } from "~/lib/utils";
+import { cn } from "~/lib/styles";
 import type { ThreadStatusPill } from "./Sidebar.logic";
 import { ThreadRunningSpinner } from "./ThreadRunningSpinner";
 

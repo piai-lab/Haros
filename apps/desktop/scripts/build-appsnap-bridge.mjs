@@ -23,11 +23,11 @@ const scriptsDirectory = dirname(scriptPath);
 const desktopDirectory = resolve(scriptsDirectory, "..");
 const sourceDirectory = join(desktopDirectory, "native", "appsnap");
 
-export const defaultAppSnapHelperPath = join(
+export const defaultAppSnapBridgePath = join(
   desktopDirectory,
   ".electron-runtime",
   "appsnap",
-  "omnimind-appsnap-helper",
+  "omnimind-appsnap-bridge",
 );
 
 const frameworkArguments = [
@@ -57,7 +57,7 @@ export function swiftTargetsForArch(arch) {
         { arch: "x64", target: "x86_64-apple-macos12.3" },
       ];
     default:
-      throw new Error(`Unsupported AppSnap helper architecture: ${arch}`);
+      throw new Error(`Unsupported AppSnap bridge architecture: ${arch}`);
   }
 }
 
@@ -77,13 +77,13 @@ function run(command, arguments_, options = {}) {
     .trim();
   const suffix = details ? `\n${details}` : "";
   throw new Error(
-    `AppSnap helper command failed (${command} ${arguments_.join(" ")}): ${result.status ?? "unknown"}${suffix}`,
+    `AppSnap bridge command failed (${command} ${arguments_.join(" ")}): ${result.status ?? "unknown"}${suffix}`,
   );
 }
 
 function buildFingerprint({ arch, release, sources, targets }) {
   const hash = createHash("sha256");
-  hash.update("omnimind-appsnap-helper-build-v1\0");
+  hash.update("omnimind-appsnap-bridge-build-v1\0");
   hash.update(arch);
   hash.update("\0");
   hash.update(release ? "release" : "debug");
@@ -120,14 +120,14 @@ function isUsableCachedBuild(outputPath, metadataPath, fingerprint) {
   }
 }
 
-export function buildAppSnapHelper({
+export function buildAppSnapBridge({
   arch = process.arch,
-  outputPath = defaultAppSnapHelperPath,
+  outputPath = defaultAppSnapBridgePath,
   release = false,
   quiet = false,
 } = {}) {
   if (process.platform !== "darwin") {
-    throw new Error("The AppSnap helper can only be built on macOS.");
+    throw new Error("The AppSnap bridge can only be built on macOS.");
   }
 
   const targets = swiftTargetsForArch(arch);
@@ -144,12 +144,12 @@ export function buildAppSnapHelper({
   const fingerprint = buildFingerprint({ arch, release, sources, targets });
   if (isUsableCachedBuild(resolvedOutputPath, metadataPath, fingerprint)) {
     if (!quiet) {
-      console.error(`[appsnap] Reusing ${arch} Swift helper at ${resolvedOutputPath}`);
+      console.error(`[appsnap] Reusing ${arch} Swift bridge at ${resolvedOutputPath}`);
     }
     return resolvedOutputPath;
   }
 
-  const temporaryDirectory = mkdtempSync(join(tmpdir(), "omnimind-appsnap-helper-"));
+  const temporaryDirectory = mkdtempSync(join(tmpdir(), "omnimind-appsnap-bridge-"));
   const moduleCacheDirectory = join(temporaryDirectory, "module-cache");
   const buildEnvironment = {
     ...process.env,
@@ -160,7 +160,7 @@ export function buildAppSnapHelper({
   try {
     const thinBinaries = [];
     for (const target of targets) {
-      const thinBinary = join(temporaryDirectory, `omnimind-appsnap-helper-${target.arch}`);
+      const thinBinary = join(temporaryDirectory, `omnimind-appsnap-bridge-${target.arch}`);
       const optimizationArguments = release
         ? ["-O", "-whole-module-optimization"]
         : ["-Onone", "-g"];
@@ -170,7 +170,7 @@ export function buildAppSnapHelper({
           "swiftc",
           ...optimizationArguments,
           "-module-name",
-          "OmniMindAppSnapHelper",
+          "OmniMindAppSnapBridge",
           "-target",
           target.target,
           ...frameworkArguments,
@@ -183,14 +183,14 @@ export function buildAppSnapHelper({
       thinBinaries.push(thinBinary);
     }
 
-    const unsignedBinary = join(temporaryDirectory, "omnimind-appsnap-helper");
+    const unsignedBinary = join(temporaryDirectory, "omnimind-appsnap-bridge");
     if (thinBinaries.length === 1) {
       copyFileSync(thinBinaries[0], unsignedBinary);
     } else {
       run("xcrun", ["lipo", "-create", ...thinBinaries, "-output", unsignedBinary]);
     }
 
-    // Dev helpers are ad-hoc signed. electron-builder replaces this signature
+    // Development bridge binaries are ad-hoc signed. electron-builder replaces this signature
     // with the release identity because the packaged path is listed in mac.binaries.
     run("codesign", ["--force", "--sign", "-", "--timestamp=none", unsignedBinary]);
 
@@ -210,7 +210,7 @@ export function buildAppSnapHelper({
 
     if (!quiet) {
       console.error(
-        `[appsnap] Built ${arch} Swift helper for macOS 12.3+ at ${resolvedOutputPath}`,
+        `[appsnap] Built ${arch} Swift bridge for macOS 12.3+ at ${resolvedOutputPath}`,
       );
     }
     return resolvedOutputPath;
@@ -221,7 +221,7 @@ export function buildAppSnapHelper({
 
 function parseCommandLine(arguments_) {
   let arch = process.arch;
-  let outputPath = defaultAppSnapHelperPath;
+  let outputPath = defaultAppSnapBridgePath;
   let release = false;
 
   for (let index = 0; index < arguments_.length; index += 1) {
@@ -245,7 +245,7 @@ function parseCommandLine(arguments_) {
         release = true;
         break;
       default:
-        throw new Error(`Unknown AppSnap helper build argument: ${argument}`);
+        throw new Error(`Unknown AppSnap bridge build argument: ${argument}`);
     }
   }
 
@@ -254,7 +254,7 @@ function parseCommandLine(arguments_) {
 
 if (process.argv[1] && resolve(process.argv[1]) === scriptPath) {
   try {
-    buildAppSnapHelper(parseCommandLine(process.argv.slice(2)));
+    buildAppSnapBridge(parseCommandLine(process.argv.slice(2)));
   } catch (error) {
     console.error(error instanceof Error ? error.message : String(error));
     process.exitCode = 1;

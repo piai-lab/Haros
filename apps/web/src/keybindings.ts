@@ -8,7 +8,7 @@ import {
   type ThreadJumpKeybindingCommand,
 } from "@omnimind/contracts";
 import { isKeyboardShortcutsHelpChord } from "@omnimind/shared/browserShortcuts";
-import { isMacPlatform, isWindowsPlatform } from "./lib/utils";
+import { isMacPlatform, isWindowsPlatform } from "./lib/platform";
 
 export interface ShortcutEventLike {
   type?: string;

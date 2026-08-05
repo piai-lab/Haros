@@ -5,7 +5,7 @@ import type { ConversationPullRequestSummary } from "~/historicalConversation";
 // Layer: UI component (pure)
 // Exports: PrStateChip
 
-import { cn } from "~/lib/utils";
+import { cn } from "~/lib/styles";
 import {
   PR_STATE_PRESENTATION_ICONS,
   resolvePrStatePresentation,

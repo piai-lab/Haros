@@ -23,7 +23,7 @@ import {
   type ThreadTerminalGroup,
   type ThreadTerminalPresentationMode,
 } from "../types";
-import { cn } from "~/lib/utils";
+import { cn } from "~/lib/styles";
 import {
   type TerminalChromeActionItem,
   TerminalSidebar,

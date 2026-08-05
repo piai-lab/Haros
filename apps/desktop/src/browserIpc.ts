@@ -1,7 +1,7 @@
 // FILE: browserIpc.ts
 // Purpose: Centralizes the desktop browser IPC contract and handler wiring.
 // Layer: Desktop IPC adapter
-// Depends on: Electron ipcMain/webContents and DesktopBrowserManager
+// Depends on: Electron ipcMain/webContents and DesktopBrowserHost
 
 import type { IpcMain, WebContents } from "electron";
 
@@ -23,7 +23,7 @@ import type {
   ThreadBrowserState,
 } from "@omnimind/contracts";
 
-import type { DesktopBrowserManager } from "./browserManager";
+import type { DesktopBrowserHost } from "./browserHost";
 import { BROWSER_IPC_CHANNELS } from "./ipcChannels";
 
 // Pushes the latest browser state snapshot to the renderer shell.
@@ -53,51 +53,51 @@ export function sendBrowserAnnotationEvent(
 // Registers the desktop browser bridge in one place so main.ts stays focused on app boot.
 export function registerBrowserIpcHandlers(
   ipcMain: IpcMain,
-  browserManager: DesktopBrowserManager,
+  browserHost: DesktopBrowserHost,
 ): void {
   const requireTrustedRenderer = (senderId: number): void => {
-    if (!browserManager.isTrustedRenderer(senderId)) {
+    if (!browserHost.isTrustedRenderer(senderId)) {
       throw new Error("Browser annotation IPC rejected an untrusted renderer.");
     }
   };
   ipcMain.removeHandler(BROWSER_IPC_CHANNELS.open);
   ipcMain.handle(BROWSER_IPC_CHANNELS.open, async (_event, input: BrowserOpenInput) =>
-    browserManager.open(input),
+    browserHost.open(input),
   );
 
   ipcMain.removeHandler(BROWSER_IPC_CHANNELS.close);
   ipcMain.handle(BROWSER_IPC_CHANNELS.close, async (_event, input: BrowserThreadInput) =>
-    browserManager.close(input),
+    browserHost.close(input),
   );
 
   ipcMain.removeHandler(BROWSER_IPC_CHANNELS.hide);
   ipcMain.handle(BROWSER_IPC_CHANNELS.hide, async (_event, input: BrowserThreadInput) => {
-    browserManager.hide(input);
+    browserHost.hide(input);
   });
 
   ipcMain.removeHandler(BROWSER_IPC_CHANNELS.getState);
   ipcMain.handle(BROWSER_IPC_CHANNELS.getState, async (_event, input: BrowserThreadInput) =>
-    browserManager.getState(input),
+    browserHost.getState(input),
   );
 
   ipcMain.removeHandler(BROWSER_IPC_CHANNELS.setBounds);
   ipcMain.removeAllListeners(BROWSER_IPC_CHANNELS.setBounds);
   ipcMain.on(BROWSER_IPC_CHANNELS.setBounds, (_event, input: BrowserSetPanelBoundsInput) => {
-    browserManager.setPanelBounds(input);
+    browserHost.setPanelBounds(input);
   });
 
   ipcMain.removeHandler(BROWSER_IPC_CHANNELS.attachWebview);
   ipcMain.handle(
     BROWSER_IPC_CHANNELS.attachWebview,
     async (event, input: BrowserAttachWebviewInput) =>
-      browserManager.attachWebview(input, event.sender.id),
+      browserHost.attachWebview(input, event.sender.id),
   );
 
   ipcMain.removeHandler(BROWSER_IPC_CHANNELS.detachWebview);
   ipcMain.handle(
     BROWSER_IPC_CHANNELS.detachWebview,
     async (_event, input: BrowserDetachWebviewInput) => {
-      browserManager.detachWebview(input);
+      browserHost.detachWebview(input);
     },
   );
 
@@ -105,60 +105,60 @@ export function registerBrowserIpcHandlers(
   ipcMain.handle(
     BROWSER_IPC_CHANNELS.captureScreenshot,
     async (_event, input: BrowserTabInput): Promise<BrowserCaptureScreenshotResult> =>
-      browserManager.captureScreenshot(input),
+      browserHost.captureScreenshot(input),
   );
 
   ipcMain.removeHandler(BROWSER_IPC_CHANNELS.copyScreenshotToClipboard);
   ipcMain.handle(
     BROWSER_IPC_CHANNELS.copyScreenshotToClipboard,
     async (_event, input: BrowserTabInput) => {
-      await browserManager.copyScreenshotToClipboard(input);
+      await browserHost.copyScreenshotToClipboard(input);
     },
   );
 
   ipcMain.removeHandler(BROWSER_IPC_CHANNELS.requestCopyLink);
   ipcMain.handle(BROWSER_IPC_CHANNELS.requestCopyLink, async (_event, input: BrowserTabInput) => {
-    browserManager.copyLink(input);
+    browserHost.copyLink(input);
   });
 
   ipcMain.removeHandler(BROWSER_IPC_CHANNELS.navigate);
   ipcMain.handle(BROWSER_IPC_CHANNELS.navigate, async (_event, input: BrowserNavigateInput) =>
-    browserManager.navigate(input),
+    browserHost.navigate(input),
   );
 
   ipcMain.removeHandler(BROWSER_IPC_CHANNELS.reload);
   ipcMain.handle(BROWSER_IPC_CHANNELS.reload, async (_event, input: BrowserTabInput) =>
-    browserManager.reload(input),
+    browserHost.reload(input),
   );
 
   ipcMain.removeHandler(BROWSER_IPC_CHANNELS.goBack);
   ipcMain.handle(BROWSER_IPC_CHANNELS.goBack, async (_event, input: BrowserTabInput) =>
-    browserManager.goBack(input),
+    browserHost.goBack(input),
   );
 
   ipcMain.removeHandler(BROWSER_IPC_CHANNELS.goForward);
   ipcMain.handle(BROWSER_IPC_CHANNELS.goForward, async (_event, input: BrowserTabInput) =>
-    browserManager.goForward(input),
+    browserHost.goForward(input),
   );
 
   ipcMain.removeHandler(BROWSER_IPC_CHANNELS.newTab);
   ipcMain.handle(BROWSER_IPC_CHANNELS.newTab, async (_event, input: BrowserNewTabInput) =>
-    browserManager.newTab(input),
+    browserHost.newTab(input),
   );
 
   ipcMain.removeHandler(BROWSER_IPC_CHANNELS.closeTab);
   ipcMain.handle(BROWSER_IPC_CHANNELS.closeTab, async (_event, input: BrowserTabInput) =>
-    browserManager.closeTab(input),
+    browserHost.closeTab(input),
   );
 
   ipcMain.removeHandler(BROWSER_IPC_CHANNELS.selectTab);
   ipcMain.handle(BROWSER_IPC_CHANNELS.selectTab, async (_event, input: BrowserTabInput) =>
-    browserManager.selectTab(input),
+    browserHost.selectTab(input),
   );
 
   ipcMain.removeHandler(BROWSER_IPC_CHANNELS.openDevTools);
   ipcMain.handle(BROWSER_IPC_CHANNELS.openDevTools, async (_event, input: BrowserTabInput) => {
-    browserManager.openDevTools(input);
+    browserHost.openDevTools(input);
   });
 
   ipcMain.removeHandler(BROWSER_IPC_CHANNELS.annotations.start);
@@ -166,7 +166,7 @@ export function registerBrowserIpcHandlers(
     BROWSER_IPC_CHANNELS.annotations.start,
     async (event, input: BrowserAnnotationStartInput) => {
       requireTrustedRenderer(event.sender.id);
-      return browserManager.startAnnotation(input);
+      return browserHost.startAnnotation(input);
     },
   );
 
@@ -175,7 +175,7 @@ export function registerBrowserIpcHandlers(
     BROWSER_IPC_CHANNELS.annotations.cancel,
     async (event, input: BrowserAnnotationCancelInput) => {
       requireTrustedRenderer(event.sender.id);
-      browserManager.cancelAnnotation(input);
+      browserHost.cancelAnnotation(input);
     },
   );
 
@@ -184,7 +184,7 @@ export function registerBrowserIpcHandlers(
     BROWSER_IPC_CHANNELS.annotations.syncMarkers,
     async (event, input: BrowserAnnotationSyncMarkersInput) => {
       requireTrustedRenderer(event.sender.id);
-      browserManager.syncAnnotationMarkers(input);
+      browserHost.syncAnnotationMarkers(input);
     },
   );
 
@@ -193,6 +193,6 @@ export function registerBrowserIpcHandlers(
     // Guest subframes inherit the preload in some embed configurations. Only
     // the current main frame may establish document/session affinity.
     if (!event.senderFrame || event.senderFrame !== event.sender.mainFrame) return;
-    browserManager.handleAnnotationGuestMessage(event.sender, payload);
+    browserHost.handleAnnotationGuestMessage(event.sender, payload);
   });
 }

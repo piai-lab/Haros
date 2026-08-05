@@ -8,7 +8,7 @@ import type { AutomationDefinition } from "@omnimind/contracts";
 
 import { formatCadence } from "~/routes/-automations.shared";
 import { ClockIcon } from "~/lib/icons";
-import { cn } from "~/lib/utils";
+import { cn } from "~/lib/styles";
 
 import {
   ENVIRONMENT_ROW_ICON_CLASS_NAME,

@@ -6,7 +6,7 @@
 import type { TerminalIconKey } from "@omnimind/shared/terminalThreads";
 
 import { TerminalSquare } from "~/lib/icons";
-import { cn } from "~/lib/utils";
+import { cn } from "~/lib/styles";
 
 import { AntigravityIcon, ClaudeAI, OpenAI } from "../Icons";
 

@@ -8,7 +8,7 @@ import type { FileDiffMetadata } from "@pierre/diffs/react";
 import { useState } from "react";
 
 import { SearchIcon } from "~/lib/icons";
-import { cn } from "~/lib/utils";
+import { cn } from "~/lib/styles";
 import { filterRenderableFilesForSearch } from "./DiffPanel.logic";
 import { ComposerPickerMenuPopup } from "./chat/ComposerPickerMenuPopup";
 import { PickerPanelShell } from "./chat/PickerPanelShell";

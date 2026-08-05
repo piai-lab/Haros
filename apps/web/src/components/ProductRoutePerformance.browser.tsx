@@ -23,8 +23,8 @@ import { commands } from "vitest/browser";
 import { afterEach, describe, expect, it, vi } from "vitest";
 import { cleanup, render } from "vitest-browser-react";
 
-vi.mock("../hooks/useHandleNewStudioChat", () => ({
-  useHandleNewStudioChat: () => ({ handleNewStudioChat: vi.fn() }),
+vi.mock("../hooks/useCreateStudioChat", () => ({
+  useCreateStudioChat: () => ({ createStudioChat: vi.fn() }),
 }));
 
 import { useProductStore } from "../store/productStore";
@@ -169,7 +169,9 @@ function hydrateProductRouteState(): void {
 }
 
 function percentile95(samples: readonly number[]): number {
-  return [...samples].sort((left, right) => left - right)[Math.ceil(samples.length * 0.95) - 1] ?? 0;
+  return (
+    [...samples].sort((left, right) => left - right)[Math.ceil(samples.length * 0.95) - 1] ?? 0
+  );
 }
 
 function nextAnimationFrame(): Promise<void> {
@@ -331,7 +333,11 @@ describe("committed Product route-owner performance", () => {
       JSON.stringify({
         samples: samples.length,
         p95Ms: percentile95(samples),
-        longTasks: longTasks.map(({ duration, name, startTime }) => ({ duration, name, startTime })),
+        longTasks: longTasks.map(({ duration, name, startTime }) => ({
+          duration,
+          name,
+          startTime,
+        })),
         heapBeforeUsedBytes: heapBefore.usedSize,
         heapAfterUsedBytes: heapAfter.usedSize,
         heapGrowthBytes,

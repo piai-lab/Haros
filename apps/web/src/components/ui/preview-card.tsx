@@ -1,6 +1,6 @@
 import { PreviewCard as PreviewCardPrimitive } from "@base-ui/react/preview-card";
 
-import { cn } from "~/lib/utils";
+import { cn } from "~/lib/styles";
 
 // Hover-triggered, interactive card (Base UI PreviewCard). Unlike a Tooltip it
 // stays open while the pointer moves into the popup, so its content can hold

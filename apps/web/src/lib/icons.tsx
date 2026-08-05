@@ -1,6 +1,6 @@
 import { type CSSProperties, type FC, type SVGProps } from "react";
 import { SiGithub } from "react-icons/si";
-import { cn } from "./utils";
+import { cn } from "./styles";
 import { Glyph, type GlyphStyle } from "~/ui/icons";
 
 // Keep the component-shaped API stable while one product glyph system owns functional icons.

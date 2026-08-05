@@ -10,7 +10,7 @@ import type { ProductWorkspaceId, PullRequestListEntry } from "@omnimind/contrac
 import { pullRequestListEntryKey, type PullRequestListGroup } from "./pullRequestList.logic";
 import { PullRequestRow } from "./PullRequestRow";
 import { PR_FINE_TEXT_CLASS_NAME, PR_QUIET_INK_CLASS_NAME } from "./pullRequestText";
-import { cn } from "~/lib/utils";
+import { cn } from "~/lib/styles";
 
 export const PullRequestList = function PullRequestList({
   entries,

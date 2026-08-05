@@ -24,7 +24,7 @@ import {
   togglePinnedMessageDone,
 } from "@omnimind/shared/pinnedMessages";
 
-import { randomUUID } from "./lib/utils";
+import { randomUUID } from "./lib/identifiers";
 import { updateProductConversationNotes } from "./productConversationMutations";
 import { useProductStore } from "./store/productStore";
 import { readProductNativeApi, type ProductNativeApi } from "./wsNativeApi";
@@ -163,10 +163,13 @@ async function pinTarget(api: ProductPinApi, threadId: ThreadId, messageId: Mess
 async function publishProductPinMutation(
   threadId: ThreadId,
   messageId: MessageId,
-  mutate: (api: ProductPinApi, target: Awaited<ReturnType<typeof pinTarget>>) => ReturnType<
-    ProductPinApi["addEntryPin"]
-  >,
-  targetStateReached: (snapshot: Awaited<ReturnType<ProductPinApi["getConversationSnapshot"]>>) => boolean,
+  mutate: (
+    api: ProductPinApi,
+    target: Awaited<ReturnType<typeof pinTarget>>,
+  ) => ReturnType<ProductPinApi["addEntryPin"]>,
+  targetStateReached: (
+    snapshot: Awaited<ReturnType<ProductPinApi["getConversationSnapshot"]>>,
+  ) => boolean,
   api: ProductPinApi = readProductNativeApi(),
 ): Promise<void> {
   const target = await pinTarget(api, threadId, messageId);
@@ -203,7 +206,8 @@ export function dispatchPinnedMessageAdd(
     threadId,
     messageId,
     (client, target) => client.addEntryPin(target),
-    (snapshot) => snapshot.readModel.entryPins.some((pin) => String(pin.entryId) === String(messageId)),
+    (snapshot) =>
+      snapshot.readModel.entryPins.some((pin) => String(pin.entryId) === String(messageId)),
     api,
   );
 }

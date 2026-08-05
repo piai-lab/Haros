@@ -11,7 +11,7 @@ import { useLayoutEffect } from "react";
 
 import { isElectron } from "~/env";
 import { useSidebar } from "~/components/ui/sidebar";
-import { isMacPlatform, isWindowsPlatform } from "~/lib/utils";
+import { isMacPlatform, isWindowsPlatform } from "~/lib/platform";
 
 /**
  * Class name backed by `index.css` (not Tailwind) so the gutter survives zoom

@@ -1,6 +1,6 @@
-// FILE: browserManager.ts
+// FILE: browserHost.ts
 // Purpose: Owns the desktop in-app browser runtime and maps thread/tab state onto Electron views.
-// Layer: Desktop runtime manager
+// Layer: Desktop runtime host
 // Depends on: Electron BrowserWindow/WebContentsView, shared browser IPC contracts
 
 import * as Crypto from "node:crypto";
@@ -211,7 +211,7 @@ export interface BrowserAutomationDownloadEvent {
   readonly sourceTabId: string;
 }
 
-export interface DesktopBrowserManagerOptions {
+export interface DesktopBrowserHostOptions {
   beforeInputEvent?: (event: Electron.Event, input: Electron.Input) => boolean;
 }
 
@@ -378,7 +378,7 @@ function browserAutomationInputMatches(
   );
 }
 
-export class DesktopBrowserManager {
+export class DesktopBrowserHost {
   private window: BrowserWindow | null = null;
   private activeThreadId: ThreadId | null = null;
   private activeBounds: BrowserPanelBounds | null = null;
@@ -450,7 +450,7 @@ export class DesktopBrowserManager {
     warmInactiveRuntimeCount: 0,
   };
 
-  constructor(private readonly options: DesktopBrowserManagerOptions = {}) {
+  constructor(private readonly options: DesktopBrowserHostOptions = {}) {
     this.sessionPolicy = new BrowserSessionPolicy((event) => {
       this.handleSessionDownload(event);
     });

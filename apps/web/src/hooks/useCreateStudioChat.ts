@@ -1,31 +1,31 @@
-// FILE: useHandleNewStudioChat.ts
+// FILE: useCreateStudioChat.ts
 // Purpose: Starts ordinary AI threads inside the hidden Studio project container.
 // Layer: Web hook
-// Exports: useHandleNewStudioChat
+// Exports: useCreateStudioChat
 
 import { ensureStudioProject } from "../lib/studioProjects";
 import { startContainerChat, type StartContainerChatResult } from "../lib/startContainerChat";
 import { useComposerDraftStore } from "../composerDraftStore";
 import { useWorkspacePathsStore } from "../workspacePathsStore";
-import { useHandleNewThread } from "./useHandleNewThread";
+import { useCreateThread } from "./useCreateThread";
 
-export function useHandleNewStudioChat() {
+export function useCreateStudioChat() {
   const homeDir = useWorkspacePathsStore((state) => state.homeDir);
   const chatWorkspaceRoot = useWorkspacePathsStore((state) => state.chatWorkspaceRoot);
   const studioWorkspaceRoot = useWorkspacePathsStore((state) => state.studioWorkspaceRoot);
-  const { handleNewThread } = useHandleNewThread();
+  const { createThread } = useCreateThread();
 
-  const handleNewStudioChat = async (options?: {
+  const createStudioChat = async (options?: {
     fresh?: boolean;
   }): Promise<StartContainerChatResult> =>
     startContainerChat({
       ensureProjectId: () =>
         ensureStudioProject({ homeDir, chatWorkspaceRoot, studioWorkspaceRoot }),
-      handleNewThread: (projectId, threadOptions) => {
+      createThread: (projectId, threadOptions) => {
         const storedDraft = useComposerDraftStore
           .getState()
           .getDraftThreadByProjectId(projectId, "chat");
-        return handleNewThread(
+        return createThread(
           projectId,
           {
             ...threadOptions,
@@ -48,5 +48,5 @@ export function useHandleNewStudioChat() {
       errorLabel: "Unable to prepare a new Studio chat.",
     });
 
-  return { handleNewStudioChat };
+  return { createStudioChat };
 }

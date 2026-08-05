@@ -8,7 +8,7 @@
 
 import type React from "react";
 import { PinStatusIcon, pinActionLabel } from "~/lib/pin";
-import { cn } from "~/lib/utils";
+import { cn } from "~/lib/styles";
 import { IconButton } from "./ui/icon-button";
 import { SIDEBAR_TRAILING_ICON_CLASS } from "./sidebarGlyphs";
 

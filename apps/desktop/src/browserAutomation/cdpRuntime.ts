@@ -1,7 +1,7 @@
 import type { BrowserTabId } from "@omnimind/contracts";
 import type { WebContents } from "electron";
 
-import type { BrowserAutomationVisibleRuntime } from "../browserManager";
+import type { BrowserAutomationVisibleRuntime } from "../browserHost";
 import { BrowserAutomationHostError, browserHostError } from "./hostErrors";
 
 export interface CdpRemoteObject {

@@ -8,7 +8,7 @@
 
 import type { GitPullRequestMergeability, PullRequestState } from "@omnimind/contracts";
 
-import { cn } from "~/lib/utils";
+import { cn } from "~/lib/styles";
 import {
   PR_STATE_PRESENTATION_ICONS,
   resolvePrStatePresentation,

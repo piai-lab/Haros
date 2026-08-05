@@ -14,8 +14,8 @@ import {
 import { readSidebarUiState } from "../components/Sidebar.uiState";
 import { SplashScreen } from "../components/SplashScreen";
 import { useComposerDraftStore } from "../composerDraftStore";
-import { useHandleNewChat } from "../hooks/useHandleNewChat";
-import { useHandleNewStudioChat } from "../hooks/useHandleNewStudioChat";
+import { useCreateChat } from "../hooks/useCreateChat";
+import { useCreateStudioChat } from "../hooks/useCreateStudioChat";
 import { collectStudioProjectIds, findStudioDraftThreadId } from "../lib/studioProjects";
 import { resolveSplitViewThreadIds, useSplitViewStore } from "../splitViewStore";
 import { EMPTY_THREAD_IDS, useStore } from "../store";
@@ -34,7 +34,7 @@ export interface ChatIndexSearch {
 }
 
 function AgentIndexRouteView() {
-  const { handleNewChat } = useHandleNewChat();
+  const { createChat } = useCreateChat();
   const threadIds = useStore((state) => state.threadIds ?? EMPTY_THREAD_IDS);
   const projects = useStore((state) => state.projects);
   const sidebarThreadSummaryById = useStore((state) => state.sidebarThreadSummaryById);
@@ -42,7 +42,7 @@ function AgentIndexRouteView() {
   const homeDir = useWorkspacePathsStore((state) => state.homeDir);
   const chatWorkspaceRoot = useWorkspacePathsStore((state) => state.chatWorkspaceRoot);
   const studioWorkspaceRoot = useWorkspacePathsStore((state) => state.studioWorkspaceRoot);
-  const createFreshChat = () => handleNewChat({ fresh: true });
+  const createFreshChat = () => createChat({ fresh: true });
 
   const workspacePaths = { homeDir, chatWorkspaceRoot, studioWorkspaceRoot };
   // Home chats restore the last visited route, except Studio threads — those belong to the
@@ -94,7 +94,7 @@ const PRODUCT_SHELL_TIMEOUT_MS = 10_000;
 function ProductChatIndexRouteView() {
   const workbenchCopy = getWorkbenchCopy();
   const navigate = useNavigate();
-  const { handleNewStudioChat } = useHandleNewStudioChat();
+  const { createStudioChat } = useCreateStudioChat();
   const shellHydrated = useProductStore((store) => store.shellHydrated);
   const shellIssue = useProductStore((store) => store.shellIssue);
   const conversations = useProductStore((store) => store.conversations);
@@ -203,7 +203,7 @@ function ProductChatIndexRouteView() {
       });
       return;
     }
-    void createProductChatDraftOnce(createInFlightRef, () => handleNewStudioChat())
+    void createProductChatDraftOnce(createInFlightRef, () => createStudioChat())
       .then((result) => {
         if (result && !result.ok) setCreationError(result.error);
       })
@@ -212,7 +212,7 @@ function ProductChatIndexRouteView() {
           error instanceof Error ? error.message : workbenchCopy.unablePrepareNewChat,
         );
       });
-  }, [creationError, handleNewStudioChat, navigate, productChatLanding]);
+  }, [creationError, createStudioChat, navigate, productChatLanding]);
 
   const errorMessage = timedOut
     ? productChatLanding.kind === "hold-draft-bootstrap"

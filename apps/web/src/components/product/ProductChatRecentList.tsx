@@ -2,7 +2,7 @@ import { ThreadId, type ProductConversationSummary } from "@omnimind/contracts";
 
 import { getWorkbenchCopy } from "../../i18n/workbenchCopy";
 import { formatRelativeTime } from "../../lib/relativeTime";
-import { cn } from "../../lib/utils";
+import { cn } from "../../lib/styles";
 import {
   SIDEBAR_ROW_ACTIVE_CLASS_NAME,
   SIDEBAR_ROW_HOVER_CLASS_NAME,

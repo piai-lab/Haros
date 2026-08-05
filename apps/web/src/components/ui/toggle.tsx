@@ -3,7 +3,7 @@
 import { Toggle as TogglePrimitive } from "@base-ui/react/toggle";
 import { cva, type VariantProps } from "class-variance-authority";
 
-import { cn } from "~/lib/utils";
+import { cn } from "~/lib/styles";
 import { extendButtonGlyphChildSelectors } from "~/ui/icons";
 
 const toggleVariants = cva(

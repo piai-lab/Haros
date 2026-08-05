@@ -7,7 +7,7 @@
 //          alignment shared by every chip; edit the fill/tone maps for the
 //          background + color variants; everything else composes from those.
 
-import { cn } from "~/lib/utils";
+import { cn } from "~/lib/styles";
 import {
   COMPOSER_EDITOR_LINE_HEIGHT_CLASS_NAME,
   COMPOSER_EDITOR_TEXT_CLASS_NAME,

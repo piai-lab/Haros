@@ -8,7 +8,7 @@ import type { ProductRequestedSelection, ProjectId, ThreadId } from "@omnimind/c
 
 import { useComposerDraftStore, type DraftThreadEnvMode } from "../composerDraftStore";
 import { dispatchKanbanDraftThread, type KanbanDraftDispatchResult } from "./kanbanDispatch";
-import { newThreadId } from "./utils";
+import { createThreadId } from "./identifiers";
 
 export interface KanbanDraftTaskInput {
   projectId: ProjectId;
@@ -26,7 +26,7 @@ export interface KanbanDraftTaskInput {
  */
 export function createKanbanDraftTask(input: KanbanDraftTaskInput): ThreadId {
   const store = useComposerDraftStore.getState();
-  const threadId = newThreadId();
+  const threadId = createThreadId();
   store.registerDraftThread(threadId, {
     projectId: input.projectId,
     envMode: input.envMode,

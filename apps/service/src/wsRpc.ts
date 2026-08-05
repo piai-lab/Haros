@@ -33,13 +33,13 @@ import {
   LOCAL_LOOPBACK_ATTACHMENT_PRINCIPAL,
 } from "./managedAttachmentPrincipal";
 import { ProductControlPlane, ProductControlPlaneError } from "./product/ProductControlPlane";
-import { DevServerManager } from "./devServerManager";
+import { DevServerSupervisor } from "./devServerSupervisor";
 import { GitCore } from "./git/Services/GitCore";
 import { createLocalPreviewGrant } from "./localImageFiles";
 import { Open } from "./open";
 import { PullRequestService } from "./pullRequests/Services/PullRequestService";
 import type { PullRequestServiceShape } from "./pullRequests/Services/PullRequestService";
-import { TerminalManager } from "./terminal/Services/Manager";
+import { TerminalSupervisor } from "./terminal/Services/Supervisor";
 import { WorkspaceEntries } from "./workspace/Services/WorkspaceEntries";
 import { WorkspaceFileSystem } from "./workspace/Services/WorkspaceFileSystem";
 import { WorkspacePaths } from "./workspace/Services/WorkspacePaths";
@@ -93,8 +93,9 @@ const systemRpcEffect = <A, E, R>(
 /** Shared source for the handlers installed in the feature RpcGroup and their wire tests. */
 export function makePullRequestSystemRpcHandlers(pullRequests: PullRequestServiceShape) {
   return {
-    [SYSTEM_RPC_METHODS.pullRequestsList]: (input: Parameters<PullRequestServiceShape["list"]>[0]) =>
-      systemRpcEffect(pullRequests.list(input), "Failed to list pull requests"),
+    [SYSTEM_RPC_METHODS.pullRequestsList]: (
+      input: Parameters<PullRequestServiceShape["list"]>[0],
+    ) => systemRpcEffect(pullRequests.list(input), "Failed to list pull requests"),
     [SYSTEM_RPC_METHODS.pullRequestsReviewRequestCount]: (
       input: Parameters<PullRequestServiceShape["reviewRequestCount"]>[0],
     ) =>
@@ -163,10 +164,10 @@ const makeWsRpcHandlersLayer = () =>
       const workspaceEntries = yield* WorkspaceEntries;
       const workspaceFileSystem = yield* WorkspaceFileSystem;
       const workspacePaths = yield* WorkspacePaths;
-      const devServerManager = yield* DevServerManager;
+      const devServerSupervisor = yield* DevServerSupervisor;
       const git = yield* GitCore;
       const open = yield* Open;
-      const terminalManager = yield* TerminalManager;
+      const terminalSupervisor = yield* TerminalSupervisor;
       const pullRequests = yield* PullRequestService;
       const streamAdmission = yield* makeWsStreamAdmission();
       const productRpcEffect = <A>(productEffect: Effect.Effect<A, ProductControlPlaneError>) =>
@@ -375,18 +376,18 @@ const makeWsRpcHandlersLayer = () =>
         [SYSTEM_RPC_METHODS.writeFile]: (input) =>
           systemRpcEffect(workspaceFileSystem.writeFile(input), "Failed to write workspace file"),
         [SYSTEM_RPC_METHODS.runDevServer]: (input) =>
-          systemRpcEffect(devServerManager.run(input), "Failed to start dev server"),
+          systemRpcEffect(devServerSupervisor.run(input), "Failed to start dev server"),
         [SYSTEM_RPC_METHODS.stopDevServer]: (input) =>
-          systemRpcEffect(devServerManager.stop(input), "Failed to stop dev server"),
+          systemRpcEffect(devServerSupervisor.stop(input), "Failed to stop dev server"),
         [SYSTEM_RPC_METHODS.listDevServers]: () =>
-          systemRpcEffect(devServerManager.list, "Failed to list dev servers"),
+          systemRpcEffect(devServerSupervisor.list, "Failed to list dev servers"),
         [SYSTEM_RPC_METHODS.subscribeDevServerEvents]: (_, { clientId }) =>
           streamAdmission.guard(
             clientId,
             { key: "system.workspace.dev-server.events" },
             Stream.concat(
               Stream.fromEffect(
-                devServerManager.list.pipe(
+                devServerSupervisor.list.pipe(
                   Effect.map(
                     (result): ProjectDevServerEvent => ({
                       type: "snapshot",
@@ -395,7 +396,7 @@ const makeWsRpcHandlersLayer = () =>
                   ),
                 ),
               ),
-              bufferLiveUiStream(devServerManager.stream, {
+              bufferLiveUiStream(devServerSupervisor.stream, {
                 label: "system.workspace.dev-server.events",
               }),
             ),
@@ -482,23 +483,23 @@ const makeWsRpcHandlersLayer = () =>
             "Failed to unstage files",
           ),
         [SYSTEM_RPC_METHODS.terminalOpen]: (input) =>
-          systemRpcEffect(terminalManager.open(input), "Failed to open terminal"),
+          systemRpcEffect(terminalSupervisor.open(input), "Failed to open terminal"),
         [SYSTEM_RPC_METHODS.terminalWrite]: (input) =>
-          systemRpcEffect(terminalManager.write(input), "Failed to write terminal"),
+          systemRpcEffect(terminalSupervisor.write(input), "Failed to write terminal"),
         [SYSTEM_RPC_METHODS.terminalAckOutput]: (input) =>
           systemRpcEffect(
-            terminalManager.ackOutput(input),
+            terminalSupervisor.ackOutput(input),
             "Failed to acknowledge terminal output",
           ),
         [SYSTEM_RPC_METHODS.terminalResize]: (input) =>
-          systemRpcEffect(terminalManager.resize(input), "Failed to resize terminal"),
+          systemRpcEffect(terminalSupervisor.resize(input), "Failed to resize terminal"),
         [SYSTEM_RPC_METHODS.terminalClear]: (input) =>
-          systemRpcEffect(terminalManager.clear(input), "Failed to clear terminal"),
+          systemRpcEffect(terminalSupervisor.clear(input), "Failed to clear terminal"),
         [SYSTEM_RPC_METHODS.terminalRestart]: (input) =>
-          systemRpcEffect(terminalManager.restart(input), "Failed to restart terminal"),
+          systemRpcEffect(terminalSupervisor.restart(input), "Failed to restart terminal"),
         [SYSTEM_RPC_METHODS.terminalClose]: (input) =>
           systemRpcEffect(
-            terminalManager.close({
+            terminalSupervisor.close({
               ...input,
               terminalId: input.terminalId ?? DEFAULT_TERMINAL_ID,
             }),
@@ -510,7 +511,7 @@ const makeWsRpcHandlersLayer = () =>
             { key: "system.terminal.events" },
             Stream.callback((queue) =>
               Effect.gen(function* () {
-                const unsubscribe = yield* terminalManager.subscribe((event) => {
+                const unsubscribe = yield* terminalSupervisor.subscribe((event) => {
                   Effect.runFork(Queue.offer(queue, event).pipe(Effect.asVoid));
                 });
                 yield* Effect.addFinalizer(() => Effect.sync(unsubscribe));

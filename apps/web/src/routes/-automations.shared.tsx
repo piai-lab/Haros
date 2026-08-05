@@ -81,7 +81,7 @@ import {
 } from "~/lib/automationForm";
 import { SkillCubeIcon, WorktreeIcon } from "~/lib/icons";
 import { Glyph } from "~/ui/icons";
-import { cn } from "~/lib/utils";
+import { cn } from "~/lib/styles";
 import { ensureNativeApi } from "~/nativeApi";
 import { useStore } from "~/store";
 import { resolveThreadPickerTitle } from "./-chatThreadRoute.logic";
@@ -814,11 +814,7 @@ export function AutomationApprovalBanner({
   );
 }
 
-export function AutomationModelPicker({
-  value,
-}: {
-  readonly value: ProductRequestedSelection;
-}) {
+export function AutomationModelPicker({ value }: { readonly value: ProductRequestedSelection }) {
   return (
     <div className="rounded-md border border-border/70 bg-muted/30 px-3 py-2 text-xs text-muted-foreground">
       <div className="font-medium text-foreground">Automation execution unavailable</div>
@@ -1062,9 +1058,7 @@ export function AutomationDialog({
               </ComposerPickerMenuPopup>
             </Menu>
 
-            <AutomationModelPicker
-              value={form.requestedSelection}
-            />
+            <AutomationModelPicker value={form.requestedSelection} />
 
             <Menu>
               <MenuTrigger render={<Button variant="ghost" size="sm" className={CHIP_CLASS} />}>
@@ -1313,7 +1307,6 @@ export function AutomationDialog({
                 </MenuGroup>
               </ComposerPickerMenuPopup>
             </Menu>
-
           </div>
 
           <div className="flex shrink-0 items-center gap-2">

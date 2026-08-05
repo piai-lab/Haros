@@ -21,7 +21,7 @@ import {
   subagentStatusDotClassName,
   subagentStatusTextToneClassName,
 } from "~/lib/subagentPresentation";
-import { cn } from "~/lib/utils";
+import { cn } from "~/lib/styles";
 import { Button } from "../ui/button";
 import { DisclosureRegion } from "../ui/DisclosureRegion";
 import type {

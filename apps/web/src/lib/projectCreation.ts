@@ -11,7 +11,7 @@ import {
   createProductWorkspace,
   type ProductWorkspaceCreateApi,
 } from "../productWorkspaceMutations";
-import { newProjectId } from "./utils";
+import { createProjectId } from "./identifiers";
 
 export const PROJECT_CREATE_EXISTING_SYNC_ERROR =
   "This folder is already linked, but the existing Workspace has not synced into the sidebar yet. Try again in a moment.";
@@ -26,10 +26,7 @@ export async function createOrRecoverProjectFromPath(input: {
   api: ProductWorkspaceCreateApi;
   workspaceRoot: string;
   createIfMissing?: boolean;
-  ensureWorkspaceRoot?: (
-    workspaceRoot: string,
-    createIfMissing: boolean,
-  ) => Promise<string>;
+  ensureWorkspaceRoot?: (workspaceRoot: string, createIfMissing: boolean) => Promise<string>;
   loadSnapshot: () => Promise<ProductShellSnapshot | null>;
   maxAttempts?: number;
   delayMs?: number;
@@ -46,7 +43,7 @@ export async function createOrRecoverProjectFromPath(input: {
   }
   workspaceRoot = await input.ensureWorkspaceRoot(workspaceRoot, input.createIfMissing === true);
 
-  const requestedProjectId = newProjectId();
+  const requestedProjectId = createProjectId();
   const workspace = await createProductWorkspace(
     {
       workspaceId: ProductWorkspaceId.makeUnsafe(requestedProjectId),

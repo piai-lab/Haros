@@ -463,7 +463,7 @@ export interface DesktopBridge {
     onError: (listener: (error: DesktopAppSnapErrorEvent) => void) => () => void;
     onState: (listener: (state: DesktopAppSnapState) => void) => () => void;
   };
-  storageMigration: {
+  storageUpgrade: {
     readSnapshot: () => OmniMindStorageSnapshot | null;
     acknowledgeSnapshot: () => Promise<void>;
   };

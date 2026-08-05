@@ -2,7 +2,7 @@ import { ThreadId, type BrowserElementRef, type BrowserSnapshotId } from "@omnim
 import type { WebContents } from "electron";
 import { describe, expect, it, vi } from "vitest";
 
-import type { BrowserAutomationVisibleRuntime } from "../browserManager";
+import type { BrowserAutomationVisibleRuntime } from "../browserHost";
 import { BrowserAutomationHostError } from "./hostErrors";
 import { BROWSER_SEMANTIC_SNAPSHOT_EXPRESSION } from "./semanticSnapshot";
 import { resolveBrowserTarget } from "./targets";

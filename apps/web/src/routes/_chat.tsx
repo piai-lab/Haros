@@ -20,10 +20,10 @@ import { shouldRenderTerminalWorkspace } from "../components/ChatView.logic";
 import ThreadSidebar from "../components/Sidebar";
 import { isElectron } from "../env";
 import { parseDiffRouteSearch } from "../diffRouteSearch";
-import { useHandleNewChat } from "../hooks/useHandleNewChat";
-import { useHandleNewStudioChat } from "../hooks/useHandleNewStudioChat";
+import { useCreateChat } from "../hooks/useCreateChat";
+import { useCreateStudioChat } from "../hooks/useCreateStudioChat";
 import { useTemporaryThreadLifecycle } from "../hooks/useTemporaryThreadLifecycle";
-import { useHandleNewThread } from "../hooks/useHandleNewThread";
+import { useCreateThread } from "../hooks/useCreateThread";
 import { useRecentViewSwitcher } from "../hooks/useRecentViewSwitcher";
 import { useLatestProjectStore } from "../latestProjectStore";
 import {
@@ -53,7 +53,7 @@ import {
   useSidebar,
 } from "~/components/ui/sidebar";
 import type { SidebarResizableOptions } from "~/components/ui/sidebar";
-import { cn } from "~/lib/utils";
+import { cn } from "~/lib/styles";
 import { ChatThreadRouteView } from "./_chat.$threadId";
 
 const EMPTY_KEYBINDINGS: ResolvedKeybindingsConfig = [];
@@ -219,9 +219,9 @@ function ChatRouteGlobalShortcuts() {
     activeDraftThread,
     activeProjectId,
     activeThread,
-    handleNewThread,
+    createThread,
     projects,
-  } = useHandleNewThread();
+  } = useCreateThread();
   const {
     recentSwitcherState,
     recentViewEntries,
@@ -233,8 +233,8 @@ function ChatRouteGlobalShortcuts() {
     activeDraftThread,
     projects,
   });
-  const { handleNewChat } = useHandleNewChat();
-  const { handleNewStudioChat } = useHandleNewStudioChat();
+  const { createChat } = useCreateChat();
+  const { createStudioChat } = useCreateStudioChat();
   const homeDir = useWorkspacePathsStore((state) => state.homeDir);
   const chatWorkspaceRoot = useWorkspacePathsStore((state) => state.chatWorkspaceRoot);
   const studioWorkspaceRoot = useWorkspacePathsStore((state) => state.studioWorkspaceRoot);
@@ -279,20 +279,20 @@ function ChatRouteGlobalShortcuts() {
     [latestProjectId, locationProjects, projectLastActivityAt],
   );
   const persistedLatestProjectStillExists = resolveLatestProjectTargetId(projects, latestProjectId);
-  const handleNewChatForActiveSurface = useCallback(
+  const createChatForActiveSurface = useCallback(
     () =>
       startFreshChatForActiveSurface({
         activeProject,
         isStudioRoute,
         paths: { homeDir, chatWorkspaceRoot, studioWorkspaceRoot },
-        handleNewChat,
-        handleNewStudioChat,
+        createChat,
+        createStudioChat,
       }),
     [
       activeProject,
       chatWorkspaceRoot,
-      handleNewChat,
-      handleNewStudioChat,
+      createChat,
+      createStudioChat,
       homeDir,
       isStudioRoute,
       studioWorkspaceRoot,
@@ -386,7 +386,7 @@ function ChatRouteGlobalShortcuts() {
       if (command === "chat.newChat" || command === "chat.newLocal") {
         event.preventDefault();
         event.stopPropagation();
-        void handleNewChatForActiveSurface();
+        void createChatForActiveSurface();
         return;
       }
 
@@ -394,7 +394,7 @@ function ChatRouteGlobalShortcuts() {
         if (!latestUsableProjectId) return;
         event.preventDefault();
         event.stopPropagation();
-        void handleNewThread(latestUsableProjectId);
+        void createThread(latestUsableProjectId);
         return;
       }
 
@@ -403,7 +403,7 @@ function ChatRouteGlobalShortcuts() {
         if (!target) return;
         event.preventDefault();
         event.stopPropagation();
-        void handleNewThread(target.projectId, {
+        void createThread(target.projectId, {
           ...(target.inheritContext
             ? resolveInheritedThreadContext({ activeThread, activeDraftThread })
             : {}),
@@ -421,7 +421,7 @@ function ChatRouteGlobalShortcuts() {
       if (!target) return;
       event.preventDefault();
       event.stopPropagation();
-      void handleNewThread(
+      void createThread(
         target.projectId,
         target.inheritContext
           ? resolveInheritedThreadContext({ activeThread, activeDraftThread })
@@ -440,8 +440,8 @@ function ChatRouteGlobalShortcuts() {
     clearSelection,
     commitRecentSwitcherSelection,
     currentProjectId,
-    handleNewChatForActiveSurface,
-    handleNewThread,
+    createChatForActiveSurface,
+    createThread,
     keybindings,
     latestUsableProjectId,
     openOrAdvanceRecentSwitcher,

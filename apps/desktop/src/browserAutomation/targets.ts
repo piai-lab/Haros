@@ -6,7 +6,7 @@ import type {
   BrowserTabId,
 } from "@omnimind/contracts";
 
-import type { BrowserAutomationVisibleRuntime } from "../browserManager";
+import type { BrowserAutomationVisibleRuntime } from "../browserHost";
 import {
   callFunctionOn,
   evaluateInContext,

@@ -4,9 +4,9 @@ import {
   appendKanbanTaskTranscript,
   buildKanbanTaskPreview,
   truncateKanbanTaskPreview,
-} from "./KanbanNewTaskDialog.logic";
+} from "./KanbanTaskCreateDialog.logic";
 
-describe("KanbanNewTaskDialog logic", () => {
+describe("KanbanTaskCreateDialog logic", () => {
   it("appends voice transcripts without preserving trailing whitespace", () => {
     expect(appendKanbanTaskTranscript("", "  ship it  ")).toBe("ship it");
     expect(appendKanbanTaskTranscript("Draft task  ", "  and test it  ")).toBe(

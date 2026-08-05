@@ -18,7 +18,7 @@ import {
 } from "@omnimind/contracts";
 import { normalizeThreadMarkerLabel } from "@omnimind/shared/threadMarkers";
 
-import { randomUUID } from "./lib/utils";
+import { randomUUID } from "./lib/identifiers";
 import { useProductStore } from "./store/productStore";
 import { readProductNativeApi, type ProductNativeApi } from "./wsNativeApi";
 
@@ -51,9 +51,9 @@ export type ProductMarkerApi = Pick<
 async function selectedTextDigest(selectedText: string): Promise<`sha256:${string}`> {
   const bytes = new TextEncoder().encode(selectedText);
   const digest = await crypto.subtle.digest("SHA-256", bytes);
-  const hex = Array.from(new Uint8Array(digest), (value) => value.toString(16).padStart(2, "0")).join(
-    "",
-  );
+  const hex = Array.from(new Uint8Array(digest), (value) =>
+    value.toString(16).padStart(2, "0"),
+  ).join("");
   return `sha256:${hex}`;
 }
 
@@ -73,9 +73,10 @@ async function markerTarget(api: ProductMarkerApi, threadId: ThreadId) {
 
 async function publishMarkerMutation(
   threadId: ThreadId,
-  mutate: (api: ProductMarkerApi, target: Awaited<ReturnType<typeof markerTarget>>) => ReturnType<
-    ProductMarkerApi["removeEntryMarker"]
-  >,
+  mutate: (
+    api: ProductMarkerApi,
+    target: Awaited<ReturnType<typeof markerTarget>>,
+  ) => ReturnType<ProductMarkerApi["removeEntryMarker"]>,
   targetStateReached: (
     snapshot: Awaited<ReturnType<ProductMarkerApi["getConversationSnapshot"]>>,
   ) => boolean,
@@ -106,16 +107,19 @@ async function publishMarkerMutation(
   useProductStore.getState().setConversationSnapshot(snapshot);
 }
 
-export function dispatchThreadMarkerAdd(input: {
-  threadId: ThreadId;
-  markerId: ThreadMarkerId;
-  messageId: MessageId;
-  startOffset: number;
-  endOffset: number;
-  selectedText: string;
-  style: ThreadMarkerStyle;
-  color: ThreadMarkerColor;
-}, api?: ProductMarkerApi): Promise<void> {
+export function dispatchThreadMarkerAdd(
+  input: {
+    threadId: ThreadId;
+    markerId: ThreadMarkerId;
+    messageId: MessageId;
+    startOffset: number;
+    endOffset: number;
+    selectedText: string;
+    style: ThreadMarkerStyle;
+    color: ThreadMarkerColor;
+  },
+  api?: ProductMarkerApi,
+): Promise<void> {
   return publishMarkerMutation(
     input.threadId,
     async (client, target) =>
@@ -158,9 +162,7 @@ export function dispatchThreadMarkerRemove(
         markerId: ProductEntryMarkerId.makeUnsafe(markerId),
       }),
     (snapshot) =>
-      !snapshot.readModel.entryMarkers.some(
-        (marker) => String(marker.id) === String(markerId),
-      ),
+      !snapshot.readModel.entryMarkers.some((marker) => String(marker.id) === String(markerId)),
     api,
   );
 }

@@ -17,7 +17,7 @@ import {
   serverLocalServersQueryOptions,
   serverStopLocalServerMutationOptions,
 } from "~/lib/serverReactQuery";
-import { cn } from "~/lib/utils";
+import { cn } from "~/lib/styles";
 import {
   ENVIRONMENT_ROW_CLASS_NAME,
   ENVIRONMENT_ROW_ICON_CLASS_NAME,

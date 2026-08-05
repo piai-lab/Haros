@@ -15,7 +15,7 @@ import { useRef, useState } from "react";
 import { toastManager } from "~/components/ui/toast";
 import type { DraftThreadEnvMode } from "~/composerDraftStore";
 import { createAndSendKanbanTask, createKanbanDraftTask } from "~/lib/kanbanTaskCreate";
-import { truncateKanbanTaskPreview } from "./KanbanNewTaskDialog.logic";
+import { truncateKanbanTaskPreview } from "./KanbanTaskCreateDialog.logic";
 import { resolveKanbanRuntimeAvailability } from "./kanbanRuntimeSelection";
 
 interface UseKanbanTaskSubmitInput {

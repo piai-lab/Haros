@@ -4,7 +4,7 @@
 // Depends on: shared input styling plus caller-provided content slots.
 
 import { useEffect, useRef, type ReactNode } from "react";
-import { cn } from "~/lib/utils";
+import { cn } from "~/lib/styles";
 import { Input } from "../ui/input";
 import {
   COMPOSER_PICKER_MODEL_LIST_SCROLL_CLASS_NAME,

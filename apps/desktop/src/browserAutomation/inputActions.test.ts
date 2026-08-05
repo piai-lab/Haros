@@ -54,7 +54,7 @@ vi.mock("./trustedInput", () => ({
   withTrustedGuestFocus: vi.fn(async (_runtime, operation: () => Promise<unknown>) => operation()),
 }));
 
-import type { BrowserAutomationVisibleRuntime } from "../browserManager";
+import type { BrowserAutomationVisibleRuntime } from "../browserHost";
 import { dragBrowserTarget, typeIntoBrowserTarget } from "./inputActions";
 
 const runtime = {

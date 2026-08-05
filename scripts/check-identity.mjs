@@ -1,6 +1,5 @@
 #!/usr/bin/env node
 
-import { createHash } from "node:crypto";
 import { readFile, readdir, stat } from "node:fs/promises";
 import path from "node:path";
 import process from "node:process";
@@ -16,16 +15,8 @@ import {
 } from "./sources.mjs";
 
 const WALK_EXCLUSIONS = new Set([".git", ".pnpm", ".yarn", "node_modules"]);
-const EXPECTED_STRUCTURE_DEBT = {
-  count: 53,
-  sha256: "b8d8d1a7c8454c2cfe7bea32c362a9b680df7d50a4c467fe719ceab0d6d2521f",
-};
-
-export function structureDebtDigest(findings) {
-  const records = findings
-    .map((finding) => `${finding.path}\t${JSON.stringify(finding.rule)}\n`)
-    .toSorted();
-  return createHash("sha256").update(records.join("")).digest("hex");
+export function identityGatePasses(findings) {
+  return findings.length === 0;
 }
 
 function parseArguments(argv) {
@@ -169,37 +160,18 @@ export async function main(argv = process.argv.slice(2)) {
 
   const structureFindings = result.findings.filter((finding) => finding.surface === "structure");
   const hardFindings = result.findings.filter((finding) => finding.surface !== "structure");
-  const structureDigest = structureDebtDigest(structureFindings);
-  const structureDebtMatches =
-    structureFindings.length === EXPECTED_STRUCTURE_DEBT.count &&
-    structureDigest === EXPECTED_STRUCTURE_DEBT.sha256;
 
-  if (hardFindings.length > 0 || !structureDebtMatches) {
-    for (const finding of hardFindings) {
+  if (!identityGatePasses(result.findings)) {
+    for (const finding of result.findings) {
       process.stderr.write(
         `${finding.path}:${finding.line}:${finding.column} ` +
           `[${finding.category}/${finding.surface}] repository policy rule ` +
           `${JSON.stringify(finding.rule)}\n`,
       );
     }
-    if (!structureDebtMatches) {
-      for (const finding of structureFindings) {
-        process.stderr.write(
-          `${finding.path}:${finding.line}:${finding.column} ` +
-            `[${finding.category}/${finding.surface}] repository policy rule ` +
-            `${JSON.stringify(finding.rule)}\n`,
-        );
-      }
-      process.stderr.write(
-        `structure debt differs from the bounded T1 set: expected ` +
-          `${EXPECTED_STRUCTURE_DEBT.count}/${EXPECTED_STRUCTURE_DEBT.sha256}, observed ` +
-          `${structureFindings.length}/${structureDigest}\n`,
-      );
-    }
     process.stderr.write(
-      `identity check failed with ${hardFindings.length} hard finding(s)` +
-        (structureDebtMatches ? "" : " and changed structure debt") +
-        `\n`,
+      `identity check failed with ${hardFindings.length} identity finding(s) and ` +
+        `${structureFindings.length} structure finding(s)\n`,
     );
     return 1;
   }
@@ -208,8 +180,8 @@ export async function main(argv = process.argv.slice(2)) {
     `identity hard-green: ${source.length} source file(s), ` +
       `${generated.length} generated file(s), ${result.rules.length} identity rule(s), ` +
       `${result.restrictedRules.length} public-surface destination rule(s), ` +
-      `max depth ${result.structurePolicy.maxDirectoryDepth}; expected-red structure debt ` +
-      `${structureFindings.length} finding(s), sha256 ${structureDigest}\n`,
+      `max depth ${result.structurePolicy.maxDirectoryDepth}; structure hard-green with ` +
+      `${structureFindings.length} finding(s)\n`,
   );
   return 0;
 }

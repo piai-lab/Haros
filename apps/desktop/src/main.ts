@@ -42,9 +42,7 @@ import type {
   DesktopUpdateActionResult,
   DesktopUpdateState,
 } from "@omnimind/contracts";
-import {
-  DESKTOP_HEALTH_PROTOCOL_VERSION,
-} from "@omnimind/contracts";
+import { DESKTOP_HEALTH_PROTOCOL_VERSION } from "@omnimind/contracts";
 import {
   autoUpdater,
   BaseUpdater,
@@ -190,7 +188,7 @@ import {
 } from "./updateArtifactIdentity";
 import { buildGitHubReleasesPageUrl, resolveGitHubUpdateSource } from "./githubUpdateFeed";
 import { isArm64HostRunningIntelBuild, resolveDesktopRuntimeInfo } from "./runtimeArch";
-import { BROWSER_SESSION_PARTITION, DesktopBrowserManager } from "./browserManager";
+import { BROWSER_SESSION_PARTITION, DesktopBrowserHost } from "./browserHost";
 import {
   registerBrowserIpcHandlers,
   sendBrowserAnnotationEvent,
@@ -219,9 +217,9 @@ import {
   acknowledgeOmniMindStorageSnapshot,
   readOmniMindStorageSnapshot,
   resolveOmniMindStorageSnapshotPath,
-} from "./desktopStorageMigration";
+} from "./desktopStorageUpgrade";
 import { DESKTOP_IPC_CHANNELS } from "./ipcChannels";
-import { DesktopAppSnapManager } from "./appSnapManager";
+import { DesktopAppSnapSupervisor } from "./appSnapSupervisor";
 import { hardenBrowserAnnotationWebviewPreferences } from "./browserAnnotations/webviewSecurity";
 import { LOCAL_HTML_PREVIEW_SCHEME } from "./localHtmlPreviewProtocol";
 import {
@@ -369,7 +367,7 @@ let desktopHealthSnapshot: DesktopHealthSnapshot = {
   },
   updatedAt: new Date().toISOString(),
 };
-const browserManager = new DesktopBrowserManager({
+const browserHost = new DesktopBrowserHost({
   beforeInputEvent: (event, input) => {
     if (
       isKeyboardShortcutsHelpChord(
@@ -399,18 +397,18 @@ const browserManager = new DesktopBrowserManager({
   },
 });
 let browserHostPipeServer: BrowserHostPipeServer | null = null;
-let appSnapManager: DesktopAppSnapManager | null = null;
+let appSnapSupervisor: DesktopAppSnapSupervisor | null = null;
 let configuredUpdaterCacheDirName: string | null = null;
 
-browserManager.subscribe((state) => {
+browserHost.subscribe((state) => {
   sendBrowserState(mainWindow?.webContents, state);
 });
 
-browserManager.subscribeCopyLink((event) => {
+browserHost.subscribeCopyLink((event) => {
   sendBrowserCopyLink(mainWindow?.webContents, event);
 });
 
-browserManager.subscribeAnnotationEvents((event) => {
+browserHost.subscribeAnnotationEvents((event) => {
   sendBrowserAnnotationEvent(mainWindow?.webContents, event);
 });
 
@@ -420,7 +418,7 @@ function startBrowserPerformanceLogging(): void {
   }
 
   browserPerfInterval = setInterval(() => {
-    const snapshot = browserManager.getPerformanceSnapshot();
+    const snapshot = browserHost.getPerformanceSnapshot();
     const trackedProcessIds = new Set(snapshot.trackedProcessIds);
     const processMetrics = app
       .getAppMetrics()
@@ -446,7 +444,7 @@ async function ensureBrowserHostPipeServer(): Promise<void> {
   if (browserHostPipeServer || !OMNIMIND_BROWSER_HOST_PIPE_PATH) {
     return;
   }
-  const server = new BrowserHostPipeServer(browserManager, {
+  const server = new BrowserHostPipeServer(browserHost, {
     capability: DESKTOP_BROWSER_HOST_CAPABILITY,
     requestOpenPanel: (threadId) => {
       if (!threadId) return;
@@ -1665,11 +1663,11 @@ function resolveNotificationIconPath(): string | null {
   return resolveResourcePath("icon.png") ?? resolveIconPath("png");
 }
 
-function resolveAppSnapHelperPath(): string {
+function resolveAppSnapBridgePath(): string {
   if (app.isPackaged) {
-    return Path.resolve(process.resourcesPath, "..", "Helpers", "omnimind-appsnap-helper");
+    return Path.resolve(process.resourcesPath, "..", "Helpers", "omnimind-appsnap-bridge");
   }
-  return Path.resolve(__dirname, "..", ".electron-runtime", "appsnap", "omnimind-appsnap-helper");
+  return Path.resolve(__dirname, "..", ".electron-runtime", "appsnap", "omnimind-appsnap-bridge");
 }
 
 function ensureMainWindowForAppSnap(): BrowserWindow | null {
@@ -1703,10 +1701,10 @@ function sendAppSnapEvent(
 }
 
 function initializeDesktopAppSnap(): void {
-  if (appSnapManager) return;
-  appSnapManager = new DesktopAppSnapManager({
+  if (appSnapSupervisor) return;
+  appSnapSupervisor = new DesktopAppSnapSupervisor({
     platform: process.platform,
-    helperPath: resolveAppSnapHelperPath(),
+    bridgePath: resolveAppSnapBridgePath(),
     captureDirectory: Path.join(app.getPath("userData"), "appsnap", "tmp"),
     excludedBundleId: APP_USER_MODEL_ID,
     shortcutRegistry: globalShortcut,
@@ -3437,10 +3435,10 @@ async function shutdownDesktopRuntime(reason: string): Promise<void> {
       clearUpdateCheckTimeoutTimer();
       clearUpdatePollTimer();
       cancelBackendReadinessWait();
-      appSnapManager?.dispose();
-      appSnapManager = null;
+      appSnapSupervisor?.dispose();
+      appSnapSupervisor = null;
       await disposeBrowserHostPipeServerForShutdown(reason);
-      browserManager.dispose();
+      browserHost.dispose();
       restoreStdIoCapture?.();
       desktopShutdownComplete = true;
       writeDesktopLogHeader(`${reason} shutdown complete`);
@@ -3486,13 +3484,13 @@ function registerIpcHandlers(): void {
     return desktopHealthSnapshot;
   });
 
-  ipcMain.removeAllListeners(IPC.storageMigration.read);
-  ipcMain.on(IPC.storageMigration.read, (event: IpcMainEvent) => {
+  ipcMain.removeAllListeners(IPC.storageUpgrade.read);
+  ipcMain.on(IPC.storageUpgrade.read, (event: IpcMainEvent) => {
     event.returnValue = readOmniMindStorageSnapshot(storageSnapshotPath);
   });
 
-  ipcMain.removeHandler(IPC.storageMigration.acknowledge);
-  ipcMain.handle(IPC.storageMigration.acknowledge, async () => {
+  ipcMain.removeHandler(IPC.storageUpgrade.acknowledge);
+  ipcMain.handle(IPC.storageUpgrade.acknowledge, async () => {
     await acknowledgeOmniMindStorageSnapshot(storageSnapshotPath);
   });
 
@@ -3801,12 +3799,12 @@ function registerIpcHandlers(): void {
           : {}),
       }),
   );
-  if (appSnapManager) {
-    registerAppSnapIpcHandlers(ipcMain, appSnapManager);
+  if (appSnapSupervisor) {
+    registerAppSnapIpcHandlers(ipcMain, appSnapSupervisor);
   }
   registerDesktopVoiceTranscriptionHandler();
   startBrowserPerformanceLogging();
-  registerBrowserIpcHandlers(ipcMain, browserManager);
+  registerBrowserIpcHandlers(ipcMain, browserHost);
 }
 
 function getIconOption(): { icon: string } | Record<string, never> {
@@ -3893,7 +3891,7 @@ function createWindow(): BrowserWindow {
       backgroundThrottling: true,
     },
   });
-  browserManager.setWindow(window);
+  browserHost.setWindow(window);
   attachDesktopZoomFactorSync(window);
   attachRendererCrashRecovery(window);
   attachDesktopPhysicalZoomShortcuts(window);
@@ -4023,7 +4021,7 @@ function createWindow(): BrowserWindow {
         renderer: { status: "unavailable", reason: null, restartAttempt: 0 },
       });
     }
-    browserManager.setWindow(null);
+    browserHost.setWindow(null);
   });
 
   return window;

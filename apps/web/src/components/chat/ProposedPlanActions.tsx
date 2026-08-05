@@ -5,7 +5,7 @@ import {
 } from "../../proposedPlan";
 import { useCopyToClipboard } from "~/hooks/useCopyToClipboard";
 import { ArrowDownIcon, ArrowUpIcon, CopyIcon } from "~/lib/icons";
-import { cn } from "~/lib/utils";
+import { cn } from "~/lib/styles";
 import { readNativeApi } from "~/nativeApi";
 import { IconButton } from "../ui/icon-button";
 import { toastManager } from "../ui/toast";

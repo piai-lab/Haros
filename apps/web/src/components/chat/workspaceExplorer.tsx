@@ -30,7 +30,7 @@ import {
   projectSearchEntriesQueryOptions,
 } from "~/lib/projectReactQuery";
 import { getSyntaxHighlighterPromise, getSyntaxLanguageForPath } from "~/lib/syntaxHighlighting";
-import { cn } from "~/lib/utils";
+import { cn } from "~/lib/styles";
 import { Skeleton } from "../ui/skeleton";
 import { Collapsible, CollapsiblePanel, CollapsibleTrigger } from "../ui/collapsible";
 import { DisclosureChevron } from "../ui/DisclosureChevron";

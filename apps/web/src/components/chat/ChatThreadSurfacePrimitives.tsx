@@ -1,11 +1,6 @@
 import type { FileDiffMetadata } from "@pierre/diffs/react";
 import type { ThreadId, TurnId } from "@omnimind/contracts";
-import {
-  lazy,
-  memo,
-  type ReactNode,
-  Suspense,
-} from "react";
+import { lazy, memo, type ReactNode, Suspense } from "react";
 
 import ChatView from "../ChatView";
 import { DiffWorkerPoolProvider } from "../DiffWorkerPoolProvider";
@@ -19,7 +14,7 @@ import type { SplitViewId, SplitViewPanePanelState } from "../../splitViewStore"
 import { SINGLE_CHAT_PANE_SCOPE_ID } from "../../lib/chatPaneScope";
 import { CHAT_BACKGROUND_CLASS_NAME } from "./composerPickerStyles";
 import { Spinner } from "../ui/spinner";
-import { cn } from "~/lib/utils";
+import { cn } from "~/lib/styles";
 import { useRetainedConversationBoundary } from "./useRetainedConversationBoundary";
 
 const DiffPanel = lazy(() => import("../DiffPanel"));
@@ -185,37 +180,33 @@ export function DeferredChatView(props: {
           >
             {shouldRetainConversation ? (
               <RetainedChatView
-                  threadId={conversation.threadId}
-                  conversationSurface={conversation.surface}
-                  conversationActivity={conversation.activity}
-                  splitViewId={conversation.splitViewId}
-                  paneScopeId={props.paneScopeId}
-                  surfaceMode={props.surfaceMode}
-                  presentationMode={props.presentationMode ?? "default"}
-                  // Visibility belongs to the retained layer, not the 13k-line ChatView.
-                  // Keeping pane focus stable prevents a route switch from rerendering both
-                  // cached Conversations. Global/menu handlers still fail closed against the
-                  // active retained DOM boundary before acting.
-                  isFocusedPane={props.isFocusedPane}
-                  panelState={props.panelState}
-                  onToggleDiffPanel={props.onToggleDiff}
-                  {...(props.onToggleRightDock
-                    ? { onToggleRightDock: props.onToggleRightDock }
-                    : {})}
-                  onToggleBrowserPanel={props.onToggleBrowser}
-                  onOpenBrowserUrl={props.onOpenBrowserUrl}
-                  onOpenTurnDiffPanel={props.onOpenTurnDiff}
-                  {...(props.onSplitSurface ? { onSplitSurface: props.onSplitSurface } : {})}
-                  {...(props.onMaximize ? { onMaximizeSurface: props.onMaximize } : {})}
-                  {...(props.viewModeAction !== undefined
-                    ? { viewModeAction: props.viewModeAction }
-                    : {})}
-                  {...(props.onChangeThread
-                    ? { onChangeThreadInSplitPane: props.onChangeThread }
-                    : {})}
-                  {...(props.onCloseThreadPane
-                    ? { onCloseThreadPane: props.onCloseThreadPane }
-                    : {})}
+                threadId={conversation.threadId}
+                conversationSurface={conversation.surface}
+                conversationActivity={conversation.activity}
+                splitViewId={conversation.splitViewId}
+                paneScopeId={props.paneScopeId}
+                surfaceMode={props.surfaceMode}
+                presentationMode={props.presentationMode ?? "default"}
+                // Visibility belongs to the retained layer, not the 13k-line ChatView.
+                // Keeping pane focus stable prevents a route switch from rerendering both
+                // cached Conversations. Global/menu handlers still fail closed against the
+                // active retained DOM boundary before acting.
+                isFocusedPane={props.isFocusedPane}
+                panelState={props.panelState}
+                onToggleDiffPanel={props.onToggleDiff}
+                {...(props.onToggleRightDock ? { onToggleRightDock: props.onToggleRightDock } : {})}
+                onToggleBrowserPanel={props.onToggleBrowser}
+                onOpenBrowserUrl={props.onOpenBrowserUrl}
+                onOpenTurnDiffPanel={props.onOpenTurnDiff}
+                {...(props.onSplitSurface ? { onSplitSurface: props.onSplitSurface } : {})}
+                {...(props.onMaximize ? { onMaximizeSurface: props.onMaximize } : {})}
+                {...(props.viewModeAction !== undefined
+                  ? { viewModeAction: props.viewModeAction }
+                  : {})}
+                {...(props.onChangeThread
+                  ? { onChangeThreadInSplitPane: props.onChangeThread }
+                  : {})}
+                {...(props.onCloseThreadPane ? { onCloseThreadPane: props.onCloseThreadPane } : {})}
               />
             ) : (
               <ChatView

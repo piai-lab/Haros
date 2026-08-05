@@ -10,7 +10,7 @@
 
 import { MessageCircleIcon, SettingsIcon } from "~/lib/icons";
 import { PinStatusIcon, pinActionLabel } from "~/lib/pin";
-import { cn } from "~/lib/utils";
+import { cn } from "~/lib/styles";
 import { FolderClosed, FolderOpen } from "./FolderClosed";
 import {
   SIDEBAR_HOVER_CARD_CONTAINER_PADDING_CLASS_NAME,

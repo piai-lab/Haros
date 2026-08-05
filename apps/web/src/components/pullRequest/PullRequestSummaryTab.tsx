@@ -37,7 +37,7 @@ import {
   PR_META_TEXT_CLASS_NAME,
   PR_SECTION_TITLE_TEXT_CLASS_NAME,
 } from "./pullRequestText";
-import { cn } from "~/lib/utils";
+import { cn } from "~/lib/styles";
 
 /** A branch name in the Branch meta row (head and base render identically). Plain text at the
  *  row's own size — no chip, no width cap: it gives up characters only once the row genuinely

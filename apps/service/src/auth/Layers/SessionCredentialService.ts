@@ -1,4 +1,8 @@
-import { AuthSessionId, type AuthClientMetadata, type AuthClientSession } from "@omnimind/contracts";
+import {
+  AuthSessionId,
+  type AuthClientMetadata,
+  type AuthClientSession,
+} from "@omnimind/contracts";
 import * as Crypto from "node:crypto";
 import {
   Clock,
@@ -35,7 +39,7 @@ import {
   resolveSessionCookieName,
   signPayload,
   timingSafeEqualBase64Url,
-} from "../utils";
+} from "../clientAuthentication";
 
 const SIGNING_SECRET_NAME = "server-signing-key";
 const DEFAULT_SESSION_TTL = Duration.days(30);

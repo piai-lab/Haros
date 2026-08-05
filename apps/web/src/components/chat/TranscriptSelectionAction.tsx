@@ -4,7 +4,7 @@
 
 import type { ReactNode } from "react";
 import { MessageCircleIcon, PencilIcon, TextWrapIcon } from "~/lib/icons";
-import { cn } from "~/lib/utils";
+import { cn } from "~/lib/styles";
 import { ELEVATED_HOVER_SURFACE_CLASS_NAME } from "~/surfaceStyles";
 
 interface TranscriptSelectionActionProps {

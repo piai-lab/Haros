@@ -53,7 +53,7 @@ final class OptionChordMonitor {
             emitter.emitError(
                 AppSnapFailure(
                     code: "event_tap_disabled",
-                    message: "macOS disabled the Option-key listener; the helper re-enabled it."
+                    message: "macOS disabled the Option-key listener; the bridge re-enabled it."
                 ),
                 capturedAt: appSnapTimestamp()
             )

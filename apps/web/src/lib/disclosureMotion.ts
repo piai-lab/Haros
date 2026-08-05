@@ -5,7 +5,7 @@
 // Why: Sidebar project/thread expand and chat disclosures reused the same grid/opacity
 //      timing in multiple places; centralize it so new expand/collapse surfaces stay consistent.
 
-import { cn } from "~/lib/utils";
+import { cn } from "~/lib/styles";
 
 export const DISCLOSURE_TRANSITION_MS = 220;
 export const DISCLOSURE_CLEANUP_BUFFER_MS = 40;

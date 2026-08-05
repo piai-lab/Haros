@@ -1,7 +1,7 @@
 import type { ReactNode } from "react";
 
 import { isElectron } from "~/env";
-import { cn } from "~/lib/utils";
+import { cn } from "~/lib/styles";
 
 import {
   CHAT_SURFACE_HEADER_DIVIDER_CLASS_NAME,

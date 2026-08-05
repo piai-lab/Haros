@@ -1,4 +1,4 @@
-import type { BrowserAutomationVisibleRuntime } from "../browserManager";
+import type { BrowserAutomationVisibleRuntime } from "../browserHost";
 import { callFunctionOn, throwIfAborted } from "./cdpRuntime";
 
 export interface ActionablePoint {

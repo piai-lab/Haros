@@ -9,7 +9,7 @@
 
 import { type ReactNode } from "react";
 
-import { cn } from "~/lib/utils";
+import { cn } from "~/lib/styles";
 import { XIcon } from "~/lib/icons";
 import { IconButton } from "../ui/icon-button";
 import {

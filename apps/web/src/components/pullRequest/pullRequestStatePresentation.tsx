@@ -17,7 +17,7 @@ import {
   type GlyphComponent,
 } from "~/lib/icons";
 
-import { cn } from "~/lib/utils";
+import { cn } from "~/lib/styles";
 
 /** Shared PR-state presentation so every PR surface labels, colors, and glyphs PRs identically. */
 export interface PrStatePresentation {
@@ -26,13 +26,14 @@ export interface PrStatePresentation {
   iconKind: "pull-request" | "draft" | "pull-request-closed" | "merged-simple" | "merge-conflict";
 }
 
-export const PR_STATE_PRESENTATION_ICONS: Record<PrStatePresentation["iconKind"], GlyphComponent> = {
-  "pull-request": GitPullRequestIcon,
-  draft: GitPullRequestDraftIcon,
-  "pull-request-closed": GitPullRequestClosedIcon,
-  "merged-simple": GitMergedSimpleIcon,
-  "merge-conflict": GitMergeConflictIcon,
-};
+export const PR_STATE_PRESENTATION_ICONS: Record<PrStatePresentation["iconKind"], GlyphComponent> =
+  {
+    "pull-request": GitPullRequestIcon,
+    draft: GitPullRequestDraftIcon,
+    "pull-request-closed": GitPullRequestClosedIcon,
+    "merged-simple": GitMergedSimpleIcon,
+    "merge-conflict": GitMergeConflictIcon,
+  };
 
 /**
  * Draft and mergeability are optional because persisted `lastKnownPr` entries written

@@ -13,7 +13,7 @@ import {
   createFreshDraftThreadSeed,
   resolveTerminalThreadCreationState,
   resolveThreadBootstrapPlan,
-  type NewThreadOptions,
+  type CreateThreadOptions,
 } from "../lib/threadBootstrap";
 import { promoteThreadCreate } from "../lib/threadCreatePromotion";
 import {
@@ -21,14 +21,14 @@ import {
   runDraftNavigationOnce,
   stageDraftNavigation,
 } from "../lib/stagedDraftNavigation";
-import { newCommandId, newThreadId } from "../lib/utils";
+import { createCommandId, createThreadId } from "../lib/identifiers";
 import { readNativeApi } from "../nativeApi";
 import { type FocusedChatContext, useFocusedChatContext } from "../focusedChatContext";
 import { useStore } from "../store";
 import { useTemporaryThreadStore } from "../temporaryThreadStore";
 import { useTerminalStateStore } from "../terminalStateStore";
 
-export interface NewThreadNavigationOptions {
+export interface CreateThreadNavigationOptions {
   /**
    * Search params applied when the hook navigates to the created thread.
    * Lets callers keep view-level state (e.g. the editor workspace view)
@@ -37,7 +37,7 @@ export interface NewThreadNavigationOptions {
   search?: (previous: Record<string, unknown>) => Record<string, unknown>;
 }
 
-function useHandleNewThreadFromFocusedContext(focusedContext: FocusedChatContext) {
+function useCreateThreadFromFocusedContext(focusedContext: FocusedChatContext) {
   const projects = useStore((store) => store.projects);
   const navigate = useNavigate();
   const router = useRouter();
@@ -49,10 +49,10 @@ function useHandleNewThreadFromFocusedContext(focusedContext: FocusedChatContext
   const markTemporaryThread = useTemporaryThreadStore((store) => store.markTemporaryThread);
   const clearTemporaryThread = useTemporaryThreadStore((store) => store.clearTemporaryThread);
 
-  const handleNewThread = (
+  const createThread = (
     projectId: ProjectId,
-    options?: NewThreadOptions,
-    navigation?: NewThreadNavigationOptions,
+    options?: CreateThreadOptions,
+    navigation?: CreateThreadNavigationOptions,
   ): Promise<ThreadId | null> => {
     const entryPoint = options?.entryPoint ?? "chat";
     const wantsTemporaryThread = options?.temporary === true;
@@ -121,7 +121,7 @@ function useHandleNewThreadFromFocusedContext(focusedContext: FocusedChatContext
     const resolveCreationState = (
       targetThreadId: ThreadId,
       draftThread: DraftThreadState | null,
-      creationOptions: NewThreadOptions | undefined,
+      creationOptions: CreateThreadOptions | undefined,
     ) =>
       resolveTerminalThreadCreationState({
         activeDraftThread: activeDraftThreadSnapshot,
@@ -139,16 +139,14 @@ function useHandleNewThreadFromFocusedContext(focusedContext: FocusedChatContext
       if (!readNativeApi()) {
         return;
       }
-      await promoteThreadCreate(
-        {
-          threadId,
-          projectId,
-          title: "New terminal",
-          worktreePath: creationState.worktreePath,
-          workingDirectory: creationState.workingDirectory,
-          createdAt: new Date().toISOString(),
-        },
-      );
+      await promoteThreadCreate({
+        threadId,
+        projectId,
+        title: "New terminal",
+        worktreePath: creationState.worktreePath,
+        workingDirectory: creationState.workingDirectory,
+        createdAt: new Date().toISOString(),
+      });
     };
     if (bootstrapPlan.kind === "stored") {
       return (async (): Promise<ThreadId> => {
@@ -231,7 +229,7 @@ function useHandleNewThreadFromFocusedContext(focusedContext: FocusedChatContext
     }
 
     return runDraftNavigationOnce(draftNavigationSlotKey(projectId, entryPoint), async () => {
-      const threadId = newThreadId();
+      const threadId = createThreadId();
       if (wantsTemporaryThread) {
         markTemporaryThread(threadId);
       }
@@ -288,14 +286,14 @@ function useHandleNewThreadFromFocusedContext(focusedContext: FocusedChatContext
     activeProjectId,
     activeThread,
     activeContextThreadId: focusedThreadId,
-    handleNewThread,
+    createThread,
     projects,
     routeThreadId,
   };
 }
 
-export function useHandleNewThread() {
-  return useHandleNewThreadFromFocusedContext(useFocusedChatContext());
+export function useCreateThread() {
+  return useCreateThreadFromFocusedContext(useFocusedChatContext());
 }
 
 /**
@@ -303,6 +301,6 @@ export function useHandleNewThread() {
  * Supplying it explicitly prevents hidden surfaces from subscribing to the
  * globally focused route while preserving the same thread bootstrap behavior.
  */
-export function useHandleNewThreadForFocusedContext(focusedContext: FocusedChatContext) {
-  return useHandleNewThreadFromFocusedContext(focusedContext);
+export function useCreateThreadForFocusedContext(focusedContext: FocusedChatContext) {
+  return useCreateThreadFromFocusedContext(focusedContext);
 }

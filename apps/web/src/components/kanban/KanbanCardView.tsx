@@ -19,7 +19,7 @@ import {
 } from "~/lib/icons";
 import { resolveThreadEnvironmentPresentation } from "~/lib/threadEnvironment";
 import { formatRelativeTime } from "~/lib/relativeTime";
-import { cn } from "~/lib/utils";
+import { cn } from "~/lib/styles";
 import { formatElapsed } from "../../session-logic";
 import { RAISED_SURFACE_CHROME_CLASS_NAME } from "../chat/composerPickerStyles";
 import { KanbanStatusIcon } from "./KanbanStatusIcon";
@@ -163,10 +163,7 @@ function KanbanCardViewComponent({
         ) : null}
         {isForked ? (
           <span title="Forked thread" className="flex shrink-0 items-center">
-            <GitForkIcon
-              className="size-3 text-emerald-600 dark:text-emerald-300/90"
-              aria-hidden
-            />
+            <GitForkIcon className="size-3 text-emerald-600 dark:text-emerald-300/90" aria-hidden />
           </span>
         ) : null}
         {pr ? <PrStateChip pr={pr} /> : null}

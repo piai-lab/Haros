@@ -18,7 +18,7 @@ import servicePackageJson from "../apps/service/package.json" with { type: "json
 import { BRAND_ASSET_PATHS } from "./lib/brand-assets.ts";
 import {
   createDesktopPlatformBuildConfig,
-  MAC_APPSNAP_HELPER_STAGE_PATH,
+  MAC_APPSNAP_BRIDGE_STAGE_PATH,
   validateDesktopNativeBuildHost,
 } from "./lib/desktop-platform-build-config.ts";
 import { OMNIMIND_PRODUCTION_BUNDLE_ID } from "@omnimind/shared/desktopIdentity";
@@ -73,10 +73,10 @@ const ProductionWindowsIconSource = Effect.zipWith(
 const NodePtySmokeScript = Effect.zipWith(RepoRoot, Effect.service(Path.Path), (repoRoot, path) =>
   path.join(repoRoot, "scripts/node-pty-smoke.mjs"),
 );
-const AppSnapHelperBuildScript = Effect.zipWith(
+const AppSnapBridgeBuildScript = Effect.zipWith(
   RepoRoot,
   Effect.service(Path.Path),
-  (repoRoot, path) => path.join(repoRoot, "apps/desktop/scripts/build-appsnap-helper.mjs"),
+  (repoRoot, path) => path.join(repoRoot, "apps/desktop/scripts/build-appsnap-bridge.mjs"),
 );
 const encodeJsonString = Schema.encodeEffect(Schema.UnknownFromJsonString);
 
@@ -829,18 +829,18 @@ const assertPlatformBuildResources = Effect.fn("assertPlatformBuildResources")(f
   }
 });
 
-const stageMacAppSnapHelper = Effect.fn("stageMacAppSnapHelper")(function* (
+const stageMacAppSnapBridge = Effect.fn("stageMacAppSnapBridge")(function* (
   stageAppDir: string,
   arch: typeof BuildArch.Type,
   verbose: boolean,
 ) {
   const path = yield* Path.Path;
   const fs = yield* FileSystem.FileSystem;
-  const buildScript = yield* AppSnapHelperBuildScript;
-  const outputPath = path.join(stageAppDir, MAC_APPSNAP_HELPER_STAGE_PATH);
+  const buildScript = yield* AppSnapBridgeBuildScript;
+  const outputPath = path.join(stageAppDir, MAC_APPSNAP_BRIDGE_STAGE_PATH);
 
   yield* fs.makeDirectory(path.dirname(outputPath), { recursive: true });
-  yield* Effect.log(`[desktop-artifact] Building native AppSnap helper (${arch})...`);
+  yield* Effect.log(`[desktop-artifact] Building native AppSnap bridge (${arch})...`);
   yield* runCommand(
     ChildProcess.make({
       cwd: stageAppDir,
@@ -850,7 +850,7 @@ const stageMacAppSnapHelper = Effect.fn("stageMacAppSnapHelper")(function* (
 
   if (!(yield* fs.exists(outputPath))) {
     return yield* new BuildScriptError({
-      message: `AppSnap helper build completed but output was not found at ${outputPath}`,
+      message: `AppSnap bridge build completed but output was not found at ${outputPath}`,
     });
   }
 });
@@ -1061,7 +1061,7 @@ const buildDesktopArtifact = Effect.fn("buildDesktopArtifact")(function* (
   yield* assertPlatformBuildResources(options.platform, stageResourcesDir, options.verbose);
 
   if (options.platform === "mac") {
-    yield* stageMacAppSnapHelper(stageAppDir, options.arch, options.verbose);
+    yield* stageMacAppSnapBridge(stageAppDir, options.arch, options.verbose);
   }
 
   // electron-builder is filtering out stageResourcesDir directory in the AppImage for production

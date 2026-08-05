@@ -6,7 +6,7 @@
 
 import type { ReactNode } from "react";
 import { createMarkdownCodeFence, formatShellTranscript } from "~/lib/toolCallDetailsFormatting";
-import { cn } from "~/lib/utils";
+import { cn } from "~/lib/styles";
 import type { TimestampFormat } from "../../appSettings";
 import type { WorkLogToolDetails, WorkLogToolOutputDetails } from "../../lib/toolCallDetails";
 import type { WorkLogLiveActivity } from "../../workLog";

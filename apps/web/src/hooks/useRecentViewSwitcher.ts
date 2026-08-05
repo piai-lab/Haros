@@ -31,9 +31,9 @@ import {
   resolveTerminalVisualIdentityMap,
   selectRepresentativeTerminalVisualIdentity,
 } from "../terminalVisualIdentity";
-import type { useHandleNewThread } from "./useHandleNewThread";
+import type { useCreateThread } from "./useCreateThread";
 
-type NewThreadContext = ReturnType<typeof useHandleNewThread>;
+type CreateThreadContext = ReturnType<typeof useCreateThread>;
 
 const EMPTY_RECENT_VIEW_ENTRIES: RecentViewDisplayEntry[] = [];
 
@@ -43,9 +43,9 @@ interface RecentViewSwitcherState {
 }
 
 interface UseRecentViewSwitcherInput {
-  activeContextThreadId: NewThreadContext["activeContextThreadId"];
-  activeDraftThread: NewThreadContext["activeDraftThread"];
-  projects: NewThreadContext["projects"];
+  activeContextThreadId: CreateThreadContext["activeContextThreadId"];
+  activeDraftThread: CreateThreadContext["activeDraftThread"];
+  projects: CreateThreadContext["projects"];
 }
 
 // Encapsulates recent-view persistence, pruning, prewarm, and activation.

@@ -69,7 +69,9 @@ describe("Product Conversation authority closure", () => {
     expect(serviceRpc).toContain("SYSTEM_RPC_METHODS.ensureWorkspaceRoot");
     expect(serviceRpc).not.toContain("ORCHESTRATION_WS_METHODS");
     expect(serviceRpc).not.toContain("assertLegacyConversationRouteAvailable");
-    expect(serviceRpc).not.toMatch(/\b(?:dispatchCommand|importThread|reconcileProviderDelivery)\b/u);
+    expect(serviceRpc).not.toMatch(
+      /\b(?:dispatchCommand|importThread|reconcileProviderDelivery)\b/u,
+    );
   });
 
   it("preserves the approved mother under Product and scoped system owners", () => {
@@ -165,7 +167,7 @@ describe("Product Conversation authority closure", () => {
 
     expect(chatView).not.toContain("useDiffRouteSearch");
     expect(chatView).not.toContain("useFocusedChatContext");
-    expect(chatView).toContain("useHandleNewThreadForFocusedContext");
+    expect(chatView).toContain("useCreateThreadForFocusedContext");
     expect(chatView).toContain("routeThreadId: threadId");
     expect(retainedSurface).toContain("isFocusedPane={props.isFocusedPane}");
     expect(retainedSurface).not.toContain("isFocusedPane={props.isFocusedPane && active}");

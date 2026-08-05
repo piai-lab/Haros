@@ -1,4 +1,4 @@
-// FILE: desktopStorageMigration.ts
+// FILE: desktopStorageUpgrade.ts
 // Purpose: Persists a validated, origin-neutral browser-storage handoff for desktop upgrades.
 // Layer: Desktop main-process utility
 

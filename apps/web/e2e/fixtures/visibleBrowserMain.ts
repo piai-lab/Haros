@@ -8,10 +8,7 @@ import type {
   ThreadId,
 } from "@omnimind/contracts";
 
-import {
-  BROWSER_SESSION_PARTITION,
-  DesktopBrowserManager,
-} from "../../../desktop/src/browserManager";
+import { BROWSER_SESSION_PARTITION, DesktopBrowserHost } from "../../../desktop/src/browserHost";
 import {
   registerBrowserIpcHandlers,
   sendBrowserAnnotationEvent,
@@ -40,7 +37,7 @@ if (
 
 app.setPath("userData", path.join(omnimindHome, "electron-userdata"));
 
-const browserManager = new DesktopBrowserManager();
+const browserHost = new DesktopBrowserHost();
 let mainWindow: BrowserWindow | null = null;
 let latestState: ThreadBrowserState | null = null;
 const annotationEvents: BrowserAnnotationEvent[] = [];
@@ -54,24 +51,24 @@ function pushState(): void {
   }
 }
 
-browserManager.subscribe((state) => {
+browserHost.subscribe((state) => {
   latestState = state;
   pushState();
 });
 
-browserManager.subscribeAnnotationEvents((event) => {
+browserHost.subscribeAnnotationEvents((event) => {
   annotationEvents.push(event);
   sendBrowserAnnotationEvent(mainWindow?.webContents, event);
 });
 
-registerBrowserIpcHandlers(ipcMain, browserManager);
+registerBrowserIpcHandlers(ipcMain, browserHost);
 ipcMain.removeAllListeners(BROWSER_IPC_CHANNELS.setBounds);
 ipcMain.on(BROWSER_IPC_CHANNELS.setBounds, (_event, input: BrowserSetPanelBoundsInput) => {
   boundsPublications.push({
     input,
     zoomFactor: mainWindow?.webContents.getZoomFactor() ?? 1,
   });
-  browserManager.setPanelBounds(input);
+  browserHost.setPanelBounds(input);
 });
 ipcMain.on("omnimind-e2e:get-zoom-factor", (event) => {
   event.returnValue = mainWindow?.webContents.getZoomFactor() ?? 1;
@@ -79,7 +76,7 @@ ipcMain.on("omnimind-e2e:get-zoom-factor", (event) => {
 
 Object.assign(globalThis, {
   __omnimindVisibleBrowserE2E: {
-    browserManager,
+    browserHost,
     annotationEvents,
     boundsPublications,
     threadId,
@@ -106,7 +103,7 @@ app.whenReady().then(async () => {
       webviewTag: true,
     },
   });
-  browserManager.setWindow(mainWindow);
+  browserHost.setWindow(mainWindow);
   mainWindow.webContents.on("will-attach-webview", (event, webPreferences, params) => {
     if (
       !hardenBrowserAnnotationWebviewPreferences({
@@ -119,11 +116,11 @@ app.whenReady().then(async () => {
       event.preventDefault();
     }
   });
-  browserManager.open({ threadId, initialUrl });
+  browserHost.open({ threadId, initialUrl });
   await mainWindow.loadFile(shellPath, { query: { threadId } });
   pushState();
 });
 
 app.on("before-quit", () => {
-  browserManager.dispose();
+  browserHost.dispose();
 });

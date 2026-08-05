@@ -10,7 +10,7 @@ import {
 } from "@omnimind/contracts";
 import { workspaceRootsEqual } from "@omnimind/shared/threadWorkspace";
 
-import { randomUUID } from "./lib/utils";
+import { randomUUID } from "./lib/identifiers";
 import { readProductNativeApi, type ProductNativeApi } from "./wsNativeApi";
 
 type ProductWorkspaceReadApi = Pick<ProductNativeApi, "getShellSnapshot">;

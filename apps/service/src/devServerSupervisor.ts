@@ -1,14 +1,14 @@
 /**
- * DevServerManager - Server-owned dev-server process orchestration.
+ * DevServerSupervisor - Server-owned dev-server process orchestration.
  *
  * Dev servers are first-class background processes keyed by project id, fully
- * decoupled from chat threads. Each runs in a managed PTY (via TerminalManager)
+ * decoupled from chat threads. Each runs in a managed PTY (via TerminalSupervisor)
  * under a synthetic `dev-server:<projectId>` thread so its lifetime survives
- * WebSocket reconnects and never clutters the thread list. The manager keeps an
+ * WebSocket reconnects and never clutters the thread list. The supervisor keeps an
  * in-memory registry, broadcasts changes over a PubSub for the
  * `project.devServerEvent` push channel, and reaps entries when their PTY exits.
  *
- * @module DevServerManager
+ * @module DevServerSupervisor
  */
 import {
   DEFAULT_TERMINAL_ID,
@@ -25,7 +25,7 @@ import {
 import { localServerMatchesRun } from "@omnimind/shared/localServers";
 import { Effect, Layer, PubSub, Ref, ServiceMap, Stream } from "effect";
 
-import { TerminalManager, type TerminalError } from "./terminal/Services/Manager";
+import { TerminalSupervisor, type TerminalError } from "./terminal/Services/Supervisor";
 
 // Dev servers reuse the terminal infrastructure under a reserved synthetic
 // thread namespace so their PTYs never collide with real chat-thread terminals.
@@ -56,7 +56,7 @@ export function findProjectDevServerForLocalServer(input: {
   return null;
 }
 
-export interface DevServerManagerShape {
+export interface DevServerSupervisorShape {
   /** Start (or restart) the dev server for a project and return its descriptor. */
   readonly run: (
     input: ProjectRunDevServerInput,
@@ -69,14 +69,15 @@ export interface DevServerManagerShape {
   readonly stream: Stream.Stream<ProjectDevServerEvent>;
 }
 
-export class DevServerManager extends ServiceMap.Service<DevServerManager, DevServerManagerShape>()(
-  "omnimind/devServerManager",
-) {}
+export class DevServerSupervisor extends ServiceMap.Service<
+  DevServerSupervisor,
+  DevServerSupervisorShape
+>()("omnimind/devServerSupervisor") {}
 
-export const DevServerManagerLive = Layer.effect(
-  DevServerManager,
+export const DevServerSupervisorLive = Layer.effect(
+  DevServerSupervisor,
   Effect.gen(function* () {
-    const terminalManager = yield* TerminalManager;
+    const terminalSupervisor = yield* TerminalSupervisor;
     const pubsub = yield* Effect.acquireRelease(
       PubSub.unbounded<ProjectDevServerEvent>(),
       PubSub.shutdown,
@@ -102,7 +103,7 @@ export const DevServerManagerLive = Layer.effect(
         ),
       );
 
-    const unsubscribe = yield* terminalManager.subscribe((event) => {
+    const unsubscribe = yield* terminalSupervisor.subscribe((event) => {
       if (event.type !== "exited" && event.type !== "error") {
         return;
       }
@@ -114,7 +115,7 @@ export const DevServerManagerLive = Layer.effect(
     });
     yield* Effect.addFinalizer(() => Effect.sync(unsubscribe));
 
-    const run: DevServerManagerShape["run"] = (input) =>
+    const run: DevServerSupervisorShape["run"] = (input) =>
       Effect.gen(function* () {
         const threadId = devServerThreadId(input.projectId);
 
@@ -123,12 +124,12 @@ export const DevServerManagerLive = Layer.effect(
         // emits no exit event, so the reaper stays quiet during the swap.
         const existing = (yield* Ref.get(registry))[input.projectId];
         if (existing) {
-          yield* terminalManager
+          yield* terminalSupervisor
             .close({ threadId, deleteHistory: true })
             .pipe(Effect.catch(() => Effect.void));
         }
 
-        const snapshot = yield* terminalManager.open({
+        const snapshot = yield* terminalSupervisor.open({
           threadId,
           terminalId: DEFAULT_TERMINAL_ID,
           cwd: input.cwd,
@@ -140,7 +141,7 @@ export const DevServerManagerLive = Layer.effect(
           ...(input.env ? { env: input.env } : {}),
         });
 
-        yield* terminalManager.write({
+        yield* terminalSupervisor.write({
           threadId,
           terminalId: DEFAULT_TERMINAL_ID,
           data: `${input.command}\r`,
@@ -159,7 +160,7 @@ export const DevServerManagerLive = Layer.effect(
         return { server };
       });
 
-    const stop: DevServerManagerShape["stop"] = (input) =>
+    const stop: DevServerSupervisorShape["stop"] = (input) =>
       Effect.gen(function* () {
         // Remove from the registry *before* closing so the PTY teardown cannot be
         // mistaken for a crash by the reaper.
@@ -175,13 +176,13 @@ export const DevServerManagerLive = Layer.effect(
           return { stopped: false };
         }
         yield* publish({ type: "removed", projectId: input.projectId, reason: "stopped" });
-        yield* terminalManager
+        yield* terminalSupervisor
           .close({ threadId: devServerThreadId(input.projectId), deleteHistory: true })
           .pipe(Effect.catch(() => Effect.void));
         return { stopped: true };
       });
 
-    const list: DevServerManagerShape["list"] = Ref.get(registry).pipe(
+    const list: DevServerSupervisorShape["list"] = Ref.get(registry).pipe(
       Effect.map((current) => ({ servers: Object.values(current) })),
     );
 
@@ -192,6 +193,6 @@ export const DevServerManagerLive = Layer.effect(
       get stream() {
         return Stream.fromPubSub(pubsub);
       },
-    } satisfies DevServerManagerShape;
+    } satisfies DevServerSupervisorShape;
   }),
 );

@@ -12,7 +12,7 @@ import type { ComposerTrigger } from "~/composer-logic";
 import { useComposerCommandMenuItems } from "~/hooks/useComposerCommandMenuItems";
 import { getLocalFolderBrowseRootPath, isLocalFolderMentionQuery } from "~/lib/localFolderMentions";
 import { projectSearchEntriesQueryOptions } from "~/lib/projectReactQuery";
-import { isMacPlatform } from "~/lib/utils";
+import { isMacPlatform } from "~/lib/platform";
 
 const COMPOSER_PATH_QUERY_DEBOUNCE_MS = 120;
 const EMPTY_PROJECT_ENTRIES: ProjectEntry[] = [];

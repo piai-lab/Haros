@@ -5,9 +5,9 @@ import { BrowserIdempotencyKey, BrowserTabId } from "./browserAutomationIds";
 import { BrowserNodeTarget, BrowserPointerTarget } from "./browserAutomationTargets";
 import {
   BrowserLoadState,
-  browserBoundedInt as boundedInt,
-  browserClosedStruct as closedStruct,
-} from "./browserAutomationToolCommon";
+  boundedBrowserInteger as boundedInt,
+  strictBrowserStruct as closedStruct,
+} from "./browserToolContract";
 
 const described = <S extends Schema.Top>(schema: S, description: string): S =>
   schema.annotate({ description }) as S;

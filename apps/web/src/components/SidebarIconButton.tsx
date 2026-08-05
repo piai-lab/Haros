@@ -16,7 +16,7 @@ import {
   type ReactElement,
   type ReactNode,
 } from "react";
-import { cn } from "~/lib/utils";
+import { cn } from "~/lib/styles";
 import { type SidebarGlyphVariant, sidebarGlyphClass } from "./sidebarGlyphs";
 import { Tooltip, TooltipPopup, TooltipTrigger } from "./ui/tooltip";
 

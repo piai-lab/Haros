@@ -93,13 +93,13 @@ test("a real Electron guest commits and reprojects a continuous annotation sessi
         const fixture = (
           globalThis as typeof globalThis & {
             __omnimindVisibleBrowserE2E: {
-              browserManager: {
+              browserHost: {
                 getState(value: { threadId: string }): { activeTabId: string | null };
               };
             };
           }
         ).__omnimindVisibleBrowserE2E;
-        return fixture.browserManager.getState({ threadId: scopedThreadId }).activeTabId;
+        return fixture.browserHost.getState({ threadId: scopedThreadId }).activeTabId;
       }, threadId);
     await expect.poll(readActiveTabId, { timeout: 5_000 }).not.toBeNull();
     const tabId = await readActiveTabId();
@@ -108,7 +108,7 @@ test("a real Electron guest commits and reprojects a continuous annotation sessi
     if (!webviewRect) throw new Error("Visible annotation guest lost its bounds.");
 
     /**
-     * Runs a script inside the exact guest currently owned by DesktopBrowserManager.
+     * Runs a script inside the exact guest currently owned by DesktopBrowserHost.
      */
     const runInGuest = async (script: string): Promise<unknown> =>
       electronApp.evaluate(
@@ -116,7 +116,7 @@ test("a real Electron guest commits and reprojects a continuous annotation sessi
           const fixture = (
             globalThis as typeof globalThis & {
               __omnimindVisibleBrowserE2E: {
-                browserManager: {
+                browserHost: {
                   getVisibleAutomationRuntime(value: { threadId: string; tabId: string }): {
                     webContents: { executeJavaScript(script: string): Promise<unknown> };
                   };
@@ -124,7 +124,7 @@ test("a real Electron guest commits and reprojects a continuous annotation sessi
               };
             }
           ).__omnimindVisibleBrowserE2E;
-          return fixture.browserManager
+          return fixture.browserHost
             .getVisibleAutomationRuntime({ threadId: input.threadId, tabId: input.tabId })
             .webContents.executeJavaScript(input.script);
         },
@@ -139,7 +139,7 @@ test("a real Electron guest commits and reprojects a continuous annotation sessi
           const fixture = (
             globalThis as typeof globalThis & {
               __omnimindVisibleBrowserE2E: {
-                browserManager: {
+                browserHost: {
                   getVisibleAutomationRuntime(value: { threadId: string; tabId: string }): {
                     webContents: { insertText(value: string): Promise<void> };
                   };
@@ -147,7 +147,7 @@ test("a real Electron guest commits and reprojects a continuous annotation sessi
               };
             }
           ).__omnimindVisibleBrowserE2E;
-          return fixture.browserManager
+          return fixture.browserHost
             .getVisibleAutomationRuntime({ threadId: input.threadId, tabId: input.tabId })
             .webContents.insertText(input.text);
         },
@@ -162,7 +162,7 @@ test("a real Electron guest commits and reprojects a continuous annotation sessi
           const fixture = (
             globalThis as typeof globalThis & {
               __omnimindVisibleBrowserE2E: {
-                browserManager: {
+                browserHost: {
                   getVisibleAutomationRuntime(value: { threadId: string; tabId: string }): {
                     webContents: { sendInputEvent(event: Record<string, unknown>): void };
                   };
@@ -170,7 +170,7 @@ test("a real Electron guest commits and reprojects a continuous annotation sessi
               };
             }
           ).__omnimindVisibleBrowserE2E;
-          const guest = fixture.browserManager.getVisibleAutomationRuntime({
+          const guest = fixture.browserHost.getVisibleAutomationRuntime({
             threadId: input.threadId,
             tabId: input.tabId,
           }).webContents;
@@ -205,22 +205,22 @@ test("a real Electron guest commits and reprojects a continuous annotation sessi
         const fixture = (
           globalThis as typeof globalThis & {
             __omnimindVisibleBrowserE2E: {
-              browserManager: { startAnnotation(value: typeof input): unknown };
+              browserHost: { startAnnotation(value: typeof input): unknown };
             };
           }
         ).__omnimindVisibleBrowserE2E;
-        return fixture.browserManager.startAnnotation(input);
+        return fixture.browserHost.startAnnotation(input);
       }, payload);
     const cancelAnnotation = async (payload: { threadId: string; tabId: string }): Promise<void> =>
       electronApp.evaluate((_electron, input) => {
         const fixture = (
           globalThis as typeof globalThis & {
             __omnimindVisibleBrowserE2E: {
-              browserManager: { cancelAnnotation(value: typeof input): void };
+              browserHost: { cancelAnnotation(value: typeof input): void };
             };
           }
         ).__omnimindVisibleBrowserE2E;
-        fixture.browserManager.cancelAnnotation(input);
+        fixture.browserHost.cancelAnnotation(input);
       }, payload);
     const syncAnnotationMarkers = async (payload: {
       threadId: string;
@@ -232,11 +232,11 @@ test("a real Electron guest commits and reprojects a continuous annotation sessi
         const fixture = (
           globalThis as typeof globalThis & {
             __omnimindVisibleBrowserE2E: {
-              browserManager: { syncAnnotationMarkers(value: typeof input): void };
+              browserHost: { syncAnnotationMarkers(value: typeof input): void };
             };
           }
         ).__omnimindVisibleBrowserE2E;
-        fixture.browserManager.syncAnnotationMarkers(input);
+        fixture.browserHost.syncAnnotationMarkers(input);
       }, payload);
     /** Every annotation event the host has observed, oldest first. */
     const annotationEvents = async (): Promise<BrowserAnnotationEvent[]> =>
@@ -533,13 +533,13 @@ test("a real Electron guest commits and reprojects a continuous annotation sessi
         const fixture = (
           globalThis as typeof globalThis & {
             __omnimindVisibleBrowserE2E: {
-              browserManager: {
+              browserHost: {
                 navigate(value: typeof input): unknown;
               };
             };
           }
         ).__omnimindVisibleBrowserE2E;
-        return fixture.browserManager.navigate(input);
+        return fixture.browserHost.navigate(input);
       },
       { threadId, tabId, url: site.nextUrl },
     );
@@ -549,7 +549,7 @@ test("a real Electron guest commits and reprojects a continuous annotation sessi
         const fixture = (
           globalThis as typeof globalThis & {
             __omnimindVisibleBrowserE2E: {
-              browserManager: {
+              browserHost: {
                 resolveAnnotationNavigationTarget(value: {
                   threadId: string;
                   tabId: string;
@@ -560,9 +560,9 @@ test("a real Electron guest commits and reprojects a continuous annotation sessi
             };
           }
         ).__omnimindVisibleBrowserE2E;
-        const target = fixture.browserManager.resolveAnnotationNavigationTarget(input);
+        const target = fixture.browserHost.resolveAnnotationNavigationTarget(input);
         if (!target) throw new Error("The committed annotation lost its live navigation target.");
-        return fixture.browserManager.navigate({
+        return fixture.browserHost.navigate({
           threadId: input.threadId,
           tabId: target.tabId,
           url: target.url,
@@ -644,7 +644,7 @@ test("a real Electron guest commits and reprojects a continuous annotation sessi
       .toBe("1");
 
     // This crosses the production BrowserPanel layout effect and desktop IPC:
-    // the main process records the exact bounds delivered to DesktopBrowserManager.
+    // the main process records the exact bounds delivered to DesktopBrowserHost.
     // Run after the pointer journey so Electron's compositor never has to
     // translate an in-flight guest interaction across a host page-zoom change.
     for (const zoomFactor of [0.8, 1.25, 1]) {

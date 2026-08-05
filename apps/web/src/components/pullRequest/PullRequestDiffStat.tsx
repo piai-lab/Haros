@@ -7,7 +7,7 @@
 // Layer: Pull request presentation
 // Exports: PullRequestDiffStat
 
-import { cn } from "~/lib/utils";
+import { cn } from "~/lib/styles";
 import { PR_QUIET_INK_CLASS_NAME } from "./pullRequestText";
 
 function formatCount(value: number): string {

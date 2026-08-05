@@ -5,7 +5,7 @@
 import { CHAT_ASSISTANT_SELECTION_TEXT_MAX_CHARS } from "@omnimind/contracts";
 
 import type { ChatAssistantSelectionAttachment } from "../types";
-import { randomUUID } from "./utils";
+import { randomUUID } from "./identifiers";
 
 const TRAILING_ASSISTANT_SELECTIONS_PATTERN =
   /\n*<assistant_selection>\n([\s\S]*?)\n<\/assistant_selection>\s*$/;

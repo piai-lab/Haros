@@ -2,7 +2,7 @@
 
 import { Popover as PopoverPrimitive } from "@base-ui/react/popover";
 
-import { cn } from "~/lib/utils";
+import { cn } from "~/lib/styles";
 import { APP_TRANSLUCENT_POPUP_SURFACE_CLASS_NAME } from "../chat/composerPickerStyles";
 
 const PopoverCreateHandle = PopoverPrimitive.createHandle;

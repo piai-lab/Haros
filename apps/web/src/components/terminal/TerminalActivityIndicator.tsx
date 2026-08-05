@@ -4,7 +4,7 @@
 
 import type { TerminalVisualState } from "@omnimind/shared/terminalThreads";
 
-import { cn } from "~/lib/utils";
+import { cn } from "~/lib/styles";
 
 interface TerminalActivityIndicatorProps {
   className?: string;

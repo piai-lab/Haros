@@ -10,7 +10,7 @@ import {
   saveOmniMindStorageSnapshot,
   OMNIMIND_STORAGE_SNAPSHOT_MAX_BYTES,
   validateOmniMindStorageSnapshot,
-} from "./desktopStorageMigration";
+} from "./desktopStorageUpgrade";
 
 const snapshot = (exportedAt = "2026-07-09T00:00:00.000Z") => ({
   version: 1 as const,
@@ -21,7 +21,7 @@ const snapshot = (exportedAt = "2026-07-09T00:00:00.000Z") => ({
   },
 });
 
-describe("desktopStorageMigration", () => {
+describe("desktopStorageUpgrade", () => {
   it("round-trips atomically and acknowledges the snapshot", async () => {
     const directory = FS.mkdtempSync(Path.join(OS.tmpdir(), "omnimind-storage-migration-"));
     const target = Path.join(directory, "snapshot.json");

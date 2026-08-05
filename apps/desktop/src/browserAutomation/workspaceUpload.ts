@@ -5,7 +5,7 @@ import { basename, isAbsolute, join, relative, resolve, sep } from "node:path";
 import type { BrowserTabId, BrowserUploadInput, BrowserUploadOutput } from "@omnimind/contracts";
 import { app, type WebContents } from "electron";
 
-import type { BrowserAutomationVisibleRuntime } from "../browserManager";
+import type { BrowserAutomationVisibleRuntime } from "../browserHost";
 import { callFunctionOn, sendCdpCommand, throwIfAborted } from "./cdpRuntime";
 import { browserHostError } from "./hostErrors";
 import type { BrowserSnapshotHandle } from "./semanticSnapshot";

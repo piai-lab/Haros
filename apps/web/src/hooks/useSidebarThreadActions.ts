@@ -32,7 +32,7 @@ import {
   reconcileOptimisticSettledMutation,
   type OptimisticSettledMutation,
 } from "../lib/threadSettle";
-import { randomUUID } from "../lib/utils";
+import { randomUUID } from "../lib/identifiers";
 import { readNativeApi } from "../nativeApi";
 import {
   setProductConversationBoardState,
@@ -94,7 +94,7 @@ export function useSidebarThreadActions(input: {
     "confirmThreadArchive" | "confirmThreadDelete" | "sidebarThreadSortOrder"
   >;
   readonly clearTerminalState: (threadId: ThreadId) => void;
-  readonly handleNewChat: (options?: { fresh?: boolean }) => Promise<unknown>;
+  readonly createChat: (options?: { fresh?: boolean }) => Promise<unknown>;
   readonly projectById: ReadonlyMap<ProjectId, Project>;
   readonly routeSplitViewId: string | null;
   readonly routeThreadId: ThreadId | null;
@@ -107,7 +107,7 @@ export function useSidebarThreadActions(input: {
     activeSplitView,
     appSettings,
     clearTerminalState,
-    handleNewChat,
+    createChat,
     projectById,
     routeSplitViewId,
     routeThreadId,
@@ -497,7 +497,7 @@ export function useSidebarThreadActions(input: {
                 replace: true,
               });
             } else if (prepared.shouldNavigateToFallback) {
-              void handleNewChat({ fresh: true });
+              void createChat({ fresh: true });
             }
           } else if (prepared?.shouldNavigateToFallback) {
             if (prepared.fallbackThreadId) {
@@ -507,7 +507,7 @@ export function useSidebarThreadActions(input: {
                 replace: true,
               });
             } else {
-              void handleNewChat({ fresh: true });
+              void createChat({ fresh: true });
             }
           }
         },
@@ -521,7 +521,7 @@ export function useSidebarThreadActions(input: {
       clearProjectDraftThreadById,
       clearTemporaryThread,
       clearTerminalState,
-      handleNewChat,
+      createChat,
       navigate,
       removeThreadFromSplitViews,
       removeWorktreeMutation,
@@ -578,7 +578,7 @@ export function useSidebarThreadActions(input: {
               replace: true,
             });
           } else {
-            await handleNewChat({ fresh: true });
+            await createChat({ fresh: true });
           }
         }
         return true;
@@ -587,7 +587,7 @@ export function useSidebarThreadActions(input: {
         pendingThreadIds.delete(threadId);
       });
     },
-    [appSettings.sidebarThreadSortOrder, handleNewChat, routeThreadId, sidebarThreads, navigate],
+    [appSettings.sidebarThreadSortOrder, createChat, routeThreadId, sidebarThreads, navigate],
   );
 
   const restoreArchivedThreadFromToast = useCallback(

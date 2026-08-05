@@ -1,10 +1,10 @@
 /**
- * TerminalManager - Terminal session orchestration service interface.
+ * TerminalSupervisor - Terminal session orchestration service interface.
  *
  * Owns terminal lifecycle operations, output fanout, and session state
  * transitions for thread-scoped terminals.
  *
- * @module TerminalManager
+ * @module TerminalSupervisor
  */
 import {
   TerminalAckOutputInput,
@@ -113,9 +113,9 @@ export interface TerminalCloseOpenedAtOrBeforeInput {
 }
 
 /**
- * TerminalManagerShape - Service API for terminal session lifecycle operations.
+ * TerminalSupervisorShape - Service API for terminal session lifecycle operations.
  */
-export interface TerminalManagerShape {
+export interface TerminalSupervisorShape {
   /**
    * Open or attach to a terminal session.
    *
@@ -182,8 +182,9 @@ export interface TerminalManagerShape {
 }
 
 /**
- * TerminalManager - Service tag for terminal session orchestration.
+ * TerminalSupervisor - Service tag for terminal session orchestration.
  */
-export class TerminalManager extends ServiceMap.Service<TerminalManager, TerminalManagerShape>()(
-  "omnimind/terminal/Services/Manager/TerminalManager",
-) {}
+export class TerminalSupervisor extends ServiceMap.Service<
+  TerminalSupervisor,
+  TerminalSupervisorShape
+>()("omnimind/terminal/Services/Supervisor/TerminalSupervisor") {}

@@ -29,7 +29,7 @@ import {
 } from "../composerDraftStore";
 import { requestComposerFocus } from "../composerFocusRequestStore";
 import { useFocusedChatContext } from "../focusedChatContext";
-import { useHandleNewChat } from "../hooks/useHandleNewChat";
+import { useCreateChat } from "../hooks/useCreateChat";
 import {
   effectiveComposerAttachmentCount,
   prepareComposerImageAttachmentsFromFiles,
@@ -209,7 +209,7 @@ async function hydratePersistedAppSnaps(
 export function AppSnapCoordinator() {
   const navigate = useNavigate();
   const { settings } = useAppSettings();
-  const { handleNewChat } = useHandleNewChat();
+  const { createChat } = useCreateChat();
   const { focusedThreadId, splitView } = useFocusedChatContext();
   const openChatThreadPage = useTerminalStateStore((state) => state.openChatThreadPage);
   const focusedTargetRef = useRef<AppSnapThreadTarget | null>(null);
@@ -373,7 +373,7 @@ export function AppSnapCoordinator() {
         target = resolvedTarget.target;
         await activateExistingTarget(target);
       } else {
-        const result = await handleNewChat({ fresh: true });
+        const result = await createChat({ fresh: true });
         if (!result.ok) throw new Error(result.error);
         if (result.threadId) {
           target = { threadId: result.threadId };
@@ -483,7 +483,7 @@ export function AppSnapCoordinator() {
       });
       return persistenceResult;
     },
-    [activateExistingTarget, handleNewChat, openChatThreadPage],
+    [activateExistingTarget, createChat, openChatThreadPage],
   );
   // Keep the native subscription stable while navigation callbacks change.
   // Pending captures can then never cross a cleanup/re-subscribe dedupe gap.
@@ -575,7 +575,7 @@ export function AppSnapCoordinator() {
         type: "error",
         title: "AppSnap failed",
         description: error.message,
-        ...(error.code === "helper-stopped"
+        ...(error.code === "bridge-stopped"
           ? {
               actionProps: {
                 children: "Restart",
