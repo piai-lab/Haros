@@ -12,23 +12,16 @@ import {
 } from "@omnimind/contracts";
 
 import type { QueuedComposerChatTurn, QueuedComposerTurn } from "./composerDraftStore";
-import {
-  getWorkbenchCopy,
-  type WorkbenchCopy,
-  type WorkbenchLocale,
-} from "./i18n/workbenchCopy";
+import { getWorkbenchCopy, type WorkbenchCopy, type WorkbenchLocale } from "./i18n/workbenchCopy";
 import type { ProductProjectionIssue } from "./store/productStore";
-import type { ChatMessage } from "./types";
 import {
-  DEFAULT_INTERACTION_MODE,
-  type ConversationPresentation,
-  type Project,
-} from "./types";
+  canDispatchProductSubmission,
+  type ProductHealthSelection,
+} from "./store/systemHealthStore";
+import type { ChatMessage } from "./types";
+import { DEFAULT_INTERACTION_MODE, type ConversationPresentation, type Project } from "./types";
 
-function fillCopy(
-  template: string,
-  fields: Readonly<Record<string, string | number>>,
-): string {
+function fillCopy(template: string, fields: Readonly<Record<string, string | number>>): string {
   return Object.entries(fields).reduce(
     (result, [key, value]) => result.replaceAll(`{${key}}`, String(value)),
     template,
@@ -67,10 +60,7 @@ function runtimeLineageLabel(
   }
 }
 
-function runtimeActivitySummary(
-  activity: ProductRuntimeActivity,
-  copy: WorkbenchCopy,
-): string {
+function runtimeActivitySummary(activity: ProductRuntimeActivity, copy: WorkbenchCopy): string {
   const detail = activity.detail;
   switch (detail.code) {
     case "session-bound":
@@ -85,6 +75,12 @@ function runtimeActivitySummary(
       return detail.text;
     case "question-requested":
       return detail.question;
+    case "plan-updated":
+      return detail.summary;
+    case "permission-requested":
+      return fillCopy(copy.productActivityPermissionRequested, { title: detail.title });
+    case "permission-rejected":
+      return fillCopy(copy.productActivityPermissionRejected, { title: detail.reason });
     case "control-applied":
       return fillCopy(copy.productActivityControlApplied, {
         control: runtimeControlLabel(detail.control, copy),
@@ -101,6 +97,8 @@ function runtimeActivitySummary(
       );
     case "usage-observed":
       return fillCopy(copy.productActivityUsage, detail);
+    case "context-usage-observed":
+      return fillCopy(copy.productActivityContextUsage, detail);
     case "run-settled":
       return detail.outcome === "succeeded"
         ? copy.productActivitySettledSucceeded
@@ -191,21 +189,24 @@ export function presentProductConversationThread(
   const selection =
     readModel.runs.at(-1)?.requestedSelection ?? readModel.queue.at(-1)?.requestedSelection;
   const selectedModel =
-    selection?.state === "selected"
-      ? selection.runtimeModelId
-      : selection?.requestedRuntimeModelId ?? "";
+    selection?.state === "selected" && selection.runtimeChoice.kind === "product-model"
+      ? selection.runtimeChoice.runtimeModelId
+      : selection?.state === "unavailable" &&
+          selection.requestedRuntimeChoice?.kind === "product-model"
+        ? selection.requestedRuntimeChoice.runtimeModelId
+        : "";
   return {
     id: ThreadId.makeUnsafe(readModel.conversation.id),
     codexThreadId: null,
     projectId: ProjectId.makeUnsafe(readModel.workspace.id),
     title: readModel.conversation.title,
     runtimeIdentity:
-      selection?.state === "selected"
+      selection?.state === "selected" && selection.runtimeChoice.kind === "product-model"
         ? {
             kind: "product",
             engineId: selection.engineId,
-            runtimeModelId: selection.runtimeModelId,
-            thinking: selection.thinking,
+            runtimeModelId: selection.runtimeChoice.runtimeModelId,
+            thinking: selection.runtimeChoice.thinking,
           }
         : null,
     // Thread requires a donor-shaped runtime mode, but Product has not selected
@@ -255,7 +256,7 @@ export function presentProductConversationThread(
     turnDiffSummaries: [],
     activities: [
       ...(readModel.activities ?? []).map((activity) => ({
-        id: EventId.makeUnsafe(`${activity.runId}:${activity.nativeSequence}`),
+        id: EventId.makeUnsafe(`${activity.runId}:${activity.engineSequence}`),
         tone:
           activity.kind === "tool"
             ? ("tool" as const)
@@ -266,7 +267,7 @@ export function presentProductConversationThread(
         summary: runtimeActivitySummary(activity, copy),
         payload: { source: "native-host" },
         turnId: TurnId.makeUnsafe(activity.runId),
-        sequence: activity.nativeSequence,
+        sequence: activity.engineSequence,
         createdAt: activity.createdAt,
       })),
       ...(readModel.recoveries ?? []).map((recovery) => ({
@@ -310,9 +311,7 @@ export function presentProductConversationProject(
 }
 
 /** View-only donor-shaped project chrome derived from a Product Workspace shell fact. */
-export function presentProductWorkspaceProject(
-  workspace: ProductWorkspaceSummary,
-): Project | null {
+export function presentProductWorkspaceProject(workspace: ProductWorkspaceSummary): Project | null {
   if (!workspace.visibleInSidebar || workspace.archivedAt !== null) return null;
   const cwd = workspace.access.primaryFolder ?? workspace.access.managedDirectory;
   if (!cwd) return null;
@@ -361,6 +360,14 @@ export function presentProductConversationError(
 export type ProductConversationPresentation =
   | { readonly kind: "ready" }
   | {
+      readonly kind: "dispatch_blocked";
+      readonly label: string;
+      readonly title: string;
+      readonly description: string;
+      readonly retryLabel: string;
+      readonly dispatchId: string;
+    }
+  | {
       readonly kind:
         | "loading"
         | "unavailable"
@@ -373,10 +380,16 @@ export type ProductConversationPresentation =
       readonly description: string;
     };
 
-function unavailableReason(snapshot: DesktopHealthSnapshot | null): string | null {
+function unavailableReason(
+  snapshot: DesktopHealthSnapshot | null,
+  selection?: ProductHealthSelection,
+): string | null {
   if (snapshot?.service.reason) return snapshot.service.reason;
-  if (snapshot?.nativeHost.reason) return snapshot.nativeHost.reason;
-  if (snapshot?.engineSelection.reason) return snapshot.engineSelection.reason;
+  const selectedEngineIsNative = !selection || selection.engineId === selection.nativeEngineId;
+  if (selectedEngineIsNative) {
+    if (snapshot?.nativeHost.reason) return snapshot.nativeHost.reason;
+    if (snapshot?.engineSelection.reason) return snapshot.engineSelection.reason;
+  }
   return null;
 }
 
@@ -389,10 +402,30 @@ export function presentProductConversationState(input: {
   readonly isKnownConversation: boolean;
   readonly projectionIssue: ProductProjectionIssue | null;
   readonly health: DesktopHealthSnapshot | null;
+  readonly healthSelection?: ProductHealthSelection | undefined;
   readonly locale?: WorkbenchLocale | undefined;
 }): ProductConversationPresentation {
   const copy = getWorkbenchCopy(input.locale);
   const receipt = input.readModel?.runs.at(-1)?.receipt.receipt;
+  const latestRun = input.readModel?.runs.at(-1);
+
+  if (
+    receipt?.state === "pending" &&
+    receipt.blocked?.kind === "selected-engine-unavailable" &&
+    latestRun
+  ) {
+    return {
+      kind: "dispatch_blocked",
+      label: copy.productDispatchBlockedLabel,
+      title: copy.productDispatchBlockedTitle,
+      description: copy.productDispatchBlockedDescription.replace(
+        "{engine}",
+        latestRun.requestedSelection.engineId,
+      ),
+      retryLabel: copy.productDispatchBlockedRetry,
+      dispatchId: latestRun.receipt.dispatchId,
+    };
+  }
 
   if (receipt?.state === "rejected") {
     return {
@@ -444,12 +477,8 @@ export function presentProductConversationState(input: {
       description: copy.executionUnavailableDescription,
     };
   }
-  if (
-    health.service.status !== "ready" ||
-    health.nativeHost.status !== "ready" ||
-    health.engineSelection.status !== "available"
-  ) {
-    const reason = unavailableReason(health);
+  if (!canDispatchProductSubmission(health, input.healthSelection)) {
+    const reason = unavailableReason(health, input.healthSelection);
     return {
       kind: "execution_unavailable",
       label: copy.executionUnavailableLabel,

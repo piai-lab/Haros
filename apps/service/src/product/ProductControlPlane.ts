@@ -49,6 +49,7 @@ import {
   ProductPutQueueItemInput,
   ProductQueueItem,
   ProductReadFactsInput,
+  ProductRetryDispatchInput,
   ProductRemoveEntryMarkerInput,
   ProductRemoveEntryPinInput,
   ProductReorderGroupsInput,
@@ -82,19 +83,25 @@ import {
   ProductWorkspace,
   ProductWorkspaceAccess,
   ProductWorkspaceSummary,
-  type NativeHostRuntimeFact,
-  type NativeHostRuntimeSnapshot,
+  ProductExecutionUpdate,
+  type ProductExecutionFact,
+  type ProductExecutionSnapshot,
   type ProductDispatchId,
-  type ProductResolvedSelection,
+  ProductResolvedSelection,
   type ProductRunId,
 } from "@omnimind/contracts";
 import { Effect, Layer, Schema, ServiceMap } from "effect";
 
 import { ServerConfig } from "../config";
 import { ensurePrivateFileSync } from "../privatePathPermissions";
+import {
+  acquireDatabaseLifecycleLock,
+  releaseDatabaseLifecycleLock,
+} from "../persistence/DatabaseLifecycleLock";
 
 export const PRODUCT_DATABASE_FILENAME = "product-state-v1.sqlite";
-export const PRODUCT_SCHEMA_VERSION = 1;
+export const PRODUCT_SCHEMA_VERSION = 2;
+export const PRODUCT_MIGRATION_REVISION = "selection-schema-v2";
 const RUNTIME_CATALOG_OBSERVATION_INTERVAL_MS = 5_000;
 const productIsoNow = () => new Date().toISOString();
 
@@ -125,7 +132,8 @@ const productSchemaSql = `
   PRAGMA busy_timeout = 5000;
 
   CREATE TABLE IF NOT EXISTS product_meta (
-    schema_version INTEGER NOT NULL CHECK (schema_version = 1)
+    schema_version INTEGER NOT NULL CHECK (schema_version = 2),
+    migration_revision TEXT NOT NULL CHECK (migration_revision = 'selection-schema-v2')
   );
 
   CREATE TABLE IF NOT EXISTS product_workspaces (
@@ -217,7 +225,7 @@ const productSchemaSql = `
     entry_id TEXT NOT NULL UNIQUE REFERENCES product_entries(entry_id) ON DELETE RESTRICT,
     requested_selection_json TEXT NOT NULL,
     workspace_observation_json TEXT NOT NULL,
-    package_generation TEXT NOT NULL,
+    package_generation TEXT,
     receipt_id TEXT NOT NULL UNIQUE,
     created_at TEXT NOT NULL,
     updated_at TEXT NOT NULL
@@ -248,11 +256,11 @@ const productSchemaSql = `
 
   CREATE TABLE IF NOT EXISTS product_runtime_activities (
     run_id TEXT NOT NULL REFERENCES product_runs(run_id) ON DELETE CASCADE,
-    native_sequence INTEGER NOT NULL CHECK (native_sequence > 0),
+    engine_sequence INTEGER NOT NULL CHECK (engine_sequence > 0),
     kind TEXT NOT NULL,
     summary TEXT NOT NULL,
     created_at TEXT NOT NULL,
-    PRIMARY KEY (run_id, native_sequence)
+    PRIMARY KEY (run_id, engine_sequence)
   );
 
   CREATE TABLE IF NOT EXISTS product_runtime_recoveries (
@@ -269,7 +277,7 @@ const productSchemaSql = `
 
   CREATE TABLE IF NOT EXISTS product_runtime_fact_cursors (
     run_id TEXT PRIMARY KEY REFERENCES product_runs(run_id) ON DELETE CASCADE,
-    native_sequence INTEGER NOT NULL CHECK (native_sequence >= 0)
+    engine_sequence INTEGER NOT NULL CHECK (engine_sequence >= 0)
   );
 
   CREATE TABLE IF NOT EXISTS product_queue_items (
@@ -289,9 +297,11 @@ const productSchemaSql = `
     dispatch_id TEXT PRIMARY KEY,
     run_id TEXT NOT NULL UNIQUE REFERENCES product_runs(run_id) ON DELETE CASCADE,
     state TEXT NOT NULL CHECK (state IN ('pending', 'sending', 'terminal')),
-    send_boundary TEXT NOT NULL CHECK (send_boundary IN ('pre-send', 'sent', 'accepted')),
+    send_boundary TEXT NOT NULL CHECK (send_boundary IN ('pre-send', 'sent', 'accepted', 'observed')),
     attempt_count INTEGER NOT NULL DEFAULT 0 CHECK (attempt_count >= 0),
     automatic_replay_count INTEGER NOT NULL DEFAULT 0 CHECK (automatic_replay_count = 0),
+    engine_id TEXT NOT NULL,
+    prepared_selection_json TEXT,
     updated_at TEXT NOT NULL
   );
 
@@ -410,18 +420,52 @@ const requiredNumber = (row: Record<string, unknown>, key: string): number => {
   return value;
 };
 
+const nullableString = (row: Record<string, unknown>, key: string): string | null => {
+  const value = row[key];
+  if (value !== null && typeof value !== "string") {
+    throw new ProductFailure("PRODUCT_STORE_DECODE", `Product Store column ${key} was invalid.`);
+  }
+  return value;
+};
+
+const receiptOperationRef = (receipt: ProductDispatchReceipt): string | null => {
+  if (receipt.state === "accepted") return receipt.operationRef;
+  if (
+    (receipt.state === "running" ||
+      receipt.state === "settled" ||
+      receipt.state === "outcome_unknown") &&
+    receipt.evidence.kind === "accepted-operation"
+  )
+    return receipt.evidence.operationRef;
+  return null;
+};
+
+const evidenceSendBoundary = (evidence: {
+  readonly kind: "accepted-operation" | "observed-delivery";
+}): "accepted" | "observed" => (evidence.kind === "accepted-operation" ? "accepted" : "observed");
+
 export interface ProductExecutionBoundary {
-  readonly preflight?: (input: {
+  /**
+   * The boundary guarantees that every subscribed update carries the concrete Engine source that
+   * emitted it. Literal multi-Engine gateways set this after binding each child subscription.
+   */
+  readonly sourceEngineBoundFacts?: true;
+  readonly prepare?: (input: {
     readonly dispatchId: ProductDispatchId;
-    readonly run: ProductRun;
+    readonly conversationId: ProductConversationId;
+    readonly runId: ProductRunId;
+    readonly requestedSelection: ProductSelectedRuntime;
+    readonly workspace: ProductWorkspace;
+    readonly resources: ReadonlyArray<ProductResourceRef>;
     readonly text: string;
     readonly priorLineageRef: string | null;
-  }) => void;
+  }) => Effect.Effect<ProductPreparedExecution, ProductControlPlaneError>;
   readonly attempt: (input: {
     readonly dispatchId: ProductDispatchId;
     readonly run: ProductRun;
     readonly text: string;
     readonly priorLineageRef: string | null;
+    readonly prepared: ProductPreparedExecution | null;
     /** Must complete before any non-idempotent send crosses the process boundary. */
     readonly markSent: () => Effect.Effect<void, ProductControlPlaneError>;
   }) => Effect.Effect<ProductExecutionObservation, ProductControlPlaneError>;
@@ -429,9 +473,7 @@ export interface ProductExecutionBoundary {
     listener: (
       runId: ProductRunId,
       observation:
-        | { readonly kind: "facts"; readonly facts: ReadonlyArray<NativeHostRuntimeFact> }
-        | { readonly kind: "snapshot"; readonly snapshot: NativeHostRuntimeSnapshot }
-        | { readonly kind: "outcome-unknown" }
+        | ProductExecutionUpdate
         | {
             readonly kind: "delivery-accepted";
             readonly operationRef: string;
@@ -444,21 +486,30 @@ export interface ProductExecutionBoundary {
             readonly message: string;
             readonly retryable: boolean;
           },
+      sourceEngineId?: string,
     ) => void,
   ) => () => void;
   readonly resumeFacts?: (runId: ProductRunId, operationRef: string) => void;
   readonly bindRunPackageGeneration?: (runId: ProductRunId, generation: string) => void;
   readonly afterObservationApplied?: (
     runId: ProductRunId,
+    engineId: string,
     observation: ProductExecutionObservation,
   ) => void;
   readonly control?: (input: {
-    readonly operationRef: string;
+    readonly run: ProductRun;
+    readonly operationRef: string | null;
     readonly control: ProductControlRunInput["control"];
     readonly text: string | null;
   }) => Effect.Effect<ProductControlRunResult, ProductControlPlaneError>;
   readonly close?: () => Promise<void>;
   readonly catalog?: () => Effect.Effect<ProductRuntimeCatalog | null, ProductControlPlaneError>;
+}
+
+export interface ProductPreparedExecution {
+  readonly engineId: string;
+  readonly resolvedSelection: ProductResolvedSelection | null;
+  readonly close: () => Promise<void>;
 }
 
 /** Closed boundary used when no authenticated native execution client is attached. */
@@ -528,11 +579,14 @@ export function makeProductExecutionFixture(
 export interface ProductOutboxDiagnostic {
   readonly dispatchId: string;
   readonly runId: string;
+  readonly engineId: string;
   readonly state: "pending" | "sending" | "terminal";
-  readonly sendBoundary: "pre-send" | "sent" | "accepted";
+  readonly sendBoundary: ProductSendBoundary;
   readonly attemptCount: number;
   readonly automaticReplayCount: 0;
 }
+
+type ProductSendBoundary = "pre-send" | "sent" | "accepted" | "observed";
 
 export interface ProductControlPlaneShape {
   readonly createWorkspace: (
@@ -638,6 +692,9 @@ export interface ProductControlPlaneShape {
   readonly submitQueueItem: (
     input: ProductSubmitQueueItemInput,
   ) => Effect.Effect<ProductSubmitResult, ProductControlPlaneError>;
+  readonly retryDispatch: (
+    input: ProductRetryDispatchInput,
+  ) => Effect.Effect<ProductSubmitResult, ProductControlPlaneError>;
   readonly controlRun: (
     input: ProductControlRunInput,
   ) => Effect.Effect<ProductControlRunResult, ProductControlPlaneError>;
@@ -693,6 +750,16 @@ function initializeSchema(database: PortableDatabase): void {
      SET updated_at = observed_at
      WHERE updated_at = '1970-01-01T00:00:00.000Z';`,
   );
+
+  const outboxColumns = new Set(
+    database
+      .prepare("PRAGMA table_info(product_outbox)")
+      .all()
+      .map((raw) => String(asRecord(raw).name)),
+  );
+  if (!outboxColumns.has("prepared_selection_json")) {
+    database.exec("ALTER TABLE product_outbox ADD COLUMN prepared_selection_json TEXT");
+  }
 
   const factColumns = database.prepare("PRAGMA table_info(product_facts)").all();
   const factGroupColumn = factColumns.find((raw) => String(asRecord(raw).name) === "group_id");
@@ -771,15 +838,21 @@ function initializeSchema(database: PortableDatabase): void {
       database.exec(`ALTER TABLE product_conversations ADD COLUMN ${definition}`);
     }
   }
-  const versionRows = database.prepare("SELECT schema_version FROM product_meta").all();
+  const versionRows = database
+    .prepare("SELECT schema_version, migration_revision FROM product_meta")
+    .all();
   if (versionRows.length === 0) {
     database
-      .prepare("INSERT INTO product_meta(schema_version) VALUES (?)")
-      .run(PRODUCT_SCHEMA_VERSION);
+      .prepare("INSERT INTO product_meta(schema_version, migration_revision) VALUES (?, ?)")
+      .run(PRODUCT_SCHEMA_VERSION, PRODUCT_MIGRATION_REVISION);
     return;
   }
   const version = requiredNumber(asRecord(versionRows[0]), "schema_version");
-  if (version !== PRODUCT_SCHEMA_VERSION || versionRows.length !== 1) {
+  if (
+    version !== PRODUCT_SCHEMA_VERSION ||
+    versionRows.length !== 1 ||
+    asRecord(versionRows[0]).migration_revision !== PRODUCT_MIGRATION_REVISION
+  ) {
     throw new ProductFailure(
       "PRODUCT_SCHEMA_UNSUPPORTED",
       `Product Store schema ${version} is unsupported; expected ${PRODUCT_SCHEMA_VERSION}.`,
@@ -874,11 +947,11 @@ export async function readProductPackageLifecycleFacts(
     }
     for (const raw of database
       .prepare(
-        `SELECT r.package_generation, a.summary, a.created_at, a.native_sequence
+        `SELECT r.package_generation, a.summary, a.created_at, a.engine_sequence
          FROM product_runtime_activities a
          JOIN product_runs r ON r.run_id = a.run_id
          WHERE a.kind = 'package' AND json_extract(a.summary, '$.code') = 'package-failed'
-         ORDER BY a.created_at ASC, a.native_sequence ASC`,
+         ORDER BY a.created_at ASC, a.engine_sequence ASC`,
       )
       .all()) {
       const row = asRecord(raw);
@@ -909,9 +982,12 @@ function makeControlPlane(
   initialRuntimeCatalog: ProductRuntimeCatalog | null,
 ): ProductControlPlaneShape {
   let runtimeCatalog = initialRuntimeCatalog;
+  const preparedExecutions = new Map<string, ProductPreparedExecution>();
   let lastRuntimeCatalogObservationAt = Number.NEGATIVE_INFINITY;
   const statement = (sql: string) => database.prepare(sql);
   const generatedId = () => randomUUID();
+  const usesEngineSessionExecution = (run: ProductRun): boolean =>
+    run.requestedSelection.runtimeChoice.kind === "engine-session-current";
 
   const withTransaction = <T>(operation: () => T): T => {
     database.exec("BEGIN IMMEDIATE");
@@ -1070,18 +1146,39 @@ function makeControlPlane(
         true,
       );
     }
-    if (
-      selection.engineId !== runtimeCatalog.engineId ||
-      selection.packageGeneration !== runtimeCatalog.packageGeneration
-    ) {
+    const engine = runtimeCatalog.engines.find(
+      (candidate) => candidate.engineId === selection.engineId,
+    );
+    if (!engine || engine.availability.state !== "available") {
       throw new ProductFailure(
         "PRODUCT_RUNTIME_SELECTION_STALE",
-        "The requested Engine or Package generation is no longer current.",
+        "The requested Engine is no longer available.",
         true,
       );
     }
-    const model = runtimeCatalog.models.find(
-      (candidate) => candidate.id === selection.runtimeModelId,
+    if (
+      selection.packageGeneration !==
+      (selection.engineId === runtimeCatalog.defaultEngineId
+        ? runtimeCatalog.packageGeneration
+        : null)
+    ) {
+      throw new ProductFailure(
+        "PRODUCT_RUNTIME_SELECTION_STALE",
+        "The requested Package generation is no longer current.",
+        true,
+      );
+    }
+    const runtimeChoice = selection.runtimeChoice;
+    if (runtimeChoice.kind === "engine-session-current") return;
+    if (engine.modelSelection.kind !== "product-model") {
+      throw new ProductFailure(
+        "PRODUCT_RUNTIME_MODEL_UNKNOWN",
+        "The selected Engine does not expose Product model selection.",
+        true,
+      );
+    }
+    const model = engine.modelSelection.models.find(
+      (candidate) => candidate.id === runtimeChoice.runtimeModelId,
     );
     if (!model) {
       throw new ProductFailure(
@@ -1102,8 +1199,10 @@ function makeControlPlane(
       );
     }
     if (
-      selection.thinking !== null &&
-      !model.thinkingLevels.includes(selection.thinking as (typeof model.thinkingLevels)[number])
+      runtimeChoice.thinking !== null &&
+      !model.thinkingLevels.includes(
+        runtimeChoice.thinking as (typeof model.thinkingLevels)[number],
+      )
     ) {
       throw new ProductFailure(
         "PRODUCT_RUNTIME_THINKING_UNSUPPORTED",
@@ -1174,11 +1273,33 @@ function makeControlPlane(
         requiredString(row, "workspace_observation_json"),
       ),
       resources: readResourcesByRun(runId),
-      packageGeneration: requiredString(row, "package_generation"),
+      packageGeneration: nullableString(row, "package_generation"),
       receipt: readReceiptByRun(runId),
       createdAt: requiredString(row, "created_at"),
       updatedAt: requiredString(row, "updated_at"),
     });
+  };
+
+  const compatiblePriorLineageRef = (
+    conversationId: ProductConversationId,
+    engineId: string,
+  ): string | null => {
+    const binding = statement(
+      `SELECT b.lineage_ref, r.rowid AS run_rowid
+       FROM product_engine_bindings b
+       JOIN product_runs r ON r.run_id = b.run_id
+       WHERE b.conversation_id = ? AND b.engine_id = ?
+       ORDER BY r.rowid DESC LIMIT 1`,
+    ).get(conversationId, engineId);
+    if (!binding) return null;
+    const row = asRecord(binding);
+    const diverged = statement(
+      `SELECT 1 FROM product_runs
+       WHERE conversation_id = ? AND rowid > ?
+         AND json_extract(requested_selection_json, '$.engineId') <> ?
+       LIMIT 1`,
+    ).get(conversationId, requiredNumber(row, "run_rowid"), engineId);
+    return diverged ? null : requiredString(row, "lineage_ref");
   };
 
   const readQueue = (conversationId: string): ReadonlyArray<ProductQueueItem> =>
@@ -1326,18 +1447,18 @@ function makeControlPlane(
       .all(conversationId)
       .map((raw) => requiredString(asRecord(raw), "run_id"));
     const activities = statement(
-      `SELECT a.run_id, a.native_sequence, a.kind, a.summary AS detail_json, a.created_at
+      `SELECT a.run_id, a.engine_sequence, a.kind, a.summary AS detail_json, a.created_at
        FROM product_runtime_activities a
        JOIN product_runs r ON r.run_id = a.run_id
        WHERE r.conversation_id = ?
-       ORDER BY a.created_at ASC, a.run_id ASC, a.native_sequence ASC`,
+       ORDER BY a.created_at ASC, a.run_id ASC, a.engine_sequence ASC`,
     )
       .all(conversationId)
       .map((raw) => {
         const row = asRecord(raw);
         return decode(ProductRuntimeActivity, {
           runId: requiredString(row, "run_id"),
-          nativeSequence: requiredNumber(row, "native_sequence"),
+          engineSequence: requiredNumber(row, "engine_sequence"),
           kind: requiredString(row, "kind"),
           detail: decodeJson(ProductRuntimeActivityDetail, requiredString(row, "detail_json")),
           createdAt: requiredString(row, "created_at"),
@@ -1516,7 +1637,7 @@ function makeControlPlane(
     runId: string,
     receipt: ProductDispatchReceipt,
     outboxState: "pending" | "sending" | "terminal",
-    sendBoundary: "pre-send" | "sent" | "accepted",
+    sendBoundary: ProductSendBoundary,
   ): void => {
     const updatedAt = productIsoNow();
     statement(
@@ -2944,10 +3065,33 @@ function makeControlPlane(
         );
       }
       const receipt = run.receipt.receipt;
-      if (receipt.state !== "accepted" && receipt.state !== "running") {
+      const operationRef = receiptOperationRef(receipt);
+      const isNoAckAbort =
+        (input.control === "abort" || input.control === "cancel") &&
+        operationRef === null &&
+        usesEngineSessionExecution(run) &&
+        "abort" in receipt &&
+        (receipt.state === "sent" || receipt.state === "running");
+      if (
+        receipt.state === "sent" &&
+        usesEngineSessionExecution(run) &&
+        (input.control === "steer" || input.control === "follow-up")
+      ) {
         return decode(ProductControlRunResult, {
-          operationRef:
-            "operationRef" in receipt ? receipt.operationRef : `unaccepted:${input.runId}`,
+          operationRef: null,
+          control: input.control,
+          result: "unsupported",
+          code: "control-unsupported",
+          message: "OpenCode does not support this control for the current Run.",
+        });
+      }
+      if (
+        receipt.state !== "accepted" &&
+        receipt.state !== "running" &&
+        !(receipt.state === "sent" && isNoAckAbort)
+      ) {
+        return decode(ProductControlRunResult, {
+          operationRef,
           control: input.control,
           result: receipt.state === "settled" ? "too-late" : "unknown",
           code: receipt.state === "settled" ? "control-too-late" : "operation-unknown",
@@ -2959,7 +3103,7 @@ function makeControlPlane(
       }
       if ((input.control === "steer" || input.control === "follow-up") && input.text === null) {
         return decode(ProductControlRunResult, {
-          operationRef: receipt.operationRef,
+          operationRef,
           control: input.control,
           result: "unsupported",
           code: "control-unsupported",
@@ -2968,18 +3112,80 @@ function makeControlPlane(
       }
       if (!executionBoundary.control) {
         return decode(ProductControlRunResult, {
-          operationRef: receipt.operationRef,
+          operationRef,
           control: input.control,
           result: "unsupported",
           code: "control-unsupported",
           message: "The active execution boundary does not expose native controls.",
         });
       }
-      return yield* executionBoundary.control({
-        operationRef: receipt.operationRef,
+      if (isNoAckAbort && receipt.abort !== null) {
+        return decode(ProductControlRunResult, {
+          operationRef: null,
+          control: input.control,
+          result: "requested",
+          code: "control-unacknowledged",
+          message: "The cancellation request is already recorded without an acknowledgement.",
+        });
+      }
+      if (isNoAckAbort) {
+        const requestedAt = productIsoNow();
+        // Persist the user's request before the unacknowledged wire boundary. A crash on either
+        // side must retain one durable intent and must never cause a second cancel write.
+        yield* effect(() =>
+          withTransaction(() => {
+            const current = readRun(input.runId).receipt.receipt;
+            if (
+              (current.state !== "sent" && current.state !== "running") ||
+              !("abort" in current) ||
+              current.abort !== null
+            )
+              return;
+            const outbox = statement(
+              "SELECT state, send_boundary FROM product_outbox WHERE run_id = ?",
+            ).get(input.runId);
+            if (!outbox) return;
+            const row = asRecord(outbox);
+            updateReceipt(
+              input.runId,
+              { ...current, abort: { requestedAt, confirmed: false } },
+              requiredString(row, "state") as "pending" | "sending" | "terminal",
+              requiredString(row, "send_boundary") as ProductSendBoundary,
+            );
+          }),
+        );
+      }
+      const result = yield* executionBoundary.control({
+        run,
+        operationRef,
         control: input.control,
         text: input.text,
       });
+      if (
+        result.result === "requested" &&
+        (input.control === "abort" || input.control === "cancel")
+      ) {
+        const requestedAt = productIsoNow();
+        yield* effect(() =>
+          withTransaction(() => {
+            const current = readRun(input.runId).receipt.receipt;
+            if (!("abort" in current)) return;
+            if (current.abort !== null) return;
+            const outbox = statement(
+              "SELECT state, send_boundary FROM product_outbox WHERE run_id = ?",
+            ).get(input.runId);
+            if (!outbox) return;
+            const row = asRecord(outbox);
+            updateReceipt(
+              input.runId,
+              { ...current, abort: { requestedAt, confirmed: false } },
+              requiredString(row, "state") as "pending" | "sending" | "terminal",
+              requiredString(row, "send_boundary") as ProductSendBoundary,
+            );
+          }),
+        );
+      }
+      return result;
     });
 
   const putQueueItem: ProductControlPlaneShape["putQueueItem"] = (input) =>
@@ -3132,171 +3338,211 @@ function makeControlPlane(
     );
 
   const admitQueueItem: ProductControlPlaneShape["admitQueueItem"] = (input) =>
-    effect(() =>
-      withTransaction(() => {
-        const blockingReceipt = statement(
-          `SELECT o.state, r.receipt_json
-           FROM product_runs pr
-           JOIN product_outbox o ON o.run_id = pr.run_id
-           JOIN product_operation_receipts r ON r.run_id = pr.run_id
-           WHERE pr.conversation_id = ?`,
-        )
-          .all(input.conversationId)
-          .map((raw) => {
-            const row = asRecord(raw);
-            const receipt = decodeJson(ProductDispatchReceipt, requiredString(row, "receipt_json"));
-            return {
-              receipt,
-              blocks:
-                requiredString(row, "state") !== "terminal" ||
-                receipt.state === "accepted" ||
-                receipt.state === "running" ||
-                receipt.state === "delivery_unknown" ||
-                receipt.state === "outcome_unknown",
-            };
-          })
-          .find((candidate) => candidate.blocks)?.receipt;
-        if (blockingReceipt) {
-          if (
-            blockingReceipt.state === "delivery_unknown" ||
-            blockingReceipt.state === "outcome_unknown"
-          ) {
-            throw new ProductFailure(
-              "PRODUCT_RUN_UNRESOLVED",
-              "This Conversation has an unresolved Engine dispatch. The item remains in the editable Queue until reconciliation settles it.",
-              true,
-            );
-          }
-          throw new ProductFailure(
-            "PRODUCT_RUN_ACTIVE",
-            "This Conversation already owns a nonterminal Engine dispatch. The item remains in the editable Queue.",
-            true,
-          );
-        }
+    Effect.gen(function* () {
+      const preparationInput = yield* effect(() => {
         const queueItem = readQueue(input.conversationId).find((item) => item.id === input.itemId);
         if (!queueItem)
           throw new ProductFailure("PRODUCT_QUEUE_ITEM_NOT_FOUND", "Queue item was not found.");
-        if (queueItem.revision !== input.expectedRevision) {
+        if (queueItem.revision !== input.expectedRevision)
           throw new ProductFailure(
             "PRODUCT_QUEUE_REVISION_CONFLICT",
             "The Queue item changed before admission.",
             true,
           );
-        }
         assertDispatchableSelection(queueItem.requestedSelection);
-        const workspaceId = readSummary(input.conversationId).workspaceId;
-        const workspace = readWorkspace(workspaceId);
+        const workspace = readWorkspace(readSummary(input.conversationId).workspaceId);
         assertResourceAuthority(workspace, queueItem.resources);
-        const timestamp = productIsoNow();
-        const pendingReceipt: ProductDispatchReceipt = {
-          state: "pending",
-          lastConfirmedBoundary: "pre-send",
+        return {
+          requestedSelection: queueItem.requestedSelection,
+          workspace,
+          resources: queueItem.resources,
+          text: queueItem.text,
+          priorLineageRef: compatiblePriorLineageRef(
+            input.conversationId,
+            queueItem.requestedSelection.engineId,
+          ),
         };
-        statement(
-          `INSERT INTO product_entries(entry_id, conversation_id, run_id, role, body, created_at)
+      });
+      const prepared = executionBoundary.prepare
+        ? yield* executionBoundary.prepare({
+            dispatchId: input.dispatchId,
+            conversationId: input.conversationId,
+            runId: input.runId,
+            ...preparationInput,
+          })
+        : null;
+      const admitted = yield* effect(() => {
+        try {
+          return withTransaction(() => {
+            const blockingReceipt = statement(
+              `SELECT o.state, r.receipt_json
+           FROM product_runs pr
+           JOIN product_outbox o ON o.run_id = pr.run_id
+           JOIN product_operation_receipts r ON r.run_id = pr.run_id
+           WHERE pr.conversation_id = ?`,
+            )
+              .all(input.conversationId)
+              .map((raw) => {
+                const row = asRecord(raw);
+                const receipt = decodeJson(
+                  ProductDispatchReceipt,
+                  requiredString(row, "receipt_json"),
+                );
+                return {
+                  receipt,
+                  blocks:
+                    requiredString(row, "state") !== "terminal" ||
+                    receipt.state === "accepted" ||
+                    receipt.state === "running" ||
+                    receipt.state === "delivery_unknown" ||
+                    receipt.state === "outcome_unknown",
+                };
+              })
+              .find((candidate) => candidate.blocks)?.receipt;
+            if (blockingReceipt) {
+              if (
+                blockingReceipt.state === "delivery_unknown" ||
+                blockingReceipt.state === "outcome_unknown"
+              ) {
+                throw new ProductFailure(
+                  "PRODUCT_RUN_UNRESOLVED",
+                  "This Conversation has an unresolved Engine dispatch. The item remains in the editable Queue until reconciliation settles it.",
+                  true,
+                );
+              }
+              throw new ProductFailure(
+                "PRODUCT_RUN_ACTIVE",
+                "This Conversation already owns a nonterminal Engine dispatch. The item remains in the editable Queue.",
+                true,
+              );
+            }
+            const queueItem = readQueue(input.conversationId).find(
+              (item) => item.id === input.itemId,
+            );
+            if (!queueItem)
+              throw new ProductFailure("PRODUCT_QUEUE_ITEM_NOT_FOUND", "Queue item was not found.");
+            if (queueItem.revision !== input.expectedRevision) {
+              throw new ProductFailure(
+                "PRODUCT_QUEUE_REVISION_CONFLICT",
+                "The Queue item changed before admission.",
+                true,
+              );
+            }
+            assertDispatchableSelection(queueItem.requestedSelection);
+            const workspaceId = readSummary(input.conversationId).workspaceId;
+            const workspace = readWorkspace(workspaceId);
+            assertResourceAuthority(workspace, queueItem.resources);
+            const timestamp = productIsoNow();
+            const pendingReceipt: ProductDispatchReceipt = {
+              state: "pending",
+              lastConfirmedBoundary: "pre-send",
+              blocked: null,
+            };
+            statement(
+              `INSERT INTO product_entries(entry_id, conversation_id, run_id, role, body, created_at)
            VALUES (?, ?, ?, 'user', ?, ?)`,
-        ).run(input.entryId, input.conversationId, input.runId, queueItem.text, timestamp);
-        statement(
-          `INSERT INTO product_runs(
+            ).run(input.entryId, input.conversationId, input.runId, queueItem.text, timestamp);
+            statement(
+              `INSERT INTO product_runs(
              run_id, conversation_id, entry_id, requested_selection_json,
              workspace_observation_json, package_generation, receipt_id, created_at, updated_at
            ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?)`,
-        ).run(
-          input.runId,
-          input.conversationId,
-          input.entryId,
-          encodeJson(ProductSelectedRuntime, queueItem.requestedSelection),
-          encodeJson(ProductWorkspace, workspace),
-          queueItem.requestedSelection.packageGeneration,
-          input.receiptId,
-          timestamp,
-          timestamp,
-        );
-        for (const resource of queueItem.resources) {
-          statement(
-            `INSERT INTO product_resource_refs(resource_id, conversation_id, run_id, resource_json)
+            ).run(
+              input.runId,
+              input.conversationId,
+              input.entryId,
+              encodeJson(ProductSelectedRuntime, queueItem.requestedSelection),
+              encodeJson(ProductWorkspace, workspace),
+              queueItem.requestedSelection.packageGeneration,
+              input.receiptId,
+              timestamp,
+              timestamp,
+            );
+            for (const resource of queueItem.resources) {
+              statement(
+                `INSERT INTO product_resource_refs(resource_id, conversation_id, run_id, resource_json)
              VALUES (?, ?, ?, ?)`,
-          ).run(
-            resource.id,
-            input.conversationId,
-            input.runId,
-            encodeJson(ProductResourceRef, resource),
-          );
-        }
-        statement(
-          `INSERT INTO product_operation_receipts(
+              ).run(
+                resource.id,
+                input.conversationId,
+                input.runId,
+                encodeJson(ProductResourceRef, resource),
+              );
+            }
+            statement(
+              `INSERT INTO product_operation_receipts(
              receipt_id, dispatch_id, run_id, receipt_json, updated_at
            ) VALUES (?, ?, ?, ?, ?)`,
-        ).run(
-          input.receiptId,
-          input.dispatchId,
-          input.runId,
-          encodeJson(ProductDispatchReceipt, pendingReceipt),
-          timestamp,
-        );
-        statement(
-          `INSERT INTO product_outbox(
+            ).run(
+              input.receiptId,
+              input.dispatchId,
+              input.runId,
+              encodeJson(ProductDispatchReceipt, pendingReceipt),
+              timestamp,
+            );
+            statement(
+              `INSERT INTO product_outbox(
              dispatch_id, run_id, state, send_boundary, attempt_count,
-             automatic_replay_count, updated_at
-           ) VALUES (?, ?, 'pending', 'pre-send', 0, 0, ?)`,
-        ).run(input.dispatchId, input.runId, timestamp);
-        statement(
-          `INSERT INTO product_submit_admissions(dispatch_id, request_json)
+             automatic_replay_count, engine_id, prepared_selection_json, updated_at
+           ) VALUES (?, ?, 'pending', 'pre-send', 0, 0, ?, ?, ?)`,
+            ).run(
+              input.dispatchId,
+              input.runId,
+              queueItem.requestedSelection.engineId,
+              prepared?.resolvedSelection
+                ? encodeJson(ProductResolvedSelection, prepared.resolvedSelection)
+                : null,
+              timestamp,
+            );
+            statement(
+              `INSERT INTO product_submit_admissions(dispatch_id, request_json)
            VALUES (?, ?)`,
-        ).run(input.dispatchId, encodeJson(ProductSubmitQueueItemInput, input));
-        const run = readRun(input.runId);
-        const priorBinding = statement(
-          `SELECT lineage_ref FROM product_engine_bindings
-           WHERE conversation_id = ? ORDER BY rowid DESC LIMIT 1`,
-        ).get(run.conversationId);
-        executionBoundary.preflight?.({
-          dispatchId: input.dispatchId,
-          run,
-          text: queueItem.text,
-          priorLineageRef: priorBinding
-            ? requiredString(asRecord(priorBinding), "lineage_ref")
-            : null,
-        });
-        statement(
-          "DELETE FROM product_queue_items WHERE queue_item_id = ? AND conversation_id = ?",
-        ).run(input.itemId, input.conversationId);
-        const entry = decode(ProductEntry, {
-          id: input.entryId,
-          conversationId: input.conversationId,
-          runId: input.runId,
-          role: "user",
-          text: queueItem.text,
-          createdAt: timestamp,
-        });
-        appendFact(input.conversationId, {
-          kind: "entry-admitted",
-          conversationId: input.conversationId,
-          entry,
-          run,
-        });
-        appendFact(input.conversationId, {
-          kind: "queue-changed",
-          conversationId: input.conversationId,
-          queue: readQueue(input.conversationId),
-        });
-        return snapshot(input.conversationId);
-      }),
-    );
+            ).run(input.dispatchId, encodeJson(ProductSubmitQueueItemInput, input));
+            const run = readRun(input.runId);
+            statement(
+              "DELETE FROM product_queue_items WHERE queue_item_id = ? AND conversation_id = ?",
+            ).run(input.itemId, input.conversationId);
+            const entry = decode(ProductEntry, {
+              id: input.entryId,
+              conversationId: input.conversationId,
+              runId: input.runId,
+              role: "user",
+              text: queueItem.text,
+              createdAt: timestamp,
+            });
+            appendFact(input.conversationId, {
+              kind: "entry-admitted",
+              conversationId: input.conversationId,
+              entry,
+              run,
+            });
+            appendFact(input.conversationId, {
+              kind: "queue-changed",
+              conversationId: input.conversationId,
+              queue: readQueue(input.conversationId),
+            });
+            return snapshot(input.conversationId);
+          });
+        } catch (cause) {
+          if (prepared) void prepared.close();
+          throw cause;
+        }
+      });
+      if (prepared) preparedExecutions.set(input.dispatchId, prepared);
+      return admitted;
+    });
 
   const applyExecutionObservation = (
     dispatchId: ProductDispatchId,
     observation: ProductExecutionObservation,
   ): void => {
     const raw = statement(
-      `SELECT run_id, state, send_boundary FROM product_outbox WHERE dispatch_id = ?`,
+      `SELECT run_id, engine_id, state, send_boundary FROM product_outbox WHERE dispatch_id = ?`,
     ).get(dispatchId);
     if (!raw) throw new ProductFailure("PRODUCT_DISPATCH_NOT_FOUND", "Dispatch was not found.");
     const row = asRecord(raw);
     const runId = requiredString(row, "run_id");
-    const currentBoundary = requiredString(row, "send_boundary") as
-      | "pre-send"
-      | "sent"
-      | "accepted";
+    const currentBoundary = requiredString(row, "send_boundary") as ProductSendBoundary;
     if (requiredString(row, "state") === "terminal") return;
     if (observation.kind === "pre-send-failure") {
       if (currentBoundary !== "pre-send") {
@@ -3305,9 +3551,35 @@ function makeControlPlane(
           "A pre-send failure cannot be recorded after the send boundary.",
         );
       }
+      if (!observation.retryable) {
+        throw new ProductFailure(
+          "PRODUCT_ENGINE_PREPARE_REJECTED",
+          "The selected Engine rejected preparation before send.",
+        );
+      }
+      const selectedRun = readRun(runId);
+      const selectedEngineId = selectedRun.requestedSelection.engineId;
+      if (selectedEngineId !== requiredString(row, "engine_id")) {
+        throw new ProductFailure(
+          "PRODUCT_ENGINE_IDENTITY_CONFLICT",
+          "The pre-send observation contradicts the admitted Run Engine.",
+        );
+      }
       updateReceipt(
         runId,
-        { state: "pending", lastConfirmedBoundary: "pre-send" },
+        {
+          state: "pending",
+          lastConfirmedBoundary: "pre-send",
+          blocked: usesEngineSessionExecution(selectedRun)
+            ? {
+                kind: "selected-engine-unavailable",
+                code: observation.code,
+                message: observation.message,
+                retryable: true,
+                observedAt: productIsoNow(),
+              }
+            : null,
+        },
         "pending",
         "pre-send",
       );
@@ -3334,14 +3606,14 @@ function makeControlPlane(
       );
     }
     if (observation.kind === "indeterminate") {
+      const currentReceipt = readRun(runId).receipt.receipt;
       updateReceipt(
         runId,
         {
           state: "delivery_unknown",
-          lastConfirmedBoundary: observation.lastConfirmedBoundary,
-          ...(observation.reconciliationHint
-            ? { reconciliationHint: observation.reconciliationHint }
-            : {}),
+          lastConfirmedBoundary:
+            observation.lastConfirmedBoundary === "sent" ? "local-write" : "acceptance-ack",
+          abort: "abort" in currentReceipt ? currentReceipt.abort : null,
         },
         "terminal",
         "sent",
@@ -3349,17 +3621,66 @@ function makeControlPlane(
       return;
     }
     const run = readRun(runId);
-    statement(
-      `INSERT INTO product_engine_bindings(
+    const abortEvidence = "abort" in run.receipt.receipt ? run.receipt.receipt.abort : null;
+    const existingBinding = statement(
+      `SELECT binding_id, engine_id, lineage_ref FROM product_engine_bindings WHERE run_id = ?`,
+    ).get(runId);
+    if (existingBinding) {
+      const existing = asRecord(existingBinding);
+      if (
+        requiredString(existing, "binding_id") !== observation.engineBinding.id ||
+        requiredString(existing, "engine_id") !== observation.engineBinding.engineId ||
+        requiredString(existing, "lineage_ref") !== observation.engineBinding.lineageRef
+      ) {
+        throw new ProductFailure(
+          "PRODUCT_ENGINE_BINDING_CONFLICT",
+          "Execution observation contradicted the established Engine binding.",
+        );
+      }
+    } else
+      statement(
+        `INSERT INTO product_engine_bindings(
          binding_id, conversation_id, run_id, engine_id, lineage_ref
        ) VALUES (?, ?, ?, ?, ?)`,
-    ).run(
-      observation.engineBinding.id,
-      run.conversationId,
-      runId,
-      observation.engineBinding.engineId,
-      observation.engineBinding.lineageRef,
-    );
+      ).run(
+        observation.engineBinding.id,
+        run.conversationId,
+        runId,
+        observation.engineBinding.engineId,
+        observation.engineBinding.lineageRef,
+      );
+    if (observation.kind === "observed-settled") {
+      updateReceipt(
+        runId,
+        {
+          state: "settled",
+          evidence: { kind: "observed-delivery", observedAt: observation.settledAt },
+          engineBinding: observation.engineBinding,
+          resolvedSelection: observation.resolvedSelection,
+          outcome: observation.outcome,
+          settledAt: observation.settledAt,
+          abort: abortEvidence,
+        },
+        "terminal",
+        "observed",
+      );
+      return;
+    }
+    if (observation.kind === "observed-outcome-unknown") {
+      updateReceipt(
+        runId,
+        {
+          state: "outcome_unknown",
+          evidence: { kind: "observed-delivery", observedAt: productIsoNow() },
+          engineBinding: observation.engineBinding,
+          resolvedSelection: observation.resolvedSelection,
+          abort: abortEvidence,
+        },
+        "terminal",
+        "observed",
+      );
+      return;
+    }
     updateReceipt(
       runId,
       {
@@ -3367,22 +3688,26 @@ function makeControlPlane(
         operationRef: observation.operationRef,
         engineBinding: observation.engineBinding,
         resolvedSelection: observation.resolvedSelection,
+        abort: abortEvidence,
       },
       "terminal",
       "accepted",
     );
   };
 
-  const dispatchPending: ProductControlPlaneShape["dispatchPending"] = (dispatchId) =>
+  const dispatchPendingInternal = (
+    dispatchId: ProductDispatchId | undefined,
+    explicitRetry: boolean,
+  ): Effect.Effect<void, ProductControlPlaneError> =>
     Effect.gen(function* () {
       const rows = yield* effect(() =>
         dispatchId
           ? statement(
-              `SELECT dispatch_id, run_id FROM product_outbox
+              `SELECT dispatch_id, run_id, engine_id, prepared_selection_json FROM product_outbox
                WHERE dispatch_id = ? AND state = 'pending' AND send_boundary = 'pre-send'`,
             ).all(dispatchId)
           : statement(
-              `SELECT dispatch_id, run_id FROM product_outbox
+              `SELECT dispatch_id, run_id, engine_id, prepared_selection_json FROM product_outbox
                WHERE state = 'pending' AND send_boundary = 'pre-send'
                ORDER BY updated_at ASC, dispatch_id ASC`,
             ).all(),
@@ -3394,10 +3719,168 @@ function makeControlPlane(
           requiredString(row, "dispatch_id"),
         );
         const runId = requiredString(row, "run_id");
+        const engineId = requiredString(row, "engine_id");
+        const admittedRun = yield* effect(() => readRun(runId));
+        let repreparedHere = false;
+        if (usesEngineSessionExecution(admittedRun) && !preparedExecutions.has(currentDispatchId)) {
+          const durable = yield* effect(() => {
+            const run = admittedRun;
+            if (run.requestedSelection.engineId !== engineId)
+              throw new ProductFailure(
+                "PRODUCT_ENGINE_IDENTITY_CONFLICT",
+                "The pending dispatch Engine contradicts its admitted Run.",
+              );
+            const entry = statement("SELECT body FROM product_entries WHERE entry_id = ?").get(
+              run.entryId,
+            );
+            if (!entry)
+              throw new ProductFailure(
+                "PRODUCT_ENTRY_NOT_FOUND",
+                "The admitted Product entry was not found.",
+              );
+            const frozenSelection = nullableString(row, "prepared_selection_json");
+            if (!frozenSelection)
+              throw new ProductFailure(
+                "PRODUCT_PREPARED_SELECTION_MISSING",
+                "The external Run has no frozen prepared selection.",
+              );
+            const decodedFrozenSelection = decodeJson(ProductResolvedSelection, frozenSelection);
+            if (decodedFrozenSelection.engineId !== engineId)
+              throw new ProductFailure(
+                "PRODUCT_PREPARED_SELECTION_CONFLICT",
+                "The frozen prepared selection contradicts the pending dispatch Engine.",
+              );
+            return {
+              run,
+              text: requiredString(asRecord(entry), "body"),
+              frozenSelection: decodedFrozenSelection,
+              priorLineageRef: compatiblePriorLineageRef(
+                run.conversationId,
+                run.requestedSelection.engineId,
+              ),
+            };
+          });
+          if (!explicitRetry) {
+            yield* effect(() =>
+              withTransaction(() =>
+                updateReceipt(
+                  runId,
+                  {
+                    state: "pending",
+                    lastConfirmedBoundary: "pre-send",
+                    blocked: {
+                      kind: "selected-engine-unavailable",
+                      code: "EXTERNAL_ENGINE_PREPARE_REQUIRED",
+                      message:
+                        "Nothing was sent. The selected Engine must be prepared again before an explicit Retry.",
+                      retryable: true,
+                      observedAt: productIsoNow(),
+                    },
+                  },
+                  "pending",
+                  "pre-send",
+                ),
+              ),
+            );
+            continue;
+          }
+          if (!executionBoundary.prepare) {
+            return yield* Effect.fail(
+              new ProductControlPlaneError({
+                code: "PRODUCT_ENGINE_UNAVAILABLE",
+                message: "The selected external Engine cannot prepare this pending Run.",
+                retryable: true,
+              }),
+            );
+          }
+          const prepared = yield* executionBoundary
+            .prepare({
+              dispatchId: currentDispatchId,
+              conversationId: durable.run.conversationId,
+              runId: durable.run.id,
+              requestedSelection: durable.run.requestedSelection,
+              workspace: durable.run.workspaceObservation,
+              resources: durable.run.resources,
+              text: durable.text,
+              priorLineageRef: durable.priorLineageRef,
+            })
+            .pipe(
+              Effect.catch((cause) =>
+                cause.retryable
+                  ? effect(() =>
+                      withTransaction(() =>
+                        updateReceipt(
+                          runId,
+                          {
+                            state: "pending",
+                            lastConfirmedBoundary: "pre-send",
+                            blocked: {
+                              kind: "selected-engine-unavailable",
+                              code: cause.code,
+                              message: cause.message,
+                              retryable: true,
+                              observedAt: productIsoNow(),
+                            },
+                          },
+                          "pending",
+                          "pre-send",
+                        ),
+                      ),
+                    ).pipe(Effect.flatMap(() => Effect.fail(cause)))
+                  : effect(() =>
+                      withTransaction(() =>
+                        updateReceipt(
+                          runId,
+                          {
+                            state: "rejected",
+                            code: cause.code,
+                            message: cause.message,
+                            retryable: false,
+                          },
+                          "terminal",
+                          "pre-send",
+                        ),
+                      ),
+                    ).pipe(Effect.flatMap(() => Effect.fail(cause))),
+              ),
+            );
+          if (
+            prepared.engineId !== engineId ||
+            !prepared.resolvedSelection ||
+            encodeJson(ProductResolvedSelection, prepared.resolvedSelection) !==
+              encodeJson(ProductResolvedSelection, durable.frozenSelection)
+          ) {
+            yield* Effect.promise(() => prepared.close());
+            yield* effect(() =>
+              withTransaction(() =>
+                updateReceipt(
+                  runId,
+                  {
+                    state: "rejected",
+                    code: "PRODUCT_PREPARED_SELECTION_CONFLICT",
+                    message: "The selected external Engine no longer matches the admitted Run.",
+                    retryable: false,
+                  },
+                  "terminal",
+                  "pre-send",
+                ),
+              ),
+            );
+            return yield* Effect.fail(
+              new ProductControlPlaneError({
+                code: "PRODUCT_PREPARED_SELECTION_CONFLICT",
+                message: "The selected external Engine no longer matches the admitted Run.",
+                retryable: false,
+              }),
+            );
+          }
+          preparedExecutions.set(currentDispatchId, prepared);
+          repreparedHere = true;
+        }
         const claimed = yield* effect(() =>
           statement(
             `UPDATE product_outbox
-             SET state = 'sending', attempt_count = attempt_count + 1, updated_at = ?
+             SET state = 'sending', updated_at = ?
              WHERE dispatch_id = ? AND state = 'pending' AND send_boundary = 'pre-send'
                AND NOT EXISTS (
                  SELECT 1
@@ -3419,7 +3902,15 @@ function makeControlPlane(
              RETURNING dispatch_id`,
           ).get(productIsoNow(), currentDispatchId),
         );
-        if (!claimed) continue;
+        if (!claimed) {
+          if (repreparedHere) {
+            const prepared = preparedExecutions.get(currentDispatchId);
+            preparedExecutions.delete(currentDispatchId);
+            if (prepared) yield* Effect.promise(() => prepared.close());
+          }
+          continue;
+        }
+        const preparedExecution = preparedExecutions.get(currentDispatchId) ?? null;
         const observation = yield* executionBoundary
           .attempt({
             dispatchId: currentDispatchId,
@@ -3439,18 +3930,15 @@ function makeControlPlane(
             }),
             priorLineageRef: yield* effect(() => {
               const run = readRun(runId);
-              const row = statement(
-                `SELECT lineage_ref FROM product_engine_bindings
-                 WHERE conversation_id = ? ORDER BY rowid DESC LIMIT 1`,
-              ).get(run.conversationId);
-              return row ? requiredString(asRecord(row), "lineage_ref") : null;
+              return compatiblePriorLineageRef(run.conversationId, run.requestedSelection.engineId);
             }),
+            prepared: preparedExecution,
             markSent: () =>
               effect(() =>
                 withTransaction(() => {
                   const changed = statement(
                     `UPDATE product_outbox
-                     SET send_boundary = 'sent', updated_at = ?
+                     SET send_boundary = 'sent', attempt_count = attempt_count + 1, updated_at = ?
                      WHERE dispatch_id = ? AND state = 'sending' AND send_boundary = 'pre-send'
                      RETURNING dispatch_id`,
                   ).get(productIsoNow(), currentDispatchId);
@@ -3458,6 +3946,19 @@ function makeControlPlane(
                     throw new ProductFailure(
                       "PRODUCT_SEND_BOUNDARY_CONFLICT",
                       "Dispatch send boundary could not be persisted before sending.",
+                    );
+                  }
+                  if (preparedExecution?.resolvedSelection) {
+                    updateReceipt(
+                      runId,
+                      {
+                        state: "sent",
+                        lastConfirmedBoundary: "local-write",
+                        resolvedSelection: preparedExecution.resolvedSelection,
+                        abort: null,
+                      },
+                      "sending",
+                      "sent",
                     );
                   }
                 }),
@@ -3479,9 +3980,15 @@ function makeControlPlane(
                   }
                   const currentRow = asRecord(current);
                   if (requiredString(currentRow, "send_boundary") === "sent") {
+                    const currentReceipt = readRun(requiredString(currentRow, "run_id")).receipt
+                      .receipt;
                     updateReceipt(
                       requiredString(currentRow, "run_id"),
-                      { state: "delivery_unknown", lastConfirmedBoundary: "sent" },
+                      {
+                        state: "delivery_unknown",
+                        lastConfirmedBoundary: "local-write",
+                        abort: "abort" in currentReceipt ? currentReceipt.abort : null,
+                      },
                       "terminal",
                       "sent",
                     );
@@ -3504,8 +4011,10 @@ function makeControlPlane(
           yield* effect(() => {
             try {
               withTransaction(() => applyExecutionObservation(currentDispatchId, observation));
+              const observedRun = readRun(runId);
               executionBoundary.afterObservationApplied?.(
                 decode(ProductRun.fields.id, runId),
+                observedRun.requestedSelection.engineId,
                 observation,
               );
             } catch (cause) {
@@ -3524,7 +4033,65 @@ function makeControlPlane(
             }
           });
         }
+        const prepared = preparedExecutions.get(currentDispatchId);
+        if (prepared) {
+          preparedExecutions.delete(currentDispatchId);
+          yield* Effect.promise(() => prepared.close());
+        }
       }
+    });
+
+  const dispatchPending: ProductControlPlaneShape["dispatchPending"] = (dispatchId) =>
+    dispatchPendingInternal(dispatchId, false);
+
+  const retryDispatch: ProductControlPlaneShape["retryDispatch"] = (input) =>
+    Effect.gen(function* () {
+      const eligibility = yield* effect(() => {
+        const raw = statement(
+          `SELECT r.conversation_id, o.run_id, o.state, o.send_boundary, o.attempt_count,
+                  o.automatic_replay_count, o.engine_id, receipt.receipt_json
+           FROM product_outbox o
+           JOIN product_runs r ON r.run_id = o.run_id
+           JOIN product_operation_receipts receipt ON receipt.run_id = o.run_id
+           WHERE o.dispatch_id = ?`,
+        ).get(input.dispatchId);
+        if (!raw) throw new ProductFailure("PRODUCT_DISPATCH_NOT_FOUND", "Dispatch was not found.");
+        const row = asRecord(raw);
+        if (requiredString(row, "conversation_id") !== input.conversationId)
+          throw new ProductFailure(
+            "PRODUCT_DISPATCH_IDENTITY_CONFLICT",
+            "Dispatch does not belong to the requested Conversation.",
+          );
+        const receipt = decodeJson(ProductDispatchReceipt, requiredString(row, "receipt_json"));
+        const alreadyAdvanced =
+          requiredString(row, "state") !== "pending" ||
+          requiredString(row, "send_boundary") !== "pre-send";
+        if (alreadyAdvanced) return { alreadyAdvanced: true } as const;
+        if (
+          requiredNumber(row, "attempt_count") !== 0 ||
+          requiredNumber(row, "automatic_replay_count") !== 0 ||
+          !usesEngineSessionExecution(readRun(requiredString(row, "run_id"))) ||
+          receipt.state !== "pending" ||
+          receipt.blocked?.kind !== "selected-engine-unavailable" ||
+          !receipt.blocked.retryable
+        ) {
+          throw new ProductFailure(
+            "PRODUCT_DISPATCH_RETRY_INELIGIBLE",
+            "Only a blocked external dispatch that has not crossed the send boundary can be retried.",
+          );
+        }
+        return { alreadyAdvanced: false } as const;
+      });
+      if (!eligibility.alreadyAdvanced) {
+        yield* dispatchPendingInternal(input.dispatchId, true);
+      }
+      return decode(ProductSubmitResult, {
+        snapshot: yield* getConversationSnapshot({
+          protocolVersion: PRODUCT_PROTOCOL_VERSION,
+          conversationId: input.conversationId,
+        }),
+        automaticReplayCount: 0,
+      });
     });
 
   const submitQueueItem: ProductControlPlaneShape["submitQueueItem"] = (input) =>
@@ -3544,6 +4111,24 @@ function makeControlPlane(
               retryable: false,
             }),
           );
+        }
+        const receiptRow = yield* effect(() =>
+          statement(
+            "SELECT receipt_json FROM product_operation_receipts WHERE dispatch_id = ?",
+          ).get(input.dispatchId),
+        );
+        const receipt = receiptRow
+          ? decodeJson(ProductDispatchReceipt, requiredString(asRecord(receiptRow), "receipt_json"))
+          : null;
+        if (
+          receipt?.state === "pending" &&
+          receipt.blocked?.kind === "selected-engine-unavailable"
+        ) {
+          return yield* retryDispatch({
+            protocolVersion: PRODUCT_PROTOCOL_VERSION,
+            conversationId: input.conversationId,
+            dispatchId: input.dispatchId,
+          });
         }
       } else {
         yield* admitQueueItem(input);
@@ -3665,14 +4250,62 @@ function makeControlPlane(
     effect(() =>
       withTransaction(() => {
         const sent = statement(
-          `SELECT dispatch_id, run_id FROM product_outbox
+          `SELECT dispatch_id, run_id, send_boundary FROM product_outbox
            WHERE state = 'sending' AND send_boundary <> 'pre-send'`,
         ).all();
         for (const raw of sent) {
           const row = asRecord(raw);
+          const runId = requiredString(row, "run_id");
+          const boundary = requiredString(row, "send_boundary") as ProductSendBoundary;
+          const currentReceipt = readRun(runId).receipt.receipt;
+          if (boundary === "accepted" || boundary === "observed") {
+            if (currentReceipt.state !== "accepted" && currentReceipt.state !== "running") {
+              throw new ProductFailure(
+                "PRODUCT_SEND_BOUNDARY_CONTRADICTION",
+                "The durable Engine boundary contradicted its execution receipt during recovery.",
+              );
+            }
+            const evidence =
+              currentReceipt.state === "accepted"
+                ? {
+                    kind: "accepted-operation" as const,
+                    operationRef: currentReceipt.operationRef,
+                  }
+                : currentReceipt.evidence;
+            const expectedBoundary = evidenceSendBoundary(evidence);
+            if (boundary !== expectedBoundary) {
+              throw new ProductFailure(
+                "PRODUCT_SEND_BOUNDARY_CONTRADICTION",
+                "The durable Engine boundary contradicted its execution evidence during recovery.",
+              );
+            }
+            updateReceipt(
+              runId,
+              {
+                state: "outcome_unknown",
+                evidence,
+                engineBinding: currentReceipt.engineBinding,
+                resolvedSelection: currentReceipt.resolvedSelection,
+                abort: currentReceipt.abort,
+              },
+              "terminal",
+              expectedBoundary,
+            );
+            continue;
+          }
+          if (boundary !== "sent") {
+            throw new ProductFailure(
+              "PRODUCT_SEND_BOUNDARY_CONTRADICTION",
+              "The durable post-send boundary contradicted its execution receipt during recovery.",
+            );
+          }
           updateReceipt(
-            requiredString(row, "run_id"),
-            { state: "delivery_unknown", lastConfirmedBoundary: "sent" },
+            runId,
+            {
+              state: "delivery_unknown",
+              lastConfirmedBoundary: "local-write",
+              abort: "abort" in currentReceipt ? currentReceipt.abort : null,
+            },
             "terminal",
             "sent",
           );
@@ -3697,61 +4330,76 @@ function makeControlPlane(
         }
         if (observation.kind === "running") {
           const source = current.state === "accepted" ? current : current;
+          const evidence =
+            source.state === "accepted"
+              ? { kind: "accepted-operation" as const, operationRef: source.operationRef }
+              : source.evidence;
           updateReceipt(
             runId,
             {
               state: "running",
-              operationRef: source.operationRef,
+              evidence,
               engineBinding: source.engineBinding,
               resolvedSelection: source.resolvedSelection,
+              abort: source.abort,
             },
             "terminal",
-            "accepted",
+            evidenceSendBoundary(evidence),
           );
           return;
         }
         if (observation.kind === "outcome_unknown") {
+          const evidence =
+            current.state === "accepted"
+              ? { kind: "accepted-operation" as const, operationRef: current.operationRef }
+              : current.evidence;
           updateReceipt(
             runId,
             {
               state: "outcome_unknown",
-              operationRef: current.operationRef,
+              evidence,
               engineBinding: current.engineBinding,
               resolvedSelection: current.resolvedSelection,
-              lastConfirmedBoundary: "accepted",
+              abort: current.abort,
             },
             "terminal",
-            "accepted",
+            evidenceSendBoundary(evidence),
           );
           return;
         }
+        const evidence =
+          current.state === "accepted"
+            ? { kind: "accepted-operation" as const, operationRef: current.operationRef }
+            : current.evidence;
         updateReceipt(
           runId,
           {
             state: "settled",
-            operationRef: current.operationRef,
+            evidence,
             engineBinding: current.engineBinding,
             resolvedSelection: current.resolvedSelection,
             outcome: observation.outcome,
             settledAt: observation.settledAt,
+            abort: current.abort,
           },
           "terminal",
-          "accepted",
+          evidenceSendBoundary(evidence),
         );
       }),
     );
 
   const applyRuntimeFacts = (
     runId: ProductRunId,
-    facts: ReadonlyArray<NativeHostRuntimeFact>,
+    facts: ReadonlyArray<ProductExecutionFact>,
   ): void => {
     const run = readRun(runId);
     const cursorRow = statement(
-      "SELECT native_sequence FROM product_runtime_fact_cursors WHERE run_id = ?",
+      "SELECT engine_sequence FROM product_runtime_fact_cursors WHERE run_id = ?",
     ).get(runId);
-    let nativeCursor = cursorRow ? requiredNumber(asRecord(cursorRow), "native_sequence") : 0;
+    let engineCursor = cursorRow ? requiredNumber(asRecord(cursorRow), "engine_sequence") : 0;
     for (const fact of facts) {
-      if (fact.sequence <= nativeCursor) continue;
+      if (fact.engineSequence <= engineCursor) continue;
+      if (fact.engineSequence !== engineCursor + 1) break;
       if (fact.kind === "assistant.delta") {
         const entryId = `${runId}:assistant`;
         const existing = statement(
@@ -3763,11 +4411,11 @@ function makeControlPlane(
           Math.max(0, PRODUCT_MAX_TEXT_CHARS - currentText.length),
         );
         if (!appendedText) {
-          nativeCursor = fact.sequence;
+          engineCursor = fact.engineSequence;
           statement(
-            `INSERT INTO product_runtime_fact_cursors(run_id, native_sequence) VALUES (?, ?)
-             ON CONFLICT(run_id) DO UPDATE SET native_sequence = excluded.native_sequence`,
-          ).run(runId, nativeCursor);
+            `INSERT INTO product_runtime_fact_cursors(run_id, engine_sequence) VALUES (?, ?)
+             ON CONFLICT(run_id) DO UPDATE SET engine_sequence = excluded.engine_sequence`,
+          ).run(runId, engineCursor);
           continue;
         }
         const nextText = `${currentText}${appendedText}`;
@@ -3793,11 +4441,11 @@ function makeControlPlane(
           delta: appendedText,
           createdAt: existing ? requiredString(asRecord(existing), "created_at") : fact.emittedAt,
         });
-        nativeCursor = fact.sequence;
+        engineCursor = fact.engineSequence;
         statement(
-          `INSERT INTO product_runtime_fact_cursors(run_id, native_sequence) VALUES (?, ?)
-           ON CONFLICT(run_id) DO UPDATE SET native_sequence = excluded.native_sequence`,
-        ).run(runId, nativeCursor);
+          `INSERT INTO product_runtime_fact_cursors(run_id, engine_sequence) VALUES (?, ?)
+           ON CONFLICT(run_id) DO UPDATE SET engine_sequence = excluded.engine_sequence`,
+        ).run(runId, engineCursor);
         continue;
       }
 
@@ -3827,6 +4475,29 @@ function makeControlPlane(
             return {
               kind: "question" as const,
               detail: { code: "question-requested" as const, question: fact.question },
+            };
+          case "plan.updated":
+            return {
+              kind: "plan" as const,
+              detail: { code: "plan-updated" as const, summary: fact.summary },
+            };
+          case "permission.requested":
+            return {
+              kind: "permission" as const,
+              detail: {
+                code: "permission-requested" as const,
+                toolCallId: fact.toolCallId,
+                title: fact.title,
+              },
+            };
+          case "permission.rejected":
+            return {
+              kind: "permission" as const,
+              detail: {
+                code: "permission-rejected" as const,
+                toolCallId: fact.toolCallId,
+                reason: fact.reason,
+              },
             };
           case "control.applied":
             return {
@@ -3863,6 +4534,15 @@ function makeControlPlane(
                 total: fact.total,
               },
             };
+          case "context.usage":
+            return {
+              kind: "usage" as const,
+              detail: {
+                code: "context-usage-observed" as const,
+                used: fact.used,
+                size: fact.size,
+              },
+            };
           case "settlement":
             return {
               kind: "settlement" as const,
@@ -3874,17 +4554,17 @@ function makeControlPlane(
       })();
       if (!activity) continue;
       const exists = statement(
-        `SELECT native_sequence FROM product_runtime_activities
-         WHERE run_id = ? AND native_sequence = ?`,
-      ).get(runId, fact.sequence);
+        `SELECT engine_sequence FROM product_runtime_activities
+         WHERE run_id = ? AND engine_sequence = ?`,
+      ).get(runId, fact.engineSequence);
       if (!exists) {
         statement(
           `INSERT INTO product_runtime_activities(
-             run_id, native_sequence, kind, summary, created_at
+             run_id, engine_sequence, kind, summary, created_at
            ) VALUES (?, ?, ?, ?, ?)`,
         ).run(
           runId,
-          fact.sequence,
+          fact.engineSequence,
           activity.kind,
           encodeJson(ProductRuntimeActivityDetail, activity.detail),
           fact.emittedAt,
@@ -3894,7 +4574,7 @@ function makeControlPlane(
           conversationId: run.conversationId,
           activity: decode(ProductRuntimeActivity, {
             runId,
-            nativeSequence: fact.sequence,
+            engineSequence: fact.engineSequence,
             kind: activity.kind,
             detail: activity.detail,
             createdAt: fact.emittedAt,
@@ -3919,39 +4599,41 @@ function makeControlPlane(
         }
         const current = readRun(runId).receipt.receipt;
         if (current.state === "accepted" || current.state === "running") {
+          const evidence =
+            current.state === "accepted"
+              ? { kind: "accepted-operation" as const, operationRef: current.operationRef }
+              : current.evidence;
           updateReceipt(
             runId,
             {
               state: "settled",
-              operationRef: current.operationRef,
+              evidence,
               engineBinding: current.engineBinding,
               resolvedSelection: current.resolvedSelection,
               outcome: fact.outcome,
               settledAt: fact.emittedAt,
+              abort: current.abort,
             },
             "terminal",
-            "accepted",
+            evidenceSendBoundary(evidence),
           );
         }
       }
-      nativeCursor = fact.sequence;
+      engineCursor = fact.engineSequence;
       statement(
-        `INSERT INTO product_runtime_fact_cursors(run_id, native_sequence) VALUES (?, ?)
-         ON CONFLICT(run_id) DO UPDATE SET native_sequence = excluded.native_sequence`,
-      ).run(runId, nativeCursor);
+        `INSERT INTO product_runtime_fact_cursors(run_id, engine_sequence) VALUES (?, ?)
+         ON CONFLICT(run_id) DO UPDATE SET engine_sequence = excluded.engine_sequence`,
+      ).run(runId, engineCursor);
     }
   };
 
   const applyRuntimeSnapshot = (
     runId: ProductRunId,
-    nativeSnapshot: NativeHostRuntimeSnapshot,
+    executionSnapshot: ProductExecutionSnapshot,
   ): void => {
     const run = readRun(runId);
     const current = run.receipt.receipt;
-    if (
-      (current.state !== "accepted" && current.state !== "running") ||
-      current.operationRef !== nativeSnapshot.operationRef
-    ) {
+    if (current.state !== "accepted" && current.state !== "running") {
       return;
     }
     const entryId = decode(ProductEntry.fields.id, `${runId}:assistant`);
@@ -3962,14 +4644,14 @@ function makeControlPlane(
     const wasStreaming = Boolean(
       statement("SELECT entry_id FROM product_streaming_entries WHERE entry_id = ?").get(entryId),
     );
-    if (nativeSnapshot.assistant.length > 0) {
+    if (executionSnapshot.assistant.length > 0) {
       const createdAt = existing
         ? requiredString(existing, "created_at")
-        : nativeSnapshot.settlement.settledAt;
+        : executionSnapshot.settlement.settledAt;
       if (existing) {
-        if (requiredString(existing, "body") !== nativeSnapshot.assistant) {
+        if (requiredString(existing, "body") !== executionSnapshot.assistant) {
           statement("UPDATE product_entries SET body = ? WHERE entry_id = ?").run(
-            nativeSnapshot.assistant,
+            executionSnapshot.assistant,
             entryId,
           );
           appendFact(run.conversationId, {
@@ -3980,7 +4662,7 @@ function makeControlPlane(
               conversationId: run.conversationId,
               runId,
               role: "assistant",
-              text: nativeSnapshot.assistant,
+              text: executionSnapshot.assistant,
               createdAt,
             }),
           });
@@ -3989,7 +4671,7 @@ function makeControlPlane(
         statement(
           `INSERT INTO product_entries(entry_id, conversation_id, run_id, role, body, created_at)
            VALUES (?, ?, ?, 'assistant', ?, ?)`,
-        ).run(entryId, run.conversationId, runId, nativeSnapshot.assistant, createdAt);
+        ).run(entryId, run.conversationId, runId, executionSnapshot.assistant, createdAt);
         appendFact(run.conversationId, {
           kind: "entry-replaced",
           conversationId: run.conversationId,
@@ -3998,7 +4680,7 @@ function makeControlPlane(
             conversationId: run.conversationId,
             runId,
             role: "assistant",
-            text: nativeSnapshot.assistant,
+            text: executionSnapshot.assistant,
             createdAt,
           }),
         });
@@ -4013,7 +4695,7 @@ function makeControlPlane(
     }
     if (wasStreaming) {
       statement("DELETE FROM product_streaming_entries WHERE entry_id = ?").run(entryId);
-      if (nativeSnapshot.assistant.length > 0) {
+      if (executionSnapshot.assistant.length > 0) {
         appendFact(run.conversationId, {
           kind: "entry-streaming",
           conversationId: run.conversationId,
@@ -4025,13 +4707,13 @@ function makeControlPlane(
     const recoveryExists = statement(
       `SELECT snapshot_version FROM product_runtime_recoveries
        WHERE run_id = ? AND snapshot_version = ?`,
-    ).get(runId, nativeSnapshot.version);
+    ).get(runId, executionSnapshot.version);
     if (!recoveryExists) {
       const recovery = decode(ProductRuntimeRecovery, {
         runId,
-        snapshotVersion: nativeSnapshot.version,
+        snapshotVersion: executionSnapshot.version,
         kind: "visible-result",
-        createdAt: nativeSnapshot.settlement.settledAt,
+        createdAt: executionSnapshot.settlement.settledAt,
       });
       statement(
         `INSERT INTO product_runtime_recoveries(
@@ -4044,23 +4726,48 @@ function makeControlPlane(
         recovery,
       });
     }
+    const evidence =
+      current.state === "accepted"
+        ? { kind: "accepted-operation" as const, operationRef: current.operationRef }
+        : current.evidence;
     updateReceipt(
       runId,
       {
         state: "settled",
-        operationRef: current.operationRef,
+        evidence,
         engineBinding: current.engineBinding,
         resolvedSelection: current.resolvedSelection,
-        outcome: nativeSnapshot.settlement.outcome,
-        settledAt: nativeSnapshot.settlement.settledAt,
+        outcome: executionSnapshot.settlement.outcome,
+        settledAt: executionSnapshot.settlement.settledAt,
+        abort: current.abort,
       },
       "terminal",
-      "accepted",
+      evidenceSendBoundary(evidence),
     );
   };
 
-  executionBoundary.subscribeFacts?.((runId, observation) => {
+  executionBoundary.subscribeFacts?.((runId, incomingObservation, sourceEngineId) => {
+    const observation =
+      incomingObservation.kind === "delivery-accepted" ||
+      incomingObservation.kind === "delivery-rejected"
+        ? incomingObservation
+        : decode(ProductExecutionUpdate, incomingObservation);
     withTransaction(() => {
+      const outboxRaw = statement("SELECT engine_id FROM product_outbox WHERE run_id = ?").get(
+        runId,
+      );
+      if (!outboxRaw) return;
+      const durableEngineId = requiredString(asRecord(outboxRaw), "engine_id");
+      if (
+        (executionBoundary.sourceEngineBoundFacts && sourceEngineId === undefined) ||
+        (sourceEngineId !== undefined && sourceEngineId !== durableEngineId) ||
+        ("engineBinding" in observation &&
+          observation.engineBinding.engineId !== durableEngineId) ||
+        ("resolvedSelection" in observation &&
+          observation.resolvedSelection.engineId !== durableEngineId)
+      ) {
+        return;
+      }
       if (observation.kind === "delivery-accepted") {
         const run = readRun(runId);
         const current = run.receipt.receipt;
@@ -4091,6 +4798,7 @@ function makeControlPlane(
               ...observation.resolvedSelection,
               executionTarget: run.requestedSelection.executionTarget,
             },
+            abort: null,
           },
           "terminal",
           "accepted",
@@ -4113,6 +4821,40 @@ function makeControlPlane(
         );
         return;
       }
+      if (observation.kind === "delivery-observed") {
+        const run = readRun(runId);
+        const current = run.receipt.receipt;
+        const cursorRow = statement(
+          "SELECT engine_sequence FROM product_runtime_fact_cursors WHERE run_id = ?",
+        ).get(runId);
+        const cursor = cursorRow ? requiredNumber(asRecord(cursorRow), "engine_sequence") : 0;
+        if (current.state !== "sent" || observation.firstFact.engineSequence !== cursor + 1) return;
+        statement(
+          `INSERT INTO product_engine_bindings(
+             binding_id, conversation_id, run_id, engine_id, lineage_ref
+           ) VALUES (?, ?, ?, ?, ?)`,
+        ).run(
+          observation.engineBinding.id,
+          run.conversationId,
+          runId,
+          observation.engineBinding.engineId,
+          observation.engineBinding.lineageRef,
+        );
+        updateReceipt(
+          runId,
+          {
+            state: "running",
+            evidence: { kind: "observed-delivery", observedAt: observation.firstFact.emittedAt },
+            engineBinding: observation.engineBinding,
+            resolvedSelection: observation.resolvedSelection,
+            abort: current.abort,
+          },
+          "sending",
+          "observed",
+        );
+        applyRuntimeFacts(runId, [observation.firstFact]);
+        return;
+      }
       if (observation.kind === "facts") {
         applyRuntimeFacts(runId, observation.facts);
         return;
@@ -4123,17 +4865,21 @@ function makeControlPlane(
       }
       const current = readRun(runId).receipt.receipt;
       if (current.state !== "accepted" && current.state !== "running") return;
+      const evidence =
+        current.state === "accepted"
+          ? { kind: "accepted-operation" as const, operationRef: current.operationRef }
+          : current.evidence;
       updateReceipt(
         runId,
         {
           state: "outcome_unknown",
-          operationRef: current.operationRef,
+          evidence,
           engineBinding: current.engineBinding,
           resolvedSelection: current.resolvedSelection,
-          lastConfirmedBoundary: "accepted",
+          abort: current.abort,
         },
         "terminal",
-        "accepted",
+        evidenceSendBoundary(evidence),
       );
     });
   });
@@ -4147,15 +4893,14 @@ function makeControlPlane(
       const receipt = decodeJson(ProductDispatchReceipt, requiredString(row, "receipt_json"));
       if (
         receipt.state === "accepted" ||
-        receipt.state === "running" ||
-        (receipt.state === "delivery_unknown" && receipt.reconciliationHint)
+        (receipt.state === "running" && receipt.evidence.kind === "accepted-operation")
       ) {
         const runId = decode(ProductRun.fields.id, requiredString(row, "run_id"));
-        executionBoundary.bindRunPackageGeneration?.(runId, readRun(runId).packageGeneration);
-        executionBoundary.resumeFacts(
-          runId,
-          receipt.state === "delivery_unknown" ? receipt.reconciliationHint! : receipt.operationRef,
-        );
+        const packageGeneration = readRun(runId).packageGeneration;
+        if (packageGeneration)
+          executionBoundary.bindRunPackageGeneration?.(runId, packageGeneration);
+        const operationRef = receiptOperationRef(receipt);
+        if (operationRef) executionBoundary.resumeFacts(runId, operationRef);
       }
     }
   }
@@ -4163,7 +4908,7 @@ function makeControlPlane(
   const inspectOutbox: ProductControlPlaneShape["inspectOutbox"] = () =>
     effect(() =>
       statement(
-        `SELECT dispatch_id, run_id, state, send_boundary, attempt_count,
+        `SELECT dispatch_id, run_id, engine_id, state, send_boundary, attempt_count,
                 automatic_replay_count FROM product_outbox
          ORDER BY dispatch_id ASC`,
       )
@@ -4173,6 +4918,7 @@ function makeControlPlane(
           return {
             dispatchId: requiredString(row, "dispatch_id"),
             runId: requiredString(row, "run_id"),
+            engineId: requiredString(row, "engine_id"),
             state: requiredString(row, "state") as ProductOutboxDiagnostic["state"],
             sendBoundary: requiredString(
               row,
@@ -4220,6 +4966,7 @@ function makeControlPlane(
     deleteQueueItem,
     admitQueueItem,
     submitQueueItem,
+    retryDispatch,
     controlRun,
     readFacts,
     recoverDispatches,
@@ -4234,21 +4981,45 @@ export function makeProductControlPlaneLayer(
   executionBoundary: ProductExecutionBoundary = ProductExecutionUnavailable,
   runtimeCatalog: ProductRuntimeCatalog | null = null,
 ): Layer.Layer<ProductControlPlane, ProductControlPlaneError> {
-  const acquire = Effect.promise(async () => {
-    if (filename !== ":memory:") ensurePrivateFileSync(filename);
-    const database = await openPortableDatabase(filename);
-    initializeSchema(database);
-    return database;
+  const acquire = Effect.tryPromise({
+    try: async () => {
+      if (filename !== ":memory:") ensurePrivateFileSync(filename);
+      const lock =
+        filename === ":memory:"
+          ? null
+          : await Effect.runPromise(acquireDatabaseLifecycleLock(filename));
+      let database: PortableDatabase | undefined;
+      try {
+        database = await openPortableDatabase(filename);
+        initializeSchema(database);
+        return { database, lock };
+      } catch (cause) {
+        database?.close();
+        if (lock) await Effect.runPromise(releaseDatabaseLifecycleLock(lock));
+        throw cause;
+      }
+    },
+    catch: (cause) =>
+      new ProductControlPlaneError({
+        code: "PRODUCT_DATABASE_LIFECYCLE_LOCKED",
+        message:
+          cause instanceof Error
+            ? cause.message
+            : "Product database lifecycle could not be acquired.",
+        retryable: true,
+      }),
   });
   return Layer.effect(
     ProductControlPlane,
     Effect.gen(function* () {
-      const database = yield* Effect.acquireRelease(acquire, (openedDatabase) =>
+      const acquired = yield* Effect.acquireRelease(acquire, ({ database, lock }) =>
         Effect.promise(async () => {
           await executionBoundary.close?.();
-          openedDatabase.close();
+          database.close();
+          if (lock) await Effect.runPromise(releaseDatabaseLifecycleLock(lock));
         }),
       );
+      const database = acquired.database;
       const controlPlane = makeControlPlane(database, executionBoundary, runtimeCatalog);
       yield* controlPlane.recoverDispatches();
       // Only pre-send pending rows are eligible. Unknown/accepted rows are terminal and never replayed.

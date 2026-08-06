@@ -20,7 +20,12 @@ import {
   fauxToolCall,
   InMemoryCredentialStore,
 } from "@earendil-works/pi-ai";
-import { ModelRuntime } from "@earendil-works/pi-coding-agent";
+import {
+  ModelRuntime,
+  type AgentSession,
+  type AgentSessionEvent,
+  type SessionManager,
+} from "@earendil-works/pi-coding-agent";
 import {
   NATIVE_HOST_PROTOCOL_VERSION,
   type NativeHostExecutionRequest,
@@ -28,7 +33,12 @@ import {
 } from "@omnimind/contracts/native-host";
 import { afterEach, describe, expect, it } from "vitest";
 
-import { PI_PACKAGE_GENERATION, PiNativeRuntime, StreamingContentRedactor } from "./piRuntime";
+import {
+  PI_PACKAGE_GENERATION,
+  PiNativeRuntime,
+  StreamingContentRedactor,
+  type PiNativeRuntimeOptions,
+} from "./piRuntime";
 
 const temporaryDirectories = new Set<string>();
 const validatedGenerationByRuntime = new WeakMap<PiNativeRuntime, string>();
@@ -103,6 +113,7 @@ async function fixture(options?: {
   readonly sessionFactoryFailure?: boolean;
   readonly settingsManagerFailure?: boolean;
   readonly packageBindFailure?: boolean;
+  readonly sessionFactory?: PiNativeRuntimeOptions["sessionFactory"];
 }) {
   const productHome = mkdtempSync(path.join(tmpdir(), "omnimind-pi-runtime-"));
   temporaryDirectories.add(productHome);
@@ -170,6 +181,7 @@ async function fixture(options?: {
           },
         }
       : {}),
+    ...(options?.sessionFactory ? { sessionFactory: options.sessionFactory } : {}),
   });
   if (options?.extensionSource) {
     const artifact = stageExtension(productHome, options.extensionSource);
@@ -178,6 +190,81 @@ async function fixture(options?: {
     validatedGenerationByRuntime.set(runtime, artifact.generation);
   }
   return { productHome, faux, modelRuntime, runtime };
+}
+
+interface ScriptedSessionContext {
+  readonly emit: (event: AgentSessionEvent) => void;
+  readonly sessionManager: SessionManager;
+  readonly isDisposed: () => boolean;
+}
+
+function scriptedSessionFactory(script: (context: ScriptedSessionContext) => Promise<void>): {
+  readonly sessionFactory: NonNullable<PiNativeRuntimeOptions["sessionFactory"]>;
+  readonly disposeCount: () => number;
+  readonly unsubscribeCount: () => number;
+} {
+  let disposeCount = 0;
+  let unsubscribeCount = 0;
+  const sessionFactory: NonNullable<PiNativeRuntimeOptions["sessionFactory"]> = async (options) => {
+    const sessionManager = options?.sessionManager;
+    if (!sessionManager) throw new Error("The scripted Session requires a SessionManager.");
+    const listeners = new Set<(event: AgentSessionEvent) => void>();
+    let disposed = false;
+    const emit = (event: AgentSessionEvent) => {
+      for (const listener of listeners) listener(event);
+    };
+    const session = {
+      get sessionFile() {
+        return sessionManager.getSessionFile();
+      },
+      get sessionId() {
+        return sessionManager.getSessionId();
+      },
+      subscribe(listener: (event: AgentSessionEvent) => void) {
+        listeners.add(listener);
+        let subscribed = true;
+        return () => {
+          if (!subscribed) return;
+          subscribed = false;
+          unsubscribeCount += 1;
+          listeners.delete(listener);
+        };
+      },
+      async prompt(text: string) {
+        const userMessage = { role: "user" as const, content: text, timestamp: Date.now() };
+        emit({ type: "message_end", message: userMessage });
+        sessionManager.appendMessage(userMessage);
+        await script({ emit, sessionManager, isDisposed: () => disposed });
+      },
+      async abort() {},
+      async bindExtensions() {},
+      dispose() {
+        if (disposed) return;
+        disposed = true;
+        disposeCount += 1;
+        listeners.clear();
+      },
+    } as unknown as AgentSession;
+    return {
+      session,
+      extensionsResult: { extensions: [], errors: [] },
+    } as unknown as Awaited<ReturnType<NonNullable<PiNativeRuntimeOptions["sessionFactory"]>>>;
+  };
+  return {
+    sessionFactory,
+    disposeCount: () => disposeCount,
+    unsubscribeCount: () => unsubscribeCount,
+  };
+}
+
+function persistedText(directory: string): string {
+  return readdirSync(directory, { withFileTypes: true })
+    .flatMap((entry) => {
+      const filename = path.join(directory, entry.name);
+      if (entry.isDirectory()) return persistedText(filename);
+      return entry.isFile() ? [readFileSync(filename, "utf8")] : [];
+    })
+    .join("\n");
 }
 
 function request(input?: {
@@ -262,6 +349,141 @@ describe("PiNativeRuntime", () => {
     expect(`${partial.push("visible plainCanaryCred")}${partial.flush()}`).toBe(
       "visible [redacted]",
     );
+  });
+
+  it("waits through a retryable agent_end and settles only the final successful attempt", async () => {
+    const credentialCanary = "RetryCredentialCanary987654321";
+    const errorCanary = "RetryProviderErrorCanary987654321";
+    let observeRetry!: () => void;
+    const retryObserved = new Promise<void>((resolve) => {
+      observeRetry = resolve;
+    });
+    let continueRetry!: () => void;
+    const retryReleased = new Promise<void>((resolve) => {
+      continueRetry = resolve;
+    });
+    let disposedBeforeFinal = true;
+    const scripted = scriptedSessionFactory(async ({ emit, sessionManager, isDisposed }) => {
+      const retryable = fauxAssistantMessage([], {
+        stopReason: "error",
+        errorMessage: `${errorCanary} ${credentialCanary}`,
+      });
+      emit({ type: "message_end", message: retryable });
+      emit({ type: "agent_end", messages: [retryable], willRetry: true });
+      emit({
+        type: "auto_retry_start",
+        attempt: 1,
+        maxAttempts: 3,
+        delayMs: 0,
+        errorMessage: `${errorCanary} ${credentialCanary}`,
+      });
+      observeRetry();
+      await retryReleased;
+      disposedBeforeFinal = isDisposed();
+      emit({ type: "auto_retry_end", success: true, attempt: 1 });
+
+      const succeeded = fauxAssistantMessage([fauxText("recovered answer")]);
+      emit({
+        type: "message_update",
+        message: succeeded,
+        assistantMessageEvent: {
+          type: "text_delta",
+          contentIndex: 0,
+          delta: "recovered answer",
+          partial: succeeded,
+        },
+      });
+      emit({ type: "message_end", message: succeeded });
+      sessionManager.appendMessage(succeeded);
+      emit({ type: "agent_end", messages: [retryable, succeeded], willRetry: false });
+      emit({ type: "agent_end", messages: [retryable, succeeded], willRetry: false });
+    });
+    const { productHome, runtime } = await fixture({
+      credential: credentialCanary,
+      sessionFactory: scripted.sessionFactory,
+    });
+
+    const execution = runtime.execute(request({ runId: "retry-terminal-success" }));
+    await retryObserved;
+    const accepted = await execution;
+    expect(accepted.kind).toBe("execution.accepted");
+    if (accepted.kind !== "execution.accepted") return;
+    expect(runtime.facts(accepted.operationRef, 0).facts).not.toContainEqual(
+      expect.objectContaining({ kind: "settlement" }),
+    );
+    expect(scripted.disposeCount()).toBe(0);
+    expect(scripted.unsubscribeCount()).toBe(0);
+
+    continueRetry();
+    const facts = await waitForSettlement(runtime, accepted.operationRef);
+    await new Promise<void>((resolve) => setImmediate(resolve));
+    const settlements = facts.filter((fact) => fact.kind === "settlement");
+    expect(settlements).toEqual([
+      expect.objectContaining({ kind: "settlement", outcome: "succeeded" }),
+    ]);
+    expect(facts.findIndex((fact) => fact.kind === "assistant.delta")).toBeLessThan(
+      facts.findIndex((fact) => fact.kind === "settlement"),
+    );
+    expect(facts.map((fact) => fact.sequence)).toEqual(
+      Array.from({ length: facts.length }, (_, index) => index + 1),
+    );
+    expect(disposedBeforeFinal).toBe(false);
+    expect(scripted.disposeCount()).toBe(1);
+    expect(scripted.unsubscribeCount()).toBe(1);
+    const serializedFacts = JSON.stringify(facts);
+    const persisted = persistedText(productHome);
+    for (const canary of [credentialCanary, errorCanary]) {
+      expect(serializedFacts).not.toContain(canary);
+      expect(persisted).not.toContain(canary);
+    }
+    await runtime.shutdown();
+  });
+
+  it.each([
+    { terminal: "error" as const, expectedMessage: "provider details were withheld" },
+    { terminal: "no-assistant" as const, expectedMessage: "provider details were withheld" },
+    {
+      terminal: "prompt-without-terminal" as const,
+      expectedMessage: "without a native settlement event",
+    },
+  ])("settles $terminal exactly once as failed", async ({ terminal, expectedMessage }) => {
+    const errorCanary = "FinalProviderErrorCanary987654321";
+    const scripted = scriptedSessionFactory(async ({ emit }) => {
+      if (terminal === "prompt-without-terminal") return;
+      if (terminal === "no-assistant") {
+        emit({ type: "agent_end", messages: [], willRetry: false });
+        return;
+      }
+      const failed = fauxAssistantMessage([], {
+        stopReason: "error",
+        errorMessage: errorCanary,
+      });
+      emit({ type: "message_end", message: failed });
+      emit({ type: "agent_end", messages: [failed], willRetry: false });
+      emit({ type: "agent_end", messages: [failed], willRetry: false });
+    });
+    const { productHome, runtime } = await fixture({
+      sessionFactory: scripted.sessionFactory,
+    });
+
+    const accepted = await runtime.execute(request({ runId: `terminal-${terminal}` }));
+    expect(accepted.kind).toBe("execution.accepted");
+    if (accepted.kind !== "execution.accepted") return;
+    const facts = await waitForSettlement(runtime, accepted.operationRef);
+    const settlements = facts.filter((fact) => fact.kind === "settlement");
+    expect(settlements).toEqual([
+      expect.objectContaining({
+        kind: "settlement",
+        outcome: "failed",
+        message: expect.stringContaining(expectedMessage),
+      }),
+    ]);
+    expect(facts.map((fact) => fact.sequence)).toEqual(
+      Array.from({ length: facts.length }, (_, index) => index + 1),
+    );
+    expect(JSON.stringify(facts)).not.toContain(errorCanary);
+    expect(persistedText(productHome)).not.toContain(errorCanary);
+    await runtime.shutdown();
   });
 
   it("prioritizes authenticated models before the bounded catalog cutoff", async () => {

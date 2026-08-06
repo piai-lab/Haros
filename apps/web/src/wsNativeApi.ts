@@ -73,6 +73,7 @@ import {
   type ProductShellSnapshot,
   type ProductSubmitQueueItemInput,
   type ProductSubmitResult,
+  type ProductRetryDispatchInput,
   type ProductUpdateConversationNotesInput,
   type ProductUpdateConversationTitleInput,
   type ProductUpdateGroupInput,
@@ -479,6 +480,7 @@ export interface ProductNativeApi {
     input: ProductDeleteQueueItemInput,
   ) => Promise<ProductConversationSnapshot>;
   readonly submitQueueItem: (input: ProductSubmitQueueItemInput) => Promise<ProductSubmitResult>;
+  readonly retryDispatch: (input: ProductRetryDispatchInput) => Promise<ProductSubmitResult>;
   readonly controlRun: (input: ProductControlRunInput) => Promise<ProductControlRunResult>;
   readonly readFacts: (input: ProductReadFactsInput) => Promise<ProductFactBatch>;
 }
@@ -622,6 +624,13 @@ export function readProductNativeApi(): ProductNativeApi {
     submitQueueItem: (input) =>
       transport
         .request<ProductSubmitResult>(PRODUCT_RPC_METHODS.submitQueueItem, input)
+        .then((result) => ({
+          ...result,
+          snapshot: rememberProductConversation(result.snapshot),
+        })),
+    retryDispatch: (input) =>
+      transport
+        .request<ProductSubmitResult>(PRODUCT_RPC_METHODS.retryDispatch, input)
         .then((result) => ({
           ...result,
           snapshot: rememberProductConversation(result.snapshot),

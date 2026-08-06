@@ -18,7 +18,7 @@ describe("Product submission health wiring", () => {
     const ownershipTransfer = productJourney.indexOf(
       "const queueItem = await confirmProductQueueOwnershipBeforeDraftClear",
     );
-    const healthGate = productJourney.indexOf("if (!canDispatchProductSubmission(");
+    const healthGate = productJourney.indexOf("!canDispatchProductSubmission(");
     const entryCreation = productJourney.indexOf("const entryId = ProductEntryId");
     const submission = productJourney.indexOf("productApi.submitQueueItem");
     expect(ownershipTransfer).toBeGreaterThan(0);

@@ -9,7 +9,7 @@ import { NonNegativeInt, PositiveInt, TrimmedNonEmptyString } from "../baseSchem
 const closedBoundary = <A extends Schema.Top>(schema: A): A =>
   schema.annotate({ parseOptions: { onExcessProperty: "error" } }) as A;
 
-export const PRODUCT_PROTOCOL_VERSION = 1 as const;
+export const PRODUCT_PROTOCOL_VERSION = 2 as const;
 export const PRODUCT_MAX_TEXT_CHARS = 65_536;
 export const PRODUCT_MAX_FACTS_PER_BATCH = 256;
 export const PRODUCT_MAX_QUEUE_ITEMS = 128;
@@ -145,32 +145,46 @@ export type ProductResourceRef = typeof ProductResourceRef.Type;
 
 const ProductSelectionPolicy = {
   permissionPolicy: Schema.Literals(["approval-required", "auto", "full-access"]),
-  enforcement: Schema.Literals(["host-enforced", "engine-enforced", "mixed", "unverified"]),
   executionTarget: Schema.NullOr(ProductExecutionTarget),
 };
+
+export const ProductRuntimeChoice = Schema.Union([
+  Schema.Struct({
+    kind: Schema.Literal("product-model"),
+    runtimeModelId: TrimmedNonEmptyString.check(Schema.isMaxLength(512)),
+    thinking: Schema.NullOr(TrimmedNonEmptyString.check(Schema.isMaxLength(128))),
+  }),
+  Schema.Struct({ kind: Schema.Literal("engine-session-current") }),
+]);
+export type ProductRuntimeChoice = typeof ProductRuntimeChoice.Type;
 
 export const ProductSelectedRuntime = Schema.Struct({
   state: Schema.Literal("selected"),
   engineId: TrimmedNonEmptyString.check(Schema.isMaxLength(256)),
-  runtimeModelId: TrimmedNonEmptyString.check(Schema.isMaxLength(512)),
-  thinking: Schema.NullOr(TrimmedNonEmptyString.check(Schema.isMaxLength(128))),
-  packageGeneration: TrimmedNonEmptyString.check(Schema.isMaxLength(256)),
+  runtimeChoice: ProductRuntimeChoice,
+  packageGeneration: Schema.NullOr(TrimmedNonEmptyString.check(Schema.isMaxLength(256))),
   ...ProductSelectionPolicy,
 });
 export type ProductSelectedRuntime = typeof ProductSelectedRuntime.Type;
 
 export const ProductUnavailableRuntime = Schema.Struct({
   state: Schema.Literal("unavailable"),
+  requestedEngineId: TrimmedNonEmptyString.check(Schema.isMaxLength(256)),
   reason: Schema.Literals([
-    "catalog-unavailable",
+    "missing",
+    "version-mismatch",
+    "artifact-mismatch",
+    "protocol-mismatch",
+    "initialize-failed",
+    "auth-required",
+    "process-unavailable",
+    "target-unsupported",
     "model-not-selected",
     "model-unavailable",
-    "auth-missing",
     "thinking-unsupported",
   ]),
-  requestedRuntimeModelId: Schema.NullOr(
-    TrimmedNonEmptyString.check(Schema.isMaxLength(512)),
-  ),
+  requestedRuntimeChoice: Schema.NullOr(ProductRuntimeChoice),
+  packageGeneration: Schema.NullOr(TrimmedNonEmptyString.check(Schema.isMaxLength(256))),
   ...ProductSelectionPolicy,
 });
 export type ProductUnavailableRuntime = typeof ProductUnavailableRuntime.Type;
@@ -186,10 +200,11 @@ export const ProductResolvedSelection = Schema.Struct({
   engineId: TrimmedNonEmptyString.check(Schema.isMaxLength(256)),
   runtimeModelId: TrimmedNonEmptyString.check(Schema.isMaxLength(512)),
   thinking: Schema.NullOr(TrimmedNonEmptyString.check(Schema.isMaxLength(128))),
+  engineModeId: Schema.NullOr(TrimmedNonEmptyString.check(Schema.isMaxLength(256))),
   permissionPolicy: Schema.Literals(["approval-required", "auto", "full-access"]),
   enforcement: Schema.Literals(["host-enforced", "engine-enforced", "mixed", "unverified"]),
   executionTarget: Schema.NullOr(ProductExecutionTarget),
-  packageGeneration: TrimmedNonEmptyString.check(Schema.isMaxLength(256)),
+  packageGeneration: Schema.NullOr(TrimmedNonEmptyString.check(Schema.isMaxLength(256))),
 });
 export type ProductResolvedSelection = typeof ProductResolvedSelection.Type;
 
@@ -203,6 +218,32 @@ export type ProductEngineBinding = typeof ProductEngineBinding.Type;
 const DispatchPending = Schema.Struct({
   state: Schema.Literal("pending"),
   lastConfirmedBoundary: Schema.Literal("pre-send"),
+  blocked: Schema.NullOr(
+    Schema.Struct({
+      kind: Schema.Literal("selected-engine-unavailable"),
+      code: TrimmedNonEmptyString.check(Schema.isMaxLength(128)),
+      message: TrimmedNonEmptyString.check(Schema.isMaxLength(2_000)),
+      retryable: Schema.Literal(true),
+      observedAt: ProductIsoDateTime,
+    }),
+  ),
+});
+const ProductAbortEvidence = Schema.NullOr(
+  Schema.Struct({ requestedAt: ProductIsoDateTime, confirmed: Schema.Boolean }),
+);
+export const ProductExecutionEvidence = Schema.Union([
+  Schema.Struct({
+    kind: Schema.Literal("accepted-operation"),
+    operationRef: TrimmedNonEmptyString.check(Schema.isMaxLength(1_024)),
+  }),
+  Schema.Struct({ kind: Schema.Literal("observed-delivery"), observedAt: ProductIsoDateTime }),
+]);
+export type ProductExecutionEvidence = typeof ProductExecutionEvidence.Type;
+const DispatchSent = Schema.Struct({
+  state: Schema.Literal("sent"),
+  lastConfirmedBoundary: Schema.Literal("local-write"),
+  resolvedSelection: ProductResolvedSelection,
+  abort: ProductAbortEvidence,
 });
 const DispatchRejected = Schema.Struct({
   state: Schema.Literal("rejected"),
@@ -215,36 +256,40 @@ const DispatchAccepted = Schema.Struct({
   operationRef: TrimmedNonEmptyString.check(Schema.isMaxLength(1_024)),
   engineBinding: ProductEngineBinding,
   resolvedSelection: ProductResolvedSelection,
+  abort: ProductAbortEvidence,
 });
 const DispatchDeliveryUnknown = Schema.Struct({
   state: Schema.Literal("delivery_unknown"),
-  lastConfirmedBoundary: Schema.Literals(["sent", "acceptance-ack"]),
-  reconciliationHint: Schema.optional(TrimmedNonEmptyString.check(Schema.isMaxLength(512))),
+  lastConfirmedBoundary: Schema.Literals(["local-write", "acceptance-ack"]),
+  abort: ProductAbortEvidence,
 });
 const DispatchRunning = Schema.Struct({
   state: Schema.Literal("running"),
-  operationRef: TrimmedNonEmptyString.check(Schema.isMaxLength(1_024)),
+  evidence: ProductExecutionEvidence,
   engineBinding: ProductEngineBinding,
   resolvedSelection: ProductResolvedSelection,
+  abort: ProductAbortEvidence,
 });
 const DispatchSettled = Schema.Struct({
   state: Schema.Literal("settled"),
-  operationRef: TrimmedNonEmptyString.check(Schema.isMaxLength(1_024)),
+  evidence: ProductExecutionEvidence,
   engineBinding: ProductEngineBinding,
   resolvedSelection: ProductResolvedSelection,
   outcome: Schema.Literals(["succeeded", "failed", "cancelled"]),
   settledAt: ProductIsoDateTime,
+  abort: ProductAbortEvidence,
 });
 const DispatchOutcomeUnknown = Schema.Struct({
   state: Schema.Literal("outcome_unknown"),
-  operationRef: TrimmedNonEmptyString.check(Schema.isMaxLength(1_024)),
+  evidence: ProductExecutionEvidence,
   engineBinding: ProductEngineBinding,
   resolvedSelection: ProductResolvedSelection,
-  lastConfirmedBoundary: Schema.Literal("accepted"),
+  abort: ProductAbortEvidence,
 });
 
 export const ProductDispatchReceipt = Schema.Union([
   DispatchPending,
+  DispatchSent,
   DispatchRejected,
   DispatchAccepted,
   DispatchDeliveryUnknown,
@@ -292,9 +337,7 @@ export const ProductEntryMarker = Schema.Struct({
     Schema.isMinLength(1),
     Schema.isMaxLength(PRODUCT_ENTRY_MARKER_SELECTED_TEXT_MAX_CHARS),
   ),
-  selectedTextDigest: Schema.String.check(
-    Schema.isPattern(/^sha256:[0-9a-f]{64}$/),
-  ),
+  selectedTextDigest: Schema.String.check(Schema.isPattern(/^sha256:[0-9a-f]{64}$/)),
   style: Schema.Literals(["highlight", "underline"]),
   color: Schema.Literals(["yellow", "blue", "green", "pink"]),
   label: Schema.NullOr(
@@ -313,7 +356,7 @@ export const ProductRun = Schema.Struct({
   requestedSelection: ProductSelectedRuntime,
   workspaceObservation: ProductWorkspace,
   resources: Schema.Array(ProductResourceRef).check(Schema.isMaxLength(PRODUCT_MAX_RESOURCE_REFS)),
-  packageGeneration: TrimmedNonEmptyString.check(Schema.isMaxLength(256)),
+  packageGeneration: Schema.NullOr(TrimmedNonEmptyString.check(Schema.isMaxLength(256))),
   receipt: ProductOperationReceipt,
   createdAt: ProductIsoDateTime,
   updatedAt: ProductIsoDateTime,
@@ -374,6 +417,7 @@ const ProductConversationSummaryFields = Schema.Struct({
   receiptState: Schema.NullOr(
     Schema.Literals([
       "pending",
+      "sent",
       "rejected",
       "accepted",
       "delivery_unknown",
@@ -405,6 +449,17 @@ export const ProductRuntimeActivityDetail = Schema.Union([
   }),
   Schema.Struct({ code: Schema.Literal("thinking-delta"), text: ProductVisibleText }),
   Schema.Struct({ code: Schema.Literal("question-requested"), question: ProductVisibleText }),
+  Schema.Struct({ code: Schema.Literal("plan-updated"), summary: ProductVisibleText }),
+  Schema.Struct({
+    code: Schema.Literal("permission-requested"),
+    toolCallId: ProductVisibleText,
+    title: ProductVisibleText,
+  }),
+  Schema.Struct({
+    code: Schema.Literal("permission-rejected"),
+    toolCallId: ProductVisibleText,
+    reason: ProductVisibleText,
+  }),
   Schema.Struct({
     code: Schema.Literal("control-applied"),
     control: Schema.Literals(["steer", "follow-up", "abort", "cancel"]),
@@ -425,20 +480,137 @@ export const ProductRuntimeActivityDetail = Schema.Union([
     total: NonNegativeInt,
   }),
   Schema.Struct({
+    code: Schema.Literal("context-usage-observed"),
+    used: NonNegativeInt,
+    size: NonNegativeInt,
+  }),
+  Schema.Struct({
     code: Schema.Literal("run-settled"),
     outcome: Schema.Literals(["succeeded", "failed", "cancelled"]),
   }),
 ]);
 export type ProductRuntimeActivityDetail = typeof ProductRuntimeActivityDetail.Type;
 
+const executionFactBase = { engineSequence: PositiveInt, emittedAt: ProductIsoDateTime };
+const executionText = Schema.String.check(Schema.isMinLength(1), Schema.isMaxLength(16_384));
+const executionName = TrimmedNonEmptyString.check(Schema.isMaxLength(512));
+const executionIdentity = TrimmedNonEmptyString.check(Schema.isMaxLength(1_024));
+const executionFact = <const Fields extends Schema.Struct.Fields>(fields: Fields) =>
+  closedBoundary(Schema.Struct({ ...executionFactBase, ...fields }));
+
+export const ProductExecutionFact = Schema.Union([
+  executionFact({
+    kind: Schema.Literal("session.bound"),
+    lineage: Schema.Literals(["continued", "new", "missing", "divergent"]),
+  }),
+  executionFact({
+    kind: Schema.Literals(["package.loaded", "package.failed"]),
+    count: NonNegativeInt,
+  }),
+  executionFact({
+    kind: Schema.Literals(["assistant.delta", "thinking.delta"]),
+    text: executionText,
+  }),
+  executionFact({ kind: Schema.Literal("question.requested"), question: executionText }),
+  executionFact({ kind: Schema.Literal("plan.updated"), summary: executionText }),
+  executionFact({
+    kind: Schema.Literal("permission.requested"),
+    toolCallId: executionIdentity,
+    title: executionName,
+  }),
+  executionFact({
+    kind: Schema.Literal("permission.rejected"),
+    toolCallId: executionIdentity,
+    reason: Schema.Literal("approval-ui-unavailable"),
+  }),
+  executionFact({
+    kind: Schema.Literal("control.applied"),
+    control: Schema.Literals(["steer", "follow-up", "abort", "cancel"]),
+    text: Schema.NullOr(Schema.String.check(Schema.isMaxLength(4_096))),
+  }),
+  executionFact({
+    kind: Schema.Literal("tool.started"),
+    toolCallId: executionIdentity,
+    toolName: executionName,
+  }),
+  executionFact({
+    kind: Schema.Literal("tool.settled"),
+    toolCallId: executionIdentity,
+    toolName: executionName,
+    outcome: Schema.Literals(["succeeded", "failed"]),
+    summary: Schema.String.check(Schema.isMaxLength(16_384)),
+  }),
+  executionFact({
+    kind: Schema.Literal("usage"),
+    input: NonNegativeInt,
+    output: NonNegativeInt,
+    cacheRead: NonNegativeInt,
+    cacheWrite: NonNegativeInt,
+    total: NonNegativeInt,
+  }),
+  executionFact({
+    kind: Schema.Literal("context.usage"),
+    used: NonNegativeInt,
+    size: NonNegativeInt,
+  }),
+  executionFact({
+    kind: Schema.Literal("settlement"),
+    outcome: Schema.Literals(["succeeded", "failed", "cancelled"]),
+    message: Schema.NullOr(Schema.String.check(Schema.isMaxLength(16_384))),
+  }),
+]);
+export type ProductExecutionFact = typeof ProductExecutionFact.Type;
+
+export const ProductExecutionSnapshot = closedBoundary(
+  Schema.Struct({
+    version: Schema.Literal(1),
+    source: Schema.Literals(["engine-session-reopen", "engine-redacted-stream"]),
+    assistant: Schema.String.check(Schema.isMaxLength(PRODUCT_MAX_TEXT_CHARS)),
+    settlement: closedBoundary(
+      Schema.Struct({
+        outcome: Schema.Literals(["succeeded", "failed", "cancelled"]),
+        message: Schema.String.check(Schema.isMaxLength(16_384)),
+        settledAt: ProductIsoDateTime,
+      }),
+    ),
+  }),
+);
+export type ProductExecutionSnapshot = typeof ProductExecutionSnapshot.Type;
+
+export const ProductExecutionUpdate = Schema.Union([
+  closedBoundary(
+    Schema.Struct({
+      kind: Schema.Literal("facts"),
+      facts: Schema.Array(ProductExecutionFact).check(
+        Schema.isMaxLength(PRODUCT_MAX_FACTS_PER_BATCH),
+      ),
+    }),
+  ),
+  closedBoundary(
+    Schema.Struct({
+      kind: Schema.Literal("delivery-observed"),
+      engineBinding: ProductEngineBinding,
+      resolvedSelection: ProductResolvedSelection,
+      firstFact: ProductExecutionFact,
+    }),
+  ),
+  closedBoundary(
+    Schema.Struct({ kind: Schema.Literal("snapshot"), snapshot: ProductExecutionSnapshot }),
+  ),
+  closedBoundary(Schema.Struct({ kind: Schema.Literal("outcome-unknown") })),
+]);
+export type ProductExecutionUpdate = typeof ProductExecutionUpdate.Type;
+
 export const ProductRuntimeActivity = Schema.Struct({
   runId: ProductRunId,
-  nativeSequence: PositiveInt,
+  engineSequence: PositiveInt,
   kind: Schema.Literals([
     "session",
     "package",
     "thinking",
     "question",
+    "plan",
+    "permission",
     "control",
     "tool",
     "usage",
@@ -466,9 +638,7 @@ export const ProductConversationReadModel = Schema.Struct({
   activities: Schema.Array(ProductRuntimeActivity),
   recoveries: Schema.optional(Schema.Array(ProductRuntimeRecovery)),
   queue: Schema.Array(ProductQueueItem).check(Schema.isMaxLength(PRODUCT_MAX_QUEUE_ITEMS)),
-  entryPins: Schema.Array(ProductEntryPin).check(
-    Schema.isMaxLength(PRODUCT_ENTRY_PINS_MAX_COUNT),
-  ),
+  entryPins: Schema.Array(ProductEntryPin).check(Schema.isMaxLength(PRODUCT_ENTRY_PINS_MAX_COUNT)),
   entryMarkers: Schema.Array(ProductEntryMarker).check(
     Schema.isMaxLength(PRODUCT_ENTRY_MARKERS_MAX_COUNT),
   ),
@@ -489,35 +659,78 @@ export const ProductRuntimeModel = Schema.Struct({
 });
 export type ProductRuntimeModel = typeof ProductRuntimeModel.Type;
 
-export const ProductRuntimeCapabilities = Schema.Struct({
-  ingress: Schema.Literal("typed-native-host"),
-  lineage: Schema.Struct({
-    continue: Schema.Literals(["available", "unavailable", "unknown"]),
-    rebuild: Schema.Literals(["available", "unavailable", "unknown"]),
+export const ProductCapabilityTruth = Schema.Struct({
+  state: Schema.Literals(["available", "unavailable", "unsupported", "degraded", "unknown"]),
+  reason: TrimmedNonEmptyString.check(Schema.isMaxLength(128)),
+});
+const ProductEngineAvailability = Schema.Union([
+  Schema.Struct({ state: Schema.Literal("available") }),
+  Schema.Struct({
+    state: Schema.Literal("unavailable"),
+    reason: Schema.Literals([
+      "missing",
+      "version-mismatch",
+      "artifact-mismatch",
+      "protocol-mismatch",
+      "initialize-failed",
+      "auth-required",
+      "process-unavailable",
+    ]),
   }),
-  controls: Schema.Struct({
-    steer: Schema.Literals(["available", "unavailable", "unknown"]),
-    followUp: Schema.Literals(["available", "unavailable", "unknown"]),
-    abort: Schema.Literals(["available", "unavailable", "unknown"]),
-    cancel: Schema.Literals(["available", "unavailable", "unknown"]),
+]);
+const ProductModelSelectionAuthority = Schema.Union([
+  Schema.Struct({
+    kind: Schema.Literal("product-model"),
+    models: Schema.Array(ProductRuntimeModel).check(Schema.isMaxLength(128)),
+    thinking: Schema.Literal("product-selectable"),
   }),
-  structuredQuestions: Schema.Literals(["available", "unavailable", "unknown"]),
-  packages: Schema.Literals(["available", "unavailable", "unknown"]),
-  filesRead: Schema.Literals(["available", "unavailable", "unknown"]),
-  filesWrite: Schema.Literals(["available", "unavailable", "unknown"]),
-  terminal: Schema.Literals(["available", "unavailable", "unknown"]),
+  Schema.Struct({
+    kind: Schema.Literal("engine-session"),
+    model: Schema.Literal("resolved-on-prepare"),
+    mode: Schema.Literal("resolved-on-prepare"),
+    thinking: Schema.Literal("unsupported"),
+  }),
+]);
+const capabilityKeys = {
+  continuation: ProductCapabilityTruth,
+  rebuild: ProductCapabilityTruth,
+  thinkingStream: ProductCapabilityTruth,
+  thinkingLevel: ProductCapabilityTruth,
+  structuredQuestion: ProductCapabilityTruth,
+  queue: ProductCapabilityTruth,
+  steer: ProductCapabilityTruth,
+  followUp: ProductCapabilityTruth,
+  cancel: ProductCapabilityTruth,
+  permissionPolicy: ProductCapabilityTruth,
+  packages: ProductCapabilityTruth,
+  filesRead: ProductCapabilityTruth,
+  filesWrite: ProductCapabilityTruth,
+  terminal: ProductCapabilityTruth,
+  namespacedUi: ProductCapabilityTruth,
+};
+export const ProductEngineCatalogEntry = Schema.Struct({
+  engineId: TrimmedNonEmptyString.check(Schema.isMaxLength(256)),
+  displayName: TrimmedNonEmptyString.check(Schema.isMaxLength(256)),
+  distribution: Schema.Literals(["bundled-native", "user-installed"]),
+  runtimeVersion: Schema.NullOr(TrimmedNonEmptyString.check(Schema.isMaxLength(128))),
+  protocol: Schema.Struct({
+    name: Schema.Literals(["native", "acp"]),
+    version: TrimmedNonEmptyString.check(Schema.isMaxLength(64)),
+  }),
+  availability: ProductEngineAvailability,
+  modelSelection: ProductModelSelectionAuthority,
+  capabilities: Schema.Struct(capabilityKeys),
   enforcement: Schema.Literals(["host-enforced", "engine-enforced", "mixed", "unverified"]),
 });
-export type ProductRuntimeCapabilities = typeof ProductRuntimeCapabilities.Type;
+export type ProductEngineCatalogEntry = typeof ProductEngineCatalogEntry.Type;
 
-/** Sanitized Host-owned catalog snapshot; Product never reconstructs provider capability. */
 export const ProductRuntimeCatalog = Schema.Struct({
-  engineId: TrimmedNonEmptyString.check(Schema.isMaxLength(256)),
-  runtimeVersion: TrimmedNonEmptyString.check(Schema.isMaxLength(128)),
-  packageGeneration: TrimmedNonEmptyString.check(Schema.isMaxLength(256)),
-  models: Schema.Array(ProductRuntimeModel).check(Schema.isMaxLength(128)),
-  capabilities: ProductRuntimeCapabilities,
-  truncated: Schema.Boolean,
+  defaultEngineId: TrimmedNonEmptyString.check(Schema.isMaxLength(256)),
+  packageGeneration: Schema.NullOr(TrimmedNonEmptyString.check(Schema.isMaxLength(256))),
+  engines: Schema.Array(ProductEngineCatalogEntry).check(
+    Schema.isMinLength(1),
+    Schema.isMaxLength(2),
+  ),
 });
 export type ProductRuntimeCatalog = typeof ProductRuntimeCatalog.Type;
 
@@ -583,10 +796,7 @@ export const ProductReorderGroupsInput = Schema.Struct({
   mutationId: ProductMutationId,
   expectedGroups: Schema.Array(
     Schema.Struct({ groupId: ProductGroupId, revision: PositiveInt }),
-  ).check(
-    Schema.isMinLength(1),
-    Schema.isMaxLength(PRODUCT_MAX_GROUPS),
-  ),
+  ).check(Schema.isMinLength(1), Schema.isMaxLength(PRODUCT_MAX_GROUPS)),
   orderedGroupIds: Schema.Array(ProductGroupId).check(
     Schema.isMinLength(1),
     Schema.isMaxLength(PRODUCT_MAX_GROUPS),
@@ -691,8 +901,7 @@ export const ProductUpdateConversationTitleInput = Schema.Struct({
   ...ProductConversationMutationTarget,
   title: ProductTitle,
 }).pipe(closedBoundary);
-export type ProductUpdateConversationTitleInput =
-  typeof ProductUpdateConversationTitleInput.Type;
+export type ProductUpdateConversationTitleInput = typeof ProductUpdateConversationTitleInput.Type;
 
 export const ProductArchiveConversationInput = Schema.Struct({
   ...ProductConversationMutationTarget,
@@ -774,9 +983,7 @@ export const ProductAddEntryMarkerInput = Schema.Struct({
     Schema.isMinLength(1),
     Schema.isMaxLength(PRODUCT_ENTRY_MARKER_SELECTED_TEXT_MAX_CHARS),
   ),
-  selectedTextDigest: Schema.String.check(
-    Schema.isPattern(/^sha256:[0-9a-f]{64}$/),
-  ),
+  selectedTextDigest: Schema.String.check(Schema.isPattern(/^sha256:[0-9a-f]{64}$/)),
   style: ProductEntryMarker.fields.style,
   color: ProductEntryMarker.fields.color,
 }).pipe(closedBoundary);
@@ -859,6 +1066,13 @@ export const ProductSubmitResult = Schema.Struct({
 }).pipe(closedBoundary);
 export type ProductSubmitResult = typeof ProductSubmitResult.Type;
 
+export const ProductRetryDispatchInput = Schema.Struct({
+  protocolVersion: Schema.Literal(PRODUCT_PROTOCOL_VERSION),
+  conversationId: ProductConversationId,
+  dispatchId: ProductDispatchId,
+}).pipe(closedBoundary);
+export type ProductRetryDispatchInput = typeof ProductRetryDispatchInput.Type;
+
 export const ProductControlRunInput = Schema.Struct({
   protocolVersion: Schema.Literal(PRODUCT_PROTOCOL_VERSION),
   conversationId: ProductConversationId,
@@ -869,14 +1083,15 @@ export const ProductControlRunInput = Schema.Struct({
 export type ProductControlRunInput = typeof ProductControlRunInput.Type;
 
 export const ProductControlRunResult = Schema.Struct({
-  operationRef: TrimmedNonEmptyString.check(Schema.isMaxLength(1_024)),
+  operationRef: Schema.NullOr(TrimmedNonEmptyString.check(Schema.isMaxLength(1_024))),
   control: Schema.Literals(["steer", "follow-up", "abort", "cancel"]),
-  result: Schema.Literals(["applied", "unsupported", "too-late", "unknown"]),
+  result: Schema.Literals(["applied", "requested", "unsupported", "too-late", "unknown"]),
   code: Schema.Literals([
     "control-applied",
     "control-unsupported",
     "control-too-late",
     "operation-unknown",
+    "control-unacknowledged",
   ]),
   message: TrimmedNonEmptyString.check(Schema.isMaxLength(2_000)),
 }).pipe(closedBoundary);
@@ -975,9 +1190,7 @@ export const ProductDetailFactChange = Schema.Union([
   Schema.Struct({
     kind: Schema.Literal("entry-pins-changed"),
     conversationId: ProductConversationId,
-    pins: Schema.Array(ProductEntryPin).check(
-      Schema.isMaxLength(PRODUCT_ENTRY_PINS_MAX_COUNT),
-    ),
+    pins: Schema.Array(ProductEntryPin).check(Schema.isMaxLength(PRODUCT_ENTRY_PINS_MAX_COUNT)),
   }),
   Schema.Struct({
     kind: Schema.Literal("entry-markers-changed"),
@@ -1122,6 +1335,18 @@ export const ProductExecutionObservation = Schema.Union([
     kind: Schema.Literal("indeterminate"),
     lastConfirmedBoundary: Schema.Literals(["sent", "acceptance-ack"]),
     reconciliationHint: Schema.optional(TrimmedNonEmptyString.check(Schema.isMaxLength(512))),
+  }),
+  Schema.Struct({
+    kind: Schema.Literal("observed-settled"),
+    engineBinding: ProductEngineBinding,
+    resolvedSelection: ProductResolvedSelection,
+    outcome: Schema.Literals(["succeeded", "failed"]),
+    settledAt: ProductIsoDateTime,
+  }),
+  Schema.Struct({
+    kind: Schema.Literal("observed-outcome-unknown"),
+    engineBinding: ProductEngineBinding,
+    resolvedSelection: ProductResolvedSelection,
   }),
 ]).pipe(closedBoundary);
 export type ProductExecutionObservation = typeof ProductExecutionObservation.Type;

@@ -56,7 +56,10 @@ export function useKanbanTaskScratchDraft(runtimeCatalog: ProductRuntimeCatalog 
   );
   const selectedProvider = "pi" as const;
   const selectedModel =
-    requestedSelection?.state === "selected" ? requestedSelection.runtimeModelId : null;
+    requestedSelection?.state === "selected" &&
+    requestedSelection.runtimeChoice.kind === "product-model"
+      ? requestedSelection.runtimeChoice.runtimeModelId
+      : null;
 
   useEffect(() => {
     const nextSkills = filterPromptSkillReferences(prompt, composerSkills, selectedProvider);
@@ -74,14 +77,16 @@ export function useKanbanTaskScratchDraft(runtimeCatalog: ProductRuntimeCatalog 
 
   const handleRuntimeSelectionChange = (model: ProductRuntimeModel, thinking: string | null) => {
     if (!runtimeCatalog) return;
+    const engine = runtimeCatalog.engines.find(
+      (candidate) => candidate.engineId === runtimeCatalog.defaultEngineId,
+    );
+    if (!engine || engine.modelSelection.kind !== "product-model") return;
     setRequestedSelection({
       state: "selected",
-      engineId: runtimeCatalog.engineId,
-      runtimeModelId: model.id,
-      thinking,
+      engineId: engine.engineId,
+      runtimeChoice: { kind: "product-model", runtimeModelId: model.id, thinking },
       packageGeneration: runtimeCatalog.packageGeneration,
       permissionPolicy: "approval-required",
-      enforcement: runtimeCatalog.capabilities.enforcement,
       executionTarget: null,
     });
   };

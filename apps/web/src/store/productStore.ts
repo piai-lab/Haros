@@ -142,9 +142,7 @@ function applyDetailFact(
     return {
       ...readModel,
       entries: exists
-        ? readModel.entries.map((entry) =>
-            entry.id === change.entry.id ? change.entry : entry,
-          )
+        ? readModel.entries.map((entry) => (entry.id === change.entry.id ? change.entry : entry))
         : [...readModel.entries, change.entry],
     };
   }
@@ -171,16 +169,13 @@ function applyDetailFact(
     const exists = readModel.activities.some(
       (activity) =>
         activity.runId === change.activity.runId &&
-        activity.nativeSequence === change.activity.nativeSequence,
+        activity.engineSequence === change.activity.engineSequence,
     );
     return exists
       ? readModel
       : {
           ...readModel,
-          activities: [
-            ...readModel.activities,
-            change.activity,
-          ],
+          activities: [...readModel.activities, change.activity],
         };
   }
   if (change.kind === "runtime-recovered") {
@@ -190,9 +185,7 @@ function applyDetailFact(
         recovery.runId === change.recovery.runId &&
         recovery.snapshotVersion === change.recovery.snapshotVersion,
     );
-    return exists
-      ? readModel
-      : { ...readModel, recoveries: [...recoveries, change.recovery] };
+    return exists ? readModel : { ...readModel, recoveries: [...recoveries, change.recovery] };
   }
   if (change.kind === "dispatch-changed") {
     return {
@@ -326,10 +319,7 @@ export function applyProductFactBatch(
   let applied = false;
   let detailTombstoned = false;
   for (const fact of batch.facts) {
-    if (
-      !isShell &&
-      (!("conversationId" in fact) || fact.conversationId !== conversationId)
-    ) {
+    if (!isShell && (!("conversationId" in fact) || fact.conversationId !== conversationId)) {
       return {
         state: {
           ...state,
@@ -370,9 +360,7 @@ export function applyProductFactBatch(
         workspaces = upsertWorkspace(workspaces, fact.change.workspace);
       } else if (fact.change.kind === "workspace-tombstone") {
         const tombstoneWorkspaceId = fact.change.workspaceId;
-        workspaces = workspaces.filter(
-          (workspace) => workspace.id !== tombstoneWorkspaceId,
-        );
+        workspaces = workspaces.filter((workspace) => workspace.id !== tombstoneWorkspaceId);
       } else if (fact.change.kind === "group-summary") {
         groups = upsertGroup(groups, fact.change.group);
       } else if (fact.change.kind === "group-tombstone") {

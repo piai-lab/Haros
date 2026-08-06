@@ -110,3 +110,5 @@
 Stage 0–3 已在 `248b3316651e681d9d4c78f81bec0c84a4cc822c` 形成并独立接受首个纵切候选；真实 headless Pi Package checkpoint 已在 `16f14d188e38134f6f45c46bfcb57ff36c1e8565` 形成并独立接受。现在只进入一个真实外部 Engine：通过 ACP、官方 headless protocol 或经证据选择的最薄真实路径，证明 capability/permission difference、next-Run choice、外部 Session authority 与 no silent fallback；不得把 Pi Gold Path 压成最低公分母，也不得先造通用多 Engine framework。
 
 该外部 Engine proof 未完成前，不提前进入 Remote、三平台发行或 Marketplace 扩建；除非 Source Review 的复验触发器变化，不重复 unchanged baseline smoke。
+
+F-13 被接受并完成 generation rotation 后、进入 Remote 前，下一 bounded checkpoint 固定为 Product truth consolidation：先创建并验证全部受影响开发 store 的 backup/export，再确立 first-public-schema baseline、删除未发行 schema 的 steady-state compatibility、按稳定职责拆分 `ProductControlPlane`，并证明 production code 与概念复杂度实质净减。该施工不属于当前 F-13，也不得在本 generation 提前实现。

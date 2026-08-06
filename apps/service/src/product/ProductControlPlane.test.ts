@@ -23,7 +23,7 @@ import {
   type ProductCreateConversationInput,
   type ProductCreateWorkspaceInput,
   type ProductExecutionObservation,
-  type NativeHostRuntimeFact,
+  type ProductExecutionFact,
   type ProductRequestedSelection,
 } from "@omnimind/contracts";
 import { Effect, ManagedRuntime } from "effect";
@@ -42,6 +42,7 @@ import {
   readProductPackageLifecycleFacts,
   type ProductExecutionBoundary,
 } from "./ProductControlPlane";
+import { makeProductExecutionGateway } from "./productExecutionGateway";
 
 const temporaryRoots: string[] = [];
 
@@ -55,10 +56,9 @@ afterEach(async () => {
 async function makeSystem(
   filename = ":memory:",
   boundary: ProductExecutionBoundary = ProductExecutionUnavailable,
+  catalog: ProductRuntimeCatalog | null = runtimeCatalog,
 ) {
-  const runtime = ManagedRuntime.make(
-    makeProductControlPlaneLayer(filename, boundary, runtimeCatalog),
-  );
+  const runtime = ManagedRuntime.make(makeProductControlPlaneLayer(filename, boundary, catalog));
   const controlPlane = await runtime.runPromise(Effect.service(ProductControlPlane));
   return {
     controlPlane,
@@ -119,10 +119,8 @@ function requestedSelection(
   return {
     state: "selected",
     engineId: "native-engine",
-    runtimeModelId: "provider/model",
-    thinking: "high",
+    runtimeChoice: { kind: "product-model", runtimeModelId: "provider/model", thinking: "high" },
     permissionPolicy: "approval-required",
-    enforcement: "unverified",
     executionTarget: withoutExecutionTarget
       ? null
       : {
@@ -135,38 +133,114 @@ function requestedSelection(
 }
 
 const runtimeCatalog: ProductRuntimeCatalog = {
-  engineId: "native-engine",
-  runtimeVersion: "test-runtime",
+  defaultEngineId: "native-engine",
   packageGeneration: "unresolved-not-activated",
-  models: [
+  engines: [
     {
-      id: "provider/model",
-      provider: "provider",
-      modelId: "model",
-      name: "Test model",
-      reasoning: true,
-      available: true,
-      thinkingLevels: ["high", "medium"],
-      auth: "configured",
+      engineId: "native-engine",
+      displayName: "Native",
+      distribution: "bundled-native",
+      runtimeVersion: "test-runtime",
+      protocol: { name: "native", version: "1" },
+      availability: { state: "available" },
+      modelSelection: {
+        kind: "product-model",
+        thinking: "product-selectable",
+        models: [
+          {
+            id: "provider/model",
+            provider: "provider",
+            modelId: "model",
+            name: "Test model",
+            reasoning: true,
+            available: true,
+            thinkingLevels: ["high", "medium"],
+            auth: "configured",
+          },
+        ],
+      },
+      capabilities: Object.fromEntries(
+        [
+          "continuation",
+          "rebuild",
+          "thinkingStream",
+          "thinkingLevel",
+          "structuredQuestion",
+          "queue",
+          "steer",
+          "followUp",
+          "cancel",
+          "permissionPolicy",
+          "packages",
+          "filesRead",
+          "filesWrite",
+          "terminal",
+          "namespacedUi",
+        ].map((key) => [key, { state: "available", reason: "fixture" }]),
+      ) as never,
+      enforcement: "unverified",
     },
   ],
-  capabilities: {
-    ingress: "typed-native-host",
-    lineage: { continue: "available", rebuild: "available" },
-    controls: {
-      steer: "available",
-      followUp: "available",
-      abort: "available",
-      cancel: "unavailable",
+};
+
+const externalRuntimeCatalog: ProductRuntimeCatalog = {
+  ...runtimeCatalog,
+  engines: [
+    runtimeCatalog.engines[0]!,
+    {
+      engineId: "opencode",
+      displayName: "OpenCode",
+      distribution: "user-installed",
+      runtimeVersion: "1.14.40",
+      protocol: { name: "acp", version: "1" },
+      availability: { state: "available" },
+      modelSelection: {
+        kind: "engine-session",
+        model: "resolved-on-prepare",
+        mode: "resolved-on-prepare",
+        thinking: "unsupported",
+      },
+      capabilities: runtimeCatalog.engines[0]!.capabilities,
+      enforcement: "unverified",
     },
-    structuredQuestions: "available",
-    packages: "available",
-    filesRead: "unknown",
-    filesWrite: "unknown",
-    terminal: "unknown",
-    enforcement: "unverified",
-  },
-  truncated: false,
+  ],
+};
+
+const externalDefaultRuntimeCatalog: ProductRuntimeCatalog = {
+  ...externalRuntimeCatalog,
+  defaultEngineId: "opencode",
+  packageGeneration: null,
+};
+
+const externalSelection: ProductRequestedSelection = {
+  state: "selected",
+  engineId: "opencode",
+  runtimeChoice: { kind: "engine-session-current" },
+  permissionPolicy: "approval-required",
+  executionTarget: null,
+  packageGeneration: null,
+};
+
+const externalResolvedSelection = {
+  engineId: "opencode",
+  runtimeModelId: "provider/external-model",
+  thinking: null,
+  engineModeId: null,
+  permissionPolicy: "approval-required" as const,
+  enforcement: "unverified" as const,
+  executionTarget: null,
+  packageGeneration: null,
+};
+
+const nativeResolvedSelection = {
+  engineId: "native-engine",
+  runtimeModelId: "provider/model",
+  thinking: "high",
+  engineModeId: null,
+  permissionPolicy: "approval-required" as const,
+  enforcement: "unverified" as const,
+  executionTarget: null,
+  packageGeneration: "unresolved-not-activated",
 };
 
 function acceptedObservation(suffix: string): ProductExecutionObservation {
@@ -182,11 +256,21 @@ function acceptedObservation(suffix: string): ProductExecutionObservation {
       engineId: "native-engine",
       runtimeModelId: "provider/model",
       thinking: "high",
+      engineModeId: null,
       permissionPolicy: "approval-required",
       enforcement: "unverified",
       executionTarget: null,
       packageGeneration: "unresolved-not-activated",
     },
+  };
+}
+
+function thinkingFact(engineSequence: number, text: string): ProductExecutionFact {
+  return {
+    kind: "thinking.delta",
+    text,
+    engineSequence,
+    emittedAt: `2026-08-07T00:00:0${engineSequence}.000Z`,
   };
 }
 
@@ -237,6 +321,442 @@ function submitInput(
 }
 
 describe("ProductControlPlane", () => {
+  it("admits and settles a new external Run with no Package generation", async () => {
+    const externalCatalog: ProductRuntimeCatalog = {
+      defaultEngineId: "native-engine",
+      packageGeneration: "unresolved-not-activated",
+      engines: [
+        runtimeCatalog.engines[0]!,
+        {
+          engineId: "opencode",
+          displayName: "OpenCode",
+          distribution: "user-installed",
+          runtimeVersion: "1.14.40",
+          protocol: { name: "acp", version: "1" },
+          availability: { state: "available" },
+          modelSelection: {
+            kind: "engine-session",
+            model: "resolved-on-prepare",
+            mode: "resolved-on-prepare",
+            thinking: "unsupported",
+          },
+          capabilities: runtimeCatalog.engines[0]!.capabilities,
+          enforcement: "unverified",
+        },
+      ],
+    };
+    const boundary: ProductExecutionBoundary = {
+      prepare: (input) =>
+        Effect.succeed({
+          engineId: input.requestedSelection.engineId,
+          resolvedSelection: {
+            engineId: "opencode",
+            runtimeModelId: "provider/external-model",
+            thinking: null,
+            engineModeId: null,
+            permissionPolicy: "approval-required",
+            enforcement: "unverified",
+            executionTarget: null,
+            packageGeneration: null,
+          },
+          close: async () => undefined,
+        }),
+      attempt: ({ run, markSent }) =>
+        Effect.promise(async () => {
+          await Effect.runPromise(markSent());
+          return {
+            kind: "observed-settled" as const,
+            engineBinding: {
+              id: ProductEngineBindingId.makeUnsafe("binding-external-null-package"),
+              engineId: "opencode",
+              lineageRef: "opaque-external-lineage",
+            },
+            resolvedSelection: {
+              engineId: "opencode",
+              runtimeModelId: "provider/external-model",
+              thinking: null,
+              engineModeId: null,
+              permissionPolicy: "approval-required" as const,
+              enforcement: "unverified" as const,
+              executionTarget: null,
+              packageGeneration: null,
+            },
+            outcome: "succeeded" as const,
+            settledAt: run.createdAt,
+          };
+        }),
+    };
+    const system = await makeSystem(":memory:", boundary, externalCatalog);
+    try {
+      const conversation = createInput("external-null-package", "chat");
+      await system.run(system.controlPlane.createConversation(conversation));
+      const queued = await system.run(
+        system.controlPlane.putQueueItem({
+          protocolVersion: PRODUCT_PROTOCOL_VERSION,
+          conversationId: conversation.conversationId,
+          itemId: ProductQueueItemId.makeUnsafe("queue-external-null-package"),
+          text: "external prompt",
+          requestedSelection: {
+            state: "selected",
+            engineId: "opencode",
+            runtimeChoice: { kind: "engine-session-current" },
+            permissionPolicy: "approval-required",
+            executionTarget: null,
+            packageGeneration: null,
+          },
+          resources: [],
+          expectedRevision: null,
+        }),
+      );
+      const result = await system.run(
+        system.controlPlane.submitQueueItem(
+          submitInput(
+            conversation.conversationId,
+            queued.id,
+            queued.revision,
+            "external-null-package",
+          ),
+        ),
+      );
+      expect(result.snapshot.readModel.runs[0]).toMatchObject({
+        packageGeneration: null,
+        requestedSelection: { engineId: "opencode", packageGeneration: null },
+        receipt: {
+          receipt: {
+            state: "settled",
+            evidence: { kind: "observed-delivery" },
+            resolvedSelection: { engineId: "opencode", packageGeneration: null },
+          },
+        },
+      });
+      expect(await system.run(system.controlPlane.inspectOutbox())).toEqual([
+        expect.objectContaining({ attemptCount: 1, automaticReplayCount: 0 }),
+      ]);
+    } finally {
+      await system.dispose();
+    }
+  });
+
+  it("keeps lineage Engine-scoped across switches and resumes only compatible same-Engine history", async () => {
+    const preparationLineage: Array<{ engineId: string; lineage: string | null }> = [];
+    const attemptLineage: Array<{ engineId: string; lineage: string | null }> = [];
+    let sequence = 0;
+    const boundary: ProductExecutionBoundary = {
+      prepare: (input) => {
+        preparationLineage.push({
+          engineId: input.requestedSelection.engineId,
+          lineage: input.priorLineageRef,
+        });
+        return Effect.succeed({
+          engineId: input.requestedSelection.engineId,
+          resolvedSelection:
+            input.requestedSelection.engineId === "opencode"
+              ? externalResolvedSelection
+              : nativeResolvedSelection,
+          close: async () => undefined,
+        });
+      },
+      attempt: ({ run, priorLineageRef, markSent }) =>
+        Effect.promise(async () => {
+          sequence += 1;
+          attemptLineage.push({
+            engineId: run.requestedSelection.engineId,
+            lineage: priorLineageRef,
+          });
+          await Effect.runPromise(markSent());
+          if (run.requestedSelection.engineId === "opencode") {
+            return {
+              kind: "observed-settled" as const,
+              engineBinding: {
+                id: ProductEngineBindingId.makeUnsafe(`binding-lineage-${sequence}`),
+                engineId: "opencode",
+                lineageRef: `lineage-opencode-${sequence}`,
+              },
+              resolvedSelection: externalResolvedSelection,
+              outcome: "succeeded" as const,
+              settledAt: run.createdAt,
+            };
+          }
+          return {
+            ...acceptedObservation(`lineage-${sequence}`),
+            engineBinding: {
+              id: ProductEngineBindingId.makeUnsafe(`binding-lineage-${sequence}`),
+              engineId: "native-engine",
+              lineageRef: `lineage-native-${sequence}`,
+            },
+          };
+        }),
+    };
+    const system = await makeSystem(":memory:", boundary, externalRuntimeCatalog);
+    try {
+      const conversation = createInput("engine-lineage", "chat");
+      await system.run(system.controlPlane.createConversation(conversation));
+      const submit = async (suffix: string, selection: ProductRequestedSelection) => {
+        const queued = await system.run(
+          system.controlPlane.putQueueItem({
+            protocolVersion: PRODUCT_PROTOCOL_VERSION,
+            conversationId: conversation.conversationId,
+            itemId: ProductQueueItemId.makeUnsafe(`queue-${suffix}`),
+            text: `message ${suffix}`,
+            requestedSelection: selection,
+            resources: [],
+            expectedRevision: null,
+          }),
+        );
+        const result = await system.run(
+          system.controlPlane.submitQueueItem(
+            submitInput(conversation.conversationId, queued.id, queued.revision, suffix),
+          ),
+        );
+        if (selection.state === "selected" && selection.engineId === "native-engine") {
+          await system.run(
+            system.controlPlane.observeRun(ProductRunId.makeUnsafe(`run-${suffix}`), {
+              kind: "settled",
+              outcome: "succeeded",
+              settledAt: "2026-08-06T00:00:00.000Z",
+            }),
+          );
+        }
+        return result;
+      };
+
+      await submit("lineage-pi-one", requestedSelection("lineage-pi-one", true));
+      await submit("lineage-opencode", externalSelection);
+      await submit("lineage-pi-two", requestedSelection("lineage-pi-two", true));
+      await submit("lineage-pi-three", requestedSelection("lineage-pi-three", true));
+
+      expect(preparationLineage).toEqual([
+        { engineId: "native-engine", lineage: null },
+        { engineId: "opencode", lineage: null },
+        { engineId: "native-engine", lineage: null },
+        { engineId: "native-engine", lineage: "lineage-native-3" },
+      ]);
+      expect(attemptLineage).toEqual(preparationLineage);
+      expect(await system.run(system.controlPlane.inspectOutbox())).toEqual(
+        expect.arrayContaining([
+          expect.objectContaining({ attemptCount: 1, automaticReplayCount: 0 }),
+        ]),
+      );
+    } finally {
+      await system.dispose();
+    }
+  });
+
+  it.each([
+    ["null", null],
+    ["stale", runtimeCatalog],
+  ] as const)(
+    "restarts and retries a frozen engine-session Run with a %s catalog",
+    async (_label, reopenedCatalog) => {
+      const root = await fs.mkdtemp(path.join(os.tmpdir(), "omnimind-external-reprepare-"));
+      temporaryRoots.push(root);
+      const filename = path.join(root, PRODUCT_DATABASE_FILENAME);
+      let initialAttemptCount = 0;
+      const initialBoundary: ProductExecutionBoundary = {
+        prepare: () =>
+          Effect.succeed({
+            engineId: "opencode",
+            resolvedSelection: externalResolvedSelection,
+            close: async () => undefined,
+          }),
+        attempt: ({ prepared }) => {
+          initialAttemptCount += 1;
+          expect(prepared?.resolvedSelection).toEqual(externalResolvedSelection);
+          return Effect.succeed({
+            kind: "pre-send-failure" as const,
+            code: "OPENCODE_EXECUTION_FAILED",
+            message: "Nothing was sent.",
+            retryable: true,
+          });
+        },
+      };
+      const first = await makeSystem(filename, initialBoundary, externalDefaultRuntimeCatalog);
+      const conversation = createInput("external-reprepare", "chat");
+      await first.run(first.controlPlane.createConversation(conversation));
+      const queued = await first.run(
+        first.controlPlane.putQueueItem({
+          protocolVersion: PRODUCT_PROTOCOL_VERSION,
+          conversationId: conversation.conversationId,
+          itemId: ProductQueueItemId.makeUnsafe("queue-external-reprepare"),
+          text: "durable external prompt",
+          requestedSelection: externalSelection,
+          resources: [],
+          expectedRevision: null,
+        }),
+      );
+      const input = submitInput(
+        conversation.conversationId,
+        queued.id,
+        queued.revision,
+        "external-reprepare",
+      );
+      const initial = await first.run(first.controlPlane.submitQueueItem(input));
+      expect(initial.snapshot.readModel.runs[0]?.receipt.receipt).toMatchObject({
+        state: "pending",
+        lastConfirmedBoundary: "pre-send",
+        blocked: {
+          kind: "selected-engine-unavailable",
+          code: "OPENCODE_EXECUTION_FAILED",
+          message: "Nothing was sent.",
+          retryable: true,
+        },
+      });
+      expect(initialAttemptCount).toBe(1);
+      expect(await first.run(first.controlPlane.inspectOutbox())).toEqual([
+        expect.objectContaining({
+          state: "pending",
+          sendBoundary: "pre-send",
+          attemptCount: 0,
+          automaticReplayCount: 0,
+        }),
+      ]);
+      await first.dispose();
+
+      let prepareCount = 0;
+      let attemptCount = 0;
+      let sendCount = 0;
+      let closeCount = 0;
+      const reopenedBoundary: ProductExecutionBoundary = {
+        prepare: (request) => {
+          prepareCount += 1;
+          expect(request).toMatchObject({
+            dispatchId: input.dispatchId,
+            conversationId: conversation.conversationId,
+            runId: input.runId,
+            requestedSelection: externalSelection,
+            workspace: {
+              id: conversation.workspaceId,
+              access: conversation.workspace,
+            },
+            resources: [],
+            text: "durable external prompt",
+            priorLineageRef: null,
+          });
+          return Effect.succeed({
+            engineId: "opencode",
+            resolvedSelection: externalResolvedSelection,
+            close: async () => {
+              closeCount += 1;
+            },
+          });
+        },
+        attempt: ({ run, prepared, markSent }) =>
+          Effect.promise(async () => {
+            attemptCount += 1;
+            expect(prepared?.resolvedSelection).toEqual(externalResolvedSelection);
+            await Effect.runPromise(markSent());
+            sendCount += 1;
+            return {
+              kind: "observed-settled" as const,
+              engineBinding: {
+                id: ProductEngineBindingId.makeUnsafe("binding-external-reprepare"),
+                engineId: "opencode",
+                lineageRef: "lineage-external-reprepare",
+              },
+              resolvedSelection: externalResolvedSelection,
+              outcome: "succeeded" as const,
+              settledAt: run.createdAt,
+            };
+          }),
+      };
+      const reopened = await makeSystem(filename, reopenedBoundary, reopenedCatalog);
+      try {
+        expect(prepareCount).toBe(0);
+        expect(attemptCount).toBe(0);
+        const blockedSnapshot = await reopened.run(
+          reopened.controlPlane.getConversationSnapshot({
+            protocolVersion: PRODUCT_PROTOCOL_VERSION,
+            conversationId: conversation.conversationId,
+          }),
+        );
+        expect(blockedSnapshot.readModel.runs[0]?.receipt.receipt).toMatchObject({
+          state: "pending",
+          lastConfirmedBoundary: "pre-send",
+          blocked: {
+            kind: "selected-engine-unavailable",
+            code: "EXTERNAL_ENGINE_PREPARE_REQUIRED",
+            retryable: true,
+          },
+        });
+        expect(await reopened.run(reopened.controlPlane.inspectOutbox())).toEqual([
+          expect.objectContaining({
+            state: "pending",
+            sendBoundary: "pre-send",
+            attemptCount: 0,
+            automaticReplayCount: 0,
+          }),
+        ]);
+
+        const result = await reopened.run(
+          reopened.controlPlane.retryDispatch({
+            protocolVersion: PRODUCT_PROTOCOL_VERSION,
+            conversationId: conversation.conversationId,
+            dispatchId: input.dispatchId,
+          }),
+        );
+        expect(result.snapshot.readModel.runs).toHaveLength(1);
+        expect(result.snapshot.readModel.runs[0]?.receipt.receipt).toMatchObject({
+          state: "settled",
+          evidence: { kind: "observed-delivery" },
+        });
+        expect(prepareCount).toBe(1);
+        expect(attemptCount).toBe(1);
+        expect(sendCount).toBe(1);
+        expect(closeCount).toBe(1);
+        expect(await reopened.run(reopened.controlPlane.inspectOutbox())).toEqual([
+          expect.objectContaining({
+            state: "terminal",
+            attemptCount: 1,
+            automaticReplayCount: 0,
+            engineId: "opencode",
+          }),
+        ]);
+      } finally {
+        await reopened.dispose();
+      }
+    },
+  );
+
+  it("fails a non-composed Engine selection closed before preparation", async () => {
+    let prepareCount = 0;
+    let attemptCount = 0;
+    const system = await makeSystem(
+      ":memory:",
+      {
+        prepare: () => {
+          prepareCount += 1;
+          return Effect.die("Unknown Engine must not prepare.");
+        },
+        attempt: () => {
+          attemptCount += 1;
+          return Effect.die("Unknown Engine must not attempt.");
+        },
+      },
+      externalRuntimeCatalog,
+    );
+    try {
+      const conversation = createInput("unknown-engine", "chat");
+      await system.run(system.controlPlane.createConversation(conversation));
+      await expect(
+        system.run(
+          system.controlPlane.putQueueItem({
+            protocolVersion: PRODUCT_PROTOCOL_VERSION,
+            conversationId: conversation.conversationId,
+            itemId: ProductQueueItemId.makeUnsafe("queue-unknown-engine"),
+            text: "unknown Engine prompt",
+            requestedSelection: { ...externalSelection, engineId: "unknown-engine" },
+            resources: [],
+            expectedRevision: null,
+          }),
+        ),
+      ).rejects.toMatchObject({ code: "PRODUCT_RUNTIME_SELECTION_STALE" });
+      expect(prepareCount).toBe(0);
+      expect(attemptCount).toBe(0);
+    } finally {
+      await system.dispose();
+    }
+  });
+
   it("keeps Product Store available while corrupt Package state fails execution closed", async () => {
     const system = await makeSystem(
       ":memory:",
@@ -342,18 +862,16 @@ describe("ProductControlPlane", () => {
         "package-fault",
       );
       await system.run(system.controlPlane.submitQueueItem(input));
-      const facts: ReadonlyArray<NativeHostRuntimeFact> = [
+      const facts: ReadonlyArray<ProductExecutionFact> = [
         {
           kind: "package.failed",
-          operationRef: "operation-package-fault",
-          sequence: 1,
+          engineSequence: 1,
           emittedAt: "2026-08-05T00:00:01.000Z",
           count: 1,
         },
         {
           kind: "settlement",
-          operationRef: "operation-package-fault",
-          sequence: 2,
+          engineSequence: 2,
           emittedAt: "2026-08-05T00:00:02.000Z",
           outcome: "failed",
           message: "Package lifecycle failed.",
@@ -409,12 +927,21 @@ describe("ProductControlPlane", () => {
       observed = {
         ...runtimeCatalog,
         packageGeneration: "package-next",
-        models: runtimeCatalog.models.map((model) => ({
-          ...model,
-          id: "provider/model-next",
-          modelId: "model-next",
-          auth: "missing" as const,
-          available: false,
+        engines: runtimeCatalog.engines.map((engine) => ({
+          ...engine,
+          modelSelection:
+            engine.modelSelection.kind === "product-model"
+              ? {
+                  ...engine.modelSelection,
+                  models: engine.modelSelection.models.map((model) => ({
+                    ...model,
+                    id: "provider/model-next",
+                    modelId: "model-next",
+                    auth: "missing" as const,
+                    available: false,
+                  })),
+                }
+              : engine.modelSelection,
         })),
       };
       now += 5_000;
@@ -427,7 +954,19 @@ describe("ProductControlPlane", () => {
 
       observed = {
         ...observed,
-        models: observed.models.map((model) => ({ ...model, auth: "unavailable" as const })),
+        engines: observed.engines.map((engine) => ({
+          ...engine,
+          modelSelection:
+            engine.modelSelection.kind === "product-model"
+              ? {
+                  ...engine.modelSelection,
+                  models: engine.modelSelection.models.map((model) => ({
+                    ...model,
+                    auth: "unavailable" as const,
+                  })),
+                }
+              : engine.modelSelection,
+        })),
       };
       now += 5_000;
       const unavailable = await read(changed.highWaterSequence);
@@ -622,9 +1161,14 @@ describe("ProductControlPlane", () => {
           requestedSelection: {
             state: "unavailable",
             reason: "model-unavailable",
-            requestedRuntimeModelId: "retired-provider/retired-model",
+            requestedEngineId: "native-engine",
+            requestedRuntimeChoice: {
+              kind: "product-model",
+              runtimeModelId: "retired-provider/retired-model",
+              thinking: null,
+            },
+            packageGeneration: "unresolved-not-activated",
             permissionPolicy: "approval-required",
-            enforcement: "unverified",
             executionTarget: null,
           },
           resources: [],
@@ -633,7 +1177,7 @@ describe("ProductControlPlane", () => {
       );
       expect(queued.requestedSelection).toMatchObject({
         state: "unavailable",
-        requestedRuntimeModelId: "retired-provider/retired-model",
+        requestedRuntimeChoice: { runtimeModelId: "retired-provider/retired-model" },
       });
       const failure = await system.run(
         system.controlPlane
@@ -1293,7 +1837,7 @@ describe("ProductControlPlane", () => {
       expect(firstResult.automaticReplayCount).toBe(0);
       expect(firstResult.snapshot.readModel.runs[0]?.receipt.receipt).toMatchObject({
         state: "delivery_unknown",
-        reconciliationHint: "pi-pending:unresolved-one",
+        lastConfirmedBoundary: "local-write",
       });
 
       const second = await putQueueItem(system, conversation, "unresolved-two");
@@ -1315,7 +1859,11 @@ describe("ProductControlPlane", () => {
       expect(snapshot.readModel.queue.map((item) => item.id)).toEqual([second.id]);
       expect(snapshot.readModel.runs).toHaveLength(1);
       expect(await system.run(system.controlPlane.inspectOutbox())).toEqual([
-        expect.objectContaining({ automaticReplayCount: 0, attemptCount: 1 }),
+        expect.objectContaining({
+          engineId: "native-engine",
+          automaticReplayCount: 0,
+          attemptCount: 1,
+        }),
       ]);
     } finally {
       await system.dispose();
@@ -1359,7 +1907,7 @@ describe("ProductControlPlane", () => {
       const result = await system.run(system.controlPlane.submitQueueItem(submitted));
       expect(result.snapshot.readModel.runs[0]?.receipt.receipt).toMatchObject({
         state: "delivery_unknown",
-        reconciliationHint: "pi-pending:late-accepted",
+        lastConfirmedBoundary: "local-write",
       });
 
       listener?.(submitted.runId, {
@@ -1367,9 +1915,10 @@ describe("ProductControlPlane", () => {
         operationRef: "pi-op:late-session:late-entry",
         lineageRef: "pi-session:late-session",
         resolvedSelection: {
-          engineId: "pi",
+          engineId: "native-engine",
           runtimeModelId: "faux-native/faux-thinker",
           thinking: "medium",
+          engineModeId: null,
           permissionPolicy: "approval-required",
           enforcement: "unverified",
           packageGeneration: "package-proof",
@@ -1384,7 +1933,7 @@ describe("ProductControlPlane", () => {
       expect(snapshot.readModel.runs[0]?.receipt.receipt).toMatchObject({
         state: "accepted",
         operationRef: "pi-op:late-session:late-entry",
-        engineBinding: { engineId: "pi", lineageRef: "pi-session:late-session" },
+        engineBinding: { engineId: "native-engine", lineageRef: "pi-session:late-session" },
       });
 
       listener?.(submitted.runId, { kind: "outcome-unknown" });
@@ -1396,12 +1945,15 @@ describe("ProductControlPlane", () => {
       );
       expect(snapshot.readModel.runs[0]?.receipt.receipt).toMatchObject({
         state: "outcome_unknown",
-        operationRef: "pi-op:late-session:late-entry",
-        lastConfirmedBoundary: "accepted",
+        evidence: { kind: "accepted-operation", operationRef: "pi-op:late-session:late-entry" },
       });
       expect(fixture.attemptCount()).toBe(1);
       expect(await system.run(system.controlPlane.inspectOutbox())).toEqual([
-        expect.objectContaining({ attemptCount: 1, automaticReplayCount: 0 }),
+        expect.objectContaining({
+          sendBoundary: "accepted",
+          attemptCount: 1,
+          automaticReplayCount: 0,
+        }),
       ]);
     } finally {
       await system.dispose();
@@ -1451,8 +2003,8 @@ describe("ProductControlPlane", () => {
       );
       expect(snapshot.readModel.runs[0]?.receipt.receipt).toEqual({
         state: "delivery_unknown",
-        lastConfirmedBoundary: "sent",
-        reconciliationHint: "pi-pending:orphaned-product",
+        lastConfirmedBoundary: "local-write",
+        abort: null,
       });
       expect(fixture.attemptCount()).toBe(1);
       expect(await system.run(system.controlPlane.inspectOutbox())).toEqual([
@@ -1510,9 +2062,7 @@ describe("ProductControlPlane", () => {
     };
     const reopened = await makeSystem(filename, recoveryBoundary);
     try {
-      expect(resumed).toEqual([
-        { runId: submitted.runId, operationRef: "pi-pending:startup-rejected" },
-      ]);
+      expect(resumed).toEqual([]);
       const rechecked = await reopened.run(reopened.controlPlane.submitQueueItem(submitted));
       expect(rechecked.snapshot.readModel.runs[0]?.receipt.receipt.state).toBe("delivery_unknown");
       expect(attemptCount).toBe(0);
@@ -1660,7 +2210,7 @@ describe("ProductControlPlane", () => {
       expect(await system.run(system.controlPlane.inspectOutbox())).toEqual([
         expect.objectContaining({
           state: "terminal",
-          attemptCount: 1,
+          attemptCount: 0,
           automaticReplayCount: 0,
         }),
       ]);
@@ -1720,7 +2270,8 @@ describe("ProductControlPlane", () => {
       const result = await system.run(system.controlPlane.submitQueueItem(input));
       expect(result.snapshot.readModel.runs[0]?.receipt.receipt).toEqual({
         state: "delivery_unknown",
-        lastConfirmedBoundary: "sent",
+        lastConfirmedBoundary: "local-write",
+        abort: null,
       });
       expect(fixture.attemptCount()).toBe(1);
       expect(await system.run(system.controlPlane.inspectOutbox())).toEqual([
@@ -1770,9 +2321,10 @@ describe("ProductControlPlane", () => {
       expect(submitted.snapshot.readModel.runs[0]?.receipt.receipt).toEqual({
         state: "pending",
         lastConfirmedBoundary: "pre-send",
+        blocked: null,
       });
       expect(await system.run(system.controlPlane.inspectOutbox())).toEqual([
-        expect.objectContaining({ state: "pending", sendBoundary: "pre-send", attemptCount: 1 }),
+        expect.objectContaining({ state: "pending", sendBoundary: "pre-send", attemptCount: 0 }),
       ]);
       const retried = await system.run(system.controlPlane.submitQueueItem(input));
       expect(retried.snapshot.readModel.runs[0]?.receipt.receipt).toMatchObject({
@@ -1854,7 +2406,7 @@ describe("ProductControlPlane", () => {
       expect(await system.run(system.controlPlane.inspectOutbox())).toEqual([
         expect.objectContaining({
           state: "terminal",
-          attemptCount: 1,
+          attemptCount: 0,
           automaticReplayCount: 0,
         }),
       ]);
@@ -1930,13 +2482,14 @@ describe("ProductControlPlane", () => {
   it("rejects an oversized native request before admission and preserves the editable Queue item", async () => {
     let attemptCount = 0;
     const boundary: ProductExecutionBoundary = {
-      preflight: () => {
-        throw new ProductControlPlaneError({
-          code: "NATIVE_HOST_REQUEST_OVERSIZED",
-          message: "Edit the Queue item before sending.",
-          retryable: false,
-        });
-      },
+      prepare: () =>
+        Effect.fail(
+          new ProductControlPlaneError({
+            code: "NATIVE_HOST_REQUEST_OVERSIZED",
+            message: "Edit the Queue item before sending.",
+            retryable: false,
+          }),
+        ),
       attempt: () => {
         attemptCount += 1;
         return Effect.succeed(acceptedObservation("must-not-send"));
@@ -1971,6 +2524,60 @@ describe("ProductControlPlane", () => {
       expect(snapshot.readModel.runs).toEqual([]);
       expect(await system.run(system.controlPlane.inspectOutbox())).toEqual([]);
     } finally {
+      await system.dispose();
+    }
+  });
+
+  it("cleans a prepared handle when the Queue changes before admission CAS", async () => {
+    let releasePrepare: (() => void) | undefined;
+    let announceEntered: (() => void) | undefined;
+    const entered = new Promise<void>((resolve) => (announceEntered = resolve));
+    let closeCount = 0;
+    const boundary: ProductExecutionBoundary = {
+      prepare: (input) =>
+        Effect.promise(async () => {
+          announceEntered?.();
+          await new Promise<void>((resolve) => (releasePrepare = resolve));
+          return {
+            engineId: input.requestedSelection.engineId,
+            resolvedSelection: null,
+            close: async () => {
+              closeCount += 1;
+            },
+          };
+        }),
+      attempt: () => Effect.succeed(acceptedObservation("prepare-race")),
+    };
+    const system = await makeSystem(":memory:", boundary);
+    try {
+      const conversation = createInput("prepare-race");
+      await system.run(system.controlPlane.createConversation(conversation));
+      const queued = await putQueueItem(system, conversation, "prepare-race");
+      const input = submitInput(
+        conversation.conversationId,
+        queued.id,
+        queued.revision,
+        "prepare-race",
+      );
+      const admission = system.run(system.controlPlane.admitQueueItem(input));
+      await entered;
+      await system.run(
+        system.controlPlane.putQueueItem({
+          protocolVersion: PRODUCT_PROTOCOL_VERSION,
+          conversationId: conversation.conversationId,
+          itemId: queued.id,
+          text: "changed during prepare",
+          requestedSelection: queued.requestedSelection,
+          resources: queued.resources,
+          expectedRevision: queued.revision,
+        }),
+      );
+      releasePrepare?.();
+      await expect(admission).rejects.toMatchObject({ code: "PRODUCT_QUEUE_REVISION_CONFLICT" });
+      expect(closeCount).toBe(1);
+      expect(await system.run(system.controlPlane.inspectOutbox())).toEqual([]);
+    } finally {
+      releasePrepare?.();
       await system.dispose();
     }
   });
@@ -2030,6 +2637,443 @@ describe("ProductControlPlane", () => {
     }
   });
 
+  it("does not route a product-model sent receipt before Pi acceptance", async () => {
+    let markSentReached: (() => void) | undefined;
+    const sentReached = new Promise<void>((resolve) => {
+      markSentReached = resolve;
+    });
+    let acceptPi: (() => void) | undefined;
+    const piAcceptanceAllowed = new Promise<void>((resolve) => {
+      acceptPi = resolve;
+    });
+    const control = vi.fn(() =>
+      Effect.succeed({
+        operationRef: null,
+        control: "abort" as const,
+        result: "requested" as const,
+        code: "control-unacknowledged" as const,
+        message: "This Product counterexample must never route.",
+      }),
+    );
+    const boundary: ProductExecutionBoundary = {
+      prepare: () =>
+        Effect.succeed({
+          engineId: "native-engine",
+          resolvedSelection: nativeResolvedSelection,
+          close: async () => undefined,
+        }),
+      attempt: ({ markSent }) =>
+        Effect.promise(async () => {
+          await Effect.runPromise(markSent());
+          markSentReached?.();
+          await piAcceptanceAllowed;
+          return acceptedObservation("pi-pre-ack-control");
+        }),
+      control,
+    };
+    const system = await makeSystem(":memory:", boundary, runtimeCatalog);
+    try {
+      const conversation = createInput("pi-pre-ack-control");
+      await system.run(system.controlPlane.createConversation(conversation));
+      const queued = await putQueueItem(system, conversation, "pi-pre-ack-control");
+      const submit = submitInput(
+        conversation.conversationId,
+        queued.id,
+        queued.revision,
+        "pi-pre-ack-control",
+      );
+      const submission = system.run(system.controlPlane.submitQueueItem(submit));
+      await sentReached;
+      const snapshot = await system.run(
+        system.controlPlane.getConversationSnapshot({
+          protocolVersion: PRODUCT_PROTOCOL_VERSION,
+          conversationId: conversation.conversationId,
+        }),
+      );
+      expect(snapshot.readModel.runs[0]?.receipt.receipt).toMatchObject({
+        state: "sent",
+        abort: null,
+      });
+      await expect(
+        system.run(
+          system.controlPlane.controlRun({
+            protocolVersion: PRODUCT_PROTOCOL_VERSION,
+            conversationId: conversation.conversationId,
+            runId: submit.runId,
+            control: "abort",
+            text: null,
+          }),
+        ),
+      ).resolves.toMatchObject({
+        operationRef: null,
+        result: "unknown",
+        code: "operation-unknown",
+      });
+      expect(control).not.toHaveBeenCalled();
+      const unchanged = await system.run(
+        system.controlPlane.getConversationSnapshot({
+          protocolVersion: PRODUCT_PROTOCOL_VERSION,
+          conversationId: conversation.conversationId,
+        }),
+      );
+      expect(unchanged.readModel.runs[0]?.receipt.receipt).toMatchObject({
+        state: "sent",
+        abort: null,
+      });
+      acceptPi?.();
+      await submission;
+    } finally {
+      acceptPi?.();
+      await system.dispose();
+    }
+  });
+
+  it("routes no-ACK OpenCode abort by the admitted Run and persists request-only evidence", async () => {
+    let listener:
+      | Parameters<NonNullable<ProductExecutionBoundary["subscribeFacts"]>>[0]
+      | undefined;
+    let markPromptEntered: (() => void) | undefined;
+    const promptEntered = new Promise<void>((resolve) => {
+      markPromptEntered = resolve;
+    });
+    let publishLateTruth: (() => void) | undefined;
+    const lateTruthAllowed = new Promise<void>((resolve) => {
+      publishLateTruth = resolve;
+    });
+    let markLateTruthPublished: (() => void) | undefined;
+    const lateTruthPublished = new Promise<void>((resolve) => {
+      markLateTruthPublished = resolve;
+    });
+    let markControlEntered: (() => void) | undefined;
+    const controlEntered = new Promise<void>((resolve) => {
+      markControlEntered = resolve;
+    });
+    let finishControl: (() => void) | undefined;
+    const controlFinished = new Promise<void>((resolve) => {
+      finishControl = resolve;
+    });
+    let finishAttempt: (() => void) | undefined;
+    const attemptFinished = new Promise<void>((resolve) => {
+      finishAttempt = resolve;
+    });
+    const controls: Array<{ operationRef: string | null; engineId: string; control: string }> = [];
+    const boundary: ProductExecutionBoundary = {
+      prepare: () =>
+        Effect.succeed({
+          engineId: "opencode",
+          resolvedSelection: externalResolvedSelection,
+          close: async () => undefined,
+        }),
+      attempt: ({ run, markSent }) =>
+        Effect.promise(async () => {
+          await Effect.runPromise(markSent());
+          markPromptEntered?.();
+          await lateTruthAllowed;
+          listener?.(run.id, {
+            kind: "delivery-observed",
+            engineBinding: {
+              id: ProductEngineBindingId.makeUnsafe("binding-external-control"),
+              engineId: "opencode",
+              lineageRef: "lineage-external-control",
+            },
+            resolvedSelection: externalResolvedSelection,
+            firstFact: {
+              kind: "assistant.delta",
+              text: "working",
+              engineSequence: 1,
+              emittedAt: "2026-08-06T00:00:01.000Z",
+            },
+          });
+          markLateTruthPublished?.();
+          await attemptFinished;
+          return {
+            kind: "observed-settled" as const,
+            engineBinding: {
+              id: ProductEngineBindingId.makeUnsafe("binding-external-control"),
+              engineId: "opencode",
+              lineageRef: "lineage-external-control",
+            },
+            resolvedSelection: externalResolvedSelection,
+            outcome: "succeeded" as const,
+            settledAt: "2026-08-06T00:00:02.000Z",
+          };
+        }),
+      control: (request) =>
+        Effect.promise(async () => {
+          controls.push({
+            operationRef: request.operationRef,
+            engineId: request.run.requestedSelection.engineId,
+            control: request.control,
+          });
+          markControlEntered?.();
+          await controlFinished;
+          return {
+            operationRef: null,
+            control: request.control,
+            result: "requested" as const,
+            code: "control-unacknowledged" as const,
+            message: "Cancellation was written without an acknowledgement.",
+          };
+        }),
+      subscribeFacts: (next) => {
+        listener = next;
+        return () => {
+          listener = undefined;
+        };
+      },
+    };
+    const system = await makeSystem(":memory:", boundary, externalRuntimeCatalog);
+    try {
+      const conversation = createInput("external-control", "chat");
+      await system.run(system.controlPlane.createConversation(conversation));
+      const queued = await system.run(
+        system.controlPlane.putQueueItem({
+          protocolVersion: PRODUCT_PROTOCOL_VERSION,
+          conversationId: conversation.conversationId,
+          itemId: ProductQueueItemId.makeUnsafe("queue-external-control"),
+          text: "cancel this",
+          requestedSelection: externalSelection,
+          resources: [],
+          expectedRevision: null,
+        }),
+      );
+      const submit = submitInput(
+        conversation.conversationId,
+        queued.id,
+        queued.revision,
+        "external-control",
+      );
+      const submission = system.run(system.controlPlane.submitQueueItem(submit));
+      await promptEntered;
+      const sent = await system.run(
+        system.controlPlane.getConversationSnapshot({
+          protocolVersion: PRODUCT_PROTOCOL_VERSION,
+          conversationId: conversation.conversationId,
+        }),
+      );
+      expect(sent.readModel.runs[0]?.receipt.receipt).toMatchObject({
+        state: "sent",
+        lastConfirmedBoundary: "local-write",
+        abort: null,
+      });
+      await expect(
+        system.run(
+          system.controlPlane.controlRun({
+            protocolVersion: PRODUCT_PROTOCOL_VERSION,
+            conversationId: conversation.conversationId,
+            runId: submit.runId,
+            control: "steer",
+            text: "do something else",
+          }),
+        ),
+      ).resolves.toMatchObject({ result: "unsupported", operationRef: null });
+      await expect(
+        system.run(
+          system.controlPlane.controlRun({
+            protocolVersion: PRODUCT_PROTOCOL_VERSION,
+            conversationId: conversation.conversationId,
+            runId: submit.runId,
+            control: "follow-up",
+            text: "later",
+          }),
+        ),
+      ).resolves.toMatchObject({ result: "unsupported", operationRef: null });
+      const resultPromise = system.run(
+        system.controlPlane.controlRun({
+          protocolVersion: PRODUCT_PROTOCOL_VERSION,
+          conversationId: conversation.conversationId,
+          runId: submit.runId,
+          control: "abort",
+          text: null,
+        }),
+      );
+      await controlEntered;
+      const durableBeforeWrite = await system.run(
+        system.controlPlane.getConversationSnapshot({
+          protocolVersion: PRODUCT_PROTOCOL_VERSION,
+          conversationId: conversation.conversationId,
+        }),
+      );
+      expect(durableBeforeWrite.readModel.runs[0]?.receipt.receipt).toMatchObject({
+        state: "sent",
+        abort: { requestedAt: expect.any(String), confirmed: false },
+      });
+      finishControl?.();
+      const result = await resultPromise;
+      expect(result).toMatchObject({
+        operationRef: null,
+        control: "abort",
+        result: "requested",
+        code: "control-unacknowledged",
+      });
+      expect(controls).toEqual([{ operationRef: null, engineId: "opencode", control: "abort" }]);
+      await expect(
+        system.run(
+          system.controlPlane.controlRun({
+            protocolVersion: PRODUCT_PROTOCOL_VERSION,
+            conversationId: conversation.conversationId,
+            runId: submit.runId,
+            control: "abort",
+            text: null,
+          }),
+        ),
+      ).resolves.toMatchObject({ result: "requested", operationRef: null });
+      expect(controls).toHaveLength(1);
+      publishLateTruth?.();
+      await lateTruthPublished;
+      const running = await system.run(
+        system.controlPlane.getConversationSnapshot({
+          protocolVersion: PRODUCT_PROTOCOL_VERSION,
+          conversationId: conversation.conversationId,
+        }),
+      );
+      expect(running.readModel.runs[0]?.receipt.receipt).toMatchObject({
+        state: "running",
+        evidence: { kind: "observed-delivery" },
+        abort: { requestedAt: expect.any(String), confirmed: false },
+      });
+      finishAttempt?.();
+      const settled = await submission;
+      expect(settled.snapshot.readModel.runs[0]?.receipt.receipt).toMatchObject({
+        state: "settled",
+        outcome: "succeeded",
+        abort: { requestedAt: expect.any(String), confirmed: false },
+      });
+    } finally {
+      finishControl?.();
+      publishLateTruth?.();
+      finishAttempt?.();
+      await system.dispose();
+    }
+  });
+
+  it("keeps unconfirmed abort evidence across the sent control crash window and reopen", async () => {
+    const root = await fs.mkdtemp(path.join(os.tmpdir(), "omnimind-opencode-abort-crash-"));
+    temporaryRoots.push(root);
+    const filename = path.join(root, PRODUCT_DATABASE_FILENAME);
+    let markSentReached: (() => void) | undefined;
+    const sentReached = new Promise<void>((resolve) => {
+      markSentReached = resolve;
+    });
+    let crashAttempt: (() => void) | undefined;
+    const attemptCrashAllowed = new Promise<void>((resolve) => {
+      crashAttempt = resolve;
+    });
+    let markControlEntered: (() => void) | undefined;
+    const controlEntered = new Promise<void>((resolve) => {
+      markControlEntered = resolve;
+    });
+    let crashControl: (() => void) | undefined;
+    const controlCrashAllowed = new Promise<void>((resolve) => {
+      crashControl = resolve;
+    });
+    const boundary: ProductExecutionBoundary = {
+      prepare: () =>
+        Effect.succeed({
+          engineId: "opencode",
+          resolvedSelection: externalResolvedSelection,
+          close: async () => undefined,
+        }),
+      attempt: ({ markSent }) =>
+        Effect.promise(async () => {
+          await Effect.runPromise(markSent());
+          markSentReached?.();
+          await attemptCrashAllowed;
+          throw new Error("fixture process crash");
+        }),
+      control: () =>
+        Effect.tryPromise({
+          try: async () => {
+            markControlEntered?.();
+            await controlCrashAllowed;
+            throw new Error("fixture control crash before a confirmed write");
+          },
+          catch: () =>
+            new ProductControlPlaneError({
+              code: "OPENCODE_CANCEL_WRITE_FAILED",
+              message: "OpenCode cancellation could not be written.",
+              retryable: false,
+            }),
+        }),
+    };
+    const first = await makeSystem(filename, boundary, externalRuntimeCatalog);
+    const conversation = createInput("external-abort-crash", "chat");
+    const input = submitInput(
+      conversation.conversationId,
+      ProductQueueItemId.makeUnsafe("queue-external-abort-crash"),
+      1,
+      "external-abort-crash",
+    );
+    try {
+      await first.run(first.controlPlane.createConversation(conversation));
+      const queued = await first.run(
+        first.controlPlane.putQueueItem({
+          protocolVersion: PRODUCT_PROTOCOL_VERSION,
+          conversationId: conversation.conversationId,
+          itemId: input.itemId,
+          text: "persist abort intent before control write",
+          requestedSelection: externalSelection,
+          resources: [],
+          expectedRevision: null,
+        }),
+      );
+      const submit = { ...input, expectedRevision: queued.revision };
+      const submission = first.run(first.controlPlane.submitQueueItem(submit));
+      await sentReached;
+      const control = first.run(
+        first.controlPlane.controlRun({
+          protocolVersion: PRODUCT_PROTOCOL_VERSION,
+          conversationId: conversation.conversationId,
+          runId: submit.runId,
+          control: "abort",
+          text: null,
+        }),
+      );
+      await controlEntered;
+      await first.run(first.controlPlane.recoverDispatches());
+      const recovered = await first.run(
+        first.controlPlane.getConversationSnapshot({
+          protocolVersion: PRODUCT_PROTOCOL_VERSION,
+          conversationId: conversation.conversationId,
+        }),
+      );
+      expect(recovered.readModel.runs[0]?.receipt.receipt).toMatchObject({
+        state: "delivery_unknown",
+        lastConfirmedBoundary: "local-write",
+        abort: { requestedAt: expect.any(String), confirmed: false },
+      });
+      crashControl?.();
+      await expect(control).rejects.toMatchObject({ code: "OPENCODE_CANCEL_WRITE_FAILED" });
+      crashAttempt?.();
+      await expect(submission).rejects.toThrow("fixture process crash");
+    } finally {
+      crashControl?.();
+      crashAttempt?.();
+      await first.dispose();
+    }
+
+    const shouldNotReplay = makeProductExecutionFixture([]);
+    const reopened = await makeSystem(filename, shouldNotReplay, externalRuntimeCatalog);
+    try {
+      const snapshot = await reopened.run(
+        reopened.controlPlane.getConversationSnapshot({
+          protocolVersion: PRODUCT_PROTOCOL_VERSION,
+          conversationId: conversation.conversationId,
+        }),
+      );
+      expect(snapshot.readModel.runs[0]?.receipt.receipt).toMatchObject({
+        state: "delivery_unknown",
+        abort: { requestedAt: expect.any(String), confirmed: false },
+      });
+      expect(shouldNotReplay.attemptCount()).toBe(0);
+      expect(await reopened.run(reopened.controlPlane.inspectOutbox())).toEqual([
+        expect.objectContaining({ attemptCount: 1, automaticReplayCount: 0, state: "terminal" }),
+      ]);
+    } finally {
+      await reopened.dispose();
+    }
+  });
+
   it("idempotently replaces a partial assistant from a native Session snapshot", async () => {
     let listener:
       | Parameters<NonNullable<ProductExecutionBoundary["subscribeFacts"]>>[0]
@@ -2060,8 +3104,7 @@ describe("ProductControlPlane", () => {
         kind: "facts",
         facts: [
           {
-            operationRef: "operation-snapshot-recovery",
-            sequence: 1,
+            engineSequence: 1,
             emittedAt: "2026-08-05T00:00:00.000Z",
             kind: "assistant.delta",
             text: "partial tail",
@@ -2072,9 +3115,7 @@ describe("ProductControlPlane", () => {
         kind: "snapshot" as const,
         snapshot: {
           version: 1 as const,
-          operationRef: "operation-snapshot-recovery",
-          source: "pi-session-reopen" as const,
-          acceptanceEntryId: "accepted-entry",
+          source: "engine-session-reopen" as const,
           assistant: "Complete answer from before Service returned.",
           settlement: {
             outcome: "succeeded" as const,
@@ -2111,6 +3152,490 @@ describe("ProductControlPlane", () => {
       await system.dispose();
     }
   });
+
+  it("atomically binds observed delivery and strictly deduplicates Engine sequence", async () => {
+    let listener:
+      | Parameters<NonNullable<ProductExecutionBoundary["subscribeFacts"]>>[0]
+      | undefined;
+    const resolvedSelection = {
+      engineId: "opencode",
+      runtimeModelId: "provider/model",
+      engineModeId: "build",
+      thinking: null,
+      permissionPolicy: "approval-required" as const,
+      enforcement: "unverified" as const,
+      executionTarget: null,
+      packageGeneration: null,
+    };
+    const engineBinding = {
+      id: ProductEngineBindingId.makeUnsafe("binding-observed-facts"),
+      engineId: "opencode",
+      lineageRef: "lineage-observed-facts",
+    };
+    const boundary: ProductExecutionBoundary = {
+      subscribeFacts: (next) => {
+        listener = next;
+        return () => (listener = undefined);
+      },
+      prepare: () =>
+        Effect.succeed({
+          engineId: "opencode",
+          resolvedSelection,
+          close: async () => undefined,
+        }),
+      attempt: ({ run, markSent }) =>
+        Effect.gen(function* () {
+          yield* markSent();
+          const fact = (engineSequence: number, text: string): ProductExecutionFact => ({
+            kind: "thinking.delta",
+            text,
+            engineSequence,
+            emittedAt: `2026-08-07T00:00:0${engineSequence}.000Z`,
+          });
+          const contextUsage: ProductExecutionFact = {
+            kind: "context.usage",
+            used: 17,
+            size: 128000,
+            engineSequence: 4,
+            emittedAt: "2026-08-07T00:00:04.000Z",
+          };
+          listener?.(run.id, {
+            kind: "delivery-observed",
+            engineBinding,
+            resolvedSelection,
+            firstFact: fact(1, "one"),
+          });
+          listener?.(run.id, {
+            kind: "facts",
+            facts: [fact(1, "duplicate")],
+          });
+          listener?.(run.id, {
+            kind: "facts",
+            facts: [fact(3, "gap")],
+          });
+          listener?.(run.id, {
+            kind: "facts",
+            facts: [fact(2, "two"), fact(3, "three"), contextUsage],
+          });
+          return {
+            kind: "observed-settled" as const,
+            engineBinding,
+            resolvedSelection,
+            outcome: "succeeded" as const,
+            settledAt: "2026-08-07T00:00:05.000Z",
+          };
+        }),
+    };
+    const externalCatalog: ProductRuntimeCatalog = {
+      defaultEngineId: "opencode",
+      packageGeneration: null,
+      engines: [
+        {
+          ...runtimeCatalog.engines[0]!,
+          engineId: "opencode",
+          displayName: "OpenCode",
+          distribution: "user-installed",
+          protocol: { name: "acp", version: "1" },
+          modelSelection: {
+            kind: "engine-session",
+            model: "resolved-on-prepare",
+            mode: "resolved-on-prepare",
+            thinking: "unsupported",
+          },
+          enforcement: "unverified",
+        },
+      ],
+    };
+    const system = await makeSystem(":memory:", boundary, externalCatalog);
+    try {
+      const conversation = createInput("observed-facts");
+      await system.run(system.controlPlane.createConversation(conversation));
+      const item = await system.run(
+        system.controlPlane.putQueueItem({
+          protocolVersion: PRODUCT_PROTOCOL_VERSION,
+          conversationId: conversation.conversationId,
+          itemId: ProductQueueItemId.makeUnsafe("queue-observed-facts"),
+          text: "observe",
+          requestedSelection: {
+            state: "selected",
+            engineId: "opencode",
+            runtimeChoice: { kind: "engine-session-current" },
+            permissionPolicy: "approval-required",
+            executionTarget: null,
+            packageGeneration: null,
+          },
+          resources: [],
+          expectedRevision: null,
+        }),
+      );
+      const result = await system.run(
+        system.controlPlane.submitQueueItem(
+          submitInput(conversation.conversationId, item.id, item.revision, "observed-facts"),
+        ),
+      );
+      expect(
+        result.snapshot.readModel.activities.map((activity) => activity.engineSequence),
+      ).toEqual([1, 2, 3, 4]);
+      expect(result.snapshot.readModel.activities.map((activity) => activity.detail)).toEqual([
+        { code: "thinking-delta", text: "one" },
+        { code: "thinking-delta", text: "two" },
+        { code: "thinking-delta", text: "three" },
+        { code: "context-usage-observed", used: 17, size: 128000 },
+      ]);
+      expect(result.snapshot.readModel.runs[0]?.receipt.receipt).toMatchObject({
+        state: "settled",
+        evidence: { kind: "observed-delivery" },
+        engineBinding,
+        resolvedSelection,
+      });
+      expect(await system.run(system.controlPlane.inspectOutbox())).toEqual([
+        expect.objectContaining({
+          state: "terminal",
+          sendBoundary: "observed",
+          attemptCount: 1,
+          automaticReplayCount: 0,
+        }),
+      ]);
+    } finally {
+      await system.dispose();
+    }
+  });
+
+  it("rejects cross-Engine asynchronous facts before they can mutate the admitted Run", async () => {
+    type Listener = Parameters<NonNullable<ProductExecutionBoundary["subscribeFacts"]>>[0];
+    let nativeListener: Listener | undefined;
+    let externalListener: Listener | undefined;
+    let markExternalSent: (() => void) | undefined;
+    const externalSent = new Promise<void>((resolve) => {
+      markExternalSent = resolve;
+    });
+    let finishExternalAttempt: (() => void) | undefined;
+    const externalAttemptFinished = new Promise<void>((resolve) => {
+      finishExternalAttempt = resolve;
+    });
+    const nativeAttempt = vi.fn(() =>
+      Effect.succeed({
+        kind: "rejected" as const,
+        code: "native-not-selected",
+        message: "Native was not selected.",
+        retryable: false,
+      }),
+    );
+    const engineBinding = {
+      id: ProductEngineBindingId.makeUnsafe("binding-source-engine-guard"),
+      engineId: "opencode",
+      lineageRef: "lineage-source-engine-guard",
+    };
+    const gateway = makeProductExecutionGateway({
+      native: {
+        engineId: "native-engine",
+        boundary: {
+          attempt: nativeAttempt,
+          subscribeFacts: (listener) => {
+            nativeListener = listener;
+            return () => (nativeListener = undefined);
+          },
+        },
+      },
+      external: {
+        engineId: "opencode",
+        boundary: {
+          prepare: () =>
+            Effect.succeed({
+              engineId: "opencode",
+              resolvedSelection: externalResolvedSelection,
+              close: async () => undefined,
+            }),
+          attempt: ({ markSent }) =>
+            Effect.promise(async () => {
+              await Effect.runPromise(markSent());
+              markExternalSent?.();
+              await externalAttemptFinished;
+              return {
+                kind: "observed-settled" as const,
+                engineBinding,
+                resolvedSelection: externalResolvedSelection,
+                outcome: "succeeded" as const,
+                settledAt: "2026-08-07T00:00:03.000Z",
+              };
+            }),
+          subscribeFacts: (listener) => {
+            externalListener = listener;
+            return () => (externalListener = undefined);
+          },
+        },
+      },
+      composeCatalog: () => externalRuntimeCatalog,
+    });
+    const system = await makeSystem(":memory:", gateway, externalRuntimeCatalog);
+    let submission: Promise<unknown> | undefined;
+    try {
+      const conversation = createInput("source-engine-guard", "chat");
+      await system.run(system.controlPlane.createConversation(conversation));
+      const queued = await system.run(
+        system.controlPlane.putQueueItem({
+          protocolVersion: PRODUCT_PROTOCOL_VERSION,
+          conversationId: conversation.conversationId,
+          itemId: ProductQueueItemId.makeUnsafe("queue-source-engine-guard"),
+          text: "keep facts on their admitted Engine",
+          requestedSelection: externalSelection,
+          resources: [],
+          expectedRevision: null,
+        }),
+      );
+      const submitted = submitInput(
+        conversation.conversationId,
+        queued.id,
+        queued.revision,
+        "source-engine-guard",
+      );
+      submission = system.run(system.controlPlane.submitQueueItem(submitted));
+      await externalSent;
+
+      nativeListener?.(submitted.runId, {
+        kind: "delivery-observed",
+        engineBinding,
+        resolvedSelection: externalResolvedSelection,
+        firstFact: thinkingFact(1, "wrong source delivery"),
+      });
+      nativeListener?.(submitted.runId, {
+        kind: "facts",
+        facts: [thinkingFact(1, "wrong source fact")],
+      });
+      externalListener?.(submitted.runId, {
+        kind: "delivery-observed",
+        engineBinding: { ...engineBinding, engineId: "native-engine" },
+        resolvedSelection: externalResolvedSelection,
+        firstFact: thinkingFact(1, "wrong binding"),
+      });
+      externalListener?.(submitted.runId, {
+        kind: "delivery-observed",
+        engineBinding,
+        resolvedSelection: { ...externalResolvedSelection, engineId: "native-engine" },
+        firstFact: thinkingFact(1, "wrong resolution"),
+      });
+
+      const unchanged = await system.run(
+        system.controlPlane.getConversationSnapshot({
+          protocolVersion: PRODUCT_PROTOCOL_VERSION,
+          conversationId: conversation.conversationId,
+        }),
+      );
+      expect(unchanged.readModel.runs[0]?.receipt.receipt).toMatchObject({ state: "sent" });
+      expect(unchanged.readModel.activities).toEqual([]);
+      expect(await system.run(system.controlPlane.inspectOutbox())).toEqual([
+        expect.objectContaining({
+          state: "sending",
+          sendBoundary: "sent",
+          attemptCount: 1,
+          automaticReplayCount: 0,
+        }),
+      ]);
+
+      externalListener?.(submitted.runId, {
+        kind: "delivery-observed",
+        engineBinding,
+        resolvedSelection: externalResolvedSelection,
+        firstFact: thinkingFact(1, "correct delivery"),
+      });
+      externalListener?.(submitted.runId, {
+        kind: "facts",
+        facts: [thinkingFact(2, "correct fact")],
+      });
+      const observed = await system.run(
+        system.controlPlane.getConversationSnapshot({
+          protocolVersion: PRODUCT_PROTOCOL_VERSION,
+          conversationId: conversation.conversationId,
+        }),
+      );
+      expect(observed.readModel.runs[0]?.receipt.receipt).toMatchObject({
+        state: "running",
+        engineBinding,
+        resolvedSelection: externalResolvedSelection,
+      });
+      expect(observed.readModel.activities.map((activity) => activity.detail)).toEqual([
+        { code: "thinking-delta", text: "correct delivery" },
+        { code: "thinking-delta", text: "correct fact" },
+      ]);
+      expect(nativeAttempt).not.toHaveBeenCalled();
+
+      finishExternalAttempt?.();
+      await submission;
+    } finally {
+      finishExternalAttempt?.();
+      await submission?.catch(() => undefined);
+      await system.dispose();
+    }
+  });
+
+  it("reopens observed in-flight delivery as outcome_unknown without relabeling it accepted", async () => {
+    const root = await fs.mkdtemp(path.join(os.tmpdir(), "omnimind-product-observed-reopen-"));
+    temporaryRoots.push(root);
+    const filename = path.join(root, PRODUCT_DATABASE_FILENAME);
+    const first = await makeSystem(filename);
+    const conversation = createInput("observed-reopen");
+    await first.run(first.controlPlane.createConversation(conversation));
+    const item = await putQueueItem(first, conversation, "observed-reopen");
+    const input = submitInput(
+      conversation.conversationId,
+      item.id,
+      item.revision,
+      "observed-reopen",
+    );
+    await first.run(first.controlPlane.admitQueueItem(input));
+    await first.dispose();
+
+    const database = new DatabaseSync(filename);
+    const observedAt = "2026-08-07T00:00:01.000Z";
+    const engineBinding = {
+      id: "binding-observed-reopen",
+      engineId: "native-engine",
+      lineageRef: "lineage-observed-reopen",
+    };
+    database
+      .prepare(
+        `INSERT INTO product_engine_bindings(
+           binding_id, conversation_id, run_id, engine_id, lineage_ref
+         ) VALUES (?, ?, ?, ?, ?)`,
+      )
+      .run(
+        engineBinding.id,
+        conversation.conversationId,
+        input.runId,
+        engineBinding.engineId,
+        engineBinding.lineageRef,
+      );
+    database
+      .prepare(
+        "UPDATE product_outbox SET state = 'sending', send_boundary = 'observed' WHERE run_id = ?",
+      )
+      .run(input.runId);
+    database.prepare("UPDATE product_operation_receipts SET receipt_json = ? WHERE run_id = ?").run(
+      JSON.stringify({
+        state: "running",
+        evidence: { kind: "observed-delivery", observedAt },
+        engineBinding,
+        resolvedSelection: nativeResolvedSelection,
+        abort: null,
+      }),
+      input.runId,
+    );
+    database.close();
+
+    const reopened = await makeSystem(filename);
+    try {
+      const snapshot = await reopened.run(
+        reopened.controlPlane.getConversationSnapshot({
+          protocolVersion: PRODUCT_PROTOCOL_VERSION,
+          conversationId: conversation.conversationId,
+        }),
+      );
+      expect(snapshot.readModel.runs[0]?.receipt.receipt).toMatchObject({
+        state: "outcome_unknown",
+        evidence: { kind: "observed-delivery", observedAt },
+      });
+      expect(await reopened.run(reopened.controlPlane.inspectOutbox())).toEqual([
+        expect.objectContaining({ state: "terminal", sendBoundary: "observed" }),
+      ]);
+    } finally {
+      await reopened.dispose();
+    }
+  });
+
+  it.each([
+    ["accepted", "observed"],
+    ["observed", "accepted"],
+  ] as const)(
+    "rejects reopen when durable %s boundary contradicts %s receipt evidence",
+    async (outboxBoundary, receiptEvidence) => {
+      const root = await fs.mkdtemp(path.join(os.tmpdir(), "omnimind-product-reopen-conflict-"));
+      temporaryRoots.push(root);
+      const filename = path.join(root, PRODUCT_DATABASE_FILENAME);
+      const first = await makeSystem(filename);
+      const conversation = createInput(`reopen-conflict-${outboxBoundary}`);
+      await first.run(first.controlPlane.createConversation(conversation));
+      const item = await putQueueItem(first, conversation, `reopen-conflict-${outboxBoundary}`);
+      const input = submitInput(
+        conversation.conversationId,
+        item.id,
+        item.revision,
+        `reopen-conflict-${outboxBoundary}`,
+      );
+      await first.run(first.controlPlane.admitQueueItem(input));
+      await first.dispose();
+
+      const database = new DatabaseSync(filename);
+      const engineBinding = {
+        id: `binding-reopen-conflict-${outboxBoundary}`,
+        engineId: "native-engine",
+        lineageRef: `lineage-reopen-conflict-${outboxBoundary}`,
+      };
+      database
+        .prepare(
+          `INSERT INTO product_engine_bindings(
+             binding_id, conversation_id, run_id, engine_id, lineage_ref
+           ) VALUES (?, ?, ?, ?, ?)`,
+        )
+        .run(
+          engineBinding.id,
+          conversation.conversationId,
+          input.runId,
+          engineBinding.engineId,
+          engineBinding.lineageRef,
+        );
+      const receipt =
+        receiptEvidence === "accepted"
+          ? {
+              state: "accepted",
+              operationRef: `operation-reopen-conflict-${outboxBoundary}`,
+              engineBinding,
+              resolvedSelection: nativeResolvedSelection,
+              abort: null,
+            }
+          : {
+              state: "running",
+              evidence: {
+                kind: "observed-delivery",
+                observedAt: "2026-08-07T00:00:02.000Z",
+              },
+              engineBinding,
+              resolvedSelection: nativeResolvedSelection,
+              abort: null,
+            };
+      database
+        .prepare("UPDATE product_outbox SET state = 'sending', send_boundary = ? WHERE run_id = ?")
+        .run(outboxBoundary, input.runId);
+      database
+        .prepare("UPDATE product_operation_receipts SET receipt_json = ? WHERE run_id = ?")
+        .run(JSON.stringify(receipt), input.runId);
+      database.close();
+
+      await expect(makeSystem(filename)).rejects.toMatchObject({
+        code: "PRODUCT_SEND_BOUNDARY_CONTRADICTION",
+      });
+      const reopened = new DatabaseSync(filename, { readOnly: true });
+      try {
+        expect(
+          reopened
+            .prepare("SELECT state, send_boundary FROM product_outbox WHERE run_id = ?")
+            .get(input.runId),
+        ).toEqual({ state: "sending", send_boundary: outboxBoundary });
+        expect(
+          JSON.parse(
+            String(
+              (
+                reopened
+                  .prepare("SELECT receipt_json FROM product_operation_receipts WHERE run_id = ?")
+                  .get(input.runId) as Record<string, unknown>
+              ).receipt_json,
+            ),
+          ),
+        ).toEqual(receipt);
+      } finally {
+        reopened.close();
+      }
+    },
+  );
 
   it.each([
     ["accepted", acceptedObservation("boundary-bypass")],
@@ -2152,13 +3677,14 @@ describe("ProductControlPlane", () => {
         expect(snapshot.readModel.runs[0]?.receipt.receipt).toEqual({
           state: "pending",
           lastConfirmedBoundary: "pre-send",
+          blocked: null,
         });
         expect(snapshot.readModel.queue).toEqual([]);
         expect(await system.run(system.controlPlane.inspectOutbox())).toEqual([
           expect.objectContaining({
             state: "pending",
             sendBoundary: "pre-send",
-            attemptCount: 1,
+            attemptCount: 0,
             automaticReplayCount: 0,
           }),
         ]);
@@ -2208,7 +3734,8 @@ describe("ProductControlPlane", () => {
     );
     expect(snapshot.readModel.runs[0]?.receipt.receipt).toEqual({
       state: "delivery_unknown",
-      lastConfirmedBoundary: "sent",
+      lastConfirmedBoundary: "local-write",
+      abort: null,
     });
     expect(shouldNotRun.attemptCount()).toBe(0);
     expect(await readProductPackageLifecycleFacts(filename)).toEqual({
@@ -2271,13 +3798,13 @@ describe("ProductControlPlane", () => {
       );
       expect(snapshot.readModel.runs[0]?.receipt.receipt).toMatchObject({
         state: "settled",
-        operationRef: "operation-settled",
+        evidence: { kind: "accepted-operation", operationRef: "operation-settled" },
         engineBinding: { id: "binding-settled" },
         resolvedSelection: { engineId: "native-engine" },
       });
       expect(snapshot.readModel.runs[1]?.receipt.receipt).toMatchObject({
         state: "outcome_unknown",
-        operationRef: "operation-outcome-unknown",
+        evidence: { kind: "accepted-operation", operationRef: "operation-outcome-unknown" },
         engineBinding: { id: "binding-outcome-unknown" },
         resolvedSelection: { engineId: "native-engine" },
       });

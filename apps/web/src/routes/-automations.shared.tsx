@@ -820,9 +820,11 @@ export function AutomationModelPicker({ value }: { readonly value: ProductReques
       <div className="font-medium text-foreground">Automation execution unavailable</div>
       <div className="mt-1">
         {value.state === "selected"
-          ? `Host runtime: ${value.runtimeModelId}${value.thinking ? ` · ${value.thinking}` : ""}.`
+          ? `Host runtime: ${value.engineId}${value.runtimeChoice.kind === "product-model" ? ` · ${value.runtimeChoice.runtimeModelId}${value.runtimeChoice.thinking ? ` · ${value.runtimeChoice.thinking}` : ""}` : " · current Engine session"}.`
           : `Host runtime unavailable: ${value.reason}${
-              value.requestedRuntimeModelId ? ` · requested ${value.requestedRuntimeModelId}` : ""
+              value.requestedRuntimeChoice?.kind === "product-model"
+                ? ` · requested ${value.requestedRuntimeChoice.runtimeModelId}`
+                : ""
             }.`}{" "}
         Scheduled work stays paused until Product Queue admission is implemented.
       </div>

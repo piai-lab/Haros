@@ -1,4 +1,8 @@
-import type { HistoricalModelOptions, HistoricalModelSelection, HistoricalModelSlug } from "~/historicalModelSelection";
+import type {
+  HistoricalModelOptions,
+  HistoricalModelSelection,
+  HistoricalModelSlug,
+} from "~/historicalModelSelection";
 import type {
   ConversationHistoryRun,
   ConversationPullRequestSummary,
@@ -34,6 +38,7 @@ import {
   normalizeFileCommentSelection,
 } from "./lib/fileComments";
 import { type TerminalContextDraft, normalizeTerminalContextText } from "./lib/terminalContext";
+import { COMPOSER_DRAFT_STORAGE_KEY_V2 } from "./composerDraftV2Transcode";
 import {
   type ChatAssistantSelectionAttachment,
   type ChatFileAttachment,
@@ -43,7 +48,7 @@ import {
   type ThreadPrimarySurface,
 } from "./types";
 
-export const COMPOSER_DRAFT_STORAGE_KEY = "omnimind:composer-drafts:v1";
+export const COMPOSER_DRAFT_STORAGE_KEY = COMPOSER_DRAFT_STORAGE_KEY_V2;
 export const COMPOSER_DRAFT_STORAGE_VERSION = 7;
 export type DraftThreadEnvMode = "local" | "worktree";
 /** Local composer presentation state used while restoring history; never Product admission. */
@@ -315,7 +320,10 @@ export interface ComposerDraftStoreState {
     threadId: ThreadId,
     modelSelection: HistoricalModelSelection | null | undefined,
   ) => void;
-  setModelSelectionAndSticky: (threadId: ThreadId, modelSelection: HistoricalModelSelection) => void;
+  setModelSelectionAndSticky: (
+    threadId: ThreadId,
+    modelSelection: HistoricalModelSelection,
+  ) => void;
   applyStickyState: (threadId: ThreadId) => void;
   setRuntimeMode: (threadId: ThreadId, runtimeMode: RuntimeMode | null | undefined) => void;
   setInteractionMode: (

@@ -8,6 +8,7 @@ import { cleanup, render } from "vitest-browser-react";
 
 import { useComposerDraftStore } from "../../composerDraftStore";
 import { useProductStore } from "../../store/productStore";
+import { makeProductModelRuntimeCatalog } from "../../testProductRuntimeCatalog";
 import type { KanbanCard } from "./kanban.logic";
 import { useKanbanDraftDispatchAdmission } from "./useKanbanDraftDispatchAdmission";
 
@@ -15,40 +16,18 @@ const PROJECT_ID = ProjectId.makeUnsafe("kanban-admission-project");
 const THREAD_ID = ThreadId.makeUnsafe("kanban-admission-thread");
 const NOW = "2026-08-05T00:00:00.000Z";
 function runtimeCatalog(auth: "configured" | "missing" = "configured"): ProductRuntimeCatalog {
-  return {
-    engineId: "pi",
-    runtimeVersion: "test",
-    packageGeneration: "package-board-browser",
-    models: [
-      {
-        id: "host-a/current",
-        provider: "host-a",
-        modelId: "current",
-        name: "Current Host model",
-        reasoning: true,
-        thinkingLevels: ["medium"],
-        available: true,
-        auth,
-      },
-    ],
-    capabilities: {
-      ingress: "typed-native-host",
-      lineage: { continue: "available", rebuild: "available" },
-      controls: {
-        steer: "available",
-        followUp: "available",
-        abort: "available",
-        cancel: "unknown",
-      },
-      structuredQuestions: "unknown",
-      packages: "unknown",
-      filesRead: "unknown",
-      filesWrite: "unknown",
-      terminal: "unknown",
-      enforcement: "unverified",
+  return makeProductModelRuntimeCatalog([
+    {
+      id: "host-a/current",
+      provider: "host-a",
+      modelId: "current",
+      name: "Current Host model",
+      reasoning: true,
+      thinkingLevels: ["medium"],
+      available: true,
+      auth,
     },
-    truncated: false,
-  };
+  ]);
 }
 
 const card: KanbanCard = {
@@ -102,10 +81,12 @@ describe("Kanban board Host dispatch admission", () => {
       requestedSelection: {
         state: "selected",
         engineId: "pi",
-        runtimeModelId: "host-a/current",
-        thinking: "medium",
+        runtimeChoice: {
+          kind: "product-model",
+          runtimeModelId: "host-a/current",
+          thinking: "medium",
+        },
         permissionPolicy: "approval-required",
-        enforcement: "unverified",
         executionTarget: { kind: "local", targetRef: "/workspace", observedAt: NOW },
         packageGeneration: "package-board-browser",
       },
@@ -124,10 +105,8 @@ describe("Kanban board Host dispatch admission", () => {
       requestedSelection: {
         state: "selected",
         engineId: "pi",
-        runtimeModelId: "host-a/current",
-        thinking: null,
+        runtimeChoice: { kind: "product-model", runtimeModelId: "host-a/current", thinking: null },
         permissionPolicy: "approval-required",
-        enforcement: "unverified",
         executionTarget: { kind: "local", targetRef: "/workspace", observedAt: NOW },
         packageGeneration: "package-board-browser",
       },

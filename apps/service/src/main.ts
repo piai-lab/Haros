@@ -40,6 +40,9 @@ import { formatHostForUrl, isLoopbackHost, isWildcardHost } from "./startupAcces
 import { AnalyticsServiceLayerLive } from "./telemetry/Layers/AnalyticsService";
 import { AnalyticsService } from "./telemetry/Services/AnalyticsService";
 import { ProductControlPlane } from "./product/ProductControlPlane";
+import { PRODUCT_DATABASE_FILENAME } from "./product/ProductControlPlane";
+import { coordinateSelectionSchemaV2 } from "./persistence/selectionSchemaCoordinator";
+import path from "node:path";
 
 export class StartupError extends Data.TaggedError("StartupError")<{
   readonly message: string;
@@ -134,9 +137,15 @@ const CliEnvConfig = Config.all({
   ),
   port: Config.port("OMNIMIND_PORT").pipe(Config.option, Config.map(Option.getOrUndefined)),
   host: Config.string("OMNIMIND_HOST").pipe(Config.option, Config.map(Option.getOrUndefined)),
-  omnimindHome: Config.string("OMNIMIND_HOME").pipe(Config.option, Config.map(Option.getOrUndefined)),
+  omnimindHome: Config.string("OMNIMIND_HOME").pipe(
+    Config.option,
+    Config.map(Option.getOrUndefined),
+  ),
   devUrl: Config.url("VITE_DEV_SERVER_URL").pipe(Config.option, Config.map(Option.getOrUndefined)),
-  publicUrl: Config.url("OMNIMIND_PUBLIC_URL").pipe(Config.option, Config.map(Option.getOrUndefined)),
+  publicUrl: Config.url("OMNIMIND_PUBLIC_URL").pipe(
+    Config.option,
+    Config.map(Option.getOrUndefined),
+  ),
   allowInsecureRemote: optionalBooleanEnvironmentConfig("OMNIMIND_ALLOW_INSECURE_REMOTE"),
   noBrowser: optionalBooleanEnvironmentConfig("OMNIMIND_NO_BROWSER"),
   authToken: Config.string("OMNIMIND_AUTH_TOKEN").pipe(
@@ -272,14 +281,30 @@ const ServerConfigLive = (input: CliInput) =>
 
 const LayerLive = (input: CliInput) => {
   const { runtimeServicesLayer } = makeServerApplicationLayers();
-
-  return Layer.empty.pipe(
-    Layer.provideMerge(runtimeServicesLayer),
-    Layer.provideMerge(SqlitePersistence.layerConfig),
-    Layer.provideMerge(ServerLoggerLive),
-    Layer.provideMerge(AnalyticsServiceLayerLive),
-    Layer.provideMerge(ServerConfigLive(input)),
+  const afterMigration = Layer.unwrap(
+    Effect.gen(function* () {
+      const config = yield* ServerConfig;
+      yield* Effect.tryPromise({
+        try: () =>
+          coordinateSelectionSchemaV2({
+            productDbPath: path.join(config.stateDir, PRODUCT_DATABASE_FILENAME),
+            automationDbPath: config.dbPath,
+          }),
+        catch: (cause) =>
+          new StartupError({
+            message: "Product selection stores require recovery before startup.",
+            cause,
+          }),
+      });
+      return Layer.empty.pipe(
+        Layer.provideMerge(runtimeServicesLayer),
+        Layer.provideMerge(SqlitePersistence.layerConfig),
+        Layer.provideMerge(ServerLoggerLive),
+        Layer.provideMerge(AnalyticsServiceLayerLive),
+      );
+    }),
   );
+  return afterMigration.pipe(Layer.provideMerge(ServerConfigLive(input)));
 };
 
 export const recordStartupHeartbeat = Effect.gen(function* () {

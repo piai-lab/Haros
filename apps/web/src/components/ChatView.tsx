@@ -248,7 +248,11 @@ import {
   isProductRuntimeModelSelectable,
   reconcileProductRuntimeSelection,
 } from "./product/ProductRuntimePicker";
-import { abortProductRun, productControlFailureMessage } from "./product/productRunControl";
+import {
+  abortProductRun,
+  isProductRunAbortable,
+  productControlFailureMessage,
+} from "./product/productRunControl";
 import { deleteProductQueueItem, moveProductQueueItemNext } from "./product/productQueueActions";
 import { useMarkSettledConversationVisited } from "./chat/useMarkSettledConversationVisited";
 import {
@@ -276,6 +280,7 @@ import {
   useComposerDraftStore,
   useComposerThreadDraft,
 } from "../composerDraftStore";
+import { isComposerDraftRecoveryRequired } from "../composerDraftV2Transcode";
 import { useTemporaryThreadStore } from "../temporaryThreadStore";
 import { useComposerFocusRequestStore } from "../composerFocusRequestStore";
 import { useWorkflowRunUiStore, useWorkflowRunUiThreadState } from "../workflowRunUiStore";
@@ -442,6 +447,8 @@ import {
   resolveDiffEnvironmentState,
   resolveThreadEnvironmentMode,
 } from "../lib/threadEnvironment";
+
+const PRODUCT_NATIVE_ENGINE_ID = "pi";
 
 // The terminal drawer drags in xterm plus its addons (~223 KB gzip). Both mount points
 // are conditional, so loading it lazily keeps the terminal stack out of the initial
@@ -710,6 +717,33 @@ export default function ChatView({
   );
   const [productDetailFetchFailed, setProductDetailFetchFailed] = useState(false);
   const systemHealthSnapshot = useSystemHealthStore((store) => store.snapshot);
+  const [productRequestedSelection, setProductRequestedSelection] =
+    useState<ProductRequestedSelection | null>(null);
+  useEffect(() => {
+    setProductRequestedSelection((current) =>
+      reconcileProductRuntimeSelection(productRuntimeCatalog, current),
+    );
+  }, [productRuntimeCatalog]);
+  const productHealthSelection = useMemo(
+    () =>
+      productRequestedSelection?.state === "selected"
+        ? {
+            engineId: productRequestedSelection.engineId,
+            nativeEngineId: PRODUCT_NATIVE_ENGINE_ID,
+            catalogReady:
+              productRuntimeCatalog?.engines.find(
+                (engine) => engine.engineId === productRequestedSelection.engineId,
+              )?.availability.state === "available",
+          }
+        : productRequestedSelection?.state === "unavailable"
+          ? {
+              engineId: productRequestedSelection.requestedEngineId,
+              nativeEngineId: PRODUCT_NATIVE_ENGINE_ID,
+              catalogReady: false,
+            }
+          : undefined,
+    [productRequestedSelection, productRuntimeCatalog],
+  );
   const productConversationPresentation = useMemo(
     () =>
       presentProductConversationState({
@@ -720,12 +754,14 @@ export default function ChatView({
             ? "history-unavailable"
             : productProjectionIssue,
         health: systemHealthSnapshot,
+        healthSelection: productHealthSelection,
       }),
     [
       isKnownProductConversation,
       productDetailFetchFailed,
       productProjectionIssue,
       productReadModel,
+      productHealthSelection,
       systemHealthSnapshot,
     ],
   );
@@ -1423,8 +1459,8 @@ export default function ChatView({
     threadId,
   ]);
   const hasProductActiveRun =
-    productReadModel?.runs.some(
-      (run) => run.receipt.receipt.state === "accepted" || run.receipt.receipt.state === "running",
+    productReadModel?.runs.some((run) =>
+      isProductRunAbortable(run.receipt.receipt, run.requestedSelection.runtimeChoice),
     ) ?? false;
   const hasProductUnresolvedRun =
     productReadModel?.runs.some(
@@ -1773,27 +1809,33 @@ export default function ChatView({
   const featureFlags = useFeatureFlags();
   const showDebugTaskBanner = import.meta.env.DEV && featureFlags["show-debug-task-banner"];
   const serverConfigQuery = useQuery(serverConfigQueryOptions());
-  const [productRequestedSelection, setProductRequestedSelection] =
-    useState<ProductRequestedSelection | null>(null);
-  useEffect(() => {
-    setProductRequestedSelection((current) =>
-      reconcileProductRuntimeSelection(productRuntimeCatalog, current),
-    );
-  }, [productRuntimeCatalog]);
   const productRuntimeModelId =
-    productRequestedSelection?.state === "selected"
-      ? productRequestedSelection.runtimeModelId
-      : (productRequestedSelection?.requestedRuntimeModelId ?? null);
+    productRequestedSelection?.state === "selected" &&
+    productRequestedSelection.runtimeChoice.kind === "product-model"
+      ? productRequestedSelection.runtimeChoice.runtimeModelId
+      : productRequestedSelection?.state === "unavailable" &&
+          productRequestedSelection.requestedRuntimeChoice?.kind === "product-model"
+        ? productRequestedSelection.requestedRuntimeChoice.runtimeModelId
+        : null;
   const productRuntimeThinking =
-    productRequestedSelection?.state === "selected" ? productRequestedSelection.thinking : null;
+    productRequestedSelection?.state === "selected" &&
+    productRequestedSelection.runtimeChoice.kind === "product-model"
+      ? productRequestedSelection.runtimeChoice.thinking
+      : null;
   const selectedModel = productRuntimeModelId;
   const commitProductRuntimeSelection = useCallback(
     (modelId: string, requestedThinking?: string | null) => {
       const catalog = productRuntimeCatalog;
-      const model = catalog?.models.find(
-        (candidate) => candidate.id === modelId && isProductRuntimeModelSelectable(candidate),
+      const engine = catalog?.engines.find(
+        (candidate) => candidate.engineId === catalog.defaultEngineId,
       );
-      if (!catalog || !model) return;
+      const model =
+        engine?.modelSelection.kind === "product-model"
+          ? engine.modelSelection.models.find(
+              (candidate) => candidate.id === modelId && isProductRuntimeModelSelectable(candidate),
+            )
+          : undefined;
+      if (!catalog || !engine || !model) return;
       const catalogThinking = requestedThinking as (typeof model.thinkingLevels)[number] | null;
       const thinking =
         catalogThinking && model.thinkingLevels.includes(catalogThinking)
@@ -1803,12 +1845,10 @@ export default function ChatView({
             : (model.thinkingLevels[0] ?? null);
       setProductRequestedSelection({
         state: "selected",
-        engineId: catalog.engineId,
-        runtimeModelId: model.id,
-        thinking,
+        engineId: engine.engineId,
+        runtimeChoice: { kind: "product-model", runtimeModelId: model.id, thinking },
         packageGeneration: catalog.packageGeneration,
         permissionPolicy: "approval-required",
-        enforcement: catalog.capabilities.enforcement,
         executionTarget: null,
       });
     },
@@ -2336,7 +2376,10 @@ export default function ChatView({
     hasProductActiveRun || activeTurnLayoutLive || keepSettledActiveTurnLayout;
   const isComposerApprovalState = activePendingApproval !== null;
   const isComposerEditorDisabled = isConnecting || isComposerApprovalState;
-  const productDispatchAvailable = canDispatchProductSubmission(systemHealthSnapshot);
+  const productDispatchAvailable = canDispatchProductSubmission(
+    systemHealthSnapshot,
+    productHealthSelection,
+  );
   const canCollapsePastedTextToDraft = shouldEnableComposerPastedTextCollapse({
     isComposerApprovalState,
     hasPendingUserInput: pendingUserInputs.length > 0,
@@ -3186,6 +3229,30 @@ export default function ChatView({
     },
     [setStoreThreadError],
   );
+  const retryBlockedProductDispatch = useCallback(
+    async (dispatchId: string) => {
+      try {
+        const result = await readProductNativeApi().retryDispatch({
+          protocolVersion: PRODUCT_PROTOCOL_VERSION,
+          conversationId: productConversationId,
+          dispatchId: ProductDispatchId.makeUnsafe(dispatchId),
+        });
+        setProductConversationSnapshot(result.snapshot);
+      } catch (error) {
+        setThreadError(
+          threadId,
+          error instanceof Error ? error.message : workbenchCopy.queuePutError,
+        );
+      }
+    },
+    [
+      productConversationId,
+      setProductConversationSnapshot,
+      setThreadError,
+      threadId,
+      workbenchCopy.queuePutError,
+    ],
+  );
   const composerImageAttachmentCount = useCallback(
     () =>
       effectiveComposerAttachmentCount(useComposerDraftStore.getState().draftsByThreadId[threadId]),
@@ -3649,9 +3716,8 @@ export default function ChatView({
   const stopActiveThreadSession = useCallback(async () => {
     const activeRun = [...(productReadModel?.runs ?? [])]
       .toReversed()
-      .find(
-        (run) =>
-          run.receipt.receipt.state === "accepted" || run.receipt.receipt.state === "running",
+      .find((run) =>
+        isProductRunAbortable(run.receipt.receipt, run.requestedSelection.runtimeChoice),
       );
     if (!activeRun || !productReadModel) return;
     await abortProductRun({
@@ -4724,9 +4790,8 @@ export default function ChatView({
   const onInterrupt = useCallback(async () => {
     const activeRun = [...(productReadModel?.runs ?? [])]
       .toReversed()
-      .find(
-        (run) =>
-          run.receipt.receipt.state === "accepted" || run.receipt.receipt.state === "running",
+      .find((run) =>
+        isProductRunAbortable(run.receipt.receipt, run.requestedSelection.runtimeChoice),
       );
     if (!activeRun || !productReadModel) return;
     await abortProductRun({
@@ -5642,6 +5707,8 @@ export default function ChatView({
     const messageId = createMessageId();
     const observedAt = new Date().toISOString();
     const productApi = readProductNativeApi();
+    // A no-ACK `sent` OpenCode Run exposes Stop only; it must never enter the
+    // steer/follow-up path before prompt-correlated delivery is observed.
     const activeProductRun = [...(productReadModel?.runs ?? [])]
       .toReversed()
       .find(
@@ -5721,70 +5788,14 @@ export default function ChatView({
               executionTarget,
               writeAuthority: "managed-directory" as const,
             };
-    const requestedRuntimeModel = productRuntimeModelId
-      ? (freshRuntimeCatalog?.models.find((model) => model.id === productRuntimeModelId) ?? null)
-      : null;
-    const requestedThinking = productRuntimeThinking;
-    const requestedSelection: ProductRequestedSelection = (() => {
-      const policy = {
-        permissionPolicy: "approval-required" as const,
-        enforcement: "unverified" as const,
-        executionTarget,
-      };
-      if (!freshRuntimeCatalog) {
-        return {
-          state: "unavailable",
-          reason: "catalog-unavailable",
-          requestedRuntimeModelId: productRuntimeModelId,
-          ...policy,
-        };
-      }
-      if (!productRuntimeModelId) {
-        return {
-          state: "unavailable",
-          reason: "model-not-selected",
-          requestedRuntimeModelId: null,
-          ...policy,
-        };
-      }
-      if (!requestedRuntimeModel || !requestedRuntimeModel.available) {
-        return {
-          state: "unavailable",
-          reason: requestedRuntimeModel?.auth === "missing" ? "auth-missing" : "model-unavailable",
-          requestedRuntimeModelId: productRuntimeModelId,
-          ...policy,
-        };
-      }
-      if (requestedRuntimeModel.auth !== "configured") {
-        return {
-          state: "unavailable",
-          reason: requestedRuntimeModel.auth === "missing" ? "auth-missing" : "model-unavailable",
-          requestedRuntimeModelId: productRuntimeModelId,
-          ...policy,
-        };
-      }
-      if (
-        requestedThinking !== null &&
-        !requestedRuntimeModel.thinkingLevels.includes(
-          requestedThinking as (typeof requestedRuntimeModel.thinkingLevels)[number],
-        )
-      ) {
-        return {
-          state: "unavailable",
-          reason: "thinking-unsupported",
-          requestedRuntimeModelId: productRuntimeModelId,
-          ...policy,
-        };
-      }
-      return {
-        state: "selected",
-        engineId: freshRuntimeCatalog.engineId,
-        runtimeModelId: requestedRuntimeModel.id,
-        thinking: requestedThinking,
-        packageGeneration: freshRuntimeCatalog.packageGeneration,
-        ...policy,
-      };
-    })();
+    const reconciledSelection = reconcileProductRuntimeSelection(
+      freshRuntimeCatalog,
+      productRequestedSelection,
+    );
+    const requestedSelection: ProductRequestedSelection = {
+      ...reconciledSelection,
+      executionTarget,
+    };
     const proposedQueuePutInput = {
       protocolVersion: PRODUCT_PROTOCOL_VERSION,
       conversationId: productConversationId,
@@ -5870,13 +5881,28 @@ export default function ChatView({
         resetLocalDispatch();
         return true;
       }
+      if (isComposerDraftRecoveryRequired()) {
+        setThreadError(
+          threadIdForSend,
+          "Draft recovery is required before this queued selection can be dispatched.",
+        );
+        sendInFlightRef.current = false;
+        resetLocalDispatch();
+        return true;
+      }
       if (requestedSelection.state === "unavailable") {
         setThreadError(threadIdForSend, workbenchCopy.productModelRequired);
         sendInFlightRef.current = false;
         resetLocalDispatch();
         return true;
       }
-      if (!canDispatchProductSubmission(useSystemHealthStore.getState().snapshot)) {
+      if (
+        !canDispatchProductSubmission(useSystemHealthStore.getState().snapshot, {
+          engineId: requestedSelection.engineId,
+          nativeEngineId: PRODUCT_NATIVE_ENGINE_ID,
+          catalogReady: true,
+        })
+      ) {
         sendInFlightRef.current = false;
         resetLocalDispatch();
         return true;
@@ -5971,7 +5997,20 @@ export default function ChatView({
         return;
       }
       if (hasProductActiveRun) return;
-      if (!canDispatchProductSubmission(useSystemHealthStore.getState().snapshot)) {
+      const queueEngineId =
+        queueItem.requestedSelection.state === "selected"
+          ? queueItem.requestedSelection.engineId
+          : PRODUCT_NATIVE_ENGINE_ID;
+      if (
+        !canDispatchProductSubmission(useSystemHealthStore.getState().snapshot, {
+          engineId: queueEngineId,
+          nativeEngineId: PRODUCT_NATIVE_ENGINE_ID,
+          catalogReady:
+            queueItem.requestedSelection.state === "selected" &&
+            productRuntimeCatalog?.engines.find((engine) => engine.engineId === queueEngineId)
+              ?.availability.state === "available",
+        })
+      ) {
         setThreadError(threadId, workbenchCopy.executionUnavailableDescription);
         return;
       }
@@ -5999,6 +6038,7 @@ export default function ChatView({
       hasProductUnresolvedRun,
       productConversationId,
       productReadModel,
+      productRuntimeCatalog,
       setProductConversationSnapshot,
       setThreadError,
       threadId,
@@ -6919,7 +6959,10 @@ export default function ChatView({
           </div>
         )}
         {productConversationSummary ? (
-          <ProductConversationNotice presentation={productConversationPresentation} />
+          <ProductConversationNotice
+            presentation={productConversationPresentation}
+            onRetryDispatch={retryBlockedProductDispatch}
+          />
         ) : null}
         <div className="flex flex-1 items-center justify-center">
           <div className="text-center">
@@ -7887,7 +7930,10 @@ export default function ChatView({
       ) : null}
 
       {/* Error banner */}
-      <ProductConversationNotice presentation={productConversationPresentation} />
+      <ProductConversationNotice
+        presentation={productConversationPresentation}
+        onRetryDispatch={retryBlockedProductDispatch}
+      />
       <ThreadErrorBanner error={activeThread.error} onDismiss={dismissActiveThreadError} />
       {terminalWorkspaceOpen && !isEditorRail ? (
         <TerminalWorkspaceTabs

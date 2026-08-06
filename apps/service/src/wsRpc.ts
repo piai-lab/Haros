@@ -318,6 +318,8 @@ const makeWsRpcHandlersLayer = () =>
           productRpcEffect(productControlPlane.deleteQueueItem(input)),
         [PRODUCT_RPC_METHODS.submitQueueItem]: (input) =>
           productRpcEffect(productControlPlane.submitQueueItem(input)),
+        [PRODUCT_RPC_METHODS.retryDispatch]: (input) =>
+          productRpcEffect(productControlPlane.retryDispatch(input)),
         [PRODUCT_RPC_METHODS.controlRun]: (input) =>
           productRpcEffect(productControlPlane.controlRun(input)),
         [PRODUCT_RPC_METHODS.readFacts]: (input) =>

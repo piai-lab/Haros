@@ -26,6 +26,7 @@ import { getWorkbenchCopy } from "../i18n/workbenchCopy";
 import { confirmProductQueueOwnershipBeforeDraftClear } from "../productQueueReconciliation";
 import { presentProductConversationQueue } from "../productReadModel";
 import { useSystemHealthStore } from "../store/systemHealthStore";
+import { makeProductModelRuntimeCatalog } from "../testProductRuntimeCatalog";
 import { ComposerColumnFrame } from "./chat/ComposerColumnFrame";
 import { ComposerQueuedHeader } from "./chat/ComposerQueuedHeader";
 import { ProductConversationNotice } from "./product/ProductConversationNotice";
@@ -33,7 +34,7 @@ import {
   ProductRuntimePicker,
   reconcileProductRuntimeSelection,
 } from "./product/ProductRuntimePicker";
-import { abortProductRun } from "./product/productRunControl";
+import { abortProductRun, isProductRunAbortable } from "./product/productRunControl";
 import { deleteProductQueueItem, moveProductQueueItemNext } from "./product/productQueueActions";
 import { SystemHealthNotice } from "./system-health/SystemHealthCoordinator";
 
@@ -41,68 +42,50 @@ const CONVERSATION_ID = ProductConversationId.makeUnsafe("product-chat-journey")
 const RUN_ID = ProductRunId.makeUnsafe("product-run-journey");
 const NOW = "2026-08-05T00:00:00.000Z";
 
-const catalog: ProductRuntimeCatalog = {
-  engineId: "pi",
-  runtimeVersion: "0.81.1",
-  packageGeneration: "package-browser",
-  models: [
-    {
-      id: "host-a/current",
-      provider: "host-a",
-      modelId: "current",
-      name: "Current Host model",
-      reasoning: true,
-      thinkingLevels: ["medium", "high"],
-      available: true,
-      auth: "configured",
-    },
-    {
-      id: "host-b/unavailable",
-      provider: "host-b",
-      modelId: "unavailable",
-      name: "Unavailable Host model",
-      reasoning: false,
-      thinkingLevels: [],
-      available: false,
-      auth: "unavailable",
-    },
-    {
-      id: "host-c/auth-missing",
-      provider: "host-c",
-      modelId: "auth-missing",
-      name: "Missing auth Host model",
-      reasoning: true,
-      thinkingLevels: ["medium"],
-      available: true,
-      auth: "missing",
-    },
-  ],
-  capabilities: {
-    ingress: "typed-native-host",
-    lineage: { continue: "available", rebuild: "available" },
-    controls: {
-      steer: "available",
-      followUp: "available",
-      abort: "available",
-      cancel: "unknown",
-    },
-    structuredQuestions: "unknown",
-    packages: "unknown",
-    filesRead: "unknown",
-    filesWrite: "unknown",
-    terminal: "unknown",
-    enforcement: "unverified",
+const catalogModels = [
+  {
+    id: "host-a/current",
+    provider: "host-a",
+    modelId: "current",
+    name: "Current Host model",
+    reasoning: true,
+    thinkingLevels: ["medium", "high"],
+    available: true,
+    auth: "configured",
   },
-  truncated: false,
-};
+  {
+    id: "host-b/unavailable",
+    provider: "host-b",
+    modelId: "unavailable",
+    name: "Unavailable Host model",
+    reasoning: false,
+    thinkingLevels: [],
+    available: false,
+    auth: "unavailable",
+  },
+  {
+    id: "host-c/auth-missing",
+    provider: "host-c",
+    modelId: "auth-missing",
+    name: "Missing auth Host model",
+    reasoning: true,
+    thinkingLevels: ["medium"],
+    available: true,
+    auth: "missing",
+  },
+] as const;
+
+const catalog: ProductRuntimeCatalog = makeProductModelRuntimeCatalog(catalogModels);
 
 const requestedSelection = {
   state: "selected" as const,
-  engineId: catalog.engineId,
-  runtimeModelId: catalog.models[0]!.id,
-  thinking: "medium",
+  engineId: catalog.defaultEngineId,
+  runtimeChoice: {
+    kind: "product-model" as const,
+    runtimeModelId: catalogModels[0].id,
+    thinking: "medium",
+  },
   permissionPolicy: "approval-required" as const,
-  enforcement: "unverified" as const,
   executionTarget: null,
   packageGeneration: catalog.packageGeneration,
 };
@@ -369,7 +352,7 @@ describe("Product Chat current journey", () => {
     await render(
       <ProductRuntimePicker
         catalog={catalog}
-        modelId={catalog.models[0]!.id}
+        modelId={catalogModels[0].id}
         thinking="medium"
         onModelChange={onModelChange}
         onThinkingChange={onThinkingChange}
@@ -393,15 +376,34 @@ describe("Product Chat current journey", () => {
   it("visually and accessibly distinguishes equal-name models by live provider", async () => {
     const duplicateNameCatalog: ProductRuntimeCatalog = {
       ...catalog,
-      models: [
-        { ...catalog.models[0]!, id: "deepseek/v4-flash", provider: "DeepSeek", name: "V4 Flash" },
-        { ...catalog.models[0]!, id: "mimo/v4-flash", provider: "Xiaomi MiMo", name: "V4 Flash" },
+      engines: [
+        {
+          ...catalog.engines[0]!,
+          modelSelection: {
+            kind: "product-model",
+            thinking: "product-selectable",
+            models: [
+              {
+                ...catalogModels[0],
+                id: "deepseek/v4-flash",
+                provider: "DeepSeek",
+                name: "V4 Flash",
+              },
+              {
+                ...catalogModels[0],
+                id: "mimo/v4-flash",
+                provider: "Xiaomi MiMo",
+                name: "V4 Flash",
+              },
+            ],
+          },
+        },
       ],
     };
     await render(
       <ProductRuntimePicker
         catalog={duplicateNameCatalog}
-        modelId={duplicateNameCatalog.models[0]!.id}
+        modelId="deepseek/v4-flash"
         thinking="medium"
         onModelChange={() => undefined}
         onThinkingChange={() => undefined}
@@ -417,13 +419,17 @@ describe("Product Chat current journey", () => {
   });
 
   it("keeps an available Host model with missing auth unselectable and preserves the draft", async () => {
-    const missingAuthModel = catalog.models[2]!;
+    const missingAuthModel = catalogModels[2];
     const onModelChange = vi.fn();
     function MissingAuthHarness() {
       const [draft] = useState("Preserve this Product draft");
       const selection = reconcileProductRuntimeSelection(catalog, {
         ...requestedSelection,
-        runtimeModelId: missingAuthModel.id,
+        runtimeChoice: {
+          kind: "product-model",
+          runtimeModelId: missingAuthModel.id,
+          thinking: "medium",
+        },
       });
       return (
         <div>
@@ -439,8 +445,10 @@ describe("Product Chat current journey", () => {
           </button>
           <output data-testid="missing-auth-selection">
             {selection.state === "unavailable"
-              ? `${selection.reason}:${selection.requestedRuntimeModelId ?? "unknown"}`
-              : selection.runtimeModelId}
+              ? `${selection.reason}:${selection.requestedRuntimeChoice?.kind === "product-model" ? selection.requestedRuntimeChoice.runtimeModelId : "unknown"}`
+              : selection.runtimeChoice.kind === "product-model"
+                ? selection.runtimeChoice.runtimeModelId
+                : "engine-session-current"}
           </output>
           <output data-testid="missing-auth-draft">{draft}</output>
         </div>
@@ -453,7 +461,7 @@ describe("Product Chat current journey", () => {
     );
     expect(page.getByRole("button", { name: "Admit runtime" })).toBeDisabled();
     expect(page.getByTestId("missing-auth-selection")).toHaveTextContent(
-      `auth-missing:${missingAuthModel.id}`,
+      `auth-required:${missingAuthModel.id}`,
     );
     await page.getByRole("combobox", { name: /Pi Models/i }).click();
     expect(
@@ -558,5 +566,76 @@ describe("Product Chat current journey", () => {
       ),
     );
     expect(document.body.textContent).not.toContain("HOST-DIAGNOSTIC-MUST-NOT-RENDER");
+  });
+
+  it("accepts a no-ACK external abort request without requiring an operation reference", async () => {
+    const controlRun = vi.fn(async () => ({
+      operationRef: null,
+      control: "abort" as const,
+      result: "requested" as const,
+      code: "control-unacknowledged" as const,
+      message: "Cancellation was written without an acknowledgement.",
+    }));
+    await expect(
+      abortProductRun({
+        api: { controlRun },
+        conversationId: CONVERSATION_ID,
+        runId: RUN_ID,
+        copy: getWorkbenchCopy("en"),
+      }),
+    ).resolves.toBeUndefined();
+  });
+
+  it("exposes abort during the no-ACK sent window without treating unknown delivery as active", () => {
+    expect(
+      isProductRunAbortable(
+        {
+          state: "sent",
+          lastConfirmedBoundary: "local-write",
+          resolvedSelection: {
+            engineId: "opencode",
+            runtimeModelId: "provider/model",
+            thinking: null,
+            engineModeId: null,
+            permissionPolicy: "approval-required",
+            enforcement: "unverified",
+            executionTarget: null,
+            packageGeneration: null,
+          },
+          abort: null,
+        },
+        { kind: "engine-session-current" },
+      ),
+    ).toBe(true);
+    expect(
+      isProductRunAbortable(
+        {
+          state: "sent",
+          lastConfirmedBoundary: "local-write",
+          resolvedSelection: {
+            engineId: "pi",
+            runtimeModelId: "provider/model",
+            thinking: "medium",
+            engineModeId: null,
+            permissionPolicy: "approval-required",
+            enforcement: "host-enforced",
+            executionTarget: null,
+            packageGeneration: "package-generation",
+          },
+          abort: null,
+        },
+        { kind: "product-model", runtimeModelId: "provider/model", thinking: "medium" },
+      ),
+    ).toBe(false);
+    expect(
+      isProductRunAbortable(
+        {
+          state: "delivery_unknown",
+          lastConfirmedBoundary: "local-write",
+          abort: { requestedAt: NOW, confirmed: false },
+        },
+        { kind: "engine-session-current" },
+      ),
+    ).toBe(false);
   });
 });

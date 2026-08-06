@@ -9,7 +9,10 @@ const sourcemapEnv = process.env.OMNIMIND_SERVICE_SOURCEMAP?.trim().toLowerCase(
 const buildSourcemap = sourcemapEnv === "1" || sourcemapEnv === "true";
 
 export default defineConfig({
-  entry: ["src/index.ts"],
+  entry: {
+    index: "src/index.ts",
+    "opencode/acpSdkWorker": "src/opencode/acpSdkWorker.ts",
+  },
   format: ["esm", "cjs"],
   checks: {
     legacyCjs: false,

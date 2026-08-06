@@ -7,6 +7,7 @@ import {
 } from "@omnimind/contracts";
 import { Schema } from "effect";
 import { afterEach, describe, expect, it } from "vitest";
+import { makeProductModelRuntimeCatalog } from "../testProductRuntimeCatalog";
 
 import {
   applyProductConversationSnapshot,
@@ -135,40 +136,18 @@ describe("Product projection store", () => {
   });
 
   it("projects changing and unavailable Host catalogs without reconnecting", () => {
-    const catalog = {
-      engineId: "pi",
-      runtimeVersion: "0.81.1",
-      packageGeneration: "package-next",
-      models: [
-        {
-          id: "provider/model-next",
-          provider: "provider",
-          modelId: "model-next",
-          name: "Model next",
-          reasoning: true,
-          thinkingLevels: ["medium"],
-          available: false,
-          auth: "missing",
-        },
-      ],
-      capabilities: {
-        ingress: "typed-native-host",
-        lineage: { continue: "available", rebuild: "available" },
-        controls: {
-          steer: "available",
-          followUp: "available",
-          abort: "available",
-          cancel: "unavailable",
-        },
-        structuredQuestions: "unknown",
-        packages: "available",
-        filesRead: "unknown",
-        filesWrite: "unknown",
-        terminal: "unknown",
-        enforcement: "unverified",
+    const catalog = makeProductModelRuntimeCatalog([
+      {
+        id: "provider/model-next",
+        provider: "provider",
+        modelId: "model-next",
+        name: "Model next",
+        reasoning: true,
+        thinkingLevels: ["medium"],
+        available: false,
+        auth: "missing",
       },
-      truncated: false,
-    } as const;
+    ]);
     const changed = applyProductFactBatch(
       initialProductProjectionState,
       shellBatch({ after: 0, change: { kind: "runtime-catalog", catalog } }),
@@ -320,9 +299,7 @@ describe("Product projection store", () => {
     });
 
     const applied = applyProductFactBatch(initial, batch);
-    expect(applied.state.detailByConversation["conversation-title"]?.conversation).toEqual(
-      renamed,
-    );
+    expect(applied.state.detailByConversation["conversation-title"]?.conversation).toEqual(renamed);
   });
 
   it("projects dispatch receipt state with its exact latest Run identity", () => {
@@ -350,7 +327,11 @@ describe("Product projection store", () => {
               id: "receipt-dispatch-1",
               dispatchId: "dispatch-1",
               runId: "run-dispatch-1",
-              receipt: { state: "pending", lastConfirmedBoundary: "pre-send" },
+              receipt: {
+                state: "pending",
+                lastConfirmedBoundary: "pre-send",
+                blocked: null,
+              },
               updatedAt: "2026-08-04T00:00:01.000Z",
             },
           },
@@ -373,10 +354,8 @@ describe("Product projection store", () => {
     const selectedRuntime = {
       state: "selected",
       engineId: "native-engine",
-      runtimeModelId: "provider/model",
-      thinking: null,
+      runtimeChoice: { kind: "product-model", runtimeModelId: "provider/model", thinking: null },
       permissionPolicy: "approval-required",
-      enforcement: "unverified",
       executionTarget: null,
       packageGeneration: "generation-1",
     } as const;
@@ -415,7 +394,7 @@ describe("Product projection store", () => {
               runId: "run-prior",
               receipt: {
                 state: "settled",
-                operationRef: "operation-prior",
+                evidence: { kind: "accepted-operation", operationRef: "operation-prior" },
                 engineBinding: {
                   id: "binding-prior",
                   engineId: "native-engine",
@@ -424,6 +403,7 @@ describe("Product projection store", () => {
                 resolvedSelection: {
                   engineId: "native-engine",
                   runtimeModelId: "provider/model",
+                  engineModeId: null,
                   thinking: null,
                   permissionPolicy: "approval-required",
                   enforcement: "unverified",
@@ -432,6 +412,7 @@ describe("Product projection store", () => {
                 },
                 outcome: "succeeded",
                 settledAt: "2026-08-04T00:00:01.000Z",
+                abort: null,
               },
               updatedAt: "2026-08-04T00:00:01.000Z",
             },
@@ -476,7 +457,11 @@ describe("Product projection store", () => {
                 id: "receipt-admitted",
                 dispatchId: "dispatch-admitted",
                 runId: "run-admitted",
-                receipt: { state: "pending", lastConfirmedBoundary: "pre-send" },
+                receipt: {
+                  state: "pending",
+                  lastConfirmedBoundary: "pre-send",
+                  blocked: null,
+                },
                 updatedAt: "2026-08-04T00:00:02.000Z",
               },
               createdAt: "2026-08-04T00:00:02.000Z",
@@ -551,10 +536,12 @@ describe("Product projection store", () => {
       requestedSelection: {
         state: "selected" as const,
         engineId: "native-engine",
-        runtimeModelId: "provider/model",
-        thinking: null,
+        runtimeChoice: {
+          kind: "product-model" as const,
+          runtimeModelId: "provider/model",
+          thinking: null,
+        },
         permissionPolicy: "approval-required" as const,
-        enforcement: "unverified" as const,
         executionTarget: null,
         packageGeneration: "unresolved-not-activated",
       },

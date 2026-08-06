@@ -37,10 +37,11 @@ import {
 
 export const defaultRequestedSelection: ProductRequestedSelection = {
   state: "unavailable",
-  reason: "catalog-unavailable",
-  requestedRuntimeModelId: null,
+  reason: "process-unavailable",
+  requestedEngineId: "pi",
+  requestedRuntimeChoice: null,
+  packageGeneration: null,
   permissionPolicy: "approval-required",
-  enforcement: "unverified",
   executionTarget: null,
 };
 

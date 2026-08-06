@@ -3,8 +3,10 @@ import { cn } from "../../lib/styles";
 
 export function ProductConversationNotice({
   presentation,
+  onRetryDispatch,
 }: {
   readonly presentation: ProductConversationPresentation;
+  readonly onRetryDispatch?: (dispatchId: string) => void;
 }) {
   if (presentation.kind === "ready") return null;
 
@@ -37,6 +39,15 @@ export function ProductConversationNotice({
           </p>
           <p className="mt-0.5 text-sm font-medium text-foreground">{presentation.title}</p>
           <p className="mt-1 text-xs leading-5 text-muted-foreground">{presentation.description}</p>
+          {presentation.kind === "dispatch_blocked" && onRetryDispatch ? (
+            <button
+              type="button"
+              className="mt-2 rounded-md border border-border px-2.5 py-1 text-xs font-medium text-foreground hover:bg-muted"
+              onClick={() => onRetryDispatch(presentation.dispatchId)}
+            >
+              {presentation.retryLabel}
+            </button>
+          ) : null}
         </div>
       </div>
     </section>

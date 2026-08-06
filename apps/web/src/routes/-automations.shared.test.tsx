@@ -80,11 +80,13 @@ const baseRun: AutomationRun = {
     requestedSelection: {
       state: "selected",
       engineId: "pi",
-      runtimeModelId: "openai/gpt-5-codex",
-      thinking: "medium",
+      runtimeChoice: {
+        kind: "product-model",
+        runtimeModelId: "openai/gpt-5-codex",
+        thinking: "medium",
+      },
       packageGeneration: "test",
       permissionPolicy: "approval-required",
-      enforcement: "host-enforced",
       executionTarget: null,
     },
     worktreeMode: "auto",
@@ -107,11 +109,13 @@ const baseDefinition: AutomationDefinition = {
   requestedSelection: {
     state: "selected",
     engineId: "pi",
-    runtimeModelId: "openai/gpt-5-codex",
-    thinking: "medium",
+    runtimeChoice: {
+      kind: "product-model",
+      runtimeModelId: "openai/gpt-5-codex",
+      thinking: "medium",
+    },
     packageGeneration: "test",
     permissionPolicy: "approval-required",
-    enforcement: "host-enforced",
     executionTarget: null,
   },
   worktreeMode: "auto",
@@ -522,9 +526,7 @@ describe("automation shared route helpers", () => {
       prompt: "Say hi.",
     };
 
-    expect(
-      createInputFromForm(form, undefined, threadId("thread-source")),
-    ).toMatchObject({
+    expect(createInputFromForm(form, undefined, threadId("thread-source"))).toMatchObject({
       sourceThreadId: "thread-source",
     });
   });

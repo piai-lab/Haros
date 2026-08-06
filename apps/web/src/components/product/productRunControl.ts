@@ -5,11 +5,24 @@ import {
   PRODUCT_PROTOCOL_VERSION,
   type ProductControlRunResult,
   type ProductConversationId,
+  type ProductDispatchReceipt,
   type ProductRunId,
+  type ProductRuntimeChoice,
 } from "@omnimind/contracts";
 
 import type { WorkbenchCopy } from "../../i18n/workbenchCopy";
 import type { ProductNativeApi } from "../../wsNativeApi";
+
+export function isProductRunAbortable(
+  receipt: ProductDispatchReceipt,
+  runtimeChoice: ProductRuntimeChoice,
+): boolean {
+  return (
+    receipt.state === "accepted" ||
+    receipt.state === "running" ||
+    (receipt.state === "sent" && runtimeChoice.kind === "engine-session-current")
+  );
+}
 
 export function productControlFailureMessage(
   result: ProductControlRunResult,
@@ -40,7 +53,7 @@ export async function abortProductRun(input: {
     control: "abort",
     text: null,
   });
-  if (result.result !== "applied") {
+  if (result.result !== "applied" && result.result !== "requested") {
     throw new Error(productControlFailureMessage(result, input.copy));
   }
 }

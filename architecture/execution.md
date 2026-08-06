@@ -44,9 +44,19 @@ sequenceDiagram
 
 ## 接纳后的执行权威
 
-Product 在接纳前拥有可编辑、可排序的 Composer intent 和 next-Run 选择。接纳把 intent 转为 Product State 定义的 `Run` 与 dispatch receipt；只有 Engine 的 accepted operation reference 能证明执行权已经转移。
+Product 在接纳前拥有可编辑、可排序的 Composer intent 和 next-Run 选择。Product 接纳把 intent 转为 Product State 定义的 `Run` 与一次 dispatch attempt，但不等于 Engine 已收到或接受执行。协议提供独立 acceptance acknowledgement 或 accepted operation reference 时，它仍是最强的执行权转移证据；在该证据到达前，local write、process liveness、Session create/load/resume 及 scheduled/global notification 都只属于诊断事实。
 
-Engine 接受后，native queue、steer、follow-up、retry、abort 和 settlement 由该 Engine 拥有。Host 与 Product Service 只传递 typed command、receipt 和增量事实，不建立第二套 operation authority。若断线发生在 acceptance 边界且无法判定是否送达，Product 保留输入并显示 `delivery_unknown`；任何 Host 或 Engine 都不得自动重放，也不得把该项退回 editable Queue 冒充未派发。
+若固定版本的外部协议经来源和真实进程证据证明不提供独立 acceptance acknowledgement/reference，但会产生与单一 prompt/Run 因果且唯一相关的 Engine facts，则第一条此类 fact 证明 observed delivery 与 Engine execution authority。Product 不得把它描述或持久化为虚构的 acceptance ACK 或 opaque operation reference。correlated final/error 证明 settlement；在首条 correlated fact 前失联为 `delivery_unknown`，其后但在 final/error 前失联为 `outcome_unknown`。两种 unknown 都保留冻结输入、选择和不可变 attempt evidence，固定为一次 attempt、零自动 replay、零 fallback，且不得退回 editable Queue。
+
+执行权由独立 ACK/reference 或上述 observed delivery 证明后，native queue、steer、follow-up、retry、abort 和 settlement 由该 Engine 拥有。Host 与 Product Service 只传递 typed command、receipt 和增量事实，不建立第二套 operation authority。若断线跨过派发边界但无法判定是否已产生 prompt-correlated Engine fact，Product 按对应的 unknown 边界保留输入；任何 Host 或 Engine 都不得自动重放，也不得把该项退回 editable Queue 冒充未派发。
+
+Product Service 的 Engine 边界使用 source-neutral、闭合的 `ProductExecutionFact`、`ProductExecutionSnapshot` 与 `ProductExecutionUpdate`。Product-facing 顺序只称 `engineSequence`；Native Host 的 sequence 在 Pi Service edge 映射后进入该边界，真实 accepted-operation reference 仍只属于 Pi 的 acceptance、control 与 recovery 证据。无 ACK 外部 Engine 的首条唯一 correlated fact 以 `delivery-observed` 在同一 Product transaction 中建立 binding、resolved selection 并应用该事实，不携带或伪造 operation reference。Product 可见 fact 仅包含稳定的 assistant/thinking/tool/usage/plan/permission/settlement 投影；原始 payload、global notification、隐藏 reasoning、配置与凭据不得进入该边界。
+
+Usage 事实按来源语义保持分离：Pi 的 token-detail usage 保留 input/output/cache/total；只提供 context-window consumption 的外部协议使用独立 `context.usage { used, size }`。两者不得互相填充、汇总或替代，外部协议附带的 cost/currency 不在本边界内。
+
+cancel request、stdio write 或 process signal 只证明 `abort_requested`，除非 Engine 明确返回 cancellation acknowledgement。晚到的 correlated facts、final 或 error 继续具有权威性并收敛可见 Run；Session identity/load/resume 只证明外部 lineage，不能替代 per-prompt delivery correlation。Pi Native Host 已有的 accepted-operation reference 语义不受这一 no-ACK 外部协议规则影响。
+
+外部 Engine 的 prepared connection 若在 `pending/pre-send`、零 attempt 时因 Service 重启而丢失，启动只能校验并展示现有 durable Run，不得自动重建连接或发送 prompt。用户针对精确 dispatch 的 typed Retry 才能在同一 selected Engine 上重建 preparation；Engine 与 frozen resolved selection 必须完全一致，且 `attemptCount` 仍只由 `markSent` 从零推进到一。重试able preparation unavailability 只刷新有界阻塞事实；任何 corruption、identity contradiction 或 non-retryable rejection 均 fail closed。该规则不改变 Pi 默认路径。
 
 ## Product Control Plane
 
@@ -87,6 +97,8 @@ SDK、Package 与 Extension 代码运行在独立 Node worker/sidecar 中。它�
 5. 无可靠契约时明确 unsupported。
 
 外部 Engine 保留自己的 Session、认证、模型、升级和执行语义。产品只统一可见 Entry、Run receipt、ResourceRef、OperationReceipt 和少量通用控制；Engine 特有能力通过 namespaced typed projection 增强。
+
+有成熟官方协议 SDK 时，它唯一拥有 wire framing/parsing、schema、request identity、response correlation、handler dispatch、cancel 与协议错误；Product Service 不复制这些职责，只在 SDK 外保留进程与资源上限、秘密/临时目录边界，以及 Product-owned receipt、typed projection 和恢复真相。上游 SDK 无法满足该责任时，必须先记录可复核 falsifier，不能静默保留手写 fallback。
 
 ## 来源接管裁决
 

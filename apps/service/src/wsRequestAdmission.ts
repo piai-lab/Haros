@@ -16,6 +16,7 @@ const CONTROL_METHODS = new Set<string>([
   PRODUCT_RPC_METHODS.reorderQueue,
   PRODUCT_RPC_METHODS.deleteQueueItem,
   PRODUCT_RPC_METHODS.submitQueueItem,
+  PRODUCT_RPC_METHODS.retryDispatch,
   PRODUCT_RPC_METHODS.controlRun,
   SYSTEM_RPC_METHODS.terminalWrite,
   SYSTEM_RPC_METHODS.terminalAckOutput,

@@ -13,7 +13,7 @@ export type KanbanProductSelection = ProductRequestedSelection;
 
 export type KanbanRuntimeAvailability =
   | {
-  readonly usable: true;
+      readonly usable: true;
       readonly model: ProductRuntimeModel;
       readonly thinking: string | null;
     }
@@ -32,10 +32,15 @@ export function resolveKanbanRuntimeModel(
   catalog: ProductRuntimeCatalog,
   selection: ProductRequestedSelection,
 ): ProductRuntimeModel | undefined {
-  if (selection.state !== "selected" || selection.engineId !== catalog.engineId) return undefined;
-  return catalog.models.find(
+  if (selection.state !== "selected" || selection.runtimeChoice.kind !== "product-model")
+    return undefined;
+  const runtimeChoice = selection.runtimeChoice;
+  const engine = catalog.engines.find((candidate) => candidate.engineId === selection.engineId);
+  if (engine?.modelSelection.kind !== "product-model") return undefined;
+  return engine.modelSelection.models.find(
     (candidate) =>
-      candidate.id === selection.runtimeModelId && isExactKanbanRuntimeModelIdentity(candidate),
+      candidate.id === runtimeChoice.runtimeModelId &&
+      isExactKanbanRuntimeModelIdentity(candidate),
   );
 }
 
@@ -51,6 +56,9 @@ export function resolveKanbanRuntimeAvailability(
   }
   if (!catalog) {
     return { usable: false, reason: "Host runtime catalog is unavailable." };
+  }
+  if (selection.runtimeChoice.kind !== "product-model") {
+    return { usable: false, reason: "This Engine resolves its model when sending." };
   }
   const model = resolveKanbanRuntimeModel(catalog, selection);
   if (!model) {
@@ -68,7 +76,7 @@ export function resolveKanbanRuntimeAvailability(
           : `${model.name} is unavailable in the Host.`,
     };
   }
-  const thinking = selection.thinking;
+  const thinking = selection.runtimeChoice.thinking;
   if (
     thinking !== null &&
     !model.thinkingLevels.includes(thinking as (typeof model.thinkingLevels)[number])

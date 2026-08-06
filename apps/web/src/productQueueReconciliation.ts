@@ -26,7 +26,6 @@ function requestedSelectionsEqual(
   if (left.state !== right.state) return false;
   if (
     left.permissionPolicy !== right.permissionPolicy ||
-    left.enforcement !== right.enforcement ||
     !executionTargetsEqual(left.executionTarget, right.executionTarget)
   ) {
     return false;
@@ -34,14 +33,16 @@ function requestedSelectionsEqual(
   if (left.state === "unavailable" && right.state === "unavailable") {
     return (
       left.reason === right.reason &&
-      left.requestedRuntimeModelId === right.requestedRuntimeModelId
+      left.requestedEngineId === right.requestedEngineId &&
+      JSON.stringify(left.requestedRuntimeChoice) ===
+        JSON.stringify(right.requestedRuntimeChoice) &&
+      left.packageGeneration === right.packageGeneration
     );
   }
   if (left.state !== "selected" || right.state !== "selected") return false;
   return (
     left.engineId === right.engineId &&
-    left.runtimeModelId === right.runtimeModelId &&
-    left.thinking === right.thinking &&
+    JSON.stringify(left.runtimeChoice) === JSON.stringify(right.runtimeChoice) &&
     left.packageGeneration === right.packageGeneration
   );
 }
@@ -61,7 +62,6 @@ function requestedSelectionIntentsEqual(
   if (left.state !== right.state) return false;
   if (
     left.permissionPolicy !== right.permissionPolicy ||
-    left.enforcement !== right.enforcement ||
     !executionTargetIntentsEqual(left.executionTarget, right.executionTarget)
   ) {
     return false;
@@ -69,14 +69,16 @@ function requestedSelectionIntentsEqual(
   if (left.state === "unavailable" && right.state === "unavailable") {
     return (
       left.reason === right.reason &&
-      left.requestedRuntimeModelId === right.requestedRuntimeModelId
+      left.requestedEngineId === right.requestedEngineId &&
+      JSON.stringify(left.requestedRuntimeChoice) ===
+        JSON.stringify(right.requestedRuntimeChoice) &&
+      left.packageGeneration === right.packageGeneration
     );
   }
   if (left.state !== "selected" || right.state !== "selected") return false;
   return (
     left.engineId === right.engineId &&
-    left.runtimeModelId === right.runtimeModelId &&
-    left.thinking === right.thinking &&
+    JSON.stringify(left.runtimeChoice) === JSON.stringify(right.runtimeChoice) &&
     left.packageGeneration === right.packageGeneration
   );
 }

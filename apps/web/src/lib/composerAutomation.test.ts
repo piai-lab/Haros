@@ -17,11 +17,9 @@ const THREAD_ID = "thread-composer-automation" as ThreadId;
 const REQUESTED_SELECTION: ProductRequestedSelection = {
   state: "selected",
   engineId: "pi",
-  runtimeModelId: "openai/gpt-5",
-  thinking: "medium",
+  runtimeChoice: { kind: "product-model", runtimeModelId: "openai/gpt-5", thinking: "medium" },
   packageGeneration: "test",
   permissionPolicy: "approval-required",
-  enforcement: "host-enforced",
   executionTarget: null,
 };
 const NOW_ISO = "2026-06-22T08:00:00.000Z";

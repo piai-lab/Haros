@@ -17,9 +17,14 @@ describe("AutomationModelPicker", () => {
         value={{
           state: "unavailable",
           reason: "model-unavailable",
-          requestedRuntimeModelId: "saved-model",
+          requestedEngineId: "pi",
+          requestedRuntimeChoice: {
+            kind: "product-model",
+            runtimeModelId: "saved-model",
+            thinking: null,
+          },
+          packageGeneration: null,
           permissionPolicy: "approval-required",
-          enforcement: "unverified",
           executionTarget: null,
         }}
       />,

@@ -10,6 +10,19 @@ export const initializeAutomationSchema = Effect.gen(function* () {
   const sql = yield* SqlClient.SqlClient;
 
   yield* sql`
+    CREATE TABLE IF NOT EXISTS automation_meta (
+      schema_version INTEGER NOT NULL CHECK (schema_version = 2),
+      migration_revision TEXT NOT NULL CHECK (migration_revision = 'selection-schema-v2')
+    )
+  `;
+  const marker = yield* sql<{
+    readonly count: number;
+  }>`SELECT COUNT(*) AS count FROM automation_meta`;
+  if (marker[0]?.count === 0) {
+    yield* sql`INSERT INTO automation_meta(schema_version, migration_revision) VALUES (2, 'selection-schema-v2')`;
+  }
+
+  yield* sql`
     CREATE TABLE IF NOT EXISTS automation_definitions (
       automation_id TEXT PRIMARY KEY,
       project_id TEXT NOT NULL,

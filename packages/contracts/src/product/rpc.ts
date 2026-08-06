@@ -29,6 +29,7 @@ import {
   ProductPutQueueItemInput,
   ProductQueueItem,
   ProductReadFactsInput,
+  ProductRetryDispatchInput,
   ProductRemoveEntryMarkerInput,
   ProductRemoveEntryPinInput,
   ProductReorderGroupsInput,
@@ -87,6 +88,7 @@ export const PRODUCT_RPC_METHODS = {
   reorderQueue: "product.queue.reorder",
   deleteQueueItem: "product.queue.delete",
   submitQueueItem: "product.queue.submit",
+  retryDispatch: "product.dispatch.retry",
   controlRun: "product.run.control",
   readFacts: "product.facts.read",
 } as const;
@@ -285,6 +287,11 @@ export const ProductSubmitQueueItemRpc = Rpc.make(PRODUCT_RPC_METHODS.submitQueu
   success: ProductSubmitResult,
   error: WsRpcError,
 });
+export const ProductRetryDispatchRpc = Rpc.make(PRODUCT_RPC_METHODS.retryDispatch, {
+  payload: ProductRetryDispatchInput,
+  success: ProductSubmitResult,
+  error: WsRpcError,
+});
 export const ProductControlRunRpc = Rpc.make(PRODUCT_RPC_METHODS.controlRun, {
   payload: ProductControlRunInput,
   success: ProductControlRunResult,
@@ -330,6 +337,7 @@ export const ProductRpcGroup = RpcGroup.make(
   ProductReorderQueueRpc,
   ProductDeleteQueueItemRpc,
   ProductSubmitQueueItemRpc,
+  ProductRetryDispatchRpc,
   ProductControlRunRpc,
   ProductReadFactsRpc,
 );

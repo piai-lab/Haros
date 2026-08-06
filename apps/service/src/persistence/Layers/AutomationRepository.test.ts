@@ -25,10 +25,11 @@ const createInput = {
   schedule: { type: "manual" },
   requestedSelection: {
     state: "unavailable",
-    reason: "catalog-unavailable",
-    requestedRuntimeModelId: null,
+    reason: "process-unavailable",
+    requestedEngineId: "pi",
+    requestedRuntimeChoice: null,
+    packageGeneration: null,
     permissionPolicy: "approval-required",
-    enforcement: "unverified",
     executionTarget: null,
   },
 } satisfies AutomationCreateInput;
@@ -41,10 +42,11 @@ const createInputForProject = (projectId: string) => ({
 const permissionSnapshot = {
   requestedSelection: {
     state: "unavailable",
-    reason: "catalog-unavailable",
-    requestedRuntimeModelId: null,
+    reason: "process-unavailable",
+    requestedEngineId: "pi",
+    requestedRuntimeChoice: null,
+    packageGeneration: null,
     permissionPolicy: "approval-required",
-    enforcement: "unverified",
     executionTarget: null,
   },
   worktreeMode: "worktree",

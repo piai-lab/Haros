@@ -13,6 +13,7 @@ import {
   type ProductSubmitResult,
 } from "@omnimind/contracts";
 import { describe, expect, it } from "vitest";
+import { makeProductModelRuntimeCatalog } from "../testProductRuntimeCatalog";
 
 import { resolveKanbanRuntimeModel, resolveKanbanSubmitReceipt } from "./kanbanDispatch";
 
@@ -30,12 +31,24 @@ const identity: Pick<
 > = { runId, entryId, dispatchId, receiptId };
 
 const selection = {
-  state: "selected" as const,
   engineId: "pi",
   runtimeModelId: "provider/shared",
+  engineModeId: null,
   thinking: "medium",
   permissionPolicy: "approval-required" as const,
   enforcement: "unverified" as const,
+  executionTarget: null,
+  packageGeneration: "package-kanban",
+};
+const requestedSelection = {
+  state: "selected" as const,
+  engineId: "pi",
+  runtimeChoice: {
+    kind: "product-model" as const,
+    runtimeModelId: "provider/shared",
+    thinking: "medium",
+  },
+  permissionPolicy: "approval-required" as const,
   executionTarget: null,
   packageGeneration: "package-kanban",
 };
@@ -88,7 +101,7 @@ function submitResult(receipt: ProductDispatchReceipt): ProductSubmitResult {
             id: runId,
             conversationId,
             entryId,
-            requestedSelection: selection,
+            requestedSelection,
             workspaceObservation: {
               id: workspaceId,
               access: {
@@ -119,45 +132,51 @@ function submitResult(receipt: ProductDispatchReceipt): ProductSubmitResult {
 
 describe("Kanban Product receipt truth", () => {
   it.each([
-    [{ state: "pending", lastConfirmedBoundary: "pre-send" }, "pending"],
+    [{ state: "pending", lastConfirmedBoundary: "pre-send", blocked: null }, "pending"],
     [{ state: "rejected", code: "NOPE", message: "Rejected", retryable: false }, "rejected"],
-    [{ state: "delivery_unknown", lastConfirmedBoundary: "sent" }, "delivery-unknown"],
+    [
+      { state: "delivery_unknown", lastConfirmedBoundary: "local-write", abort: null },
+      "delivery-unknown",
+    ],
     [
       {
         state: "accepted",
         operationRef: "op",
         engineBinding: binding,
         resolvedSelection: selection,
+        abort: null,
       },
       "accepted",
     ],
     [
       {
         state: "running",
-        operationRef: "op",
+        evidence: { kind: "accepted-operation", operationRef: "op" },
         engineBinding: binding,
         resolvedSelection: selection,
+        abort: null,
       },
       "accepted",
     ],
     [
       {
         state: "settled",
-        operationRef: "op",
+        evidence: { kind: "accepted-operation", operationRef: "op" },
         engineBinding: binding,
         resolvedSelection: selection,
         outcome: "succeeded",
         settledAt: NOW,
+        abort: null,
       },
       "settled",
     ],
     [
       {
         state: "outcome_unknown",
-        operationRef: "op",
+        evidence: { kind: "accepted-operation", operationRef: "op" },
         engineBinding: binding,
         resolvedSelection: selection,
-        lastConfirmedBoundary: "accepted",
+        abort: null,
       },
       "settled",
     ],
@@ -168,7 +187,7 @@ describe("Kanban Product receipt truth", () => {
   it("rejects a receipt from any other transfer identity", () => {
     expect(() =>
       resolveKanbanSubmitReceipt(
-        submitResult({ state: "pending", lastConfirmedBoundary: "pre-send" }),
+        submitResult({ state: "pending", lastConfirmedBoundary: "pre-send", blocked: null }),
         { ...identity, dispatchId: ProductDispatchId.makeUnsafe("dispatch-other") },
       ),
     ).toThrow("matching dispatch receipt");
@@ -176,60 +195,36 @@ describe("Kanban Product receipt truth", () => {
 });
 
 describe("Kanban Host catalog selection", () => {
-  const catalog: ProductRuntimeCatalog = {
-    engineId: "pi",
-    runtimeVersion: "test",
-    packageGeneration: "package-kanban",
-    models: [
-      {
-        id: "other/shared",
-        provider: "other",
-        modelId: "shared",
-        name: "Other shared",
-        reasoning: false,
-        thinkingLevels: ["off"],
-        available: true,
-        auth: "configured",
-      },
-      {
-        id: "pi/shared",
-        provider: "pi",
-        modelId: "shared",
-        name: "Pi shared",
-        reasoning: true,
-        thinkingLevels: ["medium"],
-        available: true,
-        auth: "configured",
-      },
-    ],
-    capabilities: {
-      ingress: "typed-native-host",
-      lineage: { continue: "available", rebuild: "available" },
-      controls: {
-        steer: "available",
-        followUp: "available",
-        abort: "available",
-        cancel: "unknown",
-      },
-      structuredQuestions: "unknown",
-      packages: "unknown",
-      filesRead: "unknown",
-      filesWrite: "unknown",
-      terminal: "unknown",
-      enforcement: "unverified",
+  const catalog: ProductRuntimeCatalog = makeProductModelRuntimeCatalog([
+    {
+      id: "other/shared",
+      provider: "other",
+      modelId: "shared",
+      name: "Other shared",
+      reasoning: false,
+      thinkingLevels: ["off"],
+      available: true,
+      auth: "configured",
     },
-    truncated: false,
-  };
+    {
+      id: "pi/shared",
+      provider: "pi",
+      modelId: "shared",
+      name: "Pi shared",
+      reasoning: true,
+      thinkingLevels: ["medium"],
+      available: true,
+      auth: "configured",
+    },
+  ]);
 
   it("requires the provider qualifier when duplicate model slugs exist", () => {
     const selection = (runtimeModelId: string) => ({
       state: "selected" as const,
-      engineId: catalog.engineId,
-      runtimeModelId,
-      thinking: null,
+      engineId: catalog.defaultEngineId,
+      runtimeChoice: { kind: "product-model" as const, runtimeModelId, thinking: null },
       packageGeneration: catalog.packageGeneration,
       permissionPolicy: "approval-required" as const,
-      enforcement: "unverified" as const,
       executionTarget: null,
     });
     expect(resolveKanbanRuntimeModel(catalog, selection("shared"))).toBeUndefined();

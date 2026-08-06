@@ -22,10 +22,12 @@ import {
 const requestedSelection = {
   state: "selected" as const,
   engineId: "native-engine",
-  runtimeModelId: "provider/model-1",
-  thinking: "high",
+  runtimeChoice: {
+    kind: "product-model" as const,
+    runtimeModelId: "provider/model-1",
+    thinking: "high",
+  },
   permissionPolicy: "approval-required" as const,
-  enforcement: "unverified" as const,
   executionTarget: {
     kind: "local" as const,
     targetRef: "/workspace",
@@ -118,7 +120,14 @@ describe("Product Queue put response-loss reconciliation", () => {
         ...attempted,
         requestedSelection:
           attempted.requestedSelection.state === "selected"
-            ? { ...attempted.requestedSelection, runtimeModelId: "provider/model-2" }
+            ? {
+                ...attempted.requestedSelection,
+                runtimeChoice: {
+                  kind: "product-model" as const,
+                  runtimeModelId: "provider/model-2",
+                  thinking: "high",
+                },
+              }
             : attempted.requestedSelection,
       }),
     ).toBeNull();
@@ -175,9 +184,7 @@ describe("Product Queue put response-loss reconciliation", () => {
     if (transferred) draftCleared = true;
     expect(transferred?.id).toBe(attempted.itemId);
     expect(draftCleared).toBe(true);
-    expect(
-      presentProductConversationQueue(durableSnapshot.readModel),
-    ).toHaveLength(1);
+    expect(presentProductConversationQueue(durableSnapshot.readModel)).toHaveLength(1);
   });
 
   it("reopens the Product Queue through the approved mother after clear and before submit", async () => {

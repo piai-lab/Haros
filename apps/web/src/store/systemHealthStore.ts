@@ -6,12 +6,21 @@ interface SystemHealthState {
   readonly setSnapshot: (snapshot: DesktopHealthSnapshot) => void;
 }
 
-export function canDispatchProductSubmission(snapshot: DesktopHealthSnapshot | null): boolean {
-  return (
-    snapshot?.service.status === "ready" &&
-    snapshot.nativeHost.status === "ready" &&
-    snapshot.engineSelection.status === "available"
-  );
+export type ProductHealthSelection = {
+  readonly engineId: string;
+  readonly nativeEngineId: string;
+  readonly catalogReady: boolean;
+};
+
+export function canDispatchProductSubmission(
+  snapshot: DesktopHealthSnapshot | null,
+  selection?: ProductHealthSelection,
+): boolean {
+  if (snapshot?.service.status !== "ready") return false;
+  if (selection && !selection.catalogReady) return false;
+  const selectedEngineIsNative = !selection || selection.engineId === selection.nativeEngineId;
+  if (!selectedEngineIsNative) return true;
+  return snapshot.nativeHost.status === "ready" && snapshot.engineSelection.status === "available";
 }
 
 export const useSystemHealthStore = create<SystemHealthState>((set) => ({

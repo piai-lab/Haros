@@ -29,11 +29,44 @@
       },
       {
         "name": "omnimind:inventory-sha256",
-        "value": "9718e8b70cf31b87aea23b0d697ac32c9ad9dadb29099fc469b1ce47d1e73f1d"
+        "value": "33016bd4d479be0d1803cb162bf64767f6c591ec26065436cb460562e8b867d5"
       }
     ]
   },
   "components": [
+    {
+      "type": "library",
+      "name": "@agentclientprotocol/sdk",
+      "version": "1.3.0",
+      "bom-ref": "pkg:npm/%40agentclientprotocol/sdk@1.3.0",
+      "purl": "pkg:npm/%40agentclientprotocol/sdk@1.3.0",
+      "licenses": [
+        {
+          "license": {
+            "id": "Apache-2.0"
+          }
+        }
+      ],
+      "hashes": [
+        {
+          "alg": "SHA-256",
+          "content": "4d71e91f3171134f630bb434a5b6ec3538fd388495c1530fded6bb07907c1558"
+        }
+      ],
+      "author": "Zed Industries",
+      "externalReferences": [
+        {
+          "type": "vcs",
+          "url": "https://github.com/agentclientprotocol/typescript-sdk.git"
+        }
+      ],
+      "properties": [
+        {
+          "name": "omnimind:artifact-location",
+          "value": "node_modules/.bun/@agentclientprotocol+sdk@1.3.0+3c5d820c62823f0b/node_modules/@agentclientprotocol/sdk"
+        }
+      ]
+    },
     {
       "type": "library",
       "name": "@anthropic-ai/sdk",
@@ -7585,6 +7618,7 @@
     {
       "ref": "pkg:npm/omnimind-desktop@0.1.0-alpha.0",
       "dependsOn": [
+        "pkg:npm/%40agentclientprotocol/sdk@1.3.0",
         "pkg:npm/%40earendil-works/pi-agent-core@0.81.1",
         "pkg:npm/%40earendil-works/pi-ai@0.81.1",
         "pkg:npm/%40earendil-works/pi-coding-agent@0.81.1",
@@ -7599,6 +7633,10 @@
         "pkg:npm/tree-kill@1.2.2",
         "pkg:npm/ws@8.21.1"
       ]
+    },
+    {
+      "ref": "pkg:npm/%40agentclientprotocol/sdk@1.3.0",
+      "dependsOn": []
     },
     {
       "ref": "pkg:npm/%40anthropic-ai/sdk@0.91.1",

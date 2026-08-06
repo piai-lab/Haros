@@ -71,15 +71,8 @@ async function main(): Promise<void> {
     throw new Error("Package crash probe found no Product Package generation.");
   const selected = catalog.models.find((model) => model.available);
   if (!selected) throw new Error("Package crash probe found no broker-backed Pi model.");
-  const runtimeCatalog = {
-    engineId: catalog.engineId,
-    runtimeVersion: catalog.runtimeVersion,
-    packageGeneration,
-    models: catalog.models,
-    capabilities: catalog.capabilities,
-    truncated: catalog.truncated,
-  };
   const boundary = makeNativeHostExecutionBoundary(client, lifecycle);
+  const runtimeCatalog = await Effect.runPromise(boundary.catalog!());
   const runtime = ManagedRuntime.make(
     makeProductControlPlaneLayer(database, boundary, runtimeCatalog),
   );
@@ -90,12 +83,14 @@ async function main(): Promise<void> {
   const requestedSelection = {
     state: "selected" as const,
     engineId: catalog.engineId,
-    runtimeModelId: selected.id,
-    thinking: selected.thinkingLevels.includes("medium")
-      ? "medium"
-      : (selected.thinkingLevels[0] ?? null),
+    runtimeChoice: {
+      kind: "product-model" as const,
+      runtimeModelId: selected.id,
+      thinking: selected.thinkingLevels.includes("medium")
+        ? "medium"
+        : (selected.thinkingLevels[0] ?? null),
+    },
     permissionPolicy: "approval-required" as const,
-    enforcement: "unverified" as const,
     executionTarget: null,
     packageGeneration,
   };
@@ -171,8 +166,7 @@ async function main(): Promise<void> {
         hostReauthenticated: true,
         submitReceiptState: submitted.snapshot.readModel.runs[0]?.receipt.receipt.state,
         receiptState: receipt?.state,
-        reconciliationHint:
-          receipt?.state === "delivery_unknown" ? receipt.reconciliationHint : null,
+        reconciliationHint: null,
         pendingReconcileStatus: pendingReconciliation.status,
         pendingResolution: pendingReconciliation.resolution?.kind ?? null,
         packageGeneration,

@@ -1222,6 +1222,7 @@ export class PiNativeRuntime {
       if (assistant) this.#appendTextFacts(operation, "assistant.delta", assistant);
       this.#appendUsage(operation, event.message.usage);
     } else if (event.type === "agent_end") {
+      if (event.willRetry || operation.status === "settled") return;
       const assistant = [...event.messages]
         .reverse()
         .find((message): message is AssistantMessage => message.role === "assistant");

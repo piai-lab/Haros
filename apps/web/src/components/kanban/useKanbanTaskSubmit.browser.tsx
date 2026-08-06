@@ -11,6 +11,7 @@ import {
 import { page } from "vitest/browser";
 import { afterEach, describe, expect, it, vi } from "vitest";
 import { cleanup, render } from "vitest-browser-react";
+import { makeProductModelRuntimeCatalog } from "../../testProductRuntimeCatalog";
 
 const taskCreate = vi.hoisted(() => ({
   send: vi.fn(async () => ({
@@ -30,40 +31,18 @@ import { useKanbanTaskSubmit } from "./useKanbanTaskSubmit";
 const PROJECT_ID = ProjectId.makeUnsafe("submit-browser-project");
 const SCRATCH_ID = ThreadId.makeUnsafe("submit-browser-scratch");
 function catalog(auth: "configured" | "missing" = "configured"): ProductRuntimeCatalog {
-  return {
-    engineId: "pi",
-    runtimeVersion: "test",
-    packageGeneration: "package-submit-browser",
-    models: [
-      {
-        id: "host-a/current",
-        provider: "host-a",
-        modelId: "current",
-        name: "Current Host model",
-        reasoning: true,
-        thinkingLevels: ["max"],
-        available: true,
-        auth,
-      },
-    ],
-    capabilities: {
-      ingress: "typed-native-host",
-      lineage: { continue: "available", rebuild: "available" },
-      controls: {
-        steer: "available",
-        followUp: "available",
-        abort: "available",
-        cancel: "unknown",
-      },
-      structuredQuestions: "unknown",
-      packages: "unknown",
-      filesRead: "unknown",
-      filesWrite: "unknown",
-      terminal: "unknown",
-      enforcement: "unverified",
+  return makeProductModelRuntimeCatalog([
+    {
+      id: "host-a/current",
+      provider: "host-a",
+      modelId: "current",
+      name: "Current Host model",
+      reasoning: true,
+      thinkingLevels: ["max"],
+      available: true,
+      auth,
     },
-    truncated: false,
-  };
+  ]);
 }
 
 function SubmitHarness(props: { readonly runtimeCatalog: ProductRuntimeCatalog | null }) {
@@ -73,11 +52,9 @@ function SubmitHarness(props: { readonly runtimeCatalog: ProductRuntimeCatalog |
     requestedSelection: {
       state: "selected",
       engineId: "pi",
-      runtimeModelId: "host-a/current",
-      thinking: "max",
+      runtimeChoice: { kind: "product-model", runtimeModelId: "host-a/current", thinking: "max" },
       packageGeneration: "package-submit-browser",
       permissionPolicy: "approval-required",
-      enforcement: "unverified",
       executionTarget: null,
     },
     runtimeCatalog: props.runtimeCatalog,
@@ -129,11 +106,13 @@ describe("Kanban New Task Host submit gate", () => {
         requestedSelection: {
           state: "selected",
           engineId: "pi",
-          runtimeModelId: "host-a/current",
-          thinking: "max",
+          runtimeChoice: {
+            kind: "product-model",
+            runtimeModelId: "host-a/current",
+            thinking: "max",
+          },
           packageGeneration: "package-submit-browser",
           permissionPolicy: "approval-required",
-          enforcement: "unverified",
           executionTarget: null,
         },
       }),

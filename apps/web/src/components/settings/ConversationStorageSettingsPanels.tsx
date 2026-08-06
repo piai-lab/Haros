@@ -3,7 +3,11 @@
 // Layer: Settings UI components
 // Exports: WorktreesSettingsPanel, ArchivedSettingsPanel
 
-import { ThreadId, type ProductConversationSummary } from "@omnimind/contracts";
+import {
+  PRODUCT_PROTOCOL_VERSION,
+  ThreadId,
+  type ProductConversationSummary,
+} from "@omnimind/contracts";
 import { pluralize } from "@omnimind/shared/text";
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import { useCallback, useMemo } from "react";
@@ -122,7 +126,7 @@ export function WorktreesSettingsPanel({ active }: { readonly active: boolean })
       const details = await Promise.all(
         snapshot.conversations.map((conversation) =>
           productApi.getConversationSnapshot({
-            protocolVersion: 1,
+            protocolVersion: PRODUCT_PROTOCOL_VERSION,
             conversationId: conversation.id,
           }),
         ),

@@ -13,6 +13,8 @@ OmniMind 是一个本地优先桌面 Agent 产品：默认用户身份是 **Omni
 
 这是一个没有用户、兼容义务和发布历史的新产品仓库。产品与架构已经围绕 Pi-native 路线收敛；旧的竞争 Runtime/Journal/Tool skeleton 被判定为错误本体，不构成保留义务。
 
+公开 Alpha 前的未发行开发状态必须可恢复，但不构成永久 runtime 兼容面；确立首个公开 schema baseline 前，必须先为全部受影响 store 创建并验证完整 backup/export，验证失败则不得 reset 或 rebaseline。
+
 OmniMind 的价值不是“能启动 Pi”，而是上游没有义务完成的桌面产品层：世界级交互、可信 Package 分发、文件与工作台、真实权限与副作用、恢复、外部 Engine 协作以及跨平台交付。若这些价值不能独立成立，产品就只是一层可替换皮肤。
 
 当前 production compatibility、Package 安全、跨平台、恢复和外部 Engine 声明仍须由 active Campaign 在同一 frozen SHA 上验证；本 README 不自证完成。
@@ -57,6 +59,15 @@ OmniMind 的价值不是“能启动 Pi”，而是上游没有义务完成的�
 这四条规定产品结果，不预先固定尚未由实现证据选择的内部组织或部署形态。
 
 ## 4. 来源、身份与结构
+
+基础设施默认采用责任匹配的成熟上游实现、官方 SDK 与已证明机制；自研实现只有在上游不兼容、
+不安全、法律上不可采用、实质更重或无法保持 OmniMind 产品边界时才成立，并必须记录可复核的
+反证。采用必须同时满足精确责任且无竞争 authority、固定版本与可复现证据、license/Notice 与
+再分发兼容、依赖和升级面有界、全生命周期复杂度低于自持五项门槛。上游或 Engine 负责协议
+wire、Runtime/Session、Tool、Extension 与 Package-private 语义；OmniMind 只保留差异化的可见
+Product identity、冻结选择与 dispatch、最小 receipt/replay truth、跨 Engine 恢复投影、安全边界、
+策展分发和 GUI。采用 wrapper 不得重新实现已交给上游的 authority，也不得带入 donor branding、
+编排、Session 状态或泛化 Runtime。
 
 下列机器块是 production adoption、身份与结构治理的唯一根级输入。研究候选不等于采用；实际采用必须在同一提交记录 fixed source、rights、路径、更新策略与法定文本。
 
@@ -227,6 +238,23 @@ OmniMind 的价值不是“能启动 Pi”，而是上游没有义务完成的�
               "packages/shared/src/desktopChrome.ts",
               "apps/desktop/src/main.ts",
               "packages/contracts/src/ipc.ts"
+            ]
+          },
+          {
+            "evidence": "research/source-review.md",
+            "mode": "adapt",
+            "rights": "The selected Synara ACP process/connection/conformance patterns are MIT-licensed under the retained ui-mother legal text. The official ACP SDK is consumed separately as the exact Apache-2.0 npm dependency recorded by Service and the release legal inventory.",
+            "sourcePaths": [
+              "apps/server/src/provider/acp/AcpSdk.ts",
+              "apps/server/src/provider/acp/AcpSessionRuntime.ts",
+              "apps/server/scripts/acp-conformance-agent.ts"
+            ],
+            "sourceRevision": "630f17e61abc478114bf83c1d740977c9f68b910",
+            "summary": "Adapted only bounded process supervision, resource limits and official-SDK conformance fixture patterns. OmniMind retains Product receipt and normalization policy; the official @agentclientprotocol/sdk owns ACP framing, schema, request IDs, correlation, handler dispatch, cancellation and errors. Donor registry, gateway, Session authority, transcript, tool journal, provider orchestration and branding are excluded. The SDK stays pinned to an exact version, artifact integrity and lockfile closure; upgrades occur only in a reviewed OmniMind release after source/license, exact supported-Engine compatibility, ACP conformance/resource-failure, Pi regression, packaged legal/SBOM and one different-actor Review. Runtime auto-update, hot replacement, handwritten protocol fallback and silent Engine fallback are forbidden.",
+            "targetPaths": [
+              "apps/service/src/opencode/acpSdkConnection.ts",
+              "apps/service/src/opencode/acpSdkConnection.test.ts",
+              "apps/service/src/opencode/test-fixtures/acp-child.mjs"
             ]
           }
         ]

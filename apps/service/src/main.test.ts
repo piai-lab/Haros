@@ -738,7 +738,7 @@ it.layer(testLayer)("server CLI command", (it) => {
         setEntryMarkerLabel: notUsed,
         getShellSnapshot: () =>
           Effect.succeed({
-            protocolVersion: 1,
+            protocolVersion: 2,
             sequence: 0,
             workspaces: [],
             groups: [],
@@ -766,6 +766,7 @@ it.layer(testLayer)("server CLI command", (it) => {
         deleteQueueItem: notUsed,
         admitQueueItem: notUsed,
         submitQueueItem: notUsed,
+        retryDispatch: notUsed,
         controlRun: notUsed,
         readFacts: notUsed,
         recoverDispatches: notUsed,

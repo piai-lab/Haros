@@ -47,43 +47,77 @@ export function reconcileProductRuntimeSelection(
   current: ProductRequestedSelection | null,
 ): ProductRequestedSelection {
   const currentId =
-    current?.state === "selected" ? current.runtimeModelId : current?.requestedRuntimeModelId;
+    current?.state === "selected" && current.runtimeChoice.kind === "product-model"
+      ? current.runtimeChoice.runtimeModelId
+      : current?.state === "unavailable" && current.requestedRuntimeChoice?.kind === "product-model"
+        ? current.requestedRuntimeChoice.runtimeModelId
+        : null;
+  const requestedEngineId =
+    current?.state === "selected" ? current.engineId : current?.requestedEngineId;
+  const engine =
+    catalog?.engines.find((candidate) => candidate.engineId === requestedEngineId) ??
+    catalog?.engines.find((candidate) => candidate.engineId === catalog.defaultEngineId) ??
+    null;
   const policy = {
     permissionPolicy: "approval-required" as const,
-    enforcement: catalog?.capabilities.enforcement ?? "unverified",
     executionTarget: null,
   };
-  if (!catalog) {
+  if (!catalog || !engine || engine.availability.state !== "available") {
     return {
       state: "unavailable",
-      reason: "catalog-unavailable",
-      requestedRuntimeModelId: currentId ?? null,
+      reason:
+        engine?.availability.state === "unavailable"
+          ? engine.availability.reason
+          : "process-unavailable",
+      requestedEngineId: requestedEngineId ?? "pi",
+      requestedRuntimeChoice: currentId
+        ? { kind: "product-model", runtimeModelId: currentId, thinking: null }
+        : null,
+      packageGeneration: null,
+      ...policy,
+    };
+  }
+
+  if (engine.modelSelection.kind === "engine-session") {
+    return {
+      state: "selected",
+      engineId: engine.engineId,
+      runtimeChoice: { kind: "engine-session-current" },
+      packageGeneration: null,
       ...policy,
     };
   }
 
   const requestedModel = currentId
-    ? (catalog.models.find((candidate) => candidate.id === currentId) ?? null)
+    ? (engine.modelSelection.models.find((candidate) => candidate.id === currentId) ?? null)
     : null;
   if (currentId && (!requestedModel || !isProductRuntimeModelSelectable(requestedModel))) {
     return {
       state: "unavailable",
-      reason: requestedModel?.auth === "missing" ? "auth-missing" : "model-unavailable",
-      requestedRuntimeModelId: currentId,
+      reason: requestedModel?.auth === "missing" ? "auth-required" : "model-unavailable",
+      requestedEngineId: engine.engineId,
+      requestedRuntimeChoice: { kind: "product-model", runtimeModelId: currentId, thinking: null },
+      packageGeneration: catalog.packageGeneration,
       ...policy,
     };
   }
 
-  const model = requestedModel ?? catalog.models.find(isProductRuntimeModelSelectable) ?? null;
+  const model =
+    requestedModel ?? engine.modelSelection.models.find(isProductRuntimeModelSelectable) ?? null;
   if (!model) {
     return {
       state: "unavailable",
       reason: "model-not-selected",
-      requestedRuntimeModelId: null,
+      requestedEngineId: engine.engineId,
+      requestedRuntimeChoice: null,
+      packageGeneration: catalog.packageGeneration,
       ...policy,
     };
   }
-  const currentThinking = current?.state === "selected" ? current.thinking : null;
+  const currentThinking =
+    current?.state === "selected" && current.runtimeChoice.kind === "product-model"
+      ? current.runtimeChoice.thinking
+      : null;
   const catalogThinking = currentThinking as (typeof model.thinkingLevels)[number] | null;
   const thinking =
     catalogThinking && model.thinkingLevels.includes(catalogThinking)
@@ -93,9 +127,8 @@ export function reconcileProductRuntimeSelection(
         : (model.thinkingLevels[0] ?? null);
   return {
     state: "selected",
-    engineId: catalog.engineId,
-    runtimeModelId: model.id,
-    thinking,
+    engineId: engine.engineId,
+    runtimeChoice: { kind: "product-model", runtimeModelId: model.id, thinking },
     packageGeneration: catalog.packageGeneration,
     ...policy,
   };
@@ -114,83 +147,126 @@ export function ProductRuntimePicker(props: {
   readonly thinking: string | null;
   readonly onModelChange: (modelId: string) => void;
   readonly onThinkingChange: (thinking: string) => void;
+  readonly engineId?: string | null;
+  readonly onEngineChange?: (engineId: string) => void;
 }) {
   const copy = props.copy ?? getWorkbenchCopy();
   const modelLabelId = useId();
   const thinkingLabelId = useId();
-  const selected = props.catalog?.models.find((model) => model.id === props.modelId) ?? null;
+  const selectedEngine =
+    props.catalog?.engines.find(
+      (engine) => engine.engineId === (props.engineId ?? props.catalog?.defaultEngineId),
+    ) ?? null;
+  const models =
+    selectedEngine?.modelSelection.kind === "product-model"
+      ? selectedEngine.modelSelection.models
+      : [];
+  const selected = models.find((model) => model.id === props.modelId) ?? null;
   const selectedUnavailableLabel = selected ? runtimeUnavailableLabel(selected, copy) : "";
   return (
     <div className="flex min-w-0 items-center gap-1" data-testid="product-runtime-picker">
-      <span className="sr-only" id={modelLabelId}>
-        Pi {copy.models}
-      </span>
       <Select
-        value={selected?.id ?? ""}
+        value={selectedEngine?.engineId ?? ""}
         onValueChange={(value) => {
-          const model = props.catalog?.models.find((candidate) => candidate.id === value);
-          if (model && isProductRuntimeModelSelectable(model)) props.onModelChange(model.id);
+          if (value) props.onEngineChange?.(value);
         }}
       >
-        <SelectTrigger
-          size="sm"
-          className="max-w-52"
-          aria-labelledby={modelLabelId}
-          disabled={!props.catalog}
-        >
-          <SelectValue>
-            {selected
-              ? `${productRuntimeModelAccessibleName(selected)}${selectedUnavailableLabel ? ` · ${selectedUnavailableLabel}` : ""}`
-              : props.catalog
-                ? copy.models
-                : copy.executionUnavailableLabel}
-          </SelectValue>
+        <SelectTrigger size="sm" aria-label="Engine" disabled={!props.catalog}>
+          <SelectValue>{selectedEngine?.displayName ?? "Engine unavailable"}</SelectValue>
         </SelectTrigger>
         <ComposerPickerSelectPopup align="start">
-          {props.catalog?.models.map((model) => (
+          {props.catalog?.engines.map((engine) => (
             <SelectItem
-              key={model.id}
-              value={model.id}
-              disabled={!isProductRuntimeModelSelectable(model)}
+              key={engine.engineId}
+              value={engine.engineId}
+              disabled={engine.availability.state !== "available"}
             >
-              {productRuntimeModelAccessibleName(model)}
-              {runtimeUnavailableLabel(model, copy)
-                ? ` · ${runtimeUnavailableLabel(model, copy)}`
-                : ""}
+              {engine.displayName}
             </SelectItem>
           ))}
         </ComposerPickerSelectPopup>
       </Select>
-      {selected &&
-      isProductRuntimeModelSelectable(selected) &&
-      selected.thinkingLevels.length > 0 ? (
+      {selectedEngine?.modelSelection.kind === "engine-session" ? (
+        <span className="text-xs text-muted-foreground">
+          Current Engine model and mode resolve when sending · approval required · enforcement
+          unverified
+        </span>
+      ) : null}
+      {selectedEngine?.modelSelection.kind === "product-model" ? (
         <>
-          <span className="sr-only" id={thinkingLabelId}>
-            {copy.thinkingLevelLabel}
+          <span className="sr-only" id={modelLabelId}>
+            Pi {copy.models}
           </span>
           <Select
-            value={
-              props.thinking && selected.thinkingLevels.includes(props.thinking as never)
-                ? props.thinking
-                : selected.thinkingLevels[0]
-            }
+            value={selected?.id ?? ""}
             onValueChange={(value) => {
-              if (typeof value === "string") props.onThinkingChange(value);
+              const model = models.find((candidate) => candidate.id === value);
+              if (model && isProductRuntimeModelSelectable(model)) props.onModelChange(model.id);
             }}
           >
-            <SelectTrigger size="sm" aria-labelledby={thinkingLabelId}>
+            <SelectTrigger
+              size="sm"
+              className="max-w-52"
+              aria-labelledby={modelLabelId}
+              disabled={!props.catalog}
+            >
               <SelectValue>
-                {localizeWorkbenchTraitLabel(props.thinking ?? selected.thinkingLevels[0] ?? "off")}
+                {selected
+                  ? `${productRuntimeModelAccessibleName(selected)}${selectedUnavailableLabel ? ` · ${selectedUnavailableLabel}` : ""}`
+                  : props.catalog
+                    ? copy.models
+                    : copy.executionUnavailableLabel}
               </SelectValue>
             </SelectTrigger>
             <ComposerPickerSelectPopup align="start">
-              {selected.thinkingLevels.map((level) => (
-                <SelectItem key={level} value={level}>
-                  {localizeWorkbenchTraitLabel(level)}
+              {models.map((model) => (
+                <SelectItem
+                  key={model.id}
+                  value={model.id}
+                  disabled={!isProductRuntimeModelSelectable(model)}
+                >
+                  {productRuntimeModelAccessibleName(model)}
+                  {runtimeUnavailableLabel(model, copy)
+                    ? ` · ${runtimeUnavailableLabel(model, copy)}`
+                    : ""}
                 </SelectItem>
               ))}
             </ComposerPickerSelectPopup>
           </Select>
+          {selected &&
+          isProductRuntimeModelSelectable(selected) &&
+          selected.thinkingLevels.length > 0 ? (
+            <>
+              <span className="sr-only" id={thinkingLabelId}>
+                {copy.thinkingLevelLabel}
+              </span>
+              <Select
+                value={
+                  props.thinking && selected.thinkingLevels.includes(props.thinking as never)
+                    ? props.thinking
+                    : selected.thinkingLevels[0]
+                }
+                onValueChange={(value) => {
+                  if (typeof value === "string") props.onThinkingChange(value);
+                }}
+              >
+                <SelectTrigger size="sm" aria-labelledby={thinkingLabelId}>
+                  <SelectValue>
+                    {localizeWorkbenchTraitLabel(
+                      props.thinking ?? selected.thinkingLevels[0] ?? "off",
+                    )}
+                  </SelectValue>
+                </SelectTrigger>
+                <ComposerPickerSelectPopup align="start">
+                  {selected.thinkingLevels.map((level) => (
+                    <SelectItem key={level} value={level}>
+                      {localizeWorkbenchTraitLabel(level)}
+                    </SelectItem>
+                  ))}
+                </ComposerPickerSelectPopup>
+              </Select>
+            </>
+          ) : null}
         </>
       ) : null}
     </div>

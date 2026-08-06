@@ -22,14 +22,19 @@ const READY_HEALTH: DesktopHealthSnapshot = {
   updatedAt: "2026-08-04T00:00:00.000Z",
 };
 
-function readModel(receipt?: ProductDispatchReceipt): ProductConversationReadModel {
+function readModel(
+  receipt?: ProductDispatchReceipt,
+  engineId = "native-engine",
+): ProductConversationReadModel {
   const selection = {
     state: "selected" as const,
-    engineId: "native-engine",
-    runtimeModelId: "provider/model-1",
-    thinking: "high",
+    engineId,
+    runtimeChoice: {
+      kind: "product-model" as const,
+      runtimeModelId: "provider/model-1",
+      thinking: "high",
+    },
     permissionPolicy: "approval-required" as const,
-    enforcement: "unverified" as const,
     executionTarget: null,
     packageGeneration: "generation-1",
   };
@@ -155,6 +160,39 @@ describe("Product Conversation presenter", () => {
     });
   });
 
+  it("keeps a catalog-ready OpenCode selection readable when only Pi credentials fail", () => {
+    const piCredentialFailure: DesktopHealthSnapshot = {
+      ...READY_HEALTH,
+      engineSelection: {
+        status: "unauthenticated",
+        reason: "No credential-backed Pi model is currently available.",
+      },
+    };
+    expect(
+      presentProductConversationState({
+        readModel: readModel(undefined, "opencode"),
+        isKnownConversation: true,
+        projectionIssue: null,
+        health: piCredentialFailure,
+        healthSelection: { engineId: "opencode", nativeEngineId: "pi", catalogReady: true },
+        locale: "en",
+      }),
+    ).toEqual({ kind: "ready" });
+    expect(
+      presentProductConversationState({
+        readModel: readModel(undefined, "pi"),
+        isKnownConversation: true,
+        projectionIssue: null,
+        health: piCredentialFailure,
+        healthSelection: { engineId: "pi", nativeEngineId: "pi", catalogReady: true },
+        locale: "en",
+      }),
+    ).toMatchObject({
+      kind: "execution_unavailable",
+      description: expect.stringContaining("No credential-backed Pi model"),
+    });
+  });
+
   it("renders rejected and uncertain receipts without a replay action", () => {
     const rejected = presentProductConversationState({
       readModel: readModel({
@@ -174,7 +212,11 @@ describe("Product Conversation presenter", () => {
     });
 
     const deliveryUnknown = presentProductConversationState({
-      readModel: readModel({ state: "delivery_unknown", lastConfirmedBoundary: "sent" }),
+      readModel: readModel({
+        state: "delivery_unknown",
+        lastConfirmedBoundary: "local-write",
+        abort: null,
+      }),
       isKnownConversation: true,
       projectionIssue: null,
       health: READY_HEALTH,
@@ -182,6 +224,53 @@ describe("Product Conversation presenter", () => {
     });
     expect(deliveryUnknown).toMatchObject({ kind: "delivery_unknown" });
     expect(deliveryUnknown).not.toHaveProperty("retry");
+  });
+
+  it("renders blocked-before-send as an exact dispatch Retry in English and Chinese", () => {
+    const receipt: ProductDispatchReceipt = {
+      state: "pending",
+      lastConfirmedBoundary: "pre-send",
+      blocked: {
+        kind: "selected-engine-unavailable",
+        code: "OPENCODE_PREPARE_FAILED",
+        message: "Selected Engine unavailable.",
+        retryable: true,
+        observedAt: "2026-08-06T00:00:00.000Z",
+      },
+    };
+    const english = presentProductConversationState({
+      readModel: readModel(receipt, "opencode"),
+      isKnownConversation: true,
+      projectionIssue: null,
+      health: READY_HEALTH,
+      locale: "en",
+    });
+    expect(english).toMatchObject({
+      kind: "dispatch_blocked",
+      dispatchId: "dispatch-1",
+      retryLabel: "Retry this dispatch",
+    });
+    if (english.kind !== "dispatch_blocked") {
+      throw new Error(`Expected dispatch_blocked, received ${english.kind}`);
+    }
+    expect(english.description).toContain("Nothing was sent");
+    expect(english.description).toContain("opencode");
+    const chinese = presentProductConversationState({
+      readModel: readModel(receipt, "opencode"),
+      isKnownConversation: true,
+      projectionIssue: null,
+      health: READY_HEALTH,
+      locale: "zh-CN",
+    });
+    expect(chinese).toMatchObject({
+      kind: "dispatch_blocked",
+      dispatchId: "dispatch-1",
+      retryLabel: "重试这一次 dispatch",
+    });
+    if (chinese.kind !== "dispatch_blocked") {
+      throw new Error(`Expected dispatch_blocked, received ${chinese.kind}`);
+    }
+    expect(chinese.description).toContain("尚未发送任何内容");
   });
 
   it("adapts typed Product facts for display without writing the donor store", () => {
@@ -213,21 +302,28 @@ describe("Product Conversation presenter", () => {
         ...base.activities,
         {
           runId: ProductRunId.makeUnsafe("run-1"),
-          nativeSequence: 1,
+          engineSequence: 1,
           kind: "session",
           detail: { code: "session-bound", lineage: "continued" },
           createdAt: "2026-08-04T00:00:00.500Z",
         },
         {
           runId: ProductRunId.makeUnsafe("run-1"),
-          nativeSequence: 2,
+          engineSequence: 2,
           kind: "control",
           detail: { code: "control-applied", control: "abort", text: null },
           createdAt: "2026-08-04T00:00:01.000Z",
         },
         {
           runId: ProductRunId.makeUnsafe("run-1"),
-          nativeSequence: 3,
+          engineSequence: 3,
+          kind: "usage",
+          detail: { code: "context-usage-observed", used: 17, size: 128000 },
+          createdAt: "2026-08-04T00:00:01.500Z",
+        },
+        {
+          runId: ProductRunId.makeUnsafe("run-1"),
+          engineSequence: 4,
           kind: "settlement",
           detail: { code: "run-settled", outcome: "cancelled" },
           createdAt: "2026-08-04T00:00:02.000Z",
@@ -244,12 +340,11 @@ describe("Product Conversation presenter", () => {
       ],
     };
     expect(
-      presentProductConversationThread(model, "en")?.activities.map(
-        (activity) => activity.summary,
-      ),
+      presentProductConversationThread(model, "en")?.activities.map((activity) => activity.summary),
     ).toEqual([
       "Native Session lineage: continued.",
       "Control applied: abort.",
+      "Context window: 17 of 128000 used.",
       "Run cancelled.",
       "Final reply recovered from the native Session; fine-grained runtime activity history is incomplete.",
     ]);
@@ -260,6 +355,7 @@ describe("Product Conversation presenter", () => {
     ).toEqual([
       "原生 Session 血缘：已续接。",
       "已应用控制：中止。",
+      "上下文窗口占用：已用 17，窗口大小 128000。",
       "Run 已取消。",
       "已从原生 Session 恢复最终答复；细粒度运行活动记录并不完整。",
     ]);

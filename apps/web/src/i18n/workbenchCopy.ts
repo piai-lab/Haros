@@ -41,8 +41,7 @@ const WORKBENCH_COPY = {
     recent: "Recent",
     noProjects: "No projects yet",
     noGroups: "No groups yet",
-    noGroupsDescription:
-      "Groups organize conversations by topic without changing their project.",
+    noGroupsDescription: "Groups organize conversations by topic without changing their project.",
     newGroup: "New group",
     editGroup: "Edit group",
     groupName: "Group name",
@@ -57,8 +56,7 @@ const WORKBENCH_COPY = {
     groupDelete: "Delete {name}",
     groupDeleteConfirm: "Delete group “{name}”? Conversations will remain.",
     groupAddCurrent: "Add current",
-    groupDragHint:
-      "Drag a conversation here. Hold Option or Command to add without moving.",
+    groupDragHint: "Drag a conversation here. Hold Option or Command to add without moving.",
     groupRemoveConversation: "Remove from {name}",
     groupMutationFailed: "The Group change could not be saved.",
     retry: "Retry",
@@ -171,6 +169,11 @@ const WORKBENCH_COPY = {
     systemHealthRetryHost: "Retry Host",
     productRejectedLabel: "Request rejected",
     productRejectedTitle: "The request was not accepted",
+    productDispatchBlockedLabel: "Dispatch blocked before send",
+    productDispatchBlockedTitle: "The selected Engine is temporarily unavailable",
+    productDispatchBlockedDescription:
+      "Nothing was sent. Your input and {engine} selection are preserved. Retry this exact dispatch when the Engine is available.",
+    productDispatchBlockedRetry: "Retry this dispatch",
     productDeliveryUnknownLabel: "Delivery unknown",
     productDeliveryUnknownTitle: "Delivery could not be confirmed",
     productDeliveryUnknownDescription:
@@ -194,10 +197,14 @@ const WORKBENCH_COPY = {
     productLineageMissing: "missing",
     productLineageDivergent: "divergent",
     productActivityToolStarted: "Tool started: {tool}.",
+    productActivityPlanUpdated: "Plan updated: {count} entries.",
+    productActivityPermissionRequested: "Permission requested: {title}.",
+    productActivityPermissionRejected: "Permission request rejected: {title}.",
     productActivityToolSucceeded: "Tool completed: {tool}.",
     productActivityToolFailed: "Tool failed: {tool}.",
     productActivityUsage:
       "Usage: {total} tokens ({input} input, {output} output, {cacheRead} cache read, {cacheWrite} cache write).",
+    productActivityContextUsage: "Context window: {used} of {size} used.",
     productActivitySettledSucceeded: "Run completed.",
     productActivitySettledFailed: "Run failed.",
     productActivitySettledCancelled: "Run cancelled.",
@@ -342,8 +349,10 @@ const WORKBENCH_COPY = {
     executionUnavailableDescription:
       "此对话与队列仍然可用；只有 Product、Host 与 Engine 就绪状态得到证明后，才会发起新的 dispatch。",
     thinkingLevelLabel: "思考等级",
-    productModelRequired: "当前没有已认证且可用的 Pi 模型；消息仍保留在 Product 队列中，可继续编辑。",
-    productRunUnresolved: "前一个 Run 的状态仍未解决；消息已保留在 Product 队列中，且没有发起 dispatch。",
+    productModelRequired:
+      "当前没有已认证且可用的 Pi 模型；消息仍保留在 Product 队列中，可继续编辑。",
+    productRunUnresolved:
+      "前一个 Run 的状态仍未解决；消息已保留在 Product 队列中，且没有发起 dispatch。",
     productControlUnsupported: "当前 Run 不支持此原生控制。",
     productControlTooLate: "Run 已结算，无法再应用此控制。",
     productControlUnknown: "Product 无法确认此控制对应的已接纳操作。",
@@ -357,6 +366,11 @@ const WORKBENCH_COPY = {
     systemHealthRetryHost: "重试 Host",
     productRejectedLabel: "请求被拒绝",
     productRejectedTitle: "请求未被接纳",
+    productDispatchBlockedLabel: "发送前已阻塞",
+    productDispatchBlockedTitle: "所选 Engine 暂时不可用",
+    productDispatchBlockedDescription:
+      "尚未发送任何内容。输入与 {engine} 选择均已保留；Engine 恢复后可显式重试这一次 dispatch。",
+    productDispatchBlockedRetry: "重试这一次 dispatch",
     productDeliveryUnknownLabel: "送达状态未知",
     productDeliveryUnknownTitle: "无法确认请求是否送达",
     productDeliveryUnknownDescription: "请求仍然可见，OmniMind 不会自动重放。",
@@ -364,8 +378,7 @@ const WORKBENCH_COPY = {
     productOutcomeUnknownTitle: "无法确认最终结果",
     productOutcomeUnknownDescription:
       "Product 无法证明请求最终如何结算。OmniMind 不会自动重放；请先检查活动记录，再决定下一步。",
-    productRuntimeRecoverySummary:
-      "已从原生 Session 恢复最终答复；细粒度运行活动记录并不完整。",
+    productRuntimeRecoverySummary: "已从原生 Session 恢复最终答复；细粒度运行活动记录并不完整。",
     productActivitySessionBound: "原生 Session 血缘：{lineage}。",
     productActivityPackagesLoaded: "已加载原生扩展包：{count} 个。",
     productActivityPackagesFailed: "原生扩展包加载失败：{count} 个。",
@@ -379,10 +392,14 @@ const WORKBENCH_COPY = {
     productLineageMissing: "原血缘缺失",
     productLineageDivergent: "血缘分叉",
     productActivityToolStarted: "工具已启动：{tool}。",
+    productActivityPlanUpdated: "计划已更新：{count} 项。",
+    productActivityPermissionRequested: "收到权限请求：{title}。",
+    productActivityPermissionRejected: "权限请求已拒绝：{title}。",
     productActivityToolSucceeded: "工具已完成：{tool}。",
     productActivityToolFailed: "工具执行失败：{tool}。",
     productActivityUsage:
       "用量：共 {total} tokens（输入 {input}、输出 {output}、缓存读取 {cacheRead}、缓存写入 {cacheWrite}）。",
+    productActivityContextUsage: "上下文窗口占用：已用 {used}，窗口大小 {size}。",
     productActivitySettledSucceeded: "Run 已完成。",
     productActivitySettledFailed: "Run 执行失败。",
     productActivitySettledCancelled: "Run 已取消。",

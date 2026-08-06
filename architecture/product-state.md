@@ -8,19 +8,19 @@ OmniMind 对用户可见、跨 Engine、需要恢复和解释的产品事实负�
 
 ## 权威映射
 
-| Fact | Authority | OmniMind responsibility |
-| --- | --- | --- |
-| Workspace and workbench layout | Product | folder/location references, tabs, panes and display preferences |
-| Visible Conversation and Timeline | Product | durable user entries, visible assistant results and attention states |
-| Run selection and dispatch | Product | freeze requested choices, resolve actual runtime and record receipt |
-| Native Session, transcript and branch | Native Engine | preserve native continuation, compaction and private state |
-| Pre-dispatch Composer Queue | Product | editable ordered user intent with frozen next-Run choices |
-| Accepted Engine operations | Engine | native queue, steer, follow-up, retry, abort and settlement |
-| Package source and activation | Product | rights, trust, exact artifact, generation, lease and rollback |
-| Package loading and private state | Native Engine / Package | format, lifecycle, tools, extensions and private data |
-| Files and directories | Owning filesystem | observe versions; mutate only through proved writer admission |
-| Git state | Git repository | show and operate Git facts without using Git as recovery fiction |
-| Remote process or external job | Remote host / service | retain references, receipts and visible observations |
+| Fact                                  | Authority               | OmniMind responsibility                                                                             |
+| ------------------------------------- | ----------------------- | --------------------------------------------------------------------------------------------------- |
+| Workspace and workbench layout        | Product                 | folder/location references, tabs, panes and display preferences                                     |
+| Visible Conversation and Timeline     | Product                 | durable user entries, visible assistant results and attention states                                |
+| Run selection and dispatch            | Product                 | freeze requested choices, resolve actual runtime and record receipt                                 |
+| Native Session, transcript and branch | Native Engine           | preserve native continuation, compaction and private state                                          |
+| Pre-dispatch Composer Queue           | Product                 | editable ordered user intent with frozen next-Run choices                                           |
+| Proved Engine execution               | Engine                  | native queue, steer, follow-up, retry, abort and settlement after acknowledged or observed transfer |
+| Package source and activation         | Product                 | rights, trust, exact artifact, generation, lease and rollback                                       |
+| Package loading and private state     | Native Engine / Package | format, lifecycle, tools, extensions and private data                                               |
+| Files and directories                 | Owning filesystem       | observe versions; mutate only through proved writer admission                                       |
+| Git state                             | Git repository          | show and operate Git facts without using Git as recovery fiction                                    |
+| Remote process or external job        | Remote host / service   | retain references, receipts and visible observations                                                |
 
 ## 七个产品对象
 
@@ -59,8 +59,9 @@ Composer 中切换选择只影响下一次发送，不热换当前 Run，不创�
 
 1. 用户尚未派发的消息由 Composer Queue 拥有，可编辑、删除、排序，并冻结下一次 Run 选择。
 2. Product Control Plane 接纳后，该项从可编辑 intent 转为 `Run` 和 dispatch receipt，再派发给选定 Engine。
-3. Engine 接受后，native queue、steer、follow-up、retry、abort 与 settlement 由 Engine 原生语义拥有；OmniMind 只投影能力、回执和可见状态。
-4. 无法证明 Engine 是否接受时保留原用户输入并记录 `delivery_unknown`；不得把它偷偷放回可编辑 Queue，也不得经原 Engine 或其他 Engine 自动重放。
+3. 协议提供独立 acceptance acknowledgement/reference 时，以该证据记录 Engine acceptance；在它到达前，local write、process/Session liveness 与 scheduled/global notification 都不是 acceptance。
+4. 经证据证明没有独立 ACK/reference 的外部协议，以第一条与该 prompt/Run 因果且唯一相关的 Engine fact 记录 observed delivery 与 Engine execution authority；不得为此伪造 accepted operation reference。
+5. 首条 correlated fact 前失联记录 `delivery_unknown`；已观察 correlated fact 但尚无 correlated final/error 时失联记录 `outcome_unknown`。两者都保留冻结输入、精确选择与不可变 attempt evidence，固定一次 attempt、零自动 replay、零 fallback，不得退回 editable Queue。
 
 这条边界既保留优秀 Queue UI，也避免两套 Harness 都认为自己可以继续执行。
 
@@ -76,17 +77,29 @@ Timeline 是规范的用户可见历史，不是 wire event log。长期保存�
 
 原始 Engine event、隐藏 reasoning、逐 token 更新和内部 Tool chatter 只能作为有界、脱敏、带版本的诊断证据。它们必须先转成 typed facts，再聚合成稳定 Activity；React 不消费永久 `payload: unknown` 总线。
 
+Product 的增量执行事实使用 source-neutral 的 `engineSequence` / `engine_sequence` 排序与去重，不保留 Product-edge `nativeSequence` alias。首条 no-ACK correlated fact、Engine binding、resolved selection 与同一条可见事实必须原子落盘；后续只接受严格递增事实。可见 Activity 可包含有界 plan 更新与 permission request/rejection，但这些只是呈现事实：`approval-ui-unavailable` rejection 不会提升 permission policy、enforcement、acceptance 或 cancellation truth。Pi 的真实 accepted-operation reference 继续保留在其 receipt/control/recovery 路径，不被塞入通用事实。
+
+Token-detail usage 与 context-window usage 是两种不同的 Product 事实。后者只保存已验证的 `used`/`size` 窗口占用，不得显示成 token input/output/total、价格、计费或 rate limit，也不得进入 token 汇总。
+
+## Schema 生命周期
+
+Product facts 与 receipts 始终由 OmniMind 拥有。公开 Alpha 前，unsupported 的开发期旧字节只有在全部受影响 store 的 backup/export 已完整创建并验证后才可 rebaseline；备份失败必须保持 live stores 原样并阻断操作，恢复必须显式、可测试，禁止静默 reset。成功 rebaseline 后，steady-state runtime 只保留一个 canonical decoder/writer，不保留永久 dual-read、schema-1 fallback、compatibility ledger 或 generic migration platform。该豁免只适用于未发行开发数据；一旦公开发行产生用户数据义务，后续 schema 变更必须采用有证据的版本化 migration/recovery，不得引用本决定规避兼容责任。
+
 ## 接纳、派发与恢复
 
 发送遵循小型 transactional outbox：
 
 1. 原子保存用户 Entry、选择和待派发请求；
 2. Host 解析 exact runtime、Session 和 Package generation；
-3. Engine 接受后记录 opaque operation/session reference；
-4. 流式事实更新增量 projection；
-5. 最终写入可见结果与 settlement receipt。
+3. 有独立 ACK/reference 时记录 accepted operation 与 opaque Session lineage；无 ACK/reference 时等待第一条 per-prompt correlated Engine fact，只记录 observed delivery 与 opaque Session lineage；
+4. 流式 correlated facts 更新增量 projection；
+5. correlated final/error 写入可见结果与 settlement receipt。
 
-崩溃、断连或 timeout 发生在 dispatch 之后时，不能推断副作用未发生。只有外部 authority 或 Engine receipt 能把 `outcome_unknown` 收敛为 settled。恢复不得盲目重放非幂等动作，也不得用用户 Git 的 reset、checkout 或 stash 代替产品恢复。
+崩溃、断连或 timeout 发生在 dispatch 之后时，不能推断副作用未发生。只有 prompt-correlated Engine fact、外部 authority、Engine receipt 或 correlated final/error 能推进相应确定性；Session identity/load/resume 只能证明 lineage，不能替代一次 prompt 的 delivery correlation。恢复不得盲目重放非幂等动作，也不得用用户 Git 的 reset、checkout 或 stash 代替产品恢复。
+
+若外部 Engine Run 已 admission、仍严格处于 `pending/pre-send`、`attemptCount=0`，且重启后只丢失了进程内 prepared handle，Product 保留同一 Run/dispatch/输入/选择并记录有界的 `selected-engine-unavailable` 阻塞事实。启动、重连、catalog 刷新和普通恢复不得自动 prepare 或发送；只有指向该 dispatch 的 typed 显式 Retry（或完全相同 submit identity 的幂等传输）可以重新 prepare，并只在成功后进入既有 `markSent`。此状态不等于 accepted、delivered、unknown、rejected 或 Conversation unavailable；它不允许 fallback，也不影响 Pi 和其他 Conversation 的可读性。损坏、身份矛盾或非重试拒绝仍 fail closed。
+
+取消只在 Engine 明确 acknowledgement 后才能记录为 confirmed/cancelled。cancel request、stdio write 或 process signal 仅记录 `abort_requested`；晚到的 correlated facts、final/error 仍需更新可见 Run。该 no-ACK 规则只适用于已由固定来源和真实进程证据证明缺少独立 ACK/reference 的外部协议，不改变 Pi Native Host 的 accepted-operation reference 语义。
 
 ## 权限真实性
 

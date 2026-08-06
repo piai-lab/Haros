@@ -140,6 +140,7 @@ export function resolveKanbanSubmitReceipt(
     case "outcome_unknown":
       return { kind: "settled" };
     case "pending":
+    case "sent":
       return { kind: "pending" };
     case "delivery_unknown":
       return { kind: "delivery-unknown" };
@@ -358,10 +359,21 @@ async function dispatchKanbanDraftThreadOnce(
       return { kind: "unavailable" };
     }
     const shell = await api.getShellSnapshot();
-    const runtimeModel = shell.runtimeCatalog
-      ? resolveKanbanRuntimeModel(shell.runtimeCatalog, requestedSelection)
+    const runtimeCatalog = shell.runtimeCatalog;
+    const runtimeEngine = runtimeCatalog?.engines.find(
+      (candidate) => candidate.engineId === requestedSelection.engineId,
+    );
+    const runtimeModel = runtimeCatalog
+      ? resolveKanbanRuntimeModel(runtimeCatalog, requestedSelection)
       : undefined;
-    if (!shell.runtimeCatalog || !runtimeModel?.available || runtimeModel.auth !== "configured") {
+    if (
+      !runtimeCatalog ||
+      !runtimeEngine ||
+      runtimeEngine.availability.state !== "available" ||
+      (requestedSelection.state === "selected" &&
+        requestedSelection.runtimeChoice.kind === "product-model" &&
+        (!runtimeModel?.available || runtimeModel.auth !== "configured"))
+    ) {
       return { kind: "unavailable" };
     }
     const conversationId = ProductConversationId.makeUnsafe(threadId);
@@ -375,14 +387,13 @@ async function dispatchKanbanDraftThreadOnce(
       itemId: ProductQueueItemId.makeUnsafe(messageId),
       text: outgoingMessageText,
       requestedSelection: {
+        ...requestedSelection,
         state: "selected",
-        engineId: shell.runtimeCatalog.engineId,
-        runtimeModelId: runtimeModel.id,
-        thinking: requestedSelection.thinking,
+        engineId: runtimeEngine.engineId,
+        runtimeChoice: requestedSelection.runtimeChoice,
         permissionPolicy: "approval-required",
-        enforcement: shell.runtimeCatalog.capabilities.enforcement,
         executionTarget: detail.readModel.workspace.access.executionTarget,
-        packageGeneration: shell.runtimeCatalog.packageGeneration,
+        packageGeneration: runtimeCatalog.packageGeneration,
       },
       resources: [],
       expectedRevision: null,

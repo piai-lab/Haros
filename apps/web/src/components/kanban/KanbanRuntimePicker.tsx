@@ -3,10 +3,7 @@
 // Layer: Kanban Product presenter
 // Exports: KanbanRuntimePicker
 
-import type {
-  ProductRuntimeCatalog,
-  ProductRuntimeModel,
-} from "@omnimind/contracts";
+import type { ProductRuntimeCatalog, ProductRuntimeModel } from "@omnimind/contracts";
 import { useId } from "react";
 
 import { ComposerPickerSelectPopup } from "~/components/chat/ComposerPickerMenuPopup";
@@ -34,10 +31,7 @@ function canSelectRuntimeModel(model: ProductRuntimeModel): boolean {
 export function KanbanRuntimePicker(props: {
   readonly catalog: ProductRuntimeCatalog | null;
   readonly selection: KanbanProductSelection | null;
-  readonly onSelectionChange: (
-    model: ProductRuntimeModel,
-    thinking: string | null,
-  ) => void;
+  readonly onSelectionChange: (model: ProductRuntimeModel, thinking: string | null) => void;
 }) {
   const modelLabelId = useId();
   const thinkingLabelId = useId();
@@ -46,13 +40,22 @@ export function KanbanRuntimePicker(props: {
       ? resolveKanbanRuntimeModel(props.catalog, props.selection)
       : undefined;
   const selectedThinking =
-    props.selection?.state === "selected" ? props.selection.thinking : null;
+    props.selection?.state === "selected" && props.selection.runtimeChoice.kind === "product-model"
+      ? props.selection.runtimeChoice.thinking
+      : null;
   const catalogThinking = selectedThinking;
+  const defaultEngine = props.catalog?.engines.find(
+    (engine) => engine.engineId === props.catalog?.defaultEngineId,
+  );
+  const defaultModels =
+    defaultEngine?.modelSelection.kind === "product-model"
+      ? defaultEngine.modelSelection.models
+      : [];
   const selectedIsUsable = selected ? canSelectRuntimeModel(selected) : false;
   const selectedLabel = selected
     ? `${selected.name} · ${selected.provider}`
     : props.selection
-      ? `${props.selection.state === "selected" ? props.selection.runtimeModelId : (props.selection.requestedRuntimeModelId ?? "Unknown model")} · unavailable`
+      ? `${props.selection.state === "selected" && props.selection.runtimeChoice.kind === "product-model" ? props.selection.runtimeChoice.runtimeModelId : props.selection.state === "unavailable" && props.selection.requestedRuntimeChoice?.kind === "product-model" ? props.selection.requestedRuntimeChoice.runtimeModelId : "Unknown model"} · unavailable`
       : props.catalog
         ? "Select Host model"
         : "Host models unavailable";
@@ -66,9 +69,15 @@ export function KanbanRuntimePicker(props: {
         value={selected?.id ?? ""}
         onValueChange={(value) => {
           if (typeof value !== "string" || !props.catalog) return;
-          const model = props.catalog.models.find(
-            (candidate) => candidate.id === value && canSelectRuntimeModel(candidate),
+          const engine = props.catalog.engines.find(
+            (candidate) => candidate.engineId === props.catalog!.defaultEngineId,
           );
+          const model =
+            engine?.modelSelection.kind === "product-model"
+              ? engine.modelSelection.models.find(
+                  (candidate) => candidate.id === value && canSelectRuntimeModel(candidate),
+                )
+              : undefined;
           if (!model) return;
           const thinking =
             catalogThinking !== null &&
@@ -87,7 +96,7 @@ export function KanbanRuntimePicker(props: {
           <SelectValue>{selectedLabel}</SelectValue>
         </SelectTrigger>
         <ComposerPickerSelectPopup align="start">
-          {props.catalog?.models.map((model) => {
+          {defaultModels.map((model) => {
             const unavailable = runtimeUnavailableLabel(model);
             return (
               <SelectItem key={model.id} value={model.id} disabled={!canSelectRuntimeModel(model)}>

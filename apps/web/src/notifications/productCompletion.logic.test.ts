@@ -67,12 +67,12 @@ function receipt(
     | "settled",
   outcome: "succeeded" | "failed" | "cancelled" = "succeeded",
 ): ProductDispatchReceipt {
-  if (state === "pending") return { state, lastConfirmedBoundary: "pre-send" };
+  if (state === "pending") return { state, lastConfirmedBoundary: "pre-send", blocked: null };
   if (state === "rejected") {
     return { state, code: "rejected", message: "Rejected", retryable: false };
   }
   if (state === "delivery_unknown") {
-    return { state, lastConfirmedBoundary: "sent" };
+    return { state, lastConfirmedBoundary: "local-write", abort: null };
   }
   const engineBinding = {
     id: ProductEngineBindingId.makeUnsafe("binding-1"),
@@ -82,6 +82,7 @@ function receipt(
   const resolvedSelection = {
     engineId: "pi",
     runtimeModelId: "model-1",
+    engineModeId: null,
     thinking: null,
     permissionPolicy: "approval-required" as const,
     enforcement: "engine-enforced" as const,
@@ -89,24 +90,33 @@ function receipt(
     packageGeneration: "generation-1",
   };
   if (state === "accepted" || state === "running") {
-    return { state, operationRef: "operation-1", engineBinding, resolvedSelection };
+    return state === "accepted"
+      ? { state, operationRef: "operation-1", engineBinding, resolvedSelection, abort: null }
+      : {
+          state,
+          evidence: { kind: "accepted-operation", operationRef: "operation-1" },
+          engineBinding,
+          resolvedSelection,
+          abort: null,
+        };
   }
   if (state === "outcome_unknown") {
     return {
       state,
-      operationRef: "operation-1",
+      evidence: { kind: "accepted-operation", operationRef: "operation-1" },
       engineBinding,
       resolvedSelection,
-      lastConfirmedBoundary: "accepted",
+      abort: null,
     };
   }
   return {
     state,
-    operationRef: "operation-1",
+    evidence: { kind: "accepted-operation", operationRef: "operation-1" },
     engineBinding,
     resolvedSelection,
     outcome,
     settledAt: "2026-08-05T00:00:02.000Z",
+    abort: null,
   };
 }
 

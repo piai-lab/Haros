@@ -46,10 +46,56 @@ describe("Product submission health gate", () => {
     },
   );
 
+  it("does not let Pi health mask an explicitly selected external Engine", () => {
+    const unavailablePi = snapshot({
+      nativeHost: "unavailable",
+      engineSelection: "unauthenticated",
+    });
+    expect(
+      canDispatchProductSubmission(unavailablePi, {
+        engineId: "opencode",
+        nativeEngineId: "pi",
+        catalogReady: true,
+      }),
+    ).toBe(true);
+    expect(
+      canDispatchProductSubmission(unavailablePi, {
+        engineId: "pi",
+        nativeEngineId: "pi",
+        catalogReady: true,
+      }),
+    ).toBe(false);
+  });
+
   it.each<EngineSelectionHealthStatus>(["degraded", "unsupported", "unauthenticated", "unknown"])(
-    "keeps Product intent queue-only while selected Engine is %s",
+    "keeps Pi intent queue-only while Pi catalog health is %s",
     (status) => {
-      expect(canDispatchProductSubmission(snapshot({ engineSelection: status }))).toBe(false);
+      const health = snapshot({ engineSelection: status });
+      expect(canDispatchProductSubmission(health)).toBe(false);
+      expect(
+        canDispatchProductSubmission(health, {
+          engineId: "pi",
+          nativeEngineId: "pi",
+          catalogReady: true,
+        }),
+      ).toBe(false);
+      expect(
+        canDispatchProductSubmission(health, {
+          engineId: "opencode",
+          nativeEngineId: "pi",
+          catalogReady: true,
+        }),
+      ).toBe(true);
     },
   );
+
+  it("keeps an external selection queue-only until its own catalog entry is ready", () => {
+    expect(
+      canDispatchProductSubmission(snapshot(), {
+        engineId: "opencode",
+        nativeEngineId: "pi",
+        catalogReady: false,
+      }),
+    ).toBe(false);
+  });
 });

@@ -1,21 +1,33 @@
 import { createHash } from "node:crypto";
-import { mkdirSync, mkdtempSync, rmSync, writeFileSync } from "node:fs";
+import { lstatSync, mkdirSync, mkdtempSync, rmSync, writeFileSync } from "node:fs";
 import { tmpdir } from "node:os";
 import path from "node:path";
 
 import {
+  PRODUCT_PROTOCOL_VERSION,
+  ProductConversationId,
+  ProductDispatchId,
+  ProductEngineBindingId,
+  ProductEntryId,
+  ProductOperationReceiptId,
+  ProductQueueItemId,
   ProductRunId,
+  ProductWorkspaceId,
   type NativeHostPackageArtifact,
   type NativeHostPackageLoadReport,
   type NativeHostRuntimeFact,
+  type ProductExecutionFact,
+  type ProductRuntimeCatalog,
 } from "@omnimind/contracts";
-import { Effect } from "effect";
+import { Effect, ManagedRuntime } from "effect";
 import { describe, expect, it } from "vitest";
 
+import { ProductControlPlane, type ProductExecutionBoundary } from "../product/ProductControlPlane";
 import { NativeHostClient } from "./client";
 import {
   initializeProductPackageLifecycle,
   makeNativeHostExecutionBoundary,
+  makeNativeHostProductControlPlaneLayer,
   makePackageStateUnavailableBoundary,
 } from "./executionBoundary";
 import { EMPTY_PI_PACKAGE_GENERATION, PiPackageLifecycle } from "./packageLifecycle";
@@ -75,6 +87,223 @@ async function waitUntil(predicate: () => boolean): Promise<void> {
   }
 }
 
+describe("Native Host production Product composition", () => {
+  it("keeps Pi available when a foreign OpenCode scratch child fails validation", async () => {
+    const root = mkdtempSync(path.join(tmpdir(), "omnimind-scratch-isolation-"));
+    const stateDir = path.join(root, "userdata");
+    const scratchBase = path.join(stateDir, "opencode-chat");
+    const foreign = path.join(scratchBase, "foreign-private-state");
+    mkdirSync(foreign, { recursive: true, mode: 0o700 });
+
+    let piPrepareCount = 0;
+    let piAttemptCount = 0;
+    const piCatalog: ProductRuntimeCatalog = {
+      defaultEngineId: "pi",
+      packageGeneration: "pi-generation",
+      engines: [
+        {
+          engineId: "pi",
+          displayName: "Pi",
+          distribution: "bundled-native",
+          runtimeVersion: "0.81.1",
+          protocol: { name: "native", version: "1" },
+          availability: { state: "available" },
+          modelSelection: {
+            kind: "product-model",
+            thinking: "product-selectable",
+            models: [
+              {
+                id: "fake/model",
+                provider: "fake",
+                modelId: "model",
+                name: "Healthy fake Pi model",
+                reasoning: false,
+                available: true,
+                thinkingLevels: [],
+                auth: "configured",
+              },
+            ],
+          },
+          capabilities: Object.fromEntries(
+            [
+              "continuation",
+              "rebuild",
+              "thinkingStream",
+              "thinkingLevel",
+              "structuredQuestion",
+              "queue",
+              "steer",
+              "followUp",
+              "cancel",
+              "permissionPolicy",
+              "packages",
+              "filesRead",
+              "filesWrite",
+              "terminal",
+              "namespacedUi",
+            ].map((key) => [key, { state: "available", reason: "healthy-fake-pi" }]),
+          ) as never,
+          enforcement: "host-enforced",
+        },
+      ],
+    };
+    const piBoundary: ProductExecutionBoundary = {
+      prepare: () => {
+        piPrepareCount += 1;
+        return Effect.succeed({
+          engineId: "pi",
+          resolvedSelection: null,
+          close: async () => undefined,
+        });
+      },
+      attempt: ({ markSent }) =>
+        Effect.gen(function* () {
+          piAttemptCount += 1;
+          yield* markSent();
+          return {
+            kind: "accepted" as const,
+            operationRef: "pi-operation:scratch-isolation",
+            engineBinding: {
+              id: ProductEngineBindingId.makeUnsafe("pi-binding:scratch-isolation"),
+              engineId: "pi",
+              lineageRef: "pi-lineage:scratch-isolation",
+            },
+            resolvedSelection: {
+              engineId: "pi",
+              runtimeModelId: "fake/model",
+              engineModeId: null,
+              thinking: null,
+              permissionPolicy: "approval-required" as const,
+              enforcement: "host-enforced" as const,
+              executionTarget: null,
+              packageGeneration: "pi-generation",
+            },
+          };
+        }),
+      catalog: () => Effect.succeed(piCatalog),
+    };
+    const layer = await Effect.runPromise(
+      makeNativeHostProductControlPlaneLayer({ stateDir, nativeBoundary: piBoundary }),
+    );
+    const runtime = ManagedRuntime.make(layer);
+    try {
+      const controlPlane = await runtime.runPromise(Effect.service(ProductControlPlane));
+      const shell = await runtime.runPromise(controlPlane.getShellSnapshot());
+      expect(shell.runtimeCatalog).toMatchObject({
+        defaultEngineId: "pi",
+        engines: [
+          { engineId: "pi", availability: { state: "available" } },
+          {
+            engineId: "opencode",
+            availability: { state: "unavailable", reason: "initialize-failed" },
+          },
+        ],
+      });
+
+      const conversationId = ProductConversationId.makeUnsafe("conversation-scratch-isolation");
+      await runtime.runPromise(
+        controlPlane.createConversation({
+          protocolVersion: PRODUCT_PROTOCOL_VERSION,
+          conversationId,
+          workspaceId: ProductWorkspaceId.makeUnsafe("workspace-scratch-isolation"),
+          title: "Scratch isolation",
+          workspace: {
+            kind: "chat",
+            managedDirectory: null,
+            primaryFolder: null,
+            executionTarget: null,
+            writeAuthority: "read-only-references",
+          },
+        }),
+      );
+      const piQueue = await runtime.runPromise(
+        controlPlane.putQueueItem({
+          protocolVersion: PRODUCT_PROTOCOL_VERSION,
+          conversationId,
+          itemId: ProductQueueItemId.makeUnsafe("queue-scratch-isolation-pi"),
+          text: "Route through healthy Pi",
+          requestedSelection: {
+            state: "selected",
+            engineId: "pi",
+            runtimeChoice: { kind: "product-model", runtimeModelId: "fake/model", thinking: null },
+            permissionPolicy: "approval-required",
+            executionTarget: null,
+            packageGeneration: "pi-generation",
+          },
+          resources: [],
+          expectedRevision: null,
+        }),
+      );
+      await expect(
+        runtime.runPromise(
+          controlPlane.submitQueueItem({
+            protocolVersion: PRODUCT_PROTOCOL_VERSION,
+            conversationId,
+            itemId: piQueue.id,
+            expectedRevision: piQueue.revision,
+            entryId: ProductEntryId.makeUnsafe("entry-scratch-isolation-pi"),
+            runId: ProductRunId.makeUnsafe("run-scratch-isolation-pi"),
+            dispatchId: ProductDispatchId.makeUnsafe("dispatch-scratch-isolation-pi"),
+            receiptId: ProductOperationReceiptId.makeUnsafe("receipt-scratch-isolation-pi"),
+          }),
+        ),
+      ).resolves.toMatchObject({
+        snapshot: { readModel: { runs: [{ requestedSelection: { engineId: "pi" } }] } },
+      });
+      expect({ piPrepareCount, piAttemptCount }).toEqual({
+        piPrepareCount: 1,
+        piAttemptCount: 1,
+      });
+
+      const openCodeQueue = await runtime.runPromise(
+        controlPlane.putQueueItem({
+          protocolVersion: PRODUCT_PROTOCOL_VERSION,
+          conversationId,
+          itemId: ProductQueueItemId.makeUnsafe("queue-scratch-isolation-opencode"),
+          text: "Keep explicit OpenCode intent",
+          requestedSelection: {
+            state: "unavailable",
+            requestedEngineId: "opencode",
+            reason: "initialize-failed",
+            requestedRuntimeChoice: { kind: "engine-session-current" },
+            permissionPolicy: "approval-required",
+            executionTarget: null,
+            packageGeneration: null,
+          },
+          resources: [],
+          expectedRevision: null,
+        }),
+      );
+      await expect(
+        runtime.runPromise(
+          controlPlane.submitQueueItem({
+            protocolVersion: PRODUCT_PROTOCOL_VERSION,
+            conversationId,
+            itemId: openCodeQueue.id,
+            expectedRevision: openCodeQueue.revision,
+            entryId: ProductEntryId.makeUnsafe("entry-scratch-isolation-opencode"),
+            runId: ProductRunId.makeUnsafe("run-scratch-isolation-opencode"),
+            dispatchId: ProductDispatchId.makeUnsafe("dispatch-scratch-isolation-opencode"),
+            receiptId: ProductOperationReceiptId.makeUnsafe("receipt-scratch-isolation-opencode"),
+          }),
+        ),
+      ).rejects.toMatchObject({ code: "PRODUCT_RUNTIME_SELECTION_UNAVAILABLE" });
+      expect({ piPrepareCount, piAttemptCount }).toEqual({
+        piPrepareCount: 1,
+        piAttemptCount: 1,
+      });
+      await expect(runtime.runPromise(controlPlane.inspectOutbox())).resolves.toEqual([
+        expect.objectContaining({ engineId: "pi", attemptCount: 1, automaticReplayCount: 0 }),
+      ]);
+      expect(lstatSync(foreign).isDirectory()).toBe(true);
+    } finally {
+      await runtime.dispose();
+    }
+    expect(lstatSync(foreign).isDirectory()).toBe(true);
+    rmSync(root, { recursive: true, force: true });
+  });
+});
+
 describe("makeNativeHostExecutionBoundary recovery", () => {
   it("fails Package capability closed when the explicit application root lacks assets", async () => {
     const root = mkdtempSync(path.join(tmpdir(), "omnimind-missing-package-root-"));
@@ -125,12 +354,16 @@ describe("makeNativeHostExecutionBoundary recovery", () => {
     } as unknown as NativeHostClient;
     const boundary = makeNativeHostExecutionBoundary(client);
     const observations: Array<
-      | { readonly kind: "facts"; readonly facts: ReadonlyArray<NativeHostRuntimeFact> }
+      | { readonly kind: "facts"; readonly facts: ReadonlyArray<ProductExecutionFact> }
       | { readonly kind: "snapshot" }
       | { readonly kind: "outcome-unknown" }
     > = [];
     boundary.subscribeFacts?.((_runId, observation) => {
-      if (observation.kind === "delivery-accepted" || observation.kind === "delivery-rejected") {
+      if (
+        observation.kind === "delivery-accepted" ||
+        observation.kind === "delivery-rejected" ||
+        observation.kind === "delivery-observed"
+      ) {
         return;
       }
       observations.push(observation.kind === "snapshot" ? { kind: "snapshot" } : observation);
@@ -146,7 +379,7 @@ describe("makeNativeHostExecutionBoundary recovery", () => {
     expect(requestedCursors).toEqual([0, 1, 2]);
     expect(
       observations.flatMap((observation) =>
-        observation.kind === "facts" ? observation.facts.map((item) => item.sequence) : [],
+        observation.kind === "facts" ? observation.facts.map((item) => item.engineSequence) : [],
       ),
     ).toEqual([1, 2, 3]);
     expect(observations.some((observation) => observation.kind === "outcome-unknown")).toBe(false);
@@ -353,7 +586,7 @@ describe("makeNativeHostExecutionBoundary recovery", () => {
     const boundary = makeNativeHostExecutionBoundary({} as NativeHostClient, lifecycle);
     const genericRunId = ProductRunId.makeUnsafe("run-generic-session-failure");
     boundary.bindRunPackageGeneration?.(genericRunId, artifacts[1]!.generation);
-    boundary.afterObservationApplied?.(genericRunId, {
+    boundary.afterObservationApplied?.(genericRunId, "pi", {
       kind: "rejected",
       code: "PI_SESSION_UNAVAILABLE",
       message: "Generic Session construction failed.",
@@ -366,7 +599,7 @@ describe("makeNativeHostExecutionBoundary recovery", () => {
 
     const packageRunId = ProductRunId.makeUnsafe("run-package-lifecycle-failure");
     boundary.bindRunPackageGeneration?.(packageRunId, artifacts[1]!.generation);
-    boundary.afterObservationApplied?.(packageRunId, {
+    boundary.afterObservationApplied?.(packageRunId, "pi", {
       kind: "rejected",
       code: "PI_PACKAGE_LIFECYCLE_UNAVAILABLE",
       message: "Selected Package lifecycle failed.",

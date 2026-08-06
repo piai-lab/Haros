@@ -23,11 +23,13 @@ const baseAutomation = (overrides: Partial<AutomationDefinition> = {}): Automati
   requestedSelection: {
     state: "selected",
     engineId: "pi",
-    runtimeModelId: "openai/gpt-5-codex",
-    thinking: "medium",
+    runtimeChoice: {
+      kind: "product-model",
+      runtimeModelId: "openai/gpt-5-codex",
+      thinking: "medium",
+    },
     packageGeneration: "test",
     permissionPolicy: "approval-required",
-    enforcement: "host-enforced",
     executionTarget: null,
   },
   worktreeMode: "worktree",

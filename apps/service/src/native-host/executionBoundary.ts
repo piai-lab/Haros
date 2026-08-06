@@ -1,7 +1,12 @@
 import {
   ProductEngineBindingId,
+  type NativeHostRuntimeFact,
+  type NativeHostRuntimeSnapshot,
+  type ProductExecutionFact,
+  type ProductExecutionSnapshot,
   type ProductExecutionObservation,
   type ProductRuntimeCatalog,
+  type ProductRunId,
 } from "@omnimind/contracts";
 import path from "node:path";
 import { Effect, Layer } from "effect";
@@ -9,12 +14,17 @@ import { Effect, Layer } from "effect";
 import {
   PRODUCT_DATABASE_FILENAME,
   ProductControlPlaneError,
+  ProductExecutionUnavailable,
   isProductPackageFatalCode,
   makeProductControlPlaneLayer,
   readProductPackageLifecycleFacts,
   type ProductExecutionBoundary,
 } from "../product/ProductControlPlane";
 import { ServerConfig } from "../config";
+import { initializeOpenCodeChatScratchBase } from "../opencode/chatScratch";
+import { OPENCODE_EXECUTABLE } from "../opencode/installation";
+import { makeOpenCodeProductExecutionBoundary } from "../opencode/productBoundary";
+import { makeProductExecutionGateway } from "../product/productExecutionGateway";
 import {
   makeNativeHostClientFromEnvironment,
   NativeHostClient,
@@ -25,6 +35,21 @@ import {
   PiPackageLifecycleError,
   resolveCuratedPiPackageEvidence,
 } from "./packageLifecycle";
+
+const toProductExecutionFact = (fact: NativeHostRuntimeFact): ProductExecutionFact => {
+  const { operationRef: _operationRef, sequence, ...rest } = fact;
+  return { ...rest, engineSequence: sequence } as ProductExecutionFact;
+};
+
+const toProductExecutionSnapshot = (
+  snapshot: NativeHostRuntimeSnapshot,
+): ProductExecutionSnapshot => ({
+  version: snapshot.version,
+  source:
+    snapshot.source === "pi-session-reopen" ? "engine-session-reopen" : "engine-redacted-stream",
+  assistant: snapshot.assistant,
+  settlement: snapshot.settlement,
+});
 
 function lifecycleRejection(cause: PiPackageLifecycleError): ProductExecutionObservation {
   return {
@@ -39,11 +64,73 @@ export function makePackageStateUnavailableBoundary(cause: unknown): ProductExec
   const code = cause instanceof PiPackageLifecycleError ? cause.code : "PACKAGE_STATE_INVALID";
   const message = "Product Package state is unavailable and execution is fail-closed.";
   return {
-    preflight: () => {
-      throw new ProductControlPlaneError({ code, message, retryable: false });
-    },
+    prepare: () => Effect.fail(new ProductControlPlaneError({ code, message, retryable: false })),
     attempt: () => Effect.succeed({ kind: "rejected", code, message, retryable: false }),
     catalog: () => Effect.succeed(null),
+  };
+}
+
+function makeOpenCodeScratchUnavailableBoundary(): ProductExecutionBoundary {
+  const message = "OpenCode private scratch validation failed and execution is unavailable.";
+  const unavailableCapability = {
+    state: "unavailable",
+    reason: "scratch-validation-failed",
+  } as const;
+  return {
+    prepare: () =>
+      Effect.fail(
+        new ProductControlPlaneError({
+          code: "OPENCODE_SCRATCH_UNAVAILABLE",
+          message,
+          retryable: false,
+        }),
+      ),
+    attempt: () =>
+      Effect.succeed({
+        kind: "rejected",
+        code: "OPENCODE_SCRATCH_UNAVAILABLE",
+        message,
+        retryable: false,
+      }),
+    catalog: () =>
+      Effect.succeed({
+        defaultEngineId: "opencode",
+        packageGeneration: null,
+        engines: [
+          {
+            engineId: "opencode",
+            displayName: "OpenCode",
+            distribution: "user-installed",
+            runtimeVersion: null,
+            protocol: { name: "acp", version: "1" },
+            availability: { state: "unavailable", reason: "initialize-failed" },
+            modelSelection: {
+              kind: "engine-session",
+              model: "resolved-on-prepare",
+              mode: "resolved-on-prepare",
+              thinking: "unsupported",
+            },
+            capabilities: {
+              continuation: unavailableCapability,
+              rebuild: unavailableCapability,
+              thinkingStream: unavailableCapability,
+              thinkingLevel: unavailableCapability,
+              structuredQuestion: unavailableCapability,
+              queue: unavailableCapability,
+              steer: unavailableCapability,
+              followUp: unavailableCapability,
+              cancel: unavailableCapability,
+              permissionPolicy: unavailableCapability,
+              packages: unavailableCapability,
+              filesRead: unavailableCapability,
+              filesWrite: unavailableCapability,
+              terminal: unavailableCapability,
+              namespacedUi: unavailableCapability,
+            },
+            enforcement: "unverified",
+          },
+        ],
+      }),
   };
 }
 
@@ -122,6 +209,16 @@ export function makeNativeHostExecutionBoundary(
     readonly priorLineageRef: string | null;
   }) => {
     const access = input.run.workspaceObservation.access;
+    if (
+      input.run.requestedSelection.runtimeChoice.kind !== "product-model" ||
+      input.run.requestedSelection.packageGeneration === null
+    ) {
+      throw new ProductControlPlaneError({
+        code: "PRODUCT_RUNTIME_SELECTION_STALE",
+        message: "Pi requires a Product model and Package generation.",
+        retryable: false,
+      });
+    }
     return {
       dispatchId: input.dispatchId,
       conversationId: input.run.conversationId,
@@ -129,10 +226,10 @@ export function makeNativeHostExecutionBoundary(
       text: input.text,
       selection: {
         engineId: input.run.requestedSelection.engineId,
-        runtimeModelId: input.run.requestedSelection.runtimeModelId,
-        thinking: input.run.requestedSelection.thinking,
+        runtimeModelId: input.run.requestedSelection.runtimeChoice.runtimeModelId,
+        thinking: input.run.requestedSelection.runtimeChoice.thinking,
         permissionPolicy: input.run.requestedSelection.permissionPolicy,
-        enforcement: input.run.requestedSelection.enforcement,
+        enforcement: "host-enforced" as const,
         packageGeneration: input.run.requestedSelection.packageGeneration,
       },
       workspace: {
@@ -142,6 +239,20 @@ export function makeNativeHostExecutionBoundary(
       priorLineageRef: input.priorLineageRef,
     } as const;
   };
+  const preparationRequest = (
+    input: Parameters<NonNullable<ProductExecutionBoundary["prepare"]>>[0],
+  ) =>
+    executionRequest({
+      dispatchId: input.dispatchId,
+      run: {
+        id: input.runId,
+        conversationId: input.conversationId,
+        requestedSelection: input.requestedSelection,
+        workspaceObservation: input.workspace,
+      } as Parameters<typeof executionRequest>[0]["run"],
+      text: input.text,
+      priorLineageRef: input.priorLineageRef,
+    });
   const listeners = new Set<
     Parameters<NonNullable<ProductExecutionBoundary["subscribeFacts"]>>[0]
   >();
@@ -181,6 +292,13 @@ export function makeNativeHostExecutionBoundary(
       runGenerations.delete(runId);
     }
   };
+  const publishFacts = (runId: ProductRunId, facts: ReadonlyArray<NativeHostRuntimeFact>) =>
+    publish(runId, {
+      kind: "facts",
+      facts: facts.map(toProductExecutionFact),
+    });
+  const publishSnapshot = (runId: ProductRunId, snapshot: NativeHostRuntimeSnapshot) =>
+    publish(runId, { kind: "snapshot", snapshot: toProductExecutionSnapshot(snapshot) });
   const wait = (milliseconds: number) =>
     new Promise<void>((resolve) => setTimeout(resolve, milliseconds));
   const observe = (
@@ -198,11 +316,11 @@ export function makeNativeHostExecutionBoundary(
           const batch = await client.facts(operationRef, cursor);
           if (batch.resnapshotRequired) {
             if (batch.snapshot) {
-              publish(runId, { kind: "snapshot", snapshot: batch.snapshot });
+              publishSnapshot(runId, batch.snapshot);
               return;
             }
             if (batch.facts.length > 0) {
-              publish(runId, { kind: "facts", facts: batch.facts });
+              publishFacts(runId, batch.facts);
               cursor = batch.facts.at(-1)?.sequence ?? cursor;
               if (batch.facts.some((fact) => fact.kind === "settlement")) return;
               continue;
@@ -215,7 +333,10 @@ export function makeNativeHostExecutionBoundary(
                   kind: "delivery-accepted",
                   operationRef: acceptedOperationRef,
                   lineageRef: reconciled.resolution.lineageRef,
-                  resolvedSelection: reconciled.resolution.resolvedSelection,
+                  resolvedSelection: {
+                    ...reconciled.resolution.resolvedSelection,
+                    engineModeId: null,
+                  },
                 });
                 setTimeout(() => observe(runId, acceptedOperationRef), 0);
               } else {
@@ -229,10 +350,10 @@ export function makeNativeHostExecutionBoundary(
               return;
             }
             if (reconciled.snapshot) {
-              publish(runId, { kind: "snapshot", snapshot: reconciled.snapshot });
+              publishSnapshot(runId, reconciled.snapshot);
               return;
             } else if (reconciled.facts.length > 0) {
-              publish(runId, { kind: "facts", facts: reconciled.facts });
+              publishFacts(runId, reconciled.facts);
               cursor = reconciled.facts.at(-1)?.sequence ?? cursor;
               if (reconciled.facts.some((fact) => fact.kind === "settlement")) return;
             } else {
@@ -247,7 +368,7 @@ export function makeNativeHostExecutionBoundary(
               return;
             }
           } else {
-            if (batch.facts.length > 0) publish(runId, { kind: "facts", facts: batch.facts });
+            if (batch.facts.length > 0) publishFacts(runId, batch.facts);
             cursor = batch.facts.at(-1)?.sequence ?? cursor;
             if (batch.facts.some((fact) => fact.kind === "settlement")) return;
           }
@@ -265,7 +386,10 @@ export function makeNativeHostExecutionBoundary(
                   kind: "delivery-accepted",
                   operationRef: acceptedOperationRef,
                   lineageRef: reconciled.resolution.lineageRef,
-                  resolvedSelection: reconciled.resolution.resolvedSelection,
+                  resolvedSelection: {
+                    ...reconciled.resolution.resolvedSelection,
+                    engineModeId: null,
+                  },
                 });
                 setTimeout(() => observe(runId, acceptedOperationRef), 0);
               } else {
@@ -279,10 +403,10 @@ export function makeNativeHostExecutionBoundary(
               return;
             }
             if (reconciled.snapshot) {
-              publish(runId, { kind: "snapshot", snapshot: reconciled.snapshot });
+              publishSnapshot(runId, reconciled.snapshot);
               return;
             } else if (reconciled.facts.length > 0) {
-              publish(runId, { kind: "facts", facts: reconciled.facts });
+              publishFacts(runId, reconciled.facts);
               cursor = reconciled.facts.at(-1)?.sequence ?? cursor;
               if (reconciled.facts.some((fact) => fact.kind === "settlement")) return;
             }
@@ -305,42 +429,48 @@ export function makeNativeHostExecutionBoundary(
     observations.set(operationRef, running);
   };
   return {
-    preflight: (input) => {
-      try {
-        lifecycle?.assertSelectable(input.run.requestedSelection.packageGeneration);
-        client.preflightExecution(executionRequest(input));
-      } catch (cause) {
-        throw new ProductControlPlaneError({
-          code:
-            cause instanceof PiPackageLifecycleError
-              ? cause.code
-              : cause instanceof NativeHostClientError
+    prepare: (input) =>
+      Effect.try({
+        try: () => {
+          lifecycle?.assertSelectable(input.requestedSelection.packageGeneration!);
+          client.preflightExecution(preparationRequest(input));
+          return {
+            engineId: input.requestedSelection.engineId,
+            resolvedSelection: null,
+            close: async () => undefined,
+          };
+        },
+        catch: (cause) =>
+          new ProductControlPlaneError({
+            code:
+              cause instanceof PiPackageLifecycleError
                 ? cause.code
-                : "NATIVE_HOST_EXECUTION_FAILED",
-          message:
-            cause instanceof PiPackageLifecycleError
-              ? cause.message
-              : cause instanceof NativeHostClientError
+                : cause instanceof NativeHostClientError
+                  ? cause.code
+                  : "NATIVE_HOST_EXECUTION_FAILED",
+            message:
+              cause instanceof PiPackageLifecycleError
                 ? cause.message
-                : "Native Host execution preflight failed.",
-          retryable:
-            cause instanceof PiPackageLifecycleError
-              ? cause.code === "PACKAGE_GENERATION_STALE"
-              : cause instanceof NativeHostClientError
-                ? cause.retryable
-                : false,
-        });
-      }
-    },
+                : cause instanceof NativeHostClientError
+                  ? cause.message
+                  : "Native Host execution preflight failed.",
+            retryable:
+              cause instanceof PiPackageLifecycleError
+                ? cause.code === "PACKAGE_GENERATION_STALE"
+                : cause instanceof NativeHostClientError
+                  ? cause.retryable
+                  : false,
+          }),
+      }),
     attempt: ({ dispatchId, run, text, priorLineageRef, markSent }) =>
       Effect.tryPromise({
         try: async (): Promise<ProductExecutionObservation> => {
-          runGenerations.set(run.id, run.requestedSelection.packageGeneration);
+          runGenerations.set(run.id, run.requestedSelection.packageGeneration!);
           let artifact = null;
           if (lifecycle) {
             try {
-              lifecycle.assertSelectable(run.requestedSelection.packageGeneration);
-              artifact = lifecycle.artifactForGeneration(run.requestedSelection.packageGeneration);
+              lifecycle.assertSelectable(run.requestedSelection.packageGeneration!);
+              artifact = lifecycle.artifactForGeneration(run.requestedSelection.packageGeneration!);
             } catch (cause) {
               if (cause instanceof PiPackageLifecycleError) {
                 return lifecycleRejection(cause);
@@ -418,6 +548,7 @@ export function makeNativeHostExecutionBoundary(
             },
             resolvedSelection: {
               ...response.resolvedSelection,
+              engineModeId: null,
               executionTarget: run.requestedSelection.executionTarget,
             },
           };
@@ -440,7 +571,7 @@ export function makeNativeHostExecutionBoundary(
     bindRunPackageGeneration: (runId, generation) => {
       runGenerations.set(runId, generation);
     },
-    afterObservationApplied: (runId, observation) => {
+    afterObservationApplied: (runId, _engineId, observation) => {
       const generation = runGenerations.get(runId);
       if (observation.kind === "rejected") {
         if (lifecycle && generation && isProductPackageFatalCode(observation.code)) {
@@ -451,39 +582,85 @@ export function makeNativeHostExecutionBoundary(
     },
     resumeFacts: observe,
     control: (input) =>
-      Effect.tryPromise(() => client.control(input.operationRef, input.control, input.text)).pipe(
-        Effect.map((response) => ({
-          operationRef: response.operationRef,
-          control: response.control,
-          result: response.result,
-          code: response.code,
-          message: response.message,
-        })),
-        Effect.mapError(
-          (cause) =>
+      input.operationRef === null
+        ? Effect.fail(
             new ProductControlPlaneError({
-              code:
-                cause instanceof NativeHostClientError ? cause.code : "NATIVE_HOST_CONTROL_FAILED",
-              message:
-                cause instanceof NativeHostClientError
-                  ? cause.message
-                  : "The Native Host control failed without exposing provider details.",
-              retryable: cause instanceof NativeHostClientError ? cause.retryable : false,
+              code: "NATIVE_HOST_OPERATION_REFERENCE_MISSING",
+              message: "The native Run has no accepted operation reference.",
+              retryable: false,
             }),
-        ),
-      ),
+          )
+        : Effect.tryPromise(() =>
+            client.control(input.operationRef!, input.control, input.text),
+          ).pipe(
+            Effect.map((response) => ({
+              operationRef: response.operationRef,
+              control: response.control,
+              result: response.result,
+              code: response.code,
+              message: response.message,
+            })),
+            Effect.mapError(
+              (cause) =>
+                new ProductControlPlaneError({
+                  code:
+                    cause instanceof NativeHostClientError
+                      ? cause.code
+                      : "NATIVE_HOST_CONTROL_FAILED",
+                  message:
+                    cause instanceof NativeHostClientError
+                      ? cause.message
+                      : "The Native Host control failed without exposing provider details.",
+                  retryable: cause instanceof NativeHostClientError ? cause.retryable : false,
+                }),
+            ),
+          ),
     catalog: () =>
       Effect.tryPromise(() => client.catalog()).pipe(
         Effect.map((response): ProductRuntimeCatalog | null => {
           const packageGeneration = lifecycle?.snapshot().currentGeneration;
           if (!packageGeneration) return null;
+          const truth = (state: "available" | "unavailable" | "unknown", reason: string) =>
+            ({ state, reason }) as const;
           return {
-            engineId: response.engineId,
-            runtimeVersion: response.runtimeVersion,
+            defaultEngineId: response.engineId,
             packageGeneration,
-            models: response.models,
-            capabilities: response.capabilities,
-            truncated: response.truncated,
+            engines: [
+              {
+                engineId: response.engineId,
+                displayName: "Pi",
+                distribution: "bundled-native",
+                runtimeVersion: response.runtimeVersion,
+                protocol: { name: "native", version: "1" },
+                availability: { state: "available" },
+                modelSelection: {
+                  kind: "product-model",
+                  models: response.models,
+                  thinking: "product-selectable",
+                },
+                capabilities: {
+                  continuation: truth(response.capabilities.lineage.continue, "native-lineage"),
+                  rebuild: truth(response.capabilities.lineage.rebuild, "native-rebuild"),
+                  thinkingStream: truth("available", "native-thinking-stream"),
+                  thinkingLevel: truth("available", "product-selectable"),
+                  structuredQuestion: truth(
+                    response.capabilities.structuredQuestions,
+                    "native-question",
+                  ),
+                  queue: truth("available", "product-queue"),
+                  steer: truth(response.capabilities.controls.steer, "native-steer"),
+                  followUp: truth(response.capabilities.controls.followUp, "native-follow-up"),
+                  cancel: truth(response.capabilities.controls.cancel, "native-cancel"),
+                  permissionPolicy: truth("available", "host-policy"),
+                  packages: truth(response.capabilities.packages, "native-packages"),
+                  filesRead: truth(response.capabilities.filesRead, "native-files-read"),
+                  filesWrite: truth(response.capabilities.filesWrite, "native-files-write"),
+                  terminal: truth(response.capabilities.terminal, "native-terminal"),
+                  namespacedUi: truth("unknown", "not-observed"),
+                },
+                enforcement: response.capabilities.enforcement,
+              },
+            ],
           };
         }),
         Effect.mapError(
@@ -502,6 +679,43 @@ export function makeNativeHostExecutionBoundary(
     },
   };
 }
+
+export const makeNativeHostProductControlPlaneLayer = (input: {
+  readonly stateDir: string;
+  readonly nativeBoundary: ProductExecutionBoundary;
+}) =>
+  Effect.gen(function* () {
+    const scratchStartup = yield* Effect.tryPromise(() =>
+      initializeOpenCodeChatScratchBase(input.stateDir),
+    ).pipe(
+      Effect.match({
+        onFailure: () => null,
+        onSuccess: (scratchBase) => scratchBase,
+      }),
+    );
+    const externalBoundary = scratchStartup
+      ? makeOpenCodeProductExecutionBoundary({
+          executable: OPENCODE_EXECUTABLE,
+          scratchBase: scratchStartup,
+        })
+      : makeOpenCodeScratchUnavailableBoundary();
+    const gateway = makeProductExecutionGateway({
+      native: { engineId: "pi", boundary: input.nativeBoundary },
+      external: { engineId: "opencode", boundary: externalBoundary },
+      composeCatalog: (native, external) => {
+        if (!native) return external;
+        if (!external) return native;
+        return {
+          defaultEngineId: native.defaultEngineId,
+          packageGeneration: native.packageGeneration,
+          engines: [...native.engines, ...external.engines].slice(0, 2),
+        };
+      },
+    });
+    const catalog = yield* gateway.catalog!().pipe(Effect.catch(() => Effect.succeed(null)));
+    const productDatabase = path.join(input.stateDir, PRODUCT_DATABASE_FILENAME);
+    return makeProductControlPlaneLayer(productDatabase, gateway, catalog);
+  });
 
 export const NativeHostProductControlPlaneLive = Layer.unwrap(
   Effect.gen(function* () {
@@ -528,9 +742,10 @@ export const NativeHostProductControlPlaneLive = Layer.unwrap(
         ? makeNativeHostExecutionBoundary(client, lifecycle)
         : makePackageStateUnavailableBoundary(lifecycleFailure)
       : null;
-    const catalog = boundary?.catalog
-      ? yield* boundary.catalog().pipe(Effect.catch(() => Effect.succeed(null)))
-      : null;
-    return makeProductControlPlaneLayer(productDatabase, boundary ?? undefined, catalog);
+    const nativeBoundary = boundary ?? ProductExecutionUnavailable;
+    return yield* makeNativeHostProductControlPlaneLayer({
+      stateDir,
+      nativeBoundary,
+    });
   }),
 );
