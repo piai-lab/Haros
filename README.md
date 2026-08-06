@@ -269,17 +269,14 @@ omni-harness
 }
 ```
 
-当前 adopted UI mother 已进入本地适配后的 author roots，但仍不是 production candidate。`historicalTrees` 只证明 T0 固定输入，`origins` 记录当前适配边界；两者不得互相冒充。Pi 与其他对照项目仍只是研究来源，除非它们进入上述 adoption 清单。exact revision/tree、rights/lineage/assets、构建/测试/运行观察和兼容限制只以 [`research/source-review.md`](research/source-review.md) 为证据 owner；法定文本保存在 `LICENSES/`。
+当前 adopted UI mother 已进入本地适配后的 author roots，并随首个本地、未签名 macOS arm64 Pi-native 纵切候选完成独立复核。该候选只证明当前纵切，不等于签名发行物、跨平台候选或 OmniMind V1。`historicalTrees` 只证明 T0 固定输入，`origins` 记录当前适配边界；两者不得互相冒充。Pi 与其他对照项目仍只是研究来源，除非它们进入上述 adoption 清单。exact revision/tree、rights/lineage/assets、构建/测试/运行观察和兼容限制只以 [`research/source-review.md`](research/source-review.md) 为证据 owner；法定文本保存在 `LICENSES/`。
 
 ## 5. 已有证据与当前下一步
 
 Source Review 已记录 imported tree 与 fixed source 的 exact comparison，以及同一固定树上的 frozen install、build、typecheck 和 unchanged macOS desktop-smoke 结果及其局限。它们不证明 production adoption、视觉等价、Windows/Linux 或 packaging。除非 Source Review 的复验触发器发生变化，不重复相同 unchanged probe。
 
-当前顺序是：
+当前已经接受的 checkpoint 是 commit `248b3316651e681d9d4c78f81bec0c84a4cc822c`：Stage 0–3 的 source/identity closure、UI 母体接管、Product 单写、isolated Native Host 与真实 Chat/folder-backed Agent 纵切已形成首个本地、未签名 macOS arm64 candidate，并由 [`Freeze handoff`](.omp-flow/tasks/08-04-ui-chassis-takeover/handoffs/freeze-first-production-candidate.md) 与 [`independent review`](.omp-flow/tasks/08-04-ui-chassis-takeover/reviews/freeze-first-production-candidate.md) 记录。该 checkpoint 不证明 Package、外部 Engine、Remote、三平台发行或 V1 完成。
 
-1. 完成本地 T1 source/identity closure 的独立复核，不把它提升为 production candidate；
-2. 在当前适配 roots 上按 Workbench 将每个获准 source domain 映射到稳定产品职责并验证行为；
-3. 按 Execution 建立 isolated Native Host，先保持真实语义，再收缩重复 execution authority；
-4. 交付 Product State 定义的第一条真实 Chat/Agent journey 后，再扩展 Package、Remote 与外部 Engine。
+唯一下一阶段是一个真实 headless Pi Package：闭合 staged activation、active lease、LKG rollback 与 fault proof，然后才进入真实外部 Engine、Remote/Workbench 扩展和三平台发行。
 
 具体进入条件、停止条件和 proof gate 只见 [`execution-brief.md`](execution-brief.md)；当前 claim 状态只见 active Campaign。

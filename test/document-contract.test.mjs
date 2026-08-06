@@ -125,6 +125,22 @@ test("a broken local owner route is reported against the routing document", asyn
   assertFinding(findings, "route.local-link", "README.md");
 });
 
+test("rejects the superseded Stage 0 action as the current execution entry", async (t) => {
+  const root = await createFixture(t);
+  await replaceText(
+    root,
+    "execution-brief.md",
+    "Stage 0–3 已在 `248b3316651e681d9d4c78f81bec0c84a4cc822c` 形成并独立接受首个纵切候选。现在只进入一个真实 headless Pi Package",
+    "当前唯一下一动作先完成并独立复核 Stage 0。之后再进入一个真实 headless Pi Package",
+  );
+
+  assertFinding(
+    await validateDocumentContract({ root }),
+    "owner.execution-brief",
+    "execution-brief.md",
+  );
+});
+
 const COVERAGE_CASES = [
   {
     name: "Public Surface registry",

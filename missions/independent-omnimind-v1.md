@@ -6,7 +6,7 @@ Owner: maintainer
 
 Canonical path: `missions/independent-omnimind-v1.md`
 
-Updated: 2026-08-03
+Updated: 2026-08-06
 
 ## 1. Objective
 
@@ -38,16 +38,16 @@ Campaign 完成必须同时满足：
 
 | ID | Claim | Proof type | Status | Evidence | SHA |
 | --- | --- | --- | --- | --- | --- |
-| F-01 | Product doctrine, execution order, discovery rationale and Campaign express one non-contradictory Pi-native architecture; no obsolete RPC-first, Pi-through-ACP, equal-engine or hidden-Pi doctrine remains | deterministic text/decision audit | candidate | Root constitution, execution phases, decision ledger and locked Campaign decisions were rewritten together; the previous transport/identity/authority routes remain only in explicit rejected/retired context. `git diff --check` and the README-derived identity/structure scan passed on the reset SHA. | `ee67b0858bdf2c701a904b78864f35ea9df2d1b7` |
-| F-02 | Repository contains no competing custom Agent/Extension runtime, full execution journal, donor identity leakage or untracked source adoption; identity, structure, source and focused tests pass | source/tree scan + tests | candidate | The custom engine/extension, journal/projection, tool execution and output skeleton plus five obsolete suites were deleted. `npm run quality` passed: 12 source files, 0 generated files, 0 adopted sources and 8/8 governance tests; the repository inventory now excludes tracked paths deleted from the working tree. | `ee67b0858bdf2c701a904b78864f35ea9df2d1b7` |
-| F-03 | U1 exact source, original-upstream lineage, contributors, assets, rights and legal texts are fully disclosed before production adoption | manifest + legal/history review | open | — | — |
-| F-04 | Complete U1 tree builds and launches unchanged at the provenance baseline, and that commit contains no OmniMind product surgery | reproducible build/run + tree digest | open | — | — |
-| F-05 | Pi SDK runs only in a supervised isolated Host; Electron Main/renderer survive Host/package crash and never execute third-party Agent code | process fault injection + architecture audit | open | — | — |
-| F-06 | Real Pi Provider, Model catalog and Thinking levels drive one Chat and one folder-backed Agent without product-maintained static mirrors | live integration + catalog/config tests | open | — | — |
-| F-07 | Pi owns native Session/transcript/compaction/branch/package state while OmniMind owns visible Conversation and lightweight Run receipts; restart, loss and rebuild do not create competing truth | schema/API review + recovery matrix | open | — | — |
-| F-08 | Transactional dispatch distinguishes pending, delivered and delivery-unknown; side effects after uncertain dispatch are never blindly replayed | crash-boundary fault matrix | open | — | — |
-| F-09 | Stream, thinking, tool activity, output, queue, steer, follow-up, cancel and usage project incrementally into stable UI without raw Engine payloads reaching React | real stream/replay/type/performance tests | open | — | — |
-| F-10 | U1 visual quality and critical workbench behavior survive surgery while donor provider/runtime/state/identity and long-term dual tracks are absent | UI/e2e/structure audit + maintainer review | open | — | — |
+| F-01 | Product doctrine, execution order, discovery rationale and Campaign express one non-contradictory Pi-native architecture; no obsolete RPC-first, Pi-through-ACP, equal-engine or hidden-Pi doctrine remains | deterministic text/decision audit | candidate | Freeze r6 handoff and different-actor review bind the current constitution, owner graph, source closure and execution boundary to the first vertical-slice candidate; review verdict `PASS`. | `248b3316651e681d9d4c78f81bec0c84a4cc822c` |
+| F-02 | Repository contains no competing custom Agent/Extension runtime, full execution journal, donor identity leakage or untracked source adoption; identity, structure, source and focused tests pass | source/tree scan + tests | candidate | Candidate quality gate passed with identity/structure zero findings, one declared adopted source, 6,425 exact-source records, 4,014 guarded glyphs and 28/28 quality tests; independent artifact inspection found one Native Host path and zero retired paths. | `248b3316651e681d9d4c78f81bec0c84a4cc822c` |
+| F-03 | U1 exact source, original-upstream lineage, contributors, assets, rights and legal texts are fully disclosed before production adoption | manifest + legal/history review | candidate | Source Review plus Freeze legal closure bind the fixed source, retained MIT text, adopted asset boundary, 230-component inventory/SBOM and packaged legal bytes; independent review `PASS`. | `248b3316651e681d9d4c78f81bec0c84a4cc822c` |
+| F-04 | Complete U1 tree builds and launches unchanged at the provenance baseline, and that commit contains no OmniMind product surgery | reproducible build/run + tree digest | candidate | Source Review retains the immutable T0 baseline separately; Freeze review confirmed it was not relabelled as candidate proof and accepted the current exact source/review chain. | `248b3316651e681d9d4c78f81bec0c84a4cc822c` |
+| F-05 | Pi SDK runs only in a supervised isolated Host; Electron Main/renderer survive Host/package crash and never execute third-party Agent code | process fault injection + architecture audit | candidate | Actual packaged Electron, Product Service and Native Host process tree passed; Service 41-test, Native Host 23-test and Desktop 6-test failure/recovery suites passed under independent review. Package-specific crash behavior remains part of F-11/F-12. | `248b3316651e681d9d4c78f81bec0c84a4cc822c` |
+| F-06 | Real Pi Provider, Model catalog and Thinking levels drive one Chat and one folder-backed Agent without product-maintained static mirrors | live integration + catalog/config tests | candidate | Pi 0.81.1 live journeys passed for MiMo and DeepSeek: new Chat, continuation and folder-backed Agent, with thinking, usage and tool lifecycle observed and no credential leakage. | `248b3316651e681d9d4c78f81bec0c84a4cc822c` |
+| F-07 | Pi owns native Session/transcript/compaction/branch/package state while OmniMind owns visible Conversation and lightweight Run receipts; restart, loss and rebuild do not create competing truth | schema/API review + recovery matrix | candidate | Current typed Product/Host boundary, continuation journey, recovery suites and competing-authority retirement were included in the reviewed candidate chain. | `248b3316651e681d9d4c78f81bec0c84a4cc822c` |
+| F-08 | Transactional dispatch distinguishes pending, delivered and delivery-unknown; side effects after uncertain dispatch are never blindly replayed | crash-boundary fault matrix | candidate | Both live providers completed each journey with one attempt and zero automatic replay; acceptance/uncertainty/recovery fault suites passed. | `248b3316651e681d9d4c78f81bec0c84a4cc822c` |
+| F-09 | Stream, thinking, tool activity, output, queue, steer, follow-up, cancel and usage project incrementally into stable UI without raw Engine payloads reaching React | real stream/replay/type/performance tests | candidate | Stable Chromium 55 files/150 tests, performance 3 files/7 tests, real Electron guest journey and live Pi stream/tool/thinking/usage observations passed on the candidate. | `248b3316651e681d9d4c78f81bec0c84a4cc822c` |
+| F-10 | U1 visual quality and critical workbench behavior survive surgery while donor provider/runtime/state/identity and long-term dual tracks are absent | UI/e2e/structure audit + maintainer review | candidate | Maintainer accepted the current visual direction; same-source browser, route, locale, accessibility, performance and identity guards passed, and Freeze review found no material finding. | `248b3316651e681d9d4c78f81bec0c84a4cc822c` |
 | F-11 | One exact mature Pi Package runs unchanged through native ResourceLoader with truthful source, rights, permissions, compatibility and private-state ownership | real package matrix + source review | open | — | — |
 | F-12 | Package Catalog/Curated/Verified and Native/Bridged UI/PTY/Unsupported are accurate; active generation never hot-updates and staged failure returns to LKG | update/fault/compatibility matrix | open | — | — |
 | F-13 | One external ACP Engine can handle the next Run in the same Conversation with honest capability/permission differences, no silent fallback and no lowest-common-denominator rewrite of Pi Gold Path | two-engine conformance + architecture audit | open | — | — |
@@ -65,9 +65,9 @@ This reset is deliberate: preserving obsolete green tests would create false con
 
 ## 5. Current status and next evidence route
 
-F-01/F-02 remain `candidate`; F-03 through F-18 remain `open`. [`research/source-review.md`](../research/source-review.md) already records the exact-tree comparison, install/build/typecheck, unchanged macOS desktop smoke, upstream failures, limitations and revalidation triggers. This Campaign does not reinterpret that evidence or request the same unchanged probe again.
+F-01 through F-10 are `candidate` on the independently accepted first local, unsigned macOS arm64 Pi-native vertical slice at `248b3316651e681d9d4c78f81bec0c84a4cc822c`. They are not `verified`: the Freeze review explicitly accepted the checkpoint without promoting Campaign claims or declaring V1 completion. F-11 through F-18 remain `open`.
 
-The ordered work is owned by [`execution-brief.md`](../execution-brief.md): finish and independently review the durable architecture/UI/governance contract; review the recorded F-03/F-04 evidence and remaining rights/assets gaps; map approved UI source domains; then begin the Execution-owned isolated Native Host and the first real Product-State-defined journey. No claim changes state merely because those documents are edited.
+The accepted checkpoint and proof boundary are recorded by the linked Freeze handoff/review under `.omp-flow/tasks/08-04-ui-chassis-takeover/`; [`research/source-review.md`](../research/source-review.md) continues to own the immutable source baseline and revalidation triggers. The sole next stage is owned by [`execution-brief.md`](../execution-brief.md): one real headless Pi Package with staged activation, lease, LKG and fault proof. No claim changes state merely because these status pointers are synchronized.
 
 ## 6. Blockers
 
@@ -75,4 +75,4 @@ None currently. U1 rights failure or evidence that Pi SDK cannot run a represent
 
 ## 7. Done
 
-Not done. F-01 and F-02 are candidate; F-03 through F-18 remain open.
+Not done. F-01 through F-10 are candidate on the accepted first vertical-slice SHA; F-11 through F-18 remain open, and none is verified.

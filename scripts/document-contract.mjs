@@ -376,9 +376,18 @@ function validateOwners(findings, documents, available) {
     available,
     "owner.execution-brief",
     P.brief,
-    hasAll(brief, ["施工顺序", "先完成并独立复核 Stage 0", "何时停止", "需要什么 proof"]) &&
+    hasAll(brief, [
+      "施工顺序",
+      "Stage 0–3 已",
+      "一个真实 headless Pi Package",
+      "何时停止",
+      "需要什么 proof",
+    ]) &&
       hasClause(brief, [["只回答"], ["施工"], ["停止"], ["proof"]]) &&
-      !contradicts(brief, [/本文件\s*(?:拥有|定义)\s*(?:完整进程拓扑|产品对象全集|完整 UI 契约)/]),
+      !contradicts(brief, [
+        /本文件\s*(?:拥有|定义)\s*(?:完整进程拓扑|产品对象全集|完整 UI 契约)/,
+        /当前唯一下一动作[\s\S]{0,300}先完成并独立复核 Stage 0/,
+      ]),
   );
 
   check(

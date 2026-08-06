@@ -181,6 +181,8 @@ Delegated Agent 显示为可进入的 child Conversation/Run，而不是日志�
 
 Team 只增加成员、消息和当前协作状态，不制造第二任务板，也不与 Todo、Workflow 或 Goal 混成一个控制台。
 
+Todo 是当前 Conversation/Run 工作意图的轻量、可检查投影，可随真实计划与结果更新；它不是 Package 私有状态的通用镜像，不启动另一套 Agent Runtime，也不成为与 Timeline、Kanban 或 Dynamic Workflow 竞争的 durable task authority。来自 Package 或 Engine 的 Todo 只有经过 typed Product facts 映射后才能进入这一产品表面。
+
 Dynamic Workflow 展示当前计划及其随 evidence 的变化，允许 retry、blocked 和未知副作用被准确表达；不默认提供固定 DAG/YAML 编辑器，也不把所有内部步骤永久塞进主 Timeline。
 
 ## 10. Workbench
@@ -260,6 +262,8 @@ Packages 是完整产品面，不是三个分类标签。它支持：
 - install/stage、approve、在安全边界 activate、查看 active lease、update、retry 与 rollback to LKG；
 - Package 所含 Skill/Extension 的 capability detail、License 与最后验证证据；
 - loading、install、update 与 fault diagnostics。
+
+随正式发行交付的精选第一方或第三方 Package 不要求普通用户另行安装，但也不因此全部常驻、自动加载进每个 Run 或取得第二套 Session/Timeline/Todo/Workflow 权威。它们按真实 capability 在安全边界激活，可被用户禁用，并继续遵守同一 source、rights、generation、lease 与 LKG 契约。
 
 `Catalog` 不等于 trust；`Curated` 和 `Verified` 只表示已有记录的审查，不表示 sandbox。`Unverified` 不能显示成可信。Unsupported Package 在 activation 前以具体原因拒绝；install/load/update 或 staging 失败保留原 current/LKG generation。活跃 Run 保持其 leased generation，绝不热替换。Package fault 停止发出新 lease，显示恢复和 LKG 状态，但不能声称进程隔离阻止了文件或网络副作用。
 

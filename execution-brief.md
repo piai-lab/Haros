@@ -12,7 +12,9 @@
 
 ## 2. 当前证据入口
 
-[`research/source-review.md`](research/source-review.md) 已记录 fixed imported tree 的 exact comparison、frozen install、build、typecheck 和 unchanged macOS desktop smoke，以及上游测试失败和这些检查的证明边界。该 evidence 不等于 production adoption、visual parity、Windows/Linux 或 packaging proof。
+首个本地、未签名 macOS arm64 Pi-native 纵切候选固定为 `248b3316651e681d9d4c78f81bec0c84a4cc822c`。[`Freeze handoff`](.omp-flow/tasks/08-04-ui-chassis-takeover/handoffs/freeze-first-production-candidate.md) 记录同一 SHA 的 source/review chain、完整 build/typecheck/quality/test、真实 Chromium/Electron、MiMo/DeepSeek Pi journeys、fault matrix、实际 ZIP/process tree、legal/SBOM/glyph 与脱敏结果；[`different-actor review`](.omp-flow/tasks/08-04-ui-chassis-takeover/reviews/freeze-first-production-candidate.md) 的结论为 `PASS`。该 checkpoint 接受 Stage 0–3 的当前纵切，不等于签名、notarization、Windows/Linux、Package、外部 Engine、Remote 或 V1 完成。
+
+[`research/source-review.md`](research/source-review.md) 仍单独拥有 fixed imported tree 的 exact comparison、frozen install、build、typecheck、unchanged baseline 与复验触发器。历史 baseline evidence 不得改写成当前候选 proof，当前候选 proof 也不得扩张为未覆盖的平台或产品结论。
 
 只有 Source Review 的复验触发器发生变化时才重跑受影响检查：source revision/tree、rights/history/assets、Pi/SDK/package format、Bun/Node/platform/packaged Electron path、Native Host boundary、structured UI bridge contract，或可复现的新反例。没有触发器时不得重复 unchanged baseline smoke。
 
@@ -103,4 +105,6 @@
 
 ## 9. 当前唯一下一动作
 
-先完成并独立复核 Stage 0；随后审查已记录的 F-03/F-04 evidence 与 rights/assets gaps，按 Workbench 建立 UI source-domain map，再按 Execution 开始 isolated Native Host。除非 Source Review 的复验触发器变化，不重复 unchanged baseline smoke，也不让文档/governance freeze 冒充产品进展。
+Stage 0–3 已在 `248b3316651e681d9d4c78f81bec0c84a4cc822c` 形成并独立接受首个纵切候选。现在只进入一个真实 headless Pi Package：使用 Pi 原生 ResourceLoader/lifecycle，闭合 Product-owned exact source/rights/trust、staged activation、active generation lease、fault isolation 与 LKG rollback，并证明 Package 私有状态和执行语义没有迁入 Electron Main、renderer 或第二套 Product Runtime。
+
+该 Package proof 未完成前，不提前进入外部 Engine、Remote、三平台发行或 Marketplace 扩建；除非 Source Review 的复验触发器变化，不重复 unchanged baseline smoke。
