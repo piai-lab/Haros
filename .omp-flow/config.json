@@ -1,0 +1,10 @@
+{
+  "schemaVersion": 1,
+  "harnesses": [
+    "omp",
+    "codex",
+    "claude",
+    "snow",
+    "cursor"
+  ]
+}
