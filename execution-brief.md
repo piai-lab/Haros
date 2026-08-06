@@ -16,6 +16,8 @@
 
 [`research/source-review.md`](research/source-review.md) 仍单独拥有 fixed imported tree 的 exact comparison、frozen install、build、typecheck、unchanged baseline 与复验触发器。历史 baseline evidence 不得改写成当前候选 proof，当前候选 proof 也不得扩张为未覆盖的平台或产品结论。
 
+首个真实 headless Pi Package checkpoint 固定为 `16f14d188e38134f6f45c46bfcb57ff36c1e8565`。其 [归档 Bundle](.omp-flow/tasks/archive/2026-08/08-06-pi-package-lifecycle/) 保存 exact source/rights、Product-owned stage/current/LKG/quarantine/lease、Pi-native ResourceLoader/private state、fault recovery、真实 MiMo/DeepSeek 与实际 macOS arm64 ZIP/ASAR 证据，以及 different-actor `PASS`。该 checkpoint 只支持当前 Package 纵切，不证明完整 Catalog/compatibility taxonomy 或后续阶段。
+
 只有 Source Review 的复验触发器发生变化时才重跑受影响检查：source revision/tree、rights/history/assets、Pi/SDK/package format、Bun/Node/platform/packaged Electron path、Native Host boundary、structured UI bridge contract，或可复现的新反例。没有触发器时不得重复 unchanged baseline smoke。
 
 ## 3. Stage 0 — Durable contract freeze
@@ -105,6 +107,6 @@
 
 ## 9. 当前唯一下一动作
 
-Stage 0–3 已在 `248b3316651e681d9d4c78f81bec0c84a4cc822c` 形成并独立接受首个纵切候选。现在只进入一个真实 headless Pi Package：使用 Pi 原生 ResourceLoader/lifecycle，闭合 Product-owned exact source/rights/trust、staged activation、active generation lease、fault isolation 与 LKG rollback，并证明 Package 私有状态和执行语义没有迁入 Electron Main、renderer 或第二套 Product Runtime。
+Stage 0–3 已在 `248b3316651e681d9d4c78f81bec0c84a4cc822c` 形成并独立接受首个纵切候选；真实 headless Pi Package checkpoint 已在 `16f14d188e38134f6f45c46bfcb57ff36c1e8565` 形成并独立接受。现在只进入一个真实外部 Engine：通过 ACP、官方 headless protocol 或经证据选择的最薄真实路径，证明 capability/permission difference、next-Run choice、外部 Session authority 与 no silent fallback；不得把 Pi Gold Path 压成最低公分母，也不得先造通用多 Engine framework。
 
-该 Package proof 未完成前，不提前进入外部 Engine、Remote、三平台发行或 Marketplace 扩建；除非 Source Review 的复验触发器变化，不重复 unchanged baseline smoke。
+该外部 Engine proof 未完成前，不提前进入 Remote、三平台发行或 Marketplace 扩建；除非 Source Review 的复验触发器变化，不重复 unchanged baseline smoke。

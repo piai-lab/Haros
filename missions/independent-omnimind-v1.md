@@ -48,7 +48,7 @@ Campaign 完成必须同时满足：
 | F-08 | Transactional dispatch distinguishes pending, delivered and delivery-unknown; side effects after uncertain dispatch are never blindly replayed | crash-boundary fault matrix | candidate | Both live providers completed each journey with one attempt and zero automatic replay; acceptance/uncertainty/recovery fault suites passed. | `248b3316651e681d9d4c78f81bec0c84a4cc822c` |
 | F-09 | Stream, thinking, tool activity, output, queue, steer, follow-up, cancel and usage project incrementally into stable UI without raw Engine payloads reaching React | real stream/replay/type/performance tests | candidate | Stable Chromium 55 files/150 tests, performance 3 files/7 tests, real Electron guest journey and live Pi stream/tool/thinking/usage observations passed on the candidate. | `248b3316651e681d9d4c78f81bec0c84a4cc822c` |
 | F-10 | U1 visual quality and critical workbench behavior survive surgery while donor provider/runtime/state/identity and long-term dual tracks are absent | UI/e2e/structure audit + maintainer review | candidate | Maintainer accepted the current visual direction; same-source browser, route, locale, accessibility, performance and identity guards passed, and Freeze review found no material finding. | `248b3316651e681d9d4c78f81bec0c84a4cc822c` |
-| F-11 | One exact mature Pi Package runs unchanged through native ResourceLoader with truthful source, rights, permissions, compatibility and private-state ownership | real package matrix + source review | open | — | — |
+| F-11 | One exact mature Pi Package runs unchanged through native ResourceLoader with truthful source, rights, permissions, compatibility and private-state ownership | real package matrix + source review | candidate | The archived 08-06 Bundle binds the unchanged Pi 0.81.1 todo source, retained rights, Product-owned generation lifecycle and SQLite Run lease, Pi-native ResourceLoader/private state, fault/LKG behavior, sanitized MiMo/DeepSeek journeys and actual macOS arm64 ZIP/ASAR to a different-actor `PASS` with zero findings. | `16f14d188e38134f6f45c46bfcb57ff36c1e8565` |
 | F-12 | Package Catalog/Curated/Verified and Native/Bridged UI/PTY/Unsupported are accurate; active generation never hot-updates and staged failure returns to LKG | update/fault/compatibility matrix | open | — | — |
 | F-13 | One external ACP Engine can handle the next Run in the same Conversation with honest capability/permission differences, no silent fallback and no lowest-common-denominator rewrite of Pi Gold Path | two-engine conformance + architecture audit | open | — | — |
 | F-14 | Chat read-only/no-folder and Agent folder/write boundaries are real; file writes use observed-version preconditions and recovery never destroys user Git or concurrent edits | filesystem/Git concurrency tests | open | — | — |
@@ -65,9 +65,9 @@ This reset is deliberate: preserving obsolete green tests would create false con
 
 ## 5. Current status and next evidence route
 
-F-01 through F-10 are `candidate` on the independently accepted first local, unsigned macOS arm64 Pi-native vertical slice at `248b3316651e681d9d4c78f81bec0c84a4cc822c`. They are not `verified`: the Freeze review explicitly accepted the checkpoint without promoting Campaign claims or declaring V1 completion. F-11 through F-18 remain `open`.
+F-01 through F-10 are `candidate` on the independently accepted first local, unsigned macOS arm64 Pi-native vertical slice at `248b3316651e681d9d4c78f81bec0c84a4cc822c`. F-11 is `candidate` on the independently accepted Package checkpoint at `16f14d188e38134f6f45c46bfcb57ff36c1e8565`. None is `verified`; F-12 through F-18 remain `open`.
 
-The accepted checkpoint and proof boundary are recorded by the linked Freeze handoff/review under `.omp-flow/tasks/08-04-ui-chassis-takeover/`; [`research/source-review.md`](../research/source-review.md) continues to own the immutable source baseline and revalidation triggers. The sole next stage is owned by [`execution-brief.md`](../execution-brief.md): one real headless Pi Package with staged activation, lease, LKG and fault proof. No claim changes state merely because these status pointers are synchronized.
+The first vertical-slice proof is recorded under `.omp-flow/tasks/08-04-ui-chassis-takeover/`; the accepted Package proof is recorded under `.omp-flow/tasks/archive/2026-08/08-06-pi-package-lifecycle/`. [`research/source-review.md`](../research/source-review.md) continues to own the immutable source baseline and revalidation triggers. The sole next stage is owned by [`execution-brief.md`](../execution-brief.md): one real external Engine with honest capability/permission differences and no silent fallback. No broader claim changes state merely because these status pointers are synchronized.
 
 ## 6. Blockers
 
@@ -75,4 +75,4 @@ None currently. U1 rights failure or evidence that Pi SDK cannot run a represent
 
 ## 7. Done
 
-Not done. F-01 through F-10 are candidate on the accepted first vertical-slice SHA; F-11 through F-18 remain open, and none is verified.
+Not done. F-01 through F-10 are candidate on the accepted first vertical-slice SHA; F-11 is candidate on the accepted Package SHA; F-12 through F-18 remain open, and none is verified.

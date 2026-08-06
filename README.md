@@ -286,8 +286,10 @@ omni-harness
 
 Source Review 已记录 imported tree 与 fixed source 的 exact comparison，以及同一固定树上的 frozen install、build、typecheck 和 unchanged macOS desktop-smoke 结果及其局限。它们不证明 production adoption、视觉等价、Windows/Linux 或 packaging。除非 Source Review 的复验触发器发生变化，不重复相同 unchanged probe。
 
-当前已经接受的 checkpoint 是 commit `248b3316651e681d9d4c78f81bec0c84a4cc822c`：Stage 0–3 的 source/identity closure、UI 母体接管、Product 单写、isolated Native Host 与真实 Chat/folder-backed Agent 纵切已形成首个本地、未签名 macOS arm64 candidate，并由 [`Freeze handoff`](.omp-flow/tasks/08-04-ui-chassis-takeover/handoffs/freeze-first-production-candidate.md) 与 [`independent review`](.omp-flow/tasks/08-04-ui-chassis-takeover/reviews/freeze-first-production-candidate.md) 记录。该 checkpoint 不证明 Package、外部 Engine、Remote、三平台发行或 V1 完成。
+Stage 0–3 的 source/identity closure、UI 母体接管、Product 单写、isolated Native Host 与真实 Chat/folder-backed Agent 纵切已在 commit `248b3316651e681d9d4c78f81bec0c84a4cc822c` 形成首个本地、未签名 macOS arm64 candidate，并由 [`Freeze handoff`](.omp-flow/tasks/08-04-ui-chassis-takeover/handoffs/freeze-first-production-candidate.md) 与 [`independent review`](.omp-flow/tasks/08-04-ui-chassis-takeover/reviews/freeze-first-production-candidate.md) 记录。
 
-唯一下一阶段是一个真实 headless Pi Package：闭合 staged activation、active lease、LKG rollback 与 fault proof，然后才进入真实外部 Engine、Remote/Workbench 扩展和三平台发行。
+首个真实 headless Pi Package checkpoint 已在 commit `16f14d188e38134f6f45c46bfcb57ff36c1e8565` 由不同 actor 独立接受；其 Work、handoff 与 PASS review 保存在 [归档 Bundle](.omp-flow/tasks/archive/2026-08/08-06-pi-package-lifecycle/)。它证明当前 exact Package 的 staged activation、active lease、LKG、fault recovery 与 Pi-native private-state boundary，不证明完整 Package Catalog/compatibility taxonomy、外部 Engine、Remote、三平台发行或 V1 完成。
+
+唯一下一阶段是一个真实外部 Engine：证明 capability/permission difference、next-Run choice 与 no silent fallback，然后才进入 Remote/Workbench 扩展和三平台发行。
 
 具体进入条件、停止条件和 proof gate 只见 [`execution-brief.md`](execution-brief.md)；当前 claim 状态只见 active Campaign。
