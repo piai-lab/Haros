@@ -447,6 +447,11 @@ export interface ProductExecutionBoundary {
     ) => void,
   ) => () => void;
   readonly resumeFacts?: (runId: ProductRunId, operationRef: string) => void;
+  readonly bindRunPackageGeneration?: (runId: ProductRunId, generation: string) => void;
+  readonly afterObservationApplied?: (
+    runId: ProductRunId,
+    observation: ProductExecutionObservation,
+  ) => void;
   readonly control?: (input: {
     readonly operationRef: string;
     readonly control: ProductControlRunInput["control"];
@@ -779,6 +784,122 @@ function initializeSchema(database: PortableDatabase): void {
       "PRODUCT_SCHEMA_UNSUPPORTED",
       `Product Store schema ${version} is unsupported; expected ${PRODUCT_SCHEMA_VERSION}.`,
     );
+  }
+}
+
+const productPackageFatalCodes = new Set([
+  "PI_PACKAGE_LIFECYCLE_UNAVAILABLE",
+  "PI_PACKAGE_VALIDATION_FAILED",
+  "PACKAGE_STAGE_CONFLICT",
+  "PACKAGE_GENERATION_CONFLICT",
+]);
+
+export function isProductPackageFatalCode(code: string): boolean {
+  return productPackageFatalCodes.has(code);
+}
+
+export type ProductPackageLifecycleReplay =
+  | {
+      readonly kind: "successful";
+      readonly generation: string;
+      readonly observedAt: string;
+    }
+  | {
+      readonly kind: "fatal";
+      readonly generation: string;
+      readonly code: string;
+      readonly observedAt: string;
+    };
+
+export interface ProductPackageLifecycleFacts {
+  readonly activeLeaseCounts: Readonly<Record<string, number>>;
+  readonly replay: ReadonlyArray<ProductPackageLifecycleReplay>;
+}
+
+/**
+ * Derives Package lifecycle inputs from committed Product facts. The Product Store remains the
+ * sole durable Run/lease authority; this projection does not create Package-owned Run state.
+ */
+export async function readProductPackageLifecycleFacts(
+  filename: string,
+): Promise<ProductPackageLifecycleFacts> {
+  if (filename !== ":memory:") ensurePrivateFileSync(filename);
+  const database = await openPortableDatabase(filename);
+  try {
+    initializeSchema(database);
+    const activeLeaseCounts: Record<string, number> = {};
+    const replay: ProductPackageLifecycleReplay[] = [];
+    const rows = database
+      .prepare(
+        `SELECT r.run_id, r.package_generation, o.receipt_json, o.updated_at
+         FROM product_runs r
+         JOIN product_operation_receipts o ON o.run_id = r.run_id
+         ORDER BY o.updated_at ASC, o.rowid ASC`,
+      )
+      .all();
+    const packageFailedRuns = new Set(
+      database
+        .prepare(
+          `SELECT DISTINCT a.run_id
+           FROM product_runtime_activities a
+           WHERE a.kind = 'package' AND json_extract(a.summary, '$.code') = 'package-failed'`,
+        )
+        .all()
+        .map((raw) => requiredString(asRecord(raw), "run_id")),
+    );
+    for (const raw of rows) {
+      const row = asRecord(raw);
+      const runId = requiredString(row, "run_id");
+      const generation = requiredString(row, "package_generation");
+      const receipt = decodeJson(ProductDispatchReceipt, requiredString(row, "receipt_json"));
+      if (
+        receipt.state === "pending" ||
+        receipt.state === "accepted" ||
+        receipt.state === "running" ||
+        receipt.state === "delivery_unknown" ||
+        receipt.state === "outcome_unknown"
+      ) {
+        activeLeaseCounts[generation] = (activeLeaseCounts[generation] ?? 0) + 1;
+      }
+      const observedAt = requiredString(row, "updated_at");
+      if (
+        receipt.state === "settled" &&
+        receipt.outcome === "succeeded" &&
+        !packageFailedRuns.has(runId)
+      ) {
+        replay.push({ kind: "successful", generation, observedAt });
+      } else if (receipt.state === "rejected" && isProductPackageFatalCode(receipt.code)) {
+        replay.push({ kind: "fatal", generation, code: receipt.code, observedAt });
+      }
+    }
+    for (const raw of database
+      .prepare(
+        `SELECT r.package_generation, a.summary, a.created_at, a.native_sequence
+         FROM product_runtime_activities a
+         JOIN product_runs r ON r.run_id = a.run_id
+         WHERE a.kind = 'package' AND json_extract(a.summary, '$.code') = 'package-failed'
+         ORDER BY a.created_at ASC, a.native_sequence ASC`,
+      )
+      .all()) {
+      const row = asRecord(raw);
+      const detail = decodeJson(ProductRuntimeActivityDetail, requiredString(row, "summary"));
+      if (detail.code !== "package-failed") continue;
+      replay.push({
+        kind: "fatal",
+        generation: requiredString(row, "package_generation"),
+        code: "PI_PACKAGE_NATIVE_FAULT",
+        observedAt: requiredString(row, "created_at"),
+      });
+    }
+    replay.sort(
+      (left, right) =>
+        left.observedAt.localeCompare(right.observedAt) ||
+        left.generation.localeCompare(right.generation) ||
+        left.kind.localeCompare(right.kind),
+    );
+    return { activeLeaseCounts, replay };
+  } finally {
+    database.close();
   }
 }
 
@@ -3383,6 +3504,10 @@ function makeControlPlane(
           yield* effect(() => {
             try {
               withTransaction(() => applyExecutionObservation(currentDispatchId, observation));
+              executionBoundary.afterObservationApplied?.(
+                decode(ProductRun.fields.id, runId),
+                observation,
+              );
             } catch (cause) {
               if (
                 cause instanceof ProductFailure &&
@@ -4025,8 +4150,10 @@ function makeControlPlane(
         receipt.state === "running" ||
         (receipt.state === "delivery_unknown" && receipt.reconciliationHint)
       ) {
+        const runId = decode(ProductRun.fields.id, requiredString(row, "run_id"));
+        executionBoundary.bindRunPackageGeneration?.(runId, readRun(runId).packageGeneration);
         executionBoundary.resumeFacts(
-          decode(ProductRun.fields.id, requiredString(row, "run_id")),
+          runId,
           receipt.state === "delivery_unknown" ? receipt.reconciliationHint! : receipt.operationRef,
         );
       }

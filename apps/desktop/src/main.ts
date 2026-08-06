@@ -102,6 +102,10 @@ import {
 } from "./resumableUpdateDownload";
 import { hardenElectronUpdater } from "./electronUpdaterSecurity";
 import { ServerListeningDetector } from "./serverListeningDetector";
+import {
+  attachServiceApplicationRoot,
+  resolveServiceApplicationRoot,
+} from "./process/serviceApplicationRoot";
 import { BackendStartupBlockDetector, type BackendStartupBlock } from "./backendStartupBlock";
 import {
   BACKEND_MAX_CONSECUTIVE_START_FAILURES,
@@ -1008,10 +1012,11 @@ protocol.registerSchemesAsPrivileged([
 ]);
 
 function resolveAppRoot(): string {
-  if (!app.isPackaged) {
-    return ROOT_DIR;
-  }
-  return app.getAppPath();
+  return resolveServiceApplicationRoot({
+    packaged: app.isPackaged,
+    repositoryRoot: ROOT_DIR,
+    packagedAppPath: app.getAppPath(),
+  });
 }
 
 /**
@@ -2979,22 +2984,25 @@ function backendNodeArgs(): string[] {
 
 function backendEnv(): NodeJS.ProcessEnv {
   const servedStaticRoot = resolveServedStaticRoot();
-  const env: NodeJS.ProcessEnv = {
-    ...resolveBrowserHostPipeBackendEnv(
-      process.env,
-      browserHostPipeServer ? OMNIMIND_BROWSER_HOST_PIPE_PATH : null,
-      browserHostPipeServer ? DESKTOP_BROWSER_HOST_CAPABILITY_FD : null,
-    ),
-    // Point the backend's HTTP static route at the same swap-immune snapshot the
-    // omnimind:// protocol serves, so both surfaces survive app.asar being replaced.
-    ...(servedStaticRoot?.snapshotted ? { OMNIMIND_STATIC_DIR: servedStaticRoot.dir } : {}),
-    OMNIMIND_MODE: "desktop",
-    OMNIMIND_NO_BROWSER: "1",
-    OMNIMIND_PORT: String(backendPort),
-    OMNIMIND_HOME: BASE_DIR,
-    OMNIMIND_AUTH_TOKEN: backendAuthToken,
-    OMNIMIND_DESKTOP_SHUTDOWN_TOKEN: DESKTOP_BACKEND_SHUTDOWN_TOKEN,
-  };
+  const env = attachServiceApplicationRoot(
+    {
+      ...resolveBrowserHostPipeBackendEnv(
+        process.env,
+        browserHostPipeServer ? OMNIMIND_BROWSER_HOST_PIPE_PATH : null,
+        browserHostPipeServer ? DESKTOP_BROWSER_HOST_CAPABILITY_FD : null,
+      ),
+      // Point the backend's HTTP static route at the same swap-immune snapshot the
+      // omnimind:// protocol serves, so both surfaces survive app.asar being replaced.
+      ...(servedStaticRoot?.snapshotted ? { OMNIMIND_STATIC_DIR: servedStaticRoot.dir } : {}),
+      OMNIMIND_MODE: "desktop",
+      OMNIMIND_NO_BROWSER: "1",
+      OMNIMIND_PORT: String(backendPort),
+      OMNIMIND_HOME: BASE_DIR,
+      OMNIMIND_AUTH_TOKEN: backendAuthToken,
+      OMNIMIND_DESKTOP_SHUTDOWN_TOKEN: DESKTOP_BACKEND_SHUTDOWN_TOKEN,
+    },
+    resolveAppRoot(),
+  );
   // The backend runs the same login-shell probe at startup and does not begin listening
   // until it returns, so an unmarked child serializes a second ~1s hydration behind ours.
   // Written explicitly in both directions: an inherited marker must never suppress a

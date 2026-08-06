@@ -23,10 +23,14 @@ import {
   type ProductCreateConversationInput,
   type ProductCreateWorkspaceInput,
   type ProductExecutionObservation,
+  type NativeHostRuntimeFact,
   type ProductRequestedSelection,
 } from "@omnimind/contracts";
 import { Effect, ManagedRuntime } from "effect";
 import { afterEach, describe, expect, it, vi } from "vitest";
+
+import { makePackageStateUnavailableBoundary } from "../native-host/executionBoundary";
+import { PiPackageLifecycleError } from "../native-host/packageLifecycle";
 
 import {
   PRODUCT_DATABASE_FILENAME,
@@ -35,6 +39,7 @@ import {
   ProductExecutionUnavailable,
   makeProductControlPlaneLayer,
   makeProductExecutionFixture,
+  readProductPackageLifecycleFacts,
   type ProductExecutionBoundary,
 } from "./ProductControlPlane";
 
@@ -232,6 +237,146 @@ function submitInput(
 }
 
 describe("ProductControlPlane", () => {
+  it("keeps Product Store available while corrupt Package state fails execution closed", async () => {
+    const system = await makeSystem(
+      ":memory:",
+      makePackageStateUnavailableBoundary(
+        new PiPackageLifecycleError("PACKAGE_STATE_INVALID", "corrupt fixture state"),
+      ),
+    );
+    try {
+      const conversation = createInput("package-state-invalid");
+      await expect(
+        system.run(system.controlPlane.createConversation(conversation)),
+      ).resolves.toMatchObject({
+        readModel: { conversation: { id: conversation.conversationId } },
+      });
+      const item = await putQueueItem(system, conversation, "package-state-invalid");
+      const input = submitInput(
+        conversation.conversationId,
+        item.id,
+        item.revision,
+        "package-state-invalid",
+      );
+      await expect(system.run(system.controlPlane.admitQueueItem(input))).rejects.toMatchObject({
+        code: "PACKAGE_STATE_INVALID",
+      });
+    } finally {
+      await system.dispose();
+    }
+  });
+
+  it("derives the exact active Package generation lease and committed success replay", async () => {
+    const root = await fs.mkdtemp(path.join(os.tmpdir(), "omnimind-package-facts-"));
+    temporaryRoots.push(root);
+    const filename = path.join(root, PRODUCT_DATABASE_FILENAME);
+    const fixture = makeProductExecutionFixture([
+      { crossesSendBoundary: true, observation: acceptedObservation("package-facts") },
+    ]);
+    const system = await makeSystem(filename, fixture);
+    try {
+      const conversation = createInput("package-facts");
+      await system.run(system.controlPlane.createConversation(conversation));
+      const item = await putQueueItem(system, conversation, "package-facts");
+      const input = submitInput(
+        conversation.conversationId,
+        item.id,
+        item.revision,
+        "package-facts",
+      );
+      await system.run(system.controlPlane.admitQueueItem(input));
+      expect(await readProductPackageLifecycleFacts(filename)).toEqual({
+        activeLeaseCounts: { "unresolved-not-activated": 1 },
+        replay: [],
+      });
+
+      await system.run(system.controlPlane.dispatchPending(input.dispatchId));
+      await system.run(
+        system.controlPlane.observeRun(input.runId, {
+          kind: "settled",
+          outcome: "succeeded",
+          settledAt: "2026-08-05T00:00:02.000Z",
+        }),
+      );
+      expect(await readProductPackageLifecycleFacts(filename)).toEqual({
+        activeLeaseCounts: {},
+        replay: [
+          expect.objectContaining({
+            kind: "successful",
+            generation: "unresolved-not-activated",
+          }),
+        ],
+      });
+    } finally {
+      await system.dispose();
+    }
+  });
+
+  it("derives quarantine replay only from a committed native Package fault", async () => {
+    const root = await fs.mkdtemp(path.join(os.tmpdir(), "omnimind-package-fault-"));
+    temporaryRoots.push(root);
+    const filename = path.join(root, PRODUCT_DATABASE_FILENAME);
+    let listener:
+      | Parameters<NonNullable<ProductExecutionBoundary["subscribeFacts"]>>[0]
+      | undefined;
+    const fixture = makeProductExecutionFixture([
+      { crossesSendBoundary: true, observation: acceptedObservation("package-fault") },
+    ]);
+    const system = await makeSystem(filename, {
+      ...fixture,
+      subscribeFacts: (next) => {
+        listener = next;
+        return () => {
+          listener = undefined;
+        };
+      },
+    });
+    try {
+      const conversation = createInput("package-fault");
+      await system.run(system.controlPlane.createConversation(conversation));
+      const item = await putQueueItem(system, conversation, "package-fault");
+      const input = submitInput(
+        conversation.conversationId,
+        item.id,
+        item.revision,
+        "package-fault",
+      );
+      await system.run(system.controlPlane.submitQueueItem(input));
+      const facts: ReadonlyArray<NativeHostRuntimeFact> = [
+        {
+          kind: "package.failed",
+          operationRef: "operation-package-fault",
+          sequence: 1,
+          emittedAt: "2026-08-05T00:00:01.000Z",
+          count: 1,
+        },
+        {
+          kind: "settlement",
+          operationRef: "operation-package-fault",
+          sequence: 2,
+          emittedAt: "2026-08-05T00:00:02.000Z",
+          outcome: "failed",
+          message: "Package lifecycle failed.",
+        },
+      ];
+      listener?.(input.runId, { kind: "facts", facts });
+
+      expect(await readProductPackageLifecycleFacts(filename)).toEqual({
+        activeLeaseCounts: {},
+        replay: [
+          {
+            kind: "fatal",
+            generation: "unresolved-not-activated",
+            code: "PI_PACKAGE_NATIVE_FAULT",
+            observedAt: "2026-08-05T00:00:01.000Z",
+          },
+        ],
+      });
+    } finally {
+      await system.dispose();
+    }
+  });
+
   it("publishes throttled Host runtime catalog changes as shell facts and clears Host loss", async () => {
     let now = 0;
     vi.spyOn(Date, "now").mockImplementation(() => now);
@@ -2038,6 +2183,10 @@ describe("ProductControlPlane", () => {
     await first.run(first.controlPlane.admitQueueItem(input));
     await expect(first.run(first.controlPlane.dispatchPending(input.dispatchId))).rejects.toThrow();
     await first.dispose();
+    expect(await readProductPackageLifecycleFacts(filename)).toEqual({
+      activeLeaseCounts: { "unresolved-not-activated": 1 },
+      replay: [],
+    });
 
     const shouldNotRun = makeProductExecutionFixture([
       {
@@ -2062,6 +2211,10 @@ describe("ProductControlPlane", () => {
       lastConfirmedBoundary: "sent",
     });
     expect(shouldNotRun.attemptCount()).toBe(0);
+    expect(await readProductPackageLifecycleFacts(filename)).toEqual({
+      activeLeaseCounts: { "unresolved-not-activated": 1 },
+      replay: [],
+    });
     expect(await reopened.run(reopened.controlPlane.inspectOutbox())).toEqual([
       expect.objectContaining({ automaticReplayCount: 0, attemptCount: 1, state: "terminal" }),
     ]);

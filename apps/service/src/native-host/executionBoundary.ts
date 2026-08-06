@@ -1,11 +1,17 @@
-import { ProductEngineBindingId, type ProductExecutionObservation } from "@omnimind/contracts";
+import {
+  ProductEngineBindingId,
+  type ProductExecutionObservation,
+  type ProductRuntimeCatalog,
+} from "@omnimind/contracts";
 import path from "node:path";
 import { Effect, Layer } from "effect";
 
 import {
   PRODUCT_DATABASE_FILENAME,
   ProductControlPlaneError,
+  isProductPackageFatalCode,
   makeProductControlPlaneLayer,
+  readProductPackageLifecycleFacts,
   type ProductExecutionBoundary,
 } from "../product/ProductControlPlane";
 import { ServerConfig } from "../config";
@@ -14,9 +20,100 @@ import {
   NativeHostClient,
   NativeHostClientError,
 } from "./client";
+import {
+  PiPackageLifecycle,
+  PiPackageLifecycleError,
+  resolveCuratedPiPackageEvidence,
+} from "./packageLifecycle";
+
+function lifecycleRejection(cause: PiPackageLifecycleError): ProductExecutionObservation {
+  return {
+    kind: "rejected",
+    code: cause.code,
+    message: cause.message,
+    retryable: cause.code === "PACKAGE_GENERATION_STALE",
+  };
+}
+
+export function makePackageStateUnavailableBoundary(cause: unknown): ProductExecutionBoundary {
+  const code = cause instanceof PiPackageLifecycleError ? cause.code : "PACKAGE_STATE_INVALID";
+  const message = "Product Package state is unavailable and execution is fail-closed.";
+  return {
+    preflight: () => {
+      throw new ProductControlPlaneError({ code, message, retryable: false });
+    },
+    attempt: () => Effect.succeed({ kind: "rejected", code, message, retryable: false }),
+    catalog: () => Effect.succeed(null),
+  };
+}
+
+export async function prepareCuratedPiPackage(input: {
+  readonly client: NativeHostClient;
+  readonly lifecycle: PiPackageLifecycle;
+  readonly packageDirectory: string;
+  readonly noticePath: string;
+  readonly activeCurrentGenerationLeaseCount: number;
+}): Promise<void> {
+  const artifact = input.lifecycle.stageCurated({
+    packageDirectory: input.packageDirectory,
+    noticePath: input.noticePath,
+  });
+  const validation = await input.client.validatePackage(artifact);
+  if (
+    validation.status !== "validated" ||
+    validation.generation !== artifact.generation ||
+    !validation.report
+  ) {
+    throw new PiPackageLifecycleError(
+      "PACKAGE_NATIVE_VALIDATION_FAILED",
+      "The curated Package generation failed native Pi validation.",
+    );
+  }
+  input.lifecycle.recordValidated(artifact, validation.report);
+  input.lifecycle.activate(artifact.generation, input.activeCurrentGenerationLeaseCount);
+}
+
+export async function initializeProductPackageLifecycle(input: {
+  readonly stateDir: string;
+  readonly productDatabase: string;
+  readonly client: NativeHostClient | null;
+  readonly applicationRoot?: string;
+}): Promise<PiPackageLifecycle> {
+  const lifecycle = new PiPackageLifecycle({ stateDir: input.stateDir });
+  const committed = await readProductPackageLifecycleFacts(input.productDatabase);
+  for (const replay of committed.replay) {
+    if (replay.kind === "successful") {
+      lifecycle.recordSuccessfulGeneration(replay.generation);
+    } else {
+      lifecycle.quarantineGeneration(replay.generation, replay.code);
+    }
+  }
+  if (!input.client) return lifecycle;
+
+  // Missing application-root assets disable the Package capability. A present candidate that
+  // fails exact source/native validation is different: it must not replace current or LKG.
+  const evidence = resolveCuratedPiPackageEvidence(
+    input.applicationRoot ? { applicationRoot: input.applicationRoot } : {},
+  );
+  try {
+    const currentGeneration = lifecycle.snapshot().currentGeneration;
+    await prepareCuratedPiPackage({
+      client: input.client,
+      lifecycle,
+      ...evidence,
+      activeCurrentGenerationLeaseCount: currentGeneration
+        ? (committed.activeLeaseCounts[currentGeneration] ?? 0)
+        : 0,
+    });
+  } catch {
+    // A failed present candidate does not replace or invalidate current/LKG generations.
+  }
+  return lifecycle;
+}
 
 export function makeNativeHostExecutionBoundary(
   client: NativeHostClient,
+  lifecycle?: PiPackageLifecycle,
 ): ProductExecutionBoundary {
   const executionRequest = (input: {
     readonly dispatchId: Parameters<ProductExecutionBoundary["attempt"]>[0]["dispatchId"];
@@ -49,6 +146,7 @@ export function makeNativeHostExecutionBoundary(
     Parameters<NonNullable<ProductExecutionBoundary["subscribeFacts"]>>[0]
   >();
   const observations = new Map<string, Promise<void>>();
+  const runGenerations = new Map<string, string>();
   let closed = false;
   const publish = (
     runId: Parameters<Parameters<NonNullable<ProductExecutionBoundary["subscribeFacts"]>>[0]>[0],
@@ -57,6 +155,31 @@ export function makeNativeHostExecutionBoundary(
     >[1],
   ) => {
     for (const listener of listeners) listener(runId, observation);
+    const generation = runGenerations.get(runId);
+    if (!lifecycle || !generation) return;
+    if (observation.kind === "facts") {
+      const packageFailed = observation.facts.some((fact) => fact.kind === "package.failed");
+      if (packageFailed) {
+        lifecycle.quarantineGeneration(generation, "PI_PACKAGE_NATIVE_FAULT");
+      } else if (
+        observation.facts.some((fact) => fact.kind === "settlement" && fact.outcome === "succeeded")
+      ) {
+        lifecycle.recordSuccessfulGeneration(generation);
+      }
+      if (observation.facts.some((fact) => fact.kind === "settlement")) {
+        runGenerations.delete(runId);
+      }
+    } else if (observation.kind === "snapshot") {
+      if (observation.snapshot.settlement.outcome === "succeeded") {
+        lifecycle.recordSuccessfulGeneration(generation);
+      }
+      runGenerations.delete(runId);
+    } else if (observation.kind === "delivery-rejected") {
+      if (isProductPackageFatalCode(observation.code)) {
+        lifecycle.quarantineGeneration(generation, observation.code);
+      }
+      runGenerations.delete(runId);
+    }
   };
   const wait = (milliseconds: number) =>
     new Promise<void>((resolve) => setTimeout(resolve, milliseconds));
@@ -184,27 +307,71 @@ export function makeNativeHostExecutionBoundary(
   return {
     preflight: (input) => {
       try {
+        lifecycle?.assertSelectable(input.run.requestedSelection.packageGeneration);
         client.preflightExecution(executionRequest(input));
       } catch (cause) {
         throw new ProductControlPlaneError({
           code:
-            cause instanceof NativeHostClientError
+            cause instanceof PiPackageLifecycleError
               ? cause.code
-              : "NATIVE_HOST_EXECUTION_FAILED",
+              : cause instanceof NativeHostClientError
+                ? cause.code
+                : "NATIVE_HOST_EXECUTION_FAILED",
           message:
-            cause instanceof NativeHostClientError
+            cause instanceof PiPackageLifecycleError
               ? cause.message
-              : "Native Host execution preflight failed.",
-          retryable: cause instanceof NativeHostClientError ? cause.retryable : false,
+              : cause instanceof NativeHostClientError
+                ? cause.message
+                : "Native Host execution preflight failed.",
+          retryable:
+            cause instanceof PiPackageLifecycleError
+              ? cause.code === "PACKAGE_GENERATION_STALE"
+              : cause instanceof NativeHostClientError
+                ? cause.retryable
+                : false,
         });
       }
     },
     attempt: ({ dispatchId, run, text, priorLineageRef, markSent }) =>
       Effect.tryPromise({
         try: async (): Promise<ProductExecutionObservation> => {
+          runGenerations.set(run.id, run.requestedSelection.packageGeneration);
+          let artifact = null;
+          if (lifecycle) {
+            try {
+              lifecycle.assertSelectable(run.requestedSelection.packageGeneration);
+              artifact = lifecycle.artifactForGeneration(run.requestedSelection.packageGeneration);
+            } catch (cause) {
+              if (cause instanceof PiPackageLifecycleError) {
+                return lifecycleRejection(cause);
+              }
+              throw cause;
+            }
+          }
           let sent = false;
           let response: Awaited<ReturnType<NativeHostClient["execute"]>>;
           try {
+            if (artifact) {
+              const validation = await client.validatePackage(artifact);
+              if (
+                validation.status !== "validated" ||
+                validation.generation !== artifact.generation ||
+                !validation.report
+              ) {
+                return {
+                  kind: "rejected",
+                  code: "PI_PACKAGE_VALIDATION_FAILED",
+                  message: "The selected Package generation failed native validation.",
+                  retryable: false,
+                };
+              }
+              try {
+                lifecycle?.recordValidated(artifact, validation.report);
+              } catch (cause) {
+                if (!(cause instanceof PiPackageLifecycleError)) throw cause;
+                return lifecycleRejection(cause);
+              }
+            }
             response = await client.execute(
               executionRequest({ dispatchId, run, text, priorLineageRef }),
               async () => {
@@ -213,7 +380,9 @@ export function makeNativeHostExecutionBoundary(
               },
             );
           } catch (cause) {
-            if (!sent) throw cause;
+            if (!sent) {
+              throw cause;
+            }
             const reconciliationHint = `pi-pending:${dispatchId}`;
             setTimeout(() => observe(run.id, reconciliationHint), 0);
             return {
@@ -268,6 +437,18 @@ export function makeNativeHostExecutionBoundary(
       listeners.add(listener);
       return () => listeners.delete(listener);
     },
+    bindRunPackageGeneration: (runId, generation) => {
+      runGenerations.set(runId, generation);
+    },
+    afterObservationApplied: (runId, observation) => {
+      const generation = runGenerations.get(runId);
+      if (observation.kind === "rejected") {
+        if (lifecycle && generation && isProductPackageFatalCode(observation.code)) {
+          lifecycle.quarantineGeneration(generation, observation.code);
+        }
+        runGenerations.delete(runId);
+      }
+    },
     resumeFacts: observe,
     control: (input) =>
       Effect.tryPromise(() => client.control(input.operationRef, input.control, input.text)).pipe(
@@ -282,9 +463,7 @@ export function makeNativeHostExecutionBoundary(
           (cause) =>
             new ProductControlPlaneError({
               code:
-                cause instanceof NativeHostClientError
-                  ? cause.code
-                  : "NATIVE_HOST_CONTROL_FAILED",
+                cause instanceof NativeHostClientError ? cause.code : "NATIVE_HOST_CONTROL_FAILED",
               message:
                 cause instanceof NativeHostClientError
                   ? cause.message
@@ -295,14 +474,18 @@ export function makeNativeHostExecutionBoundary(
       ),
     catalog: () =>
       Effect.tryPromise(() => client.catalog()).pipe(
-        Effect.map((response) => ({
-          engineId: response.engineId,
-          runtimeVersion: response.runtimeVersion,
-          packageGeneration: response.packageGeneration,
-          models: response.models,
-          capabilities: response.capabilities,
-          truncated: response.truncated,
-        })),
+        Effect.map((response): ProductRuntimeCatalog | null => {
+          const packageGeneration = lifecycle?.snapshot().currentGeneration;
+          if (!packageGeneration) return null;
+          return {
+            engineId: response.engineId,
+            runtimeVersion: response.runtimeVersion,
+            packageGeneration,
+            models: response.models,
+            capabilities: response.capabilities,
+            truncated: response.truncated,
+          };
+        }),
         Effect.mapError(
           () =>
             new ProductControlPlaneError({
@@ -324,23 +507,30 @@ export const NativeHostProductControlPlaneLive = Layer.unwrap(
   Effect.gen(function* () {
     const { stateDir } = yield* ServerConfig;
     const client = makeNativeHostClientFromEnvironment(process.env);
-    const catalog = client
-      ? yield* Effect.tryPromise(() => client.catalog()).pipe(
-          Effect.map((response) => ({
-            engineId: response.engineId,
-            runtimeVersion: response.runtimeVersion,
-            packageGeneration: response.packageGeneration,
-            models: response.models,
-            capabilities: response.capabilities,
-            truncated: response.truncated,
-          })),
-          Effect.catch(() => Effect.succeed(null)),
-        )
-      : null;
-    return makeProductControlPlaneLayer(
-      path.join(stateDir, PRODUCT_DATABASE_FILENAME),
-      client ? makeNativeHostExecutionBoundary(client) : undefined,
-      catalog,
+    const productDatabase = path.join(stateDir, PRODUCT_DATABASE_FILENAME);
+    const applicationRoot = process.env.OMNIMIND_APP_ROOT?.trim();
+    const lifecycleStartup = yield* Effect.tryPromise(() =>
+      initializeProductPackageLifecycle({
+        stateDir,
+        productDatabase,
+        client,
+        ...(applicationRoot ? { applicationRoot } : {}),
+      }),
+    ).pipe(
+      Effect.match({
+        onFailure: (cause) => ({ lifecycle: null, failure: cause }),
+        onSuccess: (lifecycle) => ({ lifecycle, failure: null }),
+      }),
     );
+    const { lifecycle, failure: lifecycleFailure } = lifecycleStartup;
+    const boundary = client
+      ? lifecycle
+        ? makeNativeHostExecutionBoundary(client, lifecycle)
+        : makePackageStateUnavailableBoundary(lifecycleFailure)
+      : null;
+    const catalog = boundary?.catalog
+      ? yield* boundary.catalog().pipe(Effect.catch(() => Effect.succeed(null)))
+      : null;
+    return makeProductControlPlaneLayer(productDatabase, boundary ?? undefined, catalog);
   }),
 );

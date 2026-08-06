@@ -65,6 +65,34 @@ This disproves the claim that the source can only reach Pi through a shallow RPC
 
 The same file also explicitly degrades or rejects important Host UI capabilities: terminal input hooks, widgets, header/footer, editor text/component APIs and autocomplete providers. Plugin mentions and plugin discovery are reported false. Native SDK use therefore does not prove complete Package UX compatibility.
 
+### 4.1 Representative Package source gate
+
+The first Package checkpoint selects exactly one executable source: `todo.ts` shipped in npm
+artifact `@earendil-works/pi-coding-agent@0.81.1`. It is a representative stateful headless tool,
+not a universal compatibility sample.
+
+| Fact | Frozen value and observation |
+| --- | --- |
+| npm identity | `@earendil-works/pi-coding-agent@0.81.1`; author `Mario Zechner`; repository `earendil-works/pi`; `gitHead` `20be4b18d4c57487f8993d2762bace129f0cf7c6` |
+| npm artifact | registry integrity `sha512-r6ovAsZOgAqbC/aU6s+/dPnv/sGZBuWyZNvi3pXjpbuX5wvp3XvGkQI7/VLvX2o9XpmpFaPUxKNym1WfkN/P8A==`, equal to `bun.lock`; fetched tarball SHA-256 `420113c0282160e6181656fd16cf18742f76bf9040ee3dfb9cb67e3e6ad5641c` |
+| executable source | upstream path `packages/coding-agent/examples/extensions/todo.ts`; npm tarball path `package/examples/extensions/todo.ts`; installed, tarball and exact-revision upstream bytes all SHA-256 `e46824d00217e25242c186d41837cc84ca81b23f978500323448502a9a424ee2` and length 8,848 bytes |
+| rights | package manifest declares MIT and the upstream revision's `LICENSE` normalized SHA-256 is `0457f5bcec3b3b211605dfb5d1a49042fd638f3686a410fe099c24a25af13c48`; root adoption path `LICENSES/pi-todo-MIT.txt` and release-retained Package-staging input `assets/licenses/pi-MIT.txt` are byte-identical responsibilities for the same exact legal text, each with raw SHA-256 `4f6a1985796db5225e3b1e59972bd47e07a27a0748427cb3d3c8fbf39f9311f0` |
+| reviewed executable surface | imports only pinned Pi AI/coding-agent/TUI packages plus `typebox`; registers `todo`, `/todos`, `session_start` and `session_tree`; no network, process, filesystem or credential access appears in the selected file |
+| Pi `0.81.1` load proof | real `DefaultResourceLoader` from the sole Pi-owning `apps/native-host` workspace loaded the exact installed source with 1 extension, 0 errors, tool `todo`, command `todos`, and lifecycle handlers `session_start`/`session_tree` |
+
+The trust decision permits this exact source and reviewed surface only. `todo` is mature enough for
+the checkpoint because its native tool owns mutable todo state and reconstructs it from Pi Session
+branch tool-result details on `session_start` and `session_tree`; it therefore falsifies a second
+Product todo store. Its `/todos` command depends on Pi TUI component APIs and is deliberately not a
+supported Product surface in this headless checkpoint. The file still loads unchanged so its
+tool/lifecycle semantics remain Pi-owned; Product simply does not expose the interactive command.
+Process isolation contains faults but is not represented as a sandbox.
+
+Reproduction on 2026-08-06 used a fresh npm pack, exact-revision raw source/legal reads with
+20-second network bounds, byte digests, and a 20-second real loader probe. No provider credential,
+response body or user resource was involved. Re-run this gate on source byte, npm integrity, Pi
+version, ResourceLoader contract, legal override or selected-permission change.
+
 At the fixed revision, Pi packages resolve to `0.81.1` through caret declarations. The exact npm artifacts for the four installed `@earendil-works/pi-*` packages identify upstream Git revision `20be4b18d4c57487f8993d2762bace129f0cf7c6`; their installed manifest bytes and that revision's MIT legal text are digest-bound in `assets/licenses/release-legal-overrides.json`. This proves package/source/legal provenance for the current generation, not production runtime compatibility. The separately inspected local Pi research tree is newer (`0.83.0`), which remains evidence of version-tracking pressure and the need for a conformance matrix.
 
 Release legal output is target-derived rather than a static cross-platform catalogue. The checked-in Web files identify themselves as a development-host platform/arch snapshot. During Desktop packaging, inventory, CycloneDX SBOM and notices are regenerated from that target's staged production closure; the build then compares disclosed `name@version` identities bidirectionally with the actual ASAR. A missing packaged legal file is accepted only through an exact override locked to package ID, installed manifest digest, declared license, source revision and legal-text digest. This mechanism is packaging evidence for one target, not evidence that another platform has the same closure.

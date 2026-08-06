@@ -16,6 +16,7 @@ import nativeHostPackageJson from "../apps/native-host/package.json" with { type
 import servicePackageJson from "../apps/service/package.json" with { type: "json" };
 
 import { BRAND_ASSET_PATHS } from "./lib/brand-assets.ts";
+import { stageCuratedPackageAssets } from "./lib/curated-package-assets.ts";
 import {
   createDesktopPlatformBuildConfig,
   MAC_APPSNAP_BRIDGE_STAGE_PATH,
@@ -1057,6 +1058,15 @@ const buildDesktopArtifact = Effect.fn("buildDesktopArtifact")(function* (
   yield* fs.copy(distDirs.desktopResources, stageResourcesDir);
   yield* fs.copy(distDirs.serviceDist, path.join(stageAppDir, "apps/service/dist"));
   yield* fs.copy(distDirs.nativeHostDist, path.join(stageAppDir, "apps/native-host/dist"));
+  yield* Effect.tryPromise({
+    try: () => stageCuratedPackageAssets({ sourceRoot: repoRoot, applicationRoot: stageAppDir }),
+    catch: (cause) =>
+      new BuildScriptError({
+        message:
+          "Curated Package release assets are missing or do not match exact source evidence.",
+        cause,
+      }),
+  });
 
   yield* assertPlatformBuildResources(options.platform, stageResourcesDir, options.verbose);
 

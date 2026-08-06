@@ -80,7 +80,6 @@ describe("fitNativeHostResponseFrame", () => {
       kind: "runtime.catalog.response",
       engineId: "pi",
       runtimeVersion: "0.81.1",
-      packageGeneration: "pi-sdk-0.81.1",
       capabilities: {
         ingress: "typed-native-host",
         lineage: { continue: "available", rebuild: "available" },

@@ -1,0 +1,45 @@
+{
+  "schemaVersion": 1,
+  "id": "pi.todo",
+  "version": "0.81.1",
+  "generation": "pi.todo@0.81.1+e46824d00217e25242c186d41837cc84ca81b23f978500323448502a9a424ee2",
+  "runtime": {
+    "engine": "pi",
+    "version": "0.81.1",
+    "compatibility": "native-headless"
+  },
+  "executable": {
+    "path": "todo.ts",
+    "sha256": "e46824d00217e25242c186d41837cc84ca81b23f978500323448502a9a424ee2",
+    "bytes": 8848
+  },
+  "source": {
+    "npmPackage": "@earendil-works/pi-coding-agent",
+    "npmVersion": "0.81.1",
+    "npmIntegrity": "sha512-r6ovAsZOgAqbC/aU6s+/dPnv/sGZBuWyZNvi3pXjpbuX5wvp3XvGkQI7/VLvX2o9XpmpFaPUxKNym1WfkN/P8A==",
+    "npmTarballSha256": "420113c0282160e6181656fd16cf18742f76bf9040ee3dfb9cb67e3e6ad5641c",
+    "repository": "https://github.com/earendil-works/pi.git",
+    "revision": "20be4b18d4c57487f8993d2762bace129f0cf7c6",
+    "repositoryPath": "packages/coding-agent/examples/extensions/todo.ts",
+    "artifactPath": "package/examples/extensions/todo.ts"
+  },
+  "rights": {
+    "license": "MIT",
+    "noticePath": "../../licenses/pi-MIT.txt",
+    "normalizedNoticeSha256": "0457f5bcec3b3b211605dfb5d1a49042fd638f3686a410fe099c24a25af13c48"
+  },
+  "trust": {
+    "decision": "curated-exact-source",
+    "reviewedPermissions": {
+      "credentials": false,
+      "filesystem": false,
+      "network": false,
+      "process": false
+    },
+    "isolation": "process-boundary-not-sandbox"
+  },
+  "surfaces": {
+    "headlessTool": "native",
+    "tuiCommand": "unsupported"
+  }
+}

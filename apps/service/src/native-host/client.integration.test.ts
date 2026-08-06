@@ -10,12 +10,14 @@ import { afterEach, describe, expect, it } from "vitest";
 
 import { NATIVE_HOST_MAX_FRAME_BYTES } from "@omnimind/contracts/native-host";
 import { makeNativeHostClientFromEnvironment, NativeHostClient } from "./client";
+import { PiPackageLifecycle } from "./packageLifecycle";
 
 const productionEntry = fileURLToPath(
   new URL("../../../native-host/dist/index.mjs", import.meta.url),
 );
 const children = new Set<ChildProcess>();
 const temporaryDirectories = new Set<string>();
+const repositoryRoot = fileURLToPath(new URL("../../../../", import.meta.url));
 
 function rendezvous() {
   const directory = mkdtempSync(join(tmpdir(), "omnimind-native-host-test-"));
@@ -137,6 +139,22 @@ describe("production Native Host protocol", () => {
       engineId: "pi",
       runtimeVersion: "0.81.1",
     });
+    const lifecycle = new PiPackageLifecycle({ stateDir: join(config.home, "userdata") });
+    const artifact = lifecycle.stageCurated({
+      packageDirectory: join(repositoryRoot, "assets", "packages", "pi-todo-0.81.1"),
+      noticePath: join(repositoryRoot, "assets", "licenses", "pi-MIT.txt"),
+    });
+    const validation = await client.validatePackage(artifact);
+    expect(validation).toMatchObject({
+      status: "validated",
+      generation: artifact.generation,
+      report: { extensionCount: 1, toolNames: ["todo"] },
+    });
+    if (!validation.report) throw new Error("Native Package validation report was missing.");
+    lifecycle.recordValidated(artifact, validation.report);
+    lifecycle.activate(artifact.generation, 0);
+    const packageGeneration = lifecycle.snapshot().currentGeneration;
+    if (!packageGeneration) throw new Error("Product Package generation was unavailable.");
     let oversizedPersisted = 0;
     await expect(
       client.execute(
@@ -151,7 +169,7 @@ describe("production Native Host protocol", () => {
             thinking: null,
             permissionPolicy: "approval-required",
             enforcement: "unverified",
-            packageGeneration: catalog.packageGeneration,
+            packageGeneration,
           },
           workspace: { kind: "chat", cwd: null },
           priorLineageRef: null,
@@ -181,7 +199,7 @@ describe("production Native Host protocol", () => {
             thinking: null,
             permissionPolicy: "approval-required",
             enforcement: "unverified",
-            packageGeneration: catalog.packageGeneration,
+            packageGeneration,
           },
           workspace: { kind: "chat", cwd: null },
           priorLineageRef: null,

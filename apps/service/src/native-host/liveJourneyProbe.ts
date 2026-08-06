@@ -23,7 +23,13 @@ import {
   makeProductControlPlaneLayer,
 } from "../product/ProductControlPlane";
 import { makeNativeHostClientFromEnvironment } from "./client";
-import { makeNativeHostExecutionBoundary } from "./executionBoundary";
+import {
+  initializeProductPackageLifecycle,
+  makeNativeHostExecutionBoundary,
+} from "./executionBoundary";
+import { CURATED_PI_PACKAGE_GENERATION } from "./packageLifecycle";
+
+const PRIVATE_TODO_CANARY = "package-private-state-canary";
 
 function requiredEnvironment(name: string): string {
   const value = process.env[name]?.trim();
@@ -82,6 +88,17 @@ async function main(): Promise<void> {
 
   const client = makeNativeHostClientFromEnvironment(process.env);
   if (!client) throw new Error("Live journey probe could not construct the Native Host client.");
+  const productDatabase = path.join(probeRoot, PRODUCT_DATABASE_FILENAME);
+  const lifecycle = await initializeProductPackageLifecycle({
+    stateDir: path.join(requiredEnvironment("OMNIMIND_HOME"), "userdata"),
+    productDatabase,
+    client,
+    applicationRoot: path.resolve(requiredEnvironment("OMNIMIND_APP_ROOT")),
+  });
+  const packageGeneration = lifecycle.snapshot().currentGeneration;
+  if (packageGeneration !== CURATED_PI_PACKAGE_GENERATION) {
+    throw new Error("Live journey probe did not activate the curated Pi Package generation.");
+  }
   const catalog = await client.catalog();
   const requestedModel = process.env.OMNIMIND_PI_LIVE_PROBE_MODEL?.trim();
   const selected = requestedModel
@@ -91,18 +108,14 @@ async function main(): Promise<void> {
   const runtimeCatalog = {
     engineId: catalog.engineId,
     runtimeVersion: catalog.runtimeVersion,
-    packageGeneration: catalog.packageGeneration,
+    packageGeneration,
     models: catalog.models,
     capabilities: catalog.capabilities,
     truncated: catalog.truncated,
   };
-  const boundary = makeNativeHostExecutionBoundary(client);
+  const boundary = makeNativeHostExecutionBoundary(client, lifecycle);
   const runtime = ManagedRuntime.make(
-    makeProductControlPlaneLayer(
-      path.join(probeRoot, PRODUCT_DATABASE_FILENAME),
-      boundary,
-      runtimeCatalog,
-    ),
+    makeProductControlPlaneLayer(productDatabase, boundary, runtimeCatalog),
   );
   const controlPlane = await runtime.runPromise(Effect.service(ProductControlPlane));
   const observedAt = new Date().toISOString();
@@ -118,7 +131,7 @@ async function main(): Promise<void> {
     permissionPolicy: "approval-required",
     enforcement: "unverified",
     executionTarget,
-    packageGeneration: catalog.packageGeneration,
+    packageGeneration,
   });
   let counter = 0;
   const nextIds = (prefix: string) => {
@@ -192,7 +205,7 @@ async function main(): Promise<void> {
     const firstChat = await submit(
       chatConversationId,
       "live-chat-first",
-      "Reply with one short sentence confirming this Chat Run.",
+      `Use the todo tool exactly once with action "add" and text "${PRIVATE_TODO_CANARY}". After the tool succeeds, reply with one short confirmation.`,
       selection(null),
     );
     const firstChatState = firstChat.snapshot.readModel.runs.find(
@@ -204,7 +217,7 @@ async function main(): Promise<void> {
     const secondChat = await submit(
       chatConversationId,
       "live-chat-continuation",
-      "Continue the same Chat Session with one more short sentence.",
+      `Use the todo tool exactly once with action "list". Then reply whether the existing list contains "${PRIVATE_TODO_CANARY}".`,
       selection(null),
     );
 
@@ -232,10 +245,7 @@ async function main(): Promise<void> {
       selection(agentTarget),
     );
 
-    const summarize = (
-      snapshot: ProductConversationSnapshot,
-      runId: ProductRunId,
-    ) => {
+    const summarize = (snapshot: ProductConversationSnapshot, runId: ProductRunId) => {
       const run = snapshot.readModel.runs.find((candidate) => candidate.id === runId);
       const activities = snapshot.readModel.activities.filter(
         (activity) => activity.runId === runId,
@@ -243,24 +253,34 @@ async function main(): Promise<void> {
       const sessionActivity = activities.find(
         (activity) => activity.detail.code === "session-bound",
       );
+      const assistantText = snapshot.readModel.entries
+        .filter((entry) => entry.runId === runId && entry.role === "assistant")
+        .map((entry) => entry.text)
+        .join("\n");
       return {
         receiptState: run?.receipt.receipt.state ?? "missing",
         assistantEntryCount: snapshot.readModel.entries.filter(
           (entry) => entry.runId === runId && entry.role === "assistant",
         ).length,
         lineage:
-          sessionActivity?.detail.code === "session-bound"
-            ? sessionActivity.detail.lineage
-            : null,
-        thinkingObserved: activities.some(
-          (activity) => activity.detail.code === "thinking-delta",
-        ),
+          sessionActivity?.detail.code === "session-bound" ? sessionActivity.detail.lineage : null,
+        thinkingObserved: activities.some((activity) => activity.detail.code === "thinking-delta"),
         toolStarted: activities.some((activity) => activity.detail.code === "tool-started"),
         toolSettled: activities.some((activity) => activity.detail.code === "tool-settled"),
-        usageObserved: activities.some((activity) => activity.detail.code === "usage-observed"),
-        settlementObserved: activities.some(
-          (activity) => activity.detail.code === "run-settled",
+        todoToolStarted: activities.some(
+          (activity) =>
+            activity.detail.code === "tool-started" && activity.detail.toolName === "todo",
         ),
+        todoToolSettled: activities.some(
+          (activity) =>
+            activity.detail.code === "tool-settled" &&
+            activity.detail.toolName === "todo" &&
+            activity.detail.outcome === "succeeded",
+        ),
+        packageLoaded: activities.some((activity) => activity.detail.code === "package-loaded"),
+        privateTodoCanaryObserved: assistantText.includes(PRIVATE_TODO_CANARY),
+        usageObserved: activities.some((activity) => activity.detail.code === "usage-observed"),
+        settlementObserved: activities.some((activity) => activity.detail.code === "run-settled"),
       };
     };
     const outbox = await runtime.runPromise(controlPlane.inspectOutbox());
@@ -269,7 +289,8 @@ async function main(): Promise<void> {
       `${JSON.stringify({
         protocolVersion: PRODUCT_PROTOCOL_VERSION,
         runtimeVersion: catalog.runtimeVersion,
-        packageGenerationMatched: catalog.packageGeneration === runtimeCatalog.packageGeneration,
+        packageGenerationMatched:
+          lifecycle.snapshot().currentGeneration === runtimeCatalog.packageGeneration,
         dispatchCount: outbox.length,
         automaticReplayCounts: outbox.map((row) => row.automaticReplayCount),
         attemptCounts: outbox.map((row) => row.attemptCount),

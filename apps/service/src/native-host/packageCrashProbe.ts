@@ -1,4 +1,5 @@
-import { writeFileSync } from "node:fs";
+import { readFileSync, writeFileSync } from "node:fs";
+import path from "node:path";
 
 import {
   PRODUCT_PROTOCOL_VERSION,
@@ -15,9 +16,12 @@ import { Effect, ManagedRuntime } from "effect";
 import {
   ProductControlPlane,
   makeProductControlPlaneLayer,
+  readProductPackageLifecycleFacts,
 } from "../product/ProductControlPlane";
 import { NativeHostClient } from "./client";
 import { makeNativeHostExecutionBoundary } from "./executionBoundary";
+import { PiPackageLifecycle } from "./packageLifecycle";
+import type { NativeHostPackageArtifact } from "@omnimind/contracts/native-host";
 
 function requiredEnvironment(name: string): string {
   const value = process.env[name]?.trim();
@@ -46,17 +50,36 @@ async function main(): Promise<void> {
     serviceInstanceId: "service-package-crash-proof",
   });
   const catalog = await client.catalog();
+  const lifecycle = new PiPackageLifecycle({
+    stateDir: path.join(requiredEnvironment("OMNIMIND_HOME"), "userdata"),
+  });
+  const artifact = JSON.parse(
+    readFileSync(requiredEnvironment("OMNIMIND_PACKAGE_CRASH_PROBE_ARTIFACT"), "utf8"),
+  ) as NativeHostPackageArtifact;
+  const validation = await client.validatePackage(artifact);
+  if (
+    validation.status !== "validated" ||
+    validation.generation !== artifact.generation ||
+    !validation.report
+  ) {
+    throw new Error("Test Package failed exact Native Host validation.");
+  }
+  lifecycle.recordValidated(artifact, validation.report);
+  lifecycle.activate(artifact.generation, 0);
+  const packageGeneration = lifecycle.snapshot().currentGeneration;
+  if (!packageGeneration)
+    throw new Error("Package crash probe found no Product Package generation.");
   const selected = catalog.models.find((model) => model.available);
   if (!selected) throw new Error("Package crash probe found no broker-backed Pi model.");
   const runtimeCatalog = {
     engineId: catalog.engineId,
     runtimeVersion: catalog.runtimeVersion,
-    packageGeneration: catalog.packageGeneration,
+    packageGeneration,
     models: catalog.models,
     capabilities: catalog.capabilities,
     truncated: catalog.truncated,
   };
-  const boundary = makeNativeHostExecutionBoundary(client);
+  const boundary = makeNativeHostExecutionBoundary(client, lifecycle);
   const runtime = ManagedRuntime.make(
     makeProductControlPlaneLayer(database, boundary, runtimeCatalog),
   );
@@ -74,7 +97,7 @@ async function main(): Promise<void> {
     permissionPolicy: "approval-required" as const,
     enforcement: "unverified" as const,
     executionTarget: null,
-    packageGeneration: catalog.packageGeneration,
+    packageGeneration,
   };
   try {
     await runtime.runPromise(
@@ -139,6 +162,8 @@ async function main(): Promise<void> {
       }),
     );
     const outbox = await runtime.runPromise(controlPlane.inspectOutbox());
+    const packageFacts = await readProductPackageLifecycleFacts(database);
+    const lifecycleSnapshot = lifecycle.snapshot();
     const receipt = snapshot.readModel.runs[0]?.receipt.receipt;
     writeFileSync(
       resultFile,
@@ -150,6 +175,9 @@ async function main(): Promise<void> {
           receipt?.state === "delivery_unknown" ? receipt.reconciliationHint : null,
         pendingReconcileStatus: pendingReconciliation.status,
         pendingResolution: pendingReconciliation.resolution?.kind ?? null,
+        packageGeneration,
+        activeLeaseCount: packageFacts.activeLeaseCounts[packageGeneration] ?? 0,
+        quarantinedGenerations: lifecycleSnapshot.quarantinedGenerations,
         queueIds: snapshot.readModel.queue.map((item) => item.id),
         outbox: outbox.map((row) => ({
           state: row.state,

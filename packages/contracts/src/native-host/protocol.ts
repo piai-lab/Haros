@@ -91,6 +91,20 @@ export interface NativeHostCatalogRequest extends NativeHostAuthenticatedEnvelop
   readonly kind: "runtime.catalog.request";
 }
 
+export interface NativeHostPackageArtifact {
+  readonly generation: string;
+  readonly stagePath: string;
+  readonly manifestSha256: string;
+  readonly executablePath: string;
+  readonly executableSha256: string;
+  readonly executableBytes: number;
+}
+
+export interface NativeHostPackageValidateRequest extends NativeHostAuthenticatedEnvelope {
+  readonly kind: "package.validate.request";
+  readonly artifact: NativeHostPackageArtifact;
+}
+
 export interface NativeHostExecutionSelection {
   readonly engineId: string;
   readonly runtimeModelId: string;
@@ -143,6 +157,7 @@ export type NativeHostRequest =
   | NativeHostLivenessRequest
   | NativeHostHealthRequest
   | NativeHostCatalogRequest
+  | NativeHostPackageValidateRequest
   | NativeHostExecutionRequest
   | NativeHostFactsRequest
   | NativeHostControlRequest
@@ -161,6 +176,22 @@ export interface NativeHostHealthResponse extends NativeHostAuthenticatedEnvelop
   readonly uptimeMs: number;
   readonly runtime: "pi";
   readonly runtimeVersion: "0.81.1";
+}
+
+export interface NativeHostPackageLoadReport {
+  readonly extensionCount: number;
+  readonly toolNames: ReadonlyArray<string>;
+  readonly commandNames: ReadonlyArray<string>;
+  readonly lifecycleEvents: ReadonlyArray<string>;
+}
+
+export interface NativeHostPackageValidationResponse extends NativeHostAuthenticatedEnvelope {
+  readonly kind: "package.validation.response";
+  readonly generation: string;
+  readonly status: "validated" | "rejected";
+  readonly code: string;
+  readonly message: string;
+  readonly report: NativeHostPackageLoadReport | null;
 }
 
 export interface NativeHostRuntimeModel {
@@ -200,7 +231,6 @@ export interface NativeHostCatalogResponse extends NativeHostAuthenticatedEnvelo
   readonly kind: "runtime.catalog.response";
   readonly engineId: "pi";
   readonly runtimeVersion: "0.81.1";
-  readonly packageGeneration: string;
   readonly models: ReadonlyArray<NativeHostRuntimeModel>;
   readonly capabilities: NativeHostRuntimeCapabilities;
   readonly truncated: boolean;
@@ -357,6 +387,7 @@ export interface NativeHostShutdownAck extends NativeHostAuthenticatedEnvelope {
 export type NativeHostResponse =
   | NativeHostLivenessResponse
   | NativeHostHealthResponse
+  | NativeHostPackageValidationResponse
   | NativeHostCatalogResponse
   | NativeHostExecutionAccepted
   | NativeHostExecutionRejected
@@ -508,9 +539,49 @@ function isWorkspace(value: unknown): value is NativeHostExecutionWorkspace {
   );
 }
 
-function isAcceptance(
-  value: unknown,
-): value is NativeHostExecutionAccepted["acceptance"] {
+function isSha256(value: unknown): value is string {
+  return typeof value === "string" && /^[0-9a-f]{64}$/u.test(value);
+}
+
+function isPackageArtifact(value: unknown): value is NativeHostPackageArtifact {
+  return (
+    isRecord(value) &&
+    hasExactKeys(value, [
+      "executableBytes",
+      "executablePath",
+      "executableSha256",
+      "generation",
+      "manifestSha256",
+      "stagePath",
+    ]) &&
+    isBoundedText(value.generation, 256) &&
+    isBoundedText(value.stagePath, 8_192) &&
+    isBoundedText(value.executablePath, 512) &&
+    !value.executablePath.includes("/") &&
+    !value.executablePath.includes("\\") &&
+    isSha256(value.manifestSha256) &&
+    isSha256(value.executableSha256) &&
+    isNonNegativeInteger(value.executableBytes) &&
+    value.executableBytes > 0
+  );
+}
+
+function isPackageLoadReport(value: unknown): value is NativeHostPackageLoadReport {
+  const isNameArray = (candidate: unknown) =>
+    Array.isArray(candidate) &&
+    candidate.length <= 32 &&
+    candidate.every((name) => isBoundedText(name, 128));
+  return (
+    isRecord(value) &&
+    hasExactKeys(value, ["commandNames", "extensionCount", "lifecycleEvents", "toolNames"]) &&
+    isNonNegativeInteger(value.extensionCount) &&
+    isNameArray(value.toolNames) &&
+    isNameArray(value.commandNames) &&
+    isNameArray(value.lifecycleEvents)
+  );
+}
+
+function isAcceptance(value: unknown): value is NativeHostExecutionAccepted["acceptance"] {
   return (
     isRecord(value) &&
     hasExactKeys(value, ["entryId", "query", "sessionId"]) &&
@@ -607,9 +678,7 @@ function isRuntimeCapabilities(value: unknown): value is NativeHostRuntimeCapabi
     availability(value.filesRead) &&
     availability(value.filesWrite) &&
     availability(value.terminal) &&
-    ["host-enforced", "engine-enforced", "mixed", "unverified"].includes(
-      String(value.enforcement),
-    )
+    ["host-enforced", "engine-enforced", "mixed", "unverified"].includes(String(value.enforcement))
   );
 }
 
@@ -675,9 +744,7 @@ export function isNativeHostRuntimeFact(value: unknown): value is NativeHostRunt
   }
 }
 
-export function isNativeHostRuntimeSnapshot(
-  value: unknown,
-): value is NativeHostRuntimeSnapshot {
+export function isNativeHostRuntimeSnapshot(value: unknown): value is NativeHostRuntimeSnapshot {
   if (
     !isRecord(value) ||
     !hasExactKeys(value, [
@@ -879,6 +946,13 @@ export function decodeNativeHostFrame(
       case "runtime.catalog.request":
       case "shutdown.request":
         return request && hasExactKeys(value, common) && authenticated;
+      case "package.validate.request":
+        return (
+          request &&
+          hasExactKeys(value, [...common, "artifact"]) &&
+          authenticated &&
+          isPackageArtifact(value.artifact)
+        );
       case "execution.request":
         return (
           request &&
@@ -944,6 +1018,18 @@ export function decodeNativeHostFrame(
           value.status === "ready" &&
           isNonNegativeInteger(value.uptimeMs)
         );
+      case "package.validation.response":
+        return (
+          response &&
+          hasExactKeys(value, [...common, "code", "generation", "message", "report", "status"]) &&
+          authenticated &&
+          isBoundedText(value.generation, 256) &&
+          ["validated", "rejected"].includes(String(value.status)) &&
+          isBoundedText(value.code, 128) &&
+          isBoundedText(value.message, 512) &&
+          ((value.status === "validated" && isPackageLoadReport(value.report)) ||
+            (value.status === "rejected" && value.report === null))
+        );
       case "runtime.catalog.response":
         return (
           response &&
@@ -952,7 +1038,6 @@ export function decodeNativeHostFrame(
             "capabilities",
             "engineId",
             "models",
-            "packageGeneration",
             "runtimeVersion",
             "truncated",
           ]) &&
@@ -960,7 +1045,6 @@ export function decodeNativeHostFrame(
           value.engineId === "pi" &&
           value.runtimeVersion === "0.81.1" &&
           isRuntimeCapabilities(value.capabilities) &&
-          isBoundedText(value.packageGeneration, 256) &&
           typeof value.truncated === "boolean" &&
           Array.isArray(value.models) &&
           value.models.length <= 128 &&

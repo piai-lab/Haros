@@ -11,6 +11,7 @@ import {
   type NativeHostFrame,
   type NativeHostControlRequest,
   type NativeHostExecutionRequest,
+  type NativeHostPackageArtifact,
   type NativeHostRequest,
   type NativeHostResponse,
 } from "@omnimind/contracts/native-host";
@@ -287,6 +288,7 @@ export class NativeHostClient {
         NativeHostExecutionRequest,
         "protocolVersion" | "kind" | "requestId" | "serviceInstanceId" | "hostInstanceId"
       >;
+      readonly artifact?: NativeHostPackageArtifact;
       readonly operationRef?: string;
       readonly afterSequence?: number;
       readonly control?: NativeHostControlRequest["control"];
@@ -311,6 +313,16 @@ export class NativeHostClient {
         break;
       case "runtime.catalog.request":
         request = { ...base, kind };
+        break;
+      case "package.validate.request":
+        if (!options.artifact) {
+          throw new NativeHostClientError(
+            "NATIVE_HOST_PROTOCOL_FAILURE",
+            "Native Host Package validation artifact was missing.",
+            false,
+          );
+        }
+        request = { ...base, kind, artifact: options.artifact };
         break;
       case "execution.request":
         if (!options.execution) {
@@ -407,6 +419,20 @@ export class NativeHostClient {
       throw new NativeHostClientError(
         "NATIVE_HOST_PROTOCOL_FAILURE",
         "Native Host returned the wrong runtime catalog response.",
+        false,
+      );
+    }
+    return response;
+  }
+
+  async validatePackage(
+    artifact: NativeHostPackageArtifact,
+  ): Promise<Extract<NativeHostResponse, { kind: "package.validation.response" }>> {
+    const response = await this.#request("package.validate.request", { artifact });
+    if (response.kind !== "package.validation.response") {
+      throw new NativeHostClientError(
+        "NATIVE_HOST_PROTOCOL_FAILURE",
+        "Native Host returned the wrong Package validation response.",
         false,
       );
     }

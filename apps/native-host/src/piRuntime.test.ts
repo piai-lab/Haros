@@ -17,22 +17,75 @@ import {
   fauxProvider,
   fauxText,
   fauxThinking,
+  fauxToolCall,
   InMemoryCredentialStore,
 } from "@earendil-works/pi-ai";
 import { ModelRuntime } from "@earendil-works/pi-coding-agent";
 import {
   NATIVE_HOST_PROTOCOL_VERSION,
   type NativeHostExecutionRequest,
+  type NativeHostPackageArtifact,
 } from "@omnimind/contracts/native-host";
 import { afterEach, describe, expect, it } from "vitest";
 
-import {
-  PI_PACKAGE_GENERATION,
-  PiNativeRuntime,
-  StreamingContentRedactor,
-} from "./piRuntime";
+import { PI_PACKAGE_GENERATION, PiNativeRuntime, StreamingContentRedactor } from "./piRuntime";
 
 const temporaryDirectories = new Set<string>();
+const validatedGenerationByRuntime = new WeakMap<PiNativeRuntime, string>();
+
+function stageExtension(
+  productHome: string,
+  source: string | Buffer,
+  generation = `fixture-${createHash("sha256").update(source).digest("hex")}`,
+): NativeHostPackageArtifact {
+  const stagePath = path.join(productHome, "userdata", "packages", "stage", generation);
+  mkdirSync(stagePath, { recursive: true });
+  const manifest = Buffer.from(`${JSON.stringify({ generation, executable: "todo.ts" })}\n`);
+  const executable = Buffer.isBuffer(source) ? source : Buffer.from(source);
+  writeFileSync(path.join(stagePath, "manifest.json"), manifest);
+  writeFileSync(path.join(stagePath, "todo.ts"), executable);
+  return {
+    generation,
+    stagePath,
+    manifestSha256: createHash("sha256").update(manifest).digest("hex"),
+    executablePath: "todo.ts",
+    executableSha256: createHash("sha256").update(executable).digest("hex"),
+    executableBytes: executable.byteLength,
+  };
+}
+
+function exactTodoArtifact(productHome: string): NativeHostPackageArtifact {
+  const sourceRoot = path.resolve(import.meta.dirname, "../../../assets/packages/pi-todo-0.81.1");
+  const manifest = readFileSync(path.join(sourceRoot, "manifest.json"));
+  const parsed = JSON.parse(manifest.toString("utf8")) as {
+    generation: string;
+    executable: { path: string; sha256: string; bytes: number };
+  };
+  const executable = readFileSync(path.join(sourceRoot, parsed.executable.path));
+  const stagePath = path.join(productHome, "userdata", "packages", "stage", parsed.generation);
+  mkdirSync(stagePath, { recursive: true });
+  writeFileSync(path.join(stagePath, "manifest.json"), manifest);
+  writeFileSync(path.join(stagePath, parsed.executable.path), executable);
+  return {
+    generation: parsed.generation,
+    stagePath,
+    manifestSha256: createHash("sha256").update(manifest).digest("hex"),
+    executablePath: parsed.executable.path,
+    executableSha256: parsed.executable.sha256,
+    executableBytes: parsed.executable.bytes,
+  };
+}
+
+async function validatePackage(runtime: PiNativeRuntime, artifact: NativeHostPackageArtifact) {
+  return runtime.validatePackage({
+    protocolVersion: NATIVE_HOST_PROTOCOL_VERSION,
+    kind: "package.validate.request",
+    requestId: `validate-${artifact.executableSha256.slice(0, 12)}`,
+    serviceInstanceId: "service-test",
+    hostInstanceId: "host-test",
+    artifact,
+  });
+}
 
 afterEach(() => {
   for (const directory of temporaryDirectories) rmSync(directory, { recursive: true, force: true });
@@ -47,14 +100,12 @@ async function fixture(options?: {
   readonly maxSettledOperations?: number;
   readonly credential?: string | null;
   readonly credentialBrokerFailure?: "disconnect" | "timeout";
+  readonly sessionFactoryFailure?: boolean;
+  readonly settingsManagerFailure?: boolean;
+  readonly packageBindFailure?: boolean;
 }) {
   const productHome = mkdtempSync(path.join(tmpdir(), "omnimind-pi-runtime-"));
   temporaryDirectories.add(productHome);
-  if (options?.extensionSource) {
-    const extensionDirectory = path.join(productHome, "pi-native", "agent", "extensions");
-    mkdirSync(extensionDirectory, { recursive: true });
-    writeFileSync(path.join(extensionDirectory, "acceptance-race.ts"), options.extensionSource);
-  }
   const faux = fauxProvider({
     provider: "faux-native",
     models: [{ id: "faux-thinker", reasoning: true }],
@@ -80,9 +131,7 @@ async function fixture(options?: {
           throw new Error("broker timeout");
         }
         const credential =
-          options && "credential" in options
-            ? options.credential
-            : "fixture-recovery-credential";
+          options && "credential" in options ? options.credential : "fixture-recovery-credential";
         return credential === null
           ? { status: "missing" as const }
           : { status: "configured" as const, credential };
@@ -100,7 +149,34 @@ async function fixture(options?: {
     ...(options?.maxSettledOperations === undefined
       ? {}
       : { maxSettledOperations: options.maxSettledOperations }),
+    ...(options?.sessionFactoryFailure
+      ? {
+          sessionFactory: async () => {
+            throw new Error("fixture Session construction failure");
+          },
+        }
+      : {}),
+    ...(options?.settingsManagerFailure
+      ? {
+          settingsManagerFactory: () => {
+            throw new Error("fixture SettingsManager construction failure");
+          },
+        }
+      : {}),
+    ...(options?.packageBindFailure
+      ? {
+          bindSessionExtensions: async () => {
+            throw new Error("fixture Package bind failure");
+          },
+        }
+      : {}),
   });
+  if (options?.extensionSource) {
+    const artifact = stageExtension(productHome, options.extensionSource);
+    const validation = await validatePackage(runtime, artifact);
+    if (validation.status !== "validated") throw new Error("Fixture Package validation failed.");
+    validatedGenerationByRuntime.set(runtime, artifact.generation);
+  }
   return { productHome, faux, modelRuntime, runtime };
 }
 
@@ -150,8 +226,10 @@ async function requestForRuntime(
   runtime: PiNativeRuntime,
   input?: Parameters<typeof request>[0],
 ): Promise<NativeHostExecutionRequest> {
-  const catalog = await runtime.catalog();
-  return request({ ...input, packageGeneration: catalog.packageGeneration });
+  return request({
+    ...input,
+    packageGeneration: validatedGenerationByRuntime.get(runtime) ?? PI_PACKAGE_GENERATION,
+  });
 }
 
 async function waitForNativeSettlement(runtime: PiNativeRuntime, operationRef: string) {
@@ -293,7 +371,9 @@ describe("PiNativeRuntime", () => {
     "makes credential broker %s failures distinctly retryable",
     async (credentialBrokerFailure) => {
       const { runtime } = await fixture({ credentialBrokerFailure });
-      expect(await runtime.execute(request({ runId: `credential-${credentialBrokerFailure}` }))).toMatchObject({
+      expect(
+        await runtime.execute(request({ runId: `credential-${credentialBrokerFailure}` })),
+      ).toMatchObject({
         kind: "execution.rejected",
         code: "PI_CREDENTIAL_BROKER_UNAVAILABLE",
         retryable: true,
@@ -301,6 +381,52 @@ describe("PiNativeRuntime", () => {
       await runtime.shutdown();
     },
   );
+
+  it("classifies generic Session construction failure outside Package authority", async () => {
+    const { runtime } = await fixture({ sessionFactoryFailure: true });
+
+    expect(await runtime.execute(request({ runId: "session-construction" }))).toMatchObject({
+      kind: "execution.rejected",
+      code: "PI_SESSION_UNAVAILABLE",
+      retryable: false,
+    });
+
+    await runtime.shutdown();
+  });
+
+  it("keeps Settings construction failure non-Package-fatal for a selected Package", async () => {
+    const { runtime } = await fixture({
+      extensionSource: "export default function () {}\n",
+      settingsManagerFailure: true,
+    });
+
+    expect(
+      await runtime.execute(await requestForRuntime(runtime, { runId: "settings-construction" })),
+    ).toMatchObject({
+      kind: "execution.rejected",
+      code: "PI_SESSION_UNAVAILABLE",
+      retryable: false,
+    });
+
+    await runtime.shutdown();
+  });
+
+  it("classifies a selected Package session hook failure as Package-fatal", async () => {
+    const { runtime } = await fixture({
+      extensionSource: "export default function () {}\n",
+      packageBindFailure: true,
+    });
+
+    expect(
+      await runtime.execute(await requestForRuntime(runtime, { runId: "package-session-hook" })),
+    ).toMatchObject({
+      kind: "execution.rejected",
+      code: "PI_PACKAGE_LIFECYCLE_UNAVAILABLE",
+      retryable: false,
+    });
+
+    await runtime.shutdown();
+  });
 
   it("accepts only after SessionManager reopen and emits exact redacted sequenced facts", async () => {
     const { productHome, faux, runtime } = await fixture();
@@ -339,7 +465,9 @@ describe("PiNativeRuntime", () => {
     const index = JSON.parse(
       readFileSync(path.join(productHome, "pi-native", "session-index.json"), "utf8"),
     ) as { sessions: Array<{ conversationId: string; sessionFile: string }> };
-    expect(index.sessions.find((entry) => entry.conversationId === "conversation-1")?.sessionFile).toBeTruthy();
+    expect(
+      index.sessions.find((entry) => entry.conversationId === "conversation-1")?.sessionFile,
+    ).toBeTruthy();
   });
 
   it("accepts a first native Session while the provider assistant is still blocked", async () => {
@@ -394,10 +522,14 @@ describe("PiNativeRuntime", () => {
         'export default function (pi) { pi.on("before_agent_start", () => { throw new Error("fixture prompt rejection"); }); }\n',
     });
     faux.setResponses([fauxAssistantMessage([fauxText("unused")])]);
-    const result = await runtime.execute(await requestForRuntime(runtime, { runId: "reject-race" }));
+    const result = await runtime.execute(
+      await requestForRuntime(runtime, { runId: "reject-race" }),
+    );
     expect(result.kind).toBe("execution.accepted");
     if (result.kind === "execution.accepted") {
       expect(result.acceptance.query).toBe("session-manager-reopen");
+      const facts = await waitForSettlement(runtime, result.operationRef);
+      expect(facts).toContainEqual(expect.objectContaining({ kind: "package.failed", count: 1 }));
       expect((await runtime.reconcile(result.operationRef, 0)).status).not.toBe("unknown");
     }
     await runtime.shutdown();
@@ -506,29 +638,13 @@ describe("PiNativeRuntime", () => {
     expect(missing).toMatchObject({ kind: "execution.accepted", rebuilt: "missing" });
   });
 
-  it("loads one headless extension, contains a crashing extension, and owns private state in Host", async () => {
+  it("validates and runs the exact todo Package through Pi, then requires revalidation after restart", async () => {
     const productHome = mkdtempSync(path.join(tmpdir(), "omnimind-pi-package-"));
     temporaryDirectories.add(productHome);
-    const extensionDirectory = path.join(productHome, "pi-native", "agent", "extensions");
-    mkdirSync(extensionDirectory, { recursive: true });
-    const marker = path.join(productHome, "package-private-state");
-    const workspace = path.join(productHome, "folder-workspace");
-    const workspaceExtensionDirectory = path.join(workspace, ".pi", "extensions");
-    const workspaceMarker = path.join(productHome, "untrusted-workspace-extension-state");
-    mkdirSync(workspaceExtensionDirectory, { recursive: true });
-    writeFileSync(
-      path.join(workspaceExtensionDirectory, "untrusted.ts"),
-      `import { writeFileSync } from "node:fs";\nwriteFileSync(${JSON.stringify(workspaceMarker)}, "must-not-load");\nexport default function () {}\n`,
-    );
-    writeFileSync(
-      path.join(extensionDirectory, "proof.ts"),
-      `import { writeFileSync } from "node:fs";\nwriteFileSync(${JSON.stringify(marker)}, "host-owned");\nexport default function () {}\n`,
-    );
-    writeFileSync(
-      path.join(extensionDirectory, "crash.ts"),
-      `throw new Error("contained-extension-crash");\nexport default function () {}\n`,
-    );
-    const faux = fauxProvider({ provider: "faux-native", models: [{ id: "faux-thinker", reasoning: true }] });
+    const faux = fauxProvider({
+      provider: "faux-native",
+      models: [{ id: "faux-thinker", reasoning: true }],
+    });
     const modelRuntime = await ModelRuntime.create({
       credentials: new InMemoryCredentialStore(),
       modelsPath: null,
@@ -547,80 +663,135 @@ describe("PiNativeRuntime", () => {
         }),
       },
     });
-    const packageGeneration = (await runtime.catalog()).packageGeneration;
-    expect(packageGeneration).not.toBe(PI_PACKAGE_GENERATION);
-    expect(
-      await runtime.execute(request({ runId: "stale-package", packageGeneration: PI_PACKAGE_GENERATION })),
-    ).toMatchObject({
-      kind: "execution.rejected",
-      code: "PI_PACKAGE_GENERATION_STALE",
+    const artifact = exactTodoArtifact(productHome);
+    const validation = await validatePackage(runtime, artifact);
+    expect(validation).toMatchObject({
+      status: "validated",
+      generation: artifact.generation,
+      report: {
+        extensionCount: 1,
+        toolNames: ["todo"],
+        commandNames: ["todos"],
+      },
     });
-    faux.setResponses([fauxAssistantMessage([fauxText("package survived")])]);
-    const result = await runtime.execute(
-      request({
-        packageGeneration,
-        workspace: { kind: "folder-backed", cwd: workspace },
-      }),
+    expect(validation.report?.lifecycleEvents).toEqual(
+      expect.arrayContaining(["session_start", "session_tree"]),
     );
-    expect(result.kind).toBe("execution.accepted");
-    if (result.kind !== "execution.accepted") return;
-    expect(result.resolvedSelection.packageGeneration).toBe(packageGeneration);
-    const facts = await waitForSettlement(runtime, result.operationRef);
-    expect(facts).toEqual(
+    faux.setResponses([
+      fauxAssistantMessage(fauxToolCall("todo", { action: "add", text: "private-item" })),
+      fauxAssistantMessage(fauxText("Todo updated.")),
+    ]);
+    const first = await runtime.execute(
+      request({ runId: "todo-add", packageGeneration: artifact.generation }),
+    );
+    expect(first.kind).toBe("execution.accepted");
+    if (first.kind !== "execution.accepted") return;
+    const firstFacts = await waitForSettlement(runtime, first.operationRef);
+    expect(firstFacts).toEqual(
       expect.arrayContaining([
         expect.objectContaining({ kind: "package.loaded", count: 1 }),
-        expect.objectContaining({ kind: "package.failed", count: 1 }),
+        expect.objectContaining({ kind: "tool.started", toolName: "todo" }),
+        expect.objectContaining({ kind: "tool.settled", toolName: "todo", outcome: "succeeded" }),
       ]),
     );
-    expect(readFileSync(marker, "utf8")).toBe("host-owned");
-    expect(existsSync(workspaceMarker)).toBe(false);
-    expect(facts.some((fact) => JSON.stringify(fact).includes("contained-extension-crash"))).toBe(false);
+    expect(JSON.stringify(firstFacts)).not.toContain("private-item");
+    await runtime.shutdown();
+
+    const restarted = await PiNativeRuntime.create({
+      productHome,
+      modelRuntime,
+      credentialBroker: {
+        available: async () => "configured",
+        credential: async () => ({
+          status: "configured",
+          credential: "fixture-recovery-credential",
+        }),
+      },
+    });
+    expect(
+      await restarted.execute(
+        request({ runId: "todo-before-revalidate", packageGeneration: artifact.generation }),
+      ),
+    ).toMatchObject({
+      kind: "execution.rejected",
+      code: "PI_PACKAGE_REVALIDATION_REQUIRED",
+    });
+    expect((await validatePackage(restarted, artifact)).status).toBe("validated");
+    faux.setResponses([
+      fauxAssistantMessage(fauxToolCall("todo", { action: "list" })),
+      fauxAssistantMessage(fauxText("Todo listed.")),
+    ]);
+    const continued = await restarted.execute(
+      request({
+        runId: "todo-list",
+        packageGeneration: artifact.generation,
+        priorLineageRef: first.lineageRef,
+      }),
+    );
+    expect(continued).toMatchObject({ kind: "execution.accepted", rebuilt: "continued" });
+    if (continued.kind !== "execution.accepted") return;
+    await waitForSettlement(restarted, continued.operationRef);
+    const index = JSON.parse(
+      readFileSync(path.join(productHome, "pi-native", "session-index.json"), "utf8"),
+    ) as { sessions: Array<{ sessionFile: string }> };
+    const entries = readFileSync(index.sessions[0]!.sessionFile, "utf8")
+      .split(/\r?\n/u)
+      .filter(Boolean)
+      .map(
+        (line) =>
+          JSON.parse(line) as {
+            type?: string;
+            message?: { role?: string; toolName?: string; details?: unknown };
+          },
+      );
+    const listResult = entries.findLast(
+      (entry) =>
+        entry.type === "message" &&
+        entry.message?.role === "toolResult" &&
+        entry.message.toolName === "todo" &&
+        (entry.message.details as { action?: string } | undefined)?.action === "list",
+    );
+    expect(listResult?.message?.details).toMatchObject({
+      action: "list",
+      todos: [{ id: 1, text: "private-item", done: false }],
+      nextId: 2,
+    });
+    await restarted.shutdown();
   });
 
-  it("rejects symbolic-link package inputs without loading their target", async () => {
+  it("rejects a symbolic-link exact artifact without loading its target", async () => {
     const productHome = mkdtempSync(path.join(tmpdir(), "omnimind-pi-package-link-"));
     temporaryDirectories.add(productHome);
-    const extensionDirectory = path.join(productHome, "pi-native", "agent", "extensions");
-    mkdirSync(extensionDirectory, { recursive: true });
     const marker = path.join(productHome, "symlink-target-loaded");
     const target = path.join(productHome, "outside-extension.ts");
     writeFileSync(
       target,
       `import { writeFileSync } from "node:fs";\nwriteFileSync(${JSON.stringify(marker)}, "loaded");\nexport default function () {}\n`,
     );
-    symlinkSync(target, path.join(extensionDirectory, "linked.ts"));
-    const faux = fauxProvider({
-      provider: "faux-native",
-      models: [{ id: "faux-thinker", reasoning: true }],
-    });
-    const modelRuntime = await ModelRuntime.create({
-      credentials: new InMemoryCredentialStore(),
-      modelsPath: null,
-      allowModelNetwork: false,
-    });
-    modelRuntime.registerNativeProvider(faux.provider);
-    await modelRuntime.setRuntimeApiKey("faux-native", "fixture-key", { allowNetwork: false });
-    const runtime = await PiNativeRuntime.create({ productHome, modelRuntime });
-    const packageGeneration = (await runtime.catalog()).packageGeneration;
-
-    expect(await runtime.execute(request({ packageGeneration }))).toMatchObject({
-      kind: "execution.rejected",
-      code: "PI_PACKAGE_INPUT_UNSUPPORTED",
+    const artifact = stageExtension(productHome, "export default function () {}\n");
+    rmSync(path.join(artifact.stagePath, "todo.ts"));
+    symlinkSync(target, path.join(artifact.stagePath, "todo.ts"));
+    const runtime = await PiNativeRuntime.create({ productHome });
+    expect(await validatePackage(runtime, artifact)).toMatchObject({
+      status: "rejected",
+      code: "package-validation-failed",
     });
     expect(existsSync(marker)).toBe(false);
-    writeFileSync(target, 'throw new Error("changed target");\nexport default function () {}\n');
-    expect((await runtime.catalog()).packageGeneration).toBe(packageGeneration);
-    expect(await runtime.execute(request({ packageGeneration }))).toMatchObject({
+    expect(
+      await runtime.execute(request({ packageGeneration: artifact.generation })),
+    ).toMatchObject({
       kind: "execution.rejected",
-      code: "PI_PACKAGE_INPUT_UNSUPPORTED",
+      code: "PI_PACKAGE_REVALIDATION_REQUIRED",
     });
     expect(existsSync(marker)).toBe(false);
+    await runtime.shutdown();
   });
 
   it("reopens a bounded full Run snapshot after retention overflow and a missing settlement fact", async () => {
     const { productHome, faux, modelRuntime, runtime } = await fixture();
-    const completeAnswer = Array.from({ length: 800 }, (_, index) =>
-      `visible-${index.toString().padStart(4, "0")}\n`,
+    const completeAnswer = Array.from(
+      { length: 800 },
+      (_, index) => `visible-${index.toString().padStart(4, "0")}\n`,
     ).join("");
     faux.setResponses([fauxAssistantMessage([fauxText(completeAnswer)])]);
     const first = await runtime.execute(request({ runId: "snapshot-one" }));
@@ -633,9 +804,7 @@ describe("PiNativeRuntime", () => {
       "facts",
       `${createHash("sha256").update(first.operationRef, "utf8").digest("hex")}.jsonl`,
     );
-    const retainedLines = readFileSync(retainedFactFile, "utf8")
-      .split(/\r?\n/u)
-      .filter(Boolean);
+    const retainedLines = readFileSync(retainedFactFile, "utf8").split(/\r?\n/u).filter(Boolean);
     expect(retainedLines.length).toBeGreaterThanOrEqual(2_048);
     expect(retainedLines.length).toBeLessThanOrEqual(2_303);
     const compacted = runtime.facts(first.operationRef, 0);

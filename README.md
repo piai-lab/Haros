@@ -231,6 +231,17 @@ OmniMind 的价值不是“能启动 Pi”，而是上游没有义务完成的�
           }
         ]
       }
+    },
+    {
+      "id": "pi-todo-headless-package",
+      "url": "https://github.com/earendil-works/pi.git",
+      "revision": "20be4b18d4c57487f8993d2762bace129f0cf7c6",
+      "paths": ["assets/packages/pi-todo-0.81.1/todo.ts"],
+      "rights": "The copied todo extension source is MIT-licensed under the retained canonical legal text. This adoption is limited to the exact selected file and does not adopt the Pi repository as OmniMind product source.",
+      "mode": "transplant",
+      "changes": "The selected todo.ts bytes are retained exactly from packages/coding-agent/examples/extensions/todo.ts at the fixed revision. OmniMind adds a separate Product-owned manifest and release staging around the unchanged executable.",
+      "updatePolicy": "Pinned revision and exact SHA-256; any source, version, digest, rights, trust-surface or runtime-compatibility change requires a new explicit source review and revalidation before activation",
+      "licenseFiles": ["LICENSES/pi-todo-MIT.txt"]
     }
   ]
 }

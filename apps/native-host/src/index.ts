@@ -155,6 +155,8 @@ async function responseFor(
       };
     case "runtime.catalog.request":
       return { ...envelope, ...(await runtime.catalog()) };
+    case "package.validate.request":
+      return { ...envelope, ...(await runtime.validatePackage(request)) };
     case "execution.request":
       return { ...envelope, ...(await runtime.execute(request)) };
     case "runtime.facts.request":

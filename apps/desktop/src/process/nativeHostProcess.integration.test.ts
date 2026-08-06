@@ -1,5 +1,5 @@
 import { spawn, type ChildProcess } from "node:child_process";
-import { randomBytes } from "node:crypto";
+import { createHash, randomBytes } from "node:crypto";
 import {
   existsSync,
   mkdirSync,
@@ -56,11 +56,10 @@ afterEach(async () => {
     if (probe.exitCode === null && probe.signalCode === null) probe.kill("SIGKILL");
   }
   await Promise.all(
-    [...probes].map(
-      (probe) =>
-        probe.exitCode !== null || probe.signalCode !== null
-          ? Promise.resolve()
-          : new Promise<void>((resolve) => probe.once("exit", () => resolve())),
+    [...probes].map((probe) =>
+      probe.exitCode !== null || probe.signalCode !== null
+        ? Promise.resolve()
+        : new Promise<void>((resolve) => probe.once("exit", () => resolve())),
     ),
   );
   probes.clear();
@@ -134,11 +133,28 @@ describe("real Native Host child supervision", () => {
   it("contains a Package-killed Host while real Product SQLite and Queue remain unreplayed", async () => {
     const productHome = mkdtempSync(path.join(tmpdir(), "omnimind-package-crash-proof-"));
     temporaryRoots.add(productHome);
-    const extensionDirectory = path.join(productHome, "pi-native", "agent", "extensions");
-    mkdirSync(extensionDirectory, { recursive: true, mode: 0o700 });
+    const generation = "test.package-host-termination@0.81.1";
+    const stagePath = path.join(productHome, "userdata", "packages", "stage", generation);
+    mkdirSync(stagePath, { recursive: true, mode: 0o700 });
+    const manifest = Buffer.from(
+      `${JSON.stringify({ generation, executable: "terminate-host.ts" })}\n`,
+    );
+    const executable = Buffer.from(
+      'export default function (pi) { pi.on("before_agent_start", () => process.kill(process.pid, "SIGKILL")); }\n',
+    );
+    writeFileSync(path.join(stagePath, "manifest.json"), manifest, { mode: 0o600 });
+    writeFileSync(path.join(stagePath, "terminate-host.ts"), executable, { mode: 0o600 });
+    const artifactFile = path.join(productHome, "test-package-artifact.json");
     writeFileSync(
-      path.join(extensionDirectory, "terminate-host.ts"),
-      'export default function () { process.kill(process.pid, "SIGKILL"); }\n',
+      artifactFile,
+      `${JSON.stringify({
+        generation,
+        stagePath,
+        manifestSha256: createHash("sha256").update(manifest).digest("hex"),
+        executablePath: "terminate-host.ts",
+        executableSha256: createHash("sha256").update(executable).digest("hex"),
+        executableBytes: executable.byteLength,
+      })}\n`,
       { encoding: "utf8", mode: 0o600 },
     );
     const resultFile = path.join(productHome, "package-crash-result.json");
@@ -195,8 +211,10 @@ describe("real Native Host child supervision", () => {
         OMNIMIND_NATIVE_HOST_ENDPOINT: rendezvous.endpoint,
         OMNIMIND_NATIVE_HOST_AUTH: rendezvous.authentication,
         OMNIMIND_NATIVE_HOST_INSTANCE: rendezvous.hostInstanceId,
+        OMNIMIND_HOME: productHome,
         OMNIMIND_PACKAGE_CRASH_PROBE_DATABASE: productDatabase,
         OMNIMIND_PACKAGE_CRASH_PROBE_RESULT: resultFile,
+        OMNIMIND_PACKAGE_CRASH_PROBE_ARTIFACT: artifactFile,
       },
       stdio: ["ignore", "pipe", "pipe"],
     });
@@ -204,18 +222,19 @@ describe("real Native Host child supervision", () => {
     const probeOutput: Buffer[] = [];
     probe.stdout?.on("data", (chunk: Buffer) => probeOutput.push(chunk));
     probe.stderr?.on("data", (chunk: Buffer) => probeOutput.push(chunk));
-    const probeExit = await new Promise<{ readonly code: number | null; readonly signal: string | null }>(
-      (resolve, reject) => {
-        const timeout = setTimeout(() => {
-          probe.kill("SIGKILL");
-          reject(new Error("Package crash probe timed out."));
-        }, 20_000);
-        probe.once("exit", (code, signal) => {
-          clearTimeout(timeout);
-          resolve({ code, signal });
-        });
-      },
-    );
+    const probeExit = await new Promise<{
+      readonly code: number | null;
+      readonly signal: string | null;
+    }>((resolve, reject) => {
+      const timeout = setTimeout(() => {
+        probe.kill("SIGKILL");
+        reject(new Error("Package crash probe timed out."));
+      }, 20_000);
+      probe.once("exit", (code, signal) => {
+        clearTimeout(timeout);
+        resolve({ code, signal });
+      });
+    });
     probes.delete(probe);
     const sanitizedProbeOutput = Buffer.concat(probeOutput)
       .toString("utf8")
@@ -237,6 +256,9 @@ describe("real Native Host child supervision", () => {
       readonly reconciliationHint: string | null;
       readonly pendingReconcileStatus: string;
       readonly pendingResolution: string | null;
+      readonly packageGeneration: string;
+      readonly activeLeaseCount: number;
+      readonly quarantinedGenerations: ReadonlyArray<string>;
       readonly queueIds: ReadonlyArray<string>;
       readonly outbox: ReadonlyArray<{
         readonly state: string;
@@ -252,6 +274,9 @@ describe("real Native Host child supervision", () => {
       reconciliationHint: "pi-pending:dispatch-package-crash-proof",
       pendingReconcileStatus: "unknown",
       pendingResolution: null,
+      packageGeneration: generation,
+      activeLeaseCount: 1,
+      quarantinedGenerations: [],
       queueIds: ["queue-package-crash-second"],
       outbox: [
         {

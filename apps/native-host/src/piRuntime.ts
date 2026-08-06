@@ -22,6 +22,7 @@ import {
 } from "@earendil-works/pi-ai";
 import {
   createAgentSession,
+  DefaultResourceLoader,
   ModelRuntime,
   SessionManager,
   SettingsManager,
@@ -41,6 +42,10 @@ import {
   type NativeHostExecutionRejected,
   type NativeHostExecutionRequest,
   type NativeHostPendingResolution,
+  type NativeHostPackageArtifact,
+  type NativeHostPackageLoadReport,
+  type NativeHostPackageValidationResponse,
+  type NativeHostPackageValidateRequest,
   type NativeHostFactsResponse,
   type NativeHostReconcileResponse,
   type NativeHostRuntimeFact,
@@ -55,9 +60,9 @@ const MAX_OPERATION_FACTS = 2_048;
 const FACT_COMPACTION_INTERVAL = 256;
 const ACCEPTANCE_TIMEOUT_MS = 10_000;
 
-interface PiPackageSnapshot {
-  readonly generation: string;
-  readonly hasUnsupportedInput: boolean;
+interface ValidatedPiPackage {
+  readonly artifact: NativeHostPackageArtifact;
+  readonly report: NativeHostPackageLoadReport;
 }
 
 type RuntimeExecutionResponse =
@@ -232,7 +237,11 @@ export class StreamingContentRedactor {
     this.#exactPending = "";
     let partialStart = -1;
     for (const candidate of this.#exactValues) {
-      for (let index = Math.max(0, exact.length - candidate.length + 1); index < exact.length; index += 1) {
+      for (
+        let index = Math.max(0, exact.length - candidate.length + 1);
+        index < exact.length;
+        index += 1
+      ) {
         const suffix = exact.slice(index);
         if (suffix.length >= 8 && candidate.startsWith(suffix)) {
           if (partialStart < 0 || index < partialStart) partialStart = index;
@@ -365,6 +374,9 @@ export interface PiNativeRuntimeOptions {
   readonly settledOperationGraceMs?: number;
   readonly maxSettledOperations?: number;
   readonly availabilityCacheTtlMs?: number;
+  readonly sessionFactory?: typeof createAgentSession;
+  readonly settingsManagerFactory?: typeof SettingsManager.create;
+  readonly bindSessionExtensions?: (session: AgentSession, onError: () => void) => Promise<void>;
 }
 
 export interface PiCredentialBroker {
@@ -390,6 +402,7 @@ export class PiNativeRuntime {
   readonly #factsDir: string;
   readonly #pendingDir: string;
   readonly #indexFile: string;
+  readonly #packageStageRoot: string;
   readonly #modelRuntime: ModelRuntime;
   readonly #credentialBroker: PiCredentialBroker;
   readonly #usesInjectedRuntime: boolean;
@@ -398,6 +411,9 @@ export class PiNativeRuntime {
   readonly #settledOperationGraceMs: number;
   readonly #maxSettledOperations: number;
   readonly #availabilityCacheTtlMs: number;
+  readonly #sessionFactory: typeof createAgentSession;
+  readonly #settingsManagerFactory: typeof SettingsManager.create;
+  readonly #bindSessionExtensions: (session: AgentSession, onError: () => void) => Promise<void>;
   readonly #providerAvailability = new Map<
     string,
     { readonly availability: PiCredentialAvailability; readonly expiresAt: number }
@@ -405,6 +421,7 @@ export class PiNativeRuntime {
   readonly #operations = new Map<string, ActiveOperation>();
   readonly #sessionIndex = new Map<string, SessionIndexRecord>();
   readonly #pendingDispatches = new Map<string, PendingDispatchRecord>();
+  readonly #validatedPackages = new Map<string, ValidatedPiPackage>();
 
   private constructor(options: PiNativeRuntimeOptions, modelRuntime: ModelRuntime) {
     this.#root = path.join(options.productHome, "pi-native");
@@ -413,6 +430,7 @@ export class PiNativeRuntime {
     this.#factsDir = path.join(this.#root, "facts");
     this.#pendingDir = path.join(this.#root, "pending-dispatches");
     this.#indexFile = path.join(this.#root, "session-index.json");
+    this.#packageStageRoot = path.join(options.productHome, "userdata", "packages", "stage");
     this.#modelRuntime = modelRuntime;
     this.#credentialBroker = options.credentialBroker ?? unavailableCredentialBroker;
     this.#usesInjectedRuntime = options.modelRuntime !== undefined;
@@ -421,6 +439,10 @@ export class PiNativeRuntime {
     this.#settledOperationGraceMs = options.settledOperationGraceMs ?? 30_000;
     this.#maxSettledOperations = options.maxSettledOperations ?? 64;
     this.#availabilityCacheTtlMs = options.availabilityCacheTtlMs ?? 5_000;
+    this.#sessionFactory = options.sessionFactory ?? createAgentSession;
+    this.#settingsManagerFactory = options.settingsManagerFactory ?? SettingsManager.create;
+    this.#bindSessionExtensions =
+      options.bindSessionExtensions ?? ((session, onError) => session.bindExtensions({ onError }));
     for (const directory of [
       this.#root,
       this.#agentDir,
@@ -534,11 +556,7 @@ export class PiNativeRuntime {
   }
 
   #acceptedPendingResolution(record: PendingDispatchRecord): NativeHostPendingResolution | null {
-    if (
-      record.phase !== "accepted" ||
-      !record.acceptedEntryId ||
-      !record.operationRef
-    ) {
+    if (record.phase !== "accepted" || !record.acceptedEntryId || !record.operationRef) {
       return null;
     }
     return {
@@ -613,9 +631,7 @@ export class PiNativeRuntime {
       const durableUser = reopened
         .getEntries()
         .slice(record.beforeEntryCount)
-        .find(
-          (entry) => entry.type === "message" && entry.message.role === "user",
-        );
+        .find((entry) => entry.type === "message" && entry.message.role === "user");
       if (durableUser) return this.#promotePendingDispatch(record, durableUser.id);
       if (record.phase !== "prompt-ended") return null;
       const rejectedRecord: PendingDispatchRecord = {
@@ -634,50 +650,145 @@ export class PiNativeRuntime {
     }
   }
 
-  #packageSnapshot(): PiPackageSnapshot {
-    const extensionRoot = path.join(this.#agentDir, "extensions");
-    if (!isDirectory(extensionRoot)) {
-      return { generation: PI_PACKAGE_GENERATION, hasUnsupportedInput: false };
+  #verifyPackageArtifact(artifact: NativeHostPackageArtifact): string | null {
+    if (!/^[A-Za-z0-9._@+-]+$/u.test(artifact.generation)) {
+      return "The Package generation is not a safe immutable stage name.";
     }
-    const inputs: Array<{ readonly relativePath: string; readonly content: Buffer }> = [];
-    const unsupportedPaths: string[] = [];
-    if (lstatSync(extensionRoot).isSymbolicLink()) unsupportedPaths.push(".");
-    const visit = (directory: string): void => {
-      for (const entry of readdirSync(directory, { withFileTypes: true }).toSorted((a, b) =>
-        a.name.localeCompare(b.name),
-      )) {
-        const absolute = path.join(directory, entry.name);
-        const relativePath = path.relative(extensionRoot, absolute).split(path.sep).join("/");
-        if (entry.isDirectory()) {
-          visit(absolute);
-        } else if (entry.isFile()) {
-          inputs.push({ relativePath, content: readFileSync(absolute) });
-        } else if (entry.isSymbolicLink()) {
-          unsupportedPaths.push(relativePath);
-        }
+    const stagePath = path.resolve(artifact.stagePath);
+    if (
+      path.dirname(stagePath) !== path.resolve(this.#packageStageRoot) ||
+      path.basename(stagePath) !== artifact.generation
+    ) {
+      return "The Package stage is outside Product-owned immutable storage.";
+    }
+    const manifestPath = path.join(stagePath, "manifest.json");
+    const executablePath = path.join(stagePath, artifact.executablePath);
+    try {
+      const stageStat = lstatSync(stagePath);
+      const manifestStat = lstatSync(manifestPath);
+      const executableStat = lstatSync(executablePath);
+      if (
+        stageStat.isSymbolicLink() ||
+        !stageStat.isDirectory() ||
+        manifestStat.isSymbolicLink() ||
+        !manifestStat.isFile() ||
+        executableStat.isSymbolicLink() ||
+        !executableStat.isFile()
+      ) {
+        return "The Package stage must contain only the expected regular inputs.";
       }
-    };
-    if (unsupportedPaths.length === 0) visit(extensionRoot);
-    if (inputs.length === 0 && unsupportedPaths.length === 0) {
-      return { generation: PI_PACKAGE_GENERATION, hasUnsupportedInput: false };
+      const manifest = readFileSync(manifestPath);
+      const executable = readFileSync(executablePath);
+      if (
+        createHash("sha256").update(manifest).digest("hex") !== artifact.manifestSha256 ||
+        createHash("sha256").update(executable).digest("hex") !== artifact.executableSha256 ||
+        executable.byteLength !== artifact.executableBytes
+      ) {
+        return "The Package stage bytes do not match the Product-approved digests.";
+      }
+    } catch {
+      return "The Package stage is unavailable or unreadable.";
     }
-    const digest = createHash("sha256").update(`pi-runtime:${PI_RUNTIME_VERSION}\0`, "utf8");
-    for (const input of inputs) {
-      digest.update(input.relativePath, "utf8");
-      digest.update("\0", "utf8");
-      digest.update(input.content);
-      digest.update("\0", "utf8");
-    }
-    for (const relativePath of unsupportedPaths.toSorted()) {
-      digest.update(`unsupported-symlink:${relativePath}\0`, "utf8");
-    }
-    return {
-      generation: `pi-runtime-${PI_RUNTIME_VERSION}-package-${digest.digest("hex").slice(0, 24)}`,
-      hasUnsupportedInput: unsupportedPaths.length > 0,
-    };
+    return null;
   }
 
-  async catalog(refreshAvailability = false): Promise<
+  async #loadPackageArtifact(
+    artifact: NativeHostPackageArtifact | null,
+    cwd: string,
+    settingsManager: SettingsManager,
+  ): Promise<{
+    readonly resourceLoader: DefaultResourceLoader;
+    readonly report: NativeHostPackageLoadReport;
+  }> {
+    if (artifact) {
+      const invalid = this.#verifyPackageArtifact(artifact);
+      if (invalid) throw new Error(invalid);
+    }
+    const resourceLoader = new DefaultResourceLoader({
+      cwd,
+      agentDir: this.#agentDir,
+      settingsManager,
+      additionalExtensionPaths: artifact
+        ? [path.join(artifact.stagePath, artifact.executablePath)]
+        : [],
+      noExtensions: true,
+      noSkills: true,
+      noPromptTemplates: true,
+      noThemes: true,
+      noContextFiles: true,
+    });
+    await resourceLoader.reload();
+    const loaded = resourceLoader.getExtensions();
+    if (loaded.errors.length > 0 || loaded.extensions.length !== (artifact ? 1 : 0)) {
+      throw new Error("Pi ResourceLoader rejected the exact Package stage.");
+    }
+    const report: NativeHostPackageLoadReport = {
+      extensionCount: loaded.extensions.length,
+      toolNames: loaded.extensions.flatMap((extension) => [...extension.tools.keys()]).toSorted(),
+      commandNames: loaded.extensions
+        .flatMap((extension) => [...extension.commands.keys()])
+        .toSorted(),
+      lifecycleEvents: [
+        ...new Set(loaded.extensions.flatMap((extension) => [...extension.handlers.keys()])),
+      ].toSorted(),
+    };
+    return { resourceLoader, report };
+  }
+
+  async validatePackage(
+    request: NativeHostPackageValidateRequest,
+  ): Promise<
+    Omit<
+      NativeHostPackageValidationResponse,
+      "protocolVersion" | "requestId" | "serviceInstanceId" | "hostInstanceId"
+    >
+  > {
+    const { artifact } = request;
+    const existing = this.#validatedPackages.get(artifact.generation);
+    if (existing && JSON.stringify(existing.artifact) !== JSON.stringify(artifact)) {
+      return {
+        kind: "package.validation.response",
+        generation: artifact.generation,
+        status: "rejected",
+        code: "package-generation-conflict",
+        message: "The generation already names different exact Package bytes in this Host.",
+        report: null,
+      };
+    }
+    try {
+      const settingsManager = SettingsManager.create(artifact.stagePath, this.#agentDir, {
+        projectTrusted: false,
+      });
+      const { report } = await this.#loadPackageArtifact(
+        artifact,
+        artifact.stagePath,
+        settingsManager,
+      );
+      this.#validatedPackages.set(artifact.generation, { artifact, report });
+      return {
+        kind: "package.validation.response",
+        generation: artifact.generation,
+        status: "validated",
+        code: "package-validated",
+        message: "Pi ResourceLoader validated the exact Package stage.",
+        report,
+      };
+    } catch {
+      this.#validatedPackages.delete(artifact.generation);
+      return {
+        kind: "package.validation.response",
+        generation: artifact.generation,
+        status: "rejected",
+        code: "package-validation-failed",
+        message: "Pi ResourceLoader rejected the exact Package stage.",
+        report: null,
+      };
+    }
+  }
+
+  async catalog(
+    refreshAvailability = false,
+  ): Promise<
     Omit<
       NativeHostCatalogResponse,
       "protocolVersion" | "requestId" | "serviceInstanceId" | "hostInstanceId"
@@ -697,9 +808,9 @@ export class PiNativeRuntime {
               if (!refreshAvailability && cached && cached.expiresAt > Date.now()) {
                 return cached.availability;
               }
-              const observed = await this.#credentialBroker.available(provider.id).catch(
-                (): PiCredentialAvailability => "unavailable",
-              );
+              const observed = await this.#credentialBroker
+                .available(provider.id)
+                .catch((): PiCredentialAvailability => "unavailable");
               this.#providerAvailability.set(provider.id, {
                 availability: observed,
                 expiresAt: Date.now() + this.#availabilityCacheTtlMs,
@@ -737,7 +848,6 @@ export class PiNativeRuntime {
       kind: "runtime.catalog.response",
       engineId: PI_ENGINE_ID,
       runtimeVersion: PI_RUNTIME_VERSION,
-      packageGeneration: this.#packageSnapshot().generation,
       models: models.slice(0, 128),
       capabilities: {
         ingress: "typed-native-host",
@@ -870,7 +980,10 @@ export class PiNativeRuntime {
     text: string,
   ): void {
     if (kind === "assistant.delta" && operation.snapshotAssistantComplete) {
-      if (operation.snapshotAssistant.length + text.length <= NATIVE_HOST_MAX_SNAPSHOT_VISIBLE_CHARS) {
+      if (
+        operation.snapshotAssistant.length + text.length <=
+        NATIVE_HOST_MAX_SNAPSHOT_VISIBLE_CHARS
+      ) {
         operation.snapshotAssistant += text;
       } else {
         operation.snapshotAssistant = "";
@@ -943,8 +1056,7 @@ export class PiNativeRuntime {
       const nextUserIndex = runEntries.findIndex(
         (entry) => entry.type === "message" && entry.message.role === "user",
       );
-      const boundedRunEntries =
-        nextUserIndex < 0 ? runEntries : runEntries.slice(0, nextUserIndex);
+      const boundedRunEntries = nextUserIndex < 0 ? runEntries : runEntries.slice(0, nextUserIndex);
       const assistantEntries = boundedRunEntries.filter(
         (entry) => entry.type === "message" && entry.message.role === "assistant",
       );
@@ -1026,9 +1138,7 @@ export class PiNativeRuntime {
       operation.acceptanceEntryId &&
       operation.snapshotAssistantComplete
     ) {
-      const settlement = [...operation.facts]
-        .reverse()
-        .find((fact) => fact.kind === "settlement");
+      const settlement = [...operation.facts].reverse().find((fact) => fact.kind === "settlement");
       if (settlement?.kind === "settlement") {
         const snapshot: NativeHostRuntimeSnapshot = {
           version: 1,
@@ -1136,24 +1246,18 @@ export class PiNativeRuntime {
   }
 
   async execute(request: NativeHostExecutionRequest): Promise<RuntimeExecutionResponse> {
-    const packageSnapshot = this.#packageSnapshot();
-    const packageGeneration = packageSnapshot.generation;
-    if (packageSnapshot.hasUnsupportedInput) {
+    const packageGeneration = request.selection.packageGeneration;
+    const validatedPackage =
+      packageGeneration === PI_PACKAGE_GENERATION
+        ? null
+        : this.#validatedPackages.get(packageGeneration);
+    if (packageGeneration !== PI_PACKAGE_GENERATION && !validatedPackage) {
       return {
         kind: "execution.rejected",
         dispatchId: request.dispatchId,
-        code: "PI_PACKAGE_INPUT_UNSUPPORTED",
-        message: "Pi package inputs must be regular files and directories; symbolic links are not loaded.",
-        retryable: false,
-      };
-    }
-    if (request.selection.packageGeneration !== packageGeneration) {
-      return {
-        kind: "execution.rejected",
-        dispatchId: request.dispatchId,
-        code: "PI_PACKAGE_GENERATION_STALE",
-        message: "The selected Pi package generation is no longer active.",
-        retryable: false,
+        code: "PI_PACKAGE_REVALIDATION_REQUIRED",
+        message: "This Native Host has not validated the Product-selected Package generation.",
+        retryable: true,
       };
     }
     const cwd = this.#workspaceCwd(request);
@@ -1303,70 +1407,131 @@ export class PiNativeRuntime {
       phase: "pending",
     };
     this.#writePendingDispatch(pendingRecord);
-    let session: AgentSession;
-    let extensionCount = 0;
-    let extensionErrorCount = 0;
+    let settingsManager: SettingsManager;
     try {
-      const settingsManager = SettingsManager.create(cwd, this.#agentDir, {
+      settingsManager = this.#settingsManagerFactory(cwd, this.#agentDir, {
         projectTrusted: false,
       });
-      const created = await createAgentSession({
+    } catch {
+      const code = "PI_SESSION_UNAVAILABLE";
+      const message = "Pi could not construct the native Session for this Run.";
+      pendingRecord = {
+        ...pendingRecord,
+        phase: "rejected",
+        rejection: { code, message, retryable: false },
+      };
+      this.#writePendingDispatch(pendingRecord);
+      return {
+        kind: "execution.rejected",
+        dispatchId: request.dispatchId,
+        code,
+        message,
+        retryable: false,
+      };
+    }
+    let resourceLoader: DefaultResourceLoader;
+    let report: NativeHostPackageLoadReport;
+    try {
+      ({ resourceLoader, report } = await this.#loadPackageArtifact(
+        validatedPackage?.artifact ?? null,
+        cwd,
+        settingsManager,
+      ));
+      if (validatedPackage && JSON.stringify(report) !== JSON.stringify(validatedPackage.report)) {
+        throw new Error("The generation lifecycle report changed after validation.");
+      }
+    } catch {
+      const packageFailure = validatedPackage !== null;
+      const code = packageFailure ? "PI_PACKAGE_LIFECYCLE_UNAVAILABLE" : "PI_SESSION_UNAVAILABLE";
+      const message = packageFailure
+        ? "Pi could not load the Product-selected Package generation for this Run."
+        : "Pi could not construct the native Session for this Run.";
+      pendingRecord = {
+        ...pendingRecord,
+        phase: "rejected",
+        rejection: { code, message, retryable: false },
+      };
+      this.#writePendingDispatch(pendingRecord);
+      return {
+        kind: "execution.rejected",
+        dispatchId: request.dispatchId,
+        code,
+        message,
+        retryable: false,
+      };
+    }
+    let session: AgentSession;
+    let extensionCount = 0;
+    try {
+      const created = await this.#sessionFactory({
         cwd,
         agentDir: this.#agentDir,
         modelRuntime: executionRuntime,
         sessionManager: manager,
         settingsManager,
+        resourceLoader,
         model,
         thinkingLevel: thinking.sessionLevel,
         ...(request.workspace.kind === "chat"
-          ? { noTools: "all" as const }
+          ? { noTools: "builtin" as const }
           : request.selection.permissionPolicy === "approval-required"
-            ? { tools: ["read", "grep", "find", "ls"] }
+            ? { tools: ["read", "grep", "find", "ls", ...report.toolNames] }
             : {}),
       });
       session = created.session;
       extensionCount = created.extensionsResult.extensions.length;
-      extensionErrorCount = created.extensionsResult.errors.length;
     } catch {
+      const code = "PI_SESSION_UNAVAILABLE";
+      const message = "Pi could not construct the native Session for this Run.";
       pendingRecord = {
         ...pendingRecord,
         phase: "rejected",
-        rejection: {
-          code: "PI_SESSION_UNAVAILABLE",
-          message: "Pi could not create or restore the native Session.",
-          retryable: false,
-        },
+        rejection: { code, message, retryable: false },
       };
       this.#writePendingDispatch(pendingRecord);
       return {
         kind: "execution.rejected",
         dispatchId: request.dispatchId,
-        code: "PI_SESSION_UNAVAILABLE",
-        message: "Pi could not create or restore the native Session.",
+        code,
+        message,
         retryable: false,
       };
     }
-    const preparedPackageSnapshot = this.#packageSnapshot();
-    if (
-      preparedPackageSnapshot.hasUnsupportedInput ||
-      preparedPackageSnapshot.generation !== packageGeneration
-    ) {
+    let packageOperation: ActiveOperation | null = null;
+    let packageFailureCount = 0;
+    const observePackageFailure = () => {
+      if (!validatedPackage) return;
+      packageFailureCount += 1;
+      if (packageOperation) {
+        this.#appendFact(packageOperation, {
+          kind: "package.failed",
+          count: packageFailureCount,
+        });
+      }
+    };
+    try {
+      await this.#bindSessionExtensions(session, observePackageFailure);
+      if (packageFailureCount > 0) {
+        throw new Error("The selected Package failed while binding its Session lifecycle.");
+      }
+    } catch {
       session.dispose();
+      const packageFailure = validatedPackage !== null;
+      const code = packageFailure ? "PI_PACKAGE_LIFECYCLE_UNAVAILABLE" : "PI_SESSION_UNAVAILABLE";
+      const message = packageFailure
+        ? "Pi could not load the Product-selected Package generation for this Run."
+        : "Pi could not construct the native Session for this Run.";
       pendingRecord = {
         ...pendingRecord,
         phase: "rejected",
-        rejection: {
-          code: "PI_PACKAGE_GENERATION_STALE",
-          message: "The Pi package inputs changed while the native Session was being prepared.",
-          retryable: false,
-        },
+        rejection: { code, message, retryable: false },
       };
       this.#writePendingDispatch(pendingRecord);
       return {
         kind: "execution.rejected",
         dispatchId: request.dispatchId,
-        code: "PI_PACKAGE_GENERATION_STALE",
-        message: "The Pi package inputs changed while the native Session was being prepared.",
+        code,
+        message,
         retryable: false,
       };
     }
@@ -1408,13 +1573,11 @@ export class PiNativeRuntime {
       snapshotAssistant: "",
       snapshotAssistantComplete: true,
     };
+    packageOperation = operation;
     exactCredentialForRedaction = null;
     this.#operations.set(pendingRef, operation);
     this.#appendFact(operation, { kind: "session.bound", lineage });
     this.#appendFact(operation, { kind: "package.loaded", count: extensionCount });
-    if (extensionErrorCount > 0) {
-      this.#appendFact(operation, { kind: "package.failed", count: extensionErrorCount });
-    }
 
     let settleAcceptance!: (value: { entryId: string } | { error: "indeterminate" }) => void;
     const acceptance = new Promise<{ entryId: string } | { error: "indeterminate" }>((resolve) => {
@@ -1427,23 +1590,17 @@ export class PiNativeRuntime {
       const entry = manager
         .getEntries()
         .slice(pendingRecord.beforeEntryCount)
-        .find(
-          (candidate) =>
-            candidate.type === "message" &&
-            candidate.message.role === "user",
-        );
+        .find((candidate) => candidate.type === "message" && candidate.message.role === "user");
       try {
         const reopened = SessionManager.open(sessionFile, this.#sessionsDir, cwd);
         if (!entry) {
           const durableNewUser = reopened
             .getEntries()
             .slice(pendingRecord.beforeEntryCount)
-            .find(
-              (candidate) =>
-                candidate.type === "message" &&
-                candidate.message.role === "user",
-            );
-          return durableNewUser ? { kind: "found", entryId: durableNewUser.id } : { kind: "absent" };
+            .find((candidate) => candidate.type === "message" && candidate.message.role === "user");
+          return durableNewUser
+            ? { kind: "found", entryId: durableNewUser.id }
+            : { kind: "absent" };
         }
         const durable = reopened.getEntry(entry.id);
         return durable?.type === "message" && durable.message.role === "user"
@@ -1462,9 +1619,7 @@ export class PiNativeRuntime {
           const durable = queryPersistedAcceptance();
           acceptanceSettled = true;
           settleAcceptance(
-            durable.kind === "found"
-              ? { entryId: durable.entryId }
-              : { error: "indeterminate" },
+            durable.kind === "found" ? { entryId: durable.entryId } : { error: "indeterminate" },
           );
         };
         if (this.#acceptanceObservationDelayMs > 0) {
@@ -1529,9 +1684,7 @@ export class PiNativeRuntime {
             phase: "rejected",
             rejection: {
               code:
-                first.kind === "rejected"
-                  ? "PI_PROMPT_REJECTED"
-                  : "PI_ACCEPTANCE_TIMEOUT_NO_ENTRY",
+                first.kind === "rejected" ? "PI_PROMPT_REJECTED" : "PI_ACCEPTANCE_TIMEOUT_NO_ENTRY",
               message: "Pi did not persist a user entry for this dispatch.",
               retryable: false,
             },
@@ -1629,8 +1782,9 @@ export class PiNativeRuntime {
   facts(
     operationRef: string,
     afterSequence: number,
-    exactRedactionValues: ReadonlyArray<string> =
-      this.#operations.get(operationRef)?.assistantRedactor.sensitiveValues() ?? [],
+    exactRedactionValues: ReadonlyArray<string> = this.#operations
+      .get(operationRef)
+      ?.assistantRedactor.sensitiveValues() ?? [],
   ): Omit<
     NativeHostFactsResponse,
     "protocolVersion" | "requestId" | "serviceInstanceId" | "hostInstanceId"
@@ -1760,10 +1914,12 @@ export class PiNativeRuntime {
   async reconcile(
     operationRef: string,
     afterSequence: number,
-  ): Promise<Omit<
-    NativeHostReconcileResponse,
-    "protocolVersion" | "requestId" | "serviceInstanceId" | "hostInstanceId"
-  >> {
+  ): Promise<
+    Omit<
+      NativeHostReconcileResponse,
+      "protocolVersion" | "requestId" | "serviceInstanceId" | "hostInstanceId"
+    >
+  > {
     if (operationRef.startsWith("pi-pending:")) {
       const resolution = this.#resolvePendingDispatch(operationRef);
       return {
@@ -1788,11 +1944,9 @@ export class PiNativeRuntime {
         const credentialResult = await this.#credentialBroker
           .credential(acceptedRecord.provider, acceptedRecord.runId)
           .catch((): PiCredentialResult => ({ status: "unavailable" }));
-        let credential = credentialResult.status === "configured" ? credentialResult.credential : null;
-        if (
-          credential &&
-          credentialDigestMatches(acceptedRecord.credentialDigest, credential)
-        ) {
+        let credential =
+          credentialResult.status === "configured" ? credentialResult.credential : null;
+        if (credential && credentialDigestMatches(acceptedRecord.credentialDigest, credential)) {
           exactRedactionValues = [credential];
         }
         credential = null;
@@ -1806,9 +1960,9 @@ export class PiNativeRuntime {
       ? operation.status
       : operationRef.startsWith("pi-pending:") && persistedSettlement
         ? "settled"
-      : native.status === "settled" && (persistedSettlement || native.snapshot !== null)
-        ? "settled"
-        : "unknown";
+        : native.status === "settled" && (persistedSettlement || native.snapshot !== null)
+          ? "settled"
+          : "unknown";
     return {
       kind: "runtime.reconcile.response",
       operationRef,

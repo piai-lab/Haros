@@ -1,11 +1,24 @@
+import { createHash } from "node:crypto";
+import { mkdirSync, mkdtempSync, rmSync, writeFileSync } from "node:fs";
+import { tmpdir } from "node:os";
+import path from "node:path";
+
 import {
   ProductRunId,
+  type NativeHostPackageArtifact,
+  type NativeHostPackageLoadReport,
   type NativeHostRuntimeFact,
 } from "@omnimind/contracts";
+import { Effect } from "effect";
 import { describe, expect, it } from "vitest";
 
 import { NativeHostClient } from "./client";
-import { makeNativeHostExecutionBoundary } from "./executionBoundary";
+import {
+  initializeProductPackageLifecycle,
+  makeNativeHostExecutionBoundary,
+  makePackageStateUnavailableBoundary,
+} from "./executionBoundary";
+import { EMPTY_PI_PACKAGE_GENERATION, PiPackageLifecycle } from "./packageLifecycle";
 
 const operationRef = "pi-op:session:entry";
 const emittedAt = "2026-08-05T00:00:00.000Z";
@@ -16,11 +29,42 @@ function fact(
     | { readonly kind: "assistant.delta"; readonly text: string }
     | {
         readonly kind: "settlement";
-        readonly outcome: "succeeded";
+        readonly outcome: "succeeded" | "failed";
         readonly message: string;
-      },
+      }
+    | { readonly kind: "package.failed"; readonly count: number },
 ): NativeHostRuntimeFact {
   return { operationRef, sequence, emittedAt, ...change };
+}
+
+const packageReport: NativeHostPackageLoadReport = {
+  extensionCount: 1,
+  toolNames: ["todo"],
+  commandNames: [],
+  lifecycleEvents: [],
+};
+
+function packageLifecycleFixture(generations: ReadonlyArray<string>) {
+  const root = mkdtempSync(path.join(tmpdir(), "omnimind-boundary-package-"));
+  const stateDir = path.join(root, "userdata");
+  const lifecycle = new PiPackageLifecycle({ stateDir });
+  const artifacts = generations.map((generation): NativeHostPackageArtifact => {
+    const stagePath = path.join(stateDir, "packages", "stage", generation);
+    mkdirSync(stagePath, { recursive: true });
+    const manifest = Buffer.from(`manifest:${generation}\n`);
+    const executable = Buffer.from(`extension:${generation}\n`);
+    writeFileSync(path.join(stagePath, "manifest.json"), manifest);
+    writeFileSync(path.join(stagePath, "todo.ts"), executable);
+    return {
+      generation,
+      stagePath,
+      manifestSha256: createHash("sha256").update(manifest).digest("hex"),
+      executablePath: "todo.ts",
+      executableSha256: createHash("sha256").update(executable).digest("hex"),
+      executableBytes: executable.byteLength,
+    };
+  });
+  return { root, lifecycle, artifacts };
 }
 
 async function waitUntil(predicate: () => boolean): Promise<void> {
@@ -32,6 +76,27 @@ async function waitUntil(predicate: () => boolean): Promise<void> {
 }
 
 describe("makeNativeHostExecutionBoundary recovery", () => {
+  it("fails Package capability closed when the explicit application root lacks assets", async () => {
+    const root = mkdtempSync(path.join(tmpdir(), "omnimind-missing-package-root-"));
+    const stateDir = path.join(root, "userdata");
+    let failure: unknown = null;
+    try {
+      await initializeProductPackageLifecycle({
+        stateDir,
+        productDatabase: path.join(stateDir, "product-state-v1.sqlite"),
+        client: {} as NativeHostClient,
+        applicationRoot: root,
+      });
+    } catch (cause) {
+      failure = cause;
+    }
+    expect(failure).toMatchObject({ code: "PACKAGE_SOURCE_INVALID" });
+    const boundary = makePackageStateUnavailableBoundary(failure);
+    expect(boundary.catalog).toBeDefined();
+    await expect(Effect.runPromise(boundary.catalog!())).resolves.toBeNull();
+    rmSync(root, { recursive: true, force: true });
+  });
+
   it("drains every settled reconcile page through the terminal fact", async () => {
     const requestedCursors: number[] = [];
     const pages = [
@@ -65,15 +130,10 @@ describe("makeNativeHostExecutionBoundary recovery", () => {
       | { readonly kind: "outcome-unknown" }
     > = [];
     boundary.subscribeFacts?.((_runId, observation) => {
-      if (
-        observation.kind === "delivery-accepted" ||
-        observation.kind === "delivery-rejected"
-      ) {
+      if (observation.kind === "delivery-accepted" || observation.kind === "delivery-rejected") {
         return;
       }
-      observations.push(
-        observation.kind === "snapshot" ? { kind: "snapshot" } : observation,
-      );
+      observations.push(observation.kind === "snapshot" ? { kind: "snapshot" } : observation);
     });
     boundary.resumeFacts?.(ProductRunId.makeUnsafe("run-reconcile-pages"), operationRef);
     await waitUntil(() =>
@@ -89,9 +149,7 @@ describe("makeNativeHostExecutionBoundary recovery", () => {
         observation.kind === "facts" ? observation.facts.map((item) => item.sequence) : [],
       ),
     ).toEqual([1, 2, 3]);
-    expect(observations.some((observation) => observation.kind === "outcome-unknown")).toBe(
-      false,
-    );
+    expect(observations.some((observation) => observation.kind === "outcome-unknown")).toBe(false);
     await boundary.close?.();
   });
 
@@ -135,6 +193,9 @@ describe("makeNativeHostExecutionBoundary recovery", () => {
   });
 
   it("re-delivers the same unacknowledged facts when the first Product apply throws", async () => {
+    const { root, lifecycle, artifacts } = packageLifecycleFixture(["generation-redelivery"]);
+    lifecycle.recordValidated(artifacts[0]!, packageReport);
+    lifecycle.activate(artifacts[0]!.generation, 0);
     const terminalFacts = [
       fact(1, { kind: "assistant.delta", text: "durable" }),
       fact(2, { kind: "settlement", outcome: "succeeded", message: "Completed." }),
@@ -169,12 +230,17 @@ describe("makeNativeHostExecutionBoundary recovery", () => {
         };
       },
     } as unknown as NativeHostClient;
-    const boundary = makeNativeHostExecutionBoundary(client);
+    const boundary = makeNativeHostExecutionBoundary(client, lifecycle);
+    boundary.bindRunPackageGeneration?.(
+      ProductRunId.makeUnsafe("run-redelivery"),
+      artifacts[0]!.generation,
+    );
     let applyCount = 0;
     let settled = false;
     boundary.subscribeFacts?.((_runId, observation) => {
       if (observation.kind !== "facts") return;
       applyCount += 1;
+      expect(lifecycle.snapshot().lastKnownGoodGeneration).toBe(EMPTY_PI_PACKAGE_GENERATION);
       if (applyCount === 1) throw new Error("transient Product transaction failure");
       settled = observation.facts.some((item) => item.kind === "settlement");
     });
@@ -182,7 +248,136 @@ describe("makeNativeHostExecutionBoundary recovery", () => {
     await waitUntil(() => settled);
     expect(cursors).toEqual([0, 0]);
     expect(applyCount).toBe(2);
+    expect(lifecycle.snapshot().lastKnownGoodGeneration).toBe(artifacts[0]!.generation);
     await boundary.close?.();
+    rmSync(root, { recursive: true, force: true });
+  });
+
+  it("quarantines only after Product accepts a native Package fault and selects LKG next", async () => {
+    const { root, lifecycle, artifacts } = packageLifecycleFixture([
+      "generation-known-good",
+      "generation-failing",
+    ]);
+    lifecycle.recordValidated(artifacts[0]!, packageReport);
+    lifecycle.activate(artifacts[0]!.generation, 0);
+    lifecycle.recordSuccessfulGeneration(artifacts[0]!.generation);
+    lifecycle.recordValidated(artifacts[1]!, packageReport);
+    lifecycle.activate(artifacts[1]!.generation, 0);
+    const terminalFacts = [
+      fact(1, { kind: "package.failed", count: 1 }),
+      fact(2, { kind: "settlement", outcome: "failed", message: "Package failed." }),
+    ];
+    const client = {
+      facts: async () => ({
+        kind: "runtime.facts.response" as const,
+        operationRef,
+        afterSequence: 0,
+        highWaterSequence: 2,
+        facts: terminalFacts,
+        resnapshotRequired: false,
+        snapshot: null,
+        resnapshotReason: null,
+      }),
+      reconcile: async () => ({
+        kind: "runtime.reconcile.response" as const,
+        operationRef,
+        status: "settled" as const,
+        highWaterSequence: 2,
+        facts: terminalFacts,
+        resnapshotRequired: false,
+        snapshot: null,
+        resnapshotReason: null,
+        resolution: null,
+      }),
+      catalog: async () => ({
+        kind: "runtime.catalog.response" as const,
+        engineId: "pi",
+        runtimeVersion: "0.81.1",
+        models: [],
+        capabilities: {
+          ingress: "typed-native-host" as const,
+          lineage: { continue: "available" as const, rebuild: "available" as const },
+          controls: {
+            steer: "available" as const,
+            followUp: "available" as const,
+            abort: "available" as const,
+            cancel: "unavailable" as const,
+          },
+          structuredQuestions: "available" as const,
+          packages: "available" as const,
+          filesRead: "unknown" as const,
+          filesWrite: "unknown" as const,
+          terminal: "unknown" as const,
+          enforcement: "unverified" as const,
+        },
+        truncated: false,
+      }),
+    } as unknown as NativeHostClient;
+    const boundary = makeNativeHostExecutionBoundary(client, lifecycle);
+    const runId = ProductRunId.makeUnsafe("run-package-fault");
+    boundary.bindRunPackageGeneration?.(runId, artifacts[1]!.generation);
+    let applyCount = 0;
+    boundary.subscribeFacts?.(() => {
+      expect(lifecycle.snapshot().currentGeneration).toBe(artifacts[1]!.generation);
+      applyCount += 1;
+      if (applyCount === 1) throw new Error("transient Product transaction failure");
+    });
+
+    boundary.resumeFacts?.(runId, operationRef);
+    await waitUntil(() => lifecycle.snapshot().quarantinedGenerations.length === 1);
+
+    expect(applyCount).toBe(2);
+    expect(lifecycle.snapshot()).toMatchObject({
+      currentGeneration: artifacts[0]!.generation,
+      lastKnownGoodGeneration: artifacts[0]!.generation,
+      quarantinedGenerations: [artifacts[1]!.generation],
+    });
+    expect(boundary.catalog).toBeDefined();
+    await expect(Effect.runPromise(boundary.catalog!())).resolves.toMatchObject({
+      packageGeneration: artifacts[0]!.generation,
+    });
+    await boundary.close?.();
+    rmSync(root, { recursive: true, force: true });
+  });
+
+  it("quarantines a committed Package rejection but not a generic Session rejection", () => {
+    const { root, lifecycle, artifacts } = packageLifecycleFixture([
+      "generation-rejection-known-good",
+      "generation-rejection-current",
+    ]);
+    lifecycle.recordValidated(artifacts[0]!, packageReport);
+    lifecycle.activate(artifacts[0]!.generation, 0);
+    lifecycle.recordSuccessfulGeneration(artifacts[0]!.generation);
+    lifecycle.recordValidated(artifacts[1]!, packageReport);
+    lifecycle.activate(artifacts[1]!.generation, 0);
+    const boundary = makeNativeHostExecutionBoundary({} as NativeHostClient, lifecycle);
+    const genericRunId = ProductRunId.makeUnsafe("run-generic-session-failure");
+    boundary.bindRunPackageGeneration?.(genericRunId, artifacts[1]!.generation);
+    boundary.afterObservationApplied?.(genericRunId, {
+      kind: "rejected",
+      code: "PI_SESSION_UNAVAILABLE",
+      message: "Generic Session construction failed.",
+      retryable: false,
+    });
+    expect(lifecycle.snapshot()).toMatchObject({
+      currentGeneration: artifacts[1]!.generation,
+      quarantinedGenerations: [],
+    });
+
+    const packageRunId = ProductRunId.makeUnsafe("run-package-lifecycle-failure");
+    boundary.bindRunPackageGeneration?.(packageRunId, artifacts[1]!.generation);
+    boundary.afterObservationApplied?.(packageRunId, {
+      kind: "rejected",
+      code: "PI_PACKAGE_LIFECYCLE_UNAVAILABLE",
+      message: "Selected Package lifecycle failed.",
+      retryable: false,
+    });
+    expect(lifecycle.snapshot()).toMatchObject({
+      currentGeneration: artifacts[0]!.generation,
+      lastKnownGoodGeneration: artifacts[0]!.generation,
+      quarantinedGenerations: [artifacts[1]!.generation],
+    });
+    rmSync(root, { recursive: true, force: true });
   });
 
   it("reconciles a pending delivery to accepted and observes only the resolved operation", async () => {

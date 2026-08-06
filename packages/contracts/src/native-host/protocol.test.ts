@@ -78,10 +78,64 @@ describe("Native Host protocol boundary", () => {
       },
     } as const;
     expect(
-      decodeNativeHostFrame(
-        encodeNativeHostFrame(response).subarray(0, -1),
-        "host-to-service",
-      ),
+      decodeNativeHostFrame(encodeNativeHostFrame(response).subarray(0, -1), "host-to-service"),
     ).toEqual(response);
+  });
+
+  it("round-trips exact Package validation without Product activation or lease authority", () => {
+    const artifact = {
+      generation: "pi.todo@0.81.1+e46824d0",
+      stagePath: "/product/userdata/packages/stage/pi.todo@0.81.1+e46824d0",
+      manifestSha256: "a".repeat(64),
+      executablePath: "todo.ts",
+      executableSha256: "b".repeat(64),
+      executableBytes: 8_848,
+    } as const;
+    const request = {
+      protocolVersion: NATIVE_HOST_PROTOCOL_VERSION,
+      kind: "package.validate.request",
+      requestId: "request-package-1",
+      serviceInstanceId: "service-1",
+      hostInstanceId: "host-1",
+      artifact,
+    } as const;
+    const response = {
+      protocolVersion: NATIVE_HOST_PROTOCOL_VERSION,
+      kind: "package.validation.response",
+      requestId: "request-package-1",
+      serviceInstanceId: "service-1",
+      hostInstanceId: "host-1",
+      generation: artifact.generation,
+      status: "validated",
+      code: "package-validated",
+      message: "Pi ResourceLoader validated the exact Package stage.",
+      report: {
+        extensionCount: 1,
+        toolNames: ["todo"],
+        commandNames: ["todos"],
+        lifecycleEvents: ["session_start", "session_tree"],
+      },
+    } as const;
+
+    expect(
+      decodeNativeHostFrame(encodeNativeHostFrame(request).subarray(0, -1), "service-to-host"),
+    ).toEqual(request);
+    expect(
+      decodeNativeHostFrame(encodeNativeHostFrame(response).subarray(0, -1), "host-to-service"),
+    ).toEqual(response);
+    for (const forbidden of [
+      { ...request, kind: "package.activate.request" },
+      { ...response, activeGeneration: artifact.generation },
+      { ...response, activeLeaseCount: 1 },
+      { ...response, report: null },
+      { ...response, status: "rejected" as const },
+    ]) {
+      expect(() =>
+        decodeNativeHostFrame(
+          JSON.stringify(forbidden),
+          forbidden.kind.endsWith("request") ? "service-to-host" : "host-to-service",
+        ),
+      ).toThrow(NativeHostProtocolError);
+    }
   });
 });
