@@ -18,6 +18,8 @@
 
 首个真实 headless Pi Package checkpoint 固定为 `16f14d188e38134f6f45c46bfcb57ff36c1e8565`。其 [归档 Bundle](.omp-flow/tasks/archive/2026-08/08-06-pi-package-lifecycle/) 保存 exact source/rights、Product-owned stage/current/LKG/quarantine/lease、Pi-native ResourceLoader/private state、fault recovery、真实 MiMo/DeepSeek 与实际 macOS arm64 ZIP/ASAR 证据，以及 different-actor `PASS`。该 checkpoint 只支持当前 Package 纵切，不证明完整 Catalog/compatibility taxonomy 或后续阶段。
 
+首个真实 OpenCode external-Engine checkpoint 固定为 `02979ff7488e0491b04f29876b253de3b96540b1`。其 [归档 Bundle](.omp-flow/tasks/archive/2026-08/08-06-opencode-external-engine/) 保存 Product protocol/store v2 迁移、literal Pi/OpenCode gateway、官方 ACP SDK、truthful next-Run Workbench、故障/恢复矩阵，以及同 SHA 的 OpenCode observed-delivery 与 Pi accepted-operation production journeys；两条旅程均证明 sibling Engine 调用为零、attempt 为一、replay/fallback 为零，different-actor Review r9 结论为 `PASS`。该 checkpoint 只支持 F-13 的当前外部 Engine 纵切，不证明 Remote、发行或通用多 Engine framework。
+
 只有 Source Review 的复验触发器发生变化时才重跑受影响检查：source revision/tree、rights/history/assets、Pi/SDK/package format、Bun/Node/platform/packaged Electron path、Native Host boundary、structured UI bridge contract，或可复现的新反例。没有触发器时不得重复 unchanged baseline smoke。
 
 ## 3. Stage 0 — Durable contract freeze
@@ -107,8 +109,6 @@
 
 ## 9. 当前唯一下一动作
 
-Stage 0–3 已在 `248b3316651e681d9d4c78f81bec0c84a4cc822c` 形成并独立接受首个纵切候选；真实 headless Pi Package checkpoint 已在 `16f14d188e38134f6f45c46bfcb57ff36c1e8565` 形成并独立接受。现在只进入一个真实外部 Engine：通过 ACP、官方 headless protocol 或经证据选择的最薄真实路径，证明 capability/permission difference、next-Run choice、外部 Session authority 与 no silent fallback；不得把 Pi Gold Path 压成最低公分母，也不得先造通用多 Engine framework。
+Stage 0–3 已在 `248b3316651e681d9d4c78f81bec0c84a4cc822c` 形成并独立接受首个纵切候选；真实 headless Pi Package checkpoint 已在 `16f14d188e38134f6f45c46bfcb57ff36c1e8565` 形成并独立接受；真实 OpenCode external-Engine checkpoint 已在 `02979ff7488e0491b04f29876b253de3b96540b1` 形成并通过 different-actor Review。
 
-该外部 Engine proof 未完成前，不提前进入 Remote、三平台发行或 Marketplace 扩建；除非 Source Review 的复验触发器变化，不重复 unchanged baseline smoke。
-
-F-13 被接受并完成 generation rotation 后、进入 Remote 前，下一 bounded checkpoint 固定为 Product truth consolidation：先创建并验证全部受影响开发 store 的 backup/export，再确立 first-public-schema baseline、删除未发行 schema 的 steady-state compatibility、按稳定职责拆分 `ProductControlPlane`，并证明 production code 与概念复杂度实质净减。该施工不属于当前 F-13，也不得在本 generation 提前实现。
+进入 Remote 前，当前唯一 bounded checkpoint 固定为 Product truth consolidation 与 generation rotation：先创建并验证全部受影响开发 store 的 backup/export，再确立 first-public-schema baseline、删除未发行 schema 的 steady-state compatibility、按稳定职责拆分 `ProductControlPlane`，并证明 production code 与概念复杂度实质净减。完成并独立接受该 checkpoint 后才进入文件/Diff/Terminal/Artifact 与真实 Remote target；不得提前扩建 Marketplace、通用多 Engine framework 或三平台发行，也不重复未触发的 unchanged baseline smoke。
