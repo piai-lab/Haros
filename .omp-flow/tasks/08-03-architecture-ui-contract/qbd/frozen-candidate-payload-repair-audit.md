@@ -60,7 +60,7 @@ were:
 
 - `vendor/ui/apps/desktop/scripts/smoke-test.mjs`: missing
   `apps/desktop/node_modules/.bin/electron` (`ENOENT`);
-- donor Desktop/Web/package `.test.ts` files: missing `@synara/contracts`, `vitest` and other
+- donor Desktop/Web/package `.test.ts` files: missing donor contracts package, `vitest` and other
   workspace dependencies.
 
 This is not shared-worktree contamination: `.obsidian`, tool roots and every non-allowlisted dirty

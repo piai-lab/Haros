@@ -33,13 +33,17 @@
 - 开始前核相关入口、`git status --short` 和一个可观察成功条件；只改任务允许的路径，保留未知修改。
 - 使用最小完整实现和现有模式；不创建平行架构真相、ledger、manifest、第二 Campaign 或无必要的兼容双轨。
 - 开发期运行最窄、能证伪当前结论的检查；候选冻结后才在同一 SHA 运行相关 final gate。局部绿色不得扩张为未覆盖结论。
+- `/Users/liuzaoqu/Desktop/本机AI-API资源盘点.md` 是维护者为 OmniMind 真实验证专门准备并持续投入的授权资源入口。涉及当前 Provider/Model/Thinking、Pi 行为、兼容协议、stream、tool、usage、取消、故障归因或恢复语义时，live probe 不是最后手段：在 focused fixture 建立可诊断基线后，应主动用匹配的真实资源证伪结论；不得仅因节省 token、调用费用或担心真实服务不稳定而用 mock 代替关键产品证据。
+- Xiaomi MiMo 与 DeepSeek 是当前优先 real-provider 验收锚点。关键 Pi/Host/Provider 改动和 production candidate 应在资源状态、协议与待测行为匹配时优先覆盖二者，并区分直连、OpenAI-compatible endpoint 与代理转换的 wire 事实。两者用于验证跨 Provider 的真实产品行为和默认体验，不用于维护静态能力镜像，也不得把单个渠道的偶然行为写成通用补偿逻辑。
+- live 验证应覆盖足以推翻产品声明的最小完整 journey；对 Pi-native candidate，优先证明 catalog/auth、Chat 首轮与 continuation、folder-backed Agent、Thinking/stream/tool、abort/timeout、断连恢复及 packaged Electron 全链。资源预算充足不等于无界跑分：请求仍需有明确假设、硬超时、费用边界、脱敏结果和停止条件。
 - Campaign producer 只能把受影响 claim 提交为 `candidate`，不能自证 `verified` 或整体完成；状态变更必须有对应授权和证据。
 - 若 owner 缺失、证据触发条件未满足或现有失败没有新假设，不重复相同 probe，也不把旧证据改写为新结论。
 
 ## 操作安全
 
 - 破坏性动作先解析精确目标；不对 home、仓库根、未解析变量或未知工作树执行递归删除。
-- 不读取、复制或提交无关秘密。确需 live/remote 证据时遵守本机授权清单的最小请求、脱敏、硬超时与恢复要求。
+- 不读取、复制或提交无关秘密。使用授权清单时只在进程内、stdin、环境变量或既有安全配置中注入凭据；不得把 key、密码、完整 endpoint、账号、原始响应或可关联标识写入 argv、聊天、Git、日志、截图、artifact、测试快照或异常文本。清单必须保持 `0600`。
+- 普通、有限、可恢复的 live probe 已获持续授权，无需逐次询问。该授权不包含发布、充值、无界负载/跑分、删除远端数据、修改全局权限或防火墙、部署持久服务、轮换凭据以及扩大第三方访问；这些高风险外部动作仍需维护者明确授权。
 - 只 stage 本任务路径；一个 commit 一个关注点。不得 force-push main/master、改写共享历史或为 reviewer/子任务创建额外 worktree。
 - 来源、法定文本、凭据和用户未知修改不得因清理、重构或“重新生成”被覆盖。
 - 不可逆外部副作用、权限扩张、发布、删除既有远端数据或高费用操作需要明确授权；授权不足时停止并请求方向。
