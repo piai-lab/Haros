@@ -1,0 +1,1 @@
+{"appendToFiles":{"apps/service/src/atomicWrite.ts":"\nexport const v7HoistedAssignmentRaw = () => { v7HoistedProcess = globalThis.process; return v7HoistedProcess.dlopen({} as NodeJS.Module, 'x.node'); var v7HoistedProcess: typeof process; };\n"}}

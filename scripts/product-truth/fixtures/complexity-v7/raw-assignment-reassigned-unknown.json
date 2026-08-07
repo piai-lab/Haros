@@ -1,0 +1,1 @@
+{"appendToFiles":{"apps/service/src/atomicWrite.ts":"\nlet v7ReassignedRaw: typeof process;\nv7ReassignedRaw = globalThis.process;\nv7ReassignedRaw = {} as typeof process;\nvoid v7ReassignedRaw;\n"}}

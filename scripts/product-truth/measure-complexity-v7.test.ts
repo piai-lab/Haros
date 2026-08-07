@@ -103,6 +103,20 @@ describe("product-truth-complexity-v7", () => {
     });
   }, 30_000);
 
+  it.each(["benign-local-assignment-positive", "shadowed-local-assignment-positive"])(
+    "accepts benign or truly shadowed simple assignment %s",
+    (fixture) => {
+      const result = run("--fixture", fixture, "--ref", baseline);
+      expect(result.status, result.stderr).toBe(0);
+      expect(JSON.parse(result.stdout).rawEffects).toMatchObject({
+        ingressCount: 812,
+        ingressSha256: "d1b60f2ed12a9cdca75752d94fd7a69c055d865d4fe5397f61550bbc2fe82d3a",
+        violationSha256: "a3f10097eeaa387fddba512addbe386c2a5b01be5e04021a1a12a4d3a168ce43",
+      });
+    },
+    30_000,
+  );
+
   it.each([
     ["work-path-removed", "WORK_AUTHORITY_CHANGED"],
     ["verifier-operation-removed", "AUTHORITY_BLOCK_CHANGED"],
@@ -148,6 +162,15 @@ describe("product-truth-complexity-v7", () => {
     "commonjs-direct-constructor",
     "commonjs-direct-return",
     "commonjs-destructure-raw",
+    "global-assignment-raw",
+    "wrapper-assignment-raw",
+    "terminal-assignment-raw",
+    "raw-assignment-reassigned-unknown",
+    "raw-assignment-compound",
+    "raw-assignment-update",
+    "raw-assignment-property-escape",
+    "raw-assignment-destructure",
+    "hoisted-var-assignment-raw",
   ])("rejects closed raw-effect syntax/owner mutation %s", (fixture) => {
     const result = run("--fixture", fixture, "--ref", baseline);
     expect(result.status).not.toBe(0);

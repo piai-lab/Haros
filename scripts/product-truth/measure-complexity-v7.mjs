@@ -935,23 +935,26 @@ for (const path of candidateGraph.paths.filter((candidatePath) => rawInventoryPa
   const reservedRoots = new Set(rawUniverse.defaultDisposition.reservedRoots);
   const reservedPrefix = (value) => [...reservedRoots].some((reserved) =>
     reserved === value || reserved.startsWith(`${value}.`));
-  const bindScopedAlias = (nameNode, identity) => {
-    if (!ts.isIdentifier(nameNode) || !identity) return false;
-    const scope = lexical.declarationScope.get(nameNode);
-    if (!scope) return false;
-    if (!scopedAliases.has(scope)) scopedAliases.set(scope, new Map());
-    const aliases = scopedAliases.get(scope);
-    if (aliases.has(nameNode.text)) return false;
-    aliases.set(nameNode.text, identity);
-    scopedAliasDeclarations.add(nameNode);
-    return true;
-  };
-  const resolveScopedAlias = (identifier) => {
+  const bindingScopeFor = (identifier) => {
     for (let current = identifier.parent; current; current = current.parent) {
-      if (!lexical.scopeBindings.get(current)?.has(identifier.text)) continue;
-      return scopedAliases.get(current)?.get(identifier.text) ?? null;
+      if (lexical.scopeBindings.get(current)?.has(identifier.text)) return current;
     }
     return null;
+  };
+  const bindScopedAliasAt = (scope, name, identity, node) => {
+    if (!scope || !identity) return false;
+    if (!scopedAliases.has(scope)) scopedAliases.set(scope, new Map());
+    const aliases = scopedAliases.get(scope);
+    if (aliases.has(name)) return false;
+    aliases.set(name, identity);
+    scopedAliasDeclarations.add(node);
+    return true;
+  };
+  const bindScopedAlias = (nameNode, identity) => ts.isIdentifier(nameNode) &&
+    bindScopedAliasAt(lexical.declarationScope.get(nameNode), nameNode.text, identity, nameNode);
+  const resolveScopedAlias = (identifier) => {
+    const scope = bindingScopeFor(identifier);
+    return scope ? scopedAliases.get(scope)?.get(identifier.text) ?? null : null;
   };
   const normalizedScopedGlobal = (node) => {
     const chain = expressionChain(node);
@@ -1002,8 +1005,49 @@ for (const path of candidateGraph.paths.filter((candidatePath) => rawInventoryPa
     return classes ? { kind: "terminal", specifier: base.root, exported: member, classes, form } : null;
   };
   const aliasDeclarations = [];
+  const aliasWrites = [];
+  const targetIdentifiers = (node, identifiers = []) => {
+    if (ts.isIdentifier(node)) identifiers.push(node);
+    else if (ts.isPropertyAccessExpression(node) || ts.isElementAccessExpression(node)) {
+      const chain = expressionChain(node);
+      if (chain) identifiers.push(chain.rootNode);
+    } else if (ts.isParenthesizedExpression(node)) targetIdentifiers(node.expression, identifiers);
+    else if (ts.isArrayLiteralExpression(node)) {
+      for (const element of node.elements) if (!ts.isOmittedExpression(element)) targetIdentifiers(element, identifiers);
+    } else if (ts.isObjectLiteralExpression(node)) {
+      for (const property of node.properties) {
+        if (ts.isPropertyAssignment(property)) targetIdentifiers(property.initializer, identifiers);
+        else if (ts.isShorthandPropertyAssignment(property)) identifiers.push(property.name);
+        else if (ts.isSpreadAssignment(property)) targetIdentifiers(property.expression, identifiers);
+      }
+    } else if (ts.isBinaryExpression(node) && node.operatorToken.kind === ts.SyntaxKind.EqualsToken) {
+      targetIdentifiers(node.left, identifiers);
+    }
+    return identifiers;
+  };
+  const addAliasWrite = (identifier, node, kind, rhs = null) => {
+    const scope = bindingScopeFor(identifier) ?? lexical.declarationScope.get(identifier);
+    if (scope) aliasWrites.push({ scope, name: identifier.text, node, kind, rhs });
+  };
   const collectAliasDeclarations = (node) => {
-    if (ts.isVariableDeclaration(node) && node.initializer) aliasDeclarations.push(node);
+    if (ts.isVariableDeclaration(node) && node.initializer) {
+      aliasDeclarations.push(node);
+      for (const identifier of targetIdentifiers(node.name)) addAliasWrite(identifier, node, "declaration", node.initializer);
+    }
+    if (ts.isBinaryExpression(node) && node.operatorToken.kind >= ts.SyntaxKind.FirstAssignment &&
+        node.operatorToken.kind <= ts.SyntaxKind.LastAssignment) {
+      const simple = node.operatorToken.kind === ts.SyntaxKind.EqualsToken && ts.isIdentifier(node.left);
+      for (const identifier of targetIdentifiers(node.left)) {
+        addAliasWrite(identifier, node, simple ? "assignment" :
+          ts.isIdentifier(node.left) ? "compound" :
+          (ts.isPropertyAccessExpression(node.left) || ts.isElementAccessExpression(node.left)) ? "property" : "destructure",
+        node.right);
+      }
+    }
+    if ((ts.isPrefixUnaryExpression(node) || ts.isPostfixUnaryExpression(node)) &&
+        [ts.SyntaxKind.PlusPlusToken, ts.SyntaxKind.MinusMinusToken].includes(node.operator)) {
+      for (const identifier of targetIdentifiers(node.operand)) addAliasWrite(identifier, node, "update");
+    }
     ts.forEachChild(node, collectAliasDeclarations);
   };
   collectAliasDeclarations(file);
@@ -1032,6 +1076,33 @@ for (const path of candidateGraph.paths.filter((candidatePath) => rawInventoryPa
         }
         if (bindScopedAlias(element.name, identityForMember(base, member, form))) scopedAliasesChanged = true;
       }
+    }
+    for (const write of aliasWrites) {
+      if (write.kind !== "assignment") continue;
+      const identity = identityForExpression(write.rhs);
+      if (identity && bindScopedAliasAt(write.scope, write.name, identity, write.node.left)) scopedAliasesChanged = true;
+    }
+  }
+  const aliasWriteViolations = new Set();
+  const rejectAliasWrite = (write, detail) => {
+    const key = `${write.node.pos}\0${write.name}`;
+    if (aliasWriteViolations.has(key)) return;
+    aliasWriteViolations.add(key);
+    addViolation("RAW_ALIAS_WRITE_UNKNOWN", path, write.node, detail);
+  };
+  for (const write of aliasWrites) {
+    if (["declaration", "assignment"].includes(write.kind) || !write.rhs || !identityForExpression(write.rhs)) continue;
+    rejectAliasWrite(write, { name: write.name, writeKinds: [write.kind] });
+  }
+  for (const [scope, aliases] of scopedAliases) for (const [name] of aliases) {
+    const writes = aliasWrites.filter((write) => write.scope === scope && write.name === name);
+    const validSingleWrite = writes.length === 1 && ["declaration", "assignment"].includes(writes[0].kind) &&
+      identityForExpression(writes[0].rhs);
+    if (!validSingleWrite) {
+      const witness = writes.find((write) => !["declaration", "assignment"].includes(write.kind) ||
+        !write.rhs || !identityForExpression(write.rhs)) ?? writes[1] ?? writes[0];
+      if (witness) rejectAliasWrite(witness, { name, writeKinds: writes.map((write) => write.kind) });
+      else addViolation("RAW_ALIAS_WRITE_UNKNOWN", path, file, { name, writeKinds: [] });
     }
   }
   const exportedNames = new Set();
