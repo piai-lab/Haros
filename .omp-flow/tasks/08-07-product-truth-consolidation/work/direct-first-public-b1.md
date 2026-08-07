@@ -22,6 +22,7 @@ This Work realizes PRD A1-A9, the B1 half of A14, and the B1 preservation portio
 - [Direct rebuild interface](../interfaces/direct-first-public-rebuild.md)
 - [QbD 1 PASS approval and three mandatory advisories](../decisions/qbd1-pass-approval.md)
 - [QbD 2 path-boundary repair calibration](../decisions/qbd2-path-repair-calibration.md)
+- [B1 implementation-discovered boundary repair](../decisions/b1-boundary-repair-calibration.md)
 - [Unshipped compatibility inventory](../research/unshipped-compatibility.md)
 
 ## In scope
@@ -65,6 +66,20 @@ The implementer may create or change only:
   focused tests; deletion of `composerDraftV2Transcode*` and `storageOriginUpgrade*`;
 - `apps/desktop/src/main.ts` and deletion of `desktopStorageUpgrade*` and
   `desktopUserDataProfile*`;
+- `packages/contracts/src/ipc.ts` solely to delete `OmniMindStorageSnapshot` and
+  `DesktopBridge.storageUpgrade`;
+- `apps/desktop/src/ipcChannels.ts` and `apps/desktop/src/preload.ts` solely to delete the retired
+  storage-upgrade read/ack channels and preload exposure;
+- `apps/web/src/lib/composerImageSource.ts` and
+  `apps/web/src/lib/composerImageSource.test.ts` solely to reject/remove legacy `appshot`
+  acceptance and normalization while retaining current `appsnap` behavior;
+- `apps/web/src/components/chat/ComposerImageAttachmentChip.tsx` and
+  `apps/web/src/components/chat/ComposerImageAttachmentChip.test.tsx` solely to remove the legacy
+  `appshot` compatibility comment and fixture without changing current attachment-chip behavior;
+- `apps/web/src/settingsSearchIndex.ts` solely to remove the `appshot` search alias;
+- `apps/service/src/native-host/executionBoundary.test.ts` solely to replace the retired Product
+  database literal with the canonical Product database resolver/constant; Native Host production
+  behavior, protocol and test intent must not change;
 - `apps/service/src/opencode/liveJourneyProbe.ts` solely to replace its retired literal Product
   database filename/path construction with the canonical Product database resolver/path; no
   OpenCode execution, protocol, Session, fixture or journey semantics may change;
@@ -96,10 +111,19 @@ An implementation-discovered required path outside this boundary stops the Work 
 - Product and service create all current tables in independent single transactions and publish the
   exact generation-1 marker/fingerprint last; Web writes/rereads only the strict g1 envelope.
   Partial/old/future/duplicate/contradictory inputs fail with zero repair writes.
-- Structural scans find zero production caller/import/string alias for every compatibility surface
-  named by the Design, including the OpenCode live probe. There is no snapshot, converter, restore,
-  legacy reader, dual-read or hidden copy, and the probe resolves the same canonical Product
-  database path as normal Service composition.
+- Scope-aware structural scans find zero runtime caller/import/API/channel/preload exposure,
+  comment, fixture or string/search alias for every compatibility surface named by the Design,
+  including the contracts/Desktop storage-upgrade bridge, legacy Web `appshot` acceptance and the
+  OpenCode live probe. `appsnap` remains the sole current image-source discriminator, and both the
+  OpenCode probe and Native Host execution-boundary fixture resolve the same canonical Product
+  database path as normal Service composition. There is no snapshot, converter, restore, legacy
+  reader, dual-read or hidden copy.
+- Retired database/key filenames under `scripts/product-truth/**` are reported separately and are
+  permitted only as exact closed destructive target identities or their matching tool fixtures and
+  assertions. They must not be counted as runtime compatibility, removed by an undifferentiated
+  string scan, or used as a decoder, normal-startup alias, fallback or old-row conversion path. Any
+  unclassified occurrence, including a newly discovered required production/test path outside this
+  Work boundary, stops the Work for map repair.
 - The dedicated B1 commit is clean and green, its full 40-hex SHA is recorded, and measurement of
   that immutable tree uses the already-frozen v1 instrument. A structural scan at B1 reports zero
   production `ProductStateStore`/`ProductExecutionCoordinator` files, symbols, imports or facade
@@ -113,8 +137,14 @@ An implementation-discovered required path outside this boundary stops the Work 
   and per-boundary kill injection.
 - Run focused Product/service/Web/Desktop/release-policy tests affected by creation and deletion,
   the existing focused OpenCode live-journey probe test for canonical Product database resolution,
-  plus `bun run --cwd apps/service typecheck`, `bun run --cwd apps/web typecheck`,
+  `apps/web/src/lib/composerImageSource.test.ts`,
+  `apps/web/src/components/chat/ComposerImageAttachmentChip.test.tsx` and
+  `apps/service/src/native-host/executionBoundary.test.ts`, plus
+  `bun run --cwd apps/service typecheck`, `bun run --cwd apps/web typecheck`,
   `bun run --cwd apps/desktop typecheck` and the scripts typecheck.
+- Run the scope-aware compatibility scan with separate forbidden-runtime and
+  `scripts/product-truth/**` destructive-target classifications. Record zero forbidden residue and
+  every permitted retired target identity; a raw whole-tree string count is not a passing result.
 - On an isolated generated home and isolated Desktop profiles only, run fresh/open/reopen and
   packaged Electron→Service→Host startup/restart proof. Verify exact g1 state, no legacy import and
   no automatic replay. Do not point the tool or runtime at the maintainer's canonical

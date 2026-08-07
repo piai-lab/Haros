@@ -8,8 +8,12 @@ title: "Direct first-public Product truth work map"
 This map decomposes the human-approved [PRD](../prd.md) and [Design](../design.md) after the
 [QbD 1 PASS approval](../decisions/qbd1-pass-approval.md), with the two exact ownership defects from
 the first [QbD 2 audit](../qbd/work-map-audit.md) repaired under the maintainer's
-[path-boundary calibration](../decisions/qbd2-path-repair-calibration.md). It is an authored
-execution view, not a machine dependency graph.
+[path-boundary calibration](../decisions/qbd2-path-repair-calibration.md) and approved by the
+[QbD 2 PASS decision](../decisions/qbd2-pass-approval.md). After the clean implementation-discovered
+stop, the maintainer's [B1 boundary repair calibration](../decisions/b1-boundary-repair-calibration.md)
+adds only the exact contracts/Desktop/Web/test consumers of the already-approved compatibility
+deletion and one canonical Product-database fixture correction. It changes no Work meaning,
+acceptance coverage or ordering. This is an authored execution view, not a machine dependency graph.
 
 ## Hard ordering
 
@@ -22,7 +26,9 @@ commit so the recorded 40-hex B1 SHA remains immutable. No Store, Coordinator, f
 leaf extraction may be assigned, started or pre-scaffolded before that handoff exists and proves
 zero extraction files and symbols. B1 also owns the one existing OpenCode live-probe correction
 needed to consume the canonical Product database resolver/path; that correction cannot be deferred
-to final C.
+to final C. The implementation-discovered contracts/Desktop/Web compatibility paths and Native Host
+execution-boundary fixture correction are part of this same indivisible B1 and do not create a new
+parallel Work or alter the accepted-handoff sequence.
 
 [Native Host v2 Package-root binding](native-host-package-root-binding.md) is a separate product
 boundary and is independently reviewable. The safe default sequence is literal: a different actor
@@ -77,6 +83,9 @@ Each implementation Work writes its promised handoff and receives a different-ac
 the next overlapping Work begins. Focused green checks do not authorize broader claims. The final C
 Work may submit affected Campaign claims only as `candidate`; no producer may mark them verified.
 
-The next workflow entry is a different-actor scoped QbD 2 audit over this repaired index and the
-affected linked Work Concepts, carrying forward every closed finding and unchanged approved
-decision. A model verdict does not replace the required human QbD 2 decision.
+The next workflow entry is a fresh different-actor scoped QbD 2 audit limited to the B1 boundary
+additions and scope-aware structural-scan distinction recorded by the
+[B1 calibration](../decisions/b1-boundary-repair-calibration.md). It carries forward every closed
+finding, the prior QbD 2 PASS, the literal accepted-handoff sequence and unchanged acceptance
+coverage. The calibration conditionally directs a scoped `PASS` to restart B1 from the clean
+checkpoint; a model verdict cannot broaden that human decision.

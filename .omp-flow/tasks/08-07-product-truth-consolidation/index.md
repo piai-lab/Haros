@@ -29,6 +29,10 @@ okf_version: "0.2"
   maintainer's standing direct-repair instruction to two exact Work ownership defects.
 - [QbD 2 PASS approval](decisions/qbd2-pass-approval.md) — authorizes the repaired literal Work
   sequence after a different-actor PASS with zero blockers and advisories.
+- [B1 boundary repair calibration](decisions/b1-boundary-repair-calibration.md) — records the clean
+  implementation stop and exact compatibility paths added to B1 ownership.
+- [B1 boundary-repair PASS approval](decisions/b1-boundary-pass-approval.md) — authorizes a new B1
+  implementation receipt after the scoped audit passed with no findings.
 - [Direct first-public rebuild](interfaces/direct-first-public-rebuild.md) — inspect/apply commands,
   guards, target allowlist, interruption and error contract.
 - [Package-root handoff](interfaces/package-root-handoff.md) — Service-to-Native-Host root binding,
@@ -41,6 +45,8 @@ okf_version: "0.2"
   map repair before execution.
 - [QbD 2 repaired work-map audit](qbd/work-map-repair-audit.md) — independent PASS closing both path
   blockers and both map advisories.
+- [B1 boundary-repair audit](qbd/b1-boundary-repair-audit.md) — scoped QbD 2 PASS over the nine
+  implementation-discovered compatibility paths.
 - [Work map](work/index.md) — five bounded implementation/review Concepts, the immutable unsplit B1
   stop, Native Host ordering and complete PRD acceptance coverage before QbD 2.
 
