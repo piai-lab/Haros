@@ -1,0 +1,8 @@
+{
+  "extendsFixture": "product-refusal-lock-positive",
+  "textReplacements": {
+    "apps/service/src/product/ProductControlPlane.ts": [
+      ["    const database = new DatabaseSync(databasePath);", "    const approved = { filename: databasePath };\n    const overwritten = { ...approved, filename: join(stateDir, \"stores\", \"product.sqlite\") };\n    const database = new DatabaseSync(overwritten.filename);"]
+    ]
+  }
+}

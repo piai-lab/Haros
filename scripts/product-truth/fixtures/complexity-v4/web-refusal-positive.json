@@ -1,0 +1,8 @@
+{
+  "virtualFiles": {
+    "apps/web/src/composerDraftStore.ts": "const CURRENT = \"omnimind:composer-drafts:g1\";\nexport function readOrCreateComposerDraftEnvelope(storage: Storage) {\n  const retiredV1 = storage.getItem(\"omnimind:composer-drafts:v1\");\n  const retiredV2 = storage.getItem(\"omnimind:composer-drafts:v2\");\n  if (retiredV1 !== null || retiredV2 !== null) {\n    throw new Error(\"PREBASELINE_RESET_REQUIRED\");\n  }\n  const current = storage.getItem(CURRENT);\n  if (current === null) storage.setItem(CURRENT, JSON.stringify({ generation: 1, state: {} }));\n  const reread = storage.getItem(CURRENT);\n  storage.setItem(CURRENT, reread ?? \"\");\n  return reread;\n}\n"
+  },
+  "semanticFocusPaths": ["apps/web/src/composerDraftStore.ts"],
+  "legacyFocusLiterals": ["omnimind:composer-drafts:v1", "omnimind:composer-drafts:v2"],
+  "enforceSemanticGates": true
+}

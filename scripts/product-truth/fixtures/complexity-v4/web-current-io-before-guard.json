@@ -1,0 +1,8 @@
+{
+  "extendsFixture": "web-refusal-positive",
+  "textReplacements": {
+    "apps/web/src/composerDraftStore.ts": [
+      ["  const retiredV1 = storage.getItem", "  storage.setItem(CURRENT, \"premature\");\n  const retiredV1 = storage.getItem"]
+    ]
+  }
+}

@@ -1,0 +1,9 @@
+{
+  "extendsFixture": "product-refusal-lock-positive",
+  "textReplacements": {
+    "apps/service/src/product/ProductControlPlane.ts": [
+      ["import { DatabaseSync } from \"node:sqlite\";", "import { DatabaseSync } from \"node:sqlite\";\nimport { SqliteMigrator } from \"@effect/sql-sqlite-bun/SqliteClient\";"],
+      ["    const database = new DatabaseSync(databasePath);", "    SqliteMigrator({ filename: databasePath });\n    const database = new DatabaseSync(databasePath);"]
+    ]
+  }
+}

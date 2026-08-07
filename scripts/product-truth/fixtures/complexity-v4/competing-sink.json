@@ -1,0 +1,7 @@
+{
+  "enforceSemanticGates": true,
+  "semanticFocusPaths": ["apps/service/src/product/productStateStore.ts"],
+  "virtualFiles": {
+    "apps/service/src/product/productStateStore.ts": "import { resolveProductDatabasePath } from './ProductControlPlane';\nconst openProductDatabase = (path: string) => path;\nexport const makeStore = (stateDir: string, alternate: string, flag: boolean) => openProductDatabase(flag ? resolveProductDatabasePath(stateDir) : alternate);\n"
+  }
+}

@@ -1,0 +1,9 @@
+{
+  "extendsFixture": "web-refusal-positive",
+  "textReplacements": {
+    "apps/web/src/composerDraftStore.ts": [
+      ["  const retiredV1", "  try {\n  const retiredV1"],
+      ["  const current = storage.getItem(CURRENT);", "  } catch { /* swallowed */ }\n  const current = storage.getItem(CURRENT);"]
+    ]
+  }
+}

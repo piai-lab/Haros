@@ -1,0 +1,8 @@
+{
+  "virtualFiles": {
+    "apps/service/src/product/notFrozenRequireTarget.ts": "export const requireTarget = true;\n"
+  },
+  "appendToFiles": {
+    "apps/service/src/product/ProductControlPlane.ts": "\nconst requireFixture = require('./notFrozenRequireTarget');\n"
+  }
+}
