@@ -22,7 +22,11 @@ import {
 import { Effect, ManagedRuntime } from "effect";
 import { describe, expect, it } from "vitest";
 
-import { ProductControlPlane, type ProductExecutionBoundary } from "../product/ProductControlPlane";
+import {
+  ProductControlPlane,
+  resolveProductDatabasePath,
+  type ProductExecutionBoundary,
+} from "../product/ProductControlPlane";
 import { NativeHostClient } from "./client";
 import {
   initializeProductPackageLifecycle,
@@ -308,11 +312,13 @@ describe("makeNativeHostExecutionBoundary recovery", () => {
   it("fails Package capability closed when the explicit application root lacks assets", async () => {
     const root = mkdtempSync(path.join(tmpdir(), "omnimind-missing-package-root-"));
     const stateDir = path.join(root, "userdata");
+    const productDatabase = resolveProductDatabasePath(stateDir);
+    mkdirSync(path.dirname(productDatabase), { recursive: true, mode: 0o700 });
     let failure: unknown = null;
     try {
       await initializeProductPackageLifecycle({
         stateDir,
-        productDatabase: path.join(stateDir, "product-state-v1.sqlite"),
+        productDatabase,
         client: {} as NativeHostClient,
         applicationRoot: root,
       });

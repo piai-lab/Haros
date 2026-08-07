@@ -1,4 +1,5 @@
 import { createHash, randomUUID } from "node:crypto";
+import { closeSync, fsyncSync, openSync } from "node:fs";
 import path from "node:path";
 
 import { workspaceRootsEqual } from "@omnimind/shared/threadWorkspace";
@@ -93,15 +94,16 @@ import {
 import { Effect, Layer, Schema, ServiceMap } from "effect";
 
 import { ServerConfig } from "../config";
-import { ensurePrivateFileSync } from "../privatePathPermissions";
+import { ensurePrivateDirectorySync, ensurePrivateFileSync } from "../privatePathPermissions";
 import {
   acquireDatabaseLifecycleLock,
   releaseDatabaseLifecycleLock,
 } from "../persistence/DatabaseLifecycleLock";
 
-export const PRODUCT_DATABASE_FILENAME = "product-state-v1.sqlite";
-export const PRODUCT_SCHEMA_VERSION = 2;
-export const PRODUCT_MIGRATION_REVISION = "selection-schema-v2";
+export const PRODUCT_DATABASE_FILENAME = "product.sqlite";
+export const PRODUCT_SCHEMA_GENERATION = 1;
+export const resolveProductDatabasePath = (stateDir: string): string =>
+  path.join(stateDir, "stores", PRODUCT_DATABASE_FILENAME);
 const RUNTIME_CATALOG_OBSERVATION_INTERVAL_MS = 5_000;
 const productIsoNow = () => new Date().toISOString();
 
@@ -117,23 +119,21 @@ interface PortableDatabase {
   close(): void;
 }
 
-const openPortableDatabase = async (filename: string): Promise<PortableDatabase> => {
+const openPortableDatabase = async (
+  filename: string,
+  options: { readonly readOnly?: boolean } = {},
+): Promise<PortableDatabase> => {
   if (process.versions.bun !== undefined) {
     const { Database } = await import("bun:sqlite");
-    return new Database(filename) as unknown as PortableDatabase;
+    return new Database(filename, options.readOnly ? { readonly: true } : undefined) as unknown as PortableDatabase;
   }
   const { DatabaseSync } = await import("node:sqlite");
-  return new DatabaseSync(filename) as unknown as PortableDatabase;
+  return new DatabaseSync(filename, { readOnly: options.readOnly ?? false }) as unknown as PortableDatabase;
 };
 
 const productSchemaSql = `
-  PRAGMA foreign_keys = ON;
-  PRAGMA journal_mode = WAL;
-  PRAGMA busy_timeout = 5000;
-
   CREATE TABLE IF NOT EXISTS product_meta (
-    schema_version INTEGER NOT NULL CHECK (schema_version = 2),
-    migration_revision TEXT NOT NULL CHECK (migration_revision = 'selection-schema-v2')
+    schema_generation INTEGER NOT NULL CHECK (schema_generation = 1)
   );
 
   CREATE TABLE IF NOT EXISTS product_workspaces (
@@ -720,145 +720,117 @@ export class ProductControlPlane extends ServiceMap.Service<
   ProductControlPlaneShape
 >()("omnimind/product/ProductControlPlane") {}
 
-function initializeSchema(database: PortableDatabase): void {
-  database.exec(productSchemaSql);
-  const workspaceColumns = database.prepare("PRAGMA table_info(product_workspaces)").all();
-  const workspaceColumnNames = new Set(workspaceColumns.map((raw) => String(asRecord(raw).name)));
-  for (const [name, definition] of [
-    ["title", "title TEXT NOT NULL DEFAULT 'Workspace'"],
-    ["revision", "revision INTEGER NOT NULL DEFAULT 1 CHECK (revision > 0)"],
-    [
-      "visible_in_sidebar",
-      "visible_in_sidebar INTEGER NOT NULL DEFAULT 1 CHECK (visible_in_sidebar IN (0, 1))",
-    ],
-    ["is_pinned", "is_pinned INTEGER NOT NULL DEFAULT 0 CHECK (is_pinned IN (0, 1))"],
-    ["run_command", "run_command TEXT"],
-    ["archived_at", "archived_at TEXT"],
-    ["deleted_at", "deleted_at TEXT"],
-    ["created_at", "created_at TEXT NOT NULL DEFAULT '1970-01-01T00:00:00.000Z'"],
-    ["updated_at", "updated_at TEXT NOT NULL DEFAULT '1970-01-01T00:00:00.000Z'"],
-  ] as const) {
-    if (!workspaceColumnNames.has(name)) {
-      database.exec(`ALTER TABLE product_workspaces ADD COLUMN ${definition}`);
-    }
-  }
-  database.exec(
-    `UPDATE product_workspaces
-     SET created_at = observed_at
-     WHERE created_at = '1970-01-01T00:00:00.000Z';
-     UPDATE product_workspaces
-     SET updated_at = observed_at
-     WHERE updated_at = '1970-01-01T00:00:00.000Z';`,
-  );
+const normalizeProductDdl = (value: string): string =>
+  value
+    .replace(/["`\[\]]/g, "")
+    .replace(/\s+/g, " ")
+    .trim()
+    .toLowerCase();
 
-  const outboxColumns = new Set(
-    database
-      .prepare("PRAGMA table_info(product_outbox)")
-      .all()
-      .map((raw) => String(asRecord(raw).name)),
-  );
-  if (!outboxColumns.has("prepared_selection_json")) {
-    database.exec("ALTER TABLE product_outbox ADD COLUMN prepared_selection_json TEXT");
-  }
+const productSchemaFingerprint = (database: PortableDatabase): string => {
+  const tuples = database
+    .prepare(
+      `SELECT type, name, tbl_name, sql
+       FROM sqlite_schema
+       WHERE name NOT LIKE 'sqlite_%' AND sql IS NOT NULL
+       ORDER BY type, name, tbl_name, sql`,
+    )
+    .all()
+    .map((raw) => {
+      const row = asRecord(raw);
+      return ["type", "name", "tbl_name", "sql"]
+        .map((column) => normalizeProductDdl(requiredString(row, column)))
+        .join("\u0000");
+    });
+  return createHash("sha256").update(tuples.join("\n"), "utf8").digest("hex");
+};
 
-  const factColumns = database.prepare("PRAGMA table_info(product_facts)").all();
-  const factGroupColumn = factColumns.find((raw) => String(asRecord(raw).name) === "group_id");
-  const factTable = database
-    .prepare("SELECT sql FROM sqlite_master WHERE type = 'table' AND name = 'product_facts'")
-    .get();
-  const factTableSql = factTable ? asRecord(factTable).sql : null;
-  const supportsRuntimeFacts =
-    typeof factTableSql === "string" &&
-    factTableSql.includes("conversation_id IS NULL AND workspace_id IS NULL AND group_id IS NULL");
-  if (!factGroupColumn || !supportsRuntimeFacts) {
-    database.exec("PRAGMA foreign_keys = OFF");
-    try {
-      database.exec(`
-        BEGIN IMMEDIATE;
-        DROP TABLE product_facts;
-        CREATE TABLE product_facts (
-          global_sequence INTEGER PRIMARY KEY AUTOINCREMENT,
-          fact_id TEXT NOT NULL UNIQUE,
-          conversation_id TEXT REFERENCES product_conversations(conversation_id) ON DELETE CASCADE,
-          workspace_id TEXT REFERENCES product_workspaces(workspace_id) ON DELETE CASCADE,
-          group_id TEXT REFERENCES product_groups(group_id) ON DELETE CASCADE,
-          conversation_sequence INTEGER CHECK (conversation_sequence > 0),
-          emitted_at TEXT NOT NULL,
-          shell_change_json TEXT NOT NULL,
-          detail_change_json TEXT,
-          UNIQUE (conversation_id, conversation_sequence),
-          CHECK (
-            (conversation_id IS NOT NULL AND workspace_id IS NULL AND group_id IS NULL AND
-             conversation_sequence IS NOT NULL AND detail_change_json IS NOT NULL) OR
-            (conversation_id IS NULL AND workspace_id IS NOT NULL AND group_id IS NULL AND
-             conversation_sequence IS NULL AND detail_change_json IS NULL) OR
-            (conversation_id IS NULL AND workspace_id IS NULL AND group_id IS NOT NULL AND
-             conversation_sequence IS NULL AND detail_change_json IS NULL) OR
-            (conversation_id IS NULL AND workspace_id IS NULL AND group_id IS NULL AND
-             conversation_sequence IS NULL AND detail_change_json IS NULL)
-          )
-        );
-        UPDATE product_conversations SET detail_sequence = 0;
-        DELETE FROM sqlite_sequence WHERE name = 'product_facts';
-        COMMIT;
-      `);
-    } catch (error) {
-      database.exec("ROLLBACK");
-      throw error;
-    } finally {
-      database.exec("PRAGMA foreign_keys = ON");
-    }
-  }
-  database.exec(
-    `CREATE INDEX IF NOT EXISTS product_facts_by_conversation
-       ON product_facts(conversation_id, conversation_sequence);
-     CREATE INDEX IF NOT EXISTS product_facts_by_workspace
-       ON product_facts(workspace_id, global_sequence);
-     CREATE INDEX IF NOT EXISTS product_facts_by_group
-       ON product_facts(group_id, global_sequence);`,
-  );
+// Generated from productSchemaSql by the focused first-public schema fixture.
+export const PRODUCT_SCHEMA_FINGERPRINT =
+  "f79549cce6bede3b0b0c40833254b17f6483e6a61d026aac5ffaa834dc4da33a";
 
-  const conversationColumns = database.prepare("PRAGMA table_info(product_conversations)").all();
-  const conversationColumnNames = new Set(
-    conversationColumns.map((raw) => String(asRecord(raw).name)),
-  );
-  for (const [name, definition] of [
-    ["revision", "revision INTEGER NOT NULL DEFAULT 1 CHECK (revision > 0)"],
-    ["archived_at", "archived_at TEXT"],
-    ["is_pinned", "is_pinned INTEGER NOT NULL DEFAULT 0 CHECK (is_pinned IN (0, 1))"],
-    ["notes", "notes TEXT NOT NULL DEFAULT ''"],
-    [
-      "board_state",
-      "board_state TEXT NOT NULL DEFAULT 'active' CHECK (board_state IN ('active', 'done'))",
-    ],
-    ["board_state_changed_at", "board_state_changed_at TEXT"],
-    ["deleted_at", "deleted_at TEXT"],
-  ] as const) {
-    if (!conversationColumnNames.has(name)) {
-      database.exec(`ALTER TABLE product_conversations ADD COLUMN ${definition}`);
-    }
-  }
-  const versionRows = database
-    .prepare("SELECT schema_version, migration_revision FROM product_meta")
-    .all();
-  if (versionRows.length === 0) {
-    database
-      .prepare("INSERT INTO product_meta(schema_version, migration_revision) VALUES (?, ?)")
-      .run(PRODUCT_SCHEMA_VERSION, PRODUCT_MIGRATION_REVISION);
-    return;
-  }
-  const version = requiredNumber(asRecord(versionRows[0]), "schema_version");
+const configureProductDatabase = (database: PortableDatabase): void => {
+  database.exec("PRAGMA foreign_keys = ON; PRAGMA busy_timeout = 5000");
+};
+
+const validateProductSchema = (database: PortableDatabase): void => {
+  const marker = database.prepare("SELECT schema_generation FROM product_meta").all();
   if (
-    version !== PRODUCT_SCHEMA_VERSION ||
-    versionRows.length !== 1 ||
-    asRecord(versionRows[0]).migration_revision !== PRODUCT_MIGRATION_REVISION
+    marker.length !== 1 ||
+    requiredNumber(asRecord(marker[0]), "schema_generation") !== PRODUCT_SCHEMA_GENERATION
   ) {
     throw new ProductFailure(
-      "PRODUCT_SCHEMA_UNSUPPORTED",
-      `Product Store schema ${version} is unsupported; expected ${PRODUCT_SCHEMA_VERSION}.`,
+      "FIRST_PUBLIC_CREATION_INCOMPLETE",
+      "Product Store does not contain the exact generation-1 marker.",
     );
   }
-}
+  const fingerprint = productSchemaFingerprint(database);
+  if (fingerprint !== PRODUCT_SCHEMA_FINGERPRINT) {
+    throw new ProductFailure(
+      "FIRST_PUBLIC_CREATION_INCOMPLETE",
+      "Product Store schema fingerprint does not match generation 1.",
+    );
+  }
+};
+
+const initializeProductSchema = (database: PortableDatabase): boolean => {
+  configureProductDatabase(database);
+  const applicationObjects = database
+    .prepare("SELECT COUNT(*) AS count FROM sqlite_schema WHERE name NOT LIKE 'sqlite_%'")
+    .get();
+  const count = requiredNumber(asRecord(applicationObjects), "count");
+  if (count > 0) {
+    validateProductSchema(database);
+    return false;
+  }
+  database.exec("BEGIN IMMEDIATE");
+  try {
+    database.exec(productSchemaSql);
+    database
+      .prepare("INSERT INTO product_meta(schema_generation) VALUES (?)")
+      .run(PRODUCT_SCHEMA_GENERATION);
+    database.exec("COMMIT");
+    return true;
+  } catch (cause) {
+    database.exec("ROLLBACK");
+    throw cause;
+  }
+};
+
+const fsyncProductDatabase = (filename: string): void => {
+  for (const target of [filename, path.dirname(filename)]) {
+    let descriptor: number | undefined;
+    try {
+      descriptor = openSync(target, "r");
+      fsyncSync(descriptor);
+    } catch (cause) {
+      if (process.platform !== "win32") throw cause;
+    } finally {
+      if (descriptor !== undefined) closeSync(descriptor);
+    }
+  }
+};
+
+const openValidatedProductDatabase = async (filename: string): Promise<PortableDatabase> => {
+  if (filename === ":memory:") {
+    const database = await openPortableDatabase(filename);
+    initializeProductSchema(database);
+    validateProductSchema(database);
+    return database;
+  }
+  let database = await openPortableDatabase(filename);
+  const created = initializeProductSchema(database);
+  database.close();
+  if (created) fsyncProductDatabase(filename);
+  database = await openPortableDatabase(filename, { readOnly: true });
+  configureProductDatabase(database);
+  validateProductSchema(database);
+  database.close();
+  database = await openPortableDatabase(filename);
+  configureProductDatabase(database);
+  validateProductSchema(database);
+  return database;
+};
 
 const productPackageFatalCodes = new Set([
   "PI_PACKAGE_LIFECYCLE_UNAVAILABLE",
@@ -897,9 +869,8 @@ export async function readProductPackageLifecycleFacts(
   filename: string,
 ): Promise<ProductPackageLifecycleFacts> {
   if (filename !== ":memory:") ensurePrivateFileSync(filename);
-  const database = await openPortableDatabase(filename);
+  const database = await openValidatedProductDatabase(filename);
   try {
-    initializeSchema(database);
     const activeLeaseCounts: Record<string, number> = {};
     const replay: ProductPackageLifecycleReplay[] = [];
     const rows = database
@@ -4983,15 +4954,18 @@ export function makeProductControlPlaneLayer(
 ): Layer.Layer<ProductControlPlane, ProductControlPlaneError> {
   const acquire = Effect.tryPromise({
     try: async () => {
-      if (filename !== ":memory:") ensurePrivateFileSync(filename);
+      if (filename !== ":memory:") {
+        const parent = path.dirname(filename);
+        ensurePrivateDirectorySync(parent);
+        ensurePrivateFileSync(filename);
+      }
       const lock =
         filename === ":memory:"
           ? null
           : await Effect.runPromise(acquireDatabaseLifecycleLock(filename));
       let database: PortableDatabase | undefined;
       try {
-        database = await openPortableDatabase(filename);
-        initializeSchema(database);
+        database = await openValidatedProductDatabase(filename);
         return { database, lock };
       } catch (cause) {
         database?.close();
@@ -5000,14 +4974,16 @@ export function makeProductControlPlaneLayer(
       }
     },
     catch: (cause) =>
-      new ProductControlPlaneError({
-        code: "PRODUCT_DATABASE_LIFECYCLE_LOCKED",
-        message:
-          cause instanceof Error
-            ? cause.message
-            : "Product database lifecycle could not be acquired.",
-        retryable: true,
-      }),
+      cause instanceof ProductFailure
+        ? toControlPlaneError(cause)
+        : new ProductControlPlaneError({
+            code: "PRODUCT_DATABASE_LIFECYCLE_LOCKED",
+            message:
+              cause instanceof Error
+                ? cause.message
+                : "Product database lifecycle could not be acquired.",
+            retryable: true,
+          }),
   });
   return Layer.effect(
     ProductControlPlane,
@@ -5031,6 +5007,6 @@ export function makeProductControlPlaneLayer(
 
 export const ProductControlPlaneLive = Layer.unwrap(
   Effect.map(Effect.service(ServerConfig), ({ stateDir }) =>
-    makeProductControlPlaneLayer(path.join(stateDir, PRODUCT_DATABASE_FILENAME)),
+    makeProductControlPlaneLayer(resolveProductDatabasePath(stateDir)),
   ),
 );

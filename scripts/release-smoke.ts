@@ -138,12 +138,8 @@ function verifyCanonicalIdentity(): void {
 
   const releasePolicy = readReleaseUpdatePolicyConfig(repoRoot);
   const resolvedPolicy = resolveReleaseUpdatePolicy("9.9.9", releasePolicy);
-  if (
-    resolvedPolicy.lane !== "clean" ||
-    !resolvedPolicy.makeLatest ||
-    resolvedPolicy.mirrorToStableChannel
-  ) {
-    throw new Error("Expected stable clean OmniMind releases to publish on GitHub Latest.");
+  if (!resolvedPolicy.makeLatest || resolvedPolicy.mirrorToStableChannel) {
+    throw new Error("Expected stable OmniMind releases to publish on GitHub Latest.");
   }
 }
 

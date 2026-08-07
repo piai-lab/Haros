@@ -4,7 +4,7 @@ import type {
   ConversationPullRequestSummary,
 } from "~/historicalConversation";
 // FILE: composerDraftPersistence.ts
-// Purpose: Owns composer draft schema v7, migrations, partialization, merge normalization, and hydration.
+// Purpose: Owns the first-public composer draft schema, partialization, strict decoding, and hydration.
 // Exports: Persist middleware transitions and persisted state type.
 
 import {
@@ -21,7 +21,6 @@ import type { DeepMutable } from "effect/Types";
 
 import {
   hydrateImagesFromPersisted,
-  normalizePersistedAttachment,
   persistQueuedComposerImages,
   toStorageSafePersistedAttachment,
 } from "./composerDraftAttachments";
@@ -31,30 +30,18 @@ import {
   normalizeDraftThreadEntryPoint,
   normalizeFileComments,
   normalizeTerminalContextsForThread,
-  projectDraftThreadEntryPointFromKey,
-  projectIdFromDraftThreadMappingKey,
   PersistedComposerImageAttachment,
   ComposerInteractionModeSchema,
   type ComposerDraftStoreState,
   type ComposerPromptHistorySavedDraft,
   type ComposerThreadDraftState,
-  type DraftThreadEnvMode,
   type QueuedComposerTurn,
 } from "./composerDraftDomain";
 import {
-  normalizeHistoricalModelSelection,
   normalizeHistoricalSourceId,
   sanitizeHistoricalModelSelectionMap,
 } from "./composerDraftModels";
-import { normalizeAssistantSelectionAttachment } from "./lib/assistantSelections";
 import { type BrowserAnnotationDraft, normalizeBrowserAnnotations } from "./lib/browserAnnotations";
-import { normalizePastedTextContent } from "./lib/composerPastedText";
-import { normalizeFileCommentSelection } from "./lib/fileComments";
-import {
-  ensureInlineTerminalContextPlaceholders,
-  normalizeTerminalContextText,
-} from "./lib/terminalContext";
-import { DEFAULT_INTERACTION_MODE, DEFAULT_RUNTIME_MODE } from "./types";
 
 const DraftThreadEnvModeSchema = Schema.Literals(["local", "worktree"]);
 const DraftThreadEntryPointSchema = Schema.Literals(["chat", "terminal"]);
@@ -236,20 +223,17 @@ const PersistedQueuedComposerTurn = Schema.Union([
 
 type PersistedQueuedComposerTurn = typeof PersistedQueuedComposerTurn.Type;
 
-const PersistedComposerPromptHistorySavedDraft = Schema.Union([
-  Schema.String,
-  Schema.Struct({
-    prompt: Schema.String,
-    attachments: Schema.optionalKey(Schema.Array(PersistedComposerImageAttachment)),
-    assistantSelections: Schema.optionalKey(Schema.Array(PersistedAssistantSelectionDraft)),
-    browserAnnotations: Schema.optionalKey(Schema.Array(PersistedBrowserAnnotationDraft)),
-    terminalContexts: Schema.optionalKey(Schema.Array(PersistedTerminalContextDraft)),
-    fileComments: Schema.optionalKey(Schema.Array(PersistedFileCommentDraft)),
-    pastedTexts: Schema.optionalKey(Schema.Array(PersistedPastedTextDraft)),
-    skills: Schema.optionalKey(Schema.Array(ProviderSkillReference)),
-    mentions: Schema.optionalKey(Schema.Array(ProviderMentionReference)),
-  }),
-]);
+const PersistedComposerPromptHistorySavedDraft = Schema.Struct({
+  prompt: Schema.String,
+  attachments: Schema.Array(PersistedComposerImageAttachment),
+  assistantSelections: Schema.optionalKey(Schema.Array(PersistedAssistantSelectionDraft)),
+  browserAnnotations: Schema.optionalKey(Schema.Array(PersistedBrowserAnnotationDraft)),
+  terminalContexts: Schema.optionalKey(Schema.Array(PersistedTerminalContextDraft)),
+  fileComments: Schema.optionalKey(Schema.Array(PersistedFileCommentDraft)),
+  pastedTexts: Schema.optionalKey(Schema.Array(PersistedPastedTextDraft)),
+  skills: Schema.optionalKey(Schema.Array(ProviderSkillReference)),
+  mentions: Schema.optionalKey(Schema.Array(ProviderMentionReference)),
+});
 
 type PersistedComposerPromptHistorySavedDraft =
   typeof PersistedComposerPromptHistorySavedDraft.Type;
@@ -293,7 +277,7 @@ const PersistedDraftThreadState = Schema.Struct({
   createdAt: Schema.String,
   runtimeMode: RuntimeMode,
   interactionMode: ComposerInteractionModeSchema,
-  entryPoint: DraftThreadEntryPointSchema.pipe(Schema.withDecodingDefault(() => "chat")),
+  entryPoint: DraftThreadEntryPointSchema,
   branch: Schema.NullOr(Schema.String),
   worktreePath: Schema.NullOr(Schema.String),
   workingDirectory: Schema.optionalKey(Schema.NullOr(Schema.String)),
@@ -306,19 +290,20 @@ const PersistedDraftThreadState = Schema.Struct({
 
 type PersistedDraftThreadState = typeof PersistedDraftThreadState.Type;
 
-const PersistedComposerDraftStoreState = Schema.Struct({
+export const PersistedComposerDraftStoreStateSchema = Schema.Struct({
   draftsByThreadId: Schema.Record(ThreadId, PersistedComposerThreadDraftState),
   draftThreadsByThreadId: Schema.Record(ThreadId, PersistedDraftThreadState),
   projectDraftThreadIdByProjectId: Schema.Record(ProjectId, ThreadId),
-  stickyModelSelectionByProvider: Schema.optionalKey(
-    Schema.Record(HistoricalSourceIdSchema, HistoricalModelSelectionSchema),
+  stickyModelSelectionByProvider: Schema.Record(
+    HistoricalSourceIdSchema,
+    HistoricalModelSelectionSchema,
   ),
-  stickyActiveProvider: Schema.optionalKey(Schema.NullOr(HistoricalSourceIdSchema)),
-});
+  stickyActiveProvider: Schema.NullOr(HistoricalSourceIdSchema),
+}).annotate({ parseOptions: { onExcessProperty: "error" } });
 
-export type PersistedComposerDraftStoreState = typeof PersistedComposerDraftStoreState.Type;
+export type PersistedComposerDraftStoreState = typeof PersistedComposerDraftStoreStateSchema.Type;
 
-const EMPTY_PERSISTED_DRAFT_STORE_STATE = Object.freeze<PersistedComposerDraftStoreState>({
+export const EMPTY_PERSISTED_DRAFT_STORE_STATE = Object.freeze<PersistedComposerDraftStoreState>({
   draftsByThreadId: {},
   draftThreadsByThreadId: {},
   projectDraftThreadIdByProjectId: {},
@@ -326,621 +311,6 @@ const EMPTY_PERSISTED_DRAFT_STORE_STATE = Object.freeze<PersistedComposerDraftSt
   stickyActiveProvider: null,
 });
 
-function normalizePersistedPromptHistorySavedDraft(
-  value: unknown,
-): DeepMutable<PersistedComposerPromptHistorySavedDraft> | null {
-  if (typeof value === "string") {
-    return { prompt: value, attachments: [] };
-  }
-  if (!value || typeof value !== "object") {
-    return null;
-  }
-  const candidate = value as Record<string, unknown>;
-  const prompt = typeof candidate.prompt === "string" ? candidate.prompt : null;
-  if (prompt === null) {
-    return null;
-  }
-  const attachments = Array.isArray(candidate.attachments)
-    ? candidate.attachments.flatMap((entry) => {
-        const normalized = normalizePersistedAttachment(entry);
-        return normalized ? [normalized] : [];
-      })
-    : [];
-  const assistantSelections = Array.isArray(candidate.assistantSelections)
-    ? candidate.assistantSelections.flatMap((entry) => {
-        const normalized = normalizePersistedAssistantSelection(entry);
-        return normalized ? [normalized] : [];
-      })
-    : [];
-  const browserAnnotations = Array.isArray(candidate.browserAnnotations)
-    ? normalizeBrowserAnnotations(candidate.browserAnnotations)
-    : [];
-  const terminalContexts = Array.isArray(candidate.terminalContexts)
-    ? candidate.terminalContexts.flatMap((entry) => {
-        const normalized = normalizePersistedTerminalContextDraft(entry);
-        return normalized ? [normalized] : [];
-      })
-    : [];
-  const fileComments = Array.isArray(candidate.fileComments)
-    ? candidate.fileComments.flatMap((entry) => {
-        const normalized = normalizePersistedFileCommentDraft(entry);
-        return normalized ? [normalized] : [];
-      })
-    : [];
-  const pastedTexts = Array.isArray(candidate.pastedTexts)
-    ? candidate.pastedTexts.flatMap((entry) => {
-        const normalized = normalizePersistedPastedTextDraft(entry);
-        return normalized ? [normalized] : [];
-      })
-    : [];
-  const skills = Array.isArray(candidate.skills)
-    ? candidate.skills.filter(Schema.is(ProviderSkillReference))
-    : [];
-  const mentions = Array.isArray(candidate.mentions)
-    ? candidate.mentions.filter(Schema.is(ProviderMentionReference))
-    : [];
-  return {
-    prompt,
-    attachments,
-    ...(assistantSelections.length > 0 ? { assistantSelections } : {}),
-    ...(browserAnnotations.length > 0 ? { browserAnnotations } : {}),
-    ...(terminalContexts.length > 0 ? { terminalContexts } : {}),
-    ...(fileComments.length > 0 ? { fileComments } : {}),
-    ...(pastedTexts.length > 0 ? { pastedTexts } : {}),
-    ...(skills.length > 0 ? { skills } : {}),
-    ...(mentions.length > 0 ? { mentions } : {}),
-  };
-}
-
-function normalizePersistedTerminalContextDraft(
-  value: unknown,
-): PersistedTerminalContextDraft | null {
-  if (!value || typeof value !== "object") {
-    return null;
-  }
-  const candidate = value as Record<string, unknown>;
-  const id = candidate.id;
-  const threadId = candidate.threadId;
-  const createdAt = candidate.createdAt;
-  const lineStart = candidate.lineStart;
-  const lineEnd = candidate.lineEnd;
-  if (
-    typeof id !== "string" ||
-    id.length === 0 ||
-    typeof threadId !== "string" ||
-    threadId.length === 0 ||
-    typeof createdAt !== "string" ||
-    createdAt.length === 0 ||
-    typeof lineStart !== "number" ||
-    !Number.isFinite(lineStart) ||
-    typeof lineEnd !== "number" ||
-    !Number.isFinite(lineEnd)
-  ) {
-    return null;
-  }
-  const terminalId = typeof candidate.terminalId === "string" ? candidate.terminalId.trim() : "";
-  const terminalLabel =
-    typeof candidate.terminalLabel === "string" ? candidate.terminalLabel.trim() : "";
-  if (terminalId.length === 0 || terminalLabel.length === 0) {
-    return null;
-  }
-  const normalizedLineStart = Math.max(1, Math.floor(lineStart));
-  const normalizedLineEnd = Math.max(normalizedLineStart, Math.floor(lineEnd));
-  return {
-    id,
-    threadId: threadId as ThreadId,
-    createdAt,
-    terminalId,
-    terminalLabel,
-    lineStart: normalizedLineStart,
-    lineEnd: normalizedLineEnd,
-  };
-}
-
-function normalizePersistedQueuedTerminalContextDraft(
-  value: unknown,
-): PersistedQueuedTerminalContextDraft | null {
-  if (!value || typeof value !== "object") {
-    return null;
-  }
-  const candidate = value as Record<string, unknown>;
-  const base = normalizePersistedTerminalContextDraft(candidate);
-  if (!base) {
-    return null;
-  }
-  const text =
-    typeof candidate.text === "string" ? normalizeTerminalContextText(candidate.text) : "";
-  return {
-    ...base,
-    text,
-  };
-}
-
-function normalizePersistedAssistantSelection(
-  value: unknown,
-): { id: string; assistantMessageId: string; text: string } | null {
-  if (!value || typeof value !== "object") {
-    return null;
-  }
-  const candidate = value as Record<string, unknown>;
-  const id = typeof candidate.id === "string" ? candidate.id : "";
-  const assistantMessageId =
-    typeof candidate.assistantMessageId === "string" ? candidate.assistantMessageId : "";
-  const text = typeof candidate.text === "string" ? candidate.text : "";
-  if (id.length === 0) {
-    return null;
-  }
-  const normalized = normalizeAssistantSelectionAttachment({ assistantMessageId, text });
-  if (!normalized) {
-    return null;
-  }
-  return { id, assistantMessageId: normalized.assistantMessageId, text: normalized.text };
-}
-
-function normalizePersistedFileCommentDraft(value: unknown): PersistedFileCommentDraft | null {
-  if (!value || typeof value !== "object") {
-    return null;
-  }
-  const candidate = value as Record<string, unknown>;
-  const id = typeof candidate.id === "string" ? candidate.id : "";
-  if (id.length === 0) {
-    return null;
-  }
-  const path = typeof candidate.path === "string" ? candidate.path : "";
-  const text = typeof candidate.text === "string" ? candidate.text : "";
-  const startLine = typeof candidate.startLine === "number" ? candidate.startLine : Number.NaN;
-  const endLine = typeof candidate.endLine === "number" ? candidate.endLine : Number.NaN;
-  if (!Number.isFinite(startLine) || !Number.isFinite(endLine)) {
-    return null;
-  }
-  const normalized = normalizeFileCommentSelection({ path, startLine, endLine, text });
-  if (!normalized) {
-    return null;
-  }
-  return { id, ...normalized };
-}
-
-function normalizePersistedPastedTextDraft(value: unknown): PersistedPastedTextDraft | null {
-  if (!value || typeof value !== "object") {
-    return null;
-  }
-  const candidate = value as Record<string, unknown>;
-  const id = typeof candidate.id === "string" ? candidate.id : "";
-  const createdAt = typeof candidate.createdAt === "string" ? candidate.createdAt : "";
-  const text = typeof candidate.text === "string" ? normalizePastedTextContent(candidate.text) : "";
-  if (id.length === 0 || text.length === 0) {
-    return null;
-  }
-  return { id, createdAt, text };
-}
-
-function normalizePersistedQueuedTurns(
-  rawQueuedTurns: unknown,
-): DeepMutable<NonNullable<PersistedComposerThreadDraftState["queuedTurns"]>> | undefined {
-  if (!Array.isArray(rawQueuedTurns)) {
-    return undefined;
-  }
-  const normalizedTurns: DeepMutable<
-    NonNullable<PersistedComposerThreadDraftState["queuedTurns"]>
-  > = [];
-  const seenIds = new Set<string>();
-  for (const entry of rawQueuedTurns) {
-    if (!entry || typeof entry !== "object") {
-      continue;
-    }
-    const candidate = entry as Record<string, unknown>;
-    const id = typeof candidate.id === "string" ? candidate.id : "";
-    const kind = candidate.kind;
-    const createdAt = typeof candidate.createdAt === "string" ? candidate.createdAt : "";
-    const previewText = typeof candidate.previewText === "string" ? candidate.previewText : "";
-    const selectedProvider = normalizeHistoricalSourceId(candidate.selectedProvider);
-    const selectedModel =
-      candidate.selectedModel === null
-        ? null
-        : typeof candidate.selectedModel === "string"
-          ? candidate.selectedModel
-          : null;
-    const selectedPromptEffort =
-      candidate.selectedPromptEffort === null
-        ? null
-        : typeof candidate.selectedPromptEffort === "string"
-          ? candidate.selectedPromptEffort
-          : null;
-    const modelSelection = normalizeHistoricalModelSelection(candidate.modelSelection);
-    const sourceProposedPlan = Schema.is(PersistedSourceProposedPlanReference)(
-      candidate.sourceProposedPlan,
-    )
-      ? candidate.sourceProposedPlan
-      : undefined;
-    const runtimeMode = Schema.is(RuntimeMode)(candidate.runtimeMode)
-      ? candidate.runtimeMode
-      : null;
-    if (
-      id.length === 0 ||
-      createdAt.length === 0 ||
-      previewText.length === 0 ||
-      selectedProvider === null ||
-      modelSelection === null ||
-      runtimeMode === null ||
-      seenIds.has(id)
-    ) {
-      continue;
-    }
-    if (kind === "chat") {
-      const prompt = typeof candidate.prompt === "string" ? candidate.prompt : "";
-      const images = Array.isArray(candidate.images)
-        ? candidate.images.flatMap((image) => {
-            const normalized = normalizePersistedAttachment(image);
-            return normalized ? [normalized] : [];
-          })
-        : [];
-      const terminalContexts = Array.isArray(candidate.terminalContexts)
-        ? candidate.terminalContexts.flatMap((context) => {
-            const normalized = normalizePersistedQueuedTerminalContextDraft(context);
-            return normalized ? [normalized] : [];
-          })
-        : [];
-      const assistantSelections = Array.isArray(candidate.assistantSelections)
-        ? candidate.assistantSelections.flatMap((selection) => {
-            const normalized = normalizePersistedAssistantSelection(selection);
-            return normalized ? [normalized] : [];
-          })
-        : [];
-      const browserAnnotations = Array.isArray(candidate.browserAnnotations)
-        ? normalizeBrowserAnnotations(candidate.browserAnnotations)
-        : [];
-      const fileComments = Array.isArray(candidate.fileComments)
-        ? candidate.fileComments.flatMap((comment) => {
-            const normalized = normalizePersistedFileCommentDraft(comment);
-            return normalized ? [normalized] : [];
-          })
-        : [];
-      const pastedTexts = Array.isArray(candidate.pastedTexts)
-        ? candidate.pastedTexts.flatMap((pasted) => {
-            const normalized = normalizePersistedPastedTextDraft(pasted);
-            return normalized ? [normalized] : [];
-          })
-        : [];
-      const skills = Array.isArray(candidate.skills)
-        ? candidate.skills.filter(Schema.is(ProviderSkillReference))
-        : [];
-      const mentions = Array.isArray(candidate.mentions)
-        ? candidate.mentions.filter(Schema.is(ProviderMentionReference))
-        : [];
-      const interactionMode =
-        candidate.interactionMode === "default" || candidate.interactionMode === "plan"
-          ? candidate.interactionMode
-          : null;
-      const envMode =
-        candidate.envMode === "local" || candidate.envMode === "worktree"
-          ? candidate.envMode
-          : null;
-      if (interactionMode === null || envMode === null) {
-        continue;
-      }
-      normalizedTurns.push({
-        id,
-        kind: "chat",
-        createdAt,
-        previewText,
-        prompt,
-        images,
-        ...(assistantSelections.length > 0 ? { assistantSelections } : {}),
-        ...(browserAnnotations.length > 0 ? { browserAnnotations } : {}),
-        terminalContexts,
-        ...(fileComments.length > 0 ? { fileComments } : {}),
-        ...(pastedTexts.length > 0 ? { pastedTexts } : {}),
-        skills: [...skills],
-        mentions: [...mentions],
-        selectedProvider,
-        selectedModel,
-        selectedPromptEffort,
-        modelSelection,
-        ...(sourceProposedPlan ? { sourceProposedPlan } : {}),
-        runtimeMode,
-        interactionMode,
-        envMode,
-      });
-      seenIds.add(id);
-      continue;
-    }
-    if (kind === "plan-follow-up") {
-      const text = typeof candidate.text === "string" ? candidate.text : "";
-      const interactionMode =
-        candidate.interactionMode === "default" || candidate.interactionMode === "plan"
-          ? candidate.interactionMode
-          : null;
-      if (interactionMode === null) {
-        continue;
-      }
-      normalizedTurns.push({
-        id,
-        kind: "plan-follow-up",
-        createdAt,
-        previewText,
-        text,
-        interactionMode,
-        selectedProvider,
-        selectedModel,
-        selectedPromptEffort,
-        modelSelection,
-        runtimeMode,
-      });
-      seenIds.add(id);
-    }
-  }
-  return normalizedTurns.length > 0 ? normalizedTurns : undefined;
-}
-
-function normalizeDraftThreadEnvMode(
-  value: unknown,
-  fallbackWorktreePath: string | null,
-): DraftThreadEnvMode {
-  if (value === "local" || value === "worktree") {
-    return value;
-  }
-  return fallbackWorktreePath ? "worktree" : "local";
-}
-
-function normalizePersistedDraftThreads(
-  rawDraftThreadsByThreadId: unknown,
-  rawProjectDraftThreadIdByProjectId: unknown,
-): Pick<
-  PersistedComposerDraftStoreState,
-  "draftThreadsByThreadId" | "projectDraftThreadIdByProjectId"
-> {
-  const draftThreadsByThreadId: Record<ThreadId, PersistedDraftThreadState> = {};
-  if (rawDraftThreadsByThreadId && typeof rawDraftThreadsByThreadId === "object") {
-    for (const [threadId, rawDraftThread] of Object.entries(
-      rawDraftThreadsByThreadId as Record<string, unknown>,
-    )) {
-      if (typeof threadId !== "string" || threadId.length === 0) {
-        continue;
-      }
-      if (!rawDraftThread || typeof rawDraftThread !== "object") {
-        continue;
-      }
-      const candidateDraftThread = rawDraftThread as Record<string, unknown>;
-      const projectId = candidateDraftThread.projectId;
-      const createdAt = candidateDraftThread.createdAt;
-      const branch = candidateDraftThread.branch;
-      const worktreePath = candidateDraftThread.worktreePath;
-      const workingDirectory = candidateDraftThread.workingDirectory;
-      let lastKnownPr: ConversationPullRequestSummary | null = null;
-      if (
-        candidateDraftThread.lastKnownPr &&
-        typeof candidateDraftThread.lastKnownPr === "object"
-      ) {
-        try {
-          lastKnownPr = Schema.decodeUnknownSync(ConversationPullRequestSummarySchema)(
-            candidateDraftThread.lastKnownPr,
-          );
-        } catch {
-          lastKnownPr = null;
-        }
-      }
-      const normalizedWorktreePath = typeof worktreePath === "string" ? worktreePath : null;
-      const isTemporary = candidateDraftThread.isTemporary === true ? true : undefined;
-      const promotedTo =
-        typeof candidateDraftThread.promotedTo === "string" &&
-        candidateDraftThread.promotedTo.length > 0
-          ? (candidateDraftThread.promotedTo as ThreadId)
-          : undefined;
-      if (typeof projectId !== "string" || projectId.length === 0) {
-        continue;
-      }
-      draftThreadsByThreadId[threadId as ThreadId] = {
-        projectId: projectId as ProjectId,
-        createdAt:
-          typeof createdAt === "string" && createdAt.length > 0
-            ? createdAt
-            : new Date().toISOString(),
-        runtimeMode: Schema.is(RuntimeMode)(candidateDraftThread.runtimeMode)
-          ? candidateDraftThread.runtimeMode
-          : DEFAULT_RUNTIME_MODE,
-        // Draft threads are current Product conversations. Retain donor modes
-        // only in historical thread schemas, never in executable draft state.
-        interactionMode: DEFAULT_INTERACTION_MODE,
-        entryPoint: normalizeDraftThreadEntryPoint(candidateDraftThread.entryPoint),
-        branch: typeof branch === "string" ? branch : null,
-        worktreePath: normalizedWorktreePath,
-        workingDirectory: typeof workingDirectory === "string" ? workingDirectory : null,
-        ...(lastKnownPr ? { lastKnownPr } : {}),
-        envMode: normalizeDraftThreadEnvMode(candidateDraftThread.envMode, normalizedWorktreePath),
-        ...(isTemporary ? { isTemporary: true } : {}),
-        ...(promotedTo ? { promotedTo } : {}),
-      };
-    }
-  }
-
-  const projectDraftThreadIdByProjectId: Record<string, ThreadId> = {};
-  if (
-    rawProjectDraftThreadIdByProjectId &&
-    typeof rawProjectDraftThreadIdByProjectId === "object"
-  ) {
-    for (const [mappingKey, threadId] of Object.entries(
-      rawProjectDraftThreadIdByProjectId as Record<string, unknown>,
-    )) {
-      const projectId = projectIdFromDraftThreadMappingKey(mappingKey);
-      const entryPoint = projectDraftThreadEntryPointFromKey(mappingKey);
-      if (
-        typeof projectId === "string" &&
-        projectId.length > 0 &&
-        typeof threadId === "string" &&
-        threadId.length > 0
-      ) {
-        projectDraftThreadIdByProjectId[mappingKey] = threadId as ThreadId;
-        if (!draftThreadsByThreadId[threadId as ThreadId]) {
-          draftThreadsByThreadId[threadId as ThreadId] = {
-            projectId: projectId as ProjectId,
-            createdAt: new Date().toISOString(),
-            runtimeMode: DEFAULT_RUNTIME_MODE,
-            interactionMode: DEFAULT_INTERACTION_MODE,
-            entryPoint,
-            branch: null,
-            worktreePath: null,
-            workingDirectory: null,
-            envMode: "local",
-          };
-        } else if (draftThreadsByThreadId[threadId as ThreadId]?.projectId !== projectId) {
-          draftThreadsByThreadId[threadId as ThreadId] = {
-            ...draftThreadsByThreadId[threadId as ThreadId]!,
-            projectId: projectId as ProjectId,
-          };
-        } else if (draftThreadsByThreadId[threadId as ThreadId]?.entryPoint !== entryPoint) {
-          draftThreadsByThreadId[threadId as ThreadId] = {
-            ...draftThreadsByThreadId[threadId as ThreadId]!,
-            entryPoint,
-          };
-        }
-      }
-    }
-  }
-
-  return { draftThreadsByThreadId, projectDraftThreadIdByProjectId };
-}
-
-function normalizePersistedDraftsByThreadId(
-  rawDraftMap: unknown,
-): PersistedComposerDraftStoreState["draftsByThreadId"] {
-  if (!rawDraftMap || typeof rawDraftMap !== "object") {
-    return {};
-  }
-
-  const nextDraftsByThreadId: DeepMutable<PersistedComposerDraftStoreState["draftsByThreadId"]> =
-    {};
-  for (const [threadId, draftValue] of Object.entries(rawDraftMap as Record<string, unknown>)) {
-    if (typeof threadId !== "string" || threadId.length === 0) {
-      continue;
-    }
-    if (!draftValue || typeof draftValue !== "object") {
-      continue;
-    }
-    const draftCandidate = draftValue as PersistedComposerThreadDraftState;
-    const promptCandidate = typeof draftCandidate.prompt === "string" ? draftCandidate.prompt : "";
-    const productQueueTransfer =
-      Schema.is(ProductPutQueueItemInput)(draftCandidate.productQueueTransfer) &&
-      draftCandidate.productQueueTransfer.conversationId === threadId
-        ? cloneProductQueueTransfer(draftCandidate.productQueueTransfer)
-        : null;
-    const promptHistorySavedDraft = normalizePersistedPromptHistorySavedDraft(
-      draftCandidate.promptHistorySavedDraft,
-    );
-    const attachments = Array.isArray(draftCandidate.attachments)
-      ? draftCandidate.attachments.flatMap((entry) => {
-          const normalized = normalizePersistedAttachment(entry);
-          return normalized ? [normalized] : [];
-        })
-      : [];
-    const terminalContexts = Array.isArray(draftCandidate.terminalContexts)
-      ? draftCandidate.terminalContexts.flatMap((entry) => {
-          const normalized = normalizePersistedTerminalContextDraft(entry);
-          return normalized ? [normalized] : [];
-        })
-      : [];
-    const assistantSelections = Array.isArray(draftCandidate.assistantSelections)
-      ? draftCandidate.assistantSelections.flatMap((entry) => {
-          const normalized = normalizePersistedAssistantSelection(entry);
-          return normalized ? [normalized] : [];
-        })
-      : [];
-    const browserAnnotations = Array.isArray(draftCandidate.browserAnnotations)
-      ? normalizeBrowserAnnotations(draftCandidate.browserAnnotations)
-      : [];
-    const fileComments = Array.isArray(draftCandidate.fileComments)
-      ? draftCandidate.fileComments.flatMap((entry) => {
-          const normalized = normalizePersistedFileCommentDraft(entry);
-          return normalized ? [normalized] : [];
-        })
-      : [];
-    const pastedTexts = Array.isArray(draftCandidate.pastedTexts)
-      ? draftCandidate.pastedTexts.flatMap((entry) => {
-          const normalized = normalizePersistedPastedTextDraft(entry);
-          return normalized ? [normalized] : [];
-        })
-      : [];
-    const skills = Array.isArray(draftCandidate.skills)
-      ? draftCandidate.skills.filter(Schema.is(ProviderSkillReference))
-      : [];
-    const mentions = Array.isArray(draftCandidate.mentions)
-      ? draftCandidate.mentions.filter(Schema.is(ProviderMentionReference))
-      : [];
-    const queuedTurns = normalizePersistedQueuedTurns(draftCandidate.queuedTurns);
-    const runtimeMode = Schema.is(RuntimeMode)(draftCandidate.runtimeMode)
-      ? draftCandidate.runtimeMode
-      : null;
-    const interactionMode =
-      draftCandidate.interactionMode === "plan" || draftCandidate.interactionMode === "default"
-        ? draftCandidate.interactionMode
-        : null;
-    const prompt = ensureInlineTerminalContextPlaceholders(
-      promptCandidate,
-      terminalContexts.length,
-    );
-    const modelSelectionByProvider = sanitizeHistoricalModelSelectionMap(
-      draftCandidate.modelSelectionByProvider ?? {},
-    );
-    const activeProvider = normalizeHistoricalSourceId(draftCandidate.activeProvider);
-
-    const normalizedQueuedTurns = queuedTurns ?? [];
-    const restoredSourceProposedPlan = Schema.is(PersistedRestoredSourceProposedPlan)(
-      draftCandidate.restoredSourceProposedPlan,
-    )
-      ? draftCandidate.restoredSourceProposedPlan
-      : null;
-    const hasModelData =
-      Object.keys(modelSelectionByProvider).length > 0 || activeProvider !== null;
-    const hasQueuedTurns = normalizedQueuedTurns.length > 0;
-    const hasReferenceData = skills.length > 0 || mentions.length > 0;
-    if (
-      promptCandidate.length === 0 &&
-      productQueueTransfer === null &&
-      promptHistorySavedDraft === null &&
-      attachments.length === 0 &&
-      terminalContexts.length === 0 &&
-      assistantSelections.length === 0 &&
-      browserAnnotations.length === 0 &&
-      fileComments.length === 0 &&
-      pastedTexts.length === 0 &&
-      !hasReferenceData &&
-      !hasQueuedTurns &&
-      restoredSourceProposedPlan === null &&
-      !hasModelData &&
-      !runtimeMode &&
-      !interactionMode
-    ) {
-      continue;
-    }
-    nextDraftsByThreadId[threadId as ThreadId] = {
-      prompt,
-      ...(productQueueTransfer !== null ? { productQueueTransfer } : {}),
-      ...(promptHistorySavedDraft !== null ? { promptHistorySavedDraft } : {}),
-      attachments,
-      ...(assistantSelections.length > 0 ? { assistantSelections } : {}),
-      ...(browserAnnotations.length > 0 ? { browserAnnotations } : {}),
-      ...(terminalContexts.length > 0 ? { terminalContexts } : {}),
-      ...(fileComments.length > 0 ? { fileComments } : {}),
-      ...(pastedTexts.length > 0 ? { pastedTexts } : {}),
-      ...(skills.length > 0 ? { skills } : {}),
-      ...(mentions.length > 0 ? { mentions } : {}),
-      ...(hasQueuedTurns ? { queuedTurns: normalizedQueuedTurns } : {}),
-      ...(restoredSourceProposedPlan ? { restoredSourceProposedPlan } : {}),
-      ...(hasModelData ? { modelSelectionByProvider, activeProvider } : {}),
-      ...(runtimeMode ? { runtimeMode } : {}),
-      ...(interactionMode ? { interactionMode } : {}),
-    };
-  }
-
-  return nextDraftsByThreadId;
-}
-
-export function migratePersistedComposerDraftStoreState(
-  persistedState: unknown,
-): PersistedComposerDraftStoreState {
-  // Version bumps should sanitize persisted data without forcing users back
-  // through the legacy sticky-model fields.
-  return normalizeCurrentPersistedComposerDraftStoreState(persistedState);
-}
 
 export function partializeComposerDraftStoreState(
   state: ComposerDraftStoreState,
@@ -1219,30 +589,15 @@ export function partializeComposerDraftStoreState(
 export function normalizeCurrentPersistedComposerDraftStoreState(
   persistedState: unknown,
 ): PersistedComposerDraftStoreState {
-  if (!persistedState || typeof persistedState !== "object") {
-    return EMPTY_PERSISTED_DRAFT_STORE_STATE;
+  const decoded = Schema.decodeUnknownSync(PersistedComposerDraftStoreStateSchema)(persistedState);
+  for (const draft of Object.values(decoded.draftsByThreadId)) {
+    const hasSelections = Object.hasOwn(draft, "modelSelectionByProvider");
+    const hasActiveProvider = Object.hasOwn(draft, "activeProvider");
+    if (hasSelections !== hasActiveProvider) {
+      throw new Error("Composer draft model selection fields must be present together.");
+    }
   }
-  const normalizedPersistedState = persistedState as PersistedComposerDraftStoreState;
-  const { draftThreadsByThreadId, projectDraftThreadIdByProjectId } =
-    normalizePersistedDraftThreads(
-      normalizedPersistedState.draftThreadsByThreadId,
-      normalizedPersistedState.projectDraftThreadIdByProjectId,
-    );
-
-  const stickyModelSelectionByProvider = sanitizeHistoricalModelSelectionMap(
-    normalizedPersistedState.stickyModelSelectionByProvider,
-  );
-  const stickyActiveProvider = normalizeHistoricalSourceId(
-    normalizedPersistedState.stickyActiveProvider,
-  );
-
-  return {
-    draftsByThreadId: normalizePersistedDraftsByThreadId(normalizedPersistedState.draftsByThreadId),
-    draftThreadsByThreadId,
-    projectDraftThreadIdByProjectId,
-    stickyModelSelectionByProvider: sanitizeHistoricalModelSelectionMap(stickyModelSelectionByProvider),
-    stickyActiveProvider,
-  };
+  return decoded;
 }
 
 function hydrateQueuedTurnsFromPersisted(
@@ -1277,22 +632,6 @@ function hydratePromptHistorySavedDraft(
   if (savedDraft === undefined) {
     return null;
   }
-  if (typeof savedDraft === "string") {
-    return {
-      prompt: savedDraft,
-      images: [],
-      files: [],
-      nonPersistedImageIds: [],
-      persistedAttachments: [],
-      assistantSelections: [],
-      browserAnnotations: [],
-      terminalContexts: [],
-      fileComments: [],
-      pastedTexts: [],
-      skills: [],
-      mentions: [],
-    };
-  }
   const attachments = savedDraft.attachments ?? [];
   return {
     prompt: savedDraft.prompt,
@@ -1318,7 +657,7 @@ export function toHydratedThreadDraft(
   threadId: ThreadId,
   persistedDraft: PersistedComposerThreadDraftState,
 ): ComposerThreadDraftState {
-  // The persisted draft is already in v3 shape (migration handles older formats)
+  // Strict generation-1 decoding has already established this shape.
   const modelSelectionByProvider: Partial<Record<string, HistoricalModelSelection>> =
     sanitizeHistoricalModelSelectionMap(persistedDraft.modelSelectionByProvider ?? {});
   const activeProvider = normalizeHistoricalSourceId(persistedDraft.activeProvider) ?? null;

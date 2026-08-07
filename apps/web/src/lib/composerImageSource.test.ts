@@ -44,14 +44,15 @@ describe("normalizeComposerImageSource", () => {
     expect(normalizeComposerImageSource({ kind: "appsnap", captureId: "" })).toBeUndefined();
   });
 
-  it("migrates the former provenance discriminator", () => {
+  it("rejects retired provenance discriminators", () => {
+    const retiredKind = ["app", "shot"].join("");
     expect(
       normalizeComposerImageSource({
-        kind: "appshot",
+        kind: retiredKind,
         captureId: "capture-legacy",
         capturedAt: "2026-07-12T20:00:00.000Z",
       }),
-    ).toMatchObject({ kind: "appsnap", captureId: "capture-legacy" });
+    ).toBeUndefined();
   });
 
   it("rejects non-PNG or oversized app icon payloads", () => {

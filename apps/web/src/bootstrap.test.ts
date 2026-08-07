@@ -9,20 +9,17 @@ const BOOTSTRAP_SOURCE = FS.readFileSync(Path.join(import.meta.dirname, "bootstr
 const MAIN_SOURCE = FS.readFileSync(Path.join(import.meta.dirname, "main.tsx"), "utf8");
 
 describe("renderer bootstrap ordering", () => {
-  it("migrates desktop storage before loading modules that hydrate app stores", () => {
+  it("completes signed-out and pairing gates before hydrating app stores", () => {
     expect(INDEX_SOURCE).toContain('<script type="module" src="/src/bootstrap.ts"></script>');
 
-    const migrationImportIndex = BOOTSTRAP_SOURCE.indexOf('import "./storageOriginUpgrade";');
     const signedOutBootstrapIndex = BOOTSTRAP_SOURCE.indexOf("bootstrapSignedOutScreen()");
     const pairingBootstrapIndex = BOOTSTRAP_SOURCE.indexOf("bootstrapPairingSession()");
     const appImportIndex = BOOTSTRAP_SOURCE.indexOf('import("./main")');
-    expect(migrationImportIndex).toBeGreaterThanOrEqual(0);
-    expect(signedOutBootstrapIndex).toBeGreaterThan(migrationImportIndex);
-    expect(pairingBootstrapIndex).toBeGreaterThan(migrationImportIndex);
+    expect(signedOutBootstrapIndex).toBeGreaterThanOrEqual(0);
     expect(pairingBootstrapIndex).toBeGreaterThan(signedOutBootstrapIndex);
-    expect(appImportIndex).toBeGreaterThan(migrationImportIndex);
     expect(appImportIndex).toBeGreaterThan(pairingBootstrapIndex);
 
-    expect(MAIN_SOURCE).not.toContain('import "./storageOriginUpgrade";');
+    expect(BOOTSTRAP_SOURCE).not.toMatch(/storage.*upgrade/iu);
+    expect(MAIN_SOURCE).not.toMatch(/storage.*upgrade/iu);
   });
 });

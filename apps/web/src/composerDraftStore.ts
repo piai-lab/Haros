@@ -9,13 +9,13 @@ import { persist } from "zustand/middleware";
 import { createComposerDraftStoreState } from "./composerDraftActions";
 import {
   COMPOSER_DRAFT_STORAGE_KEY,
-  COMPOSER_DRAFT_STORAGE_VERSION,
+  COMPOSER_DRAFT_STORAGE_GENERATION,
   selectComposerThreadDraft,
   type ComposerDraftStoreState,
   type ComposerThreadDraftState,
 } from "./composerDraftDomain";
 import {
-  migratePersistedComposerDraftStoreState,
+  EMPTY_PERSISTED_DRAFT_STORE_STATE,
   normalizeCurrentPersistedComposerDraftStoreState,
   partializeComposerDraftStoreState,
   toHydratedThreadDraft,
@@ -35,7 +35,7 @@ export {
 export {
   captureComposerPromptHistorySavedDraft,
   COMPOSER_DRAFT_STORAGE_KEY,
-  COMPOSER_DRAFT_STORAGE_VERSION,
+  COMPOSER_DRAFT_STORAGE_GENERATION,
   PersistedComposerImageAttachment,
 } from "./composerDraftDomain";
 export type {
@@ -65,11 +65,72 @@ const composerBaseStorage: StateStorage =
   typeof localStorage.removeItem === "function"
     ? localStorage
     : createMemoryStorage();
+
+const decodeComposerDraftEnvelope = (
+  raw: string,
+): { readonly generation: 1; readonly state: PersistedComposerDraftStoreState } => {
+  const parsed = JSON.parse(raw) as unknown;
+  if (!parsed || typeof parsed !== "object" || Array.isArray(parsed)) {
+    throw new Error("Composer draft envelope must be an object.");
+  }
+  const record = parsed as Record<string, unknown>;
+  if (
+    Object.keys(record).sort().join(",") !== "generation,state" ||
+    record.generation !== COMPOSER_DRAFT_STORAGE_GENERATION
+  ) {
+    throw new Error("Composer draft envelope generation is unsupported.");
+  }
+  return {
+    generation: COMPOSER_DRAFT_STORAGE_GENERATION,
+    state: normalizeCurrentPersistedComposerDraftStoreState(record.state),
+  };
+};
+
+const writeAndVerifyComposerDraftEnvelope = (state: PersistedComposerDraftStoreState): void => {
+  const encoded = JSON.stringify({
+    generation: COMPOSER_DRAFT_STORAGE_GENERATION,
+    state: normalizeCurrentPersistedComposerDraftStoreState(state),
+  });
+  composerBaseStorage.setItem(COMPOSER_DRAFT_STORAGE_KEY, encoded);
+  const reread = composerBaseStorage.getItem(COMPOSER_DRAFT_STORAGE_KEY);
+  if (reread instanceof Promise) throw new Error("Composer draft storage must be synchronous.");
+  if (reread === null) throw new Error("Composer draft generation-1 write was not durable.");
+  decodeComposerDraftEnvelope(reread);
+};
+
+const readOrCreateComposerDraftEnvelope = (): PersistedComposerDraftStoreState => {
+  const raw = composerBaseStorage.getItem(COMPOSER_DRAFT_STORAGE_KEY);
+  if (raw instanceof Promise) throw new Error("Composer draft storage must be synchronous.");
+  if (raw === null) {
+    writeAndVerifyComposerDraftEnvelope(EMPTY_PERSISTED_DRAFT_STORE_STATE);
+    return EMPTY_PERSISTED_DRAFT_STORE_STATE;
+  }
+  return decodeComposerDraftEnvelope(raw).state;
+};
+
+const composerGenerationStorage: StateStorage = {
+  getItem: () => {
+    const state = readOrCreateComposerDraftEnvelope();
+    return JSON.stringify({ state, version: COMPOSER_DRAFT_STORAGE_GENERATION });
+  },
+  setItem: (_name, value) => {
+    const persisted = JSON.parse(value) as { readonly state?: unknown; readonly version?: unknown };
+    if (persisted.version !== COMPOSER_DRAFT_STORAGE_GENERATION) {
+      throw new Error("Composer draft persistence generation is unsupported.");
+    }
+    writeAndVerifyComposerDraftEnvelope(
+      normalizeCurrentPersistedComposerDraftStoreState(persisted.state),
+    );
+  },
+  removeItem: () => {
+    writeAndVerifyComposerDraftEnvelope(EMPTY_PERSISTED_DRAFT_STORE_STATE);
+  },
+};
 const composerPersistStorage = createDeferredPersistStorage<
   ComposerDraftStoreState,
   PersistedComposerDraftStoreState
 >({
-  getStorage: () => composerBaseStorage,
+  getStorage: () => composerGenerationStorage,
   partialize: partializeComposerDraftStoreState,
   debounceMs: COMPOSER_PERSIST_DEBOUNCE_MS,
 });
@@ -83,11 +144,10 @@ export const useComposerDraftStore = create<ComposerDraftStoreState>()(
     createComposerDraftStoreState(() => composerPersistStorage.flush()),
     {
       name: COMPOSER_DRAFT_STORAGE_KEY,
-      version: COMPOSER_DRAFT_STORAGE_VERSION,
+      version: COMPOSER_DRAFT_STORAGE_GENERATION,
       // Partialization is owned by deferred storage so serialization does not run
       // on each keystroke and instead happens once per 300ms flush window.
       storage: composerPersistStorage,
-      migrate: migratePersistedComposerDraftStoreState,
       merge: (persistedState, currentState) => {
         const normalizedPersisted =
           normalizeCurrentPersistedComposerDraftStoreState(persistedState);
@@ -102,8 +162,8 @@ export const useComposerDraftStore = create<ComposerDraftStoreState>()(
           draftsByThreadId,
           draftThreadsByThreadId: normalizedPersisted.draftThreadsByThreadId,
           projectDraftThreadIdByProjectId: normalizedPersisted.projectDraftThreadIdByProjectId,
-          stickyModelSelectionByProvider: normalizedPersisted.stickyModelSelectionByProvider ?? {},
-          stickyActiveProvider: normalizedPersisted.stickyActiveProvider ?? null,
+          stickyModelSelectionByProvider: normalizedPersisted.stickyModelSelectionByProvider,
+          stickyActiveProvider: normalizedPersisted.stickyActiveProvider,
         };
       },
     },

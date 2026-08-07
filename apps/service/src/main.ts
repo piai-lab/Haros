@@ -40,9 +40,6 @@ import { formatHostForUrl, isLoopbackHost, isWildcardHost } from "./startupAcces
 import { AnalyticsServiceLayerLive } from "./telemetry/Layers/AnalyticsService";
 import { AnalyticsService } from "./telemetry/Services/AnalyticsService";
 import { ProductControlPlane } from "./product/ProductControlPlane";
-import { PRODUCT_DATABASE_FILENAME } from "./product/ProductControlPlane";
-import { coordinateSelectionSchemaV2 } from "./persistence/selectionSchemaCoordinator";
-import path from "node:path";
 
 export class StartupError extends Data.TaggedError("StartupError")<{
   readonly message: string;
@@ -281,30 +278,13 @@ const ServerConfigLive = (input: CliInput) =>
 
 const LayerLive = (input: CliInput) => {
   const { runtimeServicesLayer } = makeServerApplicationLayers();
-  const afterMigration = Layer.unwrap(
-    Effect.gen(function* () {
-      const config = yield* ServerConfig;
-      yield* Effect.tryPromise({
-        try: () =>
-          coordinateSelectionSchemaV2({
-            productDbPath: path.join(config.stateDir, PRODUCT_DATABASE_FILENAME),
-            automationDbPath: config.dbPath,
-          }),
-        catch: (cause) =>
-          new StartupError({
-            message: "Product selection stores require recovery before startup.",
-            cause,
-          }),
-      });
-      return Layer.empty.pipe(
-        Layer.provideMerge(runtimeServicesLayer),
-        Layer.provideMerge(SqlitePersistence.layerConfig),
-        Layer.provideMerge(ServerLoggerLive),
-        Layer.provideMerge(AnalyticsServiceLayerLive),
-      );
-    }),
+  return Layer.empty.pipe(
+    Layer.provideMerge(runtimeServicesLayer),
+    Layer.provideMerge(SqlitePersistence.layerConfig),
+    Layer.provideMerge(ServerLoggerLive),
+    Layer.provideMerge(AnalyticsServiceLayerLive),
+    Layer.provideMerge(ServerConfigLive(input)),
   );
-  return afterMigration.pipe(Layer.provideMerge(ServerConfigLive(input)));
 };
 
 export const recordStartupHeartbeat = Effect.gen(function* () {

@@ -986,7 +986,7 @@ describe("ProductControlPlane", () => {
     }
   });
 
-  it("preserves Product tables but resets incompatible pre-release fact history on reopen", async () => {
+  it("rejects an incompatible pre-release Product shape without repair writes", async () => {
     const root = await fs.mkdtemp(path.join(os.tmpdir(), "omnimind-product-v1-facts-"));
     temporaryRoots.push(root);
     const filename = path.join(root, PRODUCT_DATABASE_FILENAME);
@@ -1026,39 +1026,32 @@ describe("ProductControlPlane", () => {
       COMMIT;
       PRAGMA foreign_keys = ON;
     `);
+    const schemaBefore = database
+      .prepare(
+        "SELECT type, name, tbl_name, sql FROM sqlite_schema WHERE name NOT LIKE 'sqlite_%' ORDER BY type, name",
+      )
+      .all();
     database.close();
 
-    const reopened = await makeSystem(filename);
+    await expect(makeSystem(filename)).rejects.toMatchObject({
+      code: "FIRST_PUBLIC_CREATION_INCOMPLETE",
+    });
+    const reopened = new DatabaseSync(filename, { readOnly: true });
     try {
-      const shell = await reopened.run(reopened.controlPlane.getShellSnapshot());
-      expect(shell.conversations.map((candidate) => candidate.id)).toContain(
-        conversation.conversationId,
-      );
-      const oldCursor = await reopened.run(
-        reopened.controlPlane.readFacts({
-          protocolVersion: PRODUCT_PROTOCOL_VERSION,
-          scope: { kind: "shell" },
-          afterSequence: 1,
-          limit: PRODUCT_MAX_FACTS_PER_BATCH,
-        }),
-      );
-      expect(oldCursor).toMatchObject({
-        highWaterSequence: 0,
-        facts: [],
-        resnapshotRequired: true,
-        reason: "cursor-ahead",
-      });
-      const fresh = await reopened.run(
-        reopened.controlPlane.readFacts({
-          protocolVersion: PRODUCT_PROTOCOL_VERSION,
-          scope: { kind: "shell" },
-          afterSequence: 0,
-          limit: PRODUCT_MAX_FACTS_PER_BATCH,
-        }),
-      );
-      expect(fresh).toMatchObject({ highWaterSequence: 0, facts: [], resnapshotRequired: false });
+      expect(
+        reopened
+          .prepare(
+            "SELECT type, name, tbl_name, sql FROM sqlite_schema WHERE name NOT LIKE 'sqlite_%' ORDER BY type, name",
+          )
+          .all(),
+      ).toEqual(schemaBefore);
+      expect(
+        reopened
+          .prepare("SELECT COUNT(*) AS count FROM product_conversations WHERE conversation_id = ?")
+          .get(conversation.conversationId),
+      ).toEqual({ count: 1 });
     } finally {
-      await reopened.dispose();
+      reopened.close();
     }
   });
 

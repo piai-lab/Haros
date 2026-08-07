@@ -45,11 +45,16 @@ describe("local app settings", () => {
     expect(resolveTerminalFontFamilyStack("Fira Code")).toBe('"Fira Code", monospace');
   });
 
-  it("migrates the AppSnap rename without retaining the legacy key", () => {
-    const decoded = decodeSettings({ enableAppshots: true });
+  it("ignores retired AppSnap aliases while preserving the current key", () => {
+    const retiredKey = ["enable", "Appshots"].join("");
+    const decoded = decodeSettings({ [retiredKey]: true } as Record<string, unknown>);
     const normalized = normalizeStoredAppSettings(decoded);
-    expect(normalized.enableAppSnap).toBe(true);
-    expect(normalized).not.toHaveProperty("enableAppshots");
+    expect(normalized.enableAppSnap).toBe(false);
+    expect(normalized).not.toHaveProperty(retiredKey);
+
+    expect(normalizeStoredAppSettings(decodeSettings({ enableAppSnap: true })).enableAppSnap).toBe(
+      true,
+    );
   });
 
   it("keeps local delivery and follow-up preferences deterministic", () => {

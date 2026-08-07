@@ -13,6 +13,7 @@
     "@effect/platform-node": "catalog:",
     "@omnimind/contracts": "workspace:*",
     "@omnimind/shared": "workspace:*",
+    "classic-level": "3.0.0",
     "effect": "catalog:"
   },
   "devDependencies": {

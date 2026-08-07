@@ -1,8 +1,5 @@
 // FILE: bootstrap.ts
-// Purpose: Completes synchronous renderer storage migration before any app store can hydrate.
-
-import "./storageOriginUpgrade";
-import "./composerDraftV2Transcode";
+// Purpose: Resolves signed-out and pairing entry gates before app-store hydration.
 
 import { bootstrapSignedOutScreen } from "./authSignedOut";
 import { bootstrapPairingSession } from "./pairingBootstrap";

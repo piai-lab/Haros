@@ -29,7 +29,6 @@ export function ComposerImageAttachmentChip({
   onExpandImage,
   onRemoveImage,
 }: ComposerImageAttachmentChipProps) {
-  // Normalize here so a legacy "appshot" provenance still renders as an AppSnap.
   const appSnapSource = normalizeComposerImageSource(image.source) ?? null;
   const previewImage = () => {
     const preview = buildExpandedImagePreview(images, image.id);

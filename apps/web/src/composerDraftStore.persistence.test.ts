@@ -2,6 +2,7 @@ import type { ConversationHistoryPlanId } from "~/historicalConversation";
 import { ProjectId, ThreadId } from "@omnimind/contracts";
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 import { partializeComposerDraftStoreState, useComposerDraftStore } from "./composerDraftStore";
+import { COMPOSER_DRAFT_STORAGE_KEY } from "./composerDraftDomain";
 import { normalizeCurrentPersistedComposerDraftStoreState } from "./composerDraftPersistence";
 import {
   makeImage,
@@ -17,26 +18,76 @@ import {
   insertInlineTerminalContextPlaceholder,
 } from "./lib/terminalContext";
 
-describe("composerDraftStore persisted-state hydration", () => {
-  it("normalizes null and empty persisted states", () => {
-    const emptyState = {
-      draftsByThreadId: {},
-      draftThreadsByThreadId: {},
-      projectDraftThreadIdByProjectId: {},
-      stickyModelSelectionByProvider: {},
-      stickyActiveProvider: null,
-    };
+describe("composerDraftStore generation-1 persisted-state hydration", () => {
+  const emptyState = {
+    draftsByThreadId: {},
+    draftThreadsByThreadId: {},
+    projectDraftThreadIdByProjectId: {},
+    stickyModelSelectionByProvider: {},
+    stickyActiveProvider: null,
+  };
 
-    expect(normalizeCurrentPersistedComposerDraftStoreState(null)).toEqual(emptyState);
-    expect(normalizeCurrentPersistedComposerDraftStoreState({})).toEqual(emptyState);
+  it("accepts the exact current empty state", () => {
+    expect(normalizeCurrentPersistedComposerDraftStoreState(emptyState)).toEqual(emptyState);
   });
 
-  it("hydrates project mappings, defaults, and persisted selections", () => {
+  it.each([null, {}, { draftsByThreadId: {} }])(
+    "rejects absent or partial donor state %#",
+    (candidate) => {
+      expect(() => normalizeCurrentPersistedComposerDraftStoreState(candidate)).toThrow();
+    },
+  );
+
+  it.each(["stickyModelSelectionByProvider", "stickyActiveProvider"] as const)(
+    "rejects missing required current field %s",
+    (field) => {
+      const candidate = { ...emptyState } as Record<string, unknown>;
+      delete candidate[field];
+      expect(() => normalizeCurrentPersistedComposerDraftStoreState(candidate)).toThrow();
+    },
+  );
+
+  it("rejects unknown fields instead of silently stripping them", () => {
+    expect(() =>
+      normalizeCurrentPersistedComposerDraftStoreState({ ...emptyState, donorField: true }),
+    ).toThrow();
+    const threadId = ThreadId.makeUnsafe("thread-excess-field");
+    expect(() =>
+      normalizeCurrentPersistedComposerDraftStoreState({
+        ...emptyState,
+        draftsByThreadId: {
+          [threadId]: { prompt: "x", attachments: [], donorField: true },
+        },
+      }),
+    ).toThrow();
+  });
+
+  it("rejects a draft-thread without the current entry point", () => {
+    const threadId = ThreadId.makeUnsafe("thread-missing-entry-point");
+    expect(() =>
+      normalizeCurrentPersistedComposerDraftStoreState({
+        ...emptyState,
+        draftThreadsByThreadId: {
+          [threadId]: {
+            projectId: ProjectId.makeUnsafe("project-missing-entry-point"),
+            createdAt: "2026-08-07T00:00:00.000Z",
+            runtimeMode: "full-access",
+            interactionMode: "default",
+            branch: null,
+            worktreePath: null,
+            workingDirectory: null,
+            envMode: "local",
+          },
+        },
+      }),
+    ).toThrow();
+  });
+
+  it("accepts current project mappings and selections without conversion", () => {
     const projectId = ProjectId.makeUnsafe("project-hydration");
     const threadId = ThreadId.makeUnsafe("thread-hydration");
     const mappingKey = `${projectId}::terminal`;
-
-    const hydrated = normalizeCurrentPersistedComposerDraftStoreState({
+    const currentState = {
       draftsByThreadId: {
         [threadId]: {
           prompt: "Review these selections",
@@ -44,80 +95,143 @@ describe("composerDraftStore persisted-state hydration", () => {
           assistantSelections: [
             {
               id: "assistant-selection-1",
-              assistantMessageId: " assistant-message-1 ",
-              text: " selected assistant text ",
+              assistantMessageId: "assistant-message-1",
+              text: "selected assistant text",
             },
           ],
           fileComments: [
             {
               id: "file-comment-1",
-              path: " src/example.ts ",
+              path: "src/example.ts",
               startLine: 8,
-              endLine: 4,
-              text: " selected file text ",
+              endLine: 8,
+              text: "selected file text",
             },
           ],
-        },
-      },
-      draftThreadsByThreadId: {},
-      projectDraftThreadIdByProjectId: { [mappingKey]: threadId },
-    });
-
-    expect(hydrated.projectDraftThreadIdByProjectId).toEqual({ [mappingKey]: threadId });
-    expect(hydrated.draftThreadsByThreadId[threadId]).toMatchObject({
-      projectId,
-      runtimeMode: "full-access",
-      interactionMode: "default",
-      entryPoint: "terminal",
-    });
-    expect(hydrated.draftsByThreadId[threadId]?.assistantSelections).toEqual([
-      {
-        id: "assistant-selection-1",
-        assistantMessageId: "assistant-message-1",
-        text: "selected assistant text",
-      },
-    ]);
-    expect(hydrated.draftsByThreadId[threadId]?.fileComments).toEqual([
-      {
-        id: "file-comment-1",
-        path: "src/example.ts",
-        startLine: 8,
-        endLine: 8,
-        text: "selected file text",
-      },
-    ]);
-  });
-
-  it("preserves AI-reviewed auto mode during hydration", () => {
-    const projectId = ProjectId.makeUnsafe("project-auto-mode");
-    const threadId = ThreadId.makeUnsafe("thread-auto-mode");
-
-    const hydrated = normalizeCurrentPersistedComposerDraftStoreState({
-      draftsByThreadId: {
-        [threadId]: {
-          prompt: "",
-          attachments: [],
-          runtimeMode: "auto",
         },
       },
       draftThreadsByThreadId: {
         [threadId]: {
           projectId,
           createdAt: "2026-07-25T00:00:00.000Z",
-          runtimeMode: "auto",
-          interactionMode: "default",
-          entryPoint: "chat",
+          runtimeMode: "full-access" as const,
+          interactionMode: "default" as const,
+          entryPoint: "terminal" as const,
           branch: null,
           worktreePath: null,
           workingDirectory: null,
-          envMode: "local",
+          envMode: "local" as const,
         },
       },
-      projectDraftThreadIdByProjectId: {},
-    });
+      projectDraftThreadIdByProjectId: { [mappingKey]: threadId },
+      stickyModelSelectionByProvider: {},
+      stickyActiveProvider: null,
+    };
 
-    expect(hydrated.draftsByThreadId[threadId]?.runtimeMode).toBe("auto");
-    expect(hydrated.draftThreadsByThreadId[threadId]?.runtimeMode).toBe("auto");
+    expect(normalizeCurrentPersistedComposerDraftStoreState(currentState)).toEqual(currentState);
+  });
+
+  it("rejects the retired prompt-history string shape", () => {
+    expect(() =>
+      normalizeCurrentPersistedComposerDraftStoreState({
+        ...emptyState,
+        draftsByThreadId: {
+          [ThreadId.makeUnsafe("thread-retired-history")]: {
+            prompt: "",
+            attachments: [],
+            promptHistorySavedDraft: "retired donor draft",
+          },
+        },
+      }),
+    ).toThrow();
+  });
+
+  it.each([
+    { modelSelectionByProvider: {} },
+    { activeProvider: null },
+  ])("rejects an incomplete per-draft model-selection pair %#", (partial) => {
+    const threadId = ThreadId.makeUnsafe("thread-incomplete-model-pair");
+    expect(() =>
+      normalizeCurrentPersistedComposerDraftStoreState({
+        ...emptyState,
+        draftsByThreadId: {
+          [threadId]: { prompt: "", attachments: [], ...partial },
+        },
+      }),
+    ).toThrow();
+  });
+});
+
+describe("composerDraftStore generation-1 storage authority", () => {
+  const emptyState = {
+    draftsByThreadId: {},
+    draftThreadsByThreadId: {},
+    projectDraftThreadIdByProjectId: {},
+    stickyModelSelectionByProvider: {},
+    stickyActiveProvider: null,
+  };
+
+  const loadWithStorage = async (initial: Readonly<Record<string, string>>) => {
+    const values = new Map(Object.entries(initial));
+    const storage = {
+      getItem: vi.fn((name: string) => values.get(name) ?? null),
+      setItem: vi.fn((name: string, value: string) => values.set(name, value)),
+      removeItem: vi.fn((name: string) => values.delete(name)),
+    };
+    vi.stubGlobal("localStorage", storage);
+    vi.resetModules();
+    const module = await import("./composerDraftStore");
+    return { module, storage, values };
+  };
+
+  afterEach(() => {
+    vi.unstubAllGlobals();
+    vi.resetModules();
+  });
+
+  it("creates and rereads the exact g1 envelope from clean absence", async () => {
+    const { storage, values } = await loadWithStorage({});
+    expect(storage.setItem).toHaveBeenCalledTimes(1);
+    expect(storage.setItem).toHaveBeenCalledWith(
+      COMPOSER_DRAFT_STORAGE_KEY,
+      JSON.stringify({ generation: 1, state: emptyState }),
+    );
+    expect(storage.getItem).toHaveBeenCalledTimes(2);
+    expect(storage.getItem.mock.calls.every(([key]) => key === COMPOSER_DRAFT_STORAGE_KEY)).toBe(
+      true,
+    );
+    expect(values.has(COMPOSER_DRAFT_STORAGE_KEY)).toBe(true);
+  });
+
+  it("does not probe or import an old draft key", async () => {
+    const oldKey = ["omnimind:composer-drafts:", "v1"].join("");
+    const { storage, values } = await loadWithStorage({ [oldKey]: "old bytes" });
+    expect(storage.getItem.mock.calls.every(([key]) => key === COMPOSER_DRAFT_STORAGE_KEY)).toBe(
+      true,
+    );
+    expect(values.get(oldKey)).toBe("old bytes");
+    expect(values.has(COMPOSER_DRAFT_STORAGE_KEY)).toBe(true);
+  });
+
+  it.each([
+    JSON.stringify({ generation: 2, state: emptyState }),
+    JSON.stringify({ generation: 1, state: { ...emptyState, unknownField: true } }),
+  ])("refuses an invalid current envelope without rewriting it", async (raw) => {
+    const values = new Map([[COMPOSER_DRAFT_STORAGE_KEY, raw]]);
+    const storage = {
+      getItem: vi.fn((name: string) => values.get(name) ?? null),
+      setItem: vi.fn((name: string, value: string) => values.set(name, value)),
+      removeItem: vi.fn((name: string) => values.delete(name)),
+    };
+    vi.stubGlobal("localStorage", storage);
+    vi.resetModules();
+    const module = await import("./composerDraftStore");
+    const generationStorage = module.useComposerDraftStore.persist.getOptions().storage as {
+      readonly getItem: (name: string) => unknown;
+    };
+    expect(() => generationStorage.getItem(COMPOSER_DRAFT_STORAGE_KEY)).toThrow();
+    expect(storage.setItem).not.toHaveBeenCalled();
+    expect(values.get(COMPOSER_DRAFT_STORAGE_KEY)).toBe(raw);
   });
 });
 
@@ -349,6 +463,8 @@ describe("composerDraftStore terminal contexts", () => {
         },
         draftThreadsByThreadId: {},
         projectDraftThreadIdByProjectId: {},
+        stickyModelSelectionByProvider: {},
+        stickyActiveProvider: null,
       },
       useComposerDraftStore.getInitialState(),
     );
@@ -365,7 +481,7 @@ describe("composerDraftStore terminal contexts", () => {
     ]);
   });
 
-  it("sanitizes malformed persisted drafts during merge", () => {
+  it("refuses malformed persisted drafts during merge", () => {
     const persistApi = useComposerDraftStore.persist as unknown as {
       getOptions: () => {
         merge: (
@@ -374,26 +490,22 @@ describe("composerDraftStore terminal contexts", () => {
         ) => ReturnType<typeof useComposerDraftStore.getState>;
       };
     };
-    const mergedState = persistApi.getOptions().merge(
-      {
-        draftsByThreadId: {
-          [threadId]: {
-            prompt: "",
-            attachments: "not-an-array",
-            terminalContexts: "not-an-array",
-            provider: "bogus-provider",
-            modelOptions: "not-an-object",
+    expect(() =>
+      persistApi.getOptions().merge(
+        {
+          draftsByThreadId: {
+            [threadId]: {
+              prompt: "",
+              attachments: "not-an-array",
+              terminalContexts: "not-an-array",
+            },
           },
+          draftThreadsByThreadId: {},
+          projectDraftThreadIdByProjectId: {},
         },
-        draftThreadsByThreadId: "not-an-object",
-        projectDraftThreadIdByProjectId: "not-an-object",
-      },
-      useComposerDraftStore.getInitialState(),
-    );
-
-    expect(mergedState.draftsByThreadId[threadId]).toBeUndefined();
-    expect(mergedState.draftThreadsByThreadId).toEqual({});
-    expect(mergedState.projectDraftThreadIdByProjectId).toEqual({});
+        useComposerDraftStore.getInitialState(),
+      ),
+    ).toThrow();
   });
 
   it("restores provider-scoped selections without leaking effort across providers", () => {
@@ -415,6 +527,8 @@ describe("composerDraftStore terminal contexts", () => {
       {
         draftsByThreadId: {
           [threadId]: {
+            prompt: "",
+            attachments: [],
             modelSelectionByProvider: {
               codex: codexSelection,
               cursor: cursorSelection,
@@ -424,6 +538,8 @@ describe("composerDraftStore terminal contexts", () => {
         },
         draftThreadsByThreadId: {},
         projectDraftThreadIdByProjectId: {},
+        stickyModelSelectionByProvider: {},
+        stickyActiveProvider: null,
       },
       useComposerDraftStore.getInitialState(),
     );

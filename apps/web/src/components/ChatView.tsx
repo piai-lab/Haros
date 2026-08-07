@@ -280,7 +280,6 @@ import {
   useComposerDraftStore,
   useComposerThreadDraft,
 } from "../composerDraftStore";
-import { isComposerDraftRecoveryRequired } from "../composerDraftV2Transcode";
 import { useTemporaryThreadStore } from "../temporaryThreadStore";
 import { useComposerFocusRequestStore } from "../composerFocusRequestStore";
 import { useWorkflowRunUiStore, useWorkflowRunUiThreadState } from "../workflowRunUiStore";
@@ -5877,15 +5876,6 @@ export default function ChatView({
       }
       if (unresolvedProductRun) {
         setThreadError(threadIdForSend, workbenchCopy.productRunUnresolved);
-        sendInFlightRef.current = false;
-        resetLocalDispatch();
-        return true;
-      }
-      if (isComposerDraftRecoveryRequired()) {
-        setThreadError(
-          threadIdForSend,
-          "Draft recovery is required before this queued selection can be dispatched.",
-        );
         sendInFlightRef.current = false;
         resetLocalDispatch();
         return true;

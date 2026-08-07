@@ -396,12 +396,6 @@ export interface DesktopWindowState {
   isFullscreen: boolean;
 }
 
-export interface OmniMindStorageSnapshot {
-  readonly version: 1;
-  readonly exportedAt: string;
-  readonly entries: Readonly<Record<string, string>>;
-}
-
 export interface DesktopBridge {
   getWsUrl: () => string | null;
   /**
@@ -462,10 +456,6 @@ export interface DesktopBridge {
     onCaptured: (listener: (capture: DesktopAppSnapCapture) => void) => () => void;
     onError: (listener: (error: DesktopAppSnapErrorEvent) => void) => () => void;
     onState: (listener: (state: DesktopAppSnapState) => void) => () => void;
-  };
-  storageUpgrade: {
-    readSnapshot: () => OmniMindStorageSnapshot | null;
-    acknowledgeSnapshot: () => Promise<void>;
   };
   server?: {
     transcribeVoice: (

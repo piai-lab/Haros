@@ -6,7 +6,7 @@ import { pendingComposerAttachmentSyncGenerationCount } from "./composerDraftAtt
 import {
   captureComposerPromptHistorySavedDraft,
   COMPOSER_DRAFT_STORAGE_KEY,
-  COMPOSER_DRAFT_STORAGE_VERSION,
+  COMPOSER_DRAFT_STORAGE_GENERATION,
   findSupersededComposerImageBlobAttachments,
   isComposerImageBlobReferenced,
   partializeComposerDraftStoreState,
@@ -440,7 +440,7 @@ describe("composerDraftStore prompt history saved draft", () => {
     setLocalStorageItem(
       COMPOSER_DRAFT_STORAGE_KEY,
       {
-        version: COMPOSER_DRAFT_STORAGE_VERSION,
+        generation: COMPOSER_DRAFT_STORAGE_GENERATION,
         state: {
           draftsByThreadId: {
             [threadId]: {
@@ -491,7 +491,11 @@ describe("composerDraftStore prompt history saved draft", () => {
       threadId,
       captureComposerPromptHistorySavedDraft({ threadId, draft, prompt: draft.prompt }),
     );
-    setLocalStorageItem(COMPOSER_DRAFT_STORAGE_KEY, { version: 2, state: {} }, Schema.Unknown);
+    setLocalStorageItem(
+      COMPOSER_DRAFT_STORAGE_KEY,
+      { generation: COMPOSER_DRAFT_STORAGE_GENERATION, state: {} },
+      Schema.Unknown,
+    );
 
     await expect(
       store.syncPromptHistorySavedDraftPersistedAttachments(threadId, [attachment]),
@@ -929,7 +933,7 @@ describe("composerDraftStore syncPersistedAttachments", () => {
     setLocalStorageItem(
       COMPOSER_DRAFT_STORAGE_KEY,
       {
-        version: 2,
+        generation: COMPOSER_DRAFT_STORAGE_GENERATION,
         state: {
           draftsByThreadId: {
             [threadId]: {
@@ -969,7 +973,7 @@ describe("composerDraftStore syncPersistedAttachments", () => {
     setLocalStorageItem(
       COMPOSER_DRAFT_STORAGE_KEY,
       {
-        version: 2,
+        generation: COMPOSER_DRAFT_STORAGE_GENERATION,
         state: {
           draftsByThreadId: {
             [threadId]: {
@@ -1017,7 +1021,7 @@ describe("composerDraftStore syncPersistedAttachments", () => {
     setLocalStorageItem(
       COMPOSER_DRAFT_STORAGE_KEY,
       {
-        version: COMPOSER_DRAFT_STORAGE_VERSION,
+        generation: COMPOSER_DRAFT_STORAGE_GENERATION,
         state: {
           draftsByThreadId: {
             [threadId]: {
@@ -1096,7 +1100,7 @@ describe("composerDraftStore syncPersistedAttachments", () => {
     setLocalStorageItem(
       COMPOSER_DRAFT_STORAGE_KEY,
       {
-        version: COMPOSER_DRAFT_STORAGE_VERSION,
+        generation: COMPOSER_DRAFT_STORAGE_GENERATION,
         state: {
           draftsByThreadId: {
             [threadId]: {
@@ -1119,55 +1123,6 @@ describe("composerDraftStore syncPersistedAttachments", () => {
     expect(
       useComposerDraftStore.getState().draftsByThreadId[threadId]?.nonPersistedImageIds,
     ).toEqual([]);
-  });
-
-  it("keeps AppSnap blob metadata and migrates former provenance", () => {
-    const persistApi = useComposerDraftStore.persist as unknown as {
-      getOptions: () => {
-        merge: (
-          persistedState: unknown,
-          currentState: ReturnType<typeof useComposerDraftStore.getState>,
-        ) => ReturnType<typeof useComposerDraftStore.getState>;
-      };
-    };
-    const source = {
-      kind: "appsnap",
-      captureId: "capture-1",
-      capturedAt: "2026-07-12T19:59:33.000Z",
-      appName: "Safari",
-      bundleIdentifier: null,
-      appIconDataUrl: null,
-      windowTitle: "OmniMind",
-    };
-    const mergedState = persistApi.getOptions().merge(
-      {
-        draftsByThreadId: {
-          [threadId]: {
-            prompt: "",
-            attachments: [
-              {
-                id: "appsnap-1",
-                name: "appsnap.png",
-                mimeType: "image/png",
-                sizeBytes: 2048,
-                blobKey: `${threadId}:appsnap-1`,
-                source: { ...source, kind: "appshot" },
-              },
-            ],
-          },
-        },
-      },
-      useComposerDraftStore.getInitialState(),
-    );
-
-    expect(mergedState.draftsByThreadId[threadId]?.images).toEqual([]);
-    expect(mergedState.draftsByThreadId[threadId]?.persistedAttachments).toEqual([
-      expect.objectContaining({
-        id: "appsnap-1",
-        blobKey: `${threadId}:appsnap-1`,
-        source,
-      }),
-    ]);
   });
 
   it("omits inline AppSnap icons from localStorage metadata", () => {

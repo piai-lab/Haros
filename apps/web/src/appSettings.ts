@@ -120,7 +120,6 @@ export const AppSettingsSchema = Schema.Struct({
   enableAppSnap: Schema.Boolean.pipe(withDefaults(() => false)),
   appSnapShortcut: AppSnapShortcut.pipe(withDefaults(() => DEFAULT_APP_SNAP_SHORTCUT)),
   appSnapPlaySound: Schema.Boolean.pipe(withDefaults(() => true)),
-  enableAppshots: Schema.optionalKey(Schema.Boolean),
   sidebarProjectSortOrder: SidebarProjectSortOrder.pipe(
     withDefaults(() => DEFAULT_SIDEBAR_PROJECT_SORT_ORDER),
   ),
@@ -172,10 +171,8 @@ export function resolveTerminalFontFamilyStack(value: string | null | undefined)
 }
 
 function normalizeAppSettings(settings: AppSettings): AppSettings {
-  const { enableAppshots, ...current } = settings;
   return {
-    ...current,
-    enableAppSnap: settings.enableAppSnap || enableAppshots === true,
+    ...settings,
     uiDensity: normalizeUiDensity(settings.uiDensity),
     chatFontSizePx: normalizeChatFontSizePx(settings.chatFontSizePx),
     terminalFontSizePx: normalizeTerminalFontSizePx(settings.terminalFontSizePx),

@@ -10,44 +10,28 @@ import {
   type ReleaseUpdatePolicyConfig,
 } from "./lib/release-update-policy";
 
-const cleanConfig: ReleaseUpdatePolicyConfig = {
-  lane: "clean",
-  bridgeVersion: "0.4.2",
+const releaseConfig: ReleaseUpdatePolicyConfig = {
   channel: "omnimind",
 };
 const defaultManifestNames = ["latest-mac.yml", "latest.yml", "latest-linux.yml"] as const;
 
 describe("release update policy", () => {
-  it("publishes stable clean releases to Latest and keeps prereleases off it", () => {
-    expect(resolveReleaseUpdatePolicy("0.4.2", { ...cleanConfig, lane: "bridge" })).toMatchObject({
-      tag: "v0.4.2",
-      lane: "bridge",
-      makeLatest: false,
-      mirrorToStableChannel: false,
-    });
-    expect(resolveReleaseUpdatePolicy("v0.5.0", cleanConfig)).toMatchObject({
-      tag: "v0.5.0",
-      lane: "clean",
+  it("publishes stable releases to Latest and keeps prereleases off it", () => {
+    expect(resolveReleaseUpdatePolicy("v1.0.0", releaseConfig)).toMatchObject({
+      tag: "v1.0.0",
       makeLatest: true,
       mirrorToStableChannel: false,
-      bridgeTag: "v0.4.2",
       channel: "omnimind",
     });
-    expect(resolveReleaseUpdatePolicy("0.6.0-beta.1", cleanConfig)).toMatchObject({
+    expect(resolveReleaseUpdatePolicy("1.1.0-beta.1", releaseConfig)).toMatchObject({
       isPrerelease: true,
       makeLatest: false,
       mirrorToStableChannel: false,
     });
   });
 
-  it("rejects releases that could bypass or replace the compatibility hop", () => {
-    expect(() => resolveReleaseUpdatePolicy("0.5.0", { ...cleanConfig, lane: "bridge" })).toThrow(
-      "may publish only",
-    );
-    expect(() => resolveReleaseUpdatePolicy("0.4.2", cleanConfig)).toThrow("must be newer");
-    expect(() => resolveReleaseUpdatePolicy("0.4.1", cleanConfig)).toThrow("must be newer");
-    expect(() => resolveReleaseUpdatePolicy("0.4.0", cleanConfig)).toThrow("must be newer");
-    expect(() => resolveReleaseUpdatePolicy("0.5.0.not-semver", cleanConfig)).toThrow(
+  it("rejects invalid release versions", () => {
+    expect(() => resolveReleaseUpdatePolicy("1.0.0.not-semver", releaseConfig)).toThrow(
       "Invalid release version",
     );
   });
@@ -60,7 +44,7 @@ describe("release update policy", () => {
         writeFileSync(resolve(root, name), name);
       }
 
-      expect(prepareReleaseUpdateManifests(root, cleanConfig)).toEqual([
+      expect(prepareReleaseUpdateManifests(root, releaseConfig)).toEqual([
         ...defaultManifestNames,
         ...channelManifestNames("omnimind"),
       ]);
@@ -79,40 +63,15 @@ describe("release update policy", () => {
     }
   });
 
-  it("keeps default metadata and copies same-version channel placeholders on the compatibility release", () => {
+  it("refuses to overwrite an existing channel manifest", () => {
     const root = mkdtempSync(join(tmpdir(), "omnimind-release-policy-"));
     try {
       for (const name of defaultManifestNames) {
-        writeFileSync(resolve(root, name), `bridge:${name}`);
-      }
-      expect(prepareReleaseUpdateManifests(root, { ...cleanConfig, lane: "bridge" })).toEqual([
-        ...defaultManifestNames,
-        ...channelManifestNames("omnimind"),
-      ]);
-      for (const [index, channelName] of channelManifestNames("omnimind").entries()) {
-        const defaultName = defaultManifestNames[index];
-        if (!defaultName) throw new Error(`Missing default manifest mapping for ${channelName}`);
-        expect(readFileSync(resolve(root, channelName), "utf8")).toBe(
-          readFileSync(resolve(root, defaultName), "utf8"),
-        );
-      }
-      for (const name of defaultManifestNames) {
-        expect(existsSync(resolve(root, name))).toBe(true);
-      }
-    } finally {
-      rmSync(root, { recursive: true, force: true });
-    }
-  });
-
-  it("refuses to overwrite a compatibility channel placeholder", () => {
-    const root = mkdtempSync(join(tmpdir(), "omnimind-release-policy-"));
-    try {
-      for (const name of defaultManifestNames) {
-        writeFileSync(resolve(root, name), "bridge");
+        writeFileSync(resolve(root, name), "current");
       }
       writeFileSync(resolve(root, "omnimind-mac.yml"), "existing");
 
-      expect(() => prepareReleaseUpdateManifests(root, { ...cleanConfig, lane: "bridge" })).toThrow(
+      expect(() => prepareReleaseUpdateManifests(root, releaseConfig)).toThrow(
         "Refusing to overwrite existing update manifest: omnimind-mac.yml",
       );
       expect(existsSync(resolve(root, "omnimind.yml"))).toBe(false);
@@ -122,12 +81,12 @@ describe("release update policy", () => {
     }
   });
 
-  it("rejects a clean Latest release with missing default metadata", () => {
+  it("rejects a Latest release with missing default metadata", () => {
     const root = mkdtempSync(join(tmpdir(), "omnimind-release-policy-"));
     try {
-      writeFileSync(resolve(root, "latest-mac.yml"), "bridge");
+      writeFileSync(resolve(root, "latest-mac.yml"), "current");
 
-      expect(() => prepareReleaseUpdateManifests(root, cleanConfig)).toThrow(
+      expect(() => prepareReleaseUpdateManifests(root, releaseConfig)).toThrow(
         "Latest release is missing update manifests: latest.yml, latest-linux.yml",
       );
     } finally {

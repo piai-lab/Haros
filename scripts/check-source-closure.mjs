@@ -14,15 +14,15 @@ const ROOT = path.resolve(path.dirname(fileURLToPath(import.meta.url)), "..");
 const EXPECTED_PATH_COUNT = 6425;
 const EXPECTED_GLYPH_COUNTS = { line: 1979, fill: 2035 };
 const EXPECTED_DISPOSITION_COUNTS = {
-  "adapted-present": 1496,
-  "adapted-removed": 774,
+  "adapted-present": 1494,
+  "adapted-removed": 776,
   "authorized-fill-glyph": 2035,
   "authorized-line-glyph": 1979,
   "excluded-non-product": 127,
   "public-surface-lineage": 14,
 };
 const EXPECTED_DISPOSITION_DIGEST =
-  "368f2a03465320ad28552312544b81f4ac4cbdfcc8c23c73d4f21ec1f7cb9a13";
+  "3d6a5b6dac4bfd938284d459a7840ccfde913c13ab8119578e41e5cc58ac90c4";
 const FIXED_STYLE_TREES = {
   line: "08fd7dfc4631902bf6d9a2415573e4a4d0e02873",
   fill: "932c44605d556210fdfb1b663807a921f590d8f0",

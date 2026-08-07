@@ -114,12 +114,23 @@ export function preparePrivateServerPaths(
 ): void {
   for (const directoryPath of [
     paths.stateDir,
+    path.dirname(paths.dbPath),
     paths.secretsDir,
     paths.attachmentsDir,
     paths.logsDir,
     paths.terminalLogsDir,
   ]) {
     ensurePrivateDirectorySync(directoryPath, platform);
+  }
+  const legacyServiceDatabase = path.join(paths.stateDir, "state.sqlite");
+  if (
+    [legacyServiceDatabase, `${legacyServiceDatabase}-wal`, `${legacyServiceDatabase}-shm`].some(
+      (target) => existsSync(target),
+    )
+  ) {
+    throw new Error(
+      "A retired Service database bundle exists; run the direct first-public rebuild tool.",
+    );
   }
   const repairMarkerPath = path.join(paths.stateDir, PRIVATE_STATE_REPAIR_MARKER);
   if (!existsSync(repairMarkerPath)) {
@@ -140,7 +151,7 @@ export const deriveServerPaths = Effect.fn(function* (
   const { join } = yield* Path.Path;
   const stateDir = join(baseDir, devUrl !== undefined ? "dev" : "userdata");
   const secretsDir = join(stateDir, "secrets");
-  const dbPath = join(stateDir, "state.sqlite");
+  const dbPath = join(stateDir, "stores", "service.sqlite");
   const attachmentsDir = join(stateDir, "attachments");
   const logsDir = join(stateDir, "logs");
   return {

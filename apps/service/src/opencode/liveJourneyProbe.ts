@@ -18,6 +18,7 @@ import {
   ProductControlPlane,
   ProductControlPlaneError,
   makeProductControlPlaneLayer,
+  resolveProductDatabasePath,
   type ProductExecutionBoundary,
 } from "../product/ProductControlPlane";
 import {
@@ -157,7 +158,7 @@ export async function runOpenCodeLiveJourneyProbe(input: OpenCodeLiveJourneyProb
     const catalog = { ...readiness.catalog, defaultEngineId: "pi" };
     const activeRuntime = ManagedRuntime.make(
       makeProductControlPlaneLayer(
-        path.join(stateDir, "product-state-v1.sqlite"),
+        resolveProductDatabasePath(stateDir),
         gateway,
         catalog,
       ),

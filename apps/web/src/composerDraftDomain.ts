@@ -38,7 +38,6 @@ import {
   normalizeFileCommentSelection,
 } from "./lib/fileComments";
 import { type TerminalContextDraft, normalizeTerminalContextText } from "./lib/terminalContext";
-import { COMPOSER_DRAFT_STORAGE_KEY_V2 } from "./composerDraftV2Transcode";
 import {
   type ChatAssistantSelectionAttachment,
   type ChatFileAttachment,
@@ -48,8 +47,8 @@ import {
   type ThreadPrimarySurface,
 } from "./types";
 
-export const COMPOSER_DRAFT_STORAGE_KEY = COMPOSER_DRAFT_STORAGE_KEY_V2;
-export const COMPOSER_DRAFT_STORAGE_VERSION = 7;
+export const COMPOSER_DRAFT_STORAGE_KEY = "omnimind:composer-drafts:g1";
+export const COMPOSER_DRAFT_STORAGE_GENERATION = 1;
 export type DraftThreadEnvMode = "local" | "worktree";
 /** Local composer presentation state used while restoring history; never Product admission. */
 export const ComposerInteractionModeSchema = Schema.Literals(["default", "plan"]);
@@ -66,16 +65,6 @@ const PersistedComposerAppSnapSource = Schema.Struct({
   windowTitle: Schema.NullOr(Schema.String),
 });
 
-const LegacyPersistedComposerAppSnapSource = Schema.Struct({
-  kind: Schema.Literal("appshot"),
-  captureId: Schema.String,
-  capturedAt: Schema.String,
-  appName: Schema.NullOr(Schema.String),
-  bundleIdentifier: Schema.optionalKey(Schema.NullOr(Schema.String)),
-  appIconDataUrl: Schema.optionalKey(Schema.NullOr(Schema.String)),
-  windowTitle: Schema.NullOr(Schema.String),
-});
-
 export const PersistedComposerImageAttachment = Schema.Struct({
   id: Schema.String,
   name: Schema.String,
@@ -83,9 +72,7 @@ export const PersistedComposerImageAttachment = Schema.Struct({
   sizeBytes: Schema.Number,
   dataUrl: Schema.optionalKey(Schema.String),
   blobKey: Schema.optionalKey(Schema.String),
-  source: Schema.optionalKey(
-    Schema.Union([PersistedComposerAppSnapSource, LegacyPersistedComposerAppSnapSource]),
-  ),
+  source: Schema.optionalKey(PersistedComposerAppSnapSource),
 });
 
 export type PersistedComposerImageAttachment = typeof PersistedComposerImageAttachment.Type;

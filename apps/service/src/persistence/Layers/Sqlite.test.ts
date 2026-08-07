@@ -15,7 +15,7 @@ const tempDirectories: Array<string> = [];
 async function makeDbPath(): Promise<string> {
   const directory = await fs.mkdtemp(path.join(os.tmpdir(), "omnimind-sqlite-live-"));
   tempDirectories.push(directory);
-  return path.join(directory, "state.sqlite");
+  return path.join(directory, "service.sqlite");
 }
 
 async function createNormalWalSnapshot(dbPath: string): Promise<Buffer> {
@@ -88,30 +88,24 @@ describe("SQLite persistence", () => {
     );
   });
 
-  it("recovers an existing WAL without touching its stale shared-memory sidecar", async () => {
+  it("rejects a partial pre-generation schema without repair writes", async () => {
     const dbPath = await makeDbPath();
-    const staleShm = await createNormalWalSnapshot(dbPath);
-
-    await Effect.runPromise(
-      Effect.gen(function* () {
-        const sql = yield* SqlClient.SqlClient;
-        const rows = yield* sql<{ readonly value: string }>`
-          SELECT value FROM recovery_probe
-        `;
-        const [lockingMode] = yield* sql<{ readonly locking_mode: string }>`
-          PRAGMA locking_mode;
-        `;
-
-        expect(rows).toEqual([{ value: "survives-recovery" }]);
-        expect(lockingMode?.locking_mode).toBe("exclusive");
-        yield* Effect.promise(async () => {
-          expect(await fs.readFile(`${dbPath}-shm`)).toEqual(staleShm);
-        });
-      }).pipe(
-        Effect.provide(makeSqlitePersistenceLive(dbPath).pipe(Layer.provide(NodeServices.layer))),
-      ),
+    await createNormalWalSnapshot(dbPath);
+    const before = await Promise.all(
+      ["", "-wal", "-shm"].map((suffix) => fs.readFile(`${dbPath}${suffix}`)),
     );
 
-    expect(await fs.readFile(`${dbPath}-shm`)).toEqual(staleShm);
+    await expect(
+      Effect.runPromise(
+        Effect.void.pipe(
+        Effect.provide(makeSqlitePersistenceLive(dbPath).pipe(Layer.provide(NodeServices.layer))),
+        ),
+      ),
+    ).rejects.toThrow(/automation_meta|generation-1 marker/i);
+
+    const after = await Promise.all(
+      ["", "-wal", "-shm"].map((suffix) => fs.readFile(`${dbPath}${suffix}`)),
+    );
+    expect(after).toEqual(before);
   });
 });

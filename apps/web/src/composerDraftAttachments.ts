@@ -7,7 +7,7 @@ import * as Schema from "effect/Schema";
 
 import {
   COMPOSER_DRAFT_STORAGE_KEY,
-  COMPOSER_DRAFT_STORAGE_VERSION,
+  COMPOSER_DRAFT_STORAGE_GENERATION,
   PersistedComposerImageAttachment,
   shouldRemoveDraft,
   type ComposerAttachmentPersistenceResult,
@@ -315,7 +315,7 @@ function readPersistedComposerDraftsRecord(): Record<string, unknown> | null {
   const persisted = asUnknownRecord(
     getLocalStorageItem(COMPOSER_DRAFT_STORAGE_KEY, Schema.Unknown),
   );
-  if (!persisted || persisted.version !== COMPOSER_DRAFT_STORAGE_VERSION) return null;
+  if (!persisted || persisted.generation !== COMPOSER_DRAFT_STORAGE_GENERATION) return null;
   const state = asUnknownRecord(persisted.state);
   return state ? asUnknownRecord(state.draftsByThreadId) : null;
 }

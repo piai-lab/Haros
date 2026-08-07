@@ -205,11 +205,6 @@ import {
   resolveBrowserHostPipeBackendEnv,
 } from "./browserUsePipeServer";
 import { normalizeDesktopWsUrl, resolveDesktopWsUrlFromEnv } from "./desktopWsBridge";
-import {
-  repairBrowserProfileFromBridgeManifest,
-  resolveDesktopAppDataBase,
-  resolveDesktopUserDataPath,
-} from "./desktopUserDataProfile";
 import { isBrokenPipeError } from "./desktopProcessErrors";
 import { createDesktopStaticProtocolResolver } from "./desktopStaticProtocol";
 import {
@@ -217,11 +212,6 @@ import {
   resolveVisibleWindowBounds,
   writeDesktopWindowState,
 } from "./windowState";
-import {
-  acknowledgeOmniMindStorageSnapshot,
-  readOmniMindStorageSnapshot,
-  resolveOmniMindStorageSnapshotPath,
-} from "./desktopStorageUpgrade";
 import { DESKTOP_IPC_CHANNELS } from "./ipcChannels";
 import { DesktopAppSnapSupervisor } from "./appSnapSupervisor";
 import { hardenBrowserAnnotationWebviewPreferences } from "./browserAnnotations/webviewSecurity";
@@ -1858,29 +1848,16 @@ function showDesktopNotification(input: {
  * package.json. We override it to a clean lowercase OmniMind name.
  */
 function resolveUserDataPath(): string {
-  const appDataBase = resolveDesktopAppDataBase();
-  return resolveDesktopUserDataPath({
-    appDataBase,
-    userDataDirectoryName: desktopIdentity.userDataDirectoryName,
-    explicitUserDataPath: app.commandLine.getSwitchValue("user-data-dir"),
-  });
-}
-
-function repairBrowserProfileBeforeElectronReady(userDataPath: string): void {
-  const browserProfileRepair = repairBrowserProfileFromBridgeManifest(userDataPath);
-  if (browserProfileRepair.status === "repaired") {
-    console.info("[desktop] Completed OmniMind browser profile bridge repair", {
-      sourcePath: browserProfileRepair.sourcePath,
-      targetPath: browserProfileRepair.targetPath,
-      copiedEntries: browserProfileRepair.copiedEntries,
-    });
-  } else if (browserProfileRepair.status === "repair-failed") {
-    console.warn("[desktop] Failed to complete OmniMind browser profile bridge repair", {
-      sourcePath: browserProfileRepair.sourcePath,
-      targetPath: browserProfileRepair.targetPath,
-      error: browserProfileRepair.error,
-    });
-  }
+  const explicitUserDataPath = app.commandLine.getSwitchValue("user-data-dir").trim();
+  if (explicitUserDataPath) return Path.resolve(explicitUserDataPath);
+  const homeDir = OS.homedir();
+  const appDataBase =
+    process.platform === "win32"
+      ? process.env.APPDATA || Path.join(homeDir, "AppData", "Roaming")
+      : process.platform === "darwin"
+        ? Path.join(homeDir, "Library", "Application Support")
+        : process.env.XDG_CONFIG_HOME || Path.join(homeDir, ".config");
+  return Path.join(appDataBase, desktopIdentity.userDataDirectoryName);
 }
 
 function configureAppIdentity(): void {
@@ -2820,8 +2797,8 @@ function configureAutoUpdater(): void {
 
   autoUpdater.autoDownload = false;
   autoUpdater.autoInstallOnAppQuit = false;
-  // The dedicated channel keeps the permanent compatibility release on the
-  // default feed while OmniMind versions advance independently.
+  // Packaged Desktop binaries use the dedicated OmniMind channel aliases
+  // published alongside the GitHub Latest manifests.
   autoUpdater.channel = OMNIMIND_DESKTOP_UPDATE_CHANNEL;
   autoUpdater.allowPrerelease = DESKTOP_UPDATE_ALLOW_PRERELEASE;
   autoUpdater.allowDowngrade = false;
@@ -3482,7 +3459,6 @@ function requestGracefulAppQuit(reason: string): void {
 }
 
 function registerIpcHandlers(): void {
-  const storageSnapshotPath = resolveOmniMindStorageSnapshotPath(app.getPath("userData"));
 
   ipcMain.removeHandler(DESKTOP_HEALTH_IPC_CHANNELS.getSnapshot);
   ipcMain.handle(DESKTOP_HEALTH_IPC_CHANNELS.getSnapshot, async () => desktopHealthSnapshot);
@@ -3490,16 +3466,6 @@ function registerIpcHandlers(): void {
   ipcMain.handle(DESKTOP_HEALTH_IPC_CHANNELS.retryNativeHost, async () => {
     nativeHostSupervisor?.retry();
     return desktopHealthSnapshot;
-  });
-
-  ipcMain.removeAllListeners(IPC.storageUpgrade.read);
-  ipcMain.on(IPC.storageUpgrade.read, (event: IpcMainEvent) => {
-    event.returnValue = readOmniMindStorageSnapshot(storageSnapshotPath);
-  });
-
-  ipcMain.removeHandler(IPC.storageUpgrade.acknowledge);
-  ipcMain.handle(IPC.storageUpgrade.acknowledge, async () => {
-    await acknowledgeOmniMindStorageSnapshot(storageSnapshotPath);
   });
 
   ipcMain.removeAllListeners(IPC.wsUrl);
@@ -4236,10 +4202,6 @@ function configureMediaPermissions(): void {
 // Override Electron's userData path before the `ready` event so that
 // Chromium session data uses a filesystem-friendly directory name.
 // Must be called synchronously at the top level — before `app.whenReady()`.
-if (hasSingleInstanceLock) {
-  repairBrowserProfileBeforeElectronReady(userDataPath);
-}
-
 configureAppIdentity();
 
 if (!hasSingleInstanceLock) {

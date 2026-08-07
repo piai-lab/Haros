@@ -96,10 +96,8 @@ describe.skipIf(process.platform === "win32")("private server state permissions"
     const paths = derivePaths(baseDir);
     fs.mkdirSync(paths.attachmentsDir, { recursive: true, mode: 0o755 });
     fs.mkdirSync(paths.terminalLogsDir, { recursive: true, mode: 0o755 });
-    const stateFile = path.join(paths.stateDir, "state.sqlite");
     const attachmentFile = path.join(paths.attachmentsDir, "attachment.bin");
     const executableFile = path.join(paths.terminalLogsDir, "managed-hook.sh");
-    fs.writeFileSync(stateFile, "state", { mode: 0o644 });
     fs.writeFileSync(attachmentFile, "attachment", { mode: 0o644 });
     fs.writeFileSync(executableFile, "#!/bin/sh\n", { mode: 0o755 });
     fs.chmodSync(paths.stateDir, 0o755);
@@ -116,11 +114,26 @@ describe.skipIf(process.platform === "win32")("private server state permissions"
     expect(mode(paths.stateDir)).toBe(PRIVATE_DIRECTORY_MODE);
     expect(mode(paths.attachmentsDir)).toBe(PRIVATE_DIRECTORY_MODE);
     expect(mode(paths.terminalLogsDir)).toBe(PRIVATE_DIRECTORY_MODE);
-    expect(mode(stateFile)).toBe(PRIVATE_FILE_MODE);
     expect(mode(attachmentFile)).toBe(PRIVATE_FILE_MODE);
     expect(mode(executableFile)).toBe(PRIVATE_DIRECTORY_MODE);
     expect(mode(outsideFile)).toBe(0o644);
   });
+
+  it.each(["state.sqlite", "state.sqlite-wal", "state.sqlite-shm"])(
+    "refuses a retired Service bundle target %s without mutating it",
+    (filename) => {
+      const paths = derivePaths(makeTempDir());
+      fs.mkdirSync(paths.stateDir, { recursive: true, mode: 0o700 });
+      const retired = path.join(paths.stateDir, filename);
+      fs.writeFileSync(retired, `retired-${filename}\n`, { mode: 0o640 });
+      const before = fs.readFileSync(retired);
+      const beforeMode = mode(retired);
+
+      expect(() => preparePrivateServerPaths(paths)).toThrow(/retired Service database bundle/i);
+      expect(fs.readFileSync(retired)).toEqual(before);
+      expect(mode(retired)).toBe(beforeMode);
+    },
+  );
 
   it("rejects a symlinked state root without changing its outside target", () => {
     const baseDir = makeTempDir();

@@ -45,6 +45,7 @@
     "licenses:generate": "node scripts/generate-release-legal-metadata.ts",
     "licenses:check": "node scripts/generate-release-legal-metadata.ts --check",
     "quality": "bun run check:identity && bun run check:sources && bun run check:closure && bun run check:glyphs && bun run licenses:check && bun run test:quality",
+    "product-truth": "node scripts/product-truth/cli.ts",
     "brand:check": "node scripts/check-brand-identity.ts",
     "test:desktop-smoke": "turbo run smoke-test --filter=@omnimind/desktop",
     "fmt": "oxfmt",

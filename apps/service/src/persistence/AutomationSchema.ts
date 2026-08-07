@@ -11,16 +11,9 @@ export const initializeAutomationSchema = Effect.gen(function* () {
 
   yield* sql`
     CREATE TABLE IF NOT EXISTS automation_meta (
-      schema_version INTEGER NOT NULL CHECK (schema_version = 2),
-      migration_revision TEXT NOT NULL CHECK (migration_revision = 'selection-schema-v2')
+      schema_generation INTEGER NOT NULL CHECK (schema_generation = 1)
     )
   `;
-  const marker = yield* sql<{
-    readonly count: number;
-  }>`SELECT COUNT(*) AS count FROM automation_meta`;
-  if (marker[0]?.count === 0) {
-    yield* sql`INSERT INTO automation_meta(schema_version, migration_revision) VALUES (2, 'selection-schema-v2')`;
-  }
 
   yield* sql`
     CREATE TABLE IF NOT EXISTS automation_definitions (
@@ -146,9 +139,8 @@ export const initializeAutomationSchema = Effect.gen(function* () {
     WHERE status = 'succeeded' AND finished_at IS NOT NULL
   `;
 
-  yield* sql`DROP VIEW IF EXISTS automation_pending_completion_evaluations`;
   yield* sql`
-    CREATE VIEW automation_pending_completion_evaluations AS
+    CREATE VIEW IF NOT EXISTS automation_pending_completion_evaluations AS
     SELECT
       runs.run_id,
       runs.automation_id,
