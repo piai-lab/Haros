@@ -1,0 +1,192 @@
+{
+  "format": "product-truth-complexity-universe-v1",
+  "baselineCommit": "7582170a277477ba0d71cf70f53e4e0836874a72",
+  "extensions": [".ts", ".tsx", ".mjs", ".json"],
+  "sourceExtensions": [".ts", ".tsx", ".mjs", ".js", ".json"],
+  "externalImports": {
+    "exact": [
+      "@earendil-works/pi-ai",
+      "@earendil-works/pi-coding-agent",
+      "@effect/platform-node/NodeServices",
+      "@effect/sql-sqlite-bun/SqliteClient",
+      "@legendapp/list/react",
+      "@tanstack/react-pacer",
+      "@tanstack/react-query",
+      "@tanstack/react-router",
+      "classic-level",
+      "effect",
+      "effect/Cache",
+      "effect/Config",
+      "effect/Duration",
+      "effect/Effect",
+      "effect/Equal",
+      "effect/Fiber",
+      "effect/Function",
+      "effect/Layer",
+      "effect/Schema",
+      "effect/Scope",
+      "effect/Semaphore",
+      "effect/ServiceMap",
+      "effect/Stream",
+      "effect/Types",
+      "effect/unstable/cli",
+      "effect/unstable/http",
+      "effect/unstable/reactivity/Reactivity",
+      "effect/unstable/rpc",
+      "effect/unstable/sql/SqlClient",
+      "effect/unstable/sql/SqlConnection",
+      "effect/unstable/sql/SqlError",
+      "effect/unstable/sql/SqlSchema",
+      "effect/unstable/sql/Statement",
+      "electron",
+      "react",
+      "zustand",
+      "zustand/middleware"
+    ],
+    "prefixes": ["node:", "bun:"]
+  },
+  "roots": [
+    "scripts/product-truth",
+    "apps/service/src/product",
+    "apps/service/src/native-host",
+    "apps/service/src/persistence",
+    "apps/native-host/src"
+  ],
+  "exactFiles": [
+    "apps/service/src/main.ts",
+    "apps/service/src/wsRpc.ts",
+    "apps/service/src/effectServer.ts",
+    "apps/service/src/serverLayers.ts",
+    "apps/web/src/bootstrap.ts",
+    "apps/web/src/composerDraftDomain.ts",
+    "apps/web/src/composerDraftV2Transcode.ts",
+    "apps/web/src/composerDraftPersistence.ts",
+    "apps/web/src/composerDraftAttachments.ts",
+    "apps/web/src/composerDraftStore.ts",
+    "apps/web/src/storageOriginUpgrade.ts",
+    "apps/web/src/components/ChatView.tsx",
+    "apps/web/src/lib/storage.ts",
+    "apps/desktop/src/desktopStorageUpgrade.ts",
+    "apps/desktop/src/desktopUserDataProfile.ts",
+    "packages/contracts/src/native-host/protocol.ts",
+    "packages/contracts/src/product/state.ts",
+    "package.json"
+  ],
+  "classification": {
+    "testNamePattern": "\\.test\\.",
+    "browserTestNamePattern": "\\.browser\\.",
+    "fixtureDirectorySegments": ["fixtures", "test-fixtures", "snapshots", "__snapshots__"],
+    "generatedDirectorySegments": ["build", "coverage", "dist", "out", "release"],
+    "generatedNamePattern": "(?:^|/)routeTree\\.gen\\.",
+    "measurementFiles": [
+      "scripts/product-truth/measure-complexity.mjs",
+      "scripts/product-truth/complexity-universe-v1.json"
+    ],
+    "directToolRoot": "scripts/product-truth"
+  },
+  "anchors": {
+    "productControlPlane": "apps/service/src/product/ProductControlPlane.ts",
+    "literalGateway": "apps/service/src/product/productExecutionGateway.ts",
+    "wsRpc": "apps/service/src/wsRpc.ts",
+    "facadeInterface": "ProductControlPlaneShape",
+    "schemaVariable": "productSchemaSql",
+    "transactionFunction": "withTransaction",
+    "transactionCountAfter": "const createWorkspace:",
+    "volatileSymbols": ["runtimeCatalog", "preparedExecutions", "lastRuntimeCatalogObservationAt"],
+    "baselineExpected": {
+      "productControlPlaneLines": 5036,
+      "literalGatewayLines": 115,
+      "facadeShapeMethods": 42,
+      "uniqueProductRpcMethods": 36,
+      "productTables": 21,
+      "transactionWrapperCalls": 44,
+      "volatileVariables": 3,
+      "productionMonolithImporters": 10
+    }
+  },
+  "extractionSurface": {
+    "forbiddenProductionFiles": [
+      "apps/service/src/product/productStateStore.ts",
+      "apps/service/src/product/productExecutionCoordinator.ts",
+      "apps/service/src/product/productExecutionBoundary.ts"
+    ],
+    "forbiddenProductionSymbols": [
+      "ProductStateStore",
+      "ProductExecutionCoordinator",
+      "makeProductStateStore",
+      "makeProductExecutionCoordinator"
+    ],
+    "forbiddenImportBasenames": [
+      "productStateStore",
+      "productExecutionCoordinator",
+      "productExecutionBoundary"
+    ]
+  },
+  "semanticGates": {
+    "productStoreFile": "apps/service/src/product/productStateStore.ts",
+    "databaseOpenerSymbols": ["openPortableDatabase", "openProductDatabase"],
+    "directProductDatabaseConstructionSites": [
+      {
+        "path": "apps/service/src/persistence/selectionSchemaCoordinator.ts",
+        "constructor": "DatabaseSync",
+        "argumentPattern": "\\bproductDbPath\\b"
+      }
+    ],
+    "preparedStatementFactorySymbols": ["statement"],
+    "durableStateMachineSymbols": ["makeControlPlane", "makeProductStateStore"],
+    "literalGatewaySymbols": ["makeProductExecutionGateway"],
+    "rawTransactionExportSymbols": ["withTransaction", "transaction"],
+    "nativeHostRoots": ["apps/native-host/src"],
+    "nativeHostFsMutators": [
+      "appendFile",
+      "appendFileSync",
+      "copyFile",
+      "copyFileSync",
+      "mkdir",
+      "mkdirSync",
+      "rename",
+      "renameSync",
+      "rm",
+      "rmSync",
+      "unlink",
+      "unlinkSync",
+      "writeFile",
+      "writeFileSync"
+    ],
+    "nativeHostNonPackageWriteAllowlist": [
+      { "path": "apps/native-host/src/index.ts", "owner": "removeSocketFile", "callee": "unlinkSync", "argumentDigest": "4460884b08df0d3df026fcf51397d652c88a93f222363872fc24b17aeb43f419", "count": 1 },
+      { "path": "apps/native-host/src/piRuntime.ts", "owner": "constructor", "callee": "mkdirSync", "argumentDigest": "b0747482823e0cae1d9978530bb083caee9c905d049e7f4f78d70b4d38a1f595", "count": 1 },
+      { "path": "apps/native-host/src/piRuntime.ts", "owner": "#writeSessionIndex", "callee": "writeFileSync", "argumentDigest": "7fc7ac6144bb1963fae44de55ed2b838550495d4a6274500087b98490faf36ca", "count": 1 },
+      { "path": "apps/native-host/src/piRuntime.ts", "owner": "#writeSessionIndex", "callee": "renameSync", "argumentDigest": "c9c08485ba702efe8b99e2a965ddea5b168f739a76907a5f222ec03137d2f9ac", "count": 1 },
+      { "path": "apps/native-host/src/piRuntime.ts", "owner": "#writePendingDispatch", "callee": "writeFileSync", "argumentDigest": "d5e51e1d02b7ff862195dcddf4241828894fe2d1890cd39fe0b34ed732851ac9", "count": 1 },
+      { "path": "apps/native-host/src/piRuntime.ts", "owner": "#writePendingDispatch", "callee": "renameSync", "argumentDigest": "cb33ddb10be9c01e7bca7aa594a57dbb29772dd3c32212430267744b6c518d86", "count": 1 },
+      { "path": "apps/native-host/src/piRuntime.ts", "owner": "#promotePendingDispatch", "callee": "writeFileSync", "argumentDigest": "1988ab1513a3f9936f5d5e598a8ce5b531d56224ad615c8b053d8426cb8f5176", "count": 1 },
+      { "path": "apps/native-host/src/piRuntime.ts", "owner": "#promotePendingDispatch", "callee": "unlinkSync", "argumentDigest": "a20687b439b8bec47b96a8df35eb8bf939790515945d41a10f3c80aaea7e3d3c", "count": 1 },
+      { "path": "apps/native-host/src/piRuntime.ts", "owner": "#workspaceCwd", "callee": "mkdirSync", "argumentDigest": "b0747482823e0cae1d9978530bb083caee9c905d049e7f4f78d70b4d38a1f595", "count": 1 },
+      { "path": "apps/native-host/src/piRuntime.ts", "owner": "#openSession", "callee": "writeFileSync", "argumentDigest": "c2eb834ef040d9843fa040f130cddb32cf3829e1475959b4a2af6022d116484e", "count": 1 },
+      { "path": "apps/native-host/src/piRuntime.ts", "owner": "#openSession", "callee": "unlinkSync", "argumentDigest": "1830bdffd7cfaa65b76bab812ebb919cbc3c10694363d8defc1782aaf0f59751", "count": 1 },
+      { "path": "apps/native-host/src/piRuntime.ts", "owner": "#appendFact", "callee": "appendFileSync", "argumentDigest": "1a5473a2fa8749675198045ec6db71d362ae92d1829c39181d3c552128bf0951", "count": 1 },
+      { "path": "apps/native-host/src/piRuntime.ts", "owner": "#appendFact", "callee": "writeFileSync", "argumentDigest": "97fcd28e057cc40adbeb7fd32374c21ffec6297ebf72f168bf59c2deeb181034", "count": 1 },
+      { "path": "apps/native-host/src/piRuntime.ts", "owner": "#appendFact", "callee": "renameSync", "argumentDigest": "1f0f3503a8526138bdf5b5ba29ff57ac97c60cd33f57f2179d6196b982879783", "count": 1 },
+      { "path": "apps/native-host/src/piRuntime.ts", "owner": "#persistSafeSnapshot", "callee": "writeFileSync", "argumentDigest": "9c78e1d295f5c559b2628bebc3f2270d1c351ea4db09e42ba4fb8a56f96740eb", "count": 1 },
+      { "path": "apps/native-host/src/piRuntime.ts", "owner": "#persistSafeSnapshot", "callee": "renameSync", "argumentDigest": "9265158c2fb2ca3fa1639b952f20a55ba3cfbf787a00b1349a23b4205b8b8db0", "count": 1 },
+      { "path": "apps/native-host/src/piRuntime.ts", "owner": "execute", "callee": "unlinkSync", "argumentDigest": "a20687b439b8bec47b96a8df35eb8bf939790515945d41a10f3c80aaea7e3d3c", "count": 2 }
+    ]
+  },
+  "legacyRuntimeSymbols": [
+    "coordinateSelectionSchemaV2",
+    "automationSelectionTranscode",
+    "schema1ProductTranscode",
+    "schema1SelectionTranscode",
+    "migrateComposerDraftStorageV2",
+    "storageOriginUpgrade",
+    "desktopStorageUpgrade",
+    "desktopUserDataProfile",
+    "product-state-v1.sqlite",
+    "omnimind:composer-drafts:v1",
+    "omnimind:composer-drafts:v2",
+    "appshot",
+    "bridgeVersion",
+    "selection-schema-v2"
+  ]
+}
