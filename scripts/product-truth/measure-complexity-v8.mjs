@@ -1655,17 +1655,40 @@ for (const path of candidateGraph.paths.filter((candidatePath) => rawInventoryPa
     ts.forEachChild(node, collectAssignmentWrites);
   };
   collectAssignmentWrites(file);
+  const rawIdentityForGlobalAssignmentAtom = (expression) => {
+    const normalized = normalizedGlobal(expression, lexical.isShadowedAt);
+    const normalizedClasses = classifyGlobal(normalized);
+    if (normalizedClasses) return {
+      specifier: normalized.root,
+      exported: normalized.member ?? "*",
+      classes: normalizedClasses,
+      form: normalized.form ?? "global-identifier",
+    };
+    if (!ts.isIdentifier(expression) || lexical.isShadowedAt(expression, expression.text)) return null;
+    const directRoot = rawUniverse.globalRoots.find((entry) => entry.roots.includes(expression.text));
+    const classes = directRoot?.anyAccess ?? directRoot?.constructOrCall ?? directRoot?.call;
+    return classes ? {
+      specifier: expression.text,
+      exported: "*",
+      classes,
+      form: "global-identifier",
+    } : null;
+  };
   const rawIdentityForAssignmentAtom = (expression) => {
-    if (ts.isIdentifier(expression)) return resolvedBindingAt(expression);
+    if (ts.isIdentifier(expression)) {
+      const binding = resolvedBindingAt(expression);
+      if (binding) return binding;
+    }
     if ((ts.isPropertyAccessExpression(expression) || ts.isElementAccessExpression(expression)) &&
         ts.isIdentifier(expression.expression)) {
       const base = resolvedBindingAt(expression.expression);
-      if (!base) return null;
-      const member = staticMember(expression);
-      if (!member || member.value === null) return null;
-      if (!base.namespace) return { ...base, form: member.form };
-      const classes = classesForModuleExport(base.specifier, member.value);
-      return classes ? { specifier: base.specifier, exported: member.value, classes, form: member.form } : null;
+      if (base) {
+        const member = staticMember(expression);
+        if (!member || member.value === null) return null;
+        if (!base.namespace) return { ...base, form: member.form };
+        const classes = classesForModuleExport(base.specifier, member.value);
+        return classes ? { specifier: base.specifier, exported: member.value, classes, form: member.form } : null;
+      }
     }
     const directLoader = commonJsLoader(expression);
     if (directLoader) {
@@ -1680,7 +1703,7 @@ for (const path of candidateGraph.paths.filter((candidatePath) => rawInventoryPa
       const classes = classesForModuleExport(loader.specifier, member.value);
       return classes ? { specifier: loader.specifier, exported: member.value, classes, form: member.form } : null;
     }
-    return null;
+    return rawIdentityForGlobalAssignmentAtom(expression);
   };
   const assignmentExpressionContainsRaw = (expression, extensionsEnabled) => {
     if (extensionsEnabled && isFiniteTransparentExpressionWrapper(expression)) {

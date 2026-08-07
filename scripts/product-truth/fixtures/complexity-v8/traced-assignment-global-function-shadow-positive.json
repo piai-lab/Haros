@@ -1,0 +1,6 @@
+{
+  "extends": "traced-owner-positive",
+  "virtualFiles": {
+    "scripts/product-truth/sqlite-classifier.ts": "export function classifyLegacyDatabase(Function: (value: string) => string) {\n  let raw;\n  raw = Function as typeof Function;\n  return raw(\"safe\");\n}\n"
+  }
+}
