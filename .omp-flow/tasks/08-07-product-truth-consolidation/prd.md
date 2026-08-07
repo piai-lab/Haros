@@ -155,9 +155,13 @@ Windows quiescence adapter. The underlying evidence remains in the
 - Missing, old, future, duplicate or contradictory state returns `PREBASELINE_RESET_REQUIRED` or a
   generation-specific typed error. Startup never silently resets, shape-upgrades, imports,
   dual-reads or falls back.
-- Before any canonical Product database open/create and before any Web g1 create/hydration, normal
-  runtime performs only exact presence sentinels for the retired Product main/WAL/SHM identities and
-  Web v1/v2 keys. Presence refuses startup/draft mutation without decoding, logging, copying,
+- Before any current Product/service `stores/` mkdir, current database file touch or owner-lock
+  acquisition/publication, normal runtime completes a pre-mutation presence-refusal cut over the
+  owner's full retired main/WAL/SHM set. After acquiring that owner lock it repeats the same complete
+  post-lock cut before current database existence/read/open/create/write or handle mutation. Web
+  completes one full v1/v2 cut before any g1 read/create/hydration/dispatch/mutation. Every required
+  probe and decision dominates the sinks assigned to its stage; a present identity reaches only the
+  typed reset error and cannot reach current I/O. Presence refuses startup/draft mutation without decoding, logging, copying,
   deleting or deriving current content. Product Service production composition and Package
   lifecycle both receive `resolveProductDatabasePath(stateDir)`; no live entry point may construct
   `<lane>/product.sqlite`.
@@ -235,10 +239,11 @@ Windows quiescence adapter. The underlying evidence remains in the
 
 - Measurement uses the inspected base `7582170a277477ba0d71cf70f53e4e0836874a72`, a recorded
   compatibility-deleted unsplit checkpoint `B1`, and the frozen candidate `C`. All three are
-  remeasured with the checked-in `product-truth-complexity-v3` script/config and the same frozen
+  remeasured with the checked-in `product-truth-complexity-v4` script/config and the same frozen
   path/import universe in the Design; a candidate may not redefine scope, extensions, exclusions or
-  semantic counters. V3 supersedes v1 and rejected v2 for all gates. V1/v2 bytes, reports and failed
-  reviews remain immutable provenance and cannot be edited or cited as passing evidence.
+  semantic counters. V4 supersedes rejected v1/v2/v3 for all gates. V1/v2/v3 bytes, reports,
+  handoffs and failed reviews remain immutable provenance and cannot be edited or cited as passing
+  evidence.
 - `B1` is a dedicated, green, compatibility-deleted and first-public-capable commit made before any
   responsibility extraction. Its full immutable commit SHA and clean-tree metric output must be
   recorded before the Store/Coordinator split is handed off; a branch name, working tree, later
@@ -255,38 +260,48 @@ Windows quiescence adapter. The underlying evidence remains in the
 - Product SQL writers outside Store, second Product connections, raw transaction exports, Native
   Host Package lifecycle writers, forbidden compatibility imports and Engine boundary imports of
   the facade are all zero. Required presence-only sentinels are a separate exact allowlist, and
-  noncanonical production Product database composition sites are zero. Facade RPC methods remain
-  exactly 36 and Product tables remain exactly 21.
+  every complete owner-local refusal stage dominates its assigned current-generation I/O sinks.
+  Noncanonical production Product database composition sites are zero. Database consumers are
+  discovered from resolved opener/constructor/receiver identities plus complete wrapper/caller/path/
+  handle dataflow before Product classification; Product-looking text cannot select a sink. Facade
+  RPC methods remain exactly 36 and Product tables remain exactly 21.
 - No new Product table/database/durable state machine, migration platform, per-Engine Product plane,
   generic repository/manager/registry or fallback path is introduced.
-- V3 extracts the five machine-readable boundaries from one pinned accepted Design commit and
+- V4 extracts the five machine-readable boundaries from one pinned accepted Design commit and
   freezes path membership. Design-time edges/sinks are snapshots, not allowlists. Later edges pass
   only between frozen members; outside-set endpoints, computed/unresolved imports or moved
-  responsibility fail. Every candidate Product-database sink is dynamically discovered and must
-  be inside that set with canonical resolver-only provenance; outside, unclassified or competing
-  sinks fail.
+  responsibility fail. Every resolved database opener/constructor invocation is enumerated before
+  Product classification; wrappers, callers, aliases, returned handles and receivers are followed
+  to a fixed point. Every resulting Product consumer must be inside the set with canonical
+  resolver-only provenance; raw, outside, unknown or competing consumers fail. Product, service and
+  Web current-generation sinks are also discovered before CFG dominance is checked; an exact guard
+  that executes after any reachable current sink fails.
   `scripts/check-source-closure.mjs` and every meter/config file are measurement, not tool,
   production or steady-state runtime.
+- The exact configured B0 SHA is observational only for historical semantic violations: it emits
+  complete witnesses while authority/config/membership/graph-integrity defects still fail. Every
+  other candidate and focused semantic fixture treats the same Product-consumer and refusal-cut
+  violations as hard failures. Branch, working-tree or B0 substitution cannot select this mode.
 
 ## Acceptance matrix
 
-| ID | Acceptance claim | Required proof |
-| --- | --- | --- |
-| A1 | Only the exact default root, two lanes and two associated profiles are inspected | path/identity fixtures covering override, canary, repo-local, link, reparse, mode and realpath faults |
-| A2 | Dry-run positively classifies every deletion target and proves protected-fact absence without emitting business content | fixture fingerprints, strict recursive per-fixture receipt decoders, query allowlist, no-follow/hash-copy tests, blocker matrix, SQL spy and sanitized JSON snapshot |
-| A3 | Inspect mutates no source/lock while apply repeats full inspection under exact owner locks and binds mutation to classified bytes or a sealed expected transition | atomic Web-batch trace, Package transition graph, whole-tree write trace, POSIX/Windows adapters, lock identity and real replacement races |
-| A4 | Apply deletes only the allowlist and creates no recoverable copy | before/after tree allowlist, write-spy and absence scans for snapshot/export/restore surfaces |
-| A5 | Every excluded path/key/generation remains byte-identical | seeded exclusion fixture with hashes before/after apply |
-| A6 | Interruption converges only through fresh inspect/apply; inert Package tombstones do not block normal startup | real termination before/after the Web batch and every Package graph edge, stale-lock and tombstone convergence matrix |
-| A7 | Product/service/Web owners create only exact generation 1 from clean absence and all live Product consumers use the canonical Store path | fresh/open/reopen, exact legacy-presence refusal, concrete production composition and partial-creation matrix |
-| A8 | Old/future/unmarked/contradictory generations fail closed | database and Web generation fault matrix with zero write assertions |
-| A9 | The complete unshipped compatibility inventory has zero production caller/import while exact refusal sentinels remain present and non-decoding | v3 resolved-symbol/dataflow classifications and adversarial sentinel fixtures plus current-generation tests |
-| A10 | One Store retains all named compound transactions and SQL authority | static writer/connection gate and transaction fault injection for every named unit |
-| A11 | Coordinator retains Engine-effect semantics without SQL/replay/fallback | catalog/admission/attempt/control/crash tests across Pi and OpenCode |
-| A12 | Web/RPC sees exactly one 36-operation facade; probes/tests are separate | type/API snapshot, wsRpc tests and production caller scan |
-| A13 | Service selects and Host only validates one transcript-bound lane/Package root | dev/packaged process tests covering proof tamper, replay, version/field faults, second/concurrent binding, mismatch/link/sibling-root and no fallback |
-| A14 | Production and conceptual complexity strictly decrease in one coverage-complete frozen universe | immutable v1/rejected-v2 history, Design-pinned v3 boundaries, frozen path/import set, adversarial semantic gates and deterministic v3 B0/B1/C metrics |
-| A15 | Current outbox, Automation, Web safeguard, Package and Engine recovery behavior remains | focused existing suites plus complete real kill/race/write-trace and affected real-process journeys |
+| ID  | Acceptance claim                                                                                                                                                                         | Required proof                                                                                                                                                                        |
+| --- | ---------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- | ------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| A1  | Only the exact default root, two lanes and two associated profiles are inspected                                                                                                         | path/identity fixtures covering override, canary, repo-local, link, reparse, mode and realpath faults                                                                                 |
+| A2  | Dry-run positively classifies every deletion target and proves protected-fact absence without emitting business content                                                                  | fixture fingerprints, strict recursive per-fixture receipt decoders, query allowlist, no-follow/hash-copy tests, blocker matrix, SQL spy and sanitized JSON snapshot                  |
+| A3  | Inspect mutates no source/lock while apply repeats full inspection under exact owner locks and binds mutation to classified bytes or a sealed expected transition                        | atomic Web-batch trace, Package transition graph, whole-tree write trace, POSIX/Windows adapters, lock identity and real replacement races                                            |
+| A4  | Apply deletes only the allowlist and creates no recoverable copy                                                                                                                         | before/after tree allowlist, write-spy and absence scans for snapshot/export/restore surfaces                                                                                         |
+| A5  | Every excluded path/key/generation remains byte-identical                                                                                                                                | seeded exclusion fixture with hashes before/after apply                                                                                                                               |
+| A6  | Interruption converges only through fresh inspect/apply; inert Package tombstones do not block normal startup                                                                            | real termination before/after the Web batch and every Package graph edge, stale-lock and tombstone convergence matrix                                                                 |
+| A7  | Product/service/Web owners create only exact generation 1 from clean absence and all live Product consumers use the canonical Store path                                                 | fresh/open/reopen, Product/service two-stage and Web single-stage exact legacy refusal, concrete production composition and partial-creation matrix                                   |
+| A8  | Old/future/unmarked/contradictory generations fail closed                                                                                                                                | database and Web generation fault matrix with zero write assertions                                                                                                                   |
+| A9  | The complete unshipped compatibility inventory has zero production caller/import while exact refusal sentinels remain present, non-decoding and dominant over all current-generation I/O | v4 resolved-symbol/dataflow/CFG classifications; Product/service/Web positive and late-I/O/bypass fixtures plus current-generation tests                                              |
+| A10 | One Store retains all named compound transactions and SQL authority                                                                                                                      | static writer/connection gate and transaction fault injection for every named unit                                                                                                    |
+| A11 | Coordinator retains Engine-effect semantics without SQL/replay/fallback                                                                                                                  | catalog/admission/attempt/control/crash tests across Pi and OpenCode                                                                                                                  |
+| A12 | Web/RPC sees exactly one 36-operation facade; probes/tests are separate                                                                                                                  | type/API snapshot, wsRpc tests and production caller scan                                                                                                                             |
+| A13 | Service selects and Host only validates one transcript-bound lane/Package root                                                                                                           | dev/packaged process tests covering proof tamper, replay, version/field faults, second/concurrent binding, mismatch/link/sibling-root and no fallback                                 |
+| A14 | Production and conceptual complexity strictly decrease in one coverage-complete frozen universe                                                                                          | immutable rejected v1/v2/v3 history, Design-pinned v4 boundaries, frozen path/import set, opener/handle and refusal-dominance adversarial gates, and deterministic v4 B0/B1/C metrics |
+| A15 | Current outbox, Automation, Web safeguard, Package and Engine recovery behavior remains                                                                                                  | focused existing suites plus complete real kill/race/write-trace and affected real-process journeys                                                                                   |
 
 ## Constraints and non-goals
 
@@ -314,9 +329,9 @@ This revision is the architect repair returned by the failed immutable
 aggressive, limits destruction to the exact old-state allowlist and does not pause for routine
 implementation choices; every protected exclusion remains unchanged. The maintainer's
 [option-1 calibration](decisions/b1-failed-review-repair-calibration.md) additionally binds the
-atomic Web batch and sealed Package graph. The failed [v2 meter Review](reviews/product-truth-complexity-v2.md)
-returns measurement authority to v3 without changing those runtime decisions. A different QbD actor
-must challenge the v3 Design/interface/Work map. A fresh `PASS` authorizes only the
-measurement-only v3 Work; its immutable handoff requires different-actor `PASS` before a
-B1 production receipt may be issued. A changed destructive target or exclusion returns for explicit
-human decision.
+atomic Web batch and sealed Package graph. The failed
+[v3 meter Review](reviews/product-truth-complexity-v3.md) returns measurement authority to v4
+without changing those runtime decisions. A different QbD actor must challenge the v4
+Design/interface/Work map. A fresh zero-finding `PASS` authorizes only the measurement-only v4 Work;
+its immutable handoff requires a zero-finding different-actor `PASS` before a B1 production receipt
+may be issued. A changed destructive target or exclusion returns for explicit human decision.

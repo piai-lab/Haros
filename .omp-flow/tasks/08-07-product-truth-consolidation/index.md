@@ -51,6 +51,12 @@ okf_version: "0.2"
   guards, target allowlist, interruption and error contract.
 - [Package-root handoff](interfaces/package-root-handoff.md) — Service-to-Native-Host root binding,
   validation and failure behavior.
+- [Product-truth complexity v4 repair calibration](decisions/product-truth-complexity-v4-repair-calibration.md)
+  — accepts immutable v3 `FAIL` and limits the repair to complete database-consumer discovery plus
+  dominant legacy refusal.
+- [Product-truth complexity v4 authority](interfaces/product-truth-complexity-v4.md) — frozen
+  Work/universe input, resolved opener/wrapper/caller/handle graph, two-stage Product/service refusal
+  cuts, Web refusal cut and mandatory adversarial matrix.
 - [QbD 1 audit](qbd/design-audit.md) — independent critical findings that triggered the repair
   calibration.
 - [QbD 1 repair audit](qbd/design-repair-audit.md) — independent PASS with zero blockers and three
@@ -66,8 +72,9 @@ okf_version: "0.2"
   B1 safety, measurement or ordering.
 - [B1 LevelDB lockfile boundary-repair audit](qbd/b1-leveldb-lockfile-boundary-repair-audit.md) —
   fresh scoped QbD 2 PASS over the single lockfile addition and its fail-closed dependency gates.
-- [Work map](work/index.md) — five bounded implementation/review Concepts, the immutable unsplit B1
-  stop, exact eleven-path implementation-discovered compatibility boundary, one tool-only lockfile
-  addition, Native Host ordering and complete PRD acceptance coverage before QbD 2.
+- [Work map](work/index.md) — one measurement-only v4 checkpoint followed by five bounded product
+  Works, the immutable unsplit B1 stop, exact eleven-path implementation-discovered compatibility
+  boundary, one tool-only lockfile addition, Native Host ordering and complete PRD acceptance
+  coverage.
 
 This authored index is navigation, not a generated context manifest or dependency graph.

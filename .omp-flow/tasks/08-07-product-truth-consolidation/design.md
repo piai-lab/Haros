@@ -47,23 +47,25 @@ This revision also consumes the failed immutable
 destructive red-team closure without changing the exact deletion allowlist or any protected
 exclusion. The maintainer's [option-1 repair calibration](decisions/b1-failed-review-repair-calibration.md)
 binds the atomic Web batch and sealed Package transition graph. Rejected v2 remains immutable
-history; the [v3 repair calibration](decisions/product-truth-complexity-v3-repair-calibration.md)
-alone defines current measurement authority.
+history, and immutable v3 is rejected evidence after its
+[Review](reviews/product-truth-complexity-v3.md) proved two semantic bypasses. The
+[v4 repair calibration](decisions/product-truth-complexity-v4-repair-calibration.md) alone defines
+current measurement authority and changes no runtime or destructive boundary.
 
 ## Scope and source boundaries
 
-| Responsibility | Intended source boundary | Owns | Must not own |
-| --- | --- | --- | --- |
-| v3 measurement checkpoint | `measure-complexity-v3.mjs`, `complexity-universe-v3.json` and focused fixtures | Design-pinned Work extraction, frozen universe, resolved semantic gates, immutable B0 report | product runtime, direct rebuild behavior, destructive state |
-| direct rebuild tool | `scripts/product-truth/**` plus focused tests | inspect/apply orchestration, ephemeral inspection scratch, stdout result | runtime startup, old-data decoding, state preservation, Package lifecycle |
-| first-public Product Store | exact `apps/service/src/product/productStateStore.ts`; any private SQL file requires a new machine-boundary decision | Product database lifecycle, exact schema, 21 tables, all Product writes/transactions | Engine effects, Web/RPC, second connection |
-| execution coordinator | `apps/service/src/product/productExecutionCoordinator.ts` | execution boundary, catalog memory, prepared handles, subscriptions, effect ordering | SQL, durable state machine, Engine wire |
-| facade | `apps/service/src/product/ProductControlPlane.ts` | Effect service/layer, 36 operations, one error translation | database handle, Engine subscription, diagnostic hooks |
-| production Product composition | `apps/service/src/native-host/executionBoundary.ts` | consume the canonical Product database resolver for both live control-plane and Package lifecycle composition | filename-only/root-level Product path construction |
-| execution leaf | `apps/service/src/product/productExecutionBoundary.ts` | closed types, prepared-handle contract, common Product execution error | Store/facade imports, concrete Engine behavior |
-| Package root owner | existing Service Package lifecycle plus one pure Service resolver | lane/root selection, state/current/LKG/lease/quarantine | Native Host root discovery |
-| Native Host | protocol handshake and Pi runtime validation/loading | validate bound root and exact stage child, native Package load/private state | Package lifecycle selection/write/fallback |
-| Web draft owner | current composer draft domain/store | strict `g1` create/decode/flush | v1/v2 import, broad migration, destructive reset |
+| Responsibility                 | Intended source boundary                                                                                             | Owns                                                                                                                | Must not own                                                              |
+| ------------------------------ | -------------------------------------------------------------------------------------------------------------------- | ------------------------------------------------------------------------------------------------------------------- | ------------------------------------------------------------------------- |
+| v4 measurement checkpoint      | `measure-complexity-v4.mjs`, `complexity-universe-v4.json` and focused fixtures                                      | Design-pinned Work extraction, frozen universe, resolved opener/handle graph, refusal CFG cuts, immutable B0 report | product runtime, direct rebuild behavior, destructive state               |
+| direct rebuild tool            | `scripts/product-truth/**` plus focused tests                                                                        | inspect/apply orchestration, ephemeral inspection scratch, stdout result                                            | runtime startup, old-data decoding, state preservation, Package lifecycle |
+| first-public Product Store     | exact `apps/service/src/product/productStateStore.ts`; any private SQL file requires a new machine-boundary decision | Product database lifecycle, exact schema, 21 tables, all Product writes/transactions                                | Engine effects, Web/RPC, second connection                                |
+| execution coordinator          | `apps/service/src/product/productExecutionCoordinator.ts`                                                            | execution boundary, catalog memory, prepared handles, subscriptions, effect ordering                                | SQL, durable state machine, Engine wire                                   |
+| facade                         | `apps/service/src/product/ProductControlPlane.ts`                                                                    | Effect service/layer, 36 operations, one error translation                                                          | database handle, Engine subscription, diagnostic hooks                    |
+| production Product composition | `apps/service/src/native-host/executionBoundary.ts`                                                                  | consume the canonical Product database resolver for both live control-plane and Package lifecycle composition       | filename-only/root-level Product path construction                        |
+| execution leaf                 | `apps/service/src/product/productExecutionBoundary.ts`                                                               | closed types, prepared-handle contract, common Product execution error                                              | Store/facade imports, concrete Engine behavior                            |
+| Package root owner             | existing Service Package lifecycle plus one pure Service resolver                                                    | lane/root selection, state/current/LKG/lease/quarantine                                                             | Native Host root discovery                                                |
+| Native Host                    | protocol handshake and Pi runtime validation/loading                                                                 | validate bound root and exact stage child, native Package load/private state                                        | Package lifecycle selection/write/fallback                                |
+| Web draft owner                | current composer draft domain/store                                                                                  | strict `g1` create/decode/flush                                                                                     | v1/v2 import, broad migration, destructive reset                          |
 
 The Store remains the one exact production file named above. Any additional private SQL production
 file requires a new Work-map and machine-boundary decision before implementation; readability does
@@ -92,20 +94,26 @@ cross-store transaction owner.
 
 ### Product Store creation/open
 
-1. Acquire the canonical Product owner lock, resolve `<lane>/stores/product.sqlite` from the
-   canonical lane, and revalidate every existing ancestor by identity. Before creating `stores/` or
-   opening the canonical database, perform exact `lstat` presence checks for the retired
-   `product-state-v1.sqlite` main, WAL and SHM paths. Any present member—regardless of contents or
-   type—returns `PREBASELINE_RESET_REQUIRED`; runtime does not open, hash, decode, copy or mutate it.
-2. If absent, create a private regular file and run all 21 table/index DDL statements plus the single
+1. Resolve the three exact retired `product-state-v1.sqlite` main/WAL/SHM identities without
+   touching current `stores/` state. Perform a complete pre-mutation `lstat` presence guard. Any
+   present member—regardless of contents or type—returns `PREBASELINE_RESET_REQUIRED` before a
+   current `stores/` mkdir, current database file touch or Product owner-lock acquire/publish.
+2. After the pre-mutation guard passes, acquire the canonical Product owner lock, resolve
+   `<lane>/stores/product.sqlite` from the canonical lane and revalidate every existing ancestor by
+   identity. While holding the lock, repeat all three exact retired presence probes and decisions.
+   This post-lock guard completes before current database existence/read/open/create/write or
+   handle mutation. Presence again throws `PREBASELINE_RESET_REQUIRED`; runtime does not open, hash,
+   decode, copy or mutate the retired member.
+3. If both guards establish absence, create a private regular file and run all 21 table/index DDL
+   statements plus the single
    `product_meta(schema_generation=1)` insert inside one `BEGIN IMMEDIATE` transaction. Marker insert
    is the last application statement.
-3. Commit, close, fsync the file and parent where supported, reopen read-only, and require marker
+4. Commit, close, fsync the file and parent where supported, reopen read-only, and require marker
    cardinality/value plus exact normalized DDL fingerprint before announcing readiness.
-4. If a crash leaves no application table/marker, treat the file as clean absence and rerun the
+5. If a crash leaves no application table/marker, treat the file as clean absence and rerun the
    complete transaction. If any application object exists without the exact complete marker and
    fingerprint, return `FIRST_PUBLIC_CREATION_INCOMPLETE`; do not drop or alter anything.
-5. On every ordinary open, validate exact marker and fingerprint before exposing a Store method.
+6. On every ordinary open, validate exact marker and fingerprint before exposing a Store method.
    There is no `ALTER`, marker rewrite, shape inference or fallback.
 
 Every production composition site, including `NativeHostProductControlPlaneLive`,
@@ -122,9 +130,11 @@ whenever the DDL fixture changes.
 
 ### service/Automation creation/open
 
-`<lane>/stores/service.sqlite` follows the same transaction/marker/fingerprint rules. Under its
-canonical owner lock, the service owner checks exact retired `state.sqlite` main/WAL/SHM presence
-before any canonical open/create and refuses without reading contents. The service
+`<lane>/stores/service.sqlite` follows the same transaction/marker/fingerprint rules. Before any
+current `stores/` mkdir, service database file touch or service owner-lock acquire/publish, the
+service owner checks the exact retired `state.sqlite` main/WAL/SHM set and refuses without reading
+contents. After acquiring its canonical owner lock it repeats the complete three-member guard
+before any current database existence/read/open/create/write or handle mutation. The service
 persistence owner creates the complete current service schema, not only Automation tables, and
 inserts exactly one `automation_meta(schema_generation=1)` row last. Product and service creation do
 not share a SQLite transaction. Startup accepts one exact current database plus clean absence for the
@@ -151,8 +161,14 @@ version migration; current corruption fails closed and preserves the raw key for
 action outside this checkpoint.
 
 The Service/Product/Web sentinels are ordinary-runtime safety guards, not tool classifiers. Their
-literal identities and call sites form a closed allowlist in the authoritative v3 meter. Data flow
-from a legacy value to a decoder, current encoder, mutation, log or return value is forbidden.
+literal identities and exact owner entries form a closed allowlist in the authoritative v4 meter.
+For Product and service, a complete pre-mutation main/WAL/SHM cut must dominate current `stores/`
+mkdir/file/owner-lock sinks, and a repeated complete post-lock cut must dominate current database
+existence/read/open/create/write and handle mutation. For Web, both v1/v2 probes and decisions must
+execute before every reachable g1 read, create, hydration, dispatch or mutation. A probe/throw pair
+that exists syntactically but is late, conditional, bypassed, swallowed or deferred does not
+satisfy the guard. Data flow from a legacy value to a
+decoder, current encoder, mutation, log or return value is forbidden.
 
 ## Direct rebuild design
 
@@ -342,18 +358,18 @@ transformed database is consulted.
 
 Delete each retired behavior with callers, fixtures, policy and comments:
 
-| Retired surface | Production deletion |
-| --- | --- |
-| two-store selection migration | `selectionSchemaCoordinator`, startup call, schema-1 Product transcode/fixtures and all Product/Automation v1/v2 conversion branches |
-| Product shape upgrades | old filename/version constants, shape-driven `ALTER TABLE`, destructive fact-table replacement and legacy marker checks |
-| Web compatibility | `composerDraftV2Transcode`, bootstrap import/recovery flag, v1/v2 constants, version-agnostic migration, legacy `appshot` schema and historical default reconstruction |
-| inherited origin/profile bridge | `storageOriginUpgrade`, Desktop storage snapshot reader/acknowledger, profile-seed repair/caller and dedicated tests |
-| inherited release bridge | `bridgeVersion`, bridge lane/tag, `0.4.2` policy branches, CLI outputs, comments and tests; current clean release policy stays |
-| monolith leakage | execution types/errors/test fixture and internal/diagnostic methods exposed by facade implementation |
+| Retired surface                 | Production deletion                                                                                                                                                    |
+| ------------------------------- | ---------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| two-store selection migration   | `selectionSchemaCoordinator`, startup call, schema-1 Product transcode/fixtures and all Product/Automation v1/v2 conversion branches                                   |
+| Product shape upgrades          | old filename/version constants, shape-driven `ALTER TABLE`, destructive fact-table replacement and legacy marker checks                                                |
+| Web compatibility               | `composerDraftV2Transcode`, bootstrap import/recovery flag, v1/v2 constants, version-agnostic migration, legacy `appshot` schema and historical default reconstruction |
+| inherited origin/profile bridge | `storageOriginUpgrade`, Desktop storage snapshot reader/acknowledger, profile-seed repair/caller and dedicated tests                                                   |
+| inherited release bridge        | `bridgeVersion`, bridge lane/tag, `0.4.2` policy branches, CLI outputs, comments and tests; current clean release policy stays                                         |
+| monolith leakage                | execution types/errors/test fixture and internal/diagnostic methods exposed by facade implementation                                                                   |
 
 Structural checks use the exact symbol/path inventory from
 [unshipped compatibility research](research/unshipped-compatibility.md), then scan production imports
-and string literals for renamed aliases. The v3 meter makes three exhaustive disjoint reports:
+and string literals for renamed aliases. The v4 meter makes three exhaustive disjoint reports:
 `destructiveToolIdentities`, `requiredLegacyPresenceSentinels` and `forbiddenCompatibility`. The
 required sentinel allowlist fixes exact file, owner function, literal identity, presence-only
 operation and count for Product, service and Web; tainted data-flow, a decoder call, mutation,
@@ -506,101 +522,114 @@ have no compatibility path.
 
 ## Error model
 
-| Layer | Stable class | User/operator meaning |
-| --- | --- | --- |
-| direct tool | exit classes in rebuild interface | target invalid, owner active, classification/inspection blocked or destruction incomplete |
-| protected preflight | bounded `PROTECTED_*` blocker code | protected absence is unproved; report exposes aggregate count/presence only |
-| Product/service open | `PREBASELINE_RESET_REQUIRED` | retired path/marker or unknown generation exists; run explicit inspect/apply while stopped |
-| first creation | `FIRST_PUBLIC_CREATION_INCOMPLETE` | application schema exists without exact generation-1 completion; no automatic repair |
-| Web draft | `COMPOSER_DRAFT_GENERATION_UNSUPPORTED` | legacy/invalid/future key blocks draft hydration/dispatch and remains untouched |
-| Package handshake | bounded v2 handshake/root/binding codes | version/shape/proof/challenge/connection or lane-root identity is inconsistent or unsafe |
-| Package validation | existing Package unavailable/conflict class | exact generation is absent/invalid in bound root; no fallback |
-| Product execution | existing typed Product error | dispatch certainty and recovery semantics remain unchanged |
+| Layer                | Stable class                                | User/operator meaning                                                                      |
+| -------------------- | ------------------------------------------- | ------------------------------------------------------------------------------------------ |
+| direct tool          | exit classes in rebuild interface           | target invalid, owner active, classification/inspection blocked or destruction incomplete  |
+| protected preflight  | bounded `PROTECTED_*` blocker code          | protected absence is unproved; report exposes aggregate count/presence only                |
+| Product/service open | `PREBASELINE_RESET_REQUIRED`                | retired path/marker or unknown generation exists; run explicit inspect/apply while stopped |
+| first creation       | `FIRST_PUBLIC_CREATION_INCOMPLETE`          | application schema exists without exact generation-1 completion; no automatic repair       |
+| Web draft            | `COMPOSER_DRAFT_GENERATION_UNSUPPORTED`     | legacy/invalid/future key blocks draft hydration/dispatch and remains untouched            |
+| Package handshake    | bounded v2 handshake/root/binding codes     | version/shape/proof/challenge/connection or lane-root identity is inconsistent or unsafe   |
+| Package validation   | existing Package unavailable/conflict class | exact generation is absent/invalid in bound root; no fallback                              |
+| Product execution    | existing typed Product error                | dispatch certainty and recovery semantics remain unchanged                                 |
 
 Errors contain component, lane/profile and bounded code only. They do not emit database rows, draft
 values, credentials, raw Engine bytes, endpoints or stored workspace paths.
 
 ## Fault matrix
 
-| Injected fault | Required result | Forbidden result |
-| --- | --- | --- |
-| root/lane/target is link, reparse, hard link, unsafe mode or escape | exit 2 before inspection open/mutation | following, prefix-only acceptance |
-| an intermediate ancestor changes after classification | exit 5/6 before target mutation | trusting initial canonicalization |
-| override/canary/repo-local home supplied | exit 2 | widening target set |
-| Desktop/Service/Host/dev runner or profile is active | exit 3, zero mutation | force kill or ignoring profile lock |
-| POSIX/Windows process adapter times out, truncates or cannot prove current-account ownership | exit 3, zero mutation | interpreting failure as stopped |
-| `inspect` sees any lock state | observes only; live/unknown/malformed/changes exit 3; dead well-formed owner remains `stale-observed` | create/acquire/reap/rename/remove lock |
-| prior apply is SIGKILLed after publishing a well-formed profile/database lock | inspect reports stale; next apply proves dead exact owner, token-renames/reaps and reacquires | age-only reap, permanent wedging or broad lock removal |
-| lock record path/lane/store identity does not match its canonical owner path | exit 3 | accepting a transplanted token |
-| `apply` lifecycle owner live/unknown/malformed/changes | exit 3 before mutation | stale lock deletion by age/name |
-| source bundle changes during scratch copy | exit 5; scratch removed | classifying mixed bytes |
-| source/copy digest differs, no-follow open fails or scratch cleanup is incomplete | exit 5 and no apply | copy-by-path trust or leaked retained copy |
-| WAL contains committed schema/data | exact metadata classification sees current committed schema; source unchanged | main-file-only decision |
-| DB marker matches but DDL fingerprint does not | exit 4 | marker-only deletion |
-| protected registry/declared table missing/extra, value undecodable or closure contradictory | bounded `PROTECTED_*`, exit 4, zero deletion | treating unknown as zero |
-| receipt outer tag is known but a nested object/type/enum/identity is inexact | `PROTECTED_FACT_UNDECODABLE`, exit 4 | shallow truthiness/defaulting |
-| active Package lease or uncertain Run exists | bounded blocker with aggregate count only, zero deletion | whole-file deletion |
-| attachment metadata, pairing credential, auth identity or global configuration exists | bounded blocker with aggregate count only, zero deletion | content logging or whole-file deletion |
-| integrity/FK fails or undeclared business table/column is queried | exit 5/failed test | destructive classification |
-| unknown Web key exists | untouched | broad key enumeration/deletion |
-| v1/v2 key contains malformed text | exact owned key removed only during approved apply | normalization/export |
-| current/LKG/validated/quarantined Package selected | retained byte-identical | cleanup by age |
-| disposable Package child has link/digest/cross-lane contradiction | cleanup blocked | recursive deletion |
-| crash after Package rename | inert `.discarding` tombstone; runtime ignores; rebuild re-inspection required | runtime refusal or Host loading tombstone |
-| full/manifest-only/empty tombstone after abrupt kill | fresh classification reconstructs the exact sealed graph; only its next edge progresses | post-write reseal or unknown-tree removal |
-| abrupt kill before/after atomic Web batch | respectively original targets or all targets absent; reopen proves g1 unchanged | partially committed logical delete set |
-| classified database/profile/Package target is replaced before mutation | seal mismatch, zero mutation of replacement | path-only unlink/delete |
-| crash after any Web/file deletion | remaining fixed targets block startup; fresh inspect/apply | runtime resume/legacy read |
-| unlink/reread/fsync fails | exit 6 and stop | stronger/broader retry |
-| Product/service absent | exact owner-local g1 created | legacy import |
-| crash during first DB DDL transaction | no app schema may retry; partial app schema fails closed | shape repair/drop |
-| one g1 DB valid, other absent | missing owner creates only its database | cross-store migration coordinator |
-| old/future/duplicate marker or DDL mismatch | typed startup failure, zero write | reset/ALTER/fallback |
-| invalid/current Web g1 | invalid fails untouched; current exact hydrates | permissive normalize |
-| legacy Product member or Web v1/v2 exists during normal startup | exact presence-only reset error before canonical create/hydration | g1 creation, old-value decode/import or meter obfuscation |
-| live composition receives a lane stateDir | both control plane and Package lifecycle use `<lane>/stores/product.sqlite` | `<lane>/product.sqlite` second Store |
-| Store transaction fault in named compound command | all affected Product rows/facts roll back | partial cross-object commit |
-| catalog fact commit fails | Coordinator memory unchanged | volatile catalog ahead of durable fact |
-| crash after admission before handle retention | same pre-send unavailable Run, attempt 0 | auto prepare/send/fallback |
-| crash after markSent/observed fact | existing unknown boundary, attempt 1 | Queue return or replay |
-| v1, missing/extra/duplicate hello field | parser rejects before proof/Package/catalog access | legacy parser or last-key-wins acceptance |
-| transcript field or Host echo tampered | proof/readiness rejected before Package/catalog access | authenticating only peer identity |
-| old hello replayed on a fresh/restarted connection | fresh Host challenge makes proof invalid before readiness | accepting historical challenge |
-| concurrent first binding | one pair wins atomically; same-pair connections may proceed, different-pair loses before access | binding overwrite |
-| hello and request coalesced during async binding | request remains buffered until bound or is discarded on failure | pre-binding dispatch |
-| dev/package root sent as userdata or vice versa, or Service/Desktop lane differs | Host rejects hello before Package/catalog access | Host root selection |
-| selected generation only in sibling lane | selected Engine unavailable | sibling lookup or Pi fallback |
+| Injected fault                                                                               | Required result                                                                                       | Forbidden result                                          |
+| -------------------------------------------------------------------------------------------- | ----------------------------------------------------------------------------------------------------- | --------------------------------------------------------- |
+| root/lane/target is link, reparse, hard link, unsafe mode or escape                          | exit 2 before inspection open/mutation                                                                | following, prefix-only acceptance                         |
+| an intermediate ancestor changes after classification                                        | exit 5/6 before target mutation                                                                       | trusting initial canonicalization                         |
+| override/canary/repo-local home supplied                                                     | exit 2                                                                                                | widening target set                                       |
+| Desktop/Service/Host/dev runner or profile is active                                         | exit 3, zero mutation                                                                                 | force kill or ignoring profile lock                       |
+| POSIX/Windows process adapter times out, truncates or cannot prove current-account ownership | exit 3, zero mutation                                                                                 | interpreting failure as stopped                           |
+| `inspect` sees any lock state                                                                | observes only; live/unknown/malformed/changes exit 3; dead well-formed owner remains `stale-observed` | create/acquire/reap/rename/remove lock                    |
+| prior apply is SIGKILLed after publishing a well-formed profile/database lock                | inspect reports stale; next apply proves dead exact owner, token-renames/reaps and reacquires         | age-only reap, permanent wedging or broad lock removal    |
+| lock record path/lane/store identity does not match its canonical owner path                 | exit 3                                                                                                | accepting a transplanted token                            |
+| `apply` lifecycle owner live/unknown/malformed/changes                                       | exit 3 before mutation                                                                                | stale lock deletion by age/name                           |
+| source bundle changes during scratch copy                                                    | exit 5; scratch removed                                                                               | classifying mixed bytes                                   |
+| source/copy digest differs, no-follow open fails or scratch cleanup is incomplete            | exit 5 and no apply                                                                                   | copy-by-path trust or leaked retained copy                |
+| WAL contains committed schema/data                                                           | exact metadata classification sees current committed schema; source unchanged                         | main-file-only decision                                   |
+| DB marker matches but DDL fingerprint does not                                               | exit 4                                                                                                | marker-only deletion                                      |
+| protected registry/declared table missing/extra, value undecodable or closure contradictory  | bounded `PROTECTED_*`, exit 4, zero deletion                                                          | treating unknown as zero                                  |
+| receipt outer tag is known but a nested object/type/enum/identity is inexact                 | `PROTECTED_FACT_UNDECODABLE`, exit 4                                                                  | shallow truthiness/defaulting                             |
+| active Package lease or uncertain Run exists                                                 | bounded blocker with aggregate count only, zero deletion                                              | whole-file deletion                                       |
+| attachment metadata, pairing credential, auth identity or global configuration exists        | bounded blocker with aggregate count only, zero deletion                                              | content logging or whole-file deletion                    |
+| integrity/FK fails or undeclared business table/column is queried                            | exit 5/failed test                                                                                    | destructive classification                                |
+| unknown Web key exists                                                                       | untouched                                                                                             | broad key enumeration/deletion                            |
+| v1/v2 key contains malformed text                                                            | exact owned key removed only during approved apply                                                    | normalization/export                                      |
+| current/LKG/validated/quarantined Package selected                                           | retained byte-identical                                                                               | cleanup by age                                            |
+| disposable Package child has link/digest/cross-lane contradiction                            | cleanup blocked                                                                                       | recursive deletion                                        |
+| crash after Package rename                                                                   | inert `.discarding` tombstone; runtime ignores; rebuild re-inspection required                        | runtime refusal or Host loading tombstone                 |
+| full/manifest-only/empty tombstone after abrupt kill                                         | fresh classification reconstructs the exact sealed graph; only its next edge progresses               | post-write reseal or unknown-tree removal                 |
+| abrupt kill before/after atomic Web batch                                                    | respectively original targets or all targets absent; reopen proves g1 unchanged                       | partially committed logical delete set                    |
+| classified database/profile/Package target is replaced before mutation                       | seal mismatch, zero mutation of replacement                                                           | path-only unlink/delete                                   |
+| crash after any Web/file deletion                                                            | remaining fixed targets block startup; fresh inspect/apply                                            | runtime resume/legacy read                                |
+| unlink/reread/fsync fails                                                                    | exit 6 and stop                                                                                       | stronger/broader retry                                    |
+| Product/service absent                                                                       | exact owner-local g1 created                                                                          | legacy import                                             |
+| crash during first DB DDL transaction                                                        | no app schema may retry; partial app schema fails closed                                              | shape repair/drop                                         |
+| one g1 DB valid, other absent                                                                | missing owner creates only its database                                                               | cross-store migration coordinator                         |
+| old/future/duplicate marker or DDL mismatch                                                  | typed startup failure, zero write                                                                     | reset/ALTER/fallback                                      |
+| invalid/current Web g1                                                                       | invalid fails untouched; current exact hydrates                                                       | permissive normalize                                      |
+| legacy Product member or Web v1/v2 exists during normal startup                              | exact presence-only reset error before canonical create/hydration                                     | g1 creation, old-value decode/import or meter obfuscation |
+| live composition receives a lane stateDir                                                    | both control plane and Package lifecycle use `<lane>/stores/product.sqlite`                           | `<lane>/product.sqlite` second Store                      |
+| Store transaction fault in named compound command                                            | all affected Product rows/facts roll back                                                             | partial cross-object commit                               |
+| catalog fact commit fails                                                                    | Coordinator memory unchanged                                                                          | volatile catalog ahead of durable fact                    |
+| crash after admission before handle retention                                                | same pre-send unavailable Run, attempt 0                                                              | auto prepare/send/fallback                                |
+| crash after markSent/observed fact                                                           | existing unknown boundary, attempt 1                                                                  | Queue return or replay                                    |
+| v1, missing/extra/duplicate hello field                                                      | parser rejects before proof/Package/catalog access                                                    | legacy parser or last-key-wins acceptance                 |
+| transcript field or Host echo tampered                                                       | proof/readiness rejected before Package/catalog access                                                | authenticating only peer identity                         |
+| old hello replayed on a fresh/restarted connection                                           | fresh Host challenge makes proof invalid before readiness                                             | accepting historical challenge                            |
+| concurrent first binding                                                                     | one pair wins atomically; same-pair connections may proceed, different-pair loses before access       | binding overwrite                                         |
+| hello and request coalesced during async binding                                             | request remains buffered until bound or is discarded on failure                                       | pre-binding dispatch                                      |
+| dev/package root sent as userdata or vice versa, or Service/Desktop lane differs             | Host rejects hello before Package/catalog access                                                      | Host root selection                                       |
+| selected generation only in sibling lane                                                     | selected Engine unavailable                                                                           | sibling lookup or Pi fallback                             |
 
 ## Complexity measurement and gates
 
-V1 and the failed v2 candidate/reports are immutable rejected evidence; neither can gate repaired
-B1 or C. The sole current implementation is `product-truth-complexity-v3`, owned by the
-[measurement-only v3 Work](work/product-truth-complexity-v3.md) and exact
-[v3 authority interface](interfaces/product-truth-complexity-v3.md). Its dedicated commit and B0
+V1 and the failed v2/v3 candidates/reports are immutable rejected evidence; none can gate repaired
+B1 or C. The sole current implementation is `product-truth-complexity-v4`, owned by the
+[measurement-only v4 Work](work/product-truth-complexity-v4.md) and exact
+[v4 authority interface](interfaces/product-truth-complexity-v4.md). Its dedicated commit and B0
 report receive different-actor review acceptance before any B1 production receipt. B1 names that
-review receipt and immutable v3 SHA/digests as predecessor and treats all meter bytes read-only.
+review receipt and immutable v4 SHA/digests as predecessor and treats all meter bytes read-only.
 
-V3 extracts one strict machine-readable boundary block from each of the five product Works at the
+V4 extracts one strict machine-readable boundary block from each of the five product Works at the
 accepted Design commit recorded in its assignment. The config pins that Design SHA, normalized
 blocks/digests, design-time glob expansion and exact frozen path-membership set. Design-time resolved
 edges and sinks are diagnostic snapshots, not allowlists. The meter re-extracts from that commit on every run; config self-assertion,
 measured-tree Work edits, working-tree state and candidate-selected path lists have no authority.
 
-At B0/B1/C, V3 resolves the candidate graph afresh. A later edge passes only when both endpoints are
+At B0/B1/C, V4 resolves the candidate graph afresh. A later edge passes only when both endpoints are
 already frozen members, including a materialized future exact path. Any outside-set importer/target,
 computed/unresolved import, candidate-created glob match or responsibility move fails and never
 expands the set. Deleted paths remain with zero lines; future exact paths are already members.
-`scripts/check-source-closure.mjs`, all v1/v2/v3 meter/config files and their evidence are
+`scripts/check-source-closure.mjs`, all v1/v2/v3/v4 meter/config files and their evidence are
 measurement, not production, direct-tool or steady-state runtime.
 
-V3 uses the TypeScript compiler's resolved module/symbol graph and a closed local/interprocedural
-dataflow analysis. Every legacy occurrence has exactly one tool-only, presence-sentinel or forbidden
-class; sentinel values may flow only to boolean presence and the typed reset error. Frozen rules
-dynamically discover every candidate Product-database sink; each must be inside the frozen set and
-derive solely from the canonical resolver without competing provenance. Aliases, helper
-indirection, string/template construction, same-named local
-functions, ignored resolver calls and branch-mixed provenance cannot satisfy the gate. The
-adversarial matrix in the v3 interface is mandatory.
+V4 uses the TypeScript compiler's resolved module/symbol graph, closed interprocedural dataflow and
+owner control-flow graphs. It first enumerates every invocation of resolved portable database
+openers, `Database`/`DatabaseSync` constructors and handle receiver APIs across frozen production;
+only after building parameter/caller/return/alias/branch/handle summaries to a fixed point may it
+classify a component as Product. Immediate argument text, a Product-looking file/callee/variable or
+an after-the-fact sink allowlist has no authority. Canonical resolver flow through a neutral wrapper
+passes; exact raw Product identity through the same wrapper, unknown flow, a mixed branch or a
+Product handle escape fails. Every classified Product consumer must be a frozen member and derive
+solely from the exact canonical resolver declaration.
+
+Every legacy occurrence still has exactly one tool-only, presence-sentinel or forbidden class, and
+sentinel values may flow only to boolean presence and the typed reset error. Independently, V4
+discovers every current-generation Product/service/Web I/O sink from resolved APIs and
+path/key/handle flow. Product/service pre-mutation cuts dominate current stores mkdir/file/lock;
+their post-lock cuts dominate every later current database sink; Web's single complete cut dominates
+every g1 sink. For each stage, every required probe and consuming decision must dominate its sinks,
+and the legacy-present successor must reach the exact typed throw without reaching current I/O.
+Interprocedural CFG includes helper call/return, throw/catch/finally and await rejection edges;
+unsupported callback, Effect, recursion or control flow fails closed. Conditional helpers,
+alternate branches, catch/finally swallowing, later callbacks and sink-before-probe order fail. The
+complete adversarial matrix in the v4 interface is mandatory.
 
 The script still reports physical production/test/tool/measurement lines, exact imports/cycles,
 facade/table/database/writer/state-machine/gateway counters, legacy classifications and Native Host
@@ -614,12 +643,18 @@ Three points are required:
 - `B1`: a dedicated clean repaired commit where direct first-public behavior, presence-only runtime
   refusal and compatibility deletion are green but responsibility extraction has not begun. The
   failed `50deefc1f8e904805c5c990756f3048de33c7ad5` remains immutable rejected evidence and is not B1.
-  The repaired commit's full 40-hex SHA and v3 JSON output
-  are recorded in a checked-in evidence/config update before any Store/Coordinator split work is
-  handed off. Because B1 is produced by that first implementation slice, this Design does not invent
+  The repaired commit's full 40-hex SHA and v4 JSON output are recorded in the linked B1 handoff and
+  its later evidence commit, without changing v4 meter/config bytes, before any Store/Coordinator
+  split work is handed off. Because B1 is produced by that first implementation slice, this Design does not invent
   a pre-existing SHA; absence of the recorded immutable SHA is a mechanical stop for the split, not
   permission to use a branch, working tree, reconstructed patch or B0;
 - `C`: frozen candidate after split and Package-root correction.
+
+The exact configured B0 SHA is observational for historical semantic violations so the baseline can
+be measured without being mislabeled green. Authority extraction, config integrity, membership and
+graph-resolution defects remain hard failures even at B0. Repaired B1, C and every focused semantic
+fixture enforce Product-consumer and refusal-cut violations as hard failures; no other ref or
+working-tree state can select observational mode.
 
 All gates are conjunctive:
 
@@ -635,15 +670,17 @@ All gates are conjunctive:
 7. facade RPC methods = 36; Product tables = 21; Product database = 1; Product durable state machine
    = 1; literal two-Engine gateway = 1;
 8. forbidden compatibility decoder/import/caller count = 0; required Product/service/Web
-   presence-only sentinel set is an exact allowlist; tool-only identities remain confined to the
-   direct tool; noncanonical Product database resolution sites = 0; and no new generic
-   repository/manager/registry, per-Engine plane or migration platform exists.
+   presence-only sentinel set is an exact allowlist and every refusal stage dominates its assigned
+   current-generation sinks; tool-only identities remain confined to the direct tool; every Product
+   database consumer discovered from the complete resolved opener/wrapper/caller/handle graph has
+   canonical-resolver-only provenance; and no new generic repository/manager/registry, per-Engine
+   plane or migration platform exists.
 
 Failure of any gate rejects the candidate even if the largest file is shorter or tests pass.
 
-Execution starts with the bounded measurement-only v3 Work. Its immutable commit, B0 report,
+Execution starts with the bounded measurement-only v4 Work. Its immutable commit, B0 report,
 handoff and different-actor `PASS` are a hard stop before (1) direct first-public creation plus
-compatibility deletion through a green B1 commit measured with those accepted v3 bytes and (2) the
+compatibility deletion through a green B1 commit measured with those accepted v4 bytes and (2) the
 responsibility split. B1 remains one indivisible production Work but no longer creates or freezes a
 meter. The responsibility split cannot start until the B1 handoff records the immutable B1 commit
 and accepted-meter metrics. Package transcript/root work cannot change or bypass either stop.
@@ -662,9 +699,19 @@ and accepted-meter metrics. Package transcript/root work cannot change or bypass
   imports, not only filenames.
 - API/dependency checks enforce one Store writer/connection, exact core edges/no cycles, 36 facade
   methods, 21 tables, leaf boundary and zero Host lifecycle writes/hard-coded package stage.
-- `B0`/repaired-`B1`/`C` metrics use the identical frozen v3 script/config/universe; v1 and rejected
-  v2 evidence remain unchanged. The immutable repaired-B1 commit SHA is checked in before split
-  handoff and all three v3 outputs are linked from the final handoff.
+- `B0`/repaired-`B1`/`C` metrics use the identical frozen v4 script/config/universe; rejected
+  v1/v2/v3 evidence remains unchanged. The immutable repaired-B1 commit SHA is checked in before
+  split handoff and all three v4 outputs are linked from the final handoff.
+- Database semantic fixtures begin from all resolved opener/constructor/receiver calls and cover a
+  canonical neutral wrapper positive, raw Product path behind neutral names, constructor alias,
+  returned-handle receiver and mixed-caller negatives. Renaming neutral wrappers cannot change the
+  classification result.
+- Refusal fixtures include two-stage Product and service main/WAL/SHM positives and a Web v1/v2
+  positive, each with multiple current sinks. Independent negatives put valid current I/O before an
+  otherwise exact refusal and cover bypass branch, conditional helper, present fallthrough,
+  catch swallowing, a `finally` sink, deferred callback/await, missing sidecar, preguard without
+  post-lock guard and unknown Effect/recursion/control flow. Every current sink must have a
+  dominance witness.
 
 ### Destructive fixture verification
 
@@ -721,21 +768,21 @@ affected Campaign claims only as candidate and cannot self-verify completion.
 
 ## Rejected alternatives
 
-| Alternative | Rejection |
-| --- | --- |
-| retain recovery artifact or restore command | contradicts the maintainer's explicit accepted-loss calibration |
-| use current migration then reset | observed older Automation shape is not accepted and compatibility remains a runtime authority |
-| convert only visible facts/drafts | still creates an old-schema input contract and hides irreversible loss |
-| delete the whole home/lane/profile | exceeds the exact authorization and would consume credentials, Engine state and unrelated product data |
-| keep old database filenames with new markers | makes retired bytes and current generation share identity |
-| runtime auto-reset on old state | turns startup into a destructive migration path and removes operator classification |
-| table/object repositories | compound Product transactions require shared raw transactions or partial commits |
-| per-Engine Product plane | duplicates Conversation/Queue/Run/receipt authority |
-| schema/helper extraction only | moves lines without isolating durable state from Engine effects |
-| facade/Coordinator read connections | duplicates Product database lifecycle and writer/lock authority |
-| home-level shared Package root | couples dev and packaged current/LKG/lease state |
-| Native Host root discovery/fallback | creates a second lifecycle selector and hides configuration mismatch |
-| arbitrary LOC threshold | can be gamed by large compatibility deletion; strict B0/B1/C net deltas measure both whole scope and split overhead |
+| Alternative                                  | Rejection                                                                                                           |
+| -------------------------------------------- | ------------------------------------------------------------------------------------------------------------------- |
+| retain recovery artifact or restore command  | contradicts the maintainer's explicit accepted-loss calibration                                                     |
+| use current migration then reset             | observed older Automation shape is not accepted and compatibility remains a runtime authority                       |
+| convert only visible facts/drafts            | still creates an old-schema input contract and hides irreversible loss                                              |
+| delete the whole home/lane/profile           | exceeds the exact authorization and would consume credentials, Engine state and unrelated product data              |
+| keep old database filenames with new markers | makes retired bytes and current generation share identity                                                           |
+| runtime auto-reset on old state              | turns startup into a destructive migration path and removes operator classification                                 |
+| table/object repositories                    | compound Product transactions require shared raw transactions or partial commits                                    |
+| per-Engine Product plane                     | duplicates Conversation/Queue/Run/receipt authority                                                                 |
+| schema/helper extraction only                | moves lines without isolating durable state from Engine effects                                                     |
+| facade/Coordinator read connections          | duplicates Product database lifecycle and writer/lock authority                                                     |
+| home-level shared Package root               | couples dev and packaged current/LKG/lease state                                                                    |
+| Native Host root discovery/fallback          | creates a second lifecycle selector and hides configuration mismatch                                                |
+| arbitrary LOC threshold                      | can be gamed by large compatibility deletion; strict B0/B1/C net deltas measure both whole scope and split overhead |
 
 ## B1 FAIL repair and next workflow entry
 
@@ -749,16 +796,16 @@ runtime refusal sentinels separate from forbidden compatibility, per-target iden
 and a Windows quiescence adapter. The further red-team closure makes nested receipt decoding,
 nofollow/hash copies, intermediate-ancestor checks, database-lock identity, abrupt-kill stale-lock
 recovery, Package tombstone convergence and the complete real kill/race/write-trace matrix explicit.
-The v3 meter supersedes rather than edits frozen v1/rejected-v2 evidence and must remeasure B0, repaired B1
-and C in one universe.
+The v4 meter supersedes rather than edits frozen rejected v1/v2/v3 evidence and must remeasure B0,
+repaired B1 and C in one universe.
 
 The older g50 literal Pi/OpenCode gateway sibling-zero observation remains closed by its same-SHA
 process evidence and is not part of this repair or the next audit absent new contradictory evidence.
 No migration, backup, restore, alias, wrapper or dual compatibility was introduced.
 
 The next workflow output is a new independent QbD audit of this repaired Design/interface/Work map
-by a different actor. A fresh `PASS` with no unresolved blocking consequence authorizes only the
-measurement-only v3 Work. Its immutable handoff must then receive different-actor `PASS` before a
-new B1 production receipt is issued. Any proposed
+by a different actor. A fresh `PASS` with zero blocker and zero advisory authorizes only the
+measurement-only v4 Work. Its immutable handoff must then receive a zero-finding different-actor
+`PASS` before a new B1 production receipt is issued. Any proposed
 new destructive target or weakened exclusion returns for human calibration. This architect does not
 approve its own gate.

@@ -22,8 +22,8 @@ perform, the Coordinator/facade extraction.
 ## Entry stop
 
 This Work begins only after immutable B1, Native Host v2 and the execution-leaf Work have
-different-actor accepted handoffs. It must use the exact B1 recorded by the first handoff for later
-B0/B1/C comparison.
+different-actor accepted handoffs. The B1 chain must bind the accepted immutable v4 meter Review and
+SHA/digests. It must use the exact B1 recorded by the first handoff for later B0/B1/C comparison.
 
 ## Allowed code and output boundary
 
@@ -93,7 +93,7 @@ caller ownership.
 - Run Store/Product focused tests, Package projection/replay tests and Service typecheck. Static
   gates reject a second connection, writer, raw transaction export, table CRUD API or core cycle.
 - Read the frozen complexity instrument without editing it; report the intermediate metrics only.
-- Run the frozen v3 membership gate and dynamic edge/sink classification. The future Store and its
+- Run the frozen v4 membership gate and dynamic edge/sink classification. The future Store and its
   canonical sink may materialize inside the frozen set; any outside-set endpoint/sink,
   unclassified/competing sink or computed/unresolved edge stops for map repair.
 

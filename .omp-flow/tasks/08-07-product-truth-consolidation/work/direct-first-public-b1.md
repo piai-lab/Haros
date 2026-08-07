@@ -10,7 +10,7 @@ title: "Direct first-public rebuild and immutable unsplit B1"
 Implement the exact pre-release `inspect`/`apply` tool, direct generation-1 Product/service/Web
 creation and complete unshipped-compatibility deletion, while keeping Product responsibilities
 mechanically unsplit. Consume the different-actor-accepted immutable
-`product-truth-complexity-v3` meter as a read-only predecessor, then produce one dedicated clean
+`product-truth-complexity-v4` meter as a read-only predecessor, then produce one dedicated clean
 green B1 commit and record its full SHA and metrics without modifying the meter commit.
 This Work realizes PRD A1-A9, the B1 half of A14, and the B1 preservation portion of A15.
 
@@ -32,19 +32,20 @@ This Work realizes PRD A1-A9, the B1 half of A14, and the B1 preservation portio
 - [B1 source-closure disposition boundary PASS approval](../decisions/b1-source-closure-boundary-pass-approval.md)
 - [Unshipped compatibility inventory](../research/unshipped-compatibility.md)
 - [Failed immutable B1 Review](../reviews/direct-first-public-b1.md)
-- [Authoritative v3 meter Work](product-truth-complexity-v3.md) and its required
-  [handoff](../handoffs/product-truth-complexity-v3.md)
+- [Authoritative v4 meter Work](product-truth-complexity-v4.md) and its required
+  [handoff](../handoffs/product-truth-complexity-v4.md)
 
 ## Entry stop
 
-Do not assign or start this Work until `reviews/product-truth-complexity-v3.md` records a
-different-actor `PASS` over the immutable meter-only commit. The B1 assignment must name that review
-receipt as predecessor, record the accepted meter SHA/digests, and use those bytes read-only.
+Do not assign or start this Work until `reviews/product-truth-complexity-v4.md` records a
+zero-finding different-actor `PASS` over the immutable meter-only commit. The B1 assignment must
+name that review receipt as predecessor, record the accepted meter SHA/digests, and use those bytes
+read-only.
 
 ## In scope
 
-- Preserve v1 and rejected-v2 history plus accepted v3 meter/config/fixtures byte-for-byte. Run the
-  accepted v3 bytes against repaired B1; any Design/boundary/universe/semantic/B0 mismatch stops.
+- Preserve rejected v1/v2/v3 history plus accepted v4 meter/config/fixtures byte-for-byte. Run the
+  accepted v4 bytes against repaired B1; any Design/boundary/universe/semantic/B0 mismatch stops.
 - Add the two-command `scripts/product-truth/**` implementation and generated-home fixtures for the
   exact default root, two lanes, two profiles, database/WAL copies, protected-fact registry,
   Package classification, lock/quiescence rules, stdout-only sanitized plan and narrow apply. Use
@@ -54,8 +55,11 @@ receipt as predecessor, record the accepted meter SHA/digests, and use those byt
 - Create exact `<lane>/stores/product.sqlite`, `<lane>/stores/service.sqlite` and
   `omnimind:composer-drafts:g1` authorities from clean absence with marker-last transactions,
   close/reopen validation and typed refusal of every legacy, partial, future or contradictory state.
-  Product/service/Web runtime uses exact presence-only sentinels before current create/open/hydration
-  and never decodes, returns, logs, copies or mutates an old value.
+  Product/service runtime uses a complete main/WAL/SHM pre-mutation cut before current stores
+  mkdir/file/lock, then repeats the complete cut while holding the owner lock before current
+  database read/open/create/write/handle mutation. Web uses its complete v1/v2 cut before every g1
+  read/create/hydration/dispatch/mutation. No owner decodes, returns, logs, copies or mutates an old
+  value.
 - Repair live Service composition so Product control-plane and Product Package-lifecycle startup
   both consume `resolveProductDatabasePath(stateDir)` and never open `<lane>/product.sqlite`.
 - Delete the full Product/Automation selection migration, shape upgrades, Web v1/v2/bootstrap and
@@ -71,7 +75,8 @@ receipt as predecessor, record the accepted meter SHA/digests, and use those byt
 
 The implementer may create or change only:
 
-- `scripts/product-truth/**` except every v1/v2/v3 meter/config/coverage fixture, the root `package.json` entries needed for the two commands,
+- `scripts/product-truth/**` except every v1/v2/v3/v4 meter/config/coverage fixture, the root
+  `package.json` entries needed for the two commands,
   `scripts/package.json` solely to declare one exact non-range direct `classic-level` dependency,
   and the root `bun.lock` solely to record its package-manager-produced scripts-workspace
   resolution and required transitive/platform integrity closure without unrelated lock drift;
@@ -217,8 +222,9 @@ does not authorize an unlisted production path.
 - Product and service create all current tables in independent single transactions and publish the
   exact generation-1 marker/fingerprint last; Web writes/rereads only the strict g1 envelope.
   Partial/old/future/duplicate/contradictory inputs fail with zero repair writes. Runtime exact
-  Product/service/Web presence sentinels refuse before current creation/hydration without decoding,
-  and concrete live composition passes `<lane>/stores/product.sqlite` to both consumers.
+  Product/service pre-mutation and post-lock sentinel cuts plus the Web single cut refuse before the
+  sinks assigned to each stage without decoding, and concrete live composition passes
+  `<lane>/stores/product.sqlite` to both consumers.
 - Scope-aware structural scans find zero runtime caller/import/API/channel/preload exposure,
   comment, fixture or string/search alias for every compatibility surface named by the Design,
   including the contracts/Desktop storage-upgrade bridge, legacy Web `appshot` acceptance and the
@@ -228,17 +234,19 @@ does not authorize an unlisted production path.
   source occurrences, `enableAppSnap` remains the sole current AppSettings key for the capability,
   and legacy input cannot activate it through schema decoding, normalization, fixtures, comments
   or aliases. There is no snapshot, converter, restore, legacy reader, dual-read or hidden copy.
-- The accepted v3 scan reports tool-only identities, exact required presence-only runtime sentinels and
+- The accepted v4 scan reports tool-only identities, exact required presence-only runtime sentinels and
   forbidden compatibility separately. Sentinel allowlisting is exact by path, enclosing symbol,
   literal, presence operation and count, and rejects value flow to a decoder/current encoder/log or
-  mutation. Retired database/key filenames under `scripts/product-truth/**` are reported separately and are
+  mutation. Its owner CFG report additionally proves every required probe/decision dominates the
+  current-generation sinks assigned to that refusal stage and legacy-present flow cannot reach one.
+  Retired database/key filenames under `scripts/product-truth/**` are reported separately and are
   permitted only as exact closed destructive target identities or their matching tool fixtures and
   assertions. They must not be counted as runtime compatibility, removed by an undifferentiated
   string scan, or used as a decoder, normal-startup alias, fallback or old-row conversion path. Any
   unclassified occurrence, including a newly discovered required production/test path outside this
   Work boundary, stops the Work for map repair.
 - The dedicated repaired B1 commit is clean and green, its full 40-hex SHA is recorded, and B0,
-  repaired B1 and later C use the already-frozen v3 instrument. V1/rejected-v2 evidence remains immutable
+  repaired B1 and later C use the already-frozen v4 instrument. Rejected v1/v2/v3 evidence remains immutable
   and failed candidate `50deefc1...` is never reused as repaired B1. A structural scan at B1 reports zero
   production `ProductStateStore`/`ProductExecutionCoordinator` files, symbols, imports or facade
   extraction scaffolds. The evidence-recording commit is distinct from B1.
@@ -253,10 +261,13 @@ does not authorize an unlisted production path.
   write-trace matrices. Cover native Windows enumeration and POSIX `ps`, exact database-lock
   identity, SIGKILL-stale profile locks, intermediate ancestry and Package duplicate/tombstone
   convergence.
-- Run only the accepted v3 SHA/digests for B1 boundary, frozen-membership and resolved semantic
+- Run only the accepted v4 SHA/digests for B1 boundary, frozen-membership and resolved semantic
   proof. Its fixture suite must pass a materialized future Store edge/canonical sink inside the set
   and fail outside-set importer/target/sink, unclassified or competing sink, computed/unresolved
-  import and moved responsibility cases.
+  import and moved responsibility cases. It must also pass canonical neutral-wrapper and complete
+  Product/service/Web refusal positives, and fail neutral generic-wrapper raw Product paths plus
+  valid current-I/O-before-refusal, bypass, conditional-helper, swallowed-throw and deferred-sink
+  negatives for their exact bounded causes.
 - Verify the dependency boundary: `scripts/package.json` has one exact non-range direct
   `classic-level` pin; the root lock's scripts importer and integrity closure match it; a filtered
   lock diff contains no unrelated refresh; and `bun install --frozen-lockfile` leaves `bun.lock`
@@ -264,9 +275,10 @@ does not authorize an unlisted production path.
   closure excludes it, and tracked `apps/**`/`packages/**` imports remain zero.
 - Use process/import/network spies to prove `inspect` and `apply` do not launch Electron, use a
   real-profile Electron reader/writer or perform network access. Compare both historical v1 meter
-  files byte-for-byte with commit `45df49a6afde882d32c1dcd00457c7787d227e4a`, compare v2 rejected evidence and v3 bytes/digests/B0 with the
-  accepted meter handoff and remeasure repaired B1 with those v3 bytes. Prove `bun.lock` is the
-  pinned v3 `dependency` entry and excluded from v3 production LOC/import totals. V1/v2 comparison
+  files byte-for-byte with commit `45df49a6afde882d32c1dcd00457c7787d227e4a`, compare rejected
+  v2/v3 evidence and v4 bytes/digests/B0 with the accepted meter handoff and remeasure repaired B1
+  with those v4 bytes. Prove `bun.lock` is the
+  pinned v4 `dependency` entry and excluded from v4 production LOC/import totals. V1/v2/v3 comparison
   is immutable historical provenance only and cannot satisfy or fail a B1 semantic/universe gate.
 - Verify the source-closure diff is exactly the `adapted-present` 1496→1494 and
   `adapted-removed` 774→776 count transfer plus its deterministic digest, caused only by the two
