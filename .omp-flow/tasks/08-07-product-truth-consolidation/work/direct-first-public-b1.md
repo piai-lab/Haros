@@ -10,7 +10,7 @@ title: "Direct first-public rebuild and immutable unsplit B1"
 Implement the exact pre-release `inspect`/`apply` tool, direct generation-1 Product/service/Web
 creation and complete unshipped-compatibility deletion, while keeping Product responsibilities
 mechanically unsplit. Consume the different-actor-accepted immutable
-`product-truth-complexity-v2` meter as a read-only predecessor, then produce one dedicated clean
+`product-truth-complexity-v3` meter as a read-only predecessor, then produce one dedicated clean
 green B1 commit and record its full SHA and metrics without modifying the meter commit.
 This Work realizes PRD A1-A9, the B1 half of A14, and the B1 preservation portion of A15.
 
@@ -32,19 +32,19 @@ This Work realizes PRD A1-A9, the B1 half of A14, and the B1 preservation portio
 - [B1 source-closure disposition boundary PASS approval](../decisions/b1-source-closure-boundary-pass-approval.md)
 - [Unshipped compatibility inventory](../research/unshipped-compatibility.md)
 - [Failed immutable B1 Review](../reviews/direct-first-public-b1.md)
-- [Accepted v2 meter Work](product-truth-complexity-v2.md) and its required
-  [handoff](../handoffs/product-truth-complexity-v2.md)
+- [Authoritative v3 meter Work](product-truth-complexity-v3.md) and its required
+  [handoff](../handoffs/product-truth-complexity-v3.md)
 
 ## Entry stop
 
-Do not assign or start this Work until `reviews/product-truth-complexity-v2.md` records a
+Do not assign or start this Work until `reviews/product-truth-complexity-v3.md` records a
 different-actor `PASS` over the immutable meter-only commit. The B1 assignment must name that review
 receipt as predecessor, record the accepted meter SHA/digests, and use those bytes read-only.
 
 ## In scope
 
-- Preserve v1 history and the accepted v2 meter/config/coverage fixtures byte-for-byte. Run the
-  accepted v2 bytes against repaired B1; any meter digest, coverage or B0 mismatch stops the Work.
+- Preserve v1 and rejected-v2 history plus accepted v3 meter/config/fixtures byte-for-byte. Run the
+  accepted v3 bytes against repaired B1; any Design/boundary/universe/semantic/B0 mismatch stops.
 - Add the two-command `scripts/product-truth/**` implementation and generated-home fixtures for the
   exact default root, two lanes, two profiles, database/WAL copies, protected-fact registry,
   Package classification, lock/quiescence rules, stdout-only sanitized plan and narrow apply. Use
@@ -71,7 +71,7 @@ receipt as predecessor, record the accepted meter SHA/digests, and use those byt
 
 The implementer may create or change only:
 
-- `scripts/product-truth/**` except every v1/v2 meter/config/coverage fixture, the root `package.json` entries needed for the two commands,
+- `scripts/product-truth/**` except every v1/v2/v3 meter/config/coverage fixture, the root `package.json` entries needed for the two commands,
   `scripts/package.json` solely to declare one exact non-range direct `classic-level` dependency,
   and the root `bun.lock` solely to record its package-manager-produced scripts-workspace
   resolution and required transitive/platform integrity closure without unrelated lock drift;
@@ -82,9 +82,8 @@ The implementer may create or change only:
 - `apps/service/src/config.ts`, `apps/service/src/main.ts`,
   `apps/service/src/config.permissions.test.ts` solely to remove the retired Service-database seed
   from the existing private-path permission fixture while retaining its current safety assertions,
-  `apps/service/src/product/ProductControlPlane.ts`, its existing focused test, and exact new
-  first-public schema/fingerprint private files under `apps/service/src/product/` that do not
-  contain `Store` or `Coordinator` in their production filename or exported symbol;
+  `apps/service/src/product/ProductControlPlane.ts` and its existing focused test; any required new
+  first-public production file stops the Work for boundary repair before implementation;
 - `apps/service/src/native-host/executionBoundary.ts` and its focused test, solely to pass
   `resolveProductDatabasePath(stateDir)` to both live Product-control-plane and Package-lifecycle
   composition and assert the concrete `<lane>/stores/product.sqlite` path; protocol, Engine and
@@ -119,8 +118,9 @@ The implementer may create or change only:
   OpenCode execution, protocol, Session, fixture or journey semantics may change;
 - `scripts/lib/release-update-policy.ts`, `scripts/release-update-policy.json`,
   `scripts/release-update-policy.test.ts`, `scripts/resolve-release-update-policy.ts`,
-  `scripts/prepare-release-update-feed.ts`, `scripts/update-release-package-versions.ts` and
-  callers/tests only to remove the inherited compatibility lane while retaining current policy;
+  `scripts/prepare-release-update-feed.ts`, `scripts/update-release-package-versions.ts` and the
+  exact tests already enumerated in the machine block below, only to remove the inherited
+  compatibility lane while retaining current policy;
 - [handoff](../handoffs/direct-first-public-b1.md).
 
 No other production or dependency path is owned. Product refusal remains in the already-owned
@@ -129,6 +129,66 @@ adapter/seal remains under `scripts/product-truth/**`. In particular this Work m
 `productStateStore.ts`, `productExecutionCoordinator.ts`, `productExecutionBoundary.ts`, a thin
 facade scaffold, migration/backup/restore code, a second plan graph, or Native Host v2/root changes.
 An implementation-discovered required path outside this boundary stops the Work for map repair.
+The machine block below is the sole production/measurement/dependency path classification; prose
+does not authorize an unlisted production path.
+
+```omp-flow-production-boundary-v1
+{
+  "work": "direct-first-public-b1",
+  "production": [
+    { "kind": "exact", "path": "package.json" },
+    { "kind": "exact", "path": "scripts/package.json" },
+    { "kind": "exact", "path": "scripts/product-truth/chromium-leveldb.ts" },
+    { "kind": "exact", "path": "scripts/product-truth/cli.ts" },
+    { "kind": "exact", "path": "scripts/product-truth/contracts.ts" },
+    { "kind": "exact", "path": "scripts/product-truth/database-lock.ts" },
+    { "kind": "exact", "path": "scripts/product-truth/direct-first-public.ts" },
+    { "kind": "exact", "path": "scripts/product-truth/sqlite-classifier.ts" },
+    { "kind": "exact", "path": "apps/service/src/config.ts" },
+    { "kind": "exact", "path": "apps/service/src/main.ts" },
+    { "kind": "exact", "path": "apps/service/src/product/ProductControlPlane.ts" },
+    { "kind": "exact", "path": "apps/service/src/native-host/executionBoundary.ts" },
+    { "kind": "exact", "path": "apps/service/src/opencode/liveJourneyProbe.ts" },
+    { "kind": "exact", "path": "apps/service/src/persistence/AutomationSchema.ts" },
+    { "kind": "exact", "path": "apps/service/src/persistence/SystemCapabilitySchema.ts" },
+    { "kind": "exact", "path": "apps/service/src/persistence/Layers/Sqlite.ts" },
+    { "kind": "exact", "path": "apps/service/src/persistence/automationSelectionTranscode.ts" },
+    { "kind": "exact", "path": "apps/service/src/persistence/selectionSchemaCoordinator.ts" },
+    { "kind": "exact", "path": "apps/service/src/product/schema1ProductMutationFixtures.ts" },
+    { "kind": "exact", "path": "apps/service/src/product/schema1ProductTranscode.ts" },
+    { "kind": "exact", "path": "apps/service/src/product/schema1SelectionTranscode.ts" },
+    { "kind": "exact", "path": "apps/web/src/bootstrap.ts" },
+    { "kind": "exact", "path": "apps/web/src/composerDraftDomain.ts" },
+    { "kind": "exact", "path": "apps/web/src/composerDraftPersistence.ts" },
+    { "kind": "exact", "path": "apps/web/src/composerDraftAttachments.ts" },
+    { "kind": "exact", "path": "apps/web/src/composerDraftStore.ts" },
+    { "kind": "exact", "path": "apps/web/src/components/ChatView.tsx" },
+    { "kind": "exact", "path": "apps/web/src/composerDraftV2Transcode.ts" },
+    { "kind": "exact", "path": "apps/web/src/storageOriginUpgrade.ts" },
+    { "kind": "exact", "path": "apps/web/src/lib/composerImageSource.ts" },
+    { "kind": "exact", "path": "apps/web/src/components/chat/ComposerImageAttachmentChip.tsx" },
+    { "kind": "exact", "path": "apps/web/src/settingsSearchIndex.ts" },
+    { "kind": "exact", "path": "apps/web/src/appSettings.ts" },
+    { "kind": "exact", "path": "apps/desktop/src/main.ts" },
+    { "kind": "exact", "path": "apps/desktop/src/ipcChannels.ts" },
+    { "kind": "exact", "path": "apps/desktop/src/preload.ts" },
+    { "kind": "exact", "path": "apps/desktop/src/desktopStorageUpgrade.ts" },
+    { "kind": "exact", "path": "apps/desktop/src/desktopUserDataProfile.ts" },
+    { "kind": "exact", "path": "packages/contracts/src/ipc.ts" },
+    { "kind": "exact", "path": "scripts/lib/release-update-policy.ts" },
+    { "kind": "exact", "path": "scripts/release-update-policy.json" },
+    { "kind": "exact", "path": "scripts/resolve-release-update-policy.ts" },
+    { "kind": "exact", "path": "scripts/prepare-release-update-feed.ts" },
+    { "kind": "exact", "path": "scripts/update-release-package-versions.ts" }
+  ],
+  "measurement": [
+    { "kind": "exact", "path": "scripts/check-source-closure.mjs" }
+  ],
+  "dependency": [
+    { "kind": "exact", "path": "bun.lock" }
+  ]
+}
+```
 
 ## Done conditions
 
@@ -168,7 +228,7 @@ An implementation-discovered required path outside this boundary stops the Work 
   source occurrences, `enableAppSnap` remains the sole current AppSettings key for the capability,
   and legacy input cannot activate it through schema decoding, normalization, fixtures, comments
   or aliases. There is no snapshot, converter, restore, legacy reader, dual-read or hidden copy.
-- The v2 scan reports tool-only identities, exact required presence-only runtime sentinels and
+- The accepted v3 scan reports tool-only identities, exact required presence-only runtime sentinels and
   forbidden compatibility separately. Sentinel allowlisting is exact by path, enclosing symbol,
   literal, presence operation and count, and rejects value flow to a decoder/current encoder/log or
   mutation. Retired database/key filenames under `scripts/product-truth/**` are reported separately and are
@@ -178,7 +238,7 @@ An implementation-discovered required path outside this boundary stops the Work 
   unclassified occurrence, including a newly discovered required production/test path outside this
   Work boundary, stops the Work for map repair.
 - The dedicated repaired B1 commit is clean and green, its full 40-hex SHA is recorded, and B0,
-  repaired B1 and later C use the already-frozen v2 instrument. The v1 files/output remain immutable
+  repaired B1 and later C use the already-frozen v3 instrument. V1/rejected-v2 evidence remains immutable
   and failed candidate `50deefc1...` is never reused as repaired B1. A structural scan at B1 reports zero
   production `ProductStateStore`/`ProductExecutionCoordinator` files, symbols, imports or facade
   extraction scaffolds. The evidence-recording commit is distinct from B1.
@@ -193,9 +253,10 @@ An implementation-discovered required path outside this boundary stops the Work 
   write-trace matrices. Cover native Windows enumeration and POSIX `ps`, exact database-lock
   identity, SIGKILL-stale profile locks, intermediate ancestry and Package duplicate/tombstone
   convergence.
-- Run the v2 coverage gate over all five product Work boundaries and resolved production import closure at
-  B0 and repaired B1; negative fixtures omit an allowed path, materialize a bounded path, introduce
-  a computed/unresolved import and move an owned responsibility outside the universe.
+- Run only the accepted v3 SHA/digests for B1 boundary, frozen-membership and resolved semantic
+  proof. Its fixture suite must pass a materialized future Store edge/canonical sink inside the set
+  and fail outside-set importer/target/sink, unclassified or competing sink, computed/unresolved
+  import and moved responsibility cases.
 - Verify the dependency boundary: `scripts/package.json` has one exact non-range direct
   `classic-level` pin; the root lock's scripts importer and integrity closure match it; a filtered
   lock diff contains no unrelated refresh; and `bun install --frozen-lockfile` leaves `bun.lock`
@@ -203,9 +264,10 @@ An implementation-discovered required path outside this boundary stops the Work 
   closure excludes it, and tracked `apps/**`/`packages/**` imports remain zero.
 - Use process/import/network spies to prove `inspect` and `apply` do not launch Electron, use a
   real-profile Electron reader/writer or perform network access. Compare both historical v1 meter
-  files byte-for-byte with commit `45df49a6afde882d32c1dcd00457c7787d227e4a`, compare v2 bytes/digests and B0 output with the
-  accepted meter handoff, remeasure repaired B1 with those bytes, and prove `bun.lock` is outside
-  the v2 universe.
+  files byte-for-byte with commit `45df49a6afde882d32c1dcd00457c7787d227e4a`, compare v2 rejected evidence and v3 bytes/digests/B0 with the
+  accepted meter handoff and remeasure repaired B1 with those v3 bytes. Prove `bun.lock` is the
+  pinned v3 `dependency` entry and excluded from v3 production LOC/import totals. V1/v2 comparison
+  is immutable historical provenance only and cannot satisfy or fail a B1 semantic/universe gate.
 - Verify the source-closure diff is exactly the `adapted-present` 1496→1494 and
   `adapted-removed` 774→776 count transfer plus its deterministic digest, caused only by the two
   already-owned `desktopUserDataProfile` deletions; total paths, tree SHA, mappings, algorithms and

@@ -46,15 +46,17 @@ This revision also consumes the failed immutable
 [B1 Review](reviews/direct-first-public-b1.md). It repairs all four findings and the subsequent
 destructive red-team closure without changing the exact deletion allowlist or any protected
 exclusion. The maintainer's [option-1 repair calibration](decisions/b1-failed-review-repair-calibration.md)
-binds the atomic Web batch, sealed Package transition graph and coverage-complete v2 repair.
+binds the atomic Web batch and sealed Package transition graph. Rejected v2 remains immutable
+history; the [v3 repair calibration](decisions/product-truth-complexity-v3-repair-calibration.md)
+alone defines current measurement authority.
 
 ## Scope and source boundaries
 
 | Responsibility | Intended source boundary | Owns | Must not own |
 | --- | --- | --- | --- |
-| v2 measurement checkpoint | `measure-complexity-v2.mjs`, `complexity-universe-v2.json` and focused fixtures | five-Work coverage gate, semantic counters, immutable B0 report | product runtime, direct rebuild behavior, destructive state |
+| v3 measurement checkpoint | `measure-complexity-v3.mjs`, `complexity-universe-v3.json` and focused fixtures | Design-pinned Work extraction, frozen universe, resolved semantic gates, immutable B0 report | product runtime, direct rebuild behavior, destructive state |
 | direct rebuild tool | `scripts/product-truth/**` plus focused tests | inspect/apply orchestration, ephemeral inspection scratch, stdout result | runtime startup, old-data decoding, state preservation, Package lifecycle |
-| first-public Product Store | `apps/service/src/product/productStateStore.ts` and private SQL files | Product database lifecycle, exact schema, 21 tables, all Product writes/transactions | Engine effects, Web/RPC, second connection |
+| first-public Product Store | exact `apps/service/src/product/productStateStore.ts`; any private SQL file requires a new machine-boundary decision | Product database lifecycle, exact schema, 21 tables, all Product writes/transactions | Engine effects, Web/RPC, second connection |
 | execution coordinator | `apps/service/src/product/productExecutionCoordinator.ts` | execution boundary, catalog memory, prepared handles, subscriptions, effect ordering | SQL, durable state machine, Engine wire |
 | facade | `apps/service/src/product/ProductControlPlane.ts` | Effect service/layer, 36 operations, one error translation | database handle, Engine subscription, diagnostic hooks |
 | production Product composition | `apps/service/src/native-host/executionBoundary.ts` | consume the canonical Product database resolver for both live control-plane and Package lifecycle composition | filename-only/root-level Product path construction |
@@ -63,9 +65,9 @@ binds the atomic Web batch, sealed Package transition graph and coverage-complet
 | Native Host | protocol handshake and Pi runtime validation/loading | validate bound root and exact stage child, native Package load/private state | Package lifecycle selection/write/fallback |
 | Web draft owner | current composer draft domain/store | strict `g1` create/decode/flush | v1/v2 import, broad migration, destructive reset |
 
-Private SQL may be split into a small number of files for readability, but only the Store capability
-can import it and only the Store holds the connection. No new shared package is justified by this
-single consumer.
+The Store remains the one exact production file named above. Any additional private SQL production
+file requires a new Work-map and machine-boundary decision before implementation; readability does
+not authorize an out-of-set file. No new shared package is justified by this single consumer.
 
 ## Canonical state layout and first-public contracts
 
@@ -149,7 +151,7 @@ version migration; current corruption fails closed and preserves the raw key for
 action outside this checkpoint.
 
 The Service/Product/Web sentinels are ordinary-runtime safety guards, not tool classifiers. Their
-literal identities and call sites form a closed allowlist in the superseding v2 meter. Data flow
+literal identities and call sites form a closed allowlist in the authoritative v3 meter. Data flow
 from a legacy value to a decoder, current encoder, mutation, log or return value is forbidden.
 
 ## Direct rebuild design
@@ -351,7 +353,7 @@ Delete each retired behavior with callers, fixtures, policy and comments:
 
 Structural checks use the exact symbol/path inventory from
 [unshipped compatibility research](research/unshipped-compatibility.md), then scan production imports
-and string literals for renamed aliases. The superseding v2 meter makes three disjoint reports:
+and string literals for renamed aliases. The v3 meter makes three exhaustive disjoint reports:
 `destructiveToolIdentities`, `requiredLegacyPresenceSentinels` and `forbiddenCompatibility`. The
 required sentinel allowlist fixes exact file, owner function, literal identity, presence-only
 operation and count for Product, service and Web; tainted data-flow, a decoder call, mutation,
@@ -571,72 +573,38 @@ values, credentials, raw Engine bytes, endpoints or stored workspace paths.
 
 ## Complexity measurement and gates
 
-The v1 instrument and its historical B0/failed-B1 outputs are immutable evidence of the rejected
-candidate; they are superseded and cannot gate repaired B1 or C. The sole current measurement
-implementation is a new checked-in `scripts/product-truth/measure-complexity-v2.mjs` with literal
-format `product-truth-complexity-v2` and
-`scripts/product-truth/complexity-universe-v2.json`. V2 is frozen in a dedicated instrument commit
-by [measurement-only Work](work/product-truth-complexity-v2.md), then receives a linked handoff and
-different-actor review acceptance before any B1 production receipt is issued. B1 names that accepted
-review receipt and immutable meter SHA/digests as its predecessor and treats the bytes read-only.
-V2 may not change between B0, repaired B1 and C. A needed
-parser or universe correction invalidates all three v2 outputs and requires a new reviewed version;
-neither v1 nor a mixed-version comparison may be substituted.
+V1 and the failed v2 candidate/reports are immutable rejected evidence; neither can gate repaired
+B1 or C. The sole current implementation is `product-truth-complexity-v3`, owned by the
+[measurement-only v3 Work](work/product-truth-complexity-v3.md) and exact
+[v3 authority interface](interfaces/product-truth-complexity-v3.md). Its dedicated commit and B0
+report receive different-actor review acceptance before any B1 production receipt. B1 names that
+review receipt and immutable v3 SHA/digests as predecessor and treats all meter bytes read-only.
 
-The v2 path universe is candidate-independent and coverage-complete across all five product implementation Work
-Concepts. It includes every allowed production path or bounded production glob, their resolved
-internal production import closure at B0, repaired B1 and C, and every production source extension
-used by the Windows quiescence adapter. The historical roots below are a required subset:
-under `scripts/product-truth/**`, `apps/service/src/product/**`,
-`apps/service/src/native-host/**`, `apps/service/src/persistence/**` and
-`apps/native-host/src/**`, plus these exact composition/compatibility files:
+V3 extracts one strict machine-readable boundary block from each of the five product Works at the
+accepted Design commit recorded in its assignment. The config pins that Design SHA, normalized
+blocks/digests, design-time glob expansion and exact frozen path-membership set. Design-time resolved
+edges and sinks are diagnostic snapshots, not allowlists. The meter re-extracts from that commit on every run; config self-assertion,
+measured-tree Work edits, working-tree state and candidate-selected path lists have no authority.
 
-```text
-apps/service/src/main.ts
-apps/service/src/wsRpc.ts
-apps/service/src/effectServer.ts
-apps/service/src/serverLayers.ts
-apps/web/src/bootstrap.ts
-apps/web/src/composerDraftDomain.ts
-apps/web/src/composerDraftV2Transcode.ts
-apps/web/src/composerDraftPersistence.ts
-apps/web/src/composerDraftAttachments.ts
-apps/web/src/composerDraftStore.ts
-apps/web/src/storageOriginUpgrade.ts
-apps/web/src/components/ChatView.tsx
-apps/web/src/lib/storage.ts
-apps/desktop/src/desktopStorageUpgrade.ts
-apps/desktop/src/desktopUserDataProfile.ts
-packages/contracts/src/native-host/protocol.ts
-packages/contracts/src/product/state.ts
-package.json
-```
+At B0/B1/C, V3 resolves the candidate graph afresh. A later edge passes only when both endpoints are
+already frozen members, including a materialized future exact path. Any outside-set importer/target,
+computed/unresolved import, candidate-created glob match or responsibility move fails and never
+expands the set. Deleted paths remain with zero lines; future exact paths are already members.
+`scripts/check-source-closure.mjs`, all v1/v2/v3 meter/config files and their evidence are
+measurement, not production, direct-tool or steady-state runtime.
 
-The v2 config also contains a reviewable per-Work coverage section for B1, Native Host binding,
-execution leaf, State Store and Coordinator/facade. A machine gate resolves every authored allowed
-production path/glob and internal import edge and fails on omission, a newly materialized allowed
-path, computed/unresolved import or an out-of-universe move of an owned responsibility. Files ending in `.test.*`, `.browser.*`, fixture/snapshot directories, generated files, vendored
-code and task evidence are excluded from production LOC but reported separately when inside the same
-roots. Direct-rebuild tooling is production scope but excluded from the steady-state-runtime
-subtotal. Both v1/v2 meter files are measurement, not direct-tool production. The import universe is every static type/value/dynamic-literal import whose source is in
-the v2 path universe, plus every production import edge from anywhere in the repository into a v2
-path; unresolved, computed or newly externalized imports fail the metric instead of disappearing.
-All semantic counters use exact symbol/table/string rules stored in the v2 config. This same
-universe—not `git diff` or a candidate-authored list—is evaluated at all three points.
+V3 uses the TypeScript compiler's resolved module/symbol graph and a closed local/interprocedural
+dataflow analysis. Every legacy occurrence has exactly one tool-only, presence-sentinel or forbidden
+class; sentinel values may flow only to boolean presence and the typed reset error. Frozen rules
+dynamically discover every candidate Product-database sink; each must be inside the frozen set and
+derive solely from the canonical resolver without competing provenance. Aliases, helper
+indirection, string/template construction, same-named local
+functions, ignored resolver calls and branch-mixed provenance cannot satisfy the gate. The
+adversarial matrix in the v3 interface is mandatory.
 
-The script reports checked-in physical lines, production/test/tool subtotals, import edges and
-strongly connected components, facade method count, Product table count, Product database
-construction sites, Product SQL writer sites, legacy imports/symbols, durable state-machine count
-and Native Host Package lifecycle writes.
-
-V2 additionally resolves every production Product database composition site to its containing
-directory and reports `canonicalProductDatabaseConsumers` and
-`noncanonicalProductDatabaseResolutionSites`. It classifies old identities into three mutually
-exclusive sets: tool-only destructive identities, exact required presence-only runtime sentinels,
-and forbidden compatibility. Required sentinel entries are exact tuples of path, enclosing symbol,
-literal, presence operation and occurrence count; they cannot be satisfied by string splitting,
-computed aliases or decoder imports. A static taint check and focused runtime tests reject any
-legacy value flowing to parsing, normalization, current encoding, mutation, logging or return.
+The script still reports physical production/test/tool/measurement lines, exact imports/cycles,
+facade/table/database/writer/state-machine/gateway counters, legacy classifications and Native Host
+Package lifecycle writes.
 
 Three points are required:
 
@@ -646,7 +614,7 @@ Three points are required:
 - `B1`: a dedicated clean repaired commit where direct first-public behavior, presence-only runtime
   refusal and compatibility deletion are green but responsibility extraction has not begun. The
   failed `50deefc1f8e904805c5c990756f3048de33c7ad5` remains immutable rejected evidence and is not B1.
-  The repaired commit's full 40-hex SHA and v2 JSON output
+  The repaired commit's full 40-hex SHA and v3 JSON output
   are recorded in a checked-in evidence/config update before any Store/Coordinator split work is
   handed off. Because B1 is produced by that first implementation slice, this Design does not invent
   a pre-existing SHA; absence of the recorded immutable SHA is a mechanical stop for the split, not
@@ -673,9 +641,9 @@ All gates are conjunctive:
 
 Failure of any gate rejects the candidate even if the largest file is shorter or tests pass.
 
-Execution starts with the bounded measurement-only v2 Work. Its immutable commit, B0 report,
+Execution starts with the bounded measurement-only v3 Work. Its immutable commit, B0 report,
 handoff and different-actor `PASS` are a hard stop before (1) direct first-public creation plus
-compatibility deletion through a green B1 commit measured with those accepted v2 bytes and (2) the
+compatibility deletion through a green B1 commit measured with those accepted v3 bytes and (2) the
 responsibility split. B1 remains one indivisible production Work but no longer creates or freezes a
 meter. The responsibility split cannot start until the B1 handoff records the immutable B1 commit
 and accepted-meter metrics. Package transcript/root work cannot change or bypass either stop.
@@ -694,9 +662,9 @@ and accepted-meter metrics. Package transcript/root work cannot change or bypass
   imports, not only filenames.
 - API/dependency checks enforce one Store writer/connection, exact core edges/no cycles, 36 facade
   methods, 21 tables, leaf boundary and zero Host lifecycle writes/hard-coded package stage.
-- `B0`/repaired-`B1`/`C` metrics use the identical frozen v2 script/config/universe; v1 bytes and
-  historical output remain unchanged. The immutable repaired-B1 commit SHA is checked in before
-  split handoff and all three v2 outputs are linked from the final handoff.
+- `B0`/repaired-`B1`/`C` metrics use the identical frozen v3 script/config/universe; v1 and rejected
+  v2 evidence remain unchanged. The immutable repaired-B1 commit SHA is checked in before split
+  handoff and all three v3 outputs are linked from the final handoff.
 
 ### Destructive fixture verification
 
@@ -781,7 +749,7 @@ runtime refusal sentinels separate from forbidden compatibility, per-target iden
 and a Windows quiescence adapter. The further red-team closure makes nested receipt decoding,
 nofollow/hash copies, intermediate-ancestor checks, database-lock identity, abrupt-kill stale-lock
 recovery, Package tombstone convergence and the complete real kill/race/write-trace matrix explicit.
-The v2 meter supersedes rather than edits the frozen v1 evidence and must remeasure B0, repaired B1
+The v3 meter supersedes rather than edits frozen v1/rejected-v2 evidence and must remeasure B0, repaired B1
 and C in one universe.
 
 The older g50 literal Pi/OpenCode gateway sibling-zero observation remains closed by its same-SHA
@@ -790,7 +758,7 @@ No migration, backup, restore, alias, wrapper or dual compatibility was introduc
 
 The next workflow output is a new independent QbD audit of this repaired Design/interface/Work map
 by a different actor. A fresh `PASS` with no unresolved blocking consequence authorizes only the
-measurement-only v2 Work. Its immutable handoff must then receive different-actor `PASS` before a
+measurement-only v3 Work. Its immutable handoff must then receive different-actor `PASS` before a
 new B1 production receipt is issued. Any proposed
 new destructive target or weakened exclusion returns for human calibration. This architect does not
 approve its own gate.

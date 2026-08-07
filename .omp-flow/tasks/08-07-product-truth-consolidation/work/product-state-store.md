@@ -27,8 +27,8 @@ B0/B1/C comparison.
 
 ## Allowed code and output boundary
 
-- Create `apps/service/src/product/productStateStore.ts` and, only when needed for readability,
-  private SQL files under `apps/service/src/product/state/` importable solely by the Store.
+- Create `apps/service/src/product/productStateStore.ts`. Any later need for another production SQL
+  file stops for exact Work-map and machine-boundary repair; this Work has no open production glob.
 - Create Store-focused tests and one shared test fixture builder under the existing Product test
   support; do not duplicate the old 4k test setup.
 - Change `apps/service/src/product/ProductControlPlane.ts` and its focused tests to delegate all
@@ -53,6 +53,23 @@ plane is allowed. If implementation proves that any other composition, probe or 
 change, stop and return for Work-map repair; the listed paths do not imply broader directory or
 caller ownership.
 
+```omp-flow-production-boundary-v1
+{
+  "work": "product-state-store",
+  "production": [
+    { "kind": "exact", "path": "apps/service/src/product/productStateStore.ts" },
+    { "kind": "exact", "path": "apps/service/src/product/ProductControlPlane.ts" },
+    { "kind": "exact", "path": "apps/service/src/native-host/executionBoundary.ts" },
+    { "kind": "exact", "path": "apps/service/src/native-host/liveJourneyProbe.ts" },
+    { "kind": "exact", "path": "apps/service/src/native-host/packageCrashProbe.ts" },
+    { "kind": "exact", "path": "apps/service/src/opencode/liveJourneyProbe.ts" },
+    { "kind": "exact", "path": "apps/service/src/serverLayers.ts" }
+  ],
+  "measurement": [],
+  "dependency": []
+}
+```
+
 ## Done conditions
 
 - Static gates report exactly one Product database construction site/connection and zero Product SQL
@@ -76,8 +93,9 @@ caller ownership.
 - Run Store/Product focused tests, Package projection/replay tests and Service typecheck. Static
   gates reject a second connection, writer, raw transaction export, table CRUD API or core cycle.
 - Read the frozen complexity instrument without editing it; report the intermediate metrics only.
-- Run the frozen v2 per-Work coverage gate over every allowed/materialized production path and its
-  resolved internal import closure; any uncovered/computed/unresolved path stops for map repair.
+- Run the frozen v3 membership gate and dynamic edge/sink classification. The future Store and its
+  canonical sink may materialize inside the frozen set; any outside-set endpoint/sink,
+  unclassified/competing sink or computed/unresolved edge stops for map repair.
 
 ## Expected handoff
 

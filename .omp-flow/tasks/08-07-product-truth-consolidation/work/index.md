@@ -36,13 +36,15 @@ not change.
 
 The failed immutable B1 review is now governed by the maintainer's
 [option-1 repair calibration](../decisions/b1-failed-review-repair-calibration.md): one atomic Web
-batch, one sealed Package transition graph and one coverage-complete v2 meter across all five product Works.
+batch and one sealed Package transition graph. The first coverage-complete v2 meter was rejected by
+its immutable [Review](../reviews/product-truth-complexity-v2.md); v3 repairs measurement authority
+without changing any product or destructive boundary.
 No destructive target or protected exclusion changes.
 
 ## Hard ordering
 
 The first implementation checkpoint is the measurement-only
-[coverage-complete v2 meter](product-truth-complexity-v2.md). It changes no measured production
+[coverage-complete v3 meter](product-truth-complexity-v3.md). It changes no measured production
 path, freezes one immutable meter commit plus B0 report, writes its handoff and must receive a
 different-actor `PASS`. No B1 production receipt may be issued before that acceptance; B1 must name
 the accepted meter review receipt and immutable SHA/digests as predecessor.
@@ -50,7 +52,7 @@ the accepted meter review receipt and immutable SHA/digests as predecessor.
 The first production wave is [Direct first-public B1](direct-first-public-b1.md). It remains one
 deliberately indivisible production Work because the destructive tool, first-public
 Product/service/Web creation and compatibility deletion must become green together while
-`ProductControlPlane` is structurally unsplit. It consumes the accepted v2 bytes read-only.
+`ProductControlPlane` is structurally unsplit. It consumes the accepted v3 bytes read-only.
 Its implementer must create a dedicated clean commit, then write the handoff in a later evidence
 commit so the recorded 40-hex B1 SHA remains immutable. No Store, Coordinator, facade or execution
 leaf extraction may be assigned, started or pre-scaffolded before that handoff exists and proves
@@ -71,11 +73,13 @@ closure. The dependency serves `scripts/product-truth/**` only. It cannot enter 
 source profile, and cannot alter either frozen complexity-meter file or its universe. The eleven
 implementation-discovered compatibility production/test paths remain exactly eleven.
 
-V1 meter bytes are immutable history. V2 freezes in its separate Work only after this repair passes
-QbD, covers every product Work's allowed production paths plus resolved internal import closure,
-and fails mechanically on an omitted/newly materialized path, computed/unresolved import or
-out-of-universe responsibility move. After meter review acceptance, every later Work treats it as
-read-only.
+V1 and rejected-v2 meter bytes are immutable history. V3 reads the canonical machine block from
+each of the five product Works at the accepted Design commit, pins every normalized block digest,
+expands any declared design glob once and freezes path membership. Design-time edges/sinks are
+snapshots. Later edges pass only between frozen members; outside-set endpoints, computed/unresolved
+imports, moved responsibility and outside/unclassified/competing database sinks fail mechanically.
+After v3 review acceptance,
+every later Work treats it as read-only.
 An inert `.discarding` tombstone blocks rebuild convergence only; it is never loaded and adds no
 ordinary-runtime sentinel.
 
@@ -110,7 +114,7 @@ three small reviewable steps:
 These three Works are sequential because they edit the same `ProductControlPlane.ts` responsibility
 surface. They must consume the accepted meter and immutable B1 recorded by their handoffs, never a branch, dirty
 tree, reconstructed patch or B0 substitution. Therefore the complete default sequence is:
-accepted v2 meter → accepted B1 → accepted Native Host → accepted execution leaf → accepted
+accepted v3 meter → accepted B1 → accepted Native Host → accepted execution leaf → accepted
 Product State Store → Coordinator/facade C.
 
 ## Acceptance coverage
@@ -130,7 +134,7 @@ Product State Store → Coordinator/facade C.
 | A11 Coordinator effects without SQL/replay/fallback | [Coordinator and facade](product-execution-coordinator-facade.md) |
 | A12 one 36-operation facade and separate probes | [Coordinator and facade](product-execution-coordinator-facade.md) |
 | A13 Service-selected, transcript-bound Package root | [Native Host v2 Package-root binding](native-host-package-root-binding.md) |
-| A14 deterministic complexity decrease in one universe | immutable meter and B0 in [v2 measurement](product-truth-complexity-v2.md); B1 in [Direct first-public B1](direct-first-public-b1.md); C in [Coordinator and facade](product-execution-coordinator-facade.md) |
+| A14 deterministic complexity decrease in one universe | immutable meter and B0 in [v3 measurement](product-truth-complexity-v3.md); B1 in [Direct first-public B1](direct-first-public-b1.md); C in [Coordinator and facade](product-execution-coordinator-facade.md) |
 | A15 current recovery behavior and affected real journeys | focused preservation in every Work; integrated live proof in [Coordinator and facade](product-execution-coordinator-facade.md) |
 
 The three accepted QbD 1 advisories are all hard done conditions of the B1 Work: exact
@@ -145,5 +149,5 @@ Work may submit affected Campaign claims only as `candidate`; no producer may ma
 
 The next workflow entry is a fresh different-actor QbD audit of the meter-order repair across
 Design, the measurement Work, B1 and this map. Only `PASS` with no blocker or advisory authorizes the
-measurement-only v2 assignment. Its immutable handoff then needs different-actor `PASS` before a new
-B1 production receipt. The rejected `50deefc1...` candidate remains historical evidence.
+measurement-only v3 assignment. Its immutable handoff then needs different-actor `PASS` before a new
+B1 production receipt. The rejected v2 Review and candidate remain immutable historical evidence.

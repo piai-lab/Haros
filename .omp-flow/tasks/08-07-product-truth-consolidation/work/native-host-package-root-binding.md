@@ -65,6 +65,31 @@ instrument, Store/Coordinator/facade responsibilities, Package lifecycle state s
 replay cache, protocol alias, v1 reader or second root selector. Because `apps/desktop/src/main.ts`
 overlaps B1 compatibility cleanup, this Work does not run concurrently in the normal shared tree.
 
+```omp-flow-production-boundary-v1
+{
+  "work": "native-host-package-root-binding",
+  "production": [
+    { "kind": "exact", "path": "packages/contracts/src/native-host/protocol.ts" },
+    { "kind": "exact", "path": "apps/service/src/native-host/client.ts" },
+    { "kind": "exact", "path": "apps/service/src/native-host/packageLifecycle.ts" },
+    { "kind": "exact", "path": "apps/service/src/native-host/executionBoundary.ts" },
+    { "kind": "exact", "path": "apps/service/src/product/health/nativeHostHealthMonitor.ts" },
+    { "kind": "exact", "path": "apps/service/src/native-host/liveJourneyProbe.ts" },
+    { "kind": "exact", "path": "apps/service/src/native-host/packageCrashProbe.ts" },
+    { "kind": "exact", "path": "apps/native-host/src/index.ts" },
+    { "kind": "exact", "path": "apps/native-host/src/piRuntime.ts" },
+    { "kind": "exact", "path": "apps/native-host/src/responseFrame.ts" },
+    { "kind": "exact", "path": "apps/desktop/src/process/nativeHostEnvironment.ts" },
+    { "kind": "exact", "path": "apps/desktop/src/process/nativeHostRendezvous.ts" },
+    { "kind": "exact", "path": "apps/desktop/src/process/nativeHostAuthenticatedReadiness.ts" },
+    { "kind": "exact", "path": "apps/desktop/src/process/nativeHostSupervisor.ts" },
+    { "kind": "exact", "path": "apps/desktop/src/main.ts" }
+  ],
+  "measurement": [],
+  "dependency": []
+}
+```
+
 ## Done conditions
 
 - Static gates find exactly one transcript encoder, protocol version 2, exact-field and duplicate-key
@@ -76,8 +101,8 @@ overlaps B1 compatibility cleanup, this Work does not run concurrently in the no
   connections, rejects a different pair and retains zero challenge state after close.
 - Package/catalog/request bytes never dispatch before the binding is ready. A selected generation
   missing from the bound lane is unavailable even when present in the sibling lane.
-- Every allowed production path and resolved internal production import in this Work appears in the
-  frozen v2 per-Work coverage report; an uncovered or newly materialized path stops for map repair.
+- Every production path is a frozen v3 member. Candidate edges are resolved afresh and pass only
+  when both endpoints are frozen; an outside-set endpoint stops for map repair.
 
 ## Verification
 
@@ -93,8 +118,8 @@ overlaps B1 compatibility cleanup, this Work does not run concurrently in the no
   supervision in dev and packaged artifact lanes. Run the existing Native Host live-journey and
   Package-crash probes through v2 in both required process lanes. Use isolated homes and sanitize
   all output.
-- Run the read-only frozen v2 coverage gate and record this Work's covered production paths/import
-  closure; do not edit the meter or accept computed/unresolved/out-of-universe edges.
+- Run the read-only v3 membership/edge gate; do not edit the meter or accept outside-set,
+  computed or unresolved edges.
 
 ## Expected handoff
 

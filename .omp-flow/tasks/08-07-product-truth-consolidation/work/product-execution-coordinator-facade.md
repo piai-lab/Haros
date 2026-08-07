@@ -35,8 +35,10 @@ reconstructing or remeasuring with a revised universe.
 - Reduce `apps/service/src/product/ProductControlPlane.ts` and its tests to the facade/layer,
   delegating state to Store and submit/retry/control/effects to Coordinator.
 - Update `apps/service/src/wsRpc.ts`, `effectServer.ts`, `serverLayers.ts`, `server/readiness.ts`,
-  `main.ts`, their focused tests, and existing Native Host/OpenCode/Product journey probes only for
-  final composition, facade acquisition and diagnostic capability use.
+  `main.ts`, their focused tests, and exactly `native-host/liveJourneyProbe.ts`,
+  `native-host/packageCrashProbe.ts`, `opencode/liveJourneyProbe.ts` and
+  `product/engineJourneyProof.ts` only for final composition, facade acquisition and diagnostic
+  capability use.
 - Update Product/Store/Coordinator test support only to partition existing proof without duplicating
   fixtures.
 - Write [handoff](../handoffs/product-truth-candidate.md).
@@ -45,6 +47,30 @@ The Work may not modify the complexity script/config, B1 commit/evidence, Produc
 count, Native Host transcript/root contract, Engine wire/session behavior, Package lifecycle state,
 Web behavior or compatibility deletion. It may not introduce a generic registry/manager,
 per-Engine Product plane, raw transaction callback or fallback.
+The machine block below is the sole production/measurement/dependency path classification; prose
+does not authorize an unlisted production path.
+
+```omp-flow-production-boundary-v1
+{
+  "work": "product-execution-coordinator-facade",
+  "production": [
+    { "kind": "exact", "path": "apps/service/src/product/productExecutionCoordinator.ts" },
+    { "kind": "exact", "path": "apps/service/src/product/productStateDiagnostics.ts" },
+    { "kind": "exact", "path": "apps/service/src/product/ProductControlPlane.ts" },
+    { "kind": "exact", "path": "apps/service/src/wsRpc.ts" },
+    { "kind": "exact", "path": "apps/service/src/effectServer.ts" },
+    { "kind": "exact", "path": "apps/service/src/serverLayers.ts" },
+    { "kind": "exact", "path": "apps/service/src/server/readiness.ts" },
+    { "kind": "exact", "path": "apps/service/src/main.ts" },
+    { "kind": "exact", "path": "apps/service/src/native-host/liveJourneyProbe.ts" },
+    { "kind": "exact", "path": "apps/service/src/native-host/packageCrashProbe.ts" },
+    { "kind": "exact", "path": "apps/service/src/opencode/liveJourneyProbe.ts" },
+    { "kind": "exact", "path": "apps/service/src/product/engineJourneyProof.ts" }
+  ],
+  "measurement": [],
+  "dependency": []
+}
+```
 
 ## Done conditions
 
@@ -64,7 +90,7 @@ per-Engine Product plane, raw transaction callback or fallback.
   Store/facade, zero Host lifecycle write, zero legacy caller/import and one literal two-Engine
   gateway. Allowed core directions are only facade→Store, facade→Coordinator,
   Coordinator→Store and Coordinator→execution leaf.
-- The frozen v2 instrument reports coverage-complete per-Work/path/import closure and all conjunctive gates: changed-scope and steady-state production
+- The frozen v3 instrument reports Design-pinned path membership, dynamic candidate edges/sinks and all conjunctive gates: changed-scope and steady-state production
   lines C<B0, responsibility slice C<B1, changed import edges C<B0, and every semantic counter at
   the approved value. Failure of any gate rejects C even when tests pass.
 

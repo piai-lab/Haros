@@ -38,6 +38,21 @@ extraction surface. The implementation base must contain that exact B1 commit.
 No Product SQL, schema, Store, Coordinator, facade method, runtime behavior, Package root or wire
 behavior may change. The leaf may import Product contracts and generic libraries only.
 
+```omp-flow-production-boundary-v1
+{
+  "work": "product-execution-leaf",
+  "production": [
+    { "kind": "exact", "path": "apps/service/src/product/productExecutionBoundary.ts" },
+    { "kind": "exact", "path": "apps/service/src/product/ProductControlPlane.ts" },
+    { "kind": "exact", "path": "apps/service/src/product/productExecutionGateway.ts" },
+    { "kind": "exact", "path": "apps/service/src/native-host/executionBoundary.ts" },
+    { "kind": "exact", "path": "apps/service/src/opencode/productBoundary.ts" }
+  ],
+  "measurement": [],
+  "dependency": []
+}
+```
+
 ## Done conditions and verification
 
 - `productExecutionBoundary.ts` owns only closed types, prepared-handle contract, unavailable
@@ -49,8 +64,8 @@ behavior may change. The leaf may import Product contracts and generic libraries
   no new cycle, no SQL/schema/table token in the leaf and no behavior/API snapshot drift.
 - The frozen complexity instrument is read-only and reports the intermediate result without
   treating it as C or changing B1.
-- The frozen v2 coverage gate accounts for every allowed production path and resolved internal
-  import in this Work; omission, computed/unresolved import or responsibility movement stops.
+- The frozen v3 gate accounts for every production path; newly materialized edges pass only between
+  frozen members, while outside-set, computed/unresolved or moved-responsibility cases stop.
 
 ## Expected handoff
 

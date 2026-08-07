@@ -235,10 +235,10 @@ Windows quiescence adapter. The underlying evidence remains in the
 
 - Measurement uses the inspected base `7582170a277477ba0d71cf70f53e4e0836874a72`, a recorded
   compatibility-deleted unsplit checkpoint `B1`, and the frozen candidate `C`. All three are
-  remeasured with the checked-in `product-truth-complexity-v2` script/config and the same frozen
+  remeasured with the checked-in `product-truth-complexity-v3` script/config and the same frozen
   path/import universe in the Design; a candidate may not redefine scope, extensions, exclusions or
-  semantic counters. The v2 meter supersedes v1 for all gates. The v1 script/config and historical
-  B0/failed-B1 output remain immutable provenance and cannot be edited or cited as passing evidence.
+  semantic counters. V3 supersedes v1 and rejected v2 for all gates. V1/v2 bytes, reports and failed
+  reviews remain immutable provenance and cannot be edited or cited as passing evidence.
 - `B1` is a dedicated, green, compatibility-deleted and first-public-capable commit made before any
   responsibility extraction. Its full immutable commit SHA and clean-tree metric output must be
   recorded before the Store/Coordinator split is handed off; a branch name, working tree, later
@@ -259,12 +259,14 @@ Windows quiescence adapter. The underlying evidence remains in the
   exactly 36 and Product tables remain exactly 21.
 - No new Product table/database/durable state machine, migration platform, per-Engine Product plane,
   generic repository/manager/registry or fallback path is introduced.
-- Before v2 freezes, its candidate-independent coverage manifest includes every production path
-  allowed by all five product implementation Work Concepts and the resolved internal production import closure that can
-  carry those responsibilities. The meter emits a per-Work coverage report and fails on an omitted
-  allowed path, newly resolved production path, computed/unresolved import or responsibility move
-  outside the universe at B0, repaired B1 or C. Meter/config files count as measurement, not tool or
-  steady-state production.
+- V3 extracts the five machine-readable boundaries from one pinned accepted Design commit and
+  freezes path membership. Design-time edges/sinks are snapshots, not allowlists. Later edges pass
+  only between frozen members; outside-set endpoints, computed/unresolved imports or moved
+  responsibility fail. Every candidate Product-database sink is dynamically discovered and must
+  be inside that set with canonical resolver-only provenance; outside, unclassified or competing
+  sinks fail.
+  `scripts/check-source-closure.mjs` and every meter/config file are measurement, not tool,
+  production or steady-state runtime.
 
 ## Acceptance matrix
 
@@ -278,12 +280,12 @@ Windows quiescence adapter. The underlying evidence remains in the
 | A6 | Interruption converges only through fresh inspect/apply; inert Package tombstones do not block normal startup | real termination before/after the Web batch and every Package graph edge, stale-lock and tombstone convergence matrix |
 | A7 | Product/service/Web owners create only exact generation 1 from clean absence and all live Product consumers use the canonical Store path | fresh/open/reopen, exact legacy-presence refusal, concrete production composition and partial-creation matrix |
 | A8 | Old/future/unmarked/contradictory generations fail closed | database and Web generation fault matrix with zero write assertions |
-| A9 | The complete unshipped compatibility inventory has zero production caller/import while exact refusal sentinels remain present and non-decoding | v2 forbidden-compatibility/sentinel classifications plus current-generation and legacy-presence tests |
+| A9 | The complete unshipped compatibility inventory has zero production caller/import while exact refusal sentinels remain present and non-decoding | v3 resolved-symbol/dataflow classifications and adversarial sentinel fixtures plus current-generation tests |
 | A10 | One Store retains all named compound transactions and SQL authority | static writer/connection gate and transaction fault injection for every named unit |
 | A11 | Coordinator retains Engine-effect semantics without SQL/replay/fallback | catalog/admission/attempt/control/crash tests across Pi and OpenCode |
 | A12 | Web/RPC sees exactly one 36-operation facade; probes/tests are separate | type/API snapshot, wsRpc tests and production caller scan |
 | A13 | Service selects and Host only validates one transcript-bound lane/Package root | dev/packaged process tests covering proof tamper, replay, version/field faults, second/concurrent binding, mismatch/link/sibling-root and no fallback |
-| A14 | Production and conceptual complexity strictly decrease in one coverage-complete frozen universe | immutable v1 history, frozen v2 script/config, machine-failing five-Work/closure coverage reports and deterministic v2 B0/B1/C metrics |
+| A14 | Production and conceptual complexity strictly decrease in one coverage-complete frozen universe | immutable v1/rejected-v2 history, Design-pinned v3 boundaries, frozen path/import set, adversarial semantic gates and deterministic v3 B0/B1/C metrics |
 | A15 | Current outbox, Automation, Web safeguard, Package and Engine recovery behavior remains | focused existing suites plus complete real kill/race/write-trace and affected real-process journeys |
 
 ## Constraints and non-goals
@@ -312,8 +314,9 @@ This revision is the architect repair returned by the failed immutable
 aggressive, limits destruction to the exact old-state allowlist and does not pause for routine
 implementation choices; every protected exclusion remains unchanged. The maintainer's
 [option-1 calibration](decisions/b1-failed-review-repair-calibration.md) additionally binds the
-atomic Web batch, sealed Package graph and five-Work v2 coverage repair. A different QbD actor must
-challenge the repaired Design/interface/Work map and v2 meter boundary. A fresh `PASS` authorizes
-only the measurement-only v2 Work; its immutable handoff requires different-actor `PASS` before a
+atomic Web batch and sealed Package graph. The failed [v2 meter Review](reviews/product-truth-complexity-v2.md)
+returns measurement authority to v3 without changing those runtime decisions. A different QbD actor
+must challenge the v3 Design/interface/Work map. A fresh `PASS` authorizes only the
+measurement-only v3 Work; its immutable handoff requires different-actor `PASS` before a
 B1 production receipt may be issued. A changed destructive target or exclusion returns for explicit
 human decision.
