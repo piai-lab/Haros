@@ -3,9 +3,9 @@ type: "Handoff"
 title: "Authoritative Product-truth complexity v7 meter"
 work: "../work/product-truth-complexity-v7.md"
 status: "DONE"
-actor_id: "product_truth_meter_v7_r4"
-dispatch_receipt: "4286c6cd27b04b3d8a0fdf020c18f9bc"
-predecessor_receipt: "aa39020d76a7462994667e95bc097b74"
+actor_id: "product_truth_meter_v7_r5"
+dispatch_receipt: "10dd37a4714e4fed913d3863fe0166d1"
+predecessor_receipt: "4286c6cd27b04b3d8a0fdf020c18f9bc"
 predecessor_output: "../handoffs/product-truth-complexity-v7.md"
 ---
 
@@ -14,12 +14,13 @@ predecessor_output: "../handoffs/product-truth-complexity-v7.md"
 ## Result
 
 `DONE` — the measurement-only v7 authority is frozen and pushed at immutable commit
-`4c1e33d411d9b7b2a5332e5f5211545fc1c721a1`. This r4 candidate repairs the sole P0 in the
-[failed r3 Review](../reviews/product-truth-complexity-v7.md): scope-correct simple assignment aliases
-of accepted wrappers, global roots and terminals now enter the raw inventory. Multiple, unresolved,
-compound, update, destructuring and property writes involving a raw alias fail closed. R4 preserves
-r3's full frozen inventory, direct CommonJS and declaration-alias repairs. The r4 commit changes only
-the allowed v7 meter, focused test and 11 bounded structural fixtures. It changes no Product
+`5c3e61999e1d406873c957dd9dbb6847cc2487b9`. This r5 candidate repairs the sole P0 in the
+[failed r4 Review](../reviews/product-truth-complexity-v7.md): finite right-associative simple
+assignment chains now preserve accepted wrapper, global-root and terminal identities across every
+eligible lexical LHS. An unresolved nested LHS fails closed. R5 preserves r4's scope-correct
+single-assignment alias closure and all earlier frozen inventory, CommonJS and declaration-alias
+repairs. The r5 commit changes only the allowed v7 meter, focused test and two bounded structural
+fixtures. It changes no Product
 production, dependency, direct-rebuild implementation, five Work fence, config authority, v1-v6
 evidence or user-state path.
 
@@ -38,11 +39,13 @@ production implementation or destructive execution is authorized before a zero-f
   CommonJS/global-destructure P0.
 - Failed r3 Review: [product-truth-complexity-v7](../reviews/product-truth-complexity-v7.md), receipt
   `04c8dca6c3284781a994bd286586429a`, P0 assignment-alias omission.
-- Superseded rejected r3 candidate: `8429e2a4f6d21f5a8cec44e5cf67a33855d36e8e`.
-- Implementer actor: `product_truth_meter_v7_r4`.
-- Dispatch receipt: `4286c6cd27b04b3d8a0fdf020c18f9bc`.
-- Predecessor implementation receipt: `aa39020d76a7462994667e95bc097b74`.
-- Immutable meter commit: `4c1e33d411d9b7b2a5332e5f5211545fc1c721a1`.
+- Failed r4 Review: [product-truth-complexity-v7](../reviews/product-truth-complexity-v7.md), receipt
+  `135c539ca5f84e3182560bb314ce3497`, P0 assignment-chain omission.
+- Superseded rejected r4 candidate: `4c1e33d411d9b7b2a5332e5f5211545fc1c721a1`.
+- Implementer actor: `product_truth_meter_v7_r5`.
+- Dispatch receipt: `10dd37a4714e4fed913d3863fe0166d1`.
+- Predecessor implementation receipt: `4286c6cd27b04b3d8a0fdf020c18f9bc`.
+- Immutable meter commit: `5c3e61999e1d406873c957dd9dbb6847cc2487b9`.
 - Historical B0 reference: `7582170a277477ba0d71cf70f53e4e0836874a72`.
 
 The meter reads Git-tree bytes only. Five exact Work blocks and the raw-effect, effect-ingress and
@@ -53,19 +56,19 @@ operation, state, effect class, selector, dependency disposition or expected ver
 ## Frozen instrument and authority
 
 ```text
-v7 script                     f51b84a7b9ad299e5d3b3f3ef7d357e502d6043e60f3d071408bb7e9d54ffb35
+v7 script                     d2ee14dbe4be887d5e01efa76e57ae87cf435ba2ece5cb0280baf2e5e4682ad2
 v7 config                     79832f82fe60e66cb8ba3f2bb0ed10e91d3557980795732c14ce81a9ff3a8712
-v7 focused test               30739097644fa827e3e918acd0064b7500b0e271f09de4088be88aaba86a9e27
-62-fixture aggregate          b2a8b562863f886564bf674ba0812a34200b9c94b07e7ef9a50864af90d9d510
+v7 focused test               01b98f4adbece5ff14a31862d923b2b625f97c2b69fb1d985ec66870facc7a90
+64-fixture aggregate          b35b0b57891ba7033c893dfe6a504bcb5edc31e286fa5e04e44846f692369036
 frozen membership             3add77daab3e57ad284e4d7924db9a9b0598befd26f1dc4fed7d21eef886a7ef
 frozen membership paths       1093
 v1-v6 aggregate manifest      73fb340a92e2eb516deff9b423650155bd9929a377bffeec555ef01a4b466492
 ```
 
 The fixture aggregate hashes the sorted relative-path/SHA-256 manifest under
-`fixtures/complexity-v7`. Post-freeze `git diff --name-status SHA^ SHA` reports only 13 allowed r4
-paths: the script and focused test modified, plus 11 added fixtures. The config is byte-identical
-to r3 and the full v7 fixture universe is 62 files. The script remains executable; all
+`fixtures/complexity-v7`. Post-freeze `git diff --name-status SHA^ SHA` reports only four allowed r5
+paths: the script and focused test modified, plus two added fixtures. The config is byte-identical
+to r4 and the full v7 fixture universe is 64 files. The script remains executable; all
 fixture/config/test files are regular non-executable blobs.
 
 The five accepted Work boundary digests are:
@@ -137,6 +140,14 @@ to that raw alias, or a compound, update, destructuring or property write, emits
 Benign local assignments and truly shadowed local-root assignments remain adjacent positives. The
 meter records this finite syntactic binding fact without interpreting branch order or runtime value.
 
+R5 recursively unwraps only finite right-associative simple `Identifier = expression` chains. Each
+left identifier must resolve to an existing current or ancestor lexical binding; every eligible LHS
+receives the same accepted wrapper, global-root or terminal identity for subsequent syntactic uses.
+An unresolved nested binding, non-identifier LHS, mixed operator, duplicate write or unknown raw
+write remains `RAW_ALIAS_WRITE_UNKNOWN`. A three-level raw chain in a closure-only frozen member is
+the negative witness; an adjacent three-level ordinary-object chain is the positive. This adds no
+branch/order claim, CFG, SSA, points-to or runtime value interpretation.
+
 The script contains no candidate verdict input and no CFG/ICFG, SSA, points-to, Promise/task,
 Effect, catch/finally, scheduler, resource-lifetime or semantic-overlay interpreter. It does not
 claim cleanup, refusal order, path provenance, lock lifetime, scheduling, exception identity, race
@@ -148,7 +159,7 @@ fault/race/kill verifier and source Review.
 Two distinct post-freeze temporary outputs are byte-identical:
 
 ```text
-B0 JSON SHA-256               9eda5674438dc7c8e3e20dacb8afe8a03252ee8285f0b33c2fdd523f12bccfce
+B0 JSON SHA-256               aa114aeb6239dffdc10ef8023ea3399bb9e8705f5960560e5766d80abe06b16c
 production / steady           266070 / 266070
 direct rebuild tool           0
 measurement                   212
@@ -173,13 +184,13 @@ volatile variables `3`, and production monolith importers `10`.
 
 ## Verification
 
-- `bunx vitest run scripts/product-truth/measure-complexity-v7.test.ts` — `65/65` PASS post-freeze
-  in `124.55s`; all 62 fixture files are referenced.
+- `bunx vitest run scripts/product-truth/measure-complexity-v7.test.ts` — `67/67` PASS post-freeze
+  in `130.98s`; all 64 fixture files are referenced.
 - Two complete post-freeze B0 executions in distinct `mktemp` files — byte-identical; report digest
   above.
 - `bun run --cwd scripts typecheck` — PASS post-freeze.
 - `git diff --check` — PASS before and after freeze.
-- Frozen r4 scope — PASS: exactly two allowed v7 modifications and 11 allowed fixture additions;
+- Frozen r5 scope — PASS: exactly two allowed v7 modifications and two allowed fixture additions;
   no config, production, dependency, v1-v6, Work, verifier or user-state path changed.
 - V1-v6 script/config/test SHA-256 values match their immutable expected values; the focused test
   asserts every individual digest.
@@ -201,7 +212,7 @@ opened, inspected, deleted or migrated.
 
 ## Mandatory next stop
 
-A different actor must re-review commit `4c1e33d411d9b7b2a5332e5f5211545fc1c721a1` and this handoff in
+A different actor must re-review commit `5c3e61999e1d406873c957dd9dbb6847cc2487b9` and this handoff in
 `reviews/product-truth-complexity-v7.md`. Only a zero-finding `PASS` may authorize B1 to consume the
 immutable v7 SHA and digests. The reviewer must reject any claim that v7 statically proved cleanup,
 refusal, locking, scheduling, fault, race or crash-convergence behavior.
