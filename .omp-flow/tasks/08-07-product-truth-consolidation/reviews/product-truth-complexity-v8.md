@@ -1,111 +1,106 @@
 ---
 type: "Implementation Review"
-title: "Review: Authoritative Product-truth complexity v8 predecessor-delta meter (r4)"
+title: "Review: Authoritative Product-truth complexity v8 predecessor-delta meter (r5)"
 work: "../work/product-truth-complexity-v8.md"
 handoff: "../handoffs/product-truth-complexity-v8.md"
 verdict: "FAIL"
-revision: "review-product-truth-complexity-v8-r4"
-actor_id: "product_truth_complexity_v8_review_r4"
-dispatch_receipt: "2e2090f1980c4b6a902ea18fd5b72686"
-predecessor_receipt: "47eeda5671af4eb09bb3d9cf99bff89a"
+revision: "review-product-truth-complexity-v8-r5"
+actor_id: "product_truth_complexity_v8_review_r5"
+dispatch_receipt: "7a440728819142e79347b1b496f8a7a4"
+predecessor_receipt: "3ce076bb899e448aa230344f1b823f4f"
 predecessor_output: "../handoffs/product-truth-complexity-v8.md"
-reviewed_candidate: "7c6107f2b9d5ffccacdde515d943ff6a5cb7992f"
-reviewed_handoff_commit: "9aa5ba14152f8d1800680813a0f6d1e518a510b2"
-reviewed_parent: "8289941aa084fdccf7a3e95d10a0ad6d250e3a3a"
+reviewed_candidate: "6134f3115b8023c1603c705cff55ba6833ca06c2"
+reviewed_handoff_commit: "6292b8c6b4f139282b499d873676a3b131a707d9"
+reviewed_parent: "3585a87601743fcc95fd7bc7aec84bc116c98692"
 accepted_design: "23b309b0da3ae65a7809002090a539f6c7ee7c51"
-report_sha256: "bd370246d4e3f90b114f9781607ad17200312e2eafbe3e15cfc38b7c7916b8bc"
+report_sha256: "4b71ab359df15c240a2ce78d7521453c8c5b1f5ac6c093374bf0fb747ce927a4"
 ---
 
-# Review: Authoritative Product-truth complexity v8 predecessor-delta meter (r4)
+# Review: Authoritative Product-truth complexity v8 predecessor-delta meter (r5)
 
 ## Verdict
 
-`FAIL` / changes requested for immutable r4 candidate
-`7c6107f2b9d5ffccacdde515d943ff6a5cb7992f`.
+`FAIL` / changes requested for immutable r5 candidate
+`6134f3115b8023c1603c705cff55ba6833ca06c2`.
 
 The completed predecessor operation resolves to the linked handoff, the handoff links back to the
-assigned Work and r4 candidate, and implementer `product_truth_complexity_v8_impl_r4` differs from
-reviewer `product_truth_complexity_v8_review_r4`. Candidate scope, v1-v7 immutability, five Work
-fences, v8 authority, official evidence tuple, deterministic B0, authored 64-case suite, v7
+assigned Work and r5 candidate, and implementer `product_truth_complexity_v8_impl_r5` differs from
+reviewer `product_truth_complexity_v8_review_r5`. Candidate scope, v1-v7 immutability, five Work
+fences, v8 authority, official evidence tuple, deterministic B0, authored 69-case suite, v7
 regressions and typecheck reproduce.
 
-R4 closes the exact r3 examples: parenthesized/nested `as`, `satisfies` and angle-bracket assertion
-forms are normalized; value-different lifecycle composition passes; safe same-name module exports
-pass; direct raw exports and export specifier aliases fail. It also retains all r1/r2 repairs. Two
-fresh structural forms still bypass mandatory hard failures: one finite type-only wrapper evades the
-move witness, and one direct destructuring export evades raw-public-export detection. No
+R5 closes both exact r4 examples: non-null and arbitrarily nested finite type-only wrappers are
+normalized, direct raw object destructuring is rejected, and harmless nested object/array binding
+exports pass. All earlier r1-r3 controls also retain their intended outcomes. One material lexical
+binding gap remains: destructuring from an already-bound raw module namespace never receives the
+declaration-scoped raw identity, so both true raw uses and public exports can pass. No
 implementation, handoff, meter, Product or user-state file was repaired in this review.
 
 ## Findings
 
-### P0 — a non-null assertion still bypasses the normalized move witness
+### P0 — namespace-derived destructuring loses raw identity, allowing raw use and export escapes
 
-`structuralLiteralValue` at `scripts/product-truth/measure-complexity-v8.mjs:31-69` now recursively
-unwraps parentheses, `as`, `satisfies` and angle-bracket type assertions, but omits TypeScript's
-`NonNullExpression`. A non-null assertion is another finite type-only wrapper; it neither evaluates
-nor changes the enclosed object literal. Because it returns `INVALID_STRUCTURAL_LITERAL`,
-`moveWitness` at lines 2121-2137 sees no normalized equality.
+The collector binds a namespace import or `require` result to its declaration, and it binds a
+top-level object pattern only when that pattern's initializer is itself a direct recognized loader
+call. At `scripts/product-truth/measure-complexity-v8.mjs:1431-1449`, there is no corresponding path
+for an object binding pattern whose initializer is an identifier already resolved as a namespace.
+The later alias pass handles identifier declarations and namespace property expressions, but not
+binding patterns. Consequently the introduced identifiers never enter
+`bindingIdentityByDeclaration`.
 
-A fresh temp fixture deleted selected exact Work member
-`scripts/release-update-policy.json` and materialized selected pre-frozen
-`scripts/product-truth/cli.ts` with the same three-key value, reordered and wrapped only as:
+R5's export walker at lines 1670-1696 recursively enumerates every object/array binding identifier,
+but it can reject only identities already present in that map. Local export specifiers use the same
+map. Terminal-use resolution likewise finds the nearest declaration but no identity.
+
+Three fresh temp variants all unexpectedly exited 0:
 
 ```text
-export const legacyReleaseUpdatePolicy = ({ ...same literal... })!;
+import * as fs from "node:fs";
+export const { readFileSync: raw } = fs;
 ```
 
-The official-shaped comparison unexpectedly exited 0. In adjacent controls, deeply nested
-parentheses plus `as const` plus `satisfies` correctly exit 1 as
-`UNDECLARED_WORK_PATH_MOVE:...:normalized-literal-structure`, and the same nested structure with one
-different value correctly exits 0.
-
-This is a finite AST omission, not a request for CFG, value flow or runtime interpretation. It lets
-the same normalized artifact move between exact Work paths while bypassing the r4 witness through
-one erased TypeScript assertion form.
-
-### P0 — a direct exported object-binding pattern can expose a raw binding undetected
-
-The raw binding collector recognizes CommonJS object destructuring: at
-`scripts/product-truth/measure-complexity-v8.mjs:1442-1450`, each identifier in an object binding
-pattern receives a declaration-scoped raw identity. The repaired direct-export check at lines
-1681-1687, however, examines a variable declaration only when `declaration.name` is an identifier;
-it skips object binding patterns entirely.
-
-A fresh fixture materialized the traced module with:
+```text
+import * as fs from "node:fs";
+const { readFileSync: raw } = fs;
+export { raw as publicReader };
+```
 
 ```text
-export const { readFileSync: raw } = require("node:fs");
-export function classifyLegacyDatabase() {
-  return "safe";
+import * as fs from "node:fs";
+function hiddenHelper() {
+  const { readFileSync: raw } = fs;
+  return raw("forbidden");
 }
 ```
 
-The collector binds `raw` to the frozen `node:fs#readFileSync` classes, the declaration itself is
-public, and there is no later use needed to expose it. The official-shaped comparison nevertheless
-unexpectedly exited 0. By contrast, the authored direct identifier export and a fresh
-`export { raw as publicReader }` specifier alias both fail.
+The first two expose the frozen `node:fs#readFileSync` raw binding; the third makes a true raw call
+under an undeclared named private helper. Direct `require("node:fs")` object destructuring with
+plain, default and rest binding elements correctly fails, proving that export traversal itself is
+active. The gap is specifically the missing lexical identity propagation from an already-resolved
+namespace through a binding pattern.
 
-This is a raw public binding escape explicitly covered by the Work's preserved global hard failures.
-It requires only walking the already-supported binding pattern declarations, not runtime semantics.
+This violates the Work's lexical alias-use, private-helper and raw-public-export hard failures. It
+requires only finite binding-pattern resolution already used elsewhere in the meter, not CFG,
+points-to or runtime semantics.
 
 ## Independent verification
 
 ### Assignment, immutable scope and authority
 
-- Runtime operation `47eeda5671af4eb09bb3d9cf99bff89a` is completed, role `implement`, actor
-  `product_truth_complexity_v8_impl_r4`, and outputs the required linked handoff. This Review is
-  role `check`, actor `product_truth_complexity_v8_review_r4`, receipt
-  `2e2090f1980c4b6a902ea18fd5b72686`, and names that completed predecessor.
-- Candidate `7c6107f...` has parent `8289941...` and exactly eight allowed changed paths: the v8
-  meter and focused test plus six bounded fixture additions. No config, Product, dependency,
+- Runtime operation `3ce076bb899e448aa230344f1b823f4f` is completed, role `implement`, actor
+  `product_truth_complexity_v8_impl_r5`, and outputs the required linked handoff. This Review is
+  role `check`, actor `product_truth_complexity_v8_review_r5`, receipt
+  `7a440728819142e79347b1b496f8a7a4`, and names that completed predecessor.
+- Candidate `6134f31...` has parent `3585a87...` and exactly seven allowed changed paths: the v8
+  meter and focused test plus five bounded fixture additions. No config, Product, dependency,
   direct-tool, Work, Design/decision, Harness/schema, v1-v7 or user-state path changed.
-- `git diff --check 7c6107f...^ 7c6107f...` — PASS. Candidate meter/config/test blobs at handoff
-  commit `9aa5ba1...` equal the reviewed candidate blobs.
+- `git diff --check 6134f31...^ 6134f31...` — PASS. Candidate meter/config/test blobs at handoff
+  commit `6292b8c...` equal the reviewed candidate blobs.
 - Candidate SHA-256 values reproduce the handoff: script
-  `4640d14fed49e68bf7f963056a0d17b68279b6dfa603f7a2c593f72d12fa1ad4`, config
+  `0b7a7ce734ed96c570b39e2e26afe25cd539d23a0b71e11b74ee54d8da997b45`, config
   `8b80d4eb401eefb36ed4597e2032e0c7eb25e13dbdd437d2b1e90e315d094796`, focused test
-  `ab888b71f26f22a26bbe588a04a6ae303863e984b71cd79eb00c9ffb2ad8f18e`; the 47-fixture manifest is
-  `54cf7c03...f843`.
+  `e11ea99c152ec7a75d5526cf38b9c17eaef1675f405af7825e99adfb11f40932`; the 52-fixture manifest is
+  `bdff569f...f51d`.
 - Candidate scope and authored immutable-byte assertions preserve every v1-v7
   instrument/config/test byte. The official report independently reproduces the five accepted
   Work-fence digests in authored order (`0e1551...faae`, `c85e1d...6de5`, `dec2ee...ca4`,
@@ -122,8 +117,8 @@ It requires only walking the already-supported binding pattern declarations, not
   ```
 
   — PASS twice. Fresh outputs are byte-identical: 4,273,664 bytes, byte SHA-256
-  `132790c15da293f55c9f48c6dfd122187b3c6361fbf0aba5ebf3b1e23e69d70b`; decoded JCS SHA-256
-  `bd370246d4e3f90b114f9781607ad17200312e2eafbe3e15cfc38b7c7916b8bc`.
+  `b921173e94cbda9ce9383e22fc60e720045d9141b80f4a70674f5e83418260af`; decoded JCS SHA-256
+  `4b71ab359df15c240a2ce78d7521453c8c5b1f5ac6c093374bf0fb747ce927a4`.
   The handoff contains exactly one complete machine block, its decoded JCS equals both fresh reports,
   and frontmatter `report_sha256` matches.
 - The report records the exact argv once, `fixtureMode=false`, `official=true`,
@@ -134,29 +129,28 @@ It requires only walking the already-supported binding pattern declarations, not
 - The fresh report reproduces B0's 812 ingress / 107 paths and 712 owner violations / 93 paths with
   accepted ingress digest `d1b60f...2d3a` and violation digest `a3f100...e43`.
 - `bunx vitest run scripts/product-truth/measure-complexity-v8.test.ts --reporter=dot` — PASS,
-  64/64 in 241.52s.
+  69/69 in 260.56s.
 - `bunx vitest run scripts/product-truth/measure-complexity-v7.test.ts --reporter=dot` — PASS,
-  67/67 in 146.92s.
+  67/67 in 138.82s.
 - `bun run --cwd scripts typecheck` — PASS (`tsc --noEmit`).
 
 ### Prior reproductions, adjacent controls and hidden variants
 
-All hidden fixtures existed only in `/tmp/omnimind-v8-r4-review.ao5Urv/repo`; no additional
+All hidden fixtures existed only in `/tmp/omnimind-v8-r5-review.xNp76i/repo`; no additional
 worktree was created.
 
 - R1 controls: outside measurement drift exits 1 with
   `OUTSIDE_WORK_BLOB_DRIFT:scripts/check-source-closure.mjs`; imported-binding shadow exits 0.
 - R2 controls: repeated same-spelling alias in a private helper exits 1 with
   `TRACED_OWNER_IDENTITY_INVALID`; independent combined lifecycle exits 0. Exact Work deletion,
-  traced materialization and the sole B1-to-C move remain positive in the 64-case suite.
-- R3 controls: authored `as const`, `satisfies` and angle-bracket assertion moves each exit 1 with
-  `normalized-literal-structure`; value-different composition and safe same-name export each exit 0;
-  direct raw identifier export exits 1 with `RAW_BINDING_EXPORTED`.
-- Fresh nested parentheses/`as const`/`satisfies` move exits 1; the nested value-different positive
-  exits 0. Fresh non-null move unexpectedly exits 0, proving finding 1.
-- Fresh raw export specifier alias exits 1, and a harmless `export { safe as raw }` plus inner raw
-  alias exits 0. Fresh direct exported raw object destructuring unexpectedly exits 0, proving
-  finding 2.
+  traced materialization and the sole B1-to-C move remain positive in the 69-case suite.
+- R3/R4 controls: `as`, `satisfies`, type assertion, non-null and nested wrapper moves exit 1 with
+  `normalized-literal-structure`; nested value-different composition exits 0. Safe same-name export
+  and harmless destructuring pass; direct raw identifier and direct raw destructuring exports fail.
+- A deeper fresh combination of parentheses, non-null, `as const`, `satisfies` and angle-bracket
+  assertion exits 1; the same shape with one changed value exits 0.
+- Direct `require` destructuring with default/rest forms exits 1. Namespace-derived direct export,
+  export specifier alias and private-helper raw call unexpectedly exit 0, proving the finding.
 - A duplicate official evidence argument exits 1 with `OFFICIAL_INVOCATION_INVALID`; internally
   consistent alternative SHA `68b9fd1...` exits 1 with
   `OFFICIAL_EVIDENCE_SHA_NOT_ACCEPTED_V7_BOOTSTRAP`; a tuple mutation exits 1 with
@@ -172,21 +166,21 @@ read or changed.
 
 ## Review boundary and required return
 
-This verdict covers only candidate `7c6107f2b9d5ffccacdde515d943ff6a5cb7992f`, linked handoff
-commit `9aa5ba14152f8d1800680813a0f6d1e518a510b2`, assigned Work and accepted authority. It does not
+This verdict covers only candidate `6134f3115b8023c1603c705cff55ba6833ca06c2`, linked handoff
+commit `6292b8c6b4f139282b499d873676a3b131a707d9`, assigned Work and accepted authority. It does not
 authorize B1 or any Product/destructive work.
 
 No substantive fix is approved within this reviewer operation. Return the candidate to the owning
-v8 measurement Work to close both findings, add focused regressions for the non-null normalized move
-bypass and direct exported binding-pattern escape, freeze a new immutable meter candidate, and
-obtain a new different-actor Review.
+v8 measurement Work to propagate declaration-scoped raw identity through namespace-derived binding
+patterns, add focused regressions for use/direct-export/export-specifier variants, freeze a new
+immutable meter candidate, and obtain a new different-actor Review.
 
 ## Dispatch identity
 
 - role: `check`
-- actorId: `product_truth_complexity_v8_review_r4`
-- receipt: `2e2090f1980c4b6a902ea18fd5b72686`
-- predecessor: `47eeda5671af4eb09bb3d9cf99bff89a`
+- actorId: `product_truth_complexity_v8_review_r5`
+- receipt: `7a440728819142e79347b1b496f8a7a4`
+- predecessor: `3ce076bb899e448aa230344f1b823f4f`
 - predecessor output: `.omp-flow/tasks/08-07-product-truth-consolidation/handoffs/product-truth-complexity-v8.md`
 - verdict: `FAIL`
 - explicitly allowed fix: none
