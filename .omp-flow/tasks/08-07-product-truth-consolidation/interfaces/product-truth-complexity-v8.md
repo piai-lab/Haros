@@ -84,7 +84,9 @@ class, terminal, dependency disposition, predecessor or expected result.
   },
   "evidenceFieldSources": {
     "reviewedCandidateSha": "full 40-hex review.reviewed_candidate and handoff.reviewedCandidateSha; values must equal",
-    "evidenceCommitSha": "full 40-hex authenticated runtime operation record predecessorEvidenceCommitSha; never candidate/config/report input",
+    "operationPredecessorReceipt": "opaque strict-v1 assignment predecessor copied unchanged from the current operation record; required and never candidate/config/CLI input",
+    "operationPredecessorOutput": "strict-v1 assignment predecessorOutput derived by the Harness from that predecessor operation; must equal the selected table row reviewPath exactly",
+    "evidenceCommitSha": "the unique commit computed by evidenceCommitDerivation from candidateUnderTestSha, operationPredecessorReceipt and operationPredecessorOutput; never an assignment, candidate, config, report or CLI field",
     "handoffBlobId": "git rev-parse evidenceCommitSha:<table handoffPath>; exact regular blob",
     "reviewBlobId": "git rev-parse evidenceCommitSha:<table reviewPath>; exact regular blob",
     "reportSha256": "SHA-256 of JCS decoded report machine block inside the exact handoff blob",
@@ -145,12 +147,21 @@ class, terminal, dependency disposition, predecessor or expected result.
       "evidenceFields": ["reviewedCandidateSha", "evidenceCommitSha", "handoffBlobId", "reviewBlobId", "reportSha256", "reviewReceipt", "implementerActorId", "reviewerActorId"]
     }
   ],
+  "evidenceCommitDerivation": {
+    "rowBinding": "select the Design-frozen row for the assigned Product Work; operationPredecessorOutput must equal that row reviewPath and operationPredecessorReceipt must be nonempty",
+    "historyWalk": "walk candidateUnderTestSha first-parent ancestry only and inspect every commit whose tree changes operationPredecessorOutput against its first parent",
+    "reviewIntroduction": "a qualifying commit introduces a regular Review blob different from its first-parent blob; its decoded frontmatter has verdict PASS, dispatch_receipt equal to operationPredecessorReceipt, work resolving to the row predecessor Work, handoff resolving to handoffPath, predecessor_output resolving to handoffPath, and one full reviewed_candidate",
+    "handoffAtIntroduction": "the same commit contains the exact regular handoffPath blob with status DONE, Work resolving to the row predecessor Work, dispatch_receipt equal to the Review predecessor_receipt, reviewedCandidateSha equal to Review reviewed_candidate, exactly one table-tagged canonical report block and an implementer actor different from the Review actor",
+    "uniqueEvidenceCommit": "exactly one qualifying Review-introduction commit must exist; its full SHA is evidenceCommitSha; zero or multiple matches fail",
+    "postIntroductionImmutability": "from evidenceCommitSha through candidateUnderTestSha on the first-parent chain, reviewPath and handoffPath retain the exact evidence blob IDs; any later edit, deletion, replacement, revert or reintroduction fails",
+    "excludedMatches": "FAIL/non-PASS, old/wrong receipt, wrong output/path/Work/handoff/candidate, matching blobs reachable only through a non-first-parent parent, self-reviewed evidence and candidate-authored duplicate Review introductions do not qualify and cause the applicable zero/multiple/mutation failure"
+  },
   "evidenceAncestry": {
     "reviewedCandidateToEvidenceCommit": "git merge-base --is-ancestor reviewedCandidateSha evidenceCommitSha must pass and SHAs must differ",
     "evidenceCommitToCandidateUnderTest": "git merge-base --is-ancestor evidenceCommitSha candidateUnderTestSha must pass and SHAs must differ",
     "blobReadRef": "read handoff, review and report only from evidenceCommitSha, never candidateUnderTestSha",
-    "reviewBinding": "review verdict is PASS; review work/handoff/candidate/receipt/actor fields match table, exact blobs and runtime operation record",
-    "handoffBinding": "handoff Work, candidate, report digest, implementer actor and receipt match table, review and runtime operation record",
+    "reviewBinding": "review verdict is PASS; review work/handoff/candidate/receipt/actor fields match table, exact blobs and strict-v1 predecessor receipt/output",
+    "handoffBinding": "handoff Work, candidate, report digest, implementer actor and receipt match table, Review and strict-v1 predecessor receipt/output",
     "historicalFailedB1": "50deefc1f8e904805c5c990756f3048de33c7ad5 is verification-only and never an eligible reviewedCandidateSha, comparisonRef or evidence ancestor"
   },
   "lexicalOwnerModel": {
@@ -223,20 +234,25 @@ class, terminal, dependency disposition, predecessor or expected result.
 ## Predecessor binding
 
 The machine `workPredecessorEvidenceTable`, not meter configuration or candidate input, names each
-Product Work's exact predecessor Work, handoff, Review and report derivation. The authenticated
-runtime operation record supplies only the table-required predecessor receipt/output and full
-`evidenceCommitSha`; it cannot supply a different path, predecessor Work or comparison ref. V8 reads
-the exact handoff/Review blobs only from that evidence commit, extracts the table-named report block
-and recomputes all three identities.
+Product Work's exact predecessor Work, handoff, Review and report derivation. The strict-v1 current
+operation supplies only its authenticated `predecessor` receipt and Harness-derived
+`predecessorOutput`; the latter must equal the selected row's exact Review path. No new Harness
+field exists. Starting from the candidate ref, v8 walks only first parents and defines
+`evidenceCommitSha` as the unique commit that introduces at `predecessorOutput` a regular `PASS`
+Review whose `dispatch_receipt` equals `predecessor`, and whose Work, handoff, reviewed candidate and
+linked exact handoff/report agree with the selected row. Zero or multiple introductions fail.
 
 `reviewedCandidateSha` and `evidenceCommitSha` are necessarily distinct: Product implementation is
 frozen first, and the accepted handoff/Review evidence exists later. The Review candidate and
 handoff candidate must equal `reviewedCandidateSha`; the evidence commit must descend from it and
 contain the exact recorded blobs; the candidate under test must descend from the evidence commit.
-The review receipt equals the authenticated predecessor receipt, actors differ, and every full SHA,
-blob and report digest agrees across operation record, handoff and Review. The candidate tree is
-never an evidence source. A missing, mutable, self-reviewed, mismatched, overwritten or
-candidate-authored chain fails before candidate comparison.
+Review and handoff blob IDs must remain unchanged on every later first-parent step through the
+candidate. The review receipt equals the authenticated predecessor receipt, actors differ, and every
+full SHA, blob and report digest agrees across operation assignment, handoff and Review. The
+candidate tree is searched only by the fixed receipt/output predicate; it cannot contribute a
+receipt, output, commit or alternative row. A missing, duplicated, non-first-parent-only,
+later-mutated, self-reviewed, mismatched, old-receipt or candidate-authored chain fails before
+candidate comparison.
 
 For B1 only, the first table row makes the accepted v8 meter evidence commit bind the immutable B0 report above as the
 comparison snapshot. This does not authorize B0 behavior. Every later Product Work compares against
@@ -292,15 +308,18 @@ The v8 QbD and focused suite must independently demonstrate failure for:
 5. one-byte drift, deletion, materialization, path move, import-edge change, ingress change or
    violation deletion in an outside-Work frozen member;
 6. a candidate-created/unlisted path or new glob match;
-7. candidate selection of B0, `50deefc1...`, a failed/overwritten Review, a branch report, a
-   non-ancestor evidence commit, candidate-tree evidence or mismatched handoff/Review blobs,
-   receipt, actors or report digest;
+7. candidate selection of B0 or `50deefc1...`; missing or duplicate qualifying Review introduction;
+   a matching Review only on a non-first-parent parent; wrong/old receipt or predecessor output;
+   FAIL/overwritten/later-mutated/self-authored Review; non-ancestor evidence; or mismatched
+   handoff/Review blobs, Work paths, candidate, actors or report digest;
 8. global forbidden/computed loader, selector, alias, native-addon, dependency and raw-export cases.
 
 Adjacent positives must cover exact outside equality, inside nontraced equality/reduction, deletion
 of an exact Work member, materialization of an exact Work member whose ingress is fully traced, and
-the one Design-declared B1-to-C Product owner move. None of these fixtures may assert runtime
-behavior.
+the one Design-declared B1-to-C Product owner move. An evidence positive must consume an actual
+strict-v1 operation `predecessor`/`predecessorOutput` pair and derive the unique first-parent Review
+introduction without a commit-valued Harness, CLI or config input. None of these fixtures may assert
+runtime behavior.
 
 ## Transition
 

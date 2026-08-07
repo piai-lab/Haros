@@ -313,14 +313,17 @@ Windows quiescence adapter. The underlying evidence remains in the
   identities expanded to 65 concrete-ordinal kill cases. B1 code/config/tests may implement but cannot add,
   merge, omit, rename, reorder, resize, redefine or downgrade an item. The generated manifest is
   the exact Design-derived Cartesian union, not a candidate-authored or filtered list.
-- Every v8 run selects one row from the Design-owned machine predecessor table. An authenticated
-  runtime operation record supplies its evidence commit and receipt; v8 reads exact handoff/Review/
-  report blobs only from that commit. It distinguishes the reviewed Product candidate from the later
-  evidence commit and requires `reviewedCandidate -> evidenceCommit -> candidateUnderTest` ancestry,
-  exact blobs/report digest/receipt/actors and different implementer/reviewer actors. B1 receives the
+- Every v8 run selects one row from the Design-owned machine predecessor table. Its strict-v1
+  assignment supplies only the existing authenticated predecessor receipt and Harness-derived
+  predecessor output, which must equal the row's Review path. V8 derives the evidence commit as the
+  unique first-parent commit introducing the matching `PASS` Review, then reads exact handoff/
+  Review/report blobs there. It distinguishes the reviewed Product candidate from the later evidence
+  commit and requires `reviewedCandidate -> evidenceCommit -> candidateUnderTest` ancestry, unchanged
+  later blobs, exact report digest/receipt/actors and different implementer/reviewer actors. B1 receives the
   v8-accepted B0 snapshot; later Works receive the immediately preceding accepted Product candidate.
-  Candidate-selected, branch, working-tree, reconstructed, failed, overwritten or non-ancestor
-  predecessors fail before comparison; failed `50deefc1...` is verification-only.
+  Missing/duplicate, non-first-parent-only, candidate-selected, branch, working-tree, reconstructed,
+  failed, later-mutated, self-reviewed, wrong/old-receipt or non-ancestor predecessors fail before
+  comparison; failed `50deefc1...` is verification-only. No commit-valued Harness field is required.
   Exact Work members may be deleted or materialized and the graph is recomputed; outside-Work
   deletion/materialization, undeclared moves and new glob members fail.
 - `scripts/check-source-closure.mjs` and every meter/config file are measurement, not tool,
@@ -385,7 +388,8 @@ assurance route. Under the
 structural-only boundary, but the accepted v7 candidate gate is superseded by the
 [v8 predecessor-delta authority](interfaces/product-truth-complexity-v8.md). A different QbD actor
 must challenge the v8 Design/interface/Work map, including wrong-symbol/helper, inside-growth,
-outside-drift/deletion/import and candidate-chosen-predecessor attacks. A fresh zero-finding `PASS`
+outside drift and missing/duplicate/non-first-parent/wrong-receipt/mutated/self-reviewed predecessor
+attacks, plus a positive derived from an actual strict-v1 predecessor receipt/output. A fresh zero-finding `PASS`
 authorizes only the measurement-only v8 Work; its immutable handoff requires a zero-finding
 different-actor `PASS` before a B1 production receipt may be issued. A changed destructive target
 or exclusion returns for explicit human decision.

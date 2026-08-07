@@ -44,10 +44,11 @@ This Work realizes PRD A1-A9, the B1 half of A14, and the B1 preservation portio
 
 Do not assign or start this Work until `reviews/product-truth-complexity-v8.md` records a
 zero-finding different-actor `PASS` over the immutable meter-only commit. The B1 assignment must
-name that review receipt/output and its full evidence commit as predecessor, while keeping the
-reviewed v8 meter candidate SHA distinct. V8 must read the exact handoff/Review/report blobs from
-that evidence commit, validate candidate→evidence→B1 ancestry, exact receipt/actors/digests and
-different implementer/reviewer actors. The assignment also records the accepted meter SHA/digests including the
+name only that review receipt/output as its strict-v1 predecessor. V8 must require the output to
+equal the table's meter Review path, derive the unique first-parent commit introducing that receipt's
+`PASS` Review, read exact handoff/Review/report blobs there, keep the reviewed meter candidate SHA
+distinct, and validate candidate→evidence→B1 ancestry, immutable later evidence blobs, exact
+receipt/actors/digests and different implementer/reviewer actors. The assignment also records the accepted meter SHA/digests including the
 five Work fences, raw-effect syntax/dependency inventory, predecessor-delta authority,
 dependency/import closure, raw-effect owner authority and B1 verifier-universe digest, and use
 those bytes plus its accepted B0 report read-only. A branch, working tree, failed candidate or
@@ -327,7 +328,10 @@ does not authorize an unlisted production path.
   new helper, inside nontraced growth/delete-plus-relocate/replacement/reorder, unlisted paths,
   unresolved/computed imports, raw exports/handles/releases, forbidden/unknown loaders and
   simultaneous B1/C Product owners. Fail overwritten/mismatched evidence blobs/report/receipt/
-  actors, non-ancestor evidence, candidate-tree evidence and any use of `50deefc1...` as predecessor.
+  actors, missing/duplicate/non-first-parent introduction, wrong/old receipt/output, later-mutated or
+  self-authored evidence, non-ancestor evidence and any use of `50deefc1...` as predecessor. A
+  positive must derive the evidence commit from the actual strict-v1 receipt/output without any new
+  Harness/CLI/config commit field.
 - Run the verifier-owned generated-home matrix as one manifest-bound gate derived from the exact
   Design block. It covers classifier copy validation/cleanup, Product/service lock and refusal, Web
   refusal/batch, target seals, Package transitions and recovery across every frozen operation

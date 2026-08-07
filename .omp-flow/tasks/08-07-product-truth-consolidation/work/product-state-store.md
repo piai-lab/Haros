@@ -28,9 +28,10 @@ digests, including Work/raw-effect/predecessor-delta/effect-ingress/B1-verifier/
 universe digests, and the accepted B1
 verifier case-manifest/trace/fault/race/kill plus hidden-mutation/source-Review receipts. It must use
 the exact B1 recorded by the first handoff for later B0/B1/C comparison.
-The assignment carries the execution-leaf evidence commit/receipt/output; v8 loads only its
-table-named blobs and requires reviewed-leaf→evidence→this-candidate ancestry with exact report/
-digests/actors and different implementer/reviewer actors.
+The strict-v1 assignment carries only the execution-leaf Review receipt/output; v8 binds the output
+to its row, derives the unique first-parent `PASS` Review introduction commit, loads only its
+unchanged table-named blobs and requires reviewed-leaf→evidence→this-candidate ancestry with exact
+report/digests/actors and different implementer/reviewer actors.
 
 ## Allowed code and output boundary
 

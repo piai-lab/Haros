@@ -81,11 +81,14 @@ the accepted meter review receipt and immutable SHA/digests as predecessor.
 The v8 interface machine table fixes every transition without filename inference: v8 meter→B1,
 B1→Native Host, Native Host→execution leaf, execution leaf→Product State Store and Product State
 Store→Coordinator/facade. Each row fixes predecessor Work ID, exact handoff/Review/report paths and
-report derivation. The next assignment supplies the accepted runtime operation receipt/output and
-full evidence commit; v8 reads exact blobs there, distinguishes the earlier reviewed candidate from
-the later evidence commit and requires reviewed-candidate→evidence-commit→next-candidate ancestry,
-exact report digest/receipt/actors and different implementer/reviewer actors. B1's row alone binds
-accepted v8 evidence to B0. Failed `50deefc1...` is verification-only.
+report derivation. The next strict-v1 assignment supplies only its authenticated predecessor receipt
+and Harness-derived predecessor output. V8 requires that output to equal the row's Review path, then
+walks the candidate's first-parent ancestry and derives the evidence commit as the unique commit
+introducing a `PASS` Review whose receipt/Work/handoff/candidate match the row. The exact Review and
+handoff blobs remain unchanged thereafter, reviewed-candidate→evidence-commit→next-candidate
+ancestry holds, report digest/actors agree and implementer/reviewer differ. Zero/multiple,
+non-first-parent-only, later-mutated, wrong/old-receipt and self-authored matches fail. B1's row alone
+binds accepted v8 evidence to B0. Failed `50deefc1...` is verification-only.
 
 The first production wave is [Direct first-public B1](direct-first-public-b1.md). It remains one
 deliberately indivisible production Work because the destructive tool, first-public
@@ -212,8 +215,9 @@ Work may submit affected Campaign claims only as `candidate`; no producer may ma
 The next workflow entry is a fresh different-actor QbD audit of the v8 repair across Design,
 interface, measurement Work, all five Product Works and this map. It must prove v8 has only
 mechanical structure/dependency/import/effect-ingress/complexity authority, cannot claim runtime
-semantics, preserves the exact v7 global-alias/computed-selector grammar, binds the machine table's
-reviewed-candidate/evidence-commit ancestry and exact blobs/receipt/actors, fails every frozen
+semantics, preserves the exact v7 global-alias/computed-selector grammar, derives the machine table's
+unique first-parent Review-introduction commit from a real strict-v1 predecessor receipt/output,
+binds reviewed-candidate/evidence-commit ancestry and exact unchanged blobs/receipt/actors, fails every frozen
 declaration/alias disposition plus nontraced relocation/replacement/reorder, and preserves outside
 blobs/imports/raw identities/violations exactly. Every displaced obligation
 has an exact B1 owner-local capability plus frozen state/cardinality/ordinal/trace/fault/race/kill/

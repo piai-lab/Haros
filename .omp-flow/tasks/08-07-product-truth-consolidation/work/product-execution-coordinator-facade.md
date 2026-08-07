@@ -30,9 +30,10 @@ SHA, Work/raw-effect/predecessor-delta/effect-ingress/B1-verifier/dependency/imp
 case-manifest/trace/fault/race/kill and hidden-mutation/source-Review receipts must match the B1
 handoff byte-for-byte; mismatch stops rather than
 reconstructing or remeasuring with a revised universe.
-The assignment carries the Store evidence commit/receipt/output; v8 loads only its table-named
-blobs and requires reviewed-Store→evidence→this-candidate ancestry with exact report/digests/actors
-and different implementer/reviewer actors.
+The strict-v1 assignment carries only the Store Review receipt/output; v8 binds the output to its
+row, derives the unique first-parent `PASS` Review introduction commit, loads only its unchanged
+table-named blobs and requires reviewed-Store→evidence→this-candidate ancestry with exact report/
+digests/actors and different implementer/reviewer actors.
 
 ## Allowed code and output boundary
 

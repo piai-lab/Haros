@@ -45,12 +45,15 @@ user state are outside this Work.
 - Re-extract and pin the five exact Product Work blocks, v7 finite grammar/dependency/verifier/count
   authorities and the v8 predecessor-delta block from one accepted Design tree. Recompute the B0
   812-ingress/712-violation snapshot and both accepted digests byte-identically.
-- Implement the exact five-row predecessor/evidence table. Consume the authenticated operation
-  record only for its required evidence commit/receipt/output; read exact handoff/Review/report blobs
-  from that commit; distinguish `reviewedCandidateSha` from `evidenceCommitSha`; and require
-  reviewed-candidate→evidence-commit→candidate-under-test ancestry, exact digests/receipt/actors and
-  different implementer/reviewer actors. Reject missing, overwritten, non-ancestor, self-reviewed,
-  branch/working-tree, failed or candidate-selected predecessors; `50deefc1...` is verification-only.
+- Implement the exact five-row predecessor/evidence table. Consume only the strict-v1 assignment's
+  existing authenticated predecessor receipt and Harness-derived predecessor output, require the
+  output to equal the row's Review path, and derive `evidenceCommitSha` as the unique first-parent
+  commit introducing the matching `PASS` Review. Read exact handoff/Review/report blobs there;
+  distinguish `reviewedCandidateSha` from `evidenceCommitSha`; require reviewed-candidate→evidence-
+  commit→candidate-under-test ancestry, immutable later evidence blobs, exact digests/receipt/actors
+  and different implementer/reviewer actors. Reject zero/multiple, non-first-parent-only, later-
+  mutated, wrong/old-receipt, non-ancestor, self-reviewed, failed or candidate-selected predecessors;
+  add no Harness/CLI/config commit field. `50deefc1...` is verification-only.
 - Partition every frozen member by the selected Work: exact external blob/mode/import/raw/violation
   equality; predecessor-anchored nontraced structural site identity/order with deletion only; and
   one exact traced module-scope declaration kind + qualified identity + class. Apply all frozen
@@ -75,12 +78,14 @@ user state are outside this Work.
   method, constructor, overload, re-export alias, wrong-owner local alias use, new named private raw
   helper, selected-Work nontraced growth, delete-plus-relocate, replacement and reorder with unchanged
   tuple counts, outside blob/deletion/materialization/path/import/raw/violation drift, unlisted path,
-  class growth, overwritten/mismatched handoff or Review blob, report/receipt/actor mismatch,
-  non-ancestor evidence, candidate-tree evidence and candidate-chosen predecessor.
+  class growth, missing/duplicate/non-first-parent Review introduction, wrong/old receipt/output,
+  overwritten or later-mutated handoff/Review blob, self-authored Review, report/actor mismatch,
+  non-ancestor evidence and candidate-chosen predecessor.
 - Adjacent positives: unique allowed function/const-arrow owners, anonymous callback inheriting the
   nearest owner, correct local-alias use owner, exact outside preservation, selected-Work nontraced
   site preservation/deletion, exact Work deletion, exact pre-frozen materialization with fully traced
-  ingress and the declared B1-to-C Product move.
+  ingress, the declared B1-to-C Product move, and an actual strict-v1 operation receipt/output that
+  derives exactly one first-parent evidence commit without a new Harness field.
 - Re-run v7 grammar/dependency/import/export/addon/raw-public-escape negatives unchanged; no fixture
   may claim cleanup, locking, scheduling, exception or convergence behavior.
 - Compare every v1-v7 byte and all five Work blocks to their accepted digests; run scripts typecheck,

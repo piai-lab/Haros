@@ -27,10 +27,11 @@ candidate/report is this Work's immutable comparison predecessor. The chain must
 immutable v8 meter Review receipt and SHA/digests, including Work/raw-effect/predecessor-delta/
 effect-ingress/B1-verifier/dependency/import/universe digests, and its accepted
 verifier case-manifest/trace/fault/race/kill plus hidden-mutation/source-Review receipts. The
-implementation base must contain that exact B1 commit. The assignment carries the Native Host
-evidence commit/receipt/output; v8 loads its table-named blobs and requires reviewed-Native-Host→
-evidence→this-candidate ancestry, exact report/digests/actors and different implementer/reviewer
-actors.
+implementation base must contain that exact B1 commit. The strict-v1 assignment carries only the
+Native Host Review receipt/output; v8 binds the output to its row, derives the unique first-parent
+`PASS` Review introduction commit, loads its unchanged table-named blobs and requires reviewed-
+Native-Host→evidence→this-candidate ancestry, exact report/digests/actors and different implementer/
+reviewer actors.
 
 ## Allowed code and output boundary
 
