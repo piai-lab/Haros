@@ -3,22 +3,29 @@ type: "Handoff"
 title: "Authoritative Product-truth complexity v8 predecessor-delta meter"
 work: "../work/product-truth-complexity-v8.md"
 status: "DONE"
-actor_id: "product_truth_complexity_v8_impl"
-dispatch_receipt: "cfb3e18e709f46919791489a9fdf8c5c"
-predecessor_receipt: "c76378063b0e48a4a0aa739499792550"
-predecessor_output: "../qbd/product-truth-complexity-v8-audit.md"
-reviewed_candidate: "17180c0c1def7b1ee70a898d91b58acbc35cc0af"
-report_sha256: "8442b0dec5fdef95e6f2e9a97540637ec1454d9e4a84ca83b83c5380a09e942d"
+actor_id: "product_truth_complexity_v8_impl_r2"
+dispatch_receipt: "e9e8e6259fb14616b0a25c01d9c75b59"
+predecessor_receipt: "cfb3e18e709f46919791489a9fdf8c5c"
+predecessor_output: "../handoffs/product-truth-complexity-v8.md"
+reviewed_candidate: "61df83885e0290fe199a58715101ba405358aec9"
+report_sha256: "a15c7706575a8460cfccc3b8fadef21029c9fe86648ef23c190252cf1525d80b"
 ---
 
 # Authoritative Product-truth complexity v8 predecessor-delta meter
 
 ## Result
 
-`DONE` — Main froze and pushed the measurement-only v8 candidate at immutable commit
-`17180c0c1def7b1ee70a898d91b58acbc35cc0af`. That commit adds exactly 39 allowed paths: one v8
-meter, one v8 universe, one focused test and 36 bounded v8 JSON fixtures. It changes no Product,
-dependency, direct-rebuild, Work, v1-v7 evidence, Harness/schema, fence or user-state byte.
+`DONE` — Main froze and pushed the measurement-only v8 r2 candidate at immutable commit
+`61df83885e0290fe199a58715101ba405358aec9`. R2 closes all three findings in the
+[failed r1 Review](../reviews/product-truth-complexity-v8.md), receipt
+`4432276ee4a043d58c2bfc40662ad6e2`: outside-Work measurement equality, zero-raw undeclared path
+moves and lexical shadowing of imported raw bindings. The r2 commit modifies only the v8 meter and
+focused test and adds three bounded fixtures. The complete v8 surface now contains 39 fixtures. It
+changes no config, Product, dependency, direct-rebuild, Work, v1-v7 evidence, Harness/schema,
+fence or user-state byte.
+
+R2 supersedes rejected candidate `17180c0c1def7b1ee70a898d91b58acbc35cc0af` and its old B0
+report digest. Neither the rejected candidate nor its handoff report is eligible Product evidence.
 
 V8 preserves the accepted v7 B0 inventory and replaces only v7's impossible later-candidate owner
 verdict with the accepted five-row, predecessor-bound structural delta. It requires the official
@@ -40,11 +47,14 @@ evidence SHA. The meter and operation receipts do not authenticate a reviewer or
   zero advisory.
 - Trust root: [v8 evidence calibration](../decisions/product-truth-complexity-v8-trust-root-calibration.md)
   and [v8 PASS approval](../decisions/product-truth-complexity-v8-pass-approval.md).
-- Implementer actor: `product_truth_complexity_v8_impl`.
-- Dispatch receipt: `cfb3e18e709f46919791489a9fdf8c5c`.
-- Predecessor receipt: `c76378063b0e48a4a0aa739499792550`.
-- Predecessor output: `qbd/product-truth-complexity-v8-audit.md`.
-- Immutable meter commit: `17180c0c1def7b1ee70a898d91b58acbc35cc0af`.
+- Failed r1 Review: [product-truth-complexity-v8](../reviews/product-truth-complexity-v8.md), actor
+  `product_truth_complexity_v8_review`, receipt `4432276ee4a043d58c2bfc40662ad6e2`, three findings.
+- Superseded rejected r1 candidate: `17180c0c1def7b1ee70a898d91b58acbc35cc0af`.
+- R2 implementer actor: `product_truth_complexity_v8_impl_r2`.
+- R2 dispatch receipt: `e9e8e6259fb14616b0a25c01d9c75b59`.
+- R2 predecessor receipt: `cfb3e18e709f46919791489a9fdf8c5c`.
+- R2 predecessor output: `handoffs/product-truth-complexity-v8.md`.
+- Immutable r2 meter commit: `61df83885e0290fe199a58715101ba405358aec9`.
 - Historical B0 reference: `7582170a277477ba0d71cf70f53e4e0836874a72`.
 - Main-selected v7 bootstrap evidence commit:
   `5632f63603e6ae8b3fb95f759c793a09b16a1e44`.
@@ -56,10 +66,10 @@ compare the recorded Main/human selection, full invocation and tuple with the tr
 ## Frozen instrument and authority
 
 ```text
-v8 script                     b013997503018007b2658be2eb0835ef8884ca280319ef884dca587e4693698c
+v8 script                     49ac968673167aee13d7ebfa1853bad2c0c032c848494ebfb21e5299a00b748a
 v8 config                     8b80d4eb401eefb36ed4597e2032e0c7eb25e13dbdd437d2b1e90e315d094796
-v8 focused test               7e7d5831f50a2dc9a7c4c114503473fa6a053591c217c654b574bd825d487a7c
-36-fixture manifest           3bba498d5feea84fe68027af85049be72e01d908ac2904a08f6eafdf9da019d8
+v8 focused test               5d7267097a43e6fa21a7eb39975dac8507ee2933bc4d5c76780754a0d63a89c2
+39-fixture manifest           93d9e73913ce3a9b250f07d8d4561e23a2ac54b92814c4b85e770579ba90db3e
 predecessor-delta authority   578d98e96bb531f41a54525ea0e86ecc586e16071528874fff4a82572ba36d29
 raw-effect universe           35ce67d0e9d09d48cb8f4fe8c8bbc49a1c70b69c2b5a175c44c1c353ca8c7849
 effect-ingress authority      68321678a2f8c9ee36b03700486e35d3873d3e759fd3332ffe32ecdf28b86d5c
@@ -69,8 +79,10 @@ B0 frozen membership          c39b66948e4c2e7edb0fab5a8ada76440025e826c9c3de650f
 
 The fixture aggregate hashes the sorted relative-path/SHA-256 manifest under
 `fixtures/complexity-v8`. The focused test compares every v1-v7 instrument byte to its accepted
-digest. The frozen commit contains only the exact 39 new v8 paths and all are regular repository
-files; no production, dependency, Work, decision, v1-v7 or real user-state path is present.
+digest. The r2 frozen commit contains exactly five allowed changes: two v8 modifications and three
+fixture additions. The config is byte-identical to r1 because all B0 authority pins, counts and raw
+digests remain unchanged. No production, dependency, Work, decision, v1-v7 or real user-state path
+is present.
 
 The five Work-fence canonical digests are:
 
@@ -138,8 +150,8 @@ Two complete post-freeze outputs are byte-identical:
 
 ```text
 complete output bytes            4273664
-complete output byte SHA-256     4406576ce94060be03a7527a6fabcf70b4e6d75c174092f366381eaf1aa859c4
-decoded report JCS SHA-256       8442b0dec5fdef95e6f2e9a97540637ec1454d9e4a84ca83b83c5380a09e942d
+complete output byte SHA-256     3cd0a2dda6a6660a08dca01182ecdc1a384b764f37231759892be8072e838746
+decoded report JCS SHA-256       a15c7706575a8460cfccc3b8fadef21029c9fe86648ef23c190252cf1525d80b
 raw ingress count / paths        812 / 107
 raw ingress digest               d1b60f2ed12a9cdca75752d94fd7a69c055d865d4fe5397f61550bbc2fe82d3a
 owner violation count / paths    712 / 93
@@ -156,18 +168,23 @@ is recorded so repeated output can also be compared byte-for-byte. B0 remains ob
 
 ## Structural comparison and claim boundary
 
-V8 partitions the candidate by the selected Work boundary. Outside paths retain exact
-presence/mode/blob, resolved imports, canonical ingress and canonical violation equality. Selected
+V8 partitions the candidate by the selected Work boundary. Every outside production, direct-tool,
+dependency and measurement member retains exact presence/mode/blob, resolved imports, canonical
+ingress and canonical violation equality. Selected
 nontraced sites use predecessor-anchored structural identities and order with deletion only;
 replacement, relocation and reorder fail even when the old path/owner/terminal/source/class tuple
 multiset and counts are unchanged. Exact Work deletion/materialization and the authored B1-to-C
-Product move are handled explicitly; outside lifecycle drift and new glob membership fail.
+Product move are handled explicitly. Every selected-Work deletion plus materialization pair is an
+undeclared move failure regardless of raw-ingress cardinality, except that sole Design-declared
+Product path pair. Outside lifecycle drift and new glob membership fail.
 
 Traced sites require the exact module-scope declaration kind, qualified declaration ID and allowed
 class. Named/anonymous default exports, class methods, constructors, overloads, re-export aliases,
 nested same-name declarations, wrong-owner aliases, undeclared private raw helpers and class growth
 fail. Anonymous callbacks inherit the nearest named lexical owner while retaining their own AST
-role path; aliases are classified at their terminal use owner.
+role path; aliases are classified at their terminal use owner. Imported raw bindings, loader
+results, namespaces and derived aliases resolve through the nearest lexical declaration, so a
+nearer parameter/local declaration shadows the outer raw binding without becoming raw ingress.
 
 This is finite structural syntax/dependency comparison only. It implements and claims no CFG/ICFG,
 SSA, points-to, branch/order/value, Promise/task, Effect, exception, catch/finally, scheduler,
@@ -177,17 +194,20 @@ separate B1 verifier, source Review and orchestration responsibilities.
 
 Historical v7 B1 verification reproduces `RAW_EFFECT_INGRESS_INVALID` at
 `50deefc1f8e904805c5c990756f3048de33c7ad5`. With the bounded historical fixture, v8 passes the old
-global owner gate, reaches predecessor comparison, and rejects the unqualified
-`chromium-leveldb.ts` traced owner identity. It does not grant the 93 unrelated observed paths to
-B1 and the historical SHA is never eligible predecessor evidence.
+global owner gate, reaches predecessor comparison, and rejects outside measurement blob drift at
+`scripts/product-truth/complexity-universe-v1.json`. It does not grant the 93 unrelated observed
+paths to B1 and the historical SHA is never eligible predecessor evidence.
 
 ## Verification
 
 - Frozen HEAD and scope — PASS: exact commit
-  `17180c0c1def7b1ee70a898d91b58acbc35cc0af`, clean worktree before handoff, exactly 39 allowed
-  additions and no modification/deletion.
-- `bunx vitest run scripts/product-truth/measure-complexity-v8.test.ts --reporter=dot` — `53/53`
-  PASS post-freeze in `161.26s`.
+  `61df83885e0290fe199a58715101ba405358aec9`, clean worktree before handoff, exactly two allowed
+  modifications and three allowed fixture additions.
+- The three r1 target cases first failed against the old implementation, then passed after r2:
+  outside measurement drift, zero-raw undeclared deletion/materialization and imported-binding
+  lexical shadowing.
+- `bunx vitest run scripts/product-truth/measure-complexity-v8.test.ts --reporter=dot` — `56/56`
+  PASS post-freeze in `181.93s`; all 53 r1 cases remain active.
 - `bunx vitest run scripts/product-truth/measure-complexity-v7.test.ts --reporter=verbose` — `67/67`
   PASS pre-freeze in `131.15s`; v1-v7 remained immutable through the frozen commit.
 - `bun run --cwd scripts typecheck` — PASS post-freeze.
@@ -197,7 +217,7 @@ B1 and the historical SHA is never eligible predecessor evidence.
 - Focused matrix — PASS for official argv cardinality/fallback/override, alternative evidence,
   handoff/review/report/candidate/receipt/actor drift, ancestry/blob binding, qualified owners,
   exact outside equality, nontraced identity/order, lifecycle/move, historical B1 and no-CFG limit.
-- `git diff --check` and 39-file JSON/final-newline/trailing-space check — PASS before freeze.
+- `git diff --check` and five-file JSON/final-newline/trailing-space check — PASS before freeze.
 - No Product, dependency, direct-tool behavior, real provider, Harness, destructive target or real
   `~/.omnimind` state was read or changed.
 
@@ -213,7 +233,7 @@ site identities and comparison state are retained without elision.
   "commit": "7582170a277477ba0d71cf70f53e4e0836874a72",
   "observationalBaseline": true,
   "instrument": {
-    "scriptSha256": "b013997503018007b2658be2eb0835ef8884ca280319ef884dca587e4693698c",
+    "scriptSha256": "49ac968673167aee13d7ebfa1853bad2c0c032c848494ebfb21e5299a00b748a",
     "configSha256": "8b80d4eb401eefb36ed4597e2032e0c7eb25e13dbdd437d2b1e90e315d094796"
   },
   "officialInvocation": {
@@ -107636,7 +107656,7 @@ migrated.
 ## Mandatory next stop
 
 A different actor must review immutable candidate
-`17180c0c1def7b1ee70a898d91b58acbc35cc0af` and this handoff in
+`61df83885e0290fe199a58715101ba405358aec9` and this handoff in
 `reviews/product-truth-complexity-v8.md`. The Review must independently compare the complete command,
 Main-selected evidence SHA, exact tuple, frozen instrument hashes and decoded-report JCS digest with
 the trust-root Decision. Only a zero-finding `PASS` that records its own distinct actor/receipt,
