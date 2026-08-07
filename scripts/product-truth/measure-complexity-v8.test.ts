@@ -181,6 +181,8 @@ describe("product-truth-complexity-v8 qualified declarations", () => {
     "traced-namespace-destructure-shadow-positive",
     "traced-terminal-destructure-shadow-positive",
     "traced-assignment-shadow-positive",
+    "traced-assignment-rhs-raw-free-wrapper-positive",
+    "traced-assignment-rhs-raw-free-conditional-positive",
   ])("accepts exact owner declaration and lexical-use positive %s", (fixture) => {
     const result = runFixture(fixture, "direct-first-public-b1");
     expect(result.status, result.stderr).toBe(0);
@@ -212,6 +214,14 @@ describe("product-truth-complexity-v8 qualified declarations", () => {
     "traced-assignment-namespace-alias-private-helper",
     "traced-assignment-cjs-terminal-private-helper",
     "traced-assignment-terminal-export-alias",
+    "traced-assignment-rhs-as-private-helper",
+    "traced-assignment-rhs-non-null-private-helper",
+    "traced-assignment-rhs-satisfies-private-helper",
+    "traced-assignment-rhs-type-assertion-private-helper",
+    "traced-assignment-rhs-same-conditional-private-helper",
+    "traced-assignment-rhs-mixed-conditional",
+    "traced-assignment-rhs-unknown-conditional",
+    "traced-assignment-rhs-unsupported-array",
     "traced-class-growth",
   ])("rejects wrong qualified declaration/use %s", (fixture) => {
     const result = runFixture(fixture, "direct-first-public-b1");

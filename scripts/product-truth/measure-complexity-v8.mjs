@@ -28,10 +28,12 @@ const decodeUtf8 = (bytes, identity) => {
   return decoded;
 };
 const INVALID_STRUCTURAL_LITERAL = Symbol("invalid-structural-literal");
+const isFiniteTransparentExpressionWrapper = (node) =>
+  ts.isParenthesizedExpression(node) || ts.isAsExpression(node) ||
+  ts.isSatisfiesExpression(node) || ts.isTypeAssertionExpression(node) ||
+  ts.isNonNullExpression(node);
 const structuralLiteralValue = (node) => {
-  if (ts.isParenthesizedExpression(node) || ts.isAsExpression(node) ||
-      ts.isSatisfiesExpression(node) || ts.isTypeAssertionExpression(node) ||
-      ts.isNonNullExpression(node)) {
+  if (isFiniteTransparentExpressionWrapper(node)) {
     return structuralLiteralValue(node.expression);
   }
   if (ts.isStringLiteralLike(node)) return node.text;
@@ -1378,9 +1380,64 @@ const classifyGlobal = (normalized) => {
 
 const rawInventoryPaths = new Set(presentMembers.filter((path) =>
   ["production", "direct-tool"].includes(categoryOf(path)) && candidateGraph.texts.has(path)));
+const assignmentPredecessorSnapshot = candidateWorkId === null
+  ? null
+  : loadTree(evidenceBinding.predecessorReport?.commit ?? config.baselineCommit);
 for (const path of candidateGraph.paths.filter((candidatePath) => rawInventoryPaths.has(candidatePath))) {
   const file = candidateGraph.sourceFile(path);
   if (file.parseDiagnostics.length) throw new Error(`UNPARSED_FROZEN_SOURCE:${path}`);
+  const assignmentComparisonNodes = new WeakSet();
+  const assignmentComparisonPath = workBlocks
+    .find((block) => block.work === candidateWorkId)
+    ?.production.some((entry) => entry.path === path) === true;
+  if (assignmentComparisonPath) {
+    const predecessorBytes = assignmentPredecessorSnapshot?.bytesAt(path);
+    const candidateBytes = candidate.bytesAt(path);
+    if (!predecessorBytes?.equals(candidateBytes)) {
+      const predecessorCounts = new Map();
+      const assignmentKey = (node, sourceFile) => {
+        const owner = qualifiedOwner(node, sourceFile, path);
+        const localRolePath = [];
+        for (let current = node; current.parent && current !== owner.declarationNode; current = current.parent) {
+          const siblings = directChildren(current.parent);
+          localRolePath.unshift(
+            `${ts.SyntaxKind[current.parent.kind]}[${siblings.indexOf(current)}]:${ts.SyntaxKind[current.kind]}`);
+          if (current.parent === owner.declarationNode) break;
+        }
+        return canonicalJson({
+          operator: node.operatorToken.kind,
+          owner: owner.qualifiedDeclarationId,
+          localRolePath,
+          normalizedText: normalizedNodeText(node, sourceFile),
+        });
+      };
+      const collectPredecessorAssignments = (node, sourceFile) => {
+        if (ts.isBinaryExpression(node) && node.operatorToken.kind >= ts.SyntaxKind.FirstAssignment &&
+            node.operatorToken.kind <= ts.SyntaxKind.LastAssignment) {
+          const key = assignmentKey(node, sourceFile);
+          predecessorCounts.set(key, (predecessorCounts.get(key) ?? 0) + 1);
+        }
+        ts.forEachChild(node, (child) => collectPredecessorAssignments(child, sourceFile));
+      };
+      if (predecessorBytes) {
+        const predecessorFile = ts.createSourceFile(path, decodeUtf8(predecessorBytes, path), ts.ScriptTarget.Latest, true,
+          path.endsWith(".tsx") ? ts.ScriptKind.TSX : path.endsWith(".ts") ? ts.ScriptKind.TS : ts.ScriptKind.JS);
+        if (predecessorFile.parseDiagnostics.length) throw new Error(`UNPARSED_PREDECESSOR_SOURCE:${path}`);
+        collectPredecessorAssignments(predecessorFile, predecessorFile);
+      }
+      const classifyCandidateAssignments = (node) => {
+        if (ts.isBinaryExpression(node) && node.operatorToken.kind >= ts.SyntaxKind.FirstAssignment &&
+            node.operatorToken.kind <= ts.SyntaxKind.LastAssignment) {
+          const key = assignmentKey(node, file);
+          const remaining = predecessorCounts.get(key) ?? 0;
+          if (remaining > 0) predecessorCounts.set(key, remaining - 1);
+          else assignmentComparisonNodes.add(node);
+        }
+        ts.forEachChild(node, classifyCandidateAssignments);
+      };
+      classifyCandidateAssignments(file);
+    }
+  }
   const lexical = makeLexicalBindings(file);
   const bindingIdentityByDeclaration = new WeakMap();
   const declarationNodes = new Set();
@@ -1598,8 +1655,7 @@ for (const path of candidateGraph.paths.filter((candidatePath) => rawInventoryPa
     ts.forEachChild(node, collectAssignmentWrites);
   };
   collectAssignmentWrites(file);
-  const rawIdentityForAssignmentExpression = (expression) => {
-    if (ts.isParenthesizedExpression(expression)) return rawIdentityForAssignmentExpression(expression.expression);
+  const rawIdentityForAssignmentAtom = (expression) => {
     if (ts.isIdentifier(expression)) return resolvedBindingAt(expression);
     if ((ts.isPropertyAccessExpression(expression) || ts.isElementAccessExpression(expression)) &&
         ts.isIdentifier(expression.expression)) {
@@ -1625,6 +1681,42 @@ for (const path of candidateGraph.paths.filter((candidatePath) => rawInventoryPa
       return classes ? { specifier: loader.specifier, exported: member.value, classes, form: member.form } : null;
     }
     return null;
+  };
+  const assignmentExpressionContainsRaw = (expression, extensionsEnabled) => {
+    if (extensionsEnabled && isFiniteTransparentExpressionWrapper(expression)) {
+      return assignmentExpressionContainsRaw(expression.expression, extensionsEnabled);
+    }
+    if (rawIdentityForAssignmentAtom(expression)) return true;
+    let containsRaw = false;
+    ts.forEachChild(expression, (child) => {
+      if (!containsRaw && !ts.isTypeNode(child) && assignmentExpressionContainsRaw(child, extensionsEnabled)) containsRaw = true;
+    });
+    return containsRaw;
+  };
+  const rawAssignmentExpressionResult = (expression, extensionsEnabled) => {
+    if (ts.isParenthesizedExpression(expression) ||
+        (extensionsEnabled && isFiniteTransparentExpressionWrapper(expression))) {
+      return rawAssignmentExpressionResult(expression.expression, extensionsEnabled);
+    }
+    const directIdentity = rawIdentityForAssignmentAtom(expression);
+    if (directIdentity) return { identity: directIdentity, containsRaw: true };
+    if (extensionsEnabled && ts.isConditionalExpression(expression)) {
+      const whenTrue = rawAssignmentExpressionResult(expression.whenTrue, extensionsEnabled);
+      const whenFalse = rawAssignmentExpressionResult(expression.whenFalse, extensionsEnabled);
+      const conditionContainsRaw = assignmentExpressionContainsRaw(expression.condition, extensionsEnabled);
+      if (!conditionContainsRaw && whenTrue.identity && whenFalse.identity &&
+          canonicalJson(whenTrue.identity) === canonicalJson(whenFalse.identity)) {
+        return { identity: whenTrue.identity, containsRaw: true };
+      }
+      return {
+        identity: null,
+        containsRaw: conditionContainsRaw || whenTrue.containsRaw || whenFalse.containsRaw,
+      };
+    }
+    return {
+      identity: null,
+      containsRaw: extensionsEnabled && assignmentExpressionContainsRaw(expression, extensionsEnabled),
+    };
   };
   const containingVariableDeclaration = (declaration) => {
     for (let current = declaration.parent; current; current = current.parent) {
@@ -1741,18 +1833,24 @@ for (const path of candidateGraph.paths.filter((candidatePath) => rawInventoryPa
       }
       if (ts.isBinaryExpression(node) && node.operatorToken.kind >= ts.SyntaxKind.FirstAssignment &&
           node.operatorToken.kind <= ts.SyntaxKind.LastAssignment) {
-        const identity = rawIdentityForAssignmentExpression(node.right);
-        if (identity) {
+        const extensionsEnabled = assignmentComparisonNodes.has(node);
+        const rawAssignment = rawAssignmentExpressionResult(node.right, extensionsEnabled);
+        if (rawAssignment.identity) {
           if (node.operatorToken.kind === ts.SyntaxKind.EqualsToken) {
-            if (bindResolvedRawAssignment(node.left, identity, node)) aliasChanged = true;
+            if (bindResolvedRawAssignment(node.left, rawAssignment.identity, node)) aliasChanged = true;
           } else {
             addRawPatternViolation("RAW_ALIAS_WRITE_UNKNOWN", node, {
               reason: "compound-raw-assignment",
             });
           }
-        } else if (ts.isBinaryExpression(node.right) &&
+        } else if (rawAssignment.containsRaw) {
+          addRawPatternViolation("RAW_ALIAS_WRITE_UNKNOWN", node, {
+            reason: "unsupported-raw-assignment-rhs",
+            rhsKind: ts.SyntaxKind[node.right.kind],
+          });
+        } else if (!extensionsEnabled && ts.isBinaryExpression(node.right) &&
             node.right.operatorToken.kind === ts.SyntaxKind.EqualsToken &&
-            rawIdentityForAssignmentExpression(node.right.right)) {
+            rawAssignmentExpressionResult(node.right.right, extensionsEnabled).identity) {
           addRawPatternViolation("RAW_ALIAS_WRITE_UNKNOWN", node, {
             reason: "nested-raw-assignment-rhs",
           });
