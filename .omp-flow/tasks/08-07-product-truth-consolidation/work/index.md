@@ -16,7 +16,11 @@ deletion and one canonical Product-database fixture correction. It changes no Wo
 acceptance coverage or ordering. A later scope-aware scan found the AppSettings rename decoder and
 focused compatibility assertion; the [appSettings boundary repair](../decisions/b1-appsettings-boundary-repair-calibration.md)
 adds only those two exact paths and likewise changes no Work meaning, acceptance coverage or
-ordering. This is an authored execution view, not a machine dependency graph.
+ordering. The later [LevelDB dependency-lock repair](../decisions/b1-leveldb-lockfile-boundary-repair-calibration.md)
+adds only the root `bun.lock` for the one pinned, scripts-only `classic-level` dependency needed to
+realize the existing offline Chromium profile contract. It adds no compatibility path, runtime
+dependency, target or new Work and changes no acceptance coverage or ordering. This is an authored
+execution view, not a machine dependency graph.
 
 ## Hard ordering
 
@@ -35,6 +39,14 @@ parallel Work or alter the accepted-handoff sequence. The later `apps/web/src/ap
 `apps/web/src/appSettings.test.ts` additions are also part of B1 only: they remove the donor
 `enableAppshots` schema/normalization/test compatibility while preserving current `enableAppSnap`
 behavior.
+
+The only dependency-output addition is the root `bun.lock`. The already-owned
+`scripts/package.json` may declare one exact non-range direct `classic-level` dependency, and the
+lock may record only its scripts-workspace resolution plus required transitive/platform integrity
+closure. The dependency serves `scripts/product-truth/**` only. It cannot enter `apps/**`,
+`packages/**`, release/package closure or normal runtime, cannot authorize Electron against a
+source profile, and cannot alter either frozen complexity-meter file or its universe. The eleven
+implementation-discovered compatibility production/test paths remain exactly eleven.
 
 The B1 structural scan is scope-aware and exact. It must report zero forbidden compatibility
 residue for the previously repaired storage-upgrade, `appshot` and retired Product-filename
@@ -97,10 +109,11 @@ Each implementation Work writes its promised handoff and receives a different-ac
 the next overlapping Work begins. Focused green checks do not authorize broader claims. The final C
 Work may submit affected Campaign claims only as `candidate`; no producer may mark them verified.
 
-The next workflow entry is a fresh different-actor scoped QbD 2 audit limited to the two
-`appSettings` boundary additions and exact structural-scan delta recorded by the
-[appSettings calibration](../decisions/b1-appsettings-boundary-repair-calibration.md). It carries
-forward every closed finding from the prior nine-path audit, the earlier QbD 2 PASS, the literal
-accepted-handoff sequence and unchanged acceptance coverage. The prior PASS does not authorize the
-revised boundary, and a new model verdict cannot restart B1 without the applicable human
-calibration.
+The next workflow entry is a fresh different-actor scoped QbD 2 audit limited to the one root
+`bun.lock` addition, its exact scripts-only `classic-level` purpose and the dependency/LevelDB
+verification delta recorded by the
+[LevelDB calibration](../decisions/b1-leveldb-lockfile-boundary-repair-calibration.md). It carries
+forward every closed finding from the prior compatibility and appSettings audits, the earlier QbD 2
+PASS decisions, the literal accepted-handoff sequence and unchanged acceptance coverage. The prior
+PASS does not authorize the revised output boundary, and a new model verdict cannot restart B1
+without the applicable human calibration.

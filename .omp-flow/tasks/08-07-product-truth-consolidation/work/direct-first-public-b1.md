@@ -24,6 +24,7 @@ This Work realizes PRD A1-A9, the B1 half of A14, and the B1 preservation portio
 - [QbD 2 path-boundary repair calibration](../decisions/qbd2-path-repair-calibration.md)
 - [B1 implementation-discovered boundary repair](../decisions/b1-boundary-repair-calibration.md)
 - [B1 appSettings compatibility boundary repair](../decisions/b1-appsettings-boundary-repair-calibration.md)
+- [B1 LevelDB dependency-lock boundary repair](../decisions/b1-leveldb-lockfile-boundary-repair-calibration.md)
 - [Unshipped compatibility inventory](../research/unshipped-compatibility.md)
 
 ## In scope
@@ -34,7 +35,10 @@ This Work realizes PRD A1-A9, the B1 half of A14, and the B1 preservation portio
   counters; it must not change between B0, B1 and C.
 - Add the two-command `scripts/product-truth/**` implementation and generated-home fixtures for the
   exact default root, two lanes, two profiles, database/WAL copies, protected-fact registry,
-  Package classification, lock/quiescence rules, stdout-only sanitized plan and narrow apply.
+  Package classification, lock/quiescence rules, stdout-only sanitized plan and narrow apply. Use
+  the pinned scripts-workspace `classic-level` dependency for exact Chromium LevelDB access:
+  `inspect` reads only a stable offline private copy, and locked `apply` mutates/rereads only the
+  exact legacy keys without using Electron against a source profile.
 - Create exact `<lane>/stores/product.sqlite`, `<lane>/stores/service.sqlite` and
   `omnimind:composer-drafts:g1` authorities from clean absence with marker-last transactions,
   close/reopen validation and typed refusal of every legacy, partial, future or contradictory state.
@@ -51,8 +55,10 @@ This Work realizes PRD A1-A9, the B1 half of A14, and the B1 preservation portio
 
 The implementer may create or change only:
 
-- `scripts/product-truth/**`, the root `package.json` entries needed for the two commands, and
-  `scripts/package.json` when the tool needs an existing workspace dependency;
+- `scripts/product-truth/**`, the root `package.json` entries needed for the two commands,
+  `scripts/package.json` solely to declare one exact non-range direct `classic-level` dependency,
+  and the root `bun.lock` solely to record its package-manager-produced scripts-workspace
+  resolution and required transitive/platform integrity closure without unrelated lock drift;
 - `apps/service/src/config.ts`, `apps/service/src/main.ts`,
   `apps/service/src/product/ProductControlPlane.ts`, its existing focused test, and exact new
   first-public schema/fingerprint private files under `apps/service/src/product/` that do not
@@ -94,7 +100,7 @@ The implementer may create or change only:
   callers/tests only to remove the inherited compatibility lane while retaining current policy;
 - [handoff](../handoffs/direct-first-public-b1.md).
 
-No other production path is owned. In particular this Work may not create
+No other production or dependency path is owned. In particular this Work may not create
 `productStateStore.ts`, `productExecutionCoordinator.ts`, `productExecutionBoundary.ts`, a thin
 facade scaffold, migration/backup/restore code, a second plan graph, or Native Host v2/root changes.
 An implementation-discovered required path outside this boundary stops the Work for map repair.
@@ -106,10 +112,12 @@ An implementation-discovered required path outside this boundary stops the Work 
   collapse intentionally; every missing, extra, negative and unknown registry case blocks before a
   protected query. Query spies prove only declared tables/columns are read and only aggregates/codes
   leave the classifier.
-- `inspect` makes no source/profile/lock mutation. `apply` repeats all checks under the six locks in
-  fixed order. A write spy retains a whole-profile trace, not only named-exclusion hashes; every
-  write outside invocation-owned locks, exact legacy keys and other interface allowlist targets
-  fails the candidate.
+- `inspect` makes no source/profile/lock mutation and reads Chromium LevelDB only from a stable
+  tool-owned private copy. `apply` repeats all checks under the six locks in fixed order and mutates
+  only the exact legacy keys through the offline LevelDB path. Neither command uses Electron
+  against a source profile. A write spy retains a whole-profile trace, not only named-exclusion
+  hashes; every write outside invocation-owned locks, exact legacy keys and other interface
+  allowlist targets fails the candidate.
 - Generated-home before/after hashes prove exact exclusions byte-identical. Kill injection after
   every Package rename, key removal, unlink, reread and fsync converges only by fresh inspect/apply;
   startup never resumes or broadens the deletion.
@@ -141,7 +149,17 @@ An implementation-discovered required path outside this boundary stops the Work 
 - Run the narrow new tool fixtures first: path/link/reparse/hard-link/mode/override matrices;
   WAL-aware fingerprints; protected-count/decoder/cardinality matrix; sanitized JSON snapshots;
   process/lifecycle/profile locks; time-of-check races; full-profile write traces; exclusion hashes;
-  and per-boundary kill injection.
+  Chromium LevelDB stable-copy inspection and exact-key deletion/reread; and per-boundary kill
+  injection.
+- Verify the dependency boundary: `scripts/package.json` has one exact non-range direct
+  `classic-level` pin; the root lock's scripts importer and integrity closure match it; a filtered
+  lock diff contains no unrelated refresh; and `bun install --frozen-lockfile` leaves `bun.lock`
+  unchanged. Prove the tool import resolves only from the scripts workspace, release/package
+  closure excludes it, and tracked `apps/**`/`packages/**` imports remain zero.
+- Use process/import/network spies to prove `inspect` and `apply` do not launch Electron, use a
+  real-profile Electron reader/writer or perform network access. Compare both frozen meter files
+  byte-for-byte with commit `45df49a6afde882d32c1dcd00457c7787d227e4a` and prove `bun.lock` was not
+  added to the measurement universe.
 - Run focused Product/service/Web/Desktop/release-policy tests affected by creation and deletion,
   the existing focused OpenCode live-journey probe test for canonical Product database resolution,
   `apps/web/src/lib/composerImageSource.test.ts`,

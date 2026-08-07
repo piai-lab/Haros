@@ -39,6 +39,14 @@ okf_version: "0.2"
 - [B1 appSettings boundary-repair PASS approval](decisions/b1-appsettings-boundary-pass-approval.md)
   — applies the maintainer's standing direct-repair decision after the fresh audit passed and
   authorizes a new B1 implementation receipt over the exact eleven-path boundary.
+- [B1 LevelDB lockfile boundary repair calibration](decisions/b1-leveldb-lockfile-boundary-repair-calibration.md)
+  — adds only root `bun.lock` for the pinned scripts-only offline LevelDB dependency closure.
+- [B1 LevelDB lockfile boundary-repair PASS approval](decisions/b1-leveldb-lockfile-boundary-pass-approval.md)
+  — accepts the fresh scoped PASS and authorizes a new B1 receipt without broadening runtime or
+  destructive authority.
+- [B1 LevelDB dependency-lock boundary repair](decisions/b1-leveldb-lockfile-boundary-repair-calibration.md)
+  — adds only the root lockfile for one pinned scripts-only `classic-level` dependency while
+  preserving the exact offline-profile, destructive and frozen-meter contracts.
 - [Direct first-public rebuild](interfaces/direct-first-public-rebuild.md) — inspect/apply commands,
   guards, target allowlist, interruption and error contract.
 - [Package-root handoff](interfaces/package-root-handoff.md) — Service-to-Native-Host root binding,
@@ -56,8 +64,10 @@ okf_version: "0.2"
 - [B1 appSettings boundary-repair audit](qbd/b1-appsettings-boundary-repair-audit.md) — fresh scoped
   QbD 2 PASS proving the two added AppSettings owners are necessary and sufficient without changing
   B1 safety, measurement or ordering.
+- [B1 LevelDB lockfile boundary-repair audit](qbd/b1-leveldb-lockfile-boundary-repair-audit.md) —
+  fresh scoped QbD 2 PASS over the single lockfile addition and its fail-closed dependency gates.
 - [Work map](work/index.md) — five bounded implementation/review Concepts, the immutable unsplit B1
-  stop, exact eleven-path implementation-discovered compatibility boundary, Native Host ordering
-  and complete PRD acceptance coverage before QbD 2.
+  stop, exact eleven-path implementation-discovered compatibility boundary, one tool-only lockfile
+  addition, Native Host ordering and complete PRD acceptance coverage before QbD 2.
 
 This authored index is navigation, not a generated context manifest or dependency graph.
