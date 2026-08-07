@@ -277,19 +277,29 @@ Windows quiescence adapter. The underlying evidence remains in the
   effect ingress are zero. Facade RPC methods remain exactly 36 and Product tables exactly 21.
 - No new Product table/database/durable state machine, migration platform, per-Engine Product plane,
   generic repository/manager/registry or fallback path is introduced.
-- V7 extracts the five machine-readable Work boundaries and one raw-effect ingress authority from
-  the pinned accepted Design commit. It freezes path membership, exact dependency/lock bytes,
-  resolved static import/export closure and stage-specific owner identities for filesystem,
-  SQLite, LevelDB, process, Web Storage and ambient loaders. Later edges pass only between frozen
-  members. Outside-set/unresolved/computed imports, forbidden loaders, a second raw-effect owner,
-  exported raw binding/handle/release primitive, dependency drift or concurrent B1/C Product owners
-  fail mechanically.
+- V7 extracts the five machine-readable Work boundaries, the owner-allocation block, the exhaustive
+  `omp-flow-raw-effect-universe-v1` syntax/dependency inventory and the
+  `omp-flow-b1-verifier-universe-v1` digest from the pinned accepted Design commit. The raw universe
+  freezes exact Node/Bun/Deno/Electron/browser/LevelDB/SQLite/process/worker/shell/loader/native-
+  addon forms, source-digest-keyed dependency effects and unknown-dependency fail-closed rules;
+  config or meter code cannot add a spelling or disposition. It freezes path membership, exact
+  dependency/lock bytes, resolved static import/export closure and stage-specific owner identities.
+  Later edges pass only between frozen members. Outside-set/unresolved/computed imports, forbidden
+  loaders, unmatched dependency/native/shell effects, a second raw-effect owner, exported raw
+  binding/handle/release primitive, dependency drift or concurrent B1/C Product owners fail
+  mechanically.
 - V7 owns no runtime semantic proof. It must not implement or claim a general CFG/ICFG, SSA,
   points-to, Promise/scheduler, Effect, catch/finally, resource-token or virtual-source semantic
   interpreter. Cleanup, refusal order, lock lifetime, scheduler behavior, exception disposition and
   crash convergence are B1 obligations proved through exact owner-local non-leaking capabilities,
   verifier-owned injected ports and traces, exhaustive generated-home presence/fault/race/kill
   cases, plus different-actor hidden mutation and source Review at one immutable SHA.
+- The B1 verifier universe is Design-owned before implementation. For each of the ten exact traced
+  owners it freezes every port operation and signature, atomicity, stage/resource event mapping,
+  before/after fault site, observation-to-use race barrier, durable kill point, expected outcome
+  and exclusion. B1 code/config/tests may implement but cannot add, merge, omit, rename, reorder,
+  redefine or downgrade an item. The generated manifest is the exact Cartesian product of the
+  applicable fixture axes and that block, not a candidate-authored list.
 - `scripts/check-source-closure.mjs` and every meter/config file are measurement, not tool,
   production or steady-state runtime. V7 report determinism, authority/config/membership and
   dependency resolution remain hard at B0; historical behavior/ingress nonconformance may be
@@ -301,19 +311,19 @@ Windows quiescence adapter. The underlying evidence remains in the
 | ID  | Acceptance claim                                                                                                                                                                         | Required proof                                                                                                                                                                        |
 | --- | ---------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- | ------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
 | A1  | Only the exact default root, two lanes and two associated profiles are inspected                                                                                                         | path/identity fixtures covering override, canary, repo-local, link, reparse, mode and realpath faults                                                                                 |
-| A2  | Dry-run positively classifies every deletion target and proves protected-fact absence without emitting business content                                                                  | fixture fingerprints, strict recursive per-fixture receipt decoders, query allowlist, owner-local classifier capability with verifier-owned trace/fault/race/kill proof for exact retired-source/private-scratch/no-follow/read-only/all-completion copy, blocker matrix, SQL spy and sanitized JSON snapshot |
+| A2  | Dry-run positively classifies every deletion target and proves protected-fact absence without emitting business content                                                                  | fixture fingerprints, strict recursive per-fixture receipt decoders, query allowlist, Design-frozen classifier port operations/atomicity/events/faults/races/kills/outcomes/exclusions for exact retired-source/private-scratch/no-follow/read-only/all-completion copy, blocker matrix, SQL spy and sanitized JSON snapshot |
 | A3  | Inspect mutates no source/lock while apply repeats full inspection under exact owner locks and binds mutation to classified bytes or a sealed expected transition                        | atomic Web-batch trace, Package transition graph, whole-tree write trace, POSIX/Windows adapters, lock identity and real replacement races                                            |
 | A4  | Apply deletes only the allowlist and creates no recoverable copy                                                                                                                         | before/after tree allowlist, write-spy and absence scans for snapshot/export/restore surfaces                                                                                         |
 | A5  | Every excluded path/key/generation remains byte-identical                                                                                                                                | seeded exclusion fixture with hashes before/after apply                                                                                                                               |
 | A6  | Interruption converges only through fresh inspect/apply; inert Package tombstones do not block normal startup                                                                            | real termination before/after the Web batch and every Package graph edge, stale-lock and tombstone convergence matrix                                                                 |
 | A7  | Product/service/Web owners create only exact generation 1 from clean absence and all live Product consumers use the canonical Store path                                                 | fresh/open/reopen, Product/service two-stage plus matching owner-lock must-hold and Web single-stage exact refusal, concrete production composition and partial-creation matrix        |
 | A8  | Old/future/unmarked/contradictory generations fail closed                                                                                                                                | database and Web generation fault matrix with zero write assertions                                                                                                                   |
-| A9  | The complete unshipped compatibility inventory has zero production caller/import while exact refusal sentinels remain present, non-decoding and dominant over all current-generation I/O | v7 structural sentinel/raw-ingress closure plus B1 owner-local traced capability matrices over every presence assignment, fault, race and kill boundary; hidden late-I/O/bypass, swallowed/finally-replaced throw and scheduled-release mutations plus current-generation process tests |
+| A9  | The complete unshipped compatibility inventory has zero production caller/import while exact refusal sentinels remain present, non-decoding and dominant over all current-generation I/O | v7 structural sentinel/raw-ingress closure plus the Design-frozen per-owner B1 operation/event/fault/race/kill matrix over every applicable presence assignment; hidden removed/coarsened port, omitted barrier, downgraded durability, late-I/O/bypass, swallowed/finally-replaced throw and scheduled-release mutations plus current-generation process tests |
 | A10 | One Store retains all named compound transactions and SQL authority                                                                                                                      | static writer/connection gate and transaction fault injection for every named unit                                                                                                    |
 | A11 | Coordinator retains Engine-effect semantics without SQL/replay/fallback                                                                                                                  | catalog/admission/attempt/control/crash tests across Pi and OpenCode                                                                                                                  |
 | A12 | Web/RPC sees exactly one 36-operation facade; probes/tests are separate                                                                                                                  | type/API snapshot, wsRpc tests and production caller scan                                                                                                                             |
 | A13 | Service selects and Host only validates one transcript-bound lane/Package root                                                                                                           | dev/packaged process tests covering proof tamper, replay, version/field faults, second/concurrent binding, mismatch/link/sibling-root and no fallback                                 |
-| A14 | Production and conceptual complexity strictly decrease in one coverage-complete frozen universe                                                                                          | immutable rejected v1-v6 history, Design-pinned five boundaries/effect-ingress authority, frozen set, dependency/import/ingress closure and deterministic v7 B0/B1/C metrics; behavior separately accepted by frozen B1 verifier and Review |
+| A14 | Production and conceptual complexity strictly decrease in one coverage-complete frozen universe                                                                                          | immutable rejected v1-v6 history, Design-pinned five boundaries/raw-effect syntax+dependency inventory/owner authority/B1 verifier universe, frozen set, dependency/import/ingress closure and deterministic v7 B0/B1/C metrics; behavior separately accepted by the exact frozen B1 manifest and Review |
 | A15 | Current outbox, Automation, Web safeguard, Package and Engine recovery behavior remains                                                                                                  | focused existing suites plus complete real kill/race/write-trace and affected real-process journeys                                                                                   |
 
 ## Constraints and non-goals

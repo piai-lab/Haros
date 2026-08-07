@@ -23,7 +23,7 @@ authority. This is the smallest independently reviewable first step of PRD R9/R1
 Do not assign or start this Work until [`handoffs/direct-first-public-b1.md`](../handoffs/direct-first-public-b1.md)
 records a different-actor-accepted clean immutable B1 and zero production Store/Coordinator/leaf
 extraction surface. That B1 must itself name the accepted immutable v7 meter Review receipt and
-SHA/digests, including Work/effect-ingress/dependency/import/universe digests, and its accepted
+SHA/digests, including Work/raw-effect/effect-ingress/B1-verifier/dependency/import/universe digests, and its accepted
 verifier case-manifest/trace/fault/race/kill plus hidden-mutation/source-Review receipts. The
 implementation base must contain that exact B1 commit.
 

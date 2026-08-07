@@ -25,7 +25,7 @@ This Work realizes PRD A13 and its A15 process/recovery slice.
 Do not assign or start this Work until [`handoffs/direct-first-public-b1.md`](../handoffs/direct-first-public-b1.md)
 records a different-actor-accepted clean immutable B1. The implementation base must contain that
 exact B1 commit, and the B1 chain must name the accepted immutable v7 meter Review receipt and
-SHA/digests, including Work/effect-ingress/dependency/import/universe digests, plus the accepted
+SHA/digests, including Work/raw-effect/effect-ingress/B1-verifier/dependency/import/universe digests, plus the accepted
 B1 verifier case-manifest/trace/fault/race/kill and hidden-mutation/source-Review receipts. No
 shared-tree overlap with B1 is inferred.
 

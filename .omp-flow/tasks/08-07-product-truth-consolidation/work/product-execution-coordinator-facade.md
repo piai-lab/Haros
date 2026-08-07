@@ -25,7 +25,7 @@ journey gates. This Work realizes PRD A11, A12, the C half of A14 and integrated
 
 All four handoffs above must be current and different-actor accepted. Their B1 chain must bind the
 accepted immutable v7 meter Review receipt and SHA/digests. The frozen complexity instrument and
-immutable B1 SHA, Work/effect-ingress/dependency/import/universe digests plus accepted B1
+immutable B1 SHA, Work/raw-effect/effect-ingress/B1-verifier/dependency/import/universe digests plus accepted B1
 case-manifest/trace/fault/race/kill and hidden-mutation/source-Review receipts must match the B1
 handoff byte-for-byte; mismatch stops rather than
 reconstructing or remeasuring with a revised universe.

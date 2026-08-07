@@ -102,15 +102,18 @@ source profile, and cannot alter either frozen complexity-meter file or its univ
 implementation-discovered compatibility production/test paths remain exactly eleven.
 
 V1-v6 meter bytes are immutable rejected history. V7 reads the canonical machine block from
-each of the five product Works at the accepted Design commit, pins every normalized block digest,
+each of the five product Works plus the Design-owned raw-effect syntax/dependency universe,
+effect-ingress owner allocation and B1 verifier universe at the accepted Design commit, pins every normalized block digest,
 expands any declared design glob once and freezes path membership. Design-time edges/sinks are
 snapshots. Later edges pass only between frozen members; outside-set endpoints, computed/unresolved
-imports and moved responsibility fail mechanically. V7 also pins dependency/lock/export closure and
-the exact raw-effect ingress owner block for filesystem, SQLite, LevelDB, process, Web Storage and
-ambient loaders. Outside/second owners, exported raw handles/releases, forbidden/computed loaders
-and simultaneous B1/C Product owners fail. It does not claim cleanup, lock/refusal ordering,
+imports and moved responsibility fail mechanically. V7 also pins dependency/lock/export/source-digest
+closure and the finite raw-effect grammar for all nine classes. Unknown/unparsed dependencies,
+direct `Bun.spawnSync`, Bun Shell, `process.dlopen`, native-addon and worker escapes fail together
+with outside/second owners, exported raw handles/releases, forbidden/computed loaders and
+simultaneous B1/C Product owners. It does not claim cleanup, lock/refusal ordering,
 scheduler or completion semantics. B1 proves those through non-leaking owner-local capabilities,
-verifier-owned ports/events, exhaustive generated-home presence/fault/race/kill cases and
+the frozen 10-owner/146-operation/34-barrier/29-kill verifier universe, exhaustive generated-home
+presence/fault/race/kill cases and
 different-actor hidden mutation/source Review. After v7 Review acceptance, every later Work treats
 the meter bytes and accepted B1 behavior evidence as read-only predecessors.
 An inert `.discarding` tombstone blocks rebuild convergence only; it is never loaded and adds no
@@ -130,7 +133,7 @@ that exception does not apply to `enableAppshots`.
 [Native Host v2 Package-root binding](native-host-package-root-binding.md) is a separate product
 boundary and is independently reviewable. The safe default sequence is literal: a different actor
 first accepts the immutable v7 meter handoff, then B1 and a different actor accepts its complete
-meter plus behavior handoff,
+meter plus behavior handoff, including exact raw-effect and verifier-universe digests,
 then a different actor accepts the Native Host handoff,
 then execution-leaf extraction may begin. The current map infers no shared-tree overlap: B1 and the
 Native Host Work both own `apps/desktop/src/main.ts`, and the Native Host Work and execution leaf

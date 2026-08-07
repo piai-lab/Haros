@@ -44,16 +44,20 @@ architecture owners, Campaign state and user state are outside this Work.
 
 ## Done conditions
 
-- Re-extract and pin the five Work blocks, exact frozen membership, v7 effect-ingress authority,
-  accepted dependency manifests/lock bytes and all physical/conceptual counter definitions from the
-  accepted Design commit. Config assertions may only bind these extracted facts, never add roots,
-  owners, paths, packages or dispositions.
+- Re-extract and pin the five Work blocks, exact frozen membership, v7 raw-effect syntax/dependency
+  universe, effect-ingress owner authority, B1 verifier-universe digest, accepted dependency
+  manifests/lock bytes and all physical/conceptual counter definitions from the accepted Design
+  commit. Config assertions may only bind these extracted facts, never add roots, owners,
+  operations, paths, syntax terminals, packages or dispositions.
 - Resolve the static import/export graph with the compiler and exact package export/lock closure.
   Reject outside-set endpoints, computed/unresolved specifiers, undeclared/range dependencies,
   scripts-only dependency escape and byte drift. Record exact package/version/integrity/source-entry
   digests.
 - Enumerate every raw-effect ingress and binding reference in every frozen production/direct-tool
-  member for filesystem, SQLite, LevelDB, process, Web Storage and ambient loaders. Require exact
+  member for all nine Design-frozen classes. Match only the finite Node/Bun/Deno/Electron/browser/
+  LevelDB/SQLite/process/worker/shell/loader/native-addon grammar; derive dependency-export classes
+  from the exact source-digest-keyed reachable closure and fail unavailable/unparsed/unresolved/
+  unknown dependencies. Require exact
   class/owner containment, stable closed-unrelated owner/class/domain set, B1/C owner move exclusivity,
   non-export/non-escape shape and global forbidden-loader absence. Report path, resolved symbol,
   owner and count without claiming path provenance or lifetime behavior.
@@ -65,7 +69,7 @@ architecture owners, Campaign state and user state are outside this Work.
   forbidden analyzer authorities, virtual expected verdict input and fixture-name success branches
   are absent.
 - Freeze one clean dedicated commit containing only allowed v7 paths. Record full SHA, accepted
-  Design SHA, Work/effect-ingress/dependency/universe digests, deterministic B0, exact counters,
+  Design SHA, Work/raw-effect/effect-ingress/B1-verifier/dependency/universe digests, deterministic B0, exact counters,
   focused results, typecheck, v1-v6 immutability and five Work-fence digests in the handoff.
 
 ## Verification
@@ -73,10 +77,13 @@ architecture owners, Campaign state and user state are outside this Work.
 - Focused structural fixtures cover each static/dynamic/CommonJS/builtin/global ingress form,
   namespace/destructure/alias/re-export, literal allowed loader, computed/unknown/forbidden loader,
   owner-local reference, outside-owner reference, exported raw binding/handle/release and the B1→C
-  Product owner move. Each negative fails one mechanical gate; no fixture asserts cleanup, lock,
-  scheduling or exception semantics.
-- Dependency fixtures cover exact pins, lock/source/export-map drift, scripts-only classic-level
-  containment, outside-set/unresolved imports and byte-bound closure.
+  Product owner move. Mandatory single-cause negatives include `Bun.spawnSync`, Bun Shell `$`,
+  `process.dlopen`, digest-mismatched dependency export, unresolved/unparsed dependency source,
+  computed effect selector and unknown `.node` addon. Each negative fails one mechanical gate; no
+  fixture asserts cleanup, lock, scheduling or exception semantics.
+- Dependency fixtures cover exact pins, lock/source/export-map/source-closure-digest drift,
+  conservative class propagation through a wrapper export, unknown dependency failure,
+  scripts-only classic-level containment, outside-set/unresolved imports and byte-bound closure.
 - Run v7 twice against immutable B0 and require byte-identical complete JSON.
 - Compare every v1-v6 instrument byte and all five Work machine blocks for immutability.
 - Run scripts typecheck and `git diff --check`; prove no production, dependency, test verifier,

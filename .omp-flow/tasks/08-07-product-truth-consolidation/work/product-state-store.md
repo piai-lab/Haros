@@ -23,7 +23,7 @@ perform, the Coordinator/facade extraction.
 
 This Work begins only after immutable B1, Native Host v2 and the execution-leaf Work have
 different-actor accepted handoffs. The B1 chain must bind the accepted immutable v7 meter Review and
-SHA/digests, including Work/effect-ingress/dependency/import/universe digests, and the accepted B1
+SHA/digests, including Work/raw-effect/effect-ingress/B1-verifier/dependency/import/universe digests, and the accepted B1
 verifier case-manifest/trace/fault/race/kill plus hidden-mutation/source-Review receipts. It must use
 the exact B1 recorded by the first handoff for later B0/B1/C comparison.
 

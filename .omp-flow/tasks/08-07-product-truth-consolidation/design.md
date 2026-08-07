@@ -51,13 +51,16 @@ history. The [v5 Review](reviews/product-truth-complexity-v5.md) and
 [v6 Review](reviews/product-truth-complexity-v6.md) prove that meter-owned interpretation of
 arbitrary resource, scheduling and completion semantics is an unbounded assurance liability. The
 [v7 Occam calibration](decisions/product-truth-complexity-v7-repair-calibration.md) narrows current
-measurement authority and changes no runtime or destructive boundary.
+measurement authority and changes no runtime or destructive boundary. The subsequent
+[v7 QbD repair calibration](decisions/product-truth-complexity-v7-qbd-repair-calibration.md) closes
+only the finite raw-effect/dependency authority and pre-B1 verifier-universe gaps; it does not
+restore semantic CFG analysis or change any Product/destructive scope.
 
 ## Scope and source boundaries
 
 | Responsibility                 | Intended source boundary                                                                                             | Owns                                                                                                                | Must not own                                                              |
 | ------------------------------ | -------------------------------------------------------------------------------------------------------------------- | ------------------------------------------------------------------------------------------------------------------- | ------------------------------------------------------------------------- |
-| v7 measurement checkpoint      | `measure-complexity-v7.mjs`, `complexity-universe-v7.json` and structural fixtures                                   | frozen Work/dependency/import/effect-ingress/complexity/count authority and immutable B0                              | runtime behavior, CFG/points-to semantics, direct rebuild or destructive state |
+| v7 measurement checkpoint      | `measure-complexity-v7.mjs`, `complexity-universe-v7.json` and structural fixtures                                   | frozen Work/raw-effect syntax+dependency/owner-allocation/complexity/count authority, B1-verifier-universe digest and immutable B0 | runtime behavior, CFG/points-to semantics, direct rebuild or destructive state |
 | direct rebuild tool            | `scripts/product-truth/**` plus focused tests                                                                        | inspect/apply orchestration, ephemeral inspection scratch, stdout result                                            | runtime startup, old-data decoding, state preservation, Package lifecycle |
 | first-public Product Store     | exact `apps/service/src/product/productStateStore.ts`; any private SQL file requires a new machine-boundary decision | Product database lifecycle, exact schema, 21 tables, all Product writes/transactions                                | Engine effects, Web/RPC, second connection                                |
 | execution coordinator          | `apps/service/src/product/productExecutionCoordinator.ts`                                                            | execution boundary, catalog memory, prepared handles, subscriptions, effect ordering                                | SQL, durable state machine, Engine wire                                   |
@@ -619,20 +622,24 @@ current measurement authority is `product-truth-complexity-v7`, owned by the
 report receive different-actor acceptance before B1. B1 names that Review receipt and immutable v7
 SHA/digests as predecessor and treats every meter byte read-only.
 
-V7 extracts the five strict machine-readable Work boundaries plus the one
-`omp-flow-effect-ingress-authority-v1` block from its accepted Design commit. Config pins the Design
-SHA, normalized blocks/digests, one-time glob expansion and exact membership; it cannot contribute
-paths, owners, effect classes, dependency dispositions or counter definitions. The meter resolves
-static imports/exports against exact manifest/`bun.lock` bytes and records external package version,
-integrity, export entry and source closure. Design snapshots and candidate-selected path lists have
-no authority.
+V7 extracts the five strict machine-readable Work boundaries plus exactly one each of
+`omp-flow-raw-effect-universe-v1`, `omp-flow-effect-ingress-authority-v1` and
+`omp-flow-b1-verifier-universe-v1` from its accepted Design commit. Config pins the Design SHA,
+normalized blocks/digests, one-time glob expansion and exact membership; it cannot contribute
+paths, owners, operations, effect classes, syntax terminals, dependency dispositions or counter
+definitions. The meter resolves static imports/exports against exact manifest/`bun.lock` bytes and
+records external package version, integrity/revision, export entry, ordered source closure and its
+digest. Design snapshots and candidate-selected path lists have no authority.
 
-The effect-ingress block closes filesystem, SQLite, LevelDB, process, Web Storage and ambient-loader
-entry classes. Every resolved binding reference must remain inside its exact B1 traced declaration
+The raw-effect universe closes the exact Node, Bun, Deno, Electron, browser/OPFS, LevelDB, SQLite,
+process, worker, shell, dynamic-loader and native-addon syntax terminals. Dependency exports inherit
+the union of classes in their fully parsed reachable source closure and are keyed by exact locator,
+lock integrity/revision, resolved entry, ordered files and source-closure digest. Unavailable,
+unparsed, unresolved, computed, unknown native/shell/loader or digest-drifted dependencies fail;
+neither the meter nor config may call them pure. The owner-allocation block then requires every
+resolved binding reference to remain inside its exact B1 traced declaration
 or an exact count-frozen unrelated platform/release adapter; raw bindings, paths, database/Level
-handles, batches, release primitives and process handles cannot escape or be exported. Unknown or
-computed loaders, `eval`, `Function`, `vm`, private loader hooks, outside-owner ingress and a second
-Product owner fail. At C the Product ingress moves literally from unsplit
+handles, batches, release primitives and process handles cannot escape or be exported. At C the Product ingress moves literally from unsplit
 `ProductControlPlane#makeProductControlPlaneLayer` to `productStateStore#makeProductStateStore`;
 both may never coexist. These are structural owner facts, not path/lifetime proof.
 
@@ -650,21 +657,26 @@ reports exact structural inventories for forbidden compatibility, required senti
 raw-effect ingress, while B1 owns whether those sentinels refuse and those effects are safe.
 
 B1 closes each destructive/runtime-state effect behind the exact owner-local capability declared in
-the v7 interface. Public inputs are typed intent/identity and public results are sanitized facts;
+the v7 interface. The Design-owned verifier block freezes 10 owners, 146 exact operations, 34 race
+barriers and 29 durable kill boundaries together with operation signatures/atomicity, stage/resource
+events, before/after faults, outcomes and exclusions before B1 implementation. Public inputs are typed intent/identity and public results are sanitized facts;
 scratch/source paths usable for arbitrary I/O, raw SQLite/Level handles, batches, lock tokens,
 release functions, process handles and adapters never leave the owner. Verifier composition injects
 private deterministic ports, monotonic bounded events, opaque resource IDs, fault plans, race
 barriers and kill boundaries; production callers cannot select or suppress verifier events.
 
-The B1 verifier generates a complete manifest over clean absence/every legacy-presence assignment,
-each port operation failure, every observation/open/classification/mutation/lock/cleanup/fsync race
-gap and every durable abrupt-kill boundary. It asserts executed-case bijection, full trace prefix,
+The B1 verifier consumes that block verbatim and generates the exact Cartesian manifest over clean
+absence/every applicable legacy-presence assignment, each actual operation ordinal's before/after
+fault, every declared observation-to-use barrier and every declared durable kill boundary. Candidate
+code/config/tests may implement but cannot add, merge, omit, rename, reorder, redefine or downgrade
+an item. It asserts executed-case bijection, full trace prefix,
 terminal disposition, exact writes, post-state, exclusions and sanitized output on tool-created
 homes/profiles only. Fresh inspect/apply/startup is the sole convergence after kill. A different
 actor then applies hidden single-change mutations for omitted/reordered/wrong-resource events,
-skipped cleanup, swallowed failure, early release, old-state fallthrough, alternate raw ingress and
-non-exact errors, and performs source Review of capabilities, ports, all raw references and the case
-generator at the identical B1 SHA. Reviewer expectations never enter meter/config or production.
+skipped cleanup, swallowed failure, early release, old-state fallthrough, alternate raw ingress,
+removed/coarsened port, omitted barrier, downgraded durable event and non-exact errors, and performs
+source Review of capabilities, ports, all raw references and the case generator at the identical B1
+SHA. Reviewer expectations never enter meter/config or production.
 
 The script still reports physical production/test/tool/measurement lines, exact imports/cycles,
 facade/table/database/writer/state-machine/gateway counters, legacy classifications and Native Host
@@ -742,15 +754,19 @@ bypass either stop.
 - `B0`/repaired-`B1`/`C` metrics use the identical frozen v7 script/config/universe; rejected
   v1-v6 evidence remains unchanged. The immutable repaired-B1 commit SHA is checked in before
   split handoff and all three v7 outputs are linked from the final handoff.
-- V7 structural fixtures exhaust static/dynamic/CommonJS/builtin/global ingress spelling,
+- V7 structural fixtures exhaust the Design-frozen static/dynamic/CommonJS/builtin/global ingress
+  spelling, including `Bun.spawnSync`, Bun Shell `$`, `process.dlopen`, `.node`, worker and browser
+  storage/OPFS forms, plus source-digest-keyed dependency exports and unknown-dependency failure,
   namespace/destructure/alias/re-export, exact owner containment, exported raw bindings/handles/
   releases, forbidden/computed loaders, dependency/export-map drift and the exclusive B1→C Product
   owner move. They assert no cleanup, lock, scheduling, refusal or exception semantics.
-- B1 owner-local capability fixtures inject verifier-owned ports and cover all generated-home
-  presence assignments, every raw operation fault, each race barrier and every durable abrupt-kill
+- B1 owner-local capability fixtures inject verifier-owned ports and consume the exact Design block;
+  they cover all applicable generated-home presence assignments, every declared operation/ordinal
+  before/after fault, each declared race barrier and every declared durable abrupt-kill
   boundary. The checked-in generator proves case-manifest/execution bijection and each case checks
   the full event prefix, terminal disposition, exact writes, post-state, exclusions and sanitized
-  output. Hidden different-actor mutations repeat the v5/v6 counterexample families against the real
+  output. Hidden different-actor mutations include removed/coarsened operations, an omitted barrier
+  and a downgraded durable event in addition to the v5/v6 counterexample families, against the real
   verifier or v7 ingress gate, followed by same-SHA source Review.
 
 ### Destructive fixture verification

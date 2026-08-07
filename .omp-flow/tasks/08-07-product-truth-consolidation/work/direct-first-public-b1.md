@@ -43,8 +43,8 @@ This Work realizes PRD A1-A9, the B1 half of A14, and the B1 preservation portio
 Do not assign or start this Work until `reviews/product-truth-complexity-v7.md` records a
 zero-finding different-actor `PASS` over the immutable meter-only commit. The B1 assignment must
 name that review receipt as predecessor, record the accepted meter SHA/digests including the
-five Work fences, dependency/import closure and raw-effect ingress authority, and use those bytes
-read-only.
+five Work fences, raw-effect syntax/dependency inventory, dependency/import closure, raw-effect
+owner authority and B1 verifier-universe digest, and use those bytes read-only.
 
 ## In scope
 
@@ -56,6 +56,11 @@ read-only.
   primitives, process handles and raw adapters must not cross its typed intent/sanitized-result
   boundary. Verifier composition injects the frozen port/event/fault/race/kill interfaces; no
   production caller may choose or suppress verifier events.
+- Consume `omp-flow-b1-verifier-universe-v1` verbatim. Its 10 owners, 146 operations, 34 barriers,
+  29 durable kill points, signatures, atomicities, stage/resource mappings, before/after fault
+  sites, outcomes and exclusions are immutable B1 inputs. Code/config/tests may implement them but
+  may not add, merge, omit, rename, reorder, redefine or downgrade any item; an unlisted adapter
+  call fails as `UNDECLARED_PORT_OPERATION`.
 - Add the two-command `scripts/product-truth/**` implementation and generated-home fixtures for the
   exact default root, two lanes, two profiles, database/WAL copies, protected-fact registry,
   Package classification, lock/quiescence rules, stdout-only sanitized plan and narrow apply. Use
@@ -248,14 +253,16 @@ does not authorize an unlisted production path.
   and legacy input cannot activate it through schema decoding, normalization, fixtures, comments
   or aliases. There is no snapshot, converter, restore, legacy reader, dual-read or hidden copy.
 - The accepted v7 scan reports tool-only identities, required runtime sentinel identities,
-  forbidden compatibility and every raw-effect ingress separately. Exact owner containment,
+  forbidden compatibility and every raw-effect ingress separately. The finite syntax/dependency
+  universe, exact source-closure digests, unknown-dependency failure, exact owner containment,
   dependency/import closure, non-export/non-escape shape, forbidden-loader absence and the unsplit
   B1 Product owner are hard gates; no raw filesystem/SQLite/LevelDB/process/Web-Storage/ambient-loader
   path may exist outside the v7 authority.
 - The B1 verifier—not v7—proves behavior. Each exact traced owner uses non-leaking typed
   intent/sanitized-result boundaries and verifier-owned ports/events. The checked-in generator
-  covers every clean/legacy-presence assignment, raw operation fault, observation/open/
-  classification/mutation/lock/cleanup/fsync race gap and durable abrupt-kill event on generated
+  derives its dimensions only from the frozen block and accepted fixture identities, covering every
+  applicable clean/legacy-presence assignment, each actual operation ordinal's before/after fault,
+  each declared observation-to-use barrier and each declared durable kill event on generated
   homes/profiles. Executed-case bijection, complete event prefix, terminal disposition, exact writes,
   post-state, protected exclusions and sanitized output are required. No production caller can
   choose event names, suppress faults or acquire raw path/handle/batch/lock/release/process adapters.
@@ -264,7 +271,9 @@ does not authorize an unlisted production path.
   cleanup, early/detached release, old-state fallthrough, zero-iteration guards, finally-replaced or
   non-exact reset errors and missing kill convergence, then source-reviews every traced capability,
   port composition, raw reference and generator. The real verifier or v7 structural gate must fail
-  each mutation while adjacent real positives pass.
+  each mutation while adjacent real positives pass. It additionally removes one port operation,
+  coarsens two operations, omits one race barrier and downgrades one durable event; each must fail
+  while adjacent real positives pass.
   Retired database/key filenames under `scripts/product-truth/**` are reported separately and are
   permitted only as exact closed destructive target identities or their matching tool fixtures and
   assertions. They must not be counted as runtime compatibility, removed by an undifferentiated
@@ -291,9 +300,10 @@ does not authorize an unlisted production path.
   raw-effect owner containment and structural/count gates. Pass the materialized future Store member
   while B1 keeps it absent, and fail outside-set/unresolved/computed imports, alternate raw owners,
   raw exports/handles/releases, forbidden/unknown loaders and simultaneous B1/C Product owners.
-- Run the verifier-owned generated-home matrix as one manifest-bound gate. It covers classifier
-  copy validation/cleanup, Product/service lock and refusal, Web refusal/batch, target seals,
-  Package transitions and recovery across every injected fault/race/kill event. Run the
+- Run the verifier-owned generated-home matrix as one manifest-bound gate derived from the exact
+  Design block. It covers classifier copy validation/cleanup, Product/service lock and refusal, Web
+  refusal/batch, target seals, Package transitions and recovery across every frozen operation
+  fault/barrier/kill event, and rejects removed/coarsened/added/reordered/redefined operations. Run the
   different-actor hidden mutation and source Review at the exact B1 SHA; meter success cannot
   substitute for this Review and focused positives cannot substitute for manifest bijection.
 - Verify the dependency boundary: `scripts/package.json` has one exact non-range direct
@@ -349,7 +359,7 @@ stronger primitive or retry.
 
 Write [`handoffs/direct-first-public-b1.md`](../handoffs/direct-first-public-b1.md). It must link this
 Work, enumerate changed/deleted paths and reviewable commits, record the immutable B1 full SHA,
-accepted meter Review receipt/SHA plus Work/effect-ingress/dependency/import/universe digests,
+accepted meter Review receipt/SHA plus Work/raw-effect/effect-ingress/B1-verifier/dependency/import/universe digests,
 clean-tree proof, complete accepted-B0/B1 metric output, verifier case-manifest/execution bijection,
 sanitized trace/fault/race/kill witnesses and different-actor hidden-mutation/source-Review receipt, exact
 fingerprint-registry bijection, sanitized
