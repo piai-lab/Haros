@@ -27,11 +27,11 @@ candidate/report is this Work's immutable comparison predecessor. The chain must
 immutable v8 meter Review receipt and SHA/digests, including Work/raw-effect/predecessor-delta/
 effect-ingress/B1-verifier/dependency/import/universe digests, and its accepted
 verifier case-manifest/trace/fault/race/kill plus hidden-mutation/source-Review receipts. The
-implementation base must contain that exact B1 commit. The strict-v1 assignment carries only the
-Native Host Review receipt/output; v8 binds the output to its row, derives the unique first-parent
-`PASS` Review introduction commit, loads its unchanged table-named blobs and requires reviewed-
-Native-Host→evidence→this-candidate ancestry, exact report/digests/actors and different implementer/
-reviewer actors.
+implementation base must contain that exact B1 commit. Main/human orchestration supplies the full
+Native Host evidence commit through the official `--predecessor-evidence` input. V8 loads its
+unchanged table-named blobs and requires reviewed-Native-Host→evidence→this-candidate first-parent
+ancestry with exact report/digests and internally distinct declared actors. Receipt/history cannot
+select or authenticate it; later Review verifies the invocation.
 
 ## Allowed code and output boundary
 
@@ -85,5 +85,6 @@ behavior may change. The leaf may import Product contracts and generic libraries
 
 Write [`handoffs/product-execution-leaf.md`](../handoffs/product-execution-leaf.md) with exactly one
 `omp-flow-product-truth-complexity-v8-report-v1` complete canonical JSON block, the consumed B1 SHA,
+complete official invocation and deterministic evidence tuple,
 changed import edges, zero-authority static results and focused tests. A different actor must
 accept it before the next overlapping `ProductControlPlane.ts` Work begins.

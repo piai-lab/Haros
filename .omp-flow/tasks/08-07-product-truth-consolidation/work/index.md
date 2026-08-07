@@ -76,18 +76,19 @@ The next implementation checkpoint is the measurement-only
 [v8 mechanical meter](product-truth-complexity-v8.md). It changes no measured production
 path, freezes one immutable meter commit plus B0 report, writes its handoff and must receive a
 different-actor `PASS`. No B1 production receipt may be issued before that acceptance; B1 must name
-the accepted meter review receipt and immutable SHA/digests as predecessor.
+the accepted meter Review receipt as correlation and Main/human orchestration must separately select
+the immutable full evidence commit for B1's official v8 invocation.
 
 The v8 interface machine table fixes every transition without filename inference: v8 meter→B1,
 B1→Native Host, Native Host→execution leaf, execution leaf→Product State Store and Product State
 Store→Coordinator/facade. Each row fixes predecessor Work ID, exact handoff/Review/report paths and
-report derivation. The next strict-v1 assignment supplies only its authenticated predecessor receipt
-and Harness-derived predecessor output. V8 requires that output to equal the row's Review path, then
-walks the candidate's first-parent ancestry and derives the evidence commit as the unique commit
-introducing a `PASS` Review whose receipt/Work/handoff/candidate match the row. The exact Review and
-handoff blobs remain unchanged thereafter, reviewed-candidate→evidence-commit→next-candidate
-ancestry holds, report digest/actors agree and implementer/reviewer differ. Zero/multiple,
-non-first-parent-only, later-mutated, wrong/old-receipt and self-authored matches fail. B1's row alone
+report derivation. For each transition Main/human orchestration supplies exactly one full official
+evidence commit through `--predecessor-evidence`; candidate/config/repository/report/receipt/history
+cannot define, infer or override it. V8 validates exact Review/handoff/report blobs there, reviewed-
+candidate→evidence-commit→next-candidate first-parent ancestry, later blob immutability, report
+digest and internally distinct declared actors, then records the full deterministic evidence tuple.
+A later different actor checks that recorded invocation against the official selection and trust-
+root Decision. Receipt strings and Git history authenticate no reviewer identity. B1's row alone
 binds accepted v8 evidence to B0. Failed `50deefc1...` is verification-only.
 
 The first production wave is [Direct first-public B1](direct-first-public-b1.md). It remains one
@@ -215,9 +216,10 @@ Work may submit affected Campaign claims only as `candidate`; no producer may ma
 The next workflow entry is a fresh different-actor QbD audit of the v8 repair across Design,
 interface, measurement Work, all five Product Works and this map. It must prove v8 has only
 mechanical structure/dependency/import/effect-ingress/complexity authority, cannot claim runtime
-semantics, preserves the exact v7 global-alias/computed-selector grammar, derives the machine table's
-unique first-parent Review-introduction commit from a real strict-v1 predecessor receipt/output,
-binds reviewed-candidate/evidence-commit ancestry and exact unchanged blobs/receipt/actors, fails every frozen
+semantics, preserves the exact v7 global-alias/computed-selector grammar, consumes one Main/human-
+selected official full evidence commit, binds reviewed-candidate/evidence-commit ancestry and exact
+unchanged blobs/digests, rejects every candidate/config/repository/report override and forged non-
+official Review/handoff, and makes no receipt/Git-history identity-authentication claim. It fails every frozen
 declaration/alias disposition plus nontraced relocation/replacement/reorder, and preserves outside
 blobs/imports/raw identities/violations exactly. Every displaced obligation
 has an exact B1 owner-local capability plus frozen state/cardinality/ordinal/trace/fault/race/kill/

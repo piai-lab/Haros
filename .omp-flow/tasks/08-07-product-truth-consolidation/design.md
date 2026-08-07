@@ -633,7 +633,8 @@ path/class map ignores `b1TracedOwners.symbol`. The sole current candidate autho
 `product-truth-complexity-v8`, owned by the [measurement-only v8 Work](work/product-truth-complexity-v8.md)
 and exact [v8 interface](interfaces/product-truth-complexity-v8.md). Its dedicated commit and B0
 report receive different-actor acceptance before B1. B1 names that Review receipt and immutable v8
-SHA/digests as authority predecessor and treats every v1-v8 meter byte read-only.
+SHA/digests as correlation/evidence, while Main/human orchestration independently supplies the
+official full evidence commit to the v8 invocation; every v1-v8 meter byte remains read-only.
 
 V8 incorporates by digest v7's five strict machine-readable Work boundaries plus exactly one each of
 `omp-flow-raw-effect-universe-v1`, `omp-flow-effect-ingress-authority-v1` and
@@ -666,20 +667,23 @@ and process handles cannot escape or be exported. At C the Product ingress moves
 `ProductControlPlane#makeProductControlPlaneLayer` to `productStateStore#makeProductStateStore`;
 both may never coexist. These are structural owner facts, not path/lifetime proof.
 
-For each B1/C Work, v8 selects the exact row in the interface's machine predecessor table. The
-strict-v1 assignment supplies only the existing authenticated predecessor receipt and Harness-
-derived predecessor output, which must equal the row's Review path. V8 walks only the candidate's
-first-parent ancestry and defines the evidence commit as the unique commit introducing a matching
-`PASS` Review. At that commit it reads the exact handoff, Review and embedded report blobs and
-distinguishes it from the earlier reviewed Product candidate. The Review/handoff candidate must
-equal `reviewedCandidateSha`; `evidenceCommitSha` must contain the exact blobs and descend from that
-candidate; the candidate under test must descend from the evidence commit; and both evidence blobs
-remain byte-identical on all later first-parent steps. Exact report digest, receipt and actors agree
-across assignment and both blobs, and implementer and reviewer differ. B1's table row binds accepted
-v8 evidence to B0; later rows bind the immediately preceding accepted Product candidate. Zero or
-multiple matches, non-first-parent-only matches, later mutation, wrong/old receipt, non-ancestor,
-self-review, candidate choice, working-tree reconstruction or failed Reviews stop before comparison.
-No new Harness/CLI/config commit input exists. Failed `50deefc1...` remains verification-only.
+For each B1/C Work, v8 selects the exact row in the interface's machine predecessor table.
+Main/human orchestration selects one full evidence commit outside candidate/config/repository
+authority and supplies it exactly once as `--predecessor-evidence`. V8 rejects missing, duplicate,
+abbreviated, malformed and nonexistent values, and has no receipt, environment, report or Git-
+history inference/default path. At the supplied commit it reads the exact handoff, `PASS` Review and
+embedded report blobs and distinguishes that commit from the earlier reviewed Product candidate.
+The Review/handoff candidate must equal `reviewedCandidateSha`; `evidenceCommitSha` must contain the
+exact blobs and descend from that candidate; the candidate under test must descend from the evidence
+commit on its first-parent chain; and both evidence blobs remain byte-identical on every later step.
+Exact report digest and declared actors agree internally, and implementer/reviewer strings differ.
+B1's table row binds accepted v8 evidence to B0; later rows bind the immediately preceding accepted
+Product candidate. Invalid/overridden input, later mutation, non-ancestor evidence, candidate choice,
+working-tree reconstruction or failed Reviews stop before comparison. The meter emits the selected
+SHA plus exact blob/digest tuple deterministically; a later different actor checks the official
+invocation against the trust-root Decision and handoff. Receipt strings, Git history/author metadata
+and declared actor strings authenticate no reviewer or human. No Harness/schema change occurs.
+Failed `50deefc1...` remains verification-only.
 
 The selected Work's exact `production` paths are the sole mutable raw-owner set. For a selected-Work
 nontraced path, the predecessor report freezes each raw site's qualified lexical ancestry, AST
@@ -828,10 +832,11 @@ bypass either stop.
   verifier or v8 ingress gate, followed by same-SHA source Review. Separate negatives cover nested
   same-name/default/class/constructor/overload/re-export owners, alias use-owner mismatch, anonymous
   callback inheritance, new helpers, nontraced delete-plus-relocate/replacement/reorder, outside
-  blob/import/raw/violation drift, deletion/materialization/path move, missing/duplicate/non-first-
-  parent Review introductions, wrong/old receipts, later-mutated/self-reviewed evidence, mismatched
-  blobs/actors and non-ancestor/chosen predecessors. A positive uses an actual strict-v1 predecessor
-  receipt/output and derives the unique evidence commit without a new Harness field.
+  blob/import/raw/violation drift, deletion/materialization/path move, missing/duplicate/abbreviated/
+  malformed/nonexistent official evidence input, config/repository/report override, later-mutated or
+  non-ancestor evidence, mismatched blobs/actors and a sole forged candidate Review/handoff at a SHA
+  other than the official input. A positive records an official full SHA and exact deterministic
+  tuple, then receives independent invocation verification without claiming identity authentication.
 
 ### Destructive fixture verification
 

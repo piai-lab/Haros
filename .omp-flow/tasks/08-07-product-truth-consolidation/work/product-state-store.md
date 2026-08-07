@@ -28,10 +28,10 @@ digests, including Work/raw-effect/predecessor-delta/effect-ingress/B1-verifier/
 universe digests, and the accepted B1
 verifier case-manifest/trace/fault/race/kill plus hidden-mutation/source-Review receipts. It must use
 the exact B1 recorded by the first handoff for later B0/B1/C comparison.
-The strict-v1 assignment carries only the execution-leaf Review receipt/output; v8 binds the output
-to its row, derives the unique first-parent `PASS` Review introduction commit, loads only its
-unchanged table-named blobs and requires reviewed-leaf→evidence→this-candidate ancestry with exact
-report/digests/actors and different implementer/reviewer actors.
+Main/human orchestration supplies the full execution-leaf evidence commit through the official
+`--predecessor-evidence` input. V8 loads only its unchanged table-named blobs and requires reviewed-
+leaf→evidence→this-candidate first-parent ancestry with exact report/digests and internally distinct
+declared actors. Receipt/history cannot select or authenticate it; later Review verifies the invocation.
 
 ## Allowed code and output boundary
 
@@ -116,6 +116,7 @@ caller ownership.
 
 Write [`handoffs/product-state-store.md`](../handoffs/product-state-store.md) with exactly one
 `omp-flow-product-truth-complexity-v8-report-v1` complete canonical JSON block, the immutable B1 SHA,
+complete official invocation and deterministic evidence tuple,
 exact Store API, SQL writer/connection inventory, per-command transaction fault results,
 Package projection and outbox-diagnostic proof, exact composition/probe paths changed, imports and
 focused checks. A different actor must accept it before Coordinator/facade extraction starts.

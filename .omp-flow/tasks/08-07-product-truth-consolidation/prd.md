@@ -313,17 +313,19 @@ Windows quiescence adapter. The underlying evidence remains in the
   identities expanded to 65 concrete-ordinal kill cases. B1 code/config/tests may implement but cannot add,
   merge, omit, rename, reorder, resize, redefine or downgrade an item. The generated manifest is
   the exact Design-derived Cartesian union, not a candidate-authored or filtered list.
-- Every v8 run selects one row from the Design-owned machine predecessor table. Its strict-v1
-  assignment supplies only the existing authenticated predecessor receipt and Harness-derived
-  predecessor output, which must equal the row's Review path. V8 derives the evidence commit as the
-  unique first-parent commit introducing the matching `PASS` Review, then reads exact handoff/
-  Review/report blobs there. It distinguishes the reviewed Product candidate from the later evidence
-  commit and requires `reviewedCandidate -> evidenceCommit -> candidateUnderTest` ancestry, unchanged
-  later blobs, exact report digest/receipt/actors and different implementer/reviewer actors. B1 receives the
+- Every v8 run selects one row from the Design-owned machine predecessor table. Main/human official
+  orchestration supplies exactly one full evidence commit via `--predecessor-evidence`; missing,
+  duplicate, abbreviated, malformed or nonexistent input fails. Candidate/config/repository/report/
+  receipt/history values cannot define, infer or override it. V8 reads exact handoff/Review/report
+  blobs there, distinguishes the reviewed Product candidate from the later evidence commit and
+  requires `reviewedCandidate -> evidenceCommit -> candidateUnderTest` ancestry, unchanged later
+  blobs, exact report digest and internally distinct declared implementer/reviewer actors. B1 receives the
   v8-accepted B0 snapshot; later Works receive the immediately preceding accepted Product candidate.
-  Missing/duplicate, non-first-parent-only, candidate-selected, branch, working-tree, reconstructed,
-  failed, later-mutated, self-reviewed, wrong/old-receipt or non-ancestor predecessors fail before
-  comparison; failed `50deefc1...` is verification-only. No commit-valued Harness field is required.
+  Candidate-selected, failed, later-mutated or non-ancestor evidence fails before comparison;
+  failed `50deefc1...` is verification-only. The report deterministically records the supplied SHA
+  and verified blob/digest tuple. Receipts and Git history authenticate no reviewer identity; a later
+  different actor independently checks the official invocation against the trust-root Decision and
+  handoff. No Harness or operation-schema field is required.
   Exact Work members may be deleted or materialized and the graph is recomputed; outside-Work
   deletion/materialization, undeclared moves and new glob members fail.
 - `scripts/check-source-closure.mjs` and every meter/config file are measurement, not tool,
@@ -349,7 +351,7 @@ Windows quiescence adapter. The underlying evidence remains in the
 | A11 | Coordinator retains Engine-effect semantics without SQL/replay/fallback                                                                                                                  | catalog/admission/attempt/control/crash tests across Pi and OpenCode                                                                                                                  |
 | A12 | Web/RPC sees exactly one 36-operation facade; probes/tests are separate                                                                                                                  | type/API snapshot, wsRpc tests and production caller scan                                                                                                                             |
 | A13 | Service selects and Host only validates one transcript-bound lane/Package root                                                                                                           | dev/packaged process tests covering proof tamper, replay, version/field faults, second/concurrent binding, mismatch/link/sibling-root and no fallback                                 |
-| A14 | Production and conceptual complexity strictly decrease in one coverage-complete frozen universe                                                                                          | immutable v1-v7 history, Design-pinned five boundaries/raw-effect syntax+alias+dependency inventory/owner authority/B1 verifier universe and fixture-catalog digests, frozen predecessor/evidence table with candidate→evidence→next ancestry, exact external equality, unique qualified traced declarations, predecessor-anchored nontraced structural sites, dependency/import/ingress closure and deterministic v8 B0/B1/C metrics; behavior separately accepted by the exact frozen B1 manifest and Review |
+| A14 | Production and conceptual complexity strictly decrease in one coverage-complete frozen universe                                                                                          | immutable v1-v7 history, Design-pinned five boundaries/raw-effect syntax+alias+dependency inventory/owner authority/B1 verifier universe and fixture-catalog digests, Main/human-selected full evidence commit recorded in the deterministic predecessor/evidence tuple with candidate→evidence→next ancestry, exact external equality, unique qualified traced declarations, predecessor-anchored nontraced structural sites, dependency/import/ingress closure and deterministic v8 B0/B1/C metrics; behavior separately accepted by the exact frozen B1 manifest and Review |
 | A15 | Current outbox, Automation, Web safeguard, Package and Engine recovery behavior remains                                                                                                  | focused existing suites plus complete real kill/race/write-trace and affected real-process journeys                                                                                   |
 
 ## Constraints and non-goals
@@ -388,8 +390,9 @@ assurance route. Under the
 structural-only boundary, but the accepted v7 candidate gate is superseded by the
 [v8 predecessor-delta authority](interfaces/product-truth-complexity-v8.md). A different QbD actor
 must challenge the v8 Design/interface/Work map, including wrong-symbol/helper, inside-growth,
-outside drift and missing/duplicate/non-first-parent/wrong-receipt/mutated/self-reviewed predecessor
-attacks, plus a positive derived from an actual strict-v1 predecessor receipt/output. A fresh zero-finding `PASS`
+outside drift, invalid/overridden official SHA and forged candidate Review/handoff attacks, plus a
+deterministic official-invocation positive and explicit proof that meter/receipt/Git history claims
+no reviewer authentication. A fresh zero-finding `PASS`
 authorizes only the measurement-only v8 Work; its immutable handoff requires a zero-finding
 different-actor `PASS` before a B1 production receipt may be issued. A changed destructive target
 or exclusion returns for explicit human decision.

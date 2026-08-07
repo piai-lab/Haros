@@ -28,10 +28,11 @@ exact B1 commit and v8 report as this Work's immutable comparison predecessor, a
 name the accepted immutable v8 meter Review receipt and SHA/digests, including Work/raw-effect/
 predecessor-delta/effect-ingress/B1-verifier/dependency/import/universe digests, plus the accepted
 B1 verifier case-manifest/trace/fault/race/kill and hidden-mutation/source-Review receipts. No
-shared-tree overlap with B1 is inferred. The strict-v1 assignment carries only the accepted B1
-Review receipt/output. V8 binds the output to its row, derives the unique first-parent `PASS` Review
-introduction commit, reads its table-named immutable blobs, distinguishes reviewed B1 from evidence
-commit and requires reviewed-B1→evidence→this-candidate ancestry with exact report/actors/digests.
+shared-tree overlap with B1 is inferred. Main/human orchestration supplies the accepted full B1
+evidence commit through the official `--predecessor-evidence` input. V8 reads its table-named
+immutable blobs, distinguishes reviewed B1 from evidence commit and requires reviewed-B1→evidence→
+this-candidate first-parent ancestry with exact report/digests and internally distinct declared
+actors. Receipt/history cannot select or authenticate it; later Review verifies the invocation.
 
 ## In scope
 
@@ -137,6 +138,7 @@ overlaps B1 compatibility cleanup, this Work does not run concurrently in the no
 
 Write [`handoffs/native-host-package-root-binding.md`](../handoffs/native-host-package-root-binding.md)
 with exactly one `omp-flow-product-truth-complexity-v8-report-v1` complete canonical JSON block,
+the complete official invocation and deterministic evidence tuple,
 changed paths, transcript vectors, all required real-process fault rows for both lanes,
 challenge-state measurements, zero-read/zero-dispatch observations, packaged supervision evidence
 and explicit confirmation that Desktop never selected the root and Host never wrote lifecycle

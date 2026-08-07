@@ -44,11 +44,13 @@ This Work realizes PRD A1-A9, the B1 half of A14, and the B1 preservation portio
 
 Do not assign or start this Work until `reviews/product-truth-complexity-v8.md` records a
 zero-finding different-actor `PASS` over the immutable meter-only commit. The B1 assignment must
-name only that review receipt/output as its strict-v1 predecessor. V8 must require the output to
-equal the table's meter Review path, derive the unique first-parent commit introducing that receipt's
-`PASS` Review, read exact handoff/Review/report blobs there, keep the reviewed meter candidate SHA
-distinct, and validate candidate→evidence→B1 ancestry, immutable later evidence blobs, exact
-receipt/actors/digests and different implementer/reviewer actors. The assignment also records the accepted meter SHA/digests including the
+record that Review receipt only as correlation. Main/human orchestration must separately supply the
+accepted full meter evidence commit exactly once through v8's official `--predecessor-evidence`
+input. V8 reads exact handoff/Review/report blobs there, keeps the reviewed meter candidate SHA
+distinct, and validates candidate→evidence→B1 first-parent ancestry, immutable later evidence blobs,
+exact digests and internally distinct declared implementer/reviewer actors. The later different-
+actor Review checks the recorded invocation against the official selection; neither receipt nor Git
+history authenticates identity. The assignment also records the accepted meter SHA/digests including the
 five Work fences, raw-effect syntax/dependency inventory, predecessor-delta authority,
 dependency/import closure, raw-effect owner authority and B1 verifier-universe digest, and use
 those bytes plus its accepted B0 report read-only. A branch, working tree, failed candidate or
@@ -328,10 +330,10 @@ does not authorize an unlisted production path.
   new helper, inside nontraced growth/delete-plus-relocate/replacement/reorder, unlisted paths,
   unresolved/computed imports, raw exports/handles/releases, forbidden/unknown loaders and
   simultaneous B1/C Product owners. Fail overwritten/mismatched evidence blobs/report/receipt/
-  actors, missing/duplicate/non-first-parent introduction, wrong/old receipt/output, later-mutated or
-  self-authored evidence, non-ancestor evidence and any use of `50deefc1...` as predecessor. A
-  positive must derive the evidence commit from the actual strict-v1 receipt/output without any new
-  Harness/CLI/config commit field.
+  declared actors, invalid/duplicate official evidence input, candidate/config/repository/report
+  override, later-mutated or non-ancestor evidence, a sole candidate-forged Review/handoff at a
+  different SHA and any use of `50deefc1...` as predecessor. A positive records the Main/human-
+  selected full evidence SHA and exact deterministic tuple without any Harness/schema change.
 - Run the verifier-owned generated-home matrix as one manifest-bound gate derived from the exact
   Design block. It covers classifier copy validation/cleanup, Product/service lock and refusal, Web
   refusal/batch, target seals, Package transitions and recovery across every frozen operation
@@ -395,6 +397,7 @@ Write [`handoffs/direct-first-public-b1.md`](../handoffs/direct-first-public-b1.
 `omp-flow-product-truth-complexity-v8-report-v1` complete canonical JSON block. It must link this
 Work, enumerate changed/deleted paths and reviewable commits, record the immutable B1 full SHA,
 accepted meter Review receipt/SHA plus Work/raw-effect/effect-ingress/B1-verifier/dependency/import/universe digests,
+the complete official `--ref`/`--predecessor-evidence` invocation and deterministic evidence tuple,
 clean-tree proof, complete accepted-B0/B1 metric output, verifier case-manifest/execution bijection,
 sanitized trace/fault/race/kill witnesses and different-actor hidden-mutation/source-Review receipt, exact
 fingerprint-registry bijection, sanitized

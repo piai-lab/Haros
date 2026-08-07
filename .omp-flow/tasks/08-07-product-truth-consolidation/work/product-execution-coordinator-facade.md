@@ -30,10 +30,10 @@ SHA, Work/raw-effect/predecessor-delta/effect-ingress/B1-verifier/dependency/imp
 case-manifest/trace/fault/race/kill and hidden-mutation/source-Review receipts must match the B1
 handoff byte-for-byte; mismatch stops rather than
 reconstructing or remeasuring with a revised universe.
-The strict-v1 assignment carries only the Store Review receipt/output; v8 binds the output to its
-row, derives the unique first-parent `PASS` Review introduction commit, loads only its unchanged
-table-named blobs and requires reviewed-Store→evidence→this-candidate ancestry with exact report/
-digests/actors and different implementer/reviewer actors.
+Main/human orchestration supplies the full Store evidence commit through the official
+`--predecessor-evidence` input. V8 loads only its unchanged table-named blobs and requires reviewed-
+Store→evidence→this-candidate first-parent ancestry with exact report/digests and internally distinct
+declared actors. Receipt/history cannot select or authenticate it; later Review verifies the invocation.
 
 ## Allowed code and output boundary
 
@@ -134,8 +134,9 @@ does not authorize an unlisted production path.
 ## Expected handoff
 
 Write [`handoffs/product-truth-candidate.md`](../handoffs/product-truth-candidate.md) with exactly one
-`omp-flow-product-truth-complexity-v8-report-v1` complete canonical JSON block. It must link
-the measurement Work and all five product Works plus accepted reviews; record immutable B0, B1 and C full SHAs; include deterministic
+`omp-flow-product-truth-complexity-v8-report-v1` complete canonical JSON block. It must record the
+complete official invocation and deterministic evidence tuple, link the measurement Work and all
+five product Works plus accepted reviews, record immutable B0, B1 and C full SHAs, and include deterministic
 B0/B1/C JSON metrics, exact facade/table/connection/writer/import/cycle counters, focused/final gate
 commands, sanitized real-journey results and remaining limitations. The producer may submit affected
 Campaign claims only as `candidate` and must request a different-actor review; this handoff cannot
