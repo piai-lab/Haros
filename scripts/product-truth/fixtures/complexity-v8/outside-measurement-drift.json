@@ -1,0 +1,6 @@
+{
+  "compareToBootstrapBaseline": true,
+  "appendToFiles": {
+    "scripts/check-source-closure.mjs": "\n// candidate outside-work measurement drift\n"
+  }
+}

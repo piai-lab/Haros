@@ -165,7 +165,7 @@ describe("product-truth-complexity-v8 deterministic B0", () => {
     ]);
     expect(v8.status).not.toBe(0);
     expect(v8.stdout).toBe("");
-    expect(v8.stderr).toContain("TRACED_OWNER_IDENTITY_INVALID:scripts/product-truth/chromium-leveldb.ts:");
+    expect(v8.stderr).toContain("OUTSIDE_WORK_BLOB_DRIFT:scripts/product-truth/complexity-universe-v1.json");
     expect(v8.stderr).not.toContain("RAW_EFFECT_OWNER_INVALID");
   }, 30_000);
 });
@@ -175,6 +175,7 @@ describe("product-truth-complexity-v8 qualified declarations", () => {
     "traced-owner-positive",
     "traced-anonymous-callback-positive",
     "traced-local-alias-positive",
+    "traced-import-shadow-positive",
   ])("accepts exact owner declaration and lexical-use positive %s", (fixture) => {
     const result = runFixture(fixture, "direct-first-public-b1");
     expect(result.status, result.stderr).toBe(0);
@@ -231,8 +232,16 @@ describe("product-truth-complexity-v8 predecessor structural sites", () => {
     expect(result.stderr).toContain("NONTRACED_SITE_");
   }, 30_000);
 
+  it("rejects an undeclared selected-Work deletion and materialization pair with zero raw ingress", () => {
+    const result = runFixture("undeclared-zero-raw-path-move", "direct-first-public-b1");
+    expect(result.status).not.toBe(0);
+    expect(result.stdout).toBe("");
+    expect(result.stderr).toContain("UNDECLARED_WORK_PATH_MOVE:scripts/release-update-policy.json:scripts/product-truth/cli.ts");
+  }, 30_000);
+
   it.each([
     "outside-blob-drift",
+    "outside-measurement-drift",
     "outside-mode-drift",
     "outside-deletion",
     "outside-path-move",

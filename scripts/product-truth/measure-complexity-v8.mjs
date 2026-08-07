@@ -1193,6 +1193,7 @@ const expressionChain = (node) => {
 };
 const makeLexicalBindings = (file) => {
   const scopeBindings = new Map();
+  const scopeDeclarations = new Map();
   const declarationScope = new WeakMap();
   const isFunctionScope = (node) => ts.isFunctionDeclaration(node) || ts.isFunctionExpression(node) ||
     ts.isArrowFunction(node) || ts.isMethodDeclaration(node) || ts.isConstructorDeclaration(node) ||
@@ -1210,6 +1211,10 @@ const makeLexicalBindings = (file) => {
     if (ts.isIdentifier(name)) {
       if (!scopeBindings.has(scope)) scopeBindings.set(scope, new Set());
       scopeBindings.get(scope).add(name.text);
+      if (!scopeDeclarations.has(scope)) scopeDeclarations.set(scope, new Map());
+      const declarations = scopeDeclarations.get(scope);
+      if (!declarations.has(name.text)) declarations.set(name.text, new Set());
+      declarations.get(name.text).add(name);
       declarationScope.set(name, scope);
       return;
     }
@@ -1248,7 +1253,14 @@ const makeLexicalBindings = (file) => {
     }
     return false;
   };
-  return { scopeBindings, declarationScope, isShadowedAt, containingScope };
+  const declarationsAt = (node, name) => {
+    for (let current = node.parent; current; current = current.parent) {
+      const declarations = scopeDeclarations.get(current)?.get(name);
+      if (declarations?.size) return declarations;
+    }
+    return null;
+  };
+  return { scopeBindings, declarationScope, isShadowedAt, containingScope, declarationsAt };
 };
 const normalizeGlobalParts = (root, members, wrapperUsed) => {
   const possibleReserved = rawUniverse.defaultDisposition.reservedRoots.some((reserved) =>
@@ -1311,11 +1323,22 @@ for (const path of candidateGraph.paths.filter((candidatePath) => rawInventoryPa
   if (file.parseDiagnostics.length) throw new Error(`UNPARSED_FROZEN_SOURCE:${path}`);
   const lexical = makeLexicalBindings(file);
   const bindings = new Map();
+  const bindingIdentityByDeclaration = new WeakMap();
   const declarationNodes = new Set();
   const bind = (name, identity, node) => {
     if (!identity?.classes?.length) return;
     bindings.set(name, identity);
+    bindingIdentityByDeclaration.set(node, identity);
     declarationNodes.add(node);
+  };
+  const resolvedBindingAt = (identifier) => {
+    const declarations = lexical.declarationsAt(identifier, identifier.text);
+    if (!declarations) return null;
+    for (const declaration of declarations) {
+      const identity = bindingIdentityByDeclaration.get(declaration);
+      if (identity) return identity;
+    }
+    return null;
   };
   const collectBindings = (node) => {
     if (ts.isImportDeclaration(node) && ts.isStringLiteralLike(node.moduleSpecifier)) {
@@ -1354,7 +1377,7 @@ for (const path of candidateGraph.paths.filter((candidatePath) => rawInventoryPa
           ts.isIdentifier(node.initializer.expression.expression) && node.initializer.expression.expression.text === "module" &&
           node.initializer.expression.name.text === "require" && node.initializer.arguments[0] && ts.isStringLiteralLike(node.initializer.arguments[0])) specifier = node.initializer.arguments[0].text;
       if (ts.isCallExpression(node.initializer) && ts.isIdentifier(node.initializer.expression) &&
-          bindings.get(node.initializer.expression.text)?.loader && node.initializer.arguments[0] &&
+          resolvedBindingAt(node.initializer.expression)?.loader && node.initializer.arguments[0] &&
           ts.isStringLiteralLike(node.initializer.arguments[0])) specifier = node.initializer.arguments[0].text;
       if (specifier && ts.isIdentifier(node.name)) bind(node.name.text, { specifier, exported: "*", classes: moduleRootClasses.get(specifier), namespace: true }, node.name);
       if (specifier && ts.isObjectBindingPattern(node.name)) for (const element of node.name.elements) {
@@ -1367,7 +1390,7 @@ for (const path of candidateGraph.paths.filter((candidatePath) => rawInventoryPa
         bind(element.name.text, { specifier, exported, classes }, element.name);
       }
       if (ts.isIdentifier(node.name) && ts.isCallExpression(node.initializer) && ts.isIdentifier(node.initializer.expression)) {
-        const creator = bindings.get(node.initializer.expression.text);
+        const creator = resolvedBindingAt(node.initializer.expression);
         if (creator?.exported === "createRequire") bind(node.name.text, { specifier: "createRequire", exported: "result", classes: ["ambient-loader"], loader: true }, node.name);
       }
     }
@@ -1379,15 +1402,16 @@ for (const path of candidateGraph.paths.filter((candidatePath) => rawInventoryPa
     aliasChanged = false;
     const visit = (node) => {
       if (ts.isVariableDeclaration(node) && node.initializer) {
-        if (ts.isIdentifier(node.name) && ts.isIdentifier(node.initializer) && bindings.has(node.initializer.text) && !bindings.has(node.name.text)) {
-          bind(node.name.text, bindings.get(node.initializer.text), node.name); aliasChanged = true;
+        const initializerBinding = ts.isIdentifier(node.initializer) ? resolvedBindingAt(node.initializer) : null;
+        if (ts.isIdentifier(node.name) && initializerBinding && !bindings.has(node.name.text)) {
+          bind(node.name.text, initializerBinding, node.name); aliasChanged = true;
         }
         if (ts.isIdentifier(node.name) && (ts.isPropertyAccessExpression(node.initializer) || ts.isElementAccessExpression(node.initializer)) &&
-            ts.isIdentifier(node.initializer.expression) && bindings.get(node.initializer.expression.text)?.namespace) {
+            ts.isIdentifier(node.initializer.expression) && resolvedBindingAt(node.initializer.expression)?.namespace) {
           const member = staticMember(node.initializer);
           if (member.value === null) addViolation("COMPUTED_EFFECT_SELECTOR", path, node.initializer, node.initializer.getText(file));
           else if (!bindings.has(node.name.text)) {
-            const base = bindings.get(node.initializer.expression.text);
+            const base = resolvedBindingAt(node.initializer.expression);
             bind(node.name.text, { specifier: base.specifier, exported: member.value, classes: classesForModuleExport(base.specifier, member.value), form: member.form }, node.name);
             aliasChanged = true;
           }
@@ -1690,7 +1714,7 @@ for (const path of candidateGraph.paths.filter((candidatePath) => rawInventoryPa
       if (!node.arguments[0] || !ts.isStringLiteralLike(node.arguments[0])) addViolation("COMPUTED_LOADER_TARGET", path, node, node.getText(file));
       record(node, { specifier: "process", exported: "getBuiltinModule", classes: ["ambient-loader"] }, "process-get-builtin-module-call");
     }
-    if (ts.isCallExpression(node) && ts.isIdentifier(node.expression) && bindings.get(node.expression.text)?.loader) {
+    if (ts.isCallExpression(node) && ts.isIdentifier(node.expression) && resolvedBindingAt(node.expression)?.loader) {
       const argument = node.arguments[0];
       if (!argument || !ts.isStringLiteralLike(argument)) addViolation("COMPUTED_LOADER_TARGET", path, node, node.getText(file));
       else {
@@ -1700,10 +1724,11 @@ for (const path of candidateGraph.paths.filter((candidatePath) => rawInventoryPa
     }
     const directCommonJs = commonJsLoader(node);
     if (directCommonJs) recordDirectCommonJs(node, directCommonJs);
-    if (ts.isIdentifier(node) && bindings.has(node.text) && !declarationNodes.has(node)) {
+    const resolvedBinding = ts.isIdentifier(node) && !declarationNodes.has(node) ? resolvedBindingAt(node) : null;
+    if (ts.isIdentifier(node) && resolvedBinding) {
       const parent = node.parent;
       if (ts.isPropertyAccessExpression(parent) && parent.expression === node) {
-        const base = bindings.get(node.text);
+        const base = resolvedBinding;
         if (base.namespace) {
           const classes = classesForModuleExport(base.specifier, parent.name.text);
           record(parent, { specifier: base.specifier, exported: parent.name.text, classes }, "namespace-member");
@@ -1712,11 +1737,11 @@ for (const path of candidateGraph.paths.filter((candidatePath) => rawInventoryPa
         const member = staticMember(parent);
         if (member.value === null) addViolation("COMPUTED_EFFECT_SELECTOR", path, parent, parent.getText(file));
         else {
-          const base = bindings.get(node.text);
+          const base = resolvedBinding;
           record(parent, { specifier: base.specifier, exported: member.value, classes: classesForModuleExport(base.specifier, member.value) }, "computed-literal-member");
         }
       } else if (!(ts.isImportSpecifier(parent) || ts.isNamespaceImport(parent) || ts.isVariableDeclaration(parent))) {
-        record(node, bindings.get(node.text), bindings.get(node.text).form ?? "destructure-binding");
+        record(node, resolvedBinding, resolvedBinding.form ?? "destructure-binding");
       }
     }
     if ((ts.isCallExpression(node) || ts.isNewExpression(node)) && ts.isIdentifier(node.expression)) {
@@ -1929,7 +1954,7 @@ if (comparisonEnabled) {
   const predecessorMembers = new Map(predecessorReport.universe.members.map((entry) => [entry.path, entry]));
   const candidateMembers = new Map(memberRecords.map((entry) => [entry.path, entry]));
   const externalPaths = membershipPaths.filter((path) => !selectedBoundaryPaths.has(path) &&
-    ["production", "direct-tool", "dependency"].includes(categoryOf(path)));
+    ["production", "direct-tool", "dependency", "measurement"].includes(categoryOf(path)));
   for (const path of externalPaths) {
     const before = predecessorMembers.get(path);
     const after = candidateMembers.get(path);
@@ -2024,14 +2049,18 @@ if (comparisonEnabled) {
   if (hardGlobalViolations.length) throw new Error(`RAW_EFFECT_INGRESS_INVALID:${JSON.stringify(hardGlobalViolations.slice(0, 30))}`);
   const deletedPaths = [...selectedPaths].filter((path) => predecessorMembers.get(path)?.present && !candidateMembers.get(path)?.present);
   const materializedPaths = [...selectedPaths].filter((path) => !predecessorMembers.get(path)?.present && candidateMembers.get(path)?.present);
-  for (const deleted of deletedPaths) for (const materialized of materializedPaths) {
-    const deletedSites = entriesAtPath(predecessorReport.rawEffects.canonicalIngress, deleted);
-    const materializedSites = entriesAtPath(canonicalIngress, materialized);
-    const movedRawIdentity = deletedSites.some((before) => materializedSites.some((after) =>
-      before.resolvedTerminal === after.resolvedTerminal && compareCanonical(before.classes, after.classes)));
-    const declaredProductMove = `${deleted}#${deletedSites[0]?.ownerSymbol}` === cMove.from &&
-      `${materialized}#${materializedSites[0]?.ownerSymbol}` === cMove.to;
-    if (movedRawIdentity && !declaredProductMove) throw new Error(`UNDECLARED_WORK_PATH_MOVE:${deleted}:${materialized}`);
+  const undeclaredLifecyclePairs = deletedPaths.flatMap((deleted) => materializedPaths.map((materialized) => ({
+    deleted,
+    materialized,
+    siteCount: entriesAtPath(predecessorReport.rawEffects.canonicalIngress, deleted).length +
+      entriesAtPath(canonicalIngress, materialized).length,
+  }))).filter(({ deleted, materialized }) =>
+    deleted !== cMove.from.split("#")[0] || materialized !== cMove.to.split("#")[0])
+    .sort((left, right) => left.siteCount - right.siteCount ||
+      `${left.deleted}\0${left.materialized}`.localeCompare(`${right.deleted}\0${right.materialized}`));
+  if (undeclaredLifecyclePairs.length) {
+    const { deleted, materialized } = undeclaredLifecyclePairs[0];
+    throw new Error(`UNDECLARED_WORK_PATH_MOVE:${deleted}:${materialized}`);
   }
   comparison = {
     enabled: true,
