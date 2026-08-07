@@ -178,6 +178,7 @@ describe("product-truth-complexity-v8 qualified declarations", () => {
     "traced-import-shadow-positive",
     "traced-safe-export-collision-positive",
     "traced-harmless-destructure-export-positive",
+    "traced-namespace-destructure-shadow-positive",
   ])("accepts exact owner declaration and lexical-use positive %s", (fixture) => {
     const result = runFixture(fixture, "direct-first-public-b1");
     expect(result.status, result.stderr).toBe(0);
@@ -197,6 +198,9 @@ describe("product-truth-complexity-v8 qualified declarations", () => {
     "traced-repeated-alias-private-helper",
     "traced-raw-local-export",
     "traced-raw-destructure-export",
+    "traced-namespace-destructure-direct-export",
+    "traced-cjs-namespace-destructure-export-alias",
+    "traced-namespace-destructure-private-helper",
     "traced-class-growth",
   ])("rejects wrong qualified declaration/use %s", (fixture) => {
     const result = runFixture(fixture, "direct-first-public-b1");

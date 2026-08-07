@@ -1455,6 +1455,70 @@ for (const path of candidateGraph.paths.filter((candidatePath) => rawInventoryPa
     ts.forEachChild(node, collectBindings);
   };
   collectBindings(file);
+  const namespacePatternDiagnostics = new WeakSet();
+  const addNamespacePatternViolation = (code, node, detail) => {
+    if (namespacePatternDiagnostics.has(node)) return;
+    namespacePatternDiagnostics.add(node);
+    addViolation(code, path, node, detail);
+  };
+  const bindNamespacePattern = (base, name) => {
+    if (!base?.namespace) return false;
+    if (ts.isArrayBindingPattern(name)) {
+      addNamespacePatternViolation("RAW_ALIAS_WRITE_UNKNOWN", name, {
+        specifier: base.specifier,
+        reason: "array-namespace-destructure",
+      });
+      return false;
+    }
+    if (!ts.isObjectBindingPattern(name)) return false;
+    let changed = false;
+    for (const element of name.elements) {
+      if (element.dotDotDotToken) {
+        addNamespacePatternViolation("RAW_ALIAS_WRITE_UNKNOWN", element, {
+          specifier: base.specifier,
+          reason: "rest-namespace-destructure",
+        });
+        continue;
+      }
+      let member = null;
+      let form = "destructure-binding";
+      if (!element.propertyName && ts.isIdentifier(element.name)) member = element.name.text;
+      else if (element.propertyName && (ts.isIdentifier(element.propertyName) || ts.isStringLiteralLike(element.propertyName))) {
+        member = element.propertyName.text;
+      } else if (element.propertyName && ts.isComputedPropertyName(element.propertyName) &&
+          (ts.isStringLiteralLike(element.propertyName.expression) || ts.isNoSubstitutionTemplateLiteral(element.propertyName.expression))) {
+        member = element.propertyName.expression.text;
+        form = "computed-literal-member";
+      } else if (element.propertyName && ts.isComputedPropertyName(element.propertyName)) {
+        addNamespacePatternViolation("COMPUTED_EFFECT_SELECTOR", element.propertyName, element.propertyName.getText(file));
+        continue;
+      } else {
+        addNamespacePatternViolation("RAW_ALIAS_WRITE_UNKNOWN", element, {
+          specifier: base.specifier,
+          reason: "nested-namespace-destructure-without-selector",
+        });
+        continue;
+      }
+      if (!ts.isIdentifier(element.name)) {
+        addNamespacePatternViolation("RAW_ALIAS_WRITE_UNKNOWN", element.name, {
+          specifier: base.specifier,
+          exported: member,
+          reason: "nested-namespace-destructure",
+        });
+        continue;
+      }
+      const classes = classesForModuleExport(base.specifier, member);
+      if ((acceptedEffectPackages.has(packageRoot(base.specifier)) ||
+          rawUniverse.moduleSelectors.some((entry) => entry.specifier === base.specifier)) && !classes) {
+        addNamespacePatternViolation("UNKNOWN_MODULE_EFFECT_EXPORT", element, `${base.specifier}#${member}`);
+        continue;
+      }
+      if (!classes || bindingIdentityByDeclaration.has(element.name)) continue;
+      bind({ specifier: base.specifier, exported: member, classes, form }, element.name);
+      changed = true;
+    }
+    return changed;
+  };
   let aliasChanged = true;
   while (aliasChanged) {
     aliasChanged = false;
@@ -1464,6 +1528,8 @@ for (const path of candidateGraph.paths.filter((candidatePath) => rawInventoryPa
         if (ts.isIdentifier(node.name) && initializerBinding && !bindingIdentityByDeclaration.has(node.name)) {
           bind(initializerBinding, node.name); aliasChanged = true;
         }
+        if ((ts.isObjectBindingPattern(node.name) || ts.isArrayBindingPattern(node.name)) &&
+            initializerBinding?.namespace && bindNamespacePattern(initializerBinding, node.name)) aliasChanged = true;
         if (ts.isIdentifier(node.name) && (ts.isPropertyAccessExpression(node.initializer) || ts.isElementAccessExpression(node.initializer)) &&
             ts.isIdentifier(node.initializer.expression) && resolvedBindingAt(node.initializer.expression)?.namespace) {
           const member = staticMember(node.initializer);
