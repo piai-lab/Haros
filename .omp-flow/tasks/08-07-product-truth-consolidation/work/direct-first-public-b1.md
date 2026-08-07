@@ -32,6 +32,8 @@ This Work realizes PRD A1-A9, the B1 half of A14, and the B1 preservation portio
 - [B1 source-closure disposition boundary PASS approval](../decisions/b1-source-closure-boundary-pass-approval.md)
 - [Unshipped compatibility inventory](../research/unshipped-compatibility.md)
 - [Failed immutable B1 Review](../reviews/direct-first-public-b1.md)
+- [V4 QbD repair calibration](../decisions/product-truth-complexity-v4-qbd-repair-calibration.md)
+- [V4 capability/lock authority](../interfaces/product-truth-complexity-v4.md)
 - [Authoritative v4 meter Work](product-truth-complexity-v4.md) and its required
   [handoff](../handoffs/product-truth-complexity-v4.md)
 
@@ -57,7 +59,10 @@ read-only.
   close/reopen validation and typed refusal of every legacy, partial, future or contradictory state.
   Product/service runtime uses a complete main/WAL/SHM pre-mutation cut before current stores
   mkdir/file/lock, then repeats the complete cut while holding the owner lock before current
-  database read/open/create/write/handle mutation. Web uses its complete v1/v2 cut before every g1
+  database read/open/create/write/handle mutation. The lock must be the same canonical owner/lane/
+  root/database/lock-path/token capability and remain definitely held across aliases and the full
+  Product resource or Service Effect Layer until every guarded sink completes; direct-tool retired
+  locks and sibling handles never satisfy runtime hold. Web uses its complete v1/v2 cut before every g1
   read/create/hydration/dispatch/mutation. No owner decodes, returns, logs, copies or mutates an old
   value.
 - Repair live Service composition so Product control-plane and Product Package-lifecycle startup
@@ -239,6 +244,10 @@ does not authorize an unlisted production path.
   literal, presence operation and count, and rejects value flow to a decoder/current encoder/log or
   mutation. Its owner CFG report additionally proves every required probe/decision dominates the
   current-generation sinks assigned to that refusal stage and legacy-present flow cannot reach one.
+  Its accepted source/dependency capability inventory includes the real Bun/Node Effect loader,
+  layer/factory and receiver closure with no missing/mutated identity or unapproved non-Product
+  origin; every Product/service post-lock sink has the matching definitely-held capability and no
+  early, aliased, wrong-binding, sibling-handle or finally-before-sink release path.
   Retired database/key filenames under `scripts/product-truth/**` are reported separately and are
   permitted only as exact closed destructive target identities or their matching tool fixtures and
   assertions. They must not be counted as runtime compatibility, removed by an undifferentiated
@@ -267,7 +276,10 @@ does not authorize an unlisted production path.
   import and moved responsibility cases. It must also pass canonical neutral-wrapper and complete
   Product/service/Web refusal positives, and fail neutral generic-wrapper raw Product paths plus
   valid current-I/O-before-refusal, bypass, conditional-helper, swallowed-throw and deferred-sink
-  negatives for their exact bounded causes.
+  negatives for their exact bounded causes. It must also re-derive the real Effect SQLite capability
+  closure, reject every per-seed/source-digest mutation and new `SqliteMigrator`, and pass outer-
+  finalizer lock positives while rejecting dropped acquire, wrong owner/lane/root/lock-path/token,
+  sibling/direct-tool handle, early/aliased release and finally-before-sink for exact bounded codes.
 - Verify the dependency boundary: `scripts/package.json` has one exact non-range direct
   `classic-level` pin; the root lock's scripts importer and integrity closure match it; a filtered
   lock diff contains no unrelated refresh; and `bun install --frozen-lockfile` leaves `bun.lock`
@@ -321,7 +333,9 @@ stronger primitive or retry.
 
 Write [`handoffs/direct-first-public-b1.md`](../handoffs/direct-first-public-b1.md). It must link this
 Work, enumerate changed/deleted paths and reviewable commits, record the immutable B1 full SHA,
-accepted meter review receipt/SHA/digests, clean-tree proof, complete accepted-B0/B1 metric output, exact fingerprint-registry bijection, sanitized
+accepted meter review receipt/SHA plus Work/capability/owner-lock-authority/derived-inventory digests
+and must-hold report, clean-tree proof, complete accepted-B0/B1 metric output, exact
+fingerprint-registry bijection, sanitized
 whole-profile write trace, zero extraction surface and all focused/isolated-process results. It must
 state that no responsibility-extraction assignment is authorized until a different actor accepts
 this handoff.

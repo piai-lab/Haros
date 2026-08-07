@@ -158,10 +158,13 @@ Windows quiescence adapter. The underlying evidence remains in the
 - Before any current Product/service `stores/` mkdir, current database file touch or owner-lock
   acquisition/publication, normal runtime completes a pre-mutation presence-refusal cut over the
   owner's full retired main/WAL/SHM set. After acquiring that owner lock it repeats the same complete
-  post-lock cut before current database existence/read/open/create/write or handle mutation. Web
-  completes one full v1/v2 cut before any g1 read/create/hydration/dispatch/mutation. Every required
-  probe and decision dominates the sinks assigned to its stage; a present identity reaches only the
-  typed reset error and cannot reach current I/O. Presence refuses startup/draft mutation without decoding, logging, copying,
+  post-lock cut before current database existence/read/open/create/write or handle mutation. The
+  acquired capability must bind the same owner, canonical lane/root and current database, remain
+  definitely held through every guarded sink across aliases and scoped finalizers, and release only
+  after no guarded sink remains reachable on that path. Web completes one full v1/v2 cut before any
+  g1 read/create/hydration/dispatch/mutation. Every required probe and decision dominates the sinks
+  assigned to its stage; a present identity reaches only the typed reset error and cannot reach
+  current I/O. Presence refuses startup/draft mutation without decoding, logging, copying,
   deleting or deriving current content. Product Service production composition and Package
   lifecycle both receive `resolveProductDatabasePath(stateDir)`; no live entry point may construct
   `<lane>/product.sqlite`.
@@ -262,26 +265,34 @@ Windows quiescence adapter. The underlying evidence remains in the
   the facade are all zero. Required presence-only sentinels are a separate exact allowlist, and
   every complete owner-local refusal stage dominates its assigned current-generation I/O sinks.
   Noncanonical production Product database composition sites are zero. Database consumers are
-  discovered from resolved opener/constructor/receiver identities plus complete wrapper/caller/path/
-  handle dataflow before Product classification; Product-looking text cannot select a sink. Facade
-  RPC methods remain exactly 36 and Product tables remain exactly 21.
+  discovered from a Design-frozen primitive/path-origin authority and independently re-derived
+  accepted source/dependency closure, including repository/external openers, dynamic loaders,
+  Effect layers/factories and handle receivers, plus complete wrapper/caller/path/handle dataflow
+  before Product classification. Product-looking text cannot select a sink, and `proved non-Product`
+  is limited to exact approved service, classifier-copy or memory origins. Facade RPC methods remain
+  exactly 36 and Product tables remain exactly 21.
 - No new Product table/database/durable state machine, migration platform, per-Engine Product plane,
   generic repository/manager/registry or fallback path is introduced.
 - V4 extracts the five machine-readable boundaries from one pinned accepted Design commit and
-  freezes path membership. Design-time edges/sinks are snapshots, not allowlists. Later edges pass
+  freezes path membership. It also extracts the strict database-capability and owner-lock authority
+  blocks, then independently re-derives/pins the complete reachable capability inventory from the
+  same accepted source and dependency bytes. Design-time edges/sinks are snapshots, not allowlists. Later edges pass
   only between frozen members; outside-set endpoints, computed/unresolved imports or moved
   responsibility fail. Every resolved database opener/constructor invocation is enumerated before
   Product classification; wrappers, callers, aliases, returned handles and receivers are followed
   to a fixed point. Every resulting Product consumer must be inside the set with canonical
   resolver-only provenance; raw, outside, unknown or competing consumers fail. Product, service and
-  Web current-generation sinks are also discovered before CFG dominance is checked; an exact guard
-  that executes after any reachable current sink fails.
+  Web current-generation sinks are also discovered before CFG dominance is checked. Product/service
+  owner-lock acquire/release declarations and aliases are resolved as a must-hold capability bound
+  to the same canonical owner/lane/root/database; an exact guard that executes after a current sink
+  or a release/unknown-lock path before a guarded sink fails.
   `scripts/check-source-closure.mjs` and every meter/config file are measurement, not tool,
   production or steady-state runtime.
 - The exact configured B0 SHA is observational only for historical semantic violations: it emits
   complete witnesses while authority/config/membership/graph-integrity defects still fail. Every
-  other candidate and focused semantic fixture treats the same Product-consumer and refusal-cut
-  violations as hard failures. Branch, working-tree or B0 substitution cannot select this mode.
+  other candidate and focused semantic fixture treats the same Product-consumer, refusal-cut and
+  owner-lock must-hold violations as hard failures. Branch, working-tree or B0 substitution cannot
+  select this mode.
 
 ## Acceptance matrix
 
@@ -293,14 +304,14 @@ Windows quiescence adapter. The underlying evidence remains in the
 | A4  | Apply deletes only the allowlist and creates no recoverable copy                                                                                                                         | before/after tree allowlist, write-spy and absence scans for snapshot/export/restore surfaces                                                                                         |
 | A5  | Every excluded path/key/generation remains byte-identical                                                                                                                                | seeded exclusion fixture with hashes before/after apply                                                                                                                               |
 | A6  | Interruption converges only through fresh inspect/apply; inert Package tombstones do not block normal startup                                                                            | real termination before/after the Web batch and every Package graph edge, stale-lock and tombstone convergence matrix                                                                 |
-| A7  | Product/service/Web owners create only exact generation 1 from clean absence and all live Product consumers use the canonical Store path                                                 | fresh/open/reopen, Product/service two-stage and Web single-stage exact legacy refusal, concrete production composition and partial-creation matrix                                   |
+| A7  | Product/service/Web owners create only exact generation 1 from clean absence and all live Product consumers use the canonical Store path                                                 | fresh/open/reopen, Product/service two-stage plus matching owner-lock must-hold and Web single-stage exact refusal, concrete production composition and partial-creation matrix        |
 | A8  | Old/future/unmarked/contradictory generations fail closed                                                                                                                                | database and Web generation fault matrix with zero write assertions                                                                                                                   |
-| A9  | The complete unshipped compatibility inventory has zero production caller/import while exact refusal sentinels remain present, non-decoding and dominant over all current-generation I/O | v4 resolved-symbol/dataflow/CFG classifications; Product/service/Web positive and late-I/O/bypass fixtures plus current-generation tests                                              |
+| A9  | The complete unshipped compatibility inventory has zero production caller/import while exact refusal sentinels remain present, non-decoding and dominant over all current-generation I/O | v4 resolved-symbol/dataflow/CFG and owner-lock-state classifications; positive, late-I/O/bypass, wrong-lock and early/aliased/finally-release fixtures plus current-generation tests  |
 | A10 | One Store retains all named compound transactions and SQL authority                                                                                                                      | static writer/connection gate and transaction fault injection for every named unit                                                                                                    |
 | A11 | Coordinator retains Engine-effect semantics without SQL/replay/fallback                                                                                                                  | catalog/admission/attempt/control/crash tests across Pi and OpenCode                                                                                                                  |
 | A12 | Web/RPC sees exactly one 36-operation facade; probes/tests are separate                                                                                                                  | type/API snapshot, wsRpc tests and production caller scan                                                                                                                             |
 | A13 | Service selects and Host only validates one transcript-bound lane/Package root                                                                                                           | dev/packaged process tests covering proof tamper, replay, version/field faults, second/concurrent binding, mismatch/link/sibling-root and no fallback                                 |
-| A14 | Production and conceptual complexity strictly decrease in one coverage-complete frozen universe                                                                                          | immutable rejected v1/v2/v3 history, Design-pinned v4 boundaries, frozen path/import set, opener/handle and refusal-dominance adversarial gates, and deterministic v4 B0/B1/C metrics |
+| A14 | Production and conceptual complexity strictly decrease in one coverage-complete frozen universe                                                                                          | immutable rejected v1/v2/v3 history, Design-pinned boundaries and capability authority, frozen set, per-seed/Effect opener and owner-lock must-hold gates, deterministic v4 metrics   |
 | A15 | Current outbox, Automation, Web safeguard, Package and Engine recovery behavior remains                                                                                                  | focused existing suites plus complete real kill/race/write-trace and affected real-process journeys                                                                                   |
 
 ## Constraints and non-goals
@@ -331,7 +342,11 @@ implementation choices; every protected exclusion remains unchanged. The maintai
 [option-1 calibration](decisions/b1-failed-review-repair-calibration.md) additionally binds the
 atomic Web batch and sealed Package graph. The failed
 [v3 meter Review](reviews/product-truth-complexity-v3.md) returns measurement authority to v4
-without changing those runtime decisions. A different QbD actor must challenge the v4
+without changing those runtime decisions. The failed
+[v4 authority audit](qbd/product-truth-complexity-v4-audit.md) is repaired only by closing the
+database-capability/non-Product derivation and canonical owner-lock must-hold proof under the
+[maintainer calibration](decisions/product-truth-complexity-v4-qbd-repair-calibration.md). A
+different QbD actor must challenge the v4
 Design/interface/Work map. A fresh zero-finding `PASS` authorizes only the measurement-only v4 Work;
 its immutable handoff requires a zero-finding different-actor `PASS` before a B1 production receipt
 may be issued. A changed destructive target or exclusion returns for explicit human decision.

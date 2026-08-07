@@ -41,6 +41,11 @@ its immutable [Review](../reviews/product-truth-complexity-v2.md), and v3 was th
 immutable [Review](../reviews/product-truth-complexity-v3.md) for a textual Product-sink prefilter
 and missing current-I/O dominance. V4 repairs only those measurement gates without changing any
 product or destructive boundary.
+The first v4 QbD then rejected self-selected persistence-capability/non-Product authority and a
+post-lock cut that did not prove the matching lock stayed held. Under the maintainer's
+[v4 QbD repair calibration](../decisions/product-truth-complexity-v4-qbd-repair-calibration.md), the
+same v4 Work now freezes an independently re-derived accepted source/dependency capability closure
+and canonical owner-lock must-hold model. This still changes measurement authority only.
 No destructive target or protected exclusion changes.
 
 ## Hard ordering
@@ -83,7 +88,10 @@ imports and moved responsibility fail mechanically. V4 discovers all resolved da
 openers/constructors/wrappers/callers/handles before Product classification, and rejects raw,
 outside, unknown or competing Product provenance. It also proves every complete Product/service/Web
 refusal stage dominates its assigned current-generation sinks and legacy-present flow cannot reach
-current I/O. After v4 review acceptance,
+current I/O. Its capability set is independently rooted in the builtin SQLite constructors,
+accepted Work membership, exact lock/dependency source and approved path origins; Product/service
+also require the same canonical owner/lane/root/database/lock-path/token capability to remain held
+through every guarded sink. After v4 review acceptance,
 every later Work treats it as read-only.
 An inert `.discarding` tombstone blocks rebuild convergence only; it is never loaded and adds no
 ordinary-runtime sentinel.
@@ -133,7 +141,7 @@ Product State Store → Coordinator/facade C.
 | A4 allowlisted unrecoverable deletion with no copy                            | [Direct first-public B1](direct-first-public-b1.md)                                                                                                                                                           |
 | A5 byte-identical exclusions                                                  | [Direct first-public B1](direct-first-public-b1.md)                                                                                                                                                           |
 | A6 interruption only through fresh inspect/apply                              | [Direct first-public B1](direct-first-public-b1.md)                                                                                                                                                           |
-| A7 exact Product/service/Web generation-1 creation                            | [Direct first-public B1](direct-first-public-b1.md)                                                                                                                                                           |
+| A7 exact Product/service/Web generation-1 creation and matching lock hold     | [Direct first-public B1](direct-first-public-b1.md), measured by [v4](product-truth-complexity-v4.md)                                                                                                         |
 | A8 old/future/unmarked/contradictory state fails closed                       | [Direct first-public B1](direct-first-public-b1.md)                                                                                                                                                           |
 | A9 zero unshipped compatibility caller/import and dominant exact refusal cuts | [Direct first-public B1](direct-first-public-b1.md), measured by [v4](product-truth-complexity-v4.md)                                                                                                         |
 | A10 one Store, one connection and complete transactions                       | [Sole Product State Store](product-state-store.md), retained by the [final C Work](product-execution-coordinator-facade.md)                                                                                   |
@@ -154,7 +162,10 @@ the next overlapping Work begins. Focused green checks do not authorize broader 
 Work may submit affected Campaign claims only as `candidate`; no producer may mark them verified.
 
 The next workflow entry is a fresh different-actor QbD audit of the v4 meter repair across Design,
-interface, measurement Work, all five product Works and this map. Only `PASS` with zero blocker and
+interface, measurement Work, all five product Works and this map. It must explicitly refute both
+findings in the failed [v4 audit](../qbd/product-truth-complexity-v4-audit.md): per-seed/source-
+digest capability completeness with no unapproved non-Product discharge, and same-binding
+owner-lock must-hold through every sink. Only `PASS` with zero blocker and
 zero advisory authorizes the measurement-only v4 assignment. Its immutable handoff then needs a
 zero-finding different-actor `PASS` before a new B1 production receipt. Rejected v1/v2/v3 meter
 bytes, Reviews and candidates remain immutable historical evidence.

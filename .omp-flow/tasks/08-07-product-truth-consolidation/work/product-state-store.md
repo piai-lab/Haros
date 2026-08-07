@@ -23,7 +23,8 @@ perform, the Coordinator/facade extraction.
 
 This Work begins only after immutable B1, Native Host v2 and the execution-leaf Work have
 different-actor accepted handoffs. The B1 chain must bind the accepted immutable v4 meter Review and
-SHA/digests. It must use the exact B1 recorded by the first handoff for later B0/B1/C comparison.
+SHA/digests, including the capability/owner-lock-authority and derived-inventory digests plus must-hold
+report. It must use the exact B1 recorded by the first handoff for later B0/B1/C comparison.
 
 ## Allowed code and output boundary
 
@@ -74,6 +75,9 @@ caller ownership.
 
 - Static gates report exactly one Product database construction site/connection and zero Product SQL
   writer outside Store. All 21 tables and exact g1 open/create validation remain Store-owned.
+- The Store connection remains inside the exact Product canonical owner-lock resource from acquire
+  through every command/receiver sink and closes before outer-finalizer release; no path, alias,
+  sibling handle or token creates a second or prematurely released capability.
 - Store commands retain complete atomic transactions for Workspace/Conversation creation, Group
   membership, annotations/mutations/facts, Queue edit/admission, claim/`markSent`, accepted delivery,
   observed delivery plus first fact/binding/selection, execution projection, settlement, abort
@@ -95,7 +99,8 @@ caller ownership.
 - Read the frozen complexity instrument without editing it; report the intermediate metrics only.
 - Run the frozen v4 membership gate and dynamic edge/sink classification. The future Store and its
   canonical sink may materialize inside the frozen set; any outside-set endpoint/sink,
-  unclassified/competing sink or computed/unresolved edge stops for map repair.
+  unclassified/competing sink or computed/unresolved edge stops for map repair. Re-derived capability
+  inventory and same-binding owner-lock state must remain exact after the responsibility move.
 
 ## Expected handoff
 

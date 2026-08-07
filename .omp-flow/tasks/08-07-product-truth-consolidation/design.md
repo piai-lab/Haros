@@ -102,8 +102,11 @@ cross-store transaction owner.
    `<lane>/stores/product.sqlite` from the canonical lane and revalidate every existing ancestor by
    identity. While holding the lock, repeat all three exact retired presence probes and decisions.
    This post-lock guard completes before current database existence/read/open/create/write or
-   handle mutation. Presence again throws `PREBASELINE_RESET_REQUIRED`; runtime does not open, hash,
-   decode, copy or mutate the retired member.
+   handle mutation. The acquired lock is bound to the same Product owner, lane, canonical root and
+   exact current database; it remains definitely held through every database handle/receiver use
+   and is released by the outer resource finalizer only after the connection is closed and no
+   guarded sink is reachable. Presence again throws `PREBASELINE_RESET_REQUIRED`; runtime does not
+   open, hash, decode, copy or mutate the retired member.
 3. If both guards establish absence, create a private regular file and run all 21 table/index DDL
    statements plus the single
    `product_meta(schema_generation=1)` insert inside one `BEGIN IMMEDIATE` transaction. Marker insert
@@ -134,7 +137,11 @@ whenever the DDL fixture changes.
 current `stores/` mkdir, service database file touch or service owner-lock acquire/publish, the
 service owner checks the exact retired `state.sqlite` main/WAL/SHM set and refuses without reading
 contents. After acquiring its canonical owner lock it repeats the complete three-member guard
-before any current database existence/read/open/create/write or handle mutation. The service
+before any current database existence/read/open/create/write or handle mutation. The Service lock
+is derived from the same `deriveServerPaths(...).dbPath` lane/root/current-database binding and
+remains held across the dynamically selected Bun/Node Effect SQLite Layer and every reachable SQL
+receiver until the outer Layer scope closes; an alias or finalizer cannot release it before a later
+sink. The service
 persistence owner creates the complete current service schema, not only Automation tables, and
 inserts exactly one `automation_meta(schema_generation=1)` row last. Product and service creation do
 not share a SQLite transaction. Startup accepts one exact current database plus clean absence for the
@@ -164,7 +171,9 @@ The Service/Product/Web sentinels are ordinary-runtime safety guards, not tool c
 literal identities and exact owner entries form a closed allowlist in the authoritative v4 meter.
 For Product and service, a complete pre-mutation main/WAL/SHM cut must dominate current `stores/`
 mkdir/file/owner-lock sinks, and a repeated complete post-lock cut must dominate current database
-existence/read/open/create/write and handle mutation. For Web, both v1/v2 probes and decisions must
+existence/read/open/create/write and handle mutation while the exact matching owner-lock capability
+remains definitely held. Acquire/release aliases, scope exits and normal/throw/catch/finally paths
+are part of the proof. For Web, both v1/v2 probes and decisions must
 execute before every reachable g1 read, create, hydration, dispatch or mutation. A probe/throw pair
 that exists syntactically but is late, conditional, bypassed, swallowed or deferred does not
 satisfy the guard. Data flow from a legacy value to a
@@ -601,6 +610,20 @@ accepted Design commit recorded in its assignment. The config pins that Design S
 blocks/digests, design-time glob expansion and exact frozen path-membership set. Design-time resolved
 edges and sinks are diagnostic snapshots, not allowlists. The meter re-extracts from that commit on every run; config self-assertion,
 measured-tree Work edits, working-tree state and candidate-selected path lists have no authority.
+The same accepted Design tree contains one strict
+`omp-flow-database-capability-authority-v1` block in the v4 interface. It freezes only the
+irreducible `bun:sqlite#Database` and `node:sqlite#DatabaseSync` terminals plus the exact canonical
+Product, canonical service, read-only/finally-cleaned ephemeral classifier-copy and exact
+declaration-scoped `:memory:` path origins. V4 normalizes and pins that block, then, from accepted
+Work membership and exact `bun.lock`, independently derives and pins the complete reachable opener,
+dynamic-loader, Effect layer/factory/tag, wrapper and receiver inventory from the accepted
+repository/dependency source graph. The selected dependency's source, emitted JS and d.ts bytes are
+digested too. No config-authored seed or non-Product disposition can add to or subtract from that
+backward path-to-constructor plus forward handle closure.
+The interface's separate `omp-flow-owner-lock-authority-v1` block freezes the exact lifecycle-lock
+acquire/release declarations, Product and Service owner entries/path-origin classes, and direct-tool
+lock exclusion. It is normalized, hashed and re-extracted with the capability block; config cannot
+select another lock or owner.
 
 At B0/B1/C, V4 resolves the candidate graph afresh. A later edge passes only when both endpoints are
 already frozen members, including a materialized future exact path. Any outside-set importer/target,
@@ -609,12 +632,17 @@ expands the set. Deleted paths remain with zero lines; future exact paths are al
 `scripts/check-source-closure.mjs`, all v1/v2/v3/v4 meter/config files and their evidence are
 measurement, not production, direct-tool or steady-state runtime.
 
-V4 uses the TypeScript compiler's resolved module/symbol graph, closed interprocedural dataflow and
-owner control-flow graphs. It first enumerates every invocation of resolved portable database
-openers, `Database`/`DatabaseSync` constructors and handle receiver APIs across frozen production;
-only after building parameter/caller/return/alias/branch/handle summaries to a fixed point may it
-classify a component as Product. Immediate argument text, a Product-looking file/callee/variable or
-an after-the-fact sink allowlist has no authority. Canonical resolver flow through a neutral wrapper
+V4 uses the TypeScript compiler's resolved module/symbol graph, accepted dependency sources, closed
+interprocedural dataflow and owner control-flow graphs. Starting only from the two primitive
+terminals, it traverses static/dynamic imports and path/handle flow through the real
+`@effect/sql-sqlite-bun/SqliteClient.layer`, local `NodeSqliteClient.layer`, runtime loader,
+their make/layerConfig/memory/tag paths, Service persistence Layer and `SqlClient` receivers,
+Product portable/validated openers and every handle receiver. The exact derived
+inventory and digest are compared on every run; seed/edge omission, mutation, dependency-source
+drift or a new unresolved external path/handle capability fails before classification. Only after
+building parameter/caller/return/alias/branch/handle summaries to a fixed point may it classify a
+component as Product. `proved non-Product` requires one exact approved path origin and cannot be
+inferred from missing Product-looking text. Canonical resolver flow through a neutral wrapper
 passes; exact raw Product identity through the same wrapper, unknown flow, a mixed branch or a
 Product handle escape fails. Every classified Product consumer must be a frozen member and derive
 solely from the exact canonical resolver declaration.
@@ -623,8 +651,16 @@ Every legacy occurrence still has exactly one tool-only, presence-sentinel or fo
 sentinel values may flow only to boolean presence and the typed reset error. Independently, V4
 discovers every current-generation Product/service/Web I/O sink from resolved APIs and
 path/key/handle flow. Product/service pre-mutation cuts dominate current stores mkdir/file/lock;
-their post-lock cuts dominate every later current database sink; Web's single complete cut dominates
-every g1 sink. For each stage, every required probe and consuming decision must dominate its sinks,
+their post-lock cuts dominate every later current database sink while a must analysis proves the
+same canonical `{ownerKind,lane,root,database,lockPath,ownerToken}` lock remains held; Web's single complete cut
+dominates every g1 sink. Acquire/release declarations, lock-handle aliases, closure capture,
+scoped Effect/Layer finalizers, branch joins and all normal/throw/catch/finally exits are explicit
+lock-state edges. Release is accepted only after no guarded sink remains reachable on that path.
+The Product `makeProductControlPlaneLayer` resource and Service `makeSqlitePersistenceLive` Layer
+bracket are the accepted runtime shapes; direct-tool retired-store locks, sibling handles and wrong
+tokens never prove current-runtime hold. The historical B0 may report an unlocked current consumer
+such as `readProductPackageLifecycleFacts` observationally, but B1/C and fixtures fail it.
+For each stage, every required probe and consuming decision must dominate its sinks,
 and the legacy-present successor must reach the exact typed throw without reaching current I/O.
 Interprocedural CFG includes helper call/return, throw/catch/finally and await rejection edges;
 unsupported callback, Effect, recursion or control flow fails closed. Conditional helpers,
@@ -653,8 +689,8 @@ Three points are required:
 The exact configured B0 SHA is observational for historical semantic violations so the baseline can
 be measured without being mislabeled green. Authority extraction, config integrity, membership and
 graph-resolution defects remain hard failures even at B0. Repaired B1, C and every focused semantic
-fixture enforce Product-consumer and refusal-cut violations as hard failures; no other ref or
-working-tree state can select observational mode.
+fixture enforce Product-consumer, refusal-cut and owner-lock must-hold violations as hard failures;
+no other ref or working-tree state can select observational mode.
 
 All gates are conjunctive:
 
@@ -669,12 +705,14 @@ All gates are conjunctive:
    lifecycle writes = 0;
 7. facade RPC methods = 36; Product tables = 21; Product database = 1; Product durable state machine
    = 1; literal two-Engine gateway = 1;
-8. forbidden compatibility decoder/import/caller count = 0; required Product/service/Web
+8. the Design capability block and independently derived complete source/dependency capability
+   inventory match exactly; every Product database component has canonical-only provenance and
+   every other component has an exact approved non-Product origin; forbidden compatibility
+   decoder/import/caller count = 0; required Product/service/Web
    presence-only sentinel set is an exact allowlist and every refusal stage dominates its assigned
-   current-generation sinks; tool-only identities remain confined to the direct tool; every Product
-   database consumer discovered from the complete resolved opener/wrapper/caller/handle graph has
-   canonical-resolver-only provenance; and no new generic repository/manager/registry, per-Engine
-   plane or migration platform exists.
+   current-generation sinks; Product/service sinks also have one matching definitely-held owner lock
+   with no prior release/unknown path; tool-only identities remain confined to the direct tool; and
+   no new generic repository/manager/registry, per-Engine plane or migration platform exists.
 
 Failure of any gate rejects the candidate even if the largest file is shorter or tests pass.
 
@@ -702,16 +740,21 @@ and accepted-meter metrics. Package transcript/root work cannot change or bypass
 - `B0`/repaired-`B1`/`C` metrics use the identical frozen v4 script/config/universe; rejected
   v1/v2/v3 evidence remains unchanged. The immutable repaired-B1 commit SHA is checked in before
   split handoff and all three v4 outputs are linked from the final handoff.
-- Database semantic fixtures begin from all resolved opener/constructor/receiver calls and cover a
-  canonical neutral wrapper positive, raw Product path behind neutral names, constructor alias,
-  returned-handle receiver and mixed-caller negatives. Renaming neutral wrappers cannot change the
-  classification result.
+- Database semantic fixtures re-derive all resolved opener/constructor/loader/layer/factory/
+  receiver calls from the builtin roots, accepted membership, lock bytes and dependency source/JS/
+  d.ts. They cover the real Bun/Node Effect loader chains, canonical neutral-wrapper positive, raw
+  Product path behind neutral names, constructor alias, returned-handle receiver, mixed-caller,
+  per-derived-identity omit/mutation and a newly reachable `SqliteMigrator` negative. Renaming
+  neutral wrappers cannot change classification; unlisted service/scratch/temp origins cannot
+  become non-Product.
 - Refusal fixtures include two-stage Product and service main/WAL/SHM positives and a Web v1/v2
-  positive, each with multiple current sinks. Independent negatives put valid current I/O before an
-  otherwise exact refusal and cover bypass branch, conditional helper, present fallthrough,
-  catch swallowing, a `finally` sink, deferred callback/await, missing sidecar, preguard without
-  post-lock guard and unknown Effect/recursion/control flow. Every current sink must have a
-  dominance witness.
+  positive, each with multiple current sinks. Product direct and Service Effect Layer positives
+  release only from an outer finalizer after all guarded I/O. Independent negatives put valid
+  current I/O before an otherwise exact refusal and cover bypass branch, conditional helper,
+  present fallthrough, catch swallowing, a `finally` sink, deferred callback/await, missing sidecar,
+  preguard without post-lock guard, dropped acquire, early/aliased/finally release, wrong owner/lane/
+  root/lock-path/token, sibling/direct-tool handle and unknown Effect/recursion/control flow. Every
+  current sink must have both a dominance witness and matching definitely-held lock fact.
 
 ### Destructive fixture verification
 
@@ -797,7 +840,11 @@ and a Windows quiescence adapter. The further red-team closure makes nested rece
 nofollow/hash copies, intermediate-ancestor checks, database-lock identity, abrupt-kill stale-lock
 recovery, Package tombstone convergence and the complete real kill/race/write-trace matrix explicit.
 The v4 meter supersedes rather than edits frozen rejected v1/v2/v3 evidence and must remeasure B0,
-repaired B1 and C in one universe.
+repaired B1 and C in one universe. The later failed v4 authority audit is closed only by the
+candidate-independent persistence-capability derivation and canonical owner-lock must-hold model
+defined above under the
+[maintainer repair calibration](decisions/product-truth-complexity-v4-qbd-repair-calibration.md);
+it changes no runtime target, destructive scope or protected exclusion.
 
 The older g50 literal Pi/OpenCode gateway sibling-zero observation remains closed by its same-SHA
 process evidence and is not part of this repair or the next audit absent new contradictory evidence.

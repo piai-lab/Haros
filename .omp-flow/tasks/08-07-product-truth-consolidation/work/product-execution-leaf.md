@@ -23,7 +23,8 @@ authority. This is the smallest independently reviewable first step of PRD R9/R1
 Do not assign or start this Work until [`handoffs/direct-first-public-b1.md`](../handoffs/direct-first-public-b1.md)
 records a different-actor-accepted clean immutable B1 and zero production Store/Coordinator/leaf
 extraction surface. That B1 must itself name the accepted immutable v4 meter Review receipt and
-SHA/digests. The implementation base must contain that exact B1 commit.
+SHA/digests, including the capability/owner-lock-authority and derived-inventory digests plus must-hold
+report. The implementation base must contain that exact B1 commit.
 
 ## Allowed code and output boundary
 
@@ -66,7 +67,8 @@ behavior may change. The leaf may import Product contracts and generic libraries
 - The frozen complexity instrument is read-only and reports the intermediate result without
   treating it as C or changing B1.
 - The frozen v4 gate accounts for every production path; newly materialized edges pass only between
-  frozen members, while outside-set, computed/unresolved or moved-responsibility cases stop.
+  frozen members, while outside-set, computed/unresolved or moved-responsibility cases stop. Its
+  accepted persistence-capability inventory and lock-state gates remain unchanged and green.
 
 ## Expected handoff
 
