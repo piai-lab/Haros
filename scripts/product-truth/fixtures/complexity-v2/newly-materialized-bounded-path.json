@@ -1,0 +1,6 @@
+{
+  "virtualFiles": {
+    "apps/service/src/product/state/newPrivateSql.ts": "export const statement = 'SELECT 1';\n"
+  },
+  "universeOmit": ["apps/service/src/product/state/newPrivateSql.ts"]
+}

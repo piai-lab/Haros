@@ -1,0 +1,5 @@
+{
+  "appendToFiles": {
+    "apps/service/src/product/ProductControlPlane.ts": "\nimport 'brand-new-provider';\n"
+  }
+}
