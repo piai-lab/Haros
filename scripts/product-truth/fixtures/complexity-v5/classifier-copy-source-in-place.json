@@ -1,0 +1,9 @@
+{
+  "extendsFixture": "classifier-copy-positive",
+  "textReplacements": {
+    "scripts/product-truth/sqlite-classifier.ts": [[
+      "    const classifierDatabase = openClassifierCopyReadOnly(classifierCopyPath);",
+      "    const classifierDatabase = openClassifierCopyReadOnly(retiredBundle.main);"
+    ]]
+  }
+}

@@ -1,0 +1,9 @@
+{
+  "extendsFixture": "classifier-copy-positive",
+  "textReplacements": {
+    "scripts/product-truth/sqlite-classifier.ts": [[
+      "  return classifyRetiredSqliteBundle(resolveRetiredSqliteBundleTarget(root, lane, mainBasename));",
+      "  const rawCurrentProductAlias = { main: join(root, lane, \"stores/product.sqlite\"), sidecars: [] };\n  return classifyRetiredSqliteBundle(rawCurrentProductAlias);"
+    ]]
+  }
+}

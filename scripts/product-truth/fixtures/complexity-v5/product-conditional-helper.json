@@ -1,0 +1,8 @@
+{
+  "extendsFixture": "product-refusal-lock-positive",
+  "textReplacements": {
+    "apps/service/src/product/ProductControlPlane.ts": [
+      ["  if (existsSync(\"product-state-v1.sqlite\") || existsSync(\"product-state-v1.sqlite-wal\") || existsSync(\"product-state-v1.sqlite-shm\")) {\n    throw new Error(\"PREBASELINE_RESET_REQUIRED\");\n  }\n  mkdirSync", "  const rejectLegacy = () => {\n    if (existsSync(\"product-state-v1.sqlite\") || existsSync(\"product-state-v1.sqlite-wal\") || existsSync(\"product-state-v1.sqlite-shm\")) {\n      throw new Error(\"PREBASELINE_RESET_REQUIRED\");\n    }\n  };\n  if (stateDir.length > 0) rejectLegacy();\n  mkdirSync"]
+    ]
+  }
+}

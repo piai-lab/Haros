@@ -1,0 +1,8 @@
+{
+  "virtualFiles": {
+    "apps/service/src/persistence/Layers/Sqlite.ts": "import { existsSync, mkdirSync } from \"node:fs\";\nimport { dirname } from \"node:path\";\nimport { DatabaseSync } from \"node:sqlite\";\nimport { Effect } from \"effect\";\nimport { deriveServerPaths } from \"../../config.ts\";\nimport { acquireDatabaseLifecycleLock, releaseDatabaseLifecycleLock } from \"../DatabaseLifecycleLock.ts\";\n\nexport function makeSqlitePersistenceLive(root: string) {\n  const databasePath = deriveServerPaths(root, null).dbPath;\n  if (existsSync(\"state.sqlite\") || existsSync(\"state.sqlite-wal\") || existsSync(\"state.sqlite-shm\")) {\n    throw new Error(\"PREBASELINE_RESET_REQUIRED\");\n  }\n  mkdirSync(dirname(databasePath), { recursive: true });\n  return Effect.acquireRelease(\n    acquireDatabaseLifecycleLock(databasePath),\n    (lock) => releaseDatabaseLifecycleLock(lock),\n  ).pipe(Effect.flatMap(() => Effect.sync(() => {\n    if (existsSync(\"state.sqlite\") || existsSync(\"state.sqlite-wal\") || existsSync(\"state.sqlite-shm\")) {\n      throw new Error(\"PREBASELINE_RESET_REQUIRED\");\n    }\n    const database = new DatabaseSync(databasePath);\n    database.exec(\"CREATE TABLE automation_meta(schema_generation INTEGER)\");\n    database.close();\n  })));\n}\n"
+  },
+  "semanticFocusPaths": ["apps/service/src/persistence/Layers/Sqlite.ts"],
+  "legacyFocusLiterals": ["state.sqlite", "state.sqlite-wal", "state.sqlite-shm"],
+  "enforceSemanticGates": true
+}

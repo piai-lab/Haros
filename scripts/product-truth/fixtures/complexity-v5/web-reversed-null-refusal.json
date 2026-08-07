@@ -1,0 +1,8 @@
+{
+  "extendsFixture": "web-refusal-positive",
+  "textReplacements": {
+    "apps/web/src/composerDraftStore.ts": [
+      ["if (retiredV1 !== null || retiredV2 !== null)", "if (retiredV1 === null || retiredV2 === null)"]
+    ]
+  }
+}
