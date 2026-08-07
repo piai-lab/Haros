@@ -1,186 +1,191 @@
 ---
 type: "Implementation Review"
-title: "Review: Authoritative Product-truth complexity v8 predecessor-delta meter"
+title: "Review: Authoritative Product-truth complexity v8 predecessor-delta meter (r2)"
 work: "../work/product-truth-complexity-v8.md"
 handoff: "../handoffs/product-truth-complexity-v8.md"
 verdict: "FAIL"
-revision: "review-product-truth-complexity-v8-r1"
-actor_id: "product_truth_complexity_v8_review"
-dispatch_receipt: "4432276ee4a043d58c2bfc40662ad6e2"
-predecessor_receipt: "cfb3e18e709f46919791489a9fdf8c5c"
+revision: "review-product-truth-complexity-v8-r2"
+actor_id: "product_truth_complexity_v8_review_r2"
+dispatch_receipt: "2052508238264478b9b26f6cd079257a"
+predecessor_receipt: "e9e8e6259fb14616b0a25c01d9c75b59"
 predecessor_output: "../handoffs/product-truth-complexity-v8.md"
-reviewed_candidate: "17180c0c1def7b1ee70a898d91b58acbc35cc0af"
-reviewed_handoff_commit: "e6db9ea10f93c57f55bc422626699a8917c55825"
-reviewed_parent: "68b9fd1c4cb9fcc4798a65032d508e935892350a"
+reviewed_candidate: "61df83885e0290fe199a58715101ba405358aec9"
+reviewed_handoff_commit: "2fe8fe388e9ed76856a27f625d249bfaf9826c47"
+reviewed_parent: "4b8804c4e173ec1292f03cdbb80336e565fe2b62"
 accepted_design: "23b309b0da3ae65a7809002090a539f6c7ee7c51"
-report_sha256: "8442b0dec5fdef95e6f2e9a97540637ec1454d9e4a84ca83b83c5380a09e942d"
+report_sha256: "a15c7706575a8460cfccc3b8fadef21029c9fe86648ef23c190252cf1525d80b"
 ---
 
-# Review: Authoritative Product-truth complexity v8 predecessor-delta meter
+# Review: Authoritative Product-truth complexity v8 predecessor-delta meter (r2)
 
 ## Verdict
 
-`FAIL` / changes requested for immutable candidate
-`17180c0c1def7b1ee70a898d91b58acbc35cc0af`.
+`FAIL` / changes requested for immutable r2 candidate
+`61df83885e0290fe199a58715101ba405358aec9`.
 
 The completed predecessor operation resolves to the linked handoff, the handoff links back to the
-assigned Work and candidate, and implementer `product_truth_complexity_v8_impl` differs from
-reviewer `product_truth_complexity_v8_review`. The frozen 39-path scope, v1-v7 immutability, five
-Work-fence digests, v8 authority digest, official evidence tuple, deterministic B0 output, authored
-focused suite and typecheck are reproducible. They do not close the three material findings below.
-Two independent hidden structural mutations unexpectedly pass, and one adjacent lexical positive
-is falsely rejected.
+assigned Work and r2 candidate, and implementer `product_truth_complexity_v8_impl_r2` differs from
+reviewer `product_truth_complexity_v8_review_r2`. Candidate scope, v1-v7 immutability, five Work
+fences, v8 authority, official input and evidence tuple, deterministic report, authored 56-case
+suite, v7 regressions and typecheck reproduce. R2 also closes each r1 counterexample in its authored
+form: outside measurement drift fails, the zero-raw deletion/materialization negative fails, and a
+shadow of the imported binding passes.
 
-No implementation, handoff, meter, production or user-state file was repaired in this review.
+Those results do not close the two material findings below. A fresh lexical variant unexpectedly
+passes with a true raw use hidden under a named private helper, while the new lifecycle rule falsely
+rejects any independent exact Work deletion and materialization that occur together. No
+implementation, handoff, meter, Product or user-state file was repaired in this review.
 
 ## Findings
 
-### P0 — outside-Work measurement blobs are omitted from exact equality
+### P0 — repeated same-spelling lexical aliases can hide a true raw use in a private helper
 
-The predecessor comparison builds `externalPaths` from only `production`, `direct-tool` and
-`dependency` categories at `scripts/product-truth/measure-complexity-v8.mjs:1931-1932`.
-`measurement` is excluded, even though the v8 authority requires every frozen member outside the
-selected Work to preserve presence, mode and blob, and the Work map gives measurement paths their
-own exact boundary.
+R2 adds per-declaration raw identities and resolves uses against the nearest lexical declaration,
+but alias discovery still uses the module-wide `bindings` name map as its uniqueness guard. At
+`scripts/product-truth/measure-complexity-v8.mjs:1406-1417`, an alias declaration is bound only when
+`!bindings.has(node.name.text)`. Once one declaration named `raw` has been seen anywhere in the
+module, a distinct later declaration named `raw` in another lexical scope never receives an entry
+in `bindingIdentityByDeclaration`. The use resolver at lines 1334-1341 correctly finds that nearer
+declaration, but finds no identity and therefore treats the true raw call as harmless.
 
-An independent temp-repository fixture selected `native-host-package-root-binding` and appended one
-comment to the B1-owned measurement member `scripts/check-source-closure.mjs`. The predecessor blob
-was `f4935e4b83aab6d095cf6bec408845e25d79db1b`; the candidate report contained a different member
-identity. The meter nevertheless exited 0 and emitted:
+An independent temp fixture retained one allowed call inside
+`classifyLegacyDatabase`, then declared a second `const raw = readFileSync` inside a named nested
+`hiddenHelper` and invoked `raw("forbidden")`. Both aliases resolve directly from the imported raw
+binding and are in distinct lexical scopes. The official-shaped comparison unexpectedly exited 0.
+The private-helper raw call was absent from the classified ingress instead of producing the required
+`TRACED_`/raw-ingress failure.
 
-```text
-comparison.enabled=true
-comparison.exactOutsideEquality=true
-measurement.path=scripts/check-source-closure.mjs
-measurement.blobId=d89637bc97b8c6671486c283dcfbc19af3df0343
-```
+This is a false negative in the structural ownership gate, not a request for points-to or runtime
+semantics. It violates the Work's per-declaration lexical alias-use rule and its mandatory negative
+for a new named private raw helper.
 
-This lets a later Work change `scripts/check-source-closure.mjs`—and, by the same category filter,
-other otherwise-unpinned measurement members—without the predecessor-delta gate noticing. The
-candidate therefore does not enforce the exact allowed scope or outside equality promised by the
-Work, Design and v8 interface.
+### P0 — the lifecycle repair makes simultaneous exact deletion and materialization impossible
 
-### P0 — undeclared zero-raw path moves pass as unrelated deletion and materialization
+At `scripts/product-truth/measure-complexity-v8.mjs:2050-2063`, R2 forms the Cartesian product of
+every selected-Work deleted path and every selected-Work materialized path, then rejects every pair
+except the sole declared B1-to-C move. It performs no structural or content test that the two paths
+are a relocation. Consequently two independent permitted lifecycle events are unconditionally
+relabelled as an undeclared move merely because they coexist.
 
-At `scripts/product-truth/measure-complexity-v8.mjs:2025-2034`, a deleted/materialized Work-path pair
-is rejected as an undeclared move only when both paths contain a matching raw terminal and class.
-There is no path-lifecycle identity for a move whose content has no raw ingress.
-
-An independent temp fixture normalized all B1 traced owners with the existing positive fixture,
-then relocated the legacy release-policy object from the selected existing
-`scripts/release-update-policy.json` to the selected pre-frozen absent
-`scripts/product-truth/cli.ts` as an equivalent TypeScript export. The source was deleted, the target
-was materialized, the move is not the sole Design-declared Product owner move, and neither side has
-raw ingress. The official-shaped comparison nevertheless exited 0 with
-`comparison.exactOutsideEquality=true`, reporting the source absent and target present.
-
-This violates the v8 path-lifecycle rule that undeclared moves fail. Raw-effect identity cannot be
-the only witness for a general frozen-path move.
-
-### P1 — lexical shadowing of an imported raw binding is misclassified as a raw use
-
-Raw import bindings are stored in a module-wide name map, and the identifier-use branch at
-`scripts/product-truth/measure-complexity-v8.mjs:1703` checks only the spelling and declaration-node
-set. It does not resolve whether the use is shadowed by a nearer parameter/local declaration, even
-though the v8 lexical authority requires aliases and terminal uses to resolve lexically.
-
-An adjacent temp positive kept one real `readFileSync` call inside the exact
-`classifyLegacyDatabase` owner, then added a nested local callback whose parameter is also named
-`readFileSync` and invokes the harmless supplied function. The meter treated the shadowed parameter
-call as another filesystem ingress under an undeclared nested owner and exited 1 with:
+A fresh adjacent positive deleted selected exact Work path
+`scripts/release-update-policy.json` and independently materialized selected pre-frozen path
+`scripts/product-truth/cli.ts` with a new zero-raw CLI export. The two contents are unrelated. Each
+lifecycle operation passes in the authored single-operation positives, but their composition
+falsely exits 1 as:
 
 ```text
-TRACED_OWNER_IDENTITY_INVALID:scripts/product-truth/sqlite-classifier.ts:1a5b3e5e1c4eb5a6eb1b200a27de57a58548035106847f4ff9fdf6bb49128a96
+UNDECLARED_WORK_PATH_MOVE:scripts/release-update-policy.json:scripts/product-truth/cli.ts
 ```
 
-The callback does not reference the imported raw capability. This false rejection means the
-claimed lexical declaration/use model is not implemented completely and can block an otherwise
-valid selected-Work candidate.
+This is not only a synthetic composition. The assigned B1 Work requires creating the absent
+`scripts/product-truth/cli.ts` and deleting legacy production files such as
+`apps/service/src/persistence/selectionSchemaCoordinator.ts`,
+`apps/web/src/composerDraftV2Transcode.ts` and
+`apps/desktop/src/desktopStorageUpgrade.ts`; Git confirms the CLI is absent and those deletion
+targets are present at B0. After imports/callers are validly repaired, any such B1 candidate must
+populate both arrays and therefore hits the unconditional Cartesian rejection. The meter cannot
+both authorize the Work-required exact deletion/materialization lifecycle and enforce this rule.
+
+The authored `undeclared-zero-raw-path-move` regression proves only that one chosen co-occurrence
+fails; it does not establish that the paths are the same artifact. The implementation needs a
+bounded structural definition of an undeclared move that does not make all independent lifecycle
+composition impossible.
 
 ## Independent verification
 
-### Assignment, scope and authority
+### Assignment, immutable scope and authority
 
-- Read-only runtime records show predecessor `cfb3e18e709f46919791489a9fdf8c5c` is `completed`, role
-  `implement`, actor `product_truth_complexity_v8_impl`, and output
-  `.omp-flow/tasks/08-07-product-truth-consolidation/handoffs/product-truth-complexity-v8.md`.
-  This Review operation is receipt `4432276ee4a043d58c2bfc40662ad6e2`, role `check`, actor
-  `product_truth_complexity_v8_review`, and names that completed predecessor.
-- `git diff-tree --no-commit-id --name-status -r 17180c0c...` — exactly 39 additions: the v8 meter,
-  config, focused test and 36 bounded JSON fixtures. No modification or deletion; no Product,
-  dependency, Work, decision, Harness/schema, v1-v7 or user-state path changed.
-- `git diff --check 17180c0c^ 17180c0c` — PASS. The three instrument blobs at current handoff HEAD
-  equal the reviewed candidate blobs.
-- Independent extraction at accepted Design `23b309b0...` reproduced the five Work-fence canonical
-  digests in authored order:
-  `0e1551...faae`, `c85e1d...6de5`, `dec2ee...ca4`, `2f3a86...5a36a`,
-  `124e32...79d9`; the v8 predecessor authority digest is `578d98...6d29` and has the exact five
-  transition rows.
-- Candidate SHA-256 values reproduce the handoff: script `b0139975...3698c`, config
-  `8b80d4eb...4796`, focused test `7e7d5831...7a7c`. Candidate scope plus the focused immutable-byte
-  assertion preserves every v1-v7 instrument/config/test digest.
+- Runtime operation `e9e8e6259fb14616b0a25c01d9c75b59` is completed, role `implement`, actor
+  `product_truth_complexity_v8_impl_r2`, and outputs the required linked handoff. This Review is
+  role `check`, actor `product_truth_complexity_v8_review_r2`, receipt
+  `2052508238264478b9b26f6cd079257a`, and names that completed predecessor.
+- Candidate `61df838...` has parent `4b8804c...` and exactly five changed paths: the v8 meter and
+  focused test plus the three r2 fixtures `outside-measurement-drift.json`,
+  `traced-import-shadow-positive.json` and `undeclared-zero-raw-path-move.json`. No Product,
+  dependency, Work, Design/decision, Harness/schema, v1-v7 or user-state path changed.
+- `git diff --check 61df838...^ 61df838...` — PASS. Candidate meter/config/test blobs at handoff
+  commit `2fe8fe3...` equal the reviewed candidate blobs.
+- Candidate SHA-256 values reproduce the handoff: script
+  `49ac968673167aee13d7ebfa1853bad2c0c032c848494ebfb21e5299a00b748a`, config
+  `8b80d4eb401eefb36ed4597e2032e0c7eb25e13dbdd437d2b1e90e315d094796`, focused test
+  `5d7267097a43e6fa21a7eb39975dac8507ee2933bc4d5c76780754a0d63a89c2`; the 39-fixture manifest is
+  `93d9e739...b3e`.
+- Candidate scope and the 56-case immutable assertions preserve every v1-v7 instrument/config/test
+  byte. Independent authority comparison retained the five accepted Work-fence digests in authored
+  order (`0e1551...faae`, `c85e1d...6de5`, `dec2ee...ca4`, `2f3a86...5a36a`,
+  `124e32...79d9`) and v8 predecessor authority `578d98...6d29`. No CFG/ICFG, SSA, points-to,
+  branch/value, task, Effect, lifetime or runtime-verdict engine was added.
 
-### Official invocation, handoff and authored checks
+### Official report, handoff and authored gates
 
-- Exact command:
+- Exact official command:
 
   ```text
   node scripts/product-truth/measure-complexity-v8.mjs --ref 7582170a277477ba0d71cf70f53e4e0836874a72 --predecessor-evidence 5632f63603e6ae8b3fb95f759c793a09b16a1e44
   ```
 
-  — PASS. Two fresh runs are byte-identical: 4,273,664 bytes, byte SHA-256
-  `4406576ce94060be03a7527a6fabcf70b4e6d75c174092f366381eaf1aa859c4`; decoded JCS SHA-256
-  `8442b0dec5fdef95e6f2e9a97540637ec1454d9e4a84ca83b83c5380a09e942d`.
-  The handoff contains exactly one machine block, byte-for-byte decodes to the fresh report, and its
-  frontmatter digest matches. The ten-field tuple and argv exactly match the Main/human invocation
-  and trust-root Decision; `identityAuthenticationClaimed=false`.
-- `bunx vitest run scripts/product-truth/measure-complexity-v8.test.ts --reporter=dot` — PASS,
-  53/53 in 162.42s. This covers official argv cardinality/fallback/override, alternative SHA,
-  tuple/blob/report drift, authored declaration/site/outside/lifecycle fixtures and historical B1.
-- `bunx vitest run scripts/product-truth/measure-complexity-v7.test.ts --reporter=dot` — PASS,
-  67/67 in 131.66s, preserving the v7 grammar/dependency/import/export/addon/raw regression suite.
+  — PASS twice. Fresh outputs are byte-identical: 4,273,664 bytes, byte SHA-256
+  `3cd0a2dda6a6660a08dca01182ecdc1a384b764f37231759892be8072e838746`; decoded JCS SHA-256
+  `a15c7706575a8460cfccc3b8fadef21029c9fe86648ef23c190252cf1525d80b`.
+  The handoff contains exactly one complete machine block, its decoded JCS equals both fresh reports,
+  and frontmatter `report_sha256` matches.
+- The report records the exact argv once, `fixtureMode=false`, `official=true`,
+  `environmentFallbackUsed=false` and `identityAuthenticationClaimed=false`. Its ten-field selected
+  tuple matches the trust-root Decision: Work id, B0 candidate, official evidence SHA, reviewed v7
+  candidate, handoff/review blobs, predecessor report digest, distinct actors and receipt all occupy
+  the correct slots.
+- `bunx vitest run scripts/product-truth/measure-complexity-v8.test.ts` — PASS, 56/56 in 185.21s.
+  This includes input cardinality/fallback/override, alternative evidence SHA, tuple/blob/report/
+  ancestry drift, declaration/site/outside/lifecycle fixtures, exact deletion/materialization,
+  declared C move, historical B1 and immutable hashes.
+- `bunx vitest run scripts/product-truth/measure-complexity-v7.test.ts` — PASS, 67/67 in 131.65s,
+  preserving v7 grammar/dependency/import/export/addon/raw-public-escape behavior.
 - `bun run --cwd scripts typecheck` — PASS (`tsc --noEmit`).
 
-### Hidden counterexamples
+### R1 reproductions, adjacent controls and fresh hidden variants
 
-All hidden files existed only in `/tmp/omnimind-v8-review.8wpPIn/repo`; no extra worktree or
-workspace fixture was created.
+All hidden fixtures existed only in `/tmp/omnimind-v8-r2-review.qD2aRj/repo`; no additional
+worktree was created.
 
-- `node ... --fixture hidden-outside-measurement-drift --work
-  native-host-package-root-binding --ref 7582170a... --predecessor-evidence 5632f636...` — unexpected
-  PASS; this proves finding 1.
-- `node ... --fixture hidden-undeclared-lifecycle-pair --work direct-first-public-b1 --ref
-  7582170a... --predecessor-evidence 5632f636...` — unexpected PASS; this proves finding 2.
-- `node ... --fixture hidden-import-shadow-positive --work direct-first-public-b1 --ref
-  7582170a... --predecessor-evidence 5632f636...` — unexpected false reject with the exact diagnostic
-  above; this proves finding 3.
-- The authored hidden families for missing/duplicate/abbreviated/malformed/nonexistent evidence,
-  config/repository/report override, internally consistent alternative SHA, handoff/Review/report/
-  actor/receipt drift, nested/default/class/constructor/overload/re-export/private-helper/alias-use,
-  site relocation/replacement/reorder, outside blob/mode/import/raw/deletion/materialization/move,
-  raw/import/dependency and no-CFG boundaries all produced their expected result in the 53-case
-  v8 and 67-case v7 suites. No fixture or review claim extends to runtime behavior or identity
-  authentication.
+- R1 reproduction: `outside-measurement-drift` now exits 1 with
+  `OUTSIDE_WORK_BLOB_DRIFT:scripts/check-source-closure.mjs`; measurement outside-equality is closed.
+- R1 reproduction: `undeclared-zero-raw-path-move` now exits 1 with the authored
+  `UNDECLARED_WORK_PATH_MOVE`; the exact prior unexpected pass is closed.
+- R1 reproduction: `traced-import-shadow-positive` exits 0; the exact prior lexical false reject is
+  closed.
+- Adjacent controls `exact-work-deletion-positive`, `traced-owner-positive` (exact pre-frozen
+  materialization) and `product-owner-move-positive` each exit 0.
+- Fresh official-input control with a duplicate full evidence argument exits 1 with
+  `OFFICIAL_INVOCATION_INVALID`; the internally consistent alternative SHA `68b9fd1...` exits 1 with
+  `OFFICIAL_EVIDENCE_SHA_NOT_ACCEPTED_V7_BOOTSTRAP`.
+- Fresh dual actor/receipt tuple mutation exits 1 with `EVIDENCE_REVIEW_BLOB_MISMATCH`; a fresh
+  nontraced alias relocation exits 1 with `NONTRACED_SITE_RELOCATED_REPLACED_OR_ADDED`; a fresh
+  outside measurement materialization exits 1 with `UNLISTED_PATH`.
+- `hidden-repeated-local-alias-private-helper` unexpectedly exits 0, proving finding 1.
+- `hidden-independent-delete-materialize-positive` unexpectedly exits 1 with
+  `UNDECLARED_WORK_PATH_MOVE`, proving finding 2.
 
-No real `~/.omnimind`, credential, provider, network or user-state resource was read or changed.
+The authored raw/import/dependency boundaries and no-CFG claim remain structural. This review does
+not demand or claim runtime semantics or selector/reviewer/human identity authentication. No real
+`~/.omnimind`, credential, provider, network or user-state resource was read or changed.
 
 ## Review boundary and required return
 
-This verdict covers only candidate `17180c0c1def7b1ee70a898d91b58acbc35cc0af`, linked handoff
-commit `e6db9ea10f93c57f55bc422626699a8917c55825`, assigned Work and accepted authority. It does not
-authorize B1 or any production/destructive work.
+This verdict covers only candidate `61df83885e0290fe199a58715101ba405358aec9`, linked handoff
+commit `2fe8fe388e9ed76856a27f625d249bfaf9826c47`, assigned Work and accepted authority. It does not
+authorize B1 or any Product/destructive work.
 
 No substantive fix is approved within this reviewer operation. Return the candidate to the owning
-v8 measurement Work to close all three findings, add focused regressions for the two unexpected
-passes and lexical false reject, freeze a new immutable meter candidate, and obtain a new
+v8 measurement Work to close both findings, add focused regressions for the lexical unexpected pass
+and lifecycle composition false reject, freeze a new immutable meter candidate, and obtain a new
 different-actor Review.
 
 ## Dispatch identity
 
 - role: `check`
-- actorId: `product_truth_complexity_v8_review`
-- receipt: `4432276ee4a043d58c2bfc40662ad6e2`
-- predecessor: `cfb3e18e709f46919791489a9fdf8c5c`
+- actorId: `product_truth_complexity_v8_review_r2`
+- receipt: `2052508238264478b9b26f6cd079257a`
+- predecessor: `e9e8e6259fb14616b0a25c01d9c75b59`
 - predecessor output: `.omp-flow/tasks/08-07-product-truth-consolidation/handoffs/product-truth-complexity-v8.md`
 - verdict: `FAIL`
 - explicitly allowed fix: none
