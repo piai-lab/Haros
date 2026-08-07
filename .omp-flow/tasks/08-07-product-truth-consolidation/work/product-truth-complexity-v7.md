@@ -15,6 +15,7 @@ interpreter. This Work changes measurement only.
 ## Useful inputs
 
 - [V7 Occam repair calibration](../decisions/product-truth-complexity-v7-repair-calibration.md)
+- [V7 final QbD repair calibration](../decisions/product-truth-complexity-v7-final-qbd-repair-calibration.md)
 - [Failed immutable v5 Review](../reviews/product-truth-complexity-v5.md)
 - [Failed immutable v6 Review](../reviews/product-truth-complexity-v6.md)
 - [V7 mechanical authority](../interfaces/product-truth-complexity-v7.md)
@@ -45,7 +46,8 @@ architecture owners, Campaign state and user state are outside this Work.
 ## Done conditions
 
 - Re-extract and pin the five Work blocks, exact frozen membership, v7 raw-effect syntax/dependency
-  universe, effect-ingress owner authority, B1 verifier-universe digest, accepted dependency
+  universe including exact global-alias/computed-selector grammar, effect-ingress owner authority,
+  B1 verifier-universe and fixture-catalog digests, accepted dependency
   manifests/lock bytes and all physical/conceptual counter definitions from the accepted Design
   commit. Config assertions may only bind these extracted facts, never add roots, owners,
   operations, paths, syntax terminals, packages or dispositions.
@@ -57,7 +59,8 @@ architecture owners, Campaign state and user state are outside this Work.
   member for all nine Design-frozen classes. Match only the finite Node/Bun/Deno/Electron/browser/
   LevelDB/SQLite/process/worker/shell/loader/native-addon grammar; derive dependency-export classes
   from the exact source-digest-keyed reachable closure and fail unavailable/unparsed/unresolved/
-  unknown dependencies. Require exact
+  unknown dependencies. Normalize or reject `globalThis`/`global`/`self`/`window` only through the
+  Design grammar, preserve literal/nonliteral computed source-form identity and require exact
   class/owner containment, stable closed-unrelated owner/class/domain set, B1/C owner move exclusivity,
   non-export/non-escape shape and global forbidden-loader absence. Report path, resolved symbol,
   owner and count without claiming path provenance or lifetime behavior.
@@ -78,7 +81,8 @@ architecture owners, Campaign state and user state are outside this Work.
   namespace/destructure/alias/re-export, literal allowed loader, computed/unknown/forbidden loader,
   owner-local reference, outside-owner reference, exported raw binding/handle/release and the B1→C
   Product owner move. Mandatory single-cause negatives include `Bun.spawnSync`, Bun Shell `$`,
-  `process.dlopen`, digest-mismatched dependency export, unresolved/unparsed dependency source,
+  `process.dlopen`, `globalThis.Bun.spawnSync`, `globalThis.process.dlopen`, literal/nonliteral
+  computed alias chains, shadowed/repeated wrappers, digest-mismatched dependency export, unresolved/unparsed dependency source,
   computed effect selector and unknown `.node` addon. Each negative fails one mechanical gate; no
   fixture asserts cleanup, lock, scheduling or exception semantics.
 - Dependency fixtures cover exact pins, lock/source/export-map/source-closure-digest drift,
@@ -86,6 +90,9 @@ architecture owners, Campaign state and user state are outside this Work.
   scripts-only classic-level containment, outside-set/unresolved imports and byte-bound closure.
 - Run v7 twice against immutable B0 and require byte-identical complete JSON.
 - Compare every v1-v6 instrument byte and all five Work machine blocks for immutability.
+- Parse the verifier block, recompute all ten owner-state digests and the catalog digest, and assert
+  exactly 86 unique state IDs, 146 operations, 34 barrier/race pairs and 29 kill/convergence pairs;
+  omit-state, shrink-cardinality and drop-terminal-EOF mutations must fail authority validation.
 - Run scripts typecheck and `git diff --check`; prove no production, dependency, test verifier,
   destructive scope or user-state path changed and no real `~/.omnimind` was read.
 

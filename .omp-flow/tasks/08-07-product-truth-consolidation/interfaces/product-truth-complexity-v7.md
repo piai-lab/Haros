@@ -9,7 +9,8 @@ This interface applies the maintainer's
 [v7 Occam calibration](../decisions/product-truth-complexity-v7-repair-calibration.md) after the
 immutable [v6 implementation Review](../reviews/product-truth-complexity-v6.md) rejected v6, plus
 the [v7 QbD repair calibration](../decisions/product-truth-complexity-v7-qbd-repair-calibration.md)
-that closes the two remaining authority gaps. V1-v6
+and [final QbD repair calibration](../decisions/product-truth-complexity-v7-final-qbd-repair-calibration.md)
+that close the finite machine-authority gaps. V1-v6
 meter/config/test/fixture/report/handoff/Review bytes remain immutable rejected evidence. V7
 replaces measurement authority only. It changes no destructive target, protected exclusion,
 Package authority, Product behavior or byte of the five `omp-flow-production-boundary-v1` blocks.
@@ -66,7 +67,27 @@ native/shell/loader edge fails authority derivation; it is never classified as p
 {
   "version": 1,
   "classIds": ["filesystem", "sqlite", "leveldb", "process", "worker", "shell", "web-storage", "ambient-loader", "native-addon"],
-  "sourceForms": ["import-declaration", "export-from", "import-equals-require", "require-call", "module-require-call", "create-require-result-call", "process-get-builtin-module-call", "dynamic-import-call", "global-identifier", "global-member", "namespace-member", "destructure-binding", "computed-literal-member", "resolved-extension"],
+  "sourceForms": ["import-declaration", "export-from", "import-equals-require", "require-call", "module-require-call", "create-require-result-call", "process-get-builtin-module-call", "dynamic-import-call", "global-identifier", "global-member", "namespace-member", "destructure-binding", "computed-literal-member", "computed-nonliteral-member", "resolved-extension"],
+  "selectorGrammar": {
+    "dot": { "forms": ["global-member", "namespace-member"], "selector": "IdentifierName", "normalization": "identifier-utf8-bytes" },
+    "computedLiteral": { "form": "computed-literal-member", "acceptedAst": ["StringLiteral", "NoSubstitutionTemplateLiteral"], "normalization": "exact-cooked-string-utf8-bytes", "disposition": "normalize-then-match-exact-selector" },
+    "computedNonliteral": { "form": "computed-nonliteral-member", "acceptedAst": ["all-computed-property-expressions-not-accepted-by-computedLiteral"], "disposition": "fail-unknown-selector" }
+  },
+  "globalAliasGrammar": {
+    "wrappers": ["globalThis", "global", "self", "window"],
+    "reservedRootAuthority": "defaultDisposition.reservedRoots",
+    "bindingRule": "wrapper-must-be-an-unshadowed-global-identifier;any-local-binding-or-unresolved-binding-fails-global-alias-resolution",
+    "rootRule": "after-exactly-one-wrapper-strip-that-wrapper-and-normalize-the-longest-reservedRoot-using-only-dot-or-computedLiteral-selectors",
+    "terminalRule": "the-next-selector-uses-selectorGrammar;dot-and-computedLiteral-normalize-to-the-same-canonical-member;computedNonliteral-fails",
+    "chainRule": "zero-or-one-wrapper-only;second-wrapper-repeated-wrapper-empty-selector-and-any-selector-after-a-terminal-fail-global-alias-resolution",
+    "unmatchedRule": "a-wrapper-chain-that-does-not-normalize-to-one-exact-reservedRoot-fails-global-alias-resolution",
+    "canonicalExamples": [
+      { "source": "globalThis.Bun.spawnSync", "root": "Bun", "member": "spawnSync", "form": "global-member" },
+      { "source": "globalThis.Bun['spawnSync']", "root": "Bun", "member": "spawnSync", "form": "computed-literal-member" },
+      { "source": "globalThis['process'].dlopen", "root": "process", "member": "dlopen", "form": "global-member" },
+      { "source": "window['navigator']['storage']['getDirectory']", "root": "navigator.storage", "member": "getDirectory", "form": "computed-literal-member" }
+    ]
+  },
   "moduleRoots": [
     { "specifiers": ["node:fs", "node:fs/promises", "fs", "fs/promises"], "allExports": ["filesystem"] },
     { "specifiers": ["bun:sqlite", "node:sqlite", "better-sqlite3", "sqlite3", "@effect/sql-sqlite-bun", "@effect/sql-sqlite-bun/SqliteClient", "apps/service/src/persistence/NodeSqliteClient.ts"], "allExports": ["sqlite"] },
@@ -106,12 +127,13 @@ native/shell/loader edge fails authority derivation; it is never classified as p
   ],
   "syntaxTerminals": [
     { "form": "dynamic-import-call", "target": "any", "classes": ["ambient-loader"] },
-    { "form": "computed-member", "rootClass": ["ambient-loader", "process", "worker", "shell", "native-addon", "filesystem", "sqlite", "leveldb", "web-storage"], "disposition": "fail-unknown-selector" },
+    { "form": "computed-nonliteral-member", "rootClass": ["ambient-loader", "process", "worker", "shell", "native-addon", "filesystem", "sqlite", "leveldb", "web-storage"], "disposition": "fail-unknown-selector" },
     { "form": "resolved-extension", "extensions": [".node"], "classes": ["ambient-loader", "native-addon"] }
   ],
   "knownNonInventoryBuiltinSpecifiers": ["node:assert", "node:assert/strict", "node:async_hooks", "node:buffer", "node:crypto", "node:diagnostics_channel", "node:events", "node:http", "node:http2", "node:https", "node:net", "node:os", "node:path", "node:path/posix", "node:path/win32", "node:perf_hooks", "node:process", "node:querystring", "node:stream", "node:stream/promises", "node:stream/web", "node:string_decoder", "node:timers", "node:timers/promises", "node:tls", "node:tty", "node:url", "node:util", "node:zlib"],
   "defaultDisposition": {
     "unknownMemberOfReservedRoot": "fail-unknown-selector",
+    "unresolvedGlobalAlias": "fail-global-alias-resolution",
     "reservedRoots": ["Bun", "Deno", "process", "navigator.storage", "navigator.serviceWorker", "localStorage", "sessionStorage", "Storage.prototype", "indexedDB", "caches", "CacheStorage", "FileSystemDirectoryHandle", "FileSystemFileHandle", "FileSystemSyncAccessHandle", "Worker", "SharedWorker", "require", "module.require"],
     "unlistedNodeOrBareBuiltinSpecifier": "fail-unclassified-builtin",
     "knownNonInventoryBuiltinSpecifier": "resolved-import-only-no-class-seed",
@@ -133,7 +155,7 @@ native/shell/loader edge fails authority derivation; it is never classified as p
     { "package": "node-gyp-build", "locator": "node-gyp-build@4.8.4", "lockIntegrity": "sha512-LA4ZjwlnUblHVgq0oBF3Jl/6h/Nvs5fzBLwdEF4nuxnFdsfajde4WfxtJr3CaiH+F6ewcIB/q4jQ4UzPyid+CQ==", "sourceClosureSha256": "2f1603b1dd14138092c809949988dcb0606b73f642b435f4530043ca3a06f41d", "exports": [{ "name": "default", "classes": ["filesystem", "ambient-loader", "native-addon"] }], "allowedOwners": ["dependency:classic-level@3.0.0#binding"] },
     { "package": "@effect/sql-sqlite-bun", "locator": "https://pkg.pr.new/Effect-TS/effect-smol/@effect/sql-sqlite-bun@8881a9b", "lockedRevision": "8881a9b", "sourceClosureSha256": "deba2c06f44ae9015cd07d0149d3a341e17913bd35fc3edadcfa35262e501036", "exports": [{ "name": "SqliteClient", "classes": ["sqlite"] }, { "name": "layer", "classes": ["sqlite"] }, { "name": "make", "classes": ["sqlite"] }], "allowedOwners": ["apps/service/src/product/ProductControlPlane.ts#makeProductControlPlaneLayer", "apps/service/src/persistence/Layers/Sqlite.ts#makeSqlitePersistenceLive", "apps/service/src/product/productStateStore.ts#makeProductStateStore"] }
   ],
-  "requiredNegativeWitnesses": ["Bun.spawnSync", "bun#$", "process.dlopen", "digest-mismatched-dependency-export", "unresolved-dependency-export", "unparsed-dependency-source", "computed-effect-selector", "unknown-.node-addon"]
+  "requiredNegativeWitnesses": ["Bun.spawnSync", "bun#$", "process.dlopen", "globalThis.Bun.spawnSync", "globalThis.process.dlopen", "globalThis.Bun['spawnSync']", "globalThis.Bun[selector]", "self['process']['dlopen']", "window[processRoot].dlopen", "repeated-global-wrapper", "shadowed-global-alias", "digest-mismatched-dependency-export", "unresolved-dependency-export", "unparsed-dependency-source", "computed-effect-selector", "unknown-.node-addon"]
 }
 ```
 
@@ -150,6 +172,11 @@ An ingress is one exact source form in `sourceForms` that matches a listed modul
 global/member terminal, syntax terminal, resolved `.node` extension or propagated dependency-export
 class. The nine class IDs are filesystem, SQLite, LevelDB, process, worker, shell, Web Storage,
 ambient loader and native addon. No prose spelling or inferred handle shape adds an ingress.
+Before global classification, the meter applies `globalAliasGrammar` exactly: each wrapper either
+normalizes through static dot/literal selectors to one reserved root or fails. Literal computed
+selectors retain the `computed-literal-member` identity while matching the same canonical selector
+bytes as dot access; every other computed expression has the `computed-nonliteral-member` identity
+and fails. Meter/config code cannot infer another alias, selector or fallback.
 
 Aliases, namespace access, destructuring, re-export and package export maps do not create a new
 class. `eval`, `Function`, private loader hooks and computed/unknown ambient-loader targets are
@@ -527,7 +554,342 @@ transaction durable. No unlisted port call, event, resource role, barrier or kil
       "exclusions": ["legacy-value-read", "legacy-decode", "legacy-copy", "legacy-delete", "unknown-storage-key"]
     }
   ],
-  "fixtureAxes": ["clean-absence", "each-nonempty-product-service-web-legacy-presence-assignment", "partial-current", "old-current", "future-current", "duplicate-marker", "contradictory-marker", "each-operation-fault-before", "each-operation-fault-after", "each-declared-barrier-race", "each-declared-killAfter"],
+  "fixtureCanonicalization": {
+    "algorithm": "sha256",
+    "bytes": "utf8-rfc8785-json-canonicalization",
+    "ownerDigestInput": "the-complete-owner-entry-with-definitionSha256-omitted",
+    "catalogDigestInput": "ordered-lines-owner-tab-definitionSha256-newline-in-fixtureStateCatalog-order",
+    "generatorRule": "recompute-and-match-before-materialization;missing-extra-renamed-merged-resized-or-reordered-state-resource-binding-race-kill-or-convergence-member-fails"
+  },
+  "fixtureStateCatalog": [
+    {
+      "owner": "scripts/product-truth/sqlite-classifier.ts#classifyLegacyDatabase",
+      "definitionSha256": "f777b90fe59a3079c8773eb22421bf53f6d464cd36335f7828c112aa4c9469ae",
+      "normalStateIds": ["classifier.safe-empty", "classifier.protected-run", "classifier.protected-attachment", "classifier.undecodable"],
+      "faultStateId": "classifier.safe-empty",
+      "raceStateId": "classifier.safe-empty",
+      "killStateId": "classifier.safe-empty",
+      "states": [
+        { "id": "classifier.safe-empty", "layout": "allowlisted-product-safe", "expected": "sanitized-zero", "resources": { "retiredDatabaseCount": 1, "sourceDataChunkCount": 2, "protectedAggregateQueryCount": 4 } },
+        { "id": "classifier.protected-run", "layout": "allowlisted-product-uncertain-run", "expected": "block-protected-run", "resources": { "retiredDatabaseCount": 1, "sourceDataChunkCount": 2, "protectedAggregateQueryCount": 4 } },
+        { "id": "classifier.protected-attachment", "layout": "allowlisted-service-protected-attachment", "expected": "block-protected-attachment", "resources": { "retiredDatabaseCount": 1, "sourceDataChunkCount": 3, "protectedAggregateQueryCount": 5 } },
+        { "id": "classifier.undecodable", "layout": "unknown-or-mismatched-schema", "expected": "block-unclassified", "resources": { "retiredDatabaseCount": 1, "sourceDataChunkCount": 1, "protectedAggregateQueryCount": 0 } }
+      ],
+      "iterationBindings": [
+        { "operationId": "classifier.read-source-chunk", "derive": "sourceDataChunkCount-plus-one-terminal-eof" },
+        { "operationId": "classifier.write-copy-chunk", "derive": "sourceDataChunkCount" },
+        { "operationId": "classifier.read-copy-hash-chunk", "derive": "sourceDataChunkCount-plus-one-terminal-eof" },
+        { "operationId": "classifier.query-protected-aggregate", "derive": "protectedAggregateQueryCount" }
+      ]
+    },
+    {
+      "owner": "scripts/product-truth/chromium-leveldb.ts#inspectProfileDraftKeys",
+      "definitionSha256": "6afce7fd8fada6211b8409f23f0aefe2b48c42386a2f50b0fa55f818f9fda52d",
+      "normalStateIds": ["profile-inspect.clean", "profile-inspect.v1", "profile-inspect.v2", "profile-inspect.v1-v2"],
+      "faultStateId": "profile-inspect.v1-v2",
+      "raceStateId": "profile-inspect.v1-v2",
+      "killStateId": "profile-inspect.v1-v2",
+      "states": [
+        { "id": "profile-inspect.clean", "expected": "v1-absent-v2-absent", "resources": { "orderedEntryKinds": ["CURRENT", "LOCK", "LOG", "MANIFEST", "TABLE"], "entryDataChunkCounts": [1, 0, 2, 1, 2], "exactLegacyKeyCount": 2 } },
+        { "id": "profile-inspect.v1", "expected": "v1-present-v2-absent", "resources": { "orderedEntryKinds": ["CURRENT", "LOCK", "LOG", "MANIFEST", "TABLE"], "entryDataChunkCounts": [1, 0, 2, 1, 2], "exactLegacyKeyCount": 2 } },
+        { "id": "profile-inspect.v2", "expected": "v1-absent-v2-present", "resources": { "orderedEntryKinds": ["CURRENT", "LOCK", "LOG", "MANIFEST", "TABLE"], "entryDataChunkCounts": [1, 0, 2, 1, 2], "exactLegacyKeyCount": 2 } },
+        { "id": "profile-inspect.v1-v2", "expected": "v1-present-v2-present", "resources": { "orderedEntryKinds": ["CURRENT", "LOCK", "LOG", "MANIFEST", "TABLE"], "entryDataChunkCounts": [1, 0, 2, 1, 2], "exactLegacyKeyCount": 2 } }
+      ],
+      "iterationBindings": [
+        { "operationIds": ["profile-inspect.lstat-source-entry", "profile-inspect.open-source-entry", "profile-inspect.open-copy-entry", "profile-inspect.close-source-entry", "profile-inspect.close-copy-entry", "profile-inspect.relstat-source-entry", "profile-inspect.reopen-source-entry", "profile-inspect.reclose-source-entry", "profile-inspect.lstat-copy-entry", "profile-inspect.open-copy-hash-entry", "profile-inspect.close-copy-hash-entry", "profile-inspect.remove-copy-entry"], "derive": "orderedEntryKinds.length" },
+        { "operationIds": ["profile-inspect.read-source-chunk", "profile-inspect.reread-source-hash-chunk", "profile-inspect.read-copy-hash-chunk"], "derive": "sum-entryDataChunkCounts-plus-orderedEntryKinds.length-terminal-eofs" },
+        { "operationId": "profile-inspect.write-copy-chunk", "derive": "sum-entryDataChunkCounts" },
+        { "operationId": "profile-inspect.get-key", "derive": "exactLegacyKeyCount" }
+      ]
+    },
+    {
+      "owner": "scripts/product-truth/chromium-leveldb.ts#deleteLegacyProfileDraftKeys",
+      "definitionSha256": "69562d73a2b4b3ffe6a42551628bc1a3d4a7ca5d0332a264aced8980328ed1e9",
+      "normalStateIds": ["profile-delete.clean", "profile-delete.v1", "profile-delete.v2", "profile-delete.v1-v2"],
+      "faultStateId": "profile-delete.v1-v2",
+      "raceStateId": "profile-delete.v1-v2",
+      "killStateId": "profile-delete.v1-v2",
+      "states": [
+        { "id": "profile-delete.clean", "expected": "no-delete-g1-identical", "resources": { "exactKeyOrder": ["v1", "v2", "g1"], "presentLegacyKeys": [], "g1ByteChunkCount": 2 } },
+        { "id": "profile-delete.v1", "expected": "delete-v1-g1-identical", "resources": { "exactKeyOrder": ["v1", "v2", "g1"], "presentLegacyKeys": ["v1"], "g1ByteChunkCount": 2 } },
+        { "id": "profile-delete.v2", "expected": "delete-v2-g1-identical", "resources": { "exactKeyOrder": ["v1", "v2", "g1"], "presentLegacyKeys": ["v2"], "g1ByteChunkCount": 2 } },
+        { "id": "profile-delete.v1-v2", "expected": "delete-v1-v2-g1-identical", "resources": { "exactKeyOrder": ["v1", "v2", "g1"], "presentLegacyKeys": ["v1", "v2"], "g1ByteChunkCount": 2 } }
+      ],
+      "iterationBindings": [
+        { "operationIds": ["profile-delete.read-exact-key", "profile-delete.reread-exact-key"], "derive": "exactKeyOrder.length" }
+      ]
+    },
+    {
+      "owner": "scripts/product-truth/database-lock.ts#withProductTruthDatabaseLocks",
+      "definitionSha256": "36503d59bfb821098a3c13daa74ea1235d4b030c1f3fe43d7a1f8a93a206dce7",
+      "normalStateIds": ["db-lock.absent", "db-lock.stale", "db-lock.live", "db-lock.unknown", "db-lock.malformed"],
+      "faultStateId": "db-lock.stale",
+      "raceStateId": "db-lock.stale",
+      "killStateId": "db-lock.stale",
+      "states": [
+        { "id": "db-lock.absent", "expected": "acquire-six-release-six", "resources": { "orderedLockPathCount": 6, "existingRecordKinds": [] } },
+        { "id": "db-lock.stale", "expected": "reclaim-one-dead-acquire-six-release-six", "resources": { "orderedLockPathCount": 6, "existingRecordKinds": ["dead-exact"] } },
+        { "id": "db-lock.live", "expected": "typed-quiescence-refusal", "resources": { "orderedLockPathCount": 6, "existingRecordKinds": ["live-exact"] } },
+        { "id": "db-lock.unknown", "expected": "typed-quiescence-refusal", "resources": { "orderedLockPathCount": 6, "existingRecordKinds": ["unknown-exact"] } },
+        { "id": "db-lock.malformed", "expected": "typed-quiescence-refusal", "resources": { "orderedLockPathCount": 6, "existingRecordKinds": ["malformed"] } }
+      ],
+      "iterationBindings": [
+        { "operationIds": ["db-lock.lstat-existing", "db-lock.open-publish", "db-lock.write-publish", "db-lock.fsync-publish", "db-lock.close-publish", "db-lock.fsync-parent", "db-lock.open-verify", "db-lock.read-verify", "db-lock.close-verify", "db-lock.remove-owned", "db-lock.verify-absent"], "derive": "orderedLockPathCount" },
+        { "operationIds": ["db-lock.open-existing", "db-lock.read-existing", "db-lock.close-existing", "db-lock.probe-owner", "db-lock.remove-stale"], "derive": "existingRecordKinds.length-when-the-selected-record-kind-reaches-the-operation-otherwise-zero" }
+      ]
+    },
+    {
+      "owner": "scripts/product-truth/direct-first-public.ts#inspectDirectFirstPublic",
+      "definitionSha256": "6651eff2a315070c81844ecf719dadfe830559b61a8cb5c7ef590f492968d634",
+      "normalStateIds": ["inspect.clean", "inspect.legacy-mixed", "inspect.protected", "inspect.active-owner"],
+      "faultStateId": "inspect.legacy-mixed",
+      "raceStateId": "inspect.legacy-mixed",
+      "killStateId": "inspect.legacy-mixed",
+      "states": [
+        { "id": "inspect.clean", "expected": "sanitized-empty-plan", "resources": { "laneCount": 2, "profileCount": 2, "ancestorCount": 8, "targetKinds": {}, "targetDataChunkCounts": [], "processProbeCount": 3 } },
+        { "id": "inspect.legacy-mixed", "expected": "sanitized-allowlisted-plan", "resources": { "laneCount": 2, "profileCount": 2, "ancestorCount": 8, "targetKinds": { "database-member": 3, "legacy-file": 2, "package-node": 4, "profile": 2 }, "targetDataChunkCounts": [2, 1, 1, 2, 1, 0, 1, 0, 1, 2, 2], "processProbeCount": 3 } },
+        { "id": "inspect.protected", "expected": "typed-protected-refusal", "resources": { "laneCount": 2, "profileCount": 2, "ancestorCount": 8, "targetKinds": { "protected-exclusion": 1 }, "targetDataChunkCounts": [2], "processProbeCount": 3 } },
+        { "id": "inspect.active-owner", "expected": "typed-quiescence-refusal", "resources": { "laneCount": 2, "profileCount": 2, "ancestorCount": 8, "targetKinds": { "legacy-file": 1 }, "targetDataChunkCounts": [1], "processProbeCount": 3 } }
+      ],
+      "iterationBindings": [
+        { "operationIds": ["inspect.lstat-ancestor", "inspect.realpath-ancestor", "inspect.recheck-ancestor"], "derive": "ancestorCount" },
+        { "operationIds": ["inspect.open-target", "inspect.close-target", "inspect.sanitize-target-metadata"], "derive": "targetDataChunkCounts.length" },
+        { "operationId": "inspect.read-target-chunk", "derive": "sum-targetDataChunkCounts-plus-targetDataChunkCounts.length-terminal-eofs" },
+        { "operationId": "inspect.probe-process", "derive": "processProbeCount" }
+      ]
+    },
+    {
+      "owner": "scripts/product-truth/direct-first-public.ts#applyDirectFirstPublic",
+      "definitionSha256": "5f9966b48f0c5fad2fc90d8d04e444ed4dbbedc750df218e7e255f0fee4dd4bf",
+      "normalStateIds": ["apply.database-bundle", "apply.legacy-files", "apply.package-full", "apply.package-manifest-only", "apply.all-target-kinds"],
+      "faultStateId": "apply.all-target-kinds",
+      "raceStateId": "apply.all-target-kinds",
+      "killStateId": "apply.all-target-kinds",
+      "states": [
+        { "id": "apply.database-bundle", "expected": "sealed-database-bundle-absent", "resources": { "databaseMemberCount": 3, "legacyFileCount": 0, "packageTransitionCount": 0, "targetDataChunkCounts": [2, 1, 1], "protectedExclusionChunkCounts": [2, 1, 1, 1] } },
+        { "id": "apply.legacy-files", "expected": "sealed-legacy-files-absent", "resources": { "databaseMemberCount": 0, "legacyFileCount": 2, "packageTransitionCount": 0, "targetDataChunkCounts": [2, 1], "protectedExclusionChunkCounts": [2, 1, 1, 1] } },
+        { "id": "apply.package-full", "expected": "sealed-package-full-to-absent", "resources": { "databaseMemberCount": 0, "legacyFileCount": 0, "packageTransitionCount": 3, "targetDataChunkCounts": [1, 1, 0], "protectedExclusionChunkCounts": [2, 1, 1, 1] } },
+        { "id": "apply.package-manifest-only", "expected": "sealed-package-manifest-to-absent", "resources": { "databaseMemberCount": 0, "legacyFileCount": 0, "packageTransitionCount": 2, "targetDataChunkCounts": [1, 0], "protectedExclusionChunkCounts": [2, 1, 1, 1] } },
+        { "id": "apply.all-target-kinds", "expected": "only-all-sealed-targets-absent-exclusions-identical", "resources": { "databaseMemberCount": 3, "legacyFileCount": 2, "packageTransitionCount": 3, "targetDataChunkCounts": [2, 1, 1, 2, 1, 1, 1, 0], "protectedExclusionChunkCounts": [2, 1, 1, 1] } }
+      ],
+      "iterationBindings": [
+        { "operationIds": ["apply.lstat-target", "apply.open-target-hash", "apply.close-target-hash", "apply.seal-target", "apply.fsync-target-parent", "apply.verify-target-absent"], "derive": "targetDataChunkCounts.length" },
+        { "operationId": "apply.read-target-hash-chunk", "derive": "sum-targetDataChunkCounts-plus-targetDataChunkCounts.length-terminal-eofs" },
+        { "operationId": "apply.unlink-database-member", "derive": "databaseMemberCount" },
+        { "operationId": "apply.remove-legacy-file", "derive": "legacyFileCount" },
+        { "operationId": "apply.transition-package-node", "derive": "packageTransitionCount" },
+        { "operationIds": ["apply.lstat-exclusion", "apply.open-exclusion", "apply.close-exclusion", "apply.verify-exclusion-hash"], "derive": "protectedExclusionChunkCounts.length" },
+        { "operationId": "apply.read-exclusion-hash-chunk", "derive": "sum-protectedExclusionChunkCounts-plus-protectedExclusionChunkCounts.length-terminal-eofs" }
+      ]
+    },
+    {
+      "owner": "apps/service/src/product/ProductControlPlane.ts#makeProductControlPlaneLayer",
+      "definitionSha256": "e035eac216b2f9ddcce76dc31a9575eb94da2f751f751c666610e6c2618714bc",
+      "normalStateIds": ["product.clean-absence", "product.pre-main", "product.pre-wal", "product.pre-shm", "product.pre-main-wal", "product.pre-main-shm", "product.pre-wal-shm", "product.pre-all", "product.post-main", "product.post-wal", "product.post-shm", "product.post-main-wal", "product.post-main-shm", "product.post-wal-shm", "product.post-all", "product.existing-exact", "product.partial-current", "product.old-current", "product.future-current", "product.duplicate-marker", "product.contradictory-marker"],
+      "faultStateId": "product.clean-absence",
+      "raceStateId": "product.clean-absence",
+      "killStateId": "product.clean-absence",
+      "stateDefaults": { "resources": { "legacyMembers": ["main", "wal", "shm"], "schemaStatementCount": 26, "validationQueryCount": 2 } },
+      "states": [
+        { "id": "product.clean-absence", "legacy": { "phase": "none", "present": [] }, "current": "absent", "expected": "create-exact-g1" },
+        { "id": "product.pre-main", "legacy": { "phase": "pre", "present": ["main"] }, "current": "absent", "expected": "prebaseline-refusal" },
+        { "id": "product.pre-wal", "legacy": { "phase": "pre", "present": ["wal"] }, "current": "absent", "expected": "prebaseline-refusal" },
+        { "id": "product.pre-shm", "legacy": { "phase": "pre", "present": ["shm"] }, "current": "absent", "expected": "prebaseline-refusal" },
+        { "id": "product.pre-main-wal", "legacy": { "phase": "pre", "present": ["main", "wal"] }, "current": "absent", "expected": "prebaseline-refusal" },
+        { "id": "product.pre-main-shm", "legacy": { "phase": "pre", "present": ["main", "shm"] }, "current": "absent", "expected": "prebaseline-refusal" },
+        { "id": "product.pre-wal-shm", "legacy": { "phase": "pre", "present": ["wal", "shm"] }, "current": "absent", "expected": "prebaseline-refusal" },
+        { "id": "product.pre-all", "legacy": { "phase": "pre", "present": ["main", "wal", "shm"] }, "current": "absent", "expected": "prebaseline-refusal" },
+        { "id": "product.post-main", "legacy": { "phase": "post", "present": ["main"] }, "current": "absent", "expected": "release-then-prebaseline-refusal" },
+        { "id": "product.post-wal", "legacy": { "phase": "post", "present": ["wal"] }, "current": "absent", "expected": "release-then-prebaseline-refusal" },
+        { "id": "product.post-shm", "legacy": { "phase": "post", "present": ["shm"] }, "current": "absent", "expected": "release-then-prebaseline-refusal" },
+        { "id": "product.post-main-wal", "legacy": { "phase": "post", "present": ["main", "wal"] }, "current": "absent", "expected": "release-then-prebaseline-refusal" },
+        { "id": "product.post-main-shm", "legacy": { "phase": "post", "present": ["main", "shm"] }, "current": "absent", "expected": "release-then-prebaseline-refusal" },
+        { "id": "product.post-wal-shm", "legacy": { "phase": "post", "present": ["wal", "shm"] }, "current": "absent", "expected": "release-then-prebaseline-refusal" },
+        { "id": "product.post-all", "legacy": { "phase": "post", "present": ["main", "wal", "shm"] }, "current": "absent", "expected": "release-then-prebaseline-refusal" },
+        { "id": "product.existing-exact", "legacy": { "phase": "none", "present": [] }, "current": "exact-g1", "expected": "open-validate-close" },
+        { "id": "product.partial-current", "legacy": { "phase": "none", "present": [] }, "current": "partial-g1", "expected": "first-public-incomplete" },
+        { "id": "product.old-current", "legacy": { "phase": "none", "present": [] }, "current": "old-generation", "expected": "generation-refusal" },
+        { "id": "product.future-current", "legacy": { "phase": "none", "present": [] }, "current": "future-generation", "expected": "generation-refusal" },
+        { "id": "product.duplicate-marker", "legacy": { "phase": "none", "present": [] }, "current": "duplicate-marker", "expected": "generation-refusal" },
+        { "id": "product.contradictory-marker", "legacy": { "phase": "none", "present": [] }, "current": "contradictory-marker-fingerprint", "expected": "generation-refusal" }
+      ],
+      "iterationBindings": [
+        { "operationId": "product.create-schema-statement", "derive": "stateDefaults.resources.schemaStatementCount-only-for-product.clean-absence-otherwise-zero" },
+        { "operationId": "product.validate-reopen-query", "derive": "stateDefaults.resources.validationQueryCount-only-when-current-is-exact-g1-or-clean-create-committed-otherwise-zero" }
+      ]
+    },
+    {
+      "owner": "apps/service/src/persistence/Layers/Sqlite.ts#makeSqlitePersistenceLive",
+      "definitionSha256": "e0f656ef66d816ca7a9f59944e64b3e580ac8b26b5aa4293ef0ab9d9da1d8ce0",
+      "normalStateIds": ["service.clean-absence", "service.pre-main", "service.pre-wal", "service.pre-shm", "service.pre-main-wal", "service.pre-main-shm", "service.pre-wal-shm", "service.pre-all", "service.post-main", "service.post-wal", "service.post-shm", "service.post-main-wal", "service.post-main-shm", "service.post-wal-shm", "service.post-all", "service.existing-exact", "service.partial-current", "service.old-current", "service.future-current", "service.duplicate-marker", "service.contradictory-marker"],
+      "faultStateId": "service.clean-absence",
+      "raceStateId": "service.clean-absence",
+      "killStateId": "service.clean-absence",
+      "stateDefaults": { "resources": { "legacyMembers": ["main", "wal", "shm"], "schemaStatementCount": 31, "validationQueryCount": 2 } },
+      "states": [
+        { "id": "service.clean-absence", "legacy": { "phase": "none", "present": [] }, "current": "absent", "expected": "create-exact-g1" },
+        { "id": "service.pre-main", "legacy": { "phase": "pre", "present": ["main"] }, "current": "absent", "expected": "prebaseline-refusal" },
+        { "id": "service.pre-wal", "legacy": { "phase": "pre", "present": ["wal"] }, "current": "absent", "expected": "prebaseline-refusal" },
+        { "id": "service.pre-shm", "legacy": { "phase": "pre", "present": ["shm"] }, "current": "absent", "expected": "prebaseline-refusal" },
+        { "id": "service.pre-main-wal", "legacy": { "phase": "pre", "present": ["main", "wal"] }, "current": "absent", "expected": "prebaseline-refusal" },
+        { "id": "service.pre-main-shm", "legacy": { "phase": "pre", "present": ["main", "shm"] }, "current": "absent", "expected": "prebaseline-refusal" },
+        { "id": "service.pre-wal-shm", "legacy": { "phase": "pre", "present": ["wal", "shm"] }, "current": "absent", "expected": "prebaseline-refusal" },
+        { "id": "service.pre-all", "legacy": { "phase": "pre", "present": ["main", "wal", "shm"] }, "current": "absent", "expected": "prebaseline-refusal" },
+        { "id": "service.post-main", "legacy": { "phase": "post", "present": ["main"] }, "current": "absent", "expected": "release-then-prebaseline-refusal" },
+        { "id": "service.post-wal", "legacy": { "phase": "post", "present": ["wal"] }, "current": "absent", "expected": "release-then-prebaseline-refusal" },
+        { "id": "service.post-shm", "legacy": { "phase": "post", "present": ["shm"] }, "current": "absent", "expected": "release-then-prebaseline-refusal" },
+        { "id": "service.post-main-wal", "legacy": { "phase": "post", "present": ["main", "wal"] }, "current": "absent", "expected": "release-then-prebaseline-refusal" },
+        { "id": "service.post-main-shm", "legacy": { "phase": "post", "present": ["main", "shm"] }, "current": "absent", "expected": "release-then-prebaseline-refusal" },
+        { "id": "service.post-wal-shm", "legacy": { "phase": "post", "present": ["wal", "shm"] }, "current": "absent", "expected": "release-then-prebaseline-refusal" },
+        { "id": "service.post-all", "legacy": { "phase": "post", "present": ["main", "wal", "shm"] }, "current": "absent", "expected": "release-then-prebaseline-refusal" },
+        { "id": "service.existing-exact", "legacy": { "phase": "none", "present": [] }, "current": "exact-g1", "expected": "open-validate-close" },
+        { "id": "service.partial-current", "legacy": { "phase": "none", "present": [] }, "current": "partial-g1", "expected": "first-public-incomplete" },
+        { "id": "service.old-current", "legacy": { "phase": "none", "present": [] }, "current": "old-generation", "expected": "generation-refusal" },
+        { "id": "service.future-current", "legacy": { "phase": "none", "present": [] }, "current": "future-generation", "expected": "generation-refusal" },
+        { "id": "service.duplicate-marker", "legacy": { "phase": "none", "present": [] }, "current": "duplicate-marker", "expected": "generation-refusal" },
+        { "id": "service.contradictory-marker", "legacy": { "phase": "none", "present": [] }, "current": "contradictory-marker-fingerprint", "expected": "generation-refusal" }
+      ],
+      "iterationBindings": [
+        { "operationId": "service.create-schema-statement", "derive": "stateDefaults.resources.schemaStatementCount-only-for-service.clean-absence-otherwise-zero" },
+        { "operationId": "service.validate-reopen-query", "derive": "stateDefaults.resources.validationQueryCount-only-when-current-is-exact-g1-or-clean-create-committed-otherwise-zero" }
+      ]
+    },
+    {
+      "owner": "apps/web/src/composerDraftStore.ts#readOrCreateComposerDraftEnvelope",
+      "definitionSha256": "ea8338c31c1be4f464b0fee98f1882281b00d71a4e34a9590005c6bb2b876adb",
+      "normalStateIds": ["web-read.clean", "web-read.v1", "web-read.v2", "web-read.v1-v2", "web-read.existing-exact", "web-read.partial", "web-read.old", "web-read.future", "web-read.contradictory"],
+      "faultStateId": "web-read.clean",
+      "raceStateId": "web-read.clean",
+      "killStateId": "web-read.clean",
+      "states": [
+        { "id": "web-read.clean", "legacyPresent": [], "current": "absent", "expected": "create-exact-empty-g1" },
+        { "id": "web-read.v1", "legacyPresent": ["v1"], "current": "absent", "expected": "prebaseline-refusal" },
+        { "id": "web-read.v2", "legacyPresent": ["v2"], "current": "absent", "expected": "prebaseline-refusal" },
+        { "id": "web-read.v1-v2", "legacyPresent": ["v1", "v2"], "current": "absent", "expected": "prebaseline-refusal" },
+        { "id": "web-read.existing-exact", "legacyPresent": [], "current": "exact-g1", "expected": "return-byte-identical" },
+        { "id": "web-read.partial", "legacyPresent": [], "current": "partial-g1", "expected": "generation-refusal" },
+        { "id": "web-read.old", "legacyPresent": [], "current": "old-generation", "expected": "generation-refusal" },
+        { "id": "web-read.future", "legacyPresent": [], "current": "future-generation", "expected": "generation-refusal" },
+        { "id": "web-read.contradictory", "legacyPresent": [], "current": "contradictory-envelope", "expected": "generation-refusal" }
+      ],
+      "iterationBindings": []
+    },
+    {
+      "owner": "apps/web/src/composerDraftStore.ts#writeAndVerifyComposerDraftEnvelope",
+      "definitionSha256": "c5d10d0c7211483e92ce6edfe2bc0400108a7c51e0a0b46b06a01dc264ded4cd",
+      "normalStateIds": ["web-write.clean", "web-write.v1", "web-write.v2", "web-write.v1-v2", "web-write.existing-exact", "web-write.partial", "web-write.old", "web-write.future", "web-write.contradictory"],
+      "faultStateId": "web-write.existing-exact",
+      "raceStateId": "web-write.existing-exact",
+      "killStateId": "web-write.existing-exact",
+      "states": [
+        { "id": "web-write.clean", "legacyPresent": [], "current": "absent", "input": "valid-g1", "expected": "write-and-verify" },
+        { "id": "web-write.v1", "legacyPresent": ["v1"], "current": "absent", "input": "valid-g1", "expected": "prebaseline-refusal" },
+        { "id": "web-write.v2", "legacyPresent": ["v2"], "current": "absent", "input": "valid-g1", "expected": "prebaseline-refusal" },
+        { "id": "web-write.v1-v2", "legacyPresent": ["v1", "v2"], "current": "absent", "input": "valid-g1", "expected": "prebaseline-refusal" },
+        { "id": "web-write.existing-exact", "legacyPresent": [], "current": "exact-g1", "input": "valid-distinct-g1", "expected": "atomic-replace-and-verify" },
+        { "id": "web-write.partial", "legacyPresent": [], "current": "partial-g1", "input": "valid-g1", "expected": "generation-refusal" },
+        { "id": "web-write.old", "legacyPresent": [], "current": "old-generation", "input": "valid-g1", "expected": "generation-refusal" },
+        { "id": "web-write.future", "legacyPresent": [], "current": "future-generation", "input": "valid-g1", "expected": "generation-refusal" },
+        { "id": "web-write.contradictory", "legacyPresent": [], "current": "contradictory-envelope", "input": "invalid-or-valid-g1", "expected": "generation-refusal-zero-write" }
+      ],
+      "iterationBindings": []
+    }
+  ],
+  "fixtureCatalogSha256": "0d83a019c51638f4f94e65ab443705b57d8baa37146a63e2cce9709a87fa5909",
+  "convergenceStateCatalog": [
+    { "id": "classifier.scratch-created", "assertions": ["retired-source-byte-identical", "identity-matched-private-scratch-may-exist", "fresh-classifier-removes-private-scratch-only"] },
+    { "id": "classifier.copy-durable", "assertions": ["retired-source-byte-identical", "private-copy-may-be-complete", "fresh-classifier-reclassifies-source-and-cleans-copy"] },
+    { "id": "classifier.copy-removed", "assertions": ["retired-source-byte-identical", "private-copy-absent", "private-scratch-directory-may-exist"] },
+    { "id": "classifier.scratch-absent", "assertions": ["retired-source-byte-identical", "private-copy-absent", "private-scratch-directory-absent"] },
+    { "id": "profile.scratch-created", "assertions": ["source-profile-byte-identical", "manifest-owned-private-scratch-may-exist", "fresh-owner-cleans-private-scratch-only"] },
+    { "id": "profile.entry-durable", "assertions": ["source-profile-byte-identical", "only-complete-committed-copy-entry-may-exist", "fresh-owner-rebuilds-or-cleans-copy"] },
+    { "id": "profile.directory-durable", "assertions": ["source-profile-byte-identical", "complete-copy-manifest-may-exist", "fresh-owner-revalidates-before-use"] },
+    { "id": "profile.entry-removed", "assertions": ["source-profile-byte-identical", "selected-copy-entry-absent", "fresh-owner-cleans-remaining-manifest-matched-copy"] },
+    { "id": "profile.scratch-absent", "assertions": ["source-profile-byte-identical", "private-profile-copy-absent"] },
+    { "id": "profile.delete-all-or-none", "assertions": ["g1-byte-identical", "declared-v1-v2-delete-set-is-either-all-present-or-all-absent", "fresh-apply-reclassifies"] },
+    { "id": "lock.stale-removed", "assertions": ["only-dead-exact-record-may-be-absent", "foreign-locks-byte-identical", "fresh-apply-reprobes"] },
+    { "id": "lock.publish-created", "assertions": ["published-record-is-either-absent-or-complete-exact-owned-record", "foreign-locks-byte-identical", "fresh-apply-reprobes"] },
+    { "id": "lock.publish-durable", "assertions": ["complete-exact-owned-record-may-exist", "foreign-locks-byte-identical", "fresh-apply-reclaims-only-after-dead-proof"] },
+    { "id": "lock.parent-durable", "assertions": ["complete-exact-owned-record-may-exist", "parent-entry-is-durable-or-absent", "fresh-apply-reprobes"] },
+    { "id": "lock.owned-removed", "assertions": ["exact-owned-record-absent", "foreign-locks-byte-identical"] },
+    { "id": "apply.database-edge", "assertions": ["only-selected-sealed-database-member-may-be-absent", "all-protected-exclusions-byte-identical", "fresh-inspect-before-apply"] },
+    { "id": "apply.package-edge", "assertions": ["package-node-is-exactly-prior-or-precomputed-next", "current-canonical-package-generation-byte-identical", "fresh-inspect-before-apply"] },
+    { "id": "apply.file-edge", "assertions": ["only-selected-sealed-file-may-be-absent", "all-protected-exclusions-byte-identical", "fresh-inspect-before-apply"] },
+    { "id": "apply.parent-durable", "assertions": ["only-declared-prior-target-edges-may-be-committed", "all-protected-exclusions-byte-identical", "fresh-inspect-before-apply"] },
+    { "id": "runtime.lock-acquired", "assertions": ["no-current-database-handle-exposed", "fresh-startup-classifies-and-reclaims-only-dead-exact-lock"] },
+    { "id": "runtime.store-directory-created", "assertions": ["database-may-be-absent-or-empty", "no-partial-application-schema-is-accepted", "fresh-startup-classifies-only"] },
+    { "id": "runtime.g1-committed", "assertions": ["database-is-exact-complete-g1-or-typed-refusal", "fresh-startup-validates-marker-and-fingerprint"] },
+    { "id": "runtime.lock-released", "assertions": ["owner-lock-absent", "database-is-exact-complete-g1-or-typed-refusal"] },
+    { "id": "web.atomic-value", "assertions": ["g1-is-whole-prior-value-or-whole-new-value", "v1-v2-and-unknown-keys-byte-identical", "fresh-read-classifies-only"] }
+  ],
+  "raceCaseCatalog": [
+    { "barrierId": "classifier.source-identity-to-open", "stateId": "classifier.safe-empty", "writer": "replace-retired-source-identity", "expected": "typed-classifier-unavailable-source-write-zero" },
+    { "barrierId": "classifier.source-copy-to-recheck", "stateId": "classifier.safe-empty", "writer": "mutate-retired-source-after-copy", "expected": "typed-classifier-unavailable-source-write-zero" },
+    { "barrierId": "classifier.copy-identity-to-hash-open", "stateId": "classifier.safe-empty", "writer": "replace-private-copy-identity", "expected": "typed-classifier-unavailable-source-write-zero" },
+    { "barrierId": "classifier.copy-hash-to-sqlite-open", "stateId": "classifier.safe-empty", "writer": "replace-private-copy-after-hash", "expected": "typed-classifier-unavailable-source-write-zero" },
+    { "barrierId": "profile-inspect.manifest-to-copy", "stateId": "profile-inspect.v1-v2", "writer": "replace-source-entry-identity", "expected": "typed-profile-inspection-unavailable-source-byte-identical" },
+    { "barrierId": "profile-inspect.copy-to-source-recheck", "stateId": "profile-inspect.v1-v2", "writer": "append-source-profile-entry", "expected": "typed-profile-inspection-unavailable-source-byte-identical" },
+    { "barrierId": "profile-inspect-source-recheck-to-copy-hash", "stateId": "profile-inspect.v1-v2", "writer": "mutate-source-entry-after-recheck", "expected": "typed-profile-inspection-unavailable-source-byte-identical" },
+    { "barrierId": "profile-inspect.copy-manifest-to-open", "stateId": "profile-inspect.v1-v2", "writer": "replace-private-copy-entry", "expected": "typed-profile-inspection-unavailable-source-byte-identical" },
+    { "barrierId": "profile-delete.identity-to-open", "stateId": "profile-delete.v1-v2", "writer": "replace-source-profile-identity", "expected": "typed-target-changed-zero-delete" },
+    { "barrierId": "profile-delete-read-to-batch", "stateId": "profile-delete.v1-v2", "writer": "change-v1-value-after-read", "expected": "typed-target-changed-zero-delete" },
+    { "barrierId": "profile-delete-seal-to-batch", "stateId": "profile-delete.v1-v2", "writer": "change-v2-value-after-seal", "expected": "typed-target-changed-zero-delete" },
+    { "barrierId": "db-lock-record-to-process-probe", "stateId": "db-lock.stale", "writer": "replace-lock-record-before-probe", "expected": "typed-quiescence-refusal-no-foreign-removal" },
+    { "barrierId": "db-lock-dead-proof-to-stale-remove", "stateId": "db-lock.stale", "writer": "replace-lock-record-after-dead-proof", "expected": "typed-quiescence-refusal-no-foreign-removal" },
+    { "barrierId": "db-lock-publish-to-verify", "stateId": "db-lock.stale", "writer": "replace-published-record", "expected": "typed-lock-race-no-foreign-removal" },
+    { "barrierId": "db-lock-owned-to-release", "stateId": "db-lock.stale", "writer": "replace-owned-record-before-release", "expected": "typed-lock-race-no-foreign-removal" },
+    { "barrierId": "inspect-ancestor-to-target-enumeration", "stateId": "inspect.legacy-mixed", "writer": "replace-scope-ancestor", "expected": "typed-inspection-unavailable-zero-mutation" },
+    { "barrierId": "inspect-target-to-open", "stateId": "inspect.legacy-mixed", "writer": "replace-allowlisted-target", "expected": "typed-inspection-unavailable-zero-mutation" },
+    { "barrierId": "inspect-process-identity-to-probe", "stateId": "inspect.legacy-mixed", "writer": "replace-process-identity", "expected": "typed-inspection-unavailable-zero-mutation" },
+    { "barrierId": "apply-seal-to-database-unlink", "stateId": "apply.all-target-kinds", "writer": "replace-sealed-database-member", "expected": "typed-target-changed-zero-later-mutation" },
+    { "barrierId": "apply-seal-to-package-transition", "stateId": "apply.all-target-kinds", "writer": "replace-sealed-package-node", "expected": "typed-target-changed-zero-later-mutation" },
+    { "barrierId": "apply-seal-to-file-remove", "stateId": "apply.all-target-kinds", "writer": "replace-sealed-legacy-file", "expected": "typed-target-changed-zero-later-mutation" },
+    { "barrierId": "apply-mutation-to-absence", "stateId": "apply.all-target-kinds", "writer": "create-conflicting-target-after-mutation", "expected": "typed-target-changed-zero-later-mutation" },
+    { "barrierId": "product-precut-to-lock", "stateId": "product.clean-absence", "writer": "create-retired-main-before-lock", "expected": "prebaseline-refusal-before-current-io" },
+    { "barrierId": "product-lock-to-postcut", "stateId": "product.clean-absence", "writer": "create-retired-wal-after-lock", "expected": "release-then-prebaseline-refusal-before-current-io" },
+    { "barrierId": "product-postcut-to-current-open", "stateId": "product.clean-absence", "writer": "replace-current-ancestor-after-postcut", "expected": "typed-current-identity-refusal" },
+    { "barrierId": "service-precut-to-lock", "stateId": "service.clean-absence", "writer": "create-retired-main-before-lock", "expected": "prebaseline-refusal-before-current-io" },
+    { "barrierId": "service-lock-to-postcut", "stateId": "service.clean-absence", "writer": "create-retired-wal-after-lock", "expected": "release-then-prebaseline-refusal-before-current-io" },
+    { "barrierId": "service-postcut-to-current-open", "stateId": "service.clean-absence", "writer": "replace-current-ancestor-after-postcut", "expected": "typed-current-identity-refusal" },
+    { "barrierId": "web-read-v1-to-v2", "stateId": "web-read.clean", "writer": "insert-v1-after-v1-read", "expected": "prebaseline-refusal-before-g1-access" },
+    { "barrierId": "web-read-complete-cut-to-g1", "stateId": "web-read.clean", "writer": "insert-v2-after-cut", "expected": "prebaseline-refusal-or-atomic-whole-g1-no-legacy-mutation" },
+    { "barrierId": "web-read-g1-absence-to-create", "stateId": "web-read.clean", "writer": "insert-distinct-valid-g1", "expected": "whole-existing-or-whole-empty-g1" },
+    { "barrierId": "web-write-v1-to-v2", "stateId": "web-write.existing-exact", "writer": "insert-v1-after-v1-read", "expected": "prebaseline-refusal-before-g1-write" },
+    { "barrierId": "web-write-complete-cut-to-g1", "stateId": "web-write.existing-exact", "writer": "insert-v2-after-cut", "expected": "prebaseline-refusal-or-whole-prior-g1" },
+    { "barrierId": "web-write-current-read-to-set", "stateId": "web-write.existing-exact", "writer": "replace-g1-after-read", "expected": "whole-concurrent-or-whole-requested-g1-never-torn" }
+  ],
+  "killCaseCatalog": [
+    { "operationId": "classifier.create-scratch-dir", "stateId": "classifier.safe-empty", "convergenceStateId": "classifier.scratch-created" },
+    { "operationId": "classifier.fsync-copy", "stateId": "classifier.safe-empty", "convergenceStateId": "classifier.copy-durable" },
+    { "operationId": "classifier.remove-copy", "stateId": "classifier.safe-empty", "convergenceStateId": "classifier.copy-removed" },
+    { "operationId": "classifier.remove-scratch-dir", "stateId": "classifier.safe-empty", "convergenceStateId": "classifier.scratch-absent" },
+    { "operationId": "profile-inspect.create-scratch", "stateId": "profile-inspect.v1-v2", "convergenceStateId": "profile.scratch-created" },
+    { "operationId": "profile-inspect.fsync-copy-entry", "stateId": "profile-inspect.v1-v2", "convergenceStateId": "profile.entry-durable" },
+    { "operationId": "profile-inspect.fsync-copy-directory", "stateId": "profile-inspect.v1-v2", "convergenceStateId": "profile.directory-durable" },
+    { "operationId": "profile-inspect.remove-copy-entry", "stateId": "profile-inspect.v1-v2", "convergenceStateId": "profile.entry-removed" },
+    { "operationId": "profile-inspect.remove-copy-directory", "stateId": "profile-inspect.v1-v2", "convergenceStateId": "profile.scratch-absent" },
+    { "operationId": "profile-delete.atomic-batch", "stateId": "profile-delete.v1-v2", "convergenceStateId": "profile.delete-all-or-none" },
+    { "operationId": "db-lock.remove-stale", "stateId": "db-lock.stale", "convergenceStateId": "lock.stale-removed" },
+    { "operationId": "db-lock.open-publish", "stateId": "db-lock.stale", "convergenceStateId": "lock.publish-created" },
+    { "operationId": "db-lock.fsync-publish", "stateId": "db-lock.stale", "convergenceStateId": "lock.publish-durable" },
+    { "operationId": "db-lock.fsync-parent", "stateId": "db-lock.stale", "convergenceStateId": "lock.parent-durable" },
+    { "operationId": "db-lock.remove-owned", "stateId": "db-lock.stale", "convergenceStateId": "lock.owned-removed" },
+    { "operationId": "apply.unlink-database-member", "stateId": "apply.all-target-kinds", "convergenceStateId": "apply.database-edge" },
+    { "operationId": "apply.transition-package-node", "stateId": "apply.all-target-kinds", "convergenceStateId": "apply.package-edge" },
+    { "operationId": "apply.remove-legacy-file", "stateId": "apply.all-target-kinds", "convergenceStateId": "apply.file-edge" },
+    { "operationId": "apply.fsync-target-parent", "stateId": "apply.all-target-kinds", "convergenceStateId": "apply.parent-durable" },
+    { "operationId": "product.acquire-owner-lock", "stateId": "product.clean-absence", "convergenceStateId": "runtime.lock-acquired" },
+    { "operationId": "product.mkdir-stores", "stateId": "product.clean-absence", "convergenceStateId": "runtime.store-directory-created" },
+    { "operationId": "product.commit-g1", "stateId": "product.clean-absence", "convergenceStateId": "runtime.g1-committed" },
+    { "operationId": "product.release-owner-lock", "stateId": "product.clean-absence", "convergenceStateId": "runtime.lock-released" },
+    { "operationId": "service.acquire-owner-lock", "stateId": "service.clean-absence", "convergenceStateId": "runtime.lock-acquired" },
+    { "operationId": "service.mkdir-stores", "stateId": "service.clean-absence", "convergenceStateId": "runtime.store-directory-created" },
+    { "operationId": "service.commit-g1", "stateId": "service.clean-absence", "convergenceStateId": "runtime.g1-committed" },
+    { "operationId": "service.release-owner-lock", "stateId": "service.clean-absence", "convergenceStateId": "runtime.lock-released" },
+    { "operationId": "web-read.set-empty-g1", "stateId": "web-read.clean", "convergenceStateId": "web.atomic-value" },
+    { "operationId": "web-write.set-g1", "stateId": "web-write.existing-exact", "convergenceStateId": "web.atomic-value" }
+  ],
+  "fixtureAxes": ["normal-state", "operation-fault-before", "operation-fault-after", "declared-barrier-race", "declared-kill-convergence"],
   "executionRule": {
     "normal": "execute-owner-operations-in-declared-order-whenever-every-named-input-in-sig-exists-from-the-fixture-or-a-prior-operation;skip-only-when-that-named-fixture-resource-is-exactly-absent",
     "repeat": "Ordinal-operations-run-once-for-each-ordered-fixture-resource-or-chunk-including-the-terminal-Eof-read",
@@ -544,16 +906,26 @@ transaction durable. No unlisted port call, event, resource role, barrier or kil
     "postLegacyPresentThenReleaseAndRefuse": ["product.probe-pre-main", "product.probe-pre-wal", "product.probe-pre-shm", "product.acquire-owner-lock", "product.probe-post-main", "product.probe-post-wal", "product.probe-post-shm", "product.release-owner-lock", "service.probe-pre-main", "service.probe-pre-wal", "service.probe-pre-shm", "service.acquire-owner-lock", "service.probe-post-main", "service.probe-post-wal", "service.probe-post-shm", "service.release-owner-lock"],
     "existingOrCreatedCurrentValidation": ["product.validate-reopen-query", "product.close-current", "product.release-owner-lock", "service.validate-reopen-query", "service.close-current", "service.release-owner-lock"]
   },
-  "manifestRule": "exact-cartesian-product-of-each-owner-with-every-fixtureAxis-selected-by-executionRule-and-every-actual-operation-ordinal-barrier-and-killAfter-identity",
+  "manifestRule": {
+    "normal": "exact-cartesian-product-of-each-fixtureStateCatalog.owner-and-every-listed-normalStateId",
+    "fault": "exact-cartesian-product-of-each-owner-operation-and-sites-before-after-and-every-actual-ordinal-derived-from-that-owner-faultStateId;non-ordinal-operations-have-one-ordinal-identity-single",
+    "race": "exactly-one-case-for-every-owner-barrier-and-the-unique-same-id-raceCaseCatalog-entry",
+    "kill": "exactly-one-case-for-every-owner-killAfter-and-the-unique-same-id-killCaseCatalog-entry",
+    "bijection": "generated-case-ids-equal-the-sorted-derived-union-with-no-missing-extra-or-duplicate-and-executed-case-ids-equal-generated-case-ids",
+    "caseId": "owner::family::stateId::operation-or-barrier-id::site::ordinal-or-single::convergenceStateId-or-none",
+    "candidateSelection": "none"
+  },
   "candidateChangePolicy": "candidate-may-implement-only;add-merge-omit-rename-reorder-redefine-or-downgrade-any-owner-operation-role-stage-atomicity-fault-barrier-kill-outcome-or-exclusion-fails",
-  "requiredHiddenMutations": ["remove-one-port-operation", "coarsen-two-operations-into-one", "omit-one-race-barrier", "downgrade-one-durable-kill-operation", "bypass-port-with-same-owner-raw-call", "emit-wrong-resource-role", "swallow-after-fault"]
+  "requiredHiddenMutations": ["remove-one-port-operation", "coarsen-two-operations-into-one", "omit-one-fixture-state", "shrink-one-resource-cardinality", "drop-one-terminal-eof-ordinal", "omit-one-race-barrier", "omit-one-kill-convergence-state", "downgrade-one-durable-kill-operation", "bypass-port-with-same-owner-raw-call", "emit-wrong-resource-role", "swallow-after-fault"]
 }
 ```
 
 Every event uses the fixed event shape and the exact owner operation's `stage` and `role`; paths,
 rows, draft values, credentials, Package identity, workspace bytes and other business content are
 not legal event fields. Repeated chunk/key/entry operations carry only an ordinal in the private
-adapter call; the generated fixture fixes the finite ordinal count and faults each actual ordinal.
+adapter call. The matching `fixtureStateCatalog` entry and `iterationBindings` derive the finite
+ordinal count, including every required terminal EOF; the generator has no resize input and faults
+each derived ordinal.
 Typed capability-to-capability calls do not create hidden raw operations: the child owner emits its
 own declared events and the manifest contains both invocation identities.
 
@@ -572,10 +944,12 @@ homes/profiles and cover:
   startup, never in-process resume; and
 - positive current-generation open/reopen plus byte-identical protected exclusions.
 
-The checked-in generator consumes the verifier block verbatim with the accepted fixture-state
-identities, emits the full case manifest and proves executed-case bijection. B1 code, config and
+The checked-in generator consumes the verifier block verbatim, recomputes every owner definition
+digest plus `fixtureCatalogSha256`, emits only the `manifestRule` Cartesian union and proves the
+generated/executed case bijection. The 86 exact states, their resources/cardinalities, 34 race
+cases and 29 kill-to-convergence bindings cannot be supplied or filtered by candidate code. B1 code, config and
 tests cannot add, merge, omit, rename, reorder, redefine or downgrade an operation, barrier, kill
-point, outcome or exclusion. No handpicked sample may be called exhaustive. Each case asserts the
+point, state, ordinal, convergence assertion, outcome or exclusion. No handpicked sample may be called exhaustive. Each case asserts the
 complete trace prefix, terminal disposition, writes,
 remaining filesystem/profile state and sanitized output. Unsupported injected operations fail the
 test rather than falling through to real I/O. Tests never point at real `~/.omnimind`.
@@ -585,7 +959,8 @@ A fresh different actor then performs both:
 1. hidden single-change mutations of event omission/reordering, wrong resource, skipped cleanup,
    swallowed failure, early release, old-state fallthrough, outside-owner raw import/loader,
    same-owner direct raw call bypassing the injected port, removed operation, coarsened port,
-   omitted race barrier, downgraded durable event and non-exact error, requiring the real
+   omitted fixture state, reduced cardinality, dropped terminal EOF, omitted race/kill convergence
+   binding, downgraded durable event and non-exact error, requiring the real
    verifier, v7 structural gate or explicit source Review to fail; and
 2. source Review of every traced capability, port composition, raw ingress reference and generated
    matrix at the identical B1 SHA.

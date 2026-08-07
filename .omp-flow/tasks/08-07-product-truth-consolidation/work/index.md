@@ -102,8 +102,8 @@ source profile, and cannot alter either frozen complexity-meter file or its univ
 implementation-discovered compatibility production/test paths remain exactly eleven.
 
 V1-v6 meter bytes are immutable rejected history. V7 reads the canonical machine block from
-each of the five product Works plus the Design-owned raw-effect syntax/dependency universe,
-effect-ingress owner allocation and B1 verifier universe at the accepted Design commit, pins every normalized block digest,
+each of the five product Works plus the Design-owned raw-effect syntax/global-alias/dependency universe,
+effect-ingress owner allocation and B1 verifier universe at the accepted Design commit, pins every normalized block and fixture-catalog digest,
 expands any declared design glob once and freezes path membership. Design-time edges/sinks are
 snapshots. Later edges pass only between frozen members; outside-set endpoints, computed/unresolved
 imports and moved responsibility fail mechanically. V7 also pins dependency/lock/export/source-digest
@@ -112,8 +112,8 @@ direct `Bun.spawnSync`, Bun Shell, `process.dlopen`, native-addon and worker esc
 with outside/second owners, exported raw handles/releases, forbidden/computed loaders and
 simultaneous B1/C Product owners. It does not claim cleanup, lock/refusal ordering,
 scheduler or completion semantics. B1 proves those through non-leaking owner-local capabilities,
-the frozen 10-owner/146-operation/34-barrier/29-kill verifier universe, exhaustive generated-home
-presence/fault/race/kill cases and
+the frozen 10-owner/146-operation/34-barrier/29-kill verifier universe plus 86 exact owner states,
+cardinality/ordinal rules and convergence bindings, exhaustive generated-home presence/fault/race/kill cases and
 different-actor hidden mutation/source Review. After v7 Review acceptance, every later Work treats
 the meter bytes and accepted B1 behavior evidence as read-only predecessors.
 An inert `.discarding` tombstone blocks rebuild convergence only; it is never loaded and adds no
@@ -188,8 +188,9 @@ Work may submit affected Campaign claims only as `candidate`; no producer may ma
 The next workflow entry is a fresh different-actor QbD audit of the v7 repair across Design,
 interface, measurement Work, all five Product Works and this map. It must prove v7 has only
 mechanical structure/dependency/import/effect-ingress/complexity authority, cannot claim runtime
-semantics, and that every displaced obligation has an exact B1 owner-local capability plus frozen
-trace/fault/race/kill/hidden-mutation/source-Review gate. Only `PASS` with zero blocker and zero
+semantics, uses the exact global-alias/computed-selector grammar, and that every displaced obligation
+has an exact B1 owner-local capability plus frozen state/cardinality/ordinal/trace/fault/race/kill/
+convergence/hidden-mutation/source-Review gate. Only `PASS` with zero blocker and zero
 advisory authorizes the measurement-only v7 assignment. Its immutable handoff then needs a zero-
 finding different-actor `PASS` before a new B1 production receipt. Rejected v1-v6 meter bytes,
 Reviews and candidates remain immutable historical evidence.

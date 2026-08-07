@@ -282,7 +282,9 @@ Windows quiescence adapter. The underlying evidence remains in the
   `omp-flow-b1-verifier-universe-v1` digest from the pinned accepted Design commit. The raw universe
   freezes exact Node/Bun/Deno/Electron/browser/LevelDB/SQLite/process/worker/shell/loader/native-
   addon forms, source-digest-keyed dependency effects and unknown-dependency fail-closed rules;
-  config or meter code cannot add a spelling or disposition. It freezes path membership, exact
+  its single source-form vocabulary distinguishes literal from non-literal computed selectors and
+  normalizes or rejects `globalThis`/`global`/`self`/`window` through one Design-owned grammar;
+  config or meter code cannot add an alias, selector, spelling or disposition. It freezes path membership, exact
   dependency/lock bytes, resolved static import/export closure and stage-specific owner identities.
   Later edges pass only between frozen members. Outside-set/unresolved/computed imports, forbidden
   loaders, unmatched dependency/native/shell effects, a second raw-effect owner, exported raw
@@ -297,9 +299,11 @@ Windows quiescence adapter. The underlying evidence remains in the
 - The B1 verifier universe is Design-owned before implementation. For each of the ten exact traced
   owners it freezes every port operation and signature, atomicity, stage/resource event mapping,
   before/after fault site, observation-to-use race barrier, durable kill point, expected outcome
-  and exclusion. B1 code/config/tests may implement but cannot add, merge, omit, rename, reorder,
-  redefine or downgrade an item. The generated manifest is the exact Cartesian product of the
-  applicable fixture axes and that block, not a candidate-authored list.
+  and exclusion. It also freezes 86 exact per-owner fixture states, their definition/catalog
+  digests, resource/key/chunk cardinalities, ordinal derivation including terminal EOF, all 34 race
+  states and all 29 kill-to-convergence bindings. B1 code/config/tests may implement but cannot add,
+  merge, omit, rename, reorder, resize, redefine or downgrade an item. The generated manifest is
+  the exact Design-derived Cartesian union, not a candidate-authored or filtered list.
 - `scripts/check-source-closure.mjs` and every meter/config file are measurement, not tool,
   production or steady-state runtime. V7 report determinism, authority/config/membership and
   dependency resolution remain hard at B0; historical behavior/ingress nonconformance may be
@@ -318,12 +322,12 @@ Windows quiescence adapter. The underlying evidence remains in the
 | A6  | Interruption converges only through fresh inspect/apply; inert Package tombstones do not block normal startup                                                                            | real termination before/after the Web batch and every Package graph edge, stale-lock and tombstone convergence matrix                                                                 |
 | A7  | Product/service/Web owners create only exact generation 1 from clean absence and all live Product consumers use the canonical Store path                                                 | fresh/open/reopen, Product/service two-stage plus matching owner-lock must-hold and Web single-stage exact refusal, concrete production composition and partial-creation matrix        |
 | A8  | Old/future/unmarked/contradictory generations fail closed                                                                                                                                | database and Web generation fault matrix with zero write assertions                                                                                                                   |
-| A9  | The complete unshipped compatibility inventory has zero production caller/import while exact refusal sentinels remain present, non-decoding and dominant over all current-generation I/O | v7 structural sentinel/raw-ingress closure plus the Design-frozen per-owner B1 operation/event/fault/race/kill matrix over every applicable presence assignment; hidden removed/coarsened port, omitted barrier, downgraded durability, late-I/O/bypass, swallowed/finally-replaced throw and scheduled-release mutations plus current-generation process tests |
+| A9  | The complete unshipped compatibility inventory has zero production caller/import while exact refusal sentinels remain present, non-decoding and dominant over all current-generation I/O | v7 structural sentinel/raw-ingress closure plus the Design-frozen 86-state per-owner B1 operation/event/fault/race/kill/convergence matrix and cardinality/ordinal digests; hidden omitted-state, shrunken-cardinality, dropped-EOF, removed/coarsened port, omitted barrier/convergence, downgraded durability, late-I/O/bypass, swallowed/finally-replaced throw and scheduled-release mutations plus current-generation process tests |
 | A10 | One Store retains all named compound transactions and SQL authority                                                                                                                      | static writer/connection gate and transaction fault injection for every named unit                                                                                                    |
 | A11 | Coordinator retains Engine-effect semantics without SQL/replay/fallback                                                                                                                  | catalog/admission/attempt/control/crash tests across Pi and OpenCode                                                                                                                  |
 | A12 | Web/RPC sees exactly one 36-operation facade; probes/tests are separate                                                                                                                  | type/API snapshot, wsRpc tests and production caller scan                                                                                                                             |
 | A13 | Service selects and Host only validates one transcript-bound lane/Package root                                                                                                           | dev/packaged process tests covering proof tamper, replay, version/field faults, second/concurrent binding, mismatch/link/sibling-root and no fallback                                 |
-| A14 | Production and conceptual complexity strictly decrease in one coverage-complete frozen universe                                                                                          | immutable rejected v1-v6 history, Design-pinned five boundaries/raw-effect syntax+dependency inventory/owner authority/B1 verifier universe, frozen set, dependency/import/ingress closure and deterministic v7 B0/B1/C metrics; behavior separately accepted by the exact frozen B1 manifest and Review |
+| A14 | Production and conceptual complexity strictly decrease in one coverage-complete frozen universe                                                                                          | immutable rejected v1-v6 history, Design-pinned five boundaries/raw-effect syntax+alias+dependency inventory/owner authority/B1 verifier universe and fixture-catalog digests, frozen set, dependency/import/ingress closure and deterministic v7 B0/B1/C metrics; behavior separately accepted by the exact frozen B1 manifest and Review |
 | A15 | Current outbox, Automation, Web safeguard, Package and Engine recovery behavior remains                                                                                                  | focused existing suites plus complete real kill/race/write-trace and affected real-process journeys                                                                                   |
 
 ## Constraints and non-goals

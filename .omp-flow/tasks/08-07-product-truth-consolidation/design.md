@@ -55,6 +55,9 @@ measurement authority and changes no runtime or destructive boundary. The subseq
 [v7 QbD repair calibration](decisions/product-truth-complexity-v7-qbd-repair-calibration.md) closes
 only the finite raw-effect/dependency authority and pre-B1 verifier-universe gaps; it does not
 restore semantic CFG analysis or change any Product/destructive scope.
+The [final v7 QbD repair calibration](decisions/product-truth-complexity-v7-final-qbd-repair-calibration.md)
+closes only the remaining global-alias/source-form vocabulary and fixture-state/cardinality
+authority gaps; the Occam split, operation universe and five production fences remain unchanged.
 
 ## Scope and source boundaries
 
@@ -111,8 +114,8 @@ cross-store transaction owner.
    and is released by the outer resource finalizer only after the connection is closed and no
    guarded sink is reachable. Presence again throws `PREBASELINE_RESET_REQUIRED`; runtime does not
    open, hash, decode, copy or mutate the retired member.
-3. If both guards establish absence, create a private regular file and run all 21 table/index DDL
-   statements plus the single
+3. If both guards establish absence, create a private regular file and run all 26 generation-one
+   DDL statements (21 tables plus five indexes) plus the single
    `product_meta(schema_generation=1)` insert inside one `BEGIN IMMEDIATE` transaction. Marker insert
    is the last application statement.
 4. Commit, close, fsync the file and parent where supported, reopen read-only, and require marker
@@ -636,7 +639,11 @@ process, worker, shell, dynamic-loader and native-addon syntax terminals. Depend
 the union of classes in their fully parsed reachable source closure and are keyed by exact locator,
 lock integrity/revision, resolved entry, ordered files and source-closure digest. Unavailable,
 unparsed, unresolved, computed, unknown native/shell/loader or digest-drifted dependencies fail;
-neither the meter nor config may call them pure. The owner-allocation block then requires every
+neither the meter nor config may call them pure. One exact selector vocabulary distinguishes dot,
+literal-computed and nonliteral-computed access. Unshadowed `globalThis`, `global`, `self` and
+`window` normalize through only static dot/literal selectors to a reserved root; shadowing,
+nonliteral selectors, repeated wrappers and unresolved chains fail. Neither meter nor config may
+invent another alias or normalization. The owner-allocation block then requires every
 resolved binding reference to remain inside its exact B1 traced declaration
 or an exact count-frozen unrelated platform/release adapter; raw bindings, paths, database/Level
 handles, batches, release primitives and process handles cannot escape or be exported. At C the Product ingress moves literally from unsplit
@@ -659,22 +666,26 @@ raw-effect ingress, while B1 owns whether those sentinels refuse and those effec
 B1 closes each destructive/runtime-state effect behind the exact owner-local capability declared in
 the v7 interface. The Design-owned verifier block freezes 10 owners, 146 exact operations, 34 race
 barriers and 29 durable kill boundaries together with operation signatures/atomicity, stage/resource
-events, before/after faults, outcomes and exclusions before B1 implementation. Public inputs are typed intent/identity and public results are sanitized facts;
+events, before/after faults, outcomes and exclusions before B1 implementation. The same block
+freezes 86 exact per-owner fixture states, JCS/SHA-256 owner and catalog digests, resource/key/chunk
+cardinalities, ordinal derivation including terminal EOF, each barrier's writer/state/outcome and
+each kill's state/convergence assertions. Public inputs are typed intent/identity and public results are sanitized facts;
 scratch/source paths usable for arbitrary I/O, raw SQLite/Level handles, batches, lock tokens,
 release functions, process handles and adapters never leave the owner. Verifier composition injects
 private deterministic ports, monotonic bounded events, opaque resource IDs, fault plans, race
 barriers and kill boundaries; production callers cannot select or suppress verifier events.
 
-The B1 verifier consumes that block verbatim and generates the exact Cartesian manifest over clean
-absence/every applicable legacy-presence assignment, each actual operation ordinal's before/after
+The B1 verifier consumes that block verbatim, recomputes its state/catalog digests and generates the
+exact Cartesian union over every listed normal state, every actual operation ordinal's before/after
 fault, every declared observation-to-use barrier and every declared durable kill boundary. Candidate
-code/config/tests may implement but cannot add, merge, omit, rename, reorder, redefine or downgrade
-an item. It asserts executed-case bijection, full trace prefix,
+code/config/tests may implement but cannot add, merge, omit, rename, reorder, resize, redefine or
+downgrade an item. It asserts generated/executed-case bijection, full trace prefix,
 terminal disposition, exact writes, post-state, exclusions and sanitized output on tool-created
 homes/profiles only. Fresh inspect/apply/startup is the sole convergence after kill. A different
 actor then applies hidden single-change mutations for omitted/reordered/wrong-resource events,
 skipped cleanup, swallowed failure, early release, old-state fallthrough, alternate raw ingress,
-removed/coarsened port, omitted barrier, downgraded durable event and non-exact errors, and performs
+removed/coarsened port, omitted fixture state, reduced cardinality, dropped terminal EOF, omitted
+race/kill convergence binding, downgraded durable event and non-exact errors, and performs
 source Review of capabilities, ports, all raw references and the case generator at the identical B1
 SHA. Reviewer expectations never enter meter/config or production.
 

@@ -58,8 +58,9 @@ owner authority and B1 verifier-universe digest, and use those bytes read-only.
   production caller may choose or suppress verifier events.
 - Consume `omp-flow-b1-verifier-universe-v1` verbatim. Its 10 owners, 146 operations, 34 barriers,
   29 durable kill points, signatures, atomicities, stage/resource mappings, before/after fault
-  sites, outcomes and exclusions are immutable B1 inputs. Code/config/tests may implement them but
-  may not add, merge, omit, rename, reorder, redefine or downgrade any item; an unlisted adapter
+  sites, 86 fixture states, owner/catalog digests, cardinality/ordinal rules, race writers and
+  kill/convergence states, outcomes and exclusions are immutable B1 inputs. Code/config/tests may implement them but
+  may not add, merge, omit, rename, reorder, resize, redefine or downgrade any item; an unlisted adapter
   call fails as `UNDECLARED_PORT_OPERATION`.
 - Add the two-command `scripts/product-truth/**` implementation and generated-home fixtures for the
   exact default root, two lanes, two profiles, database/WAL copies, protected-fact registry,
@@ -260,8 +261,8 @@ does not authorize an unlisted production path.
   path may exist outside the v7 authority.
 - The B1 verifier—not v7—proves behavior. Each exact traced owner uses non-leaking typed
   intent/sanitized-result boundaries and verifier-owned ports/events. The checked-in generator
-  derives its dimensions only from the frozen block and accepted fixture identities, covering every
-  applicable clean/legacy-presence assignment, each actual operation ordinal's before/after fault,
+  recomputes the frozen owner/catalog digests and derives its dimensions only from the block,
+  covering every one of its 86 exact states, each cardinality-derived actual operation ordinal's before/after fault,
   each declared observation-to-use barrier and each declared durable kill event on generated
   homes/profiles. Executed-case bijection, complete event prefix, terminal disposition, exact writes,
   post-state, protected exclusions and sanitized output are required. No production caller can
@@ -272,7 +273,8 @@ does not authorize an unlisted production path.
   non-exact reset errors and missing kill convergence, then source-reviews every traced capability,
   port composition, raw reference and generator. The real verifier or v7 structural gate must fail
   each mutation while adjacent real positives pass. It additionally removes one port operation,
-  coarsens two operations, omits one race barrier and downgrades one durable event; each must fail
+  coarsens two operations, omits one fixture state, shrinks one resource cardinality, drops one
+  terminal EOF ordinal, omits one race/kill convergence binding and downgrades one durable event; each must fail
   while adjacent real positives pass.
   Retired database/key filenames under `scripts/product-truth/**` are reported separately and are
   permitted only as exact closed destructive target identities or their matching tool fixtures and
