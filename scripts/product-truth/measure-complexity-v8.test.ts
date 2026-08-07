@@ -176,6 +176,7 @@ describe("product-truth-complexity-v8 qualified declarations", () => {
     "traced-anonymous-callback-positive",
     "traced-local-alias-positive",
     "traced-import-shadow-positive",
+    "traced-safe-export-collision-positive",
   ])("accepts exact owner declaration and lexical-use positive %s", (fixture) => {
     const result = runFixture(fixture, "direct-first-public-b1");
     expect(result.status, result.stderr).toBe(0);
@@ -193,6 +194,7 @@ describe("product-truth-complexity-v8 qualified declarations", () => {
     "traced-wrong-owner-alias",
     "traced-private-helper",
     "traced-repeated-alias-private-helper",
+    "traced-raw-local-export",
     "traced-class-growth",
   ])("rejects wrong qualified declaration/use %s", (fixture) => {
     const result = runFixture(fixture, "direct-first-public-b1");
@@ -208,6 +210,7 @@ describe("product-truth-complexity-v8 predecessor structural sites", () => {
     ["nontraced-deletion-positive", "native-host-package-root-binding"],
     ["exact-work-deletion-positive", "native-host-package-root-binding"],
     ["combined-lifecycle-positive", "direct-first-public-b1"],
+    ["combined-lifecycle-value-different-positive", "direct-first-public-b1"],
     ["product-owner-move-positive", "product-state-store"],
   ] as const)("accepts exact preservation/reduction/lifecycle positive %s", (fixture, work) => {
     const result = runFixture(fixture, work);
@@ -234,8 +237,13 @@ describe("product-truth-complexity-v8 predecessor structural sites", () => {
     expect(result.stderr).toContain("NONTRACED_SITE_");
   }, 30_000);
 
-  it("rejects an undeclared selected-Work deletion and materialization pair with zero raw ingress", () => {
-    const result = runFixture("undeclared-zero-raw-path-move", "direct-first-public-b1");
+  it.each([
+    "undeclared-zero-raw-path-move",
+    "undeclared-zero-raw-path-move-as-const",
+    "undeclared-zero-raw-path-move-satisfies",
+    "undeclared-zero-raw-path-move-type-assertion",
+  ])("rejects an undeclared selected-Work deletion and materialization pair with zero raw ingress %s", (fixture) => {
+    const result = runFixture(fixture, "direct-first-public-b1");
     expect(result.status).not.toBe(0);
     expect(result.stdout).toBe("");
     expect(result.stderr).toContain("UNDECLARED_WORK_PATH_MOVE:scripts/release-update-policy.json:scripts/product-truth/cli.ts:normalized-literal-structure");

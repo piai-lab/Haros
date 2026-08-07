@@ -29,7 +29,10 @@ const decodeUtf8 = (bytes, identity) => {
 };
 const INVALID_STRUCTURAL_LITERAL = Symbol("invalid-structural-literal");
 const structuralLiteralValue = (node) => {
-  if (ts.isParenthesizedExpression(node)) return structuralLiteralValue(node.expression);
+  if (ts.isParenthesizedExpression(node) || ts.isAsExpression(node) ||
+      ts.isSatisfiesExpression(node) || ts.isTypeAssertionExpression(node)) {
+    return structuralLiteralValue(node.expression);
+  }
   if (ts.isStringLiteralLike(node)) return node.text;
   if (ts.isNumericLiteral(node)) return Number(node.text);
   if (node.kind === ts.SyntaxKind.TrueKeyword) return true;
@@ -1378,12 +1381,10 @@ for (const path of candidateGraph.paths.filter((candidatePath) => rawInventoryPa
   const file = candidateGraph.sourceFile(path);
   if (file.parseDiagnostics.length) throw new Error(`UNPARSED_FROZEN_SOURCE:${path}`);
   const lexical = makeLexicalBindings(file);
-  const bindings = new Map();
   const bindingIdentityByDeclaration = new WeakMap();
   const declarationNodes = new Set();
-  const bind = (name, identity, node) => {
+  const bind = (identity, node) => {
     if (!identity?.classes?.length) return;
-    bindings.set(name, identity);
     bindingIdentityByDeclaration.set(node, identity);
     declarationNodes.add(node);
   };
@@ -1402,21 +1403,21 @@ for (const path of candidateGraph.paths.filter((candidatePath) => rawInventoryPa
       if (node.importClause?.name) {
         const classes = classesForModuleExport(specifier, "default");
         if (acceptedEffectPackages.has(packageRoot(specifier)) && !classes) addViolation("UNKNOWN_DEPENDENCY_EFFECT_EXPORT", path, node.importClause.name, `${specifier}#default`);
-        bind(node.importClause.name.text, { specifier, exported: "default", classes }, node.importClause.name);
+        bind({ specifier, exported: "default", classes }, node.importClause.name);
       }
       const named = node.importClause?.namedBindings;
-      if (named && ts.isNamespaceImport(named)) bind(named.name.text, { specifier, exported: "*", classes: moduleRootClasses.get(specifier), namespace: true }, named.name);
+      if (named && ts.isNamespaceImport(named)) bind({ specifier, exported: "*", classes: moduleRootClasses.get(specifier), namespace: true }, named.name);
       if (named && ts.isNamedImports(named)) for (const element of named.elements) {
         const exported = element.propertyName?.text ?? element.name.text;
         const classes = classesForModuleExport(specifier, exported);
         if (acceptedEffectPackages.has(packageRoot(specifier)) && !classes) addViolation("UNKNOWN_DEPENDENCY_EFFECT_EXPORT", path, element, `${specifier}#${exported}`);
-        bind(element.name.text, { specifier, exported, classes }, element.name);
+        bind({ specifier, exported, classes }, element.name);
       }
       if (specifier.endsWith(".node")) addViolation("UNKNOWN_NATIVE_ADDON", path, node, specifier);
     }
     if (ts.isImportEqualsDeclaration(node) && ts.isExternalModuleReference(node.moduleReference) && node.moduleReference.expression && ts.isStringLiteralLike(node.moduleReference.expression)) {
       const specifier = node.moduleReference.expression.text;
-      bind(node.name.text, { specifier, exported: "*", classes: moduleRootClasses.get(specifier), namespace: true }, node.name);
+      bind({ specifier, exported: "*", classes: moduleRootClasses.get(specifier), namespace: true }, node.name);
     }
     if (ts.isExportDeclaration(node) && node.moduleSpecifier && ts.isStringLiteralLike(node.moduleSpecifier)) {
       const specifier = node.moduleSpecifier.text;
@@ -1435,7 +1436,7 @@ for (const path of candidateGraph.paths.filter((candidatePath) => rawInventoryPa
       if (ts.isCallExpression(node.initializer) && ts.isIdentifier(node.initializer.expression) &&
           resolvedBindingAt(node.initializer.expression)?.loader && node.initializer.arguments[0] &&
           ts.isStringLiteralLike(node.initializer.arguments[0])) specifier = node.initializer.arguments[0].text;
-      if (specifier && ts.isIdentifier(node.name)) bind(node.name.text, { specifier, exported: "*", classes: moduleRootClasses.get(specifier), namespace: true }, node.name);
+      if (specifier && ts.isIdentifier(node.name)) bind({ specifier, exported: "*", classes: moduleRootClasses.get(specifier), namespace: true }, node.name);
       if (specifier && ts.isObjectBindingPattern(node.name)) for (const element of node.name.elements) {
         if (!ts.isIdentifier(element.name)) continue;
         const exported = element.propertyName && (ts.isIdentifier(element.propertyName) || ts.isStringLiteralLike(element.propertyName)) ? element.propertyName.text : element.name.text;
@@ -1443,11 +1444,11 @@ for (const path of candidateGraph.paths.filter((candidatePath) => rawInventoryPa
         if ((acceptedEffectPackages.has(packageRoot(specifier)) || rawUniverse.moduleSelectors.some((entry) => entry.specifier === specifier)) && !classes) {
           addViolation("UNKNOWN_MODULE_EFFECT_EXPORT", path, element, `${specifier}#${exported}`);
         }
-        bind(element.name.text, { specifier, exported, classes }, element.name);
+        bind({ specifier, exported, classes }, element.name);
       }
       if (ts.isIdentifier(node.name) && ts.isCallExpression(node.initializer) && ts.isIdentifier(node.initializer.expression)) {
         const creator = resolvedBindingAt(node.initializer.expression);
-        if (creator?.exported === "createRequire") bind(node.name.text, { specifier: "createRequire", exported: "result", classes: ["ambient-loader"], loader: true }, node.name);
+        if (creator?.exported === "createRequire") bind({ specifier: "createRequire", exported: "result", classes: ["ambient-loader"], loader: true }, node.name);
       }
     }
     ts.forEachChild(node, collectBindings);
@@ -1460,7 +1461,7 @@ for (const path of candidateGraph.paths.filter((candidatePath) => rawInventoryPa
       if (ts.isVariableDeclaration(node) && node.initializer) {
         const initializerBinding = ts.isIdentifier(node.initializer) ? resolvedBindingAt(node.initializer) : null;
         if (ts.isIdentifier(node.name) && initializerBinding && !bindingIdentityByDeclaration.has(node.name)) {
-          bind(node.name.text, initializerBinding, node.name); aliasChanged = true;
+          bind(initializerBinding, node.name); aliasChanged = true;
         }
         if (ts.isIdentifier(node.name) && (ts.isPropertyAccessExpression(node.initializer) || ts.isElementAccessExpression(node.initializer)) &&
             ts.isIdentifier(node.initializer.expression) && resolvedBindingAt(node.initializer.expression)?.namespace) {
@@ -1468,7 +1469,7 @@ for (const path of candidateGraph.paths.filter((candidatePath) => rawInventoryPa
           if (member.value === null) addViolation("COMPUTED_EFFECT_SELECTOR", path, node.initializer, node.initializer.getText(file));
           else if (!bindingIdentityByDeclaration.has(node.name)) {
             const base = resolvedBindingAt(node.initializer.expression);
-            bind(node.name.text, { specifier: base.specifier, exported: member.value, classes: classesForModuleExport(base.specifier, member.value), form: member.form }, node.name);
+            bind({ specifier: base.specifier, exported: member.value, classes: classesForModuleExport(base.specifier, member.value), form: member.form }, node.name);
             aliasChanged = true;
           }
         }
@@ -1662,15 +1663,28 @@ for (const path of candidateGraph.paths.filter((candidatePath) => rawInventoryPa
       else addViolation("RAW_ALIAS_WRITE_UNKNOWN", path, file, { name, writeKinds: [] });
     }
   }
-  const exportedNames = new Set();
+  const rejectExportedRawDeclaration = (declaration, witness, detail) => {
+    if (bindingIdentityByDeclaration.has(declaration)) addViolation("RAW_BINDING_EXPORTED", path, witness, detail);
+  };
   const collectExports = (node) => {
-    if (ts.isExportDeclaration(node) && node.exportClause && ts.isNamedExports(node.exportClause)) {
-      for (const element of node.exportClause.elements) exportedNames.add(element.propertyName?.text ?? element.name.text);
+    if (ts.isExportDeclaration(node) && !node.moduleSpecifier && node.exportClause && ts.isNamedExports(node.exportClause)) {
+      for (const element of node.exportClause.elements) {
+        const localName = element.propertyName?.text ?? element.name.text;
+        const declarations = lexical.declarationsAt(element, localName);
+        if (declarations) for (const declaration of declarations) {
+          rejectExportedRawDeclaration(declaration, element, element.name.text);
+        }
+      }
     }
     if ((ts.isVariableStatement(node) || ts.isFunctionDeclaration(node) || ts.isClassDeclaration(node) || ts.isTypeAliasDeclaration(node) || ts.isInterfaceDeclaration(node)) &&
         ts.canHaveModifiers(node) && ts.getModifiers(node)?.some((modifier) => modifier.kind === ts.SyntaxKind.ExportKeyword)) {
-      if (ts.isVariableStatement(node)) for (const declaration of node.declarationList.declarations) if (ts.isIdentifier(declaration.name)) exportedNames.add(declaration.name.text);
-      else if (node.name) exportedNames.add(node.name.text);
+      if (ts.isVariableStatement(node)) {
+        for (const declaration of node.declarationList.declarations) {
+          if (ts.isIdentifier(declaration.name)) rejectExportedRawDeclaration(declaration.name, declaration.name, declaration.name.text);
+        }
+      } else if (node.name) {
+        rejectExportedRawDeclaration(node.name, node.name, node.name.text);
+      }
       const inspectType = (typeNode) => {
         if (ts.isImportTypeNode(typeNode) && ts.isLiteralTypeNode(typeNode.argument) && ts.isStringLiteralLike(typeNode.argument.literal)) {
           const specifier = typeNode.argument.literal.text;
@@ -1683,7 +1697,6 @@ for (const path of candidateGraph.paths.filter((candidatePath) => rawInventoryPa
     ts.forEachChild(node, collectExports);
   };
   collectExports(file);
-  for (const name of exportedNames) if (bindings.has(name)) addViolation("RAW_BINDING_EXPORTED", path, file, name);
   const record = (node, identity, form) => {
     if (!identity?.classes?.length) return;
     const classes = [...new Set(identity.classes)].sort();
