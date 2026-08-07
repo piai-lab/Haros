@@ -1,0 +1,1 @@
+{"appendToFiles":{"apps/service/src/main.ts":"\nexport const v7GlobalBun = () => globalThis.Bun.spawnSync(['true']);\n"}}

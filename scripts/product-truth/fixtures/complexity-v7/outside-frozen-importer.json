@@ -1,0 +1,1 @@
+{"virtualFiles":{"apps/service/src/product/v7OutsideImporter.ts":"import { makeProductExecutionGateway } from './productExecutionGateway';\nexport const outside = makeProductExecutionGateway;\n"}}

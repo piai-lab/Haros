@@ -1,0 +1,1 @@
+{"appendToFiles":{"apps/service/src/main.ts":"\nexport const v7Dlopen = () => process.dlopen({} as NodeJS.Module, 'x.node');\n"}}

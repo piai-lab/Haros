@@ -1,0 +1,1 @@
+{"virtualFiles":{"apps/service/src/unknown-v7.node":"not-a-real-native-addon"},"appendToFiles":{"apps/service/src/main.ts":"\nimport v7Native from './unknown-v7.node';\nvoid v7Native;\n"}}
