@@ -10,7 +10,8 @@ title: "Direct first-public rebuild and immutable unsplit B1"
 Implement the exact pre-release `inspect`/`apply` tool, direct generation-1 Product/service/Web
 creation and complete unshipped-compatibility deletion, while keeping Product responsibilities
 mechanically unsplit. Consume the different-actor-accepted immutable
-`product-truth-complexity-v6` meter as a read-only predecessor, then produce one dedicated clean
+`product-truth-complexity-v7` mechanical meter as a read-only predecessor, prove runtime behavior
+through owner-local capabilities and verifier-owned evidence, then produce one dedicated clean
 green B1 commit and record its full SHA and metrics without modifying the meter commit.
 This Work realizes PRD A1-A9, the B1 half of A14, and the B1 preservation portion of A15.
 
@@ -32,23 +33,29 @@ This Work realizes PRD A1-A9, the B1 half of A14, and the B1 preservation portio
 - [B1 source-closure disposition boundary PASS approval](../decisions/b1-source-closure-boundary-pass-approval.md)
 - [Unshipped compatibility inventory](../research/unshipped-compatibility.md)
 - [Failed immutable B1 Review](../reviews/direct-first-public-b1.md)
-- [V6 repair calibration](../decisions/product-truth-complexity-v6-repair-calibration.md)
-- [V6 unified proof authority](../interfaces/product-truth-complexity-v6.md)
-- [Authoritative v6 meter Work](product-truth-complexity-v6.md) and its required
-  `handoffs/product-truth-complexity-v6.md`
+- [V7 Occam repair calibration](../decisions/product-truth-complexity-v7-repair-calibration.md)
+- [V7 mechanical authority](../interfaces/product-truth-complexity-v7.md)
+- [Authoritative v7 meter Work](product-truth-complexity-v7.md) and its required
+  `handoffs/product-truth-complexity-v7.md`
 
 ## Entry stop
 
-Do not assign or start this Work until `reviews/product-truth-complexity-v6.md` records a
+Do not assign or start this Work until `reviews/product-truth-complexity-v7.md` records a
 zero-finding different-actor `PASS` over the immutable meter-only commit. The B1 assignment must
 name that review receipt as predecessor, record the accepted meter SHA/digests including the
-additive direct-tool classifier-copy authority, unified Proof-IR/resource-flow digest and hidden-
-overlay contract, and use those bytes read-only.
+five Work fences, dependency/import closure and raw-effect ingress authority, and use those bytes
+read-only.
 
 ## In scope
 
-- Preserve rejected v1-v5 history plus accepted v6 meter/config/fixtures byte-for-byte. Run the
-  accepted v6 bytes against repaired B1; any Design/boundary/universe/semantic/B0 mismatch stops.
+- Preserve rejected v1-v6 history plus accepted v7 meter/config/fixtures byte-for-byte. Run the
+  accepted v7 bytes against repaired B1; any Design/boundary/universe/dependency/ingress/count/B0
+  mismatch stops.
+- Encapsulate every v7 `b1TracedOwner` as a small non-leaking owner-local capability. Raw scratch or
+  source paths usable for arbitrary I/O, SQLite/LevelDB handles, batches, lock tokens, release
+  primitives, process handles and raw adapters must not cross its typed intent/sanitized-result
+  boundary. Verifier composition injects the frozen port/event/fault/race/kill interfaces; no
+  production caller may choose or suppress verifier events.
 - Add the two-command `scripts/product-truth/**` implementation and generated-home fixtures for the
   exact default root, two lanes, two profiles, database/WAL copies, protected-fact registry,
   Package classification, lock/quiescence rules, stdout-only sanitized plan and narrow apply. Use
@@ -81,7 +88,7 @@ overlay contract, and use those bytes read-only.
 
 The implementer may create or change only:
 
-- `scripts/product-truth/**` except every v1-v6 meter/config/coverage fixture, the root
+- `scripts/product-truth/**` except every v1-v7 meter/config/coverage fixture, the root
   `package.json` entries needed for the two commands,
   `scripts/package.json` solely to declare one exact non-range direct `classic-level` dependency,
   and the root `bun.lock` solely to record its package-manager-produced scripts-workspace
@@ -240,24 +247,24 @@ does not authorize an unlisted production path.
   source occurrences, `enableAppSnap` remains the sole current AppSettings key for the capability,
   and legacy input cannot activate it through schema decoding, normalization, fixtures, comments
   or aliases. There is no snapshot, converter, restore, legacy reader, dual-read or hidden copy.
-- The accepted v6 scan reports tool-only identities, exact required presence-only runtime sentinels and
-  forbidden compatibility separately. Sentinel allowlisting is exact by path, enclosing symbol,
-  literal, presence operation and count, and rejects value flow to a decoder/current encoder/log or
-  mutation. Its owner CFG report additionally proves every required probe/decision dominates the
-  current-generation sinks assigned to that refusal stage and legacy-present flow cannot reach one.
-  Its accepted source/dependency capability inventory includes the real Bun/Node Effect loader,
-  layer/factory and receiver closure across production and direct-tool members, with no missing/
-  mutated identity or unapproved non-Product
-  origin; every Product/service post-lock sink has the same acquisition token and binding on every
-  reachable predecessor, with no early, aliased, wrong-binding, sibling-handle, detached or
-  finally-before-sink release path. Present-successor reachability rejects zero-iteration guards and
-  swallowed/unreachable typed throws.
-  The exact future `sqlite-classifier.ts#classifyRetiredSqliteBundle` implementation also matches
-  the accepted additive authority: its retired source is exact, its copy is strictly contained below
-  an invocation-owned fresh private scratch root, its no-follow/source-copy identities and hashes
-  match, SQLite opens only the copy read-only/no-create, and every reachable completion closes,
-  removes and proves scratch absence. No current/source-in-place/unbound-temp/raw-current or
-  missing-cleanup flow receives the classifier-copy disposition.
+- The accepted v7 scan reports tool-only identities, required runtime sentinel identities,
+  forbidden compatibility and every raw-effect ingress separately. Exact owner containment,
+  dependency/import closure, non-export/non-escape shape, forbidden-loader absence and the unsplit
+  B1 Product owner are hard gates; no raw filesystem/SQLite/LevelDB/process/Web-Storage/ambient-loader
+  path may exist outside the v7 authority.
+- The B1 verifier—not v7—proves behavior. Each exact traced owner uses non-leaking typed
+  intent/sanitized-result boundaries and verifier-owned ports/events. The checked-in generator
+  covers every clean/legacy-presence assignment, raw operation fault, observation/open/
+  classification/mutation/lock/cleanup/fsync race gap and durable abrupt-kill event on generated
+  homes/profiles. Executed-case bijection, complete event prefix, terminal disposition, exact writes,
+  post-state, protected exclusions and sanitized output are required. No production caller can
+  choose event names, suppress faults or acquire raw path/handle/batch/lock/release/process adapters.
+- A different actor at the immutable B1 SHA applies hidden single-change mutations for alternate
+  raw ingress, cached/merged/wrong classifier resources, unreachable validation, skipped/swallowed
+  cleanup, early/detached release, old-state fallthrough, zero-iteration guards, finally-replaced or
+  non-exact reset errors and missing kill convergence, then source-reviews every traced capability,
+  port composition, raw reference and generator. The real verifier or v7 structural gate must fail
+  each mutation while adjacent real positives pass.
   Retired database/key filenames under `scripts/product-truth/**` are reported separately and are
   permitted only as exact closed destructive target identities or their matching tool fixtures and
   assertions. They must not be counted as runtime compatibility, removed by an undifferentiated
@@ -265,7 +272,7 @@ does not authorize an unlisted production path.
   unclassified occurrence, including a newly discovered required production/test path outside this
   Work boundary, stops the Work for map repair.
 - The dedicated repaired B1 commit is clean and green, its full 40-hex SHA is recorded, and B0,
-  repaired B1 and later C use the already-frozen v6 instrument. Rejected v1-v5 evidence remains immutable
+  repaired B1 and later C use the already-frozen v7 instrument. Rejected v1-v6 evidence remains immutable
   and failed candidate `50deefc1...` is never reused as repaired B1. A structural scan at B1 reports zero
   production `ProductStateStore`/`ProductExecutionCoordinator` files, symbols, imports or facade
   extraction scaffolds. The evidence-recording commit is distinct from B1.
@@ -280,21 +287,15 @@ does not authorize an unlisted production path.
   write-trace matrices. Cover native Windows enumeration and POSIX `ps`, exact database-lock
   identity, SIGKILL-stale profile locks, intermediate ancestry and Package duplicate/tombstone
   convergence.
-- Run only the accepted v6 SHA/digests for B1 boundary, frozen-membership and resolved semantic
-  proof. Its fixture suite must pass a materialized future Store edge/canonical sink inside the set
-  and fail outside-set importer/target/sink, unclassified or competing sink, computed/unresolved
-  import and moved responsibility cases. It must also pass canonical neutral-wrapper and complete
-  Product/service/Web refusal positives, and fail neutral generic-wrapper raw Product paths plus
-  valid current-I/O-before-refusal, bypass, conditional-helper, swallowed-throw and deferred-sink
-  negatives for their exact bounded causes. It must also re-derive the real Effect SQLite capability
-  closure, reject every per-seed/source-digest mutation and new `SqliteMigrator`, and pass outer-
-  finalizer lock positives while rejecting dropped acquire, wrong owner/lane/root/lock-path/token,
-  sibling/direct-tool handle, early/aliased release and finally-before-sink for exact bounded codes.
-  The five failed-v4 witnesses—direct-tool raw SQLite/DELETE, different-token branch phi, detached
-  microtask release, empty-iterable `for...of` guard and false conditional rethrow—fail independently.
-  The additive classifier-copy matrix must pass the exact retired-target/private-copy flow and fail
-  copied/opened current Product/service, source-in-place, unbound temp/caller/environment,
-  raw-current-alias and missing/bypassable-cleanup flows for the one intended bounded code.
+- Run only the accepted v7 SHA/digests for B1 frozen membership, dependency/import closure,
+  raw-effect owner containment and structural/count gates. Pass the materialized future Store member
+  while B1 keeps it absent, and fail outside-set/unresolved/computed imports, alternate raw owners,
+  raw exports/handles/releases, forbidden/unknown loaders and simultaneous B1/C Product owners.
+- Run the verifier-owned generated-home matrix as one manifest-bound gate. It covers classifier
+  copy validation/cleanup, Product/service lock and refusal, Web refusal/batch, target seals,
+  Package transitions and recovery across every injected fault/race/kill event. Run the
+  different-actor hidden mutation and source Review at the exact B1 SHA; meter success cannot
+  substitute for this Review and focused positives cannot substitute for manifest bijection.
 - Verify the dependency boundary: `scripts/package.json` has one exact non-range direct
   `classic-level` pin; the root lock's scripts importer and integrity closure match it; a filtered
   lock diff contains no unrelated refresh; and `bun install --frozen-lockfile` leaves `bun.lock`
@@ -303,10 +304,10 @@ does not authorize an unlisted production path.
 - Use process/import/network spies to prove `inspect` and `apply` do not launch Electron, use a
   real-profile Electron reader/writer or perform network access. Compare both historical v1 meter
   files byte-for-byte with commit `45df49a6afde882d32c1dcd00457c7787d227e4a`, compare rejected
-  v2/v3/v4/v5 evidence and v6 bytes/digests/B0 with the accepted meter handoff and remeasure repaired B1
-  with those v6 bytes. Prove `bun.lock` is the
-  pinned v6 `dependency` entry and excluded from v6 production LOC/import totals. V1-v5 comparison
-  is immutable historical provenance only and cannot satisfy or fail a B1 semantic/universe gate.
+  v2/v3/v4/v5/v6 evidence and v7 bytes/digests/B0 with the accepted meter handoff and remeasure
+  repaired B1 with those v7 bytes. Prove `bun.lock` is the pinned v7 `dependency` entry and excluded
+  from v7 production LOC/import totals. V1-v6 comparison is immutable historical provenance only
+  and cannot satisfy a B1 structural or behavior gate.
 - Verify the source-closure diff is exactly the `adapted-present` 1496→1494 and
   `adapted-removed` 774→776 count transfer plus its deterministic digest, caused only by the two
   already-owned `desktopUserDataProfile` deletions; total paths, tree SHA, mappings, algorithms and
@@ -348,8 +349,9 @@ stronger primitive or retry.
 
 Write [`handoffs/direct-first-public-b1.md`](../handoffs/direct-first-public-b1.md). It must link this
 Work, enumerate changed/deleted paths and reviewable commits, record the immutable B1 full SHA,
-accepted meter review receipt/SHA plus Work/capability/owner-lock-authority/derived-inventory digests
-and must-hold report, clean-tree proof, complete accepted-B0/B1 metric output, exact
+accepted meter Review receipt/SHA plus Work/effect-ingress/dependency/import/universe digests,
+clean-tree proof, complete accepted-B0/B1 metric output, verifier case-manifest/execution bijection,
+sanitized trace/fault/race/kill witnesses and different-actor hidden-mutation/source-Review receipt, exact
 fingerprint-registry bijection, sanitized
 whole-profile write trace, zero extraction surface and all focused/isolated-process results. It must
 state that no responsibility-extraction assignment is authorized until a different actor accepts

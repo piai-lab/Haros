@@ -64,10 +64,10 @@ Windows quiescence adapter. The underlying evidence remains in the
   no-follow/source-copy identity and hash binding, read-only/no-create SQLite open, and close/remove/
   absence proof on every reachable normal or abrupt completion. Current Product/service stores,
   source-in-place open, unbound temp/caller/environment paths, raw current Product aliases and any
-  missing or bypassable cleanup are not classifier-copy origins. One shared event/resource ICFG
-  must derive activation-scoped source, scratch, copy, handle and validation identities; validation
-  dominates return/open, and every completion preserves ordered close/remove/absence. Names,
-  source-token presence or a separately reconciled cleanup scan are not proof.
+  missing or bypassable cleanup are not classifier-copy origins. This behavior is proved by the
+  owner-local non-leaking classifier capability, verifier-owned resource/event trace, exhaustive
+  generated-home fault/race/kill matrix and different-actor hidden mutation/source Review at the
+  immutable B1 SHA. Static owner/name/token presence is not behavioral proof.
 - Every allowlisted Product fingerprint runs fixture-selected aggregate counts and must prove the
   absence of active Package leases and `delivery_unknown`/`outcome_unknown` Runs; Product-v2 `sent`
   is explicitly active because crash recovery advances it to `delivery_unknown`. Every allowlisted
@@ -252,9 +252,9 @@ Windows quiescence adapter. The underlying evidence remains in the
 
 - Measurement uses the inspected base `7582170a277477ba0d71cf70f53e4e0836874a72`, a recorded
   compatibility-deleted unsplit checkpoint `B1`, and the frozen candidate `C`. All three are
-  remeasured with the checked-in `product-truth-complexity-v6` script/config and the same frozen
+  remeasured with the checked-in `product-truth-complexity-v7` script/config and the same frozen
   path/import universe in the Design; a candidate may not redefine scope, extensions, exclusions or
-  semantic counters. V6 supersedes rejected v1/v2/v3/v4/v5 for all gates. V1-v5 bytes, reports,
+  counters. V7 supersedes rejected v1/v2/v3/v4/v5/v6 for all current measurement gates. V1-v6 bytes, reports,
   handoffs and failed reviews remain immutable provenance and cannot be edited or cited as passing
   evidence.
 - `B1` is a dedicated, green, compatibility-deleted and first-public-capable commit made before any
@@ -272,68 +272,48 @@ Windows quiescence adapter. The underlying evidence remains in the
   facade→Coordinator, Coordinator→Store and Coordinator→execution leaf; there is no core cycle.
 - Product SQL writers outside Store, second Product connections, raw transaction exports, Native
   Host Package lifecycle writers, forbidden compatibility imports and Engine boundary imports of
-  the facade are all zero. Required presence-only sentinels are a separate exact allowlist, and
-  every complete owner-local refusal stage dominates its assigned current-generation I/O sinks.
-  Noncanonical production Product database composition sites are zero. Database consumers are
-  discovered from a Design-frozen primitive/path-origin authority and independently re-derived
-  accepted source/dependency closure, including repository/external openers, dynamic loaders,
-  Effect layers/factories and handle receivers across every frozen `production` and `direct-tool`
-  member, plus complete wrapper/caller/path/handle dataflow before Product classification.
-  Product-looking text cannot select a sink, and `proved non-Product`
-  is limited to exact approved service, classifier-copy or memory origins. Facade RPC methods remain
-  exactly 36 and Product tables remain exactly 21.
+  the facade are all zero. Required presence-only sentinels and forbidden compatibility identities
+  are separate exact structural inventories. Noncanonical Product composition and alternate raw
+  effect ingress are zero. Facade RPC methods remain exactly 36 and Product tables exactly 21.
 - No new Product table/database/durable state machine, migration platform, per-Engine Product plane,
   generic repository/manager/registry or fallback path is introduced.
-- V6 extracts the five machine-readable boundaries from one pinned accepted Design commit and
-  freezes path membership. It also extracts the strict database-capability and owner-lock authority
-  blocks plus the one additive direct-tool classifier-copy authority block, then independently
-  re-derives/pins the complete reachable capability inventory from the same accepted source and
-  dependency bytes. Design-time edges/sinks are snapshots, not allowlists. Later edges pass
-  only between frozen members; outside-set endpoints, computed/unresolved imports or moved
-  responsibility fail. Every resolved database opener/constructor invocation is enumerated before
-  Product classification; wrappers, callers, aliases, returned handles and receivers are followed
-  to a fixed point. Every resulting Product consumer must be inside the set with canonical
-  resolver-only provenance; raw, outside, unknown or competing consumers fail. Product, service and
-  Web current-generation sinks are also discovered before proof.
-- One shared resolved-symbol, event-based bounded ICFG/SSA/points-to must-analysis proves all three
-  semantic domains: classifier provenance/all-completion cleanup, Product/service owner-lock hold,
-  and legacy-present typed-reset disposition. It binds activation-scoped source, scratch, copy,
-  file/database handle, validation, lock and scheduled-task identities; models real loop backedges,
-  call/return/throw/catch/await, closure/property aliasing, exact Promise/Effect join and pending
-  completion/finally override. Every join keeps a must-fact only when all real predecessors agree.
-  Every present assignment must terminate in the exact reset throw after catch/finally processing,
-  independently of current-sink reachability. Unsupported semantics, resource escape or any
-  context/state/event/loop bound overflow fails closed.
-- Review applies a candidate-independent hidden virtual-source overlay whose authority and entry
-  points come only from the accepted Design. The meter/config cannot contain expected overlay
-  verdicts or mutation-name exemptions; alpha-renaming, helper extraction, nested-block and literal-
-  property metamorphics must preserve semantic results.
-  `scripts/check-source-closure.mjs` and every meter/config file are measurement, not tool,
-  production or steady-state runtime.
-- The exact configured B0 SHA is observational only for historical semantic violations: it emits
-  complete witnesses while authority/config/membership/graph-integrity defects still fail. Every
-  other candidate and focused semantic fixture treats the same Product-consumer, refusal-cut and
-  owner-lock must-hold violations as hard failures. Branch, working-tree or B0 substitution cannot
-  select this mode.
+- V7 extracts the five machine-readable Work boundaries and one raw-effect ingress authority from
+  the pinned accepted Design commit. It freezes path membership, exact dependency/lock bytes,
+  resolved static import/export closure and stage-specific owner identities for filesystem,
+  SQLite, LevelDB, process, Web Storage and ambient loaders. Later edges pass only between frozen
+  members. Outside-set/unresolved/computed imports, forbidden loaders, a second raw-effect owner,
+  exported raw binding/handle/release primitive, dependency drift or concurrent B1/C Product owners
+  fail mechanically.
+- V7 owns no runtime semantic proof. It must not implement or claim a general CFG/ICFG, SSA,
+  points-to, Promise/scheduler, Effect, catch/finally, resource-token or virtual-source semantic
+  interpreter. Cleanup, refusal order, lock lifetime, scheduler behavior, exception disposition and
+  crash convergence are B1 obligations proved through exact owner-local non-leaking capabilities,
+  verifier-owned injected ports and traces, exhaustive generated-home presence/fault/race/kill
+  cases, plus different-actor hidden mutation and source Review at one immutable SHA.
+- `scripts/check-source-closure.mjs` and every meter/config file are measurement, not tool,
+  production or steady-state runtime. V7 report determinism, authority/config/membership and
+  dependency resolution remain hard at B0; historical behavior/ingress nonconformance may be
+  observational there. B1/C hard-fail all v7 structural, ingress and count gates. Branch,
+  working-tree or B0 substitution cannot select another mode.
 
 ## Acceptance matrix
 
 | ID  | Acceptance claim                                                                                                                                                                         | Required proof                                                                                                                                                                        |
 | --- | ---------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- | ------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
 | A1  | Only the exact default root, two lanes and two associated profiles are inspected                                                                                                         | path/identity fixtures covering override, canary, repo-local, link, reparse, mode and realpath faults                                                                                 |
-| A2  | Dry-run positively classifies every deletion target and proves protected-fact absence without emitting business content                                                                  | fixture fingerprints, strict recursive per-fixture receipt decoders, query allowlist, v6 event/resource must-sequence for exact retired-source/private-scratch/no-follow/read-only/all-completion classifier copy, blocker matrix, SQL spy and sanitized JSON snapshot |
+| A2  | Dry-run positively classifies every deletion target and proves protected-fact absence without emitting business content                                                                  | fixture fingerprints, strict recursive per-fixture receipt decoders, query allowlist, owner-local classifier capability with verifier-owned trace/fault/race/kill proof for exact retired-source/private-scratch/no-follow/read-only/all-completion copy, blocker matrix, SQL spy and sanitized JSON snapshot |
 | A3  | Inspect mutates no source/lock while apply repeats full inspection under exact owner locks and binds mutation to classified bytes or a sealed expected transition                        | atomic Web-batch trace, Package transition graph, whole-tree write trace, POSIX/Windows adapters, lock identity and real replacement races                                            |
 | A4  | Apply deletes only the allowlist and creates no recoverable copy                                                                                                                         | before/after tree allowlist, write-spy and absence scans for snapshot/export/restore surfaces                                                                                         |
 | A5  | Every excluded path/key/generation remains byte-identical                                                                                                                                | seeded exclusion fixture with hashes before/after apply                                                                                                                               |
 | A6  | Interruption converges only through fresh inspect/apply; inert Package tombstones do not block normal startup                                                                            | real termination before/after the Web batch and every Package graph edge, stale-lock and tombstone convergence matrix                                                                 |
 | A7  | Product/service/Web owners create only exact generation 1 from clean absence and all live Product consumers use the canonical Store path                                                 | fresh/open/reopen, Product/service two-stage plus matching owner-lock must-hold and Web single-stage exact refusal, concrete production composition and partial-creation matrix        |
 | A8  | Old/future/unmarked/contradictory generations fail closed                                                                                                                                | database and Web generation fault matrix with zero write assertions                                                                                                                   |
-| A9  | The complete unshipped compatibility inventory has zero production caller/import while exact refusal sentinels remain present, non-decoding and dominant over all current-generation I/O | v6 shared resolved-symbol ICFG/SSA proof of every present-run terminal, real loop epochs, scheduled-task joins and singleton same-binding lock tokens; positive, late-I/O/bypass, zero-iteration, swallowed/finally-replaced throw and direct/property scheduled-release fixtures plus current-generation tests |
+| A9  | The complete unshipped compatibility inventory has zero production caller/import while exact refusal sentinels remain present, non-decoding and dominant over all current-generation I/O | v7 structural sentinel/raw-ingress closure plus B1 owner-local traced capability matrices over every presence assignment, fault, race and kill boundary; hidden late-I/O/bypass, swallowed/finally-replaced throw and scheduled-release mutations plus current-generation process tests |
 | A10 | One Store retains all named compound transactions and SQL authority                                                                                                                      | static writer/connection gate and transaction fault injection for every named unit                                                                                                    |
 | A11 | Coordinator retains Engine-effect semantics without SQL/replay/fallback                                                                                                                  | catalog/admission/attempt/control/crash tests across Pi and OpenCode                                                                                                                  |
 | A12 | Web/RPC sees exactly one 36-operation facade; probes/tests are separate                                                                                                                  | type/API snapshot, wsRpc tests and production caller scan                                                                                                                             |
 | A13 | Service selects and Host only validates one transcript-bound lane/Package root                                                                                                           | dev/packaged process tests covering proof tamper, replay, version/field faults, second/concurrent binding, mismatch/link/sibling-root and no fallback                                 |
-| A14 | Production and conceptual complexity strictly decrease in one coverage-complete frozen universe                                                                                          | immutable rejected v1-v5 history, Design-pinned boundaries/capability/classifier-copy authority, frozen set, production+direct-tool capability scan, one unified event/resource Proof IR, candidate-independent overlay and deterministic v6 B0/B1/C metrics |
+| A14 | Production and conceptual complexity strictly decrease in one coverage-complete frozen universe                                                                                          | immutable rejected v1-v6 history, Design-pinned five boundaries/effect-ingress authority, frozen set, dependency/import/ingress closure and deterministic v7 B0/B1/C metrics; behavior separately accepted by frozen B1 verifier and Review |
 | A15 | Current outbox, Automation, Web safeguard, Package and Engine recovery behavior remains                                                                                                  | focused existing suites plus complete real kill/race/write-trace and affected real-process journeys                                                                                   |
 
 ## Constraints and non-goals
@@ -364,11 +344,12 @@ implementation choices; every protected exclusion remains unchanged. The maintai
 [option-1 calibration](decisions/b1-failed-review-repair-calibration.md) additionally binds the
 atomic Web batch and sealed Package graph. The failed v3/v4 Reviews and repaired v5 authority/QbD
 remain immutable provenance. The later
-[v5 implementation Review](reviews/product-truth-complexity-v5.md) rejected name/token-based
-classifier provenance, incomplete all-completion cleanup, unresolved Promise release scheduling,
-static loop acquisition identity and typed-reset disposition lost to a finally override. Under the
-[v6 calibration](decisions/product-truth-complexity-v6-repair-calibration.md), a different QbD actor
-must challenge the v6 Design/interface/Work map. A fresh zero-finding `PASS` authorizes only the
-measurement-only v6 Work; its immutable handoff requires a zero-finding different-actor `PASS`
+[v5 implementation Review](reviews/product-truth-complexity-v5.md) and
+[v6 implementation Review](reviews/product-truth-complexity-v6.md) showed that a meter-owned
+interpreter for arbitrary runtime resource, scheduling and completion semantics is not a bounded
+assurance route. Under the
+[v7 Occam calibration](decisions/product-truth-complexity-v7-repair-calibration.md), a different QbD actor
+must challenge the v7 Design/interface/Work map. A fresh zero-finding `PASS` authorizes only the
+measurement-only v7 Work; its immutable handoff requires a zero-finding different-actor `PASS`
 before a B1 production receipt may be issued. A changed destructive target or exclusion returns for
 explicit human decision.

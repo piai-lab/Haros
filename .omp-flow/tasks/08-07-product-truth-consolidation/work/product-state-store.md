@@ -22,10 +22,10 @@ perform, the Coordinator/facade extraction.
 ## Entry stop
 
 This Work begins only after immutable B1, Native Host v2 and the execution-leaf Work have
-different-actor accepted handoffs. The B1 chain must bind the accepted immutable v6 meter Review and
-SHA/digests, including the capability/owner-lock-authority, additive direct-tool classifier-copy
-authority, unified Proof-IR/resource-flow and derived-inventory digests plus must-hold/completion
-report. It must use the exact B1 recorded by the first handoff for later B0/B1/C comparison.
+different-actor accepted handoffs. The B1 chain must bind the accepted immutable v7 meter Review and
+SHA/digests, including Work/effect-ingress/dependency/import/universe digests, and the accepted B1
+verifier case-manifest/trace/fault/race/kill plus hidden-mutation/source-Review receipts. It must use
+the exact B1 recorded by the first handoff for later B0/B1/C comparison.
 
 ## Allowed code and output boundary
 
@@ -98,11 +98,12 @@ caller ownership.
 - Run Store/Product focused tests, Package projection/replay tests and Service typecheck. Static
   gates reject a second connection, writer, raw transaction export, table CRUD API or core cycle.
 - Read the frozen complexity instrument without editing it; report the intermediate metrics only.
-- Run the frozen v6 membership gate and dynamic edge/sink classification. The future Store and its
-  canonical sink may materialize inside the frozen set; any outside-set endpoint/sink,
-  unclassified/competing sink or computed/unresolved edge stops for map repair. Re-derived capability
-  inventory, additive classifier-copy authority/flow and same-binding owner-lock state must remain
-  exact after the responsibility move.
+- Run the frozen v7 membership/dependency/import/effect-ingress gates. The future Store may
+  materialize inside the frozen set and becomes the sole Product raw-effect owner exactly when the
+  unsplit `ProductControlPlane` owner disappears; coexistence, outside-set endpoint,
+  computed/unresolved import or alternate raw owner stops. Re-run the owner-local Product lifecycle
+  behavior matrix against the moved capability and obtain different-actor Review at this immutable
+  checkpoint; B1 traces are preservation inputs, not proof of the moved implementation.
 
 ## Expected handoff
 

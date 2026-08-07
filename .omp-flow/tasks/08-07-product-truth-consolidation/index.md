@@ -65,10 +65,16 @@ okf_version: "0.2"
   immutable `FAIL` with eight semantic counterexamples across classifier provenance/cleanup,
   scheduled/loop lock state and typed-reset completion.
 - [Product-truth complexity v6 repair calibration](decisions/product-truth-complexity-v6-repair-calibration.md)
-  and [unified proof authority](interfaces/product-truth-complexity-v6.md) — sole current
-  measurement design: one event/resource bounded ICFG/SSA must-analysis plus candidate-independent
-  overlay, with no Product or destructive expansion.
-- [Product-truth complexity v6 measurement Work](work/product-truth-complexity-v6.md) — next bounded
+  and [unified proof authority](interfaces/product-truth-complexity-v6.md) — immutable rejected
+  predecessor whose implementation Review demonstrated the unbounded semantic-interpreter route.
+- [Product-truth complexity v6 implementation Review](reviews/product-truth-complexity-v6.md) —
+  immutable `FAIL` with unsafe classifier/scheduler/reset overlays, false-safe rejections and a
+  non-source overlay admission gap.
+- [Product-truth complexity v7 Occam calibration](decisions/product-truth-complexity-v7-repair-calibration.md)
+  and [mechanical authority](interfaces/product-truth-complexity-v7.md) — sole current measurement
+  design: frozen structure/dependency/import/effect-ingress/complexity gates only, with runtime
+  behavior moved to B1 capabilities and verifier-owned evidence.
+- [Product-truth complexity v7 measurement Work](work/product-truth-complexity-v7.md) — next bounded
   implementation only after a fresh different-actor zero-finding QbD.
 - [QbD 1 audit](qbd/design-audit.md) — independent critical findings that triggered the repair
   calibration.
@@ -85,7 +91,7 @@ okf_version: "0.2"
   B1 safety, measurement or ordering.
 - [B1 LevelDB lockfile boundary-repair audit](qbd/b1-leveldb-lockfile-boundary-repair-audit.md) —
   fresh scoped QbD 2 PASS over the single lockfile addition and its fail-closed dependency gates.
-- [Work map](work/index.md) — one measurement-only v6 checkpoint followed by five bounded product
+- [Work map](work/index.md) — one measurement-only v7 checkpoint followed by five bounded product
   Works, the immutable unsplit B1 stop, exact eleven-path implementation-discovered compatibility
   boundary, one tool-only lockfile addition, Native Host ordering and complete PRD acceptance
   coverage.
