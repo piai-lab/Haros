@@ -30,6 +30,9 @@ SHA, Work/raw-effect/predecessor-delta/effect-ingress/B1-verifier/dependency/imp
 case-manifest/trace/fault/race/kill and hidden-mutation/source-Review receipts must match the B1
 handoff byte-for-byte; mismatch stops rather than
 reconstructing or remeasuring with a revised universe.
+The assignment carries the Store evidence commit/receipt/output; v8 loads only its table-named
+blobs and requires reviewed-Store→evidence→this-candidate ancestry with exact report/digests/actors
+and different implementer/reviewer actors.
 
 ## Allowed code and output boundary
 
@@ -96,7 +99,8 @@ does not authorize an unlisted production path.
   Coordinator→Store and Coordinator→execution leaf.
 - The frozen v8 instrument reports Design-pinned path membership, accepted predecessor binding,
   exact outside blob/import/raw/violation equality, inside traced/nontraced raw authority,
-  dependency/import closure and stable structural counts, plus all conjunctive gates:
+  exact declaration kind/qualified ID, predecessor-anchored site identity/order, dependency/import
+  closure and stable structural counts, plus all conjunctive gates:
   changed-scope and steady-state production
   lines C<B0, responsibility slice C<B1, changed import edges C<B0, and every semantic counter at
   the approved value. The Store is the sole C Product ingress owner and the unsplit B1 owner is
@@ -128,7 +132,8 @@ does not authorize an unlisted production path.
 
 ## Expected handoff
 
-Write [`handoffs/product-truth-candidate.md`](../handoffs/product-truth-candidate.md). It must link
+Write [`handoffs/product-truth-candidate.md`](../handoffs/product-truth-candidate.md) with exactly one
+`omp-flow-product-truth-complexity-v8-report-v1` complete canonical JSON block. It must link
 the measurement Work and all five product Works plus accepted reviews; record immutable B0, B1 and C full SHAs; include deterministic
 B0/B1/C JSON metrics, exact facade/table/connection/writer/import/cycle counters, focused/final gate
 commands, sanitized real-journey results and remaining limitations. The producer may submit affected

@@ -656,23 +656,34 @@ literal-computed and nonliteral-computed access. Unshadowed `globalThis`, `globa
 `window` normalize through only static dot/literal selectors to a reserved root; shadowing,
 nonliteral selectors, repeated wrappers and unresolved chains fail. Neither meter nor config may
 invent another alias or normalization. V8 consumes owner-allocation symbols rather than reducing
-them to paths: every traced reference resolves to the exact declared `(path, nearest named
-declaration symbol, class)`. A module import is only the binding declaration and every reference
-must close into that capability. No named raw-using private helper is declared; adding one requires
-a prior Design/QbD change. Raw bindings, paths, database/Level handles, batches, release primitives
+them to paths: every traced reference resolves to exactly one frozen module-scope declaration kind,
+qualified identity and class. Default exports, class members/constructors, overload groups,
+re-export aliases and nested same-name declarations have explicit fail-closed identities. Anonymous
+callbacks inherit the nearest owner but keep their structural path; every local/module raw alias is
+classified at each use owner. No named raw-using private helper is declared; adding one requires a
+prior Design/QbD change. Raw bindings, paths, database/Level handles, batches, release primitives
 and process handles cannot escape or be exported. At C the Product ingress moves literally from unsplit
 `ProductControlPlane#makeProductControlPlaneLayer` to `productStateStore#makeProductStateStore`;
 both may never coexist. These are structural owner facts, not path/lifetime proof.
 
-For each B1/C Work, v8 receives the immutable predecessor ref/report, linked handoff and
-different-actor `PASS` named by the authored Work map. B1's accepted v8 meter handoff binds B0;
-later Works bind the immediately preceding accepted Product candidate. Missing, mismatched,
-self-reviewed, candidate-chosen, branch, working-tree, reconstructed or failed predecessors stop
-before comparison.
+For each B1/C Work, v8 selects the exact row in the interface's machine predecessor table. The
+authenticated runtime operation record supplies the row-matching predecessor receipt/output and
+full evidence commit SHA. V8 reads the exact handoff, Review and embedded report blobs only from
+that commit and distinguishes it from the earlier reviewed Product candidate. The Review/handoff
+candidate must equal `reviewedCandidateSha`; `evidenceCommitSha` must contain the exact blobs and
+descend from that candidate; the candidate under test must descend from the evidence commit. Exact
+report digest, receipt and actors agree across operation record and both blobs, and implementer and
+reviewer differ. B1's table row binds accepted v8 evidence to B0; later rows bind the immediately
+preceding accepted Product candidate. Missing, overwritten, non-ancestor, self-reviewed,
+candidate-chosen, branch, working-tree, reconstructed or failed predecessors stop before comparison.
+Failed `50deefc1...` remains verification-only.
 
-The selected Work's exact `production` paths are the sole mutable raw-owner set. A selected-Work
-nontraced path's canonical ingress multiset may equal or be a sub-multiset of its predecessor; any
-new occurrence, declaration symbol, class, terminal or source form fails. Every frozen member
+The selected Work's exact `production` paths are the sole mutable raw-owner set. For a selected-Work
+nontraced path, the predecessor report freezes each raw site's qualified lexical ancestry, AST
+child-role path, raw-expression and containing-statement fingerprints, stable neighbor anchors and
+relative order. Candidate matching is exact and injective: deletion may leave a predecessor site
+unmatched, but relocation, replacement, reorder or a new occurrence cannot reuse its identity even
+when tuple counts remain equal. Every frozen member
 outside the selected Work preserves presence, executable mode and Git blob exactly, and its
 resolved import-edge, canonical ingress and canonical violation multisets must also equal the
 predecessor. This preserves the 93 unrelated B0 violation paths without approving them as owners.
@@ -760,7 +771,8 @@ All gates are conjunctive:
    = 1; literal two-Engine gateway = 1;
 8. the exact dependency/import closure and raw-effect ingress authority match across every frozen
    production/direct-tool member; outside-Work blobs/imports/raw/violations equal the accepted
-   predecessor, selected-Work nontraced ingress only decreases, traced path/symbol/class is exact,
+   predecessor and its evidence-commit ancestry, selected-Work nontraced sites only delete or retain
+   exact predecessor structural identities/order, traced module declaration kind/qualified ID/class is exact,
    and alternate/outside owner ingress, forbidden/unknown loader,
    exported raw capability/handle/release and simultaneous B1/C Product owner = 0; forbidden
    compatibility decoder/import/caller count = 0; required Product/service/Web sentinel identities
@@ -810,9 +822,11 @@ bypass either stop.
   the full event prefix, terminal disposition, exact writes, post-state, exclusions and sanitized
   output. Hidden different-actor mutations include removed/coarsened operations, an omitted barrier
   and a downgraded durable event in addition to the v5/v6 counterexample families, against the real
-  verifier or v8 ingress gate, followed by same-SHA source Review. Separate negatives cover wrong
-  traced symbols/new helpers, inside nontraced growth, outside blob/import/raw/violation drift,
-  deletion/materialization/path move and candidate-chosen predecessor.
+  verifier or v8 ingress gate, followed by same-SHA source Review. Separate negatives cover nested
+  same-name/default/class/constructor/overload/re-export owners, alias use-owner mismatch, anonymous
+  callback inheritance, new helpers, nontraced delete-plus-relocate/replacement/reorder, outside
+  blob/import/raw/violation drift, deletion/materialization/path move, mismatched evidence blobs/
+  receipts/actors, non-ancestor evidence and candidate-tree/chosen predecessor.
 
 ### Destructive fixture verification
 

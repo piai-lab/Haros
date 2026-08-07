@@ -44,7 +44,10 @@ This Work realizes PRD A1-A9, the B1 half of A14, and the B1 preservation portio
 
 Do not assign or start this Work until `reviews/product-truth-complexity-v8.md` records a
 zero-finding different-actor `PASS` over the immutable meter-only commit. The B1 assignment must
-name that review receipt as predecessor, record the accepted meter SHA/digests including the
+name that review receipt/output and its full evidence commit as predecessor, while keeping the
+reviewed v8 meter candidate SHA distinct. V8 must read the exact handoff/Review/report blobs from
+that evidence commit, validate candidate→evidence→B1 ancestry, exact receipt/actors/digests and
+different implementer/reviewer actors. The assignment also records the accepted meter SHA/digests including the
 five Work fences, raw-effect syntax/dependency inventory, predecessor-delta authority,
 dependency/import closure, raw-effect owner authority and B1 verifier-universe digest, and use
 those bytes plus its accepted B0 report read-only. A branch, working tree, failed candidate or
@@ -56,8 +59,11 @@ candidate-selected predecessor stops before comparison.
   v8 bytes against repaired B1 and its handoff-bound B0 predecessor; any Design/boundary/universe/
   predecessor/dependency/ingress/count mismatch stops.
 - Encapsulate every Design-declared `b1TracedOwner` as a small non-leaking owner-local capability.
-  V8 requires exact path + nearest named declaration symbol + class; no same-file named raw helper
-  is implicitly authorized. Raw scratch or
+  V8 requires its exact unique module-scope declaration kind + qualified identity + class; nested
+  same-name/default/class/constructor/overload/re-export forms and same-file named raw helpers are
+  not implicitly authorized. Anonymous callbacks inherit the nearest owner, aliases are classified
+  at each use owner, and every nontraced preserved site retains its predecessor structural identity/
+  order rather than only a tuple count. Raw scratch or
   source paths usable for arbitrary I/O, SQLite/LevelDB handles, batches, lock tokens, release
   primitives, process handles and raw adapters must not cross its typed intent/sanitized-result
   boundary. Verifier composition injects the frozen port/event/fault/race/kill interfaces; no
@@ -269,8 +275,8 @@ does not authorize an unlisted production path.
 - The accepted v8 scan reports tool-only identities, required runtime sentinel identities,
   forbidden compatibility and every raw-effect ingress separately. The finite syntax/dependency
   universe, exact source-closure digests, unknown-dependency failure, accepted B0 predecessor,
-  exact outside-Work blob/import/raw/violation equality, selected-Work nontraced sub-multiset and
-  traced path/declaration-symbol/class containment,
+  exact outside-Work blob/import/raw/violation equality, selected-Work nontraced predecessor-site
+  deletion/preservation and traced module declaration-kind/qualified-identity/class containment,
   dependency/import closure, non-export/non-escape shape, forbidden-loader absence and the unsplit
   B1 Product owner are hard gates; no raw filesystem/SQLite/LevelDB/process/Web-Storage/ambient-loader
   path may be newly classified or expanded outside the v8 authority.
@@ -315,11 +321,13 @@ does not authorize an unlisted production path.
   convergence.
 - Run only the accepted v8 SHA/digests and handoff-bound B0 report for B1 frozen membership,
   dependency/import closure, predecessor delta, raw-effect owner containment and structural/count
-  gates. Pass exact outside equality, selected-Work nontraced equality/reduction and the absent
+  gates. Pass exact outside equality, selected-Work nontraced site preservation/deletion and the absent
   pre-frozen future Store member; fail outside blob/deletion/materialization/import/raw/violation
-  drift, wrong traced symbol/new helper, inside nontraced growth, unlisted paths,
+  drift, nested same-name/default/class/constructor/overload/re-export owners, wrong-use aliases,
+  new helper, inside nontraced growth/delete-plus-relocate/replacement/reorder, unlisted paths,
   unresolved/computed imports, raw exports/handles/releases, forbidden/unknown loaders and
-  simultaneous B1/C Product owners.
+  simultaneous B1/C Product owners. Fail overwritten/mismatched evidence blobs/report/receipt/
+  actors, non-ancestor evidence, candidate-tree evidence and any use of `50deefc1...` as predecessor.
 - Run the verifier-owned generated-home matrix as one manifest-bound gate derived from the exact
   Design block. It covers classifier copy validation/cleanup, Product/service lock and refusal, Web
   refusal/batch, target seals, Package transitions and recovery across every frozen operation
@@ -379,7 +387,8 @@ stronger primitive or retry.
 
 ## Expected handoff
 
-Write [`handoffs/direct-first-public-b1.md`](../handoffs/direct-first-public-b1.md). It must link this
+Write [`handoffs/direct-first-public-b1.md`](../handoffs/direct-first-public-b1.md) with exactly one
+`omp-flow-product-truth-complexity-v8-report-v1` complete canonical JSON block. It must link this
 Work, enumerate changed/deleted paths and reviewable commits, record the immutable B1 full SHA,
 accepted meter Review receipt/SHA plus Work/raw-effect/effect-ingress/B1-verifier/dependency/import/universe digests,
 clean-tree proof, complete accepted-B0/B1 metric output, verifier case-manifest/execution bijection,

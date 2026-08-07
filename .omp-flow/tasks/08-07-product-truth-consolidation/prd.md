@@ -293,9 +293,11 @@ Windows quiescence adapter. The underlying evidence remains in the
   binding/handle/release primitive, dependency drift or concurrent B1/C Product owners fail
   mechanically. For each selected Work, its exact production boundary is the sole mutable raw-owner
   set. Outside it, presence/mode/blob, resolved imports and canonical raw-ingress/violation identities
-  equal the accepted predecessor exactly. Inside it, traced ingress matches exact path + declaration
-  symbol + class with no undeclared named raw helper; nontraced predecessor ingress may only be
-  preserved or reduced, never expanded by occurrence, symbol, class, terminal or source form.
+  equal the accepted predecessor exactly. Inside it, traced ingress resolves one exact module-scope
+  declaration kind + qualified identity + class; default/class/constructor/overload/re-export and
+  nested same-name substitutions fail. Nontraced predecessor ingress may only be deleted or preserve
+  its predecessor-anchored structural site identity and order; relocation, replacement or reorder
+  cannot spend an old tuple count.
 - V8 owns no runtime semantic proof. It must not implement or claim a general CFG/ICFG, SSA,
   points-to, Promise/scheduler, Effect, catch/finally, resource-token or virtual-source semantic
   interpreter. Cleanup, refusal order, lock lifetime, scheduler behavior, exception disposition and
@@ -311,10 +313,14 @@ Windows quiescence adapter. The underlying evidence remains in the
   identities expanded to 65 concrete-ordinal kill cases. B1 code/config/tests may implement but cannot add,
   merge, omit, rename, reorder, resize, redefine or downgrade an item. The generated manifest is
   the exact Design-derived Cartesian union, not a candidate-authored or filtered list.
-- Every v8 run receives an immutable predecessor full SHA/report from the prior accepted handoff and
-  different-actor `PASS` named by the authored Work map. B1 receives the v8-accepted B0 snapshot;
-  later Works receive the immediately preceding accepted Product candidate. Candidate-selected,
-  branch, working-tree, reconstructed, failed or mismatched predecessors fail before comparison.
+- Every v8 run selects one row from the Design-owned machine predecessor table. An authenticated
+  runtime operation record supplies its evidence commit and receipt; v8 reads exact handoff/Review/
+  report blobs only from that commit. It distinguishes the reviewed Product candidate from the later
+  evidence commit and requires `reviewedCandidate -> evidenceCommit -> candidateUnderTest` ancestry,
+  exact blobs/report digest/receipt/actors and different implementer/reviewer actors. B1 receives the
+  v8-accepted B0 snapshot; later Works receive the immediately preceding accepted Product candidate.
+  Candidate-selected, branch, working-tree, reconstructed, failed, overwritten or non-ancestor
+  predecessors fail before comparison; failed `50deefc1...` is verification-only.
   Exact Work members may be deleted or materialized and the graph is recomputed; outside-Work
   deletion/materialization, undeclared moves and new glob members fail.
 - `scripts/check-source-closure.mjs` and every meter/config file are measurement, not tool,
@@ -340,7 +346,7 @@ Windows quiescence adapter. The underlying evidence remains in the
 | A11 | Coordinator retains Engine-effect semantics without SQL/replay/fallback                                                                                                                  | catalog/admission/attempt/control/crash tests across Pi and OpenCode                                                                                                                  |
 | A12 | Web/RPC sees exactly one 36-operation facade; probes/tests are separate                                                                                                                  | type/API snapshot, wsRpc tests and production caller scan                                                                                                                             |
 | A13 | Service selects and Host only validates one transcript-bound lane/Package root                                                                                                           | dev/packaged process tests covering proof tamper, replay, version/field faults, second/concurrent binding, mismatch/link/sibling-root and no fallback                                 |
-| A14 | Production and conceptual complexity strictly decrease in one coverage-complete frozen universe                                                                                          | immutable v1-v7 history, Design-pinned five boundaries/raw-effect syntax+alias+dependency inventory/owner authority/B1 verifier universe and fixture-catalog digests, frozen set, accepted predecessor chain, exact external equality, inside-Work traced/nontraced deltas, dependency/import/ingress closure and deterministic v8 B0/B1/C metrics; behavior separately accepted by the exact frozen B1 manifest and Review |
+| A14 | Production and conceptual complexity strictly decrease in one coverage-complete frozen universe                                                                                          | immutable v1-v7 history, Design-pinned five boundaries/raw-effect syntax+alias+dependency inventory/owner authority/B1 verifier universe and fixture-catalog digests, frozen predecessor/evidence table with candidate→evidence→next ancestry, exact external equality, unique qualified traced declarations, predecessor-anchored nontraced structural sites, dependency/import/ingress closure and deterministic v8 B0/B1/C metrics; behavior separately accepted by the exact frozen B1 manifest and Review |
 | A15 | Current outbox, Automation, Web safeguard, Package and Engine recovery behavior remains                                                                                                  | focused existing suites plus complete real kill/race/write-trace and affected real-process journeys                                                                                   |
 
 ## Constraints and non-goals

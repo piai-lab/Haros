@@ -28,6 +28,9 @@ digests, including Work/raw-effect/predecessor-delta/effect-ingress/B1-verifier/
 universe digests, and the accepted B1
 verifier case-manifest/trace/fault/race/kill plus hidden-mutation/source-Review receipts. It must use
 the exact B1 recorded by the first handoff for later B0/B1/C comparison.
+The assignment carries the execution-leaf evidence commit/receipt/output; v8 loads only its
+table-named blobs and requires reviewed-leaf→evidence→this-candidate ancestry with exact report/
+digests/actors and different implementer/reviewer actors.
 
 ## Allowed code and output boundary
 
@@ -103,13 +106,15 @@ caller ownership.
 - Run the frozen v8 membership/dependency/import/effect-ingress/predecessor-delta gates. The future Store may
   materialize inside the frozen set and becomes the sole Product raw-effect owner exactly when the
   unsplit `ProductControlPlane` owner disappears; coexistence, outside-set endpoint,
-  computed/unresolved import or alternate raw owner stops. Re-run the owner-local Product lifecycle
+  computed/unresolved import, wrong declaration kind/qualified identity/alias use, nontraced site
+  relocation/replacement/reorder or alternate raw owner stops. Re-run the owner-local Product lifecycle
   behavior matrix against the moved capability and obtain different-actor Review at this immutable
   checkpoint; B1 traces are preservation inputs, not proof of the moved implementation.
 
 ## Expected handoff
 
-Write [`handoffs/product-state-store.md`](../handoffs/product-state-store.md) with the immutable B1
-SHA, exact Store API, SQL writer/connection inventory, per-command transaction fault results,
+Write [`handoffs/product-state-store.md`](../handoffs/product-state-store.md) with exactly one
+`omp-flow-product-truth-complexity-v8-report-v1` complete canonical JSON block, the immutable B1 SHA,
+exact Store API, SQL writer/connection inventory, per-command transaction fault results,
 Package projection and outbox-diagnostic proof, exact composition/probe paths changed, imports and
 focused checks. A different actor must accept it before Coordinator/facade extraction starts.

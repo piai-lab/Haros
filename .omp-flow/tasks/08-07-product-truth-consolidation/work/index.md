@@ -78,6 +78,15 @@ path, freezes one immutable meter commit plus B0 report, writes its handoff and 
 different-actor `PASS`. No B1 production receipt may be issued before that acceptance; B1 must name
 the accepted meter review receipt and immutable SHA/digests as predecessor.
 
+The v8 interface machine table fixes every transition without filename inference: v8 meter→B1,
+B1→Native Host, Native Host→execution leaf, execution leaf→Product State Store and Product State
+Store→Coordinator/facade. Each row fixes predecessor Work ID, exact handoff/Review/report paths and
+report derivation. The next assignment supplies the accepted runtime operation receipt/output and
+full evidence commit; v8 reads exact blobs there, distinguishes the earlier reviewed candidate from
+the later evidence commit and requires reviewed-candidate→evidence-commit→next-candidate ancestry,
+exact report digest/receipt/actors and different implementer/reviewer actors. B1's row alone binds
+accepted v8 evidence to B0. Failed `50deefc1...` is verification-only.
+
 The first production wave is [Direct first-public B1](direct-first-public-b1.md). It remains one
 deliberately indivisible production Work because the destructive tool, first-public
 Product/service/Web creation and compatibility deletion must become green together while
@@ -115,8 +124,11 @@ each of the five product Works plus the Design-owned raw-effect syntax/global-al
 effect-ingress owner allocation, predecessor-delta authority and B1 verifier universe at the accepted Design commit, pins every normalized block and fixture-catalog digest,
 expands any declared design glob once and freezes path membership. Design-time edges/sinks are
 snapshots. For the selected Work, exact production paths are the sole mutable raw set; outside paths
-preserve blob/import/raw/violation identities exactly, inside nontraced ingress only reduces, and
-traced ingress matches exact path/symbol/class with no undeclared named helper. Deleted/materialized
+preserve blob/import/raw/violation identities exactly; inside nontraced ingress only deletes or
+preserves a predecessor-anchored structural site identity/order; and traced ingress matches one
+exact module declaration kind/qualified identity/class. Nested same-name/default/class/constructor/
+overload/re-export owners, wrong-owner aliases, relocation/replacement/reorder and undeclared named
+helpers fail. Deleted/materialized
 exact Work members are explicit; outside lifecycle drift and undeclared moves fail. V8 also pins dependency/lock/export/source-digest
 closure and the finite raw-effect grammar for all nine classes. Unknown/unparsed dependencies,
 direct `Bun.spawnSync`, Bun Shell, `process.dlopen`, native-addon and worker escapes fail together
@@ -200,9 +212,10 @@ Work may submit affected Campaign claims only as `candidate`; no producer may ma
 The next workflow entry is a fresh different-actor QbD audit of the v8 repair across Design,
 interface, measurement Work, all five Product Works and this map. It must prove v8 has only
 mechanical structure/dependency/import/effect-ingress/complexity authority, cannot claim runtime
-semantics, preserves the exact v7 global-alias/computed-selector grammar, binds accepted
-predecessors, fails wrong symbols/helpers and inside growth, and preserves outside blobs/imports/
-raw identities/violations exactly. Every displaced obligation
+semantics, preserves the exact v7 global-alias/computed-selector grammar, binds the machine table's
+reviewed-candidate/evidence-commit ancestry and exact blobs/receipt/actors, fails every frozen
+declaration/alias disposition plus nontraced relocation/replacement/reorder, and preserves outside
+blobs/imports/raw identities/violations exactly. Every displaced obligation
 has an exact B1 owner-local capability plus frozen state/cardinality/ordinal/trace/fault/race/kill/
 convergence/hidden-mutation/source-Review gate. Only `PASS` with zero blocker and zero
 advisory authorizes the measurement-only v8 assignment. Its immutable handoff then needs a zero-

@@ -45,11 +45,16 @@ user state are outside this Work.
 - Re-extract and pin the five exact Product Work blocks, v7 finite grammar/dependency/verifier/count
   authorities and the v8 predecessor-delta block from one accepted Design tree. Recompute the B0
   812-ingress/712-violation snapshot and both accepted digests byte-identically.
-- Validate the accepted predecessor handoff/Review chain before reading a candidate. Reject missing,
-  mismatched, self-reviewed, branch/working-tree, failed or candidate-selected predecessors.
+- Implement the exact five-row predecessor/evidence table. Consume the authenticated operation
+  record only for its required evidence commit/receipt/output; read exact handoff/Review/report blobs
+  from that commit; distinguish `reviewedCandidateSha` from `evidenceCommitSha`; and require
+  reviewed-candidate→evidence-commit→candidate-under-test ancestry, exact digests/receipt/actors and
+  different implementer/reviewer actors. Reject missing, overwritten, non-ancestor, self-reviewed,
+  branch/working-tree, failed or candidate-selected predecessors; `50deefc1...` is verification-only.
 - Partition every frozen member by the selected Work: exact external blob/mode/import/raw/violation
-  equality; selected-Work nontraced sub-multiset; and exact traced `(path, declaration symbol,
-  class)` with no undeclared named raw helper.
+  equality; predecessor-anchored nontraced structural site identity/order with deletion only; and
+  one exact traced module-scope declaration kind + qualified identity + class. Apply all frozen
+  default/class/constructor/overload/re-export, nested-name, anonymous-callback and alias-use rules.
 - Resolve candidate imports and raw syntax afresh. Preserve all v7 unknown dependency, export/source
   digest, computed/unresolved import, loader/selector/alias/native-addon, raw export and B1/C move
   hard failures.
@@ -66,13 +71,16 @@ user state are outside this Work.
 - Run the v8 report twice at B0 and require byte-identical JSON and accepted v7 raw digests/counts.
 - Reproduce v7's B1 `RAW_EFFECT_INGRESS_INVALID` failure as historical evidence, then show v8 reaches
   candidate comparison without granting the 93 unrelated paths B1 ownership.
-- Required single-cause negatives: wrong traced symbol, new named private raw helper, selected-Work
-  nontraced occurrence/symbol/class/terminal growth, outside blob drift, outside deletion or
-  materialization, violation deletion, path move, import-edge/raw identity drift, unlisted path,
-  class growth and candidate-chosen/mismatched predecessor.
-- Adjacent positives: exact outside preservation, selected-Work nontraced equality/reduction, exact
-  Work deletion, exact pre-frozen materialization with fully traced ingress and the declared B1-to-C
-  Product move.
+- Required single-cause negatives: nested same-name owner, named/anonymous default export, class
+  method, constructor, overload, re-export alias, wrong-owner local alias use, new named private raw
+  helper, selected-Work nontraced growth, delete-plus-relocate, replacement and reorder with unchanged
+  tuple counts, outside blob/deletion/materialization/path/import/raw/violation drift, unlisted path,
+  class growth, overwritten/mismatched handoff or Review blob, report/receipt/actor mismatch,
+  non-ancestor evidence, candidate-tree evidence and candidate-chosen predecessor.
+- Adjacent positives: unique allowed function/const-arrow owners, anonymous callback inheriting the
+  nearest owner, correct local-alias use owner, exact outside preservation, selected-Work nontraced
+  site preservation/deletion, exact Work deletion, exact pre-frozen materialization with fully traced
+  ingress and the declared B1-to-C Product move.
 - Re-run v7 grammar/dependency/import/export/addon/raw-public-escape negatives unchanged; no fixture
   may claim cleanup, locking, scheduling, exception or convergence behavior.
 - Compare every v1-v7 byte and all five Work blocks to their accepted digests; run scripts typecheck,
@@ -81,7 +89,8 @@ user state are outside this Work.
 
 ## Expected handoff
 
-Write `handoffs/product-truth-complexity-v8.md`. A different actor reviews it in
+Write `handoffs/product-truth-complexity-v8.md` with exactly one
+`omp-flow-product-truth-complexity-v8-report-v1` complete canonical JSON block. A different actor reviews it in
 `reviews/product-truth-complexity-v8.md`. Only a zero-finding `PASS` authorizes B1 to consume the
 immutable v8 bytes and the handoff-bound B0 predecessor report. The reviewer must reject any claim
 that the structural predecessor delta proves runtime behavior.

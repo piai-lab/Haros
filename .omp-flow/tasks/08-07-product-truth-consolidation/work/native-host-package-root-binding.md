@@ -28,7 +28,9 @@ exact B1 commit and v8 report as this Work's immutable comparison predecessor, a
 name the accepted immutable v8 meter Review receipt and SHA/digests, including Work/raw-effect/
 predecessor-delta/effect-ingress/B1-verifier/dependency/import/universe digests, plus the accepted
 B1 verifier case-manifest/trace/fault/race/kill and hidden-mutation/source-Review receipts. No
-shared-tree overlap with B1 is inferred.
+shared-tree overlap with B1 is inferred. The assignment carries the exact accepted B1 evidence
+commit/receipt/output; v8 reads its table-named blobs, distinguishes reviewed B1 from evidence
+commit and requires reviewed-B1→evidence→this-candidate ancestry with exact report/actors/digests.
 
 ## In scope
 
@@ -124,7 +126,8 @@ overlaps B1 compatibility cleanup, this Work does not run concurrently in the no
   all output.
 - Run the read-only v8 membership/dependency/import/effect-ingress/count gates against the accepted
   B1 predecessor; do not edit the meter or accept outside-Work blob/import/raw/violation drift,
-  selected-Work nontraced growth, wrong traced symbols/helpers, outside-set, computed/unresolved
+  selected-Work nontraced site relocation/replacement/reorder/growth, wrong declaration kind/
+  qualified owner/alias use/helper, outside-set, computed/unresolved
   edges or a new raw-effect owner. This Work adds
   no B1 runtime-state capability, so the accepted B1 verifier manifest/digests and behavior Review
   must match byte-for-byte.
@@ -132,7 +135,8 @@ overlaps B1 compatibility cleanup, this Work does not run concurrently in the no
 ## Expected handoff
 
 Write [`handoffs/native-host-package-root-binding.md`](../handoffs/native-host-package-root-binding.md)
-with changed paths, transcript vectors, all required real-process fault rows for both lanes,
+with exactly one `omp-flow-product-truth-complexity-v8-report-v1` complete canonical JSON block,
+changed paths, transcript vectors, all required real-process fault rows for both lanes,
 challenge-state measurements, zero-read/zero-dispatch observations, packaged supervision evidence
 and explicit confirmation that Desktop never selected the root and Host never wrote lifecycle
 state. Link the immutable B1 handoff consumed by this Work.

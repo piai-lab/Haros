@@ -27,7 +27,10 @@ candidate/report is this Work's immutable comparison predecessor. The chain must
 immutable v8 meter Review receipt and SHA/digests, including Work/raw-effect/predecessor-delta/
 effect-ingress/B1-verifier/dependency/import/universe digests, and its accepted
 verifier case-manifest/trace/fault/race/kill plus hidden-mutation/source-Review receipts. The
-implementation base must contain that exact B1 commit.
+implementation base must contain that exact B1 commit. The assignment carries the Native Host
+evidence commit/receipt/output; v8 loads its table-named blobs and requires reviewed-Native-Host→
+evidence→this-candidate ancestry, exact report/digests/actors and different implementer/reviewer
+actors.
 
 ## Allowed code and output boundary
 
@@ -71,13 +74,15 @@ behavior may change. The leaf may import Product contracts and generic libraries
   treating it as C or changing B1.
 - The frozen v8 gate accounts for every production path; newly materialized edges pass only between
   frozen members, while outside-set, computed/unresolved or moved-responsibility cases stop. Its
-  accepted predecessor, outside blob/import/raw/violation identities, inside nontraced sub-multiset,
-  traced symbol/class, dependency/import/effect-ingress inventory and counts remain green; the
+  accepted predecessor, outside blob/import/raw/violation identities, predecessor-anchored
+  nontraced site identity/order, traced declaration kind/qualified ID/class, dependency/import/
+  effect-ingress inventory and counts remain green; the
   accepted B1 runtime behavior evidence remains an immutable predecessor rather than a static meter
   claim.
 
 ## Expected handoff
 
-Write [`handoffs/product-execution-leaf.md`](../handoffs/product-execution-leaf.md) with the consumed
-B1 SHA, changed import edges, zero-authority static results and focused tests. A different actor must
+Write [`handoffs/product-execution-leaf.md`](../handoffs/product-execution-leaf.md) with exactly one
+`omp-flow-product-truth-complexity-v8-report-v1` complete canonical JSON block, the consumed B1 SHA,
+changed import edges, zero-authority static results and focused tests. A different actor must
 accept it before the next overlapping `ProductControlPlane.ts` Work begins.
