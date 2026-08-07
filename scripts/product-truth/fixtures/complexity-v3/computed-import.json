@@ -1,0 +1,5 @@
+{
+  "appendToFiles": {
+    "apps/service/src/product/ProductControlPlane.ts": "\nconst fixtureTarget = './productExecutionGateway';\nvoid import(fixtureTarget);\n"
+  }
+}
