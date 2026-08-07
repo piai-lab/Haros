@@ -29,8 +29,8 @@
   "sourceExtensions": [".ts", ".tsx", ".mjs", ".js", ".cjs"],
   "lineExtensions": [".ts", ".tsx", ".mjs", ".js", ".cjs", ".json", ".ps1"],
   "baselineRawEffectInventory": {
-    "ingressSha256": "1654e139739d7f4a3003f014659289ace8aee2941cd7266ffc676270a7eb326c",
-    "violationSha256": "da9660389957c5b1d621144d63de7e4d6a3cb76612a5ad5b8c5b61b43aa4cb32"
+    "ingressSha256": "d1b60f2ed12a9cdca75752d94fd7a69c055d865d4fe5397f61550bbc2fe82d3a",
+    "violationSha256": "a3f10097eeaa387fddba512addbe386c2a5b01be5e04021a1a12a4d3a168ce43"
   },
   "immutableInstruments": {
     "measure-complexity.mjs": "cf5e096cb69e584573bde307cf8677de9bca9ed7705b2f31fa3fb5783a18fd4f",

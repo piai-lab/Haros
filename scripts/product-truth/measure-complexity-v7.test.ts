@@ -53,15 +53,20 @@ describe("product-truth-complexity-v7", () => {
         productionMonolithImporters: 10,
       },
       rawEffects: {
-        ingressCount: 191,
-        ingressSha256: "1654e139739d7f4a3003f014659289ace8aee2941cd7266ffc676270a7eb326c",
-        violationSha256: "da9660389957c5b1d621144d63de7e4d6a3cb76612a5ad5b8c5b61b43aa4cb32",
+        ingressCount: 812,
+        ingressSha256: "d1b60f2ed12a9cdca75752d94fd7a69c055d865d4fe5397f61550bbc2fe82d3a",
+        violationSha256: "a3f10097eeaa387fddba512addbe386c2a5b01be5e04021a1a12a4d3a168ce43",
       },
     });
     expect(report.universe.candidateSelectedPathsUsed).toBe(false);
     expect(report.universe.workingTreeUsed).toBe(false);
     expect(report.universe.workCoverage).toHaveLength(5);
     expect(report.rawEffects.classIds).toHaveLength(9);
+    expect(report.rawEffects.ownerCounts).toMatchObject({
+      "apps/desktop/src/browserUsePipeServer.ts": 5,
+      "apps/service/src/atomicWrite.ts": 19,
+      "apps/service/src/attachmentStore.ts": 1,
+    });
     expect(report.rawEffects.sourceForms).toEqual(expect.arrayContaining([
       "import-declaration", "export-from", "import-equals-require", "require-call",
       "module-require-call", "create-require-result-call", "process-get-builtin-module-call",
@@ -74,6 +79,18 @@ describe("product-truth-complexity-v7", () => {
     const result = run("--fixture", "jcs-key-order-positive", "--ref", baseline);
     expect(result.status, result.stderr).toBe(0);
     expect(JSON.parse(result.stdout).authority.verifier.fixtureStateCount).toBe(87);
+  }, 30_000);
+
+  it("accepts a literal internal require edge between exact frozen closure members", () => {
+    const result = run("--fixture", "closure-internal-require-positive", "--ref", baseline);
+    expect(result.status, result.stderr).toBe(0);
+    const report = JSON.parse(result.stdout) as any;
+    expect(report.rawEffects.ingressSha256).toBe("d1b60f2ed12a9cdca75752d94fd7a69c055d865d4fe5397f61550bbc2fe82d3a");
+    expect(report.imports.edges).toContainEqual(expect.objectContaining({
+      source: "apps/service/src/atomicWrite.ts",
+      target: "apps/service/src/attachmentPaths.ts",
+      specifier: "./attachmentPaths.ts",
+    }));
   }, 30_000);
 
   it.each([
@@ -91,6 +108,10 @@ describe("product-truth-complexity-v7", () => {
     ["unknown-dependency-export", "UNKNOWN_DEPENDENCY_EXPORT"],
     ["dependency-effect-digest-drift", "AUTHORITY_BLOCK_CHANGED"],
     ["unknown-native-addon", "FROZEN_MEMBERSHIP_EDGE_ESCAPE"],
+    ["internal-require-edge-escape", "FROZEN_MEMBERSHIP_EDGE_ESCAPE"],
+    ["internal-module-require-edge-escape", "FROZEN_MEMBERSHIP_EDGE_ESCAPE"],
+    ["internal-create-require-edge-escape", "FROZEN_MEMBERSHIP_EDGE_ESCAPE"],
+    ["commonjs-computed-target", "COMPUTED_IMPORT_FORBIDDEN"],
   ] as const)("rejects authority/dependency mutation %s", (fixture, diagnostic) => {
     const result = run("--fixture", fixture, "--ref", baseline);
     expect(result.status).not.toBe(0);
@@ -105,6 +126,7 @@ describe("product-truth-complexity-v7", () => {
     "window-computed-process", "module-require", "create-require",
     "process-get-builtin-module", "raw-reexport", "dependency-effect-export-unknown", "raw-owner-move-overlap",
     "raw-public-type-export",
+    "closure-only-raw",
   ])("rejects closed raw-effect syntax/owner mutation %s", (fixture) => {
     const result = run("--fixture", fixture, "--ref", baseline);
     expect(result.status).not.toBe(0);

@@ -384,26 +384,118 @@ const createSourceGraph = (snapshot) => {
       : { kind: "unresolved-workspace" };
   };
   const importsFor = (path) => {
+    const file = sourceFile(path);
     const literals = [];
     const computed = [];
+    const moduleSpecifiers = new Set(["module", "node:module"]);
+    const moduleNamespaces = new Set();
+    const createRequireFactories = new Set();
+    const createRequireResults = new Set();
+    const declarations = [];
+    const staticSelector = (expression) => {
+      if (ts.isPropertyAccessExpression(expression)) return expression.name.text;
+      if (ts.isElementAccessExpression(expression) && expression.argumentExpression &&
+          (ts.isStringLiteralLike(expression.argumentExpression) || ts.isNoSubstitutionTemplateLiteral(expression.argumentExpression))) {
+        return expression.argumentExpression.text;
+      }
+      return null;
+    };
+    const isModuleRequireCall = (node) => ts.isCallExpression(node) &&
+      (ts.isPropertyAccessExpression(node.expression) || ts.isElementAccessExpression(node.expression)) &&
+      ts.isIdentifier(node.expression.expression) && node.expression.expression.text === "module" &&
+      staticSelector(node.expression) === "require";
+    const isBareRequireCall = (node) => ts.isCallExpression(node) &&
+      ts.isIdentifier(node.expression) && node.expression.text === "require";
+    const literalCallTarget = (node) => node.arguments[0] && ts.isStringLiteralLike(node.arguments[0])
+      ? node.arguments[0].text
+      : null;
+    const seedBindings = (node) => {
+      if (ts.isImportDeclaration(node) && ts.isStringLiteralLike(node.moduleSpecifier) && moduleSpecifiers.has(node.moduleSpecifier.text)) {
+        const named = node.importClause?.namedBindings;
+        if (named && ts.isNamespaceImport(named)) moduleNamespaces.add(named.name.text);
+        if (named && ts.isNamedImports(named)) for (const element of named.elements) {
+          if ((element.propertyName?.text ?? element.name.text) === "createRequire") createRequireFactories.add(element.name.text);
+        }
+      }
+      if (ts.isImportEqualsDeclaration(node) && ts.isExternalModuleReference(node.moduleReference) &&
+          node.moduleReference.expression && ts.isStringLiteralLike(node.moduleReference.expression) &&
+          moduleSpecifiers.has(node.moduleReference.expression.text)) moduleNamespaces.add(node.name.text);
+      if (ts.isVariableDeclaration(node) && node.initializer) declarations.push(node);
+      ts.forEachChild(node, seedBindings);
+    };
+    seedBindings(file);
+    let bindingsChanged = true;
+    while (bindingsChanged) {
+      bindingsChanged = false;
+      const add = (set, name) => {
+        if (!set.has(name)) { set.add(name); bindingsChanged = true; }
+      };
+      for (const declaration of declarations) {
+        const { initializer, name } = declaration;
+        if (ts.isIdentifier(name) && ts.isIdentifier(initializer)) {
+          if (moduleNamespaces.has(initializer.text)) add(moduleNamespaces, name.text);
+          if (createRequireFactories.has(initializer.text)) add(createRequireFactories, name.text);
+          if (createRequireResults.has(initializer.text)) add(createRequireResults, name.text);
+        }
+        const loaderSpecifier = (isBareRequireCall(initializer) || isModuleRequireCall(initializer))
+          ? literalCallTarget(initializer)
+          : null;
+        if (loaderSpecifier && moduleSpecifiers.has(loaderSpecifier)) {
+          if (ts.isIdentifier(name)) add(moduleNamespaces, name.text);
+          if (ts.isObjectBindingPattern(name)) for (const element of name.elements) {
+            const imported = element.propertyName && (ts.isIdentifier(element.propertyName) || ts.isStringLiteralLike(element.propertyName))
+              ? element.propertyName.text
+              : ts.isIdentifier(element.name) ? element.name.text : null;
+            if (imported === "createRequire" && ts.isIdentifier(element.name)) add(createRequireFactories, element.name.text);
+          }
+        }
+        if (ts.isIdentifier(name) && (ts.isPropertyAccessExpression(initializer) || ts.isElementAccessExpression(initializer)) &&
+            staticSelector(initializer) === "createRequire") {
+          const base = initializer.expression;
+          if (ts.isIdentifier(base) && moduleNamespaces.has(base.text)) add(createRequireFactories, name.text);
+          if (ts.isCallExpression(base) && (isBareRequireCall(base) || isModuleRequireCall(base)) &&
+              moduleSpecifiers.has(literalCallTarget(base))) add(createRequireFactories, name.text);
+        }
+        if (ts.isIdentifier(name) && ts.isCallExpression(initializer)) {
+          const callee = initializer.expression;
+          if ((ts.isIdentifier(callee) && createRequireFactories.has(callee.text)) ||
+              ((ts.isPropertyAccessExpression(callee) || ts.isElementAccessExpression(callee)) &&
+               ts.isIdentifier(callee.expression) && moduleNamespaces.has(callee.expression.text) && staticSelector(callee) === "createRequire")) {
+            add(createRequireResults, name.text);
+          }
+        }
+        if (ts.isObjectBindingPattern(name) && ts.isIdentifier(initializer) && moduleNamespaces.has(initializer.text)) {
+          for (const element of name.elements) {
+            const imported = element.propertyName && (ts.isIdentifier(element.propertyName) || ts.isStringLiteralLike(element.propertyName))
+              ? element.propertyName.text
+              : ts.isIdentifier(element.name) ? element.name.text : null;
+            if (imported === "createRequire" && ts.isIdentifier(element.name)) add(createRequireFactories, element.name.text);
+          }
+        }
+      }
+    }
     const visit = (node) => {
       if ((ts.isImportDeclaration(node) || ts.isExportDeclaration(node)) && node.moduleSpecifier) {
-        ts.isStringLiteralLike(node.moduleSpecifier) ? literals.push(node.moduleSpecifier.text) : computed.push(node.getText(sourceFile(path)));
+        ts.isStringLiteralLike(node.moduleSpecifier) ? literals.push(node.moduleSpecifier.text) : computed.push(node.getText(file));
       } else if (ts.isImportEqualsDeclaration(node)) {
         const reference = node.moduleReference;
         if (ts.isExternalModuleReference(reference) && reference.expression && ts.isStringLiteralLike(reference.expression)) literals.push(reference.expression.text);
-        else computed.push(node.getText(sourceFile(path)));
+        else computed.push(node.getText(file));
       } else if (ts.isCallExpression(node) && node.expression.kind === ts.SyntaxKind.ImportKeyword) {
         const argument = node.arguments[0];
-        ts.isStringLiteralLike(argument) ? literals.push(argument.text) : computed.push(node.getText(sourceFile(path)));
+        ts.isStringLiteralLike(argument) ? literals.push(argument.text) : computed.push(node.getText(file));
+      } else if (isBareRequireCall(node) || isModuleRequireCall(node) ||
+          (ts.isCallExpression(node) && ts.isIdentifier(node.expression) && createRequireResults.has(node.expression.text))) {
+        const target = literalCallTarget(node);
+        target === null ? computed.push(node.getText(file)) : literals.push(target);
       } else if (ts.isImportTypeNode(node)) {
         const argument = node.argument;
         if (ts.isLiteralTypeNode(argument) && ts.isStringLiteralLike(argument.literal)) literals.push(argument.literal.text);
-        else computed.push(node.getText(sourceFile(path)));
+        else computed.push(node.getText(file));
       }
       ts.forEachChild(node, visit);
     };
-    visit(sourceFile(path));
+    visit(file);
     return { literals, computed };
   };
   const edges = [];
@@ -688,9 +780,11 @@ const classifyGlobal = (normalized) => {
   return null;
 };
 
-const rawInventoryPaths = new Set(declaredProductionPaths.filter((path) => candidate.tree.has(path) && isProductionSource(path)));
+const rawInventoryPaths = new Set(presentMembers.filter((path) =>
+  ["production", "direct-tool"].includes(categoryOf(path)) && candidateGraph.texts.has(path)));
 for (const path of candidateGraph.paths.filter((candidatePath) => rawInventoryPaths.has(candidatePath))) {
   const file = candidateGraph.sourceFile(path);
+  if (file.parseDiagnostics.length) throw new Error(`UNPARSED_FROZEN_SOURCE:${path}`);
   const declaredNames = collectDeclaredNames(file);
   const bindings = new Map();
   const declarationNodes = new Set();
