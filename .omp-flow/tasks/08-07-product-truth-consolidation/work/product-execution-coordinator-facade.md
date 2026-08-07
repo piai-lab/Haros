@@ -24,10 +24,10 @@ journey gates. This Work realizes PRD A11, A12, the C half of A14 and integrated
 ## Entry stop
 
 All four handoffs above must be current and different-actor accepted. Their B1 chain must bind the
-accepted immutable v5 meter Review receipt and SHA/digests. The frozen complexity instrument and
+accepted immutable v6 meter Review receipt and SHA/digests. The frozen complexity instrument and
 immutable B1 SHA, capability/owner-lock-authority, additive direct-tool classifier-copy
-authority/flow and derived-inventory digests plus must-hold report must match the B1 handoff
-byte-for-byte; mismatch stops rather than
+authority, unified Proof-IR/resource-flow and derived-inventory digests plus must-hold/completion
+report must match the B1 handoff byte-for-byte; mismatch stops rather than
 reconstructing or remeasuring with a revised universe.
 
 ## Allowed code and output boundary
@@ -93,7 +93,7 @@ does not authorize an unlisted production path.
   Store/facade, zero Host lifecycle write, zero legacy caller/import and one literal two-Engine
   gateway. Allowed core directions are only facade→Store, facade→Coordinator,
   Coordinator→Store and Coordinator→execution leaf.
-- The frozen v5 instrument reports Design-pinned path membership, dynamic candidate edges/sinks,
+- The frozen v6 instrument reports Design-pinned path membership, dynamic candidate edges/sinks,
   independently re-derived source/dependency database capability inventory, contextual opener/
   handle provenance across production and direct-tool members, additive classifier-copy
   authority/flow identity, reachable owner refusal cuts and

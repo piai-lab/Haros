@@ -57,6 +57,19 @@ okf_version: "0.2"
 - [Product-truth complexity v4 authority](interfaces/product-truth-complexity-v4.md) — frozen
   Work/universe input, resolved opener/wrapper/caller/handle graph, two-stage Product/service refusal
   cuts, Web refusal cut and mandatory adversarial matrix.
+- [Product-truth complexity v5 repair calibration](decisions/product-truth-complexity-v5-repair-calibration.md)
+  and [authority](interfaces/product-truth-complexity-v5.md) — immutable rejected predecessor that
+  added whole production/direct-tool capability discovery, acquisition tokens, reachable refusal
+  and the exact classifier-copy origin.
+- [Product-truth complexity v5 implementation Review](reviews/product-truth-complexity-v5.md) —
+  immutable `FAIL` with eight semantic counterexamples across classifier provenance/cleanup,
+  scheduled/loop lock state and typed-reset completion.
+- [Product-truth complexity v6 repair calibration](decisions/product-truth-complexity-v6-repair-calibration.md)
+  and [unified proof authority](interfaces/product-truth-complexity-v6.md) — sole current
+  measurement design: one event/resource bounded ICFG/SSA must-analysis plus candidate-independent
+  overlay, with no Product or destructive expansion.
+- [Product-truth complexity v6 measurement Work](work/product-truth-complexity-v6.md) — next bounded
+  implementation only after a fresh different-actor zero-finding QbD.
 - [QbD 1 audit](qbd/design-audit.md) — independent critical findings that triggered the repair
   calibration.
 - [QbD 1 repair audit](qbd/design-repair-audit.md) — independent PASS with zero blockers and three
@@ -72,7 +85,7 @@ okf_version: "0.2"
   B1 safety, measurement or ordering.
 - [B1 LevelDB lockfile boundary-repair audit](qbd/b1-leveldb-lockfile-boundary-repair-audit.md) —
   fresh scoped QbD 2 PASS over the single lockfile addition and its fail-closed dependency gates.
-- [Work map](work/index.md) — one measurement-only v4 checkpoint followed by five bounded product
+- [Work map](work/index.md) — one measurement-only v6 checkpoint followed by five bounded product
   Works, the immutable unsplit B1 stop, exact eleven-path implementation-discovered compatibility
   boundary, one tool-only lockfile addition, Native Host ordering and complete PRD acceptance
   coverage.

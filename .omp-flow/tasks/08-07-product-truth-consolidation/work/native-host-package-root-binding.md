@@ -24,10 +24,10 @@ This Work realizes PRD A13 and its A15 process/recovery slice.
 
 Do not assign or start this Work until [`handoffs/direct-first-public-b1.md`](../handoffs/direct-first-public-b1.md)
 records a different-actor-accepted clean immutable B1. The implementation base must contain that
-exact B1 commit, and the B1 chain must name the accepted immutable v5 meter Review receipt and
+exact B1 commit, and the B1 chain must name the accepted immutable v6 meter Review receipt and
 SHA/digests, including the capability/owner-lock-authority, additive direct-tool classifier-copy
-authority/flow and derived-inventory digests plus must-hold report. No shared-tree overlap with B1
-is inferred.
+authority, unified Proof-IR/resource-flow and derived-inventory digests plus must-hold/completion
+report. No shared-tree overlap with B1 is inferred.
 
 ## In scope
 
@@ -104,7 +104,7 @@ overlaps B1 compatibility cleanup, this Work does not run concurrently in the no
   connections, rejects a different pair and retains zero challenge state after close.
 - Package/catalog/request bytes never dispatch before the binding is ready. A selected generation
   missing from the bound lane is unavailable even when present in the sibling lane.
-- Every production path is a frozen v5 member. Candidate edges are resolved afresh and pass only
+- Every production path is a frozen v6 member. Candidate edges are resolved afresh and pass only
   when both endpoints are frozen; an outside-set endpoint stops for map repair.
 
 ## Verification
@@ -121,7 +121,7 @@ overlaps B1 compatibility cleanup, this Work does not run concurrently in the no
   supervision in dev and packaged artifact lanes. Run the existing Native Host live-journey and
   Package-crash probes through v2 in both required process lanes. Use isolated homes and sanitize
   all output.
-- Run the read-only v5 membership/edge gate; do not edit the meter or accept outside-set,
+- Run the read-only v6 membership/edge gate; do not edit the meter or accept outside-set,
   computed or unresolved edges. Its accepted capability and lock authority remains conjunctive even
   though this Work adds no database capability or owner-lock behavior. Its additive classifier-copy
   authority/flow digest must also match the accepted B1 chain byte-for-byte.

@@ -46,17 +46,18 @@ This revision also consumes the failed immutable
 [B1 Review](reviews/direct-first-public-b1.md). It repairs all four findings and the subsequent
 destructive red-team closure without changing the exact deletion allowlist or any protected
 exclusion. The maintainer's [option-1 repair calibration](decisions/b1-failed-review-repair-calibration.md)
-binds the atomic Web batch and sealed Package transition graph. Rejected v2-v4 remain immutable
-history. The [v4 Review](reviews/product-truth-complexity-v4.md) proved five additional semantic
-bypasses after v4 implementation; the
-[v5 repair calibration](decisions/product-truth-complexity-v5-repair-calibration.md) alone defines
+binds the atomic Web batch and sealed Package transition graph. Rejected v2-v5 remain immutable
+history. The [v5 Review](reviews/product-truth-complexity-v5.md) proved that separate name/token-
+driven classifier proof, scheduled-release handling, static-callsite loop tokens and sink-only reset
+checks remained unsound. The
+[v6 repair calibration](decisions/product-truth-complexity-v6-repair-calibration.md) alone defines
 current measurement authority and changes no runtime or destructive boundary.
 
 ## Scope and source boundaries
 
 | Responsibility                 | Intended source boundary                                                                                             | Owns                                                                                                                | Must not own                                                              |
 | ------------------------------ | -------------------------------------------------------------------------------------------------------------------- | ------------------------------------------------------------------------------------------------------------------- | ------------------------------------------------------------------------- |
-| v5 measurement checkpoint      | `measure-complexity-v5.mjs`, `complexity-universe-v5.json` and focused fixtures                                      | Design-pinned Work extraction, frozen universe, production+direct-tool capability graph, predecessor/token lock state, reachable refusal cuts and immutable B0 | product runtime, direct rebuild behavior, destructive state               |
+| v6 measurement checkpoint      | `measure-complexity-v6.mjs`, `complexity-universe-v6.json` and focused fixtures                                      | Design-pinned frozen universe plus one event/resource ICFG/SSA must-analysis for classifier, lock and typed-reset proof, hidden overlay and immutable B0 | product runtime, direct rebuild behavior, destructive state               |
 | direct rebuild tool            | `scripts/product-truth/**` plus focused tests                                                                        | inspect/apply orchestration, ephemeral inspection scratch, stdout result                                            | runtime startup, old-data decoding, state preservation, Package lifecycle |
 | first-public Product Store     | exact `apps/service/src/product/productStateStore.ts`; any private SQL file requires a new machine-boundary decision | Product database lifecycle, exact schema, 21 tables, all Product writes/transactions                                | Engine effects, Web/RPC, second connection                                |
 | execution coordinator          | `apps/service/src/product/productExecutionCoordinator.ts`                                                            | execution boundary, catalog memory, prepared handles, subscriptions, effect ordering                                | SQL, durable state machine, Engine wire                                   |
@@ -168,7 +169,7 @@ version migration; current corruption fails closed and preserves the raw key for
 action outside this checkpoint.
 
 The Service/Product/Web sentinels are ordinary-runtime safety guards, not tool classifiers. Their
-literal identities and exact owner entries form a closed allowlist in the authoritative v5 meter.
+literal identities and exact owner entries form a closed allowlist in the authoritative v6 meter.
 For Product and service, a complete pre-mutation main/WAL/SHM cut must dominate current `stores/`
 mkdir/file/owner-lock sinks, and a repeated complete post-lock cut must dominate current database
 existence/read/open/create/write and handle mutation while the exact matching owner-lock capability
@@ -266,7 +267,8 @@ The future implementation of this path has one exact classifier-copy flow in
 through `copyRetiredSqliteBundleToScratch`, opens only that path through
 `openClassifierCopyReadOnly` into `classifierDatabase`, then closes it and calls
 `removeClassifierScratch` from a finally path whose absence postcondition cuts every safe normal or
-abrupt completion. Those names are the exact additive v5 machine authority, not optional examples.
+abrupt completion. Those names are inherited roots for the additive v6 machine authority, not
+optional examples or proof of flow.
 The copy origin is invalid if the source is current, opened in place, raw/merged/unknown, the temp
 root is caller/environment/unbound, or cleanup/absence can be skipped.
 
@@ -389,7 +391,7 @@ Delete each retired behavior with callers, fixtures, policy and comments:
 
 Structural checks use the exact symbol/path inventory from
 [unshipped compatibility research](research/unshipped-compatibility.md), then scan production imports
-and string literals for renamed aliases. The v5 meter makes three exhaustive disjoint reports:
+and string literals for renamed aliases. The v6 meter makes three exhaustive disjoint reports:
 `destructiveToolIdentities`, `requiredLegacyPresenceSentinels` and `forbiddenCompatibility`. The
 required sentinel allowlist fixes exact file, owner function, literal identity, presence-only
 operation and count for Product, service and Web; tainted data-flow, a decoder call, mutation,
@@ -609,14 +611,14 @@ values, credentials, raw Engine bytes, endpoints or stored workspace paths.
 
 ## Complexity measurement and gates
 
-V1 and the failed v2/v3/v4 candidates/reports are immutable rejected evidence; none can gate
-repaired B1 or C. The sole current authority is `product-truth-complexity-v5`, owned by the
-[measurement-only v5 Work](work/product-truth-complexity-v5.md) and exact
-[v5 repair interface](interfaces/product-truth-complexity-v5.md). Its dedicated commit and B0
+V1 and the failed v2/v3/v4/v5 candidates/reports are immutable rejected evidence; none can gate
+repaired B1 or C. The sole current authority is `product-truth-complexity-v6`, owned by the
+[measurement-only v6 Work](work/product-truth-complexity-v6.md) and exact
+[v6 unified proof interface](interfaces/product-truth-complexity-v6.md). Its dedicated commit and B0
 report receive different-actor review acceptance before any B1 production receipt. B1 names that
-review receipt and immutable v5 SHA/digests as predecessor and treats all meter bytes read-only.
+review receipt and immutable v6 SHA/digests as predecessor and treats all meter bytes read-only.
 
-V5 extracts one strict machine-readable boundary block from each of the five product Works at the
+V6 extracts one strict machine-readable boundary block from each of the five product Works at the
 accepted Design commit recorded in its assignment. The config pins that Design SHA, normalized
 blocks/digests, design-time glob expansion and exact frozen path-membership set. Design-time resolved
 edges and sinks are diagnostic snapshots, not allowlists. The meter re-extracts from that commit on every run; config self-assertion,
@@ -625,7 +627,7 @@ The same accepted Design tree contains one strict
 `omp-flow-database-capability-authority-v1` block in the immutable v4 interface. It freezes only the
 irreducible `bun:sqlite#Database` and `node:sqlite#DatabaseSync` terminals plus the exact canonical
 Product, canonical service, the Service-owned classifier copy and exact declaration-scoped
-`:memory:` path origins. The immutable v4 block is not edited. The v5 interface adds exactly one
+`:memory:` path origins. The immutable v4 block is not edited. The immutable v5 interface adds exactly one
 `omp-flow-direct-tool-classifier-copy-authority-v1` block for the future
 `scripts/product-truth/sqlite-classifier.ts#classifyRetiredSqliteBundle` flow. It binds the exact
 canonical-default-root/lane retired-target resolver/parameter, invocation-owned fresh scratch root
@@ -635,13 +637,10 @@ all-completion cleanup/absence declaration. This is the only
 opened in place, an unbound temp/caller/environment path, a raw current Product alias or any flow
 that can bypass cleanup.
 
-V5 independently extracts, normalizes and pins both capability-origin blocks and their digests,
+V6 independently extracts, normalizes and pins all inherited authority blocks and their digests,
 then, from accepted Work membership and exact `bun.lock`, independently derives and pins the
 complete reachable opener, dynamic-loader, Effect layer/factory/tag, wrapper and receiver inventory
-from the accepted repository/dependency source graph. For the additive block it also resolves each
-named declaration/local exactly once and derives the actual retired-source, scratch containment,
-copy/hash, path-to-opener, handle-close and normal/return/throw/catch/finally cleanup flow from the
-accepted compiler graph/ICFG; block or config assertions do not prove those invariants. The selected
+from the accepted repository/dependency source graph. The selected
 dependency's source, emitted JS and d.ts bytes are digested too. No config-authored seed,
 non-Product disposition or generic temp/tool exemption can add to or subtract from that backward
 path-to-constructor plus forward handle closure.
@@ -650,14 +649,14 @@ acquire/release declarations, Product and Service owner entries/path-origin clas
 lock exclusion. It is normalized, hashed and re-extracted with the capability block; config cannot
 select another lock or owner.
 
-At B0/B1/C, V5 resolves the candidate graph afresh. A later edge passes only when both endpoints are
+At B0/B1/C, V6 resolves the candidate graph afresh. A later edge passes only when both endpoints are
 already frozen members, including a materialized future exact path. Any outside-set importer/target,
 computed/unresolved import, candidate-created glob match or responsibility move fails and never
 expands the set. Deleted paths remain with zero lines; future exact paths are already members.
-`scripts/check-source-closure.mjs`, all v1-v5 meter/config files and their evidence are
+`scripts/check-source-closure.mjs`, all v1-v6 meter/config files and their evidence are
 measurement, not production, direct-tool or steady-state runtime.
 
-V5 uses the TypeScript compiler's resolved module/symbol graph, accepted dependency sources, closed
+V6 uses the TypeScript compiler's resolved module/symbol graph, accepted dependency sources, closed
 interprocedural dataflow and owner control-flow graphs. Starting only from the two primitive
 terminals, it traverses static/dynamic imports and path/handle flow through the real
 `@effect/sql-sqlite-bun/SqliteClient.layer`, local `NodeSqliteClient.layer`, runtime loader,
@@ -675,30 +674,60 @@ Product handle escape fails. Every classified Product consumer must be a frozen 
 solely from the exact canonical resolver declaration.
 
 Every legacy occurrence still has exactly one tool-only, presence-sentinel or forbidden class, and
-sentinel values may flow only to boolean presence and the typed reset error. Independently, V5
-discovers every current-generation Product/service/Web I/O sink from resolved APIs and
-path/key/handle flow. Product/service pre-mutation cuts dominate current stores mkdir/file/lock;
-their post-lock cuts dominate every later current database sink while a must analysis proves the
-same canonical `{ownerKind,lane,root,database,lockPath,ownerToken}` lock remains held; Web's single complete cut
-dominates every g1 sink. Acquire/release declarations, lock-handle aliases, closure capture,
-scoped Effect/Layer finalizers, branch joins and all normal/throw/catch/finally exits are explicit
-lock-state edges. Each acquire creates a unique abstract token; a join retains held only when every
-actual predecessor has the same binding and token. A detached callback/microtask/fiber that may
-release or escape the token is unknown unless an exact completion join precedes the sink. Release is
-accepted only after no guarded sink remains reachable on that path.
-The Product `makeProductControlPlaneLayer` resource and Service `makeSqlitePersistenceLive` Layer
-bracket are the accepted runtime shapes; direct-tool retired-store locks, sibling handles and wrong
-tokens never prove current-runtime hold. The historical B0 may report an unlocked current consumer
-such as `readProductPackageLifecycleFacts` observationally, but B1/C and fixtures fail it.
-For each stage, every required probe and consuming decision must dominate its sinks, and every
-legacy-present successor must reach the exact typed throw without reaching current I/O. The bounded
-ICFG computes actual reachability and presence polarity, including zero-iteration loops, exact
-constant branches and catch/finally completion; an unreachable or swallowed throw does not count.
-Interprocedural CFG includes helper call/return, throw/catch/finally and await rejection edges;
-unsupported callback, Effect, recursion or control flow fails closed. Conditional helpers,
-alternate branches, catch/finally swallowing, later callbacks and sink-before-probe order fail. The
-complete inherited v4 matrix plus the five exact failed-Review witnesses in the v5 interface is
-mandatory.
+sentinel values may flow only to boolean presence and the typed reset error. V6 discovers every
+current-generation Product/service/Web I/O sink from resolved APIs and path/key/handle flow before
+semantic proof.
+
+One shared Proof IR represents assignment, parameters/returns, literal-property points-to, exact
+evaluation order, calls and normal/throw/await edges, branch/switch/short-circuit truth, every loop
+entry/back/exit edge, abrupt completion, pending catch/finally completion, closure capture,
+scheduling and exact task joins. Its abstract state contains environment, typed resources,
+intersection-only must-facts, pending tasks and completion disposition. Bounded call strings and
+fixed points are explicit; recursion, dynamic targets, unknown object/properties/thenables,
+unsupported Effect/scheduler/finalizer semantics, resource escape and every context/state/event/
+loop bound overflow fail closed rather than widening to success.
+
+Classifier proof uses activation-scoped `RetiredBundle`, `ScratchRoot`, `CopyPath`, `FileHandle`,
+`Bytes`, `Manifest` and `DatabaseHandle` identities. Module activation is distinct from classifier
+invocation. The current invocation must allocate a fresh exclusive `0700` scratch root, derive one
+strict descendant `0600` copy, bind source identity before/after, copy identity/link facts, exact
+byte count, SHA-256 and repeated manifest, then return/open only that validated copy read-only/no-
+create. Every validation fact dominates helper return and open. After scratch acquisition every
+normal/return/throw/catch/finally completion is followed; after database open, close precedes
+link-safe remove and exact absence. A cleanup primitive may fail closed abruptly, but no catch or
+finally may translate that failure to safe completion. Cached scratch, source/copy phi, post-return
+checks, source-in-place/current/unbound paths and swallowed cleanup fail the same resource proof.
+
+Owner-lock proof uses `LockToken(binding, acquireSite, invocation, callContext, epoch)`. Real loop
+SCC/backedges create a new epoch for repeated acquisition; exact `while(false)`/empty iterable run
+zero times and `do...while(false)` once. A sink is held only when every actual predecessor carries
+one identical singleton token and canonical `{ownerKind,lane,root,database,lockPath}` binding.
+Promise continuations, microtasks, timers, event handlers and Effect forks create task tokens;
+captured local/property/parameter/return aliases are followed. Any unjoined task that may release or
+escape poisons later sinks, awaiting an unrelated Promise does not clear it, and a joined release
+remains released. The only Effect positive is the exact resolved acquireRelease→use→all-completion
+release bracket. Direct-tool retired-store locks, sibling handles, repeated tokens and wrong
+bindings never prove current-runtime hold.
+
+For each owner with `N` required identities, V6 explores all `2^N` presence assignments. Every
+reachable terminal of every assignment containing a present identity must retain the exact typed
+reset throw after catch/finally override; normal, return, another throw, swallowing or a finally
+return fails even if no current sink is reached. Current-sink nonreachability is a separate gate;
+only the all-absent assignment may proceed to current I/O under the required lock. The historical
+B0 may report existing violations observationally, but B1/C and fixtures fail them.
+
+Review uses a candidate-independent hidden overlay containing only virtual frozen-member source
+bytes. Authority, membership and roots come from the accepted Design; expected verdicts exist only
+on the reviewer side. The sole `analyzeVirtualCandidate(ref, virtualSources)` seam accepts only an
+in-memory exact-path→bytes map for existing frozen production/direct-tool members, resolves the
+mixed tree without writes, digests it and hard-gates every non-empty overlay even on B0; it accepts
+no authority, root, category, bound or verdict input. Alpha-renaming below exact authority roots,
+helper extraction/inlining under
+those roots, nested unconditional blocks and literal-property aliases are mandatory metamorphics.
+Authority-named roots themselves remain exact. V6 inherits the full v5 matrix and adds all
+eight v5 Review counterexamples—module cache, source/copy phi, unreachable validation, swallowed
+cleanup, direct/property Promise release, dynamic do-loop reacquire and finally return—beside their
+positive controls. No name, regex, fixture or directory exception may discharge a gate.
 
 The script still reports physical production/test/tool/measurement lines, exact imports/cycles,
 facade/table/database/writer/state-machine/gateway counters, legacy classifications and Native Host
@@ -712,8 +741,8 @@ Three points are required:
 - `B1`: a dedicated clean repaired commit where direct first-public behavior, presence-only runtime
   refusal and compatibility deletion are green but responsibility extraction has not begun. The
   failed `50deefc1f8e904805c5c990756f3048de33c7ad5` remains immutable rejected evidence and is not B1.
-  The repaired commit's full 40-hex SHA and v5 JSON output are recorded in the linked B1 handoff and
-  its later evidence commit, without changing v5 meter/config bytes, before any Store/Coordinator
+  The repaired commit's full 40-hex SHA and v6 JSON output are recorded in the linked B1 handoff and
+  its later evidence commit, without changing v6 meter/config bytes, before any Store/Coordinator
   split work is handed off. Because B1 is produced by that first implementation slice, this Design does not invent
   a pre-existing SHA; absence of the recorded immutable SHA is a mechanical stop for the split, not
   permission to use a branch, working tree, reconstructed patch or B0;
@@ -740,23 +769,23 @@ All gates are conjunctive:
    = 1; literal two-Engine gateway = 1;
 8. the inherited capability block, additive direct-tool classifier-copy block and independently
    derived complete source/dependency capability inventory match exactly across every frozen
-   production and direct-tool member; the classifier-copy class additionally proves exact retired-
-   source binding, invocation-owned scratch containment, no-follow/copy identity, read-only open
-   and all-completion cleanup/absence; every Product
+   production and direct-tool member; one shared Proof IR additionally proves exact activation-
+   scoped retired-source/scratch/copy/handle/validation identity, all-completion cleanup/absence,
+   loop/scheduled-task lock state and typed-reset terminal disposition; every Product
    database component has canonical-only provenance and
    every other component has an exact approved non-Product origin; forbidden compatibility
    decoder/import/caller count = 0; required Product/service/Web
-   presence-only sentinel set is an exact allowlist and every refusal stage dominates its assigned
-   current-generation sinks under actual reachability/present-successor semantics; Product/service
+   presence-only sentinel set is an exact allowlist and every present assignment retains the exact
+   reset terminal while its refusal stage dominates assigned current-generation sinks; Product/service
    sinks also have one matching definitely-held owner lock acquisition token on every predecessor,
    with no prior release/detached/unknown path; tool-only identities remain confined to the direct tool; and
    no new generic repository/manager/registry, per-Engine plane or migration platform exists.
 
 Failure of any gate rejects the candidate even if the largest file is shorter or tests pass.
 
-Execution starts with the bounded measurement-only v5 Work. Its immutable commit, B0 report,
+Execution starts with the bounded measurement-only v6 Work. Its immutable commit, B0 report,
 handoff and different-actor `PASS` are a hard stop before (1) direct first-public creation plus
-compatibility deletion through a green B1 commit measured with those accepted v5 bytes and (2) the
+compatibility deletion through a green B1 commit measured with those accepted v6 bytes and (2) the
 responsibility split. B1 remains one indivisible production Work but no longer creates or freezes a
 meter. The responsibility split cannot start until the B1 handoff records the immutable B1 commit
 and accepted-meter metrics. Package transcript/root work cannot change or bypass either stop.
@@ -775,9 +804,9 @@ and accepted-meter metrics. Package transcript/root work cannot change or bypass
   imports, not only filenames.
 - API/dependency checks enforce one Store writer/connection, exact core edges/no cycles, 36 facade
   methods, 21 tables, leaf boundary and zero Host lifecycle writes/hard-coded package stage.
-- `B0`/repaired-`B1`/`C` metrics use the identical frozen v5 script/config/universe; rejected
-  v1-v4 evidence remains unchanged. The immutable repaired-B1 commit SHA is checked in before
-  split handoff and all three v5 outputs are linked from the final handoff.
+- `B0`/repaired-`B1`/`C` metrics use the identical frozen v6 script/config/universe; rejected
+  v1-v5 evidence remains unchanged. The immutable repaired-B1 commit SHA is checked in before
+  split handoff and all three v6 outputs are linked from the final handoff.
 - Database semantic fixtures re-derive all resolved opener/constructor/loader/layer/factory/
   receiver calls from the builtin roots, accepted membership, lock bytes and dependency source/JS/
   d.ts. They cover the real Bun/Node Effect loader chains, canonical neutral-wrapper positive, raw
@@ -786,13 +815,13 @@ and accepted-meter metrics. Package transcript/root work cannot change or bypass
   neutral wrappers cannot change classification; unlisted service/scratch/temp origins cannot
   become non-Product.
 - Direct-tool classifier-copy fixtures independently resolve the exact future
-  `sqlite-classifier.ts` declarations/locals and pass only an exact retired tool target copied below
-  the invocation-owned fresh scratch root with no-follow/source-copy identity and hash equality,
-  read-only/no-create SQLite open, close, link-safe removal and absence on every completion. Separate
-  single-cause negatives cover a copied/opened current Product or service store, retired source
-  opened in place, unbound temp/caller/environment path, raw current Product alias and missing or
-  bypassable normal/throw/catch/finally cleanup. The earlier raw Product SQLite/`DELETE` direct-tool
-  negative remains mandatory and distinct.
+  `sqlite-classifier.ts` declarations/locals, then pass only the activation-scoped event sequence
+  over an exact retired bundle, invocation-fresh scratch, strict copy, bound file/database handles,
+  dominating source/copy identity-count-hash-manifest facts and ordered close/remove/absence on every
+  completion. Separate single-cause negatives cover module-cached scratch, source/copy return phi,
+  post-return validation, swallowed cleanup, copied/opened current stores, source-in-place open,
+  unbound temp/caller/environment path and raw current alias. The earlier raw Product
+  SQLite/`DELETE` direct-tool negative remains mandatory and distinct.
 - Refusal fixtures include two-stage Product and service main/WAL/SHM positives and a Web v1/v2
   positive, each with multiple current sinks. Product direct and Service Effect Layer positives
   release only from an outer finalizer after all guarded I/O. Independent negatives put valid
@@ -802,8 +831,13 @@ and accepted-meter metrics. Package transcript/root work cannot change or bypass
   root/lock-path/token, sibling/direct-tool handle and unknown Effect/recursion/control flow. Every
   current sink must have both a reachable-cut witness and matching same-acquisition-token lock fact.
   Mandatory single-cause negatives include direct-tool raw Product SQLite/DELETE, different-handle
-  branch phi, detached microtask release, a guard inside `for (const never of [])`, and a typed reset
-  swallowed by `catch { if (false) throw ... }`.
+  branch phi, detached microtask release, direct and literal-property Promise-continuation release,
+  dynamic `do...while` reacquisition, a guard inside `for (const never of [])`, a typed reset
+  swallowed by `catch { if (false) throw ... }`, and a typed reset replaced by `finally` return.
+  Positive controls include invocation-local strict copy, nested unconditional cleanup,
+  `do...while(false)`, `while(false)`, empty/non-overriding finally, no scheduling and exact joined
+  non-releasing continuation. Candidate-independent virtual overlays repeat these under alpha-
+  renaming, helper extraction and literal-property alias metamorphics.
 
 ### Destructive fixture verification
 
@@ -888,16 +922,15 @@ runtime refusal sentinels separate from forbidden compatibility, per-target iden
 and a Windows quiescence adapter. The further red-team closure makes nested receipt decoding,
 nofollow/hash copies, intermediate-ancestor checks, database-lock identity, abrupt-kill stale-lock
 recovery, Package tombstone convergence and the complete real kill/race/write-trace matrix explicit.
-The v5 meter supersedes rather than edits frozen rejected v1-v4 evidence and must remeasure B0,
-repaired B1 and C in one universe. V5 inherits the repaired v4 capability and owner-lock authority,
-then closes the failed v4 implementation Review with complete production+direct-tool capability
-analysis, unique acquisition-token predecessor meets and actual bounded CFG/ICFG reachability under
-the [v5 calibration](decisions/product-truth-complexity-v5-repair-calibration.md). The subsequent v5
-QbD repair adds only the exact additive direct-tool classifier-copy origin selected by the
-[QbD repair calibration](decisions/product-truth-complexity-v5-qbd-repair-calibration.md): retired
-source binding, invocation-owned scratch containment, no-follow/copy identity, read-only open and
-all-completion cleanup are independently derived rather than asserted by config. It changes no
-runtime target, destructive scope or protected exclusion.
+The v6 meter supersedes rather than edits frozen rejected v1-v5 evidence and must remeasure B0,
+repaired B1 and C in one universe. It inherits the accepted universe and all three authority blocks,
+then replaces v5's separable proof shortcuts with one resolved-symbol event/resource ICFG/SSA
+must-analysis under the
+[v6 calibration](decisions/product-truth-complexity-v6-repair-calibration.md). Classifier provenance
+and cleanup, repeated/scheduled lock state and typed-reset completion share the same reachability,
+points-to, resource and Completion semantics. Candidate-independent overlays test those semantics
+without giving candidate bytes fixture or verdict authority. This changes no runtime target,
+destructive scope or protected exclusion.
 
 The older g50 literal Pi/OpenCode gateway sibling-zero observation remains closed by its same-SHA
 process evidence and is not part of this repair or the next audit absent new contradictory evidence.
@@ -905,7 +938,7 @@ No migration, backup, restore, alias, wrapper or dual compatibility was introduc
 
 The next workflow output is a new independent QbD audit of this repaired Design/interface/Work map
 by a different actor. A fresh `PASS` with zero blocker and zero advisory authorizes only the
-measurement-only v5 Work. Its immutable handoff must then receive a zero-finding different-actor
+measurement-only v6 Work. Its immutable handoff must then receive a zero-finding different-actor
 `PASS` before a new B1 production receipt is issued. Any proposed
 new destructive target or weakened exclusion returns for human calibration. This architect does not
 approve its own gate.

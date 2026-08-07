@@ -10,7 +10,7 @@ title: "Direct first-public rebuild and immutable unsplit B1"
 Implement the exact pre-release `inspect`/`apply` tool, direct generation-1 Product/service/Web
 creation and complete unshipped-compatibility deletion, while keeping Product responsibilities
 mechanically unsplit. Consume the different-actor-accepted immutable
-`product-truth-complexity-v5` meter as a read-only predecessor, then produce one dedicated clean
+`product-truth-complexity-v6` meter as a read-only predecessor, then produce one dedicated clean
 green B1 commit and record its full SHA and metrics without modifying the meter commit.
 This Work realizes PRD A1-A9, the B1 half of A14, and the B1 preservation portion of A15.
 
@@ -32,23 +32,23 @@ This Work realizes PRD A1-A9, the B1 half of A14, and the B1 preservation portio
 - [B1 source-closure disposition boundary PASS approval](../decisions/b1-source-closure-boundary-pass-approval.md)
 - [Unshipped compatibility inventory](../research/unshipped-compatibility.md)
 - [Failed immutable B1 Review](../reviews/direct-first-public-b1.md)
-- [V5 repair calibration](../decisions/product-truth-complexity-v5-repair-calibration.md)
-- [V5 capability/lock/reachability authority](../interfaces/product-truth-complexity-v5.md)
-- [Authoritative v5 meter Work](product-truth-complexity-v5.md) and its required
-  `handoffs/product-truth-complexity-v5.md`
+- [V6 repair calibration](../decisions/product-truth-complexity-v6-repair-calibration.md)
+- [V6 unified proof authority](../interfaces/product-truth-complexity-v6.md)
+- [Authoritative v6 meter Work](product-truth-complexity-v6.md) and its required
+  `handoffs/product-truth-complexity-v6.md`
 
 ## Entry stop
 
-Do not assign or start this Work until `reviews/product-truth-complexity-v5.md` records a
+Do not assign or start this Work until `reviews/product-truth-complexity-v6.md` records a
 zero-finding different-actor `PASS` over the immutable meter-only commit. The B1 assignment must
 name that review receipt as predecessor, record the accepted meter SHA/digests including the
-additive direct-tool classifier-copy authority and independently derived flow digest, and use those
-bytes read-only.
+additive direct-tool classifier-copy authority, unified Proof-IR/resource-flow digest and hidden-
+overlay contract, and use those bytes read-only.
 
 ## In scope
 
-- Preserve rejected v1-v4 history plus accepted v5 meter/config/fixtures byte-for-byte. Run the
-  accepted v5 bytes against repaired B1; any Design/boundary/universe/semantic/B0 mismatch stops.
+- Preserve rejected v1-v5 history plus accepted v6 meter/config/fixtures byte-for-byte. Run the
+  accepted v6 bytes against repaired B1; any Design/boundary/universe/semantic/B0 mismatch stops.
 - Add the two-command `scripts/product-truth/**` implementation and generated-home fixtures for the
   exact default root, two lanes, two profiles, database/WAL copies, protected-fact registry,
   Package classification, lock/quiescence rules, stdout-only sanitized plan and narrow apply. Use
@@ -81,7 +81,7 @@ bytes read-only.
 
 The implementer may create or change only:
 
-- `scripts/product-truth/**` except every v1-v5 meter/config/coverage fixture, the root
+- `scripts/product-truth/**` except every v1-v6 meter/config/coverage fixture, the root
   `package.json` entries needed for the two commands,
   `scripts/package.json` solely to declare one exact non-range direct `classic-level` dependency,
   and the root `bun.lock` solely to record its package-manager-produced scripts-workspace
@@ -240,7 +240,7 @@ does not authorize an unlisted production path.
   source occurrences, `enableAppSnap` remains the sole current AppSettings key for the capability,
   and legacy input cannot activate it through schema decoding, normalization, fixtures, comments
   or aliases. There is no snapshot, converter, restore, legacy reader, dual-read or hidden copy.
-- The accepted v5 scan reports tool-only identities, exact required presence-only runtime sentinels and
+- The accepted v6 scan reports tool-only identities, exact required presence-only runtime sentinels and
   forbidden compatibility separately. Sentinel allowlisting is exact by path, enclosing symbol,
   literal, presence operation and count, and rejects value flow to a decoder/current encoder/log or
   mutation. Its owner CFG report additionally proves every required probe/decision dominates the
@@ -265,7 +265,7 @@ does not authorize an unlisted production path.
   unclassified occurrence, including a newly discovered required production/test path outside this
   Work boundary, stops the Work for map repair.
 - The dedicated repaired B1 commit is clean and green, its full 40-hex SHA is recorded, and B0,
-  repaired B1 and later C use the already-frozen v5 instrument. Rejected v1-v4 evidence remains immutable
+  repaired B1 and later C use the already-frozen v6 instrument. Rejected v1-v5 evidence remains immutable
   and failed candidate `50deefc1...` is never reused as repaired B1. A structural scan at B1 reports zero
   production `ProductStateStore`/`ProductExecutionCoordinator` files, symbols, imports or facade
   extraction scaffolds. The evidence-recording commit is distinct from B1.
@@ -280,7 +280,7 @@ does not authorize an unlisted production path.
   write-trace matrices. Cover native Windows enumeration and POSIX `ps`, exact database-lock
   identity, SIGKILL-stale profile locks, intermediate ancestry and Package duplicate/tombstone
   convergence.
-- Run only the accepted v5 SHA/digests for B1 boundary, frozen-membership and resolved semantic
+- Run only the accepted v6 SHA/digests for B1 boundary, frozen-membership and resolved semantic
   proof. Its fixture suite must pass a materialized future Store edge/canonical sink inside the set
   and fail outside-set importer/target/sink, unclassified or competing sink, computed/unresolved
   import and moved responsibility cases. It must also pass canonical neutral-wrapper and complete
@@ -303,9 +303,9 @@ does not authorize an unlisted production path.
 - Use process/import/network spies to prove `inspect` and `apply` do not launch Electron, use a
   real-profile Electron reader/writer or perform network access. Compare both historical v1 meter
   files byte-for-byte with commit `45df49a6afde882d32c1dcd00457c7787d227e4a`, compare rejected
-  v2/v3/v4 evidence and v5 bytes/digests/B0 with the accepted meter handoff and remeasure repaired B1
-  with those v5 bytes. Prove `bun.lock` is the
-  pinned v5 `dependency` entry and excluded from v5 production LOC/import totals. V1-v4 comparison
+  v2/v3/v4/v5 evidence and v6 bytes/digests/B0 with the accepted meter handoff and remeasure repaired B1
+  with those v6 bytes. Prove `bun.lock` is the
+  pinned v6 `dependency` entry and excluded from v6 production LOC/import totals. V1-v5 comparison
   is immutable historical provenance only and cannot satisfy or fail a B1 semantic/universe gate.
 - Verify the source-closure diff is exactly the `adapted-present` 1496→1494 and
   `adapted-removed` 774→776 count transfer plus its deterministic digest, caused only by the two
