@@ -27,6 +27,8 @@ This Work realizes PRD A1-A9, the B1 half of A14, and the B1 preservation portio
 - [B1 LevelDB dependency-lock boundary repair](../decisions/b1-leveldb-lockfile-boundary-repair-calibration.md)
 - [B1 Service permissions test boundary repair](../decisions/b1-config-permissions-test-boundary-repair-calibration.md)
 - [B1 Service permissions test boundary PASS approval](../decisions/b1-config-permissions-test-boundary-pass-approval.md)
+- [B1 source-closure disposition boundary repair](../decisions/b1-source-closure-boundary-repair-calibration.md)
+- [B1 source-closure disposition boundary PASS approval](../decisions/b1-source-closure-boundary-pass-approval.md)
 - [Unshipped compatibility inventory](../research/unshipped-compatibility.md)
 
 ## In scope
@@ -61,6 +63,10 @@ The implementer may create or change only:
   `scripts/package.json` solely to declare one exact non-range direct `classic-level` dependency,
   and the root `bun.lock` solely to record its package-manager-produced scripts-workspace
   resolution and required transitive/platform integrity closure without unrelated lock drift;
+- `scripts/check-source-closure.mjs` solely to update the two adopted-target disposition counts and
+  deterministically regenerated disposition digest caused by the already-owned deletion of
+  `desktopUserDataProfile.ts` and its focused test; no algorithm, mapping or other constant may
+  change;
 - `apps/service/src/config.ts`, `apps/service/src/main.ts`,
   `apps/service/src/config.permissions.test.ts` solely to remove the retired Service-database seed
   from the existing private-path permission fixture while retaining its current safety assertions,
@@ -164,6 +170,10 @@ An implementation-discovered required path outside this boundary stops the Work 
   real-profile Electron reader/writer or perform network access. Compare both frozen meter files
   byte-for-byte with commit `45df49a6afde882d32c1dcd00457c7787d227e4a` and prove `bun.lock` was not
   added to the measurement universe.
+- Verify the source-closure diff is exactly the `adapted-present` 1496→1494 and
+  `adapted-removed` 774→776 count transfer plus its deterministic digest, caused only by the two
+  already-owned `desktopUserDataProfile` deletions; total paths, tree SHA, mappings, algorithms and
+  every other disposition remain unchanged.
 - Run focused Product/service/Web/Desktop/release-policy tests affected by creation and deletion,
   the existing focused OpenCode live-journey probe test for canonical Product database resolution,
   `apps/web/src/lib/composerImageSource.test.ts`,

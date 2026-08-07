@@ -28,6 +28,12 @@ with the already-approved startup refusal and prevents the existing current-path
 from reaching its assertions. The repair authorizes removal of that seed and legacy expectation
 only; it does not add a runtime path, migration or destructive authority.
 
+The later [source-closure disposition repair](../decisions/b1-source-closure-boundary-repair-calibration.md)
+adds only `scripts/check-source-closure.mjs` and only its two affected disposition counts plus the
+mechanically regenerated digest. It records the provenance consequence of the already-owned
+`desktopUserDataProfile` source/test deletions; the immutable tree, mappings and Work meaning do
+not change.
+
 ## Hard ordering
 
 The first implementation wave is [Direct first-public B1](direct-first-public-b1.md). It is one
