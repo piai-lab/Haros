@@ -1,0 +1,1 @@
+{"appendToFiles":{"apps/service/src/atomicWrite.ts":"\nlet v7ChainLeft: typeof process;\nlet v7ChainMiddle: typeof process;\nlet v7ChainRight: typeof process;\nv7ChainLeft = v7ChainMiddle = v7ChainRight = globalThis.process;\nexport const v7AssignmentChainRaw = () => v7ChainLeft.dlopen({} as NodeJS.Module, 'x.node');\n"}}

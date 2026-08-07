@@ -982,6 +982,11 @@ for (const path of candidateGraph.paths.filter((candidatePath) => rawInventoryPa
     } : null;
   };
   const identityForExpression = (expression) => {
+    if (ts.isParenthesizedExpression(expression)) return identityForExpression(expression.expression);
+    if (ts.isBinaryExpression(expression) && expression.operatorToken.kind === ts.SyntaxKind.EqualsToken) {
+      if (!ts.isIdentifier(expression.left) || !bindingScopeFor(expression.left)) return null;
+      return identityForExpression(expression.right);
+    }
     if (ts.isIdentifier(expression)) {
       const scoped = resolveScopedAlias(expression);
       if (scoped) return scoped;
@@ -1027,7 +1032,7 @@ for (const path of candidateGraph.paths.filter((candidatePath) => rawInventoryPa
   };
   const addAliasWrite = (identifier, node, kind, rhs = null) => {
     const scope = bindingScopeFor(identifier) ?? lexical.declarationScope.get(identifier);
-    if (scope) aliasWrites.push({ scope, name: identifier.text, node, kind, rhs });
+    aliasWrites.push({ scope, name: identifier.text, node, kind, rhs });
   };
   const collectAliasDeclarations = (node) => {
     if (ts.isVariableDeclaration(node) && node.initializer) {
@@ -1091,6 +1096,10 @@ for (const path of candidateGraph.paths.filter((candidatePath) => rawInventoryPa
     addViolation("RAW_ALIAS_WRITE_UNKNOWN", path, write.node, detail);
   };
   for (const write of aliasWrites) {
+    if (!write.scope && ["declaration", "assignment"].includes(write.kind) && write.rhs && identityForExpression(write.rhs)) {
+      rejectAliasWrite(write, { name: write.name, writeKinds: [write.kind], unresolvedBinding: true });
+      continue;
+    }
     if (["declaration", "assignment"].includes(write.kind) || !write.rhs || !identityForExpression(write.rhs)) continue;
     rejectAliasWrite(write, { name: write.name, writeKinds: [write.kind] });
   }

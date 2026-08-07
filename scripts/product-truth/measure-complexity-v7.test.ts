@@ -103,7 +103,7 @@ describe("product-truth-complexity-v7", () => {
     });
   }, 30_000);
 
-  it.each(["benign-local-assignment-positive", "shadowed-local-assignment-positive"])(
+  it.each(["benign-local-assignment-positive", "shadowed-local-assignment-positive", "benign-assignment-chain-positive"])(
     "accepts benign or truly shadowed simple assignment %s",
     (fixture) => {
       const result = run("--fixture", fixture, "--ref", baseline);
@@ -171,6 +171,7 @@ describe("product-truth-complexity-v7", () => {
     "raw-assignment-property-escape",
     "raw-assignment-destructure",
     "hoisted-var-assignment-raw",
+    "assignment-chain-raw",
   ])("rejects closed raw-effect syntax/owner mutation %s", (fixture) => {
     const result = run("--fixture", fixture, "--ref", baseline);
     expect(result.status).not.toBe(0);

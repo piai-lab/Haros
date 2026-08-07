@@ -1,0 +1,1 @@
+{"appendToFiles":{"apps/service/src/atomicWrite.ts":"\nlet v7BenignChainLeft: { value: number };\nlet v7BenignChainMiddle: { value: number };\nlet v7BenignChainRight: { value: number };\nv7BenignChainLeft = v7BenignChainMiddle = v7BenignChainRight = { value: 1 };\nexport const v7BenignAssignmentChain = () => v7BenignChainLeft.value;\n"}}
