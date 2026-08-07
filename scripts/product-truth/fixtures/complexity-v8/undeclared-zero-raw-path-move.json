@@ -4,6 +4,6 @@
     "scripts/release-update-policy.json"
   ],
   "virtualFiles": {
-    "scripts/product-truth/cli.ts": "export const legacyReleaseUpdatePolicy = {};\n"
+    "scripts/product-truth/cli.ts": "export const legacyReleaseUpdatePolicy = {\n  lane: \"clean\",\n  bridgeVersion: \"0.4.2\",\n  channel: \"omnimind\",\n};\n"
   }
 }

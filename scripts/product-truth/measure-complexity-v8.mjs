@@ -27,6 +27,62 @@ const decodeUtf8 = (bytes, identity) => {
   if (decoded.includes("\u0000")) throw new Error(`NUL byte in text authority: ${identity}`);
   return decoded;
 };
+const INVALID_STRUCTURAL_LITERAL = Symbol("invalid-structural-literal");
+const structuralLiteralValue = (node) => {
+  if (ts.isParenthesizedExpression(node)) return structuralLiteralValue(node.expression);
+  if (ts.isStringLiteralLike(node)) return node.text;
+  if (ts.isNumericLiteral(node)) return Number(node.text);
+  if (node.kind === ts.SyntaxKind.TrueKeyword) return true;
+  if (node.kind === ts.SyntaxKind.FalseKeyword) return false;
+  if (node.kind === ts.SyntaxKind.NullKeyword) return null;
+  if (ts.isPrefixUnaryExpression(node) && node.operator === ts.SyntaxKind.MinusToken && ts.isNumericLiteral(node.operand)) {
+    return -Number(node.operand.text);
+  }
+  if (ts.isArrayLiteralExpression(node)) {
+    const values = [];
+    for (const element of node.elements) {
+      if (ts.isOmittedExpression(element) || ts.isSpreadElement(element)) return INVALID_STRUCTURAL_LITERAL;
+      const value = structuralLiteralValue(element);
+      if (value === INVALID_STRUCTURAL_LITERAL) return value;
+      values.push(value);
+    }
+    return values;
+  }
+  if (ts.isObjectLiteralExpression(node)) {
+    const value = {};
+    for (const property of node.properties) {
+      if (!ts.isPropertyAssignment(property) || ts.isComputedPropertyName(property.name) ||
+          !(ts.isIdentifier(property.name) || ts.isStringLiteralLike(property.name) || ts.isNumericLiteral(property.name))) {
+        return INVALID_STRUCTURAL_LITERAL;
+      }
+      const key = property.name.text;
+      if (Object.hasOwn(value, key)) return INVALID_STRUCTURAL_LITERAL;
+      const propertyValue = structuralLiteralValue(property.initializer);
+      if (propertyValue === INVALID_STRUCTURAL_LITERAL) return propertyValue;
+      value[key] = propertyValue;
+    }
+    return value;
+  }
+  return INVALID_STRUCTURAL_LITERAL;
+};
+const normalizedStructuralLiteral = (bytes, identity) => {
+  const text = decodeUtf8(bytes, identity);
+  try {
+    return canonicalJson(JSON.parse(text));
+  } catch {
+    const file = ts.createSourceFile(identity, text, ts.ScriptTarget.Latest, true, ts.ScriptKind.TS);
+    if (file.parseDiagnostics.length || file.statements.length !== 1) return null;
+    const statement = file.statements[0];
+    if (!ts.isVariableStatement(statement) ||
+        !declarationModifiers(statement).has(ts.SyntaxKind.ExportKeyword) ||
+        (statement.declarationList.flags & ts.NodeFlags.Const) === 0 ||
+        statement.declarationList.declarations.length !== 1) return null;
+    const declaration = statement.declarationList.declarations[0];
+    if (!ts.isIdentifier(declaration.name) || !declaration.initializer) return null;
+    const value = structuralLiteralValue(declaration.initializer);
+    return value === INVALID_STRUCTURAL_LITERAL ? null : canonicalJson(value);
+  }
+};
 const assertNoDuplicateJsonKeys = (text, identity) => {
   const parsed = ts.parseJsonText(identity, text);
   if (parsed.parseDiagnostics.length) throw new Error(`Invalid JSON in ${identity}.`);
@@ -1403,14 +1459,14 @@ for (const path of candidateGraph.paths.filter((candidatePath) => rawInventoryPa
     const visit = (node) => {
       if (ts.isVariableDeclaration(node) && node.initializer) {
         const initializerBinding = ts.isIdentifier(node.initializer) ? resolvedBindingAt(node.initializer) : null;
-        if (ts.isIdentifier(node.name) && initializerBinding && !bindings.has(node.name.text)) {
+        if (ts.isIdentifier(node.name) && initializerBinding && !bindingIdentityByDeclaration.has(node.name)) {
           bind(node.name.text, initializerBinding, node.name); aliasChanged = true;
         }
         if (ts.isIdentifier(node.name) && (ts.isPropertyAccessExpression(node.initializer) || ts.isElementAccessExpression(node.initializer)) &&
             ts.isIdentifier(node.initializer.expression) && resolvedBindingAt(node.initializer.expression)?.namespace) {
           const member = staticMember(node.initializer);
           if (member.value === null) addViolation("COMPUTED_EFFECT_SELECTOR", path, node.initializer, node.initializer.getText(file));
-          else if (!bindings.has(node.name.text)) {
+          else if (!bindingIdentityByDeclaration.has(node.name)) {
             const base = resolvedBindingAt(node.initializer.expression);
             bind(node.name.text, { specifier: base.specifier, exported: member.value, classes: classesForModuleExport(base.specifier, member.value), form: member.form }, node.name);
             aliasChanged = true;
@@ -2049,18 +2105,27 @@ if (comparisonEnabled) {
   if (hardGlobalViolations.length) throw new Error(`RAW_EFFECT_INGRESS_INVALID:${JSON.stringify(hardGlobalViolations.slice(0, 30))}`);
   const deletedPaths = [...selectedPaths].filter((path) => predecessorMembers.get(path)?.present && !candidateMembers.get(path)?.present);
   const materializedPaths = [...selectedPaths].filter((path) => !predecessorMembers.get(path)?.present && candidateMembers.get(path)?.present);
-  const undeclaredLifecyclePairs = deletedPaths.flatMap((deleted) => materializedPaths.map((materialized) => ({
+  const moveWitness = (deleted, materialized) => {
+    const predecessorBlobId = predecessorMembers.get(deleted)?.blobId;
+    const materializedBytes = candidate.bytesAt(materialized);
+    if (!/^[0-9a-f]{40}$/.test(predecessorBlobId ?? "") || materializedBytes === null) return null;
+    const predecessorBytes = git(["cat-file", "blob", predecessorBlobId]);
+    if (sha256(predecessorBytes) === sha256(materializedBytes)) return "exact-content";
+    const predecessorStructure = normalizedStructuralLiteral(predecessorBytes, deleted);
+    const materializedStructure = normalizedStructuralLiteral(materializedBytes, materialized);
+    return predecessorStructure !== null && predecessorStructure === materializedStructure
+      ? "normalized-literal-structure" : null;
+  };
+  const undeclaredMoves = deletedPaths.flatMap((deleted) => materializedPaths.map((materialized) => ({
     deleted,
     materialized,
-    siteCount: entriesAtPath(predecessorReport.rawEffects.canonicalIngress, deleted).length +
-      entriesAtPath(canonicalIngress, materialized).length,
-  }))).filter(({ deleted, materialized }) =>
-    deleted !== cMove.from.split("#")[0] || materialized !== cMove.to.split("#")[0])
-    .sort((left, right) => left.siteCount - right.siteCount ||
-      `${left.deleted}\0${left.materialized}`.localeCompare(`${right.deleted}\0${right.materialized}`));
-  if (undeclaredLifecyclePairs.length) {
-    const { deleted, materialized } = undeclaredLifecyclePairs[0];
-    throw new Error(`UNDECLARED_WORK_PATH_MOVE:${deleted}:${materialized}`);
+    witness: deleted === cMove.from.split("#")[0] && materialized === cMove.to.split("#")[0]
+      ? null : moveWitness(deleted, materialized),
+  }))).filter((entry) => entry.witness !== null)
+    .sort((left, right) => `${left.deleted}\0${left.materialized}`.localeCompare(`${right.deleted}\0${right.materialized}`));
+  if (undeclaredMoves.length) {
+    const { deleted, materialized, witness } = undeclaredMoves[0];
+    throw new Error(`UNDECLARED_WORK_PATH_MOVE:${deleted}:${materialized}:${witness}`);
   }
   comparison = {
     enabled: true,

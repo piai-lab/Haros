@@ -1,0 +1,9 @@
+{
+  "extends": "traced-owner-positive",
+  "removeFiles": [
+    "scripts/release-update-policy.json"
+  ],
+  "virtualFiles": {
+    "scripts/product-truth/cli.ts": "export const productTruthCli = () => \"ready\";\n"
+  }
+}

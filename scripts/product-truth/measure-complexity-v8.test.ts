@@ -192,6 +192,7 @@ describe("product-truth-complexity-v8 qualified declarations", () => {
     "traced-reexport-alias",
     "traced-wrong-owner-alias",
     "traced-private-helper",
+    "traced-repeated-alias-private-helper",
     "traced-class-growth",
   ])("rejects wrong qualified declaration/use %s", (fixture) => {
     const result = runFixture(fixture, "direct-first-public-b1");
@@ -206,6 +207,7 @@ describe("product-truth-complexity-v8 predecessor structural sites", () => {
     ["exact-predecessor-positive", "native-host-package-root-binding"],
     ["nontraced-deletion-positive", "native-host-package-root-binding"],
     ["exact-work-deletion-positive", "native-host-package-root-binding"],
+    ["combined-lifecycle-positive", "direct-first-public-b1"],
     ["product-owner-move-positive", "product-state-store"],
   ] as const)("accepts exact preservation/reduction/lifecycle positive %s", (fixture, work) => {
     const result = runFixture(fixture, work);
@@ -236,7 +238,7 @@ describe("product-truth-complexity-v8 predecessor structural sites", () => {
     const result = runFixture("undeclared-zero-raw-path-move", "direct-first-public-b1");
     expect(result.status).not.toBe(0);
     expect(result.stdout).toBe("");
-    expect(result.stderr).toContain("UNDECLARED_WORK_PATH_MOVE:scripts/release-update-policy.json:scripts/product-truth/cli.ts");
+    expect(result.stderr).toContain("UNDECLARED_WORK_PATH_MOVE:scripts/release-update-policy.json:scripts/product-truth/cli.ts:normalized-literal-structure");
   }, 30_000);
 
   it.each([
