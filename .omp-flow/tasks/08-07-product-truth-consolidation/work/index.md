@@ -34,12 +34,23 @@ mechanically regenerated digest. It records the provenance consequence of the al
 `desktopUserDataProfile` source/test deletions; the immutable tree, mappings and Work meaning do
 not change.
 
+The failed immutable B1 review is now governed by the maintainer's
+[option-1 repair calibration](../decisions/b1-failed-review-repair-calibration.md): one atomic Web
+batch, one sealed Package transition graph and one coverage-complete v2 meter across all five product Works.
+No destructive target or protected exclusion changes.
+
 ## Hard ordering
 
-The first implementation wave is [Direct first-public B1](direct-first-public-b1.md). It is one
-deliberately indivisible Work because the approved evidence requires the destructive tool,
-first-public Product/service/Web creation, compatibility deletion and the frozen complexity
-instrument to become green together while `ProductControlPlane` is still structurally unsplit.
+The first implementation checkpoint is the measurement-only
+[coverage-complete v2 meter](product-truth-complexity-v2.md). It changes no measured production
+path, freezes one immutable meter commit plus B0 report, writes its handoff and must receive a
+different-actor `PASS`. No B1 production receipt may be issued before that acceptance; B1 must name
+the accepted meter review receipt and immutable SHA/digests as predecessor.
+
+The first production wave is [Direct first-public B1](direct-first-public-b1.md). It remains one
+deliberately indivisible production Work because the destructive tool, first-public
+Product/service/Web creation and compatibility deletion must become green together while
+`ProductControlPlane` is structurally unsplit. It consumes the accepted v2 bytes read-only.
 Its implementer must create a dedicated clean commit, then write the handoff in a later evidence
 commit so the recorded 40-hex B1 SHA remains immutable. No Store, Coordinator, facade or execution
 leaf extraction may be assigned, started or pre-scaffolded before that handoff exists and proves
@@ -60,6 +71,14 @@ closure. The dependency serves `scripts/product-truth/**` only. It cannot enter 
 source profile, and cannot alter either frozen complexity-meter file or its universe. The eleven
 implementation-discovered compatibility production/test paths remain exactly eleven.
 
+V1 meter bytes are immutable history. V2 freezes in its separate Work only after this repair passes
+QbD, covers every product Work's allowed production paths plus resolved internal import closure,
+and fails mechanically on an omitted/newly materialized path, computed/unresolved import or
+out-of-universe responsibility move. After meter review acceptance, every later Work treats it as
+read-only.
+An inert `.discarding` tombstone blocks rebuild convergence only; it is never loaded and adds no
+ordinary-runtime sentinel.
+
 The Service permissions fixture is a separate focused-test consumer of the in-scope fail-closed
 configuration change, not a twelfth compatibility surface.
 
@@ -73,7 +92,7 @@ that exception does not apply to `enableAppshots`.
 
 [Native Host v2 Package-root binding](native-host-package-root-binding.md) is a separate product
 boundary and is independently reviewable. The safe default sequence is literal: a different actor
-first accepts the immutable B1 handoff, then a different actor accepts the Native Host handoff,
+first accepts the immutable meter handoff, then B1 and a different actor accepts its handoff, then a different actor accepts the Native Host handoff,
 then execution-leaf extraction may begin. The current map infers no shared-tree overlap: B1 and the
 Native Host Work both own `apps/desktop/src/main.ts`, and the Native Host Work and execution leaf
 both own `apps/service/src/native-host/executionBoundary.ts`.
@@ -89,10 +108,10 @@ three small reviewable steps:
    remove test/diagnostic leakage, freeze C, and run the conjunctive B0/B1/C and real-journey gates.
 
 These three Works are sequential because they edit the same `ProductControlPlane.ts` responsibility
-surface. They must consume the immutable B1 recorded by the first handoff, never a branch, dirty
+surface. They must consume the accepted meter and immutable B1 recorded by their handoffs, never a branch, dirty
 tree, reconstructed patch or B0 substitution. Therefore the complete default sequence is:
-accepted B1 → accepted Native Host → accepted execution leaf → accepted Product State Store →
-Coordinator/facade C.
+accepted v2 meter → accepted B1 → accepted Native Host → accepted execution leaf → accepted
+Product State Store → Coordinator/facade C.
 
 ## Acceptance coverage
 
@@ -111,7 +130,7 @@ Coordinator/facade C.
 | A11 Coordinator effects without SQL/replay/fallback | [Coordinator and facade](product-execution-coordinator-facade.md) |
 | A12 one 36-operation facade and separate probes | [Coordinator and facade](product-execution-coordinator-facade.md) |
 | A13 Service-selected, transcript-bound Package root | [Native Host v2 Package-root binding](native-host-package-root-binding.md) |
-| A14 deterministic complexity decrease in one universe | B0/B1 instrument and immutable checkpoint in [Direct first-public B1](direct-first-public-b1.md); C gates in [Coordinator and facade](product-execution-coordinator-facade.md) |
+| A14 deterministic complexity decrease in one universe | immutable meter and B0 in [v2 measurement](product-truth-complexity-v2.md); B1 in [Direct first-public B1](direct-first-public-b1.md); C in [Coordinator and facade](product-execution-coordinator-facade.md) |
 | A15 current recovery behavior and affected real journeys | focused preservation in every Work; integrated live proof in [Coordinator and facade](product-execution-coordinator-facade.md) |
 
 The three accepted QbD 1 advisories are all hard done conditions of the B1 Work: exact
@@ -124,11 +143,7 @@ Each implementation Work writes its promised handoff and receives a different-ac
 the next overlapping Work begins. Focused green checks do not authorize broader claims. The final C
 Work may submit affected Campaign claims only as `candidate`; no producer may mark them verified.
 
-The next workflow entry is a fresh different-actor scoped QbD 2 audit limited to the one root
-`bun.lock` addition, its exact scripts-only `classic-level` purpose and the dependency/LevelDB
-verification delta recorded by the
-[LevelDB calibration](../decisions/b1-leveldb-lockfile-boundary-repair-calibration.md). It carries
-forward every closed finding from the prior compatibility and appSettings audits, the earlier QbD 2
-PASS decisions, the literal accepted-handoff sequence and unchanged acceptance coverage. The prior
-PASS does not authorize the revised output boundary, and a new model verdict cannot restart B1
-without the applicable human calibration.
+The next workflow entry is a fresh different-actor QbD audit of the meter-order repair across
+Design, the measurement Work, B1 and this map. Only `PASS` with no blocker or advisory authorizes the
+measurement-only v2 assignment. Its immutable handoff then needs different-actor `PASS` before a new
+B1 production receipt. The rejected `50deefc1...` candidate remains historical evidence.

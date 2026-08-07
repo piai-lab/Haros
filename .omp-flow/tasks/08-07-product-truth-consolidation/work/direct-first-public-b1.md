@@ -9,8 +9,9 @@ title: "Direct first-public rebuild and immutable unsplit B1"
 
 Implement the exact pre-release `inspect`/`apply` tool, direct generation-1 Product/service/Web
 creation and complete unshipped-compatibility deletion, while keeping Product responsibilities
-mechanically unsplit. Freeze the `product-truth-complexity-v1` instrument first, then produce one
-dedicated clean green B1 commit and record its full SHA and metrics without modifying that commit.
+mechanically unsplit. Consume the different-actor-accepted immutable
+`product-truth-complexity-v2` meter as a read-only predecessor, then produce one dedicated clean
+green B1 commit and record its full SHA and metrics without modifying the meter commit.
 This Work realizes PRD A1-A9, the B1 half of A14, and the B1 preservation portion of A15.
 
 ## Useful inputs
@@ -30,13 +31,20 @@ This Work realizes PRD A1-A9, the B1 half of A14, and the B1 preservation portio
 - [B1 source-closure disposition boundary repair](../decisions/b1-source-closure-boundary-repair-calibration.md)
 - [B1 source-closure disposition boundary PASS approval](../decisions/b1-source-closure-boundary-pass-approval.md)
 - [Unshipped compatibility inventory](../research/unshipped-compatibility.md)
+- [Failed immutable B1 Review](../reviews/direct-first-public-b1.md)
+- [Accepted v2 meter Work](product-truth-complexity-v2.md) and its required
+  [handoff](../handoffs/product-truth-complexity-v2.md)
+
+## Entry stop
+
+Do not assign or start this Work until `reviews/product-truth-complexity-v2.md` records a
+different-actor `PASS` over the immutable meter-only commit. The B1 assignment must name that review
+receipt as predecessor, record the accepted meter SHA/digests, and use those bytes read-only.
 
 ## In scope
 
-- Freeze `scripts/product-truth/measure-complexity.mjs` and
-  `scripts/product-truth/complexity-universe-v1.json` before changing measured production code.
-  The instrument must evaluate immutable Git trees, the fixed Design universe and semantic
-  counters; it must not change between B0, B1 and C.
+- Preserve v1 history and the accepted v2 meter/config/coverage fixtures byte-for-byte. Run the
+  accepted v2 bytes against repaired B1; any meter digest, coverage or B0 mismatch stops the Work.
 - Add the two-command `scripts/product-truth/**` implementation and generated-home fixtures for the
   exact default root, two lanes, two profiles, database/WAL copies, protected-fact registry,
   Package classification, lock/quiescence rules, stdout-only sanitized plan and narrow apply. Use
@@ -46,6 +54,10 @@ This Work realizes PRD A1-A9, the B1 half of A14, and the B1 preservation portio
 - Create exact `<lane>/stores/product.sqlite`, `<lane>/stores/service.sqlite` and
   `omnimind:composer-drafts:g1` authorities from clean absence with marker-last transactions,
   close/reopen validation and typed refusal of every legacy, partial, future or contradictory state.
+  Product/service/Web runtime uses exact presence-only sentinels before current create/open/hydration
+  and never decodes, returns, logs, copies or mutates an old value.
+- Repair live Service composition so Product control-plane and Product Package-lifecycle startup
+  both consume `resolveProductDatabasePath(stateDir)` and never open `<lane>/product.sqlite`.
 - Delete the full Product/Automation selection migration, shape upgrades, Web v1/v2/bootstrap and
   permissive donor-draft compatibility, inherited origin/profile bridge, and `0.4.2` release lane,
   including callers, fixtures, comments, aliases and dormant readers.
@@ -59,7 +71,7 @@ This Work realizes PRD A1-A9, the B1 half of A14, and the B1 preservation portio
 
 The implementer may create or change only:
 
-- `scripts/product-truth/**`, the root `package.json` entries needed for the two commands,
+- `scripts/product-truth/**` except every v1/v2 meter/config/coverage fixture, the root `package.json` entries needed for the two commands,
   `scripts/package.json` solely to declare one exact non-range direct `classic-level` dependency,
   and the root `bun.lock` solely to record its package-manager-produced scripts-workspace
   resolution and required transitive/platform integrity closure without unrelated lock drift;
@@ -73,6 +85,10 @@ The implementer may create or change only:
   `apps/service/src/product/ProductControlPlane.ts`, its existing focused test, and exact new
   first-public schema/fingerprint private files under `apps/service/src/product/` that do not
   contain `Store` or `Coordinator` in their production filename or exported symbol;
+- `apps/service/src/native-host/executionBoundary.ts` and its focused test, solely to pass
+  `resolveProductDatabasePath(stateDir)` to both live Product-control-plane and Package-lifecycle
+  composition and assert the concrete `<lane>/stores/product.sqlite` path; protocol, Engine and
+  Package lifecycle semantics must not change;
 - `apps/service/src/persistence/AutomationSchema.ts`, `SystemCapabilitySchema.ts`,
   `Layers/Sqlite.ts` and their focused tests;
 - deletion of `apps/service/src/persistence/selectionSchemaCoordinator*`,
@@ -98,9 +114,6 @@ The implementer may create or change only:
   `enableAppshots` schema input, normalization/migration and focused compatibility assertion while
   retaining deterministic current `enableAppSnap` behavior and every unrelated AppSettings
   behavior;
-- `apps/service/src/native-host/executionBoundary.test.ts` solely to replace the retired Product
-  database literal with the canonical Product database resolver/constant; Native Host production
-  behavior, protocol and test intent must not change;
 - `apps/service/src/opencode/liveJourneyProbe.ts` solely to replace its retired literal Product
   database filename/path construction with the canonical Product database resolver/path; no
   OpenCode execution, protocol, Session, fixture or journey semantics may change;
@@ -110,7 +123,9 @@ The implementer may create or change only:
   callers/tests only to remove the inherited compatibility lane while retaining current policy;
 - [handoff](../handoffs/direct-first-public-b1.md).
 
-No other production or dependency path is owned. In particular this Work may not create
+No other production or dependency path is owned. Product refusal remains in the already-owned
+`ProductControlPlane.ts`, Web refusal in the already-owned composer files, and every destructive
+adapter/seal remains under `scripts/product-truth/**`. In particular this Work may not create
 `productStateStore.ts`, `productExecutionCoordinator.ts`, `productExecutionBoundary.ts`, a thin
 facade scaffold, migration/backup/restore code, a second plan graph, or Native Host v2/root changes.
 An implementation-discovered required path outside this boundary stops the Work for map repair.
@@ -120,20 +135,30 @@ An implementation-discovered required path outside this boundary stops the Work 
 - A fingerprint inventory generated independently from every baseline-listed Product/service
   fixture is an exact bijection with the checked-in protected-fact registry. Duplicate fingerprints
   collapse intentionally; every missing, extra, negative and unknown registry case blocks before a
-  protected query. Query spies prove only declared tables/columns are read and only aggregates/codes
-  leave the classifier.
+  protected query. Fixture decoders recursively reject wrong/missing/extra nested receipt fields,
+  enums, types, duplicate JSON keys and identity mismatches. Query spies prove only declared
+  tables/columns are read and only aggregates/codes leave the classifier.
 - `inspect` makes no source/profile/lock mutation and reads Chromium LevelDB only from a stable
-  tool-owned private copy. `apply` repeats all checks under the six locks in fixed order and mutates
+  no-follow, source/copy-hash-matched tool-owned private copy whose cleanup is verified. `apply`
+  repeats all checks under six path-bound owner locks in fixed order and mutates
   only the exact legacy keys through the offline LevelDB path. Neither command uses Electron
   against a source profile. A write spy retains a whole-profile trace, not only named-exclusion
   hashes; every write outside invocation-owned locks, exact legacy keys and other interface
   allowlist targets fails the candidate.
+- Each profile uses one sealed pre-state and one atomic batch containing only deletes for present
+  v1/v2 targets; kill points are before/after the batch, reopen proves g1 unchanged, and unknown
+  logical keys are neither enumerated/hashed nor claimed unchanged. Package cleanup follows only the
+  precomputed sealed `full -> manifest-only -> empty -> absent` graph; no post-write reseal is allowed.
 - Generated-home before/after hashes prove exact exclusions byte-identical. Kill injection after
-  every Package rename, key removal, unlink, reread and fsync converges only by fresh inspect/apply;
-  startup never resumes or broadens the deletion.
+  every lock publish, before/after the atomic Web batch, each Package graph edge, database unlink and fsync uses a
+  real abruptly terminated subprocess and converges only by fresh inspect/apply. SIGKILL-stale
+  profile/database locks and full/manifest-only/empty Package tombstones converge only through the
+  exact identity/liveness/lifecycle/digest rules; startup never resumes or broadens deletion.
 - Product and service create all current tables in independent single transactions and publish the
   exact generation-1 marker/fingerprint last; Web writes/rereads only the strict g1 envelope.
-  Partial/old/future/duplicate/contradictory inputs fail with zero repair writes.
+  Partial/old/future/duplicate/contradictory inputs fail with zero repair writes. Runtime exact
+  Product/service/Web presence sentinels refuse before current creation/hydration without decoding,
+  and concrete live composition passes `<lane>/stores/product.sqlite` to both consumers.
 - Scope-aware structural scans find zero runtime caller/import/API/channel/preload exposure,
   comment, fixture or string/search alias for every compatibility surface named by the Design,
   including the contracts/Desktop storage-upgrade bridge, legacy Web `appshot` acceptance and the
@@ -143,14 +168,18 @@ An implementation-discovered required path outside this boundary stops the Work 
   source occurrences, `enableAppSnap` remains the sole current AppSettings key for the capability,
   and legacy input cannot activate it through schema decoding, normalization, fixtures, comments
   or aliases. There is no snapshot, converter, restore, legacy reader, dual-read or hidden copy.
-- Retired database/key filenames under `scripts/product-truth/**` are reported separately and are
+- The v2 scan reports tool-only identities, exact required presence-only runtime sentinels and
+  forbidden compatibility separately. Sentinel allowlisting is exact by path, enclosing symbol,
+  literal, presence operation and count, and rejects value flow to a decoder/current encoder/log or
+  mutation. Retired database/key filenames under `scripts/product-truth/**` are reported separately and are
   permitted only as exact closed destructive target identities or their matching tool fixtures and
   assertions. They must not be counted as runtime compatibility, removed by an undifferentiated
   string scan, or used as a decoder, normal-startup alias, fallback or old-row conversion path. Any
   unclassified occurrence, including a newly discovered required production/test path outside this
   Work boundary, stops the Work for map repair.
-- The dedicated B1 commit is clean and green, its full 40-hex SHA is recorded, and measurement of
-  that immutable tree uses the already-frozen v1 instrument. A structural scan at B1 reports zero
+- The dedicated repaired B1 commit is clean and green, its full 40-hex SHA is recorded, and B0,
+  repaired B1 and later C use the already-frozen v2 instrument. The v1 files/output remain immutable
+  and failed candidate `50deefc1...` is never reused as repaired B1. A structural scan at B1 reports zero
   production `ProductStateStore`/`ProductExecutionCoordinator` files, symbols, imports or facade
   extraction scaffolds. The evidence-recording commit is distinct from B1.
 
@@ -159,17 +188,24 @@ An implementation-discovered required path outside this boundary stops the Work 
 - Run the narrow new tool fixtures first: path/link/reparse/hard-link/mode/override matrices;
   WAL-aware fingerprints; protected-count/decoder/cardinality matrix; sanitized JSON snapshots;
   process/lifecycle/profile locks; time-of-check races; full-profile write traces; exclusion hashes;
-  Chromium LevelDB stable-copy inspection and exact-key deletion/reread; and per-boundary kill
-  injection.
+  Chromium LevelDB no-follow/hash-matched stable-copy inspection and exact-key deletion/reread; and
+  real-subprocess per-boundary abrupt-kill, separate-writer replacement-race and external whole-tree
+  write-trace matrices. Cover native Windows enumeration and POSIX `ps`, exact database-lock
+  identity, SIGKILL-stale profile locks, intermediate ancestry and Package duplicate/tombstone
+  convergence.
+- Run the v2 coverage gate over all five product Work boundaries and resolved production import closure at
+  B0 and repaired B1; negative fixtures omit an allowed path, materialize a bounded path, introduce
+  a computed/unresolved import and move an owned responsibility outside the universe.
 - Verify the dependency boundary: `scripts/package.json` has one exact non-range direct
   `classic-level` pin; the root lock's scripts importer and integrity closure match it; a filtered
   lock diff contains no unrelated refresh; and `bun install --frozen-lockfile` leaves `bun.lock`
   unchanged. Prove the tool import resolves only from the scripts workspace, release/package
   closure excludes it, and tracked `apps/**`/`packages/**` imports remain zero.
 - Use process/import/network spies to prove `inspect` and `apply` do not launch Electron, use a
-  real-profile Electron reader/writer or perform network access. Compare both frozen meter files
-  byte-for-byte with commit `45df49a6afde882d32c1dcd00457c7787d227e4a` and prove `bun.lock` was not
-  added to the measurement universe.
+  real-profile Electron reader/writer or perform network access. Compare both historical v1 meter
+  files byte-for-byte with commit `45df49a6afde882d32c1dcd00457c7787d227e4a`, compare v2 bytes/digests and B0 output with the
+  accepted meter handoff, remeasure repaired B1 with those bytes, and prove `bun.lock` is outside
+  the v2 universe.
 - Verify the source-closure diff is exactly the `adapted-present` 1496→1494 and
   `adapted-removed` 774→776 count transfer plus its deterministic digest, caused only by the two
   already-owned `desktopUserDataProfile` deletions; total paths, tree SHA, mappings, algorithms and
@@ -184,8 +220,9 @@ An implementation-discovered required path outside this boundary stops the Work 
   `bun run --cwd apps/service typecheck`, `bun run --cwd apps/web typecheck`,
   `bun run --cwd apps/desktop typecheck` and the scripts typecheck.
 - Run the scope-aware compatibility scan with separate forbidden-runtime and
-  `scripts/product-truth/**` destructive-target classifications. Record zero forbidden residue and
-  every permitted retired target identity. The scan must separately record exact
+  `scripts/product-truth/**` destructive-target classifications plus the exact required runtime
+  presence-sentinel class. Record zero forbidden residue, every permitted target identity and only
+  the configured Product/service/Web sentinels. The scan must separately record exact
   `enableAppshots` at zero under production/test source and prove `enableAppSnap` is the sole current
   AppSettings key; the destructive-target exception does not apply to this donor alias. A raw
   whole-tree string count is not a passing result.
@@ -210,7 +247,7 @@ stronger primitive or retry.
 
 Write [`handoffs/direct-first-public-b1.md`](../handoffs/direct-first-public-b1.md). It must link this
 Work, enumerate changed/deleted paths and reviewable commits, record the immutable B1 full SHA,
-clean-tree proof, complete B0/B1 metric output, exact fingerprint-registry bijection, sanitized
+accepted meter review receipt/SHA/digests, clean-tree proof, complete accepted-B0/B1 metric output, exact fingerprint-registry bijection, sanitized
 whole-profile write trace, zero extraction surface and all focused/isolated-process results. It must
 state that no responsibility-extraction assignment is authorized until a different actor accepts
 this handoff.

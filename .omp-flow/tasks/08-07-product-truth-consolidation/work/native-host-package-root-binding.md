@@ -76,6 +76,8 @@ overlaps B1 compatibility cleanup, this Work does not run concurrently in the no
   connections, rejects a different pair and retains zero challenge state after close.
 - Package/catalog/request bytes never dispatch before the binding is ready. A selected generation
   missing from the bound lane is unavailable even when present in the sibling lane.
+- Every allowed production path and resolved internal production import in this Work appears in the
+  frozen v2 per-Work coverage report; an uncovered or newly materialized path stops for map repair.
 
 ## Verification
 
@@ -91,6 +93,8 @@ overlaps B1 compatibility cleanup, this Work does not run concurrently in the no
   supervision in dev and packaged artifact lanes. Run the existing Native Host live-journey and
   Package-crash probes through v2 in both required process lanes. Use isolated homes and sanitize
   all output.
+- Run the read-only frozen v2 coverage gate and record this Work's covered production paths/import
+  closure; do not edit the meter or accept computed/unresolved/out-of-universe edges.
 
 ## Expected handoff
 

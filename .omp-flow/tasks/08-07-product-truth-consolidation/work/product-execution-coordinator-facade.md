@@ -64,7 +64,7 @@ per-Engine Product plane, raw transaction callback or fallback.
   Store/facade, zero Host lifecycle write, zero legacy caller/import and one literal two-Engine
   gateway. Allowed core directions are only facade→Store, facade→Coordinator,
   Coordinator→Store and Coordinator→execution leaf.
-- The frozen v1 instrument reports all conjunctive gates: changed-scope and steady-state production
+- The frozen v2 instrument reports coverage-complete per-Work/path/import closure and all conjunctive gates: changed-scope and steady-state production
   lines C<B0, responsibility slice C<B1, changed import edges C<B0, and every semantic counter at
   the approved value. Failure of any gate rejects C even when tests pass.
 
@@ -76,7 +76,7 @@ per-Engine Product plane, raw transaction callback or fallback.
   settlement, startup recovery and concurrent dispatch claim.
 - Run Product, Store, Coordinator, gateway, Pi boundary, OpenCode boundary, Automation, Web draft,
   Package lifecycle and Native Host v2 suites; typecheck/build affected workspaces; run exact API,
-  import/no-cycle/writer/connection/table/state-machine and B0/B1/C gates.
+  import/no-cycle/writer/connection/table/state-machine, five-Work coverage and B0/B1/C gates.
 - On isolated first-public fixture homes, run packaged Electron→Service→Host restart/reopen and the
   smallest complete live journeys: MiMo Pi Chat plus continuation and Package generation, DeepSeek
   Pi Chat plus continuation and Package generation, and one OpenCode next-Run with Pi calls zero.
@@ -93,7 +93,7 @@ per-Engine Product plane, raw transaction callback or fallback.
 ## Expected handoff
 
 Write [`handoffs/product-truth-candidate.md`](../handoffs/product-truth-candidate.md). It must link
-all five Works and accepted reviews; record immutable B0, B1 and C full SHAs; include deterministic
+the measurement Work and all five product Works plus accepted reviews; record immutable B0, B1 and C full SHAs; include deterministic
 B0/B1/C JSON metrics, exact facade/table/connection/writer/import/cycle counters, focused/final gate
 commands, sanitized real-journey results and remaining limitations. The producer may submit affected
 Campaign claims only as `candidate` and must request a different-actor review; this handoff cannot

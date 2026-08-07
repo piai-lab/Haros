@@ -35,10 +35,15 @@ fresh source bytes while those locks remain held.
    `path.join(os.homedir(), ".omnimind")`. The argument and confirmation must resolve to that path.
    Every existing component from the account home through a target is `lstat`-checked. Symlink,
    junction, reparse point, hard-linked regular file (`nlink != 1`), case/realpath mismatch, path
-   escape or group/other-writable lane blocks the command.
+   escape or group/other-writable lane blocks the command. Every known intermediate ancestor is
+   identified again immediately before each source open, lock operation and mutation; changed
+   ancestry invalidates earlier classification.
 2. Enumerate only the literal `dev` and `userdata` lane entries and the two exact Desktop identities
    `omnimind-dev` and `omnimind`. No recursive home/profile discovery is allowed.
-3. Prove the Product Service, Desktop and Native Host topology stopped. The platform adapter rejects
+3. Prove the Product Service, Desktop and Native Host topology stopped. The POSIX adapter uses fixed
+   `ps` argv. The Windows adapter uses a fixed non-interpolated PowerShell/CIM query with current-user
+   SID filtering. Both have strict bounded decoding and a hard timeout; unavailable, malformed,
+   truncated or ownership-unknown results block. The platform adapter rejects
    a current-user process whose executable/argv matches the OmniMind Desktop bundle, Service entry,
    Native Host entry or dev runner; it reports only component and PID. During `inspect`, observe
    database lifecycle-lock and profile single-instance-lock identity/liveness without mutating them.
@@ -46,12 +51,14 @@ fresh source bytes while those locks remain held.
    reported as `stale-observed` but is neither reaped nor renamed. Read each exact profile through a
    stable offline private copy of its origin storage, with source identities compared before/after;
    do not launch Electron or a lock-taking profile helper.
-4. For a present database bundle, copy main/WAL/existing-SHM into a private `0700` `mkdtemp`
-   directory with `0600` files, re-stat source identity before and after the copy, and inspect only
-   the copy. Run `integrity_check`, `foreign_key_check`, read the marker table, and hash normalized
+4. For a present database bundle, open main/WAL/existing-SHM no-follow and stream them into a private
+   `0700` `mkdtemp` directory with exclusive `0600` files. For every member, source handle/path
+   identity before/after, byte count and SHA-256 must agree with the copy; a second complete source
+   identity+digest manifest must match. Inspect only the copy. Run `integrity_check`,
+   `foreign_key_check`, read the marker table, and hash normalized
    `(type,name,tbl_name,sql)` rows from `sqlite_schema`. Once an exact checked-in fixture identity is
    selected, run only that fixture's protected-fact queries described below. The scratch directory
-   is removed before returning; failure to remove it stops `apply`.
+   is link-safely removed and verified absent before returning; failure to remove it stops `apply`.
 5. Read only Package `state.json`, exact stage manifests and bytes needed for digest/type/link
    validation. Read only the two legacy Web keys at `omnimind://app`; never enumerate or emit other
    localStorage entries.
@@ -89,7 +96,9 @@ fixture decoder. Every fixture-defined nonterminal Run with a Package generation
 uncertain-Run count includes every `delivery_unknown`/`outcome_unknown` receipt.
 Missing/duplicate Run↔receipt↔outbox identity, impossible send/attempt state, invalid generation,
 undecodable receipt/activity or an unclassified state is contradictory closure and blocks the whole
-plan.
+plan. Receipt decoding is recursively strict for the selected fixture: exact nested keys, types,
+discriminants, enums, nullable fields, finite integers and identity equalities are required; unknown,
+missing or duplicate nested members and coercion/defaulting are forbidden.
 
 Every allowlisted service fingerprint declares the exact columns and runs aggregate counts over
 `managed_attachment_blobs`, `managed_attachment_cleanup_jobs`, `auth_pairing_links`,
@@ -125,12 +134,24 @@ workspace path. Query-spy fixtures fail on any undeclared table or column.
 ### Apply exclusivity
 
 Before its repeated inspection, `apply` obtains the two profile single-instance locks and the four
-database lifecycle locks in this order: dev Product, dev service, userdata Product, userdata
-service. It may use the existing token-safe algorithm to reap a well-formed dead database owner, but
-never a live/unknown/malformed/changing owner. It records invocation tokens in memory, accepts only
-those invocation-owned lock mutations during the repeat, and releases/removes only locks whose
+canonical owner database lifecycle locks in this order: dev Product, dev service, userdata Product,
+userdata service. A database lock record has an exact format and binds lane, store kind, canonical
+`<lane>/stores/{product,service}.sqlite` path, PID and token; a copied/transplanted record is unknown.
+It may token-safely rename and reap a well-formed owner proved dead by two stable observations,
+including a profile or database lock left by an abruptly killed prior apply, but never a
+live/unknown/malformed/changing owner. `inspect` only reports that owner as `stale-observed`. Apply
+records invocation tokens and lock/file identities in memory, accepts only those invocation-owned
+lock mutations during the repeat, and releases/removes only locks whose path identity, record
 identity and token still match. Any acquisition/reap/profile-lock failure occurs before destructive
 writes. The final source inspection remains under all locks.
+
+The repeated inspection also creates a private in-memory destructive seal for every planned target.
+Database and Package seals bind canonical relative path, all ancestor identities, platform file
+identity, type/mode/link count, size and SHA-256; Package seals additionally bind lifecycle state,
+per-entry facts and the deterministic `full -> manifest-only -> empty -> absent` transition graph.
+One Web profile seal binds the pre-mutation LevelDB identity/digest manifest, g1 presence/value hash
+and exact target-value hash for each present v1/v2 key. Unknown logical keys are not enumerated or
+hashed. Seals are never serialized, logged or accepted from a prior command.
 
 ## Apply contract and allowlist
 
@@ -147,12 +168,24 @@ Package cleanup first atomically renames an allowed stage child out of `stage/` 
 tool-owned sibling `.discarding/`, rechecks that the canonical stage path is absent, then deletes the
 tombstone without following links. Native Host never loads `.discarding`. An interruption after the
 rename leaves an inert tombstone; a later `inspect` reports it separately and `apply` may finish its
-deletion only after validating its direct-child name, original generation/digest classification and
-link-free remaining tree. `.discarding` is removed when empty and is never a recovery source.
+deletion only through the sealed transition graph. Every edge specifies one exact unlink/rmdir and
+the complete expected next entry set/digest computed from the prior seal; ancestry, locks and
+lifecycle digest are revalidated before each edge. No post-write scan reseals an unexpected state.
+After restart, fresh classification reconstructs the graph; duplicate proof, when needed, is
+recomputed from a currently referenced byte-identical opposite-lane stage. Any other partial shape
+or replacement blocks. `.discarding` is removed when empty and is never a recovery source.
 
-Legacy database bundles may be unlinked in any order because every retired filename and sidecar is
-independently classified; first-public owners never use those paths. Web key removal is followed by
-an immediate reread proving absence. The tool releases its lifecycle/profile locks and emits a final
+Immediately before every Package graph edge, Web batch and database unlink, apply reopens or
+rereads the exact target and requires its complete seal, current ancestor identities and all
+invocation locks to match. A path-only, name-only or previous-plan match is insufficient. Any
+replacement or content change stops before mutating that target. Legacy database bundles may then be
+unlinked in any order because every retired filename and sidecar is independently classified;
+first-public owners never use those paths. Per profile, Web removal is one atomic logical batch that
+contains exactly one delete for each present sealed v1/v2 key and no other operation. Abrupt-kill
+boundaries are before and after the batch, never between its logical deletes. Reopen proves v1/v2
+absence and unchanged g1; an API-level operation trace proves the closed batch. No claim is made
+about unknown logical keys. The tool releases its
+lifecycle/profile locks and emits a final
 stdout receipt only after the whole allowlisted set is absent. It does not create first-public
 state. The Product State Store, service persistence owner and Web draft owner create their own fresh
 generation on the next normal start.
@@ -169,7 +202,9 @@ update state.
 - Before the first unlink/remove, all old state remains and startup reports
   `PREBASELINE_RESET_REQUIRED`.
 - During apply, every remaining retired file/key and any `.discarding` tombstone is visible to the
-  next inspection. Normal startup never resumes or cleans it and remains fail-closed.
+  next inspection. Normal startup never resumes or cleans retired files/keys and remains fail-closed.
+  An inert, nonreferenced `.discarding` tombstone blocks only the rebuild tool; Service and Host do
+  not read/load it, so it does not require or create a runtime refusal sentinel.
 - After the final target disappears, the live state is clean absence. Normal owners create exact
   generation 1; they do not read a tool receipt.
 - A crash during fresh SQLite creation leaves either no application table or a transactionally
@@ -177,6 +212,9 @@ update state.
   schema is `FIRST_PUBLIC_CREATION_INCOMPLETE`. Web creation accepts only absent or exact `g1`.
 - Re-running `apply` is idempotent with respect to already absent targets. It never broadens a
   classification to make progress.
+- Ordinary Product/service/Web startup owns exact presence-only legacy sentinels before canonical
+  database open/create or g1 hydration/create. These sentinels never decode a legacy value and are
+  not destructive-tool or compatibility entry points.
 
 ## Result classes
 
@@ -187,7 +225,7 @@ update state.
 | 3 | `OWNER_NOT_STOPPED` | process, lifecycle owner or profile owner is live/unknown/ambiguous |
 | 4 | `CLASSIFICATION_BLOCKED` | unknown database fingerprint, any bounded protected-fact blocker, current contradiction, unknown Package state or distributed-consumer evidence |
 | 5 | `INSPECTION_UNSAFE` | scratch copy, stable-stat, SQLite, integrity/FK, digest or scratch cleanup failed |
-| 6 | `DESTRUCTION_INCOMPLETE` | an allowed unlink/remove/reread/fsync failed; stop and re-inspect without stronger primitives |
+| 6 | `DESTRUCTION_INCOMPLETE` | a target/ancestor/lock seal changed or an allowed unlink/remove/reread/fsync failed; stop and re-inspect without stronger primitives |
 
 No failure automatically retries with broader permissions, kills a process, deletes a malformed
 lock, follows a link or treats an unknown target as obsolete.

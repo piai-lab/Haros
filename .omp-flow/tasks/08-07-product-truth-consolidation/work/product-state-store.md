@@ -76,6 +76,8 @@ caller ownership.
 - Run Store/Product focused tests, Package projection/replay tests and Service typecheck. Static
   gates reject a second connection, writer, raw transaction export, table CRUD API or core cycle.
 - Read the frozen complexity instrument without editing it; report the intermediate metrics only.
+- Run the frozen v2 per-Work coverage gate over every allowed/materialized production path and its
+  resolved internal import closure; any uncovered/computed/unresolved path stops for map repair.
 
 ## Expected handoff
 

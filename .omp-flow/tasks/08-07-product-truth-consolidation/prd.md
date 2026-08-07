@@ -22,7 +22,10 @@ This PRD consumes the [selected synthesis](research/synthesis.md), maintainer ca
 [Brainstorm](brainstorm.md), exact [baseline decision](decisions/direct-first-public-baseline.md),
 [QbD 1 repair calibration](decisions/qbd1-repair-calibration.md),
 [direct rebuild interface](interfaces/direct-first-public-rebuild.md), and
-[Package-root handoff](interfaces/package-root-handoff.md). The underlying evidence remains in the
+[Package-root handoff](interfaces/package-root-handoff.md). It also repairs every material finding
+in the failed immutable [B1 Review](reviews/direct-first-public-b1.md): canonical production Store
+composition, exact runtime refusal without compatibility, classification-to-mutation binding and a
+Windows quiescence adapter. The underlying evidence remains in the
 [store surface](research/development-store-surface.md),
 [compatibility inventory](research/unshipped-compatibility.md), and
 [control-plane map](research/product-control-plane-map.md).
@@ -38,7 +41,8 @@ This PRD consumes the [selected synthesis](research/synthesis.md), maintainer ca
   recursively discovered path or profile other than those two is out of scope.
 - Every existing ancestor and target is canonical, real, correctly typed, non-linked and private.
   A symlink, junction, reparse point, hard-linked file, realpath/case escape, unsafe mode or changing
-  inode blocks all mutation.
+  inode blocks all mutation. Every intermediate ancestor is revalidated by identity immediately
+  before each copy, lock, rename, key mutation or unlink; an earlier root check is not reusable proof.
 - An absent default home is a valid empty result. The tool never creates the root merely to inspect
   it.
 
@@ -47,8 +51,10 @@ This PRD consumes the [selected synthesis](research/synthesis.md), maintainer ca
 - `bun run product-truth -- inspect --home ~/.omnimind` enumerates only the fixed allowlist and emits
   a deterministic sorted JSON plan to stdout. It writes no report, marker or retained artifact.
 - Product and service database identity classification includes committed WAL state through an
-  ephemeral private copy and uses marker metadata, normalized full DDL fingerprint, integrity and
-  foreign-key checks. Only after one exact fixture identity is established, a separate closed
+  ephemeral private copy made with no-follow opens, per-file identity checks and SHA-256 comparison
+  between source and copy. Cleanup is verified before success. Classification uses marker metadata,
+  normalized full DDL fingerprint, integrity and foreign-key checks. Only after one exact fixture
+  identity is established, a separate closed
   protected-fact preflight may read that fixture's allowlisted columns. It returns only
   presence/count and bounded blocker codes; no row value, identifier, JSON, path or content leaves
   the classifier.
@@ -57,7 +63,8 @@ This PRD consumes the [selected synthesis](research/synthesis.md), maintainer ca
   is explicitly active because crash recovery advances it to `delivery_unknown`. Every allowlisted
   service fingerprint counts attachment/cleanup metadata, pairing credentials, auth-session
   identity and `automation_settings` global configuration. Any nonzero count blocks. Unknown
-  fingerprint/registry identity (`DATABASE_FINGERPRINT_UNKNOWN`), undecodable facts or contradictory
+  fingerprint/registry identity (`DATABASE_FINGERPRINT_UNKNOWN`), a receipt whose complete
+  fixture-specific nested shape or enum is not exact, undecodable facts or contradictory
   closure blocks all deletion; `PROTECTED_IDENTITY` means only a nonzero auth-session identity count.
 - A database main file is legacy only when its retired filename and exact fingerprint/marker class
   match the [baseline decision](decisions/direct-first-public-baseline.md). Orphan sidecars at retired
@@ -65,21 +72,32 @@ This PRD consumes the [selected synthesis](research/synthesis.md), maintainer ca
 - The exact `v1` and `v2` composer keys are legacy by their owned key+origin+profile identity. Their
   values are neither printed nor decoded for conversion. `g1` and every other storage key are
   excluded.
+- For each profile, apply seals the physical pre-state and exact hashes of every present v1/v2
+  target, then commits one atomic logical batch containing only those target deletes. It verifies
+  v1/v2 absence and unchanged g1 after reopen. It does not enumerate, hash or claim invariance for
+  unknown logical keys; an API-operation trace proves the batch contains no other operation.
 - A Package generation is disposable only when its exact manifest/digests validate and valid
   lifecycle state references it nowhere; duplicate classification additionally requires a
   byte-identical referenced copy in the other canonical lane. Unknown Package bytes remain untouched.
 - `apply` repeats the complete inspection under the same quiescence guards. A prior plan is never a
-  deletion capability.
+  deletion capability. The repeated classification creates an in-memory destructive seal for every
+  target; canonical ancestry, file identity, size/mode/link count and content digest, or the exact
+  logical Web-key value digest, must still match immediately before that target's mutation.
 
 ### R3 — Stopped topology and exclusive ownership
 
 - Desktop, Product Service, Native Host and dev runner processes for the current account must be
-  stopped. `inspect` observes process, database-lock and profile-lock state without creating,
+  stopped. POSIX and Windows use bounded native platform adapters with strict output decoding,
+  current-account filtering and a hard timeout; adapter failure is not equivalent to zero matches.
+  `inspect` observes process, database-lock and profile-lock state without creating,
   acquiring, reaping, renaming or removing any lifecycle/single-instance lock. Its only writes are
   private ephemeral scratch copies outside the source roots, removed before return.
-- `apply` alone obtains stable/development profile exclusivity and database lifecycle locks in the
-  fixed order dev Product, dev service, userdata Product, userdata service. It may token-safely reap
-  only a well-formed dead owner, then repeats the complete path, process, database, protected-fact,
+- `apply` alone obtains stable/development profile exclusivity and the canonical owner database
+  lifecycle locks in the fixed order dev Product, dev service, userdata Product, userdata service.
+  Every lock record binds the exact canonical database path, lane, store kind, PID and token; a
+  transplanted or path-mismatched lock is unknown. It may token-safely reap only a well-formed owner
+  proved dead, including a profile lock left by an abruptly killed prior apply, then repeats the
+  complete path, process, database, protected-fact,
   Web and Package inspection while all declared locks remain held. Live, unknown, malformed or
   changing ownership blocks before destructive writes.
 - The operation never kills a process, breaks a live/unknown lock, retries with a broader primitive
@@ -95,7 +113,13 @@ This PRD consumes the [selected synthesis](research/synthesis.md), maintainer ca
   lifecycle locks. Deleted Web inputs are the exact two legacy keys in the two exact profiles.
 - Optional Package cleanup atomically moves only a classified direct stage child into the inert
   `.discarding` sibling before link-safe deletion. Current/LKG/validated/quarantined or unknown
-  generations and lifecycle metadata are never deleted.
+  generations and lifecycle metadata are never deleted. Full, manifest-only and empty tombstones
+  follow a sealed deterministic `full -> manifest-only -> empty -> absent` transition graph. Every
+  next state and digest is computed from the prior sealed state, not accepted from a post-write
+  rescan; an unexpected state requires a fresh whole classification. Cross-lane duplicate proof is
+  recomputed from current lifecycle state and byte digests after every restart. An inert tombstone
+  blocks only rebuild completion and is never loaded; it does not block ordinary startup and adds no
+  runtime sentinel.
 - The operation creates no snapshot, export, converter output, displaced generation, restore route,
   retention promise or hidden copy. Success means the selected old bytes are gone.
 - Failure stops immediately and never escalates the target or primitive. Partial deletion is handled
@@ -131,6 +155,12 @@ This PRD consumes the [selected synthesis](research/synthesis.md), maintainer ca
 - Missing, old, future, duplicate or contradictory state returns `PREBASELINE_RESET_REQUIRED` or a
   generation-specific typed error. Startup never silently resets, shape-upgrades, imports,
   dual-reads or falls back.
+- Before any canonical Product database open/create and before any Web g1 create/hydration, normal
+  runtime performs only exact presence sentinels for the retired Product main/WAL/SHM identities and
+  Web v1/v2 keys. Presence refuses startup/draft mutation without decoding, logging, copying,
+  deleting or deriving current content. Product Service production composition and Package
+  lifecycle both receive `resolveProductDatabasePath(stateDir)`; no live entry point may construct
+  `<lane>/product.sqlite`.
 
 ### R7 — Remove unshipped compatibility completely
 
@@ -144,7 +174,9 @@ This PRD consumes the [selected synthesis](research/synthesis.md), maintainer ca
   lane, fields, commands, comments and tests. Retain only truthful current release/update policy.
 - Delete aliases, wrappers, dormant readers, generic migration abstractions and compatibility tests
   whose sole purpose is the retired behavior. Packaged runtime and normal startup must have zero
-  imports of old-generation decoders.
+  imports of old-generation decoders. Exact Product/service/Web presence-only refusal sentinels are
+  required fail-closed guards and are measured separately from forbidden compatibility; they may
+  expose only presence and a typed reset error.
 - Retain current transactional outbox/receipt/unknown recovery, Automation scheduler recovery,
   Package lifecycle/fault behavior and Engine-private continuation. Their semantics and proofs do
   not weaken.
@@ -199,12 +231,14 @@ This PRD consumes the [selected synthesis](research/synthesis.md), maintainer ca
 - Root/lane mismatch, link/path escape or selected generation missing from the bound root fails
   closed as unavailable. Presence in the sibling lane never creates a fallback.
 
-### R11 — Real complexity reduction
+### R11 — Real complexity reduction with a superseding meter
 
 - Measurement uses the inspected base `7582170a277477ba0d71cf70f53e4e0836874a72`, a recorded
-  compatibility-deleted unsplit checkpoint `B1`, and the frozen candidate `C`. All three use the
-  checked-in `product-truth-complexity-v1` script/config and the same frozen path/import universe in
-  the Design; a candidate may not redefine scope, extensions, exclusions or semantic counters.
+  compatibility-deleted unsplit checkpoint `B1`, and the frozen candidate `C`. All three are
+  remeasured with the checked-in `product-truth-complexity-v2` script/config and the same frozen
+  path/import universe in the Design; a candidate may not redefine scope, extensions, exclusions or
+  semantic counters. The v2 meter supersedes v1 for all gates. The v1 script/config and historical
+  B0/failed-B1 output remain immutable provenance and cannot be edited or cited as passing evidence.
 - `B1` is a dedicated, green, compatibility-deleted and first-public-capable commit made before any
   responsibility extraction. Its full immutable commit SHA and clean-tree metric output must be
   recorded before the Store/Coordinator split is handed off; a branch name, working tree, later
@@ -219,30 +253,38 @@ This PRD consumes the [selected synthesis](research/synthesis.md), maintainer ca
   lower than at the base. The four allowed core directions are facade→Store,
   facade→Coordinator, Coordinator→Store and Coordinator→execution leaf; there is no core cycle.
 - Product SQL writers outside Store, second Product connections, raw transaction exports, Native
-  Host Package lifecycle writers, legacy runtime imports and Engine boundary imports of the facade
-  are all zero. Facade RPC methods remain exactly 36 and Product tables remain exactly 21.
+  Host Package lifecycle writers, forbidden compatibility imports and Engine boundary imports of
+  the facade are all zero. Required presence-only sentinels are a separate exact allowlist, and
+  noncanonical production Product database composition sites are zero. Facade RPC methods remain
+  exactly 36 and Product tables remain exactly 21.
 - No new Product table/database/durable state machine, migration platform, per-Engine Product plane,
   generic repository/manager/registry or fallback path is introduced.
+- Before v2 freezes, its candidate-independent coverage manifest includes every production path
+  allowed by all five product implementation Work Concepts and the resolved internal production import closure that can
+  carry those responsibilities. The meter emits a per-Work coverage report and fails on an omitted
+  allowed path, newly resolved production path, computed/unresolved import or responsibility move
+  outside the universe at B0, repaired B1 or C. Meter/config files count as measurement, not tool or
+  steady-state production.
 
 ## Acceptance matrix
 
 | ID | Acceptance claim | Required proof |
 | --- | --- | --- |
 | A1 | Only the exact default root, two lanes and two associated profiles are inspected | path/identity fixtures covering override, canary, repo-local, link, reparse, mode and realpath faults |
-| A2 | Dry-run positively classifies every deletion target and proves protected-fact absence without emitting business content | fixture fingerprints, per-fixture query allowlist/decoder tests, blocker-code matrix, SQL-query spy and sanitized JSON snapshot |
-| A3 | Inspect mutates no source/lock while apply repeats full inspection under exclusive locks | write-spy, process/lifecycle/profile lock fault tests and apply time-of-check race tests |
+| A2 | Dry-run positively classifies every deletion target and proves protected-fact absence without emitting business content | fixture fingerprints, strict recursive per-fixture receipt decoders, query allowlist, no-follow/hash-copy tests, blocker matrix, SQL spy and sanitized JSON snapshot |
+| A3 | Inspect mutates no source/lock while apply repeats full inspection under exact owner locks and binds mutation to classified bytes or a sealed expected transition | atomic Web-batch trace, Package transition graph, whole-tree write trace, POSIX/Windows adapters, lock identity and real replacement races |
 | A4 | Apply deletes only the allowlist and creates no recoverable copy | before/after tree allowlist, write-spy and absence scans for snapshot/export/restore surfaces |
 | A5 | Every excluded path/key/generation remains byte-identical | seeded exclusion fixture with hashes before/after apply |
-| A6 | Interruption converges only through fresh inspect/apply; startup never resumes it | kill injection after each unlink/key removal/Package rename and startup refusal tests |
-| A7 | Product/service/Web owners create only exact generation 1 from clean absence | fresh/open/reopen and partial-creation matrix |
+| A6 | Interruption converges only through fresh inspect/apply; inert Package tombstones do not block normal startup | real termination before/after the Web batch and every Package graph edge, stale-lock and tombstone convergence matrix |
+| A7 | Product/service/Web owners create only exact generation 1 from clean absence and all live Product consumers use the canonical Store path | fresh/open/reopen, exact legacy-presence refusal, concrete production composition and partial-creation matrix |
 | A8 | Old/future/unmarked/contradictory generations fail closed | database and Web generation fault matrix with zero write assertions |
-| A9 | The complete unshipped compatibility inventory has zero production caller/import | structural symbol/path/import scans plus replacement current-generation tests |
+| A9 | The complete unshipped compatibility inventory has zero production caller/import while exact refusal sentinels remain present and non-decoding | v2 forbidden-compatibility/sentinel classifications plus current-generation and legacy-presence tests |
 | A10 | One Store retains all named compound transactions and SQL authority | static writer/connection gate and transaction fault injection for every named unit |
 | A11 | Coordinator retains Engine-effect semantics without SQL/replay/fallback | catalog/admission/attempt/control/crash tests across Pi and OpenCode |
 | A12 | Web/RPC sees exactly one 36-operation facade; probes/tests are separate | type/API snapshot, wsRpc tests and production caller scan |
 | A13 | Service selects and Host only validates one transcript-bound lane/Package root | dev/packaged process tests covering proof tamper, replay, version/field faults, second/concurrent binding, mismatch/link/sibling-root and no fallback |
-| A14 | Production and conceptual complexity strictly decrease in one frozen universe | versioned script/config, immutable B1 SHA and deterministic B0/B1/C JSON metrics attached to the implementation handoff |
-| A15 | Current outbox, Automation, Web safeguard, Package and Engine recovery behavior remains | focused existing suites plus affected real-process journey |
+| A14 | Production and conceptual complexity strictly decrease in one coverage-complete frozen universe | immutable v1 history, frozen v2 script/config, machine-failing five-Work/closure coverage reports and deterministic v2 B0/B1/C metrics |
+| A15 | Current outbox, Automation, Web safeguard, Package and Engine recovery behavior remains | focused existing suites plus complete real kill/race/write-trace and affected real-process journeys |
 
 ## Constraints and non-goals
 
@@ -265,9 +307,13 @@ Product Service, and every excluded data class remains protected. No governance 
 
 ## Next gate
 
-The first audit's two blockers and two advisory observations are repaired under the linked
-[maintainer decision](decisions/qbd1-repair-calibration.md). The older g50 literal Pi/OpenCode
-gateway observation remains closed and is not reopened without contradictory evidence. A different
-QbD actor must now challenge the repaired set. A fresh `PASS` with no unresolved blocking
-consequence activates the maintainer's conditional authorization to decompose immediately; a new
-material blocker returns for human calibration.
+This revision is the architect repair returned by the failed immutable
+[B1 Review](reviews/direct-first-public-b1.md). The standing maintainer calibration keeps the repair
+aggressive, limits destruction to the exact old-state allowlist and does not pause for routine
+implementation choices; every protected exclusion remains unchanged. The maintainer's
+[option-1 calibration](decisions/b1-failed-review-repair-calibration.md) additionally binds the
+atomic Web batch, sealed Package graph and five-Work v2 coverage repair. A different QbD actor must
+challenge the repaired Design/interface/Work map and v2 meter boundary. A fresh `PASS` authorizes
+only the measurement-only v2 Work; its immutable handoff requires different-actor `PASS` before a
+B1 production receipt may be issued. A changed destructive target or exclusion returns for explicit
+human decision.

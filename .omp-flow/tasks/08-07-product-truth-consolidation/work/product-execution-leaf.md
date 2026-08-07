@@ -49,6 +49,8 @@ behavior may change. The leaf may import Product contracts and generic libraries
   no new cycle, no SQL/schema/table token in the leaf and no behavior/API snapshot drift.
 - The frozen complexity instrument is read-only and reports the intermediate result without
   treating it as C or changing B1.
+- The frozen v2 coverage gate accounts for every allowed production path and resolved internal
+  import in this Work; omission, computed/unresolved import or responsibility movement stops.
 
 ## Expected handoff
 
