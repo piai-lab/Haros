@@ -112,8 +112,9 @@ direct `Bun.spawnSync`, Bun Shell, `process.dlopen`, native-addon and worker esc
 with outside/second owners, exported raw handles/releases, forbidden/computed loaders and
 simultaneous B1/C Product owners. It does not claim cleanup, lock/refusal ordering,
 scheduler or completion semantics. B1 proves those through non-leaking owner-local capabilities,
-the frozen 10-owner/146-operation/34-barrier/29-kill verifier universe plus 86 exact owner states,
-cardinality/ordinal rules and convergence bindings, exhaustive generated-home presence/fault/race/kill cases and
+the frozen 10-owner/146-operation/34-barrier/29-kill verifier universe plus 87 exact owner states,
+cardinality/ordinal rules, 85 concrete-ordinal race cases, 65 concrete-ordinal kill cases and
+convergence bindings, exhaustive generated-home presence/fault/race/kill cases and
 different-actor hidden mutation/source Review. After v7 Review acceptance, every later Work treats
 the meter bytes and accepted B1 behavior evidence as read-only predecessors.
 An inert `.discarding` tombstone blocks rebuild convergence only; it is never loaded and adds no

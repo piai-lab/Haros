@@ -667,9 +667,11 @@ B1 closes each destructive/runtime-state effect behind the exact owner-local cap
 the v7 interface. The Design-owned verifier block freezes 10 owners, 146 exact operations, 34 race
 barriers and 29 durable kill boundaries together with operation signatures/atomicity, stage/resource
 events, before/after faults, outcomes and exclusions before B1 implementation. The same block
-freezes 86 exact per-owner fixture states, JCS/SHA-256 owner and catalog digests, resource/key/chunk
+freezes 87 exact per-owner fixture states, JCS/SHA-256 owner and catalog digests, resource/key/chunk
 cardinalities, ordinal derivation including terminal EOF, each barrier's writer/state/outcome and
-each kill's state/convergence assertions. Public inputs are typed intent/identity and public results are sanitized facts;
+ordinal basis, and each kill's state/convergence assertions. The 34 barrier identities expand to 85
+concrete-ordinal race cases and the 29 kill identities expand to 65 concrete-ordinal kill cases;
+their canonical case IDs and JCS digest are Design authority. Public inputs are typed intent/identity and public results are sanitized facts;
 scratch/source paths usable for arbitrary I/O, raw SQLite/Level handles, batches, lock tokens,
 release functions, process handles and adapters never leave the owner. Verifier composition injects
 private deterministic ports, monotonic bounded events, opaque resource IDs, fault plans, race
@@ -677,7 +679,8 @@ barriers and kill boundaries; production callers cannot select or suppress verif
 
 The B1 verifier consumes that block verbatim, recomputes its state/catalog digests and generates the
 exact Cartesian union over every listed normal state, every actual operation ordinal's before/after
-fault, every declared observation-to-use barrier and every declared durable kill boundary. Candidate
+fault, every declared observation-to-use barrier's actual ordinal and every declared durable kill
+boundary's actual ordinal. Candidate
 code/config/tests may implement but cannot add, merge, omit, rename, reorder, resize, redefine or
 downgrade an item. It asserts generated/executed-case bijection, full trace prefix,
 terminal disposition, exact writes, post-state, exclusions and sanitized output on tool-created

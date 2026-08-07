@@ -91,8 +91,10 @@ architecture owners, Campaign state and user state are outside this Work.
 - Run v7 twice against immutable B0 and require byte-identical complete JSON.
 - Compare every v1-v6 instrument byte and all five Work machine blocks for immutability.
 - Parse the verifier block, recompute all ten owner-state digests and the catalog digest, and assert
-  exactly 86 unique state IDs, 146 operations, 34 barrier/race pairs and 29 kill/convergence pairs;
-  omit-state, shrink-cardinality and drop-terminal-EOF mutations must fail authority validation.
+  exactly 87 unique state IDs, 146 operations, 34 barrier identities expanding to 85
+  concrete-ordinal race cases and 29 kill/convergence identities expanding to 65 concrete-ordinal
+  kill cases; recompute the canonical race/kill case-ID digest. Omit-state, shrink-cardinality,
+  drop-terminal-EOF or collapse-one-race/kill-ordinal mutations must fail authority validation.
 - Run scripts typecheck and `git diff --check`; prove no production, dependency, test verifier,
   destructive scope or user-state path changed and no real `~/.omnimind` was read.
 

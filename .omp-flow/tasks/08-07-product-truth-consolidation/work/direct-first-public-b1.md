@@ -58,7 +58,8 @@ owner authority and B1 verifier-universe digest, and use those bytes read-only.
   production caller may choose or suppress verifier events.
 - Consume `omp-flow-b1-verifier-universe-v1` verbatim. Its 10 owners, 146 operations, 34 barriers,
   29 durable kill points, signatures, atomicities, stage/resource mappings, before/after fault
-  sites, 86 fixture states, owner/catalog digests, cardinality/ordinal rules, race writers and
+  sites, 87 fixture states, owner/catalog digests, cardinality/ordinal rules, 85 concrete-ordinal
+  race cases, 65 concrete-ordinal kill cases, canonical case-ID digest, race writers and
   kill/convergence states, outcomes and exclusions are immutable B1 inputs. Code/config/tests may implement them but
   may not add, merge, omit, rename, reorder, resize, redefine or downgrade any item; an unlisted adapter
   call fails as `UNDECLARED_PORT_OPERATION`.
@@ -262,8 +263,8 @@ does not authorize an unlisted production path.
 - The B1 verifier—not v7—proves behavior. Each exact traced owner uses non-leaking typed
   intent/sanitized-result boundaries and verifier-owned ports/events. The checked-in generator
   recomputes the frozen owner/catalog digests and derives its dimensions only from the block,
-  covering every one of its 86 exact states, each cardinality-derived actual operation ordinal's before/after fault,
-  each declared observation-to-use barrier and each declared durable kill event on generated
+  covering every one of its 87 exact states, each cardinality-derived actual operation ordinal's before/after fault,
+  each declared observation-to-use barrier ordinal and each declared durable kill-event ordinal on generated
   homes/profiles. Executed-case bijection, complete event prefix, terminal disposition, exact writes,
   post-state, protected exclusions and sanitized output are required. No production caller can
   choose event names, suppress faults or acquire raw path/handle/batch/lock/release/process adapters.

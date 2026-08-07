@@ -10,6 +10,7 @@ This interface applies the maintainer's
 immutable [v6 implementation Review](../reviews/product-truth-complexity-v6.md) rejected v6, plus
 the [v7 QbD repair calibration](../decisions/product-truth-complexity-v7-qbd-repair-calibration.md)
 and [final QbD repair calibration](../decisions/product-truth-complexity-v7-final-qbd-repair-calibration.md)
+plus the bounded [catalog repair calibration](../decisions/product-truth-complexity-v7-catalog-repair-calibration.md)
 that close the finite machine-authority gaps. V1-v6
 meter/config/test/fixture/report/handoff/Review bytes remain immutable rejected evidence. V7
 replaces measurement authority only. It changes no destructive target, protected exclusion,
@@ -660,8 +661,8 @@ transaction durable. No unlisted port call, event, resource role, barrier or kil
     },
     {
       "owner": "scripts/product-truth/direct-first-public.ts#applyDirectFirstPublic",
-      "definitionSha256": "5f9966b48f0c5fad2fc90d8d04e444ed4dbbedc750df218e7e255f0fee4dd4bf",
-      "normalStateIds": ["apply.database-bundle", "apply.legacy-files", "apply.package-full", "apply.package-manifest-only", "apply.all-target-kinds"],
+      "definitionSha256": "2fc2e9386a97db0465d66e95df890920007f6b4663303ebabfff8812307d906b",
+      "normalStateIds": ["apply.database-bundle", "apply.legacy-files", "apply.package-full", "apply.package-manifest-only", "apply.package-empty", "apply.all-target-kinds"],
       "faultStateId": "apply.all-target-kinds",
       "raceStateId": "apply.all-target-kinds",
       "killStateId": "apply.all-target-kinds",
@@ -670,6 +671,7 @@ transaction durable. No unlisted port call, event, resource role, barrier or kil
         { "id": "apply.legacy-files", "expected": "sealed-legacy-files-absent", "resources": { "databaseMemberCount": 0, "legacyFileCount": 2, "packageTransitionCount": 0, "targetDataChunkCounts": [2, 1], "protectedExclusionChunkCounts": [2, 1, 1, 1] } },
         { "id": "apply.package-full", "expected": "sealed-package-full-to-absent", "resources": { "databaseMemberCount": 0, "legacyFileCount": 0, "packageTransitionCount": 3, "targetDataChunkCounts": [1, 1, 0], "protectedExclusionChunkCounts": [2, 1, 1, 1] } },
         { "id": "apply.package-manifest-only", "expected": "sealed-package-manifest-to-absent", "resources": { "databaseMemberCount": 0, "legacyFileCount": 0, "packageTransitionCount": 2, "targetDataChunkCounts": [1, 0], "protectedExclusionChunkCounts": [2, 1, 1, 1] } },
+        { "id": "apply.package-empty", "expected": "sealed-package-empty-to-absent", "resources": { "databaseMemberCount": 0, "legacyFileCount": 0, "packageTransitionCount": 1, "targetDataChunkCounts": [0], "protectedExclusionChunkCounts": [2, 1, 1, 1] } },
         { "id": "apply.all-target-kinds", "expected": "only-all-sealed-targets-absent-exclusions-identical", "resources": { "databaseMemberCount": 3, "legacyFileCount": 2, "packageTransitionCount": 3, "targetDataChunkCounts": [2, 1, 1, 2, 1, 1, 1, 0], "protectedExclusionChunkCounts": [2, 1, 1, 1] } }
       ],
       "iterationBindings": [
@@ -795,7 +797,7 @@ transaction durable. No unlisted port call, event, resource role, barrier or kil
       "iterationBindings": []
     }
   ],
-  "fixtureCatalogSha256": "0d83a019c51638f4f94e65ab443705b57d8baa37146a63e2cce9709a87fa5909",
+  "fixtureCatalogSha256": "369381e5b06db8e32a68d6e6daebc408afea4b9780b54180c3089c147ca2f3fe",
   "convergenceStateCatalog": [
     { "id": "classifier.scratch-created", "assertions": ["retired-source-byte-identical", "identity-matched-private-scratch-may-exist", "fresh-classifier-removes-private-scratch-only"] },
     { "id": "classifier.copy-durable", "assertions": ["retired-source-byte-identical", "private-copy-may-be-complete", "fresh-classifier-reclassifies-source-and-cleans-copy"] },
@@ -823,40 +825,40 @@ transaction durable. No unlisted port call, event, resource role, barrier or kil
     { "id": "web.atomic-value", "assertions": ["g1-is-whole-prior-value-or-whole-new-value", "v1-v2-and-unknown-keys-byte-identical", "fresh-read-classifies-only"] }
   ],
   "raceCaseCatalog": [
-    { "barrierId": "classifier.source-identity-to-open", "stateId": "classifier.safe-empty", "writer": "replace-retired-source-identity", "expected": "typed-classifier-unavailable-source-write-zero" },
-    { "barrierId": "classifier.source-copy-to-recheck", "stateId": "classifier.safe-empty", "writer": "mutate-retired-source-after-copy", "expected": "typed-classifier-unavailable-source-write-zero" },
-    { "barrierId": "classifier.copy-identity-to-hash-open", "stateId": "classifier.safe-empty", "writer": "replace-private-copy-identity", "expected": "typed-classifier-unavailable-source-write-zero" },
-    { "barrierId": "classifier.copy-hash-to-sqlite-open", "stateId": "classifier.safe-empty", "writer": "replace-private-copy-after-hash", "expected": "typed-classifier-unavailable-source-write-zero" },
-    { "barrierId": "profile-inspect.manifest-to-copy", "stateId": "profile-inspect.v1-v2", "writer": "replace-source-entry-identity", "expected": "typed-profile-inspection-unavailable-source-byte-identical" },
-    { "barrierId": "profile-inspect.copy-to-source-recheck", "stateId": "profile-inspect.v1-v2", "writer": "append-source-profile-entry", "expected": "typed-profile-inspection-unavailable-source-byte-identical" },
-    { "barrierId": "profile-inspect-source-recheck-to-copy-hash", "stateId": "profile-inspect.v1-v2", "writer": "mutate-source-entry-after-recheck", "expected": "typed-profile-inspection-unavailable-source-byte-identical" },
-    { "barrierId": "profile-inspect.copy-manifest-to-open", "stateId": "profile-inspect.v1-v2", "writer": "replace-private-copy-entry", "expected": "typed-profile-inspection-unavailable-source-byte-identical" },
-    { "barrierId": "profile-delete.identity-to-open", "stateId": "profile-delete.v1-v2", "writer": "replace-source-profile-identity", "expected": "typed-target-changed-zero-delete" },
-    { "barrierId": "profile-delete-read-to-batch", "stateId": "profile-delete.v1-v2", "writer": "change-v1-value-after-read", "expected": "typed-target-changed-zero-delete" },
-    { "barrierId": "profile-delete-seal-to-batch", "stateId": "profile-delete.v1-v2", "writer": "change-v2-value-after-seal", "expected": "typed-target-changed-zero-delete" },
-    { "barrierId": "db-lock-record-to-process-probe", "stateId": "db-lock.stale", "writer": "replace-lock-record-before-probe", "expected": "typed-quiescence-refusal-no-foreign-removal" },
-    { "barrierId": "db-lock-dead-proof-to-stale-remove", "stateId": "db-lock.stale", "writer": "replace-lock-record-after-dead-proof", "expected": "typed-quiescence-refusal-no-foreign-removal" },
-    { "barrierId": "db-lock-publish-to-verify", "stateId": "db-lock.stale", "writer": "replace-published-record", "expected": "typed-lock-race-no-foreign-removal" },
-    { "barrierId": "db-lock-owned-to-release", "stateId": "db-lock.stale", "writer": "replace-owned-record-before-release", "expected": "typed-lock-race-no-foreign-removal" },
-    { "barrierId": "inspect-ancestor-to-target-enumeration", "stateId": "inspect.legacy-mixed", "writer": "replace-scope-ancestor", "expected": "typed-inspection-unavailable-zero-mutation" },
-    { "barrierId": "inspect-target-to-open", "stateId": "inspect.legacy-mixed", "writer": "replace-allowlisted-target", "expected": "typed-inspection-unavailable-zero-mutation" },
-    { "barrierId": "inspect-process-identity-to-probe", "stateId": "inspect.legacy-mixed", "writer": "replace-process-identity", "expected": "typed-inspection-unavailable-zero-mutation" },
-    { "barrierId": "apply-seal-to-database-unlink", "stateId": "apply.all-target-kinds", "writer": "replace-sealed-database-member", "expected": "typed-target-changed-zero-later-mutation" },
-    { "barrierId": "apply-seal-to-package-transition", "stateId": "apply.all-target-kinds", "writer": "replace-sealed-package-node", "expected": "typed-target-changed-zero-later-mutation" },
-    { "barrierId": "apply-seal-to-file-remove", "stateId": "apply.all-target-kinds", "writer": "replace-sealed-legacy-file", "expected": "typed-target-changed-zero-later-mutation" },
-    { "barrierId": "apply-mutation-to-absence", "stateId": "apply.all-target-kinds", "writer": "create-conflicting-target-after-mutation", "expected": "typed-target-changed-zero-later-mutation" },
-    { "barrierId": "product-precut-to-lock", "stateId": "product.clean-absence", "writer": "create-retired-main-before-lock", "expected": "prebaseline-refusal-before-current-io" },
-    { "barrierId": "product-lock-to-postcut", "stateId": "product.clean-absence", "writer": "create-retired-wal-after-lock", "expected": "release-then-prebaseline-refusal-before-current-io" },
-    { "barrierId": "product-postcut-to-current-open", "stateId": "product.clean-absence", "writer": "replace-current-ancestor-after-postcut", "expected": "typed-current-identity-refusal" },
-    { "barrierId": "service-precut-to-lock", "stateId": "service.clean-absence", "writer": "create-retired-main-before-lock", "expected": "prebaseline-refusal-before-current-io" },
-    { "barrierId": "service-lock-to-postcut", "stateId": "service.clean-absence", "writer": "create-retired-wal-after-lock", "expected": "release-then-prebaseline-refusal-before-current-io" },
-    { "barrierId": "service-postcut-to-current-open", "stateId": "service.clean-absence", "writer": "replace-current-ancestor-after-postcut", "expected": "typed-current-identity-refusal" },
-    { "barrierId": "web-read-v1-to-v2", "stateId": "web-read.clean", "writer": "insert-v1-after-v1-read", "expected": "prebaseline-refusal-before-g1-access" },
-    { "barrierId": "web-read-complete-cut-to-g1", "stateId": "web-read.clean", "writer": "insert-v2-after-cut", "expected": "prebaseline-refusal-or-atomic-whole-g1-no-legacy-mutation" },
-    { "barrierId": "web-read-g1-absence-to-create", "stateId": "web-read.clean", "writer": "insert-distinct-valid-g1", "expected": "whole-existing-or-whole-empty-g1" },
-    { "barrierId": "web-write-v1-to-v2", "stateId": "web-write.existing-exact", "writer": "insert-v1-after-v1-read", "expected": "prebaseline-refusal-before-g1-write" },
-    { "barrierId": "web-write-complete-cut-to-g1", "stateId": "web-write.existing-exact", "writer": "insert-v2-after-cut", "expected": "prebaseline-refusal-or-whole-prior-g1" },
-    { "barrierId": "web-write-current-read-to-set", "stateId": "web-write.existing-exact", "writer": "replace-g1-after-read", "expected": "whole-concurrent-or-whole-requested-g1-never-torn" }
+    { "barrierId": "classifier.source-identity-to-open", "stateId": "classifier.safe-empty", "ordinalOperationId": "classifier.lstat-source-before", "writer": "replace-retired-source-identity", "expected": "typed-classifier-unavailable-source-write-zero" },
+    { "barrierId": "classifier.source-copy-to-recheck", "stateId": "classifier.safe-empty", "ordinalOperationId": "classifier.close-source", "writer": "mutate-retired-source-after-copy", "expected": "typed-classifier-unavailable-source-write-zero" },
+    { "barrierId": "classifier.copy-identity-to-hash-open", "stateId": "classifier.safe-empty", "ordinalOperationId": "classifier.lstat-copy", "writer": "replace-private-copy-identity", "expected": "typed-classifier-unavailable-source-write-zero" },
+    { "barrierId": "classifier.copy-hash-to-sqlite-open", "stateId": "classifier.safe-empty", "ordinalOperationId": "classifier.close-copy-hash", "writer": "replace-private-copy-after-hash", "expected": "typed-classifier-unavailable-source-write-zero" },
+    { "barrierId": "profile-inspect.manifest-to-copy", "stateId": "profile-inspect.v1-v2", "ordinalOperationId": "profile-inspect.lstat-source-entry", "writer": "replace-source-entry-identity", "expected": "typed-profile-inspection-unavailable-source-byte-identical" },
+    { "barrierId": "profile-inspect.copy-to-source-recheck", "stateId": "profile-inspect.v1-v2", "ordinalOperationId": "profile-inspect.fsync-copy-directory", "writer": "append-source-profile-entry", "expected": "typed-profile-inspection-unavailable-source-byte-identical" },
+    { "barrierId": "profile-inspect-source-recheck-to-copy-hash", "stateId": "profile-inspect.v1-v2", "ordinalOperationId": "profile-inspect.reclose-source-entry", "writer": "mutate-source-entry-after-recheck", "expected": "typed-profile-inspection-unavailable-source-byte-identical" },
+    { "barrierId": "profile-inspect.copy-manifest-to-open", "stateId": "profile-inspect.v1-v2", "ordinalOperationId": "profile-inspect.enumerate-copy", "writer": "replace-private-copy-entry", "expected": "typed-profile-inspection-unavailable-source-byte-identical" },
+    { "barrierId": "profile-delete.identity-to-open", "stateId": "profile-delete.v1-v2", "ordinalOperationId": "profile-delete.lstat-source", "writer": "replace-source-profile-identity", "expected": "typed-target-changed-zero-delete" },
+    { "barrierId": "profile-delete-read-to-batch", "stateId": "profile-delete.v1-v2", "ordinalOperationId": "profile-delete.read-exact-key", "writer": "change-v1-value-after-read", "expected": "typed-target-changed-zero-delete" },
+    { "barrierId": "profile-delete-seal-to-batch", "stateId": "profile-delete.v1-v2", "ordinalOperationId": "profile-delete.seal-targets", "writer": "change-v2-value-after-seal", "expected": "typed-target-changed-zero-delete" },
+    { "barrierId": "db-lock-record-to-process-probe", "stateId": "db-lock.stale", "ordinalOperationId": "db-lock.close-existing", "writer": "replace-lock-record-before-probe", "expected": "typed-quiescence-refusal-no-foreign-removal" },
+    { "barrierId": "db-lock-dead-proof-to-stale-remove", "stateId": "db-lock.stale", "ordinalOperationId": "db-lock.probe-owner", "writer": "replace-lock-record-after-dead-proof", "expected": "typed-quiescence-refusal-no-foreign-removal" },
+    { "barrierId": "db-lock-publish-to-verify", "stateId": "db-lock.stale", "ordinalOperationId": "db-lock.fsync-parent", "writer": "replace-published-record", "expected": "typed-lock-race-no-foreign-removal" },
+    { "barrierId": "db-lock-owned-to-release", "stateId": "db-lock.stale", "ordinalOperationId": "db-lock.close-verify", "writer": "replace-owned-record-before-release", "expected": "typed-lock-race-no-foreign-removal" },
+    { "barrierId": "inspect-ancestor-to-target-enumeration", "stateId": "inspect.legacy-mixed", "ordinalOperationId": "inspect.realpath-ancestor", "writer": "replace-scope-ancestor", "expected": "typed-inspection-unavailable-zero-mutation" },
+    { "barrierId": "inspect-target-to-open", "stateId": "inspect.legacy-mixed", "ordinalOperationId": "inspect.open-target", "writer": "replace-allowlisted-target", "expected": "typed-inspection-unavailable-zero-mutation" },
+    { "barrierId": "inspect-process-identity-to-probe", "stateId": "inspect.legacy-mixed", "ordinalOperationId": "inspect.probe-process", "writer": "replace-process-identity", "expected": "typed-inspection-unavailable-zero-mutation" },
+    { "barrierId": "apply-seal-to-database-unlink", "stateId": "apply.all-target-kinds", "ordinalOperationId": "apply.unlink-database-member", "writer": "replace-sealed-database-member", "expected": "typed-target-changed-zero-later-mutation" },
+    { "barrierId": "apply-seal-to-package-transition", "stateId": "apply.all-target-kinds", "ordinalOperationId": "apply.transition-package-node", "writer": "replace-sealed-package-node", "expected": "typed-target-changed-zero-later-mutation" },
+    { "barrierId": "apply-seal-to-file-remove", "stateId": "apply.all-target-kinds", "ordinalOperationId": "apply.remove-legacy-file", "writer": "replace-sealed-legacy-file", "expected": "typed-target-changed-zero-later-mutation" },
+    { "barrierId": "apply-mutation-to-absence", "stateId": "apply.all-target-kinds", "ordinalOperationId": "apply.fsync-target-parent", "writer": "create-conflicting-target-after-mutation", "expected": "typed-target-changed-zero-later-mutation" },
+    { "barrierId": "product-precut-to-lock", "stateId": "product.clean-absence", "ordinalOperationId": "product.probe-pre-shm", "writer": "create-retired-main-before-lock", "expected": "prebaseline-refusal-before-current-io" },
+    { "barrierId": "product-lock-to-postcut", "stateId": "product.clean-absence", "ordinalOperationId": "product.acquire-owner-lock", "writer": "create-retired-wal-after-lock", "expected": "release-then-prebaseline-refusal-before-current-io" },
+    { "barrierId": "product-postcut-to-current-open", "stateId": "product.clean-absence", "ordinalOperationId": "product.probe-post-shm", "writer": "replace-current-ancestor-after-postcut", "expected": "typed-current-identity-refusal" },
+    { "barrierId": "service-precut-to-lock", "stateId": "service.clean-absence", "ordinalOperationId": "service.probe-pre-shm", "writer": "create-retired-main-before-lock", "expected": "prebaseline-refusal-before-current-io" },
+    { "barrierId": "service-lock-to-postcut", "stateId": "service.clean-absence", "ordinalOperationId": "service.acquire-owner-lock", "writer": "create-retired-wal-after-lock", "expected": "release-then-prebaseline-refusal-before-current-io" },
+    { "barrierId": "service-postcut-to-current-open", "stateId": "service.clean-absence", "ordinalOperationId": "service.probe-post-shm", "writer": "replace-current-ancestor-after-postcut", "expected": "typed-current-identity-refusal" },
+    { "barrierId": "web-read-v1-to-v2", "stateId": "web-read.clean", "ordinalOperationId": "web-read.get-v1", "writer": "insert-v1-after-v1-read", "expected": "prebaseline-refusal-before-g1-access" },
+    { "barrierId": "web-read-complete-cut-to-g1", "stateId": "web-read.clean", "ordinalOperationId": "web-read.get-v2", "writer": "insert-v2-after-cut", "expected": "prebaseline-refusal-or-atomic-whole-g1-no-legacy-mutation" },
+    { "barrierId": "web-read-g1-absence-to-create", "stateId": "web-read.clean", "ordinalOperationId": "web-read.get-g1", "writer": "insert-distinct-valid-g1", "expected": "whole-existing-or-whole-empty-g1" },
+    { "barrierId": "web-write-v1-to-v2", "stateId": "web-write.existing-exact", "ordinalOperationId": "web-write.get-v1", "writer": "insert-v1-after-v1-read", "expected": "prebaseline-refusal-before-g1-write" },
+    { "barrierId": "web-write-complete-cut-to-g1", "stateId": "web-write.existing-exact", "ordinalOperationId": "web-write.get-v2", "writer": "insert-v2-after-cut", "expected": "prebaseline-refusal-or-whole-prior-g1" },
+    { "barrierId": "web-write-current-read-to-set", "stateId": "web-write.existing-exact", "ordinalOperationId": "web-write.get-g1-before", "writer": "replace-g1-after-read", "expected": "whole-concurrent-or-whole-requested-g1-never-torn" }
   ],
   "killCaseCatalog": [
     { "operationId": "classifier.create-scratch-dir", "stateId": "classifier.safe-empty", "convergenceStateId": "classifier.scratch-created" },
@@ -889,6 +891,20 @@ transaction durable. No unlisted port call, event, resource role, barrier or kil
     { "operationId": "web-read.set-empty-g1", "stateId": "web-read.clean", "convergenceStateId": "web.atomic-value" },
     { "operationId": "web-write.set-g1", "stateId": "web-write.existing-exact", "convergenceStateId": "web.atomic-value" }
   ],
+  "caseIdentityCanonicalization": {
+    "algorithm": "sha256",
+    "bytes": "utf8-rfc8785-json-canonicalization",
+    "ordinalNumbering": "zero-based-contiguous-in-declared-fixture-resource-order",
+    "nonOrdinalIdentity": "single",
+    "raceExpansion": "for-each-raceCaseCatalog-entry-resolve-its-owner-and-stateId-then-expand-one-case-for-every-actual-ordinal-of-ordinalOperationId-derived-only-from-that-owners-iterationBindings;an-operation-with-no-binding-expands-only-single;ordinalOperationId-must-be-that-barriers-from-or-to-operation",
+    "killExpansion": "for-each-killCaseCatalog-entry-resolve-its-owner-and-stateId-then-expand-one-case-for-every-actual-ordinal-of-operationId-derived-only-from-that-owners-iterationBindings;an-operation-with-no-binding-expands-only-single",
+    "raceSite": "race",
+    "killSite": "kill-after",
+    "caseIdArray": "expand-race-then-kill;within-each-family-sort-caseId-by-utf8-bytes;hash-the-rfc8785-canonicalized-array-of-caseId-strings",
+    "expandedRaceCaseCount": 85,
+    "expandedKillCaseCount": 65,
+    "raceKillCaseIdentitySha256": "d09aadf1e78994ad65a4804de4d791f79762066e9da864c435ec126cf860f892"
+  },
   "fixtureAxes": ["normal-state", "operation-fault-before", "operation-fault-after", "declared-barrier-race", "declared-kill-convergence"],
   "executionRule": {
     "normal": "execute-owner-operations-in-declared-order-whenever-every-named-input-in-sig-exists-from-the-fixture-or-a-prior-operation;skip-only-when-that-named-fixture-resource-is-exactly-absent",
@@ -909,10 +925,10 @@ transaction durable. No unlisted port call, event, resource role, barrier or kil
   "manifestRule": {
     "normal": "exact-cartesian-product-of-each-fixtureStateCatalog.owner-and-every-listed-normalStateId",
     "fault": "exact-cartesian-product-of-each-owner-operation-and-sites-before-after-and-every-actual-ordinal-derived-from-that-owner-faultStateId;non-ordinal-operations-have-one-ordinal-identity-single",
-    "race": "exactly-one-case-for-every-owner-barrier-and-the-unique-same-id-raceCaseCatalog-entry",
-    "kill": "exactly-one-case-for-every-owner-killAfter-and-the-unique-same-id-killCaseCatalog-entry",
+    "race": "exact-cartesian-product-of-every-owner-barrier-the-unique-same-id-raceCaseCatalog-entry-and-every-actual-ordinal-of-that-entrys-ordinalOperationId-derived-from-its-stateId;non-ordinal-operations-have-one-ordinal-identity-single",
+    "kill": "exact-cartesian-product-of-every-owner-killAfter-the-unique-same-id-killCaseCatalog-entry-and-every-actual-ordinal-of-that-entrys-operationId-derived-from-its-stateId;non-ordinal-operations-have-one-ordinal-identity-single",
     "bijection": "generated-case-ids-equal-the-sorted-derived-union-with-no-missing-extra-or-duplicate-and-executed-case-ids-equal-generated-case-ids",
-    "caseId": "owner::family::stateId::operation-or-barrier-id::site::ordinal-or-single::convergenceStateId-or-none",
+    "caseId": "owner::family::stateId::operation-or-barrier-id::site::zero-based-ordinal-or-single::convergenceStateId-or-none",
     "candidateSelection": "none"
   },
   "candidateChangePolicy": "candidate-may-implement-only;add-merge-omit-rename-reorder-redefine-or-downgrade-any-owner-operation-role-stage-atomicity-fault-barrier-kill-outcome-or-exclusion-fails",
@@ -925,7 +941,10 @@ rows, draft values, credentials, Package identity, workspace bytes and other bus
 not legal event fields. Repeated chunk/key/entry operations carry only an ordinal in the private
 adapter call. The matching `fixtureStateCatalog` entry and `iterationBindings` derive the finite
 ordinal count, including every required terminal EOF; the generator has no resize input and faults
-each derived ordinal.
+each derived ordinal. Every race entry names one barrier-endpoint `ordinalOperationId`; every kill
+entry uses its own `operationId`. The same state-local binding expands zero-based ordinals, or the
+literal `single` for an unbound operation, and the frozen JCS case-identity digest makes any
+collapsed, substituted or omitted race/kill ordinal fail before execution.
 Typed capability-to-capability calls do not create hidden raw operations: the child owner emits its
 own declared events and the manifest contains both invocation identities.
 
@@ -946,8 +965,9 @@ homes/profiles and cover:
 
 The checked-in generator consumes the verifier block verbatim, recomputes every owner definition
 digest plus `fixtureCatalogSha256`, emits only the `manifestRule` Cartesian union and proves the
-generated/executed case bijection. The 86 exact states, their resources/cardinalities, 34 race
-cases and 29 kill-to-convergence bindings cannot be supplied or filtered by candidate code. B1 code, config and
+generated/executed case bijection. The 87 exact states, their resources/cardinalities, 34 barrier
+identities expanded to 85 race cases and 29 kill-to-convergence identities expanded to 65 kill
+cases cannot be supplied or filtered by candidate code. B1 code, config and
 tests cannot add, merge, omit, rename, reorder, redefine or downgrade an operation, barrier, kill
 point, state, ordinal, convergence assertion, outcome or exclusion. No handpicked sample may be called exhaustive. Each case asserts the
 complete trace prefix, terminal disposition, writes,
