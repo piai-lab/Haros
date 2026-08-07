@@ -1455,28 +1455,35 @@ for (const path of candidateGraph.paths.filter((candidatePath) => rawInventoryPa
     ts.forEachChild(node, collectBindings);
   };
   collectBindings(file);
-  const namespacePatternDiagnostics = new WeakSet();
-  const addNamespacePatternViolation = (code, node, detail) => {
-    if (namespacePatternDiagnostics.has(node)) return;
-    namespacePatternDiagnostics.add(node);
+  const rawPatternDiagnostics = new WeakSet();
+  const addRawPatternViolation = (code, node, detail) => {
+    if (rawPatternDiagnostics.has(node)) return;
+    rawPatternDiagnostics.add(node);
     addViolation(code, path, node, detail);
   };
-  const bindNamespacePattern = (base, name) => {
-    if (!base?.namespace) return false;
+  const bindResolvedRawPattern = (base, name) => {
+    if (!base?.classes?.length) return false;
     if (ts.isArrayBindingPattern(name)) {
-      addNamespacePatternViolation("RAW_ALIAS_WRITE_UNKNOWN", name, {
+      addRawPatternViolation("RAW_ALIAS_WRITE_UNKNOWN", name, {
         specifier: base.specifier,
-        reason: "array-namespace-destructure",
+        reason: "array-raw-destructure",
       });
       return false;
     }
     if (!ts.isObjectBindingPattern(name)) return false;
+    if (name.elements.length === 0) {
+      addRawPatternViolation("RAW_ALIAS_WRITE_UNKNOWN", name, {
+        specifier: base.specifier,
+        reason: "empty-raw-destructure",
+      });
+      return false;
+    }
     let changed = false;
     for (const element of name.elements) {
       if (element.dotDotDotToken) {
-        addNamespacePatternViolation("RAW_ALIAS_WRITE_UNKNOWN", element, {
+        addRawPatternViolation("RAW_ALIAS_WRITE_UNKNOWN", element, {
           specifier: base.specifier,
-          reason: "rest-namespace-destructure",
+          reason: "rest-raw-destructure",
         });
         continue;
       }
@@ -1490,31 +1497,42 @@ for (const path of candidateGraph.paths.filter((candidatePath) => rawInventoryPa
         member = element.propertyName.expression.text;
         form = "computed-literal-member";
       } else if (element.propertyName && ts.isComputedPropertyName(element.propertyName)) {
-        addNamespacePatternViolation("COMPUTED_EFFECT_SELECTOR", element.propertyName, element.propertyName.getText(file));
+        addRawPatternViolation("COMPUTED_EFFECT_SELECTOR", element.propertyName, element.propertyName.getText(file));
         continue;
       } else {
-        addNamespacePatternViolation("RAW_ALIAS_WRITE_UNKNOWN", element, {
+        addRawPatternViolation("RAW_ALIAS_WRITE_UNKNOWN", element, {
           specifier: base.specifier,
-          reason: "nested-namespace-destructure-without-selector",
+          reason: "nested-raw-destructure-without-selector",
         });
         continue;
       }
       if (!ts.isIdentifier(element.name)) {
-        addNamespacePatternViolation("RAW_ALIAS_WRITE_UNKNOWN", element.name, {
+        addRawPatternViolation("RAW_ALIAS_WRITE_UNKNOWN", element.name, {
           specifier: base.specifier,
           exported: member,
-          reason: "nested-namespace-destructure",
+          reason: "nested-raw-destructure",
         });
         continue;
       }
-      const classes = classesForModuleExport(base.specifier, member);
-      if ((acceptedEffectPackages.has(packageRoot(base.specifier)) ||
-          rawUniverse.moduleSelectors.some((entry) => entry.specifier === base.specifier)) && !classes) {
-        addNamespacePatternViolation("UNKNOWN_MODULE_EFFECT_EXPORT", element, `${base.specifier}#${member}`);
+      if (element.initializer && !base.namespace) {
+        addRawPatternViolation("RAW_ALIAS_WRITE_UNKNOWN", element, {
+          specifier: base.specifier,
+          exported: base.exported,
+          reason: "default-non-namespace-raw-destructure",
+        });
         continue;
       }
-      if (!classes || bindingIdentityByDeclaration.has(element.name)) continue;
-      bind({ specifier: base.specifier, exported: member, classes, form }, element.name);
+      let identity = { ...base, form };
+      if (base.namespace) {
+        const classes = classesForModuleExport(base.specifier, member);
+        if (!classes) {
+          addRawPatternViolation("UNKNOWN_MODULE_EFFECT_EXPORT", element, `${base.specifier}#${member}`);
+          continue;
+        }
+        identity = { specifier: base.specifier, exported: member, classes, form };
+      }
+      if (bindingIdentityByDeclaration.has(element.name)) continue;
+      bind(identity, element.name);
       changed = true;
     }
     return changed;
@@ -1529,7 +1547,7 @@ for (const path of candidateGraph.paths.filter((candidatePath) => rawInventoryPa
           bind(initializerBinding, node.name); aliasChanged = true;
         }
         if ((ts.isObjectBindingPattern(node.name) || ts.isArrayBindingPattern(node.name)) &&
-            initializerBinding?.namespace && bindNamespacePattern(initializerBinding, node.name)) aliasChanged = true;
+            initializerBinding && bindResolvedRawPattern(initializerBinding, node.name)) aliasChanged = true;
         if (ts.isIdentifier(node.name) && (ts.isPropertyAccessExpression(node.initializer) || ts.isElementAccessExpression(node.initializer)) &&
             ts.isIdentifier(node.initializer.expression) && resolvedBindingAt(node.initializer.expression)?.namespace) {
           const member = staticMember(node.initializer);
