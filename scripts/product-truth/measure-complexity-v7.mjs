@@ -723,18 +723,89 @@ const expressionChain = (node) => {
   }
   return ts.isIdentifier(current) ? { root: current.text, rootNode: current, members } : null;
 };
-const collectDeclaredNames = (file) => {
-  const names = new Set();
+const makeLexicalBindings = (file) => {
+  const scopeBindings = new Map();
+  const declarationScope = new WeakMap();
+  const isFunctionScope = (node) => ts.isFunctionDeclaration(node) || ts.isFunctionExpression(node) ||
+    ts.isArrowFunction(node) || ts.isMethodDeclaration(node) || ts.isConstructorDeclaration(node) ||
+    ts.isGetAccessorDeclaration(node) || ts.isSetAccessorDeclaration(node);
+  const isLexicalScope = (node) => ts.isSourceFile(node) || isFunctionScope(node) ||
+    ts.isBlock(node) || ts.isCaseBlock(node) || ts.isCatchClause(node) || ts.isForStatement(node) ||
+    ts.isForInStatement(node) || ts.isForOfStatement(node);
+  const containingScope = (node, functionScoped = false) => {
+    for (let current = node.parent; current; current = current.parent) {
+      if (functionScoped ? (isFunctionScope(current) || ts.isSourceFile(current)) : isLexicalScope(current)) return current;
+    }
+    return file;
+  };
+  const addName = (name, scope) => {
+    if (ts.isIdentifier(name)) {
+      if (!scopeBindings.has(scope)) scopeBindings.set(scope, new Set());
+      scopeBindings.get(scope).add(name.text);
+      declarationScope.set(name, scope);
+      return;
+    }
+    if (ts.isObjectBindingPattern(name) || ts.isArrayBindingPattern(name)) {
+      for (const element of name.elements) if (ts.isBindingElement(element)) addName(element.name, scope);
+    }
+  };
   const visit = (node) => {
-    if ((ts.isVariableDeclaration(node) || ts.isParameter(node) || ts.isFunctionDeclaration(node) || ts.isClassDeclaration(node)) && node.name && ts.isIdentifier(node.name)) names.add(node.name.text);
-    if (ts.isImportClause(node) && node.name) names.add(node.name.text);
-    if (ts.isImportSpecifier(node) || ts.isNamespaceImport(node)) names.add(node.name.text);
+    if (ts.isVariableDeclaration(node)) {
+      if (ts.isCatchClause(node.parent)) addName(node.name, node.parent);
+      else {
+        const blockScoped = ts.isVariableDeclarationList(node.parent) && (node.parent.flags & ts.NodeFlags.BlockScoped) !== 0;
+        addName(node.name, containingScope(node, !blockScoped));
+      }
+    } else if (ts.isParameter(node)) {
+      addName(node.name, containingScope(node, true));
+    } else if (ts.isFunctionDeclaration(node) && node.name) {
+      addName(node.name, containingScope(node));
+    } else if (ts.isFunctionExpression(node) && node.name) {
+      addName(node.name, node);
+    } else if (ts.isClassDeclaration(node) && node.name) {
+      addName(node.name, containingScope(node));
+    } else if (ts.isImportClause(node) && node.name) {
+      addName(node.name, file);
+    } else if (ts.isImportSpecifier(node) || ts.isNamespaceImport(node) || ts.isImportEqualsDeclaration(node)) {
+      addName(node.name, file);
+    } else if (ts.isCatchClause(node) && node.variableDeclaration) {
+      addName(node.variableDeclaration.name, node);
+    }
     ts.forEachChild(node, visit);
   };
   visit(file);
-  return names;
+  const isShadowedAt = (node, name) => {
+    for (let current = node.parent; current; current = current.parent) {
+      if (scopeBindings.get(current)?.has(name)) return true;
+    }
+    return false;
+  };
+  return { scopeBindings, declarationScope, isShadowedAt, containingScope };
 };
-const normalizedGlobal = (node, declaredNames) => {
+const normalizeGlobalParts = (root, members, wrapperUsed) => {
+  const possibleReserved = rawUniverse.defaultDisposition.reservedRoots.some((reserved) =>
+    reserved === root || reserved.startsWith(`${root}.`));
+  if (!possibleReserved) return null;
+  const reservedRoots = [...rawUniverse.defaultDisposition.reservedRoots]
+    .sort((left, right) => right.split(".").length - left.split(".").length);
+  const chainParts = [root, ...members.map((member) => member.value)];
+  for (const reserved of reservedRoots) {
+    const parts = reserved.split(".");
+    if (!parts.every((part, index) => chainParts[index] === part)) continue;
+    const hasTerminal = chainParts.length > parts.length;
+    if (hasTerminal && chainParts[parts.length] === null) return { root: reserved, members, error: "computed-effect-selector" };
+    return {
+      root: reserved,
+      member: hasTerminal ? chainParts[parts.length] : null,
+      extraMemberCount: Math.max(0, chainParts.length - parts.length - 1),
+      members,
+      form: members.some((member) => member.form === "computed-literal") ? "computed-literal-member" : "global-member",
+    };
+  }
+  if (members.some((member) => member.value === null)) return { root, members, error: "computed-effect-selector" };
+  return wrapperUsed ? { error: "unresolved-global-alias" } : null;
+};
+const normalizedGlobal = (node, isShadowedAt) => {
   const chain = expressionChain(node);
   if (!chain) return null;
   const wrappers = new Set(rawUniverse.globalAliasGrammar.wrappers);
@@ -743,29 +814,14 @@ const normalizedGlobal = (node, declaredNames) => {
   if (wrappers.has(root)) {
     const first = members.shift();
     if (!first || first.value === null || wrappers.has(first.value)) return { error: "invalid-global-wrapper" };
-    const possibleReserved = rawUniverse.defaultDisposition.reservedRoots.some((reserved) => reserved === first.value || reserved.startsWith(`${first.value}.`));
-    if (!possibleReserved) return null;
-    if (declaredNames.has(root)) return { error: "shadowed-global-alias" };
+    if (!rawUniverse.defaultDisposition.reservedRoots.some((reserved) =>
+        reserved === first.value || reserved.startsWith(`${first.value}.`))) return null;
+    if (isShadowedAt(chain.rootNode, root)) return { error: "shadowed-global-alias" };
     root = first.value;
-  } else if (declaredNames.has(root)) {
+  } else if (isShadowedAt(chain.rootNode, root)) {
     return null;
   }
-  const possibleReserved = rawUniverse.defaultDisposition.reservedRoots.some((reserved) => reserved === root || reserved.startsWith(`${root}.`));
-  if (!possibleReserved) return null;
-  const firstUnknown = members.findIndex((member) => member.value === null);
-  if (firstUnknown === 0) return { root, members, error: "computed-effect-selector" };
-  if (firstUnknown > 0) return null;
-  const reservedRoots = [...rawUniverse.defaultDisposition.reservedRoots].sort((left, right) => right.split(".").length - left.split(".").length);
-  for (const reserved of reservedRoots) {
-    const parts = reserved.split(".");
-    const chainParts = [root, ...members.map((member) => member.value)];
-    if (parts.every((part, index) => chainParts[index] === part)) {
-      const terminalIndex = parts.length - 1;
-      return { root: reserved, member: chainParts[terminalIndex + 1] ?? null, members, form: members.some((member) => member.form === "computed-literal") ? "computed-literal-member" : "global-member" };
-    }
-  }
-  if (wrappers.has(chain.root)) return { error: "unresolved-global-alias" };
-  return null;
+  return normalizeGlobalParts(root, members, wrappers.has(chain.root));
 };
 const classifyGlobal = (normalized) => {
   if (!normalized || normalized.error) return null;
@@ -785,7 +841,7 @@ const rawInventoryPaths = new Set(presentMembers.filter((path) =>
 for (const path of candidateGraph.paths.filter((candidatePath) => rawInventoryPaths.has(candidatePath))) {
   const file = candidateGraph.sourceFile(path);
   if (file.parseDiagnostics.length) throw new Error(`UNPARSED_FROZEN_SOURCE:${path}`);
-  const declaredNames = collectDeclaredNames(file);
+  const lexical = makeLexicalBindings(file);
   const bindings = new Map();
   const declarationNodes = new Set();
   const bind = (name, identity, node) => {
@@ -829,11 +885,18 @@ for (const path of candidateGraph.paths.filter((candidatePath) => rawInventoryPa
       if (ts.isCallExpression(node.initializer) && ts.isPropertyAccessExpression(node.initializer.expression) &&
           ts.isIdentifier(node.initializer.expression.expression) && node.initializer.expression.expression.text === "module" &&
           node.initializer.expression.name.text === "require" && node.initializer.arguments[0] && ts.isStringLiteralLike(node.initializer.arguments[0])) specifier = node.initializer.arguments[0].text;
+      if (ts.isCallExpression(node.initializer) && ts.isIdentifier(node.initializer.expression) &&
+          bindings.get(node.initializer.expression.text)?.loader && node.initializer.arguments[0] &&
+          ts.isStringLiteralLike(node.initializer.arguments[0])) specifier = node.initializer.arguments[0].text;
       if (specifier && ts.isIdentifier(node.name)) bind(node.name.text, { specifier, exported: "*", classes: moduleRootClasses.get(specifier), namespace: true }, node.name);
       if (specifier && ts.isObjectBindingPattern(node.name)) for (const element of node.name.elements) {
         if (!ts.isIdentifier(element.name)) continue;
         const exported = element.propertyName && (ts.isIdentifier(element.propertyName) || ts.isStringLiteralLike(element.propertyName)) ? element.propertyName.text : element.name.text;
-        bind(element.name.text, { specifier, exported, classes: classesForModuleExport(specifier, exported) }, element.name);
+        const classes = classesForModuleExport(specifier, exported);
+        if ((acceptedEffectPackages.has(packageRoot(specifier)) || rawUniverse.moduleSelectors.some((entry) => entry.specifier === specifier)) && !classes) {
+          addViolation("UNKNOWN_MODULE_EFFECT_EXPORT", path, element, `${specifier}#${exported}`);
+        }
+        bind(element.name.text, { specifier, exported, classes }, element.name);
       }
       if (ts.isIdentifier(node.name) && ts.isCallExpression(node.initializer) && ts.isIdentifier(node.initializer.expression)) {
         const creator = bindings.get(node.initializer.expression.text);
@@ -865,6 +928,111 @@ for (const path of candidateGraph.paths.filter((candidatePath) => rawInventoryPa
       ts.forEachChild(node, visit);
     };
     visit(file);
+  }
+  const scopedAliases = new Map();
+  const scopedAliasDeclarations = new Set();
+  const wrappers = new Set(rawUniverse.globalAliasGrammar.wrappers);
+  const reservedRoots = new Set(rawUniverse.defaultDisposition.reservedRoots);
+  const reservedPrefix = (value) => [...reservedRoots].some((reserved) =>
+    reserved === value || reserved.startsWith(`${value}.`));
+  const bindScopedAlias = (nameNode, identity) => {
+    if (!ts.isIdentifier(nameNode) || !identity) return false;
+    const scope = lexical.declarationScope.get(nameNode);
+    if (!scope) return false;
+    if (!scopedAliases.has(scope)) scopedAliases.set(scope, new Map());
+    const aliases = scopedAliases.get(scope);
+    if (aliases.has(nameNode.text)) return false;
+    aliases.set(nameNode.text, identity);
+    scopedAliasDeclarations.add(nameNode);
+    return true;
+  };
+  const resolveScopedAlias = (identifier) => {
+    for (let current = identifier.parent; current; current = current.parent) {
+      if (!lexical.scopeBindings.get(current)?.has(identifier.text)) continue;
+      return scopedAliases.get(current)?.get(identifier.text) ?? null;
+    }
+    return null;
+  };
+  const normalizedScopedGlobal = (node) => {
+    const chain = expressionChain(node);
+    if (!chain) return null;
+    const identity = resolveScopedAlias(chain.rootNode);
+    if (!identity || identity.kind === "terminal") return null;
+    const members = [...chain.members];
+    if (identity.kind === "wrapper") {
+      const first = members.shift();
+      if (!first || first.value === null || wrappers.has(first.value)) return { error: "invalid-global-wrapper" };
+      return normalizeGlobalParts(first.value, members, true);
+    }
+    return normalizeGlobalParts(identity.root, members, false);
+  };
+  const identityForNormalizedGlobal = (normalized) => {
+    if (!normalized || normalized.error || normalized.extraMemberCount > 0) return null;
+    if (!normalized.member) return { kind: "global-root", root: normalized.root };
+    const classes = classifyGlobal(normalized);
+    return classes ? {
+      kind: "terminal",
+      specifier: normalized.root,
+      exported: normalized.member,
+      classes,
+      form: normalized.form ?? "global-member",
+    } : null;
+  };
+  const identityForExpression = (expression) => {
+    if (ts.isIdentifier(expression)) {
+      const scoped = resolveScopedAlias(expression);
+      if (scoped) return scoped;
+      if (wrappers.has(expression.text) && !lexical.isShadowedAt(expression, expression.text)) return { kind: "wrapper" };
+    }
+    if (ts.isIdentifier(expression) || ts.isPropertyAccessExpression(expression) || ts.isElementAccessExpression(expression)) {
+      const normalized = normalizedScopedGlobal(expression) ?? normalizedGlobal(expression, lexical.isShadowedAt);
+      return identityForNormalizedGlobal(normalized);
+    }
+    return null;
+  };
+  const identityForMember = (base, member, form) => {
+    if (!base || member === null || base.kind === "terminal") return null;
+    if (base.kind === "wrapper") {
+      if (!reservedPrefix(member) || wrappers.has(member)) return null;
+      return { kind: "global-root", root: member };
+    }
+    const combined = `${base.root}.${member}`;
+    if (reservedPrefix(combined)) return { kind: "global-root", root: combined };
+    const classes = classifyGlobal({ root: base.root, member });
+    return classes ? { kind: "terminal", specifier: base.root, exported: member, classes, form } : null;
+  };
+  const aliasDeclarations = [];
+  const collectAliasDeclarations = (node) => {
+    if (ts.isVariableDeclaration(node) && node.initializer) aliasDeclarations.push(node);
+    ts.forEachChild(node, collectAliasDeclarations);
+  };
+  collectAliasDeclarations(file);
+  let scopedAliasesChanged = true;
+  while (scopedAliasesChanged) {
+    scopedAliasesChanged = false;
+    for (const declaration of aliasDeclarations) {
+      const base = identityForExpression(declaration.initializer);
+      if (!base) continue;
+      if (ts.isIdentifier(declaration.name)) {
+        if (bindScopedAlias(declaration.name, base)) scopedAliasesChanged = true;
+        continue;
+      }
+      if (!ts.isObjectBindingPattern(declaration.name)) continue;
+      for (const element of declaration.name.elements) {
+        if (!ts.isIdentifier(element.name)) continue;
+        let member = element.name.text;
+        let form = "destructure-binding";
+        if (element.propertyName) {
+          if (ts.isIdentifier(element.propertyName) || ts.isStringLiteralLike(element.propertyName)) member = element.propertyName.text;
+          else if (ts.isComputedPropertyName(element.propertyName) &&
+              (ts.isStringLiteralLike(element.propertyName.expression) || ts.isNoSubstitutionTemplateLiteral(element.propertyName.expression))) {
+            member = element.propertyName.expression.text;
+            form = "computed-literal-member";
+          } else continue;
+        }
+        if (bindScopedAlias(element.name, identityForMember(base, member, form))) scopedAliasesChanged = true;
+      }
+    }
   }
   const exportedNames = new Set();
   const collectExports = (node) => {
@@ -904,17 +1072,59 @@ for (const path of candidateGraph.paths.filter((candidatePath) => rawInventoryPa
     rawIngress.push(site);
     if (!allowed || invalidClasses.length) addViolation("RAW_EFFECT_OWNER_INVALID", path, node, site);
   };
+  const commonJsLoader = (node) => {
+    if (!ts.isCallExpression(node)) return null;
+    let form = null;
+    if (ts.isIdentifier(node.expression) && node.expression.text === "require" &&
+        !lexical.isShadowedAt(node.expression, "require")) form = "require-call";
+    if ((ts.isPropertyAccessExpression(node.expression) || ts.isElementAccessExpression(node.expression)) &&
+        ts.isIdentifier(node.expression.expression) && node.expression.expression.text === "module" &&
+        staticMember(node.expression)?.value === "require" && !lexical.isShadowedAt(node.expression.expression, "module")) {
+      form = "module-require-call";
+    }
+    if (!form || !node.arguments[0] || !ts.isStringLiteralLike(node.arguments[0])) return null;
+    return { specifier: node.arguments[0].text, form };
+  };
+  const knownEffectModule = (specifier) => moduleRootClasses.has(specifier) ||
+    rawUniverse.moduleSelectors.some((entry) => entry.specifier === specifier) ||
+    acceptedEffectPackages.has(packageRoot(specifier));
+  const recordDirectCommonJs = (node, loader) => {
+    const parent = node.parent;
+    if ((ts.isPropertyAccessExpression(parent) || ts.isElementAccessExpression(parent)) && parent.expression === node) {
+      const member = staticMember(parent);
+      if (!member || member.value === null) {
+        addViolation("COMPUTED_EFFECT_SELECTOR", path, parent, parent.getText(file));
+        return;
+      }
+      const classes = classesForModuleExport(loader.specifier, member.value);
+      if (!classes && knownEffectModule(loader.specifier)) {
+        addViolation("UNKNOWN_MODULE_EFFECT_EXPORT", path, parent, `${loader.specifier}#${member.value}`);
+        return;
+      }
+      record(parent, { specifier: loader.specifier, exported: member.value, classes }, loader.form);
+      return;
+    }
+    if (ts.isVariableDeclaration(parent) && parent.initializer === node) return;
+    const classes = classesForModuleExport(loader.specifier, "*") ?? moduleRootClasses.get(loader.specifier);
+    if (!classes && knownEffectModule(loader.specifier)) {
+      addViolation("UNKNOWN_MODULE_EFFECT_EXPORT", path, node, `${loader.specifier}#*`);
+      return;
+    }
+    record(node, { specifier: loader.specifier, exported: "*", classes }, loader.form);
+  };
   const visitUses = (node) => {
     if (ts.isCallExpression(node) && node.expression.kind === ts.SyntaxKind.ImportKeyword) {
       const argument = node.arguments[0];
       if (!argument || !ts.isStringLiteralLike(argument)) addViolation("COMPUTED_LOADER_TARGET", path, node, node.getText(file));
       else record(node, { specifier: "import", exported: argument.text, classes: ["ambient-loader"] }, "dynamic-import-call");
     }
-    if (ts.isCallExpression(node) && ts.isIdentifier(node.expression) && ["eval", "Function"].includes(node.expression.text) && !declaredNames.has(node.expression.text)) {
+    if (ts.isCallExpression(node) && ts.isIdentifier(node.expression) && ["eval", "Function"].includes(node.expression.text) &&
+        !lexical.isShadowedAt(node.expression, node.expression.text)) {
       addViolation("FORBIDDEN_AMBIENT_LOADER", path, node, node.expression.text);
     }
     if (ts.isCallExpression(node) && ts.isPropertyAccessExpression(node.expression) && ts.isIdentifier(node.expression.expression) &&
-        node.expression.expression.text === "process" && node.expression.name.text === "getBuiltinModule") {
+        node.expression.expression.text === "process" && node.expression.name.text === "getBuiltinModule" &&
+        !lexical.isShadowedAt(node.expression.expression, "process")) {
       if (!node.arguments[0] || !ts.isStringLiteralLike(node.arguments[0])) addViolation("COMPUTED_LOADER_TARGET", path, node, node.getText(file));
       record(node, { specifier: "process", exported: "getBuiltinModule", classes: ["ambient-loader"] }, "process-get-builtin-module-call");
     }
@@ -926,6 +1136,8 @@ for (const path of candidateGraph.paths.filter((candidatePath) => rawInventoryPa
         record(node, { specifier: "createRequire", exported: argument.text, classes: [...new Set(["ambient-loader", ...targetClasses])] }, "create-require-result-call");
       }
     }
+    const directCommonJs = commonJsLoader(node);
+    if (directCommonJs) recordDirectCommonJs(node, directCommonJs);
     if (ts.isIdentifier(node) && bindings.has(node.text) && !declarationNodes.has(node)) {
       const parent = node.parent;
       if (ts.isPropertyAccessExpression(parent) && parent.expression === node) {
@@ -945,13 +1157,20 @@ for (const path of candidateGraph.paths.filter((candidatePath) => rawInventoryPa
         record(node, bindings.get(node.text), bindings.get(node.text).form ?? "destructure-binding");
       }
     }
+    if ((ts.isCallExpression(node) || ts.isNewExpression(node)) && ts.isIdentifier(node.expression)) {
+      const identity = resolveScopedAlias(node.expression);
+      if (identity?.kind === "terminal" && !scopedAliasDeclarations.has(node.expression)) {
+        record(node.expression, identity, identity.form ?? "destructure-binding");
+      }
+    }
     if ((ts.isCallExpression(node) || ts.isNewExpression(node)) &&
         (ts.isPropertyAccessExpression(node.expression) || ts.isElementAccessExpression(node.expression))) {
-      const normalized = normalizedGlobal(node.expression, declaredNames);
+      const normalized = normalizedScopedGlobal(node.expression) ?? normalizedGlobal(node.expression, lexical.isShadowedAt);
       if (normalized?.error) addViolation(normalized.error === "computed-effect-selector" ? "COMPUTED_EFFECT_SELECTOR" : "GLOBAL_ALIAS_INVALID", path, node.expression, normalized.error);
       else {
         const classes = classifyGlobal(normalized);
-        if (classes) record(node.expression, { specifier: normalized.root, exported: normalized.member ?? "*", classes }, normalized.form ?? "global-identifier");
+        if (classes && normalized.extraMemberCount > 0) addViolation("GLOBAL_ALIAS_INVALID", path, node.expression, "selector-after-terminal");
+        else if (classes) record(node.expression, { specifier: normalized.root, exported: normalized.member ?? "*", classes }, normalized.form ?? "global-identifier");
         else if (normalized?.root && normalized.member && ["eval", "Function", "_load", "binding", "_linkedBinding", "dlopen"].includes(normalized.member)) addViolation("UNKNOWN_RESERVED_SELECTOR", path, node.expression, normalized);
       }
     }

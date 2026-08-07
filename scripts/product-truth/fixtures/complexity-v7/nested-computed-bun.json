@@ -1,0 +1,1 @@
+{"appendToFiles":{"apps/service/src/atomicWrite.ts":"\nconst v7NestedBunKey: string = 'spawnSync';\nexport const v7NestedComputedBun = () => globalThis.Bun[v7NestedBunKey](['true']);\n"}}

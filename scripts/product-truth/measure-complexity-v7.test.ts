@@ -93,6 +93,16 @@ describe("product-truth-complexity-v7", () => {
     }));
   }, 30_000);
 
+  it("accepts a truly shadowed local global-root spelling without a raw-effect false positive", () => {
+    const result = run("--fixture", "truly-shadowed-global-positive", "--ref", baseline);
+    expect(result.status, result.stderr).toBe(0);
+    expect(JSON.parse(result.stdout).rawEffects).toMatchObject({
+      ingressCount: 812,
+      ingressSha256: "d1b60f2ed12a9cdca75752d94fd7a69c055d865d4fe5397f61550bbc2fe82d3a",
+      violationSha256: "a3f10097eeaa387fddba512addbe386c2a5b01be5e04021a1a12a4d3a168ce43",
+    });
+  }, 30_000);
+
   it.each([
     ["work-path-removed", "WORK_AUTHORITY_CHANGED"],
     ["verifier-operation-removed", "AUTHORITY_BLOCK_CHANGED"],
@@ -127,6 +137,17 @@ describe("product-truth-complexity-v7", () => {
     "process-get-builtin-module", "raw-reexport", "dependency-effect-export-unknown", "raw-owner-move-overlap",
     "raw-public-type-export",
     "closure-only-raw",
+    "closure-direct-commonjs-raw",
+    "global-destructure-raw",
+    "nested-computed-process",
+    "nested-computed-bun",
+    "wrapper-alias-computed",
+    "unrelated-scope-shadow",
+    "global-dot-alias-raw",
+    "global-literal-destructure-raw",
+    "commonjs-direct-constructor",
+    "commonjs-direct-return",
+    "commonjs-destructure-raw",
   ])("rejects closed raw-effect syntax/owner mutation %s", (fixture) => {
     const result = run("--fixture", fixture, "--ref", baseline);
     expect(result.status).not.toBe(0);

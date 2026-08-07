@@ -1,0 +1,1 @@
+{"appendToFiles":{"apps/service/src/atomicWrite.ts":"\nconst v7GlobalWrapperAlias = globalThis;\nconst v7WrapperProcessKey: string = 'dlopen';\nexport const v7WrapperAliasComputed = () => v7GlobalWrapperAlias.process[v7WrapperProcessKey]({} as NodeJS.Module, 'x.node');\n"}}
