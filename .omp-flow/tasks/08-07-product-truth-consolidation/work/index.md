@@ -39,15 +39,20 @@ The failed immutable B1 review is now governed by the maintainer's
 batch and one sealed Package transition graph. The first coverage-complete v2 meter was rejected by
 its immutable [Review](../reviews/product-truth-complexity-v2.md), and v3 was then rejected by its
 immutable [Review](../reviews/product-truth-complexity-v3.md) for a textual Product-sink prefilter
-and missing current-I/O dominance. V4 repaired those authority claims, but its immutable
-[implementation Review](../reviews/product-truth-complexity-v4.md) then found five concrete semantic
-bypasses. Under the [v5 repair calibration](../decisions/product-truth-complexity-v5-repair-calibration.md),
-v5 alone replaces measurement authority.
-The first v4 QbD then rejected self-selected persistence-capability/non-Product authority and a
+and missing current-I/O dominance. The first v4 QbD then rejected self-selected
+persistence-capability/non-Product authority and a
 post-lock cut that did not prove the matching lock stayed held. Under the maintainer's
 [v4 QbD repair calibration](../decisions/product-truth-complexity-v4-qbd-repair-calibration.md), the
 same v4 Work froze an independently re-derived accepted source/dependency capability closure and
-canonical owner-lock model. V5 inherits those roots, while v4 remains rejected. This still changes
+canonical owner-lock model. Its immutable
+[implementation Review](../reviews/product-truth-complexity-v4.md) then found five concrete semantic
+bypasses. Under the [v5 repair calibration](../decisions/product-truth-complexity-v5-repair-calibration.md),
+v5 alone replaces measurement authority and inherits those repaired roots, while v4 remains
+rejected. The first v5 QbD then found that the immutable v4 path-origin block could not authorize
+B1's required private SQLite classifier copy. The maintainer's
+[v5 QbD repair calibration](../decisions/product-truth-complexity-v5-qbd-repair-calibration.md)
+adds only one independently checked `ephemeral-direct-tool-classifier-copy` origin for the exact
+future `sqlite-classifier.ts` flow; it is not a general temp/tool exemption. This still changes
 measurement authority only.
 No destructive target or protected exclusion changes.
 
@@ -89,7 +94,11 @@ expands any declared design glob once and freezes path membership. Design-time e
 snapshots. Later edges pass only between frozen members; outside-set endpoints, computed/unresolved
 imports and moved responsibility fail mechanically. V5 discovers all resolved database
 openers/constructors/wrappers/callers/handles before Product classification, and rejects raw,
-outside, unknown or competing Product provenance across production and direct-tool members. It also proves every complete Product/service/Web
+outside, unknown or competing Product provenance across production and direct-tool members. It
+separately extracts the additive direct-tool classifier-copy block and independently proves the exact
+retired source, invocation-owned scratch containment, no-follow/copy identity, read-only open and
+all-completion cleanup/absence flow; current/source-in-place/unbound-temp/raw-current/missing-cleanup
+flows fail and cannot become non-Product. It also proves every complete Product/service/Web
 refusal stage dominates its assigned current-generation sinks and legacy-present flow cannot reach
 current I/O. Its capability set is independently rooted in the builtin SQLite constructors,
 accepted Work membership, exact lock/dependency source and approved path origins; Product/service
@@ -141,7 +150,7 @@ Product State Store → Coordinator/facade C.
 | PRD acceptance                                                                | Realizing Work                                                                                                                                                                                                |
 | ----------------------------------------------------------------------------- | ------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
 | A1 exact root/lane/profile scope                                              | [Direct first-public B1](direct-first-public-b1.md)                                                                                                                                                           |
-| A2 exact classification, protected-fact preflight and sanitized output        | [Direct first-public B1](direct-first-public-b1.md)                                                                                                                                                           |
+| A2 exact classification, protected-fact preflight, strict private classifier-copy origin and sanitized output | [Direct first-public B1](direct-first-public-b1.md), authorized/measured by [v5](product-truth-complexity-v5.md)                                                                                              |
 | A3 read-only inspect and locked repeated apply                                | [Direct first-public B1](direct-first-public-b1.md)                                                                                                                                                           |
 | A4 allowlisted unrecoverable deletion with no copy                            | [Direct first-public B1](direct-first-public-b1.md)                                                                                                                                                           |
 | A5 byte-identical exclusions                                                  | [Direct first-public B1](direct-first-public-b1.md)                                                                                                                                                           |
@@ -153,7 +162,7 @@ Product State Store → Coordinator/facade C.
 | A11 Coordinator effects without SQL/replay/fallback                           | [Coordinator and facade](product-execution-coordinator-facade.md)                                                                                                                                             |
 | A12 one 36-operation facade and separate probes                               | [Coordinator and facade](product-execution-coordinator-facade.md)                                                                                                                                             |
 | A13 Service-selected, transcript-bound Package root                           | [Native Host v2 Package-root binding](native-host-package-root-binding.md)                                                                                                                                    |
-| A14 deterministic complexity decrease in one universe                         | immutable meter and B0 in [v5 measurement](product-truth-complexity-v5.md); B1 in [Direct first-public B1](direct-first-public-b1.md); C in [Coordinator and facade](product-execution-coordinator-facade.md) |
+| A14 deterministic complexity decrease in one universe and independently derived direct-tool classifier-copy authority | immutable meter, authority/flow digests and B0 in [v5 measurement](product-truth-complexity-v5.md); B1 in [Direct first-public B1](direct-first-public-b1.md); C in [Coordinator and facade](product-execution-coordinator-facade.md) |
 | A15 current recovery behavior and affected real journeys                      | focused preservation in every Work; integrated live proof in [Coordinator and facade](product-execution-coordinator-facade.md)                                                                                |
 
 The three accepted QbD 1 advisories are all hard done conditions of the B1 Work: exact
@@ -171,6 +180,8 @@ interface, measurement Work, all five product Works and this map. It must explic
 five unexpected passes in the failed [v4 implementation Review](../reviews/product-truth-complexity-v4.md):
 direct-tool raw Product persistence, different-acquisition branch phi, detached microtask release,
 zero-iteration `for...of`, and conditional false rethrow swallowing. Only `PASS` with zero blocker
-and zero advisory authorizes the measurement-only v5 assignment. Its immutable handoff then needs a
+and zero advisory authorizes the measurement-only v5 assignment. It must also verify that the exact
+private-copy positive is realizable and the current/source-in-place/unbound-temp/raw-current/
+missing-cleanup cases cannot discharge the additive origin. Its immutable handoff then needs a
 zero-finding different-actor `PASS` before a new B1 production receipt. Rejected v1-v4 meter bytes,
 Reviews and candidates remain immutable historical evidence.

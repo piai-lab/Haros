@@ -25,8 +25,9 @@ This Work realizes PRD A13 and its A15 process/recovery slice.
 Do not assign or start this Work until [`handoffs/direct-first-public-b1.md`](../handoffs/direct-first-public-b1.md)
 records a different-actor-accepted clean immutable B1. The implementation base must contain that
 exact B1 commit, and the B1 chain must name the accepted immutable v5 meter Review receipt and
-SHA/digests, including the capability/owner-lock-authority and derived-inventory digests plus must-hold
-report. No shared-tree overlap with B1 is inferred.
+SHA/digests, including the capability/owner-lock-authority, additive direct-tool classifier-copy
+authority/flow and derived-inventory digests plus must-hold report. No shared-tree overlap with B1
+is inferred.
 
 ## In scope
 
@@ -122,7 +123,8 @@ overlaps B1 compatibility cleanup, this Work does not run concurrently in the no
   all output.
 - Run the read-only v5 membership/edge gate; do not edit the meter or accept outside-set,
   computed or unresolved edges. Its accepted capability and lock authority remains conjunctive even
-  though this Work adds no database capability or owner-lock behavior.
+  though this Work adds no database capability or owner-lock behavior. Its additive classifier-copy
+  authority/flow digest must also match the accepted B1 chain byte-for-byte.
 
 ## Expected handoff
 

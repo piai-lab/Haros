@@ -41,8 +41,9 @@ This Work realizes PRD A1-A9, the B1 half of A14, and the B1 preservation portio
 
 Do not assign or start this Work until `reviews/product-truth-complexity-v5.md` records a
 zero-finding different-actor `PASS` over the immutable meter-only commit. The B1 assignment must
-name that review receipt as predecessor, record the accepted meter SHA/digests, and use those bytes
-read-only.
+name that review receipt as predecessor, record the accepted meter SHA/digests including the
+additive direct-tool classifier-copy authority and independently derived flow digest, and use those
+bytes read-only.
 
 ## In scope
 
@@ -251,6 +252,12 @@ does not authorize an unlisted production path.
   reachable predecessor, with no early, aliased, wrong-binding, sibling-handle, detached or
   finally-before-sink release path. Present-successor reachability rejects zero-iteration guards and
   swallowed/unreachable typed throws.
+  The exact future `sqlite-classifier.ts#classifyRetiredSqliteBundle` implementation also matches
+  the accepted additive authority: its retired source is exact, its copy is strictly contained below
+  an invocation-owned fresh private scratch root, its no-follow/source-copy identities and hashes
+  match, SQLite opens only the copy read-only/no-create, and every reachable completion closes,
+  removes and proves scratch absence. No current/source-in-place/unbound-temp/raw-current or
+  missing-cleanup flow receives the classifier-copy disposition.
   Retired database/key filenames under `scripts/product-truth/**` are reported separately and are
   permitted only as exact closed destructive target identities or their matching tool fixtures and
   assertions. They must not be counted as runtime compatibility, removed by an undifferentiated
@@ -285,6 +292,9 @@ does not authorize an unlisted production path.
   sibling/direct-tool handle, early/aliased release and finally-before-sink for exact bounded codes.
   The five failed-v4 witnesses—direct-tool raw SQLite/DELETE, different-token branch phi, detached
   microtask release, empty-iterable `for...of` guard and false conditional rethrow—fail independently.
+  The additive classifier-copy matrix must pass the exact retired-target/private-copy flow and fail
+  copied/opened current Product/service, source-in-place, unbound temp/caller/environment,
+  raw-current-alias and missing/bypassable-cleanup flows for the one intended bounded code.
 - Verify the dependency boundary: `scripts/package.json` has one exact non-range direct
   `classic-level` pin; the root lock's scripts importer and integrity closure match it; a filtered
   lock diff contains no unrelated refresh; and `bun install --frozen-lockfile` leaves `bun.lock`

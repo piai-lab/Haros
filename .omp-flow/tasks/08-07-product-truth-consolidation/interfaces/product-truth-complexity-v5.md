@@ -10,6 +10,8 @@ This interface applies the maintainer's
 immutable [v4 implementation Review](../reviews/product-truth-complexity-v4.md) rejected v4. It is
 a narrow replacement for v4 measurement authority, not a new Product or destructive contract.
 V1-v4 meter/config/test/fixture/report/handoff/Review bytes remain immutable rejected evidence.
+The later [v5 QbD repair calibration](../decisions/product-truth-complexity-v5-qbd-repair-calibration.md)
+adds only the exact direct-tool classifier-copy origin below; every other v5 rule remains in force.
 
 ## Inherited authority and frozen universe
 
@@ -22,7 +24,11 @@ unless this interface explicitly strengthens it. In particular, it preserves:
 - the exact `omp-flow-database-capability-authority-v1` and
   `omp-flow-owner-lock-authority-v1` blocks already recorded in the v4 interface. V5 extracts those
   two blocks from that exact path in its accepted Design tree, normalizes and pins them, and rejects
-  any missing, duplicate, changed or additional authority;
+  any missing, duplicate or changed instance of either inherited block;
+- the one additive `omp-flow-direct-tool-classifier-copy-authority-v1` block below. V5 extracts it
+  independently from this exact interface path in the accepted Design tree, normalizes and pins its
+  digest beside the inherited blocks, and rejects a missing, duplicate, changed or additional
+  direct-tool copy authority;
 - resolved-symbol persistence discovery, exact approved path-origin classes, canonical-only Product
   provenance, unknown capability failure, complete legacy classification, core responsibility and
   complexity counters, and every v3/v4 adversarial fixture not replaced below.
@@ -30,6 +36,98 @@ unless this interface explicitly strengthens it. In particular, it preserves:
 The five Work fences are byte-identical. Measurement paths and `bun.lock` remain outside measured
 production. No candidate, working tree, branch name, config assertion or historical report may add
 authority or select a smaller universe.
+
+## Exact direct-tool classifier-copy origin
+
+The inherited v4 capability block remains byte-identical and does not authorize the future B1
+classifier copy. The following additive block is the only accepted origin for that one copy. It
+names one exact future declaration and its proof-relevant locals/flow in the already frozen
+`scripts/product-truth/sqlite-classifier.ts` member; it is not a broad temporary-directory,
+direct-tool or non-Product exemption.
+
+```omp-flow-direct-tool-classifier-copy-authority-v1
+{
+  "scope": "direct-first-public-retired-sqlite-classifier-copy",
+  "class": "ephemeral-direct-tool-classifier-copy",
+  "path": "scripts/product-truth/sqlite-classifier.ts",
+  "entry": {
+    "declaration": "classifyRetiredSqliteBundle",
+    "retiredSourceParameter": "retiredBundle",
+    "scratchRootLocal": "invocationScratchRoot",
+    "copyPathLocal": "classifierCopyPath",
+    "databaseHandleLocal": "classifierDatabase"
+  },
+  "retiredSourceBinding": {
+    "resolverDeclaration": "resolveRetiredSqliteBundleTarget",
+    "requiredRootAuthority": "canonical-default-omnimind",
+    "allowedLanes": ["dev", "userdata"],
+    "requiredContainment": "exact-lane-root-retired-target",
+    "allowedMainBasenames": ["product-state-v1.sqlite", "state.sqlite"],
+    "allowedSidecarSuffixes": ["-wal", "-shm"],
+    "requiredDisposition": "exact-retired-tool-target"
+  },
+  "scratchBinding": {
+    "creatorDeclaration": "createClassifierScratchRoot",
+    "ownership": "invocation-owned-fresh-exclusive",
+    "directoryMode": "0700",
+    "copyMode": "0600",
+    "containment": "strict-descendant-of-invocation-scratch",
+    "excludedAncestors": ["retired-source-bundle", "canonical-current-stores"]
+  },
+  "copyIdentity": {
+    "declaration": "copyRetiredSqliteBundleToScratch",
+    "sourceOpen": "nofollow-readonly",
+    "destinationOpen": "exclusive-create",
+    "requiredEqualities": [
+      "source-handle-path-identity-before-after",
+      "copy-handle-path-identity-before-open",
+      "copy-nlink-one-no-follow",
+      "source-copy-byte-count",
+      "source-copy-sha256",
+      "repeated-source-bundle-manifest"
+    ]
+  },
+  "sqliteOpen": {
+    "declaration": "openClassifierCopyReadOnly",
+    "pathLocal": "classifierCopyPath",
+    "mode": "readonly-no-create",
+    "forbidSourceHandle": true
+  },
+  "cleanup": {
+    "declaration": "removeClassifierScratch",
+    "ownerEntry": "classifyRetiredSqliteBundle",
+    "control": "finally-on-all-reachable-completions",
+    "postcondition": "scratch-root-absent-before-safe-return-or-next-operation"
+  }
+}
+```
+
+Unknown/duplicate keys, unsupported values or any second instance fail authority extraction. The
+meter does not accept the JSON claims as proof. From the accepted Design tree and the same
+compiler-resolved capability/CFG universe, it independently requires every named declaration/local
+to exist exactly once in that path and derives the actual caller, parameter, path, handle and
+completion flow. `retiredBundle` must derive exclusively from
+`resolveRetiredSqliteBundleTarget` from the canonical default root through one exact `dev` or
+`userdata` lane, with one allowlisted retired main basename and its exact sibling sidecars; an
+outside-root/lane alias, merged source or current `stores/product.sqlite`/`stores/service.sqlite`
+source is unknown. `invocationScratchRoot` must be freshly and exclusively created per classifier
+invocation outside source/current-store roots, and `classifierCopyPath` must remain a strict
+descendant of that exact root. No-follow source identity, exclusive copy identity, byte count,
+SHA-256 and repeated bundle-manifest equalities are conjunctive.
+
+Only `classifierCopyPath` may reach `openClassifierCopyReadOnly`, and only a resolved read-only,
+no-create SQLite open may produce `classifierDatabase`. Opening the retired source in place,
+opening a copied current database, using an unbound `os.tmpdir()`/environment/caller path, passing a
+raw current Product alias, or merging an approved copy path with any other path fails
+`DIRECT_TOOL_CLASSIFIER_COPY_ORIGIN_INVALID`. After scratch acquisition, every reachable normal,
+return, throw, catch and finally completion must traverse database close, link-safe
+`removeClassifierScratch` and the exact absence postcondition before a safe return or any later
+operation. Missing/bypassed/conditional cleanup, a detached cleanup or a cleanup failure path
+claimed as a valid disposition fails the same gate.
+
+This additive origin changes classification authority only. It does not authorize source mutation,
+source-in-place SQLite, current database classification, current-path copy/open, a raw Product
+alias, a general temp root, retained evidence or relaxed protected-fact/destructive scope.
 
 ## Complete persistence-capability domain
 
@@ -165,6 +263,17 @@ must fail because of present-successor polarity, not pattern matching. Positives
 branch propagation without reacquisition, outer-finalizer release after all sinks, exact direct and
 Effect scoped owners, complete Web refusal and a direct-tool operation whose every persistence and
 destructive capability is explicitly classified.
+
+The additive classifier-copy authority has its own mandatory single-cause matrix. One positive
+materializes the exact `classifyRetiredSqliteBundle` flow: an exact retired tool target is copied
+no-follow into the invocation-owned fresh private scratch root, source/copy identities and hashes
+match, only the copy is opened read-only/no-create, and every completion closes it, removes the
+scratch tree and proves absence. Independent negatives must each fail
+`DIRECT_TOOL_CLASSIFIER_COPY_ORIGIN_INVALID` for: copying/opening current
+`stores/product.sqlite` or `stores/service.sqlite`; opening the retired source in place; using an
+unbound temp/caller/environment path; passing a raw current Product alias through the named flow;
+and a normal, throw, catch or finally completion that can bypass cleanup/absence proof. The failed-v4
+direct-tool raw Product SQLite/`DELETE` negative remains separate and mandatory.
 
 Each negative asserts its intended bounded code and witness. A failure in one gate cannot be hidden
 by another historical B0 violation. Two byte-identical B0 reports, focused tests, scripts typecheck,

@@ -58,6 +58,13 @@ Windows quiescence adapter. The underlying evidence remains in the
   protected-fact preflight may read that fixture's allowlisted columns. It returns only
   presence/count and bounded blocker codes; no row value, identifier, JSON, path or content leaves
   the classifier.
+- The future `scripts/product-truth/sqlite-classifier.ts` copy is admissible only through the exact
+  accepted `ephemeral-direct-tool-classifier-copy` origin: an exact retired tool target, an
+  invocation-owned freshly/exclusively created private scratch root, strict copy containment,
+  no-follow/source-copy identity and hash binding, read-only/no-create SQLite open, and close/remove/
+  absence proof on every reachable normal or abrupt completion. Current Product/service stores,
+  source-in-place open, unbound temp/caller/environment paths, raw current Product aliases and any
+  missing or bypassable cleanup are not classifier-copy origins.
 - Every allowlisted Product fingerprint runs fixture-selected aggregate counts and must prove the
   absence of active Package leases and `delivery_unknown`/`outcome_unknown` Runs; Product-v2 `sent`
   is explicitly active because crash recovery advances it to `delivery_unknown`. Every allowlisted
@@ -276,8 +283,10 @@ Windows quiescence adapter. The underlying evidence remains in the
   generic repository/manager/registry or fallback path is introduced.
 - V5 extracts the five machine-readable boundaries from one pinned accepted Design commit and
   freezes path membership. It also extracts the strict database-capability and owner-lock authority
-  blocks, then independently re-derives/pins the complete reachable capability inventory from the
-  same accepted source and dependency bytes. Design-time edges/sinks are snapshots, not allowlists. Later edges pass
+  blocks plus the one additive direct-tool classifier-copy authority block, then independently
+  re-derives/pins the complete reachable capability inventory and the exact retired-source/scratch/
+  copy/open/cleanup flow from the same accepted source and dependency bytes. Design-time edges/sinks
+  are snapshots, not allowlists. Later edges pass
   only between frozen members; outside-set endpoints, computed/unresolved imports or moved
   responsibility fail. Every resolved database opener/constructor invocation is enumerated before
   Product classification; wrappers, callers, aliases, returned handles and receivers are followed
@@ -304,7 +313,7 @@ Windows quiescence adapter. The underlying evidence remains in the
 | ID  | Acceptance claim                                                                                                                                                                         | Required proof                                                                                                                                                                        |
 | --- | ---------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- | ------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
 | A1  | Only the exact default root, two lanes and two associated profiles are inspected                                                                                                         | path/identity fixtures covering override, canary, repo-local, link, reparse, mode and realpath faults                                                                                 |
-| A2  | Dry-run positively classifies every deletion target and proves protected-fact absence without emitting business content                                                                  | fixture fingerprints, strict recursive per-fixture receipt decoders, query allowlist, no-follow/hash-copy tests, blocker matrix, SQL spy and sanitized JSON snapshot                  |
+| A2  | Dry-run positively classifies every deletion target and proves protected-fact absence without emitting business content                                                                  | fixture fingerprints, strict recursive per-fixture receipt decoders, query allowlist, exact retired-source/private-scratch/no-follow/read-only/all-exit classifier-copy matrix, blocker matrix, SQL spy and sanitized JSON snapshot                  |
 | A3  | Inspect mutates no source/lock while apply repeats full inspection under exact owner locks and binds mutation to classified bytes or a sealed expected transition                        | atomic Web-batch trace, Package transition graph, whole-tree write trace, POSIX/Windows adapters, lock identity and real replacement races                                            |
 | A4  | Apply deletes only the allowlist and creates no recoverable copy                                                                                                                         | before/after tree allowlist, write-spy and absence scans for snapshot/export/restore surfaces                                                                                         |
 | A5  | Every excluded path/key/generation remains byte-identical                                                                                                                                | seeded exclusion fixture with hashes before/after apply                                                                                                                               |
@@ -316,7 +325,7 @@ Windows quiescence adapter. The underlying evidence remains in the
 | A11 | Coordinator retains Engine-effect semantics without SQL/replay/fallback                                                                                                                  | catalog/admission/attempt/control/crash tests across Pi and OpenCode                                                                                                                  |
 | A12 | Web/RPC sees exactly one 36-operation facade; probes/tests are separate                                                                                                                  | type/API snapshot, wsRpc tests and production caller scan                                                                                                                             |
 | A13 | Service selects and Host only validates one transcript-bound lane/Package root                                                                                                           | dev/packaged process tests covering proof tamper, replay, version/field faults, second/concurrent binding, mismatch/link/sibling-root and no fallback                                 |
-| A14 | Production and conceptual complexity strictly decrease in one coverage-complete frozen universe                                                                                          | immutable rejected v1-v4 history, Design-pinned boundaries and capability authority, frozen set, production+direct-tool capability scan, per-seed/Effect opener and predecessor/token owner-lock gates, deterministic v5 metrics   |
+| A14 | Production and conceptual complexity strictly decrease in one coverage-complete frozen universe                                                                                          | immutable rejected v1-v4 history, Design-pinned boundaries/capability/classifier-copy authority, frozen set, production+direct-tool capability scan, independently derived classifier copy path/control flow, per-seed/Effect opener and predecessor/token owner-lock gates, deterministic v5 metrics   |
 | A15 | Current outbox, Automation, Web safeguard, Package and Engine recovery behavior remains                                                                                                  | focused existing suites plus complete real kill/race/write-trace and affected real-process journeys                                                                                   |
 
 ## Constraints and non-goals

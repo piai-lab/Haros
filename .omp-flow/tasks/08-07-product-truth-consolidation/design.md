@@ -259,6 +259,17 @@ For each present main/WAL/SHM bundle, the tool:
    absent, before `inspect` succeeds or
    `apply` can begin.
 
+The future implementation of this path has one exact classifier-copy flow in
+`scripts/product-truth/sqlite-classifier.ts`: `resolveRetiredSqliteBundleTarget` produces the
+`retiredBundle` parameter consumed by `classifyRetiredSqliteBundle`; that entry creates
+`invocationScratchRoot` through `createClassifierScratchRoot`, produces `classifierCopyPath`
+through `copyRetiredSqliteBundleToScratch`, opens only that path through
+`openClassifierCopyReadOnly` into `classifierDatabase`, then closes it and calls
+`removeClassifierScratch` from a finally path whose absence postcondition cuts every safe normal or
+abrupt completion. Those names are the exact additive v5 machine authority, not optional examples.
+The copy origin is invalid if the source is current, opened in place, raw/merged/unknown, the temp
+root is caller/environment/unbound, or cleanup/absence can be skipped.
+
 The identity classifier does not call the current selection coordinator, Product decoder or
 Automation repository. Its SQL is allowlisted to SQLite metadata/PRAGMAs and the exact meta table.
 Corruption, mismatched marker/fingerprint, a changing bundle or failed scratch cleanup is a blocker;
@@ -613,13 +624,27 @@ measured-tree Work edits, working-tree state and candidate-selected path lists h
 The same accepted Design tree contains one strict
 `omp-flow-database-capability-authority-v1` block in the immutable v4 interface. It freezes only the
 irreducible `bun:sqlite#Database` and `node:sqlite#DatabaseSync` terminals plus the exact canonical
-Product, canonical service, read-only/finally-cleaned ephemeral classifier-copy and exact
-declaration-scoped `:memory:` path origins. V5 normalizes and pins that block, then, from accepted
-Work membership and exact `bun.lock`, independently derives and pins the complete reachable opener,
-dynamic-loader, Effect layer/factory/tag, wrapper and receiver inventory from the accepted
-repository/dependency source graph. The selected dependency's source, emitted JS and d.ts bytes are
-digested too. No config-authored seed or non-Product disposition can add to or subtract from that
-backward path-to-constructor plus forward handle closure.
+Product, canonical service, the Service-owned classifier copy and exact declaration-scoped
+`:memory:` path origins. The immutable v4 block is not edited. The v5 interface adds exactly one
+`omp-flow-direct-tool-classifier-copy-authority-v1` block for the future
+`scripts/product-truth/sqlite-classifier.ts#classifyRetiredSqliteBundle` flow. It binds the exact
+canonical-default-root/lane retired-target resolver/parameter, invocation-owned fresh scratch root
+local, strict descendant copy local, no-follow/source-copy identity declarations, read-only/no-create SQLite handle and
+all-completion cleanup/absence declaration. This is the only
+`ephemeral-direct-tool-classifier-copy` origin; it cannot classify a current database, a source
+opened in place, an unbound temp/caller/environment path, a raw current Product alias or any flow
+that can bypass cleanup.
+
+V5 independently extracts, normalizes and pins both capability-origin blocks and their digests,
+then, from accepted Work membership and exact `bun.lock`, independently derives and pins the
+complete reachable opener, dynamic-loader, Effect layer/factory/tag, wrapper and receiver inventory
+from the accepted repository/dependency source graph. For the additive block it also resolves each
+named declaration/local exactly once and derives the actual retired-source, scratch containment,
+copy/hash, path-to-opener, handle-close and normal/return/throw/catch/finally cleanup flow from the
+accepted compiler graph/ICFG; block or config assertions do not prove those invariants. The selected
+dependency's source, emitted JS and d.ts bytes are digested too. No config-authored seed,
+non-Product disposition or generic temp/tool exemption can add to or subtract from that backward
+path-to-constructor plus forward handle closure.
 The interface's separate `omp-flow-owner-lock-authority-v1` block freezes the exact lifecycle-lock
 acquire/release declarations, Product and Service owner entries/path-origin classes, and direct-tool
 lock exclusion. It is normalized, hashed and re-extracted with the capability block; config cannot
@@ -713,8 +738,11 @@ All gates are conjunctive:
    lifecycle writes = 0;
 7. facade RPC methods = 36; Product tables = 21; Product database = 1; Product durable state machine
    = 1; literal two-Engine gateway = 1;
-8. the Design capability block and independently derived complete source/dependency capability
-   inventory match exactly across every frozen production and direct-tool member; every Product
+8. the inherited capability block, additive direct-tool classifier-copy block and independently
+   derived complete source/dependency capability inventory match exactly across every frozen
+   production and direct-tool member; the classifier-copy class additionally proves exact retired-
+   source binding, invocation-owned scratch containment, no-follow/copy identity, read-only open
+   and all-completion cleanup/absence; every Product
    database component has canonical-only provenance and
    every other component has an exact approved non-Product origin; forbidden compatibility
    decoder/import/caller count = 0; required Product/service/Web
@@ -757,6 +785,14 @@ and accepted-meter metrics. Package transcript/root work cannot change or bypass
   per-derived-identity omit/mutation and a newly reachable `SqliteMigrator` negative. Renaming
   neutral wrappers cannot change classification; unlisted service/scratch/temp origins cannot
   become non-Product.
+- Direct-tool classifier-copy fixtures independently resolve the exact future
+  `sqlite-classifier.ts` declarations/locals and pass only an exact retired tool target copied below
+  the invocation-owned fresh scratch root with no-follow/source-copy identity and hash equality,
+  read-only/no-create SQLite open, close, link-safe removal and absence on every completion. Separate
+  single-cause negatives cover a copied/opened current Product or service store, retired source
+  opened in place, unbound temp/caller/environment path, raw current Product alias and missing or
+  bypassable normal/throw/catch/finally cleanup. The earlier raw Product SQLite/`DELETE` direct-tool
+  negative remains mandatory and distinct.
 - Refusal fixtures include two-stage Product and service main/WAL/SHM positives and a Web v1/v2
   positive, each with multiple current sinks. Product direct and Service Effect Layer positives
   release only from an outer finalizer after all guarded I/O. Independent negatives put valid
@@ -856,7 +892,11 @@ The v5 meter supersedes rather than edits frozen rejected v1-v4 evidence and mus
 repaired B1 and C in one universe. V5 inherits the repaired v4 capability and owner-lock authority,
 then closes the failed v4 implementation Review with complete production+direct-tool capability
 analysis, unique acquisition-token predecessor meets and actual bounded CFG/ICFG reachability under
-the [v5 calibration](decisions/product-truth-complexity-v5-repair-calibration.md). It changes no
+the [v5 calibration](decisions/product-truth-complexity-v5-repair-calibration.md). The subsequent v5
+QbD repair adds only the exact additive direct-tool classifier-copy origin selected by the
+[QbD repair calibration](decisions/product-truth-complexity-v5-qbd-repair-calibration.md): retired
+source binding, invocation-owned scratch containment, no-follow/copy identity, read-only open and
+all-completion cleanup are independently derived rather than asserted by config. It changes no
 runtime target, destructive scope or protected exclusion.
 
 The older g50 literal Pi/OpenCode gateway sibling-zero observation remains closed by its same-SHA

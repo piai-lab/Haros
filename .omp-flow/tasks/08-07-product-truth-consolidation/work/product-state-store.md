@@ -23,8 +23,9 @@ perform, the Coordinator/facade extraction.
 
 This Work begins only after immutable B1, Native Host v2 and the execution-leaf Work have
 different-actor accepted handoffs. The B1 chain must bind the accepted immutable v5 meter Review and
-SHA/digests, including the capability/owner-lock-authority and derived-inventory digests plus must-hold
-report. It must use the exact B1 recorded by the first handoff for later B0/B1/C comparison.
+SHA/digests, including the capability/owner-lock-authority, additive direct-tool classifier-copy
+authority/flow and derived-inventory digests plus must-hold report. It must use the exact B1
+recorded by the first handoff for later B0/B1/C comparison.
 
 ## Allowed code and output boundary
 
@@ -100,7 +101,8 @@ caller ownership.
 - Run the frozen v5 membership gate and dynamic edge/sink classification. The future Store and its
   canonical sink may materialize inside the frozen set; any outside-set endpoint/sink,
   unclassified/competing sink or computed/unresolved edge stops for map repair. Re-derived capability
-  inventory and same-binding owner-lock state must remain exact after the responsibility move.
+  inventory, additive classifier-copy authority/flow and same-binding owner-lock state must remain
+  exact after the responsibility move.
 
 ## Expected handoff
 
