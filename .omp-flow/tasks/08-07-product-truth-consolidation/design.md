@@ -46,17 +46,17 @@ This revision also consumes the failed immutable
 [B1 Review](reviews/direct-first-public-b1.md). It repairs all four findings and the subsequent
 destructive red-team closure without changing the exact deletion allowlist or any protected
 exclusion. The maintainer's [option-1 repair calibration](decisions/b1-failed-review-repair-calibration.md)
-binds the atomic Web batch and sealed Package transition graph. Rejected v2 remains immutable
-history, and immutable v3 is rejected evidence after its
-[Review](reviews/product-truth-complexity-v3.md) proved two semantic bypasses. The
-[v4 repair calibration](decisions/product-truth-complexity-v4-repair-calibration.md) alone defines
+binds the atomic Web batch and sealed Package transition graph. Rejected v2-v4 remain immutable
+history. The [v4 Review](reviews/product-truth-complexity-v4.md) proved five additional semantic
+bypasses after v4 implementation; the
+[v5 repair calibration](decisions/product-truth-complexity-v5-repair-calibration.md) alone defines
 current measurement authority and changes no runtime or destructive boundary.
 
 ## Scope and source boundaries
 
 | Responsibility                 | Intended source boundary                                                                                             | Owns                                                                                                                | Must not own                                                              |
 | ------------------------------ | -------------------------------------------------------------------------------------------------------------------- | ------------------------------------------------------------------------------------------------------------------- | ------------------------------------------------------------------------- |
-| v4 measurement checkpoint      | `measure-complexity-v4.mjs`, `complexity-universe-v4.json` and focused fixtures                                      | Design-pinned Work extraction, frozen universe, resolved opener/handle graph, refusal CFG cuts, immutable B0 report | product runtime, direct rebuild behavior, destructive state               |
+| v5 measurement checkpoint      | `measure-complexity-v5.mjs`, `complexity-universe-v5.json` and focused fixtures                                      | Design-pinned Work extraction, frozen universe, production+direct-tool capability graph, predecessor/token lock state, reachable refusal cuts and immutable B0 | product runtime, direct rebuild behavior, destructive state               |
 | direct rebuild tool            | `scripts/product-truth/**` plus focused tests                                                                        | inspect/apply orchestration, ephemeral inspection scratch, stdout result                                            | runtime startup, old-data decoding, state preservation, Package lifecycle |
 | first-public Product Store     | exact `apps/service/src/product/productStateStore.ts`; any private SQL file requires a new machine-boundary decision | Product database lifecycle, exact schema, 21 tables, all Product writes/transactions                                | Engine effects, Web/RPC, second connection                                |
 | execution coordinator          | `apps/service/src/product/productExecutionCoordinator.ts`                                                            | execution boundary, catalog memory, prepared handles, subscriptions, effect ordering                                | SQL, durable state machine, Engine wire                                   |
@@ -168,7 +168,7 @@ version migration; current corruption fails closed and preserves the raw key for
 action outside this checkpoint.
 
 The Service/Product/Web sentinels are ordinary-runtime safety guards, not tool classifiers. Their
-literal identities and exact owner entries form a closed allowlist in the authoritative v4 meter.
+literal identities and exact owner entries form a closed allowlist in the authoritative v5 meter.
 For Product and service, a complete pre-mutation main/WAL/SHM cut must dominate current `stores/`
 mkdir/file/owner-lock sinks, and a repeated complete post-lock cut must dominate current database
 existence/read/open/create/write and handle mutation while the exact matching owner-lock capability
@@ -378,7 +378,7 @@ Delete each retired behavior with callers, fixtures, policy and comments:
 
 Structural checks use the exact symbol/path inventory from
 [unshipped compatibility research](research/unshipped-compatibility.md), then scan production imports
-and string literals for renamed aliases. The v4 meter makes three exhaustive disjoint reports:
+and string literals for renamed aliases. The v5 meter makes three exhaustive disjoint reports:
 `destructiveToolIdentities`, `requiredLegacyPresenceSentinels` and `forbiddenCompatibility`. The
 required sentinel allowlist fixes exact file, owner function, literal identity, presence-only
 operation and count for Product, service and Web; tainted data-flow, a decoder call, mutation,
@@ -598,23 +598,23 @@ values, credentials, raw Engine bytes, endpoints or stored workspace paths.
 
 ## Complexity measurement and gates
 
-V1 and the failed v2/v3 candidates/reports are immutable rejected evidence; none can gate repaired
-B1 or C. The sole current implementation is `product-truth-complexity-v4`, owned by the
-[measurement-only v4 Work](work/product-truth-complexity-v4.md) and exact
-[v4 authority interface](interfaces/product-truth-complexity-v4.md). Its dedicated commit and B0
+V1 and the failed v2/v3/v4 candidates/reports are immutable rejected evidence; none can gate
+repaired B1 or C. The sole current authority is `product-truth-complexity-v5`, owned by the
+[measurement-only v5 Work](work/product-truth-complexity-v5.md) and exact
+[v5 repair interface](interfaces/product-truth-complexity-v5.md). Its dedicated commit and B0
 report receive different-actor review acceptance before any B1 production receipt. B1 names that
-review receipt and immutable v4 SHA/digests as predecessor and treats all meter bytes read-only.
+review receipt and immutable v5 SHA/digests as predecessor and treats all meter bytes read-only.
 
-V4 extracts one strict machine-readable boundary block from each of the five product Works at the
+V5 extracts one strict machine-readable boundary block from each of the five product Works at the
 accepted Design commit recorded in its assignment. The config pins that Design SHA, normalized
 blocks/digests, design-time glob expansion and exact frozen path-membership set. Design-time resolved
 edges and sinks are diagnostic snapshots, not allowlists. The meter re-extracts from that commit on every run; config self-assertion,
 measured-tree Work edits, working-tree state and candidate-selected path lists have no authority.
 The same accepted Design tree contains one strict
-`omp-flow-database-capability-authority-v1` block in the v4 interface. It freezes only the
+`omp-flow-database-capability-authority-v1` block in the immutable v4 interface. It freezes only the
 irreducible `bun:sqlite#Database` and `node:sqlite#DatabaseSync` terminals plus the exact canonical
 Product, canonical service, read-only/finally-cleaned ephemeral classifier-copy and exact
-declaration-scoped `:memory:` path origins. V4 normalizes and pins that block, then, from accepted
+declaration-scoped `:memory:` path origins. V5 normalizes and pins that block, then, from accepted
 Work membership and exact `bun.lock`, independently derives and pins the complete reachable opener,
 dynamic-loader, Effect layer/factory/tag, wrapper and receiver inventory from the accepted
 repository/dependency source graph. The selected dependency's source, emitted JS and d.ts bytes are
@@ -625,19 +625,21 @@ acquire/release declarations, Product and Service owner entries/path-origin clas
 lock exclusion. It is normalized, hashed and re-extracted with the capability block; config cannot
 select another lock or owner.
 
-At B0/B1/C, V4 resolves the candidate graph afresh. A later edge passes only when both endpoints are
+At B0/B1/C, V5 resolves the candidate graph afresh. A later edge passes only when both endpoints are
 already frozen members, including a materialized future exact path. Any outside-set importer/target,
 computed/unresolved import, candidate-created glob match or responsibility move fails and never
 expands the set. Deleted paths remain with zero lines; future exact paths are already members.
-`scripts/check-source-closure.mjs`, all v1/v2/v3/v4 meter/config files and their evidence are
+`scripts/check-source-closure.mjs`, all v1-v5 meter/config files and their evidence are
 measurement, not production, direct-tool or steady-state runtime.
 
-V4 uses the TypeScript compiler's resolved module/symbol graph, accepted dependency sources, closed
+V5 uses the TypeScript compiler's resolved module/symbol graph, accepted dependency sources, closed
 interprocedural dataflow and owner control-flow graphs. Starting only from the two primitive
 terminals, it traverses static/dynamic imports and path/handle flow through the real
 `@effect/sql-sqlite-bun/SqliteClient.layer`, local `NodeSqliteClient.layer`, runtime loader,
 their make/layerConfig/memory/tag paths, Service persistence Layer and `SqlClient` receivers,
-Product portable/validated openers and every handle receiver. The exact derived
+Product portable/validated openers and every handle receiver across the union of all frozen
+`production` and `direct-tool` members. Direct-tool is excluded only from ordinary-runtime
+current-lock proof, never capability discovery. The exact derived
 inventory and digest are compared on every run; seed/edge omission, mutation, dependency-source
 drift or a new unresolved external path/handle capability fails before classification. Only after
 building parameter/caller/return/alias/branch/handle summaries to a fixed point may it classify a
@@ -648,24 +650,30 @@ Product handle escape fails. Every classified Product consumer must be a frozen 
 solely from the exact canonical resolver declaration.
 
 Every legacy occurrence still has exactly one tool-only, presence-sentinel or forbidden class, and
-sentinel values may flow only to boolean presence and the typed reset error. Independently, V4
+sentinel values may flow only to boolean presence and the typed reset error. Independently, V5
 discovers every current-generation Product/service/Web I/O sink from resolved APIs and
 path/key/handle flow. Product/service pre-mutation cuts dominate current stores mkdir/file/lock;
 their post-lock cuts dominate every later current database sink while a must analysis proves the
 same canonical `{ownerKind,lane,root,database,lockPath,ownerToken}` lock remains held; Web's single complete cut
 dominates every g1 sink. Acquire/release declarations, lock-handle aliases, closure capture,
 scoped Effect/Layer finalizers, branch joins and all normal/throw/catch/finally exits are explicit
-lock-state edges. Release is accepted only after no guarded sink remains reachable on that path.
+lock-state edges. Each acquire creates a unique abstract token; a join retains held only when every
+actual predecessor has the same binding and token. A detached callback/microtask/fiber that may
+release or escape the token is unknown unless an exact completion join precedes the sink. Release is
+accepted only after no guarded sink remains reachable on that path.
 The Product `makeProductControlPlaneLayer` resource and Service `makeSqlitePersistenceLive` Layer
 bracket are the accepted runtime shapes; direct-tool retired-store locks, sibling handles and wrong
 tokens never prove current-runtime hold. The historical B0 may report an unlocked current consumer
 such as `readProductPackageLifecycleFacts` observationally, but B1/C and fixtures fail it.
-For each stage, every required probe and consuming decision must dominate its sinks,
-and the legacy-present successor must reach the exact typed throw without reaching current I/O.
+For each stage, every required probe and consuming decision must dominate its sinks, and every
+legacy-present successor must reach the exact typed throw without reaching current I/O. The bounded
+ICFG computes actual reachability and presence polarity, including zero-iteration loops, exact
+constant branches and catch/finally completion; an unreachable or swallowed throw does not count.
 Interprocedural CFG includes helper call/return, throw/catch/finally and await rejection edges;
 unsupported callback, Effect, recursion or control flow fails closed. Conditional helpers,
 alternate branches, catch/finally swallowing, later callbacks and sink-before-probe order fail. The
-complete adversarial matrix in the v4 interface is mandatory.
+complete inherited v4 matrix plus the five exact failed-Review witnesses in the v5 interface is
+mandatory.
 
 The script still reports physical production/test/tool/measurement lines, exact imports/cycles,
 facade/table/database/writer/state-machine/gateway counters, legacy classifications and Native Host
@@ -679,8 +687,8 @@ Three points are required:
 - `B1`: a dedicated clean repaired commit where direct first-public behavior, presence-only runtime
   refusal and compatibility deletion are green but responsibility extraction has not begun. The
   failed `50deefc1f8e904805c5c990756f3048de33c7ad5` remains immutable rejected evidence and is not B1.
-  The repaired commit's full 40-hex SHA and v4 JSON output are recorded in the linked B1 handoff and
-  its later evidence commit, without changing v4 meter/config bytes, before any Store/Coordinator
+  The repaired commit's full 40-hex SHA and v5 JSON output are recorded in the linked B1 handoff and
+  its later evidence commit, without changing v5 meter/config bytes, before any Store/Coordinator
   split work is handed off. Because B1 is produced by that first implementation slice, this Design does not invent
   a pre-existing SHA; absence of the recorded immutable SHA is a mechanical stop for the split, not
   permission to use a branch, working tree, reconstructed patch or B0;
@@ -706,19 +714,21 @@ All gates are conjunctive:
 7. facade RPC methods = 36; Product tables = 21; Product database = 1; Product durable state machine
    = 1; literal two-Engine gateway = 1;
 8. the Design capability block and independently derived complete source/dependency capability
-   inventory match exactly; every Product database component has canonical-only provenance and
+   inventory match exactly across every frozen production and direct-tool member; every Product
+   database component has canonical-only provenance and
    every other component has an exact approved non-Product origin; forbidden compatibility
    decoder/import/caller count = 0; required Product/service/Web
    presence-only sentinel set is an exact allowlist and every refusal stage dominates its assigned
-   current-generation sinks; Product/service sinks also have one matching definitely-held owner lock
-   with no prior release/unknown path; tool-only identities remain confined to the direct tool; and
+   current-generation sinks under actual reachability/present-successor semantics; Product/service
+   sinks also have one matching definitely-held owner lock acquisition token on every predecessor,
+   with no prior release/detached/unknown path; tool-only identities remain confined to the direct tool; and
    no new generic repository/manager/registry, per-Engine plane or migration platform exists.
 
 Failure of any gate rejects the candidate even if the largest file is shorter or tests pass.
 
-Execution starts with the bounded measurement-only v4 Work. Its immutable commit, B0 report,
+Execution starts with the bounded measurement-only v5 Work. Its immutable commit, B0 report,
 handoff and different-actor `PASS` are a hard stop before (1) direct first-public creation plus
-compatibility deletion through a green B1 commit measured with those accepted v4 bytes and (2) the
+compatibility deletion through a green B1 commit measured with those accepted v5 bytes and (2) the
 responsibility split. B1 remains one indivisible production Work but no longer creates or freezes a
 meter. The responsibility split cannot start until the B1 handoff records the immutable B1 commit
 and accepted-meter metrics. Package transcript/root work cannot change or bypass either stop.
@@ -737,9 +747,9 @@ and accepted-meter metrics. Package transcript/root work cannot change or bypass
   imports, not only filenames.
 - API/dependency checks enforce one Store writer/connection, exact core edges/no cycles, 36 facade
   methods, 21 tables, leaf boundary and zero Host lifecycle writes/hard-coded package stage.
-- `B0`/repaired-`B1`/`C` metrics use the identical frozen v4 script/config/universe; rejected
-  v1/v2/v3 evidence remains unchanged. The immutable repaired-B1 commit SHA is checked in before
-  split handoff and all three v4 outputs are linked from the final handoff.
+- `B0`/repaired-`B1`/`C` metrics use the identical frozen v5 script/config/universe; rejected
+  v1-v4 evidence remains unchanged. The immutable repaired-B1 commit SHA is checked in before
+  split handoff and all three v5 outputs are linked from the final handoff.
 - Database semantic fixtures re-derive all resolved opener/constructor/loader/layer/factory/
   receiver calls from the builtin roots, accepted membership, lock bytes and dependency source/JS/
   d.ts. They cover the real Bun/Node Effect loader chains, canonical neutral-wrapper positive, raw
@@ -754,7 +764,10 @@ and accepted-meter metrics. Package transcript/root work cannot change or bypass
   present fallthrough, catch swallowing, a `finally` sink, deferred callback/await, missing sidecar,
   preguard without post-lock guard, dropped acquire, early/aliased/finally release, wrong owner/lane/
   root/lock-path/token, sibling/direct-tool handle and unknown Effect/recursion/control flow. Every
-  current sink must have both a dominance witness and matching definitely-held lock fact.
+  current sink must have both a reachable-cut witness and matching same-acquisition-token lock fact.
+  Mandatory single-cause negatives include direct-tool raw Product SQLite/DELETE, different-handle
+  branch phi, detached microtask release, a guard inside `for (const never of [])`, and a typed reset
+  swallowed by `catch { if (false) throw ... }`.
 
 ### Destructive fixture verification
 
@@ -839,12 +852,12 @@ runtime refusal sentinels separate from forbidden compatibility, per-target iden
 and a Windows quiescence adapter. The further red-team closure makes nested receipt decoding,
 nofollow/hash copies, intermediate-ancestor checks, database-lock identity, abrupt-kill stale-lock
 recovery, Package tombstone convergence and the complete real kill/race/write-trace matrix explicit.
-The v4 meter supersedes rather than edits frozen rejected v1/v2/v3 evidence and must remeasure B0,
-repaired B1 and C in one universe. The later failed v4 authority audit is closed only by the
-candidate-independent persistence-capability derivation and canonical owner-lock must-hold model
-defined above under the
-[maintainer repair calibration](decisions/product-truth-complexity-v4-qbd-repair-calibration.md);
-it changes no runtime target, destructive scope or protected exclusion.
+The v5 meter supersedes rather than edits frozen rejected v1-v4 evidence and must remeasure B0,
+repaired B1 and C in one universe. V5 inherits the repaired v4 capability and owner-lock authority,
+then closes the failed v4 implementation Review with complete production+direct-tool capability
+analysis, unique acquisition-token predecessor meets and actual bounded CFG/ICFG reachability under
+the [v5 calibration](decisions/product-truth-complexity-v5-repair-calibration.md). It changes no
+runtime target, destructive scope or protected exclusion.
 
 The older g50 literal Pi/OpenCode gateway sibling-zero observation remains closed by its same-SHA
 process evidence and is not part of this repair or the next audit absent new contradictory evidence.
@@ -852,7 +865,7 @@ No migration, backup, restore, alias, wrapper or dual compatibility was introduc
 
 The next workflow output is a new independent QbD audit of this repaired Design/interface/Work map
 by a different actor. A fresh `PASS` with zero blocker and zero advisory authorizes only the
-measurement-only v4 Work. Its immutable handoff must then receive a zero-finding different-actor
+measurement-only v5 Work. Its immutable handoff must then receive a zero-finding different-actor
 `PASS` before a new B1 production receipt is issued. Any proposed
 new destructive target or weakened exclusion returns for human calibration. This architect does not
 approve its own gate.

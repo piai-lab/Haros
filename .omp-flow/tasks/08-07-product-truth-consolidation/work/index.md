@@ -39,19 +39,22 @@ The failed immutable B1 review is now governed by the maintainer's
 batch and one sealed Package transition graph. The first coverage-complete v2 meter was rejected by
 its immutable [Review](../reviews/product-truth-complexity-v2.md), and v3 was then rejected by its
 immutable [Review](../reviews/product-truth-complexity-v3.md) for a textual Product-sink prefilter
-and missing current-I/O dominance. V4 repairs only those measurement gates without changing any
-product or destructive boundary.
+and missing current-I/O dominance. V4 repaired those authority claims, but its immutable
+[implementation Review](../reviews/product-truth-complexity-v4.md) then found five concrete semantic
+bypasses. Under the [v5 repair calibration](../decisions/product-truth-complexity-v5-repair-calibration.md),
+v5 alone replaces measurement authority.
 The first v4 QbD then rejected self-selected persistence-capability/non-Product authority and a
 post-lock cut that did not prove the matching lock stayed held. Under the maintainer's
 [v4 QbD repair calibration](../decisions/product-truth-complexity-v4-qbd-repair-calibration.md), the
-same v4 Work now freezes an independently re-derived accepted source/dependency capability closure
-and canonical owner-lock must-hold model. This still changes measurement authority only.
+same v4 Work froze an independently re-derived accepted source/dependency capability closure and
+canonical owner-lock model. V5 inherits those roots, while v4 remains rejected. This still changes
+measurement authority only.
 No destructive target or protected exclusion changes.
 
 ## Hard ordering
 
 The first implementation checkpoint is the measurement-only
-[coverage-complete v4 meter](product-truth-complexity-v4.md). It changes no measured production
+[coverage-complete v5 meter](product-truth-complexity-v5.md). It changes no measured production
 path, freezes one immutable meter commit plus B0 report, writes its handoff and must receive a
 different-actor `PASS`. No B1 production receipt may be issued before that acceptance; B1 must name
 the accepted meter review receipt and immutable SHA/digests as predecessor.
@@ -59,7 +62,7 @@ the accepted meter review receipt and immutable SHA/digests as predecessor.
 The first production wave is [Direct first-public B1](direct-first-public-b1.md). It remains one
 deliberately indivisible production Work because the destructive tool, first-public
 Product/service/Web creation and compatibility deletion must become green together while
-`ProductControlPlane` is structurally unsplit. It consumes the accepted v4 bytes read-only.
+`ProductControlPlane` is structurally unsplit. It consumes the accepted v5 bytes read-only.
 Its implementer must create a dedicated clean commit, then write the handoff in a later evidence
 commit so the recorded 40-hex B1 SHA remains immutable. No Store, Coordinator, facade or execution
 leaf extraction may be assigned, started or pre-scaffolded before that handoff exists and proves
@@ -80,18 +83,20 @@ closure. The dependency serves `scripts/product-truth/**` only. It cannot enter 
 source profile, and cannot alter either frozen complexity-meter file or its universe. The eleven
 implementation-discovered compatibility production/test paths remain exactly eleven.
 
-V1 and rejected v2/v3 meter bytes are immutable history. V4 reads the canonical machine block from
+V1 and rejected v2/v3/v4 meter bytes are immutable history. V5 reads the canonical machine block from
 each of the five product Works at the accepted Design commit, pins every normalized block digest,
 expands any declared design glob once and freezes path membership. Design-time edges/sinks are
 snapshots. Later edges pass only between frozen members; outside-set endpoints, computed/unresolved
-imports and moved responsibility fail mechanically. V4 discovers all resolved database
+imports and moved responsibility fail mechanically. V5 discovers all resolved database
 openers/constructors/wrappers/callers/handles before Product classification, and rejects raw,
-outside, unknown or competing Product provenance. It also proves every complete Product/service/Web
+outside, unknown or competing Product provenance across production and direct-tool members. It also proves every complete Product/service/Web
 refusal stage dominates its assigned current-generation sinks and legacy-present flow cannot reach
 current I/O. Its capability set is independently rooted in the builtin SQLite constructors,
 accepted Work membership, exact lock/dependency source and approved path origins; Product/service
-also require the same canonical owner/lane/root/database/lock-path/token capability to remain held
-through every guarded sink. After v4 review acceptance,
+also require one unique acquisition token for the same canonical owner/lane/root/database/lock-path
+binding on every actual predecessor through every guarded sink. Detached release-capable scheduling
+is unknown; refusal follows present-successor reachability, zero-iteration loops and catch/finally.
+After v5 review acceptance,
 every later Work treats it as read-only.
 An inert `.discarding` tombstone blocks rebuild convergence only; it is never loaded and adds no
 ordinary-runtime sentinel.
@@ -109,7 +114,7 @@ that exception does not apply to `enableAppshots`.
 
 [Native Host v2 Package-root binding](native-host-package-root-binding.md) is a separate product
 boundary and is independently reviewable. The safe default sequence is literal: a different actor
-first accepts the immutable v4 meter handoff, then B1 and a different actor accepts its handoff,
+first accepts the immutable v5 meter handoff, then B1 and a different actor accepts its handoff,
 then a different actor accepts the Native Host handoff,
 then execution-leaf extraction may begin. The current map infers no shared-tree overlap: B1 and the
 Native Host Work both own `apps/desktop/src/main.ts`, and the Native Host Work and execution leaf
@@ -128,7 +133,7 @@ three small reviewable steps:
 These three Works are sequential because they edit the same `ProductControlPlane.ts` responsibility
 surface. They must consume the accepted meter and immutable B1 recorded by their handoffs, never a branch, dirty
 tree, reconstructed patch or B0 substitution. Therefore the complete default sequence is:
-accepted v4 meter → accepted B1 → accepted Native Host → accepted execution leaf → accepted
+accepted v5 meter → accepted B1 → accepted Native Host → accepted execution leaf → accepted
 Product State Store → Coordinator/facade C.
 
 ## Acceptance coverage
@@ -141,14 +146,14 @@ Product State Store → Coordinator/facade C.
 | A4 allowlisted unrecoverable deletion with no copy                            | [Direct first-public B1](direct-first-public-b1.md)                                                                                                                                                           |
 | A5 byte-identical exclusions                                                  | [Direct first-public B1](direct-first-public-b1.md)                                                                                                                                                           |
 | A6 interruption only through fresh inspect/apply                              | [Direct first-public B1](direct-first-public-b1.md)                                                                                                                                                           |
-| A7 exact Product/service/Web generation-1 creation and matching lock hold     | [Direct first-public B1](direct-first-public-b1.md), measured by [v4](product-truth-complexity-v4.md)                                                                                                         |
+| A7 exact Product/service/Web generation-1 creation and matching lock hold     | [Direct first-public B1](direct-first-public-b1.md), measured by [v5](product-truth-complexity-v5.md)                                                                                                         |
 | A8 old/future/unmarked/contradictory state fails closed                       | [Direct first-public B1](direct-first-public-b1.md)                                                                                                                                                           |
-| A9 zero unshipped compatibility caller/import and dominant exact refusal cuts | [Direct first-public B1](direct-first-public-b1.md), measured by [v4](product-truth-complexity-v4.md)                                                                                                         |
+| A9 zero unshipped compatibility caller/import and dominant exact refusal cuts | [Direct first-public B1](direct-first-public-b1.md), measured by [v5](product-truth-complexity-v5.md)                                                                                                         |
 | A10 one Store, one connection and complete transactions                       | [Sole Product State Store](product-state-store.md), retained by the [final C Work](product-execution-coordinator-facade.md)                                                                                   |
 | A11 Coordinator effects without SQL/replay/fallback                           | [Coordinator and facade](product-execution-coordinator-facade.md)                                                                                                                                             |
 | A12 one 36-operation facade and separate probes                               | [Coordinator and facade](product-execution-coordinator-facade.md)                                                                                                                                             |
 | A13 Service-selected, transcript-bound Package root                           | [Native Host v2 Package-root binding](native-host-package-root-binding.md)                                                                                                                                    |
-| A14 deterministic complexity decrease in one universe                         | immutable meter and B0 in [v4 measurement](product-truth-complexity-v4.md); B1 in [Direct first-public B1](direct-first-public-b1.md); C in [Coordinator and facade](product-execution-coordinator-facade.md) |
+| A14 deterministic complexity decrease in one universe                         | immutable meter and B0 in [v5 measurement](product-truth-complexity-v5.md); B1 in [Direct first-public B1](direct-first-public-b1.md); C in [Coordinator and facade](product-execution-coordinator-facade.md) |
 | A15 current recovery behavior and affected real journeys                      | focused preservation in every Work; integrated live proof in [Coordinator and facade](product-execution-coordinator-facade.md)                                                                                |
 
 The three accepted QbD 1 advisories are all hard done conditions of the B1 Work: exact
@@ -161,11 +166,11 @@ Each implementation Work writes its promised handoff and receives a different-ac
 the next overlapping Work begins. Focused green checks do not authorize broader claims. The final C
 Work may submit affected Campaign claims only as `candidate`; no producer may mark them verified.
 
-The next workflow entry is a fresh different-actor QbD audit of the v4 meter repair across Design,
-interface, measurement Work, all five product Works and this map. It must explicitly refute both
-findings in the failed [v4 audit](../qbd/product-truth-complexity-v4-audit.md): per-seed/source-
-digest capability completeness with no unapproved non-Product discharge, and same-binding
-owner-lock must-hold through every sink. Only `PASS` with zero blocker and
-zero advisory authorizes the measurement-only v4 assignment. Its immutable handoff then needs a
-zero-finding different-actor `PASS` before a new B1 production receipt. Rejected v1/v2/v3 meter
-bytes, Reviews and candidates remain immutable historical evidence.
+The next workflow entry is a fresh different-actor QbD audit of the v5 repair across Design,
+interface, measurement Work, all five product Works and this map. It must explicitly refute the
+five unexpected passes in the failed [v4 implementation Review](../reviews/product-truth-complexity-v4.md):
+direct-tool raw Product persistence, different-acquisition branch phi, detached microtask release,
+zero-iteration `for...of`, and conditional false rethrow swallowing. Only `PASS` with zero blocker
+and zero advisory authorizes the measurement-only v5 assignment. Its immutable handoff then needs a
+zero-finding different-actor `PASS` before a new B1 production receipt. Rejected v1-v4 meter bytes,
+Reviews and candidates remain immutable historical evidence.
