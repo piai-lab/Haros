@@ -22,8 +22,10 @@ perform, the Coordinator/facade extraction.
 ## Entry stop
 
 This Work begins only after immutable B1, Native Host v2 and the execution-leaf Work have
-different-actor accepted handoffs. The B1 chain must bind the accepted immutable v7 meter Review and
-SHA/digests, including Work/raw-effect/effect-ingress/B1-verifier/dependency/import/universe digests, and the accepted B1
+different-actor accepted handoffs. The execution-leaf candidate/report is this Work's immutable
+comparison predecessor. The B1 chain must bind the accepted immutable v8 meter Review and SHA/
+digests, including Work/raw-effect/predecessor-delta/effect-ingress/B1-verifier/dependency/import/
+universe digests, and the accepted B1
 verifier case-manifest/trace/fault/race/kill plus hidden-mutation/source-Review receipts. It must use
 the exact B1 recorded by the first handoff for later B0/B1/C comparison.
 
@@ -98,7 +100,7 @@ caller ownership.
 - Run Store/Product focused tests, Package projection/replay tests and Service typecheck. Static
   gates reject a second connection, writer, raw transaction export, table CRUD API or core cycle.
 - Read the frozen complexity instrument without editing it; report the intermediate metrics only.
-- Run the frozen v7 membership/dependency/import/effect-ingress gates. The future Store may
+- Run the frozen v8 membership/dependency/import/effect-ingress/predecessor-delta gates. The future Store may
   materialize inside the frozen set and becomes the sole Product raw-effect owner exactly when the
   unsplit `ProductControlPlane` owner disappears; coexistence, outside-set endpoint,
   computed/unresolved import or alternate raw owner stops. Re-run the owner-local Product lifecycle

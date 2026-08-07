@@ -22,8 +22,10 @@ authority. This is the smallest independently reviewable first step of PRD R9/R1
 
 Do not assign or start this Work until [`handoffs/direct-first-public-b1.md`](../handoffs/direct-first-public-b1.md)
 records a different-actor-accepted clean immutable B1 and zero production Store/Coordinator/leaf
-extraction surface. That B1 must itself name the accepted immutable v7 meter Review receipt and
-SHA/digests, including Work/raw-effect/effect-ingress/B1-verifier/dependency/import/universe digests, and its accepted
+extraction surface, and the Native Host Work must have a different-actor-accepted handoff whose
+candidate/report is this Work's immutable comparison predecessor. The chain must name the accepted
+immutable v8 meter Review receipt and SHA/digests, including Work/raw-effect/predecessor-delta/
+effect-ingress/B1-verifier/dependency/import/universe digests, and its accepted
 verifier case-manifest/trace/fault/race/kill plus hidden-mutation/source-Review receipts. The
 implementation base must contain that exact B1 commit.
 
@@ -67,9 +69,10 @@ behavior may change. The leaf may import Product contracts and generic libraries
   no new cycle, no SQL/schema/table token in the leaf and no behavior/API snapshot drift.
 - The frozen complexity instrument is read-only and reports the intermediate result without
   treating it as C or changing B1.
-- The frozen v7 gate accounts for every production path; newly materialized edges pass only between
+- The frozen v8 gate accounts for every production path; newly materialized edges pass only between
   frozen members, while outside-set, computed/unresolved or moved-responsibility cases stop. Its
-  accepted dependency/import/effect-ingress inventory and counts remain unchanged and green; the
+  accepted predecessor, outside blob/import/raw/violation identities, inside nontraced sub-multiset,
+  traced symbol/class, dependency/import/effect-ingress inventory and counts remain green; the
   accepted B1 runtime behavior evidence remains an immutable predecessor rather than a static meter
   claim.
 

@@ -58,12 +58,19 @@ restore semantic CFG analysis or change any Product/destructive scope.
 The [final v7 QbD repair calibration](decisions/product-truth-complexity-v7-final-qbd-repair-calibration.md)
 closes only the remaining global-alias/source-form vocabulary and fixture-state/cardinality
 authority gaps; the Occam split, operation universe and five production fences remain unchanged.
+The accepted [v7 Review](reviews/product-truth-complexity-v7.md) freezes that history, including B0's
+812 raw ingress sites and 712 observational owner violations. The failed B1 measurement exposed a
+separate authority contradiction: v7 rejects every unchanged B0 violation for a non-B0 ref and does
+not consume declared owner symbols. The versioned
+[v8 authority](interfaces/product-truth-complexity-v8.md) repairs only that candidate comparison;
+it does not edit v7 or expand runtime/destructive scope.
 
 ## Scope and source boundaries
 
 | Responsibility                 | Intended source boundary                                                                                             | Owns                                                                                                                | Must not own                                                              |
 | ------------------------------ | -------------------------------------------------------------------------------------------------------------------- | ------------------------------------------------------------------------------------------------------------------- | ------------------------------------------------------------------------- |
-| v7 measurement checkpoint      | `measure-complexity-v7.mjs`, `complexity-universe-v7.json` and structural fixtures                                   | frozen Work/raw-effect syntax+dependency/owner-allocation/complexity/count authority, B1-verifier-universe digest and immutable B0 | runtime behavior, CFG/points-to semantics, direct rebuild or destructive state |
+| v7 historical checkpoint       | immutable `measure-complexity-v7.mjs`, config, fixtures, handoff and Review                                           | accepted B0 structure/grammar and observational raw inventory provenance                                                  | candidate raw-owner verdict or runtime behavior                           |
+| v8 measurement checkpoint      | `measure-complexity-v8.mjs`, `complexity-universe-v8.json` and structural fixtures                                   | frozen v7 authorities plus accepted-predecessor binding, exact owner symbols and per-Work raw deltas                      | runtime behavior, CFG/points-to semantics, direct rebuild or destructive state |
 | direct rebuild tool            | `scripts/product-truth/**` plus focused tests                                                                        | inspect/apply orchestration, ephemeral inspection scratch, stdout result                                            | runtime startup, old-data decoding, state preservation, Package lifecycle |
 | first-public Product Store     | exact `apps/service/src/product/productStateStore.ts`; any private SQL file requires a new machine-boundary decision | Product database lifecycle, exact schema, 21 tables, all Product writes/transactions                                | Engine effects, Web/RPC, second connection                                |
 | execution coordinator          | `apps/service/src/product/productExecutionCoordinator.ts`                                                            | execution boundary, catalog memory, prepared handles, subscriptions, effect ordering                                | SQL, durable state machine, Engine wire                                   |
@@ -618,19 +625,24 @@ values, credentials, raw Engine bytes, endpoints or stored workspace paths.
 
 ## Complexity measurement and gates
 
-V1-v6 candidates/reports are immutable rejected evidence; none can gate repaired B1 or C. The sole
-current measurement authority is `product-truth-complexity-v7`, owned by the
-[measurement-only v7 Work](work/product-truth-complexity-v7.md) and exact
-[v7 mechanical interface](interfaces/product-truth-complexity-v7.md). Its dedicated commit and B0
-report receive different-actor acceptance before B1. B1 names that Review receipt and immutable v7
-SHA/digests as predecessor and treats every meter byte read-only.
+V1-v6 candidates/reports are immutable rejected evidence. V7 is immutable accepted evidence for
+B0 structure, the finite syntax/dependency universe and its observational inventory, but is not a
+candidate gate: `node scripts/product-truth/measure-complexity-v7.mjs --ref
+50deefc1f8e904805c5c990756f3048de33c7ad5` exits 1 on unchanged outside-B1 owners, and v7's
+path/class map ignores `b1TracedOwners.symbol`. The sole current candidate authority is
+`product-truth-complexity-v8`, owned by the [measurement-only v8 Work](work/product-truth-complexity-v8.md)
+and exact [v8 interface](interfaces/product-truth-complexity-v8.md). Its dedicated commit and B0
+report receive different-actor acceptance before B1. B1 names that Review receipt and immutable v8
+SHA/digests as authority predecessor and treats every v1-v8 meter byte read-only.
 
-V7 extracts the five strict machine-readable Work boundaries plus exactly one each of
+V8 incorporates by digest v7's five strict machine-readable Work boundaries plus exactly one each of
 `omp-flow-raw-effect-universe-v1`, `omp-flow-effect-ingress-authority-v1` and
 `omp-flow-b1-verifier-universe-v1` from its accepted Design commit. Config pins the Design SHA,
 normalized blocks/digests, one-time glob expansion and exact membership; it cannot contribute
 paths, owners, operations, effect classes, syntax terminals, dependency dispositions or counter
-definitions. The meter resolves static imports/exports against exact manifest/`bun.lock` bytes and
+definitions. It additionally extracts exactly one
+`omp-flow-work-predecessor-delta-authority-v1` block from the v8 interface. The meter resolves
+static imports/exports against exact manifest/`bun.lock` bytes and
 records external package version, integrity/revision, export entry, ordered source closure and its
 digest. Design snapshots and candidate-selected path lists have no authority.
 
@@ -643,28 +655,43 @@ neither the meter nor config may call them pure. One exact selector vocabulary d
 literal-computed and nonliteral-computed access. Unshadowed `globalThis`, `global`, `self` and
 `window` normalize through only static dot/literal selectors to a reserved root; shadowing,
 nonliteral selectors, repeated wrappers and unresolved chains fail. Neither meter nor config may
-invent another alias or normalization. The owner-allocation block then requires every
-resolved binding reference to remain inside its exact B1 traced declaration
-or an exact count-frozen unrelated platform/release adapter; raw bindings, paths, database/Level
-handles, batches, release primitives and process handles cannot escape or be exported. At C the Product ingress moves literally from unsplit
+invent another alias or normalization. V8 consumes owner-allocation symbols rather than reducing
+them to paths: every traced reference resolves to the exact declared `(path, nearest named
+declaration symbol, class)`. A module import is only the binding declaration and every reference
+must close into that capability. No named raw-using private helper is declared; adding one requires
+a prior Design/QbD change. Raw bindings, paths, database/Level handles, batches, release primitives
+and process handles cannot escape or be exported. At C the Product ingress moves literally from unsplit
 `ProductControlPlane#makeProductControlPlaneLayer` to `productStateStore#makeProductStateStore`;
 both may never coexist. These are structural owner facts, not path/lifetime proof.
 
-At B0/B1/C, V7 resolves the candidate graph afresh. A later edge passes only when both endpoints are
-already frozen members, including a materialized future exact path. Any outside-set importer/target,
-computed/unresolved import, candidate-created glob match or responsibility move fails and never
-expands the set. Deleted paths remain with zero lines; future exact paths are already members.
-`scripts/check-source-closure.mjs`, all v1-v7 meter/config files and their evidence are
-measurement, not production, direct-tool or steady-state runtime.
+For each B1/C Work, v8 receives the immutable predecessor ref/report, linked handoff and
+different-actor `PASS` named by the authored Work map. B1's accepted v8 meter handoff binds B0;
+later Works bind the immediately preceding accepted Product candidate. Missing, mismatched,
+self-reviewed, candidate-chosen, branch, working-tree, reconstructed or failed predecessors stop
+before comparison.
 
-V7 deliberately stops at those mechanically decidable facts. It contains no general CFG/ICFG,
+The selected Work's exact `production` paths are the sole mutable raw-owner set. A selected-Work
+nontraced path's canonical ingress multiset may equal or be a sub-multiset of its predecessor; any
+new occurrence, declaration symbol, class, terminal or source form fails. Every frozen member
+outside the selected Work preserves presence, executable mode and Git blob exactly, and its
+resolved import-edge, canonical ingress and canonical violation multisets must also equal the
+predecessor. This preserves the 93 unrelated B0 violation paths without approving them as owners.
+
+V8 resolves the candidate graph afresh. Exact selected-Work members may be deleted, leaving zero
+candidate ingress, or materialized when pre-frozen in the boundary, in which case all raw ingress
+must be traced. Outside deletion/materialization, candidate-created glob membership and undeclared
+path moves fail. Every candidate importer is resolved again, so deletion cannot leave a dangling or
+altered outside edge. `scripts/check-source-closure.mjs` and all v1-v8 meter/config files and their
+evidence are measurement, not production, direct-tool or steady-state runtime.
+
+V8 deliberately stops at those mechanically decidable facts. It contains no general CFG/ICFG,
 SSA, points-to, resource-token, Promise/task, Effect, catch/finally, scheduling or virtual-source
 semantic interpreter and makes no runtime claim from source order, nesting, names or tokens. It
 reports exact structural inventories for forbidden compatibility, required sentinel identities and
 raw-effect ingress, while B1 owns whether those sentinels refuse and those effects are safe.
 
 B1 closes each destructive/runtime-state effect behind the exact owner-local capability declared in
-the v7 interface. The Design-owned verifier block freezes 10 owners, 146 exact operations, 34 race
+the immutable v7 allocation and enforced by v8's exact-symbol rule. The Design-owned verifier block freezes 10 owners, 146 exact operations, 34 race
 barriers and 29 durable kill boundaries together with operation signatures/atomicity, stage/resource
 events, before/after faults, outcomes and exclusions before B1 implementation. The same block
 freezes 87 exact per-owner fixture states, JCS/SHA-256 owner and catalog digests, resource/key/chunk
@@ -704,8 +731,8 @@ Three points are required:
 - `B1`: a dedicated clean repaired commit where direct first-public behavior, presence-only runtime
   refusal and compatibility deletion are green but responsibility extraction has not begun. The
   failed `50deefc1f8e904805c5c990756f3048de33c7ad5` remains immutable rejected evidence and is not B1.
-  The repaired commit's full 40-hex SHA, v7 JSON output and complete runtime-verifier manifest/result
-  are recorded in the linked B1 handoff and its later evidence commit, without changing v7
+  The repaired commit's full 40-hex SHA, v8 JSON output and complete runtime-verifier manifest/result
+  are recorded in the linked B1 handoff and its later evidence commit, without changing v1-v8
   meter/config bytes, before any Store/Coordinator
   split work is handed off. Because B1 is produced by that first implementation slice, this Design does not invent
   a pre-existing SHA; absence of the recorded immutable SHA is a mechanical stop for the split, not
@@ -715,7 +742,7 @@ Three points are required:
 The exact configured B0 SHA is observational for historical behavior and effect-ingress
 nonconformance so the baseline can be measured without being mislabeled green. Authority extraction,
 config integrity, membership, dependency resolution and report determinism remain hard at B0.
-Repaired B1/C hard-fail every v7 structural/ingress/count gate; the separate B1 runtime verifier and
+Repaired B1/C hard-fail every v8 structural/predecessor-delta/ingress/count gate; the separate B1 runtime verifier and
 Review gate behavior. No other ref or working-tree state can select observational mode.
 
 All gates are conjunctive:
@@ -732,7 +759,9 @@ All gates are conjunctive:
 7. facade RPC methods = 36; Product tables = 21; Product database = 1; Product durable state machine
    = 1; literal two-Engine gateway = 1;
 8. the exact dependency/import closure and raw-effect ingress authority match across every frozen
-   production/direct-tool member; alternate/outside owner ingress, forbidden/unknown loader,
+   production/direct-tool member; outside-Work blobs/imports/raw/violations equal the accepted
+   predecessor, selected-Work nontraced ingress only decreases, traced path/symbol/class is exact,
+   and alternate/outside owner ingress, forbidden/unknown loader,
    exported raw capability/handle/release and simultaneous B1/C Product owner = 0; forbidden
    compatibility decoder/import/caller count = 0; required Product/service/Web sentinel identities
    and tool-only target identities remain exact structural inventories; no generic
@@ -742,9 +771,9 @@ All gates are conjunctive:
 
 Failure of any gate rejects the candidate even if the largest file is shorter or tests pass.
 
-Execution starts with the bounded measurement-only v7 Work. Its immutable commit, B0 report,
+Execution starts with the bounded measurement-only v8 Work. Its immutable commit, predecessor-bound B0 report,
 handoff and different-actor `PASS` are a hard stop before (1) direct first-public creation plus
-compatibility deletion through a green B1 commit measured with those accepted v7 bytes and proved
+compatibility deletion through a green B1 commit measured with those accepted v8 bytes and proved
 by its separate frozen runtime verifier/Review, and (2) the
 responsibility split. B1 remains one indivisible production Work but no longer creates or freezes a
 meter. The responsibility split cannot start until the B1 handoff records the immutable B1 commit
@@ -765,10 +794,10 @@ bypass either stop.
   imports, not only filenames.
 - API/dependency checks enforce one Store writer/connection, exact core edges/no cycles, 36 facade
   methods, 21 tables, leaf boundary and zero Host lifecycle writes/hard-coded package stage.
-- `B0`/repaired-`B1`/`C` metrics use the identical frozen v7 script/config/universe; rejected
-  v1-v6 evidence remains unchanged. The immutable repaired-B1 commit SHA is checked in before
-  split handoff and all three v7 outputs are linked from the final handoff.
-- V7 structural fixtures exhaust the Design-frozen static/dynamic/CommonJS/builtin/global ingress
+- `B0`/repaired-`B1`/`C` metrics use the identical frozen v8 script/config/universe; all v1-v7
+  evidence remains unchanged. The immutable repaired-B1 commit SHA is checked in before split
+  handoff and all three v8 outputs are linked from the final handoff.
+- V8 structural fixtures preserve v7's Design-frozen static/dynamic/CommonJS/builtin/global ingress
   spelling, including `Bun.spawnSync`, Bun Shell `$`, `process.dlopen`, `.node`, worker and browser
   storage/OPFS forms, plus source-digest-keyed dependency exports and unknown-dependency failure,
   namespace/destructure/alias/re-export, exact owner containment, exported raw bindings/handles/
@@ -781,7 +810,9 @@ bypass either stop.
   the full event prefix, terminal disposition, exact writes, post-state, exclusions and sanitized
   output. Hidden different-actor mutations include removed/coarsened operations, an omitted barrier
   and a downgraded durable event in addition to the v5/v6 counterexample families, against the real
-  verifier or v7 ingress gate, followed by same-SHA source Review.
+  verifier or v8 ingress gate, followed by same-SHA source Review. Separate negatives cover wrong
+  traced symbols/new helpers, inside nontraced growth, outside blob/import/raw/violation drift,
+  deletion/materialization/path move and candidate-chosen predecessor.
 
 ### Destructive fixture verification
 
@@ -866,10 +897,10 @@ runtime refusal sentinels separate from forbidden compatibility, per-target iden
 and a Windows quiescence adapter. The further red-team closure makes nested receipt decoding,
 nofollow/hash copies, intermediate-ancestor checks, database-lock identity, abrupt-kill stale-lock
 recovery, Package tombstone convergence and the complete real kill/race/write-trace matrix explicit.
-The v7 meter supersedes rather than edits frozen rejected v1-v6 evidence and remeasures B0,
-repaired B1 and C in one universe. Under the
-[v7 calibration](decisions/product-truth-complexity-v7-repair-calibration.md), it proves only frozen
-structure, dependency/import closure, raw-effect ingress ownership, complexity and stable counts.
+The accepted v7 meter remains immutable B0 structural evidence. V8 supersedes only its impossible
+candidate raw-owner verdict and remeasures B0, repaired B1 and C in one universe. It preserves the
+[v7 calibration](decisions/product-truth-complexity-v7-repair-calibration.md): only frozen
+structure, dependency/import closure, accepted-predecessor raw deltas, complexity and stable counts.
 Classifier cleanup, lock/refusal ordering, scheduling and completion behavior move to B1's
 non-leaking owner capabilities, verifier-owned trace/fault/race/kill matrix and hidden-mutation/
 source Review. This changes no runtime target, destructive scope or protected exclusion.
@@ -878,9 +909,9 @@ The older g50 literal Pi/OpenCode gateway sibling-zero observation remains close
 process evidence and is not part of this repair or the next audit absent new contradictory evidence.
 No migration, backup, restore, alias, wrapper or dual compatibility was introduced.
 
-The next workflow output is a new independent QbD audit of this repaired Design/interface/Work map
+The next workflow output is a new independent QbD audit of this repaired Design/v8 interface/Work map
 by a different actor. A fresh `PASS` with zero blocker and zero advisory authorizes only the
-measurement-only v7 Work. Its immutable handoff must then receive a zero-finding different-actor
+measurement-only v8 Work. Its immutable handoff must then receive a zero-finding different-actor
 `PASS` before a new B1 production receipt is issued. Any proposed
 new destructive target or weakened exclusion returns for human calibration. This architect does not
 approve its own gate.

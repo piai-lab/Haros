@@ -10,7 +10,8 @@ title: "Direct first-public rebuild and immutable unsplit B1"
 Implement the exact pre-release `inspect`/`apply` tool, direct generation-1 Product/service/Web
 creation and complete unshipped-compatibility deletion, while keeping Product responsibilities
 mechanically unsplit. Consume the different-actor-accepted immutable
-`product-truth-complexity-v7` mechanical meter as a read-only predecessor, prove runtime behavior
+`product-truth-complexity-v8` mechanical meter and its accepted B0 snapshot as a read-only
+predecessor, prove runtime behavior
 through owner-local capabilities and verifier-owned evidence, then produce one dedicated clean
 green B1 commit and record its full SHA and metrics without modifying the meter commit.
 This Work realizes PRD A1-A9, the B1 half of A14, and the B1 preservation portion of A15.
@@ -34,24 +35,29 @@ This Work realizes PRD A1-A9, the B1 half of A14, and the B1 preservation portio
 - [Unshipped compatibility inventory](../research/unshipped-compatibility.md)
 - [Failed immutable B1 Review](../reviews/direct-first-public-b1.md)
 - [V7 Occam repair calibration](../decisions/product-truth-complexity-v7-repair-calibration.md)
-- [V7 mechanical authority](../interfaces/product-truth-complexity-v7.md)
-- [Authoritative v7 meter Work](product-truth-complexity-v7.md) and its required
-  `handoffs/product-truth-complexity-v7.md`
+- [Accepted v7 historical Review](../reviews/product-truth-complexity-v7.md)
+- [V8 predecessor-delta authority](../interfaces/product-truth-complexity-v8.md)
+- [Authoritative v8 meter Work](product-truth-complexity-v8.md) and its required
+  `handoffs/product-truth-complexity-v8.md`
 
 ## Entry stop
 
-Do not assign or start this Work until `reviews/product-truth-complexity-v7.md` records a
+Do not assign or start this Work until `reviews/product-truth-complexity-v8.md` records a
 zero-finding different-actor `PASS` over the immutable meter-only commit. The B1 assignment must
 name that review receipt as predecessor, record the accepted meter SHA/digests including the
-five Work fences, raw-effect syntax/dependency inventory, dependency/import closure, raw-effect
-owner authority and B1 verifier-universe digest, and use those bytes read-only.
+five Work fences, raw-effect syntax/dependency inventory, predecessor-delta authority,
+dependency/import closure, raw-effect owner authority and B1 verifier-universe digest, and use
+those bytes plus its accepted B0 report read-only. A branch, working tree, failed candidate or
+candidate-selected predecessor stops before comparison.
 
 ## In scope
 
-- Preserve rejected v1-v6 history plus accepted v7 meter/config/fixtures byte-for-byte. Run the
-  accepted v7 bytes against repaired B1; any Design/boundary/universe/dependency/ingress/count/B0
-  mismatch stops.
-- Encapsulate every v7 `b1TracedOwner` as a small non-leaking owner-local capability. Raw scratch or
+- Preserve all v1-v7 history plus accepted v8 meter/config/fixtures byte-for-byte. Run the accepted
+  v8 bytes against repaired B1 and its handoff-bound B0 predecessor; any Design/boundary/universe/
+  predecessor/dependency/ingress/count mismatch stops.
+- Encapsulate every Design-declared `b1TracedOwner` as a small non-leaking owner-local capability.
+  V8 requires exact path + nearest named declaration symbol + class; no same-file named raw helper
+  is implicitly authorized. Raw scratch or
   source paths usable for arbitrary I/O, SQLite/LevelDB handles, batches, lock tokens, release
   primitives, process handles and raw adapters must not cross its typed intent/sanitized-result
   boundary. Verifier composition injects the frozen port/event/fault/race/kill interfaces; no
@@ -95,7 +101,7 @@ owner authority and B1 verifier-universe digest, and use those bytes read-only.
 
 The implementer may create or change only:
 
-- `scripts/product-truth/**` except every v1-v7 meter/config/coverage fixture, the root
+- `scripts/product-truth/**` except every v1-v8 meter/config/coverage fixture, the root
   `package.json` entries needed for the two commands,
   `scripts/package.json` solely to declare one exact non-range direct `classic-level` dependency,
   and the root `bun.lock` solely to record its package-manager-produced scripts-workspace
@@ -146,6 +152,9 @@ The implementer may create or change only:
   `scripts/prepare-release-update-feed.ts`, `scripts/update-release-package-versions.ts` and the
   exact tests already enumerated in the machine block below, only to remove the inherited
   compatibility lane while retaining current policy;
+- `scripts/release-smoke.ts` solely to remove the retired `.lane` caller/assertions while preserving
+  every current release-smoke path and assertion; it grants no release-policy redesign, new lane,
+  dependency, packaging or runtime authority;
 - [handoff](../handoffs/direct-first-public-b1.md).
 
 No other production or dependency path is owned. Product refusal remains in the already-owned
@@ -204,7 +213,8 @@ does not authorize an unlisted production path.
     { "kind": "exact", "path": "scripts/release-update-policy.json" },
     { "kind": "exact", "path": "scripts/resolve-release-update-policy.ts" },
     { "kind": "exact", "path": "scripts/prepare-release-update-feed.ts" },
-    { "kind": "exact", "path": "scripts/update-release-package-versions.ts" }
+    { "kind": "exact", "path": "scripts/update-release-package-versions.ts" },
+    { "kind": "exact", "path": "scripts/release-smoke.ts" }
   ],
   "measurement": [
     { "kind": "exact", "path": "scripts/check-source-closure.mjs" }
@@ -253,14 +263,18 @@ does not authorize an unlisted production path.
   database path as normal Service composition. Exact `enableAppshots` has zero production/test
   source occurrences, `enableAppSnap` remains the sole current AppSettings key for the capability,
   and legacy input cannot activate it through schema decoding, normalization, fixtures, comments
-  or aliases. There is no snapshot, converter, restore, legacy reader, dual-read or hidden copy.
-- The accepted v7 scan reports tool-only identities, required runtime sentinel identities,
+  or aliases. `scripts/release-smoke.ts` has zero retired `.lane` caller/assertion residue and no
+  other behavior change. There is no snapshot, converter, restore, legacy reader, dual-read or
+  hidden copy.
+- The accepted v8 scan reports tool-only identities, required runtime sentinel identities,
   forbidden compatibility and every raw-effect ingress separately. The finite syntax/dependency
-  universe, exact source-closure digests, unknown-dependency failure, exact owner containment,
+  universe, exact source-closure digests, unknown-dependency failure, accepted B0 predecessor,
+  exact outside-Work blob/import/raw/violation equality, selected-Work nontraced sub-multiset and
+  traced path/declaration-symbol/class containment,
   dependency/import closure, non-export/non-escape shape, forbidden-loader absence and the unsplit
   B1 Product owner are hard gates; no raw filesystem/SQLite/LevelDB/process/Web-Storage/ambient-loader
-  path may exist outside the v7 authority.
-- The B1 verifier—not v7—proves behavior. Each exact traced owner uses non-leaking typed
+  path may be newly classified or expanded outside the v8 authority.
+- The B1 verifier—not v8—proves behavior. Each exact traced owner uses non-leaking typed
   intent/sanitized-result boundaries and verifier-owned ports/events. The checked-in generator
   recomputes the frozen owner/catalog digests and derives its dimensions only from the block,
   covering every one of its 87 exact states, each cardinality-derived actual operation ordinal's before/after fault,
@@ -272,7 +286,7 @@ does not authorize an unlisted production path.
   raw ingress, cached/merged/wrong classifier resources, unreachable validation, skipped/swallowed
   cleanup, early/detached release, old-state fallthrough, zero-iteration guards, finally-replaced or
   non-exact reset errors and missing kill convergence, then source-reviews every traced capability,
-  port composition, raw reference and generator. The real verifier or v7 structural gate must fail
+  port composition, raw reference and generator. The real verifier or v8 structural gate must fail
   each mutation while adjacent real positives pass. It additionally removes one port operation,
   coarsens two operations, omits one fixture state, shrinks one resource cardinality, drops one
   terminal EOF ordinal, omits one race/kill convergence binding and downgrades one durable event; each must fail
@@ -284,7 +298,7 @@ does not authorize an unlisted production path.
   unclassified occurrence, including a newly discovered required production/test path outside this
   Work boundary, stops the Work for map repair.
 - The dedicated repaired B1 commit is clean and green, its full 40-hex SHA is recorded, and B0,
-  repaired B1 and later C use the already-frozen v7 instrument. Rejected v1-v6 evidence remains immutable
+  repaired B1 and later C use the already-frozen v8 instrument. All v1-v7 evidence remains immutable
   and failed candidate `50deefc1...` is never reused as repaired B1. A structural scan at B1 reports zero
   production `ProductStateStore`/`ProductExecutionCoordinator` files, symbols, imports or facade
   extraction scaffolds. The evidence-recording commit is distinct from B1.
@@ -299,10 +313,13 @@ does not authorize an unlisted production path.
   write-trace matrices. Cover native Windows enumeration and POSIX `ps`, exact database-lock
   identity, SIGKILL-stale profile locks, intermediate ancestry and Package duplicate/tombstone
   convergence.
-- Run only the accepted v7 SHA/digests for B1 frozen membership, dependency/import closure,
-  raw-effect owner containment and structural/count gates. Pass the materialized future Store member
-  while B1 keeps it absent, and fail outside-set/unresolved/computed imports, alternate raw owners,
-  raw exports/handles/releases, forbidden/unknown loaders and simultaneous B1/C Product owners.
+- Run only the accepted v8 SHA/digests and handoff-bound B0 report for B1 frozen membership,
+  dependency/import closure, predecessor delta, raw-effect owner containment and structural/count
+  gates. Pass exact outside equality, selected-Work nontraced equality/reduction and the absent
+  pre-frozen future Store member; fail outside blob/deletion/materialization/import/raw/violation
+  drift, wrong traced symbol/new helper, inside nontraced growth, unlisted paths,
+  unresolved/computed imports, raw exports/handles/releases, forbidden/unknown loaders and
+  simultaneous B1/C Product owners.
 - Run the verifier-owned generated-home matrix as one manifest-bound gate derived from the exact
   Design block. It covers classifier copy validation/cleanup, Product/service lock and refusal, Web
   refusal/batch, target seals, Package transitions and recovery across every frozen operation
@@ -317,15 +334,17 @@ does not authorize an unlisted production path.
 - Use process/import/network spies to prove `inspect` and `apply` do not launch Electron, use a
   real-profile Electron reader/writer or perform network access. Compare both historical v1 meter
   files byte-for-byte with commit `45df49a6afde882d32c1dcd00457c7787d227e4a`, compare rejected
-  v2/v3/v4/v5/v6 evidence and v7 bytes/digests/B0 with the accepted meter handoff and remeasure
-  repaired B1 with those v7 bytes. Prove `bun.lock` is the pinned v7 `dependency` entry and excluded
-  from v7 production LOC/import totals. V1-v6 comparison is immutable historical provenance only
+  v2/v3/v4/v5/v6/v7 evidence and v8 bytes/digests/B0 with the accepted meter handoff and remeasure
+  repaired B1 with those v8 bytes. Prove `bun.lock` is the pinned v8 `dependency` entry and excluded
+  from v8 production LOC/import totals. V1-v7 comparison is immutable historical provenance only
   and cannot satisfy a B1 structural or behavior gate.
 - Verify the source-closure diff is exactly the `adapted-present` 1496→1494 and
   `adapted-removed` 774→776 count transfer plus its deterministic digest, caused only by the two
   already-owned `desktopUserDataProfile` deletions; total paths, tree SHA, mappings, algorithms and
   every other disposition remain unchanged.
 - Run focused Product/service/Web/Desktop/release-policy tests affected by creation and deletion,
+  including the unchanged-current-behavior `scripts/release-smoke.ts` assertions after removing
+  only the retired `.lane` caller surface,
   the existing focused OpenCode live-journey probe test for canonical Product database resolution,
   `apps/web/src/lib/composerImageSource.test.ts`,
   `apps/web/src/components/chat/ComposerImageAttachmentChip.test.tsx`,
