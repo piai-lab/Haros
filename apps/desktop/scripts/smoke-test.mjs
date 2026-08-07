@@ -39,9 +39,7 @@ async function rendererReady(output) {
 function verifyElectronProfiles(pid) {
   if (process.platform === "win32") return;
   const electronProcesses = processGroupCommands(pid).filter(
-    (process) =>
-      /Electron(?: Helper)?/u.test(process.command) &&
-      !process.command.includes("/apps/service/dist/index.mjs"),
+    (process) => process.command.includes(mainJs) || /(?:^|\s)--type=[^\s]+/u.test(process.command),
   );
   if (electronProcesses.length === 0) {
     throw new Error("no Electron process was present after renderer readiness");
