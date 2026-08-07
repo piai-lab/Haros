@@ -1,0 +1,8 @@
+{
+  "compareToBootstrapBaseline": true,
+  "textReplacements": {
+    "apps/desktop/src/main.ts": [
+      ["    FS.mkdirSync(Path.dirname(recordPath), { recursive: true });\n    FS.writeFileSync(recordPath, serializeLaunchVersionRecord(version));", "    FS.writeFileSync(recordPath, serializeLaunchVersionRecord(version));\n    FS.mkdirSync(Path.dirname(recordPath), { recursive: true });"]
+    ]
+  }
+}

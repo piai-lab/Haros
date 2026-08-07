@@ -1,0 +1,8 @@
+{
+  "compareToBootstrapBaseline": true,
+  "textReplacements": {
+    "apps/service/src/atomicWrite.ts": [
+      ["await fs.lstat(existingDirectory)", "await fs.stat(existingDirectory)"]
+    ]
+  }
+}

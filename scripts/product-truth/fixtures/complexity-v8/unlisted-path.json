@@ -1,0 +1,6 @@
+{
+  "compareToBootstrapBaseline": true,
+  "virtualFiles": {
+    "apps/service/src/not-authorized-v8.ts": "export const notAuthorized = true;\n"
+  }
+}

@@ -1,0 +1,6 @@
+{
+  "compareToBootstrapBaseline": true,
+  "moveFiles": {
+    "apps/service/src/atomicWrite.ts": "apps/service/src/atomicWriteMoved.ts"
+  }
+}

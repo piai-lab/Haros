@@ -1,0 +1,8 @@
+{
+  "compareToBootstrapBaseline": true,
+  "textReplacements": {
+    "apps/service/src/atomicWrite.ts": [
+      ["from \"./privatePathPermissions\";", "from \"./attachmentPaths\";"]
+    ]
+  }
+}

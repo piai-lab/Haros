@@ -1,0 +1,8 @@
+{
+  "compareToBootstrapBaseline": true,
+  "textReplacements": {
+    "apps/desktop/src/main.ts": [
+      ["const raw = FS.readFileSync(ymlPath, \"utf-8\");", "let raw: Buffer;\n    raw = FS.readFileSync(ymlPath, \"utf-8\");"]
+    ]
+  }
+}

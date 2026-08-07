@@ -1,0 +1,6 @@
+{
+  "compareToBootstrapBaseline": true,
+  "removeFiles": [
+    "apps/service/src/native-host/liveJourneyProbe.ts"
+  ]
+}

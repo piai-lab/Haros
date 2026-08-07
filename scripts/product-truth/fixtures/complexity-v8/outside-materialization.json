@@ -1,0 +1,6 @@
+{
+  "compareToBootstrapBaseline": true,
+  "virtualFiles": {
+    "apps/service/src/product/productStateStore.ts": "export function makeProductStateStore() {\n  return null;\n}\n"
+  }
+}
