@@ -271,7 +271,7 @@ describe("real Native Host child supervision", () => {
       hostReauthenticated: true,
       submitReceiptState: "delivery_unknown",
       receiptState: "delivery_unknown",
-      reconciliationHint: "pi-pending:dispatch-package-crash-proof",
+      reconciliationHint: null,
       pendingReconcileStatus: "unknown",
       pendingResolution: null,
       packageGeneration: generation,

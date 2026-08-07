@@ -3,7 +3,7 @@
 // Layer: Web lib test
 // Exports: Vitest cases for threadArchive helpers
 
-import { ThreadId } from "@omnimind/contracts";
+import { PRODUCT_PROTOCOL_VERSION, ThreadId } from "@omnimind/contracts";
 import { assert, describe, expect, it, vi } from "vitest";
 import type { ProductConversationArchiveApi } from "../productConversationMutations";
 
@@ -33,7 +33,7 @@ describe("threadArchive client helpers", () => {
 
     expect(archiveConversation).toHaveBeenCalledWith(
       expect.objectContaining({
-        protocolVersion: 1,
+        protocolVersion: PRODUCT_PROTOCOL_VERSION,
         conversationId: THREAD_ID,
         expectedRevision: 4,
         mutationId: expect.any(String),
@@ -41,7 +41,7 @@ describe("threadArchive client helpers", () => {
     );
     expect(restoreConversation).toHaveBeenCalledWith(
       expect.objectContaining({
-        protocolVersion: 1,
+        protocolVersion: PRODUCT_PROTOCOL_VERSION,
         conversationId: THREAD_ID,
         expectedRevision: 4,
         mutationId: expect.any(String),
