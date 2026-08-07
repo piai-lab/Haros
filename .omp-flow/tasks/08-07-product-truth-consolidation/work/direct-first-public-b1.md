@@ -23,6 +23,7 @@ This Work realizes PRD A1-A9, the B1 half of A14, and the B1 preservation portio
 - [QbD 1 PASS approval and three mandatory advisories](../decisions/qbd1-pass-approval.md)
 - [QbD 2 path-boundary repair calibration](../decisions/qbd2-path-repair-calibration.md)
 - [B1 implementation-discovered boundary repair](../decisions/b1-boundary-repair-calibration.md)
+- [B1 appSettings compatibility boundary repair](../decisions/b1-appsettings-boundary-repair-calibration.md)
 - [Unshipped compatibility inventory](../research/unshipped-compatibility.md)
 
 ## In scope
@@ -77,6 +78,10 @@ The implementer may create or change only:
   `apps/web/src/components/chat/ComposerImageAttachmentChip.test.tsx` solely to remove the legacy
   `appshot` compatibility comment and fixture without changing current attachment-chip behavior;
 - `apps/web/src/settingsSearchIndex.ts` solely to remove the `appshot` search alias;
+- `apps/web/src/appSettings.ts` and `apps/web/src/appSettings.test.ts` solely to remove the optional
+  `enableAppshots` schema input, normalization/migration and focused compatibility assertion while
+  retaining deterministic current `enableAppSnap` behavior and every unrelated AppSettings
+  behavior;
 - `apps/service/src/native-host/executionBoundary.test.ts` solely to replace the retired Product
   database literal with the canonical Product database resolver/constant; Native Host production
   behavior, protocol and test intent must not change;
@@ -116,8 +121,10 @@ An implementation-discovered required path outside this boundary stops the Work 
   including the contracts/Desktop storage-upgrade bridge, legacy Web `appshot` acceptance and the
   OpenCode live probe. `appsnap` remains the sole current image-source discriminator, and both the
   OpenCode probe and Native Host execution-boundary fixture resolve the same canonical Product
-  database path as normal Service composition. There is no snapshot, converter, restore, legacy
-  reader, dual-read or hidden copy.
+  database path as normal Service composition. Exact `enableAppshots` has zero production/test
+  source occurrences, `enableAppSnap` remains the sole current AppSettings key for the capability,
+  and legacy input cannot activate it through schema decoding, normalization, fixtures, comments
+  or aliases. There is no snapshot, converter, restore, legacy reader, dual-read or hidden copy.
 - Retired database/key filenames under `scripts/product-truth/**` are reported separately and are
   permitted only as exact closed destructive target identities or their matching tool fixtures and
   assertions. They must not be counted as runtime compatibility, removed by an undifferentiated
@@ -138,13 +145,17 @@ An implementation-discovered required path outside this boundary stops the Work 
 - Run focused Product/service/Web/Desktop/release-policy tests affected by creation and deletion,
   the existing focused OpenCode live-journey probe test for canonical Product database resolution,
   `apps/web/src/lib/composerImageSource.test.ts`,
-  `apps/web/src/components/chat/ComposerImageAttachmentChip.test.tsx` and
+  `apps/web/src/components/chat/ComposerImageAttachmentChip.test.tsx`,
+  `apps/web/src/appSettings.test.ts`,
   `apps/service/src/native-host/executionBoundary.test.ts`, plus
   `bun run --cwd apps/service typecheck`, `bun run --cwd apps/web typecheck`,
   `bun run --cwd apps/desktop typecheck` and the scripts typecheck.
 - Run the scope-aware compatibility scan with separate forbidden-runtime and
   `scripts/product-truth/**` destructive-target classifications. Record zero forbidden residue and
-  every permitted retired target identity; a raw whole-tree string count is not a passing result.
+  every permitted retired target identity. The scan must separately record exact
+  `enableAppshots` at zero under production/test source and prove `enableAppSnap` is the sole current
+  AppSettings key; the destructive-target exception does not apply to this donor alias. A raw
+  whole-tree string count is not a passing result.
 - On an isolated generated home and isolated Desktop profiles only, run fresh/open/reopen and
   packaged Electron→Service→Host startup/restart proof. Verify exact g1 state, no legacy import and
   no automatic replay. Do not point the tool or runtime at the maintainer's canonical

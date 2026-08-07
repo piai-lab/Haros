@@ -33,6 +33,12 @@ okf_version: "0.2"
   implementation stop and exact compatibility paths added to B1 ownership.
 - [B1 boundary-repair PASS approval](decisions/b1-boundary-pass-approval.md) — authorizes a new B1
   implementation receipt after the scoped audit passed with no findings.
+- [B1 appSettings boundary repair calibration](decisions/b1-appsettings-boundary-repair-calibration.md)
+  — records the later implementation-discovered donor AppSettings rename decoder and adds only its
+  production owner and focused test to the next scoped QbD 2 boundary.
+- [B1 appSettings boundary-repair PASS approval](decisions/b1-appsettings-boundary-pass-approval.md)
+  — applies the maintainer's standing direct-repair decision after the fresh audit passed and
+  authorizes a new B1 implementation receipt over the exact eleven-path boundary.
 - [Direct first-public rebuild](interfaces/direct-first-public-rebuild.md) — inspect/apply commands,
   guards, target allowlist, interruption and error contract.
 - [Package-root handoff](interfaces/package-root-handoff.md) — Service-to-Native-Host root binding,
@@ -47,7 +53,11 @@ okf_version: "0.2"
   blockers and both map advisories.
 - [B1 boundary-repair audit](qbd/b1-boundary-repair-audit.md) — scoped QbD 2 PASS over the nine
   implementation-discovered compatibility paths.
+- [B1 appSettings boundary-repair audit](qbd/b1-appsettings-boundary-repair-audit.md) — fresh scoped
+  QbD 2 PASS proving the two added AppSettings owners are necessary and sufficient without changing
+  B1 safety, measurement or ordering.
 - [Work map](work/index.md) — five bounded implementation/review Concepts, the immutable unsplit B1
-  stop, Native Host ordering and complete PRD acceptance coverage before QbD 2.
+  stop, exact eleven-path implementation-discovered compatibility boundary, Native Host ordering
+  and complete PRD acceptance coverage before QbD 2.
 
 This authored index is navigation, not a generated context manifest or dependency graph.

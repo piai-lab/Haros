@@ -13,7 +13,10 @@ the first [QbD 2 audit](../qbd/work-map-audit.md) repaired under the maintainer'
 stop, the maintainer's [B1 boundary repair calibration](../decisions/b1-boundary-repair-calibration.md)
 adds only the exact contracts/Desktop/Web/test consumers of the already-approved compatibility
 deletion and one canonical Product-database fixture correction. It changes no Work meaning,
-acceptance coverage or ordering. This is an authored execution view, not a machine dependency graph.
+acceptance coverage or ordering. A later scope-aware scan found the AppSettings rename decoder and
+focused compatibility assertion; the [appSettings boundary repair](../decisions/b1-appsettings-boundary-repair-calibration.md)
+adds only those two exact paths and likewise changes no Work meaning, acceptance coverage or
+ordering. This is an authored execution view, not a machine dependency graph.
 
 ## Hard ordering
 
@@ -28,7 +31,18 @@ zero extraction files and symbols. B1 also owns the one existing OpenCode live-p
 needed to consume the canonical Product database resolver/path; that correction cannot be deferred
 to final C. The implementation-discovered contracts/Desktop/Web compatibility paths and Native Host
 execution-boundary fixture correction are part of this same indivisible B1 and do not create a new
-parallel Work or alter the accepted-handoff sequence.
+parallel Work or alter the accepted-handoff sequence. The later `apps/web/src/appSettings.ts` and
+`apps/web/src/appSettings.test.ts` additions are also part of B1 only: they remove the donor
+`enableAppshots` schema/normalization/test compatibility while preserving current `enableAppSnap`
+behavior.
+
+The B1 structural scan is scope-aware and exact. It must report zero forbidden compatibility
+residue for the previously repaired storage-upgrade, `appshot` and retired Product-filename
+surfaces; exact `enableAppshots` must additionally be zero under production/test source in
+`apps/**`, `packages/**` and `scripts/**`, while `enableAppSnap` remains the sole current AppSettings
+key. Retired database/key literals in `scripts/product-truth/**` remain permitted only when
+separately enumerated as closed destructive target identities or matching tool fixtures/assertions;
+that exception does not apply to `enableAppshots`.
 
 [Native Host v2 Package-root binding](native-host-package-root-binding.md) is a separate product
 boundary and is independently reviewable. The safe default sequence is literal: a different actor
@@ -83,9 +97,10 @@ Each implementation Work writes its promised handoff and receives a different-ac
 the next overlapping Work begins. Focused green checks do not authorize broader claims. The final C
 Work may submit affected Campaign claims only as `candidate`; no producer may mark them verified.
 
-The next workflow entry is a fresh different-actor scoped QbD 2 audit limited to the B1 boundary
-additions and scope-aware structural-scan distinction recorded by the
-[B1 calibration](../decisions/b1-boundary-repair-calibration.md). It carries forward every closed
-finding, the prior QbD 2 PASS, the literal accepted-handoff sequence and unchanged acceptance
-coverage. The calibration conditionally directs a scoped `PASS` to restart B1 from the clean
-checkpoint; a model verdict cannot broaden that human decision.
+The next workflow entry is a fresh different-actor scoped QbD 2 audit limited to the two
+`appSettings` boundary additions and exact structural-scan delta recorded by the
+[appSettings calibration](../decisions/b1-appsettings-boundary-repair-calibration.md). It carries
+forward every closed finding from the prior nine-path audit, the earlier QbD 2 PASS, the literal
+accepted-handoff sequence and unchanged acceptance coverage. The prior PASS does not authorize the
+revised boundary, and a new model verdict cannot restart B1 without the applicable human
+calibration.
