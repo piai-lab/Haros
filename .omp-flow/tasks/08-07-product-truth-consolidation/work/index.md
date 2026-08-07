@@ -22,6 +22,12 @@ realize the existing offline Chromium profile contract. It adds no compatibility
 dependency, target or new Work and changes no acceptance coverage or ordering. This is an authored
 execution view, not a machine dependency graph.
 
+The later [Service permissions test repair](../decisions/b1-config-permissions-test-boundary-repair-calibration.md)
+adds only `apps/service/src/config.permissions.test.ts`: its retired `state.sqlite` seed conflicts
+with the already-approved startup refusal and prevents the existing current-path permission test
+from reaching its assertions. The repair authorizes removal of that seed and legacy expectation
+only; it does not add a runtime path, migration or destructive authority.
+
 ## Hard ordering
 
 The first implementation wave is [Direct first-public B1](direct-first-public-b1.md). It is one
@@ -47,6 +53,9 @@ closure. The dependency serves `scripts/product-truth/**` only. It cannot enter 
 `packages/**`, release/package closure or normal runtime, cannot authorize Electron against a
 source profile, and cannot alter either frozen complexity-meter file or its universe. The eleven
 implementation-discovered compatibility production/test paths remain exactly eleven.
+
+The Service permissions fixture is a separate focused-test consumer of the in-scope fail-closed
+configuration change, not a twelfth compatibility surface.
 
 The B1 structural scan is scope-aware and exact. It must report zero forbidden compatibility
 residue for the previously repaired storage-upgrade, `appshot` and retired Product-filename

@@ -25,6 +25,8 @@ This Work realizes PRD A1-A9, the B1 half of A14, and the B1 preservation portio
 - [B1 implementation-discovered boundary repair](../decisions/b1-boundary-repair-calibration.md)
 - [B1 appSettings compatibility boundary repair](../decisions/b1-appsettings-boundary-repair-calibration.md)
 - [B1 LevelDB dependency-lock boundary repair](../decisions/b1-leveldb-lockfile-boundary-repair-calibration.md)
+- [B1 Service permissions test boundary repair](../decisions/b1-config-permissions-test-boundary-repair-calibration.md)
+- [B1 Service permissions test boundary PASS approval](../decisions/b1-config-permissions-test-boundary-pass-approval.md)
 - [Unshipped compatibility inventory](../research/unshipped-compatibility.md)
 
 ## In scope
@@ -60,6 +62,8 @@ The implementer may create or change only:
   and the root `bun.lock` solely to record its package-manager-produced scripts-workspace
   resolution and required transitive/platform integrity closure without unrelated lock drift;
 - `apps/service/src/config.ts`, `apps/service/src/main.ts`,
+  `apps/service/src/config.permissions.test.ts` solely to remove the retired Service-database seed
+  from the existing private-path permission fixture while retaining its current safety assertions,
   `apps/service/src/product/ProductControlPlane.ts`, its existing focused test, and exact new
   first-public schema/fingerprint private files under `apps/service/src/product/` that do not
   contain `Store` or `Coordinator` in their production filename or exported symbol;
@@ -165,7 +169,8 @@ An implementation-discovered required path outside this boundary stops the Work 
   `apps/web/src/lib/composerImageSource.test.ts`,
   `apps/web/src/components/chat/ComposerImageAttachmentChip.test.tsx`,
   `apps/web/src/appSettings.test.ts`,
-  `apps/service/src/native-host/executionBoundary.test.ts`, plus
+  `apps/service/src/native-host/executionBoundary.test.ts`,
+  `apps/service/src/config.permissions.test.ts`, plus
   `bun run --cwd apps/service typecheck`, `bun run --cwd apps/web typecheck`,
   `bun run --cwd apps/desktop typecheck` and the scripts typecheck.
 - Run the scope-aware compatibility scan with separate forbidden-runtime and
