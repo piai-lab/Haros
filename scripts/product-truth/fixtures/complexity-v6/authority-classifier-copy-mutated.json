@@ -1,0 +1,6 @@
+{
+  "authorityMutation": {
+    "kind": "mutate-classifier-copy-authority",
+    "value": { "scope": "broadened-temp-exemption" }
+  }
+}

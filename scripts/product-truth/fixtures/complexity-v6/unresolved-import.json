@@ -1,0 +1,5 @@
+{
+  "appendToFiles": {
+    "apps/service/src/product/ProductControlPlane.ts": "\nimport './missing-owned-module';\n"
+  }
+}

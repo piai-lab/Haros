@@ -1,0 +1,9 @@
+{
+  "extendsFixture": "product-refusal-lock-positive",
+  "textReplacements": {
+    "apps/service/src/product/ProductControlPlane.ts": [
+      ["  const databasePath = resolveProductDatabasePath(stateDir);\n  if (existsSync(\"product-state-v1.sqlite\")", "  const databasePath = resolveProductDatabasePath(stateDir);\n  mkdirSync(dirname(databasePath), { recursive: true });\n  if (existsSync(\"product-state-v1.sqlite\")"],
+      ["  mkdirSync(dirname(databasePath), { recursive: true });\n  const lock", "  const lock"]
+    ]
+  }
+}

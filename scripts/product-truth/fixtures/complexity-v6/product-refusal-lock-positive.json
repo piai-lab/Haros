@@ -1,0 +1,8 @@
+{
+  "virtualFiles": {
+    "apps/service/src/product/ProductControlPlane.ts": "import { existsSync, mkdirSync } from \"node:fs\";\nimport { dirname, join } from \"node:path\";\nimport { DatabaseSync } from \"node:sqlite\";\nimport { acquireDatabaseLifecycleLock, releaseDatabaseLifecycleLock } from \"../persistence/DatabaseLifecycleLock.ts\";\n\nexport const resolveProductDatabasePath = (stateDir: string) => join(stateDir, \"stores\", \"product.sqlite\");\n\nexport async function makeProductControlPlaneLayer(stateDir: string) {\n  const databasePath = resolveProductDatabasePath(stateDir);\n  if (existsSync(\"product-state-v1.sqlite\") || existsSync(\"product-state-v1.sqlite-wal\") || existsSync(\"product-state-v1.sqlite-shm\")) {\n    throw new Error(\"PREBASELINE_RESET_REQUIRED\");\n  }\n  mkdirSync(dirname(databasePath), { recursive: true });\n  const lock = await acquireDatabaseLifecycleLock(databasePath);\n  try {\n    if (existsSync(\"product-state-v1.sqlite\") || existsSync(\"product-state-v1.sqlite-wal\") || existsSync(\"product-state-v1.sqlite-shm\")) {\n      throw new Error(\"PREBASELINE_RESET_REQUIRED\");\n    }\n    const database = new DatabaseSync(databasePath);\n    database.exec(\"CREATE TABLE product_meta(schema_generation INTEGER)\");\n    database.close();\n  } finally {\n    await releaseDatabaseLifecycleLock(lock);\n  }\n}\n"
+  },
+  "semanticFocusPaths": ["apps/service/src/product/ProductControlPlane.ts"],
+  "legacyFocusLiterals": ["product-state-v1.sqlite", "product-state-v1.sqlite-wal", "product-state-v1.sqlite-shm"],
+  "enforceSemanticGates": true
+}

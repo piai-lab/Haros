@@ -1,0 +1,5 @@
+{
+  "virtualFiles": {
+    "packages/shared/src/outsideProductImporter.ts": "import '../../../apps/service/src/product/ProductControlPlane';\nexport const outside = true;\n"
+  }
+}

@@ -1,0 +1,9 @@
+{
+  "extendsFixture": "classifier-copy-positive",
+  "textReplacements": {
+    "scripts/product-truth/sqlite-classifier.ts": [[
+      "    removeClassifierScratch(invocationScratchRoot);\n    assertClassifierScratchAbsent(invocationScratchRoot);",
+      "    {\n      {\n        removeClassifierScratch(invocationScratchRoot);\n        assertClassifierScratchAbsent(invocationScratchRoot);\n      }\n    }"
+    ]]
+  }
+}

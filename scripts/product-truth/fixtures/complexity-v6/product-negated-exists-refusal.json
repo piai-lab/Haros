@@ -1,0 +1,8 @@
+{
+  "extendsFixture": "product-refusal-lock-positive",
+  "textReplacements": {
+    "apps/service/src/product/ProductControlPlane.ts": [
+      ["  const databasePath = resolveProductDatabasePath(stateDir);\n  if (existsSync(\"product-state-v1.sqlite\") || existsSync(\"product-state-v1.sqlite-wal\") || existsSync(\"product-state-v1.sqlite-shm\"))", "  const databasePath = resolveProductDatabasePath(stateDir);\n  if (!existsSync(\"product-state-v1.sqlite\") && !existsSync(\"product-state-v1.sqlite-wal\") && !existsSync(\"product-state-v1.sqlite-shm\"))"]
+    ]
+  }
+}

@@ -1,0 +1,8 @@
+{
+  "extendsFixture": "product-refusal-lock-positive",
+  "textReplacements": {
+    "apps/service/src/product/ProductControlPlane.ts": [
+      ["  try {\n    if (existsSync", "  try {\n    const finish = releaseDatabaseLifecycleLock;\n    await finish(lock);\n    if (existsSync"]
+    ]
+  }
+}

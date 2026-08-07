@@ -1,0 +1,8 @@
+{
+  "extendsFixture": "product-refusal-lock-positive",
+  "textReplacements": {
+    "apps/service/src/product/ProductControlPlane.ts": [
+      ["  const databasePath = resolveProductDatabasePath(stateDir);", "  if (stateDir === \"again\") await makeProductControlPlaneLayer(\"stop\");\n  const databasePath = resolveProductDatabasePath(stateDir);"]
+    ]
+  }
+}

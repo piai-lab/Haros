@@ -1,0 +1,8 @@
+{
+  "enforceSemanticGates": true,
+  "semanticFocusPaths": ["apps/web/src/composerDraftStore.ts"],
+  "legacyFocusLiterals": ["omnimind:composer-drafts:v1"],
+  "virtualFiles": {
+    "apps/web/src/composerDraftStore.ts": "export const readOrCreateComposerDraftEnvelope = (storage: Storage) => { const legacy = storage.getItem('omnimind:composer-drafts:v1'); if (legacy !== null) JSON.parse(legacy); throw new Error('PREBASELINE_RESET_REQUIRED'); };\n"
+  }
+}
