@@ -1,0 +1,6 @@
+{
+  "extends": "traced-owner-positive",
+  "virtualFiles": {
+    "scripts/product-truth/sqlite-classifier.ts": "import { readFileSync } from \"node:fs\";\nconst safeSource = { reader: () => \"safe\", values: [\"safe\"] };\nexport const { reader: raw, values: [first] } = safeSource;\nexport function classifyLegacyDatabase() {\n  return [readFileSync(\"fixture\"), raw(), first];\n}\n"
+  }
+}

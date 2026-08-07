@@ -177,6 +177,7 @@ describe("product-truth-complexity-v8 qualified declarations", () => {
     "traced-local-alias-positive",
     "traced-import-shadow-positive",
     "traced-safe-export-collision-positive",
+    "traced-harmless-destructure-export-positive",
   ])("accepts exact owner declaration and lexical-use positive %s", (fixture) => {
     const result = runFixture(fixture, "direct-first-public-b1");
     expect(result.status, result.stderr).toBe(0);
@@ -195,6 +196,7 @@ describe("product-truth-complexity-v8 qualified declarations", () => {
     "traced-private-helper",
     "traced-repeated-alias-private-helper",
     "traced-raw-local-export",
+    "traced-raw-destructure-export",
     "traced-class-growth",
   ])("rejects wrong qualified declaration/use %s", (fixture) => {
     const result = runFixture(fixture, "direct-first-public-b1");
@@ -211,6 +213,7 @@ describe("product-truth-complexity-v8 predecessor structural sites", () => {
     ["exact-work-deletion-positive", "native-host-package-root-binding"],
     ["combined-lifecycle-positive", "direct-first-public-b1"],
     ["combined-lifecycle-value-different-positive", "direct-first-public-b1"],
+    ["combined-lifecycle-nested-wrapper-value-different-positive", "direct-first-public-b1"],
     ["product-owner-move-positive", "product-state-store"],
   ] as const)("accepts exact preservation/reduction/lifecycle positive %s", (fixture, work) => {
     const result = runFixture(fixture, work);
@@ -242,6 +245,8 @@ describe("product-truth-complexity-v8 predecessor structural sites", () => {
     "undeclared-zero-raw-path-move-as-const",
     "undeclared-zero-raw-path-move-satisfies",
     "undeclared-zero-raw-path-move-type-assertion",
+    "undeclared-zero-raw-path-move-non-null",
+    "undeclared-zero-raw-path-move-nested-wrappers",
   ])("rejects an undeclared selected-Work deletion and materialization pair with zero raw ingress %s", (fixture) => {
     const result = runFixture(fixture, "direct-first-public-b1");
     expect(result.status).not.toBe(0);

@@ -30,7 +30,8 @@ const decodeUtf8 = (bytes, identity) => {
 const INVALID_STRUCTURAL_LITERAL = Symbol("invalid-structural-literal");
 const structuralLiteralValue = (node) => {
   if (ts.isParenthesizedExpression(node) || ts.isAsExpression(node) ||
-      ts.isSatisfiesExpression(node) || ts.isTypeAssertionExpression(node)) {
+      ts.isSatisfiesExpression(node) || ts.isTypeAssertionExpression(node) ||
+      ts.isNonNullExpression(node)) {
     return structuralLiteralValue(node.expression);
   }
   if (ts.isStringLiteralLike(node)) return node.text;
@@ -1666,6 +1667,15 @@ for (const path of candidateGraph.paths.filter((candidatePath) => rawInventoryPa
   const rejectExportedRawDeclaration = (declaration, witness, detail) => {
     if (bindingIdentityByDeclaration.has(declaration)) addViolation("RAW_BINDING_EXPORTED", path, witness, detail);
   };
+  const bindingPatternIdentifiers = (name, identifiers = []) => {
+    if (ts.isIdentifier(name)) identifiers.push(name);
+    else if (ts.isObjectBindingPattern(name) || ts.isArrayBindingPattern(name)) {
+      for (const element of name.elements) {
+        if (ts.isBindingElement(element)) bindingPatternIdentifiers(element.name, identifiers);
+      }
+    }
+    return identifiers;
+  };
   const collectExports = (node) => {
     if (ts.isExportDeclaration(node) && !node.moduleSpecifier && node.exportClause && ts.isNamedExports(node.exportClause)) {
       for (const element of node.exportClause.elements) {
@@ -1680,7 +1690,9 @@ for (const path of candidateGraph.paths.filter((candidatePath) => rawInventoryPa
         ts.canHaveModifiers(node) && ts.getModifiers(node)?.some((modifier) => modifier.kind === ts.SyntaxKind.ExportKeyword)) {
       if (ts.isVariableStatement(node)) {
         for (const declaration of node.declarationList.declarations) {
-          if (ts.isIdentifier(declaration.name)) rejectExportedRawDeclaration(declaration.name, declaration.name, declaration.name.text);
+          for (const identifier of bindingPatternIdentifiers(declaration.name)) {
+            rejectExportedRawDeclaration(identifier, identifier, identifier.text);
+          }
         }
       } else if (node.name) {
         rejectExportedRawDeclaration(node.name, node.name, node.name.text);
