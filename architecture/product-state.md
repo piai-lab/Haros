@@ -83,7 +83,7 @@ Token-detail usage 与 context-window usage 是两种不同的 Product 事实。
 
 ## Schema 生命周期
 
-Product facts 与 receipts 始终由 OmniMind 拥有。公开 Alpha 前，unsupported 的开发期旧字节只有在全部受影响 store 的 backup/export 已完整创建并验证后才可 rebaseline；备份失败必须保持 live stores 原样并阻断操作，恢复必须显式、可测试，禁止静默 reset。成功 rebaseline 后，steady-state runtime 只保留一个 canonical decoder/writer，不保留永久 dual-read、schema-1 fallback、compatibility ledger 或 generic migration platform。该豁免只适用于未发行开发数据；一旦公开发行产生用户数据义务，后续 schema 变更必须采用有证据的版本化 migration/recovery，不得引用本决定规避兼容责任。
+Product facts 与 receipts 始终由 OmniMind 拥有。首个公开 baseline 前，维护者已明确放弃默认 `~/.omnimind` 中被精确识别为 pre-baseline 的旧 Product、Automation/service 与 OmniMind Web-draft 字节；在 Desktop、Product Service 与 Native Host 全部停止、canonical target 逐项确认位于该默认 home、类型为预期 regular file/key、非 link 且不含任何排除数据后，可以不备份、不迁移、不恢复地直接删除并由当前 owner 创建 fresh first-public state。未知 generation、残留活动 owner、路径逃逸、异常类型/link 或无法证明为 legacy 的目标必须 fail closed，不得扩张为删除 home/lane。steady-state runtime 只保留一个 canonical decoder/writer，不保留 dual-read、schema-1 fallback、compatibility ledger 或 generic migration platform。该一次性豁免不包含 credential、当前 canonical Package generation、Pi-native state、attachments、外部 ResourceRef、用户 workspace、Git、全局配置、其他 home 或任何公开发行后的数据；一旦公开发行，后续 schema 变更必须采用有证据的版本化 migration/recovery。
 
 ## 接纳、派发与恢复
 

@@ -71,6 +71,15 @@ Product Control Plane 应保留并负责：
 - 外部 Engine 的安装、能力、版本、权限真实性和来源；
 - 跨 Engine continuity。
 
+Product Service 内的 Package lifecycle 是 Package root 的唯一 owner。`dev` lane 只解析
+`<canonical ~/.omnimind>/dev/packages`，packaged lane 只解析
+`<canonical ~/.omnimind>/userdata/packages`；Service 通过受认证的 typed Host 启动/请求边界把
+当前 lane 的 canonical Package root 显式交给 Native Host。Native Host 只验证 generation 是该
+root 下的精确子路径并加载内容，不得硬编码、发现、猜测或自行选择 `userdata/packages/stage`
+等 root。首个公开 baseline 可精确删除默认 home 中被证明重复或过期的旧 Package 状态并按唯一
+owner 重建；当前 canonical generation、lease/LKG 事实和 Engine-private state 不在该授权内，
+不得保留双 root fallback。
+
 固定 UI 母体中已经成熟的 SQLite、transport、projection、receipt、reconciliation 和 process supervision 机制可以保留并重构。判断单位是事实权威与行为质量，不是“server 代码一律删除”或“整个 Runtime 永久保留”。
 
 ## Native Execution Plane

@@ -1,66 +1,71 @@
 ---
 type: "Research Synthesis"
-title: "Backup-gated first-public Product truth consolidation"
+title: "Direct first-public Product truth consolidation"
 ---
 
-# Backup-gated first-public Product truth consolidation
+# Direct first-public Product truth consolidation
 
-The three internal research questions select one bounded direction. OmniMind has no evidenced public
-pre-baseline consumer, so development-era Product v1→v2, unmarked Automation→v2, Web key/envelope
-migrations and the renamed Synara `0.4.2` bridge are not durable product contracts. They may be
-removed after—not before—a verified backup/export and isolated restore. Operational recovery for
-dispatch uncertainty, Automation leases/runs, current Web drafts, lifecycle locks and Package/Engine
-authority remains; those are current product semantics rather than old-schema compatibility.
+The three internal research questions establish that OmniMind has no evidenced public pre-baseline
+consumer and that development-era Product v1→v2, unmarked Automation→v2, Web key/envelope migrations
+and the renamed Synara `0.4.2` bridge are not durable product contracts. Research originally
+recommended a verified backup/export because the default local stores contain real older bytes.
+The maintainer explicitly supersedes that recommendation: only default `~/.omnimind` is in scope,
+all positively identified pre-baseline Product/Automation/Web-draft state may be destroyed, and no
+backup, migration or restore is required. This is a human risk decision, not an inference that the
+old bytes are valueless.
 
 ## Selected order
 
-1. Require an explicit canonical list of development `OMNIMIND_HOME` roots. Include standard dev,
-   Electron-dev, packaged/userdata and canary lanes when present; do not recursively guess across the
-   home directory. Inventory both current Service and Native Host package-stage paths until Design
-   establishes one owner.
-2. With each home quiesced, acquire the Product then service lifecycle locks and create WAL-aware
-   logical snapshots of both SQLite authorities. Copy existing packages, attachments and Pi-native
-   dependent closure without interpreting Engine-private state. Refuse symlinks, incomplete pairs,
-   unreadable bytes, insufficient space or unknown active owners.
-3. Bind one private manifest to canonical roots, source revision, SQLite version, hashes, modes,
-   schema metadata, structural/cardinality invariants and dependent closure. Run integrity and
-   foreign-key checks plus application-level structural decoding without emitting records.
-4. Restore the complete set into an isolated home, prove the pinned pre-rebaseline reader can read
-   it, then exercise the candidate transform/import and startup. A snapshot without restore proof
-   cannot authorize rotation.
-5. Install one explicit first-public Product, Automation and Web generation while stopped. Keep the
-   verified prior snapshot and an explicit operator restore path; steady-state runtime has one
-   canonical decoder/writer and fails closed on unknown generations.
-6. Remove the development compatibility inventory only after rotation proof. Preserve the
-   coordinator's full preflight, fixed lock order and crash convergence as bounded offline-transform
-   properties, not a permanent runtime migration platform.
-7. Split responsibility without splitting truth: one Product State Store owns the single SQLite
+1. Canonicalize the exact default `~/.omnimind`, reject symlinks/path escapes and prove Desktop,
+   Service and Native Host are stopped. No override, canary, repo-local, archived or recursively
+   discovered home is in scope.
+2. Positively classify exact old Product/service database files and sidecars plus exact legacy
+   OmniMind Web-draft keys. Enumerate and validate each target before deletion. Unknown files,
+   unexpected links/types, active owners or ambiguous current-generation markers stop the action.
+3. Remove only classified legacy database main/WAL/SHM files, lifecycle locks proven stale under the
+   stopped topology, legacy draft keys, and Package state proven duplicate or obsolete relative to
+   the selected lane root. Never delete the home, lane directory, credential store, current canonical
+   Package generation/artifacts, attachments, Pi-native state, external ResourceRefs, workspaces,
+   logs, Git, source, global configuration or unrelated browser data.
+4. Create fresh first-public Product and service databases and the canonical Web generation through
+   current owners. No legacy converter, backup artifact, restore command, dual-read or fallback is
+   created. Interruption before publication leaves either classified old state or clean absence;
+   startup never guesses or resumes a partially fabricated migration.
+5. Remove the full unshipped compatibility inventory and make unknown/old generations fail closed
+   with a precise reset-required error rather than silently mutating them.
+6. Split responsibility without splitting truth: one Product State Store owns the single SQLite
    connection, all 21 tables and every compound transaction; one Product Execution Coordinator owns
    Engine effects, catalog observation and prepared handles; `ProductControlPlane` remains the thin
    Web/RPC facade; `productExecutionBoundary` is a dependency-leaf contract. No table repository,
    per-Engine Product plane, raw shared transaction callback or second state machine is allowed.
+7. Make Product Service Package lifecycle the sole Package-root owner. It resolves
+   `<home>/dev/packages` for `dev` and `<home>/userdata/packages` for packaged execution and passes
+   that canonical root explicitly to Native Host. Native Host only validates/loads exact children;
+   it never hard-codes, discovers or selects a root. Delete the obsolete duplicate path/state after
+   positive classification and keep no compatibility fallback.
 
 ## Counter-evidence and why it does not overturn the direction
 
-The current monolith contains legitimate cross-object and Queue-to-Run transactions, and the current
-migration protects real local development bytes. This rejects a mechanical file split or immediate
-deletion. It does not require 5,036 lines in one module: atomicity comes from one SQLite connection
-and `BEGIN IMMEDIATE`, while Engine effects already occur outside transactions. Likewise, the
-inherited origin/profile bridge once served real Synara users, but fixed-source evidence and current
-public checks show no corresponding OmniMind release, marker producer or consumer.
+The current monolith contains legitimate cross-object and Queue-to-Run transactions, which rejects a
+mechanical repository split. It does not require 5,036 lines in one module: atomicity comes from one
+SQLite connection and `BEGIN IMMEDIATE`, while Engine effects already occur outside transactions.
+The default stores contain real old development data, so deletion is irreversible; the maintainer
+accepts that loss explicitly. The inherited bridge once served real Synara users, but fixed-source
+evidence and current public checks show no corresponding OmniMind release, marker producer or
+consumer.
 
 ## Acceptance implications
 
-- Live stores remain byte-untouched until every declared root has a complete verified snapshot and
-  isolated restore.
-- A missing root declaration, incomplete database pair, failed hash/integrity/foreign-key/decoder
-  check, restore failure or newly discovered distributed OmniMind pre-baseline build stops rotation.
+- Destructive execution requires a dry-run inventory whose exact canonical targets are all beneath
+  default `~/.omnimind`, individually typed, non-linked and positively legacy. Target ambiguity,
+  active processes or a newly discovered distributed OmniMind pre-baseline build stops execution.
+- Deletion is intentionally unrecoverable; no result may claim backup or migration preservation.
 - Complexity success requires lower total production lines and dependency edges after rebaseline,
   not merely a smaller maximum file. Product SQL writes remain exclusive to the State Store and all
   named compound transactions retain integrated fault tests.
-- The next Design must settle the single package root, first-public markers, offline converter and
-  restore command, backup retention input, Package read projection, facade surface and exact
-  before/after complexity metrics.
+- The next Design must settle the exact deletion classifier, first-public markers and publication
+  boundary, single package root, Package read projection, facade surface and exact before/after
+  complexity metrics.
 
 This synthesis confirms the Brainstorm anchor and is sufficient for Design. No external repository
 adoption is proposed. Primary evidence remains in the three linked research Concepts.

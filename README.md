@@ -13,7 +13,7 @@ OmniMind 是一个本地优先桌面 Agent 产品：默认用户身份是 **Omni
 
 这是一个没有用户、兼容义务和发布历史的新产品仓库。产品与架构已经围绕 Pi-native 路线收敛；旧的竞争 Runtime/Journal/Tool skeleton 被判定为错误本体，不构成保留义务。
 
-公开 Alpha 前的未发行开发状态必须可恢复，但不构成永久 runtime 兼容面；确立首个公开 schema baseline 前，必须先为全部受影响 store 创建并验证完整 backup/export，验证失败则不得 reset 或 rebaseline。
+公开 Alpha 前没有用户数据兼容义务。维护者已明确放弃默认 `~/.omnimind` 中被精确识别为 pre-baseline 的旧开发 Product、Automation/service 与 OmniMind Web-draft 状态，以及重复/过期的旧 Package 状态；首个公开 schema 可在进程停止、目标逐项验证且删除范围不越界时直接重建，不创建 backup、migration、restore 或长期兼容面。该授权不包含 credential、当前 canonical Package generation、Pi-native state、attachments、外部 ResourceRef、用户 workspace、Git、全局配置、其他 home 或任何未识别路径。
 
 OmniMind 的价值不是“能启动 Pi”，而是上游没有义务完成的桌面产品层：世界级交互、可信 Package 分发、文件与工作台、真实权限与副作用、恢复、外部 Engine 协作以及跨平台交付。若这些价值不能独立成立，产品就只是一层可替换皮肤。
 
