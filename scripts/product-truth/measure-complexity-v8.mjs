@@ -1398,6 +1398,18 @@ for (const path of candidateGraph.paths.filter((candidatePath) => rawInventoryPa
     }
     return null;
   };
+  const commonJsLoader = (node) => {
+    if (!ts.isCallExpression(node)) return null;
+    let form = null;
+    if (ts.isIdentifier(node.expression) && node.expression.text === "require" &&
+        !lexical.isShadowedAt(node.expression, "require")) form = "require-call";
+    if ((ts.isPropertyAccessExpression(node.expression) || ts.isElementAccessExpression(node.expression)) &&
+        ts.isIdentifier(node.expression.expression) && node.expression.expression.text === "module" &&
+        staticMember(node.expression)?.value === "require" &&
+        !lexical.isShadowedAt(node.expression.expression, "module")) form = "module-require-call";
+    if (!form || !node.arguments[0] || !ts.isStringLiteralLike(node.arguments[0])) return null;
+    return { specifier: node.arguments[0].text, form };
+  };
   const collectBindings = (node) => {
     if (ts.isImportDeclaration(node) && ts.isStringLiteralLike(node.moduleSpecifier)) {
       const specifier = node.moduleSpecifier.text;
@@ -1537,6 +1549,174 @@ for (const path of candidateGraph.paths.filter((candidatePath) => rawInventoryPa
     }
     return changed;
   };
+  const declarationIdentifiers = (name, identifiers = []) => {
+    if (ts.isIdentifier(name)) identifiers.push(name);
+    else if (ts.isObjectBindingPattern(name) || ts.isArrayBindingPattern(name)) {
+      for (const element of name.elements) {
+        if (ts.isBindingElement(element)) declarationIdentifiers(element.name, identifiers);
+      }
+    }
+    return identifiers;
+  };
+  const assignmentTargetIdentifiers = (node, identifiers = []) => {
+    if (ts.isParenthesizedExpression(node)) return assignmentTargetIdentifiers(node.expression, identifiers);
+    if (ts.isIdentifier(node)) identifiers.push(node);
+    else if (ts.isObjectLiteralExpression(node)) {
+      for (const property of node.properties) {
+        if (ts.isPropertyAssignment(property)) assignmentTargetIdentifiers(property.initializer, identifiers);
+        else if (ts.isShorthandPropertyAssignment(property)) identifiers.push(property.name);
+        else if (ts.isSpreadAssignment(property)) assignmentTargetIdentifiers(property.expression, identifiers);
+      }
+    } else if (ts.isArrayLiteralExpression(node)) {
+      for (const element of node.elements) if (!ts.isOmittedExpression(element)) assignmentTargetIdentifiers(element, identifiers);
+    } else if (ts.isBinaryExpression(node) && node.operatorToken.kind === ts.SyntaxKind.EqualsToken) {
+      assignmentTargetIdentifiers(node.left, identifiers);
+    }
+    return identifiers;
+  };
+  const assignmentWritesByDeclaration = new Map();
+  const recordAssignmentWrite = (identifier, node, kind, declaration = null) => {
+    const declarations = declaration ? new Set([declaration]) : lexical.declarationsAt(identifier, identifier.text);
+    if (!declarations || declarations.size !== 1) return;
+    const target = [...declarations][0];
+    if (!assignmentWritesByDeclaration.has(target)) assignmentWritesByDeclaration.set(target, []);
+    assignmentWritesByDeclaration.get(target).push({ node, kind });
+  };
+  const collectAssignmentWrites = (node) => {
+    if (ts.isVariableDeclaration(node) && node.initializer) {
+      for (const identifier of declarationIdentifiers(node.name)) recordAssignmentWrite(identifier, node, "declaration", identifier);
+    }
+    if (ts.isBinaryExpression(node) && node.operatorToken.kind >= ts.SyntaxKind.FirstAssignment &&
+        node.operatorToken.kind <= ts.SyntaxKind.LastAssignment) {
+      const kind = node.operatorToken.kind === ts.SyntaxKind.EqualsToken ? "equals" : "compound";
+      for (const identifier of assignmentTargetIdentifiers(node.left)) recordAssignmentWrite(identifier, node, kind);
+    }
+    if ((ts.isPrefixUnaryExpression(node) || ts.isPostfixUnaryExpression(node)) &&
+        [ts.SyntaxKind.PlusPlusToken, ts.SyntaxKind.MinusMinusToken].includes(node.operator)) {
+      for (const identifier of assignmentTargetIdentifiers(node.operand)) recordAssignmentWrite(identifier, node, "update");
+    }
+    ts.forEachChild(node, collectAssignmentWrites);
+  };
+  collectAssignmentWrites(file);
+  const rawIdentityForAssignmentExpression = (expression) => {
+    if (ts.isParenthesizedExpression(expression)) return rawIdentityForAssignmentExpression(expression.expression);
+    if (ts.isIdentifier(expression)) return resolvedBindingAt(expression);
+    if ((ts.isPropertyAccessExpression(expression) || ts.isElementAccessExpression(expression)) &&
+        ts.isIdentifier(expression.expression)) {
+      const base = resolvedBindingAt(expression.expression);
+      if (!base) return null;
+      const member = staticMember(expression);
+      if (!member || member.value === null) return null;
+      if (!base.namespace) return { ...base, form: member.form };
+      const classes = classesForModuleExport(base.specifier, member.value);
+      return classes ? { specifier: base.specifier, exported: member.value, classes, form: member.form } : null;
+    }
+    const directLoader = commonJsLoader(expression);
+    if (directLoader) {
+      const classes = classesForModuleExport(directLoader.specifier, "*") ?? moduleRootClasses.get(directLoader.specifier);
+      return classes ? { ...directLoader, exported: "*", classes, namespace: true } : null;
+    }
+    if ((ts.isPropertyAccessExpression(expression) || ts.isElementAccessExpression(expression)) &&
+        ts.isCallExpression(expression.expression)) {
+      const loader = commonJsLoader(expression.expression);
+      const member = staticMember(expression);
+      if (!loader || !member || member.value === null) return null;
+      const classes = classesForModuleExport(loader.specifier, member.value);
+      return classes ? { specifier: loader.specifier, exported: member.value, classes, form: member.form } : null;
+    }
+    return null;
+  };
+  const containingVariableDeclaration = (declaration) => {
+    for (let current = declaration.parent; current; current = current.parent) {
+      if (ts.isVariableDeclaration(current)) return current;
+      if (ts.isStatement(current) || ts.isFunctionLike(current)) return null;
+    }
+    return null;
+  };
+  const assignmentTargetDeclaration = (identifier, witness) => {
+    const declarations = lexical.declarationsAt(identifier, identifier.text);
+    if (!declarations || declarations.size !== 1) {
+      addRawPatternViolation("RAW_ALIAS_WRITE_UNKNOWN", witness, {
+        name: identifier.text,
+        reason: "unresolved-assignment-target",
+      });
+      return null;
+    }
+    const declaration = [...declarations][0];
+    const variableDeclaration = containingVariableDeclaration(declaration);
+    if (!variableDeclaration || !ts.isVariableDeclarationList(variableDeclaration.parent) ||
+        !ts.isVariableStatement(variableDeclaration.parent.parent)) {
+      addRawPatternViolation("RAW_ALIAS_WRITE_UNKNOWN", witness, {
+        name: identifier.text,
+        reason: "unsupported-assignment-target-declaration",
+      });
+      return null;
+    }
+    const writes = assignmentWritesByDeclaration.get(declaration) ?? [];
+    if (writes.length !== 1 || writes[0].kind !== "equals" || writes[0].node !== witness) {
+      addRawPatternViolation("RAW_ALIAS_WRITE_UNKNOWN", witness, {
+        name: identifier.text,
+        reason: "non-single-assignment-target",
+        writeKinds: writes.map((write) => write.kind),
+      });
+      return null;
+    }
+    return declaration;
+  };
+  const assignmentProperty = (property) => {
+    if (ts.isShorthandPropertyAssignment(property)) {
+      if (property.objectAssignmentInitializer) return null;
+      return { member: property.name.text, target: property.name, form: "destructure-assignment" };
+    }
+    if (!ts.isPropertyAssignment(property) || !ts.isIdentifier(property.initializer)) return null;
+    if (ts.isIdentifier(property.name) || ts.isStringLiteralLike(property.name)) {
+      return { member: property.name.text, target: property.initializer, form: "destructure-assignment" };
+    }
+    if (ts.isComputedPropertyName(property.name) &&
+        (ts.isStringLiteralLike(property.name.expression) || ts.isNoSubstitutionTemplateLiteral(property.name.expression))) {
+      return { member: property.name.expression.text, target: property.initializer, form: "computed-literal-member" };
+    }
+    return null;
+  };
+  const bindResolvedRawAssignment = (left, base, witness) => {
+    if (ts.isParenthesizedExpression(left)) return bindResolvedRawAssignment(left.expression, base, witness);
+    if (ts.isIdentifier(left)) {
+      const declaration = assignmentTargetDeclaration(left, witness);
+      if (!declaration || bindingIdentityByDeclaration.has(declaration)) return false;
+      bind(base, declaration);
+      return true;
+    }
+    if (!ts.isObjectLiteralExpression(left) || left.properties.length === 0) {
+      addRawPatternViolation("RAW_ALIAS_WRITE_UNKNOWN", witness, {
+        reason: "unsupported-raw-assignment-target",
+      });
+      return false;
+    }
+    let changed = false;
+    for (const property of left.properties) {
+      const selected = assignmentProperty(property);
+      if (!selected) {
+        addRawPatternViolation("RAW_ALIAS_WRITE_UNKNOWN", property, {
+          reason: "unsupported-raw-assignment-pattern",
+        });
+        continue;
+      }
+      let identity = { ...base, form: selected.form };
+      if (base.namespace) {
+        const classes = classesForModuleExport(base.specifier, selected.member);
+        if (!classes) {
+          addRawPatternViolation("UNKNOWN_MODULE_EFFECT_EXPORT", property, `${base.specifier}#${selected.member}`);
+          continue;
+        }
+        identity = { specifier: base.specifier, exported: selected.member, classes, form: selected.form };
+      }
+      const declaration = assignmentTargetDeclaration(selected.target, witness);
+      if (!declaration || bindingIdentityByDeclaration.has(declaration)) continue;
+      bind(identity, declaration);
+      changed = true;
+    }
+    return changed;
+  };
   let aliasChanged = true;
   while (aliasChanged) {
     aliasChanged = false;
@@ -1559,9 +1739,44 @@ for (const path of candidateGraph.paths.filter((candidatePath) => rawInventoryPa
           }
         }
       }
+      if (ts.isBinaryExpression(node) && node.operatorToken.kind >= ts.SyntaxKind.FirstAssignment &&
+          node.operatorToken.kind <= ts.SyntaxKind.LastAssignment) {
+        const identity = rawIdentityForAssignmentExpression(node.right);
+        if (identity) {
+          if (node.operatorToken.kind === ts.SyntaxKind.EqualsToken) {
+            if (bindResolvedRawAssignment(node.left, identity, node)) aliasChanged = true;
+          } else {
+            addRawPatternViolation("RAW_ALIAS_WRITE_UNKNOWN", node, {
+              reason: "compound-raw-assignment",
+            });
+          }
+        } else if (ts.isBinaryExpression(node.right) &&
+            node.right.operatorToken.kind === ts.SyntaxKind.EqualsToken &&
+            rawIdentityForAssignmentExpression(node.right.right)) {
+          addRawPatternViolation("RAW_ALIAS_WRITE_UNKNOWN", node, {
+            reason: "nested-raw-assignment-rhs",
+          });
+        }
+      }
       ts.forEachChild(node, visit);
     };
     visit(file);
+  }
+  for (const [declaration, writes] of assignmentWritesByDeclaration) {
+    if (!bindingIdentityByDeclaration.has(declaration) || writes.length === 0) continue;
+    const variableDeclaration = containingVariableDeclaration(declaration);
+    const validDeclarationWrite = writes.length === 1 && writes[0].kind === "declaration" &&
+      variableDeclaration?.initializer;
+    const validAssignmentWrite = writes.length === 1 && writes[0].kind === "equals" &&
+      variableDeclaration && !variableDeclaration.initializer;
+    if (!validDeclarationWrite && !validAssignmentWrite) {
+      const witness = writes.find((write) => !["declaration", "equals"].includes(write.kind)) ?? writes[1] ?? writes[0];
+      addRawPatternViolation("RAW_ALIAS_WRITE_UNKNOWN", witness.node, {
+        name: declaration.text,
+        reason: "raw-declaration-write-cardinality",
+        writeKinds: writes.map((write) => write.kind),
+      });
+    }
   }
   const scopedAliases = new Map();
   const scopedAliasDeclarations = new Set();
@@ -1822,19 +2037,6 @@ for (const path of candidateGraph.paths.filter((candidatePath) => rawInventoryPa
       siteRecord: Object.fromEntries(Object.entries(structural).filter(([key]) => !["siteId", "owner"].includes(key))),
     });
     if (!allowed || invalidClasses.length) addViolation("RAW_EFFECT_OWNER_INVALID", path, node, site);
-  };
-  const commonJsLoader = (node) => {
-    if (!ts.isCallExpression(node)) return null;
-    let form = null;
-    if (ts.isIdentifier(node.expression) && node.expression.text === "require" &&
-        !lexical.isShadowedAt(node.expression, "require")) form = "require-call";
-    if ((ts.isPropertyAccessExpression(node.expression) || ts.isElementAccessExpression(node.expression)) &&
-        ts.isIdentifier(node.expression.expression) && node.expression.expression.text === "module" &&
-        staticMember(node.expression)?.value === "require" && !lexical.isShadowedAt(node.expression.expression, "module")) {
-      form = "module-require-call";
-    }
-    if (!form || !node.arguments[0] || !ts.isStringLiteralLike(node.arguments[0])) return null;
-    return { specifier: node.arguments[0].text, form };
   };
   const knownEffectModule = (specifier) => moduleRootClasses.has(specifier) ||
     rawUniverse.moduleSelectors.some((entry) => entry.specifier === specifier) ||
