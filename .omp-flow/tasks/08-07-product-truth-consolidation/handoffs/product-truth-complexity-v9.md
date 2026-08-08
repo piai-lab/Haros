@@ -1,86 +1,76 @@
 ---
 type: "Handoff"
-title: "Exact-authority Product-truth complexity v9 measurement"
+title: "Product-truth complexity v9 byte-protocol realization"
 work: "../work/product-truth-complexity-v9.md"
 status: "DONE"
-actor_id: "product_truth_complexity_v9_impl_authority"
-dispatch_receipt: "ecb72ae80a9e46f4ba39b858fa003c4f"
-predecessor_receipt: "f378781d410f4e2c9ffa776acf7d9c3c"
-predecessor_output: "../qbd/product-truth-complexity-v9-final-authority-audit.md"
-reviewed_candidate: "558de08f897e2131c9159d118944272191f48359"
-report_sha256: "74188c2f581b90f3eb5e5fbaa1883251bc649a2415f98fbc18a6974bfd4c6815"
+actor_id: "product_truth_complexity_v9_protocol_route_impl"
+dispatch_receipt: "6fd41c9e10ef4313835fd3fe75c8fba1"
+predecessor_receipt: "954837db7e934fa8ba87c2966e0818fe"
+predecessor_output: "../qbd/product-truth-complexity-v9-protocol-route-audit.md"
+reviewed_candidate: "e31d732937399b303448c9aa8d80f510c6cac8c2"
+report_sha256: "454d35025f19399905ace410a9706492858a864e4cc60744a79714f004980299"
 ---
 
-# Exact-authority Product-truth complexity v9 measurement
+# Product-truth complexity v9 byte-protocol realization
 
 ## Result
 
 `DONE` — the measurement-only candidate is frozen at immutable commit
-`558de08f897e2131c9159d118944272191f48359`. It implements only the exact authority accepted by the
-[final-authority QbD audit](../qbd/product-truth-complexity-v9-final-authority-audit.md) and the
-[human PASS approval](../decisions/product-truth-complexity-v9-final-authority-pass-approval.md):
-authority Design tree `d2e7bab77405f32fed81f6c29247eca9cad6702c`, approved state
-`f110fb66006768074ca192bb94024632d16c09dd`, the exact five production fences, exact Design
-verification rows, and the frozen accepted dependency/adoption byte expansion.
+`e31d732937399b303448c9aa8d80f510c6cac8c2`. It is the one bounded realization authorized by the
+[protocol/route QbD](../qbd/product-truth-complexity-v9-protocol-route-audit.md) (`PASS`, 0 blocker,
+0 advisory) and the linked
+[human PASS Decision](../decisions/product-truth-complexity-v9-protocol-route-pass-approval.md).
+It changes only the v9 raw changed-path parser, its finite protocol tests and fixtures. Config,
+Design, Work, production, dependencies, authority families, path categories, lifecycle rules,
+counters, semantic grammar, AST families, CFG/SSA/points-to and every Review path remain unchanged.
 
-The candidate preserves v1-v8, production, dependencies, all five fence documents and the three
-concurrently modified user documents. It changes only 24 v9-owned script/config/test/bounded-fixture
-paths. It adds no semantic, raw/global, alias, callback, RHS/subtree, selector or per-use-owner
-grammar. It did not run B1, access a real `~/.omnimind`, or perform a destructive operation.
+Rejected predecessor `558de08f897e2131c9159d118944272191f48359` remains rejected by the
+[immutable final-authority Review](../reviews/product-truth-complexity-v9-final-authority.md). This
+candidate neither repairs nor accepts that commit or its recorded handoff. It implements only the
+subsequently approved raw-byte protocol and Review route. It did not run B1, access a real
+`~/.omnimind`, modify user state or perform a destructive operation.
 
 ## Frozen bytes and exact scope
 
 - Meter: `scripts/product-truth/measure-complexity-v9.mjs`, mode `100755`, Git blob
-  `049cfc694264c5766c17f05e45ebed72db2c1300`, SHA-256
-  `b2d32b8131ce8f708d5aed9ce961fdf2acaf30bd0baa4efe4046a3b67789d44f`.
+  `ae7f7879e55b3a3cff1641fcb0524e4279e8e636`, 85,475 bytes, SHA-256
+  `b46d1b9558eb1c1077e9856e9b1764a664788a1ff4a81ac61f499318637f3e23`.
 - Config: `scripts/product-truth/complexity-universe-v9.json`, mode `100644`, Git blob
-  `9f67c28b3ed8715ec32e826d5711edf3973c55a1`, SHA-256
+  `9f67c28b3ed8715ec32e826d5711edf3973c55a1`, 1,649 bytes, SHA-256
   `c795657575c7c2ed50bd7b9654d16448476d05ea7136bd9f154bf9f6b7bfb6b8`.
 - Focused test: `scripts/product-truth/measure-complexity-v9.test.ts`, mode `100644`, Git blob
-  `cd65ce9e8fa282e6f915f5d079aaa6985879e5db`, SHA-256
-  `286fd1270fdf2f0a051e467841239593e7029adca52316ae01e1bddbb83c7e90`.
-- Exact 24-path freeze manifest: JCS SHA-256
-  `d035bb1801fcf0ec56c3177852ad222ddf3f73e552fb5ae20bc40142a3f1655c` for complete
-  `{path,mode,bytes,gitBlob,sha256}` rows.
-- Complete 60-fixture manifest: JCS SHA-256
-  `593a5b942b229abe78d4fb9a3f331446c17ea915f6dc9a11863c57e1ad0658a7`.
-- Complete 63-artifact v9 manifest: JCS SHA-256
-  `b01bf3ae4318d9d852e1140f4e714f02f0af48c4ec593f0aca46a7c4cd6de500`.
-- Post-freeze verification proved candidate type `commit`, parent
-  `81dcb40357084cee0bf1aa45f35ded9e4f830229`, exact diff `8 M + 16 A`, and all 24 tree
-  mode/blob/byte/SHA-256 records identical to the freeze manifest.
+  `71007ce37bb12d46b29e3c7958ac4f101ff2ecef`, 38,058 bytes, SHA-256
+  `a85830cdf11fa59e60580858484aa52310aa108ac003604ed3c420ccd197e828`.
+- The 27 new `protocol-*.json` fixtures contain 3,541 bytes; their sorted complete
+  `{path,mode,bytes,gitBlob,sha256}` row-array JCS SHA-256 is
+  `ce87f705c78d10298ff2bee7b1333161d0797d41d01b49a72b37aa72a4a6717b`.
+- The complete 87-fixture v9 manifest contains 15,100 bytes and has JCS SHA-256
+  `4a7fca73964dce3e2f71709ef55af0bdc88b117dbc921d0f0369c6c76f8330e4`.
+  Meter, unchanged config, focused test and all fixtures form 90 artifacts / 140,282 bytes with
+  JCS SHA-256 `baeb7b7879fc6556484caa49a423f5955ea36616181e3cfc08ee715de5b0ef6d`.
+- The frozen commit has parent `01e1ff90e8dd4f805cd08013dde379aef74e0a08` and exact diff
+  `2 M + 27 A`. Its 29 changed paths contain 127,074 bytes and have sorted complete-row JCS
+  SHA-256 `8e5af9ec5dc53fe14345a449d86b3b9ccb948d436c98e9668f8f863cad8631dd`.
+  The pre-freeze exact `{path,sha256}` dispatch manifest separately reproduces SHA-256
+  `f084998b27bbf7ae6ea9f9e633da7b9890dcde21860042e00b85b3b08532611d`.
 
-## Frozen authority and lifecycle facts
+## Exact protocol and routing
 
-- Authority JCS SHA-256:
-  `f3fdbbcd7547c6bbf4d5990358d7a3a2cffac7497c16f725c73aaa57b794f95d`.
-- Verification authority: 70 per-Work rows, 45 unique paths, nine exact first materializations;
-  row digest `c291688e134e1ea91b0905c2b8709634ecd0e5fc1cf616a0b5a656e0d6978326`.
-  Per-Work counts are `16/17/10/10/17` for direct-first-public, native-host package-root,
-  execution leaf, state store and coordinator/facade respectively.
-- Production authority: 69 unique rows and four exact first materializations; approved-state digest
-  `c7790b3db167484ffaa85e4a3ad1430c29f2f7f05e952441b39ff6e08b862c82`.
-- Boundary-plus-verification union: 110 records, 88 present and 22 absent; digest
-  `2d189676ed940fa9299504a7e0fc47aa91f5c7eced44c115be21340d83df3ac9`.
-- Accepted dependency/adoption closure: 6,329 derivations collapse to 6,321 unique present records
-  and 6,083 unique blobs / 25,155,672 raw bytes. Every record mode, blob and raw-byte SHA-256 was
-  independently replayed from the approved Git tree. Input digest is
-  `176c47725b129d28044933c009391b9104ae7bad69aed048eb437db07a6d0faf`; record digest is
-  `6687319b0ea58643812cee677fad03b3152e8bfcb31486ddb368bc1b3cf2f599`.
-- Five Work fence digests remain:
-  `direct-first-public-b1=0e1551ebcdb8a47310e3ef56f9f7558ada452f5590d166551296eb359dd8faae`;
-  `native-host-package-root-binding=c85e1d66b3945573e86d5cdc7c2499bb1dc3136d810d02913be6e4a04c5d6de5`;
-  `product-execution-leaf=dec2eea264a3e638753fae7a548f1bb249f6f21bf5bc4a7011de05ddde5d3ca4`;
-  `product-state-store=2f3a862745d5edb40b9bcf793dde7d66d048b0094276655e4223eccad5c5a36a`;
-  `product-execution-coordinator-facade=124e32d7478469dd9973977573619371f5af863ed8f67d75fc2cc7d3643e79d9`.
-- V1-v8 accepted-tree history remains 580 exact records with manifest SHA-256
-  `a23165cc1330a12e69003a7f29177a229ce56a451cd3db20341bdd6f745854eb`.
-
-All Git changed paths now start rejected. Only an exact selected-Work production member or exact
-Design verification row may follow its authored presence/mode/materialization lifecycle. There is
-no path-category, extension, root, test, fixture, output, handoff or current-v9-artifact exemption.
-Non-selected accepted-tree records remain byte-exact. Graph, SCC, physical and semantic counts are
-emitted only as observations and cannot be promoted by candidate input, branch state or B1.
+- Official Product comparison invokes exactly
+  `git diff --name-status -z --no-renames <official-evidence> <candidate> --` with raw Buffer
+  stdout. Zero bytes mean zero records. A non-empty buffer must terminate in NUL and contain exact
+  repeated non-empty status/path fields.
+- Status is one byte and only `A/D/M/T` is accepted. Only each path field is fatal-UTF-8 decoded,
+  round-tripped byte-for-byte and checked as an exact relative Git path without normalization.
+  TAB, LF, CR, backslash and valid non-ASCII bytes remain path data.
+- Status/tree state is cross-checked before duplicate rejection. Every error is the fixed,
+  non-path-echoing command/unterminated/cardinality/status/empty-path/path-UTF-8/path-form/
+  status-state/duplicate-path disposition with only a zero-based ordinal where authored.
+- Every successful record preserves Git order and reaches the existing selected lifecycle and
+  accepted-tree classifiers. Parsing grants no membership or lifecycle authority. The existing
+  default reject, exact production/verification membership, 70/45/9 verification facts,
+  69-production state, 110-row (`88` present / `22` absent) union, 6,321-row accepted-tree closure,
+  declaration gate and observational graph/count boundary are unchanged.
 
 ## Official evidence and deterministic B0
 
@@ -88,34 +78,35 @@ The exact official invocation was:
 
 `node scripts/product-truth/measure-complexity-v9.mjs --ref 7582170a277477ba0d71cf70f53e4e0836874a72 --predecessor-evidence 5632f63603e6ae8b3fb95f759c793a09b16a1e44`
 
-Two invocations on the byte-stable candidate were byte-identical. Each output is 2,060,726 bytes,
-with raw-file SHA-256 `036c57828949c2d69c771cb92cf9a066864fcf1eaa7cf904fc94f0bcd946e3fe`
-and report JCS SHA-256
-`74188c2f581b90f3eb5e5fbaa1883251bc649a2415f98fbc18a6974bfd4c6815`. The report instrument
+Two post-freeze invocations on the immutable candidate were byte-identical. Each output is
+2,060,726 bytes, with raw-output SHA-256
+`5eda9b2816ca2a1615152224d17a226a7c2aaa49c08020f25436374ba4eb2f80` and report JCS SHA-256
+`454d35025f19399905ace410a9706492858a864e4cc60744a79714f004980299`. The report instrument
 hashes equal the meter/config bytes in the immutable candidate. Its evidence tuple is the exact
 accepted v7 bootstrap tuple; declared actor strings and receipts authenticate no identity.
 
 ## Verification
 
-- Focused falsifiers covered official B0, five complete Work lifecycle matrices, all changed-path
-  default-reject families, accepted-tree omissions, dependency adoption bytes, declaration
-  authority, evidence mutation/forgery, future Product transition tuples and observational graph
-  behavior.
-- A pre-freeze full run found one stale adjacent-positive fixture that duplicated an already-present
-  private helper. The bounded fixture was corrected before freeze; this was not a Product regression
-  or Design conflict. The byte-stable final run passed 83/83:
-  `bunx vitest run scripts/product-truth/measure-complexity-v9.test.ts --reporter=verbose`.
-- `bun run typecheck` from `scripts/`: PASS.
+- Direct raw-Buffer parser controls: `27/27 PASS`, covering empty output, terminal/cardinality and
+  empty-field faults, all disallowed statuses, fatal UTF-8, every authored path-form family,
+  A/D/M/T state cross-checks, duplicates and valid non-ASCII/TAB/LF/CR/backslash paths.
+- Fixture-free branchless Git-object controls: `9/9 PASS`. Temporary indexes plus
+  `hash-object`/`write-tree`/`commit-tree` updated no branch, ref or working-tree byte. Selected
+  existing `M` and exact authored verification `A` passed; unlisted `A/M`, selected `D`, mode `M`,
+  selected `T`, no-renames `D+A` move and adopted-byte drift reached their existing downstream
+  lifecycle or accepted-tree disposition with zero protocol/text false rejection.
+- Final focused v9 gate: `119/119 PASS` via
+  `bun x vitest run scripts/product-truth/measure-complexity-v9.test.ts --reporter=dot`.
+- `bun run --cwd scripts typecheck`: PASS.
 - `node --check scripts/product-truth/measure-complexity-v9.mjs`: PASS.
-- `oxfmt --check`: PASS for the meter, config, test and all 60 fixtures (63 files).
-- Strict JSON parsing: PASS for config and all 60 fixtures.
-- `git diff --check`: PASS. Source grammar scan found none of the forbidden classifiers.
-- Independent Design-tree reconstruction reproduced authority, 70/45/9 verification,
-  69/4 production, 110/88/22 union and every stated digest. Independent accepted-tree replay
-  verified all 6,321 record bytes.
-- Post-freeze commit/type/parent/scope/tree/instrument verification: PASS at
-  `558de08f897e2131c9159d118944272191f48359`.
-- Markdown-link, frontmatter and complete machine-report validation: PASS.
+- `oxfmt --check`: PASS for the meter, test and 27 protocol fixtures (29 files); strict JSON parse:
+  `27/27 PASS`.
+- `git diff --check`: PASS. Source scan confirms the official diff buffer never reaches
+  `decodeUtf8` or `TEXT_AUTHORITY_INVALID:git-diff-name-status`, and none of the forbidden semantic
+  classifiers was added.
+- Post-freeze commit/type/parent/scope/tree/instrument verification reproduced all 29 frozen paths,
+  both manifest digests and the complete B0 at
+  `e31d732937399b303448c9aa8d80f510c6cac8c2`.
 
 ## Decisions, caveats and stop-loss
 
@@ -124,11 +115,17 @@ Design/Work blocks. Config contains no paths, categories, counters, lifecycle ro
 verdicts. No candidate-controlled discovery can expand authority. The report is measurement
 evidence only and proves no Product behavior, semantic non-leak, actor identity or B1 acceptance.
 
-The post-r2 stop-loss is binding. This is the final authorized v9 implementation attempt. A fresh
-different-actor Review must inspect this immutable candidate, this handoff and the complete report,
-then write `reviews/product-truth-complexity-v9.md`. If that Review finds another material
-membership, changed-path, lifecycle or dependency-adoption bypass, this operation authorizes no
-repair, v9 extension, grammar addition or B1 run; Main must stop and return to human direction.
+The only next implementation Review output is
+`reviews/product-truth-complexity-v9-protocol-route.md`. A fresh different actor must review this
+immutable candidate, this handoff and the exact official invocation there. Every earlier Review
+path remains immutable evidence and cannot satisfy B1; no alias, fallback, directory scan or
+"latest" selection is permitted.
+
+The terminal stop-loss is permanent. Only a zero-material-finding, zero-blocker, zero-advisory
+different-actor `PASS` at that unique path may release the already-authored B1 prerequisite. Any
+material implementation or Review failure ends v9 immediately: no repair, Design extension, new
+QbD, semantic grammar, alternate Review path or B1 dispatch is authorized. Main must stop or obtain
+a new human decision for an authority outside v9.
 
 ## Complete B0 report
 ```omp-flow-product-truth-complexity-v9-report-v1
@@ -138,7 +135,7 @@ repair, v9 extension, grammar addition or B1 run; Main must stop and return to h
   "commit": "7582170a277477ba0d71cf70f53e4e0836874a72",
   "observationalBaseline": true,
   "instrument": {
-    "scriptSha256": "b2d32b8131ce8f708d5aed9ce961fdf2acaf30bd0baa4efe4046a3b67789d44f",
+    "scriptSha256": "b46d1b9558eb1c1077e9856e9b1764a664788a1ff4a81ac61f499318637f3e23",
     "configSha256": "c795657575c7c2ed50bd7b9654d16448476d05ea7136bd9f154bf9f6b7bfb6b8"
   },
   "officialInvocation": {
