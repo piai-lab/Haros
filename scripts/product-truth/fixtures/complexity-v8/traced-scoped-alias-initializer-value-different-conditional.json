@@ -1,0 +1,6 @@
+{
+  "extends": "traced-owner-positive",
+  "virtualFiles": {
+    "scripts/product-truth/sqlite-classifier.ts": "const flag = true;\nconst storageRead = flag ? localStorage.getItem : sessionStorage.getItem;\nexport function classifyLegacyDatabase() {\n  return \"safe\";\n}\n"
+  }
+}

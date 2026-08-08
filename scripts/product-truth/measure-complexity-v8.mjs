@@ -1387,6 +1387,7 @@ for (const path of candidateGraph.paths.filter((candidatePath) => rawInventoryPa
   const file = candidateGraph.sourceFile(path);
   if (file.parseDiagnostics.length) throw new Error(`UNPARSED_FROZEN_SOURCE:${path}`);
   const assignmentComparisonNodes = new WeakSet();
+  const aliasInitializerComparisonNodes = new WeakSet();
   const assignmentComparisonPath = workBlocks
     .find((block) => block.work === candidateWorkId)
     ?.production.some((entry) => entry.path === path) === true;
@@ -1395,8 +1396,8 @@ for (const path of candidateGraph.paths.filter((candidatePath) => rawInventoryPa
     const candidateBytes = candidate.bytesAt(path);
     if (!predecessorBytes?.equals(candidateBytes)) {
       const predecessorCounts = new Map();
-      const assignmentKey = (node, sourceFile) => {
-        const owner = qualifiedOwner(node, sourceFile, path);
+      const predecessorAliasInitializerCounts = new Map();
+      const localRolePathFor = (node, owner) => {
         const localRolePath = [];
         for (let current = node; current.parent && current !== owner.declarationNode; current = current.parent) {
           const siblings = directChildren(current.parent);
@@ -1404,10 +1405,23 @@ for (const path of candidateGraph.paths.filter((candidatePath) => rawInventoryPa
             `${ts.SyntaxKind[current.parent.kind]}[${siblings.indexOf(current)}]:${ts.SyntaxKind[current.kind]}`);
           if (current.parent === owner.declarationNode) break;
         }
+        return localRolePath;
+      };
+      const assignmentKey = (node, sourceFile) => {
+        const owner = qualifiedOwner(node, sourceFile, path);
         return canonicalJson({
           operator: node.operatorToken.kind,
           owner: owner.qualifiedDeclarationId,
-          localRolePath,
+          localRolePath: localRolePathFor(node, owner),
+          normalizedText: normalizedNodeText(node, sourceFile),
+        });
+      };
+      const aliasInitializerKey = (node, sourceFile) => {
+        const owner = qualifiedOwner(node, sourceFile, path);
+        return canonicalJson({
+          kind: "variable-initializer",
+          owner: owner.qualifiedDeclarationId,
+          localRolePath: localRolePathFor(node, owner),
           normalizedText: normalizedNodeText(node, sourceFile),
         });
       };
@@ -1416,6 +1430,10 @@ for (const path of candidateGraph.paths.filter((candidatePath) => rawInventoryPa
             node.operatorToken.kind <= ts.SyntaxKind.LastAssignment) {
           const key = assignmentKey(node, sourceFile);
           predecessorCounts.set(key, (predecessorCounts.get(key) ?? 0) + 1);
+        }
+        if (ts.isVariableDeclaration(node) && node.initializer) {
+          const key = aliasInitializerKey(node, sourceFile);
+          predecessorAliasInitializerCounts.set(key, (predecessorAliasInitializerCounts.get(key) ?? 0) + 1);
         }
         ts.forEachChild(node, (child) => collectPredecessorAssignments(child, sourceFile));
       };
@@ -1432,6 +1450,12 @@ for (const path of candidateGraph.paths.filter((candidatePath) => rawInventoryPa
           const remaining = predecessorCounts.get(key) ?? 0;
           if (remaining > 0) predecessorCounts.set(key, remaining - 1);
           else assignmentComparisonNodes.add(node);
+        }
+        if (ts.isVariableDeclaration(node) && node.initializer) {
+          const key = aliasInitializerKey(node, file);
+          const remaining = predecessorAliasInitializerCounts.get(key) ?? 0;
+          if (remaining > 0) predecessorAliasInitializerCounts.set(key, remaining - 1);
+          else aliasInitializerComparisonNodes.add(node);
         }
         ts.forEachChild(node, classifyCandidateAssignments);
       };
@@ -1722,28 +1746,29 @@ for (const path of candidateGraph.paths.filter((candidatePath) => rawInventoryPa
     }
     return rawIdentityForGlobalAssignmentAtom(expression);
   };
-  const assignmentExpressionContainsRaw = (expression, extensionsEnabled) => {
+  const expressionContainsRaw = (expression, extensionsEnabled, identityForAtom) => {
     if (extensionsEnabled && isFiniteTransparentExpressionWrapper(expression)) {
-      return assignmentExpressionContainsRaw(expression.expression, extensionsEnabled);
+      return expressionContainsRaw(expression.expression, extensionsEnabled, identityForAtom);
     }
-    if (rawIdentityForAssignmentAtom(expression)) return true;
+    if (identityForAtom(expression)) return true;
     let containsRaw = false;
     ts.forEachChild(expression, (child) => {
-      if (!containsRaw && !ts.isTypeNode(child) && assignmentExpressionContainsRaw(child, extensionsEnabled)) containsRaw = true;
+      if (!containsRaw && !ts.isTypeNode(child) &&
+          expressionContainsRaw(child, extensionsEnabled, identityForAtom)) containsRaw = true;
     });
     return containsRaw;
   };
-  const rawAssignmentExpressionResult = (expression, extensionsEnabled) => {
+  const finiteRawExpressionResult = (expression, extensionsEnabled, identityForAtom) => {
     if (ts.isParenthesizedExpression(expression) ||
         (extensionsEnabled && isFiniteTransparentExpressionWrapper(expression))) {
-      return rawAssignmentExpressionResult(expression.expression, extensionsEnabled);
+      return finiteRawExpressionResult(expression.expression, extensionsEnabled, identityForAtom);
     }
-    const directIdentity = rawIdentityForAssignmentAtom(expression);
+    const directIdentity = identityForAtom(expression);
     if (directIdentity) return { identity: directIdentity, containsRaw: true };
     if (extensionsEnabled && ts.isConditionalExpression(expression)) {
-      const whenTrue = rawAssignmentExpressionResult(expression.whenTrue, extensionsEnabled);
-      const whenFalse = rawAssignmentExpressionResult(expression.whenFalse, extensionsEnabled);
-      const conditionContainsRaw = assignmentExpressionContainsRaw(expression.condition, extensionsEnabled);
+      const whenTrue = finiteRawExpressionResult(expression.whenTrue, extensionsEnabled, identityForAtom);
+      const whenFalse = finiteRawExpressionResult(expression.whenFalse, extensionsEnabled, identityForAtom);
+      const conditionContainsRaw = expressionContainsRaw(expression.condition, extensionsEnabled, identityForAtom);
       if (!conditionContainsRaw && whenTrue.identity && whenFalse.identity &&
           canonicalJson(whenTrue.identity) === canonicalJson(whenFalse.identity)) {
         return { identity: whenTrue.identity, containsRaw: true };
@@ -1755,9 +1780,11 @@ for (const path of candidateGraph.paths.filter((candidatePath) => rawInventoryPa
     }
     return {
       identity: null,
-      containsRaw: extensionsEnabled && assignmentExpressionContainsRaw(expression, extensionsEnabled),
+      containsRaw: extensionsEnabled && expressionContainsRaw(expression, extensionsEnabled, identityForAtom),
     };
   };
+  const rawAssignmentExpressionResult = (expression, extensionsEnabled) =>
+    finiteRawExpressionResult(expression, extensionsEnabled, rawIdentityForAssignmentAtom);
   const containingVariableDeclaration = (declaration) => {
     for (let current = declaration.parent; current; current = current.parent) {
       if (ts.isVariableDeclaration(current)) return current;
@@ -1970,11 +1997,11 @@ for (const path of candidateGraph.paths.filter((candidatePath) => rawInventoryPa
       form: normalized.form ?? "global-member",
     } : null;
   };
-  const identityForExpression = (expression) => {
-    if (ts.isParenthesizedExpression(expression)) return identityForExpression(expression.expression);
+  let identityForExpression = () => null;
+  const identityForExpressionAtom = (expression, extensionsEnabled) => {
     if (ts.isBinaryExpression(expression) && expression.operatorToken.kind === ts.SyntaxKind.EqualsToken) {
       if (!ts.isIdentifier(expression.left) || !bindingScopeFor(expression.left)) return null;
-      return identityForExpression(expression.right);
+      return identityForExpression(expression.right, extensionsEnabled);
     }
     if (ts.isIdentifier(expression)) {
       const scoped = resolveScopedAlias(expression);
@@ -1990,6 +2017,11 @@ for (const path of candidateGraph.paths.filter((candidatePath) => rawInventoryPa
     }
     return null;
   };
+  const scopedAliasExpressionResult = (expression, extensionsEnabled = false) =>
+    finiteRawExpressionResult(expression, extensionsEnabled,
+      (atom) => identityForExpressionAtom(atom, extensionsEnabled));
+  identityForExpression = (expression, extensionsEnabled = false) =>
+    scopedAliasExpressionResult(expression, extensionsEnabled).identity;
   const identityForMember = (base, member, form) => {
     if (!base || member === null || base.kind === "terminal") return null;
     if (base.kind === "wrapper") {
@@ -2048,11 +2080,15 @@ for (const path of candidateGraph.paths.filter((candidatePath) => rawInventoryPa
     ts.forEachChild(node, collectAliasDeclarations);
   };
   collectAliasDeclarations(file);
+  const aliasWriteExtensionsEnabled = (write) => ts.isVariableDeclaration(write.node)
+    ? aliasInitializerComparisonNodes.has(write.node)
+    : assignmentComparisonNodes.has(write.node);
   let scopedAliasesChanged = true;
   while (scopedAliasesChanged) {
     scopedAliasesChanged = false;
     for (const declaration of aliasDeclarations) {
-      const base = identityForExpression(declaration.initializer);
+      const base = identityForExpression(declaration.initializer,
+        aliasInitializerComparisonNodes.has(declaration));
       if (!base) continue;
       if (ts.isIdentifier(declaration.name)) {
         if (bindScopedAlias(declaration.name, base)) scopedAliasesChanged = true;
@@ -2076,7 +2112,7 @@ for (const path of candidateGraph.paths.filter((candidatePath) => rawInventoryPa
     }
     for (const write of aliasWrites) {
       if (write.kind !== "assignment") continue;
-      const identity = identityForExpression(write.rhs);
+      const identity = identityForExpression(write.rhs, aliasWriteExtensionsEnabled(write));
       if (identity && bindScopedAliasAt(write.scope, write.name, identity, write.node.left)) scopedAliasesChanged = true;
     }
   }
@@ -2090,20 +2126,31 @@ for (const path of candidateGraph.paths.filter((candidatePath) => rawInventoryPa
     addViolation("RAW_ALIAS_WRITE_UNKNOWN", path, write.node, detail);
   };
   for (const write of aliasWrites) {
-    if (!write.scope && ["declaration", "assignment"].includes(write.kind) && write.rhs && identityForExpression(write.rhs)) {
+    const rhsResult = write.rhs
+      ? scopedAliasExpressionResult(write.rhs, aliasWriteExtensionsEnabled(write))
+      : { identity: null, containsRaw: false };
+    if (["declaration", "assignment"].includes(write.kind) && rhsResult.containsRaw && !rhsResult.identity) {
+      rejectAliasWrite(write, {
+        name: write.name,
+        writeKinds: [write.kind],
+        reason: "unsupported-raw-alias-initializer",
+      });
+      continue;
+    }
+    if (!write.scope && ["declaration", "assignment"].includes(write.kind) && rhsResult.identity) {
       rejectAliasWrite(write, { name: write.name, writeKinds: [write.kind], unresolvedBinding: true });
       continue;
     }
-    if (["declaration", "assignment"].includes(write.kind) || !write.rhs || !identityForExpression(write.rhs)) continue;
+    if (["declaration", "assignment"].includes(write.kind) || !rhsResult.identity) continue;
     rejectAliasWrite(write, { name: write.name, writeKinds: [write.kind] });
   }
   for (const [scope, aliases] of scopedAliases) for (const [name] of aliases) {
     const writes = aliasWrites.filter((write) => write.scope === scope && write.name === name);
     const validSingleWrite = writes.length === 1 && ["declaration", "assignment"].includes(writes[0].kind) &&
-      identityForExpression(writes[0].rhs);
+      identityForExpression(writes[0].rhs, aliasWriteExtensionsEnabled(writes[0]));
     if (!validSingleWrite) {
       const witness = writes.find((write) => !["declaration", "assignment"].includes(write.kind) ||
-        !write.rhs || !identityForExpression(write.rhs)) ?? writes[1] ?? writes[0];
+        !write.rhs || !identityForExpression(write.rhs, aliasWriteExtensionsEnabled(write))) ?? writes[1] ?? writes[0];
       if (witness) rejectAliasWrite(witness, { name, writeKinds: writes.map((write) => write.kind) });
       else addViolation("RAW_ALIAS_WRITE_UNKNOWN", path, file, { name, writeKinds: [] });
     }

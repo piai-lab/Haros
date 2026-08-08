@@ -1,0 +1,6 @@
+{
+  "extends": "traced-owner-positive",
+  "virtualFiles": {
+    "scripts/product-truth/sqlite-classifier.ts": "const storageRead = localStorage.getItem as typeof localStorage.getItem;\nexport function classifyLegacyDatabase() {\n  return \"safe\";\n}\nfunction hiddenHelper() {\n  return storageRead(\"forbidden\");\n}\nexport const observed = hiddenHelper();\n"
+  }
+}

@@ -185,6 +185,8 @@ describe("product-truth-complexity-v8 qualified declarations", () => {
     "traced-assignment-global-function-shadow-positive",
     "traced-assignment-scoped-global-shadow-positive",
     "traced-assignment-scoped-terminal-direct-use-positive",
+    "traced-scoped-alias-initializer-shadow-wrapper-positive",
+    "traced-scoped-alias-initializer-raw-free-conditional-positive",
     "traced-assignment-rhs-raw-free-wrapper-positive",
     "traced-assignment-rhs-raw-free-conditional-positive",
   ])("accepts exact owner declaration and lexical-use positive %s", (fixture) => {
@@ -235,6 +237,13 @@ describe("product-truth-complexity-v8 qualified declarations", () => {
     "traced-assignment-scoped-ambient-module-as-private-helper",
     "traced-assignment-scoped-global-function-as-private-helper",
     "traced-assignment-scoped-terminal-as-private-helper",
+    "traced-scoped-alias-initializer-root-nested-wrapper-private-helper",
+    "traced-scoped-alias-initializer-terminal-nested-wrapper-private-helper",
+    "traced-scoped-alias-initializer-terminal-same-conditional-private-helper",
+    "traced-scoped-alias-initializer-terminal-wrapper-direct-private-helper",
+    "traced-scoped-alias-initializer-ambient-wrapper-private-helper",
+    "traced-scoped-alias-initializer-multihop-wrapper-private-helper",
+    "traced-scoped-alias-initializer-value-different-conditional",
     "traced-class-growth",
   ])("rejects wrong qualified declaration/use %s", (fixture) => {
     const result = runFixture(fixture, "direct-first-public-b1");
