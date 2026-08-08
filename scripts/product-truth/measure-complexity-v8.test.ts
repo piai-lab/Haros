@@ -189,6 +189,8 @@ describe("product-truth-complexity-v8 qualified declarations", () => {
     "traced-scoped-alias-initializer-raw-free-conditional-positive",
     "traced-finite-expression-nested-assignment-raw-free-positive",
     "traced-finite-expression-property-assignment-positive",
+    "traced-global-exact-computed-terminal-positive",
+    "traced-global-extra-selector-shadow-positive",
     "traced-assignment-rhs-raw-free-wrapper-positive",
     "traced-assignment-rhs-raw-free-conditional-positive",
   ])("accepts exact owner declaration and lexical-use positive %s", (fixture) => {
@@ -260,6 +262,18 @@ describe("product-truth-complexity-v8 qualified declarations", () => {
     "traced-finite-expression-nested-assignment-rhs",
     "traced-finite-expression-nested-compound-assignment-alias",
   ])("rejects unsupported raw-containing nested assignment syntax %s", (fixture) => {
+    const result = runFixture(fixture, "direct-first-public-b1");
+    expect(result.status).not.toBe(0);
+    expect(result.stdout).toBe("");
+    expect(result.stderr).toContain("RAW_ALIAS_WRITE_UNKNOWN");
+  }, 30_000);
+
+  it.each([
+    "traced-global-extra-selector-alias-dot",
+    "traced-global-extra-selector-assignment-computed",
+    "traced-global-extra-selector-wrapped-alias-dot",
+    "traced-global-extra-selector-conditional-computed",
+  ])("rejects a selector after a frozen global terminal %s", (fixture) => {
     const result = runFixture(fixture, "direct-first-public-b1");
     expect(result.status).not.toBe(0);
     expect(result.stdout).toBe("");

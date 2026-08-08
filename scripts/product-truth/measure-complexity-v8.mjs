@@ -1682,6 +1682,7 @@ for (const path of candidateGraph.paths.filter((candidatePath) => rawInventoryPa
   let assignmentScopedIdentityForExpression = () => null;
   const rawIdentityForGlobalAssignmentAtom = (expression) => {
     const normalized = normalizedGlobal(expression, lexical.isShadowedAt);
+    if (normalized?.error || normalized?.extraMemberCount > 0) return null;
     const normalizedClasses = classifyGlobal(normalized);
     if (normalizedClasses) return {
       specifier: normalized.root,
