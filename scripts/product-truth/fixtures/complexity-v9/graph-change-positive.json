@@ -1,0 +1,6 @@
+{
+  "extends": "exact-predecessor-positive",
+  "appendToFiles": {
+    "apps/web/src/appSettings.ts": "\nimport \"./settingsSearchIndex\";\n"
+  }
+}

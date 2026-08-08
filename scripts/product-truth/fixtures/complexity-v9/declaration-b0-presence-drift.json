@@ -1,0 +1,5 @@
+{
+  "virtualFiles": {
+    "scripts/product-truth/direct-first-public.ts": "export function inspectDirectFirstPublic() { return null; }\n"
+  }
+}

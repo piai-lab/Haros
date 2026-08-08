@@ -1,0 +1,6 @@
+{
+  "extends": "exact-predecessor-positive",
+  "virtualFiles": {
+    "apps/service/src/product/productExecutionBoundary.ts": "export const productExecutionBoundaryFixture = true;\n"
+  }
+}

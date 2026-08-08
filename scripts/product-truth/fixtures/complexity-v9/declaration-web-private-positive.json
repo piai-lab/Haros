@@ -1,0 +1,6 @@
+{
+  "extends": "exact-predecessor-positive",
+  "appendToFiles": {
+    "apps/web/src/composerDraftStore.ts": "\nconst readOrCreateComposerDraftEnvelope = () => null;\nconst writeAndVerifyComposerDraftEnvelope = () => null;\n"
+  }
+}

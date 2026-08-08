@@ -1,0 +1,19 @@
+{
+  "format": "product-truth-complexity-universe-v9",
+  "acceptedDesignCommit": "f110fb66006768074ca192bb94024632d16c09dd",
+  "baselineCommit": "7582170a277477ba0d71cf70f53e4e0836874a72",
+  "authoritySha256": "b8ffbdb58b17322d1e35835071c3458eba51c3913b0d05de50162219ae803920",
+  "dependencyAuthoritySha256": "35ce67d0e9d09d48cb8f4fe8c8bbc49a1c70b69c2b5a175c44c1c353ca8c7849",
+  "dependencyClosureSha256": {
+    "baseline": "b3989b0c513f830a18b6803c85455acada90b287702370207aaa3e3427f710f6",
+    "accepted": "23336380434c431dca5236593f08ae276b790014a35a273ff2ad26eb44795e60"
+  },
+  "historicalArtifactsSha256": "a23165cc1330a12e69003a7f29177a229ce56a451cd3db20341bdd6f745854eb",
+  "workBoundarySha256": {
+    "direct-first-public-b1": "0e1551ebcdb8a47310e3ef56f9f7558ada452f5590d166551296eb359dd8faae",
+    "native-host-package-root-binding": "c85e1d66b3945573e86d5cdc7c2499bb1dc3136d810d02913be6e4a04c5d6de5",
+    "product-execution-coordinator-facade": "124e32d7478469dd9973977573619371f5af863ed8f67d75fc2cc7d3643e79d9",
+    "product-execution-leaf": "dec2eea264a3e638753fae7a548f1bb249f6f21bf5bc4a7011de05ddde5d3ca4",
+    "product-state-store": "2f3a862745d5edb40b9bcf793dde7d66d048b0094276655e4223eccad5c5a36a"
+  }
+}

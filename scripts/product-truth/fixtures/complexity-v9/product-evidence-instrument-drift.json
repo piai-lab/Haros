@@ -1,0 +1,8 @@
+{
+  "extends": "product-evidence-positive",
+  "syntheticEvidenceMutation": {
+    "appendToFiles": {
+      "scripts/product-truth/measure-complexity-v9.mjs": "\n"
+    }
+  }
+}

@@ -1,0 +1,6 @@
+{
+  "extends": "exact-predecessor-positive",
+  "appendToFiles": {
+    "scripts/check-source-closure.mjs": "\n// v9 outside-measurement drift\n"
+  }
+}

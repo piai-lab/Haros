@@ -1,0 +1,8 @@
+{
+  "extends": "product-evidence-positive",
+  "laterEvidenceMutation": {
+    "appendToFiles": {
+      ".omp-flow/tasks/08-07-product-truth-consolidation/reviews/product-truth-complexity-v9.md": "\n"
+    }
+  }
+}

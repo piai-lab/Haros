@@ -1,0 +1,9 @@
+{
+  "extends": "exact-predecessor-positive",
+  "virtualFiles": {
+    "scripts/product-truth/sqlite-classifier.ts": "export function classifyLegacyDatabase() { return null; }\n",
+    "scripts/product-truth/chromium-leveldb.ts": "export function inspectProfileDraftKeys() { return null; }\nexport function deleteLegacyProfileDraftKeys() { return null; }\n",
+    "scripts/product-truth/database-lock.ts": "export function withProductTruthDatabaseLocks() { return null; }\n",
+    "scripts/product-truth/direct-first-public.ts": "export function inspectDirectFirstPublic() { return null; }\nexport function applyDirectFirstPublic() { return null; }\n"
+  }
+}

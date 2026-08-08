@@ -1,0 +1,4 @@
+{
+  "extends": "product-evidence-positive",
+  "syntheticReportDigestMismatch": true
+}

@@ -1,0 +1,6 @@
+{
+  "extends": "exact-predecessor-positive",
+  "moveFiles": {
+    "scripts/release-update-policy.json": "scripts/product-truth/direct-first-public.ts"
+  }
+}
