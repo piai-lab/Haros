@@ -3,42 +3,50 @@ type: "Handoff"
 title: "Narrow Product-truth complexity v9 measurement"
 work: "../work/product-truth-complexity-v9.md"
 status: "DONE"
-actor_id: "product_truth_complexity_v9_impl"
-dispatch_receipt: "5715f89dd0e34abc99410f90c72f4c0d"
-predecessor_receipt: "3dce1351cebd4a5e9f40a9c32583ae17"
-predecessor_output: "../qbd/product-truth-complexity-v9-final-audit.md"
-reviewed_candidate: "0b09b7441ae71cafe39eaabaaad4f2f0cbce9f00"
-report_sha256: "878feb3487231f3bf6afd9c03d1fcb4d7d7fc0eddf11c87d6f58f47d4b8c373d"
+actor_id: "product_truth_complexity_v9_impl_r2"
+dispatch_receipt: "b37ff42180f742a5b909ce16fbab558a"
+predecessor_receipt: "5715f89dd0e34abc99410f90c72f4c0d"
+predecessor_output: "../handoffs/product-truth-complexity-v9.md"
+reviewed_candidate: "ec416f7fe6eeea908fb80bbd6c716bc01e9860bd"
+report_sha256: "4d02b9c880331e70cc9440e8461d3bfea280fa8b1a784c4df838f16491c4ff46"
 ---
 
 # Narrow Product-truth complexity v9 measurement
 
 ## Result
 
-`DONE` — the measurement-only v9 candidate is frozen at immutable commit
-`0b09b7441ae71cafe39eaabaaad4f2f0cbce9f00`. It implements the exact hard facts in the
+`DONE` — the repaired measurement-only v9 candidate is frozen at immutable commit
+`ec416f7fe6eeea908fb80bbd6c716bc01e9860bd`. It implements the exact hard facts in the
 [v9 Interface](../interfaces/product-truth-complexity-v9.md) and the bounded
 [measurement Work](../work/product-truth-complexity-v9.md), under accepted Design
 `f110fb66006768074ca192bb94024632d16c09dd`, the zero-finding
 [final QbD audit](../qbd/product-truth-complexity-v9-final-audit.md), and human PASS at
 `d74bffb673a7869272a6e243a8c8a329fce69092`.
 
-The candidate adds only the v9 meter, data-only config, focused test, and 34 finite structural
-fixtures. It changes no Product, dependency, v1-v8 artifact, existing Work, Design, Decision, QbD,
-handoff, Review, or protected user document. B1 was not run and is not authorized by this result.
+The immutable first candidate `0b09b7441ae71cafe39eaabaaad4f2f0cbce9f00` was rejected by the
+[failed implementation Review](../reviews/product-truth-complexity-v9.md), receipt
+`0bb1e2cc742d4572aef193be8c4fc23d`. This r2 candidate repairs only its three P1 findings: extension-
+independent production/direct-tool membership over every changed path, value-namespace declaration
+export disposition, and recursive duplicate-key rejection for predecessor evidence machine JSON.
+It adds ten bounded structural fixtures, changes no Design or v9 semantic authority, and imports no
+v8 expression case. Product, dependency, v1-v8 artifacts, Work/Design/Decision/QbD/Review bytes,
+the three Synara-first documents and real `~/.omnimind` remain outside the repair.
 
 ## Frozen bytes and authority
 
 - Meter: `scripts/product-truth/measure-complexity-v9.mjs`, mode `100755`, SHA-256
-  `83a3c908de0c560358139aa87c3bf180dd8f5be62d27c48aa667bd268e012da9`.
+  `8408b18b9812444edc030b8b44a5d6389fceedc949ba196c8413ac80f722cce8`.
 - Config: `scripts/product-truth/complexity-universe-v9.json`, SHA-256
   `b60120a449e0fc90e537dd1aa45f4e660650d21e050261785fe1156a6eb20ccb`.
 - Focused test: `scripts/product-truth/measure-complexity-v9.test.ts`, SHA-256
-  `37830d0d1b6514c6c843d76c515da64311acce5572f4f7fc1f95b2500589ae25`.
-- Fixture manifest: 34 exact path/mode/SHA-256 records, raw-JCS SHA-256
-  `4d2605c4851942fc0d16d50e09f0f342972c36fbb4638dfe463662a7e64e18ff`.
-- Full candidate manifest: 37 exact path/mode/SHA-256 records, raw-JCS SHA-256
-  `bfe8c02d80c740af240db4ccaa69f03251a91b6b37fbe1f0271f59143a95a764`.
+  `0e8205cc0e548bc71b4345bd5fac59594406dc0dc5757b14ab2f723c9827a331`.
+- Fixture manifest: 44 exact path/mode/SHA-256 records, raw-JCS SHA-256
+  `4bd1dc794b3af56c98ed9313aff3cb62c044001320e952ffaa1d0b02ecef7f98`.
+- Full candidate manifest: 47 exact path/mode/SHA-256 records, raw-JCS SHA-256
+  `15e30df5191c9134e275cdd76da9349afe8b45e3ad66f63d49a46facbc8efa04`.
+- R2 repair manifest from failed-Review commit
+  `f12d654c5447c1c2192bdd3e43bcbd41a33f2769`: 12 exact path/mode/SHA-256 records,
+  raw-JCS SHA-256 `f3415c4da21af4f29c7bdafacbc3515b28bd31177ec5e19992c09659961070d9`.
 - V9 authority JCS SHA-256:
   `b8ffbdb58b17322d1e35835071c3458eba51c3913b0d05de50162219ae803920`.
 - Five Work fence JCS SHA-256 values:
@@ -84,8 +92,8 @@ implementer `product_truth_meter_v7_r5`, reviewer `product_truth_meter_v7_review
 Review receipt `ac877c8dbc3a425b91129f153deb61f9`. These declared strings and receipts authenticate no identity.
 
 Two clean post-freeze invocations were byte-identical at 148,897 bytes. Each output has byte SHA-256
-`947965ab6442fca664f511e2e85ea9a872095435a3bf8320886f29c473adec64`
-and JCS SHA-256 `878feb3487231f3bf6afd9c03d1fcb4d7d7fc0eddf11c87d6f58f47d4b8c373d`.
+`b997bdd3142b5c669e98e76f41ba4d7588004127f3b0d1ca9dff17a1b290f66c`
+and JCS SHA-256 `4d02b9c880331e70cc9440e8461d3bfea280fa8b1a784c4df838f16491c4ff46`.
 The report reproduces 69 production source members, 71 complete boundary members, 56 parsed sources,
 578 literal records, graph SHA-256
 `9594b2c2d1562d9d546ece89e699156d1e6708b0817ac0a2bf5b62ea6ba66869`,
@@ -93,13 +101,14 @@ and all 11 declarations as two present plus nine absent.
 
 ## Verification
 
-- `bunx vitest run scripts/product-truth/measure-complexity-v9.test.ts`: PASS, 53/53.
+- `bunx vitest run scripts/product-truth/measure-complexity-v9.test.ts`: PASS, 63/63.
 - `bun run typecheck` from `scripts/`: PASS.
 - `node --check scripts/product-truth/measure-complexity-v9.mjs`: PASS.
-- Targeted `oxfmt --check`: PASS for all 37 candidate files.
-- Link/JSON validation: PASS, 14 relevant Markdown links and 35 v9 JSON files.
+- Targeted `oxfmt --check`: PASS for all 12 r2 repair files.
+- Link/JSON validation: PASS, all linked local targets, one complete report block and 45 v9 JSON
+  files.
 - `git diff --check`: PASS.
-- Frozen commit identity/type and exact 37-path diff: PASS.
+- Frozen commit identity/type, exact 12-path r2 diff and cumulative 47-path v9 candidate: PASS.
 - V1-v8 byte/mode manifest, five fence digests, source/config authority, and path-limited scope:
   PASS.
 - Source inspection found no v8 expression grammar or public-nonleak, write/Web-RPC/gateway,
@@ -112,7 +121,7 @@ and all 11 declarations as two present plus nine absent.
 ## Independent review required
 
 This handoff is producer evidence, not acceptance. A fresh different actor must review immutable
-candidate `0b09b7441ae71cafe39eaabaaad4f2f0cbce9f00`, this handoff, the official invocation, and the
+candidate `ec416f7fe6eeea908fb80bbd6c716bc01e9860bd`, this handoff, the official invocation, and the
 complete report, then write `reviews/product-truth-complexity-v9.md`. Only a zero-finding PASS can
 satisfy B1's meter prerequisite.
 
@@ -125,7 +134,7 @@ satisfy B1's meter prerequisite.
   "commit": "7582170a277477ba0d71cf70f53e4e0836874a72",
   "observationalBaseline": true,
   "instrument": {
-    "scriptSha256": "83a3c908de0c560358139aa87c3bf180dd8f5be62d27c48aa667bd268e012da9",
+    "scriptSha256": "8408b18b9812444edc030b8b44a5d6389fceedc949ba196c8413ac80f722cce8",
     "configSha256": "b60120a449e0fc90e537dd1aa45f4e660650d21e050261785fe1156a6eb20ccb"
   },
   "officialInvocation": {
