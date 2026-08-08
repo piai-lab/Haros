@@ -1,0 +1,11 @@
+{
+  "extends": "exact-predecessor-positive",
+  "virtualFiles": {
+    "protocol/非ASCII.ts": "export {};\n",
+    "protocol/tab\tname.ts": "export {};\n",
+    "protocol/line\nfeed.ts": "export {};\n",
+    "protocol/carriage\rreturn.ts": "export {};\n",
+    "protocol/back\\slash.ts": "export {};\n"
+  },
+  "rawChangedPathHex": "410070726f746f636f6c2fe99d9e41534349492e747300410070726f746f636f6c2f746162096e616d652e747300410070726f746f636f6c2f6c696e650a666565642e747300410070726f746f636f6c2f63617272696167650d72657475726e2e747300410070726f746f636f6c2f6261636b5c736c6173682e747300"
+}

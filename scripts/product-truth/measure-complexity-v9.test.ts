@@ -1,6 +1,8 @@
 import { createHash } from "node:crypto";
-import { readdirSync, readFileSync, statSync } from "node:fs";
+import { mkdtempSync, readdirSync, readFileSync, rmSync, statSync } from "node:fs";
 import { spawnSync } from "node:child_process";
+import { tmpdir } from "node:os";
+import { join } from "node:path";
 import { fileURLToPath } from "node:url";
 import { describe, expect, it } from "vitest";
 
@@ -34,6 +36,140 @@ const canonicalJson = (value: any): string => {
   return JSON.stringify(value);
 };
 const sha256 = (value: Buffer | string) => createHash("sha256").update(value).digest("hex");
+
+type GitObjectChange =
+  | { path: string; bytes: Buffer | string; mode?: "100644" | "100755" | "120000" }
+  | { path: string; delete: true };
+
+const runGit = (
+  args: ReadonlyArray<string>,
+  input?: Buffer | string,
+  env: NodeJS.ProcessEnv = process.env,
+) => {
+  const result = spawnSync("git", args, {
+    cwd: root,
+    input,
+    env,
+    encoding: null,
+    maxBuffer: 512 * 1024 * 1024,
+  });
+  if (result.status !== 0) {
+    throw new Error(`git ${args[0]} failed: ${result.stderr.toString("utf8").trim()}`);
+  }
+  return result.stdout;
+};
+
+const objectBytesAt = (ref: string, path: string) => runGit(["show", `${ref}:${path}`]);
+
+const writeObjectCommit = (parent: string, changes: GitObjectChange[], message: string) => {
+  const temporaryDirectory = mkdtempSync(join(tmpdir(), "omnimind-v9-protocol-"));
+  const environment = {
+    ...process.env,
+    GIT_INDEX_FILE: join(temporaryDirectory, "index"),
+    GIT_AUTHOR_NAME: "OmniMind v9 protocol control",
+    GIT_AUTHOR_EMAIL: "v9-protocol-control@invalid.example",
+    GIT_AUTHOR_DATE: "2001-01-01T00:00:00Z",
+    GIT_COMMITTER_NAME: "OmniMind v9 protocol control",
+    GIT_COMMITTER_EMAIL: "v9-protocol-control@invalid.example",
+    GIT_COMMITTER_DATE: "2001-01-01T00:00:00Z",
+  };
+  try {
+    runGit(["read-tree", parent], undefined, environment);
+    for (const change of changes) {
+      if ("delete" in change) {
+        runGit(["update-index", "--force-remove", "--", change.path], undefined, environment);
+        continue;
+      }
+      const blob = runGit(["hash-object", "-w", "--stdin"], change.bytes, environment)
+        .toString("ascii")
+        .trim();
+      runGit(
+        [
+          "update-index",
+          "--add",
+          "--cacheinfo",
+          `${change.mode ?? "100644"},${blob},${change.path}`,
+        ],
+        undefined,
+        environment,
+      );
+    }
+    const tree = runGit(["write-tree"], undefined, environment).toString("ascii").trim();
+    return runGit(["commit-tree", tree, "-p", parent], `${message}\n`, environment)
+      .toString("ascii")
+      .trim();
+  } finally {
+    rmSync(temporaryDirectory, { recursive: true, force: true });
+  }
+};
+
+let officialControlEvidence:
+  | { evidenceCommit: string; reviewedCandidate: string; reportSha256: string }
+  | undefined;
+
+const buildOfficialControlEvidence = () => {
+  if (officialControlEvidence) return officialControlEvidence;
+  const pristine = run(baseArgs);
+  if (pristine.status !== 0) throw new Error(pristine.stderr);
+  const report = parse(pristine.stdout);
+  const reportSha256 = sha256(canonicalJson(report));
+  const reviewedCandidate = writeObjectCommit(
+    approvedState,
+    [
+      {
+        path: "scripts/product-truth/measure-complexity-v9.mjs",
+        bytes: readFileSync(script),
+        mode: "100755",
+      },
+      {
+        path: "scripts/product-truth/complexity-universe-v9.json",
+        bytes: readFileSync(configPath),
+      },
+    ],
+    "v9 protocol control instrument",
+  );
+  const handoffPath =
+    ".omp-flow/tasks/08-07-product-truth-consolidation/handoffs/product-truth-complexity-v9.md";
+  const reviewPath =
+    ".omp-flow/tasks/08-07-product-truth-consolidation/reviews/product-truth-complexity-v9.md";
+  const handoff = `---\ntype: "Handoff"\nwork: "../work/product-truth-complexity-v9.md"\nstatus: "DONE"\nactor_id: "v9_protocol_control_implementer"\ndispatch_receipt: "v9protocolcontrolimplementationreceipt"\nreviewed_candidate: "${reviewedCandidate}"\nreport_sha256: "${reportSha256}"\n---\n\n# Fixture-free v9 protocol control evidence\n\n\`\`\`omp-flow-product-truth-complexity-v9-report-v1\n${JSON.stringify(report, null, 2)}\n\`\`\`\n`;
+  const review = `---\ntype: "Implementation Review"\nwork: "../work/product-truth-complexity-v9.md"\nhandoff: "../handoffs/product-truth-complexity-v9.md"\nverdict: "PASS"\nactor_id: "v9_protocol_control_reviewer"\ndispatch_receipt: "v9protocolcontrolreviewreceipt"\npredecessor_receipt: "v9protocolcontrolimplementationreceipt"\npredecessor_output: "../handoffs/product-truth-complexity-v9.md"\nreviewed_candidate: "${reviewedCandidate}"\nreport_sha256: "${reportSha256}"\n---\n\n# Fixture-free v9 protocol control Review\n`;
+  const evidenceCommit = writeObjectCommit(
+    reviewedCandidate,
+    [
+      { path: handoffPath, bytes: handoff },
+      { path: reviewPath, bytes: review },
+    ],
+    "v9 protocol control evidence",
+  );
+  officialControlEvidence = { evidenceCommit, reviewedCandidate, reportSha256 };
+  return officialControlEvidence;
+};
+
+const runOfficialControl = (changes: GitObjectChange[], identity: string) => {
+  const statusBefore = runGit(["status", "--short"]);
+  const { evidenceCommit } = buildOfficialControlEvidence();
+  const candidate = writeObjectCommit(evidenceCommit, changes, `v9 protocol control ${identity}`);
+  const diff = runGit([
+    "diff",
+    "--name-status",
+    "-z",
+    "--no-renames",
+    evidenceCommit,
+    candidate,
+    "--",
+  ]);
+  const result = run([
+    "--work",
+    "direct-first-public-b1",
+    "--ref",
+    candidate,
+    "--predecessor-evidence",
+    evidenceCommit,
+  ]);
+  expect(runGit(["status", "--short"])).toEqual(statusBefore);
+  return { candidate, diff, evidenceCommit, result };
+};
 
 describe("product-truth complexity v9 official input and B0", () => {
   it.each([
@@ -151,6 +287,239 @@ describe("product-truth complexity v9 official input and B0", () => {
       reviewBlobId: "fa047d2bf3c62ce87483cea86f6e0b1ed2362eea",
     });
   }, 30_000);
+});
+
+describe("product-truth complexity v9 raw changed-path Buffer protocol", () => {
+  it.each([
+    ["protocol-empty-output", []],
+    ["protocol-selected-m-positive", [{ status: "M", path: "apps/web/src/appSettings.ts" }]],
+  ] as const)("accepts the exact raw Buffer control %s", (fixture, expectedRecords) => {
+    const result = runFixture(fixture);
+    expect(result.status, result.stderr).toBe(0);
+    expect(parse(result.stdout).comparison.allGitChangedPaths).toEqual(expectedRecords);
+  });
+
+  it.each([
+    ["protocol-unterminated", "GIT_CHANGED_PATH_RECORD_INVALID:unterminated"],
+    ["protocol-cardinality", "GIT_CHANGED_PATH_RECORD_INVALID:cardinality"],
+    ["protocol-empty-status", "GIT_CHANGED_PATH_RECORD_INVALID:status:0"],
+    ["protocol-empty-path", "GIT_CHANGED_PATH_RECORD_INVALID:empty-path:0"],
+    ["protocol-invalid-utf8", "GIT_CHANGED_PATH_RECORD_INVALID:path-utf8:0"],
+    ["protocol-duplicate-path", "GIT_CHANGED_PATH_RECORD_INVALID:duplicate-path:1"],
+  ] as const)("rejects the raw Buffer fault %s with its fixed error", (fixture, diagnostic) => {
+    const result = runFixture(fixture);
+    expect(result.status).not.toBe(0);
+    expect(result.stdout).toBe("");
+    expect(result.stderr).toContain(diagnostic);
+  });
+
+  it.each([
+    "protocol-status-c",
+    "protocol-status-r",
+    "protocol-status-u",
+    "protocol-status-x",
+    "protocol-status-b",
+    "protocol-status-score",
+    "protocol-status-multibyte",
+  ])("rejects each disallowed status field %s without decoding a path", (fixture) => {
+    const result = runFixture(fixture);
+    expect(result.status).not.toBe(0);
+    expect(result.stdout).toBe("");
+    expect(result.stderr).toContain("GIT_CHANGED_PATH_RECORD_INVALID:status:0");
+    expect(result.stderr).not.toContain("protocol/new.ts");
+  });
+
+  it.each([
+    "protocol-path-leading-slash",
+    "protocol-path-trailing-slash",
+    "protocol-path-empty-component",
+    "protocol-path-dot",
+    "protocol-path-dot-dot",
+    "protocol-path-dot-component",
+    "protocol-path-dot-dot-component",
+  ])("rejects each invalid relative Git path form %s without echoing it", (fixture) => {
+    const result = runFixture(fixture);
+    expect(result.status).not.toBe(0);
+    expect(result.stdout).toBe("");
+    expect(result.stderr).toContain("GIT_CHANGED_PATH_RECORD_INVALID:path-form:0");
+    expect(result.stderr).not.toContain("protocol/new.ts");
+  });
+
+  it.each([
+    "protocol-status-state-a",
+    "protocol-status-state-d",
+    "protocol-status-state-m",
+    "protocol-status-state-t",
+  ])("cross-checks %s against the two exact tree states", (fixture) => {
+    const result = runFixture(fixture);
+    expect(result.status).not.toBe(0);
+    expect(result.stdout).toBe("");
+    expect(result.stderr).toContain("GIT_CHANGED_PATH_RECORD_INVALID:status-state:0");
+  });
+
+  it("preserves valid non-ASCII, TAB, LF, CR and backslash bytes through downstream routing", () => {
+    const result = runFixture("protocol-valid-path-bytes");
+    expect(result.status).not.toBe(0);
+    expect(result.stdout).toBe("");
+    expect(result.stderr).toContain("UNLISTED_PATH:");
+    expect(result.stderr).not.toContain("GIT_CHANGED_PATH_RECORD_INVALID");
+    expect(result.stderr).not.toContain("TEXT_AUTHORITY_INVALID:git-diff-name-status");
+  });
+});
+
+describe("product-truth complexity v9 fixture-free official Git-object routing", () => {
+  const selectedExistingPath = "apps/web/src/appSettings.test.ts";
+  const authoredMaterializationPath =
+    "scripts/product-truth/first-public-capability-verifier.test.ts";
+
+  const decodedDiffRecords = (diff: Buffer) => {
+    expect(diff.length).toBeGreaterThan(0);
+    expect(diff.at(-1)).toBe(0);
+    const fields = diff.subarray(0, -1).toString("utf8").split("\0");
+    expect(fields.length % 2).toBe(0);
+    return Array.from({ length: fields.length / 2 }, (_, index) => ({
+      status: fields[index * 2],
+      path: fields[index * 2 + 1],
+    }));
+  };
+
+  it("accepts a selected existing M from the exact official Git command", () => {
+    const { evidenceCommit } = buildOfficialControlEvidence();
+    const result = runOfficialControl(
+      [
+        {
+          path: selectedExistingPath,
+          bytes: Buffer.concat([
+            objectBytesAt(evidenceCommit, selectedExistingPath),
+            Buffer.from("\n// fixture-free selected M protocol control\n"),
+          ]),
+        },
+      ],
+      "selected-m",
+    );
+    expect(decodedDiffRecords(result.diff)).toEqual([{ status: "M", path: selectedExistingPath }]);
+    expect(result.result.status, result.result.stderr).toBe(0);
+    expect(parse(result.result.stdout).comparison.allGitChangedPaths).toEqual([
+      { status: "M", path: selectedExistingPath },
+    ]);
+  }, 60_000);
+
+  it("accepts an exact authored verification A from the exact official Git command", () => {
+    const result = runOfficialControl(
+      [{ path: authoredMaterializationPath, bytes: "export {};\n" }],
+      "authored-a",
+    );
+    expect(decodedDiffRecords(result.diff)).toEqual([
+      { status: "A", path: authoredMaterializationPath },
+    ]);
+    expect(result.result.status, result.result.stderr).toBe(0);
+    expect(parse(result.result.stdout).comparison.allGitChangedPaths).toEqual([
+      { status: "A", path: authoredMaterializationPath },
+    ]);
+  }, 60_000);
+
+  it.each([
+    [
+      "unlisted-a",
+      () => [{ path: "protocol-route-unlisted.ts", bytes: "export {};\n" }] as GitObjectChange[],
+      ["A"],
+      "UNLISTED_PATH",
+    ],
+    [
+      "unlisted-m",
+      () => {
+        const { evidenceCommit } = buildOfficialControlEvidence();
+        return [
+          {
+            path: "execution-brief.md",
+            bytes: Buffer.concat([
+              objectBytesAt(evidenceCommit, "execution-brief.md"),
+              Buffer.from("\n<!-- fixture-free unlisted M protocol control -->\n"),
+            ]),
+          },
+        ] as GitObjectChange[];
+      },
+      ["M"],
+      "OUTSIDE_WORK_BLOB_DRIFT",
+    ],
+    [
+      "selected-d",
+      () => [{ path: selectedExistingPath, delete: true }] as GitObjectChange[],
+      ["D"],
+      "SELECTED_WORK_DELETION_FORBIDDEN",
+    ],
+    [
+      "selected-mode-m",
+      () => {
+        const { evidenceCommit } = buildOfficialControlEvidence();
+        return [
+          {
+            path: selectedExistingPath,
+            bytes: objectBytesAt(evidenceCommit, selectedExistingPath),
+            mode: "100755",
+          },
+        ] as GitObjectChange[];
+      },
+      ["M"],
+      "SELECTED_WORK_MODE_DRIFT",
+    ],
+    [
+      "selected-t",
+      () =>
+        [
+          { path: selectedExistingPath, bytes: "protocol-control-target", mode: "120000" },
+        ] as GitObjectChange[],
+      ["T"],
+      "SELECTED_WORK_MODE_DRIFT",
+    ],
+    [
+      "no-renames-move",
+      () => {
+        const { evidenceCommit } = buildOfficialControlEvidence();
+        return [
+          { path: selectedExistingPath, delete: true },
+          {
+            path: "apps/web/src/appSettingsMoved.test.ts",
+            bytes: objectBytesAt(evidenceCommit, selectedExistingPath),
+          },
+        ] as GitObjectChange[];
+      },
+      ["D", "A"],
+      "SELECTED_WORK_DELETION_FORBIDDEN",
+    ],
+    [
+      "adopted-byte-drift",
+      () => {
+        const { evidenceCommit } = buildOfficialControlEvidence();
+        const path = "assets/packages/pi-todo-0.81.1/todo.ts";
+        return [
+          {
+            path,
+            bytes: Buffer.concat([
+              objectBytesAt(evidenceCommit, path),
+              Buffer.from("\n// fixture-free adopted-byte protocol control\n"),
+            ]),
+          },
+        ] as GitObjectChange[];
+      },
+      ["M"],
+      "ACCEPTED_TREE_OUTSIDE_SELECTED_DRIFT",
+    ],
+  ] as const)(
+    "routes the real-Git %s control to its downstream classifier",
+    (identity, changes, expectedStatuses, diagnostic) => {
+      const result = runOfficialControl(changes(), identity);
+      expect(decodedDiffRecords(result.diff).map((record) => record.status)).toEqual(
+        expectedStatuses,
+      );
+      expect(result.result.status).not.toBe(0);
+      expect(result.result.stdout).toBe("");
+      expect(result.result.stderr).toContain(diagnostic);
+      expect(result.result.stderr).not.toContain("GIT_CHANGED_PATH_RECORD_INVALID");
+      expect(result.result.stderr).not.toContain("TEXT_AUTHORITY_INVALID:git-diff-name-status");
+    },
+    60_000,
+  );
 });
 
 describe("product-truth complexity v9 finite hard families", () => {

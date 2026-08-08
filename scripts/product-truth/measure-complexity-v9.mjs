@@ -1439,22 +1439,6 @@ if (comparisonFixture || evidenceBinding.kind === "accepted-product-predecessor"
     if (before && !after) throw new Error(`DECLARATION_PRESENCE_DRIFT:${row.path}#${row.symbol}`);
   }
 
-  for (const path of boundaryAndVerificationPaths.filter((value) => !selectedPaths.has(value))) {
-    const before = comparisonBaseSnapshot.tree.get(path) ?? null;
-    const after = candidate.tree.get(path) ?? null;
-    if (Boolean(before) !== Boolean(after)) throw new Error(`OUTSIDE_WORK_PRESENCE_DRIFT:${path}`);
-    if (before?.mode !== after?.mode) throw new Error(`OUTSIDE_WORK_MODE_DRIFT:${path}`);
-    if (before?.object !== after?.object) throw new Error(`OUTSIDE_WORK_BLOB_DRIFT:${path}`);
-  }
-
-  for (const path of acceptedTreePaths.filter((value) => !selectedPaths.has(value))) {
-    const before = stateRecordAt(comparisonBaseSnapshot, path);
-    const after = stateRecordAt(candidate, path);
-    if (canonicalJson(before) !== canonicalJson(after)) {
-      throw new Error(`ACCEPTED_TREE_OUTSIDE_SELECTED_DRIFT:${path}`);
-    }
-  }
-
   const changedStatusRecordsForSnapshots = (beforeSnapshot, afterSnapshot) =>
     sortedStrings(new Set([...beforeSnapshot.tree.keys(), ...afterSnapshot.tree.keys()]))
       .filter((path) => {
@@ -1470,39 +1454,123 @@ if (comparisonFixture || evidenceBinding.kind === "accepted-product-predecessor"
         status: beforeSnapshot.tree.has(path) ? (afterSnapshot.tree.has(path) ? "M" : "D") : "A",
         path,
       }));
-  const changedStatusRecordsFromGit = () => {
-    const output = git([
-      "diff",
-      "--name-status",
-      "-z",
-      "--no-renames",
-      evidenceCommit,
-      commit,
-      "--",
-    ]);
-    const decoded = decodeUtf8(output, "git-diff-name-status");
-    if (!decoded.length) return [];
-    const fields = decoded.split("\0");
-    if (fields.at(-1) !== "") throw new Error("GIT_CHANGED_PATH_RECORD_INVALID:unterminated");
-    fields.pop();
-    if (fields.length % 2 !== 0) throw new Error("GIT_CHANGED_PATH_RECORD_INVALID:cardinality");
+  const gitEntryKind = (entry) => {
+    if (entry === null) return null;
+    if (entry.mode === "120000") return "symlink";
+    if (entry.mode === "160000") return "gitlink";
+    return entry.type;
+  };
+  const parseChangedPathBuffer = (output, beforeSnapshot, afterSnapshot) => {
+    if (output.length === 0) return [];
+    if (output.at(-1) !== 0) throw new Error("GIT_CHANGED_PATH_RECORD_INVALID:unterminated");
+    const fields = [];
+    let fieldStart = 0;
+    for (let offset = 0; offset < output.length; offset += 1) {
+      if (output[offset] !== 0) continue;
+      fields.push(output.subarray(fieldStart, offset));
+      fieldStart = offset + 1;
+    }
+    if (fields.length === 0 || fields.length % 2 !== 0) {
+      throw new Error("GIT_CHANGED_PATH_RECORD_INVALID:cardinality");
+    }
     const records = [];
-    for (let index = 0; index < fields.length; index += 2) {
-      const status = fields[index];
-      const path = fields[index + 1];
-      if (!/^[ADMT]$/.test(status) || !path)
-        throw new Error("GIT_CHANGED_PATH_RECORD_INVALID:status-or-path");
+    const paths = new Set();
+    for (let fieldIndex = 0; fieldIndex < fields.length; fieldIndex += 2) {
+      const ordinal = fieldIndex / 2;
+      const statusBytes = fields[fieldIndex];
+      if (statusBytes.length !== 1 || ![0x41, 0x44, 0x4d, 0x54].includes(statusBytes[0])) {
+        throw new Error(`GIT_CHANGED_PATH_RECORD_INVALID:status:${ordinal}`);
+      }
+      const pathBytes = fields[fieldIndex + 1];
+      if (pathBytes.length === 0) {
+        throw new Error(`GIT_CHANGED_PATH_RECORD_INVALID:empty-path:${ordinal}`);
+      }
+      let path;
+      try {
+        path = new TextDecoder("utf-8", { fatal: true }).decode(pathBytes);
+      } catch {
+        throw new Error(`GIT_CHANGED_PATH_RECORD_INVALID:path-utf8:${ordinal}`);
+      }
+      if (!Buffer.from(path, "utf8").equals(pathBytes)) {
+        throw new Error(`GIT_CHANGED_PATH_RECORD_INVALID:path-utf8:${ordinal}`);
+      }
+      const components = path.split("/");
+      if (
+        path.startsWith("/") ||
+        path.endsWith("/") ||
+        components.some((component) => component === "" || component === "." || component === "..")
+      ) {
+        throw new Error(`GIT_CHANGED_PATH_RECORD_INVALID:path-form:${ordinal}`);
+      }
+      const status = String.fromCharCode(statusBytes[0]);
+      const before = beforeSnapshot.tree.get(path) ?? null;
+      const after = afterSnapshot.tree.get(path) ?? null;
+      const stateMatches =
+        (status === "A" && before === null && after !== null) ||
+        (status === "D" && before !== null && after === null) ||
+        (status === "M" &&
+          before !== null &&
+          after !== null &&
+          gitEntryKind(before) === gitEntryKind(after)) ||
+        (status === "T" &&
+          before !== null &&
+          after !== null &&
+          gitEntryKind(before) !== gitEntryKind(after));
+      if (!stateMatches) {
+        throw new Error(`GIT_CHANGED_PATH_RECORD_INVALID:status-state:${ordinal}`);
+      }
+      if (paths.has(path)) {
+        throw new Error(`GIT_CHANGED_PATH_RECORD_INVALID:duplicate-path:${ordinal}`);
+      }
+      paths.add(path);
       records.push({ status, path });
     }
     return records;
   };
+  const changedStatusRecordsFromGit = () => {
+    const result = spawnSync(
+      "git",
+      ["diff", "--name-status", "-z", "--no-renames", evidenceCommit, commit, "--"],
+      { cwd: repositoryRoot, encoding: null, maxBuffer: 512 * 1024 * 1024 },
+    );
+    if (result.status !== 0) throw new Error("GIT_CHANGED_PATH_COMMAND_FAILED");
+    return parseChangedPathBuffer(result.stdout, comparisonBaseSnapshot, candidate);
+  };
+  const fixtureChangedPathBuffer =
+    fixture?.rawChangedPathHex === undefined
+      ? null
+      : (() => {
+          if (
+            typeof fixture.rawChangedPathHex !== "string" ||
+            fixture.rawChangedPathHex.length % 2 !== 0 ||
+            !/^[0-9a-f]*$/.test(fixture.rawChangedPathHex)
+          ) {
+            throw new Error("FIXTURE_CHANGED_PATH_BUFFER_INVALID");
+          }
+          return Buffer.from(fixture.rawChangedPathHex, "hex");
+        })();
   const changedStatusRecords =
-    fixtureName === null
-      ? changedStatusRecordsFromGit()
-      : changedStatusRecordsForSnapshots(comparisonBaseSnapshot, candidate);
-  const changedPaths = changedStatusRecords.map((record) => record.path);
-  if (new Set(changedPaths).size !== changedPaths.length)
-    throw new Error("GIT_CHANGED_PATH_RECORD_INVALID:duplicate-path");
+    fixtureChangedPathBuffer !== null
+      ? parseChangedPathBuffer(fixtureChangedPathBuffer, comparisonBaseSnapshot, candidate)
+      : fixtureName === null
+        ? changedStatusRecordsFromGit()
+        : changedStatusRecordsForSnapshots(comparisonBaseSnapshot, candidate);
+
+  for (const path of boundaryAndVerificationPaths.filter((value) => !selectedPaths.has(value))) {
+    const before = comparisonBaseSnapshot.tree.get(path) ?? null;
+    const after = candidate.tree.get(path) ?? null;
+    if (Boolean(before) !== Boolean(after)) throw new Error(`OUTSIDE_WORK_PRESENCE_DRIFT:${path}`);
+    if (before?.mode !== after?.mode) throw new Error(`OUTSIDE_WORK_MODE_DRIFT:${path}`);
+    if (before?.object !== after?.object) throw new Error(`OUTSIDE_WORK_BLOB_DRIFT:${path}`);
+  }
+
+  for (const path of acceptedTreePaths.filter((value) => !selectedPaths.has(value))) {
+    const before = stateRecordAt(comparisonBaseSnapshot, path);
+    const after = stateRecordAt(candidate, path);
+    if (canonicalJson(before) !== canonicalJson(after)) {
+      throw new Error(`ACCEPTED_TREE_OUTSIDE_SELECTED_DRIFT:${path}`);
+    }
+  }
 
   const selectedAuthorityFor = (path) => {
     const verificationRow = selectedVerificationByPath.get(path) ?? null;
