@@ -11,6 +11,9 @@ V9 implements the selected [Route B stop-loss](../decisions/product-truth-comple
 as repaired by the human [safe-degradation calibration](../decisions/product-truth-complexity-v9-safe-degradation-calibration.md)
 after the independent [v9 audit](../qbd/product-truth-complexity-v9-audit.md). It supersedes v8 only
 as a future candidate measurement authority. V1-v7 and failed v8 r1-r17 remain immutable evidence.
+The post-r2 stop-loss in the first Decision additionally closes the finite changed-path and
+accepted-tree byte-authority gap found by immutable
+[Review r2](../reviews/product-truth-complexity-v9-r2.md); it changes no Route B semantic boundary.
 
 V9 measures repository facts. It does not decide raw-capability non-leak, effect mediation,
 lifecycle writes, Web/RPC or gateway ownership, raw-reference completeness, mutation rejection or
@@ -28,7 +31,7 @@ runtime safety. Those are explicit B1 acceptance obligations below.
   },
   "designInputs": {
     "productWorkBoundaries": "exactly five omp-flow-production-boundary-v1 blocks at the QbD-approved Design tree",
-    "membershipExpansion": "expand authored exact members once at that tree and freeze present-or-absent identity",
+    "membershipExpansion": "read only production entries from the five blocks, require kind exact, union exact Git path bytes once at the approved tree and freeze present-or-absent identity",
     "declarationRows": "the exact rows and phase dispositions below",
     "physicalObservations": [
       "changed-scope-production-loc",
@@ -70,15 +73,95 @@ runtime safety. Those are explicit B1 acceptance obligations below.
     }
   },
   "selectedWork": {
-    "mutableSet": "exact production members of the one selected Work boundary",
-    "delete": "allowed only for a frozen selected-Work member",
-    "materialize": "allowed only for a frozen absent selected-Work member and, for a declaration row, its named firstMaterializationWork",
-    "outsideWork": "every frozen member preserves presence, executable mode and Git blob exactly",
-    "unlistedOrNewMember": "fail"
+    "comparisonBase": "the full official predecessor evidence commit supplied by Main/human for the authored predecessor row",
+    "changedPathCommand": "git diff --name-status -z --no-renames <official-predecessor-evidence-full-sha> <candidate-under-test-full-sha> --",
+    "changedPathDefault": "reject",
+    "mutableSet": "exact production members of the one selected Work boundary; measurement and dependency entries contribute no mutable path",
+    "pathSpelling": "exact Git path bytes decoded as valid UTF-8; no normalization, extension inference, root predicate, glob, directory category or output category",
+    "presentMemberRule": "a member present at approved Design commit f110fb66006768074ca192bb94024632d16c09dd may change Git blob only in its selected Work; presence and mode remain exact",
+    "absentMemberDefault": "remain absent",
+    "allowedMaterializations": [
+      { "work": "product-execution-leaf", "path": "apps/service/src/product/productExecutionBoundary.ts", "mode": "100644" },
+      { "work": "product-state-store", "path": "apps/service/src/product/productStateStore.ts", "mode": "100644" },
+      { "work": "product-execution-coordinator-facade", "path": "apps/service/src/product/productExecutionCoordinator.ts", "mode": "100644" },
+      { "work": "product-execution-coordinator-facade", "path": "apps/service/src/product/productStateDiagnostics.ts", "mode": "100644" }
+    ],
+    "allowedDeletions": [],
+    "moves": "forbidden; --no-renames exposes a deletion and an addition and each is judged independently",
+    "authorityExemptions": [],
+    "meterConfigFixtureRule": "cannot add a path, category, extension, root, lifecycle disposition, test, fixture, report, handoff, Review or current-output exemption",
+    "approvedBoundaryState": {
+      "commit": "f110fb66006768074ca192bb94024632d16c09dd",
+      "recordSchema": ["path", "presence", "mode", "gitBlob", "sha256"],
+      "recordCount": 69,
+      "recordsRawJcsSha256": "c7790b3db167484ffaa85e4a3ad1430c29f2f7f05e952441b39ff6e08b862c82"
+    }
+  },
+  "acceptedTreeByteAuthority": {
+    "approvedCommit": "f110fb66006768074ca192bb94024632d16c09dd",
+    "sourceAdoptions": {
+      "documentPath": "README.md",
+      "block": "source-adoptions",
+      "blockJcsSha256": "2b2ae1a84d70e55076bfabf720864693536462659da8c428acf5293ce4e6babf"
+    },
+    "inputs": {
+      "manifestPaths": [
+        "package.json",
+        "apps/desktop/package.json",
+        "apps/native-host/package.json",
+        "apps/service/package.json",
+        "apps/web/package.json",
+        "packages/contracts/package.json",
+        "packages/shared/package.json",
+        "scripts/package.json",
+        "assets/packages/pi-todo-0.81.1/manifest.json"
+      ],
+      "lockfilePaths": ["bun.lock"],
+      "patchRoots": [
+        { "adoptionId": "ui-mother", "path": "patches" }
+      ],
+      "adoptedSourceRoots": [
+        { "adoptionId": "ui-mother", "path": "apps/web" },
+        { "adoptionId": "ui-mother", "path": "apps/desktop" },
+        { "adoptionId": "ui-mother", "path": "apps/service" },
+        { "adoptionId": "ui-mother", "path": "packages/contracts" },
+        { "adoptionId": "ui-mother", "path": "packages/shared" },
+        { "adoptionId": "ui-mother", "path": "scripts" },
+        { "adoptionId": "ui-mother", "path": "package.json" },
+        { "adoptionId": "ui-mother", "path": "bun.lock" },
+        { "adoptionId": "ui-mother", "path": "bunfig.toml" },
+        { "adoptionId": "ui-mother", "path": "turbo.json" },
+        { "adoptionId": "ui-mother", "path": "tsconfig.base.json" },
+        { "adoptionId": "ui-mother", "path": "vitest.config.ts" },
+        { "adoptionId": "ui-mother", "path": ".oxfmtrc.json" },
+        { "adoptionId": "ui-mother", "path": ".oxlintrc.json" },
+        { "adoptionId": "pi-todo-headless-package", "path": "assets/packages/pi-todo-0.81.1/todo.ts" }
+      ],
+      "licensePaths": [
+        { "adoptionId": "ui-mother", "path": "LICENSES/ui-mother-MIT.txt" },
+        { "adoptionId": "pi-todo-headless-package", "path": "LICENSES/pi-todo-MIT.txt" }
+      ]
+    },
+    "inputsJcsSha256": "176c47725b129d28044933c009391b9104ae7bad69aed048eb437db07a6d0faf",
+    "expansion": [
+      "parse exactly one recursively unique-key source-adoptions JSON block at the approved commit and require its JCS digest",
+      "require every authored adoptedSourceRoots and patchRoots row to be an exact id-plus-path row from that block and every licensePaths row to be an exact id-plus-licenseFiles row; manifestPaths and lockfilePaths are Design-authored exact paths",
+      "for each exact input path use the approved commit Git tree: a blob contributes itself; a tree contributes every recursive blob; an absent exact file contributes an absent row; an absent tree or non-blob descendant fails authority derivation",
+      "accept only regular blob modes 100644 or 100755, union duplicate paths by exact UTF-8 path bytes, and require duplicate derivations to name the same Git object",
+      "for each present path hash raw Git blob bytes with SHA-256 and emit exactly path, presence present, mode, gitBlob and sha256; an absent row uses presence absent and null mode, gitBlob and sha256",
+      "JCS-encode each complete record, sort records with unsigned raw UTF-8 byte comparison of those JCS bytes, JCS-encode the complete array and SHA-256 the resulting bytes"
+    ],
+    "acceptedRecords": {
+      "recordSchema": ["path", "presence", "mode", "gitBlob", "sha256"],
+      "recordCount": 6321,
+      "recordsRawJcsSha256": "6687319b0ea58643812cee677fad03b3152e8bfcb31486ddb368bc1b3cf2f599"
+    },
+    "candidateRule": "consume the exact approved 6321-row path manifest without candidate-side root discovery; each frozen row outside the selected Work production mutable set remains exact, while an overlapping selected path is governed only by selectedWork lifecycle; every candidate path absent from the approved manifest is still judged by the independent all-Git-changed-path default-reject rule",
+    "configRule": "config may pin only the approved commit and Design-authored block, input and record digests/count; it cannot provide or filter a path"
   },
   "dependencyClosure": {
-    "inputs": ["exact package manifests", "exact bun.lock", "pinned adopted-source digests"],
-    "hardRule": "ordered input-byte identities and closure digest are exact; no semantic capability verdict"
+    "inputs": ["acceptedTreeByteAuthority", "exact external package locator, integrity-or-revision, export and source-closure tuples inherited from accepted v7 authority"],
+    "hardRule": "the Design-owned accepted-tree expansion and external dependency tuples are exact; no semantic capability verdict"
   },
   "literalImportExportGraph": {
     "recordSchema": ["form", "source", "specifier"],
@@ -125,10 +208,10 @@ runtime safety. Those are explicit B1 acceptance obligations below.
     "determinism": "two clean-tree invocations over the same refs and official evidence input are byte-identical",
     "hardFacts": [
       "authority-and-config-digest",
-      "membership-and-selected-work-lifecycle",
-      "outside-work-presence-mode-blob",
+      "all-git-changed-path-default-reject-and-design-selected-work-lifecycle",
+      "outside-work-presence-mode-blob-and-sha256",
       "official-evidence-tuple-blob-ancestry",
-      "dependency-input-byte-closure",
+      "design-expanded-dependency-adoption-input-byte-closure",
       "declaration-identity-presence-export-private-disposition",
       "report-determinism"
     ],
@@ -137,7 +220,8 @@ runtime safety. Those are explicit B1 acceptance obligations below.
       "literal-import-export-graph-and-scc",
       "all physical and semantic counters",
       "all domain ownership interpretations"
-    ]
+    ],
+    "postR2StopLoss": "a later implementation Review bypass in membership, changed-path classification, lifecycle disposition or dependency-adoption expansion returns to Design/stop and cannot receive another implementation repair dispatch"
   },
   "explicitNonAuthority": [
     "semantic-public-raw-non-leak",
@@ -170,6 +254,60 @@ Main/human supplies the official evidence commit. Missing, duplicated, abbreviat
 selected, mutated, non-ancestor or inconsistent evidence fails before comparison. The first row
 binds a freshly generated v9 B0 report at `7582170a277477ba0d71cf70f53e4e0836874a72`;
 v7/v8 reports never become v9 acceptance.
+
+## Exact Product changed-path and lifecycle rule
+
+For a Product Work, the official evidence commit—not the B0 report commit, branch tip, working tree,
+reviewed predecessor candidate or candidate-selected base—is the only comparison base. The B0
+report remains a physical observation baseline. V9 runs the exact `--no-renames` Git tree
+comparison named in the authority, requires valid complete status records and obtains the union of
+every added, deleted, modified or type/mode-changed path. Unknown status or malformed path bytes
+fail before classification.
+
+Every changed path begins as `reject`. The only replacement disposition is membership in the exact
+`production` array of the selected one of the five frozen Work blocks. The blocks' `measurement`
+and `dependency` arrays do not grant Product-candidate mutability. Test suffixes, fixture directory
+names, source extensions, `apps|packages|scripts` roots, handoff/Review/report paths and current
+output names have no category rule at all. A candidate, meter, config or fixture cannot add one.
+
+The approved Design tree freezes 69 unique production-path records with digest
+`c7790b3db167484ffaa85e4a3ad1430c29f2f7f05e952441b39ff6e08b862c82`.
+A selected member present there may change only its blob and must keep presence and mode. An absent
+member remains absent except for the four exact `100644` first materializations in the machine
+block. There are no path deletions or moves. This means the nine retired B1 compatibility paths
+already absent at the approved tree remain absent; prose, a candidate diff or a later config cannot
+resurrect them. If implementation needs any other path or lifecycle, it stops for Design rather
+than teaching the meter a new exception.
+
+The predecessor evidence interval is independently bound by the authored row's exact handoff and
+Review blobs and their post-evidence immutability. It cannot be used to smuggle a Product,
+dependency or adoption mutation into the comparison base: the accepted-tree manifest below and
+the prior candidate report must reproduce before candidate comparison.
+
+## Accepted-tree dependency and adoption byte authority
+
+The machine block supplies the complete derivation. At approved Design commit
+`f110fb66006768074ca192bb94024632d16c09dd`, the sole source-adoptions block has JCS digest
+`2b2ae1a84d70e55076bfabf720864693536462659da8c428acf5293ce4e6babf`.
+Its exact adopted paths, patch root and legal paths plus the nine Design-authored manifest paths and
+one lockfile path have input-authority JCS digest
+`176c47725b129d28044933c009391b9104ae7bad69aed048eb437db07a6d0faf`.
+
+Expansion is Git-object based, not filesystem, extension or package-manager discovery. Exact blobs
+contribute one row; exact trees contribute every recursive blob; path derivations are unioned by
+raw UTF-8 path bytes; every present row binds mode, Git blob ID and raw-byte SHA-256. Per-record JCS
+bytes are sorted with unsigned raw UTF-8 byte comparison, never locale collation, and the complete
+array is JCS encoded. Independent full-row reconstruction yields exactly 6,321 records and digest
+`6687319b0ea58643812cee677fad03b3152e8bfcb31486ddb368bc1b3cf2f599`.
+This includes the exact Pi todo source and manifest, the adopted dependency patch and root build
+inputs that r2 proved were previously skippable.
+
+The accepted 6,321-row manifest is reconstructed once from the approved block and Design input rows,
+not from candidate README/config. Candidate comparison reads those exact frozen paths; any row
+outside the selected Work remains exact, while an overlapping selected production path follows only
+the lifecycle rule above. It does not candidate-discover a new root or path class. A path absent from
+the approved manifest is still present in the independent complete Git changed-path set and rejects
+unless it is one of the four exact Design-authored materializations.
 
 ## Declaration and graph interpretation
 
@@ -254,12 +392,17 @@ syntax, alias, callback, wrapper or expression grammar patch.
 
 ## Verification and transition
 
-Fresh QbD must reproduce the machine JSON, declaration phase rows, 69-member source-universe digest,
-578-record B0 graph digest, absence of semantic v9 verdicts, reviewer evidence schema and complete
-r1-r17 derivation. It must also confirm v1-v8, all five fences, production, existing meters, Reviews,
-handoffs and protected user documents are byte-identical.
+Fresh QbD must reproduce the machine JSON, the 69-row accepted boundary-state digest, all four and
+only four materializations, the 6,321-row accepted-tree byte expansion and its raw-JCS digest,
+declaration phase rows, 69-member source-universe digest, 578-record B0 graph digest, absence of
+semantic v9 verdicts, reviewer evidence schema and complete r1-r17 derivation. It must also confirm
+the all-Git-path default reject has no category or output exemption and that v1-v8, all five fences,
+production, existing meters, Reviews, handoffs and protected user documents are byte-identical.
 
-The next output is a fresh different-actor QbD audit. It must reach **0 blocker and 0 advisory**;
-only a subsequent recorded human PASS may authorize the [v9 measurement Work](../work/product-truth-complexity-v9.md).
-The immutable v9 implementation then requires a separate zero-finding different-actor Review before
-B1. This Interface authorizes no Product edit or destructive execution.
+The next output is a fresh different-actor QbD audit at
+`qbd/product-truth-complexity-v9-authority-repair-audit.md`. It must reach **0 blocker and 0
+advisory**; only a subsequent recorded human PASS may authorize the
+[v9 measurement Work](../work/product-truth-complexity-v9.md). The immutable v9 implementation then
+requires a separate zero-finding different-actor Review before B1. If that Review finds another
+bypass in this membership/changed-path family, no implementation repair is dispatched; the route
+returns to Design/stop. This Interface authorizes no Product edit or destructive execution.

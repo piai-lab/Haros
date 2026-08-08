@@ -74,10 +74,22 @@ SCC/count output is observational. B1 owns public non-leak, lifecycle writes, ra
 reviewer-owned complete enumeration, zero unexplained references, the fixed verifier, full r1-r17
 manifest with adjacent positives and same-SHA source Review. No destructive target or exclusion changes.
 
+Immutable [v9 implementation Review r2](../reviews/product-truth-complexity-v9-r2.md) later proved
+that the changed-path predicate still skipped adopted Package, patch and root-build bytes. The
+maintainer's post-r2
+[stop-loss calibration](../decisions/product-truth-complexity-v9-stop-loss-calibration.md) records
+the attempted r3 implementation as correctly aborted and rolled back, supersedes the prior
+implementation authorization, and permits one final Design repair only: all Git changed paths
+default reject; exact selected-Work production members and Design-authored lifecycle are the sole
+mutability; and the approved dependency/adoption inputs expand to a reproducible 6,321-row byte
+authority. Another implementation finding in this same family returns to Design/stop without
+another implementation repair dispatch.
+
 ## Hard ordering
 
-The next workflow checkpoint is a fresh different-actor QbD over this revised design/map. It must
-reach 0 blocker and 0 advisory. Only a recorded human PASS calibration may authorize the measurement-only
+The next workflow checkpoint is a fresh different-actor QbD at
+`../qbd/product-truth-complexity-v9-authority-repair-audit.md` over this revised design/map. It must
+reach 0 blocker and 0 advisory. Only a newly recorded human PASS calibration may authorize the measurement-only
 [v9 narrow meter](product-truth-complexity-v9.md). It changes no measured production path, freezes
 one immutable meter commit plus B0 report, writes its handoff and must receive a zero-finding
 different-actor implementation `PASS`. No B1 production receipt may be issued before that
@@ -131,11 +143,18 @@ production/test paths are exactly twelve.
 
 V1-v8 meter bytes and evidence are immutable history. V9 reads the canonical machine block from
 each of the five Product Works plus the v9 authority at the QbD-approved Design tree, pins every
-normalized block digest, expands any authored glob once and freezes membership. For the selected
-Work, exact production paths are the sole mutable set; outside paths preserve presence/mode/blob
-exactly; selected members alone may delete/materialize or participate in an authored move. V9 also
-pins exact declaration identity/B0 absence/export-private/first-materialization facts and dependency
-bytes. It emits the pinned literal import/export multiset and LOC/SCC/count observations without a
+normalized block digest and freezes the 69 exact production paths. For Product comparison it uses
+the official evidence commit as base, enumerates every Git changed path with rename detection off
+and rejects by default. Only exact selected-Work production paths may change: approved-present paths
+preserve presence/mode, approved-absent paths stay absent except for four exact `100644`
+materializations, and deletion/move is forbidden. Measurement/dependency entries, tests, fixtures,
+extensions, roots and output artifacts add no exemption. The approved source-adoptions block, nine
+manifests, `bun.lock`, patch/adopted roots and legal paths expand by exact Git objects to 6,321
+`path/presence/mode/Git-blob/SHA-256` records with digest
+`6687319b0ea58643812cee677fad03b3152e8bfcb31486ddb368bc1b3cf2f599`;
+config may pin only Design values and cannot choose paths. V9 also pins exact declaration identity/
+B0 absence/export-private/first-materialization facts and external dependency identities. It emits
+the pinned literal import/export multiset and LOC/SCC/count observations without a
 hard delta or domain verdict. It does not inventory or classify raw/global/alias expressions, callbacks,
 RHS/subtrees or per-use owners. B1 proves effect safety through non-leaking owner-local capabilities,
 the frozen 10-owner/146-operation/34-barrier/29-kill verifier universe plus 87 exact owner states,
@@ -213,14 +232,16 @@ Each implementation Work writes its promised handoff and receives a different-ac
 the next overlapping Work begins. Focused green checks do not authorize broader claims. The final C
 Work may submit affected Campaign claims only as `candidate`; no producer may mark them verified.
 
-The next workflow entry is a fresh different-actor QbD audit of the v9 repair across Design, both
-Decisions, Interface, measurement Work, all five Product Works and this map. It must prove v9 owns
-only the hard membership/evidence/lifecycle/outside-blob/dependency-byte/declaration-disposition
-facts, keeps graph/SCC/count output observational, contains no raw non-leak/write/Web-RPC/gateway or
+The next workflow entry is a fresh different-actor QbD audit of the post-r2 v9 repair across Design,
+both Route B Decisions, Interface, measurement Work, all five Product Works and this map. It must
+prove v9 owns only the hard all-changed-path/membership/evidence/lifecycle/outside-blob/accepted-
+tree-byte/dependency/declaration-disposition facts, keeps graph/SCC/count output observational,
+contains no path-category/output exemption and no raw non-leak/write/Web-RPC/gateway or
 raw/global/alias/callback/RHS/per-use verdict, preserves all five fences and v1-v8 bytes, and hands
 effect safety to B1's private ports, fixed 10/146/87/85/65 verifier, reviewer-owned complete
 enumeration, zero unexplained references and full r1-r17 manifest with adjacent positives. The audit
 must reach 0 blocker and 0 advisory. Only a recorded human PASS calibration after it authorizes the measurement-
 only v9 assignment. Its immutable handoff then needs a zero-finding different-actor implementation
-`PASS` before a new B1 production receipt. The next QbD output is
-`../qbd/product-truth-complexity-v9-final-audit.md`.
+`PASS` before a new B1 production receipt. Another membership/changed-path-family bypass stops and
+returns to Design without implementation repair. The next QbD output is
+`../qbd/product-truth-complexity-v9-authority-repair-audit.md`.

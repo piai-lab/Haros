@@ -259,8 +259,10 @@ Windows quiescence adapter. The underlying evidence remains in the
   remeasured with the checked-in `product-truth-complexity-v9` script/config and the same frozen
   membership/static-graph/count universe in the Design; a candidate may not redefine scope,
   extensions, exclusions, declarations, edges or counters. V9 is the next candidate authority only
-  after fresh different-actor QbD plus human PASS calibration and a later zero-finding independent
-  implementation Review. V1-v8 bytes, reports, handoffs and Reviews remain immutable provenance.
+  after a new post-r2 different-actor QbD reaches 0 blocker/0 advisory, the human records a new PASS
+  calibration and a later zero-finding independent implementation Review accepts it. The prior PASS
+  approval does not authorize another implementation after r2. V1-v8 bytes, reports, handoffs and
+  Reviews remain immutable provenance.
   Accepted v7 retains the observational B0 inventory; failed v8 r1-r17 remain stop-loss evidence.
   Neither is a v9 candidate PASS or permission for raw effects.
 - V9 hard declaration facts are only exact path/symbol/kind, B0 presence or explicit absence,
@@ -291,12 +293,27 @@ Windows quiescence adapter. The underlying evidence remains in the
 - No new Product table/database/durable state machine, migration platform, per-Engine Product plane,
   generic repository/manager/registry or fallback path is introduced.
 - V9 extracts the five machine-readable Work boundaries and its exact authority from the pinned
-  QbD-approved Design tree. It owns only candidate-independent Work membership; Main/human-selected
-  predecessor evidence and exact handoff/Review/report blobs and tuple; selected-Work member
-  deletion/materialization; exact outside-Work presence/mode/blob equality; exact declaration
+  QbD-approved Design tree. For Product comparison the official predecessor evidence commit is the
+  only base; every net Git changed path defaults to reject. The sole mutable paths are exact
+  `production` members of the selected Work. Measurement/dependency members, tests, fixtures,
+  extensions, directory roots, reports, handoffs, Reviews and current outputs provide no exemption.
+  A present selected member preserves presence/mode and may change only its blob; an absent member
+  remains absent except for the four exact Design-authored `100644` first materializations. No path
+  deletion or move is authorized. Meter, config and fixture bytes cannot add a path, category,
+  lifecycle disposition or output exemption.
+- V9 separately replays the Design-owned accepted-tree dependency/adoption expansion at approved
+  commit `f110fb66006768074ca192bb94024632d16c09dd`. The immutable source-adoptions block, nine exact
+  manifests, `bun.lock`, declared patch root, adopted-source roots and legal paths expand by Git
+  objects to exactly 6,321 `path/presence/mode/Git-blob/SHA-256` rows whose raw-JCS array digest is
+  `6687319b0ea58643812cee677fad03b3152e8bfcb31486ddb368bc1b3cf2f599`.
+  Any non-selected record remains exact; an overlapping selected production path follows only the
+  lifecycle rule above. Config may pin the Design commit/count/digests but cannot choose or filter
+  an input path.
+- V9 otherwise owns only candidate-independent Work membership; Main/human-selected predecessor
+  evidence and exact handoff/Review/report blobs and tuple; exact declaration
   identity/presence/export-private disposition and non-self-authorizing first materialization;
-  manifest/lock/adopted-source byte closure; deterministic reporting; and physical LOC/count
-  observations. Config and candidate bytes cannot add or redefine any hard fact.
+  deterministic reporting; and physical LOC/count observations. Config and candidate bytes cannot
+  add or redefine any hard fact.
 - V9 emits the complete sorted literal import/export record multiset. Its B0 69-member universe and
   578-record digest are pinned, but Design has authored no complete exact per-Work allowed-delta
   table; therefore candidate graph differences, SCCs and named domain edges are observational.
@@ -329,11 +346,14 @@ Windows quiescence adapter. The underlying evidence remains in the
   and verified blob/digest tuple. Receipts and Git history authenticate no reviewer identity; a later
   different actor independently checks the official invocation against the stop-loss Decision and
   handoff. No Harness or operation-schema field is required.
-  Exact Work members may be deleted or materialized and the graph is recomputed; outside-Work
-  deletion/materialization, undeclared moves and new glob members fail.
+  Exact Work members follow only the frozen lifecycle: approved-present members preserve presence/
+  mode and may change blob, approved-absent members stay absent except for the four exact
+  materializations; deletion, move, unlisted addition and any other changed path fail. The graph is
+  recomputed observationally.
 - `scripts/check-source-closure.mjs` and every meter/config file are measurement, not tool,
   production or steady-state runtime. V9 report determinism, authority/config/membership, official
-  evidence, dependency bytes and exact declaration identity/disposition remain hard in every mode.
+  evidence, the accepted-tree byte expansion, external dependency identities and exact declaration
+  identity/disposition remain hard in every mode.
   Static-graph/SCC/count facts and domain semantics are observational in v9 and cannot authorize a
   candidate. Branch, working-tree or B0 substitution cannot select another mode.
 - At the exact B1 SHA, a fresh different actor must run all 10-owner/146-operation/87-state/85-race/
@@ -346,6 +366,11 @@ Windows quiescence adapter. The underlying evidence remains in the
   digest. Candidate/config filtering is forbidden. This evidence belongs to B1 Review, not v9. A
   new bypass preserving every v9 fact and escaping the fixed enumerator/verifier/source Review
   falsifies Route B, returns to Design and never authorizes another v9 grammar rule.
+- The post-r2 changed-path repair is the last implementation repair permitted in its family. If the
+  next immutable implementation Review finds another skipped path, candidate-selected category or
+  exemption, unowned lifecycle transition, or incomplete dependency/adoption expansion, Main does
+  not dispatch another implementation repair; the sequence returns to Design/stop for a new human
+  decision. This does not reduce Route B semantic safe degradation or any B1 obligation.
 - Reuse follows the current Synara/repository ladder: preserve, identify the exact OmniMind gap,
   wire or locally repair, and replace only with a named unique owner, reproducible falsifier and
   proof that the smaller repairs cannot work. V8 r1-r17 falsify only its expression-combination
@@ -368,7 +393,7 @@ Windows quiescence adapter. The underlying evidence remains in the
 | A11 | Coordinator retains Engine-effect semantics without SQL/replay/fallback                                                                                                                  | catalog/admission/attempt/control/crash tests across Pi and OpenCode                                                                                                                  |
 | A12 | Web/RPC sees exactly one 36-operation facade; probes/tests are separate                                                                                                                  | type/API snapshot, wsRpc tests and production caller scan                                                                                                                             |
 | A13 | Service selects and Host only validates one transcript-bound lane/Package root                                                                                                           | dev/packaged process tests covering proof tamper, replay, version/field faults, second/concurrent binding, mismatch/link/sibling-root and no fallback                                 |
-| A14 | Production and conceptual complexity strictly decrease in one coverage-complete frozen universe                                                                                          | immutable v1-v8 provenance; Design-pinned five boundaries, exact declaration presence/export-private dispositions and dependency bytes; Main/human-selected evidence tuple/blob/ancestry; selected-Work lifecycle; outside mode/blob equality; deterministic v9 physical observations including the observational literal-edge multiset; behavior and semantic ownership separately hard-accepted by the exact B1 verifier, reviewer-owned enumeration/source Review and full r1-r17 manifest with adjacent positives |
+| A14 | Production and conceptual complexity strictly decrease in one coverage-complete frozen universe                                                                                          | immutable v1-v8 provenance; Design-pinned five boundaries and 69-row accepted state; all-Git-path default reject with only selected production members and four exact materializations; complete 6,321-row manifest/lock/patch/adopted-source byte authority; exact declaration presence/export-private dispositions; Main/human-selected evidence tuple/blob/ancestry; deterministic v9 physical observations including the observational literal-edge multiset; behavior and semantic ownership separately hard-accepted by the exact B1 verifier, reviewer-owned enumeration/source Review and full r1-r17 manifest with adjacent positives |
 | A15 | Current outbox, Automation, Web safeguard, Package and Engine recovery behavior remains                                                                                                  | focused existing suites plus complete real kill/race/write-trace and affected real-process journeys                                                                                   |
 
 ## Constraints and non-goals
@@ -406,11 +431,15 @@ assurance route. Under the
 [v7 Occam calibration](decisions/product-truth-complexity-v7-repair-calibration.md) remains the
   structural-only boundary. The failed immutable v8 r1-r17 series is now superseded only by the
   selected [v9 stop-loss calibration](decisions/product-truth-complexity-v9-stop-loss-calibration.md)
-  and [narrow v9 authority](interfaces/product-truth-complexity-v9.md). A fresh different QbD actor
-  must challenge the complete v9 Design/interface/Work map, exact non-authority boundary, official
-  evidence tuple/blob/ancestry, five unchanged fences, declaration presence/export-private and
-  first-materialization authority, observational graph boundary, dependency bytes and replayable
-  B1 enumerator/verifier/raw-reference/r1-r17 handoff. It must reach 0 blocker and 0 advisory. Only
-  a later recorded human PASS calibration may authorize the measurement-only v9 Work. Its immutable handoff then requires
-  a zero-finding different-actor implementation Review before a B1 receipt may be issued. A changed
+  and [narrow v9 authority](interfaces/product-truth-complexity-v9.md). Immutable r2 exposed the
+  final allowed membership/changed-path Design repair; the aborted r3 implementation was rolled
+  back and authorizes nothing. A fresh different QbD actor must challenge the complete v9
+  Design/interface/Work map, exact non-authority boundary, official evidence tuple/blob/ancestry,
+  all-Git-path default reject, four exact materializations, 69-row boundary state, 6,321-row
+  accepted dependency/adoption byte expansion, five unchanged fences, declaration authority,
+  observational graph boundary and replayable B1 enumerator/verifier/raw-reference/r1-r17 handoff.
+  It must reach 0 blocker and 0 advisory. Only a later recorded human PASS calibration may authorize
+  the measurement-only v9 Work. Its immutable handoff then requires a zero-finding different-actor
+  implementation Review before a B1 receipt may be issued. Another bypass in the same membership/
+  changed-path family returns to Design/stop without an implementation repair dispatch. A changed
   destructive target or exclusion returns for explicit human decision.

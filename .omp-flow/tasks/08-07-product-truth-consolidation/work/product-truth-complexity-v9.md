@@ -26,10 +26,13 @@ report and receives independent Review before any B1 assignment.
 
 ## Entry stop
 
-Do not assign or start this Work until a fresh different-actor QbD audits the current PRD, Design,
-both v9 Decisions, Interface, this Work, all five downstream Product Works and the Work map, reports
-0 blocker and 0 advisory, and the human records a PASS calibration. The assignment must name that QbD output. This architect neither audits
-nor approves its own design.
+The r2 Review is `FAIL`; the attempted r3 implementation was aborted and correctly rolled back to
+r2 Review HEAD without a candidate or handoff. The earlier v9 PASS approval no longer authorizes an
+implementation. Do not assign or start this Work until a fresh different-actor QbD writes
+`qbd/product-truth-complexity-v9-authority-repair-audit.md`, audits the current PRD, Design, both
+Route B Decisions, Interface, this Work, all five downstream Product Works and the Work map, reports
+0 blocker and 0 advisory, and the human records a new PASS calibration. The assignment must name
+that QbD output. This architect neither audits nor approves its own design.
 
 ## In scope
 
@@ -42,9 +45,21 @@ nor approves its own design.
   is smaller; r1-r17 falsify only v8 expression-combination authority.
 - Implement exact official predecessor-evidence input, blob/report tuple, strict ancestry and
   post-evidence blob immutability without claiming identity authentication.
-- Implement selected-Work lifecycle, outside-Work presence/mode/blob equality, manifest/lock/source-
-  byte dependency closure and exact declaration path/symbol/kind/B0 presence/export-private/first-
-  materialization facts. Candidate-emitted signatures are observational; no signature row is pinned.
+- For Product comparison, use the official evidence commit as the sole base, enumerate the complete
+  `git diff --name-status -z --no-renames` path set and reject every path by default. Replace that
+  default only for exact `production` members of the selected frozen Work block. Implement the
+  69-row accepted presence/mode/blob state, no deletions/moves and only the four exact Design-authored
+  `100644` materializations. Do not add test, fixture, extension, root, dependency, measurement,
+  handoff, Review, report or output categories.
+- Reproduce the Design-owned accepted-tree byte expansion from the approved source-adoptions block,
+  nine exact manifests, `bun.lock`, patch root, adopted roots and legal paths. Require exactly 6,321
+  `path/presence/mode/Git-blob/SHA-256` records and raw-JCS digest
+  `6687319b0ea58643812cee677fad03b3152e8bfcb31486ddb368bc1b3cf2f599`.
+  Config may pin only Design values and cannot provide/filter a path. Apply selected lifecycle only
+  to overlapping selected production paths; every other record remains exact.
+- Retain exact external dependency tuples and declaration path/symbol/kind/B0 presence/export-
+  private/first-materialization facts. Candidate-emitted signatures are observational; no signature
+  row is pinned.
 - Emit the complete sorted literal import/export multiset and reproduce the pinned 69-member,
   578-record B0 digest. Candidate graph/SCC/delta and all semantic counters remain observational
   because Design has no complete exact allowed-delta table.
@@ -65,7 +80,8 @@ nor approves its own design.
 
 ## Allowed code and output boundary
 
-Only these paths may be created:
+Only these paths may be modified for this measurement implementation; new bounded fixture paths may
+be created only under the exact fixture root:
 
 - `scripts/product-truth/measure-complexity-v9.mjs`;
 - `scripts/product-truth/complexity-universe-v9.json`;
@@ -73,27 +89,29 @@ Only these paths may be created:
 - bounded structural fixtures under `scripts/product-truth/fixtures/complexity-v9/**`;
 - `handoffs/product-truth-complexity-v9.md`.
 
-No existing file is owned. Fixture count must be derived from the finite v9 authority families, not
-grown by importing v8 r1-r17 expression cases.
+No Product/dependency path is owned. Fixture count must be derived from the finite v9 authority
+families, not grown by importing v8 r1-r17 expression cases. This implementation-only output
+boundary does not become a Product-candidate exemption.
 
 ## Done conditions
 
 - V1-v8 artifact manifests and bytes match their accepted/failed historical commits; all five
   production fence block digests match the QbD-approved Design tree.
 - Config is data-only and cannot add paths, graph deltas, declaration identities, presence/export-
-  private/first-materialization dispositions,
+  private/first-materialization dispositions, changed-path categories/exemptions, lifecycle,
   counters, predecessor rows or expected verdicts.
-- Focused negatives cover Work-member deletion/materialization/move, unlisted path/new glob member,
-  outside presence/mode/blob drift, invalid or overridden official evidence, forged/mutated/non-
-  ancestor evidence, declaration presence/export-private/first-materialization drift and dependency/
-  lock/source-byte drift. Adjacent positives cover every allowed hard state. Graph/SCC/count
-  fixtures assert deterministic observations, not pass/fail domain verdicts.
+- Focused negatives cover every non-selected Git path, including existing/new adopted Package
+  bytes, manifest, patch, root build input, test, fixture, output and arbitrary extension/root paths;
+  selected deletion/mode/move and non-authored materialization; accepted-tree record omission/
+  addition/blob drift; invalid or overridden official evidence; declaration drift; and dependency
+  identity drift. Adjacent positives cover only selected content change and the four exact
+  materializations. Graph/SCC/count fixtures assert observations, not domain verdicts.
 - Source inspection and an explicit test assert the v9 script/config contains no public non-leak,
   write/Web-RPC/gateway, raw-terminal, global-wrapper, selector, alias-use, callback-inheritance,
   RHS/subtree or per-use-owner classifier.
-- Authority/config/membership/evidence/selected-lifecycle/outside-blob/dependency-byte/declaration/
-  report gates are hard; graph/SCC/count and semantic observations are labeled observational in
-  every mode. B1/later cannot promote them and
+- Authority/config/all-changed-path/membership/evidence/selected-lifecycle/outside-blob/accepted-
+  tree-byte/dependency/declaration/report gates are hard; graph/SCC/count and semantic observations
+  are labeled observational in every mode. B1/later cannot promote them and
   cannot be selected by a branch, working tree or candidate-controlled field.
 - Scripts typecheck, focused tests, syntax check, link/JSON validation, `git diff --check` and a
   path-limited diff all pass. No production/dependency path, five fence block, destructive target,
@@ -115,4 +133,6 @@ results, two-run determinism proof, explicit non-authority scan and path-limited
 fresh different-actor implementation Review at `reviews/product-truth-complexity-v9.md`.
 
 Only a zero-finding different-actor PASS over the immutable v9 candidate, handoff and official
-invocation can satisfy B1's prerequisite. The Work author and implementer cannot self-accept it.
+invocation can satisfy B1's prerequisite. If that Review finds another bypass in the membership/
+changed-path family, Main must not dispatch another implementation repair; return to Design/stop.
+The Work author and implementer cannot self-accept it.
