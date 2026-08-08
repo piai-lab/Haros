@@ -1347,24 +1347,6 @@ const normalizeGlobalParts = (root, members, wrapperUsed) => {
   if (members.some((member) => member.value === null)) return { root, members, error: "computed-effect-selector" };
   return wrapperUsed ? { error: "unresolved-global-alias" } : null;
 };
-const normalizedGlobal = (node, isShadowedAt) => {
-  const chain = expressionChain(node);
-  if (!chain) return null;
-  const wrappers = new Set(rawUniverse.globalAliasGrammar.wrappers);
-  let { root } = chain;
-  const members = [...chain.members];
-  if (wrappers.has(root)) {
-    const first = members.shift();
-    if (!first || first.value === null || wrappers.has(first.value)) return { error: "invalid-global-wrapper" };
-    if (!rawUniverse.defaultDisposition.reservedRoots.some((reserved) =>
-        reserved === first.value || reserved.startsWith(`${first.value}.`))) return null;
-    if (isShadowedAt(chain.rootNode, root)) return { error: "shadowed-global-alias" };
-    root = first.value;
-  } else if (isShadowedAt(chain.rootNode, root)) {
-    return null;
-  }
-  return normalizeGlobalParts(root, members, wrappers.has(chain.root));
-};
 const classifyGlobal = (normalized) => {
   if (!normalized || normalized.error) return null;
   for (const entry of rawUniverse.globalMembers) {
@@ -1377,6 +1359,31 @@ const classifyGlobal = (normalized) => {
   }
   return null;
 };
+const normalizedGlobal = (node, isShadowedAt, strictWrapper = false) => {
+  const chain = expressionChain(node);
+  if (!chain) return null;
+  const wrappers = new Set(rawUniverse.globalAliasGrammar.wrappers);
+  let { root } = chain;
+  const members = [...chain.members];
+  if (wrappers.has(root)) {
+    if (strictWrapper && isShadowedAt(chain.rootNode, root)) return null;
+    const first = members.shift();
+    if (!first || first.value === null || wrappers.has(first.value)) return { error: "invalid-global-wrapper" };
+    if (!rawUniverse.defaultDisposition.reservedRoots.some((reserved) =>
+        reserved === first.value || reserved.startsWith(`${first.value}.`))) {
+      return strictWrapper ? { error: "unresolved-global-alias" } : null;
+    }
+    if (isShadowedAt(chain.rootNode, root)) return { error: "shadowed-global-alias" };
+    root = first.value;
+  } else if (isShadowedAt(chain.rootNode, root)) {
+    return null;
+  }
+  const normalized = normalizeGlobalParts(root, members, wrappers.has(chain.root));
+  if (strictWrapper && wrappers.has(chain.root) && normalized?.member && !normalized.error && !classifyGlobal(normalized)) {
+    return { error: "unresolved-global-alias" };
+  }
+  return normalized;
+};
 
 const rawInventoryPaths = new Set(presentMembers.filter((path) =>
   ["production", "direct-tool"].includes(categoryOf(path)) && candidateGraph.texts.has(path)));
@@ -1388,6 +1395,7 @@ for (const path of candidateGraph.paths.filter((candidatePath) => rawInventoryPa
   if (file.parseDiagnostics.length) throw new Error(`UNPARSED_FROZEN_SOURCE:${path}`);
   const assignmentComparisonNodes = new WeakSet();
   const aliasInitializerComparisonNodes = new WeakSet();
+  const directUseComparisonNodes = new WeakSet();
   const assignmentComparisonPath = workBlocks
     .find((block) => block.work === candidateWorkId)
     ?.production.some((entry) => entry.path === path) === true;
@@ -1397,6 +1405,7 @@ for (const path of candidateGraph.paths.filter((candidatePath) => rawInventoryPa
     if (!predecessorBytes?.equals(candidateBytes)) {
       const predecessorCounts = new Map();
       const predecessorAliasInitializerCounts = new Map();
+      const predecessorDirectUseCounts = new Map();
       const localRolePathFor = (node, owner) => {
         const localRolePath = [];
         for (let current = node; current.parent && current !== owner.declarationNode; current = current.parent) {
@@ -1425,6 +1434,15 @@ for (const path of candidateGraph.paths.filter((candidatePath) => rawInventoryPa
           normalizedText: normalizedNodeText(node, sourceFile),
         });
       };
+      const directUseKey = (node, sourceFile) => {
+        const owner = qualifiedOwner(node, sourceFile, path);
+        return canonicalJson({
+          kind: ts.SyntaxKind[node.kind],
+          owner: owner.qualifiedDeclarationId,
+          localRolePath: localRolePathFor(node, owner),
+          normalizedExpression: normalizedNodeText(node.expression, sourceFile),
+        });
+      };
       const collectPredecessorAssignments = (node, sourceFile) => {
         if (ts.isBinaryExpression(node) && node.operatorToken.kind >= ts.SyntaxKind.FirstAssignment &&
             node.operatorToken.kind <= ts.SyntaxKind.LastAssignment) {
@@ -1434,6 +1452,11 @@ for (const path of candidateGraph.paths.filter((candidatePath) => rawInventoryPa
         if (ts.isVariableDeclaration(node) && node.initializer) {
           const key = aliasInitializerKey(node, sourceFile);
           predecessorAliasInitializerCounts.set(key, (predecessorAliasInitializerCounts.get(key) ?? 0) + 1);
+        }
+        if ((ts.isCallExpression(node) || ts.isNewExpression(node)) &&
+            (ts.isPropertyAccessExpression(node.expression) || ts.isElementAccessExpression(node.expression))) {
+          const key = directUseKey(node, sourceFile);
+          predecessorDirectUseCounts.set(key, (predecessorDirectUseCounts.get(key) ?? 0) + 1);
         }
         ts.forEachChild(node, (child) => collectPredecessorAssignments(child, sourceFile));
       };
@@ -1456,6 +1479,13 @@ for (const path of candidateGraph.paths.filter((candidatePath) => rawInventoryPa
           const remaining = predecessorAliasInitializerCounts.get(key) ?? 0;
           if (remaining > 0) predecessorAliasInitializerCounts.set(key, remaining - 1);
           else aliasInitializerComparisonNodes.add(node);
+        }
+        if ((ts.isCallExpression(node) || ts.isNewExpression(node)) &&
+            (ts.isPropertyAccessExpression(node.expression) || ts.isElementAccessExpression(node.expression))) {
+          const key = directUseKey(node, file);
+          const remaining = predecessorDirectUseCounts.get(key) ?? 0;
+          if (remaining > 0) predecessorDirectUseCounts.set(key, remaining - 1);
+          else directUseComparisonNodes.add(node);
         }
         ts.forEachChild(node, classifyCandidateAssignments);
       };
@@ -2313,7 +2343,8 @@ for (const path of candidateGraph.paths.filter((candidatePath) => rawInventoryPa
     }
     if ((ts.isCallExpression(node) || ts.isNewExpression(node)) &&
         (ts.isPropertyAccessExpression(node.expression) || ts.isElementAccessExpression(node.expression))) {
-      const normalized = normalizedScopedGlobal(node.expression) ?? normalizedGlobal(node.expression, lexical.isShadowedAt);
+      const normalized = normalizedScopedGlobal(node.expression) ??
+        normalizedGlobal(node.expression, lexical.isShadowedAt, directUseComparisonNodes.has(node));
       if (normalized?.error) addViolation(normalized.error === "computed-effect-selector" ? "COMPUTED_EFFECT_SELECTOR" : "GLOBAL_ALIAS_INVALID", path, node.expression, normalized.error);
       else {
         const classes = classifyGlobal(normalized);

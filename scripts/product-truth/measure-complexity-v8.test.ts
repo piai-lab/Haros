@@ -191,6 +191,9 @@ describe("product-truth-complexity-v8 qualified declarations", () => {
     "traced-finite-expression-property-assignment-positive",
     "traced-global-exact-computed-terminal-positive",
     "traced-global-extra-selector-shadow-positive",
+    "traced-global-wrapper-shadow-positive",
+    "traced-global-wrapper-exact-terminal-positive",
+    "traced-known-non-inventory-global-positive",
     "traced-assignment-rhs-raw-free-wrapper-positive",
     "traced-assignment-rhs-raw-free-conditional-positive",
   ])("accepts exact owner declaration and lexical-use positive %s", (fixture) => {
@@ -278,6 +281,17 @@ describe("product-truth-complexity-v8 qualified declarations", () => {
     expect(result.status).not.toBe(0);
     expect(result.stdout).toBe("");
     expect(result.stderr).toContain("RAW_ALIAS_WRITE_UNKNOWN");
+  }, 30_000);
+
+  it.each([
+    "traced-global-wrapper-unknown-first-direct",
+    "traced-global-wrapper-hidden-terminal-direct",
+    "traced-global-wrapper-unknown-terminal-direct",
+  ])("rejects an unresolved unshadowed global-wrapper direct use %s", (fixture) => {
+    const result = runFixture(fixture, "direct-first-public-b1");
+    expect(result.status).not.toBe(0);
+    expect(result.stdout).toBe("");
+    expect(result.stderr).toContain("GLOBAL_ALIAS_INVALID");
   }, 30_000);
 });
 
