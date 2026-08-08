@@ -86,6 +86,9 @@ okf_version: "0.2"
   — keeps the final-authority candidate rejected, freezes the exact raw `-z` protocol and sole new
   Review output, and requires fresh different-actor QbD 0/0 plus human PASS before one bounded
   realization; any material failure ends v9.
+- [Product-truth complexity v9 protocol-route PASS approval](decisions/product-truth-complexity-v9-protocol-route-pass-approval.md)
+  — human authorization for that single bounded realization; any material implementation or
+  Review finding permanently ends v9.
 - [Product-truth complexity v9 narrow authority](interfaces/product-truth-complexity-v9.md) — exact
   membership/evidence/declaration boundary, observational literal-graph baseline and explicit
   semantic non-authority.
