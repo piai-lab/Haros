@@ -3,32 +3,32 @@ type: "Handoff"
 title: "Authoritative Product-truth complexity v8 predecessor-delta meter"
 work: "../work/product-truth-complexity-v8.md"
 status: "DONE"
-actor_id: "product_truth_complexity_v8_impl_r13"
-dispatch_receipt: "30507ea905ae4185b1fc4f675846e9af"
-predecessor_receipt: "ff59ca1809ad488c9883412c59ed561a"
+actor_id: "product_truth_complexity_v8_impl_r14"
+dispatch_receipt: "4afd4cc577f44643993e38a288025f2e"
+predecessor_receipt: "30507ea905ae4185b1fc4f675846e9af"
 predecessor_output: "../handoffs/product-truth-complexity-v8.md"
-reviewed_candidate: "299b4c9862033e1cb1ec105ed829d483292ed5ba"
-report_sha256: "60c1501cfc9bf25ca93303e90b1091ab5670dbe54f1fe415d2200af9aaa1912c"
+reviewed_candidate: "b28346cb03391c589788e634dc3c8c9cf5cd01a0"
+report_sha256: "edede031ccd1fb0de2f265ee8aa82598968c106446d8492ad3050e50b51d161a"
 ---
 
 # Authoritative Product-truth complexity v8 predecessor-delta meter
 
 ## Result
 
-`DONE` — Main froze and pushed the measurement-only v8 r13 candidate at immutable commit
-`299b4c9862033e1cb1ec105ed829d483292ed5ba`. R13 closes the sole P0 in the
-[failed r12 Review](../reviews/product-truth-complexity-v8.md), receipt
-`2c1c67b42ffb4c8e9af8ade3f98c3566`: the shared finite raw-expression classifier now applies its
-closed supported-atom syntax gate before invoking either declaration-scoped atom resolver. Nested
-simple and compound assignment expressions can no longer masquerade as raw identities; a nested
-assignment subtree containing raw syntax fails closed, while a raw-free equivalent remains
-harmless. The explicit top-level candidate assignment visitor and supported property atoms retain
-their prior structural behavior. The no-CFG/no-SSA boundary and predecessor occurrence scoping are
-unchanged. The r13 commit modifies only the v8 meter and focused test and adds six bounded controls.
-The complete v8 surface now contains 105 fixtures. It changes no config,
+`DONE` — Main froze and pushed the measurement-only v8 r14 candidate at immutable commit
+`b28346cb03391c589788e634dc3c8c9cf5cd01a0`. R14 closes the sole P0 in the
+[failed r13 Review](../reviews/product-truth-complexity-v8.md), receipt
+`8c8ab032e78a434ab2ec1bb9ad0c628c`: the shared direct-global atom classifier now rejects normalized
+errors and any terminal-following extra selector before classification or identity admission.
+Direct, finite-wrapped and canonical-equal conditional forms therefore treat dot and computed-
+literal selectors after `Bun.file` as unsupported raw syntax and fail closed. Exact dot/computed
+terminals and lexical shadows retain their prior behavior. The no-CFG/no-SSA boundary and
+predecessor occurrence scoping remain unchanged. The r14 commit modifies only the v8 meter and
+focused test and adds six bounded controls. The complete v8 surface now contains 111 fixtures. It
+changes no config,
 Product, dependency, direct-rebuild, Work, v1-v7 evidence, Harness/schema, fence or user-state byte.
 
-R13 supersedes rejected candidates `17180c0c1def7b1ee70a898d91b58acbc35cc0af`,
+R14 supersedes rejected candidates `17180c0c1def7b1ee70a898d91b58acbc35cc0af`,
 `61df83885e0290fe199a58715101ba405358aec9`,
 `8cee02f09de917ba169770bebe8b348a32448807` and
 `7c6107f2b9d5ffccacdde515d943ff6a5cb7992f`,
@@ -39,7 +39,8 @@ R13 supersedes rejected candidates `17180c0c1def7b1ee70a898d91b58acbc35cc0af`,
 `5796ea8906b3b5f2d3cf45de9638f7b5f1696cea`,
 `a94919c58385abb8a0d674408a63dca5c5f9a69a` and
 `89bc90138277aa6673a4ca57f4219c979268346d` and
-`2b200e1a7efa4fc68aa60b48d109a7929132c7e7`, together with their old B0 report digests. No rejected
+`2b200e1a7efa4fc68aa60b48d109a7929132c7e7` and
+`299b4c9862033e1cb1ec105ed829d483292ed5ba`, together with their old B0 report digests. No rejected
 candidate or superseded handoff report is eligible Product evidence.
 
 V8 preserves the accepted v7 B0 inventory and replaces only v7's impossible later-candidate owner
@@ -98,11 +99,14 @@ evidence SHA. The meter and operation receipts do not authenticate a reviewer or
 - Failed r12 Review: [product-truth-complexity-v8](../reviews/product-truth-complexity-v8.md), actor
   `product_truth_complexity_v8_review_r12`, receipt `2c1c67b42ffb4c8e9af8ade3f98c3566`, one P0.
 - Superseded rejected r12 candidate: `2b200e1a7efa4fc68aa60b48d109a7929132c7e7`.
-- R13 implementer actor: `product_truth_complexity_v8_impl_r13`.
-- R13 dispatch receipt: `30507ea905ae4185b1fc4f675846e9af`.
-- R13 predecessor receipt: `ff59ca1809ad488c9883412c59ed561a`.
-- R13 predecessor output: `handoffs/product-truth-complexity-v8.md`.
-- Immutable r13 meter commit: `299b4c9862033e1cb1ec105ed829d483292ed5ba`.
+- Failed r13 Review: [product-truth-complexity-v8](../reviews/product-truth-complexity-v8.md), actor
+  `product_truth_complexity_v8_review_r13`, receipt `8c8ab032e78a434ab2ec1bb9ad0c628c`, one P0.
+- Superseded rejected r13 candidate: `299b4c9862033e1cb1ec105ed829d483292ed5ba`.
+- R14 implementer actor: `product_truth_complexity_v8_impl_r14`.
+- R14 dispatch receipt: `4afd4cc577f44643993e38a288025f2e`.
+- R14 predecessor receipt: `30507ea905ae4185b1fc4f675846e9af`.
+- R14 predecessor output: `handoffs/product-truth-complexity-v8.md`.
+- Immutable r14 meter commit: `b28346cb03391c589788e634dc3c8c9cf5cd01a0`.
 - Historical B0 reference: `7582170a277477ba0d71cf70f53e4e0836874a72`.
 - Main-selected v7 bootstrap evidence commit:
   `5632f63603e6ae8b3fb95f759c793a09b16a1e44`.
@@ -114,10 +118,10 @@ compare the recorded Main/human selection, full invocation and tuple with the tr
 ## Frozen instrument and authority
 
 ```text
-v8 script                     5e64e550df9d426e651b1aaebd66755fc95878b113c4707611ef819aa206d7e5
+v8 script                     9d42cfead5ebf3fef25107bc65e88ca0bdf6e30dda984e581139effacfe9e786
 v8 config                     8b80d4eb401eefb36ed4597e2032e0c7eb25e13dbdd437d2b1e90e315d094796
-v8 focused test               0396462e610ef56fc798f86f3b82bfb73eb93e59f78cbc522404608428d3f51d
-105-fixture manifest          30ee82cebc00319061a90c62f23761d13941a88ad5f7fcf0c777471379d6d868
+v8 focused test               7396863afa355ba42668311995dc46e443c28e2c3b3acc59b68e198e08b8c5b2
+111-fixture manifest          e320a994930ab9dc17f828f5209b7dac4e8bb970dc76986528c37d65a4396afd
 predecessor-delta authority   578d98e96bb531f41a54525ea0e86ecc586e16071528874fff4a82572ba36d29
 raw-effect universe           35ce67d0e9d09d48cb8f4fe8c8bbc49a1c70b69c2b5a175c44c1c353ca8c7849
 effect-ingress authority      68321678a2f8c9ee36b03700486e35d3873d3e759fd3332ffe32ecdf28b86d5c
@@ -127,8 +131,8 @@ B0 frozen membership          c39b66948e4c2e7edb0fab5a8ada76440025e826c9c3de650f
 
 The fixture aggregate hashes the sorted `basename<TAB>SHA-256<LF>` manifest under
 `fixtures/complexity-v8`. The focused test compares every v1-v7 instrument byte to its accepted
-digest. The r13 frozen commit contains exactly eight allowed changes: the meter and test modified,
-plus six fixture additions. The config is byte-identical to r12 because all B0 authority
+digest. The r14 frozen commit contains exactly eight allowed changes: the meter and test modified,
+plus six fixture additions. The config is byte-identical to r13 because all B0 authority
 pins, counts and raw digests remain unchanged. No production, dependency, Work, decision, v1-v7 or
 real user-state path is present.
 
@@ -198,8 +202,8 @@ Two complete post-freeze outputs are byte-identical:
 
 ```text
 complete output bytes            4273664
-complete output byte SHA-256     e4efc018ece9e61177d659d8acd8301e08892c6f84764d8561547ce12d1701c8
-decoded report JCS SHA-256       60c1501cfc9bf25ca93303e90b1091ab5670dbe54f1fe415d2200af9aaa1912c
+complete output byte SHA-256     2cf2e1bbdea4b4cd1d8bb91e0fa0a61a3979f6616aa74c4c84b25d414f2e739f
+decoded report JCS SHA-256       edede031ccd1fb0de2f265ee8aa82598968c106446d8492ad3050e50b51d161a
 raw ingress count / paths        812 / 107
 raw ingress digest               d1b60f2ed12a9cdca75752d94fd7a69c055d865d4fe5397f61550bbc2fe82d3a
 owner violation count / paths    712 / 93
@@ -310,12 +314,20 @@ compound assignment subtrees and fails them closed, while a raw-free nested assi
 harmless. An exact top-level `=` continues through the existing explicit assignment visitor, so
 this ordering repair adds no assignment evaluation or runtime semantics.
 
+R14 preserves the frozen ordinary-use global grammar in that shared atom path. A normalized direct
+global atom carrying an error or any selector after an already recognized terminal is rejected
+before `classifyGlobal` can return the terminal's classes. Recursive raw detection then finds the
+inner exact terminal and makes the enclosing alias initializer or assignment RHS fail closed as
+unsupported raw syntax. This applies identically through finite wrappers and canonical-equal
+conditional branches, for dot and literal-computed extra selectors. An exact terminal with no extra
+member remains admissible, and a nearer lexical declaration still shadows the reserved global.
+
 The meter derives candidate-new structural occurrences from the exact source tree named by the
 immutable predecessor report's `commit`. Within each selected-Work production member it matches
 bounded structural occurrence tuples for both assignment writes and variable-declaration alias
 initializers: exact occurrence kind, qualified lexical owner, owner-local AST role path, normalized
 source text and cardinality. A matched predecessor occurrence keeps the accepted B0 grammar; an
-unmatched materialized, relocated, duplicated or changed occurrence uses the r9-r13 finite
+unmatched materialized, relocated, duplicated or changed occurrence uses the r9-r14 finite
 expression closure. This prevents file-level edits elsewhere from retroactively changing B0 or
 outside equality while preventing a moved or duplicate occurrence from spending an unrelated old
 occurrence. The tuple is structural evidence only and carries no execution or value semantics.
@@ -335,16 +347,16 @@ paths to B1 and the historical SHA is never eligible predecessor evidence.
 ## Verification
 
 - Frozen HEAD and scope — PASS: exact commit
-  `299b4c9862033e1cb1ec105ed829d483292ed5ba`, clean worktree before handoff, exactly two allowed
+  `b28346cb03391c589788e634dc3c8c9cf5cd01a0`, clean worktree before handoff, exactly two allowed
   modifications and six allowed fixture additions.
-- The r12 escape variants were reproduced against r12, then closed by r13: plain and nested wrapped
-  alias initializers plus an outer assignment RHS containing identifier-left nested `=` all fail
-  closed. A raw-containing nested compound assignment also fails. The raw-free nested assignment
-  and supported top-level `Bun.file` property assignment controls pass.
-- `bunx vitest run scripts/product-truth/measure-complexity-v8.test.ts --reporter=dot` — `122/122`
-  PASS post-freeze in `573.81s`; all 116 r12 cases remain active.
+- The r13 escape variants were reproduced against r13, then closed by r14: direct alias,
+  top-level assignment, finite-wrapped alias and canonical-equal conditional forms with dot or
+  literal-computed selectors after `Bun.file` all fail closed. The exact computed terminal and
+  lexical-shadow controls pass.
+- `bunx vitest run scripts/product-truth/measure-complexity-v8.test.ts --reporter=dot` — `128/128`
+  PASS post-freeze in `624.66s`; all 122 r13 cases remain active.
 - `bunx vitest run scripts/product-truth/measure-complexity-v7.test.ts --reporter=dot` — `67/67`
-  PASS post-freeze in `139.37s`; r13's immutable-byte assertions prove v1-v7 remained unchanged
+  PASS post-freeze in `140.83s`; r14's immutable-byte assertions prove v1-v7 remained unchanged
   through the frozen commit.
 - `bun run --cwd scripts typecheck` — PASS post-freeze.
 - `node --check scripts/product-truth/measure-complexity-v8.mjs` — PASS post-freeze.
@@ -369,7 +381,7 @@ site identities and comparison state are retained without elision.
   "commit": "7582170a277477ba0d71cf70f53e4e0836874a72",
   "observationalBaseline": true,
   "instrument": {
-    "scriptSha256": "5e64e550df9d426e651b1aaebd66755fc95878b113c4707611ef819aa206d7e5",
+    "scriptSha256": "9d42cfead5ebf3fef25107bc65e88ca0bdf6e30dda984e581139effacfe9e786",
     "configSha256": "8b80d4eb401eefb36ed4597e2032e0c7eb25e13dbdd437d2b1e90e315d094796"
   },
   "officialInvocation": {
@@ -107792,7 +107804,7 @@ migrated.
 ## Mandatory next stop
 
 A different actor must review immutable candidate
-`299b4c9862033e1cb1ec105ed829d483292ed5ba` and this handoff in
+`b28346cb03391c589788e634dc3c8c9cf5cd01a0` and this handoff in
 `reviews/product-truth-complexity-v8.md`. The Review must independently compare the complete command,
 Main-selected evidence SHA, exact tuple, frozen instrument hashes and decoded-report JCS digest with
 the trust-root Decision. Only a zero-finding `PASS` that records its own distinct actor/receipt,
