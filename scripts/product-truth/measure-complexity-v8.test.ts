@@ -187,6 +187,8 @@ describe("product-truth-complexity-v8 qualified declarations", () => {
     "traced-assignment-scoped-terminal-direct-use-positive",
     "traced-scoped-alias-initializer-shadow-wrapper-positive",
     "traced-scoped-alias-initializer-raw-free-conditional-positive",
+    "traced-finite-expression-nested-assignment-raw-free-positive",
+    "traced-finite-expression-property-assignment-positive",
     "traced-assignment-rhs-raw-free-wrapper-positive",
     "traced-assignment-rhs-raw-free-conditional-positive",
   ])("accepts exact owner declaration and lexical-use positive %s", (fixture) => {
@@ -250,6 +252,18 @@ describe("product-truth-complexity-v8 qualified declarations", () => {
     expect(result.status).not.toBe(0);
     expect(result.stdout).toBe("");
     expect(result.stderr).toMatch(/TRACED_|RAW_EFFECT_INGRESS_INVALID/);
+  }, 30_000);
+
+  it.each([
+    "traced-finite-expression-nested-assignment-alias",
+    "traced-finite-expression-wrapped-nested-assignment-alias",
+    "traced-finite-expression-nested-assignment-rhs",
+    "traced-finite-expression-nested-compound-assignment-alias",
+  ])("rejects unsupported raw-containing nested assignment syntax %s", (fixture) => {
+    const result = runFixture(fixture, "direct-first-public-b1");
+    expect(result.status).not.toBe(0);
+    expect(result.stdout).toBe("");
+    expect(result.stderr).toContain("RAW_ALIAS_WRITE_UNKNOWN");
   }, 30_000);
 });
 

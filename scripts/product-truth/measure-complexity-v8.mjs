@@ -1746,11 +1746,14 @@ for (const path of candidateGraph.paths.filter((candidatePath) => rawInventoryPa
     }
     return rawIdentityForGlobalAssignmentAtom(expression);
   };
+  const isFiniteRawExpressionAtom = (expression) => ts.isIdentifier(expression) ||
+    ts.isPropertyAccessExpression(expression) || ts.isElementAccessExpression(expression) ||
+    ts.isCallExpression(expression);
   const expressionContainsRaw = (expression, extensionsEnabled, identityForAtom) => {
     if (extensionsEnabled && isFiniteTransparentExpressionWrapper(expression)) {
       return expressionContainsRaw(expression.expression, extensionsEnabled, identityForAtom);
     }
-    if (identityForAtom(expression)) return true;
+    if (isFiniteRawExpressionAtom(expression) && identityForAtom(expression)) return true;
     let containsRaw = false;
     ts.forEachChild(expression, (child) => {
       if (!containsRaw && !ts.isTypeNode(child) &&
@@ -1763,8 +1766,6 @@ for (const path of candidateGraph.paths.filter((candidatePath) => rawInventoryPa
         (extensionsEnabled && isFiniteTransparentExpressionWrapper(expression))) {
       return finiteRawExpressionResult(expression.expression, extensionsEnabled, identityForAtom);
     }
-    const directIdentity = identityForAtom(expression);
-    if (directIdentity) return { identity: directIdentity, containsRaw: true };
     if (extensionsEnabled && ts.isConditionalExpression(expression)) {
       const whenTrue = finiteRawExpressionResult(expression.whenTrue, extensionsEnabled, identityForAtom);
       const whenFalse = finiteRawExpressionResult(expression.whenFalse, extensionsEnabled, identityForAtom);
@@ -1777,6 +1778,10 @@ for (const path of candidateGraph.paths.filter((candidatePath) => rawInventoryPa
         identity: null,
         containsRaw: conditionContainsRaw || whenTrue.containsRaw || whenFalse.containsRaw,
       };
+    }
+    if (isFiniteRawExpressionAtom(expression)) {
+      const directIdentity = identityForAtom(expression);
+      if (directIdentity) return { identity: directIdentity, containsRaw: true };
     }
     return {
       identity: null,
@@ -1998,11 +2003,7 @@ for (const path of candidateGraph.paths.filter((candidatePath) => rawInventoryPa
     } : null;
   };
   let identityForExpression = () => null;
-  const identityForExpressionAtom = (expression, extensionsEnabled) => {
-    if (ts.isBinaryExpression(expression) && expression.operatorToken.kind === ts.SyntaxKind.EqualsToken) {
-      if (!ts.isIdentifier(expression.left) || !bindingScopeFor(expression.left)) return null;
-      return identityForExpression(expression.right, extensionsEnabled);
-    }
+  const identityForExpressionAtom = (expression) => {
     if (ts.isIdentifier(expression)) {
       const scoped = resolveScopedAlias(expression);
       if (scoped) return scoped;
@@ -2019,7 +2020,7 @@ for (const path of candidateGraph.paths.filter((candidatePath) => rawInventoryPa
   };
   const scopedAliasExpressionResult = (expression, extensionsEnabled = false) =>
     finiteRawExpressionResult(expression, extensionsEnabled,
-      (atom) => identityForExpressionAtom(atom, extensionsEnabled));
+      (atom) => identityForExpressionAtom(atom));
   identityForExpression = (expression, extensionsEnabled = false) =>
     scopedAliasExpressionResult(expression, extensionsEnabled).identity;
   const identityForMember = (base, member, form) => {
