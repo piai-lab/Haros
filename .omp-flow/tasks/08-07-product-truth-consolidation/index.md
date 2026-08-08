@@ -89,7 +89,13 @@ okf_version: "0.2"
   implementation only after fresh different-actor QbD and recorded human PASS calibration.
 - [Product-truth complexity v9 audit](qbd/product-truth-complexity-v9-audit.md) — immutable `FAIL`
   that found the missing declaration/signature and static-edge authority and requested the selected
-  safe degradation; a fresh different-actor audit must now reach 0 blocker and 0 advisory.
+  safe degradation.
+- [Product-truth complexity v9 safe-degradation audit](qbd/product-truth-complexity-v9-safe-degradation-audit.md)
+  — immutable `FAIL` that found two baseline-authority defects subsequently repaired.
+- [Product-truth complexity v9 final audit](qbd/product-truth-complexity-v9-final-audit.md) and
+  [PASS approval](decisions/product-truth-complexity-v9-pass-approval.md) — different-actor `PASS`
+  with 0 blocker and 0 advisory; authorizes only the measurement-only v9 implementation and its
+  independent Review, while B1 remains blocked.
 - [QbD 1 audit](qbd/design-audit.md) — independent critical findings that triggered the repair
   calibration.
 - [QbD 1 repair audit](qbd/design-repair-audit.md) — independent PASS with zero blockers and three
