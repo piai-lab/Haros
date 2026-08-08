@@ -96,6 +96,10 @@ okf_version: "0.2"
   [PASS approval](decisions/product-truth-complexity-v9-pass-approval.md) — different-actor `PASS`
   with 0 blocker and 0 advisory; authorizes only the measurement-only v9 implementation and its
   independent Review, while B1 remains blocked.
+- [Product-truth complexity v9 final-authority audit](qbd/product-truth-complexity-v9-final-authority-audit.md)
+  and [final-authority PASS approval](decisions/product-truth-complexity-v9-final-authority-pass-approval.md)
+  — current different-actor `PASS` with 0 blocker and 0 advisory; authorizes only the repaired
+  measurement-only v9 implementation and its independent Review, while B1 remains blocked.
 - [QbD 1 audit](qbd/design-audit.md) — independent critical findings that triggered the repair
   calibration.
 - [QbD 1 repair audit](qbd/design-repair-audit.md) — independent PASS with zero blockers and three
