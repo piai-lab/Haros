@@ -24,12 +24,12 @@ This Work realizes PRD A13 and its A15 process/recovery slice.
 
 Do not assign or start this Work until [`handoffs/direct-first-public-b1.md`](../handoffs/direct-first-public-b1.md)
 records a different-actor-accepted clean immutable B1. The implementation base must contain that
-exact B1 commit and v8 report as this Work's immutable comparison predecessor, and the B1 chain must
-name the accepted immutable v8 meter Review receipt and SHA/digests, including Work/raw-effect/
-predecessor-delta/effect-ingress/B1-verifier/dependency/import/universe digests, plus the accepted
+exact B1 commit and v9 report as this Work's immutable comparison predecessor, and the B1 chain must
+name the accepted immutable v9 meter Review receipt and SHA/digests, including Work/v9-authority/
+public-shape/B1-verifier/dependency/import/universe digests, plus the accepted
 B1 verifier case-manifest/trace/fault/race/kill and hidden-mutation/source-Review receipts. No
 shared-tree overlap with B1 is inferred. Main/human orchestration supplies the accepted full B1
-evidence commit through the official `--predecessor-evidence` input. V8 reads its table-named
+evidence commit through the official `--predecessor-evidence` input. V9 reads its table-named
 immutable blobs, distinguishes reviewed B1 from evidence commit and requires reviewed-B1→evidence→
 this-candidate first-parent ancestry with exact report/digests and internally distinct declared
 actors. Receipt/history cannot select or authenticate it; later Review verifies the invocation.
@@ -109,7 +109,7 @@ overlaps B1 compatibility cleanup, this Work does not run concurrently in the no
   connections, rejects a different pair and retains zero challenge state after close.
 - Package/catalog/request bytes never dispatch before the binding is ready. A selected generation
   missing from the bound lane is unavailable even when present in the sibling lane.
-- Every production path is a frozen v8 member. Candidate edges are resolved afresh and pass only
+- Every production path is a frozen v9 member. Candidate static edges are resolved afresh and pass only
   when both endpoints are frozen; an outside-set endpoint stops for map repair.
 
 ## Verification
@@ -126,18 +126,17 @@ overlaps B1 compatibility cleanup, this Work does not run concurrently in the no
   supervision in dev and packaged artifact lanes. Run the existing Native Host live-journey and
   Package-crash probes through v2 in both required process lanes. Use isolated homes and sanitize
   all output.
-- Run the read-only v8 membership/dependency/import/effect-ingress/count gates against the accepted
-  B1 predecessor; do not edit the meter or accept outside-Work blob/import/raw/violation drift,
-  selected-Work nontraced site relocation/replacement/reorder/growth, wrong declaration kind/
-  qualified owner/alias use/helper, outside-set, computed/unresolved
-  edges or a new raw-effect owner. This Work adds
+- Run the read-only v9 membership/evidence/lifecycle/public-shape/dependency/static-import/count
+  gates against the accepted B1 predecessor; do not edit the meter or accept outside-Work
+  presence/mode/blob drift, unlisted membership, public raw-capability leakage, dependency/source
+  digest drift, unresolved/nonliteral static specifiers or forbidden static edges. This Work adds
   no B1 runtime-state capability, so the accepted B1 verifier manifest/digests and behavior Review
   must match byte-for-byte.
 
 ## Expected handoff
 
 Write [`handoffs/native-host-package-root-binding.md`](../handoffs/native-host-package-root-binding.md)
-with exactly one `omp-flow-product-truth-complexity-v8-report-v1` complete canonical JSON block,
+with exactly one `omp-flow-product-truth-complexity-v9-report-v1` complete canonical JSON block,
 the complete official invocation and deterministic evidence tuple,
 changed paths, transcript vectors, all required real-process fault rows for both lanes,
 challenge-state measurements, zero-read/zero-dispatch observations, packaged supervision evidence

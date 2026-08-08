@@ -23,13 +23,13 @@ perform, the Coordinator/facade extraction.
 
 This Work begins only after immutable B1, Native Host v2 and the execution-leaf Work have
 different-actor accepted handoffs. The execution-leaf candidate/report is this Work's immutable
-comparison predecessor. The B1 chain must bind the accepted immutable v8 meter Review and SHA/
-digests, including Work/raw-effect/predecessor-delta/effect-ingress/B1-verifier/dependency/import/
+comparison predecessor. The B1 chain must bind the accepted immutable v9 meter Review and SHA/
+digests, including Work/v9-authority/public-shape/B1-verifier/dependency/import/
 universe digests, and the accepted B1
 verifier case-manifest/trace/fault/race/kill plus hidden-mutation/source-Review receipts. It must use
 the exact B1 recorded by the first handoff for later B0/B1/C comparison.
 Main/human orchestration supplies the full execution-leaf evidence commit through the official
-`--predecessor-evidence` input. V8 loads only its unchanged table-named blobs and requires reviewed-
+`--predecessor-evidence` input. V9 loads only its unchanged table-named blobs and requires reviewed-
 leaf→evidence→this-candidate first-parent ancestry with exact report/digests and internally distinct
 declared actors. Receipt/history cannot select or authenticate it; later Review verifies the invocation.
 
@@ -104,18 +104,18 @@ caller ownership.
 - Run Store/Product focused tests, Package projection/replay tests and Service typecheck. Static
   gates reject a second connection, writer, raw transaction export, table CRUD API or core cycle.
 - Read the frozen complexity instrument without editing it; report the intermediate metrics only.
-- Run the frozen v8 membership/dependency/import/effect-ingress/predecessor-delta gates. The future Store may
-  materialize inside the frozen set and becomes the sole Product raw-effect owner exactly when the
-  unsplit `ProductControlPlane` owner disappears; coexistence, outside-set endpoint,
-  computed/unresolved import, wrong declaration kind/qualified identity/alias use, nontraced site
-  relocation/replacement/reorder or alternate raw owner stops. Re-run the owner-local Product lifecycle
+- Run the frozen v9 membership/evidence/lifecycle/public-shape/dependency/static-import/count gates.
+  The future Store may materialize inside the frozen set and becomes the sole declared Product
+  capability exactly when the unsplit `ProductControlPlane` declaration disappears; coexistence,
+  outside-set endpoint, unresolved/nonliteral or forbidden static edge, declaration/public-type
+  drift or public raw-capability leakage stops. Re-run the owner-local Product lifecycle
   behavior matrix against the moved capability and obtain different-actor Review at this immutable
   checkpoint; B1 traces are preservation inputs, not proof of the moved implementation.
 
 ## Expected handoff
 
 Write [`handoffs/product-state-store.md`](../handoffs/product-state-store.md) with exactly one
-`omp-flow-product-truth-complexity-v8-report-v1` complete canonical JSON block, the immutable B1 SHA,
+`omp-flow-product-truth-complexity-v9-report-v1` complete canonical JSON block, the immutable B1 SHA,
 complete official invocation and deterministic evidence tuple,
 exact Store API, SQL writer/connection inventory, per-command transaction fault results,
 Package projection and outbox-diagnostic proof, exact composition/probe paths changed, imports and

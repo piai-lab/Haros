@@ -24,11 +24,11 @@ Do not assign or start this Work until [`handoffs/direct-first-public-b1.md`](..
 records a different-actor-accepted clean immutable B1 and zero production Store/Coordinator/leaf
 extraction surface, and the Native Host Work must have a different-actor-accepted handoff whose
 candidate/report is this Work's immutable comparison predecessor. The chain must name the accepted
-immutable v8 meter Review receipt and SHA/digests, including Work/raw-effect/predecessor-delta/
-effect-ingress/B1-verifier/dependency/import/universe digests, and its accepted
+immutable v9 meter Review receipt and SHA/digests, including Work/v9-authority/public-shape/
+B1-verifier/dependency/import/universe digests, and its accepted
 verifier case-manifest/trace/fault/race/kill plus hidden-mutation/source-Review receipts. The
 implementation base must contain that exact B1 commit. Main/human orchestration supplies the full
-Native Host evidence commit through the official `--predecessor-evidence` input. V8 loads its
+Native Host evidence commit through the official `--predecessor-evidence` input. V9 loads its
 unchanged table-named blobs and requires reviewed-Native-Host→evidence→this-candidate first-parent
 ancestry with exact report/digests and internally distinct declared actors. Receipt/history cannot
 select or authenticate it; later Review verifies the invocation.
@@ -73,18 +73,18 @@ behavior may change. The leaf may import Product contracts and generic libraries
   no new cycle, no SQL/schema/table token in the leaf and no behavior/API snapshot drift.
 - The frozen complexity instrument is read-only and reports the intermediate result without
   treating it as C or changing B1.
-- The frozen v8 gate accounts for every production path; newly materialized edges pass only between
-  frozen members, while outside-set, computed/unresolved or moved-responsibility cases stop. Its
-  accepted predecessor, outside blob/import/raw/violation identities, predecessor-anchored
-  nontraced site identity/order, traced declaration kind/qualified ID/class, dependency/import/
-  effect-ingress inventory and counts remain green; the
+- The frozen v9 gate accounts for every production path; newly materialized static edges pass only
+  between frozen members, while outside-set, unresolved/nonliteral or forbidden static edges stop.
+  Its accepted predecessor/evidence tuple, outside presence/mode/blob equality, selected-Work
+  lifecycle, exact capability declaration/public non-leak shape, dependency/static-import closure
+  and counts remain green; the
   accepted B1 runtime behavior evidence remains an immutable predecessor rather than a static meter
   claim.
 
 ## Expected handoff
 
 Write [`handoffs/product-execution-leaf.md`](../handoffs/product-execution-leaf.md) with exactly one
-`omp-flow-product-truth-complexity-v8-report-v1` complete canonical JSON block, the consumed B1 SHA,
+`omp-flow-product-truth-complexity-v9-report-v1` complete canonical JSON block, the consumed B1 SHA,
 complete official invocation and deterministic evidence tuple,
 changed import edges, zero-authority static results and focused tests. A different actor must
 accept it before the next overlapping `ProductControlPlane.ts` Work begins.

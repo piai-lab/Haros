@@ -71,15 +71,19 @@ okf_version: "0.2"
   immutable `FAIL` with unsafe classifier/scheduler/reset overlays, false-safe rejections and a
   non-source overlay admission gap.
 - [Product-truth complexity v7 Occam calibration](decisions/product-truth-complexity-v7-repair-calibration.md)
-  and [mechanical authority](interfaces/product-truth-complexity-v7.md) — sole current measurement
-  design: frozen structure/dependency/import/effect-ingress/complexity gates only, with runtime
-  behavior moved to B1 capabilities and verifier-owned evidence.
+  and [mechanical authority](interfaces/product-truth-complexity-v7.md) — immutable accepted B0
+  provenance; its later-candidate verdict is superseded.
 - [Product-truth complexity v8 stop-loss synthesis](research/product-truth-complexity-v8-stop-loss.md)
   — accepts immutable r17 `FAIL`, forbids r18 shape-by-shape repair and selects a new narrower
   structural/authority meter while B1 capabilities, generated real verification, hidden mutation
   and same-SHA source Review own raw/global/alias combination semantics.
-- [Product-truth complexity v7 measurement Work](work/product-truth-complexity-v7.md) — next bounded
-  implementation only after a fresh different-actor zero-finding QbD.
+- [Product-truth complexity v9 stop-loss calibration](decisions/product-truth-complexity-v9-stop-loss-calibration.md)
+  — records selected Route B, preserves v1-v8 and routes expression combinations to B1 evidence.
+- [Product-truth complexity v9 narrow authority](interfaces/product-truth-complexity-v9.md) — exact
+  membership/evidence/lifecycle/public-shape/static-graph/count boundary and explicit semantic
+  non-authority.
+- [Product-truth complexity v9 measurement Work](work/product-truth-complexity-v9.md) — next bounded
+  implementation only after fresh different-actor QbD and recorded human PASS calibration.
 - [QbD 1 audit](qbd/design-audit.md) — independent critical findings that triggered the repair
   calibration.
 - [QbD 1 repair audit](qbd/design-repair-audit.md) — independent PASS with zero blockers and three
@@ -95,7 +99,7 @@ okf_version: "0.2"
   B1 safety, measurement or ordering.
 - [B1 LevelDB lockfile boundary-repair audit](qbd/b1-leveldb-lockfile-boundary-repair-audit.md) —
   fresh scoped QbD 2 PASS over the single lockfile addition and its fail-closed dependency gates.
-- [Work map](work/index.md) — one measurement-only v7 checkpoint followed by five bounded product
+- [Work map](work/index.md) — one measurement-only v9 checkpoint followed by five bounded product
   Works, the immutable unsplit B1 stop, exact eleven-path implementation-discovered compatibility
   boundary, one tool-only lockfile addition, Native Host ordering and complete PRD acceptance
   coverage.

@@ -24,14 +24,14 @@ journey gates. This Work realizes PRD A11, A12, the C half of A14 and integrated
 ## Entry stop
 
 All four handoffs above must be current and different-actor accepted. Their B1 chain must bind the
-accepted immutable v8 meter Review receipt and SHA/digests. The accepted Store candidate/report is
+accepted immutable v9 meter Review receipt and SHA/digests. The accepted Store candidate/report is
 this Work's immutable comparison predecessor. The frozen complexity instrument and immutable B1
-SHA, Work/raw-effect/predecessor-delta/effect-ingress/B1-verifier/dependency/import/universe digests plus accepted B1
+SHA, Work/v9-authority/public-shape/B1-verifier/dependency/import/universe digests plus accepted B1
 case-manifest/trace/fault/race/kill and hidden-mutation/source-Review receipts must match the B1
 handoff byte-for-byte; mismatch stops rather than
 reconstructing or remeasuring with a revised universe.
 Main/human orchestration supplies the full Store evidence commit through the official
-`--predecessor-evidence` input. V8 loads only its unchanged table-named blobs and requires reviewed-
+`--predecessor-evidence` input. V9 loads only its unchanged table-named blobs and requires reviewed-
 Store→evidence→this-candidate first-parent ancestry with exact report/digests and internally distinct
 declared actors. Receipt/history cannot select or authenticate it; later Review verifies the invocation.
 
@@ -98,15 +98,16 @@ does not authorize an unlisted production path.
   Store/facade, zero Host lifecycle write, zero legacy caller/import and one literal two-Engine
   gateway. Allowed core directions are only facade→Store, facade→Coordinator,
   Coordinator→Store and Coordinator→execution leaf.
-- The frozen v8 instrument reports Design-pinned path membership, accepted predecessor binding,
-  exact outside blob/import/raw/violation equality, inside traced/nontraced raw authority,
-  exact declaration kind/qualified ID, predecessor-anchored site identity/order, dependency/import
-  closure and stable structural counts, plus all conjunctive gates:
+- The frozen v9 instrument reports Design-pinned path membership, accepted predecessor binding and
+  exact evidence tuple, selected-Work lifecycle, exact outside presence/mode/blob equality,
+  capability declaration/public non-leak shape, dependency/static import-export closure and stable
+  structural counts, plus all conjunctive gates:
   changed-scope and steady-state production
   lines C<B0, responsibility slice C<B1, changed import edges C<B0, and every semantic counter at
   the approved value. The Store is the sole C Product ingress owner and the unsplit B1 owner is
   absent. Runtime cleanup/refusal/lock behavior remains separately proved by rerunning the frozen
-  owner-local verifier matrix and a different-actor source Review after the owner move. Failure of
+  owner-local verifier matrix, every r1-r17 hidden mutation and deterministic raw-reference/source
+  Review after the owner move. Failure of
   any structural or behavior gate rejects C even when other tests pass.
 
 ## Verification
@@ -134,7 +135,7 @@ does not authorize an unlisted production path.
 ## Expected handoff
 
 Write [`handoffs/product-truth-candidate.md`](../handoffs/product-truth-candidate.md) with exactly one
-`omp-flow-product-truth-complexity-v8-report-v1` complete canonical JSON block. It must record the
+`omp-flow-product-truth-complexity-v9-report-v1` complete canonical JSON block. It must record the
 complete official invocation and deterministic evidence tuple, link the measurement Work and all
 five product Works plus accepted reviews, record immutable B0, B1 and C full SHAs, and include deterministic
 B0/B1/C JSON metrics, exact facade/table/connection/writer/import/cycle counters, focused/final gate

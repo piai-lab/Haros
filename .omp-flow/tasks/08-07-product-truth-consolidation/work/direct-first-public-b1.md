@@ -10,7 +10,7 @@ title: "Direct first-public rebuild and immutable unsplit B1"
 Implement the exact pre-release `inspect`/`apply` tool, direct generation-1 Product/service/Web
 creation and complete unshipped-compatibility deletion, while keeping Product responsibilities
 mechanically unsplit. Consume the different-actor-accepted immutable
-`product-truth-complexity-v8` mechanical meter and its accepted B0 snapshot as a read-only
+`product-truth-complexity-v9` narrow meter and its accepted B0 snapshot as a read-only
 predecessor, prove runtime behavior
 through owner-local capabilities and verifier-owned evidence, then produce one dedicated clean
 green B1 commit and record its full SHA and metrics without modifying the meter commit.
@@ -36,37 +36,35 @@ This Work realizes PRD A1-A9, the B1 half of A14, and the B1 preservation portio
 - [Failed immutable B1 Review](../reviews/direct-first-public-b1.md)
 - [V7 Occam repair calibration](../decisions/product-truth-complexity-v7-repair-calibration.md)
 - [Accepted v7 historical Review](../reviews/product-truth-complexity-v7.md)
-- [V8 predecessor-delta authority](../interfaces/product-truth-complexity-v8.md)
-- [Authoritative v8 meter Work](product-truth-complexity-v8.md) and its required
-  `handoffs/product-truth-complexity-v8.md`
+- [V9 stop-loss calibration](../decisions/product-truth-complexity-v9-stop-loss-calibration.md)
+- [V9 narrow authority](../interfaces/product-truth-complexity-v9.md)
+- [Authoritative v9 meter Work](product-truth-complexity-v9.md) and its required
+  `handoffs/product-truth-complexity-v9.md`
 
 ## Entry stop
 
-Do not assign or start this Work until `reviews/product-truth-complexity-v8.md` records a
+Do not assign or start this Work until `reviews/product-truth-complexity-v9.md` records a
 zero-finding different-actor `PASS` over the immutable meter-only commit. The B1 assignment must
 record that Review receipt only as correlation. Main/human orchestration must separately supply the
-accepted full meter evidence commit exactly once through v8's official `--predecessor-evidence`
-input. V8 reads exact handoff/Review/report blobs there, keeps the reviewed meter candidate SHA
+accepted full meter evidence commit exactly once through v9's official `--predecessor-evidence`
+input. V9 reads exact handoff/Review/report blobs there, keeps the reviewed meter candidate SHA
 distinct, and validates candidate→evidence→B1 first-parent ancestry, immutable later evidence blobs,
 exact digests and internally distinct declared implementer/reviewer actors. The later different-
 actor Review checks the recorded invocation against the official selection; neither receipt nor Git
 history authenticates identity. The assignment also records the accepted meter SHA/digests including the
-five Work fences, raw-effect syntax/dependency inventory, predecessor-delta authority,
-dependency/import closure, raw-effect owner authority and B1 verifier-universe digest, and use
+five Work fences, v9 authority, dependency/static-import closure, public capability-shape and B1
+verifier-universe digests, and use
 those bytes plus its accepted B0 report read-only. A branch, working tree, failed candidate or
 candidate-selected predecessor stops before comparison.
 
 ## In scope
 
-- Preserve all v1-v7 history plus accepted v8 meter/config/fixtures byte-for-byte. Run the accepted
-  v8 bytes against repaired B1 and its handoff-bound B0 predecessor; any Design/boundary/universe/
-  predecessor/dependency/ingress/count mismatch stops.
-- Encapsulate every Design-declared `b1TracedOwner` as a small non-leaking owner-local capability.
-  V8 requires its exact unique module-scope declaration kind + qualified identity + class; nested
-  same-name/default/class/constructor/overload/re-export forms and same-file named raw helpers are
-  not implicitly authorized. Anonymous callbacks inherit the nearest owner, aliases are classified
-  at each use owner, and every nontraced preserved site retains its predecessor structural identity/
-  order rather than only a tuple count. Raw scratch or
+- Preserve all v1-v8 history plus accepted v9 meter/config/fixtures byte-for-byte. Run the accepted
+  v9 bytes against repaired B1 and its handoff-bound B0 predecessor; any Design/boundary/evidence/
+  lifecycle/public-shape/dependency/static-graph/count mismatch stops.
+- Encapsulate every Design-declared owner as a small non-leaking owner-local capability. V9 checks
+  only the exact module declaration and exported public type/API shape; it does not classify local raw
+  expressions or per-use owners. Raw scratch or
   source paths usable for arbitrary I/O, SQLite/LevelDB handles, batches, lock tokens, release
   primitives, process handles and raw adapters must not cross its typed intent/sanitized-result
   boundary. Verifier composition injects the frozen port/event/fault/race/kill interfaces; no
@@ -275,15 +273,11 @@ does not authorize an unlisted production path.
   or aliases. `scripts/release-smoke.ts` has zero retired `.lane` caller/assertion residue and no
   other behavior change. There is no snapshot, converter, restore, legacy reader, dual-read or
   hidden copy.
-- The accepted v8 scan reports tool-only identities, required runtime sentinel identities,
-  forbidden compatibility and every raw-effect ingress separately. The finite syntax/dependency
-  universe, exact source-closure digests, unknown-dependency failure, accepted B0 predecessor,
-  exact outside-Work blob/import/raw/violation equality, selected-Work nontraced predecessor-site
-  deletion/preservation and traced module declaration-kind/qualified-identity/class containment,
-  dependency/import closure, non-export/non-escape shape, forbidden-loader absence and the unsplit
-  B1 Product owner are hard gates; no raw filesystem/SQLite/LevelDB/process/Web-Storage/ambient-loader
-  path may be newly classified or expanded outside the v8 authority.
-- The B1 verifier—not v8—proves behavior. Each exact traced owner uses non-leaking typed
+- The accepted v9 scan reports exact Work membership/lifecycle, official predecessor evidence,
+  outside presence/mode/blob equality, capability declaration/public non-leak shape,
+  dependency/static import-export closure, forbidden decidable edges and stable counts. It does not
+  inventory or classify raw expressions; passing it is not effect-safety evidence.
+- The B1 verifier—not v9—proves behavior. Each exact owner uses non-leaking typed
   intent/sanitized-result boundaries and verifier-owned ports/events. The checked-in generator
   recomputes the frozen owner/catalog digests and derives its dimensions only from the block,
   covering every one of its 87 exact states, each cardinality-derived actual operation ordinal's before/after fault,
@@ -294,8 +288,10 @@ does not authorize an unlisted production path.
 - A different actor at the immutable B1 SHA applies hidden single-change mutations for alternate
   raw ingress, cached/merged/wrong classifier resources, unreachable validation, skipped/swallowed
   cleanup, early/detached release, old-state fallthrough, zero-iteration guards, finally-replaced or
-  non-exact reset errors and missing kill convergence, then source-reviews every traced capability,
-  port composition, raw reference and generator. The real verifier or v8 structural gate must fail
+  non-exact reset errors and missing kill convergence, then source-reviews every capability, port
+  composition, raw reference and generator. It additionally applies every v8 r1-r17 family and
+  adjacent positive, and emits the deterministic raw root/import/loader/adapter inventory with zero
+  unexplained references. The real verifier, retained static/public-shape gate or Review must fail
   each mutation while adjacent real positives pass. It additionally removes one port operation,
   coarsens two operations, omits one fixture state, shrinks one resource cardinality, drops one
   terminal EOF ordinal, omits one race/kill convergence binding and downgrades one durable event; each must fail
@@ -307,7 +303,7 @@ does not authorize an unlisted production path.
   unclassified occurrence, including a newly discovered required production/test path outside this
   Work boundary, stops the Work for map repair.
 - The dedicated repaired B1 commit is clean and green, its full 40-hex SHA is recorded, and B0,
-  repaired B1 and later C use the already-frozen v8 instrument. All v1-v7 evidence remains immutable
+  repaired B1 and later C use the already-frozen v9 instrument. All v1-v8 evidence remains immutable
   and failed candidate `50deefc1...` is never reused as repaired B1. A structural scan at B1 reports zero
   production `ProductStateStore`/`ProductExecutionCoordinator` files, symbols, imports or facade
   extraction scaffolds. The evidence-recording commit is distinct from B1.
@@ -322,14 +318,13 @@ does not authorize an unlisted production path.
   write-trace matrices. Cover native Windows enumeration and POSIX `ps`, exact database-lock
   identity, SIGKILL-stale profile locks, intermediate ancestry and Package duplicate/tombstone
   convergence.
-- Run only the accepted v8 SHA/digests and handoff-bound B0 report for B1 frozen membership,
-  dependency/import closure, predecessor delta, raw-effect owner containment and structural/count
-  gates. Pass exact outside equality, selected-Work nontraced site preservation/deletion and the absent
-  pre-frozen future Store member; fail outside blob/deletion/materialization/import/raw/violation
-  drift, nested same-name/default/class/constructor/overload/re-export owners, wrong-use aliases,
-  new helper, inside nontraced growth/delete-plus-relocate/replacement/reorder, unlisted paths,
-  unresolved/computed imports, raw exports/handles/releases, forbidden/unknown loaders and
-  simultaneous B1/C Product owners. Fail overwritten/mismatched evidence blobs/report/receipt/
+- Run only the accepted v9 SHA/digests and handoff-bound B0 report for frozen membership, official
+  evidence, selected-Work lifecycle, outside presence/mode/blob equality, exact capability
+  declaration/public non-leak shape, dependency/static-import closure and structural/count gates.
+  Pass allowed member deletion/materialization and the absent pre-frozen future Store member; fail
+  outside lifecycle/blob drift, unlisted paths/new glob members, public raw-capability leaks,
+  dependency/lock/source-digest drift, unresolved/nonliteral static specifiers, forbidden static
+  edges and simultaneous B1/C Product owners. Fail overwritten/mismatched evidence blobs/report/receipt/
   declared actors, invalid/duplicate official evidence input, candidate/config/repository/report
   override, later-mutated or non-ancestor evidence, a sole candidate-forged Review/handoff at a
   different SHA and any use of `50deefc1...` as predecessor. A positive records the Main/human-
@@ -338,8 +333,13 @@ does not authorize an unlisted production path.
   Design block. It covers classifier copy validation/cleanup, Product/service lock and refusal, Web
   refusal/batch, target seals, Package transitions and recovery across every frozen operation
   fault/barrier/kill event, and rejects removed/coarsened/added/reordered/redefined operations. Run the
-  different-actor hidden mutation and source Review at the exact B1 SHA; meter success cannot
-  substitute for this Review and focused positives cannot substitute for manifest bijection.
+  different-actor hidden mutation and source Review at the exact B1 SHA. Apply every immutable v8
+  r1-r17 family, including direct global/wrapper/alias/destructure/namespace/assignment/RHS/nested/
+  selector/call-argument/callback forms and the four exact r17 callback-global cases, with adjacent
+  positives. Deterministically inventory every raw root/import/loader reference and production
+  adapter composition, record its canonical count/JCS digest and require zero unexplained
+  references. Meter success cannot substitute for this Review and focused positives cannot
+  substitute for manifest bijection.
 - Verify the dependency boundary: `scripts/package.json` has one exact non-range direct
   `classic-level` pin; the root lock's scripts importer and integrity closure match it; a filtered
   lock diff contains no unrelated refresh; and `bun install --frozen-lockfile` leaves `bun.lock`
@@ -348,9 +348,10 @@ does not authorize an unlisted production path.
 - Use process/import/network spies to prove `inspect` and `apply` do not launch Electron, use a
   real-profile Electron reader/writer or perform network access. Compare both historical v1 meter
   files byte-for-byte with commit `45df49a6afde882d32c1dcd00457c7787d227e4a`, compare rejected
-  v2/v3/v4/v5/v6/v7 evidence and v8 bytes/digests/B0 with the accepted meter handoff and remeasure
-  repaired B1 with those v8 bytes. Prove `bun.lock` is the pinned v8 `dependency` entry and excluded
-  from v8 production LOC/import totals. V1-v7 comparison is immutable historical provenance only
+  v2/v3/v4/v5/v6/v7 evidence and all v8 r1-r17 bytes/evidence with historical digests, compare v9
+  bytes/digests/B0 with the accepted meter handoff and remeasure repaired B1 with those v9 bytes.
+  Prove `bun.lock` is the pinned v9 dependency input and excluded from v9 production LOC/import
+  totals. V1-v8 comparison is immutable historical provenance only
   and cannot satisfy a B1 structural or behavior gate.
 - Verify the source-closure diff is exactly the `adapted-present` 1496→1494 and
   `adapted-removed` 774→776 count transfer plus its deterministic digest, caused only by the two
@@ -394,9 +395,9 @@ stronger primitive or retry.
 ## Expected handoff
 
 Write [`handoffs/direct-first-public-b1.md`](../handoffs/direct-first-public-b1.md) with exactly one
-`omp-flow-product-truth-complexity-v8-report-v1` complete canonical JSON block. It must link this
+`omp-flow-product-truth-complexity-v9-report-v1` complete canonical JSON block. It must link this
 Work, enumerate changed/deleted paths and reviewable commits, record the immutable B1 full SHA,
-accepted meter Review receipt/SHA plus Work/raw-effect/effect-ingress/B1-verifier/dependency/import/universe digests,
+accepted meter Review receipt/SHA plus Work/v9-authority/public-shape/B1-verifier/dependency/import/universe digests,
 the complete official `--ref`/`--predecessor-evidence` invocation and deterministic evidence tuple,
 clean-tree proof, complete accepted-B0/B1 metric output, verifier case-manifest/execution bijection,
 sanitized trace/fault/race/kill witnesses and different-actor hidden-mutation/source-Review receipt, exact

@@ -62,15 +62,20 @@ The accepted [v7 Review](reviews/product-truth-complexity-v7.md) freezes that hi
 812 raw ingress sites and 712 observational owner violations. The failed B1 measurement exposed a
 separate authority contradiction: v7 rejects every unchanged B0 violation for a non-B0 ref and does
 not consume declared owner symbols. The versioned
-[v8 authority](interfaces/product-truth-complexity-v8.md) repairs only that candidate comparison;
-it does not edit v7 or expand runtime/destructive scope.
+[v8 authority](interfaces/product-truth-complexity-v8.md) attempted to repair that candidate
+comparison, but immutable r1-r17 repeatedly expanded expression-combination grammar and ended in the
+callback/global stop-loss failure. The selected
+[v9 stop-loss calibration](decisions/product-truth-complexity-v9-stop-loss-calibration.md) therefore
+creates a new [narrow v9 authority](interfaces/product-truth-complexity-v9.md). It preserves every
+v1-v8 artifact and removes raw/global/alias/callback/RHS/per-use semantics from candidate
+measurement rather than patching or relabeling v8.
 
 ## Scope and source boundaries
 
 | Responsibility                 | Intended source boundary                                                                                             | Owns                                                                                                                | Must not own                                                              |
 | ------------------------------ | -------------------------------------------------------------------------------------------------------------------- | ------------------------------------------------------------------------------------------------------------------- | ------------------------------------------------------------------------- |
-| v7 historical checkpoint       | immutable `measure-complexity-v7.mjs`, config, fixtures, handoff and Review                                           | accepted B0 structure/grammar and observational raw inventory provenance                                                  | candidate raw-owner verdict or runtime behavior                           |
-| v8 measurement checkpoint      | `measure-complexity-v8.mjs`, `complexity-universe-v8.json` and structural fixtures                                   | frozen v7 authorities plus accepted-predecessor binding, exact owner symbols and per-Work raw deltas                      | runtime behavior, CFG/points-to semantics, direct rebuild or destructive state |
+| v7/v8 historical checkpoints   | immutable v7 accepted artifacts and failed v8 r1-r17 artifacts                                                        | B0 observational provenance, stop-loss evidence and reusable evidence/static-graph mechanisms                              | v9 candidate verdict, Product behavior or permission for raw effects      |
+| v9 measurement checkpoint      | future `measure-complexity-v9.mjs`, `complexity-universe-v9.json` and bounded structural fixtures                     | exact membership/evidence/lifecycle/public shape/static graph/LOC-import-SCC/stable Product counts                         | raw/global/alias/callback/RHS/per-use semantics, runtime behavior or destructive state |
 | direct rebuild tool            | `scripts/product-truth/**` plus focused tests                                                                        | inspect/apply orchestration, ephemeral inspection scratch, stdout result                                            | runtime startup, old-data decoding, state preservation, Package lifecycle |
 | first-public Product Store     | exact `apps/service/src/product/productStateStore.ts`; any private SQL file requires a new machine-boundary decision | Product database lifecycle, exact schema, 21 tables, all Product writes/transactions                                | Engine effects, Web/RPC, second connection                                |
 | execution coordinator          | `apps/service/src/product/productExecutionCoordinator.ts`                                                            | execution boundary, catalog memory, prepared handles, subscriptions, effect ordering                                | SQL, durable state machine, Engine wire                                   |
@@ -84,6 +89,13 @@ it does not edit v7 or expand runtime/destructive scope.
 The Store remains the one exact production file named above. Any additional private SQL production
 file requires a new Work-map and machine-boundary decision before implementation; readability does
 not authorize an out-of-set file. No new shared package is justified by this single consumer.
+
+All implementation follows the current Synara/repository reuse-first ladder: preserve the adopted
+or already-running mechanism, identify the exact OmniMind gap, wire or locally repair it, and replace
+only after recording the unique owner, a reproducible falsifier, why wiring/local repair cannot
+close the gap and why the replacement has lower lifecycle cost. An open Campaign claim is not a
+falsifier. V8 r1-r17 falsify only the expression-combination candidate meter, not the Product,
+Synara, v7 mechanical or v8 evidence-binding/static-graph mechanisms.
 
 ## Canonical state layout and first-public contracts
 
@@ -625,51 +637,32 @@ values, credentials, raw Engine bytes, endpoints or stored workspace paths.
 
 ## Complexity measurement and gates
 
-V1-v6 candidates/reports are immutable rejected evidence. V7 is immutable accepted evidence for
-B0 structure, the finite syntax/dependency universe and its observational inventory, but is not a
-candidate gate: `node scripts/product-truth/measure-complexity-v7.mjs --ref
-50deefc1f8e904805c5c990756f3048de33c7ad5` exits 1 on unchanged outside-B1 owners, and v7's
-path/class map ignores `b1TracedOwners.symbol`. The sole current candidate authority is
-`product-truth-complexity-v8`, owned by the [measurement-only v8 Work](work/product-truth-complexity-v8.md)
-and exact [v8 interface](interfaces/product-truth-complexity-v8.md). Its dedicated commit and B0
-report receive different-actor acceptance before B1. B1 names that Review receipt and immutable v8
-SHA/digests as correlation/evidence, while Main/human orchestration independently supplies the
-official full evidence commit to the v8 invocation; every v1-v8 meter byte remains read-only.
+V1-v6 candidates/reports are immutable rejected evidence. V7 remains immutable accepted B0
+observational provenance. V8 r1-r17 are immutable failed stop-loss evidence and cannot be repaired,
+relabelled or cited as candidate acceptance. The next candidate authority is
+`product-truth-complexity-v9`, owned by the [measurement-only v9 Work](work/product-truth-complexity-v9.md)
+and [v9 interface](interfaces/product-truth-complexity-v9.md), but it becomes implementable only
+after fresh different-actor QbD and recorded human PASS calibration. Its later immutable commit and
+B0 report require a separate zero-finding different-actor implementation Review before B1.
 
-V8 incorporates by digest v7's five strict machine-readable Work boundaries plus exactly one each of
-`omp-flow-raw-effect-universe-v1`, `omp-flow-effect-ingress-authority-v1` and
-`omp-flow-b1-verifier-universe-v1` from its accepted Design commit. Config pins the Design SHA,
-normalized blocks/digests, one-time glob expansion and exact membership; it cannot contribute
-paths, owners, operations, effect classes, syntax terminals, dependency dispositions or counter
-definitions. It additionally extracts exactly one
-`omp-flow-work-predecessor-delta-authority-v1` block from the v8 interface. The meter resolves
-static imports/exports against exact manifest/`bun.lock` bytes and
-records external package version, integrity/revision, export entry, ordered source closure and its
-digest. Design snapshots and candidate-selected path lists have no authority.
+V9 incorporates by digest exactly five strict `omp-flow-production-boundary-v1` blocks plus its one
+`omp-flow-product-truth-complexity-v9-authority-v1` block from the QbD-approved Design tree. Config
+pins the Design SHA, normalized blocks/digests, one-time glob expansion and exact membership; it
+cannot contribute paths, declaration identities, public-type dispositions, edges, counters,
+predecessor rows or expected verdicts. It resolves static import/export declarations against exact
+manifest/`bun.lock`/adopted-source bytes and records package locator, integrity/revision, export
+entry, ordered closure and digest. Candidate-selected snapshots or path lists have no authority.
 
-The raw-effect universe closes the exact Node, Bun, Deno, Electron, browser/OPFS, LevelDB, SQLite,
-process, worker, shell, dynamic-loader and native-addon syntax terminals. Dependency exports inherit
-the union of classes in their fully parsed reachable source closure and are keyed by exact locator,
-lock integrity/revision, resolved entry, ordered files and source-closure digest. Unavailable,
-unparsed, unresolved, computed, unknown native/shell/loader or digest-drifted dependencies fail;
-neither the meter nor config may call them pure. One exact selector vocabulary distinguishes dot,
-literal-computed and nonliteral-computed access. Unshadowed `globalThis`, `global`, `self` and
-`window` normalize through only static dot/literal selectors to a reserved root; shadowing,
-nonliteral selectors, repeated wrappers and unresolved chains fail. Neither meter nor config may
-invent another alias or normalization. V8 consumes owner-allocation symbols rather than reducing
-them to paths: every traced reference resolves to exactly one frozen module-scope declaration kind,
-qualified identity and class. Default exports, class members/constructors, overload groups,
-re-export aliases and nested same-name declarations have explicit fail-closed identities. Anonymous
-callbacks inherit the nearest owner but keep their structural path; every local/module raw alias is
-classified at each use owner. No named raw-using private helper is declared; adding one requires a
-prior Design/QbD change. Raw bindings, paths, database/Level handles, batches, release primitives
-and process handles cannot escape or be exported. At C the Product ingress moves literally from unsplit
-`ProductControlPlane#makeProductControlPlaneLayer` to `productStateStore#makeProductStateStore`;
-both may never coexist. These are structural owner facts, not path/lifetime proof.
+V9 checks exact capability module declaration identity, declaration kind and canonical exported
+public type/API closure. Only typed intent, stable capability methods and sanitized results/facts may
+cross the public boundary; raw paths usable for arbitrary I/O, SQLite/Level handles, raw statements
+or transaction callbacks, batches, lock tokens, release functions, process handles, raw adapters,
+loaders or native-addon capabilities are forbidden in that public declaration/type closure. This is
+an export/type-shape check only. It does not classify local raw uses or infer an expression owner.
 
-For each B1/C Work, v8 selects the exact row in the interface's machine predecessor table.
+For each B1/C Work, v9 selects the exact authored row in its Interface.
 Main/human orchestration selects one full evidence commit outside candidate/config/repository
-authority and supplies it exactly once as `--predecessor-evidence`. V8 rejects missing, duplicate,
+authority and supplies it exactly once as `--predecessor-evidence`. V9 rejects missing, duplicate,
 abbreviated, malformed and nonexistent values, and has no receipt, environment, report or Git-
 history inference/default path. At the supplied commit it reads the exact handoff, `PASS` Review and
 embedded report blobs and distinguishes that commit from the earlier reviewed Product candidate.
@@ -677,39 +670,32 @@ The Review/handoff candidate must equal `reviewedCandidateSha`; `evidenceCommitS
 exact blobs and descend from that candidate; the candidate under test must descend from the evidence
 commit on its first-parent chain; and both evidence blobs remain byte-identical on every later step.
 Exact report digest and declared actors agree internally, and implementer/reviewer strings differ.
-B1's table row binds accepted v8 evidence to B0; later rows bind the immediately preceding accepted
-Product candidate. Invalid/overridden input, later mutation, non-ancestor evidence, candidate choice,
+B1's row binds accepted v9 evidence to a freshly generated v9 B0 report at the immutable B0 SHA; it
+does not turn v7 inventory or v8 output into v9 acceptance. Later rows bind the immediately
+preceding accepted Product candidate. Invalid/overridden input, later mutation, non-ancestor evidence, candidate choice,
 working-tree reconstruction or failed Reviews stop before comparison. The meter emits the selected
 SHA plus exact blob/digest tuple deterministically; a later different actor checks the official
-invocation against the trust-root Decision and handoff. Receipt strings, Git history/author metadata
+invocation against the stop-loss Decision and handoff. Receipt strings, Git history/author metadata
 and declared actor strings authenticate no reviewer or human. No Harness/schema change occurs.
 Failed `50deefc1...` remains verification-only.
 
-The selected Work's exact `production` paths are the sole mutable raw-owner set. For a selected-Work
-nontraced path, the predecessor report freezes each raw site's qualified lexical ancestry, AST
-child-role path, raw-expression and containing-statement fingerprints, stable neighbor anchors and
-relative order. Candidate matching is exact and injective: deletion may leave a predecessor site
-unmatched, but relocation, replacement, reorder or a new occurrence cannot reuse its identity even
-when tuple counts remain equal. Every frozen member
-outside the selected Work preserves presence, executable mode and Git blob exactly, and its
-resolved import-edge, canonical ingress and canonical violation multisets must also equal the
-predecessor. This preserves the 93 unrelated B0 violation paths without approving them as owners.
+The selected Work's exact `production` members are the sole mutable set. V9 allows deletion or
+materialization only for a pre-frozen selected-Work member; an authored move is delete plus
+materialize with both endpoints in the same Work. Every member outside the selected Work preserves
+presence, executable mode and Git blob exactly. Unlisted paths, new glob matches, outside lifecycle
+change and undeclared moves fail. The candidate static graph is resolved afresh so deletion cannot
+leave a dangling or changed forbidden edge. V9 does not require outside raw/violation multiset
+equality and does not compare inside raw sites.
 
-V8 resolves the candidate graph afresh. Exact selected-Work members may be deleted, leaving zero
-candidate ingress, or materialized when pre-frozen in the boundary, in which case all raw ingress
-must be traced. Outside deletion/materialization, candidate-created glob membership and undeclared
-path moves fail. Every candidate importer is resolved again, so deletion cannot leave a dangling or
-altered outside edge. `scripts/check-source-closure.mjs` and all v1-v8 meter/config files and their
-evidence are measurement, not production, direct-tool or steady-state runtime.
+V9 deliberately stops at those mechanically decidable facts. It owns no raw/global terminal
+inventory, wrapper/selector normalization, alias propagation, callback inheritance, RHS/subtree
+classification or per-use owner verdict. It contains no CFG/ICFG, SSA, points-to, reachability,
+resource-token, Promise/task, Effect, catch/finally, scheduling or virtual-source semantic
+interpreter. `scripts/check-source-closure.mjs` and all meter/config/evidence files are measurement,
+not production, direct-tool or steady-state runtime.
 
-V8 deliberately stops at those mechanically decidable facts. It contains no general CFG/ICFG,
-SSA, points-to, resource-token, Promise/task, Effect, catch/finally, scheduling or virtual-source
-semantic interpreter and makes no runtime claim from source order, nesting, names or tokens. It
-reports exact structural inventories for forbidden compatibility, required sentinel identities and
-raw-effect ingress, while B1 owns whether those sentinels refuse and those effects are safe.
-
-B1 closes each destructive/runtime-state effect behind the exact owner-local capability declared in
-the immutable v7 allocation and enforced by v8's exact-symbol rule. The Design-owned verifier block freezes 10 owners, 146 exact operations, 34 race
+B1 closes each destructive/runtime-state effect behind an exact owner-local capability with
+owner-private injected real/verifier ports. The Design-owned verifier block freezes 10 owners, 146 exact operations, 34 race
 barriers and 29 durable kill boundaries together with operation signatures/atomicity, stage/resource
 events, before/after faults, outcomes and exclusions before B1 implementation. The same block
 freezes 87 exact per-owner fixture states, JCS/SHA-256 owner and catalog digests, resource/key/chunk
@@ -735,7 +721,20 @@ skipped cleanup, swallowed failure, early release, old-state fallthrough, altern
 removed/coarsened port, omitted fixture state, reduced cardinality, dropped terminal EOF, omitted
 race/kill convergence binding, downgraded durable event and non-exact errors, and performs
 source Review of capabilities, ports, all raw references and the case generator at the identical B1
-SHA. Reviewer expectations never enter meter/config or production.
+SHA. The mutation set includes every immutable v8 r1-r17 family—direct globals, wrappers, aliases,
+destructure/namespace, assignment/RHS, nested expressions, selector fallbacks, known non-inventory
+globals, direct/callback arguments and the four exact r17 callback-global forms—plus adjacent
+positives.
+
+At that same B1 SHA the different actor produces a deterministic inventory of every raw root, raw
+import, loader reference and production adapter composition. Canonical records contain path,
+reference kind, source-span digest, enclosing exported capability declaration (or `none`),
+real/verifier adapter disposition and sanitized rationale; the sorted count and JCS/SHA-256 digest
+must have zero unexplained references. The actor source-reviews every capability, public surface,
+private port, real/verifier composition and case generator. Reviewer expectations and inventory
+verdicts never enter v9 meter/config or production. If a bypass has no reproducible failure condition
+in the verifier, retained static/public-shape gate or Review, Route B is falsified and returns to
+Design rather than adding a v9 expression rule.
 
 The script still reports physical production/test/tool/measurement lines, exact imports/cycles,
 facade/table/database/writer/state-machine/gateway counters, legacy classifications and Native Host
@@ -749,8 +748,8 @@ Three points are required:
 - `B1`: a dedicated clean repaired commit where direct first-public behavior, presence-only runtime
   refusal and compatibility deletion are green but responsibility extraction has not begun. The
   failed `50deefc1f8e904805c5c990756f3048de33c7ad5` remains immutable rejected evidence and is not B1.
-  The repaired commit's full 40-hex SHA, v8 JSON output and complete runtime-verifier manifest/result
-  are recorded in the linked B1 handoff and its later evidence commit, without changing v1-v8
+  The repaired commit's full 40-hex SHA, v9 JSON output and complete runtime-verifier manifest/result
+  are recorded in the linked B1 handoff and its later evidence commit, without changing v1-v9
   meter/config bytes, before any Store/Coordinator
   split work is handed off. Because B1 is produced by that first implementation slice, this Design does not invent
   a pre-existing SHA; absence of the recorded immutable SHA is a mechanical stop for the split, not
@@ -760,8 +759,9 @@ Three points are required:
 The exact configured B0 SHA is observational for historical behavior and effect-ingress
 nonconformance so the baseline can be measured without being mislabeled green. Authority extraction,
 config integrity, membership, dependency resolution and report determinism remain hard at B0.
-Repaired B1/C hard-fail every v8 structural/predecessor-delta/ingress/count gate; the separate B1 runtime verifier and
-Review gate behavior. No other ref or working-tree state can select observational mode.
+Repaired B1/C hard-fail every v9 membership/evidence/lifecycle/public-shape/dependency/static-graph/
+count gate; the separate B1 runtime verifier and Review gate behavior. No other ref or working-tree
+state can select observational mode.
 
 All gates are conjunctive:
 
@@ -776,23 +776,23 @@ All gates are conjunctive:
    lifecycle writes = 0;
 7. facade RPC methods = 36; Product tables = 21; Product database = 1; Product durable state machine
    = 1; literal two-Engine gateway = 1;
-8. the exact dependency/import closure and raw-effect ingress authority match across every frozen
-   production/direct-tool member; outside-Work blobs/imports/raw/violations equal the accepted
-   predecessor and its evidence-commit ancestry, selected-Work nontraced sites only delete or retain
-   exact predecessor structural identities/order, traced module declaration kind/qualified ID/class is exact,
-   and alternate/outside owner ingress, forbidden/unknown loader,
-   exported raw capability/handle/release and simultaneous B1/C Product owner = 0; forbidden
+8. the exact dependency/static import-export closure matches across every frozen production member;
+   outside-Work presence/mode/blob equals the accepted predecessor; selected-Work lifecycle is exact;
+   capability declaration/public type shape is exact and exposes no raw handle/transaction/release/
+   adapter capability; every forbidden decidable static edge and simultaneous B1/C Product owner =
+   0; forbidden
    compatibility decoder/import/caller count = 0; required Product/service/Web sentinel identities
    and tool-only target identities remain exact structural inventories; no generic
    repository/manager/registry, per-Engine plane or migration platform exists; and the independent
-   B1 trace/fault/race/kill plus hidden-mutation/source Review has accepted runtime behavior at the
-   same immutable SHA.
+   B1 trace/fault/race/kill plus all r1-r17 hidden mutations and deterministic raw-reference/source
+   Review has accepted runtime behavior at the same immutable SHA.
 
 Failure of any gate rejects the candidate even if the largest file is shorter or tests pass.
 
-Execution starts with the bounded measurement-only v8 Work. Its immutable commit, predecessor-bound B0 report,
-handoff and different-actor `PASS` are a hard stop before (1) direct first-public creation plus
-compatibility deletion through a green B1 commit measured with those accepted v8 bytes and proved
+Execution starts only after a fresh different-actor QbD and recorded human PASS authorize the
+bounded measurement-only v9 Work. Its immutable commit, predecessor-bound B0 report, handoff and
+zero-finding different-actor implementation `PASS` are a hard stop before (1) direct first-public
+creation plus compatibility deletion through a green B1 commit measured with those accepted v9 bytes and proved
 by its separate frozen runtime verifier/Review, and (2) the
 responsibility split. B1 remains one indivisible production Work but no longer creates or freezes a
 meter. The responsibility split cannot start until the B1 handoff records the immutable B1 commit
@@ -813,15 +813,14 @@ bypass either stop.
   imports, not only filenames.
 - API/dependency checks enforce one Store writer/connection, exact core edges/no cycles, 36 facade
   methods, 21 tables, leaf boundary and zero Host lifecycle writes/hard-coded package stage.
-- `B0`/repaired-`B1`/`C` metrics use the identical frozen v8 script/config/universe; all v1-v7
+- `B0`/repaired-`B1`/`C` metrics use the identical frozen v9 script/config/authority; all v1-v8
   evidence remains unchanged. The immutable repaired-B1 commit SHA is checked in before split
-  handoff and all three v8 outputs are linked from the final handoff.
-- V8 structural fixtures preserve v7's Design-frozen static/dynamic/CommonJS/builtin/global ingress
-  spelling, including `Bun.spawnSync`, Bun Shell `$`, `process.dlopen`, `.node`, worker and browser
-  storage/OPFS forms, plus source-digest-keyed dependency exports and unknown-dependency failure,
-  namespace/destructure/alias/re-export, exact owner containment, exported raw bindings/handles/
-  releases, forbidden/computed loaders, dependency/export-map drift and the exclusive B1→C Product
-  owner move. They assert no cleanup, lock, scheduling, refusal or exception semantics.
+  handoff and all three v9 outputs are linked from the final handoff.
+- V9 structural fixtures cover only exact membership and path lifecycle, official evidence tuple/
+  blobs/ancestry, outside presence/mode/blob equality, capability declaration/public type non-leak,
+  manifest/lock/source digest closure, resolved static import/export edges, forbidden decidable
+  edges, LOC/import/SCC and stable Product counts. An explicit source/test negative rejects any
+  raw/global/alias/callback/RHS/per-use classifier in v9.
 - B1 owner-local capability fixtures inject verifier-owned ports and consume the exact Design block;
   they cover all applicable generated-home presence assignments, every declared operation/ordinal
   before/after fault, each declared race barrier and every declared durable abrupt-kill
@@ -829,14 +828,15 @@ bypass either stop.
   the full event prefix, terminal disposition, exact writes, post-state, exclusions and sanitized
   output. Hidden different-actor mutations include removed/coarsened operations, an omitted barrier
   and a downgraded durable event in addition to the v5/v6 counterexample families, against the real
-  verifier or v8 ingress gate, followed by same-SHA source Review. Separate negatives cover nested
-  same-name/default/class/constructor/overload/re-export owners, alias use-owner mismatch, anonymous
-  callback inheritance, new helpers, nontraced delete-plus-relocate/replacement/reorder, outside
-  blob/import/raw/violation drift, deletion/materialization/path move, missing/duplicate/abbreviated/
-  malformed/nonexistent official evidence input, config/repository/report override, later-mutated or
-  non-ancestor evidence, mismatched blobs/actors and a sole forged candidate Review/handoff at a SHA
-  other than the official input. A positive records an official full SHA and exact deterministic
-  tuple, then receives independent invocation verification without claiming identity authentication.
+  verifier, retained static/public-shape gate or same-SHA Review. They include every immutable v8
+  r1-r17 family and adjacent positive. The Review deterministically inventories every raw root,
+  import, loader reference and production adapter composition at the same SHA, records count plus
+  canonical digest and requires zero unexplained references. Separate v9 negatives cover exact
+  declaration/public-type leaks, selected-Work lifecycle, outside mode/blob drift, dependency/static
+  edge drift, missing/duplicate/abbreviated/malformed/nonexistent official evidence input,
+  config/repository/report override, later-mutated or non-ancestor evidence, mismatched blobs/actors
+  and a forged candidate Review/handoff at a SHA other than the official input. A positive records an
+  official full SHA and exact deterministic tuple without claiming identity authentication.
 
 ### Destructive fixture verification
 
@@ -921,21 +921,22 @@ runtime refusal sentinels separate from forbidden compatibility, per-target iden
 and a Windows quiescence adapter. The further red-team closure makes nested receipt decoding,
 nofollow/hash copies, intermediate-ancestor checks, database-lock identity, abrupt-kill stale-lock
 recovery, Package tombstone convergence and the complete real kill/race/write-trace matrix explicit.
-The accepted v7 meter remains immutable B0 structural evidence. V8 supersedes only its impossible
-candidate raw-owner verdict and remeasures B0, repaired B1 and C in one universe. It preserves the
-[v7 calibration](decisions/product-truth-complexity-v7-repair-calibration.md): only frozen
-structure, dependency/import closure, accepted-predecessor raw deltas, complexity and stable counts.
-Classifier cleanup, lock/refusal ordering, scheduling and completion behavior move to B1's
-non-leaking owner capabilities, verifier-owned trace/fault/race/kill matrix and hidden-mutation/
-source Review. This changes no runtime target, destructive scope or protected exclusion.
+The accepted v7 meter remains immutable B0 structural evidence. Failed v8 r1-r17 attempted only its
+candidate authority and remain immutable. Selected stop-loss Route B creates v9 for only membership, official evidence,
+selected-Work lifecycle, outside mode/blob equality, exact declaration/public non-leak shape,
+dependency/static edges and LOC/import/SCC/stable Product counts. Raw/global/alias/callback/RHS/
+per-use semantics move entirely to B1's owner-private injected ports, fixed real verifier, complete
+r1-r17 hidden mutations and deterministic same-SHA raw-reference/source Review. This changes no
+runtime target, destructive scope or protected exclusion.
 
 The older g50 literal Pi/OpenCode gateway sibling-zero observation remains closed by its same-SHA
 process evidence and is not part of this repair or the next audit absent new contradictory evidence.
 No migration, backup, restore, alias, wrapper or dual compatibility was introduced.
 
-The next workflow output is a new independent QbD audit of this repaired Design/v8 interface/Work map
-by a different actor. A fresh `PASS` with zero blocker and zero advisory authorizes only the
-measurement-only v8 Work. Its immutable handoff must then receive a zero-finding different-actor
-`PASS` before a new B1 production receipt is issued. Any proposed
+The next workflow output is a fresh different-actor QbD audit of this repaired Design, v9
+Decision/Interface/measurement Work, all five Product Works and the Work map. Only a subsequently
+recorded human PASS calibration may authorize the measurement-only v9 Work. Its immutable handoff
+must then receive a zero-finding different-actor implementation `PASS` before a new B1 production
+receipt is issued. Any proposed
 new destructive target or weakened exclusion returns for human calibration. This architect does not
 approve its own gate.
