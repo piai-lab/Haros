@@ -74,6 +74,10 @@ okf_version: "0.2"
   and [mechanical authority](interfaces/product-truth-complexity-v7.md) — sole current measurement
   design: frozen structure/dependency/import/effect-ingress/complexity gates only, with runtime
   behavior moved to B1 capabilities and verifier-owned evidence.
+- [Product-truth complexity v8 stop-loss synthesis](research/product-truth-complexity-v8-stop-loss.md)
+  — accepts immutable r17 `FAIL`, forbids r18 shape-by-shape repair and selects a new narrower
+  structural/authority meter while B1 capabilities, generated real verification, hidden mutation
+  and same-SHA source Review own raw/global/alias combination semantics.
 - [Product-truth complexity v7 measurement Work](work/product-truth-complexity-v7.md) — next bounded
   implementation only after a fresh different-actor zero-finding QbD.
 - [QbD 1 audit](qbd/design-audit.md) — independent critical findings that triggered the repair
