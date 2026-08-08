@@ -1,0 +1,6 @@
+{
+  "extends": "exact-predecessor-positive",
+  "virtualFiles": {
+    "scripts/product-truth/direct-first-public.ts": "function inspectDirectFirstPublic() { return null; }\ninterface inspectDirectFirstPublic { readonly marker: true; }\nexport { type inspectDirectFirstPublic };\nexport function applyDirectFirstPublic() { return null; }\n"
+  }
+}

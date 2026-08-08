@@ -1,0 +1,13 @@
+{
+  "extends": "product-evidence-positive",
+  "syntheticEvidenceMutation": {
+    "textReplacements": {
+      ".omp-flow/tasks/08-07-product-truth-consolidation/handoffs/product-truth-complexity-v9.md": [
+        [
+          "  \"format\": \"product-truth-complexity-v9\",",
+          "  \"format\": \"forged-first-value\",\n  \"format\": \"product-truth-complexity-v9\","
+        ]
+      ]
+    }
+  }
+}

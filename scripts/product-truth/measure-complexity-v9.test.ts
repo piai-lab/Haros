@@ -146,6 +146,8 @@ describe("product-truth complexity v9 finite hard families", () => {
     "selected-deletion-positive",
     "selected-materialization-positive",
     "declaration-direct-tools-positive",
+    "declaration-private-type-only-control-positive",
+    "declaration-value-export-type-control-positive",
     "declaration-web-private-positive",
   ])(
     "accepts an adjacent selected-Work lifecycle/declaration state %s",
@@ -166,6 +168,9 @@ describe("product-truth complexity v9 finite hard families", () => {
   it.each([
     ["selected-exact-move", "UNDECLARED_WORK_PATH_MOVE"],
     ["unlisted-path", "UNLISTED_PATH"],
+    ["unlisted-mts-path", "UNLISTED_PATH"],
+    ["unlisted-json-path", "UNLISTED_PATH"],
+    ["unlisted-existing-blob-drift", "OUTSIDE_WORK_BLOB_DRIFT"],
     ["outside-blob-drift", "OUTSIDE_WORK_BLOB_DRIFT"],
     ["outside-measurement-drift", "OUTSIDE_WORK_BLOB_DRIFT"],
     ["outside-mode-drift", "OUTSIDE_WORK_MODE_DRIFT"],
@@ -186,6 +191,16 @@ describe("product-truth complexity v9 finite hard families", () => {
     ["declaration-kind-drift", "direct-first-public-b1", "DECLARATION_DISPOSITION_DRIFT"],
     ["declaration-disposition-drift", "direct-first-public-b1", "DECLARATION_DISPOSITION_DRIFT"],
     ["declaration-web-export-drift", "direct-first-public-b1", "DECLARATION_DISPOSITION_DRIFT"],
+    [
+      "declaration-type-only-export-drift",
+      "direct-first-public-b1",
+      "DECLARATION_DISPOSITION_DRIFT",
+    ],
+    [
+      "declaration-specifier-type-only-export-drift",
+      "direct-first-public-b1",
+      "DECLARATION_DISPOSITION_DRIFT",
+    ],
     [
       "declaration-wrong-first-work",
       "native-host-package-root-binding",
@@ -220,6 +235,30 @@ describe("product-truth complexity v9 finite hard families", () => {
       expect(result.status).not.toBe(0);
       expect(result.stdout).toBe("");
       expect(result.stderr).toContain(diagnostic);
+    },
+    30_000,
+  );
+
+  it.each([
+    "product-evidence-duplicate-report-key",
+    "product-evidence-duplicate-nested-report-key",
+    "product-evidence-review-duplicate-report-key",
+  ])(
+    "rejects duplicate keys in predecessor evidence JSON %s",
+    (fixture) => {
+      const result = run([
+        "--fixture",
+        fixture,
+        "--work",
+        "direct-first-public-b1",
+        "--ref",
+        designHead,
+        "--predecessor-evidence",
+        evidence,
+      ]);
+      expect(result.status).not.toBe(0);
+      expect(result.stdout).toBe("");
+      expect(result.stderr).toContain("JSON_DUPLICATE_KEY");
     },
     30_000,
   );

@@ -1,0 +1,6 @@
+{
+  "extends": "exact-predecessor-positive",
+  "appendToFiles": {
+    "apps/desktop/src/appSnapIpc.ts": "\n"
+  }
+}

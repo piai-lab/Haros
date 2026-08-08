@@ -1,0 +1,6 @@
+{
+  "extends": "exact-predecessor-positive",
+  "virtualFiles": {
+    "apps/web/src/composerDraftStore.ts": "const readOrCreateComposerDraftEnvelope = () => null;\ninterface readOrCreateComposerDraftEnvelope { readonly marker: true; }\nexport type { readOrCreateComposerDraftEnvelope };\nconst writeAndVerifyComposerDraftEnvelope = () => null;\n"
+  }
+}

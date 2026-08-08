@@ -12,6 +12,14 @@ const REPORT_SCHEMA = "omp-flow-product-truth-complexity-v9-report-v1";
 const BUNDLE_ROOT = ".omp-flow/tasks/08-07-product-truth-consolidation";
 const INTERFACE_PATH = `${BUNDLE_ROOT}/interfaces/product-truth-complexity-v9.md`;
 const V7_BOOTSTRAP_EVIDENCE = "5632f63603e6ae8b3fb95f759c793a09b16a1e44";
+const historicalArtifactPath = (path) =>
+  /^scripts\/product-truth\/(?:measure-complexity(?:-v[2-8])?(?:\.test)?\.(?:mjs|ts)|complexity-universe-v[1-8]\.json)$/.test(
+    path,
+  ) ||
+  /^scripts\/product-truth\/fixtures\/complexity-v(?:[2-8])\//.test(path) ||
+  new RegExp(
+    `^${BUNDLE_ROOT.replaceAll(".", "\\.")}\/(?:handoffs|reviews)\/product-truth-complexity-v[2-8]\\.md$`,
+  ).test(path);
 const scriptPath = fileURLToPath(import.meta.url);
 const scriptDirectory = dirname(scriptPath);
 const repositoryRoot = resolve(scriptDirectory, "../..");
@@ -62,6 +70,10 @@ const assertNoDuplicateJsonKeys = (text, identity) => {
   };
   visit(parsed);
 };
+const parseJsonStrict = (text, identity) => {
+  assertNoDuplicateJsonKeys(text, identity);
+  return JSON.parse(text);
+};
 
 const parseArguments = (argv) => {
   const values = new Map();
@@ -99,8 +111,7 @@ const { commit, evidenceCommit, candidateWorkId, fixtureName } = parseArguments(
   process.argv.slice(2),
 );
 const configText = decodeUtf8(configBytes, "complexity-universe-v9.json");
-assertNoDuplicateJsonKeys(configText, "complexity-universe-v9.json");
-const config = JSON.parse(configText);
+const config = parseJsonStrict(configText, "complexity-universe-v9.json");
 if (config.format !== "product-truth-complexity-universe-v9")
   throw new Error("CONFIG_FORMAT_INVALID");
 const configKeys = [
@@ -140,8 +151,7 @@ const loadFixture = (name, stack = []) => {
   if (stack.includes(name)) throw new Error("FIXTURE_INHERITANCE_CYCLE");
   const path = resolve(scriptDirectory, "fixtures/complexity-v9", `${name}.json`);
   const text = readFileSync(path, "utf8");
-  assertNoDuplicateJsonKeys(text, path);
-  const own = JSON.parse(text);
+  const own = parseJsonStrict(text, path);
   if (!own.extends) return own;
   if (!/^[a-z0-9-]+$/.test(own.extends)) throw new Error("FIXTURE_PARENT_INVALID");
   const parent = loadFixture(own.extends, [...stack, name]);
@@ -280,7 +290,12 @@ applySnapshotMutation(evidence, fixture?.evidenceMutation, `evidence-${fixtureNa
 const extractMachineBlock = (text, tag, identity) => {
   const matches = [...text.matchAll(new RegExp("```" + tag + "\\n([\\s\\S]*?)\\n```", "g"))];
   if (matches.length !== 1) throw new Error(`MACHINE_BLOCK_CARDINALITY_INVALID:${identity}:${tag}`);
-  return JSON.parse(matches[0][1]);
+  return parseJsonStrict(matches[0][1], `${identity}:${tag}`);
+};
+const assertMachineBlockJsonKeys = (text, tag, identity) => {
+  const matches = [...text.matchAll(new RegExp("```" + tag + "\\n([\\s\\S]*?)\\n```", "g"))];
+  for (const [index, match] of matches.entries())
+    assertNoDuplicateJsonKeys(match[1], `${identity}:${tag}:${index + 1}`);
 };
 const setAtPointer = (root, pointer, action, value) => {
   const parts = pointer
@@ -472,12 +487,14 @@ const exportNames = (file) => {
   for (const statement of file.statements) {
     if (
       ts.isExportDeclaration(statement) &&
+      !statement.isTypeOnly &&
       !statement.moduleSpecifier &&
       statement.exportClause &&
       ts.isNamedExports(statement.exportClause)
     ) {
-      for (const element of statement.exportClause.elements)
-        names.add(element.propertyName?.text ?? element.name.text);
+      for (const element of statement.exportClause.elements) {
+        if (!element.isTypeOnly) names.add(element.propertyName?.text ?? element.name.text);
+      }
     }
     if (ts.isExportAssignment(statement) && ts.isIdentifier(statement.expression))
       names.add(statement.expression.text);
@@ -805,6 +822,8 @@ const validateProductEvidence = () => {
   const reviewBlobId = blobIdAt(evidence, row.reviewPath, "EVIDENCE_REVIEW_BLOB_MISSING");
   const handoffText = evidence.textAt(row.handoffPath);
   const reviewText = evidence.textAt(row.reviewPath);
+  assertMachineBlockJsonKeys(handoffText, REPORT_SCHEMA, row.handoffPath);
+  assertMachineBlockJsonKeys(reviewText, REPORT_SCHEMA, row.reviewPath);
   const handoff = parseFrontMatter(handoffText, row.handoffPath);
   const review = parseFrontMatter(reviewText, row.reviewPath);
   const predecessorWork = `../work/${row.predecessorWorkId}.md`;
@@ -950,18 +969,32 @@ function loadPristineBootstrapReport() {
   );
   if (result.status !== 0)
     throw new Error(`BOOTSTRAP_PREDECESSOR_REPORT_FAILED:${result.stderr.trim()}`);
-  return JSON.parse(result.stdout);
+  return parseJsonStrict(result.stdout, "bootstrap-predecessor-report");
 }
-const productionSourcePath = (path) => {
-  if (!sourceExtensions.has(extname(path)) || !/^(?:apps|packages|scripts)\//.test(path))
-    return false;
+const nonProductionWorkArtifactPath = (path) => {
   if (
     /(?:^|\/)(?:fixtures|test-fixtures|testSupport|snapshots|__snapshots__|e2e)(?:\/|$)/.test(
       path,
     ) ||
-    /(?:\.test|\.browser|\.spec)\.[cm]?[jt]sx?$/.test(path)
+    /(?:\.test|\.browser|\.spec)\.[^/]+$/.test(path)
   )
+    return true;
+  if (path === `${BUNDLE_ROOT}/handoffs/${candidateWorkId}.md`) return true;
+  return (
+    historicalArtifactPath(path) ||
+    path === "scripts/product-truth/measure-complexity-v9.mjs" ||
+    path === "scripts/product-truth/complexity-universe-v9.json" ||
+    path === "scripts/product-truth/measure-complexity-v9.test.ts"
+  );
+};
+const productionOrDirectToolPath = (path) => {
+  if (nonProductionWorkArtifactPath(path)) return false;
+  return path === "package.json" || /^(?:apps|packages|scripts)\//.test(path);
+};
+const productionSourcePath = (path) => {
+  if (!sourceExtensions.has(extname(path)) || !/^(?:apps|packages|scripts)\//.test(path))
     return false;
+  if (nonProductionWorkArtifactPath(path)) return false;
   return (
     !/^scripts\/product-truth\/(?:measure-complexity(?:-v\d+)?\.mjs|fixtures\/)/.test(path) &&
     path !== "scripts/check-source-closure.mjs"
@@ -1059,17 +1092,25 @@ if (comparisonFixture || evidenceBinding.kind === "accepted-product-predecessor"
     }
   }
 
-  const beforeProduction = new Set(
-    [...predecessorSnapshot.tree.keys()].filter(productionSourcePath),
-  );
-  const afterProduction = new Set([...candidate.tree.keys()].filter(productionSourcePath));
-  for (const path of afterProduction) {
-    if (!beforeProduction.has(path) && !selectedPaths.has(path))
-      throw new Error(`UNLISTED_PATH:${path}`);
-  }
-  for (const path of beforeProduction) {
-    if (!afterProduction.has(path) && !selectedPaths.has(path))
-      throw new Error(`OUTSIDE_WORK_DELETION:${path}`);
+  const changedPaths = sortedStrings(
+    new Set([...predecessorSnapshot.tree.keys(), ...candidate.tree.keys()]),
+  ).filter((path) => {
+    const before = predecessorSnapshot.tree.get(path) ?? null;
+    const after = candidate.tree.get(path) ?? null;
+    return (
+      before?.mode !== after?.mode ||
+      before?.type !== after?.type ||
+      before?.object !== after?.object
+    );
+  });
+  for (const path of changedPaths) {
+    if (selectedPaths.has(path) || !productionOrDirectToolPath(path)) continue;
+    const before = predecessorSnapshot.tree.get(path) ?? null;
+    const after = candidate.tree.get(path) ?? null;
+    if (!before) throw new Error(`UNLISTED_PATH:${path}`);
+    if (!after) throw new Error(`OUTSIDE_WORK_DELETION:${path}`);
+    if (before.mode !== after.mode) throw new Error(`OUTSIDE_WORK_MODE_DRIFT:${path}`);
+    throw new Error(`OUTSIDE_WORK_BLOB_DRIFT:${path}`);
   }
 
   const deleted = [...selectedPaths].filter(
@@ -1206,14 +1247,6 @@ if (!officialB0 && !comparisonFixture && !fixtureUsesBootstrapCandidate) {
     throw new Error(`DEPENDENCY_SOURCE_IDENTITY_UNAVAILABLE:${unavailable[0].package}`);
 }
 
-const historicalArtifactPath = (path) =>
-  /^scripts\/product-truth\/(?:measure-complexity(?:-v[2-8])?(?:\.test)?\.(?:mjs|ts)|complexity-universe-v[1-8]\.json)$/.test(
-    path,
-  ) ||
-  /^scripts\/product-truth\/fixtures\/complexity-v(?:[2-8])\//.test(path) ||
-  new RegExp(
-    `^${BUNDLE_ROOT.replaceAll(".", "\\.")}\/(?:handoffs|reviews)\/product-truth-complexity-v[2-8]\\.md$`,
-  ).test(path);
 const historicalRecords = sortByJcsBytes(
   [...accepted.tree.keys()].filter(historicalArtifactPath).map((path) => {
     const entry = accepted.tree.get(path);
@@ -1245,7 +1278,8 @@ const physicalLines = (text) =>
 const candidateManifestPaths = sortedStrings([...candidate.tree.keys()].filter(manifestPath));
 const workspaceRoots = new Map();
 for (const path of candidateManifestPaths) {
-  const manifest = JSON.parse(candidate.textAt(path));
+  const manifestText = candidate.textAt(path);
+  const manifest = parseJsonStrict(manifestText, path);
   if (typeof manifest.name === "string")
     workspaceRoots.set(manifest.name, { directory: posix.dirname(path), manifest });
 }
