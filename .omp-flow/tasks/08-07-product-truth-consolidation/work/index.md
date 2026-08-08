@@ -223,4 +223,4 @@ enumeration, zero unexplained references and full r1-r17 manifest with adjacent 
 must reach 0 blocker and 0 advisory. Only a recorded human PASS calibration after it authorizes the measurement-
 only v9 assignment. Its immutable handoff then needs a zero-finding different-actor implementation
 `PASS` before a new B1 production receipt. The next QbD output is
-`../qbd/product-truth-complexity-v9-audit.md`.
+`../qbd/product-truth-complexity-v9-final-audit.md`.

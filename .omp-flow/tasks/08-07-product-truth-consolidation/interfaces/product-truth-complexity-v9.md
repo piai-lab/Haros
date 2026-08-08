@@ -56,8 +56,8 @@ runtime safety. Those are explicit B1 acceptance obligations below.
       { "path": "scripts/product-truth/direct-first-public.ts", "symbol": "applyDirectFirstPublic", "declarationKind": "named-function-declaration", "b0Presence": "absent", "dispositionWhenPresent": "exported", "firstMaterializationWork": "direct-first-public-b1" },
       { "path": "apps/service/src/product/ProductControlPlane.ts", "symbol": "makeProductControlPlaneLayer", "declarationKind": "named-function-declaration", "b0Presence": "present", "dispositionWhenPresent": "exported", "firstMaterializationWork": null },
       { "path": "apps/service/src/persistence/Layers/Sqlite.ts", "symbol": "makeSqlitePersistenceLive", "declarationKind": "const-arrow-function", "b0Presence": "present", "dispositionWhenPresent": "exported", "firstMaterializationWork": null },
-      { "path": "apps/web/src/composerDraftStore.ts", "symbol": "readOrCreateComposerDraftEnvelope", "declarationKind": "const-arrow-function", "b0Presence": "present", "dispositionWhenPresent": "module-private", "firstMaterializationWork": null },
-      { "path": "apps/web/src/composerDraftStore.ts", "symbol": "writeAndVerifyComposerDraftEnvelope", "declarationKind": "const-arrow-function", "b0Presence": "present", "dispositionWhenPresent": "module-private", "firstMaterializationWork": null },
+      { "path": "apps/web/src/composerDraftStore.ts", "symbol": "readOrCreateComposerDraftEnvelope", "declarationKind": "const-arrow-function", "b0Presence": "absent", "dispositionWhenPresent": "module-private", "firstMaterializationWork": "direct-first-public-b1" },
+      { "path": "apps/web/src/composerDraftStore.ts", "symbol": "writeAndVerifyComposerDraftEnvelope", "declarationKind": "const-arrow-function", "b0Presence": "absent", "dispositionWhenPresent": "module-private", "firstMaterializationWork": "direct-first-public-b1" },
       { "path": "apps/service/src/product/productStateStore.ts", "symbol": "makeProductStateStore", "declarationKind": "named-function-declaration", "b0Presence": "absent", "dispositionWhenPresent": "exported", "firstMaterializationWork": "product-state-store" }
     ],
     "hardRule": "exact path, symbol, declaration kind, phase presence and exported-or-module-private disposition only",
@@ -83,7 +83,7 @@ runtime safety. Those are explicit B1 acceptance obligations below.
   "literalImportExportGraph": {
     "recordSchema": ["form", "source", "specifier"],
     "forms": ["import-declaration", "export-declaration"],
-    "multiset": "retain every literal record including duplicates; sort by JCS record bytes",
+    "multiset": "retain every literal record including duplicates; sort lexicographically by raw JCS UTF-8 record bytes",
     "sourceUniverse": "exact union of the five Design-frozen production boundaries",
     "sourceUniverseMemberCount": 69,
     "sourceUniverseJcsSha256": "f771ad1803e65a65e6077687d0f923d41c826d17cbcfdfb11dee73d1b3787caa",
@@ -91,7 +91,7 @@ runtime safety. Those are explicit B1 acceptance obligations below.
       "commit": "7582170a277477ba0d71cf70f53e4e0836874a72",
       "presentParsedSourceCount": 56,
       "recordCount": 578,
-      "recordMultisetJcsSha256": "fa1f5d5727398fb897fb15481253974328a6276031db437530ecd0600909fbf2"
+      "recordMultisetJcsSha256": "9594b2c2d1562d9d546ece89e699156d1e6708b0817ac0a2bf5b62ea6ba66869"
     },
     "designAuthoredExactAllowedDeltas": [],
     "hardGateEnabled": false,
@@ -174,11 +174,12 @@ v7/v8 reports never become v9 acceptance.
 ## Declaration and graph interpretation
 
 The declaration gate proves only identity, phase presence and export/private disposition. All six
-direct-tool declarations and the future Store declaration are explicitly absent at B0; their first
-materialization cannot be learned from candidate bytes. The two Web helpers are deliberately
-module-private. No current declaration has an independently pinned emitted signature, so v9 cannot
-turn a candidate-generated `.d.ts`, structural type interpretation or forbidden-type vocabulary
-into a hard expected value.
+direct-tool declarations, both Web helpers and the future Store declaration are explicitly absent
+at B0. The two Web helpers first materialize as module-private declarations only in
+`direct-first-public-b1`; none of these first-materialization facts can be learned from candidate,
+meter or config bytes. No current declaration has an independently pinned emitted signature, so v9
+cannot turn a candidate-generated `.d.ts`, structural type interpretation or forbidden-type
+vocabulary into a hard expected value.
 
 V9 emits the full literal import/export multiset and its digest. Because Design has not supplied a
 complete exact allowed-delta/disposition table, every candidate graph comparison, SCC and named
