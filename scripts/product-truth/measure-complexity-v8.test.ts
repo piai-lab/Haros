@@ -199,6 +199,8 @@ describe("product-truth-complexity-v8 qualified declarations", () => {
     "traced-global-wrapper-math-positive",
     "traced-global-wrapper-json-positive",
     "traced-global-wrapper-console-alias-positive",
+    "traced-global-wrapper-console-raw-free-argument-positive",
+    "traced-global-wrapper-console-known-argument-positive",
     "traced-assignment-rhs-raw-free-wrapper-positive",
     "traced-assignment-rhs-raw-free-conditional-positive",
   ])("accepts exact owner declaration and lexical-use positive %s", (fixture) => {
@@ -302,6 +304,16 @@ describe("product-truth-complexity-v8 qualified declarations", () => {
 
   it("rejects an unknown alias member under a known non-inventory global", () => {
     const result = runFixture("traced-global-wrapper-console-unknown-alias", "direct-first-public-b1");
+    expect(result.status).not.toBe(0);
+    expect(result.stdout).toBe("");
+    expect(result.stderr).toContain("RAW_ALIAS_WRITE_UNKNOWN");
+  }, 30_000);
+
+  it.each([
+    "traced-global-wrapper-console-raw-argument",
+    "traced-global-wrapper-console-unknown-argument",
+  ])("rejects a raw or unresolved subtree in a candidate-new direct argument %s", (fixture) => {
+    const result = runFixture(fixture, "direct-first-public-b1");
     expect(result.status).not.toBe(0);
     expect(result.stdout).toBe("");
     expect(result.stderr).toContain("RAW_ALIAS_WRITE_UNKNOWN");

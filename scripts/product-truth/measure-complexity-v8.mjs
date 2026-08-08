@@ -1480,8 +1480,7 @@ for (const path of candidateGraph.paths.filter((candidatePath) => rawInventoryPa
           const key = aliasInitializerKey(node, sourceFile);
           predecessorAliasInitializerCounts.set(key, (predecessorAliasInitializerCounts.get(key) ?? 0) + 1);
         }
-        if ((ts.isCallExpression(node) || ts.isNewExpression(node)) &&
-            (ts.isPropertyAccessExpression(node.expression) || ts.isElementAccessExpression(node.expression))) {
+        if (ts.isCallExpression(node) || ts.isNewExpression(node)) {
           const key = directUseKey(node, sourceFile);
           predecessorDirectUseCounts.set(key, (predecessorDirectUseCounts.get(key) ?? 0) + 1);
         }
@@ -1507,8 +1506,7 @@ for (const path of candidateGraph.paths.filter((candidatePath) => rawInventoryPa
           if (remaining > 0) predecessorAliasInitializerCounts.set(key, remaining - 1);
           else aliasInitializerComparisonNodes.add(node);
         }
-        if ((ts.isCallExpression(node) || ts.isNewExpression(node)) &&
-            (ts.isPropertyAccessExpression(node.expression) || ts.isElementAccessExpression(node.expression))) {
+        if (ts.isCallExpression(node) || ts.isNewExpression(node)) {
           const key = directUseKey(node, file);
           const remaining = predecessorDirectUseCounts.get(key) ?? 0;
           if (remaining > 0) predecessorDirectUseCounts.set(key, remaining - 1);
@@ -2188,6 +2186,19 @@ for (const path of candidateGraph.paths.filter((candidatePath) => rawInventoryPa
   }
   assignmentScopedIdentityForExpression = identityForExpression;
   propagateRawAssignments();
+  const directExpressionContainsRaw = (expression) => {
+    if (ts.isFunctionLike(expression) || ts.isClassExpression(expression) || ts.isTypeNode(expression)) return false;
+    if (isFiniteRawExpressionAtom(expression)) {
+      const identity = identityForExpressionAtom(expression, true) ?? rawIdentityForAssignmentAtom(expression);
+      if (identity?.kind === "known-noninventory") return false;
+      if (identity) return true;
+    }
+    let containsRaw = false;
+    ts.forEachChild(expression, (child) => {
+      if (!containsRaw && directExpressionContainsRaw(child)) containsRaw = true;
+    });
+    return containsRaw;
+  };
   const aliasWriteViolations = new Set();
   const rejectAliasWrite = (write, detail) => {
     const key = `${write.node.pos}\0${write.name}`;
@@ -2377,6 +2388,16 @@ for (const path of candidateGraph.paths.filter((candidatePath) => rawInventoryPa
       const identity = resolveScopedAlias(node.expression);
       if (identity?.kind === "terminal" && !scopedAliasDeclarations.has(node.expression)) {
         record(node.expression, identity, identity.form ?? "destructure-binding");
+      }
+    }
+    if ((ts.isCallExpression(node) || ts.isNewExpression(node)) && directUseComparisonNodes.has(node)) {
+      for (const argument of node.arguments ?? []) {
+        if (directExpressionContainsRaw(argument)) {
+          addRawPatternViolation("RAW_ALIAS_WRITE_UNKNOWN", argument, {
+            reason: "unsupported-raw-direct-expression-child",
+            childKind: ts.SyntaxKind[argument.kind],
+          });
+        }
       }
     }
     if ((ts.isCallExpression(node) || ts.isNewExpression(node)) &&
