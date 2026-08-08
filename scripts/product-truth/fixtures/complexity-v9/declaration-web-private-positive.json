@@ -1,6 +1,6 @@
 {
   "extends": "exact-predecessor-positive",
   "appendToFiles": {
-    "apps/web/src/composerDraftStore.ts": "\nconst readOrCreateComposerDraftEnvelope = () => null;\nconst writeAndVerifyComposerDraftEnvelope = () => null;\n"
+    "apps/web/src/composerDraftStore.ts": "\n// Adjacent selected-Work edit preserves both approved private declarations.\n"
   }
 }

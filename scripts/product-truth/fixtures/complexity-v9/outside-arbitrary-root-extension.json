@@ -1,0 +1,6 @@
+{
+  "extends": "exact-predecessor-positive",
+  "virtualFiles": {
+    "reviewer-arbitrary-root/rejected.member.xyz": "rejected\n"
+  }
+}

@@ -1,0 +1,8 @@
+{
+  "authorityMutation": {
+    "block": "verification",
+    "pointer": "/verificationPathRows/0/purpose",
+    "action": "replace",
+    "value": "candidate-selected-purpose"
+  }
+}

@@ -1,0 +1,9 @@
+{
+  "extends": "exact-predecessor-positive",
+  "virtualFiles": {
+    "scripts/product-truth/first-public-capability-verifier.ts": "export {};\n"
+  },
+  "modeChanges": {
+    "scripts/product-truth/first-public-capability-verifier.ts": "100755"
+  }
+}

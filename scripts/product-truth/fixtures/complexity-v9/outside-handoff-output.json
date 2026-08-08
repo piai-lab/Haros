@@ -1,0 +1,6 @@
+{
+  "extends": "exact-predecessor-positive",
+  "appendToFiles": {
+    ".omp-flow/tasks/08-07-product-truth-consolidation/handoffs/direct-first-public-b1.md": "\nrejected candidate output drift\n"
+  }
+}

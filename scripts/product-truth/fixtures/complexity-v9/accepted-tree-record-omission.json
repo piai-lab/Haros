@@ -1,0 +1,4 @@
+{
+  "extends": "exact-predecessor-positive",
+  "removeFiles": ["assets/packages/pi-todo-0.81.1/todo.ts"]
+}

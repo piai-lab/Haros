@@ -1,6 +1,6 @@
 {
   "extends": "exact-predecessor-positive",
   "appendToFiles": {
-    "apps/service/package.json": "\n"
+    "assets/packages/pi-todo-0.81.1/manifest.json": "\n"
   }
 }

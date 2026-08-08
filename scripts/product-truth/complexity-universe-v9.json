@@ -1,13 +1,16 @@
 {
   "format": "product-truth-complexity-universe-v9",
-  "acceptedDesignCommit": "f110fb66006768074ca192bb94024632d16c09dd",
+  "authorityDesignCommit": "d2e7bab77405f32fed81f6c29247eca9cad6702c",
+  "approvedStateCommit": "f110fb66006768074ca192bb94024632d16c09dd",
   "baselineCommit": "7582170a277477ba0d71cf70f53e4e0836874a72",
-  "authoritySha256": "b8ffbdb58b17322d1e35835071c3458eba51c3913b0d05de50162219ae803920",
+  "authoritySha256": "f3fdbbcd7547c6bbf4d5990358d7a3a2cffac7497c16f725c73aaa57b794f95d",
+  "verificationRowsJcsSha256": "c291688e134e1ea91b0905c2b8709634ecd0e5fc1cf616a0b5a656e0d6978326",
+  "boundaryStateRecordsRawJcsSha256": "c7790b3db167484ffaa85e4a3ad1430c29f2f7f05e952441b39ff6e08b862c82",
+  "boundaryAndVerificationRecordsRawJcsSha256": "2d189676ed940fa9299504a7e0fc47aa91f5c7eced44c115be21340d83df3ac9",
+  "acceptedTreeInputsJcsSha256": "176c47725b129d28044933c009391b9104ae7bad69aed048eb437db07a6d0faf",
+  "acceptedTreeRecordCount": 6321,
+  "acceptedTreeRecordsRawJcsSha256": "6687319b0ea58643812cee677fad03b3152e8bfcb31486ddb368bc1b3cf2f599",
   "dependencyAuthoritySha256": "35ce67d0e9d09d48cb8f4fe8c8bbc49a1c70b69c2b5a175c44c1c353ca8c7849",
-  "dependencyClosureSha256": {
-    "baseline": "b3989b0c513f830a18b6803c85455acada90b287702370207aaa3e3427f710f6",
-    "accepted": "23336380434c431dca5236593f08ae276b790014a35a273ff2ad26eb44795e60"
-  },
   "historicalArtifactsSha256": "a23165cc1330a12e69003a7f29177a229ce56a451cd3db20341bdd6f745854eb",
   "workBoundarySha256": {
     "direct-first-public-b1": "0e1551ebcdb8a47310e3ef56f9f7558ada452f5590d166551296eb359dd8faae",

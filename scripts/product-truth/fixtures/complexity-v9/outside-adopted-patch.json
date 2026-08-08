@@ -1,0 +1,6 @@
+{
+  "extends": "exact-predecessor-positive",
+  "appendToFiles": {
+    "patches/@effect%2Fplatform-node-shared@8881a9b.patch": "\n# rejected adopted patch drift\n"
+  }
+}

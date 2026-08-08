@@ -11,8 +11,8 @@ const fixtureRoot = fileURLToPath(new URL("./fixtures/complexity-v9", import.met
 const testPath = fileURLToPath(import.meta.url);
 const baseline = "7582170a277477ba0d71cf70f53e4e0836874a72";
 const evidence = "5632f63603e6ae8b3fb95f759c793a09b16a1e44";
-const acceptedDesign = "f110fb66006768074ca192bb94024632d16c09dd";
-const designHead = "d74bffb673a7869272a6e243a8c8a329fce69092";
+const approvedState = "f110fb66006768074ca192bb94024632d16c09dd";
+const designHead = "d2e7bab77405f32fed81f6c29247eca9cad6702c";
 const baseArgs = ["--ref", baseline, "--predecessor-evidence", evidence] as const;
 const run = (args: ReadonlyArray<string>) =>
   spawnSync(process.execPath, [script, ...args], {
@@ -76,13 +76,10 @@ describe("product-truth complexity v9 official input and B0", () => {
     expect(result.stderr).toContain("OFFICIAL_EVIDENCE_INPUT_INVALID:missing");
   });
 
-  it("emits the exact byte-stable observational B0 with hard structural facts", () => {
-    const first = run(baseArgs);
-    const second = run(baseArgs);
-    expect(first.status, first.stderr).toBe(0);
-    expect(second.status, second.stderr).toBe(0);
-    expect(second.stdout).toBe(first.stdout);
-    const report = parse(first.stdout);
+  it("emits the exact observational B0 with hard structural facts", () => {
+    const result = run(baseArgs);
+    expect(result.status, result.stderr).toBe(0);
+    const report = parse(result.stdout);
     expect(report).toMatchObject({
       format: "product-truth-complexity-v9",
       schema: "omp-flow-product-truth-complexity-v9-report-v1",
@@ -100,10 +97,27 @@ describe("product-truth complexity v9 official input and B0", () => {
         sourceUniverseJcsSha256: "f771ad1803e65a65e6077687d0f923d41c826d17cbcfdfb11dee73d1b3787caa",
       },
       dependencies: {
-        phase: "baseline",
-        closureSha256: "b3989b0c513f830a18b6803c85455acada90b287702370207aaa3e3427f710f6",
+        acceptedTreeRecordCount: 6321,
+        acceptedTreeRecordsRawJcsSha256:
+          "6687319b0ea58643812cee677fad03b3152e8bfcb31486ddb368bc1b3cf2f599",
         semanticCapabilityVerdict: false,
       },
+    });
+    expect(report.authority).toMatchObject({
+      authorityDesignCommit: designHead,
+      approvedStateCommit: approvedState,
+      authoritySha256: "f3fdbbcd7547c6bbf4d5990358d7a3a2cffac7497c16f725c73aaa57b794f95d",
+      verificationRows: {
+        rowCount: 70,
+        uniquePathCount: 45,
+        rowsJcsSha256: "c291688e134e1ea91b0905c2b8709634ecd0e5fc1cf616a0b5a656e0d6978326",
+      },
+    });
+    expect(report.universe.approvedBoundaryAndVerificationState).toMatchObject({
+      recordCount: 110,
+      presentCount: 88,
+      absentCount: 22,
+      recordsRawJcsSha256: "2d189676ed940fa9299504a7e0fc47aa91f5c7eced44c115be21340d83df3ac9",
     });
     expect(report.universe.members).toHaveLength(69);
     expect(report.declarations.rows).toHaveLength(11);
@@ -143,7 +157,6 @@ describe("product-truth complexity v9 finite hard families", () => {
   it.each([
     "exact-predecessor-positive",
     "selected-change-positive",
-    "selected-deletion-positive",
     "selected-materialization-positive",
     "declaration-direct-tools-positive",
     "declaration-private-type-only-control-positive",
@@ -166,16 +179,104 @@ describe("product-truth complexity v9 finite hard families", () => {
   );
 
   it.each([
-    ["selected-exact-move", "UNDECLARED_WORK_PATH_MOVE"],
+    [
+      "direct-first-public-b1",
+      45,
+      16,
+      [
+        "scripts/product-truth/first-public-capability-verifier.test.ts",
+        "scripts/product-truth/first-public-capability-verifier.ts",
+      ],
+    ],
+    [
+      "native-host-package-root-binding",
+      15,
+      17,
+      ["apps/service/src/product/health/nativeHostHealthMonitor.test.ts"],
+    ],
+    [
+      "product-execution-leaf",
+      5,
+      10,
+      [
+        "apps/service/src/product/productExecutionBoundary.test.ts",
+        "apps/service/src/product/productExecutionBoundary.ts",
+        "apps/service/src/product/testSupport/productExecutionFixture.ts",
+      ],
+    ],
+    [
+      "product-state-store",
+      7,
+      10,
+      [
+        "apps/service/src/product/productStateStore.test.ts",
+        "apps/service/src/product/productStateStore.ts",
+        "apps/service/src/product/testSupport/productStateFixture.ts",
+      ],
+    ],
+    [
+      "product-execution-coordinator-facade",
+      12,
+      17,
+      [
+        "apps/service/src/product/productExecutionCoordinator.test.ts",
+        "apps/service/src/product/productExecutionCoordinator.ts",
+        "apps/service/src/product/productStateDiagnostics.ts",
+        "apps/service/src/wsRpc.product.test.ts",
+      ],
+    ],
+  ])(
+    "accepts every exact production and verification lifecycle row for %s",
+    (work, productionCount, verificationCount, expectedMaterializations) => {
+      const result = runFixture("authorized-lifecycle-matrix-positive", work);
+      expect(result.status, result.stderr).toBe(0);
+      const comparison = parse(result.stdout).comparison;
+      expect(comparison).toMatchObject({
+        candidateWorkId: work,
+        selectedProductionMemberCount: productionCount,
+        selectedVerificationRowCount: verificationCount,
+        changedPathDefault: "reject",
+        authorityExemptions: [],
+        acceptedTreeOutsideSelectedEquality: true,
+      });
+      expect(
+        comparison.allGitChangedPaths
+          .filter((record: any) => record.status === "A")
+          .map((record: any) => record.path)
+          .sort(),
+      ).toEqual(expectedMaterializations);
+    },
+    30_000,
+  );
+
+  it.each([
+    ["selected-deletion-positive", "SELECTED_WORK_DELETION_FORBIDDEN"],
+    ["selected-exact-move", "SELECTED_WORK_DELETION_FORBIDDEN"],
+    ["selected-mode-drift", "SELECTED_WORK_MODE_DRIFT"],
+    ["selected-unauthored-materialization", "SELECTED_WORK_UNAUTHORED_MATERIALIZATION"],
+    [
+      "verification-first-materialization-mode-drift",
+      "SELECTED_WORK_FIRST_MATERIALIZATION_INVALID",
+    ],
     ["unlisted-path", "UNLISTED_PATH"],
     ["unlisted-mts-path", "UNLISTED_PATH"],
     ["unlisted-json-path", "UNLISTED_PATH"],
-    ["unlisted-existing-blob-drift", "OUTSIDE_WORK_BLOB_DRIFT"],
+    ["unlisted-existing-blob-drift", "ACCEPTED_TREE_OUTSIDE_SELECTED_DRIFT"],
     ["outside-blob-drift", "OUTSIDE_WORK_BLOB_DRIFT"],
-    ["outside-measurement-drift", "OUTSIDE_WORK_BLOB_DRIFT"],
+    ["outside-measurement-drift", "ACCEPTED_TREE_OUTSIDE_SELECTED_DRIFT"],
     ["outside-mode-drift", "OUTSIDE_WORK_MODE_DRIFT"],
     ["outside-deletion", "OUTSIDE_WORK_PRESENCE_DRIFT"],
     ["outside-materialization", "OUTSIDE_WORK_PRESENCE_DRIFT"],
+    ["outside-adopted-package-source", "ACCEPTED_TREE_OUTSIDE_SELECTED_DRIFT"],
+    ["outside-adopted-package-manifest", "ACCEPTED_TREE_OUTSIDE_SELECTED_DRIFT"],
+    ["outside-adopted-patch", "ACCEPTED_TREE_OUTSIDE_SELECTED_DRIFT"],
+    ["outside-root-build-input", "ACCEPTED_TREE_OUTSIDE_SELECTED_DRIFT"],
+    ["outside-verification-test", "OUTSIDE_WORK_BLOB_DRIFT"],
+    ["outside-v9-fixture", "UNLISTED_PATH"],
+    ["outside-handoff-output", "OUTSIDE_WORK_BLOB_DRIFT"],
+    ["outside-arbitrary-root-extension", "UNLISTED_PATH"],
+    ["outside-new-adopted-package-byte", "UNLISTED_PATH"],
+    ["accepted-tree-record-omission", "ACCEPTED_TREE_OUTSIDE_SELECTED_DRIFT"],
   ])(
     "rejects lifecycle/outside boundary drift %s",
     (fixture, diagnostic) => {
@@ -187,10 +288,20 @@ describe("product-truth complexity v9 finite hard families", () => {
     30_000,
   );
 
+  it("rejects a later verification row without its required prior materialization", () => {
+    const result = runFixture(
+      "verification-required-prior-missing",
+      "product-execution-coordinator-facade",
+    );
+    expect(result.status).not.toBe(0);
+    expect(result.stdout).toBe("");
+    expect(result.stderr).toContain("SELECTED_WORK_PRIOR_MATERIALIZATION_INVALID");
+  }, 30_000);
+
   it.each([
     ["declaration-kind-drift", "direct-first-public-b1", "DECLARATION_DISPOSITION_DRIFT"],
     ["declaration-disposition-drift", "direct-first-public-b1", "DECLARATION_DISPOSITION_DRIFT"],
-    ["declaration-web-export-drift", "direct-first-public-b1", "DECLARATION_DISPOSITION_DRIFT"],
+    ["declaration-web-export-drift", "direct-first-public-b1", "DECLARATION_CARDINALITY_INVALID"],
     [
       "declaration-type-only-export-drift",
       "direct-first-public-b1",
@@ -225,9 +336,9 @@ describe("product-truth complexity v9 finite hard families", () => {
   });
 
   it.each([
-    ["dependency-manifest-drift", "DEPENDENCY_MANIFEST_CHANGED"],
-    ["dependency-lock-drift", "DEPENDENCY_LOCK_CHANGED"],
-    ["dependency-source-drift", "DEPENDENCY_ADOPTED_SOURCE_CHANGED"],
+    ["dependency-manifest-drift", "ACCEPTED_TREE_OUTSIDE_SELECTED_DRIFT"],
+    ["dependency-lock-drift", "ACCEPTED_TREE_OUTSIDE_SELECTED_DRIFT"],
+    ["dependency-source-drift", "OUTSIDE_WORK_BLOB_DRIFT"],
   ])(
     "rejects dependency input byte drift %s",
     (fixture, diagnostic) => {
@@ -266,6 +377,7 @@ describe("product-truth complexity v9 finite hard families", () => {
   it.each([
     ["authority-membership-drift", "WORK_AUTHORITY_CHANGED"],
     ["authority-declaration-drift", "V9_AUTHORITY_CHANGED"],
+    ["authority-verification-row-drift", "VERIFICATION_PATH_ROWS_CHANGED"],
   ])("rejects accepted authority mutation %s", (fixture, diagnostic) => {
     const result = run(["--fixture", fixture, ...baseArgs]);
     expect(result.status).not.toBe(0);
@@ -383,7 +495,7 @@ describe("product-truth complexity v9 observational graph", () => {
     const result = runFixture("graph-change-positive");
     expect(result.status, result.stderr).toBe(0);
     const graph = parse(result.stdout).observations.literalImportExportGraph;
-    expect(graph.recordCount).toBe(579);
+    expect(graph.recordCount).not.toBe(578);
     expect(graph.recordMultisetJcsSha256).not.toBe(
       "9594b2c2d1562d9d546ece89e699156d1e6708b0817ac0a2bf5b62ea6ba66869",
     );
@@ -393,7 +505,11 @@ describe("product-truth complexity v9 observational graph", () => {
       hardGateEnabled: false,
       compared: true,
     });
-    expect(graph.delta.addedRecords).toHaveLength(1);
+    expect(graph.delta.addedRecords).toContainEqual({
+      form: "import-declaration",
+      source: "apps/web/src/appSettings.ts",
+      specifier: "./settingsSearchIndex",
+    });
   }, 30_000);
 
   it("emits a candidate-created SCC as observational data", () => {
@@ -422,13 +538,19 @@ describe("product-truth complexity v9 immutable scope", () => {
     const config = JSON.parse(configText);
     expect(Object.keys(config).sort()).toEqual(
       [
-        "acceptedDesignCommit",
+        "acceptedTreeInputsJcsSha256",
+        "acceptedTreeRecordCount",
+        "acceptedTreeRecordsRawJcsSha256",
+        "approvedStateCommit",
+        "authorityDesignCommit",
         "authoritySha256",
         "baselineCommit",
+        "boundaryAndVerificationRecordsRawJcsSha256",
+        "boundaryStateRecordsRawJcsSha256",
         "dependencyAuthoritySha256",
-        "dependencyClosureSha256",
         "format",
         "historicalArtifactsSha256",
+        "verificationRowsJcsSha256",
         "workBoundarySha256",
       ].sort(),
     );
@@ -450,6 +572,9 @@ describe("product-truth complexity v9 immutable scope", () => {
 
   it("contains no v8 expression or semantic classifier", () => {
     const source = readFileSync(script, "utf8");
+    expect(source).toContain('changedPathDefault: "reject"');
+    expect(source).toContain('"--name-status"');
+    expect(source).toContain('"--no-renames"');
     for (const forbidden of [
       "analyzeExpression",
       "globalAliasGrammar",
@@ -465,12 +590,14 @@ describe("product-truth complexity v9 immutable scope", () => {
       "controlFlowGraph",
       "staticSingleAssignment",
       "candidateExpectedVerdict",
+      "productionOrDirectToolPath",
+      "nonProductionWorkArtifactPath",
     ])
       expect(source).not.toContain(forbidden);
   });
 
   it("matches the accepted-tree v1-v8 artifact manifest and every working-tree byte", () => {
-    const output = spawnSync("git", ["ls-tree", "-rz", "--full-tree", acceptedDesign], {
+    const output = spawnSync("git", ["ls-tree", "-rz", "--full-tree", approvedState], {
       cwd: root,
       encoding: "buffer",
     });

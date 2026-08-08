@@ -11,6 +11,7 @@ const FORMAT = "product-truth-complexity-v9";
 const REPORT_SCHEMA = "omp-flow-product-truth-complexity-v9-report-v1";
 const BUNDLE_ROOT = ".omp-flow/tasks/08-07-product-truth-consolidation";
 const INTERFACE_PATH = `${BUNDLE_ROOT}/interfaces/product-truth-complexity-v9.md`;
+const DESIGN_PATH = `${BUNDLE_ROOT}/design.md`;
 const V7_BOOTSTRAP_EVIDENCE = "5632f63603e6ae8b3fb95f759c793a09b16a1e44";
 const historicalArtifactPath = (path) =>
   /^scripts\/product-truth\/(?:measure-complexity(?:-v[2-8])?(?:\.test)?\.(?:mjs|ts)|complexity-universe-v[1-8]\.json)$/.test(
@@ -115,19 +116,23 @@ const config = parseJsonStrict(configText, "complexity-universe-v9.json");
 if (config.format !== "product-truth-complexity-universe-v9")
   throw new Error("CONFIG_FORMAT_INVALID");
 const configKeys = [
-  "acceptedDesignCommit",
+  "acceptedTreeInputsJcsSha256",
+  "acceptedTreeRecordCount",
+  "acceptedTreeRecordsRawJcsSha256",
+  "approvedStateCommit",
+  "authorityDesignCommit",
   "authoritySha256",
   "baselineCommit",
+  "boundaryAndVerificationRecordsRawJcsSha256",
+  "boundaryStateRecordsRawJcsSha256",
   "dependencyAuthoritySha256",
-  "dependencyClosureSha256",
   "format",
   "historicalArtifactsSha256",
+  "verificationRowsJcsSha256",
   "workBoundarySha256",
 ].sort();
 if (
   canonicalJson(Object.keys(config).sort()) !== canonicalJson(configKeys) ||
-  canonicalJson(Object.keys(config.dependencyClosureSha256 ?? {}).sort()) !==
-    canonicalJson(["accepted", "baseline"]) ||
   Object.keys(config.workBoundarySha256 ?? {}).length !== 5
 ) {
   throw new Error("CONFIG_AUTHORITY_SURFACE_INVALID");
@@ -184,7 +189,8 @@ const requireCommit = (ref, diagnostic) => {
 };
 requireCommit(commit, "CANDIDATE_REF_INVALID:nonexistent-or-noncommit");
 requireCommit(evidenceCommit, "OFFICIAL_EVIDENCE_INPUT_INVALID:nonexistent-or-noncommit");
-requireCommit(config.acceptedDesignCommit, "DESIGN_REF_INVALID");
+requireCommit(config.authorityDesignCommit, "DESIGN_REF_INVALID");
+requireCommit(config.approvedStateCommit, "APPROVED_STATE_REF_INVALID");
 
 const loadTree = (ref) => {
   const output = git(["ls-tree", "-rz", "--full-tree", ref]);
@@ -233,7 +239,7 @@ const loadTree = (ref) => {
   const install = (path, bytes, mode = "100644", salt = "candidate") => {
     if (!["100644", "100755"].includes(mode)) throw new Error(`FIXTURE_MODE_INVALID:${path}`);
     const object = createHash("sha1")
-      .update(Buffer.concat([Buffer.from(`v9-${salt}\0${path}\0${bytes.length}\0`), bytes]))
+      .update(Buffer.concat([Buffer.from(`blob ${bytes.length}\0`), bytes]))
       .digest("hex");
     tree.set(path, { mode, type: "blob", object });
     blobs.set(object, bytes);
@@ -241,10 +247,22 @@ const loadTree = (ref) => {
   return { tree, blobs, bytesAt, textAt, install };
 };
 
-const accepted = loadTree(config.acceptedDesignCommit);
+const authorityTree = loadTree(config.authorityDesignCommit);
+const approvedState = loadTree(config.approvedStateCommit);
 const fixtureUsesBootstrapCandidate = fixture?.useBootstrapCandidateSnapshot === true;
-const candidate = loadTree(fixtureUsesBootstrapCandidate ? config.baselineCommit : commit);
-const evidence = loadTree(evidenceCommit);
+const fixtureUsesApprovedStateCandidate = fixture?.useApprovedStateCandidateSnapshot === true;
+const candidate = loadTree(
+  fixtureUsesBootstrapCandidate
+    ? config.baselineCommit
+    : fixtureUsesApprovedStateCandidate
+      ? config.approvedStateCommit
+      : commit,
+);
+const evidence = loadTree(
+  fixture?.syntheticProductEvidence === true && fixtureUsesApprovedStateCandidate
+    ? config.approvedStateCommit
+    : evidenceCommit,
+);
 const applySnapshotMutation = (snapshot, mutation, salt) => {
   for (const [from, to] of Object.entries(mutation?.moveFiles ?? {})) {
     const bytes = snapshot.bytesAt(from);
@@ -322,7 +340,7 @@ const setAtPointer = (root, pointer, action, value) => {
   }
 };
 
-const interfaceText = accepted.textAt(INTERFACE_PATH);
+const interfaceText = authorityTree.textAt(INTERFACE_PATH);
 const authority = extractMachineBlock(
   interfaceText,
   "omp-flow-product-truth-complexity-v9-authority-v1",
@@ -347,7 +365,11 @@ if (
 const workBlocks = [];
 for (const work of sortedStrings(Object.keys(config.workBoundarySha256))) {
   const path = `${BUNDLE_ROOT}/work/${work}.md`;
-  const block = extractMachineBlock(accepted.textAt(path), "omp-flow-production-boundary-v1", path);
+  const block = extractMachineBlock(
+    authorityTree.textAt(path),
+    "omp-flow-production-boundary-v1",
+    path,
+  );
   if (fixture?.authorityMutation?.block === `work:${work}`) {
     setAtPointer(
       block,
@@ -436,6 +458,337 @@ if (
   sourceUniverseSha256 !== graphAuthority.sourceUniverseJcsSha256
 ) {
   throw new Error(`SOURCE_UNIVERSE_CHANGED:${sourceUniverse.length}:${sourceUniverseSha256}`);
+}
+
+const verificationAuthority = extractMachineBlock(
+  authorityTree.textAt(DESIGN_PATH),
+  "omp-flow-product-verification-paths-v1",
+  DESIGN_PATH,
+);
+if (fixture?.authorityMutation?.block === "verification") {
+  setAtPointer(
+    verificationAuthority,
+    fixture.authorityMutation.pointer,
+    fixture.authorityMutation.action,
+    fixture.authorityMutation.value,
+  );
+}
+const verificationRows = verificationAuthority.verificationPathRows;
+const verificationRowKeys = [
+  "allowedLifecycle",
+  "approvedGitBlob",
+  "approvedMode",
+  "approvedPresence",
+  "approvedSha256",
+  "firstMaterializationMode",
+  "firstMaterializationWork",
+  "path",
+  "purpose",
+  "work",
+].sort();
+if (
+  verificationAuthority.authority !== "omp-flow-product-verification-paths-v1" ||
+  verificationAuthority.approvedCommit !== config.approvedStateCommit ||
+  !Array.isArray(verificationRows) ||
+  verificationRows.length !== authority.designInputs.verificationPathRows.rowCount ||
+  verificationRows.some(
+    (row) =>
+      canonicalJson(Object.keys(row).sort()) !== canonicalJson(verificationRowKeys) ||
+      !worksById.has(row.work) ||
+      typeof row.path !== "string",
+  )
+) {
+  throw new Error("VERIFICATION_PATH_AUTHORITY_INVALID");
+}
+const verificationRowsJcsSha256 = sha256(
+  Buffer.from(canonicalJson(sortByJcsBytes(verificationRows))),
+);
+if (
+  verificationRowsJcsSha256 !== config.verificationRowsJcsSha256 ||
+  verificationRowsJcsSha256 !== verificationAuthority.verificationPathRowsJcsSha256 ||
+  verificationRowsJcsSha256 !== authority.designInputs.verificationPathRows.rowsJcsSha256
+) {
+  throw new Error(`VERIFICATION_PATH_ROWS_CHANGED:${verificationRowsJcsSha256}`);
+}
+const verificationRowsPerWork = Object.fromEntries(
+  sortedStrings([...worksById.keys()]).map((work) => [
+    work,
+    verificationRows.filter((row) => row.work === work).length,
+  ]),
+);
+if (
+  canonicalJson(verificationRowsPerWork) !==
+  canonicalJson(authority.designInputs.verificationPathRows.rowsPerWork)
+) {
+  throw new Error("VERIFICATION_PATH_WORK_COUNTS_CHANGED");
+}
+const verificationRowsByWork = new Map(
+  [...worksById.keys()].map((work) => [work, verificationRows.filter((row) => row.work === work)]),
+);
+const verificationPaths = sortedStrings(new Set(verificationRows.map((row) => row.path)));
+if (verificationPaths.length !== authority.designInputs.verificationPathRows.uniquePathCount) {
+  throw new Error(`VERIFICATION_PATH_UNIQUE_COUNT_CHANGED:${verificationPaths.length}`);
+}
+
+const stateRecordAt = (snapshot, path) => {
+  const entry = snapshot.tree.get(path) ?? null;
+  const bytes = snapshot.bytesAt(path);
+  if (!entry || bytes === null) {
+    return { path, presence: "absent", mode: null, gitBlob: null, sha256: null };
+  }
+  return {
+    path,
+    presence: "present",
+    mode: entry.mode,
+    gitBlob: entry.object,
+    sha256: sha256(bytes),
+  };
+};
+const approvedProductionStateRecords = sortByJcsBytes(
+  sourceUniverse.map((path) => stateRecordAt(approvedState, path)),
+);
+const approvedProductionStateSha256 = sha256(
+  Buffer.from(canonicalJson(approvedProductionStateRecords)),
+);
+if (
+  config.approvedStateCommit !== authority.selectedWork.approvedBoundaryState.commit ||
+  approvedProductionStateRecords.length !==
+    authority.selectedWork.approvedBoundaryState.recordCount ||
+  approvedProductionStateSha256 !== config.boundaryStateRecordsRawJcsSha256 ||
+  approvedProductionStateSha256 !== authority.selectedWork.approvedBoundaryState.recordsRawJcsSha256
+) {
+  throw new Error(`APPROVED_PRODUCTION_STATE_CHANGED:${approvedProductionStateSha256}`);
+}
+const approvedProductionStateByPath = new Map(
+  approvedProductionStateRecords.map((record) => [record.path, record]),
+);
+for (const row of verificationRows) {
+  const approved = stateRecordAt(approvedState, row.path);
+  if (
+    approved.presence !== row.approvedPresence ||
+    approved.mode !== row.approvedMode ||
+    approved.gitBlob !== row.approvedGitBlob ||
+    approved.sha256 !== row.approvedSha256
+  ) {
+    throw new Error(`VERIFICATION_PATH_APPROVED_STATE_CHANGED:${row.work}:${row.path}`);
+  }
+  const allowed =
+    row.approvedPresence === "present"
+      ? row.allowedLifecycle === "modify-blob-preserve-presence-and-mode" &&
+        row.firstMaterializationMode === null &&
+        row.firstMaterializationWork === null
+      : [
+          "first-materialize-then-modify-preserve-presence-and-mode",
+          "modify-after-required-prior-materialization-preserve-presence-and-mode",
+        ].includes(row.allowedLifecycle) &&
+        row.firstMaterializationMode === "100644" &&
+        worksById.has(row.firstMaterializationWork);
+  if (!allowed) throw new Error(`VERIFICATION_PATH_LIFECYCLE_INVALID:${row.work}:${row.path}`);
+}
+const boundaryAndVerificationPaths = sortedStrings(
+  new Set([...sourceUniverse, ...verificationPaths]),
+);
+const approvedBoundaryAndVerificationRecords = sortByJcsBytes(
+  boundaryAndVerificationPaths.map((path) => stateRecordAt(approvedState, path)),
+);
+const approvedBoundaryAndVerificationSha256 = sha256(
+  Buffer.from(canonicalJson(approvedBoundaryAndVerificationRecords)),
+);
+const approvedBoundaryAndVerificationAuthority =
+  authority.selectedWork.approvedBoundaryAndVerificationState;
+if (
+  approvedBoundaryAndVerificationRecords.length !==
+    approvedBoundaryAndVerificationAuthority.recordCount ||
+  approvedBoundaryAndVerificationRecords.filter((row) => row.presence === "present").length !==
+    approvedBoundaryAndVerificationAuthority.presentCount ||
+  approvedBoundaryAndVerificationRecords.filter((row) => row.presence === "absent").length !==
+    approvedBoundaryAndVerificationAuthority.absentCount ||
+  approvedBoundaryAndVerificationSha256 !== config.boundaryAndVerificationRecordsRawJcsSha256 ||
+  approvedBoundaryAndVerificationSha256 !==
+    approvedBoundaryAndVerificationAuthority.recordsRawJcsSha256
+) {
+  throw new Error(
+    `APPROVED_BOUNDARY_AND_VERIFICATION_STATE_CHANGED:${approvedBoundaryAndVerificationSha256}`,
+  );
+}
+
+const productionMaterializations = authority.selectedWork.productionAllowedMaterializations;
+if (!Array.isArray(productionMaterializations) || productionMaterializations.length !== 4) {
+  throw new Error("PRODUCTION_MATERIALIZATION_AUTHORITY_INVALID");
+}
+const productionMaterializationByIdentity = new Map();
+for (const row of productionMaterializations) {
+  const identity = `${row.work}\0${row.path}`;
+  const block = worksById.get(row.work);
+  const approved = approvedProductionStateByPath.get(row.path);
+  if (
+    productionMaterializationByIdentity.has(identity) ||
+    row.mode !== "100644" ||
+    !block?.production.some((entry) => entry.path === row.path) ||
+    approved?.presence !== "absent"
+  ) {
+    throw new Error(`PRODUCTION_MATERIALIZATION_AUTHORITY_INVALID:${identity}`);
+  }
+  productionMaterializationByIdentity.set(identity, row);
+}
+const verificationFirstMaterializations = new Map();
+for (const row of verificationRows.filter((entry) => entry.approvedPresence === "absent")) {
+  const prior = verificationFirstMaterializations.get(row.path);
+  if (
+    prior &&
+    (prior.firstMaterializationWork !== row.firstMaterializationWork ||
+      prior.firstMaterializationMode !== row.firstMaterializationMode)
+  ) {
+    throw new Error(`VERIFICATION_MATERIALIZATION_CONFLICT:${row.path}`);
+  }
+  verificationFirstMaterializations.set(row.path, row);
+}
+if (
+  verificationFirstMaterializations.size !==
+    authority.selectedWork.verificationAllowedMaterializations.uniquePathCount ||
+  canonicalJson(sortedStrings(verificationFirstMaterializations.keys())) !==
+    canonicalJson(sortedStrings(authority.selectedWork.verificationAllowedMaterializations.paths))
+) {
+  throw new Error("VERIFICATION_MATERIALIZATION_AUTHORITY_INVALID");
+}
+
+const sourceAdoptions = extractMachineBlock(
+  approvedState.textAt(authority.acceptedTreeByteAuthority.sourceAdoptions.documentPath),
+  authority.acceptedTreeByteAuthority.sourceAdoptions.block,
+  authority.acceptedTreeByteAuthority.sourceAdoptions.documentPath,
+);
+const sourceAdoptionsSha256 = sha256(Buffer.from(canonicalJson(sourceAdoptions)));
+if (sourceAdoptionsSha256 !== authority.acceptedTreeByteAuthority.sourceAdoptions.blockJcsSha256) {
+  throw new Error(`SOURCE_ADOPTIONS_AUTHORITY_CHANGED:${sourceAdoptionsSha256}`);
+}
+const acceptedTreeInputs = authority.acceptedTreeByteAuthority.inputs;
+const acceptedTreeInputsSha256 = sha256(Buffer.from(canonicalJson(acceptedTreeInputs)));
+if (
+  acceptedTreeInputsSha256 !== config.acceptedTreeInputsJcsSha256 ||
+  acceptedTreeInputsSha256 !== authority.acceptedTreeByteAuthority.inputsJcsSha256
+) {
+  throw new Error(`ACCEPTED_TREE_INPUTS_CHANGED:${acceptedTreeInputsSha256}`);
+}
+const adoptionsById = new Map((sourceAdoptions.adopted ?? []).map((entry) => [entry.id, entry]));
+for (const row of [...acceptedTreeInputs.patchRoots, ...acceptedTreeInputs.adoptedSourceRoots]) {
+  if (!adoptionsById.get(row.adoptionId)?.paths?.includes(row.path)) {
+    throw new Error(`ACCEPTED_TREE_ADOPTION_INPUT_INVALID:${row.adoptionId}:${row.path}`);
+  }
+}
+for (const row of acceptedTreeInputs.licensePaths) {
+  if (!adoptionsById.get(row.adoptionId)?.licenseFiles?.includes(row.path)) {
+    throw new Error(`ACCEPTED_TREE_LICENSE_INPUT_INVALID:${row.adoptionId}:${row.path}`);
+  }
+}
+const acceptedInputPaths = [
+  ...acceptedTreeInputs.manifestPaths,
+  ...acceptedTreeInputs.lockfilePaths,
+  ...acceptedTreeInputs.patchRoots.map((row) => row.path),
+  ...acceptedTreeInputs.adoptedSourceRoots.map((row) => row.path),
+  ...acceptedTreeInputs.licensePaths.map((row) => row.path),
+];
+const acceptedTreeDerivations = [];
+for (const inputPath of acceptedInputPaths) {
+  if (approvedState.tree.has(inputPath)) {
+    acceptedTreeDerivations.push(inputPath);
+    continue;
+  }
+  const descendants = [...approvedState.tree.keys()].filter((path) =>
+    path.startsWith(`${inputPath}/`),
+  );
+  if (!descendants.length) throw new Error(`ACCEPTED_TREE_INPUT_MISSING:${inputPath}`);
+  acceptedTreeDerivations.push(...descendants);
+}
+const acceptedTreePathObjects = new Map();
+for (const path of acceptedTreeDerivations) {
+  const entry = approvedState.tree.get(path);
+  if (!entry || entry.type !== "blob" || !["100644", "100755"].includes(entry.mode)) {
+    throw new Error(`ACCEPTED_TREE_MEMBER_NOT_REGULAR:${path}`);
+  }
+  const prior = acceptedTreePathObjects.get(path);
+  if (prior && prior !== entry.object)
+    throw new Error(`ACCEPTED_TREE_DUPLICATE_OBJECT_CONFLICT:${path}`);
+  acceptedTreePathObjects.set(path, entry.object);
+}
+const acceptedTreeRecords = sortByJcsBytes(
+  [...acceptedTreePathObjects.keys()].map((path) => stateRecordAt(approvedState, path)),
+);
+const acceptedTreeRecordsSha256 = sha256(Buffer.from(canonicalJson(acceptedTreeRecords)));
+if (
+  acceptedTreeRecords.length !== config.acceptedTreeRecordCount ||
+  acceptedTreeRecords.length !== authority.acceptedTreeByteAuthority.acceptedRecords.recordCount ||
+  acceptedTreeRecordsSha256 !== config.acceptedTreeRecordsRawJcsSha256 ||
+  acceptedTreeRecordsSha256 !==
+    authority.acceptedTreeByteAuthority.acceptedRecords.recordsRawJcsSha256
+) {
+  throw new Error(
+    `ACCEPTED_TREE_RECORDS_CHANGED:${acceptedTreeRecords.length}:${acceptedTreeRecordsSha256}`,
+  );
+}
+const acceptedTreePaths = acceptedTreeRecords.map((record) => record.path);
+
+const materializedProductionBytes = (path) =>
+  path === "apps/service/src/product/productStateStore.ts"
+    ? Buffer.from("export function makeProductStateStore() { return null; }\n")
+    : Buffer.from("export {};\n");
+const exerciseAuthorizedRows = (snapshot, work, phase) => {
+  const block = worksById.get(work);
+  if (!block) throw new Error(`FIXTURE_AUTHORIZED_WORK_INVALID:${work}`);
+  for (const entry of block.production) {
+    const approved = approvedProductionStateByPath.get(entry.path);
+    if (approved?.presence === "present") {
+      const current = snapshot.bytesAt(entry.path);
+      const mode = snapshot.tree.get(entry.path)?.mode;
+      if (current === null || mode !== approved.mode)
+        throw new Error(`FIXTURE_AUTHORIZED_BASE_INVALID:${entry.path}`);
+      snapshot.install(
+        entry.path,
+        Buffer.concat([
+          current,
+          Buffer.from(
+            entry.path.endsWith(".json") ? "\n " : `\n// v9-authorized-${work}-${phase}\n`,
+          ),
+        ]),
+        mode,
+        `authorized-${work}-${phase}`,
+      );
+    } else if (productionMaterializationByIdentity.has(`${work}\0${entry.path}`)) {
+      snapshot.install(
+        entry.path,
+        materializedProductionBytes(entry.path),
+        "100644",
+        `authorized-${work}-${phase}`,
+      );
+    }
+  }
+  for (const row of verificationRowsByWork.get(work) ?? []) {
+    if (row.approvedPresence === "present") {
+      const current = snapshot.bytesAt(row.path);
+      if (current === null || snapshot.tree.get(row.path)?.mode !== row.approvedMode)
+        throw new Error(`FIXTURE_AUTHORIZED_BASE_INVALID:${row.path}`);
+      snapshot.install(
+        row.path,
+        Buffer.concat([current, Buffer.from(`\n// v9-verification-${work}-${phase}\n`)]),
+        row.approvedMode,
+        `authorized-${work}-${phase}`,
+      );
+    } else if (
+      row.firstMaterializationWork === work ||
+      row.allowedLifecycle ===
+        "modify-after-required-prior-materialization-preserve-presence-and-mode"
+    ) {
+      snapshot.install(
+        row.path,
+        Buffer.from(`export {};\n// v9-verification-${work}-${phase}\n`),
+        row.firstMaterializationMode,
+        `authorized-${work}-${phase}`,
+      );
+    }
+  }
+};
+if (fixture?.exerciseAuthorizedRows === true) {
+  if (!candidateWorkId) throw new Error("FIXTURE_AUTHORIZED_WORK_REQUIRED");
+  exerciseAuthorizedRows(candidate, candidateWorkId, "candidate");
 }
 
 const sourceExtensions = new Set([".ts", ".tsx", ".mjs", ".js", ".cjs"]);
@@ -780,6 +1133,7 @@ const validateProductEvidence = () => {
     };
     for (const [path, bytes] of Object.entries(syntheticDocuments)) {
       evidence.install(path, bytes, "100644", "synthetic-product-evidence");
+      candidate.install(path, bytes, "100644", "synthetic-product-candidate");
     }
     evidence.install(
       "scripts/product-truth/measure-complexity-v9.mjs",
@@ -949,7 +1303,7 @@ const validateProductEvidence = () => {
   };
 };
 
-const comparisonFixture = fixture?.compareToBootstrapBaseline === true;
+const comparisonFixture = fixture?.compareToApprovedState === true;
 if (commit === config.baselineCommit && candidateWorkId !== null && !comparisonFixture) {
   throw new Error("CANDIDATE_WORK_INVALID:not-allowed-for-official-b0");
 }
@@ -971,36 +1325,20 @@ function loadPristineBootstrapReport() {
     throw new Error(`BOOTSTRAP_PREDECESSOR_REPORT_FAILED:${result.stderr.trim()}`);
   return parseJsonStrict(result.stdout, "bootstrap-predecessor-report");
 }
-const nonProductionWorkArtifactPath = (path) => {
-  if (
-    /(?:^|\/)(?:fixtures|test-fixtures|testSupport|snapshots|__snapshots__|e2e)(?:\/|$)/.test(
-      path,
-    ) ||
-    /(?:\.test|\.browser|\.spec)\.[^/]+$/.test(path)
-  )
-    return true;
-  if (path === `${BUNDLE_ROOT}/handoffs/${candidateWorkId}.md`) return true;
-  return (
-    historicalArtifactPath(path) ||
-    path === "scripts/product-truth/measure-complexity-v9.mjs" ||
-    path === "scripts/product-truth/complexity-universe-v9.json" ||
-    path === "scripts/product-truth/measure-complexity-v9.test.ts"
-  );
-};
-const productionOrDirectToolPath = (path) => {
-  if (nonProductionWorkArtifactPath(path)) return false;
-  return path === "package.json" || /^(?:apps|packages|scripts)\//.test(path);
-};
 const productionSourcePath = (path) => {
   if (!sourceExtensions.has(extname(path)) || !/^(?:apps|packages|scripts)\//.test(path))
     return false;
-  if (nonProductionWorkArtifactPath(path)) return false;
   return (
+    !/(?:^|\/)(?:fixtures|test-fixtures|testSupport|snapshots|__snapshots__|e2e)(?:\/|$)/.test(
+      path,
+    ) &&
+    !/(?:\.test|\.browser|\.spec)\.[^/]+$/.test(path) &&
     !/^scripts\/product-truth\/(?:measure-complexity(?:-v\d+)?\.mjs|fixtures\/)/.test(path) &&
     path !== "scripts/check-source-closure.mjs"
   );
 };
 let comparison = {
+  hardGate: true,
   enabled: false,
   candidateWorkId: null,
   predecessorKind: evidenceBinding.kind,
@@ -1053,11 +1391,38 @@ if (comparisonFixture || evidenceBinding.kind === "accepted-product-predecessor"
     addedRecords: multisetDifference(sortedLiteralRecords, predecessorLiteralRecords),
     removedRecords: multisetDifference(predecessorLiteralRecords, sortedLiteralRecords),
   };
-  const predecessorSnapshot = loadTree(predecessorReport.commit);
-  const selectedPaths = new Set(selectedWork.production.map((entry) => entry.path));
+  const comparisonBaseSnapshot = comparisonFixture
+    ? loadTree(config.approvedStateCommit)
+    : evidence;
+  if (fixture?.exerciseAuthorizedRows === true) {
+    for (const row of verificationRowsByWork.get(candidateWorkId) ?? []) {
+      if (
+        row.allowedLifecycle ===
+        "modify-after-required-prior-materialization-preserve-presence-and-mode"
+      ) {
+        comparisonBaseSnapshot.install(
+          row.path,
+          Buffer.from(`export {};\n// v9-verification-${candidateWorkId}-predecessor\n`),
+          row.firstMaterializationMode,
+          `authorized-${candidateWorkId}-predecessor`,
+        );
+      }
+    }
+  }
+  applySnapshotMutation(
+    comparisonBaseSnapshot,
+    fixture?.predecessorMutation,
+    `predecessor-${fixtureName ?? "official"}`,
+  );
+  const selectedProductionPaths = new Set(selectedWork.production.map((entry) => entry.path));
+  const selectedVerificationRows = verificationRowsByWork.get(candidateWorkId) ?? [];
+  const selectedVerificationByPath = new Map(
+    selectedVerificationRows.map((row) => [row.path, row]),
+  );
+  const selectedPaths = new Set([...selectedProductionPaths, ...selectedVerificationByPath.keys()]);
 
   for (const row of authority.capabilityDeclarations.rows) {
-    const before = observeDeclaration(predecessorSnapshot, row).actual;
+    const before = observeDeclaration(comparisonBaseSnapshot, row).actual;
     const after = observeDeclaration(candidate, row).actual;
     if (
       after &&
@@ -1074,67 +1439,145 @@ if (comparisonFixture || evidenceBinding.kind === "accepted-product-predecessor"
     if (before && !after) throw new Error(`DECLARATION_PRESENCE_DRIFT:${row.path}#${row.symbol}`);
   }
 
-  for (const path of frozenBoundaryUniverse.filter((value) => !selectedPaths.has(value))) {
-    const before = predecessorSnapshot.tree.get(path) ?? null;
+  for (const path of boundaryAndVerificationPaths.filter((value) => !selectedPaths.has(value))) {
+    const before = comparisonBaseSnapshot.tree.get(path) ?? null;
     const after = candidate.tree.get(path) ?? null;
-    const dependencyDiagnostic = path === "bun.lock" ? "DEPENDENCY_LOCK_CHANGED:bun.lock" : null;
-    if (Boolean(before) !== Boolean(after)) {
-      if (dependencyDiagnostic) throw new Error(dependencyDiagnostic);
-      throw new Error(`OUTSIDE_WORK_PRESENCE_DRIFT:${path}`);
+    if (Boolean(before) !== Boolean(after)) throw new Error(`OUTSIDE_WORK_PRESENCE_DRIFT:${path}`);
+    if (before?.mode !== after?.mode) throw new Error(`OUTSIDE_WORK_MODE_DRIFT:${path}`);
+    if (before?.object !== after?.object) throw new Error(`OUTSIDE_WORK_BLOB_DRIFT:${path}`);
+  }
+
+  for (const path of acceptedTreePaths.filter((value) => !selectedPaths.has(value))) {
+    const before = stateRecordAt(comparisonBaseSnapshot, path);
+    const after = stateRecordAt(candidate, path);
+    if (canonicalJson(before) !== canonicalJson(after)) {
+      throw new Error(`ACCEPTED_TREE_OUTSIDE_SELECTED_DRIFT:${path}`);
     }
-    if (before?.mode !== after?.mode) {
-      if (dependencyDiagnostic) throw new Error(dependencyDiagnostic);
-      throw new Error(`OUTSIDE_WORK_MODE_DRIFT:${path}`);
+  }
+
+  const changedStatusRecordsForSnapshots = (beforeSnapshot, afterSnapshot) =>
+    sortedStrings(new Set([...beforeSnapshot.tree.keys(), ...afterSnapshot.tree.keys()]))
+      .filter((path) => {
+        const before = beforeSnapshot.tree.get(path) ?? null;
+        const after = afterSnapshot.tree.get(path) ?? null;
+        return (
+          before?.mode !== after?.mode ||
+          before?.type !== after?.type ||
+          before?.object !== after?.object
+        );
+      })
+      .map((path) => ({
+        status: beforeSnapshot.tree.has(path) ? (afterSnapshot.tree.has(path) ? "M" : "D") : "A",
+        path,
+      }));
+  const changedStatusRecordsFromGit = () => {
+    const output = git([
+      "diff",
+      "--name-status",
+      "-z",
+      "--no-renames",
+      evidenceCommit,
+      commit,
+      "--",
+    ]);
+    const decoded = decodeUtf8(output, "git-diff-name-status");
+    if (!decoded.length) return [];
+    const fields = decoded.split("\0");
+    if (fields.at(-1) !== "") throw new Error("GIT_CHANGED_PATH_RECORD_INVALID:unterminated");
+    fields.pop();
+    if (fields.length % 2 !== 0) throw new Error("GIT_CHANGED_PATH_RECORD_INVALID:cardinality");
+    const records = [];
+    for (let index = 0; index < fields.length; index += 2) {
+      const status = fields[index];
+      const path = fields[index + 1];
+      if (!/^[ADMT]$/.test(status) || !path)
+        throw new Error("GIT_CHANGED_PATH_RECORD_INVALID:status-or-path");
+      records.push({ status, path });
     }
-    if (before?.object !== after?.object) {
-      if (dependencyDiagnostic) throw new Error(dependencyDiagnostic);
+    return records;
+  };
+  const changedStatusRecords =
+    fixtureName === null
+      ? changedStatusRecordsFromGit()
+      : changedStatusRecordsForSnapshots(comparisonBaseSnapshot, candidate);
+  const changedPaths = changedStatusRecords.map((record) => record.path);
+  if (new Set(changedPaths).size !== changedPaths.length)
+    throw new Error("GIT_CHANGED_PATH_RECORD_INVALID:duplicate-path");
+
+  const selectedAuthorityFor = (path) => {
+    const verificationRow = selectedVerificationByPath.get(path) ?? null;
+    const production = selectedProductionPaths.has(path);
+    if (!production && !verificationRow) return null;
+    return { approved: stateRecordAt(approvedState, path), production, verificationRow };
+  };
+  for (const { status, path } of changedStatusRecords) {
+    const selectedAuthority = selectedAuthorityFor(path);
+    const before = comparisonBaseSnapshot.tree.get(path) ?? null;
+    const after = candidate.tree.get(path) ?? null;
+    if (!selectedAuthority) {
+      if (status === "A") throw new Error(`UNLISTED_PATH:${path}`);
+      if (status === "D") throw new Error(`OUTSIDE_WORK_DELETION:${path}`);
+      if (before?.mode !== after?.mode) throw new Error(`OUTSIDE_WORK_MODE_DRIFT:${path}`);
       throw new Error(`OUTSIDE_WORK_BLOB_DRIFT:${path}`);
     }
-  }
-
-  const changedPaths = sortedStrings(
-    new Set([...predecessorSnapshot.tree.keys(), ...candidate.tree.keys()]),
-  ).filter((path) => {
-    const before = predecessorSnapshot.tree.get(path) ?? null;
-    const after = candidate.tree.get(path) ?? null;
-    return (
-      before?.mode !== after?.mode ||
-      before?.type !== after?.type ||
-      before?.object !== after?.object
-    );
-  });
-  for (const path of changedPaths) {
-    if (selectedPaths.has(path) || !productionOrDirectToolPath(path)) continue;
-    const before = predecessorSnapshot.tree.get(path) ?? null;
-    const after = candidate.tree.get(path) ?? null;
-    if (!before) throw new Error(`UNLISTED_PATH:${path}`);
-    if (!after) throw new Error(`OUTSIDE_WORK_DELETION:${path}`);
-    if (before.mode !== after.mode) throw new Error(`OUTSIDE_WORK_MODE_DRIFT:${path}`);
-    throw new Error(`OUTSIDE_WORK_BLOB_DRIFT:${path}`);
-  }
-
-  const deleted = [...selectedPaths].filter(
-    (path) => predecessorSnapshot.tree.has(path) && !candidate.tree.has(path),
-  );
-  const materialized = [...selectedPaths].filter(
-    (path) => !predecessorSnapshot.tree.has(path) && candidate.tree.has(path),
-  );
-  for (const from of sortedStrings(deleted))
-    for (const to of sortedStrings(materialized)) {
-      const before = predecessorSnapshot.bytesAt(from);
-      const after = candidate.bytesAt(to);
-      if (before !== null && after !== null && before.equals(after)) {
-        throw new Error(`UNDECLARED_WORK_PATH_MOVE:${from}:${to}:exact-content`);
-      }
+    if (!after) throw new Error(`SELECTED_WORK_DELETION_FORBIDDEN:${path}`);
+    const { approved, production, verificationRow } = selectedAuthority;
+    if (approved.presence === "present") {
+      if (!before) throw new Error(`SELECTED_WORK_UNAUTHORED_MATERIALIZATION:${path}`);
+      if (before.mode !== approved.mode || after.mode !== approved.mode)
+        throw new Error(`SELECTED_WORK_MODE_DRIFT:${path}`);
+      continue;
     }
+    const productionMaterialization = productionMaterializationByIdentity.get(
+      `${candidateWorkId}\0${path}`,
+    );
+    const firstVerificationMaterialization =
+      verificationRow?.firstMaterializationWork === candidateWorkId &&
+      verificationRow.allowedLifecycle ===
+        "first-materialize-then-modify-preserve-presence-and-mode";
+    const laterVerificationModification =
+      verificationRow?.allowedLifecycle ===
+      "modify-after-required-prior-materialization-preserve-presence-and-mode";
+    if (productionMaterialization || firstVerificationMaterialization) {
+      const mode = productionMaterialization?.mode ?? verificationRow.firstMaterializationMode;
+      if (before || after.mode !== mode)
+        throw new Error(`SELECTED_WORK_FIRST_MATERIALIZATION_INVALID:${path}`);
+      continue;
+    }
+    if (laterVerificationModification) {
+      if (
+        !before ||
+        before.mode !== verificationRow.firstMaterializationMode ||
+        after.mode !== verificationRow.firstMaterializationMode
+      ) {
+        throw new Error(`SELECTED_WORK_PRIOR_MATERIALIZATION_INVALID:${path}`);
+      }
+      continue;
+    }
+    throw new Error(`SELECTED_WORK_UNAUTHORED_MATERIALIZATION:${path}`);
+  }
+
   comparison = {
+    hardGate: true,
     enabled: true,
     candidateWorkId,
-    predecessorKind: comparisonFixture ? "accepted-v9-bootstrap-fixture" : evidenceBinding.kind,
+    predecessorKind: comparisonFixture ? "approved-state-fixture" : evidenceBinding.kind,
     predecessorReportSha256: sha256(Buffer.from(canonicalJson(predecessorReport))),
     selectedMemberCount: selectedPaths.size,
-    outsideMemberCount: frozenBoundaryUniverse.filter((path) => !selectedPaths.has(path)).length,
+    selectedProductionMemberCount: selectedProductionPaths.size,
+    selectedVerificationRowCount: selectedVerificationRows.length,
+    allGitChangedPathCount: changedStatusRecords.length,
+    allGitChangedPaths: changedStatusRecords,
+    changedPathCommand:
+      fixtureName === null
+        ? ["git", "diff", "--name-status", "-z", "--no-renames", evidenceCommit, commit, "--"]
+        : null,
+    changedPathDefault: "reject",
+    authorityExemptions: [],
+    outsideMemberCount: boundaryAndVerificationPaths.filter((path) => !selectedPaths.has(path))
+      .length,
     exactOutsideEquality: true,
+    acceptedTreeOutsideSelectedEquality: true,
     graphGateEnabled: false,
     observationPromotion: false,
   };
@@ -1150,7 +1593,7 @@ const selectedTuple = Object.fromEntries(
 
 const V7_INTERFACE_PATH = `${BUNDLE_ROOT}/interfaces/product-truth-complexity-v7.md`;
 const dependencyAuthority = extractMachineBlock(
-  accepted.textAt(V7_INTERFACE_PATH),
+  authorityTree.textAt(V7_INTERFACE_PATH),
   "omp-flow-raw-effect-universe-v1",
   V7_INTERFACE_PATH,
 );
@@ -1171,74 +1614,18 @@ const dependencyEffectRecords = sortByJcsBytes(
     sourceClosureSha256: entry.sourceClosureSha256,
   })),
 );
-const dependencyRecordsFor = (snapshot) => {
-  const records = sortedStrings([...snapshot.tree.keys()].filter(manifestPath)).map((path) => ({
-    kind: "package-manifest",
-    path,
-    sha256: sha256(snapshot.bytesAt(path)),
-  }));
-  const lockBytes = snapshot.bytesAt("bun.lock");
-  if (lockBytes === null) throw new Error("DEPENDENCY_LOCK_MISSING");
-  records.push({ kind: "lockfile", path: "bun.lock", sha256: sha256(lockBytes) });
-  const adoption = extractMachineBlock(
-    snapshot.textAt("README.md"),
-    "source-adoptions",
-    "README.md",
-  );
-  records.push({
-    kind: "adopted-source-authority",
-    path: "README.md#source-adoptions",
-    sha256: sha256(Buffer.from(canonicalJson(adoption))),
-  });
-  records.push(...dependencyEffectRecords);
-  const ordered = sortByJcsBytes(records);
-  return { records: ordered, closureSha256: sha256(Buffer.from(canonicalJson(ordered))) };
-};
-const dependencySnapshots = {
-  baseline: dependencyRecordsFor(loadTree(config.baselineCommit)),
-  accepted: dependencyRecordsFor(accepted),
-};
-const actualDependency = dependencyRecordsFor(candidate);
-const dependencyPhase =
-  officialB0 || comparisonFixture || fixtureUsesBootstrapCandidate ? "baseline" : "accepted";
-for (const phase of ["baseline", "accepted"]) {
-  if (dependencySnapshots[phase].closureSha256 !== config.dependencyClosureSha256[phase]) {
-    throw new Error(
-      `DEPENDENCY_CONFIG_CLOSURE_CHANGED:${phase}:${dependencySnapshots[phase].closureSha256}`,
-    );
-  }
-}
-const expectedDependency = dependencySnapshots[dependencyPhase];
-const expectedManifests = new Map(
-  expectedDependency.records
-    .filter((entry) => entry.kind === "package-manifest")
-    .map((entry) => [entry.path, entry.sha256]),
+const candidateAcceptedTreeRecords = sortByJcsBytes(
+  acceptedTreePaths.map((path) => stateRecordAt(candidate, path)),
 );
-const actualManifests = new Map(
-  actualDependency.records
-    .filter((entry) => entry.kind === "package-manifest")
-    .map((entry) => [entry.path, entry.sha256]),
+const candidateAcceptedTreeRecordsSha256 = sha256(
+  Buffer.from(canonicalJson(candidateAcceptedTreeRecords)),
 );
-if (canonicalJson([...expectedManifests.keys()]) !== canonicalJson([...actualManifests.keys()])) {
-  throw new Error("DEPENDENCY_MANIFEST_SET_CHANGED");
-}
-for (const [path, expectedSha256] of expectedManifests) {
-  if (actualManifests.get(path) !== expectedSha256)
-    throw new Error(`DEPENDENCY_MANIFEST_CHANGED:${path}`);
-}
-const expectedLock = expectedDependency.records.find((entry) => entry.kind === "lockfile");
-const actualLock = actualDependency.records.find((entry) => entry.kind === "lockfile");
-if (actualLock?.sha256 !== expectedLock?.sha256)
-  throw new Error("DEPENDENCY_LOCK_CHANGED:bun.lock");
-const expectedAdoption = expectedDependency.records.find(
-  (entry) => entry.kind === "adopted-source-authority",
-);
-const actualAdoption = actualDependency.records.find(
-  (entry) => entry.kind === "adopted-source-authority",
-);
-if (actualAdoption?.sha256 !== expectedAdoption?.sha256)
-  throw new Error("DEPENDENCY_ADOPTED_SOURCE_CHANGED");
-if (!officialB0 && !comparisonFixture && !fixtureUsesBootstrapCandidate) {
+if (
+  !officialB0 &&
+  !comparisonFixture &&
+  !fixtureUsesBootstrapCandidate &&
+  !fixtureUsesApprovedStateCandidate
+) {
   const lockText = candidate.textAt("bun.lock");
   const unavailable = dependencyEffectRecords.filter(
     (entry) => !lockText.includes(entry.locator) || !lockText.includes(entry.lockIdentity),
@@ -1248,9 +1635,9 @@ if (!officialB0 && !comparisonFixture && !fixtureUsesBootstrapCandidate) {
 }
 
 const historicalRecords = sortByJcsBytes(
-  [...accepted.tree.keys()].filter(historicalArtifactPath).map((path) => {
-    const entry = accepted.tree.get(path);
-    const bytes = accepted.bytesAt(path);
+  [...approvedState.tree.keys()].filter(historicalArtifactPath).map((path) => {
+    const entry = approvedState.tree.get(path);
+    const bytes = approvedState.bytesAt(path);
     return { path, mode: entry.mode, blobId: entry.object, sha256: sha256(bytes) };
   }),
 );
@@ -1583,21 +1970,32 @@ const report = {
     identityAuthenticationClaimed: false,
   },
   authority: {
-    acceptedDesignCommit: config.acceptedDesignCommit,
+    hardGate: true,
+    authorityDesignCommit: config.authorityDesignCommit,
+    approvedStateCommit: config.approvedStateCommit,
     authoritySha256,
     configSha256: sha256(configBytes),
     workBoundarySha256: config.workBoundarySha256,
+    verificationRows: {
+      rowCount: verificationRows.length,
+      uniquePathCount: verificationPaths.length,
+      rowsPerWork: verificationRowsPerWork,
+      rowsJcsSha256: verificationRowsJcsSha256,
+      rows: sortByJcsBytes(verificationRows),
+    },
     hardFacts: authority.report.hardFacts,
     observationalFacts: authority.report.observationalFacts,
     explicitNonAuthority: authority.explicitNonAuthority,
     observationsPromoted: false,
   },
   evidence: {
+    hardGate: true,
     transitionRows,
     selectedTuple,
     identityAuthenticationClaimed: false,
   },
   universe: {
+    hardGate: true,
     source: "five-design-frozen-production-boundaries",
     candidateSelectedPathsUsed: false,
     workingTreeUsed: false,
@@ -1606,19 +2004,45 @@ const report = {
     members: memberRecords,
     frozenBoundaryMemberCount: frozenBoundaryUniverse.length,
     frozenBoundaryMembers: boundaryMemberRecords,
+    approvedProductionState: {
+      recordCount: approvedProductionStateRecords.length,
+      recordsRawJcsSha256: approvedProductionStateSha256,
+      records: approvedProductionStateRecords,
+    },
+    approvedBoundaryAndVerificationState: {
+      recordCount: approvedBoundaryAndVerificationRecords.length,
+      presentCount: approvedBoundaryAndVerificationRecords.filter(
+        (row) => row.presence === "present",
+      ).length,
+      absentCount: approvedBoundaryAndVerificationRecords.filter((row) => row.presence === "absent")
+        .length,
+      recordsRawJcsSha256: approvedBoundaryAndVerificationSha256,
+      records: approvedBoundaryAndVerificationRecords,
+    },
   },
   dependencies: {
-    hardGate: "exact-input-byte-closure-only",
-    phase: dependencyPhase,
-    closureSha256: actualDependency.closureSha256,
-    records: actualDependency.records,
+    hardGate: true,
+    hardGateScope: "accepted-tree-byte-and-external-tuple-authority",
+    sourceAdoptionsJcsSha256: sourceAdoptionsSha256,
+    inputsJcsSha256: acceptedTreeInputsSha256,
+    acceptedTreeDerivationCount: acceptedTreeDerivations.length,
+    acceptedTreeRecordCount: acceptedTreeRecords.length,
+    acceptedTreeRecordsRawJcsSha256: acceptedTreeRecordsSha256,
+    acceptedTreeRecords,
+    candidateTreeRecordCount: candidateAcceptedTreeRecords.length,
+    candidateTreeRecordsRawJcsSha256: candidateAcceptedTreeRecordsSha256,
+    externalDependencyRecords: dependencyEffectRecords,
     semanticCapabilityVerdict: false,
   },
   immutableHistory: {
     hardGate: true,
     acceptedTreeManifestCount: historicalRecords.length,
     acceptedTreeManifestSha256: historicalArtifactsSha256,
-    candidateChecked: !officialB0 && !comparisonFixture && !fixtureUsesBootstrapCandidate,
+    candidateChecked:
+      !officialB0 &&
+      !comparisonFixture &&
+      !fixtureUsesBootstrapCandidate &&
+      !fixtureUsesApprovedStateCandidate,
   },
   declarations: {
     hardGate: "identity-presence-disposition-first-materialization-only",

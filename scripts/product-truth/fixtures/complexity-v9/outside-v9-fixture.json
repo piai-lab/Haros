@@ -1,0 +1,6 @@
+{
+  "extends": "exact-predecessor-positive",
+  "virtualFiles": {
+    "scripts/product-truth/fixtures/complexity-v9/candidate-output.json": "{}\n"
+  }
+}

@@ -1,3 +1,4 @@
 {
-  "compareToBootstrapBaseline": true
+  "compareToApprovedState": true,
+  "useApprovedStateCandidateSnapshot": true
 }

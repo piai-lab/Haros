@@ -1,6 +1,6 @@
 {
   "extends": "exact-predecessor-positive",
   "moveFiles": {
-    "scripts/release-update-policy.json": "scripts/product-truth/direct-first-public.ts"
+    "apps/web/src/appSettings.ts": "apps/web/src/appSettingsMoved.ts"
   }
 }

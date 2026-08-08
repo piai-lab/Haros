@@ -1,6 +1,6 @@
 {
   "extends": "exact-predecessor-positive",
   "appendToFiles": {
-    "apps/service/package.json": "\n"
+    "turbo.json": "\n"
   }
 }

@@ -1,0 +1,6 @@
+{
+  "extends": "exact-predecessor-positive",
+  "modeChanges": {
+    "apps/web/src/appSettings.ts": "100755"
+  }
+}

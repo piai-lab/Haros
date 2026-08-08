@@ -1,0 +1,6 @@
+{
+  "extends": "exact-predecessor-positive",
+  "virtualFiles": {
+    "apps/web/src/composerDraftV2Transcode.ts": "export {};\n"
+  }
+}
