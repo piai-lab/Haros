@@ -1,0 +1,6 @@
+{
+  "extends": "traced-owner-positive",
+  "virtualFiles": {
+    "scripts/product-truth/sqlite-classifier.ts": "const fileRead = Bun.file;\nexport function classifyLegacyDatabase() {\n  return fileRead(\"fixture\");\n}\n"
+  }
+}

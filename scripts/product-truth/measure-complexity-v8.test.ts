@@ -183,6 +183,8 @@ describe("product-truth-complexity-v8 qualified declarations", () => {
     "traced-assignment-shadow-positive",
     "traced-assignment-global-localstorage-shadow-positive",
     "traced-assignment-global-function-shadow-positive",
+    "traced-assignment-scoped-global-shadow-positive",
+    "traced-assignment-scoped-terminal-direct-use-positive",
     "traced-assignment-rhs-raw-free-wrapper-positive",
     "traced-assignment-rhs-raw-free-conditional-positive",
   ])("accepts exact owner declaration and lexical-use positive %s", (fixture) => {
@@ -228,6 +230,11 @@ describe("product-truth-complexity-v8 qualified declarations", () => {
     "traced-assignment-global-localstorage-same-conditional-private-helper",
     "traced-assignment-global-eval-as-private-helper",
     "traced-assignment-global-function-as-private-helper",
+    "traced-assignment-scoped-global-module-as-private-helper",
+    "traced-assignment-scoped-global-module-conditional-private-helper",
+    "traced-assignment-scoped-ambient-module-as-private-helper",
+    "traced-assignment-scoped-global-function-as-private-helper",
+    "traced-assignment-scoped-terminal-as-private-helper",
     "traced-class-growth",
   ])("rejects wrong qualified declaration/use %s", (fixture) => {
     const result = runFixture(fixture, "direct-first-public-b1");

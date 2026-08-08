@@ -1655,6 +1655,7 @@ for (const path of candidateGraph.paths.filter((candidatePath) => rawInventoryPa
     ts.forEachChild(node, collectAssignmentWrites);
   };
   collectAssignmentWrites(file);
+  let assignmentScopedIdentityForExpression = () => null;
   const rawIdentityForGlobalAssignmentAtom = (expression) => {
     const normalized = normalizedGlobal(expression, lexical.isShadowedAt);
     const normalizedClasses = classifyGlobal(normalized);
@@ -1702,6 +1703,22 @@ for (const path of candidateGraph.paths.filter((candidatePath) => rawInventoryPa
       if (!loader || !member || member.value === null) return null;
       const classes = classesForModuleExport(loader.specifier, member.value);
       return classes ? { specifier: loader.specifier, exported: member.value, classes, form: member.form } : null;
+    }
+    const scoped = assignmentScopedIdentityForExpression(expression);
+    if (scoped?.kind === "terminal") return {
+      specifier: scoped.specifier,
+      exported: scoped.exported,
+      classes: scoped.classes,
+      form: scoped.form,
+    };
+    if (scoped?.kind === "global-root") {
+      const classes = classifyGlobal({ root: scoped.root, member: null });
+      if (classes) return {
+        specifier: scoped.root,
+        exported: "*",
+        classes,
+        form: "global-identifier",
+      };
     }
     return rawIdentityForGlobalAssignmentAtom(expression);
   };
@@ -1832,73 +1849,75 @@ for (const path of candidateGraph.paths.filter((candidatePath) => rawInventoryPa
     }
     return changed;
   };
-  let aliasChanged = true;
-  while (aliasChanged) {
-    aliasChanged = false;
-    const visit = (node) => {
-      if (ts.isVariableDeclaration(node) && node.initializer) {
-        const initializerBinding = ts.isIdentifier(node.initializer) ? resolvedBindingAt(node.initializer) : null;
-        if (ts.isIdentifier(node.name) && initializerBinding && !bindingIdentityByDeclaration.has(node.name)) {
-          bind(initializerBinding, node.name); aliasChanged = true;
-        }
-        if ((ts.isObjectBindingPattern(node.name) || ts.isArrayBindingPattern(node.name)) &&
-            initializerBinding && bindResolvedRawPattern(initializerBinding, node.name)) aliasChanged = true;
-        if (ts.isIdentifier(node.name) && (ts.isPropertyAccessExpression(node.initializer) || ts.isElementAccessExpression(node.initializer)) &&
-            ts.isIdentifier(node.initializer.expression) && resolvedBindingAt(node.initializer.expression)?.namespace) {
-          const member = staticMember(node.initializer);
-          if (member.value === null) addViolation("COMPUTED_EFFECT_SELECTOR", path, node.initializer, node.initializer.getText(file));
-          else if (!bindingIdentityByDeclaration.has(node.name)) {
-            const base = resolvedBindingAt(node.initializer.expression);
-            bind({ specifier: base.specifier, exported: member.value, classes: classesForModuleExport(base.specifier, member.value), form: member.form }, node.name);
-            aliasChanged = true;
+  const propagateRawAssignments = () => {
+    let aliasChanged = true;
+    while (aliasChanged) {
+      aliasChanged = false;
+      const visit = (node) => {
+        if (ts.isVariableDeclaration(node) && node.initializer) {
+          const initializerBinding = ts.isIdentifier(node.initializer) ? resolvedBindingAt(node.initializer) : null;
+          if (ts.isIdentifier(node.name) && initializerBinding && !bindingIdentityByDeclaration.has(node.name)) {
+            bind(initializerBinding, node.name); aliasChanged = true;
+          }
+          if ((ts.isObjectBindingPattern(node.name) || ts.isArrayBindingPattern(node.name)) &&
+              initializerBinding && bindResolvedRawPattern(initializerBinding, node.name)) aliasChanged = true;
+          if (ts.isIdentifier(node.name) && (ts.isPropertyAccessExpression(node.initializer) || ts.isElementAccessExpression(node.initializer)) &&
+              ts.isIdentifier(node.initializer.expression) && resolvedBindingAt(node.initializer.expression)?.namespace) {
+            const member = staticMember(node.initializer);
+            if (member.value === null) addViolation("COMPUTED_EFFECT_SELECTOR", path, node.initializer, node.initializer.getText(file));
+            else if (!bindingIdentityByDeclaration.has(node.name)) {
+              const base = resolvedBindingAt(node.initializer.expression);
+              bind({ specifier: base.specifier, exported: member.value, classes: classesForModuleExport(base.specifier, member.value), form: member.form }, node.name);
+              aliasChanged = true;
+            }
           }
         }
-      }
-      if (ts.isBinaryExpression(node) && node.operatorToken.kind >= ts.SyntaxKind.FirstAssignment &&
-          node.operatorToken.kind <= ts.SyntaxKind.LastAssignment) {
-        const extensionsEnabled = assignmentComparisonNodes.has(node);
-        const rawAssignment = rawAssignmentExpressionResult(node.right, extensionsEnabled);
-        if (rawAssignment.identity) {
-          if (node.operatorToken.kind === ts.SyntaxKind.EqualsToken) {
-            if (bindResolvedRawAssignment(node.left, rawAssignment.identity, node)) aliasChanged = true;
-          } else {
+        if (ts.isBinaryExpression(node) && node.operatorToken.kind >= ts.SyntaxKind.FirstAssignment &&
+            node.operatorToken.kind <= ts.SyntaxKind.LastAssignment) {
+          const extensionsEnabled = assignmentComparisonNodes.has(node);
+          const rawAssignment = rawAssignmentExpressionResult(node.right, extensionsEnabled);
+          if (rawAssignment.identity) {
+            if (node.operatorToken.kind === ts.SyntaxKind.EqualsToken) {
+              if (bindResolvedRawAssignment(node.left, rawAssignment.identity, node)) aliasChanged = true;
+            } else {
+              addRawPatternViolation("RAW_ALIAS_WRITE_UNKNOWN", node, {
+                reason: "compound-raw-assignment",
+              });
+            }
+          } else if (rawAssignment.containsRaw) {
             addRawPatternViolation("RAW_ALIAS_WRITE_UNKNOWN", node, {
-              reason: "compound-raw-assignment",
+              reason: "unsupported-raw-assignment-rhs",
+              rhsKind: ts.SyntaxKind[node.right.kind],
+            });
+          } else if (!extensionsEnabled && ts.isBinaryExpression(node.right) &&
+              node.right.operatorToken.kind === ts.SyntaxKind.EqualsToken &&
+              rawAssignmentExpressionResult(node.right.right, extensionsEnabled).identity) {
+            addRawPatternViolation("RAW_ALIAS_WRITE_UNKNOWN", node, {
+              reason: "nested-raw-assignment-rhs",
             });
           }
-        } else if (rawAssignment.containsRaw) {
-          addRawPatternViolation("RAW_ALIAS_WRITE_UNKNOWN", node, {
-            reason: "unsupported-raw-assignment-rhs",
-            rhsKind: ts.SyntaxKind[node.right.kind],
-          });
-        } else if (!extensionsEnabled && ts.isBinaryExpression(node.right) &&
-            node.right.operatorToken.kind === ts.SyntaxKind.EqualsToken &&
-            rawAssignmentExpressionResult(node.right.right, extensionsEnabled).identity) {
-          addRawPatternViolation("RAW_ALIAS_WRITE_UNKNOWN", node, {
-            reason: "nested-raw-assignment-rhs",
-          });
         }
-      }
-      ts.forEachChild(node, visit);
-    };
-    visit(file);
-  }
-  for (const [declaration, writes] of assignmentWritesByDeclaration) {
-    if (!bindingIdentityByDeclaration.has(declaration) || writes.length === 0) continue;
-    const variableDeclaration = containingVariableDeclaration(declaration);
-    const validDeclarationWrite = writes.length === 1 && writes[0].kind === "declaration" &&
-      variableDeclaration?.initializer;
-    const validAssignmentWrite = writes.length === 1 && writes[0].kind === "equals" &&
-      variableDeclaration && !variableDeclaration.initializer;
-    if (!validDeclarationWrite && !validAssignmentWrite) {
-      const witness = writes.find((write) => !["declaration", "equals"].includes(write.kind)) ?? writes[1] ?? writes[0];
-      addRawPatternViolation("RAW_ALIAS_WRITE_UNKNOWN", witness.node, {
-        name: declaration.text,
-        reason: "raw-declaration-write-cardinality",
-        writeKinds: writes.map((write) => write.kind),
-      });
+        ts.forEachChild(node, visit);
+      };
+      visit(file);
     }
-  }
+    for (const [declaration, writes] of assignmentWritesByDeclaration) {
+      if (!bindingIdentityByDeclaration.has(declaration) || writes.length === 0) continue;
+      const variableDeclaration = containingVariableDeclaration(declaration);
+      const validDeclarationWrite = writes.length === 1 && writes[0].kind === "declaration" &&
+        variableDeclaration?.initializer;
+      const validAssignmentWrite = writes.length === 1 && writes[0].kind === "equals" &&
+        variableDeclaration && !variableDeclaration.initializer;
+      if (!validDeclarationWrite && !validAssignmentWrite) {
+        const witness = writes.find((write) => !["declaration", "equals"].includes(write.kind)) ?? writes[1] ?? writes[0];
+        addRawPatternViolation("RAW_ALIAS_WRITE_UNKNOWN", witness.node, {
+          name: declaration.text,
+          reason: "raw-declaration-write-cardinality",
+          writeKinds: writes.map((write) => write.kind),
+        });
+      }
+    }
+  };
   const scopedAliases = new Map();
   const scopedAliasDeclarations = new Set();
   const wrappers = new Set(rawUniverse.globalAliasGrammar.wrappers);
@@ -1964,7 +1983,10 @@ for (const path of candidateGraph.paths.filter((candidatePath) => rawInventoryPa
     }
     if (ts.isIdentifier(expression) || ts.isPropertyAccessExpression(expression) || ts.isElementAccessExpression(expression)) {
       const normalized = normalizedScopedGlobal(expression) ?? normalizedGlobal(expression, lexical.isShadowedAt);
-      return identityForNormalizedGlobal(normalized);
+      const identity = identityForNormalizedGlobal(normalized);
+      if (identity) return identity;
+      const directGlobal = rawIdentityForGlobalAssignmentAtom(expression);
+      return directGlobal ? { kind: "terminal", ...directGlobal } : null;
     }
     return null;
   };
@@ -2058,6 +2080,8 @@ for (const path of candidateGraph.paths.filter((candidatePath) => rawInventoryPa
       if (identity && bindScopedAliasAt(write.scope, write.name, identity, write.node.left)) scopedAliasesChanged = true;
     }
   }
+  assignmentScopedIdentityForExpression = identityForExpression;
+  propagateRawAssignments();
   const aliasWriteViolations = new Set();
   const rejectAliasWrite = (write, detail) => {
     const key = `${write.node.pos}\0${write.name}`;
