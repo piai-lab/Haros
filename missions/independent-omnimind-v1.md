@@ -36,6 +36,8 @@ Campaign 完成必须同时满足：
 
 状态只允许 `open -> candidate -> verified`，另有 `blocked`。生产者只能提交 candidate；verified 需要独立证据。final SHA 改变后，受影响 verified 回到 candidate。
 
+`open` 表示该 Claim 的 OmniMind 验收证据尚未形成，不表示对应产品基座不存在。尤其不得把 F-12、F-14–F-18 的 `open` 解释为需要重写 Synara 已有的 Package surface、File/Viewer/Diff/Terminal、Conversation、i18n/accessibility 或 Electron build/updater；施工范围与复用门只由 [`execution-brief.md`](../execution-brief.md) 决定。
+
 | ID | Claim | Proof type | Status | Evidence | SHA |
 | --- | --- | --- | --- | --- | --- |
 | F-01 | Product doctrine, execution order, discovery rationale and Campaign express one non-contradictory Pi-native architecture; no obsolete RPC-first, Pi-through-ACP, equal-engine or hidden-Pi doctrine remains | deterministic text/decision audit | candidate | Freeze r6 handoff and different-actor review bind the current constitution, owner graph, source closure and execution boundary to the first vertical-slice candidate; review verdict `PASS`. | `248b3316651e681d9d4c78f81bec0c84a4cc822c` |
@@ -67,7 +69,7 @@ This reset is deliberate: preserving obsolete green tests would create false con
 
 F-01 through F-10 are `candidate` on the independently accepted first local, unsigned macOS arm64 Pi-native vertical slice at `248b3316651e681d9d4c78f81bec0c84a4cc822c`. F-11 is `candidate` on the independently accepted Package checkpoint at `16f14d188e38134f6f45c46bfcb57ff36c1e8565`. F-13 is `candidate` on the independently accepted OpenCode external-Engine checkpoint at `02979ff7488e0491b04f29876b253de3b96540b1`. None is `verified`; F-12 and F-14 through F-18 remain `open`.
 
-The first vertical-slice proof is recorded under `.omp-flow/tasks/08-04-ui-chassis-takeover/`; the accepted Package proof is recorded under `.omp-flow/tasks/archive/2026-08/08-06-pi-package-lifecycle/`; the accepted external-Engine proof is recorded under `.omp-flow/tasks/archive/2026-08/08-06-opencode-external-engine/`. [`research/source-review.md`](../research/source-review.md) continues to own the immutable source baseline and revalidation triggers. The sole next bounded checkpoint is owned by [`execution-brief.md`](../execution-brief.md): Product truth consolidation and generation rotation before Remote. No broader claim changes state merely because these status pointers are synchronized.
+The first vertical-slice proof is recorded under `.omp-flow/tasks/08-04-ui-chassis-takeover/`; the accepted Package proof is recorded under `.omp-flow/tasks/archive/2026-08/08-06-pi-package-lifecycle/`; the accepted external-Engine proof is recorded under `.omp-flow/tasks/archive/2026-08/08-06-opencode-external-engine/`. [`research/source-review.md`](../research/source-review.md) continues to own the immutable source baseline and revalidation triggers. The sole next bounded checkpoint is owned by [`execution-brief.md`](../execution-brief.md): Product truth consolidation and generation rotation before F-12 Package-surface closure, then F-14–F-16 File/Remote/permissions. No broader claim changes state merely because these status pointers are synchronized, and an `open` Claim never authorizes rebuilding an already adopted Synara capability.
 
 ## 6. Blockers
 

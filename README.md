@@ -6,7 +6,7 @@ OmniMind 是一个本地优先桌面 Agent 产品：默认用户身份是 **Omni
 
 - **Pi-native**：默认 Agent、Provider/Model/Thinking、Session 与 Package 语义来自 Pi 原生运行时。
 - **OmniMind-owned**：品牌、桌面体验、用户可见工作、Package 信任与分发、系统能力、恢复和跨 Engine 连续性由 OmniMind 负责。
-- **Ecosystem-first**：优先无损承接成熟能力，不重写竞争 Runtime。
+- **Ecosystem-first**：优先无损承接成熟能力，不重写竞争 Runtime，也不把已经采用的 Synara 产品能力因 OmniMind 验收项尚未闭合而从零重造。
 - **Engine-open**：Pi 是 Gold Path，外部 Agent 是真实出口；能力差异必须诚实呈现。
 
 ## 1. 产品状态与战略
@@ -16,6 +16,8 @@ OmniMind 是一个本地优先桌面 Agent 产品：默认用户身份是 **Omni
 公开 Alpha 前没有用户数据兼容义务。维护者已明确放弃默认 `~/.omnimind` 中被精确识别为 pre-baseline 的旧开发 Product、Automation/service 与 OmniMind Web-draft 状态，以及重复/过期的旧 Package 状态；首个公开 schema 可在进程停止、目标逐项验证且删除范围不越界时直接重建，不创建 backup、migration、restore 或长期兼容面。该授权不包含 credential、当前 canonical Package generation、Pi-native state、attachments、外部 ResourceRef、用户 workspace、Git、全局配置、其他 home 或任何未识别路径。
 
 OmniMind 的价值不是“能启动 Pi”，而是上游没有义务完成的桌面产品层：世界级交互、可信 Package 分发、文件与工作台、真实权限与副作用、恢复、外部 Engine 协作以及跨平台交付。若这些价值不能独立成立，产品就只是一层可替换皮肤。
+
+已采用的 Synara UI mother 与仓库中已经运行的成熟机制是默认施工基座。一个 Campaign claim 为 `open`，只表示 OmniMind 对该产品语义的验收证据尚未闭合，不表示对应 File、Viewer、Diff、Terminal、Conversation、i18n、accessibility、packaging 或 updater 基座不存在。替换既有机制前必须同时指出唯一 owner、可复现冲突，以及为什么接线、authority 收口或局部修复不能解决；否则保持既有实现并补齐 OmniMind 差异与 proof。
 
 当前 production compatibility、Package 安全、跨平台、恢复和外部 Engine 声明仍须由 active Campaign 在同一 frozen SHA 上验证；本 README 不自证完成。
 
@@ -318,6 +320,6 @@ Stage 0–3 的 source/identity closure、UI 母体接管、Product 单写、iso
 
 首个真实 headless Pi Package checkpoint 已在 commit `16f14d188e38134f6f45c46bfcb57ff36c1e8565` 由不同 actor 独立接受；其 Work、handoff 与 PASS review 保存在 [归档 Bundle](.omp-flow/tasks/archive/2026-08/08-06-pi-package-lifecycle/)。它证明当前 exact Package 的 staged activation、active lease、LKG、fault recovery 与 Pi-native private-state boundary，不证明完整 Package Catalog/compatibility taxonomy、外部 Engine、Remote、三平台发行或 V1 完成。
 
-唯一下一阶段是一个真实外部 Engine：证明 capability/permission difference、next-Run choice 与 no silent fallback，然后才进入 Remote/Workbench 扩展和三平台发行。
+真实外部 Engine checkpoint 已完成并通过独立复核。当前唯一 bounded checkpoint 是 Product truth consolidation；其后按完整 Package surface、File/Remote/permissions、性能/双语/无障碍、三平台发行的顺序闭合剩余证据。各阶段默认复用已采用的 Synara 与当前仓库基座，只实现 architecture owner 能证明的 OmniMind 差异；精确进入、停止和 proof 条件只见 [`execution-brief.md`](execution-brief.md)。
 
 具体进入条件、停止条件和 proof gate 只见 [`execution-brief.md`](execution-brief.md)；当前 claim 状态只见 active Campaign。
