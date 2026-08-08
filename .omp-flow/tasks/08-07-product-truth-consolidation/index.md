@@ -89,6 +89,9 @@ okf_version: "0.2"
 - [Product-truth complexity v9 protocol-route PASS approval](decisions/product-truth-complexity-v9-protocol-route-pass-approval.md)
   — human authorization for that single bounded realization; any material implementation or
   Review finding permanently ends v9.
+- [Product B1 alternate-authority recovery](decisions/product-truth-b1-alternate-authority-recovery.md)
+  — records that the material protocol-route Review finding permanently ended v9 and resumes B1
+  from the unchanged exact production fences, Design verification rows and real Product evidence.
 - [Product-truth complexity v9 narrow authority](interfaces/product-truth-complexity-v9.md) — exact
   membership/evidence/declaration boundary, observational literal-graph baseline and explicit
   semantic non-authority.
@@ -127,8 +130,8 @@ okf_version: "0.2"
   B1 safety, measurement or ordering.
 - [B1 LevelDB lockfile boundary-repair audit](qbd/b1-leveldb-lockfile-boundary-repair-audit.md) —
   fresh scoped QbD 2 PASS over the single lockfile addition and its fail-closed dependency gates.
-- [Work map](work/index.md) — one measurement-only v9 checkpoint followed by five bounded product
-  Works, the immutable unsplit B1 stop, exact eleven-path implementation-discovered compatibility
+- [Work map](work/index.md) — five bounded Product Works starting directly with immutable unsplit
+  B1 under exact alternate authority, exact implementation-discovered compatibility
   boundary, one tool-only lockfile addition, Native Host ordering and complete PRD acceptance
   coverage.
 

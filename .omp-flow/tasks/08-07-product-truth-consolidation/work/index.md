@@ -102,37 +102,32 @@ There is no test, fixture, output, extension or root category expansion; runtime
 homes are not Git paths and receive no exemption. Another implementation finding in this same
 family returns to Design/stop without another implementation repair dispatch.
 
+The later bounded protocol realization received a material different-actor finding. Under the
+maintainer's binding
+[B1 alternate-authority recovery](../decisions/product-truth-b1-alternate-authority-recovery.md),
+v9 is now permanently terminated and retained only as immutable failed history. It cannot gate B1,
+be renamed or replaced, or authenticate paths through candidate configuration. Product work resumes
+from the unchanged five production fences and the exact Design verification rows, checked directly
+against the real Git diff by Main.
+
 ## Hard ordering
 
-The next workflow checkpoint is a fresh different-actor QbD at
-`qbd/product-truth-complexity-v9-protocol-route-audit.md` over this revised design/map. It must
-reach 0 blocker and 0 advisory. Only a newly recorded human PASS calibration may authorize the measurement-only
-[v9 narrow meter](product-truth-complexity-v9.md). It changes no measured production path, freezes
-one immutable meter commit plus B0 report, writes its handoff and must receive a zero-finding
-different-actor implementation `PASS` only at
-`reviews/product-truth-complexity-v9-protocol-route.md`. No B1 production receipt may be issued before that
-acceptance; B1 names the accepted meter Review receipt only as correlation and Main/human
-orchestration separately selects the immutable evidence commit for B1's official v9 invocation.
+The next workflow checkpoint is [Direct first-public B1](direct-first-public-b1.md). Main records
+the full base and candidate SHAs and checks the real Git diff directly. The B1 production,
+measurement and dependency rows plus the exact 16 Design B1 verification rows are the sole changed-
+path authority, with their existing lifecycle and purpose. Candidate config, reports, receipts and
+all meter artifacts cannot add or authenticate a path. V1-v9 reports remain provenance only;
+failed `50deefc1...` and every v9 candidate are never Product predecessors.
 
-The v9 interface authored rows fix every transition without filename inference: v9 meter→B1,
-B1→Native Host, Native Host→execution leaf, execution leaf→Product State Store and Product State
-Store→Coordinator/facade. Each row fixes predecessor Work ID, exact handoff/Review/report paths and
-report derivation. For each transition Main/human orchestration supplies exactly one full official
-evidence commit through `--predecessor-evidence`; candidate/config/repository/report/receipt/history
-cannot define, infer or override it. V9 validates exact Review/handoff/report blobs there, reviewed-
-candidate→evidence-commit→next-candidate first-parent ancestry, later blob immutability, report
-digest and internally distinct declared actors, then records the full deterministic evidence tuple.
-A later different actor checks that recorded invocation against the official selection and trust-
-stop-loss Decision. Receipt strings and Git history authenticate no reviewer identity. B1's row
-binds accepted v9 evidence to a fresh v9 B0 report. V7/v8 reports are provenance only; failed
-`50deefc1...` is verification-only.
+After immutable B1 implementation, one different actor reviews the same SHA using the B1 handoff,
+the fixed capability verifier, generated-home presence/fault/race/kill evidence and reviewer-owned
+complete raw-reference enumeration. Only that Product Review may authorize Native Host work.
 
 The first production wave is [Direct first-public B1](direct-first-public-b1.md). It remains one
 deliberately indivisible production Work because the destructive tool, first-public
 Product/service/Web creation and compatibility deletion must become green together while
-`ProductControlPlane` is structurally unsplit. It consumes the accepted v9 bytes and handoff-bound
-B0 predecessor read-only and owns
-the separate frozen capability trace/fault/race/kill verifier, every r1-r17 hidden-mutation family
+`ProductControlPlane` is structurally unsplit. It owns the separate frozen capability trace/fault/
+race/kill verifier, every r1-r17 hidden-mutation family
 and deterministic same-SHA raw-reference/source Review.
 Its implementer must create a dedicated clean commit, then write the handoff in a later evidence
 commit so the recorded 40-hex B1 SHA remains immutable. No Store, Coordinator, facade or execution
@@ -159,41 +154,22 @@ source profile, and cannot alter any frozen complexity-meter file or universe. W
 `scripts/release-smoke.ts` caller addition, the implementation-discovered compatibility
 production/test paths are exactly twelve.
 
-V1-v8 meter bytes and evidence are immutable history. V9 reads the canonical machine block from
-each of the five Product Works plus the v9 authority and Design verification table at the
-QbD-approved Design tree, pins every normalized block digest and separately freezes the unchanged
-69 exact production paths and 70 exact per-Work verification rows. For Product comparison it uses
-the official evidence commit as base, enumerates every Git changed path with rename detection off
-and rejects by default. Only exact selected-Work production paths and exact verification rows named
-for that Work may change. Approved-present rows preserve presence/mode. Approved-absent production
-rows stay absent except for four exact `100644` production materializations; approved-absent verification rows
-follow only the nine exact table materializations and any authored required-prior-materialization
-lifecycle. Deletion/move is forbidden. Measurement/dependency entries and test, fixture, output,
-extension or root labels add no exemption. The approved source-adoptions block, nine
-manifests, `bun.lock`, patch/adopted roots and legal paths expand by exact Git objects to 6,321
-`path/presence/mode/Git-blob/SHA-256` records with digest
-`6687319b0ea58643812cee677fad03b3152e8bfcb31486ddb368bc1b3cf2f599`;
-config may pin only Design values and cannot choose paths. V9 also pins exact declaration identity/
-B0 absence/export-private/first-materialization facts and external dependency identities. It emits
-the pinned literal import/export multiset and LOC/SCC/count observations without a
-hard delta or domain verdict. It does not inventory or classify raw/global/alias expressions, callbacks,
-RHS/subtrees or per-use owners. B1 proves effect safety through non-leaking owner-local capabilities,
+V1-v9 meter bytes and evidence are immutable history and no meter gates Product work. Main uses the
+real Git diff and the unchanged exact Work rows directly. B1 proves effect safety through non-
+leaking owner-local capabilities,
 the frozen 10-owner/146-operation/34-barrier/29-kill verifier universe plus 87 exact owner states,
 cardinality/ordinal rules, 85 concrete-ordinal race cases, 65 concrete-ordinal kill cases and
 convergence bindings, exhaustive generated-home presence/fault/race/kill cases, the full r1-r17
 manifest with adjacent positives and reviewer-owned same-SHA enumeration/source Review, including
-tool/version/source digest, canonical records and zero unexplained references. After v9 Review acceptance, every later Work treats
-the meter bytes, accepted immediate predecessor report and accepted B1 behavior evidence as read-only predecessors.
+tool/version/source digest, canonical records and zero unexplained references. Every later Work
+treats the accepted immediate Product predecessor handoff/Review and B1 behavior evidence as read-
+only inputs.
 An inert `.discarding` tombstone blocks rebuild convergence only; it is never loaded and adds no
 ordinary-runtime sentinel.
 
-The v9 all-Git path source is an exact byte protocol, not a text file: successful
-`git diff --name-status -z --no-renames` stdout is parsed as repeated one-byte `A/D/M/T`, NUL,
-non-empty path bytes, NUL. The whole buffer never enters text/no-NUL validation; only each path
-slice receives fatal UTF-8 byte-round-trip and exact relative-path validation. Fixed protocol
-errors reject before policy, while valid records must reach the existing lifecycle/accepted-tree
-classifiers. Direct Buffer cases and fixture-free real Git-object selected/unselected/lifecycle/
-adoption controls are mandatory.
+Main records the successful raw `git diff --name-status -z --no-renames` output for the exact
+base/candidate pair and path-limits it against authored rows; B1 does not consume a candidate-owned
+parser or config for scope authority.
 
 The Service permissions fixture is a separate focused-test consumer of the in-scope fail-closed
 configuration change, not a thirteenth compatibility surface.
@@ -207,9 +183,8 @@ separately enumerated as closed destructive target identities or matching tool f
 that exception does not apply to `enableAppshots`.
 
 [Native Host v2 Package-root binding](native-host-package-root-binding.md) is a separate product
-boundary and is independently reviewable. The safe default sequence is literal: a different actor
-first accepts the immutable v9 meter handoff, then B1 and a different actor accepts its complete
-meter plus behavior handoff, including exact v9-authority, raw-reference and verifier-universe digests,
+boundary and is independently reviewable. The safe default sequence is literal: B1 and a different
+actor accepts its complete behavior handoff, including raw-reference and verifier-universe digests,
 then a different actor accepts the Native Host handoff,
 then execution-leaf extraction may begin. The current map infers no shared-tree overlap: B1 and the
 Native Host Work both own `apps/desktop/src/main.ts`, and the Native Host Work and execution leaf
@@ -226,9 +201,10 @@ three small reviewable steps:
    remove test/diagnostic leakage, freeze C, and run the conjunctive B0/B1/C and real-journey gates.
 
 These three Works are sequential because they edit the same `ProductControlPlane.ts` responsibility
-surface. They must consume the accepted meter and immutable B1 recorded by their handoffs, never a branch, dirty
+surface. They must consume the immutable accepted Product predecessor recorded by its handoff,
+never a branch, dirty
 tree, reconstructed patch or B0 substitution. Therefore the complete default sequence is:
-accepted v9 meter → accepted B1 → accepted Native Host → accepted execution leaf → accepted
+accepted B1 → accepted Native Host → accepted execution leaf → accepted
 Product State Store → Coordinator/facade C.
 
 ## Acceptance coverage
@@ -236,19 +212,19 @@ Product State Store → Coordinator/facade C.
 | PRD acceptance                                                                | Realizing Work                                                                                                                                                                                                |
 | ----------------------------------------------------------------------------- | ------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
 | A1 exact root/lane/profile scope                                              | [Direct first-public B1](direct-first-public-b1.md)                                                                                                                                                           |
-| A2 exact classification, protected-fact preflight, strict private classifier-copy origin and sanitized output | [Direct first-public B1](direct-first-public-b1.md), bounded by v9 declaration identity and hard-accepted by B1 verifier/enumerator/source Review |
+| A2 exact classification, protected-fact preflight, strict private classifier-copy origin and sanitized output | [Direct first-public B1](direct-first-public-b1.md), hard-accepted by B1 verifier/enumerator/source Review |
 | A3 read-only inspect and locked repeated apply                                | [Direct first-public B1](direct-first-public-b1.md)                                                                                                                                                           |
 | A4 allowlisted unrecoverable deletion with no copy                            | [Direct first-public B1](direct-first-public-b1.md)                                                                                                                                                           |
 | A5 byte-identical exclusions                                                  | [Direct first-public B1](direct-first-public-b1.md)                                                                                                                                                           |
 | A6 interruption only through fresh inspect/apply                              | [Direct first-public B1](direct-first-public-b1.md)                                                                                                                                                           |
-| A7 exact Product/service/Web generation-1 creation and matching lock hold     | [Direct first-public B1](direct-first-public-b1.md), bounded by v9 declaration identity and hard-accepted by B1 verifier/enumerator/source Review |
+| A7 exact Product/service/Web generation-1 creation and matching lock hold     | [Direct first-public B1](direct-first-public-b1.md), hard-accepted by B1 verifier/enumerator/source Review |
 | A8 old/future/unmarked/contradictory state fails closed                       | [Direct first-public B1](direct-first-public-b1.md)                                                                                                                                                           |
-| A9 zero unshipped compatibility caller/import and dominant exact refusal cuts | [Direct first-public B1](direct-first-public-b1.md), v9 membership/declaration facts plus hard B1 public-non-leak/lifecycle/raw-completeness/mutation Review |
+| A9 zero unshipped compatibility caller/import and dominant exact refusal cuts | [Direct first-public B1](direct-first-public-b1.md), exact Work scope plus hard B1 public-non-leak/lifecycle/raw-completeness/mutation Review |
 | A10 one Store, one connection and complete transactions                       | [Sole Product State Store](product-state-store.md), retained by the [final C Work](product-execution-coordinator-facade.md)                                                                                   |
 | A11 Coordinator effects without SQL/replay/fallback                           | [Coordinator and facade](product-execution-coordinator-facade.md)                                                                                                                                             |
 | A12 one 36-operation facade and separate probes                               | [Coordinator and facade](product-execution-coordinator-facade.md)                                                                                                                                             |
 | A13 Service-selected, transcript-bound Package root                           | [Native Host v2 Package-root binding](native-host-package-root-binding.md)                                                                                                                                    |
-| A14 deterministic complexity decrease in one universe and closed capability boundary | immutable v1-v8 provenance plus hard membership/evidence/lifecycle/declaration/dependency facts and observational graph/count output in [v9 measurement](product-truth-complexity-v9.md); semantic behavior/raw evidence in [Direct first-public B1](direct-first-public-b1.md); C in [Coordinator and facade](product-execution-coordinator-facade.md) |
+| A14 deterministic complexity decrease in one universe and closed capability boundary | immutable v1-v9 historical provenance; direct exact Work scope plus semantic behavior/raw evidence in [Direct first-public B1](direct-first-public-b1.md); C in [Coordinator and facade](product-execution-coordinator-facade.md) |
 | A15 current recovery behavior and affected real journeys                      | focused preservation in every Work; integrated live proof in [Coordinator and facade](product-execution-coordinator-facade.md)                                                                                |
 
 The three accepted QbD 1 advisories are all hard done conditions of the B1 Work: exact
@@ -261,20 +237,7 @@ Each implementation Work writes its promised handoff and receives a different-ac
 the next overlapping Work begins. Focused green checks do not authorize broader claims. The final C
 Work may submit affected Campaign claims only as `candidate`; no producer may mark them verified.
 
-The next workflow entry is a fresh different-actor QbD audit of the final-authority stop-loss repair
-across Design, all three Route B/stop-loss Decisions, Interface, measurement Work, B1 Work and this
-map. It must
-reproduce the exact 70-row verification table, per-Work counts, 45-path unique set, nine
-materializations, row digest and complete 110-row state; prove v9 owns only the hard all-changed-
-path/membership/evidence/lifecycle/outside-blob/accepted-tree-byte/dependency/declaration-disposition
-facts; keep graph/SCC/count output observational; contain no path-category/output exemption and no
-raw non-leak/write/Web-RPC/gateway or raw/global/alias/callback/RHS/per-use verdict; preserve all
-five production fences and v1-v8 bytes; and hand effect safety to B1's private ports, fixed
-10/146/87/85/65 verifier, reviewer-owned complete enumeration, zero unexplained references and full
-r1-r17 manifest with adjacent positives. The audit must reach 0 blocker and 0 advisory. Only a
-recorded human PASS calibration after it authorizes the measurement-
-only v9 assignment. Its immutable handoff then needs a zero-finding different-actor implementation
-`PASS` only at `reviews/product-truth-complexity-v9-protocol-route.md` before a new B1 production
-receipt. Any material implementation or Review failure ends v9 and returns to stop/alternate
-authority. The next QbD output is
-`qbd/product-truth-complexity-v9-protocol-route-audit.md`.
+The next workflow entry is direct first-public B1 under the alternate-authority Decision. After its
+immutable candidate and linked handoff, exactly one fresh different actor performs the Product
+Review at `reviews/direct-first-public-b1.md`. No further complexity-meter assignment, QbD or human
+calibration precedes B1.

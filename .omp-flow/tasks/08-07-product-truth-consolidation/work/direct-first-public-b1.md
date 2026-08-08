@@ -9,11 +9,11 @@ title: "Direct first-public rebuild and immutable unsplit B1"
 
 Implement the exact pre-release `inspect`/`apply` tool, direct generation-1 Product/service/Web
 creation and complete unshipped-compatibility deletion, while keeping Product responsibilities
-mechanically unsplit. Consume the different-actor-accepted immutable
-`product-truth-complexity-v9` narrow meter and its accepted B0 snapshot as a read-only
-predecessor, prove runtime behavior
-through owner-local capabilities and verifier-owned evidence, then produce one dedicated clean
-green B1 commit and record its full SHA and metrics without modifying the meter commit.
+mechanically unsplit. Use the maintainer-selected exact production fences and Design verification
+rows as changed-path authority, prove runtime behavior through owner-local capabilities,
+generated-home tests and reviewer-owned evidence, then produce one dedicated clean green B1 commit
+and record its full SHA and metrics. Complexity-meter artifacts remain immutable failed history and
+are not a B1 predecessor or gate.
 This Work realizes PRD A1-A9, the B1 half of A14, and the B1 preservation portion of A15.
 
 ## Useful inputs
@@ -34,43 +34,38 @@ This Work realizes PRD A1-A9, the B1 half of A14, and the B1 preservation portio
 - [B1 source-closure disposition boundary PASS approval](../decisions/b1-source-closure-boundary-pass-approval.md)
 - [Unshipped compatibility inventory](../research/unshipped-compatibility.md)
 - [Failed immutable B1 Review](../reviews/direct-first-public-b1.md)
+- [B1 alternate-authority recovery](../decisions/product-truth-b1-alternate-authority-recovery.md)
 - [V7 Occam repair calibration](../decisions/product-truth-complexity-v7-repair-calibration.md)
 - [Accepted v7 historical Review](../reviews/product-truth-complexity-v7.md)
 - [V9 stop-loss calibration](../decisions/product-truth-complexity-v9-stop-loss-calibration.md)
 - [V9 safe-degradation calibration](../decisions/product-truth-complexity-v9-safe-degradation-calibration.md)
 - [V9 protocol/route stop-loss calibration](../decisions/product-truth-complexity-v9-protocol-route-stop-loss.md)
-- [V9 narrow authority](../interfaces/product-truth-complexity-v9.md)
-- [Authoritative v9 meter Work](product-truth-complexity-v9.md) and its required
-  `handoffs/product-truth-complexity-v9.md`
+- [V9 narrow authority](../interfaces/product-truth-complexity-v9.md), as immutable failed history
+  and optional observational evidence only
 
 ## Entry stop
 
-Do not assign or start this Work until
-`reviews/product-truth-complexity-v9-protocol-route.md` records a zero-finding different-actor
-`PASS` over the immutable meter-only commit. No earlier Review path, including every immutable
-`FAIL`, can satisfy this stop; there is no alias, fallback, overwrite or latest-file selection. The
-B1 assignment must
-record that Review receipt only as correlation. Main/human orchestration must separately supply the
-accepted full meter evidence commit exactly once through v9's official `--predecessor-evidence`
-input. V9 reads exact handoff/Review/report blobs there, keeps the reviewed meter candidate SHA
-distinct, and validates candidate→evidence→B1 first-parent ancestry, immutable later evidence blobs,
-exact digests and internally distinct declared implementer/reviewer actors. The later different-
-actor Review checks the recorded invocation against the official selection; neither receipt nor Git
-history authenticates identity. The assignment also records the accepted meter SHA/digests including the
-five Work fences, v9 authority, dependency bytes, declaration-disposition and B1
-verifier-universe digests, and use
-those bytes plus its accepted B0 report read-only. A branch, working tree, failed candidate or
-candidate-selected predecessor stops before comparison.
+This Work starts only under the maintainer's
+[alternate-authority Decision](../decisions/product-truth-b1-alternate-authority-recovery.md).
+Main records the full base/candidate SHAs and checks the real Git diff directly. The unchanged B1
+production fence and the exact 16 Design-owned B1 verification rows are the sole changed-path
+authority; every other Git path fails before Product acceptance. No candidate config, meter,
+handoff, Review path or receipt may select or expand that set. V9 is permanently terminated and is
+not an entry stop, predecessor or command in this Work.
 
 ## In scope
 
-- Preserve all v1-v8 history plus accepted v9 meter/config/fixtures byte-for-byte. Run the accepted
-  v9 bytes against repaired B1 and its handoff-bound B0 predecessor; any Design/boundary/evidence/
-  lifecycle/outside-blob/dependency/declaration hard-fact mismatch stops. Graph/SCC/count drift is
-  recorded observationally and cannot become a v9 semantic verdict.
-- Encapsulate every Design-declared owner as a small non-leaking owner-local capability. V9 checks
-  only exact declaration identity, phase presence and export/private disposition; B1 source/behavior
-  Review hard-checks non-leak and mediation. Raw scratch or
+- Preserve all v1-v9 meter/config/fixture/history bytes. Enforce changed-path scope directly from
+  the unchanged Work fence and exact B1 verification rows; no complexity meter is executed as a
+  Product gate.
+- Develop this single atomic Work in product-first focused checkpoints: canonical live Product DB
+  path; Product/Service/Web refusal cuts; destructive seals/decoders/atomic batch/stale-lock
+  convergence; compatibility and Package-root authority; then thin coverage generation over real
+  owner-local capabilities. The 10/146/87/85/65 catalog is a coverage list, not a general event VM,
+  test runtime or governance framework. Failed historical candidates are counterexample sources
+  only and are never cherry-picked wholesale.
+- Encapsulate every Design-declared owner as a small non-leaking owner-local capability. B1
+  source/behavior Review hard-checks declaration identity, non-leak and mediation. Raw scratch or
   source paths usable for arbitrary I/O, SQLite/LevelDB handles, batches, lock tokens, release
   primitives, process handles and raw adapters must not cross its typed intent/sanitized-result
   boundary. Verifier composition injects the frozen port/event/fault/race/kill interfaces; no
@@ -305,14 +300,11 @@ receive no exemption.
   or aliases. `scripts/release-smoke.ts` has zero retired `.lane` caller/assertion residue and no
   other behavior change. There is no snapshot, converter, restore, legacy reader, dual-read or
   hidden copy.
-- The accepted v9 scan reports exact Work membership/lifecycle, official predecessor evidence,
-  outside presence/mode/blob equality, dependency bytes and exact declaration identity/B0 absence/
-  export-private/first-materialization facts. It accepts only the exact B1 production rows and 16
-  exact Design verification rows at their authored lifecycles and rejects every other changed Git
-  path. Literal graph/SCC/count output is observational. V9
-  neither proves public non-leak nor inventories/classifies raw expressions; passing it is not
-  effect-safety evidence.
-- The B1 verifier—not v9—proves behavior. Each exact owner uses non-leaking typed
+- Main's direct Git scope check records the immutable base/candidate SHAs and accepts only the exact
+  B1 production, measurement and dependency rows plus 16 exact Design verification rows at their
+  authored lifecycles. Every other changed Git path is rejected. This path check proves scope only;
+  it does not prove effect safety.
+- The B1 verifier proves behavior. Each exact owner uses non-leaking typed
   intent/sanitized-result boundaries and verifier-owned ports/events. The checked-in generator
   recomputes the frozen owner/catalog digests and derives its dimensions only from the block,
   covering every one of its 87 exact states, each cardinality-derived actual operation ordinal's before/after fault,
@@ -336,8 +328,8 @@ receive no exemption.
   while adjacent real positives pass.
   Public raw-capability leakage, Native Host Package-lifecycle writes, unmediated effects,
   incomplete enumeration, unexplained references or any escaping negative mutation is a hard B1
-  rejection. A new bypass preserving all v9 facts and escaping the fixed enumerator/verifier/source
-  Review returns to Design and never becomes a v9 grammar patch.
+  rejection. A bypass that escapes the fixed enumerator/verifier/source Review is a Product Review
+  failure and never becomes a meter grammar patch.
   Retired database/key filenames in the exact `scripts/product-truth/` production and B1
   verification rows are reported separately and are
   permitted only as exact closed destructive target identities or their matching tool fixtures and
@@ -345,9 +337,9 @@ receive no exemption.
   string scan, or used as a decoder, normal-startup alias, fallback or old-row conversion path. Any
   unclassified occurrence, including a newly discovered required production/test path outside this
   Work boundary, stops the Work for map repair.
-- The dedicated repaired B1 commit is clean and green, its full 40-hex SHA is recorded, and B0,
-  repaired B1 and later C use the already-frozen v9 instrument. All v1-v8 evidence remains immutable
-  and failed candidate `50deefc1...` is never reused as repaired B1. A structural scan at B1 reports zero
+- The dedicated repaired B1 commit is clean and green and its full 40-hex SHA is recorded. All
+  v1-v9 evidence remains immutable historical input and failed candidate `50deefc1...` is never
+  reused as repaired B1. A structural scan at B1 reports zero
   production `ProductStateStore`/`ProductExecutionCoordinator` files, symbols, imports or facade
   extraction scaffolds. The evidence-recording commit is distinct from B1.
 
@@ -363,16 +355,13 @@ receive no exemption.
   write-trace matrices. Cover native Windows enumeration and POSIX `ps`, exact database-lock
   identity, SIGKILL-stale profile locks, intermediate ancestry and Package duplicate/tombstone
   convergence.
-- Run only the accepted v9 SHA/digests and handoff-bound B0 report for frozen membership, official
-  evidence, selected-Work lifecycle, outside presence/mode/blob equality, dependency bytes and exact
-  declaration identity/B0 absence/export-private/first-materialization gates. Reproduce the pinned
-  literal-edge baseline and label candidate graph/SCC/count output observational. Pass only the
-  Design-named future declarations in B1; fail outside lifecycle/blob drift, unlisted paths/new
-  members, declaration drift and dependency/lock/source-byte drift. Fail overwritten/mismatched evidence blobs/report/receipt/
-  declared actors, invalid/duplicate official evidence input, candidate/config/repository/report
-  override, later-mutated or non-ancestor evidence, a sole candidate-forged Review/handoff at a
-  different SHA and any use of `50deefc1...` as predecessor. A positive records the Main/human-
-  selected full evidence SHA and exact deterministic tuple without any Harness/schema change.
+- Record the full base/candidate SHAs and parse the real
+  `git diff --name-status -z --no-renames` output without a candidate-controlled path source. Accept
+  only exact rows from the unchanged B1 production fence and the 16 Design B1 verification rows,
+  with their authored presence/mode/lifecycle; reject every unlisted path, new member, deletion,
+  move or mode/lifecycle drift not explicitly allowed by those rows. Independently verify the
+  scripts-only dependency/lock closure and declaration identity/export-private dispositions as
+  Product/source checks. V9 output is not invoked or accepted as a substitute.
 - Run the verifier-owned generated-home matrix as one manifest-bound gate derived from the exact
   Design block. It covers classifier copy validation/cleanup, Product/service lock and refusal, Web
   refusal/batch, target seals, Package transitions and recovery across every frozen operation
@@ -395,10 +384,9 @@ receive no exemption.
 - Use process/import/network spies to prove `inspect` and `apply` do not launch Electron, use a
   real-profile Electron reader/writer or perform network access. Compare both historical v1 meter
   files byte-for-byte with commit `45df49a6afde882d32c1dcd00457c7787d227e4a`, compare rejected
-  v2/v3/v4/v5/v6/v7 evidence and all v8 r1-r17 bytes/evidence with historical digests, compare v9
-  bytes/digests/B0 with the accepted meter handoff and remeasure repaired B1 with those v9 bytes.
-  Prove `bun.lock` is the pinned v9 dependency input and excluded from v9 production LOC/import
-  totals. V1-v8 comparison is immutable historical provenance only
+  v2/v3/v4/v5/v6/v7 evidence, all v8 r1-r17 bytes/evidence and v9 history with their historical
+  digests. Do not execute any complexity meter as a B1 gate. V1-v9 comparison is immutable
+  historical provenance only
   and cannot satisfy a B1 structural or behavior gate.
 - Verify the source-closure diff is exactly the `adapted-present` 1496→1494 and
   `adapted-removed` 774→776 count transfer plus its deterministic digest, caused only by the two
@@ -428,7 +416,7 @@ receive no exemption.
   no automatic replay. Do not point the tool or runtime at the maintainer's canonical
   `~/.omnimind`.
 - At the clean candidate run `git diff --check`, relevant source/identity/document gates and the
-  frozen B0/B1 metric commands. Record commands, exit codes and sanitized results; do not repeat
+  B1 verifier/enumerator commands. Record commands, exit codes and sanitized results; do not repeat
   unchanged live Provider probes unless a listed trigger changed.
 
 ## Destructive safety boundary
@@ -442,13 +430,11 @@ stronger primitive or retry.
 
 ## Expected handoff
 
-Write [`handoffs/direct-first-public-b1.md`](../handoffs/direct-first-public-b1.md) with exactly one
-`omp-flow-product-truth-complexity-v9-report-v1` complete canonical JSON block. It must link this
-Work, enumerate changed/deleted paths and reviewable commits, record the immutable B1 full SHA,
-accepted meter Review receipt/SHA plus Work/v9-authority/declaration/B1-verifier/dependency/import-universe digests,
-the literal accepted meter Review path `reviews/product-truth-complexity-v9-protocol-route.md`,
-the complete official `--ref`/`--predecessor-evidence` invocation and deterministic evidence tuple,
-clean-tree proof, complete accepted-B0/B1 metric output, verifier case-manifest/execution bijection,
+Write [`handoffs/direct-first-public-b1.md`](../handoffs/direct-first-public-b1.md). It must link this
+Work and the alternate-authority Decision, enumerate changed/deleted paths and reviewable commits,
+record the immutable B1 full SHA, full base/candidate scope-check command and accepted exact paths,
+declaration/B1-verifier/dependency/import-universe digests, clean-tree proof, verifier
+case-manifest/execution bijection,
 sanitized trace/fault/race/kill witnesses, reviewer tool/version/source digest, full enumeration
 records/count/JCS digest, full r1-r17 negative/adjacent-positive manifest/result digest and
 different-actor source-Review receipt, exact
