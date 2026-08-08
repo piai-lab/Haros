@@ -1,0 +1,6 @@
+{
+  "extends": "traced-owner-positive",
+  "virtualFiles": {
+    "scripts/product-truth/sqlite-classifier.ts": "export function classifyLegacyDatabase() {\n  return self.Math.max(1, 2);\n}\n"
+  }
+}

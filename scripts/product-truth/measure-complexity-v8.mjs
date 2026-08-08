@@ -1359,7 +1359,31 @@ const classifyGlobal = (normalized) => {
   }
   return null;
 };
-const normalizedGlobal = (node, isShadowedAt, strictWrapper = false) => {
+const globalChainKey = (root, members) => canonicalJson([root, ...members.map((member) => member.value)]);
+const knownNonInventoryGlobalChains = new Set();
+for (const path of acceptedGraph.paths) {
+  const file = acceptedGraph.sourceFile(path);
+  const lexical = makeLexicalBindings(file);
+  const visit = (node) => {
+    if (ts.isPropertyAccessExpression(node) || ts.isElementAccessExpression(node)) {
+      const chain = expressionChain(node);
+      if (chain && !lexical.isShadowedAt(chain.rootNode, chain.root) &&
+          !rawUniverse.globalAliasGrammar.wrappers.includes(chain.root) &&
+          chain.members.every((member) => member.value !== null) &&
+          normalizeGlobalParts(chain.root, chain.members, false) === null &&
+          !rawUniverse.globalMembers.some((entry) => entry.root === chain.root) &&
+          !rawUniverse.globalRoots.some((entry) => entry.roots.includes(chain.root))) {
+        for (let length = 0; length <= chain.members.length; length += 1) {
+          knownNonInventoryGlobalChains.add(globalChainKey(chain.root, chain.members.slice(0, length)));
+        }
+      }
+    }
+    ts.forEachChild(node, visit);
+  };
+  visit(file);
+}
+const normalizedGlobal = (node, isShadowedAt, strictWrapper = false,
+  isKnownNonInventoryGlobal = () => false) => {
   const chain = expressionChain(node);
   if (!chain) return null;
   const wrappers = new Set(rawUniverse.globalAliasGrammar.wrappers);
@@ -1369,6 +1393,9 @@ const normalizedGlobal = (node, isShadowedAt, strictWrapper = false) => {
     if (strictWrapper && isShadowedAt(chain.rootNode, root)) return null;
     const first = members.shift();
     if (!first || first.value === null || wrappers.has(first.value)) return { error: "invalid-global-wrapper" };
+    if (strictWrapper && isKnownNonInventoryGlobal(first.value, members)) {
+      return { knownNonInventory: true };
+    }
     if (!rawUniverse.defaultDisposition.reservedRoots.some((reserved) =>
         reserved === first.value || reserved.startsWith(`${first.value}.`))) {
       return strictWrapper ? { error: "unresolved-global-alias" } : null;
@@ -1784,7 +1811,11 @@ for (const path of candidateGraph.paths.filter((candidatePath) => rawInventoryPa
     if (extensionsEnabled && isFiniteTransparentExpressionWrapper(expression)) {
       return expressionContainsRaw(expression.expression, extensionsEnabled, identityForAtom);
     }
-    if (isFiniteRawExpressionAtom(expression) && identityForAtom(expression)) return true;
+    if (isFiniteRawExpressionAtom(expression)) {
+      const identity = identityForAtom(expression);
+      if (identity?.kind === "known-noninventory") return false;
+      if (identity) return true;
+    }
     let containsRaw = false;
     ts.forEachChild(expression, (child) => {
       if (!containsRaw && !ts.isTypeNode(child) &&
@@ -1812,6 +1843,8 @@ for (const path of candidateGraph.paths.filter((candidatePath) => rawInventoryPa
     }
     if (isFiniteRawExpressionAtom(expression)) {
       const directIdentity = identityForAtom(expression);
+      if (directIdentity?.kind === "known-noninventory") return { identity: null, containsRaw: false };
+      if (directIdentity?.kind === "invalid-global-wrapper") return { identity: null, containsRaw: true };
       if (directIdentity) return { identity: directIdentity, containsRaw: true };
     }
     return {
@@ -2034,14 +2067,19 @@ for (const path of candidateGraph.paths.filter((candidatePath) => rawInventoryPa
     } : null;
   };
   let identityForExpression = () => null;
-  const identityForExpressionAtom = (expression) => {
+  const isKnownNonInventoryGlobal = (root, members) =>
+    knownNonInventoryGlobalChains.has(globalChainKey(root, members));
+  const identityForExpressionAtom = (expression, strictWrapper = false) => {
     if (ts.isIdentifier(expression)) {
       const scoped = resolveScopedAlias(expression);
       if (scoped) return scoped;
       if (wrappers.has(expression.text) && !lexical.isShadowedAt(expression, expression.text)) return { kind: "wrapper" };
     }
     if (ts.isIdentifier(expression) || ts.isPropertyAccessExpression(expression) || ts.isElementAccessExpression(expression)) {
-      const normalized = normalizedScopedGlobal(expression) ?? normalizedGlobal(expression, lexical.isShadowedAt);
+      const normalized = normalizedScopedGlobal(expression) ??
+        normalizedGlobal(expression, lexical.isShadowedAt, strictWrapper, isKnownNonInventoryGlobal);
+      if (normalized?.knownNonInventory) return { kind: "known-noninventory" };
+      if (strictWrapper && normalized?.error) return { kind: "invalid-global-wrapper" };
       const identity = identityForNormalizedGlobal(normalized);
       if (identity) return identity;
       const directGlobal = rawIdentityForGlobalAssignmentAtom(expression);
@@ -2051,7 +2089,7 @@ for (const path of candidateGraph.paths.filter((candidatePath) => rawInventoryPa
   };
   const scopedAliasExpressionResult = (expression, extensionsEnabled = false) =>
     finiteRawExpressionResult(expression, extensionsEnabled,
-      (atom) => identityForExpressionAtom(atom));
+      (atom) => identityForExpressionAtom(atom, extensionsEnabled));
   identityForExpression = (expression, extensionsEnabled = false) =>
     scopedAliasExpressionResult(expression, extensionsEnabled).identity;
   const identityForMember = (base, member, form) => {
@@ -2344,7 +2382,8 @@ for (const path of candidateGraph.paths.filter((candidatePath) => rawInventoryPa
     if ((ts.isCallExpression(node) || ts.isNewExpression(node)) &&
         (ts.isPropertyAccessExpression(node.expression) || ts.isElementAccessExpression(node.expression))) {
       const normalized = normalizedScopedGlobal(node.expression) ??
-        normalizedGlobal(node.expression, lexical.isShadowedAt, directUseComparisonNodes.has(node));
+        normalizedGlobal(node.expression, lexical.isShadowedAt, directUseComparisonNodes.has(node),
+          isKnownNonInventoryGlobal);
       if (normalized?.error) addViolation(normalized.error === "computed-effect-selector" ? "COMPUTED_EFFECT_SELECTOR" : "GLOBAL_ALIAS_INVALID", path, node.expression, normalized.error);
       else {
         const classes = classifyGlobal(normalized);
