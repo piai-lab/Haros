@@ -96,7 +96,7 @@ family returns to Design/stop without another implementation repair dispatch.
 ## Hard ordering
 
 The next workflow checkpoint is a fresh different-actor QbD at
-`../qbd/product-truth-complexity-v9-authority-repair-audit.md` over this revised design/map. It must
+`../qbd/product-truth-complexity-v9-final-authority-audit.md` over this revised design/map. It must
 reach 0 blocker and 0 advisory. Only a newly recorded human PASS calibration may authorize the measurement-only
 [v9 narrow meter](product-truth-complexity-v9.md). It changes no measured production path, freezes
 one immutable meter commit plus B0 report, writes its handoff and must receive a zero-finding
@@ -257,4 +257,4 @@ recorded human PASS calibration after it authorizes the measurement-
 only v9 assignment. Its immutable handoff then needs a zero-finding different-actor implementation
 `PASS` before a new B1 production receipt. Another membership/changed-path-family bypass stops and
 returns to Design without implementation repair. The next QbD output is
-`../qbd/product-truth-complexity-v9-authority-repair-audit.md`.
+`../qbd/product-truth-complexity-v9-final-authority-audit.md`.

@@ -449,7 +449,7 @@ are not Git paths and receive no exemption. V1-v8, all five production fences, p
 meters, Reviews, handoffs and protected user documents remain byte-identical.
 
 The next output is a fresh different-actor QbD audit at
-`qbd/product-truth-complexity-v9-authority-repair-audit.md`. It must reach **0 blocker and 0
+`qbd/product-truth-complexity-v9-final-authority-audit.md`. It must reach **0 blocker and 0
 advisory**; only a subsequent recorded human PASS may authorize the
 [v9 measurement Work](../work/product-truth-complexity-v9.md). The immutable v9 implementation then
 requires a separate zero-finding different-actor Review before B1. If that Review finds another

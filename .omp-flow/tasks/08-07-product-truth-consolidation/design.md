@@ -1138,7 +1138,7 @@ process evidence and is not part of this repair or the next audit absent new con
 No migration, backup, restore, alias, wrapper or dual compatibility was introduced.
 
 The next workflow output is a fresh different-actor QbD audit at
-`qbd/product-truth-complexity-v9-authority-repair-audit.md` over this repaired Design, both Route B
+`qbd/product-truth-complexity-v9-final-authority-audit.md` over this repaired Design, both Route B
 Decisions, Interface/measurement Work, all five Product Works and the Work map. It must reach 0
 blocker and 0 advisory. Only a subsequently recorded human PASS calibration may authorize the
 measurement-only v9 Work. Its immutable handoff must then receive a zero-finding different-actor

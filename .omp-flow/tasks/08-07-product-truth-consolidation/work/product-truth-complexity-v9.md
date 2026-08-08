@@ -29,7 +29,7 @@ report and receives independent Review before any B1 assignment.
 The r2 Review is `FAIL`; the attempted r3 implementation was aborted and correctly rolled back to
 r2 Review HEAD without a candidate or handoff. The earlier v9 PASS approval no longer authorizes an
 implementation. Do not assign or start this Work until a fresh different-actor QbD writes
-`qbd/product-truth-complexity-v9-authority-repair-audit.md`, audits the current PRD, Design, both
+`qbd/product-truth-complexity-v9-final-authority-audit.md`, audits the current PRD, Design, both
 Route B Decisions, Interface, this Work, all five downstream Product Works and the Work map, reports
 0 blocker and 0 advisory, and the human records a new PASS calibration. The assignment must name
 that QbD output. This architect neither audits nor approves its own design.
