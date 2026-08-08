@@ -37,18 +37,31 @@ declared actors. Receipt/history cannot select or authenticate it; later Review 
 
 ## Allowed code and output boundary
 
-- Create `apps/service/src/product/productExecutionCoordinator.ts` and focused tests.
+- Candidate Git mutability is exactly the 12 production rows in the machine block below plus the
+  17 exact `product-execution-coordinator-facade` rows in the Design-owned
+  [verification-path table](../design.md#exact-per-work-verification-path-authority), under each
+  row's presence/mode/lifecycle and purpose. No test, support, probe, process, extension or root
+  label adds a path.
+- Create `apps/service/src/product/productExecutionCoordinator.ts` and exact
+  `apps/service/src/product/productExecutionCoordinator.test.ts`.
 - Create `apps/service/src/product/productStateDiagnostics.ts` only as explicit probe-only
   composition.
-- Reduce `apps/service/src/product/ProductControlPlane.ts` and its tests to the facade/layer,
+- Reduce `apps/service/src/product/ProductControlPlane.ts` and exact
+  `apps/service/src/product/ProductControlPlane.test.ts` to the facade/layer,
   delegating state to Store and submit/retry/control/effects to Coordinator.
 - Update `apps/service/src/wsRpc.ts`, `effectServer.ts`, `serverLayers.ts`, `server/readiness.ts`,
-  `main.ts`, their focused tests, and exactly `native-host/liveJourneyProbe.ts`,
+  `main.ts`, and exactly `native-host/liveJourneyProbe.ts`,
   `native-host/packageCrashProbe.ts`, `opencode/liveJourneyProbe.ts` and
   `product/engineJourneyProof.ts` only for final composition, facade acquisition and diagnostic
-  capability use.
-- Update Product/Store/Coordinator test support only to partition existing proof without duplicating
-  fixtures.
+  capability use. The only mutable checked-in verification paths for that composition are the exact
+  rows in the Design table, including new `apps/service/src/wsRpc.product.test.ts` and the existing
+  `apps/service/src/main.test.ts`, `apps/service/src/http.test.ts`, exact probe/process tests and
+  `apps/service/src/product/engineJourneyProof.test.ts`.
+- Update only exact `apps/service/src/product/productStateStore.test.ts`,
+  `apps/service/src/product/testSupport/productExecutionFixture.ts` and
+  `apps/service/src/product/testSupport/productStateFixture.ts` to partition existing Store/
+  Coordinator proof without duplicating fixtures. These three approved-absent rows may change here
+  only after their required prior Store/leaf materializations remain present at mode `100644`.
 - Write [handoff](../handoffs/product-truth-candidate.md).
 
 The Work may not modify the complexity script/config, B1 commit/evidence, Product schema/table
@@ -56,7 +69,9 @@ count, Native Host transcript/root contract, Engine wire/session behavior, Packa
 Web behavior or compatibility deletion. It may not introduce a generic registry/manager,
 per-Engine Product plane, raw transaction callback or fallback.
 The machine block below is the sole production/measurement/dependency path classification; prose
-does not authorize an unlisted production path.
+does not authorize an unlisted production path. The Design verification table is the sole
+verification-path classification. Runtime-generated temporary homes are not Git paths and receive
+no exemption.
 
 ```omp-flow-production-boundary-v1
 {
@@ -98,7 +113,8 @@ does not authorize an unlisted production path.
   Store/facade, zero Host lifecycle write, zero legacy caller/import and one literal two-Engine
   gateway. Allowed core directions are only facade→Store, facade→Coordinator,
   Coordinator→Store and Coordinator→execution leaf.
-- The frozen v9 instrument reports Design-pinned path membership, accepted predecessor binding and
+- The frozen v9 instrument reports Design-pinned production membership and all 17 exact verification
+  row lifecycles, accepted predecessor binding and
   exact evidence tuple, selected-Work lifecycle, exact outside presence/mode/blob equality,
   declaration identity/export-private disposition and dependency bytes, plus observational literal
   graph/SCC/structural counts and separately reviewed conjunctive Product gates:
@@ -112,12 +128,15 @@ does not authorize an unlisted production path.
 
 ## Verification
 
-- Focused Coordinator tests cover catalog commit failure, admission compensation, attempt/control,
+- Exact `apps/service/src/product/productExecutionCoordinator.test.ts` covers catalog commit failure,
+  admission compensation, attempt/control,
   crash before handle retention, crash after `markSent`, selected-Engine rejection, late fact after
-  abort and no fallback. Integrated tests retain Queue-to-Run, first observed fact+binding+cursor,
-  settlement, startup recovery and concurrent dispatch claim.
-- Run Product, Store, Coordinator, gateway, Pi boundary, OpenCode boundary, Automation, Web draft,
-  Package lifecycle and Native Host v2 suites; typecheck/build affected workspaces; run exact API,
+  abort and no fallback. The remaining exact Design verification rows retain integrated Queue-to-
+  Run, first observed fact+binding+cursor, settlement, startup recovery and concurrent dispatch
+  claim cases.
+- Run only this Work's exact 17 checked-in verification rows for Product, Store, Coordinator,
+  gateway, Pi boundary, OpenCode boundary, Package lifecycle and Native Host v2 proof;
+  typecheck/build affected workspaces; run exact API,
   import/no-cycle/writer/connection/table/state-machine, five-Work coverage and B0/B1/C gates.
 - On isolated first-public fixture homes, run packaged Electron→Service→Host restart/reopen and the
   smallest complete live journeys: MiMo Pi Chat plus continuation and Package generation, DeepSeek

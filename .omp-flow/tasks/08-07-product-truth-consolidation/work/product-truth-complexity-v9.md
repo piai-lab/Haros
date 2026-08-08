@@ -47,16 +47,26 @@ that QbD output. This architect neither audits nor approves its own design.
   post-evidence blob immutability without claiming identity authentication.
 - For Product comparison, use the official evidence commit as the sole base, enumerate the complete
   `git diff --name-status -z --no-renames` path set and reject every path by default. Replace that
-  default only for exact `production` members of the selected frozen Work block. Implement the
-  69-row accepted presence/mode/blob state, no deletions/moves and only the four exact Design-authored
-  `100644` materializations. Do not add test, fixture, extension, root, dependency, measurement,
-  handoff, Review, report or output categories.
+  default only for exact `production` members of the selected frozen Work block or exact rows for
+  that Work in the Design-owned
+  [verification-path table](../design.md#exact-per-work-verification-path-authority). Preserve the
+  unchanged 69-row production state and four exact production `100644` materializations. Reproduce
+  the table's 70 per-Work rows (`16/17/10/10/17`), 45 unique paths, nine exact verification first
+  materializations and row digest
+  `c291688e134e1ea91b0905c2b8709634ecd0e5fc1cf616a0b5a656e0d6978326`.
+  Reproduce their complete union as 110 rows (`88` present/`22` absent) with raw-JCS digest
+  `2d189676ed940fa9299504a7e0fc47aa91f5c7eced44c115be21340d83df3ac9`.
+  Implement each exact row lifecycle, including required prior materialization for a later Work,
+  with no deletion or move. Do not add a test, fixture, extension, root, dependency, measurement,
+  handoff, Review, report or output category; runtime-generated temporary homes are not Git paths
+  and receive no exemption.
 - Reproduce the Design-owned accepted-tree byte expansion from the approved source-adoptions block,
   nine exact manifests, `bun.lock`, patch root, adopted roots and legal paths. Require exactly 6,321
   `path/presence/mode/Git-blob/SHA-256` records and raw-JCS digest
   `6687319b0ea58643812cee677fad03b3152e8bfcb31486ddb368bc1b3cf2f599`.
   Config may pin only Design values and cannot provide/filter a path. Apply selected lifecycle only
-  to overlapping selected production paths; every other record remains exact.
+  to overlapping selected exact production members or verification rows; every other record
+  remains exact.
 - Retain exact external dependency tuples and declaration path/symbol/kind/B0 presence/export-
   private/first-materialization facts. Candidate-emitted signatures are observational; no signature
   row is pinned.
@@ -97,6 +107,12 @@ boundary does not become a Product-candidate exemption.
 
 - V1-v8 artifact manifests and bytes match their accepted/failed historical commits; all five
   production fence block digests match the QbD-approved Design tree.
+- The exact Design verification table reproduces 70 rows, 45 unique paths, per-Work counts
+  `16/17/10/10/17`, nine exact verification first materializations and its row digest. Its union
+  with the unchanged production state reproduces 110 rows, `88` present, `22` absent and raw-JCS
+  digest `2d189676ed940fa9299504a7e0fc47aa91f5c7eced44c115be21340d83df3ac9`.
+- The complete recursively unique-key v9 authority object reproduces JCS digest
+  `f3fdbbcd7547c6bbf4d5990358d7a3a2cffac7497c16f725c73aaa57b794f95d`.
 - Config is data-only and cannot add paths, graph deltas, declaration identities, presence/export-
   private/first-materialization dispositions, changed-path categories/exemptions, lifecycle,
   counters, predecessor rows or expected verdicts.
@@ -104,8 +120,10 @@ boundary does not become a Product-candidate exemption.
   bytes, manifest, patch, root build input, test, fixture, output and arbitrary extension/root paths;
   selected deletion/mode/move and non-authored materialization; accepted-tree record omission/
   addition/blob drift; invalid or overridden official evidence; declaration drift; and dependency
-  identity drift. Adjacent positives cover only selected content change and the four exact
-  materializations. Graph/SCC/count fixtures assert observations, not domain verdicts.
+  identity drift. Adjacent positives cover exact selected production content changes, the four
+  exact production materializations and every exact selected-Work verification row lifecycle,
+  including all nine first materializations and later required-prior-materialization cases.
+  Graph/SCC/count fixtures assert observations, not domain verdicts.
 - Source inspection and an explicit test assert the v9 script/config contains no public non-leak,
   write/Web-RPC/gateway, raw-terminal, global-wrapper, selector, alias-use, callback-inheritance,
   RHS/subtree or per-use-owner classifier.
@@ -120,9 +138,10 @@ boundary does not become a Product-candidate exemption.
 ## Verification
 
 Run the narrowest deterministic checks for the new script and fixtures, then run the two exact B0
-invocations and compare bytes/JCS digest. Verify every Markdown link and machine JSON block. Diff the
-candidate against its base and fail on any path outside the allowed boundary or any v1-v8/fence
-digest drift. The implementer does not run B1 or touch a real `~/.omnimind`.
+invocations and compare bytes/JCS digest. Independently reconstruct the Design verification table,
+combined 110-row state and all counts/digests above. Verify every Markdown link and machine JSON
+block. Diff the candidate against its base and fail on any path outside the allowed boundary or any
+v1-v8/fence digest drift. The implementer does not run B1 or touch a real `~/.omnimind`.
 
 ## Expected handoff
 

@@ -80,10 +80,18 @@ maintainer's post-r2
 [stop-loss calibration](../decisions/product-truth-complexity-v9-stop-loss-calibration.md) records
 the attempted r3 implementation as correctly aborted and rolled back, supersedes the prior
 implementation authorization, and permits one final Design repair only: all Git changed paths
-default reject; exact selected-Work production members and Design-authored lifecycle are the sole
-mutability; and the approved dependency/adoption inputs expand to a reproducible 6,321-row byte
-authority. Another implementation finding in this same family returns to Design/stop without
-another implementation repair dispatch.
+default reject; exact selected-Work production members plus that Work's exact Design-owned
+[verification-path rows](../design.md#exact-per-work-verification-path-authority) and their authored
+lifecycles are the sole mutability; and the approved dependency/adoption inputs expand to a
+reproducible 6,321-row byte authority. The verification table has 70 per-Work rows
+(`16/17/10/10/17`), 45 unique exact paths, nine exact `100644` first materializations and row digest
+`c291688e134e1ea91b0905c2b8709634ecd0e5fc1cf616a0b5a656e0d6978326`.
+Its union with the unchanged 69 production paths is 110 unique state rows (`88` present/`22`
+absent), raw-JCS digest
+`2d189676ed940fa9299504a7e0fc47aa91f5c7eced44c115be21340d83df3ac9`.
+There is no test, fixture, output, extension or root category expansion; runtime-generated temporary
+homes are not Git paths and receive no exemption. Another implementation finding in this same
+family returns to Design/stop without another implementation repair dispatch.
 
 ## Hard ordering
 
@@ -142,13 +150,16 @@ source profile, and cannot alter any frozen complexity-meter file or universe. W
 production/test paths are exactly twelve.
 
 V1-v8 meter bytes and evidence are immutable history. V9 reads the canonical machine block from
-each of the five Product Works plus the v9 authority at the QbD-approved Design tree, pins every
-normalized block digest and freezes the 69 exact production paths. For Product comparison it uses
+each of the five Product Works plus the v9 authority and Design verification table at the
+QbD-approved Design tree, pins every normalized block digest and separately freezes the unchanged
+69 exact production paths and 70 exact per-Work verification rows. For Product comparison it uses
 the official evidence commit as base, enumerates every Git changed path with rename detection off
-and rejects by default. Only exact selected-Work production paths may change: approved-present paths
-preserve presence/mode, approved-absent paths stay absent except for four exact `100644`
-materializations, and deletion/move is forbidden. Measurement/dependency entries, tests, fixtures,
-extensions, roots and output artifacts add no exemption. The approved source-adoptions block, nine
+and rejects by default. Only exact selected-Work production paths and exact verification rows named
+for that Work may change. Approved-present rows preserve presence/mode. Approved-absent production
+rows stay absent except for four exact `100644` production materializations; approved-absent verification rows
+follow only the nine exact table materializations and any authored required-prior-materialization
+lifecycle. Deletion/move is forbidden. Measurement/dependency entries and test, fixture, output,
+extension or root labels add no exemption. The approved source-adoptions block, nine
 manifests, `bun.lock`, patch/adopted roots and legal paths expand by exact Git objects to 6,321
 `path/presence/mode/Git-blob/SHA-256` records with digest
 `6687319b0ea58643812cee677fad03b3152e8bfcb31486ddb368bc1b3cf2f599`;
@@ -234,13 +245,15 @@ Work may submit affected Campaign claims only as `candidate`; no producer may ma
 
 The next workflow entry is a fresh different-actor QbD audit of the post-r2 v9 repair across Design,
 both Route B Decisions, Interface, measurement Work, all five Product Works and this map. It must
-prove v9 owns only the hard all-changed-path/membership/evidence/lifecycle/outside-blob/accepted-
-tree-byte/dependency/declaration-disposition facts, keeps graph/SCC/count output observational,
-contains no path-category/output exemption and no raw non-leak/write/Web-RPC/gateway or
-raw/global/alias/callback/RHS/per-use verdict, preserves all five fences and v1-v8 bytes, and hands
-effect safety to B1's private ports, fixed 10/146/87/85/65 verifier, reviewer-owned complete
-enumeration, zero unexplained references and full r1-r17 manifest with adjacent positives. The audit
-must reach 0 blocker and 0 advisory. Only a recorded human PASS calibration after it authorizes the measurement-
+reproduce the exact 70-row verification table, per-Work counts, 45-path unique set, nine
+materializations, row digest and complete 110-row state; prove v9 owns only the hard all-changed-
+path/membership/evidence/lifecycle/outside-blob/accepted-tree-byte/dependency/declaration-disposition
+facts; keep graph/SCC/count output observational; contain no path-category/output exemption and no
+raw non-leak/write/Web-RPC/gateway or raw/global/alias/callback/RHS/per-use verdict; preserve all
+five production fences and v1-v8 bytes; and hand effect safety to B1's private ports, fixed
+10/146/87/85/65 verifier, reviewer-owned complete enumeration, zero unexplained references and full
+r1-r17 manifest with adjacent positives. The audit must reach 0 blocker and 0 advisory. Only a
+recorded human PASS calibration after it authorizes the measurement-
 only v9 assignment. Its immutable handoff then needs a zero-finding different-actor implementation
 `PASS` before a new B1 production receipt. Another membership/changed-path-family bypass stops and
 returns to Design without implementation repair. The next QbD output is

@@ -53,18 +53,29 @@ actors. Receipt/history cannot select or authenticate it; later Review verifies 
 
 The implementer may change only:
 
-- `packages/contracts/src/native-host/protocol.ts` and its tests;
+- the 15 exact production paths in the machine block below plus the 17 exact
+  `native-host-package-root-binding` rows in the Design-owned
+  [verification-path table](../design.md#exact-per-work-verification-path-authority), under each
+  row's authored presence/mode/lifecycle and purpose. Subsequent prose narrows purpose; a test,
+  probe, process, fixture, extension or root label cannot add a Git path;
+- `packages/contracts/src/native-host/protocol.ts` and exact
+  `packages/contracts/src/native-host/protocol.test.ts`;
 - `apps/service/src/native-host/client.ts`, `packageLifecycle.ts` and `executionBoundary.ts`, and
-  their focused/integration tests;
+  only their exact Service verification rows in the Design table;
 - `apps/service/src/product/health/nativeHostHealthMonitor.ts` for v2 client construction plus
-  bounded authenticated readiness/error semantics;
+  bounded authenticated readiness/error semantics, with the one exact new verification path
+  `apps/service/src/product/health/nativeHostHealthMonitor.test.ts` first materialized at mode
+  `100644`;
 - `apps/service/src/native-host/liveJourneyProbe.ts` and
   `apps/service/src/native-host/packageCrashProbe.ts`, limited to v2 binding construction,
-  bounded readiness/error semantics and the required live/restart/process evidence; their existing
-  focused probe tests may change only for that same purpose;
-- `apps/native-host/src/index.ts`, `piRuntime.ts`, `responseFrame.ts` and their tests;
+  bounded readiness/error semantics and the required live/restart/process evidence; only the exact
+  probe/process verification rows in the Design table may change for that purpose;
+- `apps/native-host/src/index.ts`, `piRuntime.ts` and `responseFrame.ts`; only exact
+  `apps/native-host/src/piRuntime.test.ts` and `apps/native-host/src/responseFrame.test.ts` may
+  change as the two checked-in tests for those production files;
 - `apps/desktop/src/process/nativeHostEnvironment.ts`, `nativeHostRendezvous.ts`,
-  `nativeHostAuthenticatedReadiness.ts`, `nativeHostSupervisor.ts` and their focused/process tests;
+  `nativeHostAuthenticatedReadiness.ts` and `nativeHostSupervisor.ts`, plus only the exact Desktop
+  verification rows in the Design table;
 - `apps/desktop/src/main.ts` only for the launch-lane value passed into the existing Host supervision
   composition;
 - [handoff](../handoffs/native-host-package-root-binding.md).
@@ -73,6 +84,7 @@ It may not change Product schema/transactions, Web drafts, compatibility deletio
 instrument, Store/Coordinator/facade responsibilities, Package lifecycle state shape, or add a
 replay cache, protocol alias, v1 reader or second root selector. Because `apps/desktop/src/main.ts`
 overlaps B1 compatibility cleanup, this Work does not run concurrently in the normal shared tree.
+Runtime-generated isolated homes are not Git paths and receive no exemption.
 
 ```omp-flow-production-boundary-v1
 {
@@ -110,23 +122,26 @@ overlaps B1 compatibility cleanup, this Work does not run concurrently in the no
   connections, rejects a different pair and retains zero challenge state after close.
 - Package/catalog/request bytes never dispatch before the binding is ready. A selected generation
   missing from the bound lane is unavailable even when present in the sibling lane.
-- Every production path is a frozen v9 member. Candidate static edges are resolved afresh and pass only
-  when both endpoints are frozen; an outside-set endpoint stops for map repair.
+- Every production path and all 17 exact verification rows follow their frozen v9 lifecycles.
+  Candidate static edges are resolved afresh and pass only when both endpoints are frozen; an
+  outside-set endpoint or unlisted changed Git path stops for map repair.
 
 ## Verification
 
-- Unit/parser tests cover tampered protocol/lane/root/Service/Host/challenge/proof/echo, old hello,
+- Run the exact checked-in verification rows in the Design table. Their unit/parser cases cover
+  tampered protocol/lane/root/Service/Host/challenge/proof/echo, old hello,
   missing/extra/duplicate/wrong-typed fields, v1, linked ancestry, outside/nested stage paths and
   sibling-root no-fallback.
-- Real multi-process tests, not only in-memory sockets, cover replay across a new connection and Host
+- Their exact real multi-process rows, not only in-memory sockets, cover replay across a new connection and Host
   restart, second-different binding, concurrent first bindings, same-pair concurrency, coalesced
   hello+request, lane/root/Desktop assertion mismatch and zero pre-ready read/dispatch.
 - Run those real-process matrices in both dev and packaged lanes. Run sustained current per-request
   handshake/health traffic and prove challenge state returns to zero with bounded sockets/memory.
-- Build contracts, Service, Native Host and Desktop; run focused typechecks/tests plus actual Desktop
-  supervision in dev and packaged artifact lanes. Run the existing Native Host live-journey and
-  Package-crash probes through v2 in both required process lanes. Use isolated homes and sanitize
-  all output.
+- Build contracts, Service, Native Host and Desktop; run all 17 exact verification rows plus focused
+  typechecks and actual Desktop supervision in dev and packaged artifact lanes. Run exact
+  `apps/service/src/native-host/liveJourneyProbe.ts` and
+  `apps/service/src/native-host/packageCrashProbe.ts` through v2 in both required process lanes.
+  Use isolated homes and sanitize all output.
 - Run the read-only v9 membership/evidence/lifecycle/outside-blob/dependency-byte/declaration gates
   against the accepted B1 predecessor; do not edit the meter or accept outside-Work drift, unlisted
   membership, declaration disposition or dependency-byte drift. Record graph/SCC/count changes

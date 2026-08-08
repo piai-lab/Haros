@@ -32,6 +32,14 @@ runtime safety. Those are explicit B1 acceptance obligations below.
   "designInputs": {
     "productWorkBoundaries": "exactly five omp-flow-production-boundary-v1 blocks at the QbD-approved Design tree",
     "membershipExpansion": "read only production entries from the five blocks, require kind exact, union exact Git path bytes once at the approved tree and freeze present-or-absent identity",
+    "verificationPathRows": {
+      "designBlock": "omp-flow-product-verification-paths-v1",
+      "rowCount": 70,
+      "uniquePathCount": 45,
+      "rowsPerWork": { "direct-first-public-b1": 16, "native-host-package-root-binding": 17, "product-execution-leaf": 10, "product-state-store": 10, "product-execution-coordinator-facade": 17 },
+      "rowDigestAlgorithm": "JCS-encode each complete row, sort those bytes by unsigned raw UTF-8, JCS-encode the resulting row array, then SHA-256",
+      "rowsJcsSha256": "c291688e134e1ea91b0905c2b8709634ecd0e5fc1cf616a0b5a656e0d6978326"
+    },
     "declarationRows": "the exact rows and phase dispositions below",
     "physicalObservations": [
       "changed-scope-production-loc",
@@ -76,16 +84,31 @@ runtime safety. Those are explicit B1 acceptance obligations below.
     "comparisonBase": "the full official predecessor evidence commit supplied by Main/human for the authored predecessor row",
     "changedPathCommand": "git diff --name-status -z --no-renames <official-predecessor-evidence-full-sha> <candidate-under-test-full-sha> --",
     "changedPathDefault": "reject",
-    "mutableSet": "exact production members of the one selected Work boundary; measurement and dependency entries contribute no mutable path",
+    "mutableSet": "the exact production members of the one selected Work boundary plus only the exact verificationPathRows whose work equals that selected Work; measurement and dependency entries contribute no mutable path",
     "pathSpelling": "exact Git path bytes decoded as valid UTF-8; no normalization, extension inference, root predicate, glob, directory category or output category",
-    "presentMemberRule": "a member present at approved Design commit f110fb66006768074ca192bb94024632d16c09dd may change Git blob only in its selected Work; presence and mode remain exact",
-    "absentMemberDefault": "remain absent",
-    "allowedMaterializations": [
+    "presentMemberRule": "an authorized production member or exact verificationPathRow present at approved Design commit f110fb66006768074ca192bb94024632d16c09dd may change Git blob only in its selected Work; presence and mode remain exact",
+    "absentMemberDefault": "remain absent unless the exact production materialization row or exact verificationPathRow lifecycle authorizes first materialization in the selected Work",
+    "productionAllowedMaterializations": [
       { "work": "product-execution-leaf", "path": "apps/service/src/product/productExecutionBoundary.ts", "mode": "100644" },
       { "work": "product-state-store", "path": "apps/service/src/product/productStateStore.ts", "mode": "100644" },
       { "work": "product-execution-coordinator-facade", "path": "apps/service/src/product/productExecutionCoordinator.ts", "mode": "100644" },
       { "work": "product-execution-coordinator-facade", "path": "apps/service/src/product/productStateDiagnostics.ts", "mode": "100644" }
     ],
+    "verificationAllowedMaterializations": {
+      "rule": "only the nine absent unique paths in the Design verificationPathRows block, at their exact firstMaterializationWork and firstMaterializationMode; a later named row may modify only after required prior materialization",
+      "uniquePathCount": 9,
+      "paths": [
+        "scripts/product-truth/first-public-capability-verifier.ts",
+        "scripts/product-truth/first-public-capability-verifier.test.ts",
+        "apps/service/src/product/health/nativeHostHealthMonitor.test.ts",
+        "apps/service/src/product/productExecutionBoundary.test.ts",
+        "apps/service/src/product/testSupport/productExecutionFixture.ts",
+        "apps/service/src/product/productStateStore.test.ts",
+        "apps/service/src/product/testSupport/productStateFixture.ts",
+        "apps/service/src/product/productExecutionCoordinator.test.ts",
+        "apps/service/src/wsRpc.product.test.ts"
+      ]
+    },
     "allowedDeletions": [],
     "moves": "forbidden; --no-renames exposes a deletion and an addition and each is judged independently",
     "authorityExemptions": [],
@@ -95,6 +118,14 @@ runtime safety. Those are explicit B1 acceptance obligations below.
       "recordSchema": ["path", "presence", "mode", "gitBlob", "sha256"],
       "recordCount": 69,
       "recordsRawJcsSha256": "c7790b3db167484ffaa85e4a3ad1430c29f2f7f05e952441b39ff6e08b862c82"
+    },
+    "approvedBoundaryAndVerificationState": {
+      "commit": "f110fb66006768074ca192bb94024632d16c09dd",
+      "recordSchema": ["path", "presence", "mode", "gitBlob", "sha256"],
+      "recordCount": 110,
+      "presentCount": 88,
+      "absentCount": 22,
+      "recordsRawJcsSha256": "2d189676ed940fa9299504a7e0fc47aa91f5c7eced44c115be21340d83df3ac9"
     }
   },
   "acceptedTreeByteAuthority": {
@@ -156,7 +187,7 @@ runtime safety. Those are explicit B1 acceptance obligations below.
       "recordCount": 6321,
       "recordsRawJcsSha256": "6687319b0ea58643812cee677fad03b3152e8bfcb31486ddb368bc1b3cf2f599"
     },
-    "candidateRule": "consume the exact approved 6321-row path manifest without candidate-side root discovery; each frozen row outside the selected Work production mutable set remains exact, while an overlapping selected path is governed only by selectedWork lifecycle; every candidate path absent from the approved manifest is still judged by the independent all-Git-changed-path default-reject rule",
+    "candidateRule": "consume the exact approved 6321-row path manifest without candidate-side root discovery; each frozen row outside the selected Work exact production-member and verificationPathRow mutable set remains exact, while an overlapping selected path is governed only by its exact selectedWork production or verification lifecycle; every candidate path absent from the approved manifest is still judged by the independent all-Git-changed-path default-reject rule",
     "configRule": "config may pin only the approved commit and Design-authored block, input and record digests/count; it cannot provide or filter a path"
   },
   "dependencyClosure": {
@@ -240,6 +271,9 @@ runtime safety. Those are explicit B1 acceptance obligations below.
 }
 ```
 
+The recursively unique-key authority object above is JCS-encoded as one complete object. Its
+SHA-256 is `f3fdbbcd7547c6bbf4d5990358d7a3a2cffac7497c16f725c73aaa57b794f95d`.
+
 ## Authored predecessor rows
 
 | Candidate Work | Required predecessor | Handoff | Review | Report |
@@ -264,20 +298,30 @@ comparison named in the authority, requires valid complete status records and ob
 every added, deleted, modified or type/mode-changed path. Unknown status or malformed path bytes
 fail before classification.
 
-Every changed path begins as `reject`. The only replacement disposition is membership in the exact
-`production` array of the selected one of the five frozen Work blocks. The blocks' `measurement`
-and `dependency` arrays do not grant Product-candidate mutability. Test suffixes, fixture directory
-names, source extensions, `apps|packages|scripts` roots, handoff/Review/report paths and current
-output names have no category rule at all. A candidate, meter, config or fixture cannot add one.
+Every changed path begins as `reject`. The only replacement dispositions are membership in the
+exact `production` array of the selected one of the five frozen Work blocks or an exact row for that
+Work in the Design-owned
+[verification-path table](../design.md#exact-per-work-verification-path-authority). The blocks'
+`measurement` and `dependency` arrays do not grant Product-candidate mutability. Test suffixes,
+fixture directory names, source extensions, `apps|packages|scripts` roots, handoff/Review/report
+paths and current output names have no category rule at all. A candidate, meter, config or fixture
+cannot add, expand or discover a row.
 
-The approved Design tree freezes 69 unique production-path records with digest
-`c7790b3db167484ffaa85e4a3ad1430c29f2f7f05e952441b39ff6e08b862c82`.
-A selected member present there may change only its blob and must keep presence and mode. An absent
-member remains absent except for the four exact `100644` first materializations in the machine
-block. There are no path deletions or moves. This means the nine retired B1 compatibility paths
-already absent at the approved tree remain absent; prose, a candidate diff or a later config cannot
-resurrect them. If implementation needs any other path or lifecycle, it stops for Design rather
-than teaching the meter a new exception.
+The approved Design tree separately freezes the unchanged 69 unique production-path records with
+digest `c7790b3db167484ffaa85e4a3ad1430c29f2f7f05e952441b39ff6e08b862c82`
+and the 70 per-Work verification rows (45 unique paths) with digest
+`c291688e134e1ea91b0905c2b8709634ecd0e5fc1cf616a0b5a656e0d6978326`.
+Their exact union is 110 unique records, 88 present and 22 absent, with complete-state digest
+`2d189676ed940fa9299504a7e0fc47aa91f5c7eced44c115be21340d83df3ac9`.
+A selected authorized row present there may change only its blob and must keep presence and mode.
+An absent production member remains absent except for the four unchanged exact `100644` production
+first materializations. An absent verification row may first materialize only at its exact named
+Work and `100644` mode; a later named Work may modify it only after the required prior
+materialization remains present in that mode. There are nine such unique verification paths. There
+are no path deletions or moves. This means the nine retired B1 compatibility paths already absent at
+the approved tree remain absent; prose, a candidate diff or a later config cannot resurrect them.
+If implementation needs any other path or lifecycle, it stops for Design rather than teaching the
+meter a new exception.
 
 The predecessor evidence interval is independently bound by the authored row's exact handoff and
 Review blobs and their post-evidence immutability. It cannot be used to smuggle a Product,
@@ -304,10 +348,11 @@ inputs that r2 proved were previously skippable.
 
 The accepted 6,321-row manifest is reconstructed once from the approved block and Design input rows,
 not from candidate README/config. Candidate comparison reads those exact frozen paths; any row
-outside the selected Work remains exact, while an overlapping selected production path follows only
-the lifecycle rule above. It does not candidate-discover a new root or path class. A path absent from
-the approved manifest is still present in the independent complete Git changed-path set and rejects
-unless it is one of the four exact Design-authored materializations.
+outside the selected Work remains exact, while an overlapping selected exact production member or
+verification row follows only its lifecycle rule above. It does not candidate-discover a new root
+or path class. A path absent from the approved manifest is still present in the independent complete
+Git changed-path set and rejects unless it is one of the four exact production materializations or
+nine exact verification materializations.
 
 ## Declaration and graph interpretation
 
@@ -392,12 +437,16 @@ syntax, alias, callback, wrapper or expression grammar patch.
 
 ## Verification and transition
 
-Fresh QbD must reproduce the machine JSON, the 69-row accepted boundary-state digest, all four and
-only four materializations, the 6,321-row accepted-tree byte expansion and its raw-JCS digest,
-declaration phase rows, 69-member source-universe digest, 578-record B0 graph digest, absence of
-semantic v9 verdicts, reviewer evidence schema and complete r1-r17 derivation. It must also confirm
-the all-Git-path default reject has no category or output exemption and that v1-v8, all five fences,
-production, existing meters, Reviews, handoffs and protected user documents are byte-identical.
+Fresh QbD must reproduce the machine JSON; the unchanged 69-row production boundary-state digest
+and four exact production materializations; the Design table's 70 rows, 45 unique verification
+paths, per-Work counts `16/17/10/10/17`, nine exact verification materializations and row digest;
+the complete 110-row (`88` present/`22` absent) boundary-plus-verification state and raw-JCS digest;
+the 6,321-row accepted-tree byte expansion and its raw-JCS digest; declaration phase rows;
+69-member production source-universe digest; 578-record B0 graph digest; absence of semantic v9
+verdicts; reviewer evidence schema; and complete r1-r17 derivation. It must also confirm the all-Git-
+path default reject has no category or output exemption and that runtime-generated temporary homes
+are not Git paths and receive no exemption. V1-v8, all five production fences, production, existing
+meters, Reviews, handoffs and protected user documents remain byte-identical.
 
 The next output is a fresh different-actor QbD audit at
 `qbd/product-truth-complexity-v9-authority-repair-audit.md`. It must reach **0 blocker and 0

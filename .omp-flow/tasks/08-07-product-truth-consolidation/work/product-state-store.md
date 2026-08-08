@@ -35,11 +35,18 @@ declared actors. Receipt/history cannot select or authenticate it; later Review 
 
 ## Allowed code and output boundary
 
+- Candidate Git mutability is exactly the seven production rows in the machine block below plus the
+  10 exact `product-state-store` rows in the Design-owned
+  [verification-path table](../design.md#exact-per-work-verification-path-authority), under each
+  row's presence/mode/lifecycle and purpose. No test, fixture, probe, integration, extension or root
+  label adds a path.
 - Create `apps/service/src/product/productStateStore.ts`. Any later need for another production SQL
   file stops for exact Work-map and machine-boundary repair; this Work has no open production glob.
-- Create Store-focused tests and one shared test fixture builder under the existing Product test
-  support; do not duplicate the old 4k test setup.
-- Change `apps/service/src/product/ProductControlPlane.ts` and its focused tests to delegate all
+- Create exact `apps/service/src/product/productStateStore.test.ts` and exact shared fixture builder
+  `apps/service/src/product/testSupport/productStateFixture.ts`; do not duplicate the old 4k test
+  setup.
+- Change `apps/service/src/product/ProductControlPlane.ts` and exact
+  `apps/service/src/product/ProductControlPlane.test.ts` to delegate all
   durable reads/writes to complete Store commands while temporarily retaining existing Engine
   effects until the next Work.
 - Change `apps/service/src/native-host/executionBoundary.ts`,
@@ -48,18 +55,20 @@ declared actors. Receipt/history cannot select or authenticate it; later Review 
   `apps/service/src/opencode/liveJourneyProbe.ts` only to construct/pass the single Store or consume
   its typed Package lifecycle projection/outbox diagnostics through that same connection.
 - Change `apps/service/src/serverLayers.ts` only where necessary to compose and pass that single
-  Store. The exact existing focused/integration proof paths that may change for this composition are
+  Store. Only the exact focused/probe/process verification rows named for this Work in the Design
+  table may change for this composition; their exact path bytes, including
   `apps/service/src/native-host/executionBoundary.test.ts`,
   `apps/service/src/native-host/liveJourneyProbe.test.ts`,
   `apps/service/src/native-host/serviceProcess.integration.test.ts` and
-  `apps/service/src/opencode/liveJourneyProbe.test.ts`.
+  `apps/service/src/opencode/liveJourneyProbe.test.ts`, are table-owned rather than category-owned.
 - Write [handoff](../handoffs/product-state-store.md).
 
 No table repository, second Product connection, raw database/statement/SQL fragment/transaction
 callback export, Coordinator scaffold, new durable state machine, migration platform or per-Engine
 plane is allowed. If implementation proves that any other composition, probe or test path must
 change, stop and return for Work-map repair; the listed paths do not imply broader directory or
-caller ownership.
+caller ownership. Prose does not authorize an unlisted Git path; runtime-generated temporary homes
+are not Git paths and receive no exemption.
 
 ```omp-flow-production-boundary-v1
 {
@@ -99,12 +108,16 @@ caller ownership.
 
 - Transaction fault injection for every named compound unit proves full rollback and no partial
   Product fact/object state.
-- Reopen/concurrency tests prove one lifecycle lock/connection, deterministic schema validation,
+- Cases implemented by this Work's exact 10 Design verification rows prove on reopen/concurrency one
+  lifecycle lock/connection, deterministic schema validation,
   concurrent dispatch claim, first-fact sequence atomicity and startup unknown recovery.
-- Run Store/Product focused tests, Package projection/replay tests and Service typecheck. Static
+- Run only the Store Work's exact 10 checked-in verification rows for Store/Product and Package
+  projection/replay proof, plus Service typecheck. Static
   gates reject a second connection, writer, raw transaction export, table CRUD API or core cycle.
 - Read the frozen complexity instrument without editing it; report the intermediate metrics only.
-- Run the frozen v9 membership/evidence/lifecycle/outside-blob/dependency-byte/declaration gates.
+- Run the frozen v9 membership/evidence/lifecycle/outside-blob/dependency-byte/declaration gates;
+  they must accept all and only the exact seven production rows and 10 verification rows at their
+  authored lifecycles.
   The future Store declaration may first materialize only in this Design-named Work. V9 does not
   decide whether old implementation responsibility remains, whether public types leak raw
   capability or whether an edge is semantically allowed; different-actor source/behavior Review

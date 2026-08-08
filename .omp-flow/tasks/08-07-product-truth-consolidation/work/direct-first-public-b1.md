@@ -75,10 +75,18 @@ candidate-selected predecessor stops before comparison.
   29 durable kill points, signatures, atomicities, stage/resource mappings, before/after fault
   sites, 87 fixture states, owner/catalog digests, cardinality/ordinal rules, 85 concrete-ordinal
   race cases, 65 concrete-ordinal kill cases, canonical case-ID digest, race writers and
-  kill/convergence states, outcomes and exclusions are immutable B1 inputs. Code/config/tests may implement them but
-  may not add, merge, omit, rename, reorder, resize, redefine or downgrade any item; an unlisted adapter
-  call fails as `UNDECLARED_PORT_OPERATION`.
-- Add the two-command `scripts/product-truth/**` implementation and generated-home fixtures for the
+  kill/convergence states, outcomes and exclusions are immutable B1 inputs. Only the exact B1 rows
+  in the Design-owned
+  [verification-path table](../design.md#exact-per-work-verification-path-authority) may carry the
+  checked-in verifier/generator, fixture-definition and test changes that implement them; those
+  bytes may not add, merge, omit, rename, reorder, resize, redefine or downgrade any item. An
+  unlisted adapter call fails as `UNDECLARED_PORT_OPERATION`.
+- Add the two-command implementation in the six exact `scripts/product-truth/` production paths in
+  the machine block below. The exact checked-in verifier/generator and its bijection test are
+  `scripts/product-truth/first-public-capability-verifier.ts` and
+  `scripts/product-truth/first-public-capability-verifier.test.ts`; all other checked-in test and
+  fixture-definition paths are only the exact B1 verification rows in the Design table. Build
+  runtime-generated homes and profiles for the
   exact default root, two lanes, two profiles, database/WAL copies, protected-fact registry,
   Package classification, lock/quiescence rules, stdout-only sanitized plan and narrow apply. Use
   the pinned scripts-workspace `classic-level` dependency for exact Chromium LevelDB access:
@@ -110,34 +118,50 @@ candidate-selected predecessor stops before comparison.
 
 The implementer may create or change only:
 
-- `scripts/product-truth/**` except every v1-v8 meter/config/coverage fixture, the root
+- the exact `production` rows in the machine block below and the 16 exact
+  `direct-first-public-b1` rows in the
+  [Design verification-path table](../design.md#exact-per-work-verification-path-authority), each
+  under its authored presence/mode/lifecycle and purpose. Subsequent prose narrows purpose; a path
+  root, wildcard, suffix, test/fixture/generator label or current output cannot add a Git path;
+- the six exact `scripts/product-truth/` production paths in that machine block and the exact B1
+  verification rows in that table, including the two new verifier paths named above; every v1-v8
+  meter/config/coverage fixture remains immutable. The root
   `package.json` entries needed for the two commands,
   `scripts/package.json` solely to declare one exact non-range direct `classic-level` dependency,
   and the root `bun.lock` solely to record its package-manager-produced scripts-workspace
   resolution and required transitive/platform integrity closure without unrelated lock drift;
 - `scripts/check-source-closure.mjs` solely to update the two adopted-target disposition counts and
   deterministically regenerated disposition digest caused by the already-owned deletion of
-  `desktopUserDataProfile.ts` and its focused test; no algorithm, mapping or other constant may
-  change;
+  `apps/desktop/src/desktopUserDataProfile.ts` and exact
+  `apps/desktop/src/desktopUserDataProfile.test.ts`; both are already absent at the approved Design
+  tree and this sentence grants no resurrection. No algorithm, mapping or other constant may change;
 - `apps/service/src/config.ts`, `apps/service/src/main.ts`,
   `apps/service/src/config.permissions.test.ts` solely to remove the retired Service-database seed
   from the existing private-path permission fixture while retaining its current safety assertions,
-  `apps/service/src/product/ProductControlPlane.ts` and its existing focused test; any required new
+  `apps/service/src/product/ProductControlPlane.ts` and exact
+  `apps/service/src/product/ProductControlPlane.test.ts`; any required new
   first-public production file stops the Work for boundary repair before implementation;
-- `apps/service/src/native-host/executionBoundary.ts` and its focused test, solely to pass
+- `apps/service/src/native-host/executionBoundary.ts` and exact
+  `apps/service/src/native-host/executionBoundary.test.ts`, solely to pass
   `resolveProductDatabasePath(stateDir)` to both live Product-control-plane and Package-lifecycle
   composition and assert the concrete `<lane>/stores/product.sqlite` path; protocol, Engine and
   Package lifecycle semantics must not change;
-- `apps/service/src/persistence/AutomationSchema.ts`, `SystemCapabilitySchema.ts`,
-  `Layers/Sqlite.ts` and their focused tests;
-- deletion of `apps/service/src/persistence/selectionSchemaCoordinator*`,
-  `automationSelectionTranscode*`, `apps/service/src/product/schema1ProductTranscode*`,
-  `schema1SelectionTranscode*` and `schema1ProductMutationFixtures.ts`;
+- `apps/service/src/persistence/AutomationSchema.ts`, `SystemCapabilitySchema.ts` and
+  `Layers/Sqlite.ts`; the only corresponding mutable checked-in test here is exact
+  `apps/service/src/persistence/Layers/Sqlite.test.ts` in the Design table;
+- deletion of exact `apps/service/src/persistence/selectionSchemaCoordinator.ts`,
+  `apps/service/src/persistence/automationSelectionTranscode.ts`,
+  `apps/service/src/product/schema1ProductTranscode.ts`,
+  `apps/service/src/product/schema1SelectionTranscode.ts` and
+  `apps/service/src/product/schema1ProductMutationFixtures.ts` production rows;
 - `apps/web/src/bootstrap.ts`, `composerDraftDomain.ts`, `composerDraftPersistence.ts`,
-  `composerDraftAttachments.ts`, `composerDraftStore.ts`, `components/ChatView.tsx` and their
-  focused tests; deletion of `composerDraftV2Transcode*` and `storageOriginUpgrade*`;
-- `apps/desktop/src/main.ts` and deletion of `desktopStorageUpgrade*` and
-  `desktopUserDataProfile*`;
+  `composerDraftAttachments.ts`, `composerDraftStore.ts` and `components/ChatView.tsx`; only the
+  exact Web test rows named for B1 in the Design table may change. Deletion prose for
+  `composerDraftV2Transcode*` and `storageOriginUpgrade*` refers only to their exact production rows
+  in the machine block and grants no wildcard;
+- `apps/desktop/src/main.ts` and deletion of exact
+  `apps/desktop/src/desktopStorageUpgrade.ts` and
+  `apps/desktop/src/desktopUserDataProfile.ts` production rows;
 - `packages/contracts/src/ipc.ts` solely to delete `OmniMindStorageSnapshot` and
   `DesktopBridge.storageUpgrade`;
 - `apps/desktop/src/ipcChannels.ts` and `apps/desktop/src/preload.ts` solely to delete the retired
@@ -158,8 +182,7 @@ The implementer may create or change only:
   OpenCode execution, protocol, Session, fixture or journey semantics may change;
 - `scripts/lib/release-update-policy.ts`, `scripts/release-update-policy.json`,
   `scripts/release-update-policy.test.ts`, `scripts/resolve-release-update-policy.ts`,
-  `scripts/prepare-release-update-feed.ts`, `scripts/update-release-package-versions.ts` and the
-  exact tests already enumerated in the machine block below, only to remove the inherited
+  `scripts/prepare-release-update-feed.ts` and `scripts/update-release-package-versions.ts`, only to remove the inherited
   compatibility lane while retaining current policy;
 - `scripts/release-smoke.ts` solely to remove the retired `.lane` caller/assertions while preserving
   every current release-smoke path and assertion; it grants no release-policy redesign, new lane,
@@ -168,12 +191,15 @@ The implementer may create or change only:
 
 No other production or dependency path is owned. Product refusal remains in the already-owned
 `ProductControlPlane.ts`, Web refusal in the already-owned composer files, and every destructive
-adapter/seal remains under `scripts/product-truth/**`. In particular this Work may not create
+adapter/seal remains in the exact `scripts/product-truth/` production or B1 verification rows named
+above. In particular this Work may not create
 `productStateStore.ts`, `productExecutionCoordinator.ts`, `productExecutionBoundary.ts`, a thin
 facade scaffold, migration/backup/restore code, a second plan graph, or Native Host v2/root changes.
 An implementation-discovered required path outside this boundary stops the Work for map repair.
-The machine block below is the sole production/measurement/dependency path classification; prose
-does not authorize an unlisted production path.
+The machine block below is the sole production/measurement/dependency path classification; the
+Design verification table is the sole verification-path classification. Prose does not authorize
+an unlisted Git path. Runtime-generated temporary homes and isolated profiles are not Git paths and
+receive no exemption.
 
 ```omp-flow-production-boundary-v1
 {
@@ -277,7 +303,9 @@ does not authorize an unlisted production path.
   hidden copy.
 - The accepted v9 scan reports exact Work membership/lifecycle, official predecessor evidence,
   outside presence/mode/blob equality, dependency bytes and exact declaration identity/B0 absence/
-  export-private/first-materialization facts. Literal graph/SCC/count output is observational. V9
+  export-private/first-materialization facts. It accepts only the exact B1 production rows and 16
+  exact Design verification rows at their authored lifecycles and rejects every other changed Git
+  path. Literal graph/SCC/count output is observational. V9
   neither proves public non-leak nor inventories/classifies raw expressions; passing it is not
   effect-safety evidence.
 - The B1 verifier—not v9—proves behavior. Each exact owner uses non-leaking typed
@@ -306,7 +334,8 @@ does not authorize an unlisted production path.
   incomplete enumeration, unexplained references or any escaping negative mutation is a hard B1
   rejection. A new bypass preserving all v9 facts and escaping the fixed enumerator/verifier/source
   Review returns to Design and never becomes a v9 grammar patch.
-  Retired database/key filenames under `scripts/product-truth/**` are reported separately and are
+  Retired database/key filenames in the exact `scripts/product-truth/` production and B1
+  verification rows are reported separately and are
   permitted only as exact closed destructive target identities or their matching tool fixtures and
   assertions. They must not be counted as runtime compatibility, removed by an undifferentiated
   string scan, or used as a decoder, normal-startup alias, fallback or old-row conversion path. Any
@@ -320,7 +349,9 @@ does not authorize an unlisted production path.
 
 ## Verification
 
-- Run the narrow new tool fixtures first: path/link/reparse/hard-link/mode/override matrices;
+- Within the exact 16 B1 verification rows, run the checked-in verifier/generator, tests and fixture
+  definitions first; runtime-generate (without adding Git paths) the path/link/reparse/hard-link/
+  mode/override matrices;
   WAL-aware fingerprints; protected-count/decoder/cardinality matrix; sanitized JSON snapshots;
   process/lifecycle/profile locks; time-of-check races; full-profile write traces; exclusion hashes;
   Chromium LevelDB no-follow/hash-matched stable-copy inspection and exact-key deletion/reread; and
@@ -369,10 +400,11 @@ does not authorize an unlisted production path.
   `adapted-removed` 774→776 count transfer plus its deterministic digest, caused only by the two
   already-owned `desktopUserDataProfile` deletions; total paths, tree SHA, mappings, algorithms and
   every other disposition remain unchanged.
-- Run focused Product/service/Web/Desktop/release-policy tests affected by creation and deletion,
-  including the unchanged-current-behavior `scripts/release-smoke.ts` assertions after removing
-  only the retired `.lane` caller surface,
-  the existing focused OpenCode live-journey probe test for canonical Product database resolution,
+- Run all 16 exact B1 verification rows in the Design table, including checked-in verifier/generator
+  source, tests and fixture definitions, for Product/service/Web/Desktop/release-policy coverage
+  affected by creation and deletion. Separately run the production-row
+  `scripts/release-smoke.ts` assertions after removing only the retired `.lane` caller surface. The
+  exact verification rows include `apps/service/src/opencode/liveJourneyProbe.test.ts`,
   `apps/web/src/lib/composerImageSource.test.ts`,
   `apps/web/src/components/chat/ComposerImageAttachmentChip.test.tsx`,
   `apps/web/src/appSettings.test.ts`,
@@ -380,8 +412,8 @@ does not authorize an unlisted production path.
   `apps/service/src/config.permissions.test.ts`, plus
   `bun run --cwd apps/service typecheck`, `bun run --cwd apps/web typecheck`,
   `bun run --cwd apps/desktop typecheck` and the scripts typecheck.
-- Run the scope-aware compatibility scan with separate forbidden-runtime and
-  `scripts/product-truth/**` destructive-target classifications plus the exact required runtime
+- Run the scope-aware compatibility scan with separate forbidden-runtime and exact
+  `scripts/product-truth/` production/verification-row destructive-target classifications plus the exact required runtime
   presence-sentinel class. Record zero forbidden residue, every permitted target identity and only
   the configured Product/service/Web sentinels. The scan must separately record exact
   `enableAppshots` at zero under production/test source and prove `enableAppSnap` is the sole current

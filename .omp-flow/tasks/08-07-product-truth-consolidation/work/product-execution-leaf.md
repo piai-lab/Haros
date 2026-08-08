@@ -35,17 +35,29 @@ select or authenticate it; later Review verifies the invocation.
 
 ## Allowed code and output boundary
 
-- Create `apps/service/src/product/productExecutionBoundary.ts` and a focused test.
-- Create one clearly test-only fixture module under `apps/service/src/product/testSupport/`.
-- Change `apps/service/src/product/ProductControlPlane.ts` and its test only to remove the moved
+- Candidate Git mutability is exactly the five production rows in the machine block below plus the
+  10 exact `product-execution-leaf` rows in the Design-owned
+  [verification-path table](../design.md#exact-per-work-verification-path-authority), under each
+  row's presence/mode/lifecycle and purpose. No test, fixture, probe, extension or root label adds a
+  path.
+- Create `apps/service/src/product/productExecutionBoundary.ts` and exact
+  `apps/service/src/product/productExecutionBoundary.test.ts`.
+- Create exact test-support module
+  `apps/service/src/product/testSupport/productExecutionFixture.ts`.
+- Change `apps/service/src/product/ProductControlPlane.ts` and exact
+  `apps/service/src/product/ProductControlPlane.test.ts` only to remove the moved
   contract/error/fixture and import the leaf/test support.
-- Change `apps/service/src/product/productExecutionGateway.ts` and its test,
-  `apps/service/src/native-host/executionBoundary.ts` and focused tests/probes, and
-  `apps/service/src/opencode/productBoundary.ts` and focused tests/probes only to replace imports.
+- Change `apps/service/src/product/productExecutionGateway.ts` and exact
+  `apps/service/src/product/productExecutionGateway.test.ts`,
+  `apps/service/src/native-host/executionBoundary.ts`,
+  `apps/service/src/opencode/productBoundary.ts` and only the exact native-host/OpenCode probe/test
+  rows named for this Work in the Design table, solely to replace imports.
 - Write [handoff](../handoffs/product-execution-leaf.md).
 
 No Product SQL, schema, Store, Coordinator, facade method, runtime behavior, Package root or wire
-behavior may change. The leaf may import Product contracts and generic libraries only.
+behavior may change. The leaf may import Product contracts and generic libraries only. Prose does
+not authorize an unlisted Git path; runtime-generated temporary homes are not Git paths and receive
+no exemption.
 
 ```omp-flow-production-boundary-v1
 {
@@ -69,11 +81,13 @@ behavior may change. The leaf may import Product contracts and generic libraries
   Engine.
 - Literal gateway, Pi and OpenCode boundaries import the leaf and never the monolith for execution
   types. Production imports of the execution fixture are zero; it exists only under test support.
-- Focused boundary/gateway/Product tests and Service typecheck pass. Structural import checks show
+- The exact 10 verification rows' boundary/gateway/Product/probe checks and Service typecheck pass.
+  Structural import checks show
   no new cycle, no SQL/schema/table token in the leaf and no behavior/API snapshot drift.
 - The frozen complexity instrument is read-only and reports the intermediate result without
   treating it as C or changing B1.
-- The frozen v9 gate accounts for every production path and exact declaration disposition. Its
+- The frozen v9 gate accounts for every production path, all 10 exact verification rows and exact
+  declaration disposition. Its
   predecessor/evidence tuple, outside mode/blob, selected-Work lifecycle and dependency bytes remain
   green; literal graph/SCC/count changes are observational, while source/build Review owns semantic
   edges and public non-leak. The
@@ -85,5 +99,5 @@ behavior may change. The leaf may import Product contracts and generic libraries
 Write [`handoffs/product-execution-leaf.md`](../handoffs/product-execution-leaf.md) with exactly one
 `omp-flow-product-truth-complexity-v9-report-v1` complete canonical JSON block, the consumed B1 SHA,
 complete official invocation and deterministic evidence tuple,
-changed import edges, zero-authority static results and focused tests. A different actor must
+changed import edges, zero-authority static results and the exact 10 verification-row results. A different actor must
 accept it before the next overlapping `ProductControlPlane.ts` Work begins.
