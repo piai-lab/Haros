@@ -11,13 +11,15 @@ The selected [stop-loss synthesis](../research/product-truth-complexity-v8-stop-
 Route B: create a new, narrower Product-truth complexity v9 authority and keep every v8 r1-r17
 candidate, fixture, handoff and Review immutable failed evidence. V9 does not repair, relabel or
 extend v8 and cannot cite an r1-r17 green authored suite as candidate acceptance.
+The later human [safe-degradation calibration](product-truth-complexity-v9-safe-degradation-calibration.md)
+retains this route while superseding this Decision's earlier public-shape/static-verdict detail.
 
 The selected route retains only facts that a candidate-independent repository measurement can own:
-the exact Design/Work membership, the official predecessor-evidence selection and exact evidence
-blobs/tuple, selected-Work path lifecycle, outside-Work presence/mode/blob equality, exact capability
-declaration and public non-leak shape, manifest/lock/source-digest dependency closure, resolved
-static import/export closure and decidable forbidden edges, LOC/import/SCC metrics and stable Product
-counts.
+the exact Design/Work membership, official predecessor-evidence selection and exact evidence
+blobs/tuple, selected-Work path lifecycle, outside-Work presence/mode/blob equality, dependency bytes,
+exact declaration identity/B0 absence/export-private disposition/non-self-authorizing first
+materialization and report determinism. Literal graph/SCC/count facts remain deterministic
+observations until Design authors a complete exact allowed-delta table.
 
 V9 has no authority to classify raw/global/alias expressions, callbacks, RHS/subtrees or per-use
 owner semantics. The accepted v7 B0 inventory and all v8 counterexamples remain provenance only.
@@ -58,9 +60,9 @@ The destructive allowlist, protected exclusions, five Product Work boundaries, W
 behavioral universe remain unchanged. V1-v8 bytes and evidence remain immutable. This calibration
 does not authorize v9 implementation, B1, destructive execution or any Product change.
 
-The next entry is a fresh different-actor QbD over the revised PRD, Design,
+The next entry is a fresh different-actor QbD over the revised PRD, Design, both Decisions,
 [v9 interface](../interfaces/product-truth-complexity-v9.md),
 [v9 measurement Work](../work/product-truth-complexity-v9.md), all five Product Works and the
 [authored Work map](../work/index.md). Only a recorded human calibration after that independent audit
-may authorize v9 implementation. A separate zero-finding different-actor implementation Review must
+may authorize v9 implementation, and that QbD must reach 0 blocker and 0 advisory. A separate zero-finding different-actor implementation Review must
 then accept the immutable v9 meter before B1 can be assigned.

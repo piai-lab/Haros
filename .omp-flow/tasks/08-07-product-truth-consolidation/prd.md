@@ -24,6 +24,7 @@ This PRD consumes the [selected synthesis](research/synthesis.md), maintainer ca
 [direct rebuild interface](interfaces/direct-first-public-rebuild.md), and
 [Package-root handoff](interfaces/package-root-handoff.md). Its measurement boundary additionally
 consumes the selected [v9 stop-loss calibration](decisions/product-truth-complexity-v9-stop-loss-calibration.md),
+[Route B safe-degradation calibration](decisions/product-truth-complexity-v9-safe-degradation-calibration.md),
 [stop-loss evidence](research/product-truth-complexity-v8-stop-loss.md) and
 [v9 interface](interfaces/product-truth-complexity-v9.md). It also repairs every material finding
 in the failed immutable [B1 Review](reviews/direct-first-public-b1.md): canonical production Store
@@ -262,6 +263,12 @@ Windows quiescence adapter. The underlying evidence remains in the
   implementation Review. V1-v8 bytes, reports, handoffs and Reviews remain immutable provenance.
   Accepted v7 retains the observational B0 inventory; failed v8 r1-r17 remain stop-loss evidence.
   Neither is a v9 candidate PASS or permission for raw effects.
+- V9 hard declaration facts are only exact path/symbol/kind, B0 presence or explicit absence,
+  exported/module-private disposition and the Design-authored first materialization Work. A byte-
+  emitted signature is hard only when its independently existing bytes and digest were frozen
+  before the candidate; none is currently pinned. Candidate-emitted signatures, inferred type
+  closure, public raw non-leak and owner semantics are observational or B1 evidence, never v9
+  expected values.
 - `B1` is a dedicated, green, compatibility-deleted and first-public-capable commit made before any
   responsibility extraction. Its full immutable commit SHA and clean-tree metric output must be
   recorded before the Store/Coordinator split is handed off; a branch name, working tree, later
@@ -277,20 +284,23 @@ Windows quiescence adapter. The underlying evidence remains in the
   facade→Coordinator, Coordinator→Store and Coordinator→execution leaf; there is no core cycle.
 - Product SQL writers outside Store, second Product connections, raw transaction exports, Native
   Host Package lifecycle writers, forbidden compatibility imports and Engine boundary imports of
-  the facade are all zero. Required presence-only sentinels and forbidden compatibility identities
-  are separate exact structural inventories. Noncanonical Product composition and alternate raw
-  effect ingress are both zero: v9 owns only the former static/public-shape evidence, while the B1
-  verifier and deterministic same-SHA raw-reference Review own the latter. Facade RPC methods remain
-  exactly 36 and Product tables exactly 21.
+  the facade are all zero as Product acceptance claims. V9 may report their physical observations
+  but cannot hard-classify write, Web/RPC, gateway, compatibility or ownership semantics. B1 and
+  later applicable Product Reviews own the hard source/process verdicts. Facade RPC methods remain
+  exactly 36 and Product tables exactly 21 as Product acceptance, not v9 semantic authority.
 - No new Product table/database/durable state machine, migration platform, per-Engine Product plane,
   generic repository/manager/registry or fallback path is introduced.
 - V9 extracts the five machine-readable Work boundaries and its exact authority from the pinned
   QbD-approved Design tree. It owns only candidate-independent Work membership; Main/human-selected
   predecessor evidence and exact handoff/Review/report blobs and tuple; selected-Work member
-  deletion/materialization/authored move; exact outside-Work presence/mode/blob equality; exact
-  capability declaration and public type/API non-leak shape; manifest/lock/adopted-source digest
-  closure; resolved static import/export closure and forbidden decidable edges; and LOC/import/SCC
-  plus stable Product counts. Config and candidate bytes cannot add or redefine any of them.
+  deletion/materialization; exact outside-Work presence/mode/blob equality; exact declaration
+  identity/presence/export-private disposition and non-self-authorizing first materialization;
+  manifest/lock/adopted-source byte closure; deterministic reporting; and physical LOC/count
+  observations. Config and candidate bytes cannot add or redefine any hard fact.
+- V9 emits the complete sorted literal import/export record multiset. Its B0 69-member universe and
+  578-record digest are pinned, but Design has authored no complete exact per-Work allowed-delta
+  table; therefore candidate graph differences, SCCs and named domain edges are observational.
+  Turning them hard requires a new Design and QbD, not config or candidate inference.
 - V9 does not inventory or classify raw/global/alias expressions, normalize wrappers/selectors,
   inherit callback owners, inspect RHS/subtrees or decide per-use owner semantics. It must not
   implement or claim CFG/ICFG, SSA, points-to, reachability/order, Promise/scheduler, Effect,
@@ -322,18 +332,20 @@ Windows quiescence adapter. The underlying evidence remains in the
   Exact Work members may be deleted or materialized and the graph is recomputed; outside-Work
   deletion/materialization, undeclared moves and new glob members fail.
 - `scripts/check-source-closure.mjs` and every meter/config file are measurement, not tool,
-  production or steady-state runtime. V9 report determinism, authority/config/membership, evidence,
-  dependency and static-graph resolution remain hard at B0; historical raw/behavior observations
-  are provenance only. B1/C hard-fail all v9 membership, evidence, lifecycle, public-shape,
-  dependency/static-graph and count gates. Branch, working-tree or B0 substitution cannot select
-  another mode.
+  production or steady-state runtime. V9 report determinism, authority/config/membership, official
+  evidence, dependency bytes and exact declaration identity/disposition remain hard in every mode.
+  Static-graph/SCC/count facts and domain semantics are observational in v9 and cannot authorize a
+  candidate. Branch, working-tree or B0 substitution cannot select another mode.
 - At the exact B1 SHA, a fresh different actor must run all 10-owner/146-operation/87-state/85-race/
   65-kill cases, apply every immutable v8 r1-r17 hidden-mutation family including the four r17
-  callback-global forms and adjacent positives, and emit a deterministic count/JCS digest inventory
-  of every raw root/import/loader reference and production adapter composition with zero unexplained
-  references. This evidence belongs to B1 Review, not v9. A bypass with no reproducible verifier or
-  Review failure condition falsifies Route B and returns to Design; it never authorizes another v9
-  expression rule.
+  callback-global forms and adjacent positives, and hard-fail public raw leakage, Native Host
+  lifecycle writes, unmediated effects, incomplete enumeration, unexplained references or a
+  negative mutation that escapes while its adjacent positive passes. The Review retains the fully
+  expanded reviewer-owned enumeration command, Bun/tool version, enumerator source bytes/digest,
+  Design source-universe digest, canonical records, full mutation manifest and sorted count/JCS
+  digest. Candidate/config filtering is forbidden. This evidence belongs to B1 Review, not v9. A
+  new bypass preserving every v9 fact and escaping the fixed enumerator/verifier/source Review
+  falsifies Route B, returns to Design and never authorizes another v9 grammar rule.
 - Reuse follows the current Synara/repository ladder: preserve, identify the exact OmniMind gap,
   wire or locally repair, and replace only with a named unique owner, reproducible falsifier and
   proof that the smaller repairs cannot work. V8 r1-r17 falsify only its expression-combination
@@ -351,12 +363,12 @@ Windows quiescence adapter. The underlying evidence remains in the
 | A6  | Interruption converges only through fresh inspect/apply; inert Package tombstones do not block normal startup                                                                            | real termination before/after the Web batch and every Package graph edge, stale-lock and tombstone convergence matrix                                                                 |
 | A7  | Product/service/Web owners create only exact generation 1 from clean absence and all live Product consumers use the canonical Store path                                                 | fresh/open/reopen, Product/service two-stage plus matching owner-lock must-hold and Web single-stage exact refusal, concrete production composition and partial-creation matrix        |
 | A8  | Old/future/unmarked/contradictory generations fail closed                                                                                                                                | database and Web generation fault matrix with zero write assertions                                                                                                                   |
-| A9  | The complete unshipped compatibility inventory has zero production caller/import while exact refusal sentinels remain present, non-decoding and dominant over all current-generation I/O | v9 membership/static-edge/public-shape gate plus the Design-frozen 87-state per-owner B1 operation/event/fault/race/kill/convergence matrix and cardinality/ordinal digests; deterministic same-SHA raw-reference inventory; every v8 r1-r17 hidden mutation; current-generation process tests |
+| A9  | The complete unshipped compatibility inventory has zero production caller/import while exact refusal sentinels remain present, non-decoding and dominant over all current-generation I/O | v9 membership/declaration-identity evidence plus B1 hard source/process acceptance: fixed 87-state owner matrix, public non-leak, lifecycle-write and raw-mediation Review, reviewer-owned complete enumeration with zero unexplained references, full r1-r17 manifest with adjacent positives and current-generation process tests |
 | A10 | One Store retains all named compound transactions and SQL authority                                                                                                                      | static writer/connection gate and transaction fault injection for every named unit                                                                                                    |
 | A11 | Coordinator retains Engine-effect semantics without SQL/replay/fallback                                                                                                                  | catalog/admission/attempt/control/crash tests across Pi and OpenCode                                                                                                                  |
 | A12 | Web/RPC sees exactly one 36-operation facade; probes/tests are separate                                                                                                                  | type/API snapshot, wsRpc tests and production caller scan                                                                                                                             |
 | A13 | Service selects and Host only validates one transcript-bound lane/Package root                                                                                                           | dev/packaged process tests covering proof tamper, replay, version/field faults, second/concurrent binding, mismatch/link/sibling-root and no fallback                                 |
-| A14 | Production and conceptual complexity strictly decrease in one coverage-complete frozen universe                                                                                          | immutable v1-v8 provenance; Design-pinned five boundaries, exact capability declaration/public non-leak shape, dependency/static import-export closure and B1 verifier digests; Main/human-selected evidence commit and exact tuple/blob/ancestry; selected-Work lifecycle; exact outside mode/blob equality; deterministic v9 LOC/import/SCC/stable Product counts; behavior separately accepted by the exact frozen B1 manifest, r1-r17 hidden mutations and same-SHA raw-reference/source Review |
+| A14 | Production and conceptual complexity strictly decrease in one coverage-complete frozen universe                                                                                          | immutable v1-v8 provenance; Design-pinned five boundaries, exact declaration presence/export-private dispositions and dependency bytes; Main/human-selected evidence tuple/blob/ancestry; selected-Work lifecycle; outside mode/blob equality; deterministic v9 physical observations including the observational literal-edge multiset; behavior and semantic ownership separately hard-accepted by the exact B1 verifier, reviewer-owned enumeration/source Review and full r1-r17 manifest with adjacent positives |
 | A15 | Current outbox, Automation, Web safeguard, Package and Engine recovery behavior remains                                                                                                  | focused existing suites plus complete real kill/race/write-trace and affected real-process journeys                                                                                   |
 
 ## Constraints and non-goals
@@ -396,8 +408,9 @@ assurance route. Under the
   selected [v9 stop-loss calibration](decisions/product-truth-complexity-v9-stop-loss-calibration.md)
   and [narrow v9 authority](interfaces/product-truth-complexity-v9.md). A fresh different QbD actor
   must challenge the complete v9 Design/interface/Work map, exact non-authority boundary, official
-  evidence tuple/blob/ancestry, five unchanged fences, public non-leak shape, dependency/static-edge
-  closure, stable counts and B1 verifier/raw-reference/r1-r17 handoff. Only a later recorded human
-  PASS calibration may authorize the measurement-only v9 Work. Its immutable handoff then requires
+  evidence tuple/blob/ancestry, five unchanged fences, declaration presence/export-private and
+  first-materialization authority, observational graph boundary, dependency bytes and replayable
+  B1 enumerator/verifier/raw-reference/r1-r17 handoff. It must reach 0 blocker and 0 advisory. Only
+  a later recorded human PASS calibration may authorize the measurement-only v9 Work. Its immutable handoff then requires
   a zero-finding different-actor implementation Review before a B1 receipt may be issued. A changed
   destructive target or exclusion returns for explicit human decision.

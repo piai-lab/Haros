@@ -69,13 +69,17 @@ callback/global stop-loss failure. The selected
 creates a new [narrow v9 authority](interfaces/product-truth-complexity-v9.md). It preserves every
 v1-v8 artifact and removes raw/global/alias/callback/RHS/per-use semantics from candidate
 measurement rather than patching or relabeling v8.
+The later human [safe-degradation calibration](decisions/product-truth-complexity-v9-safe-degradation-calibration.md)
+closes the v9 audit's two blockers and advisory by limiting declaration hard facts, making the
+incomplete static graph observational and freezing replayable B1 reviewer evidence. It does not
+change Route B, Product scope or Work order.
 
 ## Scope and source boundaries
 
 | Responsibility                 | Intended source boundary                                                                                             | Owns                                                                                                                | Must not own                                                              |
 | ------------------------------ | -------------------------------------------------------------------------------------------------------------------- | ------------------------------------------------------------------------------------------------------------------- | ------------------------------------------------------------------------- |
 | v7/v8 historical checkpoints   | immutable v7 accepted artifacts and failed v8 r1-r17 artifacts                                                        | B0 observational provenance, stop-loss evidence and reusable evidence/static-graph mechanisms                              | v9 candidate verdict, Product behavior or permission for raw effects      |
-| v9 measurement checkpoint      | future `measure-complexity-v9.mjs`, `complexity-universe-v9.json` and bounded structural fixtures                     | exact membership/evidence/lifecycle/public shape/static graph/LOC-import-SCC/stable Product counts                         | raw/global/alias/callback/RHS/per-use semantics, runtime behavior or destructive state |
+| v9 measurement checkpoint      | future `measure-complexity-v9.mjs`, `complexity-universe-v9.json` and bounded structural fixtures                     | exact membership/evidence/lifecycle/declaration disposition/dependency bytes/report determinism plus observational physical metrics and literal graph | public raw non-leak, write/Web-RPC/gateway semantics, raw/global/alias/callback/RHS/per-use behavior or destructive state |
 | direct rebuild tool            | `scripts/product-truth/**` plus focused tests                                                                        | inspect/apply orchestration, ephemeral inspection scratch, stdout result                                            | runtime startup, old-data decoding, state preservation, Package lifecycle |
 | first-public Product Store     | exact `apps/service/src/product/productStateStore.ts`; any private SQL file requires a new machine-boundary decision | Product database lifecycle, exact schema, 21 tables, all Product writes/transactions                                | Engine effects, Web/RPC, second connection                                |
 | execution coordinator          | `apps/service/src/product/productExecutionCoordinator.ts`                                                            | execution boundary, catalog memory, prepared handles, subscriptions, effect ordering                                | SQL, durable state machine, Engine wire                                   |
@@ -648,17 +652,18 @@ B0 report require a separate zero-finding different-actor implementation Review 
 V9 incorporates by digest exactly five strict `omp-flow-production-boundary-v1` blocks plus its one
 `omp-flow-product-truth-complexity-v9-authority-v1` block from the QbD-approved Design tree. Config
 pins the Design SHA, normalized blocks/digests, one-time glob expansion and exact membership; it
-cannot contribute paths, declaration identities, public-type dispositions, edges, counters,
+cannot contribute paths, declaration identities, presence/export-private dispositions, first-
+materialization Works, graph deltas, counters,
 predecessor rows or expected verdicts. It resolves static import/export declarations against exact
 manifest/`bun.lock`/adopted-source bytes and records package locator, integrity/revision, export
 entry, ordered closure and digest. Candidate-selected snapshots or path lists have no authority.
 
-V9 checks exact capability module declaration identity, declaration kind and canonical exported
-public type/API closure. Only typed intent, stable capability methods and sanitized results/facts may
-cross the public boundary; raw paths usable for arbitrary I/O, SQLite/Level handles, raw statements
-or transaction callbacks, batches, lock tokens, release functions, process handles, raw adapters,
-loaders or native-addon capabilities are forbidden in that public declaration/type closure. This is
-an export/type-shape check only. It does not classify local raw uses or infer an expression owner.
+V9 checks only exact capability path, symbol, declaration kind, B0 presence or explicit absence,
+exported/module-private disposition and the Design-authored Work that may first materialize an
+absent future declaration. It has no current hard emitted-signature row: a signature becomes hard
+only when Design pins independently existing emitted bytes and digest before implementation.
+Candidate-emitted declarations, inferred type closure and semantic public raw non-leak are not v9
+expected values. The latter is a B1 source/behavior acceptance gate.
 
 For each B1/C Work, v9 selects the exact authored row in its Interface.
 Main/human orchestration selects one full evidence commit outside candidate/config/repository
@@ -680,12 +685,19 @@ and declared actor strings authenticate no reviewer or human. No Harness/schema 
 Failed `50deefc1...` remains verification-only.
 
 The selected Work's exact `production` members are the sole mutable set. V9 allows deletion or
-materialization only for a pre-frozen selected-Work member; an authored move is delete plus
-materialize with both endpoints in the same Work. Every member outside the selected Work preserves
+materialization only for a pre-frozen selected-Work member; a declaration row may first materialize
+only in its Design-named Work. Every member outside the selected Work preserves
 presence, executable mode and Git blob exactly. Unlisted paths, new glob matches, outside lifecycle
-change and undeclared moves fail. The candidate static graph is resolved afresh so deletion cannot
-leave a dangling or changed forbidden edge. V9 does not require outside raw/violation multiset
+change and undeclared moves fail. The candidate literal graph is resolved afresh so deletions and
+changed records remain visible as observations. V9 does not require outside raw/violation multiset
 equality and does not compare inside raw sites.
+
+The graph output is exactly the sorted multiset of literal `import` and `export ... from` records
+`{form,source,specifier}`, including duplicates, over the 69-member union of the five production
+fences. B0 contains 578 records with the source-universe and record digests frozen in the v9
+Interface. Design has not authored a complete exact allowed-delta/disposition table, so every
+candidate graph difference, SCC and Web/RPC/gateway/write/ownership interpretation is
+observational. A future hard graph gate requires a new Design and QbD; meter/config cannot supply it.
 
 V9 deliberately stops at those mechanically decidable facts. It owns no raw/global terminal
 inventory, wrapper/selector normalization, alias propagation, callback inheritance, RHS/subtree
@@ -729,16 +741,30 @@ positives.
 At that same B1 SHA the different actor produces a deterministic inventory of every raw root, raw
 import, loader reference and production adapter composition. Canonical records contain path,
 reference kind, source-span digest, enclosing exported capability declaration (or `none`),
-real/verifier adapter disposition and sanitized rationale; the sorted count and JCS/SHA-256 digest
-must have zero unexplained references. The actor source-reviews every capability, public surface,
-private port, real/verifier composition and case generator. Reviewer expectations and inventory
-verdicts never enter v9 meter/config or production. If a bypass has no reproducible failure condition
-in the verifier, retained static/public-shape gate or Review, Route B is falsified and returns to
-Design rather than adding a v9 expression rule.
+real/verifier/forbidden/unexplained disposition and sanitized rationale code. The Review retains the
+fully expanded reviewer-owned enumeration command, Bun/tool version, enumerator source bytes/blob
+and SHA-256, candidate and QbD-approved Design SHAs, 69-member source-universe digest, complete
+sorted records, count and JCS/SHA-256 digest. Candidate production, v9 meter/config and tests cannot
+provide or filter the universe, reference kinds, expected dispositions or cases. `unexplained = 0`
+is a hard B1 gate.
 
-The script still reports physical production/test/tool/measurement lines, exact imports/cycles,
-facade/table/database/writer/state-machine/gateway counters, legacy classifications and Native Host
-Package lifecycle writes.
+The same Review materializes the full candidate-independent r1-r17 manifest from the immutable
+Review/repair-fixture commits named in the v9 Interface, including every negative and adjacent
+positive plus the four exact r17 callback-global negatives and five controls. It records each case,
+source/blob, expected reject/pass and applicable verifier/enumerator/source-Review oracle, sorted
+count and JCS digest. Every negative rejects and every adjacent positive passes. The actor also hard-
+reviews every exported/private capability, owner-private real/verifier composition and Native Host
+Package-lifecycle write path. Public raw leakage, lifecycle writes outside Product Service,
+unmediated effects, incomplete enumeration, unexplained references or mutation escape reject B1.
+
+If any new raw bypass preserves every v9 fact and escapes the fixed enumerator, verifier and same-SHA
+source Review, Route B is falsified and returns to Design. It must never be answered by another v9
+syntax, wrapper, alias, callback, RHS or expression rule.
+
+The script still reports physical production/test/tool/measurement lines, literal import/export
+records/cycles and facade/table/database/writer/state-machine/gateway/lifecycle observations. Those
+domain interpretations are observational; Product acceptance is owned by the applicable source,
+behavior and process Review.
 
 Three points are required:
 
@@ -758,38 +784,38 @@ Three points are required:
 
 The exact configured B0 SHA is observational for historical behavior and effect-ingress
 nonconformance so the baseline can be measured without being mislabeled green. Authority extraction,
-config integrity, membership, dependency resolution and report determinism remain hard at B0.
-Repaired B1/C hard-fail every v9 membership/evidence/lifecycle/public-shape/dependency/static-graph/
-count gate; the separate B1 runtime verifier and Review gate behavior. No other ref or working-tree
-state can select observational mode.
+config integrity, membership, official evidence, selected-Work lifecycle, outside mode/blob,
+dependency input bytes, declaration identity/presence/export-private disposition and report
+determinism remain hard. Emitted signatures without an independent pin, literal graph/SCC changes,
+counts and every semantic domain verdict are observational at B0/B1/C. No ref, candidate or
+working-tree state can promote an observation into a hard fact.
 
-All gates are conjunctive:
+The following Product acceptance claims remain conjunctive, but v9 supplies only the hard facts and
+observations stated above; source, behavior and process Review supplies semantic verdicts:
 
 1. changed-scope production lines `C < B0`, and steady-state runtime lines `C < B0`;
 2. core responsibility slice `C < B1`, so deletion cannot conceal extraction overhead;
-3. changed-module production import edges `C < B0`, with only facade→Store,
-   facade→Coordinator, Coordinator→Store and Coordinator→execution-leaf among the four core modules;
-4. no core strongly connected component has more than one module;
+3. observed changed-module literal import/export records `C < B0`; different-actor source Review
+   confirms the intended facade→Store, facade→Coordinator, Coordinator→Store and
+   Coordinator→execution-leaf relationships;
+4. observed core SCCs have no component larger than one, confirmed by source/build Review;
 5. Product SQL writer outside Store = 0; Product database construction site = 1; raw transaction
    callback export = 0;
 6. Engine/gateway imports of facade/Store = 0; `wsRpc` imports only facade; Native Host Package
    lifecycle writes = 0;
 7. facade RPC methods = 36; Product tables = 21; Product database = 1; Product durable state machine
    = 1; literal two-Engine gateway = 1;
-8. the exact dependency/static import-export closure matches across every frozen production member;
-   outside-Work presence/mode/blob equals the accepted predecessor; selected-Work lifecycle is exact;
-   capability declaration/public type shape is exact and exposes no raw handle/transaction/release/
-   adapter capability; every forbidden decidable static edge and simultaneous B1/C Product owner =
-   0; forbidden
-   compatibility decoder/import/caller count = 0; required Product/service/Web sentinel identities
-   and tool-only target identities remain exact structural inventories; no generic
-   repository/manager/registry, per-Engine plane or migration platform exists; and the independent
-   B1 trace/fault/race/kill plus all r1-r17 hidden mutations and deterministic raw-reference/source
-   Review has accepted runtime behavior at the same immutable SHA.
+8. exact dependency bytes, membership, outside mode/blob, selected-Work lifecycle and declaration
+   identity/presence/export-private disposition pass v9; the literal graph and stable counts match
+   the required observed values; and independent same-SHA B1/later Review hard-confirms public
+   non-leak, zero forbidden lifecycle writes/compatibility callers, raw mediation, complete
+   enumeration with zero unexplained references, full r1-r17 negative/adjacent-positive outcomes,
+   required sentinels and absence of competing Product authority.
 
 Failure of any gate rejects the candidate even if the largest file is shorter or tests pass.
 
-Execution starts only after a fresh different-actor QbD and recorded human PASS authorize the
+Execution starts only after a fresh different-actor QbD reports 0 blocker and 0 advisory and a
+recorded human PASS authorizes the
 bounded measurement-only v9 Work. Its immutable commit, predecessor-bound B0 report, handoff and
 zero-finding different-actor implementation `PASS` are a hard stop before (1) direct first-public
 creation plus compatibility deletion through a green B1 commit measured with those accepted v9 bytes and proved
@@ -816,11 +842,12 @@ bypass either stop.
 - `B0`/repaired-`B1`/`C` metrics use the identical frozen v9 script/config/authority; all v1-v8
   evidence remains unchanged. The immutable repaired-B1 commit SHA is checked in before split
   handoff and all three v9 outputs are linked from the final handoff.
-- V9 structural fixtures cover only exact membership and path lifecycle, official evidence tuple/
-  blobs/ancestry, outside presence/mode/blob equality, capability declaration/public type non-leak,
-  manifest/lock/source digest closure, resolved static import/export edges, forbidden decidable
-  edges, LOC/import/SCC and stable Product counts. An explicit source/test negative rejects any
-  raw/global/alias/callback/RHS/per-use classifier in v9.
+- V9 structural fixtures cover only exact membership/path lifecycle, official evidence tuple/blob/
+  ancestry, outside presence/mode/blob, dependency bytes, declaration identity/B0 absence/export-
+  private disposition/first materialization and report determinism. They reproduce the 69-member,
+  578-record literal-edge baseline, but graph/SCC/count differences remain observational because
+  there is no complete Design-authored delta table. A source/test negative rejects raw non-leak,
+  write/Web-RPC/gateway and raw/global/alias/callback/RHS/per-use semantic verdicts in v9.
 - B1 owner-local capability fixtures inject verifier-owned ports and consume the exact Design block;
   they cover all applicable generated-home presence assignments, every declared operation/ordinal
   before/after fault, each declared race barrier and every declared durable abrupt-kill
@@ -828,12 +855,13 @@ bypass either stop.
   the full event prefix, terminal disposition, exact writes, post-state, exclusions and sanitized
   output. Hidden different-actor mutations include removed/coarsened operations, an omitted barrier
   and a downgraded durable event in addition to the v5/v6 counterexample families, against the real
-  verifier, retained static/public-shape gate or same-SHA Review. They include every immutable v8
-  r1-r17 family and adjacent positive. The Review deterministically inventories every raw root,
-  import, loader reference and production adapter composition at the same SHA, records count plus
-  canonical digest and requires zero unexplained references. Separate v9 negatives cover exact
-  declaration/public-type leaks, selected-Work lifecycle, outside mode/blob drift, dependency/static
-  edge drift, missing/duplicate/abbreviated/malformed/nonexistent official evidence input,
+  verifier, reviewer enumerator or same-SHA source Review. They include every immutable v8 r1-r17
+  family and adjacent positive. The Review records the fully expanded reviewer-owned command,
+  runtime/tool version, enumerator source bytes/digest, Design-universe digest, complete canonical
+  records, sorted count/JCS digest and zero unexplained references, with no candidate/config
+  filtering. Separate v9 negatives cover declaration presence/export-private/first-materialization,
+  selected-Work lifecycle, outside mode/blob drift, dependency-byte drift,
+  missing/duplicate/abbreviated/malformed/nonexistent official evidence input,
   config/repository/report override, later-mutated or non-ancestor evidence, mismatched blobs/actors
   and a forged candidate Review/handoff at a SHA other than the official input. A positive records an
   official full SHA and exact deterministic tuple without claiming identity authentication.
@@ -922,20 +950,22 @@ and a Windows quiescence adapter. The further red-team closure makes nested rece
 nofollow/hash copies, intermediate-ancestor checks, database-lock identity, abrupt-kill stale-lock
 recovery, Package tombstone convergence and the complete real kill/race/write-trace matrix explicit.
 The accepted v7 meter remains immutable B0 structural evidence. Failed v8 r1-r17 attempted only its
-candidate authority and remain immutable. Selected stop-loss Route B creates v9 for only membership, official evidence,
-selected-Work lifecycle, outside mode/blob equality, exact declaration/public non-leak shape,
-dependency/static edges and LOC/import/SCC/stable Product counts. Raw/global/alias/callback/RHS/
-per-use semantics move entirely to B1's owner-private injected ports, fixed real verifier, complete
-r1-r17 hidden mutations and deterministic same-SHA raw-reference/source Review. This changes no
+candidate authority and remain immutable. Selected stop-loss Route B creates v9 for only membership,
+official evidence, selected-Work lifecycle, outside mode/blob equality, dependency bytes, exact
+declaration identity/presence/export-private disposition, non-self-authorizing first materialization
+and report determinism. Literal graph/SCC/count facts are observational because no complete exact
+delta table exists. Public non-leak, lifecycle writes, raw mediation/completeness, unexplained
+references and mutation rejection move entirely to B1's owner-private ports, fixed real verifier,
+reviewer-owned enumeration, full r1-r17 manifest and deterministic same-SHA source Review. This changes no
 runtime target, destructive scope or protected exclusion.
 
 The older g50 literal Pi/OpenCode gateway sibling-zero observation remains closed by its same-SHA
 process evidence and is not part of this repair or the next audit absent new contradictory evidence.
 No migration, backup, restore, alias, wrapper or dual compatibility was introduced.
 
-The next workflow output is a fresh different-actor QbD audit of this repaired Design, v9
-Decision/Interface/measurement Work, all five Product Works and the Work map. Only a subsequently
-recorded human PASS calibration may authorize the measurement-only v9 Work. Its immutable handoff
+The next workflow output is a fresh different-actor QbD audit of this repaired Design, both v9
+Decisions, Interface/measurement Work, all five Product Works and the Work map. It must reach 0
+blocker and 0 advisory. Only a subsequently recorded human PASS calibration may authorize the measurement-only v9 Work. Its immutable handoff
 must then receive a zero-finding different-actor implementation `PASS` before a new B1 production
 receipt is issued. Any proposed
 new destructive target or weakened exclusion returns for human calibration. This architect does not

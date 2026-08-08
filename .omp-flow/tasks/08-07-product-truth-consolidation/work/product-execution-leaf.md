@@ -24,7 +24,7 @@ Do not assign or start this Work until [`handoffs/direct-first-public-b1.md`](..
 records a different-actor-accepted clean immutable B1 and zero production Store/Coordinator/leaf
 extraction surface, and the Native Host Work must have a different-actor-accepted handoff whose
 candidate/report is this Work's immutable comparison predecessor. The chain must name the accepted
-immutable v9 meter Review receipt and SHA/digests, including Work/v9-authority/public-shape/
+immutable v9 meter Review receipt and SHA/digests, including Work/v9-authority/declaration/
 B1-verifier/dependency/import/universe digests, and its accepted
 verifier case-manifest/trace/fault/race/kill plus hidden-mutation/source-Review receipts. The
 implementation base must contain that exact B1 commit. Main/human orchestration supplies the full
@@ -73,11 +73,10 @@ behavior may change. The leaf may import Product contracts and generic libraries
   no new cycle, no SQL/schema/table token in the leaf and no behavior/API snapshot drift.
 - The frozen complexity instrument is read-only and reports the intermediate result without
   treating it as C or changing B1.
-- The frozen v9 gate accounts for every production path; newly materialized static edges pass only
-  between frozen members, while outside-set, unresolved/nonliteral or forbidden static edges stop.
-  Its accepted predecessor/evidence tuple, outside presence/mode/blob equality, selected-Work
-  lifecycle, exact capability declaration/public non-leak shape, dependency/static-import closure
-  and counts remain green; the
+- The frozen v9 gate accounts for every production path and exact declaration disposition. Its
+  predecessor/evidence tuple, outside mode/blob, selected-Work lifecycle and dependency bytes remain
+  green; literal graph/SCC/count changes are observational, while source/build Review owns semantic
+  edges and public non-leak. The
   accepted B1 runtime behavior evidence remains an immutable predecessor rather than a static meter
   claim.
 

@@ -37,6 +37,7 @@ This Work realizes PRD A1-A9, the B1 half of A14, and the B1 preservation portio
 - [V7 Occam repair calibration](../decisions/product-truth-complexity-v7-repair-calibration.md)
 - [Accepted v7 historical Review](../reviews/product-truth-complexity-v7.md)
 - [V9 stop-loss calibration](../decisions/product-truth-complexity-v9-stop-loss-calibration.md)
+- [V9 safe-degradation calibration](../decisions/product-truth-complexity-v9-safe-degradation-calibration.md)
 - [V9 narrow authority](../interfaces/product-truth-complexity-v9.md)
 - [Authoritative v9 meter Work](product-truth-complexity-v9.md) and its required
   `handoffs/product-truth-complexity-v9.md`
@@ -52,7 +53,7 @@ distinct, and validates candidate→evidence→B1 first-parent ancestry, immutab
 exact digests and internally distinct declared implementer/reviewer actors. The later different-
 actor Review checks the recorded invocation against the official selection; neither receipt nor Git
 history authenticates identity. The assignment also records the accepted meter SHA/digests including the
-five Work fences, v9 authority, dependency/static-import closure, public capability-shape and B1
+five Work fences, v9 authority, dependency bytes, declaration-disposition and B1
 verifier-universe digests, and use
 those bytes plus its accepted B0 report read-only. A branch, working tree, failed candidate or
 candidate-selected predecessor stops before comparison.
@@ -61,10 +62,11 @@ candidate-selected predecessor stops before comparison.
 
 - Preserve all v1-v8 history plus accepted v9 meter/config/fixtures byte-for-byte. Run the accepted
   v9 bytes against repaired B1 and its handoff-bound B0 predecessor; any Design/boundary/evidence/
-  lifecycle/public-shape/dependency/static-graph/count mismatch stops.
+  lifecycle/outside-blob/dependency/declaration hard-fact mismatch stops. Graph/SCC/count drift is
+  recorded observationally and cannot become a v9 semantic verdict.
 - Encapsulate every Design-declared owner as a small non-leaking owner-local capability. V9 checks
-  only the exact module declaration and exported public type/API shape; it does not classify local raw
-  expressions or per-use owners. Raw scratch or
+  only exact declaration identity, phase presence and export/private disposition; B1 source/behavior
+  Review hard-checks non-leak and mediation. Raw scratch or
   source paths usable for arbitrary I/O, SQLite/LevelDB handles, batches, lock tokens, release
   primitives, process handles and raw adapters must not cross its typed intent/sanitized-result
   boundary. Verifier composition injects the frozen port/event/fault/race/kill interfaces; no
@@ -274,9 +276,10 @@ does not authorize an unlisted production path.
   other behavior change. There is no snapshot, converter, restore, legacy reader, dual-read or
   hidden copy.
 - The accepted v9 scan reports exact Work membership/lifecycle, official predecessor evidence,
-  outside presence/mode/blob equality, capability declaration/public non-leak shape,
-  dependency/static import-export closure, forbidden decidable edges and stable counts. It does not
-  inventory or classify raw expressions; passing it is not effect-safety evidence.
+  outside presence/mode/blob equality, dependency bytes and exact declaration identity/B0 absence/
+  export-private/first-materialization facts. Literal graph/SCC/count output is observational. V9
+  neither proves public non-leak nor inventories/classifies raw expressions; passing it is not
+  effect-safety evidence.
 - The B1 verifier—not v9—proves behavior. Each exact owner uses non-leaking typed
   intent/sanitized-result boundaries and verifier-owned ports/events. The checked-in generator
   recomputes the frozen owner/catalog digests and derives its dimensions only from the block,
@@ -289,13 +292,20 @@ does not authorize an unlisted production path.
   raw ingress, cached/merged/wrong classifier resources, unreachable validation, skipped/swallowed
   cleanup, early/detached release, old-state fallthrough, zero-iteration guards, finally-replaced or
   non-exact reset errors and missing kill convergence, then source-reviews every capability, port
-  composition, raw reference and generator. It additionally applies every v8 r1-r17 family and
-  adjacent positive, and emits the deterministic raw root/import/loader/adapter inventory with zero
-  unexplained references. The real verifier, retained static/public-shape gate or Review must fail
+  composition, raw reference and generator. It materializes the full immutable r1-r17 manifest with
+  every adjacent positive and records case source/blob, expected outcome, oracle, sorted count and
+  JCS digest. It emits the deterministic raw root/import/loader/adapter inventory with zero
+  unexplained references. The Review retains the fully expanded reviewer-owned enumeration command,
+  Bun/tool version, enumerator source bytes/blob/digest, Design source-universe digest and complete
+  canonical records; candidate/config filtering is forbidden. The real verifier, enumerator or source Review must fail
   each mutation while adjacent real positives pass. It additionally removes one port operation,
   coarsens two operations, omits one fixture state, shrinks one resource cardinality, drops one
   terminal EOF ordinal, omits one race/kill convergence binding and downgrades one durable event; each must fail
   while adjacent real positives pass.
+  Public raw-capability leakage, Native Host Package-lifecycle writes, unmediated effects,
+  incomplete enumeration, unexplained references or any escaping negative mutation is a hard B1
+  rejection. A new bypass preserving all v9 facts and escaping the fixed enumerator/verifier/source
+  Review returns to Design and never becomes a v9 grammar patch.
   Retired database/key filenames under `scripts/product-truth/**` are reported separately and are
   permitted only as exact closed destructive target identities or their matching tool fixtures and
   assertions. They must not be counted as runtime compatibility, removed by an undifferentiated
@@ -319,12 +329,11 @@ does not authorize an unlisted production path.
   identity, SIGKILL-stale profile locks, intermediate ancestry and Package duplicate/tombstone
   convergence.
 - Run only the accepted v9 SHA/digests and handoff-bound B0 report for frozen membership, official
-  evidence, selected-Work lifecycle, outside presence/mode/blob equality, exact capability
-  declaration/public non-leak shape, dependency/static-import closure and structural/count gates.
-  Pass allowed member deletion/materialization and the absent pre-frozen future Store member; fail
-  outside lifecycle/blob drift, unlisted paths/new glob members, public raw-capability leaks,
-  dependency/lock/source-digest drift, unresolved/nonliteral static specifiers, forbidden static
-  edges and simultaneous B1/C Product owners. Fail overwritten/mismatched evidence blobs/report/receipt/
+  evidence, selected-Work lifecycle, outside presence/mode/blob equality, dependency bytes and exact
+  declaration identity/B0 absence/export-private/first-materialization gates. Reproduce the pinned
+  literal-edge baseline and label candidate graph/SCC/count output observational. Pass only the
+  Design-named future declarations in B1; fail outside lifecycle/blob drift, unlisted paths/new
+  members, declaration drift and dependency/lock/source-byte drift. Fail overwritten/mismatched evidence blobs/report/receipt/
   declared actors, invalid/duplicate official evidence input, candidate/config/repository/report
   override, later-mutated or non-ancestor evidence, a sole candidate-forged Review/handoff at a
   different SHA and any use of `50deefc1...` as predecessor. A positive records the Main/human-
@@ -336,9 +345,12 @@ does not authorize an unlisted production path.
   different-actor hidden mutation and source Review at the exact B1 SHA. Apply every immutable v8
   r1-r17 family, including direct global/wrapper/alias/destructure/namespace/assignment/RHS/nested/
   selector/call-argument/callback forms and the four exact r17 callback-global cases, with adjacent
-  positives. Deterministically inventory every raw root/import/loader reference and production
-  adapter composition, record its canonical count/JCS digest and require zero unexplained
-  references. Meter success cannot substitute for this Review and focused positives cannot
+  positives. Retain the fully expanded enumeration argv, runtime/tool version, enumerator source
+  bytes/digest, fixed-universe digest and full r1-r17 case manifest/count/JCS digest. Deterministically
+  inventory every raw root/import/loader reference and production adapter composition, retain all
+  canonical records and require zero unexplained references with no candidate/config filtering.
+  Hard-reject public leak, forbidden lifecycle write, unmediated effect, incomplete enumeration or
+  mutation escape. Meter success cannot substitute for this Review and focused positives cannot
   substitute for manifest bijection.
 - Verify the dependency boundary: `scripts/package.json` has one exact non-range direct
   `classic-level` pin; the root lock's scripts importer and integrity closure match it; a filtered
@@ -397,10 +409,12 @@ stronger primitive or retry.
 Write [`handoffs/direct-first-public-b1.md`](../handoffs/direct-first-public-b1.md) with exactly one
 `omp-flow-product-truth-complexity-v9-report-v1` complete canonical JSON block. It must link this
 Work, enumerate changed/deleted paths and reviewable commits, record the immutable B1 full SHA,
-accepted meter Review receipt/SHA plus Work/v9-authority/public-shape/B1-verifier/dependency/import/universe digests,
+accepted meter Review receipt/SHA plus Work/v9-authority/declaration/B1-verifier/dependency/import-universe digests,
 the complete official `--ref`/`--predecessor-evidence` invocation and deterministic evidence tuple,
 clean-tree proof, complete accepted-B0/B1 metric output, verifier case-manifest/execution bijection,
-sanitized trace/fault/race/kill witnesses and different-actor hidden-mutation/source-Review receipt, exact
+sanitized trace/fault/race/kill witnesses, reviewer tool/version/source digest, full enumeration
+records/count/JCS digest, full r1-r17 negative/adjacent-positive manifest/result digest and
+different-actor source-Review receipt, exact
 fingerprint-registry bijection, sanitized
 whole-profile write trace, zero extraction surface and all focused/isolated-process results. It must
 state that no responsibility-extraction assignment is authorized until a different actor accepts

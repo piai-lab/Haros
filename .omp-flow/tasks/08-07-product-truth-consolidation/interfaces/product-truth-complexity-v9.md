@@ -7,15 +7,14 @@ title: "Product-truth complexity v9 narrow measurement authority"
 
 ## Purpose and provenance
 
-V9 implements selected stop-loss [Route B](../decisions/product-truth-complexity-v9-stop-loss-calibration.md).
-It supersedes v8 only as the future candidate measurement authority. It never edits, repairs,
-relabels or grants acceptance to immutable failed v8 r1-r17. The [stop-loss evidence](../research/product-truth-complexity-v8-stop-loss.md),
-accepted v7 B0 report and failed v8 artifacts remain read-only provenance.
+V9 implements the selected [Route B stop-loss](../decisions/product-truth-complexity-v9-stop-loss-calibration.md)
+as repaired by the human [safe-degradation calibration](../decisions/product-truth-complexity-v9-safe-degradation-calibration.md)
+after the independent [v9 audit](../qbd/product-truth-complexity-v9-audit.md). It supersedes v8 only
+as a future candidate measurement authority. V1-v7 and failed v8 r1-r17 remain immutable evidence.
 
-V9 is a repository measurement boundary, not a Product authority or semantic analyzer. Its report
-answers whether a selected candidate preserves the exact authored scope, evidence trust root,
-public capability shape, static dependency graph and stable counts. B1's real verifier and same-SHA
-different-actor Review answer whether effects are actually mediated, ordered, cleaned up and safe.
+V9 measures repository facts. It does not decide raw-capability non-leak, effect mediation,
+lifecycle writes, Web/RPC or gateway ownership, raw-reference completeness, mutation rejection or
+runtime safety. Those are explicit B1 acceptance obligations below.
 
 ## Sole authority
 
@@ -29,85 +28,75 @@ different-actor Review answer whether effects are actually mediated, ordered, cl
   },
   "designInputs": {
     "productWorkBoundaries": "exactly five omp-flow-production-boundary-v1 blocks at the QbD-approved Design tree",
-    "membershipExpansion": "expand authored globs exactly once at that tree and freeze exact present-or-absent members",
-    "capabilityDeclarations": "exact Design-declared module path, capability declaration symbol and kind, plus canonical module export/public type/API signature",
-    "stableCounters": [
+    "membershipExpansion": "expand authored exact members once at that tree and freeze present-or-absent identity",
+    "declarationRows": "the exact rows and phase dispositions below",
+    "physicalObservations": [
       "changed-scope-production-loc",
       "steady-state-runtime-loc",
       "responsibility-slice-loc",
-      "production-static-import-edge-count",
-      "production-static-sccs",
-      "product-sql-writer-count",
-      "product-database-construction-count",
-      "product-table-count",
-      "facade-operation-count",
-      "product-durable-state-machine-count",
-      "literal-engine-gateway-count",
-      "native-host-package-lifecycle-writer-count",
-      "forbidden-compatibility-identity-count"
+      "literal-import-export-record-count",
+      "literal-import-export-sccs",
+      "product-sql-writer-observation",
+      "product-database-construction-observation",
+      "product-table-observation",
+      "facade-operation-observation",
+      "product-durable-state-machine-observation",
+      "literal-engine-gateway-observation",
+      "native-host-package-lifecycle-write-observation",
+      "compatibility-identity-observation"
     ]
   },
   "capabilityDeclarations": {
-    "b1": [
-      { "path": "scripts/product-truth/sqlite-classifier.ts", "symbol": "classifyLegacyDatabase", "declarationKind": "named-function-declaration" },
-      { "path": "scripts/product-truth/chromium-leveldb.ts", "symbol": "inspectProfileDraftKeys", "declarationKind": "named-function-declaration" },
-      { "path": "scripts/product-truth/chromium-leveldb.ts", "symbol": "deleteLegacyProfileDraftKeys", "declarationKind": "named-function-declaration" },
-      { "path": "scripts/product-truth/database-lock.ts", "symbol": "withProductTruthDatabaseLocks", "declarationKind": "named-function-declaration" },
-      { "path": "scripts/product-truth/direct-first-public.ts", "symbol": "inspectDirectFirstPublic", "declarationKind": "named-function-declaration" },
-      { "path": "scripts/product-truth/direct-first-public.ts", "symbol": "applyDirectFirstPublic", "declarationKind": "named-function-declaration" },
-      { "path": "apps/service/src/product/ProductControlPlane.ts", "symbol": "makeProductControlPlaneLayer", "declarationKind": "named-function-declaration" },
-      { "path": "apps/service/src/persistence/Layers/Sqlite.ts", "symbol": "makeSqlitePersistenceLive", "declarationKind": "const-arrow-function" },
-      { "path": "apps/web/src/composerDraftStore.ts", "symbol": "readOrCreateComposerDraftEnvelope", "declarationKind": "const-arrow-function" },
-      { "path": "apps/web/src/composerDraftStore.ts", "symbol": "writeAndVerifyComposerDraftEnvelope", "declarationKind": "const-arrow-function" }
+    "rows": [
+      { "path": "scripts/product-truth/sqlite-classifier.ts", "symbol": "classifyLegacyDatabase", "declarationKind": "named-function-declaration", "b0Presence": "absent", "dispositionWhenPresent": "exported", "firstMaterializationWork": "direct-first-public-b1" },
+      { "path": "scripts/product-truth/chromium-leveldb.ts", "symbol": "inspectProfileDraftKeys", "declarationKind": "named-function-declaration", "b0Presence": "absent", "dispositionWhenPresent": "exported", "firstMaterializationWork": "direct-first-public-b1" },
+      { "path": "scripts/product-truth/chromium-leveldb.ts", "symbol": "deleteLegacyProfileDraftKeys", "declarationKind": "named-function-declaration", "b0Presence": "absent", "dispositionWhenPresent": "exported", "firstMaterializationWork": "direct-first-public-b1" },
+      { "path": "scripts/product-truth/database-lock.ts", "symbol": "withProductTruthDatabaseLocks", "declarationKind": "named-function-declaration", "b0Presence": "absent", "dispositionWhenPresent": "exported", "firstMaterializationWork": "direct-first-public-b1" },
+      { "path": "scripts/product-truth/direct-first-public.ts", "symbol": "inspectDirectFirstPublic", "declarationKind": "named-function-declaration", "b0Presence": "absent", "dispositionWhenPresent": "exported", "firstMaterializationWork": "direct-first-public-b1" },
+      { "path": "scripts/product-truth/direct-first-public.ts", "symbol": "applyDirectFirstPublic", "declarationKind": "named-function-declaration", "b0Presence": "absent", "dispositionWhenPresent": "exported", "firstMaterializationWork": "direct-first-public-b1" },
+      { "path": "apps/service/src/product/ProductControlPlane.ts", "symbol": "makeProductControlPlaneLayer", "declarationKind": "named-function-declaration", "b0Presence": "present", "dispositionWhenPresent": "exported", "firstMaterializationWork": null },
+      { "path": "apps/service/src/persistence/Layers/Sqlite.ts", "symbol": "makeSqlitePersistenceLive", "declarationKind": "const-arrow-function", "b0Presence": "present", "dispositionWhenPresent": "exported", "firstMaterializationWork": null },
+      { "path": "apps/web/src/composerDraftStore.ts", "symbol": "readOrCreateComposerDraftEnvelope", "declarationKind": "const-arrow-function", "b0Presence": "present", "dispositionWhenPresent": "module-private", "firstMaterializationWork": null },
+      { "path": "apps/web/src/composerDraftStore.ts", "symbol": "writeAndVerifyComposerDraftEnvelope", "declarationKind": "const-arrow-function", "b0Presence": "present", "dispositionWhenPresent": "module-private", "firstMaterializationWork": null },
+      { "path": "apps/service/src/product/productStateStore.ts", "symbol": "makeProductStateStore", "declarationKind": "named-function-declaration", "b0Presence": "absent", "dispositionWhenPresent": "exported", "firstMaterializationWork": "product-state-store" }
     ],
-    "authoredMove": {
-      "work": "product-state-store",
-      "from": { "path": "apps/service/src/product/ProductControlPlane.ts", "symbol": "makeProductControlPlaneLayer", "declarationKind": "named-function-declaration" },
-      "to": { "path": "apps/service/src/product/productStateStore.ts", "symbol": "makeProductStateStore", "declarationKind": "named-function-declaration" },
-      "coexistence": "forbidden"
-    },
-    "candidateExtension": "forbidden; a new or renamed declaration requires Design and QbD"
+    "hardRule": "exact path, symbol, declaration kind, phase presence and exported-or-module-private disposition only",
+    "absentFutureRule": "zero matching declarations before the named firstMaterializationWork",
+    "firstMaterializationRule": "exactly one match may first appear only while measuring the named selected Work; candidate, config and meter cannot add or rename a row",
+    "emittedSignatureRule": {
+      "hardOnlyWhen": "Design pinned independently existing emitted bytes and SHA-256 before candidate implementation",
+      "currentPinnedRows": [],
+      "candidateEmittedOrInferredShape": "observational"
+    }
   },
   "selectedWork": {
     "mutableSet": "exact production members of the one selected Work boundary",
     "delete": "allowed only for a frozen selected-Work member",
-    "materialize": "allowed only for a frozen absent selected-Work member",
-    "move": "delete plus materialize; both endpoints must be frozen members of that same selected Work and expressly authored",
+    "materialize": "allowed only for a frozen absent selected-Work member and, for a declaration row, its named firstMaterializationWork",
     "outsideWork": "every frozen member preserves presence, executable mode and Git blob exactly",
-    "unlistedOrNewGlobMember": "fail"
+    "unlistedOrNewMember": "fail"
   },
-  "publicCapabilityShape": {
-    "declarationIdentity": "exact path, module declaration symbol and kind, plus canonical exported signature/type closure",
-    "allowedPublicSurface": "typed intent, stable capability methods and sanitized result/fact types only",
-    "forbiddenPublicSurface": [
-      "raw-path-or-scratch-path-for-arbitrary-io",
-      "sqlite-or-leveldb-handle",
-      "raw-database-statement-or-transaction-callback",
-      "batch-or-lock-token",
-      "release-function",
-      "process-handle-or-raw-adapter",
-      "raw-loader-or-native-addon-capability"
-    ],
-    "method": "TypeScript declaration/export and public type-closure comparison only; no local-use, alias-flow, RHS or callback classification"
+  "dependencyClosure": {
+    "inputs": ["exact package manifests", "exact bun.lock", "pinned adopted-source digests"],
+    "hardRule": "ordered input-byte identities and closure digest are exact; no semantic capability verdict"
   },
-  "dependencyAndStaticGraph": {
-    "inputs": ["exact package manifests", "exact bun.lock", "pinned adopted-source digests", "resolved package export entries"],
-    "closure": "ordered exact source/dependency closure and digest",
-    "edges": "resolved static TypeScript/JavaScript import and export declarations with literal module specifiers",
-    "recomputeAtCandidate": true,
-    "forbiddenDecidableEdges": [
-      "edge-to-unlisted-member",
-      "unresolved-static-module-specifier",
-      "nonliteral-static-import-or-export-specifier",
-      "production-import-of-measurement",
-      "web-or-rpc-import-other-than-facade",
-      "engine-gateway-import-of-facade-or-store",
-      "native-host-package-lifecycle-write-edge",
-      "forbidden-compatibility-module-edge",
-      "core-edge-outside-facade-to-store-facade-to-coordinator-coordinator-to-store-coordinator-to-execution-leaf",
-      "core-scc-larger-than-one"
-    ],
-    "notOwned": "dynamic/raw/global/alias/loader expression interpretation and per-use owner semantics"
+  "literalImportExportGraph": {
+    "recordSchema": ["form", "source", "specifier"],
+    "forms": ["import-declaration", "export-declaration"],
+    "multiset": "retain every literal record including duplicates; sort by JCS record bytes",
+    "sourceUniverse": "exact union of the five Design-frozen production boundaries",
+    "sourceUniverseMemberCount": 69,
+    "sourceUniverseJcsSha256": "f771ad1803e65a65e6077687d0f923d41c826d17cbcfdfb11dee73d1b3787caa",
+    "baseline": {
+      "commit": "7582170a277477ba0d71cf70f53e4e0836874a72",
+      "presentParsedSourceCount": 56,
+      "recordCount": 578,
+      "recordMultisetJcsSha256": "fa1f5d5727398fb897fb15481253974328a6276031db437530ecd0600909fbf2"
+    },
+    "designAuthoredExactAllowedDeltas": [],
+    "hardGateEnabled": false,
+    "reason": "Design has not authored a complete exact per-Work delta/disposition table",
+    "candidateGraphDisposition": "observational; no raw, write, Web/RPC, gateway, ownership or forbidden-edge verdict"
   },
   "evidence": {
     "argument": "--predecessor-evidence",
@@ -134,18 +123,33 @@ different-actor Review answer whether effects are actually mediated, ordered, cl
     "machineBlock": "omp-flow-product-truth-complexity-v9-report-v1",
     "canonicalization": "JCS",
     "determinism": "two clean-tree invocations over the same refs and official evidence input are byte-identical",
-    "modes": {
-      "b0": "authority/config/membership/evidence/dependency/static-graph/report determinism are hard; historical counts are observational",
-      "b1OrLater": "all v9 membership/evidence/lifecycle/public-shape/dependency/static-graph/count gates are hard"
-    }
+    "hardFacts": [
+      "authority-and-config-digest",
+      "membership-and-selected-work-lifecycle",
+      "outside-work-presence-mode-blob",
+      "official-evidence-tuple-blob-ancestry",
+      "dependency-input-byte-closure",
+      "declaration-identity-presence-export-private-disposition",
+      "report-determinism"
+    ],
+    "observationalFacts": [
+      "emitted-signature-without-independent-pin",
+      "literal-import-export-graph-and-scc",
+      "all physical and semantic counters",
+      "all domain ownership interpretations"
+    ]
   },
   "explicitNonAuthority": [
+    "semantic-public-raw-non-leak",
     "raw-or-global-terminal-inventory",
     "global-wrapper-or-selector-normalization",
     "module-or-local-alias-propagation",
     "callback-owner-inheritance",
     "rhs-or-expression-subtree-classification",
     "per-use-owner-or-lifetime-semantics",
+    "native-host-package-lifecycle-write-verdict",
+    "web-rpc-facade-or-gateway-verdict",
+    "forbidden-compatibility-semantic-verdict",
     "cfg-icfg-ssa-points-to-order-reachability",
     "cleanup-lock-scheduler-exception-race-or-crash-convergence"
   ]
@@ -154,71 +158,107 @@ different-actor Review answer whether effects are actually mediated, ordered, cl
 
 ## Authored predecessor rows
 
-The v9 implementation hard-codes no path table. It extracts the following authored rows from this
-Interface at the QbD-approved Design tree. Main/human orchestration still supplies the one exact
-evidence commit; the row only names the expected predecessor artifacts.
-
 | Candidate Work | Required predecessor | Handoff | Review | Report |
 | --- | --- | --- | --- | --- |
-| `direct-first-public-b1` | accepted `product-truth-complexity-v9` meter candidate | `handoffs/product-truth-complexity-v9.md` | `reviews/product-truth-complexity-v9.md` | `omp-flow-product-truth-complexity-v9-report-v1` at fixed B0 |
-| `native-host-package-root-binding` | accepted `direct-first-public-b1` candidate | `handoffs/direct-first-public-b1.md` | `reviews/direct-first-public-b1.md` | v9 report for reviewed B1 candidate |
-| `product-execution-leaf` | accepted `native-host-package-root-binding` candidate | `handoffs/native-host-package-root-binding.md` | `reviews/native-host-package-root-binding.md` | v9 report for reviewed Native Host candidate |
-| `product-state-store` | accepted `product-execution-leaf` candidate | `handoffs/product-execution-leaf.md` | `reviews/product-execution-leaf.md` | v9 report for reviewed execution-leaf candidate |
-| `product-execution-coordinator-facade` | accepted `product-state-store` candidate | `handoffs/product-state-store.md` | `reviews/product-state-store.md` | v9 report for reviewed Store candidate |
+| `direct-first-public-b1` | accepted `product-truth-complexity-v9` meter candidate | `handoffs/product-truth-complexity-v9.md` | `reviews/product-truth-complexity-v9.md` | v9 B0 report |
+| `native-host-package-root-binding` | accepted `direct-first-public-b1` candidate | `handoffs/direct-first-public-b1.md` | `reviews/direct-first-public-b1.md` | reviewed B1 v9 report |
+| `product-execution-leaf` | accepted `native-host-package-root-binding` candidate | `handoffs/native-host-package-root-binding.md` | `reviews/native-host-package-root-binding.md` | reviewed Native Host v9 report |
+| `product-state-store` | accepted `product-execution-leaf` candidate | `handoffs/product-execution-leaf.md` | `reviews/product-execution-leaf.md` | reviewed execution-leaf v9 report |
+| `product-execution-coordinator-facade` | accepted `product-state-store` candidate | `handoffs/product-state-store.md` | `reviews/product-state-store.md` | reviewed Store v9 report |
 
-For the first row, the accepted v9 evidence binds a freshly generated v9 B0 report at
-`7582170a277477ba0d71cf70f53e4e0836874a72`; it does not convert the v7 inventory or any v8 report
-into v9 acceptance. Later rows bind the immediately preceding different-actor-accepted Product
-candidate. Missing, duplicated, abbreviated, candidate-selected, mutated, non-ancestor or
-internally inconsistent evidence fails before comparison.
+Main/human supplies the official evidence commit. Missing, duplicated, abbreviated, candidate-
+selected, mutated, non-ancestor or inconsistent evidence fails before comparison. The first row
+binds a freshly generated v9 B0 report at `7582170a277477ba0d71cf70f53e4e0836874a72`;
+v7/v8 reports never become v9 acceptance.
 
-## Candidate-independent public-shape rule
+## Declaration and graph interpretation
 
-The Design freezes each capability's module declaration and canonical emitted public type/API
-shape before implementation. V9 may prove only that those declarations exist exactly once, that
-their exported signatures match, and that the public type closure exposes none of the forbidden raw
-capability types above. It does not inspect local raw uses, infer callback ownership or decide which
-alias/RHS expression reaches an effect. A module can therefore pass v9 public-shape checks and still
-fail B1; that is an intentional ownership boundary, not evidence of safety.
+The declaration gate proves only identity, phase presence and export/private disposition. All six
+direct-tool declarations and the future Store declaration are explicitly absent at B0; their first
+materialization cannot be learned from candidate bytes. The two Web helpers are deliberately
+module-private. No current declaration has an independently pinned emitted signature, so v9 cannot
+turn a candidate-generated `.d.ts`, structural type interpretation or forbidden-type vocabulary
+into a hard expected value.
 
-## B1 behavioral evidence contract
+V9 emits the full literal import/export multiset and its digest. Because Design has not supplied a
+complete exact allowed-delta/disposition table, every candidate graph comparison, SCC and named
+domain relationship is observational. A future hard graph gate requires a new Design revision and
+QbD; config or implementation cannot fill the missing table.
 
-B1 must compose production and verification through owner-private injected ports. The Design-owned
-manifest remains exactly 10 owners, 146 operations, 87 states, 85 concrete-ordinal races and 65
-concrete-ordinal kills. Candidate code and tests cannot filter, resize or redefine that universe.
+## B1 reviewer evidence and acceptance contract
 
-At the identical B1 SHA, a fresh different actor must generate a deterministic raw-reference Review
-inventory covering every raw root, raw import, loader reference and production adapter composition.
-The canonical records contain path, syntactic reference kind, source-span digest, enclosing exported
-capability declaration (or `none`), real/verifier adapter disposition and sanitized rationale; the
-Review records sorted count and JCS/SHA-256 digest with zero unexplained references. This inventory
-is Review evidence, not candidate meter/config authority and cannot be sampled prose.
+B1 uses the fixed 10-owner/146-operation/87-state/85-race/65-kill verifier universe unchanged. At
+the identical immutable B1 SHA, a different actor owns—not merely invokes—the raw-reference
+enumerator and records the fully expanded command. Its fixed command grammar is:
 
-The same Review must apply every immutable v8 r1-r17 hidden-mutation family named by the
-[stop-loss evidence](../research/product-truth-complexity-v8-stop-loss.md), including the four exact
-r17 callback-global cases, and show that the real verifier, retained static/public-shape gate or
-raw-reference Review deterministically rejects each mutation while its adjacent positive passes.
-If any bypass lacks such a reproducible failure condition, Route B is falsified and returns to
-Design; v9 must not add an expression grammar to absorb it.
+```text
+bun <reviewer-owned-enumerator> --repository <clean-repository> --candidate <B1-full-SHA> --design <QbD-approved-Design-full-SHA> --source-universe-sha256 f771ad1803e65a65e6077687d0f923d41c826d17cbcfdfb11dee73d1b3787caa --emit-jcs <review-output>
+```
 
-## Reuse and replacement gate
+The Review retains the exact Bun/runtime version, enumerator version, enumerator source bytes/blob
+and SHA-256, fully expanded argv, candidate and Design SHAs, source-universe count/digest and output
+bytes. Neither candidate production, v9 meter/config nor test selection may provide, subtract from
+or filter the source universe, reference kinds, expected dispositions or mutation cases.
 
-Implementation first reuses the accepted v7 mechanical and v8 evidence-binding/static-graph logic
-that already fits this authority. It may extract or locally repair only the v9 gap. Replacing an
-existing repository or adopted Synara mechanism requires the unique owner, a reproducible
-falsifier, proof that wiring/local repair cannot solve it and a lower lifecycle cost. The r1-r17
-record is a falsifier for v8 expression-combination authority only.
+Each canonical raw-reference record has exactly these fields:
+
+```text
+path
+referenceKind
+sourceSpanSha256
+enclosingDeclaration | "none"
+adapterDisposition: "owner-private-real-port" | "owner-private-verifier-port" | "forbidden" | "unexplained"
+rationaleCode
+```
+
+Records sort by their JCS bytes. The Review records exact count, JCS/SHA-256 digest and the complete
+records, and hard-fails unless `unexplained = 0`. It source-reviews every exported/private capability,
+real/verifier composition, Native Host Package-lifecycle write path and raw reference. Public raw
+capability leak, lifecycle write outside the Product Service owner, unmediated raw effect,
+incomplete enumeration or unexplained reference rejects B1.
+
+The mutation manifest is candidate-independent. For r1-r16 it is the complete path+Git-blob set
+added or modified under `scripts/product-truth/fixtures/complexity-v8/**` by the repair commit after
+each immutable Review below, with expected negative/adjacent-positive disposition taken from that
+Review. R17 adds the four exact negative expressions and adjacent controls recorded in its Review.
+
+| Family | Immutable Review | Exact repair-fixture commit / cases |
+| --- | --- | --- |
+| r1 | `4b8804c4e173ec1292f03cdbb80336e565fe2b62` | `61df83885e0290fe199a58715101ba405358aec9` |
+| r2 | `0c23b4771a0aa5cf456f557061c7bbc5e959e17a` | `8cee02f09de917ba169770bebe8b348a32448807` |
+| r3 | `8289941aa084fdccf7a3e95d10a0ad6d250e3a3a` | `7c6107f2b9d5ffccacdde515d943ff6a5cb7992f` |
+| r4 | `3585a87601743fcc95fd7bc7aec84bc116c98692` | `6134f3115b8023c1603c705cff55ba6833ca06c2` |
+| r5 | `2fa0538dadd5affc476f2acc24f617a2e212cb37` | `745473e86ef800ed6176529782cc1c249df9e20a` |
+| r6 | `510726e54ca3418d48ad170b6d93f21bce939751` | `c84fb9773eb6f8aba0627b2214f543481d179224` |
+| r7 | `a526e88c2f2e8442e18a4f38ab3b44d4d97109ee` | `d2c31d4d5c9c85c4caa5f9033e091ec6fb6da4a6` |
+| r8 | `88bc86ddc7a21ec34748ac862ccb9dadfedb457a` | `5796ea8906b3b5f2d3cf45de9638f7b5f1696cea` |
+| r9 | `7df1e2cd8a78a903df680dda437538d1528c38ce` | `a94919c58385abb8a0d674408a63dca5c5f9a69a` |
+| r10 | `084c3308f18f4eb8b57a8909c329cc072542c7d4` | `89bc90138277aa6673a4ca57f4219c979268346d` |
+| r11 | `d22a52b46e088de30d8b4b41a6a971d674d47c38` | `2b200e1a7efa4fc68aa60b48d109a7929132c7e7` |
+| r12 | `47af3534dd8b23b4e91126689998d0e9d8a1f69c` | `299b4c9862033e1cb1ec105ed829d483292ed5ba` |
+| r13 | `fc5f754e944d9f9f4cff8a693177fb77b9f163d1` | `b28346cb03391c589788e634dc3c8c9cf5cd01a0` |
+| r14 | `7088290818b8405c19b6b1adb86e6475d308b62c` | `9f7f05384c72238c12ed075eb942d79abf878b35` |
+| r15 | `5c3130770ad75c6a7bb027097e29d64b82c39a48` | `54771ec7a75b9d032b83be0b20386f5cee3bbc4e` |
+| r16 | `5117aad8eb8175d242482b309601f352a2f3bfa2` | `9ead992939e5765d5b9a75a5e2249b898a71aea3` |
+| r17 | `63e3dafd340ab92cab5664c50b92c1c3a053e9dc` | exact negatives `() => Bun.file`, `(value = Bun.file) => value`, `() => ({ nested: [Bun.file] })`, `() => globalThis.unknown.Bun.file`; adjacent positives/counter-controls are the five exact controls in that Review |
+
+Before execution, the reviewer materializes this derivation as one sorted manifest containing every
+case ID, source Review/fixture blob, expected `reject` or `pass`, and applicable verifier/enumerator/
+source-Review oracle; it records count plus JCS/SHA-256 digest. Every negative must reject and every
+adjacent positive must pass. Focused authored tests or sampled prose cannot substitute.
+
+Any new raw bypass that preserves every v9 hard fact and escapes this fixed enumeration, verifier
+and same-SHA source Review falsifies Route B. It returns to Design and must never become another v9
+syntax, alias, callback, wrapper or expression grammar patch.
 
 ## Verification and transition
 
-QbD must challenge at least: v1-v8 byte immutability; all five fence digests; selected-Work delete,
-materialize, move and unlisted-member cases; outside mode/blob drift; official evidence input,
-tuple/blob/ancestry and forged-evidence attacks; exact capability declaration/public-type leak
-cases; dependency/lock/source-digest drift; every allowed and forbidden static edge; LOC/import/SCC
-and stable Product counts; explicit absence of raw/global/alias/callback/RHS verdicts; and the
-complete B1 verifier/raw-reference/hidden-mutation handoff.
+Fresh QbD must reproduce the machine JSON, declaration phase rows, 69-member source-universe digest,
+578-record B0 graph digest, absence of semantic v9 verdicts, reviewer evidence schema and complete
+r1-r17 derivation. It must also confirm v1-v8, all five fences, production, existing meters, Reviews,
+handoffs and protected user documents are byte-identical.
 
-The next output is a fresh different-actor QbD audit of the current Design and Work map. Only a
-recorded human PASS calibration may authorize the [v9 measurement Work](../work/product-truth-complexity-v9.md).
-V9's immutable implementation then requires a zero-finding different-actor Review before B1. This
-Interface authorizes no production edit or destructive execution.
+The next output is a fresh different-actor QbD audit. It must reach **0 blocker and 0 advisory**;
+only a subsequent recorded human PASS may authorize the [v9 measurement Work](../work/product-truth-complexity-v9.md).
+The immutable v9 implementation then requires a separate zero-finding different-actor Review before
+B1. This Interface authorizes no Product edit or destructive execution.

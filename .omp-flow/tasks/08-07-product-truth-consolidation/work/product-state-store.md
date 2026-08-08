@@ -24,7 +24,7 @@ perform, the Coordinator/facade extraction.
 This Work begins only after immutable B1, Native Host v2 and the execution-leaf Work have
 different-actor accepted handoffs. The execution-leaf candidate/report is this Work's immutable
 comparison predecessor. The B1 chain must bind the accepted immutable v9 meter Review and SHA/
-digests, including Work/v9-authority/public-shape/B1-verifier/dependency/import/
+digests, including Work/v9-authority/declaration/B1-verifier/dependency/import-
 universe digests, and the accepted B1
 verifier case-manifest/trace/fault/race/kill plus hidden-mutation/source-Review receipts. It must use
 the exact B1 recorded by the first handoff for later B0/B1/C comparison.
@@ -104,13 +104,12 @@ caller ownership.
 - Run Store/Product focused tests, Package projection/replay tests and Service typecheck. Static
   gates reject a second connection, writer, raw transaction export, table CRUD API or core cycle.
 - Read the frozen complexity instrument without editing it; report the intermediate metrics only.
-- Run the frozen v9 membership/evidence/lifecycle/public-shape/dependency/static-import/count gates.
-  The future Store may materialize inside the frozen set and becomes the sole declared Product
-  capability exactly when the unsplit `ProductControlPlane` declaration disappears; coexistence,
-  outside-set endpoint, unresolved/nonliteral or forbidden static edge, declaration/public-type
-  drift or public raw-capability leakage stops. Re-run the owner-local Product lifecycle
-  behavior matrix against the moved capability and obtain different-actor Review at this immutable
-  checkpoint; B1 traces are preservation inputs, not proof of the moved implementation.
+- Run the frozen v9 membership/evidence/lifecycle/outside-blob/dependency-byte/declaration gates.
+  The future Store declaration may first materialize only in this Design-named Work. V9 does not
+  decide whether old implementation responsibility remains, whether public types leak raw
+  capability or whether an edge is semantically allowed; different-actor source/behavior Review
+  hard-checks sole Store authority, public non-leak and the observed graph. B1 traces are
+  preservation inputs, not proof of the extracted implementation.
 
 ## Expected handoff
 

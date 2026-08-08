@@ -67,15 +67,17 @@ gates only; runtime semantics move to B1 capabilities and verifier-owned evidenc
 structure/report remains immutable, but the failed B1 run proves v7 cannot gate candidates. Failed
 v8 r1-r17 then proved that expression-combination interpretation is not a bounded candidate meter.
 The selected [v9 stop-loss calibration](../decisions/product-truth-complexity-v9-stop-loss-calibration.md)
-and [narrow authority](../interfaces/product-truth-complexity-v9.md) preserve v1-v8 and retain only
-membership/evidence/lifecycle/public-shape/static-graph/count facts. B1 owns owner-private ports,
-the fixed real verifier, all r1-r17 hidden mutations and deterministic same-SHA raw-reference/source
-Review. No destructive target or protected exclusion changes.
+and human [safe-degradation calibration](../decisions/product-truth-complexity-v9-safe-degradation-calibration.md)
+preserve v1-v8. The [narrow authority](../interfaces/product-truth-complexity-v9.md) retains hard
+membership/evidence/lifecycle/outside-blob/dependency-byte/declaration-disposition facts while graph/
+SCC/count output is observational. B1 owns public non-leak, lifecycle writes, raw mediation,
+reviewer-owned complete enumeration, zero unexplained references, the fixed verifier, full r1-r17
+manifest with adjacent positives and same-SHA source Review. No destructive target or exclusion changes.
 
 ## Hard ordering
 
-The next workflow checkpoint is a fresh different-actor QbD over this revised design/map. Only a
-recorded human PASS calibration may authorize the measurement-only
+The next workflow checkpoint is a fresh different-actor QbD over this revised design/map. It must
+reach 0 blocker and 0 advisory. Only a recorded human PASS calibration may authorize the measurement-only
 [v9 narrow meter](product-truth-complexity-v9.md). It changes no measured production path, freezes
 one immutable meter commit plus B0 report, writes its handoff and must receive a zero-finding
 different-actor implementation `PASS`. No B1 production receipt may be issued before that
@@ -132,14 +134,15 @@ each of the five Product Works plus the v9 authority at the QbD-approved Design 
 normalized block digest, expands any authored glob once and freezes membership. For the selected
 Work, exact production paths are the sole mutable set; outside paths preserve presence/mode/blob
 exactly; selected members alone may delete/materialize or participate in an authored move. V9 also
-pins exact capability declaration/public type/API non-leak shape, dependency/lock/adopted-source
-digests, resolved static import/export closure, forbidden decidable edges and LOC/import/SCC/stable
-Product counts. It does not inventory or classify raw/global/alias expressions, callbacks,
+pins exact declaration identity/B0 absence/export-private/first-materialization facts and dependency
+bytes. It emits the pinned literal import/export multiset and LOC/SCC/count observations without a
+hard delta or domain verdict. It does not inventory or classify raw/global/alias expressions, callbacks,
 RHS/subtrees or per-use owners. B1 proves effect safety through non-leaking owner-local capabilities,
 the frozen 10-owner/146-operation/34-barrier/29-kill verifier universe plus 87 exact owner states,
 cardinality/ordinal rules, 85 concrete-ordinal race cases, 65 concrete-ordinal kill cases and
-convergence bindings, exhaustive generated-home presence/fault/race/kill cases and
-every r1-r17 hidden mutation and deterministic same-SHA raw-reference/source Review. After v9 Review acceptance, every later Work treats
+convergence bindings, exhaustive generated-home presence/fault/race/kill cases, the full r1-r17
+manifest with adjacent positives and reviewer-owned same-SHA enumeration/source Review, including
+tool/version/source digest, canonical records and zero unexplained references. After v9 Review acceptance, every later Work treats
 the meter bytes, accepted immediate predecessor report and accepted B1 behavior evidence as read-only predecessors.
 An inert `.discarding` tombstone blocks rebuild convergence only; it is never loaded and adds no
 ordinary-runtime sentinel.
@@ -185,19 +188,19 @@ Product State Store → Coordinator/facade C.
 | PRD acceptance                                                                | Realizing Work                                                                                                                                                                                                |
 | ----------------------------------------------------------------------------- | ------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
 | A1 exact root/lane/profile scope                                              | [Direct first-public B1](direct-first-public-b1.md)                                                                                                                                                           |
-| A2 exact classification, protected-fact preflight, strict private classifier-copy origin and sanitized output | [Direct first-public B1](direct-first-public-b1.md), bounded by [v9](product-truth-complexity-v9.md) public shape/static edges and behaviorally accepted by B1 verifier/Review |
+| A2 exact classification, protected-fact preflight, strict private classifier-copy origin and sanitized output | [Direct first-public B1](direct-first-public-b1.md), bounded by v9 declaration identity and hard-accepted by B1 verifier/enumerator/source Review |
 | A3 read-only inspect and locked repeated apply                                | [Direct first-public B1](direct-first-public-b1.md)                                                                                                                                                           |
 | A4 allowlisted unrecoverable deletion with no copy                            | [Direct first-public B1](direct-first-public-b1.md)                                                                                                                                                           |
 | A5 byte-identical exclusions                                                  | [Direct first-public B1](direct-first-public-b1.md)                                                                                                                                                           |
 | A6 interruption only through fresh inspect/apply                              | [Direct first-public B1](direct-first-public-b1.md)                                                                                                                                                           |
-| A7 exact Product/service/Web generation-1 creation and matching lock hold     | [Direct first-public B1](direct-first-public-b1.md), bounded by [v9](product-truth-complexity-v9.md) public shape/static edges and behaviorally accepted by B1 verifier/Review |
+| A7 exact Product/service/Web generation-1 creation and matching lock hold     | [Direct first-public B1](direct-first-public-b1.md), bounded by v9 declaration identity and hard-accepted by B1 verifier/enumerator/source Review |
 | A8 old/future/unmarked/contradictory state fails closed                       | [Direct first-public B1](direct-first-public-b1.md)                                                                                                                                                           |
-| A9 zero unshipped compatibility caller/import and dominant exact refusal cuts | [Direct first-public B1](direct-first-public-b1.md), static membership/edge evidence in [v9](product-truth-complexity-v9.md) and behavior/raw-reference evidence in B1 Review |
+| A9 zero unshipped compatibility caller/import and dominant exact refusal cuts | [Direct first-public B1](direct-first-public-b1.md), v9 membership/declaration facts plus hard B1 public-non-leak/lifecycle/raw-completeness/mutation Review |
 | A10 one Store, one connection and complete transactions                       | [Sole Product State Store](product-state-store.md), retained by the [final C Work](product-execution-coordinator-facade.md)                                                                                   |
 | A11 Coordinator effects without SQL/replay/fallback                           | [Coordinator and facade](product-execution-coordinator-facade.md)                                                                                                                                             |
 | A12 one 36-operation facade and separate probes                               | [Coordinator and facade](product-execution-coordinator-facade.md)                                                                                                                                             |
 | A13 Service-selected, transcript-bound Package root                           | [Native Host v2 Package-root binding](native-host-package-root-binding.md)                                                                                                                                    |
-| A14 deterministic complexity decrease in one universe and closed capability boundary | immutable v1-v8 provenance plus membership/evidence/lifecycle/public-shape/static-graph/count gate in [v9 measurement](product-truth-complexity-v9.md); behavior/raw references plus B1 in [Direct first-public B1](direct-first-public-b1.md); C in [Coordinator and facade](product-execution-coordinator-facade.md) |
+| A14 deterministic complexity decrease in one universe and closed capability boundary | immutable v1-v8 provenance plus hard membership/evidence/lifecycle/declaration/dependency facts and observational graph/count output in [v9 measurement](product-truth-complexity-v9.md); semantic behavior/raw evidence in [Direct first-public B1](direct-first-public-b1.md); C in [Coordinator and facade](product-execution-coordinator-facade.md) |
 | A15 current recovery behavior and affected real journeys                      | focused preservation in every Work; integrated live proof in [Coordinator and facade](product-execution-coordinator-facade.md)                                                                                |
 
 The three accepted QbD 1 advisories are all hard done conditions of the B1 Work: exact
@@ -210,14 +213,14 @@ Each implementation Work writes its promised handoff and receives a different-ac
 the next overlapping Work begins. Focused green checks do not authorize broader claims. The final C
 Work may submit affected Campaign claims only as `candidate`; no producer may mark them verified.
 
-The next workflow entry is a fresh different-actor QbD audit of the v9 repair across Design,
-Decision, Interface, measurement Work, all five Product Works and this map. It must prove v9 owns
-only membership, official evidence blobs/tuple, selected-Work lifecycle, outside mode/blob equality,
-exact capability declaration/public non-leak shape, dependency/static edges and LOC/import/SCC/
-stable Product counts; contains no raw/global/alias/callback/RHS/per-use verdict; preserves all five
-fences and v1-v8 bytes; and hands every effect-safety obligation to B1's private ports, fixed
-10/146/87/85/65 verifier, complete r1-r17 hidden mutations and deterministic same-SHA raw-reference/
-source Review. Only a recorded human PASS calibration after that audit authorizes the measurement-
+The next workflow entry is a fresh different-actor QbD audit of the v9 repair across Design, both
+Decisions, Interface, measurement Work, all five Product Works and this map. It must prove v9 owns
+only the hard membership/evidence/lifecycle/outside-blob/dependency-byte/declaration-disposition
+facts, keeps graph/SCC/count output observational, contains no raw non-leak/write/Web-RPC/gateway or
+raw/global/alias/callback/RHS/per-use verdict, preserves all five fences and v1-v8 bytes, and hands
+effect safety to B1's private ports, fixed 10/146/87/85/65 verifier, reviewer-owned complete
+enumeration, zero unexplained references and full r1-r17 manifest with adjacent positives. The audit
+must reach 0 blocker and 0 advisory. Only a recorded human PASS calibration after it authorizes the measurement-
 only v9 assignment. Its immutable handoff then needs a zero-finding different-actor implementation
 `PASS` before a new B1 production receipt. The next QbD output is
 `../qbd/product-truth-complexity-v9-audit.md`.

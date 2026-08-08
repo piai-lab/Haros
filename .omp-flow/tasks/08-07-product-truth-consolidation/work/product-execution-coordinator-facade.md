@@ -26,7 +26,7 @@ journey gates. This Work realizes PRD A11, A12, the C half of A14 and integrated
 All four handoffs above must be current and different-actor accepted. Their B1 chain must bind the
 accepted immutable v9 meter Review receipt and SHA/digests. The accepted Store candidate/report is
 this Work's immutable comparison predecessor. The frozen complexity instrument and immutable B1
-SHA, Work/v9-authority/public-shape/B1-verifier/dependency/import/universe digests plus accepted B1
+SHA, Work/v9-authority/declaration/B1-verifier/dependency/import-universe digests plus accepted B1
 case-manifest/trace/fault/race/kill and hidden-mutation/source-Review receipts must match the B1
 handoff byte-for-byte; mismatch stops rather than
 reconstructing or remeasuring with a revised universe.
@@ -100,8 +100,8 @@ does not authorize an unlisted production path.
   Coordinator→Store and Coordinator→execution leaf.
 - The frozen v9 instrument reports Design-pinned path membership, accepted predecessor binding and
   exact evidence tuple, selected-Work lifecycle, exact outside presence/mode/blob equality,
-  capability declaration/public non-leak shape, dependency/static import-export closure and stable
-  structural counts, plus all conjunctive gates:
+  declaration identity/export-private disposition and dependency bytes, plus observational literal
+  graph/SCC/structural counts and separately reviewed conjunctive Product gates:
   changed-scope and steady-state production
   lines C<B0, responsibility slice C<B1, changed import edges C<B0, and every semantic counter at
   the approved value. The Store is the sole C Product ingress owner and the unsplit B1 owner is

@@ -79,11 +79,17 @@ okf_version: "0.2"
   and same-SHA source Review own raw/global/alias combination semantics.
 - [Product-truth complexity v9 stop-loss calibration](decisions/product-truth-complexity-v9-stop-loss-calibration.md)
   — records selected Route B, preserves v1-v8 and routes expression combinations to B1 evidence.
+- [Product-truth complexity v9 safe-degradation calibration](decisions/product-truth-complexity-v9-safe-degradation-calibration.md)
+  — records the human response to the v9 audit: exact declaration/disposition authority,
+  observational graph boundary, replayable B1 reviewer evidence and the Route-B falsifier.
 - [Product-truth complexity v9 narrow authority](interfaces/product-truth-complexity-v9.md) — exact
-  membership/evidence/lifecycle/public-shape/static-graph/count boundary and explicit semantic
-  non-authority.
+  membership/evidence/declaration boundary, observational literal-graph baseline and explicit
+  semantic non-authority.
 - [Product-truth complexity v9 measurement Work](work/product-truth-complexity-v9.md) — next bounded
   implementation only after fresh different-actor QbD and recorded human PASS calibration.
+- [Product-truth complexity v9 audit](qbd/product-truth-complexity-v9-audit.md) — immutable `FAIL`
+  that found the missing declaration/signature and static-edge authority and requested the selected
+  safe degradation; a fresh different-actor audit must now reach 0 blocker and 0 advisory.
 - [QbD 1 audit](qbd/design-audit.md) — independent critical findings that triggered the repair
   calibration.
 - [QbD 1 repair audit](qbd/design-repair-audit.md) — independent PASS with zero blockers and three

@@ -17,6 +17,7 @@ report and receives independent Review before any B1 assignment.
 - [PRD R11/A14](../prd.md)
 - [Design complexity boundary and verification](../design.md)
 - [Selected stop-loss calibration](../decisions/product-truth-complexity-v9-stop-loss-calibration.md)
+- [Human safe-degradation calibration](../decisions/product-truth-complexity-v9-safe-degradation-calibration.md)
 - [Stop-loss evidence](../research/product-truth-complexity-v8-stop-loss.md)
 - [V9 narrow authority](../interfaces/product-truth-complexity-v9.md)
 - [Accepted v7 historical Review](../reviews/product-truth-complexity-v7.md)
@@ -26,8 +27,8 @@ report and receives independent Review before any B1 assignment.
 ## Entry stop
 
 Do not assign or start this Work until a fresh different-actor QbD audits the current PRD, Design,
-v9 Decision/Interface, this Work, all five downstream Product Works and the Work map, and the human
-records a PASS calibration. The assignment must name that QbD output. This architect neither audits
+both v9 Decisions, Interface, this Work, all five downstream Product Works and the Work map, reports
+0 blocker and 0 advisory, and the human records a PASS calibration. The assignment must name that QbD output. This architect neither audits
 nor approves its own design.
 
 ## In scope
@@ -41,10 +42,12 @@ nor approves its own design.
   is smaller; r1-r17 falsify only v8 expression-combination authority.
 - Implement exact official predecessor-evidence input, blob/report tuple, strict ancestry and
   post-evidence blob immutability without claiming identity authentication.
-- Implement selected-Work lifecycle, outside-Work presence/mode/blob equality, exact capability
-  declaration/public type/API non-leak shape, manifest/lock/source-digest dependency closure,
-  resolved static import/export closure, forbidden decidable edges and the frozen LOC/import/SCC/
-  Product counters.
+- Implement selected-Work lifecycle, outside-Work presence/mode/blob equality, manifest/lock/source-
+  byte dependency closure and exact declaration path/symbol/kind/B0 presence/export-private/first-
+  materialization facts. Candidate-emitted signatures are observational; no signature row is pinned.
+- Emit the complete sorted literal import/export multiset and reproduce the pinned 69-member,
+  578-record B0 digest. Candidate graph/SCC/delta and all semantic counters remain observational
+  because Design has no complete exact allowed-delta table.
 - Emit one complete `omp-flow-product-truth-complexity-v9-report-v1` canonical JSON block for B0 and
   prove two identical clean-tree invocations produce byte-identical output.
 
@@ -54,6 +57,8 @@ nor approves its own design.
 - No raw/global/alias inventory or verdict; no wrapper/selector normalization; no callback owner,
   RHS/subtree, per-use owner, CFG/ICFG, SSA, points-to, order, lifetime, cleanup, scheduler, race or
   convergence analysis.
+- No public raw non-leak, lifecycle-write, Web/RPC, gateway, compatibility-owner or forbidden-edge
+  semantic verdict. Those claims belong to B1/later source, behavior and process Review.
 - No modification, regeneration, relabeling or acceptance of v1-v8 scripts, configs, fixtures,
   reports, handoffs or Reviews.
 - No B1 implementation, hidden-mutation execution, raw-reference Review or Product Work dispatch.
@@ -75,18 +80,20 @@ grown by importing v8 r1-r17 expression cases.
 
 - V1-v8 artifact manifests and bytes match their accepted/failed historical commits; all five
   production fence block digests match the QbD-approved Design tree.
-- Config is data-only and cannot add paths, edges, declaration identities, type dispositions,
+- Config is data-only and cannot add paths, graph deltas, declaration identities, presence/export-
+  private/first-materialization dispositions,
   counters, predecessor rows or expected verdicts.
 - Focused negatives cover Work-member deletion/materialization/move, unlisted path/new glob member,
   outside presence/mode/blob drift, invalid or overridden official evidence, forged/mutated/non-
-  ancestor evidence, public capability declaration/signature drift, every forbidden public raw type,
-  dependency/lock/source-digest drift, unresolved/nonliteral static module specifiers, forbidden
-  static edges, SCC growth and each stable-count change. Adjacent positives cover every allowed
-  state.
-- Source inspection and an explicit test assert the v9 script/config contains no raw-terminal,
-  global-wrapper, selector, alias-use, callback-inheritance, RHS/subtree or per-use-owner classifier.
-- B0 authority/config/membership/evidence/dependency/static-graph/report gates are hard; historical
-  LOC/count observations are labeled observational. B1/later modes hard-fail every v9 gate and
+  ancestor evidence, declaration presence/export-private/first-materialization drift and dependency/
+  lock/source-byte drift. Adjacent positives cover every allowed hard state. Graph/SCC/count
+  fixtures assert deterministic observations, not pass/fail domain verdicts.
+- Source inspection and an explicit test assert the v9 script/config contains no public non-leak,
+  write/Web-RPC/gateway, raw-terminal, global-wrapper, selector, alias-use, callback-inheritance,
+  RHS/subtree or per-use-owner classifier.
+- Authority/config/membership/evidence/selected-lifecycle/outside-blob/dependency-byte/declaration/
+  report gates are hard; graph/SCC/count and semantic observations are labeled observational in
+  every mode. B1/later cannot promote them and
   cannot be selected by a branch, working tree or candidate-controlled field.
 - Scripts typecheck, focused tests, syntax check, link/JSON validation, `git diff --check` and a
   path-limited diff all pass. No production/dependency path, five fence block, destructive target,

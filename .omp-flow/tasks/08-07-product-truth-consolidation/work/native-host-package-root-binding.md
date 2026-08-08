@@ -26,7 +26,8 @@ Do not assign or start this Work until [`handoffs/direct-first-public-b1.md`](..
 records a different-actor-accepted clean immutable B1. The implementation base must contain that
 exact B1 commit and v9 report as this Work's immutable comparison predecessor, and the B1 chain must
 name the accepted immutable v9 meter Review receipt and SHA/digests, including Work/v9-authority/
-public-shape/B1-verifier/dependency/import/universe digests, plus the accepted
+declaration/B1-verifier/dependency/import-universe digests, plus the accepted reviewer-enumerator
+tool/source and r1-r17 manifest digests and the accepted
 B1 verifier case-manifest/trace/fault/race/kill and hidden-mutation/source-Review receipts. No
 shared-tree overlap with B1 is inferred. Main/human orchestration supplies the accepted full B1
 evidence commit through the official `--predecessor-evidence` input. V9 reads its table-named
@@ -126,10 +127,10 @@ overlaps B1 compatibility cleanup, this Work does not run concurrently in the no
   supervision in dev and packaged artifact lanes. Run the existing Native Host live-journey and
   Package-crash probes through v2 in both required process lanes. Use isolated homes and sanitize
   all output.
-- Run the read-only v9 membership/evidence/lifecycle/public-shape/dependency/static-import/count
-  gates against the accepted B1 predecessor; do not edit the meter or accept outside-Work
-  presence/mode/blob drift, unlisted membership, public raw-capability leakage, dependency/source
-  digest drift, unresolved/nonliteral static specifiers or forbidden static edges. This Work adds
+- Run the read-only v9 membership/evidence/lifecycle/outside-blob/dependency-byte/declaration gates
+  against the accepted B1 predecessor; do not edit the meter or accept outside-Work drift, unlisted
+  membership, declaration disposition or dependency-byte drift. Record graph/SCC/count changes
+  observationally; source/process Review owns semantic edges and lifecycle writes. This Work adds
   no B1 runtime-state capability, so the accepted B1 verifier manifest/digests and behavior Review
   must match byte-for-byte.
 
