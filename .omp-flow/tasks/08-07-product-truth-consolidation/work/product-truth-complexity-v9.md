@@ -18,6 +18,7 @@ report and receives independent Review before any B1 assignment.
 - [Design complexity boundary and verification](../design.md)
 - [Selected stop-loss calibration](../decisions/product-truth-complexity-v9-stop-loss-calibration.md)
 - [Human safe-degradation calibration](../decisions/product-truth-complexity-v9-safe-degradation-calibration.md)
+- [Protocol/route stop-loss calibration](../decisions/product-truth-complexity-v9-protocol-route-stop-loss.md)
 - [Stop-loss evidence](../research/product-truth-complexity-v8-stop-loss.md)
 - [V9 narrow authority](../interfaces/product-truth-complexity-v9.md)
 - [Accepted v7 historical Review](../reviews/product-truth-complexity-v7.md)
@@ -26,13 +27,16 @@ report and receives independent Review before any B1 assignment.
 
 ## Entry stop
 
-The r2 Review is `FAIL`; the attempted r3 implementation was aborted and correctly rolled back to
-r2 Review HEAD without a candidate or handoff. The earlier v9 PASS approval no longer authorizes an
-implementation. Do not assign or start this Work until a fresh different-actor QbD writes
-`qbd/product-truth-complexity-v9-final-authority-audit.md`, audits the current PRD, Design, both
-Route B Decisions, Interface, this Work, all five downstream Product Works and the Work map, reports
-0 blocker and 0 advisory, and the human records a new PASS calibration. The assignment must name
-that QbD output. This architect neither audits nor approves its own design.
+The immutable final-authority Review is `FAIL` and candidate
+`558de08f897e2131c9159d118944272191f48359` remains rejected. Its recorded handoff commit and all
+earlier Reviews are read-only evidence; a later implementation writes the Work-owned handoff path
+only after freezing a new immutable candidate. No earlier v9 PASS authorizes an implementation. Do
+not assign or start this Work until a fresh different-actor QbD writes
+`qbd/product-truth-complexity-v9-protocol-route-audit.md`, audits the current PRD, Design, all three
+Route B/stop-loss Decisions, Interface, this Work, B1 Work and Work map, reports 0 blocker and 0
+advisory, and the human records a new PASS calibration. That PASS may authorize only one bounded
+byte-protocol/Review-route realization, not an r4 shape repair. The assignment must name that QbD
+output. This architect neither audits nor approves its own design.
 
 ## In scope
 
@@ -46,7 +50,12 @@ that QbD output. This architect neither audits nor approves its own design.
 - Implement exact official predecessor-evidence input, blob/report tuple, strict ancestry and
   post-evidence blob immutability without claiming identity authentication.
 - For Product comparison, use the official evidence commit as the sole base, enumerate the complete
-  `git diff --name-status -z --no-renames` path set and reject every path by default. Replace that
+  `git diff --name-status -z --no-renames` path set as raw bytes. Never pass the complete buffer to
+  text/no-NUL validation. Parse exact `A|D|M|T NUL path-bytes NUL` records with terminal/field
+  cardinality, per-path fatal UTF-8 byte round-trip and relative-path validation, status/tree-state
+  cross-check, fixed non-path-echoing error dispositions and duplicate rejection exactly as the
+  Interface requires. Every valid record must enter the existing lifecycle and accepted-tree
+  classifiers. Reject every path by default. Replace that
   default only for exact `production` members of the selected frozen Work block or exact rows for
   that Work in the Design-owned
   [verification-path table](../design.md#exact-per-work-verification-path-authority). Preserve the
@@ -75,6 +84,10 @@ that QbD output. This architect neither audits nor approves its own design.
   because Design has no complete exact allowed-delta table.
 - Emit one complete `omp-flow-product-truth-complexity-v9-report-v1` canonical JSON block for B0 and
   prove two identical clean-tree invocations produce byte-identical output.
+- Add bounded direct-Buffer parser cases and fixture-free official controls over tool-created real
+  Git objects. The real controls accept selected existing `M` and authored first-materialization
+  `A`; unlisted `A/M`, selected `D`, mode drift, `T`, no-renames move and adopted-byte drift must
+  reach their existing downstream classifier rather than a parser/text error.
 
 ## Out of scope
 
@@ -112,7 +125,7 @@ boundary does not become a Product-candidate exemption.
   with the unchanged production state reproduces 110 rows, `88` present, `22` absent and raw-JCS
   digest `2d189676ed940fa9299504a7e0fc47aa91f5c7eced44c115be21340d83df3ac9`.
 - The complete recursively unique-key v9 authority object reproduces JCS digest
-  `f3fdbbcd7547c6bbf4d5990358d7a3a2cffac7497c16f725c73aaa57b794f95d`.
+  `9313f74f3d0d76c858bea53b6e4aeb06bf2ec7bfeb3dff5922091270e1b2d0b0`.
 - Config is data-only and cannot add paths, graph deltas, declaration identities, presence/export-
   private/first-materialization dispositions, changed-path categories/exemptions, lifecycle,
   counters, predecessor rows or expected verdicts.
@@ -124,6 +137,11 @@ boundary does not become a Product-candidate exemption.
   exact production materializations and every exact selected-Work verification row lifecycle,
   including all nine first materializations and later required-prior-materialization cases.
   Graph/SCC/count fixtures assert observations, not domain verdicts.
+- Direct Buffer cases cover zero output, terminal/cardinality/empty-field faults, every disallowed
+  status, invalid UTF-8/path forms, duplicate paths and valid non-ASCII/TAB/LF/CR/backslash path
+  bytes. Fixture-free real-Git controls reach their asserted downstream lifecycle/accepted-tree
+  dispositions with zero `TEXT_AUTHORITY_INVALID:git-diff-name-status` or other protocol false
+  rejection.
 - Source inspection and an explicit test assert the v9 script/config contains no public non-leak,
   write/Web-RPC/gateway, raw-terminal, global-wrapper, selector, alias-use, callback-inheritance,
   RHS/subtree or per-use-owner classifier.
@@ -133,7 +151,8 @@ boundary does not become a Product-candidate exemption.
   cannot be selected by a branch, working tree or candidate-controlled field.
 - Scripts typecheck, focused tests, syntax check, link/JSON validation, `git diff --check` and a
   path-limited diff all pass. No production/dependency path, five fence block, destructive target,
-  protected exclusion, v1-v8 artifact or existing handoff/Review changed.
+  protected exclusion, v1-v8 artifact or prior Review changed; the handoff is written only after
+  the immutable implementation commit.
 
 ## Verification
 
@@ -149,9 +168,11 @@ Write `handoffs/product-truth-complexity-v9.md` with exactly one complete
 `omp-flow-product-truth-complexity-v9-report-v1` canonical JSON block, the immutable meter candidate
 SHA, script/config/fixture/fence/v1-v8 digests, exact official invocation and evidence tuple, focused
 results, two-run determinism proof, explicit non-authority scan and path-limited diff. Request a
-fresh different-actor implementation Review at `reviews/product-truth-complexity-v9.md`.
+fresh different-actor implementation Review only at
+`reviews/product-truth-complexity-v9-protocol-route.md`. The handoff must state that every earlier
+Review path remains immutable and cannot satisfy B1.
 
-Only a zero-finding different-actor PASS over the immutable v9 candidate, handoff and official
-invocation can satisfy B1's prerequisite. If that Review finds another bypass in the membership/
-changed-path family, Main must not dispatch another implementation repair; return to Design/stop.
-The Work author and implementer cannot self-accept it.
+Only a zero-finding different-actor PASS at that exact path over the immutable v9 candidate, handoff
+and official invocation can satisfy B1's prerequisite. Any material implementation or Review
+failure ends v9; Main must not dispatch another repair, alias Review or B1 Work and instead returns
+to stop/alternate authority. The Work author and implementer cannot self-accept it.

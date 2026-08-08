@@ -38,14 +38,18 @@ This Work realizes PRD A1-A9, the B1 half of A14, and the B1 preservation portio
 - [Accepted v7 historical Review](../reviews/product-truth-complexity-v7.md)
 - [V9 stop-loss calibration](../decisions/product-truth-complexity-v9-stop-loss-calibration.md)
 - [V9 safe-degradation calibration](../decisions/product-truth-complexity-v9-safe-degradation-calibration.md)
+- [V9 protocol/route stop-loss calibration](../decisions/product-truth-complexity-v9-protocol-route-stop-loss.md)
 - [V9 narrow authority](../interfaces/product-truth-complexity-v9.md)
 - [Authoritative v9 meter Work](product-truth-complexity-v9.md) and its required
   `handoffs/product-truth-complexity-v9.md`
 
 ## Entry stop
 
-Do not assign or start this Work until `reviews/product-truth-complexity-v9.md` records a
-zero-finding different-actor `PASS` over the immutable meter-only commit. The B1 assignment must
+Do not assign or start this Work until
+`reviews/product-truth-complexity-v9-protocol-route.md` records a zero-finding different-actor
+`PASS` over the immutable meter-only commit. No earlier Review path, including every immutable
+`FAIL`, can satisfy this stop; there is no alias, fallback, overwrite or latest-file selection. The
+B1 assignment must
 record that Review receipt only as correlation. Main/human orchestration must separately supply the
 accepted full meter evidence commit exactly once through v9's official `--predecessor-evidence`
 input. V9 reads exact handoff/Review/report blobs there, keeps the reviewed meter candidate SHA
@@ -442,6 +446,7 @@ Write [`handoffs/direct-first-public-b1.md`](../handoffs/direct-first-public-b1.
 `omp-flow-product-truth-complexity-v9-report-v1` complete canonical JSON block. It must link this
 Work, enumerate changed/deleted paths and reviewable commits, record the immutable B1 full SHA,
 accepted meter Review receipt/SHA plus Work/v9-authority/declaration/B1-verifier/dependency/import-universe digests,
+the literal accepted meter Review path `reviews/product-truth-complexity-v9-protocol-route.md`,
 the complete official `--ref`/`--predecessor-evidence` invocation and deterministic evidence tuple,
 clean-tree proof, complete accepted-B0/B1 metric output, verifier case-manifest/execution bijection,
 sanitized trace/fault/race/kill witnesses, reviewer tool/version/source digest, full enumeration

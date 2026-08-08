@@ -34,6 +34,15 @@ mechanically regenerated digest. It records the provenance consequence of the al
 `desktopUserDataProfile` source/test deletions; the immutable tree, mappings and Work meaning do
 not change.
 
+The immutable
+[final-authority Review](../reviews/product-truth-complexity-v9-final-authority.md) rejects the
+current v9 candidate for one whole-buffer `-z` parser false rejection and one Review-route split.
+The binding
+[protocol/route stop-loss](../decisions/product-truth-complexity-v9-protocol-route-stop-loss.md)
+keeps Route B and every 69/70/110/6,321 authority fact unchanged. It permits no implementation
+before a fresh QbD 0/0 and human PASS, and permits at most one later bounded protocol/route
+realization; any material failure ends v9.
+
 The failed immutable B1 review is now governed by the maintainer's
 [option-1 repair calibration](../decisions/b1-failed-review-repair-calibration.md): one atomic Web
 batch and one sealed Package transition graph. The first coverage-complete v2 meter was rejected by
@@ -96,11 +105,12 @@ family returns to Design/stop without another implementation repair dispatch.
 ## Hard ordering
 
 The next workflow checkpoint is a fresh different-actor QbD at
-`../qbd/product-truth-complexity-v9-final-authority-audit.md` over this revised design/map. It must
+`qbd/product-truth-complexity-v9-protocol-route-audit.md` over this revised design/map. It must
 reach 0 blocker and 0 advisory. Only a newly recorded human PASS calibration may authorize the measurement-only
 [v9 narrow meter](product-truth-complexity-v9.md). It changes no measured production path, freezes
 one immutable meter commit plus B0 report, writes its handoff and must receive a zero-finding
-different-actor implementation `PASS`. No B1 production receipt may be issued before that
+different-actor implementation `PASS` only at
+`reviews/product-truth-complexity-v9-protocol-route.md`. No B1 production receipt may be issued before that
 acceptance; B1 names the accepted meter Review receipt only as correlation and Main/human
 orchestration separately selects the immutable evidence commit for B1's official v9 invocation.
 
@@ -177,6 +187,14 @@ the meter bytes, accepted immediate predecessor report and accepted B1 behavior 
 An inert `.discarding` tombstone blocks rebuild convergence only; it is never loaded and adds no
 ordinary-runtime sentinel.
 
+The v9 all-Git path source is an exact byte protocol, not a text file: successful
+`git diff --name-status -z --no-renames` stdout is parsed as repeated one-byte `A/D/M/T`, NUL,
+non-empty path bytes, NUL. The whole buffer never enters text/no-NUL validation; only each path
+slice receives fatal UTF-8 byte-round-trip and exact relative-path validation. Fixed protocol
+errors reject before policy, while valid records must reach the existing lifecycle/accepted-tree
+classifiers. Direct Buffer cases and fixture-free real Git-object selected/unselected/lifecycle/
+adoption controls are mandatory.
+
 The Service permissions fixture is a separate focused-test consumer of the in-scope fail-closed
 configuration change, not a thirteenth compatibility surface.
 
@@ -243,8 +261,9 @@ Each implementation Work writes its promised handoff and receives a different-ac
 the next overlapping Work begins. Focused green checks do not authorize broader claims. The final C
 Work may submit affected Campaign claims only as `candidate`; no producer may mark them verified.
 
-The next workflow entry is a fresh different-actor QbD audit of the post-r2 v9 repair across Design,
-both Route B Decisions, Interface, measurement Work, all five Product Works and this map. It must
+The next workflow entry is a fresh different-actor QbD audit of the final-authority stop-loss repair
+across Design, all three Route B/stop-loss Decisions, Interface, measurement Work, B1 Work and this
+map. It must
 reproduce the exact 70-row verification table, per-Work counts, 45-path unique set, nine
 materializations, row digest and complete 110-row state; prove v9 owns only the hard all-changed-
 path/membership/evidence/lifecycle/outside-blob/accepted-tree-byte/dependency/declaration-disposition
@@ -255,6 +274,7 @@ five production fences and v1-v8 bytes; and hand effect safety to B1's private p
 r1-r17 manifest with adjacent positives. The audit must reach 0 blocker and 0 advisory. Only a
 recorded human PASS calibration after it authorizes the measurement-
 only v9 assignment. Its immutable handoff then needs a zero-finding different-actor implementation
-`PASS` before a new B1 production receipt. Another membership/changed-path-family bypass stops and
-returns to Design without implementation repair. The next QbD output is
-`../qbd/product-truth-complexity-v9-final-authority-audit.md`.
+`PASS` only at `reviews/product-truth-complexity-v9-protocol-route.md` before a new B1 production
+receipt. Any material implementation or Review failure ends v9 and returns to stop/alternate
+authority. The next QbD output is
+`qbd/product-truth-complexity-v9-protocol-route-audit.md`.

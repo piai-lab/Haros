@@ -14,6 +14,13 @@ as a future candidate measurement authority. V1-v7 and failed v8 r1-r17 remain i
 The post-r2 stop-loss in the first Decision additionally closes the finite changed-path and
 accepted-tree byte-authority gap found by immutable
 [Review r2](../reviews/product-truth-complexity-v9-r2.md); it changes no Route B semantic boundary.
+The later immutable
+[final-authority Review](../reviews/product-truth-complexity-v9-final-authority.md) rejects candidate
+`558de08f897e2131c9159d118944272191f48359`: its whole-buffer text decoder cannot consume any
+non-empty valid `-z` output, and its assigned Review path is not the predecessor path consumed by
+B1. The binding [protocol/route stop-loss](../decisions/product-truth-complexity-v9-protocol-route-stop-loss.md)
+permits only this candidate-independent byte protocol and one literal new Review route to return to
+QbD; it authorizes no implementation.
 
 V9 measures repository facts. It does not decide raw-capability non-leak, effect mediation,
 lifecycle writes, Web/RPC or gateway ownership, raw-reference completeness, mutation rejection or
@@ -83,6 +90,31 @@ runtime safety. Those are explicit B1 acceptance obligations below.
   "selectedWork": {
     "comparisonBase": "the full official predecessor evidence commit supplied by Main/human for the authored predecessor row",
     "changedPathCommand": "git diff --name-status -z --no-renames <official-predecessor-evidence-full-sha> <candidate-under-test-full-sha> --",
+    "changedPathByteProtocol": {
+      "input": "raw stdout bytes from the successful changedPathCommand; never decode or pass the complete buffer through a text or no-NUL validator",
+      "emptyOutput": "the zero-byte buffer is exactly zero records",
+      "recordGrammar": "for non-empty output, repeat status-byte NUL path-bytes NUL; the final path terminator is the final byte",
+      "terminalAndCardinality": "non-empty output must end in exactly one field terminator; remove only the terminal empty segment, then require a positive even field count and every status/path field non-empty",
+      "allowedStatusBytes": ["0x41:A", "0x44:D", "0x4d:M", "0x54:T"],
+      "statusRule": "each status field is exactly one byte; every other byte, score, multi-byte field or C/R/U/X/B status rejects before path classification",
+      "pathRule": "decode only each non-empty path byte slice with fatal UTF-8, require byte-for-byte UTF-8 re-encoding, no leading or trailing slash, and no empty, dot or dot-dot slash component; perform no Unicode normalization; TAB, LF, CR, backslash and other otherwise valid UTF-8 characters are not delimiters and remain exact path bytes",
+      "recordStateCrossCheck": "A requires absent-to-present, D present-to-absent, M present-to-present without Git entry-kind change, and T present-to-present with Git entry-kind change; mismatch rejects before lifecycle disposition",
+      "duplicateRule": "duplicate exact decoded paths reject before lifecycle disposition",
+      "successDisposition": "preserve record order and pass every parsed status/path record to the existing selected-Work lifecycle and accepted-tree classifiers; parsing itself grants no path or lifecycle authority",
+      "validationOrder": ["command success", "zero-byte output", "terminal NUL", "even status/path field cardinality", "one-byte allowed status", "non-empty path", "path fatal UTF-8 and byte round-trip", "relative path form", "status/tree-state cross-check", "duplicate exact path"],
+      "errors": {
+        "command": "GIT_CHANGED_PATH_COMMAND_FAILED",
+        "unterminated": "GIT_CHANGED_PATH_RECORD_INVALID:unterminated",
+        "cardinality": "GIT_CHANGED_PATH_RECORD_INVALID:cardinality",
+        "status": "GIT_CHANGED_PATH_RECORD_INVALID:status:<record-ordinal>",
+        "emptyPath": "GIT_CHANGED_PATH_RECORD_INVALID:empty-path:<record-ordinal>",
+        "pathUtf8": "GIT_CHANGED_PATH_RECORD_INVALID:path-utf8:<record-ordinal>",
+        "pathForm": "GIT_CHANGED_PATH_RECORD_INVALID:path-form:<record-ordinal>",
+        "statusState": "GIT_CHANGED_PATH_RECORD_INVALID:status-state:<record-ordinal>",
+        "duplicatePath": "GIT_CHANGED_PATH_RECORD_INVALID:duplicate-path:<record-ordinal>"
+      },
+      "errorOutputRule": "protocol errors expose only the fixed code and zero-based record ordinal; never interpolate raw or decoded path bytes"
+    },
     "changedPathDefault": "reject",
     "mutableSet": "the exact production members of the one selected Work boundary plus only the exact verificationPathRows whose work equals that selected Work; measurement and dependency entries contribute no mutable path",
     "pathSpelling": "exact Git path bytes decoded as valid UTF-8; no normalization, extension inference, root predicate, glob, directory category or output category",
@@ -233,6 +265,15 @@ runtime safety. Those are explicit B1 acceptance obligations below.
     "postEvidenceImmutability": "handoff and Review blob IDs remain exact on every later first-parent step",
     "identityClaim": "receipt, actor strings and Git metadata authenticate no reviewer or human"
   },
+  "acceptedMeterReviewRoute": {
+    "path": "reviews/product-truth-complexity-v9-protocol-route.md",
+    "predecessorWork": "product-truth-complexity-v9",
+    "requiredVerdict": "PASS",
+    "requiredBlockingFindings": 0,
+    "requiredAdvisoryFindings": 0,
+    "immutability": "the assigned different actor creates this path once for the next candidate; all earlier Review bytes remain immutable",
+    "selection": "literal authored path only; no filename inference, alias, fallback, directory scan, latest-file rule or candidate/config override"
+  },
   "report": {
     "machineBlock": "omp-flow-product-truth-complexity-v9-report-v1",
     "canonicalization": "JCS",
@@ -252,7 +293,7 @@ runtime safety. Those are explicit B1 acceptance obligations below.
       "all physical and semantic counters",
       "all domain ownership interpretations"
     ],
-    "postR2StopLoss": "a later implementation Review bypass in membership, changed-path classification, lifecycle disposition or dependency-adoption expansion returns to Design/stop and cannot receive another implementation repair dispatch"
+    "postR2StopLoss": "candidate 558de08f897e2131c9159d118944272191f48359 remains rejected; no implementation is authorized before fresh different-actor QbD 0/0 and human PASS; after the one bounded protocol/route realization, any material implementation or Review failure ends v9 and returns to stop/alternate authority without repair or B1"
   },
   "explicitNonAuthority": [
     "semantic-public-raw-non-leak",
@@ -272,13 +313,13 @@ runtime safety. Those are explicit B1 acceptance obligations below.
 ```
 
 The recursively unique-key authority object above is JCS-encoded as one complete object. Its
-SHA-256 is `f3fdbbcd7547c6bbf4d5990358d7a3a2cffac7497c16f725c73aaa57b794f95d`.
+SHA-256 is `9313f74f3d0d76c858bea53b6e4aeb06bf2ec7bfeb3dff5922091270e1b2d0b0`.
 
 ## Authored predecessor rows
 
 | Candidate Work | Required predecessor | Handoff | Review | Report |
 | --- | --- | --- | --- | --- |
-| `direct-first-public-b1` | accepted `product-truth-complexity-v9` meter candidate | `handoffs/product-truth-complexity-v9.md` | `reviews/product-truth-complexity-v9.md` | v9 B0 report |
+| `direct-first-public-b1` | accepted `product-truth-complexity-v9` meter candidate | `handoffs/product-truth-complexity-v9.md` | `reviews/product-truth-complexity-v9-protocol-route.md` | v9 B0 report |
 | `native-host-package-root-binding` | accepted `direct-first-public-b1` candidate | `handoffs/direct-first-public-b1.md` | `reviews/direct-first-public-b1.md` | reviewed B1 v9 report |
 | `product-execution-leaf` | accepted `native-host-package-root-binding` candidate | `handoffs/native-host-package-root-binding.md` | `reviews/native-host-package-root-binding.md` | reviewed Native Host v9 report |
 | `product-state-store` | accepted `product-execution-leaf` candidate | `handoffs/product-execution-leaf.md` | `reviews/product-execution-leaf.md` | reviewed execution-leaf v9 report |
@@ -289,14 +330,30 @@ selected, mutated, non-ancestor or inconsistent evidence fails before comparison
 binds a freshly generated v9 B0 report at `7582170a277477ba0d71cf70f53e4e0836874a72`;
 v7/v8 reports never become v9 acceptance.
 
-## Exact Product changed-path and lifecycle rule
+## Exact Product changed-path byte protocol and lifecycle rule
 
 For a Product Work, the official evidence commit—not the B0 report commit, branch tip, working tree,
 reviewed predecessor candidate or candidate-selected base—is the only comparison base. The B0
-report remains a physical observation baseline. V9 runs the exact `--no-renames` Git tree
-comparison named in the authority, requires valid complete status records and obtains the union of
-every added, deleted, modified or type/mode-changed path. Unknown status or malformed path bytes
-fail before classification.
+report remains a physical observation baseline. V9 captures the exact `--no-renames` Git tree
+comparison named in the authority as bytes. The complete buffer is never decoded and never enters
+the general text/no-NUL validator: NUL is the required record delimiter.
+
+The zero-byte buffer is zero records. A non-empty buffer must be an exact repetition of
+`status-byte NUL path-bytes NUL` and end at the last path terminator. After removing only that
+terminal empty segment, the field count must be positive and even and no status/path field may be
+empty. A status is exactly one byte from `A` (`0x41`), `D` (`0x44`), `M` (`0x4d`) or `T` (`0x54`);
+scores, multi-byte statuses and `C/R/U/X/B` reject. Only each path slice is fatal-UTF-8 decoded and
+round-tripped byte-for-byte. It is an exact relative Git path: no leading/trailing slash and no
+empty, `.` or `..` slash component. No normalization occurs. TAB, LF, CR, backslash and any other
+otherwise valid UTF-8 remain path data rather than delimiters. Protocol errors expose only the
+fixed machine code and record ordinal, never path bytes.
+
+Before lifecycle disposition, status is cross-checked against the two Git trees: `A` is
+absent→present, `D` present→absent, `M` present→present without entry-kind change, and `T`
+present→present with entry-kind change. Duplicate exact paths reject. Every valid record then
+reaches the existing lifecycle and accepted-tree classifiers in Git order; the parser grants no
+path exemption. Thus the complete output obtains every added, deleted, modified or type/mode-
+changed path, while unknown status or malformed path bytes fail before classification.
 
 Every changed path begins as `reject`. The only replacement dispositions are membership in the
 exact `production` array of the selected one of the five frozen Work blocks or an exact row for that
@@ -445,13 +502,23 @@ the 6,321-row accepted-tree byte expansion and its raw-JCS digest; declaration p
 69-member production source-universe digest; 578-record B0 graph digest; absence of semantic v9
 verdicts; reviewer evidence schema; and complete r1-r17 derivation. It must also confirm the all-Git-
 path default reject has no category or output exemption and that runtime-generated temporary homes
-are not Git paths and receive no exemption. V1-v8, all five production fences, production, existing
-meters, Reviews, handoffs and protected user documents remain byte-identical.
+are not Git paths and receive no exemption. It must reproduce the raw-byte protocol with direct
+Buffer cases for empty output, missing terminal NUL, odd cardinality, empty fields, all disallowed
+statuses, invalid UTF-8, invalid relative-path forms, duplicate paths and valid non-ASCII/control-
+character path bytes. Fixture-free official invocations over tool-created real Git objects must
+accept a selected existing-blob `M` and an authored first-materialization `A`, and must reach the
+existing downstream lifecycle or accepted-tree error for unlisted `A/M`, selected `D`, selected
+mode drift, selected `T`, a no-renames move and adopted-byte drift. A parser/text error in any such
+real-Git control is a hard failure. V1-v8, all five production fences, production, existing meters,
+Reviews, handoffs and protected user documents remain byte-identical.
 
 The next output is a fresh different-actor QbD audit at
-`qbd/product-truth-complexity-v9-final-authority-audit.md`. It must reach **0 blocker and 0
+`qbd/product-truth-complexity-v9-protocol-route-audit.md`. It must reach **0 blocker and 0
 advisory**; only a subsequent recorded human PASS may authorize the
 [v9 measurement Work](../work/product-truth-complexity-v9.md). The immutable v9 implementation then
-requires a separate zero-finding different-actor Review before B1. If that Review finds another
-bypass in this membership/changed-path family, no implementation repair is dispatched; the route
-returns to Design/stop. This Interface authorizes no Product edit or destructive execution.
+requires a separate zero-finding different-actor Review only at
+`reviews/product-truth-complexity-v9-protocol-route.md` before B1. Candidate
+`558de08f897e2131c9159d118944272191f48359` remains rejected. Any material implementation or Review
+failure ends v9 and returns to stop/alternate authority; there is no r4 shape repair, Review-path
+fallback or same-path overwrite. This Interface authorizes no Product edit or destructive
+execution.

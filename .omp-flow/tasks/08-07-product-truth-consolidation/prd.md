@@ -259,10 +259,12 @@ Windows quiescence adapter. The underlying evidence remains in the
   remeasured with the checked-in `product-truth-complexity-v9` script/config and the same frozen
   membership/static-graph/count universe in the Design; a candidate may not redefine scope,
   extensions, exclusions, declarations, edges or counters. V9 is the next candidate authority only
-  after a new post-r2 different-actor QbD reaches 0 blocker/0 advisory, the human records a new PASS
-  calibration and a later zero-finding independent implementation Review accepts it. The prior PASS
-  approval does not authorize another implementation after r2. V1-v8 bytes, reports, handoffs and
-  Reviews remain immutable provenance.
+  after the post-final-authority different-actor QbD at
+  `qbd/product-truth-complexity-v9-protocol-route-audit.md` reaches 0 blocker/0 advisory, the human
+  records a new PASS calibration and a later zero-finding independent implementation Review at the
+  sole path `reviews/product-truth-complexity-v9-protocol-route.md` accepts it. Candidate
+  `558de08f897e2131c9159d118944272191f48359` remains rejected, and no earlier PASS authorizes
+  implementation. V1-v8 bytes, all prior reports, handoffs and Reviews remain immutable provenance.
   Accepted v7 retains the observational B0 inventory; failed v8 r1-r17 remain stop-loss evidence.
   Neither is a v9 candidate PASS or permission for raw effects.
 - V9 hard declaration facts are only exact path/symbol/kind, B0 presence or explicit absence,
@@ -294,7 +296,14 @@ Windows quiescence adapter. The underlying evidence remains in the
   generic repository/manager/registry or fallback path is introduced.
 - V9 extracts the five machine-readable Work boundaries and its exact authority from the pinned
   QbD-approved Design tree. For Product comparison the official predecessor evidence commit is the
-  only base; every net Git changed path defaults to reject. The sole mutable paths are exact
+  only base. The exact `git diff --name-status -z --no-renames` stdout is parsed as raw bytes, never
+  decoded as one text/no-NUL value: empty output is zero records; non-empty output is repeated
+  `A|D|M|T NUL non-empty-path-bytes NUL`, terminal/cardinality exact, and only each path slice is
+  fatal-UTF-8 decoded, byte-round-tripped and checked as an exact relative Git path without
+  normalization. Malformed status, terminal, cardinality, UTF-8, path form, status/tree state or
+  duplicate path fails with its fixed disposition before lifecycle classification. Valid records
+  must reach the existing selected-Work lifecycle and accepted-tree classifiers; parser success is
+  not path authority. Every net Git changed path defaults to reject. The sole mutable paths are exact
   `production` members of the selected Work plus only that Work's exact rows in the Design-owned
   [verification-path table](design.md#exact-per-work-verification-path-authority). Measurement and
   dependency members add nothing. Test/fixture/output labels, extensions, directory roots, reports,
@@ -378,11 +387,12 @@ Windows quiescence adapter. The underlying evidence remains in the
   digest. Candidate/config filtering is forbidden. This evidence belongs to B1 Review, not v9. A
   new bypass preserving every v9 fact and escaping the fixed enumerator/verifier/source Review
   falsifies Route B, returns to Design and never authorizes another v9 grammar rule.
-- The post-r2 changed-path repair is the last implementation repair permitted in its family. If the
-  next immutable implementation Review finds another skipped path, candidate-selected category or
-  exemption, unowned lifecycle transition, or incomplete dependency/adoption expansion, Main does
-  not dispatch another implementation repair; the sequence returns to Design/stop for a new human
-  decision. This does not reduce Route B semantic safe degradation or any B1 obligation.
+- The failed final-authority candidate exhausted the post-r2 implementation allowance. The current
+  Design permits at most one later bounded byte-protocol/Review-route realization after fresh QbD
+  0/0 and human PASS; it is not an r4 shape repair. Any material implementation or Review failure
+  ends v9 and returns to stop/alternate authority with no new parser exception, Review alias,
+  same-path overwrite or B1 dispatch. This does not reduce Route B semantic safe degradation or any
+  B1 obligation.
 - Reuse follows the current Synara/repository ladder: preserve, identify the exact OmniMind gap,
   wire or locally repair, and replace only with a named unique owner, reproducible falsifier and
   proof that the smaller repairs cannot work. V8 r1-r17 falsify only its expression-combination
@@ -405,7 +415,7 @@ Windows quiescence adapter. The underlying evidence remains in the
 | A11 | Coordinator retains Engine-effect semantics without SQL/replay/fallback                                                                                                                  | catalog/admission/attempt/control/crash tests across Pi and OpenCode                                                                                                                  |
 | A12 | Web/RPC sees exactly one 36-operation facade; probes/tests are separate                                                                                                                  | type/API snapshot, wsRpc tests and production caller scan                                                                                                                             |
 | A13 | Service selects and Host only validates one transcript-bound lane/Package root                                                                                                           | dev/packaged process tests covering proof tamper, replay, version/field faults, second/concurrent binding, mismatch/link/sibling-root and no fallback                                 |
-| A14 | Production and conceptual complexity strictly decrease in one coverage-complete frozen universe                                                                                          | immutable v1-v8 provenance; Design-pinned five production boundaries and unchanged 69-row production state; exact 70-row/45-unique-path verification table with per-Work counts `16/17/10/10/17` and nine exact first materializations; complete 110-row (`88` present/`22` absent) boundary-plus-verification state and raw-JCS digest; all-Git-path default reject with only exact selected production members or selected-Work verification rows; complete 6,321-row manifest/lock/patch/adopted-source byte authority; exact declaration presence/export-private dispositions; Main/human-selected evidence tuple/blob/ancestry; deterministic v9 physical observations including the observational literal-edge multiset; behavior and semantic ownership separately hard-accepted by the exact B1 verifier, reviewer-owned enumeration/source Review and full r1-r17 manifest with adjacent positives |
+| A14 | Production and conceptual complexity strictly decrease in one coverage-complete frozen universe                                                                                          | immutable v1-v8 provenance; Design-pinned five production boundaries and unchanged 69-row production state; exact 70-row/45-unique-path verification table with per-Work counts `16/17/10/10/17` and nine exact first materializations; complete 110-row (`88` present/`22` absent) boundary-plus-verification state and raw-JCS digest; exact raw-byte `status NUL path NUL` parser with only `A/D/M/T`, fixed fail-closed dispositions and fixture-free real-Git positives/negatives reaching downstream lifecycle classifiers; all-Git-path default reject with only exact selected production members or selected-Work verification rows; complete 6,321-row manifest/lock/patch/adopted-source byte authority; one literal accepted Review route at `reviews/product-truth-complexity-v9-protocol-route.md`; exact declaration presence/export-private dispositions; Main/human-selected evidence tuple/blob/ancestry; deterministic v9 physical observations including the observational literal-edge multiset; behavior and semantic ownership separately hard-accepted by the exact B1 verifier, reviewer-owned enumeration/source Review and full r1-r17 manifest with adjacent positives |
 | A15 | Current outbox, Automation, Web safeguard, Package and Engine recovery behavior remains                                                                                                  | focused existing suites plus complete real kill/race/write-trace and affected real-process journeys                                                                                   |
 
 ## Constraints and non-goals
@@ -445,15 +455,22 @@ assurance route. Under the
   selected [v9 stop-loss calibration](decisions/product-truth-complexity-v9-stop-loss-calibration.md)
   and [narrow v9 authority](interfaces/product-truth-complexity-v9.md). Immutable r2 exposed the
   final allowed membership/changed-path Design repair; the aborted r3 implementation was rolled
-  back and authorizes nothing. A fresh different QbD actor must challenge the complete v9
+  back and authorizes nothing. The later
+  [final-authority Review](reviews/product-truth-complexity-v9-final-authority.md) rejected the
+  resulting candidate for the exact byte-protocol and Review-route defects now governed by the
+  [protocol/route stop-loss](decisions/product-truth-complexity-v9-protocol-route-stop-loss.md).
+  A fresh different QbD actor must challenge the complete v9
   Design/interface/Work map, exact non-authority boundary, official evidence tuple/blob/ancestry,
   all-Git-path default reject, unchanged four exact production materializations and 69-row
   production state, the 70-row/45-unique-path verification table and nine exact verification
   materializations, the complete 110-row boundary-plus-verification state, 6,321-row accepted
   dependency/adoption byte expansion, five unchanged production fences, declaration authority,
   observational graph boundary and replayable B1 enumerator/verifier/raw-reference/r1-r17 handoff.
-  It must reach 0 blocker and 0 advisory. Only a later recorded human PASS calibration may authorize
-  the measurement-only v9 Work. Its immutable handoff then requires a zero-finding different-actor
-  implementation Review before a B1 receipt may be issued. Another bypass in the same membership/
-  changed-path family returns to Design/stop without an implementation repair dispatch. A changed
-  destructive target or exclusion returns for explicit human decision.
+  It must also prove the raw-byte parser and real-Git downstream controls and the one exact new
+  Review route. The audit output is
+  `qbd/product-truth-complexity-v9-protocol-route-audit.md`; it must reach 0 blocker and 0 advisory.
+  Only a later recorded human PASS calibration may authorize one bounded protocol/route
+  implementation. Its immutable handoff then requires a zero-finding different-actor Review only at
+  `reviews/product-truth-complexity-v9-protocol-route.md` before a B1 receipt may be issued. Any
+  material implementation or Review failure ends v9 and returns to stop/alternate authority. A
+  changed destructive target or exclusion returns for explicit human decision.

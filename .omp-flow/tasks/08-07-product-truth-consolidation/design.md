@@ -81,9 +81,11 @@ maintainer's post-r2
 Product-candidate Git changed path reject by default, gives mutability only to the selected Work's
 exact production members and exact Design-owned verification rows with their authored lifecycles,
 and freezes a reproducible accepted-tree dependency/adoption byte expansion. The aborted r3
-implementation was rolled back; this Design is
-the last repair permitted in that membership/changed-path family before Route B must stop and
-return to Design on any further same-family implementation finding.
+implementation was rolled back. The later final-authority candidate implemented that Design but is
+now rejected by its immutable Review. The
+[protocol/route stop-loss](decisions/product-truth-complexity-v9-protocol-route-stop-loss.md) returns
+to Design for only the exact byte parser and literal Review route; no prior approval survives and
+any material failure after the one gated realization ends v9.
 
 ## Scope and source boundaries
 
@@ -656,11 +658,16 @@ V1-v6 candidates/reports are immutable rejected evidence. V7 remains immutable a
 observational provenance. V8 r1-r17 are immutable failed stop-loss evidence and cannot be repaired,
 relabelled or cited as candidate acceptance. The next candidate authority is
 `product-truth-complexity-v9`, owned by the [measurement-only v9 Work](work/product-truth-complexity-v9.md)
-and [v9 interface](interfaces/product-truth-complexity-v9.md), but it becomes implementable only
-after a new post-r2 different-actor QbD reaches 0 blocker and 0 advisory and the human records a new
-PASS calibration. The earlier PASS authorized only the now-failed r1/r2 line. Its later immutable
-commit and B0 report require a separate zero-finding different-actor implementation Review before
-B1. The aborted r3 attempt produced no candidate or handoff and is not a predecessor.
+and [v9 interface](interfaces/product-truth-complexity-v9.md). Immutable
+[final-authority Review](reviews/product-truth-complexity-v9-final-authority.md) rejects candidate
+`558de08f897e2131c9159d118944272191f48359`; no prior PASS or handoff authorizes its repair or B1.
+Under the binding
+[protocol/route stop-loss](decisions/product-truth-complexity-v9-protocol-route-stop-loss.md), one
+later bounded byte-protocol/Review-route realization becomes implementable only after the fresh
+different-actor QbD at `qbd/product-truth-complexity-v9-protocol-route-audit.md` reaches 0 blocker
+and 0 advisory and the human records a new PASS calibration. It then requires a zero-finding
+different-actor Review only at `reviews/product-truth-complexity-v9-protocol-route.md`. The aborted
+r3 attempt produced no candidate or handoff and is not a predecessor.
 
 V9 incorporates by digest exactly five strict `omp-flow-production-boundary-v1` blocks plus its one
 `omp-flow-product-truth-complexity-v9-authority-v1` block from the QbD-approved Design tree. Config
@@ -668,6 +675,46 @@ pins only Design SHA, normalized blocks/digests, exact membership and Design-aut
 counts/digests. It cannot contribute paths, categories, extensions, roots, test/fixture/output
 exemptions, lifecycle dispositions, declaration identities, graph deltas, counters, predecessor
 rows or expected verdicts. Candidate-selected snapshots or path lists have no authority.
+
+### Exact Git changed-path byte protocol
+
+The [v9 Interface](interfaces/product-truth-complexity-v9.md) owns the machine contract. The meter
+spawns exactly `git diff --name-status -z --no-renames <official-evidence> <candidate> --` and keeps
+successful stdout as bytes. The general UTF-8/no-NUL text decoder is architecturally outside this
+path. Empty stdout means zero records. Non-empty stdout is scanned once as repeated
+`status-byte NUL path-bytes NUL`; its final byte is the final path terminator. Removing that one
+terminal empty segment must leave a positive even number of non-empty fields.
+
+Each status field is exactly one byte: `A`, `D`, `M` or `T`. Scores, multi-byte fields and
+`C/R/U/X/B` fail before classification. Only each path field is decoded with fatal UTF-8 and then
+re-encoded to the identical bytes. A decoded path is non-empty and relative, has no leading or
+trailing `/`, and contains no empty, `.` or `..` slash component. There is no Unicode
+normalization. TAB, LF, CR, backslash and other valid UTF-8 remain path bytes because only NUL
+delimits fields. Error output is the fixed command/terminal/cardinality/status/empty-path/path-
+UTF-8/path-form/status-state/duplicate-path code plus a zero-based record ordinal; raw or decoded
+path bytes are not interpolated.
+
+Before policy, each status is checked against the two Git trees: `A` is absent→present, `D`
+present→absent, `M` present→present without entry-kind change, and `T` present→present with
+entry-kind change. Duplicate exact paths fail. Every other valid record proceeds unchanged and in
+Git order to the existing selected-Work lifecycle and accepted-tree classifiers. Therefore parser
+success cannot grant membership, lifecycle or dependency authority, and a real selected or
+unselected change cannot be accepted or rejected at the text layer.
+
+Verification has two independent layers. Direct raw-Buffer cases cover empty output, terminal and
+cardinality faults, empty fields, every disallowed status, invalid UTF-8, invalid relative forms,
+duplicates and valid non-ASCII/TAB/LF/CR/backslash paths. Fixture-free official invocations use a
+tool-created temporary Git object chain without changing a branch or working tree: selected
+existing-blob `M` and exact authored first-materialization `A` must pass, while unlisted `A/M`,
+selected `D`, selected mode drift, selected `T`, a move exposed as `D+A`, and an adopted-byte drift
+must reach their existing downstream lifecycle or accepted-tree dispositions. Any parser/text
+error in these real-Git controls fails the design.
+
+The accepted-meter Review route is also Design-owned: the B1 predecessor row, v9 expected handoff,
+B1 entry stop and Work map consume exactly
+`reviews/product-truth-complexity-v9-protocol-route.md`. There is no filename inference, old-Review
+overwrite, alias, fallback, directory scan or “latest Review” rule. Every existing Review remains
+immutable evidence.
 
 ### Exact per-Work verification path authority
 
@@ -975,18 +1022,19 @@ observations stated above; source, behavior and process Review supplies semantic
 
 Failure of any gate rejects the candidate even if the largest file is shorter or tests pass.
 
-Execution starts only after the post-r2 fresh different-actor QbD reports 0 blocker and 0 advisory
-and a newly recorded human PASS authorizes the
-bounded measurement-only v9 Work. Its immutable commit, predecessor-bound B0 report, handoff and
-zero-finding different-actor implementation `PASS` are a hard stop before (1) direct first-public
+Execution starts only after the fresh different-actor protocol/route QbD reports 0 blocker and 0
+advisory and a newly recorded human PASS authorizes the single bounded measurement-only v9
+realization. Its immutable commit, predecessor-bound B0 report, handoff and zero-finding
+different-actor implementation `PASS` at
+`reviews/product-truth-complexity-v9-protocol-route.md` are a hard stop before (1) direct first-public
 creation plus compatibility deletion through a green B1 commit measured with those accepted v9 bytes and proved
 by its separate frozen runtime verifier/Review, and (2) the
 responsibility split. B1 remains one indivisible production Work but no longer creates or freezes a
 meter. The responsibility split cannot start until the B1 handoff records the immutable B1 commit
 accepted-meter metrics and accepted behavior Review. Package transcript/root work cannot change or
-bypass either stop. This is the final implementation opportunity in the membership/changed-path
-family: another same-family bypass in the next implementation Review returns to Design/stop and may
-not receive another implementation repair dispatch.
+bypass either stop. The rejected final-authority candidate exhausted that implementation
+opportunity. Only the protocol/route realization above may follow fresh QbD 0/0 and human PASS;
+any material failure ends v9 and returns to stop/alternate authority.
 
 ## Verification strategy
 
@@ -1018,6 +1066,13 @@ not receive another implementation repair dispatch.
   SCC/count differences remain observational because there is no complete Design-authored delta
   table. A source/test negative rejects raw non-leak, write/Web-RPC/gateway and raw/global/alias/
   callback/RHS/per-use semantic verdicts in v9.
+- Direct Buffer protocol cases freeze empty/terminal/cardinality/status/path-UTF-8/path-form/
+  duplicate dispositions and prove valid non-ASCII/TAB/LF/CR/backslash path bytes survive without
+  whole-buffer text decoding. Fixture-free official invocations over tool-created real Git objects
+  prove selected `M` and authored `A` positives and require unlisted `A/M`, selected `D`, mode drift,
+  `T`, no-renames `D+A` move and adopted-byte drift to reach their downstream lifecycle or accepted-
+  tree classifiers. The same evidence commit must contain the literal zero-finding Review blob at
+  `reviews/product-truth-complexity-v9-protocol-route.md`; any old Review or alternate path rejects.
 - B1 owner-local capability fixtures inject verifier-owned ports and consume the exact Design block;
   they cover all applicable generated-home presence assignments, every declared operation/ordinal
   before/after fault, each declared race barrier and every declared durable abrupt-kill
@@ -1107,6 +1162,9 @@ affected Campaign claims only as candidate and cannot self-verify completion.
 | home-level shared Package root               | couples dev and packaged current/LKG/lease state                                                                    |
 | Native Host root discovery/fallback          | creates a second lifecycle selector and hides configuration mismatch                                                |
 | arbitrary LOC threshold                      | can be gamed by large compatibility deletion; strict B0/B1/C net deltas measure both whole scope and split overhead |
+| decode complete `-z` stdout as text           | valid non-empty output necessarily contains NUL delimiters; decoding belongs only to each path slice                |
+| overwrite or reuse an earlier v9 Review path  | destroys immutable failed evidence and leaves runtime assignment/predecessor authority ambiguous                   |
+| patch rejected candidate as r4 shape repair   | violates the binding stop-loss; only a fresh-QbD-approved byte-protocol/route realization may be considered         |
 
 ## B1 FAIL repair and next workflow entry
 
@@ -1138,11 +1196,13 @@ process evidence and is not part of this repair or the next audit absent new con
 No migration, backup, restore, alias, wrapper or dual compatibility was introduced.
 
 The next workflow output is a fresh different-actor QbD audit at
-`qbd/product-truth-complexity-v9-final-authority-audit.md` over this repaired Design, both Route B
-Decisions, Interface/measurement Work, all five Product Works and the Work map. It must reach 0
-blocker and 0 advisory. Only a subsequently recorded human PASS calibration may authorize the
-measurement-only v9 Work. Its immutable handoff must then receive a zero-finding different-actor
-implementation `PASS` before a new B1 production receipt is issued. If that Review finds another
-membership/changed-path-family bypass, no implementation repair is dispatched; the sequence returns
-to Design/stop. Any proposed new destructive target or weakened exclusion returns for human
-calibration. This architect does not approve its own gate.
+`qbd/product-truth-complexity-v9-protocol-route-audit.md` over this repaired Design, all three Route
+B/stop-loss Decisions, Interface/measurement Work, B1 Work and the Work map. It must reproduce the
+raw-byte protocol, real-Git downstream controls, unchanged 69/70/110/6,321 facts and the sole new
+Review route, and reach 0 blocker and 0 advisory. Only a subsequently recorded human PASS
+calibration may authorize one bounded protocol/route realization. Its immutable handoff must then
+receive a zero-finding different-actor `PASS` only at
+`reviews/product-truth-complexity-v9-protocol-route.md` before a new B1 production receipt is issued.
+Any material implementation or Review failure ends v9 and returns to stop/alternate authority.
+Any proposed new destructive target or weakened exclusion returns for human calibration. This
+architect does not approve its own gate.

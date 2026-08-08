@@ -82,11 +82,17 @@ okf_version: "0.2"
 - [Product-truth complexity v9 safe-degradation calibration](decisions/product-truth-complexity-v9-safe-degradation-calibration.md)
   — records the human response to the v9 audit: exact declaration/disposition authority,
   observational graph boundary, replayable B1 reviewer evidence and the Route-B falsifier.
+- [Product-truth complexity v9 byte-protocol and Review-route stop-loss](decisions/product-truth-complexity-v9-protocol-route-stop-loss.md)
+  — keeps the final-authority candidate rejected, freezes the exact raw `-z` protocol and sole new
+  Review output, and requires fresh different-actor QbD 0/0 plus human PASS before one bounded
+  realization; any material failure ends v9.
 - [Product-truth complexity v9 narrow authority](interfaces/product-truth-complexity-v9.md) — exact
   membership/evidence/declaration boundary, observational literal-graph baseline and explicit
   semantic non-authority.
 - [Product-truth complexity v9 measurement Work](work/product-truth-complexity-v9.md) — next bounded
-  implementation only after fresh different-actor QbD and recorded human PASS calibration.
+  protocol/route realization only after fresh different-actor QbD and recorded human PASS
+  calibration; its sole future Review output is
+  `reviews/product-truth-complexity-v9-protocol-route.md`.
 - [Product-truth complexity v9 audit](qbd/product-truth-complexity-v9-audit.md) — immutable `FAIL`
   that found the missing declaration/signature and static-edge authority and requested the selected
   safe degradation.
@@ -94,12 +100,15 @@ okf_version: "0.2"
   — immutable `FAIL` that found two baseline-authority defects subsequently repaired.
 - [Product-truth complexity v9 final audit](qbd/product-truth-complexity-v9-final-audit.md) and
   [PASS approval](decisions/product-truth-complexity-v9-pass-approval.md) — different-actor `PASS`
-  with 0 blocker and 0 advisory; authorizes only the measurement-only v9 implementation and its
-  independent Review, while B1 remains blocked.
+  with 0 blocker and 0 advisory; immutable historical approval superseded by later failed Reviews,
+  so it no longer authorizes implementation or B1.
 - [Product-truth complexity v9 final-authority audit](qbd/product-truth-complexity-v9-final-authority-audit.md)
   and [final-authority PASS approval](decisions/product-truth-complexity-v9-final-authority-pass-approval.md)
-  — current different-actor `PASS` with 0 blocker and 0 advisory; authorizes only the repaired
-  measurement-only v9 implementation and its independent Review, while B1 remains blocked.
+  — immutable historical 0/0 approval whose authorized candidate was later rejected; it no longer
+  authorizes implementation or B1.
+- [Product-truth complexity v9 final-authority implementation Review](reviews/product-truth-complexity-v9-final-authority.md)
+  — immutable `FAIL` that found the whole-buffer NUL parser false rejection and Review-route split;
+  both return to Design under the new stop-loss Decision.
 - [QbD 1 audit](qbd/design-audit.md) — independent critical findings that triggered the repair
   calibration.
 - [QbD 1 repair audit](qbd/design-repair-audit.md) — independent PASS with zero blockers and three
