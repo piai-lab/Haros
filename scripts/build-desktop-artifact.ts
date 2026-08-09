@@ -24,6 +24,8 @@ import { OMNIMIND_PRODUCTION_BUNDLE_ID } from "@synara/shared/desktopIdentity";
 import { parseBooleanEnvValue } from "./lib/env-bool.ts";
 import { finalizeSignedMacDmg } from "./lib/mac-dmg-finalize.ts";
 import { finalizeMacUpdateZip } from "./lib/mac-update-zip-finalize.ts";
+import { verifyPackagedLegalClosure } from "./lib/packaged-legal-closure.ts";
+import { writeReleaseLegalMetadata } from "./lib/release-legal-metadata.ts";
 import {
   OMNIMIND_PI_RUNTIME_PACKAGE_PATH,
   RELEASE_LOCKFILE_PATH,
@@ -666,10 +668,9 @@ const installFrozenStageDependencies = Effect.fn("installFrozenStageDependencies
     path.join(repoRoot, RELEASE_PATCHES_PATH),
     path.join(stageAppDir, RELEASE_PATCHES_PATH),
   );
-  yield* fs.makeDirectory(
-    path.dirname(path.join(stageAppDir, OMNIMIND_PI_RUNTIME_PACKAGE_PATH)),
-    { recursive: true },
-  );
+  yield* fs.makeDirectory(path.dirname(path.join(stageAppDir, OMNIMIND_PI_RUNTIME_PACKAGE_PATH)), {
+    recursive: true,
+  });
   yield* fs.copyFile(
     path.join(repoRoot, OMNIMIND_PI_RUNTIME_PACKAGE_PATH),
     path.join(stageAppDir, OMNIMIND_PI_RUNTIME_PACKAGE_PATH),
@@ -1067,6 +1068,29 @@ const buildDesktopArtifact = Effect.fn("buildDesktopArtifact")(function* (
   const stagePackageJsonString = yield* encodeJsonString(stagePackageJson);
   yield* fs.writeFileString(path.join(stageAppDir, "package.json"), `${stagePackageJsonString}\n`);
 
+  const legalInventory = yield* Effect.try({
+    try: () =>
+      writeReleaseLegalMetadata({
+        packageRoot: stageAppDir,
+        repositoryRoot: repoRoot,
+        outputDirectory: path.join(stageAppDir, "apps/server/dist/client/licenses"),
+        appVersion,
+        target: {
+          kind: "release-target",
+          platform: options.platform,
+          arch: options.arch,
+        },
+      }),
+    catch: (cause) =>
+      new BuildScriptError({
+        message: "Could not derive fail-closed legal metadata from staged dependencies.",
+        cause,
+      }),
+  });
+  yield* Effect.log(
+    `[desktop-artifact] Locked legal metadata to ${legalInventory.componentCount} staged production components.`,
+  );
+
   if (options.platform === "linux") {
     yield* verifyStagedNodePty(stageAppDir, options.verbose);
   }
@@ -1122,6 +1146,20 @@ const buildDesktopArtifact = Effect.fn("buildDesktopArtifact")(function* (
     return yield* new BuildScriptError({
       message: `Build completed but dist directory was not found at ${stageDistDir}`,
     });
+  }
+
+  const verifiedLegalArchives = yield* Effect.try({
+    try: () => verifyPackagedLegalClosure(stageDistDir),
+    catch: (cause) =>
+      new BuildScriptError({
+        message: "Packaged dependency/legal closure verification failed.",
+        cause,
+      }),
+  });
+  for (const result of verifiedLegalArchives) {
+    yield* Effect.log(
+      `[desktop-artifact] Verified ${result.componentCount} disclosed dependency identities in ${result.archivePath}.`,
+    );
   }
 
   if (options.platform === "mac" && options.target === "dmg" && options.signed) {
