@@ -1,157 +1,139 @@
 ---
 type: "Handoff"
-title: "Direct-first public B1 alternate-authority recovery"
-status: "DONE"
+title: "Direct-first public B1 review repair candidate"
+status: "CANDIDATE"
 work: "../work/direct-first-public-b1.md"
+review: "../reviews/direct-first-public-b1.md"
+candidate: "452b587208287b3383eff8eeecc5a3fd0d1baecc"
 ---
 
-# Direct-first public B1 recovery handoff
+# Direct-first public B1 review repair handoff
 
-## Assignment
+## Assignment and transition
 
 - Bundle: `.omp-flow/tasks/08-07-product-truth-consolidation`
 - Role: `implementer`
-- Actor ID: `direct_first_public_b1_alternate_impl`
-- Dispatch receipt: `f457f4f3b7fa42d1b8e6174f680a2892`
-- Predecessor: none
+- Actor ID: `direct_first_public_b1_repair_r1`
+- Dispatch receipt: `3f690240ae57495293a232e7ea668341`
+- Predecessor receipt: `f457f4f3b7fa42d1b8e6174f680a2892`
+- Predecessor output: this linked handoff
 - Work: [`direct-first-public-b1.md`](../work/direct-first-public-b1.md)
-- Decision:
+- Authority decision:
   [`product-truth-b1-alternate-authority-recovery.md`](../decisions/product-truth-b1-alternate-authority-recovery.md)
+- Failed Product Review: [`direct-first-public-b1.md`](../reviews/direct-first-public-b1.md),
+  receipt `4e09674cb24140dc9a552bb9e15c9bf5`, reviewed Product SHA
+  `280976e44435d2331f589a9100397ba9d50446e3`
 
-## Result
+The new immutable repair candidate is
+`452b587208287b3383eff8eeecc5a3fd0d1baecc` (parent
+`62a6f013361623ae56e9eb6cbacb30113457c14b`, tree
+`dd5561eff91cce87bc90c42732056da91ddb828d`). It contains exactly the twelve
+authorized production/verification paths listed below and no v9, meter, framework, dependency,
+lockfile, runtime/session, Harness, release, or unrelated path. This handoff is deliberately a
+separate evidence change. Candidate status is not independent acceptance; the only authorized next
+transition is one fresh different-actor Product Review of this SHA.
 
-`DONE`. The immutable Product SHA is
-`280976e44435d2331f589a9100397ba9d50446e3`. All ten frozen catalog owners have direct execution
-witnesses for all 1,263 cases, the focused final gates are green, and the repaired packaged
-Electron→Service→Native Host chain passes fresh creation, reopen and same-home restart from an
-isolated generated home. This actor did not commit, push, merge, run v9, or access the maintainer's
-real `~/.omnimind`. Implementation completion is not independent acceptance: the only remaining
-transition is a fresh different-actor Product Review of the immutable final SHA.
+## Closed review findings
 
-Rejected historical candidate `50deefc1...` was used only as counterexample input and was never
-cherry-picked. The immutable two-commit Product chain is:
+### 1. Durable database and Package destructive intermediates
 
-1. base authority `f2a32c3abb84b6d76b6c3920fa139ffe6035bb5f` → frozen main candidate
-   `cea92ba2ab2d99b20f138d45fe42c08ca95deb90`;
-2. `cea92ba2ab2d99b20f138d45fe42c08ca95deb90` → final Product repair
-   `280976e44435d2331f589a9100397ba9d50446e3`.
+- A classified database member is atomically renamed to the stable, enumerable identity
+  `<name>.retiring-<sha256>-<size>`. A Package entry inside its stable outer
+  `.discarding/<generation>.<tree-digest>` directory is atomically renamed to
+  `.retiring-<base64url-logical-name>-<sha256>-<size>`.
+- The exact renamed inode is opened no-follow, identity/size checked again, truncated to zero and
+  fsynced. The stable zero-byte marker remains as the terminal receipt. No post-seal unlink or
+  directory removal window exists, so fresh inspection can enumerate every current intermediate.
+- Fresh inspection accepts only an exact nonzero marker matching its encoded seal or the exact
+  zero-byte terminal receipt. Original-plus-marker, multiple/malformed markers, digest mismatch,
+  link/symlink/mode/identity replacement, and foreign bytes are typed refusal. Unknown bytes are
+  never deleted.
+- Real child `SIGKILL` is sent while a nonzero database/Package retirement marker exists; a fresh
+  process enumerates it and `inspect -> apply -> inspect` converges. Independent separate-writer
+  children replace the exact database and Package marker between final validation and the fd sink,
+  without a production hook. Both operations exit with typed refusal; the foreign replacement and
+  moved owner inode survive; fresh inspection blocks.
 
-The final commit's tree is `de03741a72a43908045d0559bc65310aa24c377e`.
+### 2. Service schema witnesses bind actual SQL statements one-to-one
 
-## Stable Product
+- `makeSqlitePersistenceLive` no longer accepts or exports a witness port. The synthetic loop that
+  emitted 31 before events, ran one aggregate initializer, then emitted 31 after events is gone.
+- The Service verifier installs a test-process-only Proxy on the actual `DatabaseSync.prepare`
+  boundary. Each classified Service schema SQL string receives its ordinal in real prepare order;
+  before/after fault injection wraps the actual `StatementSync.run/all` call for that one SQL
+  statement. All 31 ordinals at both sites prove transactional rollback and no marker/application
+  object residue. Normal execution proves the observed SQL sequence and the frozen ordinal sequence
+  are bijective.
+- Product schema verification uses the same test-only adapter interception around its real DDL
+  execution. Real separate-writer and real `SIGKILL`/fresh-reopen cases remain at the actual SQLite
+  boundary.
 
-### Product and refusal cuts
+### 3. Production-callable verifier controls and renderer global are removed
 
-- Live Service composition passes `resolveProductDatabasePath(stateDir)` to both the Product
-  control plane and Product Package-lifecycle facts. The focused composition proof observes only
-  `<lane>/stores/product.sqlite`; `<lane>/product.sqlite` remains absent.
-- Product and Service perform a complete retired main/WAL/SHM cut before current mkdir/lock/open,
-  acquire the canonical database owner lock, recheck all retired members while held, revalidate the
-  stores parent identity, and retain the lock through close. Legacy presence refuses before current
-  mutation. Existing partial/empty/old/future/contradictory current files are never repaired.
-- Product creation contains 27 raw SQL statements but exactly 26 frozen logical schema segments:
-  the final logical segment contains the two adjacent final index DDL statements. All remain in one
-  `BEGIN IMMEDIATE`; marker insert remains last. A catalog-external regression injects failure at
-  zero-based raw-statement ordinal 26 (the 27th and second statement in the final segment) and
-  proves complete rollback with no marker or application object. This handoff does not claim that
-  every logical segment is one SQL statement.
-- Web v1/v2 operations are logical presence probes implemented by own-key enumeration. A test spy
-  throws if old-key `getItem` is attempted; all normal, fault and race paths retain zero retired
-  value reads and zero retired writes. A sink-adjacent extra g1 reread is an owner-internal safety
-  recheck and does not invent a catalog operation.
+- Normal production entry points no longer accept witness, test-hook, raw target callback, barrier,
+  or mutation closure parameters. Service and Product layer factories expose no witness ports.
+  Chromium profile, database-lock, classifier, direct inspect/apply, and Web draft-store production
+  callers cannot install, choose, suppress, or throw verifier events.
+- The renderer `Symbol.for("omnimind.composer-draft-witness")` and its `globalThis` lookup are
+  deleted. Web verification observes a test-local Proxy around the real localStorage/presence
+  adapter.
+- Direct-tool verification uses runtime-generated copies of the exact owned source files in an OS
+  temporary directory. Test-only source transformation binds otherwise-unset owner-local
+  instrumentation variables to test-process fields in that copy; production modules have no setter,
+  registration path, exported port, extra argument, stable global Symbol, or caller-reachable value
+  path. The generated verifier directory and its workspace dependency symlink are removed after the
+  suite. No checked-in verifier framework or second production implementation was added.
+- The exact failed-Review regex union
+  `TestHooks|WitnessPort|afterBoundary|Symbol\.for\(|globalThis\[|witness` returns zero matches over
+  the same seven production files. This closes the Review's 86-record set without changing the
+  production universe or creating a meter.
 
-### Destructive safety and convergence
+### 4. Retained replayable packaged chain
 
-- Direct `inspect` uses no-follow target and intermediate-ancestor identities, stable source and
-  copy content seals, strict protected-fixture decoders and sanitized output. Chromium LevelDB is
-  opened only from an identity/content-matched private copy; cleanup is source-bound.
-- `apply` holds the fixed owner-lock order, rechecks target/ancestor/content seals at each sink,
-  uses identity-bound same-directory tombstones for database/package removal, performs one
-  delete-only LevelDB batch for the exact retired keys, rereads g1, and preserves protected
-  exclusions byte-for-byte. Unknown logical keys are not enumerated or claimed.
-- Package full/manifest-only/empty/absent edges and database/profile replacement races use separate
-  writers. Stale database/profile locks and tombstones converge only through exact identity and
-  liveness rules. Real subprocess SIGKILL witnesses cover the catalog durable points and fresh
-  convergence on immediately generated homes/profiles.
-- Strict JSON decoding rejects duplicate keys, extra/missing recursive receipt fields and
-  cross-field identity mismatch before protected queries.
+The exact-provenance macOS arm64 build and its generated-home journey are retained outside Git at:
 
-### Compatibility and Package-root boundary
+`/Users/liuzaoqu/Desktop/Develop/independent/OmniMind-b1-452b5872-evidence.2ABS4v`
 
-- Scope-aware scan reports zero runtime/test source occurrences of `enableAppshots`, `appshot`,
-  selection/schema1 transcoders, V2/storage-upgrade bridges and Product Store/Coordinator extraction
-  scaffolds. Nine exact retired production files remain absent. `scripts/release-smoke.ts` has zero
-  `.lane` residue and the release-policy surface has zero `0.4.2` residue.
-- `enableAppSnap` remains the sole current setting. Web v1/v2 strings remain only as the two exact
-  production presence sentinels and their direct test assertions; the Product tool's retired
-  identities remain closed destructive targets, not runtime compatibility.
-- B1 prepares Service-selected Package authority by binding the same canonical Product database
-  transcript into Product control-plane and Package-lifecycle startup. Final Native Host sole root
-  consumption/write exclusion belongs to the subsequent `native-host-package-root-binding` Work;
-  no Native Host v2/protocol/root path was edited here.
+The retained [`TRANSCRIPT.md`](../../../../../OmniMind-b1-452b5872-evidence.2ABS4v/TRANSCRIPT.md)
+records exact commands, exit codes, sanitized JSON and replay order. Its machine-readable
+`artifact-manifest.json` binds:
 
-## Frozen verifier and actual execution
+- ZIP: `169203720` bytes,
+  SHA-256 `6ecbbb17dd66e2facc9c46da05620242a0e320d1ca6bd82750dab01a9da7cf23`
+- DMG: `169178146` bytes,
+  SHA-256 `fe0913ee51c001a6884dde2ca933f17417514e2c7c5e30ce53c54ec6454d6fe5`
+- replay verifier SHA-256:
+  `e7ef3469aca291ff9146a799869a6a9181f8487dd479356e95842a51165fd14d`
 
-The thin generator reads the Design-owned `omp-flow-b1-verifier-universe-v1` fence verbatim,
-recomputes every owner definition digest, the fixture catalog digest and race/kill case digest, and
-materializes only a coverage manifest. It does not schedule generic events or duplicate owner
-semantics.
+The build command required clean `HEAD` equal to the full source commit and the exact
+`bun.lock` SHA-256 `05960c3b0c2b51ca90ad5f2411ff6eb4c24356a028f72ed0fb2ca364347bed91`;
+it exited 0 after Desktop/Service/Web build, arm64 AppSnap build, frozen dependency staging,
+231-component legal/ASAR validation, ZIP repack and DMG creation.
 
-- Fixture catalog SHA-256:
-  `369381e5b06db8e32a68d6e6daebc408afea4b9780b54180c3089c147ca2f3fe`
-- Expanded race/kill identity SHA-256:
-  `d09aadf1e78994ad65a4804de4d791f79762066e9da864c435ec126cf860f892`
-- Generator source SHA-256:
-  `6ee61c5e55ccb3df1aafdf7a67f93e3feefeda900dfc2537f64ad8eb797d209c`
-- Generator test SHA-256:
-  `efd595dbb23733d021e1a805c6df06cd29ab43af5b9e98b40f0a95baa3b6f748`
-- Universe: 10 owners, 146 operations, 87 normal states, 1,026 operation faults, 85
-  concrete-ordinal races and 65 concrete-ordinal kills: 1,263 cases total.
+The replay chain uses only `<evidence-root>/state` for HOME, user data, caches and `OMNIMIND_HOME`:
 
-Every count below comes from real owner calls and selected injection points; no expected-ID spread
-or loop was used to mark a case executed.
+1. fresh preparation proves Product and Service databases absent;
+2. packaged fresh launch reaches app/window/backend/Native Host/authenticated readiness with exactly
+   one Service, one Native Host and one renderer, then stops the complete process group by SIGTERM;
+3. private read-only reopen observes Product and Service `schema_generation=1`, mode `0600`, zero
+   Product runs, Automation runs and outbox rows, and all six retired database bundle members absent;
+4. the same packaged bytes restart against the same generated home, using only log bytes appended
+   after the restart spawn for readiness, again reach the five predicates and `1/1/1` counts, and
+   stop cleanly;
+5. the second read-only reopen observes the same Product and Service inode identities and the same
+   generation/zero-replay facts.
 
-| Owner | Normal | Fault | Race | Kill | Total |
-| --- | ---: | ---: | ---: | ---: | ---: |
-| `deleteLegacyProfileDraftKeys` | 4 | 24 | 5 | 1 | 34 |
-| `inspectProfileDraftKeys` | 4 | 224 | 12 | 9 | 249 |
-| `withProductTruthDatabaseLocks` | 5 | 144 | 14 | 25 | 188 |
-| `classifyLegacyDatabase` | 4 | 58 | 4 | 4 | 70 |
-| `inspectDirectFirstPublic` | 4 | 172 | 22 | 0 | 198 |
-| `applyDirectFirstPublic` | 6 | 198 | 16 | 16 | 236 |
-| `makeProductControlPlaneLayer` | 21 | 88 | 3 | 4 | 116 |
-| `makeSqlitePersistenceLive` | 21 | 98 | 3 | 4 | 126 |
-| `readOrCreateComposerDraftEnvelope` | 9 | 10 | 3 | 1 | 23 |
-| `writeAndVerifyComposerDraftEnvelope` | 9 | 10 | 3 | 1 | 23 |
-| **Total** | **87** | **1,026** | **85** | **65** | **1,263** |
+An exploratory restart observation that read the whole existing log was discarded because it could
+not distinguish prior readiness lines. The retained transcript contains only the corrected
+append-after-spawn result and calls this out explicitly.
 
-Owner-local logical mappings retained for source Review:
+## Exact candidate scope
 
-- Profile delete `read-exact-key` is the first three exact Level gets. `seal-targets` is the sealed
-  set formed from initial presence/hash; implementation safety rereads remain internal.
-- Database lock ordinals are two profile `SingletonLock`s plus four fixed lane/database lifecycle
-  locks in owner order; the two underlying lock record primitives are not generalized.
-- Inspect's 11 target ordinals are three database members, two retired-key stable-copy presence
-  observations, four sealed Package nodes and two profile stable-copy observations. Public plans
-  remain sanitized and may merge kinds.
-- Apply ordinals map to three database tombstones, two profile legacy logical removals, three
-  Package edges, eight parent fsync/absence facts and four protected exclusions. Extra sink safety
-  rechecks do not add catalog operations.
-- Web `get-v1`/`get-v2` are logical presence witnesses while the underlying adapter never retrieves
-  retired bytes.
+`git diff --name-status --no-renames 62a6f013361623ae56e9eb6cbacb30113457c14b 452b587208287b3383eff8eeecc5a3fd0d1baecc`
+reports exactly:
 
-## Immutable paths and direct scope audit
+Production:
 
-The direct real-Git audit
-`git diff --name-status -z --no-renames f2a32c3abb84b6d76b6c3920fa139ffe6035bb5f..280976e44435d2331f589a9100397ba9d50446e3`
-reports exactly 18 paths: nine production and nine verification. All are accepted by the unchanged
-production fence or exact 16-row Design table; rejected paths are zero. The handoff is deliberately
-outside the Product commits.
-
-Production paths:
-
-- `apps/service/src/config.ts`
-- `apps/service/src/native-host/executionBoundary.ts`
 - `apps/service/src/persistence/Layers/Sqlite.ts`
 - `apps/service/src/product/ProductControlPlane.ts`
 - `apps/web/src/composerDraftStore.ts`
@@ -160,90 +142,54 @@ Production paths:
 - `scripts/product-truth/direct-first-public.ts`
 - `scripts/product-truth/sqlite-classifier.ts`
 
-Verification paths:
+Verification:
 
-- `apps/service/src/config.permissions.test.ts`
-- `apps/service/src/native-host/executionBoundary.test.ts`
 - `apps/service/src/persistence/Layers/Sqlite.test.ts`
 - `apps/service/src/product/ProductControlPlane.test.ts`
-- `apps/web/src/appSettings.test.ts`
 - `apps/web/src/composerDraftStore.persistence.test.ts`
 - `scripts/product-truth/direct-first-public.test.ts`
 - `scripts/product-truth/first-public-capability-verifier.test.ts`
-- `scripts/product-truth/first-public-capability-verifier.ts`
 
-No dependency, lockfile, meter/config/history, runtime/session or Harness path changed. No production
-or verification path was deleted or renamed. The final two-path repair changed only
-`apps/service/src/config.ts` and `apps/service/src/config.permissions.test.ts`, both already present
-in the same 18-path authority.
+## Verification on frozen bytes
 
-## Final Product verification
-
-- `bun run test -- product-truth/direct-first-public.test.ts product-truth/first-public-capability-verifier.test.ts release-update-policy.test.ts`
-  from `scripts`: 3 files, 87 tests passed. The first pre-repair run exposed a verifier-test
-  concurrency false positive: it counted another test file's live scratch. The assertion was
-  narrowed to the generated profile's exact `owner.json.source`; the focused falsifier passed and
-  the new byte-stable candidate's full Scripts gate passed once.
-- Service exact-row gate: 5 files, 92 tests passed (`config.permissions`, native-host composition,
-  OpenCode probe, Service SQLite and Product control plane).
-- Web exact-row gate: 6 files, 85 tests passed (`appSettings`, bootstrap, attachment chip, draft
-  attachments/persistence and image source). The persistence owner file alone passed 46/46.
-- `bun run typecheck` passed in `apps/service`, `apps/web`, `apps/desktop` and `scripts`.
-- `bun run release:smoke`: passed. Its temporary install did not change repository `bun.lock`.
-- `bun run check:sources`: passed.
-- `bun run check:closure`: passed with source tree
+- Direct destructive focused checks passed for real SIGKILL inside both durable marker windows,
+  database and Package no-hook separate-writer sink replacement, exact apply kill cases, all seven
+  direct durable-boundary child kills, normal/intermediate/terminal states, replacement refusal and
+  terminal receipt preservation.
+- The three exact profile/database-lock durable-kill cases passed together, including fresh-process
+  convergence. Direct inspect/apply fault and race matrices and the exact operation surface passed
+  in the verifier-only copy.
+- Service exact-row gate: `5 files / 91 tests`, exit 0.
+- Web exact-row gate: `6 files / 84 tests`, exit 0.
+- `bun run --cwd apps/service typecheck`, `apps/web`, `apps/desktop`, and `scripts`: all exit 0.
+- `bun run release:smoke`: exit 0 and repository `bun.lock` unchanged.
+- `bun run check:sources`: exit 0.
+- `bun run check:closure`: exit 0; source tree
   `630f17e61abc478114bf83c1d740977c9f68b910`, counts `adapted-present=1494`,
-  `adapted-removed=776`, and disposition digest
+  `adapted-removed=776`, disposition SHA-256
   `3d6a5b6dac4bfd938284d459a7840ccfde913c13ab8119578e41e5cc58ac90c4`.
-- `git diff --check`: passed.
-- Direct scope audit: base→final has exactly 18 paths (nine production plus nine verification), zero
-  rejected paths; base `f2a32c3abb84b6d76b6c3920fa139ffe6035bb5f`, final
-  `280976e44435d2331f589a9100397ba9d50446e3`.
-- Compatibility audit: nine exact retired files absent; forbidden runtime/test counts all zero;
-  release `.lane=0`, release `0.4.2=0`; extraction surface zero.
-- Real Electron Chromium LevelDB fixture is included in the passed direct-tool gate. All destructive
-  tests used immediately generated temporary roots/profiles.
+- `git diff --check`: exit 0.
+- Candidate was clean at `452b587208287b3383eff8eeecc5a3fd0d1baecc` before this handoff update.
 
-The 1,263/1,263 owner execution result and the broad final gates above were run once against frozen
-main candidate `cea92ba2ab2d99b20f138d45fe42c08ca95deb90`. The subsequent real packaged journey
-found one Product failure: `preparePrivateServerPaths` created an empty current
-`userdata/stores/service.sqlite` before `makeSqlitePersistenceLive` acquired its lifecycle lock, so
-the correctly fail-closed SQLite owner refused it with
-`Service Store existed without the exact generation-1 schema.` The final repair deletes config's
-current-database precreation while retaining the private-tree repair marker, and changes the focused
-permissions test to prove the database remains absent after config and is first created with mode
-`0600` by the held SQLite layer.
+Honest scripts boundary: the exact three-file final command
+`bun run test -- product-truth/direct-first-public.test.ts product-truth/first-public-capability-verifier.test.ts release-update-policy.test.ts`
+was launched once on byte-stable source and its process completed, but the execution adapter yielded
+after startup and did not retain its terminal summary or exit status. It is therefore not claimed as
+a recorded PASS and was not repeated, per the maintainer's one-final-gate instruction. The focused
+results above are retained; a fresh reviewer must run the exact three-file command once against the
+immutable candidate.
 
-- Repair focused gate: `bun run vitest run apps/service/src/config.permissions.test.ts`: one file,
-  11 tests passed.
-- A new local validation artifact built from the repaired source completed Desktop/Service/Web,
-  arm64 AppSnap bridge, frozen production dependencies, 231-component legal closure and ASAR
-  validation. ZIP SHA-256:
-  `b1f77f1a24e89cd7516b637f39d17f6f9aeb43b10d21d31afac9f3bc876bc52e`; DMG SHA-256:
-  `9e9644e08f93bc4931ea3ae9e006c728e2652054e1b028ed3745026533d00232`.
-- Packaged fresh launch began with the generated-home Service database absent and reached app ready,
-  main window ready, backend ready, Native Host ready and authenticated readiness with exactly one
-  Service, one Native Host and one Renderer. After shutdown, a private read-only reopen observed
-  `schema_generation=1`. The same packaged app then restarted against the same generated home and
-  reached all five readiness predicates again with process counts `1/1/1`, the same database
-  identity, `schema_generation=1`, and zero occurrences of the prior schema refusal.
+## Safety, decisions and remaining review duty
 
-No broad gate was repeated after the two-path repair, per the frozen-candidate verification rule;
-the repair received the narrow failing-owner test and the real packaged counterexample/restart proof.
-
-`bun run check:identity` reports 85 pre-existing findings in unchanged historical complexity
-fixtures plus `execution-brief.md` and the active mission. Main's real base→final diff has zero path
-overlap with that 85-item baseline. This external baseline is recorded, not suppressed or repaired
-inside B1.
-
-## Review transition
-
-Product implementation is complete at immutable SHA
-`280976e44435d2331f589a9100397ba9d50446e3`. The only next operation is a fresh different-actor
-Product Review of that same SHA, including the raw-reference enumeration, hidden mutation matrix,
-public non-leak and Package-root owner-boundary checks. No responsibility extraction or further
-Product mutation is authorized before review acceptance.
-
-V9 was not run or repaired. Every destructive and packaged journey used immediately generated
-temporary homes/profiles; the maintainer's real `~/.omnimind` was never read, inspected, copied,
-renamed, mutated or deleted.
+- No production/test code was changed after candidate SHA
+  `452b587208287b3383eff8eeecc5a3fd0d1baecc` was frozen. Only this linked handoff and the retained
+  external evidence directory were written afterwards.
+- This actor did not commit, push, merge, alter v9/history, create a meter/framework, edit runtime or
+  Harness state, or access the maintainer's real `~/.omnimind`.
+- Every destructive test and packaged journey used a newly generated, precisely scoped temporary or
+  retained evidence home. Credentials and raw application logs are not in this handoff or artifact
+  manifest.
+- Unproven done condition: independent Product acceptance. A fresh different actor must review the
+  immutable SHA, rerun the exact scripts final command, replay the retained packaged chain, and
+  accept or reject the four closures. No responsibility extraction or additional Product mutation is
+  authorized before that Review.
