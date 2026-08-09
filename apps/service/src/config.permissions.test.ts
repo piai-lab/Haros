@@ -3,7 +3,7 @@ import os from "node:os";
 import path from "node:path";
 
 import * as NodeServices from "@effect/platform-node/NodeServices";
-import { Effect } from "effect";
+import { Effect, Layer } from "effect";
 import { afterEach, describe, expect, it } from "vitest";
 
 import {
@@ -18,6 +18,7 @@ import {
   repairPrivateFile,
   repairPrivateFileSync,
 } from "./privatePathPermissions";
+import { makeSqlitePersistenceLive } from "./persistence/Layers/Sqlite";
 import { writeFileStringAtomically } from "./atomicWrite";
 
 const tempDirs = new Set<string>();
@@ -46,7 +47,7 @@ afterEach(() => {
 });
 
 describe.skipIf(process.platform === "win32")("private server state permissions", () => {
-  it("creates a fresh home with private state directories", () => {
+  it("creates private state directories while the locked SQLite layer owns database creation", async () => {
     const paths = derivePaths(makeTempDir());
 
     preparePrivateServerPaths(paths);
@@ -61,12 +62,23 @@ describe.skipIf(process.platform === "win32")("private server state permissions"
       expect(mode(directoryPath)).toBe(PRIVATE_DIRECTORY_MODE);
     }
     expect(mode(path.join(paths.stateDir, PRIVATE_STATE_REPAIR_MARKER))).toBe(PRIVATE_FILE_MODE);
+    expect(fs.existsSync(paths.dbPath)).toBe(false);
+
+    await Effect.runPromise(
+      Effect.void.pipe(
+        Effect.provide(
+          makeSqlitePersistenceLive(paths.dbPath).pipe(Layer.provide(NodeServices.layer)),
+        ),
+      ),
+    );
+
     expect(mode(paths.dbPath)).toBe(PRIVATE_FILE_MODE);
   });
 
   it("creates representative fresh state files with owner-only permissions", async () => {
     const paths = derivePaths(makeTempDir());
     preparePrivateServerPaths(paths);
+    expect(fs.existsSync(paths.dbPath)).toBe(false);
     await Effect.runPromise(
       Effect.gen(function* () {
         for (const filePath of [
@@ -81,7 +93,6 @@ describe.skipIf(process.platform === "win32")("private server state permissions"
     );
 
     for (const filePath of [
-      paths.dbPath,
       paths.settingsPath,
       paths.serverRuntimeStatePath,
       paths.anonymousIdPath,

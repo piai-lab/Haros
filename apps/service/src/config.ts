@@ -138,11 +138,6 @@ export function preparePrivateServerPaths(
   if (!existsSync(repairMarkerPath)) {
     repairPrivateTreeSync(paths.stateDir, platform);
   }
-  // Create or repair the main database before any SQLite client can open it.
-  // SQLite sidecars are created inside this 0700 state directory, which is the
-  // portable privacy boundary while SQLite owns their creation; POSIX startup
-  // repair additionally narrows existing regular files to 0600.
-  ensurePrivateFileSync(paths.dbPath, { platform });
   ensurePrivateFileSync(repairMarkerPath, { platform });
 }
 
