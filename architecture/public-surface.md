@@ -19,6 +19,15 @@ trysynara.com
 @trySynara
 ```
 
+该 denylist 约束的是 authored/built 产品出口，不授权全仓字符串替换。URL 必须按责任处理：
+
+- OmniMind 自有 Home、Docs、Changelog、Download、Privacy、Support 与 Feedback 只使用本文件的 canonical origin、固定 route 和各自激活门；
+- adopted source、license、About/Licenses 与可追踪 provenance 保留真实 upstream URL，不能改写成 OmniMind 自有来源；
+- Provider 官方文档、认证、usage 与技术详情保留该 Provider 的真实 destination，不经 OmniMind public origin 代理或冒充；
+- release/update URL 只来自独立的 artifact、签名、channel/feed authority，不能由 public site origin、源码仓库链接或 donor destination 推导。
+
+因此只有第一类人类公共出口经过 Public Surface resolver。实现与 focused falsifier 必须从本 owner 的唯一 denylist 读取规则，阻止被禁 destination 重新进入 production source/built surface；不得为此恢复 generic identity-governance 平台，也不得拦截合法 upstream provenance 或 Provider-native URL。
+
 OmniMind 即使完全没有公共网络能力，也必须保持本地 Agent/Chat、已有 Conversation 和 Settings 可用。
 公共表面失败只能关闭自身，不得阻塞 renderer、Composer、Run、Queue、Session、Package、credential 或用户文件。
 

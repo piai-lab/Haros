@@ -32,7 +32,11 @@ flowchart LR
     Studio --> Providers
 ```
 
-`Agent | Chat` 是产品入口，不是持久化类型。Projects、Threads、Spaces、Studio container、routes 与 restore behavior 直接沿用 Synara。
+`Agent | Chat` 是唯一一级工作入口，不是持久化类型。正常 shell 在侧栏顶部同时呈现 `Agent`（左）与 `Chat`（右），当前项与另一入口始终可见，用户一次激活即可切换；不得把另一入口收进 dropdown、overflow、Provider selector 或二级导航。入口直接绑定当前 route、restore 与 prewarm 机制，不能为了恢复旧视觉而重建常驻双 panel、第二份 selection state 或新的导航 authority。
+
+用户在 Settings 中显式隐藏 Chat 时，可以只显示非交互的 `Agent` 标题；恢复 Chat 的入口仍由既有 Settings/search/deep-link 提供，不能留下只有一个选项的假 switcher。正常双入口必须在 source 最小侧栏宽度、简体中文/英文、键盘与 screen reader 下保持顺序、可见性、focus 和单次激活；实现应使用与当前 route 模型相符的互斥选择或 navigation 语义，不伪造不存在的 `tabpanel` 关系。
+
+这项约束拥有的是稳定的产品结果，而不是旧提交的具体 DOM。历史实现可以作为视觉与行为证据，但不得整体 cherry-pick 已退休的 Product Control Plane、retained-panel 或其他旧架构。
 
 ### Agent
 
@@ -151,6 +155,7 @@ Git `canary:rollback` 只用于开发工作流，不是用户产品功能。
 V1 UI 候选至少证明：
 
 - `Agent | Chat` 复用同一 Project/Thread/Provider substrate，边界准确；
+- 正常侧栏顶部的 `Agent`（左）与 `Chat`（右）同时可见、一次激活，在最小侧栏宽度与中英文下无溢出；用户显式隐藏 Chat 时不呈现单选项假 switcher；
 - bundled OmniMind Agent 的 Provider/Model/Thinking、Session、stream、Tool、abort、resume 与代表性 Pi-ecosystem journey 可用；
 - stock Pi 作为独立 Provider 可选择，identity/version/state 与 OmniMind Agent 不混用；
 - inherited Providers 没有因 OmniMind surgery 回退，状态与能力准确；

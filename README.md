@@ -48,7 +48,7 @@ OmniMind 的价值不是“能启动 Pi”，也不是“再造一个多 Engine 
 ## 3. 不可协商的产品边界
 
 - App shell、导航、Agent/Chat、设置、错误、更新和默认生态入口只使用 OmniMind 产品语言。Synara 不作为用户概念；OmniMind Agent 不以 Pi 命名或解释自身。准确的 Pi lineage、采用版本、改动边界与 license 只在 About、Licenses、诊断和源码归属中按需可发现。
-- `Agent | Chat` 是产品入口：Agent 复用 folder-backed Project Thread，Chat 复用 Home/Studio managed Thread，Groups 复用 Spaces；不创建第二套 durable objects。
+- `Agent | Chat` 是唯一一级工作入口：正常 shell 在侧栏顶部同时呈现 `Agent`（左）与 `Chat`（右），一次激活即可切换；不得把另一入口隐藏进菜单或溢出项。用户显式隐藏 Chat 是唯一例外。Agent 复用 folder-backed Project Thread，Chat 复用 Home/Studio managed Thread，Groups 复用 Spaces；这个入口不创建第二套 durable objects、tabpanel state 或 restore authority。
 - 生态生命周期属于各 Provider。V1 恢复并复用 Synara 既有 Plugin/Skill discovery；OmniMind Agent 只在其原生 API 已存在时提供 provider-scoped install/update/remove/reload。stock Pi 与其他 Provider 不为视觉对称而补造生命周期 API，共同 UI 不保存跨 Provider current/LKG/generation。
 - V1 在 inherited Registry 中增加一个有界的 `omnimind` identity，并保留 `pi` 与其他既有 adapters；不把 ProviderKind 改成动态插件平台。OmniMind Agent 是默认、内置和最深验收路径；stock Pi 只在用户主动选择 Provider 或查看详情时以 `Pi` 显示。UI 使用每个 runtime 的 ready、auth、version、capability 与 diagnostics，不新增 support-tier 状态。
 - U1 是获准的完整 UI 物理母体和可运行底盘；采用遵守 Workbench 的逐域 preserve/adapt/delete gate，不按截图另画薄 shell，不因未接线就删除成熟表面。
