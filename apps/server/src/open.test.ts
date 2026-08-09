@@ -27,14 +27,6 @@ function encodeExpectedWindowsEditorUriPath(targetPath: string): string {
     .join("/");
 }
 
-function shellSingleQuote(value: string): string {
-  return `'${value.replaceAll("'", "'\\''")}'`;
-}
-
-function fakePowerShellAppxScript(installLocation: string): string {
-  return `#!/bin/sh\nprintf '%s\\n' ${shellSingleQuote(installLocation)}\n`;
-}
-
 it.layer(NodeServices.layer)("resolveEditorLaunch", (it) => {
   it.effect("returns commands for command-based editors", () =>
     Effect.gen(function* () {
@@ -540,36 +532,26 @@ it.layer(NodeServices.layer)("resolveAvailableEditors", (it) => {
     }),
   );
 
-  it.effect("returns VS Code when the Windows Store package is installed without a CLI", () =>
-    Effect.gen(function* () {
-      const fs = yield* FileSystem.FileSystem;
-      const path = yield* Path.Path;
-      const programFiles = yield* fs.makeTempDirectoryScoped({ prefix: "omnimind-vscode-store-" });
-      const binDir = path.join(programFiles, "bin");
-      const installLocation = path.join(
-        programFiles,
-        "WindowsApps",
-        "Microsoft.VisualStudioCode_1.0.0.0_x64__8wekyb3d8bbwe",
-      );
-      yield* fs.makeDirectory(installLocation, { recursive: true });
-      yield* fs.makeDirectory(binDir, { recursive: true });
-      yield* fs.writeFileString(
-        path.join(binDir, "powershell.exe"),
-        fakePowerShellAppxScript(installLocation),
-      );
-      yield* fs.chmod(path.join(binDir, "powershell.exe"), 0o755);
-
-      clearWindowsStorePackageDiscoveryCache();
-
-      const editors = resolveAvailableEditors("win32", {
-        PATH: binDir,
+  it("returns VS Code when the Windows Store package is installed without a CLI", () => {
+    const editors = resolveAvailableEditors(
+      "win32",
+      {
+        PATH: "",
         PATHEXT: ".COM;.EXE;.BAT;.CMD",
-        ProgramFiles: programFiles,
-      });
+      },
+      (packages, platform) => {
+        assert.equal(platform, "win32");
+        return packages?.some(
+          ({ packageName, publisherId }) =>
+            packageName === "Microsoft.VisualStudioCode" && publisherId === "8wekyb3d8bbwe",
+        )
+          ? "C:\\Program Files\\WindowsApps\\Microsoft.VisualStudioCode_1.0.0.0_x64__8wekyb3d8bbwe"
+          : null;
+      },
+    );
 
-      assert.equal(editors.includes("vscode"), true);
-    }),
-  );
+    assert.equal(editors.includes("vscode"), true);
+  });
 
   it.effect("does not treat Windows app-execution-alias folders as package installs", () =>
     Effect.gen(function* () {

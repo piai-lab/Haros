@@ -275,6 +275,7 @@ export function isCommandAvailable(
 export function resolveAvailableEditors(
   platform: NodeJS.Platform = process.platform,
   env: NodeJS.ProcessEnv = process.env,
+  resolveWindowsStorePackage: typeof resolveWindowsStorePackageInstallLocation = resolveWindowsStorePackageInstallLocation,
 ): ReadonlyArray<EditorId> {
   const available: EditorId[] = [];
 
@@ -291,13 +292,7 @@ export function resolveAvailableEditors(
       continue;
     }
 
-    if (
-      resolveWindowsStorePackageInstallLocation(
-        getEditorWindowsStorePackages(editor),
-        platform,
-        env,
-      ) !== null
-    ) {
+    if (resolveWindowsStorePackage(getEditorWindowsStorePackages(editor), platform, env) !== null) {
       available.push(editor.id);
       continue;
     }
