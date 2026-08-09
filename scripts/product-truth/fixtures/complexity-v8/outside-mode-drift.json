@@ -1,6 +1,0 @@
-{
-  "compareToBootstrapBaseline": true,
-  "modeChanges": {
-    "apps/service/src/atomicWrite.ts": "100755"
-  }
-}

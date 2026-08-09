@@ -1,4 +1,4 @@
-import type { PullRequestDetailInput, PullRequestSetPinnedInput } from "@omnimind/contracts";
+import type { PullRequestDetailInput, PullRequestSetPinnedInput } from "@synara/contracts";
 import type { QueryClient } from "@tanstack/react-query";
 
 import type {
@@ -207,7 +207,7 @@ export function beginPullRequestRefresh(
 
 export function beginPullRequestActionProtection(
   queryClient: QueryClient,
-  input: Pick<PullRequestDetailInput, "workspaceId" | "repository" | "number">,
+  input: Pick<PullRequestDetailInput, "projectId" | "repository" | "number">,
   patch: PullRequestActionListPatch,
 ): PullRequestActionProtectionContext {
   const coordinator = getPinMutationCoordinator(queryClient);

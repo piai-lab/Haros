@@ -8,10 +8,10 @@ export const MICROPHONE_USAGE_DESCRIPTION =
 export const MAC_ENTITLEMENTS_PATH = "apps/desktop/resources/entitlements.mac.plist";
 export const MAC_INHERITED_ENTITLEMENTS_PATH =
   "apps/desktop/resources/entitlements.mac.inherit.plist";
-export const MAC_APPSNAP_BRIDGE_STAGE_PATH =
-  "apps/desktop/native/appsnap/build/omnimind-appsnap-bridge";
-export const MAC_APPSNAP_BRIDGE_ASAR_EXCLUSION = "!apps/desktop/native/appsnap/build/**";
-export const MAC_APPSNAP_BRIDGE_BUNDLE_PATH = "Contents/Helpers/omnimind-appsnap-bridge";
+export const MAC_APPSNAP_HELPER_STAGE_PATH =
+  "apps/desktop/native/appsnap/build/omnimind-appsnap-helper";
+export const MAC_APPSNAP_HELPER_ASAR_EXCLUSION = "!apps/desktop/native/appsnap/build/**";
+export const MAC_APPSNAP_HELPER_BUNDLE_PATH = "Contents/Helpers/omnimind-appsnap-helper";
 export const WINDOWS_INSTALLER_GUID = "368107a8-afe6-5db5-ab3b-d4f331684868";
 const MAC_DMG_ICON_PATH = "icon.icns";
 export const NODE_PTY_ASAR_UNPACK_GLOBS = ["node_modules/node-pty/**"] as const;
@@ -44,8 +44,8 @@ export interface DesktopNativeBuildHostInput {
 export function validateDesktopNativeBuildHost(input: DesktopNativeBuildHostInput): string | null {
   if (input.platform === "mac" && input.hostPlatform !== "darwin") {
     return [
-      "macOS desktop artifacts include the native Swift AppSnap bridge.",
-      `Build mac/${input.arch} on macOS so the bridge can be compiled and signed.`,
+      "macOS desktop artifacts include the native Swift AppSnap helper.",
+      `Build mac/${input.arch} on macOS so the helper can be compiled and signed.`,
       `Current host is ${input.hostPlatform}/${input.hostArch}.`,
     ].join(" ");
   }
@@ -76,10 +76,10 @@ export function createDesktopPlatformBuildConfig(
       notarize: input.signed === true,
       entitlements: MAC_ENTITLEMENTS_PATH,
       entitlementsInherit: MAC_INHERITED_ENTITLEMENTS_PATH,
-      binaries: [MAC_APPSNAP_BRIDGE_BUNDLE_PATH],
-      // The universal build stages the same pre-lipo'd bridge in both app trees.
+      binaries: [MAC_APPSNAP_HELPER_BUNDLE_PATH],
+      // The universal build stages the same pre-lipo'd helper in both app trees.
       // @electron/universal needs this pattern to preserve that existing fat binary.
-      x64ArchFiles: MAC_APPSNAP_BRIDGE_BUNDLE_PATH,
+      x64ArchFiles: MAC_APPSNAP_HELPER_BUNDLE_PATH,
       extendInfo: {
         NSMicrophoneUsageDescription: MICROPHONE_USAGE_DESCRIPTION,
       },
@@ -94,11 +94,11 @@ export function createDesktopPlatformBuildConfig(
         // macOS auto-updates use the separately finalized ZIP artifact.
         writeUpdateInfo: false,
       },
-      files: ["**/*", MAC_APPSNAP_BRIDGE_ASAR_EXCLUSION],
+      files: ["**/*", MAC_APPSNAP_HELPER_ASAR_EXCLUSION],
       extraFiles: [
         {
-          from: MAC_APPSNAP_BRIDGE_STAGE_PATH,
-          to: "Helpers/omnimind-appsnap-bridge",
+          from: MAC_APPSNAP_HELPER_STAGE_PATH,
+          to: "Helpers/omnimind-appsnap-helper",
         },
       ],
       mac,

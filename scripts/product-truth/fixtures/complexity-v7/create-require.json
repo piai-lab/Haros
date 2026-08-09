@@ -1,1 +1,0 @@
-{"appendToFiles":{"apps/service/src/main.ts":"\nimport { createRequire as v7CreateRequire } from 'node:module';\nconst v7Require = v7CreateRequire(import.meta.url);\nexport const v7CreateRequireUse = () => v7Require('node:fs');\n"}}

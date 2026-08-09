@@ -3,12 +3,9 @@
 // Layer: Kanban UI hook
 // Exports: useKanbanTaskScratchDraft
 
-import type {
-  ProductRequestedSelection,
-  ProductRuntimeCatalog,
-  ProductRuntimeModel,
-} from "@omnimind/contracts";
-import { useCallback, useEffect, useState } from "react";
+import type { ModelSlug, ProviderKind } from "@synara/contracts";
+import { getDefaultModel } from "@synara/shared/model";
+import { useCallback, useEffect, useRef, useState } from "react";
 
 import {
   filterPromptProviderMentionReferences,
@@ -18,18 +15,19 @@ import {
 } from "~/lib/composerMentions";
 import { effectiveComposerAttachmentCount } from "~/lib/composerSend";
 import { useComposerImageIntake } from "~/hooks/useComposerImageIntake";
-import { createThreadId } from "~/lib/identifiers";
+import { newThreadId } from "~/lib/utils";
 import {
   type ComposerImageAttachment,
   useComposerDraftStore,
   useComposerThreadDraft,
 } from "../../composerDraftStore";
+import { buildModelSelection } from "../../providerModelOptions";
 import { toastManager } from "../ui/toast";
 
-export function useKanbanTaskScratchDraft(runtimeCatalog: ProductRuntimeCatalog | null) {
+export function useKanbanTaskScratchDraft(input: { readonly defaultProvider: ProviderKind }) {
   // Scratch composer draft backing the dialog: model/effort/speed state lives in
   // the composer draft store under this throwaway thread id, exactly like chat.
-  const [scratchThreadId] = useState(() => createThreadId());
+  const [scratchThreadId] = useState(() => newThreadId());
   useEffect(() => {
     useComposerDraftStore.getState().applyStickyState(scratchThreadId);
     return () => {
@@ -51,15 +49,27 @@ export function useKanbanTaskScratchDraft(runtimeCatalog: ProductRuntimeCatalog 
     useComposerDraftStore.getState().setPrompt(scratchThreadId, nextPrompt);
   };
 
-  const [requestedSelection, setRequestedSelection] = useState<ProductRequestedSelection | null>(
-    null,
+  const stickyActiveProvider = useComposerDraftStore((state) => state.stickyActiveProvider);
+  const stickyModelSelectionByProvider = useComposerDraftStore(
+    (state) => state.stickyModelSelectionByProvider,
   );
-  const selectedProvider = "pi" as const;
-  const selectedModel =
-    requestedSelection?.state === "selected" &&
-    requestedSelection.runtimeChoice.kind === "product-model"
-      ? requestedSelection.runtimeChoice.runtimeModelId
-      : null;
+  const selectedProvider: ProviderKind =
+    scratchDraft.activeProvider ?? stickyActiveProvider ?? input.defaultProvider;
+  const draftModelSelection =
+    scratchDraft.modelSelectionByProvider[selectedProvider] ??
+    stickyModelSelectionByProvider[selectedProvider];
+  const selectedModel: ModelSlug | null =
+    draftModelSelection?.model ?? getDefaultModel(selectedProvider);
+  const selectedProviderModelOptions = draftModelSelection?.options;
+  const selectedModelSupportsAutoMode =
+    draftModelSelection?.provider === "claudeAgent"
+      ? draftModelSelection.supportsAutoMode
+      : undefined;
+
+  const previousSelectedProviderRef = useRef<{
+    threadId: string;
+    provider: ProviderKind;
+  } | null>(null);
 
   useEffect(() => {
     const nextSkills = filterPromptSkillReferences(prompt, composerSkills, selectedProvider);
@@ -75,20 +85,32 @@ export function useKanbanTaskScratchDraft(runtimeCatalog: ProductRuntimeCatalog 
     }
   }, [composerMentions, prompt, scratchThreadId]);
 
-  const handleRuntimeSelectionChange = (model: ProductRuntimeModel, thinking: string | null) => {
-    if (!runtimeCatalog) return;
-    const engine = runtimeCatalog.engines.find(
-      (candidate) => candidate.engineId === runtimeCatalog.defaultEngineId,
-    );
-    if (!engine || engine.modelSelection.kind !== "product-model") return;
-    setRequestedSelection({
-      state: "selected",
-      engineId: engine.engineId,
-      runtimeChoice: { kind: "product-model", runtimeModelId: model.id, thinking },
-      packageGeneration: runtimeCatalog.packageGeneration,
-      permissionPolicy: "approval-required",
-      executionTarget: null,
-    });
+  useEffect(() => {
+    const previous = previousSelectedProviderRef.current;
+    previousSelectedProviderRef.current = {
+      threadId: scratchThreadId,
+      provider: selectedProvider,
+    };
+    if (
+      !previous ||
+      previous.threadId !== scratchThreadId ||
+      previous.provider === selectedProvider
+    ) {
+      return;
+    }
+    useComposerDraftStore.getState().setSkills(scratchThreadId, []);
+    useComposerDraftStore.getState().setMentions(scratchThreadId, []);
+  }, [scratchThreadId, selectedProvider]);
+
+  const handleProviderModelChange = (
+    provider: ProviderKind,
+    model: ModelSlug,
+    supportsAutoMode?: boolean,
+  ) => {
+    const store = useComposerDraftStore.getState();
+    const nextSelection = buildModelSelection(provider, model, undefined, supportsAutoMode);
+    // Mirrors the composer: update the scratch draft and persist the sticky selection.
+    store.setModelSelectionAndSticky(scratchThreadId, nextSelection);
   };
 
   const existingAttachmentCount = useCallback(
@@ -155,9 +177,10 @@ export function useKanbanTaskScratchDraft(runtimeCatalog: ProductRuntimeCatalog 
     waitForPendingImages,
     selectedProvider,
     selectedModel,
-    requestedSelection,
+    selectedModelSupportsAutoMode,
+    selectedProviderModelOptions,
     setPrompt,
-    handleRuntimeSelectionChange,
+    handleProviderModelChange,
     addComposerImages,
     removeComposerImage,
     clearComposerAssistantSelections,

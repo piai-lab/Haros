@@ -1,56 +1,6 @@
 import { Schema, Struct } from "effect";
 import { NonNegativeInt, ProjectId, ThreadId, TrimmedNonEmptyString } from "./baseSchemas";
 
-/** Stable names for concrete system capabilities that remain outside Engine ownership. */
-export const SYSTEM_RPC_METHODS = {
-  discoverScripts: "system.workspace.scripts.discover",
-  listDirectories: "system.workspace.directories.list",
-  searchEntries: "system.workspace.entries.search",
-  searchLocalEntries: "system.workspace.local.search",
-  readFile: "system.workspace.file.read",
-  createLocalFilePreviewGrant: "system.workspace.preview.grant",
-  writeFile: "system.workspace.file.write",
-  runDevServer: "system.workspace.dev-server.run",
-  stopDevServer: "system.workspace.dev-server.stop",
-  listDevServers: "system.workspace.dev-server.list",
-  subscribeDevServerEvents: "system.workspace.dev-server.events",
-  browseFilesystem: "system.filesystem.browse",
-  ensureWorkspaceRoot: "system.workspace.ensure-root",
-  openInEditor: "system.editor.open",
-  gitStatus: "system.git.status",
-  gitReadDiff: "system.git.diff.read",
-  gitDiffStats: "system.git.diff.stats",
-  gitPull: "system.git.pull",
-  gitListBranches: "system.git.branches.list",
-  gitCreateWorktree: "system.git.worktree.create",
-  gitCreateDetachedWorktree: "system.git.worktree.create-detached",
-  gitRemoveWorktree: "system.git.worktree.remove",
-  gitCreateBranch: "system.git.branch.create",
-  gitCheckout: "system.git.checkout",
-  gitStashAndCheckout: "system.git.stash-and-checkout",
-  gitStashDrop: "system.git.stash.drop",
-  gitStashInfo: "system.git.stash.info",
-  gitRemoveIndexLock: "system.git.index-lock.remove",
-  gitInit: "system.git.init",
-  gitStageFiles: "system.git.files.stage",
-  gitUnstageFiles: "system.git.files.unstage",
-  pullRequestsList: "system.pull-requests.list",
-  pullRequestsReviewRequestCount: "system.pull-requests.review-request-count",
-  pullRequestsDetail: "system.pull-requests.detail",
-  pullRequestsDiff: "system.pull-requests.diff",
-  pullRequestsAction: "system.pull-requests.action",
-  pullRequestsComment: "system.pull-requests.comment",
-  pullRequestsSetPinned: "system.pull-requests.pin.set",
-  terminalOpen: "system.terminal.open",
-  terminalWrite: "system.terminal.write",
-  terminalAckOutput: "system.terminal.output.ack",
-  terminalResize: "system.terminal.resize",
-  terminalClear: "system.terminal.clear",
-  terminalRestart: "system.terminal.restart",
-  terminalClose: "system.terminal.close",
-  subscribeTerminalEvents: "system.terminal.events",
-} as const;
-
 import {
   AutomationCancelRunInput,
   AutomationArchiveRunInput,
@@ -64,6 +14,26 @@ import {
   AutomationStreamEvent,
   AutomationUpdateInput,
 } from "./automation";
+import {
+  ClientOrchestrationCommand,
+  OrchestrationEvent,
+  OrchestrationImportThreadInput,
+  OrchestrationShellStreamItem,
+  OrchestrationSubscribeShellInput,
+  OrchestrationSubscribeThreadInput,
+  OrchestrationThreadStreamItem,
+  OrchestrationUnsubscribeShellInput,
+  OrchestrationUnsubscribeThreadInput,
+  ORCHESTRATION_WS_CHANNELS,
+  OrchestrationGetFullThreadDiffInput,
+  OrchestrationGetThreadDetailSnapshotInput,
+  OrchestrationGetShellSnapshotInput,
+  OrchestrationRepairStateInput,
+  ORCHESTRATION_WS_METHODS,
+  OrchestrationGetSnapshotInput,
+  OrchestrationGetTurnDiffInput,
+  OrchestrationReplayEventsInput,
+} from "./orchestration";
 import {
   GitActionProgressEvent,
   GitCheckoutInput,
@@ -87,7 +57,9 @@ import {
   GitStashDropInput,
   GitStashInfoInput,
   GitStatusInput,
+  GitSummarizeDiffInput,
   GitUnstageFilesInput,
+  GitWorktreeSetupProgressEvent,
 } from "./git";
 import {
   TerminalAckOutputInput,
@@ -106,6 +78,7 @@ import {
   ProjectDiscoverScriptsInput,
   ProjectListDirectoriesInput,
   ProjectReadFileInput,
+  ProjectResolveOutOfRootFileReferenceInput,
   ProjectRunDevServerInput,
   ProjectSearchEntriesInput,
   ProjectSearchLocalEntriesInput,
@@ -117,11 +90,49 @@ import { FilesystemBrowseInput } from "./filesystem";
 import { OpenInEditorInput } from "./editor";
 import {
   ServerConfigUpdatedPayload,
+  ServerGenerateAutomationIntentInput,
+  ServerGenerateThreadRecapInput,
   ServerLifecycleStreamEvent,
+  ServerProviderUpdateInput,
+  ServerUpdateSettingsInput,
+  ServerGetProviderUsageSnapshotInput,
+  ServerListProviderUsageInput,
+  ServerProviderStatusesUpdatedPayload,
+  ServerSettingsUpdatedPayload,
   ServerStopLocalServerInput,
+  ServerVoicePrewarmInput,
   ServerVoiceTranscriptionInput,
 } from "./server";
 import { StatsGetProfileStatsInput, StatsGetProfileTokenStatsInput } from "./stats";
+import {
+  ProviderListCommandsInput,
+  ProviderGetComposerCapabilitiesInput,
+  ProviderListPluginsInput,
+  ProviderListModelsInput,
+  ProviderListAgentsInput,
+  ProviderReadPluginInput,
+  ProviderListSkillsInput,
+  ProviderSkillsCatalogInput,
+} from "./providerDiscovery";
+import { ProviderCompactThreadInput } from "./provider";
+import {
+  PullRequestActionInput,
+  PullRequestCommentInput,
+  PullRequestDetailInput,
+  PullRequestReviewRequestCountInput,
+  PullRequestSetPinnedInput,
+  PullRequestsListInput,
+} from "./pullRequests";
+import {
+  ExternalMcpCreateIntegrationInput,
+  ExternalMcpRefreshPairingInput,
+  ExternalMcpRevokeIntegrationInput,
+} from "./externalMcp";
+import {
+  GitHubProjectProvisionInput,
+  GitHubProjectProvisionProgressEvent,
+} from "./githubProjectProvisioning";
+
 // ── WebSocket RPC Method Names ───────────────────────────────────────
 
 export const WS_METHODS = {
@@ -131,12 +142,14 @@ export const WS_METHODS = {
   projectsSearchEntries: "projects.searchEntries",
   projectsSearchLocalEntries: "projects.searchLocalEntries",
   projectsReadFile: "projects.readFile",
+  projectsResolveOutOfRootFileReference: "projects.resolveOutOfRootFileReference",
   projectsCreateLocalFilePreviewGrant: "projects.createLocalFilePreviewGrant",
   projectsWriteFile: "projects.writeFile",
   projectsRunDevServer: "projects.runDevServer",
   projectsStopDevServer: "projects.stopDevServer",
   projectsListDevServers: "projects.listDevServers",
   subscribeProjectDevServerEvents: "projects.subscribeDevServerEvents",
+  projectsProvisionFromGitHub: "projects.provisionFromGitHub",
 
   // Studio methods
   studioListThreadOutputs: "studio.listThreadOutputs",
@@ -153,6 +166,7 @@ export const WS_METHODS = {
   gitStatus: "git.status",
   gitReadWorkingTreeDiff: "git.readWorkingTreeDiff",
   gitWorkingTreeDiffStats: "git.workingTreeDiffStats",
+  gitSummarizeDiff: "git.summarizeDiff",
   gitRunStackedAction: "git.runStackedAction",
   gitListBranches: "git.listBranches",
   gitCreateWorktree: "git.createWorktree",
@@ -172,6 +186,15 @@ export const WS_METHODS = {
   gitPullRequestSnapshot: "git.pullRequestSnapshot",
   gitPreparePullRequestThread: "git.preparePullRequestThread",
 
+  // Global pull request methods
+  pullRequestsList: "pullRequests.list",
+  pullRequestsReviewRequestCount: "pullRequests.reviewRequestCount",
+  pullRequestsDetail: "pullRequests.detail",
+  pullRequestsDiff: "pullRequests.diff",
+  pullRequestsAction: "pullRequests.action",
+  pullRequestsComment: "pullRequests.comment",
+  pullRequestsSetPinned: "pullRequests.setPinned",
+
   // Terminal methods
   terminalOpen: "terminal.open",
   terminalWrite: "terminal.write",
@@ -184,19 +207,46 @@ export const WS_METHODS = {
   // Server meta
   serverGetConfig: "server.getConfig",
   serverGetEnvironment: "server.getEnvironment",
+  serverGetSettings: "server.getSettings",
+  serverUpdateSettings: "server.updateSettings",
+  serverRefreshProviders: "server.refreshProviders",
+  serverUpdateProvider: "server.updateProvider",
+  serverListExternalMcpIntegrations: "server.listExternalMcpIntegrations",
+  serverCreateExternalMcpIntegration: "server.createExternalMcpIntegration",
+  serverRevokeExternalMcpIntegration: "server.revokeExternalMcpIntegration",
+  serverRefreshExternalMcpPairing: "server.refreshExternalMcpPairing",
   serverListWorktrees: "server.listWorktrees",
   serverListLocalServers: "server.listLocalServers",
   serverStopLocalServer: "server.stopLocalServer",
+  serverGetProviderUsageSnapshot: "server.getProviderUsageSnapshot",
+  serverListProviderUsage: "server.listProviderUsage",
   statsGetProfileStats: "stats.getProfileStats",
   statsGetProfileTokenStats: "stats.getProfileTokenStats",
   serverGetDiagnostics: "server.getDiagnostics",
+  serverPrewarmVoice: "server.prewarmVoice",
   serverTranscribeVoice: "server.transcribeVoice",
+  serverGenerateThreadRecap: "server.generateThreadRecap",
+  serverGenerateAutomationIntent: "server.generateAutomationIntent",
   serverUpsertKeybinding: "server.upsertKeybinding",
   subscribeServerLifecycle: "server.subscribeLifecycle",
   subscribeServerConfig: "server.subscribeConfig",
+  subscribeServerProviderStatuses: "server.subscribeProviderStatuses",
+  subscribeServerSettings: "server.subscribeSettings",
 
   // Streaming subscriptions
   subscribeTerminalEvents: "terminal.subscribeEvents",
+  subscribeOrchestrationDomainEvents: "orchestration.subscribeDomainEvents",
+
+  // Provider discovery
+  providerGetComposerCapabilities: "provider.getComposerCapabilities",
+  providerCompactThread: "provider.compactThread",
+  providerListCommands: "provider.listCommands",
+  providerListSkills: "provider.listSkills",
+  providerListSkillsCatalog: "provider.listSkillsCatalog",
+  providerListPlugins: "provider.listPlugins",
+  providerReadPlugin: "provider.readPlugin",
+  providerListModels: "provider.listModels",
+  providerListAgents: "provider.listAgents",
 
   // Automation methods
   automationList: "automation.list",
@@ -217,11 +267,15 @@ export const WS_METHODS = {
 export const WS_CHANNELS = {
   automationEvent: "automation.event",
   gitActionProgress: "git.actionProgress",
+  gitWorktreeSetupProgress: "git.worktreeSetupProgress",
+  projectProvisionProgress: "project.provisionProgress",
   terminalEvent: "terminal.event",
   projectDevServerEvent: "project.devServerEvent",
   serverWelcome: "server.welcome",
   serverMaintenanceUpdated: "server.maintenanceUpdated",
   serverConfigUpdated: "server.configUpdated",
+  serverProviderStatusesUpdated: "server.providerStatusesUpdated",
+  serverSettingsUpdated: "server.settingsUpdated",
 } as const;
 
 // -- Tagged Union of all request body schemas ─────────────────────────
@@ -237,12 +291,37 @@ const tagRequestBody = <const Tag extends string, const Fields extends Schema.St
   );
 
 const WebSocketRequestBody = Schema.Union([
+  // Orchestration methods
+  tagRequestBody(
+    ORCHESTRATION_WS_METHODS.dispatchCommand,
+    Schema.Struct({ command: ClientOrchestrationCommand }),
+  ),
+  tagRequestBody(ORCHESTRATION_WS_METHODS.importThread, OrchestrationImportThreadInput),
+  tagRequestBody(ORCHESTRATION_WS_METHODS.getSnapshot, OrchestrationGetSnapshotInput),
+  tagRequestBody(ORCHESTRATION_WS_METHODS.getShellSnapshot, OrchestrationGetShellSnapshotInput),
+  tagRequestBody(
+    ORCHESTRATION_WS_METHODS.getThreadDetailSnapshot,
+    OrchestrationGetThreadDetailSnapshotInput,
+  ),
+  tagRequestBody(ORCHESTRATION_WS_METHODS.repairState, OrchestrationRepairStateInput),
+  tagRequestBody(ORCHESTRATION_WS_METHODS.getTurnDiff, OrchestrationGetTurnDiffInput),
+  tagRequestBody(ORCHESTRATION_WS_METHODS.getFullThreadDiff, OrchestrationGetFullThreadDiffInput),
+  tagRequestBody(ORCHESTRATION_WS_METHODS.replayEvents, OrchestrationReplayEventsInput),
+  tagRequestBody(ORCHESTRATION_WS_METHODS.subscribeShell, OrchestrationSubscribeShellInput),
+  tagRequestBody(ORCHESTRATION_WS_METHODS.unsubscribeShell, OrchestrationUnsubscribeShellInput),
+  tagRequestBody(ORCHESTRATION_WS_METHODS.subscribeThread, OrchestrationSubscribeThreadInput),
+  tagRequestBody(ORCHESTRATION_WS_METHODS.unsubscribeThread, OrchestrationUnsubscribeThreadInput),
+
   // Project Search
   tagRequestBody(WS_METHODS.projectsDiscoverScripts, ProjectDiscoverScriptsInput),
   tagRequestBody(WS_METHODS.projectsListDirectories, ProjectListDirectoriesInput),
   tagRequestBody(WS_METHODS.projectsSearchEntries, ProjectSearchEntriesInput),
   tagRequestBody(WS_METHODS.projectsSearchLocalEntries, ProjectSearchLocalEntriesInput),
   tagRequestBody(WS_METHODS.projectsReadFile, ProjectReadFileInput),
+  tagRequestBody(
+    WS_METHODS.projectsResolveOutOfRootFileReference,
+    ProjectResolveOutOfRootFileReferenceInput,
+  ),
   tagRequestBody(
     WS_METHODS.projectsCreateLocalFilePreviewGrant,
     ProjectCreateLocalFilePreviewGrantInput,
@@ -252,6 +331,7 @@ const WebSocketRequestBody = Schema.Union([
   tagRequestBody(WS_METHODS.projectsStopDevServer, ProjectStopDevServerInput),
   tagRequestBody(WS_METHODS.projectsListDevServers, Schema.Struct({})),
   tagRequestBody(WS_METHODS.subscribeProjectDevServerEvents, Schema.Struct({})),
+  tagRequestBody(WS_METHODS.projectsProvisionFromGitHub, GitHubProjectProvisionInput),
 
   // Filesystem browse
   // Studio
@@ -268,6 +348,7 @@ const WebSocketRequestBody = Schema.Union([
   tagRequestBody(WS_METHODS.gitStatus, GitStatusInput),
   tagRequestBody(WS_METHODS.gitReadWorkingTreeDiff, GitReadWorkingTreeDiffInput),
   tagRequestBody(WS_METHODS.gitWorkingTreeDiffStats, GitReadWorkingTreeDiffInput),
+  tagRequestBody(WS_METHODS.gitSummarizeDiff, GitSummarizeDiffInput),
   tagRequestBody(WS_METHODS.gitRunStackedAction, GitRunStackedActionInput),
   tagRequestBody(WS_METHODS.gitListBranches, GitListBranchesInput),
   tagRequestBody(WS_METHODS.gitCreateWorktree, GitCreateWorktreeInput),
@@ -287,6 +368,15 @@ const WebSocketRequestBody = Schema.Union([
   tagRequestBody(WS_METHODS.gitPullRequestSnapshot, GitPullRequestSnapshotInput),
   tagRequestBody(WS_METHODS.gitPreparePullRequestThread, GitPreparePullRequestThreadInput),
 
+  // Global pull requests
+  tagRequestBody(WS_METHODS.pullRequestsList, PullRequestsListInput),
+  tagRequestBody(WS_METHODS.pullRequestsReviewRequestCount, PullRequestReviewRequestCountInput),
+  tagRequestBody(WS_METHODS.pullRequestsDetail, PullRequestDetailInput),
+  tagRequestBody(WS_METHODS.pullRequestsDiff, PullRequestDetailInput),
+  tagRequestBody(WS_METHODS.pullRequestsAction, PullRequestActionInput),
+  tagRequestBody(WS_METHODS.pullRequestsComment, PullRequestCommentInput),
+  tagRequestBody(WS_METHODS.pullRequestsSetPinned, PullRequestSetPinnedInput),
+
   // Terminal methods
   tagRequestBody(WS_METHODS.terminalOpen, TerminalOpenInput),
   tagRequestBody(WS_METHODS.terminalWrite, TerminalWriteInput),
@@ -299,14 +389,38 @@ const WebSocketRequestBody = Schema.Union([
   // Server meta
   tagRequestBody(WS_METHODS.serverGetConfig, Schema.Struct({})),
   tagRequestBody(WS_METHODS.serverGetEnvironment, Schema.Struct({})),
+  tagRequestBody(WS_METHODS.serverGetSettings, Schema.Struct({})),
+  tagRequestBody(WS_METHODS.serverUpdateSettings, ServerUpdateSettingsInput),
+  tagRequestBody(WS_METHODS.serverRefreshProviders, Schema.Struct({})),
+  tagRequestBody(WS_METHODS.serverUpdateProvider, ServerProviderUpdateInput),
+  tagRequestBody(WS_METHODS.serverListExternalMcpIntegrations, Schema.Struct({})),
+  tagRequestBody(WS_METHODS.serverCreateExternalMcpIntegration, ExternalMcpCreateIntegrationInput),
+  tagRequestBody(WS_METHODS.serverRevokeExternalMcpIntegration, ExternalMcpRevokeIntegrationInput),
+  tagRequestBody(WS_METHODS.serverRefreshExternalMcpPairing, ExternalMcpRefreshPairingInput),
   tagRequestBody(WS_METHODS.serverListWorktrees, Schema.Struct({})),
   tagRequestBody(WS_METHODS.serverListLocalServers, Schema.Struct({})),
   tagRequestBody(WS_METHODS.serverStopLocalServer, ServerStopLocalServerInput),
+  tagRequestBody(WS_METHODS.serverGetProviderUsageSnapshot, ServerGetProviderUsageSnapshotInput),
+  tagRequestBody(WS_METHODS.serverListProviderUsage, ServerListProviderUsageInput),
   tagRequestBody(WS_METHODS.statsGetProfileStats, StatsGetProfileStatsInput),
   tagRequestBody(WS_METHODS.statsGetProfileTokenStats, StatsGetProfileTokenStatsInput),
   tagRequestBody(WS_METHODS.serverGetDiagnostics, Schema.Struct({})),
+  tagRequestBody(WS_METHODS.serverPrewarmVoice, ServerVoicePrewarmInput),
   tagRequestBody(WS_METHODS.serverTranscribeVoice, ServerVoiceTranscriptionInput),
+  tagRequestBody(WS_METHODS.serverGenerateThreadRecap, ServerGenerateThreadRecapInput),
+  tagRequestBody(WS_METHODS.serverGenerateAutomationIntent, ServerGenerateAutomationIntentInput),
   tagRequestBody(WS_METHODS.serverUpsertKeybinding, KeybindingRule),
+
+  // Provider discovery
+  tagRequestBody(WS_METHODS.providerGetComposerCapabilities, ProviderGetComposerCapabilitiesInput),
+  tagRequestBody(WS_METHODS.providerCompactThread, ProviderCompactThreadInput),
+  tagRequestBody(WS_METHODS.providerListCommands, ProviderListCommandsInput),
+  tagRequestBody(WS_METHODS.providerListSkills, ProviderListSkillsInput),
+  tagRequestBody(WS_METHODS.providerListSkillsCatalog, ProviderSkillsCatalogInput),
+  tagRequestBody(WS_METHODS.providerListPlugins, ProviderListPluginsInput),
+  tagRequestBody(WS_METHODS.providerReadPlugin, ProviderReadPluginInput),
+  tagRequestBody(WS_METHODS.providerListModels, ProviderListModelsInput),
+  tagRequestBody(WS_METHODS.providerListAgents, ProviderListAgentsInput),
 
   // Automation methods
   tagRequestBody(WS_METHODS.automationList, AutomationListInput),
@@ -357,10 +471,17 @@ export interface WsPushPayloadByChannel {
   readonly [WS_CHANNELS.serverWelcome]: WsWelcomePayload;
   readonly [WS_CHANNELS.serverMaintenanceUpdated]: ServerLifecycleStreamEvent;
   readonly [WS_CHANNELS.serverConfigUpdated]: typeof ServerConfigUpdatedPayload.Type;
+  readonly [WS_CHANNELS.serverProviderStatusesUpdated]: typeof ServerProviderStatusesUpdatedPayload.Type;
+  readonly [WS_CHANNELS.serverSettingsUpdated]: typeof ServerSettingsUpdatedPayload.Type;
   readonly [WS_CHANNELS.automationEvent]: typeof AutomationStreamEvent.Type;
   readonly [WS_CHANNELS.gitActionProgress]: typeof GitActionProgressEvent.Type;
+  readonly [WS_CHANNELS.gitWorktreeSetupProgress]: typeof GitWorktreeSetupProgressEvent.Type;
+  readonly [WS_CHANNELS.projectProvisionProgress]: typeof GitHubProjectProvisionProgressEvent.Type;
   readonly [WS_CHANNELS.terminalEvent]: typeof TerminalEvent.Type;
   readonly [WS_CHANNELS.projectDevServerEvent]: typeof ProjectDevServerEvent.Type;
+  readonly [ORCHESTRATION_WS_CHANNELS.domainEvent]: OrchestrationEvent;
+  readonly [ORCHESTRATION_WS_CHANNELS.shellEvent]: OrchestrationShellStreamItem;
+  readonly [ORCHESTRATION_WS_CHANNELS.threadEvent]: OrchestrationThreadStreamItem;
 }
 
 export type WsPushChannel = keyof WsPushPayloadByChannel;
@@ -386,6 +507,14 @@ export const WsPushServerConfigUpdated = makeWsPushSchema(
   WS_CHANNELS.serverConfigUpdated,
   ServerConfigUpdatedPayload,
 );
+export const WsPushServerProviderStatusesUpdated = makeWsPushSchema(
+  WS_CHANNELS.serverProviderStatusesUpdated,
+  ServerProviderStatusesUpdatedPayload,
+);
+export const WsPushServerSettingsUpdated = makeWsPushSchema(
+  WS_CHANNELS.serverSettingsUpdated,
+  ServerSettingsUpdatedPayload,
+);
 export const WsPushAutomationEvent = makeWsPushSchema(
   WS_CHANNELS.automationEvent,
   AutomationStreamEvent,
@@ -394,19 +523,47 @@ export const WsPushGitActionProgress = makeWsPushSchema(
   WS_CHANNELS.gitActionProgress,
   GitActionProgressEvent,
 );
+export const WsPushGitWorktreeSetupProgress = makeWsPushSchema(
+  WS_CHANNELS.gitWorktreeSetupProgress,
+  GitWorktreeSetupProgressEvent,
+);
+export const WsPushProjectProvisionProgress = makeWsPushSchema(
+  WS_CHANNELS.projectProvisionProgress,
+  GitHubProjectProvisionProgressEvent,
+);
 export const WsPushTerminalEvent = makeWsPushSchema(WS_CHANNELS.terminalEvent, TerminalEvent);
 export const WsPushProjectDevServerEvent = makeWsPushSchema(
   WS_CHANNELS.projectDevServerEvent,
   ProjectDevServerEvent,
 );
+export const WsPushOrchestrationDomainEvent = makeWsPushSchema(
+  ORCHESTRATION_WS_CHANNELS.domainEvent,
+  OrchestrationEvent,
+);
+export const WsPushOrchestrationShellEvent = makeWsPushSchema(
+  ORCHESTRATION_WS_CHANNELS.shellEvent,
+  OrchestrationShellStreamItem,
+);
+export const WsPushOrchestrationThreadEvent = makeWsPushSchema(
+  ORCHESTRATION_WS_CHANNELS.threadEvent,
+  OrchestrationThreadStreamItem,
+);
+
 export const WsPushChannelSchema = Schema.Literals([
   WS_CHANNELS.gitActionProgress,
+  WS_CHANNELS.gitWorktreeSetupProgress,
+  WS_CHANNELS.projectProvisionProgress,
   WS_CHANNELS.serverWelcome,
   WS_CHANNELS.serverMaintenanceUpdated,
   WS_CHANNELS.serverConfigUpdated,
+  WS_CHANNELS.serverProviderStatusesUpdated,
+  WS_CHANNELS.serverSettingsUpdated,
   WS_CHANNELS.automationEvent,
   WS_CHANNELS.terminalEvent,
   WS_CHANNELS.projectDevServerEvent,
+  ORCHESTRATION_WS_CHANNELS.domainEvent,
+  ORCHESTRATION_WS_CHANNELS.shellEvent,
+  ORCHESTRATION_WS_CHANNELS.threadEvent,
 ]);
 export type WsPushChannelSchema = typeof WsPushChannelSchema.Type;
 
@@ -414,10 +571,17 @@ export const WsPush = Schema.Union([
   WsPushServerWelcome,
   WsPushServerMaintenanceUpdated,
   WsPushServerConfigUpdated,
+  WsPushServerProviderStatusesUpdated,
+  WsPushServerSettingsUpdated,
   WsPushAutomationEvent,
   WsPushGitActionProgress,
+  WsPushGitWorktreeSetupProgress,
+  WsPushProjectProvisionProgress,
   WsPushTerminalEvent,
   WsPushProjectDevServerEvent,
+  WsPushOrchestrationDomainEvent,
+  WsPushOrchestrationShellEvent,
+  WsPushOrchestrationThreadEvent,
 ]);
 export type WsPush = typeof WsPush.Type;
 

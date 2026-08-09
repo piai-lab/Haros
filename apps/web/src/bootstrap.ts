@@ -1,5 +1,5 @@
 // FILE: bootstrap.ts
-// Purpose: Resolves signed-out and pairing entry gates before app-store hydration.
+// Purpose: Starts the renderer without reading any predecessor product storage.
 
 import { bootstrapSignedOutScreen } from "./authSignedOut";
 import { bootstrapPairingSession } from "./pairingBootstrap";

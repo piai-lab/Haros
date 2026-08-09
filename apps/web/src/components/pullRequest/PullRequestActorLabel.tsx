@@ -7,9 +7,9 @@
 // Layer: Pull request presentation
 // Exports: PullRequestActorLabel
 
-import type { PullRequestActor } from "@omnimind/contracts";
+import type { PullRequestActor } from "@synara/contracts";
 
-import { cn } from "~/lib/styles";
+import { cn } from "~/lib/utils";
 import { PullRequestAvatar } from "./PullRequestAvatar";
 
 export function PullRequestActorLabel({

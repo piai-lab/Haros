@@ -1,4 +1,4 @@
-import { ProjectId, ThreadId, TurnId } from "@omnimind/contracts";
+import { ProjectId, ThreadId, TurnId } from "@synara/contracts";
 import { describe, expect, it } from "vitest";
 
 import { type DraftThreadState } from "./composerDraftStore";
@@ -19,7 +19,9 @@ function makeProject(): Project {
     folderName: "project",
     localName: null,
     cwd: "/tmp/project",
+    defaultModelSelection: { provider: "codex", model: "gpt-5.4-mini" },
     expanded: true,
+    spaceId: null,
     scripts: [],
   };
 }

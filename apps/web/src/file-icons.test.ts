@@ -21,7 +21,7 @@ const PROTOTYPE_MEMBER_TOKENS = [
 ];
 
 describe("getFileIconName", () => {
-  it("uses exact filename matches from the glyph mapping", () => {
+  it("uses exact filename matches from the Central mapping", () => {
     assert.equal(getFileIconName("package.json"), "npm");
     assert.equal(getFileIconName("bun.lock"), "bun");
     assert.equal(getFileIconName("tsconfig.json"), "typescript");
@@ -56,7 +56,7 @@ describe("getFileIconName", () => {
   });
 
   it("falls back to the bracket glyph for unknown or icon-less types", () => {
-    // Swift/Go/Ruby have no dedicated product glyph, so they use the bracket.
+    // Swift/Go/Ruby have no dedicated Central icon, so they use the bracket.
     assert.equal(getFileIconName("App.swift"), "code-brackets");
     assert.equal(getFileIconName("main.go"), "code-brackets");
     assert.equal(getFileIconName("server.rb"), "code-brackets");

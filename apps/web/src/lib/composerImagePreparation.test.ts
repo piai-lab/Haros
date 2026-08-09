@@ -1,7 +1,7 @@
 import {
-  CHAT_IMAGE_MAX_BYTES,
-  CHAT_IMAGE_IMPORT_MAX_BYTES,
-} from "@omnimind/contracts";
+  PROVIDER_SEND_TURN_MAX_IMAGE_BYTES,
+  PROVIDER_SEND_TURN_MAX_IMAGE_IMPORT_BYTES,
+} from "@synara/contracts";
 import { afterEach, describe, expect, it, vi } from "vitest";
 
 import { prepareComposerImageFile } from "./composerImagePreparation";
@@ -30,7 +30,7 @@ describe("prepareComposerImageFile", () => {
     const file = new File(["png"], "massive.png", { type: "image/png" });
     Object.defineProperty(file, "size", {
       configurable: true,
-      value: CHAT_IMAGE_IMPORT_MAX_BYTES + 1,
+      value: PROVIDER_SEND_TURN_MAX_IMAGE_IMPORT_BYTES + 1,
     });
     const createImageBitmapMock = vi.fn();
     vi.stubGlobal("createImageBitmap", createImageBitmapMock);
@@ -46,7 +46,7 @@ describe("prepareComposerImageFile", () => {
     });
     Object.defineProperty(source, "size", {
       configurable: true,
-      value: CHAT_IMAGE_MAX_BYTES + 1,
+      value: PROVIDER_SEND_TURN_MAX_IMAGE_BYTES + 1,
     });
     const close = vi.fn();
     vi.stubGlobal(
@@ -76,7 +76,7 @@ describe("prepareComposerImageFile", () => {
     expect(prepared).not.toBe(source);
     expect(prepared.name).toBe("CleanShot 2026-08-02 at 4.00.23@2x.webp");
     expect(prepared.type).toBe("image/webp");
-    expect(prepared.size).toBeLessThanOrEqual(CHAT_IMAGE_MAX_BYTES);
+    expect(prepared.size).toBeLessThanOrEqual(PROVIDER_SEND_TURN_MAX_IMAGE_BYTES);
     expect(prepared.lastModified).toBe(42);
     expect(drawImage).toHaveBeenCalledOnce();
     expect(close).toHaveBeenCalledOnce();
@@ -88,7 +88,7 @@ describe("prepareComposerImageFile", () => {
     });
     Object.defineProperty(source, "size", {
       configurable: true,
-      value: CHAT_IMAGE_MAX_BYTES + 1,
+      value: PROVIDER_SEND_TURN_MAX_IMAGE_BYTES + 1,
     });
     const createImageBitmapMock = vi.fn();
     vi.stubGlobal("createImageBitmap", createImageBitmapMock);

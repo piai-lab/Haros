@@ -1,4 +1,4 @@
-import type { BrowserAnnotationMarker } from "@omnimind/contracts";
+import type { BrowserAnnotationMarker } from "@synara/contracts";
 
 import type { AnnotationGuestCommand } from "./protocol";
 
@@ -71,11 +71,13 @@ function validMarker(value: unknown): value is BrowserAnnotationMarker {
 }
 
 export function isGuestAnnotationCommand(value: unknown): value is AnnotationGuestCommand {
-  if (!isRecord(value) || value.version !== GUEST_ANNOTATION_PROTOCOL_VERSION) {
+  if (
+    !isRecord(value) ||
+    value.version !== GUEST_ANNOTATION_PROTOCOL_VERSION ||
+    !validIdentifier(value.documentToken)
+  ) {
     return false;
   }
-  if (value.kind === "request-ready") return true;
-  if (!validIdentifier(value.documentToken)) return false;
   if (value.kind === "start") {
     return validIdentifier(value.sessionId) && validTheme(value.theme);
   }

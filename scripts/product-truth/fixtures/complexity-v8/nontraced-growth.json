@@ -1,6 +1,0 @@
-{
-  "compareToBootstrapBaseline": true,
-  "appendToFiles": {
-    "apps/desktop/src/main.ts": "\nfunction candidateRawGrowth() {\n  return FS.readFileSync(\"fixture\");\n}\n"
-  }
-}

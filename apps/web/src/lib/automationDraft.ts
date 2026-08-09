@@ -4,16 +4,18 @@
 // Exports: AutomationCreationDraft plus pure warning/skill helpers.
 // Depends on: automation contracts shared with the native API.
 
-import { DEFAULT_AUTOMATION_FAST_INTERVAL_MAX_ITERATIONS } from "@omnimind/contracts";
+import { DEFAULT_AUTOMATION_FAST_INTERVAL_MAX_ITERATIONS } from "@synara/contracts";
 import type {
   AutomationMode,
   AutomationSchedule,
   AutomationWorktreeMode,
-  ProductRequestedSelection,
+  ModelSelection,
   ProjectId,
+  ProviderInteractionMode,
+  RuntimeMode,
   ThreadId,
-} from "@omnimind/contracts";
-import { automationRequiresTargetThread } from "@omnimind/shared/automationMode";
+} from "@synara/contracts";
+import { automationRequiresTargetThread } from "@synara/shared/automationMode";
 
 import type { ChatAutomationExecutionScope } from "./automationIntent";
 
@@ -52,7 +54,9 @@ export interface AutomationCreationDraft {
   readonly mode: AutomationMode;
   readonly targetThreadId: ThreadId | null;
   readonly projectId: ProjectId;
-  readonly requestedSelection: ProductRequestedSelection;
+  readonly modelSelection: ModelSelection;
+  readonly runtimeMode: RuntimeMode;
+  readonly interactionMode: ProviderInteractionMode;
   readonly worktreeMode: AutomationWorktreeMode;
   readonly maxIterations: number | null;
   readonly stopOnError: boolean;
@@ -66,7 +70,7 @@ export function containsAutomationSkillReference(prompt: string): boolean {
 export function buildAutomationDraftWarnings(input: {
   readonly schedule: AutomationSchedule;
   readonly mode: AutomationMode;
-  readonly permissionPolicy: ProductRequestedSelection["permissionPolicy"];
+  readonly runtimeMode: RuntimeMode;
   readonly worktreeMode: AutomationWorktreeMode;
   readonly hasEphemeralContext: boolean;
   readonly generatedConfidence: number | null;
@@ -99,7 +103,7 @@ export function buildAutomationDraftWarnings(input: {
       requiresAcknowledgement: true,
     });
   }
-  if (input.permissionPolicy === "full-access") {
+  if (input.runtimeMode === "full-access") {
     warnings.push({
       id: "full-access",
       title: "Full access",
@@ -164,7 +168,7 @@ export function automationApprovalGaps(input: {
   readonly enabled: boolean;
   readonly maxIterations: number | null;
   readonly mode: AutomationMode;
-  readonly permissionPolicy: ProductRequestedSelection["permissionPolicy"];
+  readonly runtimeMode: RuntimeMode;
   readonly worktreeMode: AutomationWorktreeMode;
   readonly prompt: string;
   readonly acknowledgedRisks: readonly AutomationAcknowledgedRiskId[];
@@ -181,7 +185,7 @@ export function automationApprovalGaps(input: {
   // Heartbeats reuse their target thread, so local-checkout consent is needed for updates
   // but not dispatch.
   const runBlockingIds = new Set<AutomationDraftWarningId>();
-  if (input.permissionPolicy === "full-access" && !acknowledged.has("full-access")) {
+  if (input.runtimeMode === "full-access" && !acknowledged.has("full-access")) {
     approvalIds.add("full-access");
     runBlockingIds.add("full-access");
   }
@@ -222,7 +226,7 @@ export function automationApprovalGaps(input: {
   const warnings = buildAutomationDraftWarnings({
     schedule: input.schedule,
     mode: input.mode,
-    permissionPolicy: input.permissionPolicy,
+    runtimeMode: input.runtimeMode,
     worktreeMode: input.worktreeMode,
     hasEphemeralContext: false,
     generatedConfidence: null,

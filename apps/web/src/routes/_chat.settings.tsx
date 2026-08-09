@@ -3,8 +3,10 @@
 // Layer: Route screen
 // Exports: Settings route component for `/settings`
 
-import { sameAppSnapShortcut } from "@omnimind/shared/appSnapShortcut";
-import { createFileRoute, useNavigate, useSearch } from "@tanstack/react-router";
+import { PROVIDER_DISPLAY_NAMES, type ProviderKind } from "@synara/contracts";
+import { PROVIDER_DESCRIPTORS } from "@synara/shared/providerMetadata";
+import { sameAppSnapShortcut } from "@synara/shared/appSnapShortcut";
+import { createFileRoute, useSearch } from "@tanstack/react-router";
 import { useEffect, useMemo, useState } from "react";
 
 import {
@@ -19,10 +21,12 @@ import {
   normalizeChatFontSizePx,
   normalizeTerminalFontFamily,
   normalizeTerminalFontSizePx,
+  isGitTextGenerationSettingsDirty,
   TERMINAL_FONT_FAMILY_SUGGESTIONS,
   useAppSettings,
 } from "../appSettings";
 import { AdvancedSettingsPanel } from "~/components/settings/AdvancedSettingsPanel";
+import { AppIconPicker } from "~/components/settings/AppIconPicker";
 import {
   ArchivedSettingsPanel,
   WorktreesSettingsPanel,
@@ -32,7 +36,11 @@ import {
   NotificationsSettingsPanel,
 } from "~/components/settings/DesktopSettingsPanels";
 import { ModelsSettingsPanel } from "~/components/settings/ModelsSettingsPanel";
-import { ProvidersSettingsPanel } from "~/components/settings/ProvidersSettingsPanel";
+import {
+  isProviderInstallSettingsDirty,
+  ProvidersSettingsPanel,
+} from "~/components/settings/ProvidersSettingsPanel";
+import { ProviderOptionLabel } from "../components/ProviderIcon";
 import { KeyboardShortcutsSettingsPanel } from "../components/settings/KeyboardShortcutsSettingsPanel";
 import { ProfileSettingsPanel } from "../components/settings/ProfileSettingsPanel";
 import { ProviderUsageSettingsPanel } from "../components/settings/ProviderUsageSettingsPanel";
@@ -49,6 +57,7 @@ import {
   SettingsSectionShell,
 } from "../components/settings/SettingsPanelPrimitives";
 import { SkillsSettingsPanel } from "../components/settings/SkillsSettingsPanel";
+import { ThemeModePicker } from "../components/settings/ThemeModePicker";
 import { ThemePackEditor } from "../components/ThemePackEditor";
 import {
   CHAT_CONTENT_CARD_CLASS_NAME,
@@ -75,17 +84,17 @@ import { SidebarHeaderNavigationControls } from "../components/SidebarHeaderNavi
 import { useDesktopTopBarTrafficLightGutterClassName } from "../hooks/useDesktopTopBarGutter";
 import { useTheme } from "../hooks/useTheme";
 import { isUiDensity } from "../lib/appDensity";
-import { DeviceLaptopIcon, MoonIcon, RotateCcwIcon, SunIcon } from "../lib/icons";
-import { cn } from "../lib/styles";
-import { isMacPlatform } from "../lib/platform";
+import { isElectron } from "../env";
+import { RotateCcwIcon } from "../lib/icons";
+import { cn, isMacPlatform } from "../lib/utils";
 import { ensureNativeApi, readNativeApi } from "../nativeApi";
+import { sameProviderOrder } from "../providerOrdering";
 import {
   normalizeSettingsSection,
   SETTINGS_NAV_ITEMS,
   SETTINGS_TARGETS,
 } from "../settingsNavigation";
 import { SETTINGS_PAGE_BACKGROUND_CLASS_NAME } from "../settingsPanelStyles";
-import { getWorkbenchCopy } from "../i18n/workbenchCopy";
 
 // ── Settings taxonomy ──────────────────────────────────────────────────────
 
@@ -111,26 +120,7 @@ const UI_DENSITY_OPTIONS = [
   description: string;
 }>;
 
-const THEME_OPTIONS = [
-  {
-    value: "light",
-    label: "Light",
-    description: "Always use the light theme.",
-    icon: <SunIcon />,
-  },
-  {
-    value: "dark",
-    label: "Dark",
-    description: "Always use the dark theme.",
-    icon: <MoonIcon />,
-  },
-  {
-    value: "system",
-    label: "System",
-    description: "Match your OS appearance setting.",
-    icon: <DeviceLaptopIcon />,
-  },
-] as const;
+const PROVIDER_SELECT_OPTIONS = PROVIDER_DESCRIPTORS.map((descriptor) => descriptor.kind);
 
 const TIMESTAMP_FORMAT_LABELS = {
   locale: "System default",
@@ -158,6 +148,10 @@ const FOLLOW_UP_BEHAVIOR_OPTIONS = [
 
 // Shared settings controls live in ~/components/settings/SettingControls.
 
+function isProviderSelectOption(value: string): value is ProviderKind {
+  return PROVIDER_SELECT_OPTIONS.includes(value as ProviderKind);
+}
+
 // Keys of AppSettings whose value is a plain boolean — the only ones that can be
 // driven by the shared on/off toggle row below.
 type BooleanSettingKey = {
@@ -167,28 +161,10 @@ type BooleanSettingKey = {
 // ── Route screen ───────────────────────────────────────────────────────────
 
 function SettingsRouteView() {
-  const navigate = useNavigate();
-  const workbenchCopy = getWorkbenchCopy();
   const routeSearch = useSearch({ strict: false }) as Record<string, unknown>;
   const activeSection = normalizeSettingsSection(routeSearch.section);
   const settingsTarget = typeof routeSearch.target === "string" ? routeSearch.target : null;
   const activeSectionItem = SETTINGS_NAV_ITEMS.find((item) => item.id === activeSection)!;
-  const activeSectionTitle =
-    activeSection === "models"
-      ? workbenchCopy.models
-      : activeSection === "agents"
-        ? workbenchCopy.agents
-        : activeSection === "packages"
-          ? workbenchCopy.packages
-          : activeSectionItem.label;
-  const activeSectionDescription =
-    activeSection === "models"
-      ? workbenchCopy.modelsDescription
-      : activeSection === "agents"
-        ? workbenchCopy.agentsDescription
-        : activeSection === "packages"
-          ? workbenchCopy.packagesDescription
-          : activeSectionItem.description;
 
   const {
     isDefaultActiveTheme,
@@ -213,6 +189,11 @@ function SettingsRouteView() {
     );
   }, [settings.terminalFontFamily]);
 
+  const isGitTextGenerationModelDirty = isGitTextGenerationSettingsDirty(settings, defaults);
+  const isInstallSettingsDirty = isProviderInstallSettingsDirty(settings, defaults);
+  const hiddenProviderCount = new Set(settings.hiddenProviders).size;
+  const isProviderOrderDirty = !sameProviderOrder(settings.providerOrder, defaults.providerOrder);
+
   // Deep links and sidebar search targets all resolve to stable DOM ids in the active panel.
   useEffect(() => {
     if (!settingsTarget) return;
@@ -227,6 +208,7 @@ function SettingsRouteView() {
   const changedSettingLabels = [
     ...(theme !== "system" ? ["Theme"] : []),
     ...(!isDefaultActiveTheme ? [`${resolvedTheme === "dark" ? "Dark" : "Light"} theme pack`] : []),
+    ...(settings.defaultProvider !== defaults.defaultProvider ? ["Default provider"] : []),
     ...(settings.defaultThreadEnvMode !== defaults.defaultThreadEnvMode ? ["New thread mode"] : []),
     ...(settings.sidebarProjectSortOrder !== defaults.sidebarProjectSortOrder
       ? ["Project sort order"]
@@ -237,6 +219,7 @@ function SettingsRouteView() {
     ...(settings.showChatsSection !== defaults.showChatsSection ? ["Chats section"] : []),
     ...(settings.showStudioSection !== defaults.showStudioSection ? ["Studio section"] : []),
     ...(settings.uiDensity !== defaults.uiDensity ? ["UI density"] : []),
+    ...(settings.desktopAppIcon !== defaults.desktopAppIcon ? ["App icon"] : []),
     ...(settings.chatFontSizePx !== defaults.chatFontSizePx ? ["Base font size"] : []),
     ...(settings.terminalFontSizePx !== defaults.terminalFontSizePx ? ["Terminal font size"] : []),
     ...(settings.terminalFontFamily !== defaults.terminalFontFamily ? ["Terminal font"] : []),
@@ -261,7 +244,13 @@ function SettingsRouteView() {
       ? ["AppSnap shortcut"]
       : []),
     ...(settings.appSnapPlaySound !== defaults.appSnapPlaySound ? ["AppSnap capture sound"] : []),
+    ...(settings.enableProviderUpdateChecks !== defaults.enableProviderUpdateChecks
+      ? ["Provider update checks"]
+      : []),
     ...(settings.diffWordWrap !== defaults.diffWordWrap ? ["Diff line wrapping"] : []),
+    ...(settings.showPullRequestDiffColors !== defaults.showPullRequestDiffColors
+      ? ["Pull request diff colors"]
+      : []),
     ...(settings.confirmThreadDelete !== defaults.confirmThreadDelete
       ? ["Delete confirmation"]
       : []),
@@ -271,6 +260,21 @@ function SettingsRouteView() {
     ...(settings.confirmTerminalTabClose !== defaults.confirmTerminalTabClose
       ? ["Terminal close confirmation"]
       : []),
+    ...(isGitTextGenerationModelDirty ? ["Git writing model"] : []),
+    ...(settings.customCodexModels.length > 0 ||
+    settings.customClaudeModels.length > 0 ||
+    settings.customCursorModels.length > 0 ||
+    settings.customAntigravityModels.length > 0 ||
+    settings.customGrokModels.length > 0 ||
+    settings.customDroidModels.length > 0 ||
+    settings.customKiloModels.length > 0 ||
+    settings.customOpenCodeModels.length > 0 ||
+    settings.customPiModels.length > 0
+      ? ["Custom models"]
+      : []),
+    ...(isInstallSettingsDirty ? ["Provider installs"] : []),
+    ...(hiddenProviderCount > 0 ? ["Provider visibility"] : []),
+    ...(isProviderOrderDirty ? ["Provider order"] : []),
   ];
 
   async function restoreDefaults() {
@@ -333,6 +337,44 @@ function SettingsRouteView() {
   const renderGeneralPanel = () => (
     <div className="space-y-6">
       <SettingsSection title="Core defaults">
+        <SettingsRow
+          title="Default provider"
+          description="Choose the provider used for new chats."
+          resetAction={
+            settings.defaultProvider !== defaults.defaultProvider ? (
+              <SettingResetButton
+                label="default provider"
+                onClick={() => updateSettings({ defaultProvider: defaults.defaultProvider })}
+              />
+            ) : null
+          }
+          control={
+            <SettingsSelectControl
+              value={settings.defaultProvider}
+              onValueChange={(value) => {
+                if (!isProviderSelectOption(value)) return;
+                updateSettings({ defaultProvider: value });
+              }}
+              ariaLabel="Default provider"
+              valueContent={
+                <ProviderOptionLabel
+                  provider={settings.defaultProvider}
+                  label={PROVIDER_DISPLAY_NAMES[settings.defaultProvider]}
+                />
+              }
+            >
+              {PROVIDER_SELECT_OPTIONS.map((provider) => (
+                <SelectItem hideIndicator key={provider} value={provider}>
+                  <ProviderOptionLabel
+                    provider={provider}
+                    label={PROVIDER_DISPLAY_NAMES[provider]}
+                  />
+                </SelectItem>
+              ))}
+            </SettingsSelectControl>
+          }
+        />
+
         <SettingsRow
           title="New threads"
           description="Pick the default workspace mode for newly created draft threads."
@@ -576,18 +618,15 @@ function SettingsRouteView() {
                 <SettingResetButton label="theme" onClick={() => setTheme("system")} />
               ) : null
             }
-            control={
-              <SettingsSegmentedControl
+          >
+            <div className="max-w-md pt-3">
+              <ThemeModePicker
                 value={theme}
-                onValueChange={(value) => {
-                  if (value !== "system" && value !== "light" && value !== "dark") return;
-                  setTheme(value);
-                }}
+                onValueChange={setTheme}
                 ariaLabel="Theme preference"
-                options={THEME_OPTIONS}
               />
-            }
-          />
+            </div>
+          </SettingsRow>
         </SettingsCard>
 
         <div className="space-y-3">
@@ -604,6 +643,29 @@ function SettingsRouteView() {
           ))}
         </div>
       </SettingsSectionShell>
+
+      {isElectron ? (
+        <SettingsSection title="App">
+          <SettingsRow
+            title="App icon"
+            description="Choose the icon OmniMind uses in the dock or taskbar."
+            resetAction={
+              settings.desktopAppIcon !== defaults.desktopAppIcon ? (
+                <SettingResetButton
+                  label="app icon"
+                  onClick={() => updateSettings({ desktopAppIcon: defaults.desktopAppIcon })}
+                />
+              ) : null
+            }
+            control={
+              <AppIconPicker
+                value={settings.desktopAppIcon}
+                onValueChange={(desktopAppIcon) => updateSettings({ desktopAppIcon })}
+              />
+            }
+          />
+        </SettingsSection>
+      ) : null}
 
       <SettingsSection title="Typography and spacing">
         <SettingsRow
@@ -896,6 +958,14 @@ function SettingsRouteView() {
 
       <SettingsSection title="Review">
         {renderBooleanSettingRow({
+          settingKey: "showPullRequestDiffColors",
+          title: "Pull request diff colors",
+          description: "Show additions in green and deletions in red in pull request summaries.",
+          resetLabel: "pull request diff colors",
+          ariaLabel: "Show pull request diff colors",
+        })}
+
+        {renderBooleanSettingRow({
           settingKey: "diffWordWrap",
           title: "Diff line wrapping",
           description:
@@ -945,29 +1015,8 @@ function SettingsRouteView() {
         return <KeyboardShortcutsSettingsPanel />;
       case "profile":
         return <ProfileSettingsPanel />;
-      case "packages":
-        return (
-          <div className="space-y-6">
-            <section
-              aria-label="Package capability status"
-              className="rounded-xl border border-border/70 bg-background/60 px-4 py-3"
-            >
-              <h2 className="text-sm font-medium text-foreground">{workbenchCopy.packages}</h2>
-              <p className="text-sm leading-6 text-muted-foreground">
-                {workbenchCopy.packagesBoundary}
-              </p>
-              <Button
-                size="xs"
-                variant="outline"
-                className="mt-3"
-                onClick={() => void navigate({ to: "/plugins" })}
-              >
-                {workbenchCopy.openPackageDiscovery}
-              </Button>
-            </section>
-            <SkillsSettingsPanel />
-          </div>
-        );
+      case "skills":
+        return <SkillsSettingsPanel />;
       case "usage":
         return <ProviderUsageSettingsPanel />;
       default:
@@ -1018,10 +1067,10 @@ function SettingsRouteView() {
                 <div className="mb-8 flex items-start justify-between gap-4">
                   <div className="min-w-0">
                     <h1 className="text-xl font-medium tracking-tight text-foreground">
-                      {activeSectionTitle}
+                      {activeSectionItem.label}
                     </h1>
                     <p className="mt-1.5 text-sm leading-relaxed text-muted-foreground">
-                      {activeSectionDescription}
+                      {activeSectionItem.description}
                     </p>
                   </div>
                   <Button
@@ -1038,17 +1087,6 @@ function SettingsRouteView() {
               ) : null}
 
               {renderRouteOwnedPanel()}
-              {activeSection === "agents" ? (
-                <section
-                  aria-label="Agent capability status"
-                  className="mb-6 rounded-xl border border-border/70 bg-background/60 px-4 py-3"
-                >
-                  <h2 className="text-sm font-medium text-foreground">{workbenchCopy.agents}</h2>
-                  <p className="text-sm leading-6 text-muted-foreground">
-                    {workbenchCopy.agentsBoundary}
-                  </p>
-                </section>
-              ) : null}
               {/* These workflow owners stay mounted so drafts, request guards, and pending
                   mutations retain route lifetime while inactive panels render no DOM. */}
               <div className="contents">
@@ -1066,8 +1104,20 @@ function SettingsRouteView() {
                 />
                 <WorktreesSettingsPanel active={activeSection === "worktrees"} />
                 <ArchivedSettingsPanel active={activeSection === "archived"} />
-                <ModelsSettingsPanel active={activeSection === "models"} />
-                <ProvidersSettingsPanel active={activeSection === "agents"} />
+                <ModelsSettingsPanel
+                  active={activeSection === "models"}
+                  settings={settings}
+                  defaults={defaults}
+                  updateSettings={updateSettings}
+                  resetEpoch={resetEpoch}
+                />
+                <ProvidersSettingsPanel
+                  active={activeSection === "providers"}
+                  settings={settings}
+                  defaults={defaults}
+                  updateSettings={updateSettings}
+                  resetEpoch={resetEpoch}
+                />
                 <ExternalMcpSettingsPanel active={activeSection === "integrations"} />
                 <AdvancedSettingsPanel
                   active={activeSection === "advanced"}

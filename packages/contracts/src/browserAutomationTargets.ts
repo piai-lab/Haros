@@ -3,7 +3,7 @@ import { Schema } from "effect";
 import { BoundedUtf8String } from "./browserAutomationBounds";
 import { BrowserCssSelector } from "./browserAutomationCssSelector";
 import { BrowserElementRef, BrowserSnapshotId } from "./browserAutomationIds";
-import { strictBrowserStruct } from "./browserToolContract";
+import { browserClosedStruct } from "./browserAutomationToolCommon";
 
 export const BrowserAriaRole = Schema.Literals([
   "alert",
@@ -81,41 +81,41 @@ export const BrowserAriaRole = Schema.Literals([
 const BoundedLocatorText = BoundedUtf8String(2_048, 1);
 
 export const BrowserLocator = Schema.Union([
-  strictBrowserStruct({
+  browserClosedStruct({
     kind: Schema.Literal("role"),
     role: BrowserAriaRole,
     name: Schema.optional(BoundedLocatorText),
     exact: Schema.optional(Schema.Boolean),
   }),
-  strictBrowserStruct({
+  browserClosedStruct({
     kind: Schema.Literal("text"),
     text: BoundedLocatorText,
     exact: Schema.optional(Schema.Boolean),
   }),
-  strictBrowserStruct({
+  browserClosedStruct({
     kind: Schema.Literal("label"),
     text: BoundedLocatorText,
     exact: Schema.optional(Schema.Boolean),
   }),
-  strictBrowserStruct({
+  browserClosedStruct({
     kind: Schema.Literal("placeholder"),
     text: BoundedLocatorText,
     exact: Schema.optional(Schema.Boolean),
   }),
-  strictBrowserStruct({ kind: Schema.Literal("testId"), value: BoundedLocatorText }),
+  browserClosedStruct({ kind: Schema.Literal("testId"), value: BoundedLocatorText }),
 ]);
 
 export const BrowserNodeTarget = Schema.Union([
-  strictBrowserStruct({ ref: BrowserElementRef, snapshotId: BrowserSnapshotId }),
-  strictBrowserStruct({ locator: BrowserLocator }),
-  strictBrowserStruct({ selector: BrowserCssSelector }),
+  browserClosedStruct({ ref: BrowserElementRef, snapshotId: BrowserSnapshotId }),
+  browserClosedStruct({ locator: BrowserLocator }),
+  browserClosedStruct({ selector: BrowserCssSelector }),
 ]);
 
-export const BrowserPoint = strictBrowserStruct({ x: Schema.Finite, y: Schema.Finite });
+export const BrowserPoint = browserClosedStruct({ x: Schema.Finite, y: Schema.Finite });
 
 export const BrowserPointerTarget = Schema.Union([
   BrowserNodeTarget,
-  strictBrowserStruct({ point: BrowserPoint }),
+  browserClosedStruct({ point: BrowserPoint }),
 ]);
 
 export const BrowserTarget = BrowserPointerTarget;

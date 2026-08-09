@@ -2,10 +2,10 @@
 // Purpose: "Markers" section of the Environment panel for highlighted transcript text.
 // Layer: Environment panel section
 
-import type { MessageId, ThreadMarker, ThreadMarkerId } from "@omnimind/contracts";
-import { isThreadMarkerAvailable } from "@omnimind/shared/threadMarkers";
+import type { MessageId, ThreadMarker, ThreadMarkerId } from "@synara/contracts";
+import { isThreadMarkerAvailable } from "@synara/shared/threadMarkers";
 
-import { cn } from "~/lib/styles";
+import { cn } from "~/lib/utils";
 import { deriveThreadMarkerLabel } from "~/threadMarkers";
 
 import { EnvironmentEditableChecklistRow } from "./EnvironmentEditableChecklistRow";

@@ -1,40 +1,39 @@
 // FILE: _chat.index.tsx
 // Purpose: Restores the last chat route on app launch, falling back to a fresh home-chat draft.
+//          Also the landing for a Space that has nothing to open.
 // Layer: Routing
 // Depends on: the shared restore/create route surface plus the home-chat new-chat handler.
 
-import { ThreadId, type ProjectId } from "@omnimind/contracts";
-import { createFileRoute, useNavigate } from "@tanstack/react-router";
-import { useEffect, useMemo, useRef, useState } from "react";
+import { SpaceId, type ProjectId } from "@synara/contracts";
+import { createFileRoute } from "@tanstack/react-router";
 
 import {
   RestoreOrCreateChatRoute,
   type RestoreRouteResolver,
 } from "../components/RestoreOrCreateChatRoute";
 import { readSidebarUiState } from "../components/Sidebar.uiState";
-import { SplashScreen } from "../components/SplashScreen";
 import { useComposerDraftStore } from "../composerDraftStore";
-import { useCreateChat } from "../hooks/useCreateChat";
-import { useCreateStudioChat } from "../hooks/useCreateStudioChat";
-import { collectStudioProjectIds, findStudioDraftThreadId } from "../lib/studioProjects";
+import { useHandleNewChat } from "../hooks/useHandleNewChat";
+import { VOID_SPACE_KEY } from "../lib/spaceGrouping";
+import { collectStudioProjectIds } from "../lib/studioProjects";
 import { resolveSplitViewThreadIds, useSplitViewStore } from "../splitViewStore";
 import { EMPTY_THREAD_IDS, useStore } from "../store";
-import { useProductStore } from "../store/productStore";
 import { useWorkspacePathsStore } from "../workspacePathsStore";
-import { resolveChatIndexRestoreRoute } from "./-chatIndexRoute.logic";
-import {
-  createProductChatDraftOnce,
-  resolveProductChatLanding,
-} from "./-productChatIndexRoute.logic";
-import { getWorkbenchCopy } from "../i18n/workbenchCopy";
+import { resolveChatIndexRestoreRoute, type ChatIndexLandingSpace } from "./-chatIndexRoute.logic";
 
+/**
+ * Set by the Space switcher when the selected Space has nothing to open (`spaceKey`, so Void
+ * survives as a string). It scopes the restore below to that Space — without it this landing
+ * happily reopens the *previous* Space's thread, and the route-to-Space sync then writes that
+ * Space back over the user's click.
+ */
 export interface ChatIndexSearch {
-  /** Agent is the canonical default and is omitted. */
-  readonly surface?: "chat" | undefined;
+  readonly space?: string | undefined;
 }
 
-function AgentIndexRouteView() {
-  const { createChat } = useCreateChat();
+function ChatIndexRouteView() {
+  const { handleNewChat } = useHandleNewChat();
+  const landingSpaceKey = Route.useSearch({ select: (search) => search.space });
   const threadIds = useStore((state) => state.threadIds ?? EMPTY_THREAD_IDS);
   const projects = useStore((state) => state.projects);
   const sidebarThreadSummaryById = useStore((state) => state.sidebarThreadSummaryById);
@@ -42,7 +41,11 @@ function AgentIndexRouteView() {
   const homeDir = useWorkspacePathsStore((state) => state.homeDir);
   const chatWorkspaceRoot = useWorkspacePathsStore((state) => state.chatWorkspaceRoot);
   const studioWorkspaceRoot = useWorkspacePathsStore((state) => state.studioWorkspaceRoot);
-  const createFreshChat = () => createChat({ fresh: true });
+  // A Space landing reuses the stored home-chat draft instead of minting one (same reasoning as
+  // the /studio landing): a fresh draft per visit would litter the Chats container every time
+  // someone clicked through their empty Spaces.
+  const createFreshChat = () =>
+    landingSpaceKey === undefined ? handleNewChat({ fresh: true }) : handleNewChat();
 
   const workspacePaths = { homeDir, chatWorkspaceRoot, studioWorkspaceRoot };
   // Home chats restore the last visited route, except Studio threads — those belong to the
@@ -59,6 +62,15 @@ function AgentIndexRouteView() {
     }
   }
 
+  const landingSpace: ChatIndexLandingSpace | null =
+    landingSpaceKey === undefined
+      ? null
+      : {
+          spaceId: landingSpaceKey === VOID_SPACE_KEY ? null : SpaceId.makeUnsafe(landingSpaceKey),
+          projectById: new Map(projects.map((project) => [project.id, project])),
+          workspacePaths,
+        };
+
   const resolveRestoreRoute: RestoreRouteResolver = ({ availableSplitViewIds }) => {
     const lastThreadRoute = readSidebarUiState().lastThreadRoute;
     const rememberedSplitView = lastThreadRoute?.splitViewId
@@ -74,6 +86,7 @@ function AgentIndexRouteView() {
       rememberedSplitViewThreadIds: rememberedSplitView
         ? resolveSplitViewThreadIds(rememberedSplitView)
         : undefined,
+      landingSpace,
     });
   };
 
@@ -85,168 +98,8 @@ function AgentIndexRouteView() {
   );
 }
 
-const PRODUCT_SHELL_TIMEOUT_MS = 10_000;
-
-/**
- * Canonical Chat landing. Product summaries are the only durable recent-conversation inventory;
- * the donor Studio project is retained solely to host one unsent local draft until Product owns it.
- */
-function ProductChatIndexRouteView() {
-  const workbenchCopy = getWorkbenchCopy();
-  const navigate = useNavigate();
-  const { createStudioChat } = useCreateStudioChat();
-  const shellHydrated = useProductStore((store) => store.shellHydrated);
-  const shellIssue = useProductStore((store) => store.shellIssue);
-  const conversations = useProductStore((store) => store.conversations);
-  const projects = useStore((state) => state.projects);
-  const draftThreadsByThreadId = useComposerDraftStore((state) => state.draftThreadsByThreadId);
-  const projectDraftThreadIdByProjectId = useComposerDraftStore(
-    (state) => state.projectDraftThreadIdByProjectId,
-  );
-  const homeDir = useWorkspacePathsStore((state) => state.homeDir);
-  const chatWorkspaceRoot = useWorkspacePathsStore((state) => state.chatWorkspaceRoot);
-  const studioWorkspaceRoot = useWorkspacePathsStore((state) => state.studioWorkspaceRoot);
-  const splitViewsHydrated = useSplitViewStore((state) => state.hasHydrated);
-  const splitViewsById = useSplitViewStore((state) => state.splitViewsById);
-  const [attempt, setAttempt] = useState(0);
-  const [timedOut, setTimedOut] = useState(false);
-  const [creationError, setCreationError] = useState<string | null>(null);
-  const createInFlightRef = useRef(false);
-
-  const productChatConversations = useMemo(
-    () =>
-      conversations
-        .filter((conversation) => conversation.workspaceKind === "chat")
-        .toSorted(
-          (left, right) =>
-            Date.parse(right.updatedAt) - Date.parse(left.updatedAt) ||
-            left.id.localeCompare(right.id),
-        ),
-    [conversations],
-  );
-  const studioProjectIds = collectStudioProjectIds(projects, {
-    homeDir,
-    chatWorkspaceRoot,
-    studioWorkspaceRoot,
-  });
-  const localDraftThreadId = findStudioDraftThreadId({
-    studioProjectIds,
-    projectDraftThreadIdByProjectId,
-    draftThreadsByThreadId,
-  });
-  const productChatSplitViewIds = useMemo(() => {
-    const productChatThreadIds = new Set<string>(
-      productChatConversations.map((conversation) => conversation.id),
-    );
-    if (localDraftThreadId) productChatThreadIds.add(localDraftThreadId);
-    return new Set(
-      Object.entries(splitViewsById).flatMap(([splitViewId, splitView]) =>
-        splitView &&
-        resolveSplitViewThreadIds(splitView).every((threadId) => productChatThreadIds.has(threadId))
-          ? [splitViewId]
-          : [],
-      ),
-    );
-  }, [localDraftThreadId, productChatConversations, splitViewsById]);
-  const productChatLanding = useMemo(
-    () =>
-      resolveProductChatLanding({
-        shellHydrated,
-        splitViewsHydrated,
-        productConversationIds: productChatConversations.map((conversation) => conversation.id),
-        localDraftThreadId,
-        lastThreadRoute: readSidebarUiState().lastThreadRoute,
-        availableSplitViewIds: productChatSplitViewIds,
-        canCreateLocalDraft: studioWorkspaceRoot !== null,
-      }),
-    [
-      localDraftThreadId,
-      productChatConversations,
-      shellHydrated,
-      productChatSplitViewIds,
-      splitViewsHydrated,
-      studioWorkspaceRoot,
-    ],
-  );
-
-  useEffect(() => {
-    if (
-      (productChatLanding.kind !== "hold-product-shell" &&
-        productChatLanding.kind !== "hold-draft-bootstrap") ||
-      timedOut
-    ) {
-      return;
-    }
-    const timer = window.setTimeout(() => setTimedOut(true), PRODUCT_SHELL_TIMEOUT_MS);
-    return () => window.clearTimeout(timer);
-  }, [attempt, productChatLanding.kind, timedOut]);
-
-  useEffect(() => {
-    if (
-      productChatLanding.kind === "hold-product-shell" ||
-      productChatLanding.kind === "hold-draft-bootstrap" ||
-      creationError !== null
-    ) {
-      return;
-    }
-    if (productChatLanding.kind === "navigate") {
-      void navigate({
-        to: "/$threadId",
-        params: { threadId: ThreadId.makeUnsafe(productChatLanding.threadId) },
-        replace: true,
-        search: {
-          surface: "chat",
-          ...(productChatLanding.splitViewId
-            ? { splitViewId: productChatLanding.splitViewId }
-            : {}),
-        },
-      });
-      return;
-    }
-    void createProductChatDraftOnce(createInFlightRef, () => createStudioChat())
-      .then((result) => {
-        if (result && !result.ok) setCreationError(result.error);
-      })
-      .catch((error: unknown) => {
-        setCreationError(
-          error instanceof Error ? error.message : workbenchCopy.unablePrepareNewChat,
-        );
-      });
-  }, [creationError, createStudioChat, navigate, productChatLanding]);
-
-  const errorMessage = timedOut
-    ? productChatLanding.kind === "hold-draft-bootstrap"
-      ? workbenchCopy.draftWorkspaceUnavailable
-      : shellIssue
-        ? workbenchCopy.productShellUnavailable
-        : workbenchCopy.productShellTimeout
-    : null;
-  const visibleError = creationError ?? errorMessage;
-  return (
-    <SplashScreen
-      errorMessage={visibleError}
-      onRetry={
-        visibleError
-          ? () => {
-              setCreationError(null);
-              setTimedOut(false);
-              setAttempt((value) => value + 1);
-            }
-          : null
-      }
-    />
-  );
-}
-
-function ChatIndexRouteView() {
-  const surface = Route.useSearch({ select: (search) => search.surface });
-  return surface === "chat" ? <ProductChatIndexRouteView /> : <AgentIndexRouteView />;
-}
-
 export const Route = createFileRoute("/_chat/")({
-  validateSearch: (raw: Record<string, unknown>): ChatIndexSearch => ({
-    ...(typeof raw.space === "string" && raw.space.length > 0 ? { space: raw.space } : {}),
-    ...(raw.surface === "chat" ? { surface: "chat" as const } : {}),
-  }),
+  validateSearch: (raw: Record<string, unknown>): ChatIndexSearch =>
+    typeof raw.space === "string" && raw.space.length > 0 ? { space: raw.space } : {},
   component: ChatIndexRouteView,
 });

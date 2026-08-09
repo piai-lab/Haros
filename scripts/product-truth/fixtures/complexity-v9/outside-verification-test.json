@@ -1,6 +1,0 @@
-{
-  "extends": "exact-predecessor-positive",
-  "appendToFiles": {
-    "packages/contracts/src/native-host/protocol.test.ts": "\n// rejected non-selected verification row\n"
-  }
-}

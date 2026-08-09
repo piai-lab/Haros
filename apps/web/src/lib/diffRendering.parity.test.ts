@@ -9,7 +9,7 @@
 // feeding one badge, so any disagreement between them is a visible number changing for the
 // user. Every patch shape git can emit for a working tree belongs in this table.
 
-import { summarizeUnifiedPatchTotals } from "@omnimind/shared/unifiedPatchStats";
+import { summarizeUnifiedPatchTotals } from "@synara/shared/unifiedPatchStats";
 import { describe, expect, it } from "vitest";
 
 import { summarizePatchTotals } from "./diffRendering";

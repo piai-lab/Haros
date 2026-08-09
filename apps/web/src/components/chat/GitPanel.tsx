@@ -9,7 +9,7 @@
 // through GitCore; on settle we invalidate the per-cwd git caches so both lists stay in sync.
 
 import { type FileDiffMetadata } from "@pierre/diffs/react";
-import { type ProjectId, type ThreadId } from "@omnimind/contracts";
+import { type ProjectId, type ThreadId } from "@synara/contracts";
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import { useMemo, useState } from "react";
 
@@ -29,7 +29,7 @@ import {
   gitWorkingTreeDiffQueryOptions,
 } from "~/lib/gitReactQuery";
 import { PlusIcon, RefreshCwIcon, RotateCcwIcon } from "~/lib/icons";
-import { cn } from "~/lib/styles";
+import { cn } from "~/lib/utils";
 import { useStore } from "~/store";
 import { createProjectSelector, createThreadSelector } from "~/storeSelectors";
 import { Alert } from "../ui/alert";

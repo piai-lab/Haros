@@ -16,28 +16,14 @@ const PROJECT_DIRECTORY_LIST_MAX_DEPTH = 32;
 const PROJECT_SCRIPT_DISCOVERY_MAX_DEPTH = 3;
 const ProjectEntryKind = Schema.Literals(["file", "directory"]);
 
+export const ProjectFileEncoding = Schema.Literals(["utf8", "utf8-bom"]);
+export type ProjectFileEncoding = typeof ProjectFileEncoding.Type;
+
+export const ProjectFileLineEnding = Schema.Literals(["lf", "crlf", "cr", "mixed"]);
+export type ProjectFileLineEnding = typeof ProjectFileLineEnding.Type;
+
 export const ProjectKind = Schema.Literals(["project", "chat", "studio"]);
 export type ProjectKind = typeof ProjectKind.Type;
-
-export const ProjectScriptIcon = Schema.Literals([
-  "play",
-  "test",
-  "lint",
-  "configure",
-  "build",
-  "debug",
-]);
-export type ProjectScriptIcon = typeof ProjectScriptIcon.Type;
-
-/** User-authored workspace command; execution remains a scoped system capability. */
-export const ProjectScript = Schema.Struct({
-  id: TrimmedNonEmptyString,
-  name: TrimmedNonEmptyString,
-  command: TrimmedNonEmptyString,
-  icon: ProjectScriptIcon,
-  runOnWorktreeCreate: Schema.Boolean,
-});
-export type ProjectScript = typeof ProjectScript.Type;
 
 export const ProjectSearchEntriesInput = Schema.Struct({
   cwd: TrimmedNonEmptyString,
@@ -148,11 +134,15 @@ export const ProjectWriteFileInput = Schema.Struct({
   cwd: TrimmedNonEmptyString,
   relativePath: TrimmedNonEmptyString.check(Schema.isMaxLength(PROJECT_FILE_PATH_MAX_LENGTH)),
   contents: Schema.String.check(Schema.isMaxLength(PROJECT_READ_FILE_MAX_BYTES)),
+  expectedVersion: Schema.optional(TrimmedNonEmptyString.check(Schema.isMaxLength(128))),
+  encoding: Schema.optional(ProjectFileEncoding),
+  lineEnding: Schema.optional(ProjectFileLineEnding),
 });
 export type ProjectWriteFileInput = typeof ProjectWriteFileInput.Type;
 
 export const ProjectWriteFileResult = Schema.Struct({
   relativePath: TrimmedNonEmptyString,
+  version: TrimmedNonEmptyString,
 });
 export type ProjectWriteFileResult = typeof ProjectWriteFileResult.Type;
 
@@ -170,8 +160,30 @@ export const ProjectReadFileResult = Schema.Struct({
   relativePath: TrimmedNonEmptyString,
   contents: Schema.String,
   truncated: Schema.Boolean,
+  version: Schema.NullOr(TrimmedNonEmptyString),
+  encoding: Schema.NullOr(ProjectFileEncoding),
+  lineEnding: Schema.NullOr(ProjectFileLineEnding),
 });
 export type ProjectReadFileResult = typeof ProjectReadFileResult.Type;
+
+// Locates a chat file reference that failed to read inside the workspace root:
+// the server retries the workspace-relative path against ancestor directories
+// of the root (bounded to the user's home directory) and returns the absolute
+// path of the real file, or null when no candidate exists. Reading the located
+// file still goes through the preview-grant flow — this method never returns
+// file contents.
+export const ProjectResolveOutOfRootFileReferenceInput = Schema.Struct({
+  cwd: TrimmedNonEmptyString,
+  relativePath: TrimmedNonEmptyString.check(Schema.isMaxLength(PROJECT_READ_FILE_PATH_MAX_LENGTH)),
+});
+export type ProjectResolveOutOfRootFileReferenceInput =
+  typeof ProjectResolveOutOfRootFileReferenceInput.Type;
+
+export const ProjectResolveOutOfRootFileReferenceResult = Schema.Struct({
+  fullPath: Schema.NullOr(TrimmedNonEmptyString),
+});
+export type ProjectResolveOutOfRootFileReferenceResult =
+  typeof ProjectResolveOutOfRootFileReferenceResult.Type;
 
 export const ProjectCreateLocalFilePreviewGrantInput = Schema.Struct({
   path: TrimmedNonEmptyString.check(Schema.isMaxLength(PROJECT_READ_FILE_PATH_MAX_LENGTH)),
@@ -252,5 +264,3 @@ export const ProjectDevServerEvent = Schema.Union([
   }),
 ]);
 export type ProjectDevServerEvent = typeof ProjectDevServerEvent.Type;
-export const WorkspaceEnvironmentMode = Schema.Literals(["local", "worktree"]);
-export type WorkspaceEnvironmentMode = typeof WorkspaceEnvironmentMode.Type;

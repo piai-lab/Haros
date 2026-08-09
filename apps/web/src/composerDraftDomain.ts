@@ -1,25 +1,21 @@
-import type {
-  HistoricalModelOptions,
-  HistoricalModelSelection,
-  HistoricalModelSlug,
-} from "~/historicalModelSelection";
-import type {
-  ConversationHistoryRun,
-  ConversationPullRequestSummary,
-} from "~/historicalConversation";
 // FILE: composerDraftDomain.ts
 // Purpose: Defines composer draft state, stable defaults, and content/project normalization.
 // Exports: Internal domain primitives plus public facade types.
 
 import {
+  type ModelSelection,
+  type OrchestrationLatestTurn,
+  type OrchestrationThreadPullRequest,
   type ProjectId,
+  type ProviderInteractionMode,
+  type ProviderKind,
   type ProviderMentionReference,
+  type ProviderModelOptions,
   type ProviderSkillReference,
-  type ProductPutQueueItemInput,
-  type ProductRequestedSelection,
+  type ProviderStartOptions,
   type RuntimeMode,
   type ThreadId,
-} from "@omnimind/contracts";
+} from "@synara/contracts";
 import * as Equal from "effect/Equal";
 import * as Schema from "effect/Schema";
 
@@ -47,16 +43,23 @@ import {
   type ThreadPrimarySurface,
 } from "./types";
 
-export const COMPOSER_DRAFT_STORAGE_KEY = "omnimind:composer-drafts:g1";
-export const COMPOSER_DRAFT_STORAGE_GENERATION = 1;
+export const COMPOSER_DRAFT_STORAGE_KEY = "omnimind:composer-drafts:v1";
+export const COMPOSER_DRAFT_STORAGE_VERSION = 6;
 export type DraftThreadEnvMode = "local" | "worktree";
-/** Local composer presentation state used while restoring history; never Product admission. */
-export const ComposerInteractionModeSchema = Schema.Literals(["default", "plan"]);
-export type ComposerInteractionMode = typeof ComposerInteractionModeSchema.Type;
 const TERMINAL_DRAFT_THREAD_MAPPING_SUFFIX = "::terminal";
 
 const PersistedComposerAppSnapSource = Schema.Struct({
   kind: Schema.Literal("appsnap"),
+  captureId: Schema.String,
+  capturedAt: Schema.String,
+  appName: Schema.NullOr(Schema.String),
+  bundleIdentifier: Schema.optionalKey(Schema.NullOr(Schema.String)),
+  appIconDataUrl: Schema.optionalKey(Schema.NullOr(Schema.String)),
+  windowTitle: Schema.NullOr(Schema.String),
+});
+
+const LegacyPersistedComposerAppSnapSource = Schema.Struct({
+  kind: Schema.Literal("appshot"),
   captureId: Schema.String,
   capturedAt: Schema.String,
   appName: Schema.NullOr(Schema.String),
@@ -72,7 +75,9 @@ export const PersistedComposerImageAttachment = Schema.Struct({
   sizeBytes: Schema.Number,
   dataUrl: Schema.optionalKey(Schema.String),
   blobKey: Schema.optionalKey(Schema.String),
-  source: Schema.optionalKey(PersistedComposerAppSnapSource),
+  source: Schema.optionalKey(
+    Schema.Union([PersistedComposerAppSnapSource, LegacyPersistedComposerAppSnapSource]),
+  ),
 });
 
 export type PersistedComposerImageAttachment = typeof PersistedComposerImageAttachment.Type;
@@ -121,20 +126,21 @@ export interface QueuedComposerChatTurn {
   pastedTexts: PastedTextDraft[];
   skills: ProviderSkillReference[];
   mentions: ProviderMentionReference[];
-  selectedProvider: string;
+  selectedProvider: ProviderKind;
   selectedModel: string | null;
   selectedPromptEffort: string | null;
-  modelSelection: HistoricalModelSelection;
-  sourceProposedPlan?: NonNullable<ConversationHistoryRun["sourceProposedPlan"]> | undefined;
+  modelSelection: ModelSelection;
+  providerOptionsForDispatch?: ProviderStartOptions | undefined;
+  sourceProposedPlan?: NonNullable<OrchestrationLatestTurn["sourceProposedPlan"]> | undefined;
   runtimeMode: RuntimeMode;
-  interactionMode: ComposerInteractionMode;
+  interactionMode: ProviderInteractionMode;
   envMode: DraftThreadEnvMode;
 }
 
 export interface RestoredComposerSourceProposedPlan {
   threadId: ThreadId;
   restoredPrompt: string;
-  sourceProposedPlan: NonNullable<ConversationHistoryRun["sourceProposedPlan"]>;
+  sourceProposedPlan: NonNullable<OrchestrationLatestTurn["sourceProposedPlan"]>;
 }
 
 export interface QueuedComposerPlanFollowUp {
@@ -144,10 +150,11 @@ export interface QueuedComposerPlanFollowUp {
   previewText: string;
   text: string;
   interactionMode: "default" | "plan";
-  selectedProvider: string;
+  selectedProvider: ProviderKind;
   selectedModel: string | null;
   selectedPromptEffort: string | null;
-  modelSelection: HistoricalModelSelection;
+  modelSelection: ModelSelection;
+  providerOptionsForDispatch?: ProviderStartOptions | undefined;
   runtimeMode: RuntimeMode;
 }
 
@@ -155,12 +162,6 @@ export type QueuedComposerTurn = QueuedComposerChatTurn | QueuedComposerPlanFoll
 
 export interface ComposerThreadDraftState {
   prompt: string;
-  /**
-   * Present only while this exact draft is transferring to the durable Product
-   * Queue. The stable item id and frozen intent let reload recovery distinguish
-   * this transfer from a later independent draft with identical content.
-   */
-  productQueueTransfer?: ProductPutQueueItemInput | null;
   // Non-null only while composer prompt-history browsing is active: the user's
   // real draft, kept safe while `prompt` temporarily holds a recalled history
   // entry. Restored (and cleared) when a browse is interrupted by a thread
@@ -179,43 +180,41 @@ export interface ComposerThreadDraftState {
   mentions: ProviderMentionReference[];
   queuedTurns: QueuedComposerTurn[];
   restoredSourceProposedPlan?: RestoredComposerSourceProposedPlan | null;
-  modelSelectionByProvider: Partial<Record<string, HistoricalModelSelection>>;
-  activeProvider: string | null;
+  modelSelectionByProvider: Partial<Record<ProviderKind, ModelSelection>>;
+  activeProvider: ProviderKind | null;
   runtimeMode: RuntimeMode | null;
-  interactionMode: ComposerInteractionMode | null;
+  interactionMode: ProviderInteractionMode | null;
 }
 
 export interface DraftThreadState {
   projectId: ProjectId;
   createdAt: string;
   runtimeMode: RuntimeMode;
-  interactionMode: ComposerInteractionMode;
+  interactionMode: ProviderInteractionMode;
   entryPoint: ThreadPrimarySurface;
   branch: string | null;
   worktreePath: string | null;
   workingDirectory?: string | null;
-  lastKnownPr?: ConversationPullRequestSummary | null;
+  lastKnownPr?: OrchestrationThreadPullRequest | null;
   envMode: DraftThreadEnvMode;
   isTemporary?: boolean;
   promotedTo?: ThreadId;
-  requestedSelection?: ProductRequestedSelection;
 }
 
 interface DraftThreadMutationOptions {
   branch?: string | null;
   worktreePath?: string | null;
   workingDirectory?: string | null;
-  lastKnownPr?: ConversationPullRequestSummary | null;
+  lastKnownPr?: OrchestrationThreadPullRequest | null;
   createdAt?: string;
   // Explicitly `| undefined`: callers forward a `ThreadWorkspacePatch`, whose `envMode` is
   // optional in the same way, and under `exactOptionalPropertyTypes` a bare `?:` would reject
   // that spread even though the value sets are identical ("local" | "worktree").
   envMode?: DraftThreadEnvMode | undefined;
   runtimeMode?: RuntimeMode;
-  interactionMode?: ComposerInteractionMode;
+  interactionMode?: ProviderInteractionMode;
   entryPoint?: ThreadPrimarySurface;
   isTemporary?: boolean;
-  requestedSelection?: ProductRequestedSelection;
 }
 
 type DraftThreadCreatedAtMode = "accept-empty" | "preserve-existing-on-empty";
@@ -228,8 +227,8 @@ export interface ComposerDraftStoreState {
   draftsByThreadId: Record<ThreadId, ComposerThreadDraftState>;
   draftThreadsByThreadId: Record<ThreadId, DraftThreadState>;
   projectDraftThreadIdByProjectId: Record<string, ThreadId>;
-  stickyModelSelectionByProvider: Partial<Record<string, HistoricalModelSelection>>;
-  stickyActiveProvider: string | null;
+  stickyModelSelectionByProvider: Partial<Record<ProviderKind, ModelSelection>>;
+  stickyActiveProvider: ProviderKind | null;
   getDraftThreadByProjectId: (
     projectId: ProjectId,
     entryPoint?: ThreadPrimarySurface,
@@ -257,10 +256,9 @@ export interface ComposerDraftStoreState {
       workingDirectory?: string | null;
       envMode?: DraftThreadEnvMode;
       runtimeMode?: RuntimeMode;
-      interactionMode?: ComposerInteractionMode;
+      interactionMode?: ProviderInteractionMode;
       entryPoint?: ThreadPrimarySurface;
       isTemporary?: boolean;
-      requestedSelection?: ProductRequestedSelection;
     },
   ) => void;
   setDraftThreadContext: (
@@ -282,14 +280,8 @@ export interface ComposerDraftStoreState {
   markDraftThreadPromoting: (threadId: ThreadId, promotedTo?: ThreadId) => void;
   finalizePromotedDraftThread: (threadId: ThreadId) => void;
   clearDraftThread: (threadId: ThreadId) => void;
-  setStickyModelSelection: (modelSelection: HistoricalModelSelection | null | undefined) => void;
+  setStickyModelSelection: (modelSelection: ModelSelection | null | undefined) => void;
   setPrompt: (threadId: ThreadId, prompt: string) => void;
-  stageProductQueueTransfer: (threadId: ThreadId, transfer: ProductPutQueueItemInput) => void;
-  clearComposerContentForProductQueueTransfer: (
-    threadId: ThreadId,
-    transfer: ProductPutQueueItemInput,
-    options?: { readonly preservePreviewUrls?: boolean },
-  ) => boolean;
   setPromptHistorySavedDraft: (
     threadId: ThreadId,
     savedDraft: ComposerPromptHistorySavedDraft | null,
@@ -305,17 +297,27 @@ export interface ComposerDraftStoreState {
   setMentions: (threadId: ThreadId, mentions: ProviderMentionReference[]) => void;
   setModelSelection: (
     threadId: ThreadId,
-    modelSelection: HistoricalModelSelection | null | undefined,
+    modelSelection: ModelSelection | null | undefined,
   ) => void;
-  setModelSelectionAndSticky: (
+  setModelSelectionAndSticky: (threadId: ThreadId, modelSelection: ModelSelection) => void;
+  setModelOptions: (
     threadId: ThreadId,
-    modelSelection: HistoricalModelSelection,
+    modelOptions: ProviderModelOptions | null | undefined,
   ) => void;
   applyStickyState: (threadId: ThreadId) => void;
+  setProviderModelOptions: (
+    threadId: ThreadId,
+    provider: ProviderKind,
+    nextProviderOptions: ProviderModelOptions[ProviderKind] | null | undefined,
+    options?: {
+      model?: string | null;
+      persistSticky?: boolean;
+    },
+  ) => void;
   setRuntimeMode: (threadId: ThreadId, runtimeMode: RuntimeMode | null | undefined) => void;
   setInteractionMode: (
     threadId: ThreadId,
-    interactionMode: ComposerInteractionMode | null | undefined,
+    interactionMode: ProviderInteractionMode | null | undefined,
   ) => void;
   enqueueQueuedTurn: (threadId: ThreadId, queuedTurn: QueuedComposerTurn) => void;
   insertQueuedTurn: (threadId: ThreadId, queuedTurn: QueuedComposerTurn, index: number) => void;
@@ -431,7 +433,6 @@ export function buildDraftThreadState(input: {
         ? false
         : existingThread?.isTemporary === true;
   const nextPromotedTo = existingThread?.promotedTo;
-  const requestedSelection = options?.requestedSelection ?? existingThread?.requestedSelection;
 
   return {
     projectId: input.projectId,
@@ -441,10 +442,8 @@ export function buildDraftThreadState(input: {
       mode: input.createdAtMode,
     }),
     runtimeMode: options?.runtimeMode ?? existingThread?.runtimeMode ?? DEFAULT_RUNTIME_MODE,
-    // Local drafts are current Product conversations. Product admission has no
-    // interaction-mode field, so donor-era `plan` state must never become a
-    // persisted execution control for a new draft.
-    interactionMode: DEFAULT_INTERACTION_MODE,
+    interactionMode:
+      options?.interactionMode ?? existingThread?.interactionMode ?? DEFAULT_INTERACTION_MODE,
     entryPoint: nextEntryPoint,
     branch:
       options?.branch === undefined ? (existingThread?.branch ?? null) : (options.branch ?? null),
@@ -461,7 +460,6 @@ export function buildDraftThreadState(input: {
       options?.envMode ?? (nextWorktreePath ? "worktree" : (existingThread?.envMode ?? "local")),
     ...(nextIsTemporary ? { isTemporary: true } : {}),
     ...(nextPromotedTo ? { promotedTo: nextPromotedTo } : {}),
-    ...(requestedSelection ? { requestedSelection } : {}),
   };
 }
 
@@ -485,8 +483,7 @@ export function draftThreadStatesEqual(
     Equal.equals(left.lastKnownPr ?? null, right.lastKnownPr ?? null) &&
     left.envMode === right.envMode &&
     (left.isTemporary === true) === (right.isTemporary === true) &&
-    left.promotedTo === right.promotedTo &&
-    Equal.equals(left.requestedSelection, right.requestedSelection)
+    left.promotedTo === right.promotedTo
   );
 }
 
@@ -510,7 +507,6 @@ export function removeProjectDraftMappingsForThread(
 export function createEmptyThreadDraft(): ComposerThreadDraftState {
   return {
     prompt: "",
-    productQueueTransfer: null,
     promptHistorySavedDraft: null,
     images: [],
     files: [],
@@ -743,7 +739,6 @@ export function buildTransferredComposerDraft(input: {
   return {
     ...base,
     prompt: sourceDraft.prompt,
-    productQueueTransfer: null,
     promptHistorySavedDraft: clonePromptHistorySavedDraft(
       sourceDraft.promptHistorySavedDraft,
       targetThreadId,
@@ -811,7 +806,6 @@ function clonePromptHistorySavedDraft(
 export function shouldRemoveDraft(draft: ComposerThreadDraftState): boolean {
   return (
     draft.prompt.length === 0 &&
-    draft.productQueueTransfer == null &&
     draft.promptHistorySavedDraft === null &&
     draft.images.length === 0 &&
     draft.files.length === 0 &&
@@ -859,12 +853,11 @@ Object.freeze(EMPTY_PASTED_TEXTS);
 Object.freeze(EMPTY_SKILLS);
 Object.freeze(EMPTY_MENTIONS);
 Object.freeze(EMPTY_QUEUED_TURNS);
-const EMPTY_MODEL_SELECTION_BY_PROVIDER: Partial<Record<string, HistoricalModelSelection>> =
+const EMPTY_MODEL_SELECTION_BY_PROVIDER: Partial<Record<ProviderKind, ModelSelection>> =
   Object.freeze({});
 
 const EMPTY_THREAD_DRAFT = Object.freeze<ComposerThreadDraftState>({
   prompt: "",
-  productQueueTransfer: null,
   promptHistorySavedDraft: null,
   images: EMPTY_IMAGES,
   files: EMPTY_FILES,

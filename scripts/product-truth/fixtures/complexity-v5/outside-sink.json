@@ -1,7 +1,0 @@
-{
-  "enforceSemanticGates": true,
-  "semanticFocusPaths": ["packages/shared/src/outsideProductSink.ts"],
-  "virtualFiles": {
-    "packages/shared/src/outsideProductSink.ts": "import { DatabaseSync } from 'node:sqlite';\nexport const outside = (root: string) => new DatabaseSync(`${root}/stores/product.sqlite`);\n"
-  }
-}

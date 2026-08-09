@@ -16,7 +16,7 @@ import { useNavigate } from "@tanstack/react-router";
 import { useEffect, useRef, useState } from "react";
 
 import { useLocalStorage } from "../hooks/useLocalStorage";
-import { Glyph } from "~/ui/icons";
+import { CentralIcon } from "../lib/central-icons";
 import { Button } from "./ui/button";
 import {
   Dialog,
@@ -110,7 +110,7 @@ export function AppSnapWelcomeDialog() {
             aria-hidden
             className="mb-8 flex size-16 shrink-0 items-center justify-center rounded-2xl border border-[color:var(--color-border)] bg-muted/30 text-foreground"
           >
-            <Glyph name="screen-capture" className="size-8" />
+            <CentralIcon name="screen-capture" className="size-8" />
           </span>
 
           <DialogHeader className="gap-2 p-0">

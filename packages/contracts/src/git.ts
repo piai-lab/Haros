@@ -6,6 +6,8 @@ import {
   ThreadId,
   TrimmedNonEmptyString,
 } from "./baseSchemas";
+import { DEFAULT_GIT_TEXT_GENERATION_MODEL } from "./model";
+import { ModelSelection, ProviderStartOptions } from "./orchestration";
 
 const TrimmedNonEmptyStringSchema = TrimmedNonEmptyString;
 
@@ -145,15 +147,43 @@ export const GitPullInput = Schema.Struct({
 });
 export type GitPullInput = typeof GitPullInput.Type;
 
+// Read-only diff summary requests reuse the shared git text-generation model settings.
+export const GitSummarizeDiffInput = Schema.Struct({
+  cwd: TrimmedNonEmptyStringSchema,
+  scope: Schema.optional(Schema.Literals(["workingTree", "unstaged", "staged", "branch"])).pipe(
+    Schema.withConstructorDefault(() => Option.some("workingTree" as const)),
+  ),
+  codexHomePath: Schema.optional(TrimmedNonEmptyStringSchema),
+  providerOptions: Schema.optional(ProviderStartOptions),
+  textGenerationModel: Schema.optional(TrimmedNonEmptyStringSchema).pipe(
+    Schema.withConstructorDefault(() => Option.some(DEFAULT_GIT_TEXT_GENERATION_MODEL)),
+  ),
+  textGenerationModelSelection: Schema.optional(ModelSelection),
+});
+export type GitSummarizeDiffInput = typeof GitSummarizeDiffInput.Type;
+
 export const GitRunStackedActionInput = Schema.Struct({
   actionId: TrimmedNonEmptyStringSchema,
   cwd: TrimmedNonEmptyStringSchema,
   action: GitStackedAction,
   commitMessage: Schema.optional(TrimmedNonEmptyStringSchema.check(Schema.isMaxLength(10_000))),
   featureBranch: Schema.optional(Schema.Boolean),
+  // PR content overrides for create_pr/commit_push_pr; missing fields are generated.
+  prTitle: Schema.optional(TrimmedNonEmptyStringSchema.check(Schema.isMaxLength(300))),
+  prBody: Schema.optional(TrimmedNonEmptyStringSchema.check(Schema.isMaxLength(60_000))),
+  prDraft: Schema.optional(Schema.Boolean),
+  // The user explicitly chose to leave working-tree changes out of a push/create_pr,
+  // so the dirty-tree safety guard must not reject the action.
+  allowDirtyWorkingTree: Schema.optional(Schema.Boolean),
   filePaths: Schema.optional(
     Schema.Array(TrimmedNonEmptyStringSchema).check(Schema.isMinLength(1)),
   ),
+  codexHomePath: Schema.optional(TrimmedNonEmptyStringSchema),
+  providerOptions: Schema.optional(ProviderStartOptions),
+  textGenerationModel: Schema.optional(TrimmedNonEmptyStringSchema).pipe(
+    Schema.withConstructorDefault(() => Option.some(DEFAULT_GIT_TEXT_GENERATION_MODEL)),
+  ),
+  textGenerationModelSelection: Schema.optional(ModelSelection),
 });
 export type GitRunStackedActionInput = typeof GitRunStackedActionInput.Type;
 
@@ -175,6 +205,12 @@ export const GitCreateDetachedWorktreeInput = Schema.Struct({
   ref: TrimmedNonEmptyStringSchema,
   path: Schema.NullOr(TrimmedNonEmptyStringSchema),
   copyChangesFrom: Schema.optional(TrimmedNonEmptyStringSchema),
+  // When set, the worktree is created on this new branch (pinned at `ref`)
+  // instead of a detached HEAD, so threads get a branch attached from birth.
+  newBranch: Schema.optional(TrimmedNonEmptyStringSchema),
+  // Caller-chosen correlation id echoed on every setup progress event, so
+  // concurrent creations can be told apart by progress subscribers.
+  progressId: Schema.optional(TrimmedNonEmptyStringSchema),
 });
 export type GitCreateDetachedWorktreeInput = typeof GitCreateDetachedWorktreeInput.Type;
 
@@ -217,6 +253,11 @@ export const GitRemoveWorktreeInput = Schema.Struct({
   cwd: TrimmedNonEmptyStringSchema,
   path: TrimmedNonEmptyStringSchema,
   force: Schema.optional(Schema.Boolean),
+  // Managed worktrees are born on temporary omnimind/* branches. When set, a
+  // removal also deletes that branch so retiring the worktree cannot strand it;
+  // user-named branches are never touched. Handoff flows leave this unset
+  // because they re-home the branch into the root checkout instead.
+  reclaimTemporaryBranch: Schema.optional(Schema.Boolean),
 });
 export type GitRemoveWorktreeInput = typeof GitRemoveWorktreeInput.Type;
 
@@ -304,6 +345,7 @@ export const GitStatusResult = Schema.Struct({
   }),
   hasUpstream: Schema.Boolean,
   upstreamBranch: TrimmedNonEmptyStringSchema.pipe(Schema.NullOr),
+  configuredPrBaseBranch: Schema.optional(TrimmedNonEmptyStringSchema.pipe(Schema.NullOr)),
   aheadCount: NonNegativeInt,
   behindCount: NonNegativeInt,
   pr: Schema.NullOr(GitStatusPr),
@@ -320,6 +362,7 @@ export type GitStatusLocalResult = typeof GitStatusLocalResult.Type;
 export const GitStatusRemoteResult = Schema.Struct({
   hasUpstream: Schema.Boolean,
   upstreamBranch: GitStatusResult.fields.upstreamBranch,
+  configuredPrBaseBranch: GitStatusResult.fields.configuredPrBaseBranch,
   aheadCount: NonNegativeInt,
   behindCount: NonNegativeInt,
   pr: Schema.NullOr(GitStatusPr),
@@ -402,6 +445,32 @@ export const GitCreateDetachedWorktreeResult = Schema.Struct({
 });
 export type GitCreateDetachedWorktreeResult = typeof GitCreateDetachedWorktreeResult.Type;
 
+// Real phases of detached-worktree creation, in execution order: create the
+// branch, materialize the checkout, then copy local changes (when requested).
+export const GitWorktreeSetupPhase = Schema.Literals(["branch", "worktree", "copy-changes"]);
+export type GitWorktreeSetupPhase = typeof GitWorktreeSetupPhase.Type;
+
+const GitWorktreeSetupProgressBase = Schema.Struct({
+  progressId: Schema.NullOr(TrimmedNonEmptyStringSchema),
+});
+
+const GitWorktreeSetupPhaseStartedEvent = Schema.Struct({
+  ...GitWorktreeSetupProgressBase.fields,
+  kind: Schema.Literal("phase_started"),
+  phase: GitWorktreeSetupPhase,
+});
+const GitWorktreeSetupCompletedEvent = Schema.Struct({
+  ...GitWorktreeSetupProgressBase.fields,
+  kind: Schema.Literal("completed"),
+  result: GitCreateDetachedWorktreeResult,
+});
+
+export const GitWorktreeSetupProgressEvent = Schema.Union([
+  GitWorktreeSetupPhaseStartedEvent,
+  GitWorktreeSetupCompletedEvent,
+]);
+export type GitWorktreeSetupProgressEvent = typeof GitWorktreeSetupProgressEvent.Type;
+
 export const GitStashInfoResult = Schema.Struct({
   cwd: TrimmedNonEmptyStringSchema,
   branch: TrimmedNonEmptyStringSchema.pipe(Schema.NullOr),
@@ -480,6 +549,11 @@ export const GitPullResult = Schema.Struct({
   upstreamBranch: TrimmedNonEmptyStringSchema.pipe(Schema.NullOr),
 });
 export type GitPullResult = typeof GitPullResult.Type;
+
+export const GitSummarizeDiffResult = Schema.Struct({
+  summary: TrimmedNonEmptyStringSchema,
+});
+export type GitSummarizeDiffResult = typeof GitSummarizeDiffResult.Type;
 
 const GitActionProgressBase = Schema.Struct({
   actionId: TrimmedNonEmptyStringSchema,

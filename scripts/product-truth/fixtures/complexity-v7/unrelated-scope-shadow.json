@@ -1,1 +1,0 @@
-{"appendToFiles":{"apps/service/src/atomicWrite.ts":"\nconst v7UnrelatedShadow = () => { const process = { dlopen: () => 0 }; return process; };\nvoid v7UnrelatedShadow;\nexport const v7GlobalOutsideShadow = () => process.dlopen({} as NodeJS.Module, 'x.node');\n"}}

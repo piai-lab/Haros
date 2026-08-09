@@ -1,0 +1,166 @@
+import { Schema, SchemaIssue } from "effect";
+
+// ===============================
+// Core Persistence Errors
+// ===============================
+
+export class PersistenceSqlError extends Schema.TaggedErrorClass<PersistenceSqlError>()(
+  "PersistenceSqlError",
+  {
+    operation: Schema.String,
+    detail: Schema.String,
+    cause: Schema.optional(Schema.Defect),
+  },
+) {
+  override get message(): string {
+    return `SQL error in ${this.operation}: ${this.detail}`;
+  }
+}
+
+export class PersistenceDecodeError extends Schema.TaggedErrorClass<PersistenceDecodeError>()(
+  "PersistenceDecodeError",
+  {
+    operation: Schema.String,
+    issue: Schema.String,
+    cause: Schema.optional(Schema.Defect),
+  },
+) {
+  override get message(): string {
+    return `Decode error in ${this.operation}: ${this.issue}`;
+  }
+}
+
+export function toPersistenceSqlError(operation: string) {
+  return (cause: unknown): PersistenceSqlError => {
+    const messages: string[] = [];
+    const seen = new Set<unknown>();
+    let current: unknown = cause;
+    while (current && typeof current === "object" && !seen.has(current)) {
+      seen.add(current);
+      if (current instanceof Error && current.message && !messages.includes(current.message)) {
+        messages.push(current.message);
+      }
+      current = "cause" in current ? (current as { readonly cause?: unknown }).cause : undefined;
+    }
+    const causeDetail = messages.length > 0 ? ` (${messages.join(": ")})` : "";
+    return new PersistenceSqlError({
+      operation,
+      detail: `Failed to execute ${operation}${causeDetail}`,
+      cause,
+    });
+  };
+}
+
+export function toPersistenceDecodeError(operation: string) {
+  return (error: Schema.SchemaError): PersistenceDecodeError =>
+    new PersistenceDecodeError({
+      operation,
+      issue: SchemaIssue.makeFormatterDefault()(error.issue),
+      cause: error,
+    });
+}
+
+export function toPersistenceSqlOrDecodeError(
+  sqlOperation: string,
+  decodeOperation: string,
+): (cause: unknown) => PersistenceSqlError | PersistenceDecodeError {
+  return (cause) =>
+    Schema.isSchemaError(cause)
+      ? toPersistenceDecodeError(decodeOperation)(cause)
+      : toPersistenceSqlError(sqlOperation)(cause);
+}
+
+export function toPersistenceDecodeCauseError(operation: string) {
+  return (cause: unknown): PersistenceDecodeError =>
+    new PersistenceDecodeError({
+      operation,
+      issue: `Failed to execute ${operation}`,
+      cause,
+    });
+}
+
+export const isPersistenceError = (u: unknown) =>
+  Schema.is(PersistenceSqlError)(u) || Schema.is(PersistenceDecodeError)(u);
+
+export class MigrationLineageError extends Schema.TaggedErrorClass<MigrationLineageError>()(
+  "MigrationLineageError",
+  {
+    firstDivergedId: Schema.Number,
+    expectedName: Schema.String,
+    recordedName: Schema.String,
+  },
+) {
+  override get message(): string {
+    return (
+      `Migration tracker does not match any known lineage: migration ${this.firstDivergedId} ` +
+      `is recorded as "${this.recordedName}" but OmniMind expects "${this.expectedName}". ` +
+      `Refusing to run migrations against an unrecognized database.`
+    );
+  }
+}
+
+export class MigrationSchemaTooNewError extends Schema.TaggedErrorClass<MigrationSchemaTooNewError>()(
+  "MigrationSchemaTooNewError",
+  {
+    databaseMigrationId: Schema.Number,
+    latestSupportedMigrationId: Schema.Number,
+  },
+) {
+  override get message(): string {
+    return (
+      `Database schema migration ${this.databaseMigrationId} is newer than this OmniMind build ` +
+      `(latest supported migration: ${this.latestSupportedMigrationId}). ` +
+      "Refusing writable startup; upgrade OmniMind or restore a compatible database backup."
+    );
+  }
+}
+
+// ===============================
+// Provider Session Repository Errors
+// ===============================
+
+export class ProviderSessionRepositoryValidationError extends Schema.TaggedErrorClass<ProviderSessionRepositoryValidationError>()(
+  "ProviderSessionRepositoryValidationError",
+  {
+    operation: Schema.String,
+    issue: Schema.String,
+    cause: Schema.optional(Schema.Defect),
+  },
+) {
+  override get message(): string {
+    return `Provider session repository validation failed in ${this.operation}: ${this.issue}`;
+  }
+}
+
+export class ProviderSessionRepositoryPersistenceError extends Schema.TaggedErrorClass<ProviderSessionRepositoryPersistenceError>()(
+  "ProviderSessionRepositoryPersistenceError",
+  {
+    operation: Schema.String,
+    detail: Schema.String,
+    cause: Schema.optional(Schema.Defect),
+  },
+) {
+  override get message(): string {
+    return `Provider session repository persistence error in ${this.operation}: ${this.detail}`;
+  }
+}
+
+export type OrchestrationEventStoreError = PersistenceSqlError | PersistenceDecodeError;
+
+export type ProviderSessionRepositoryError =
+  | ProviderSessionRepositoryValidationError
+  | ProviderSessionRepositoryPersistenceError;
+
+export type OrchestrationCommandReceiptRepositoryError =
+  | PersistenceSqlError
+  | PersistenceDecodeError;
+
+export type ProviderSessionRuntimeRepositoryError = PersistenceSqlError | PersistenceDecodeError;
+
+export type ProjectionRepositoryError = PersistenceSqlError | PersistenceDecodeError;
+
+export type AuthPairingLinkRepositoryError = PersistenceSqlError | PersistenceDecodeError;
+
+export type AuthSessionRepositoryError = PersistenceSqlError | PersistenceDecodeError;
+
+export type AutomationRepositoryError = PersistenceSqlError | PersistenceDecodeError;

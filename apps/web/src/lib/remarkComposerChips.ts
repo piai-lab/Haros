@@ -1,6 +1,6 @@
 // FILE: remarkComposerChips.ts
 // Purpose: Remark plugin that rewrites composer inline tokens (skills, @-mentions,
-//          bare link chips, and terminal selections) inside markdown
+//          agent mentions, bare link chips, and terminal selections) inside markdown
 //          text nodes into custom elements, so user-message markdown renders the exact
 //          same chips as the composer echo. Running inside remark (after parsing) means
 //          tokens typed inside inline code or fenced blocks stay literal for free.
@@ -9,7 +9,7 @@
 //          terminal chip constants, ComposerChipSegment,
 //          createComposerChipsRemarkPlugin, parseComposerChipSegment
 
-import type { ProviderMentionReference } from "@omnimind/contracts";
+import type { ProviderMentionReference } from "@synara/contracts";
 import {
   splitPromptIntoDisplaySegments,
   type ComposerPromptSegment,
@@ -27,12 +27,13 @@ export interface TerminalContextChipToken {
 
 export type ComposerChipSegment = Extract<
   ComposerPromptSegment,
-  { type: "skill" } | { type: "mention" } | { type: "link" }
+  { type: "skill" } | { type: "mention" } | { type: "agent-mention" } | { type: "link" }
 >;
 
 const CHIP_SEGMENT_TYPES = new Set<ComposerChipSegment["type"]>([
   "skill",
   "mention",
+  "agent-mention",
   "link",
 ]);
 

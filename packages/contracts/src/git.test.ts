@@ -7,6 +7,7 @@ import {
   GitPreparePullRequestThreadInput,
   GitRunStackedActionInput,
   GitResolvePullRequestResult,
+  GitSummarizeDiffInput,
 } from "./git";
 
 const decodeCreateWorktreeInput = Schema.decodeUnknownSync(GitCreateWorktreeInput);
@@ -15,6 +16,7 @@ const decodePreparePullRequestThreadInput = Schema.decodeUnknownSync(
   GitPreparePullRequestThreadInput,
 );
 const decodeRunStackedActionInput = Schema.decodeUnknownSync(GitRunStackedActionInput);
+const decodeSummarizeDiffInput = Schema.decodeUnknownSync(GitSummarizeDiffInput);
 const decodeResolvePullRequestResult = Schema.decodeUnknownSync(GitResolvePullRequestResult);
 
 describe("GitCreateWorktreeInput", () => {
@@ -103,4 +105,42 @@ describe("GitRunStackedActionInput", () => {
     expect(parsed.action).toBe("commit");
   });
 
+  it("accepts an optional codexHomePath for git text generation", () => {
+    const parsed = decodeRunStackedActionInput({
+      actionId: "action-2",
+      cwd: "/repo",
+      action: "commit_push",
+      codexHomePath: "/tmp/custom-codex-home",
+    });
+
+    expect(parsed.codexHomePath).toBe("/tmp/custom-codex-home");
+  });
+
+  it("accepts an optional textGenerationModelSelection for provider routing", () => {
+    const parsed = decodeRunStackedActionInput({
+      actionId: "action-3",
+      cwd: "/repo",
+      action: "commit",
+      textGenerationModelSelection: {
+        provider: "opencode",
+        model: "openrouter/gpt-oss-120b",
+      },
+    });
+
+    expect(parsed.textGenerationModelSelection?.provider).toBe("opencode");
+    expect(parsed.textGenerationModelSelection?.model).toBe("openrouter/gpt-oss-120b");
+  });
+});
+
+describe("GitSummarizeDiffInput", () => {
+  it("accepts an optional codexHomePath for diff summaries", () => {
+    const parsed = decodeSummarizeDiffInput({
+      cwd: "/repo",
+      scope: "staged",
+      codexHomePath: "/tmp/custom-codex-home",
+    });
+
+    expect(parsed.codexHomePath).toBe("/tmp/custom-codex-home");
+    expect(parsed.scope).toBe("staged");
+  });
 });

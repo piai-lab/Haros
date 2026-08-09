@@ -6,12 +6,13 @@
 import {
   DESKTOP_TOP_BAR_TRAFFIC_LIGHT_GUTTER_CSS_VAR,
   resolveMacDesktopTopBarTrafficLightGutterCssPx,
-} from "@omnimind/shared/desktopChrome";
+} from "@synara/shared/desktopChrome";
 import { useLayoutEffect } from "react";
 
 import { isElectron } from "~/env";
 import { useSidebar } from "~/components/ui/sidebar";
-import { isMacPlatform, isWindowsPlatform } from "~/lib/platform";
+import { readDesktopZoomFactor, subscribeDesktopZoomFactor } from "~/lib/desktopZoom";
+import { isMacPlatform, isWindowsPlatform } from "~/lib/utils";
 
 /**
  * Class name backed by `index.css` (not Tailwind) so the gutter survives zoom
@@ -45,12 +46,6 @@ export function shouldReserveDesktopTopBarTrafficLightGutter(input: {
   return !input.sidebarOpen;
 }
 
-function readDesktopZoomFactor(): number {
-  const bridge = window.desktopBridge;
-  if (!bridge?.getZoomFactor) return 1;
-  return bridge.getZoomFactor();
-}
-
 function applyTrafficLightGutterCssVar(zoomFactor: number): void {
   document.documentElement.style.setProperty(
     DESKTOP_TOP_BAR_TRAFFIC_LIGHT_GUTTER_CSS_VAR,
@@ -72,10 +67,7 @@ export function useSyncDesktopTopBarTrafficLightGutterZoom(): void {
 
     applyTrafficLightGutterCssVar(readDesktopZoomFactor());
 
-    const bridge = window.desktopBridge;
-    const unsubscribe = bridge?.onZoomFactorChange?.((zoomFactor) => {
-      applyTrafficLightGutterCssVar(zoomFactor);
-    });
+    const unsubscribe = subscribeDesktopZoomFactor(applyTrafficLightGutterCssVar);
 
     // Preload can attach after the first layout pass; re-apply on the next frame.
     const frame = requestAnimationFrame(() => {
@@ -84,7 +76,7 @@ export function useSyncDesktopTopBarTrafficLightGutterZoom(): void {
 
     return () => {
       cancelAnimationFrame(frame);
-      unsubscribe?.();
+      unsubscribe();
       document.documentElement.style.removeProperty(DESKTOP_TOP_BAR_TRAFFIC_LIGHT_GUTTER_CSS_VAR);
     };
   }, [isMacDesktop]);

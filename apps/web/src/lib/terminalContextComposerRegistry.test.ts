@@ -40,16 +40,6 @@ describe("terminalContextComposerRegistry", () => {
     expect(getTerminalContextComposerTarget("pane-2")).toBeUndefined();
   });
 
-  it("never exposes a target registered for a different pane scope", () => {
-    const target = vi.fn();
-    const cleanup = registerTerminalContextComposerTarget("single-chat-pane", target);
-
-    expect(getTerminalContextComposerTarget("split-chat-pane-left")).toBeUndefined();
-    expect(getTerminalContextComposerTarget("single-chat-pane")).toBe(target);
-
-    cleanup();
-  });
-
   it("notifies subscribers when availability changes", () => {
     const listener = vi.fn();
     const unsubscribe = subscribeTerminalContextComposerTarget("pane-3", listener);

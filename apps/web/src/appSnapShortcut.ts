@@ -6,8 +6,8 @@ import type {
   KeybindingCommand,
   KeybindingShortcut,
   ResolvedKeybindingsConfig,
-} from "@omnimind/contracts";
-import { appSnapShortcutKeyLabel } from "@omnimind/shared/appSnapShortcut";
+} from "@synara/contracts";
+import { appSnapShortcutKeyLabel } from "@synara/shared/appSnapShortcut";
 
 import { DEFAULT_SHORTCUT_FALLBACKS } from "./keybindings";
 

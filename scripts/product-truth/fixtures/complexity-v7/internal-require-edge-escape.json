@@ -1,1 +1,0 @@
-{"virtualFiles":{"apps/service/src/v7OutsideCommonJs.ts":"export const outside = true;\n"},"appendToFiles":{"apps/service/src/main.ts":"\nconst v7OutsideRequire = require('./v7OutsideCommonJs');\nvoid v7OutsideRequire;\n"}}

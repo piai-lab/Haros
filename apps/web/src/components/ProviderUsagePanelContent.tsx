@@ -2,7 +2,8 @@
 // Purpose: Render a provider usage summary panel that can show both classic
 // rate-limit rows and archive-derived local usage lines in the same popover.
 
-import { historicalUsageLabel } from "~/historicalSourcePresentation";
+import type { ProviderKind } from "@synara/contracts";
+import { providerUsageLabel } from "@synara/shared/providerUsage";
 
 import { ExternalLinkIcon, TriangleAlertIcon } from "~/lib/icons";
 import type { OpenUsageUsageLine } from "~/lib/openUsageRateLimits";
@@ -12,13 +13,15 @@ import {
   type ProviderRateLimit,
 } from "~/lib/rateLimits";
 import { deriveProviderUsageDisplayRows } from "~/lib/providerUsageDisplay";
-import { cn } from "~/lib/styles";
+import { cn } from "~/lib/utils";
 
 import { ProviderUsageLimitRows } from "./ProviderUsageLimitRows";
 import { ProviderUsageLineList } from "./ProviderUsageLineList";
 
+export { providerUsageLabel };
+
 export function ProviderUsagePanelContent(props: {
-  provider: string | null | undefined;
+  provider: ProviderKind | null | undefined;
   rateLimits: ReadonlyArray<ProviderRateLimit>;
   usageLines?: ReadonlyArray<OpenUsageUsageLine> | undefined;
   notice?: string | null | undefined;
@@ -39,7 +42,7 @@ export function ProviderUsagePanelContent(props: {
     <div className={cn("space-y-2", props.className)}>
       {props.showTitle !== false ? (
         <div className="text-[length:var(--app-font-size-chat-meta,10px)] font-medium text-muted-foreground">
-          {historicalUsageLabel(props.provider)}
+          {providerUsageLabel(props.provider)}
         </div>
       ) : null}
       {props.notice ? (
@@ -57,13 +60,13 @@ export function ProviderUsagePanelContent(props: {
         />
       ) : visibleRows.length === 0 && props.isLoading ? (
         <p className="text-[length:var(--app-font-size-chat-meta,10px)] leading-relaxed text-muted-foreground">
-          Reading recorded usage from conversation activity.
+          Scanning local usage data for the selected provider.
         </p>
       ) : visibleRows.length === 0 ? (
         <p className="text-[length:var(--app-font-size-chat-meta,10px)] leading-relaxed text-muted-foreground">
           {props.provider
-            ? "No usage was recorded in conversation activity for the selected source."
-            : "No usage was recorded in conversation activity."}
+            ? "No local usage data was found yet for the selected provider."
+            : "No local usage data was found yet."}
         </p>
       ) : null}
       {props.showLearnMore === true && learnMoreHref ? (

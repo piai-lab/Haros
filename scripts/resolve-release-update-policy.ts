@@ -1,5 +1,5 @@
 // FILE: resolve-release-update-policy.ts
-// Purpose: Resolves release metadata for GitHub Actions from the checked-in update policy.
+// Purpose: Resolves release metadata for GitHub Actions from the checked-in lane policy.
 
 import { appendFileSync } from "node:fs";
 import { dirname, resolve } from "node:path";
@@ -22,6 +22,8 @@ const output = {
   is_prerelease: String(policy.isPrerelease),
   make_latest: String(policy.makeLatest),
   mirror_to_stable_channel: String(policy.mirrorToStableChannel),
+  release_lane: policy.lane,
+  bridge_tag: policy.bridgeTag,
   update_channel: policy.channel,
 };
 

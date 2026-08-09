@@ -96,13 +96,21 @@ describe("deriveOmniMindMcpToolTitle", () => {
         "OmniMind is reading thread activity",
         "OmniMind read thread activity",
       ],
-      ["omnimind_read_thread_events", "OmniMind is reading thread events", "OmniMind read thread events"],
+      [
+        "omnimind_read_thread_events",
+        "OmniMind is reading thread events",
+        "OmniMind read thread events",
+      ],
       [
         "omnimind_read_thread_runtime_events",
         "OmniMind is reading thread runtime events",
         "OmniMind read thread runtime events",
       ],
-      ["omnimind_diagnose_thread", "OmniMind is diagnosing a thread", "OmniMind diagnosed a thread"],
+      [
+        "omnimind_diagnose_thread",
+        "OmniMind is diagnosing a thread",
+        "OmniMind diagnosed a thread",
+      ],
       ["omnimind_create_thread", "OmniMind is creating a thread", "OmniMind created a thread"],
       ["omnimind_create_threads", "OmniMind is creating threads", "OmniMind created threads"],
       [
@@ -111,15 +119,27 @@ describe("deriveOmniMindMcpToolTitle", () => {
         "OmniMind finished waiting for threads",
       ],
       ["omnimind_send_message", "OmniMind is sending a message", "OmniMind sent a message"],
-      ["omnimind_interrupt_thread", "OmniMind is interrupting a thread", "OmniMind interrupted a thread"],
+      [
+        "omnimind_interrupt_thread",
+        "OmniMind is interrupting a thread",
+        "OmniMind interrupted a thread",
+      ],
       ["omnimind_set_thread_title", "OmniMind is renaming a thread", "OmniMind renamed a thread"],
-      ["omnimind_set_thread_archived", "OmniMind is updating a thread", "OmniMind updated a thread"],
+      [
+        "omnimind_set_thread_archived",
+        "OmniMind is updating a thread",
+        "OmniMind updated a thread",
+      ],
       [
         "omnimind_create_automation",
         "OmniMind is creating an automation",
         "OmniMind created an automation",
       ],
-      ["omnimind_list_automations", "OmniMind is listing automations", "OmniMind listed automations"],
+      [
+        "omnimind_list_automations",
+        "OmniMind is listing automations",
+        "OmniMind listed automations",
+      ],
       [
         "omnimind_cancel_automation",
         "OmniMind is stopping an automation",
@@ -175,9 +195,9 @@ describe("deriveOmniMindMcpToolTitle", () => {
   });
 
   it("recognizes bare and already-humanized OmniMind tool names", () => {
-    expect(deriveOmniMindMcpToolTitle({ toolName: "omnimind_send_message", status: "running" })).toBe(
-      "OmniMind is sending a message",
-    );
+    expect(
+      deriveOmniMindMcpToolTitle({ toolName: "omnimind_send_message", status: "running" }),
+    ).toBe("OmniMind is sending a message");
     expect(
       deriveOmniMindMcpToolTitle({ title: "OmniMind: OmniMind List Threads", status: "completed" }),
     ).toBe("OmniMind listed threads");
@@ -441,12 +461,12 @@ describe("deriveReadableCommandDisplay", () => {
   it("does not discard real chained commands after a shell wrapper", () => {
     expect(
       deriveReadableCommandDisplay(
-        `/bin/zsh -lc 'rm -f /tmp/test.log && bun run --cwd apps/service test'`,
+        `/bin/zsh -lc 'rm -f /tmp/test.log && bun run --cwd apps/server test'`,
       ),
     ).toEqual({
       verb: "Removed",
       target: "/tmp/test.log",
-      fullCommand: `/bin/zsh -lc 'rm -f /tmp/test.log && bun run --cwd apps/service test'`,
+      fullCommand: `/bin/zsh -lc 'rm -f /tmp/test.log && bun run --cwd apps/server test'`,
     });
   });
 

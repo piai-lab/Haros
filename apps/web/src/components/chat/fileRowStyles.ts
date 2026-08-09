@@ -4,7 +4,7 @@
 //          surface re-declaring the same Tailwind classes and indent math.
 // Layer: Chat/shared UI
 
-import { cn } from "~/lib/styles";
+import { cn } from "~/lib/utils";
 
 // Solid "active block" = the selection background token. The selected row paints
 // it directly; the keyboard-focused row re-applies the same token under

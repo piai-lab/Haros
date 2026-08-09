@@ -2,7 +2,7 @@
 // Purpose: Shared remaining-quota progress track with an optional expected-pace marker.
 // Used by Settings and compact picker usage views so marker placement stays consistent.
 
-import { cn } from "~/lib/styles";
+import { cn } from "~/lib/utils";
 
 function clampPercent(value: number): number {
   return Math.min(100, Math.max(0, value));

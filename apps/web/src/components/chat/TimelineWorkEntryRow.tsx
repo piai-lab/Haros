@@ -3,7 +3,7 @@
 // Layer: Web chat presentation component
 // Exports: TimelineWorkEntryRow, EditedFileRowContent, prefersCompactWorkEntryRow
 
-import type { TurnId } from "@omnimind/contracts";
+import type { TurnId } from "@synara/contracts";
 import {
   createElement,
   memo,
@@ -29,7 +29,7 @@ import {
   GitHubIcon,
   GlobeIcon,
   HammerIcon,
-  type GlyphComponent,
+  type LucideIcon,
   McpIcon,
   PencilIcon,
   SearchIcon,
@@ -39,7 +39,7 @@ import {
   ZapIcon,
 } from "~/lib/icons";
 import { describeLinkChip } from "~/lib/linkChips";
-import { cn } from "~/lib/styles";
+import { cn } from "~/lib/utils";
 
 import { isFileChangeWorkLogEntry, type WorkLogEntry } from "../../session-logic";
 import {
@@ -54,7 +54,7 @@ import { DiffStatLabel } from "./DiffStatLabel";
 import { type ExpandedImagePreview } from "./ExpandedImagePreview";
 import { LinkChipIcon } from "../LinkChipIcon";
 import { normalizeCompactToolLabel } from "./MessagesTimeline.logic";
-import { BrandMark } from "../BrandMark";
+import { OmniMindLogo } from "../OmniMindLogo";
 import { ToolCallDetailsContent } from "./ToolCallDetailsDialog";
 import { DisclosureChevron } from "../ui/DisclosureChevron";
 import { DisclosureRegion } from "../ui/DisclosureRegion";
@@ -90,22 +90,14 @@ const EMPTY_FILE_DIFF_STATS: ReadonlyMap<string, { additions: number; deletions:
 
 type TimelineWorkEntry = WorkLogEntry;
 
-const AgentTaskIcon: GlyphComponent = (props) => <BotIcon {...props} />;
+const AgentTaskIcon: LucideIcon = (props) => <BotIcon {...props} />;
 
-const OmniMindToolIcon: GlyphComponent = ({
-  className,
-  "aria-label": ariaLabel,
-  "aria-hidden": ariaHidden,
-}) => (
-  <BrandMark
-    aria-label={ariaLabel}
-    aria-hidden={ariaHidden}
-    className={cn("text-current", className)}
-  />
+const OmniMindToolIcon: LucideIcon = ({ className, ...props }) => (
+  <OmniMindLogo {...props} className={cn("text-current", className)} />
 );
 
 function workToneIcon(tone: TimelineWorkEntry["tone"]): {
-  icon: GlyphComponent;
+  icon: LucideIcon;
   className: string;
 } {
   if (tone === "error") {
@@ -221,7 +213,7 @@ function isFileReadToolEntry(workEntry: TimelineWorkEntry): boolean {
 
 // Command rows reuse toolCallLabel's wrapper-aware classifier so wrapped git/gh
 // commands get the GitHub mark while ordinary commands keep the terminal icon.
-function commandWorkEntryIcon(workEntry: TimelineWorkEntry): GlyphComponent {
+function commandWorkEntryIcon(workEntry: TimelineWorkEntry): LucideIcon {
   const command = workEntry.command ?? workEntry.rawCommand;
   switch (command ? resolveCommandVisualKind(command) : "terminal") {
     case "inspect":
@@ -234,7 +226,7 @@ function commandWorkEntryIcon(workEntry: TimelineWorkEntry): GlyphComponent {
   }
 }
 
-function workEntryIcon(workEntry: TimelineWorkEntry): GlyphComponent {
+function workEntryIcon(workEntry: TimelineWorkEntry): LucideIcon {
   // User-input rows read as a question (awaiting an answer) and an upload
   // (answer submitted) rather than the generic "info" checkmark.
   if (workEntry.activityKind === "user-input.requested") return CircleQuestionIcon;
@@ -272,14 +264,14 @@ function workEntryIcon(workEntry: TimelineWorkEntry): GlyphComponent {
 // Dynamic icon selection is data, not a component declaration. Keeping the
 // createElement call in this module helper avoids presenting a render-local
 // component binding to React Compiler.
-export function renderWorkEntryIcon(Icon: GlyphComponent, className: string): ReactElement {
+export function renderWorkEntryIcon(Icon: LucideIcon, className: string): ReactElement {
   return createElement(Icon, { className });
 }
 
 // The leading glyph for a tool row: recognizable product and surface icons win
 // over the kind-derived entry icon. Shared with the collapsed tool-group summary
 // row, which borrows its first entry's icon.
-export function workEntryLeftIcon(workEntry: TimelineWorkEntry): GlyphComponent {
+export function workEntryLeftIcon(workEntry: TimelineWorkEntry): LucideIcon {
   if (isGitHubMcpToolCall(workEntry)) return GitHubIcon;
   if (isOmniMindBrowserWorkEntry(workEntry)) return GlobeIcon;
   if (isOmniMindToolCall(workEntry)) return OmniMindToolIcon;

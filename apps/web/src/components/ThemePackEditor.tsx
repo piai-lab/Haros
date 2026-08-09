@@ -25,7 +25,7 @@ import { toastManager } from "./ui/toast";
 import { SettingsCard, SettingsSelectPopup } from "./settings/SettingsPanelPrimitives";
 import { copyTextToClipboard } from "../hooks/useCopyToClipboard";
 import { type ChromeTheme, type ThemeMode, type ThemeVariant, useTheme } from "../hooks/useTheme";
-import { cn } from "../lib/styles";
+import { cn } from "../lib/utils";
 import {
   SETTINGS_CARD_ROW_CLASS_NAME,
   SETTINGS_CONTROL_RADIUS_CLASS_NAME,

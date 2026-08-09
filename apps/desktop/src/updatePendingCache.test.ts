@@ -95,7 +95,9 @@ describe("resolveElectronUpdaterCacheDir", () => {
       homeDir: "/Users/test",
     };
 
-    expect(resolveElectronUpdaterCacheDir(args)).toBe("/Users/test/Library/Caches/OmniMind-updater");
+    expect(resolveElectronUpdaterCacheDir(args)).toBe(
+      "/Users/test/Library/Caches/OmniMind-updater",
+    );
     expect(resolveElectronUpdaterLegacyZipPath(args)).toBe(
       "/Users/test/Library/Caches/OmniMind-updater/update.zip",
     );

@@ -2,7 +2,7 @@
 // Purpose: Keep pure selection-action positioning helpers separate from the browser-heavy drawer.
 // Layer: Chat terminal workspace helpers
 
-import type { ContextMenuItem } from "@omnimind/contracts";
+import type { ContextMenuItem } from "@synara/contracts";
 
 const MULTI_CLICK_SELECTION_ACTION_DELAY_MS = 260;
 

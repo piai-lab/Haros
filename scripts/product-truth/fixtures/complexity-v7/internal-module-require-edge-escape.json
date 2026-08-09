@@ -1,1 +1,0 @@
-{"virtualFiles":{"apps/service/src/v7OutsideModuleRequire.ts":"export const outside = true;\n"},"appendToFiles":{"apps/service/src/main.ts":"\nconst v7OutsideModuleRequire = module.require('./v7OutsideModuleRequire');\nvoid v7OutsideModuleRequire;\n"}}

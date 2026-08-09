@@ -61,11 +61,11 @@ import {
 import { parseBareComposerLink } from "~/lib/linkChips";
 import { type TerminalContextDraft } from "~/lib/terminalContext";
 import { shouldCollapsePastedText } from "~/lib/composerPastedText";
-import type { ProviderMentionReference } from "@omnimind/contracts";
+import type { ProviderMentionReference } from "@synara/contracts";
 import { useStore } from "~/store";
 import { createComposerThreadMentionSourcesSelector } from "~/storeSelectors";
 import { resolveThreadDisplayProvider } from "~/lib/threadDisplayProvider";
-import { cn } from "~/lib/styles";
+import { cn } from "~/lib/utils";
 import {
   COMPOSER_EDITOR_CONTENT_RESET_CLASS_NAME,
   COMPOSER_EDITOR_MIN_HEIGHT_CLASS_NAME,
@@ -76,11 +76,13 @@ import {
   ComposerMentionNode,
   ComposerSkillNode,
   ComposerSlashCommandNode,
+  ComposerAgentMentionNode,
   ComposerTerminalContextNode,
   ComposerLinkNode,
   $createComposerMentionNode,
   $createComposerSkillNode,
   $createComposerSlashCommandNode,
+  $createComposerAgentMentionNode,
   $createComposerTerminalContextNode,
   $createComposerLinkNode,
   isComposerInlineTokenNode,
@@ -230,7 +232,8 @@ function getAbsoluteOffsetForPoint(node: LexicalNode, pointOffset: number): numb
     if (
       node instanceof ComposerMentionNode ||
       node instanceof ComposerSkillNode ||
-      node instanceof ComposerSlashCommandNode
+      node instanceof ComposerSlashCommandNode ||
+      node instanceof ComposerAgentMentionNode
     ) {
       return getAbsoluteOffsetForInlineTokenPoint(node, offset, pointOffset);
     }
@@ -282,7 +285,8 @@ function getExpandedAbsoluteOffsetForPoint(node: LexicalNode, pointOffset: numbe
     if (
       node instanceof ComposerMentionNode ||
       node instanceof ComposerSkillNode ||
-      node instanceof ComposerSlashCommandNode
+      node instanceof ComposerSlashCommandNode ||
+      node instanceof ComposerAgentMentionNode
     ) {
       return getExpandedAbsoluteOffsetForInlineTokenPoint(node, offset, pointOffset);
     }
@@ -315,6 +319,7 @@ function findSelectionPointAtOffset(
     node instanceof ComposerMentionNode ||
     node instanceof ComposerSkillNode ||
     node instanceof ComposerSlashCommandNode ||
+    node instanceof ComposerAgentMentionNode ||
     node instanceof ComposerLinkNode ||
     node instanceof ComposerTerminalContextNode
   ) {
@@ -451,12 +456,7 @@ function $setComposerEditorPrompt(
         : undefined;
       const provider = thread ? resolveThreadDisplayProvider(thread) : undefined;
       paragraph.append(
-        $createComposerMentionNode(
-          segment.path,
-          segment.kind,
-          provider ?? undefined,
-          segment.threadId,
-        ),
+        $createComposerMentionNode(segment.path, segment.kind, provider, segment.threadId),
       );
       continue;
     }
@@ -473,6 +473,10 @@ function $setComposerEditorPrompt(
       if (segment.context) {
         paragraph.append($createComposerTerminalContextNode(segment.context));
       }
+      continue;
+    }
+    if (segment.type === "agent-mention") {
+      paragraph.append($createComposerAgentMentionNode(segment.alias, segment.color));
       continue;
     }
     if (segment.type === "link") {
@@ -554,11 +558,6 @@ function ComposerCommandKeyPlugin(props: {
       event: KeyboardEvent | null,
     ): boolean => {
       if (!props.onCommandKeyDown || !event) {
-        return false;
-      }
-      // Enter confirms the active IME composition; it is not a send/menu command. Some Chromium
-      // input methods report only the legacy 229 keyCode, so keep both signals fail-closed.
-      if (event.isComposing || event.keyCode === 229) {
         return false;
       }
       const handled = props.onCommandKeyDown(key, event);
@@ -858,7 +857,7 @@ function ComposerLinkPastePlugin() {
 // which may not be loaded yet when a draft is restored (and can change after a
 // provider handoff). Refresh the stored provider on existing chips whenever the
 // summaries change so the icon never stays stale.
-function ComposerThreadMentionSourceSyncPlugin() {
+function ComposerThreadMentionProviderPlugin() {
   const [editor] = useLexicalComposerContext();
   const threadMentionSources = useStore(
     useMemo(() => createComposerThreadMentionSourcesSelector(), []),
@@ -1237,7 +1236,7 @@ function ComposerPromptEditorInner({
         <ComposerSlashCommandTransformPlugin />
         <ComposerLinkTransformPlugin />
         <ComposerLinkPastePlugin />
-        <ComposerThreadMentionSourceSyncPlugin />
+        <ComposerThreadMentionProviderPlugin />
         {onCollapsePastedText ? (
           <ComposerBigPastePlugin onCollapsePastedText={onCollapsePastedText} />
         ) : null}

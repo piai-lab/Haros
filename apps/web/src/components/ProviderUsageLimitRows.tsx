@@ -7,7 +7,7 @@ import {
   providerUsageProgressTrackProps,
   type ProviderUsageDisplayRow,
 } from "~/lib/providerUsageDisplay";
-import { cn } from "~/lib/styles";
+import { cn } from "~/lib/utils";
 
 import { UsageProgressTrack } from "./UsageProgressTrack";
 

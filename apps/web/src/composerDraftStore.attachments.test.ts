@@ -1,12 +1,15 @@
-import type { ConversationHistoryPlanId } from "~/historicalConversation";
-import { CHAT_TURN_MAX_ATTACHMENTS, ThreadId } from "@omnimind/contracts";
+import {
+  OrchestrationProposedPlanId,
+  PROVIDER_SEND_TURN_MAX_ATTACHMENTS,
+  ThreadId,
+} from "@synara/contracts";
 import * as Schema from "effect/Schema";
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 import { pendingComposerAttachmentSyncGenerationCount } from "./composerDraftAttachments";
 import {
   captureComposerPromptHistorySavedDraft,
   COMPOSER_DRAFT_STORAGE_KEY,
-  COMPOSER_DRAFT_STORAGE_GENERATION,
+  COMPOSER_DRAFT_STORAGE_VERSION,
   findSupersededComposerImageBlobAttachments,
   isComposerImageBlobReferenced,
   partializeComposerDraftStoreState,
@@ -109,15 +112,17 @@ describe("composerDraftStore addImages", () => {
 
   it("enforces the attachment limit atomically when another reference wins the last slot", () => {
     const store = useComposerDraftStore.getState();
-    const initialImages = Array.from({ length: CHAT_TURN_MAX_ATTACHMENTS - 1 }, (_, index) =>
-      makeImage({
-        id: `img-${index}`,
-        name: `image-${index}.png`,
-        sizeBytes: index + 1,
-        previewUrl: `blob:image-${index}`,
-      }),
+    const initialImages = Array.from(
+      { length: PROVIDER_SEND_TURN_MAX_ATTACHMENTS - 1 },
+      (_, index) =>
+        makeImage({
+          id: `img-${index}`,
+          name: `image-${index}.png`,
+          sizeBytes: index + 1,
+          previewUrl: `blob:image-${index}`,
+        }),
     );
-    expect(store.addImages(threadId, initialImages)).toBe(CHAT_TURN_MAX_ATTACHMENTS - 1);
+    expect(store.addImages(threadId, initialImages)).toBe(PROVIDER_SEND_TURN_MAX_ATTACHMENTS - 1);
     expect(store.addFiles(threadId, [makeFile({ id: "last-slot" })])).toBe(1);
 
     const lateImage = makeImage({
@@ -129,7 +134,7 @@ describe("composerDraftStore addImages", () => {
 
     const draft = useComposerDraftStore.getState().draftsByThreadId[threadId];
     expect((draft?.images.length ?? 0) + (draft?.files.length ?? 0)).toBe(
-      CHAT_TURN_MAX_ATTACHMENTS,
+      PROVIDER_SEND_TURN_MAX_ATTACHMENTS,
     );
     expect(revokeSpy).toHaveBeenCalledWith("blob:late-image");
   });
@@ -369,10 +374,7 @@ describe("composerDraftStore prompt history saved draft", () => {
     const persistedState = partializeComposerDraftStoreState(
       useComposerDraftStore.getState(),
     ) as unknown as {
-      draftsByThreadId?: Record<
-        string,
-        { promptHistorySavedDraft?: Record<string, unknown> }
-      >;
+      draftsByThreadId?: Record<string, { promptHistorySavedDraft?: Record<string, unknown> }>;
     };
 
     expect(
@@ -440,7 +442,7 @@ describe("composerDraftStore prompt history saved draft", () => {
     setLocalStorageItem(
       COMPOSER_DRAFT_STORAGE_KEY,
       {
-        generation: COMPOSER_DRAFT_STORAGE_GENERATION,
+        version: COMPOSER_DRAFT_STORAGE_VERSION,
         state: {
           draftsByThreadId: {
             [threadId]: {
@@ -491,11 +493,7 @@ describe("composerDraftStore prompt history saved draft", () => {
       threadId,
       captureComposerPromptHistorySavedDraft({ threadId, draft, prompt: draft.prompt }),
     );
-    setLocalStorageItem(
-      COMPOSER_DRAFT_STORAGE_KEY,
-      { generation: COMPOSER_DRAFT_STORAGE_GENERATION, state: {} },
-      Schema.Unknown,
-    );
+    setLocalStorageItem(COMPOSER_DRAFT_STORAGE_KEY, { version: 2, state: {} }, Schema.Unknown);
 
     await expect(
       store.syncPromptHistorySavedDraftPersistedAttachments(threadId, [attachment]),
@@ -815,7 +813,7 @@ describe("composerDraftStore copyTransferableComposerState", () => {
       restoredPrompt: "Implement the accepted plan",
       sourceProposedPlan: {
         threadId: sourceThreadId,
-        planId: "plan-source-transfer",
+        planId: OrchestrationProposedPlanId.makeUnsafe("plan-source-transfer"),
       },
     });
 
@@ -933,7 +931,7 @@ describe("composerDraftStore syncPersistedAttachments", () => {
     setLocalStorageItem(
       COMPOSER_DRAFT_STORAGE_KEY,
       {
-        generation: COMPOSER_DRAFT_STORAGE_GENERATION,
+        version: 2,
         state: {
           draftsByThreadId: {
             [threadId]: {
@@ -973,7 +971,7 @@ describe("composerDraftStore syncPersistedAttachments", () => {
     setLocalStorageItem(
       COMPOSER_DRAFT_STORAGE_KEY,
       {
-        generation: COMPOSER_DRAFT_STORAGE_GENERATION,
+        version: 2,
         state: {
           draftsByThreadId: {
             [threadId]: {
@@ -1021,7 +1019,7 @@ describe("composerDraftStore syncPersistedAttachments", () => {
     setLocalStorageItem(
       COMPOSER_DRAFT_STORAGE_KEY,
       {
-        generation: COMPOSER_DRAFT_STORAGE_GENERATION,
+        version: COMPOSER_DRAFT_STORAGE_VERSION,
         state: {
           draftsByThreadId: {
             [threadId]: {
@@ -1100,7 +1098,7 @@ describe("composerDraftStore syncPersistedAttachments", () => {
     setLocalStorageItem(
       COMPOSER_DRAFT_STORAGE_KEY,
       {
-        generation: COMPOSER_DRAFT_STORAGE_GENERATION,
+        version: COMPOSER_DRAFT_STORAGE_VERSION,
         state: {
           draftsByThreadId: {
             [threadId]: {
@@ -1123,6 +1121,55 @@ describe("composerDraftStore syncPersistedAttachments", () => {
     expect(
       useComposerDraftStore.getState().draftsByThreadId[threadId]?.nonPersistedImageIds,
     ).toEqual([]);
+  });
+
+  it("keeps AppSnap blob metadata and migrates former provenance", () => {
+    const persistApi = useComposerDraftStore.persist as unknown as {
+      getOptions: () => {
+        merge: (
+          persistedState: unknown,
+          currentState: ReturnType<typeof useComposerDraftStore.getState>,
+        ) => ReturnType<typeof useComposerDraftStore.getState>;
+      };
+    };
+    const source = {
+      kind: "appsnap",
+      captureId: "capture-1",
+      capturedAt: "2026-07-12T19:59:33.000Z",
+      appName: "Safari",
+      bundleIdentifier: null,
+      appIconDataUrl: null,
+      windowTitle: "OmniMind",
+    };
+    const mergedState = persistApi.getOptions().merge(
+      {
+        draftsByThreadId: {
+          [threadId]: {
+            prompt: "",
+            attachments: [
+              {
+                id: "appsnap-1",
+                name: "appsnap.png",
+                mimeType: "image/png",
+                sizeBytes: 2048,
+                blobKey: `${threadId}:appsnap-1`,
+                source: { ...source, kind: "appshot" },
+              },
+            ],
+          },
+        },
+      },
+      useComposerDraftStore.getInitialState(),
+    );
+
+    expect(mergedState.draftsByThreadId[threadId]?.images).toEqual([]);
+    expect(mergedState.draftsByThreadId[threadId]?.persistedAttachments).toEqual([
+      expect.objectContaining({
+        id: "appsnap-1",
+        blobKey: `${threadId}:appsnap-1`,
+        source,
+      }),
+    ]);
   });
 
   it("omits inline AppSnap icons from localStorage metadata", () => {

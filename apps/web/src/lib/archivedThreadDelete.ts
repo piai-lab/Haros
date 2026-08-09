@@ -3,16 +3,13 @@
 // Layer: Web orchestration helper
 // Exports: deleteArchivedThreadsFromClient
 
-import type { ThreadId } from "@omnimind/contracts";
+import type { NativeApi, ThreadId } from "@synara/contracts";
 
 import { reconcileDeletedThreadsFromClient } from "./deletedThreadClientReconciliation";
-import {
-  deleteProductConversation,
-  type ProductConversationDeleteApi,
-} from "../productConversationMutations";
+import { newCommandId } from "./utils";
 
 interface DeleteArchivedThreadsFromClientInput {
-  api: ProductConversationDeleteApi;
+  api: Pick<NativeApi["orchestration"], "dispatchCommand">;
   threadIds: ReadonlyArray<ThreadId>;
   removeDeletedThreadFromClientState: (threadId: ThreadId) => void;
 }
@@ -29,7 +26,11 @@ export async function deleteArchivedThreadsFromClient(
   const deletedThreadIds: ThreadId[] = [];
   try {
     for (const threadId of threadIds) {
-      await deleteProductConversation(threadId, input.api);
+      await input.api.dispatchCommand({
+        type: "thread.delete",
+        commandId: newCommandId(),
+        threadId,
+      });
       deletedThreadIds.push(threadId);
     }
   } finally {

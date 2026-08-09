@@ -1,4 +1,4 @@
-import type { DesktopUpdateState } from "@omnimind/contracts";
+import type { DesktopUpdateState } from "@synara/contracts";
 
 export type DownloadProgressSample = {
   readonly percent?: number | null;

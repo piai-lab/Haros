@@ -1,8 +1,0 @@
-{
-  "extendsFixture": "web-refusal-positive",
-  "textReplacements": {
-    "apps/web/src/composerDraftStore.ts": [
-      ["  const current = storage.getItem(CURRENT);", "  queueMicrotask(() => storage.setItem(CURRENT, \"later\"));\n  const current = storage.getItem(CURRENT);"]
-    ]
-  }
-}

@@ -1,5 +1,6 @@
 // FILE: deferredChatMount.ts
-// Purpose: Bound deferred Conversation mounting when Chromium suppresses animation frames.
+// Purpose: Schedules deferred chat mounting with a bounded fallback when Chromium
+//          suppresses animation frames during Electron startup/background throttling.
 // Layer: Chat surface lifecycle helper
 
 export const DEFERRED_CHAT_MOUNT_FALLBACK_MS = 500;
@@ -11,7 +12,11 @@ export interface DeferredChatMountScheduler {
   clearTimeout(handle: number): void;
 }
 
-/** Wait for two paints, with a bounded fallback and exact-once cleanup. */
+/**
+ * Wait for two paints before mounting a heavy chat surface, but never leave the
+ * loader visible forever when Chromium pauses animation frames. Returns a cleanup
+ * function that prevents either path from committing after the caller unmounts.
+ */
 export function scheduleDeferredChatMount(
   scheduler: DeferredChatMountScheduler,
   onReady: () => void,
@@ -22,7 +27,9 @@ export function scheduleDeferredChatMount(
   let settled = false;
 
   const markReady = () => {
-    if (settled) return;
+    if (settled) {
+      return;
+    }
     settled = true;
     scheduler.clearTimeout(fallbackTimer);
     onReady();
@@ -30,7 +37,9 @@ export function scheduleDeferredChatMount(
 
   fallbackTimer = scheduler.setTimeout(markReady, DEFERRED_CHAT_MOUNT_FALLBACK_MS);
   firstFrame = scheduler.requestAnimationFrame(() => {
-    if (settled) return;
+    if (settled) {
+      return;
+    }
     secondFrame = scheduler.requestAnimationFrame(markReady);
   });
 

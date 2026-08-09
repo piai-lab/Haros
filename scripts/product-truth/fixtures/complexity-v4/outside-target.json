@@ -1,8 +1,0 @@
-{
-  "virtualFiles": {
-    "apps/service/src/product/notFrozenTarget.ts": "export const outsideTarget = true;\n"
-  },
-  "appendToFiles": {
-    "apps/service/src/product/ProductControlPlane.ts": "\nimport './notFrozenTarget';\n"
-  }
-}

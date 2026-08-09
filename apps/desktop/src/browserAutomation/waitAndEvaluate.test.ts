@@ -1,9 +1,9 @@
-import { ThreadId, type BrowserCssSelector } from "@omnimind/contracts";
+import { ThreadId, type BrowserCssSelector } from "@synara/contracts";
 import type { WebContents } from "electron";
 import { EventEmitter } from "node:events";
 import { describe, expect, it, vi } from "vitest";
 
-import type { BrowserAutomationVisibleRuntime } from "../browserHost";
+import type { BrowserAutomationVisibleRuntime } from "../browserManager";
 import { beginBrowserNavigation } from "./navigationTracker";
 import {
   boundedGlobMatches,

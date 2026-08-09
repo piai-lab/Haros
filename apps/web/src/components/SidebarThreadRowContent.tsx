@@ -4,8 +4,8 @@
 
 import { useMemo, type ReactNode } from "react";
 
-import { isGenericChatThreadTitle } from "@omnimind/shared/chatThreads";
-import { pluralize } from "@omnimind/shared/text";
+import { isGenericChatThreadTitle } from "@synara/shared/chatThreads";
+import { pluralize } from "@synara/shared/text";
 
 import { createThreadSelector } from "../storeSelectors";
 import { useStore } from "../store";
@@ -14,7 +14,7 @@ import { resolveThreadHandoffBadgeLabel } from "../lib/threadHandoff";
 import { SIDEBAR_ROW_LABEL_TEXT_CLASS_NAME } from "../sidebarRowStyles";
 import type { SidebarThreadSummary } from "../types";
 import { TerminalIcon } from "../lib/icons";
-import { cn } from "../lib/styles";
+import { cn } from "../lib/utils";
 import { ProviderIcon } from "./ProviderIcon";
 import { SidebarGlyph } from "./sidebarGlyphs";
 import { Tooltip, TooltipPopup, TooltipTrigger } from "./ui/tooltip";
@@ -34,7 +34,7 @@ function ProviderAvatarWithTerminal({
   terminalStatus: SidebarThreadTerminalStatus | null;
   terminalCount: number;
 }) {
-  const provider = thread.session?.provider ?? thread.modelSelection?.provider ?? null;
+  const provider = thread.session?.provider ?? thread.modelSelection.provider;
   const handoffSourceProvider = thread.handoff?.sourceProvider ?? null;
   const handoffTooltip = resolveThreadHandoffBadgeLabel(thread);
   const showBadge = terminalCount > 1 || terminalStatus !== null;

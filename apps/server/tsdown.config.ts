@@ -1,0 +1,28 @@
+// FILE: tsdown.config.ts
+// Purpose: Builds the OmniMind server CLI and controls diagnostic source maps.
+// Layer: Server build config
+// Depends on: tsdown.
+
+import { defineConfig } from "tsdown";
+
+const sourcemapEnv = process.env.OMNIMIND_SERVER_SOURCEMAP?.trim().toLowerCase();
+const buildSourcemap = sourcemapEnv === "1" || sourcemapEnv === "true";
+
+export default defineConfig({
+  entry: ["src/index.ts", "src/restoreMigrationBackup.ts"],
+  format: ["esm", "cjs"],
+  checks: {
+    legacyCjs: false,
+  },
+  outDir: "dist",
+  // Bun builtins only resolve at runtime under Bun; MigrationBackup.ts guards
+  // the import behind a `process.versions.bun` check.
+  external: [/^bun:/u],
+  sourcemap: buildSourcemap,
+  clean: true,
+  noExternal: (id) => id.startsWith("@synara/"),
+  inlineOnly: false,
+  banner: {
+    js: "#!/usr/bin/env node\n",
+  },
+});

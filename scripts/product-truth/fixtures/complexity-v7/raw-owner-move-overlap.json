@@ -1,1 +1,0 @@
-{"virtualFiles":{"apps/service/src/product/productStateStore.ts":"import * as fs from 'node:fs';\nexport const makeProductStateStore = () => fs.readFileSync('x');\n"}}

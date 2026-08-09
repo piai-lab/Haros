@@ -6,7 +6,7 @@ describe("ServerListeningDetector", () => {
   it("resolves when the backend logs its listening line", async () => {
     const detector = new ServerListeningDetector();
 
-    detector.push("OmniMind running { port: 3773 }\n");
+    detector.push("Listening on http://127.0.0.1:3773\n");
 
     await expect(detector.promise).resolves.toBeUndefined();
   });
@@ -14,8 +14,8 @@ describe("ServerListeningDetector", () => {
   it("resolves when the listening line arrives across multiple chunks", async () => {
     const detector = new ServerListeningDetector();
 
-    detector.push("OmniMind run");
-    detector.push("ning { port: 3773 }\n");
+    detector.push("Listening on ");
+    detector.push("http://127.0.0.1:3773\n");
 
     await expect(detector.promise).resolves.toBeUndefined();
   });

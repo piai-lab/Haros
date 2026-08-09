@@ -5,13 +5,13 @@
 // Layer: Pull request presentation
 // Exports: PullRequestRow
 
-import type { PullRequestListEntry } from "@omnimind/contracts";
-import { pullRequestListWorkspaceContexts } from "@omnimind/shared/githubRepository";
+import type { PullRequestListEntry } from "@synara/contracts";
+import { pullRequestListProjectContexts } from "@synara/shared/githubRepository";
 
 import { Tooltip, TooltipPopup, TooltipTrigger } from "~/components/ui/tooltip";
 import { PinStatusIcon, pinActionLabel } from "~/lib/pin";
 import { formatRelativeTime } from "~/lib/relativeTime";
-import { cn } from "~/lib/styles";
+import { cn } from "~/lib/utils";
 import {
   PR_BODY_TEXT_CLASS_NAME,
   PR_FINE_TEXT_CLASS_NAME,
@@ -45,25 +45,28 @@ function TruncatedTitle({ title, number }: { title: string; number: number }) {
 export const PullRequestRow = function PullRequestRow({
   entry,
   selected,
-  showWorkspaceTitle: showWorkspaceTitleProp,
+  showProjectTitle: showProjectTitleProp,
+  showDiffColors: showDiffColorsProp,
   onClick,
   onTogglePinned,
 }: {
   entry: PullRequestListEntry;
   selected: boolean;
   /** All-projects view: identifies the preferred local context used when opening the remote PR. */
-  showWorkspaceTitle?: boolean;
+  showProjectTitle?: boolean;
+  showDiffColors?: boolean;
   onClick: (entry: PullRequestListEntry) => void;
   onTogglePinned: (entry: PullRequestListEntry) => void;
 }) {
-  const showWorkspaceTitle = showWorkspaceTitleProp ?? false;
+  const showProjectTitle = showProjectTitleProp ?? false;
+  const showDiffColors = showDiffColorsProp ?? true;
   const isPinned = entry.isPinned === true;
-  const workspaceContexts = pullRequestListWorkspaceContexts(entry);
+  const projectContexts = pullRequestListProjectContexts(entry);
   const projectLabel =
-    workspaceContexts.length > 1 ? `${workspaceContexts.length} projects` : entry.workspaceTitle;
-  const workspaceTitle = workspaceContexts.map((context) => context.workspaceTitle).join(", ");
+    projectContexts.length > 1 ? `${projectContexts.length} projects` : entry.projectTitle;
+  const projectTitle = projectContexts.map((context) => context.projectTitle).join(", ");
   const pinLabel = pinActionLabel(
-    showWorkspaceTitle
+    showProjectTitle
       ? `pull request #${entry.number} in ${projectLabel}`
       : `pull request #${entry.number}`,
     isPinned,
@@ -84,7 +87,7 @@ export const PullRequestRow = function PullRequestRow({
       <button
         type="button"
         data-pull-request-row
-        data-project-id={entry.workspaceId}
+        data-project-id={entry.projectId}
         data-repository={entry.repository}
         data-pull-request-number={entry.number}
         aria-current={selected ? "true" : undefined}
@@ -115,8 +118,8 @@ export const PullRequestRow = function PullRequestRow({
                 isn't one of the dot-separated facts about the PR. */}
             <PullRequestAvatar actor={entry.author} size="sm" className="shrink-0" />
             <PullRequestMetaLine className="flex-1">
-              {showWorkspaceTitle ? (
-                <span className="max-w-[12rem] truncate" title={workspaceTitle}>
+              {showProjectTitle ? (
+                <span className="max-w-[12rem] truncate" title={projectTitle}>
                   {projectLabel}
                 </span>
               ) : null}
@@ -138,7 +141,11 @@ export const PullRequestRow = function PullRequestRow({
           )}
         >
           <span>{formatRelativeTime(entry.updatedAt)}</span>
-          <PullRequestDiffStat additions={entry.additions} deletions={entry.deletions} />
+          <PullRequestDiffStat
+            additions={entry.additions}
+            deletions={entry.deletions}
+            tone={showDiffColors ? "diff" : "muted"}
+          />
         </span>
       </button>
       <Tooltip>

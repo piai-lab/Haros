@@ -4,10 +4,10 @@
 // Exports: ChatPaneDropOverlay component, drag MIME constant, drop-zone helpers used by tests
 
 import { useEffect, useRef, type DragEvent as ReactDragEvent, type ReactNode } from "react";
-import { type ThreadId } from "@omnimind/contracts";
+import { type ThreadId } from "@synara/contracts";
 
 import { type SplitDirection, type SplitDropSide } from "../../splitViewStore";
-import { cn } from "../../lib/styles";
+import { cn } from "../../lib/utils";
 
 // Custom MIME so external file drops on the composer (which listen for `Files`) cannot trigger us.
 export const THREAD_DRAG_MIME = "application/x-omnimind-thread";

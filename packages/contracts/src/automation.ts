@@ -13,7 +13,15 @@ import {
   TrimmedNonEmptyString,
   TurnId,
 } from "./baseSchemas";
-import { ProductRequestedSelection } from "./product/state";
+import {
+  ModelSelection,
+  ProviderInteractionMode,
+  ProviderKind,
+  ProviderStartOptions,
+  RuntimeMode,
+} from "./orchestration";
+
+export const DEFAULT_AUTOMATION_RUNTIME_MODE: RuntimeMode = "approval-required";
 
 const AutomationIsoDateTime = IsoDateTime.check(
   Schema.isPattern(/^\d{4}-\d{2}-\d{2}T\d{2}:\d{2}:\d{2}(?:\.\d{3})?Z$/),
@@ -142,11 +150,15 @@ export const AutomationAllowedCapability = Schema.Literals([
 export type AutomationAllowedCapability = typeof AutomationAllowedCapability.Type;
 
 export const AutomationPermissionSnapshot = Schema.Struct({
+  provider: ProviderKind,
   settingsRevision: Schema.optional(NonNegativeInt),
-  requestedSelection: ProductRequestedSelection,
+  modelSelection: ModelSelection,
+  providerOptions: Schema.optional(ProviderStartOptions),
   completionPolicyVersion: Schema.optional(NonNegativeInt),
   /** Stable one-based iteration ordinal claimed for this run. */
   iterationNumber: Schema.optional(PositiveInt),
+  runtimeMode: RuntimeMode,
+  interactionMode: ProviderInteractionMode,
   worktreeMode: AutomationWorktreeMode,
   allowedCapabilities: Schema.Array(AutomationAllowedCapability),
   createdAt: AutomationIsoDateTime,
@@ -201,7 +213,10 @@ export const AutomationDefinition = Schema.Struct({
   schedule: AutomationSchedule,
   enabled: Schema.Boolean,
   nextRunAt: Schema.NullOr(AutomationIsoDateTime),
-  requestedSelection: ProductRequestedSelection,
+  modelSelection: ModelSelection,
+  providerOptions: Schema.optional(ProviderStartOptions),
+  runtimeMode: RuntimeMode,
+  interactionMode: ProviderInteractionMode,
   worktreeMode: AutomationWorktreeMode,
   mode: AutomationMode,
   /**
@@ -262,7 +277,14 @@ const AutomationDefinitionConfig = Schema.Struct({
   prompt: TrimmedNonEmptyString.check(Schema.isMaxLength(64_000)),
   schedule: AutomationSchedule,
   enabled: Schema.optional(Schema.Boolean).pipe(Schema.withDecodingDefault(() => true)),
-  requestedSelection: ProductRequestedSelection,
+  modelSelection: ModelSelection,
+  providerOptions: Schema.optional(ProviderStartOptions),
+  runtimeMode: Schema.optional(RuntimeMode).pipe(
+    Schema.withDecodingDefault(() => DEFAULT_AUTOMATION_RUNTIME_MODE),
+  ),
+  interactionMode: Schema.optional(ProviderInteractionMode).pipe(
+    Schema.withDecodingDefault(() => "default" as const),
+  ),
   worktreeMode: Schema.optional(AutomationWorktreeMode).pipe(
     Schema.withDecodingDefault(() => "auto" as const),
   ),
@@ -316,7 +338,10 @@ export const AutomationUpdateInput = Schema.Struct({
   prompt: Schema.optional(TrimmedNonEmptyString.check(Schema.isMaxLength(64_000))),
   schedule: Schema.optional(AutomationSchedule),
   enabled: Schema.optional(Schema.Boolean),
-  requestedSelection: Schema.optional(ProductRequestedSelection),
+  modelSelection: Schema.optional(ModelSelection),
+  providerOptions: Schema.optional(ProviderStartOptions),
+  runtimeMode: Schema.optional(RuntimeMode),
+  interactionMode: Schema.optional(ProviderInteractionMode),
   worktreeMode: Schema.optional(AutomationWorktreeMode),
   mode: Schema.optional(AutomationMode),
   targetThreadId: Schema.optional(Schema.NullOr(ThreadId)),

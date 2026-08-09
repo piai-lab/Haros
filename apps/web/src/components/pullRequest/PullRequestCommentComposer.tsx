@@ -8,7 +8,7 @@
 // Layer: Pull request presentation
 // Exports: PullRequestCommentComposer
 
-import type { PullRequestDetail } from "@omnimind/contracts";
+import type { PullRequestDetail } from "@synara/contracts";
 import { useMutation, useQueryClient } from "@tanstack/react-query";
 import { useRef, useState } from "react";
 
@@ -16,7 +16,7 @@ import { toastManager } from "~/components/ui/toast";
 import { ArrowUpIcon, GitHubIcon } from "~/lib/icons";
 import { pullRequestCommentMutationOptions } from "~/lib/pullRequestReactQuery";
 import { PR_BODY_TEXT_CLASS_NAME } from "./pullRequestText";
-import { cn } from "~/lib/styles";
+import { cn } from "~/lib/utils";
 
 export function PullRequestCommentComposer({ detail }: { detail: PullRequestDetail }) {
   const queryClient = useQueryClient();
@@ -35,7 +35,7 @@ export function PullRequestCommentComposer({ detail }: { detail: PullRequestDeta
     submittingRef.current = true;
     void mutation
       .mutateAsync({
-        workspaceId: detail.workspaceId,
+        projectId: detail.projectId,
         repository: detail.repository,
         number: detail.number,
         body: trimmed,

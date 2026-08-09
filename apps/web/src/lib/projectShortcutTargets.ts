@@ -1,4 +1,4 @@
-import type { ProjectId } from "@omnimind/contracts";
+import type { ProjectId } from "@synara/contracts";
 
 import type { Project } from "../types";
 
@@ -30,8 +30,18 @@ export function resolveLatestProjectTargetId(
   return resolveUsableProjectId(projects, latestProjectId);
 }
 
+/**
+ * Last time each project was used, keyed by project id (see
+ * `createProjectLastActivityAtSelector`). Projects absent from the map have no threads yet.
+ */
 export type ProjectLastActivityAt = ReadonlyMap<ProjectId, string>;
 
+/**
+ * Ranks a project by when it was last *used* — the newest user message across its threads — and
+ * only falls back to its metadata timestamps when it has no threads at all. Ranking by
+ * `Project.updatedAt` alone would order by "most recently created/renamed project", which is not
+ * what "last used project" means to the user.
+ */
 function projectRecencyKey(project: Project, lastActivityAt: ProjectLastActivityAt): string {
   return lastActivityAt.get(project.id) ?? project.updatedAt ?? project.createdAt ?? "";
 }
@@ -47,11 +57,10 @@ export function resolveLatestProjectTargetIdWithFallback(
     resolveLatestProjectTargetId(projects, latestProjectId) ??
     projects
       .filter((project) => project.kind === "project")
-      .toSorted(
-        (left, right) =>
-          projectRecencyKey(right, lastActivityAt).localeCompare(
-            projectRecencyKey(left, lastActivityAt),
-          ) || left.id.localeCompare(right.id),
+      .toSorted((left, right) =>
+        projectRecencyKey(right, lastActivityAt).localeCompare(
+          projectRecencyKey(left, lastActivityAt),
+        ),
       )
       .at(0)?.id ??
     null

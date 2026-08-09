@@ -8,7 +8,7 @@ import {
   BROWSER_ANNOTATION_MAX_TEXT_LENGTH,
   BROWSER_ANNOTATION_MAX_URL_LENGTH,
   type BrowserAnnotationTheme,
-} from "@omnimind/contracts";
+} from "@synara/contracts";
 import { describe, expect, it } from "vitest";
 
 import { createGuestIdentifier } from "./guestIdentity";
@@ -47,8 +47,6 @@ const theme: BrowserAnnotationTheme = {
 
 describe("browser annotation protocol", () => {
   it("accepts only bounded resolved colors for the guest annotation theme", () => {
-    expect(isGuestAnnotationCommand({ version: 1, kind: "request-ready" })).toBe(true);
-    expect(isGuestAnnotationCommand({ version: 2, kind: "request-ready" })).toBe(false);
     expect(parseBrowserAnnotationTheme(theme)).toEqual(theme);
     expect(
       parseBrowserAnnotationTheme({

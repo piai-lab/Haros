@@ -3,7 +3,7 @@
 // Layer: Web chat state utility
 // Exports: Draft answer helpers and progress derivation used by ChatView/composer panels.
 
-import type { ProviderUserInputAnswers, UserInputQuestion } from "@omnimind/contracts";
+import type { ProviderUserInputAnswers, UserInputQuestion } from "@synara/contracts";
 
 export interface PendingUserInputDraftAnswer {
   selectedOptionLabels?: string[];

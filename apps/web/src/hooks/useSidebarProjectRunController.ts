@@ -7,8 +7,8 @@ import {
   type ProjectDiscoveredScriptTarget,
   type ProjectId,
   type ServerLocalServerProcess,
-} from "@omnimind/contracts";
-import { localServerAddressLabel, localServerMatchesRun } from "@omnimind/shared/localServers";
+} from "@synara/contracts";
+import { localServerAddressLabel, localServerMatchesRun } from "@synara/shared/localServers";
 import { useQueries, useQuery, useQueryClient } from "@tanstack/react-query";
 import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 
@@ -17,14 +17,15 @@ import { toastManager } from "../components/ui/toast";
 import { isHomeChatContainerProject } from "../lib/chatProjects";
 import { projectDiscoverScriptsQueryOptions } from "../lib/projectReactQuery";
 import { serverQueryKeys, sidebarLocalServersQueryOptions } from "../lib/serverReactQuery";
+import { newCommandId } from "../lib/utils";
 import { readNativeApi } from "../nativeApi";
 import { useProjectRunStore, type ProjectRunState } from "../projectRunStore";
-import { selectPrimaryProjectRunCommand } from "../projectRunTargets";
+import {
+  selectPrimaryProjectRunCommand,
+  upsertProjectRunCommandScripts,
+} from "../projectRunTargets";
 import { projectScriptRuntimeEnv } from "../projectScripts";
-import { updateProductWorkspaceRunCommand } from "../productWorkspaceMutations";
-import { useProductStore } from "../store/productStore";
 import type { Project } from "../types";
-import { readProductNativeApi } from "../wsNativeApi";
 
 export function firstLocalServerUrl(server: ServerLocalServerProcess): string | null {
   return server.addresses.find((address) => address.url)?.url ?? null;
@@ -234,12 +235,18 @@ export function useSidebarProjectRunController(input: {
 
   const persistProjectRunCommand = useCallback(
     async (projectId: ProjectId, command: string) => {
+      const api = readNativeApi();
       const project = input.projectById.get(projectId);
-      if (!project) return;
+      if (!api || !project) return;
+      const nextScripts = upsertProjectRunCommandScripts({ scripts: project.scripts, command });
+      if (!nextScripts) return;
       try {
-        const api = readProductNativeApi();
-        await updateProductWorkspaceRunCommand(projectId, command, api);
-        useProductStore.getState().setShellSnapshot(await api.getShellSnapshot());
+        await api.orchestration.dispatchCommand({
+          type: "project.meta.update",
+          commandId: newCommandId(),
+          projectId,
+          scripts: nextScripts,
+        });
       } catch (error) {
         console.error("Failed to save project run command", { projectId, error });
       }

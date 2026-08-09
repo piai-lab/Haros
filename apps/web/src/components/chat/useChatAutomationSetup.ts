@@ -1,4 +1,4 @@
-import { type AutomationDefinition, type MessageId, type ThreadId } from "@omnimind/contracts";
+import { type AutomationDefinition, type MessageId, type ThreadId } from "@synara/contracts";
 import {
   type MutableRefObject,
   useCallback,
@@ -153,7 +153,7 @@ export function useChatAutomationSetup({
           : buildAutomationDraftWarnings({
               schedule: scheduleFromForm(nextForm),
               mode: nextForm.mode,
-              permissionPolicy: nextForm.requestedSelection.permissionPolicy,
+              runtimeMode: nextForm.runtimeMode,
               worktreeMode: nextForm.worktreeMode,
               hasEphemeralContext: automationDraftWarningContext.hasEphemeralContext,
               generatedConfidence: automationDraftWarningContext.generatedConfidence,

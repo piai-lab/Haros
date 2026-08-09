@@ -2,7 +2,7 @@ import fs from "node:fs";
 import os from "node:os";
 import path from "node:path";
 
-import { RotatingFileSink } from "@omnimind/shared/logging";
+import { RotatingFileSink } from "@synara/shared/logging";
 import { afterEach, describe, expect, it } from "vitest";
 
 const tempRoots: string[] = [];

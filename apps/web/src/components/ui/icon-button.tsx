@@ -6,7 +6,7 @@
 
 import { forwardRef, type ComponentProps, type ReactNode } from "react";
 
-import { cn } from "~/lib/styles";
+import { cn } from "~/lib/utils";
 
 import { Button } from "./button";
 import { Tooltip, TooltipPopup, TooltipTrigger } from "./tooltip";
@@ -42,7 +42,7 @@ const IconButton = forwardRef<HTMLButtonElement, IconButtonProps>(function IconB
         {...buttonProps}
         ref={ref}
         aria-label={label}
-        className={cn("[&_svg,&_[data-slot=glyph]]:mx-0", className)}
+        className={cn("[&_svg,&_[data-slot=central-icon]]:mx-0", className)}
         size={size}
         title={title}
         variant={variant}
@@ -60,7 +60,7 @@ const IconButton = forwardRef<HTMLButtonElement, IconButtonProps>(function IconB
             {...buttonProps}
             ref={ref}
             aria-label={label}
-            className={cn("[&_svg,&_[data-slot=glyph]]:mx-0", className)}
+            className={cn("[&_svg,&_[data-slot=central-icon]]:mx-0", className)}
             size={size}
             title={title}
             variant={variant}

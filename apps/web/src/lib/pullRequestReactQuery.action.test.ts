@@ -1,4 +1,4 @@
-import type { ProductWorkspaceId } from "@omnimind/contracts";
+import type { ProjectId } from "@synara/contracts";
 import { QueryClient } from "@tanstack/react-query";
 import { describe, expect, it, vi } from "vitest";
 
@@ -8,9 +8,9 @@ import { pullRequestActionMutationOptions, pullRequestQueryKeys } from "./pullRe
 describe("pullRequestActionMutationOptions", () => {
   it("cancels an ordinary list refetch before applying optimistic fields", async () => {
     const queryClient = new QueryClient();
-    const workspaceId = "project-a" as ProductWorkspaceId;
-    const identity = { workspaceId, repository: "acme/widgets", number: 42 } as const;
-    const listKey = pullRequestQueryKeys.list({ state: "open", workspaceId });
+    const projectId = "project-a" as ProjectId;
+    const identity = { projectId, repository: "acme/widgets", number: 42 } as const;
+    const listKey = pullRequestQueryKeys.list({ state: "open", projectId });
     queryClient.setQueryData(listKey, {
       entries: [{ ...identity, state: "open", isDraft: false, isPinned: false }],
     });
@@ -43,22 +43,22 @@ describe("pullRequestActionMutationOptions", () => {
 
   it("invalidates only repository scopes, matching detail, and the affected git PR cache", async () => {
     const queryClient = new QueryClient();
-    const workspaceId = "project-a" as ProductWorkspaceId;
-    const otherProjectId = "project-b" as ProductWorkspaceId;
+    const projectId = "project-a" as ProjectId;
+    const otherProjectId = "project-b" as ProjectId;
     const input = {
-      workspaceId,
+      projectId,
       repository: "acme/widgets",
       number: 42,
       action: "ready",
     } as const;
-    const listKey = pullRequestQueryKeys.list({ state: "open", workspaceId });
+    const listKey = pullRequestQueryKeys.list({ state: "open", projectId });
     const unrelatedListKey = pullRequestQueryKeys.list({
       state: "open",
-      workspaceId: otherProjectId,
+      projectId: otherProjectId,
     });
     const detailKey = pullRequestQueryKeys.detail(input);
     const otherDetailKey = pullRequestQueryKeys.detail({
-      workspaceId,
+      projectId,
       repository: "acme/widgets",
       number: 7,
     });
@@ -70,7 +70,7 @@ describe("pullRequestActionMutationOptions", () => {
     queryClient.setQueryData(listKey, {
       entries: [
         {
-          workspaceId,
+          projectId,
           repository: "acme/widgets",
           number: 42,
           state: "open",
@@ -82,7 +82,7 @@ describe("pullRequestActionMutationOptions", () => {
     queryClient.setQueryData(unrelatedListKey, {
       entries: [
         {
-          workspaceId: otherProjectId,
+          projectId: otherProjectId,
           repository: "other/repository",
           number: 9,
           state: "open",
@@ -126,19 +126,19 @@ describe("pullRequestActionMutationOptions", () => {
 
   it("updates the global row when an action starts from another associated project", async () => {
     const queryClient = new QueryClient();
-    const projectA = "project-a" as ProductWorkspaceId;
-    const projectB = "project-b" as ProductWorkspaceId;
+    const projectA = "project-a" as ProjectId;
+    const projectB = "project-b" as ProjectId;
     const input = {
-      workspaceId: projectA,
+      projectId: projectA,
       repository: "acme/widgets",
       number: 42,
       action: "ready",
     } as const;
-    const globalListKey = pullRequestQueryKeys.list({ state: "open", workspaceId: null });
+    const globalListKey = pullRequestQueryKeys.list({ state: "open", projectId: null });
     queryClient.setQueryData(globalListKey, {
       entries: [
         {
-          workspaceId: projectB,
+          projectId: projectB,
           repository: "acme/widgets",
           number: 42,
           state: "open",
@@ -152,7 +152,7 @@ describe("pullRequestActionMutationOptions", () => {
 
     const context = await Reflect.apply(options.onMutate, undefined, [input, undefined]);
     expect(queryClient.getQueryData(globalListKey)).toMatchObject({
-      entries: [{ workspaceId: projectB, isDraft: false }],
+      entries: [{ projectId: projectB, isDraft: false }],
     });
     await Reflect.apply(options.onSuccess, undefined, [
       { workspaceRoot: "/repo" },
@@ -165,14 +165,14 @@ describe("pullRequestActionMutationOptions", () => {
 
   it("does not keep an action pending on the passive review-count refresh", async () => {
     const queryClient = new QueryClient();
-    const workspaceId = "project-a" as ProductWorkspaceId;
+    const projectId = "project-a" as ProjectId;
     const input = {
-      workspaceId,
+      projectId,
       repository: "acme/widgets",
       number: 42,
       action: "ready",
     } as const;
-    const listKey = pullRequestQueryKeys.list({ state: "open", workspaceId });
+    const listKey = pullRequestQueryKeys.list({ state: "open", projectId });
     queryClient.setQueryData(listKey, {
       entries: [{ ...input, state: "open", isDraft: true, isPinned: false }],
     });
@@ -201,20 +201,20 @@ describe("pullRequestActionMutationOptions", () => {
 
   it("invalidates the warm merged lists after a merge", async () => {
     const queryClient = new QueryClient();
-    const workspaceId = "project-a" as ProductWorkspaceId;
+    const projectId = "project-a" as ProjectId;
     const input = {
-      workspaceId,
+      projectId,
       repository: "acme/widgets",
       number: 42,
       action: "merge",
     } as const;
-    const openKey = pullRequestQueryKeys.list({ state: "open", workspaceId });
-    const mergedKey = pullRequestQueryKeys.list({ state: "merged", workspaceId });
-    const allProjectsMergedKey = pullRequestQueryKeys.list({ state: "merged", workspaceId: null });
+    const openKey = pullRequestQueryKeys.list({ state: "open", projectId });
+    const mergedKey = pullRequestQueryKeys.list({ state: "merged", projectId });
+    const allProjectsMergedKey = pullRequestQueryKeys.list({ state: "merged", projectId: null });
     const mergedExactKey = pullRequestQueryKeys.exactList({
       involvement: "authored",
       state: "merged",
-      workspaceId,
+      projectId,
     });
     queryClient.setQueryData(openKey, {
       entries: [{ ...input, state: "open", isDraft: false, isPinned: false }],
@@ -241,9 +241,9 @@ describe("pullRequestActionMutationOptions", () => {
 
   it("rolls list-owned fields back even when no detail cache exists", async () => {
     const queryClient = new QueryClient();
-    const workspaceId = "project-a" as ProductWorkspaceId;
-    const identity = { workspaceId, repository: "acme/widgets", number: 42 } as const;
-    const listKey = pullRequestQueryKeys.list({ state: "open", workspaceId });
+    const projectId = "project-a" as ProjectId;
+    const identity = { projectId, repository: "acme/widgets", number: 42 } as const;
+    const listKey = pullRequestQueryKeys.list({ state: "open", projectId });
     queryClient.setQueryData(listKey, {
       entries: [{ ...identity, state: "open", isDraft: false, isPinned: false, title: "before" }],
     });

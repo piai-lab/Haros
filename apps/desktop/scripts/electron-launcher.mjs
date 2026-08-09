@@ -13,7 +13,10 @@ import {
   writeFileSync,
 } from "node:fs";
 import { createRequire } from "node:module";
-import { resolveOmniMindDesktopFlavor, omnimindDesktopIdentity } from "@omnimind/shared/desktopIdentity";
+import {
+  resolveOmniMindDesktopFlavor,
+  omnimindDesktopIdentity,
+} from "@synara/shared/desktopIdentity";
 import { dirname, join, resolve } from "node:path";
 import { fileURLToPath } from "node:url";
 

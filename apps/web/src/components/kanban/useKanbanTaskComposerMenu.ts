@@ -4,11 +4,23 @@
 // Exports: useKanbanTaskComposerMenu
 
 import type {
+  ModelSlug,
+  ProviderAgentDescriptor,
+  ProviderInteractionMode,
+  ProviderKind,
   ProviderMentionReference,
   ProviderSkillReference,
+  ProviderStartOptions,
   ThreadId,
-} from "@omnimind/contracts";
-import { useEffect, useState, type MutableRefObject, type RefObject } from "react";
+} from "@synara/contracts";
+import {
+  useEffect,
+  useState,
+  type Dispatch,
+  type MutableRefObject,
+  type RefObject,
+  type SetStateAction,
+} from "react";
 
 import type { ComposerPromptEditorHandle } from "~/components/ComposerPromptEditor";
 import type { ComposerLocalDirectoryMenuHandle } from "~/components/chat/ComposerLocalDirectoryMenu";
@@ -19,6 +31,7 @@ import {
   type ComposerTrigger,
 } from "~/composer-logic";
 import type { TerminalContextDraft } from "~/lib/terminalContext";
+import type { ProviderModelOption } from "../../providerModelOptions";
 import { useKanbanTaskComposerDiscovery } from "./useKanbanTaskComposerDiscovery";
 import { useKanbanTaskComposerEditor } from "./useKanbanTaskComposerEditor";
 
@@ -32,10 +45,21 @@ interface UseKanbanTaskComposerMenuInput {
   readonly composerSkills: readonly ProviderSkillReference[];
   readonly composerMentions: readonly ProviderMentionReference[];
   readonly scratchThreadId: ThreadId;
-  readonly selectedProvider: string;
+  readonly selectedProvider: ProviderKind;
+  readonly modelOptionsByProvider: Record<
+    ProviderKind,
+    ReadonlyArray<ProviderModelOption & { isCustom?: boolean }>
+  >;
+  readonly selectedRuntimeAgents: readonly ProviderAgentDescriptor[];
   readonly selectedProjectCwd: string | null;
   readonly serverCwd: string | null;
   readonly serverHomeDir: string | null;
+  readonly providerOptionsForDispatch: ProviderStartOptions | undefined;
+  readonly hiddenProviders: readonly ProviderKind[];
+  readonly providerOrder: readonly ProviderKind[];
+  readonly piAgentDir: string | null;
+  readonly handleProviderModelChange: (provider: ProviderKind, model: ModelSlug) => void;
+  readonly setInteractionMode: Dispatch<SetStateAction<ProviderInteractionMode>>;
   readonly onCreate: () => void;
 }
 
@@ -47,12 +71,21 @@ export function useKanbanTaskComposerMenu(input: UseKanbanTaskComposerMenuInput)
     composerEditorRef,
     localDirectoryMenuRef,
     composerTerminalContexts,
+    composerSkills,
     composerMentions,
     scratchThreadId,
     selectedProvider,
+    modelOptionsByProvider,
+    selectedRuntimeAgents,
     selectedProjectCwd,
     serverCwd,
     serverHomeDir,
+    providerOptionsForDispatch,
+    hiddenProviders,
+    providerOrder,
+    piAgentDir,
+    handleProviderModelChange,
+    setInteractionMode,
     onCreate,
   } = input;
   const [composerCursorState, setComposerCursor] = useState(() =>
@@ -78,10 +111,16 @@ export function useKanbanTaskComposerMenu(input: UseKanbanTaskComposerMenuInput)
   } = useKanbanTaskComposerDiscovery({
     composerTrigger,
     selectedProvider,
+    modelOptionsByProvider,
+    selectedRuntimeAgents,
     selectedProjectCwd,
     serverCwd,
     serverHomeDir,
     scratchThreadId,
+    providerOptionsForDispatch,
+    hiddenProviders,
+    providerOrder,
+    piAgentDir,
   });
   const activeComposerMenuItem =
     composerMenuItems.find((item) => item.id === composerHighlightedItemId) ??
@@ -102,8 +141,12 @@ export function useKanbanTaskComposerMenu(input: UseKanbanTaskComposerMenuInput)
     isLocalFolderBrowserOpen,
     localFolderBrowseRootPath,
     composerTerminalContexts,
+    composerSkills,
     composerMentions,
     scratchThreadId,
+    selectedProvider,
+    handleProviderModelChange,
+    setInteractionMode,
     onCreate,
   });
 

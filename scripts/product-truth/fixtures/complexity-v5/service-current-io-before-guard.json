@@ -1,9 +1,0 @@
-{
-  "extendsFixture": "service-refusal-effect-lock-positive",
-  "textReplacements": {
-    "apps/service/src/persistence/Layers/Sqlite.ts": [
-      ["  const databasePath = deriveServerPaths(root, null).dbPath;\n  if (existsSync", "  const databasePath = deriveServerPaths(root, null).dbPath;\n  mkdirSync(dirname(databasePath), { recursive: true });\n  if (existsSync"],
-      ["  mkdirSync(dirname(databasePath), { recursive: true });\n  return Effect.acquireRelease", "  return Effect.acquireRelease"]
-    ]
-  }
-}

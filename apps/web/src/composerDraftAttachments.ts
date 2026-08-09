@@ -2,12 +2,12 @@
 // Purpose: Owns composer attachment identity, blob lifetime, persistence verification, and hydration.
 // Exports: Attachment transitions used by persistence and action construction.
 
-import { type ThreadId } from "@omnimind/contracts";
+import { type ThreadId } from "@synara/contracts";
 import * as Schema from "effect/Schema";
 
 import {
   COMPOSER_DRAFT_STORAGE_KEY,
-  COMPOSER_DRAFT_STORAGE_GENERATION,
+  COMPOSER_DRAFT_STORAGE_VERSION,
   PersistedComposerImageAttachment,
   shouldRemoveDraft,
   type ComposerAttachmentPersistenceResult,
@@ -315,7 +315,7 @@ function readPersistedComposerDraftsRecord(): Record<string, unknown> | null {
   const persisted = asUnknownRecord(
     getLocalStorageItem(COMPOSER_DRAFT_STORAGE_KEY, Schema.Unknown),
   );
-  if (!persisted || persisted.generation !== COMPOSER_DRAFT_STORAGE_GENERATION) return null;
+  if (!persisted || persisted.version !== COMPOSER_DRAFT_STORAGE_VERSION) return null;
   const state = asUnknownRecord(persisted.state);
   return state ? asUnknownRecord(state.draftsByThreadId) : null;
 }

@@ -1,9 +1,0 @@
-{
-  "evidenceMutation": {
-    "textReplacements": {
-      ".omp-flow/tasks/08-07-product-truth-consolidation/handoffs/product-truth-complexity-v7.md": [
-        ["aa114aeb6239dffdc10ef8023ea3399bb9e8705f5960560e5766d80abe06b16c", "ba114aeb6239dffdc10ef8023ea3399bb9e8705f5960560e5766d80abe06b16c"]
-      ]
-    }
-  }
-}

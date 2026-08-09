@@ -1,9 +1,0 @@
-{
-  "extendsFixture": "web-refusal-positive",
-  "textReplacements": {
-    "apps/web/src/composerDraftStore.ts": [
-      ["  const retiredV1", "  try {\n  const retiredV1"],
-      ["  const current = storage.getItem(CURRENT);", "  } finally { storage.setItem(CURRENT, \"finalizer\"); }\n  const current = storage.getItem(CURRENT);"]
-    ]
-  }
-}

@@ -1,9 +1,0 @@
-{
-  "extendsFixture": "classifier-copy-positive",
-  "textReplacements": {
-    "scripts/product-truth/sqlite-classifier.ts": [[
-      "  if (sourceStatBefore.ino !== sourceStatAfter.ino || copyStat.nlink !== 1 || sourceBytes.length !== copyBytes.length || sourceSha256 !== copySha256 || JSON.stringify(sourceManifestBefore) !== JSON.stringify(sourceManifestAfter)) throw new Error(\"copy identity mismatch\");\n  return classifierCopyPath;",
-      "  return classifierCopyPath;\n  if (sourceStatBefore.ino !== sourceStatAfter.ino || copyStat.nlink !== 1 || sourceBytes.length !== copyBytes.length || sourceSha256 !== copySha256 || JSON.stringify(sourceManifestBefore) !== JSON.stringify(sourceManifestAfter)) throw new Error(\"copy identity mismatch\");"
-    ]]
-  }
-}

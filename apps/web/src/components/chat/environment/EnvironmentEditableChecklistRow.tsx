@@ -14,7 +14,7 @@ import {
 import { Checkbox } from "~/components/ui/checkbox";
 import { IconButton } from "~/components/ui/icon-button";
 import { XIcon } from "~/lib/icons";
-import { cn } from "~/lib/styles";
+import { cn } from "~/lib/utils";
 import { ELEVATED_HOVER_SURFACE_CLASS_NAME } from "~/surfaceStyles";
 
 const JUMP_CLICK_DELAY_MS = 180;

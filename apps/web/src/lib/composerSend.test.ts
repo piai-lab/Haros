@@ -1,7 +1,7 @@
 import {
-  CHAT_TURN_MAX_ATTACHMENTS,
-  CHAT_IMAGE_MAX_BYTES,
-} from "@omnimind/contracts";
+  PROVIDER_SEND_TURN_MAX_ATTACHMENTS,
+  PROVIDER_SEND_TURN_MAX_IMAGE_BYTES,
+} from "@synara/contracts";
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 
 import type {
@@ -78,12 +78,12 @@ describe("composerSend attachment builders", () => {
   it("enforces the shared attachment count cap for generic files", () => {
     const result = buildComposerFileAttachmentsFromFiles({
       files: [new File(["data"], "notes.txt", { type: "text/plain" })],
-      existingAttachmentCount: CHAT_TURN_MAX_ATTACHMENTS,
+      existingAttachmentCount: PROVIDER_SEND_TURN_MAX_ATTACHMENTS,
     });
 
     expect(result.files).toEqual([]);
     expect(result.error).toBe(
-      `You can attach up to ${CHAT_TURN_MAX_ATTACHMENTS} references per message.`,
+      `You can attach up to ${PROVIDER_SEND_TURN_MAX_ATTACHMENTS} references per message.`,
     );
   });
 
@@ -91,13 +91,13 @@ describe("composerSend attachment builders", () => {
     const unsupported = new File(["gif"], "animation.gif", { type: "image/gif" });
     Object.defineProperty(unsupported, "size", {
       configurable: true,
-      value: CHAT_IMAGE_MAX_BYTES + 1,
+      value: PROVIDER_SEND_TURN_MAX_IMAGE_BYTES + 1,
     });
     const valid = new File(["png"], "screen.png", { type: "image/png" });
 
     const result = await prepareComposerImageAttachmentsFromFiles({
       files: [unsupported, valid],
-      existingAttachmentCount: CHAT_TURN_MAX_ATTACHMENTS - 1,
+      existingAttachmentCount: PROVIDER_SEND_TURN_MAX_ATTACHMENTS - 1,
     });
 
     expect(result.images).toHaveLength(1);

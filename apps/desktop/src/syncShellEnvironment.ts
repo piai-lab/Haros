@@ -10,25 +10,11 @@ import {
   readWindowsPersistentEnvironment,
   type ShellEnvironmentReader,
   type WindowsEnvironmentReader,
-} from "@omnimind/shared/shell";
+} from "@synara/shared/shell";
 import {
   createCachedLoginShellEnvironmentReader,
   LOGIN_SHELL_ENVIRONMENT_NAMES,
-} from "@omnimind/shared/loginShellEnvironment";
-
-const DISPOSABLE_SMOKE_ROOT_ENV_NAME = "OMNIMIND_DISPOSABLE_SMOKE_ROOT";
-
-export function isDisposableSmokeEnvironment(env: NodeJS.ProcessEnv): boolean {
-  const root = env[DISPOSABLE_SMOKE_ROOT_ENV_NAME]?.trim();
-  if (!root) return false;
-  const normalizedRoot = root.replace(/[\\/]+$/u, "");
-  return [env.HOME, env.OMNIMIND_HOME].every(
-    (candidate) =>
-      typeof candidate === "string" &&
-      candidate.length > normalizedRoot.length &&
-      candidate.startsWith(`${normalizedRoot}${process.platform === "win32" ? "\\" : "/"}`),
-  );
-}
+} from "@synara/shared/loginShellEnvironment";
 
 function logShellEnvironmentWarning(message: string, error?: unknown): void {
   console.warn(`[desktop] ${message}`, error instanceof Error ? error.message : (error ?? ""));

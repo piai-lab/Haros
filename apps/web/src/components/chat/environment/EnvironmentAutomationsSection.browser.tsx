@@ -4,7 +4,7 @@
 
 import "../../../index.css";
 
-import { AutomationId, ProjectId, ThreadId, type AutomationDefinition } from "@omnimind/contracts";
+import { AutomationId, ProjectId, ThreadId, type AutomationDefinition } from "@synara/contracts";
 import { page } from "vitest/browser";
 import { afterEach, describe, expect, it, vi } from "vitest";
 import { render } from "vitest-browser-react";
@@ -20,18 +20,9 @@ const baseAutomation = (overrides: Partial<AutomationDefinition> = {}): Automati
   schedule: { type: "interval", everySeconds: 180 },
   enabled: true,
   nextRunAt: "2026-06-21T15:00:00.000Z",
-  requestedSelection: {
-    state: "selected",
-    engineId: "pi",
-    runtimeChoice: {
-      kind: "product-model",
-      runtimeModelId: "openai/gpt-5-codex",
-      thinking: "medium",
-    },
-    packageGeneration: "test",
-    permissionPolicy: "approval-required",
-    executionTarget: null,
-  },
+  modelSelection: { provider: "codex", model: "gpt-5-codex" },
+  runtimeMode: "approval-required",
+  interactionMode: "default",
   worktreeMode: "worktree",
   mode: "heartbeat",
   targetThreadId: ThreadId.makeUnsafe("thread-pr-220"),

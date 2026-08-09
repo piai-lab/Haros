@@ -22,7 +22,7 @@ const ASAR_SUFFIX = ".asar";
 
 /**
  * Returns the path of the containing `.asar` archive when `candidatePath` points
- * inside one (`…/app.asar/apps/service/dist/client` → `…/app.asar`), or the path
+ * inside one (`…/app.asar/apps/server/dist/client` → `…/app.asar`), or the path
  * itself when it IS an archive. Null for plain-directory paths, which need no
  * snapshot: real files are already immune to archive swaps.
  */

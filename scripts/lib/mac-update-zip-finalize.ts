@@ -20,7 +20,6 @@ import { basename, dirname, join } from "node:path";
 
 import {
   buildMacUpdateZipSymlinkEntries,
-  findMacUpdateManifestFileNames,
   isZipInfoSymlink,
   resolveMacUpdateManifestFileNames,
   resolveSingleMacUpdateZipFileName,
@@ -32,7 +31,6 @@ export interface FinalizeMacUpdateZipOptions {
   readonly stageDistDir: string;
   readonly signed: boolean;
   readonly verbose?: boolean;
-  readonly requireUpdateManifest?: boolean;
 }
 
 export interface FinalizedMacUpdateZip {
@@ -190,12 +188,8 @@ export async function finalizeMacUpdateZip(
   }
   const sha512 = await computeSha512Base64(zipPath);
 
-  const manifestNames =
-    options.requireUpdateManifest === false
-      ? findMacUpdateManifestFileNames(distEntries)
-      : resolveMacUpdateManifestFileNames(distEntries);
   const updatedManifestPaths: string[] = [];
-  for (const manifestName of manifestNames) {
+  for (const manifestName of resolveMacUpdateManifestFileNames(distEntries)) {
     const manifestPath = join(options.stageDistDir, manifestName);
     const manifest = readFileSync(manifestPath, "utf8");
     const nextManifest = updateMacUpdateManifestZipEntry(manifest, zipFileName, {

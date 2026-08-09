@@ -28,10 +28,10 @@ describe("resolveWorkspaceFileOpenTarget", () => {
 
   it("maps OmniMind public asset URLs to their workspace files", () => {
     expect(
-      resolveWorkspaceFileOpenTarget("/icons/line/magnifying-glass.svg", "/repo/app"),
-    ).toBe("apps/web/public/icons/line/magnifying-glass.svg");
-    expect(resolveWorkspaceFileOpenTarget("/icons/fill/search.svg:12", "/repo/app")).toBe(
-      "apps/web/public/icons/fill/search.svg",
+      resolveWorkspaceFileOpenTarget("/central-icons-reversed/magnifying-glass.svg", "/repo/app"),
+    ).toBe("apps/web/public/central-icons-reversed/magnifying-glass.svg");
+    expect(resolveWorkspaceFileOpenTarget("/central-icons-fill/search.svg:12", "/repo/app")).toBe(
+      "apps/web/public/central-icons-fill/search.svg",
     );
   });
 

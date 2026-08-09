@@ -1,6 +1,0 @@
-{
-  "compareToBootstrapBaseline": true,
-  "removeFiles": [
-    "apps/service/src/atomicWrite.ts"
-  ]
-}

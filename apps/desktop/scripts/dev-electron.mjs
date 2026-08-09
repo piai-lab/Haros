@@ -3,7 +3,7 @@ import { watch } from "node:fs";
 import { join } from "node:path";
 import waitOn from "wait-on";
 
-import { buildAppSnapBridge } from "./build-appsnap-bridge.mjs";
+import { buildAppSnapHelper } from "./build-appsnap-helper.mjs";
 import { desktopDir, resolveElectronPath } from "./electron-launcher.mjs";
 
 const port = Number(process.env.ELECTRON_RENDERER_PORT ?? 5733);
@@ -27,7 +27,7 @@ const childTreeGracePeriodMs = 1_200;
 const staleComputerUseGracePeriodMs = 300;
 
 if (process.platform === "darwin") {
-  buildAppSnapBridge({ arch: process.arch });
+  buildAppSnapHelper({ arch: process.arch });
 }
 
 await waitOn({

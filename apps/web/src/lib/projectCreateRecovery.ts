@@ -1,9 +1,9 @@
-import type { HistoricalWorkspaceReadModel } from "~/historicalConversation";
 // FILE: projectCreateRecovery.ts
 // Purpose: Centralizes duplicate `project.create` error parsing and recovery helpers.
 // Exports: duplicate-create error guards plus snapshot matching for import recovery.
 
-import { workspaceRootsEqual } from "@omnimind/shared/threadWorkspace";
+import type { OrchestrationReadModel } from "@synara/contracts";
+import { workspaceRootsEqual } from "@synara/shared/threadWorkspace";
 
 const DUPLICATE_PROJECT_CREATE_ERROR_PREFIX =
   "Orchestration command invariant failed (project.create): Project '";
@@ -191,7 +191,7 @@ export function findRecoverableProjectForDuplicateCreate<
 
 export async function waitForRecoverableProjectInReadModel<
   TSnapshot extends SnapshotWithProjects<DuplicateProjectCreateRecoveryCandidate> =
-    HistoricalWorkspaceReadModel,
+    OrchestrationReadModel,
 >(
   input: ProjectLookupInput & {
     readonly loadSnapshot: () => Promise<TSnapshot | null>;

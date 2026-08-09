@@ -1,5 +1,5 @@
 import { readFileSync } from "node:fs";
-import { MessageId, ThreadMarkerId, type ThreadMarker } from "@omnimind/contracts";
+import { MessageId, ThreadMarkerId, type ThreadMarker } from "@synara/contracts";
 import { renderToStaticMarkup } from "react-dom/server";
 import { describe, expect, it, vi } from "vitest";
 
@@ -134,6 +134,33 @@ describe("ChatMarkdown", () => {
     expect(markup).toContain("$USD$");
     expect(markup).toContain("$PATH$");
     expect(markup).not.toContain('class="katex"');
+  });
+
+  it("renders a table whose delimiter row is missing cells", async () => {
+    // Models regularly emit a delimiter row with fewer cells than the header;
+    // GFM rejects the whole block on the mismatch and the table degrades into
+    // one run-on paragraph of pipes. The repair pass pads the delimiter row.
+    const markup = await renderMarkdown(
+      [
+        "Studio vs. normal mode:",
+        "",
+        "| | Normal mode | Studio |",
+        "|---|---|",
+        "| Purpose | Focused, interactive work | Long-running, agent-led work |",
+      ].join("\n"),
+    );
+
+    expect(markup).toContain("<table>");
+    expect(markup).toContain("<th>Studio</th>");
+    expect(markup).toContain("<td>Purpose</td>");
+    expect(markup).not.toContain("|---|");
+  });
+
+  it("keeps pipe-and-dash lines inside code fences out of table repair", async () => {
+    const markup = await renderMarkdown(["```", "| a | b |", "|---|", "```"].join("\n"));
+
+    expect(markup).not.toContain("<table>");
+    expect(markup).toContain("|---|");
   });
 
   it("renders exact thread marker ranges without changing markdown structure", async () => {
@@ -298,7 +325,7 @@ describe("ChatMarkdown user variant", () => {
       const markup = await renderUserMarkdown(`what if a key is \`${token}\``);
 
       expect(markup).toContain("<code>");
-      expect(markup).not.toContain('data-slot="glyph"');
+      expect(markup).not.toContain('data-slot="central-icon"');
     }
   });
 

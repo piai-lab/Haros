@@ -1,13 +1,16 @@
-import type { HistoricalModelOptions, HistoricalModelSelection, HistoricalModelSlug } from "~/historicalModelSelection";
 import {
   CheckpointRef,
   EventId,
   MessageId,
   ThreadId,
   TurnId,
+  type GitWorktreeSetupProgressEvent,
+  type ModelSlug,
   type RuntimeMode,
-} from "@omnimind/contracts";
-import { describe, expect, it } from "vitest";
+} from "@synara/contracts";
+import { describe, expect, it, vi } from "vitest";
+
+import type { WorkLogEntry } from "../session-logic";
 
 import {
   appendVoiceTranscriptToPrompt,
@@ -17,6 +20,7 @@ import {
   createRuntimeModePersistenceQueue,
   persistModelSelectionBeforeRuntimeMode,
   createLocalDispatchSnapshot,
+  createWorktreeSetupResolution,
   createWorktreeSetupSnapshot,
   derivePromptHistoryFromMessages,
   failWorktreeSetupSnapshot,
@@ -28,13 +32,18 @@ import {
   promptStillMatchesActiveHistoryBrowse,
   resolvePromptHistoryNavigation,
   resolveNextLocalDispatchSnapshot,
+  resolveWorkingLabel,
   deriveComposerSendState,
   deriveComposerVoiceState,
   describeVoiceRecordingStartError,
+  hasLiveTurnTakenOver,
   hasServerAcknowledgedLocalDispatch,
   isVoiceAuthExpiredMessage,
+  LOCAL_DISPATCH_TURN_TAKEOVER_TIMEOUT_MS,
   resolveActiveThreadTitle,
   resolveActiveTurnLiveDiffState,
+  resolveCommittedProviderModel,
+  resolveComposerStripWorkLogEntries,
   resolveCycledModelSlug,
   resolveDefaultEnvironmentPanelOpen,
   resolveEnvironmentPanelOpen,
@@ -47,6 +56,7 @@ import {
   resolveRuntimeModeAfterApprovalDecision,
   resolveThreadDetailHydration,
   resolveThreadArtifactWorkspaceRoot,
+  runWorktreeCreationFlow,
   QUEUED_STEER_GATE_TIMEOUT_MS,
   sanitizeVoiceErrorMessage,
   buildExpiredTerminalContextToastCopy,
@@ -54,11 +64,35 @@ import {
   shouldConsumePendingCustomBinaryConfirmation,
   shouldEnableComposerPastedTextCollapse,
   shouldHandlePromptHistoryNavigationKey,
+  shouldRenderProviderHealthBanner,
   shouldShowComposerModelBootstrapSkeleton,
   shouldStartActiveTurnLayoutGrace,
   shouldRenderTerminalWorkspace,
   worktreeSetupHasError,
 } from "./ChatView.logic";
+
+describe("composer strip work-log derivation", () => {
+  it("reuses the active derivation unless a subagent view needs its parent source", () => {
+    const activeWorkLogEntries: WorkLogEntry[] = [];
+    const deriveParentWorkLogEntries = vi.fn(() => []);
+
+    expect(
+      resolveComposerStripWorkLogEntries({
+        hasDistinctParentSource: false,
+        activeWorkLogEntries,
+        deriveParentWorkLogEntries,
+      }),
+    ).toBe(activeWorkLogEntries);
+    expect(deriveParentWorkLogEntries).not.toHaveBeenCalled();
+
+    resolveComposerStripWorkLogEntries({
+      hasDistinctParentSource: true,
+      activeWorkLogEntries,
+      deriveParentWorkLogEntries,
+    });
+    expect(deriveParentWorkLogEntries).toHaveBeenCalledOnce();
+  });
+});
 
 describe("thread artifact workspace root", () => {
   it("uses a materialized worktree for file previews", () => {
@@ -803,9 +837,10 @@ describe("voice helpers", () => {
     expect(describeVoiceRecordingStartError(error)).toContain("Microphone access was denied");
   });
 
-  it("fails voice notes closed without a System-owned capability", () => {
+  it("derives voice-note availability from provider auth and runtime state", () => {
     expect(
       deriveComposerVoiceState({
+        authStatus: "authenticated",
         voiceTranscriptionAvailable: true,
         isRecording: false,
         isTranscribing: false,
@@ -818,7 +853,8 @@ describe("voice helpers", () => {
 
     expect(
       deriveComposerVoiceState({
-        voiceTranscriptionAvailable: false,
+        authStatus: "unauthenticated",
+        voiceTranscriptionAvailable: true,
         isRecording: true,
         isTranscribing: false,
       }),
@@ -1344,6 +1380,33 @@ describe("shouldShowComposerModelBootstrapSkeleton", () => {
   });
 });
 
+describe("resolveCommittedProviderModel", () => {
+  it("preserves the exact runtime-discovered slug when the picker selected it", () => {
+    expect(
+      resolveCommittedProviderModel({
+        selectedModel: "grok-code-fast-1-0825" as ModelSlug,
+        availableOptions: [
+          {
+            slug: "grok-code-fast-1-0825" as ModelSlug,
+            name: "Grok Code Fast 1 0825",
+          },
+        ],
+        fallback: () => "grok-build-0.1",
+      }),
+    ).toBe("grok-code-fast-1-0825");
+  });
+
+  it("falls back to static alias resolution when the selected slug is not in the options", () => {
+    expect(
+      resolveCommittedProviderModel({
+        selectedModel: "code-fast" as ModelSlug,
+        availableOptions: [],
+        fallback: () => "grok-build-0.1",
+      }),
+    ).toBe("grok-build-0.1");
+  });
+});
+
 describe("shouldConsumePendingCustomBinaryConfirmation", () => {
   it("still processes a pending path for a session that was already checked", () => {
     expect(
@@ -1582,6 +1645,35 @@ describe("resolveProjectScriptTerminalTarget", () => {
   });
 });
 
+describe("shouldRenderProviderHealthBanner", () => {
+  it("does not show chat provider health while a terminal thread is active", () => {
+    expect(
+      shouldRenderProviderHealthBanner({
+        threadEntryPoint: "terminal",
+        terminalWorkspaceTerminalTabActive: false,
+      }),
+    ).toBe(false);
+  });
+
+  it("does not show chat provider health while the terminal workspace tab is active", () => {
+    expect(
+      shouldRenderProviderHealthBanner({
+        threadEntryPoint: "chat",
+        terminalWorkspaceTerminalTabActive: true,
+      }),
+    ).toBe(false);
+  });
+
+  it("shows chat provider health only on the chat surface", () => {
+    expect(
+      shouldRenderProviderHealthBanner({
+        threadEntryPoint: "chat",
+        terminalWorkspaceTerminalTabActive: false,
+      }),
+    ).toBe(true);
+  });
+});
+
 describe("shouldStartActiveTurnLayoutGrace", () => {
   it("starts the grace window when a live turn just became settled", () => {
     expect(
@@ -1627,23 +1719,49 @@ describe("shouldStartActiveTurnLayoutGrace", () => {
 describe("worktree setup snapshots", () => {
   it("marks earlier steps done, the active step active, and later steps pending", () => {
     expect(createWorktreeSetupSnapshot("prepare-thread").steps).toEqual([
-      { id: "create-worktree", label: "Creating branch and worktree", status: "done" },
+      { id: "create-branch", label: "Creating branch", status: "done" },
+      { id: "create-worktree", label: "Creating worktree", status: "done" },
       { id: "prepare-thread", label: "Linking thread workspace", status: "active" },
       { id: "start-session", label: "Starting session", status: "pending" },
     ]);
   });
 
   it("starts with every step pending except the first when setup begins", () => {
-    expect(createWorktreeSetupSnapshot("create-worktree").steps.map((step) => step.status)).toEqual(
-      ["active", "pending", "pending"],
-    );
+    expect(createWorktreeSetupSnapshot("create-branch").steps.map((step) => step.status)).toEqual([
+      "active",
+      "pending",
+      "pending",
+      "pending",
+    ]);
   });
 
   it("ends with every step done except the last when the session starts", () => {
     expect(createWorktreeSetupSnapshot("start-session").steps.map((step) => step.status)).toEqual([
       "done",
       "done",
+      "done",
       "active",
+    ]);
+  });
+
+  it("inserts the copy step when the worktree copies local changes", () => {
+    expect(createWorktreeSetupSnapshot("copy-changes").steps).toEqual([
+      { id: "create-branch", label: "Creating branch", status: "done" },
+      { id: "create-worktree", label: "Creating worktree", status: "done" },
+      { id: "copy-changes", label: "Copying local changes", status: "active" },
+      { id: "prepare-thread", label: "Linking thread workspace", status: "pending" },
+      { id: "start-session", label: "Starting session", status: "pending" },
+    ]);
+    expect(
+      createWorktreeSetupSnapshot("create-branch", { copyLocalChanges: true }).steps.map(
+        (step) => step.id,
+      ),
+    ).toEqual([
+      "create-branch",
+      "create-worktree",
+      "copy-changes",
+      "prepare-thread",
+      "start-session",
     ]);
   });
 
@@ -1651,7 +1769,8 @@ describe("worktree setup snapshots", () => {
     expect(
       createWorktreeSetupSnapshot("run-setup-action", { setupScriptName: "Setup" }).steps,
     ).toEqual([
-      { id: "create-worktree", label: "Creating branch and worktree", status: "done" },
+      { id: "create-branch", label: "Creating branch", status: "done" },
+      { id: "create-worktree", label: "Creating worktree", status: "done" },
       { id: "prepare-thread", label: "Linking thread workspace", status: "done" },
       { id: "run-setup-action", label: "Running setup action: Setup", status: "active" },
       { id: "start-session", label: "Starting session", status: "pending" },
@@ -1663,7 +1782,7 @@ describe("worktree setup snapshots", () => {
       createWorktreeSetupSnapshot("start-session", { setupScriptName: "Setup" }).steps.map(
         (step) => step.status,
       ),
-    ).toEqual(["done", "done", "done", "active"]);
+    ).toEqual(["done", "done", "done", "done", "active"]);
   });
 
   it("preserves setup action metadata while advancing local worktree setup", () => {
@@ -1679,7 +1798,8 @@ describe("worktree setup snapshots", () => {
     });
 
     expect(next.worktreeSetup?.steps).toEqual([
-      { id: "create-worktree", label: "Creating branch and worktree", status: "done" },
+      { id: "create-branch", label: "Creating branch", status: "done" },
+      { id: "create-worktree", label: "Creating worktree", status: "done" },
       { id: "prepare-thread", label: "Linking thread workspace", status: "done" },
       { id: "run-setup-action", label: "Running setup action: Setup", status: "active" },
       { id: "start-session", label: "Starting session", status: "pending" },
@@ -1688,7 +1808,7 @@ describe("worktree setup snapshots", () => {
 
   it("fails only the active step and leaves the rest untouched", () => {
     const failed = failWorktreeSetupSnapshot(createWorktreeSetupSnapshot("prepare-thread"));
-    expect(failed.steps.map((step) => step.status)).toEqual(["done", "error", "pending"]);
+    expect(failed.steps.map((step) => step.status)).toEqual(["done", "done", "error", "pending"]);
     expect(worktreeSetupHasError(failed)).toBe(true);
   });
 
@@ -1700,6 +1820,27 @@ describe("worktree setup snapshots", () => {
   it("reports no error for null or healthy snapshots", () => {
     expect(worktreeSetupHasError(null)).toBe(false);
     expect(worktreeSetupHasError(createWorktreeSetupSnapshot("create-worktree"))).toBe(false);
+  });
+
+  it("resolves a worktree setup resolution once and ignores later attempts", async () => {
+    const resolution = createWorktreeSetupResolution();
+    expect(resolution.action).toBeNull();
+
+    resolution.resolve("work-locally");
+    resolution.resolve("cancel");
+
+    expect(resolution.action).toBe("work-locally");
+    await expect(resolution.promise).resolves.toBe("work-locally");
+  });
+
+  it("exposes a cancel resolution through both the getter and the promise", async () => {
+    const resolution = createWorktreeSetupResolution();
+    const settled = resolution.promise;
+
+    resolution.resolve("cancel");
+
+    expect(resolution.action).toBe("cancel");
+    await expect(settled).resolves.toBe("cancel");
   });
 
   it("replaces a held failed setup when a fresh local dispatch starts", () => {
@@ -1724,6 +1865,29 @@ describe("worktree setup snapshots", () => {
     expect(next.worktreeSetup).toBeNull();
   });
 
+  it("starts a fresh dispatch marker when a new expected user message id arrives", () => {
+    const current: LocalDispatchSnapshot = {
+      startedAt: "2026-04-13T00:00:00.000Z",
+      worktreeSetup: null,
+      expectedUserMessageId: "message-first" as never,
+      latestTurnTurnId: null,
+      latestTurnRequestedAt: null,
+      latestTurnStartedAt: null,
+      latestTurnCompletedAt: null,
+      sessionOrchestrationStatus: "ready",
+      sessionUpdatedAt: "2026-04-13T00:00:00.000Z",
+    };
+
+    const next = resolveNextLocalDispatchSnapshot({
+      current,
+      activeThread: undefined,
+      options: { expectedUserMessageId: "message-second" as never },
+    });
+
+    expect(next).not.toBe(current);
+    expect(next.expectedUserMessageId).toBe("message-second");
+  });
+
   it("replaces a held failed setup when retrying worktree setup", () => {
     const current: LocalDispatchSnapshot = {
       startedAt: "2026-04-13T00:00:00.000Z",
@@ -1745,10 +1909,125 @@ describe("worktree setup snapshots", () => {
 
     expect(next).not.toBe(current);
     expect(next.worktreeSetup?.steps.map((step) => step.status)).toEqual([
+      "done",
       "active",
       "pending",
       "pending",
     ]);
+  });
+});
+
+describe("runWorktreeCreationFlow", () => {
+  interface FlowHarness {
+    emit: (event: GitWorktreeSetupProgressEvent) => void;
+    resolution: ReturnType<typeof createWorktreeSetupResolution>;
+    steps: string[];
+    removedPaths: string[];
+    unsubscribeCount: () => number;
+    settleCreation: (worktreePath: string) => void;
+    rejectCreation: (error: unknown) => void;
+    flow: ReturnType<typeof runWorktreeCreationFlow<{ worktree: { path: string } }>>;
+  }
+
+  function startFlowHarness(): FlowHarness {
+    const listeners: Array<(event: GitWorktreeSetupProgressEvent) => void> = [];
+    let unsubscribes = 0;
+    let settle!: (result: { worktree: { path: string } }) => void;
+    let reject!: (error: unknown) => void;
+    const resolution = createWorktreeSetupResolution();
+    const steps: string[] = [];
+    const removedPaths: string[] = [];
+    const flow = runWorktreeCreationFlow({
+      progressId: "progress-1",
+      subscribeToProgress: (listener) => {
+        listeners.push(listener);
+        return () => {
+          unsubscribes += 1;
+        };
+      },
+      startCreation: () =>
+        new Promise<{ worktree: { path: string } }>((resolveCreation, rejectCreation) => {
+          settle = resolveCreation;
+          reject = rejectCreation;
+        }),
+      resolution,
+      onCreationStep: (stepId) => steps.push(stepId),
+      removeWorktree: (worktreePath) => {
+        removedPaths.push(worktreePath);
+        return Promise.resolve();
+      },
+    });
+    return {
+      emit: (event) => {
+        for (const listener of listeners) {
+          listener(event);
+        }
+      },
+      resolution,
+      steps,
+      removedPaths,
+      unsubscribeCount: () => unsubscribes,
+      settleCreation: (worktreePath) => settle({ worktree: { path: worktreePath } }),
+      rejectCreation: (error) => reject(error),
+      flow,
+    };
+  }
+
+  it("advances steps only for this creation's phase-started events", async () => {
+    const harness = startFlowHarness();
+
+    harness.emit({ progressId: "progress-1", kind: "phase_started", phase: "branch" });
+    harness.emit({ progressId: "progress-other", kind: "phase_started", phase: "worktree" });
+    harness.emit({
+      progressId: "progress-1",
+      kind: "completed",
+      result: { worktree: { path: "/wt", ref: "abc123", branch: "omnimind/x" } },
+    });
+    harness.emit({ progressId: "progress-1", kind: "phase_started", phase: "copy-changes" });
+
+    expect(harness.steps).toEqual(["create-branch", "copy-changes"]);
+
+    harness.settleCreation("/wt");
+    await expect(harness.flow).resolves.toEqual({
+      outcome: "created",
+      result: { worktree: { path: "/wt" } },
+    });
+    expect(harness.removedPaths).toEqual([]);
+    expect(harness.unsubscribeCount()).toBe(1);
+  });
+
+  it("stops advancing steps once the setup card is resolved", async () => {
+    const harness = startFlowHarness();
+
+    harness.emit({ progressId: "progress-1", kind: "phase_started", phase: "branch" });
+    harness.resolution.resolve("cancel");
+    harness.emit({ progressId: "progress-1", kind: "phase_started", phase: "worktree" });
+
+    expect(harness.steps).toEqual(["create-branch"]);
+    await expect(harness.flow).resolves.toEqual({ outcome: "resolved" });
+  });
+
+  it("tears down the worktree once creation lands after a resolution won the race", async () => {
+    const harness = startFlowHarness();
+
+    harness.resolution.resolve("work-locally");
+    await expect(harness.flow).resolves.toEqual({ outcome: "resolved" });
+    expect(harness.unsubscribeCount()).toBe(1);
+    expect(harness.removedPaths).toEqual([]);
+
+    harness.settleCreation("/late-worktree");
+    await Promise.resolve();
+    expect(harness.removedPaths).toEqual(["/late-worktree"]);
+  });
+
+  it("unsubscribes and rethrows when creation fails", async () => {
+    const harness = startFlowHarness();
+
+    harness.rejectCreation(new Error("worktree add failed"));
+
+    await expect(harness.flow).rejects.toThrow("worktree add failed");
+    expect(harness.unsubscribeCount()).toBe(1);
+    expect(harness.removedPaths).toEqual([]);
   });
 });
 
@@ -1897,6 +2176,211 @@ describe("hasServerAcknowledgedLocalDispatch", () => {
         threadError: "provider failed",
       }),
     ).toBe(true);
+  });
+});
+
+describe("hasLiveTurnTakenOver", () => {
+  const localDispatch: LocalDispatchSnapshot = {
+    startedAt: "2026-04-13T00:00:00.000Z",
+    worktreeSetup: null,
+    expectedUserMessageId: "message-for-dispatch" as never,
+    latestTurnTurnId: null,
+    latestTurnRequestedAt: null,
+    latestTurnStartedAt: null,
+    latestTurnCompletedAt: null,
+    sessionOrchestrationStatus: "ready",
+    sessionUpdatedAt: "2026-04-13T00:00:00.000Z",
+  };
+
+  it("stays false for a message echo and requestedAt-only turn bump", () => {
+    expect(
+      hasLiveTurnTakenOver({
+        localDispatch,
+        phase: "ready",
+        latestTurn: {
+          turnId: "turn-1" as never,
+          state: "running",
+          requestedAt: "2026-04-13T00:00:01.000Z",
+          startedAt: null,
+          completedAt: null,
+          assistantMessageId: null,
+          sourceProposedPlan: undefined,
+        },
+        session: {
+          provider: "codex",
+          status: "ready",
+          orchestrationStatus: "ready",
+          createdAt: "2026-04-13T00:00:00.000Z",
+          updatedAt: "2026-04-13T00:00:01.000Z",
+        },
+        hasPendingApproval: false,
+        hasPendingUserInput: false,
+        threadError: null,
+        now: Date.parse("2026-04-13T00:00:02.000Z"),
+      }),
+    ).toBe(false);
+  });
+
+  it("takes over once the session phase is running or connecting", () => {
+    expect(
+      hasLiveTurnTakenOver({
+        localDispatch,
+        phase: "running",
+        latestTurn: null,
+        session: null,
+        hasPendingApproval: false,
+        hasPendingUserInput: false,
+        threadError: null,
+      }),
+    ).toBe(true);
+    expect(
+      hasLiveTurnTakenOver({
+        localDispatch,
+        phase: "connecting",
+        latestTurn: null,
+        session: null,
+        hasPendingApproval: false,
+        hasPendingUserInput: false,
+        threadError: null,
+      }),
+    ).toBe(true);
+  });
+
+  it("takes over when an active turn id appears", () => {
+    expect(
+      hasLiveTurnTakenOver({
+        localDispatch,
+        phase: "ready",
+        latestTurn: null,
+        session: {
+          provider: "codex",
+          status: "ready",
+          orchestrationStatus: "ready",
+          activeTurnId: "turn-1" as never,
+          createdAt: "2026-04-13T00:00:00.000Z",
+          updatedAt: "2026-04-13T00:00:01.000Z",
+        },
+        hasPendingApproval: false,
+        hasPendingUserInput: false,
+        threadError: null,
+      }),
+    ).toBe(true);
+  });
+
+  it("takes over when latestTurn startedAt or completedAt changes", () => {
+    expect(
+      hasLiveTurnTakenOver({
+        localDispatch,
+        phase: "ready",
+        latestTurn: {
+          turnId: "turn-1" as never,
+          state: "running",
+          requestedAt: "2026-04-13T00:00:01.000Z",
+          startedAt: "2026-04-13T00:00:02.000Z",
+          completedAt: null,
+          assistantMessageId: null,
+          sourceProposedPlan: undefined,
+        },
+        session: null,
+        hasPendingApproval: false,
+        hasPendingUserInput: false,
+        threadError: null,
+      }),
+    ).toBe(true);
+    expect(
+      hasLiveTurnTakenOver({
+        localDispatch,
+        phase: "ready",
+        latestTurn: {
+          turnId: "turn-1" as never,
+          state: "completed",
+          requestedAt: "2026-04-13T00:00:01.000Z",
+          startedAt: null,
+          completedAt: "2026-04-13T00:00:03.000Z",
+          assistantMessageId: null,
+          sourceProposedPlan: undefined,
+        },
+        session: null,
+        hasPendingApproval: false,
+        hasPendingUserInput: false,
+        threadError: null,
+      }),
+    ).toBe(true);
+  });
+
+  it("takes over on pending approval, user input, or thread error", () => {
+    expect(
+      hasLiveTurnTakenOver({
+        localDispatch,
+        phase: "ready",
+        latestTurn: null,
+        session: null,
+        hasPendingApproval: true,
+        hasPendingUserInput: false,
+        threadError: null,
+      }),
+    ).toBe(true);
+    expect(
+      hasLiveTurnTakenOver({
+        localDispatch,
+        phase: "ready",
+        latestTurn: null,
+        session: null,
+        hasPendingApproval: false,
+        hasPendingUserInput: true,
+        threadError: null,
+      }),
+    ).toBe(true);
+    expect(
+      hasLiveTurnTakenOver({
+        localDispatch,
+        phase: "ready",
+        latestTurn: null,
+        session: null,
+        hasPendingApproval: false,
+        hasPendingUserInput: false,
+        threadError: "provider failed",
+      }),
+    ).toBe(true);
+  });
+
+  it("fails open after the awaiting-turn timeout unless worktree setup is active", () => {
+    const now = Date.parse(localDispatch.startedAt) + LOCAL_DISPATCH_TURN_TAKEOVER_TIMEOUT_MS;
+    expect(
+      hasLiveTurnTakenOver({
+        localDispatch,
+        phase: "ready",
+        latestTurn: null,
+        session: null,
+        hasPendingApproval: false,
+        hasPendingUserInput: false,
+        threadError: null,
+        now,
+      }),
+    ).toBe(true);
+    expect(
+      hasLiveTurnTakenOver({
+        localDispatch: {
+          ...localDispatch,
+          worktreeSetup: createWorktreeSetupSnapshot("create-worktree"),
+        },
+        phase: "ready",
+        latestTurn: null,
+        session: null,
+        hasPendingApproval: false,
+        hasPendingUserInput: false,
+        threadError: null,
+        now,
+      }),
+    ).toBe(false);
+  });
+});
+
+describe("resolveWorkingLabel", () => {
+  it("shows Loading only while an unacknowledged send is still local", () => {
+    expect(resolveWorkingLabel({ isSendBusy: true, turnTakenOver: false })).toBe("Loading");
+    expect(resolveWorkingLabel({ isSendBusy: true, turnTakenOver: true })).toBe("Thinking");
+    expect(resolveWorkingLabel({ isSendBusy: false, turnTakenOver: false })).toBe("Thinking");
   });
 });
 

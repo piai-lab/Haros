@@ -1,6 +1,0 @@
-{
-  "extends": "exact-predecessor-positive",
-  "virtualFiles": {
-    "scripts/product-truth/direct-first-public.ts": "export const inspectDirectFirstPublic = () => null;\n"
-  }
-}

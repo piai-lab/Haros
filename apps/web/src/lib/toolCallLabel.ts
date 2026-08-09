@@ -2,14 +2,14 @@
 // Purpose: Normalizes generic tool-call titles and humanizes command executions for timeline rows.
 // Layer: UI utility
 // Exports: deriveReadableToolTitle, deriveReadableCommandDisplay, deriveFriendlyCommandTarget, command icon classifiers, deriveInlineCommandCall, normalizeCompactToolLabel, isGenericToolTitle, extractWebFetchUrl
-// Depends on: @omnimind/contracts tool lifecycle item types
+// Depends on: @synara/contracts tool lifecycle item types
 
 import {
   BROWSER_TOOL_NAMES,
   type BrowserToolName,
   type ToolLifecycleItemType,
-} from "@omnimind/contracts";
-import { BROWSER_TOOL_TITLES } from "@omnimind/shared/browserAutomationPresentation";
+} from "@synara/contracts";
+import { BROWSER_TOOL_TITLES } from "@synara/shared/browserAutomationPresentation";
 import { basenameOfPath } from "../file-icons";
 import { extractToolArgumentField } from "./toolArgumentSummary";
 
@@ -366,9 +366,9 @@ function resolveOmniMindMcpToolPresentation(
     }
     const toolName = extractOmniMindMcpToolName(normalizedCandidate);
     const knownPresentation = toolName
-      ? (OMNIMIND_MCP_TOOL_PRESENTATIONS[toolName as keyof typeof OMNIMIND_MCP_TOOL_PRESENTATIONS] as
-          | OmniMindMcpToolPresentation
-          | undefined)
+      ? (OMNIMIND_MCP_TOOL_PRESENTATIONS[
+          toolName as keyof typeof OMNIMIND_MCP_TOOL_PRESENTATIONS
+        ] as OmniMindMcpToolPresentation | undefined)
       : undefined;
     if (knownPresentation) {
       return knownPresentation;
@@ -412,7 +412,9 @@ export interface OmniMindMcpToolTitleInput {
 }
 
 export function isOmniMindBrowserToolCall(input: OmniMindMcpToolTitleInput): boolean {
-  return resolveOmniMindBrowserToolName([input.toolName, input.title, input.fallbackLabel]) !== null;
+  return (
+    resolveOmniMindBrowserToolName([input.toolName, input.title, input.fallbackLabel]) !== null
+  );
 }
 
 // Every provider exposes OmniMind's MCP tools differently: MCP, dynamic, and even

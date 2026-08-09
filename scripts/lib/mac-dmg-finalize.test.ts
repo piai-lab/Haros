@@ -13,9 +13,9 @@ const credentials = {
 
 describe("macOS DMG finalization", () => {
   it("requires exactly one DMG artifact", () => {
-    expect(resolveSingleMacDmgFileName(["OmniMind-0.6.0-arm64.zip", "OmniMind-0.6.0-arm64.dmg"])).toBe(
-      "OmniMind-0.6.0-arm64.dmg",
-    );
+    expect(
+      resolveSingleMacDmgFileName(["OmniMind-0.6.0-arm64.zip", "OmniMind-0.6.0-arm64.dmg"]),
+    ).toBe("OmniMind-0.6.0-arm64.dmg");
     expect(() => resolveSingleMacDmgFileName([])).toThrow("found 0");
     expect(() => resolveSingleMacDmgFileName(["a.dmg", "b.dmg"])).toThrow("found 2");
   });

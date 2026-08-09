@@ -8,13 +8,13 @@
 // Layer: Pull request presentation
 // Exports: PullRequestCommentCard
 
-import type { PullRequestComment } from "@omnimind/contracts";
+import type { PullRequestComment } from "@synara/contracts";
 import { useState } from "react";
 
 import { Collapsible, CollapsiblePanel, CollapsibleTrigger } from "~/components/ui/collapsible";
 import { DisclosureChevron } from "~/components/ui/DisclosureChevron";
 import { formatRelativeTime } from "~/lib/relativeTime";
-import { cn } from "~/lib/styles";
+import { cn } from "~/lib/utils";
 import {
   PR_BODY_TEXT_CLASS_NAME,
   PR_FINE_TEXT_CLASS_NAME,

@@ -4,7 +4,7 @@
 // Exports: SidebarSectionToolbar
 
 import type { ReactNode } from "react";
-import { cn } from "~/lib/styles";
+import { cn } from "~/lib/utils";
 
 export function SidebarSectionToolbar({
   placement: placementProp,

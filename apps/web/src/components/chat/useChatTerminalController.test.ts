@@ -2,7 +2,7 @@
 // Purpose: Characterizes terminal split limits, focus requests, and final-tab close behavior.
 // Layer: Chat terminal controller tests
 
-import { ThreadId } from "@omnimind/contracts";
+import { ThreadId } from "@synara/contracts";
 import { beforeEach, describe, expect, it, vi } from "vitest";
 
 const reactHarness = vi.hoisted(() => {
@@ -164,7 +164,7 @@ const THREAD_ID = ThreadId.makeUnsafe("thread-a");
 describe("useChatTerminalController", () => {
   const onDeletePlaceholderThread = vi.fn();
 
-  const render = (options?: { isFocusedPane?: boolean; isInteractionActive?: () => boolean }) => {
+  const render = () => {
     reactHarness.beginRender();
     return useChatTerminalController({
       threadId: THREAD_ID,
@@ -178,8 +178,7 @@ describe("useChatTerminalController", () => {
         proposedPlans: [],
       },
       activeProjectPresent: true,
-      isFocusedPane: options?.isFocusedPane ?? false,
-      isInteractionActive: options?.isInteractionActive ?? (() => false),
+      isFocusedPane: false,
       isServerThread: true,
       confirmTerminalClose: true,
       onDeletePlaceholderThread,
@@ -219,34 +218,6 @@ describe("useChatTerminalController", () => {
     expect(result.hasReachedSplitLimit).toBe(true);
     expect(terminalHarness.actions.splitTerminalRight).toHaveBeenCalledTimes(1);
     expect(result.terminalFocusRequestId).toBe(1);
-  });
-
-  it("ignores Desktop menu actions from a retained inactive Conversation", () => {
-    const menuHandlers: Array<(action: "new-terminal-tab") => void> = [];
-    vi.stubGlobal("window", {
-      desktopBridge: {
-        onMenuAction: (handler: (action: "new-terminal-tab") => void) => {
-          menuHandlers.push(handler);
-          return vi.fn();
-        },
-      },
-    });
-    let active = false;
-    render({
-      isFocusedPane: true,
-      isInteractionActive: () => active,
-    });
-
-    menuHandlers[0]?.("new-terminal-tab");
-    expect(terminalHarness.actions.newTerminalTab).not.toHaveBeenCalled();
-
-    active = true;
-    menuHandlers[0]?.("new-terminal-tab");
-    expect(terminalHarness.actions.newTerminalTab).toHaveBeenCalledWith(
-      THREAD_ID,
-      "terminal-1",
-      "terminal-new",
-    );
   });
 
   it("honors close confirmation before deleting a final placeholder terminal thread", async () => {

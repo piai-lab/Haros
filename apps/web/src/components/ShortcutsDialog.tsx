@@ -3,7 +3,7 @@
 // Layer: Chat shell overlay
 // Depends on: shared dialog UI, shortcut label builder, and current project script metadata.
 
-import type { ResolvedKeybindingsConfig } from "@omnimind/contracts";
+import type { ResolvedKeybindingsConfig } from "@synara/contracts";
 import { useEffect, useRef, useState } from "react";
 import {
   Dialog,
@@ -14,7 +14,7 @@ import {
   DialogTitle,
 } from "~/components/ui/dialog";
 import { Input } from "~/components/ui/input";
-import { cn } from "~/lib/styles";
+import { cn } from "~/lib/utils";
 import { ShortcutKbd } from "./ui/shortcut-kbd";
 import {
   buildShortcutSheetSections,
@@ -81,7 +81,7 @@ function ShortcutsDialogContent(props: {
   return (
     <>
       <DialogHeader className="pb-2">
-        <DialogTitle className="text-base">Keyboard shortcuts</DialogTitle>
+        <DialogTitle className="text-base">Keybindings</DialogTitle>
         <DialogDescription className="text-xs">
           Reflects the bindings active in your current context.
         </DialogDescription>

@@ -18,7 +18,7 @@ import {
 
 import { buildFileDiffTree, type FileDiffTreeNode } from "~/lib/fileDiffTree";
 import { XIcon } from "~/lib/icons";
-import { cn } from "~/lib/styles";
+import { cn } from "~/lib/utils";
 
 import { filterRenderableFilesForSearch } from "./DiffPanel.logic";
 import { FileEntryIcon } from "./chat/FileEntryIcon";

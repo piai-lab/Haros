@@ -2,7 +2,7 @@ import Foundation
 
 /// Fires the capture gesture when the parent process writes a `trigger` line
 /// to stdin. Used when Electron owns shortcut detection via its global
-/// accelerator registration, so the bridge needs no keyboard event tap.
+/// accelerator registration, so the helper needs no keyboard event tap.
 final class ExternalTriggerListener {
     private let emitter: NDJSONEmitter
     private let onTrigger: () -> Void

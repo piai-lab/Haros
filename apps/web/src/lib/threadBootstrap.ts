@@ -1,32 +1,36 @@
-import type { ConversationPullRequestSummary } from "~/historicalConversation";
 // FILE: threadBootstrap.ts
 // Purpose: Pure helpers for draft reuse and terminal-thread promotion payloads.
 // Layer: Web bootstrap/domain helpers
 // Exports: draft patching, reuse checks, and terminal creation state resolution.
 
 import {
-  type ProjectId,
-  type RuntimeMode,
-  type WorkspaceEnvironmentMode,
-  type ThreadId,
-} from "@omnimind/contracts";
-import { resolveThreadEnvironmentMode } from "@omnimind/shared/threadEnvironment";
-import { type DraftThreadEnvMode, type DraftThreadState } from "../composerDraftStore";
-import {
-  DEFAULT_INTERACTION_MODE,
   DEFAULT_RUNTIME_MODE,
-  type ConversationInteractionMode,
-  type Thread,
-  type ThreadPrimarySurface,
-} from "../types";
+  type ModelSelection,
+  type OrchestrationThreadPullRequest,
+  type ProjectId,
+  type ProviderInteractionMode,
+  type ProviderKind,
+  type RuntimeMode,
+  type ThreadEnvironmentMode,
+  type ThreadId,
+} from "@synara/contracts";
+import { resolveThreadEnvironmentMode } from "@synara/shared/threadEnvironment";
+import {
+  type ComposerThreadDraftState,
+  type DraftThreadEnvMode,
+  type DraftThreadState,
+  resolvePreferredComposerModelSelection,
+} from "../composerDraftStore";
+import { DEFAULT_INTERACTION_MODE, type Thread, type ThreadPrimarySurface } from "../types";
 
-export interface CreateThreadOptions {
+export interface NewThreadOptions {
   branch?: string | null;
   worktreePath?: string | null;
   workingDirectory?: string | null;
   envMode?: DraftThreadEnvMode;
   entryPoint?: ThreadPrimarySurface;
   temporary?: boolean;
+  provider?: ProviderKind;
   fresh?: boolean;
 }
 
@@ -72,10 +76,11 @@ export function resolveInheritedThreadContext(input: {
 
 interface ActiveThreadSnapshot {
   projectId: ProjectId;
+  modelSelection: ModelSelection;
   runtimeMode: RuntimeMode;
-  interactionMode: ConversationInteractionMode;
-  envMode?: WorkspaceEnvironmentMode | undefined;
-  lastKnownPr?: ConversationPullRequestSummary | null;
+  interactionMode: ProviderInteractionMode;
+  envMode?: ThreadEnvironmentMode | undefined;
+  lastKnownPr?: OrchestrationThreadPullRequest | null;
 }
 
 export interface DraftReusePlanStored {
@@ -99,16 +104,20 @@ export type ThreadBootstrapPlan = DraftReusePlanStored | DraftReusePlanRoute | D
 interface ResolveTerminalThreadCreationStateInput {
   activeDraftThread: DraftThreadState | null;
   activeThread: ActiveThreadSnapshot | null;
+  defaultProvider?: ProviderKind | null | undefined;
+  draftComposerState: ComposerThreadDraftState | null;
   draftThread: DraftThreadState | null;
-  options: CreateThreadOptions | undefined;
+  options: NewThreadOptions | undefined;
+  projectDefaultModelSelection: ModelSelection | null;
   projectId: ProjectId;
 }
 
 export interface TerminalThreadCreationState {
   branch: string | null;
   envMode: DraftThreadEnvMode;
-  interactionMode: ConversationInteractionMode;
-  lastKnownPr: ConversationPullRequestSummary | null;
+  interactionMode: ProviderInteractionMode;
+  lastKnownPr: OrchestrationThreadPullRequest | null;
+  modelSelection: ModelSelection;
   runtimeMode: RuntimeMode;
   worktreePath: string | null;
   workingDirectory: string | null;
@@ -118,11 +127,12 @@ export interface TerminalThreadCreationState {
 export function createActiveThreadSnapshot(
   activeThread:
     | {
-        interactionMode: ConversationInteractionMode;
+        interactionMode: ProviderInteractionMode;
+        modelSelection: ModelSelection;
         projectId: ProjectId;
         runtimeMode: RuntimeMode;
-        envMode?: WorkspaceEnvironmentMode | undefined;
-        lastKnownPr?: ConversationPullRequestSummary | null;
+        envMode?: ThreadEnvironmentMode | undefined;
+        lastKnownPr?: OrchestrationThreadPullRequest | null;
       }
     | null
     | undefined,
@@ -133,6 +143,7 @@ export function createActiveThreadSnapshot(
   }
   return {
     projectId: activeThread.projectId,
+    modelSelection: activeThread.modelSelection,
     runtimeMode: activeThread.runtimeMode,
     interactionMode: activeThread.interactionMode,
     envMode: activeThread.envMode,
@@ -199,7 +210,7 @@ export function resolveThreadBootstrapPlan(input: {
 export function createFreshDraftThreadSeed(input: {
   createdAt: string;
   entryPoint: ThreadPrimarySurface;
-  options: CreateThreadOptions | undefined;
+  options: NewThreadOptions | undefined;
 }): Omit<DraftThreadState, "projectId" | "interactionMode"> {
   return {
     createdAt: input.createdAt,
@@ -214,7 +225,7 @@ export function createFreshDraftThreadSeed(input: {
 }
 
 // Detect whether the caller wants to override stored draft context before reuse.
-export function hasDraftContextOverrides(options?: CreateThreadOptions): boolean {
+export function hasDraftContextOverrides(options?: NewThreadOptions): boolean {
   return (
     options?.branch !== undefined ||
     options?.worktreePath !== undefined ||
@@ -226,7 +237,7 @@ export function hasDraftContextOverrides(options?: CreateThreadOptions): boolean
 // Build the exact patch we should apply to an existing draft before reusing it.
 export function buildDraftThreadContextPatch(
   entryPoint: ThreadPrimarySurface,
-  options?: CreateThreadOptions,
+  options?: NewThreadOptions,
 ): {
   branch?: string | null;
   entryPoint: ThreadPrimarySurface;
@@ -291,6 +302,15 @@ export function resolveTerminalThreadCreationState(
           : undefined;
 
   return {
+    modelSelection: resolvePreferredComposerModelSelection({
+      draft: input.draftComposerState,
+      threadModelSelection:
+        input.activeThread?.projectId === input.projectId
+          ? input.activeThread.modelSelection
+          : null,
+      projectModelSelection: input.projectDefaultModelSelection,
+      defaultProvider: input.defaultProvider,
+    }),
     runtimeMode:
       input.draftThread?.runtimeMode ??
       (input.activeThread?.projectId === input.projectId ? input.activeThread.runtimeMode : null) ??

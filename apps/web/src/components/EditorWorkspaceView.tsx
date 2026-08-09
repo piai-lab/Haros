@@ -3,7 +3,7 @@
 //          file search, file/diff preview, and chat.
 // Layer: Chat route presentation
 
-import type { ProjectId } from "@omnimind/contracts";
+import type { ProjectId } from "@synara/contracts";
 import type { FileDiffMetadata } from "@pierre/diffs/react";
 import {
   type CSSProperties,
@@ -37,7 +37,7 @@ import {
 import { showFileReferenceContextMenu } from "~/lib/fileReferenceContextMenu";
 import type { ChatFileReference } from "~/lib/chatReferences";
 import type { FileCommentSelection } from "~/lib/fileComments";
-import { cn } from "~/lib/styles";
+import { cn } from "~/lib/utils";
 import { useTheme } from "~/hooks/useTheme";
 import { Skeleton } from "./ui/skeleton";
 import {
@@ -629,6 +629,7 @@ export function EditorWorkspaceView(props: EditorWorkspaceViewProps) {
                 <WorkspaceFilePreview
                   workspaceRoot={props.workspaceRoot}
                   filePath={props.selectedFilePath}
+                  editable
                   onReferenceInChat={props.onReferenceInChat}
                   onAskWhyInChat={props.onAskWhyInChat}
                   onCommentInChat={props.onCommentInChat}

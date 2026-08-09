@@ -15,8 +15,8 @@ import {
   type BrowserAnnotationMarker,
   type BrowserAnnotationSource,
   type BrowserAnnotationTheme,
-} from "@omnimind/contracts";
-import { sanitizeBrowserAnnotationPageTitle } from "@omnimind/shared/browserAnnotations";
+} from "@synara/contracts";
+import { sanitizeBrowserAnnotationPageTitle } from "@synara/shared/browserAnnotations";
 
 export const BROWSER_ANNOTATION_PROTOCOL_VERSION = 1 as const;
 
@@ -57,10 +57,6 @@ export type AnnotationGuestMessage =
   | AnnotationGuestMarkersProjectedMessage;
 
 export type AnnotationGuestCommand =
-  | {
-      readonly version: 1;
-      readonly kind: "request-ready";
-    }
   | {
       readonly version: 1;
       readonly kind: "start";

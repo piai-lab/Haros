@@ -7,7 +7,8 @@ import type {
   ProfileHeatmapCell,
   ProfileStats,
   ProfileTokenStats,
-} from "@omnimind/contracts";
+  ProviderKind,
+} from "@synara/contracts";
 
 export interface ProfileHeatmapSelection {
   readonly cells: ReadonlyArray<ProfileHeatmapCell>;
@@ -16,13 +17,13 @@ export interface ProfileHeatmapSelection {
 }
 
 export interface ProfileTopProviderSelection {
-  readonly provider: string | null;
+  readonly provider: ProviderKind | null;
   readonly percent: number | null;
   readonly metric: "tokens" | "turns";
 }
 
 export interface ProfileModelUsageEntry {
-  readonly provider: string | "unknown";
+  readonly provider: ProviderKind | "unknown";
   readonly model: string;
   readonly percent: number;
 }

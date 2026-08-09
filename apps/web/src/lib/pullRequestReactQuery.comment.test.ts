@@ -1,4 +1,4 @@
-import type { ProductWorkspaceId } from "@omnimind/contracts";
+import type { ProjectId } from "@synara/contracts";
 import { QueryClient } from "@tanstack/react-query";
 import { describe, expect, it } from "vitest";
 
@@ -7,19 +7,19 @@ import { pullRequestCommentMutationOptions, pullRequestQueryKeys } from "./pullR
 describe("pullRequestCommentMutationOptions", () => {
   it("invalidates matching repository list scopes and detail only", async () => {
     const queryClient = new QueryClient();
-    const workspaceId = "project-a" as ProductWorkspaceId;
-    const otherProjectId = "project-b" as ProductWorkspaceId;
+    const projectId = "project-a" as ProjectId;
+    const otherProjectId = "project-b" as ProjectId;
     const input = {
-      workspaceId,
+      projectId,
       repository: "acme/widgets",
       number: 42,
       body: "Looks good",
     } as const;
-    const projectListKey = pullRequestQueryKeys.list({ state: "open", workspaceId });
-    const allProjectsListKey = pullRequestQueryKeys.list({ state: "open", workspaceId: null });
+    const projectListKey = pullRequestQueryKeys.list({ state: "open", projectId });
+    const allProjectsListKey = pullRequestQueryKeys.list({ state: "open", projectId: null });
     const unrelatedListKey = pullRequestQueryKeys.list({
       state: "open",
-      workspaceId: otherProjectId,
+      projectId: otherProjectId,
     });
     const detailKey = pullRequestQueryKeys.detail(input);
     const diffKey = pullRequestQueryKeys.diff(input);
@@ -28,7 +28,7 @@ describe("pullRequestCommentMutationOptions", () => {
     queryClient.setQueryData(unrelatedListKey, {
       entries: [
         {
-          workspaceId: otherProjectId,
+          projectId: otherProjectId,
           repository: "other/repository",
           number: 7,
           isPinned: false,

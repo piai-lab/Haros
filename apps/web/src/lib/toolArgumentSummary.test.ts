@@ -27,9 +27,9 @@ describe("toolArgumentSummaryToolName", () => {
   it("extracts the identifier prefix whether or not JSON args follow", () => {
     expect(toolArgumentSummaryToolName('ExitPlanMode: {"plan":"Ship it"}')).toBe("ExitPlanMode");
     expect(toolArgumentSummaryToolName("ExitPlanMode: truncated args…")).toBe("ExitPlanMode");
-    expect(toolArgumentSummaryToolName('mcp__omnimind__omnimind_read_thread: {"threadId":"c3"}')).toBe(
-      "mcp__omnimind__omnimind_read_thread",
-    );
+    expect(
+      toolArgumentSummaryToolName('mcp__omnimind__omnimind_read_thread: {"threadId":"c3"}'),
+    ).toBe("mcp__omnimind__omnimind_read_thread");
   });
 
   it("returns null when there is no identifier prefix", () => {

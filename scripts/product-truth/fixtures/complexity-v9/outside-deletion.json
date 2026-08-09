@@ -1,4 +1,0 @@
-{
-  "extends": "exact-predecessor-positive",
-  "removeFiles": ["apps/native-host/src/index.ts"]
-}

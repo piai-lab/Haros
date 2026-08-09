@@ -8,7 +8,6 @@ import { assert, describe, it } from "@effect/vitest";
 import {
   assertMacUpdateManifestZipMetadata,
   buildMacUpdateZipSymlinkEntries,
-  findMacUpdateManifestFileNames,
   isZipInfoSymlink,
   resolveMacUpdateManifestFileNames,
   resolveSingleMacUpdateZipFileName,
@@ -97,10 +96,6 @@ describe("mac-update-zip", () => {
     assert.throws(
       () => resolveMacUpdateManifestFileNames(["OmniMind-0.1.5-arm64.dmg"]),
       /Expected at least one macOS update manifest/,
-    );
-    assert.deepStrictEqual(
-      findMacUpdateManifestFileNames(["OmniMind-0.1.5-arm64.dmg", "OmniMind-0.1.5-arm64.zip"]),
-      [],
     );
   });
 

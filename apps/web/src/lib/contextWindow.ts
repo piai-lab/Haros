@@ -1,5 +1,4 @@
-import type { ConversationHistoryActivity } from "~/historicalConversation";
-import type { ThreadTokenUsageSnapshot } from "@omnimind/contracts";
+import type { OrchestrationThreadActivity, ThreadTokenUsageSnapshot } from "@synara/contracts";
 
 function asRecord(value: unknown): Record<string, unknown> | null {
   return value && typeof value === "object" ? (value as Record<string, unknown>) : null;
@@ -56,7 +55,7 @@ const KNOWN_CONTEXT_WINDOW_MAX_TOKENS = {
 
 // Read the latest token-usage snapshot emitted by the runtime.
 function deriveLatestUsageContextWindowSnapshot(
-  activities: ReadonlyArray<ConversationHistoryActivity>,
+  activities: ReadonlyArray<OrchestrationThreadActivity>,
 ): ContextWindowSnapshot | null {
   for (let index = activities.length - 1; index >= 0; index -= 1) {
     const activity = activities[index];
@@ -114,7 +113,7 @@ function deriveLatestUsageContextWindowSnapshot(
 
 // Use the configured session window as the source of truth for the meter denominator.
 function deriveLatestConfiguredContextWindowMaxTokens(
-  activities: ReadonlyArray<ConversationHistoryActivity>,
+  activities: ReadonlyArray<OrchestrationThreadActivity>,
 ): number | null {
   for (let index = activities.length - 1; index >= 0; index -= 1) {
     const activity = activities[index];
@@ -131,7 +130,7 @@ function deriveLatestConfiguredContextWindowMaxTokens(
 }
 
 export function deriveLatestContextWindowSnapshot(
-  activities: ReadonlyArray<ConversationHistoryActivity>,
+  activities: ReadonlyArray<OrchestrationThreadActivity>,
 ): ContextWindowSnapshot | null {
   const usageSnapshot = deriveLatestUsageContextWindowSnapshot(activities);
   const configuredMaxTokens = deriveLatestConfiguredContextWindowMaxTokens(activities);
@@ -251,7 +250,7 @@ export function deriveContextWindowMeterDisplay(
 }
 
 export function deriveCumulativeCostUsd(
-  activities: ReadonlyArray<ConversationHistoryActivity>,
+  activities: ReadonlyArray<OrchestrationThreadActivity>,
 ): number | null {
   let turnDeltaTotal = 0;
   let latestCumulative: number | null = null;

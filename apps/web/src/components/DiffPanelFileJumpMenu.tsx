@@ -1,6 +1,6 @@
 // FILE: DiffPanelFileJumpMenu.tsx
 // Purpose: Searchable "jump to file" picker for the diff panel toolbar. Reuses the
-//          composer picker shell and FileEntryIcon (icons/line) so file
+//          composer picker shell and FileEntryIcon (central-icons-reversed) so file
 //          rows match the command menu and git pane.
 // Layer: Diff panel UI
 
@@ -8,7 +8,7 @@ import type { FileDiffMetadata } from "@pierre/diffs/react";
 import { useState } from "react";
 
 import { SearchIcon } from "~/lib/icons";
-import { cn } from "~/lib/styles";
+import { cn } from "~/lib/utils";
 import { filterRenderableFilesForSearch } from "./DiffPanel.logic";
 import { ComposerPickerMenuPopup } from "./chat/ComposerPickerMenuPopup";
 import { PickerPanelShell } from "./chat/PickerPanelShell";

@@ -17,7 +17,7 @@ describe("ProviderIcon", () => {
     expect(markup).toContain("#FFE432");
   });
 
-  it("uses the line glyph for opencode in dark mode", () => {
+  it("uses the reversed Central icon for opencode in dark mode", () => {
     const markup = renderToStaticMarkup(
       <ProviderIcon provider="opencode" className="size-4 text-muted-foreground" />,
     );
@@ -25,12 +25,6 @@ describe("ProviderIcon", () => {
     expect(markup).toContain("dark:hidden");
     expect(markup).toContain("hidden dark:inline-block");
     expect(markup).toContain("dark:text-foreground/90");
-    expect(markup).toContain("/icons/line/opencode.svg");
-  });
-
-  it("uses the neutral product mark when provider identity is unknown", () => {
-    const markup = renderToStaticMarkup(<ProviderIcon provider={null} />);
-    expect(markup).toContain("/omnimind-icon-light.svg");
-    expect(markup).not.toBe("");
+    expect(markup).toContain("/central-icons-reversed/opencode.svg");
   });
 });

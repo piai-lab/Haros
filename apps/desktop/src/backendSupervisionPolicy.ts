@@ -12,8 +12,9 @@ export const BACKEND_RESTART_MAX_DELAY_MS = 10_000;
  * Consecutive failed backend starts — with no readiness signal in between — after
  * which the desktop stops respawning and asks the user what to do.
  *
- * A backend that dies *during* startup can do expensive work before it fails,
- * so an unbounded respawn loop amplifies one broken start into resource churn.
+ * A backend that dies *during* startup can do expensive work before it fails
+ * (v0.6.0 wrote a full pre-migration database backup on every attempt), so an
+ * unbounded respawn loop turns one broken start into gigabytes of disk churn.
  * Five attempts spans ~7.5s of backoff: long enough to ride out a transient port
  * or filesystem race, short enough that a deterministic startup failure is
  * reported to the user almost immediately instead of never.
@@ -32,6 +33,11 @@ export function backendRestartDelayMs(attempt: number): number {
 export type BackendCrashResponse =
   /** Shutting down, or a restart is already armed: the caller does nothing. */
   | { readonly kind: "ignore" }
+  /**
+   * A migration-recovery marker appeared (usually written mid-session by the very
+   * migration that just killed the backend). Recovery owns the process from here.
+   */
+  | { readonly kind: "recover-migration" }
   | { readonly kind: "retry"; readonly delayMs: number; readonly attempt: number }
   | { readonly kind: "give-up"; readonly failures: number };
 
@@ -39,6 +45,8 @@ export interface BackendStartFailureInput {
   readonly quitting: boolean;
   /** A restart timer is already armed for an earlier failure in this cycle. */
   readonly restartPending: boolean;
+  /** The server-owned migration-recovery marker exists right now. */
+  readonly migrationRecoveryMarkerPresent: boolean;
 }
 
 /**
@@ -52,6 +60,9 @@ export interface BackendStartFailureInput {
 export class BackendSupervisionPolicy {
   private failures = 0;
   private givenUp = false;
+  // Deliberately not cleared by reset(): the recovery prompt is shown once per app
+  // run, not once per restart attempt.
+  private migrationRecoveryPrompted = false;
 
   get consecutiveFailures(): number {
     return this.failures;
@@ -59,6 +70,10 @@ export class BackendSupervisionPolicy {
 
   get hasGivenUp(): boolean {
     return this.givenUp;
+  }
+
+  get hasPromptedMigrationRecovery(): boolean {
+    return this.migrationRecoveryPrompted;
   }
 
   /** Clears the backoff and the breaker for a deliberate (non-crash) backend start. */
@@ -75,6 +90,13 @@ export class BackendSupervisionPolicy {
   respondToStartFailure(input: BackendStartFailureInput): BackendCrashResponse {
     if (input.quitting || input.restartPending) {
       return { kind: "ignore" };
+    }
+
+    // Re-checked on every crash: the marker is written mid-session by the first
+    // failing migration, long after desktop bootstrap read it.
+    if (input.migrationRecoveryMarkerPresent && !this.migrationRecoveryPrompted) {
+      this.migrationRecoveryPrompted = true;
+      return { kind: "recover-migration" };
     }
 
     if (this.givenUp) {

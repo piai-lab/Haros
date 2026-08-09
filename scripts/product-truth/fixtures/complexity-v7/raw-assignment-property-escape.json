@@ -1,1 +1,0 @@
-{"appendToFiles":{"apps/service/src/atomicWrite.ts":"\nlet v7PropertyRaw: typeof process;\nv7PropertyRaw = globalThis.process;\nv7PropertyRaw.dlopen = (() => undefined) as typeof process.dlopen;\n"}}

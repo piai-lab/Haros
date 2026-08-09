@@ -5,7 +5,7 @@
 // Exports: WorkspaceFilesSidebar, WorkspaceSearchSidebar, WorkspaceExplorerSidebar,
 //          ExplorerActivityBarButton, useExplorerEntryPrefetch, setFileReferenceDragData.
 
-import type { ProjectEntry, ProjectFileSystemEntry } from "@omnimind/contracts";
+import type { ProjectEntry, ProjectFileSystemEntry } from "@synara/contracts";
 import { useDebouncedValue } from "@tanstack/react-pacer";
 import { useQuery, useQueryClient } from "@tanstack/react-query";
 import {
@@ -30,7 +30,7 @@ import {
   projectSearchEntriesQueryOptions,
 } from "~/lib/projectReactQuery";
 import { getSyntaxHighlighterPromise, getSyntaxLanguageForPath } from "~/lib/syntaxHighlighting";
-import { cn } from "~/lib/styles";
+import { cn } from "~/lib/utils";
 import { Skeleton } from "../ui/skeleton";
 import { Collapsible, CollapsiblePanel, CollapsibleTrigger } from "../ui/collapsible";
 import { DisclosureChevron } from "../ui/DisclosureChevron";

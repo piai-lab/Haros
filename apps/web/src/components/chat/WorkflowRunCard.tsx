@@ -10,8 +10,9 @@
 // Layer: Chat composer UI
 // Exports: WorkflowRunCard
 
-import type { ThreadId } from "@omnimind/contracts";
-import { pluralize } from "@omnimind/shared/text";
+import type { ThreadId } from "@synara/contracts";
+import { getModelCapabilities } from "@synara/shared/model";
+import { pluralize } from "@synara/shared/text";
 import { useState } from "react";
 
 import { formatContextWindowTokens } from "~/lib/contextWindow";
@@ -31,7 +32,7 @@ import {
   WorkflowIcon,
   XIcon,
 } from "~/lib/icons";
-import { cn } from "~/lib/styles";
+import { cn } from "~/lib/utils";
 import { useCopyToClipboard } from "~/hooks/useCopyToClipboard";
 import { formatClockDuration } from "../../session-logic";
 import { Button } from "../ui/button";
@@ -96,6 +97,16 @@ function agentRowMeta(agent: WorkflowAgentRow, nowMs: number): string | null {
   return parts.length > 0 ? parts.join(" · ") : null;
 }
 
+function agentContextWindowTokens(agent: WorkflowAgentRow): number | undefined {
+  if (!agent.model) {
+    return undefined;
+  }
+  const contextWindowTokens = getModelCapabilities("claudeAgent", agent.model).contextWindowTokens;
+  return typeof contextWindowTokens === "number" && contextWindowTokens > 0
+    ? contextWindowTokens
+    : undefined;
+}
+
 function agentDetailStatsLine(agent: WorkflowAgentRow, nowMs: number): string | null {
   const elapsedMs = workflowElapsedMs(agent, nowMs);
   const parts = [
@@ -118,10 +129,14 @@ function WorkflowAgentDetail({
   onOpenThread: (threadId: ThreadId) => void;
 }) {
   const [promptOpen, setPromptOpen] = useState(false);
+  const contextWindowTokens = agentContextWindowTokens(agent);
   const identityLine = [
     agent.statusLabel,
     agent.modelLabel,
     agent.effortLabel ? `${agent.effortLabel} effort` : null,
+    contextWindowTokens !== undefined
+      ? `${formatContextWindowTokens(contextWindowTokens)} window`
+      : null,
   ]
     .filter((part): part is string => part !== null && part !== undefined)
     .join(" · ");

@@ -3,7 +3,7 @@
 // Layer: UI state helpers
 // Exports: dock pane types, default-state factory, and immutable open/close/activate helpers.
 
-import type { ProductWorkspaceId, ThreadId, TurnId } from "@omnimind/contracts";
+import type { ProjectId, ThreadId, TurnId } from "@synara/contracts";
 import { isPlainObject, sanitizeStringKeyedRecord } from "./persistedRecord";
 
 // Single source of truth for the dock pane kinds. The union type, the runtime
@@ -35,7 +35,7 @@ export interface RightDockPane {
   diffFilePath: string | null;
   // file panes preview one workspace-relative file.
   filePath: string | null;
-  pullRequestWorkspaceId: ProductWorkspaceId | null;
+  pullRequestProjectId: ProjectId | null;
   pullRequestRepository: string | null;
   pullRequestNumber: number | null;
   pullRequestInitialTab: PullRequestInitialTab | null;
@@ -47,9 +47,9 @@ export interface RightDockThreadState {
   activePaneId: string | null;
 }
 
-// Kinds that allow multiple concurrent panes per host thread: sidechat opens
-// one pane per embedded thread, file opens one tab per previewed file.
-const MULTI_INSTANCE_PANE_KINDS: ReadonlySet<RightDockPaneKind> = new Set(["sidechat", "file"]);
+// File previews are the only multi-instance dock kind. Side chats share one
+// destination and switch the embedded thread inside it.
+const MULTI_INSTANCE_PANE_KINDS: ReadonlySet<RightDockPaneKind> = new Set(["file"]);
 
 // Kinds that can only ever have one instance per host thread, derived as
 // "every kind that is not multi-instance" so the two sets can never drift.
@@ -92,9 +92,9 @@ function sanitizePersistedPane(value: unknown): RightDockPane | null {
     diffTurnId: typeof candidate.diffTurnId === "string" ? (candidate.diffTurnId as TurnId) : null,
     diffFilePath: typeof candidate.diffFilePath === "string" ? candidate.diffFilePath : null,
     filePath: typeof candidate.filePath === "string" ? candidate.filePath : null,
-    pullRequestWorkspaceId:
-      typeof candidate.pullRequestWorkspaceId === "string"
-        ? (candidate.pullRequestWorkspaceId as ProductWorkspaceId)
+    pullRequestProjectId:
+      typeof candidate.pullRequestProjectId === "string"
+        ? (candidate.pullRequestProjectId as ProjectId)
         : null,
     pullRequestRepository:
       typeof candidate.pullRequestRepository === "string" ? candidate.pullRequestRepository : null,
@@ -118,15 +118,29 @@ export function sanitizeRightDockThreadState(value: unknown): RightDockThreadSta
     return createDefaultRightDockState();
   }
   const candidate = value;
-  const panes = Array.isArray(candidate.panes)
+  const sanitizedPanes = Array.isArray(candidate.panes)
     ? candidate.panes
         .map(sanitizePersistedPane)
         .filter((pane): pane is RightDockPane => pane !== null)
     : [];
+  const persistedActivePaneId =
+    typeof candidate.activePaneId === "string" ? candidate.activePaneId : null;
+  const keptSingletonPaneIdByKind = new Map<RightDockPaneKind, string>();
+  for (const pane of sanitizedPanes) {
+    if (
+      isSingletonPaneKind(pane.kind) &&
+      (pane.id === persistedActivePaneId || !keptSingletonPaneIdByKind.has(pane.kind))
+    ) {
+      keptSingletonPaneIdByKind.set(pane.kind, pane.id);
+    }
+  }
+  const panes = sanitizedPanes.filter(
+    (pane) =>
+      !isSingletonPaneKind(pane.kind) || keptSingletonPaneIdByKind.get(pane.kind) === pane.id,
+  );
   const activePaneId =
-    typeof candidate.activePaneId === "string" &&
-    panes.some((pane) => pane.id === candidate.activePaneId)
-      ? candidate.activePaneId
+    persistedActivePaneId && panes.some((pane) => pane.id === persistedActivePaneId)
+      ? persistedActivePaneId
       : (panes[0]?.id ?? null);
   return {
     open: candidate.open === true,
@@ -150,7 +164,7 @@ export interface OpenPaneInput {
   diffTurnId?: TurnId | null;
   diffFilePath?: string | null;
   filePath?: string | null;
-  pullRequestWorkspaceId?: ProductWorkspaceId | null;
+  pullRequestProjectId?: ProjectId | null;
   pullRequestRepository?: string | null;
   pullRequestNumber?: number | null;
   pullRequestInitialTab?: PullRequestInitialTab | null;
@@ -164,7 +178,7 @@ function createPane(input: OpenPaneInput): RightDockPane {
     diffTurnId: input.diffTurnId ?? null,
     diffFilePath: input.diffFilePath ?? null,
     filePath: input.filePath ?? null,
-    pullRequestWorkspaceId: input.pullRequestWorkspaceId ?? null,
+    pullRequestProjectId: input.pullRequestProjectId ?? null,
     pullRequestRepository: input.pullRequestRepository ?? null,
     pullRequestNumber: input.pullRequestNumber ?? null,
     pullRequestInitialTab: input.pullRequestInitialTab ?? null,
@@ -175,6 +189,9 @@ function createPane(input: OpenPaneInput): RightDockPane {
 // overwrite content metadata when the caller explicitly targets new content,
 // so a bare re-open/toggle keeps the pane focused on what it currently shows.
 function singletonPaneReopenPatch(input: OpenPaneInput): Partial<RightDockPane> | null {
+  if (input.kind === "sidechat" && input.threadId !== undefined) {
+    return { threadId: input.threadId ?? null };
+  }
   if (
     input.kind === "diff" &&
     (input.diffTurnId !== undefined || input.diffFilePath !== undefined)
@@ -183,13 +200,13 @@ function singletonPaneReopenPatch(input: OpenPaneInput): Partial<RightDockPane> 
   }
   if (
     input.kind === "pullRequest" &&
-    (input.pullRequestWorkspaceId !== undefined ||
+    (input.pullRequestProjectId !== undefined ||
       input.pullRequestRepository !== undefined ||
       input.pullRequestNumber !== undefined ||
       input.pullRequestInitialTab !== undefined)
   ) {
     return {
-      pullRequestWorkspaceId: input.pullRequestWorkspaceId ?? null,
+      pullRequestProjectId: input.pullRequestProjectId ?? null,
       pullRequestRepository: input.pullRequestRepository ?? null,
       pullRequestNumber: input.pullRequestNumber ?? null,
       pullRequestInitialTab: input.pullRequestInitialTab ?? null,
@@ -198,20 +215,12 @@ function singletonPaneReopenPatch(input: OpenPaneInput): Partial<RightDockPane> 
   return null;
 }
 
-// Multi-instance kinds reuse an existing pane only when it already shows the
-// requested content: sidechat panes match on the embedded thread, file panes
-// on the previewed file (so re-clicking an open file focuses its tab instead
-// of duplicating it, and a bare open reuses an existing empty file pane).
+// Multi-instance file panes reuse an existing pane when it already shows the
+// requested path, so re-clicking a file focuses its tab instead of duplicating it.
 function findMatchingMultiInstancePane(
   state: RightDockThreadState,
   input: OpenPaneInput,
 ): RightDockPane | undefined {
-  if (input.kind === "sidechat") {
-    if (!input.threadId) {
-      return undefined;
-    }
-    return state.panes.find((pane) => pane.kind === "sidechat" && pane.threadId === input.threadId);
-  }
   if (input.kind === "file") {
     const filePath = input.filePath ?? null;
     return state.panes.find((pane) => pane.kind === "file" && pane.filePath === filePath);
@@ -327,7 +336,7 @@ export function updatePaneInState(
       | "diffFilePath"
       | "filePath"
       | "threadId"
-      | "pullRequestWorkspaceId"
+      | "pullRequestProjectId"
       | "pullRequestRepository"
       | "pullRequestNumber"
       | "pullRequestInitialTab"
@@ -345,7 +354,7 @@ export function updatePaneInState(
       nextPane.diffFilePath !== pane.diffFilePath ||
       nextPane.filePath !== pane.filePath ||
       nextPane.threadId !== pane.threadId ||
-      nextPane.pullRequestWorkspaceId !== pane.pullRequestWorkspaceId ||
+      nextPane.pullRequestProjectId !== pane.pullRequestProjectId ||
       nextPane.pullRequestRepository !== pane.pullRequestRepository ||
       nextPane.pullRequestNumber !== pane.pullRequestNumber ||
       nextPane.pullRequestInitialTab !== pane.pullRequestInitialTab
@@ -377,4 +386,47 @@ export function resolveActivePane(state: RightDockThreadState): RightDockPane | 
     return null;
   }
   return state.panes.find((pane) => pane.id === state.activePaneId) ?? null;
+}
+
+export function findMissingSidechatPaneIds(
+  state: RightDockThreadState,
+  existingThreadIds: ReadonlySet<ThreadId>,
+): readonly string[] {
+  return state.panes.flatMap((pane) =>
+    pane.kind === "sidechat" && pane.threadId && !existingThreadIds.has(pane.threadId)
+      ? [pane.id]
+      : [],
+  );
+}
+
+// An active sidechat embeds a full chat, so it needs a detail lease just like a
+// split-view pane. Persisted inactive or currently unrendered docks stay out of
+// the scarce live-stream budget.
+export function resolveVisibleDockSidechatThreadIds(input: {
+  dockRendered: boolean;
+  dockStateByThreadId: Record<string, RightDockThreadState | undefined>;
+  hostThreadIds: readonly ThreadId[];
+}): ThreadId[] {
+  if (!input.dockRendered) {
+    return [];
+  }
+
+  const sidechatThreadIds: ThreadId[] = [];
+  const seenThreadIds = new Set<ThreadId>(input.hostThreadIds);
+  for (const hostThreadId of input.hostThreadIds) {
+    const dockState = input.dockStateByThreadId[hostThreadId];
+    if (!dockState) {
+      continue;
+    }
+    const activePane = resolveActivePane(dockState);
+    if (
+      activePane?.kind === "sidechat" &&
+      activePane.threadId &&
+      !seenThreadIds.has(activePane.threadId)
+    ) {
+      seenThreadIds.add(activePane.threadId);
+      sidechatThreadIds.push(activePane.threadId);
+    }
+  }
+  return sidechatThreadIds;
 }

@@ -11,11 +11,11 @@ import type {
   PullRequestInvolvement,
   PullRequestListEntry,
   PullRequestSetPinnedInput,
-} from "@omnimind/contracts";
+} from "@synara/contracts";
 import {
-  pullRequestListWorkspaceContexts,
+  pullRequestListProjectContexts,
   pullRequestListRepositoryIdentity,
-} from "@omnimind/shared/githubRepository";
+} from "@synara/shared/githubRepository";
 
 export type PullRequestListGroupKey = "pinned" | "reviewRequested" | "authored" | "others";
 
@@ -45,17 +45,17 @@ export function pullRequestPinToggleInputs(
   if (!aggregate) {
     return [
       {
-        workspaceId: entry.workspaceId,
+        projectId: entry.projectId,
         repository: entry.repository,
         number: entry.number,
         isPinned: !entry.isPinned,
       },
     ];
   }
-  return pullRequestListWorkspaceContexts(entry)
+  return pullRequestListProjectContexts(entry)
     .filter((context) => !entry.isPinned || context.isPinned)
     .map((context) => ({
-      workspaceId: context.workspaceId,
+      projectId: context.projectId,
       repository: entry.repository,
       number: entry.number,
       isPinned: !entry.isPinned,

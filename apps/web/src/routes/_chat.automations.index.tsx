@@ -1,7 +1,8 @@
-import { type AutomationDefinition, type AutomationRun } from "@omnimind/contracts";
+import { type AutomationDefinition, type AutomationRun } from "@synara/contracts";
 import { createFileRoute, useNavigate } from "@tanstack/react-router";
 import { useEffect, useState, type ReactNode } from "react";
 
+import { getProviderStartOptions, useAppSettings } from "~/appSettings";
 import {
   CHAT_SURFACE_HEADER_DIVIDER_CLASS_NAME,
   CHAT_SURFACE_HEADER_HEIGHT_CLASS,
@@ -22,8 +23,8 @@ import {
   useDesktopTopBarTrafficLightGutterClassName,
   useDesktopTopBarWindowControlsGutterClassName,
 } from "~/hooks/useDesktopTopBarGutter";
-import { Glyph } from "~/ui/icons";
-import { cn } from "~/lib/styles";
+import { CentralIcon } from "~/lib/central-icons";
+import { cn } from "~/lib/utils";
 import { ELEVATED_HOVER_SURFACE_CLASS_NAME } from "~/surfaceStyles";
 import { ensureNativeApi } from "~/nativeApi";
 import { useStore } from "~/store";
@@ -43,6 +44,8 @@ import {
   isLiveRun,
   isRowInteractiveEventTarget,
   isUnresolvedTriageResult,
+  providerOptionsForAutomationEdit,
+  projectModelSelection,
   runStatusLabel,
   updateInputFromForm,
   useAutomations,
@@ -137,7 +140,7 @@ function AutomationListRow({
           }}
           className="shrink-0 self-center rounded p-0.5 text-muted-foreground opacity-0 transition-opacity hover:text-foreground focus-visible:opacity-100 group-hover:opacity-100"
         >
-          <Glyph name="trash-can-simple" className="size-3.5" />
+          <CentralIcon name="trash-can-simple" className="size-3.5" />
         </button>
       ) : null}
     </div>
@@ -177,6 +180,7 @@ function rowSubtitle(
 
 function AutomationsRouteView() {
   const navigate = useNavigate();
+  const { settings } = useAppSettings();
   const desktopTopBarTrafficLightGutterClassName = useDesktopTopBarTrafficLightGutterClassName();
   const desktopTopBarWindowControlsGutterClassName =
     useDesktopTopBarWindowControlsGutterClassName();
@@ -197,7 +201,7 @@ function AutomationsRouteView() {
   }, []);
   const fallbackProjectId = projects[0]?.id ?? "";
   const [form, setForm] = useState<AutomationFormState>(() =>
-    formFromDefinition(null, fallbackProjectId),
+    formFromDefinition(null, fallbackProjectId, projectModelSelection(projects, fallbackProjectId)),
   );
 
   const {
@@ -209,6 +213,7 @@ function AutomationsRouteView() {
     deleteMutation,
     runsByAutomationId,
   } = useAutomations((threadId) => void navigate({ to: "/$threadId", params: { threadId } }));
+  const providerOptionsForDispatch = getProviderStartOptions(settings);
 
   const updateDialogForm = (nextForm: AutomationFormState) => {
     setForm(nextForm);
@@ -223,7 +228,11 @@ function AutomationsRouteView() {
 
   const openCreateDialog = () => {
     setEditingDefinition(null);
-    const nextForm = formFromDefinition(null, fallbackProjectId);
+    const nextForm = formFromDefinition(
+      null,
+      fallbackProjectId,
+      projectModelSelection(projects, fallbackProjectId),
+    );
     setForm(nextForm);
     setDialogWarnings(buildAutomationFormWarnings(nextForm));
     setAcknowledgedWarningIds(new Set());
@@ -240,12 +249,20 @@ function AutomationsRouteView() {
     const closeOnSuccess = { onSuccess: () => setDialogOpen(false) };
     if (editingDefinition) {
       updateMutation.mutate(
-        updateInputFromForm(editingDefinition, form, acknowledgedRisks),
+        updateInputFromForm(
+          editingDefinition,
+          form,
+          providerOptionsForAutomationEdit(editingDefinition, form, providerOptionsForDispatch),
+          acknowledgedRisks,
+        ),
         closeOnSuccess,
       );
       return;
     }
-    createMutation.mutate(createInputFromForm(form, acknowledgedRisks), closeOnSuccess);
+    createMutation.mutate(
+      createInputFromForm(form, providerOptionsForDispatch, acknowledgedRisks),
+      closeOnSuccess,
+    );
   };
 
   const deleteDefinition = async (definition: AutomationDefinition) => {
@@ -277,7 +294,7 @@ function AutomationsRouteView() {
         }
         leading={(() => {
           const icon = automationListRowIcon(definition, latestRun);
-          return <Glyph name={icon.name} className={icon.className} />;
+          return <CentralIcon name={icon.name} className={icon.className} />;
         })()}
         title={definition.name}
         detail={rowSubtitle(definition, latestRun, now)}
@@ -349,7 +366,7 @@ function AutomationsRouteView() {
                 title="Refresh"
                 onClick={() => void refetch()}
               >
-                <Glyph name="arrow-rotate-clockwise" className="size-4" />
+                <CentralIcon name="arrow-rotate-clockwise" className="size-4" />
               </Button>
               <Button
                 type="button"
@@ -357,7 +374,7 @@ function AutomationsRouteView() {
                 onClick={openCreateDialog}
                 disabled={projects.length === 0}
               >
-                <Glyph name="plus-small" className="size-4" />
+                <CentralIcon name="plus-small" className="size-4" />
                 New automation
               </Button>
             </div>

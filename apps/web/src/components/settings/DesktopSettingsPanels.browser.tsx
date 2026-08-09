@@ -4,7 +4,7 @@
 
 import "../../index.css";
 
-import type { DesktopAppSnapState } from "@omnimind/contracts";
+import type { DesktopAppSnapState } from "@synara/contracts";
 import type { AppSettingsBinding } from "~/appSettings";
 import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
 import { useState } from "react";

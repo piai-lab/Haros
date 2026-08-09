@@ -3,7 +3,7 @@ import { EventEmitter } from "node:events";
 import type { WebContents } from "electron";
 import { describe, expect, it, vi } from "vitest";
 
-import type { BrowserAutomationVisibleRuntime } from "../browserHost";
+import type { BrowserAutomationVisibleRuntime } from "../browserManager";
 import { evaluateInContext } from "./cdpRuntime";
 import { MAX_DIALOGS_PER_COMMAND, withDialogHandling } from "./dialogHandling";
 

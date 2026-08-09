@@ -3,7 +3,7 @@
 // Layer: UI component
 // Exports: RecentViewSwitcher plus item shape used by the chat route shell.
 
-import type { KeybindingShortcut } from "@omnimind/contracts";
+import type { KeybindingShortcut } from "@synara/contracts";
 
 import { formatShortcutLabel } from "../keybindings";
 import {
@@ -13,7 +13,7 @@ import {
   PluginIcon,
   SettingsIcon,
 } from "../lib/icons";
-import { cn } from "../lib/styles";
+import { cn } from "../lib/utils";
 import type { RecentViewDisplayEntry } from "../recentViews.logic";
 import { ProviderIcon } from "./ProviderIcon";
 import TerminalIdentityIcon from "./terminal/TerminalIdentityIcon";

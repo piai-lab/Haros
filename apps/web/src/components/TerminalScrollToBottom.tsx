@@ -7,7 +7,7 @@ import type { Terminal } from "@xterm/xterm";
 import { useEffect, useRef, useState } from "react";
 import { IconButton } from "~/components/ui/icon-button";
 import { ArrowDownIcon } from "~/lib/icons";
-import { cn } from "~/lib/styles";
+import { cn } from "~/lib/utils";
 
 interface TerminalScrollToBottomProps {
   terminal: Terminal | null;

@@ -12,31 +12,24 @@ import { join } from "node:path";
 
 import rootPackageJson from "../package.json" with { type: "json" };
 import desktopPackageJson from "../apps/desktop/package.json" with { type: "json" };
-import nativeHostPackageJson from "../apps/native-host/package.json" with { type: "json" };
-import servicePackageJson from "../apps/service/package.json" with { type: "json" };
+import serverPackageJson from "../apps/server/package.json" with { type: "json" };
 
 import { BRAND_ASSET_PATHS } from "./lib/brand-assets.ts";
-import { stageCuratedPackageAssets } from "./lib/curated-package-assets.ts";
 import {
   createDesktopPlatformBuildConfig,
-  MAC_APPSNAP_BRIDGE_STAGE_PATH,
+  MAC_APPSNAP_HELPER_STAGE_PATH,
   validateDesktopNativeBuildHost,
 } from "./lib/desktop-platform-build-config.ts";
-import { OMNIMIND_PRODUCTION_BUNDLE_ID } from "@omnimind/shared/desktopIdentity";
+import { OMNIMIND_PRODUCTION_BUNDLE_ID } from "@synara/shared/desktopIdentity";
 import { parseBooleanEnvValue } from "./lib/env-bool.ts";
 import { finalizeSignedMacDmg } from "./lib/mac-dmg-finalize.ts";
 import { finalizeMacUpdateZip } from "./lib/mac-update-zip-finalize.ts";
-import { verifyPackagedLegalClosure } from "./lib/packaged-legal-closure.ts";
-import { writeReleaseLegalMetadata } from "./lib/release-legal-metadata.ts";
 import {
   RELEASE_LOCKFILE_PATH,
   RELEASE_PATCHES_PATH,
   RELEASE_WORKSPACE_MANIFEST_PATHS,
 } from "./lib/release-workspace-manifests.ts";
-import {
-  resolveCatalogDependencies,
-  resolvePackagedWorkspaceRuntimeDependencies,
-} from "./lib/resolve-catalog.ts";
+import { resolveCatalogDependencies } from "./lib/resolve-catalog.ts";
 
 import * as NodeRuntime from "@effect/platform-node/NodeRuntime";
 import * as NodeServices from "@effect/platform-node/NodeServices";
@@ -74,10 +67,10 @@ const ProductionWindowsIconSource = Effect.zipWith(
 const NodePtySmokeScript = Effect.zipWith(RepoRoot, Effect.service(Path.Path), (repoRoot, path) =>
   path.join(repoRoot, "scripts/node-pty-smoke.mjs"),
 );
-const AppSnapBridgeBuildScript = Effect.zipWith(
+const AppSnapHelperBuildScript = Effect.zipWith(
   RepoRoot,
   Effect.service(Path.Path),
-  (repoRoot, path) => path.join(repoRoot, "apps/desktop/scripts/build-appsnap-bridge.mjs"),
+  (repoRoot, path) => path.join(repoRoot, "apps/desktop/scripts/build-appsnap-helper.mjs"),
 );
 const encodeJsonString = Schema.encodeEffect(Schema.UnknownFromJsonString);
 
@@ -654,8 +647,6 @@ const installFrozenStageDependencies = Effect.fn("installFrozenStageDependencies
   repoRoot: string,
   stageAppDir: string,
   platform: typeof BuildPlatform.Type,
-  arch: typeof BuildArch.Type,
-  appVersion: string,
   verbose: boolean,
 ) {
   const path = yield* Path.Path;
@@ -697,7 +688,7 @@ const installFrozenStageDependencies = Effect.fn("installFrozenStageDependencies
       ChildProcess.make({
         cwd: stageAppDir,
         ...commandOutputOptions(verbose),
-      })`bun install --omit=dev --frozen-lockfile --ignore-scripts --linker hoisted`,
+      })`bun install --frozen-lockfile --ignore-scripts --linker hoisted`,
     );
   }
 
@@ -716,25 +707,6 @@ const installFrozenStageDependencies = Effect.fn("installFrozenStageDependencies
   }
 
   yield* verifyStagedPatchedDependencies(repoRoot, stageAppDir);
-
-  const inventory = yield* Effect.try({
-    try: () =>
-      writeReleaseLegalMetadata({
-        packageRoot: stageAppDir,
-        repositoryRoot: repoRoot,
-        outputDirectory: path.join(stageAppDir, "apps/service/dist/client/licenses"),
-        appVersion,
-        target: { kind: "release-target", platform, arch },
-      }),
-    catch: (cause) =>
-      new BuildScriptError({
-        message: "Could not derive fail-closed legal metadata from staged production dependencies.",
-        cause,
-      }),
-  });
-  yield* Effect.log(
-    `[desktop-artifact] Locked legal metadata to ${inventory.componentCount} staged production components.`,
-  );
 
   for (const relativePath of RELEASE_WORKSPACE_MANIFEST_PATHS) {
     if (relativePath !== "package.json") {
@@ -772,11 +744,6 @@ const createBuildConfig = Effect.fn("createBuildConfig")(function* (
         url: `http://localhost:${mockUpdateServerPort ?? 3000}`,
       },
     ];
-  } else {
-    // A local build has no truthful update source. Explicit null prevents
-    // electron-builder from guessing repository metadata and creating an
-    // invalid update-info task while still allowing the artifact itself.
-    buildConfig.publish = null;
   }
 
   const windowsSigningConfig =
@@ -804,7 +771,6 @@ const createBuildConfig = Effect.fn("createBuildConfig")(function* (
 
   return {
     buildConfig,
-    updateSourceConfigured: publishConfig !== undefined || mockUpdates,
     windowsPublisherSubject: windowsSigningConfig?.subjectDistinguishedName ?? null,
   };
 });
@@ -830,18 +796,18 @@ const assertPlatformBuildResources = Effect.fn("assertPlatformBuildResources")(f
   }
 });
 
-const stageMacAppSnapBridge = Effect.fn("stageMacAppSnapBridge")(function* (
+const stageMacAppSnapHelper = Effect.fn("stageMacAppSnapHelper")(function* (
   stageAppDir: string,
   arch: typeof BuildArch.Type,
   verbose: boolean,
 ) {
   const path = yield* Path.Path;
   const fs = yield* FileSystem.FileSystem;
-  const buildScript = yield* AppSnapBridgeBuildScript;
-  const outputPath = path.join(stageAppDir, MAC_APPSNAP_BRIDGE_STAGE_PATH);
+  const buildScript = yield* AppSnapHelperBuildScript;
+  const outputPath = path.join(stageAppDir, MAC_APPSNAP_HELPER_STAGE_PATH);
 
   yield* fs.makeDirectory(path.dirname(outputPath), { recursive: true });
-  yield* Effect.log(`[desktop-artifact] Building native AppSnap bridge (${arch})...`);
+  yield* Effect.log(`[desktop-artifact] Building native AppSnap helper (${arch})...`);
   yield* runCommand(
     ChildProcess.make({
       cwd: stageAppDir,
@@ -851,7 +817,7 @@ const stageMacAppSnapBridge = Effect.fn("stageMacAppSnapBridge")(function* (
 
   if (!(yield* fs.exists(outputPath))) {
     return yield* new BuildScriptError({
-      message: `AppSnap bridge build completed but output was not found at ${outputPath}`,
+      message: `AppSnap helper build completed but output was not found at ${outputPath}`,
     });
   }
 });
@@ -883,17 +849,10 @@ const buildDesktopArtifact = Effect.fn("buildDesktopArtifact")(function* (
 
   const electronVersion = desktopPackageJson.dependencies.electron;
 
-  const serviceDependencies = servicePackageJson.dependencies;
-  if (!serviceDependencies || Object.keys(serviceDependencies).length === 0) {
+  const serverDependencies = serverPackageJson.dependencies;
+  if (!serverDependencies || Object.keys(serverDependencies).length === 0) {
     return yield* new BuildScriptError({
-      message: "Could not resolve production dependencies from apps/service/package.json.",
-    });
-  }
-
-  const nativeHostDependencies = nativeHostPackageJson.dependencies;
-  if (!nativeHostDependencies || Object.keys(nativeHostDependencies).length === 0) {
-    return yield* new BuildScriptError({
-      message: "Could not resolve production dependencies from apps/native-host/package.json.",
+      message: "Could not resolve production dependencies from apps/server/package.json.",
     });
   }
 
@@ -911,29 +870,16 @@ const buildDesktopArtifact = Effect.fn("buildDesktopArtifact")(function* (
       }),
   });
 
-  const resolvedServiceDependencies = yield* Effect.try({
+  const resolvedServerDependencies = yield* Effect.try({
     try: () =>
       resolveCatalogDependencies(
-        serviceDependencies,
+        serverDependencies,
         rootPackageJson.workspaces.catalog,
-        "apps/service",
+        "apps/server",
       ),
     catch: (cause) =>
       new BuildScriptError({
-        message: "Could not resolve production dependencies from apps/service/package.json.",
-        cause,
-      }),
-  });
-  const resolvedNativeHostDependencies = yield* Effect.try({
-    try: () =>
-      resolvePackagedWorkspaceRuntimeDependencies(
-        nativeHostDependencies,
-        rootPackageJson.workspaces.catalog,
-        "apps/native-host",
-      ),
-    catch: (cause) =>
-      new BuildScriptError({
-        message: "Could not resolve production dependencies from apps/native-host/package.json.",
+        message: "Could not resolve production dependencies from apps/server/package.json.",
         cause,
       }),
   });
@@ -950,7 +896,7 @@ const buildDesktopArtifact = Effect.fn("buildDesktopArtifact")(function* (
       }),
   });
 
-  const appVersion = options.version ?? servicePackageJson.version;
+  const appVersion = options.version ?? serverPackageJson.version;
   const hasSourceCommit = options.sourceCommit !== undefined;
   const hasLockfileSha256 = options.lockfileSha256 !== undefined;
   const exactProvenanceRequested =
@@ -1016,10 +962,9 @@ const buildDesktopArtifact = Effect.fn("buildDesktopArtifact")(function* (
   const distDirs = {
     desktopDist: path.join(repoRoot, "apps/desktop/dist-electron"),
     desktopResources: path.join(repoRoot, "apps/desktop/resources"),
-    serviceDist: path.join(repoRoot, "apps/service/dist"),
-    nativeHostDist: path.join(repoRoot, "apps/native-host/dist"),
+    serverDist: path.join(repoRoot, "apps/server/dist"),
   };
-  const bundledClientEntry = path.join(distDirs.serviceDist, "client/index.html");
+  const bundledClientEntry = path.join(distDirs.serverDist, "client/index.html");
 
   if (!options.skipBuild) {
     yield* Effect.log("[desktop-artifact] Building desktop/server/web artifacts...");
@@ -1050,28 +995,17 @@ const buildDesktopArtifact = Effect.fn("buildDesktopArtifact")(function* (
   yield* validateBundledClientAssets(path.dirname(bundledClientEntry));
 
   yield* fs.makeDirectory(path.join(stageAppDir, "apps/desktop"), { recursive: true });
-  yield* fs.makeDirectory(path.join(stageAppDir, "apps/service"), { recursive: true });
-  yield* fs.makeDirectory(path.join(stageAppDir, "apps/native-host"), { recursive: true });
+  yield* fs.makeDirectory(path.join(stageAppDir, "apps/server"), { recursive: true });
 
   yield* Effect.log("[desktop-artifact] Staging release app...");
   yield* fs.copy(distDirs.desktopDist, path.join(stageAppDir, "apps/desktop/dist-electron"));
   yield* fs.copy(distDirs.desktopResources, stageResourcesDir);
-  yield* fs.copy(distDirs.serviceDist, path.join(stageAppDir, "apps/service/dist"));
-  yield* fs.copy(distDirs.nativeHostDist, path.join(stageAppDir, "apps/native-host/dist"));
-  yield* Effect.tryPromise({
-    try: () => stageCuratedPackageAssets({ sourceRoot: repoRoot, applicationRoot: stageAppDir }),
-    catch: (cause) =>
-      new BuildScriptError({
-        message:
-          "Curated Package release assets are missing or do not match exact source evidence.",
-        cause,
-      }),
-  });
+  yield* fs.copy(distDirs.serverDist, path.join(stageAppDir, "apps/server/dist"));
 
   yield* assertPlatformBuildResources(options.platform, stageResourcesDir, options.verbose);
 
   if (options.platform === "mac") {
-    yield* stageMacAppSnapBridge(stageAppDir, options.arch, options.verbose);
+    yield* stageMacAppSnapHelper(stageAppDir, options.arch, options.verbose);
   }
 
   // electron-builder is filtering out stageResourcesDir directory in the AppImage for production
@@ -1100,8 +1034,7 @@ const buildDesktopArtifact = Effect.fn("buildDesktopArtifact")(function* (
     main: "apps/desktop/dist-electron/main.js",
     build: resolvedBuildConfig.buildConfig,
     dependencies: {
-      ...resolvedServiceDependencies,
-      ...resolvedNativeHostDependencies,
+      ...resolvedServerDependencies,
       ...resolvedDesktopRuntimeDependencies,
     },
     devDependencies: {
@@ -1112,14 +1045,7 @@ const buildDesktopArtifact = Effect.fn("buildDesktopArtifact")(function* (
     },
   };
 
-  yield* installFrozenStageDependencies(
-    repoRoot,
-    stageAppDir,
-    options.platform,
-    options.arch,
-    appVersion,
-    options.verbose,
-  );
+  yield* installFrozenStageDependencies(repoRoot, stageAppDir, options.platform, options.verbose);
 
   const stagePackageJsonString = yield* encodeJsonString(stagePackageJson);
   yield* fs.writeFileString(path.join(stageAppDir, "package.json"), `${stagePackageJsonString}\n`);
@@ -1174,20 +1100,6 @@ const buildDesktopArtifact = Effect.fn("buildDesktopArtifact")(function* (
     });
   }
 
-  const verifiedLegalArchives = yield* Effect.try({
-    try: () => verifyPackagedLegalClosure(stageDistDir),
-    catch: (cause) =>
-      new BuildScriptError({
-        message: "Packaged dependency/legal closure verification failed.",
-        cause,
-      }),
-  });
-  for (const result of verifiedLegalArchives) {
-    yield* Effect.log(
-      `[desktop-artifact] Verified ${result.componentCount} disclosed dependency identities in ${result.archivePath}.`,
-    );
-  }
-
   if (options.platform === "mac" && options.target === "dmg" && options.signed) {
     yield* Effect.log("[desktop-artifact] Notarizing and validating signed macOS DMG...");
     const finalizedDmg = yield* Effect.try({
@@ -1218,7 +1130,6 @@ const buildDesktopArtifact = Effect.fn("buildDesktopArtifact")(function* (
           stageDistDir,
           signed: options.signed,
           verbose: options.verbose,
-          requireUpdateManifest: resolvedBuildConfig.updateSourceConfigured,
         }),
       catch: (cause) =>
         new BuildScriptError({

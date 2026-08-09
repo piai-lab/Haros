@@ -35,12 +35,15 @@ describe("sanitizeBrowserAnnotationPageTitle", () => {
     expect(sanitizeBrowserAnnotationPageTitle(title)).toBe("");
   });
 
-  it.each(["OmniMind", "React 19 documentation", "API keys – Settings", "Invoice #1234", "Checkout"])(
-    "preserves an ordinary title: %s",
-    (title) => {
-      expect(sanitizeBrowserAnnotationPageTitle(title)).toBe(title);
-    },
-  );
+  it.each([
+    "OmniMind",
+    "React 19 documentation",
+    "API keys – Settings",
+    "Invoice #1234",
+    "Checkout",
+  ])("preserves an ordinary title: %s", (title) => {
+    expect(sanitizeBrowserAnnotationPageTitle(title)).toBe(title);
+  });
 });
 
 describe("sanitizeBrowserAnnotationUrl", () => {

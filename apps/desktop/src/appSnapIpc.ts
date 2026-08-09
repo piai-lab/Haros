@@ -1,16 +1,16 @@
 // FILE: appSnapIpc.ts
 // Purpose: Centralizes the desktop AppSnap IPC contract and renderer push events.
 // Layer: Desktop IPC adapter
-// Depends on: Electron IPC and DesktopAppSnapSupervisor.
+// Depends on: Electron IPC and DesktopAppSnapManager.
 
 import type { IpcMain, WebContents } from "electron";
 import type {
   DesktopAppSnapCapture,
   DesktopAppSnapErrorEvent,
   DesktopAppSnapState,
-} from "@omnimind/contracts";
+} from "@synara/contracts";
 
-import type { DesktopAppSnapSupervisor } from "./appSnapSupervisor";
+import type { DesktopAppSnapManager } from "./appSnapManager";
 import { APPSNAP_IPC_CHANNELS } from "./ipcChannels";
 
 export function sendAppSnapState(
@@ -34,10 +34,7 @@ export function sendAppSnapError(
   webContents?.send(APPSNAP_IPC_CHANNELS.error, error);
 }
 
-export function registerAppSnapIpcHandlers(
-  ipcMain: IpcMain,
-  manager: DesktopAppSnapSupervisor,
-): void {
+export function registerAppSnapIpcHandlers(ipcMain: IpcMain, manager: DesktopAppSnapManager): void {
   ipcMain.removeHandler(APPSNAP_IPC_CHANNELS.getState);
   ipcMain.handle(APPSNAP_IPC_CHANNELS.getState, async () => manager.refreshState());
 

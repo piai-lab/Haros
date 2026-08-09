@@ -3,12 +3,12 @@
 // Layer: Chat header action
 // Depends on: shared editor metadata, native shell bridge, and preferred editor state.
 
-import { type EditorId, type ResolvedKeybindingsConfig } from "@omnimind/contracts";
+import { type EditorId, type ResolvedKeybindingsConfig } from "@synara/contracts";
 import { useQuery } from "@tanstack/react-query";
 import { useEditorLaunchers } from "~/hooks/useEditorLaunchers";
 import { ChevronDownIcon } from "~/lib/icons";
 import { serverConfigQueryOptions } from "~/lib/serverReactQuery";
-import { cn } from "~/lib/styles";
+import { cn } from "~/lib/utils";
 import {
   Menu,
   MenuRadioGroup,

@@ -3,7 +3,7 @@
 // Layer: Web lib test
 // Depends on: composerAutomation resolver and automation form helpers.
 
-import type { ProductRequestedSelection, ProjectId, ThreadId } from "@omnimind/contracts";
+import type { ModelSelection, ProjectId, ThreadId } from "@synara/contracts";
 import { describe, expect, it, vi } from "vitest";
 
 import {
@@ -14,13 +14,9 @@ import {
 
 const PROJECT_ID = "project-composer-automation" as ProjectId;
 const THREAD_ID = "thread-composer-automation" as ThreadId;
-const REQUESTED_SELECTION: ProductRequestedSelection = {
-  state: "selected",
-  engineId: "pi",
-  runtimeChoice: { kind: "product-model", runtimeModelId: "openai/gpt-5", thinking: "medium" },
-  packageGeneration: "test",
-  permissionPolicy: "approval-required",
-  executionTarget: null,
+const MODEL_SELECTION: ModelSelection = {
+  provider: "codex",
+  model: "gpt-5",
 };
 const NOW_ISO = "2026-06-22T08:00:00.000Z";
 
@@ -243,10 +239,8 @@ describe("composerAutomation", () => {
     const draft = buildComposerAutomationDraft({
       resolution: decision.resolution,
       projectId: PROJECT_ID,
-      requestedSelection: {
-        ...REQUESTED_SELECTION,
-        permissionPolicy: "full-access",
-      },
+      projectModelSelection: MODEL_SELECTION,
+      selectedModelSelection: MODEL_SELECTION,
       targetThreadId: THREAD_ID,
       hasEphemeralContext: false,
     });
@@ -297,7 +291,8 @@ describe("composerAutomation", () => {
     const draft = buildComposerAutomationDraft({
       resolution: decision.resolution,
       projectId: PROJECT_ID,
-      requestedSelection: REQUESTED_SELECTION,
+      projectModelSelection: MODEL_SELECTION,
+      selectedModelSelection: MODEL_SELECTION,
       targetThreadId: THREAD_ID,
       hasEphemeralContext: false,
     });
@@ -306,9 +301,7 @@ describe("composerAutomation", () => {
     expect(draft.form).toMatchObject({
       mode: "heartbeat",
       targetThreadId: THREAD_ID,
-      requestedSelection: {
-        permissionPolicy: "approval-required",
-      },
+      runtimeMode: "approval-required",
       maxIterations: "3",
       prompt: "say hi",
     });
@@ -347,7 +340,8 @@ describe("composerAutomation", () => {
     const draft = buildComposerAutomationDraft({
       resolution: decision.resolution,
       projectId: PROJECT_ID,
-      requestedSelection: REQUESTED_SELECTION,
+      projectModelSelection: MODEL_SELECTION,
+      selectedModelSelection: MODEL_SELECTION,
       targetThreadId: THREAD_ID,
       hasEphemeralContext: false,
     });
@@ -391,7 +385,8 @@ describe("composerAutomation", () => {
     const draft = buildComposerAutomationDraft({
       resolution: decision.resolution,
       projectId: PROJECT_ID,
-      requestedSelection: REQUESTED_SELECTION,
+      projectModelSelection: MODEL_SELECTION,
+      selectedModelSelection: MODEL_SELECTION,
       targetThreadId: null,
       hasEphemeralContext: false,
     });
@@ -442,7 +437,8 @@ describe("composerAutomation", () => {
     const draft = buildComposerAutomationDraft({
       resolution: decision.resolution,
       projectId: PROJECT_ID,
-      requestedSelection: REQUESTED_SELECTION,
+      projectModelSelection: MODEL_SELECTION,
+      selectedModelSelection: MODEL_SELECTION,
       targetThreadId: THREAD_ID,
       hasEphemeralContext: false,
     });

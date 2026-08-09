@@ -1,8 +1,0 @@
-{
-  "extendsFixture": "product-refusal-lock-positive",
-  "textReplacements": {
-    "apps/service/src/product/ProductControlPlane.ts": [
-      ["acquireDatabaseLifecycleLock(databasePath)", "acquireDatabaseLifecycleLock(join(stateDir, \"wrong-lane\", \"stores\", \"product.sqlite\"))"]
-    ]
-  }
-}

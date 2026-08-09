@@ -9,7 +9,7 @@ import {
   COMPOSER_EDITOR_TYPOGRAPHY_CLASS_NAME,
   COMPOSER_PLACEHOLDER_TEXT_CLASS_NAME,
 } from "~/components/chat/composerPickerStyles";
-import { cn } from "~/lib/styles";
+import { cn } from "~/lib/utils";
 
 /** Panel title ("Environment") and section labels ("Editor", "Recap"). */
 export const ENVIRONMENT_PANEL_LABEL_CLASS_NAME = cn(

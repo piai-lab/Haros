@@ -7,12 +7,23 @@ export const MAX_WHEN_EXPRESSION_DEPTH = 64;
 export const MAX_SCRIPT_ID_LENGTH = 24;
 export const MAX_KEYBINDINGS_COUNT = 256;
 
-const STATIC_KEYBINDING_COMMANDS = [
+export const STATIC_KEYBINDING_COMMANDS = [
   "sidebar.toggle",
   "sidebar.search",
   "sidebar.activity",
   "sidebar.addProject",
   "sidebar.importThread",
+  "space.previous",
+  "space.next",
+  "space.jump.1",
+  "space.jump.2",
+  "space.jump.3",
+  "space.jump.4",
+  "space.jump.5",
+  "space.jump.6",
+  "space.jump.7",
+  "space.jump.8",
+  "space.jump.9",
   "terminal.toggle",
   "terminal.split",
   "terminal.splitRight",
@@ -28,12 +39,19 @@ const STATIC_KEYBINDING_COMMANDS = [
   "browser.toggle",
   "diff.toggle",
   "composer.focus.toggle",
+  "modelPicker.toggle",
+  "model.next",
+  "model.previous",
+  "traitsPicker.toggle",
   "settings.usage",
   "chat.new",
   "chat.newLatestProject",
   "chat.newChat",
   "chat.newLocal",
   "chat.newTerminal",
+  "chat.newClaude",
+  "chat.newCodex",
+  "chat.newCursor",
   "chat.split",
   "view.recent.next",
   "view.recent.previous",
@@ -46,6 +64,7 @@ const STATIC_KEYBINDING_COMMANDS = [
   "thread.jump.7",
   "thread.jump.8",
   "thread.jump.9",
+  "thread.copyId",
   "chat.visible.next",
   "chat.visible.previous",
   "editor.openFavorite",
@@ -65,6 +84,21 @@ export const THREAD_JUMP_KEYBINDING_COMMANDS = [
   "thread.jump.9",
 ] as const;
 export type ThreadJumpKeybindingCommand = (typeof THREAD_JUMP_KEYBINDING_COMMANDS)[number];
+
+// Shared list of numbered space-jump commands used by the web shortcut UI. Index 0 is
+// the first tab in the space strip (Void), matching the visual order of the switcher.
+export const SPACE_JUMP_KEYBINDING_COMMANDS = [
+  "space.jump.1",
+  "space.jump.2",
+  "space.jump.3",
+  "space.jump.4",
+  "space.jump.5",
+  "space.jump.6",
+  "space.jump.7",
+  "space.jump.8",
+  "space.jump.9",
+] as const;
+export type SpaceJumpKeybindingCommand = (typeof SPACE_JUMP_KEYBINDING_COMMANDS)[number];
 
 export const SCRIPT_RUN_COMMAND_PATTERN = Schema.TemplateLiteral([
   Schema.Literal("script."),

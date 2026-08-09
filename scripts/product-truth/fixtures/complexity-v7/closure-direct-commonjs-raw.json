@@ -1,1 +1,0 @@
-{"appendToFiles":{"apps/service/src/atomicWrite.ts":"\nexport const v7DirectCommonJsRaw = () => require('node:child_process').spawnSync(['true']);\n"}}

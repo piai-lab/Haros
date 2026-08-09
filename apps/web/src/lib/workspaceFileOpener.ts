@@ -9,13 +9,13 @@
 //          resolveDockFileOpenTarget,
 //          openWorkspaceFileReference, prefetchWorkspaceFile
 
-import { isSupportedLocalPreviewFilePath } from "@omnimind/shared/localPreviewFiles";
+import { isSupportedLocalPreviewFilePath } from "@synara/shared/localPreviewFiles";
 import {
   isLocalAbsolutePath,
   isWorkspaceRelativePathSafe,
   workspaceRelativePathOf,
-} from "@omnimind/shared/path";
-import { isScratchWorkspacePath } from "@omnimind/shared/threadWorkspace";
+} from "@synara/shared/path";
+import { isScratchWorkspacePath } from "@synara/shared/threadWorkspace";
 import type { QueryClient } from "@tanstack/react-query";
 import { createContext, useContext } from "react";
 
@@ -44,8 +44,8 @@ export function useWorkspaceFileOpener(): WorkspaceFileOpener | null {
 // The in-app viewer previews whole files, so the position is dropped.
 const FILE_POSITION_SUFFIX_PATTERN = /:\d+(?::\d+)?$/;
 const OMNIMIND_PUBLIC_ASSET_PATH_PREFIXES = [
-  "/icons/line/",
-  "/icons/fill/",
+  "/central-icons-reversed/",
+  "/central-icons-fill/",
 ] as const;
 const OMNIMIND_WEB_PUBLIC_WORKSPACE_DIR = "apps/web/public";
 
@@ -85,8 +85,8 @@ export function resolveWorkspaceFileOpenTarget(
   if (workspaceRelativePath) {
     return workspaceRelativePath;
   }
-  // Glyph assets are linked in chat as Vite root URLs
-  // (`/product-glyphs-...`) but the file viewer needs the repo path.
+  // CentralIcon assets are linked in chat as Vite root URLs
+  // (`/central-icons-...`) but the file viewer needs the repo path.
   return resolveOmniMindPublicAssetOpenTarget(withoutPosition, workspaceRoot);
 }
 

@@ -1,11 +1,12 @@
-import type { ConversationPullRequestSummary } from "~/historicalConversation";
 // FILE: PrStateChip.tsx
 // Purpose: Compact PR chip (state icon + #number, hover title) shared by the
 //          kanban card meta row and the sidebar Activity rows.
 // Layer: UI component (pure)
 // Exports: PrStateChip
 
-import { cn } from "~/lib/styles";
+import type { OrchestrationThreadPullRequest } from "@synara/contracts";
+
+import { cn } from "~/lib/utils";
 import {
   PR_STATE_PRESENTATION_ICONS,
   resolvePrStatePresentation,
@@ -16,7 +17,7 @@ export function PrStateChip({
   pr,
   className,
 }: {
-  pr: ConversationPullRequestSummary;
+  pr: OrchestrationThreadPullRequest;
   className?: string;
 }) {
   const presentation = resolvePrStatePresentation(pr);

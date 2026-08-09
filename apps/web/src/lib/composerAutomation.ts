@@ -4,13 +4,16 @@
 // Exports: composer automation resolver plus draft builder for ChatView.
 // Depends on: automationIntent parsing and automation form helpers.
 
-import { DEFAULT_AUTOMATION_FAST_INTERVAL_MAX_ITERATIONS } from "@omnimind/contracts";
+import { DEFAULT_AUTOMATION_FAST_INTERVAL_MAX_ITERATIONS } from "@synara/contracts";
 import type {
   AutomationMode,
-  ProductRequestedSelection,
+  ModelSelection,
   ProjectId,
+  ServerAutomationIntentMissingField,
+  ServerGenerateAutomationIntentInput,
+  ServerGenerateAutomationIntentResult,
   ThreadId,
-} from "@omnimind/contracts";
+} from "@synara/contracts";
 
 import {
   applyScheduleToForm,
@@ -18,8 +21,8 @@ import {
   isFormSubmittable,
   type AutomationFormState,
 } from "./automationForm";
-import { stopWhenFromCompletionPolicy } from "@omnimind/shared/automationCompletionPolicy";
-import { automationRequiresTargetThread } from "@omnimind/shared/automationMode";
+import { stopWhenFromCompletionPolicy } from "@synara/shared/automationCompletionPolicy";
+import { automationRequiresTargetThread } from "@synara/shared/automationMode";
 import {
   acknowledgedWarningIdsForAutomaticChatAutomation,
   buildAutomationDraftWarnings,
@@ -37,21 +40,12 @@ import {
   resolveChatAutomationIntent,
   shouldGenerateAutomationIntent,
   type ChatAutomationIntent,
-  type AutomationIntentMissingField,
-  type GeneratedAutomationIntent,
   type ResolvedChatAutomationIntent,
 } from "./automationIntent";
 
-interface GenerateAutomationIntentRequest {
-  readonly cwd: string;
-  readonly message: string;
-  readonly defaultMode?: AutomationMode;
-  readonly nowIso: string;
-}
-
 type GenerateComposerAutomationIntent = (
-  input: GenerateAutomationIntentRequest,
-) => Promise<GeneratedAutomationIntent>;
+  input: ServerGenerateAutomationIntentInput,
+) => Promise<ServerGenerateAutomationIntentResult>;
 
 const DEFAULT_GENERATE_INTENT_TIMEOUT_MS = 1_500;
 
@@ -67,7 +61,7 @@ export type ComposerAutomationRequestDecision =
       // scaffolding as task content.
       readonly type: "needs-clarification";
       readonly automationMessage: string;
-      readonly missingFields: readonly AutomationIntentMissingField[];
+      readonly missingFields: readonly ServerAutomationIntentMissingField[];
       readonly reason: string | null;
     }
   | {
@@ -105,12 +99,12 @@ function stripTrailingAutomationFiller(message: string): string {
 // fields. Falls back to asking for a schedule (the dominant missing field) when the
 // generator could not report what was missing.
 export function automationClarificationPrompt(
-  missingFields: readonly AutomationIntentMissingField[],
+  missingFields: readonly ServerAutomationIntentMissingField[],
 ): string {
   // When the generator could not say what was missing (timeout/failure on a bare
   // request), ask for both task and schedule so setup can still recover instead of
   // looping on a cadence-only question that a bare "create an automation" can't answer.
-  const fields: readonly AutomationIntentMissingField[] =
+  const fields: readonly ServerAutomationIntentMissingField[] =
     missingFields.length > 0 ? missingFields : ["taskPrompt", "schedule"];
   const needsTask = fields.includes("taskPrompt");
   const needsSchedule = fields.includes("schedule");
@@ -132,9 +126,9 @@ export function automationClarificationPrompt(
 
 async function generateIntentWithTimeout(input: {
   readonly generateIntent: GenerateComposerAutomationIntent;
-  readonly request: GenerateAutomationIntentRequest;
+  readonly request: ServerGenerateAutomationIntentInput;
   readonly timeoutMs: number;
-}): Promise<GeneratedAutomationIntent | null> {
+}): Promise<ServerGenerateAutomationIntentResult | null> {
   let timeoutId: ReturnType<typeof setTimeout> | null = null;
   try {
     return await Promise.race([
@@ -259,13 +253,14 @@ export async function resolveComposerAutomationRequest(input: {
 export function buildComposerAutomationDraft(input: {
   readonly resolution: ResolvedChatAutomationIntent;
   readonly projectId: ProjectId;
-  readonly requestedSelection: ProductRequestedSelection;
+  readonly projectModelSelection: ModelSelection;
+  readonly selectedModelSelection: ModelSelection;
   readonly targetThreadId: ThreadId | null;
   readonly hasEphemeralContext: boolean;
 }): ComposerAutomationDraftDecision {
   const { intent: automationIntent, mode: automationMode } = input.resolution;
   const automationStopWhen = stopWhenFromCompletionPolicy(automationIntent.completionPolicy);
-  const baseForm = formFromDefinition(null, input.projectId, input.requestedSelection);
+  const baseForm = formFromDefinition(null, input.projectId, input.projectModelSelection);
   // Chat-created automations should not inherit live Full access; escalating scheduled
   // runs stays an explicit review step in the automation dialog.
   const nextForm = applyScheduleToForm(
@@ -274,10 +269,8 @@ export function buildComposerAutomationDraft(input: {
       name: automationIntent.name,
       prompt: automationIntent.prompt,
       projectId: input.projectId,
-      requestedSelection: {
-        ...input.requestedSelection,
-        permissionPolicy: "approval-required",
-      },
+      modelSelection: input.selectedModelSelection,
+      runtimeMode: "approval-required",
       worktreeMode: automationIntent.executionScope === "worktree" ? "worktree" : "auto",
       mode: automationMode,
       targetThreadId:
@@ -296,7 +289,7 @@ export function buildComposerAutomationDraft(input: {
   const warnings = buildAutomationDraftWarnings({
     schedule: automationIntent.schedule,
     mode: nextForm.mode,
-    permissionPolicy: nextForm.requestedSelection.permissionPolicy,
+    runtimeMode: nextForm.runtimeMode,
     worktreeMode: nextForm.worktreeMode,
     hasEphemeralContext: input.hasEphemeralContext,
     generatedConfidence: input.resolution.generatedConfidence,

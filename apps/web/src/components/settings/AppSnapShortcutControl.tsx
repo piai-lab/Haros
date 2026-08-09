@@ -8,7 +8,7 @@ import {
   type DesktopAppSnapShortcutModifier,
   type DesktopAppSnapState,
   type ResolvedKeybindingsConfig,
-} from "@omnimind/contracts";
+} from "@synara/contracts";
 import {
   DEFAULT_APP_SNAP_SHORTCUT,
   appSnapModifierFromEventCode,
@@ -17,12 +17,12 @@ import {
   appSnapShortcutSystemConflict,
   isAppSnapShortcutKey,
   sameAppSnapShortcut,
-} from "@omnimind/shared/appSnapShortcut";
+} from "@synara/shared/appSnapShortcut";
 import { useRef, useState, type KeyboardEvent } from "react";
 
 import { appSnapShortcutConflictCommand } from "~/appSnapShortcut";
 import { shortcutSheetCommandLabel } from "~/shortcutsSheet";
-import { cn } from "~/lib/styles";
+import { cn } from "~/lib/utils";
 import { Button } from "~/components/ui/button";
 import { Kbd, KbdGroup } from "~/components/ui/kbd";
 import { toastManager } from "~/components/ui/toast";

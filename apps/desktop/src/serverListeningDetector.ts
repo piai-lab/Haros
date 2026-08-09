@@ -1,4 +1,4 @@
-const LISTENING_LOG_FRAGMENT = "OmniMind running";
+const LISTENING_LOG_FRAGMENT = "Listening on http://";
 const MAX_BUFFER_CHARS = 8_192;
 
 export class ServerListeningDetector {

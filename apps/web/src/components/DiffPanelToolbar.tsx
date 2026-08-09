@@ -5,7 +5,8 @@
 // Layer: Diff panel UI
 
 import type { FileDiffMetadata } from "@pierre/diffs/react";
-import type { ThreadId, TurnId } from "@omnimind/contracts";
+import type { ThreadId, TurnId } from "@synara/contracts";
+import { FaPlusMinus } from "react-icons/fa6";
 import { useState, type ReactNode } from "react";
 
 import GitActionsControl from "~/components/GitActionsControl";
@@ -23,7 +24,7 @@ import {
   Rows3Icon,
   XIcon,
 } from "~/lib/icons";
-import { cn } from "~/lib/styles";
+import { cn } from "~/lib/utils";
 import {
   ELEVATED_HOVER_SURFACE_CLASS_NAME,
   ELEVATED_HOVER_SURFACE_RAISED_TEXT_CLASS_NAME,
@@ -136,7 +137,7 @@ function resolveScopeMenuIcon(scope: RepoDiffScope | "lastTurn") {
     case "lastTurn":
       return (
         <span className="inline-flex size-3.5 shrink-0 items-center justify-center text-muted-foreground">
-          <DiffIcon className="size-2.25" />
+          <FaPlusMinus className="size-2.25" />
         </span>
       );
     default:
@@ -159,7 +160,7 @@ export const DiffPanelToolbar = function DiffPanelToolbar(props: DiffPanelToolba
 
   let scopePickerIcon: ReactNode;
   if (props.viewSource.kind === "turn") {
-    scopePickerIcon = <DiffIcon className="size-2.5 text-[var(--color-text-foreground)]" />;
+    scopePickerIcon = <FaPlusMinus className="size-2.5 text-[var(--color-text-foreground)]" />;
   } else {
     scopePickerIcon = <ChangesIcon className={DIFF_PANEL_PICKER_ICON_CLASS_NAME} />;
   }
@@ -419,7 +420,7 @@ export const DiffPanelToolbar = function DiffPanelToolbar(props: DiffPanelToolba
           >
             <EnvironmentRowBody
               compact
-              icon={<DiffIcon className="size-2.5 text-[var(--color-text-foreground)]" />}
+              icon={<FaPlusMinus className="size-2.5 text-[var(--color-text-foreground)]" />}
               label={<span className="truncate">{turnsMenuLabel}</span>}
               trailing={<EnvironmentRowChevron />}
             />
@@ -448,7 +449,7 @@ export const DiffPanelToolbar = function DiffPanelToolbar(props: DiffPanelToolba
                 </MenuRadioItem>
                 {visibleTurnSummaries.map((summary) => (
                   <MenuRadioItem key={summary.turnId} value={summary.turnId}>
-                    <DiffIcon className="size-2.5 shrink-0 text-muted-foreground" />
+                    <FaPlusMinus className="size-2.5 shrink-0 text-muted-foreground" />
                     <span className="min-w-0 flex-1 truncate">
                       Turn {resolveTurnNumber(summary, props.inferredCheckpointTurnCountByTurnId)}
                     </span>

@@ -10,16 +10,11 @@ import type {
   PullRequestAction,
   PullRequestDetailInput,
   PullRequestMergeMethod,
-} from "@omnimind/contracts";
-import {
-  PRODUCT_PROTOCOL_VERSION,
-  ProductConversationId,
-  ProductWorkspaceId,
-} from "@omnimind/contracts";
+} from "@synara/contracts";
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
-import { useNavigate } from "@tanstack/react-router";
 import { lazy, Suspense, useRef, useState } from "react";
 
+import { useAppSettings } from "~/appSettings";
 import {
   CHAT_HEADER_CONTROL_CLASS_NAME,
   CHAT_HEADER_ICON_CONTROL_CLASS_NAME,
@@ -75,12 +70,10 @@ import {
   pullRequestDetailQueryOptions,
   pullRequestQueryErrorState,
 } from "~/lib/pullRequestReactQuery";
-import { cn } from "~/lib/styles";
-import { createThreadId, randomUUID } from "~/lib/identifiers";
+import { cn } from "~/lib/utils";
 import { ensureNativeApi } from "~/nativeApi";
+import { useHandleNewThread } from "~/hooks/useHandleNewThread";
 import { copyTextToClipboard } from "~/hooks/useCopyToClipboard";
-import { createProductConversationWithRecovery } from "~/productConversationMutations";
-import { useProductStore } from "~/store/productStore";
 import { PullRequestSummaryTab } from "./PullRequestSummaryTab";
 import { PullRequestTimelineTab } from "./PullRequestTimelineTab";
 import { PullRequestsUnavailableState } from "./PullRequestsUnavailableState";
@@ -148,10 +141,11 @@ export function PullRequestDetailPanel({
   const initialTab = initialTabProp ?? "summary";
   const pollingEnabled = pollingEnabledProp ?? true;
   const queryClient = useQueryClient();
-  const navigate = useNavigate();
+  const { settings } = useAppSettings();
+  const { handleNewThread } = useHandleNewThread();
   // Panel state keyed to the PR it belongs to: switching PRs (or landing tab)
   // derives straight back to the defaults with no state-resetting effect.
-  const panelKey = `${input.workspaceId}\u0000${input.repository}\u0000${input.number}\u0000${initialTab}`;
+  const panelKey = `${input.projectId}\u0000${input.repository}\u0000${input.number}\u0000${initialTab}`;
   const [panelState, setPanelState] = useState<{
     key: string;
     tab: DetailTab;
@@ -218,9 +212,9 @@ export function PullRequestDetailPanel({
       });
   };
 
-  // A PR handoff gets its own Product Workspace because the prepared worktree is a distinct
-  // writable root. The Conversation and Workspace receive fresh identities; no donor Project
-  // identity is translated into the Product authority.
+  // "Fix findings" and "Resolve conflicts" hand the PR to a fresh thread the same way:
+  // prepare a worktree on the PR branch, create the thread, and pre-fill the composer with
+  // the task-specific prompt for the user to review and send.
   const startPullRequestThread = (
     kind: "findings" | "conflicts",
     prompt: string,
@@ -228,42 +222,25 @@ export function PullRequestDetailPanel({
   ) => {
     if (!detail || preparingThread !== null) return;
     setPreparingThread(kind);
+    const mode = settings.defaultThreadEnvMode;
     void prepareThreadMutation
-      .mutateAsync({ reference: detail.url, mode: "worktree" })
-      .then(async (prepared) => {
-        if (prepared.worktreePath === null) {
-          throw new Error("Git did not return the requested pull-request worktree.");
-        }
-        const threadId = createThreadId();
-        const conversationId = ProductConversationId.makeUnsafe(threadId);
-        const observedAt = new Date().toISOString();
-        const title =
-          `${kind === "findings" ? "Fix" : "Resolve conflicts in"} PR #${detail.number}: ${detail.title}`.slice(
-            0,
-            256,
-          );
-        const snapshot = await createProductConversationWithRecovery({
-          protocolVersion: PRODUCT_PROTOCOL_VERSION,
-          conversationId,
-          workspaceId: ProductWorkspaceId.makeUnsafe(randomUUID()),
-          title,
-          workspace: {
-            kind: "folder-backed",
-            managedDirectory: null,
-            primaryFolder: prepared.worktreePath,
-            executionTarget: {
-              kind: "local",
-              targetRef: prepared.worktreePath,
-              observedAt,
-            },
-            writeAuthority: "primary-folder",
-          },
-        });
-        useProductStore.getState().setConversationSnapshot(snapshot);
-        appendComposerPromptText(threadId, prompt);
-        await navigate({ to: "/$threadId", params: { threadId } });
-        onClose?.();
-      })
+      .mutateAsync({ reference: detail.url, mode })
+      .then((prepared) =>
+        Promise.resolve(
+          handleNewThread(detail.projectId, {
+            branch: prepared.branch,
+            worktreePath: prepared.worktreePath,
+            envMode: mode,
+            // This action is an explicit handoff from the PR browser. Reusing the project's
+            // existing draft can leave the user on the PR route and insert the prompt into a
+            // hidden composer, making the button appear inert.
+            fresh: true,
+          }),
+        ).then((threadId) => {
+          if (!threadId) throw new Error("Could not create a draft thread for this pull request.");
+          appendComposerPromptText(threadId, prompt);
+        }),
+      )
       .catch((error: unknown) => {
         toastManager.add({
           type: "error",

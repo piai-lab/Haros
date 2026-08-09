@@ -9,17 +9,17 @@ const BOOTSTRAP_SOURCE = FS.readFileSync(Path.join(import.meta.dirname, "bootstr
 const MAIN_SOURCE = FS.readFileSync(Path.join(import.meta.dirname, "main.tsx"), "utf8");
 
 describe("renderer bootstrap ordering", () => {
-  it("completes signed-out and pairing gates before hydrating app stores", () => {
+  it("never imports predecessor storage before loading app stores", () => {
     expect(INDEX_SOURCE).toContain('<script type="module" src="/src/bootstrap.ts"></script>');
 
     const signedOutBootstrapIndex = BOOTSTRAP_SOURCE.indexOf("bootstrapSignedOutScreen()");
     const pairingBootstrapIndex = BOOTSTRAP_SOURCE.indexOf("bootstrapPairingSession()");
     const appImportIndex = BOOTSTRAP_SOURCE.indexOf('import("./main")');
+    expect(BOOTSTRAP_SOURCE).not.toContain("storageOriginMigration");
     expect(signedOutBootstrapIndex).toBeGreaterThanOrEqual(0);
     expect(pairingBootstrapIndex).toBeGreaterThan(signedOutBootstrapIndex);
     expect(appImportIndex).toBeGreaterThan(pairingBootstrapIndex);
 
-    expect(BOOTSTRAP_SOURCE).not.toMatch(/storage.*upgrade/iu);
-    expect(MAIN_SOURCE).not.toMatch(/storage.*upgrade/iu);
+    expect(MAIN_SOURCE).not.toContain("storageOriginMigration");
   });
 });

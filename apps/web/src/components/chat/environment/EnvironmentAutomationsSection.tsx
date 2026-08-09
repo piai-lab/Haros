@@ -4,11 +4,11 @@
 // Exports: EnvironmentAutomationsSection, EnvironmentAutomationPanelItem
 // Depends on: automation shared formatters and Environment panel row primitives.
 
-import type { AutomationDefinition } from "@omnimind/contracts";
+import type { AutomationDefinition } from "@synara/contracts";
 
 import { formatCadence } from "~/routes/-automations.shared";
 import { ClockIcon } from "~/lib/icons";
-import { cn } from "~/lib/styles";
+import { cn } from "~/lib/utils";
 
 import {
   ENVIRONMENT_ROW_ICON_CLASS_NAME,

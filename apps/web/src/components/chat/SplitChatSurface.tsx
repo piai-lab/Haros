@@ -1,4 +1,4 @@
-import { type ProjectId, type ThreadId, type TurnId } from "@omnimind/contracts";
+import { type ProjectId, type ProviderKind, type ThreadId, type TurnId } from "@synara/contracts";
 import { useNavigate } from "@tanstack/react-router";
 import {
   type CSSProperties,
@@ -24,7 +24,7 @@ import {
   noopChatSurfaceAction,
 } from "./ChatThreadSurfacePrimitives";
 import { useBrowserPanelDesktopBridge } from "../../hooks/useBrowserPanelDesktopBridge";
-import { useCreateChat } from "../../hooks/useCreateChat";
+import { useHandleNewChat } from "../../hooks/useHandleNewChat";
 import type { ChatRightPanel } from "../../diffRouteSearch";
 import { stripDiffSearchParams } from "../../diffRouteSearch";
 import {
@@ -52,7 +52,6 @@ import {
 } from "../../splitViewStore";
 import { useStore } from "../../store";
 import { createAllThreadsSelector } from "../../storeSelectors";
-import type { Thread } from "../../types";
 import {
   normalizeSingleSearchFromPane,
   resolveSplitPaneCloseDecision,
@@ -78,7 +77,7 @@ import {
   CHAT_MAIN_VIEWPORT_SHELL_CLASS_NAME,
 } from "./composerPickerStyles";
 import { routeSplitBrowserPanelOpenRequest } from "./browserPanelOpenRequest";
-import { cn } from "~/lib/styles";
+import { cn } from "~/lib/utils";
 
 const SPLIT_PANE_PANEL_DEFAULT_WIDTH_PX = 22 * 16;
 const BROWSER_SPLIT_PANE_PANEL_DEFAULT_WIDTH_PX = 30 * 16;
@@ -235,7 +234,7 @@ function SplitPaneEmptyState(props: {
     id: ThreadId;
     title: string | null;
     projectId: ProjectId;
-    modelSelection: { provider: string };
+    modelSelection: { provider: ProviderKind };
   }[];
   projects: readonly { id: ProjectId; name: string }[];
   excludedThreadIds: ReadonlySet<ThreadId>;
@@ -453,7 +452,6 @@ function SplitPaneSurface(props: {
   splitView: SplitView;
   paneId: PaneId;
   threadId: ThreadId | null;
-  conversationSurface: "agent" | "chat";
   panelState: SplitViewPanePanelState;
   isFocused: boolean;
   deferChatMount: boolean;
@@ -463,7 +461,7 @@ function SplitPaneSurface(props: {
     id: ThreadId;
     title: string | null;
     projectId: ProjectId;
-    modelSelection: { provider: string };
+    modelSelection: { provider: ProviderKind };
   }[];
   projects: readonly { id: ProjectId; name: string }[];
   onFocus: () => void;
@@ -528,8 +526,6 @@ function SplitPaneSurface(props: {
           {props.threadId ? (
             <DeferredChatView
               threadId={props.threadId}
-              conversationSurface={props.conversationSurface}
-              splitViewId={props.splitView.id}
               paneScopeId={paneScopeId}
               deferMount={props.deferChatMount}
               surfaceMode="split"
@@ -584,13 +580,9 @@ function SplitPaneSurface(props: {
   );
 }
 
-export function SplitChatSurface(props: {
-  splitViewId: SplitViewId;
-  routeThreadId: ThreadId;
-  conversationSurface: "agent" | "chat";
-}) {
+export function SplitChatSurface(props: { splitViewId: SplitViewId; routeThreadId: ThreadId }) {
   const navigate = useNavigate();
-  const { createChat } = useCreateChat();
+  const { handleNewChat } = useHandleNewChat();
   const selectAllThreads = createAllThreadsSelector();
   const threads = useStore(selectAllThreads);
   const projects = useStore((store) => store.projects);
@@ -631,7 +623,7 @@ export function SplitChatSurface(props: {
       removeSplitView(activeSplitView.id);
       const fallbackThreadId = onlyThreadId ?? props.routeThreadId;
       if (!fallbackThreadId) {
-        void createChat({ fresh: true });
+        void handleNewChat({ fresh: true });
         return;
       }
       void navigate({
@@ -673,7 +665,7 @@ export function SplitChatSurface(props: {
     }
   }, [
     activeSplitView,
-    createChat,
+    handleNewChat,
     navigate,
     props.routeThreadId,
     removeSplitView,
@@ -736,9 +728,6 @@ export function SplitChatSurface(props: {
           routeSplitBrowserPanelOpenRequest({
             splitView: activeSplitView,
             requestedThreadId,
-            focusPane: (paneId) => setFocusedPane(activeSplitView.id, paneId),
-            replacePaneThread: (paneId, threadId) =>
-              replacePaneThread(activeSplitView.id, paneId, threadId),
             openBrowserPanel: (paneId) =>
               setPanePanelState(activeSplitView.id, paneId, {
                 panel: "browser",
@@ -747,14 +736,6 @@ export function SplitChatSurface(props: {
                 hasOpenedPanel: true,
                 lastOpenPanel: "browser",
               }),
-            navigateToThread: (threadId) => {
-              void navigate({
-                to: "/$threadId",
-                params: { threadId },
-                replace: true,
-                search: () => ({ splitViewId: activeSplitView.id }),
-              });
-            },
           });
         }
       : null,
@@ -794,7 +775,7 @@ export function SplitChatSurface(props: {
     }
 
     removeSplitView(activeSplitView.id);
-    void createChat({ fresh: true });
+    void handleNewChat({ fresh: true });
   };
 
   const closePaneThread = (paneId: PaneId) => {
@@ -872,7 +853,7 @@ export function SplitChatSurface(props: {
       return;
     }
 
-    void createChat({ fresh: true });
+    void handleNewChat({ fresh: true });
   };
 
   const handleSetRatio = (nodeId: PaneId, ratio: number) => {
@@ -907,16 +888,10 @@ export function SplitChatSurface(props: {
     });
   };
 
-  const selectableThreads = threads
-    .filter(
-      (thread): thread is Thread & { modelSelection: NonNullable<Thread["modelSelection"]> } =>
-        thread.modelSelection !== undefined,
-    )
-    .toSorted(
-      (left, right) =>
-        Date.parse(right.updatedAt ?? right.createdAt) -
-        Date.parse(left.updatedAt ?? left.createdAt),
-    );
+  const selectableThreads = threads.toSorted(
+    (left, right) =>
+      Date.parse(right.updatedAt ?? right.createdAt) - Date.parse(left.updatedAt ?? left.createdAt),
+  );
   const splitThreadIds = new Set(activeSplitView ? resolveSplitViewThreadIds(activeSplitView) : []);
 
   if (!activeSplitView) {
@@ -966,7 +941,6 @@ export function SplitChatSurface(props: {
         splitView={activeSplitView}
         paneId={leaf.id}
         threadId={leaf.threadId}
-        conversationSurface={props.conversationSurface}
         panelState={leaf.panel}
         isFocused={isFocused}
         deferChatMount={false}

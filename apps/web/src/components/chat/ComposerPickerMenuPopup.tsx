@@ -5,7 +5,7 @@
 
 import type { ComponentProps } from "react";
 
-import { cn } from "~/lib/styles";
+import { cn } from "~/lib/utils";
 import { MenuPopupBase, MenuSubPopup } from "../ui/menu";
 import { SelectPopup } from "../ui/select";
 import {

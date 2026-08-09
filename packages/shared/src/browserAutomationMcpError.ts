@@ -2,7 +2,7 @@ import {
   BrowserAutomationError,
   BrowserMcpToolErrorEnvelope,
   utf8ByteLength,
-} from "@omnimind/contracts";
+} from "@synara/contracts";
 import { Schema } from "effect";
 
 import { stableJsonStringify, type BrowserToolDefinition } from "./browserAutomationCatalogue";

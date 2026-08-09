@@ -8,14 +8,14 @@ import {
   BROWSER_BLANK_URL,
   BROWSER_SEARCH_URL_PREFIX,
   normalizeBrowserUrlInput,
-} from "@omnimind/shared/browserSession";
+} from "@synara/shared/browserSession";
 import type {
   BrowserAnnotationEvent,
   BrowserAnnotationMarker,
   BrowserAnnotationTheme,
   BrowserTabState,
   ThreadId,
-} from "@omnimind/contracts";
+} from "@synara/contracts";
 import type { BrowserHistoryEntry } from "../browserStateStore";
 import type { BrowserAnnotationDraft } from "../lib/browserAnnotations";
 
@@ -100,6 +100,19 @@ export function createBrowserPanelHideScheduler(
   }
 
   return { cancel, schedule };
+}
+
+/**
+ * Electron guest surfaces can paint above React portals regardless of CSS
+ * z-index. Hide the guest while browser-owned chrome or another app overlay is
+ * open so that the DOM surface remains the topmost interactive layer.
+ */
+export function shouldOccludeBrowserWebview(input: {
+  showLocalServersHome: boolean;
+  browserActionsMenuOpen: boolean;
+  hasObscuringOverlay: boolean;
+}): boolean {
+  return input.showLocalServersHome || input.browserActionsMenuOpen || input.hasObscuringOverlay;
 }
 
 interface ResolveBrowserAddressSyncInput {
@@ -273,8 +286,10 @@ export function browserAnnotationTheme(
   return {
     mode,
     accent: resolvedBrowserAnnotationColor(root, "--color-text-accent", fallback.accent),
-    // Guest-page cards do not have the composer's backdrop blur, so use the
-    // opaque control fill instead of the translucent composer glass.
+    // The overlay renders inside the guest page without the backdrop blur the
+    // composer sits on, so a translucent surface (--composer-surface is ~14%
+    // transparent in light mode) would let page content show through the cards.
+    // The opaque control token is the same fill without the glass assumption.
     surface: resolvedBrowserAnnotationColor(
       root,
       "--color-background-control-opaque",

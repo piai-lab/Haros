@@ -1,6 +1,0 @@
-{
-  "extends": "exact-predecessor-positive",
-  "appendToFiles": {
-    "apps/web/src/appSettings.ts": "\n// v9 selected-Work structural fixture\n"
-  }
-}

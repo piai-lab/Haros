@@ -4,14 +4,10 @@
 
 import {
   PINNED_MESSAGE_LABEL_MAX_CHARS,
-  PRODUCT_PROTOCOL_VERSION,
   type MessageId,
   type PinnedMessage,
-  ProductConversationId,
-  ProductEntryId,
-  ProductMutationId,
   type ThreadId,
-} from "@omnimind/contracts";
+} from "@synara/contracts";
 import {
   addPinnedMessage,
   clampThreadNotes,
@@ -22,12 +18,10 @@ import {
   setPinnedMessageLabel,
   togglePinnedMessage,
   togglePinnedMessageDone,
-} from "@omnimind/shared/pinnedMessages";
+} from "@synara/shared/pinnedMessages";
 
-import { randomUUID } from "./lib/identifiers";
-import { updateProductConversationNotes } from "./productConversationMutations";
-import { useProductStore } from "./store/productStore";
-import { readProductNativeApi, type ProductNativeApi } from "./wsNativeApi";
+import { newCommandId } from "./lib/utils";
+import { readNativeApi } from "./nativeApi";
 
 // Strip the most common leading block markers (headings, list bullets, blockquotes)
 // and inline emphasis so an auto-derived label reads as plain prose.
@@ -136,134 +130,82 @@ export function setPinLabel(
   return setPinnedMessageLabel(pins, messageId, label);
 }
 
-export type ProductPinApi = Pick<
-  ProductNativeApi,
-  | "getConversationSnapshot"
-  | "addEntryPin"
-  | "removeEntryPin"
-  | "setEntryPinDone"
-  | "setEntryPinLabel"
->;
-
-async function pinTarget(api: ProductPinApi, threadId: ThreadId, messageId: MessageId) {
-  const conversationId = ProductConversationId.makeUnsafe(threadId);
-  const snapshot = await api.getConversationSnapshot({
-    protocolVersion: PRODUCT_PROTOCOL_VERSION,
-    conversationId,
-  });
-  return {
-    protocolVersion: PRODUCT_PROTOCOL_VERSION,
-    mutationId: ProductMutationId.makeUnsafe(randomUUID()),
-    conversationId,
-    expectedRevision: snapshot.readModel.conversation.revision,
-    entryId: ProductEntryId.makeUnsafe(messageId),
-  } as const;
-}
-
-async function publishProductPinMutation(
-  threadId: ThreadId,
-  messageId: MessageId,
-  mutate: (
-    api: ProductPinApi,
-    target: Awaited<ReturnType<typeof pinTarget>>,
-  ) => ReturnType<ProductPinApi["addEntryPin"]>,
-  targetStateReached: (
-    snapshot: Awaited<ReturnType<ProductPinApi["getConversationSnapshot"]>>,
-  ) => boolean,
-  api: ProductPinApi = readProductNativeApi(),
+async function dispatchSidepanelCommand(
+  command:
+    | {
+        readonly type: "thread.pinned-message.add" | "thread.pinned-message.remove";
+        readonly threadId: ThreadId;
+        readonly messageId: MessageId;
+      }
+    | {
+        readonly type: "thread.pinned-message.done.set";
+        readonly threadId: ThreadId;
+        readonly messageId: MessageId;
+        readonly done: boolean;
+      }
+    | {
+        readonly type: "thread.pinned-message.label.set";
+        readonly threadId: ThreadId;
+        readonly messageId: MessageId;
+        readonly label: string | null;
+      }
+    | {
+        readonly type: "thread.meta.update";
+        readonly threadId: ThreadId;
+        readonly notes: string;
+      },
 ): Promise<void> {
-  const target = await pinTarget(api, threadId, messageId);
-  let snapshot;
-  try {
-    snapshot = await mutate(api, target);
-  } catch (error) {
-    const code =
-      error && typeof error === "object" && "code" in error && typeof error.code === "string"
-        ? error.code
-        : null;
-    if (code !== "WS_REQUEST_TIMEOUT" && code !== "WS_REQUEST_ABORTED") throw error;
-    let current;
-    try {
-      current = await api.getConversationSnapshot({
-        protocolVersion: PRODUCT_PROTOCOL_VERSION,
-        conversationId: target.conversationId,
-      });
-    } catch {
-      throw error;
-    }
-    if (!targetStateReached(current)) throw error;
-    snapshot = current;
+  const api = readNativeApi();
+  if (!api) {
+    return;
   }
-  useProductStore.getState().setConversationSnapshot(snapshot);
+  await api.orchestration.dispatchCommand({
+    commandId: newCommandId(),
+    ...command,
+  });
 }
 
-export function dispatchPinnedMessageAdd(
-  threadId: ThreadId,
-  messageId: MessageId,
-  api?: ProductPinApi,
-): Promise<void> {
-  return publishProductPinMutation(
-    threadId,
-    messageId,
-    (client, target) => client.addEntryPin(target),
-    (snapshot) =>
-      snapshot.readModel.entryPins.some((pin) => String(pin.entryId) === String(messageId)),
-    api,
-  );
+export function dispatchPinnedMessageAdd(threadId: ThreadId, messageId: MessageId): Promise<void> {
+  return dispatchSidepanelCommand({ type: "thread.pinned-message.add", threadId, messageId });
 }
 
 export function dispatchPinnedMessageRemove(
   threadId: ThreadId,
   messageId: MessageId,
-  api?: ProductPinApi,
 ): Promise<void> {
-  return publishProductPinMutation(
-    threadId,
-    messageId,
-    (client, target) => client.removeEntryPin(target),
-    (snapshot) =>
-      !snapshot.readModel.entryPins.some((pin) => String(pin.entryId) === String(messageId)),
-    api,
-  );
+  return dispatchSidepanelCommand({ type: "thread.pinned-message.remove", threadId, messageId });
 }
 
 export function dispatchPinnedMessageDoneSet(
   threadId: ThreadId,
   messageId: MessageId,
   done: boolean,
-  api?: ProductPinApi,
 ): Promise<void> {
-  return publishProductPinMutation(
+  return dispatchSidepanelCommand({
+    type: "thread.pinned-message.done.set",
     threadId,
     messageId,
-    (client, target) => client.setEntryPinDone({ ...target, done }),
-    (snapshot) =>
-      snapshot.readModel.entryPins.some(
-        (pin) => String(pin.entryId) === String(messageId) && pin.done === done,
-      ),
-    api,
-  );
+    done,
+  });
 }
 
 export function dispatchPinnedMessageLabelSet(
   threadId: ThreadId,
   messageId: MessageId,
   label: string | null,
-  api?: ProductPinApi,
 ): Promise<void> {
-  const normalized = normalizePinLabel(label);
-  return publishProductPinMutation(
+  return dispatchSidepanelCommand({
+    type: "thread.pinned-message.label.set",
     threadId,
     messageId,
-    (client, target) => client.setEntryPinLabel({ ...target, label: normalized }),
-    (snapshot) =>
-      snapshot.readModel.entryPins.some(
-        (pin) => String(pin.entryId) === String(messageId) && pin.label === normalized,
-      ),
-    api,
-  );
+    label: normalizePinLabel(label),
+  });
 }
 
 export function dispatchThreadNotes(threadId: ThreadId, notes: string): Promise<void> {
-  return updateProductConversationNotes(threadId, clampThreadNotes(notes)).then(() => undefined);
+  return dispatchSidepanelCommand({
+    type: "thread.meta.update",
+    threadId,
+    notes: clampThreadNotes(notes),
+  });
 }

@@ -6,8 +6,8 @@
 // Layer: Kanban UI hook
 // Exports: useKanbanCardContextMenu
 
-import type { ThreadId } from "@omnimind/contracts";
-import { resolveThreadWorkspaceCwd } from "@omnimind/shared/threadEnvironment";
+import type { ThreadId } from "@synara/contracts";
+import { resolveThreadWorkspaceCwd } from "@synara/shared/threadEnvironment";
 import { useMutation, useQueryClient } from "@tanstack/react-query";
 import { type MouseEvent, useState } from "react";
 
@@ -19,8 +19,7 @@ import { gitRemoveWorktreeMutationOptions } from "~/lib/gitReactQuery";
 import { pinActionLabel } from "~/lib/pin";
 import { archiveThreadFromClient } from "~/lib/threadArchive";
 import { dispatchThreadRename } from "~/lib/threadRename";
-import { setProductConversationPinned } from "~/productConversationMutations";
-import { readProductNativeApi } from "~/wsNativeApi";
+import { newCommandId } from "~/lib/utils";
 import { useComposerDraftStore } from "../../composerDraftStore";
 import { useKanbanUiStore } from "../../kanbanUiStore";
 import { readNativeApi } from "../../nativeApi";
@@ -60,11 +59,18 @@ async function archiveCardThread(threadId: ThreadId) {
   // Archived threads leave the board's thread feed, so a live optimistic
   // dispatch entry could never reconcile — drop it with the card.
   useKanbanUiStore.getState().clearOptimisticDispatch(threadId);
-  await archiveThreadFromClient(readProductNativeApi(), threadId);
+  await archiveThreadFromClient(api.orchestration, threadId);
 }
 
 async function setThreadPinned(threadId: ThreadId, isPinned: boolean) {
-  await setProductConversationPinned(threadId, isPinned);
+  const api = readNativeApi();
+  if (!api) return;
+  await api.orchestration.dispatchCommand({
+    type: "thread.meta.update",
+    commandId: newCommandId(),
+    threadId,
+    isPinned,
+  });
 }
 
 export function useKanbanCardContextMenu(): KanbanCardContextMenuController {

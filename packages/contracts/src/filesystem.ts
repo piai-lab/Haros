@@ -20,13 +20,3 @@ export const FilesystemBrowseResult = Schema.Struct({
   entries: Schema.Array(FilesystemBrowseEntry),
 });
 export type FilesystemBrowseResult = typeof FilesystemBrowseResult.Type;
-export const WorkspaceEnsureRootInput = Schema.Struct({
-  path: TrimmedNonEmptyString.check(Schema.isMaxLength(8_192)),
-  createIfMissing: Schema.Boolean,
-});
-export type WorkspaceEnsureRootInput = typeof WorkspaceEnsureRootInput.Type;
-
-export const WorkspaceEnsureRootResult = Schema.Struct({
-  canonicalRoot: Schema.String.check(Schema.isMinLength(1), Schema.isMaxLength(8_192)),
-});
-export type WorkspaceEnsureRootResult = typeof WorkspaceEnsureRootResult.Type;

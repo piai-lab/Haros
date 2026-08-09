@@ -1,9 +1,17 @@
 {
-  "name": "@omnimind/shared",
-  "version": "0.1.0-alpha.0",
+  "name": "@synara/shared",
+  "version": "0.0.0-alpha.1",
   "private": true,
   "type": "module",
   "exports": {
+    "./model": {
+      "types": "./src/model.ts",
+      "import": "./src/model.ts"
+    },
+    "./runtimeMode": {
+      "types": "./src/runtimeMode.ts",
+      "import": "./src/runtimeMode.ts"
+    },
     "./git": {
       "types": "./src/git.ts",
       "import": "./src/git.ts"
@@ -32,9 +40,9 @@
       "types": "./src/loginShellEnvironment.ts",
       "import": "./src/loginShellEnvironment.ts"
     },
-    "./productHome": {
-      "types": "./src/productHome.ts",
-      "import": "./src/productHome.ts"
+    "./omnimindHome": {
+      "types": "./src/omnimindHome.ts",
+      "import": "./src/omnimindHome.ts"
     },
     "./staticSnapshot": {
       "types": "./src/staticSnapshot.ts",
@@ -100,6 +108,10 @@
       "types": "./src/Struct.ts",
       "import": "./src/Struct.ts"
     },
+    "./serverSettings": {
+      "types": "./src/serverSettings.ts",
+      "import": "./src/serverSettings.ts"
+    },
     "./terminalThreads": {
       "types": "./src/terminalThreads.ts",
       "import": "./src/terminalThreads.ts"
@@ -108,9 +120,25 @@
       "types": "./src/threadEnvironment.ts",
       "import": "./src/threadEnvironment.ts"
     },
+    "./threadDetailEvents": {
+      "types": "./src/threadDetailEvents.ts",
+      "import": "./src/threadDetailEvents.ts"
+    },
+    "./threadSummary": {
+      "types": "./src/threadSummary.ts",
+      "import": "./src/threadSummary.ts"
+    },
+    "./pendingInteractions": {
+      "types": "./src/pendingInteractions.ts",
+      "import": "./src/pendingInteractions.ts"
+    },
     "./projectContainers": {
       "types": "./src/projectContainers.ts",
       "import": "./src/projectContainers.ts"
+    },
+    "./projectDirectoryName": {
+      "types": "./src/projectDirectoryName.ts",
+      "import": "./src/projectDirectoryName.ts"
     },
     "./pinnedMessages": {
       "types": "./src/pinnedMessages.ts",
@@ -131,6 +159,10 @@
     "./subagents": {
       "types": "./src/subagents.ts",
       "import": "./src/subagents.ts"
+    },
+    "./agentMentions": {
+      "types": "./src/agentMentions.ts",
+      "import": "./src/agentMentions.ts"
     },
     "./automationCompletionPolicy": {
       "types": "./src/automationCompletionPolicy.ts",
@@ -188,6 +220,14 @@
       "types": "./src/editorIcons.ts",
       "import": "./src/editorIcons.ts"
     },
+    "./providerUsage": {
+      "types": "./src/providerUsage.ts",
+      "import": "./src/providerUsage.ts"
+    },
+    "./providerMetadata": {
+      "types": "./src/providerMetadata.ts",
+      "import": "./src/providerMetadata.ts"
+    },
     "./formatBytes": {
       "types": "./src/formatBytes.ts",
       "import": "./src/formatBytes.ts"
@@ -195,6 +235,10 @@
     "./cli": {
       "types": "./src/cli.ts",
       "import": "./src/cli.ts"
+    },
+    "./migrationRecovery": {
+      "types": "./src/migrationRecovery.ts",
+      "import": "./src/migrationRecovery.ts"
     },
     "./threadMentions": {
       "types": "./src/threadMentions.ts",
@@ -220,6 +264,10 @@
       "types": "./src/unifiedPatchStats.ts",
       "import": "./src/unifiedPatchStats.ts"
     },
+    "./providerDeliveryBlock": {
+      "types": "./src/providerDeliveryBlock.ts",
+      "import": "./src/providerDeliveryBlock.ts"
+    },
     "./browserAnnotations": {
       "types": "./src/browserAnnotations.ts",
       "import": "./src/browserAnnotations.ts"
@@ -231,7 +279,7 @@
     "test": "vitest run"
   },
   "dependencies": {
-    "@omnimind/contracts": "workspace:*",
+    "@synara/contracts": "workspace:*",
     "effect": "catalog:"
   },
   "devDependencies": {

@@ -19,8 +19,8 @@ const decodeReviewRequestCountResult = Schema.decodeUnknownSync(
 
 function listEntry() {
   return {
-    workspaceId: "project-1",
-    workspaceTitle: "Project One",
+    projectId: "project-1",
+    projectTitle: "Project One",
     repository: "acme/widgets",
     number: 42,
     title: "Prioritize this",
@@ -45,7 +45,7 @@ describe("PullRequestListEntry", () => {
     // The fixture deliberately omits both fields — this is what an older server sends.
     const decoded = decodeListEntry(listEntry());
     expect(decoded.isPinned).toBe(false);
-    expect(decoded.workspaceContexts).toEqual([]);
+    expect(decoded.projectContexts).toEqual([]);
     expect(decoded.mergeability).toBe("unknown");
     expect(
       decodeListEntry({ ...listEntry(), isPinned: true, mergeability: "conflicting" }),
@@ -56,8 +56,8 @@ describe("PullRequestListEntry", () => {
 describe("PullRequestDetail", () => {
   it("defaults mergeability for a real pre-field detail payload", () => {
     const decoded = decodeDetail({
-      workspaceId: "project-1",
-      workspaceTitle: "Project One",
+      projectId: "project-1",
+      projectTitle: "Project One",
       workspaceRoot: "/workspace/project-one",
       repository: "acme/widgets",
       number: 42,
@@ -101,7 +101,7 @@ describe("PullRequestDetail", () => {
 
 describe("PullRequestCommentInput", () => {
   const base = {
-    workspaceId: "project-1",
+    projectId: "project-1",
     repository: "acme/widgets",
     number: 42,
   } as const;
@@ -116,13 +116,13 @@ describe("PullRequestSetPinnedInput", () => {
   it("decodes a project-scoped idempotent pin setter", () => {
     expect(
       decodeSetPinnedInput({
-        workspaceId: "project-1",
+        projectId: "project-1",
         repository: "acme/widgets",
         number: 42,
         isPinned: true,
       }),
     ).toEqual({
-      workspaceId: "project-1",
+      projectId: "project-1",
       repository: "acme/widgets",
       number: 42,
       isPinned: true,

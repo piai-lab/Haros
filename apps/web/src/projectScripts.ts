@@ -3,7 +3,7 @@ import {
   SCRIPT_RUN_COMMAND_PATTERN,
   type KeybindingCommand,
   type ProjectScript,
-} from "@omnimind/contracts";
+} from "@synara/contracts";
 import { Schema } from "effect";
 
 function normalizeScriptId(value: string): string {

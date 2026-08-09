@@ -1,4 +1,4 @@
-import { MessageId } from "@omnimind/contracts";
+import { MessageId } from "@synara/contracts";
 import { describe, expect, it } from "vitest";
 
 import {
@@ -282,7 +282,7 @@ describe("estimateChangedFilesSummaryHeight", () => {
     const files = [
       { path: "apps/web/src/index.ts", additions: 1, deletions: 0 },
       { path: "apps/web/src/components/Button.tsx", additions: 2, deletions: 1 },
-      { path: "apps/service/src/index.ts", additions: 4, deletions: 0 },
+      { path: "apps/server/src/index.ts", additions: 4, deletions: 0 },
       { path: "packages/shared/src/path.ts", additions: 0, deletions: 2 },
       { path: "README.md", additions: 1, deletions: 1 },
       { path: "CHANGELOG.md", additions: 3, deletions: 0 },

@@ -3,12 +3,17 @@
 // Layer: Chat composer hook
 // Depends on: useVoiceRecorder, ChatView voice helper logic, and the native API voice endpoint.
 
-import { type ThreadId } from "@omnimind/contracts";
+import { type ProviderKind, type ServerProviderStatus, type ThreadId } from "@synara/contracts";
 import { useEffect, useLayoutEffect, useRef, useState } from "react";
 
 import type { Project } from "../../types";
-import { formatVoiceRecordingDuration, useVoiceRecorder } from "../../lib/voiceRecorder";
+import {
+  formatVoiceRecordingDuration,
+  isVoiceRecordingCancelledError,
+  useVoiceRecorder,
+} from "../../lib/voiceRecorder";
 import { readNativeApi } from "../../nativeApi";
+import type { RefreshProviderStatusesNow } from "../../hooks/useProviderStatusRefresh";
 import { toastManager } from "../ui/toast";
 import {
   deriveComposerVoiceState,
@@ -33,8 +38,11 @@ export interface UseComposerVoiceControllerOptions {
   activeProject: Project | undefined;
   activeThreadId: ThreadId | null;
   threadId: ThreadId;
+  selectedProvider: ProviderKind;
+  activeProviderStatus: ServerProviderStatus | null;
   pendingUserInputCount: number;
   onTranscriptReady: (transcript: string) => void;
+  refreshVoiceStatus: RefreshProviderStatusesNow;
   actionArmDelayMs?: number;
   failureCopy?: Partial<ComposerVoiceFailureCopy>;
   onGuardWarning?: (message: string, details: ComposerVoiceGuardDetails) => void;
@@ -68,8 +76,11 @@ export function useComposerVoiceController(
     activeProject,
     activeThreadId,
     threadId,
+    selectedProvider,
+    activeProviderStatus,
     pendingUserInputCount,
     onTranscriptReady,
+    refreshVoiceStatus,
     actionArmDelayMs: actionArmDelayMsProp,
     failureCopy: failureCopyOverrides,
     onGuardWarning,
@@ -86,6 +97,7 @@ export function useComposerVoiceController(
   const [isVoiceTranscribing, setIsVoiceTranscribing] = useState(false);
   const voiceTranscriptionRequestIdRef = useRef(0);
   const voiceThreadIdRef = useRef(threadId);
+  const voiceProviderRef = useRef<ProviderKind>(selectedProvider);
   const voiceRecordingStartedAtRef = useRef<number | null>(null);
   const failureCopy = {
     ...DEFAULT_FAILURE_COPY,
@@ -95,11 +107,13 @@ export function useComposerVoiceController(
   // its identity before passive effects and browser events can observe it.
   useLayoutEffect(() => {
     voiceThreadIdRef.current = threadId;
-  }, [threadId]);
+    voiceProviderRef.current = selectedProvider;
+  }, [threadId, selectedProvider]);
 
   const voiceRecordingDurationLabel = formatVoiceRecordingDuration(voiceRecordingDurationMs);
   const { canStartVoiceNotes, showVoiceNotesControl } = deriveComposerVoiceState({
-    voiceTranscriptionAvailable: false,
+    authStatus: activeProviderStatus?.authStatus,
+    voiceTranscriptionAvailable: activeProviderStatus?.voiceTranscriptionAvailable,
     isRecording: isVoiceRecording,
     isTranscribing: isVoiceTranscribing,
   });
@@ -115,13 +129,23 @@ export function useComposerVoiceController(
         setIsVoiceTranscribing(false);
       }
     });
-  }, [cancelVoiceRecording, threadId]);
+  }, [cancelVoiceRecording, selectedProvider, threadId]);
+
+  useEffect(
+    () => () => {
+      voiceTranscriptionRequestIdRef.current += 1;
+      voiceRecordingStartedAtRef.current = null;
+    },
+    [],
+  );
 
   useEffect(() => {
     if (canStartVoiceNotes || !isVoiceRecording) {
       return;
     }
-    onGuardWarning?.("cancelled active voice recording because voice is unavailable", {
+    onGuardWarning?.("cancelled active voice recording because voice became unavailable", {
+      authStatus: activeProviderStatus?.authStatus ?? null,
+      voiceTranscriptionAvailable: activeProviderStatus?.voiceTranscriptionAvailable ?? null,
       isVoiceRecording,
     });
     const invalidatedRequestId = voiceTranscriptionRequestIdRef.current + 1;
@@ -133,6 +157,8 @@ export function useComposerVoiceController(
       }
     });
   }, [
+    activeProviderStatus?.authStatus,
+    activeProviderStatus?.voiceTranscriptionAvailable,
     canStartVoiceNotes,
     cancelVoiceRecording,
     isVoiceRecording,
@@ -157,6 +183,13 @@ export function useComposerVoiceController(
     if (!activeProject) {
       return;
     }
+    if (activeProviderStatus?.authStatus === "unauthenticated") {
+      toastManager.add({
+        type: "error",
+        title: "Sign in to ChatGPT in Codex before using voice notes.",
+      });
+      return;
+    }
     if (!canStartVoiceNotes) {
       toastManager.add({
         type: "error",
@@ -175,7 +208,18 @@ export function useComposerVoiceController(
     try {
       await startVoiceRecording();
       voiceRecordingStartedAtRef.current = performance.now();
+      const api = readNativeApi();
+      void api?.server
+        .prewarmVoice?.({
+          provider: "codex",
+          cwd: activeProject.cwd,
+          ...(activeThreadId ? { threadId: activeThreadId } : {}),
+        })
+        .catch(() => undefined);
     } catch (error) {
+      if (isVoiceRecordingCancelledError(error)) {
+        return;
+      }
       toastManager.add({
         type: "error",
         title: "Could not start recording",
@@ -206,9 +250,11 @@ export function useComposerVoiceController(
     const requestId = voiceTranscriptionRequestIdRef.current + 1;
     voiceTranscriptionRequestIdRef.current = requestId;
     const requestThreadId = threadId;
+    const requestProvider = selectedProvider;
     const isCurrentVoiceRequest = () =>
       voiceTranscriptionRequestIdRef.current === requestId &&
-      voiceThreadIdRef.current === requestThreadId;
+      voiceThreadIdRef.current === requestThreadId &&
+      voiceProviderRef.current === requestProvider;
 
     // Promise chain instead of async/try-catch-finally: React Compiler does
     // not yet support try/finally, and it would skip optimizing this hook.
@@ -226,6 +272,7 @@ export function useComposerVoiceController(
         }
         return api.server
           .transcribeVoice({
+            provider: "codex",
             cwd: activeProject.cwd,
             ...(activeThreadId ? { threadId: activeThreadId } : {}),
             ...payload,
@@ -247,10 +294,23 @@ export function useComposerVoiceController(
             ? sanitizeVoiceErrorMessage(error.message)
             : failureCopy.fallbackDescription;
         const authExpired = isVoiceAuthExpiredMessage(description);
+        if (authExpired) {
+          void refreshVoiceStatus();
+        }
         toastManager.add({
           type: "error",
           title: authExpired ? failureCopy.authExpiredTitle : failureCopy.transcriptionFailedTitle,
           description: authExpired ? failureCopy.authExpiredDescription : description,
+          ...(authExpired
+            ? {
+                actionProps: {
+                  children: failureCopy.refreshActionLabel,
+                  onClick: () => {
+                    void refreshVoiceStatus();
+                  },
+                },
+              }
+            : {}),
         });
       })
       .finally(() => {

@@ -3,7 +3,7 @@
 // Layer: Web chat virtualization utility
 // Exports: message/work height estimators used by MessagesTimeline and browser tests
 
-import type { MessageId } from "@omnimind/contracts";
+import type { MessageId } from "@synara/contracts";
 
 import type { TurnDiffFileChange } from "../types";
 import { DEFAULT_CHAT_FONT_SIZE_PX, normalizeChatFontSizePx } from "../appSettings";

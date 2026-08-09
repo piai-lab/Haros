@@ -1,8 +1,8 @@
-import type { GitBranch } from "@omnimind/contracts";
+import type { GitBranch } from "@synara/contracts";
 import {
   deriveAssociatedWorktreeMetadata,
   type AssociatedWorktreeMetadata,
-} from "@omnimind/shared/threadWorkspace";
+} from "@synara/shared/threadWorkspace";
 import { Schema } from "effect";
 import type { ThreadWorkspacePatch } from "../types";
 

@@ -8,6 +8,7 @@
 
 import { Schema } from "effect";
 import { IsoDateTime, NonNegativeInt, TrimmedNonEmptyString } from "./baseSchemas";
+import { ProviderKind } from "./orchestration";
 
 // ── Input ────────────────────────────────────────────────────────────
 
@@ -35,7 +36,7 @@ export const ProfileHeatmapCell = Schema.Struct({
 export type ProfileHeatmapCell = typeof ProfileHeatmapCell.Type;
 
 export const ProfileProviderUsage = Schema.Struct({
-  provider: TrimmedNonEmptyString,
+  provider: Schema.Union([ProviderKind, Schema.Literal("unknown")]),
   model: TrimmedNonEmptyString,
   turnCount: NonNegativeInt,
   percent: Schema.Number,
@@ -46,7 +47,7 @@ export type ProfileProviderUsage = typeof ProfileProviderUsage.Type;
 // turn that processed them (thread selection is only a legacy-data fallback),
 // so switching models mid-thread keeps each model's share accurate.
 export const ProfileTokenModelUsage = Schema.Struct({
-  provider: TrimmedNonEmptyString,
+  provider: Schema.Union([ProviderKind, Schema.Literal("unknown")]),
   model: TrimmedNonEmptyString,
   tokens: NonNegativeInt,
   percent: Schema.Number,
@@ -74,7 +75,7 @@ export type ProfileMostWorkedProject = typeof ProfileMostWorkedProject.Type;
 
 export const ProfileQuota = Schema.Struct({
   status: Schema.Literals(["available", "unavailable"]),
-  provider: Schema.NullOr(TrimmedNonEmptyString),
+  provider: Schema.NullOr(ProviderKind),
   window: Schema.NullOr(Schema.String),
   usedPercent: Schema.NullOr(Schema.Number),
   resetsAt: Schema.NullOr(IsoDateTime),
@@ -106,7 +107,7 @@ export type ProfileActiveHours = typeof ProfileActiveHours.Type;
 export const ProfileInsights = Schema.Struct({
   // Ranked by turn count. Token-based ranking lives on ProfileTokenStats; clients
   // prefer it when available (see selectProfileTopProvider on the web).
-  topProvider: Schema.NullOr(TrimmedNonEmptyString),
+  topProvider: Schema.NullOr(ProviderKind),
   topProviderPercent: Schema.NullOr(Schema.Number),
   topReasoning: Schema.NullOr(Schema.String),
   topReasoningPercent: Schema.NullOr(Schema.Number),
@@ -155,12 +156,12 @@ export const ProfileTokenStats = Schema.Struct({
   lifetimeTotalTokens: Schema.NullOr(NonNegativeInt),
   peakDayTokens: Schema.NullOr(NonNegativeInt),
   peakDay: Schema.NullOr(TrimmedNonEmptyString),
-  providers: Schema.Array(TrimmedNonEmptyString),
+  providers: Schema.Array(ProviderKind),
   // Providers with recorded turns but no token telemetry (their adapters never
   // emit context-window updates); excluded from token-based rankings.
-  unavailableProviders: Schema.Array(TrimmedNonEmptyString),
+  unavailableProviders: Schema.Array(ProviderKind),
   // Most-used provider by tokens processed, among providers with token telemetry.
-  topProvider: Schema.NullOr(TrimmedNonEmptyString),
+  topProvider: Schema.NullOr(ProviderKind),
   topProviderPercent: Schema.NullOr(Schema.Number),
   // Per-model token shares; clients prefer this over the turn-based
   // ProfileStats.providerModels when token telemetry is available.

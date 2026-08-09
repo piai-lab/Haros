@@ -6,9 +6,9 @@
 // Layer: Pull request presentation
 // Exports: PullRequestChecksRing
 
-import type { PullRequestCheck, PullRequestCheckStatus } from "@omnimind/contracts";
+import type { PullRequestCheck, PullRequestCheckStatus } from "@synara/contracts";
 
-import { cn } from "~/lib/styles";
+import { cn } from "~/lib/utils";
 
 type RingBucket = "success" | "failure" | "pending" | "neutral";
 

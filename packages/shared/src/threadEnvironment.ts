@@ -1,11 +1,11 @@
-import type { WorkspaceEnvironmentMode } from "@omnimind/contracts";
+import type { ThreadEnvironmentMode } from "@synara/contracts";
 
 export type ResolvedThreadWorkspaceState = "local" | "worktree-pending" | "worktree-ready";
 
 export function resolveThreadEnvironmentMode(input: {
-  envMode?: WorkspaceEnvironmentMode | null | undefined;
+  envMode?: ThreadEnvironmentMode | null | undefined;
   worktreePath?: string | null | undefined;
-}): WorkspaceEnvironmentMode {
+}): ThreadEnvironmentMode {
   if (input.worktreePath) {
     return "worktree";
   }
@@ -13,7 +13,7 @@ export function resolveThreadEnvironmentMode(input: {
 }
 
 export function resolveThreadWorkspaceState(input: {
-  envMode?: WorkspaceEnvironmentMode | null | undefined;
+  envMode?: ThreadEnvironmentMode | null | undefined;
   worktreePath?: string | null | undefined;
 }): ResolvedThreadWorkspaceState {
   const mode = resolveThreadEnvironmentMode(input);
@@ -24,7 +24,7 @@ export function resolveThreadWorkspaceState(input: {
 }
 
 export function isPendingThreadWorktree(input: {
-  envMode?: WorkspaceEnvironmentMode | null | undefined;
+  envMode?: ThreadEnvironmentMode | null | undefined;
   worktreePath?: string | null | undefined;
 }): boolean {
   return resolveThreadWorkspaceState(input) === "worktree-pending";
@@ -33,7 +33,7 @@ export function isPendingThreadWorktree(input: {
 // Runtime-facing operations should only target a materialized worktree path.
 export function resolveThreadWorkspaceCwd(input: {
   projectCwd?: string | null | undefined;
-  envMode?: WorkspaceEnvironmentMode | null | undefined;
+  envMode?: ThreadEnvironmentMode | null | undefined;
   worktreePath?: string | null | undefined;
   workingDirectory?: string | null | undefined;
 }): string | null {

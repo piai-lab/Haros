@@ -6,39 +6,43 @@
 // Layer: Pull request presentation
 // Exports: PullRequestList
 
-import type { ProductWorkspaceId, PullRequestListEntry } from "@omnimind/contracts";
+import type { ProjectId, PullRequestListEntry } from "@synara/contracts";
 import { pullRequestListEntryKey, type PullRequestListGroup } from "./pullRequestList.logic";
 import { PullRequestRow } from "./PullRequestRow";
 import { PR_FINE_TEXT_CLASS_NAME, PR_QUIET_INK_CLASS_NAME } from "./pullRequestText";
-import { cn } from "~/lib/styles";
+import { cn } from "~/lib/utils";
 
 export const PullRequestList = function PullRequestList({
   entries,
   grouped,
-  selectedWorkspaceId,
+  selectedProjectId,
   selectedRepo,
   selectedNumber,
-  showWorkspaceTitle: showWorkspaceTitleProp,
+  showProjectTitle: showProjectTitleProp,
+  showDiffColors: showDiffColorsProp,
   onSelect,
   onTogglePinned,
 }: {
   entries: PullRequestListEntry[];
   grouped: PullRequestListGroup[] | null;
-  selectedWorkspaceId: ProductWorkspaceId | undefined;
+  selectedProjectId: ProjectId | undefined;
   selectedRepo: string | undefined;
   selectedNumber: number | undefined;
-  showWorkspaceTitle?: boolean;
+  showProjectTitle?: boolean;
+  showDiffColors?: boolean;
   onSelect: (entry: PullRequestListEntry) => void;
   onTogglePinned: (entry: PullRequestListEntry) => void;
 }) {
-  const showWorkspaceTitle = showWorkspaceTitleProp ?? false;
+  const showProjectTitle = showProjectTitleProp ?? false;
+  const showDiffColors = showDiffColorsProp ?? true;
   const renderEntry = (entry: PullRequestListEntry) => (
     <PullRequestRow
       key={pullRequestListEntryKey(entry)}
       entry={entry}
-      showWorkspaceTitle={showWorkspaceTitle}
+      showProjectTitle={showProjectTitle}
+      showDiffColors={showDiffColors}
       selected={
-        selectedWorkspaceId === entry.workspaceId &&
+        selectedProjectId === entry.projectId &&
         selectedRepo === entry.repository &&
         selectedNumber === entry.number
       }

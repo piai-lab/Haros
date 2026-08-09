@@ -1,13 +1,12 @@
 // FILE: PullRequestDiffStat.tsx
 // Purpose: The "+N -M" additions/deletions counter shown wherever the pull request feature
-//          summarizes a change size. Muted by default (list rows, environment row) where the
-//          counts are ambient metadata; the "diff" tone applies the working-tree diff colors
-//          inside the detail view, where the change size is the point. Tabular-nums keeps
+//          summarizes a change size. The "diff" tone applies the working-tree green/red
+//          decoration colors; "muted" keeps ambient metadata quiet. Tabular-nums keeps
 //          counts column-aligned.
 // Layer: Pull request presentation
 // Exports: PullRequestDiffStat
 
-import { cn } from "~/lib/styles";
+import { cn } from "~/lib/utils";
 import { PR_QUIET_INK_CLASS_NAME } from "./pullRequestText";
 
 function formatCount(value: number): string {

@@ -1,26 +1,25 @@
-import type {
-  ConversationHistoryActivity,
-  ConversationHistoryRunState,
-  HistoricalSourceId,
-} from "~/historicalConversation";
 import {
   isToolLifecycleItemType,
   STUDIO_OUTPUTS_ACTIVITY_KIND,
+  type OrchestrationLatestTurnState,
+  type OrchestrationThreadActivity,
+  type ProviderKind,
   type ToolLifecycleItemType,
   type TurnId,
-} from "@omnimind/contracts";
+} from "@synara/contracts";
 import {
   decodeSubagentAgentStates,
   extractSubagentIdentityHints,
   decodeSubagentReceiverAgents,
   decodeSubagentReceiverThreadIds,
-} from "@omnimind/shared/subagents";
+} from "@synara/shared/subagents";
 import {
   approvalRequestKindFromRequestType,
   type ApprovalRequestKind,
-} from "~/conversationHistorySummary";
-import { summarizeToolRawOutput } from "@omnimind/shared/toolOutputSummary";
-import { pluralize } from "@omnimind/shared/text";
+} from "@synara/shared/threadSummary";
+import { summarizeToolRawOutput } from "@synara/shared/toolOutputSummary";
+import { pluralize } from "@synara/shared/text";
+import { PROVIDER_DESCRIPTORS } from "@synara/shared/providerMetadata";
 import {
   deriveReadableToolTitle,
   deriveOmniMindMcpToolTitle,
@@ -42,7 +41,7 @@ import type { ChatMessage, ProposedPlan } from "./types";
 export type WorkLogRequestKind = ApprovalRequestKind;
 
 // Mirrors CHECKPOINT_REVERT_FAILED_ACTIVITY_KIND in
-// apps/service/src/orchestration/commandInvariants.ts, which the web app cannot
+// apps/server/src/orchestration/commandInvariants.ts, which the web app cannot
 // import.
 const CHECKPOINT_REVERT_FAILED_ACTIVITY_KIND = "checkpoint.revert.failed";
 
@@ -72,7 +71,7 @@ export interface WorkLogEntry {
   // Source activity kind, kept so the timeline can pick a kind-specific icon
   // (e.g. user-input.requested -> question glyph) instead of the generic
   // tone fallback. Same rationale as `toolName` below.
-  activityKind?: ConversationHistoryActivity["kind"];
+  activityKind?: OrchestrationThreadActivity["kind"];
   // Provider-native event type carried through the activity payload (e.g.
   // "background_tasks_changed") so the timeline can pick a specific icon.
   nativeEventType?: string;
@@ -110,7 +109,7 @@ export interface WorkLogAutomation {
 export interface WorkLogOmniMindCreatedThread {
   threadId: string;
   title: string;
-  provider: HistoricalSourceId;
+  provider: ProviderKind;
   model: string;
   environment: "local" | "worktree";
   status: string;
@@ -150,7 +149,7 @@ export interface WorkLogSubagentAction {
 }
 
 interface DerivedWorkLogEntry extends WorkLogEntry {
-  activityKind: ConversationHistoryActivity["kind"];
+  activityKind: OrchestrationThreadActivity["kind"];
   collapseKey?: string;
   collapseCommand?: string;
   toolName?: string;
@@ -196,11 +195,11 @@ export type TimelineEntry =
     };
 
 const orderedActivitiesCache = new WeakMap<
-  ReadonlyArray<ConversationHistoryActivity>,
-  ReadonlyArray<ConversationHistoryActivity>
+  ReadonlyArray<OrchestrationThreadActivity>,
+  ReadonlyArray<OrchestrationThreadActivity>
 >();
 
-function isActivityOrderStable(activities: ReadonlyArray<ConversationHistoryActivity>): boolean {
+function isActivityOrderStable(activities: ReadonlyArray<OrchestrationThreadActivity>): boolean {
   for (let index = 1; index < activities.length; index += 1) {
     if (compareActivitiesByOrder(activities[index - 1]!, activities[index]!) > 0) {
       return false;
@@ -212,8 +211,8 @@ function isActivityOrderStable(activities: ReadonlyArray<ConversationHistoryActi
 // Thread activity arrays are immutable store values and most call sites need the
 // same order; cache it so chat startup does not sort the same array repeatedly.
 export function orderedActivities(
-  activities: ReadonlyArray<ConversationHistoryActivity>,
-): ReadonlyArray<ConversationHistoryActivity> {
+  activities: ReadonlyArray<OrchestrationThreadActivity>,
+): ReadonlyArray<OrchestrationThreadActivity> {
   const cached = orderedActivitiesCache.get(activities);
   if (cached) {
     return cached;
@@ -246,13 +245,13 @@ export function omitRoutedSubagentWorkEntries<Entry extends WorkLogEntry>(
 }
 
 export function deriveWorkLogEntries(
-  activities: ReadonlyArray<ConversationHistoryActivity>,
+  activities: ReadonlyArray<OrchestrationThreadActivity>,
   latestTurnId: TurnId | undefined,
   options: {
     visibleTurnIds?: ReadonlySet<TurnId | string>;
     activeTurnId?: TurnId | null;
     activeTurnStartedAt?: string | null;
-    latestTurnState?: ConversationHistoryRunState | null;
+    latestTurnState?: OrchestrationLatestTurnState | null;
     latestTurnCompletedAt?: string | null;
   } = {},
 ): WorkLogEntry[] {
@@ -304,7 +303,7 @@ export function deriveWorkLogEntries(
 }
 
 function shouldKeepActivityForWorkLog(
-  activity: ConversationHistoryActivity,
+  activity: OrchestrationThreadActivity,
   latestTurnId: TurnId | undefined,
   visibleTurnIds: ReadonlySet<TurnId | string> | undefined,
 ): boolean {
@@ -337,7 +336,7 @@ function shouldKeepActivityForWorkLog(
   return latestTurnId ? activity.turnId === latestTurnId : true;
 }
 
-function isQuietTurnLifecycleActivity(activity: ConversationHistoryActivity): boolean {
+function isQuietTurnLifecycleActivity(activity: OrchestrationThreadActivity): boolean {
   if (activity.kind !== "turn.completed" && activity.kind !== "turn.aborted") {
     return false;
   }
@@ -349,7 +348,7 @@ function isUninformativeCommandStartEntry(entry: DerivedWorkLogEntry): boolean {
   return entry.activityKind === "tool.started" && entry.suppressStandaloneCommandStart === true;
 }
 
-function isPlanBoundaryToolActivity(activity: ConversationHistoryActivity): boolean {
+function isPlanBoundaryToolActivity(activity: OrchestrationThreadActivity): boolean {
   if (activity.kind !== "tool.updated" && activity.kind !== "tool.completed") {
     return false;
   }
@@ -409,16 +408,19 @@ function extractWorkLogOmniMindThreadCreation(
     const model = asTrimmedString(thread?.model);
     const environment = asTrimmedString(thread?.environment);
     const status = asTrimmedString(thread?.status) ?? "created";
+    const providerKind = PROVIDER_DESCRIPTORS.find(
+      (descriptor) => descriptor.kind === provider,
+    )?.kind;
     if (
       !threadId ||
       !title ||
-      !provider ||
+      !providerKind ||
       !model ||
       (environment !== "local" && environment !== "worktree")
     ) {
       return [];
     }
-    return [{ threadId, title, provider, model, environment, status }];
+    return [{ threadId, title, provider: providerKind, model, environment, status }];
   });
   if (threads.length === 0) {
     return null;
@@ -434,7 +436,7 @@ function extractWorkLogOmniMindThreadCreation(
   return { operationId, requestedCount, createdCount, threads };
 }
 
-function toDerivedWorkLogEntry(activity: ConversationHistoryActivity): DerivedWorkLogEntry {
+function toDerivedWorkLogEntry(activity: OrchestrationThreadActivity): DerivedWorkLogEntry {
   const payload =
     activity.payload && typeof activity.payload === "object"
       ? (activity.payload as Record<string, unknown>)
@@ -513,7 +515,8 @@ function toDerivedWorkLogEntry(activity: ConversationHistoryActivity): DerivedWo
     activity.kind === "tool.started" &&
     itemType === "command_execution" &&
     !commandAction &&
-    !commandPreview.command
+    !commandPreview.command &&
+    !toolName
   ) {
     entry.suppressStandaloneCommandStart = true;
   }
@@ -596,7 +599,7 @@ function toDerivedWorkLogEntry(activity: ConversationHistoryActivity): DerivedWo
 }
 
 function deriveProviderRuntimeReconciliationCollapseKey(
-  activity: ConversationHistoryActivity,
+  activity: OrchestrationThreadActivity,
   payload: Record<string, unknown> | null,
 ): string | undefined {
   if (activity.kind !== "provider.runtime.reconciled") {
@@ -626,7 +629,7 @@ function deriveProviderRuntimeReconciliationCollapseKey(
 }
 
 function deriveToolLifecycleStatus(
-  activityKind: ConversationHistoryActivity["kind"],
+  activityKind: OrchestrationThreadActivity["kind"],
   payload: Record<string, unknown> | null,
 ): OmniMindMcpToolStatus | undefined {
   if (!isRenderableToolLifecycleActivity(activityKind)) return undefined;
@@ -636,7 +639,7 @@ function deriveToolLifecycleStatus(
 }
 
 function deriveWorkLogLiveActivity(
-  activity: ConversationHistoryActivity,
+  activity: OrchestrationThreadActivity,
   payload: Record<string, unknown> | null,
   entry: WorkLogEntry,
 ): WorkLogLiveActivity | undefined {
@@ -1108,12 +1111,12 @@ function mergeWorkLogLiveActivity(
 
 function reconcileSettledLiveActivities(
   entries: ReadonlyArray<DerivedWorkLogEntry>,
-  activities: ReadonlyArray<ConversationHistoryActivity>,
+  activities: ReadonlyArray<OrchestrationThreadActivity>,
   latestTurnId: TurnId | undefined,
   options: {
     activeTurnId?: TurnId | null;
     activeTurnStartedAt?: string | null;
-    latestTurnState?: ConversationHistoryRunState | null;
+    latestTurnState?: OrchestrationLatestTurnState | null;
     latestTurnCompletedAt?: string | null;
   },
 ): DerivedWorkLogEntry[] {
@@ -1310,7 +1313,7 @@ function deriveToolLifecycleCollapseKey(entry: DerivedWorkLogEntry): string | un
 }
 
 function isRenderableToolLifecycleActivity(
-  kind: ConversationHistoryActivity["kind"],
+  kind: OrchestrationThreadActivity["kind"],
 ): kind is "tool.started" | "tool.updated" | "tool.completed" {
   return kind === "tool.started" || kind === "tool.updated" || kind === "tool.completed";
 }
@@ -1762,7 +1765,7 @@ function collectCommandActions(
 
 function deriveCommandActionDisplay(
   action: CommandAction | null,
-  activityKind: ConversationHistoryActivity["kind"],
+  activityKind: OrchestrationThreadActivity["kind"],
 ): CommandActionDisplay | null {
   if (!action) {
     return null;
@@ -2013,8 +2016,8 @@ function extractChangedFiles(payload: Record<string, unknown> | null): string[] 
 }
 
 function compareActivitiesByOrder(
-  left: ConversationHistoryActivity,
-  right: ConversationHistoryActivity,
+  left: OrchestrationThreadActivity,
+  right: OrchestrationThreadActivity,
 ): number {
   if (left.sequence !== undefined && right.sequence !== undefined) {
     if (left.sequence !== right.sequence) {

@@ -14,8 +14,8 @@ export const SETTINGS_SECTION_IDS = [
   "worktrees",
   "archived",
   "models",
-  "agents",
-  "packages",
+  "providers",
+  "skills",
   "usage",
   "integrations",
   "advanced",
@@ -39,7 +39,7 @@ export type SettingsNavItem = {
   group: SettingsNavGroupId;
   label: string;
   description: string;
-  /** Basename of a SVG under `/icons/line`. */
+  /** Basename of a SVG under `/central-icons-reversed`. */
   icon: string;
   eyebrow: string;
 };
@@ -99,8 +99,8 @@ export const SETTINGS_NAV_ITEMS: readonly SettingsNavItem[] = [
   {
     id: "shortcuts",
     group: "personal",
-    label: "Keyboard shortcuts",
-    description: "Search and customize shortcuts, grouped by where they work.",
+    label: "Keybindings",
+    description: "Capture, customize, and add shortcuts for every OmniMind command.",
     icon: "shortcut",
     eyebrow: "Key bindings",
   },
@@ -129,31 +129,28 @@ export const SETTINGS_NAV_ITEMS: readonly SettingsNavItem[] = [
     eyebrow: "External agents",
   },
   {
+    id: "providers",
+    group: "coding",
+    label: "Agent providers",
+    description: "Choose visible coding agents and manage their installed CLI tools.",
+    icon: "puzzle",
+    eyebrow: "Coding agents",
+  },
+  {
     id: "models",
     group: "coding",
-    label: "Models",
-    description:
-      "Review model connections, selection, thinking support, authentication, and health.",
+    label: "Models & writing",
+    description: "Choose the model used for Git writing and add custom model slugs.",
     icon: "brain",
-    eyebrow: "Model connections",
+    eyebrow: "Model configuration",
   },
   {
-    id: "agents",
+    id: "skills",
     group: "coding",
-    label: "Agents",
-    description:
-      "Inspect native and external agents, capability evidence, permissions, and diagnostics.",
-    icon: "puzzle",
-    eyebrow: "Execution agents",
-  },
-  {
-    id: "packages",
-    group: "coding",
-    label: "Packages",
-    description:
-      "Review discovery, source evidence, compatibility, activation boundaries, and contained skills.",
+    label: "Agent skills",
+    description: "Review reusable workflows discovered across all configured providers.",
     icon: "building-blocks",
-    eyebrow: "Runtime extensions",
+    eyebrow: "Reusable workflows",
   },
   {
     id: "worktrees",
@@ -196,8 +193,6 @@ export function settingRowAnchorId(title: string): string {
 }
 
 export function normalizeSettingsSection(value: unknown): SettingsSectionId {
-  if (value === "providers") return "agents";
-  if (value === "skills") return "packages";
   if (typeof value !== "string") {
     return "general";
   }

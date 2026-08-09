@@ -4,7 +4,7 @@ import type { KeyboardInputEvent } from "electron";
 import type {
   BrowserAutomationExpectedInput,
   BrowserAutomationVisibleRuntime,
-} from "../browserHost";
+} from "../browserManager";
 import type { ActionablePoint } from "./actionability";
 import { abortReason, drainOnAbort, sendCdpCommand, throwIfAborted } from "./cdpRuntime";
 

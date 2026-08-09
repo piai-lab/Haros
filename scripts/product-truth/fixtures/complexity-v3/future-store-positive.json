@@ -1,5 +1,0 @@
-{
-  "virtualFiles": {
-    "apps/service/src/product/productStateStore.ts": "import { resolveProductDatabasePath } from './ProductControlPlane';\nconst openProductDatabase = (path: string) => path;\nexport const makeFutureStore = (stateDir: string) => openProductDatabase(resolveProductDatabasePath(stateDir));\n"
-  }
-}

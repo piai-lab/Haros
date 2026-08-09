@@ -6,9 +6,9 @@
 // Layer: Pull request presentation
 // Exports: PullRequestStateGlyph
 
-import type { GitPullRequestMergeability, PullRequestState } from "@omnimind/contracts";
+import type { GitPullRequestMergeability, PullRequestState } from "@synara/contracts";
 
-import { cn } from "~/lib/styles";
+import { cn } from "~/lib/utils";
 import {
   PR_STATE_PRESENTATION_ICONS,
   resolvePrStatePresentation,

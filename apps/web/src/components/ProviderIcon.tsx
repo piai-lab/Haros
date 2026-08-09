@@ -4,11 +4,11 @@
  * Centralizes provider-to-icon mapping so new providers do not need repeated
  * branching across every UI surface.
  */
+import { type ProviderKind } from "@synara/contracts";
 import type { ReactNode, SVGProps } from "react";
 
-import { Glyph } from "~/ui/icons";
-import { cn } from "~/lib/styles";
-import { BrandMark } from "./BrandMark";
+import { CentralIcon } from "~/lib/central-icons";
+import { cn } from "~/lib/utils";
 import {
   AntigravityIcon,
   ClaudeAI,
@@ -24,9 +24,9 @@ import {
 
 export type ProviderIconTone = "default" | "header";
 
-// The bundled SVG has a dark outer fill, so dark mode swaps to the reversed glyph asset.
+// The bundled SVG has a dark outer fill, so dark mode swaps to the reversed Central asset.
 // React's SVGProps has no `title`, so accept it via an explicit prop type and forward it
-// only to Glyph (an HTML span, which supports `title`); the light-mode SVG conveys
+// only to CentralIcon (an HTML span, which supports `title`); the light-mode SVG conveys
 // its accessible name through aria-label instead.
 const OpenCodeProviderIcon = ({
   className,
@@ -37,7 +37,7 @@ const OpenCodeProviderIcon = ({
   "aria-label": ariaLabel,
   ...svgProps
 }: SVGProps<SVGSVGElement> & { title?: string }) => {
-  const glyphLabel =
+  const centralIconLabel =
     ariaHidden === true || ariaHidden === "true" || typeof ariaLabel !== "string"
       ? undefined
       : ariaLabel;
@@ -52,9 +52,9 @@ const OpenCodeProviderIcon = ({
         className={cn(className, "dark:hidden")}
         style={style}
       />
-      <Glyph
+      <CentralIcon
         name="opencode"
-        label={glyphLabel}
+        label={centralIconLabel}
         title={title}
         className={cn(className, "hidden dark:inline-block dark:text-foreground/90")}
         style={style}
@@ -63,7 +63,7 @@ const OpenCodeProviderIcon = ({
   );
 };
 
-export const PROVIDER_ICON_COMPONENT_BY_PROVIDER: Record<string, Icon> = {
+export const PROVIDER_ICON_COMPONENT_BY_PROVIDER: Record<ProviderKind, Icon> = {
   codex: OpenAI,
   claudeAgent: ClaudeAI,
   cursor: CursorIcon,
@@ -76,7 +76,7 @@ export const PROVIDER_ICON_COMPONENT_BY_PROVIDER: Record<string, Icon> = {
 };
 
 export function providerIconToneClassName(
-  provider: string | null | undefined,
+  provider: ProviderKind | null | undefined,
   tone: ProviderIconTone = "default",
 ): string {
   if (provider === "kilo" || provider === "opencode") {
@@ -89,7 +89,7 @@ export function providerIconToneClassName(
 }
 
 export type ProviderIconProps = Omit<SVGProps<SVGSVGElement>, "ref"> & {
-  readonly provider: string | null | undefined;
+  readonly provider: ProviderKind | null | undefined;
   readonly fallback?: ReactNode;
   readonly tone?: ProviderIconTone;
 };
@@ -102,13 +102,7 @@ export function ProviderIcon({
   "aria-hidden": ariaHiddenProp,
   ...svgProps
 }: ProviderIconProps) {
-  const fallback = fallbackProp ?? (
-    <BrandMark
-      aria-hidden={ariaHiddenProp ?? true}
-      className={cn("size-4", className)}
-      title="Unknown provider"
-    />
-  );
+  const fallback = fallbackProp ?? null;
   const tone = toneProp ?? "default";
   const ariaHidden = ariaHiddenProp ?? true;
   if (provider === null || provider === undefined) {
@@ -116,14 +110,30 @@ export function ProviderIcon({
   }
 
   const Icon = PROVIDER_ICON_COMPONENT_BY_PROVIDER[provider];
-  if (!Icon) {
-    return fallback;
-  }
   return (
     <Icon
       aria-hidden={ariaHidden}
       {...svgProps}
       className={cn(providerIconToneClassName(provider, tone), className)}
     />
+  );
+}
+
+export function ProviderOptionLabel({
+  provider,
+  label,
+  className,
+  iconClassName,
+}: {
+  provider: ProviderKind;
+  label: ReactNode;
+  className?: string;
+  iconClassName?: string;
+}) {
+  return (
+    <span className={cn("flex min-w-0 items-center gap-2", className)}>
+      <ProviderIcon provider={provider} className={cn("size-3.5", iconClassName)} />
+      <span className="min-w-0 truncate">{label}</span>
+    </span>
   );
 }

@@ -5,9 +5,9 @@
 
 import type { ReactNode } from "react";
 
-import type { ServerLocalServerProcess } from "@omnimind/contracts";
+import type { ServerLocalServerProcess } from "@synara/contracts";
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
-import { localServerPrimaryLabel } from "@omnimind/shared/localServers";
+import { localServerPrimaryLabel } from "@synara/shared/localServers";
 
 import { LocalServerIdentity } from "../../LocalServerIdentity";
 import { ComposerPickerMenuPopup } from "../ComposerPickerMenuPopup";
@@ -17,7 +17,7 @@ import {
   serverLocalServersQueryOptions,
   serverStopLocalServerMutationOptions,
 } from "~/lib/serverReactQuery";
-import { cn } from "~/lib/styles";
+import { cn } from "~/lib/utils";
 import {
   ENVIRONMENT_ROW_CLASS_NAME,
   ENVIRONMENT_ROW_ICON_CLASS_NAME,

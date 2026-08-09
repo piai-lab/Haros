@@ -1,7 +1,0 @@
-{
-  "virtualFiles": {
-    "apps/service/src/product/productStateStore.ts": "import { DatabaseSync } from 'node:sqlite';\nimport { resolveProductDatabasePath } from './ProductControlPlane';\nexport const makeFutureStore = (stateDir: string) => new DatabaseSync(resolveProductDatabasePath(stateDir));\n"
-  },
-  "semanticFocusPaths": ["apps/service/src/product/productStateStore.ts"],
-  "enforceSemanticGates": true
-}

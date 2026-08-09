@@ -10,7 +10,7 @@
 
 import { forwardRef, type ComponentPropsWithoutRef, type ReactNode } from "react";
 
-import { cn } from "~/lib/styles";
+import { cn } from "~/lib/utils";
 import { AttachmentRemoveButton, type AttachmentRemoveButtonSize } from "./AttachmentRemoveButton";
 
 export type AttachmentCardSize = "sm" | "md";

@@ -1,4 +1,4 @@
-import type { GitResolvePullRequestResult } from "@omnimind/contracts";
+import type { GitResolvePullRequestResult } from "@synara/contracts";
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import { useDebouncedValue } from "@tanstack/react-pacer";
 import { useEffect, useRef, useState } from "react";
@@ -7,7 +7,7 @@ import {
   gitPreparePullRequestThreadMutationOptions,
   gitResolvePullRequestQueryOptions,
 } from "~/lib/gitReactQuery";
-import { cn } from "~/lib/styles";
+import { cn } from "~/lib/utils";
 import { parsePullRequestReference } from "~/pullRequestReference";
 import { Button } from "./ui/button";
 import {

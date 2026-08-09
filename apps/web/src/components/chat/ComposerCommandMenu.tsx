@@ -1,4 +1,12 @@
-import { type ProjectEntry, type ProviderMentionReference } from "@omnimind/contracts";
+import {
+  type ProjectEntry,
+  type ModelSlug,
+  type ProviderNativeCommandDescriptor,
+  type ProviderMentionReference,
+  type ProviderKind,
+  type ProviderPluginDescriptor,
+  type ProviderSkillDescriptor,
+} from "@synara/contracts";
 import { memo, useEffect, useRef, type ReactNode } from "react";
 import { type ComposerTriggerKind } from "../../composer-logic";
 import { type ComposerSlashCommand } from "../../composerSlashCommands";
@@ -6,16 +14,26 @@ import {
   BotIcon,
   BrainIcon,
   BugIcon,
+  ChangesIcon,
   ClockIcon,
   DeviceLaptopIcon,
   EraserIcon,
+  FastModeIcon,
+  GitBranchIcon,
+  GitForkIcon,
   InfoIcon,
   ListTodoIcon,
-  type GlyphComponent,
+  type LucideIcon,
   MessageCircleIcon,
+  Minimize2,
+  PluginIcon,
+  SkillCubeIcon,
+  TemporaryThreadIcon,
   TerminalIcon,
+  WorktreeIcon,
 } from "~/lib/icons";
-import { cn } from "~/lib/styles";
+import { formatSkillScope } from "~/lib/providerDiscovery";
+import { cn } from "~/lib/utils";
 import {
   Command,
   CommandGroup,
@@ -40,16 +58,28 @@ function humanizeProviderCommandName(command: string): string {
     .join(" ");
 }
 
-function commandMenuTitle(item: Extract<ComposerCommandItem, { type: "slash-command" }>): string {
+function commandMenuTitle(
+  item: Extract<ComposerCommandItem, { type: "slash-command" | "provider-native-command" }>,
+): string {
   switch (item.command) {
     case "clear":
       return "Clear";
+    case "compact":
+      return "Compact Context";
     case "model":
       return "Model";
+    case "fast":
+      return "Fast Mode";
     case "plan":
       return "Plan Mode";
     case "default":
       return "Default Mode";
+    case "review":
+      return "Code Review";
+    case "fork":
+      return "Fork";
+    case "side":
+      return "Sidechat";
     case "status":
       return "Status";
     case "subagents":
@@ -62,6 +92,14 @@ function commandMenuTitle(item: Extract<ComposerCommandItem, { type: "slash-comm
 }
 
 function commandMenuTrailingMeta(item: ComposerCommandItem): string | null {
+  if (item.type === "agent") {
+    return "delegate task to subagent";
+  }
+
+  if (item.type === "plugin") {
+    return "Plugin";
+  }
+
   if (item.type === "thread") {
     return null;
   }
@@ -70,7 +108,15 @@ function commandMenuTrailingMeta(item: ComposerCommandItem): string | null {
     return "Local";
   }
 
-  if (item.type === "slash-command") {
+  if (item.type === "skill") {
+    return formatSkillScope(item.skill.scope);
+  }
+
+  if (item.type === "model") {
+    return "Model";
+  }
+
+  if (item.type === "slash-command" || item.type === "provider-native-command") {
     return `/${item.command}`;
   }
 
@@ -84,11 +130,20 @@ function commandMenuTrailingMeta(item: ComposerCommandItem): string | null {
 }
 
 function commandMenuSecondaryText(item: ComposerCommandItem): string | null {
-  if (item.type === "slash-command") {
+  if (item.type === "slash-command" || item.type === "provider-native-command") {
     return item.description;
   }
 
-  if (item.type === "local-root" || item.type === "thread") {
+  if (item.type === "agent") {
+    return item.description;
+  }
+
+  if (
+    item.type === "plugin" ||
+    item.type === "skill" ||
+    item.type === "local-root" ||
+    item.type === "thread"
+  ) {
     return item.description;
   }
 
@@ -120,10 +175,64 @@ export type ComposerCommandItem =
     }
   | {
       id: string;
+      type: "provider-native-command";
+      provider: ProviderKind;
+      command: ProviderNativeCommandDescriptor["name"];
+      label: string;
+      description: string;
+    }
+  | {
+      id: string;
+      type: "fork-target";
+      target: "local" | "worktree";
+      label: string;
+      description: string;
+    }
+  | {
+      id: string;
+      type: "review-target";
+      target: "changes" | "base-branch";
+      label: string;
+      description: string;
+    }
+  | {
+      id: string;
+      type: "model";
+      provider: ProviderKind;
+      model: ModelSlug;
+      label: string;
+      description: string;
+    }
+  | {
+      id: string;
+      type: "plugin";
+      plugin: ProviderPluginDescriptor;
+      mention: ProviderMentionReference;
+      label: string;
+      description: string;
+    }
+  | {
+      id: string;
       type: "thread";
       threadId: string;
-      provider: string | null;
+      provider: ProviderKind;
       mention: ProviderMentionReference;
+      label: string;
+      description: string;
+    }
+  | {
+      id: string;
+      type: "skill";
+      skill: ProviderSkillDescriptor;
+      label: string;
+      description: string;
+    }
+  | {
+      id: string;
+      type: "agent";
+      provider: ProviderKind;
+      alias: string;
+      color: string;
       label: string;
       description: string;
     };
@@ -143,14 +252,34 @@ export function groupCommandItems(
   groupSlashCommandSections: boolean,
 ): ComposerCommandGroupModel[] {
   if (triggerKind === "mention") {
+    const pluginItems = items.filter((item) => item.type === "plugin");
     const threadItems = items.filter((item) => item.type === "thread");
     const localItems = items.filter((item) => item.type === "local-root" || item.type === "path");
+    const agentItems = items.filter((item) => item.type === "agent");
+    const otherItems = items.filter(
+      (item) =>
+        item.type !== "plugin" &&
+        item.type !== "thread" &&
+        item.type !== "local-root" &&
+        item.type !== "path" &&
+        item.type !== "agent",
+    );
+
     const groups: ComposerCommandGroupModel[] = [];
+    if (pluginItems.length > 0) {
+      groups.push({ id: "plugins", label: "Plugins", items: pluginItems });
+    }
     if (threadItems.length > 0) {
       groups.push({ id: "chats", label: "Chats", items: threadItems });
     }
     if (localItems.length > 0) {
       groups.push({ id: "local", label: "Local", items: localItems });
+    }
+    if (agentItems.length > 0) {
+      groups.push({ id: "subagents", label: "Subagents", items: agentItems });
+    }
+    if (otherItems.length > 0) {
+      groups.push({ id: "other", label: null, items: otherItems });
     }
     return groups;
   }
@@ -160,9 +289,27 @@ export function groupCommandItems(
   }
 
   const builtInItems = items.filter((item) => item.type === "slash-command");
+  const providerItems = items.filter((item) => item.type === "provider-native-command");
+  const skillItems = items.filter((item) => item.type === "skill");
+  const otherItems = items.filter(
+    (item) =>
+      item.type !== "slash-command" &&
+      item.type !== "provider-native-command" &&
+      item.type !== "skill",
+  );
+
   const groups: ComposerCommandGroupModel[] = [];
   if (builtInItems.length > 0) {
     groups.push({ id: "built-in", label: "Built-in", items: builtInItems });
+  }
+  if (providerItems.length > 0) {
+    groups.push({ id: "provider", label: "Provider", items: providerItems });
+  }
+  if (skillItems.length > 0) {
+    groups.push({ id: "skills", label: "Skills", items: skillItems });
+  }
+  if (otherItems.length > 0) {
+    groups.push({ id: "other", label: null, items: otherItems });
   }
   return groups;
 }
@@ -300,18 +447,23 @@ const COMPOSER_COMMAND_ITEM_GLYPH_CLASSNAME = "size-3.5";
 // Reuse the app's existing icon components for each concept so the command menu
 // stays coherent with how plan/fork/review/model/etc. appear everywhere else.
 // Don't introduce bespoke glyphs here — map to the shared `~/lib/icons` exports.
-const SLASH_COMMAND_ICONS: Record<string, GlyphComponent> = {
+const SLASH_COMMAND_ICONS: Record<string, LucideIcon> = {
   clear: EraserIcon,
+  compact: Minimize2,
   model: BrainIcon,
+  fast: FastModeIcon,
   plan: ListTodoIcon,
   default: MessageCircleIcon,
+  review: BugIcon,
+  fork: GitForkIcon,
+  side: TemporaryThreadIcon,
   status: InfoIcon,
   subagents: BotIcon,
   feedback: BugIcon,
   automation: ClockIcon,
 };
 
-function commandMenuSlashGlyph(command: string, fallback: GlyphComponent): ReactNode {
+function commandMenuSlashGlyph(command: string, fallback: LucideIcon): ReactNode {
   const Icon = SLASH_COMMAND_ICONS[command] ?? fallback;
   return <Icon className={COMPOSER_COMMAND_ITEM_GLYPH_CLASSNAME} />;
 }
@@ -332,10 +484,35 @@ function commandMenuItemGlyph(item: ComposerCommandItem, theme: "light" | "dark"
       );
     case "local-root":
       return <DeviceLaptopIcon className={cls} />;
+    case "fork-target":
+      return item.target === "local" ? (
+        <DeviceLaptopIcon className={cls} />
+      ) : (
+        <WorktreeIcon className={cls} />
+      );
+    case "review-target":
+      return item.target === "changes" ? (
+        <ChangesIcon className={cls} />
+      ) : (
+        <GitBranchIcon className={cls} />
+      );
     case "slash-command":
       return commandMenuSlashGlyph(item.command, TerminalIcon);
+    case "provider-native-command":
+      // Provider native commands surface skills (e.g. Claude exposes skills as
+      // slash commands), so default to the skill block glyph used for skill
+      // tokens in the composer/timeline — named commands still keep their icon.
+      return commandMenuSlashGlyph(item.command, SkillCubeIcon);
+    case "model":
+      return <BrainIcon className={cls} />;
+    case "agent":
+      return <BotIcon className={cls} />;
+    case "plugin":
+      return <PluginIcon className={cls} />;
     case "thread":
       return <ProviderIcon provider={item.provider} className={cls} />;
+    case "skill":
+      return <SkillCubeIcon className={cls} />;
     default:
       return null;
   }
@@ -403,7 +580,9 @@ const ComposerCommandMenuItem = memo(function ComposerCommandMenuItem({
       <div className="min-w-0 flex flex-1 items-center gap-3">
         <div className="min-w-0 flex flex-1 items-center gap-1.5 overflow-hidden">
           <span className="shrink-0 text-[11.5px] font-medium text-foreground/80">
-            {item.type === "slash-command" ? commandMenuTitle(item) : item.label}
+            {item.type === "slash-command" || item.type === "provider-native-command"
+              ? commandMenuTitle(item)
+              : item.label}
           </span>
           {secondaryText ? (
             <span className="truncate text-[11px] text-muted-foreground/55">{secondaryText}</span>

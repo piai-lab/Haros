@@ -4,8 +4,8 @@
 // Exports: FileEntryIcon
 
 import { getAttachmentIconName, getFileIconName } from "../../file-icons";
-import { Glyph } from "~/ui/icons";
-import { cn } from "~/lib/styles";
+import { CentralIcon } from "~/lib/central-icons";
+import { cn } from "~/lib/utils";
 import { FolderClosed, FolderOpen } from "../FolderClosed";
 
 const FILE_ICON_COLOR_CLASS_BY_ICON_NAME: Record<string, string> = {
@@ -52,7 +52,7 @@ export const FileEntryIcon = function FileEntryIcon(props: {
   // undefined for source-file surfaces (diff/editor/timeline) that key purely
   // off the path.
   mimeType?: string | null | undefined;
-  // Vestigial: product glyphs are `currentColor` glyphs, so theme no longer
+  // Vestigial: Central icons are `currentColor` glyphs, so theme no longer
   // affects icon selection. Optional so theme-less surfaces (e.g. markdown
   // file links, code-block headers) can reuse this same primitive.
   theme?: "light" | "dark" | undefined;
@@ -63,7 +63,7 @@ export const FileEntryIcon = function FileEntryIcon(props: {
   expanded?: boolean | undefined;
 }) {
   // Match the look of the local filepath picker: directories always render the
-  // outlined product folder glyph.
+  // outlined Central folder glyph.
   if (props.kind === "directory") {
     const FolderIcon = props.expanded ? FolderOpen : FolderClosed;
     return (
@@ -84,6 +84,9 @@ export const FileEntryIcon = function FileEntryIcon(props: {
         FILE_ICON_COLOR_CLASS_BY_ICON_NAME["code-brackets"]);
 
   return (
-    <Glyph name={iconName} className={cn("size-4 shrink-0", props.className, colorClassName)} />
+    <CentralIcon
+      name={iconName}
+      className={cn("size-4 shrink-0", props.className, colorClassName)}
+    />
   );
 };

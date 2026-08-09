@@ -4,13 +4,9 @@
 // Layer: UI logic (no React, no stores) so the board math stays unit-testable.
 // Exports: deriveKanbanColumn, buildKanbanBoard, ordering + drop-action helpers.
 
-import type {
-  ProjectId,
-  WorkspaceEnvironmentMode,
-  ThreadId,
-} from "@omnimind/contracts";
-import { buildPromptThreadTitleFallback } from "@omnimind/shared/chatThreads";
-import { isPendingThreadWorktree } from "@omnimind/shared/threadEnvironment";
+import type { ProjectId, ProviderKind, ThreadEnvironmentMode, ThreadId } from "@synara/contracts";
+import { buildPromptThreadTitleFallback } from "@synara/shared/chatThreads";
+import { isPendingThreadWorktree } from "@synara/shared/threadEnvironment";
 import type { ComposerThreadDraftState } from "../../composerDraftStore";
 import {
   canSessionAnswerPendingRequests,
@@ -34,7 +30,7 @@ export interface KanbanComposerDraftSnapshot {
   prompt: string;
   /** Files, images, terminal contexts, or references attached to the composer draft. */
   hasAttachments: boolean;
-  provider: string | null;
+  provider: ProviderKind | null;
 }
 
 type KanbanComposerDraftSource = Pick<
@@ -80,7 +76,7 @@ export interface KanbanOptimisticDispatchSnapshot {
   projectId: ProjectId;
   /** Display title for the window where neither thread nor composer prompt exists. */
   title: string;
-  provider: string | null;
+  provider: ProviderKind | null;
   /** latestTurn.turnId at dispatch time; any different (or first) turn settles the entry. */
   baselineTurnId: string | null;
   /** Epoch ms of the drop — recency sort key and expiry baseline. */
@@ -123,7 +119,7 @@ export interface KanbanDraftThreadSnapshot {
   projectId: ProjectId;
   createdAt: string;
   branch: string | null;
-  envMode?: WorkspaceEnvironmentMode | null;
+  envMode?: ThreadEnvironmentMode | null;
   worktreePath?: string | null;
 }
 
@@ -137,12 +133,12 @@ export interface KanbanCard {
   projectId: ProjectId;
   column: KanbanColumnKey;
   title: string;
-  provider: string | null;
+  provider: ProviderKind | null;
   /** Terminal-first thread — renders the terminal glyph instead of a provider icon. */
   isTerminal: boolean;
   branch: string | null;
   /** Environment intent for the local/worktree badge; mirrored from the thread or draft. */
-  envMode: WorkspaceEnvironmentMode | null;
+  envMode: ThreadEnvironmentMode | null;
   worktreePath: string | null;
   /** Backing summary; null for local-only draft threads that have not been promoted yet. */
   thread: SidebarThreadSummary | null;
@@ -270,7 +266,7 @@ function resolveThreadCardTimestamp(
 function resolveComposerDraft(
   composerDraftByThreadId: BuildKanbanBoardInput["composerDraftByThreadId"],
   threadId: ThreadId,
-): { prompt: string; hasAttachments: boolean; provider: string | null } {
+): { prompt: string; hasAttachments: boolean; provider: ProviderKind | null } {
   const snapshot = composerDraftByThreadId[threadId];
   return {
     prompt: snapshot?.prompt.trim() ?? "",
@@ -289,7 +285,7 @@ function buildThreadCard(
   const timestamp = resolveThreadCardTimestamp(thread, column);
   const threadProvider = isTerminal
     ? null
-    : (thread.session?.provider ?? thread.modelSelection?.provider ?? null);
+    : (thread.session?.provider ?? thread.modelSelection.provider);
   const activeWorkStartedAt =
     column === "inProgress"
       ? deriveActiveWorkStartedAt(thread.latestTurn, thread.session, timestamp)
@@ -333,7 +329,7 @@ function buildUnsentPromptCard(
   const titleSeed = composerDraft.prompt.length > 0 ? composerDraft.prompt : "Attached references";
   const threadProvider = isTerminal
     ? null
-    : (thread.session?.provider ?? thread.modelSelection?.provider ?? null);
+    : (thread.session?.provider ?? thread.modelSelection.provider);
   return {
     cardId: kanbanDraftCardId(thread.id),
     threadId: thread.id,
@@ -666,11 +662,24 @@ export function flattenProjectBoardForOverview(board: KanbanProjectBoard): Kanba
   return [...board.inProgress, ...board.draft, ...board.done];
 }
 
-export type KanbanDraftOpenThreadReason =
-  | "not-draft"
-  | "empty"
-  | "worktree-pending"
-  | "unsupported-execution-options";
+const OVERVIEW_RENDER_CAP = 20;
+
+/**
+ * The capped card list an overview project column actually renders, plus the count folded
+ * behind its "Show more" affordance. Shared with the board root so per-card data (PR
+ * badges) is fetched for exactly the rendered set.
+ */
+export function overviewVisibleKanbanCards(board: KanbanProjectBoard): {
+  visibleCards: KanbanCard[];
+  hiddenCount: number;
+} {
+  const cards = flattenProjectBoardForOverview(board);
+  const visibleCards =
+    cards.length > OVERVIEW_RENDER_CAP ? cards.slice(0, OVERVIEW_RENDER_CAP) : cards;
+  return { visibleCards, hiddenCount: cards.length - visibleCards.length };
+}
+
+export type KanbanDraftOpenThreadReason = "not-draft" | "empty" | "worktree-pending";
 export type KanbanDraftDropAction = "dispatch" | "open-thread";
 
 /** Explains why a draft card must fall back to the canonical chat composer flow. */

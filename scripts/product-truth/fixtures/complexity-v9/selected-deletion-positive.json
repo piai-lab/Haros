@@ -1,4 +1,0 @@
-{
-  "extends": "exact-predecessor-positive",
-  "removeFiles": ["apps/web/src/appSettings.ts"]
-}

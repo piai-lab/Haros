@@ -2,7 +2,7 @@
 // Purpose: Own the assistant highlight -> floating action -> composer insertion flow for transcript selections.
 // Layer: Chat transcript interaction controller
 
-import { CHAT_TURN_MAX_ATTACHMENTS } from "@omnimind/contracts";
+import { PROVIDER_SEND_TURN_MAX_ATTACHMENTS } from "@synara/contracts";
 import {
   useEffect,
   useRef,
@@ -197,12 +197,12 @@ export function useTranscriptAssistantSelectionAction(
       composerImagesRef.current.length +
         composerFilesRef.current.length +
         composerAssistantSelectionsRef.current.length >=
-      CHAT_TURN_MAX_ATTACHMENTS
+      PROVIDER_SEND_TURN_MAX_ATTACHMENTS
     ) {
       setPendingTranscriptSelectionAction(null);
       toastManager.add({
         type: "warning",
-        title: `You can attach up to ${CHAT_TURN_MAX_ATTACHMENTS} references per message.`,
+        title: `You can attach up to ${PROVIDER_SEND_TURN_MAX_ATTACHMENTS} references per message.`,
       });
       return;
     }

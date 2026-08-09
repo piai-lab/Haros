@@ -1,5 +1,0 @@
-{
-  "virtualFiles": {
-    "packages/shared/src/productExecutionCoordinator.ts": "export const makeProductExecutionCoordinator = () => ({ moved: true });\n"
-  }
-}

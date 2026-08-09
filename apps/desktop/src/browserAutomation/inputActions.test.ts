@@ -1,4 +1,4 @@
-import type { BrowserCssSelector } from "@omnimind/contracts";
+import type { BrowserCssSelector } from "@synara/contracts";
 import type { WebContents } from "electron";
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 
@@ -54,7 +54,7 @@ vi.mock("./trustedInput", () => ({
   withTrustedGuestFocus: vi.fn(async (_runtime, operation: () => Promise<unknown>) => operation()),
 }));
 
-import type { BrowserAutomationVisibleRuntime } from "../browserHost";
+import type { BrowserAutomationVisibleRuntime } from "../browserManager";
 import { dragBrowserTarget, typeIntoBrowserTarget } from "./inputActions";
 
 const runtime = {

@@ -5,7 +5,7 @@
 // Layer: Pull request presentation
 // Exports: PullRequestCodeTab (default export for React.lazy)
 
-import type { PullRequestDetail, PullRequestDetailInput } from "@omnimind/contracts";
+import type { PullRequestDetail, PullRequestDetailInput } from "@synara/contracts";
 import { useQuery } from "@tanstack/react-query";
 import { useState } from "react";
 
@@ -15,7 +15,7 @@ import { DiffPanelLoadingState } from "~/components/DiffPanelShell";
 import { useTheme } from "~/hooks/useTheme";
 import { getRenderablePatch, sortFileDiffsByPath, summarizePatchTotals } from "~/lib/diffRendering";
 import { pullRequestDiffQueryOptions } from "~/lib/pullRequestReactQuery";
-import { cn } from "~/lib/styles";
+import { cn } from "~/lib/utils";
 import { PullRequestDiffStat } from "./PullRequestDiffStat";
 import { PullRequestMetaLine } from "./PullRequestMetaLine";
 import { PR_META_TEXT_CLASS_NAME } from "./pullRequestText";
@@ -34,7 +34,7 @@ export function PullRequestCodeTab({
 
   const renderablePatch = getRenderablePatch(
     diffQuery.data?.patch,
-    `pull-request:${input.workspaceId}:${input.number}`,
+    `pull-request:${input.projectId}:${input.number}`,
   );
   const renderableFiles =
     renderablePatch?.kind === "files" ? sortFileDiffsByPath(renderablePatch.files) : [];

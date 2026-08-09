@@ -2,7 +2,7 @@
 // Purpose: Verifies Kanban delegates active-thread archive/delete to shared owners.
 // Layer: Web Kanban hook tests
 
-import { ProjectId, ThreadId } from "@omnimind/contracts";
+import { ProjectId, ThreadId } from "@synara/contracts";
 import { beforeEach, describe, expect, it, vi } from "vitest";
 
 const harness = vi.hoisted(() => ({
@@ -16,7 +16,6 @@ const harness = vi.hoisted(() => ({
   clearTerminalState: vi.fn(),
   deleteActiveThread: vi.fn(),
   archiveThread: vi.fn(),
-  setProductConversationPinned: vi.fn(),
   toast: vi.fn(),
 }));
 
@@ -43,10 +42,6 @@ vi.mock("~/lib/activeThreadDelete", () => ({
 vi.mock("~/lib/gitReactQuery", () => ({ gitRemoveWorktreeMutationOptions: () => ({}) }));
 vi.mock("~/lib/threadArchive", () => ({ archiveThreadFromClient: harness.archiveThread }));
 vi.mock("~/lib/threadRename", () => ({ dispatchThreadRename: vi.fn() }));
-vi.mock("~/productConversationMutations", () => ({
-  setProductConversationPinned: harness.setProductConversationPinned,
-}));
-vi.mock("~/wsNativeApi", () => ({ readProductNativeApi: () => ({}) }));
 vi.mock("../../composerDraftStore", () => ({
   useComposerDraftStore: (selector: (state: unknown) => unknown) =>
     selector({
@@ -132,7 +127,6 @@ beforeEach(() => {
     harness.clearTerminalState,
     harness.deleteActiveThread,
     harness.archiveThread,
-    harness.setProductConversationPinned,
     harness.toast,
   ]) {
     mock.mockReset();
@@ -140,7 +134,6 @@ beforeEach(() => {
   harness.showContextMenu.mockImplementation(async () => harness.clicked);
   harness.confirm.mockResolvedValue(true);
   harness.archiveThread.mockResolvedValue(undefined);
-  harness.setProductConversationPinned.mockResolvedValue({ sequence: 1 });
   harness.deleteActiveThread.mockImplementation(async (input: unknown) => {
     const action = input as {
       onDeleted: (input: { thread: { id: ThreadId; projectId: ProjectId } }) => void;

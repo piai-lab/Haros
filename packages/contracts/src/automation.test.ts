@@ -10,19 +10,9 @@ import {
   AutomationSchedule,
   AutomationRunStatus,
   AutomationStreamEvent,
+  DEFAULT_AUTOMATION_RUNTIME_MODE,
   DEFAULT_AUTOMATION_STOP_CONFIDENCE_THRESHOLD,
 } from "./automation";
-
-const requestedSelection = {
-  state: "selected" as const,
-  engineId: "pi",
-  runtimeModelId: "gpt-5-codex",
-  thinking: null,
-  packageGeneration: "test",
-  permissionPolicy: "approval-required" as const,
-  enforcement: "host-enforced" as const,
-  executionTarget: null,
-};
 
 const decode = <S extends Schema.Top>(
   schema: S,
@@ -34,17 +24,21 @@ const decode = <S extends Schema.Top>(
     never
   >;
 
-it.effect("defaults automation scheduling policies without adding execution authority", () =>
+it.effect("defaults automation runtime mode to approval-required", () =>
   Effect.gen(function* () {
     const parsed = yield* decode(AutomationCreateInput, {
       name: "Nightly maintenance",
       projectId: "project-1",
       prompt: "Check for stale dependencies.",
       schedule: { type: "manual" },
-      requestedSelection,
+      modelSelection: {
+        provider: "codex",
+        model: "gpt-5-codex",
+      },
     });
 
-    assert.strictEqual(parsed.requestedSelection.permissionPolicy, "approval-required");
+    assert.strictEqual(DEFAULT_AUTOMATION_RUNTIME_MODE, "approval-required");
+    assert.strictEqual(parsed.runtimeMode, "approval-required");
     assert.strictEqual(parsed.minimumIntervalSeconds, 60);
     assert.strictEqual(parsed.maxRuntimeSeconds, 60 * 60);
     assert.deepStrictEqual(parsed.retryPolicy, { type: "none" });
@@ -57,7 +51,7 @@ it.effect("defaults automation scheduling policies without adding execution auth
   }),
 );
 
-it.effect("decodes automation definitions without completion policies", () =>
+it.effect("decodes legacy automation definitions without completion policies", () =>
   Effect.gen(function* () {
     const parsed = yield* decode(AutomationDefinition, {
       id: "automation-legacy",
@@ -68,7 +62,12 @@ it.effect("decodes automation definitions without completion policies", () =>
       schedule: { type: "manual" },
       enabled: true,
       nextRunAt: null,
-      requestedSelection,
+      modelSelection: {
+        provider: "codex",
+        model: "gpt-5-codex",
+      },
+      runtimeMode: "approval-required",
+      interactionMode: "default",
       worktreeMode: "auto",
       mode: "heartbeat",
       targetThreadId: "thread-1",
@@ -131,9 +130,15 @@ it.effect("accepts automation runs with immutable permission snapshots", () =>
       error: null,
       result: null,
       permissionSnapshot: {
-        requestedSelection,
+        provider: "codex",
+        modelSelection: {
+          provider: "codex",
+          model: "gpt-5-codex",
+        },
         completionPolicyVersion: 7,
         iterationNumber: 3,
+        runtimeMode: "approval-required",
+        interactionMode: "default",
         worktreeMode: "worktree",
         allowedCapabilities: ["send-turn"],
         createdAt: "2026-06-16T10:00:00.000Z",
@@ -142,10 +147,7 @@ it.effect("accepts automation runs with immutable permission snapshots", () =>
       updatedAt: "2026-06-16T10:00:02.000Z",
     });
 
-    assert.strictEqual(
-      parsed.permissionSnapshot.requestedSelection.permissionPolicy,
-      "approval-required",
-    );
+    assert.strictEqual(parsed.permissionSnapshot.runtimeMode, "approval-required");
     assert.strictEqual(parsed.permissionSnapshot.completionPolicyVersion, 7);
     assert.strictEqual(parsed.permissionSnapshot.iterationNumber, 3);
     assert.strictEqual(parsed.status, "running");
@@ -296,7 +298,13 @@ it.effect("accepts automation stream run updates", () =>
         error: null,
         result: null,
         permissionSnapshot: {
-          requestedSelection,
+          provider: "codex",
+          modelSelection: {
+            provider: "codex",
+            model: "gpt-5-codex",
+          },
+          runtimeMode: "approval-required",
+          interactionMode: "default",
           worktreeMode: "worktree",
           allowedCapabilities: ["send-turn"],
           createdAt: "2026-06-16T10:00:00.000Z",

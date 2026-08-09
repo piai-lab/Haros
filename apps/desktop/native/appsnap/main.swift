@@ -57,7 +57,7 @@ do {
 } catch {
     emitter.emitError(
         AppSnapFailure(
-            code: "bridge_failed",
+            code: "helper_failed",
             message: error.localizedDescription
         ),
         capturedAt: appSnapTimestamp()

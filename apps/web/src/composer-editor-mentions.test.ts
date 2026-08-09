@@ -82,12 +82,6 @@ describe("matchComposerSlashCommandChipToken", () => {
 });
 
 describe("splitPromptIntoComposerSegments", () => {
-  it("keeps a parenthesized retired agent invocation as one literal display segment", () => {
-    expect(splitPromptIntoDisplaySegments("@spark(check the UI)")).toEqual([
-      { type: "text", text: "@spark(check the UI)" },
-    ]);
-  });
-
   it("marks structured thread mentions as thread chips", () => {
     expect(
       splitPromptIntoComposerSegments(
@@ -184,9 +178,11 @@ describe("splitPromptIntoComposerSegments", () => {
     ]);
   });
 
-  it("keeps retired provider-agent syntax as plain text", () => {
+  it("converts an agent alias into a chip once the task parentheses begin", () => {
     expect(splitPromptIntoComposerSegments("Ask @spark()")).toEqual([
-      { type: "text", text: "Ask @spark()" },
+      { type: "text", text: "Ask " },
+      { type: "agent-mention", alias: "spark", color: "cyan" },
+      { type: "text", text: "()" },
     ]);
   });
 

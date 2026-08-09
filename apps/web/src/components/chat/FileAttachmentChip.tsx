@@ -3,11 +3,11 @@
 // Layer: Chat attachment presentation
 // Depends on: shared byte formatting, chat attachment types, and compact chip styles.
 
-import { formatBytes } from "@omnimind/shared/formatBytes";
+import { formatBytes } from "@synara/shared/formatBytes";
 
 import { basenameOfPath } from "~/file-icons";
 import { FileIcon } from "~/lib/icons";
-import { cn } from "~/lib/styles";
+import { cn } from "~/lib/utils";
 import { type ChatFileAttachment } from "../../types";
 import { COMPOSER_ATTACHMENT_CHIP_CLASS_NAME } from "../composerInlineChip";
 import { Tooltip, TooltipPopup, TooltipTrigger } from "../ui/tooltip";

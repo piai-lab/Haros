@@ -10,12 +10,13 @@
     "cssVariables": true,
     "prefix": ""
   },
+  "iconLibrary": "tabler",
   "rtl": false,
   "menuColor": "default-translucent",
   "menuAccent": "subtle",
   "aliases": {
     "components": "~/components",
-    "utils": "~/lib/styles",
+    "utils": "~/lib/utils",
     "ui": "~/components/ui",
     "lib": "~/lib",
     "hooks": "~/hooks"

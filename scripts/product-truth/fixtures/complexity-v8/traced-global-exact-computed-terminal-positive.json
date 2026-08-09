@@ -1,6 +1,0 @@
-{
-  "extends": "traced-owner-positive",
-  "virtualFiles": {
-    "scripts/product-truth/sqlite-classifier.ts": "let raw;\nexport function classifyLegacyDatabase() {\n  raw = Bun[\"file\"];\n  return raw(\"fixture\");\n}\n"
-  }
-}

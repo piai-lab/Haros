@@ -4,9 +4,9 @@ import type {
   BrowserSnapshotHostOutput,
   BrowserSnapshotOutput,
   BrowserTabId,
-} from "@omnimind/contracts";
+} from "@synara/contracts";
 
-import type { BrowserAutomationVisibleRuntime } from "../browserHost";
+import type { BrowserAutomationVisibleRuntime } from "../browserManager";
 import {
   drainOnAbort,
   evaluateInContext,
@@ -452,7 +452,7 @@ export const captureSemanticSnapshot = async (
       ? [
           {
             code: "semantic-runtime",
-            message: "Snapshot collected from the shared visible Electron WebView.",
+            message: "Snapshot collected from the shared Electron browser runtime.",
           },
           {
             code: "closed-shadow-unobservable",

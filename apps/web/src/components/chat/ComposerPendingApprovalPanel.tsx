@@ -7,10 +7,10 @@
 // Layer: Chat composer UI
 // Exports: ComposerPendingApprovalPanel
 
-import { type ApprovalRequestId, type ProviderApprovalDecision } from "@omnimind/contracts";
+import { type ApprovalRequestId, type ProviderApprovalDecision } from "@synara/contracts";
 import { type KeyboardEvent } from "react";
 import { type PendingApproval } from "../../session-logic";
-import { cn } from "~/lib/styles";
+import { cn } from "~/lib/utils";
 import { ComposerChoiceRow, type ComposerChoiceTone } from "./ComposerChoiceRow";
 import { COMPOSER_INPUT_SURFACE_CLASS_NAME } from "./composerPickerStyles";
 

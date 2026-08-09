@@ -1,6 +1,0 @@
-{
-  "extends": "traced-owner-positive",
-  "virtualFiles": {
-    "scripts/product-truth/sqlite-classifier.ts": "import fs from \"node:fs\";\nfunction hiddenHelper() {\n  const { readFileSync: raw } = fs;\n  return raw(\"forbidden\");\n}\nexport function classifyLegacyDatabase() {\n  return hiddenHelper();\n}\n"
-  }
-}

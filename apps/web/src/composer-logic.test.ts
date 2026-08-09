@@ -472,8 +472,8 @@ describe("parseStandaloneComposerSlashCommand", () => {
     expect(parseStandaloneComposerSlashCommand("/default")).toBe("default");
   });
 
-  it("keeps the retired /fast command unavailable", () => {
-    expect(parseStandaloneComposerSlashCommand("/fast")).toBeNull();
+  it("parses standalone /fast command", () => {
+    expect(parseStandaloneComposerSlashCommand("/fast")).toBe("fast");
   });
 
   it("parses standalone /feedback command", () => {

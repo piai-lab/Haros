@@ -3,7 +3,7 @@
 // Layer: Chat composer UI
 // Depends on: the same Command primitives used by ComposerCommandMenu so both pickers share chrome.
 
-import type { ProjectFileSystemEntry, ProjectLocalSearchEntry } from "@omnimind/contracts";
+import type { ProjectFileSystemEntry, ProjectLocalSearchEntry } from "@synara/contracts";
 import type { Ref } from "react";
 import { useEffect, useImperativeHandle, useRef, useState } from "react";
 import { useQuery } from "@tanstack/react-query";
@@ -12,7 +12,7 @@ import { ArrowUpIcon, FileIcon } from "~/lib/icons";
 import { expandLocalFolderPath } from "~/lib/localFolderMentions";
 import { projectSearchLocalEntriesQueryOptions } from "~/lib/projectReactQuery";
 import { readNativeApi } from "~/nativeApi";
-import { cn } from "~/lib/styles";
+import { cn } from "~/lib/utils";
 import {
   ELEVATED_HOVER_SURFACE_CLASS_NAME,
   ELEVATED_HOVER_SURFACE_RAISED_TEXT_CLASS_NAME,

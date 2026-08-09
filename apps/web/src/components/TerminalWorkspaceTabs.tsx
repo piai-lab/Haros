@@ -7,7 +7,7 @@
 // Buttons. Tab-shape rendering (rounded-top corners, no bottom border on the
 // active tab, z-index stacking) doesn't fit the Button taxonomy.
 
-import { cn } from "~/lib/styles";
+import { cn } from "~/lib/utils";
 
 import TerminalActivityIndicator from "./terminal/TerminalActivityIndicator";
 import { type ThreadTerminalWorkspaceLayout, type ThreadTerminalWorkspaceTab } from "../types";

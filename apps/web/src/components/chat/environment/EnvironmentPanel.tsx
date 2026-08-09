@@ -14,11 +14,12 @@ import type {
   MessageId,
   PinnedMessage,
   ProjectId,
+  ProviderKind,
   ResolvedKeybindingsConfig,
   ThreadId,
   ThreadMarker,
   ThreadMarkerId,
-} from "@omnimind/contracts";
+} from "@synara/contracts";
 import { useNavigate } from "@tanstack/react-router";
 
 import { useAppSettings } from "~/appSettings";
@@ -37,7 +38,7 @@ import { isElectron } from "~/env";
 import { basenameOfPath } from "~/file-icons";
 import type { RepoDiffTotals } from "~/hooks/useRepoDiffTotals";
 import { ArrowUpRightIcon, ChangesIcon, GitHubIcon, SettingsIcon } from "~/lib/icons";
-import { cn } from "~/lib/styles";
+import { cn } from "~/lib/utils";
 import { readNativeApi } from "~/nativeApi";
 
 import { EnvironmentEditorSection } from "./EnvironmentEditorSection";
@@ -95,7 +96,7 @@ export interface EnvironmentPanelProps {
   availableEditors: ReadonlyArray<EditorId>;
   activeThreadId: ThreadId | null;
   /** Active provider for the usage row (same chip the header used to show). */
-  activeProvider: string | null;
+  activeProvider: ProviderKind;
   /**
    * Whether the active thread is a Studio chat. Studio chats show the Output section:
    * the Outbox files THIS chat produced, so its output stays attached to the chat.
@@ -118,7 +119,7 @@ export interface EnvironmentPanelProps {
   /** Compact idle-generated chat memory for the top of the panel. */
   recap?: {
     readonly text: string | null;
-    readonly status: "idle" | "pending" | "error" | "unavailable";
+    readonly status: "idle" | "pending" | "error";
     readonly updatedAt: string | null;
   } | null;
   /** Per-thread pinned-message checklist (server-synced). */
@@ -193,9 +194,10 @@ function EnvironmentRecapSection({
             />
           </div>
         ) : (
-          <p className="px-2 text-xs leading-5 text-muted-foreground">
-            Recap generation is unavailable until a Product-owned Host capability is approved.
-          </p>
+          <div className="flex flex-col gap-1.5 px-2" aria-hidden>
+            <div className="h-2.5 w-full rounded bg-[var(--color-background-button-secondary-hover)]/45 motion-safe:animate-pulse" />
+            <div className="h-2.5 w-4/5 rounded bg-[var(--color-background-button-secondary-hover)]/35 motion-safe:animate-pulse" />
+          </div>
         )}
       </div>
     </EnvironmentCollapsibleSection>
@@ -262,7 +264,7 @@ export function EnvironmentPanel({
   // Disable the Changes row only when the diff cannot be opened *and* is not already open
   // (so an open diff stays toggleable closed even when there are no pending changes).
   const changesDisabled = diffDisabledReason !== null && !diffOpen;
-  const showRecap = Boolean(recap?.text) || recap?.status === "unavailable";
+  const showRecap = Boolean(recap?.text) || recap?.status === "pending";
   const markdownCwd = openInTarget ?? gitCwd ?? undefined;
   const showStudioFolderRow = shouldShowStudioFolderRow({
     isStudioChat,
@@ -379,9 +381,7 @@ export function EnvironmentPanel({
         actually shows, so toggling any section via the header gear menu never leaves a doubled or
         dangling rule. Visibility is gated on the per-section AppSettings flags.
       */}
-      {settings.showEnvironmentUsage && activeProvider ? (
-        <EnvironmentUsageSection provider={activeProvider} />
-      ) : null}
+      {settings.showEnvironmentUsage ? <EnvironmentUsageSection provider={activeProvider} /> : null}
 
       {settings.showEnvironmentRepository && githubRepository && onOpenGithubRepository ? (
         <EnvironmentLabeledSection label="Repository">
@@ -402,7 +402,9 @@ export function EnvironmentPanel({
           gitCwd={gitCwd}
           enabled={open}
           activeThreadId={activeThreadId}
+          projectId={activeProjectId}
           configuredRepositories={githubRepositories}
+          showDiffColors={settings.showPullRequestDiffColors}
           onOpenUrl={onOpenGithubRepository}
           onClose={onClose}
         />

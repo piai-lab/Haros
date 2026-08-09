@@ -1,6 +1,0 @@
-{
-  "extends": "exact-predecessor-positive",
-  "virtualFiles": {
-    "assets/packages/pi-todo-0.81.1/reviewer-unlisted.ts": "export {};\n"
-  }
-}

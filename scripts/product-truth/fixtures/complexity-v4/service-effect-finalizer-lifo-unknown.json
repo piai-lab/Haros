@@ -1,9 +1,0 @@
-{
-  "extendsFixture": "service-refusal-effect-lock-positive",
-  "textReplacements": {
-    "apps/service/src/persistence/Layers/Sqlite.ts": [
-      ["  return Effect.acquireRelease(\n    acquireDatabaseLifecycleLock(databasePath),", "  return Effect.acquireRelease(\n    Effect.acquireRelease(\n      acquireDatabaseLifecycleLock(databasePath),\n      (early) => releaseDatabaseLifecycleLock(early),\n    ),"],
-      ["    (lock) => releaseDatabaseLifecycleLock(lock),\n  ).pipe", "    (lock) => releaseDatabaseLifecycleLock(lock),\n  ).pipe"]
-    ]
-  }
-}

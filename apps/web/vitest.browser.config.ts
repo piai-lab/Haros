@@ -1,23 +1,10 @@
 import { fileURLToPath } from "node:url";
-import { defineBrowserCommand, playwright } from "@vitest/browser-playwright";
+import { playwright } from "@vitest/browser-playwright";
 import { defineConfig, mergeConfig } from "vitest/config";
 
 import viteConfig from "./vite.config";
 
 const srcPath = fileURLToPath(new URL("./src", import.meta.url));
-
-interface ChromiumCdpSession {
-  send(method: string, params?: Record<string, unknown>): Promise<unknown>;
-}
-
-const collectBrowserHeap = defineBrowserCommand(async ({ provider, sessionId }) => {
-  const session = (await provider.getCDPSession?.(sessionId)) as ChromiumCdpSession | undefined;
-  if (!session) {
-    throw new Error("The browser profile requires Chromium CDP heap access.");
-  }
-  await session.send("HeapProfiler.collectGarbage");
-  return session.send("Runtime.getHeapUsage");
-});
 
 export default mergeConfig(
   viteConfig,
@@ -33,20 +20,11 @@ export default mergeConfig(
         "src/lib/**/*.browser.ts",
         "src/lib/**/*.browser.tsx",
       ],
-      // Performance proofs require their dedicated command surface, serial execution,
-      // host metadata and longer budgets. The performance profile explicitly re-enables
-      // these exact files after inheriting this default exclusion.
-      exclude: [
-        "src/components/chat/ConversationPerformance.browser.tsx",
-        "src/components/WorkbenchPerformance.browser.tsx",
-        "src/components/ProductRoutePerformance.browser.tsx",
-      ],
       browser: {
         enabled: true,
         provider: playwright(),
         instances: [{ browser: "chromium" }],
         headless: true,
-        commands: { collectBrowserHeap },
         api: {
           // Vitest's default 63315 falls inside common Windows/Hyper-V
           // excluded-port ranges. Keep the local browser harness on IPv4 and

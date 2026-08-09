@@ -5,7 +5,7 @@
 
 import "../../index.css";
 
-import { MessageId } from "@omnimind/contracts";
+import { MessageId } from "@synara/contracts";
 import { afterEach, describe, expect, it } from "vitest";
 import { render } from "vitest-browser-react";
 
@@ -22,7 +22,6 @@ function assistantEntry(id: string, text: string, streaming: boolean): TimelineE
       role: "assistant",
       text,
       createdAt: "2026-03-17T19:12:28.000Z",
-      ...(streaming ? {} : { completedAt: "2026-03-17T19:12:29.000Z" }),
       streaming,
     },
   };
@@ -68,15 +67,12 @@ const SETTLED_COMMANDS = [
 // Commands whose display text passes through verbatim (no humanized rewrite).
 const LIVE_COMMANDS = ["git status", "node scripts/tail.mjs"];
 
-function ToolGroupCollapseTimeline(props: {
-  timelineEntries: TimelineEntry[];
-  activeTurnInProgress?: boolean;
-}) {
+function ToolGroupCollapseTimeline(props: { timelineEntries: TimelineEntry[] }) {
   return (
     <MessagesTimeline
       hasMessages
       isWorking={false}
-      activeTurnInProgress={props.activeTurnInProgress ?? true}
+      activeTurnInProgress
       activeTurnStartedAt="2026-03-17T19:12:20.000Z"
       timelineEntries={props.timelineEntries}
       turnDiffSummaryByAssistantMessageId={new Map()}
@@ -209,55 +205,6 @@ describe("MessagesTimeline tool group collapse", () => {
     } finally {
       await screen.unmount();
       host.remove();
-    }
-  });
-
-  it("does not replay settled collapse on hydration but animates a row observed live", async () => {
-    const settledEntries = [
-      ...SETTLED_COMMANDS.map((command, index) => commandEntry(`settled-${index}`, command)),
-      assistantEntry("narration-1", "Finished checking the commands.", false),
-    ];
-    const hydratedHost = createTimelineHost();
-    const hydrated = await render(
-      <ToolGroupCollapseTimeline timelineEntries={settledEntries} activeTurnInProgress={false} />,
-      { container: hydratedHost },
-    );
-
-    try {
-      await expect.poll(() => findSummaryTrigger("Worked for") !== null).toBe(true);
-      expect(
-        hydratedHost.querySelector('[data-settled-turn-collapse-transition="true"]'),
-      ).toBeNull();
-    } finally {
-      await hydrated.unmount();
-      hydratedHost.remove();
-    }
-
-    const liveHost = createTimelineHost();
-    const live = await render(
-      <ToolGroupCollapseTimeline
-        timelineEntries={[assistantEntry("narration-1", "Still checking.", true)]}
-      />,
-      { container: liveHost },
-    );
-
-    try {
-      await live.rerender(
-        <ToolGroupCollapseTimeline timelineEntries={settledEntries} activeTurnInProgress={false} />,
-      );
-      await expect
-        .poll(
-          () => liveHost.querySelector('[data-settled-turn-collapse-transition="true"]') !== null,
-        )
-        .toBe(true);
-      await expect
-        .poll(
-          () => liveHost.querySelector('[data-settled-turn-collapse-transition="true"]') === null,
-        )
-        .toBe(true);
-    } finally {
-      await live.unmount();
-      liveHost.remove();
     }
   });
 });

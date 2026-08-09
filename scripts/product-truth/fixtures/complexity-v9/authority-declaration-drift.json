@@ -1,8 +1,0 @@
-{
-  "authorityMutation": {
-    "block": "v9",
-    "pointer": "/capabilityDeclarations/rows/0/symbol",
-    "action": "replace",
-    "value": "candidateControlledSymbol"
-  }
-}

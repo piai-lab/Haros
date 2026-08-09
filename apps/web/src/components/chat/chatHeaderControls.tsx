@@ -13,11 +13,11 @@
 
 import { forwardRef, type ComponentProps, type ReactNode } from "react";
 
-import { CHAT_SURFACE_HEADER_HEIGHT_PX } from "@omnimind/shared/desktopChrome";
+import { CHAT_SURFACE_HEADER_HEIGHT_PX } from "@synara/shared/desktopChrome";
 
-import { Glyph } from "~/ui/icons";
-import { type GlyphComponent } from "~/lib/icons";
-import { cn } from "~/lib/styles";
+import { CentralIcon } from "~/lib/central-icons";
+import { type LucideIcon } from "~/lib/icons";
+import { cn } from "~/lib/utils";
 
 import { Button } from "../ui/button";
 
@@ -30,7 +30,7 @@ import { Button } from "../ui/button";
  * breathing room below them rather than hugging the very top of the window.
  *
  * The pixel height is owned by `CHAT_SURFACE_HEADER_HEIGHT_PX` in
- * `@omnimind/shared/desktopChrome` (the single source of truth the Electron main
+ * `@synara/shared/desktopChrome` (the single source of truth the Electron main
  * process also reads to center the native traffic lights). Tailwind only emits CSS
  * for class names it can scan literally, so the class stays a literal here — but its
  * TYPE is derived from the shared number, so the build fails if the two ever drift.
@@ -136,7 +136,7 @@ export function SurfaceChipIcon({
   icon: Icon,
   className,
 }: {
-  icon: GlyphComponent;
+  icon: LucideIcon;
   className?: string;
 }) {
   return <Icon aria-hidden className={cn(CHAT_SURFACE_CHIP_ICON_CLASS_NAME, className)} />;
@@ -238,7 +238,7 @@ export function SurfaceTabChip({
           >
             {icon}
           </span>
-          <Glyph name="cross-small" className={DOCK_TAB_CLOSE_GLYPH_CLASS_NAME} />
+          <CentralIcon name="cross-small" className={DOCK_TAB_CLOSE_GLYPH_CLASS_NAME} />
         </button>
       ) : (
         <span className="flex size-4 shrink-0 items-center justify-center">{icon}</span>
@@ -276,7 +276,7 @@ export function SurfaceTabChip({
 }
 
 export const CHAT_HEADER_ICON_CONTROL_CLASS_NAME =
-  "!size-7 shrink-0 rounded-lg [&_svg,&_[data-slot=glyph]]:mx-0";
+  "!size-7 shrink-0 rounded-lg [&_svg,&_[data-slot=central-icon]]:mx-0";
 
 /**
  * Square chrome icon-button footprint shared by every right-dock header — the tab

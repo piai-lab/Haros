@@ -4,7 +4,7 @@
 // Exports: ChatColumnBannerFrame
 
 import type { ReactNode } from "react";
-import { cn } from "~/lib/styles";
+import { cn } from "~/lib/utils";
 import {
   CHAT_COLUMN_FRAME_CLASS_NAME,
   CHAT_COLUMN_GUTTER_CLASS_NAME,

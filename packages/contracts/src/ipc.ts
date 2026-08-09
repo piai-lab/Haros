@@ -1,3 +1,5 @@
+import { Schema } from "effect";
+
 import type {
   AuthBearerBootstrapResult,
   AuthBootstrapInput,
@@ -12,7 +14,13 @@ import type {
   AuthSessionState,
   AuthWebSocketTokenResult,
 } from "./auth";
-import type { WorkspaceEnsureRootInput, WorkspaceEnsureRootResult } from "./filesystem";
+import type {
+  ExternalMcpCreateIntegrationInput,
+  ExternalMcpCreateIntegrationResult,
+  ExternalMcpIntegration,
+  ExternalMcpRefreshPairingInput,
+  ExternalMcpRevokeIntegrationInput,
+} from "./externalMcp";
 import type {
   AutomationCancelRunInput,
   AutomationCancelRunResult,
@@ -36,6 +44,7 @@ import type {
 import type {
   GitCheckoutInput,
   GitActionProgressEvent,
+  GitWorktreeSetupProgressEvent,
   GitCreateBranchInput,
   GitCreateDetachedWorktreeInput,
   GitCreateDetachedWorktreeResult,
@@ -71,9 +80,16 @@ import type {
   GitStashInfoResult,
   GitStatusInput,
   GitStatusResult,
+  GitSummarizeDiffInput,
+  GitSummarizeDiffResult,
   GitUnstageFilesInput,
   GitUnstageFilesResult,
 } from "./git";
+import type {
+  GitHubProjectProvisionInput,
+  GitHubProjectProvisionProgressEvent,
+  GitHubProjectProvisionResult,
+} from "./githubProjectProvisioning";
 import type {
   PullRequestActionInput,
   PullRequestActionResult,
@@ -99,6 +115,8 @@ import type {
   ProjectListDirectoriesResult,
   ProjectReadFileInput,
   ProjectReadFileResult,
+  ProjectResolveOutOfRootFileReferenceInput,
+  ProjectResolveOutOfRootFileReferenceResult,
   ProjectRunDevServerInput,
   ProjectRunDevServerResult,
   ProjectSearchEntriesInput,
@@ -115,13 +133,29 @@ import type { StudioListThreadOutputsInput, StudioListThreadOutputsResult } from
 import type {
   ServerConfig,
   ServerDiagnosticsResult,
+  ServerGenerateAutomationIntentInput,
+  ServerGenerateAutomationIntentResult,
+  ServerGenerateThreadRecapInput,
+  ServerGenerateThreadRecapResult,
   ServerGetEnvironmentResult,
+  ServerGetProviderUsageSnapshotInput,
+  ServerGetProviderUsageSnapshotResult,
+  ServerListProviderUsageInput,
+  ServerListProviderUsageResult,
+  ServerGetSettingsResult,
   ServerListLocalServersResult,
   ServerListWorktreesResult,
+  ServerProviderUpdateInput,
+  ServerProviderUpdateResult,
+  ServerRefreshProvidersResult,
   ServerStopLocalServerInput,
   ServerStopLocalServerResult,
+  ServerUpdateSettingsInput,
+  ServerUpdateSettingsResult,
   ServerUpsertKeybindingInput,
   ServerUpsertKeybindingResult,
+  ServerVoicePrewarmInput,
+  ServerVoicePrewarmResult,
   ServerVoiceTranscriptionInput,
   ServerVoiceTranscriptionResult,
 } from "./server";
@@ -136,9 +170,49 @@ import type {
   TerminalSessionSnapshot,
   TerminalWriteInput,
 } from "./terminal";
+import type {
+  ClientOrchestrationCommand,
+  OrchestrationGetFullThreadDiffInput,
+  OrchestrationGetFullThreadDiffResult,
+  OrchestrationGetThreadDetailSnapshotInput,
+  OrchestrationGetThreadDetailSnapshotResult,
+  OrchestrationImportThreadInput,
+  OrchestrationImportThreadResult,
+  OrchestrationListProviderDeliveryBlockersInput,
+  OrchestrationListProviderDeliveryBlockersResult,
+  OrchestrationReconcileProviderDeliveryInput,
+  OrchestrationReconcileProviderDeliveryResult,
+  OrchestrationGetTurnDiffInput,
+  OrchestrationGetTurnDiffResult,
+  OrchestrationEvent,
+  OrchestrationReadModel,
+  OrchestrationShellSnapshot,
+  OrchestrationShellStreamItem,
+  OrchestrationSubscribeThreadInput,
+  OrchestrationThreadStreamItem,
+  OrchestrationUnsubscribeThreadInput,
+} from "./orchestration";
 import type { EditorId } from "./editor";
 import type { ThreadId } from "./baseSchemas";
-import type { ProductConversationId } from "./product/state";
+import type {
+  ProviderComposerCapabilities,
+  ProviderGetComposerCapabilitiesInput,
+  ProviderListAgentsInput,
+  ProviderListAgentsResult,
+  ProviderListCommandsInput,
+  ProviderListCommandsResult,
+  ProviderListModelsInput,
+  ProviderListModelsResult,
+  ProviderListPluginsInput,
+  ProviderListPluginsResult,
+  ProviderListSkillsInput,
+  ProviderListSkillsResult,
+  ProviderSkillsCatalogInput,
+  ProviderSkillsCatalogResult,
+  ProviderReadPluginInput,
+  ProviderReadPluginResult,
+} from "./providerDiscovery";
+import type { ProviderCompactThreadInput } from "./provider";
 import type {
   StatsGetProfileStatsInput,
   StatsGetProfileStatsResult,
@@ -206,6 +280,12 @@ export interface BrowserTabState {
   id: string;
   url: string;
   title: string;
+  /**
+   * Agent-owned tabs use a main-process WebContentsView so the exact page can
+   * stay alive while its chat route is not mounted. Older snapshots omit this
+   * field and are treated as renderer-owned by the web app.
+   */
+  runtimeSurface?: "native" | "renderer";
   status: "live" | "suspended";
   isLoading: boolean;
   canGoBack: boolean;
@@ -384,17 +464,17 @@ export interface DesktopNotificationInput {
   title: string;
   body?: string;
   silent?: boolean;
-  threadId?: ThreadId;
-  /** Request policy only. Desktop Main independently resolves actual BrowserWindow focus. */
   suppressWhenForeground?: boolean;
-  productConversationId?: ProductConversationId;
-  productSurface?: "agent" | "chat";
+  threadId?: ThreadId;
 }
 
 export interface DesktopWindowState {
   isMaximized: boolean;
   isFullscreen: boolean;
 }
+
+export const DesktopAppIcon = Schema.Literals(["default", "icon"]);
+export type DesktopAppIcon = typeof DesktopAppIcon.Type;
 
 export interface DesktopBridge {
   getWsUrl: () => string | null;
@@ -411,6 +491,7 @@ export interface DesktopBridge {
   }) => Promise<string | null>;
   confirm: (message: string) => Promise<boolean>;
   setTheme: (theme: DesktopTheme) => Promise<void>;
+  setAppIcon: (icon: DesktopAppIcon) => Promise<void>;
   showContextMenu: <T extends string>(
     items: readonly ContextMenuItem<T>[],
     position?: { x: number; y: number },
@@ -499,6 +580,9 @@ export interface NativeApi {
       input: ProjectSearchLocalEntriesInput,
     ) => Promise<ProjectSearchLocalEntriesResult>;
     readFile: (input: ProjectReadFileInput) => Promise<ProjectReadFileResult>;
+    resolveOutOfRootFileReference: (
+      input: ProjectResolveOutOfRootFileReferenceInput,
+    ) => Promise<ProjectResolveOutOfRootFileReferenceResult>;
     createLocalFilePreviewGrant: (
       input: ProjectCreateLocalFilePreviewGrantInput,
     ) => Promise<ProjectCreateLocalFilePreviewGrantResult>;
@@ -507,10 +591,16 @@ export interface NativeApi {
     stopDevServer: (input: ProjectStopDevServerInput) => Promise<ProjectStopDevServerResult>;
     listDevServers: () => Promise<ProjectListDevServersResult>;
     onDevServerEvent: (callback: (event: ProjectDevServerEvent) => void) => () => void;
+    provisionFromGitHub: (
+      input: GitHubProjectProvisionInput,
+      options?: { readonly signal?: AbortSignal },
+    ) => Promise<GitHubProjectProvisionResult>;
+    onProvisionProgress: (
+      callback: (event: GitHubProjectProvisionProgressEvent) => void,
+    ) => () => void;
   };
   filesystem: {
     browse: (input: FilesystemBrowseInput) => Promise<FilesystemBrowseResult>;
-    ensureWorkspaceRoot: (input: WorkspaceEnsureRootInput) => Promise<WorkspaceEnsureRootResult>;
   };
   studio: {
     listThreadOutputs: (
@@ -557,8 +647,12 @@ export interface NativeApi {
     workingTreeDiffStats: (
       input: GitReadWorkingTreeDiffInput,
     ) => Promise<GitWorkingTreeDiffStatsResult>;
+    summarizeDiff: (input: GitSummarizeDiffInput) => Promise<GitSummarizeDiffResult>;
     runStackedAction: (input: GitRunStackedActionInput) => Promise<GitRunStackedActionResult>;
     onActionProgress: (callback: (event: GitActionProgressEvent) => void) => () => void;
+    onWorktreeSetupProgress: (
+      callback: (event: GitWorktreeSetupProgressEvent) => void,
+    ) => () => void;
   };
   pullRequests: {
     list: (input: PullRequestsListInput) => Promise<PullRequestsListResult>;
@@ -580,6 +674,8 @@ export interface NativeApi {
   server: {
     getConfig: () => Promise<ServerConfig>;
     getEnvironment: () => Promise<ServerGetEnvironmentResult>;
+    getSettings: () => Promise<ServerGetSettingsResult>;
+    updateSettings: (input: ServerUpdateSettingsInput) => Promise<ServerUpdateSettingsResult>;
     getAuthSession: () => Promise<AuthSessionState>;
     bootstrapAuth: (input: AuthBootstrapInput) => Promise<AuthBootstrapResult>;
     bootstrapBearerAuth: (input: AuthBootstrapInput) => Promise<AuthBearerBootstrapResult>;
@@ -593,10 +689,35 @@ export interface NativeApi {
     revokeAuthClient: (input: AuthRevokeClientSessionInput) => Promise<{ revoked: boolean }>;
     revokeOtherAuthClients: () => Promise<{ revokedCount: number }>;
     logoutAuthSession: () => Promise<AuthLogoutResult>;
+    listExternalMcpIntegrations: () => Promise<ReadonlyArray<ExternalMcpIntegration>>;
+    createExternalMcpIntegration: (
+      input: ExternalMcpCreateIntegrationInput,
+    ) => Promise<ExternalMcpCreateIntegrationResult>;
+    revokeExternalMcpIntegration: (
+      input: ExternalMcpRevokeIntegrationInput,
+    ) => Promise<{ revoked: boolean }>;
+    refreshExternalMcpPairing: (
+      input: ExternalMcpRefreshPairingInput,
+    ) => Promise<ExternalMcpCreateIntegrationResult>;
+    refreshProviders: () => Promise<ServerRefreshProvidersResult>;
+    updateProvider: (input: ServerProviderUpdateInput) => Promise<ServerProviderUpdateResult>;
     listWorktrees: () => Promise<ServerListWorktreesResult>;
     listLocalServers: () => Promise<ServerListLocalServersResult>;
     stopLocalServer: (input: ServerStopLocalServerInput) => Promise<ServerStopLocalServerResult>;
+    getProviderUsageSnapshot: (
+      input: ServerGetProviderUsageSnapshotInput,
+    ) => Promise<ServerGetProviderUsageSnapshotResult>;
+    listProviderUsage: (
+      input: ServerListProviderUsageInput,
+    ) => Promise<ServerListProviderUsageResult>;
     getDiagnostics: () => Promise<ServerDiagnosticsResult>;
+    generateThreadRecap: (
+      input: ServerGenerateThreadRecapInput,
+    ) => Promise<ServerGenerateThreadRecapResult>;
+    generateAutomationIntent: (
+      input: ServerGenerateAutomationIntentInput,
+    ) => Promise<ServerGenerateAutomationIntentResult>;
+    prewarmVoice?: (input: ServerVoicePrewarmInput) => Promise<ServerVoicePrewarmResult>;
     transcribeVoice: (
       input: ServerVoiceTranscriptionInput,
     ) => Promise<ServerVoiceTranscriptionResult>;
@@ -607,6 +728,52 @@ export interface NativeApi {
     getProfileTokenStats: (
       input: StatsGetProfileTokenStatsInput,
     ) => Promise<StatsGetProfileTokenStatsResult>;
+  };
+  provider: {
+    getComposerCapabilities: (
+      input: ProviderGetComposerCapabilitiesInput,
+    ) => Promise<ProviderComposerCapabilities>;
+    compactThread: (input: ProviderCompactThreadInput) => Promise<void>;
+    listCommands: (input: ProviderListCommandsInput) => Promise<ProviderListCommandsResult>;
+    listSkills: (input: ProviderListSkillsInput) => Promise<ProviderListSkillsResult>;
+    listSkillsCatalog: (input: ProviderSkillsCatalogInput) => Promise<ProviderSkillsCatalogResult>;
+    listPlugins: (input: ProviderListPluginsInput) => Promise<ProviderListPluginsResult>;
+    readPlugin: (input: ProviderReadPluginInput) => Promise<ProviderReadPluginResult>;
+    listModels: (input: ProviderListModelsInput) => Promise<ProviderListModelsResult>;
+    listAgents: (input: ProviderListAgentsInput) => Promise<ProviderListAgentsResult>;
+  };
+  orchestration: {
+    getSnapshot: () => Promise<OrchestrationReadModel>;
+    getShellSnapshot: () => Promise<OrchestrationShellSnapshot>;
+    getThreadDetailSnapshot: (
+      input: OrchestrationGetThreadDetailSnapshotInput,
+    ) => Promise<OrchestrationGetThreadDetailSnapshotResult>;
+    dispatchCommand: (command: ClientOrchestrationCommand) => Promise<{ sequence: number }>;
+    importThread: (
+      input: OrchestrationImportThreadInput,
+    ) => Promise<OrchestrationImportThreadResult>;
+    repairState: () => Promise<OrchestrationReadModel>;
+    getTurnDiff: (input: OrchestrationGetTurnDiffInput) => Promise<OrchestrationGetTurnDiffResult>;
+    getFullThreadDiff: (
+      input: OrchestrationGetFullThreadDiffInput,
+    ) => Promise<OrchestrationGetFullThreadDiffResult>;
+    replayEvents: (
+      fromSequenceExclusive: number,
+      threadId?: ThreadId,
+    ) => Promise<OrchestrationEvent[]>;
+    listProviderDeliveryBlockers: (
+      input?: OrchestrationListProviderDeliveryBlockersInput,
+    ) => Promise<OrchestrationListProviderDeliveryBlockersResult>;
+    reconcileProviderDelivery: (
+      input: OrchestrationReconcileProviderDeliveryInput,
+    ) => Promise<OrchestrationReconcileProviderDeliveryResult>;
+    subscribeShell: () => Promise<void>;
+    unsubscribeShell: () => Promise<void>;
+    subscribeThread: (input: OrchestrationSubscribeThreadInput) => Promise<void>;
+    unsubscribeThread: (input: OrchestrationUnsubscribeThreadInput) => Promise<void>;
+    onDomainEvent: (callback: (event: OrchestrationEvent) => void) => () => void;
+    onShellEvent: (callback: (event: OrchestrationShellStreamItem) => void) => () => void;
+    onThreadEvent: (callback: (event: OrchestrationThreadStreamItem) => void) => () => void;
   };
   automation: {
     list: (input?: AutomationListInput) => Promise<AutomationListResult>;

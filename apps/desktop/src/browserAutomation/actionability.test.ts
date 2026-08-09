@@ -1,7 +1,7 @@
 import type { WebContents } from "electron";
 import { describe, expect, it, vi } from "vitest";
 
-import type { BrowserAutomationVisibleRuntime } from "../browserHost";
+import type { BrowserAutomationVisibleRuntime } from "../browserManager";
 import { waitForActionableTarget } from "./actionability";
 
 const runtimeReturning = (value: unknown): BrowserAutomationVisibleRuntime => ({

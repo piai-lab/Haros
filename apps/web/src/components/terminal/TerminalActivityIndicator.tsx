@@ -2,9 +2,9 @@
 // Purpose: Compact terminal lifecycle indicator for running, attention, and review states.
 // Layer: Terminal presentation primitive
 
-import type { TerminalVisualState } from "@omnimind/shared/terminalThreads";
+import type { TerminalVisualState } from "@synara/shared/terminalThreads";
 
-import { cn } from "~/lib/styles";
+import { cn } from "~/lib/utils";
 
 interface TerminalActivityIndicatorProps {
   className?: string;

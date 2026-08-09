@@ -13,7 +13,7 @@ import {
   splitRepoRelativePath,
   summarizeFileDiffStats,
 } from "~/lib/diffRendering";
-import { cn } from "~/lib/styles";
+import { cn } from "~/lib/utils";
 import { DiffStat } from "./DiffStatLabel";
 import { FileEntryIcon } from "./FileEntryIcon";
 

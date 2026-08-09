@@ -1,1 +1,0 @@
-{"appendToFiles":{"apps/service/src/main.ts":"\nexport const v7RepeatedGlobal = () => globalThis.globalThis.Bun.spawnSync(['true']);\n"}}

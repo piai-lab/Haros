@@ -4,8 +4,7 @@
 
 export const RELEASE_WORKSPACE_MANIFEST_PATHS = [
   "package.json",
-  "apps/native-host/package.json",
-  "apps/service/package.json",
+  "apps/server/package.json",
   "apps/desktop/package.json",
   "apps/web/package.json",
   "packages/contracts/package.json",

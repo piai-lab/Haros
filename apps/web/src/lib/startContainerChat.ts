@@ -4,11 +4,11 @@
 // Layer: Web orchestration helper
 // Exports: Container-chat startup plus segment-aware fresh-chat dispatch.
 
-import type { ProjectId, ThreadId } from "@omnimind/contracts";
+import type { ProjectId, ThreadId } from "@synara/contracts";
 import type { Project } from "../types";
 import { isStudioContainerProject } from "./studioProjects";
 import type { ServerWorkspacePaths } from "./serverWorkspacePaths";
-import type { CreateThreadOptions } from "./threadBootstrap";
+import type { NewThreadOptions } from "./threadBootstrap";
 
 export type StartContainerChatResult =
   | { ok: true; threadId: ThreadId | null }
@@ -24,13 +24,13 @@ export function startFreshChatForActiveSurface(input: {
   readonly activeProject: Pick<Project, "cwd" | "kind"> | null;
   readonly isStudioRoute: boolean;
   readonly paths: ServerWorkspacePaths;
-  readonly createChat: StartFreshContainerChat;
-  readonly createStudioChat: StartFreshContainerChat;
+  readonly handleNewChat: StartFreshContainerChat;
+  readonly handleNewStudioChat: StartFreshContainerChat;
 }): Promise<StartContainerChatResult> {
   const handler =
     input.isStudioRoute || isStudioContainerProject(input.activeProject, input.paths)
-      ? input.createStudioChat
-      : input.createChat;
+      ? input.handleNewStudioChat
+      : input.handleNewChat;
   return handler({ fresh: true });
 }
 
@@ -41,9 +41,9 @@ export function startFreshChatForActiveSurface(input: {
  */
 export async function startContainerChat(input: {
   readonly ensureProjectId: () => Promise<ProjectId | null>;
-  readonly createThread: (
+  readonly handleNewThread: (
     projectId: ProjectId,
-    options?: CreateThreadOptions,
+    options?: NewThreadOptions,
   ) => Promise<ThreadId | null>;
   readonly fresh?: boolean | undefined;
   readonly forceLocalWorkspace?: boolean | undefined;
@@ -54,7 +54,7 @@ export async function startContainerChat(input: {
     if (!projectId) {
       return { ok: false, error: input.errorLabel };
     }
-    const threadOptions: CreateThreadOptions | undefined =
+    const threadOptions: NewThreadOptions | undefined =
       input.fresh === true || input.forceLocalWorkspace === true
         ? {
             ...(input.fresh === true ? { fresh: true } : {}),
@@ -63,7 +63,7 @@ export async function startContainerChat(input: {
             worktreePath: null,
           }
         : undefined;
-    const threadId = await input.createThread(projectId, threadOptions);
+    const threadId = await input.handleNewThread(projectId, threadOptions);
     return { ok: true, threadId };
   } catch (error) {
     return {

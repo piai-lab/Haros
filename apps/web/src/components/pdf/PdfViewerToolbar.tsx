@@ -15,7 +15,7 @@ import {
   PlusIcon,
 } from "~/lib/icons";
 import { formatZoomPercent, PDF_ZOOM_PRESETS, type PdfZoomMode } from "~/lib/pdf/pdfZoom";
-import { cn } from "~/lib/styles";
+import { cn } from "~/lib/utils";
 import { ComposerPickerMenuPopup } from "../chat/ComposerPickerMenuPopup";
 import {
   CHAT_SURFACE_HEADER_DIVIDER_CLASS_NAME,

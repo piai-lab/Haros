@@ -1,8 +1,0 @@
-{
-  "extendsFixture": "web-refusal-positive",
-  "textReplacements": {
-    "apps/web/src/composerDraftStore.ts": [
-      ["  const retiredV2 = storage.getItem(\"omnimind:composer-drafts:v2\");\n", "  const retiredV2 = null;\n"]
-    ]
-  }
-}

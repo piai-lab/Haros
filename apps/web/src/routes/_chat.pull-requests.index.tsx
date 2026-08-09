@@ -1,13 +1,13 @@
 import type {
-  ProductWorkspaceId,
+  ProjectId,
   PullRequestInvolvement,
   PullRequestListEntry,
   PullRequestState,
-} from "@omnimind/contracts";
+} from "@synara/contracts";
 import {
   coalescePullRequestListEntries,
   isValidGitHubRepositoryNameWithOwner,
-} from "@omnimind/shared/githubRepository";
+} from "@synara/shared/githubRepository";
 import { useIsMutating, useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import { createFileRoute, useNavigate } from "@tanstack/react-router";
 import { lazy, Suspense, useCallback, useDeferredValue, useEffect, useMemo, useState } from "react";
@@ -42,7 +42,7 @@ import {
 } from "~/components/pullRequest/pullRequestList.logic";
 import {
   PullRequestFilterPillGroup,
-  PullRequestWorkspaceFilterPopover,
+  PullRequestProjectFilterPopover,
 } from "~/components/pullRequest/PullRequestListFilters";
 import { PullRequestsUnavailableState } from "~/components/pullRequest/PullRequestsUnavailableState";
 import { usePullRequestPaneStateIcon } from "~/components/pullRequest/usePullRequestPaneStateIcon";
@@ -69,20 +69,21 @@ import {
   pullRequestSetPinnedMutationOptions,
   shouldLoadExactPullRequestInvolvement,
 } from "~/lib/pullRequestReactQuery";
-import { cn } from "~/lib/styles";
+import { cn } from "~/lib/utils";
 import {
   createDefaultRightDockState,
   openPaneInState,
   type RightDockThreadState,
 } from "~/rightDockStore.logic";
-import { useProductStore } from "~/store/productStore";
+import { useStore } from "~/store";
 import { PR_FINE_TEXT_CLASS_NAME } from "~/components/pullRequest/pullRequestText";
+import { useAppSettings } from "~/appSettings";
 
 export interface PullRequestsSearch {
   involvement: PullRequestInvolvement;
   state: PullRequestState;
-  workspaceId?: ProductWorkspaceId;
-  selectedWorkspaceId?: ProductWorkspaceId;
+  projectId?: ProjectId;
+  selectedProjectId?: ProjectId;
   selectedRepo?: string;
   number?: number;
   q?: string;
@@ -91,8 +92,8 @@ export interface PullRequestsSearch {
 interface PullRequestsSearchPatch {
   involvement?: PullRequestInvolvement;
   state?: PullRequestState;
-  workspaceId?: ProductWorkspaceId | undefined;
-  selectedWorkspaceId?: ProductWorkspaceId | undefined;
+  projectId?: ProjectId | undefined;
+  selectedProjectId?: ProjectId | undefined;
   selectedRepo?: string | undefined;
   number?: number | undefined;
   q?: string | undefined;
@@ -101,7 +102,7 @@ interface PullRequestsSearchPatch {
 // Every filter change and the panel close drop the current selection the same way; keep the
 // patch in one place so a new selection field can't be forgotten by one of the call sites.
 const CLEARED_SELECTION = {
-  selectedWorkspaceId: undefined,
+  selectedProjectId: undefined,
   selectedRepo: undefined,
   number: undefined,
 } as const satisfies PullRequestsSearchPatch;
@@ -116,11 +117,11 @@ export const Route = createFileRoute("/_chat/pull-requests/")({
     involvement:
       raw.involvement === "reviewing" || raw.involvement === "authored" ? raw.involvement : "all",
     state: raw.state === "closed" || raw.state === "merged" ? raw.state : "open",
-    ...(typeof raw.workspaceId === "string" && raw.workspaceId
-      ? { workspaceId: raw.workspaceId as ProductWorkspaceId }
+    ...(typeof raw.projectId === "string" && raw.projectId
+      ? { projectId: raw.projectId as ProjectId }
       : {}),
-    ...(typeof raw.selectedWorkspaceId === "string" && raw.selectedWorkspaceId
-      ? { selectedWorkspaceId: raw.selectedWorkspaceId as ProductWorkspaceId }
+    ...(typeof raw.selectedProjectId === "string" && raw.selectedProjectId
+      ? { selectedProjectId: raw.selectedProjectId as ProjectId }
       : {}),
     ...(typeof raw.selectedRepo === "string" &&
     isValidGitHubRepositoryNameWithOwner(raw.selectedRepo)
@@ -146,18 +147,19 @@ const STATE_TABS: ReadonlyArray<{ value: PullRequestState; label: string }> = [
 ];
 
 function PullRequestsRouteView() {
+  const { settings } = useAppSettings();
   const search = Route.useSearch();
   const navigate = useNavigate({ from: Route.fullPath });
   const trafficLightGutter = useDesktopTopBarTrafficLightGutterClassName();
   const windowControlsGutter = useDesktopTopBarWindowControlsGutterClassName();
-  const workspaces = useProductStore((store) => store.workspaces);
+  const projects = useStore((store) => store.projects);
   const queryClient = useQueryClient();
   // One fetch per (state, project): the server returns the "all" involvement superset and the
   // Reviewing/Authored tabs are derived below, so involvement switches never hit the network.
   // Manual memoization kept: this file does not compile under React Compiler (see compile-report).
   const listInput = useMemo(
-    () => ({ state: search.state, workspaceId: search.workspaceId ?? null }),
-    [search.workspaceId, search.state],
+    () => ({ state: search.state, projectId: search.projectId ?? null }),
+    [search.projectId, search.state],
   );
   const listQuery = useQuery(pullRequestsListQueryOptions(listInput));
   const refreshMutation = useMutation(pullRequestsForceRefreshMutationOptions(queryClient));
@@ -173,8 +175,8 @@ function PullRequestsRouteView() {
           return {
             involvement: next.involvement,
             state: next.state,
-            ...(next.workspaceId ? { workspaceId: next.workspaceId } : {}),
-            ...(next.selectedWorkspaceId ? { selectedWorkspaceId: next.selectedWorkspaceId } : {}),
+            ...(next.projectId ? { projectId: next.projectId } : {}),
+            ...(next.selectedProjectId ? { selectedProjectId: next.selectedProjectId } : {}),
             ...(next.selectedRepo ? { selectedRepo: next.selectedRepo } : {}),
             ...(next.number ? { number: next.number } : {}),
             ...(next.q ? { q: next.q } : {}),
@@ -184,16 +186,16 @@ function PullRequestsRouteView() {
       }),
     [navigate],
   );
-  const repositoryWorkspaces = useMemo(
+  const repositoryProjects = useMemo(
     () =>
-      workspaces
-        .filter((workspace) => workspace.archivedAt === null && workspace.access.kind !== "chat")
-        .map((workspace) => [workspace.id, workspace.title] as const)
+      projects
+        .filter((project) => project.kind === "project")
+        .map((project) => [project.id, project.name] as const)
         .toSorted((left, right) => left[1].localeCompare(right[1])),
-    [workspaces],
+    [projects],
   );
-  const scopedWorkspaceName = search.workspaceId
-    ? repositoryWorkspaces.find(([workspaceId]) => workspaceId === search.workspaceId)?.[1]
+  const scopedProjectName = search.projectId
+    ? repositoryProjects.find(([projectId]) => projectId === search.projectId)?.[1]
     : undefined;
   // Precise fallback for the filtered tabs: when a repository hit the per-repo entry cap, the
   // client-side involvement filter over the truncated superset can miss older matches, so the
@@ -211,7 +213,7 @@ function PullRequestsRouteView() {
     ...pullRequestsExactInvolvementQueryOptions({
       involvement: search.involvement,
       state: search.state,
-      workspaceId: search.workspaceId ?? null,
+      projectId: search.projectId ?? null,
     }),
     enabled: needsExactInvolvement,
   });
@@ -230,10 +232,10 @@ function PullRequestsRouteView() {
       if (state === search.state) return;
       void prefetchPullRequestListState(queryClient, {
         state,
-        workspaceId: search.workspaceId ?? null,
+        projectId: search.projectId ?? null,
       });
     },
-    [queryClient, search.workspaceId, search.state],
+    [queryClient, search.projectId, search.state],
   );
   const activeListData =
     needsExactInvolvement && exactInvolvementQuery.data
@@ -253,10 +255,10 @@ function PullRequestsRouteView() {
             activeListData?.viewer ?? listQuery.data?.viewer,
             search.involvement,
           ).filter((entry) => matchesPullRequestSearchQuery(entry, query)),
-          { preferredWorkspaceId: search.selectedWorkspaceId },
+          { preferredProjectId: search.selectedProjectId },
         ),
       ),
-    [activeListData, listQuery.data?.viewer, query, search.involvement, search.selectedWorkspaceId],
+    [activeListData, listQuery.data?.viewer, query, search.involvement, search.selectedProjectId],
   );
   const grouped = useMemo(
     () =>
@@ -268,13 +270,13 @@ function PullRequestsRouteView() {
   // A crafted URL must not show Project A's list while opening Project B's PR: when the list
   // is project-scoped, the selection must belong to that same project.
   const selectionMatchesScope =
-    search.workspaceId === undefined ||
-    search.selectedWorkspaceId === undefined ||
-    search.selectedWorkspaceId === search.workspaceId;
+    search.projectId === undefined ||
+    search.selectedProjectId === undefined ||
+    search.selectedProjectId === search.projectId;
   const selectedInput =
-    selectionMatchesScope && search.selectedWorkspaceId && search.selectedRepo && search.number
+    selectionMatchesScope && search.selectedProjectId && search.selectedRepo && search.number
       ? {
-          workspaceId: search.selectedWorkspaceId,
+          projectId: search.selectedProjectId,
           repository: search.selectedRepo,
           number: search.number,
         }
@@ -290,7 +292,7 @@ function PullRequestsRouteView() {
     // selectedInput is a fresh object literal every render; depend on its primitive
     // fields instead so this only re-fires when the actual selection changes.
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [search.selectedWorkspaceId, search.selectedRepo, search.number]);
+  }, [search.selectedProjectId, search.selectedRepo, search.number]);
   useEffect(() => {
     if (detailOpen) return;
     const timeout = window.setTimeout(() => setRenderedInput(null), 300);
@@ -316,7 +318,7 @@ function PullRequestsRouteView() {
     const state = openPaneInState(createDefaultRightDockState(), {
       paneId: PULL_REQUESTS_ROUTE_PANE_ID,
       kind: "pullRequest",
-      pullRequestWorkspaceId: renderedInput.workspaceId,
+      pullRequestProjectId: renderedInput.projectId,
       pullRequestRepository: renderedInput.repository,
       pullRequestNumber: renderedInput.number,
     });
@@ -337,7 +339,7 @@ function PullRequestsRouteView() {
   const handleSelectPullRequest = useCallback(
     (entry: PullRequestListEntry) =>
       updateSearch({
-        selectedWorkspaceId: entry.workspaceId,
+        selectedProjectId: entry.projectId,
         selectedRepo: entry.repository,
         number: entry.number,
       }),
@@ -345,7 +347,7 @@ function PullRequestsRouteView() {
   );
   const handleTogglePinned = useCallback(
     (entry: PullRequestListEntry) => {
-      for (const input of pullRequestPinToggleInputs(entry, search.workspaceId === undefined)) {
+      for (const input of pullRequestPinToggleInputs(entry, search.projectId === undefined)) {
         mutatePin(input, {
           onError: (error) =>
             toastManager.add({
@@ -356,7 +358,7 @@ function PullRequestsRouteView() {
         });
       }
     },
-    [mutatePin, search.workspaceId],
+    [mutatePin, search.projectId],
   );
   const refreshBlocked = refreshMutation.isPending || activeActionCount > 0;
   const handleManualRefresh = useCallback(() => {
@@ -395,13 +397,13 @@ function PullRequestsRouteView() {
               {/* The title rides the surface header like the automations detail route, so the
                   scroll area opens straight onto the filters and the list. */}
               <h1 className="truncate font-heading text-sm font-medium">Pull requests</h1>
-              {scopedWorkspaceName ? (
+              {scopedProjectName ? (
                 <>
                   <span aria-hidden className="text-muted-foreground/50">
                     ·
                   </span>
                   <span className="truncate text-xs text-muted-foreground">
-                    {scopedWorkspaceName}
+                    {scopedProjectName}
                   </span>
                 </>
               ) : null}
@@ -452,10 +454,10 @@ function PullRequestsRouteView() {
                       onChange={(event) => updateSearch({ q: event.target.value || undefined })}
                     />
                   </div>
-                  <PullRequestWorkspaceFilterPopover
-                    projects={repositoryWorkspaces}
-                    value={search.workspaceId}
-                    onChange={(workspaceId) => updateSearch({ workspaceId, ...CLEARED_SELECTION })}
+                  <PullRequestProjectFilterPopover
+                    projects={repositoryProjects}
+                    value={search.projectId}
+                    onChange={(projectId) => updateSearch({ projectId, ...CLEARED_SELECTION })}
                   />
                 </div>
               </div>
@@ -496,10 +498,11 @@ function PullRequestsRouteView() {
                 <PullRequestList
                   entries={entries}
                   grouped={grouped}
-                  selectedWorkspaceId={search.selectedWorkspaceId}
+                  showDiffColors={settings.showPullRequestDiffColors}
+                  selectedProjectId={search.selectedProjectId}
                   selectedRepo={search.selectedRepo}
                   selectedNumber={search.number}
-                  showWorkspaceTitle={search.workspaceId === undefined}
+                  showProjectTitle={search.projectId === undefined}
                   onSelect={handleSelectPullRequest}
                   onTogglePinned={handleTogglePinned}
                 />

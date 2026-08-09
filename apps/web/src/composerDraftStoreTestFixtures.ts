@@ -1,5 +1,4 @@
-import type { HistoricalModelOptions, HistoricalModelSelection, HistoricalModelSlug } from "~/historicalModelSelection";
-import { ThreadId } from "@omnimind/contracts";
+import { ThreadId, type ModelSelection, type ProviderModelOptions } from "@synara/contracts";
 import {
   useComposerDraftStore,
   type ComposerFileAttachment,
@@ -170,17 +169,17 @@ export function resetComposerDraftStore() {
 }
 
 export function modelSelection(
-  provider: HistoricalModelSelection["provider"],
+  provider: ModelSelection["provider"],
   model: string,
-  options?: HistoricalModelSelection["options"],
-): HistoricalModelSelection {
+  options?: ModelSelection["options"],
+): ModelSelection {
   return {
     provider,
     model,
     ...(options ? { options } : {}),
-  } as HistoricalModelSelection;
+  } as ModelSelection;
 }
 
-export function providerModelOptions(options: HistoricalModelOptions): HistoricalModelOptions {
+export function providerModelOptions(options: ProviderModelOptions): ProviderModelOptions {
   return options;
 }

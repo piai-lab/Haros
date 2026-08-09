@@ -1,1 +1,0 @@
-{"appendToFiles":{"apps/service/src/atomicWrite.ts":"\nexport const v7DirectCommonJsConstructor = () => new (require('node:worker_threads').Worker)('worker.js');\n"}}

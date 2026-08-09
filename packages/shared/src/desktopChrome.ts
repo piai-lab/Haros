@@ -57,7 +57,11 @@ export const MAC_DESKTOP_TOP_BAR_TRAFFIC_LIGHT_GUTTER_CSS_PX = 90;
 export const DESKTOP_TOP_BAR_TRAFFIC_LIGHT_GUTTER_CSS_VAR =
   "--desktop-top-bar-traffic-light-gutter";
 
-/** Invalid bridge data degrades to no zoom, never zero/NaN geometry. */
+/**
+ * Coerce an untrusted zoom factor (missing bridge, stale IPC payload) to a usable
+ * multiplier. Every zoom-aware conversion in this file funnels through here so a
+ * bogus value degrades to "no zoom" instead of collapsing geometry to 0 or NaN.
+ */
 export function normalizeDesktopZoomFactor(zoomFactor: unknown): number {
   return typeof zoomFactor === "number" && Number.isFinite(zoomFactor) && zoomFactor > 0
     ? zoomFactor
@@ -74,6 +78,7 @@ export function resolveMacDesktopTopBarTrafficLightGutterCssPx(zoomFactor: numbe
   );
 }
 
+/** Axis-aligned rectangle, in whichever pixel space the caller is working in. */
 export interface DesktopRect {
   x: number;
   y: number;
@@ -81,13 +86,25 @@ export interface DesktopRect {
   height: number;
 }
 
-/** Convert renderer layout CSS pixels into Electron window-relative DIPs. */
+/**
+ * Convert a renderer rectangle (`getBoundingClientRect()`, i.e. layout CSS pixels)
+ * into the window-relative DIPs that Electron's native view APIs expect.
+ *
+ * `webContents` zoom scales the renderer's CSS pixel against the window's DIP grid:
+ * at zoom z, one CSS px covers z DIPs, so a slot measured as `w` CSS px physically
+ * spans `w * z` DIPs. Native views (`WebContentsView.setBounds`, `BrowserWindow`
+ * bounds) are never zoomed, so handing them raw CSS numbers makes them miss their
+ * DOM slot by exactly `1 / z` — the native browser view overflows the panel when the
+ * shell is zoomed out and under-fills it when zoomed in.
+ */
 export function resolveDesktopDipRectFromCssRect(
   rect: DesktopRect,
   zoomFactor: number,
 ): DesktopRect {
   const safeZoom = normalizeDesktopZoomFactor(zoomFactor);
-  if (safeZoom === 1) return rect;
+  if (safeZoom === 1) {
+    return rect;
+  }
   return {
     x: rect.x * safeZoom,
     y: rect.y * safeZoom,

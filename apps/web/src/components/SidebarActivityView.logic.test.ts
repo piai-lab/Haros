@@ -1,6 +1,6 @@
 import { describe, expect, it } from "vitest";
 
-import { ProjectId, ThreadId } from "@omnimind/contracts";
+import { ProjectId, ThreadId } from "@synara/contracts";
 
 import type { SidebarThreadSummary, ThreadSession } from "../types";
 import { formatRelativeTime } from "~/lib/relativeTime";
@@ -518,7 +518,7 @@ describe("project filter", () => {
         }),
       ],
       (projectId) => projectId === PROJECT_ID,
-      { nowMs: new Date(2026, 7, 1, 15, 0, 0).getTime() },
+      { nowMs: Date.parse("2026-08-01T12:00:00.000Z") },
     );
 
     expect(groups.map((group) => [group.kind, group.threads.map((thread) => thread.id)])).toEqual([
@@ -532,23 +532,31 @@ describe("project filter", () => {
     });
   });
 
-  it("ranks a Project touched by the user today above newer background output", () => {
-    const nowMs = new Date(2026, 7, 1, 15, 0, 0).getTime();
-    const userProject = makeThread({
-      id: "user-project",
-      projectId: PROJECT_ID,
-      latestTurn: completedTurn("2026-08-01T10:00:00.000Z"),
-      lastVisitedAt: "2026-08-01T11:00:00.000Z",
-    });
-    const backgroundProject = makeThread({
-      id: "background-project",
-      projectId: OTHER_PROJECT_ID,
-      latestTurn: completedTurn("2026-08-01T14:00:00.000Z"),
-      lastVisitedAt: "2026-07-31T12:00:00.000Z",
-    });
-    const groups = groupActivityThreadsByProject([backgroundProject, userProject], () => true, {
-      nowMs,
-    });
+  it("ranks projects touched in the current working day above newer untouched activity", () => {
+    const OTHER_PROJECT_ID = ProjectId.makeUnsafe("project-2");
+    // 01:30 local on Aug 2: the working day still started at 04:00 on Aug 1.
+    const nowMs = new Date(2026, 7, 2, 1, 30, 0).getTime();
+    const localIso = (day: number, hour: number) => new Date(2026, 7, day, hour).toISOString();
+
+    const touched = {
+      ...makeThread({
+        id: "touched",
+        projectId: PROJECT_ID,
+        latestTurn: completedTurn(localIso(1, 22)),
+        lastVisitedAt: localIso(1, 22),
+      }),
+    };
+    // Newer agent output, but the user has not opened it since before the turnover.
+    const untouched = {
+      ...makeThread({
+        id: "untouched",
+        projectId: OTHER_PROJECT_ID,
+        latestTurn: completedTurn(localIso(2, 1)),
+        lastVisitedAt: localIso(1, 3),
+      }),
+    };
+
+    const groups = groupActivityThreadsByProject([untouched, touched], () => true, { nowMs });
     expect(groups.map((group) => group.key)).toEqual([
       `project:${PROJECT_ID}`,
       `project:${OTHER_PROJECT_ID}`,

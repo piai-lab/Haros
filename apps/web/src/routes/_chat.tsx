@@ -1,12 +1,6 @@
-import { ThreadId, type ResolvedKeybindingsConfig } from "@omnimind/contracts";
+import type { ResolvedKeybindingsConfig } from "@synara/contracts";
 import { useQuery } from "@tanstack/react-query";
-import {
-  Outlet,
-  createFileRoute,
-  useLocation,
-  useNavigate,
-  useRouterState,
-} from "@tanstack/react-router";
+import { Outlet, createFileRoute, useLocation, useNavigate } from "@tanstack/react-router";
 import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 
 import {
@@ -19,11 +13,10 @@ import { RecentViewSwitcher } from "../components/RecentViewSwitcher";
 import { shouldRenderTerminalWorkspace } from "../components/ChatView.logic";
 import ThreadSidebar from "../components/Sidebar";
 import { isElectron } from "../env";
-import { parseDiffRouteSearch } from "../diffRouteSearch";
-import { useCreateChat } from "../hooks/useCreateChat";
-import { useCreateStudioChat } from "../hooks/useCreateStudioChat";
+import { useHandleNewChat } from "../hooks/useHandleNewChat";
+import { useHandleNewStudioChat } from "../hooks/useHandleNewStudioChat";
 import { useTemporaryThreadLifecycle } from "../hooks/useTemporaryThreadLifecycle";
-import { useCreateThread } from "../hooks/useCreateThread";
+import { useHandleNewThread } from "../hooks/useHandleNewThread";
 import { useRecentViewSwitcher } from "../hooks/useRecentViewSwitcher";
 import { useLatestProjectStore } from "../latestProjectStore";
 import {
@@ -36,13 +29,18 @@ import { resolveInheritedThreadContext } from "../lib/threadBootstrap";
 import { isTerminalFocused } from "../lib/terminalFocus";
 import { serverConfigQueryOptions } from "../lib/serverReactQuery";
 import { startFreshChatForActiveSurface } from "../lib/startContainerChat";
+import { isOrdinarySpaceProject } from "../lib/spaces";
 import { isKeyboardShortcutsHelpShortcut, resolveShortcutCommand } from "../keybindings";
 import { useStore } from "../store";
 import { createProjectLastActivityAtSelector } from "../storeSelectors";
+import { useSpacesUiStore } from "../spacesUiStore";
 import { selectThreadTerminalState, useTerminalStateStore } from "../terminalStateStore";
 import { useThreadSelectionStore } from "../threadSelectionStore";
 import { onServerMaintenanceUpdated } from "../wsNativeApi";
 import { useWorkspacePathsStore } from "../workspacePathsStore";
+import { useProviderStatusesForLocalConfig } from "~/hooks/useProviderStatusesForLocalConfig";
+import { useRefreshProviderStatusesNow } from "~/hooks/useProviderStatusRefresh";
+import { resolveProviderSendAvailabilityWithRefresh } from "~/lib/providerAvailability";
 import { toastManager } from "~/components/ui/toast";
 import {
   Sidebar,
@@ -53,8 +51,7 @@ import {
   useSidebar,
 } from "~/components/ui/sidebar";
 import type { SidebarResizableOptions } from "~/components/ui/sidebar";
-import { cn } from "~/lib/styles";
-import { ChatThreadRouteView } from "./_chat.$threadId";
+import { cn } from "~/lib/utils";
 
 const EMPTY_KEYBINDINGS: ResolvedKeybindingsConfig = [];
 const THREAD_SIDEBAR_WIDTH_STORAGE_KEY = "chat_thread_sidebar_width";
@@ -83,7 +80,8 @@ function ThreadRetentionMaintenanceToast() {
         return;
       }
 
-      const { state, deletedCount, totalCount, error } = event.payload;
+      // `deletedCount` is the legacy wire name; retention now archives.
+      const { state, deletedCount: archivedCount, totalCount, error } = event.payload;
       const eventMs = Date.parse(event.payload.at);
       const isStaleEvent = Number.isFinite(eventMs)
         ? Date.now() - eventMs > MAINTENANCE_EVENT_STALE_MS
@@ -95,7 +93,7 @@ function ThreadRetentionMaintenanceToast() {
       if (state === "started") {
         toastIdRef.current = toastManager.add({
           type: "loading",
-          title: "Hiding old chats...",
+          title: "Archiving old chats...",
           description: "Preparing background maintenance.",
           timeout: 0,
           data: { allowCrossThreadVisibility: true },
@@ -108,18 +106,18 @@ function ThreadRetentionMaintenanceToast() {
           toastIdRef.current ??
           toastManager.add({
             type: "loading",
-            title: "Hiding old chats...",
+            title: "Archiving old chats...",
             timeout: 0,
             data: { allowCrossThreadVisibility: true },
           });
         toastIdRef.current = toastId;
         toastManager.update(toastId, {
           type: "loading",
-          title: "Hiding old chats...",
+          title: "Archiving old chats...",
           description:
             totalCount && totalCount > 0
-              ? `${deletedCount ?? 0} of ${totalCount} chats hidden.`
-              : `${deletedCount ?? 0} chats hidden.`,
+              ? `${archivedCount ?? 0} of ${totalCount} chats archived.`
+              : `${archivedCount ?? 0} chats archived.`,
           timeout: 0,
           data: { allowCrossThreadVisibility: true },
         });
@@ -154,11 +152,11 @@ function ThreadRetentionMaintenanceToast() {
       if (!toastId) return;
       toastManager.update(toastId, {
         type: "success",
-        title: "Old chats hidden",
+        title: "Old chats archived",
         description:
-          deletedCount && deletedCount > 0
-            ? `${deletedCount} old chats hidden from the app.`
-            : "No old chats needed hiding.",
+          archivedCount && archivedCount > 0
+            ? `${archivedCount} old chats moved to Settings → Archived, where you can restore them.`
+            : "No old chats needed archiving.",
         timeout: 3500,
         data: { allowCrossThreadVisibility: true },
       });
@@ -219,9 +217,9 @@ function ChatRouteGlobalShortcuts() {
     activeDraftThread,
     activeProjectId,
     activeThread,
-    createThread,
+    handleNewThread,
     projects,
-  } = useCreateThread();
+  } = useHandleNewThread();
   const {
     recentSwitcherState,
     recentViewEntries,
@@ -233,8 +231,8 @@ function ChatRouteGlobalShortcuts() {
     activeDraftThread,
     projects,
   });
-  const { createChat } = useCreateChat();
-  const { createStudioChat } = useCreateStudioChat();
+  const { handleNewChat } = useHandleNewChat();
+  const { handleNewStudioChat } = useHandleNewStudioChat();
   const homeDir = useWorkspacePathsStore((state) => state.homeDir);
   const chatWorkspaceRoot = useWorkspacePathsStore((state) => state.chatWorkspaceRoot);
   const studioWorkspaceRoot = useWorkspacePathsStore((state) => state.studioWorkspaceRoot);
@@ -244,10 +242,13 @@ function ChatRouteGlobalShortcuts() {
   const threadsHydrated = useStore((state) => state.threadsHydrated);
   const selectProjectLastActivityAt = useMemo(() => createProjectLastActivityAtSelector(), []);
   const projectLastActivityAt = useStore(selectProjectLastActivityAt);
+  const activeSpaceId = useSpacesUiStore((state) => state.activeSpaceId);
   useTemporaryThreadLifecycle(activeContextThreadId);
   const serverConfigQuery = useQuery(serverConfigQueryOptions());
   const keybindings = serverConfigQuery.data?.keybindings ?? EMPTY_KEYBINDINGS;
   const platform = typeof navigator === "undefined" ? "" : navigator.platform;
+  const providerStatuses = useProviderStatusesForLocalConfig();
+  const refreshProviderStatuses = useRefreshProviderStatusesNow();
   const activeThreadTerminalState = activeContextThreadId
     ? selectThreadTerminalState(terminalStateByThreadId, activeContextThreadId)
     : null;
@@ -261,38 +262,50 @@ function ChatRouteGlobalShortcuts() {
     presentationMode: activeThreadTerminalState?.presentationMode ?? "drawer",
     terminalOpen,
   });
-  const locationProjects = useMemo(
-    () => projects.filter((project) => project.kind === "project"),
-    [projects],
+  // Shortcuts that target "a project" must stay inside the Space you are looking at, or
+  // mod+alt+arrow would switch Space and the next new-thread shortcut would drop you back
+  // out of it.
+  const activeSpaceProjects = useMemo(
+    () =>
+      projects.filter(
+        (project) =>
+          isOrdinarySpaceProject(project, { homeDir, chatWorkspaceRoot, studioWorkspaceRoot }) &&
+          (project.spaceId ?? null) === activeSpaceId,
+      ),
+    [activeSpaceId, chatWorkspaceRoot, homeDir, projects, studioWorkspaceRoot],
   );
   const currentProjectId = resolveCurrentProjectTargetId(
-    locationProjects,
+    activeSpaceProjects,
     activeProject?.id ?? null,
   );
+  // The remembered project is global, so it is unusable the moment you switch Space. Fall
+  // back to this Space's most recently touched project rather than to nothing.
   const latestUsableProjectId = useMemo(
     () =>
       resolveLatestProjectTargetIdWithFallback(
-        locationProjects,
+        activeSpaceProjects,
         latestProjectId,
         projectLastActivityAt,
       ),
-    [latestProjectId, locationProjects, projectLastActivityAt],
+    [activeSpaceProjects, latestProjectId, projectLastActivityAt],
   );
+  // Deliberately unscoped: the persisted id is only cleared once the project is gone from
+  // the app entirely, not merely absent from the Space you happen to be in.
   const persistedLatestProjectStillExists = resolveLatestProjectTargetId(projects, latestProjectId);
-  const createChatForActiveSurface = useCallback(
+  const handleNewChatForActiveSurface = useCallback(
     () =>
       startFreshChatForActiveSurface({
         activeProject,
         isStudioRoute,
         paths: { homeDir, chatWorkspaceRoot, studioWorkspaceRoot },
-        createChat,
-        createStudioChat,
+        handleNewChat,
+        handleNewStudioChat,
       }),
     [
       activeProject,
       chatWorkspaceRoot,
-      createChat,
-      createStudioChat,
+      handleNewChat,
+      handleNewStudioChat,
       homeDir,
       isStudioRoute,
       studioWorkspaceRoot,
@@ -386,7 +399,7 @@ function ChatRouteGlobalShortcuts() {
       if (command === "chat.newChat" || command === "chat.newLocal") {
         event.preventDefault();
         event.stopPropagation();
-        void createChatForActiveSurface();
+        void handleNewChatForActiveSurface();
         return;
       }
 
@@ -394,7 +407,7 @@ function ChatRouteGlobalShortcuts() {
         if (!latestUsableProjectId) return;
         event.preventDefault();
         event.stopPropagation();
-        void createThread(latestUsableProjectId);
+        void handleNewThread(latestUsableProjectId);
         return;
       }
 
@@ -403,12 +416,50 @@ function ChatRouteGlobalShortcuts() {
         if (!target) return;
         event.preventDefault();
         event.stopPropagation();
-        void createThread(target.projectId, {
+        void handleNewThread(target.projectId, {
           ...(target.inheritContext
             ? resolveInheritedThreadContext({ activeThread, activeDraftThread })
             : {}),
           entryPoint: "terminal",
         });
+        return;
+      }
+
+      if (
+        command === "chat.newClaude" ||
+        command === "chat.newCodex" ||
+        command === "chat.newCursor"
+      ) {
+        const provider =
+          command === "chat.newClaude"
+            ? "claudeAgent"
+            : command === "chat.newCodex"
+              ? "codex"
+              : "cursor";
+        const target = resolveNewThreadTarget({ currentProjectId, latestUsableProjectId });
+        if (!target) return;
+        event.preventDefault();
+        event.stopPropagation();
+        void (async () => {
+          const providerAvailability = await resolveProviderSendAvailabilityWithRefresh({
+            provider,
+            statuses: providerStatuses,
+            refreshStatuses: () => refreshProviderStatuses({ silent: true }),
+          });
+          if (!providerAvailability.usable) {
+            toastManager.add({
+              type: "error",
+              title: providerAvailability.unavailableReason,
+            });
+            return;
+          }
+          await handleNewThread(target.projectId, {
+            provider,
+            ...(target.inheritContext
+              ? resolveInheritedThreadContext({ activeThread, activeDraftThread })
+              : {}),
+          });
+        })();
         return;
       }
 
@@ -421,7 +472,7 @@ function ChatRouteGlobalShortcuts() {
       if (!target) return;
       event.preventDefault();
       event.stopPropagation();
-      void createThread(
+      void handleNewThread(
         target.projectId,
         target.inheritContext
           ? resolveInheritedThreadContext({ activeThread, activeDraftThread })
@@ -440,12 +491,14 @@ function ChatRouteGlobalShortcuts() {
     clearSelection,
     commitRecentSwitcherSelection,
     currentProjectId,
-    createChatForActiveSurface,
-    createThread,
+    handleNewChatForActiveSurface,
+    handleNewThread,
     keybindings,
     latestUsableProjectId,
     openOrAdvanceRecentSwitcher,
     platform,
+    providerStatuses,
+    refreshProviderStatuses,
     recentSwitcherState,
     selectedThreadIdsSize,
     terminalOpen,
@@ -507,14 +560,6 @@ const SIDEBAR_GAP_CLASS =
 const SIDEBAR_INNER_CLASS = "app-sidebar-surface";
 
 function ChatRouteLayout() {
-  const threadRouteMatch = useRouterState({
-    select: (state) => state.matches.find((match) => match.routeId === "/_chat/$threadId") ?? null,
-  });
-  const routeThreadId =
-    typeof threadRouteMatch?.params.threadId === "string"
-      ? ThreadId.makeUnsafe(threadRouteMatch.params.threadId)
-      : null;
-  const threadRouteSearch = threadRouteMatch?.search ?? parseDiffRouteSearch({});
   const isEditorView = useLocation({
     select: (location) => (location.search as { view?: unknown }).view === "editor",
   });
@@ -551,11 +596,7 @@ function ChatRouteLayout() {
           <SidebarRail placement="content-seam" />
         </SidebarInstanceProvider>
       )}
-      {routeThreadId === null ? (
-        <Outlet />
-      ) : (
-        <ChatThreadRouteView threadId={routeThreadId} search={threadRouteSearch} />
-      )}
+      <Outlet />
     </div>
   );
 

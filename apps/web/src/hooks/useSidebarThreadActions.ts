@@ -3,8 +3,8 @@
 // Layer: Web Sidebar controller hook
 // Exports: useSidebarThreadActions
 
-import { type ProjectId, ThreadId } from "@omnimind/contracts";
-import { pluralize } from "@omnimind/shared/text";
+import { type ProjectId, ThreadId } from "@synara/contracts";
+import { pluralize } from "@synara/shared/text";
 import { useMutation, useQueryClient } from "@tanstack/react-query";
 import { useNavigate } from "@tanstack/react-router";
 import { useCallback, useEffect, useMemo, useRef, useState } from "react";
@@ -30,15 +30,11 @@ import {
   createOptimisticSettledMutation,
   recordOptimisticSettledMutationSequence,
   reconcileOptimisticSettledMutation,
+  setThreadSettledFromClient,
   type OptimisticSettledMutation,
 } from "../lib/threadSettle";
-import { randomUUID } from "../lib/identifiers";
+import { newCommandId, randomUUID } from "../lib/utils";
 import { readNativeApi } from "../nativeApi";
-import {
-  setProductConversationBoardState,
-  setProductConversationPinned,
-} from "../productConversationMutations";
-import { readProductNativeApi } from "../wsNativeApi";
 import { usePinnedThreadsStore } from "../pinnedThreadsStore";
 import { reconcileOptimisticPinState } from "../pinning.logic";
 import {
@@ -74,7 +70,7 @@ async function unarchiveThreadIgnoringAlreadyRestored(threadId: ThreadId): Promi
   try {
     const api = readNativeApi();
     if (!api) throw new Error("Unable to connect to the app server.");
-    await unarchiveThreadFromClient(readProductNativeApi(), threadId);
+    await unarchiveThreadFromClient(api.orchestration, threadId);
   } catch (error) {
     if (!isThreadAlreadyUnarchivedError(error, threadId)) throw error;
   }
@@ -94,7 +90,7 @@ export function useSidebarThreadActions(input: {
     "confirmThreadArchive" | "confirmThreadDelete" | "sidebarThreadSortOrder"
   >;
   readonly clearTerminalState: (threadId: ThreadId) => void;
-  readonly createChat: (options?: { fresh?: boolean }) => Promise<unknown>;
+  readonly handleNewChat: (options?: { fresh?: boolean }) => Promise<unknown>;
   readonly projectById: ReadonlyMap<ProjectId, Project>;
   readonly routeSplitViewId: string | null;
   readonly routeThreadId: ThreadId | null;
@@ -107,7 +103,7 @@ export function useSidebarThreadActions(input: {
     activeSplitView,
     appSettings,
     clearTerminalState,
-    createChat,
+    handleNewChat,
     projectById,
     routeSplitViewId,
     routeThreadId,
@@ -177,10 +173,19 @@ export function useSidebarThreadActions(input: {
     });
   }, []);
   const dispatchThreadPinnedState = useCallback(async (threadId: ThreadId, isPinned: boolean) => {
-    await setProductConversationPinned(threadId, isPinned);
+    const api = readNativeApi();
+    if (!api) return;
+    await api.orchestration.dispatchCommand({
+      type: "thread.meta.update",
+      commandId: newCommandId(),
+      threadId,
+      isPinned,
+    });
   }, []);
   const setThreadPinned = useCallback(
     async (threadId: ThreadId, isPinned: boolean) => {
+      const api = readNativeApi();
+      if (!api) return;
       const requestVersion =
         (latestPinnedMutationVersionByThreadIdRef.current.get(threadId) ?? 0) + 1;
       latestPinnedMutationVersionByThreadIdRef.current.set(threadId, requestVersion);
@@ -251,6 +256,8 @@ export function useSidebarThreadActions(input: {
 
   const setThreadSettled = useCallback(
     async (threadId: ThreadId, isSettled: boolean) => {
+      const api = readNativeApi();
+      if (!api) throw new Error("Unable to connect to the app server.");
       const requestVersion =
         (latestSettledMutationVersionByThreadIdRef.current.get(threadId) ?? 0) + 1;
       latestSettledMutationVersionByThreadIdRef.current.set(threadId, requestVersion);
@@ -275,10 +282,12 @@ export function useSidebarThreadActions(input: {
         );
         return next;
       });
-      const boardState = isSettled ? "done" : "active";
       try {
-        const commandSequence = (await setProductConversationBoardState(threadId, boardState))
-          .sequence;
+        const commandSequence = await setThreadSettledFromClient(
+          api.orchestration,
+          threadId,
+          isSettled,
+        );
         if (isLatestRequest()) {
           setOptimisticSettledMutationByThreadId((current) => {
             const mutation = current.get(threadId);
@@ -497,7 +506,7 @@ export function useSidebarThreadActions(input: {
                 replace: true,
               });
             } else if (prepared.shouldNavigateToFallback) {
-              void createChat({ fresh: true });
+              void handleNewChat({ fresh: true });
             }
           } else if (prepared?.shouldNavigateToFallback) {
             if (prepared.fallbackThreadId) {
@@ -507,7 +516,7 @@ export function useSidebarThreadActions(input: {
                 replace: true,
               });
             } else {
-              void createChat({ fresh: true });
+              void handleNewChat({ fresh: true });
             }
           }
         },
@@ -521,7 +530,7 @@ export function useSidebarThreadActions(input: {
       clearProjectDraftThreadById,
       clearTemporaryThread,
       clearTerminalState,
-      createChat,
+      handleNewChat,
       navigate,
       removeThreadFromSplitViews,
       removeWorktreeMutation,
@@ -563,7 +572,7 @@ export function useSidebarThreadActions(input: {
 
       pendingThreadIds.add(threadId);
       const runArchive = async (): Promise<boolean> => {
-        await archiveThreadFromClient(readProductNativeApi(), threadId);
+        await archiveThreadFromClient(api.orchestration, threadId);
         if (routeThreadId === threadId) {
           const fallbackThreadId = getFallbackThreadIdAfterDelete({
             threads: sidebarThreads,
@@ -578,7 +587,7 @@ export function useSidebarThreadActions(input: {
               replace: true,
             });
           } else {
-            await createChat({ fresh: true });
+            await handleNewChat({ fresh: true });
           }
         }
         return true;
@@ -587,7 +596,7 @@ export function useSidebarThreadActions(input: {
         pendingThreadIds.delete(threadId);
       });
     },
-    [appSettings.sidebarThreadSortOrder, createChat, routeThreadId, sidebarThreads, navigate],
+    [appSettings.sidebarThreadSortOrder, handleNewChat, routeThreadId, sidebarThreads, navigate],
   );
 
   const restoreArchivedThreadFromToast = useCallback(

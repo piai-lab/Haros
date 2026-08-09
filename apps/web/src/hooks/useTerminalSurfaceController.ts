@@ -7,8 +7,8 @@
 //       thread cleanup, and split-view navigation, so it shares only the lower-level
 //       terminalSession helpers instead of this controller.
 
-import { type ThreadId } from "@omnimind/contracts";
-import { type TerminalCliKind } from "@omnimind/shared/terminalThreads";
+import { type ThreadId } from "@synara/contracts";
+import { type TerminalCliKind } from "@synara/shared/terminalThreads";
 import { useState } from "react";
 
 import { useAppSettings } from "~/appSettings";
@@ -42,6 +42,7 @@ export function useTerminalSurfaceController(threadId: ThreadId) {
   const closeTerminalAndEnsureReplacementStore = useTerminalStateStore(
     (s) => s.closeTerminalAndEnsureReplacement,
   );
+  const closeExitedTerminalStore = useTerminalStateStore((s) => s.closeExitedTerminal);
   const closeTerminalGroupStore = useTerminalStateStore((s) => s.closeTerminalGroup);
   const setTerminalHeightStore = useTerminalStateStore((s) => s.setTerminalHeight);
   const resizeTerminalSplitStore = useTerminalStateStore((s) => s.resizeTerminalSplit);
@@ -105,15 +106,26 @@ export function useTerminalSurfaceController(threadId: ThreadId) {
     bumpFocusRequest();
   };
 
-  const handleTerminalSessionExited = (terminalId: string) => {
+  const disposeExitedTerminal = (terminalId: string) => {
     disposeAndCloseTerminalSession({
       api: readNativeApi(),
       threadId,
       terminalId,
       processAlreadyExited: true,
     });
+  };
+
+  const handleTerminalSessionExited = (terminalId: string) => {
+    disposeExitedTerminal(terminalId);
     closeTerminalAndEnsureReplacementStore(threadId, terminalId, randomTerminalId());
     bumpFocusRequest();
+  };
+
+  const handleDockTerminalSessionExited = (terminalId: string) => {
+    disposeExitedTerminal(terminalId);
+    const disposition = closeExitedTerminalStore(threadId, terminalId);
+    bumpFocusRequest();
+    return disposition;
   };
 
   const closeTerminalGroup = (groupId: string) => closeTerminalGroupStore(threadId, groupId);
@@ -142,6 +154,7 @@ export function useTerminalSurfaceController(threadId: ThreadId) {
     activateTerminal,
     closeTerminal,
     handleTerminalSessionExited,
+    handleDockTerminalSessionExited,
     closeTerminalGroup,
     setTerminalHeight,
     resizeTerminalSplit,

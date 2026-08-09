@@ -5,9 +5,9 @@ import { BrowserIdempotencyKey, BrowserTabId } from "./browserAutomationIds";
 import { BrowserNodeTarget, BrowserPointerTarget } from "./browserAutomationTargets";
 import {
   BrowserLoadState,
-  boundedBrowserInteger as boundedInt,
-  strictBrowserStruct as closedStruct,
-} from "./browserToolContract";
+  browserBoundedInt as boundedInt,
+  browserClosedStruct as closedStruct,
+} from "./browserAutomationToolCommon";
 
 const described = <S extends Schema.Top>(schema: S, description: string): S =>
   schema.annotate({ description }) as S;
@@ -20,7 +20,7 @@ export const BROWSER_FIELD_INSTRUCTION_COPY = {
     "Optional advanced retry key. OmniMind derives a stable key from the authenticated tool request when omitted; provide one only to deliberately deduplicate a byte-identical retry.",
   target:
     "Exactly one target; prefer a current snapshot {ref,snapshotId}, then a literal semantic locator, strict CSS, or an allowed point.",
-  show: "Whether to reveal the shared visible browser surface; defaults true. False only reuses an already attached renderer WebView and otherwise reports unavailable; it never creates a separate/headless browser.",
+  show: "Whether to request the shared browser surface when its owning thread is already active; defaults true and never changes the user's active chat. False reuses an existing scoped tab without requesting UI visibility.",
   waitUntil:
     "Navigation milestone; domcontentloaded is the default, while networkidle uses OmniMind's bounded tracker.",
   annotationId:
@@ -286,7 +286,7 @@ export const BrowserUploadInput = closedStruct({
   ...optionalTabField,
   target: described(
     BrowserNodeTarget,
-    "Exactly one enabled input[type=file] in the visible shared WebView; prefer a current snapshot {ref,snapshotId}.",
+    "Exactly one enabled input[type=file] in the shared browser page; prefer a current snapshot {ref,snapshotId}.",
   ),
   paths: described(
     Schema.Array(BrowserWorkspaceRelativePath)

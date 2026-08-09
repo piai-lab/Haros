@@ -1,10 +1,9 @@
 import { useEffect, useState } from "react";
 
-import type { DesktopWindowState } from "@omnimind/contracts";
+import type { DesktopWindowState } from "@synara/contracts";
 
 import { isElectron } from "~/env";
-import { cn } from "~/lib/styles";
-import { isWindowsPlatform } from "~/lib/platform";
+import { cn, isWindowsPlatform } from "~/lib/utils";
 
 const DEFAULT_WINDOW_STATE: DesktopWindowState = {
   isMaximized: false,

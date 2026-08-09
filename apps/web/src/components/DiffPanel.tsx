@@ -4,7 +4,7 @@
 
 import { useQuery } from "@tanstack/react-query";
 import { useNavigate, useParams } from "@tanstack/react-router";
-import { ThreadId, type TurnId } from "@omnimind/contracts";
+import { ThreadId, type TurnId } from "@synara/contracts";
 import type { FileDiffMetadata } from "@pierre/diffs/react";
 import { Columns2Icon, CopyIcon, EllipsisIcon, FolderIcon, Rows3Icon, XIcon } from "~/lib/icons";
 import { useCallback, useEffect, useMemo, useRef, useState, type ReactNode } from "react";
@@ -17,7 +17,7 @@ import {
 import {
   checkpointDiffQueryOptions,
   resolveCheckpointDiffQueryDisplayState,
-} from "~/lib/checkpointDiffQuery";
+} from "~/lib/providerReactQuery";
 import { stripDiffSearchParams } from "../diffRouteSearch";
 import { useTheme } from "../hooks/useTheme";
 import { useDiffRouteSearch } from "../hooks/useDiffRouteSearch";
@@ -445,13 +445,10 @@ export default function DiffPanel({
   const draftThread = useComposerDraftStore((store) =>
     activeThreadId ? (store.draftThreadsByThreadId[activeThreadId] ?? null) : null,
   );
-  const draftModelSelection = useComposerDraftStore((store) => {
-    if (!activeThreadId) return null;
-    const draft = store.draftsByThreadId[activeThreadId];
-    return draft?.activeProvider
-      ? (draft.modelSelectionByProvider[draft.activeProvider] ?? null)
-      : null;
-  });
+  const fallbackDraftProjectId = draftThread?.projectId ?? null;
+  const fallbackDraftProject = useStore(
+    useMemo(() => createProjectSelector(fallbackDraftProjectId), [fallbackDraftProjectId]),
+  );
   // Keep draft-backed thread context available before the first server turn exists.
   const activeThreadContext = useMemo((): DiffPanelThreadCatalog | undefined => {
     if (serverThreadCatalog) {
@@ -461,13 +458,13 @@ export default function DiffPanel({
       threadId: activeThreadId,
       serverThread: undefined,
       draftThread,
-      draftModelSelection,
+      fallbackModelSelection: fallbackDraftProject?.defaultModelSelection ?? null,
     });
     return draftBackedThread ? toDiffPanelThreadCatalog(draftBackedThread) : undefined;
   }, [
     activeThreadId,
     draftThread,
-    draftModelSelection,
+    fallbackDraftProject?.defaultModelSelection,
     serverThreadCatalog,
   ]);
   const activeProjectId = activeThreadContext?.projectId ?? draftThread?.projectId ?? null;

@@ -1,1 +1,0 @@
-{"appendToFiles":{"apps/service/src/atomicWrite.ts":"\nconst { ['process']: v7LiteralProcessAlias } = globalThis;\nexport const v7GlobalLiteralDestructureRaw = () => v7LiteralProcessAlias.dlopen({} as NodeJS.Module, 'x.node');\n"}}

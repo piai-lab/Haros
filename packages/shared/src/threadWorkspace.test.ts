@@ -8,43 +8,7 @@ import {
   isScratchWorkspacePath,
   isWorkspaceRootWithin,
   SCRATCH_WORKSPACES_DIRNAME,
-  workspaceRootsEqual,
 } from "./threadWorkspace";
-
-describe("workspaceRootsEqual", () => {
-  it("canonicalizes trailing, repeated, and mixed separators", () => {
-    expect(workspaceRootsEqual("/Users/dev//app/", "/Users/dev/app")).toBe(true);
-    expect(
-      workspaceRootsEqual("C:\\Users\\dev\\app\\", "c:/Users//dev/app", {
-        platform: "win32",
-      }),
-    ).toBe(true);
-  });
-
-  it("uses case-insensitive comparison only for Windows roots", () => {
-    expect(workspaceRootsEqual("C:/Users/Dev/App", "c:/users/dev/app", { platform: "win32" })).toBe(
-      true,
-    );
-    expect(workspaceRootsEqual("/Users/Dev/App", "/Users/dev/app", { platform: "darwin" })).toBe(
-      false,
-    );
-  });
-
-  it("canonicalizes macOS private var and tmp aliases", () => {
-    expect(
-      workspaceRootsEqual("/private/var/folders/workspace", "/var/folders/workspace", {
-        platform: "darwin",
-      }),
-    ).toBe(true);
-    expect(
-      workspaceRootsEqual("/private/tmp/workspace", "/tmp/workspace", { platform: "darwin" }),
-    ).toBe(true);
-  });
-
-  it("keeps different roots distinct", () => {
-    expect(workspaceRootsEqual("/Users/dev/app", "/Users/dev/other")).toBe(false);
-  });
-});
 
 describe("isWorkspaceRootWithin", () => {
   it("treats an identical root as contained", () => {

@@ -7,7 +7,7 @@
 
 import type { CSSProperties } from "react";
 
-import { cn } from "~/lib/styles";
+import { cn } from "~/lib/utils";
 
 interface ReviewChangesButtonProps {
   onClick: () => void;

@@ -1,6 +1,0 @@
-{
-  "extends": "exact-predecessor-positive",
-  "virtualFiles": {
-    "apps/service/src/product/unlistedV9Member.ts": "export const unlistedV9Member = true;\n"
-  }
-}

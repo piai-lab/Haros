@@ -3,16 +3,16 @@
 //          involvement and state tabs (chip background on the active option only), and the
 //          project filter popover behind the header's filter icon.
 // Layer: Pull request presentation
-// Exports: PullRequestFilterPillGroup, PullRequestWorkspaceFilterPopover
+// Exports: PullRequestFilterPillGroup, PullRequestProjectFilterPopover
 
-import type { ProductWorkspaceId } from "@omnimind/contracts";
+import type { ProjectId } from "@synara/contracts";
 import { useState } from "react";
 
 import { CHAT_SURFACE_CONTROL_ACTIVE_CLASS_NAME } from "~/components/chat/chatHeaderControls";
 import { IconButton } from "~/components/ui/icon-button";
 import { Popover, PopoverPopup, PopoverTrigger } from "~/components/ui/popover";
 import { CheckIcon, FilterIcon } from "~/lib/icons";
-import { cn } from "~/lib/styles";
+import { cn } from "~/lib/utils";
 import {
   PR_BODY_TEXT_CLASS_NAME,
   PR_FINE_TEXT_CLASS_NAME,
@@ -66,19 +66,19 @@ export function PullRequestFilterPillGroup<T extends string>({
   );
 }
 
-export function PullRequestWorkspaceFilterPopover({
+export function PullRequestProjectFilterPopover({
   projects,
   value,
   onChange,
 }: {
-  projects: ReadonlyArray<readonly [ProductWorkspaceId, string]>;
-  value: ProductWorkspaceId | undefined;
-  onChange: (workspaceId: ProductWorkspaceId | undefined) => void;
+  projects: ReadonlyArray<readonly [ProjectId, string]>;
+  value: ProjectId | undefined;
+  onChange: (projectId: ProjectId | undefined) => void;
 }) {
   const [open, setOpen] = useState(false);
   const active = value !== undefined;
   const selectedProjectName = value
-    ? projects.find(([workspaceId]) => workspaceId === value)?.[1]
+    ? projects.find(([projectId]) => projectId === value)?.[1]
     : undefined;
   const triggerLabel = `Filter pull requests by project: ${selectedProjectName ?? "All projects"}`;
   return (

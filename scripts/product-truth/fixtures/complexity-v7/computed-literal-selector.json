@@ -1,1 +1,0 @@
-{"appendToFiles":{"apps/service/src/main.ts":"\nexport const v7ComputedLiteral = () => globalThis.Bun['spawnSync'](['true']);\n"}}

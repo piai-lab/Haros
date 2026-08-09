@@ -1,12 +1,22 @@
-import type { ServerConfig } from "@omnimind/contracts";
+import type { ServerConfig } from "@synara/contracts";
 
-export function createBrowserTestServerConfig(_checkedAt: string): ServerConfig {
+export function createBrowserTestServerConfig(checkedAt: string): ServerConfig {
   return {
     cwd: "/repo/project",
     worktreesDir: "/repo/.codex/worktrees",
     keybindingsConfigPath: "/repo/project/.omnimind-keybindings.json",
     keybindings: [],
     issues: [],
+    providers: [
+      {
+        provider: "codex",
+        status: "ready",
+        available: true,
+        authStatus: "authenticated",
+        supportsAutoRuntimeMode: true,
+        checkedAt,
+      },
+    ],
     availableEditors: [],
   };
 }

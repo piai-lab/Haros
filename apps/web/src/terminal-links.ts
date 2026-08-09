@@ -1,4 +1,4 @@
-import { isMacPlatform } from "./lib/platform";
+import { isMacPlatform } from "./lib/utils";
 
 export type TerminalLinkKind = "url" | "path";
 

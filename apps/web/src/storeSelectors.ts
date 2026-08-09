@@ -2,7 +2,7 @@
 // Purpose: Stable Zustand selectors for entity lookups and lightweight sidebar projections.
 // Exports: Selector factories used by routes and sidebar-heavy components.
 
-import type { ProjectId, WorkspaceEnvironmentMode, ThreadId } from "@omnimind/contracts";
+import type { ProjectId, ThreadEnvironmentMode, ThreadId } from "@synara/contracts";
 
 import type { AppState } from "./storeState";
 import { resolveThreadDisplayProvider } from "./lib/threadDisplayProvider";
@@ -18,7 +18,7 @@ import type {
 const EMPTY_THREAD_SHELLS: ThreadShell[] = [];
 
 export interface ThreadWorkspaceMetadata {
-  envMode: WorkspaceEnvironmentMode | undefined;
+  envMode: ThreadEnvironmentMode | undefined;
   worktreePath: string | null;
   workingDirectory: string | null;
 }
@@ -169,7 +169,7 @@ export function createThreadProjectIdSelector(
 export function createThreadWorkspaceMetadataSelector(
   threadId: ThreadId | null | undefined,
 ): (state: AppState) => ThreadWorkspaceMetadata {
-  let previousEnvMode: WorkspaceEnvironmentMode | undefined = undefined;
+  let previousEnvMode: ThreadEnvironmentMode | undefined = undefined;
   let previousWorktreePath: string | null = null;
   let previousWorkingDirectory: string | null = null;
   let previousResult = EMPTY_THREAD_WORKSPACE_METADATA;
@@ -335,8 +335,13 @@ export function createSidebarTreeThreadsSelector(): (
 }
 
 /**
- * Last user activity per Project. This deliberately ignores thread `updatedAt`,
- * which advances on background streaming and would reorder the user's target.
+ * Last time each project was actually *used*, i.e. when a thread of that project last received a
+ * user message (falling back to the thread's creation time for threads never written to).
+ *
+ * Deliberately not `Project.updatedAt`: that timestamp only moves when project *metadata* changes
+ * (creation, rename, pin, scripts), so ranking by it surfaces the most recently created project
+ * instead of the one you were last talking in. Deliberately not thread `updatedAt` either: that
+ * churns on every streamed token and would rebuild this map continuously.
  */
 export function createProjectLastActivityAtSelector(): (
   state: AppState,
@@ -357,7 +362,9 @@ export function createProjectLastActivityAtSelector(): (
     const nextActivity = new Map<ProjectId, string>();
     for (const threadId of threadIds ?? []) {
       const thread = summaryById[threadId];
-      if (!thread) continue;
+      if (!thread) {
+        continue;
+      }
       const activityAt = thread.latestUserMessageAt ?? thread.createdAt;
       const current = nextActivity.get(thread.projectId);
       if (current === undefined || current < activityAt) {

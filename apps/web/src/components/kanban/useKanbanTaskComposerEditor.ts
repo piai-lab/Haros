@@ -4,9 +4,13 @@
 // Exports: useKanbanTaskComposerEditor
 
 import type {
+  ModelSlug,
+  ProviderInteractionMode,
+  ProviderKind,
   ProviderMentionReference,
+  ProviderSkillReference,
   ThreadId,
-} from "@omnimind/contracts";
+} from "@synara/contracts";
 import { type Dispatch, type MutableRefObject, type RefObject, type SetStateAction } from "react";
 
 import type { ComposerPromptEditorHandle } from "~/components/ComposerPromptEditor";
@@ -26,6 +30,7 @@ import {
 import {
   composerMentionPathNeedsQuoting,
   formatComposerMentionToken,
+  skillMentionPrefix,
 } from "~/lib/composerMentions";
 import {
   syncTerminalContextsByIds,
@@ -49,8 +54,12 @@ interface UseKanbanTaskComposerEditorInput {
   readonly isLocalFolderBrowserOpen: boolean;
   readonly localFolderBrowseRootPath: string | null;
   readonly composerTerminalContexts: readonly TerminalContextDraft[];
+  readonly composerSkills: readonly ProviderSkillReference[];
   readonly composerMentions: readonly ProviderMentionReference[];
   readonly scratchThreadId: ThreadId;
+  readonly selectedProvider: ProviderKind;
+  readonly handleProviderModelChange: (provider: ProviderKind, model: ModelSlug) => void;
+  readonly setInteractionMode: Dispatch<SetStateAction<ProviderInteractionMode>>;
   readonly onCreate: () => void;
 }
 
@@ -70,8 +79,12 @@ export function useKanbanTaskComposerEditor(input: UseKanbanTaskComposerEditorIn
     isLocalFolderBrowserOpen,
     localFolderBrowseRootPath,
     composerTerminalContexts,
+    composerSkills,
     composerMentions,
     scratchThreadId,
+    selectedProvider,
+    handleProviderModelChange,
+    setInteractionMode,
     onCreate,
   } = input;
 
@@ -223,7 +236,33 @@ export function useKanbanTaskComposerEditor(input: UseKanbanTaskComposerEditorIn
       handleNavigateLocalFolder(localFolderBrowseRootPath ?? "/");
       return;
     }
-    if (item.type === "thread") {
+    if (item.type === "provider-native-command") {
+      applyComposerTriggerReplacement({ snapshot, trigger, base: `/${item.command} ` });
+      return;
+    }
+    if (item.type === "skill") {
+      applyComposerTriggerReplacement({
+        snapshot,
+        trigger,
+        base: `${skillMentionPrefix(selectedProvider)}${item.skill.name} `,
+        onApplied: () => {
+          const nextSkill = {
+            name: item.skill.name,
+            path: item.skill.path,
+          } satisfies ProviderSkillReference;
+          const exists = composerSkills.some(
+            (skill) => skill.name === nextSkill.name && skill.path === nextSkill.path,
+          );
+          if (!exists) {
+            useComposerDraftStore
+              .getState()
+              .setSkills(scratchThreadId, [...composerSkills, nextSkill]);
+          }
+        },
+      });
+      return;
+    }
+    if (item.type === "plugin" || item.type === "thread") {
       applyComposerTriggerReplacement({
         snapshot,
         trigger,
@@ -239,12 +278,30 @@ export function useKanbanTaskComposerEditor(input: UseKanbanTaskComposerEditorIn
       });
       return;
     }
+    if (item.type === "model") {
+      handleProviderModelChange(item.provider, item.model);
+      applyComposerTriggerReplacement({ snapshot, trigger, base: "" });
+      return;
+    }
+    if (item.type === "agent") {
+      applyComposerTriggerReplacement({
+        snapshot,
+        trigger,
+        base: `@${item.alias}()`,
+        cursorOffset: -1,
+      });
+      return;
+    }
     if (item.type === "slash-command") {
       if (item.command === "clear") {
         useComposerDraftStore.getState().clearComposerContent(scratchThreadId);
         setComposerCursor(0);
         setComposerTrigger(null);
         return;
+      }
+      if (item.command === "plan" || item.command === "default") {
+        setInteractionMode(item.command === "plan" ? "plan" : "default");
+        applyComposerTriggerReplacement({ snapshot, trigger, base: "" });
       }
     }
   };
@@ -290,6 +347,11 @@ export function useKanbanTaskComposerEditor(input: UseKanbanTaskComposerEditorIn
     key: "ArrowDown" | "ArrowUp" | "Enter" | "Tab" | "Slash",
     event: KeyboardEvent,
   ) => {
+    if (key === "Tab" && event.shiftKey) {
+      setInteractionMode((current) => (current === "plan" ? "default" : "plan"));
+      return true;
+    }
+
     const { trigger } = resolveActiveComposerTrigger();
     const menuIsActive = trigger !== null;
 

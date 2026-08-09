@@ -1,6 +1,0 @@
-{
-  "extends": "traced-owner-positive",
-  "virtualFiles": {
-    "apps/service/src/product/ProductControlPlane.ts": "export async function makeProductControlPlaneLayer() {\n  return Promise.all([import(\"bun:sqlite\"), import(\"node:sqlite\"), import(\"bun:sqlite\")]);\n}\n"
-  }
-}

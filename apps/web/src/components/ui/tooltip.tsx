@@ -1,6 +1,6 @@
 import { Tooltip as TooltipPrimitive } from "@base-ui/react/tooltip";
 
-import { cn } from "~/lib/styles";
+import { cn } from "~/lib/utils";
 import {
   APP_TOOLTIP_SURFACE_CLASS_NAME,
   COMPOSER_PICKER_TOOLTIP_SURFACE_CLASS_NAME,

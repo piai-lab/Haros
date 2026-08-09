@@ -1,11 +1,16 @@
 // FILE: release-update-policy.ts
-// Purpose: Publishes stable releases through GitHub Latest while retaining the packaged app's
+// Purpose: Keeps the historical 0.4.x compatibility line separate while stable 0.5.x
+// releases publish through GitHub's Latest updater feed and retain the packaged app's
 // dedicated `omnimind` channel aliases.
 
 import { constants, copyFileSync, existsSync, readFileSync } from "node:fs";
 import { resolve } from "node:path";
 
+export type ReleaseLane = "bridge" | "clean";
+
 export interface ReleaseUpdatePolicyConfig {
+  readonly lane: ReleaseLane;
+  readonly bridgeVersion: string;
   readonly channel: string;
 }
 
@@ -15,18 +20,29 @@ export interface ResolvedReleaseUpdatePolicy {
   readonly isPrerelease: boolean;
   readonly makeLatest: boolean;
   readonly mirrorToStableChannel: boolean;
+  readonly lane: ReleaseLane;
+  readonly bridgeTag: string;
   readonly channel: string;
 }
 
 const VERSION_PATTERN = /^(\d+)\.(\d+)\.(\d+)(?:-([0-9A-Za-z-]+(?:\.[0-9A-Za-z-]+)*))?$/;
 const CHANNEL_PATTERN = /^[a-z0-9-]+$/;
 
-function parseVersion(value: string): { isPrerelease: boolean } {
+function parseVersion(value: string): { core: readonly number[]; isPrerelease: boolean } {
   const match = VERSION_PATTERN.exec(value);
   if (!match) throw new Error(`Invalid release version: ${value}`);
   return {
+    core: [Number(match[1]), Number(match[2]), Number(match[3])],
     isPrerelease: match[4] !== undefined,
   };
+}
+
+function compareCoreVersions(left: readonly number[], right: readonly number[]): number {
+  for (let index = 0; index < 3; index += 1) {
+    const difference = (left[index] ?? 0) - (right[index] ?? 0);
+    if (difference !== 0) return difference;
+  }
+  return 0;
 }
 
 export function validateReleaseUpdatePolicyConfig(config: unknown): ReleaseUpdatePolicyConfig {
@@ -34,6 +50,13 @@ export function validateReleaseUpdatePolicyConfig(config: unknown): ReleaseUpdat
     throw new Error("Release update policy must be an object.");
   }
   const candidate = config as Partial<ReleaseUpdatePolicyConfig>;
+  if (candidate.lane !== "bridge" && candidate.lane !== "clean") {
+    throw new Error(`Invalid release lane: ${String(candidate.lane)}`);
+  }
+  if (typeof candidate.bridgeVersion !== "string") {
+    throw new Error("Compatibility release version must be a string.");
+  }
+  parseVersion(candidate.bridgeVersion);
   if (
     typeof candidate.channel !== "string" ||
     !CHANNEL_PATTERN.test(candidate.channel) ||
@@ -56,13 +79,27 @@ export function resolveReleaseUpdatePolicy(
   const normalizedConfig = validateReleaseUpdatePolicyConfig(config);
   const version = rawVersion.startsWith("v") ? rawVersion.slice(1) : rawVersion;
   const requested = parseVersion(version);
+  const bridge = parseVersion(normalizedConfig.bridgeVersion);
+
+  if (normalizedConfig.lane === "bridge" && version !== normalizedConfig.bridgeVersion) {
+    throw new Error(
+      `The compatibility lane may publish only v${normalizedConfig.bridgeVersion}, not v${version}.`,
+    );
+  }
+  if (normalizedConfig.lane === "clean" && compareCoreVersions(requested.core, bridge.core) <= 0) {
+    throw new Error(
+      `OmniMind releases must be newer than the compatibility release v${normalizedConfig.bridgeVersion}.`,
+    );
+  }
 
   return {
     version,
     tag: `v${version}`,
     isPrerelease: requested.isPrerelease,
-    makeLatest: !requested.isPrerelease,
+    makeLatest: normalizedConfig.lane === "clean" && !requested.isPrerelease,
     mirrorToStableChannel: false,
+    lane: normalizedConfig.lane,
+    bridgeTag: `v${normalizedConfig.bridgeVersion}`,
     channel: normalizedConfig.channel,
   };
 }
@@ -101,11 +138,20 @@ export function prepareReleaseUpdateManifests(
   const normalizedConfig = validateReleaseUpdatePolicyConfig(config);
   const sourceNames = ["latest-mac.yml", "latest.yml", "latest-linux.yml"] as const;
   const destinationNames = channelManifestNames(normalizedConfig.channel);
+  if (normalizedConfig.lane === "bridge") {
+    const missing = sourceNames.filter((name) => !existsSync(resolve(assetDirectory, name)));
+    if (missing.length > 0) {
+      throw new Error(`Compatibility release is missing update manifests: ${missing.join(", ")}`);
+    }
+    copyChannelManifests(assetDirectory, sourceNames, destinationNames);
+    return [...sourceNames, ...destinationNames];
+  }
+
   const missing = sourceNames.filter((name) => !existsSync(resolve(assetDirectory, name)));
   if (missing.length > 0) {
     throw new Error(`Latest release is missing update manifests: ${missing.join(", ")}`);
   }
-  // Stable releases are GitHub Latest, but shipped desktop binaries still
+  // Stable 0.5.x releases are GitHub Latest, but shipped desktop binaries still
   // request the dedicated `omnimind` channel. Keep both filenames in the same
   // release so existing installations and new Latest installs use the same feed.
   copyChannelManifests(assetDirectory, sourceNames, destinationNames);

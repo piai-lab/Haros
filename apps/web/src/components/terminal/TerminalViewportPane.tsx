@@ -9,7 +9,7 @@
 
 import type { PointerEvent as ReactPointerEvent, ReactNode } from "react";
 
-import type { ResolvedTerminalVisualIdentity } from "@omnimind/shared/terminalThreads";
+import type { ResolvedTerminalVisualIdentity } from "@synara/shared/terminalThreads";
 
 import { IconButton } from "~/components/ui/icon-button";
 import {
@@ -22,7 +22,7 @@ import {
   TerminalSquareIcon,
   Trash2,
 } from "~/lib/icons";
-import { cn } from "~/lib/styles";
+import { cn } from "~/lib/utils";
 
 import { DOCK_HEADER_ICON_BUTTON_CLASS, SurfaceTabChip } from "../chat/chatHeaderControls";
 import type {

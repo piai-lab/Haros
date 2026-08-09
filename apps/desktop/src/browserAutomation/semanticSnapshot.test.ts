@@ -1,8 +1,8 @@
-import { ThreadId, type BrowserElementRef, type BrowserSnapshotId } from "@omnimind/contracts";
+import { ThreadId, type BrowserElementRef, type BrowserSnapshotId } from "@synara/contracts";
 import type { WebContents } from "electron";
 import { describe, expect, it, vi } from "vitest";
 
-import type { BrowserAutomationVisibleRuntime } from "../browserHost";
+import type { BrowserAutomationVisibleRuntime } from "../browserManager";
 import { BrowserAutomationHostError } from "./hostErrors";
 import { BROWSER_SEMANTIC_SNAPSHOT_EXPRESSION } from "./semanticSnapshot";
 import { resolveBrowserTarget } from "./targets";

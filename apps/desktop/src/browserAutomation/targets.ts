@@ -4,9 +4,9 @@ import type {
   BrowserNodeTarget,
   BrowserPointerTarget,
   BrowserTabId,
-} from "@omnimind/contracts";
+} from "@synara/contracts";
 
-import type { BrowserAutomationVisibleRuntime } from "../browserHost";
+import type { BrowserAutomationVisibleRuntime } from "../browserManager";
 import {
   callFunctionOn,
   evaluateInContext,

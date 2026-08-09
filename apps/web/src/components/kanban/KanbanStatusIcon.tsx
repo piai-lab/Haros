@@ -5,7 +5,7 @@
 // Layer: Kanban UI component
 // Exports: KanbanStatusIcon
 
-import { cn } from "~/lib/styles";
+import { cn } from "~/lib/utils";
 import type { KanbanColumnKey } from "./kanban.logic";
 
 export function KanbanStatusIcon({

@@ -3,15 +3,23 @@ import {
   type AutomationRun,
   type AutomationUpdateInput,
   type AutomationWorktreeMode,
-} from "@omnimind/contracts";
+  type ModelSelection,
+  type ProviderOptionDescriptor,
+} from "@synara/contracts";
 import {
   automationContinuationThreadId,
   automationRequiresTargetThread,
-} from "@omnimind/shared/automationMode";
+} from "@synara/shared/automationMode";
+import {
+  getModelCapabilities,
+  getProviderOptionCurrentValue,
+  getProviderOptionDescriptors,
+} from "@synara/shared/model";
 import { useQuery } from "@tanstack/react-query";
 import { createFileRoute, useNavigate } from "@tanstack/react-router";
 import { useState } from "react";
 
+import { getProviderStartOptions, useAppSettings } from "~/appSettings";
 import { AutomationProposalActions } from "~/components/automation/AutomationProposalActions";
 import {
   CHAT_SURFACE_HEADER_DIVIDER_CLASS_NAME,
@@ -33,14 +41,20 @@ import {
 import {
   completionPolicyFromStopWhen,
   stopWhenFromCompletionPolicy,
-} from "@omnimind/shared/automationCompletionPolicy";
+} from "@synara/shared/automationCompletionPolicy";
 import { automationLifecycleState, canPauseAutomation } from "~/lib/automationStatus";
 import {
   useDesktopTopBarTrafficLightGutterClassName,
   useDesktopTopBarWindowControlsGutterClassName,
 } from "~/hooks/useDesktopTopBarGutter";
-import { Glyph } from "~/ui/icons";
-import { cn } from "~/lib/styles";
+import { CentralIcon } from "~/lib/central-icons";
+import { cn } from "~/lib/utils";
+import {
+  buildModelSelection,
+  buildNextProviderOptions,
+  buildProviderOptionPatch,
+  type ProviderOptions,
+} from "~/providerModelOptions";
 import { ensureNativeApi } from "~/nativeApi";
 import { useStore } from "~/store";
 import { createAllThreadsSelector } from "~/storeSelectors";
@@ -60,6 +74,8 @@ import {
   isTriageRun,
   isFormSubmittable,
   maxIterationOptions,
+  providerOptionsForAutomationEdit,
+  providerOptionsForAutomationModelSelection,
   runResultSummary,
   runResultTitle,
   runStatusLabel,
@@ -172,6 +188,7 @@ function intervalOptions(current: number): readonly SelectOption[] {
 function AutomationDetailView() {
   const { automationId } = Route.useParams();
   const navigate = useNavigate();
+  const { settings } = useAppSettings();
   const desktopTopBarTrafficLightGutterClassName = useDesktopTopBarTrafficLightGutterClassName();
   const desktopTopBarWindowControlsGutterClassName =
     useDesktopTopBarWindowControlsGutterClassName();
@@ -210,6 +227,7 @@ function AutomationDetailView() {
   const streamedMemory =
     (data.memories ?? []).find((candidate) => candidate.automationId === automationId) ?? null;
   const memory = streamedMemory ?? memoryQuery.data ?? null;
+  const providerOptionsForDispatch = getProviderStartOptions(settings);
 
   if (!definition) {
     return (
@@ -279,7 +297,7 @@ function AutomationDetailView() {
     enabled: definition.enabled,
     maxIterations: definition.maxIterations,
     mode: definition.mode,
-    permissionPolicy: definition.requestedSelection.permissionPolicy,
+    runtimeMode: definition.runtimeMode,
     worktreeMode: definition.worktreeMode,
     prompt: definition.prompt,
     acknowledgedRisks: definition.acknowledgedRisks,
@@ -303,6 +321,20 @@ function AutomationDetailView() {
     runNowMutation.mutate(definition);
   };
   const approvalBusy = updateMutation.isPending || runNowMutation.isPending;
+
+  // Applying a new model selection (model swap or a capability tweak) refreshes the saved
+  // provider start options the same way the model picker does, then patches both at once.
+  const applyModelSelection = (nextModelSelection: ModelSelection) => {
+    const providerOptions = providerOptionsForAutomationModelSelection(
+      definition,
+      nextModelSelection,
+      providerOptionsForDispatch,
+    );
+    patch({
+      modelSelection: nextModelSelection,
+      ...(providerOptions ? { providerOptions } : {}),
+    });
+  };
 
   const openEditDialog = (overrides: Partial<AutomationFormState> = {}) => {
     const nextForm = {
@@ -333,9 +365,17 @@ function AutomationDetailView() {
       dialogWarnings,
       acknowledgedWarningIds,
     );
-    updateMutation.mutate(updateInputFromForm(definition, form, acknowledgedRisks), {
-      onSuccess: () => setDialogOpen(false),
-    });
+    updateMutation.mutate(
+      updateInputFromForm(
+        definition,
+        form,
+        providerOptionsForAutomationEdit(definition, form, providerOptionsForDispatch),
+        acknowledgedRisks,
+      ),
+      {
+        onSuccess: () => setDialogOpen(false),
+      },
+    );
   };
 
   const togglePause = () => {
@@ -380,7 +420,7 @@ function AutomationDetailView() {
                 >
                   Automations
                 </button>
-                <Glyph
+                <CentralIcon
                   name="chevron-right-small"
                   className="size-3.5 shrink-0 text-muted-foreground"
                 />
@@ -448,7 +488,7 @@ function AutomationDetailView() {
                     title={definition.enabled ? "Pause" : "Resume"}
                     onClick={togglePause}
                   >
-                    <Glyph name={definition.enabled ? "pause" : "play"} className="size-4" />
+                    <CentralIcon name={definition.enabled ? "pause" : "play"} className="size-4" />
                   </Button>
                 ) : null}
                 <Button
@@ -459,17 +499,32 @@ function AutomationDetailView() {
                   title="Delete"
                   onClick={() => void deleteDefinition()}
                 >
-                  <Glyph name="trash-can-simple" className="size-4" />
+                  <CentralIcon name="trash-can-simple" className="size-4" />
                 </Button>
                 <Button
                   type="button"
                   size="sm"
                   className="ml-1.5"
-                  disabled
-                  title="Automation execution is unavailable until Product Queue admission is implemented"
+                  disabled={
+                    runNowMutation.isPending ||
+                    pendingProposal ||
+                    // Stay disabled while an approval update is in flight: the cache merges
+                    // acknowledgedRisks optimistically, so warnings clears before the server
+                    // persists and a run dispatched in that window hits the old definition.
+                    updateMutation.isPending ||
+                    approvalGaps.runBlockingWarnings.length > 0
+                  }
+                  title={
+                    pendingProposal
+                      ? "Accept the automation proposal first"
+                      : approvalGaps.runBlockingWarnings.length > 0
+                        ? "Approve the automation first"
+                        : undefined
+                  }
+                  onClick={() => runNowMutation.mutate(definition)}
                 >
-                  <Glyph name="play" className="size-4" />
-                  Run unavailable
+                  <CentralIcon name="play" className="size-4" />
+                  Run now
                 </Button>
               </div>
             </div>
@@ -524,7 +579,7 @@ function AutomationDetailView() {
                     label={
                       <>
                         Runs in
-                        <Glyph
+                        <CentralIcon
                           name="info-simple"
                           className="size-3 text-muted-foreground/60"
                           aria-label="Where the automation runs: a worktree, a local checkout, or auto"
@@ -697,8 +752,16 @@ function AutomationDetailView() {
                   </EditRow>
                 ) : null}
                 <EditRow label="Model">
-                  <AutomationModelPicker value={definition.requestedSelection} />
+                  <AutomationModelPicker
+                    value={definition.modelSelection}
+                    projectCwd={project?.cwd ?? null}
+                    onChange={applyModelSelection}
+                  />
                 </EditRow>
+                <ModelOptionRows
+                  modelSelection={definition.modelSelection}
+                  onChange={applyModelSelection}
+                />
                 <DetailRow label="Mode">{MODE_LABELS[definition.mode]}</DetailRow>
                 <EditRow label="Notify">
                   <InlineSelect
@@ -901,11 +964,102 @@ function InlineSelect({
           </option>
         ))}
       </select>
-      <Glyph
+      <CentralIcon
         name="chevron-down-small"
         className="pointer-events-none absolute right-1 size-3 text-muted-foreground"
       />
     </div>
+  );
+}
+
+function InlineToggle({
+  value,
+  onChange,
+}: {
+  readonly value: boolean;
+  readonly onChange: (value: boolean) => void;
+}) {
+  return (
+    <button
+      type="button"
+      onClick={() => onChange(!value)}
+      className={cn(INLINE_CONTROL_CLASS, "min-w-[3rem]")}
+    >
+      {value ? "On" : "Off"}
+    </button>
+  );
+}
+
+/**
+ * Inline edit rows for the selected model's capabilities — reasoning effort, fast mode,
+ * thinking, context window, etc. The knobs are derived from the provider's capability
+ * descriptors, so each provider surfaces exactly the controls it supports (and none when it
+ * supports nothing). Changing a value reuses the same model-selection patch path as the
+ * model picker, keeping provider start options in sync.
+ */
+function ModelOptionRows({
+  modelSelection,
+  onChange,
+}: {
+  readonly modelSelection: ModelSelection;
+  readonly onChange: (next: ModelSelection) => void;
+}) {
+  const { provider, model } = modelSelection;
+  const caps = getModelCapabilities(provider, model);
+  const descriptors = getProviderOptionDescriptors({
+    provider,
+    caps,
+    selections: modelSelection.options as Record<string, unknown> | undefined,
+  });
+  if (descriptors.length === 0) {
+    return null;
+  }
+
+  const setOption = (descriptor: ProviderOptionDescriptor, value: string | boolean) => {
+    const optionPatch = buildProviderOptionPatch(provider, descriptor.id, value);
+    const nextOptions = buildNextProviderOptions(
+      provider,
+      modelSelection.options as ProviderOptions | undefined,
+      optionPatch,
+    );
+    onChange(
+      buildModelSelection(
+        provider,
+        model,
+        nextOptions,
+        modelSelection.provider === "claudeAgent" ? modelSelection.supportsAutoMode : undefined,
+      ),
+    );
+  };
+
+  return (
+    <>
+      {descriptors.map((descriptor) => {
+        if (descriptor.type === "boolean") {
+          return (
+            <EditRow key={descriptor.id} label={descriptor.label}>
+              <InlineToggle
+                value={getProviderOptionCurrentValue(descriptor) === true}
+                onChange={(checked) => setOption(descriptor, checked)}
+              />
+            </EditRow>
+          );
+        }
+        const current = getProviderOptionCurrentValue(descriptor);
+        return (
+          <EditRow key={descriptor.id} label={descriptor.label}>
+            <InlineSelect
+              value={typeof current === "string" ? current : ""}
+              options={descriptor.options.map((option) => ({
+                value: option.id,
+                label: option.label,
+              }))}
+              onChange={(value) => setOption(descriptor, value)}
+            />
+          </EditRow>
+        );
+      })}
+    </>
   );
 }
 
@@ -1064,7 +1218,7 @@ function RunRow({
             onCancel();
           }}
         >
-          <Glyph name="stop" className="size-3.5" />
+          <CentralIcon name="stop" className="size-3.5" />
         </Button>
       ) : null}
       <span className="shrink-0 tabular-nums text-muted-foreground">

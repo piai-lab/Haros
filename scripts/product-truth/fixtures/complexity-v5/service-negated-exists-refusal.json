@@ -1,8 +1,0 @@
-{
-  "extendsFixture": "service-refusal-effect-lock-positive",
-  "textReplacements": {
-    "apps/service/src/persistence/Layers/Sqlite.ts": [
-      ["  const databasePath = deriveServerPaths(root, null).dbPath;\n  if (existsSync(\"state.sqlite\") || existsSync(\"state.sqlite-wal\") || existsSync(\"state.sqlite-shm\"))", "  const databasePath = deriveServerPaths(root, null).dbPath;\n  if (!existsSync(\"state.sqlite\") && !existsSync(\"state.sqlite-wal\") && !existsSync(\"state.sqlite-shm\"))"]
-    ]
-  }
-}

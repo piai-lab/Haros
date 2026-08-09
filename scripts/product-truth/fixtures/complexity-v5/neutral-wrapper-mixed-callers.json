@@ -1,8 +1,0 @@
-{
-  "extendsFixture": "neutral-wrapper-canonical-positive",
-  "textReplacements": {
-    "apps/service/src/product/ProductControlPlane.ts": [
-      ["    const database = openNeutral(databasePath);", "    openNeutral(join(stateDir, \"stores\", \"product.sqlite\"));\n    const database = openNeutral(databasePath);"]
-    ]
-  }
-}

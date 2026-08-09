@@ -7,9 +7,9 @@
 
 import { useState } from "react";
 
-import type { PullRequestActor } from "@omnimind/contracts";
+import type { PullRequestActor } from "@synara/contracts";
 
-import { cn } from "~/lib/styles";
+import { cn } from "~/lib/utils";
 
 const SIZE_CLASS_NAME = {
   sm: "size-4 text-[8px]",

@@ -1,4 +1,4 @@
-import { ProjectId, ThreadId } from "@omnimind/contracts";
+import { ProjectId, ThreadId } from "@synara/contracts";
 import { describe, expect, it } from "vitest";
 
 import {
@@ -10,6 +10,7 @@ import type { SplitView } from "../../splitViewStore";
 const PROJECT_ID = ProjectId.makeUnsafe("project-1");
 const THREAD_A = ThreadId.makeUnsafe("thread-a");
 const THREAD_B = ThreadId.makeUnsafe("thread-b");
+const THREAD_C = ThreadId.makeUnsafe("thread-c");
 
 function createSplitView(): SplitView {
   const firstLeaf = {
@@ -60,6 +61,7 @@ describe("resolveVisibleToastThreadIds", () => {
       resolveVisibleToastThreadIds({
         activeThreadId: THREAD_A,
         splitView: null,
+        rightDockRendered: true,
       }),
     ).toEqual(new Set([THREAD_A]));
   });
@@ -69,63 +71,113 @@ describe("resolveVisibleToastThreadIds", () => {
       resolveVisibleToastThreadIds({
         activeThreadId: THREAD_A,
         splitView: createSplitView(),
+        rightDockRendered: true,
       }),
     ).toEqual(new Set([THREAD_A, THREAD_B]));
   });
 
-  it("includes only the rendered active sidechat dock pane", () => {
-    const dockState = {
-      open: true,
-      activePaneId: "sidechat-b",
-      panes: [
-        {
-          id: "sidechat-b",
-          kind: "sidechat" as const,
-          threadId: THREAD_B,
-          diffTurnId: null,
-          diffFilePath: null,
-          filePath: null,
-          pullRequestWorkspaceId: null,
-          pullRequestRepository: null,
-          pullRequestNumber: null,
-          pullRequestInitialTab: null,
-        },
-      ],
-    };
+  it("includes the active sidechat when its host dock is visible", () => {
     expect(
       resolveVisibleToastThreadIds({
         activeThreadId: THREAD_A,
         splitView: null,
-        rightDockState: dockState,
+        rightDockRendered: true,
+        rightDockState: {
+          open: true,
+          activePaneId: "sidechat-pane",
+          panes: [
+            {
+              id: "sidechat-pane",
+              kind: "sidechat",
+              threadId: THREAD_B,
+              diffTurnId: null,
+              diffFilePath: null,
+              filePath: null,
+              pullRequestProjectId: null,
+              pullRequestRepository: null,
+              pullRequestNumber: null,
+              pullRequestInitialTab: null,
+            },
+          ],
+        },
       }),
     ).toEqual(new Set([THREAD_A, THREAD_B]));
+  });
 
+  it("does not treat hidden or inactive sidechat panes as visible", () => {
     expect(
       resolveVisibleToastThreadIds({
         activeThreadId: THREAD_A,
         splitView: null,
-        rightDockState: { ...dockState, open: false },
+        rightDockRendered: true,
+        rightDockState: {
+          open: false,
+          activePaneId: "sidechat-pane",
+          panes: [
+            {
+              id: "sidechat-pane",
+              kind: "sidechat",
+              threadId: THREAD_B,
+              diffTurnId: null,
+              diffFilePath: null,
+              filePath: null,
+              pullRequestProjectId: null,
+              pullRequestRepository: null,
+              pullRequestNumber: null,
+              pullRequestInitialTab: null,
+            },
+          ],
+        },
       }),
     ).toEqual(new Set([THREAD_A]));
   });
 
-  it("ignores persisted dock state when a split route owns the rendered panes", () => {
+  it("ignores persisted dock state while the editor route hides the dock", () => {
+    expect(
+      resolveVisibleToastThreadIds({
+        activeThreadId: THREAD_A,
+        splitView: null,
+        rightDockRendered: false,
+        rightDockState: {
+          open: true,
+          activePaneId: "sidechat-pane",
+          panes: [
+            {
+              id: "sidechat-pane",
+              kind: "sidechat",
+              threadId: THREAD_B,
+              diffTurnId: null,
+              diffFilePath: null,
+              filePath: null,
+              pullRequestProjectId: null,
+              pullRequestRepository: null,
+              pullRequestNumber: null,
+              pullRequestInitialTab: null,
+            },
+          ],
+        },
+      }),
+    ).toEqual(new Set([THREAD_A]));
+  });
+
+  it("ignores persisted dock state while the route is rendering a split", () => {
     expect(
       resolveVisibleToastThreadIds({
         activeThreadId: THREAD_A,
         splitView: createSplitView(),
+        rightDockRendered: true,
         rightDockState: {
           open: true,
-          activePaneId: "sidechat-hidden",
+          activePaneId: "sidechat-pane",
           panes: [
             {
-              id: "sidechat-hidden",
+              id: "sidechat-pane",
               kind: "sidechat",
-              threadId: ThreadId.makeUnsafe("thread-hidden"),
+              threadId: THREAD_C,
               diffTurnId: null,
               diffFilePath: null,
               filePath: null,
-              pullRequestWorkspaceId: null,
+              pullRequestProjectId: null,
               pullRequestRepository: null,
               pullRequestNumber: null,
               pullRequestInitialTab: null,

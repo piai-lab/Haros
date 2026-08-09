@@ -5,10 +5,10 @@ import type {
   BrowserLogsOutput,
   BrowserNetworkLogEntry,
   BrowserTabId,
-} from "@omnimind/contracts";
+} from "@synara/contracts";
 import type { WebContents } from "electron";
 
-import type { BrowserAutomationVisibleRuntime } from "../browserHost";
+import type { BrowserAutomationVisibleRuntime } from "../browserManager";
 import { sendCdpCommand, throwIfAborted } from "./cdpRuntime";
 
 const MAX_CAPTURED_ENTRIES = 1_000;

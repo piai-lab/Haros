@@ -1,6 +1,6 @@
 import type { WebContents } from "electron";
 
-import type { BrowserAutomationVisibleRuntime } from "../browserHost";
+import type { BrowserAutomationVisibleRuntime } from "../browserManager";
 import {
   drainOnAbort,
   ensureCdpAttached,

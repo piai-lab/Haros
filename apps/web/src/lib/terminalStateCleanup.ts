@@ -1,4 +1,4 @@
-import type { ThreadId } from "@omnimind/contracts";
+import type { ThreadId } from "@synara/contracts";
 
 interface TerminalRetentionThread {
   id: ThreadId;

@@ -7,16 +7,16 @@ import {
   type DesktopAppSnapPermission,
   type DesktopAppSnapState,
   type ResolvedKeybindingsConfig,
-} from "@omnimind/contracts";
-import { appSnapShortcutLabels } from "@omnimind/shared/appSnapShortcut";
+} from "@synara/contracts";
+import { appSnapShortcutLabels } from "@synara/shared/appSnapShortcut";
 import { useQuery } from "@tanstack/react-query";
 import { useEffect, useRef, useState } from "react";
 
 import type { AppSettingsBinding } from "~/appSettings";
 import { createLatestAppSnapRequestGuard } from "~/appSnap.logic";
 import { playAppSnapCaptureSound } from "~/lib/appSnapSound";
-import { Glyph } from "~/ui/icons";
-import { cn } from "~/lib/styles";
+import { CentralIcon } from "~/lib/central-icons";
+import { cn } from "~/lib/utils";
 import { isElectron } from "~/env";
 import {
   buildNotificationSettingsSupportText,
@@ -329,7 +329,7 @@ export function AppSnapSettingsPanel({
     <div className="space-y-6">
       <SettingsCard divided={false} className="flex items-start gap-3 px-4 py-3.5">
         <span className="mt-0.5 flex size-8 shrink-0 items-center justify-center rounded-lg border border-[color:var(--color-border)] text-muted-foreground">
-          <Glyph name="screen-capture" className="size-4" />
+          <CentralIcon name="screen-capture" className="size-4" />
         </span>
         <div className="min-w-0 space-y-1">
           <p className={SETTINGS_CARD_ROW_TITLE_CLASS_NAME}>

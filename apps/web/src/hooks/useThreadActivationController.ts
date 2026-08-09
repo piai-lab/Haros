@@ -3,9 +3,14 @@
 // Exports: useThreadActivationController
 
 import type { useNavigate } from "@tanstack/react-router";
-import type { ProjectId, ThreadId } from "@omnimind/contracts";
+import type { ThreadId } from "@synara/contracts";
 import type { LastThreadRoute } from "../chatRouteRestore";
-import { type PaneId, type SplitView, type SplitViewId } from "../splitViewStore";
+import {
+  resolveSplitViewThreadIds,
+  type PaneId,
+  type SplitView,
+  type SplitViewId,
+} from "../splitViewStore";
 import { selectThreadTerminalState } from "../terminalStateStore";
 import type { SidebarThreadSummary } from "../types";
 import {
@@ -25,17 +30,12 @@ export type ThreadActivationControllerInput = {
   clearSelection: () => void;
   navigate: Navigate;
   openChatThreadPage: (threadId: ThreadId) => void;
-  openSidechatSplit: (input: {
-    sidechatThreadId: ThreadId;
-    sourceThreadId: ThreadId;
-    ownerProjectId: ProjectId;
-  }) => SplitViewId;
+  openSidechatDock: (input: { sidechatThreadId: ThreadId; sourceThreadId: ThreadId }) => void;
   openTerminalThreadPage: (threadId: ThreadId) => void;
+  prewarmThreadDetailForIntent: (threadId: ThreadId) => void;
   rememberLastThreadRouteNow: (nextLastThreadRoute: LastThreadRoute) => void;
   routeSplitViewId: string | null | undefined;
   routeThreadId: ThreadId | null | undefined;
-  /** Omitted is the canonical Agent route; Chat is serialized as `surface=chat`. */
-  routeSurface?: "chat" | undefined;
   selectedThreadCount: number;
   setOptimisticActiveThreadId: (threadId: ThreadId) => void;
   setSelectionAnchor: (threadId: ThreadId) => void;
@@ -54,10 +54,10 @@ export function activateThreadFromSidebarIntent(
     activeSplitView,
     clearSelection,
     navigate,
+    prewarmThreadDetailForIntent,
     rememberLastThreadRouteNow,
     routeSplitViewId,
     routeThreadId,
-    routeSurface,
     selectedThreadCount,
     setOptimisticActiveThreadId,
     setSelectionAnchor,
@@ -66,29 +66,42 @@ export function activateThreadFromSidebarIntent(
     splitViewsById,
   } = input;
 
+  const targetThread = sidebarThreadSummaryById[threadId];
+  const sidechatDockActivation = resolveSidechatDockActivation(input, {
+    threadId,
+    targetThread,
+  });
+  if (sidechatDockActivation) {
+    activateSidechatDock(input, sidechatDockActivation);
+    return;
+  }
+
   // Active split wins first; otherwise every persisted split block can restore deterministically.
-  const preferredSplit = resolvePreferredSplitForCommand({
+  const preferredSplitCandidate = resolvePreferredSplitForCommand({
     activeSplitView,
     splitViewsById,
     threadId,
   });
-  const targetThread = sidebarThreadSummaryById[threadId];
+  const preferredSplitView = preferredSplitCandidate
+    ? (splitViewsById[preferredSplitCandidate.splitViewId] ??
+      (activeSplitView?.id === preferredSplitCandidate.splitViewId ? activeSplitView : null))
+    : null;
+  const preferredSplit =
+    preferredSplitCandidate &&
+    preferredSplitView &&
+    resolveSplitViewThreadIds(preferredSplitView).some(
+      (paneThreadId) => sidebarThreadSummaryById[paneThreadId]?.sidechatSourceThreadId,
+    )
+      ? null
+      : preferredSplitCandidate;
   const activation = resolveThreadCommandActivation({
     threadId,
     threadExists: targetThread !== undefined,
-    activeSidebarThreadId: routeThreadId,
+    activeSidebarThreadId:
+      routeSplitViewId && preferredSplitCandidate && !preferredSplit ? null : routeThreadId,
     preferredSplitViewId: preferredSplit?.splitViewId ?? null,
     splitPaneId: preferredSplit?.paneId ?? null,
   });
-
-  const sidechatSplitActivation = resolveSidechatSplitActivation(input, {
-    threadId,
-    targetThread,
-  });
-  if (sidechatSplitActivation && activation.kind !== "split") {
-    activateSidechatSplit(input, sidechatSplitActivation);
-    return;
-  }
 
   if (activation.kind === "ignore") {
     return;
@@ -103,6 +116,7 @@ export function activateThreadFromSidebarIntent(
     return;
   }
 
+  prewarmThreadDetailForIntent(activation.threadId);
   setOptimisticActiveThreadId(activation.threadId);
   if (selectedThreadCount > 0) {
     clearSelection();
@@ -119,63 +133,61 @@ export function activateThreadFromSidebarIntent(
     search: (previous) => ({
       ...previous,
       splitViewId: activation.splitViewId,
-      surface: routeSurface,
     }),
   });
 }
 
-function resolveSidechatSplitActivation(
+function resolveSidechatDockActivation(
   input: ThreadActivationControllerInput,
   options: {
     threadId: ThreadId;
     targetThread: SidebarThreadActivationSummary | undefined;
   },
-): { threadId: ThreadId; sourceThreadId: ThreadId; ownerProjectId: ProjectId } | null {
+): { threadId: ThreadId; sourceThreadId: ThreadId } | null {
   if (!options.targetThread?.sidechatSourceThreadId) {
     return null;
   }
   const sourceThread = input.sidebarThreadSummaryById[options.targetThread.sidechatSourceThreadId];
-  if (!sourceThread || input.routeSplitViewId) {
+  if (!sourceThread) {
     return null;
   }
   return {
     threadId: options.threadId,
     sourceThreadId: options.targetThread.sidechatSourceThreadId,
-    ownerProjectId: sourceThread.projectId,
   };
 }
 
-// Sidechat rows reopen as source-left + sidechat-right when no split route is active.
-function activateSidechatSplit(
+// Sidechat rows always target the source thread's dock, matching where sidechats
+// are created and avoiding a second, conflicting split-view navigation model.
+function activateSidechatDock(
   input: ThreadActivationControllerInput,
   activation: {
     threadId: ThreadId;
     sourceThreadId: ThreadId;
-    ownerProjectId: ProjectId;
   },
 ): void {
-  input.setOptimisticActiveThreadId(activation.threadId);
+  input.prewarmThreadDetailForIntent(activation.sourceThreadId);
+  input.prewarmThreadDetailForIntent(activation.threadId);
+  input.setOptimisticActiveThreadId(activation.sourceThreadId);
   if (input.selectedThreadCount > 0) {
     input.clearSelection();
   }
   input.setSelectionAnchor(activation.threadId);
 
-  const splitViewId = input.openSidechatSplit({
+  input.openChatThreadPage(activation.sourceThreadId);
+  input.openSidechatDock({
     sourceThreadId: activation.sourceThreadId,
-    ownerProjectId: activation.ownerProjectId,
     sidechatThreadId: activation.threadId,
   });
   input.rememberLastThreadRouteNow({
-    threadId: activation.threadId,
-    splitViewId,
+    threadId: activation.sourceThreadId,
   });
   void input.navigate({
     to: "/$threadId",
-    params: { threadId: activation.threadId },
+    params: { threadId: activation.sourceThreadId },
     search: (previous) => ({
       ...previous,
-      splitViewId,
-      surface: input.routeSurface,
+      splitViewId: undefined,
     }),
   });
 }
@@ -184,6 +196,7 @@ function activateSidechatSplit(
 function activateThreadSingle(input: ThreadActivationControllerInput, threadId: ThreadId): void {
   if (!input.sidebarThreadSummaryById[threadId]) return;
 
+  input.prewarmThreadDetailForIntent(threadId);
   input.setOptimisticActiveThreadId(threadId);
   if (input.selectedThreadCount > 0) {
     input.clearSelection();
@@ -206,7 +219,6 @@ function activateThreadSingle(input: ThreadActivationControllerInput, threadId: 
     search: (previous) => ({
       ...previous,
       splitViewId: undefined,
-      surface: input.routeSurface,
     }),
   });
 }
@@ -219,12 +231,12 @@ export function useThreadActivationController(input: ThreadActivationControllerI
     clearSelection,
     navigate,
     openChatThreadPage,
-    openSidechatSplit,
+    openSidechatDock,
     openTerminalThreadPage,
+    prewarmThreadDetailForIntent,
     rememberLastThreadRouteNow,
     routeSplitViewId,
     routeThreadId,
-    routeSurface,
     selectedThreadCount,
     setOptimisticActiveThreadId,
     setSelectionAnchor,
@@ -241,12 +253,12 @@ export function useThreadActivationController(input: ThreadActivationControllerI
         clearSelection,
         navigate,
         openChatThreadPage,
-        openSidechatSplit,
+        openSidechatDock,
         openTerminalThreadPage,
+        prewarmThreadDetailForIntent,
         rememberLastThreadRouteNow,
         routeSplitViewId,
         routeThreadId,
-        routeSurface,
         selectedThreadCount,
         setOptimisticActiveThreadId,
         setSelectionAnchor,

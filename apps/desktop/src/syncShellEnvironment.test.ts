@@ -1,24 +1,8 @@
 import { describe, expect, it, vi } from "vitest";
 
-import { isDisposableSmokeEnvironment, syncShellEnvironment } from "./syncShellEnvironment";
+import { syncShellEnvironment } from "./syncShellEnvironment";
 
 describe("syncShellEnvironment", () => {
-  it("recognizes only a smoke environment whose homes are contained by its declared root", () => {
-    expect(
-      isDisposableSmokeEnvironment({
-        OMNIMIND_DISPOSABLE_SMOKE_ROOT: "/tmp/smoke",
-        HOME: "/tmp/smoke/home",
-        OMNIMIND_HOME: "/tmp/smoke/omnimind",
-      }),
-    ).toBe(true);
-    expect(
-      isDisposableSmokeEnvironment({
-        OMNIMIND_DISPOSABLE_SMOKE_ROOT: "/tmp/smoke",
-        HOME: "/Users/real",
-        OMNIMIND_HOME: "/tmp/smoke/omnimind",
-      }),
-    ).toBe(false);
-  });
   it("hydrates PATH and missing SSH_AUTH_SOCK from the login shell on macOS", () => {
     const env: NodeJS.ProcessEnv = {
       SHELL: "/bin/zsh",

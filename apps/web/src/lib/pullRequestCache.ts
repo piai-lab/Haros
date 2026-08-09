@@ -1,31 +1,31 @@
 import type {
-  ProductWorkspaceId,
+  ProjectId,
   PullRequestDetailInput,
-  PullRequestWorkspaceContext,
+  PullRequestProjectContext,
   PullRequestSetPinnedInput,
   PullRequestState,
   PullRequestsListResult,
-} from "@omnimind/contracts";
+} from "@synara/contracts";
 import {
   coalescePullRequestListEntries,
-  pullRequestListEntryHasWorkspace,
-  pullRequestListWorkspaceContexts,
-  pullRequestListWorkspacePin,
+  pullRequestListEntryHasProject,
+  pullRequestListProjectContexts,
+  pullRequestListProjectPin,
   pullRequestListRepositoryIdentity,
-  updatePullRequestListEntryWorkspacePin,
-} from "@omnimind/shared/githubRepository";
+  updatePullRequestListEntryProjectPin,
+} from "@synara/shared/githubRepository";
 import type { QueryClient, QueryKey } from "@tanstack/react-query";
 
 import { PULL_REQUEST_STATES } from "./pullRequestQueryOptions";
 
 export type PullRequestListCacheEntry = {
-  workspaceId: ProductWorkspaceId;
-  workspaceTitle?: string;
+  projectId: ProjectId;
+  projectTitle?: string;
   repository: string;
   number: number;
   isPinned: boolean;
   headBranch?: string;
-  workspaceContexts?: ReadonlyArray<PullRequestWorkspaceContext>;
+  projectContexts?: ReadonlyArray<PullRequestProjectContext>;
   state?: PullRequestState;
   isDraft?: boolean;
 };
@@ -51,13 +51,13 @@ export type ActionListCacheRollback = {
 
 export type PullRequestListQueryScope = {
   state: PullRequestState;
-  workspaceId: ProductWorkspaceId | null;
+  projectId: ProjectId | null;
 };
 
 export function pullRequestIdentityKey(
-  input: Pick<PullRequestDetailInput, "workspaceId" | "repository" | "number">,
+  input: Pick<PullRequestDetailInput, "projectId" | "repository" | "number">,
 ): string {
-  return JSON.stringify([input.workspaceId, input.repository.toLowerCase(), input.number]);
+  return JSON.stringify([input.projectId, input.repository.toLowerCase(), input.number]);
 }
 
 export function pullRequestRemoteIdentityKey(
@@ -75,20 +75,20 @@ function matchesPullRequestRemoteIdentity(
 
 function matchesPullRequestPinIdentity(
   entry: PullRequestListCacheEntry,
-  input: Pick<PullRequestDetailInput, "workspaceId" | "repository" | "number">,
+  input: Pick<PullRequestDetailInput, "projectId" | "repository" | "number">,
 ): boolean {
   return (
     matchesPullRequestRemoteIdentity(entry, input) &&
-    pullRequestListEntryHasWorkspace(entry, input.workspaceId)
+    pullRequestListEntryHasProject(entry, input.projectId)
   );
 }
 
 function updateEntryProjectPin(
   entry: PullRequestListCacheEntry,
-  workspaceId: ProductWorkspaceId,
+  projectId: ProjectId,
   isPinned: boolean,
 ): PullRequestListCacheEntry {
-  return updatePullRequestListEntryWorkspacePin(entry, workspaceId, isPinned);
+  return updatePullRequestListEntryProjectPin(entry, projectId, isPinned);
 }
 
 export function isPullRequestListQueryKey(queryKey: QueryKey): boolean {
@@ -107,19 +107,19 @@ export function pullRequestListQueryScope(queryKey: QueryKey): PullRequestListQu
   const stateIndex = queryKey[1] === "list" ? 2 : 3;
   const projectIdIndex = queryKey[1] === "list" ? 3 : 4;
   const state = queryKey[stateIndex];
-  const workspaceId = queryKey[projectIdIndex];
+  const projectId = queryKey[projectIdIndex];
   if (!PULL_REQUEST_STATES.includes(state as PullRequestState)) return null;
-  if (workspaceId !== null && typeof workspaceId !== "string") return null;
-  return { state: state as PullRequestState, workspaceId: workspaceId as ProductWorkspaceId | null };
+  if (projectId !== null && typeof projectId !== "string") return null;
+  return { state: state as PullRequestState, projectId: projectId as ProjectId | null };
 }
 
 function scopeKey(scope: PullRequestListQueryScope): string {
-  return `${scope.state}\u0000${scope.workspaceId ?? ""}`;
+  return `${scope.state}\u0000${scope.projectId ?? ""}`;
 }
 
 export function listScopesContainingPullRequest(
   queryClient: QueryClient,
-  input: Pick<PullRequestDetailInput, "workspaceId" | "repository" | "number">,
+  input: Pick<PullRequestDetailInput, "projectId" | "repository" | "number">,
 ): PullRequestListQueryScope[] {
   const scopes = new Map<string, PullRequestListQueryScope>();
   for (const [queryKey, data] of queryClient.getQueriesData<PullRequestListCache>({
@@ -136,7 +136,7 @@ export function listScopesContainingPullRequest(
  * This reaches the relevant state/involvement siblings without invalidating unrelated projects. */
 export function listScopesContainingPullRequestRepository(
   queryClient: QueryClient,
-  input: Pick<PullRequestDetailInput, "workspaceId" | "repository" | "number">,
+  input: Pick<PullRequestDetailInput, "projectId" | "repository" | "number">,
 ): PullRequestListQueryScope[] {
   const scopes = new Map<string, PullRequestListQueryScope>();
   for (const [queryKey, data] of queryClient.getQueriesData<PullRequestListCache>({
@@ -194,7 +194,7 @@ export function invalidateOtherPullRequestListQueries(
         refreshedScope !== null &&
         candidateScope !== null &&
         candidateScope.state === refreshedScope.state &&
-        candidateScope.workspaceId === refreshedScope.workspaceId &&
+        candidateScope.projectId === refreshedScope.projectId &&
         !queryKeysEqual(query.queryKey, refreshedQueryKey)
       );
     },
@@ -203,7 +203,7 @@ export function invalidateOtherPullRequestListQueries(
 
 export function optimisticallyPatchPullRequestActionFieldsInListCaches(
   queryClient: QueryClient,
-  input: Pick<PullRequestDetailInput, "workspaceId" | "repository" | "number">,
+  input: Pick<PullRequestDetailInput, "projectId" | "repository" | "number">,
   entryPatch: PullRequestActionListPatch,
 ): ActionListCacheRollback[] {
   const rollbackByQuery: ActionListCacheRollback[] = [];
@@ -236,7 +236,7 @@ export function optimisticallyPatchPullRequestActionFieldsInListCaches(
 
 export function rollbackPullRequestActionFieldsInListCaches(input: {
   queryClient: QueryClient;
-  identity: Pick<PullRequestDetailInput, "workspaceId" | "repository" | "number">;
+  identity: Pick<PullRequestDetailInput, "projectId" | "repository" | "number">;
   optimisticPatch: PullRequestActionListPatch;
   rollbackByQuery: ReadonlyArray<ActionListCacheRollback>;
 }) {
@@ -272,7 +272,7 @@ export function rollbackPullRequestActionFieldsInListCaches(input: {
 
 export function patchPullRequestPinInListCaches(
   queryClient: QueryClient,
-  input: Pick<PullRequestSetPinnedInput, "workspaceId" | "repository" | "number">,
+  input: Pick<PullRequestSetPinnedInput, "projectId" | "repository" | "number">,
   isPinned: boolean,
 ) {
   for (const [queryKey] of queryClient.getQueriesData<PullRequestListCache>({
@@ -284,7 +284,7 @@ export function patchPullRequestPinInListCaches(
             ...current,
             entries: current.entries.map((entry) =>
               matchesPullRequestPinIdentity(entry, input)
-                ? updateEntryProjectPin(entry, input.workspaceId, isPinned)
+                ? updateEntryProjectPin(entry, input.projectId, isPinned)
                 : entry,
             ),
           }
@@ -305,7 +305,7 @@ export function optimisticallyPatchPullRequestPinInListCaches(
     if (!match) continue;
     rollbackByQuery.push({
       queryKey,
-      previousIsPinned: pullRequestListWorkspacePin(match, input.workspaceId)!,
+      previousIsPinned: pullRequestListProjectPin(match, input.projectId)!,
     });
     queryClient.setQueryData<PullRequestListCache>(queryKey, (current) =>
       current
@@ -313,7 +313,7 @@ export function optimisticallyPatchPullRequestPinInListCaches(
             ...current,
             entries: current.entries.map((entry) =>
               matchesPullRequestPinIdentity(entry, input)
-                ? updateEntryProjectPin(entry, input.workspaceId, input.isPinned)
+                ? updateEntryProjectPin(entry, input.projectId, input.isPinned)
                 : entry,
             ),
           }
@@ -326,7 +326,7 @@ export function optimisticallyPatchPullRequestPinInListCaches(
 export function patchOwnedPullRequestPinInCache(input: {
   queryClient: QueryClient;
   queryKey: QueryKey;
-  identity: Pick<PullRequestSetPinnedInput, "workspaceId" | "repository" | "number">;
+  identity: Pick<PullRequestSetPinnedInput, "projectId" | "repository" | "number">;
   expectedIsPinned: boolean;
   nextIsPinned: boolean;
 }) {
@@ -336,8 +336,8 @@ export function patchOwnedPullRequestPinInCache(input: {
           ...current,
           entries: current.entries.map((entry) =>
             matchesPullRequestPinIdentity(entry, input.identity) &&
-            pullRequestListWorkspacePin(entry, input.identity.workspaceId) === input.expectedIsPinned
-              ? updateEntryProjectPin(entry, input.identity.workspaceId, input.nextIsPinned)
+            pullRequestListProjectPin(entry, input.identity.projectId) === input.expectedIsPinned
+              ? updateEntryProjectPin(entry, input.identity.projectId, input.nextIsPinned)
               : entry,
           ),
         }
@@ -359,12 +359,12 @@ export function preserveProtectedPinValues(
   const resultRemoteIdentities = new Set(result.entries.map(pullRequestRemoteIdentityKey));
   const missingProtectedPinnedEntries = currentEntries.filter((entry) => {
     if (resultRemoteIdentities.has(pullRequestRemoteIdentityKey(entry))) return false;
-    return pullRequestListWorkspaceContexts(entry).some(
+    return pullRequestListProjectContexts(entry).some(
       (context) =>
         context.isPinned &&
         protectedIdentities.has(
           pullRequestIdentityKey({
-            workspaceId: context.workspaceId,
+            projectId: context.projectId,
             repository: entry.repository,
             number: entry.number,
           }),
@@ -377,11 +377,11 @@ export function preserveProtectedPinValues(
       ...missingProtectedPinnedEntries,
       ...result.entries.flatMap((entry) => {
         const currentEntry = currentByRemoteIdentity.get(pullRequestRemoteIdentityKey(entry));
-        const contexts = pullRequestListWorkspaceContexts(entry);
+        const contexts = pullRequestListProjectContexts(entry);
         const protectedContexts = contexts.filter((context) =>
           protectedIdentities.has(
             pullRequestIdentityKey({
-              workspaceId: context.workspaceId,
+              projectId: context.projectId,
               repository: entry.repository,
               number: entry.number,
             }),
@@ -395,28 +395,28 @@ export function preserveProtectedPinValues(
           return [
             protectedContexts.reduce(
               (next, context) =>
-                updatePullRequestListEntryWorkspacePin(next, context.workspaceId, false),
+                updatePullRequestListEntryProjectPin(next, context.projectId, false),
               entry,
             ),
           ];
         }
         const hasAggregateContexts =
-          (entry.workspaceContexts?.length ?? 0) > 0 ||
-          (currentEntry.workspaceContexts?.length ?? 0) > 0;
+          (entry.projectContexts?.length ?? 0) > 0 ||
+          (currentEntry.projectContexts?.length ?? 0) > 0;
         const mergedEntry = hasAggregateContexts
           ? coalescePullRequestListEntries([entry, currentEntry], {
-              preferredWorkspaceId: entry.workspaceId,
+              preferredProjectId: entry.projectId,
             })[0]!
           : entry;
         return [
-          pullRequestListWorkspaceContexts(currentEntry).reduce((next, context) => {
+          pullRequestListProjectContexts(currentEntry).reduce((next, context) => {
             const identityKey = pullRequestIdentityKey({
-              workspaceId: context.workspaceId,
+              projectId: context.projectId,
               repository: entry.repository,
               number: entry.number,
             });
             return protectedIdentities.has(identityKey)
-              ? updatePullRequestListEntryWorkspacePin(next, context.workspaceId, context.isPinned)
+              ? updatePullRequestListEntryProjectPin(next, context.projectId, context.isPinned)
               : next;
           }, mergedEntry),
         ];

@@ -2,15 +2,15 @@
 // Purpose: Identify the source thread for conversations created by another OmniMind agent.
 // Layer: Chat transcript UI
 
-import { type ThreadId } from "@omnimind/contracts";
+import { type ProviderKind, type ThreadId } from "@synara/contracts";
 import { memo, type ReactNode } from "react";
 
-import { BrandMark } from "../BrandMark";
-import { cn } from "~/lib/styles";
+import { OmniMindLogo } from "../OmniMindLogo";
+import { cn } from "~/lib/utils";
 
 export interface CrossTaskOrigin {
   readonly sourceThreadId: ThreadId;
-  readonly sourceProvider: string | null;
+  readonly sourceProvider: ProviderKind | null;
 }
 
 // A single, app-level attribution: the message reached this thread from another
@@ -20,7 +20,7 @@ function OriginContent(): ReactNode {
   return (
     <>
       <span className="flex size-4 shrink-0 items-center justify-center text-muted-foreground/70">
-        <BrandMark className="h-4 w-auto" aria-label="OmniMind" />
+        <OmniMindLogo className="h-4 w-auto" aria-label="OmniMind" />
       </span>
       <span className="truncate">Sent by OmniMind from another thread</span>
     </>

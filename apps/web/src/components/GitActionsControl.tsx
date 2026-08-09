@@ -3,12 +3,15 @@
 // Layer: Header action control
 // Depends on: git React Query hooks, native shell bridges, and shared picker/menu primitives.
 
+import { DEFAULT_GIT_TEXT_GENERATION_MODEL } from "@synara/contracts";
 import type {
   GitActionProgressEvent,
+  GitRunStackedActionResult,
   GitStackedAction,
   GitStatusResult,
+  ModelSelection,
   ThreadId,
-} from "@omnimind/contracts";
+} from "@synara/contracts";
 import { useIsMutating, useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import {
@@ -17,7 +20,7 @@ import {
   GitBranchIcon,
   GitCommitIcon,
   InfoIcon,
-  type GlyphComponent,
+  type LucideIcon,
   PushIcon,
 } from "~/lib/icons";
 import { Input } from "~/components/ui/input";
@@ -25,6 +28,7 @@ import { GitHubIcon } from "./Icons";
 import {
   buildGitActionProgressStages,
   buildMenuItems,
+  type CreatePrDialogContext,
   type GitActionMenuItem,
   type GitActionIconName,
   type GitQuickAction,
@@ -35,12 +39,21 @@ import {
   resolveDefaultCreateBranchName,
   resolveDefaultBranchActionDialogCopy,
   resolveCreatePrActionAvailability,
+  resolveCreatePrBaseBranch,
+  resolveCreatePrDialogRuntimeStatus,
+  resolveCreatePrExecution,
   resolveQuickAction,
   resolvePullActionAvailability,
   shouldShowEnvironmentPanelPullRow,
   shouldOfferCreateBranchPrompt,
   summarizeGitResult,
 } from "./GitActionsControl.logic";
+import {
+  GitCreatePrDialog,
+  type GitCreatePrDialogBrowserRequest,
+  type GitCreatePrDialogSubmission,
+} from "./GitCreatePrDialog";
+import { getProviderStartOptions, useAppSettings } from "~/appSettings";
 import { formatClockDuration } from "~/session-logic";
 import { Button } from "~/components/ui/button";
 import {
@@ -91,9 +104,10 @@ import {
   gitRunStackedActionMutationOptions,
   gitStatusQueryOptions,
   invalidateGitQueries,
+  isGitExpensiveReadCapacityError,
+  refreshGitActionAvailability,
 } from "~/lib/gitReactQuery";
-import { cn } from "~/lib/styles";
-import { createCommandId, randomUUID } from "~/lib/identifiers";
+import { cn, newCommandId, randomUUID } from "~/lib/utils";
 import { resolvePathLinkTarget } from "~/terminal-links";
 import { readNativeApi } from "~/nativeApi";
 import { createThreadSelector } from "~/storeSelectors";
@@ -146,6 +160,20 @@ interface RunGitActionWithToastInput {
   isDefaultBranchOverride?: boolean;
   progressToastId?: GitActionToastId;
   filePaths?: string[];
+  prTitle?: string;
+  prBody?: string;
+  prDraft?: boolean;
+  allowDirtyWorkingTree?: boolean;
+  afterSuccess?: (result: GitRunStackedActionResult) => void;
+}
+
+// Overrides captured when the Create PR dialog opens from a surface with a
+// pre-resolved git status (e.g. the post-push toast CTA); null means "open
+// against the live status".
+interface CreatePrDialogState {
+  statusOverride: GitStatusResult | null;
+  statusOverrideSource: GitStatusResult | null;
+  isDefaultBranchOverride: boolean | null;
 }
 
 interface GitPickerMenuItem {
@@ -155,6 +183,11 @@ interface GitPickerMenuItem {
   disabledReason: string | null;
   icon: GitActionIconName | "sync" | "branch";
   onSelect: () => void;
+}
+
+// Keep "/" literal in branch names; GitHub compare URLs expect it unescaped.
+function encodeBranchForCompareUrl(branch: string): string {
+  return branch.split("/").map(encodeURIComponent).join("/");
 }
 
 function formatElapsedDescription(startedAtMs: number | null): string | undefined {
@@ -176,11 +209,15 @@ function getMenuActionDisabledReason({
   gitStatus,
   isBusy,
   hasOriginRemote,
+  isDefaultBranch,
+  defaultBranchName,
 }: {
   item: GitActionMenuItem;
   gitStatus: GitStatusResult | null;
   isBusy: boolean;
   hasOriginRemote: boolean;
+  isDefaultBranch: boolean;
+  defaultBranchName: string | null;
 }): string | null {
   if (!item.disabled) return null;
   if (isBusy) return "Git action in progress.";
@@ -237,20 +274,15 @@ function getMenuActionDisabledReason({
   if (hasOpenPr) {
     return "View PR is currently unavailable.";
   }
-  if (!hasBranch) {
-    return "Detached HEAD: checkout a branch before creating a PR.";
-  }
-  if (hasChanges) {
-    return "Commit local changes before creating a PR.";
-  }
-  if (!gitStatus.hasUpstream && !hasOriginRemote) {
-    return 'Add an "origin" remote before creating a PR.';
-  }
-  if (!isAhead) {
-    return "No local commits to include in a PR.";
-  }
-  if (isBehind) {
-    return "Branch is behind upstream. Pull/rebase before creating a PR.";
+  const prExecution = resolveCreatePrExecution({
+    gitStatus,
+    isBusy,
+    isDefaultBranch,
+    hasOriginRemote,
+    defaultBranchName,
+  });
+  if (prExecution.kind === "unavailable") {
+    return prExecution.hint;
   }
   return "Create PR is currently unavailable.";
 }
@@ -259,7 +291,7 @@ const COMMIT_DIALOG_TITLE = "Commit changes";
 const COMMIT_DIALOG_DESCRIPTION =
   "Review and confirm your commit. Leave the message blank to auto-generate one.";
 
-// product glyphs render as masked spans (not <svg>), so size them explicitly here
+// Central icons render as masked spans (not <svg>), so size them explicitly here
 // rather than relying on parent `[&>svg]` selectors.
 const GIT_ACTION_ICON_CLASS = "size-3.5";
 
@@ -268,7 +300,7 @@ const GIT_ACTION_ICON_CLASS = "size-3.5";
  *  renders the same icon (e.g. push-family → the cloud PushIcon, PR → GitHub mark). */
 type GitGlyphName = GitActionIconName | "sync" | "branch";
 
-const GIT_ACTION_GLYPH: Record<GitGlyphName, GlyphComponent> = {
+const GIT_ACTION_GLYPH: Record<GitGlyphName, LucideIcon> = {
   commit: GitCommitIcon,
   push: PushIcon,
   pr: GitHubIcon,
@@ -332,6 +364,16 @@ export default function GitActionsControl({
   const hideQuickActionLabel = hideQuickActionLabelProp ?? false;
   const variant = variantProp ?? "header";
   const isPanel = variant === "panel";
+  const { settings } = useAppSettings();
+  // Manual memoization kept: this file does not compile under React Compiler (see compile-report).
+  const providerOptions = useMemo(() => getProviderStartOptions(settings), [settings]);
+  const gitTextGenerationModelSelection = useMemo(
+    (): ModelSelection => ({
+      provider: settings.textGenerationProvider ?? "codex",
+      model: settings.textGenerationModel ?? DEFAULT_GIT_TEXT_GENERATION_MODEL,
+    }),
+    [settings.textGenerationModel, settings.textGenerationProvider],
+  );
   const activeThread = useStore(
     useMemo(() => createThreadSelector(activeThreadId), [activeThreadId]),
   );
@@ -349,6 +391,7 @@ export default function GitActionsControl({
     useState<PendingDefaultBranchAction | null>(null);
   const [isCreateBranchDialogOpen, setIsCreateBranchDialogOpen] = useState(false);
   const [createBranchName, setCreateBranchName] = useState("");
+  const [createPrDialog, setCreatePrDialog] = useState<CreatePrDialogState | null>(null);
   const activeGitActionProgressRef = useRef<ActiveGitActionProgress | null>(null);
 
   const updateActiveProgressToast = useCallback(() => {
@@ -375,10 +418,17 @@ export default function GitActionsControl({
   const currentBranch = branchList?.branches.find((branch) => branch.current)?.name ?? null;
   // Only poll status after branch discovery confirms a repo — avoids non-repo
   // cwds feeding a permanent "Refreshing git status..." invalidation loop.
-  const { data: gitStatusData, error: gitStatusError } = useQuery(
-    gitStatusQueryOptions(gitCwd, branchListReady && branchList?.isRepo === true),
-  );
+  const {
+    data: gitStatusData,
+    error: gitStatusError,
+    isFetching: isGitStatusFetching,
+  } = useQuery(gitStatusQueryOptions(gitCwd, branchListReady && branchList?.isRepo === true));
   const gitStatus = gitStatusData ?? null;
+  const isGitStatusRefreshDelayed = isGitExpensiveReadCapacityError(gitStatusError);
+  const requestGitActionAvailabilityRefresh = useCallback(() => {
+    if (!gitCwd) return;
+    void refreshGitActionAvailability(queryClient, gitCwd).catch(() => undefined);
+  }, [gitCwd, queryClient]);
   const liveThreadBranchUpdate = useMemo(
     () =>
       resolveLiveThreadBranchUpdate({
@@ -391,8 +441,8 @@ export default function GitActionsControl({
 
   useEffect(() => {
     if (!isGitStatusOutOfSync) return;
-    void invalidateGitQueries(queryClient);
-  }, [isGitStatusOutOfSync, queryClient]);
+    requestGitActionAvailabilityRefresh();
+  }, [isGitStatusOutOfSync, requestGitActionAvailabilityRefresh]);
 
   const gitStatusForActions = isGitStatusOutOfSync ? null : gitStatus;
 
@@ -407,6 +457,10 @@ export default function GitActionsControl({
     gitRunStackedActionMutationOptions({
       cwd: gitCwd,
       queryClient,
+      codexHomePath: settings.codexHomePath || null,
+      model: settings.textGenerationModel ?? null,
+      modelSelection: gitTextGenerationModelSelection,
+      ...(providerOptions ? { providerOptions } : {}),
     }),
   );
   const pullMutation = useMutation(gitPullMutationOptions({ cwd: gitCwd, queryClient }));
@@ -427,7 +481,16 @@ export default function GitActionsControl({
       if (!activeThreadId) {
         return;
       }
-      void pr;
+      const api = readNativeApi();
+      if (!api) {
+        return;
+      }
+      await api.orchestration.dispatchCommand({
+        type: "thread.meta.update",
+        commandId: newCommandId(),
+        threadId: activeThreadId,
+        lastKnownPr: pr,
+      });
     },
     [activeThreadId],
   );
@@ -567,11 +630,8 @@ export default function GitActionsControl({
           progress.lastOutputLine = null;
           break;
         case "action_finished":
-          // Don't clear timestamps here — the HTTP response handler (line 496)
-          // sets activeGitActionProgressRef to null and shows the success toast.
-          // Clearing timestamps early causes the "Running for Xs" description
-          // to disappear before the success state renders, leaving a bare
-          // "Pushing..." toast in the gap between the WS event and HTTP response.
+          // The terminal stream response owns the final toast so success is rendered once.
+          // Its server-side status refresh is detached, keeping this event-to-response gap short.
           return;
         case "action_failed":
           // Same reasoning as action_finished — let the HTTP error handler
@@ -627,6 +687,90 @@ export default function GitActionsControl({
     });
   }, [gitStatusForActions, threadToastData]);
 
+  // Single entry point for every "Create PR" surface: opens the PR dialog when a
+  // PR can be created, opens the existing PR when one is already open, and
+  // explains unavailability otherwise.
+  const openCreatePrDialog = useCallback(
+    (input?: {
+      statusOverride?: GitStatusResult | null;
+      statusOverrideSource?: GitStatusResult | null;
+      isDefaultBranchOverride?: boolean;
+    }) => {
+      const execution = resolveCreatePrExecution({
+        gitStatus: input?.statusOverride ?? gitStatusForActions,
+        isBusy: isGitActionRunning,
+        isDefaultBranch: input?.isDefaultBranchOverride ?? isDefaultBranch,
+        hasOriginRemote,
+        defaultBranchName,
+      });
+      if (execution.kind === "open_pr") {
+        void openExistingPr();
+        return;
+      }
+      if (execution.kind === "unavailable") {
+        toastManager.add({
+          type: "info",
+          title: "Create PR unavailable",
+          description: execution.hint,
+          data: threadToastData,
+        });
+        return;
+      }
+      setCreatePrDialog({
+        statusOverride: input?.statusOverride ?? null,
+        statusOverrideSource: input?.statusOverrideSource ?? null,
+        isDefaultBranchOverride: input?.isDefaultBranchOverride ?? null,
+      });
+    },
+    [
+      defaultBranchName,
+      gitStatusForActions,
+      hasOriginRemote,
+      isDefaultBranch,
+      isGitActionRunning,
+      openExistingPr,
+      threadToastData,
+    ],
+  );
+
+  const openComparePage = useCallback(
+    async (headBranch: string | null, baseBranch: string) => {
+      const api = readNativeApi();
+      if (!api || !gitCwd || !headBranch) {
+        toastManager.add({
+          type: "error",
+          title: "Unable to open compare page.",
+          data: threadToastData,
+        });
+        return;
+      }
+      try {
+        const repoResult = await api.git.githubRepository({ cwd: gitCwd });
+        const repoUrl = repoResult.repository?.url ?? null;
+        if (!repoUrl) {
+          toastManager.add({
+            type: "error",
+            title: "Unable to open compare page",
+            description: "No GitHub repository detected for this project.",
+            data: threadToastData,
+          });
+          return;
+        }
+        await api.shell.openExternal(
+          `${repoUrl}/compare/${encodeBranchForCompareUrl(baseBranch)}...${encodeBranchForCompareUrl(headBranch)}?expand=1`,
+        );
+      } catch (error) {
+        toastManager.add({
+          type: "error",
+          title: "Unable to open compare page",
+          description: error instanceof Error ? error.message : "An error occurred.",
+          data: threadToastData,
+        });
+      }
+    },
+    [gitCwd, threadToastData],
+  );
+
   const runSyncWithRemote = useCallback(() => {
     const promise = pullMutation.mutateAsync();
     toastManager.promise(promise, {
@@ -660,6 +804,11 @@ export default function GitActionsControl({
       isDefaultBranchOverride,
       progressToastId,
       filePaths,
+      prTitle,
+      prBody,
+      prDraft,
+      allowDirtyWorkingTree,
+      afterSuccess,
     }: RunGitActionWithToastInput) {
       const forcePushOnlyProgress = forcePushOnlyProgressProp ?? false;
       const skipDefaultBranchPrompt = skipDefaultBranchPromptProp ?? false;
@@ -692,7 +841,7 @@ export default function GitActionsControl({
         });
         return;
       }
-      if (action === "create_pr" && !featureBranch) {
+      if (action === "create_pr" && !featureBranch && !allowDirtyWorkingTree) {
         const createPrAvailability = resolveCreatePrActionAvailability({
           gitStatus: actionStatus,
           isDefaultBranch: actionIsDefaultBranch,
@@ -757,6 +906,10 @@ export default function GitActionsControl({
         ...(commitMessage ? { commitMessage } : {}),
         ...(featureBranch ? { featureBranch } : {}),
         ...(filePaths ? { filePaths } : {}),
+        ...(prTitle ? { prTitle } : {}),
+        ...(prBody ? { prBody } : {}),
+        ...(prDraft ? { prDraft } : {}),
+        ...(allowDirtyWorkingTree ? { allowDirtyWorkingTree } : {}),
       });
 
       try {
@@ -814,12 +967,13 @@ export default function GitActionsControl({
           !prUrl &&
           result.push.status === "pushed" &&
           !actionIsDefaultBranch &&
-          resolveCreatePrActionAvailability({
+          resolveCreatePrExecution({
             gitStatus: postPushStatus,
+            isBusy: false,
             isDefaultBranch: actionIsDefaultBranch,
             hasOriginRemote,
             defaultBranchName,
-          }).canRun;
+          }).kind === "run_action";
         const closeResultToast = () => {
           toastManager.close(resolvedProgressToastId);
         };
@@ -865,9 +1019,9 @@ export default function GitActionsControl({
                       children: "Create PR",
                       onClick: () => {
                         closeResultToast();
-                        void runGitActionWithToast({
-                          action: "create_pr",
+                        openCreatePrDialog({
                           statusOverride: postPushStatus,
+                          statusOverrideSource: actionStatus,
                           isDefaultBranchOverride: actionIsDefaultBranch,
                         });
                       },
@@ -875,6 +1029,7 @@ export default function GitActionsControl({
                   }
                 : {}),
         });
+        afterSuccess?.(result);
       } catch (err) {
         activeGitActionProgressRef.current = null;
         toastManager.update(resolvedProgressToastId, {
@@ -890,10 +1045,113 @@ export default function GitActionsControl({
       gitStatusForActions,
       hasOriginRemote,
       isDefaultBranch,
+      openCreatePrDialog,
       persistThreadPr,
       runImmediateGitActionMutation,
       threadToastData,
     ],
+  );
+
+  const createPrDialogRuntimeStatus = useMemo(
+    () =>
+      resolveCreatePrDialogRuntimeStatus({
+        liveGitStatus: gitStatusForActions,
+        statusOverride: createPrDialog?.statusOverride ?? null,
+        statusOverrideSource: createPrDialog?.statusOverrideSource ?? null,
+        isDefaultBranch,
+        isDefaultBranchOverride: createPrDialog?.isDefaultBranchOverride ?? null,
+      }),
+    [createPrDialog, gitStatusForActions, isDefaultBranch],
+  );
+
+  const handleCreatePrDialogSubmit = useCallback(
+    (submission: GitCreatePrDialogSubmission) => {
+      setCreatePrDialog(null);
+      const actionStatus = createPrDialogRuntimeStatus.gitStatus;
+      const actionIsDefaultBranch = createPrDialogRuntimeStatus.isDefaultBranch;
+      const excludesDirtyChanges =
+        !submission.includeLocalChanges && actionStatus?.hasWorkingTreeChanges === true;
+      void runGitActionWithToast({
+        action: submission.action,
+        ...(createPrDialogRuntimeStatus.statusOverride
+          ? { statusOverride: createPrDialogRuntimeStatus.statusOverride }
+          : {}),
+        isDefaultBranchOverride: actionIsDefaultBranch,
+        ...(actionIsDefaultBranch ? { featureBranch: true } : {}),
+        skipDefaultBranchPrompt: true,
+        ...(submission.title ? { prTitle: submission.title } : {}),
+        ...(submission.body ? { prBody: submission.body } : {}),
+        ...(submission.draft ? { prDraft: true } : {}),
+        ...(excludesDirtyChanges ? { allowDirtyWorkingTree: true } : {}),
+      });
+    },
+    [createPrDialogRuntimeStatus, runGitActionWithToast],
+  );
+
+  const handleCreatePrDialogBrowser = useCallback(
+    (request: GitCreatePrDialogBrowserRequest) => {
+      setCreatePrDialog(null);
+      const actionStatus = createPrDialogRuntimeStatus.gitStatus;
+      const actionIsDefaultBranch = createPrDialogRuntimeStatus.isDefaultBranch;
+      const preparation = request.preparation;
+      if (preparation.kind === "open_pr") {
+        void openExistingPr();
+        return;
+      }
+      if (preparation.kind === "unavailable") {
+        toastManager.add({
+          type: "info",
+          title: "Create PR unavailable",
+          description: preparation.hint,
+          data: threadToastData,
+        });
+        return;
+      }
+      if (preparation.kind === "open_compare") {
+        void openComparePage(
+          actionStatus?.branch ?? null,
+          resolveCreatePrBaseBranch(actionStatus, defaultBranchName),
+        );
+        return;
+      }
+      const excludesDirtyChanges =
+        !request.includeLocalChanges && actionStatus?.hasWorkingTreeChanges === true;
+      void runGitActionWithToast({
+        action: preparation.action,
+        ...(createPrDialogRuntimeStatus.statusOverride
+          ? { statusOverride: createPrDialogRuntimeStatus.statusOverride }
+          : {}),
+        isDefaultBranchOverride: actionIsDefaultBranch,
+        ...(actionIsDefaultBranch ? { featureBranch: true } : {}),
+        skipDefaultBranchPrompt: true,
+        ...(excludesDirtyChanges ? { allowDirtyWorkingTree: true } : {}),
+        afterSuccess: (result) => {
+          void openComparePage(
+            result.push.branch ?? result.branch.name ?? actionStatus?.branch ?? null,
+            resolveCreatePrBaseBranch(actionStatus, defaultBranchName),
+          );
+        },
+      });
+    },
+    [
+      createPrDialogRuntimeStatus,
+      defaultBranchName,
+      openComparePage,
+      openExistingPr,
+      runGitActionWithToast,
+      threadToastData,
+    ],
+  );
+
+  const createPrDialogContext = useMemo<CreatePrDialogContext>(
+    () => ({
+      gitStatus: createPrDialogRuntimeStatus.gitStatus,
+      isBusy: isGitActionRunning,
+      isDefaultBranch: createPrDialogRuntimeStatus.isDefaultBranch,
+      hasOriginRemote,
+      defaultBranchName,
+    }),
+    [createPrDialogRuntimeStatus, defaultBranchName, hasOriginRemote, isGitActionRunning],
   );
 
   const continuePendingDefaultBranchAction = useCallback(() => {
@@ -974,10 +1232,17 @@ export default function GitActionsControl({
       return;
     }
     if (quickAction.action) {
+      // PR-creating quick actions go through the Create PR dialog so the user
+      // can review title/description/draft before the chain runs.
+      if (quickAction.action === "create_pr" || quickAction.action === "commit_push_pr") {
+        openCreatePrDialog();
+        return;
+      }
       void runGitActionWithToast({ action: quickAction.action });
     }
   }, [
     openCreateBranchDialog,
+    openCreatePrDialog,
     openExistingPr,
     quickAction,
     runGitActionWithToast,
@@ -1011,6 +1276,18 @@ export default function GitActionsControl({
 
       if (trimmedName.toLowerCase() === normalizedCurrentBranchName) {
         if (activeThreadId) {
+          void api.orchestration
+            .dispatchCommand({
+              type: "thread.meta.update",
+              commandId: newCommandId(),
+              threadId: activeThreadId,
+              createBranchFlowCompleted: true,
+            })
+            .catch(() => {
+              setThreadWorkspaceAction(activeThreadId, {
+                createBranchFlowCompleted: false,
+              });
+            });
           setThreadWorkspaceAction(activeThreadId, {
             createBranchFlowCompleted: true,
           });
@@ -1035,6 +1312,22 @@ export default function GitActionsControl({
         await api.git.createBranch({ cwd: gitCwd, branch: trimmedName, publish: hasOriginRemote });
         await api.git.checkout({ cwd: gitCwd, branch: trimmedName });
         if (activeThreadId) {
+          void api.orchestration
+            .dispatchCommand({
+              type: "thread.meta.update",
+              commandId: newCommandId(),
+              threadId: activeThreadId,
+              branch: trimmedName,
+              worktreePath: activeThread?.worktreePath ?? null,
+              associatedWorktreeBranch: trimmedName,
+              associatedWorktreeRef: trimmedName,
+              createBranchFlowCompleted: true,
+            })
+            .catch(() => {
+              setThreadWorkspaceAction(activeThreadId, {
+                createBranchFlowCompleted: false,
+              });
+            });
           setThreadWorkspaceAction(activeThreadId, {
             branch: trimmedName,
             associatedWorktreeBranch: trimmedName,
@@ -1087,12 +1380,12 @@ export default function GitActionsControl({
         return;
       }
       if (item.dialogAction === "create_pr") {
-        void runGitActionWithToast({ action: "create_pr" });
+        openCreatePrDialog();
         return;
       }
       openCommitDialog();
     },
-    [openCommitDialog, openExistingPr, runGitActionWithToast],
+    [openCommitDialog, openCreatePrDialog, openExistingPr, runGitActionWithToast],
   );
 
   useEffect(() => {
@@ -1128,6 +1421,8 @@ export default function GitActionsControl({
           gitStatus: gitStatusForActions,
           isBusy: isGitActionRunning,
           hasOriginRemote,
+          isDefaultBranch,
+          defaultBranchName,
         }),
         icon: "commit",
         onSelect: () => openDialogForMenuItem(commitMenuItem),
@@ -1144,6 +1439,8 @@ export default function GitActionsControl({
           gitStatus: gitStatusForActions,
           isBusy: isGitActionRunning,
           hasOriginRemote,
+          isDefaultBranch,
+          defaultBranchName,
         }),
         icon: "push",
         onSelect: () => openDialogForMenuItem(commitPushMenuItem),
@@ -1169,6 +1466,8 @@ export default function GitActionsControl({
           gitStatus: gitStatusForActions,
           isBusy: isGitActionRunning,
           hasOriginRemote,
+          isDefaultBranch,
+          defaultBranchName,
         }),
         icon: "push",
         onSelect: () => openDialogForMenuItem(pushMenuItem),
@@ -1185,6 +1484,8 @@ export default function GitActionsControl({
           gitStatus: gitStatusForActions,
           isBusy: isGitActionRunning,
           hasOriginRemote,
+          isDefaultBranch,
+          defaultBranchName,
         }),
         icon: "pr",
         onSelect: () => openDialogForMenuItem(prMenuItem),
@@ -1206,9 +1507,11 @@ export default function GitActionsControl({
 
     return items;
   }, [
+    defaultBranchName,
     gitActionMenuItems,
     gitStatusForActions,
     hasOriginRemote,
+    isDefaultBranch,
     isGitActionRunning,
     openCreateBranchDialog,
     openDialogForMenuItem,
@@ -1316,8 +1619,15 @@ export default function GitActionsControl({
       {isGitStatusOutOfSync && (
         <p className="px-3 py-1.5 text-xs text-muted-foreground">Refreshing git status...</p>
       )}
-      {gitStatusError && (
-        <p className="px-3 py-1.5 text-xs text-destructive">{gitStatusError.message}</p>
+      {isGitStatusRefreshDelayed && !isGitStatusOutOfSync && (
+        <p className="px-3 py-1.5 text-xs text-muted-foreground">
+          {isGitStatusFetching ? "Refreshing git status..." : "Git status refresh delayed."}
+        </p>
+      )}
+      {gitStatusError && !isGitStatusRefreshDelayed && (
+        <p className="px-3 py-1.5 text-xs text-destructive">
+          {gitStatusError instanceof Error ? gitStatusError.message : "Git status refresh failed."}
+        </p>
       )}
     </>
   );
@@ -1325,6 +1635,16 @@ export default function GitActionsControl({
   // The git action dialogs are identical across surfaces; only the trigger differs.
   const gitActionDialogs = (
     <>
+      <GitCreatePrDialog
+        open={createPrDialog !== null}
+        onOpenChange={(open) => {
+          if (!open) setCreatePrDialog(null);
+        }}
+        context={createPrDialogContext}
+        onSubmit={handleCreatePrDialogSubmit}
+        onOpenInBrowser={handleCreatePrDialogBrowser}
+      />
+
       <Dialog
         open={isCommitDialogOpen}
         onOpenChange={(open) => {
@@ -1621,7 +1941,7 @@ export default function GitActionsControl({
     const panelGitActionsMenu = (
       <Menu
         onOpenChange={(open) => {
-          if (open) void invalidateGitQueries(queryClient);
+          if (open) requestGitActionAvailabilityRefresh();
         }}
       >
         <MenuTrigger
@@ -1771,7 +2091,7 @@ export default function GitActionsControl({
           <ChatHeaderSplitDivider />
           <Menu
             onOpenChange={(open) => {
-              if (open) void invalidateGitQueries(queryClient);
+              if (open) requestGitActionAvailabilityRefresh();
             }}
           >
             <MenuTrigger

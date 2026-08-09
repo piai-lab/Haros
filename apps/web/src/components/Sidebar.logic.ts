@@ -3,20 +3,19 @@
 // Exports: Sidebar row state derivation, add-project error helpers, sort utilities, and visibility helpers.
 
 import {
+  MAX_PINNED_PROJECTS,
   type KeybindingCommand,
   type ProjectId,
-  type ProductConversationSummary,
   type PullRequestReviewRequestCountResult,
   type ThreadId,
-} from "@omnimind/contracts";
-import { MAX_PINNED_SIDEBAR_WORKSPACES } from "../pinnedProjectsStore";
-import { pluralize } from "@omnimind/shared/text";
-import { resolveThreadEnvironmentMode } from "@omnimind/shared/threadEnvironment";
-import { isWorkspaceRootWithin, workspaceRootsEqual } from "@omnimind/shared/threadWorkspace";
+} from "@synara/contracts";
+import { pluralize } from "@synara/shared/text";
+import { resolveThreadEnvironmentMode } from "@synara/shared/threadEnvironment";
+import { isWorkspaceRootWithin, workspaceRootsEqual } from "@synara/shared/threadWorkspace";
 import type { SidebarProjectSortOrder, SidebarThreadSortOrder } from "../appSettings";
 import { resolveRestorableThreadRoute, type LastThreadRoute } from "../chatRouteRestore";
 import type { ChatMessage, Project, SidebarThreadSummary, Thread } from "../types";
-import { cn } from "../lib/styles";
+import { cn } from "../lib/utils";
 import {
   derivePinnedIds,
   getPinnedItems,
@@ -53,39 +52,6 @@ export type SidebarActionBadge = {
   readonly text: string;
   readonly accessibleLabel: string;
 };
-
-export function sortProductChatConversations(
-  conversations: ReadonlyArray<ProductConversationSummary>,
-): ProductConversationSummary[] {
-  return conversations
-    .filter((conversation) => conversation.workspaceKind === "chat")
-    .toSorted(
-      (left, right) =>
-        Date.parse(right.updatedAt) - Date.parse(left.updatedAt) || left.id.localeCompare(right.id),
-    );
-}
-
-export function resolveLatestChatThreadId(input: {
-  readonly orderedProductConversationIds: readonly string[];
-  readonly localDrafts: ReadonlyArray<{ readonly id: string; readonly createdAt: string }>;
-}): string | null {
-  const productConversationId = input.orderedProductConversationIds[0];
-  if (productConversationId) return productConversationId;
-  return (
-    input.localDrafts.toSorted(
-      (left, right) =>
-        Date.parse(right.createdAt) - Date.parse(left.createdAt) || left.id.localeCompare(right.id),
-    )[0]?.id ?? null
-  );
-}
-
-/** The sole T3 exception to Product-owned Chat recents: an unsent local draft. */
-export function shouldPresentLocalChatDraft(input: {
-  readonly hasLocalDraft: boolean;
-  readonly hasProductSummary: boolean;
-}): boolean {
-  return input.hasLocalDraft && !input.hasProductSummary;
-}
 
 export function isProjectsSidebarSurface(input: {
   readonly isOnSettings: boolean;
@@ -134,6 +100,70 @@ export function pullRequestRepositoryConfigFingerprint(
       .map((project) => [project.id, project.cwd, project.name, project.remoteName] as const)
       .toSorted((left, right) => left[0].localeCompare(right[0])),
   );
+}
+
+/**
+ * Shared project roots can serve several threads, so their live Git status only belongs to a
+ * thread when the checked-out branch matches the persisted thread branch. A materialized
+ * worktree is thread-scoped, though, and coding agents may checkout or create a new branch
+ * without going through OmniMind's branch picker. In that case the worktree's checked-out branch
+ * is authoritative even when the persisted branch metadata is stale.
+ */
+export function shouldUseLivePullRequestForSidebarThread(input: {
+  readonly threadBranch: string | null;
+  readonly liveBranch: string | null;
+  readonly hasDedicatedWorktree: boolean;
+}): boolean {
+  if (input.liveBranch === null) {
+    return false;
+  }
+  if (input.hasDedicatedWorktree) {
+    return true;
+  }
+  return input.threadBranch !== null && input.threadBranch === input.liveBranch;
+}
+
+export function resolveSidebarThreadPullRequest<
+  T extends { readonly headBranch: string; readonly state: "open" | "closed" | "merged" },
+>(input: {
+  readonly threadBranch: string | null;
+  readonly liveBranch: string | null;
+  readonly hasLiveStatus: boolean;
+  readonly hasDedicatedWorktree: boolean;
+  readonly livePullRequest: T | null;
+  readonly persistedPullRequest: T | null;
+}): T | null {
+  // A settled (merged/closed) PR is the thread's outcome, not a claim about the current
+  // checkout, so it stays visible after the checkout moves on — e.g. switching back to
+  // main after merging must flip the badge to "merged", not drop it and let stale
+  // metadata elsewhere keep it "open".
+  const settledPersistedPullRequest =
+    input.persistedPullRequest !== null && input.persistedPullRequest.state !== "open"
+      ? input.persistedPullRequest
+      : null;
+  const persistedValidationBranch =
+    input.hasLiveStatus && input.hasDedicatedWorktree ? input.liveBranch : input.threadBranch;
+  const persistedPullRequest =
+    input.persistedPullRequest !== null &&
+    (persistedValidationBranch === null ||
+      input.persistedPullRequest.headBranch === persistedValidationBranch)
+      ? input.persistedPullRequest
+      : settledPersistedPullRequest;
+  if (!input.hasLiveStatus) {
+    return persistedPullRequest;
+  }
+  if (input.liveBranch === null && input.hasDedicatedWorktree) {
+    return settledPersistedPullRequest;
+  }
+  if (!shouldUseLivePullRequestForSidebarThread(input)) {
+    return persistedPullRequest;
+  }
+  if (input.livePullRequest !== null) {
+    return input.livePullRequest;
+  }
+  return persistedPullRequest !== null && persistedPullRequest.headBranch === input.liveBranch
+    ? persistedPullRequest
+    : settledPersistedPullRequest;
 }
 
 type SidebarProject = {
@@ -196,6 +226,25 @@ export type SidebarThreadHoverMetadata = {
   worktreeName: string | null;
 };
 
+/** Prefer the branch captured from the active workspace. The associated worktree branch is a
+ * durable handoff/recovery identity and can legitimately lag after an agent checks out a branch. */
+export function resolveThreadDisplayBranch(
+  thread: Pick<
+    SidebarThreadSummary,
+    "envMode" | "branch" | "worktreePath" | "associatedWorktreeBranch"
+  >,
+): string | null {
+  const currentBranch = nonEmptyDisplayValue(thread.branch);
+  if (currentBranch !== null) return currentBranch;
+
+  const isActiveWorktree =
+    resolveThreadEnvironmentMode({
+      envMode: thread.envMode,
+      worktreePath: thread.worktreePath,
+    }) === "worktree";
+  return isActiveWorktree ? null : nonEmptyDisplayValue(thread.associatedWorktreeBranch);
+}
+
 export function resolveThreadHoverCardMetadata(input: {
   thread: Pick<
     SidebarThreadSummary,
@@ -219,9 +268,7 @@ export function resolveThreadHoverCardMetadata(input: {
     sourceProjectName: isWorktree
       ? differentDisplayValue(input.project?.folderName, projectName)
       : null,
-    branch:
-      nonEmptyDisplayValue(input.thread.associatedWorktreeBranch) ??
-      nonEmptyDisplayValue(input.thread.branch),
+    branch: resolveThreadDisplayBranch(input.thread),
     worktreeName: worktreePath ? formatWorktreePathForDisplay(worktreePath) : null,
   };
 }
@@ -711,6 +758,39 @@ export function findDeepestWorkspaceRootMatch<T>(
   return best;
 }
 
+export async function runExclusiveProjectAddition<T>(
+  lock: { current: boolean },
+  operation: () => Promise<T>,
+): Promise<T> {
+  if (lock.current) {
+    throw new Error("Another project is already being added.");
+  }
+
+  lock.current = true;
+  try {
+    return await operation();
+  } finally {
+    lock.current = false;
+  }
+}
+
+export async function runProjectProvisionWithCancellationRecovery<T>(input: {
+  readonly signal: AbortSignal;
+  readonly provision: () => Promise<T>;
+  readonly recoverCommittedProject: () => Promise<boolean>;
+}): Promise<
+  { readonly status: "completed"; readonly result: T } | { readonly status: "recovered" }
+> {
+  try {
+    return { status: "completed", result: await input.provision() };
+  } catch (error) {
+    if (!input.signal.aborted || !(await input.recoverCommittedProject())) {
+      throw error;
+    }
+    return { status: "recovered" };
+  }
+}
+
 // Rechecks an existing local project against the server before the add flow decides to reuse it.
 export async function recoverExistingAddProjectTarget(input: {
   readonly existingProjectId: ProjectId | null | undefined;
@@ -1031,7 +1111,7 @@ export function derivePinnedProjectIdsForSidebar<
     items: input.projects,
     persistedPinnedIds: input.persistedPinnedProjectIds,
     optimisticPinnedStateById: input.optimisticPinnedStateByProjectId,
-    maxCount: MAX_PINNED_SIDEBAR_WORKSPACES,
+    maxCount: MAX_PINNED_PROJECTS,
   });
 }
 

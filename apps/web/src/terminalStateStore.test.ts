@@ -1,4 +1,4 @@
-import { ThreadId } from "@omnimind/contracts";
+import { ThreadId } from "@synara/contracts";
 import { beforeEach, describe, expect, it } from "vitest";
 
 import { collectTerminalIdsFromLayout } from "./terminalPaneLayout";
@@ -453,6 +453,22 @@ describe("terminalStateStore actions", () => {
     );
     expect(terminalState.terminalIds).toEqual(["default"]);
     expect(terminalState.terminalIds).not.toContain("unused-replacement");
+  });
+
+  it("reports the final exit from current store state across consecutive exits", () => {
+    const store = useTerminalStateStore.getState();
+    store.openTerminalThreadPage(THREAD_ID, { terminalOnly: true });
+    store.newTerminal(THREAD_ID, "terminal-2");
+
+    expect(store.closeExitedTerminal(THREAD_ID, "default")).toBe("remaining");
+    expect(store.closeExitedTerminal(THREAD_ID, "terminal-2")).toBe("final");
+
+    const terminalState = selectThreadTerminalState(
+      useTerminalStateStore.getState().terminalStateByThreadId,
+      THREAD_ID,
+    );
+    expect(terminalState.terminalOpen).toBe(false);
+    expect(terminalState.terminalIds).toEqual(["default"]);
   });
 
   it("keeps a valid active terminal after closing an active split terminal", () => {

@@ -1,9 +1,0 @@
-{
-  "evidenceMutation": {
-    "textReplacements": {
-      ".omp-flow/tasks/08-07-product-truth-consolidation/reviews/product-truth-complexity-v7.md": [
-        ["dispatch_receipt: \"ac877c8dbc3a425b91129f153deb61f9\"", "dispatch_receipt: \"bc877c8dbc3a425b91129f153deb61f9\""]
-      ]
-    }
-  }
-}

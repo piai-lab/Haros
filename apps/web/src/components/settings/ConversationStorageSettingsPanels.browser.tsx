@@ -4,11 +4,6 @@
 
 import "../../index.css";
 
-import {
-  ProductConversationId,
-  ProductWorkspaceId,
-  type ProductConversationSummary,
-} from "@omnimind/contracts";
 import { afterEach, describe, expect, it, vi } from "vitest";
 import { render } from "vitest-browser-react";
 
@@ -54,9 +49,8 @@ vi.mock("~/store", () => ({
 }));
 
 import { ArchivedSettingsPanel, WorktreesSettingsPanel } from "./ConversationStorageSettingsPanels";
-import { useProductStore } from "~/store/productStore";
 
-function threadShell(overrides: Record<string, unknown>) {
+function thread(overrides: Record<string, unknown>) {
   return {
     id: "thread",
     title: "Thread",
@@ -70,53 +64,25 @@ function threadShell(overrides: Record<string, unknown>) {
   };
 }
 
-function productConversation(
-  overrides: Partial<ProductConversationSummary> & Pick<ProductConversationSummary, "id" | "title">,
-): ProductConversationSummary {
-  const { id, title, ...rest } = overrides;
-  return {
-    id,
-    workspaceId: ProductWorkspaceId.makeUnsafe("project-1"),
-    title,
-    workspaceKind: "folder-backed",
-    revision: 1,
-    archivedAt: null,
-    isPinned: false,
-    notes: "",
-    boardState: "active",
-    boardStateChangedAt: null,
-    latestRunId: null,
-    receiptState: null,
-    createdAt: "2026-01-01T00:00:00.000Z",
-    updatedAt: "2026-01-01T00:00:00.000Z",
-    ...rest,
-  };
-}
-
 describe("ConversationStorageSettingsPanels", () => {
   afterEach(() => {
     document.body.innerHTML = "";
     harness.threadShells = [];
-    useProductStore.getState().reset();
   });
 
   it("uses one association rule for direct and associated worktree paths", async () => {
     harness.threadShells = [
-      threadShell({
+      thread({
         id: "direct",
         title: "Direct link",
         worktreePath: "/repo/.worktrees/feature",
       }),
-      threadShell({
+      thread({
         id: "associated",
         title: "Associated link",
         associatedWorktreePath: "/repo/.worktrees/feature",
       }),
-      threadShell({
-        id: "other",
-        title: "Other worktree",
-        worktreePath: "/repo/.worktrees/other",
-      }),
+      thread({ id: "other", title: "Other worktree", worktreePath: "/repo/.worktrees/other" }),
     ];
 
     await render(<WorktreesSettingsPanel active />);
@@ -127,26 +93,24 @@ describe("ConversationStorageSettingsPanels", () => {
   });
 
   it("sorts archived threads once and keeps orphaned projects visible", async () => {
-    useProductStore.setState({
-      conversations: [
-        productConversation({
-          id: ProductConversationId.makeUnsafe("older"),
-          title: "Older archived",
-          archivedAt: "2026-01-02T00:00:00.000Z",
-        }),
-        productConversation({
-          id: ProductConversationId.makeUnsafe("newer"),
-          title: "Newer archived",
-          archivedAt: "2026-01-03T00:00:00.000Z",
-        }),
-        productConversation({
-          id: ProductConversationId.makeUnsafe("orphan"),
-          title: "Orphan archived",
-          workspaceId: ProductWorkspaceId.makeUnsafe("missing-project"),
-          archivedAt: "2026-01-04T00:00:00.000Z",
-        }),
-      ],
-    });
+    harness.threadShells = [
+      thread({
+        id: "older",
+        title: "Older archived",
+        archivedAt: "2026-01-02T00:00:00.000Z",
+      }),
+      thread({
+        id: "newer",
+        title: "Newer archived",
+        archivedAt: "2026-01-03T00:00:00.000Z",
+      }),
+      thread({
+        id: "orphan",
+        title: "Orphan archived",
+        projectId: "missing-project",
+        archivedAt: "2026-01-04T00:00:00.000Z",
+      }),
+    ];
 
     await render(<ArchivedSettingsPanel active />);
 
@@ -154,5 +118,35 @@ describe("ConversationStorageSettingsPanels", () => {
     expect(text.indexOf("Newer archived")).toBeLessThan(text.indexOf("Older archived"));
     expect(text).toContain("Unknown project");
     expect(text).toContain("Orphan archived");
+  });
+
+  it("lists each archived subtree once and exposes a child archived without its parent", async () => {
+    harness.threadShells = [
+      thread({ id: "active-parent", title: "Active parent" }),
+      thread({
+        id: "recoverable-child",
+        title: "Recoverable archived child",
+        parentThreadId: "active-parent",
+        archivedAt: "2026-01-02T00:00:00.000Z",
+      }),
+      thread({
+        id: "archived-parent",
+        title: "Archived parent",
+        archivedAt: "2026-01-03T00:00:00.000Z",
+      }),
+      thread({
+        id: "represented-child",
+        title: "Represented archived child",
+        parentThreadId: "archived-parent",
+        archivedAt: "2026-01-03T00:00:00.000Z",
+      }),
+    ];
+
+    await render(<ArchivedSettingsPanel active />);
+
+    const text = document.body.textContent ?? "";
+    expect(text).toContain("Recoverable archived child");
+    expect(text).toContain("Archived parent");
+    expect(text).not.toContain("Represented archived child");
   });
 });

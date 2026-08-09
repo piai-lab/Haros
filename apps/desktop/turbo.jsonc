@@ -7,16 +7,16 @@
       "outputs": ["dist-electron/**"],
     },
     "dev": {
-      "dependsOn": ["@omnimind/service#build"],
+      "dependsOn": ["@synara/cli#build"],
       "persistent": true,
     },
     "start": {
-      "dependsOn": ["build", "@omnimind/web#build", "@omnimind/service#build"],
+      "dependsOn": ["build", "@synara/web#build", "@synara/cli#build"],
       "cache": false,
       "persistent": true,
     },
     "smoke-test": {
-      "dependsOn": ["build", "@omnimind/web#build", "@omnimind/service#build"],
+      "dependsOn": ["build", "@synara/web#build", "@synara/cli#build"],
       "cache": false,
       "outputs": [],
     },

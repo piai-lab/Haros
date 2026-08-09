@@ -3,15 +3,15 @@
 // Layer: Web composer utility
 
 import {
-  CHAT_IMAGE_MAX_BYTES,
-  CHAT_IMAGE_IMPORT_MAX_BYTES,
-} from "@omnimind/contracts";
+  PROVIDER_SEND_TURN_MAX_IMAGE_BYTES,
+  PROVIDER_SEND_TURN_MAX_IMAGE_IMPORT_BYTES,
+} from "@synara/contracts";
 
 const MEBIBYTE = 1024 * 1024;
 const JPEG_HEADER_READ_BYTES = 1024 * 1024;
 const RASTER_HEADER_READ_BYTES = 64;
 
-export const COMPOSER_IMAGE_MAX_IMPORT_BYTES = CHAT_IMAGE_IMPORT_MAX_BYTES;
+export const COMPOSER_IMAGE_MAX_IMPORT_BYTES = PROVIDER_SEND_TURN_MAX_IMAGE_IMPORT_BYTES;
 export const COMPOSER_IMAGE_OPTIMIZED_TARGET_BYTES = 8 * MEBIBYTE;
 
 const COMPOSER_IMAGE_MAX_SOURCE_PIXELS = 64_000_000;
@@ -383,7 +383,7 @@ async function optimizeOversizedComposerImage(file: File): Promise<File> {
   } else {
     blob = await optimizeOnMainThread(file, dimensions, renderSize, mimeType);
   }
-  if (blob.size > CHAT_IMAGE_MAX_BYTES) {
+  if (blob.size > PROVIDER_SEND_TURN_MAX_IMAGE_BYTES) {
     throw new ComposerImagePreparationError(
       `'${imageName(file)}' is still too large after automatic optimization.`,
     );
@@ -400,7 +400,7 @@ export async function prepareComposerImageFile(file: File): Promise<File> {
   if (!file.type.startsWith("image/")) {
     throw new ComposerImagePreparationError(`'${imageName(file)}' is not an image file.`);
   }
-  if (file.size <= CHAT_IMAGE_MAX_BYTES) return file;
+  if (file.size <= PROVIDER_SEND_TURN_MAX_IMAGE_BYTES) return file;
   if (file.size > COMPOSER_IMAGE_MAX_IMPORT_BYTES) {
     throw new ComposerImagePreparationError(
       `'${imageName(file)}' exceeds the ${COMPOSER_IMAGE_MAX_IMPORT_BYTES / MEBIBYTE}MB image import limit.`,

@@ -1,6 +1,6 @@
 import { describe, expect, it } from "vitest";
 
-import type { PullRequestActor, PullRequestListEntry } from "@omnimind/contracts";
+import type { PullRequestActor, PullRequestListEntry } from "@synara/contracts";
 
 import {
   countUniqueViewerReviewRequests,
@@ -18,8 +18,8 @@ function makeActor(login: string): PullRequestActor {
 
 function makeEntry(overrides: Partial<PullRequestListEntry> = {}): PullRequestListEntry {
   const entry: PullRequestListEntry = {
-    workspaceId: "project-1" as PullRequestListEntry["workspaceId"],
-    workspaceTitle: "Project One",
+    projectId: "project-1" as PullRequestListEntry["projectId"],
+    projectTitle: "Project One",
     repository: "acme/widgets",
     number: 1,
     title: "Untitled",
@@ -36,17 +36,17 @@ function makeEntry(overrides: Partial<PullRequestListEntry> = {}): PullRequestLi
     reviewDecision: null,
     viewerReviewRequested: false,
     isPinned: false,
-    workspaceContexts: [],
+    projectContexts: [],
     mergeability: "unknown",
     labels: [],
     ...overrides,
   };
   return {
     ...entry,
-    workspaceContexts: overrides.workspaceContexts ?? [
+    projectContexts: overrides.projectContexts ?? [
       {
-        workspaceId: entry.workspaceId,
-        workspaceTitle: entry.workspaceTitle,
+        projectId: entry.projectId,
+        projectTitle: entry.projectTitle,
         isPinned: entry.isPinned ?? false,
       },
     ],
@@ -145,8 +145,8 @@ describe("pull request list identity", () => {
   it("uses one stable row identity across projects sharing a repository", () => {
     const first = makeEntry();
     const second = makeEntry({
-      workspaceId: "project-2" as PullRequestListEntry["workspaceId"],
-      workspaceTitle: "Project Two",
+      projectId: "project-2" as PullRequestListEntry["projectId"],
+      projectTitle: "Project Two",
     });
     expect(pullRequestListEntryKey(first)).toBe(pullRequestListEntryKey(second));
   });
@@ -154,7 +154,7 @@ describe("pull request list identity", () => {
   it("counts one review request once across shared-project rows", () => {
     const first = makeEntry({ viewerReviewRequested: true });
     const duplicate = makeEntry({
-      workspaceId: "project-2" as PullRequestListEntry["workspaceId"],
+      projectId: "project-2" as PullRequestListEntry["projectId"],
       viewerReviewRequested: true,
     });
     const other = makeEntry({ number: 2, viewerReviewRequested: true });
@@ -166,15 +166,15 @@ describe("pullRequestPinToggleInputs", () => {
   it("clears every owning project from an aggregate pinned row", () => {
     const entry = makeEntry({
       isPinned: true,
-      workspaceContexts: [
+      projectContexts: [
         {
-          workspaceId: "project-1" as PullRequestListEntry["workspaceId"],
-          workspaceTitle: "Project One",
+          projectId: "project-1" as PullRequestListEntry["projectId"],
+          projectTitle: "Project One",
           isPinned: true,
         },
         {
-          workspaceId: "project-2" as PullRequestListEntry["workspaceId"],
-          workspaceTitle: "Project Two",
+          projectId: "project-2" as PullRequestListEntry["projectId"],
+          projectTitle: "Project Two",
           isPinned: true,
         },
       ],
@@ -182,13 +182,13 @@ describe("pullRequestPinToggleInputs", () => {
 
     expect(pullRequestPinToggleInputs(entry, true)).toEqual([
       {
-        workspaceId: "project-1",
+        projectId: "project-1",
         repository: "acme/widgets",
         number: 1,
         isPinned: false,
       },
       {
-        workspaceId: "project-2",
+        projectId: "project-2",
         repository: "acme/widgets",
         number: 1,
         isPinned: false,
@@ -200,7 +200,7 @@ describe("pullRequestPinToggleInputs", () => {
     const entry = makeEntry({ isPinned: true });
     expect(pullRequestPinToggleInputs(entry, false)).toEqual([
       {
-        workspaceId: entry.workspaceId,
+        projectId: entry.projectId,
         repository: entry.repository,
         number: entry.number,
         isPinned: false,
@@ -210,28 +210,28 @@ describe("pullRequestPinToggleInputs", () => {
 
   it("pins every associated project from an aggregate unpinned row", () => {
     const entry = makeEntry({
-      workspaceContexts: [
+      projectContexts: [
         {
-          workspaceId: "project-1" as PullRequestListEntry["workspaceId"],
-          workspaceTitle: "Project One",
+          projectId: "project-1" as PullRequestListEntry["projectId"],
+          projectTitle: "Project One",
           isPinned: false,
         },
         {
-          workspaceId: "project-2" as PullRequestListEntry["workspaceId"],
-          workspaceTitle: "Project Two",
+          projectId: "project-2" as PullRequestListEntry["projectId"],
+          projectTitle: "Project Two",
           isPinned: false,
         },
       ],
     });
     expect(pullRequestPinToggleInputs(entry, true)).toEqual([
       {
-        workspaceId: "project-1",
+        projectId: "project-1",
         repository: "acme/widgets",
         number: 1,
         isPinned: true,
       },
       {
-        workspaceId: "project-2",
+        projectId: "project-2",
         repository: "acme/widgets",
         number: 1,
         isPinned: true,

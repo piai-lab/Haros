@@ -5,7 +5,7 @@ import { type ComponentPropsWithoutRef } from "react";
 
 import type { BrowserAnnotationDraft } from "~/lib/browserAnnotations";
 import { formatBrowserAnnotationLabel } from "~/lib/browserAnnotations";
-import { cn } from "~/lib/styles";
+import { cn } from "~/lib/utils";
 import { COMPOSER_ATTACHMENT_CHIP_CLASS_NAME } from "../composerInlineChip";
 import { Tooltip, TooltipPopup, TooltipTrigger } from "../ui/tooltip";
 import { AttachmentRemoveButton } from "./AttachmentRemoveButton";

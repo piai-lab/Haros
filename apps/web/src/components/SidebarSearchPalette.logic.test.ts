@@ -1,12 +1,10 @@
-import { assert, describe, expect, it } from "vitest";
+import { assert, describe, it } from "vitest";
 
 import {
   matchSidebarSearchActions,
   matchSidebarSearchProjects,
   matchSidebarSearchThemes,
   matchSidebarSearchThreads,
-  resolveSidebarSearchThreadActivation,
-  selectSidebarSearchThreadInventory,
   type SidebarSearchAction,
   type SidebarSearchProject,
   type SidebarSearchTheme,
@@ -49,7 +47,7 @@ const projects: SidebarSearchProject[] = [
     folderName: "alpha-repo",
     localName: null,
     cwd: "/repos/alpha-repo",
-    locationName: "Work",
+    spaceName: "Work",
     updatedAt: "2026-04-09T10:00:00.000Z",
   },
   {
@@ -59,7 +57,7 @@ const projects: SidebarSearchProject[] = [
     folderName: "beta-repo",
     localName: "Docs",
     cwd: "/repos/beta-repo",
-    locationName: "Global",
+    spaceName: "Void",
     updatedAt: "2026-04-09T11:00:00.000Z",
   },
 ];
@@ -112,7 +110,7 @@ const threads: SidebarSearchThread[] = [
     projectId: "project-alpha",
     projectName: "Alpha Repo",
     projectRemoteName: "Alpha Repo",
-    locationName: "Work",
+    spaceName: "Work",
     provider: "claudeAgent",
     createdAt: "2026-04-09T09:00:00.000Z",
     updatedAt: "2026-04-09T11:30:00.000Z",
@@ -128,7 +126,7 @@ const threads: SidebarSearchThread[] = [
     projectId: "project-alpha",
     projectName: "Alpha Repo",
     projectRemoteName: "Alpha Repo",
-    locationName: "Work",
+    spaceName: "Work",
     provider: "codex",
     createdAt: "2026-04-09T08:00:00.000Z",
     updatedAt: "2026-04-09T10:30:00.000Z",
@@ -147,7 +145,7 @@ const threads: SidebarSearchThread[] = [
     projectId: "project-beta",
     projectName: "Docs",
     projectRemoteName: "Beta Repo",
-    locationName: "Global",
+    spaceName: "Void",
     provider: "claudeAgent",
     createdAt: "2026-04-09T07:00:00.000Z",
     updatedAt: "2026-04-09T09:00:00.000Z",
@@ -160,40 +158,6 @@ const threads: SidebarSearchThread[] = [
 ];
 
 describe("SidebarSearchPalette.logic", () => {
-  it("keeps Chat Product/local inventory separate from Agent donor inventory and activation", () => {
-    const productThread: SidebarSearchThread = {
-      ...threads[0]!,
-      id: "product-chat",
-      title: "Product Chat",
-      provider: null,
-      messages: [],
-    };
-    const localDraftThread: SidebarSearchThread = {
-      ...productThread,
-      id: "local-chat-draft",
-      title: "New chat",
-    };
-
-    expect(
-      selectSidebarSearchThreadInventory({
-        surface: "chat",
-        productThreads: [productThread],
-        localChatDraftThreads: [localDraftThread],
-        agentThreads: threads,
-      }).map((thread) => thread.id),
-    ).toEqual(["product-chat", "local-chat-draft"]);
-    expect(
-      selectSidebarSearchThreadInventory({
-        surface: "agent",
-        productThreads: [productThread],
-        localChatDraftThreads: [localDraftThread],
-        agentThreads: threads,
-      }).map((thread) => thread.id),
-    ).toEqual(threads.map((thread) => thread.id));
-    expect(resolveSidebarSearchThreadActivation("chat")).toBe("product-chat-route");
-    expect(resolveSidebarSearchThreadActivation("agent")).toBe("agent-thread");
-  });
-
   it("keeps suggested actions in source order for an empty query", () => {
     const result = matchSidebarSearchActions(actions, "");
 
@@ -214,26 +178,26 @@ describe("SidebarSearchPalette.logic", () => {
     );
   });
 
-  it("hides location jumps from the empty palette but matches them once typed", () => {
-    const withLocationJump: SidebarSearchAction[] = [
+  it("hides requiresQuery actions from the empty palette but matches them once typed", () => {
+    const withSpaceJump: SidebarSearchAction[] = [
       ...actions,
       {
-        id: "switch-location-work",
+        id: "switch-space-work",
         label: "Switch to Work",
-        description: "Jump to this location.",
-        keywords: ["location", "switch", "Work"],
+        description: "Jump to this space.",
+        keywords: ["space", "switch", "Work"],
         requiresQuery: true,
       },
     ];
 
-    const emptyQuery = matchSidebarSearchActions(withLocationJump, "");
+    const emptyQuery = matchSidebarSearchActions(withSpaceJump, "");
     assert.equal(
-      emptyQuery.some((action) => action.id === "switch-location-work"),
+      emptyQuery.some((action) => action.id === "switch-space-work"),
       false,
     );
 
-    const typed = matchSidebarSearchActions(withLocationJump, "work");
-    assert.equal(typed[0]?.id, "switch-location-work");
+    const typed = matchSidebarSearchActions(withSpaceJump, "work");
+    assert.equal(typed[0]?.id, "switch-space-work");
   });
 
   it("matches usage settings by keyword", () => {
@@ -278,13 +242,13 @@ describe("SidebarSearchPalette.logic", () => {
     assert.equal(result[0]?.project.id, "project-beta");
   });
 
-  it("matches projects and threads through their location label", () => {
+  it("matches projects and threads through their space label", () => {
     assert.deepEqual(
       matchSidebarSearchProjects(projects, "work").map((match) => match.project.id),
       ["project-alpha"],
     );
     assert.deepEqual(
-      matchSidebarSearchThreads(threads, "global").map((match) => match.thread.id),
+      matchSidebarSearchThreads(threads, "void").map((match) => match.thread.id),
       ["thread-beta-settings"],
     );
   });
@@ -344,28 +308,5 @@ describe("SidebarSearchPalette.logic", () => {
     assert.equal(result[0]?.thread.id, "thread-alpha-compose-prompt");
     assert.equal(result[0]?.matchKind, "title");
     assert.equal(result[0]?.messageMatchCount, 2);
-  });
-
-  it("searches Product conversations by title without inventing provider or message facts", () => {
-    const productThread: SidebarSearchThread = {
-      id: "product-conversation",
-      title: "Plan the release train",
-      projectId: "workspace-product",
-      projectName: "Chat",
-      projectRemoteName: "Chat",
-      locationName: "Global",
-      provider: null,
-      createdAt: "2026-04-09T12:00:00.000Z",
-      updatedAt: "2026-04-09T12:30:00.000Z",
-      messages: [],
-    };
-
-    const titleMatches = matchSidebarSearchThreads([...threads, productThread], "release train");
-    assert.equal(titleMatches[0]?.thread.id, productThread.id);
-    assert.equal(titleMatches[0]?.matchKind, "title");
-    assert.equal(titleMatches[0]?.thread.provider, null);
-    assert.deepEqual(titleMatches[0]?.thread.messages, []);
-
-    assert.deepEqual(matchSidebarSearchThreads([productThread], "dispatch payload"), []);
   });
 });

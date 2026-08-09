@@ -29,18 +29,18 @@ import {
   type BrowserWaitInput,
   type ThreadBrowserState,
   type ThreadId,
-} from "@omnimind/contracts";
+} from "@synara/contracts";
 import {
   BROWSER_TOOL_DEFINITIONS_BY_NAME,
   stableJsonStringify,
-} from "@omnimind/shared/browserAutomationCatalogue";
+} from "@synara/shared/browserAutomationCatalogue";
 import { Schema } from "effect";
 
 import type {
   BrowserAutomationWindowOpenEvent,
   BrowserAutomationVisibleRuntime,
-  DesktopBrowserHost,
-} from "../browserHost";
+  DesktopBrowserManager,
+} from "../browserManager";
 import { abortReason, observePage, sendCdpCommand, throwIfAborted } from "./cdpRuntime";
 import { BrowserAutomationHostError, browserHostError } from "./hostErrors";
 import {
@@ -76,12 +76,6 @@ const IDEMPOTENCY_TTL_MS = 15 * 60_000;
 const MAX_IDEMPOTENCY_TOMBSTONES = 4_096;
 const IDEMPOTENCY_TOMBSTONE_TTL_MS = 24 * 60 * 60_000;
 const MAX_SESSION_SNAPSHOTS = 256;
-const VISIBLE_RUNTIME_POLL_MS = 50;
-// The tool's own 10–30 second deadline remains authoritative. This secondary
-// ceiling only prevents an accidentally unbounded wait if the host is ever
-// called without that outer guard; it must not preempt a healthy slow renderer
-// mount and manufacture BrowserHostUnavailable midway through browser_open.
-const DEFAULT_VISIBLE_RUNTIME_TIMEOUT_MS = 30_000;
 const WINDOW_OPEN_RECONCILIATION_TIMEOUT_MS = 2_000;
 const WINDOW_OPEN_EVENT_LOOP_GRACE_MS = 16;
 
@@ -98,7 +92,6 @@ export interface BrowserAutomationToolRequest {
 
 export interface DesktopBrowserAutomationHostOptions {
   readonly requestOpenPanel?: (threadId: ThreadId) => void | Promise<void>;
-  readonly visibleRuntimeTimeoutMs?: number;
 }
 
 interface SessionAffinity {
@@ -319,15 +312,12 @@ export class DesktopBrowserAutomationHost {
   private readonly snapshotBySession = new Map<string, BrowserSnapshotHandle>();
   private readonly diagnostics = new BrowserDiagnosticsStore();
   private readonly requestOpenPanel: ((threadId: ThreadId) => void | Promise<void>) | undefined;
-  private readonly visibleRuntimeTimeoutMs: number;
 
   constructor(
-    private readonly browserHost: DesktopBrowserHost,
+    private readonly browserManager: DesktopBrowserManager,
     options: DesktopBrowserAutomationHostOptions = {},
   ) {
     this.requestOpenPanel = options.requestOpenPanel;
-    this.visibleRuntimeTimeoutMs =
-      options.visibleRuntimeTimeoutMs ?? DEFAULT_VISIBLE_RUNTIME_TIMEOUT_MS;
   }
 
   async executeTool(request: BrowserAutomationToolRequest): Promise<unknown> {
@@ -340,7 +330,7 @@ export class DesktopBrowserAutomationHost {
     if (
       request.name !== "browser_status" &&
       request.name !== "browser_tabs" &&
-      this.browserHost.isAnnotationInteractive(request.threadId)
+      this.browserManager.isAnnotationInteractive(request.threadId)
     ) {
       throw new BrowserAutomationHostError({
         code: "BrowserInterruptedByHuman",
@@ -398,7 +388,7 @@ export class DesktopBrowserAutomationHost {
     const unsubscribeHumanControl =
       request.name === "browser_status" || request.name === "browser_tabs"
         ? undefined
-        : this.browserHost.subscribeAutomationHumanControl(request.threadId, () => {
+        : this.browserManager.subscribeAutomationHumanControl(request.threadId, () => {
             interruptByHuman(
               new BrowserAutomationHostError({
                 code: "BrowserInterruptedByHuman",
@@ -680,7 +670,7 @@ export class DesktopBrowserAutomationHost {
     interrupt: (error: BrowserAutomationHostError) => void,
     action: () => Promise<T> | T,
   ): Promise<T> {
-    const epoch = this.browserHost.getAutomationHumanControlEpoch(threadId);
+    const epoch = this.browserManager.getAutomationHumanControlEpoch(threadId);
     const humanError = new BrowserAutomationHostError({
       code: "BrowserInterruptedByHuman",
       retryable: true,
@@ -689,18 +679,18 @@ export class DesktopBrowserAutomationHost {
       tabId: tabId as BrowserTabId,
     });
     try {
-      if (this.browserHost.getAutomationHumanControlEpoch(threadId) !== epoch) {
+      if (this.browserManager.getAutomationHumanControlEpoch(threadId) !== epoch) {
         interrupt(humanError);
       }
       throwIfAborted(signal);
       const result = await action();
-      if (this.browserHost.getAutomationHumanControlEpoch(threadId) !== epoch) {
+      if (this.browserManager.getAutomationHumanControlEpoch(threadId) !== epoch) {
         interrupt(humanError);
       }
       throwIfAborted(signal);
       return result;
     } catch (error) {
-      if (this.browserHost.getAutomationHumanControlEpoch(threadId) !== epoch) {
+      if (this.browserManager.getAutomationHumanControlEpoch(threadId) !== epoch) {
         interrupt(humanError);
       }
       if (signal.aborted) throw abortReason(signal);
@@ -722,7 +712,7 @@ export class DesktopBrowserAutomationHost {
       effectMayHaveCommitted: true,
       tabId: tabId as BrowserTabId,
     });
-    const releaseTracking = this.browserHost.trackAutomationDownload({ threadId, tabId }, () =>
+    const releaseTracking = this.browserManager.trackAutomationDownload({ threadId, tabId }, () =>
       interrupt(downloadError),
     );
     try {
@@ -756,7 +746,7 @@ export class DesktopBrowserAutomationHost {
   }
 
   private resolveTabId(affinity: SessionAffinity, requested: unknown): string {
-    const state = this.browserHost.getState({ threadId: affinity.threadId });
+    const state = this.browserManager.getState({ threadId: affinity.threadId });
     const tabId = typeof requested === "string" ? requested : (affinity.tabId ?? state.activeTabId);
     if (!tabId || !state.tabs.some((tab) => tab.id === tabId)) {
       browserHostError({
@@ -770,61 +760,51 @@ export class DesktopBrowserAutomationHost {
     return tabId;
   }
 
-  private async resolveVisibleRuntime(
+  private async resolveAutomationRuntime(
     affinity: SessionAffinity,
     tabId: string,
     signal: AbortSignal,
     reveal: boolean,
+    restore = true,
   ): Promise<BrowserAutomationVisibleRuntime> {
     throwIfAborted(signal);
-    if (!reveal) {
-      try {
-        const runtime = this.browserHost.getVisibleAutomationRuntime({
-          threadId: affinity.threadId,
-          tabId,
-        });
-        throwIfAborted(signal);
-        await this.diagnostics.observe(runtime, signal);
-        return runtime;
-      } catch {
-        throwIfAborted(signal);
-        browserHostError({
-          code: "BrowserHostUnavailable",
-          retryable: true,
-          phase: "runtime",
-          effectMayHaveCommitted: false,
-          tabId: tabId as BrowserTabId,
-        });
-      }
-    }
-    this.browserHost.selectAutomationTab({ threadId: affinity.threadId, tabId });
+    this.browserManager.selectAutomationTab({ threadId: affinity.threadId, tabId });
     throwIfAborted(signal);
-    if (this.requestOpenPanel) {
-      await raceWithSignal(Promise.resolve(this.requestOpenPanel(affinity.threadId)), signal);
-    }
+    if (reveal) this.requestPanelReveal(affinity.threadId);
     throwIfAborted(signal);
-    const deadline = performance.now() + this.visibleRuntimeTimeoutMs;
-    do {
-      try {
-        const runtime = this.browserHost.getVisibleAutomationRuntime({
-          threadId: affinity.threadId,
-          tabId,
-        });
-        throwIfAborted(signal);
-        await this.diagnostics.observe(runtime, signal);
-        return runtime;
-      } catch {
-        throwIfAborted(signal);
-        await sleep(VISIBLE_RUNTIME_POLL_MS, signal);
-      }
-    } while (performance.now() <= deadline);
-    browserHostError({
-      code: "BrowserHostUnavailable",
-      retryable: true,
-      phase: "runtime",
-      effectMayHaveCommitted: false,
-      tabId: tabId as BrowserTabId,
-    });
+    try {
+      const runtime = await raceWithSignal(
+        this.browserManager.getAutomationRuntime(
+          { threadId: affinity.threadId, tabId },
+          { restore },
+        ),
+        signal,
+      );
+      throwIfAborted(signal);
+      await this.diagnostics.observe(runtime, signal);
+      return runtime;
+    } catch {
+      throwIfAborted(signal);
+      browserHostError({
+        code: "BrowserHostUnavailable",
+        retryable: true,
+        phase: "runtime",
+        effectMayHaveCommitted: false,
+        tabId: tabId as BrowserTabId,
+      });
+    }
+  }
+
+  private requestPanelReveal(threadId: ThreadId): void {
+    if (!this.requestOpenPanel) return;
+    // Revealing is opportunistic UI feedback, not a prerequisite for browser
+    // execution. The renderer opens the panel only when this thread is already
+    // active; a slow/backgrounded UI must never stall the agent runtime.
+    try {
+      void Promise.resolve(this.requestOpenPanel(threadId)).catch(() => undefined);
+    } catch {
+      // The persistent native runtime remains usable when the shell cannot reveal it.
+    }
   }
 
   private observeWindowOpen(runtime: BrowserAutomationVisibleRuntime): WindowOpenObservation {
@@ -838,7 +818,7 @@ export class DesktopBrowserAutomationHost {
       if (args[1] === "Page.windowOpen") pageAnnouncedWindowOpen = true;
     };
     runtime.webContents.debugger.on("message", onDebuggerMessage);
-    const releaseManagerTracking = this.browserHost.trackAutomationWindowOpen(
+    const releaseManagerTracking = this.browserManager.trackAutomationWindowOpen(
       { threadId: runtime.threadId, tabId: runtime.tabId },
       (event) => {
         if (observedEvent) return;
@@ -926,7 +906,7 @@ export class DesktopBrowserAutomationHost {
 
     const annotationTarget =
       request.name === "browser_navigate" && typeof input.annotationId === "string"
-        ? this.browserHost.resolveAnnotationNavigationTarget({
+        ? this.browserManager.resolveAnnotationNavigationTarget({
             threadId: affinity.threadId,
             annotationId: input.annotationId,
             ...(typeof input.tabId === "string" ? { tabId: input.tabId } : {}),
@@ -1009,7 +989,7 @@ export class DesktopBrowserAutomationHost {
       const resolvedUrl =
         navigateInput.annotationId === undefined
           ? navigateInput.url
-          : this.browserHost.resolveAnnotationNavigationTarget({
+          : this.browserManager.resolveAnnotationNavigationTarget({
               threadId: affinity.threadId,
               tabId: targetTabId,
               annotationId: navigateInput.annotationId,
@@ -1025,12 +1005,18 @@ export class DesktopBrowserAutomationHost {
       }
       const url = validateWebUrl(resolvedUrl);
       this.snapshotBySession.delete(request.sessionId);
-      this.browserHost.prepareAutomationNavigation({
+      this.browserManager.prepareAutomationNavigation({
         threadId: affinity.threadId,
         tabId: targetTabId,
         url,
       });
-      const runtime = await this.resolveVisibleRuntime(affinity, targetTabId, signal, true);
+      const runtime = await this.resolveAutomationRuntime(
+        affinity,
+        targetTabId,
+        signal,
+        true,
+        false,
+      );
       return uncorrelatedExecution(
         await this.withDialogs(runtime, signal, () =>
           this.navigate(runtime, navigateInput, url, signal),
@@ -1041,7 +1027,7 @@ export class DesktopBrowserAutomationHost {
     const historyDirection = browserHistoryDirection(request.name);
     if (historyDirection) {
       this.snapshotBySession.delete(request.sessionId);
-      const runtime = await this.resolveVisibleRuntime(affinity, targetTabId, signal, true);
+      const runtime = await this.resolveAutomationRuntime(affinity, targetTabId, signal, true);
       return uncorrelatedExecution(
         await this.withDialogs(runtime, signal, () =>
           navigateBrowserHistory(
@@ -1054,12 +1040,12 @@ export class DesktopBrowserAutomationHost {
       );
     }
 
-    const runtime = await this.resolveVisibleRuntime(affinity, targetTabId, signal, true);
+    const runtime = await this.resolveAutomationRuntime(affinity, targetTabId, signal, true);
     let snapshot = this.snapshotBySession.get(request.sessionId);
     if (
       snapshot &&
       snapshot.humanControlEpoch !==
-        this.browserHost.getAutomationHumanControlEpoch(affinity.threadId)
+        this.browserManager.getAutomationHumanControlEpoch(affinity.threadId)
     ) {
       this.snapshotBySession.delete(request.sessionId);
       snapshot = undefined;
@@ -1110,7 +1096,9 @@ export class DesktopBrowserAutomationHost {
               ...(input as BrowserSnapshotInput),
               includeImage: (input as BrowserSnapshotInput).includeImage ?? false,
               includeDiagnostics: (input as BrowserSnapshotInput).includeDiagnostics ?? true,
-              humanControlEpoch: this.browserHost.getAutomationHumanControlEpoch(affinity.threadId),
+              humanControlEpoch: this.browserManager.getAutomationHumanControlEpoch(
+                affinity.threadId,
+              ),
             },
             signal,
           );
@@ -1232,7 +1220,7 @@ export class DesktopBrowserAutomationHost {
             },
           }
         : result;
-    const state = this.browserHost.getState({ threadId: affinity.threadId });
+    const state = this.browserManager.getState({ threadId: affinity.threadId });
     const openedTabId = execution.openedTabId ?? state.activeTabId;
     if (
       !openedTabId ||
@@ -1241,7 +1229,7 @@ export class DesktopBrowserAutomationHost {
     ) {
       return reconciledResult;
     }
-    // BrowserHost changes activeTabId without advancing the human epoch only
+    // BrowserManager changes activeTabId without advancing the human epoch only
     // for a new tab created inside the short-lived agent gesture lease. Adopt
     // it after the human guard has successfully reconciled.
     affinity.tabId = openedTabId;
@@ -1261,7 +1249,7 @@ export class DesktopBrowserAutomationHost {
   }
 
   private tabs(affinity: SessionAffinity): BrowserTabsOutput {
-    const state = this.browserHost.getState({ threadId: affinity.threadId });
+    const state = this.browserManager.getState({ threadId: affinity.threadId });
     return {
       tabs: state.tabs.slice(0, 24).map((tab) => ({
         tabId: tab.id as BrowserTabId,
@@ -1288,7 +1276,7 @@ export class DesktopBrowserAutomationHost {
     throwIfAborted(signal);
     const url = input.url === undefined ? undefined : validateWebUrl(input.url);
     const show = input.show ?? true;
-    const before = this.browserHost.getState({ threadId: affinity.threadId });
+    const before = this.browserManager.getState({ threadId: affinity.threadId });
     const hiddenTabId = !show && (input.reuse ?? true) ? before.activeTabId : null;
     if (!show) {
       if (!hiddenTabId) {
@@ -1307,7 +1295,7 @@ export class DesktopBrowserAutomationHost {
     const prepared = show
       ? await this.withVisibilityLock(affinity.threadId, signal, abortError, async () => {
           markActionStarted();
-          return this.browserHost.prepareAutomationTab({
+          return this.browserManager.prepareAutomationTab({
             threadId: affinity.threadId,
             reuse: input.reuse ?? true,
           });
@@ -1331,12 +1319,12 @@ export class DesktopBrowserAutomationHost {
               // Keep the potentially slow diagnostics preflight outside the
               // visibility lease. The state is revalidated under that lease
               // immediately before any hidden mutation below.
-              await this.resolveVisibleRuntime(affinity, selected, signal, false);
+              await this.resolveAutomationRuntime(affinity, selected, signal, false);
             }
             const executeOpen = async (): Promise<BrowserOpenOutput> => {
               markActionStarted();
               if (!show) {
-                const visibleState = this.browserHost.getState({ threadId: affinity.threadId });
+                const visibleState = this.browserManager.getState({ threadId: affinity.threadId });
                 if (
                   visibleState.activeTabId !== selected ||
                   !visibleState.tabs.some((tab) => tab.id === selected)
@@ -1353,22 +1341,15 @@ export class DesktopBrowserAutomationHost {
                 // prepareAutomationTab runs before the per-tab lease is known.
                 // Reassert its selection now that the thread visibility lease
                 // protects this open from every other provider session.
-                this.browserHost.selectAutomationTab({
+                this.browserManager.selectAutomationTab({
                   threadId: affinity.threadId,
                   tabId: selected,
                 });
               }
               affinity.tabId = selected;
               if (!url) {
-                if (show) {
-                  if (this.requestOpenPanel) {
-                    await raceWithSignal(
-                      Promise.resolve(this.requestOpenPanel(affinity.threadId)),
-                      signal,
-                    );
-                  }
-                  throwIfAborted(signal);
-                }
+                if (show) this.requestPanelReveal(affinity.threadId);
+                throwIfAborted(signal);
                 const tab = prepared.tabs.find((candidate) => candidate.id === selected);
                 return {
                   tabId: selected as BrowserTabId,
@@ -1384,16 +1365,17 @@ export class DesktopBrowserAutomationHost {
                 signal,
                 interruptByHuman,
                 async () => {
-                  this.browserHost.prepareAutomationNavigation({
+                  this.browserManager.prepareAutomationNavigation({
                     threadId: affinity.threadId,
                     tabId: selected,
                     url,
                   });
-                  const runtime = await this.resolveVisibleRuntime(
+                  const runtime = await this.resolveAutomationRuntime(
                     affinity,
                     selected,
                     signal,
                     show,
+                    false,
                   );
                   return this.withDialogs(runtime, signal, async () => {
                     const loaded = await this.navigateOrObserve(
@@ -1542,7 +1524,7 @@ export class DesktopBrowserAutomationHost {
   }
 
   private close(affinity: SessionAffinity, tabId: string): BrowserCloseOutput {
-    const state: ThreadBrowserState = this.browserHost.closeAutomationTab({
+    const state: ThreadBrowserState = this.browserManager.closeAutomationTab({
       threadId: affinity.threadId,
       tabId,
     });

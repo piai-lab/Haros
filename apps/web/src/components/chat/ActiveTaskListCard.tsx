@@ -3,18 +3,17 @@
 // Layer: Chat composer UI
 // Exports: ActiveTaskListCard
 
-import { pluralize } from "@omnimind/shared/text";
-import type { ActiveTaskListState } from "../../session-logic";
+import { pluralize } from "@synara/shared/text";
 import {
-  BotIcon,
-  CheckIcon,
-  LoaderIcon,
-  Maximize2,
-  Minimize2,
-  PanelLeftIcon,
-  SlidersIcon,
-} from "~/lib/icons";
-import { cn } from "~/lib/styles";
+  PiArrowsInSimple,
+  PiArrowsOutSimple,
+  PiSidebarSimple,
+  PiSlidersHorizontal,
+} from "react-icons/pi";
+
+import type { ActiveTaskListState } from "../../session-logic";
+import { BotIcon, CheckIcon, LoaderIcon } from "~/lib/icons";
+import { cn } from "~/lib/utils";
 import { Button } from "../ui/button";
 import {
   ComposerStackedPanelHeaderRow,
@@ -70,7 +69,7 @@ export function ActiveTaskListCard({
           {compact && hasInProgressTask ? (
             <LoaderIcon className={cn(COMPOSER_STACKED_PANEL_ICON_CLASS_NAME, "animate-spin")} />
           ) : (
-            <SlidersIcon className={COMPOSER_STACKED_PANEL_ICON_CLASS_NAME} />
+            <PiSlidersHorizontal className={COMPOSER_STACKED_PANEL_ICON_CLASS_NAME} />
           )}
           <ComposerStackedPanelRowLabel tone="meta">
             {completedCount} out of {totalCount} tasks completed
@@ -86,7 +85,7 @@ export function ActiveTaskListCard({
             aria-label="Open tasks sidebar"
             title="Open tasks sidebar"
           >
-            <PanelLeftIcon className="size-3" />
+            <PiSidebarSimple className="size-3" />
           </Button>
           <Button
             type="button"
@@ -97,7 +96,11 @@ export function ActiveTaskListCard({
             aria-label={compact ? "Expand task banner" : "Collapse task banner"}
             title={compact ? "Expand task banner" : "Collapse task banner"}
           >
-            {compact ? <Maximize2 className="size-3" /> : <Minimize2 className="size-3" />}
+            {compact ? (
+              <PiArrowsOutSimple className="size-3" />
+            ) : (
+              <PiArrowsInSimple className="size-3" />
+            )}
           </Button>
         </div>
       </ComposerStackedPanelHeaderRow>

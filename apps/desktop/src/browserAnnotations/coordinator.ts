@@ -12,11 +12,11 @@ import type {
   BrowserAnnotationSource,
   BrowserAnnotationTheme,
   ThreadId,
-} from "@omnimind/contracts";
+} from "@synara/contracts";
 import {
   browserAnnotationDocumentIdentityUrl,
   sanitizeBrowserAnnotationUrl,
-} from "@omnimind/shared/browserAnnotations";
+} from "@synara/shared/browserAnnotations";
 
 import { BROWSER_ANNOTATION_GUEST_COMMAND_CHANNEL } from "../ipcChannels";
 import {
@@ -331,22 +331,6 @@ export class BrowserAnnotationCoordinator {
       document: session.document,
       source: message.annotation.source,
       annotation: message.annotation,
-    });
-  }
-
-  requestReady(threadId: ThreadId, tabId: string, webContentsId: number): void {
-    const runtime = this.options.resolveRuntimeByWebContentsId(webContentsId);
-    if (
-      !runtime ||
-      runtime.threadId !== threadId ||
-      runtime.tabId !== tabId ||
-      runtime.webContents.isDestroyed()
-    ) {
-      return;
-    }
-    runtime.webContents.send(BROWSER_ANNOTATION_GUEST_COMMAND_CHANNEL, {
-      version: BROWSER_ANNOTATION_PROTOCOL_VERSION,
-      kind: "request-ready",
     });
   }
 

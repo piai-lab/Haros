@@ -1,6 +1,6 @@
 import { describe, expect, it } from "vitest";
 
-import type { ServerLocalServerProcess } from "@omnimind/contracts";
+import type { ServerLocalServerProcess } from "@synara/contracts";
 
 import {
   localServerAddressLabel,
@@ -49,9 +49,9 @@ describe("localServerAddressLabel", () => {
 
 describe("localServerPrimaryLabel", () => {
   it("prefers the live page title when one was resolved", () => {
-    expect(localServerPrimaryLabel(makeServer({ pageTitle: "OmniMind", displayName: "Vite" }))).toBe(
-      "OmniMind",
-    );
+    expect(
+      localServerPrimaryLabel(makeServer({ pageTitle: "OmniMind", displayName: "Vite" })),
+    ).toBe("OmniMind");
   });
 
   it("falls back to the detected display name when no page title is known", () => {
@@ -61,9 +61,9 @@ describe("localServerPrimaryLabel", () => {
 
 describe("localServerFolderLabel", () => {
   it("returns the final segment of a POSIX cwd", () => {
-    expect(localServerFolderLabel(makeServer({ cwd: "/Users/me/Developer/omnimind-website" }))).toBe(
-      "omnimind-website",
-    );
+    expect(
+      localServerFolderLabel(makeServer({ cwd: "/Users/me/Developer/omnimind-website" })),
+    ).toBe("omnimind-website");
   });
 
   it("ignores a trailing separator", () => {

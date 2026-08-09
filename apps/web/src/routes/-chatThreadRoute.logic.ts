@@ -3,11 +3,10 @@
 // Layer: Route UI logic helpers.
 // Exports: thread title fallback, deep-link bootstrap replay handling, and panel toggle helpers.
 
-import type { ProjectId, WorkspaceEnvironmentMode, ThreadId, TurnId } from "@omnimind/contracts";
-import { resolveThreadWorkspaceCwd } from "@omnimind/shared/threadEnvironment";
+import type { ProjectId, ThreadEnvironmentMode, ThreadId, TurnId } from "@synara/contracts";
+import { resolveThreadWorkspaceCwd } from "@synara/shared/threadEnvironment";
 
 import type { ChatRightPanel, DiffRouteSearch } from "../diffRouteSearch";
-import type { EmptyRouteRestoreRecoveryState } from "../chatRouteRestore";
 
 export interface ChatPanelStateSnapshot {
   panel: ChatRightPanel | null;
@@ -32,75 +31,6 @@ export interface SplitPaneMaximizeDecision {
   panelState: ChatPanelStateSnapshot | null;
 }
 
-export type MissingThreadRouteAuthority =
-  | "available"
-  | "wait-product-shell"
-  | "product-unavailable"
-  | "legacy-recovery";
-
-export type ThreadSurfaceMembership =
-  | "agent"
-  | "chat"
-  | "canonicalize-chat"
-  | "missing-agent"
-  | "missing-chat";
-
-export function resolveThreadRouteRecoveryState(input: {
-  readonly threadId: ThreadId;
-  readonly episodeThreadId: ThreadId;
-  readonly episodeState: EmptyRouteRestoreRecoveryState;
-}): EmptyRouteRestoreRecoveryState {
-  return input.episodeThreadId === input.threadId ? input.episodeState : "idle";
-}
-
-export function resolveThreadRouteConversationError(input: {
-  readonly threadId: ThreadId;
-  readonly episodeThreadId: ThreadId;
-  readonly episodeError: string | null;
-}): string | null {
-  return input.episodeThreadId === input.threadId ? input.episodeError : null;
-}
-
-export function resolveThreadSurfaceMembership(input: {
-  readonly surface?: "chat" | undefined;
-  readonly donorThreadExists: boolean;
-  readonly donorDraftExists: boolean;
-  readonly productChatExists: boolean;
-  readonly productAgentExists: boolean;
-  readonly productLocalChatDraftExists: boolean;
-}): ThreadSurfaceMembership {
-  if (input.surface === "chat") {
-    return input.productChatExists || input.productLocalChatDraftExists ? "chat" : "missing-chat";
-  }
-  if (input.productChatExists || input.productLocalChatDraftExists) return "canonicalize-chat";
-  return input.donorThreadExists || input.donorDraftExists || input.productAgentExists
-    ? "agent"
-    : "missing-agent";
-}
-
-export function isProductChatSplitRestorable(input: {
-  readonly surface?: "chat" | undefined;
-  readonly splitThreadIds: ReadonlyArray<string> | null;
-  readonly productChatThreadIds: ReadonlySet<string>;
-}): boolean {
-  if (input.surface !== "chat" || input.splitThreadIds === null) return true;
-  return (
-    input.splitThreadIds.length > 0 &&
-    input.splitThreadIds.every((threadId) => input.productChatThreadIds.has(threadId))
-  );
-}
-
-/** Chat misses are decided only by typed Product identity; Agent retains donor recovery. */
-export function resolveMissingThreadRouteAuthority(input: {
-  readonly surface?: "chat" | undefined;
-  readonly routeThreadExists: boolean;
-  readonly productShellHydrated: boolean;
-}): MissingThreadRouteAuthority {
-  if (input.routeThreadExists) return "available";
-  if (!input.productShellHydrated) return "wait-product-shell";
-  return input.surface === "chat" ? "product-unavailable" : "legacy-recovery";
-}
-
 export type SplitPaneCloseDecision =
   | {
       kind: "single-thread";
@@ -123,7 +53,7 @@ export function resolveThreadPickerTitle(title: string | null): string {
 // File previews follow the thread runtime cwd so worktree chats open the files they actually edit.
 export function resolveFilePreviewWorkspaceRoot(input: {
   projectCwd?: string | null | undefined;
-  threadEnvMode?: WorkspaceEnvironmentMode | null | undefined;
+  threadEnvMode?: ThreadEnvironmentMode | null | undefined;
   threadWorktreePath?: string | null | undefined;
   threadWorkingDirectory?: string | null | undefined;
 }): string | null {

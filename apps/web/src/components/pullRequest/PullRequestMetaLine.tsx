@@ -10,7 +10,7 @@
 
 import { Children, isValidElement, type ReactNode } from "react";
 
-import { cn } from "~/lib/styles";
+import { cn } from "~/lib/utils";
 
 /** `Children.toArray` keys every element it returns, so a separator can borrow the key of the
  *  segment it precedes and stay stable without counting positions. Plain text segments carry

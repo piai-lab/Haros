@@ -3,12 +3,9 @@
 // Layer: Settings UI components
 // Exports: WorktreesSettingsPanel, ArchivedSettingsPanel
 
-import {
-  PRODUCT_PROTOCOL_VERSION,
-  ThreadId,
-  type ProductConversationSummary,
-} from "@omnimind/contracts";
-import { pluralize } from "@omnimind/shared/text";
+import type { ThreadId } from "@synara/contracts";
+import { pluralize } from "@synara/shared/text";
+import { collectSubagentDescendants } from "@synara/shared/threadHierarchy";
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import { useCallback, useMemo } from "react";
 
@@ -19,15 +16,13 @@ import { deleteArchivedThreadsFromClient } from "~/lib/archivedThreadDelete";
 import { formatRelativeTime } from "~/lib/relativeTime";
 import { serverQueryKeys, serverWorktreesQueryOptions } from "~/lib/serverReactQuery";
 import { unarchiveThreadFromClient } from "~/lib/threadArchive";
-import { cn } from "~/lib/styles";
+import { cn } from "~/lib/utils";
 import { ensureNativeApi, readNativeApi } from "~/nativeApi";
 import { SETTINGS_CARD_ROW_DESCRIPTION_CLASS_NAME } from "~/settingsPanelStyles";
 import { useStore } from "~/store";
-import { useProductStore } from "~/store/productStore";
 import { createThreadShellsSelector } from "~/storeSelectors";
 import { formatWorktreePathForDisplay } from "~/worktreeCleanup";
 import { toastManager } from "../ui/toast";
-import { readProductNativeApi } from "~/wsNativeApi";
 import { SettingsEmptyState, SettingsListRow, SettingsSection } from "./SettingsPanelPrimitives";
 
 type WorktreeAssociation = {
@@ -112,8 +107,7 @@ export function WorktreesSettingsPanel({ active }: { readonly active: boolean })
     async (input: { workspaceRoot: string; worktreePath: string }) => {
       const api = readNativeApi() ?? ensureNativeApi();
       const displayName = formatWorktreePathForDisplay(input.worktreePath);
-      const productApi = readProductNativeApi();
-      const snapshot = await productApi.getShellSnapshot().catch(() => null);
+      const snapshot = await api.orchestration.getShellSnapshot().catch(() => null);
       if (snapshot === null) {
         toastManager.add({
           type: "error",
@@ -123,24 +117,12 @@ export function WorktreesSettingsPanel({ active }: { readonly active: boolean })
         return;
       }
 
-      const details = await Promise.all(
-        snapshot.conversations.map((conversation) =>
-          productApi.getConversationSnapshot({
-            protocolVersion: PRODUCT_PROTOCOL_VERSION,
-            conversationId: conversation.id,
-          }),
-        ),
+      const linkedThreads = snapshot.threads.filter((thread) =>
+        isThreadAssociatedWithWorktree(thread, input.worktreePath),
       );
-      const linkedThreads = details.filter(({ readModel }) => {
-        const access = readModel.workspace.access;
-        return (
-          access.primaryFolder === input.worktreePath ||
-          access.managedDirectory === input.worktreePath
-        );
-      });
       const linkedArchivedThreadIds = linkedThreads
-        .filter(({ readModel }) => readModel.conversation.archivedAt !== null)
-        .map(({ readModel }) => ThreadId.makeUnsafe(readModel.conversation.id));
+        .filter((thread) => (thread.archivedAt ?? null) !== null)
+        .map((thread) => thread.id);
       const linkedActiveThreadCount = linkedThreads.length - linkedArchivedThreadIds.length;
       const linkedConversationCount = linkedThreads.length;
       const confirmed = await api.dialogs.confirm(
@@ -163,7 +145,7 @@ export function WorktreesSettingsPanel({ active }: { readonly active: boolean })
 
       try {
         await deleteArchivedThreadsFromClient({
-          api: productApi,
+          api: api.orchestration,
           threadIds: linkedArchivedThreadIds,
           removeDeletedThreadFromClientState,
         });
@@ -291,36 +273,44 @@ export function ArchivedSettingsPanel({ active }: { readonly active: boolean }) 
   const removeDeletedThreadFromClientState = useStore(
     (store) => store.removeDeletedThreadFromClientState,
   );
-  const conversations = useProductStore((store) => store.conversations);
+  const threadShells = useStore(useMemo(() => createThreadShellsSelector(), []));
   const projects = useStore((store) => store.projects);
   const archivedGroups = useMemo(() => {
-    const archivedThreads = conversations.filter(
-      (conversation) => conversation.archivedAt !== null,
+    // Represent each archived subtree once. Normally that is a top-level thread;
+    // a child whose parent is still active/missing is also a root and must remain
+    // visible so legacy retention state can be recovered.
+    const archivedThreadIds = new Set(
+      threadShells.filter((thread) => thread.archivedAt != null).map((thread) => thread.id),
     );
-    const knownProjectIds = new Set(projects.map((project) => String(project.id)));
+    const archivedThreads = threadShells.filter((thread) => {
+      if (thread.archivedAt == null) return false;
+      const parentThreadId = thread.parentThreadId ?? null;
+      return parentThreadId === null || !archivedThreadIds.has(parentThreadId);
+    });
+    const knownProjectIds = new Set(projects.map((project) => project.id));
     const groups: Array<{
       project: (typeof projects)[number] | null;
-      threads: ProductConversationSummary[];
+      threads: typeof archivedThreads;
     }> = projects.map((project) => ({
       project,
       threads: archivedThreads
-        .filter((thread) => String(thread.workspaceId) === String(project.id))
+        .filter((thread) => thread.projectId === project.id)
         .toSorted(compareArchivedThreads),
     }));
     const orphanedThreads = archivedThreads
-      .filter((thread) => !knownProjectIds.has(String(thread.workspaceId)))
+      .filter((thread) => !knownProjectIds.has(thread.projectId))
       .toSorted(compareArchivedThreads);
     if (orphanedThreads.length > 0) {
       groups.push({ project: null, threads: orphanedThreads });
     }
     return groups.filter((group) => group.threads.length > 0);
-  }, [conversations, projects]);
+  }, [projects, threadShells]);
 
   const unarchiveThread = useCallback(async (threadId: ThreadId) => {
     const api = readNativeApi();
     if (!api) return;
     try {
-      await unarchiveThreadFromClient(readProductNativeApi(), threadId);
+      await unarchiveThreadFromClient(api.orchestration, threadId);
       toastManager.add({
         type: "success",
         title: "Thread restored",
@@ -344,9 +334,15 @@ export function ArchivedSettingsPanel({ active }: { readonly active: boolean }) 
       );
       if (!confirmed) return;
       try {
+        // Subagent threads are hidden from this list and unreachable without their
+        // parent, so deleting the parent removes the whole subtree. Children go
+        // first so a mid-flight failure cannot strand them without a parent entry.
+        const subagentThreadIds = collectSubagentDescendants(threadShells, threadId).map(
+          (thread) => thread.id,
+        );
         await deleteArchivedThreadsFromClient({
-          api: readProductNativeApi(),
-          threadIds: [threadId],
+          api: api.orchestration,
+          threadIds: [...subagentThreadIds.toReversed(), threadId],
           removeDeletedThreadFromClientState,
         });
         toastManager.add({
@@ -362,7 +358,7 @@ export function ArchivedSettingsPanel({ active }: { readonly active: boolean }) 
         });
       }
     },
-    [removeDeletedThreadFromClientState],
+    [removeDeletedThreadFromClientState, threadShells],
   );
 
   const handleContextMenu = useCallback(
@@ -415,7 +411,7 @@ export function ArchivedSettingsPanel({ active }: { readonly active: boolean }) 
               description={`Archived ${formatRelativeTime(thread.archivedAt ?? thread.createdAt)}`}
               onContextMenu={(event) => {
                 event.preventDefault();
-                void handleContextMenu(ThreadId.makeUnsafe(thread.id), thread.title, {
+                void handleContextMenu(thread.id, thread.title, {
                   x: event.clientX,
                   y: event.clientY,
                 });
@@ -425,16 +421,14 @@ export function ArchivedSettingsPanel({ active }: { readonly active: boolean }) 
                   <Button
                     size="xs"
                     variant="outline"
-                    onClick={() => void unarchiveThread(ThreadId.makeUnsafe(thread.id))}
+                    onClick={() => void unarchiveThread(thread.id)}
                   >
                     Restore
                   </Button>
                   <Button
                     size="xs"
                     variant="destructive"
-                    onClick={() =>
-                      void deleteArchivedThread(ThreadId.makeUnsafe(thread.id), thread.title)
-                    }
+                    onClick={() => void deleteArchivedThread(thread.id, thread.title)}
                   >
                     Delete
                   </Button>

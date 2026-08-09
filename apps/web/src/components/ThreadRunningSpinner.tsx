@@ -3,7 +3,7 @@
 // Layer: Sidebar UI primitive
 // Exports: ThreadRunningSpinner
 
-import { cn } from "~/lib/styles";
+import { cn } from "~/lib/utils";
 
 // Geometry mirrors Remodex's RunningThreadSpinner (with a thinner stroke and
 // slower spin): a full track ring at 22% opacity (stroke ×0.7) and a rounded

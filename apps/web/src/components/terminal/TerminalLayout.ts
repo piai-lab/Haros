@@ -6,7 +6,7 @@
 import {
   type ResolvedTerminalVisualIdentity,
   type TerminalCliKind,
-} from "@omnimind/shared/terminalThreads";
+} from "@synara/shared/terminalThreads";
 
 import { resolveTerminalVisualIdentityMap } from "../../terminalVisualIdentity";
 import {

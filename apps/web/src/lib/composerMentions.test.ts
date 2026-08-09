@@ -26,15 +26,6 @@ function parseMentionToken(token: string): string {
 }
 
 describe("composer mention reference filtering", () => {
-  it("keeps retired parenthesized agent syntax out of mention parsing", () => {
-    expect(
-      createComposerMentionTokenRegex({
-        includeTrailingTokenAtEnd: true,
-        global: false,
-      }).exec("@spark(check the UI)"),
-    ).toBeNull();
-  });
-
   it("does not invent plugin references for plain file or folder mentions", () => {
     expect(filterPromptProviderMentionReferences("Open @Things please", [])).toEqual([]);
   });

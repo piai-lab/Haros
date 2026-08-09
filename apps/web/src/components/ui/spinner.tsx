@@ -1,5 +1,5 @@
 import { Loader2Icon } from "~/lib/icons";
-import { cn } from "~/lib/styles";
+import { cn } from "~/lib/utils";
 
 function Spinner({ className, ...props }: React.ComponentProps<typeof Loader2Icon>) {
   return (

@@ -5,7 +5,7 @@ import type {
   DesktopAppSnapKeyChord,
   DesktopAppSnapShortcut,
   DesktopAppSnapShortcutModifier,
-} from "@omnimind/contracts";
+} from "@synara/contracts";
 
 export const DEFAULT_APP_SNAP_SHORTCUT = {
   kind: "both-option-keys",

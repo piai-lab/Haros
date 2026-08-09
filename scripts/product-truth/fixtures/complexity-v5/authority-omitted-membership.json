@@ -1,6 +1,0 @@
-{
-  "authorityMutation": {
-    "kind": "omit-membership",
-    "path": "scripts/check-source-closure.mjs"
-  }
-}

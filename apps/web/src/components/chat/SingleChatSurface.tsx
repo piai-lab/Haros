@@ -1,6 +1,6 @@
 import type { FileDiffMetadata } from "@pierre/diffs/react";
-import { isWorkspaceRelativePathSafe } from "@omnimind/shared/path";
-import type { ProjectId, ThreadId, TurnId } from "@omnimind/contracts";
+import { isWorkspaceRelativePathSafe } from "@synara/shared/path";
+import type { ProjectId, ThreadId, TurnId } from "@synara/contracts";
 import { useQuery, useQueryClient } from "@tanstack/react-query";
 import { useNavigate } from "@tanstack/react-router";
 import {
@@ -12,6 +12,7 @@ import {
   useMemo,
   useRef,
   useState,
+  useSyncExternalStore,
 } from "react";
 
 import { useAppSettings } from "../../appSettings";
@@ -22,7 +23,7 @@ import { readEditorViewState, storeEditorViewState } from "../../editorViewState
 import { basenameOfPath } from "../../file-icons";
 import { useBrowserPanelDesktopBridge } from "../../hooks/useBrowserPanelDesktopBridge";
 import { useDockPaneRuntimeActivation } from "../../hooks/useDockPaneRuntimeActivation";
-import { useCreateThread } from "../../hooks/useCreateThread";
+import { useHandleNewThread } from "../../hooks/useHandleNewThread";
 import { useRepoDiffTotals } from "../../hooks/useRepoDiffTotals";
 import {
   addChatFileComment,
@@ -41,7 +42,13 @@ import type { FileCommentSelection } from "../../lib/fileComments";
 import { gitBranchesQueryOptions } from "../../lib/gitReactQuery";
 import { canComposerHandlePanelWidth } from "../../lib/panelResize";
 import { projectListDirectoriesQueryOptions } from "../../lib/projectReactQuery";
-import { getSidechatCreator } from "../../lib/sidechatCreatorRegistry";
+import { waitForSidechatCreator } from "../../lib/sidechatCreatorRegistry";
+import {
+  clearSidechatPaneRetention,
+  getSidechatPaneRetentionVersion,
+  sidechatPaneRetentionRemainingMs,
+  subscribeSidechatPaneRetention,
+} from "../../lib/sidechatCreation";
 import {
   prefetchWorkspaceFile,
   resolveDockFileOpenTarget,
@@ -52,6 +59,7 @@ import {
 import { selectRightDockState, useRightDockStore } from "../../rightDockStore";
 import {
   resolveActivePane,
+  findMissingSidechatPaneIds,
   type RightDockPane,
   type RightDockPaneKind,
 } from "../../rightDockStore.logic";
@@ -99,7 +107,7 @@ import {
   resolveRoutePanelBootstrap,
   stripEditorViewSearchParams,
 } from "../../routes/-chatThreadRoute.logic";
-import { cn } from "~/lib/styles";
+import { cn } from "~/lib/utils";
 
 const PullRequestDockPane = lazy(() => import("../pullRequest/PullRequestDockPane"));
 const EditorWorkspaceView = lazy(() =>
@@ -122,12 +130,6 @@ const DockFilePane = lazy(() =>
 
 const DIFF_INLINE_DEFAULT_WIDTH = "max(28rem, calc(50vw - 8rem))";
 const SINGLE_PANEL_MIN_WIDTH = 26 * 16;
-
-export function toggleRightDockOpen(threadId: ThreadId): void {
-  const store = useRightDockStore.getState();
-  const open = selectRightDockState(threadId)(store).open;
-  store.setDockOpen(threadId, !open);
-}
 
 const allowAnySplitDirection = (_direction: SplitDirection) => true;
 
@@ -226,8 +228,9 @@ export function SingleChatSurface(props: {
   });
   const availableDockPaneKinds = dockLauncherItems.map(({ kind }) => kind);
   const projects = useStore((store) => store.projects);
+  const threadsHydrated = useStore((store) => store.threadsHydrated);
   const { settings: appSettings } = useAppSettings();
-  const { createThread } = useCreateThread();
+  const { handleNewThread } = useHandleNewThread();
   const queryClient = useQueryClient();
   const lastAppliedRoutePanelSearchKeyRef = useRef<string | null>(null);
   const [editorExpandedDirectories, setEditorExpandedDirectories] = useState<ReadonlySet<string>>(
@@ -309,7 +312,7 @@ export function SingleChatSurface(props: {
     toggleSingletonPane(props.threadId, { kind: "browser" });
   };
   const handleToggleRightDock = () => {
-    toggleRightDockOpen(props.threadId);
+    setDockOpen(props.threadId, !dockState.open);
   };
   const handleOpenBrowserUrl = () => {
     requestImmediateDockHydration("browser");
@@ -560,14 +563,6 @@ export function SingleChatSurface(props: {
         requestedThreadId,
         requestImmediateBrowserHydration: () => requestImmediateDockHydration("browser"),
         openBrowserPane: (threadId) => openPane(threadId, { kind: "browser" }),
-        navigateToThread: (threadId, panel) => {
-          void navigate({
-            to: "/$threadId",
-            params: { threadId },
-            replace: true,
-            search: () => ({ panel }),
-          });
-        },
       });
     },
   });
@@ -579,6 +574,62 @@ export function SingleChatSurface(props: {
   // selector, which re-emits on every streaming token of any thread and would
   // otherwise re-render the entire chat surface + right dock + active pane.
   const threadSummaries = useStore(useMemo(() => createSidebarThreadSummariesSelector(), []));
+  const sidechatPaneRetentionVersion = useSyncExternalStore(
+    subscribeSidechatPaneRetention,
+    getSidechatPaneRetentionVersion,
+    getSidechatPaneRetentionVersion,
+  );
+  useEffect(() => {
+    if (!threadsHydrated) {
+      return;
+    }
+    const existingThreadIds = new Set(threadSummaries.map((thread) => thread.id));
+    for (const pane of dockState.panes) {
+      if (pane.kind === "sidechat" && pane.threadId && existingThreadIds.has(pane.threadId)) {
+        clearSidechatPaneRetention(pane.threadId);
+      }
+    }
+    const missingPaneIds = findMissingSidechatPaneIds(dockState, existingThreadIds);
+    if (missingPaneIds.length === 0) {
+      return;
+    }
+
+    const timerIds: number[] = [];
+    for (const paneId of missingPaneIds) {
+      const pane = dockState.panes.find((candidate) => candidate.id === paneId);
+      const remainingGraceMs = pane?.threadId ? sidechatPaneRetentionRemainingMs(pane.threadId) : 0;
+      if (remainingGraceMs === null) {
+        continue;
+      }
+      if (remainingGraceMs <= 0) {
+        if (pane?.threadId) {
+          clearSidechatPaneRetention(pane.threadId);
+        }
+        closePane(props.threadId, paneId);
+        continue;
+      }
+      timerIds.push(
+        window.setTimeout(() => {
+          if (pane?.threadId) {
+            clearSidechatPaneRetention(pane.threadId);
+          }
+          closePane(props.threadId, paneId);
+        }, remainingGraceMs),
+      );
+    }
+    return () => {
+      for (const timerId of timerIds) {
+        window.clearTimeout(timerId);
+      }
+    };
+  }, [
+    closePane,
+    dockState,
+    props.threadId,
+    sidechatPaneRetentionVersion,
+    threadSummaries,
+    threadsHydrated,
+  ]);
   const editorProjectOptions = projects.flatMap((project) =>
     project.kind === "project" ? [{ id: project.id, name: project.name }] : [],
   );
@@ -600,7 +651,7 @@ export function SingleChatSurface(props: {
       return;
     }
 
-    await createThread(
+    await handleNewThread(
       projectId,
       {
         envMode: appSettings.defaultThreadEnvMode,
@@ -622,7 +673,6 @@ export function SingleChatSurface(props: {
       });
     });
   };
-  const hasSidechatPane = dockState.panes.some((pane) => pane.kind === "sidechat");
   const hasNamedFilePane = dockState.panes.some(
     (pane) => pane.kind === "file" && pane.filePath !== null,
   );
@@ -630,15 +680,10 @@ export function SingleChatSurface(props: {
     (pane) => pane.kind === "pullRequest" && pane.pullRequestNumber !== null,
   );
   let paneLabelOverrides: Record<string, string | undefined> | undefined;
-  if (hasSidechatPane || hasNamedFilePane || hasNumberedPullRequestPane) {
-    const titleByThreadId = hasSidechatPane
-      ? new Map(threadSummaries.map((summary) => [summary.id, summary.title]))
-      : null;
+  if (hasNamedFilePane || hasNumberedPullRequestPane) {
     const overrides: Record<string, string | undefined> = {};
     for (const pane of dockState.panes) {
-      if (pane.kind === "sidechat" && pane.threadId) {
-        overrides[pane.id] = titleByThreadId?.get(pane.threadId) || "Side";
-      } else if (pane.kind === "file" && pane.filePath) {
+      if (pane.kind === "file" && pane.filePath) {
         overrides[pane.id] = basenameOfPath(pane.filePath);
       } else if (pane.kind === "pullRequest" && pane.pullRequestNumber !== null) {
         overrides[pane.id] = pullRequestPaneTabLabel(pane.pullRequestNumber);
@@ -664,23 +709,28 @@ export function SingleChatSurface(props: {
     if (kind === "sidechat") {
       // Sidechat spawns a thread; reuse the composer's /side flow (correct model
       // selection) published via the registry instead of opening an empty pane.
-      const createSidechat = getSidechatCreator(props.threadId);
-      if (!createSidechat) {
-        toastManager.add({
-          type: "warning",
-          title: "Side is unavailable",
-          description: "Open a server-backed main thread before starting Side.",
+      void waitForSidechatCreator(props.threadId)
+        .then((createSidechat) => {
+          if (!createSidechat) {
+            toastManager.add({
+              type: "warning",
+              title: "Side chat is unavailable",
+              description: "Open a server-backed main thread before starting a Side chat.",
+            });
+            return;
+          }
+          return createSidechat();
+        })
+        .catch((error) => {
+          toastManager.add({
+            type: "error",
+            title: "Could not start Side chat",
+            description:
+              error instanceof Error
+                ? error.message
+                : "An error occurred while creating Side chat.",
+          });
         });
-        return;
-      }
-      void createSidechat().catch((error) => {
-        toastManager.add({
-          type: "error",
-          title: "Could not start Side",
-          description:
-            error instanceof Error ? error.message : "An error occurred while creating Side.",
-        });
-      });
       return;
     }
     openPane(props.threadId, { kind });
@@ -749,6 +799,7 @@ export function SingleChatSurface(props: {
               hostThreadId={props.threadId}
               projectId={props.projectId}
               isActive={context.isActive && dockState.open}
+              onClosePanel={() => closePane(props.threadId, pane.id)}
             />
           </Suspense>
         );
@@ -789,14 +840,15 @@ export function SingleChatSurface(props: {
         if (!pane.threadId) {
           return <RightDockPanePlaceholder kind="sidechat" />;
         }
+        if (!threadSummaries.some((thread) => thread.id === pane.threadId)) {
+          return <PanelStateMessage>Loading side chat...</PanelStateMessage>;
+        }
         if (context.runtimeMode === "preview") {
           return null;
         }
         return (
           <DeferredChatView
             threadId={pane.threadId}
-            conversationSurface={props.search.surface === "chat" ? "chat" : "agent"}
-            splitViewId={props.search.splitViewId ?? null}
             paneScopeId={dockSidechatPaneScopeId(pane.id)}
             deferMount={false}
             surfaceMode="split"
@@ -928,8 +980,6 @@ export function SingleChatSurface(props: {
                 >
                   <DeferredChatView
                     threadId={props.threadId}
-                    conversationSurface={props.search.surface === "chat" ? "chat" : "agent"}
-                    splitViewId={props.search.splitViewId ?? null}
                     paneScopeId={EDITOR_CHAT_PANE_SCOPE_ID}
                     deferMount={false}
                     surfaceMode="split"
@@ -964,8 +1014,6 @@ export function SingleChatSurface(props: {
           <RouteInsetSurface surfaceClassName={CHAT_BACKGROUND_CLASS_NAME}>
             <DeferredChatView
               threadId={props.threadId}
-              conversationSurface={props.search.surface === "chat" ? "chat" : "agent"}
-              splitViewId={props.search.splitViewId ?? null}
               paneScopeId={SINGLE_CHAT_PANE_SCOPE_ID}
               deferMount={isBrandNewDraftThread}
               surfaceMode="single"

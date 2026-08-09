@@ -1,22 +1,28 @@
-import type { HistoricalModelOptions, HistoricalModelSelection, HistoricalModelSlug } from "~/historicalModelSelection";
 import {
   ProjectId,
   ThreadId,
+  type GitWorktreeSetupPhase,
+  type GitWorktreeSetupProgressEvent,
+  type ModelSelection,
+  type ModelSlug,
   type ProviderApprovalDecision,
+  type ProviderKind,
   type ProviderRequestKind,
   type RuntimeMode,
+  type ServerProviderAuthStatus,
   type ThreadId as ThreadIdType,
-} from "@omnimind/contracts";
-import { normalizeModelIdentifier } from "../modelIdentifier";
-import { buildOmniMindBranchName } from "@omnimind/shared/git";
-import { isGenericChatThreadTitle } from "@omnimind/shared/chatThreads";
-import { isGenericTerminalThreadTitle } from "@omnimind/shared/terminalThreads";
+} from "@synara/contracts";
+import { normalizeModelSlug } from "@synara/shared/model";
+import { buildOmniMindBranchName } from "@synara/shared/git";
+import { isGenericChatThreadTitle } from "@synara/shared/chatThreads";
+import { isGenericTerminalThreadTitle } from "@synara/shared/terminalThreads";
 import {
   type ChatMessage,
   type SessionPhase,
   type Thread,
   type ThreadPrimarySurface,
   type TurnDiffSummary,
+  type WorktreeSetupResolutionAction,
   type WorktreeSetupSnapshot,
   type WorktreeSetupStepId,
 } from "../types";
@@ -40,11 +46,14 @@ import {
   type WorkLogEntry,
 } from "../session-logic";
 import { localSubagentThreadId } from "./ChatView.selectors";
+import type { ProviderModelOption } from "../providerModelOptions";
 
 export const LAST_INVOKED_SCRIPT_BY_PROJECT_KEY = "omnimind:last-invoked-script-by-project";
+export const DISMISSED_PROVIDER_HEALTH_BANNERS_KEY = "omnimind:dismissed-provider-health-banners";
 export const PROMPT_HISTORY_MAX_ENTRIES = 100;
 
 export const LastInvokedScriptByProjectSchema = Schema.Record(ProjectId, Schema.String);
+export const DismissedProviderHealthBannersSchema = Schema.Array(Schema.String);
 
 export interface PendingFileUndo {
   readonly threadId: ThreadIdType;
@@ -182,7 +191,7 @@ export function createRuntimeModePersistenceQueue(
   };
 }
 
-export function modelSelectionsEqual(left: HistoricalModelSelection, right: HistoricalModelSelection): boolean {
+export function modelSelectionsEqual(left: ModelSelection, right: ModelSelection): boolean {
   return (
     left.provider === right.provider &&
     left.model === right.model &&
@@ -199,11 +208,11 @@ export function modelSelectionsEqual(left: HistoricalModelSelection, right: Hist
  * incompatible replacement model is not rejected by the old policy.
  */
 export async function persistModelSelectionBeforeRuntimeMode(input: {
-  currentModelSelection: HistoricalModelSelection;
-  nextModelSelection?: HistoricalModelSelection;
+  currentModelSelection: ModelSelection;
+  nextModelSelection?: ModelSelection;
   currentRuntimeMode: RuntimeMode;
   nextRuntimeMode: RuntimeMode;
-  persistModelSelection: (selection: HistoricalModelSelection) => Promise<unknown>;
+  persistModelSelection: (selection: ModelSelection) => Promise<unknown>;
   persistRuntimeMode: (mode: RuntimeMode) => Promise<unknown>;
 }): Promise<void> {
   const nextModelSelection = input.nextModelSelection;
@@ -223,6 +232,13 @@ export async function persistModelSelectionBeforeRuntimeMode(input: {
   if (runtimeChanged && !downgradesFromAuto) {
     await input.persistRuntimeMode(input.nextRuntimeMode);
   }
+}
+
+export function shouldRenderProviderHealthBanner(input: {
+  threadEntryPoint: ThreadPrimarySurface;
+  terminalWorkspaceTerminalTabActive: boolean;
+}): boolean {
+  return input.threadEntryPoint === "chat" && !input.terminalWorkspaceTerminalTabActive;
 }
 
 // Big-paste cards are sent only by the normal chat path; non-chat composer flows
@@ -489,7 +505,7 @@ export function resolveDefaultEnvironmentPanelOpen(input: {
   );
 }
 
-// Build the ordered model list used by the current picker: favorites first
+// Build the ordered model list used by model.next / model.previous: favorites first
 // (stable user order), then remaining discovered options. Returns null when cycling is
 // a no-op (fewer than two selectable models).
 export function resolveCycledModelSlug(input: {
@@ -675,7 +691,7 @@ export function resolveThreadDetailHydration(input: {
 export function buildLocalDraftThread(
   threadId: ThreadId,
   draftThread: DraftThreadState,
-  fallbackModelSelection: HistoricalModelSelection,
+  fallbackModelSelection: ModelSelection,
   error: string | null,
 ): Thread {
   return {
@@ -709,13 +725,12 @@ export function resolveActiveThreadTitle(input: {
   subagentTitle: string | null;
   isHomeChat: boolean;
   isEmpty: boolean;
-  emptyChatTitle?: string;
 }): string {
   if (input.subagentTitle) {
     return input.subagentTitle;
   }
   if (input.isHomeChat && input.isEmpty && isGenericChatThreadTitle(input.title)) {
-    return input.emptyChatTitle ?? "New Chat";
+    return "New Chat";
   }
   return input.title;
 }
@@ -828,6 +843,7 @@ export function describeVoiceRecordingStartError(error: unknown): string {
 }
 
 export function deriveComposerVoiceState(input: {
+  authStatus: ServerProviderAuthStatus | null | undefined;
   voiceTranscriptionAvailable: boolean | undefined;
   isRecording: boolean;
   isTranscribing: boolean;
@@ -836,8 +852,8 @@ export function deriveComposerVoiceState(input: {
   canStartVoiceNotes: boolean;
   showVoiceNotesControl: boolean;
 } {
-  const canRenderVoiceNotes = input.voiceTranscriptionAvailable === true;
-  const canStartVoiceNotes = canRenderVoiceNotes;
+  const canRenderVoiceNotes = input.authStatus !== "unauthenticated";
+  const canStartVoiceNotes = canRenderVoiceNotes && input.voiceTranscriptionAvailable !== false;
 
   return {
     canRenderVoiceNotes,
@@ -847,10 +863,10 @@ export function deriveComposerVoiceState(input: {
 }
 
 export function shouldShowComposerModelBootstrapSkeleton(input: {
-  selectedProvider: string;
+  selectedProvider: ProviderKind;
   selectedModel: string | null | undefined;
-  persistedModelSelection: HistoricalModelSelection | null | undefined;
-  draftModelSelection: HistoricalModelSelection | null | undefined;
+  persistedModelSelection: ModelSelection | null | undefined;
+  draftModelSelection: ModelSelection | null | undefined;
   providerModelsLoading: boolean;
   requiresDiscoveredModels?: boolean;
 }): boolean {
@@ -877,11 +893,23 @@ export function shouldShowComposerModelBootstrapSkeleton(input: {
   }
 
   const normalizedSelectedModel =
-    normalizeModelIdentifier(input.selectedModel) ?? input.selectedModel;
+    normalizeModelSlug(input.selectedModel, input.selectedProvider) ?? input.selectedModel;
   const normalizedPersistedModel =
-    normalizeModelIdentifier(persistedSelection.model) ?? persistedSelection.model;
+    normalizeModelSlug(persistedSelection.model, persistedSelection.provider) ??
+    persistedSelection.model;
 
   return normalizedSelectedModel !== normalizedPersistedModel;
+}
+
+export function resolveCommittedProviderModel(input: {
+  selectedModel: ModelSlug;
+  availableOptions: ReadonlyArray<ProviderModelOption>;
+  fallback: () => string;
+}): string {
+  const directRuntimeOption = input.availableOptions.find(
+    (option) => option.slug === input.selectedModel,
+  );
+  return directRuntimeOption?.slug ?? input.fallback();
 }
 
 // Lets a pending custom binary path re-check a session that was already observed ready.
@@ -897,19 +925,30 @@ export interface PullRequestDialogState {
   key: number;
 }
 
-// Ordered client-side phases of the "New worktree" first-send setup. The
-// labels surface verbatim in the transcript's transient setup row.
-export const WORKTREE_SETUP_STEP_DEFINITIONS: ReadonlyArray<{
-  id: WorktreeSetupStepId;
-  label: string;
-}> = [
-  { id: "create-worktree", label: "Creating branch and worktree" },
-  { id: "prepare-thread", label: "Linking thread workspace" },
-  { id: "start-session", label: "Starting session" },
-];
+// Labels for the "New worktree" first-send setup steps, surfaced verbatim in
+// the transcript's transient setup row. Single source — the ordered step list
+// is assembled in `worktreeSetupStepDefinitions`.
+const WORKTREE_SETUP_STEP_LABELS: Record<WorktreeSetupStepId, string> = {
+  "create-branch": "Creating branch",
+  "create-worktree": "Creating worktree",
+  "copy-changes": "Copying local changes",
+  "prepare-thread": "Linking thread workspace",
+  "run-setup-action": "Running setup action",
+  "start-session": "Starting session",
+};
+
+// Creation phases mirror the server's real worktree setup progress events, so
+// each row completes on an actual boundary instead of one row spinning through
+// all of them.
+export const WORKTREE_SETUP_STEP_ID_BY_PHASE: Record<GitWorktreeSetupPhase, WorktreeSetupStepId> = {
+  branch: "create-branch",
+  worktree: "create-worktree",
+  "copy-changes": "copy-changes",
+};
 
 export interface WorktreeSetupSnapshotOptions {
   setupScriptName?: string | null;
+  copyLocalChanges?: boolean;
 }
 
 export interface WorktreeSetupDispatchOptions extends WorktreeSetupSnapshotOptions {
@@ -923,18 +962,23 @@ function worktreeSetupStepDefinitions(
 ): ReadonlyArray<{ id: WorktreeSetupStepId; label: string }> {
   const setupScriptName = options?.setupScriptName?.trim();
   const includeSetupStep = activeStepId === "run-setup-action" || Boolean(setupScriptName);
-  if (!includeSetupStep) {
-    return WORKTREE_SETUP_STEP_DEFINITIONS;
+  const includeCopyStep = activeStepId === "copy-changes" || Boolean(options?.copyLocalChanges);
+  const stepIds: WorktreeSetupStepId[] = ["create-branch", "create-worktree"];
+  if (includeCopyStep) {
+    stepIds.push("copy-changes");
   }
-  return [
-    { id: "create-worktree", label: "Creating branch and worktree" },
-    { id: "prepare-thread", label: "Linking thread workspace" },
-    {
-      id: "run-setup-action",
-      label: setupScriptName ? `Running setup action: ${setupScriptName}` : "Running setup action",
-    },
-    { id: "start-session", label: "Starting session" },
-  ];
+  stepIds.push("prepare-thread");
+  if (includeSetupStep) {
+    stepIds.push("run-setup-action");
+  }
+  stepIds.push("start-session");
+  return stepIds.map((id) => ({
+    id,
+    label:
+      id === "run-setup-action" && setupScriptName
+        ? `${WORKTREE_SETUP_STEP_LABELS[id]}: ${setupScriptName}`
+        : WORKTREE_SETUP_STEP_LABELS[id],
+  }));
 }
 
 // How long a failed setup step stays visible before the row is dismissed, so
@@ -969,6 +1013,112 @@ export function failWorktreeSetupSnapshot(snapshot: WorktreeSetupSnapshot): Work
 export function worktreeSetupHasError(snapshot: WorktreeSetupSnapshot | null): boolean {
   return snapshot?.steps.some((step) => step.status === "error") ?? false;
 }
+
+/**
+ * Thrown by the send pipeline when the user cancels worktree preparation from
+ * the setup card. The shared send-failure path treats it as a silent rollback:
+ * no error styling on the step row and no thread error banner.
+ */
+export class WorktreeSetupCancelledError extends Error {
+  constructor() {
+    super("Worktree preparation cancelled.");
+    this.name = "WorktreeSetupCancelledError";
+  }
+}
+
+/**
+ * Single-shot resolution of an in-flight worktree preparation. The setup
+ * card's "Cancel" / "Work locally" buttons resolve it; the send pipeline races
+ * `promise` against slow steps (worktree creation, setup scripts) and checks
+ * `action` at step boundaries, honoring the choice at the next checkpoint
+ * before the turn is dispatched. Only the first resolve wins.
+ */
+export interface WorktreeSetupResolution {
+  readonly promise: Promise<WorktreeSetupResolutionAction>;
+  readonly action: WorktreeSetupResolutionAction | null;
+  resolve(action: WorktreeSetupResolutionAction): void;
+}
+
+export function createWorktreeSetupResolution(): WorktreeSetupResolution {
+  let action: WorktreeSetupResolutionAction | null = null;
+  let settle: (resolved: WorktreeSetupResolutionAction) => void = () => {};
+  const promise = new Promise<WorktreeSetupResolutionAction>((resolve) => {
+    settle = resolve;
+  });
+  return {
+    promise,
+    get action() {
+      return action;
+    },
+    resolve(next) {
+      if (action !== null) {
+        return;
+      }
+      action = next;
+      settle(next);
+    },
+  };
+}
+
+export interface WorktreeCreationFlowDeps<Result extends { worktree: { path: string } }> {
+  /** Correlates streamed progress events with this creation request. */
+  progressId: string;
+  subscribeToProgress: (listener: (event: GitWorktreeSetupProgressEvent) => void) => () => void;
+  startCreation: () => Promise<Result>;
+  resolution: WorktreeSetupResolution;
+  /** Advances the setup card to the step matching a streamed creation phase. */
+  onCreationStep: (stepId: WorktreeSetupStepId) => void;
+  removeWorktree: (worktreePath: string) => Promise<unknown>;
+}
+
+export type WorktreeCreationFlowOutcome<Result> =
+  | { outcome: "resolved" }
+  | { outcome: "created"; result: Result };
+
+/**
+ * Runs one worktree creation while the setup card is showing: subscribes to
+ * the server's streamed setup phases, races the creation against the card's
+ * "Cancel" / "Work locally" resolution, and — when the user resolves first —
+ * tears the (possibly still materializing) worktree down once the creation
+ * lands so a resolved send leaves no stray checkout.
+ */
+export async function runWorktreeCreationFlow<Result extends { worktree: { path: string } }>(
+  deps: WorktreeCreationFlowDeps<Result>,
+): Promise<WorktreeCreationFlowOutcome<Result>> {
+  const unsubscribe = deps.subscribeToProgress((event) => {
+    if (
+      event.progressId !== deps.progressId ||
+      event.kind !== "phase_started" ||
+      deps.resolution.action !== null
+    ) {
+      return;
+    }
+    deps.onCreationStep(WORKTREE_SETUP_STEP_ID_BY_PHASE[event.phase]);
+  });
+  try {
+    const creation = deps.startCreation();
+    // `git worktree add` is the longest step; let the card's buttons win the
+    // wait instead of only taking effect once the creation finishes.
+    await Promise.race([creation, deps.resolution.promise]);
+    if (deps.resolution.action !== null) {
+      void creation
+        .then((result) => deps.removeWorktree(result.worktree.path))
+        .catch(() => undefined);
+      return { outcome: "resolved" };
+    }
+    return { outcome: "created", result: await creation };
+  } finally {
+    unsubscribe();
+  }
+}
+
+// Once the turn RPC has resolved the server provably owns the turn; the
+// dispatch marker then only waits for the thread stream to echo the change
+// (session running / message echo / turn change). A dead or stalled stream
+// would otherwise leave the composer spinner stuck forever, so the marker is
+// force-cleared after this bound and the catch-up watchdog re-syncs the real
+// thread state.
+export const LOCAL_DISPATCH_ACK_TIMEOUT_MS = 10_000;
 
 export interface LocalDispatchSnapshot {
   startedAt: string;
@@ -1024,6 +1174,15 @@ export function resolveNextLocalDispatchSnapshot(input: {
   }
 
   if (!worktreeSetupStepId) {
+    // Same in-flight send may call beginLocalDispatch() with no options to keep
+    // the marker. A new expectedUserMessageId means a fresh send — replace the
+    // snapshot so the awaiting-turn bridge and send-busy gate track the new one.
+    if (
+      input.options?.expectedUserMessageId != null &&
+      input.options.expectedUserMessageId !== input.current.expectedUserMessageId
+    ) {
+      return createLocalDispatchSnapshot(input.activeThread, input.options);
+    }
     return input.current;
   }
 
@@ -1090,6 +1249,70 @@ export function hasServerAcknowledgedLocalDispatch(input: {
       return false;
     }
     return true;
+  }
+
+  return false;
+}
+
+/** Fail-open bound for the post-ack "awaiting turn start" Thinking bridge. */
+export const LOCAL_DISPATCH_TURN_TAKEOVER_TIMEOUT_MS = 60_000;
+
+export function resolveWorkingLabel(input: {
+  isSendBusy: boolean;
+  turnTakenOver: boolean;
+}): "Loading" | "Thinking" {
+  return input.isSendBusy && !input.turnTakenOver ? "Loading" : "Thinking";
+}
+
+/**
+ * True once a locally dispatched turn is observably live, finished, or blocked
+ * on user interaction. Echo of the user message and a mere
+ * `latestTurn.requestedAt`/`turnId` bump are NOT takeover — those arrive in the
+ * gap before the provider session is actually running.
+ */
+export function hasLiveTurnTakenOver(input: {
+  localDispatch: LocalDispatchSnapshot | null;
+  phase: SessionPhase;
+  latestTurn: Thread["latestTurn"] | null;
+  session: Thread["session"] | null;
+  hasPendingApproval: boolean;
+  hasPendingUserInput: boolean;
+  threadError: string | null | undefined;
+  now?: number;
+}): boolean {
+  if (!input.localDispatch) {
+    return false;
+  }
+  if (input.phase === "running" || input.phase === "connecting") {
+    return true;
+  }
+  if (input.session?.activeTurnId != null) {
+    return true;
+  }
+  if (input.hasPendingApproval || input.hasPendingUserInput || Boolean(input.threadError)) {
+    return true;
+  }
+
+  const latestTurn = input.latestTurn ?? null;
+  const startedAtChanged =
+    input.localDispatch.latestTurnStartedAt !== (latestTurn?.startedAt ?? null);
+  const completedAtChanged =
+    input.localDispatch.latestTurnCompletedAt !== (latestTurn?.completedAt ?? null);
+  if (startedAtChanged || completedAtChanged) {
+    return true;
+  }
+
+  // Fail-open so Thinking cannot stick forever when a turn is requested but
+  // never becomes live and never surfaces an error. Worktree setup has its own
+  // lifecycle and must not be cut short by this bound.
+  if (!input.localDispatch.worktreeSetup && input.now !== undefined) {
+    const startedAtMs = Date.parse(input.localDispatch.startedAt);
+    if (
+      Number.isFinite(startedAtMs) &&
+      input.now - startedAtMs >= LOCAL_DISPATCH_TURN_TAKEOVER_TIMEOUT_MS
+    ) {
+      return true;
+    }
   }
 
   return false;
@@ -1458,6 +1681,16 @@ function resolveTimelineSubagentThread(input: {
   }
 
   return undefined;
+}
+
+export function resolveComposerStripWorkLogEntries(input: {
+  hasDistinctParentSource: boolean;
+  activeWorkLogEntries: WorkLogEntry[];
+  deriveParentWorkLogEntries: () => WorkLogEntry[];
+}): WorkLogEntry[] {
+  return input.hasDistinctParentSource
+    ? input.deriveParentWorkLogEntries()
+    : input.activeWorkLogEntries;
 }
 
 export function enrichSubagentWorkEntries(

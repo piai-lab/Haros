@@ -37,12 +37,11 @@ import type {
 } from "electron";
 import * as Effect from "effect/Effect";
 import type {
-  DesktopHealthSnapshot,
+  DesktopAppIcon,
   DesktopTheme,
   DesktopUpdateActionResult,
   DesktopUpdateState,
-} from "@omnimind/contracts";
-import { DESKTOP_HEALTH_PROTOCOL_VERSION } from "@omnimind/contracts";
+} from "@synara/contracts";
 import {
   autoUpdater,
   BaseUpdater,
@@ -50,18 +49,18 @@ import {
   type UpdateDownloadedEvent,
 } from "electron-updater";
 
-import type { ContextMenuItem } from "@omnimind/contracts";
-import { isKeyboardShortcutsHelpChord } from "@omnimind/shared/browserShortcuts";
-import { getMacTrafficLightPosition } from "@omnimind/shared/desktopChrome";
+import type { ContextMenuItem } from "@synara/contracts";
+import { isKeyboardShortcutsHelpChord } from "@synara/shared/browserShortcuts";
+import { getMacTrafficLightPosition } from "@synara/shared/desktopChrome";
 import {
   OMNIMIND_DESKTOP_UPDATE_CHANNEL,
   resolveOmniMindDesktopFlavor,
   omnimindDesktopIdentity,
-} from "@omnimind/shared/desktopIdentity";
-import { NetService } from "@omnimind/shared/Net";
-import { applyShellEnvironmentHydrationMarker } from "@omnimind/shared/shell";
-import { RotatingFileSink } from "@omnimind/shared/logging";
-import { ensureStaticSnapshot, findAsarArchivePath } from "@omnimind/shared/staticSnapshot";
+} from "@synara/shared/desktopIdentity";
+import { NetService } from "@synara/shared/Net";
+import { applyShellEnvironmentHydrationMarker } from "@synara/shared/shell";
+import { RotatingFileSink } from "@synara/shared/logging";
+import { ensureStaticSnapshot, findAsarArchivePath } from "@synara/shared/staticSnapshot";
 import { isBackendReadinessAborted, waitForHttpReady } from "./backendReadiness";
 import { resolveBackendNodeArgs } from "./backendNodeOptions";
 import {
@@ -82,9 +81,24 @@ import {
 import { waitForBackendStartupReady } from "./backendStartupReadiness";
 import { showDesktopConfirmDialog } from "./confirmDialog";
 import {
+  desktopAppIconResourceName,
+  isDesktopAppIcon,
+  shouldUpdateDesktopAppIcon,
+} from "./desktopAppIcon";
+import {
   makeUpdateInstallPreparationCoordinator,
   type UpdateInstallPreparationAttempt,
 } from "./updateInstallPreparation";
+import {
+  hasPendingDesktopMigrationRecovery,
+  requiresDesktopMigrationRecovery,
+  recoverDesktopMigrationIfRequired,
+  resolveDesktopMigrationRecoveryPaths,
+  restoreDesktopMigrationBackup,
+  type DesktopMigrationRecoveryDecision,
+  type DesktopMigrationRecoveryOutcome,
+  type DesktopMigrationRecoveryPaths,
+} from "./desktopMigrationRecovery";
 import {
   LSREGISTER_PATH,
   parseLastLaunchVersion,
@@ -102,10 +116,6 @@ import {
 } from "./resumableUpdateDownload";
 import { hardenElectronUpdater } from "./electronUpdaterSecurity";
 import { ServerListeningDetector } from "./serverListeningDetector";
-import {
-  attachServiceApplicationRoot,
-  resolveServiceApplicationRoot,
-} from "./process/serviceApplicationRoot";
 import { BackendStartupBlockDetector, type BackendStartupBlock } from "./backendStartupBlock";
 import {
   BACKEND_MAX_CONSECUTIVE_START_FAILURES,
@@ -114,24 +124,7 @@ import {
   summarizeBackendFailureOutput,
 } from "./backendSupervisionPolicy";
 import { captureBackendProcessOutput } from "./backendProcessOutput";
-import {
-  createNativeHostRendezvous,
-  nativeHostChildEnvironment,
-  type NativeHostRendezvous,
-} from "./process/nativeHostRendezvous";
-import {
-  NATIVE_HOST_READY_TEXT,
-  NativeHostProcessSupervisor,
-  type NativeHostSupervisorState,
-} from "./process/nativeHostSupervisor";
-import { NativeHostAuthenticatedReadinessDetector } from "./process/nativeHostAuthenticatedReadiness";
-import { DESKTOP_HEALTH_IPC_CHANNELS } from "./process/desktopHealthChannels";
-import { createNativeHostBaseEnvironment } from "./process/nativeHostEnvironment";
-import {
-  createPiKeychainLookup,
-  NativeHostCredentialBroker,
-} from "./process/nativeHostCredentialBroker";
-import { isDisposableSmokeEnvironment, syncShellEnvironment } from "./syncShellEnvironment";
+import { syncShellEnvironment } from "./syncShellEnvironment";
 import {
   RENDERER_MAX_AUTOMATIC_RELOADS,
   RendererCrashPolicy,
@@ -192,7 +185,7 @@ import {
 } from "./updateArtifactIdentity";
 import { buildGitHubReleasesPageUrl, resolveGitHubUpdateSource } from "./githubUpdateFeed";
 import { isArm64HostRunningIntelBuild, resolveDesktopRuntimeInfo } from "./runtimeArch";
-import { BROWSER_SESSION_PARTITION, DesktopBrowserHost } from "./browserHost";
+import { BROWSER_SESSION_PARTITION, DesktopBrowserManager } from "./browserManager";
 import {
   registerBrowserIpcHandlers,
   sendBrowserAnnotationEvent,
@@ -205,6 +198,7 @@ import {
   resolveBrowserHostPipeBackendEnv,
 } from "./browserUsePipeServer";
 import { normalizeDesktopWsUrl, resolveDesktopWsUrlFromEnv } from "./desktopWsBridge";
+import { resolveDesktopAppDataBase, resolveDesktopUserDataPath } from "./desktopUserDataProfile";
 import { isBrokenPipeError } from "./desktopProcessErrors";
 import { createDesktopStaticProtocolResolver } from "./desktopStaticProtocol";
 import {
@@ -213,7 +207,7 @@ import {
   writeDesktopWindowState,
 } from "./windowState";
 import { DESKTOP_IPC_CHANNELS } from "./ipcChannels";
-import { DesktopAppSnapSupervisor } from "./appSnapSupervisor";
+import { DesktopAppSnapManager } from "./appSnapManager";
 import { hardenBrowserAnnotationWebviewPreferences } from "./browserAnnotations/webviewSecurity";
 import { LOCAL_HTML_PREVIEW_SCHEME } from "./localHtmlPreviewProtocol";
 import {
@@ -237,11 +231,9 @@ const startupBundleIdentity = captureStartupBundleIdentity();
 // `BASE_DIR` prefers OMNIMIND_HOME, which the Windows registry read hydrates whenever the
 // user set it persistently. Resolving either against an unhydrated environment would
 // silently relocate an existing user's profile and data directory.
-// (The probe also carries PATH, SSH_AUTH_SOCK and HOMEBREW_* for supervised child processes.
+// (The probe also carries PATH, SSH_AUTH_SOCK and HOMEBREW_* for later provider spawns.
 // APPDATA on Windows is inherited from the process env, not hydrated here.)
-const shellEnvironmentSync = isDisposableSmokeEnvironment(process.env)
-  ? { pathHydrated: true }
-  : syncShellEnvironment();
+const shellEnvironmentSync = syncShellEnvironment();
 
 const IPC = DESKTOP_IPC_CHANNELS;
 const MAX_CLIPBOARD_IMAGE_DATA_URL_LENGTH = 16 * 1024 * 1024;
@@ -256,6 +248,7 @@ const BASE_DIR =
   Path.join(OS.homedir(), desktopIdentity.defaultHomeDirectoryName);
 const STATE_DIR = Path.join(BASE_DIR, "userdata");
 const DESKTOP_WINDOW_STATE_PATH = Path.join(STATE_DIR, "desktop-window-state.json");
+const DESKTOP_APP_ICON_PATH = Path.join(STATE_DIR, "desktop-app-icon");
 const DESKTOP_SCHEME = desktopIdentity.scheme;
 const ROOT_DIR = Path.resolve(__dirname, "../../..");
 const APP_DISPLAY_NAME = desktopIdentity.displayName;
@@ -265,14 +258,11 @@ const COMMIT_HASH_DISPLAY_LENGTH = 12;
 const LOG_DIR = Path.join(STATE_DIR, "logs");
 const DESKTOP_LOG_FILE_NAME = "desktop-main.log";
 const BACKEND_LOG_FILE_NAME = "server-child.log";
-const NATIVE_HOST_LOG_FILE_NAME = "native-host-child.log";
 const LOG_FILE_MAX_BYTES = 10 * 1024 * 1024;
 const LOG_FILE_MAX_FILES = 10;
 const APP_RUN_ID = Crypto.randomBytes(6).toString("hex");
 const DESKTOP_BACKEND_SHUTDOWN_TOKEN = Crypto.randomBytes(32).toString("hex");
 const DESKTOP_BROWSER_HOST_CAPABILITY = Crypto.randomBytes(32).toString("base64url");
-const NATIVE_HOST_BROKER_AUTHENTICATION = Crypto.randomBytes(32).toString("base64url");
-const NATIVE_HOST_BROKER_DESKTOP_INSTANCE = `desktop-${Crypto.randomUUID()}`;
 const DESKTOP_BROWSER_HOST_CAPABILITY_FD = 3;
 // Electron's single-instance lock is scoped through userData on Windows/Linux.
 // Set the flavor-specific profile first so Stable, Dev, and Canary never contend
@@ -297,6 +287,7 @@ const AUTO_UPDATE_INSTALL_WATCHDOG_MS = 15 * 1000;
 const AUTO_UPDATE_DIAGNOSTICS_TIMEOUT_MS = 2_800;
 // User-driven like the menu and renderer reasons, so it must not be filtered
 // out by the automatic-activity suppression a previous install failure arms.
+const UPDATE_CHECK_REASON_MIGRATION_RECOVERY = "migration recovery";
 const UPDATE_INSTALL_MARKER_FILE_NAME = "pending-update-install.json";
 const BACKEND_FORCE_KILL_DELAY_MS = 8_000;
 const BACKEND_SHUTDOWN_TIMEOUT_MS = 10_000;
@@ -313,11 +304,6 @@ type DesktopUpdateErrorContext = DesktopUpdateState["errorContext"];
 
 let mainWindow: BrowserWindow | null = null;
 let backendProcess: ChildProcess.ChildProcess | null = null;
-let nativeHostRendezvous: NativeHostRendezvous | null = null;
-let nativeHostSupervisor: NativeHostProcessSupervisor | null = null;
-let nativeHostCredentialBroker: NativeHostCredentialBroker | null = null;
-let nativeHostProcessReady = false;
-let nativeHostStdoutBuffer = "";
 let backendPort = 0;
 let backendAuthToken = "";
 let backendHttpUrl = "";
@@ -340,28 +326,19 @@ let isUpdaterInstallPreparing = false;
 let isUpdaterQuitAndInstallInFlight = false;
 const updateInstallPreparation = makeUpdateInstallPreparationCoordinator();
 let desktopShutdownPromise: Promise<void> | null = null;
+let desktopStartupBlockedForMigrationRecovery = false;
 let desktopShutdownComplete = false;
 let desktopProtocolRegistered = false;
 let aboutCommitHashCache: string | null | undefined;
 let appUpdateYmlCache: Record<string, string> | null | undefined;
 let desktopLogSink: RotatingFileSink | null = null;
 let backendLogSink: RotatingFileSink | null = null;
-let nativeHostLogSink: RotatingFileSink | null = null;
 let restoreStdIoCapture: (() => void) | null = null;
 let unreadBackgroundNotificationCount = 0;
 let browserPerfInterval: ReturnType<typeof setInterval> | null = null;
-let desktopHealthSnapshot: DesktopHealthSnapshot = {
-  protocolVersion: DESKTOP_HEALTH_PROTOCOL_VERSION,
-  renderer: { status: "unavailable", reason: null, restartAttempt: 0 },
-  service: { status: "starting", reason: null, restartAttempt: 0 },
-  nativeHost: { status: "unavailable", reason: null, restartAttempt: 0 },
-  engineSelection: {
-    status: "unknown",
-    reason: "Native runtime catalog and selected credential have not been confirmed.",
-  },
-  updatedAt: new Date().toISOString(),
-};
-const browserHost = new DesktopBrowserHost({
+const annotationGuestPreload = Path.join(__dirname, "guestPreload.js");
+const browserManager = new DesktopBrowserManager({
+  annotationPreloadPath: annotationGuestPreload,
   beforeInputEvent: (event, input) => {
     if (
       isKeyboardShortcutsHelpChord(
@@ -391,18 +368,18 @@ const browserHost = new DesktopBrowserHost({
   },
 });
 let browserHostPipeServer: BrowserHostPipeServer | null = null;
-let appSnapSupervisor: DesktopAppSnapSupervisor | null = null;
+let appSnapManager: DesktopAppSnapManager | null = null;
 let configuredUpdaterCacheDirName: string | null = null;
 
-browserHost.subscribe((state) => {
+browserManager.subscribe((state) => {
   sendBrowserState(mainWindow?.webContents, state);
 });
 
-browserHost.subscribeCopyLink((event) => {
+browserManager.subscribeCopyLink((event) => {
   sendBrowserCopyLink(mainWindow?.webContents, event);
 });
 
-browserHost.subscribeAnnotationEvents((event) => {
+browserManager.subscribeAnnotationEvents((event) => {
   sendBrowserAnnotationEvent(mainWindow?.webContents, event);
 });
 
@@ -412,7 +389,7 @@ function startBrowserPerformanceLogging(): void {
   }
 
   browserPerfInterval = setInterval(() => {
-    const snapshot = browserHost.getPerformanceSnapshot();
+    const snapshot = browserManager.getPerformanceSnapshot();
     const trackedProcessIds = new Set(snapshot.trackedProcessIds);
     const processMetrics = app
       .getAppMetrics()
@@ -438,7 +415,7 @@ async function ensureBrowserHostPipeServer(): Promise<void> {
   if (browserHostPipeServer || !OMNIMIND_BROWSER_HOST_PIPE_PATH) {
     return;
   }
-  const server = new BrowserHostPipeServer(browserHost, {
+  const server = new BrowserHostPipeServer(browserManager, {
     capability: DESKTOP_BROWSER_HOST_CAPABILITY,
     requestOpenPanel: (threadId) => {
       if (!threadId) return;
@@ -481,69 +458,6 @@ function writeBackendSessionBoundary(phase: "START" | "END", details: string): v
   backendLogSink.write(
     `[${logTimestamp()}] ---- APP SESSION ${phase} run=${APP_RUN_ID} ${normalizedDetails} ----\n`,
   );
-}
-
-function publishDesktopHealth(
-  update: Partial<
-    Pick<DesktopHealthSnapshot, "renderer" | "service" | "nativeHost" | "engineSelection">
-  >,
-): DesktopHealthSnapshot {
-  desktopHealthSnapshot = {
-    ...desktopHealthSnapshot,
-    ...update,
-    updatedAt: new Date().toISOString(),
-  };
-  for (const window of BrowserWindow.getAllWindows()) {
-    if (!window.isDestroyed()) {
-      window.webContents.send(DESKTOP_HEALTH_IPC_CHANNELS.snapshot, desktopHealthSnapshot);
-    }
-  }
-  return desktopHealthSnapshot;
-}
-
-function disconnectNativeHostCredentialBroker(): void {
-  nativeHostCredentialBroker?.stop();
-}
-
-function startNativeHostCredentialBroker(): void {
-  if (nativeHostProcessReady) nativeHostCredentialBroker?.start();
-}
-
-function observeNativeHostStdout(chunk: Buffer): void {
-  nativeHostStdoutBuffer = `${nativeHostStdoutBuffer}${chunk.toString("utf8").replace(/\r/gu, "")}`;
-  for (;;) {
-    const newline = nativeHostStdoutBuffer.indexOf("\n");
-    if (newline < 0) break;
-    const line = nativeHostStdoutBuffer.slice(0, newline).trim();
-    nativeHostStdoutBuffer = nativeHostStdoutBuffer.slice(newline + 1);
-    if (line === NATIVE_HOST_READY_TEXT) {
-      nativeHostProcessReady = true;
-      startNativeHostCredentialBroker();
-    }
-  }
-  if (nativeHostStdoutBuffer.length > 2_048) {
-    nativeHostStdoutBuffer = nativeHostStdoutBuffer.slice(-2_048);
-  }
-}
-
-function publishNativeHostHealth(state: NativeHostSupervisorState): void {
-  publishDesktopHealth({
-    nativeHost: {
-      status: state.status,
-      reason: state.reason,
-      restartAttempt: state.restartAttempt,
-    },
-  });
-  const description = `native host state=${state.status} restartAttempt=${state.restartAttempt}${state.reason ? ` reason=${sanitizeLogValue(state.reason)}` : ""}`;
-  writeDesktopLogHeader(description);
-  console.info(`[desktop] ${description}`);
-  if (state.pid === null || state.status === "restarting" || state.status === "circuitOpen") {
-    nativeHostProcessReady = false;
-    nativeHostStdoutBuffer = "";
-    disconnectNativeHostCredentialBroker();
-  } else if (nativeHostProcessReady) {
-    startNativeHostCredentialBroker();
-  }
 }
 
 function safeConsoleError(...args: Parameters<typeof console.error>): void {
@@ -680,7 +594,11 @@ async function waitForBackendWindowReady(baseUrl: string): Promise<"listening" |
     waitForHttpReady: () =>
       waitForBackendHttpReady(baseUrl, {
         path: "/health",
-        timeoutMs: 60_000,
+        // The child supervisor, not elapsed wall time, owns the terminal
+        // condition. Large projection catch-up can legitimately outlive a
+        // minute; this observer is cancelled when that child exits or the app
+        // shuts down.
+        timeoutMs: null,
         isReady: async (response) => {
           if (!response.ok) {
             return false;
@@ -786,11 +704,6 @@ function initializePackagedLogging(): void {
     });
     backendLogSink = new RotatingFileSink({
       filePath: Path.join(LOG_DIR, BACKEND_LOG_FILE_NAME),
-      maxBytes: LOG_FILE_MAX_BYTES,
-      maxFiles: LOG_FILE_MAX_FILES,
-    });
-    nativeHostLogSink = new RotatingFileSink({
-      filePath: Path.join(LOG_DIR, NATIVE_HOST_LOG_FILE_NAME),
       maxBytes: LOG_FILE_MAX_BYTES,
       maxFiles: LOG_FILE_MAX_FILES,
     });
@@ -1002,11 +915,10 @@ protocol.registerSchemesAsPrivileged([
 ]);
 
 function resolveAppRoot(): string {
-  return resolveServiceApplicationRoot({
-    packaged: app.isPackaged,
-    repositoryRoot: ROOT_DIR,
-    packagedAppPath: app.getAppPath(),
-  });
+  if (!app.isPackaged) {
+    return ROOT_DIR;
+  }
+  return app.getAppPath();
 }
 
 /**
@@ -1103,11 +1015,7 @@ function resolveAboutCommitHash(): string | null {
 }
 
 function resolveBackendEntry(): string {
-  return Path.join(resolveAppRoot(), "apps/service/dist/index.mjs");
-}
-
-function resolveNativeHostEntry(): string {
-  return Path.join(resolveAppRoot(), "apps/native-host/dist/index.mjs");
+  return Path.join(resolveAppRoot(), "apps/server/dist/index.mjs");
 }
 
 function resolveBackendCwd(): string {
@@ -1117,63 +1025,140 @@ function resolveBackendCwd(): string {
   return OS.homedir();
 }
 
-function startNativeHost(): void {
-  if (nativeHostSupervisor) {
-    nativeHostSupervisor.start();
-    return;
-  }
-  if (!nativeHostRendezvous) {
-    publishDesktopHealth({
-      nativeHost: {
-        status: "unavailable",
-        reason: "Native Host rendezvous was not initialized.",
-        restartAttempt: 0,
-      },
-    });
-    return;
-  }
-  const entry = resolveNativeHostEntry();
-  if (!FS.existsSync(entry)) {
-    publishDesktopHealth({
-      nativeHost: {
-        status: "unavailable",
-        reason: "Native Host executable is missing from this build.",
-        restartAttempt: 0,
-      },
-    });
-    return;
-  }
-  nativeHostCredentialBroker ??= new NativeHostCredentialBroker({
-    endpoint: nativeHostRendezvous.endpoint,
-    hostInstanceId: nativeHostRendezvous.hostInstanceId,
-    authentication: NATIVE_HOST_BROKER_AUTHENTICATION,
-    desktopInstanceId: NATIVE_HOST_BROKER_DESKTOP_INSTANCE,
-    keychain: createPiKeychainLookup(),
+function desktopMigrationRecoveryPaths(): DesktopMigrationRecoveryPaths {
+  return resolveDesktopMigrationRecoveryPaths({
+    baseDir: BASE_DIR,
+    appRoot: resolveAppRoot(),
+    isDevelopment,
   });
-  nativeHostSupervisor = new NativeHostProcessSupervisor({
-    executable: process.execPath,
-    entry,
-    cwd: resolveBackendCwd(),
-    nodeArgs: backendNodeArgs(),
-    environment: {
-      ...createNativeHostBaseEnvironment(process.env, BASE_DIR),
-      OMNIMIND_NATIVE_HOST_BROKER_AUTH: NATIVE_HOST_BROKER_AUTHENTICATION,
+}
+
+function isDesktopMigrationRecoveryPending(): boolean {
+  try {
+    // Deliberately not "a marker exists": while the backend still has resume
+    // attempts left, a failed start is an ordinary restart, not a recovery
+    // prompt. Escalating early would bury the self-heal under a dialog.
+    return requiresDesktopMigrationRecovery(desktopMigrationRecoveryPaths());
+  } catch (error) {
+    // An unreadable marker path must not break crash supervision.
+    writeDesktopLogHeader(
+      `migration recovery marker check failed message=${formatErrorMessage(error)}`,
+    );
+    return false;
+  }
+}
+
+/** Joins user-facing options as "a, b or c". */
+function formatRecoveryOptionList(options: ReadonlyArray<string>): string {
+  if (options.length <= 1) return options[0] ?? "";
+  return `${options.slice(0, -1).join(", ")} or ${options[options.length - 1]}`;
+}
+
+async function handleDesktopMigrationRecovery(): Promise<DesktopMigrationRecoveryOutcome> {
+  const paths = desktopMigrationRecoveryPaths();
+  desktopStartupBlockedForMigrationRecovery = true;
+  const outcome = await recoverDesktopMigrationIfRequired({
+    // The gate opens only once the backend has spent its resume budget, while
+    // the post-restore verification checks the marker file itself.
+    requiresRecovery: () => requiresDesktopMigrationRecovery(paths),
+    markerRemains: () => hasPendingDesktopMigrationRecovery(paths),
+    choose: async ({ previousFailure }) => {
+      // The user is here because OmniMind cannot open its database, so the
+      // in-app update button is unreachable by definition. A newer build is
+      // often the actual fix, and this dialog is the only surface left to
+      // offer it from: installing it in place when the updater can reach the
+      // feed, and handing over the download page otherwise.
+      const releaseUrl = updateState.releaseUrl;
+      const canInstallUpdate = canInstallUpdateFromRecovery();
+      const restoreFailed = previousFailure?.attempt === "restore";
+      const choices: Array<{
+        readonly label: string;
+        readonly detail: string;
+        readonly decision: DesktopMigrationRecoveryDecision;
+      }> = [
+        restoreFailed
+          ? {
+              label: "Try restore again",
+              detail: "retry the verified backup restore",
+              decision: "restore",
+            }
+          : {
+              label: "Restore backup and restart",
+              detail: "restore the verified pre-migration backup and restart",
+              decision: "restore",
+            },
+      ];
+      if (canInstallUpdate) {
+        choices.push({
+          label: "Update OmniMind and restart",
+          detail: "install the newest OmniMind release, which may already contain the fix",
+          decision: "install-update",
+        });
+      }
+      if (releaseUrl !== null) {
+        choices.push({
+          label: "Download latest release",
+          detail: `${canInstallUpdate ? "download that release" : "download the latest OmniMind release"} in a browser`,
+          decision: "open-release-page",
+        });
+      }
+      choices.push({
+        label: "Quit",
+        detail: "quit without opening the database",
+        decision: "quit",
+      });
+
+      const options = formatRecoveryOptionList(choices.map((choice) => choice.detail));
+      const result = await dialog.showMessageBox({
+        type: previousFailure === null ? "warning" : "error",
+        title:
+          previousFailure === null
+            ? "OmniMind needs to recover its database"
+            : restoreFailed
+              ? "Migration recovery failed"
+              : "OmniMind could not update itself",
+        message:
+          previousFailure === null
+            ? "OmniMind stopped a database migration before it could finish safely."
+            : restoreFailed
+              ? "The saved database backup could not be restored."
+              : "The newest OmniMind release could not be installed.",
+        detail: `${previousFailure === null ? "" : `${previousFailure.message}\n\n`}You can ${options}. No provider or chat process will start until recovery succeeds.`,
+        buttons: choices.map((choice) => choice.label),
+        defaultId: 0,
+        cancelId: choices.length - 1,
+        noLink: true,
+      });
+      return choices[result.response]?.decision ?? "quit";
     },
-    rendezvous: nativeHostRendezvous,
-    onState: publishNativeHostHealth,
-    onStdout: (chunk) => {
-      nativeHostLogSink?.write(chunk);
-      observeNativeHostStdout(chunk);
+    installUpdate: installLatestUpdateForMigrationRecovery,
+    openReleasePage: () => {
+      const releaseUrl = updateState.releaseUrl;
+      if (releaseUrl !== null) void shell.openExternal(releaseUrl);
     },
-    onStderr: (chunk) => nativeHostLogSink?.write(chunk),
+    restore: () =>
+      restoreDesktopMigrationBackup({
+        executablePath: process.execPath,
+        nodeArgs: backendNodeArgs(),
+        paths,
+        cwd: resolveBackendCwd(),
+        env: process.env,
+      }),
+    requestRestart: () => app.relaunch(),
+    requestQuit: (reason) => requestGracefulAppQuit(reason),
+    formatError: formatErrorMessage,
+    log: writeDesktopLogHeader,
   });
-  nativeHostSupervisor.start();
+  if (outcome === "continue") {
+    desktopStartupBlockedForMigrationRecovery = false;
+  }
+  return outcome;
 }
 
 function resolveDesktopStaticDir(): string | null {
   const appRoot = resolveAppRoot();
   const candidates = [
-    Path.join(appRoot, "apps/service/dist/client"),
+    Path.join(appRoot, "apps/server/dist/client"),
     Path.join(appRoot, "apps/web/dist"),
   ];
 
@@ -1339,7 +1324,7 @@ function registerDesktopProtocol(): void {
   const staticRoot = resolveServedStaticRoot()?.dir ?? null;
   if (!staticRoot) {
     throw new Error(
-      "Desktop static bundle missing. Build apps/service (with bundled client) first.",
+      "Desktop static bundle missing. Build apps/server (with bundled client) first.",
     );
   }
 
@@ -1658,11 +1643,11 @@ function resolveNotificationIconPath(): string | null {
   return resolveResourcePath("icon.png") ?? resolveIconPath("png");
 }
 
-function resolveAppSnapBridgePath(): string {
+function resolveAppSnapHelperPath(): string {
   if (app.isPackaged) {
-    return Path.resolve(process.resourcesPath, "..", "Helpers", "omnimind-appsnap-bridge");
+    return Path.resolve(process.resourcesPath, "..", "Helpers", "omnimind-appsnap-helper");
   }
-  return Path.resolve(__dirname, "..", ".electron-runtime", "appsnap", "omnimind-appsnap-bridge");
+  return Path.resolve(__dirname, "..", ".electron-runtime", "appsnap", "omnimind-appsnap-helper");
 }
 
 function ensureMainWindowForAppSnap(): BrowserWindow | null {
@@ -1696,10 +1681,10 @@ function sendAppSnapEvent(
 }
 
 function initializeDesktopAppSnap(): void {
-  if (appSnapSupervisor) return;
-  appSnapSupervisor = new DesktopAppSnapSupervisor({
+  if (appSnapManager) return;
+  appSnapManager = new DesktopAppSnapManager({
     platform: process.platform,
-    bridgePath: resolveAppSnapBridgePath(),
+    helperPath: resolveAppSnapHelperPath(),
     captureDirectory: Path.join(app.getPath("userData"), "appsnap", "tmp"),
     excludedBundleId: APP_USER_MODEL_ID,
     shortcutRegistry: globalShortcut,
@@ -1745,13 +1730,6 @@ function isMainWindowForeground(window: BrowserWindow | null): boolean {
   return window.isVisible() && !window.isMinimized() && window.isFocused();
 }
 
-function shouldSuppressDesktopNotification(
-  suppressWhenForeground: boolean,
-  window: BrowserWindow | null,
-): boolean {
-  return suppressWhenForeground && isMainWindowForeground(window);
-}
-
 function incrementUnreadNotificationBadge(): void {
   unreadBackgroundNotificationCount = Math.min(unreadBackgroundNotificationCount + 1, 99);
   syncUnreadNotificationBadge();
@@ -1793,20 +1771,16 @@ function showDesktopNotification(input: {
   title: string;
   body?: string;
   silent?: boolean;
-  threadId?: string;
   suppressWhenForeground?: boolean;
-  productConversationId?: string;
-  productSurface?: "agent" | "chat";
+  threadId?: string;
 }): boolean {
   const title = typeof input.title === "string" ? input.title.trim() : "";
   const body = typeof input.body === "string" ? input.body.trim() : "";
   const threadId = typeof input.threadId === "string" ? input.threadId.trim() : "";
-  const productConversationId =
-    typeof input.productConversationId === "string" ? input.productConversationId.trim() : "";
   if (title.length === 0 || !Notification.isSupported()) {
     return false;
   }
-  if (shouldSuppressDesktopNotification(input.suppressWhenForeground === true, mainWindow)) {
+  if (input.suppressWhenForeground === true && isMainWindowForeground(mainWindow)) {
     return false;
   }
 
@@ -1827,12 +1801,7 @@ function showDesktopNotification(input: {
     if (!mainWindow) {
       return;
     }
-    if (productConversationId.length > 0 && input.productSurface) {
-      mainWindow.webContents.send(
-        IPC.menuAction,
-        `notification-open-product-${input.productSurface}:${productConversationId}`,
-      );
-    } else if (threadId.length > 0) {
+    if (threadId.length > 0) {
       mainWindow.webContents.send(IPC.menuAction, `notification-open-thread:${threadId}`);
     }
   });
@@ -1848,16 +1817,11 @@ function showDesktopNotification(input: {
  * package.json. We override it to a clean lowercase OmniMind name.
  */
 function resolveUserDataPath(): string {
-  const explicitUserDataPath = app.commandLine.getSwitchValue("user-data-dir").trim();
-  if (explicitUserDataPath) return Path.resolve(explicitUserDataPath);
-  const homeDir = OS.homedir();
-  const appDataBase =
-    process.platform === "win32"
-      ? process.env.APPDATA || Path.join(homeDir, "AppData", "Roaming")
-      : process.platform === "darwin"
-        ? Path.join(homeDir, "Library", "Application Support")
-        : process.env.XDG_CONFIG_HOME || Path.join(homeDir, ".config");
-  return Path.join(appDataBase, desktopIdentity.userDataDirectoryName);
+  const appDataBase = resolveDesktopAppDataBase();
+  return resolveDesktopUserDataPath({
+    appDataBase,
+    userDataDirectoryName: desktopIdentity.userDataDirectoryName,
+  });
 }
 
 function configureAppIdentity(): void {
@@ -1878,23 +1842,61 @@ function configureAppIdentity(): void {
 // The packaged bundle icon is a solid, pre-rounded ICNS so Tahoe does not reinterpret
 // the mark as Icon Composer glass. Older macOS gets the same literal rounded artwork as
 // a runtime dock override because it does not apply the modern system mask itself.
-function applyLegacyMacDockIcon(): void {
+function usesLegacyMacDockIcon(): boolean {
+  if (process.platform !== "darwin") return false;
+  const darwinMajor = Number.parseInt(OS.release().split(".")[0] ?? "", 10);
+  return Number.isFinite(darwinMajor) && darwinMajor < 25;
+}
+
+function readDesktopAppIcon(): DesktopAppIcon {
+  try {
+    const storedIcon = FS.readFileSync(DESKTOP_APP_ICON_PATH, "utf8").trim();
+    return isDesktopAppIcon(storedIcon) ? storedIcon : "default";
+  } catch {
+    return "default";
+  }
+}
+
+function persistDesktopAppIcon(icon: DesktopAppIcon): void {
+  FS.mkdirSync(Path.dirname(DESKTOP_APP_ICON_PATH), { recursive: true });
+  FS.writeFileSync(DESKTOP_APP_ICON_PATH, icon, "utf8");
+}
+
+function applyDesktopAppIcon(icon: DesktopAppIcon): void {
+  if (
+    process.platform !== "darwin" &&
+    process.platform !== "linux" &&
+    process.platform !== "win32"
+  ) {
+    return;
+  }
+  const resourceName = desktopAppIconResourceName({
+    icon,
+    platform: process.platform,
+    useLegacyMacDefault: usesLegacyMacDockIcon(),
+  });
+  const iconPath = resolveResourcePath(resourceName);
+  if (!iconPath) return;
+
+  const image = nativeImage.createFromPath(iconPath);
+  if (image.isEmpty()) return;
+
+  if (process.platform === "darwin") {
+    app.dock?.setIcon(image);
+    return;
+  }
+  mainWindow?.setIcon(image);
+}
+
+function applyInitialMacDockIcon(): void {
   if (process.platform !== "darwin" || !app.dock) {
     return;
   }
-  const darwinMajor = Number.parseInt(OS.release().split(".")[0] ?? "", 10);
-  if (!Number.isFinite(darwinMajor) || darwinMajor >= 25) {
+  const icon = readDesktopAppIcon();
+  if (icon === "default" && !usesLegacyMacDockIcon()) {
     return;
   }
-  const iconPath = resolveResourcePath("dock-icon.png");
-  if (!iconPath) {
-    return;
-  }
-  const image = nativeImage.createFromPath(iconPath);
-  if (image.isEmpty()) {
-    return;
-  }
-  app.dock.setIcon(image);
+  applyDesktopAppIcon(icon);
 }
 
 function readLaunchVersionRecordContents(): string | null {
@@ -2111,7 +2113,9 @@ function scheduleUpdatePoll(): void {
 }
 
 function isExplicitUpdateCheckReason(reason: string): boolean {
-  return reason === "menu" || reason === "renderer";
+  return (
+    reason === "menu" || reason === "renderer" || reason === UPDATE_CHECK_REASON_MIGRATION_RECOVERY
+  );
 }
 
 function emitUpdateState(): void {
@@ -2615,6 +2619,84 @@ function prepareAvailableUpdateInBackground(reason: string): void {
   activeUpdatePreparation = preparation;
 }
 
+/**
+ * Whether the recovery prompt can offer an in-place update.
+ *
+ * Deliberately permissive about the current status: the check has usually not
+ * run yet at this point in startup, so "we do not know of an update" is not a
+ * reason to hide the option. Only a completed check that found nothing newer
+ * is, because then updating provably cannot repair anything.
+ */
+function canInstallUpdateFromRecovery(): boolean {
+  return updaterConfigured && updateState.status !== "up-to-date";
+}
+
+/**
+ * Drives check → download → install for an install whose database is wedged.
+ *
+ * This is the only recovery option that needs nothing from the user afterwards,
+ * so it runs the whole updater sequence rather than stopping at "an update is
+ * available". Resolves to a message to show in the next prompt when the update
+ * could not be installed, or to null once the install handoff has started.
+ */
+async function installLatestUpdateForMigrationRecovery(): Promise<string | null> {
+  if (!updaterConfigured) {
+    return resolveAutoUpdateDisabledReason() ?? "Automatic updates are not available.";
+  }
+
+  if (updateState.status !== "downloaded") {
+    // The automatic startup check is armed before this prompt appears, so one
+    // may already be running. Joining it is what gets a real answer: starting a
+    // second check here would return without doing anything and leave the
+    // status at "checking", which reads as a download failure below.
+    const inFlightCheck = activeUpdateCheck;
+    if (inFlightCheck === null) {
+      await checkForUpdates(UPDATE_CHECK_REASON_MIGRATION_RECOVERY);
+    } else {
+      await inFlightCheck;
+    }
+    // A successful check starts the download itself; await that one rather
+    // than starting a competing transfer.
+    const preparation = activeUpdatePreparation;
+    if (preparation !== null) {
+      await preparation;
+    } else if (updateState.status === "available") {
+      await downloadAvailableUpdate();
+    }
+  }
+
+  if (updateState.status === "up-to-date") {
+    return `OmniMind ${app.getVersion()} is already the newest release, so updating cannot repair this database.`;
+  }
+  if (updateState.status !== "downloaded") {
+    return updateState.message ?? "The update could not be downloaded.";
+  }
+
+  await installDownloadedUpdate();
+  // quitAndInstall never resolves — the process exits under it. A handoff that
+  // silently fails is cleared by the install watchdog instead, and waiting for
+  // that verdict is what keeps a failed install from leaving a live app with
+  // no window and no way back to this prompt.
+  await waitForMigrationRecoveryInstallHandoff();
+  if (isUpdaterQuitAndInstallInFlight) {
+    return null;
+  }
+  return updateState.message ?? "The downloaded update could not be installed.";
+}
+
+/**
+ * Waits out the install watchdog window, which is the earliest a failed handoff
+ * can be known: nothing else clears `isUpdaterQuitAndInstallInFlight`, so there
+ * is nothing to poll for. A successful handoff exits the process well before
+ * this resolves.
+ */
+async function waitForMigrationRecoveryInstallHandoff(): Promise<void> {
+  if (!isUpdaterQuitAndInstallInFlight) return;
+  await new Promise<void>((resolve) => {
+    setTimeout(resolve, AUTO_UPDATE_INSTALL_WATCHDOG_MS + 2_000).unref();
+  });
+}
+
 async function runDownloadedUpdateInstall(
   preparationAttempt: UpdateInstallPreparationAttempt,
 ): Promise<{
@@ -2797,8 +2879,8 @@ function configureAutoUpdater(): void {
 
   autoUpdater.autoDownload = false;
   autoUpdater.autoInstallOnAppQuit = false;
-  // Packaged Desktop binaries use the dedicated OmniMind channel aliases
-  // published alongside the GitHub Latest manifests.
+  // The dedicated channel keeps the permanent compatibility release on the
+  // default feed while OmniMind versions advance independently.
   autoUpdater.channel = OMNIMIND_DESKTOP_UPDATE_CHANNEL;
   autoUpdater.allowPrerelease = DESKTOP_UPDATE_ALLOW_PRERELEASE;
   autoUpdater.allowDowngrade = false;
@@ -2946,7 +3028,7 @@ function configureAutoUpdater(): void {
 
   scheduleUpdatePoll();
 }
-// Builds process-local Node args so supervised tool children do not inherit OmniMind's heap guard.
+// Builds process-local Node args so provider/tool children do not inherit OmniMind's heap guard.
 function backendNodeArgs(): string[] {
   const configuredMaxOldSpaceMb =
     BACKEND_MAX_OLD_SPACE_ENV_KEYS.map((key) => process.env[key]).find(
@@ -2961,52 +3043,52 @@ function backendNodeArgs(): string[] {
 
 function backendEnv(): NodeJS.ProcessEnv {
   const servedStaticRoot = resolveServedStaticRoot();
-  const env = attachServiceApplicationRoot(
-    {
-      ...resolveBrowserHostPipeBackendEnv(
-        process.env,
-        browserHostPipeServer ? OMNIMIND_BROWSER_HOST_PIPE_PATH : null,
-        browserHostPipeServer ? DESKTOP_BROWSER_HOST_CAPABILITY_FD : null,
-      ),
-      // Point the backend's HTTP static route at the same swap-immune snapshot the
-      // omnimind:// protocol serves, so both surfaces survive app.asar being replaced.
-      ...(servedStaticRoot?.snapshotted ? { OMNIMIND_STATIC_DIR: servedStaticRoot.dir } : {}),
-      OMNIMIND_MODE: "desktop",
-      OMNIMIND_NO_BROWSER: "1",
-      OMNIMIND_PORT: String(backendPort),
-      OMNIMIND_HOME: BASE_DIR,
-      OMNIMIND_AUTH_TOKEN: backendAuthToken,
-      OMNIMIND_DESKTOP_SHUTDOWN_TOKEN: DESKTOP_BACKEND_SHUTDOWN_TOKEN,
-    },
-    resolveAppRoot(),
-  );
+  const env: NodeJS.ProcessEnv = {
+    ...resolveBrowserHostPipeBackendEnv(
+      process.env,
+      browserHostPipeServer ? OMNIMIND_BROWSER_HOST_PIPE_PATH : null,
+      browserHostPipeServer ? DESKTOP_BROWSER_HOST_CAPABILITY_FD : null,
+    ),
+    // Point the backend's HTTP static route at the same swap-immune snapshot the
+    // omnimind:// protocol serves, so both surfaces survive app.asar being replaced.
+    ...(servedStaticRoot?.snapshotted ? { OMNIMIND_STATIC_DIR: servedStaticRoot.dir } : {}),
+    OMNIMIND_MODE: "desktop",
+    OMNIMIND_NO_BROWSER: "1",
+    OMNIMIND_PORT: String(backendPort),
+    OMNIMIND_HOME: BASE_DIR,
+    OMNIMIND_AUTH_TOKEN: backendAuthToken,
+    OMNIMIND_DESKTOP_SHUTDOWN_TOKEN: DESKTOP_BACKEND_SHUTDOWN_TOKEN,
+  };
   // The backend runs the same login-shell probe at startup and does not begin listening
   // until it returns, so an unmarked child serializes a second ~1s hydration behind ours.
   // Written explicitly in both directions: an inherited marker must never suppress a
   // probe when our own hydration failed and the child's PATH is the raw launch one.
-  const hydrated = applyShellEnvironmentHydrationMarker(env, shellEnvironmentSync.pathHydrated);
-  return nativeHostRendezvous
-    ? nativeHostChildEnvironment(hydrated, nativeHostRendezvous)
-    : hydrated;
+  return applyShellEnvironmentHydrationMarker(env, shellEnvironmentSync.pathHydrated);
 }
 
 function scheduleBackendRestart(reason: string): void {
   const response = backendSupervision.respondToStartFailure({
     quitting: isQuitting,
     restartPending: restartTimer !== null,
+    migrationRecoveryMarkerPresent: isDesktopMigrationRecoveryPending(),
   });
 
   switch (response.kind) {
     case "ignore":
       return;
+    case "recover-migration":
+      // The marker is written mid-session by the migration that just killed the
+      // backend, so bootstrap's one-shot check never saw it. Recovery owns the
+      // process from here; respawning would only repeat the failed migration.
+      writeDesktopLogHeader(
+        `migration recovery marker detected after backend failure reason=${sanitizeLogValue(reason)}`,
+      );
+      safeConsoleError(
+        `[desktop] backend failed with a pending migration recovery (${reason}); opening recovery`,
+      );
+      void runMidSessionMigrationRecovery(reason);
+      return;
     case "give-up":
-      publishDesktopHealth({
-        service: {
-          status: "unavailable",
-          reason,
-          restartAttempt: response.failures,
-        },
-      });
       writeDesktopLogHeader(
         `backend supervision gave up failures=${response.failures} reason=${sanitizeLogValue(reason)}`,
       );
@@ -3016,13 +3098,6 @@ function scheduleBackendRestart(reason: string): void {
       presentBackendStartupGiveUp(reason);
       return;
     case "retry":
-      publishDesktopHealth({
-        service: {
-          status: "restarting",
-          reason,
-          restartAttempt: response.attempt,
-        },
-      });
       safeConsoleError(
         `[desktop] backend exited unexpectedly (${reason}); restarting in ${response.delayMs}ms (attempt ${response.attempt}/${BACKEND_MAX_CONSECUTIVE_START_FAILURES})`,
       );
@@ -3032,6 +3107,17 @@ function scheduleBackendRestart(reason: string): void {
       }, response.delayMs);
       return;
   }
+}
+
+// Runs the same recovery flow bootstrap uses, but for a marker that appeared while
+// the app was already running. Shown once per app run — the policy owns that latch.
+async function runMidSessionMigrationRecovery(reason: string): Promise<void> {
+  const outcome = await handleDesktopMigrationRecovery();
+  if (outcome !== "continue") return;
+
+  // The marker vanished between the crash check and the recovery run (another
+  // process cleared it), so fall back to the normal supervised restart.
+  await restartBackendAfterCrash(reason);
 }
 
 function backendFailureDialogDetail(reason: string): string {
@@ -3104,6 +3190,27 @@ function handleBackendStartupBlock(block: BackendStartupBlock): void {
   if (isQuitting || backendLifecycleDialogInFlight) return;
 
   const task = (async () => {
+    if (block.kind === "migration-recovery-required") {
+      const result = await dialog.showMessageBox({
+        type: "warning",
+        title: "OmniMind needs to recover its database",
+        message: "A database migration did not finish safely.",
+        detail:
+          "Restart OmniMind to open the verified backup recovery flow. Provider and chat processes will remain stopped until recovery completes.",
+        buttons: ["Restart and recover", "Quit"],
+        defaultId: 0,
+        cancelId: 1,
+        noLink: true,
+      });
+      if (result.response === 0) {
+        app.relaunch();
+        requestGracefulAppQuit("migration recovery required");
+      } else {
+        requestGracefulAppQuit("migration recovery declined");
+      }
+      return;
+    }
+
     const processDetail =
       block.ownerPid === null
         ? "Another OmniMind server is already using this database."
@@ -3149,6 +3256,10 @@ async function restartBackendAfterCrash(
   }
 
   cancelBackendReadinessWait();
+  // The aborted observer settles on a later microtask. Clear its identity now
+  // so the replacement child always gets a fresh readiness observation even
+  // when the renderer window survived the crash.
+  backendInitialWindowOpenInFlight = null;
   try {
     await reserveBackendEndpoint("backend restart");
   } catch (error) {
@@ -3171,17 +3282,17 @@ type BackendStartTrigger = "lifecycle" | "crash-restart";
 
 function startBackend(trigger: BackendStartTrigger = "lifecycle"): void {
   if (isQuitting || backendProcess) return;
+  // Recovery owns the database until it clears the marker. Callers that restart
+  // the backend after an unrelated failure — a given-up update install, say —
+  // must not hand it a database the user is being asked how to repair.
+  if (desktopStartupBlockedForMigrationRecovery) {
+    writeDesktopLogHeader("backend start suppressed while migration recovery is pending");
+    return;
+  }
 
   if (trigger === "lifecycle") {
     backendSupervision.reset();
   }
-  publishDesktopHealth({
-    service: {
-      status: trigger === "lifecycle" ? "starting" : "restarting",
-      reason: null,
-      restartAttempt: backendSupervision.consecutiveFailures,
-    },
-  });
 
   const backendEntry = resolveBackendEntry();
   if (!FS.existsSync(backendEntry)) {
@@ -3217,13 +3328,6 @@ function startBackend(trigger: BackendStartTrigger = "lifecycle"): void {
     return;
   }
   const listeningDetector = new ServerListeningDetector();
-  const nativeHostReadinessDetector = new NativeHostAuthenticatedReadinessDetector({
-    onReady: () => nativeHostSupervisor?.recordAuthenticatedReadiness(),
-    onUnavailable: () =>
-      nativeHostSupervisor?.recordAuthenticatedUnavailable(
-        "Product Service could not authenticate the Native Host channel.",
-      ),
-  });
   const startupBlockDetector = new BackendStartupBlockDetector();
   const outputTailDetector = new BackendOutputTailDetector();
   backendListeningDetector = listeningDetector;
@@ -3244,28 +3348,12 @@ function startBackend(trigger: BackendStartTrigger = "lifecycle"): void {
     stderr: child.stderr,
     ...(backendLogDestination ? { writeLog: (chunk) => backendLogDestination.write(chunk) } : {}),
     writeStdout: (chunk) => {
-      const output = chunk.toString("utf8");
-      if (output.includes("OMNIMIND_NATIVE_HOST_EXECUTION_AVAILABLE protocol=1")) {
-        publishDesktopHealth({ engineSelection: { status: "available", reason: null } });
-      } else if (output.includes("OMNIMIND_NATIVE_HOST_EXECUTION_UNAVAILABLE protocol=1")) {
-        publishDesktopHealth({
-          engineSelection: {
-            status: "unauthenticated",
-            reason: "No credential-backed Pi model is currently available.",
-          },
-        });
-      }
       process.stdout.write(chunk);
     },
     writeStderr: (chunk) => {
       process.stderr.write(chunk);
     },
-    detectors: [
-      listeningDetector,
-      nativeHostReadinessDetector,
-      startupBlockDetector,
-      outputTailDetector,
-    ],
+    detectors: [listeningDetector, startupBlockDetector, outputTailDetector],
   });
 
   // A successful spawn only proves that Electron created the process. Reset the
@@ -3275,9 +3363,6 @@ function startBackend(trigger: BackendStartTrigger = "lifecycle"): void {
     () => {
       if (backendListeningDetector === listeningDetector) {
         backendSupervision.recordReadiness();
-        publishDesktopHealth({
-          service: { status: "ready", reason: null, restartAttempt: 0 },
-        });
       }
     },
     () => undefined,
@@ -3403,7 +3488,7 @@ async function disposeBrowserHostPipeServerForShutdown(reason: string): Promise<
   }
 }
 
-// Keeps Electron alive long enough for backend finalizers to reap supervised child processes.
+// Keeps Electron alive long enough for backend finalizers to reap provider child processes.
 async function shutdownDesktopRuntime(reason: string): Promise<void> {
   if (desktopShutdownPromise) {
     return desktopShutdownPromise;
@@ -3414,16 +3499,14 @@ async function shutdownDesktopRuntime(reason: string): Promise<void> {
   const shutdown = runAfterDesktopShutdown(
     stopBackendAndWaitForExit(),
     async () => {
-      disconnectNativeHostCredentialBroker();
-      await nativeHostSupervisor?.stop();
       clearUpdateBackgroundBlurTimer();
       clearUpdateCheckTimeoutTimer();
       clearUpdatePollTimer();
       cancelBackendReadinessWait();
-      appSnapSupervisor?.dispose();
-      appSnapSupervisor = null;
+      appSnapManager?.dispose();
+      appSnapManager = null;
       await disposeBrowserHostPipeServerForShutdown(reason);
-      browserHost.dispose();
+      browserManager.dispose();
       restoreStdIoCapture?.();
       desktopShutdownComplete = true;
       writeDesktopLogHeader(`${reason} shutdown complete`);
@@ -3459,15 +3542,6 @@ function requestGracefulAppQuit(reason: string): void {
 }
 
 function registerIpcHandlers(): void {
-
-  ipcMain.removeHandler(DESKTOP_HEALTH_IPC_CHANNELS.getSnapshot);
-  ipcMain.handle(DESKTOP_HEALTH_IPC_CHANNELS.getSnapshot, async () => desktopHealthSnapshot);
-  ipcMain.removeHandler(DESKTOP_HEALTH_IPC_CHANNELS.retryNativeHost);
-  ipcMain.handle(DESKTOP_HEALTH_IPC_CHANNELS.retryNativeHost, async () => {
-    nativeHostSupervisor?.retry();
-    return desktopHealthSnapshot;
-  });
-
   ipcMain.removeAllListeners(IPC.wsUrl);
   ipcMain.on(IPC.wsUrl, (event: IpcMainEvent) => {
     // The backend port is reserved at runtime, so preload asks main for the
@@ -3536,6 +3610,16 @@ function registerIpcHandlers(): void {
     }
 
     nativeTheme.themeSource = theme;
+  });
+
+  ipcMain.removeHandler(IPC.setAppIcon);
+  ipcMain.handle(IPC.setAppIcon, async (_event, rawIcon: unknown) => {
+    if (!isDesktopAppIcon(rawIcon)) return;
+    // Renderer hydration mirrors this native preference. Avoid reapplying the icon selected
+    // during boot, especially the bundled default that modern macOS renders itself.
+    if (!shouldUpdateDesktopAppIcon(readDesktopAppIcon(), rawIcon)) return;
+    persistDesktopAppIcon(rawIcon);
+    applyDesktopAppIcon(rawIcon);
   });
 
   ipcMain.removeHandler(IPC.contextMenu);
@@ -3751,10 +3835,8 @@ function registerIpcHandlers(): void {
             title?: unknown;
             body?: unknown;
             silent?: unknown;
-            threadId?: unknown;
             suppressWhenForeground?: unknown;
-            productConversationId?: unknown;
-            productSurface?: unknown;
+            threadId?: unknown;
           }
         | null
         | undefined,
@@ -3765,26 +3847,25 @@ function registerIpcHandlers(): void {
         silent: input?.silent === true,
         suppressWhenForeground: input?.suppressWhenForeground === true,
         ...(typeof input?.threadId === "string" ? { threadId: input.threadId } : {}),
-        ...(typeof input?.productConversationId === "string"
-          ? { productConversationId: input.productConversationId }
-          : {}),
-        ...(input?.productSurface === "agent" || input?.productSurface === "chat"
-          ? { productSurface: input.productSurface }
-          : {}),
       }),
   );
-  if (appSnapSupervisor) {
-    registerAppSnapIpcHandlers(ipcMain, appSnapSupervisor);
+  if (appSnapManager) {
+    registerAppSnapIpcHandlers(ipcMain, appSnapManager);
   }
   registerDesktopVoiceTranscriptionHandler();
   startBrowserPerformanceLogging();
-  registerBrowserIpcHandlers(ipcMain, browserHost);
+  registerBrowserIpcHandlers(ipcMain, browserManager);
 }
 
 function getIconOption(): { icon: string } | Record<string, never> {
   if (process.platform === "darwin") return {}; // macOS uses .icns from app bundle
-  const ext = process.platform === "win32" ? "ico" : "png";
-  const iconPath = resolveIconPath(ext);
+  if (process.platform !== "linux" && process.platform !== "win32") return {};
+  const resourceName = desktopAppIconResourceName({
+    icon: readDesktopAppIcon(),
+    platform: process.platform,
+    useLegacyMacDefault: false,
+  });
+  const iconPath = resolveResourcePath(resourceName);
   return iconPath ? { icon: iconPath } : {};
 }
 
@@ -3821,7 +3902,7 @@ function getTitleBarOptions(): BrowserWindowConstructorOptions {
   }
   return {
     titleBarStyle: "hiddenInset",
-    // Derived from the shared chat-surface header geometry (@omnimind/shared/desktopChrome)
+    // Derived from the shared chat-surface header geometry (@synara/shared/desktopChrome)
     // so the native lights and the renderer's leading toggle/arrow controls always share
     // the same vertical center. Tune the height/radius there, never the raw px here.
     trafficLightPosition: getMacTrafficLightPosition(),
@@ -3865,12 +3946,11 @@ function createWindow(): BrowserWindow {
       backgroundThrottling: true,
     },
   });
-  browserHost.setWindow(window);
+  browserManager.setWindow(window);
   attachDesktopZoomFactorSync(window);
   attachRendererCrashRecovery(window);
   attachDesktopPhysicalZoomShortcuts(window);
 
-  const annotationGuestPreload = Path.join(__dirname, "guestPreload.js");
   window.webContents.on("will-attach-webview", (event, webPreferences, params) => {
     const partition = params.partition;
     if (
@@ -3937,11 +4017,6 @@ function createWindow(): BrowserWindow {
   window.webContents.on("did-finish-load", () => {
     window.setTitle(APP_DISPLAY_NAME);
     emitUpdateState();
-    publishDesktopHealth({
-      renderer: { status: "ready", reason: null, restartAttempt: 0 },
-    });
-    writeDesktopLogHeader("renderer did finish load");
-    console.info("[desktop] renderer did finish load");
   });
   window.once("ready-to-show", () => {
     // Preserve the original first-launch behavior, then respect the state saved
@@ -3991,11 +4066,8 @@ function createWindow(): BrowserWindow {
   window.on("closed", () => {
     if (mainWindow === window) {
       mainWindow = null;
-      publishDesktopHealth({
-        renderer: { status: "unavailable", reason: null, restartAttempt: 0 },
-      });
     }
-    browserHost.setWindow(null);
+    browserManager.setWindow(null);
   });
 
   return window;
@@ -4031,13 +4103,6 @@ function attachRendererCrashRecovery(window: BrowserWindow): void {
       case "ignore":
         return;
       case "reload":
-        publishDesktopHealth({
-          renderer: {
-            status: "recovering",
-            reason: details.reason,
-            restartAttempt: response.attempt,
-          },
-        });
         writeDesktopLogHeader(
           `renderer reload scheduled attempt=${response.attempt}/${RENDERER_MAX_AUTOMATIC_RELOADS} delayMs=${response.delayMs}`,
         );
@@ -4049,13 +4114,6 @@ function attachRendererCrashRecovery(window: BrowserWindow): void {
         }, response.delayMs);
         return;
       case "prompt":
-        publishDesktopHealth({
-          renderer: {
-            status: "crashed",
-            reason: details.reason,
-            restartAttempt: response.crashes,
-          },
-        });
         writeDesktopLogHeader(
           `renderer recovery prompt cause=${response.cause} crashes=${response.crashes}`,
         );
@@ -4214,10 +4272,19 @@ if (!hasSingleInstanceLock) {
 
 async function bootstrap(): Promise<void> {
   writeDesktopLogHeader("bootstrap start");
+  // Ahead of the recovery gate on purpose. A startup that blocks below returns
+  // early, and every path that could ship the fix for whatever blocked it lives
+  // after that return: an install wedged on a bad migration would be unable to
+  // update out of it, which is exactly how 0.6.0 stranded its users. The
+  // updater touches no database state, so configuring it first is safe.
   configureAutoUpdater();
 
+  const migrationRecoveryOutcome = await handleDesktopMigrationRecovery();
+  if (migrationRecoveryOutcome !== "continue") {
+    return;
+  }
+
   backendAuthToken = Crypto.randomBytes(24).toString("hex");
-  nativeHostRendezvous = createNativeHostRendezvous();
   await reserveBackendEndpoint("bootstrap");
 
   registerIpcHandlers();
@@ -4227,9 +4294,8 @@ async function bootstrap(): Promise<void> {
   } catch (error) {
     console.warn("[OmniMind browser] Failed to start browser host pipe", error);
   }
-  startNativeHost();
   startBackend();
-  writeDesktopLogHeader("bootstrap service and native host starts requested");
+  writeDesktopLogHeader("bootstrap backend start requested");
 
   if (isDevelopment) {
     void waitForBackendWindowReady(backendHttpUrl)
@@ -4317,7 +4383,7 @@ if (hasSingleInstanceLock) {
     .then(() => {
       writeDesktopLogHeader("app ready");
       configureAppIdentity();
-      applyLegacyMacDockIcon();
+      applyInitialMacDockIcon();
       refreshMacIconCacheOnVersionChange();
       configureMediaPermissions();
       initializeDesktopAppSnap();
@@ -4345,7 +4411,7 @@ if (hasSingleInstanceLock) {
       });
 
       app.on("activate", () => {
-        if (isQuitting) {
+        if (desktopStartupBlockedForMigrationRecovery || isQuitting) {
           return;
         }
         handleDesktopAppForegrounded();

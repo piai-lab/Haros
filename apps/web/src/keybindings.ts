@@ -4,11 +4,13 @@ import {
   type KeybindingShortcut,
   type KeybindingWhenNode,
   type ResolvedKeybindingsConfig,
+  SPACE_JUMP_KEYBINDING_COMMANDS,
+  type SpaceJumpKeybindingCommand,
   THREAD_JUMP_KEYBINDING_COMMANDS,
   type ThreadJumpKeybindingCommand,
-} from "@omnimind/contracts";
-import { isKeyboardShortcutsHelpChord } from "@omnimind/shared/browserShortcuts";
-import { isMacPlatform, isWindowsPlatform } from "./lib/platform";
+} from "@synara/contracts";
+import { isKeyboardShortcutsHelpChord } from "@synara/shared/browserShortcuts";
+import { isMacPlatform, isWindowsPlatform } from "./lib/utils";
 
 export interface ShortcutEventLike {
   type?: string;
@@ -72,19 +74,19 @@ const whenThreadJumpAvailable = whenAnd(
   whenNotTerminalFocus,
   whenNot(whenIdentifier("terminalWorkspaceOpen")),
 );
-// New-surface creation chords (new chat/terminal/provider chat/split) bind to `mod`,
-// which is Cmd on macOS. xterm never forwards a Cmd-chord to the PTY, so a bare
+// App-level `mod` chords (new chat/terminal/provider chat/split, copy thread id) bind to
+// `mod`, which is Cmd on macOS. xterm never forwards a Cmd-chord to the PTY, so a bare
 // `!terminalFocus` guard silently dropped these chords whenever the terminal had focus
-// — the chord did nothing instead of creating anything. `|| isMac` lets them fire from
+// — the chord did nothing instead of running the command. `|| isMac` lets them fire from
 // the terminal on macOS while still yielding the chord to the shell on Linux/Windows,
 // where `mod` is Ctrl and keys like Ctrl+N are real shell input that must pass through.
-const whenCreationAllowed = whenOr(whenNotTerminalFocus, whenIdentifier("isMac"));
+const whenModChordAllowed = whenOr(whenNotTerminalFocus, whenIdentifier("isMac"));
 
 export const DEFAULT_SHORTCUT_FALLBACKS: ResolvedKeybindingsConfig = [
   {
     command: "sidebar.activity",
     shortcut: commandShortcut("u", { altKey: true }),
-    whenAst: whenCreationAllowed,
+    whenAst: whenModChordAllowed,
   },
   {
     command: "sidebar.addProject",
@@ -92,29 +94,49 @@ export const DEFAULT_SHORTCUT_FALLBACKS: ResolvedKeybindingsConfig = [
     whenAst: whenNotTerminalFocus,
   },
   {
+    command: "sidebar.importThread",
+    shortcut: commandShortcut("i"),
+    whenAst: whenNotTerminalFocus,
+  },
+  {
     command: "chat.new",
     shortcut: commandShortcut("n"),
-    whenAst: whenCreationAllowed,
+    whenAst: whenModChordAllowed,
   },
   {
     command: "chat.newLatestProject",
     shortcut: commandShortcut("n", { shiftKey: true }),
-    whenAst: whenCreationAllowed,
+    whenAst: whenModChordAllowed,
+  },
+  {
+    command: "chat.newClaude",
+    shortcut: commandShortcut("c", { altKey: true }),
+    whenAst: whenModChordAllowed,
   },
   {
     command: "chat.newChat",
     shortcut: commandShortcut("n", { altKey: true }),
-    whenAst: whenCreationAllowed,
+    whenAst: whenModChordAllowed,
   },
   {
     command: "chat.newTerminal",
     shortcut: commandShortcut("t", { shiftKey: true }),
-    whenAst: whenCreationAllowed,
+    whenAst: whenModChordAllowed,
+  },
+  {
+    command: "chat.newCodex",
+    shortcut: commandShortcut("x", { altKey: true }),
+    whenAst: whenModChordAllowed,
+  },
+  {
+    command: "chat.newCursor",
+    shortcut: commandShortcut("r", { altKey: true }),
+    whenAst: whenModChordAllowed,
   },
   {
     command: "chat.split",
     shortcut: commandShortcut("\\"),
-    whenAst: whenCreationAllowed,
+    whenAst: whenModChordAllowed,
   },
   // Installed-app only (Electron / standalone PWA). Browsers reserve Ctrl+Tab and
   // Ctrl+Shift+Tab for tab switching and won't deliver them to the page, so the
@@ -129,6 +151,26 @@ export const DEFAULT_SHORTCUT_FALLBACKS: ResolvedKeybindingsConfig = [
   {
     command: "view.recent.previous",
     shortcut: commandShortcut("tab", { ctrlKey: true, shiftKey: true, modKey: false }),
+  },
+  {
+    command: "modelPicker.toggle",
+    shortcut: commandShortcut("m", { shiftKey: true }),
+    whenAst: whenNotTerminalFocus,
+  },
+  {
+    command: "model.next",
+    shortcut: commandShortcut("]", { altKey: true, modKey: false }),
+    whenAst: whenNotTerminalFocus,
+  },
+  {
+    command: "model.previous",
+    shortcut: commandShortcut("[", { altKey: true, modKey: false }),
+    whenAst: whenNotTerminalFocus,
+  },
+  {
+    command: "traitsPicker.toggle",
+    shortcut: commandShortcut("e", { shiftKey: true }),
+    whenAst: whenNotTerminalFocus,
   },
   // Cmd-only instead of mod so Ctrl+L remains available to shells on non-macOS.
   {
@@ -154,6 +196,14 @@ export const DEFAULT_SHORTCUT_FALLBACKS: ResolvedKeybindingsConfig = [
     shortcut: commandShortcut("p", { ctrlKey: true, altKey: true, modKey: false }),
     whenAst: whenAnd(whenNotTerminalFocus, whenNot(whenIdentifier("isMac"))),
   },
+  // Numbered space jumps target the switcher's visual tab order (mod+alt+1 = Void).
+  // Same guard as the creation chords: Cmd+Alt never reaches the PTY on macOS, while
+  // Ctrl+Alt+digit doubles as AltGr input on Linux/Windows and must yield to terminals.
+  ...SPACE_JUMP_KEYBINDING_COMMANDS.map((command, index) => ({
+    command,
+    shortcut: commandShortcut(String(index + 1), { altKey: true }),
+    whenAst: whenModChordAllowed,
+  })),
   {
     command: "thread.jump.1",
     shortcut: commandShortcut("1"),
@@ -198,6 +248,11 @@ export const DEFAULT_SHORTCUT_FALLBACKS: ResolvedKeybindingsConfig = [
     command: "thread.jump.9",
     shortcut: commandShortcut("9"),
     whenAst: whenThreadJumpAvailable,
+  },
+  {
+    command: "thread.copyId",
+    shortcut: commandShortcut("c", { shiftKey: true }),
+    whenAst: whenModChordAllowed,
   },
   {
     command: "terminal.workspace.newFullWidth",
@@ -315,7 +370,7 @@ function resolvePlatform(options: ShortcutMatchOptions | undefined): string {
 
 function resolveContext(options: ShortcutMatchOptions | undefined): ShortcutMatchContext {
   // `isMac` is derived from the resolved platform so `when` clauses can gate on it
-  // (e.g. `whenCreationAllowed`) without every dispatch site having to thread the flag
+  // (e.g. `whenModChordAllowed`) without every dispatch site having to thread the flag
   // through `context`. An explicit `context.isMac` still wins via the spread below.
   return {
     terminalFocus: false,
@@ -367,6 +422,14 @@ function findEffectiveShortcutForCommand(
   command: KeybindingCommand,
   options?: ShortcutMatchOptions,
 ): KeybindingShortcut | null {
+  return findEffectiveKeybindingForCommand(keybindings, command, options)?.shortcut ?? null;
+}
+
+export function findEffectiveKeybindingForCommand(
+  keybindings: ResolvedKeybindingsConfig,
+  command: KeybindingCommand,
+  options?: ShortcutMatchOptions,
+): ResolvedKeybindingRule | null {
   const platform = resolvePlatform(options);
   const context = resolveContext(options);
   const claimedShortcuts = new Set<string>();
@@ -383,11 +446,36 @@ function findEffectiveShortcutForCommand(
 
     claimedShortcuts.add(conflictKey);
     if (binding.command === command) {
-      return binding.shortcut;
+      return binding;
     }
   }
 
   return null;
+}
+
+export function resolveKeybindingForCommand(
+  keybindings: ResolvedKeybindingsConfig,
+  command: KeybindingCommand,
+  options?: ShortcutMatchOptions,
+): ResolvedKeybindingRule | null {
+  return (
+    findEffectiveKeybindingForCommand(keybindings, command, options) ??
+    findEffectiveKeybindingForCommand(getFallbackBindings(keybindings), command, options)
+  );
+}
+
+export function formatKeybindingWhenExpression(node: KeybindingWhenNode | undefined): string {
+  if (!node) return "";
+  switch (node.type) {
+    case "identifier":
+      return node.name;
+    case "not":
+      return `!(${formatKeybindingWhenExpression(node.node)})`;
+    case "and":
+      return `(${formatKeybindingWhenExpression(node.left)} && ${formatKeybindingWhenExpression(node.right)})`;
+    case "or":
+      return `(${formatKeybindingWhenExpression(node.left)} || ${formatKeybindingWhenExpression(node.right)})`;
+  }
 }
 
 function matchesCommandShortcut(
@@ -553,6 +641,15 @@ export function threadJumpCommandForIndex(index: number): ThreadJumpKeybindingCo
 
 export function threadJumpIndexFromCommand(command: string): number | null {
   const index = THREAD_JUMP_KEYBINDING_COMMANDS.indexOf(command as ThreadJumpKeybindingCommand);
+  return index === -1 ? null : index;
+}
+
+export function spaceJumpCommandForIndex(index: number): SpaceJumpKeybindingCommand | null {
+  return SPACE_JUMP_KEYBINDING_COMMANDS[index] ?? null;
+}
+
+export function spaceJumpIndexFromCommand(command: string): number | null {
+  const index = SPACE_JUMP_KEYBINDING_COMMANDS.indexOf(command as SpaceJumpKeybindingCommand);
   return index === -1 ? null : index;
 }
 

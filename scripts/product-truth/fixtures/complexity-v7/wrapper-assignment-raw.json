@@ -1,1 +1,0 @@
-{"appendToFiles":{"apps/service/src/atomicWrite.ts":"\nlet v7AssignedWrapper: typeof globalThis;\nv7AssignedWrapper = globalThis;\nexport const v7AssignedWrapperRaw = () => v7AssignedWrapper.process.dlopen({} as NodeJS.Module, 'x.node');\n"}}

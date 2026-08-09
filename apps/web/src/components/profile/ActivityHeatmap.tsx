@@ -5,8 +5,8 @@
 // Layer: web profile feature.
 
 import { type CSSProperties } from "react";
-import type { ProfileHeatmapCell } from "@omnimind/contracts";
-import { cn } from "~/lib/styles";
+import type { ProfileHeatmapCell } from "@synara/contracts";
+import { cn } from "~/lib/utils";
 import { Tooltip, TooltipPopup, TooltipTrigger } from "~/components/ui/tooltip";
 import { formatCompact, formatShortDate } from "./profileFormatting";
 

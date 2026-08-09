@@ -5,7 +5,7 @@
 
 import type { ReactNode } from "react";
 
-import type { GlyphComponent } from "~/lib/icons";
+import type { LucideIcon } from "~/lib/icons";
 import {
   DiffIcon,
   FileIcon,
@@ -27,7 +27,7 @@ import { FileEntryIcon } from "./FileEntryIcon";
 
 export interface RightDockPaneMeta {
   label: string;
-  Icon: GlyphComponent;
+  Icon: LucideIcon;
 }
 
 export interface RightDockLauncherItem extends RightDockPaneMeta {
@@ -40,7 +40,7 @@ export const RIGHT_DOCK_PANE_META: Record<RightDockPaneKind, RightDockPaneMeta> 
   explorer: { label: "Explorer", Icon: FoldersIcon },
   file: { label: "File", Icon: FileIcon },
   terminal: { label: "Terminal", Icon: TerminalIcon },
-  sidechat: { label: "Side", Icon: MessageCircleIcon },
+  sidechat: { label: "Side chats", Icon: MessageCircleIcon },
   git: { label: "Git", Icon: GitCommitIcon },
   pullRequest: { label: "Pull request", Icon: GitPullRequestIcon },
 };
@@ -84,7 +84,7 @@ const RIGHT_DOCK_LAUNCHER_ORDER: readonly RightDockPaneKind[] = [
 const RIGHT_DOCK_LAUNCHER_LABELS: Partial<Record<RightDockPaneKind, string>> = {
   diff: "Review",
   explorer: "Files",
-  sidechat: "Side chat",
+  sidechat: "Side chats",
   git: "Source control",
 };
 

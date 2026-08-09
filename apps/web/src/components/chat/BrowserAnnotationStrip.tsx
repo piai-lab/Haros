@@ -2,10 +2,10 @@
 // Purpose: Keep browser annotations to one compact row, with overflow available on demand.
 // Layer: Chat attachment presentation
 
-import { pluralize } from "@omnimind/shared/text";
+import { pluralize } from "@synara/shared/text";
 
 import type { BrowserAnnotationDraft } from "~/lib/browserAnnotations";
-import { cn } from "~/lib/styles";
+import { cn } from "~/lib/utils";
 import { COMPOSER_ATTACHMENT_CHIP_CLASS_NAME } from "../composerInlineChip";
 import { Popover, PopoverPopup, PopoverTrigger } from "../ui/popover";
 import { BrowserAnnotationChip } from "./BrowserAnnotationChip";

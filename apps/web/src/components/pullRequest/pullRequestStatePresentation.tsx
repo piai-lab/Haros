@@ -2,7 +2,7 @@
 // Purpose: Single source of truth for how a pull request's state renders across the app —
 //          the sidebar thread badge, kanban card chip, list rows, detail panel, and dock tab
 //          all resolve label, color, and glyph from here so no surface can drift. Icons come
-//          from the same three-node line family (pull-request / draft /
+//          from the same three-node Central "reversed" family (pull-request / draft /
 //          request-closed / merged-simple).
 // Layer: Pull request presentation
 // Exports: PrStatePresentation, resolvePrStatePresentation, PR_STATE_PRESENTATION_ICONS,
@@ -14,10 +14,10 @@ import {
   GitPullRequestClosedIcon,
   GitPullRequestDraftIcon,
   GitPullRequestIcon,
-  type GlyphComponent,
+  type LucideIcon,
 } from "~/lib/icons";
 
-import { cn } from "~/lib/styles";
+import { cn } from "~/lib/utils";
 
 /** Shared PR-state presentation so every PR surface labels, colors, and glyphs PRs identically. */
 export interface PrStatePresentation {
@@ -26,14 +26,13 @@ export interface PrStatePresentation {
   iconKind: "pull-request" | "draft" | "pull-request-closed" | "merged-simple" | "merge-conflict";
 }
 
-export const PR_STATE_PRESENTATION_ICONS: Record<PrStatePresentation["iconKind"], GlyphComponent> =
-  {
-    "pull-request": GitPullRequestIcon,
-    draft: GitPullRequestDraftIcon,
-    "pull-request-closed": GitPullRequestClosedIcon,
-    "merged-simple": GitMergedSimpleIcon,
-    "merge-conflict": GitMergeConflictIcon,
-  };
+export const PR_STATE_PRESENTATION_ICONS: Record<PrStatePresentation["iconKind"], LucideIcon> = {
+  "pull-request": GitPullRequestIcon,
+  draft: GitPullRequestDraftIcon,
+  "pull-request-closed": GitPullRequestClosedIcon,
+  "merged-simple": GitMergedSimpleIcon,
+  "merge-conflict": GitMergeConflictIcon,
+};
 
 /**
  * Draft and mergeability are optional because persisted `lastKnownPr` entries written

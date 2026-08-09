@@ -1,4 +1,4 @@
-import { BROWSER_TOOL_NAMES, utf8ByteLength } from "@omnimind/contracts";
+import { BROWSER_TOOL_NAMES, utf8ByteLength } from "@synara/contracts";
 import { describe, expect, it } from "vitest";
 
 import {

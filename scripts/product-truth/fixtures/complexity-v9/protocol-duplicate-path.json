@@ -1,7 +1,0 @@
-{
-  "extends": "exact-predecessor-positive",
-  "virtualFiles": {
-    "protocol/duplicate.ts": "export {};\n"
-  },
-  "rawChangedPathHex": "410070726f746f636f6c2f6475706c69636174652e747300410070726f746f636f6c2f6475706c69636174652e747300"
-}

@@ -35,18 +35,32 @@ describe("resolveMacDesktopTopBarTrafficLightGutterCssPx", () => {
 describe("resolveDesktopDipRectFromCssRect", () => {
   const rect = { x: 320, y: 46, width: 800, height: 600 };
 
-  it.each([
-    [1, rect],
-    [2, { x: 640, y: 92, width: 1_600, height: 1_200 }],
-    [0.5, { x: 160, y: 23, width: 400, height: 300 }],
-  ])("converts the zoom %s matrix into window DIPs", (zoomFactor, expected) => {
-    expect(resolveDesktopDipRectFromCssRect(rect, zoomFactor)).toEqual(expected);
+  it("passes the rect through untouched at zoom 1", () => {
+    expect(resolveDesktopDipRectFromCssRect(rect, 1)).toEqual(rect);
   });
 
-  it.each([0, Number.NaN, Number.POSITIVE_INFINITY])(
-    "falls back to zoom 1 for invalid factor %s",
-    (zoomFactor) => {
-      expect(resolveDesktopDipRectFromCssRect(rect, zoomFactor)).toEqual(rect);
-    },
-  );
+  it("grows the DIP rect when the shell is zoomed in", () => {
+    expect(resolveDesktopDipRectFromCssRect(rect, 2)).toEqual({
+      x: 640,
+      y: 92,
+      width: 1600,
+      height: 1200,
+    });
+  });
+
+  it("shrinks the DIP rect when the shell is zoomed out", () => {
+    // The regression this guards: a zoomed-out shell measures a slot wider in CSS px
+    // than it physically occupies, so an unconverted rect overflowed the panel.
+    expect(resolveDesktopDipRectFromCssRect(rect, 0.5)).toEqual({
+      x: 160,
+      y: 23,
+      width: 400,
+      height: 300,
+    });
+  });
+
+  it("falls back to zoom 1 for invalid factors", () => {
+    expect(resolveDesktopDipRectFromCssRect(rect, 0)).toEqual(rect);
+    expect(resolveDesktopDipRectFromCssRect(rect, Number.NaN)).toEqual(rect);
+  });
 });

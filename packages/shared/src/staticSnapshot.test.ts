@@ -10,7 +10,7 @@ describe("findAsarArchivePath", () => {
   it("resolves the containing archive for a path inside an asar", () => {
     expect(
       findAsarArchivePath(
-        "/Applications/OmniMind.app/Contents/Resources/app.asar/apps/service/dist/client",
+        "/Applications/OmniMind.app/Contents/Resources/app.asar/apps/server/dist/client",
       ),
     ).toBe(path.join("/Applications/OmniMind.app/Contents/Resources/app.asar"));
   });

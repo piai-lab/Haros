@@ -1,4 +1,4 @@
-import { ProjectId, ThreadId } from "@omnimind/contracts";
+import { ProjectId, ThreadId } from "@synara/contracts";
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 import { selectComposerThreadDraft } from "./composerDraftDomain";
 import {
@@ -23,51 +23,6 @@ describe("composerDraftStore stable empty draft identity", () => {
 
     const after = selectComposerThreadDraft(useComposerDraftStore.getState(), missingThreadId);
     expect(after).toBe(before);
-  });
-
-  it("does not publish or allocate a draft for an unchanged empty prompt", () => {
-    resetComposerDraftStore();
-    const missingThreadId = ThreadId.makeUnsafe("thread-missing-empty-prompt");
-    const before = useComposerDraftStore.getState();
-    const listener = vi.fn();
-    const unsubscribe = useComposerDraftStore.subscribe(listener);
-
-    useComposerDraftStore.getState().setPrompt(missingThreadId, "");
-
-    const after = useComposerDraftStore.getState();
-    expect(after).toBe(before);
-    expect(after.draftsByThreadId).toBe(before.draftsByThreadId);
-    expect(after.draftsByThreadId[missingThreadId]).toBeUndefined();
-    expect(listener).not.toHaveBeenCalled();
-    unsubscribe();
-  });
-
-  it("preserves identity for the same prompt and still publishes a real prompt change", () => {
-    resetComposerDraftStore();
-    const threadId = ThreadId.makeUnsafe("thread-stable-prompt");
-    useComposerDraftStore.getState().setPrompt(threadId, "stable");
-    const before = useComposerDraftStore.getState();
-    const beforeDraft = before.draftsByThreadId[threadId];
-    const listener = vi.fn();
-    const unsubscribe = useComposerDraftStore.subscribe(listener);
-
-    useComposerDraftStore.getState().setPrompt(threadId, "stable");
-
-    const unchanged = useComposerDraftStore.getState();
-    expect(unchanged).toBe(before);
-    expect(unchanged.draftsByThreadId).toBe(before.draftsByThreadId);
-    expect(unchanged.draftsByThreadId[threadId]).toBe(beforeDraft);
-    expect(listener).not.toHaveBeenCalled();
-
-    useComposerDraftStore.getState().setPrompt(threadId, "changed");
-
-    const changed = useComposerDraftStore.getState();
-    expect(changed).not.toBe(before);
-    expect(changed.draftsByThreadId).not.toBe(before.draftsByThreadId);
-    expect(changed.draftsByThreadId[threadId]).not.toBe(beforeDraft);
-    expect(changed.draftsByThreadId[threadId]?.prompt).toBe("changed");
-    expect(listener).toHaveBeenCalledTimes(1);
-    unsubscribe();
   });
 });
 

@@ -9,7 +9,7 @@
 
 import type { HTMLAttributes } from "react";
 
-import { cn } from "~/lib/styles";
+import { cn } from "~/lib/utils";
 import { PR_META_TEXT_CLASS_NAME } from "./pullRequestText";
 
 export type PullRequestWarningNoteShape = "note" | "callout" | "banner";

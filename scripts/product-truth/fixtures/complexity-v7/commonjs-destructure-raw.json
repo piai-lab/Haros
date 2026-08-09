@@ -1,1 +1,0 @@
-{"appendToFiles":{"apps/service/src/atomicWrite.ts":"\nconst { spawnSync: v7DestructuredSpawn } = require('node:child_process');\nexport const v7CommonJsDestructureRaw = () => v7DestructuredSpawn(['true']);\n"}}

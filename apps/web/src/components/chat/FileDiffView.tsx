@@ -10,7 +10,7 @@ import { FileDiff, type FileDiffMetadata, Virtualizer } from "@pierre/diffs/reac
 import { type ReactNode } from "react";
 
 import { buildDiffPanelUnsafeCSS, resolveDiffThemeName } from "~/lib/diffRendering";
-import { cn } from "~/lib/styles";
+import { cn } from "~/lib/utils";
 import { FileDiffHeader } from "./FileDiffHeader";
 
 // Keep diff virtualization tuning in one place so every diff surface scrolls identically.

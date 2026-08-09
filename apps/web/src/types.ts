@@ -1,42 +1,43 @@
-import type { HistoricalModelOptions, HistoricalModelSelection, HistoricalModelSlug } from "~/historicalModelSelection";
-import type {
-  ConversationHandoff,
-  ConversationHistoryActivity,
-  ConversationHistoryMessageSource,
-  ConversationHistoryPlanId,
-  ConversationHistoryRun,
-  ConversationHistorySessionStatus,
-  ConversationPendingInteraction,
-  ConversationPullRequestSummary,
-} from "~/historicalConversation";
 // FILE: types.ts
 // Purpose: Shared web-app view models for threads, projects, terminal layout, and sidebar rows.
 // Exports: Runtime UI types consumed across store, routes, and components.
 
 import type {
+  ModelSelection,
   MessageDispatchOrigin,
+  OrchestrationMessageSource,
+  OrchestrationPendingInteraction,
   TurnDispatchMode,
+  OrchestrationLatestTurn,
+  OrchestrationThreadPullRequest,
+  OrchestrationProposedPlanId,
   PinnedMessage,
   ThreadMarker,
+  OrchestrationSessionStatus,
+  OrchestrationThreadActivity,
+  ThreadHandoff,
   ProjectScript as ContractProjectScript,
   ThreadId,
   ProjectId,
+  SpaceId,
+  SpaceIconName,
   TurnId,
   MessageId,
   ProviderMentionReference,
   ProviderSkillReference,
+  ProviderKind,
   CheckpointRef,
+  ProviderInteractionMode,
   ProjectKind,
   RuntimeMode,
   ThreadCreationSource,
-  WorkspaceEnvironmentMode,
-} from "@omnimind/contracts";
+  ThreadEnvironmentMode,
+} from "@synara/contracts";
 
 export type SessionPhase = "disconnected" | "connecting" | "ready" | "running";
 export const DEFAULT_RUNTIME_MODE: RuntimeMode = "full-access";
 
-export type ConversationInteractionMode = "default" | "plan";
-export const DEFAULT_INTERACTION_MODE: ConversationInteractionMode = "default";
+export const DEFAULT_INTERACTION_MODE: ProviderInteractionMode = "default";
 export const DEFAULT_THREAD_TERMINAL_HEIGHT = 280;
 export const DEFAULT_THREAD_TERMINAL_ID = "default";
 export const MAX_TERMINALS_PER_GROUP = 6;
@@ -114,11 +115,11 @@ export interface ChatMessage {
   createdAt: string;
   completedAt?: string | undefined;
   streaming: boolean;
-  source?: ConversationHistoryMessageSource;
+  source?: OrchestrationMessageSource;
 }
 
 export interface ProposedPlan {
-  id: ConversationHistoryPlanId;
+  id: OrchestrationProposedPlanId;
   turnId: TurnId | null;
   planMarkdown: string;
   implementedAt: string | null;
@@ -146,10 +147,12 @@ export interface TurnDiffSummary {
 }
 
 // Ephemeral client-side progress of the "New worktree" first-send setup
-// sequence (create worktree → link thread → start session). Rendered as a
-// transient transcript row; never persisted.
+// sequence (create branch → create worktree → copy changes → link thread →
+// start session). Rendered as a transient transcript row; never persisted.
 export type WorktreeSetupStepId =
+  | "create-branch"
   | "create-worktree"
+  | "copy-changes"
   | "prepare-thread"
   | "run-setup-action"
   | "start-session";
@@ -165,6 +168,12 @@ export interface WorktreeSetupSnapshot {
   steps: WorktreeSetupStep[];
 }
 
+/**
+ * User choice made from the worktree setup card while preparation is in
+ * flight: abandon the send entirely, or redirect it to the local checkout.
+ */
+export type WorktreeSetupResolutionAction = "cancel" | "work-locally";
+
 export interface Project {
   id: ProjectId;
   kind: ProjectKind;
@@ -173,15 +182,27 @@ export interface Project {
   folderName: string;
   localName: string | null;
   cwd: string;
+  defaultModelSelection: ModelSelection | null;
   expanded: boolean;
   isPinned?: boolean;
+  /** Missing on renderer state written before Spaces; normalized snapshots always set it. */
+  spaceId?: SpaceId | null;
   createdAt?: string | undefined;
   updatedAt?: string | undefined;
   scripts: ProjectScript[];
 }
 
+export interface Space {
+  id: SpaceId;
+  name: string;
+  icon: SpaceIconName;
+  sortOrder: number;
+  createdAt: string;
+  updatedAt: string;
+}
+
 export interface ThreadWorkspaceState {
-  envMode?: WorkspaceEnvironmentMode | undefined;
+  envMode?: ThreadEnvironmentMode | undefined;
   branch: string | null;
   worktreePath: string | null;
   workingDirectory?: string | null;
@@ -192,7 +213,7 @@ export interface ThreadWorkspaceState {
 }
 
 export interface ThreadWorkspacePatch {
-  envMode?: WorkspaceEnvironmentMode | undefined;
+  envMode?: ThreadEnvironmentMode | undefined;
   branch?: string | null;
   worktreePath?: string | null;
   workingDirectory?: string | null;
@@ -207,9 +228,9 @@ export interface Thread extends ThreadWorkspaceState {
   codexThreadId: string | null;
   projectId: ProjectId;
   title: string;
-  modelSelection?: HistoricalModelSelection;
+  modelSelection: ModelSelection;
   runtimeMode: RuntimeMode;
-  interactionMode: ConversationInteractionMode;
+  interactionMode: ProviderInteractionMode;
   session: ThreadSession | null;
   messages: ChatMessage[];
   proposedPlans: ProposedPlan[];
@@ -222,8 +243,8 @@ export interface Thread extends ThreadWorkspaceState {
   pinnedMessages?: PinnedMessage[];
   threadMarkers?: ThreadMarker[];
   notes?: string;
-  latestTurn: ConversationHistoryRun | null;
-  pendingSourceProposedPlan?: ConversationHistoryRun["sourceProposedPlan"];
+  latestTurn: OrchestrationLatestTurn | null;
+  pendingSourceProposedPlan?: OrchestrationLatestTurn["sourceProposedPlan"];
   lastVisitedAt?: string | undefined;
   parentThreadId?: ThreadId | null;
   creationSource?: ThreadCreationSource | null;
@@ -233,71 +254,15 @@ export interface Thread extends ThreadWorkspaceState {
   subagentRole?: string | null;
   forkSourceThreadId?: ThreadId | null;
   sidechatSourceThreadId?: ThreadId | null;
-  handoff?: ConversationHandoff | null;
-  lastKnownPr?: ConversationPullRequestSummary | null;
+  handoff?: ThreadHandoff | null;
+  lastKnownPr?: OrchestrationThreadPullRequest | null;
   latestUserMessageAt?: string | null;
   hasPendingApprovals?: boolean;
   hasPendingUserInput?: boolean;
   hasActionableProposedPlan?: boolean;
-  pendingInteractions?: ConversationPendingInteraction[];
+  pendingInteractions?: OrchestrationPendingInteraction[];
   turnDiffSummaries: TurnDiffSummary[];
-  activities: ConversationHistoryActivity[];
-}
-
-export type ConversationRuntimeIdentity =
-  | {
-      readonly kind: "product";
-      readonly engineId: string;
-      readonly runtimeModelId: string;
-      readonly thinking: string | null;
-    }
-  | {
-      readonly kind: "historical-provider";
-      readonly sourceId: string;
-      readonly modelLabel: string;
-    };
-
-/** Source-neutral Workbench projection; executable authority stays outside presentation. */
-export interface ConversationPresentation extends ThreadWorkspaceState {
-  readonly id: ThreadId;
-  readonly codexThreadId: string | null;
-  readonly projectId: ProjectId;
-  readonly title: string;
-  readonly runtimeMode: RuntimeMode;
-  readonly interactionMode: ConversationInteractionMode;
-  readonly session: ThreadSession | null;
-  readonly messages: ChatMessage[];
-  readonly proposedPlans: ProposedPlan[];
-  readonly error: string | null;
-  readonly createdAt: string;
-  readonly archivedAt?: string | null;
-  readonly settledAt?: string | null;
-  readonly updatedAt?: string | undefined;
-  readonly isPinned?: boolean;
-  readonly pinnedMessages?: PinnedMessage[];
-  readonly threadMarkers?: ThreadMarker[];
-  readonly notes?: string;
-  readonly latestTurn: ConversationHistoryRun | null;
-  readonly pendingSourceProposedPlan?: ConversationHistoryRun["sourceProposedPlan"];
-  readonly lastVisitedAt?: string | undefined;
-  readonly parentThreadId?: ThreadId | null;
-  readonly creationSource?: ThreadCreationSource | null;
-  readonly sourceThreadId?: ThreadId | null;
-  readonly subagentAgentId?: string | null;
-  readonly subagentNickname?: string | null;
-  readonly subagentRole?: string | null;
-  readonly forkSourceThreadId?: ThreadId | null;
-  readonly sidechatSourceThreadId?: ThreadId | null;
-  readonly handoff?: ConversationHandoff | null;
-  readonly lastKnownPr?: ConversationPullRequestSummary | null;
-  readonly latestUserMessageAt?: string | null;
-  readonly hasPendingApprovals?: boolean;
-  readonly hasPendingUserInput?: boolean;
-  readonly hasActionableProposedPlan?: boolean;
-  readonly pendingInteractions?: ConversationPendingInteraction[];
-  readonly turnDiffSummaries: TurnDiffSummary[];
-  readonly activities: ConversationHistoryActivity[];
-  readonly runtimeIdentity: ConversationRuntimeIdentity | null;
+  activities: OrchestrationThreadActivity[];
 }
 
 export interface ThreadShell extends ThreadWorkspaceState {
@@ -305,9 +270,9 @@ export interface ThreadShell extends ThreadWorkspaceState {
   codexThreadId: string | null;
   projectId: ProjectId;
   title: string;
-  modelSelection?: HistoricalModelSelection;
+  modelSelection: ModelSelection;
   runtimeMode: RuntimeMode;
-  interactionMode: ConversationInteractionMode;
+  interactionMode: ProviderInteractionMode;
   error: string | null;
   createdAt: string;
   archivedAt?: string | null;
@@ -329,28 +294,28 @@ export interface ThreadShell extends ThreadWorkspaceState {
   subagentRole?: string | null;
   forkSourceThreadId?: ThreadId | null;
   sidechatSourceThreadId?: ThreadId | null;
-  handoff?: ConversationHandoff | null;
-  lastKnownPr?: ConversationPullRequestSummary | null;
+  handoff?: ThreadHandoff | null;
+  lastKnownPr?: OrchestrationThreadPullRequest | null;
   latestUserMessageAt?: string | null;
   hasPendingApprovals?: boolean;
   hasPendingUserInput?: boolean;
   hasActionableProposedPlan?: boolean;
-  pendingInteractions?: ConversationPendingInteraction[];
+  pendingInteractions?: OrchestrationPendingInteraction[];
   lastVisitedAt?: string | undefined;
 }
 
 export interface ThreadTurnState {
-  latestTurn: ConversationHistoryRun | null;
-  pendingSourceProposedPlan?: ConversationHistoryRun["sourceProposedPlan"];
+  latestTurn: OrchestrationLatestTurn | null;
+  pendingSourceProposedPlan?: OrchestrationLatestTurn["sourceProposedPlan"];
 }
 
 export interface SidebarThreadSummary {
   id: ThreadId;
   projectId: ProjectId;
   title: string;
-  modelSelection?: HistoricalModelSelection;
-  interactionMode: ConversationInteractionMode;
-  envMode?: WorkspaceEnvironmentMode | undefined;
+  modelSelection: ModelSelection;
+  interactionMode: ProviderInteractionMode;
+  envMode?: ThreadEnvironmentMode | undefined;
   branch: string | null;
   worktreePath: string | null;
   workingDirectory?: string | null;
@@ -363,7 +328,7 @@ export interface SidebarThreadSummary {
   settledAt?: string | null;
   updatedAt?: string | undefined;
   isPinned?: boolean;
-  latestTurn: ConversationHistoryRun | null;
+  latestTurn: OrchestrationLatestTurn | null;
   lastVisitedAt?: string | undefined;
   parentThreadId?: ThreadId | null;
   subagentAgentId?: string | null;
@@ -376,8 +341,8 @@ export interface SidebarThreadSummary {
   hasLiveTailWork: boolean;
   forkSourceThreadId?: ThreadId | null;
   sidechatSourceThreadId?: ThreadId | null;
-  handoff?: ConversationHandoff | null;
-  lastKnownPr?: ConversationPullRequestSummary | null;
+  handoff?: ThreadHandoff | null;
+  lastKnownPr?: OrchestrationThreadPullRequest | null;
 }
 
 /** Lightweight composer identity that ignores live turn/status churn. */
@@ -385,7 +350,7 @@ export interface ComposerThreadMentionSource {
   id: ThreadId;
   projectId: ProjectId;
   title: string;
-  provider: string | null;
+  provider: ProviderKind;
   createdAt: string;
   archivedAt?: string | null;
   lastVisitedAt?: string | undefined;
@@ -393,11 +358,11 @@ export interface ComposerThreadMentionSource {
 }
 
 export interface ThreadSession {
-  provider: string | null;
+  provider: ProviderKind;
   status: SessionPhase | "error" | "closed";
   activeTurnId?: TurnId | undefined;
   createdAt: string;
   updatedAt: string;
   lastError?: string;
-  orchestrationStatus: ConversationHistorySessionStatus;
+  orchestrationStatus: OrchestrationSessionStatus;
 }

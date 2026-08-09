@@ -1,9 +1,0 @@
-{
-  "extendsFixture": "product-refusal-lock-positive",
-  "textReplacements": {
-    "apps/service/src/product/ProductControlPlane.ts": [
-      ["export async function makeProductControlPlaneLayer", "const openNeutral = (location: string) => new DatabaseSync(location);\n\nexport async function makeProductControlPlaneLayer"],
-      ["    const database = new DatabaseSync(databasePath);", "    const database = openNeutral(databasePath);"]
-    ]
-  }
-}

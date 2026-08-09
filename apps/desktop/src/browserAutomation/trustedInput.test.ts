@@ -8,7 +8,7 @@ vi.mock("electron", () => ({
   webContents: { getFocusedWebContents },
 }));
 
-import type { BrowserAutomationVisibleRuntime } from "../browserHost";
+import type { BrowserAutomationVisibleRuntime } from "../browserManager";
 import {
   dispatchTrustedClick,
   dispatchTrustedDrag,

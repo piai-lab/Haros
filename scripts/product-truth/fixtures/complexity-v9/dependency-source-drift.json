@@ -1,8 +1,0 @@
-{
-  "extends": "exact-predecessor-positive",
-  "textReplacements": {
-    "README.md": [
-      ["6aca3dcc505894481430967c2acb762b3dd1b358", "0000000000000000000000000000000000000000"]
-    ]
-  }
-}

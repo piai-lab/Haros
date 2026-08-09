@@ -5,7 +5,7 @@
 
 import { type ComponentProps, type ReactNode } from "react";
 import { ChevronDownIcon } from "~/lib/icons";
-import { cn } from "~/lib/styles";
+import { cn } from "~/lib/utils";
 import { Button } from "../ui/button";
 import { COMPOSER_PICKER_TRIGGER_TEXT_CLASS_NAME } from "./composerPickerStyles";
 

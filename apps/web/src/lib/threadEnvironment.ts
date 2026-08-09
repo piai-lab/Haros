@@ -3,22 +3,22 @@
 // Layer: Web domain helpers
 // Exports: thread env resolution + `/fork` target planning
 
-import type { WorkspaceEnvironmentMode } from "@omnimind/contracts";
+import type { ThreadEnvironmentMode } from "@synara/contracts";
 import {
   isPendingThreadWorktree,
   resolveThreadEnvironmentMode,
   resolveThreadWorkspaceCwd,
   resolveThreadWorkspaceState,
   type ResolvedThreadWorkspaceState,
-} from "@omnimind/shared/threadEnvironment";
-import { deriveAssociatedWorktreeMetadata } from "@omnimind/shared/threadWorkspace";
+} from "@synara/shared/threadEnvironment";
+import { deriveAssociatedWorktreeMetadata } from "@synara/shared/threadWorkspace";
 import type { Thread } from "../types";
 
 export type ForkThreadTarget = "local" | "worktree";
 
 export interface ResolvedForkThreadEnvironment {
   target: ForkThreadTarget;
-  envMode: WorkspaceEnvironmentMode;
+  envMode: ThreadEnvironmentMode;
   branch: string | null;
   worktreePath: string | null;
   associatedWorktreePath: string | null;
@@ -30,10 +30,10 @@ export {
   isPendingThreadWorktree,
   resolveThreadEnvironmentMode,
   resolveThreadWorkspaceState,
-} from "@omnimind/shared/threadEnvironment";
+} from "@synara/shared/threadEnvironment";
 
 export interface ThreadEnvironmentPresentation {
-  mode: WorkspaceEnvironmentMode;
+  mode: ThreadEnvironmentMode;
   workspaceState: ResolvedThreadWorkspaceState;
   shortLabel: "Local" | "Worktree";
   localOptionLabel: "Local project";
@@ -42,7 +42,7 @@ export interface ThreadEnvironmentPresentation {
 }
 
 export function resolveThreadEnvironmentPresentation(input: {
-  envMode?: WorkspaceEnvironmentMode | null | undefined;
+  envMode?: ThreadEnvironmentMode | null | undefined;
   worktreePath?: string | null | undefined;
 }): ThreadEnvironmentPresentation {
   const mode = resolveThreadEnvironmentMode(input);
@@ -72,7 +72,7 @@ export interface DiffEnvironmentState {
 // Diff surfaces stay disabled while a worktree-intended chat is still waiting for its path.
 export function resolveDiffEnvironmentState(input: {
   projectCwd?: string | null | undefined;
-  envMode?: WorkspaceEnvironmentMode | null | undefined;
+  envMode?: ThreadEnvironmentMode | null | undefined;
   worktreePath?: string | null | undefined;
 }): DiffEnvironmentState {
   const pending = isPendingThreadWorktree(input);

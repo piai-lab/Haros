@@ -11,7 +11,7 @@ import {
   LoaderIcon,
   PanelRightCloseIcon,
 } from "~/lib/icons";
-import { cn } from "~/lib/styles";
+import { cn } from "~/lib/utils";
 import type { ActiveTaskListState } from "../session-logic";
 import type { LatestProposedPlanState } from "../session-logic";
 import { formatTimestamp } from "../timestampFormat";

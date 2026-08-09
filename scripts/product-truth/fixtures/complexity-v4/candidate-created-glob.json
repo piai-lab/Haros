@@ -1,9 +1,0 @@
-{
-  "virtualFiles": {
-    "apps/service/src/product/design-only/newCandidate.ts": "export const candidate = true;\n"
-  },
-  "designGlobProbe": {
-    "pattern": "apps/service/src/product/design-only/**",
-    "designTimePaths": []
-  }
-}

@@ -1,11 +1,11 @@
-import type { ConversationPullRequestSummary } from "~/historicalConversation";
 // FILE: SidebarActivityView.browser.tsx
 // Purpose: Browser regressions for Activity paging, stateful actions, scope fallback, and live PR data.
 // Layer: Sidebar Activity UI test
 
 import "../index.css";
 
-import { ProjectId, ThreadId } from "@omnimind/contracts";
+import { ProjectId, ThreadId, type OrchestrationThreadPullRequest } from "@synara/contracts";
+import type { PointerEvent as ReactPointerEvent } from "react";
 import { page, userEvent } from "vitest/browser";
 import { afterEach, describe, expect, it, vi } from "vitest";
 import { render } from "vitest-browser-react";
@@ -26,6 +26,7 @@ function makeProject(id: ProjectId, name: string): Project {
     folderName: name,
     localName: null,
     cwd: `/tmp/${id}`,
+    defaultModelSelection: null,
     expanded: true,
     scripts: [],
   };
@@ -71,10 +72,14 @@ function renderActivity(input: {
   activeThreadId?: ThreadId | null;
   pinnedThreadIdSet?: ReadonlySet<ThreadId>;
   settledOverrideByThreadId?: ReadonlyMap<ThreadId, boolean>;
-  prByThreadId?: ReadonlyMap<ThreadId, ConversationPullRequestSummary | null>;
+  prByThreadId?: ReadonlyMap<ThreadId, OrchestrationThreadPullRequest | null>;
   onVisibleThreadIdsChange?: (threadIds: readonly ThreadId[]) => void;
   onSetThreadSettled?: (threadId: ThreadId, settled: boolean) => void;
   onMarkThreadRead?: (threadId: ThreadId, completedAt?: string) => void;
+  onRenameThread?: (threadId: ThreadId) => void;
+  onThreadRenamePointerUp?: (event: ReactPointerEvent<HTMLElement>, threadId: ThreadId) => void;
+  onThreadContextMenu?: (threadId: ThreadId, position: { x: number; y: number }) => void;
+  onProjectContextMenu?: (projectId: ProjectId, position: { x: number; y: number }) => void;
   resolveThreadStatus?: (thread: SidebarThreadSummary) => ThreadStatusPill | null;
 }) {
   const projects = input.projects ?? [makeProject(PROJECT_A, "Project A")];
@@ -94,6 +99,10 @@ function renderActivity(input: {
       onToggleThreadPinned={() => {}}
       onArchiveThread={() => {}}
       onMarkThreadRead={input.onMarkThreadRead ?? (() => {})}
+      onRenameThread={input.onRenameThread ?? (() => {})}
+      onThreadRenamePointerUp={input.onThreadRenamePointerUp ?? (() => {})}
+      onThreadContextMenu={input.onThreadContextMenu ?? (() => {})}
+      onProjectContextMenu={input.onProjectContextMenu ?? (() => {})}
       renderThreadHoverCard={() => null}
       onCreateChat={() => {}}
       onAddProject={() => {}}
@@ -118,7 +127,7 @@ describe("SidebarActivityView", () => {
         state: "open",
       },
     });
-    const livePr: ConversationPullRequestSummary = {
+    const livePr: OrchestrationThreadPullRequest = {
       number: 42,
       title: "Live merged PR",
       url: "https://github.com/acme/omnimind/pull/42",
@@ -153,6 +162,87 @@ describe("SidebarActivityView", () => {
       expect(document.querySelectorAll("[data-testid^='activity-thread-']")).toHaveLength(40);
       expect(onVisibleThreadIdsChange.mock.lastCall?.[0]).toHaveLength(40);
     });
+    await mounted.unmount();
+  });
+
+  it("renames on row double-click and opens the row/project menus on right-click", async () => {
+    const thread = makeThread(0);
+    const onRenameThread = vi.fn();
+    const onThreadContextMenu = vi.fn();
+    const onProjectContextMenu = vi.fn();
+    const mounted = await render(
+      renderActivity({
+        threads: [thread],
+        onRenameThread,
+        onThreadContextMenu,
+        onProjectContextMenu,
+      }),
+    );
+
+    await page.getByRole("button", { name: "Activity options", exact: true }).click();
+    await page.getByRole("menuitemradio", { name: "Project" }).click();
+    await userEvent.keyboard("{Escape}");
+    await vi.waitFor(() => {
+      expect(document.querySelector('[role="menu"]')).toBeNull();
+    });
+
+    const row = page.getByTestId(`activity-thread-${thread.id}`).element();
+    row.dispatchEvent(new MouseEvent("dblclick", { bubbles: true, cancelable: true }));
+    expect(onRenameThread).toHaveBeenCalledWith(thread.id);
+
+    row.dispatchEvent(
+      new MouseEvent("contextmenu", { bubbles: true, cancelable: true, clientX: 12, clientY: 34 }),
+    );
+    expect(onThreadContextMenu).toHaveBeenCalledWith(thread.id, { x: 12, y: 34 });
+    // The row menu must not also bubble into the project block it sits under.
+    expect(onProjectContextMenu).not.toHaveBeenCalled();
+
+    const projectBlockLabel = document.querySelector('[data-slot="activity-section-label"]');
+    expect(projectBlockLabel).not.toBeNull();
+    projectBlockLabel?.dispatchEvent(
+      new MouseEvent("contextmenu", { bubbles: true, cancelable: true, clientX: 5, clientY: 6 }),
+    );
+    expect(onProjectContextMenu).toHaveBeenCalledWith(PROJECT_A, { x: 5, y: 6 });
+    await mounted.unmount();
+  });
+
+  it("does not forward touch action taps to the row rename gesture", async () => {
+    const thread = makeThread(0);
+    const onThreadRenamePointerUp = vi.fn();
+    const mounted = await render(
+      renderActivity({
+        threads: [thread],
+        onThreadRenamePointerUp,
+      }),
+    );
+
+    await page.getByRole("button", { name: "Activity options", exact: true }).click();
+    await page.getByRole("menuitemradio", { name: "Project" }).click();
+    await userEvent.keyboard("{Escape}");
+    await vi.waitFor(() => {
+      expect(document.querySelector('[role="menu"]')).toBeNull();
+    });
+
+    const pinButton = page.getByRole("button", { name: "Pin thread" }).element();
+    pinButton.dispatchEvent(
+      new PointerEvent("pointerup", { bubbles: true, cancelable: true, pointerType: "touch" }),
+    );
+    pinButton.dispatchEvent(
+      new PointerEvent("pointerup", { bubbles: true, cancelable: true, pointerType: "touch" }),
+    );
+    expect(onThreadRenamePointerUp).not.toHaveBeenCalled();
+
+    page
+      .getByTestId(`activity-thread-${thread.id}`)
+      .element()
+      .dispatchEvent(
+        new PointerEvent("pointerup", {
+          bubbles: true,
+          cancelable: true,
+          pointerType: "touch",
+        }),
+      );
+    expect(onThreadRenamePointerUp).toHaveBeenCalledWith(expect.anything(), thread.id);
     await mounted.unmount();
   });
 

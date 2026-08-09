@@ -11,7 +11,7 @@ import { useState } from "react";
 import ChatMarkdown from "~/components/ChatMarkdown";
 import { Collapsible, CollapsiblePanel, CollapsibleTrigger } from "~/components/ui/collapsible";
 import { DisclosureChevron } from "~/components/ui/DisclosureChevron";
-import { cn } from "~/lib/styles";
+import { cn } from "~/lib/utils";
 import {
   preparePullRequestMarkdown,
   splitPullRequestMarkdownSections,

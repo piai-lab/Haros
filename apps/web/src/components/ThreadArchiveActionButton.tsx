@@ -4,10 +4,11 @@
 // Layer: Sidebar UI primitive
 // Exports: ThreadArchiveActionButton
 
-import type { ThreadId } from "@omnimind/contracts";
+import { HiOutlineArchiveBox } from "react-icons/hi2";
 
-import { ArchiveIcon } from "~/lib/icons";
-import { cn } from "~/lib/styles";
+import type { ThreadId } from "@synara/contracts";
+
+import { cn } from "~/lib/utils";
 import { SIDEBAR_TRAILING_ICON_CLASS, sidebarGlyphClass } from "./sidebarGlyphs";
 import { SidebarIconButton } from "./SidebarIconButton";
 
@@ -26,7 +27,7 @@ export function ThreadArchiveActionButton({
   const isCompact = compact === true;
   return (
     <SidebarIconButton
-      icon={ArchiveIcon}
+      icon={HiOutlineArchiveBox}
       label="Archive thread"
       title="Archive thread"
       data-testid={`thread-archive-${threadId}`}

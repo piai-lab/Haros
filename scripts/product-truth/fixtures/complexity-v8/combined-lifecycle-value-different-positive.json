@@ -1,9 +1,0 @@
-{
-  "extends": "traced-owner-positive",
-  "removeFiles": [
-    "scripts/release-update-policy.json"
-  ],
-  "virtualFiles": {
-    "scripts/product-truth/cli.ts": "export const differentReleaseUpdatePolicy = {\n  channel: \"different\",\n  lane: \"clean\",\n  bridgeVersion: \"0.4.2\",\n} as const;\n"
-  }
-}

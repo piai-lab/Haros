@@ -3,7 +3,7 @@
 //          the file viewer attaches to a thread's composer draft and prompt.
 // Layer: Chat composer and transcript helpers
 
-import { randomUUID } from "./identifiers";
+import { randomUUID } from "./utils";
 
 // Inline comments authored against a file/line range in the editor gutter. They
 // live on the composer draft like terminal contexts (not wire attachments) and

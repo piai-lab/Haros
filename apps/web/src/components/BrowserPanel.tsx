@@ -9,11 +9,11 @@
 import { useCallback, useEffect, useLayoutEffect, useRef, useState } from "react";
 import { useQuery } from "@tanstack/react-query";
 import {
-  CHAT_TURN_MAX_ATTACHMENTS,
+  PROVIDER_SEND_TURN_MAX_ATTACHMENTS,
   type ServerLocalServerProcess,
   type ThreadBrowserState,
   type ThreadId,
-} from "@omnimind/contracts";
+} from "@synara/contracts";
 import {
   ArrowLeftIcon,
   ArrowRightIcon,
@@ -23,33 +23,32 @@ import {
   GlobeIcon,
   LinkIcon,
   LoaderCircleIcon,
-  type GlyphComponent,
+  type LucideIcon,
   PlusIcon,
-  PointerIcon,
   RefreshCwIcon,
   XIcon,
 } from "~/lib/icons";
 
-import { localServerPrimaryLabel } from "@omnimind/shared/localServers";
-import { resolveDesktopDipRectFromCssRect } from "@omnimind/shared/desktopChrome";
+import { localServerPrimaryLabel } from "@synara/shared/localServers";
+import { resolveDesktopDipRectFromCssRect } from "@synara/shared/desktopChrome";
 import {
   BROWSER_BLANK_URL,
   isBlankBrowserTabUrl,
   resolveCopyableBrowserTabUrl,
-} from "@omnimind/shared/browserSession";
+} from "@synara/shared/browserSession";
 import {
   BROWSER_COPY_LINK_TOAST_TITLE,
   isBrowserCopyLinkChord,
-} from "@omnimind/shared/browserShortcuts";
+} from "@synara/shared/browserShortcuts";
 
 import { isElectron } from "~/env";
-import { readDesktopZoomFactor, subscribeDesktopZoomFactor } from "~/lib/desktopZoom";
+import { CentralIcon } from "~/lib/central-icons";
 import { readNativeApi } from "~/nativeApi";
 import type { DockPaneRuntimeMode } from "~/lib/dockPaneActivation";
-import { PANEL_RESIZE_OVERLAY_SYNC_EVENT } from "~/lib/panelResize";
+import { readDesktopZoomFactor, subscribeDesktopZoomFactor } from "~/lib/desktopZoom";
+import { NATIVE_SURFACE_OCCLUSION_SYNC_EVENT } from "~/lib/nativeSurfaceOcclusion";
 import { serverLocalServersQueryOptions } from "~/lib/serverReactQuery";
-import { cn } from "~/lib/styles";
-import { isMacPlatform } from "~/lib/platform";
+import { cn, isMacPlatform } from "~/lib/utils";
 
 import {
   useBrowserStateStore,
@@ -68,6 +67,7 @@ import {
   normalizeBrowserAddressInput,
   resolveBrowserChromeStatus,
   resolveBrowserAddressSync,
+  shouldOccludeBrowserWebview,
   type BrowserAddressSuggestion,
 } from "./BrowserPanel.logic";
 import { DiffPanelLoadingState, DiffPanelShell, type DiffPanelMode } from "./DiffPanelShell";
@@ -108,7 +108,7 @@ const BROWSER_ACTION_MENU_PANEL_CLASS_NAME = "w-52 min-w-52";
 const BROWSER_ACTION_MENU_ITEM_CLASS_NAME =
   "text-[var(--color-text-foreground)] data-highlighted:text-[var(--color-text-foreground)]";
 const BROWSER_ACTION_MENU_ICON_CLASS_NAME =
-  "inline-flex size-3.5 shrink-0 items-center justify-center text-[var(--color-text-foreground-secondary)] [&>svg]:size-3.5 [&>[data-slot=glyph]]:size-3.5";
+  "inline-flex size-3.5 shrink-0 items-center justify-center text-[var(--color-text-foreground-secondary)] [&>svg]:size-3.5 [&>[data-slot=central-icon]]:size-3.5";
 const EMPTY_BROWSER_ANNOTATIONS: readonly BrowserAnnotationDraft[] = [];
 const NATIVE_BROWSER_OBSCURING_OVERLAY_SELECTOR = [
   "[data-slot='dialog-backdrop']",
@@ -124,7 +124,7 @@ const NATIVE_BROWSER_OBSCURING_OVERLAY_SELECTOR = [
   "[role='dialog'][aria-modal='true']",
 ].join(", ");
 
-function BrowserActionMenuIcon({ icon: Icon }: { icon: GlyphComponent }) {
+function BrowserActionMenuIcon({ icon: Icon }: { icon: LucideIcon }) {
   return (
     <span className={BROWSER_ACTION_MENU_ICON_CLASS_NAME}>
       <Icon aria-hidden="true" />
@@ -145,7 +145,7 @@ export function BrowserAnnotationButton(props: {
             type="button"
             variant={props.controller.active ? "default" : "ghost"}
             size="icon-sm"
-            className="size-7 [&_svg]:!opacity-100"
+            className="size-7 [&_[data-slot=central-icon]]:!opacity-100"
             disabled={props.disabled}
             aria-label={label}
             aria-pressed={props.controller.active}
@@ -156,7 +156,7 @@ export function BrowserAnnotationButton(props: {
           />
         }
       >
-        <PointerIcon className="size-3.5" aria-hidden="true" />
+        <CentralIcon name="window-cursor" className="size-3.5" />
       </TooltipTrigger>
       <TooltipPopup side="bottom">
         {props.controller.active
@@ -614,12 +614,14 @@ export function BrowserPanel({
   const [workspaceReady, setWorkspaceReady] = useState(false);
   const [localError, setLocalError] = useState<string | null>(null);
   const [browserRendererGeneration, setBrowserRendererGeneration] = useState(0);
+  const [browserActionsMenuOpen, setBrowserActionsMenuOpen] = useState(false);
   const runtimeReady = isLiveRuntime ? workspaceReady : true;
   const activeTab =
     threadBrowserState?.tabs.find((tab) => tab.id === threadBrowserState.activeTabId) ??
     threadBrowserState?.tabs[0] ??
     null;
   const activeTabId = activeTab?.id ?? null;
+  const usesNativeRuntime = activeTab?.runtimeSurface === "native";
   const activeTabInitialUrl = activeTab?.lastCommittedUrl ?? activeTab?.url ?? BROWSER_BLANK_URL;
   activeTabInitialUrlRef.current = activeTabInitialUrl;
   const loading = activeTab?.isLoading ?? false;
@@ -811,7 +813,7 @@ export function BrowserPanel({
       return;
     }
 
-    if (showLocalServersHome) {
+    if (showLocalServersHome || usesNativeRuntime) {
       detachRendererBrowserWebview();
       return;
     }
@@ -834,7 +836,7 @@ export function BrowserPanel({
       // A <webview> blocks window.open() unless `allowpopups` is set. Without it, clicking
       // "Continue with Google" (and any OAuth/popup flow) is silently dropped before the main
       // process's window-open handler ever runs. Enabling it lets the popup classifier in
-      // browserHost decide popup-vs-tab and keep the OAuth `window.opener` handshake alive.
+      // browserManager decide popup-vs-tab and keep the OAuth `window.opener` handshake alive.
       webview.setAttribute("allowpopups", "true");
       // No `useragent` attribute on purpose: the desktop main process spoofs a desktop Chrome
       // UA on the shared persistent partition, so this webview (and OAuth popups) inherit the
@@ -995,6 +997,7 @@ export function BrowserPanel({
     showLocalServersHome,
     threadId,
     upsertThreadState,
+    usesNativeRuntime,
     workspaceReady,
   ]);
 
@@ -1046,7 +1049,11 @@ export function BrowserPanel({
       // While the local-servers home is up, force the browser surface hidden instead of
       // trusting the obscuring-overlay heuristic. The native/inline webview otherwise paints
       // about:blank white over our dark DOM home — the "always white" empty state.
-      const obscuredByOverlay = showLocalServersHome || hasNativeBrowserObscuringOverlay(element);
+      const obscuredByOverlay = shouldOccludeBrowserWebview({
+        showLocalServersHome,
+        browserActionsMenuOpen,
+        hasObscuringOverlay: hasNativeBrowserObscuringOverlay(element),
+      });
       lastOverlayObscuredRef.current = obscuredByOverlay;
       setBrowserWebviewOverlayOcclusion(browserWebviewRef.current, obscuredByOverlay);
       const rect = element.getBoundingClientRect();
@@ -1056,14 +1063,18 @@ export function BrowserPanel({
             if (rect.width <= 0 || rect.height <= 0) {
               return null;
             }
+            // The native view is positioned in window DIPs, which only equal the CSS
+            // pixels measured above while the shell sits at 100% zoom. Convert, or a
+            // zoomed shell leaves the browser surface sized 1/zoom off its DOM slot.
             return resolveDesktopDipRectFromCssRect(
               { x: rect.left, y: rect.top, width: rect.width, height: rect.height },
               readDesktopZoomFactor(),
             );
           })();
+      const surface = usesNativeRuntime ? "native" : "renderer";
       const nextKey = bounds
-        ? `renderer:${Math.round(bounds.x)}:${Math.round(bounds.y)}:${Math.round(bounds.width)}:${Math.round(bounds.height)}`
-        : "renderer:hidden";
+        ? `${surface}:${Math.round(bounds.x)}:${Math.round(bounds.y)}:${Math.round(bounds.width)}:${Math.round(bounds.height)}`
+        : `${surface}:hidden`;
       lastMeasuredBoundsKeyRef.current = nextKey;
       if (lastSentBoundsRef.current === nextKey) {
         perfCountersRef.current.syncSkips += 1;
@@ -1072,7 +1083,7 @@ export function BrowserPanel({
       lastSentBoundsRef.current = nextKey;
       perfCountersRef.current.syncSends += 1;
       void api.browser
-        .setPanelBounds({ threadId, bounds, surface: "renderer" })
+        .setPanelBounds({ threadId, bounds, surface })
         .catch(ignoreBrowserBoundsSyncError);
     };
 
@@ -1154,9 +1165,12 @@ export function BrowserPanel({
       scheduleSyncBounds();
     });
     observer.observe(element);
+    // A zoom change moves the slot on the DIP grid. It usually reflows the panel too
+    // (so the observer above fires), but a slot with a fixed CSS px size keeps its
+    // measured rect and would otherwise strand the native view at the old scale.
     const unsubscribeZoom = subscribeDesktopZoomFactor(scheduleSyncBounds);
     window.addEventListener("resize", scheduleSyncBounds);
-    window.addEventListener(PANEL_RESIZE_OVERLAY_SYNC_EVENT, scheduleSyncBounds);
+    window.addEventListener(NATIVE_SURFACE_OCCLUSION_SYNC_EVENT, scheduleSyncBounds);
     document.addEventListener("transitionrun", handleTransitionBounds, true);
     document.addEventListener("transitionend", handleTransitionBounds, true);
     document.addEventListener("transitioncancel", handleTransitionBounds, true);
@@ -1166,7 +1180,7 @@ export function BrowserPanel({
       observer.disconnect();
       unsubscribeZoom();
       window.removeEventListener("resize", scheduleSyncBounds);
-      window.removeEventListener(PANEL_RESIZE_OVERLAY_SYNC_EVENT, scheduleSyncBounds);
+      window.removeEventListener(NATIVE_SURFACE_OCCLUSION_SYNC_EVENT, scheduleSyncBounds);
       document.removeEventListener("transitionrun", handleTransitionBounds, true);
       document.removeEventListener("transitionend", handleTransitionBounds, true);
       document.removeEventListener("transitioncancel", handleTransitionBounds, true);
@@ -1181,7 +1195,14 @@ export function BrowserPanel({
       burstFramesRemainingRef.current = 0;
       burstStableFramesRef.current = 0;
     };
-  }, [api, isLiveRuntime, showLocalServersHome, threadId]);
+  }, [
+    api,
+    browserActionsMenuOpen,
+    isLiveRuntime,
+    showLocalServersHome,
+    threadId,
+    usesNativeRuntime,
+  ]);
 
   const onSubmitAddress = useCallback(() => {
     if (!ensureLiveRuntime()) {
@@ -1321,8 +1342,10 @@ export function BrowserPanel({
 
     const attachmentCount =
       composerDraftImageCount + composerDraftFileCount + composerDraftAssistantSelectionCount;
-    if (attachmentCount >= CHAT_TURN_MAX_ATTACHMENTS) {
-      setLocalError(`You can attach up to ${CHAT_TURN_MAX_ATTACHMENTS} references per message.`);
+    if (attachmentCount >= PROVIDER_SEND_TURN_MAX_ATTACHMENTS) {
+      setLocalError(
+        `You can attach up to ${PROVIDER_SEND_TURN_MAX_ATTACHMENTS} references per message.`,
+      );
       return;
     }
 
@@ -1339,7 +1362,7 @@ export function BrowserPanel({
         );
         if (!inserted) {
           throw new Error(
-            `You can attach up to ${CHAT_TURN_MAX_ATTACHMENTS} references per message.`,
+            `You can attach up to ${PROVIDER_SEND_TURN_MAX_ATTACHMENTS} references per message.`,
           );
         }
         setLocalError(null);
@@ -1679,7 +1702,7 @@ export function BrowserPanel({
           <LinkIcon className="size-3.5" />
           <span className="sr-only">Copy link</span>
         </Button>
-        <Menu modal={false}>
+        <Menu modal={false} open={browserActionsMenuOpen} onOpenChange={setBrowserActionsMenuOpen}>
           <MenuTrigger
             render={
               <Button
@@ -1836,11 +1859,7 @@ export function BrowserPanel({
             </div>
           ) : null}
           {isLiveRuntime ? (
-            <div
-              ref={browserViewportRef}
-              data-omnimind-browser-viewport
-              className="absolute inset-0 bg-[#0d0d0d]"
-            />
+            <div ref={browserViewportRef} className="absolute inset-0 bg-[#0d0d0d]" />
           ) : null}
           {showLocalServersHome ? (
             <BrowserLocalServersHome

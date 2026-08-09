@@ -5,11 +5,11 @@
 // Layer: Pull request presentation
 // Exports: PullRequestTimelineTab
 
-import type { PullRequestDetail } from "@omnimind/contracts";
+import type { PullRequestDetail } from "@synara/contracts";
 import { formatRelativeTime } from "~/lib/relativeTime";
 import { buildPullRequestTimelineEvents } from "./pullRequestDetail.logic";
 import { PR_BODY_TEXT_CLASS_NAME, PR_META_TEXT_CLASS_NAME } from "./pullRequestText";
-import { cn } from "~/lib/styles";
+import { cn } from "~/lib/utils";
 
 export function PullRequestTimelineTab({ detail }: { detail: PullRequestDetail }) {
   const events = buildPullRequestTimelineEvents(detail);

@@ -84,11 +84,17 @@ authority，也不得带入 donor branding、竞争编排、第二 Session 状�
     {
       "id": "ui-mother",
       "url": "https://github.com/Emanuele-web04/synara.git",
-      "revision": "6aca3dcc505894481430967c2acb762b3dd1b358",
+      "revision": "02c8a6cb9948eba0afc828492764e7236965c61f",
       "paths": [
-        "apps/web",
+        ".github",
+        ".gitattributes",
+        ".gitignore",
+        ".mise.toml",
+        ".oxfmtrc.json",
+        ".oxlintrc.json",
         "apps/desktop",
-        "apps/service",
+        "apps/web",
+        "apps/server",
         "packages/contracts",
         "packages/shared",
         "patches",
@@ -96,176 +102,15 @@ authority，也不得带入 donor branding、竞争编排、第二 Session 状�
         "package.json",
         "bun.lock",
         "bunfig.toml",
-        "turbo.json",
         "tsconfig.base.json",
-        "vitest.config.ts",
-        ".oxfmtrc.json",
-        ".oxlintrc.json"
+        "turbo.json",
+        "vitest.config.ts"
       ],
-      "rights": "The fixed source is MIT-licensed under the retained legal text. The maintainer has authorized retention, adaptation and redistribution of the fixed code and the complete 4,014-file icon corpus in source and product artifacts. Former product identity assets are not adopted.",
+      "rights": "The fixed source is MIT-licensed under the retained exact legal text. The maintainer has authorized retention, adaptation and redistribution of the fixed code and complete source icon corpus. Former product identity assets are not adopted.",
       "mode": "adapt",
-      "changes": "The immutable T0 tree was transplanted into stable Web, Desktop, Product Service, contract, shared, patch and build-tool responsibilities; package, product, environment, protocol and storage identity were replaced; the authorized icon corpus was moved byte-for-byte to source-neutral line/fill paths behind the Glyph API; former product identity, marketing implementation/content and fake release history were removed while public-surface capability lineage retained explicit Product re-entry anchors; existing OmniMind brand assets replace first-party graphics.",
-      "updatePolicy": "Pinned revision; upstream review starts only when the maintainer explicitly requests it, remains read-only through discussion, and requires explicit approval of the current intake set before implementation",
-      "licenseFiles": ["LICENSES/ui-mother-MIT.txt"],
-      "provenance": {
-        "repositoryCommit": "2445acb987e443b44b7dc819de3de44c3d68b391",
-        "historicalTrees": {
-          "vendor/ui": "630f17e61abc478114bf83c1d740977c9f68b910"
-        },
-        "origins": {
-          "apps/web": {
-            "sourcePath": "vendor/ui/apps/web",
-            "changes": "Adapted product identity, brand and icon paths/API; removed false public destinations and product history while retaining runnable UI plus fail-closed Docs, Changelog and Feedback re-entry anchors."
-          },
-          "apps/desktop": {
-            "sourcePath": "vendor/ui/apps/desktop",
-            "changes": "Adapted package, bundle, protocol, profile, static-client and platform-brand resource identity."
-          },
-          "apps/service": {
-            "sourcePath": "vendor/ui/apps/server",
-            "changes": "Moved the server package into the stable Product Service responsibility and adapted package, environment, profile and static-client paths."
-          },
-          "packages/contracts": {
-            "sourcePath": "vendor/ui/packages/contracts",
-            "changes": "Adapted package and product identity without changing its current mixed execution semantics."
-          },
-          "packages/shared": {
-            "sourcePath": "vendor/ui/packages/shared",
-            "changes": "Adapted package identity and renamed the product-home responsibility."
-          },
-          "patches": {
-            "sourcePath": "vendor/ui/patches",
-            "changes": "Retained only dependency patches required by the transplanted workspace."
-          },
-          "scripts": {
-            "sourcePath": "vendor/ui/scripts",
-            "changes": "Adapted required build, development, package and release checks; retained repository-owned governance checks and added deterministic glyph validation."
-          },
-          "package.json": {
-            "sourcePath": "vendor/ui/package.json",
-            "changes": "Adapted the workspace graph, package identity and quality gates."
-          },
-          "bun.lock": {
-            "sourcePath": "vendor/ui/bun.lock",
-            "changes": "Regenerated from the adapted workspace with the pinned package manager."
-          },
-          "bunfig.toml": {
-            "sourcePath": "vendor/ui/bunfig.toml",
-            "changes": "Retained required workspace package-manager configuration."
-          },
-          "turbo.json": {
-            "sourcePath": "vendor/ui/turbo.json",
-            "changes": "Adapted workspace task inputs and package responsibility names."
-          },
-          "tsconfig.base.json": {
-            "sourcePath": "vendor/ui/tsconfig.base.json",
-            "changes": "Retained the required TypeScript workspace baseline."
-          },
-          "vitest.config.ts": {
-            "sourcePath": "vendor/ui/vitest.config.ts",
-            "changes": "Retained the required workspace test configuration."
-          },
-          ".oxfmtrc.json": {
-            "sourcePath": "vendor/ui/.oxfmtrc.json",
-            "changes": "Retained and reviewed formatter configuration for the adapted roots."
-          },
-          ".oxlintrc.json": {
-            "sourcePath": "vendor/ui/.oxlintrc.json",
-            "changes": "Retained and reviewed lint configuration for the adapted roots."
-          }
-        },
-        "selectiveIntakes": [
-          {
-            "evidence": "research/source-review.md",
-            "mode": "adapt",
-            "rights": "The selectively adopted mechanisms remain covered by the source repository's MIT license; the retained legal text now includes both copyright notices present at the reviewed source revision.",
-            "sourcePaths": [
-              "apps/web/src/components/chat/ChatThreadSurfacePrimitives.tsx",
-              "apps/web/src/components/chat/deferredChatMount.ts",
-              "apps/web/src/components/chat/ProviderModelOptionGroupList.tsx",
-              "apps/web/src/providerModelOptions.ts",
-              "apps/web/src/components/BrowserPanel.logic.ts",
-              "apps/web/src/components/BrowserPanel.tsx",
-              "apps/web/src/components/chat/MessagesTimeline.tsx",
-              "apps/web/src/components/Sidebar.tsx",
-              "apps/web/src/components/SidebarActivityView.logic.ts",
-              "apps/web/src/components/SidebarActivityView.tsx",
-              "apps/web/src/components/ui/toastRouteVisibility.ts",
-              "apps/web/src/notifications/taskCompletion.logic.ts",
-              "apps/web/src/notifications/taskCompletion.tsx",
-              "apps/web/src/lib/desktopZoom.ts",
-              "apps/web/src/lib/projectShortcutTargets.ts",
-              "apps/web/src/storeSelectors.ts",
-              "packages/shared/src/desktopChrome.ts",
-              "apps/web/src/components/ChatView.tsx",
-              "apps/web/src/components/ThreadTerminalDrawer.tsx",
-              "apps/web/src/components/chat/DockTerminalPane.tsx",
-              "apps/web/src/components/chat/useChatTerminalController.ts",
-              "apps/web/src/components/terminal/terminalRuntime.ts",
-              "apps/web/src/components/terminal/terminalRuntimeTypes.ts",
-              "apps/web/src/components/terminal/terminalSession.ts",
-              "apps/web/src/hooks/useTerminalSurfaceController.ts",
-              "apps/web/src/lib/terminalContextComposerRegistry.ts",
-              "apps/web/src/terminalStateStore.ts",
-              "apps/desktop/src/main.ts",
-              "packages/contracts/src/ipc.ts"
-            ],
-            "sourceRevision": "be6dcad3f63fa121fbe3180f257ba1ff128696c4",
-            "summary": "Adapted the approved v0.6.7 Workbench and completion-signal mechanisms into current OmniMind owners: bounded exact-once Conversation mounting, live model provenance, opaque browser annotation presentation and zoom-correct native bounds, non-replaying transcript recovery and user-activity Project ranking, pane-scoped terminal Composer routing and natural-exit cleanup with fresh dock replacement, plus Product Conversation/Run/receipt completion identity, rendered-route suppression and Desktop-owned foreground defense. Donor Thread/Turn completion authority, execution authority, identity and deferred capabilities were not adopted.",
-            "targetPaths": [
-              "apps/web/src/components/BrowserPanel.logic.ts",
-              "apps/web/src/components/BrowserPanel.tsx",
-              "apps/web/src/components/product/ProductRuntimePicker.tsx",
-              "apps/web/src/components/Sidebar.tsx",
-              "apps/web/src/components/SidebarActivityView.logic.ts",
-              "apps/web/src/components/SidebarActivityView.tsx",
-              "apps/web/src/components/ThreadTerminalDrawer.tsx",
-              "apps/web/src/components/chat/DockTerminalPane.tsx",
-              "apps/web/src/components/chat/MessagesTimeline.tsx",
-              "apps/web/src/components/chat/deferredChatMount.ts",
-              "apps/web/src/components/chat/useChatTerminalController.ts",
-              "apps/web/src/components/chat/useRetainedConversationBoundary.ts",
-              "apps/web/src/components/ui/toastRouteVisibility.ts",
-              "apps/web/src/notifications/productCompletion.logic.ts",
-              "apps/web/src/notifications/productCompletion.tsx",
-              "apps/web/src/notifications/taskCompletion.logic.ts",
-              "apps/web/src/notifications/taskCompletion.tsx",
-              "apps/web/src/components/terminal/terminalRuntime.ts",
-              "apps/web/src/components/terminal/terminalRuntimeTypes.ts",
-              "apps/web/src/components/terminal/terminalSelectionActions.ts",
-              "apps/web/src/components/terminal/terminalSession.ts",
-              "apps/web/src/hooks/useTerminalSurfaceController.ts",
-              "apps/web/src/lib/desktopZoom.ts",
-              "apps/web/src/lib/projectShortcutTargets.ts",
-              "apps/web/src/lib/terminalContextComposerRegistry.ts",
-              "apps/web/src/routes/__root.tsx",
-              "apps/web/src/routes/_chat.tsx",
-              "apps/web/src/storeSelectors.ts",
-              "apps/web/src/terminalStateStore.ts",
-              "packages/shared/src/desktopChrome.ts",
-              "apps/desktop/src/main.ts",
-              "packages/contracts/src/ipc.ts"
-            ]
-          },
-          {
-            "evidence": "research/source-review.md",
-            "mode": "adapt",
-            "rights": "The selected Synara ACP process/connection/conformance patterns are MIT-licensed under the retained ui-mother legal text. The official ACP SDK is consumed separately as the exact Apache-2.0 npm dependency recorded by Service and the release legal inventory.",
-            "sourcePaths": [
-              "apps/server/src/provider/acp/AcpSdk.ts",
-              "apps/server/src/provider/acp/AcpSessionRuntime.ts",
-              "apps/server/scripts/acp-conformance-agent.ts"
-            ],
-            "sourceRevision": "630f17e61abc478114bf83c1d740977c9f68b910",
-            "summary": "Adapted only bounded process supervision, resource limits and official-SDK conformance fixture patterns. OmniMind retains Product receipt and normalization policy; the official @agentclientprotocol/sdk owns ACP framing, schema, request IDs, correlation, handler dispatch, cancellation and errors. Donor registry, gateway, Session authority, transcript, tool journal, provider orchestration and branding are excluded. The SDK stays pinned to an exact version, artifact integrity and lockfile closure; upgrades occur only in a reviewed OmniMind release after source/license, exact supported-Engine compatibility, ACP conformance/resource-failure, Pi regression, packaged legal/SBOM and one different-actor Review. Runtime auto-update, hot replacement, handwritten protocol fallback and silent Engine fallback are forbidden.",
-            "targetPaths": [
-              "apps/service/src/opencode/acpSdkConnection.ts",
-              "apps/service/src/opencode/acpSdkConnection.test.ts",
-              "apps/service/src/opencode/test-fixtures/acp-child.mjs"
-            ]
-          }
-        ]
-      }
+      "changes": "The exact physical Desktop, Web, Server, contracts, shared, patch, build and release substrate was transplanted once. OmniMind changes only first-public package, app, protocol, updater, profile, storage and artifact identity; replaces first-party graphics with the retained OmniMind brand; removes donor profile/storage migration entrypoints, marketing, release-history and social surfaces, donor-specific governance, apps/service and apps/native-host; and keeps the internal @synara/* package scope as implementation lineage only.",
+      "updatePolicy": "Pinned revision; source updates begin only after a maintainer-requested read-only intake and explicit approval of that intake set.",
+      "licenseFiles": ["LICENSES/ui-mother-MIT.txt"]
     },
     {
       "id": "pi-todo-headless-package",
@@ -274,18 +119,17 @@ authority，也不得带入 donor branding、竞争编排、第二 Session 状�
       "paths": ["assets/packages/pi-todo-0.81.1/todo.ts"],
       "rights": "The copied todo extension source is MIT-licensed under the retained canonical legal text. This adoption is limited to the exact selected file and does not adopt the Pi repository as OmniMind product source.",
       "mode": "transplant",
-      "changes": "The selected todo.ts bytes are retained exactly from packages/coding-agent/examples/extensions/todo.ts at the fixed revision. OmniMind adds a separate Product-owned manifest and release staging around the unchanged executable.",
-      "updatePolicy": "Pinned revision and exact SHA-256; any source, version, digest, rights, trust-surface or runtime-compatibility change requires a new explicit source review and revalidation before activation",
+      "changes": "The selected todo.ts bytes are retained exactly from packages/coding-agent/examples/extensions/todo.ts at the fixed revision. Its V1 runtime proof must be redone against the isolated OmniMind Agent rather than inherited from the retired host.",
+      "updatePolicy": "Pinned revision and exact SHA-256; any source, version, digest, rights, trust-surface or runtime-compatibility change requires a new explicit source review and revalidation before activation.",
       "licenseFiles": ["LICENSES/pi-todo-MIT.txt"]
     }
   ]
 }
 ```
 
-身份扫描只阻止 donor/旧产品身份泄漏；Pi 与实际 shipped Provider 是公开产品依赖，不属于需要洗掉的身份。Provider 名称可以出现在真实 integration、选择器、详情、诊断、About 与 Licenses 中，但不得作为虚假能力或 donor 品牌泄漏。
+身份扫描只阻止 donor/旧产品身份进入普通产品表面；内部 `@synara/*` 包作用域按 adoption record 保留。Pi 与实际 shipped Provider 是公开产品依赖，不属于需要洗掉的身份。Provider 名称可以出现在真实 integration、选择器、详情、诊断、About 与 Licenses 中，但不得作为虚假能力或 donor 品牌泄漏。
 
 ```identity-denylist
-synara
 t3-code
 proma
 weknora
@@ -315,16 +159,16 @@ omni-harness
 }
 ```
 
-当前 adopted UI mother 已进入本地适配后的 author roots，并随首个本地、未签名 macOS arm64 Pi-native 纵切候选完成独立复核。该候选只证明当前纵切，不等于签名发行物、跨平台候选或 OmniMind V1。`historicalTrees` 只证明 T0 固定输入，`origins` 记录当前适配边界；两者不得互相冒充。Pi 与其他对照项目仍只是研究来源，除非它们进入上述 adoption 清单。exact revision/tree、rights/lineage/assets、构建/测试/运行观察和兼容限制只以 [`research/source-review.md`](research/source-review.md) 为证据 owner；法定文本保存在 `LICENSES/`。
+当前 adopted UI mother 是 exact Synara `02c8a6c…` 的单一物理 substrate：`apps/desktop + apps/web + apps/server + packages/contracts + packages/shared`。`apps/service`、`apps/native-host`、donor profile/storage migration 与旧 Product Control Plane 不再属于生产拓扑。Pi 与其他对照项目仍只是研究来源，除非进入上述 adoption 清单；exact revision/tree、rights/lineage/assets、构建/测试/运行观察和兼容限制只以 [`research/source-review.md`](research/source-review.md) 为证据 owner，法定文本保存在 `LICENSES/`。
 
 ## 5. 已有证据与当前下一步
 
-Source Review 已记录 imported tree 与 fixed source 的 exact comparison，以及同一固定树上的 frozen install、build、typecheck 和 unchanged macOS desktop-smoke 结果及其局限。它们不证明 production adoption、视觉等价、Windows/Linux 或 packaging。除非 Source Review 的复验触发器发生变化，不重复相同 unchanged probe。
+Source Review 已记录 fixed source 的 exact comparison及其局限；当前 production bytes、focused/final gates 与真实 App journey 只在 active Campaign 记录 candidate evidence。局部绿色不证明视觉等价、Windows/Linux、签名 packaging 或 OmniMind V1。
 
-Stage 0–3 的 source/identity closure、UI 母体接管、Product 单写、isolated Native Host 与真实 Chat/folder-backed Agent 纵切已在 commit `248b3316651e681d9d4c78f81bec0c84a4cc822c` 形成首个本地、未签名 macOS arm64 candidate，并由 [`Freeze handoff`](.omp-flow/tasks/08-04-ui-chassis-takeover/handoffs/freeze-first-production-candidate.md) 与 [`independent review`](.omp-flow/tasks/08-04-ui-chassis-takeover/reviews/freeze-first-production-candidate.md) 记录。该 checkpoint 证明当时的纵切，不证明 isolated Native Host 是最终 topology；single-substrate reset 必须重新裁决其责任是否已由 inherited PiAdapter 承担。
+旧 isolated Native Host、平行 Product Control Plane 与 Product Truth checkpoint 只作可追溯历史，不再定义生产 topology 或下一步。
 
 首个真实 headless Pi Package checkpoint 位于 commit `16f14d188e38134f6f45c46bfcb57ff36c1e8565`。它证明 exact `todo.ts` 是可复用的 Pi-ecosystem regression input，也证明跨 Provider staged activation/lease/LKG 路线过重。V1 要证明该类 Package 能在 OmniMind Agent 的独立 Pi-compatible runtime 中运行，同时保持 stock Pi state 隔离。
 
-平行 OpenCode checkpoint 和 Product Truth destructive route 现只作历史证据，均不再定义 V1 下一步；这不删除 Synara 已有的 OpenCode 或其他 Provider adapter。当前以 exact Synara responsibility reset、Pi stable alignment、Agent/Chat mapping、原生生态、Workbench 质量和三平台发行的顺序闭合剩余证据；精确进入、停止和 proof 条件只见 [`execution-brief.md`](execution-brief.md)。
+当前以 exact Synara responsibility reset、Pi stable alignment、Agent/Chat mapping、原生生态、Workbench 质量和三平台发行的顺序闭合剩余证据；这不删除 Synara 已有的 OpenCode 或其他 Provider adapter。精确进入、停止和 proof 条件只见 [`execution-brief.md`](execution-brief.md)。
 
 具体进入条件、停止条件和 proof gate 只见 [`execution-brief.md`](execution-brief.md)；当前 claim 状态只见 active Campaign。

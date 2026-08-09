@@ -1,8 +1,0 @@
-{
-  "extendsFixture": "service-refusal-effect-lock-positive",
-  "textReplacements": {
-    "apps/service/src/persistence/Layers/Sqlite.ts": [
-      ["    if (existsSync(\"state.sqlite\") || existsSync(\"state.sqlite-wal\") || existsSync(\"state.sqlite-shm\")) {\n      throw new Error(\"PREBASELINE_RESET_REQUIRED\");\n    }\n    const database", "    const guard = Effect.sync(() => {\n      if (existsSync(\"state.sqlite\") || existsSync(\"state.sqlite-wal\") || existsSync(\"state.sqlite-shm\")) {\n        throw new Error(\"PREBASELINE_RESET_REQUIRED\");\n      }\n    });\n    void guard;\n    const database"]
-    ]
-  }
-}

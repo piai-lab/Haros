@@ -1,21 +1,15 @@
-import { ProjectId, ThreadId, TurnId } from "@omnimind/contracts";
+import { ProjectId, ThreadId, TurnId } from "@synara/contracts";
 import { describe, expect, it } from "vitest";
-import { shouldHoldMissingThreadRouteFallback } from "../chatRouteRestore";
 
 import {
   collectParentDirectoryPaths,
-  isProductChatSplitRestorable,
   normalizeSingleSearchFromPane,
   resolveFilePreviewWorkspaceRoot,
-  resolveMissingThreadRouteAuthority,
   resolveRoutePanelBootstrap,
   resolveSingleProjectId,
-  resolveThreadRouteConversationError,
-  resolveThreadRouteRecoveryState,
   resolveSplitPaneCloseDecision,
   resolveSplitPaneMaximizeDecision,
   resolveThreadPickerTitle,
-  resolveThreadSurfaceMembership,
   resolveToggledChatPanelPatch,
   stripEditorViewSearchParams,
 } from "./-chatThreadRoute.logic";
@@ -83,137 +77,6 @@ describe("resolveFilePreviewWorkspaceRoot", () => {
 });
 
 describe("single chat route helpers", () => {
-  it("rejects cross-surface ids and canonicalizes Product Chat from omitted surface", () => {
-    expect(
-      resolveThreadSurfaceMembership({
-        surface: "chat",
-        donorThreadExists: true,
-        donorDraftExists: false,
-        productChatExists: false,
-        productAgentExists: false,
-        productLocalChatDraftExists: false,
-      }),
-    ).toBe("missing-chat");
-    expect(
-      resolveThreadSurfaceMembership({
-        donorThreadExists: true,
-        donorDraftExists: false,
-        productChatExists: true,
-        productAgentExists: false,
-        productLocalChatDraftExists: false,
-      }),
-    ).toBe("canonicalize-chat");
-    expect(
-      resolveThreadSurfaceMembership({
-        donorThreadExists: true,
-        donorDraftExists: false,
-        productChatExists: false,
-        productAgentExists: false,
-        productLocalChatDraftExists: false,
-      }),
-    ).toBe("agent");
-    expect(
-      resolveThreadSurfaceMembership({
-        surface: "chat",
-        donorThreadExists: true,
-        donorDraftExists: false,
-        productChatExists: false,
-        productAgentExists: true,
-        productLocalChatDraftExists: false,
-      }),
-    ).toBe("missing-chat");
-    expect(
-      resolveThreadSurfaceMembership({
-        donorThreadExists: false,
-        donorDraftExists: false,
-        productChatExists: false,
-        productAgentExists: true,
-        productLocalChatDraftExists: false,
-      }),
-    ).toBe("agent");
-    expect(
-      resolveThreadSurfaceMembership({
-        surface: "chat",
-        donorThreadExists: false,
-        donorDraftExists: true,
-        productChatExists: false,
-        productAgentExists: false,
-        productLocalChatDraftExists: true,
-      }),
-    ).toBe("chat");
-  });
-
-  it("refuses a mixed Agent/Product split on Chat", () => {
-    expect(
-      isProductChatSplitRestorable({
-        surface: "chat",
-        splitThreadIds: ["product-chat", "agent-thread"],
-        productChatThreadIds: new Set(["product-chat"]),
-      }),
-    ).toBe(false);
-    expect(
-      isProductChatSplitRestorable({
-        surface: "chat",
-        splitThreadIds: ["product-chat", "product-chat-2"],
-        productChatThreadIds: new Set(["product-chat", "product-chat-2"]),
-      }),
-    ).toBe(true);
-  });
-
-  it("keeps missing Chat identity inside Product and reserves donor recovery for Agent", () => {
-    expect(
-      resolveMissingThreadRouteAuthority({
-        surface: "chat",
-        routeThreadExists: false,
-        productShellHydrated: false,
-      }),
-    ).toBe("wait-product-shell");
-    expect(
-      resolveMissingThreadRouteAuthority({
-        surface: "chat",
-        routeThreadExists: false,
-        productShellHydrated: true,
-      }),
-    ).toBe("product-unavailable");
-    expect(
-      resolveMissingThreadRouteAuthority({
-        surface: "chat",
-        routeThreadExists: true,
-        productShellHydrated: true,
-      }),
-    ).toBe("available");
-    expect(
-      resolveMissingThreadRouteAuthority({
-        routeThreadExists: false,
-        productShellHydrated: true,
-      }),
-    ).toBe("legacy-recovery");
-  });
-
-  it("starts missing thread B with an independent recovery and no early home fallback", () => {
-    const recoveryState = resolveThreadRouteRecoveryState({
-      threadId: OTHER_THREAD_ID,
-      episodeThreadId: THREAD_ID,
-      episodeState: "done",
-    });
-
-    expect(recoveryState).toBe("idle");
-    expect(
-      shouldHoldMissingThreadRouteFallback({
-        hasKnownServerThreads: false,
-        recoveryState,
-        routeThreadExists: false,
-      }),
-    ).toBe(true);
-    expect(
-      resolveThreadRouteConversationError({
-        threadId: OTHER_THREAD_ID,
-        episodeThreadId: THREAD_ID,
-        episodeError: "Thread A failed",
-      }),
-    ).toBeNull();
-  });
-
   it("prefers the server thread project and falls back to the draft project", () => {
     expect(
       resolveSingleProjectId({

@@ -4,9 +4,9 @@
 // Layer: Kanban route surface
 // Exports: KanbanView (default)
 
-import type { ProjectId } from "@omnimind/contracts";
+import type { ProjectId } from "@synara/contracts";
 import { useNavigate } from "@tanstack/react-router";
-import { useEffect, useRef, useState } from "react";
+import { useEffect, useMemo, useRef, useState } from "react";
 
 import { SidebarHeaderNavigationControls } from "~/components/SidebarHeaderNavigationControls";
 import { Button } from "~/components/ui/button";
@@ -18,10 +18,10 @@ import {
   useDesktopTopBarWindowControlsGutterClassName,
 } from "~/hooks/useDesktopTopBarGutter";
 import { useNowMs } from "~/hooks/useNowMs";
+import { useThreadPullRequests } from "~/hooks/useThreadPullRequests";
 import { splitShortcutLabel } from "~/keybindings";
 import { ArrowLeftIcon, PlusIcon } from "~/lib/icons";
-import { cn } from "~/lib/styles";
-import { isMacPlatform } from "~/lib/platform";
+import { cn, isMacPlatform } from "~/lib/utils";
 
 // Kanban-scoped "Create task" shortcut: ⌘⌥T on macOS, Ctrl+Alt+T elsewhere —
 // matching the app's mod convention (meta on mac, ctrl otherwise) and the ⌘⌥
@@ -49,12 +49,12 @@ import {
   CHAT_SURFACE_HEADER_PADDING_X_CLASS,
 } from "../chat/chatHeaderControls";
 import { CHAT_BACKGROUND_CLASS_NAME } from "../chat/composerPickerStyles";
-import { KanbanTaskCreateDialog } from "./KanbanTaskCreateDialog";
+import { KanbanNewTaskDialog } from "./KanbanNewTaskDialog";
 import { KanbanOverview } from "./KanbanOverview";
 import { KanbanProjectBoardView } from "./KanbanProjectBoardView";
 import { useKanbanBoard } from "./useKanbanBoard";
 import { useKanbanCardContextMenu } from "./useKanbanCardContextMenu";
-import type { KanbanCard } from "./kanban.logic";
+import { overviewVisibleKanbanCards, type KanbanCard } from "./kanban.logic";
 
 export default function KanbanView({ projectId }: { projectId: string | null }) {
   const navigate = useNavigate();
@@ -72,6 +72,25 @@ export default function KanbanView({ projectId }: { projectId: string | null }) 
     project.inProgress.some((card) => card.activeWorkStartedAt !== null),
   );
   const nowMs = useNowMs(hasActiveCardWork);
+
+  // PR badges resolve like the sidebar's: live git status per checkout validates the
+  // persisted PR instead of trusting stale lastKnownPr metadata. Scoped to the cards the
+  // current surface renders (one board, or each overview column's capped list).
+  const allProjects = useStore((state) => state.projects);
+  const projectCwdById = useMemo(
+    () => new Map(allProjects.map((project) => [project.id, project.cwd] as const)),
+    [allProjects],
+  );
+  const renderedCardThreads = useMemo(() => {
+    const cards = projectBoard
+      ? [...projectBoard.inProgress, ...projectBoard.draft, ...projectBoard.done]
+      : board.projects.flatMap((candidate) => overviewVisibleKanbanCards(candidate).visibleCards);
+    return cards.flatMap((card) => (card.thread ? [card.thread] : []));
+  }, [board.projects, projectBoard]);
+  const prByThreadId = useThreadPullRequests({
+    threads: renderedCardThreads,
+    projectCwdById,
+  });
 
   const [newTaskDialog, setNewTaskDialog] = useState<{
     key: number;
@@ -222,6 +241,7 @@ export default function KanbanView({ projectId }: { projectId: string | null }) 
               onOpenCard={handleOpenCard}
               onCardContextMenu={onCardContextMenu}
               onNewTask={handleNewDraftInProjectBoard}
+              prByThreadId={prByThreadId}
               nowMs={nowMs}
             />
           ) : (
@@ -231,6 +251,7 @@ export default function KanbanView({ projectId }: { projectId: string | null }) 
               onOpenCard={handleOpenCard}
               onCardContextMenu={onCardContextMenu}
               onNewTask={handleNewTask}
+              prByThreadId={prByThreadId}
               nowMs={nowMs}
             />
           )}
@@ -238,7 +259,7 @@ export default function KanbanView({ projectId }: { projectId: string | null }) 
       </div>
 
       {newTaskDialog ? (
-        <KanbanTaskCreateDialog
+        <KanbanNewTaskDialog
           key={newTaskDialog.key}
           onOpenChange={(open) => {
             if (!open) {

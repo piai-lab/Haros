@@ -1,6 +1,14 @@
 {
   "$schema": "./node_modules/oxfmt/configuration_schema.json",
   "ignorePatterns": [
+    ".agents",
+    ".claude",
+    ".codex",
+    ".cursor",
+    ".obsidian",
+    ".omp",
+    ".omp-flow",
+    ".snow",
     ".plans",
     "dist",
     "dist-electron",
@@ -8,7 +16,8 @@
     "bun.lock",
     "*.tsbuildinfo",
     "**/routeTree.gen.ts",
-    "apps/web/public/mockServiceWorker.js"
+    "apps/web/public/mockServiceWorker.js",
+    "assets/packages/pi-todo-0.81.1/todo.ts"
   ],
   "sortPackageJson": {}
 }

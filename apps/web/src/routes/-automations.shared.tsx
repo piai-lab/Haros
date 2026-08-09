@@ -11,18 +11,22 @@ import {
   type AutomationStreamEvent,
   type AutomationUpdateInput,
   type AutomationWorktreeMode,
-  type ProductRequestedSelection,
+  type ModelSelection,
+  type ProviderKind,
+  type RuntimeMode,
   type ThreadId,
-} from "@omnimind/contracts";
-import { automationRequiresTargetThread } from "@omnimind/shared/automationMode";
+} from "@synara/contracts";
+import { automationRequiresTargetThread } from "@synara/shared/automationMode";
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import { useCallback, useEffect, useState } from "react";
 
+import { useAppSettings } from "~/appSettings";
 import type { Thread } from "~/types";
 import {
   ComposerPickerMenuPopup,
   ComposerPickerMenuSubPopup,
 } from "~/components/chat/ComposerPickerMenuPopup";
+import { ProviderModelPicker } from "~/components/chat/ProviderModelPicker";
 import { RUNTIME_AUTO_ICON_ACCENT_CLASS_NAME } from "~/components/chat/composerPickerStyles";
 import { Alert, AlertDescription, AlertTitle } from "~/components/ui/alert";
 import { Button } from "~/components/ui/button";
@@ -54,7 +58,7 @@ import {
   buildAutomationFormWarnings,
   createInputFromForm,
   datetimeLocalFromIso,
-  defaultRequestedSelection,
+  defaultModelSelection,
   formatCadence,
   formatCadenceLong,
   formatClockTime,
@@ -66,6 +70,10 @@ import {
   automationsForThread,
   isFormSubmittable,
   isoFromDatetimeLocal,
+  modelSelectionForProjectChange,
+  projectModelSelection,
+  providerOptionsForAutomationEdit,
+  providerOptionsForAutomationModelSelection,
   scheduleFromForm,
   scheduleFromKind,
   scheduleKindFromSchedule,
@@ -80,9 +88,21 @@ import {
   type ScheduleKind,
 } from "~/lib/automationForm";
 import { SkillCubeIcon, WorktreeIcon } from "~/lib/icons";
-import { Glyph } from "~/ui/icons";
-import { cn } from "~/lib/styles";
+import { CentralIcon } from "~/lib/central-icons";
+import { resolveRuntimeModelDescriptor } from "~/components/chat/runtimeModelCapabilities";
+import { resolveProviderDiscoveryCwd } from "~/lib/providerDiscovery";
+import {
+  normalizeRuntimeModeForProvider,
+  providerModelSupportsAutoRuntimeMode,
+  providerSupportsAutoRuntimeMode,
+} from "~/lib/runtimeMode";
+import { findProviderStatus } from "~/lib/providerAvailability";
+import { cn } from "~/lib/utils";
+import { serverConfigQueryOptions } from "~/lib/serverReactQuery";
 import { ensureNativeApi } from "~/nativeApi";
+import { buildModelSelection } from "~/providerModelOptions";
+import { useProviderModelCatalog } from "~/hooks/useProviderModelCatalog";
+import { useProviderStatusesForLocalConfig } from "~/hooks/useProviderStatusesForLocalConfig";
 import { useStore } from "~/store";
 import { resolveThreadPickerTitle } from "./-chatThreadRoute.logic";
 
@@ -100,7 +120,7 @@ export {
   buildAutomationFormWarnings,
   createInputFromForm,
   datetimeLocalFromIso,
-  defaultRequestedSelection,
+  defaultModelSelection,
   formatCadence,
   formatCadenceLong,
   formatClockTime,
@@ -112,6 +132,10 @@ export {
   automationsForThread,
   isFormSubmittable,
   isoFromDatetimeLocal,
+  modelSelectionForProjectChange,
+  projectModelSelection,
+  providerOptionsForAutomationEdit,
+  providerOptionsForAutomationModelSelection,
   scheduleFromForm,
   scheduleFromKind,
   scheduleKindFromSchedule,
@@ -233,7 +257,7 @@ export function RunStatusIndicator({
 }) {
   if (runStatusVariant(status) === "success") {
     return (
-      <Glyph
+      <CentralIcon
         name="circle-check"
         className={cn("size-3.5 shrink-0 text-muted-foreground/70", className)}
       />
@@ -770,7 +794,7 @@ export function AutomationApprovalBanner({
   warnings,
   busy,
   onApprove,
-  onApproveAndRun: _onApproveAndRun,
+  onApproveAndRun,
 }: {
   readonly warnings: readonly AutomationDraftWarning[];
   readonly busy: boolean;
@@ -785,8 +809,8 @@ export function AutomationApprovalBanner({
       <AlertTitle>Approval needed</AlertTitle>
       <AlertDescription>
         <span>
-          This automation needs your approval once before OmniMind can save changes. Execution
-          remains unavailable until scheduled work uses Product Queue admission.
+          This automation needs your approval once before OmniMind can save changes. When a warning
+          blocks manual runs, Run now stays disabled until you approve it.
         </span>
         <ul className="flex flex-col gap-1.5">
           {warnings.map((warning) => (
@@ -800,13 +824,8 @@ export function AutomationApprovalBanner({
           <Button type="button" variant="ghost" size="sm" disabled={busy} onClick={onApprove}>
             Approve
           </Button>
-          <Button
-            type="button"
-            size="sm"
-            disabled
-            title="Automation execution is unavailable until Product Queue admission is implemented"
-          >
-            Run unavailable
+          <Button type="button" size="sm" disabled={busy} onClick={onApproveAndRun}>
+            Approve &amp; run now
           </Button>
         </div>
       </AlertDescription>
@@ -814,22 +833,97 @@ export function AutomationApprovalBanner({
   );
 }
 
-export function AutomationModelPicker({ value }: { readonly value: ProductRequestedSelection }) {
-  return (
-    <div className="rounded-md border border-border/70 bg-muted/30 px-3 py-2 text-xs text-muted-foreground">
-      <div className="font-medium text-foreground">Automation execution unavailable</div>
-      <div className="mt-1">
-        {value.state === "selected"
-          ? `Host runtime: ${value.engineId}${value.runtimeChoice.kind === "product-model" ? ` · ${value.runtimeChoice.runtimeModelId}${value.runtimeChoice.thinking ? ` · ${value.runtimeChoice.thinking}` : ""}` : " · current Engine session"}.`
-          : `Host runtime unavailable: ${value.reason}${
-              value.requestedRuntimeChoice?.kind === "product-model"
-                ? ` · requested ${value.requestedRuntimeChoice.runtimeModelId}`
-                : ""
-            }.`}{" "}
-        Scheduled work stays paused until Product Queue admission is implemented.
-      </div>
-    </div>
+export function AutomationModelPicker({
+  value,
+  projectCwd,
+  onChange,
+  onAutoModeSupportChange,
+}: {
+  readonly value: ModelSelection;
+  readonly projectCwd: string | null;
+  readonly onChange: (value: ModelSelection) => void;
+  readonly onAutoModeSupportChange?: (supported: boolean) => void;
+}) {
+  const { settings } = useAppSettings();
+  const serverConfigQuery = useQuery(serverConfigQueryOptions());
+  const providerStatuses = useProviderStatusesForLocalConfig();
+  const [open, setOpen] = useState(false);
+  const modelHintByProvider: Partial<Record<ProviderKind, string | null>> = {
+    [value.provider]: value.model,
+  };
+  const providerModelDiscoveryCwd = resolveProviderDiscoveryCwd({
+    activeThreadWorktreePath: null,
+    activeProjectCwd: projectCwd,
+    serverCwd: serverConfigQuery.data?.cwd ?? null,
+  });
+  const {
+    modelOptionsByProvider,
+    loadingModelProviders,
+    runtimeModelsByProvider,
+    selectedRuntimeModel,
+  } = useProviderModelCatalog({
+    selectedProvider: value.provider,
+    discoveryEnabled: open,
+    cwd: providerModelDiscoveryCwd,
+    modelHintByProvider,
+  });
+  const providerStatus = findProviderStatus(providerStatuses, value.provider);
+  const persistedRuntimeModel =
+    value.provider === "claudeAgent" && typeof value.supportsAutoMode === "boolean"
+      ? {
+          slug: value.model,
+          name: value.model,
+          supportsAutoMode: value.supportsAutoMode,
+        }
+      : undefined;
+  const autoModeSupported = providerModelSupportsAutoRuntimeMode(
+    value.provider,
+    selectedRuntimeModel ?? persistedRuntimeModel,
+    providerStatus,
   );
+  useEffect(() => {
+    onAutoModeSupportChange?.(autoModeSupported);
+  }, [autoModeSupported, onAutoModeSupportChange]);
+
+  return (
+    <ProviderModelPicker
+      compact
+      provider={value.provider}
+      model={value.model}
+      lockedProvider={null}
+      providers={providerStatuses}
+      modelOptionsByProvider={modelOptionsByProvider}
+      loadingModelProviders={loadingModelProviders}
+      hiddenProviders={settings.hiddenProviders}
+      providerOrder={settings.providerOrder}
+      open={open}
+      onOpenChange={setOpen}
+      onProviderModelChange={(provider, model) => {
+        const runtimeModel = resolveRuntimeModelDescriptor({
+          provider,
+          model,
+          runtimeModels: runtimeModelsByProvider[provider],
+        });
+        onChange(buildModelSelection(provider, model, undefined, runtimeModel?.supportsAutoMode));
+      }}
+    />
+  );
+}
+
+export function reconcileAutomationFormAutoModeSupport(
+  form: AutomationFormState,
+  supported: boolean,
+): AutomationFormState {
+  const modelSelection =
+    form.modelSelection.provider === "claudeAgent" &&
+    form.modelSelection.supportsAutoMode !== supported
+      ? { ...form.modelSelection, supportsAutoMode: supported }
+      : form.modelSelection;
+  const runtimeMode =
+    !supported && form.runtimeMode === "auto" ? "approval-required" : form.runtimeMode;
+  return modelSelection !== form.modelSelection || runtimeMode !== form.runtimeMode
+    ? { ...form, modelSelection, runtimeMode }
+    : form;
 }
 
 export function AutomationDialog({
@@ -866,6 +960,21 @@ export function AutomationDialog({
     onFormChange({ ...form, [key]: value });
   const projectThreads = threads.filter((thread) => thread.projectId === form.projectId);
   const selectedProject = projects.find((project) => project.id === form.projectId);
+  const [selectedModelSupportsAuto, setSelectedModelSupportsAuto] = useState(() =>
+    form.modelSelection.provider === "claudeAgent"
+      ? form.modelSelection.supportsAutoMode !== false
+      : providerSupportsAutoRuntimeMode(form.modelSelection.provider),
+  );
+  const handleAutoModeSupportChange = useCallback(
+    (supported: boolean) => {
+      setSelectedModelSupportsAuto(supported);
+      const reconciled = reconcileAutomationFormAutoModeSupport(form, supported);
+      if (reconciled !== form) {
+        onFormChange(reconciled);
+      }
+    },
+    [form, onFormChange],
+  );
   const schedule = scheduleFromForm(form);
   const fastIntervalLimitMessage = automationFastIntervalLimitMessage(form);
   const hasBlockingWarning = hasBlockingAutomationDraftWarnings(warnings, acknowledgedWarningIds);
@@ -892,9 +1001,17 @@ export function AutomationDialog({
     const targetStillMatches =
       form.targetThreadId.length > 0 &&
       threads.some((thread) => thread.id === form.targetThreadId && thread.projectId === projectId);
+    const modelSelection = modelSelectionForProjectChange(
+      projects,
+      form.projectId,
+      projectId,
+      form.modelSelection,
+    );
     onFormChange({
       ...form,
       projectId,
+      modelSelection,
+      runtimeMode: normalizeRuntimeModeForProvider(form.runtimeMode, modelSelection.provider),
       targetThreadId: targetStillMatches ? form.targetThreadId : "",
     });
   };
@@ -939,7 +1056,7 @@ export function AutomationDialog({
               aria-label="About automations"
               title="Automations run this prompt on a schedule and open the result as a thread."
             >
-              <Glyph name="info-simple" className="size-4" />
+              <CentralIcon name="info-simple" className="size-4" />
             </Button>
             <Menu>
               <MenuTrigger render={<Button variant="outline" size="sm" />}>
@@ -961,7 +1078,7 @@ export function AutomationDialog({
               disabled={busy}
               onClick={() => onOpenChange(false)}
             >
-              <Glyph name="cross-small" className="size-4" />
+              <CentralIcon name="cross-small" className="size-4" />
             </Button>
           </div>
         </div>
@@ -1022,7 +1139,7 @@ export function AutomationDialog({
                 <MenuTrigger render={<Button variant="ghost" size="sm" className={CHIP_CLASS} />}>
                   <WorktreeIcon className="size-4" />
                   <span className="capitalize">{form.worktreeMode}</span>
-                  <Glyph name="chevron-down-small" className="size-3.5 opacity-60" />
+                  <CentralIcon name="chevron-down-small" className="size-3.5 opacity-60" />
                 </MenuTrigger>
                 <ComposerPickerMenuPopup align="start" className="w-40">
                   <MenuRadioGroup
@@ -1043,11 +1160,11 @@ export function AutomationDialog({
 
             <Menu>
               <MenuTrigger render={<Button variant="ghost" size="sm" className={CHIP_CLASS} />}>
-                <Glyph name="folder-2" className="size-4" />
+                <CentralIcon name="folder-2" className="size-4" />
                 <span className="max-w-[10rem] truncate">
                   {selectedProject?.name ?? "Select project"}
                 </span>
-                <Glyph name="chevron-down-small" className="size-3.5 opacity-60" />
+                <CentralIcon name="chevron-down-small" className="size-3.5 opacity-60" />
               </MenuTrigger>
               <ComposerPickerMenuPopup align="start" className="w-56">
                 <MenuRadioGroup value={form.projectId} onValueChange={chooseProject}>
@@ -1060,13 +1177,24 @@ export function AutomationDialog({
               </ComposerPickerMenuPopup>
             </Menu>
 
-            <AutomationModelPicker value={form.requestedSelection} />
+            <AutomationModelPicker
+              value={form.modelSelection}
+              projectCwd={selectedProject?.cwd ?? null}
+              onChange={(value) => {
+                onFormChange({
+                  ...form,
+                  modelSelection: value,
+                  runtimeMode: normalizeRuntimeModeForProvider(form.runtimeMode, value.provider),
+                });
+              }}
+              onAutoModeSupportChange={handleAutoModeSupportChange}
+            />
 
             <Menu>
               <MenuTrigger render={<Button variant="ghost" size="sm" className={CHIP_CLASS} />}>
-                <Glyph name="clock" className="size-4" />
+                <CentralIcon name="clock" className="size-4" />
                 <span>{formatCadence(schedule)}</span>
-                <Glyph name="chevron-down-small" className="size-3.5 opacity-60" />
+                <CentralIcon name="chevron-down-small" className="size-3.5 opacity-60" />
               </MenuTrigger>
               <ComposerPickerMenuPopup align="start" className="w-56">
                 <MenuGroup>
@@ -1307,6 +1435,52 @@ export function AutomationDialog({
                     <MenuRadioItem value="failed-runs-only">Failed runs only</MenuRadioItem>
                   </MenuRadioGroup>
                 </MenuGroup>
+              </ComposerPickerMenuPopup>
+            </Menu>
+
+            <Menu>
+              <MenuTrigger
+                render={
+                  <Button
+                    variant="ghost"
+                    size="icon-sm"
+                    aria-label="Permissions"
+                    title="Permissions"
+                    className="rounded-lg text-[var(--color-text-foreground-secondary)]"
+                  />
+                }
+              >
+                <CentralIcon
+                  name={
+                    form.runtimeMode === "auto"
+                      ? "shield-code"
+                      : form.runtimeMode === "full-access"
+                        ? "shield-access"
+                        : "brain"
+                  }
+                  className={cn(
+                    "size-4",
+                    form.runtimeMode === "auto" && RUNTIME_AUTO_ICON_ACCENT_CLASS_NAME,
+                  )}
+                />
+              </MenuTrigger>
+              <ComposerPickerMenuPopup align="start" className="w-48">
+                <MenuRadioGroup
+                  value={form.runtimeMode}
+                  onValueChange={(value) => setField("runtimeMode", value as RuntimeMode)}
+                >
+                  <MenuRadioItem value="approval-required">Approval required</MenuRadioItem>
+                  {selectedModelSupportsAuto ? (
+                    <MenuRadioItem value="auto">
+                      <CentralIcon
+                        name="shield-code"
+                        className={cn("size-4", RUNTIME_AUTO_ICON_ACCENT_CLASS_NAME)}
+                      />
+                      Auto
+                    </MenuRadioItem>
+                  ) : null}
+                  <MenuRadioItem value="full-access">Full access</MenuRadioItem>
+                </MenuRadioGroup>
               </ComposerPickerMenuPopup>
             </Menu>
           </div>

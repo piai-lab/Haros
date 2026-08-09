@@ -2,7 +2,7 @@
 
 import { Dialog as DialogPrimitive } from "@base-ui/react/dialog";
 import { XIcon } from "~/lib/icons";
-import { cn } from "~/lib/styles";
+import { cn } from "~/lib/utils";
 import { Button, dialogActionButtonClassName } from "~/components/ui/button";
 import { ScrollArea } from "~/components/ui/scroll-area";
 
@@ -65,7 +65,7 @@ const dialogFooterButtonClassName = dialogActionButtonClassName
   .map((className) => `${dialogFooterButtonSlotSelector}:${className.replace(/!/g, "\\!")}`)
   .join(" ");
 
-/** Shared label style for form fields inside dialogs. */
+/** Shared label style for form fields inside dialogs (SpaceEditorDialog, CreateProjectDialog). */
 const dialogFieldLabelClassName =
   "text-[length:var(--app-font-size-ui-sm,11px)] font-medium text-foreground/80";
 

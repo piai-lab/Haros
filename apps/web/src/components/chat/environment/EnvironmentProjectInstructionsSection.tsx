@@ -4,7 +4,7 @@
 // Exports: EnvironmentProjectInstructionsSection
 
 import { useEffect, useRef, useState, type ChangeEventHandler } from "react";
-import { CONVERSATION_NOTES_MAX_CHARS, type ProjectId } from "@omnimind/contracts";
+import { THREAD_NOTES_MAX_CHARS, type ProjectId } from "@synara/contracts";
 
 import { Textarea } from "~/components/ui/textarea";
 import { Button } from "~/components/ui/button";
@@ -162,7 +162,7 @@ export function EnvironmentProjectInstructionsSection({
           onFocus={autosave.onFocus}
           onBlur={autosave.onBlur}
           placeholder="Architecture notes, conventions, repo links"
-          maxLength={CONVERSATION_NOTES_MAX_CHARS}
+          maxLength={THREAD_NOTES_MAX_CHARS}
           disabled={!projectId}
         />
         {hasInstructions && canCopyToThreadNotes ? (

@@ -1,9 +1,12 @@
-import type {
-  ConversationHistoryActivity,
-  ConversationHistoryPlanId,
-  ConversationHistoryRun,
-} from "~/historicalConversation";
-import { type ThreadId, type TurnId } from "@omnimind/contracts";
+import {
+  type OrchestrationLatestTurn,
+  type OrchestrationProposedPlanId,
+  type OrchestrationThreadActivity,
+  type ProviderKind,
+  type ThreadId,
+  type TurnId,
+} from "@synara/contracts";
+import { PROVIDER_DESCRIPTORS } from "@synara/shared/providerMetadata";
 
 import { orderedActivities } from "./workLog";
 
@@ -41,6 +44,18 @@ export {
   type WorkLogOmniMindThreadCreation,
 } from "./workLog";
 
+export type ProviderPickerKind = ProviderKind;
+
+export const PROVIDER_OPTIONS: Array<{
+  value: ProviderPickerKind;
+  label: string;
+  available: boolean;
+}> = PROVIDER_DESCRIPTORS.map((descriptor) => ({
+  value: descriptor.kind,
+  label: descriptor.displayName,
+  available: descriptor.available,
+}));
+
 export interface ActiveTaskListState {
   createdAt: string;
   turnId: TurnId | null;
@@ -57,7 +72,7 @@ export interface ActiveBackgroundTasksState {
 }
 
 export interface LatestProposedPlanState {
-  id: ConversationHistoryPlanId;
+  id: OrchestrationProposedPlanId;
   createdAt: string;
   updatedAt: string;
   turnId: TurnId | null;
@@ -110,7 +125,7 @@ export function formatElapsed(startIso: string, endIso: string | undefined): str
 }
 
 type LatestTurnTiming = Pick<
-  ConversationHistoryRun,
+  OrchestrationLatestTurn,
   "turnId" | "state" | "startedAt" | "completedAt"
 >;
 type SessionActivityState = Pick<ThreadSession, "orchestrationStatus" | "activeTurnId">;
@@ -205,7 +220,7 @@ export function deriveActiveWorkStartedAt(
   return sendStartedAt;
 }
 
-function toActiveTaskListState(activity: ConversationHistoryActivity): ActiveTaskListState | null {
+function toActiveTaskListState(activity: OrchestrationThreadActivity): ActiveTaskListState | null {
   const payload =
     activity.payload && typeof activity.payload === "object"
       ? (activity.payload as Record<string, unknown>)
@@ -250,7 +265,7 @@ function toActiveTaskListState(activity: ConversationHistoryActivity): ActiveTas
 }
 
 export function deriveActiveTaskListState(
-  activities: ReadonlyArray<ConversationHistoryActivity>,
+  activities: ReadonlyArray<OrchestrationThreadActivity>,
   latestTurnId: TurnId | undefined,
 ): ActiveTaskListState | null {
   const ordered = orderedActivities(activities);
@@ -289,7 +304,7 @@ export function deriveActiveTaskListState(
 
 // Counts still-running background work for the active turn so compact UI can surface agent activity.
 export function deriveActiveBackgroundTasksState(
-  activities: ReadonlyArray<ConversationHistoryActivity>,
+  activities: ReadonlyArray<OrchestrationThreadActivity>,
   latestTurnId: TurnId | undefined,
 ): ActiveBackgroundTasksState | null {
   const ordered = orderedActivities(activities);
@@ -362,9 +377,9 @@ export function deriveActiveBackgroundTasksState(
 // Keeps the UI "working" while the provider still has visible assistant text or
 // background-task updates to finish for the latest turn.
 export function hasLiveTurnTailWork(input: {
-  latestTurn: Pick<ConversationHistoryRun, "turnId" | "completedAt"> | null;
+  latestTurn: Pick<OrchestrationLatestTurn, "turnId" | "completedAt"> | null;
   messages: ReadonlyArray<Pick<ChatMessage, "role" | "streaming" | "turnId">>;
-  activities: ReadonlyArray<ConversationHistoryActivity>;
+  activities: ReadonlyArray<OrchestrationThreadActivity>;
   session?: Pick<ThreadSession, "orchestrationStatus"> | null;
 }): boolean {
   const latestTurnId = input.latestTurn?.turnId;
@@ -428,7 +443,7 @@ export function findLatestProposedPlan(
 
 export function findSidebarProposedPlan(input: {
   threads: ReadonlyArray<Pick<Thread, "id" | "proposedPlans">>;
-  latestTurn: Pick<ConversationHistoryRun, "turnId" | "sourceProposedPlan"> | null;
+  latestTurn: Pick<OrchestrationLatestTurn, "turnId" | "sourceProposedPlan"> | null;
   latestTurnSettled: boolean;
   threadId: ThreadId | string | null | undefined;
 }): LatestProposedPlanState | null {
@@ -462,7 +477,7 @@ export function hasActionableProposedPlan(
 export function buildSourceProposedPlanReference(input: {
   threadId: ThreadId;
   proposedPlan: Pick<ProposedPlan, "id"> | null | undefined;
-}): ConversationHistoryRun["sourceProposedPlan"] | undefined {
+}): OrchestrationLatestTurn["sourceProposedPlan"] | undefined {
   if (!input.proposedPlan) {
     return undefined;
   }

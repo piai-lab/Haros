@@ -1,0 +1,255 @@
+name: PR Size
+
+on:
+  pull_request_target:
+    types: [opened, reopened, synchronize, ready_for_review, converted_to_draft]
+
+permissions:
+  contents: read
+
+jobs:
+  prepare-config:
+    name: Prepare PR size config
+    runs-on: ubuntu-24.04
+    outputs:
+      labels_json: ${{ steps.config.outputs.labels_json }}
+    steps:
+      - id: config
+        name: Build PR size label config
+        uses: actions/github-script@v8
+        with:
+          result-encoding: string
+          script: |
+            const managedLabels = [
+              {
+                name: "size:XS",
+                color: "0e8a16",
+                description: "0-9 effective changed lines (test files excluded in mixed PRs).",
+              },
+              {
+                name: "size:S",
+                color: "5ebd3e",
+                description: "10-29 effective changed lines (test files excluded in mixed PRs).",
+              },
+              {
+                name: "size:M",
+                color: "fbca04",
+                description: "30-99 effective changed lines (test files excluded in mixed PRs).",
+              },
+              {
+                name: "size:L",
+                color: "fe7d37",
+                description: "100-499 effective changed lines (test files excluded in mixed PRs).",
+              },
+              {
+                name: "size:XL",
+                color: "d93f0b",
+                description: "500-999 effective changed lines (test files excluded in mixed PRs).",
+              },
+              {
+                name: "size:XXL",
+                color: "b60205",
+                description: "1,000+ effective changed lines (test files excluded in mixed PRs).",
+              },
+            ];
+
+            core.setOutput("labels_json", JSON.stringify(managedLabels));
+  sync-label-definitions:
+    name: Sync PR size label definitions
+    needs: prepare-config
+    if: github.event_name != 'pull_request_target'
+    runs-on: ubuntu-24.04
+    permissions:
+      contents: read
+      issues: write
+    steps:
+      - name: Ensure PR size labels exist
+        uses: actions/github-script@v8
+        env:
+          PR_SIZE_LABELS_JSON: ${{ needs.prepare-config.outputs.labels_json }}
+        with:
+          script: |
+            const managedLabels = JSON.parse(process.env.PR_SIZE_LABELS_JSON ?? "[]");
+
+            for (const label of managedLabels) {
+              try {
+                const { data: existing } = await github.rest.issues.getLabel({
+                  owner: context.repo.owner,
+                  repo: context.repo.repo,
+                  name: label.name,
+                });
+
+                if (
+                  existing.color !== label.color ||
+                  (existing.description ?? "") !== label.description
+                ) {
+                  await github.rest.issues.updateLabel({
+                    owner: context.repo.owner,
+                    repo: context.repo.repo,
+                    name: label.name,
+                    color: label.color,
+                    description: label.description,
+                  });
+                }
+              } catch (error) {
+                if (error.status !== 404) {
+                  throw error;
+                }
+
+                try {
+                  await github.rest.issues.createLabel({
+                    owner: context.repo.owner,
+                    repo: context.repo.repo,
+                    name: label.name,
+                    color: label.color,
+                    description: label.description,
+                  });
+                } catch (createError) {
+                  if (createError.status !== 422) {
+                    throw createError;
+                  }
+                }
+              }
+            }
+  label:
+    name: Label PR size
+    needs: prepare-config
+    if: github.event_name == 'pull_request_target'
+    runs-on: ubuntu-24.04
+    permissions:
+      contents: read
+      issues: read
+      pull-requests: write
+    concurrency:
+      group: pr-size-${{ github.event.pull_request.number }}
+      cancel-in-progress: true
+    steps:
+      - name: Sync PR size label
+        uses: actions/github-script@v8
+        env:
+          PR_SIZE_LABELS_JSON: ${{ needs.prepare-config.outputs.labels_json }}
+        with:
+          script: |
+            const issueNumber = context.payload.pull_request.number;
+            const managedLabels = JSON.parse(process.env.PR_SIZE_LABELS_JSON ?? "[]");
+            const managedLabelNames = new Set(managedLabels.map((label) => label.name));
+            // Keep this aligned with the repo's test entrypoints and test-only support files.
+            const testFilePatterns = [
+              /(^|\/)__tests__(\/|$)/,
+              /(^|\/)tests?(\/|$)/,
+              /^apps\/server\/integration\//,
+              /\.(test|spec|browser|integration)\.[^.\/]+$/,
+            ];
+
+            const isTestFile = (filename) =>
+              testFilePatterns.some((pattern) => pattern.test(filename));
+
+            const resolveSizeLabel = (totalChangedLines) => {
+              if (totalChangedLines < 10) {
+                return "size:XS";
+              }
+
+              if (totalChangedLines < 30) {
+                return "size:S";
+              }
+
+              if (totalChangedLines < 100) {
+                return "size:M";
+              }
+
+              if (totalChangedLines < 500) {
+                return "size:L";
+              }
+
+              if (totalChangedLines < 1000) {
+                return "size:XL";
+              }
+
+              return "size:XXL";
+            };
+
+            const files = await github.paginate(
+              github.rest.pulls.listFiles,
+              {
+                owner: context.repo.owner,
+                repo: context.repo.repo,
+                pull_number: issueNumber,
+                per_page: 100,
+              },
+              (response) => response.data,
+            );
+
+            if (files.length >= 3000) {
+              core.warning(
+                "The GitHub pull request files API may truncate results at 3,000 files; PR size may be undercounted.",
+              );
+            }
+
+            let testChangedLines = 0;
+            let nonTestChangedLines = 0;
+
+            for (const file of files) {
+              const changedLinesForFile = (file.additions ?? 0) + (file.deletions ?? 0);
+
+              if (changedLinesForFile === 0) {
+                continue;
+              }
+
+              if (isTestFile(file.filename)) {
+                testChangedLines += changedLinesForFile;
+                continue;
+              }
+
+              nonTestChangedLines += changedLinesForFile;
+            }
+
+            const changedLines = nonTestChangedLines === 0 ? testChangedLines : nonTestChangedLines;
+            const nextLabelName = resolveSizeLabel(changedLines);
+
+            const { data: currentLabels } = await github.rest.issues.listLabelsOnIssue({
+              owner: context.repo.owner,
+              repo: context.repo.repo,
+              issue_number: issueNumber,
+              per_page: 100,
+            });
+
+            for (const label of currentLabels) {
+              if (!managedLabelNames.has(label.name) || label.name === nextLabelName) {
+                continue;
+              }
+
+              try {
+                await github.rest.issues.removeLabel({
+                  owner: context.repo.owner,
+                  repo: context.repo.repo,
+                  issue_number: issueNumber,
+                  name: label.name,
+                });
+              } catch (removeError) {
+                if (removeError.status !== 404) {
+                  throw removeError;
+                }
+              }
+            }
+
+            if (!currentLabels.some((label) => label.name === nextLabelName)) {
+              await github.rest.issues.addLabels({
+                owner: context.repo.owner,
+                repo: context.repo.repo,
+                issue_number: issueNumber,
+                labels: [nextLabelName],
+              });
+            }
+
+            const classification =
+              nonTestChangedLines === 0
+                ? testChangedLines > 0
+                  ? "test-only PR"
+                  : "no line changes"
+                : testChangedLines > 0
+                  ? "test lines excluded"
+                  : "all non-test changes";
+
+            core.info(
+              `PR #${issueNumber}: ${nonTestChangedLines} non-test lines, ${testChangedLines} test lines, ${changedLines} effective lines -> ${nextLabelName} (${classification})`,
+            );

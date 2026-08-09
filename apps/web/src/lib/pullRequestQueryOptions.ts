@@ -1,31 +1,31 @@
 import type {
-  ProductWorkspaceId,
+  ProjectId,
   PullRequestDetailInput,
   PullRequestInvolvement,
   PullRequestState,
-} from "@omnimind/contracts";
+} from "@synara/contracts";
 import { queryOptions, type QueryClient } from "@tanstack/react-query";
 
 import { ensureNativeApi } from "~/nativeApi";
 
 export const pullRequestQueryKeys = {
   all: ["pull-requests"] as const,
-  list: (input: { state: PullRequestState; workspaceId: ProductWorkspaceId | null }) =>
-    ["pull-requests", "list", input.state, input.workspaceId] as const,
+  list: (input: { state: PullRequestState; projectId: ProjectId | null }) =>
+    ["pull-requests", "list", input.state, input.projectId] as const,
   exactList: (input: {
     involvement: PullRequestInvolvement;
     state: PullRequestState;
-    workspaceId: ProductWorkspaceId | null;
+    projectId: ProjectId | null;
   }) =>
-    ["pull-requests", "list-involvement", input.involvement, input.state, input.workspaceId] as const,
+    ["pull-requests", "list-involvement", input.involvement, input.state, input.projectId] as const,
   reviewRequestCounts: ["pull-requests", "review-request-count"] as const,
-  reviewRequestCount: (workspaceId: ProductWorkspaceId | null) =>
-    [...pullRequestQueryKeys.reviewRequestCounts, workspaceId] as const,
+  reviewRequestCount: (projectId: ProjectId | null) =>
+    [...pullRequestQueryKeys.reviewRequestCounts, projectId] as const,
   detail: (input: PullRequestDetailInput | null) =>
     [
       "pull-requests",
       "detail",
-      input?.workspaceId ?? null,
+      input?.projectId ?? null,
       input?.repository ?? null,
       input?.number ?? null,
     ] as const,
@@ -33,7 +33,7 @@ export const pullRequestQueryKeys = {
     [
       "pull-requests",
       "diff",
-      input?.workspaceId ?? null,
+      input?.projectId ?? null,
       input?.repository ?? null,
       input?.number ?? null,
     ] as const,
@@ -54,11 +54,11 @@ export function pullRequestQueryErrorState<TData, TError>(
 
 export function normalizePullRequestListKeyInput(input: {
   state: PullRequestState;
-  workspaceId?: ProductWorkspaceId | null | undefined;
+  projectId?: ProjectId | null | undefined;
 }) {
   return {
     state: input.state,
-    workspaceId: input.workspaceId ?? null,
+    projectId: input.projectId ?? null,
   };
 }
 
@@ -76,7 +76,7 @@ export function shouldLoadExactPullRequestInvolvement(input: {
 
 export function pullRequestsListQueryOptions(input: {
   state: PullRequestState;
-  workspaceId: ProductWorkspaceId | null;
+  projectId: ProjectId | null;
 }) {
   return queryOptions({
     queryKey: pullRequestQueryKeys.list(input),
@@ -84,7 +84,7 @@ export function pullRequestsListQueryOptions(input: {
       ensureNativeApi().pullRequests.list({
         involvement: "all",
         state: input.state,
-        workspaceId: input.workspaceId,
+        projectId: input.projectId,
       }),
     staleTime: 60_000,
     gcTime: 30 * 60_000,
@@ -98,7 +98,7 @@ export function pullRequestsListQueryOptions(input: {
 export function pullRequestsExactInvolvementQueryOptions(input: {
   involvement: PullRequestInvolvement;
   state: PullRequestState;
-  workspaceId: ProductWorkspaceId | null;
+  projectId: ProjectId | null;
 }) {
   return queryOptions({
     queryKey: pullRequestQueryKeys.exactList(input),
@@ -111,9 +111,9 @@ export function pullRequestsExactInvolvementQueryOptions(input: {
   });
 }
 
-export function pullRequestReviewRequestCountQueryOptions(input: { workspaceId: ProductWorkspaceId | null }) {
+export function pullRequestReviewRequestCountQueryOptions(input: { projectId: ProjectId | null }) {
   return queryOptions({
-    queryKey: pullRequestQueryKeys.reviewRequestCount(input.workspaceId),
+    queryKey: pullRequestQueryKeys.reviewRequestCount(input.projectId),
     queryFn: () => ensureNativeApi().pullRequests.reviewRequestCount(input),
     staleTime: 5 * 60_000,
     refetchInterval: 5 * 60_000,
@@ -125,7 +125,7 @@ export function pullRequestReviewRequestCountQueryOptions(input: { workspaceId: 
 /** Warm one destination state only after the user points at or focuses its tab. */
 export function prefetchPullRequestListState(
   queryClient: QueryClient,
-  input: { state: PullRequestState; workspaceId: ProductWorkspaceId | null },
+  input: { state: PullRequestState; projectId: ProjectId | null },
 ) {
   return queryClient.prefetchQuery(pullRequestsListQueryOptions(input));
 }

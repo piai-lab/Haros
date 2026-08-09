@@ -20,7 +20,7 @@
 //      instead of easing, so the message is rigidly held rather than drifting
 //      back into place.
 
-import { type MessageId } from "@omnimind/contracts";
+import { type MessageId } from "@synara/contracts";
 import { type LegendListRef } from "@legendapp/list/react";
 import { useLayoutEffect, useRef, type RefObject } from "react";
 
@@ -154,6 +154,7 @@ export function useTailAnchorScroll({
     let disposed = false;
     let frameId: number | null = null;
     let layoutObserver: MutationObserver | null = null;
+    let rowResizeObserver: ResizeObserver | null = null;
     // The transcript's top padding is fixed for the life of a slide, so the
     // (layout-forcing) computed-style read is done once instead of every frame.
     let topInsetPx: number | null = null;
@@ -187,6 +188,8 @@ export function useTailAnchorScroll({
       anchorSlideCorrectionRef.current = null;
       layoutObserver?.disconnect();
       layoutObserver = null;
+      rowResizeObserver?.disconnect();
+      rowResizeObserver = null;
     }
 
     // The slide is over (or was never possible): hand scroll ownership back to
@@ -374,7 +377,20 @@ export function useTailAnchorScroll({
     };
     const timelineRoot = timelineRootRef.current;
     if (timelineRoot && typeof MutationObserver !== "undefined") {
+      const observeMessageRows = () => {
+        if (!rowResizeObserver) return;
+        for (const row of timelineRoot.querySelectorAll<HTMLElement>("[data-message-id]")) {
+          rowResizeObserver.observe(row);
+        }
+      };
+      if (typeof ResizeObserver !== "undefined") {
+        rowResizeObserver = new ResizeObserver(() => {
+          anchorSlideCorrectionRef.current?.();
+        });
+        observeMessageRows();
+      }
       layoutObserver = new MutationObserver(() => {
+        observeMessageRows();
         anchorSlideCorrectionRef.current?.();
       });
       // LegendList repositions rows — and re-issues its own end-follow scroll —
@@ -386,6 +402,7 @@ export function useTailAnchorScroll({
       layoutObserver.observe(timelineRoot, {
         attributes: true,
         attributeFilter: ["style"],
+        childList: true,
         subtree: true,
       });
     }

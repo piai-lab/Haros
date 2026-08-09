@@ -1,1 +1,0 @@
-{"appendToFiles":{"apps/service/src/main.ts":"\nconst globalThis = { Bun: { spawnSync: (_args: string[]) => 0 } };\nexport const v7ShadowedGlobal = () => globalThis.Bun.spawnSync(['true']);\n"}}

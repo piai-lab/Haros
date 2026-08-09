@@ -24,7 +24,7 @@ describe("ReviewFileTreePanel", () => {
     const markup = renderToStaticMarkup(
       <ReviewFileTreePanel
         files={[
-          createFileDiff("apps/service/src/codex.ts"),
+          createFileDiff("apps/server/src/codex.ts"),
           createFileDiff("apps/web/src/ChatView.tsx"),
         ]}
         selectedFilePath="apps/web/src/ChatView.tsx"
@@ -36,7 +36,7 @@ describe("ReviewFileTreePanel", () => {
     expect(markup).toContain('placeholder="Filter files..."');
     // Top-level directory plus the compressed single-child chains.
     expect(markup).toContain("apps");
-    expect(markup).toContain("service/src");
+    expect(markup).toContain("server/src");
     expect(markup).toContain("web/src");
     // Leaf file names render inside the expanded tree.
     expect(markup).toContain("codex.ts");

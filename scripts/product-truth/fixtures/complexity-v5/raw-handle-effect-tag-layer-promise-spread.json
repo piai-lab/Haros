@@ -1,8 +1,0 @@
-{
-  "extendsFixture": "product-refusal-lock-positive",
-  "textReplacements": {
-    "apps/service/src/product/ProductControlPlane.ts": [
-      ["    const database = new DatabaseSync(databasePath);", "    const tag = { open: (options: { filename: string }) => Promise.resolve({ ...options }) };\n    const layer = (options: { filename: string }) => tag.open({ ...options });\n    const options = await layer({ filename: join(stateDir, \"stores\", \"product.sqlite\") });\n    const database = new DatabaseSync(options.filename);"]
-    ]
-  }
-}

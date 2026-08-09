@@ -1,5 +1,5 @@
 {
-  "name": "@omnimind/web",
+  "name": "@synara/web",
   "version": "0.1.0-alpha.0",
   "private": true,
   "type": "module",
@@ -28,8 +28,9 @@
     "@legendapp/list": "3.3.3",
     "@lexical/react": "^0.41.0",
     "@pierre/diffs": "^1.2.12",
-    "@omnimind/contracts": "workspace:*",
-    "@omnimind/shared": "workspace:*",
+    "@synara/contracts": "workspace:*",
+    "@synara/shared": "workspace:*",
+    "@tabler/icons-react": "^3.44.0",
     "@tanstack/react-pacer": "^0.19.4",
     "@tanstack/react-query": "^5.90.0",
     "@tanstack/react-router": "^1.160.2",

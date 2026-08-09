@@ -1,6 +1,0 @@
-{
-  "compareToBootstrapBaseline": true,
-  "appendToFiles": {
-    "apps/service/src/atomicWrite.ts": "\n// candidate outside-work drift\n"
-  }
-}

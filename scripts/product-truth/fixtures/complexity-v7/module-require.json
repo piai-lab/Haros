@@ -1,1 +1,0 @@
-{"appendToFiles":{"apps/service/src/main.ts":"\nconst v7Fs = module.require('node:fs');\nexport const v7ModuleRequire = () => v7Fs.readFileSync('x');\n"}}

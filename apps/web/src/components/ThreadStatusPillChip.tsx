@@ -4,7 +4,7 @@
 // Layer: UI component (pure)
 // Exports: ThreadStatusPillChip
 
-import { cn } from "~/lib/styles";
+import { cn } from "~/lib/utils";
 import type { ThreadStatusPill } from "./Sidebar.logic";
 
 export function ThreadStatusPillChip({

@@ -1,1 +1,0 @@
-{"appendToFiles":{"apps/service/src/atomicWrite.ts":"\nlet v7BenignAssignedLocal: { value: number };\nv7BenignAssignedLocal = { value: 1 };\nexport const v7BenignAssignment = () => v7BenignAssignedLocal.value;\n"}}

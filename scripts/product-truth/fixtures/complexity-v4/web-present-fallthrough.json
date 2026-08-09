@@ -1,8 +1,0 @@
-{
-  "extendsFixture": "web-refusal-positive",
-  "textReplacements": {
-    "apps/web/src/composerDraftStore.ts": [
-      ["  if (retiredV1 !== null || retiredV2 !== null) {\n    throw new Error(\"PREBASELINE_RESET_REQUIRED\");\n  }", "  if (retiredV1 !== null || retiredV2 !== null) {\n    if (Math.random() > 0.5) throw new Error(\"PREBASELINE_RESET_REQUIRED\");\n  }"]
-    ]
-  }
-}

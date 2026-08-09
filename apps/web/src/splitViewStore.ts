@@ -3,12 +3,12 @@
 // Layer: UI state store
 // Exports: pane/split types, tree-aware selectors, and id-based mutation helpers used by sidebar and route surfaces
 
-import { type ProjectId, type ThreadId, type TurnId } from "@omnimind/contracts";
+import { type ProjectId, type ThreadId, type TurnId } from "@synara/contracts";
 import { create } from "zustand";
 import { createJSONStorage, persist } from "zustand/middleware";
 
 import { type ChatRightPanel } from "./diffRouteSearch";
-import { randomUUID } from "./lib/identifiers";
+import { randomUUID } from "./lib/utils";
 import {
   canSubdividePane,
   collectLeaves,

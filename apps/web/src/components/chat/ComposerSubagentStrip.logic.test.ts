@@ -1,11 +1,10 @@
-import type { ConversationHistoryActivity } from "~/historicalConversation";
 // FILE: ComposerSubagentStrip.logic.test.ts
 // Purpose: Locks composer subagent strip row derivation to live-turn scoping,
 // snapshot merging, and retire-once-finished behavior.
 // Layer: Web chat composer tests
 // Depends on: deriveComposerSubagentStripItems
 
-import { EventId, ThreadId, TurnId } from "@omnimind/contracts";
+import { EventId, ThreadId, TurnId, type OrchestrationThreadActivity } from "@synara/contracts";
 import { describe, expect, it } from "vitest";
 
 import {
@@ -528,7 +527,7 @@ describe("deriveComposerSubagentStripItems", () => {
 
   it("derives a strip row end-to-end from a routed collab activity omitted by the timeline", () => {
     const parentThreadId = ThreadId.makeUnsafe("thread-1");
-    const activities: ConversationHistoryActivity[] = [
+    const activities: OrchestrationThreadActivity[] = [
       {
         id: EventId.makeUnsafe("routed-agent-update"),
         createdAt: "2026-07-14T00:00:01.000Z",

@@ -4,15 +4,7 @@
 // Depends on: update-release-package-versions.ts and merge-mac-update-manifests.ts.
 
 import { execFileSync } from "node:child_process";
-import {
-  cpSync,
-  existsSync,
-  mkdirSync,
-  mkdtempSync,
-  readFileSync,
-  rmSync,
-  writeFileSync,
-} from "node:fs";
+import { cpSync, mkdirSync, mkdtempSync, readFileSync, rmSync, writeFileSync } from "node:fs";
 import { tmpdir } from "node:os";
 import { dirname, join, resolve } from "node:path";
 import { fileURLToPath } from "node:url";
@@ -20,13 +12,12 @@ import { fileURLToPath } from "node:url";
 import {
   OMNIMIND_DESKTOP_UPDATE_CHANNEL,
   OMNIMIND_PRODUCTION_BUNDLE_ID,
-} from "@omnimind/shared/desktopIdentity";
+} from "@synara/shared/desktopIdentity";
 
 import {
   readReleaseUpdatePolicyConfig,
   resolveReleaseUpdatePolicy,
 } from "./lib/release-update-policy.ts";
-import { readBunV1WorkspaceImporters } from "./lib/bun-text-lockfile.ts";
 import {
   RELEASE_LOCKFILE_PATH,
   RELEASE_PATCHES_PATH,
@@ -46,24 +37,6 @@ function copyWorkspaceManifestFixture(targetRoot: string): void {
   cpSync(resolve(repoRoot, RELEASE_PATCHES_PATH), resolve(targetRoot, RELEASE_PATCHES_PATH), {
     recursive: true,
   });
-}
-
-function verifyReleaseWorkspaceInputs(): void {
-  const relativePaths = [
-    ...RELEASE_WORKSPACE_MANIFEST_PATHS,
-    RELEASE_LOCKFILE_PATH,
-    RELEASE_PATCHES_PATH,
-  ];
-  for (const relativePath of relativePaths) {
-    if (!existsSync(resolve(repoRoot, relativePath))) {
-      throw new Error(`Release staging input is missing: ${relativePath}`);
-    }
-  }
-  assertNotContains(
-    JSON.stringify(RELEASE_WORKSPACE_MANIFEST_PATHS),
-    "apps/marketing",
-    "Excluded marketing workspace must not re-enter release staging.",
-  );
 }
 
 function writeMacManifestFixtures(targetRoot: string): { arm64Path: string; x64Path: string } {
@@ -115,18 +88,19 @@ function assertNotContains(haystack: string, needle: string, message: string): v
 }
 
 function verifyCanonicalIdentity(): void {
-  const servicePackage = JSON.parse(
-    readFileSync(resolve(repoRoot, "apps/service/package.json"), "utf8"),
+  const serverPackage = JSON.parse(
+    readFileSync(resolve(repoRoot, "apps/server/package.json"), "utf8"),
   ) as { name?: string; bin?: Record<string, string> };
-  if (servicePackage.name !== "@omnimind/service") {
-    throw new Error(
-      `Expected Service package @omnimind/service, got ${servicePackage.name ?? "<missing>"}.`,
-    );
+  if (serverPackage.name !== "@synara/cli") {
+    throw new Error(`Expected CLI package @synara/cli, got ${serverPackage.name ?? "<missing>"}.`);
   }
-  const expectedBinaries = { omnimind: "dist/index.mjs" };
-  if (JSON.stringify(servicePackage.bin ?? {}) !== JSON.stringify(expectedBinaries)) {
+  const expectedBinaries = {
+    omnimind: "dist/index.mjs",
+    "omnimind-restore-migration-backup": "dist/restoreMigrationBackup.mjs",
+  };
+  if (JSON.stringify(serverPackage.bin ?? {}) !== JSON.stringify(expectedBinaries)) {
     throw new Error(
-      "Expected the Service package to expose only its local entry point.",
+      "Expected the CLI to expose only the OmniMind entry point and migration recovery binary.",
     );
   }
   if (OMNIMIND_PRODUCTION_BUNDLE_ID !== "app.omnimind.desktop") {
@@ -138,32 +112,153 @@ function verifyCanonicalIdentity(): void {
 
   const releasePolicy = readReleaseUpdatePolicyConfig(repoRoot);
   const resolvedPolicy = resolveReleaseUpdatePolicy("9.9.9", releasePolicy);
-  if (!resolvedPolicy.makeLatest || resolvedPolicy.mirrorToStableChannel) {
-    throw new Error("Expected stable OmniMind releases to publish on GitHub Latest.");
+  if (
+    resolvedPolicy.lane !== "clean" ||
+    !resolvedPolicy.makeLatest ||
+    resolvedPolicy.mirrorToStableChannel
+  ) {
+    throw new Error("Expected stable clean OmniMind releases to publish on GitHub Latest.");
   }
 }
 
-function verifyReleaseImplementationSafety(): void {
-  const serviceTool = readFileSync(resolve(repoRoot, "apps/service/scripts/cli.ts"), "utf8");
+function verifyReleaseWorkflowSafety(): void {
+  const workflow = readFileSync(resolve(repoRoot, ".github/workflows/release.yml"), "utf8");
   assertContains(
-    serviceTool,
-    "makeTempDirectoryScoped",
-    "Expected Service publication to build an exclusively owned temporary package tree.",
+    workflow,
+    "publish_release:\n        description:",
+    "Expected a manual publication opt-in input.",
   );
   assertContains(
-    serviceTool,
+    workflow,
+    "default: false\n        type: boolean",
+    "Expected manual release runs to default to build-only mode.",
+  );
+  assertContains(
+    workflow,
+    "publish_release: ${{ steps.release_mode.outputs.publish_release }}",
+    "Expected preflight to expose the resolved publication mode.",
+  );
+  assertContains(
+    workflow,
+    "if: ${{ needs.preflight.outputs.publish_release == 'true' }}",
+    "Expected GitHub publication to require explicit publication mode.",
+  );
+  assertContains(
+    workflow,
+    "needs.preflight.outputs.publish_release == 'true' && vars.OMNIMIND_PUBLISH_CLI == '1'",
+    "Expected CLI publication to require explicit publication mode.",
+  );
+  assertContains(
+    workflow,
+    "needs.preflight.outputs.publish_release == 'true' && vars.OMNIMIND_FINALIZE_RELEASE == '1'",
+    "Expected release finalization to require explicit publication mode.",
+  );
+  assertContains(
+    workflow,
+    "OMNIMIND_PUBLISH_RELEASE: ${{ needs.preflight.outputs.publish_release }}",
+    "Expected artifact signing admission to know whether artifacts will be published.",
+  );
+  assertContains(
+    workflow,
+    "Publishing macOS artifacts requires every signing and notarization secret.",
+    "Expected macOS publication to fail closed when signing is unavailable.",
+  );
+  assertContains(
+    workflow,
+    "Publishing Windows artifacts requires every Azure Trusted Signing secret.",
+    "Expected Windows publication to fail closed when signing is unavailable.",
+  );
+  assertNotContains(
+    workflow,
+    "Windows signing is optional",
+    "Windows publication must not retain the unsigned-installer fallback.",
+  );
+  assertContains(
+    workflow,
+    "node scripts/verify-release-source-provenance.ts",
+    "Expected preflight to bind release source provenance before artifact jobs.",
+  );
+  assertContains(
+    workflow,
+    "source_commit: ${{ steps.source_provenance.outputs.source_commit }}",
+    "Expected the verified source commit to be a preflight output.",
+  );
+  assertContains(
+    workflow,
+    "lockfile_sha256: ${{ steps.source_provenance.outputs.lockfile_sha256 }}",
+    "Expected the verified lockfile digest to be a preflight output.",
+  );
+  assertContains(
+    workflow,
+    '--source-commit "$SOURCE_COMMIT"',
+    "Expected desktop packaging to revalidate the verified source commit.",
+  );
+  assertContains(
+    workflow,
+    '--lockfile-sha256 "$LOCKFILE_SHA256"',
+    "Expected desktop packaging to revalidate the verified lockfile digest.",
+  );
+  assertNotContains(
+    workflow,
+    "Align package versions to release version",
+    "Release jobs must not mutate package versions after source provenance is established.",
+  );
+  assertContains(
+    workflow,
+    "node scripts/write-release-artifact-provenance.ts",
+    "Expected every platform lane to prove collected artifacts before upload.",
+  );
+  assertContains(
+    workflow,
+    'mv release-publish/latest-mac.yml "release-publish/latest-mac-${{ matrix.arch }}.yml"',
+    "Expected the x64 macOS matrix lane to preserve a distinct updater manifest for merging.",
+  );
+  assertContains(
+    workflow,
+    "APPLE_TEAM_ID: ${{ secrets.APPLE_TEAM_ID }}",
+    "Expected macOS signing admission to pin the post-build Team ID.",
+  );
+  assertContains(
+    workflow,
+    "AZURE_TRUSTED_SIGNING_SUBJECT_DN: ${{ secrets.AZURE_TRUSTED_SIGNING_SUBJECT_DN }}",
+    "Expected Windows signing admission to require the exact certificate subject DN.",
+  );
+  assertContains(
+    workflow,
+    '--expected-windows-subject-dn "$EXPECTED_WINDOWS_SUBJECT_DN"',
+    "Expected Windows artifact provenance to verify the exact certificate subject DN.",
+  );
+  assertContains(
+    workflow,
+    "AZURE_TRUSTED_SIGNING_PUBLISHER_NAME: ${{ secrets.AZURE_TRUSTED_SIGNING_PUBLISHER_NAME }}",
+    "Expected the Windows build to receive the publisher identity that is pinned in the bundle.",
+  );
+  assertContains(
+    workflow,
+    "node scripts/verify-packaged-desktop-startup.ts",
+    "Expected every native payload to pass isolated packaged startup before upload.",
+  );
+
+  const cliScript = readFileSync(resolve(repoRoot, "apps/server/scripts/cli.ts"), "utf8");
+  assertContains(
+    cliScript,
+    "makeTempDirectoryScoped",
+    "Expected CLI publication to build an exclusively owned temporary package tree.",
+  );
+  assertContains(
+    cliScript,
     "cwd: stagedPackageDir",
     "Expected npm publication to run only from the isolated CLI stage.",
   );
   assertContains(
-    serviceTool,
+    cliScript,
     "Staged CLI bin target is missing its Node shebang",
     "Expected staged CLI commands to remain executable npm bin entries.",
   );
   assertNotContains(
-    serviceTool,
+    cliScript,
     ".publish-bak",
-    "Service publication must not mutate and restore source-tree assets.",
+    "CLI publication must not mutate and restore source-tree assets.",
   );
 
   const desktopBuildConfig = readFileSync(
@@ -189,13 +284,15 @@ function verifyReleaseImplementationSafety(): void {
 
 function verifyDesktopStageLockAuthority(): void {
   const buildScript = readFileSync(resolve(repoRoot, "scripts/build-desktop-artifact.ts"), "utf8");
-  const lockfileBytes = readFileSync(resolve(repoRoot, RELEASE_LOCKFILE_PATH));
-  if (lockfileBytes.includes(Buffer.from("\r\n"))) {
-    throw new Error("Expected bun.lock to use LF line endings in the actual release input.");
-  }
+  const gitAttributes = readFileSync(resolve(repoRoot, ".gitattributes"), "utf8");
+  assertContains(
+    gitAttributes,
+    "bun.lock text eol=lf",
+    "Expected bun.lock to retain byte-identical LF endings on every release runner.",
+  );
   assertContains(
     buildScript,
-    "bun install --omit=dev --frozen-lockfile --ignore-scripts --linker hoisted",
+    "bun install --frozen-lockfile --ignore-scripts --linker hoisted",
     "Expected macOS and Linux desktop staging to install from the repository's frozen workspace lockfile.",
   );
   assertContains(
@@ -220,7 +317,7 @@ function verifyDesktopStageLockAuthority(): void {
   );
   assertNotContains(
     buildScript,
-    "--filter @omnimind/",
+    "--filter @synara/",
     "Desktop staging must not use Bun workspace filters because filtered hoisted installs can diverge from bun.lock.",
   );
   assertContains(
@@ -275,10 +372,14 @@ function verifyDesktopStageLockAuthority(): void {
   );
 
   const lockfile = readFileSync(resolve(repoRoot, RELEASE_LOCKFILE_PATH), "utf8");
-  const workspaceImporters = new Set(readBunV1WorkspaceImporters(lockfile));
+  const packagesSectionOffset = lockfile.indexOf('\n  "packages": {');
+  if (packagesSectionOffset < 0) {
+    throw new Error("Expected bun.lock to contain a packages section.");
+  }
+  const workspaceImporters = lockfile.slice(0, packagesSectionOffset);
   for (const manifestPath of RELEASE_WORKSPACE_MANIFEST_PATHS) {
     const workspacePath = manifestPath === "package.json" ? "" : dirname(manifestPath);
-    if (!workspaceImporters.has(workspacePath)) {
+    if (!workspaceImporters.includes(`${JSON.stringify(workspacePath)}: {`)) {
       throw new Error(`Expected ${manifestPath} to have a matching importer in bun.lock.`);
     }
   }
@@ -288,8 +389,7 @@ const tempRoot = mkdtempSync(join(tmpdir(), "omnimind-release-smoke-"));
 
 try {
   verifyCanonicalIdentity();
-  verifyReleaseWorkspaceInputs();
-  verifyReleaseImplementationSafety();
+  verifyReleaseWorkflowSafety();
   verifyDesktopStageLockAuthority();
   copyWorkspaceManifestFixture(tempRoot);
 

@@ -3,7 +3,7 @@
 import { useEffect, useRef } from "react";
 
 import { Button } from "~/components/ui/button";
-import { cn } from "~/lib/styles";
+import { cn } from "~/lib/utils";
 
 const HOURS = Array.from({ length: 24 }, (_, index) => index);
 const MINUTES = Array.from({ length: 60 }, (_, index) => index);

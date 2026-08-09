@@ -1,7 +1,0 @@
-{
-  "authorityMutation": {
-    "kind": "omit-work-rule",
-    "work": "direct-first-public-b1",
-    "path": "apps/service/src/config.ts"
-  }
-}

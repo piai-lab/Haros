@@ -3,8 +3,8 @@
 // Layer: Web composer helper
 // Exports: mention token formatters plus regex helpers used by composer parsing and prompt sync.
 
-import type { ProviderMentionReference, ProviderSkillReference } from "@omnimind/contracts";
-import { isThreadMentionPath, threadIdFromThreadMentionPath } from "@omnimind/shared/threadMentions";
+import type { ProviderMentionReference, ProviderSkillReference } from "@synara/contracts";
+import { isThreadMentionPath, threadIdFromThreadMentionPath } from "@synara/shared/threadMentions";
 
 export function skillMentionPrefix(provider: string): string {
   return provider === "pi" ? "/skill:" : "/";
@@ -21,7 +21,7 @@ export function createComposerMentionTokenRegex(options: {
 }): RegExp {
   const suffix = options.includeTrailingTokenAtEnd ? "(?=\\s|$)" : "(?=\\s)";
   return new RegExp(
-    `(^|\\s)@(?:"${QUOTED_MENTION_PATH_SOURCE}"|([^\\s@()]+))${suffix}`,
+    `(^|\\s)@(?:"${QUOTED_MENTION_PATH_SOURCE}"|([^\\s@]+))${suffix}`,
     options.global === false ? "" : "g",
   );
 }

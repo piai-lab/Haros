@@ -7,7 +7,7 @@
 //      sits in an identically centered box.
 
 import { forwardRef, type HTMLAttributes } from "react";
-import { cn } from "~/lib/styles";
+import { cn } from "~/lib/utils";
 
 const SLOT_SIZE = {
   sm: "size-4",

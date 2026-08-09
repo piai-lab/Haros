@@ -1,4 +1,4 @@
-import { ProjectId, ThreadId, TurnId } from "@omnimind/contracts";
+import { ProjectId, ThreadId, TurnId } from "@synara/contracts";
 import { describe, expect, it } from "vitest";
 
 import type { DraftThreadState } from "../composerDraftStore";
@@ -84,7 +84,7 @@ describe("resolveDiffPanelThread", () => {
         threadId: THREAD_ID,
         serverThread,
         draftThread: makeDraftThread({ branch: "feature/draft" }),
-        draftModelSelection: { provider: "codex", model: "gpt-5.4-mini" },
+        fallbackModelSelection: { provider: "codex", model: "gpt-5.4-mini" },
       }),
     ).toBe(serverThread);
   });
@@ -98,7 +98,7 @@ describe("resolveDiffPanelThread", () => {
         worktreePath: "/tmp/worktree",
         envMode: "worktree",
       }),
-      draftModelSelection: { provider: "codex", model: "gpt-5.4-mini" },
+      fallbackModelSelection: { provider: "codex", model: "gpt-5.4-mini" },
     });
 
     expect(resolved).toMatchObject({
@@ -118,7 +118,7 @@ describe("resolveDiffPanelThread", () => {
         threadId: THREAD_ID,
         serverThread: undefined,
         draftThread: null,
-        draftModelSelection: null,
+        fallbackModelSelection: null,
       }),
     ).toBeUndefined();
   });

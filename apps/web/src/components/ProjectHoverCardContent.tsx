@@ -10,7 +10,7 @@
 
 import { MessageCircleIcon, SettingsIcon } from "~/lib/icons";
 import { PinStatusIcon, pinActionLabel } from "~/lib/pin";
-import { cn } from "~/lib/styles";
+import { cn } from "~/lib/utils";
 import { FolderClosed, FolderOpen } from "./FolderClosed";
 import {
   SIDEBAR_HOVER_CARD_CONTAINER_PADDING_CLASS_NAME,
@@ -33,7 +33,7 @@ export type ProjectHoverCardContentProps = {
 // card slim.
 const ROW_CLASS_NAME = SIDEBAR_HOVER_CARD_ROW_CLASS_NAME;
 // Icons stay one step dimmer than their label so the glyph reads as a quiet
-// affordance, not a peer of the text. Product glyphs paint via bg-current, so
+// affordance, not a peer of the text. Central glyphs paint via bg-current, so
 // the explicit text color here tints them directly.
 const ICON_CLASS_NAME = "size-3.5 shrink-0 text-muted-foreground";
 

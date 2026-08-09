@@ -14,7 +14,7 @@ import {
   type Ref,
 } from "react";
 
-import { cn } from "~/lib/styles";
+import { cn } from "~/lib/utils";
 import {
   COMPOSER_COLUMN_FRAME_CLASS_NAME,
   COMPOSER_STACKED_HEADER_FRAME_CLASS_NAME,

@@ -1,6 +1,6 @@
 import { TerminalIcon } from "~/lib/icons";
 
-import { cn } from "~/lib/styles";
+import { cn } from "~/lib/utils";
 import {
   COMPOSER_INLINE_CHIP_CLASS_NAME,
   COMPOSER_INLINE_CHIP_ICON_CLASS_NAME,

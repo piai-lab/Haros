@@ -7,13 +7,12 @@
 
 import { useState } from "react";
 import { useQuery } from "@tanstack/react-query";
-import { type ProfileStats, type ProfileTokenStats } from "@omnimind/contracts";
-import { historicalSourceDisplayName } from "~/historicalSourcePresentation";
+import { type ProfileStats, type ProfileTokenStats, type ProviderKind } from "@synara/contracts";
 import {
   serverProfileStatsQueryOptions,
   serverProfileTokenStatsQueryOptions,
 } from "~/lib/serverReactQuery";
-import { Glyph } from "~/ui/icons";
+import { CentralIcon } from "~/lib/central-icons";
 import { ProviderIcon } from "~/components/ProviderIcon";
 import { Button } from "~/components/ui/button";
 import { Skeleton } from "~/components/ui/skeleton";
@@ -92,7 +91,7 @@ function ProfileContent({
       {/* Action row */}
       <div className="flex items-center justify-end gap-2">
         <Button variant="outline" size="sm" onClick={() => setEditOpen(true)}>
-          <Glyph name="pencil" />
+          <CentralIcon name="pencil" />
           Edit
         </Button>
       </div>
@@ -204,7 +203,7 @@ function ProfileContent({
                 >
                   <span className="flex min-w-0 items-center gap-2.5">
                     <span className="flex size-5 shrink-0 items-center justify-center rounded-md bg-muted/60">
-                      <Glyph
+                      <CentralIcon
                         name={skill.kind === "agent" ? "agent" : "building-blocks"}
                         className="size-3"
                       />
@@ -311,7 +310,7 @@ function formatMostWorkedProjectLabel(project: ProfileStats["mostWorkedProject"]
   return `${project.title} · ${formatNumber(project.promptCount)} ${promptLabel}`;
 }
 
-function formatProviderLabel(provider: string): string {
+function formatProviderLabel(provider: ProviderKind): string {
   switch (provider) {
     case "codex":
       return "Codex";
@@ -332,7 +331,6 @@ function formatProviderLabel(provider: string): string {
     case "pi":
       return "Pi";
   }
-  return historicalSourceDisplayName(provider);
 }
 
 function ModelUsageRow({
@@ -340,7 +338,7 @@ function ModelUsageRow({
   model,
   percent,
 }: {
-  provider: string | "unknown";
+  provider: ProviderKind | "unknown";
   model: string;
   percent: number;
 }) {
@@ -351,7 +349,7 @@ function ModelUsageRow({
           {provider !== "unknown" ? (
             <ProviderIcon provider={provider} className="size-3.5 shrink-0" />
           ) : (
-            <Glyph name="chart-2" className="size-3.5 shrink-0 text-muted-foreground" />
+            <CentralIcon name="chart-2" className="size-3.5 shrink-0 text-muted-foreground" />
           )}
           <span className="truncate">{model}</span>
         </span>

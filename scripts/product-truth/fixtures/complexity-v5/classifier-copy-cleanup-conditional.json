@@ -1,9 +1,0 @@
-{
-  "extendsFixture": "classifier-copy-positive",
-  "textReplacements": {
-    "scripts/product-truth/sqlite-classifier.ts": [[
-      "    removeClassifierScratch(invocationScratchRoot);",
-      "    if (Date.now() > 0) removeClassifierScratch(invocationScratchRoot);"
-    ]]
-  }
-}

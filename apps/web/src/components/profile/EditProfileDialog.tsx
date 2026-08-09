@@ -13,8 +13,8 @@ import {
   InputGroupInput,
   InputGroupText,
 } from "~/components/ui/input-group";
-import { Glyph } from "~/ui/icons";
-import { cn } from "~/lib/styles";
+import { CentralIcon } from "~/lib/central-icons";
+import { cn } from "~/lib/utils";
 import { normalizeHandle } from "./profileFormatting";
 import { PROFILE_AVATAR_COLORS } from "./useProfileAvatarColor";
 import { AvatarImageError, compressAvatarImage } from "./avatarImage";
@@ -139,7 +139,7 @@ function EditProfileDialogContent({
                 "bg-black/45 text-white backdrop-blur-sm transition-colors hover:bg-black/60",
               )}
             >
-              <Glyph name="pencil" className="size-3 opacity-100" />
+              <CentralIcon name="pencil" className="size-3 opacity-100" />
             </button>
           </div>
 
@@ -165,7 +165,7 @@ function EditProfileDialogContent({
                   disabled={processing}
                   onClick={() => fileInputRef.current?.click()}
                 >
-                  <Glyph name="add-image" className="size-3.5" />
+                  <CentralIcon name="add-image" className="size-3.5" />
                   {processing ? "Processing…" : draftImage ? "Replace photo" : "Upload photo"}
                 </Button>
                 {draftImage && (
@@ -179,7 +179,7 @@ function EditProfileDialogContent({
                       setError(null);
                     }}
                   >
-                    <Glyph name="trash-can-simple" className="size-3.5" />
+                    <CentralIcon name="trash-can-simple" className="size-3.5" />
                     Remove
                   </Button>
                 )}

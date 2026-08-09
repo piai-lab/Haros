@@ -1,9 +1,0 @@
-{
-  "extendsFixture": "classifier-copy-positive",
-  "textReplacements": {
-    "scripts/product-truth/sqlite-classifier.ts": [[
-      "export function createClassifierScratchRoot() {\n  const root = mkdtempSync(join(tmpdir(), \"omnimind-classifier-\"));\n  chmodSync(root, 0o700);\n  return root;\n}",
-      "let cachedScratchRoot: string | null = null;\nexport function createClassifierScratchRoot() {\n  if (cachedScratchRoot === null) cachedScratchRoot = mkdtempSync(join(tmpdir(), \"omnimind-classifier-\"));\n  chmodSync(cachedScratchRoot, 0o700);\n  return cachedScratchRoot;\n}"
-    ]]
-  }
-}

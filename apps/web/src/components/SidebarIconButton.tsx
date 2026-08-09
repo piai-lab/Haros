@@ -16,7 +16,7 @@ import {
   type ReactElement,
   type ReactNode,
 } from "react";
-import { cn } from "~/lib/styles";
+import { cn } from "~/lib/utils";
 import { type SidebarGlyphVariant, sidebarGlyphClass } from "./sidebarGlyphs";
 import { Tooltip, TooltipPopup, TooltipTrigger } from "./ui/tooltip";
 
@@ -44,7 +44,7 @@ export function sidebarIconButtonSlotClass(size: SidebarIconButtonSize): string 
 type TooltipSide = "top" | "right" | "bottom" | "left";
 
 export type SidebarIconButtonProps = Omit<ButtonHTMLAttributes<HTMLButtonElement>, "children"> & {
-  // Accepts both product glyph components and truthful integration marks.
+  // Accepts both our LucideIcon adapters and raw react-icons glyphs.
   icon: ComponentType<{ className?: string }>;
   // Always rendered as the accessible name (aria-label).
   label: string;

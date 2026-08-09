@@ -7,7 +7,7 @@
 // Layer: UI state store
 // Exports: useWorkflowRunUiStore, useWorkflowRunUiThreadState, default-state helper
 
-import type { ThreadId } from "@omnimind/contracts";
+import type { ThreadId } from "@synara/contracts";
 import { create } from "zustand";
 import { createJSONStorage, persist } from "zustand/middleware";
 import { isPlainObject, sanitizeStringKeyedRecord } from "./persistedRecord";

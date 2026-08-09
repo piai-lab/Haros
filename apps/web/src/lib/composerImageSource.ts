@@ -19,7 +19,10 @@ export type PersistedComposerAppSnapSource = Omit<ComposerAppSnapSource, "appIco
 export function isComposerAppSnapCaptureSource(value: unknown, captureId: string): boolean {
   if (!value || typeof value !== "object" || captureId.length === 0) return false;
   const candidate = value as Record<string, unknown>;
-  return candidate.kind === "appsnap" && candidate.captureId === captureId;
+  return (
+    (candidate.kind === "appsnap" || candidate.kind === "appshot") &&
+    candidate.captureId === captureId
+  );
 }
 
 function normalizeAppIconDataUrl(value: unknown): string | null {
@@ -31,7 +34,7 @@ export function normalizeComposerImageSource(value: unknown): ComposerImageSourc
   if (!value || typeof value !== "object") return undefined;
   const candidate = value as Record<string, unknown>;
   if (
-    candidate.kind !== "appsnap" ||
+    (candidate.kind !== "appsnap" && candidate.kind !== "appshot") ||
     typeof candidate.captureId !== "string" ||
     candidate.captureId.length === 0 ||
     typeof candidate.capturedAt !== "string"

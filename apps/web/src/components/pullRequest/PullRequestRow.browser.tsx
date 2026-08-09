@@ -4,7 +4,7 @@
 
 import "../../index.css";
 
-import type { PullRequestListEntry } from "@omnimind/contracts";
+import type { PullRequestListEntry } from "@synara/contracts";
 import { page } from "vitest/browser";
 import { afterEach, describe, expect, it, vi } from "vitest";
 import { render } from "vitest-browser-react";
@@ -12,15 +12,15 @@ import { useState } from "react";
 
 import { PullRequestAvatar } from "./PullRequestAvatar";
 import { PullRequestList } from "./PullRequestList";
-import { PullRequestWorkspaceFilterPopover } from "./PullRequestListFilters";
+import { PullRequestProjectFilterPopover } from "./PullRequestListFilters";
 import { PullRequestRow } from "./PullRequestRow";
 import { groupPullRequestEntriesByInvolvement } from "./pullRequestList.logic";
 import { focusPullRequestRow, isFocusInsideRightDock } from "./pullRequestFocus";
 
 function makeEntry(isPinned: boolean): PullRequestListEntry {
   return {
-    workspaceId: "project-1" as PullRequestListEntry["workspaceId"],
-    workspaceTitle: "Project One",
+    projectId: "project-1" as PullRequestListEntry["projectId"],
+    projectTitle: "Project One",
     repository: "acme/widgets",
     number: 42,
     title: "Prioritize this pull request",
@@ -37,10 +37,10 @@ function makeEntry(isPinned: boolean): PullRequestListEntry {
     reviewDecision: null,
     viewerReviewRequested: false,
     isPinned,
-    workspaceContexts: [
+    projectContexts: [
       {
-        workspaceId: "project-1" as PullRequestListEntry["workspaceId"],
-        workspaceTitle: "Project One",
+        projectId: "project-1" as PullRequestListEntry["projectId"],
+        projectTitle: "Project One",
         isPinned,
       },
     ],
@@ -55,7 +55,7 @@ function StatefulGroupedList() {
     <PullRequestList
       entries={[entry]}
       grouped={groupPullRequestEntriesByInvolvement([entry], null)}
-      selectedWorkspaceId={undefined}
+      selectedProjectId={undefined}
       selectedRepo={undefined}
       selectedNumber={undefined}
       onSelect={() => {}}
@@ -175,7 +175,7 @@ describe("PullRequestRow pin control", () => {
       <PullRequestRow
         entry={makeEntry(false)}
         selected={false}
-        showWorkspaceTitle
+        showProjectTitle
         onClick={vi.fn()}
         onTogglePinned={vi.fn()}
       />,
@@ -191,17 +191,17 @@ describe("PullRequestRow pin control", () => {
       <PullRequestRow
         entry={{
           ...entry,
-          workspaceContexts: [
-            ...(entry.workspaceContexts ?? []),
+          projectContexts: [
+            ...(entry.projectContexts ?? []),
             {
-              workspaceId: "project-2" as PullRequestListEntry["workspaceId"],
-              workspaceTitle: "Project Two",
+              projectId: "project-2" as PullRequestListEntry["projectId"],
+              projectTitle: "Project Two",
               isPinned: false,
             },
           ],
         }}
         selected={false}
-        showWorkspaceTitle
+        showProjectTitle
         onClick={vi.fn()}
         onTogglePinned={vi.fn()}
       />,
@@ -225,6 +225,25 @@ describe("PullRequestRow pin control", () => {
     expect(page.getByRole("button", { name: "Pin pull request #42" })).toBeVisible();
   });
 
+  it("renders neutral diff statistics when colors are disabled", async () => {
+    await render(
+      <PullRequestRow
+        entry={makeEntry(false)}
+        selected={false}
+        showDiffColors={false}
+        onClick={vi.fn()}
+        onTogglePinned={vi.fn()}
+      />,
+    );
+
+    expect(page.getByText("+2", { exact: true }).element().className).not.toContain(
+      "color-decoration-added",
+    );
+    expect(page.getByText("-1", { exact: true }).element().className).not.toContain(
+      "color-decoration-deleted",
+    );
+  });
+
   it("restores focus by remote identity when aggregate project context changes", async () => {
     const entry = makeEntry(false);
     await render(
@@ -234,7 +253,7 @@ describe("PullRequestRow pin control", () => {
     expect(
       focusPullRequestRow(document, {
         ...entry,
-        workspaceId: "different-project" as PullRequestListEntry["workspaceId"],
+        projectId: "different-project" as PullRequestListEntry["projectId"],
       }),
     ).toBe(true);
     expect(document.activeElement?.getAttribute("data-pull-request-number")).toBe("42");
@@ -253,17 +272,17 @@ describe("PullRequestRow pin control", () => {
   });
 });
 
-describe("PullRequestWorkspaceFilterPopover", () => {
+describe("PullRequestProjectFilterPopover", () => {
   afterEach(() => {
     document.body.innerHTML = "";
   });
 
   it("announces the selected project on both the trigger and options", async () => {
-    const workspaceId = "project-1" as PullRequestListEntry["workspaceId"];
+    const projectId = "project-1" as PullRequestListEntry["projectId"];
     await render(
-      <PullRequestWorkspaceFilterPopover
-        projects={[[workspaceId, "Project One"]]}
-        value={workspaceId}
+      <PullRequestProjectFilterPopover
+        projects={[[projectId, "Project One"]]}
+        value={projectId}
         onChange={vi.fn()}
       />,
     );

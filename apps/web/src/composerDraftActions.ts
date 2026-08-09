@@ -1,14 +1,15 @@
-import type { HistoricalModelOptions, HistoricalModelSelection, HistoricalModelSlug } from "~/historicalModelSelection";
 // FILE: composerDraftActions.ts
 // Purpose: Constructs the ComposerDraftStoreState actions while preserving granular thread identity.
 // Exports: Zustand state creator consumed by the public facade.
 
 import {
-  CHAT_TURN_MAX_ATTACHMENTS,
+  type ModelSelection,
+  type ProviderKind,
+  PROVIDER_SEND_TURN_MAX_ATTACHMENTS,
   RuntimeMode,
   ThreadId,
-} from "@omnimind/contracts";
-import { normalizeModelIdentifier } from "./modelIdentifier";
+} from "@synara/contracts";
+import { getDefaultModel, normalizeModelSlug } from "@synara/shared/model";
 import * as Equal from "effect/Equal";
 import * as Schema from "effect/Schema";
 import type { StateCreator } from "zustand";
@@ -55,10 +56,13 @@ import {
   terminalContextDedupKey,
 } from "./composerDraftDomain";
 import {
-  makeHistoricalModelSelection,
-  normalizeHistoricalModelSelection,
-  normalizeHistoricalSourceId,
-  reconcileHistoricalModelSelection,
+  COMPOSER_PROVIDER_KINDS,
+  makeModelSelection,
+  normalizeModelSelection,
+  normalizeProviderKind,
+  normalizeProviderModelOptions,
+  reconcileProviderScopedModelSelection,
+  stripNonStickyModelOptions,
 } from "./composerDraftModels";
 import { isComposerAppSnapCaptureSource } from "./lib/composerImageSource";
 import {
@@ -73,6 +77,7 @@ import {
   composerImageConsumesAttachmentSlot,
   effectiveComposerAttachmentCount,
 } from "./lib/composerAttachmentCapacity";
+import { buildModelSelection } from "./providerModelOptions";
 import { DEFAULT_INTERACTION_MODE, DEFAULT_RUNTIME_MODE } from "./types";
 
 function removeDraftThreadIfUnmapped(input: {
@@ -218,7 +223,6 @@ export const createComposerDraftStoreState =
           workingDirectory: options.workingDirectory ?? null,
           lastKnownPr: null,
           envMode: options.envMode ?? (worktreePath ? "worktree" : "local"),
-          ...(options.requestedSelection ? { requestedSelection: options.requestedSelection } : {}),
           ...(options.isTemporary ? { isTemporary: true } : {}),
         };
         return {
@@ -486,13 +490,13 @@ export const createComposerDraftStoreState =
       });
     },
     setStickyModelSelection: (modelSelection) => {
-      const rawNormalized = normalizeHistoricalModelSelection(modelSelection);
-      const normalized = rawNormalized;
+      const rawNormalized = normalizeModelSelection(modelSelection);
+      const normalized = rawNormalized ? stripNonStickyModelOptions(rawNormalized) : null;
       set((state) => {
         if (!normalized) {
           return state;
         }
-        const nextMap: Partial<Record<string, HistoricalModelSelection>> = {
+        const nextMap: Partial<Record<ProviderKind, ModelSelection>> = {
           ...state.stickyModelSelectionByProvider,
           [normalized.provider]: normalized,
         };
@@ -522,8 +526,8 @@ export const createComposerDraftStoreState =
         const nextMap = { ...base.modelSelectionByProvider };
         for (const [provider, selection] of Object.entries(stickyMap)) {
           if (selection) {
-            const current = nextMap[provider as string];
-            nextMap[provider as string] =
+            const current = nextMap[provider as ProviderKind];
+            nextMap[provider as ProviderKind] =
               current && current.model !== selection.model ? current : selection;
           }
         }
@@ -552,11 +556,7 @@ export const createComposerDraftStoreState =
         return;
       }
       set((state) => {
-        const persisted = state.draftsByThreadId[threadId];
-        if ((persisted?.prompt ?? "") === prompt) {
-          return state;
-        }
-        const existing = persisted ?? createEmptyThreadDraft();
+        const existing = state.draftsByThreadId[threadId] ?? createEmptyThreadDraft();
         const nextDraft: ComposerThreadDraftState = {
           ...existing,
           prompt,
@@ -569,72 +569,6 @@ export const createComposerDraftStoreState =
         }
         return { draftsByThreadId: nextDraftsByThreadId };
       });
-    },
-    stageProductQueueTransfer: (threadId, transfer) => {
-      if (threadId.length === 0) {
-        throw new Error("A Product Queue transfer requires a Composer draft id.");
-      }
-      set((state) => {
-        const existing = state.draftsByThreadId[threadId] ?? createEmptyThreadDraft();
-        if (existing.productQueueTransfer === transfer) {
-          return state;
-        }
-        return {
-          draftsByThreadId: {
-            ...state.draftsByThreadId,
-            [threadId]: { ...existing, productQueueTransfer: transfer },
-          },
-        };
-      });
-      // Product put may follow immediately. Force the same Composer draft blob
-      // containing the marker through storage before crossing that boundary.
-      flushPersistStorage();
-    },
-    clearComposerContentForProductQueueTransfer: (threadId, transfer, options) => {
-      if (threadId.length === 0) {
-        return false;
-      }
-      let clearedDraft: ComposerThreadDraftState | undefined;
-      set((state) => {
-        const current = state.draftsByThreadId[threadId];
-        if (!current || !Equal.equals(current.productQueueTransfer, transfer)) {
-          return state;
-        }
-        clearedDraft = current;
-        const nextDraft: ComposerThreadDraftState = {
-          ...current,
-          prompt: "",
-          productQueueTransfer: null,
-          promptHistorySavedDraft: null,
-          images: [],
-          files: [],
-          nonPersistedImageIds: [],
-          persistedAttachments: [],
-          assistantSelections: [],
-          browserAnnotations: [],
-          terminalContexts: [],
-          fileComments: [],
-          pastedTexts: [],
-          skills: [],
-          mentions: [],
-          restoredSourceProposedPlan: null,
-        };
-        const nextDraftsByThreadId = { ...state.draftsByThreadId };
-        if (shouldRemoveDraft(nextDraft)) {
-          delete nextDraftsByThreadId[threadId];
-        } else {
-          nextDraftsByThreadId[threadId] = nextDraft;
-        }
-        return { draftsByThreadId: nextDraftsByThreadId };
-      });
-      if (!clearedDraft) {
-        return false;
-      }
-      deleteDraftComposerImageBlobs(clearedDraft, () => get().draftsByThreadId);
-      if (options?.preservePreviewUrls !== true) {
-        revokeDraftComposerImagePreviewUrls(clearedDraft);
-      }
-      return true;
     },
     setPromptHistorySavedDraft: (threadId, savedDraft) => {
       if (threadId.length === 0) {
@@ -845,7 +779,7 @@ export const createComposerDraftStoreState =
       if (threadId.length === 0) {
         return;
       }
-      const normalized = normalizeHistoricalModelSelection(modelSelection);
+      const normalized = normalizeModelSelection(modelSelection);
       set((state) => {
         const existing = state.draftsByThreadId[threadId];
         if (!existing && normalized === null) {
@@ -855,7 +789,7 @@ export const createComposerDraftStoreState =
         const nextMap = { ...base.modelSelectionByProvider };
         if (normalized) {
           const current = nextMap[normalized.provider];
-          nextMap[normalized.provider] = reconcileHistoricalModelSelection(normalized, current);
+          nextMap[normalized.provider] = reconcileProviderScopedModelSelection(normalized, current);
         }
         const nextActiveProvider = normalized?.provider ?? base.activeProvider;
         if (
@@ -883,6 +817,169 @@ export const createComposerDraftStoreState =
       const correctedSelection =
         get().draftsByThreadId[threadId]?.modelSelectionByProvider[modelSelection.provider];
       get().setStickyModelSelection(correctedSelection ?? modelSelection);
+    },
+    setModelOptions: (threadId, modelOptions) => {
+      if (threadId.length === 0) {
+        return;
+      }
+      const normalizedOpts = normalizeProviderModelOptions(modelOptions);
+      set((state) => {
+        const existing = state.draftsByThreadId[threadId];
+        if (!existing && normalizedOpts === null) {
+          return state;
+        }
+        const base = existing ?? createEmptyThreadDraft();
+        const nextMap = { ...base.modelSelectionByProvider };
+        for (const provider of COMPOSER_PROVIDER_KINDS) {
+          // Only touch providers explicitly present in the input
+          if (!normalizedOpts || !(provider in normalizedOpts)) continue;
+          const opts = normalizedOpts[provider];
+          const current = nextMap[provider];
+          if (opts) {
+            const model = current?.model ?? getDefaultModel(provider);
+            if (!model) continue;
+            nextMap[provider] = makeModelSelection(
+              provider,
+              model,
+              opts,
+              current?.provider === "claudeAgent" ? current.supportsAutoMode : undefined,
+            );
+          } else if (current?.options) {
+            // Remove options but keep the selection
+            nextMap[provider] = buildModelSelection(
+              provider,
+              current.model,
+              undefined,
+              current.provider === "claudeAgent" ? current.supportsAutoMode : undefined,
+            );
+          }
+        }
+        if (Equal.equals(base.modelSelectionByProvider, nextMap)) {
+          return state;
+        }
+        const nextDraft: ComposerThreadDraftState = {
+          ...base,
+          modelSelectionByProvider: nextMap,
+        };
+        const nextDraftsByThreadId = { ...state.draftsByThreadId };
+        if (shouldRemoveDraft(nextDraft)) {
+          delete nextDraftsByThreadId[threadId];
+        } else {
+          nextDraftsByThreadId[threadId] = nextDraft;
+        }
+        return { draftsByThreadId: nextDraftsByThreadId };
+      });
+    },
+    setProviderModelOptions: (threadId, provider, nextProviderOptions, options) => {
+      if (threadId.length === 0) {
+        return;
+      }
+      const normalizedProvider = normalizeProviderKind(provider);
+      if (normalizedProvider === null) {
+        return;
+      }
+      // Normalize just this provider's options
+      const normalizedOpts = normalizeProviderModelOptions(
+        { [normalizedProvider]: nextProviderOptions },
+        normalizedProvider,
+      );
+      const providerOpts = normalizedOpts?.[normalizedProvider];
+      const fallbackModel =
+        normalizeModelSlug(options?.model, normalizedProvider) ??
+        getDefaultModel(normalizedProvider);
+
+      set((state) => {
+        const existing = state.draftsByThreadId[threadId];
+        const base = existing ?? createEmptyThreadDraft();
+
+        // Update the map entry for this provider
+        const nextMap = { ...base.modelSelectionByProvider };
+        const currentForProvider = nextMap[normalizedProvider];
+        if (providerOpts) {
+          const nextModel = currentForProvider?.model ?? fallbackModel;
+          if (!nextModel) {
+            return state;
+          }
+          nextMap[normalizedProvider] = makeModelSelection(
+            normalizedProvider,
+            nextModel,
+            providerOpts,
+            currentForProvider?.provider === "claudeAgent"
+              ? currentForProvider.supportsAutoMode
+              : undefined,
+          );
+        } else if (currentForProvider?.options) {
+          nextMap[normalizedProvider] = buildModelSelection(
+            normalizedProvider,
+            currentForProvider.model,
+            undefined,
+            currentForProvider.provider === "claudeAgent"
+              ? currentForProvider.supportsAutoMode
+              : undefined,
+          );
+        }
+
+        // Handle sticky persistence
+        let nextStickyMap = state.stickyModelSelectionByProvider;
+        let nextStickyActiveProvider = state.stickyActiveProvider;
+        if (options?.persistSticky === true) {
+          nextStickyMap = { ...state.stickyModelSelectionByProvider };
+          const stickyBase =
+            nextStickyMap[normalizedProvider] ??
+            base.modelSelectionByProvider[normalizedProvider] ??
+            (fallbackModel ? makeModelSelection(normalizedProvider, fallbackModel) : null);
+          if (!stickyBase) {
+            return state;
+          }
+          if (providerOpts) {
+            nextStickyMap[normalizedProvider] = stripNonStickyModelOptions(
+              makeModelSelection(
+                normalizedProvider,
+                stickyBase.model,
+                providerOpts,
+                stickyBase.provider === "claudeAgent" ? stickyBase.supportsAutoMode : undefined,
+              ),
+            );
+          } else if (stickyBase.options) {
+            nextStickyMap[normalizedProvider] = buildModelSelection(
+              normalizedProvider,
+              stickyBase.model,
+              undefined,
+              stickyBase.provider === "claudeAgent" ? stickyBase.supportsAutoMode : undefined,
+            );
+          }
+          nextStickyActiveProvider = base.activeProvider ?? normalizedProvider;
+        }
+
+        if (
+          Equal.equals(base.modelSelectionByProvider, nextMap) &&
+          Equal.equals(state.stickyModelSelectionByProvider, nextStickyMap) &&
+          state.stickyActiveProvider === nextStickyActiveProvider
+        ) {
+          return state;
+        }
+
+        const nextDraft: ComposerThreadDraftState = {
+          ...base,
+          modelSelectionByProvider: nextMap,
+        };
+        const nextDraftsByThreadId = { ...state.draftsByThreadId };
+        if (shouldRemoveDraft(nextDraft)) {
+          delete nextDraftsByThreadId[threadId];
+        } else {
+          nextDraftsByThreadId[threadId] = nextDraft;
+        }
+
+        return {
+          draftsByThreadId: nextDraftsByThreadId,
+          ...(options?.persistSticky === true
+            ? {
+                stickyModelSelectionByProvider: nextStickyMap,
+                stickyActiveProvider: nextStickyActiveProvider,
+              }
+            : {}),
+        };
+      });
     },
     setRuntimeMode: (threadId, runtimeMode) => {
       if (threadId.length === 0) {
@@ -1026,7 +1123,7 @@ export const createComposerDraftStoreState =
         let attachmentCount = effectiveComposerAttachmentCount(existing);
         for (const image of images) {
           const consumesSlot = composerImageConsumesAttachmentSlot(existing, image.id);
-          if (consumesSlot && attachmentCount >= CHAT_TURN_MAX_ATTACHMENTS) {
+          if (consumesSlot && attachmentCount >= PROVIDER_SEND_TURN_MAX_ATTACHMENTS) {
             revokeObjectPreviewUrl(image.previewUrl);
             continue;
           }
@@ -1814,7 +1911,6 @@ export const createComposerDraftStoreState =
         const nextDraft: ComposerThreadDraftState = {
           ...current,
           prompt: "",
-          productQueueTransfer: null,
           promptHistorySavedDraft: null,
           images: [],
           files: [],

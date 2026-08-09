@@ -7,7 +7,7 @@
 // Layer: Chat header control
 
 import { WindowIcon } from "~/lib/icons";
-import { cn } from "~/lib/styles";
+import { cn } from "~/lib/utils";
 
 import { Toggle } from "../../ui/toggle";
 import { Tooltip, TooltipPopup, TooltipTrigger } from "../../ui/tooltip";
@@ -21,7 +21,7 @@ export interface EnvironmentToggleState {
 // Icon-only footprint matching the header diff toggle's collapsed (no-badge) size.
 const TOGGLE_CLASS_NAME = cn(
   CHAT_HEADER_TOGGLE_CLASS_NAME,
-  "!size-7 [&_svg,&_[data-slot=glyph]]:mx-0",
+  "!size-7 [&_svg,&_[data-slot=central-icon]]:mx-0",
 );
 
 export function EnvironmentToggle({ environment }: { environment: EnvironmentToggleState }) {

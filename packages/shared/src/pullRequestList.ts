@@ -1,12 +1,12 @@
-import type { ProductWorkspaceId, PullRequestListEntry, PullRequestWorkspaceContext } from "@omnimind/contracts";
+import type { ProjectId, PullRequestListEntry, PullRequestProjectContext } from "@synara/contracts";
 
-type WorkspaceAwarePullRequestEntry = Pick<
+type ProjectAwarePullRequestEntry = Pick<
   PullRequestListEntry,
-  "workspaceId" | "repository" | "number" | "isPinned"
+  "projectId" | "repository" | "number" | "isPinned"
 > & {
-  readonly workspaceTitle?: string | undefined;
+  readonly projectTitle?: string | undefined;
   readonly headBranch?: string | undefined;
-  readonly workspaceContexts?: ReadonlyArray<PullRequestWorkspaceContext> | undefined;
+  readonly projectContexts?: ReadonlyArray<PullRequestProjectContext> | undefined;
 };
 
 /** Remote identity for a pull request. A PR belongs to a GitHub repository, not to each local
@@ -18,82 +18,82 @@ export function pullRequestListRepositoryIdentity(
 }
 
 /** Project associations for a repository-level row, with a legacy fallback for older payloads. */
-export function pullRequestListWorkspaceContexts(
-  entry: WorkspaceAwarePullRequestEntry,
-): PullRequestWorkspaceContext[] {
-  if (entry.workspaceContexts && entry.workspaceContexts.length > 0) {
-    return [...entry.workspaceContexts];
+export function pullRequestListProjectContexts(
+  entry: ProjectAwarePullRequestEntry,
+): PullRequestProjectContext[] {
+  if (entry.projectContexts && entry.projectContexts.length > 0) {
+    return [...entry.projectContexts];
   }
   return [
     {
-      workspaceId: entry.workspaceId,
-      workspaceTitle: entry.workspaceTitle ?? String(entry.workspaceId),
+      projectId: entry.projectId,
+      projectTitle: entry.projectTitle ?? String(entry.projectId),
       isPinned: entry.isPinned ?? false,
     },
   ];
 }
 
-export function pullRequestListEntryHasWorkspace(
-  entry: WorkspaceAwarePullRequestEntry,
-  workspaceId: ProductWorkspaceId,
+export function pullRequestListEntryHasProject(
+  entry: ProjectAwarePullRequestEntry,
+  projectId: ProjectId,
 ): boolean {
-  return pullRequestListWorkspaceContexts(entry).some((context) => context.workspaceId === workspaceId);
+  return pullRequestListProjectContexts(entry).some((context) => context.projectId === projectId);
 }
 
-export function pullRequestListWorkspacePin(
-  entry: WorkspaceAwarePullRequestEntry,
-  workspaceId: ProductWorkspaceId,
+export function pullRequestListProjectPin(
+  entry: ProjectAwarePullRequestEntry,
+  projectId: ProjectId,
 ): boolean | null {
   return (
-    pullRequestListWorkspaceContexts(entry).find((context) => context.workspaceId === workspaceId)
+    pullRequestListProjectContexts(entry).find((context) => context.projectId === projectId)
       ?.isPinned ?? null
   );
 }
 
-function mergeWorkspaceContexts(
-  entries: readonly WorkspaceAwarePullRequestEntry[],
-): PullRequestWorkspaceContext[] {
-  const byWorkspaceId = new Map<ProductWorkspaceId, PullRequestWorkspaceContext>();
+function mergeProjectContexts(
+  entries: readonly ProjectAwarePullRequestEntry[],
+): PullRequestProjectContext[] {
+  const byProjectId = new Map<ProjectId, PullRequestProjectContext>();
   for (const entry of entries) {
-    for (const context of pullRequestListWorkspaceContexts(entry)) {
-      const existing = byWorkspaceId.get(context.workspaceId);
-      byWorkspaceId.set(
-        context.workspaceId,
+    for (const context of pullRequestListProjectContexts(entry)) {
+      const existing = byProjectId.get(context.projectId);
+      byProjectId.set(
+        context.projectId,
         existing ? { ...context, isPinned: existing.isPinned || context.isPinned } : context,
       );
     }
   }
-  return [...byWorkspaceId.values()].toSorted(
+  return [...byProjectId.values()].toSorted(
     (left, right) =>
-      left.workspaceTitle.localeCompare(right.workspaceTitle) ||
-      left.workspaceId.localeCompare(right.workspaceId),
+      left.projectTitle.localeCompare(right.projectTitle) ||
+      left.projectId.localeCompare(right.projectId),
   );
 }
 
-function preferredWorkspaceContext(
+function preferredProjectContext(
   entry: Pick<PullRequestListEntry, "headBranch">,
-  contexts: readonly PullRequestWorkspaceContext[],
-  preferredWorkspaceId: ProductWorkspaceId | undefined,
-): PullRequestWorkspaceContext {
-  const explicitlyPreferred = preferredWorkspaceId
-    ? contexts.find((context) => context.workspaceId === preferredWorkspaceId)
+  contexts: readonly PullRequestProjectContext[],
+  preferredProjectId: ProjectId | undefined,
+): PullRequestProjectContext {
+  const explicitlyPreferred = preferredProjectId
+    ? contexts.find((context) => context.projectId === preferredProjectId)
     : undefined;
   if (explicitlyPreferred) return explicitlyPreferred;
 
   const normalizedHeadBranch = entry.headBranch.trim().toLowerCase();
   return (
     contexts.find(
-      (context) => context.workspaceTitle.trim().toLowerCase() === normalizedHeadBranch,
+      (context) => context.projectTitle.trim().toLowerCase() === normalizedHeadBranch,
     ) ?? contexts[0]!
   );
 }
 
 /** Collapse project/worktree fan-out into one visible row per GitHub PR while retaining every
- * local workspace association. The chosen top-level project is only the context used to open the
+ * local project association. The chosen top-level project is only the context used to open the
  * detail panel; remote identity and aggregate pin state remain repository-level. */
 export function coalescePullRequestListEntries(
   entries: readonly PullRequestListEntry[],
-  options: { readonly preferredWorkspaceId?: ProductWorkspaceId | undefined } = {},
+  options: { readonly preferredProjectId?: ProjectId | undefined } = {},
 ): PullRequestListEntry[] {
   const entriesByIdentity = new Map<string, PullRequestListEntry[]>();
   for (const entry of entries) {
@@ -105,35 +105,35 @@ export function coalescePullRequestListEntries(
 
   return [...entriesByIdentity.values()].map((group) => {
     const first = group[0]!;
-    const contexts = mergeWorkspaceContexts(group);
-    const preferred = preferredWorkspaceContext(first, contexts, options.preferredWorkspaceId);
+    const contexts = mergeProjectContexts(group);
+    const preferred = preferredProjectContext(first, contexts, options.preferredProjectId);
     return {
       ...first,
-      workspaceId: preferred.workspaceId,
-      workspaceTitle: preferred.workspaceTitle,
-      workspaceContexts: contexts,
+      projectId: preferred.projectId,
+      projectTitle: preferred.projectTitle,
+      projectContexts: contexts,
       isPinned: contexts.some((context) => context.isPinned),
       viewerReviewRequested: group.some((entry) => entry.viewerReviewRequested),
     };
   });
 }
 
-/** Update one workspace-owned pin inside an aggregate row without changing its selected context. */
-export function updatePullRequestListEntryWorkspacePin<T extends WorkspaceAwarePullRequestEntry>(
+/** Update one project-owned pin inside an aggregate row without changing its selected context. */
+export function updatePullRequestListEntryProjectPin<T extends ProjectAwarePullRequestEntry>(
   entry: T,
-  workspaceId: ProductWorkspaceId,
+  projectId: ProjectId,
   isPinned: boolean,
 ): T {
-  if (!pullRequestListEntryHasWorkspace(entry, workspaceId)) return entry;
-  if (!entry.workspaceContexts || entry.workspaceContexts.length === 0) {
-    return entry.workspaceId === workspaceId ? ({ ...entry, isPinned } as T) : entry;
+  if (!pullRequestListEntryHasProject(entry, projectId)) return entry;
+  if (!entry.projectContexts || entry.projectContexts.length === 0) {
+    return entry.projectId === projectId ? ({ ...entry, isPinned } as T) : entry;
   }
-  const workspaceContexts = entry.workspaceContexts.map((context) =>
-    context.workspaceId === workspaceId ? { ...context, isPinned } : context,
+  const projectContexts = entry.projectContexts.map((context) =>
+    context.projectId === projectId ? { ...context, isPinned } : context,
   );
   return {
     ...entry,
-    workspaceContexts,
-    isPinned: workspaceContexts.some((context) => context.isPinned),
+    projectContexts,
+    isPinned: projectContexts.some((context) => context.isPinned),
   } as T;
 }

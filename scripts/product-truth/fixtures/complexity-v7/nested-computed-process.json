@@ -1,1 +1,0 @@
-{"appendToFiles":{"apps/service/src/atomicWrite.ts":"\nconst v7NestedProcessKey: string = 'dlopen';\nexport const v7NestedComputedProcess = () => globalThis.process[v7NestedProcessKey]({} as NodeJS.Module, 'x.node');\n"}}

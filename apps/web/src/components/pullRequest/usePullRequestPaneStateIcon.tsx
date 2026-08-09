@@ -6,7 +6,7 @@
 // Layer: Pull request presentation
 // Exports: usePullRequestPaneStateIcon
 
-import type { PullRequestDetailInput } from "@omnimind/contracts";
+import type { PullRequestDetailInput } from "@synara/contracts";
 import { useQuery } from "@tanstack/react-query";
 import type { ReactNode } from "react";
 

@@ -1,7 +1,0 @@
-{
-  "virtualFiles": {
-    "scripts/product-truth/direct-first-public.ts": "import { join } from \"node:path\";\nimport { DatabaseSync } from \"node:sqlite\";\n\nexport function inspectRetired(root: string) {\n  const rawCurrentProductPath = join(root, \"userdata\", \"stores\", \"product.sqlite\");\n  const database = new DatabaseSync(rawCurrentProductPath);\n  database.exec(\"DELETE FROM product_entries\");\n  database.close();\n}\n"
-  },
-  "semanticFocusPaths": ["scripts/product-truth/direct-first-public.ts"],
-  "enforceSemanticGates": true
-}

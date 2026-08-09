@@ -1,6 +1,0 @@
-{
-  "extends": "traced-owner-positive",
-  "virtualFiles": {
-    "scripts/product-truth/sqlite-classifier.ts": "const ambientAlias = eval as typeof eval;\nlet raw;\nexport function classifyLegacyDatabase() {\n  raw = ambientAlias as typeof ambientAlias;\n  return \"safe\";\n}\nfunction hiddenHelper() {\n  return raw(\"forbidden\");\n}\nexport const observed = hiddenHelper();\n"
-  }
-}

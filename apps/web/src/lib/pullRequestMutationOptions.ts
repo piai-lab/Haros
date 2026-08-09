@@ -1,10 +1,10 @@
 import type {
-  ProductWorkspaceId,
+  ProjectId,
   PullRequestActionInput,
   PullRequestCommentInput,
   PullRequestSetPinnedInput,
   PullRequestState,
-} from "@omnimind/contracts";
+} from "@synara/contracts";
 import { mutationOptions, type QueryClient } from "@tanstack/react-query";
 
 import { ensureNativeApi } from "~/nativeApi";
@@ -98,16 +98,16 @@ function actionListScopes(
   const scopes = listScopesContainingPullRequestRepository(queryClient, input);
   if (targetState === undefined) return scopes;
   const byKey = new Map(
-    scopes.map((scope) => [`${scope.state}\u0000${scope.workspaceId ?? ""}`, scope] as const),
+    scopes.map((scope) => [`${scope.state}\u0000${scope.projectId ?? ""}`, scope] as const),
   );
-  const projectIds = new Set<ProductWorkspaceId | null>([
-    input.workspaceId,
+  const projectIds = new Set<ProjectId | null>([
+    input.projectId,
     null,
-    ...scopes.map((scope) => scope.workspaceId),
+    ...scopes.map((scope) => scope.projectId),
   ]);
-  for (const workspaceId of projectIds) {
-    const target = { state: targetState, workspaceId };
-    byKey.set(`${target.state}\u0000${target.workspaceId ?? ""}`, target);
+  for (const projectId of projectIds) {
+    const target = { state: targetState, projectId };
+    byKey.set(`${target.state}\u0000${target.projectId ?? ""}`, target);
   }
   return [...byKey.values()];
 }
@@ -330,8 +330,8 @@ export function pullRequestCommentMutationOptions(queryClient: QueryClient) {
         // A new comment updates GitHub's `updatedAt` and can move an out-of-cap PR into either
         // aggregate. Include those destination scopes even when no cached row proves membership.
         affectedScopes.push(
-          { state: detailState, workspaceId: input.workspaceId },
-          { state: detailState, workspaceId: null },
+          { state: detailState, projectId: input.projectId },
+          { state: detailState, projectId: null },
         );
       }
       await Promise.all([
@@ -352,11 +352,11 @@ export function pullRequestsForceRefreshMutationOptions(queryClient: QueryClient
     // merged field-by-field through the retained identity protection below.
     scope: { id: PULL_REQUEST_ACTION_REFRESH_SCOPE_ID },
     networkMode: "always",
-    mutationFn: (input: { state: PullRequestState; workspaceId: ProductWorkspaceId | null }) =>
+    mutationFn: (input: { state: PullRequestState; projectId: ProjectId | null }) =>
       ensureNativeApi().pullRequests.list({
         involvement: "all",
         state: input.state,
-        workspaceId: input.workspaceId,
+        projectId: input.projectId,
         forceRefresh: true,
       }),
     onMutate: async (input) => {

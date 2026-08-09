@@ -4,10 +4,10 @@
 
 import {
   PINNED_MESSAGE_LABEL_MAX_CHARS,
-  CONVERSATION_NOTES_MAX_CHARS,
+  THREAD_NOTES_MAX_CHARS,
   type MessageId,
   type PinnedMessage,
-} from "@omnimind/contracts";
+} from "@synara/contracts";
 
 // Preserve no-op references while keeping mutation helpers typed as mutable-array outputs.
 function keepExistingPins(pins: readonly PinnedMessage[]): PinnedMessage[] {
@@ -111,5 +111,5 @@ export function setPinnedMessageLabel(
 }
 
 export function clampThreadNotes(notes: string): string {
-  return notes.length > CONVERSATION_NOTES_MAX_CHARS ? notes.slice(0, CONVERSATION_NOTES_MAX_CHARS) : notes;
+  return notes.length > THREAD_NOTES_MAX_CHARS ? notes.slice(0, THREAD_NOTES_MAX_CHARS) : notes;
 }

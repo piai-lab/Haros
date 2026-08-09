@@ -1,6 +1,0 @@
-{
-  "extends": "traced-owner-positive",
-  "virtualFiles": {
-    "scripts/product-truth/sqlite-classifier.ts": "let raw;\nexport function classifyLegacyDatabase() {\n  raw = Function as typeof Function;\n  return \"safe\";\n}\nfunction hiddenHelper() {\n  return raw(\"return 1\");\n}\nexport const observed = hiddenHelper();\n"
-  }
-}

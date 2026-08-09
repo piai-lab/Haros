@@ -1,11 +1,11 @@
 // FILE: file-icons.ts
-// Purpose: Map file/folder paths to product glyph names (the icons/line
+// Purpose: Map file/folder paths to Central icon names (the central-icons-reversed
 //          asset set). Anything we don't have a dedicated glyph for falls back to
 //          the generic `code-brackets` icon.
 // Layer: app-level utility shared by composer, diff panel, timeline, sidebar.
-// Depends on: product glyph assets served from /icons/line (see product-glyphs.tsx).
+// Depends on: Central icon assets served from /central-icons-reversed (see central-icons.tsx).
 
-// Generic bracket glyph used whenever a file type has no dedicated product glyph.
+// Generic bracket glyph used whenever a file type has no dedicated Central icon.
 const DEFAULT_FILE_ICON = "code-brackets";
 
 // Lookup keys come from untrusted text (chat content, attachment names), so the
@@ -15,7 +15,7 @@ function createIconTable(entries: Record<string, string>): ReadonlyMap<string, s
   return new Map(Object.entries(entries));
 }
 
-// Exact basename → product glyph name (case-insensitive lookup). Add entries here
+// Exact basename → Central icon name (case-insensitive lookup). Add entries here
 // when a well-known filename has a dedicated icon we want to surface.
 const FILE_ICON_BY_BASENAME = createIconTable({
   "package.json": "npm",
@@ -60,7 +60,7 @@ const FILE_ICON_BY_BASENAME = createIconTable({
   ".env.example": "settings-gear-1",
 });
 
-// Extension → product glyph name. Longest extension wins because
+// Extension → Central icon name. Longest extension wins because
 // `extensionCandidates` yields compound extensions first (e.g. `.d.ts` before
 // `.ts`). NOTE: the Python asset ships misspelled upstream as `phyton.svg`.
 const FILE_ICON_BY_EXTENSION = createIconTable({
@@ -200,7 +200,7 @@ function extensionCandidates(fileName: string): string[] {
   return candidates;
 }
 
-// Resolves the product glyph name for a file path, defaulting to the generic
+// Resolves the Central icon name for a file path, defaulting to the generic
 // bracket glyph when the basename/extension has no dedicated icon.
 export function getFileIconName(pathValue: string): string {
   const basename = basenameOfPath(pathValue).toLowerCase();
@@ -213,7 +213,7 @@ export function getFileIconName(pathValue: string): string {
   return DEFAULT_FILE_ICON;
 }
 
-// MIME type → product glyph name, used as a fallback for attachments whose
+// MIME type → Central icon name, used as a fallback for attachments whose
 // filename has no recognizable extension (e.g. a download named only by its
 // Content-Type, like a UUID carrying a `text/calendar` body). Mirrors the
 // families covered by the extension map so the two stay visually consistent.
@@ -248,7 +248,7 @@ const FILE_ICON_BY_MIME_TYPE = createIconTable({
 // bracket: an arbitrary upload is far likelier to be a document than code.
 const DEFAULT_ATTACHMENT_ICON = "file-text";
 
-// Resolves the product glyph name for a chat file attachment. Prefers the
+// Resolves the Central icon name for a chat file attachment. Prefers the
 // filename (basename, then extension) like `getFileIconName`, then falls back to
 // the MIME type and finally a generic document glyph — never the bracket glyph,
 // which misreads on non-code uploads.

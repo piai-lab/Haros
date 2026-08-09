@@ -5,7 +5,7 @@
 
 import type { FileDiffMetadata } from "@pierre/diffs/react";
 import { memo } from "react";
-import { cn } from "~/lib/styles";
+import { cn } from "~/lib/utils";
 import type { RenderablePatch } from "~/lib/diffRendering";
 import { DiffPanelFileList, type DiffFileChatActions } from "./DiffPanelFileList";
 import { DiffPanelLoadingState } from "./DiffPanelShell";

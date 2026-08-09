@@ -4,11 +4,11 @@
 // Layer: Pull request presentation
 // Exports: PullRequestCheckStatusIcon
 
-import type { PullRequestCheckStatus } from "@omnimind/contracts";
+import type { PullRequestCheckStatus } from "@synara/contracts";
 
-import { Glyph } from "~/ui/icons";
+import { CentralIcon } from "~/lib/central-icons";
 import { Loader2Icon } from "~/lib/icons";
-import { cn } from "~/lib/styles";
+import { cn } from "~/lib/utils";
 
 // One footprint for every branch: the glyphs head a row of text and must share an optical
 // box, so the dashed placeholder is centered inside the same size rather than sized down.
@@ -30,18 +30,18 @@ export function PullRequestCheckStatusIcon({ status }: { status: PullRequestChec
       );
     case "success":
       return (
-        <Glyph
+        <CentralIcon
           name="circle-check"
-          glyphStyle="fill"
+          variant="fill"
           className={cn(CHECK_STATUS_ICON_CLASS, CHECK_SUCCESS_COLOR_CLASS)}
         />
       );
     case "failure":
     case "cancelled":
       return (
-        <Glyph
+        <CentralIcon
           name="circle-x"
-          glyphStyle="fill"
+          variant="fill"
           className={cn(CHECK_STATUS_ICON_CLASS, CHECK_FAILURE_COLOR_CLASS)}
         />
       );

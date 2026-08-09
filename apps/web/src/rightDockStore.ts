@@ -3,11 +3,11 @@
 // Layer: UI state store
 // Exports: dock store hook, per-thread selector, and stable default snapshot.
 
-import type { ThreadId } from "@omnimind/contracts";
+import type { ThreadId } from "@synara/contracts";
 import { create } from "zustand";
 import { createJSONStorage, persist } from "zustand/middleware";
 
-import { randomUUID } from "./lib/identifiers";
+import { randomUUID } from "./lib/utils";
 import {
   type OpenPaneInput,
   type RightDockPane,
@@ -47,7 +47,7 @@ interface RightDockStore {
         | "diffFilePath"
         | "filePath"
         | "threadId"
-        | "pullRequestWorkspaceId"
+        | "pullRequestProjectId"
         | "pullRequestRepository"
         | "pullRequestNumber"
         | "pullRequestInitialTab"
@@ -129,8 +129,9 @@ export const useRightDockStore = create<RightDockStore>()(
   ),
 );
 
-export function selectRightDockState(threadId: ThreadId) {
+export function selectRightDockState(threadId: ThreadId | null) {
   // Keep the fallback snapshot stable so React does not observe phantom store
   // changes while mounting a thread that has no persisted dock state yet.
-  return (store: RightDockStore) => store.dockStateByThreadId[threadId] ?? DEFAULT_RIGHT_DOCK_STATE;
+  return (store: RightDockStore) =>
+    (threadId ? store.dockStateByThreadId[threadId] : undefined) ?? DEFAULT_RIGHT_DOCK_STATE;
 }

@@ -1,6 +1,0 @@
-{
-  "extends": "exact-predecessor-positive",
-  "appendToFiles": {
-    "apps/native-host/src/index.ts": "\n// v9 outside-Work structural drift\n"
-  }
-}

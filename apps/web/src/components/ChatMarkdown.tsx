@@ -4,7 +4,7 @@
 // Exports: ChatMarkdown
 
 import { CheckIcon, CopyIcon, TextWrapIcon } from "~/lib/icons";
-import type { ProviderMentionReference, ThreadMarker } from "@omnimind/contracts";
+import type { ProviderMentionReference, ThreadMarker } from "@synara/contracts";
 import "katex/dist/katex.min.css";
 import React, {
   Children,
@@ -31,8 +31,9 @@ import { copyTextToClipboard } from "../hooks/useCopyToClipboard";
 import { resolveDiffThemeName, type DiffThemeName } from "../lib/diffRendering";
 import { dedentCode, parseCodeFenceInfo, type CodeFenceInfo } from "../lib/codeFence";
 import { getFileIconName, pathLooksLikeKnownFile } from "../file-icons";
-import { Glyph } from "~/ui/icons";
+import { CentralIcon } from "~/lib/central-icons";
 import { isLocalImageMarkdownSrc } from "../lib/localImageUrls";
+import { repairMarkdownTableDelimiters } from "../lib/markdownTableRepair";
 import { useTheme } from "../hooks/useTheme";
 import { useSmoothStreamedText } from "../hooks/useSmoothStreamedText";
 import { openWorkspaceFileReference, useWorkspaceFileOpener } from "../lib/workspaceFileOpener";
@@ -47,6 +48,7 @@ import {
   COMPOSER_INLINE_CHIP_TOKEN_ICON_CLASS_NAME,
 } from "./composerInlineChip";
 import { LinkChipIcon } from "./LinkChipIcon";
+import { InlineAgentChip } from "./chat/InlineAgentChip";
 import { InlineLinkChip } from "./InlineLinkChip";
 import { InlineMentionChip } from "./chat/InlineMentionChip";
 import { InlineSkillChip } from "./chat/InlineSkillChip";
@@ -811,6 +813,9 @@ function ComposerChipElement(props: {
       />
     );
   }
+  if (segment.type === "agent-mention") {
+    return <InlineAgentChip alias={segment.alias} color={segment.color} />;
+  }
   return <InlineLinkChip url={segment.url} interactive />;
 }
 
@@ -818,7 +823,7 @@ function CodeBlockHeaderTitle({ fence }: { fence: CodeFenceInfo }) {
   if (fence.isFileReference && fence.fileName) {
     return (
       <span className="chat-markdown-codeblock__file" title={fence.filePath ?? fence.fileName}>
-        <Glyph
+        <CentralIcon
           name={getFileIconName(fence.filePath ?? fence.fileName)}
           className="chat-markdown-codeblock__file-icon"
         />
@@ -1035,8 +1040,13 @@ function ChatMarkdown({
   const smoothedText = useSmoothStreamedText(text, isStreaming);
   // The dollar rewrite exists to disambiguate math from currency; the user
   // variant has no math, so its text must stay byte-for-byte what was typed.
+  // Table repair runs first and can change text length, so the thread-marker
+  // plugin below must resolve offsets against the same repaired text.
   const normalizedText = useMemo(
-    () => (isUserVariant ? smoothedText : protectLiteralMarkdownDollars(smoothedText)),
+    () =>
+      isUserVariant
+        ? smoothedText
+        : protectLiteralMarkdownDollars(repairMarkdownTableDelimiters(smoothedText)),
     [isUserVariant, smoothedText],
   );
   // While streaming, let React deprioritize and coalesce the markdown re-parse so a
@@ -1045,9 +1055,15 @@ function ChatMarkdown({
   // completed messages render the exact current text immediately (no visual change).
   const deferredNormalizedText = useDeferredValue(normalizedText);
   const renderedText = isStreaming ? deferredNormalizedText : normalizedText;
+  // Marker offsets are applied against mdast positions, which come from the
+  // repaired text — validate them against the same string. A marker recorded
+  // after a repaired delimiter row fails its `selectedText` check and is
+  // dropped instead of highlighting a shifted range.
   const threadMarkerRemarkPlugin = useMemo(
     () =>
-      markers && markers.length > 0 ? createThreadMarkerRemarkPlugin({ text, markers }) : null,
+      markers && markers.length > 0
+        ? createThreadMarkerRemarkPlugin({ text: repairMarkdownTableDelimiters(text), markers })
+        : null,
     [markers, text],
   );
   const composerChipsRemarkPlugin = useMemo(

@@ -1,6 +1,7 @@
 import { assert, it } from "@effect/vitest";
 import { Effect, Schema } from "effect";
 
+import { ORCHESTRATION_WS_CHANNELS, ORCHESTRATION_WS_METHODS } from "./orchestration";
 import { WebSocketRequest, WsResponse, WS_CHANNELS, WS_METHODS } from "./ws";
 
 const decode = <S extends Schema.Top>(
@@ -13,20 +14,54 @@ const decode = <S extends Schema.Top>(
     never
   >;
 
-it.effect("rejects retired orchestration requests", () =>
+it.effect("accepts getTurnDiff requests when fromTurnCount <= toTurnCount", () =>
+  Effect.gen(function* () {
+    const parsed = yield* decode(WebSocketRequest, {
+      id: "req-1",
+      body: {
+        _tag: ORCHESTRATION_WS_METHODS.getTurnDiff,
+        threadId: "thread-1",
+        fromTurnCount: 1,
+        toTurnCount: 2,
+      },
+    });
+    assert.strictEqual(parsed.body._tag, ORCHESTRATION_WS_METHODS.getTurnDiff);
+  }),
+);
+
+it.effect("rejects getTurnDiff requests when fromTurnCount > toTurnCount", () =>
   Effect.gen(function* () {
     const result = yield* Effect.exit(
       decode(WebSocketRequest, {
         id: "req-1",
         body: {
-          _tag: "orchestration.getTurnDiff",
+          _tag: ORCHESTRATION_WS_METHODS.getTurnDiff,
           threadId: "thread-1",
-          fromTurnCount: 1,
+          fromTurnCount: 3,
           toTurnCount: 2,
         },
       }),
     );
     assert.strictEqual(result._tag, "Failure");
+  }),
+);
+
+it.effect("trims websocket request id and nested orchestration ids", () =>
+  Effect.gen(function* () {
+    const parsed = yield* decode(WebSocketRequest, {
+      id: " req-1 ",
+      body: {
+        _tag: ORCHESTRATION_WS_METHODS.getTurnDiff,
+        threadId: " thread-1 ",
+        fromTurnCount: 0,
+        toTurnCount: 0,
+      },
+    });
+    assert.strictEqual(parsed.id, "req-1");
+    assert.strictEqual(parsed.body._tag, ORCHESTRATION_WS_METHODS.getTurnDiff);
+    if (parsed.body._tag === ORCHESTRATION_WS_METHODS.getTurnDiff) {
+      assert.strictEqual(parsed.body.threadId, "thread-1");
+    }
   }),
 );
 
@@ -69,13 +104,9 @@ it.effect("accepts automation create requests", () =>
         projectId: "project-1",
         prompt: "Check stale dependencies.",
         schedule: { type: "manual" },
-        requestedSelection: {
-          state: "unavailable",
-          reason: "catalog-unavailable",
-          requestedRuntimeModelId: null,
-          permissionPolicy: "approval-required",
-          enforcement: "unverified",
-          executionTarget: null,
+        modelSelection: {
+          provider: "codex",
+          model: "gpt-5-codex",
         },
       },
     });
@@ -167,6 +198,27 @@ it.effect("accepts git.actionProgress push envelopes", () =>
   }),
 );
 
+it.effect("accepts git.worktreeSetupProgress push envelopes", () =>
+  Effect.gen(function* () {
+    const parsed = yield* decode(WsResponse, {
+      type: "push",
+      sequence: 5,
+      channel: WS_CHANNELS.gitWorktreeSetupProgress,
+      data: {
+        progressId: "progress-1",
+        kind: "phase_started",
+        phase: "branch",
+      },
+    });
+
+    if (!("type" in parsed) || parsed.type !== "push") {
+      assert.fail("expected websocket response to decode as a push envelope");
+    }
+
+    assert.strictEqual(parsed.channel, WS_CHANNELS.gitWorktreeSetupProgress);
+  }),
+);
+
 it.effect("accepts automation.event push envelopes", () =>
   Effect.gen(function* () {
     const parsed = yield* decode(WsResponse, {
@@ -187,13 +239,13 @@ it.effect("accepts automation.event push envelopes", () =>
   }),
 );
 
-it.effect("rejects retired orchestration push channels", () =>
+it.effect("rejects push envelopes when channel payload does not match the channel schema", () =>
   Effect.gen(function* () {
     const result = yield* Effect.exit(
       decode(WsResponse, {
         type: "push",
         sequence: 2,
-        channel: "orchestration.domainEvent",
+        channel: ORCHESTRATION_WS_CHANNELS.domainEvent,
         data: {
           cwd: "/tmp/workspace",
           projectName: "workspace",

@@ -2,7 +2,7 @@
 // Purpose: Characterizes Sidebar pin races, archive serialization/undo, and batch deletion.
 // Layer: Web hook tests
 
-import { ProjectId, ThreadId } from "@omnimind/contracts";
+import { ProjectId, ThreadId } from "@synara/contracts";
 import { beforeEach, describe, expect, it, vi } from "vitest";
 
 const reactHarness = vi.hoisted(() => {
@@ -81,8 +81,6 @@ const harness = vi.hoisted(() => ({
   unpinThread: vi.fn(),
   prunePinnedThreads: vi.fn(),
   dispatchCommand: vi.fn(),
-  setProductConversationPinned: vi.fn(),
-  setProductConversationBoardState: vi.fn(),
   confirm: vi.fn(),
   archiveThread: vi.fn(),
   unarchiveThread: vi.fn(),
@@ -97,7 +95,7 @@ const harness = vi.hoisted(() => ({
   removeThreadFromSplitViews: vi.fn(),
   clearTemporaryThread: vi.fn(),
   clearTerminalState: vi.fn(),
-  createChat: vi.fn(),
+  handleNewChat: vi.fn(),
   removeDeletedThreadFromClientState: vi.fn(),
   resolveSplitViewPaneIdForThread: vi.fn(),
   resolveSplitViewFocusedThreadId: vi.fn(),
@@ -159,11 +157,6 @@ vi.mock("../nativeApi", () => ({
     dialogs: { confirm: harness.confirm },
   }),
 }));
-vi.mock("../productConversationMutations", () => ({
-  setProductConversationPinned: harness.setProductConversationPinned,
-  setProductConversationBoardState: harness.setProductConversationBoardState,
-}));
-vi.mock("../wsNativeApi", () => ({ readProductNativeApi: () => ({}) }));
 vi.mock("../lib/threadArchive", () => ({
   archiveThreadFromClient: harness.archiveThread,
   unarchiveThreadFromClient: harness.unarchiveThread,
@@ -204,6 +197,7 @@ const PROJECT = {
   folderName: "actions",
   localName: null,
   cwd: "/repo",
+  defaultModelSelection: null,
   expanded: true,
   scripts: [],
 } satisfies Project;
@@ -248,7 +242,7 @@ function render(
       sidebarThreadSortOrder: "updated_at",
     },
     clearTerminalState: harness.clearTerminalState,
-    createChat: harness.createChat,
+    handleNewChat: harness.handleNewChat,
     projectById: new Map([[PROJECT_ID, PROJECT]]),
     routeSplitViewId: overrides.routeSplitViewId ?? null,
     routeThreadId: overrides.routeThreadId ?? null,
@@ -273,8 +267,6 @@ beforeEach(() => {
     harness.unpinThread,
     harness.prunePinnedThreads,
     harness.dispatchCommand,
-    harness.setProductConversationPinned,
-    harness.setProductConversationBoardState,
     harness.confirm,
     harness.archiveThread,
     harness.unarchiveThread,
@@ -288,7 +280,7 @@ beforeEach(() => {
     harness.removeThreadFromSplitViews,
     harness.clearTemporaryThread,
     harness.clearTerminalState,
-    harness.createChat,
+    harness.handleNewChat,
     harness.resolveSplitViewPaneIdForThread,
     harness.resolveSplitViewFocusedThreadId,
   ]) {
@@ -301,12 +293,10 @@ beforeEach(() => {
     harness.pinnedThreadIds = harness.pinnedThreadIds.filter((id) => id !== threadId);
   });
   harness.dispatchCommand.mockResolvedValue({ sequence: 1 });
-  harness.setProductConversationPinned.mockResolvedValue({ sequence: 1 });
-  harness.setProductConversationBoardState.mockResolvedValue({ sequence: 1 });
   harness.archiveThread.mockResolvedValue(undefined);
   harness.unarchiveThread.mockResolvedValue(undefined);
   harness.confirm.mockResolvedValue(true);
-  harness.createChat.mockResolvedValue({ ok: true });
+  harness.handleNewChat.mockResolvedValue({ ok: true });
   harness.activeThreadDelete.mockImplementation(async (input: unknown) => {
     const action = input as {
       prepareForDelete?: () => unknown;
@@ -328,20 +318,26 @@ beforeEach(() => {
 });
 
 describe("useSidebarThreadActions", () => {
-  it("pins optimistically and persists Product Conversation state", async () => {
+  it("pins optimistically and dispatches thread metadata", async () => {
     let controller = render();
 
     controller.toggleThreadPinned(THREAD_ID);
-    await vi.waitFor(() => expect(harness.setProductConversationPinned).toHaveBeenCalled());
+    await vi.waitFor(() => expect(harness.dispatchCommand).toHaveBeenCalled());
     controller = render();
 
     expect(harness.pinThread).toHaveBeenCalledWith(THREAD_ID);
-    expect(harness.setProductConversationPinned).toHaveBeenCalledWith(THREAD_ID, true);
+    expect(harness.dispatchCommand).toHaveBeenCalledWith(
+      expect.objectContaining({
+        type: "thread.meta.update",
+        threadId: THREAD_ID,
+        isPinned: true,
+      }),
+    );
     expect(controller.pinnedThreadIdSet.has(THREAD_ID)).toBe(true);
   });
 
   it("rolls the latest failed pin back to confirmed server state", async () => {
-    harness.setProductConversationPinned.mockRejectedValue(new Error("pin rejected"));
+    harness.dispatchCommand.mockRejectedValue(new Error("pin rejected"));
 
     render().toggleThreadPinned(THREAD_ID);
     await vi.waitFor(() => expect(harness.toast).toHaveBeenCalled());
@@ -356,16 +352,16 @@ describe("useSidebarThreadActions", () => {
   it("does not let an older failed pin roll back a newer click", async () => {
     let rejectFirst!: (error: Error) => void;
     let resolveSecond!: () => void;
-    harness.setProductConversationPinned
+    harness.dispatchCommand
       .mockImplementationOnce(() => new Promise((_, reject) => (rejectFirst = reject)))
       .mockImplementationOnce(() => new Promise<void>((resolve) => (resolveSecond = resolve)));
     let controller = render();
 
     controller.toggleThreadPinned(THREAD_ID);
-    await vi.waitFor(() => expect(harness.setProductConversationPinned).toHaveBeenCalledTimes(1));
+    await vi.waitFor(() => expect(harness.dispatchCommand).toHaveBeenCalledTimes(1));
     controller = render();
     controller.toggleThreadPinned(THREAD_ID);
-    await vi.waitFor(() => expect(harness.setProductConversationPinned).toHaveBeenCalledTimes(2));
+    await vi.waitFor(() => expect(harness.dispatchCommand).toHaveBeenCalledTimes(2));
     resolveSecond();
     rejectFirst(new Error("stale failure"));
     await vi.waitFor(() => expect(harness.unpinThread).toHaveBeenCalledTimes(1));
@@ -377,16 +373,16 @@ describe("useSidebarThreadActions", () => {
   it("waits for hydration and deduplicates an in-flight legacy pin migration", async () => {
     harness.pinnedThreadIds = [THREAD_ID];
     let resolveMigration!: () => void;
-    harness.setProductConversationPinned.mockImplementation(
+    harness.dispatchCommand.mockImplementation(
       () => new Promise<void>((resolve) => (resolveMigration = resolve)),
     );
 
     render({ threadsHydrated: false });
-    expect(harness.setProductConversationPinned).not.toHaveBeenCalled();
+    expect(harness.dispatchCommand).not.toHaveBeenCalled();
     render({ threadsHydrated: true });
     sidebarThreads = [...sidebarThreads];
     render({ threadsHydrated: true });
-    expect(harness.setProductConversationPinned).toHaveBeenCalledTimes(1);
+    expect(harness.dispatchCommand).toHaveBeenCalledTimes(1);
     resolveMigration();
   });
 
@@ -515,6 +511,6 @@ describe("useSidebarThreadActions", () => {
     }).deleteThread(THREAD_ID);
 
     expect(harness.navigate).not.toHaveBeenCalled();
-    expect(harness.createChat).toHaveBeenCalledWith({ fresh: true });
+    expect(harness.handleNewChat).toHaveBeenCalledWith({ fresh: true });
   });
 });

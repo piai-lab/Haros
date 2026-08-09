@@ -5,9 +5,9 @@ import type {
   BrowserWaitCondition,
   BrowserWaitInput,
   BrowserWaitOutput,
-} from "@omnimind/contracts";
+} from "@synara/contracts";
 
-import type { BrowserAutomationVisibleRuntime } from "../browserHost";
+import type { BrowserAutomationVisibleRuntime } from "../browserManager";
 import {
   abortReason,
   evaluateInContext,

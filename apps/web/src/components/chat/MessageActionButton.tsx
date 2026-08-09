@@ -4,7 +4,7 @@
 // Exports: MessageActionButton
 
 import { forwardRef, type ComponentProps, type ReactNode } from "react";
-import { cn } from "~/lib/styles";
+import { cn } from "~/lib/utils";
 import { IconButton } from "../ui/icon-button";
 import type { TooltipPopup } from "../ui/tooltip";
 

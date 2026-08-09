@@ -1,6 +1,24 @@
 import { describe, expect, it } from "vitest";
 
-import { parseDiffRouteSearch, resolveProductSurface } from "./diffRouteSearch";
+import { diffRouteSearchEquals, parseDiffRouteSearch } from "./diffRouteSearch";
+
+describe("diffRouteSearchEquals", () => {
+  it("detects editor route and selected file changes", () => {
+    expect(diffRouteSearchEquals({}, { view: "editor" })).toBe(false);
+    expect(
+      diffRouteSearchEquals(
+        { view: "editor", editorFilePath: "src/first.ts" },
+        { view: "editor", editorFilePath: "src/second.ts" },
+      ),
+    ).toBe(false);
+    expect(
+      diffRouteSearchEquals(
+        { view: "editor", editorFilePath: "src/first.ts" },
+        { view: "editor", editorFilePath: "src/first.ts" },
+      ),
+    ).toBe(true);
+  });
+});
 
 describe("parseDiffRouteSearch", () => {
   it("parses valid diff search values", () => {
@@ -101,13 +119,5 @@ describe("parseDiffRouteSearch", () => {
       panel: "browser",
       splitViewId: "split-1",
     });
-  });
-
-  it("serializes only Chat and keeps Agent as the omitted canonical default", () => {
-    expect(parseDiffRouteSearch({ surface: "chat" })).toEqual({ surface: "chat" });
-    expect(parseDiffRouteSearch({ surface: "agent" })).toEqual({});
-    expect(parseDiffRouteSearch({ surface: "studio" })).toEqual({});
-    expect(resolveProductSurface({})).toBe("agent");
-    expect(resolveProductSurface({ surface: "chat" })).toBe("chat");
   });
 });

@@ -26,8 +26,8 @@ describe("windowsCertificate", () => {
 
   it("rejects incomplete pins and mismatched signer fields", () => {
     expect(matchesDistinguishedName("CN=OmniMind", "CN=OmniMind, O=Acme Tools")).toBe(false);
-    expect(matchesDistinguishedName("CN=OmniMind, O=Acme Tools", "CN=OmniMind, O=Other Tools")).toBe(
-      false,
-    );
+    expect(
+      matchesDistinguishedName("CN=OmniMind, O=Acme Tools", "CN=OmniMind, O=Other Tools"),
+    ).toBe(false);
   });
 });

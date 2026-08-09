@@ -15,7 +15,7 @@ import {
   resolveSiteFaviconUrl,
   siteFaviconStatusCache,
 } from "~/lib/siteFavicon";
-import { cn } from "~/lib/styles";
+import { cn } from "~/lib/utils";
 
 export interface SiteFaviconProps {
   /** Full URL (or bare host) the favicon should represent. */

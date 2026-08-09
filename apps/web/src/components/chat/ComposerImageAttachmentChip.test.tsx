@@ -1,6 +1,7 @@
 import { renderToStaticMarkup } from "react-dom/server";
 import { describe, expect, it } from "vitest";
 
+import type { ComposerImageSource } from "../../lib/composerImageSource";
 import { ComposerImageAttachmentChip } from "./ComposerImageAttachmentChip";
 
 describe("ComposerImageAttachmentChip", () => {
@@ -120,4 +121,36 @@ describe("ComposerImageAttachmentChip", () => {
     expect(provenanceMatches.length).toBeGreaterThan(0);
   });
 
+  it("renders legacy Appshot provenance as an AppSnap card", () => {
+    const appSnap = {
+      id: "appsnap-legacy",
+      type: "image" as const,
+      name: "appsnap.png",
+      mimeType: "image/png",
+      sizeBytes: 2048,
+      previewUrl: "blob:appsnap-legacy",
+      file: new File(["image"], "appsnap.png", { type: "image/png" }),
+      // Older drafts persisted the provenance under the "appshot" discriminator.
+      source: {
+        kind: "appshot",
+        captureId: "capture-legacy",
+        capturedAt: "2026-07-12T19:59:33.000Z",
+        appName: "Safari",
+        windowTitle: "OmniMind",
+      } as unknown as ComposerImageSource,
+    };
+    const markup = renderToStaticMarkup(
+      <ComposerImageAttachmentChip
+        image={appSnap}
+        images={[appSnap]}
+        nonPersisted={false}
+        onExpandImage={() => {}}
+        onRemoveImage={() => {}}
+      />,
+    );
+
+    expect(markup).toContain("w-52");
+    expect(markup).toContain("Preview AppSnap from Safari");
+    expect(markup).toContain("OmniMind / Safari");
+  });
 });

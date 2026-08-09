@@ -12,19 +12,19 @@ import {
   threadIdFromProviderMentionReference,
   type MentionChipKind,
 } from "~/lib/composerMentions";
-import { Glyph, createGlyphElement } from "~/ui/icons";
+import { CentralIcon, createCentralIconElement } from "~/lib/central-icons";
 import { MessageCircleIcon, PluginIcon } from "~/lib/icons";
 import { COMPOSER_INLINE_MENTION_CHIP_ICON_CLASS_NAME } from "../composerInlineChip";
 import { FolderClosed } from "../FolderClosed";
-import type { ProviderMentionReference } from "@omnimind/contracts";
-import { threadIdFromThreadMentionPath } from "@omnimind/shared/threadMentions";
+import type { ProviderMentionReference } from "@synara/contracts";
+import { threadIdFromThreadMentionPath } from "@synara/shared/threadMentions";
 import { useStore } from "~/store";
 import { resolveThreadDisplayProvider } from "~/lib/threadDisplayProvider";
 import { ProviderIcon } from "../ProviderIcon";
 
 export type { MentionChipKind };
 
-function composerMentionChipGlyphName(path: string, kind: MentionChipKind = "path"): string {
+function composerMentionChipCentralIconName(path: string, kind: MentionChipKind = "path"): string {
   if (kind === "plugin" || path.startsWith("plugin://")) {
     return "puzzle";
   }
@@ -35,7 +35,7 @@ function composerMentionChipGlyphName(path: string, kind: MentionChipKind = "pat
 }
 
 // `theme` is retained for call-site compatibility but no longer affects icon
-// selection (product glyphs are theme-agnostic `currentColor` glyphs).
+// selection (Central icons are theme-agnostic `currentColor` glyphs).
 // `className` lets callers size the glyph per surface (composer token vs timeline
 // echo) while keeping the file/folder/plugin selection logic in one place.
 export const MentionChipIcon = function MentionChipIcon(props: {
@@ -78,23 +78,23 @@ export const MentionChipIcon = function MentionChipIcon(props: {
   if (kind === "directory") {
     return <FolderClosed className={className} />;
   }
-  // Masked Product glyph painted with `bg-current`, so the file icon inherits the
+  // Masked Central glyph painted with `bg-current`, so the file icon inherits the
   // chip's text color (it shares the filename's color) instead of a per-filetype
   // tint. `getFileIconName` already falls back to the bracket glyph when unknown.
-  return <Glyph name={getFileIconName(props.path)} className={className} />;
+  return <CentralIcon name={getFileIconName(props.path)} className={className} />;
 };
 
-// Lexical composer only — use a single masked product glyph (same as skill chips)
+// Lexical composer only — use a single masked Central icon (same as skill chips)
 // so @ tokens align with / and $ tokens. User-message bubbles keep MentionChipIcon.
 export function createMentionChipIconElement(
   path: string,
   kind: MentionChipKind = "path",
   className: string = COMPOSER_INLINE_MENTION_CHIP_ICON_CLASS_NAME,
 ): HTMLElement {
-  const iconName = composerMentionChipGlyphName(path, kind);
+  const iconName = composerMentionChipCentralIconName(path, kind);
   return (
-    createGlyphElement(iconName, className) ??
-    createGlyphElement("code-brackets", className) ??
+    createCentralIconElement(iconName, className) ??
+    createCentralIconElement("code-brackets", className) ??
     document.createElement("span")
   );
 }

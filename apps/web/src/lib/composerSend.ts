@@ -7,14 +7,18 @@ import {
   type ChatFileAttachment,
   type ChatImageAttachment,
   MessageId,
-  CHAT_TURN_MAX_ATTACHMENTS,
-  CHAT_FILE_MAX_BYTES,
+  type ModelSelection,
+  PROVIDER_SEND_TURN_MAX_ATTACHMENTS,
+  PROVIDER_SEND_TURN_MAX_FILE_BYTES,
+  type ClaudeCodeEffort,
+  type ProviderKind,
   type UploadChatAttachment,
-} from "@omnimind/contracts";
+} from "@synara/contracts";
 import {
   ATTACHMENT_CANCEL_ROUTE_PATH,
   ATTACHMENT_UPLOAD_ROUTE_PATH,
-} from "@omnimind/shared/binaryTransfer";
+} from "@synara/shared/binaryTransfer";
+import { applyClaudePromptEffortPrefix, getModelCapabilities } from "@synara/shared/model";
 
 import {
   cloneComposerImageAttachment,
@@ -29,7 +33,7 @@ import {
   prepareComposerImageFile,
 } from "./composerImagePreparation";
 import { normalizeComposerImageSource } from "./composerImageSource";
-import { randomUUID } from "./identifiers";
+import { randomUUID } from "./utils";
 import { resolveWsHttpUrl } from "./wsHttpUrl";
 
 const ATTACHMENT_CANCEL_CONCURRENCY = 2;
@@ -38,7 +42,9 @@ const ATTACHMENT_CANCEL_BODY_MAX_BYTES = 512;
 export { cloneComposerImageAttachment };
 export { effectiveComposerAttachmentCount } from "./composerAttachmentCapacity";
 
-export const FILE_SIZE_LIMIT_LABEL = `${Math.round(CHAT_FILE_MAX_BYTES / (1024 * 1024))}MB`;
+export const FILE_SIZE_LIMIT_LABEL = `${Math.round(
+  PROVIDER_SEND_TURN_MAX_FILE_BYTES / (1024 * 1024),
+)}MB`;
 
 export interface ComposerImageBuildResult {
   images: ComposerImageAttachment[];
@@ -84,8 +90,8 @@ function collectComposerAttachmentFiles(input: {
       error = `'${file.name}' exceeds the ${input.sizeLimitLabel} attachment limit.`;
       continue;
     }
-    if (nextAttachmentCount >= CHAT_TURN_MAX_ATTACHMENTS) {
-      error = `You can attach up to ${CHAT_TURN_MAX_ATTACHMENTS} references per message.`;
+    if (nextAttachmentCount >= PROVIDER_SEND_TURN_MAX_ATTACHMENTS) {
+      error = `You can attach up to ${PROVIDER_SEND_TURN_MAX_ATTACHMENTS} references per message.`;
       break;
     }
 
@@ -113,8 +119,8 @@ export async function prepareComposerImageAttachmentsFromFiles(input: {
       error = `Unsupported file type for '${file.name}'. Please attach image files only.`;
       continue;
     }
-    if (input.existingAttachmentCount + images.length >= CHAT_TURN_MAX_ATTACHMENTS) {
-      error = `You can attach up to ${CHAT_TURN_MAX_ATTACHMENTS} references per message.`;
+    if (input.existingAttachmentCount + images.length >= PROVIDER_SEND_TURN_MAX_ATTACHMENTS) {
+      error = `You can attach up to ${PROVIDER_SEND_TURN_MAX_ATTACHMENTS} references per message.`;
       break;
     }
     try {
@@ -138,7 +144,7 @@ export function buildComposerFileAttachmentsFromFiles(input: {
   const result = collectComposerAttachmentFiles({
     files: input.files,
     existingAttachmentCount: input.existingAttachmentCount,
-    maxBytes: CHAT_FILE_MAX_BYTES,
+    maxBytes: PROVIDER_SEND_TURN_MAX_FILE_BYTES,
     sizeLimitLabel: FILE_SIZE_LIMIT_LABEL,
     acceptsFile: (file) => !file.type.startsWith("image/"),
   });
@@ -184,6 +190,44 @@ export function readFileAsDataUrl(file: File): Promise<string> {
     });
     reader.readAsDataURL(file);
   });
+}
+
+// Provider-specific prompt massaging. Claude prompt-injected efforts must be
+// applied before filtering skill/mention references and before dispatch.
+export function formatOutgoingComposerPrompt(params: {
+  provider: ProviderKind;
+  model: string | null;
+  effort: string | null;
+  text: string;
+}): string {
+  const caps = getModelCapabilities(params.provider, params.model);
+  if (params.effort && caps.promptInjectedEffortLevels.includes(params.effort)) {
+    return applyClaudePromptEffortPrefix(params.text, params.effort as ClaudeCodeEffort | null);
+  }
+  return params.text;
+}
+
+export function resolvePromptEffortFromModelSelection(
+  modelSelection: ModelSelection,
+): string | null {
+  switch (modelSelection.provider) {
+    case "antigravity":
+      return null;
+    case "codex":
+      return modelSelection.options?.reasoningEffort ?? null;
+    case "claudeAgent":
+      return modelSelection.options?.effort ?? null;
+    case "cursor":
+      return modelSelection.options?.reasoningEffort ?? null;
+    case "grok":
+    case "droid":
+      return modelSelection.options?.reasoningEffort ?? null;
+    case "pi":
+      return modelSelection.options?.thinkingLevel ?? null;
+    case "kilo":
+    case "opencode":
+      return null;
+  }
 }
 
 export interface StagedComposerAttachments {
@@ -255,7 +299,7 @@ export async function stageUploadComposerAttachments(input: {
   try {
     for (const attachment of [...input.images, ...(input.files ?? [])]) {
       const params = new URLSearchParams({
-        conversationId: input.threadId,
+        threadId: input.threadId,
         type: attachment.type,
         name: attachment.name,
         mimeType: attachment.mimeType,

@@ -3,6 +3,7 @@
 // message-content hits while still surfacing a useful snippet for chat matches.
 import type { ComponentType } from "react";
 
+import type { ProviderKind } from "@synara/contracts";
 import { basenameOfPath } from "../file-icons";
 import type { ThemeMode, ThemeVariant } from "../theme/theme.logic";
 
@@ -12,12 +13,12 @@ export interface SidebarSearchAction {
   description: string;
   keywords?: readonly string[];
   shortcutLabel?: string | null;
-  /** Dynamic actions (e.g. "Switch to <location>") execute this instead of a wired-up prop. */
+  /** Dynamic actions (e.g. "Switch to <space>") execute this instead of a wired-up prop. */
   run?: () => void;
-  /** Overrides the id-keyed icon map for actions whose glyph is data (a location icon). */
+  /** Overrides the id-keyed icon map for actions whose glyph is data (a space's icon). */
   icon?: ComponentType<{ className?: string }>;
   /**
-   * Type-to-jump targets (one per location) only appear once the user types; listing them
+   * Type-to-jump targets (one per space) only appear once the user types; listing them
    * all in the empty palette would push threads and projects below the fold.
    */
   requiresQuery?: boolean;
@@ -42,7 +43,7 @@ export interface SidebarSearchProject {
   folderName: string;
   localName: string | null;
   cwd: string;
-  locationName: string;
+  spaceName: string;
   createdAt?: string | undefined;
   updatedAt?: string | undefined;
 }
@@ -58,32 +59,13 @@ export interface SidebarSearchThread {
   projectId: string;
   projectName: string;
   projectRemoteName: string;
-  locationName: string;
-  provider: string | null;
+  spaceName: string;
+  provider: ProviderKind;
   createdAt: string;
   updatedAt?: string | undefined;
   messages: readonly {
     text: string;
   }[];
-}
-
-export type SidebarSearchSurface = "agent" | "chat";
-
-export function selectSidebarSearchThreadInventory(input: {
-  readonly surface: SidebarSearchSurface;
-  readonly productThreads: readonly SidebarSearchThread[];
-  readonly localChatDraftThreads: readonly SidebarSearchThread[];
-  readonly agentThreads: readonly SidebarSearchThread[];
-}): SidebarSearchThread[] {
-  return input.surface === "chat"
-    ? [...input.productThreads, ...input.localChatDraftThreads]
-    : [...input.agentThreads];
-}
-
-export function resolveSidebarSearchThreadActivation(
-  surface: SidebarSearchSurface,
-): "product-chat-route" | "agent-thread" {
-  return surface === "chat" ? "product-chat-route" : "agent-thread";
 }
 
 export interface SidebarSearchThreadMatch {
@@ -247,7 +229,7 @@ function scoreProject(project: SidebarSearchProject, query: string): number | nu
   const remoteName = normalizeText(project.remoteName);
   const cwd = normalizeText(project.cwd);
   const folder = normalizeText(project.folderName || basenameOfPath(project.cwd));
-  const locationName = normalizeText(project.locationName);
+  const spaceName = normalizeText(project.spaceName);
 
   if (name === query) return 150;
   if (remoteName === query) return 150;
@@ -258,9 +240,9 @@ function scoreProject(project: SidebarSearchProject, query: string): number | nu
   if (name.includes(query)) return 105;
   if (remoteName.includes(query)) return 105;
   if (folder.includes(query)) return 95;
-  if (locationName === query) return 90;
+  if (spaceName === query) return 90;
   if (cwd.includes(query)) return 70;
-  if (locationName.includes(query)) return 60;
+  if (spaceName.includes(query)) return 60;
   return null;
 }
 
@@ -370,7 +352,7 @@ export function matchSidebarSearchThreads(
       const title = normalizeText(thread.title);
       const projectName = normalizeText(thread.projectName);
       const projectRemoteName = normalizeText(thread.projectRemoteName);
-      const locationName = normalizeText(thread.locationName);
+      const spaceName = normalizeText(thread.spaceName);
       const messageMatch = scoreMessage(thread.messages, normalizedQuery, queryTokens);
       let score: number | null = null;
       let matchKind: SidebarSearchThreadMatch["matchKind"] = "title";
@@ -401,7 +383,7 @@ export function matchSidebarSearchThreads(
       ) {
         score = 65;
         matchKind = "project";
-      } else if (locationName.includes(normalizedQuery)) {
+      } else if (spaceName.includes(normalizedQuery)) {
         score = 55;
         matchKind = "project";
       }

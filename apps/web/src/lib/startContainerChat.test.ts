@@ -1,4 +1,4 @@
-import { ProjectId, ThreadId } from "@omnimind/contracts";
+import { ProjectId, ThreadId } from "@synara/contracts";
 import { describe, expect, it, vi } from "vitest";
 
 import {
@@ -19,8 +19,8 @@ function successfulHandler() {
 
 describe("startFreshChatForActiveSurface", () => {
   it("keeps the global New chat action in Studio", async () => {
-    const createChat = successfulHandler();
-    const createStudioChat = successfulHandler();
+    const handleNewChat = successfulHandler();
+    const handleNewStudioChat = successfulHandler();
 
     await startFreshChatForActiveSurface({
       activeProject: {
@@ -29,29 +29,29 @@ describe("startFreshChatForActiveSurface", () => {
       },
       isStudioRoute: false,
       paths,
-      createChat,
-      createStudioChat,
+      handleNewChat,
+      handleNewStudioChat,
     });
 
-    expect(createStudioChat).toHaveBeenCalledOnce();
-    expect(createStudioChat).toHaveBeenCalledWith({ fresh: true });
-    expect(createChat).not.toHaveBeenCalled();
+    expect(handleNewStudioChat).toHaveBeenCalledOnce();
+    expect(handleNewStudioChat).toHaveBeenCalledWith({ fresh: true });
+    expect(handleNewChat).not.toHaveBeenCalled();
   });
 
   it("keeps the global New chat action on the Studio landing route", async () => {
-    const createChat = successfulHandler();
-    const createStudioChat = successfulHandler();
+    const handleNewChat = successfulHandler();
+    const handleNewStudioChat = successfulHandler();
 
     await startFreshChatForActiveSurface({
       activeProject: null,
       isStudioRoute: true,
       paths,
-      createChat,
-      createStudioChat,
+      handleNewChat,
+      handleNewStudioChat,
     });
 
-    expect(createStudioChat).toHaveBeenCalledOnce();
-    expect(createChat).not.toHaveBeenCalled();
+    expect(handleNewStudioChat).toHaveBeenCalledOnce();
+    expect(handleNewChat).not.toHaveBeenCalled();
   });
 
   it("keeps the global New chat action in Projects for ordinary or missing projects", async () => {
@@ -59,20 +59,20 @@ describe("startFreshChatForActiveSurface", () => {
       { kind: "project" as const, cwd: "/Users/tester/Developer/app" },
       null,
     ]) {
-      const createChat = successfulHandler();
-      const createStudioChat = successfulHandler();
+      const handleNewChat = successfulHandler();
+      const handleNewStudioChat = successfulHandler();
 
       await startFreshChatForActiveSurface({
         activeProject,
         isStudioRoute: false,
         paths,
-        createChat,
-        createStudioChat,
+        handleNewChat,
+        handleNewStudioChat,
       });
 
-      expect(createChat).toHaveBeenCalledOnce();
-      expect(createChat).toHaveBeenCalledWith({ fresh: true });
-      expect(createStudioChat).not.toHaveBeenCalled();
+      expect(handleNewChat).toHaveBeenCalledOnce();
+      expect(handleNewChat).toHaveBeenCalledWith({ fresh: true });
+      expect(handleNewStudioChat).not.toHaveBeenCalled();
     }
   });
 });
@@ -81,18 +81,18 @@ describe("startContainerChat", () => {
   it("returns the created thread so callers can attach context deterministically", async () => {
     const projectId = ProjectId.makeUnsafe("project-1");
     const threadId = ThreadId.makeUnsafe("thread-1");
-    const createThread = vi.fn(async () => threadId);
+    const handleNewThread = vi.fn(async () => threadId);
 
     await expect(
       startContainerChat({
         ensureProjectId: async () => projectId,
-        createThread,
+        handleNewThread,
         fresh: true,
         errorLabel: "failed",
       }),
     ).resolves.toEqual({ ok: true, threadId });
 
-    expect(createThread).toHaveBeenCalledWith(projectId, {
+    expect(handleNewThread).toHaveBeenCalledWith(projectId, {
       fresh: true,
       envMode: "local",
       branch: null,
@@ -103,16 +103,16 @@ describe("startContainerChat", () => {
   it("clears a stored Studio draft's inherited worktree metadata without overriding its cwd", async () => {
     const projectId = ProjectId.makeUnsafe("studio-project");
     const threadId = ThreadId.makeUnsafe("studio-thread");
-    const createThread = vi.fn(async () => threadId);
+    const handleNewThread = vi.fn(async () => threadId);
 
     await startContainerChat({
       ensureProjectId: async () => projectId,
-      createThread,
+      handleNewThread,
       forceLocalWorkspace: true,
       errorLabel: "failed",
     });
 
-    expect(createThread).toHaveBeenCalledWith(projectId, {
+    expect(handleNewThread).toHaveBeenCalledWith(projectId, {
       envMode: "local",
       branch: null,
       worktreePath: null,

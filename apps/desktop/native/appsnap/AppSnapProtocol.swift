@@ -32,7 +32,7 @@ struct AppSnapOptions {
                 guard requestedMode == nil else {
                     throw AppSnapFailure(
                         code: "invalid_arguments",
-                        message: "Choose exactly one bridge mode."
+                        message: "Choose exactly one helper mode."
                     )
                 }
                 requestedMode = argument
@@ -124,7 +124,7 @@ final class NDJSONEmitter {
         guard JSONSerialization.isValidJSONObject(payload),
               var data = try? JSONSerialization.data(withJSONObject: payload)
         else {
-            writeDiagnostic("Could not encode bridge protocol event.")
+            writeDiagnostic("Could not encode helper protocol event.")
             return
         }
 
@@ -200,7 +200,7 @@ final class NDJSONEmitter {
     }
 
     private func writeDiagnostic(_ message: String) {
-        guard let data = "[omnimind-appsnap-bridge] \(message)\n".data(using: .utf8) else {
+        guard let data = "[omnimind-appsnap-helper] \(message)\n".data(using: .utf8) else {
             return
         }
         lock.lock()

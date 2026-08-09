@@ -1,4 +1,4 @@
-import { ThreadId } from "@omnimind/contracts";
+import { ThreadId } from "@synara/contracts";
 import { beforeEach, describe, expect, it } from "vitest";
 
 import { partializeComposerDraftStoreState, useComposerDraftStore } from "./composerDraftStore";

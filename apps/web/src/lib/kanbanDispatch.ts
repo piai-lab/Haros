@@ -5,44 +5,47 @@
 // Exports: dispatchKanbanDraftCard, dispatchKanbanDraftThread, KanbanDraftDispatchResult
 
 import type {
-  ProductSubmitQueueItemInput,
-  ProductSubmitResult,
+  AssistantDeliveryMode,
   ProjectId,
-  WorkspaceEnvironmentMode,
+  ProviderKind,
+  ProviderStartOptions,
+  ThreadEnvironmentMode,
   ThreadId,
-} from "@omnimind/contracts";
-import {
-  PRODUCT_PROTOCOL_VERSION,
-  ProductConversationId,
-  ProductDispatchId,
-  ProductEntryId,
-  ProductOperationReceiptId,
-  ProductQueueItemId,
-  ProductRunId,
-} from "@omnimind/contracts";
-import { buildPromptThreadTitleFallback } from "@omnimind/shared/chatThreads";
-import { isPendingThreadWorktree } from "@omnimind/shared/threadEnvironment";
+} from "@synara/contracts";
+import { buildPromptThreadTitleFallback } from "@synara/shared/chatThreads";
+import { isPendingThreadWorktree } from "@synara/shared/threadEnvironment";
 import {
   buildKanbanComposerDraftSnapshot,
   resolveKanbanDraftOpenThreadReason,
   resolveDraftDropAction,
   type KanbanCard,
   type KanbanDraftOpenThreadReason,
-  type KanbanOptimisticDispatchSnapshot,
 } from "../components/kanban/kanban.logic";
-import { resolveKanbanRuntimeModel } from "../components/kanban/kanbanRuntimeSelection";
-import { useComposerDraftStore } from "../composerDraftStore";
+import {
+  resolvePreferredComposerModelSelection,
+  useComposerDraftStore,
+} from "../composerDraftStore";
 import { useKanbanUiStore } from "../kanbanUiStore";
-import { readProductNativeApi } from "../wsNativeApi";
+import { readNativeApi } from "../nativeApi";
 import { useStore } from "../store";
 import { getThreadFromState } from "../threadDerivation";
 import type { SidebarThreadSummary } from "../types";
+import { DEFAULT_INTERACTION_MODE, DEFAULT_RUNTIME_MODE } from "../types";
 import { appendAssistantSelectionsToPrompt } from "./assistantSelections";
 import {
   appendBrowserAnnotationsToPrompt,
   formatBrowserAnnotationLabel,
 } from "./browserAnnotations";
+import {
+  stageUploadComposerAttachments,
+  formatOutgoingComposerPrompt,
+  resolvePromptEffortFromModelSelection,
+} from "./composerSend";
 import { appendFileCommentsToPrompt, formatFileCommentTitleSeed } from "./fileComments";
+import {
+  filterPromptProviderMentionReferences,
+  filterPromptSkillReferences,
+} from "./composerMentions";
 import {
   appendTerminalContextsToPrompt,
   filterTerminalContextsWithText,
@@ -50,26 +53,21 @@ import {
 } from "./terminalContext";
 import { resolveTerminalThreadCreationState } from "./threadBootstrap";
 import { promoteThreadCreate } from "./threadCreatePromotion";
-import { createMessageId, randomUUID } from "./identifiers";
+import { newCommandId, newMessageId } from "./utils";
 
 export type KanbanDraftDispatchResult =
   /** The drafted prompt is on its way; runtime events move the card to In Progress. */
   | { kind: "dispatched" }
   /** The board cannot dispatch this card faithfully — open the chat instead. */
   | { kind: "open-thread"; reason: KanbanDraftOpenThreadReason }
-  /** Admission remains pre-send; retry reuses the same durable transfer identity. */
-  | { kind: "pending" }
-  /** Delivery crossed an uncertain boundary; never replay this intent automatically. */
-  | { kind: "delivery-unknown" }
-  /** The Host conclusively rejected the transfer before execution. */
-  | { kind: "rejected"; message: string; retryable: boolean }
-  /** Composer changed after admission; the edited draft was not submitted. */
-  | { kind: "draft-changed" }
   | { kind: "unavailable" }
   | { kind: "error"; message: string };
 
 export async function dispatchKanbanDraftCard(input: {
   card: KanbanCard;
+  defaultProvider: ProviderKind;
+  assistantDeliveryMode: AssistantDeliveryMode;
+  providerOptions?: ProviderStartOptions | undefined;
 }): Promise<KanbanDraftDispatchResult> {
   const { card } = input;
   if (resolveDraftDropAction(card) !== "dispatch") {
@@ -82,6 +80,9 @@ export async function dispatchKanbanDraftCard(input: {
     threadId: card.threadId,
     projectId: card.projectId,
     thread: card.thread,
+    defaultProvider: input.defaultProvider,
+    assistantDeliveryMode: input.assistantDeliveryMode,
+    providerOptions: input.providerOptions,
   });
 }
 
@@ -90,90 +91,16 @@ interface KanbanDraftDispatchInput {
   projectId: ProjectId;
   /** Backing summary; null for local-only draft threads not yet promoted. */
   thread: SidebarThreadSummary | null;
+  defaultProvider: ProviderKind;
+  assistantDeliveryMode: AssistantDeliveryMode;
+  providerOptions?: ProviderStartOptions | undefined;
 }
 
 // Racing callers (a re-drop before the board re-derives, drag + send-now) must
-// not create two Product Queue transfers for the same local draft.
+// not queue two turns for the same thread — the server accepts duplicate
+// thread.turn.start commands while the session is still starting. Same pattern
+// as threadCreatePromotion's inFlightThreadCreateById.
 const inFlightDispatchByThreadId = new Map<ThreadId, Promise<KanbanDraftDispatchResult>>();
-
-interface PendingKanbanTransfer {
-  readonly submitInput: ProductSubmitQueueItemInput;
-  readonly optimisticEntry: KanbanOptimisticDispatchSnapshot;
-  readonly outgoingMessageText: string;
-}
-
-// A transport error or pre-send receipt must not turn a second drop into a
-// second Queue item. The Product Control Plane owns the durable item/run; this
-// map only retains its transfer identity for a same-process retry.
-const pendingTransferByThreadId = new Map<ThreadId, PendingKanbanTransfer>();
-
-export { resolveKanbanRuntimeModel } from "../components/kanban/kanbanRuntimeSelection";
-
-export type KanbanSubmitReceiptResolution =
-  | { readonly kind: "accepted" }
-  | { readonly kind: "settled" }
-  | { readonly kind: "pending" }
-  | { readonly kind: "delivery-unknown" }
-  | { readonly kind: "rejected"; readonly message: string; readonly retryable: boolean };
-
-/** Resolves only the receipt created by this transfer; another run can never confirm the card. */
-export function resolveKanbanSubmitReceipt(
-  result: ProductSubmitResult,
-  identity: Pick<ProductSubmitQueueItemInput, "runId" | "entryId" | "dispatchId" | "receiptId">,
-): KanbanSubmitReceiptResolution {
-  const run = result.snapshot.readModel.runs.find(
-    (candidate) =>
-      candidate.id === identity.runId &&
-      candidate.entryId === identity.entryId &&
-      candidate.receipt.id === identity.receiptId &&
-      candidate.receipt.dispatchId === identity.dispatchId,
-  );
-  if (!run) {
-    throw new Error("Product submit response did not contain the matching dispatch receipt.");
-  }
-  const receipt = run.receipt.receipt;
-  switch (receipt.state) {
-    case "accepted":
-    case "running":
-      return { kind: "accepted" };
-    case "settled":
-    case "outcome_unknown":
-      return { kind: "settled" };
-    case "pending":
-    case "sent":
-      return { kind: "pending" };
-    case "delivery_unknown":
-      return { kind: "delivery-unknown" };
-    case "rejected":
-      return { kind: "rejected", message: receipt.message, retryable: receipt.retryable };
-  }
-}
-
-function applyKanbanSubmitResult(
-  threadId: ThreadId,
-  transfer: PendingKanbanTransfer,
-  result: ProductSubmitResult,
-  options?: { readonly preserveEditedDraft?: boolean },
-): KanbanDraftDispatchResult {
-  const resolution = resolveKanbanSubmitReceipt(result, transfer.submitInput);
-  if (resolution.kind === "pending") return { kind: "pending" };
-  if (resolution.kind === "delivery-unknown") return { kind: "delivery-unknown" };
-
-  pendingTransferByThreadId.delete(threadId);
-  if (resolution.kind === "rejected") {
-    return resolution;
-  }
-
-  // Only an exact accepted/running receipt earns the short projection-gap
-  // overlay. Settled/outcome-unknown receipts are accepted history, but they do
-  // not truthfully describe work as currently In Progress.
-  if (resolution.kind === "accepted") {
-    useKanbanUiStore.getState().markOptimisticDispatch(threadId, transfer.optimisticEntry);
-  }
-  if (options?.preserveEditedDraft) return { kind: "draft-changed" };
-  useComposerDraftStore.getState().clearComposerContent(threadId);
-  return { kind: "dispatched" };
-}
 
 /**
  * Promote (when needed) and dispatch a draft thread's composer prompt as a queued
@@ -200,10 +127,8 @@ async function dispatchKanbanDraftThreadOnce(
   input: KanbanDraftDispatchInput,
 ): Promise<KanbanDraftDispatchResult> {
   const { threadId, projectId, thread } = input;
-  let api;
-  try {
-    api = readProductNativeApi();
-  } catch {
+  const api = readNativeApi();
+  if (!api) {
     return { kind: "unavailable" };
   }
 
@@ -220,10 +145,12 @@ async function dispatchKanbanDraftThreadOnce(
   const appState = useStore.getState();
   const project = appState.projects.find((candidate) => candidate.id === projectId) ?? null;
   const existingThread = thread ? getThreadFromState(appState, threadId) : null;
-  const requestedSelection = composerStore.getDraftThread(threadId)?.requestedSelection ?? null;
-  if (!requestedSelection || requestedSelection.state !== "selected") {
-    return { kind: "unavailable" };
-  }
+  const modelSelection = resolvePreferredComposerModelSelection({
+    draft: draftComposerState,
+    threadModelSelection: thread?.modelSelection ?? null,
+    projectModelSelection: project?.defaultModelSelection ?? null,
+    defaultProvider: input.defaultProvider,
+  });
   const draftThread = composerStore.getDraftThread(threadId);
   // Worktree creation is owned by the full chat composer path. Kanban stays a
   // control surface and opens chat when a draft still needs that preflight.
@@ -231,17 +158,25 @@ async function dispatchKanbanDraftThreadOnce(
     envMode: (thread?.envMode ??
       existingThread?.envMode ??
       draftThread?.envMode ??
-      null) as WorkspaceEnvironmentMode | null,
+      null) as ThreadEnvironmentMode | null,
     worktreePath: thread?.worktreePath ?? existingThread?.worktreePath ?? draftThread?.worktreePath,
   };
   if (isPendingThreadWorktree(dispatchEnvironment)) {
     return { kind: "open-thread", reason: "worktree-pending" };
   }
+  const runtimeMode =
+    draftComposerState?.runtimeMode ??
+    existingThread?.runtimeMode ??
+    draftThread?.runtimeMode ??
+    DEFAULT_RUNTIME_MODE;
+  const interactionMode =
+    draftComposerState?.interactionMode ??
+    existingThread?.interactionMode ??
+    thread?.interactionMode ??
+    draftThread?.interactionMode ??
+    DEFAULT_INTERACTION_MODE;
   const skills = draftComposerState?.skills ?? [];
   const mentions = draftComposerState?.mentions ?? [];
-  if (skills.length > 0 || mentions.length > 0) {
-    return { kind: "open-thread", reason: "unsupported-execution-options" };
-  }
   const composerImages = draftComposerState?.images ?? [];
   const composerFiles = draftComposerState?.files ?? [];
   const composerAssistantSelections = draftComposerState?.assistantSelections ?? [];
@@ -264,7 +199,7 @@ async function dispatchKanbanDraftThreadOnce(
       : "") ||
     "New task";
   const fallbackTitle = buildPromptThreadTitleFallback(titleSeed);
-  const messageId = createMessageId();
+  const messageId = newMessageId();
   // Browser annotations serialize outermost so display extraction can validate
   // their message-bound transport before unwrapping the remaining context blocks.
   const messageText = appendBrowserAnnotationsToPrompt(
@@ -278,59 +213,41 @@ async function dispatchKanbanDraftThreadOnce(
     composerBrowserAnnotations,
     messageId,
   );
-  const outgoingMessageText =
-    messageText || (composerImages.length > 0 ? IMAGE_ONLY_BOOTSTRAP_PROMPT : "");
-  const pendingTransfer = pendingTransferByThreadId.get(threadId);
-  if (pendingTransfer) {
-    try {
-      const draftChanged = pendingTransfer.outgoingMessageText !== outgoingMessageText;
-      if (draftChanged) {
-        // Recheck only. The admitted intent may already have crossed the send
-        // boundary, so editing invalidates its retry authority but can never
-        // authorize a replacement put/replay.
-        const snapshot = await api.getConversationSnapshot({
-          protocolVersion: PRODUCT_PROTOCOL_VERSION,
-          conversationId: pendingTransfer.submitInput.conversationId,
-        });
-        const resolution = resolveKanbanSubmitReceipt(
-          { snapshot, automaticReplayCount: 0 },
-          pendingTransfer.submitInput,
-        );
-        if (resolution.kind === "pending" || resolution.kind === "delivery-unknown") {
-          return { kind: "draft-changed" };
-        }
-        return applyKanbanSubmitResult(
-          threadId,
-          pendingTransfer,
-          { snapshot, automaticReplayCount: 0 },
-          { preserveEditedDraft: true },
-        );
-      }
-      return applyKanbanSubmitResult(
-        threadId,
-        pendingTransfer,
-        await api.submitQueueItem(pendingTransfer.submitInput),
-      );
-    } catch (error) {
-      return {
-        kind: "error",
-        message: error instanceof Error ? error.message : "Could not recheck the drafted prompt.",
-      };
-    }
-  }
+  const outgoingMessageText = formatOutgoingComposerPrompt({
+    provider: modelSelection.provider,
+    model: modelSelection.model,
+    effort: resolvePromptEffortFromModelSelection(modelSelection),
+    text: messageText || (composerImages.length > 0 ? IMAGE_ONLY_BOOTSTRAP_PROMPT : ""),
+  });
+  const mentionedSkills = filterPromptSkillReferences(
+    outgoingMessageText,
+    skills,
+    modelSelection.provider,
+  );
+  const mentionedMentions = filterPromptProviderMentionReferences(outgoingMessageText, mentions);
+  const turnAttachmentsPromise = stageUploadComposerAttachments({
+    threadId,
+    images: composerImages,
+    files: composerFiles,
+    assistantSelections: composerAssistantSelections,
+  });
   // The same instant feeds both the command timestamps and the optimistic entry:
   // a server-side failure stamps the session with this createdAt, and the
   // failure check compares it against droppedAtMs with >=.
   const droppedAtMs = Date.now();
   const createdAt = new Date(droppedAtMs).toISOString();
 
-  const optimisticEntry: KanbanOptimisticDispatchSnapshot = {
+  // Optimistic move: show the card In Progress before any round-trip. Provider
+  // session init can take seconds; runtime events confirm the move (reconciliation
+  // clears the entry) or the failure paths below revert it.
+  const kanbanUi = useKanbanUiStore.getState();
+  kanbanUi.markOptimisticDispatch(threadId, {
     projectId,
     title: thread?.title ?? fallbackTitle,
-    provider: null,
+    provider: modelSelection.provider,
     baselineTurnId: thread?.latestTurn?.turnId ?? null,
     droppedAtMs,
-  };
+  });
 
   try {
     if (thread === null) {
@@ -339,86 +256,87 @@ async function dispatchKanbanDraftThreadOnce(
       const creationState = resolveTerminalThreadCreationState({
         activeDraftThread: null,
         activeThread: null,
+        defaultProvider: input.defaultProvider,
+        draftComposerState,
         draftThread,
         options: undefined,
+        projectDefaultModelSelection: project?.defaultModelSelection ?? null,
         projectId,
       });
-      const promotion = await promoteThreadCreate({
-        threadId,
-        projectId,
-        title: fallbackTitle,
-        worktreePath: creationState.worktreePath,
-        workingDirectory: creationState.workingDirectory,
-        createdAt: draftThread?.createdAt ?? createdAt,
-      });
+      const promotion = await promoteThreadCreate(
+        {
+          type: "thread.create",
+          commandId: newCommandId(),
+          threadId,
+          projectId,
+          title: fallbackTitle,
+          modelSelection,
+          runtimeMode,
+          interactionMode,
+          envMode: creationState.envMode,
+          branch: creationState.branch,
+          worktreePath: creationState.worktreePath,
+          workingDirectory: creationState.workingDirectory,
+          lastKnownPr: creationState.lastKnownPr,
+          createdAt: draftThread?.createdAt ?? createdAt,
+        },
+        api,
+      );
       if (promotion === "unavailable") {
+        await turnAttachmentsPromise.then(
+          (staged) => staged.cleanup(),
+          () => undefined,
+        );
+        kanbanUi.clearOptimisticDispatch(threadId);
         return { kind: "unavailable" };
       }
+      if (project?.kind === "chat") {
+        await api.orchestration.dispatchCommand({
+          type: "project.meta.update",
+          commandId: newCommandId(),
+          projectId,
+          title: fallbackTitle,
+        });
+      }
     }
-    if (composerImages.length > 0 || composerFiles.length > 0) {
-      return { kind: "unavailable" };
-    }
-    const shell = await api.getShellSnapshot();
-    const runtimeCatalog = shell.runtimeCatalog;
-    const runtimeEngine = runtimeCatalog?.engines.find(
-      (candidate) => candidate.engineId === requestedSelection.engineId,
+
+    const stagedTurnAttachments = await turnAttachmentsPromise;
+    await stagedTurnAttachments.runWithDispatch((turnAttachments) =>
+      api.orchestration.dispatchCommand({
+        type: "thread.turn.start",
+        commandId: newCommandId(),
+        threadId,
+        message: {
+          messageId,
+          role: "user",
+          text: outgoingMessageText,
+          attachments: turnAttachments,
+          ...(mentionedSkills.length > 0 ? { skills: mentionedSkills } : {}),
+          ...(mentionedMentions.length > 0 ? { mentions: mentionedMentions } : {}),
+        },
+        modelSelection,
+        ...(input.providerOptions ? { providerOptions: input.providerOptions } : {}),
+        assistantDeliveryMode: input.assistantDeliveryMode,
+        dispatchMode: "queue",
+        runtimeMode,
+        interactionMode,
+        createdAt,
+      }),
     );
-    const runtimeModel = runtimeCatalog
-      ? resolveKanbanRuntimeModel(runtimeCatalog, requestedSelection)
-      : undefined;
-    if (
-      !runtimeCatalog ||
-      !runtimeEngine ||
-      runtimeEngine.availability.state !== "available" ||
-      (requestedSelection.state === "selected" &&
-        requestedSelection.runtimeChoice.kind === "product-model" &&
-        (!runtimeModel?.available || runtimeModel.auth !== "configured"))
-    ) {
-      return { kind: "unavailable" };
-    }
-    const conversationId = ProductConversationId.makeUnsafe(threadId);
-    const detail = await api.getConversationSnapshot({
-      protocolVersion: PRODUCT_PROTOCOL_VERSION,
-      conversationId,
-    });
-    const queueItem = await api.putQueueItem({
-      protocolVersion: PRODUCT_PROTOCOL_VERSION,
-      conversationId,
-      itemId: ProductQueueItemId.makeUnsafe(messageId),
-      text: outgoingMessageText,
-      requestedSelection: {
-        ...requestedSelection,
-        state: "selected",
-        engineId: runtimeEngine.engineId,
-        runtimeChoice: requestedSelection.runtimeChoice,
-        permissionPolicy: "approval-required",
-        executionTarget: detail.readModel.workspace.access.executionTarget,
-        packageGeneration: runtimeCatalog.packageGeneration,
-      },
-      resources: [],
-      expectedRevision: null,
-    });
-    const submitInput: ProductSubmitQueueItemInput = {
-      protocolVersion: PRODUCT_PROTOCOL_VERSION,
-      conversationId,
-      itemId: queueItem.id,
-      expectedRevision: queueItem.revision,
-      entryId: ProductEntryId.makeUnsafe(messageId),
-      runId: ProductRunId.makeUnsafe(randomUUID()),
-      dispatchId: ProductDispatchId.makeUnsafe(randomUUID()),
-      receiptId: ProductOperationReceiptId.makeUnsafe(randomUUID()),
-    };
-    const transfer = {
-      submitInput,
-      optimisticEntry,
-      outgoingMessageText,
-    } satisfies PendingKanbanTransfer;
-    pendingTransferByThreadId.set(threadId, transfer);
-    return applyKanbanSubmitResult(threadId, transfer, await api.submitQueueItem(submitInput));
   } catch (error) {
+    await turnAttachmentsPromise.then(
+      (staged) => staged.cleanup(),
+      () => undefined,
+    );
+    kanbanUi.clearOptimisticDispatch(threadId);
     return {
       kind: "error",
       message: error instanceof Error ? error.message : "Could not send the drafted prompt.",
     };
   }
+
+  // The prompt was consumed by the dispatched turn; an open composer for this
+  // thread should not keep offering it.
+  useComposerDraftStore.getState().clearComposerContent(threadId);
+  return { kind: "dispatched" };
 }

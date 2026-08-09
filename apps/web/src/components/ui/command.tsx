@@ -3,7 +3,7 @@
 import { Dialog as CommandDialogPrimitive } from "@base-ui/react/dialog";
 import { SearchIcon } from "~/lib/icons";
 import type * as React from "react";
-import { cn } from "~/lib/styles";
+import { cn } from "~/lib/utils";
 import {
   Autocomplete,
   AutocompleteCollection,

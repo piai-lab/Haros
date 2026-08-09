@@ -1,8 +1,0 @@
-{
-  "compareToBootstrapBaseline": true,
-  "textReplacements": {
-    "apps/desktop/src/main.ts": [
-      ["void shell.openExternal(externalUrl);", "void externalUrl;"]
-    ]
-  }
-}

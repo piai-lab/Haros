@@ -1,6 +1,0 @@
-{
-  "extends": "traced-owner-positive",
-  "virtualFiles": {
-    "scripts/product-truth/sqlite-classifier.ts": "export function classifyLegacyDatabase() {\n  globalThis.console.log(globalThis.JSON.stringify({ value: 1 }));\n  return \"safe\";\n}\n"
-  }
-}

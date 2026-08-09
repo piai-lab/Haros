@@ -1,1 +1,0 @@
-{"appendToFiles":{"apps/service/src/main.ts":"\nconst v7Selector: string = 'spawnSync';\nexport const v7ComputedUnknown = () => globalThis.Bun[v7Selector](['true']);\n"}}

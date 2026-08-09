@@ -1,6 +1,0 @@
-{
-  "enforceDependencyGate": true,
-  "virtualFiles": {
-    "bun.lock": "fixture dependency drift\n"
-  }
-}

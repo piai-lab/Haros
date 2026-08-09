@@ -1,1 +1,0 @@
-{"appendToFiles":{"apps/service/src/main.ts":"\nimport { $ as v7Shell } from 'bun';\nexport const v7BunShell = () => v7Shell`true`;\n"}}

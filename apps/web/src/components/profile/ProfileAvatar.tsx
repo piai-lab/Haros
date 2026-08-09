@@ -4,7 +4,7 @@
 // the Edit dialog, and the shareable card so the three never drift.
 // Layer: web profile feature.
 
-import { cn } from "~/lib/styles";
+import { cn } from "~/lib/utils";
 
 interface ProfileAvatarProps {
   readonly initials: string;

@@ -33,10 +33,13 @@ import {
   isDuplicateProjectCreateError,
   pruneProjectThreadListPagingForCollapsedProjects,
   recoverExistingAddProjectTarget,
+  runExclusiveProjectAddition,
+  runProjectProvisionWithCancellationRecovery,
   resolvePullRequestReviewBadge,
+  resolveSidebarThreadPullRequest,
+  resolveThreadDisplayBranch,
   resolveSidebarThreadListPaging,
   resolveProjectEmptyState,
-  resolveLatestChatThreadId,
   resolveSettingsBackTarget,
   resolveProjectStatusIndicator,
   resolveSidebarNewThreadEnvMode,
@@ -47,14 +50,13 @@ import {
   isUrgentThreadStatusPill,
   type ThreadStatusPill,
   shouldShowDebugFeatureFlagsMenu,
+  shouldUseLivePullRequestForSidebarThread,
   shouldPrunePinnedThreads,
-  shouldPresentLocalChatDraft,
   shouldClearThreadSelectionOnMouseDown,
   sortProjectsForSidebar,
-  sortProductChatConversations,
   sortThreadsForSidebar,
 } from "./Sidebar.logic";
-import { ProjectId, ThreadId } from "@omnimind/contracts";
+import { ProjectId, ThreadId } from "@synara/contracts";
 import {
   DEFAULT_INTERACTION_MODE,
   DEFAULT_RUNTIME_MODE,
@@ -82,57 +84,6 @@ describe("isProjectsSidebarSurface", () => {
     expect(isProjectsSidebarSurface({ isOnSettings: false, isOnStudio: false })).toBe(true);
     expect(isProjectsSidebarSurface({ isOnSettings: false, isOnStudio: true })).toBe(false);
     expect(isProjectsSidebarSurface({ isOnSettings: true, isOnStudio: false })).toBe(false);
-  });
-});
-
-describe("Product-owned Chat recents", () => {
-  it("filters to Chat and orders only typed Product summaries by activity", () => {
-    const summaries = [
-      {
-        id: "agent-new",
-        workspaceId: "workspace-agent",
-        title: "Agent",
-        workspaceKind: "managed",
-        receiptState: null,
-        createdAt: "2026-08-04T00:00:00.000Z",
-        updatedAt: "2026-08-04T03:00:00.000Z",
-      },
-      {
-        id: "chat-old",
-        workspaceId: "workspace-old",
-        title: "Old",
-        workspaceKind: "chat",
-        receiptState: null,
-        createdAt: "2026-08-04T00:00:00.000Z",
-        updatedAt: "2026-08-04T01:00:00.000Z",
-      },
-      {
-        id: "chat-new",
-        workspaceId: "workspace-new",
-        title: "New",
-        workspaceKind: "chat",
-        receiptState: "running",
-        createdAt: "2026-08-04T00:00:00.000Z",
-        updatedAt: "2026-08-04T02:00:00.000Z",
-      },
-    ] as never;
-
-    expect(sortProductChatConversations(summaries).map((summary) => summary.id)).toEqual([
-      "chat-new",
-      "chat-old",
-    ]);
-  });
-
-  it("admits a donor row only as an unsent draft absent from Product", () => {
-    expect(shouldPresentLocalChatDraft({ hasLocalDraft: true, hasProductSummary: false })).toBe(
-      true,
-    );
-    expect(shouldPresentLocalChatDraft({ hasLocalDraft: true, hasProductSummary: true })).toBe(
-      false,
-    );
-    expect(shouldPresentLocalChatDraft({ hasLocalDraft: false, hasProductSummary: false })).toBe(
-      false,
-    );
   });
 });
 
@@ -171,6 +122,215 @@ describe("pullRequestRepositoryConfigFingerprint", () => {
     expect(
       pullRequestRepositoryConfigFingerprint([{ ...first, name: "Renamed" }, second]),
     ).not.toBe(baseline);
+  });
+});
+
+describe("shouldUseLivePullRequestForSidebarThread", () => {
+  it("trusts the checked-out branch for a dedicated worktree when persisted metadata is stale", () => {
+    expect(
+      shouldUseLivePullRequestForSidebarThread({
+        threadBranch: "omnimind/original-branch",
+        liveBranch: "feat/agent-created-branch",
+        hasDedicatedWorktree: true,
+      }),
+    ).toBe(true);
+  });
+
+  it("still requires a branch match for a shared project root", () => {
+    expect(
+      shouldUseLivePullRequestForSidebarThread({
+        threadBranch: "feature/another-thread",
+        liveBranch: "feat/agent-created-branch",
+        hasDedicatedWorktree: false,
+      }),
+    ).toBe(false);
+    expect(
+      shouldUseLivePullRequestForSidebarThread({
+        threadBranch: "feat/agent-created-branch",
+        liveBranch: "feat/agent-created-branch",
+        hasDedicatedWorktree: false,
+      }),
+    ).toBe(true);
+  });
+
+  it("does not use live PR data for a detached worktree", () => {
+    expect(
+      shouldUseLivePullRequestForSidebarThread({
+        threadBranch: "omnimind/original-branch",
+        liveBranch: null,
+        hasDedicatedWorktree: true,
+      }),
+    ).toBe(false);
+  });
+});
+
+describe("resolveSidebarThreadPullRequest", () => {
+  type TestPr = {
+    readonly number: number;
+    readonly headBranch: string;
+    readonly state: "open" | "closed" | "merged";
+  };
+  const openPr = (number: number, headBranch: string): TestPr => ({
+    number,
+    headBranch,
+    state: "open",
+  });
+  const mergedPr = (number: number, headBranch: string): TestPr => ({
+    number,
+    headBranch,
+    state: "merged",
+  });
+
+  it("keeps persisted PR metadata when the worktree is no longer available", () => {
+    const persisted = openPr(574, "feat/provider-usage-snapshot-cache");
+    expect(
+      resolveSidebarThreadPullRequest({
+        threadBranch: "feat/provider-usage-snapshot-cache",
+        liveBranch: null,
+        hasLiveStatus: false,
+        hasDedicatedWorktree: false,
+        livePullRequest: null,
+        persistedPullRequest: persisted,
+      }),
+    ).toBe(persisted);
+  });
+
+  it("prefers live metadata for the worktree's current branch", () => {
+    const live = openPr(575, "feat/current-branch");
+    expect(
+      resolveSidebarThreadPullRequest({
+        threadBranch: "omnimind/stale-branch",
+        liveBranch: "feat/current-branch",
+        hasLiveStatus: true,
+        hasDedicatedWorktree: true,
+        livePullRequest: live,
+        persistedPullRequest: openPr(574, "omnimind/stale-branch"),
+      }),
+    ).toBe(live);
+  });
+
+  it("keeps persisted metadata during a transient lookup failure on the same branch", () => {
+    const persisted = openPr(574, "feat/current-branch");
+    expect(
+      resolveSidebarThreadPullRequest({
+        threadBranch: "feat/current-branch",
+        liveBranch: "feat/current-branch",
+        hasLiveStatus: true,
+        hasDedicatedWorktree: true,
+        livePullRequest: null,
+        persistedPullRequest: persisted,
+      }),
+    ).toBe(persisted);
+  });
+
+  it("uses the live worktree branch to validate persisted metadata while thread branch metadata catches up", () => {
+    const persisted = openPr(574, "feat/current-branch");
+    expect(
+      resolveSidebarThreadPullRequest({
+        threadBranch: null,
+        liveBranch: "feat/current-branch",
+        hasLiveStatus: true,
+        hasDedicatedWorktree: true,
+        livePullRequest: null,
+        persistedPullRequest: persisted,
+      }),
+    ).toBe(persisted);
+  });
+
+  it("uses the live worktree branch to validate persisted metadata when the thread branch is stale", () => {
+    const persisted = openPr(574, "feat/current-branch");
+    expect(
+      resolveSidebarThreadPullRequest({
+        threadBranch: "feat/previous-branch",
+        liveBranch: "feat/current-branch",
+        hasLiveStatus: true,
+        hasDedicatedWorktree: true,
+        livePullRequest: null,
+        persistedPullRequest: persisted,
+      }),
+    ).toBe(persisted);
+  });
+
+  it("does not attach an open persisted PR from another branch to the current worktree branch", () => {
+    expect(
+      resolveSidebarThreadPullRequest({
+        threadBranch: "feat/previous-branch",
+        liveBranch: "feat/current-branch",
+        hasLiveStatus: true,
+        hasDedicatedWorktree: true,
+        livePullRequest: null,
+        persistedPullRequest: openPr(574, "feat/previous-branch"),
+      }),
+    ).toBeNull();
+  });
+
+  it("keeps a merged persisted PR visible after the worktree switches to another branch", () => {
+    const merged = mergedPr(574, "feat/previous-branch");
+    expect(
+      resolveSidebarThreadPullRequest({
+        threadBranch: "feat/previous-branch",
+        liveBranch: "main",
+        hasLiveStatus: true,
+        hasDedicatedWorktree: true,
+        livePullRequest: null,
+        persistedPullRequest: merged,
+      }),
+    ).toBe(merged);
+  });
+
+  it("keeps a merged persisted PR visible on a shared checkout that moved to another branch", () => {
+    const merged = mergedPr(574, "feat/previous-branch");
+    expect(
+      resolveSidebarThreadPullRequest({
+        threadBranch: "main",
+        liveBranch: "main",
+        hasLiveStatus: true,
+        hasDedicatedWorktree: false,
+        livePullRequest: null,
+        persistedPullRequest: merged,
+      }),
+    ).toBe(merged);
+  });
+
+  it("prefers a live PR for the current branch over a merged persisted PR", () => {
+    const live = openPr(600, "feat/current-branch");
+    expect(
+      resolveSidebarThreadPullRequest({
+        threadBranch: "feat/current-branch",
+        liveBranch: "feat/current-branch",
+        hasLiveStatus: true,
+        hasDedicatedWorktree: true,
+        livePullRequest: live,
+        persistedPullRequest: mergedPr(574, "feat/previous-branch"),
+      }),
+    ).toBe(live);
+  });
+
+  it("hides an open persisted PR when an active dedicated worktree is detached", () => {
+    expect(
+      resolveSidebarThreadPullRequest({
+        threadBranch: "feat/previous-branch",
+        liveBranch: null,
+        hasLiveStatus: true,
+        hasDedicatedWorktree: true,
+        livePullRequest: null,
+        persistedPullRequest: openPr(574, "feat/previous-branch"),
+      }),
+    ).toBeNull();
+  });
+
+  it("keeps a merged persisted PR when an active dedicated worktree is detached", () => {
+    const merged = mergedPr(574, "feat/previous-branch");
+    expect(
+      resolveSidebarThreadPullRequest({
+        threadBranch: "feat/previous-branch",
+        liveBranch: null,
+        hasLiveStatus: true,
+        hasDedicatedWorktree: true,
+        livePullRequest: null,
+        persistedPullRequest: merged,
+      }),
+    ).toBe(merged);
   });
 });
 
@@ -303,6 +463,41 @@ describe("resolveThreadHoverCardMetadata", () => {
     });
   });
 
+  it("shows the current branch instead of a stale associated worktree branch", () => {
+    const thread = makeSidebarThreadSummary({
+      envMode: "worktree",
+      branch: "feat/current-branch",
+      worktreePath: "/repo/.worktrees/thread",
+      associatedWorktreeBranch: "omnimind/stale-branch",
+    });
+
+    expect(resolveThreadDisplayBranch(thread)).toBe("feat/current-branch");
+    expect(
+      resolveThreadHoverCardMetadata({
+        thread,
+        project: {
+          kind: "project",
+          name: "omnimind",
+          folderName: "omnimind",
+          cwd: "/repo",
+        },
+      }).branch,
+    ).toBe("feat/current-branch");
+  });
+
+  it("does not label a detached active worktree with its historical branch", () => {
+    expect(
+      resolveThreadDisplayBranch(
+        makeSidebarThreadSummary({
+          envMode: "worktree",
+          branch: null,
+          worktreePath: "/repo/.worktrees/thread",
+          associatedWorktreeBranch: "feat/previous-branch",
+        }),
+      ),
+    ).toBeNull();
+  });
+
   it("labels project-less chat containers as OmniMind instead of the slug folder", () => {
     const metadata = resolveThreadHoverCardMetadata({
       thread: makeSidebarThreadSummary({ branch: null }),
@@ -338,31 +533,6 @@ describe("resolveSidebarNewThreadEnvMode", () => {
 });
 
 describe("resolveSettingsBackTarget", () => {
-  it("selects the newest local Chat draft directly when Product has no summaries", () => {
-    expect(
-      resolveLatestChatThreadId({
-        orderedProductConversationIds: [],
-        localDrafts: [
-          { id: "thread-draft-older", createdAt: "2026-08-05T01:00:00.000Z" },
-          { id: "thread-draft-newest", createdAt: "2026-08-05T03:00:00.000Z" },
-          { id: "thread-draft-middle", createdAt: "2026-08-05T02:00:00.000Z" },
-        ],
-      }),
-    ).toBe("thread-draft-newest");
-  });
-
-  it("uses a stable id tie-break for equally recent local Chat drafts", () => {
-    expect(
-      resolveLatestChatThreadId({
-        orderedProductConversationIds: [],
-        localDrafts: [
-          { id: "thread-draft-b", createdAt: "2026-08-05T03:00:00.000Z" },
-          { id: "thread-draft-a", createdAt: "2026-08-05T03:00:00.000Z" },
-        ],
-      }),
-    ).toBe("thread-draft-a");
-  });
-
   it("keeps fresh draft chats available as settings back targets", () => {
     // Mirrors the sidebar's settings-back wiring: persisted thread summaries plus the
     // segment's draft thread ids form the restorable set.
@@ -572,7 +742,7 @@ describe("add-project error helpers", () => {
     expect(
       findDeepestWorkspaceRootMatch(
         projects,
-        "/Users/tester/Code/repo/apps/service",
+        "/Users/tester/Code/repo/apps/server",
         (project) => project.cwd,
       )?.id,
     ).toBe("repo");
@@ -616,6 +786,64 @@ describe("add-project error helpers", () => {
     });
 
     expect(decision).toBe("recovered");
+  });
+
+  it("serializes project additions and releases the lock after completion", async () => {
+    const lock = { current: false };
+    let releaseFirst!: () => void;
+    const firstBlocked = new Promise<void>((resolve) => {
+      releaseFirst = resolve;
+    });
+    let markFirstStarted!: () => void;
+    const firstStarted = new Promise<void>((resolve) => {
+      markFirstStarted = resolve;
+    });
+    const first = runExclusiveProjectAddition(lock, async () => {
+      markFirstStarted();
+      await firstBlocked;
+      return "first";
+    });
+
+    await firstStarted;
+    await expect(runExclusiveProjectAddition(lock, async () => "second")).rejects.toThrow(
+      "Another project is already being added.",
+    );
+
+    releaseFirst();
+    await expect(first).resolves.toBe("first");
+    await expect(runExclusiveProjectAddition(lock, async () => "third")).resolves.toBe("third");
+  });
+
+  it("recovers a project whose server commit won a cancellation race", async () => {
+    const controller = new AbortController();
+    const interruption = new Error("cancelled");
+    controller.abort(interruption);
+
+    await expect(
+      runProjectProvisionWithCancellationRecovery({
+        signal: controller.signal,
+        provision: async () => {
+          throw interruption;
+        },
+        recoverCommittedProject: async () => true,
+      }),
+    ).resolves.toEqual({ status: "recovered" });
+  });
+
+  it("preserves cancellation when no project commit can be recovered", async () => {
+    const controller = new AbortController();
+    const interruption = new Error("cancelled");
+    controller.abort(interruption);
+
+    await expect(
+      runProjectProvisionWithCancellationRecovery({
+        signal: controller.signal,
+        provision: async () => {
+          throw interruption;
+        },
+        recoverCommittedProject: async () => false,
+      }),
+    ).rejects.toBe(interruption);
   });
 
   it("detects duplicate project.create errors", () => {
@@ -679,7 +907,9 @@ describe("pin helpers", () => {
       folderName: id,
       localName: null,
       cwd: `/tmp/${id}`,
+      defaultModelSelection: null,
       expanded: true,
+      spaceId: null,
       createdAt: "2026-03-09T10:00:00.000Z",
       updatedAt: "2026-03-09T10:00:00.000Z",
       scripts: [],
@@ -1606,6 +1836,7 @@ describe("createSidebarThreadHoverAnchorId", () => {
 });
 
 function makeProject(overrides: Partial<Project> = {}): Project {
+  const { defaultModelSelection, ...rest } = overrides;
   return {
     id: ProjectId.makeUnsafe("project-1"),
     kind: "project",
@@ -1614,11 +1845,17 @@ function makeProject(overrides: Partial<Project> = {}): Project {
     folderName: "project",
     localName: null,
     cwd: "/tmp/project",
+    defaultModelSelection: {
+      provider: "codex",
+      model: "gpt-5.4",
+      ...defaultModelSelection,
+    },
     expanded: true,
+    spaceId: null,
     createdAt: "2026-03-09T10:00:00.000Z",
     updatedAt: "2026-03-09T10:00:00.000Z",
     scripts: [],
-    ...overrides,
+    ...rest,
   };
 }
 

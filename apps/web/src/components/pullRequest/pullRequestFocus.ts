@@ -1,4 +1,4 @@
-import type { PullRequestDetailInput } from "@omnimind/contracts";
+import type { PullRequestDetailInput } from "@synara/contracts";
 
 /** Whether a dock-triggered close should return keyboard focus to the selected list row. */
 export function isFocusInsideRightDock(activeElement: Element | null): boolean {
@@ -10,7 +10,7 @@ export function isFocusInsideRightDock(activeElement: Element | null): boolean {
  * the detail URL is cleared. */
 export function focusPullRequestRow(
   root: ParentNode,
-  input: Pick<PullRequestDetailInput, "workspaceId" | "repository" | "number">,
+  input: Pick<PullRequestDetailInput, "projectId" | "repository" | "number">,
 ): boolean {
   const repository = input.repository.toLowerCase();
   const candidates = Array.from(
@@ -21,7 +21,7 @@ export function focusPullRequestRow(
       candidate.dataset.pullRequestNumber === String(input.number),
   );
   const row =
-    candidates.find((candidate) => candidate.dataset.workspaceId === input.workspaceId) ??
+    candidates.find((candidate) => candidate.dataset.projectId === input.projectId) ??
     candidates[0];
   if (!row) return false;
   row.focus({ preventScroll: true });

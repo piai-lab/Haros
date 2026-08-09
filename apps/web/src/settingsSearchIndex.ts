@@ -4,7 +4,7 @@
 // Layer: Route/UI support
 // Exports: entry type, the index, section label lookup, and the ranking helper
 
-import { rankSearchItems } from "~/lib/searchRanking";
+import { rankProviderDiscoveryItems } from "~/lib/providerDiscovery";
 import {
   settingRowAnchorId,
   SETTINGS_NAV_ITEMS,
@@ -144,6 +144,13 @@ export const SETTINGS_SEARCH_ENTRIES: readonly SettingsSearchEntry[] = [
     keywords: "Choose how OmniMind looks across the app. dark light system color",
   },
   {
+    id: "appearance:app-icon",
+    section: "appearance",
+    title: "App icon",
+    keywords: "Choose the icon OmniMind uses in the dock or taskbar desktop application logo.",
+    target: null,
+  },
+  {
     id: "appearance:system-ui-font",
     section: "appearance",
     title: "Use system UI font",
@@ -213,7 +220,7 @@ export const SETTINGS_SEARCH_ENTRIES: readonly SettingsSearchEntry[] = [
     section: "appsnap",
     title: "Enable AppSnap",
     keywords:
-      "Capture the frontmost macOS app window with a configurable two-key shortcut and add it to a recent task. screenshot snap window capture hotkey",
+      "Capture the frontmost macOS app window with a configurable two-key shortcut and add it to a recent task. appshot screenshot snap window capture hotkey",
   },
   {
     id: "appsnap:shortcut",
@@ -283,11 +290,11 @@ export const SETTINGS_SEARCH_ENTRIES: readonly SettingsSearchEntry[] = [
     keywords: "Ask before closing a terminal tab and clearing its history. safety confirm",
   },
 
-  // ── Keyboard Shortcuts ────────────────────────────────────────────────────────
+  // ── Keybindings ───────────────────────────────────────────────────────────────
   {
     id: "shortcuts:keyboard-shortcuts",
     section: "shortcuts",
-    title: "Keyboard Shortcuts",
+    title: "Keybindings",
     keywords:
       "Every keyboard shortcut available in OmniMind, grouped by context. keybindings hotkeys key combo cmd ctrl reference",
     target: null,
@@ -328,27 +335,27 @@ export const SETTINGS_SEARCH_ENTRIES: readonly SettingsSearchEntry[] = [
   // ── Providers ─────────────────────────────────────────────────────────────────
   {
     id: "providers:automatic-cli-update-checks",
-    section: "agents",
+    section: "providers",
     title: "Automatic CLI update checks",
     keywords:
       "Check Codex Claude and other provider CLIs for newer versions in the background. updates upgrade disable nags",
   },
   {
     id: "providers:visible-providers",
-    section: "agents",
+    section: "providers",
     title: "Visible providers",
     keywords:
       "Drag providers into your preferred picker order and hide the ones you don't use. visibility order",
   },
   {
     id: "providers:provider-updates",
-    section: "agents",
+    section: "providers",
     title: "Provider updates",
     keywords: "Update installed provider tools that OmniMind can safely update. upgrade cli",
   },
   {
     id: "providers:installed-clis",
-    section: "agents",
+    section: "providers",
     title: "Installed CLIs",
     keywords: "Review provider versions and update tools. binary overrides path install",
   },
@@ -356,7 +363,7 @@ export const SETTINGS_SEARCH_ENTRIES: readonly SettingsSearchEntry[] = [
   // ── Skills ────────────────────────────────────────────────────────────────────
   {
     id: "skills:skills",
-    section: "packages",
+    section: "skills",
     title: "Skills",
     keywords: "Every skill found across providers, with toggles to control availability. agent",
     target: null,
@@ -399,6 +406,13 @@ export const SETTINGS_SEARCH_ENTRIES: readonly SettingsSearchEntry[] = [
     title: "Version",
     keywords: "Current application version. about",
   },
+  {
+    id: "advanced:release-history",
+    section: "advanced",
+    title: "Release history",
+    keywords:
+      "A running log of every update, newest first. changelog what's new about release notes",
+  },
 ] as const;
 
 const SETTINGS_SECTION_LABEL_BY_ID = new Map<SettingsSectionId, string>(
@@ -422,7 +436,7 @@ export function rankSettingsSearchEntries(
   if (trimmed.length === 0) {
     return [];
   }
-  const ranked = rankSearchItems(SETTINGS_SEARCH_ENTRIES, trimmed, (entry) => [
+  const ranked = rankProviderDiscoveryItems(SETTINGS_SEARCH_ENTRIES, trimmed, (entry) => [
     { value: entry.title },
     { value: entry.keywords, weight: 200 },
     { value: settingsSectionLabel(entry.section), weight: 400 },

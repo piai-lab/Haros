@@ -8,7 +8,6 @@ import { useCallback, useMemo, useState } from "react";
 
 import { logoutCurrentBrowserSession } from "~/authLogout";
 import { APP_VERSION } from "~/branding";
-import { BrandMark } from "~/components/BrandMark";
 import { resolveAndPersistPreferredEditor } from "~/editorPreferences";
 import { DisclosureChevron } from "~/components/ui/DisclosureChevron";
 import { DisclosureRegion } from "~/components/ui/DisclosureRegion";
@@ -16,12 +15,7 @@ import { Button } from "~/components/ui/button";
 import { toastManager } from "~/components/ui/toast";
 import { ensureNativeApi, readNativeApi } from "~/nativeApi";
 import { serverAuthSessionQueryOptions, serverConfigQueryOptions } from "~/lib/serverReactQuery";
-import { cn } from "~/lib/styles";
-import {
-  BUNDLED_PI_PROVENANCE,
-  OPEN_SOURCE_NOTICE,
-  RELEASE_LEGAL_ARTIFACTS,
-} from "~/runtimeProvenance";
+import { cn } from "~/lib/utils";
 import { SETTINGS_INSET_LIST_CLASS_NAME } from "~/settingsPanelStyles";
 import { useStore } from "~/store";
 import { createAllThreadsMessagelessSelector, createThreadShellsSelector } from "~/storeSelectors";
@@ -31,6 +25,7 @@ import { SettingsRow, SettingsSection } from "./SettingsPanelPrimitives";
 export function AdvancedSettingsPanel(props: { active: boolean; resetEpoch: number }) {
   const configQuery = useQuery(serverConfigQueryOptions());
   const authSessionQuery = useQuery(serverAuthSessionQueryOptions());
+  const syncServerReadModel = useStore((store) => store.syncServerReadModel);
   // Keep these subscriptions inside the only panel that uses recovery eligibility.
   const threadShells = useStore(useMemo(() => createThreadShellsSelector(), []));
   const allThreadsMessageless = useStore(useMemo(() => createAllThreadsMessagelessSelector(), []));
@@ -90,14 +85,27 @@ export function AdvancedSettingsPanel(props: { active: boolean; resetEpoch: numb
     if (!confirmed) return;
 
     setIsRepairingLocalState(true);
-    toastManager.add({
-      type: "warning",
-      title: "Re-entry required",
-      description:
-        "Legacy projection repair is unavailable. Reopen the Product workspace to resnapshot.",
-    });
-    setIsRepairingLocalState(false);
-  }, [isRepairingLocalState]);
+    await api.orchestration
+      .repairState()
+      .then((snapshot) => {
+        syncServerReadModel(snapshot);
+        toastManager.add({
+          type: "success",
+          title: "Local state repaired",
+          description: "Project indexes were rebuilt without clearing existing chats.",
+        });
+      })
+      .catch((error: unknown) => {
+        toastManager.add({
+          type: "error",
+          title: "Repair failed",
+          description: error instanceof Error ? error.message : "Unable to repair local state.",
+        });
+      })
+      .finally(() => {
+        setIsRepairingLocalState(false);
+      });
+  }, [isRepairingLocalState, syncServerReadModel]);
 
   const logoutCurrentSession = useCallback(async () => {
     if (isLoggingOut) return;
@@ -224,68 +232,14 @@ export function AdvancedSettingsPanel(props: { active: boolean; resetEpoch: numb
 
       <SettingsSection title="About">
         <SettingsRow
-          title="Product identity"
-          description="OmniMind Agent is the first-party product identity. Runtime provenance remains separately discoverable."
-          control={
-            <span className="inline-flex items-center gap-2 text-xs font-medium text-foreground">
-              <BrandMark aria-label="OmniMind" className="size-5" />
-              OmniMind Agent
-            </span>
-          }
-        />
-        <SettingsRow
           title="Version"
           description="Current application version."
           control={<code className="text-xs font-medium text-muted-foreground">{APP_VERSION}</code>}
         />
         <SettingsRow
-          title="Native runtime"
-          description="Bundled Pi distribution; users do not install a separate runtime."
-          control={
-            <code className="text-xs font-medium text-muted-foreground">
-              {BUNDLED_PI_PROVENANCE.packageVersion}
-            </code>
-          }
-          status={
-            <div className="max-w-2xl space-y-1.5" data-runtime-provenance="pi">
-              <p>{BUNDLED_PI_PROVENANCE.revisionTruth}</p>
-              <p>
-                Packages: <code>{BUNDLED_PI_PROVENANCE.packages.join(", ")}</code>
-              </p>
-              <p>Execution authority: {BUNDLED_PI_PROVENANCE.authority}</p>
-              <p>Host boundary: {BUNDLED_PI_PROVENANCE.currentBoundary}</p>
-              <p>
-                Source:{" "}
-                <a
-                  className="underline decoration-border underline-offset-2 hover:text-foreground"
-                  href={BUNDLED_PI_PROVENANCE.sourceUrl}
-                  target="_blank"
-                  rel="noreferrer"
-                >
-                  {BUNDLED_PI_PROVENANCE.sourceLabel}
-                </a>
-              </p>
-            </div>
-          }
-        />
-        <SettingsRow
-          title="Licenses"
-          description="Exact dependency identities, legal text provenance, and the machine-readable SBOM shipped with this build."
-          control={
-            <div className="flex max-w-sm flex-wrap justify-end gap-x-3 gap-y-1.5">
-              {[OPEN_SOURCE_NOTICE, ...RELEASE_LEGAL_ARTIFACTS].map((artifact) => (
-                <a
-                  key={artifact.href}
-                  className="text-xs font-medium text-foreground underline decoration-border underline-offset-2"
-                  href={artifact.href}
-                  target="_blank"
-                  rel="noreferrer"
-                >
-                  {artifact.label}
-                </a>
-              ))}
-            </div>
-          }
+          title="Release history"
+          description="Release notes are not available in this build."
+          control={<Button disabled>Unavailable</Button>}
         />
       </SettingsSection>
     </div>

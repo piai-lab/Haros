@@ -10,12 +10,12 @@
 
 import type { ReactNode } from "react";
 
-import type { ResolvedTerminalVisualIdentity } from "@omnimind/shared/terminalThreads";
+import type { ResolvedTerminalVisualIdentity } from "@synara/shared/terminalThreads";
 
 import { IconButton } from "~/components/ui/icon-button";
 import { Popover, PopoverPopup, PopoverTrigger } from "~/components/ui/popover";
 import { XIcon } from "~/lib/icons";
-import { cn } from "~/lib/styles";
+import { cn } from "~/lib/utils";
 import { selectRepresentativeTerminalVisualIdentity } from "~/terminalVisualIdentity";
 
 import { DOCK_HEADER_ICON_BUTTON_CLASS, SurfaceTabChip } from "../chat/chatHeaderControls";
@@ -36,7 +36,7 @@ function TerminalChromeActions(props: {
 }) {
   const buttonClassName =
     props.variant === "sidebar"
-      ? "!size-6 shrink-0 rounded-md [&_svg,&_[data-slot=glyph]]:mx-0"
+      ? "!size-6 shrink-0 rounded-md [&_svg,&_[data-slot=central-icon]]:mx-0"
       : DOCK_HEADER_ICON_BUTTON_CLASS;
 
   return (

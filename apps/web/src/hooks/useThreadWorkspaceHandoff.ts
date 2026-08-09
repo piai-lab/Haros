@@ -2,12 +2,12 @@ import { useMutation, useQueryClient } from "@tanstack/react-query";
 import {
   resolveWorktreeHandoffIntent,
   resolveWorktreeHandoffWorkspaceMetadata,
-} from "@omnimind/shared/worktreeHandoff";
+} from "@synara/shared/worktreeHandoff";
 import { useCallback, useState } from "react";
 import { gitHandoffThreadMutationOptions } from "~/lib/gitReactQuery";
 import { buildSuggestedWorktreeName } from "../components/ChatView.logic";
 import { toastManager } from "../components/ui/toast";
-import { createCommandId } from "../lib/identifiers";
+import { newCommandId } from "../lib/utils";
 import {
   setupProjectScript,
   type ProjectScriptRunOptions,
@@ -67,7 +67,7 @@ export function useThreadWorkspaceHandoff(input: {
       // The whole payload is resolved before the `try`: React Compiler cannot lower `??` inside a
       // try block, and this hook backs the local/worktree switch on every thread.
       const handoffPayload = {
-        commandId: createCommandId(),
+        commandId: newCommandId(),
         threadId: input.activeThread.id,
         targetMode,
         currentBranch: input.activeThread.branch ?? null,

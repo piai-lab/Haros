@@ -1,4 +1,4 @@
-import type { ProjectId } from "@omnimind/contracts";
+import type { ProjectId } from "@synara/contracts";
 import { create } from "zustand";
 import { createJSONStorage, persist } from "zustand/middleware";
 

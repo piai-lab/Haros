@@ -12,8 +12,8 @@ import {
   Trash2,
   TriangleAlertIcon,
 } from "~/lib/icons";
-import { type ThreadId } from "@omnimind/contracts";
-import { type TerminalActivityState, type TerminalCliKind } from "@omnimind/shared/terminalThreads";
+import { type ThreadId } from "@synara/contracts";
+import { type TerminalActivityState, type TerminalCliKind } from "@synara/shared/terminalThreads";
 import { Terminal } from "@xterm/xterm";
 import { useCallback, useEffect, useLayoutEffect, useMemo, useRef, useState } from "react";
 import { type TerminalContextSelection } from "~/lib/terminalContext";
@@ -23,7 +23,7 @@ import {
   type ThreadTerminalGroup,
   type ThreadTerminalPresentationMode,
 } from "../types";
-import { cn } from "~/lib/styles";
+import { cn } from "~/lib/utils";
 import {
   type TerminalChromeActionItem,
   TerminalSidebar,

@@ -3,7 +3,7 @@
 // Layer: Web browser tests
 // Depends on: useDockPaneRuntimeActivation and a real React/browser event loop.
 
-import { ThreadId } from "@omnimind/contracts";
+import { ThreadId } from "@synara/contracts";
 import { afterEach, describe, expect, it, vi } from "vitest";
 import { renderHook } from "vitest-browser-react";
 
@@ -19,7 +19,7 @@ const BROWSER_PANE: RightDockPane = {
   diffTurnId: null,
   diffFilePath: null,
   filePath: null,
-  pullRequestWorkspaceId: null,
+  pullRequestProjectId: null,
   pullRequestRepository: null,
   pullRequestNumber: null,
   pullRequestInitialTab: null,

@@ -3,14 +3,13 @@
 //          directories, center mode) so re-entering the editor view restores it.
 // Layer: Web UI state persistence
 
-import { type ProjectId, type ThreadId } from "@omnimind/contracts";
-import * as Schema from "effect/Schema";
+import type { ProjectId, ProviderKind, ThreadId } from "@synara/contracts";
+import { isProviderKind } from "./providerOrdering";
 
 const EDITOR_VIEW_STATE_STORAGE_KEY = "omnimind.editor.viewStateByThreadId";
 const EDITOR_RAIL_CHAT_TABS_STORAGE_KEY = "omnimind.editor.railChatTabsByProjectId";
 const MAX_PERSISTED_THREADS = 50;
 const MAX_EDITOR_RAIL_CHAT_TABS = 8;
-const isProviderKind = Schema.is(Schema.String);
 
 export interface EditorViewStateSnapshot {
   expandedDirectories: ReadonlyArray<string>;
@@ -26,7 +25,7 @@ type PersistedEditorViewStateMap = Record<string, PersistedEditorViewState>;
 export interface EditorRailChatTabSnapshot {
   id: ThreadId;
   title: string;
-  provider: string;
+  provider: ProviderKind;
 }
 
 type PersistedEditorRailChatTabsMap = Record<string, ReadonlyArray<EditorRailChatTabSnapshot>>;

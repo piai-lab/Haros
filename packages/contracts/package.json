@@ -1,6 +1,6 @@
 {
-  "name": "@omnimind/contracts",
-  "version": "0.1.0-alpha.0",
+  "name": "@synara/contracts",
+  "version": "0.7.0",
   "private": true,
   "files": [
     "dist"
@@ -14,14 +14,6 @@
       "types": "./src/index.ts",
       "import": "./src/index.ts",
       "require": "./dist/index.cjs"
-    },
-    "./native-host": {
-      "types": "./src/native-host/index.ts",
-      "import": "./src/native-host/index.ts"
-    },
-    "./desktop": {
-      "types": "./src/desktop/index.ts",
-      "import": "./src/desktop/index.ts"
     }
   },
   "scripts": {

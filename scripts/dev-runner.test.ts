@@ -201,7 +201,7 @@ it.layer(NodeServices.layer)("dev-runner", (it) => {
     it.effect("supports explicit typed overrides", () =>
       Effect.gen(function* () {
         const env = yield* createDevRunnerEnv({
-          mode: "dev:service",
+          mode: "dev:server",
           baseEnv: {},
           serverOffset: 0,
           webOffset: 0,
@@ -368,11 +368,11 @@ it.layer(NodeServices.layer)("dev-runner", (it) => {
       }),
     );
 
-    it.effect("shifts only server offset for dev:service", () =>
+    it.effect("shifts only server offset for dev:server", () =>
       Effect.gen(function* () {
         const taken = new Set([3773]);
         const offsets = yield* resolveModePortOffsets({
-          mode: "dev:service",
+          mode: "dev:server",
           startOffset: 0,
           hasExplicitServerPort: false,
           hasExplicitDevUrl: false,
@@ -397,10 +397,10 @@ it.layer(NodeServices.layer)("dev-runner", (it) => {
       }),
     );
 
-    it.effect("respects explicit server port override for dev:service", () =>
+    it.effect("respects explicit server port override for dev:server", () =>
       Effect.gen(function* () {
         const offsets = yield* resolveModePortOffsets({
-          mode: "dev:service",
+          mode: "dev:server",
           startOffset: 0,
           hasExplicitServerPort: true,
           hasExplicitDevUrl: false,

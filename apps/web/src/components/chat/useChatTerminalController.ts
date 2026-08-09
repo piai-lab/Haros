@@ -1,7 +1,7 @@
-import { type ThreadId } from "@omnimind/contracts";
+import { type ThreadId } from "@synara/contracts";
 import { useCallback, useEffect, useState } from "react";
 
-import { resolveTerminalCreateAction } from "../../lib/terminalCreateAction";
+import { resolveTerminalNewAction } from "../../lib/terminalNewAction";
 import { selectThreadTerminalState, useTerminalStateStore } from "../../terminalStateStore";
 import { collectTerminalIdsFromLayout } from "../../terminalPaneLayout";
 import { MAX_TERMINALS_PER_GROUP, type Thread } from "../../types";
@@ -26,7 +26,6 @@ interface UseChatTerminalControllerInput {
   readonly activeThread: AutoDeleteCandidateThread | null | undefined;
   readonly activeProjectPresent: boolean;
   readonly isFocusedPane: boolean;
-  readonly isInteractionActive: () => boolean;
   readonly isServerThread: boolean;
   readonly confirmTerminalClose: boolean;
   readonly onDeletePlaceholderThread: (threadId: ThreadId) => Promise<void> | void;
@@ -38,7 +37,6 @@ export function useChatTerminalController({
   activeThread,
   activeProjectPresent,
   isFocusedPane,
-  isInteractionActive,
   isServerThread,
   confirmTerminalClose,
   onDeletePlaceholderThread,
@@ -193,13 +191,13 @@ export function useChatTerminalController({
     [activeThreadId, newTerminalTabInStore, requestTerminalFocus],
   );
   const createTerminalFromShortcut = useCallback(() => {
-    const action = resolveTerminalCreateAction({
+    const action = resolveTerminalNewAction({
       terminalOpen: terminalState.terminalOpen,
       activeTerminalId: terminalState.activeTerminalId,
       activeTerminalGroupId: terminalState.activeTerminalGroupId,
       terminalGroups: terminalState.terminalGroups,
     });
-    if (action.kind === "create-group") {
+    if (action.kind === "new-group") {
       if (!terminalState.terminalOpen) setTerminalOpen(true);
       createNewTerminal();
       return;
@@ -232,10 +230,9 @@ export function useChatTerminalController({
     const onMenuAction = window.desktopBridge?.onMenuAction;
     if (typeof onMenuAction !== "function" || !isFocusedPane) return;
     return onMenuAction((action) => {
-      if (!isInteractionActive()) return;
       if (action === "new-terminal-tab") createTerminalFromShortcut();
     });
-  }, [createTerminalFromShortcut, isFocusedPane, isInteractionActive]);
+  }, [createTerminalFromShortcut, isFocusedPane]);
 
   const activateTerminal = useCallback(
     (terminalId: string) => {

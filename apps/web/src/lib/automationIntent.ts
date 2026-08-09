@@ -8,27 +8,11 @@ import type {
   AutomationCompletionPolicy,
   AutomationMode,
   AutomationSchedule,
-} from "@omnimind/contracts";
+  ServerGenerateAutomationIntentResult,
+} from "@synara/contracts";
 
-import { completionPolicyFromStopWhen } from "@omnimind/shared/automationCompletionPolicy";
-import { automationRequiresTargetThread } from "@omnimind/shared/automationMode";
-
-export interface GeneratedAutomationIntent {
-  readonly isAutomation: boolean;
-  readonly confidence: number;
-  readonly language: string | null;
-  readonly name: string | null;
-  readonly taskPrompt: string | null;
-  readonly schedule: AutomationSchedule | null;
-  readonly mode: AutomationMode | null;
-  readonly maxIterations?: number | null;
-  readonly completionPolicy: AutomationCompletionPolicy;
-  readonly missingFields: readonly AutomationIntentMissingField[];
-  readonly needsConfirmation: boolean;
-  readonly reason: string | null;
-}
-
-export type AutomationIntentMissingField = "schedule" | "taskPrompt" | "name" | "mode";
+import { completionPolicyFromStopWhen } from "@synara/shared/automationCompletionPolicy";
+import { automationRequiresTargetThread } from "@synara/shared/automationMode";
 
 export interface ChatAutomationIntent {
   readonly name: string;
@@ -952,7 +936,7 @@ function stripGeneratedPromptScaffolding(value: string): string {
 
 // Prefer the model's structured run cap, but recover old/generated prompt scaffolding too.
 function maxIterationsFromGeneratedIntent(
-  generatedIntent: GeneratedAutomationIntent,
+  generatedIntent: ServerGenerateAutomationIntentResult,
 ): number | null {
   return (
     generatedIntent.maxIterations ??
@@ -963,7 +947,7 @@ function maxIterationsFromGeneratedIntent(
 }
 
 function generatedAutomationPromptEnrichment(
-  generatedIntent: GeneratedAutomationIntent | null,
+  generatedIntent: ServerGenerateAutomationIntentResult | null,
 ): Pick<ChatAutomationIntent, "name" | "prompt" | "maxIterations"> | null {
   if (
     generatedIntent?.isAutomation !== true ||
@@ -984,7 +968,7 @@ function generatedAutomationPromptEnrichment(
 }
 
 function generatedAutomationIntentToChatIntent(
-  generatedIntent: GeneratedAutomationIntent | null,
+  generatedIntent: ServerGenerateAutomationIntentResult | null,
   executionScope: ChatAutomationExecutionScope,
 ): ChatAutomationIntent | null {
   if (generatedIntent?.isAutomation !== true || generatedIntent.taskPrompt === null) {
@@ -1049,7 +1033,7 @@ function modeForExecutionScope(input: {
 
 export function resolveChatAutomationIntent(input: {
   readonly deterministicIntent: ChatAutomationIntent | null;
-  readonly generatedIntent: GeneratedAutomationIntent | null;
+  readonly generatedIntent: ServerGenerateAutomationIntentResult | null;
   readonly defaultMode: AutomationMode;
   readonly executionScope: ChatAutomationExecutionScope;
 }): ResolvedChatAutomationIntent | null {

@@ -41,8 +41,8 @@ describe("buildFileDiffTree", () => {
 
   it("groups files into nested directories with directories before files", () => {
     const tree = buildFileDiffTree([
-      createFileDiff("apps/service/src/a.ts"),
-      createFileDiff("apps/service/src/b.ts"),
+      createFileDiff("apps/server/src/a.ts"),
+      createFileDiff("apps/server/src/b.ts"),
       createFileDiff("apps/web/src/c.tsx"),
       createFileDiff("README.md"),
     ]);
@@ -51,13 +51,13 @@ describe("buildFileDiffTree", () => {
     expect(names(tree)).toEqual(["apps", "README.md"]);
 
     const apps = asDirectory(tree[0]);
-    // "service" and "web" each have a single child "src", so they compress.
-    expect(names(apps.children)).toEqual(["service/src", "web/src"]);
+    // "server" and "web" each have a single child "src", so they compress.
+    expect(names(apps.children)).toEqual(["server/src", "web/src"]);
 
-    const serviceSrc = asDirectory(apps.children[0]);
-    expect(serviceSrc.name).toBe("service/src");
-    expect(serviceSrc.path).toBe("apps/service/src");
-    expect(names(serviceSrc.children)).toEqual(["a.ts", "b.ts"]);
+    const serverSrc = asDirectory(apps.children[0]);
+    expect(serverSrc.name).toBe("server/src");
+    expect(serverSrc.path).toBe("apps/server/src");
+    expect(names(serverSrc.children)).toEqual(["a.ts", "b.ts"]);
   });
 
   it("compresses a fully unbranched chain into a single directory row", () => {
@@ -108,12 +108,12 @@ describe("buildFileDiffTree", () => {
 
   it("collects every directory path", () => {
     const tree = buildFileDiffTree([
-      createFileDiff("apps/service/a.ts"),
+      createFileDiff("apps/server/a.ts"),
       createFileDiff("apps/web/b.ts"),
     ]);
     expect(collectFileDiffTreeDirectoryPaths(tree).toSorted()).toEqual([
       "apps",
-      "apps/service",
+      "apps/server",
       "apps/web",
     ]);
   });
@@ -121,7 +121,7 @@ describe("buildFileDiffTree", () => {
 
 describe("search → tree pipeline", () => {
   const files = [
-    createFileDiff("apps/service/src/codex.ts"),
+    createFileDiff("apps/server/src/codex.ts"),
     createFileDiff("apps/web/src/ChatView.tsx"),
     createFileDiff("packages/shared/src/model.ts"),
   ];

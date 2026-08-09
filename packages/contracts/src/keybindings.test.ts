@@ -95,6 +95,30 @@ it.effect("parses keybinding rules", () =>
     });
     assert.strictEqual(parsedBrowserToggle.command, "browser.toggle");
 
+    const parsedModelPickerToggle = yield* decode(KeybindingRule, {
+      key: "mod+shift+m",
+      command: "modelPicker.toggle",
+    });
+    assert.strictEqual(parsedModelPickerToggle.command, "modelPicker.toggle");
+
+    const parsedNextModel = yield* decode(KeybindingRule, {
+      key: "alt+]",
+      command: "model.next",
+    });
+    assert.strictEqual(parsedNextModel.command, "model.next");
+
+    const parsedPreviousModel = yield* decode(KeybindingRule, {
+      key: "alt+[",
+      command: "model.previous",
+    });
+    assert.strictEqual(parsedPreviousModel.command, "model.previous");
+
+    const parsedTraitsPickerToggle = yield* decode(KeybindingRule, {
+      key: "mod+shift+e",
+      command: "traitsPicker.toggle",
+    });
+    assert.strictEqual(parsedTraitsPickerToggle.command, "traitsPicker.toggle");
+
     const parsedComposerFocusToggle = yield* decode(KeybindingRule, {
       key: "cmd+l",
       command: "composer.focus.toggle",
@@ -125,11 +149,23 @@ it.effect("parses keybinding rules", () =>
     });
     assert.strictEqual(parsedTerminal.command, "chat.newTerminal");
 
+    const parsedCursor = yield* decode(KeybindingRule, {
+      key: "mod+alt+r",
+      command: "chat.newCursor",
+    });
+    assert.strictEqual(parsedCursor.command, "chat.newCursor");
+
     const parsedThreadJump = yield* decode(KeybindingRule, {
       key: "mod+3",
       command: "thread.jump.3",
     });
     assert.strictEqual(parsedThreadJump.command, "thread.jump.3");
+
+    const parsedSpaceJump = yield* decode(KeybindingRule, {
+      key: "mod+alt+5",
+      command: "space.jump.5",
+    });
+    assert.strictEqual(parsedSpaceJump.command, "space.jump.5");
 
     const parsedVisibleNext = yield* decode(KeybindingRule, {
       key: "mod+shift+]",
@@ -166,25 +202,6 @@ it.effect("rejects invalid command values", () =>
       }),
     );
     assert.strictEqual(result._tag, "Failure");
-  }),
-);
-
-it.effect("rejects retired donor command values", () =>
-  Effect.gen(function* () {
-    const retiredCommands = [
-      "chat.newClaude",
-      "chat.newCodex",
-      "chat.newCursor",
-      "modelPicker.toggle",
-      "model.next",
-      "model.previous",
-      "traitsPicker.toggle",
-    ] as const;
-
-    for (const command of retiredCommands) {
-      const result = yield* Effect.exit(decode(KeybindingRule, { key: "mod+k", command }));
-      assert.strictEqual(result._tag, "Failure");
-    }
   }),
 );
 

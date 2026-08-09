@@ -9,7 +9,7 @@
 // Layer: Chat transcript shell (presentation)
 // Depends on: pure magnification math in messageTrail.logic.ts (unit-tested).
 
-import { type MessageId } from "@omnimind/contracts";
+import { type MessageId } from "@synara/contracts";
 import {
   useEffect,
   useId,
@@ -21,7 +21,7 @@ import {
   type MouseEvent as ReactMouseEvent,
   type PointerEvent as ReactPointerEvent,
 } from "react";
-import { cn } from "~/lib/styles";
+import { cn } from "~/lib/utils";
 import { DISCLOSURE_CONTENT_MOTION_CLASS } from "~/lib/disclosureMotion";
 import { APP_TOOLTIP_SURFACE_CLASS_NAME } from "./composerPickerStyles";
 import {

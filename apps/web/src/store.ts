@@ -3,20 +3,34 @@
 // Exports: Stable store API plus pure transitions re-exported from focused modules.
 
 import { Fragment, type ReactNode, createElement, useEffect } from "react";
-import { type ThreadId } from "@omnimind/contracts";
+import {
+  type OrchestrationEvent,
+  type OrchestrationReadModel,
+  type OrchestrationShellSnapshot,
+  type OrchestrationShellStreamEvent,
+  type SpaceId,
+  type ThreadId,
+} from "@synara/contracts";
 import { Debouncer } from "@tanstack/react-pacer";
-import { resolveThreadBranchRegressionGuard } from "@omnimind/shared/git";
+import { resolveThreadBranchRegressionGuard } from "@synara/shared/git";
 import { create } from "zustand";
 
 import { resolveCreateBranchFlowCompletedMerge } from "./storeNormalization";
 import {
+  applySpaceOrder,
+  applyShellEvent,
   applyThreadUpdate,
   clearThreadDetailSyncFailureInClientState,
   evictThreadDetailFromClientState,
   markThreadDetailSyncFailedInClientState,
   removeDeletedProjectFromClientState,
   removeDeletedThreadFromClientState,
+  syncServerReadModel,
+  syncServerShellSnapshot,
+  syncServerThreadDetail,
+  syncServerThreadDetailHotPath,
 } from "./storeProjection";
+import { applyOrchestrationEvents, applyOrchestrationEventsHotPath } from "./storeEventReducer";
 import {
   persistState,
   readPersistedState,
@@ -26,15 +40,24 @@ import {
 import { initialState, type AppState } from "./storeState";
 import type { Project, ThreadWorkspacePatch } from "./types";
 
+type ReadModelThread = OrchestrationReadModel["threads"][number];
+
 export type { AppState } from "./storeState";
 export { EMPTY_THREAD_IDS } from "./storeState";
 export {
+  applySpaceOrder,
+  applyShellEvent,
   clearThreadDetailSyncFailureInClientState,
   evictThreadDetailFromClientState,
   markThreadDetailSyncFailedInClientState,
   removeDeletedProjectFromClientState,
   removeDeletedThreadFromClientState,
+  syncServerReadModel,
+  syncServerShellSnapshot,
+  syncServerThreadDetail,
+  syncServerThreadDetailHotPath,
 } from "./storeProjection";
+export { applyOrchestrationEvents, applyOrchestrationEventsHotPath } from "./storeEventReducer";
 
 const debouncedPersistState = new Debouncer(persistState, { wait: 500 });
 
@@ -239,6 +262,13 @@ export function setThreadWorkspace(
 // ── Zustand store ────────────────────────────────────────────────────
 
 interface AppStore extends AppState {
+  syncServerShellSnapshot: (snapshot: OrchestrationShellSnapshot) => void;
+  syncServerThreadDetail: (thread: ReadModelThread) => void;
+  syncServerThreadDetailHotPath: (thread: ReadModelThread) => void;
+  syncServerReadModel: (readModel: OrchestrationReadModel) => void;
+  applyShellEvent: (event: OrchestrationShellStreamEvent) => void;
+  applyOrchestrationEvents: (events: ReadonlyArray<OrchestrationEvent>) => void;
+  applyOrchestrationEventsHotPath: (events: ReadonlyArray<OrchestrationEvent>) => void;
   evictThreadDetail: (threadId: ThreadId) => void;
   evictThreadDetails: (threadIds: readonly ThreadId[]) => void;
   markThreadDetailSyncFailed: (threadId: ThreadId) => void;
@@ -252,6 +282,7 @@ interface AppStore extends AppState {
   setAllProjectsExpanded: (expanded: boolean) => void;
   collapseProjectsExcept: (activeProjectId: Project["id"] | null) => void;
   reorderProjects: (draggedProjectId: Project["id"], targetProjectId: Project["id"]) => void;
+  reorderSpacesLocally: (orderedSpaceIds: ReadonlyArray<SpaceId>) => void;
   renameProjectLocally: (projectId: Project["id"], name: string | null) => void;
   setError: (threadId: ThreadId, error: string | null) => void;
   setThreadWorkspace: (threadId: ThreadId, patch: ThreadWorkspacePatch) => void;
@@ -259,6 +290,19 @@ interface AppStore extends AppState {
 
 export const useStore = create<AppStore>((set) => ({
   ...readPersistedState(initialState),
+  syncServerShellSnapshot: (snapshot) => set((state) => syncServerShellSnapshot(state, snapshot)),
+  syncServerThreadDetail: (thread) => set((state) => syncServerThreadDetail(state, thread)),
+  syncServerThreadDetailHotPath: (thread) =>
+    set((state) => syncServerThreadDetailHotPath(state, thread)),
+  syncServerReadModel: (readModel) => set((state) => syncServerReadModel(state, readModel)),
+  applyShellEvent: (event) => set((state) => applyShellEvent(state, event)),
+  applyOrchestrationEvents: (events) => set((state) => applyOrchestrationEvents(state, events)),
+  applyOrchestrationEventsHotPath: (events) =>
+    set((state) =>
+      applyOrchestrationEventsHotPath(state, events, {
+        updateSidebarSummary: false,
+      }),
+    ),
   evictThreadDetail: (threadId) =>
     set((state) => evictThreadDetailFromClientState(state, threadId)),
   // Dropping a batch of leases evicts several threads at once. Every store update
@@ -291,6 +335,8 @@ export const useStore = create<AppStore>((set) => ({
     set((state) => collapseProjectsExcept(state, activeProjectId)),
   reorderProjects: (draggedProjectId, targetProjectId) =>
     set((state) => reorderProjects(state, draggedProjectId, targetProjectId)),
+  reorderSpacesLocally: (orderedSpaceIds) =>
+    set((state) => applySpaceOrder(state, orderedSpaceIds)),
   renameProjectLocally: (projectId, name) => {
     set((state) => renameProjectLocally(state, projectId, name));
     persistAppStateNow();

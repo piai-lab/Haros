@@ -1,10 +1,10 @@
 import { spawn } from "node:child_process";
 
-import { buildAppSnapBridge } from "./build-appsnap-bridge.mjs";
+import { buildAppSnapHelper } from "./build-appsnap-helper.mjs";
 import { desktopDir, resolveElectronPath } from "./electron-launcher.mjs";
 
 if (process.platform === "darwin") {
-  buildAppSnapBridge({ arch: process.arch });
+  buildAppSnapHelper({ arch: process.arch });
 }
 
 const childEnv = { ...process.env };

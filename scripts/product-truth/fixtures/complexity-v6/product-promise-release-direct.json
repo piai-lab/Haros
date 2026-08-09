@@ -1,9 +1,0 @@
-{
-  "extendsFixture": "product-refusal-lock-positive",
-  "textReplacements": {
-    "apps/service/src/product/ProductControlPlane.ts": [[
-      "  const lock = await acquireDatabaseLifecycleLock(databasePath);",
-      "  const lock = await acquireDatabaseLifecycleLock(databasePath);\n  Promise.resolve().then(() => releaseDatabaseLifecycleLock(lock));\n  await Promise.resolve();"
-    ]]
-  }
-}
