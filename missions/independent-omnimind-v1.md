@@ -6,7 +6,7 @@ Owner: maintainer
 
 Canonical path: `missions/independent-omnimind-v1.md`
 
-Updated: 2026-08-09
+Updated: 2026-08-10
 
 ## 1. Objective
 
@@ -41,7 +41,7 @@ V1 保留 `Agent | Chat`，但 Agent/Chat/Groups 直接复用 Projects/Threads/S
 | F-14 | Chat managed workspace/artifact 与外部文件只读边界真实；Send to Agent 显式进入 folder-backed Project；文件/Git 不静默覆盖                                                                                                         | filesystem/Git/product journeys              | candidate | File/Viewer/save-conflict 与 Git 责任链保持 Synara exact source：真实 Electron 中 Project save 成功，外部变更触发冲突且保留 dirty buffer 与磁盘内容；Diff/Git、Terminal 与 Artifact 可达；`Send to Agent` 选择现有 Project 后创建 fresh folder-backed draft，只复制未发送 prompt/attachments/references，原 Chat draft 保留且无 message/Session/operation replay；frozen Chromium stable 276/276 与 full unit/build 绿 | `9ce368fbdc6eba34dbe6a714be2d9290db2a8839` |
 | F-16 | approval/permission 只按 Provider/Host 实际请求与能力呈现；未实现能力不宣传，process isolation 不冒充 sandbox                                                                                                                     | source/UI + focused capability tests         | candidate | pending-interaction derivation 与 approval UI 保持 Synara exact source，只投影 Provider 实际 request/scope/result；真实 Electron permission 菜单只显示实际 `Ask for approval` / `Full access`，无请求不渲染，未实现 Pi approval 不造假；无凭据在发送前准确阻止且不 fallback；frozen full unit/browser/build 绿，source/tree 无 permission broker、跨 Provider policy state 或 sandbox 宣称 | `9ce368fbdc6eba34dbe6a714be2d9290db2a8839` |
 | F-17 | 一套 OmniMind message catalog 覆盖正常用户可达产品面；中文/英文、IME、keyboard、screen reader、reduced motion、真实 long thread/burst/large output 达到可用质量；不把 source 零散文案冒充完整 i18n                                | catalog coverage + dual-locale/a11y/profile  | candidate | 唯一 catalog 与 AST source falsifier 覆盖全部直达 Settings 分区、Search/shortcuts/toast、Chat header/Composer/Workbench/root error/updater，以及 Kanban overview/三列/card/新任务/拖放/上下文菜单；保持 raw provider output、路径、命令、模型名与技术诊断原文。隔离 macOS Electron 的既有双语 journey 仍为输入；最终 source gate 为 Kanban/catalog 58/58、web typecheck、document/public-surface 15/15，packaged App 连续启动两次并保持 Agent 域 Kanban 与独立 profile | `1e3d465940c70dab297ddce5e56289de0d3f39e1` |
-| F-18 | 同一 SHA 的 macOS/Windows/Linux artifacts 可安装、启动、更新、失败重试/重新安装恢复，legal/SBOM/signing 与 fresh audit 通过                                                                                                       | release matrix + completion audit            | blocked   | `1e3d465…` 生成 macOS arm64 本地候选并复制到 Downloads（SHA-256 `36b0c621…294816`）；DMG mount/copy/install 后隔离 profile 连续启动/重开，Desktop→Server 且无 service/native-host/`.pi`；release-target inventory/SBOM/notices 243 项与 ASAR 双向一致，Pi 双物理模块保留；mock updater DMG/ZIP/manifest HEAD/SHA-512 与 retry/install-recovery focused 125/125 通过。阻塞：本机无 Apple signing/notary identity/凭据，DMG 未签名/公证/staple；无 Windows x64 runner/Trusted Signing 凭据，现有 Docker 仅 Linux arm64、不能替代 Linux x64 原生 install/open；独立 fresh-context completion audit 尚未发生 | `1e3d465940c70dab297ddce5e56289de0d3f39e1` |
+| F-18 | 同一 SHA 的 macOS/Windows/Linux artifacts 可安装、启动、更新、失败重试/重新安装恢复，legal/SBOM/signing 与 fresh audit 通过                                                                                                       | release matrix + completion audit            | blocked   | `1e3d465…` 生成 macOS arm64 本地候选并复制到 Downloads（SHA-256 `36b0c621…294816`）；DMG mount/copy/install 后隔离 profile 连续启动/重开，Desktop→Server 且无 service/native-host/`.pi`；release-target inventory/SBOM/notices 243 项与 ASAR 双向一致，Pi 双物理模块保留；mock updater DMG/ZIP/manifest HEAD/SHA-512 与 retry/install-recovery focused 125/125 通过。尚缺 Apple signing/notary、Windows Trusted Signing、Windows/Linux 原生 runner journey 与独立 fresh-context completion audit；维护者于 2026-08-10 明确暂停这些 gate。后续跨平台优先复用 `.github/workflows/release.yml` 的 `publish_release=false` build-only lane：`windows-2022`/`ubuntu-24.04` 只生成 Actions artifact 并运行 packaged startup smoke，不发布 Release 或改 feed；未签名 Windows artifact 不构成签名闭环 | `1e3d465940c70dab297ddce5e56289de0d3f39e1` |
 | F-19 | shipped inherited Provider 保持 discovery/health 和 source 已支持的 core journeys；ready/warning/error/auth/version/capability truth 准确；stock Pi session runtime 与 optional local CLI version 不混淆                          | provider smoke + source audit                | candidate | bundled OmniMind Agent health 与无凭据状态真实；stock Pi 纯投影 bundled `0.84.1` 且默认不 discovery，App updater 独占 runtime 更新；OpenCode discovery 保持 Synara exact source，后台 refresh 只执行 binary/auth/version lookup，update subprocess 仅由显式 `server.updateProvider` 进入；真实 Electron 显示可关闭的 read-only advisory，未点击前进程树无 install/update command；transient timeout 丢弃未经复核 advisory 而保留既有 usable health；frozen full unit/browser/build 绿 | `9ce368fbdc6eba34dbe6a714be2d9290db2a8839` |
 
 F-13 与 F-15 保留为历史 ID，不复用。Remote/SSH 继续 V2。
@@ -73,7 +73,7 @@ F-13 与 F-15 保留为历史 ID，不复用。Remote/SSH 继续 V2。
 
 ## 7. Blockers
 
-None currently. 若 exact Synara Registry 无法同时承载独立 OmniMind Agent 与 stock Pi，或 OmniMind Agent 无法在不读取 stock Pi state 的情况下保持所需生态兼容，停止并重新 convergence。
+F-18 保留以下由维护者明确暂停的外部门：Apple signing/notary、Windows Trusted Signing、Windows/Linux 原生 install/open journey，以及独立 fresh-context completion audit。当前只记录，不施工、不追问；恢复时优先走既有 GitHub Actions build-only runner，且不得把 Actions artifact 上传误记为公开发行。
 
 ## 8. Done
 

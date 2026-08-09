@@ -106,6 +106,8 @@ OmniMind Agent 是内部最深验收路线。stock Pi 与其他 shipped Provider
 
 ## 10. 当前唯一下一动作
 
-Stage 4/F-18 已由维护者显式启动。本地可闭合部分冻结在 `1e3d465940c70dab297ddce5e56289de0d3f39e1`：macOS arm64 本地候选完成 build、mount、隔离 install/open/reopen，target-derived inventory/SBOM/notices 与 ASAR 双向闭合，mock updater artifact 与失败重试/安装恢复 focused gate 通过。F-18 仍为 blocked：Apple signing/notary、Windows x64 + Trusted Signing、Linux x64 原生 install/open runner 与独立 fresh-context completion audit 缺失；不得以本地未签名 DMG、Docker arm64、authored test 或本 Runner 自审改写为三平台 candidate/verified，也不得进入公开发布、上传、feed mutation 或 push。
+Stage 4/F-18 的本地可闭合部分冻结在 `1e3d465940c70dab297ddce5e56289de0d3f39e1`：macOS arm64 本地候选完成 build、mount、隔离 install/open/reopen，target-derived inventory/SBOM/notices 与 ASAR 双向闭合，mock updater artifact 与失败重试/安装恢复 focused gate 通过。维护者于 2026-08-10 明确暂停 Apple signing/notary、Windows Trusted Signing、Windows/Linux runner journey 与独立 fresh-context completion audit；这些缺口继续准确保留，F-18 保持 blocked，但当前不再施工或追问。
+
+后续显式恢复跨平台验收时，优先直接运行现有 `.github/workflows/release.yml` 的手动 build-only 模式（`publish_release=false`）：GitHub-hosted `windows-2022` 与 `ubuntu-24.04` lane 构建 artifact、执行 packaged startup smoke 并只保存 Actions artifact，不创建 GitHub Release、不上传 updater feed。Windows 未配置 Trusted Signing 时只能形成未签名构建/启动证据，不能闭合签名或 production release claim。不得以本地未签名 DMG、Docker arm64、authored test 或本 Runner 自审改写为三平台 candidate/verified。
 
 任何继续扩充 Product Truth semantic meter、平行 Product Control Plane、跨 Provider Package lifecycle、Remote 或 settings taxonomy 重写的工作都应停止。
