@@ -398,7 +398,8 @@ export function normalizeProviderModelOptions(
     piCandidate?.thinkingLevel === "low" ||
     piCandidate?.thinkingLevel === "medium" ||
     piCandidate?.thinkingLevel === "high" ||
-    piCandidate?.thinkingLevel === "xhigh"
+    piCandidate?.thinkingLevel === "xhigh" ||
+    piCandidate?.thinkingLevel === "max"
       ? piCandidate.thinkingLevel
       : undefined;
   const pi = piThinkingLevel !== undefined ? { thinkingLevel: piThinkingLevel } : undefined;
