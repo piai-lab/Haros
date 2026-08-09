@@ -1,25 +1,27 @@
 # OmniMind
 
-OmniMind 是一个本地优先桌面 Agent 产品：默认用户身份是 **OmniMind Agent**，经过策展和调校的 Pi 是内置原生 Gold Path。OmniMind 把其运行时与生态做成普通用户愿意长期使用的桌面产品；其他真实 Agent 可以作为外部 Engine 接入，但不承诺虚假的能力对称。日常工作台保持产品优先；About、Licenses、运行时详情和诊断必须能发现准确的 Pi provenance 与执行权威。
+OmniMind 是一个本地优先、多 Provider 的桌面 Agent 产品。普通用户面对的是完整的 **OmniMind** 产品与默认内置的 **OmniMind Agent**；Synara 和 Pi lineage 只作为实现、兼容与法定来源存在，不成为日常产品语言。只有用户主动打开 Provider 选择或技术详情时，独立的 stock Pi 才以 `Pi` 显示，其他真实 Provider 同理。所有 Provider 共用一套继承的 Product Orchestration 与 Registry，但各自保留真实的 identity、版本、配置、Session、私有 state 与生态能力。
 
-> **Pi-native. OmniMind-owned. Ecosystem-first. Engine-open.**
+> **OmniMind-native by default. Pi-ecosystem compatible. Provider-honest. Source-first.**
 
-- **Pi-native**：默认 Agent、Provider/Model/Thinking、Session 与 Package 语义来自 Pi 原生运行时。
-- **OmniMind-owned**：品牌、桌面体验、用户可见工作、Package 信任与分发、系统能力、恢复和跨 Engine 连续性由 OmniMind 负责。
-- **Ecosystem-first**：优先无损承接成熟能力，不重写竞争 Runtime，也不把已经采用的 Synara 产品能力因 OmniMind 验收项尚未闭合而从零重造。
-- **Engine-open**：Pi 是 Gold Path，外部 Agent 是真实出口；能力差异必须诚实呈现。
+- **OmniMind-native by default**：OmniMind Agent runtime 由产品内置，随 OmniMind 一起构建、签名、更新和验收；这表示无需另装 Agent runtime，不承诺在没有可用模型凭据或本地模型时伪造首次回复。
+- **Pi-ecosystem compatible**：OmniMind Agent 保留可维护的 Pi Package/Extension/Skill/Prompt/Tool/MCP compatibility；Pi 技术 lineage 在 About、Licenses 与源码归属中准确披露。
+- **Provider-honest**：Codex、Claude、OpenCode、Pi 等 inherited integrations 各自保留原生协议、能力和限制；共同 UI 不伪造功能齐平、跨 Provider continuation 或静默 fallback。
+- **Source-first**：优先无损承接 Synara 的成熟产品能力和 Pi-compatible 生态表面，只补经真实 journey 证明的 OmniMind 差异，不把上游已解决的问题重新平台化。
 
 ## 1. 产品状态与战略
 
-这是一个没有用户、兼容义务和发布历史的新产品仓库。产品与架构已经围绕 Pi-native 路线收敛；旧的竞争 Runtime/Journal/Tool skeleton 被判定为错误本体，不构成保留义务。
+这是一个没有用户、兼容义务和发布历史的新产品仓库。产品与架构围绕“一个 OmniMind 产品、多个真实 Provider、bundled OmniMind Agent”收敛。正常旅程不要求用户理解 Synara 或 Pi；stock Pi 只在用户主动选择 Provider、查看诊断或法定来源时出现。仓库后来新增的平行 Product Control Plane、重复 Run/Journal/Tool authority 与重复 Registry 被判定为错误本体，不构成保留义务。
 
-公开 Alpha 前没有用户数据兼容义务。维护者已明确放弃默认 `~/.omnimind` 中被精确识别为 pre-baseline 的旧开发 Product、Automation/service 与 OmniMind Web-draft 状态，以及重复/过期的旧 Package 状态；首个公开 schema 可在进程停止、目标逐项验证且删除范围不越界时直接重建，不创建 backup、migration、restore 或长期兼容面。该授权不包含 credential、当前 canonical Package generation、Pi-native state、attachments、外部 ResourceRef、用户 workspace、Git、全局配置、其他 home 或任何未识别路径。
+公开 Alpha 前没有用户数据兼容义务，但这不构成删除本机旧字节的产品价值。V1 的每个 owner 使用唯一、全新的 first-public canonical namespace；旧开发 Product、Automation/service、Web draft 与 Package 状态不再读取、推断、迁移、修复或删除。若旧路径与当前 owner 冲突，当前 owner 一次性选择新的最终路径或 key，而不是发布 destructive rebuild 工具。credential、Pi-native state、attachments、用户 workspace、Git、全局配置和任何未知路径始终保持原样。公开发行后的 schema 变更才进入有证据的 migration/recovery。
 
-OmniMind 的价值不是“能启动 Pi”，而是上游没有义务完成的桌面产品层：世界级交互、可信 Package 分发、文件与工作台、真实权限与副作用、恢复、外部 Engine 协作以及跨平台交付。若这些价值不能独立成立，产品就只是一层可替换皮肤。
+OmniMind 的价值不是“能启动 Pi”，也不是“再造一个多 Engine 平台”，而是用 `Agent | Chat` 提供清晰默认路线，把成熟 Synara Workbench、多 Provider substrate 与 Pi 生态交付为一个完整桌面产品。OmniMind 不需要拥有每个内部 lifecycle 才能形成产品价值；可信来源、策展、体验和发行可以建立在上游原生 authority 之上。Remote/SSH 推迟到 V2。
 
-已采用的 Synara UI mother 与仓库中已经运行的成熟机制是默认施工基座。一个 Campaign claim 为 `open`，只表示 OmniMind 对该产品语义的验收证据尚未闭合，不表示对应 File、Viewer、Diff、Terminal、Conversation、i18n、accessibility、packaging 或 updater 基座不存在。替换既有机制前必须同时指出唯一 owner、可复现冲突，以及为什么接线、authority 收口或局部修复不能解决；否则保持既有实现并补齐 OmniMind 差异与 proof。
+已采用的 Synara UI mother 与仓库中已经运行的成熟机制是默认施工基座。一个 Campaign claim 为 `open`，只表示 OmniMind 对该产品语义的验收证据尚未闭合，不表示对应 File、Viewer、Diff、Terminal、Conversation、accessibility、performance、packaging 或 updater 基座不存在。替换既有机制前必须同时指出唯一 owner、可复现冲突，以及为什么接线、authority 收口或局部修复不能解决；否则保持既有实现并补齐 OmniMind 差异与 proof。
 
-当前 production compatibility、Package 安全、跨平台、恢复和外部 Engine 声明仍须由 active Campaign 在同一 frozen SHA 上验证；本 README 不自证完成。
+双语是例外，不得被“source-first”口号虚构为现成能力。Synara `02c8a6c…` 没有覆盖完整产品面的消息目录或 locale 切换；浏览器 locale、零散文案表和英文 UI 不构成可继承的完整 i18n。OmniMind 只新增一套轻量消息目录并覆盖首发可达产品面，不借此重写 source 组件树或建设通用 localization platform。
+
+当前 production compatibility、Package 安全、跨平台与恢复仍须由 active Campaign 在同一 frozen SHA 上验证；本 README 不自证完成。
 
 ## 2. 唯一权威与架构入口
 
@@ -38,38 +40,41 @@ OmniMind 的价值不是“能启动 Pi”，而是上游没有义务完成的�
 
 - [`architecture/workbench.md`](architecture/workbench.md) 是用户可见行为、UI 母体接管门、性能与可访问性的完整契约；
 - [`architecture/public-surface.md`](architecture/public-surface.md) 唯一拥有公共 origin、Registry、激活门、不可用行为、反馈数据边界与发行/更新权威分离；
-- [`architecture/product-state.md`](architecture/product-state.md) 唯一拥有产品事实、durable product objects、Queue-to-Run 转移、receipt 与恢复；
-- [`architecture/execution.md`](architecture/execution.md) 唯一拥有详细进程 topology、target responsibility layout、Native/External Engine 边界与故障域。
+- [`architecture/product-state.md`](architecture/product-state.md) 唯一拥有 inherited 产品事实、Agent/Chat 映射、Queue admission、receipt 与恢复边界；
+- [`architecture/execution.md`](architecture/execution.md) 唯一拥有 Product Orchestration、Provider Registry/adapters、详细进程 topology、OS capability 与故障域。
 
 根文档只保留宪法级后果。它不提供第二套 UI ledger、产品对象目录、物理树、研究记录、施工计划或验收状态。
 
 ## 3. 不可协商的产品边界
 
-- OmniMind 以独立产品和 OmniMind Agent 身份面对用户，不冒充 Pi 官方 GUI，也不把 Pi 当作日常品牌口号；准确的 Pi 来源、版本和原生执行权威在 About、Licenses、运行时详情与诊断中逐层可发现。
-- OmniMind 保留用户可见产品事实、桌面体验、Package source/trust/current/LKG、文件/Remote、权限表达、恢复和跨 Engine 连续性；详细事实只以 Product State 为准。
-- 外部 Engine 使用真实官方协议或明确受限路径接入，不反向把 Pi Gold Path 压成最低公分母，也不允许静默 fallback。
+- App shell、导航、Agent/Chat、设置、错误、更新和默认生态入口只使用 OmniMind 产品语言。Synara 不作为用户概念；OmniMind Agent 不以 Pi 命名或解释自身。准确的 Pi lineage、采用版本、改动边界与 license 只在 About、Licenses、诊断和源码归属中按需可发现。
+- `Agent | Chat` 是产品入口：Agent 复用 folder-backed Project Thread，Chat 复用 Home/Studio managed Thread，Groups 复用 Spaces；不创建第二套 durable objects。
+- 生态生命周期属于各 Provider。V1 恢复并复用 Synara 既有 Plugin/Skill discovery；OmniMind Agent 只在其原生 API 已存在时提供 provider-scoped install/update/remove/reload。stock Pi 与其他 Provider 不为视觉对称而补造生命周期 API，共同 UI 不保存跨 Provider current/LKG/generation。
+- V1 在 inherited Registry 中增加一个有界的 `omnimind` identity，并保留 `pi` 与其他既有 adapters；不把 ProviderKind 改成动态插件平台。OmniMind Agent 是默认、内置和最深验收路径；stock Pi 只在用户主动选择 Provider 或查看详情时以 `Pi` 显示。UI 使用每个 runtime 的 ready、auth、version、capability 与 diagnostics，不新增 support-tier 状态。
 - U1 是获准的完整 UI 物理母体和可运行底盘；采用遵守 Workbench 的逐域 preserve/adapt/delete gate，不按截图另画薄 shell，不因未接线就删除成熟表面。
-- 权限策略与实际 enforcement source 必须分开表达；副作用确定性、恢复、性能、简体中文/英文和 macOS/Windows/Linux 都需要真实证据。
+- 权限请求和限制只能按当前 Provider/Host 的真实行为表达；副作用确定性、恢复、性能、简体中文/英文和 macOS/Windows/Linux 都需要真实证据。
 
-以下四条官方发行与 Pi 生态要求由产品维护者锁定：
+以下四条官方发行、Provider 与 Pi 生态要求由产品维护者锁定：
 
-1. OmniMind 官方发行版内置并针对产品体验调优 Pi；普通用户使用默认 Gold Path 时，无需另行安装或单独配置 Pi。
-2. OmniMind 可以策展、预装或自建 Package、MCP、Skill 与 Prompt，也可以对 Pi 做有界、可维护的适配；这些是发行与集成选择，不转移 Pi 原生执行权威。
-3. OmniMind 不建立与 Pi 竞争的 Agent Runtime；Pi runtime 与可执行生态代码不得进入 Electron Main 或 renderer，详细进程边界只由 Execution 定义。
-4. 用户及 Provider/Engine credential 必须作为秘密保护，不能因内置、预装或产品配置而写入发行物或公开内容；任何 bundling、预装、修改与再分发都必须履行适用的真实 license、attribution 与 redistribution obligations。
+1. OmniMind 官方发行版内置 OmniMind Agent runtime；普通用户无需另行安装 Pi 或 Agent runtime。首次模型请求仍以真实的 model/provider auth readiness 为准，不静默 fallback。
+2. OmniMind Agent 是 Pi-derived、产品自有的 runtime，可以策展、预装或自建兼容的 Package、MCP、Skill 与 Prompt；stock Pi 仍作为独立 Provider 保留。
+3. OmniMind Agent 与 Pi 必须进入 inherited Provider Registry，而不是建立竞争的 Registry、Product Control Plane 或跨 Provider runtime。二者可共享窄的 Pi-family adapter core，但 identity、version、configuration、Session、state root、Package install state 和 diagnostics 必须隔离；可执行 runtime 不进入 Electron renderer。
+4. 用户及 Provider credential 必须作为秘密保护，不能因内置、预装或产品配置而写入发行物或公开内容；任何 bundling、预装、修改与再分发都必须履行适用的真实 license、attribution 与 redistribution obligations。
 
-这四条规定产品结果，不预先固定尚未由实现证据选择的内部组织或部署形态。
+这四条规定产品结果。`omnimind` 与 `pi` 是两个真实 Provider identity，但仍服从同一个 inherited orchestration；这与重建通用多 Engine 平台不同。
+
+OmniMind Agent 的首个技术 lineage/生态兼容基准是 Pi stable `v0.84.1`，之后使用自己的 runtime version；它不以 Pi version 作为长期产品身份。它使用独立构建或等价的 instance-level 配置，使全局与 project-local private state 都进入 `.omnimind`。stock Pi 仅在被用户显式选择时使用自己的 `.pi` native state；产品 reset、OmniMind Agent 和后台 discovery 都不得读取、迁移、同步或改写它。stock Pi 的实际 session runtime version 与可选本机 CLI version 必须分别呈现，不能互相冒充。本轮 responsibility comparison 使用 exact Synara `02c8a6cb9948eba0afc828492764e7236965c61f`；实际 source bytes 和 Pi-derived runtime 进入 production 后，才更新本文件唯一 adoption record。
 
 ## 4. 来源、身份与结构
 
 基础设施默认采用责任匹配的成熟上游实现、官方 SDK 与已证明机制；自研实现只有在上游不兼容、
 不安全、法律上不可采用、实质更重或无法保持 OmniMind 产品边界时才成立，并必须记录可复核的
 反证。采用必须同时满足精确责任且无竞争 authority、固定版本与可复现证据、license/Notice 与
-再分发兼容、依赖和升级面有界、全生命周期复杂度低于自持五项门槛。上游或 Engine 负责协议
-wire、Runtime/Session、Tool、Extension 与 Package-private 语义；OmniMind 只保留差异化的可见
-Product identity、冻结选择与 dispatch、最小 receipt/replay truth、跨 Engine 恢复投影、安全边界、
-策展分发和 GUI。采用 wrapper 不得重新实现已交给上游的 authority，也不得带入 donor branding、
-编排、Session 状态或泛化 Runtime。
+再分发兼容、依赖和升级面有界、全生命周期复杂度低于自持五项门槛。每个 Provider runtime 负责
+自己的 protocol、Session、Tool、capability 与私有生态语义；OmniMind Agent 与 stock Pi 分别拥有各自
+的 Session、ResourceLoader-compatible lifecycle 和 Package-private state。OmniMind 只保留跨 Provider 仍稳定的产品事实、默认与策展、
+最小 receipt/recovery truth、安全边界、分发和 GUI。采用 wrapper 不得重新实现已交给上游的
+authority，也不得带入 donor branding、竞争编排、第二 Session 状态或泛化 Runtime。
 
 下列机器块是 production adoption、身份与结构治理的唯一根级输入。研究候选不等于采用；实际采用必须在同一提交记录 fixed source、rights、路径、更新策略与法定文本。
 
@@ -277,7 +282,7 @@ Product identity、冻结选择与 dispatch、最小 receipt/replay truth、跨 
 }
 ```
 
-身份扫描只阻止 donor/旧产品身份泄漏；Pi 是公开产品依赖，不属于需要洗掉的身份。外部 Engine 名称可以出现在真实 integration 和动态来源边界，不能成为通用产品本体。
+身份扫描只阻止 donor/旧产品身份泄漏；Pi 与实际 shipped Provider 是公开产品依赖，不属于需要洗掉的身份。Provider 名称可以出现在真实 integration、选择器、详情、诊断、About 与 Licenses 中，但不得作为虚假能力或 donor 品牌泄漏。
 
 ```identity-denylist
 synara
@@ -316,10 +321,10 @@ omni-harness
 
 Source Review 已记录 imported tree 与 fixed source 的 exact comparison，以及同一固定树上的 frozen install、build、typecheck 和 unchanged macOS desktop-smoke 结果及其局限。它们不证明 production adoption、视觉等价、Windows/Linux 或 packaging。除非 Source Review 的复验触发器发生变化，不重复相同 unchanged probe。
 
-Stage 0–3 的 source/identity closure、UI 母体接管、Product 单写、isolated Native Host 与真实 Chat/folder-backed Agent 纵切已在 commit `248b3316651e681d9d4c78f81bec0c84a4cc822c` 形成首个本地、未签名 macOS arm64 candidate，并由 [`Freeze handoff`](.omp-flow/tasks/08-04-ui-chassis-takeover/handoffs/freeze-first-production-candidate.md) 与 [`independent review`](.omp-flow/tasks/08-04-ui-chassis-takeover/reviews/freeze-first-production-candidate.md) 记录。
+Stage 0–3 的 source/identity closure、UI 母体接管、Product 单写、isolated Native Host 与真实 Chat/folder-backed Agent 纵切已在 commit `248b3316651e681d9d4c78f81bec0c84a4cc822c` 形成首个本地、未签名 macOS arm64 candidate，并由 [`Freeze handoff`](.omp-flow/tasks/08-04-ui-chassis-takeover/handoffs/freeze-first-production-candidate.md) 与 [`independent review`](.omp-flow/tasks/08-04-ui-chassis-takeover/reviews/freeze-first-production-candidate.md) 记录。该 checkpoint 证明当时的纵切，不证明 isolated Native Host 是最终 topology；single-substrate reset 必须重新裁决其责任是否已由 inherited PiAdapter 承担。
 
-首个真实 headless Pi Package checkpoint 已在 commit `16f14d188e38134f6f45c46bfcb57ff36c1e8565` 由不同 actor 独立接受；其 Work、handoff 与 PASS review 保存在 [归档 Bundle](.omp-flow/tasks/archive/2026-08/08-06-pi-package-lifecycle/)。它证明当前 exact Package 的 staged activation、active lease、LKG、fault recovery 与 Pi-native private-state boundary，不证明完整 Package Catalog/compatibility taxonomy、外部 Engine、Remote、三平台发行或 V1 完成。
+首个真实 headless Pi Package checkpoint 位于 commit `16f14d188e38134f6f45c46bfcb57ff36c1e8565`。它证明 exact `todo.ts` 是可复用的 Pi-ecosystem regression input，也证明跨 Provider staged activation/lease/LKG 路线过重。V1 要证明该类 Package 能在 OmniMind Agent 的独立 Pi-compatible runtime 中运行，同时保持 stock Pi state 隔离。
 
-真实外部 Engine checkpoint 已完成并通过独立复核。当前唯一 bounded checkpoint 是 Product truth consolidation；其后按完整 Package surface、File/Remote/permissions、性能/双语/无障碍、三平台发行的顺序闭合剩余证据。各阶段默认复用已采用的 Synara 与当前仓库基座，只实现 architecture owner 能证明的 OmniMind 差异；精确进入、停止和 proof 条件只见 [`execution-brief.md`](execution-brief.md)。
+平行 OpenCode checkpoint 和 Product Truth destructive route 现只作历史证据，均不再定义 V1 下一步；这不删除 Synara 已有的 OpenCode 或其他 Provider adapter。当前以 exact Synara responsibility reset、Pi stable alignment、Agent/Chat mapping、原生生态、Workbench 质量和三平台发行的顺序闭合剩余证据；精确进入、停止和 proof 条件只见 [`execution-brief.md`](execution-brief.md)。
 
 具体进入条件、停止条件和 proof gate 只见 [`execution-brief.md`](execution-brief.md)；当前 claim 状态只见 active Campaign。

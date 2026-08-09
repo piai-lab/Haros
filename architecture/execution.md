@@ -1,147 +1,151 @@
 # Execution
 
-## 目标边界
+## 核心裁决
 
-OmniMind 使用一个产品控制平面协调桌面、可见 Conversation、系统能力和多个真实 Engine。默认原生 Engine 拥有最深集成；外部 Engine 通过正式协议进入。产品只统一稳定的用户事实，不要求能力对称。
+OmniMind V1 直接使用 Synara 的多 Provider execution substrate：一个 Product Orchestration、一个 Provider Registry、一个 Session/Thread binding 路径和一套 canonical events/projections。Codex、Claude、OpenCode、stock Pi 等沿用原生 adapter；bundled OmniMind Agent 作为独立 Provider 加入同一个 Registry。
 
-本文件是详细进程 topology 与 target responsibility layout 的唯一 owner。目标职责为：
-
-```text
-apps/web       Renderer / Product UI
-    │ typed commands and view models
-apps/desktop   Desktop Host: windows, menu, keychain, notifications
-    ├── separately supervises apps/service
-    └── separately supervises apps/native-host
-apps/service   Product Service: product facts, outbox, projections, system capabilities
-    ├── direct typed-protocol client of apps/native-host
-    └── External Engine process/connection(s): ACP or official thin protocol
-apps/native-host
-               isolated Native Host executable build target: native SDK, Session and Package code
-```
-
-这些路径描述代码收敛后的职责，不要求提前制造空目录。共享 `packages/` 只在出现真实复用职责后建立；不得为了匹配 topology 创建占位 package。
-`apps/native-host` 是上述已批准 Native Host 职责的唯一 production executable workspace，不是新的产品对象或执行权威。Desktop Host 以独立 child lifecycle 监督 Product Service 与 Native Host；Product Service 是 Native Host 协议的直接客户端。Desktop Host 只建立有界 rendezvous 和 supervision capability，不代理、解析或转发 Engine command/fact payload。
-
-```mermaid
-sequenceDiagram
-    participant UI as Product UI
-    participant PC as Product Control Plane
-    participant PH as Isolated Native Host
-    participant NE as Native Engine
-    participant OS as Files / Git / Terminal / Remote
-
-    UI->>PC: submit visible Entry + next-Run choices
-    PC->>PC: persist outbox and freeze request
-    PC->>PH: typed dispatch + exact generation
-    PH->>NE: native session operation
-    NE-->>PH: accepted operation reference
-    PH-->>PC: typed receipt and incremental facts
-    PC-->>UI: stable projection
-    NE->>OS: authorized tool/effect path
-    OS-->>PC: observed result or external receipt
-    PC-->>UI: visible outcome / failure / unknown
-```
-
-## 接纳后的执行权威
-
-Product 在接纳前拥有可编辑、可排序的 Composer intent 和 next-Run 选择。Product 接纳把 intent 转为 Product State 定义的 `Run` 与一次 dispatch attempt，但不等于 Engine 已收到或接受执行。协议提供独立 acceptance acknowledgement 或 accepted operation reference 时，它仍是最强的执行权转移证据；在该证据到达前，local write、process liveness、Session create/load/resume 及 scheduled/global notification 都只属于诊断事实。
-
-若固定版本的外部协议经来源和真实进程证据证明不提供独立 acceptance acknowledgement/reference，但会产生与单一 prompt/Run 因果且唯一相关的 Engine facts，则第一条此类 fact 证明 observed delivery 与 Engine execution authority。Product 不得把它描述或持久化为虚构的 acceptance ACK 或 opaque operation reference。correlated final/error 证明 settlement；在首条 correlated fact 前失联为 `delivery_unknown`，其后但在 final/error 前失联为 `outcome_unknown`。两种 unknown 都保留冻结输入、选择和不可变 attempt evidence，固定为一次 attempt、零自动 replay、零 fallback，且不得退回 editable Queue。
-
-执行权由独立 ACK/reference 或上述 observed delivery 证明后，native queue、steer、follow-up、retry、abort 和 settlement 由该 Engine 拥有。Host 与 Product Service 只传递 typed command、receipt 和增量事实，不建立第二套 operation authority。若断线跨过派发边界但无法判定是否已产生 prompt-correlated Engine fact，Product 按对应的 unknown 边界保留输入；任何 Host 或 Engine 都不得自动重放，也不得把该项退回 editable Queue 冒充未派发。
-
-Product Service 的 Engine 边界使用 source-neutral、闭合的 `ProductExecutionFact`、`ProductExecutionSnapshot` 与 `ProductExecutionUpdate`。Product-facing 顺序只称 `engineSequence`；Native Host 的 sequence 在 Pi Service edge 映射后进入该边界，真实 accepted-operation reference 仍只属于 Pi 的 acceptance、control 与 recovery 证据。无 ACK 外部 Engine 的首条唯一 correlated fact 以 `delivery-observed` 在同一 Product transaction 中建立 binding、resolved selection 并应用该事实，不携带或伪造 operation reference。Product 可见 fact 仅包含稳定的 assistant/thinking/tool/usage/plan/permission/settlement 投影；原始 payload、global notification、隐藏 reasoning、配置与凭据不得进入该边界。
-
-Usage 事实按来源语义保持分离：Pi 的 token-detail usage 保留 input/output/cache/total；只提供 context-window consumption 的外部协议使用独立 `context.usage { used, size }`。两者不得互相填充、汇总或替代，外部协议附带的 cost/currency 不在本边界内。
-
-cancel request、stdio write 或 process signal 只证明 `abort_requested`，除非 Engine 明确返回 cancellation acknowledgement。晚到的 correlated facts、final 或 error 继续具有权威性并收敛可见 Run；Session identity/load/resume 只证明外部 lineage，不能替代 per-prompt delivery correlation。Pi Native Host 已有的 accepted-operation reference 语义不受这一 no-ACK 外部协议规则影响。
-
-外部 Engine 的 prepared connection 若在 `pending/pre-send`、零 attempt 时因 Service 重启而丢失，启动只能校验并展示现有 durable Run，不得自动重建连接或发送 prompt。用户针对精确 dispatch 的 typed Retry 才能在同一 selected Engine 上重建 preparation；Engine 与 frozen resolved selection 必须完全一致，且 `attemptCount` 仍只由 `markSent` 从零推进到一。重试able preparation unavailability 只刷新有界阻塞事实；任何 corruption、identity contradiction 或 non-retryable rejection 均 fail closed。该规则不改变 Pi 默认路径。
-
-## Product Control Plane
-
-Product Control Plane 应保留并负责：
-
-- Desktop/Web/Server transport 与生命周期；
-- Workspace、Visible Conversation、Composer 与 workbench layout；
-- user command admission、dispatch receipt 与 visible recovery；
-- typed projection、bounded ingress、startup reconciliation；
-- File、Git、Terminal、Attachment、Artifact 与 Remote product surface；
-- Package source、rights、trust、exact generation、lease 与 LKG；
-- 外部 Engine 的安装、能力、版本、权限真实性和来源；
-- 跨 Engine continuity。
-
-Product Service 内的 Package lifecycle 是 Package root 的唯一 owner。`dev` lane 只解析
-`<canonical ~/.omnimind>/dev/packages`，packaged lane 只解析
-`<canonical ~/.omnimind>/userdata/packages`；Service 通过受认证的 typed Host 启动/请求边界把
-当前 lane 的 canonical Package root 显式交给 Native Host。Native Host 只验证 generation 是该
-root 下的精确子路径并加载内容，不得硬编码、发现、猜测或自行选择 `userdata/packages/stage`
-等 root。首个公开 baseline 可精确删除默认 home 中被证明重复或过期的旧 Package 状态并按唯一
-owner 重建；当前 canonical generation、lease/LKG 事实和 Engine-private state 不在该授权内，
-不得保留双 root fallback。
-
-固定 UI 母体中已经成熟的 SQLite、transport、projection、receipt、reconciliation 和 process supervision 机制可以保留并重构。判断单位是事实权威与行为质量，不是“server 代码一律删除”或“整个 Runtime 永久保留”。
-
-## Native Execution Plane
-
-默认原生 Engine 唯一拥有：
-
-- Agent loop 与模型调用；
-- native Session transcript、compaction 和 branch；
-- Provider、Model catalog 与 Thinking；
-- ResourceLoader、Extension lifecycle、Tool execution 与 Package private state；
-- accepted operation、native queue、steer/follow-up、retry、abort 和 usage；
-- 原生错误、lineage 与未来稳定 Harness durability。
-
-SDK、Package 与 Extension 代码运行在独立 Node worker/sidecar 中。它们不进入 Electron Main、renderer，也不直接持有 Product Store 或其他 Engine 凭据。worker 通过 typed IPC 暴露产品需要的 commands、receipts 和 facts；未来官方 client/server 可以替换传输，但不改变权威分工。
-
-## External Engine Gateway
-
-外部 Agent 的优先顺序是：
-
-1. ACP；
-2. 官方 app-server/headless protocol；
-3. 边界明确的薄 Bridge；
-4. 真实 PTY/guest capsule；
-5. 无可靠契约时明确 unsupported。
-
-外部 Engine 保留自己的 Session、认证、模型、升级和执行语义。产品只统一可见 Entry、Run receipt、ResourceRef、OperationReceipt 和少量通用控制；Engine 特有能力通过 namespaced typed projection 增强。
-
-有成熟官方协议 SDK 时，它唯一拥有 wire framing/parsing、schema、request identity、response correlation、handler dispatch、cancel 与协议错误；Product Service 不复制这些职责，只在 SDK 外保留进程与资源上限、秘密/临时目录边界，以及 Product-owned receipt、typed projection 和恢复真相。上游 SDK 无法满足该责任时，必须先记录可复核 falsifier，不能静默保留手写 fallback。
-
-## 来源接管裁决
-
-完整固定源码树是可运行产品底盘和隐性行为的物理起点，不是截图参考，也不是永久 donor archive。
-
-接管顺序固定为：
+**OmniMind Agent** 是独立 `omnimind` Provider：Pi-derived、产品自有、随 OmniMind 内置发行。既有 `pi` Provider 同时保留，但正常产品旅程只呈现 OmniMind；`Pi` 只在用户主动选择 Provider、查看诊断或法定来源时出现。两个 Provider 不意味着两个 Product worlds。
 
 ```text
-exact source baseline
-→ unchanged build/run evidence
-→ responsibility and authority audit
-→ direct source transplant
-→ typed boundary replacement
-→ behavior and visual proof
-→ delete superseded authority and donor structure
+apps/web       inherited Product UI / Workbench
+    │ typed commands, snapshots, canonical events
+apps/desktop   window, menu, keychain, notifications, updater
+    └── supervises apps/server
+apps/server    one Orchestration + projections + Provider Registry
+    ├── Codex adapter
+    ├── Claude adapter
+    ├── OpenCode adapter
+    ├── OmniMind Agent adapter → bundled OmniMind runtime
+    ├── Pi adapter             → stock Pi integration
+    └── other inherited adapters
 ```
 
-需要保留的不是某个来源目录本身，而是已经证明优质且符合单一权威的产品机制。需要删除的是与原生 Engine 争夺 Session、queue、Tool、retry、Package lifecycle 或恢复权威的部分。两者必须逐域替换，不能大爆炸重写，也不能长期双轨。
+当前仓库中平行的 Product Control Plane、第二 event/store/projection、独立 Registry 或 Run/receipt/outbox 都是删除候选。OmniMind Agent 可以拥有自己的 runtime implementation，却不能拥有第二 orchestration、Thread model 或 Workbench。
 
-## 进程与故障边界
+## 继承层与 Provider 私有层
 
-- Desktop Host：window、menu、keychain、notification 与 process supervision。
-- Product Service：产品事实、transport、system capability coordination 与 projection。
-- Native Host：按 trust/profile/package generation 隔离；必要时可降到 per-Conversation。
-- External Engine：独立进程或正式远端 connection。
+### 直接继承的共用层
 
-worker crash 不得带崩窗口或 Product Store。进程隔离只证明故障域变小；未经平台沙箱与拒绝测试，不能声称文件、网络或命令被 host 强制隔离。
+- Project、Thread、Space、Home/Studio managed container；
+- Composer draft、attachments、Queue 与 existing command receipt；
+- canonical Timeline/Activity、attention、failure 与 recovery；
+- command/event store、projection、snapshot/catch-up 与 transport；
+- File、Viewer、Diff、Terminal、Git、Artifact 与 Studio Output；
+- provider/model/skill discovery surfaces；
+- settings、notifications、updates、legal 与 diagnostics。
+
+### Provider 私有层
+
+- process/SDK/wire protocol 与 authentication；
+- native Session、resume cursor、transcript、compaction、branch 与 private state；
+- Model option、Thinking/traits、usage 与 rate-limit 语义；
+- Tool schema、approval、structured input、slash command 与 native UI；
+- Extension、Skill、Plugin、Prompt、MCP 与 package lifecycle；
+- raw event、native identifier、error 与 cancellation acknowledgement。
+
+共用层只包含 Synara 已经证明稳定的最小事实。Provider-specific capability 通过现有 optional methods、capability data 与 namespaced detail 呈现；没有第二个“更统一”的 runtime contract。
+
+## Agent、Chat 与 Spaces
+
+`Agent | Chat` 只改变入口与用户边界：
+
+- Agent 路由到 folder-backed Project Thread 和现有 Workbench；
+- Chat 路由到 Home/Studio managed Project Thread 与 managed workspace/outbox；
+- Groups 直接使用 Synara Spaces；
+- `Send to Agent` 只创建/打开 folder-backed Project Thread，并携带用户选择的 prompt、attachments 与 artifact refs。
+
+这些动作不创建新 aggregate，不复制 native Session，不承诺跨 Provider continuation，也不改变 Provider Registry。
+
+## Provider Registry 与 adapter
+
+Provider Registry 只做 `ProviderKind → ProviderAdapter` lookup；Provider Service/Session Directory 使用现有 Thread binding 管理 lifecycle。
+
+V1 只向现有闭合 `ProviderKind` 增加一个 `omnimind` literal，并穷尽更新已有 descriptor、schema、settings、model discovery、usage、health 与 UI maps；不把 ProviderKind 改成动态插件系统。Pi-family implementation 只参数化真实变化的 provider ID、runtime entry、state/version/policy，不能复制整份 Pi adapter。
+
+adapter contract 只保留 source 实际支持的操作，例如 start/stop/send/interrupt、native resume、canonical event stream 与可选 discovery。optional 就是真 optional：未实现时隐藏或显示 unavailable，不模拟成功、不 silent fallback、不由另一 Provider 接管。
+
+Provider 切换沿用 stop-first replacement：当前 operation 结束或停止后才启动目标 Provider；目标失败时恢复上一 exact binding。Product transcript 不能替代 Provider native context。
+
+## OmniMind Agent 与 stock Pi
+
+OmniMind Agent runtime 拥有：
+
+- 独立 OmniMind Agent Session、resume、branch 与 compaction；
+- agent loop、model runtime、stream、usage、steer、abort 与 settlement；
+- Pi-compatible PackageManager/ResourceLoader、Extensions、Skills、Prompts、Tools、MCP 与独立 private state；
+- OmniMind Agent native error、raw event 与 UI request。
+
+其首个代码与 ecosystem compatibility baseline 是 Pi stable `v0.84.1`，但产物使用 OmniMind Agent 自身 version、bundle identity、configuration 与 state root，并随应用发布。为了同时隔离 global 与 project-local state，OmniMind Agent 必须使用独立 Pi-derived build/package，或让 upstream config-dir 在 runtime instance 上显式可配置；仅传入另一 global `agentDir` 不足以证明隔离。其 global settings/session/package 与 project-local settings/resources 都使用 `.omnimind`。后续优化不受 stock Pi release cadence 约束；Pi lineage、license 与修改边界必须可追踪。
+
+stock Pi 继续由 inherited `pi` adapter 拥有其 Session、Pi version、configuration、PackageManager/ResourceLoader 和 `.pi` native state。只有用户显式选择 stock Pi 后，该 Provider 才可按原生 contract 访问自己的 state；OmniMind Agent、产品 reset 与后台 discovery 都不得读取、迁移、同步或改写它。两者可共享窄的 Pi-family transport/event bridge，只要行为确实同构；不得共享 Provider identity、Session cursor、agentDir/state root、Package install state 或 diagnostics。
+
+stock Pi 的“实际会话 runtime version”和“本机可选 `pi` CLI version”是两个事实。若 session 使用 bundled SDK，就不能用 `pi --version` 冒充其执行版本；local CLI 只能作为独立诊断字段显示。
+
+## 其他 Provider
+
+stock Pi、Codex、Claude、OpenCode 等 inherited adapters 留在 V1。产品只要求：
+
+- discovery、binary/auth/health 事实准确；
+- source 已支持的 Chat、stream、interrupt/resume 不因 OmniMind surgery 回退；
+- Model、approval、usage、commands、Skills/Plugins 按 adapter truth 呈现；
+- unavailable、unsupported、degraded 与 unknown 由 runtime evidence 决定；
+- 不成为 OmniMind Agent 的 fallback，也不被迫获得其 Package 语义。
+
+Gold 只表示内部验收优先级，不写进新的运行时 tier state。UI 直接显示现有 ready/warning/error、availability、auth、version/update 与 capability facts。
+
+## Event、dispatch 与恢复
+
+adapter 把 native event 映射到现有 canonical facts，并保留 Provider/native references。未知 payload 可进入有界 diagnostics，不能靠字符串猜测为 Tool、Question、permission 或 success。
+
+Product command receipt 只证明外层 admission。native acceptance/turn/session reference、interrupt acknowledgement 与 settlement 必须来自当前 adapter；失联时显示 waiting、failed 或 unknown，不自动转交另一 Provider。
+
+restart 优先使用 Provider native resume/session cursor。无法恢复时明确创建 fresh context/new lineage；不能用 Product Timeline 冒充完整 native continuation。
+
+## 扩展与生态
+
+Package lifecycle 不跨 Provider归一：
+
+- OmniMind Agent UI 直接调用 bundled Pi-compatible manager/loader/settings/trust，并写入独立 OmniMind state root；
+- stock Pi 继续拥有其 PackageManager/Settings/Trust/ResourceLoader，但 UI 只使用 inherited adapter 已经暴露的动作；不为了和 OmniMind Agent 对称而扩大 stock Pi adapter；
+- 其他 Provider 使用各自 discovery 与其实际支持的 actions；
+- 共同表面直接复用 Synara PluginLibrary、Skills 页面和 provider discovery，只负责导航、按 Provider 分组、来源/rights 展示和 diagnostics；
+- curated/preinstalled OmniMind Agent 资源使用发行时 manifest 记录 source、hash、license 与 ecosystem API compatibility，不成为运行时 state store。
+
+不得新增 `PackageActivation`、current/LKG、generation lease、跨 Provider rollback 或第二 Marketplace。Package 更新对活跃 Session 的影响完全按原生 runtime 行为呈现；若原生 contract 不足以安全暴露某动作，就暂不提供该按钮。
+
+## First-public storage
+
+V1 只保留 inherited orchestration 对 Project/Thread/Space command/event/projection 的一份 canonical product truth，并继续允许各 Provider 使用自己的 native/private state。OmniMind Agent 使用新的 `.omnimind` global/project-local namespace；stock Pi 的 `.pi` settings/packages/sessions 保持原样，不被产品或 OmniMind Agent 读取、迁移或写入。
+
+不得为不同 Provider 建平行 Product databases，也不得为了清理历史发布 destructive rebuild。Provider native state 可以不同，但 Project/Thread/Space/Timeline 只有 inherited 一份。
+
+## 本地系统能力
+
+File、Git 与 Terminal 分别由 filesystem、Git repository 与 local process/PTY 拥有。OmniMind 直接复用 Synara 的 typed commands、viewer、save/conflict behavior、Git journey 和 per-thread terminal state。
+
+不建设 observed-version 平台。只有现实可复现的静默覆盖风险才增加最小 precondition；外部工具或 Provider Tool 改写文件后重新观察并呈现即可。
+
+Remote/SSH 不属于 V1；普通 Git remote、push/pull/PR 不受影响。
+
+## 进程、安全与应用更新
+
+进程边界按 Provider 真实实现保留。OmniMind Agent 的 bundled runtime 可以使用 product-owned worker/process 以满足 crash、更新和资源边界，但该进程只承载一个 Provider runtime，不复制 orchestration。stock Pi 保持 inherited integration 的真实 topology。
+
+credential 使用现有 keychain/provider config 边界，不进入 Product events、Timeline 或日志。进程隔离、Package verification 和 Provider policy 都不能宣传为 OS sandbox。
+
+应用更新直接继承 Electron updater，保持 downgrade disabled。V1 验证检查、下载、安装、重启、失败提示、重试和重新安装恢复；不建设自动 application rollback 或第二 updater pipeline。开发用 Git canary rollback 不是用户应用回滚能力。
+
+OmniMind Desktop updater 同时拥有 bundled OmniMind Agent runtime 的版本与更新。Pi-derived CLI self-update、默认 `pi.dev` share、Pi install/update telemetry 与独立 version-check 不进入正常产品 composition；能在 adapter/composition 边界禁用时不为此 fork 整个 upstream。Provider-native manager 只更新 Extensions/Packages/Skills 等生态资源，不能替换 bundled runtime。为兼容 unchanged Pi ecosystem，可保留 `@earendil-works/pi-*` imports、`PI_SESSION_*`、`PI_CODING_AGENT` 等内部 API/env 名称，但不得把它们渲染成 OmniMind 的用户品牌。
+
+## V2 deferred
+
+Remote/SSH 是 V2。V1 不保留 Remote picker、ExecutionTarget branch、background daemon、transport recovery 或相关 final gate。未来重开时先重新研究届时 Synara 与各 Provider 的 native remote 能力。
 
 ## 收缩规则
 
-对任何来源 Runtime 模块，只问三个问题：
+1. Synara 或 Provider 是否已经拥有这项责任；
+2. 用户是否真的需要跨 Provider 的共同事实；
+3. 删除重复层后 normal/failure/restart journey 是否仍闭合；
+4. 最小接线是否比新平台更便宜、更可靠。
 
-1. 它拥有的是产品事实、Engine 私有事实，还是外部事实？
-2. 当前稳定上游是否已经完整拥有同一执行语义与恢复责任？
-3. 删除后是否仍有真实接纳、回执、失败、恢复和行为证据？
-
-只有上游已经稳定拥有、替代链完整且故障测试成立时，才删除重复 execution authority。反过来，不能以未来设计稿为由提前删除已经成熟的产品控制能力。
+已有就复用；Provider 私有就留在 adapter；重复就删除；缺真实第二消费者就不抽象。sunk cost、历史 candidate 和文档数量都不是保留理由。

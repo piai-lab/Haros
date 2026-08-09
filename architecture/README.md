@@ -20,15 +20,18 @@
 | ---------------------------------------- | ----------------------------------------------------------------------------------------------------- | -------------------------------------------------- |
 | [`workbench.md`](workbench.md)           | 所有用户可见行为、UI source-domain preserve/adapt/delete gate、失败/恢复呈现、性能与可访问性          | 持久事实目录、Engine 私有语义或进程 topology       |
 | [`public-surface.md`](public-surface.md) | canonical public origin、Public Surface Registry、激活门、不可用行为、反馈数据边界与发行/更新权威分离 | 网站视觉/内容实现、Runtime topology 或产品状态对象 |
-| [`product-state.md`](product-state.md)   | 产品事实、七个 durable product objects、Queue-to-Run 转移、receipt/恢复与权限真实性                   | 详细进程布局或完整 UI 行为                         |
-| [`execution.md`](execution.md)           | 完整进程 topology、target responsibility layout、Native/External Engine 权威和故障边界                | Campaign 状态、来源结论或第二套产品对象目录        |
+| [`product-state.md`](product-state.md)   | 继承的 Project/Thread/Space 产品事实、Conversation/native Session 边界、Queue admission 与恢复真实性  | 详细进程布局、完整 UI 行为或 Provider 私有生态     |
+| [`execution.md`](execution.md)           | 单一 Product Orchestration、Provider Registry/adapters、进程 topology、OS capability 与故障边界       | Campaign 状态、来源结论或第二套产品对象目录        |
 
 一个任务涉及多个 topic 时必须逐个完整读取；本索引不是它们的缩写，也不提供第二套物理文件树或对象清单。
 
 ## 共同设计准则
 
-- 用户可见产品事实、Engine 私有事实和外部系统事实各有唯一权威。
+- 用户只需要理解 OmniMind。Synara/Pi 作为 source/runtime/compatibility lineage 留在实现、About、Licenses、诊断和用户主动打开的 Provider detail，不进入普通产品语言。
+- 用户可见产品事实、各 Provider 私有事实和外部系统事实各有唯一权威。
 - wire evidence 先转成强类型事实，再形成增量 projection 和局部 view model。
 - 进程隔离缩小崩溃域，不自动构成文件、网络或系统调用沙箱。
+- 共用产品层只承载 Synara 已经证明需要跨 Provider 稳定的用户事实；native Session、protocol、capability、permission 与 ecosystem 保持 Provider-specific。
+- 产品名词优先映射到既有 Project、Thread、Space、Studio 与 Provider discovery；没有第二个真实 owner 时，不创建新的 aggregate、registry 或生命周期。
 - 产品表面保持克制；状态、进度、权限、恢复和动效必须由真实回执与失败语义支撑。
 - 第一位普通消费者先使用具体实现；第二位真实消费者出现后再提炼最小公共合同。

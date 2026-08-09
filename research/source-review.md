@@ -2,6 +2,8 @@
 
 > Nature: fixed-source research evidence. It does not grant production authority or Campaign status.
 
+> Sections 1–9 preserve the evidence and decisions available at their original review dates. Where their former next-step language conflicts with the 2026-08-09 Occam reset, it is superseded by §10 and the current architecture/execution owners; it must not be executed as backlog. Section 10 owns only the current research comparison inputs, not production adoption.
+
 ## 1. Fixed input
 
 - Repository: U1（exact source URL 只由根 `README.md` 的 adoption record 持有）
@@ -208,7 +210,13 @@ baseline until the existing production adoption disclosure is deliberately updat
 actual selectively adopted bytes; it must never be changed to `be6dcad3` as if the whole range had
 been merged.
 
-## 9. Official ACP SDK intake for the OpenCode slice
+## 9. Historical ACP SDK intake for the retired parallel OpenCode slice
+
+This section records exact historical evidence only. The maintainer retired OmniMind's separately
+built OpenCode/Product-control-plane slice on 2026-08-09. That decision does not remove the adopted UI
+mother's existing OpenCode adapter or other Provider integrations from V1. Nothing below authorizes
+restoring the parallel slice, and none of its old evidence proves the inherited adapter; it remains a
+falsifier and protocol reference for the single-substrate implementation.
 
 The F-13 wire owner is the direct dependency `@agentclientprotocol/sdk@1.3.0` from
 `https://github.com/agentclientprotocol/typescript-sdk.git`. The exact npm artifact resolves with
@@ -238,3 +246,86 @@ patterns were adapted from Synara tree `630f17e61abc478114bf83c1d740977c9f68b910
 `apps/server/src/provider/acp/AcpSdk.ts`, `AcpSessionRuntime.ts` and
 `apps/server/scripts/acp-conformance-agent.ts`; donor registry, gateway, Session/transcript/tool
 authority, provider orchestration and branding were not adopted.
+
+## 10. Maintainer-initiated current Pi/Synara baseline review
+
+### 10.1 Exact boundary
+
+The maintainer approved an Occam reset after the Gate A review: use one exact current Synara commit as
+the responsibility and behavior comparison baseline, while using the latest stable Pi release as the
+first technical lineage and ecosystem-compatibility baseline for the independent OmniMind Agent. This avoids a permanent `stable + selected HEAD fixes`
+three-way model. It still does not claim that the Synara baseline bytes have already entered OmniMind's
+production adoption record.
+
+The local sub-repositories were inspected without modification. The dirty parent
+`/Users/liuzaoqu/Desktop/Develop/πCode` was not used as source authority.
+
+| Source           | Previous OmniMind anchor                                      | Selected V1 input                                               | Status                                                                                                                  |
+| ---------------- | ------------------------------------------------------------- | --------------------------------------------------------------- | ----------------------------------------------------------------------------------------------------------------------- |
+| Synara           | reviewed `v0.6.7`, `be6dcad3f63fa121fbe3180f257ba1ff128696c4` | exact current commit `02c8a6cb9948eba0afc828492764e7236965c61f` | sole responsibility/UI comparison baseline; implementation and adoption disclosure pending                              |
+| Pi               | packages `0.81.1`                                             | stable `v0.84.1`, `53fa77ccd8a279eb87e92294ef3687b03ff80112`    | OmniMind Agent first technical lineage/ecosystem compatibility baseline; stock Pi remains a separate inherited Provider |
+| Pi post-tag main | —                                                             | `936aff00918de1187f085f123c2812d8f2d67745`                      | read-only API/fix discovery only                                                                                        |
+
+The selected Pi `todo.ts` remains byte-identical from the accepted `0.81.1` checkpoint to stable
+`v0.84.1` (`SHA-256 e46824d00217e25242c186d41837cc84ca81b23f978500323448502a9a424ee2`).
+This retains the artifact as a useful compatibility regression for the bundled OmniMind Agent; it
+does not retain OmniMind's former staged activation/LKG platform or merge OmniMind Agent with stock Pi.
+
+### 10.2 Structural evidence and accepted disposition
+
+| Area                         | Exact observed source evidence                                                                                                                                                                                                               | V1 disposition                                                                                                                                                                              |
+| ---------------------------- | -------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- | ------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| Multi-Provider execution     | Synara `ProviderAdapterRegistry`, `ProviderService` and native adapters already cover Pi, Codex, Claude, OpenCode and other providers with stop-first binding replacement                                                                    | Preserve the inherited substrate; remove competing Product/Provider paths                                                                                                                   |
+| OmniMind Agent               | Pi stable provides a mature SDK/Session/Package ecosystem; Synara proves the shared Provider contract can host Pi-family runtimes                                                                                                            | Create a distinct bundled `omnimind` Provider derived from the Pi `v0.84.1` lineage, with its own version/config/session/state/package lifecycle                                            |
+| Pi-family state isolation    | Pi `config.ts` derives `CONFIG_DIR_NAME` from package `piConfig`; `SettingsManager` and `ResourceLoader` use that module-level value for project-local settings/resources, so changing only a global `agentDir` cannot isolate project `.pi` | Use a distinct OmniMind Agent build/package or make config-dir instance-configurable; both global and project-local state use `.omnimind`, while stock Pi alone owns `.pi`                  |
+| Stock Pi                     | Synara already has a direct Pi adapter and user-visible Pi Provider                                                                                                                                                                          | Preserve `pi` as a separate selectable Provider; never relabel or reuse its native state for OmniMind Agent                                                                                 |
+| Agent / Chat                 | `projectContainers.ts` distinguishes ordinary folder-backed projects from Home/Studio containers; Studio routes and `studio.ts` already own managed workspace/output behavior                                                                | Map Agent to Project Thread and Chat to Home/Studio Thread; no new workspace/Conversation ontology                                                                                          |
+| Groups                       | `spacesUiStore.ts`, store projections and Space contracts already own organization and restoration                                                                                                                                           | Present Spaces as Groups if desired; no `Group` aggregate                                                                                                                                   |
+| Workbench                    | per-thread `terminalStateStore`, project/editor state, Explorer, viewer, Diff and Git journeys already exist                                                                                                                                 | Preserve source mechanisms; fix only reproduced regression                                                                                                                                  |
+| Settings                     | `settingsNavigation.ts` already has a mature searchable taxonomy across Personal, Integrations, Coding, System and Archived groups                                                                                                           | Keep the taxonomy; do not replace it with a new four-domain settings architecture                                                                                                           |
+| Bilingual UI                 | Exact source has locale-aware timestamp formatting but no product message catalog, locale switch or complete translation corpus                                                                                                              | Add one lightweight OmniMind message catalog after source reset; preserve source DOM/interaction and do not claim i18n inheritance                                                          |
+| Provider ecosystem discovery | `providerDiscovery` contracts, Skills settings and PluginLibrary already expose provider-native resources; current PluginLibrary silently chooses the first discovery-capable Provider when selection lacks support                          | Restore the source discovery surface, remove the silent fallback, and add lifecycle actions only where the selected Provider already exposes them; no generic plugin runtime or parity work |
+| Pi ecosystem                 | Pi `DefaultPackageManager`, `DefaultResourceLoader`, package CLI, settings, trust, cache and reload define the mature compatibility surface                                                                                                  | Reuse/adapt this surface inside OmniMind Agent under an independent state root; keep stock Pi lifecycle separate; remove cross-Provider PackageActivation/current/LKG                       |
+| Desktop updates              | Synara Electron updater explicitly sets `allowDowngrade = false`; `canary:rollback` is a developer Git workflow                                                                                                                              | Verify update/failure/retry/reinstall; do not claim automatic application rollback                                                                                                          |
+| Remote/SSH                   | No V1 prerequisite for preserving local Provider integrations                                                                                                                                                                                | Defer the whole product journey to V2                                                                                                                                                       |
+
+This evidence changes the burden of proof. A divergence must identify a concrete OmniMind journey that
+the exact baseline cannot support. The mere existence of current OmniMind code, tests or prior Campaign
+evidence is not a reason to keep a duplicate responsibility.
+
+### 10.3 Mechanism anchors inside the exact baseline
+
+The commits below remain useful falsifier anchors, but they are no longer a cherry-pick backlog. They
+are already part of the single exact Synara comparison baseline and should be restored or adapted by
+responsibility where current OmniMind regressed.
+
+| Commit                                                                                 | Mechanism                                       | Occam consequence                                      |
+| -------------------------------------------------------------------------------------- | ----------------------------------------------- | ------------------------------------------------------ |
+| `84fe193d4382d090becb88a91830c35e4a017e6f`                                             | editable/saveable Explorer files                | Reuse; no observed-version platform                    |
+| `f1782beee18788f2c7a2231ec23eca8d890d6ca3`                                             | long-thread Composer/activity latency           | Use real profile evidence; no arbitrary size benchmark |
+| `b4f3aeb864bc9311bb6807c6d4e6e0a4069569a9`                                             | Windows Terminal activity polling               | Restore platform fix in the existing Terminal lineage  |
+| `8bacc7475bc2b8efaba454d38de42148577e6c10`                                             | runtime polling/thread subscription performance | Reuse in the inherited Provider substrate              |
+| `8f87cf5eaf8aa0f028097c14eb66f2959a12f7db`                                             | slow startup and late events                    | Keep as Pi startup/recovery falsifiers                 |
+| `306494f892efdb884a1bff3013f4a77154253402`, `ed320bb4d634b9d1781e83d6a55a23ac36cda351` | commit→push→PR and serialized Git refresh       | Preserve the mature Git product journey                |
+
+### 10.4 Adoption and revalidation
+
+Implementation must compare current OmniMind to Synara `02c8a6c…` by stable responsibility and choose
+only Restore source / Keep a narrow evidenced OmniMind difference / Delete duplicate. After actual
+source bytes are accepted, the root `source-adoptions` block must record the resulting exact revision,
+paths, rights and changes; this research decision cannot pre-authorize that production fact.
+
+Pi stable `v0.84.1` is the first code-lineage and ecosystem compatibility baseline for OmniMind Agent,
+not its permanent product identity or release cadence. The root adoption record must eventually disclose
+the exact Pi-derived source paths, rights, modifications and bundled artifact. Synara's stock Pi Provider
+remains distinct. Pi post-tag main is discovery only. Donor branding, blind merge, Remote/SSH, competing
+Product/Provider authority, shared Package lifecycle, settings rewrite and semantic flattening remain out.
+
+Synara `02c8a6c…` still declares `@earendil-works/pi-coding-agent` `^0.81.1`; the selected Pi baseline is
+`v0.84.1`. That is an explicit compatibility port, not unchanged inheritance. The Pi-family adapter must
+compile against the exact `0.84.1` SDK and re-run its session/model/stream/tool/interrupt/discovery tests
+before the second module instance is introduced. A successful `0.81.1` source test cannot be reused as
+evidence for `0.84.1`, and post-tag Pi main fixes cannot be silently mixed into the stable payload.
+
+Re-run this review when either exact selected input changes, rights/security facts change, or a focused
+OmniMind journey disproves the accepted disposition.

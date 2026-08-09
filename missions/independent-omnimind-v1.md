@@ -6,75 +6,75 @@ Owner: maintainer
 
 Canonical path: `missions/independent-omnimind-v1.md`
 
-Updated: 2026-08-06
+Updated: 2026-08-09
 
 ## 1. Objective
 
-交付 production-grade OmniMind V1：一个公开 Powered by Pi、以 Pi 为唯一 bundled-native Gold Path、具有世界级桌面 GUI、可信 Package 分发与恢复能力，并可接入真实外部 Agent Engine 的本地优先跨平台产品。
+交付 production-grade OmniMind V1：以 exact Synara product substrate 为唯一产品基座，保留其多 Provider 与完整桌面产品；内置独立、Pi-derived 的 **OmniMind Agent** 作为默认、最深验收路径，并同时保留 stock Pi Provider。普通产品旅程只呈现 OmniMind；Synara/Pi lineage 仅在 About、Licenses、诊断和用户主动展开的 Provider detail 中出现。
 
-Campaign 完成必须同时满足：
+V1 保留 `Agent | Chat`，但 Agent/Chat/Groups 直接复用 Projects/Threads/Spaces/Home/Studio。OmniMind Agent 与 stock Pi 分别拥有原生 package lifecycle 和 state；前者开箱内置并兼容 Pi 生态，后者保持独立 Provider。V1 不交付 Remote/SSH、第二 Product Control Plane/Registry、跨 Provider Package lifecycle、generic plugin runtime 或自动应用 rollback。
 
-- required claims 全部在同一 frozen final SHA 为 `verified`；
-- `blocked = 0`；
-- 相关 final gates 在该 SHA 运行并通过；
-- fresh-context completion audit 无 material finding；
-- 没有 donor identity、双 runtime、平行 Package loader、静默 fallback、虚假权限或未披露来源。
+完成必须满足：required claims 在同一 frozen SHA verified、blocked = 0、相关 final gate 通过、fresh-context completion audit 无 material finding。
 
-## 2. Authority and read route
+## 2. Authority
 
-本文件只拥有 Campaign claim 状态和证据指针，不定义产品、UI、对象、topology、施工计划或来源结论。统一读取顺序是：
+本文件只拥有 Claim 状态和 evidence pointer。产品、UI、topology、施工顺序与来源结论分别由 README、architecture、execution brief 和 research owners 持有。
 
-1. `README.md` — 产品宪法与 production adoption；
-2. `architecture/README.md` 与全部相关专题 owner — 稳定 contract；
-3. `execution-brief.md` — 当前施工顺序与 proof gate；
-4. 本文件 — active Campaign status only；
-5. 只有来源、既往裁决或潜在反证相关时，才读取 `research/README.md` 与对应 evidence。
-
-权威不由顺序产生。产品决定见 README/architecture，施工顺序见 execution brief，固定证据与复验触发器见 research。不得创建第二 Campaign、Goal spec、ledger、manifest 或进度报告；历史聊天、旧 worktree 和自动摘要不是状态证据。
+状态只允许 `open -> candidate -> verified`，另有 `blocked`。producer 只能提交 candidate；final SHA、source baseline 或 Pi version 变化后，受影响 evidence 重新建立。
 
 ## 3. Acceptance matrix
 
-状态只允许 `open -> candidate -> verified`，另有 `blocked`。生产者只能提交 candidate；verified 需要独立证据。final SHA 改变后，受影响 verified 回到 candidate。
+| ID   | Claim                                                                                                                                                                                                                             | Proof type                                   | Status | Evidence                                                  | SHA |
+| ---- | --------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- | -------------------------------------------- | ------ | --------------------------------------------------------- | --- |
+| F-01 | sole owners、旧 decision、source re-entry 与 executable document contract 对 single substrate、OmniMind-only 普通 UI、Agent/Chat、Provider-native ecosystem、Remote V2 无矛盾                                                     | structural contract + fresh document audit   | open   | Stage 0 authority reset                                   | —   |
+| F-02 | Repository 只有一个 Product Orchestration、Provider Registry 与 Project/Thread/Space product-truth authority；平行 ProductControlPlane/Run/outbox/adapter 被删除                                                                  | source/tree/responsibility audit             | open   | exact-source responsibility reset                         | —   |
+| F-03 | Synara exact baseline `02c8a6c…` 的 source、lineage、rights、selected paths 与 OmniMind differences 可追踪                                                                                                                        | source/legal audit                           | open   | implementation adoption 后更新 sole README record         | —   |
+| F-04 | source alignment 只使用一个 exact Synara baseline，不维护 `stable + HEAD patches` 双轨                                                                                                                                            | source/tree reproducibility audit            | open   | bounded disposition table + resulting tree                | —   |
+| F-05 | Agent=folder-backed Project Thread；Chat=Home/Studio managed Thread；Groups=Spaces；无第二 durable objects                                                                                                                        | source audit + create/reopen/switch journeys | open   | responsibility reset 后建立                               | —   |
+| F-06 | inherited Provider Registry/Session binding 唯一路由到 native adapters；切换 stop-first、失败恢复 exact binding                                                                                                                   | adapter contract + journey matrix            | open   | source alignment 后建立                                   | —   |
+| F-07 | bounded `omnimind` 与 stock `pi` 均进入 inherited Registry；OmniMind Agent 以 Pi `v0.84.1` 为 lineage，使用 `.omnimind` global/project-local state；stock Pi 显式选择时才使用 `.pi`，identity/version/config/session/state 不混用 | source/API + real-provider journeys          | open   | provider/runtime implementation 后建立                    | —   |
+| F-08 | command admission、native acceptance、interrupt、settlement 与 unknown 准确；OmniMind Agent 与 stock Pi 之间无 cursor/state/replay/fallback 混用                                                                                  | recovery/failure matrix                      | open   | OmniMind Agent + stock Pi + representative adapter        | —   |
+| F-09 | stream、reasoning、tool、structured request、usage/error 进入 existing Timeline 且保留 Provider provenance                                                                                                                        | event replay + UI/profile                    | open   | inherited canonical event contract                        | —   |
+| F-10 | Synara Workbench、Settings、File/Viewer/Diff/Terminal/Git、stream/scroll、a11y/perf 在 surgery 后无 material regression                                                                                                           | e2e/visual/a11y/profile                      | open   | exact-source alignment 后统一复核                         | —   |
+| F-11 | representative unchanged Pi Package、Extension、Skill、Prompt、Tool、MCP 在 OmniMind Agent 的 Pi-compatible runtime 中运行；不宣称 TUI-only surface 无损兼容                                                                      | real ecosystem journeys + source audit       | open   | historical `todo.ts` 作 compatibility predecessor         | —   |
+| F-12 | Synara PluginLibrary/Skills/provider discovery 恢复；OmniMind Agent 的原生 install/update/remove/reload 可用且写入 `.omnimind`；stock Pi/其他 Provider 仅保留 source 已有动作；无 shared PackageActivation/current/LKG            | UI + native lifecycle/isolation/fault tests  | open   | 不要求跨 Provider lifecycle parity                        | —   |
+| F-14 | Chat managed workspace/artifact 与外部文件只读边界真实；Send to Agent 显式进入 folder-backed Project；文件/Git 不静默覆盖                                                                                                         | filesystem/Git/product journeys              | open   | 复用 source save/conflict，不建 observed-version platform | —   |
+| F-16 | approval/permission 只按 Provider/Host 实际请求与能力呈现；未实现能力不宣传，process isolation 不冒充 sandbox                                                                                                                     | source/UI + focused capability tests         | open   | 不建 permission broker 或跨 Provider deny matrix          | —   |
+| F-17 | 一套 OmniMind message catalog 覆盖正常用户可达产品面；中文/英文、IME、keyboard、screen reader、reduced motion、真实 long thread/burst/large output 达到可用质量；不把 source 零散文案冒充完整 i18n                                | catalog coverage + dual-locale/a11y/profile  | open   | source reset 后实现真实产品差异，不重写 Workbench         | —   |
+| F-18 | 同一 SHA 的 macOS/Windows/Linux artifacts 可安装、启动、更新、失败重试/重新安装恢复，legal/SBOM/signing 与 fresh audit 通过                                                                                                       | release matrix + completion audit            | open   | 复用 Electron pipeline；不要求自动 rollback               | —   |
+| F-19 | shipped inherited Provider 保持 discovery/health 和 source 已支持的 core journeys；ready/warning/error/auth/version/capability truth 准确；stock Pi session runtime 与 optional local CLI version 不混淆                          | provider smoke + source audit                | open   | 无 runtime support-tier ontology                          | —   |
 
-`open` 表示该 Claim 的 OmniMind 验收证据尚未形成，不表示对应产品基座不存在。尤其不得把 F-12、F-14–F-18 的 `open` 解释为需要重写 Synara 已有的 Package surface、File/Viewer/Diff/Terminal、Conversation、i18n/accessibility 或 Electron build/updater；施工范围与复用门只由 [`execution-brief.md`](../execution-brief.md) 决定。
+F-13 与 F-15 保留为历史 ID，不复用。Remote/SSH 继续 V2。
 
-| ID | Claim | Proof type | Status | Evidence | SHA |
-| --- | --- | --- | --- | --- | --- |
-| F-01 | Product doctrine, execution order, discovery rationale and Campaign express one non-contradictory Pi-native architecture; no obsolete RPC-first, Pi-through-ACP, equal-engine or hidden-Pi doctrine remains | deterministic text/decision audit | candidate | Freeze r6 handoff and different-actor review bind the current constitution, owner graph, source closure and execution boundary to the first vertical-slice candidate; review verdict `PASS`. | `248b3316651e681d9d4c78f81bec0c84a4cc822c` |
-| F-02 | Repository contains no competing custom Agent/Extension runtime, full execution journal, donor identity leakage or untracked source adoption; identity, structure, source and focused tests pass | source/tree scan + tests | candidate | Candidate quality gate passed with identity/structure zero findings, one declared adopted source, 6,425 exact-source records, 4,014 guarded glyphs and 28/28 quality tests; independent artifact inspection found one Native Host path and zero retired paths. | `248b3316651e681d9d4c78f81bec0c84a4cc822c` |
-| F-03 | U1 exact source, original-upstream lineage, contributors, assets, rights and legal texts are fully disclosed before production adoption | manifest + legal/history review | candidate | Source Review plus Freeze legal closure bind the fixed source, retained MIT text, adopted asset boundary, 230-component inventory/SBOM and packaged legal bytes; independent review `PASS`. | `248b3316651e681d9d4c78f81bec0c84a4cc822c` |
-| F-04 | Complete U1 tree builds and launches unchanged at the provenance baseline, and that commit contains no OmniMind product surgery | reproducible build/run + tree digest | candidate | Source Review retains the immutable T0 baseline separately; Freeze review confirmed it was not relabelled as candidate proof and accepted the current exact source/review chain. | `248b3316651e681d9d4c78f81bec0c84a4cc822c` |
-| F-05 | Pi SDK runs only in a supervised isolated Host; Electron Main/renderer survive Host/package crash and never execute third-party Agent code | process fault injection + architecture audit | candidate | Actual packaged Electron, Product Service and Native Host process tree passed; Service 41-test, Native Host 23-test and Desktop 6-test failure/recovery suites passed under independent review. Package-specific crash behavior remains part of F-11/F-12. | `248b3316651e681d9d4c78f81bec0c84a4cc822c` |
-| F-06 | Real Pi Provider, Model catalog and Thinking levels drive one Chat and one folder-backed Agent without product-maintained static mirrors | live integration + catalog/config tests | candidate | Pi 0.81.1 live journeys passed for MiMo and DeepSeek: new Chat, continuation and folder-backed Agent, with thinking, usage and tool lifecycle observed and no credential leakage. | `248b3316651e681d9d4c78f81bec0c84a4cc822c` |
-| F-07 | Pi owns native Session/transcript/compaction/branch/package state while OmniMind owns visible Conversation and lightweight Run receipts; restart, loss and rebuild do not create competing truth | schema/API review + recovery matrix | candidate | Current typed Product/Host boundary, continuation journey, recovery suites and competing-authority retirement were included in the reviewed candidate chain. | `248b3316651e681d9d4c78f81bec0c84a4cc822c` |
-| F-08 | Transactional dispatch distinguishes pending, delivered and delivery-unknown; side effects after uncertain dispatch are never blindly replayed | crash-boundary fault matrix | candidate | Both live providers completed each journey with one attempt and zero automatic replay; acceptance/uncertainty/recovery fault suites passed. | `248b3316651e681d9d4c78f81bec0c84a4cc822c` |
-| F-09 | Stream, thinking, tool activity, output, queue, steer, follow-up, cancel and usage project incrementally into stable UI without raw Engine payloads reaching React | real stream/replay/type/performance tests | candidate | Stable Chromium 55 files/150 tests, performance 3 files/7 tests, real Electron guest journey and live Pi stream/tool/thinking/usage observations passed on the candidate. | `248b3316651e681d9d4c78f81bec0c84a4cc822c` |
-| F-10 | U1 visual quality and critical workbench behavior survive surgery while donor provider/runtime/state/identity and long-term dual tracks are absent | UI/e2e/structure audit + maintainer review | candidate | Maintainer accepted the current visual direction; same-source browser, route, locale, accessibility, performance and identity guards passed, and Freeze review found no material finding. | `248b3316651e681d9d4c78f81bec0c84a4cc822c` |
-| F-11 | One exact mature Pi Package runs unchanged through native ResourceLoader with truthful source, rights, permissions, compatibility and private-state ownership | real package matrix + source review | candidate | The archived 08-06 Bundle binds the unchanged Pi 0.81.1 todo source, retained rights, Product-owned generation lifecycle and SQLite Run lease, Pi-native ResourceLoader/private state, fault/LKG behavior, sanitized MiMo/DeepSeek journeys and actual macOS arm64 ZIP/ASAR to a different-actor `PASS` with zero findings. | `16f14d188e38134f6f45c46bfcb57ff36c1e8565` |
-| F-12 | Package Catalog/Curated/Verified and Native/Bridged UI/PTY/Unsupported are accurate; active generation never hot-updates and staged failure returns to LKG | update/fault/compatibility matrix | open | — | — |
-| F-13 | One external ACP Engine can handle the next Run in the same Conversation with honest capability/permission differences, no silent fallback and no lowest-common-denominator rewrite of Pi Gold Path | two-engine conformance + architecture audit | candidate | The archived 08-06 OpenCode Bundle binds the closed Product-v2 migration and literal Pi/OpenCode gateway, official ACP SDK boundary, truthful Workbench choice, deterministic fault/recovery gates, same-SHA production OpenCode observed-delivery and Pi accepted-operation journeys with the sibling Engine at zero, and different-actor Review r9 `PASS` with no material finding. | `02979ff7488e0491b04f29876b253de3b96540b1` |
-| F-14 | Chat read-only/no-folder and Agent folder/write boundaries are real; file writes use observed-version preconditions and recovery never destroys user Git or concurrent edits | filesystem/Git concurrency tests | open | — | — |
-| F-15 | Local and one real SSH target share product semantics while host keys, credentials, remote files and durable process state retain correct authority and recover after disconnect | real remote scenario + security audit | open | — | — |
-| F-16 | Permissions report policy separately from host/engine enforcement; Package isolation is not overstated as sandbox and post-dispatch uncertainty remains visible | deny-side-effect and process-boundary tests | open | — | — |
-| F-17 | Chinese and English critical journeys, 100k+ visible Conversation, burst streaming, large/unknown outputs, stable scrolling and bounded memory meet measured budgets | dual-locale e2e + profiling | open | — | — |
-| F-18 | Signed/traceable macOS, Windows and Linux candidates install, update, roll back and pass all required final gates on one frozen SHA; independent audit has no material finding | release matrix + fresh-context audit | open | — | — |
+## 4. Internal acceptance priority
 
-## 4. Retired evidence
+- OmniMind Agent 接受最完整的 core、ecosystem、recovery、quality 与三平台验证；
+- stock Pi 与其他 inherited Provider 按 source 已有能力和可用资源做 focused smoke；
+- 无 binary/auth/evidence 时记录 unavailable/unknown，不阻塞 OmniMind Agent 主路线，也不宣称 supported；
+- 该优先级不进入 runtime schema 或新的 UI tier。
 
-Earlier M0/M1 candidates and branches measured useful mechanisms, but their custom extension bridge, Thread journal, direct-RPC-first and engine-neutral conclusions are superseded by the confirmed Pi-native architecture. They remain recoverable in Git history and cannot be cited as current production evidence. No old `candidate` status transfers automatically to this matrix.
+## 5. Retired scope
 
-This reset is deliberate: preserving obsolete green tests would create false confidence and maintenance obligations for code that must not ship.
+- 平行 OpenCode/Product-control-plane checkpoint 只作 falsifier；不恢复其 architecture；
+- Product Truth destructive rebuild、v2–v9 semantic meter、巨型 reports 与 race/kill Cartesian matrix 退出 acceptance formula；
+- 自建 Package staged activation/current/LKG/generation 证据只作历史，不定义 V1；
+- Remote/SSH、ExecutionTarget 与远端 daemon 延后到 V2；
+- provider native state、credentials、user workspace、Git 与旧预发布 bytes 保持原地不读不碰。
 
-## 5. Current status and next evidence route
+## 6. Current route
 
-F-01 through F-10 are `candidate` on the independently accepted first local, unsigned macOS arm64 Pi-native vertical slice at `248b3316651e681d9d4c78f81bec0c84a4cc822c`. F-11 is `candidate` on the independently accepted Package checkpoint at `16f14d188e38134f6f45c46bfcb57ff36c1e8565`. F-13 is `candidate` on the independently accepted OpenCode external-Engine checkpoint at `02979ff7488e0491b04f29876b253de3b96540b1`. None is `verified`; F-12 and F-14 through F-18 remain `open`.
+唯一施工顺序由 [`execution-brief.md`](../execution-brief.md) 定义：
 
-The first vertical-slice proof is recorded under `.omp-flow/tasks/08-04-ui-chassis-takeover/`; the accepted Package proof is recorded under `.omp-flow/tasks/archive/2026-08/08-06-pi-package-lifecycle/`; the accepted external-Engine proof is recorded under `.omp-flow/tasks/archive/2026-08/08-06-opencode-external-engine/`. [`research/source-review.md`](../research/source-review.md) continues to own the immutable source baseline and revalidation triggers. The sole next bounded checkpoint is owned by [`execution-brief.md`](../execution-brief.md): Product truth consolidation and generation rotation before F-12 Package-surface closure, then F-14–F-16 File/Remote/permissions. No broader claim changes state merely because these status pointers are synchronized, and an `open` Claim never authorizes rebuilding an already adopted Synara capability.
+0. authority reset：移除旧架构执行权并冻结当前边界，不提前实现 production source reset；
+1. exact Synara physical-source responsibility reset：一次性恢复 production/build/release 拓扑并删除重复控制面；
+2. bundled OmniMind Agent vertical：参数化 Pi-family adapter、双物理模块实例、Agent/Chat 与 `.omnimind/.pi` 隔离；
+3. product surface and quality：PluginLibrary、OmniMind brand、一套中英 message catalog、Workbench/a11y/perf 与 inherited Provider smokes；
+4. three-platform release and completion audit。
 
-## 6. Blockers
+## 7. Blockers
 
-None currently. U1 rights failure or evidence that Pi SDK cannot run a representative native Package in an isolated Host would be a structural blocker and trigger a new convergence round; ordinary implementation difficulty does not.
+None currently. 若 exact Synara Registry 无法同时承载独立 OmniMind Agent 与 stock Pi，或 OmniMind Agent 无法在不读取 stock Pi state 的情况下保持所需生态兼容，停止并重新 convergence。
 
-## 7. Done
+## 8. Done
 
-Not done. F-01 through F-10 are candidate on the accepted first vertical-slice SHA; F-11 is candidate on the accepted Package SHA; F-13 is candidate on the accepted external-Engine SHA; F-12 and F-14 through F-18 remain open, and none is verified.
+Not done. 当前不存在可发布 V1 candidate。

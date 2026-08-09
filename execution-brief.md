@@ -1,138 +1,111 @@
-# OmniMind V1 — Execution Brief
+# OmniMind V1 execution brief
 
-本文件只回答“按什么顺序施工、何时进入、何时停止、需要什么 proof”。产品宪法以 [`README.md`](README.md) 为准；完整 UI、公共表面、产品事实和详细 topology 分别以 [`architecture/workbench.md`](architecture/workbench.md)、[`architecture/public-surface.md`](architecture/public-surface.md)、[`architecture/product-state.md`](architecture/product-state.md) 和 [`architecture/execution.md`](architecture/execution.md) 为准；claim 状态只见 active Campaign。
+## 1. 目标
 
-## 1. 读取与施工规则
+以 Synara 当前成熟产品 substrate 为唯一产品基座，交付 OmniMind V1：保留多 Provider、Project/Thread/Space/Studio、Workbench、Settings 与三平台桌面能力；新增 bundled、product-owned `omnimind` Provider，并保留 Synara 原有 stock `pi` Provider。
 
-施工前按统一路由读取：README → architecture index 与全部相关专题 owner（公共出口任务包含 Public Surface owner）→ 本 brief → active Campaign（仅状态）→ 与来源、既往裁决或潜在反证相关的 research evidence。
+OmniMind Agent 是 Pi-derived 独立 runtime，随 App 开箱发行；它可以与 stock Pi 共享窄的技术基础，但普通用户只感知 OmniMind，不需要理解 Synara/Pi lineage。V1 不创建第二套产品对象或控制面。Remote/SSH 延后到 V2。
 
-阶段文本只能引用 owner，不得在这里创建产品对象、物理树、Engine 语义或 UI 行为。若 owner 冲突、进入条件不成立、proof 不可执行或新证据命中结构性 falsifier，停止并修复权威图；不得靠本 brief 覆盖架构。
+## 2. 不变量
 
-开发期使用最窄可证伪检查。阶段候选固定 SHA 后才运行对应 final gate；producer 只能提交 `candidate`，不能自证 `verified`。
+1. 一个 Product Orchestration、Provider Registry、Project/Thread/Space command/event/projection authority 和 Provider binding path；
+2. `Agent | Chat` 直接映射到 inherited Project/Thread/Space/Home/Studio；
+3. 正常 UI 只呈现 OmniMind；`omnimind` 与 `pi` 是同一 Registry 中两个真实 identity，stock Pi 只在用户主动选择 Provider 或查看详情时显示；
+4. OmniMind Agent 使用 `.omnimind` global/project-local state；stock Pi 仅在被显式选择时使用自己的 `.pi`，二者不迁移、同步或共享；
+5. 恢复 Synara PluginLibrary/Skills/provider discovery；只有 OmniMind Agent 原生 API 已提供时补 provider-scoped lifecycle，不追求 stock Pi/其他 Provider 功能齐平；
+6. File、Git、Terminal 直接复用现有实现，不建新 client 或 observed-version platform；
+7. Settings IA、performance、a11y、packaging 与 updater 优先保全 source；双语是明确的 OmniMind 产品差异，不虚构为 source 已有能力；
+8. 只补可复现的 OmniMind 差异；未证明缺口时不得重写；
+9. 旧预发布字节零读取、零迁移、零删除；
+10. 不以统一为理由压平 capability、permission、usage、Session 或 ecosystem。
+11. Agent runtime 内置不等于 model credential 内置；无可用模型时准确引导配置，不能 silent fallback。
 
-### Synara-first 复用门
+## 3. 固定来源基准
 
-[`architecture/workbench.md`](architecture/workbench.md) 已确认 adopted Synara UI mother 是完整物理产品基座，而不是只供参考的截图。File tree/search/reveal、Viewer、Diff/Changes、Terminal/PTY、Git/PR、Conversation/stream/output、简体中文/英文、可访问性以及 Electron 桌面/发行基座已经存在时，Campaign 的 `open` 只表示 OmniMind 语义与证据尚未闭合，不得据此推断“功能不存在”并从零施工。
+本轮 source alignment 只使用两个输入：
 
-每个后续 Work 在改代码前必须在同一 Work 或 handoff 中简短回答：
+| Source | Exact baseline                                               | Role                                                                                      |
+| ------ | ------------------------------------------------------------ | ----------------------------------------------------------------------------------------- |
+| Synara | `02c8a6cb9948eba0afc828492764e7236965c61f`                   | 唯一责任、行为与 UI 比较基准；不再使用 `v0.7.0 + HEAD patches` 双基线                     |
+| Pi     | stable `v0.84.1`, `53fa77ccd8a279eb87e92294ef3687b03ff80112` | OmniMind Agent 首个技术 lineage / ecosystem compatibility baseline；不是长期产品 identity |
 
-1. 当前 adopted Synara/仓库基座的精确入口与已保留行为是什么；
-2. architecture owner 要求而现有基座尚未满足的差异是什么；
-3. 本次处置是直接复用、接线、局部修复还是替换；
-4. 若选择替换，哪个可复现反例证明接线、authority 收口或局部修复不足；
-5. 哪个 focused proof 能证明差异已闭合且既有能力没有回退。
+Pi post-tag head `936aff00918de1187f085f123c2812d8f2d67745` 只作 API/fix discovery，不进入 production。Synara exact baseline 尚未实际吸收的代码不能提前写成 README production adoption；实现完成时再更新唯一 adoption record、rights 和 source paths。
 
-无法回答第 2 或第 4 项时，不得重构既有机制。不得为了命名统一、未来可能需要、Campaign 术语或更容易写测试而建立第二套 File、Viewer、Diff、Terminal、Conversation、Package、updater、platform adapter 或状态权威。新发现的 Synara 上游能力按 [`research/source-update-intake.md`](research/source-update-intake.md) 先做只读 intake；未经维护者对当次 bounded update set 再确认，不进入 production，也不打断当前唯一 checkpoint。
+## 4. Occam 比较规则
 
-治理脚本、meter、fixture 与文档 gate 只是施工工具，不是第二个产品。若同一证明工具连续两轮只有相邻同类 finding、没有 acceptance 状态迁移，立即停止逐形态补丁并回到 Design：要么改成声明式、闭合、可生成穷举矩阵的有限规则，要么缩小静态证明范围，把组合行为交给真实 capability、fault/live tests 与 different-actor source review。控制者不得把“再补最后一个例外”自行豁免于此门。
+对当前 OmniMind 与 exact Synara baseline 的每个责任只允许三种 disposition：
 
-## 2. 当前证据入口
+- **Restore source**：OmniMind 删除、改坏或重复实现了 source 能力；
+- **Keep narrow OmniMind difference**：有明确产品差异与 focused falsifier；
+- **Delete duplicate**：同一责任已由 source 或 Provider 原生实现承担。
 
-首个本地、未签名 macOS arm64 Pi-native 纵切候选固定为 `248b3316651e681d9d4c78f81bec0c84a4cc822c`。[`Freeze handoff`](.omp-flow/tasks/08-04-ui-chassis-takeover/handoffs/freeze-first-production-candidate.md) 记录同一 SHA 的 source/review chain、完整 build/typecheck/quality/test、真实 Chromium/Electron、MiMo/DeepSeek Pi journeys、fault matrix、实际 ZIP/process tree、legal/SBOM/glyph 与脱敏结果；[`different-actor review`](.omp-flow/tasks/08-04-ui-chassis-takeover/reviews/freeze-first-production-candidate.md) 的结论为 `PASS`。该 checkpoint 接受 Stage 0–3 的当前纵切，不等于签名、notarization、Windows/Linux、Package、外部 Engine、Remote 或 V1 完成。
+不创建第四类“以后可能有用”的 abstraction。没有真实第二消费者时，不提炼 common platform。
 
-[`research/source-review.md`](research/source-review.md) 仍单独拥有 fixed imported tree 的 exact comparison、frozen install、build、typecheck、unchanged baseline 与复验触发器。历史 baseline evidence 不得改写成当前候选 proof，当前候选 proof 也不得扩张为未覆盖的平台或产品结论。
+## 5. 施工顺序
 
-首个真实 headless Pi Package checkpoint 固定为 `16f14d188e38134f6f45c46bfcb57ff36c1e8565`。其 [归档 Bundle](.omp-flow/tasks/archive/2026-08/08-06-pi-package-lifecycle/) 保存 exact source/rights、Product-owned stage/current/LKG/quarantine/lease、Pi-native ResourceLoader/private state、fault recovery、真实 MiMo/DeepSeek 与实际 macOS arm64 ZIP/ASAR 证据，以及 different-actor `PASS`。该 checkpoint 只支持当前 Package 纵切，不证明完整 Catalog/compatibility taxonomy 或后续阶段。
+| 顺序 | 阶段                              | 默认复用                                                                                                  | 只做的差异                                                                                                                                                                                                                           | 明确不做                                                                                                        | 完成证据                                                                                                                                |
+| ---- | --------------------------------- | --------------------------------------------------------------------------------------------------------- | ------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------ | --------------------------------------------------------------------------------------------------------------- | --------------------------------------------------------------------------------------------------------------------------------------- |
+| 0    | Authority reset                   | 当前 sole owners 与最小结构性文档检查                                                                     | 标记旧 decision 为 superseded；修 source re-entry；删除旧 semantic keyword oracle；冻结品牌、`.omnimind/.pi`、auth、双语与 updater 边界                                                                                              | 为通过旧测试恢复 ProductControlPlane、Package LKG、permission broker 或 PluginLibrary 占位方案                  | 新 owner/route/contract 通过；fresh document audit 无旧架构执行权                                                                       |
+| 1    | Exact-source responsibility reset | Synara `02c8a6c…` 的完整 production、build、release 物理拓扑                                              | 一次性恢复 `apps/server`、desktop/web/contracts/shared、root configs、scripts 与 `.github`；保留 OmniMind 权威/品牌/法定资产；删除重复控制面；建立 first-public profile/storage/protocol/update identity，移除 donor migration entry | 逐 commit 拼旧补丁、保留 path translation、机械重命名内部 `@synara/*`、读取/迁移/删除 donor 或旧预发布状态      | 单一可回退 transplant commit；source/tree disposition；install/typecheck/unit/browser/build；fresh/reopen/restart；旧 bytes untouched   |
+| 2    | Bundled OmniMind Agent vertical   | source Registry/Orchestration/PiAdapter/PluginLibrary + Pi stable `v0.84.1`                               | 一个参数化 Pi-family adapter；stock Pi 使用原模块；OmniMind Agent 从同一 pinned source payload 生成第二物理模块实例，只改产品拥有的 package metadata/configDir；Agent/Chat/Groups 映射；去 silent fallback                           | fork 整份 Pi、第二 Registry/Product state/native-host RPC、共享 `.pi`/Session/package state、动态 Provider 平台 | runtime 零安装/auth readiness；MiMo/DeepSeek Chat/continue/folder/stream/tool/abort/resume；`.omnimind/.pi` 隔离；Pi ecosystem artifact |
+| 3    | Product surface and quality       | source Workbench、Settings、File/Viewer/Diff/Terminal/Git/PR、stream/scroll、a11y/perf、Provider adapters | OmniMind-only 正常 UI；一套轻量中英 message catalog；恢复 PluginLibrary/Skills；只给 OmniMind Agent 做原生 lifecycle；修真实 adapter/quality regression                                                                              | Remote、new FS/Git client、settings taxonomy rewrite、shared Package state、generic plugin platform、假齐平     | Agent/Chat/Send to Agent；普通旅程无 donor 术语；双语/IME/a11y/profile；File/Git/PTY；inherited Provider focused smokes                 |
+| 4    | Three-platform release            | source Electron build/package/updater/platform adapters                                                   | OmniMind artifact、bundled runtime、legal/SBOM、signing/notarization、update failure/retry/reinstall recovery                                                                                                                        | second updater、Pi self-update、自动应用 rollback、Remote                                                       | 同一 SHA 的 macOS/Windows/Linux install/open/update/retry/reinstall；core journeys；fresh completion audit                              |
 
-首个真实 OpenCode external-Engine checkpoint 固定为 `02979ff7488e0491b04f29876b253de3b96540b1`。其 [归档 Bundle](.omp-flow/tasks/archive/2026-08/08-06-opencode-external-engine/) 保存 Product protocol/store v2 迁移、literal Pi/OpenCode gateway、官方 ACP SDK、truthful next-Run Workbench、故障/恢复矩阵，以及同 SHA 的 OpenCode observed-delivery 与 Pi accepted-operation production journeys；两条旅程均证明 sibling Engine 调用为零、attempt 为一、replay/fallback 为零，different-actor Review r9 结论为 `PASS`。该 checkpoint 只支持 F-13 的当前外部 Engine 纵切，不证明 Remote、发行或通用多 Engine framework。
+Stage 1 是一次受控替换，不是长期 diff 项目：先冻结精确来源与保留列表，再把 source 对应物理树作为一个整体落入当前仓库。默认保留 `.git`、`AGENTS.md`、`README.md`、`architecture/`、`research/`、`execution-brief.md`、active Campaign、`LICENSES/`、OmniMind brand assets，以及 `scripts/document-contract.mjs` / `test/document-contract.test.mjs` 这一条最小文档检查；默认替换 production apps/packages、build/release scripts、root toolchain configs 与 source CI。旧 `quality.test`、source-closure/identity governance 和 product-truth meter/fixtures 不随 transplant 保留。source 构建需要的品牌文件在同一阶段映射到 OmniMind 资产，不能为了先绿 build 暂时提交 donor 图标。source 中读取 Synara profile/storage 的迁移入口必须删除或从 composition 彻底断开；bundle ID、userData/home、protocol、storage key、updater channel 和 artifact identity 使用新的 first-public OmniMind namespace。内部 `@synara/*` package/API/env 名可以在不泄露产品品牌且不碰 donor state 时保留。任何其他 current-only production 文件都必须有一个已经写入 owner 的窄产品差异，否则删除。
 
-只有 Source Review 的复验触发器发生变化时才重跑受影响检查：source revision/tree、rights/history/assets、Pi/SDK/package format、Bun/Node/platform/packaged Electron path、Native Host boundary、structured UI bridge contract，或可复现的新反例。没有触发器时不得重复 unchanged baseline smoke。
+Stage 2 不 fork Pi 源码树。构建过程从 exact pinned Pi source payload 生成第二个可复现的物理模块实例，只改变产品拥有的 package identity/configDir，使 Pi 内部 module-level project state 常量分别落到 `.pi` 和 `.omnimind`；原始 source payload digest 与生成差异必须可复算。若该双实例在三平台不能被相同 lockfile、source digest 与 packaged artifact 证明，立即停止并改为窄 upstream instance-configuration patch；不得退回 Native Host 或第二控制面。
 
-## 3. Stage 0 — Durable contract freeze
+Stage 2 必须先把 inherited stock Pi adapter 单独升级到 `v0.84.1` 并使原 Pi tests/journey 通过，再参数化 provider identity/SDK loader 并加入 `omnimind`。这把“SDK 版本兼容”和“双实例隔离”拆成两个可证伪 checkpoint，避免在同一失败里猜测来源；不产生第二条长期 adapter 分支。
 
-**进入条件**
+前一阶段没有形成 candidate 时，不提前开始下一阶段的大范围重构。只读 source inspection 和最小 probe 不算抢跑。
 
-- 已接受的 product doctrine、architecture design 与 QbD calibration 可从仓库读取；
-- 变更边界明确，用户已有修改可保留；
-- 本阶段不声称产品 UI 或 Runtime 已实现。
+## 6. 阶段一删除门
 
-**施工顺序**
+删除按责任，不按文件年代：
 
-1. 让 README、architecture、research、execution order 与 Campaign status 各有唯一 owner；
-2. 在 Workbench 冻结完整用户可见契约与 source-domain 删除门；
-3. 建立 declared exact-source/identity boundary 和 bounded document-contract validator；
-4. 运行 focused fixtures、source/identity checks、immutable path/tree proof 与独立 review；
-5. 候选冻结后在同一 clean SHA 运行一次相关 total gate。
+- retained source 有同一 owner 且 normal/failure/restart journey 闭合，删除重复实现；
+- current fix 有 source 未覆盖的可复现反例，保留最小 fix 和 regression test；
+- bespoke ProductControlPlane、parallel OpenCode/ACP path、shared Package lifecycle state、destructive tooling、`apps/service` path translation 与 `apps/native-host` 默认删除；OmniMind Agent 直接走 inherited Provider boundary；
+- provider native state、credentials、user workspace、Git 和 global config 不动。
 
-**停止条件**
+禁止为保住 sunk cost 创建 wrapper 或兼容双轨。
 
-- 任一事实仍有两个可执行 owner；
-- Workbench 可在缺少替代行为时删除获准母体域；
-- exact provenance 与 production identity 的 gate 仍互相矛盾；
-- Campaign claim 被文档生产者自行提升。
+## 7. Provider 验收
 
-## 4. Stage 1 — Evidence and rights review
+OmniMind Agent 是内部最深验收路线。stock Pi 与其他 shipped Provider 只按其真实 adapter 能力做 discovery、health 与必要 smoke；缺 binary/auth/evidence 时保留 source 已有的 unavailable/unknown diagnostics。
 
-**进入条件**：Stage 0 的 owner graph 与 proof path 已通过独立 review。
+不要建立 runtime support-tier ontology。UI 使用现有 ready/warning/error、availability、auth、version/update 与 capability facts。任何 Provider 都不能 silent fallback 到另一 Provider。
 
-**顺序与 proof**
+## 8. Final gate
 
-1. 复核 Source Review 中已记录的 F-03/F-04 evidence，不重做未触发的 probe；
-2. 闭合 original-upstream lineage、contributors、license 与 production assets 的剩余 gaps；
-3. 在同一 immutable candidate 上核 exact tree、rights disclosure、legal text 和 unchanged baseline 边界；
-4. 只有独立 reviewer 接受证据后，才按 Campaign 规则改变相关 claim 状态。
+同一 frozen SHA 必须满足：
 
-**停止条件**：rights 无法成立、exact tree 不一致、资产不能合法进入 production，或 evidence 被误写成产品兼容结论。
+- Campaign required claims 全部 verified，blocked = 0；
+- only one inherited Product Orchestration/Registry and Project/Thread/Space product-truth authority；
+- Agent/Chat/Groups 无平行 durable object；
+- 普通产品旅程只呈现 OmniMind；实现来源只在 About/Licenses/诊断/显式 Provider 详情中出现；
+- bundled OmniMind Agent 以自身 identity/version 免安装运行，在模型未配置时准确阻止发送并引导 auth；Pi `v0.84.1` lineage 可追踪，代表性 Pi ecosystem 与 real-provider journey 通过；
+- stock Pi 独立可选，实际 runtime version 与 optional local CLI version 分离，`.pi` 不与 OmniMind Agent 的 `.omnimind` 混用；
+- inherited Providers 未因 surgery 回退，状态和能力准确；
+- PluginLibrary/Skills/provider discovery 恢复；OmniMind Agent lifecycle 可用，stock Pi 与其他 Provider 不被迫功能齐平，无 shared Package state；
+- File/Git/Terminal、Settings、双语、a11y 与真实性能可用；
+- macOS/Windows/Linux artifact 通过 install/open/update/failure-retry/reinstall；
+- legal/SBOM/signing requirements 满足；
+- 无 donor identity、第二 control plane、跨 Provider loader/state、silent fallback、fake parity/permission/progress；
+- fresh-context completion audit 无 material finding。
 
-## 5. Stage 2 — UI source-domain takeover
+## 9. 交付诚实性
 
-**进入条件**：获准 baseline 与 rights boundary 已固定，Workbench 的 preserve/adapt/delete gate 可执行。
+“今天完成”必须按证据区分：
 
-按 Workbench 逐域建立 source anchor、目标职责、正常/失败/恢复行为、视觉与性能 proof。产品事实接入只消费 Product State，进程接入只消费 Execution；不在本 brief 定义替代状态机或 topology。替代路径未运行并通过 proof 前，不删除源域，也不在旁边另建薄 shell 或长期 donor mirror。
+- **今天可完成的强目标**：Stage 0 权威冻结、Stage 1 单次 source transplant、依赖安装与相关 source gates，并在 macOS 上形成可启动的开发 candidate；若 Pi package 双实例没有 API/打包阻塞，可继续完成 Stage 2 首个 vertical。
+- **今天不能提前宣称的 production 结论**：完整中英产品面、MiMo/DeepSeek 全 journey、真实 Windows/Linux 安装与 updater、macOS notarization、Windows signing、发行凭据、SBOM/legal 以及 fresh completion audit。它们只能由相应资源和同一 frozen SHA 的实证完成。
+- 缺少证书、真实 runner 或 Provider 资源时，claim 标记 `blocked`，不得用 macOS 本地模拟、未签名包或 authored test 改写为 `verified`。
 
-**停止条件**：域映射缺失、行为只能靠截图证明、typed boundary 不存在、failure/recovery 被省略，或删除会造成已批准能力回退。
+产品差异本身不大；时间主要花在安全删除旧 fork、恢复 source 物理拓扑和三平台发行证据。最快路线是减少代码和验证分叉，不是减少必须真实发生的发行证明。
 
-## 6. Stage 3 — Native Host vertical slice
+## 10. 当前唯一下一动作
 
-**进入条件**：首批 UI 域已映射，Execution-owned Host boundary 与 Product-State-owned admission/receipt contract 可实现。
+冻结 Stage 0 文档 candidate 后，立即执行 Stage 1，不再追加研究型 meter：列出 exact source/keep/delete paths 和 dry-run tree diff；在一个可回退 commit 中恢复 source 物理树并删除重复生产拓扑；安装依赖，依次跑最窄 import/typecheck、source unit/browser/build gate。只有这个 transplant candidate 绿色后，才在同一新基线上实现 Pi-family 双实例和 bundled OmniMind Agent vertical。
 
-先交付一个真实 Chat 与一个 folder-backed Agent journey。实现必须遵守 Execution 的隔离、typed ingress、Engine authority 和故障边界，以及 Product State 的 Conversation/Run/Queue/receipt/unknown-delivery 规则。本阶段的 proof 至少覆盖真实 Provider/Model/Thinking、Session continue/rebuild、stream/tool/queue/cancel、Host crash/restart、文件写前提和不可盲目重放。
-
-**停止条件**：Native code 进入 Desktop/renderer、出现第二套 Session/queue/Package authority、raw wire 进入 React，或 uncertain dispatch 被自动重放。
-
-## 7. 后续顺序与复用边界
-
-已接受的 headless Package 与 external-Engine checkpoints 是后续施工输入，不重复建设。Product truth consolidation 完成后，剩余阶段按下表顺序推进：
-
-| 阶段 | 默认复用的现有基座 | 只补的 OmniMind 差异 | 禁止重造 | 主要 proof |
-| --- | --- | --- | --- | --- |
-| Product truth consolidation | 当前 SQLite/LevelDB、原子文件、锁、Package generation 与 owner 实现 | sole authority、direct first-public boundary、稳定职责拆分和可证明净减 | 通用 migration/restore 平台、第二状态轨、无界语义 meter | 精确 destructive allowlist、真实 fault/race tests、不同 actor source review |
-| F-12 完整 Package surface | 已接受的 headless lifecycle、现有 Catalog/Package UI、stage/current/LKG/lease | Curated/Verified 与 Native/Bridged UI/PTY/Unsupported 的真实分类、失败回到 LKG | 第二 marketplace、第二 loader、热更新 active generation | compatibility/update/fault matrix 与真实 Package journeys |
-| F-14–F-16 File/Remote/permissions | Synara File tree/search/edit、Viewer、Diff/Changes、Terminal/PTY、Git 与现有 Remote 入口 | observed-version writer admission、一个真实 SSH authority、断连恢复、policy 与 enforcement truth | 新文件浏览器、编辑器、Diff、Terminal、Git 客户端或远端状态权威 | Git/concurrency tests、真实 SSH journey、deny-side-effect/security audit |
-| F-17 质量闭合 | 现有 Conversation/stream/output、scroll、CJK/i18n、accessibility 与性能基座 | 100k Conversation、burst stream、large/unknown output、双语关键旅程和三平台预算的实测缺口 | 第二消息渲染管线、为 benchmark 重写产品、静态平台能力镜像 | profiler、dual-locale/a11y e2e、三平台 measured budgets |
-| F-18 发行与终审 | 当前 Electron build/package/updater 与各平台 adapter | 签名/notarization、可信 feed、真实 artifact install/update/rollback、同 SHA 审计 | 第二 build/updater pipeline、平台行为假镜像 | macOS/Windows/Linux artifact matrix、rollback 与 fresh completion audit |
-
-上游 v0.6.7 之后已发现但尚未自动 adopted 的三项高价值输入——Explorer observed-version guarded editing、long-thread composer latency proof、Windows terminal polling——分别进入 F-14、F-17、F-18 的 source intake。它们现在只作为后续阶段的优先证据候选，不插队修改 Product truth；到达对应阶段时按 source-update gate 给维护者提交精确 commit/path/rights/disposition 清单。
-
-每个阶段的产品含义仍由 architecture owner 定义；本表只规定施工依赖与复用边界。未经前一阶段真实 proof，不提前制造 Package marketplace、通用多 Engine framework、重型知识库或固定 Workflow designer。
-
-## 8. Proof gates
-
-### 每次局部改动
-
-- 运行受影响的最窄类型检查/单测与 source/identity/document gate；
-- 检查允许路径、意外 generated files、debug residue 和用户未知修改；
-- 不把局部绿色扩张成未覆盖结论。
-
-### 每个阶段候选
-
-- 固定 base/candidate SHA，核 changed-path allowlist 与 `git diff --check`；
-- worktree clean，source rights 与 lockfile 完整；
-- relevant unit/integration/e2e 与当前新增副作用的 fault injection 通过；
-- 真实进程、Package、Provider 或平台场景按本阶段范围通过；
-- producer 只提交 `candidate`，独立 reviewer 决定是否支持下一状态。
-
-### V1 final candidate
-
-- 所有 required claims 在同一 final SHA 为 `verified`，`blocked = 0`；
-- 三平台相关 final gates 各运行一次；
-- fresh-context completion audit 无 material finding；
-- 没有 donor identity、双 Runtime、平行 Package loader、静默 fallback、虚假权限或不可恢复迁移。
-
-## 9. 当前唯一下一动作
-
-Stage 0–3 已在 `248b3316651e681d9d4c78f81bec0c84a4cc822c` 形成并独立接受首个纵切候选；真实 headless Pi Package checkpoint 已在 `16f14d188e38134f6f45c46bfcb57ff36c1e8565` 形成并独立接受；真实 OpenCode external-Engine checkpoint 已在 `02979ff7488e0491b04f29876b253de3b96540b1` 形成并通过 different-actor Review。
-
-进入 Remote 前，当前唯一 bounded checkpoint 固定为 Product truth consolidation 与 direct first-public rebuild：在 Desktop、Product Service 与 Native Host 停止后，只对 canonical 默认 `~/.omnimind` 中逐项证明为 pre-baseline 的旧 Product、Automation/service、OmniMind Web-draft 和重复/过期 Package 状态执行精确删除，由当前 owner 直接创建 first-public state；不创建 backup、migration、restore 或双轨兼容，并严格排除 credential、当前 canonical Package generation、Pi-native state、attachments、外部 ResourceRef、用户 workspace、Git、全局配置、其他 home 与未知路径。同时确立 Product Service 的唯一 Package-root authority，按稳定职责拆分 `ProductControlPlane`，并证明 production code 与概念复杂度实质净减。完成并独立接受该 checkpoint 后才进入文件/Diff/Terminal/Artifact 与真实 Remote target；不得提前扩建 Marketplace、通用多 Engine framework 或三平台发行，也不重复未触发的 unchanged baseline smoke。
-
-该 checkpoint 同样受 Synara-first 复用门与治理工具止损门约束：它只允许收口 Product authority、first-public 行为和职责边界，不授权重写已采用的 Workbench 能力，也不允许 complexity meter 继续通过逐个 AST 形态扩张来替代 B1 的真实 capability、fault tests 与源码审查。
+任何继续扩充 Product Truth semantic meter、平行 Product Control Plane、跨 Provider Package lifecycle、Remote 或 settings taxonomy 重写的工作都应停止。
