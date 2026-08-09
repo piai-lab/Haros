@@ -8,6 +8,7 @@ import { useEffect, useRef } from "react";
 
 import { useAppSettings } from "~/appSettings";
 import { useStableValue } from "~/hooks/useStableValue";
+import { useI18n } from "~/i18n";
 import { toastManager } from "~/components/ui/toast";
 import { useComposerDraftStore } from "../../composerDraftStore";
 import { useKanbanUiStore } from "../../kanbanUiStore";
@@ -36,6 +37,7 @@ const OPTIMISTIC_DISPATCH_TIMEOUT_MS = 30_000;
 const OPTIMISTIC_DISPATCH_EXPIRY_CHECK_MS = 5_000;
 
 export function useKanbanBoard(): KanbanBoard {
+  const { t } = useI18n();
   const selectDisplayThreads = createSidebarDisplayThreadsSelector();
   const threads = useStore(selectDisplayThreads);
   const allProjects = useStore((state) => state.projects);
@@ -69,7 +71,7 @@ export function useKanbanBoard(): KanbanBoard {
   const projects = [
     ...sortProjectsForSidebar(otherProjects, threads, projectSortOrder),
     ...(canonicalContainer
-      ? [{ id: canonicalContainer.id, kind: canonicalContainer.kind, name: "Chats" }]
+      ? [{ id: canonicalContainer.id, kind: canonicalContainer.kind, name: t("kanban.chats") }]
       : []),
   ];
   const draftsByThreadId = useComposerDraftStore((state) => state.draftsByThreadId);
@@ -204,6 +206,10 @@ export function useKanbanBoard(): KanbanBoard {
   }
 
   return buildKanbanBoard({
+    copy: {
+      attachedReferences: t("kanban.attachedReferences"),
+      newThread: t("kanban.newThread"),
+    },
     projects,
     threads,
     draftThreads,

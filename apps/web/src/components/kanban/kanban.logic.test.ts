@@ -77,6 +77,7 @@ function makeSidebarThreadSummary(
 
 function makeBoardInput(overrides: Partial<BuildKanbanBoardInput> = {}): BuildKanbanBoardInput {
   return {
+    copy: { attachedReferences: "Attached references", newThread: "New thread" },
     projects: [{ id: ProjectId.makeUnsafe("project-1"), kind: "project", name: "OmniMind" }],
     threads: [],
     draftThreads: [],

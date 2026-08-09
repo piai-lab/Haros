@@ -17,13 +17,10 @@ import type { Project, SidebarThreadSummary } from "../../types";
 
 export type KanbanColumnKey = "draft" | "inProgress" | "done";
 
-export const KANBAN_COLUMN_LABELS: Record<KanbanColumnKey, string> = {
-  draft: "Draft",
-  inProgress: "In Progress",
-  done: "Done",
-};
-
-export const KANBAN_FALLBACK_DRAFT_TITLE = "New thread";
+export interface KanbanBoardCopy {
+  readonly attachedReferences: string;
+  readonly newThread: string;
+}
 
 /** Pending composer content for one thread, projected from the composer draft store. */
 export interface KanbanComposerDraftSnapshot {
@@ -172,6 +169,7 @@ export interface KanbanBoard {
 }
 
 export interface BuildKanbanBoardInput {
+  copy: KanbanBoardCopy;
   projects: readonly Pick<Project, "id" | "kind" | "name">[];
   threads: readonly SidebarThreadSummary[];
   draftThreads: readonly KanbanDraftThreadSnapshot[];
@@ -321,12 +319,14 @@ function buildUnsentPromptCard(
   thread: SidebarThreadSummary,
   composerDraftByThreadId: BuildKanbanBoardInput["composerDraftByThreadId"],
   isTerminal: boolean,
+  copy: KanbanBoardCopy,
 ): KanbanCard | null {
   const composerDraft = resolveComposerDraft(composerDraftByThreadId, thread.id);
   if (composerDraft.prompt.length === 0 && !composerDraft.hasAttachments) {
     return null;
   }
-  const titleSeed = composerDraft.prompt.length > 0 ? composerDraft.prompt : "Attached references";
+  const titleSeed =
+    composerDraft.prompt.length > 0 ? composerDraft.prompt : copy.attachedReferences;
   const threadProvider = isTerminal
     ? null
     : (thread.session?.provider ?? thread.modelSelection.provider);
@@ -356,6 +356,7 @@ function buildUnsentPromptCard(
 function buildLocalDraftCard(
   draftThread: KanbanDraftThreadSnapshot,
   composerDraftByThreadId: BuildKanbanBoardInput["composerDraftByThreadId"],
+  copy: KanbanBoardCopy,
 ): KanbanCard {
   const composerDraft = resolveComposerDraft(composerDraftByThreadId, draftThread.threadId);
   return {
@@ -367,8 +368,8 @@ function buildLocalDraftCard(
       composerDraft.prompt.length > 0
         ? buildPromptThreadTitleFallback(composerDraft.prompt)
         : composerDraft.hasAttachments
-          ? "Attached references"
-          : KANBAN_FALLBACK_DRAFT_TITLE,
+          ? copy.attachedReferences
+          : copy.newThread,
     provider: composerDraft.provider,
     isTerminal: false,
     branch: draftThread.branch,
@@ -392,15 +393,13 @@ function buildLocalDraftCard(
 function forceOptimisticInProgressCard(
   card: KanbanCard,
   entry: KanbanOptimisticDispatchSnapshot,
+  fallbackDraftTitle: string,
 ): KanbanCard {
   return {
     ...card,
     column: "inProgress",
     isOptimisticDispatch: true,
-    title:
-      card.title === KANBAN_FALLBACK_DRAFT_TITLE && entry.title.length > 0
-        ? entry.title
-        : card.title,
+    title: card.title === fallbackDraftTitle && entry.title.length > 0 ? entry.title : card.title,
     draftPrompt: "",
     draftHasAttachments: false,
     sortTimestamp: entry.droppedAtMs,
@@ -577,7 +576,9 @@ export function buildKanbanBoard(input: BuildKanbanBoardInput): KanbanBoard {
         // A drop already dispatched this thread's prompt; show it In Progress while
         // the first runtime signal is in flight and suppress its draft/done duplicates
         // so the board matches the state the dispatch is about to produce.
-        bucket.inProgress.push(forceOptimisticInProgressCard(card, optimisticEntry));
+        bucket.inProgress.push(
+          forceOptimisticInProgressCard(card, optimisticEntry, input.copy.newThread),
+        );
         continue;
       }
     }
@@ -587,6 +588,7 @@ export function buildKanbanBoard(input: BuildKanbanBoardInput): KanbanBoard {
         thread,
         input.composerDraftByThreadId,
         isTerminal,
+        input.copy,
       );
       if (unsentPromptCard) {
         bucket.draft.push(unsentPromptCard);
@@ -609,11 +611,11 @@ export function buildKanbanBoard(input: BuildKanbanBoardInput): KanbanBoard {
     if (!optimisticEntry && composerDraft.prompt.length === 0 && !composerDraft.hasAttachments) {
       continue;
     }
-    const card = buildLocalDraftCard(draftThread, input.composerDraftByThreadId);
+    const card = buildLocalDraftCard(draftThread, input.composerDraftByThreadId, input.copy);
     if (optimisticEntry) {
       handledOptimisticThreadIds.add(draftThread.threadId);
       bucketFor(boardProjectId).inProgress.push(
-        forceOptimisticInProgressCard(card, optimisticEntry),
+        forceOptimisticInProgressCard(card, optimisticEntry, input.copy.newThread),
       );
       continue;
     }

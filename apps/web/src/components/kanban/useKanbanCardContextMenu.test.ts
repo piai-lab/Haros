@@ -36,6 +36,9 @@ vi.mock("~/hooks/useCopyToClipboard", () => ({
   useCopyPathToClipboard: () => vi.fn(),
   useCopyThreadIdToClipboard: () => vi.fn(),
 }));
+vi.mock("~/i18n", () => ({
+  useI18n: () => ({ t: (key: string) => key }),
+}));
 vi.mock("~/lib/activeThreadDelete", () => ({
   deleteActiveThreadFromClient: harness.deleteActiveThread,
 }));

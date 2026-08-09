@@ -6,6 +6,12 @@ import {
   truncateKanbanTaskPreview,
 } from "./KanbanNewTaskDialog.logic";
 
+const PREVIEW_COPY = {
+  imagePreview: (name: string) => `Image: ${name}`,
+  referencedAssistantLabel: "Referenced assistant selection",
+  newTaskLabel: "New task",
+} as const;
+
 describe("KanbanNewTaskDialog logic", () => {
   it("appends voice transcripts without preserving trailing whitespace", () => {
     expect(appendKanbanTaskTranscript("", "  ship it  ")).toBe("ship it");
@@ -18,6 +24,7 @@ describe("KanbanNewTaskDialog logic", () => {
   it("builds the same preview fallback order as the dialog", () => {
     expect(
       buildKanbanTaskPreview({
+        ...PREVIEW_COPY,
         trimmedPrompt: "Fix reconnect",
         firstImageName: "screen.png",
         assistantSelectionCount: 1,
@@ -25,6 +32,7 @@ describe("KanbanNewTaskDialog logic", () => {
     ).toBe("Fix reconnect");
     expect(
       buildKanbanTaskPreview({
+        ...PREVIEW_COPY,
         trimmedPrompt: "",
         firstImageName: "screen.png",
         assistantSelectionCount: 1,
@@ -32,6 +40,7 @@ describe("KanbanNewTaskDialog logic", () => {
     ).toBe("Image: screen.png");
     expect(
       buildKanbanTaskPreview({
+        ...PREVIEW_COPY,
         trimmedPrompt: "",
         firstImageName: null,
         assistantSelectionCount: 1,
@@ -39,6 +48,7 @@ describe("KanbanNewTaskDialog logic", () => {
     ).toBe("Referenced assistant selection");
     expect(
       buildKanbanTaskPreview({
+        ...PREVIEW_COPY,
         trimmedPrompt: "",
         firstImageName: null,
         assistantSelectionCount: 0,

@@ -16,7 +16,7 @@ import { RenameThreadDialog } from "~/components/RenameThreadDialog";
 import { useCopyPathToClipboard, useCopyThreadIdToClipboard } from "~/hooks/useCopyToClipboard";
 import { deleteActiveThreadFromClient } from "~/lib/activeThreadDelete";
 import { gitRemoveWorktreeMutationOptions } from "~/lib/gitReactQuery";
-import { pinActionLabel } from "~/lib/pin";
+import { useI18n } from "~/i18n";
 import { archiveThreadFromClient } from "~/lib/threadArchive";
 import { dispatchThreadRename } from "~/lib/threadRename";
 import { newCommandId } from "~/lib/utils";
@@ -74,6 +74,7 @@ async function setThreadPinned(threadId: ThreadId, isPinned: boolean) {
 }
 
 export function useKanbanCardContextMenu(): KanbanCardContextMenuController {
+  const { t } = useI18n();
   const { settings } = useAppSettings();
   const queryClient = useQueryClient();
   const removeWorktreeMutation = useMutation(gitRemoveWorktreeMutationOptions({ queryClient }));
@@ -110,7 +111,7 @@ export function useKanbanCardContextMenu(): KanbanCardContextMenuController {
         clearTerminalState(card.threadId);
       },
       removeWorktree: (worktree) => removeWorktreeMutation.mutateAsync(worktree),
-      unknownWorktreeErrorMessage: "Unknown error.",
+      unknownWorktreeErrorMessage: t("kanban.unknownError"),
     });
   };
 
@@ -131,23 +132,23 @@ export function useKanbanCardContextMenu(): KanbanCardContextMenuController {
         [
           ...(isThreadActionCard
             ? [
-                { id: "rename", label: "Rename thread" },
+                { id: "rename", label: t("kanban.renameThread") },
                 {
                   id: "toggle-pin",
-                  label: pinActionLabel("thread", card.thread?.isPinned ?? false),
+                  label: card.thread?.isPinned ? t("kanban.unpinThread") : t("kanban.pinThread"),
                 },
               ]
             : []),
           ...(workspacePath
-            ? [{ id: "copy-path", label: "Copy Path", separatorBefore: true }]
+            ? [{ id: "copy-path", label: t("kanban.copyPath"), separatorBefore: true }]
             : []),
-          ...(isThreadBacked ? [{ id: "copy-thread-id", label: "Copy Thread ID" }] : []),
+          ...(isThreadBacked ? [{ id: "copy-thread-id", label: t("kanban.copyThreadId") }] : []),
           ...(isThreadActionCard
-            ? [{ id: "archive", label: "Archive", separatorBefore: true }]
+            ? [{ id: "archive", label: t("kanban.archive"), separatorBefore: true }]
             : []),
           {
             id: "delete",
-            label: deletesOnlyDraft ? "Delete draft" : "Delete",
+            label: deletesOnlyDraft ? t("kanban.deleteDraft") : t("kanban.delete"),
             destructive: true,
             separatorBefore: !isThreadActionCard,
           },
@@ -164,7 +165,7 @@ export function useKanbanCardContextMenu(): KanbanCardContextMenuController {
         void setThreadPinned(card.threadId, next).catch(() => {
           toastManager.add({
             type: "error",
-            title: next ? "Unable to pin thread" : "Unable to unpin thread",
+            title: next ? t("kanban.unableToPin") : t("kanban.unableToUnpin"),
           });
         });
         return;
@@ -183,8 +184,8 @@ export function useKanbanCardContextMenu(): KanbanCardContextMenuController {
         if (settings.confirmThreadArchive) {
           const confirmed = await api.dialogs.confirm(
             [
-              `Archive thread "${card.title}"?`,
-              "Archived threads are hidden from the sidebar but can be restored later.",
+              t("kanban.confirmArchive", { title: card.title }),
+              t("kanban.archiveDescription"),
             ].join("\n"),
           );
           if (!confirmed) return;
@@ -196,10 +197,10 @@ export function useKanbanCardContextMenu(): KanbanCardContextMenuController {
       if (settings.confirmThreadDelete) {
         const confirmed = await api.dialogs.confirm(
           deletesOnlyDraft
-            ? `Delete this draft? This removes its unsent prompt.`
+            ? t("kanban.confirmDeleteDraft")
             : [
-                `Delete thread "${card.title}"?`,
-                "This permanently clears conversation history for this thread.",
+                t("kanban.confirmDeleteThread", { title: card.title }),
+                t("kanban.deleteThreadDescription"),
               ].join("\n"),
         );
         if (!confirmed) return;
@@ -225,8 +226,8 @@ export function useKanbanCardContextMenu(): KanbanCardContextMenuController {
         if (outcome === "unavailable") {
           toastManager.add({
             type: "error",
-            title: "Not connected",
-            description: "Reconnect to the server before renaming.",
+            title: t("kanban.notConnected"),
+            description: t("kanban.reconnectBeforeRenaming"),
           });
           return;
         }

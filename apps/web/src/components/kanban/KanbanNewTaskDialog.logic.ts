@@ -18,17 +18,20 @@ export function buildKanbanTaskPreview(input: {
   readonly trimmedPrompt: string;
   readonly firstImageName?: string | null | undefined;
   readonly assistantSelectionCount: number;
+  readonly imagePreview: (name: string) => string;
+  readonly referencedAssistantLabel: string;
+  readonly newTaskLabel: string;
 }): string {
   if (input.trimmedPrompt.length > 0) {
     return input.trimmedPrompt;
   }
   if (input.firstImageName) {
-    return `Image: ${input.firstImageName}`;
+    return input.imagePreview(input.firstImageName);
   }
   if (input.assistantSelectionCount > 0) {
-    return "Referenced assistant selection";
+    return input.referencedAssistantLabel;
   }
-  return "New task";
+  return input.newTaskLabel;
 }
 
 export function truncateKanbanTaskPreview(preview: string, maxLength = 80): string {
