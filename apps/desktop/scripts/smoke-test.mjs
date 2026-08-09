@@ -2,15 +2,17 @@ import { spawn } from "node:child_process";
 import { dirname, resolve } from "node:path";
 import { fileURLToPath } from "node:url";
 
+import { resolveElectronPath } from "./electron-launcher.mjs";
+
 const __dirname = dirname(fileURLToPath(import.meta.url));
 const desktopDir = resolve(__dirname, "..");
-const electronBin = resolve(desktopDir, "node_modules/.bin/electron");
 const mainJs = resolve(desktopDir, "dist-electron/main.js");
 
 console.log("\nLaunching Electron smoke test...");
 
-const child = spawn(electronBin, [mainJs], {
+const child = spawn(resolveElectronPath(), [mainJs], {
   stdio: ["pipe", "pipe", "pipe"],
+  detached: process.platform !== "win32",
   env: {
     ...process.env,
     VITE_DEV_SERVER_URL: "",
@@ -26,12 +28,27 @@ child.stderr.on("data", (chunk) => {
   output += chunk.toString();
 });
 
+function stopSmokeProcess(signal) {
+  if (child.pid && process.platform !== "win32") {
+    try {
+      process.kill(-child.pid, signal);
+      return;
+    } catch {
+      // Fall back to the direct child if it left its launch process group.
+    }
+  }
+  child.kill(signal);
+}
+
+let forceKillTimeout;
 const timeout = setTimeout(() => {
-  child.kill();
+  stopSmokeProcess("SIGTERM");
+  forceKillTimeout = setTimeout(() => stopSmokeProcess("SIGKILL"), 2_000);
 }, 8_000);
 
 child.on("exit", () => {
   clearTimeout(timeout);
+  clearTimeout(forceKillTimeout);
 
   const fatalPatterns = [
     "Cannot find module",
