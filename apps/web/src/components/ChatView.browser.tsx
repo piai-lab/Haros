@@ -5715,6 +5715,88 @@ describe("ChatView timeline estimator parity (full app)", () => {
     }
   });
 
+  it("sends only the current composer draft from managed Chat to a fresh folder Agent", async () => {
+    const managedChatSnapshot = withActiveHomeChatThread(
+      createSnapshotForTargetUser({
+        targetMessageId: "msg-user-send-to-agent-test" as MessageId,
+        targetText: "existing managed chat message",
+      }),
+    );
+    const mounted = await mountChatView({
+      viewport: DEFAULT_VIEWPORT,
+      snapshot: {
+        ...managedChatSnapshot,
+        projects: managedChatSnapshot.projects.map((project) =>
+          project.id === HOME_PROJECT_ID
+            ? {
+                ...project,
+                workspaceRoot: "/Users/tester/Documents/OmniMind/2026/send-to-agent",
+              }
+            : project,
+        ),
+      },
+      configureFixture: (nextFixture) => {
+        nextFixture.welcome = {
+          ...nextFixture.welcome,
+          homeDir: "/Users/tester",
+          chatWorkspaceRoot: "/Users/tester/Documents/OmniMind",
+        };
+      },
+    });
+
+    try {
+      await waitForComposerEditor();
+      await page.getByRole("textbox").fill("Carry this unsent prompt and its references.");
+
+      const sendToAgentButton = await waitForElement(
+        () => document.querySelector<HTMLButtonElement>('button[aria-label="Send to Agent"]'),
+        "Unable to find the Send to Agent action.",
+      );
+      sendToAgentButton.click();
+      const projectOption = await waitForElement(
+        () =>
+          Array.from(document.querySelectorAll<HTMLElement>('[data-slot="combobox-item"]')).find(
+            (item) => item.textContent?.trim() === "project",
+          ) ?? null,
+        "Unable to find the Agent destination project.",
+      );
+      projectOption.click();
+
+      const targetPath = await waitForURL(
+        mounted.router,
+        (path) => UUID_ROUTE_RE.test(path) && path !== `/${THREAD_ID}`,
+        "Send to Agent should open a fresh Project draft.",
+      );
+      const targetThreadId = targetPath.slice(1) as ThreadId;
+
+      await vi.waitFor(() => {
+        expect(useComposerDraftStore.getState().getDraftThread(targetThreadId)).toMatchObject({
+          projectId: PROJECT_ID,
+          entryPoint: "chat",
+        });
+        expect(useComposerDraftStore.getState().draftsByThreadId[targetThreadId]?.prompt).toBe(
+          "Carry this unsent prompt and its references.",
+        );
+      });
+      expect(useComposerDraftStore.getState().draftsByThreadId[THREAD_ID]?.prompt).toBe(
+        "Carry this unsent prompt and its references.",
+      );
+      expect(
+        wsRequests.some(
+          (request) =>
+            request._tag === ORCHESTRATION_WS_METHODS.dispatchCommand &&
+            "command" in request &&
+            request.command &&
+            typeof request.command === "object" &&
+            "type" in request.command &&
+            request.command.type === "thread.handoff.create",
+        ),
+      ).toBe(false);
+    } finally {
+      await mounted.cleanup();
+    }
+  });
+
   it("moves a home draft into an existing project from the home picker without carrying branch", async () => {
     useComposerDraftStore.setState({
       draftThreadsByThreadId: {

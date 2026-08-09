@@ -121,6 +121,7 @@ interface ChatHeaderProps {
     label: string;
     onClick: () => void;
   } | null;
+  sendToAgentControl?: React.ReactNode;
   // Editor-rail chat controls rendered beside the title: a "new chat" button and
   // a project chat-history menu. Provided only by the editor workspace chat pane.
   editorChatControls?: {
@@ -528,6 +529,7 @@ export function ChatHeader({
   environment: environmentProp,
   chatLayoutAction: chatLayoutActionProp,
   changeThreadAction: changeThreadActionProp,
+  sendToAgentControl,
   editorChatControls: editorChatControlsProp,
   onRunProjectScript,
   onAddProjectScript,
@@ -782,6 +784,7 @@ export function ChatHeader({
         </div>
       </div>
       <div className="flex shrink-0 items-center gap-2 [-webkit-app-region:no-drag]">
+        {sendToAgentControl}
         {!hideHandoffControls && !environment ? (
           <ProviderUsageMenuControl provider={activeProvider} />
         ) : null}

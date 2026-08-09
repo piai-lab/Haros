@@ -440,6 +440,7 @@ import {
   CHAT_SURFACE_HEADER_HEIGHT_CLASS,
   CHAT_SURFACE_HEADER_PADDING_X_CLASS,
   CHAT_SURFACE_HEADER_ROW_CLASS_NAME,
+  ChatHeaderButton,
 } from "./chat/chatHeaderControls";
 import { SidebarHeaderNavigationControls } from "./SidebarHeaderNavigationControls";
 import { SidebarHeaderTrigger } from "./ui/sidebar";
@@ -9875,6 +9876,69 @@ export default function ChatView({
     ],
   );
 
+  const handleSendToAgentProject = useCallback(
+    async (projectId: ProjectId) => {
+      const project = useStore
+        .getState()
+        .projects.find((candidate) => candidate.id === projectId && candidate.kind === "project");
+      if (!project) {
+        throw new Error("Selected project is not available.");
+      }
+
+      const targetThreadId = await handleNewThread(projectId, {
+        fresh: true,
+        provider: selectedProvider,
+      });
+      if (!targetThreadId) {
+        throw new Error("Unable to prepare the Agent thread.");
+      }
+
+      const draftStore = useComposerDraftStore.getState();
+      draftStore.copyTransferableComposerState(threadId, targetThreadId);
+      draftStore.setModelSelection(targetThreadId, selectedModelSelection);
+    },
+    [handleNewThread, selectedModelSelection, selectedProvider, threadId],
+  );
+
+  const handleCreateAgentProjectFromPickerPath = useCallback(
+    async (workspaceRoot: string) => {
+      const api = readNativeApi();
+      if (!api) {
+        throw new Error("App is still connecting. Try again in a moment.");
+      }
+
+      const existingProject = useStore
+        .getState()
+        .projects.find(
+          (project) =>
+            project.kind === "project" && workspaceRootsEqual(project.cwd, workspaceRoot),
+        );
+      if (existingProject) {
+        await handleSendToAgentProject(existingProject.id);
+        return;
+      }
+
+      const creationResult = await createOrRecoverProjectFromPath({
+        api,
+        workspaceRoot,
+        createIfMissing: false,
+        defaultModelSelection: selectedModelSelection,
+        loadSnapshot: () => api.orchestration.getShellSnapshot().catch(() => null),
+      });
+      if (creationResult.snapshot) {
+        syncServerShellSnapshot(creationResult.snapshot);
+      }
+      if (!creationResult.created && !creationResult.project) {
+        throw new Error(PROJECT_CREATE_EXISTING_SYNC_ERROR);
+      }
+      if (!creationResult.project) {
+        throw new Error(PROJECT_CREATE_SYNC_ERROR);
+      }
+      await handleSendToAgentProject(creationResult.project.id);
+    },
+    [handleSendToAgentProject, selectedModelSelection, syncServerShellSnapshot],
+  );
+
   const applyPromptReplacement = useCallback(
     (
       rangeStart: number,
@@ -11780,6 +11844,25 @@ export default function ChatView({
                   onClick: onChangeThreadInSplitPane,
                 }
               : null
+          }
+          sendToAgentControl={
+            isChatProject && !isEditorRail ? (
+              <ProjectPicker
+                align="end"
+                side="bottom"
+                selectionMode="project"
+                addActionLabel="Choose another folder"
+                searchPlaceholder="Choose a project for Agent"
+                onSelectProject={handleSendToAgentProject}
+                onCreateProjectFromPath={handleCreateAgentProjectFromPickerPath}
+                renderTrigger={
+                  <ChatHeaderButton type="button" tone="outline" aria-label="Send to Agent">
+                    <FolderClosed className="size-3.5 shrink-0" />
+                    <span className="truncate font-normal">Send to Agent</span>
+                  </ChatHeaderButton>
+                }
+              />
+            ) : null
           }
           onRunProjectScript={onRunProjectScriptFromHeader}
           onAddProjectScript={saveProjectScript}
