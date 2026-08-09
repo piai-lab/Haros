@@ -365,6 +365,11 @@ export const ProjectPicker = memo(function ProjectPicker({
   ) : (
     emptyTriggerLabel
   );
+  const triggerAccessibleLabel = selectedFolderOption
+    ? [selectedFolderOption.primaryLabel, selectedFolderOption.secondaryLabel]
+        .filter((label): label is string => Boolean(label))
+        .join(", ")
+    : emptyTriggerLabel;
 
   const handleOpenChange = useCallback((nextOpen: boolean) => {
     setOpen(nextOpen);
@@ -573,7 +578,7 @@ export const ProjectPicker = memo(function ProjectPicker({
                 data-testid={
                   isProjectSelectionMode ? "project-picker-trigger" : "workspace-picker-trigger"
                 }
-                aria-label={triggerLabel}
+                aria-label={triggerAccessibleLabel}
                 icon={
                   <FolderClosed
                     className={cn(
