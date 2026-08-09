@@ -2090,6 +2090,77 @@ describe("ProviderRuntimeIngestion", () => {
     });
   });
 
+  it.each(["omnimind", "pi"] as const)(
+    "buffers %s native reasoning text into one completed activity",
+    async (provider) => {
+      const harness = await createHarness();
+      const now = new Date().toISOString();
+      const itemId = `${provider}-reasoning-buffered-1`;
+      const baseEvent = {
+        provider,
+        createdAt: now,
+        threadId: asThreadId("thread-1"),
+        turnId: asTurnId(`turn-${provider}-reasoning`),
+        itemId: asItemId(itemId),
+      };
+
+      harness.emit({
+        ...baseEvent,
+        type: "content.delta",
+        eventId: asEventId(`evt-${provider}-reasoning-delta-1`),
+        payload: {
+          streamKind: "reasoning_text",
+          contentIndex: 0,
+          delta: "Inspect the ",
+        },
+      });
+      harness.emit({
+        ...baseEvent,
+        type: "content.delta",
+        eventId: asEventId(`evt-${provider}-reasoning-delta-2`),
+        payload: {
+          streamKind: "reasoning_text",
+          contentIndex: 0,
+          delta: "runtime mapping",
+        },
+      });
+      harness.emit({
+        ...baseEvent,
+        type: "item.completed",
+        eventId: asEventId(`evt-${provider}-reasoning-completed`),
+        payload: {
+          itemType: "reasoning",
+          status: "completed",
+          title: "Reasoning",
+        },
+      });
+
+      const stableActivityId = `provider-reasoning:thread-1:${itemId}`;
+      const thread = await waitForThread(harness.engine, (entry) =>
+        entry.activities.some(
+          (activity: ProviderRuntimeTestActivity) => activity.id === stableActivityId,
+        ),
+      );
+
+      expect(
+        thread.activities.filter(
+          (activity: ProviderRuntimeTestActivity) => activity.id === stableActivityId,
+        ),
+      ).toEqual([
+        expect.objectContaining({
+          kind: "task.progress",
+          tone: "tool",
+          summary: "Reasoning trace",
+          payload: expect.objectContaining({
+            status: "completed",
+            detail: "Inspect the runtime mapping",
+            data: { toolCallId: itemId },
+          }),
+        }),
+      ]);
+    },
+  );
+
   it("settles buffered Codex reasoning when a turn is aborted", async () => {
     const harness = await createHarness();
     const now = new Date().toISOString();
@@ -2305,7 +2376,7 @@ describe("ProviderRuntimeIngestion", () => {
     ).toHaveLength(0);
   });
 
-  it("does not project unsupported or unidentified reasoning lifecycle rows", async () => {
+  it("does not project empty or unidentified reasoning lifecycle rows", async () => {
     const harness = await createHarness();
     const now = new Date().toISOString();
 

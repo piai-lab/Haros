@@ -231,8 +231,10 @@ function getProviderStateFromCapabilities(
       normalizedOptions = normalizeOpenCodeModelOptions(providerOptions);
       break;
     }
+    case "omnimind":
     case "pi": {
-      const providerOptions = modelOptions?.pi;
+      const providerOptions =
+        provider === "omnimind" ? modelOptions?.omnimind : modelOptions?.pi;
       rawEffort = trimOrNull(providerOptions?.thinkingLevel);
       normalizedOptions = normalizePiModelOptions(providerOptions);
       break;

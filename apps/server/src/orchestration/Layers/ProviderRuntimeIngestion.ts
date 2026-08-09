@@ -306,13 +306,12 @@ function reasoningSummaryBufferKey(
   event: ProviderRuntimeEvent,
   threadId = event.threadId,
 ): string | null {
-  if ((event.provider !== "codex" && event.provider !== "antigravity") || !event.itemId) {
+  if (!supportsReadableReasoningProjection(event.provider) || !event.itemId) {
     return null;
   }
   if (
     event.type === "content.delta" &&
-    (event.payload.streamKind === "reasoning_summary_text" ||
-      (event.provider === "antigravity" && event.payload.streamKind === "reasoning_text"))
+    isReadableReasoningDelta(event.provider, event.payload.streamKind)
   ) {
     return [threadId, event.turnId ?? "no-turn", event.itemId].join(":");
   }
@@ -325,6 +324,21 @@ function reasoningSummaryBufferKey(
     return [threadId, event.turnId ?? "no-turn", event.itemId].join(":");
   }
   return null;
+}
+
+function supportsReadableReasoningProjection(provider: ProviderKind): boolean {
+  return (
+    provider === "codex" ||
+    provider === "antigravity" ||
+    provider === "omnimind" ||
+    provider === "pi"
+  );
+}
+
+function isReadableReasoningDelta(provider: ProviderKind, streamKind: string): boolean {
+  return provider === "codex"
+    ? streamKind === "reasoning_summary_text"
+    : supportsReadableReasoningProjection(provider) && streamKind === "reasoning_text";
 }
 
 function joinedBufferedReasoningSummary(
@@ -346,7 +360,7 @@ function withBufferedReasoningSummary(
 ): ProviderRuntimeEvent {
   if (
     event.type !== "item.completed" ||
-    (event.provider !== "codex" && event.provider !== "antigravity") ||
+    !supportsReadableReasoningProjection(event.provider) ||
     event.payload.itemType !== "reasoning" ||
     readableReasoningDetail(event.payload.detail)
   ) {
@@ -2169,8 +2183,7 @@ const make = Effect.gen(function* () {
       if (
         reasoningSummaryKey &&
         event.type === "content.delta" &&
-        (event.payload.streamKind === "reasoning_summary_text" ||
-          (event.provider === "antigravity" && event.payload.streamKind === "reasoning_text")) &&
+        isReadableReasoningDelta(event.provider, event.payload.streamKind) &&
         event.payload.delta.length > 0
       ) {
         yield* appendBufferedReasoningSummary(reasoningSummaryKey, event);

@@ -453,6 +453,22 @@ describe("provider option descriptor helpers", () => {
       currentValue: "xhigh",
     });
     expect(descriptors.some((descriptor) => descriptor.id === "reasoningEffort")).toBe(false);
+
+    const omniMindDescriptors = getProviderOptionDescriptors({
+      provider: "omnimind",
+      caps: {
+        reasoningEffortLevels: [{ value: "high", label: "High", isDefault: true }],
+        supportsFastMode: false,
+        supportsThinkingToggle: false,
+        promptInjectedEffortLevels: [],
+        contextWindowOptions: [],
+      },
+      selections: { thinkingLevel: "high" },
+    });
+    expect(omniMindDescriptors[0]).toMatchObject({
+      id: "thinkingLevel",
+      currentValue: "high",
+    });
   });
 
   it("honors explicit descriptors and serializes their current values", () => {

@@ -763,6 +763,31 @@ describe("getComposerProviderState", () => {
     });
   });
 
+  it("keeps OmniMind Agent runtime thinking selections on the thinkingLevel field", () => {
+    const selection = getComposerTraitSelection(
+      "omnimind",
+      "deepseek/deepseek-v4-pro",
+      "",
+      { thinkingLevel: "xhigh" },
+      { ...PI_RUNTIME_MODEL_WITH_REASONING, slug: "deepseek/deepseek-v4-pro" },
+    );
+    const state = getComposerProviderState({
+      provider: "omnimind",
+      model: "deepseek/deepseek-v4-pro",
+      runtimeModel: { ...PI_RUNTIME_MODEL_WITH_REASONING, slug: "deepseek/deepseek-v4-pro" },
+      prompt: "",
+      modelOptions: { omnimind: { thinkingLevel: "xhigh" } },
+    });
+
+    expect(selection.primarySelectDescriptor?.id).toBe("thinkingLevel");
+    expect(selection.effort).toBe("xhigh");
+    expect(state).toEqual({
+      provider: "omnimind",
+      promptEffort: "xhigh",
+      modelOptionsForDispatch: { thinkingLevel: "xhigh" },
+    });
+  });
+
   it("does not render a traits picker for OpenCode models without exposed controls", () => {
     const threadId = ThreadId.makeUnsafe("thread-opencode-traits-hidden");
 

@@ -473,12 +473,15 @@ export function projectProviderRuntimeActivities(
       ? { sequence }
       : {};
   })();
-  // Codex and Antigravity only render completed reasoning items with a readable summary.
+  // Providers whose runtime supplies readable reasoning text only render the completed item.
   // Empty starts/completions are private/encrypted reasoning boundaries, not
   // transcript rows. Waiting for the authoritative completion also avoids
   // per-token activity writes and transcript height churn.
   if (
-    (event.provider === "codex" || event.provider === "antigravity") &&
+    (event.provider === "codex" ||
+      event.provider === "antigravity" ||
+      event.provider === "omnimind" ||
+      event.provider === "pi") &&
     event.type === "item.completed" &&
     event.payload.itemType === "reasoning" &&
     event.itemId !== undefined &&

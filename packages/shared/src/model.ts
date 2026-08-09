@@ -285,7 +285,7 @@ function reasoningDescriptorId(provider: ProviderKind): string {
   if (provider === "kilo" || provider === "opencode") {
     return "variant";
   }
-  if (provider === "pi") {
+  if (provider === "pi" || provider === "omnimind") {
     return "thinkingLevel";
   }
   return "reasoningEffort";
