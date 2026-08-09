@@ -7266,6 +7266,11 @@ describe("ProviderCommandReactor", () => {
       threadId: "thread-1",
       turnId: "turn-1",
     });
+
+    await waitFor(async () => {
+      const thread = await readHarnessThread(harness);
+      return thread?.session?.status === "interrupted" && thread.session.activeTurnId === null;
+    });
   });
 
   it("routes subagent interrupts through the parent provider session using the child provider thread id", async () => {

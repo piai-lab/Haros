@@ -2614,6 +2614,18 @@ const make = Effect.gen(function* () {
       }),
     });
     if (result._tag === "ok") {
+      // Main-session interrupts retire the provider runtime under a new
+      // lifecycle generation. Any terminal event emitted by the old adapter is
+      // therefore intentionally rejected as stale, so settle the product turn
+      // once ProviderService has confirmed both interrupt and teardown. Child
+      // interrupts keep the shared parent generation and still settle from the
+      // provider terminal event.
+      if (providerThreadId === undefined) {
+        return yield* settleInterruptedProviderTurn({
+          threadId: input.threadId,
+          createdAt: input.createdAt,
+        });
+      }
       return;
     }
 

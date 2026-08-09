@@ -2667,11 +2667,15 @@ const makePiAdapter = <P extends PiFamilyProvider>(
           return;
         }
         const activeTurnId = turnId ?? context.activeTurnId;
+        if (activeTurnId === undefined) return;
+        // AgentSession.abort() waits for provider I/O to become idle. Accept
+        // Stop synchronously here; ProviderService owns deterministic runtime
+        // teardown and the orchestration projection settlement.
         yield* withAgentGatewayTurnCancellation(
           context.gatewaySessionLease,
           activeTurnId,
-          Effect.tryPromise({
-            try: () => context.runtime.session.abort(),
+          Effect.try({
+            try: () => context.runtime.session.agent.abort(),
             catch: (cause) =>
               new ProviderAdapterRequestError({
                 provider: provider,
