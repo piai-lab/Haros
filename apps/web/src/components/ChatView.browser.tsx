@@ -32,6 +32,7 @@ import { afterAll, afterEach, beforeAll, beforeEach, describe, expect, it, vi } 
 import { render } from "vitest-browser-react";
 
 import { type ComposerImageAttachment, useComposerDraftStore } from "../composerDraftStore";
+import { EN_MESSAGES } from "../i18n";
 import {
   AUTO_SCROLL_BOTTOM_THRESHOLD_PX,
   getScrollContainerDistanceFromBottom,
@@ -5213,7 +5214,10 @@ describe("ChatView timeline estimator parity (full app)", () => {
     });
 
     try {
-      const newThreadButton = page.getByRole("button", { name: "New thread", exact: true });
+      const newThreadButton = page.getByRole("button", {
+        name: EN_MESSAGES["nav.newAgent"],
+        exact: true,
+      });
       await expect.element(newThreadButton).toBeInTheDocument();
       await newThreadButton.click();
 
@@ -5289,7 +5293,7 @@ describe("ChatView timeline estimator parity (full app)", () => {
       const paletteNewThreadAction = await waitForElement(
         () =>
           Array.from(document.querySelectorAll<HTMLElement>('[data-slot="command-item"]')).find(
-            (item) => item.textContent?.trim().startsWith("New thread"),
+            (item) => item.textContent?.trim().startsWith(EN_MESSAGES["nav.newAgent"]),
           ) ?? null,
         "Unable to find the command-palette New thread action.",
       );
@@ -5327,7 +5331,10 @@ describe("ChatView timeline estimator parity (full app)", () => {
 
     try {
       const initialPath = mounted.router.state.location.pathname;
-      const newThreadButton = page.getByRole("button", { name: "New thread", exact: true });
+      const newThreadButton = page.getByRole("button", {
+        name: EN_MESSAGES["nav.newAgent"],
+        exact: true,
+      });
       await expect.element(newThreadButton).toBeInTheDocument();
       await newThreadButton.click();
 
@@ -5356,7 +5363,10 @@ describe("ChatView timeline estimator parity (full app)", () => {
       useStore.setState({ projects: [], threadsHydrated: false });
       await waitForLayout();
       const initialPath = mounted.router.state.location.pathname;
-      const newThreadButton = page.getByRole("button", { name: "New thread", exact: true });
+      const newThreadButton = page.getByRole("button", {
+        name: EN_MESSAGES["nav.newAgent"],
+        exact: true,
+      });
       await expect.element(newThreadButton).toBeInTheDocument();
       await newThreadButton.click();
       await waitForLayout();
@@ -5564,7 +5574,10 @@ describe("ChatView timeline estimator parity (full app)", () => {
 
     try {
       const newStudioChatButton = await waitForElement(
-        () => document.querySelector<HTMLButtonElement>('button[aria-label="New studio chat"]'),
+        () =>
+          Array.from(document.querySelectorAll<HTMLButtonElement>("button")).find(
+            (button) => button.getAttribute("aria-label") === EN_MESSAGES["nav.newChat"],
+          ) ?? null,
         "Unable to find the Studio new-chat action.",
       );
       newStudioChatButton.click();
@@ -6013,7 +6026,7 @@ describe("ChatView timeline estimator parity (full app)", () => {
     });
 
     try {
-      await page.getByRole("button", { name: "Add project", exact: true }).click();
+      await page.getByRole("button", { name: EN_MESSAGES["nav.addProject"], exact: true }).click();
       await expect
         .element(page.getByRole("heading", { name: "Create project" }))
         .toBeInTheDocument();
@@ -6070,7 +6083,7 @@ describe("ChatView timeline estimator parity (full app)", () => {
         .find((command) => command?.type === type && matches(command));
 
     try {
-      await page.getByRole("button", { name: "Add project", exact: true }).click();
+      await page.getByRole("button", { name: EN_MESSAGES["nav.addProject"], exact: true }).click();
       await expect
         .element(page.getByRole("heading", { name: "Create project" }))
         .toBeInTheDocument();
@@ -6173,7 +6186,7 @@ describe("ChatView timeline estimator parity (full app)", () => {
     });
 
     try {
-      await page.getByRole("button", { name: "Add project", exact: true }).click();
+      await page.getByRole("button", { name: EN_MESSAGES["nav.addProject"], exact: true }).click();
       await page.getByLabelText("Project folder path").fill("/repo/failing-project");
       const spaceTrigger = await waitForElement(
         () =>
