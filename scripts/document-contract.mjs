@@ -58,6 +58,7 @@ const MACHINE_BLOCKS = [
     tag: "engine-capability-composition",
     format: "json",
   },
+  { path: "architecture/workbench.md", tag: "work-surface-ia", format: "json" },
 ];
 
 function normalize(value) {
@@ -233,9 +234,7 @@ function validateBundledPiRuntimeAdoption(findings, documents) {
   let record;
   try {
     const parsed = JSON.parse(blocks[0]);
-    record = parsed?.adopted?.find(
-      (entry) => entry?.id === "bundled-omnimind-agent-runtime",
-    );
+    record = parsed?.adopted?.find((entry) => entry?.id === "bundled-omnimind-agent-runtime");
   } catch {
     return;
   }
@@ -277,6 +276,35 @@ function validateBundledPiRuntimeAdoption(findings, documents) {
   }
 }
 
+function validateWorkSurfaceInformationArchitecture(findings, documents) {
+  const documentPath = "architecture/workbench.md";
+  const blocks = blocksFor(documents.get(documentPath) ?? "", "work-surface-ia");
+  if (blocks.length !== 1) return;
+
+  let policy;
+  try {
+    policy = JSON.parse(blocks[0]);
+  } catch {
+    return;
+  }
+  const expected = {
+    primaryModes: ["Agent", "Chat"],
+    agentSecondary: ["New Agent", "Kanban", "Pull Requests", "Automations"],
+    kanbanRoutes: ["/kanban", "/kanban/:projectId"],
+    kanbanPrimaryMode: "Agent",
+    kanbanCardTarget: "folder-backed Agent Thread",
+    projectContextAction: "Open in Kanban",
+  };
+  if (JSON.stringify(policy) !== JSON.stringify(expected)) {
+    addFinding(
+      findings,
+      "workbench.work-surface-ia",
+      documentPath,
+      "Kanban must remain the Agent domain's secondary console, not a third primary mode",
+    );
+  }
+}
+
 /**
  * Validate only the durable document graph and machine-readable owner blocks.
  * Product semantics remain in the sole owners and are reviewed as prose/design;
@@ -309,6 +337,7 @@ export async function validateDocumentContract({ root, read = readFile }) {
   validateCurrentState(findings, documents);
   validateEngineCapabilityComposition(findings, documents);
   validateBundledPiRuntimeAdoption(findings, documents);
+  validateWorkSurfaceInformationArchitecture(findings, documents);
 
   return findings;
 }

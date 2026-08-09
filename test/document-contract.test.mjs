@@ -184,6 +184,22 @@ test("bundled Pi runtime adoption cannot lose its exact artifact identity", asyn
   );
 });
 
+test("Kanban remains the Agent domain's secondary console", async (t) => {
+  const root = await createFixture(t);
+  await replaceText(
+    root,
+    "architecture/workbench.md",
+    '"kanbanPrimaryMode": "Agent"',
+    '"kanbanPrimaryMode": "Chat"',
+  );
+
+  assertFinding(
+    await validateDocumentContract({ root }),
+    "workbench.work-surface-ia",
+    "architecture/workbench.md",
+  );
+});
+
 test("Campaign canonical identity is structural", async (t) => {
   const root = await createFixture(t);
   await replaceText(root, "missions/independent-omnimind-v1.md", "Status: active", "Status: done");

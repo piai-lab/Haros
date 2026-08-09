@@ -36,6 +36,19 @@ flowchart LR
 
 用户在 Settings 中显式隐藏 Chat 时，可以只显示非交互的 `Agent` 标题；恢复 Chat 的入口仍由既有 Settings/search/deep-link 提供，不能留下只有一个选项的假 switcher。正常双入口必须在 source 最小侧栏宽度、简体中文/英文、键盘与 screen reader 下保持顺序、可见性、focus 和单次激活；实现应使用与当前 route 模型相符的互斥选择或 navigation 语义，不伪造不存在的 `tabpanel` 关系。
 
+`Agent | Chat` 的“唯一一级”只约束工作模式，不删除 Agent 域二级控制台。Agent 选中时仍按 `New Agent → Kanban → Pull Requests → Automations` 呈现；`/kanban` 是跨 Project 总览，`/kanban/:projectId` 是单 Project 看板，卡片回到对应 folder-backed Agent Thread，Project context menu 保留 `Open in Kanban`。Kanban route 的顶部仍表达 Agent 域，Chat 不把 Kanban 伪装成第三种工作模式。
+
+```work-surface-ia
+{
+  "primaryModes": ["Agent", "Chat"],
+  "agentSecondary": ["New Agent", "Kanban", "Pull Requests", "Automations"],
+  "kanbanRoutes": ["/kanban", "/kanban/:projectId"],
+  "kanbanPrimaryMode": "Agent",
+  "kanbanCardTarget": "folder-backed Agent Thread",
+  "projectContextAction": "Open in Kanban"
+}
+```
+
 这项约束拥有的是稳定的产品结果，而不是旧提交的具体 DOM。历史实现可以作为视觉与行为证据，但不得整体 cherry-pick 已退休的 Product Control Plane、retained-panel 或其他旧架构。
 
 ### Agent
