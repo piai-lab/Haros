@@ -11,7 +11,8 @@ import tailwindcss from "@tailwindcss/vite";
 import react, { reactCompilerPreset } from "@vitejs/plugin-react";
 import babel from "@rolldown/plugin-babel";
 import { tanstackRouter } from "@tanstack/router-plugin/vite";
-import { defineConfig, type Plugin } from "vite";
+import type { Plugin } from "vite";
+import { defineConfig } from "vitest/config";
 import pkg from "./package.json" with { type: "json" };
 
 const port = Number(process.env.PORT ?? 5733);
@@ -183,6 +184,12 @@ function precompressPlugin(): Plugin {
 }
 
 export default defineConfig({
+  test: {
+    // Node 25 exposes a placeholder localStorage without Storage methods unless
+    // a backing file is configured. Unit tests provide their own in-memory
+    // stores, so keep the runtime global disabled in every Vitest worker.
+    execArgv: ["--no-experimental-webstorage"],
+  },
   plugins: [
     tanstackRouter({
       target: "react",

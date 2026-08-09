@@ -853,6 +853,7 @@ describe("hasLiveTurnTailWork", () => {
 
 describe("PROVIDER_OPTIONS", () => {
   it("lists available providers", () => {
+    const omnimind = PROVIDER_OPTIONS.find((option) => option.value === "omnimind");
     const claude = PROVIDER_OPTIONS.find((option) => option.value === "claudeAgent");
     const cursor = PROVIDER_OPTIONS.find((option) => option.value === "cursor");
     const grok = PROVIDER_OPTIONS.find((option) => option.value === "grok");
@@ -861,6 +862,7 @@ describe("PROVIDER_OPTIONS", () => {
     const opencode = PROVIDER_OPTIONS.find((option) => option.value === "opencode");
     const pi = PROVIDER_OPTIONS.find((option) => option.value === "pi");
     expect(PROVIDER_OPTIONS).toEqual([
+      { value: "omnimind", label: "OmniMind Agent", available: true },
       { value: "codex", label: "Codex", available: true },
       { value: "claudeAgent", label: "Claude", available: true },
       { value: "cursor", label: "Cursor", available: true },
@@ -871,6 +873,11 @@ describe("PROVIDER_OPTIONS", () => {
       { value: "opencode", label: "OpenCode", available: true },
       { value: "pi", label: "Pi", available: true },
     ]);
+    expect(omnimind).toEqual({
+      value: "omnimind",
+      label: "OmniMind Agent",
+      available: true,
+    });
     expect(claude).toEqual({
       value: "claudeAgent",
       label: "Claude",
