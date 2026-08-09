@@ -1189,11 +1189,8 @@ function SidebarActivityBellButton({
   );
 }
 
-/**
- * App-switcher style surface picker: a compact pill with the active surface
- * name that opens a menu of surfaces, each with a one-line description and a
- * check on the active entry.
- */
+/** Route-native primary work navigation. Both product surfaces stay visible;
+ * the active route is the only selection authority. */
 export function SidebarSurfacePicker({
   views,
   activeView,
@@ -1206,71 +1203,59 @@ export function SidebarSurfacePicker({
   onPrewarmView?: (view: SidebarView) => void;
 }) {
   const { t } = useI18n();
-  const copyByView: Record<SidebarView, { title: string; description: string }> = {
-    threads: { title: t("nav.agent"), description: t("nav.agentDescription") },
-    studio: { title: t("nav.chat"), description: t("nav.chatDescription") },
+  const titleByView: Record<SidebarView, string> = {
+    threads: t("nav.agent"),
+    studio: t("nav.chat"),
   };
-  const activeCopy = copyByView[activeView];
 
-  return (
-    <Menu>
-      <MenuTrigger
-        render={
-          <button
-            type="button"
-            aria-label={t("shell.switchSurface")}
-            className={cn(
-              "flex h-8 min-w-0 cursor-pointer items-center gap-1.5 rounded-lg px-2.5",
-              SIDEBAR_ROW_FOCUS_CLASS_NAME,
-              SIDEBAR_ROW_HOVER_CLASS_NAME,
-            )}
-          />
-        }
+  if (views.length === 1) {
+    return (
+      <div
+        className="flex h-8 min-w-0 flex-1 items-center px-2.5"
+        data-slot="sidebar-surface-title"
       >
         <span className="font-display min-w-0 truncate text-[17px] text-foreground">
-          {activeCopy.title}
+          {titleByView[views[0] ?? "threads"]}
         </span>
-        <DisclosureChevron open className="text-muted-foreground/70" />
-      </MenuTrigger>
-      <ComposerPickerMenuPopup
-        align="start"
-        side="bottom"
-        className="sidebar-surface-picker-menu min-w-64"
-      >
-        <MenuRadioGroup
-          className="flex flex-col gap-0.5"
-          value={activeView}
-          onValueChange={(value) => {
-            const view = value as SidebarView;
-            onPrewarmView?.(view);
-            onSelectView(view);
-          }}
-        >
-          {views.map((view) => {
-            const copy = copyByView[view];
-            return (
-              <MenuRadioItem
-                key={view}
-                value={view}
-                // Base UI radio items keep the menu open by default; this picker is a
-                // one-shot surface switch, so selecting an entry should dismiss it.
-                closeOnClick
-                className="items-center rounded-[10px] data-checked:bg-[var(--color-background-button-secondary-hover)]"
-              >
-                <span className="flex min-w-0 flex-1 flex-col gap-0.5">
-                  <span className="text-[13px] font-medium leading-none text-foreground">
-                    {copy.title}
-                  </span>
-                  <span className="text-[11px] leading-snug text-muted-foreground">
-                    {copy.description}
-                  </span>
-                </span>
-              </MenuRadioItem>
-            );
-          })}
-        </MenuRadioGroup>
-      </ComposerPickerMenuPopup>
-    </Menu>
+      </div>
+    );
+  }
+
+  return (
+    <nav
+      aria-label={t("shell.switchSurface")}
+      className="grid h-8 min-w-0 flex-1 max-w-40 grid-cols-2 gap-0.5 rounded-lg bg-[var(--color-background-button-secondary)] p-0.5"
+      data-slot="sidebar-surface-navigation"
+    >
+      {views.map((view) => {
+        const active = view === activeView;
+        return (
+          <button
+            key={view}
+            type="button"
+            aria-current={active ? "page" : undefined}
+            data-active={active ? "true" : "false"}
+            onMouseEnter={() => onPrewarmView?.(view)}
+            onFocus={() => onPrewarmView?.(view)}
+            onPointerDown={() => onPrewarmView?.(view)}
+            onClick={() => {
+              if (active) return;
+              onPrewarmView?.(view);
+              onSelectView(view);
+            }}
+            className={cn(
+              "flex min-w-0 items-center justify-center rounded-md px-2 text-[13px] font-medium transition-colors motion-reduce:transition-none",
+              SIDEBAR_ROW_FOCUS_CLASS_NAME,
+              active
+                ? "bg-[var(--color-background-button-secondary-hover)] text-foreground shadow-xs"
+                : "text-muted-foreground hover:bg-[var(--color-background-button-secondary-hover)]/65 hover:text-foreground",
+            )}
+          >
+            <span className="min-w-0 truncate">{titleByView[view]}</span>
+          </button>
+        );
+      })}
+    </nav>
   );
 }
 
@@ -5825,8 +5810,8 @@ export default function Sidebar() {
                 ) : null}
               </div>
             </div>
-            {/* The keyed content remounts with a short enter animation while the picker
-                stays mounted so its thumb can glide between Projects and Studio. */}
+            {/* The keyed content remounts with a short enter animation while the
+                route-native surface navigation stays mounted. */}
             <div
               key={isOnStudio ? "studio" : activityViewEnabled ? "activity" : "threads"}
               className="sidebar-surface-enter"
