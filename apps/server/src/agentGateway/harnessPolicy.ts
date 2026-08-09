@@ -75,6 +75,7 @@ const PROVIDERS_WITH_THREAD_SCOPED_OMNIMIND_MCP = new Set<ProviderKind>([
   "opencode",
   "kilo",
   "pi",
+  "omnimind",
 ]);
 
 export function providerHasOmniMindGatewayControl(input: {

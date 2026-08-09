@@ -41,7 +41,10 @@ import {
 } from "@synara/contracts";
 import { Effect, FileSystem, Layer, Option, Queue, Stream } from "effect";
 
-import { takeOmniMindHarnessPolicyForProviderSession } from "../../agentGateway/harnessPolicy.ts";
+import {
+  providerHasOmniMindGatewayControl,
+  renderOmniMindHarnessPolicy,
+} from "../../agentGateway/harnessPolicy.ts";
 import {
   callAgentGatewayMcpTool,
   listAgentGatewayMcpTools,
@@ -357,7 +360,6 @@ const OMNIMIND_AGENT_FAMILY = {
 } satisfies PiFamilyAdapterConfig<"omnimind">;
 
 interface PiSessionContext {
-  harnessPolicyDelivered?: boolean;
   readonly gatewayControlAvailable: boolean;
   gatewaySessionLease?: AgentGatewaySessionLease;
   gatewayConnection?: AgentGatewayMcpConnection;
@@ -952,6 +954,38 @@ function textFromToolResult(result: unknown): string | undefined {
       : [];
   });
   return parts.length > 0 ? parts.join("\n") : undefined;
+}
+
+export function piToolTimelineDetail(result: unknown): string | undefined {
+  return trimToUndefined(textFromToolResult(result));
+}
+
+export function makePiGatewayLoadWarning(displayName: string) {
+  return {
+    message: `OmniMind MCP tools could not be loaded for this ${displayName} session. Engine-native tools remain available; OmniMind MCP actions are unavailable.`,
+    detail: { source: "omnimind-mcp", availability: "failed" } as const,
+  };
+}
+
+/**
+ * Pi owns native Prompt, Skill, Extension, and input-hook expansion. Keep the
+ * host policy in Pi's existing system-prompt projection so slash input reaches
+ * that source-locked pipeline unchanged.
+ */
+export function makePiHostSystemPrompt(input: {
+  readonly provider: ProviderKind;
+  readonly gatewayControlAvailable: boolean;
+}): string {
+  return [
+    "<omnimind_host_context>",
+    renderOmniMindHarnessPolicy({
+      gatewayControlAvailable: providerHasOmniMindGatewayControl({
+        provider: input.provider,
+        scopedGatewayConnectionAvailable: input.gatewayControlAvailable,
+      }),
+    }),
+    "</omnimind_host_context>",
+  ].join("\n");
 }
 
 function toolExitCode(result: unknown): number | null | undefined {
@@ -1923,7 +1957,7 @@ const makePiAdapter = <P extends PiFamilyProvider>(
         case "tool_execution_update": {
           const tracked = context.activeToolItems.get(event.toolCallId);
           if (!tracked) return;
-          const detail = textFromToolResult(event.partialResult);
+          const detail = piToolTimelineDetail(event.partialResult);
           recordItem(context, {
             type: "tool_call",
             status: "updated",
@@ -1960,7 +1994,7 @@ const makePiAdapter = <P extends PiFamilyProvider>(
             itemType: toolItemType(event.toolName),
           };
           context.activeToolItems.delete(event.toolCallId);
-          const detail = textFromToolResult(event.result);
+          const detail = piToolTimelineDetail(event.result);
           recordItem(context, {
             type: "tool_call",
             status: event.isError ? "failed" : "completed",
@@ -2134,6 +2168,7 @@ const makePiAdapter = <P extends PiFamilyProvider>(
       thinkingLevel?: ThinkingLevel;
       processSupervisor: PiBashProcessSupervisor;
       gatewayTools?: ReadonlyArray<ToolDefinition>;
+      hostSystemPrompt: string;
     }) => {
       const modelRuntime = await createPiModelRuntime(input.agentDir, input.sdk);
       const createRuntime: CreateAgentSessionRuntimeFactory = async ({
@@ -2146,6 +2181,9 @@ const makePiAdapter = <P extends PiFamilyProvider>(
           cwd,
           agentDir,
           modelRuntime,
+          resourceLoaderOptions: {
+            appendSystemPromptOverride: (base) => [...base, input.hostSystemPrompt],
+          },
         });
         const registry = modelRegistryFacade(services.modelRuntime, input.sdk);
         const model = findModelInRegistry(registry, input.modelId);
@@ -2238,6 +2276,7 @@ const makePiAdapter = <P extends PiFamilyProvider>(
           provider,
         );
         const agentGatewayConnection = agentGatewaySessionLease?.connection;
+        let gatewayToolLoadFailed = false;
         const gatewayTools = agentGatewayConnection
           ? yield* releaseAgentGatewaySessionLeaseOnInterrupt(
               agentGatewaySessionLease,
@@ -2253,13 +2292,16 @@ const makePiAdapter = <P extends PiFamilyProvider>(
                 catch: (cause) => cause,
               }),
             ).pipe(
-              Effect.catch((cause) =>
-                Effect.sync(() => agentGatewaySessionLease?.release()).pipe(
+              Effect.catch(() =>
+                Effect.sync(() => {
+                  gatewayToolLoadFailed = true;
+                  agentGatewaySessionLease?.release();
+                }).pipe(
                   Effect.andThen(
-                    Effect.logWarning(
-                      "Pi could not install thread-scoped OmniMind gateway tools",
-                      cause,
-                    ),
+                    Effect.logWarning("Pi could not install thread-scoped OmniMind gateway tools", {
+                      provider,
+                      reason: "gateway-discovery-failed",
+                    }),
                   ),
                   Effect.as([] as ReadonlyArray<ToolDefinition>),
                 ),
@@ -2283,6 +2325,10 @@ const makePiAdapter = <P extends PiFamilyProvider>(
                 ...(thinkingLevel ? { thinkingLevel } : {}),
                 processSupervisor,
                 ...(gatewayControlAvailable ? { gatewayTools } : {}),
+                hostSystemPrompt: makePiHostSystemPrompt({
+                  provider,
+                  gatewayControlAvailable,
+                }),
               }),
             catch: (cause) =>
               new ProviderAdapterRequestError({
@@ -2377,6 +2423,19 @@ const makePiAdapter = <P extends PiFamilyProvider>(
             }),
           ),
         );
+        if (gatewayToolLoadFailed) {
+          const warning = makePiGatewayLoadWarning(displayName);
+          offerRuntimeEvent({
+            ...makeEventBase(context, { includeTurnId: false }),
+            type: "runtime.warning",
+            payload: warning,
+            raw: {
+              source: "pi.sdk.event",
+              method: "gateway/discovery-failed",
+              payload: { provider },
+            },
+          } satisfies ProviderRuntimeEvent);
+        }
         const loadedExtensions = runtime.session.resourceLoader.getExtensions().extensions;
         if (loadedExtensions.length > 0) {
           const extensionNames = loadedExtensions.map(extensionDisplayName);
@@ -2596,13 +2655,8 @@ const makePiAdapter = <P extends PiFamilyProvider>(
             resumeCursor: getSessionFile(context.runtime.session),
           };
         }
-        const harnessPolicy = takeOmniMindHarnessPolicyForProviderSession(context, {
-          provider: provider,
-          scopedGatewayConnectionAvailable: context.gatewayControlAvailable,
-        });
-        const providerText = [harnessPolicy, payload.text].filter(Boolean).join("\n\n");
         void context.runtime.session
-          .prompt(providerText, payload.images.length > 0 ? { images: payload.images } : undefined)
+          .prompt(payload.text, payload.images.length > 0 ? { images: payload.images } : undefined)
           .catch((cause) => {
             completePromptRejection(context, turnId, cause);
           });
@@ -2617,11 +2671,6 @@ const makePiAdapter = <P extends PiFamilyProvider>(
       Effect.gen(function* () {
         const context = yield* requireSession(input.threadId);
         const payload = yield* buildPromptPayload(input);
-        const harnessPolicy = takeOmniMindHarnessPolicyForProviderSession(context, {
-          provider: provider,
-          scopedGatewayConnectionAvailable: context.gatewayControlAvailable,
-        });
-        const providerText = [harnessPolicy, payload.text].filter(Boolean).join("\n\n");
         const turnId = context.activeTurnId ?? TurnId.makeUnsafe(crypto.randomUUID());
         if (!context.activeTurnId) {
           context.activeTurnId = turnId;
@@ -2629,7 +2678,7 @@ const makePiAdapter = <P extends PiFamilyProvider>(
         }
         if (context.runtime.session.isStreaming) {
           yield* Effect.tryPromise({
-            try: () => context.runtime.session.steer(providerText, payload.images),
+            try: () => context.runtime.session.steer(payload.text, payload.images),
             catch: (cause) =>
               new ProviderAdapterRequestError({
                 provider: provider,
@@ -2641,7 +2690,7 @@ const makePiAdapter = <P extends PiFamilyProvider>(
         } else {
           void context.runtime.session
             .prompt(
-              providerText,
+              payload.text,
               payload.images.length > 0 ? { images: payload.images } : undefined,
             )
             .catch((cause) => {

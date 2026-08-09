@@ -20,12 +20,43 @@ import {
   getPiSupportedThinkingOptions,
   buildPiAgentGatewayCustomTools,
   makePiBashProcessSupervisor,
+  makePiGatewayLoadWarning,
+  makePiHostSystemPrompt,
   makePiRuntimeEventBase,
   makePiUserInputOptions,
   piModelHasConfiguredCredentials,
+  piToolTimelineDetail,
   PLAIN_PI_EXTENSION_THEME,
   toPiProviderModelDescriptor,
 } from "./PiAdapter";
+
+describe("Pi native resource projection", () => {
+  it("keeps native slash input in Pi and injects OmniMind policy through its system prompt", () => {
+    const prompt = makePiHostSystemPrompt({
+      provider: "omnimind",
+      gatewayControlAvailable: true,
+    });
+
+    expect(prompt).toContain("<omnimind_host_context>");
+    expect(prompt).toContain("Use the omnimind_* tools");
+    expect(prompt).not.toContain("OmniMind MCP control is unavailable");
+  });
+
+  it("keeps usable native tools visible when OmniMind MCP discovery fails", () => {
+    expect(makePiGatewayLoadWarning("OmniMind Agent")).toEqual({
+      message:
+        "OmniMind MCP tools could not be loaded for this OmniMind Agent session. Engine-native tools remain available; OmniMind MCP actions are unavailable.",
+      detail: { source: "omnimind-mcp", availability: "failed" },
+    });
+  });
+
+  it("normalizes native tool text before it reaches the Timeline event contract", () => {
+    expect(piToolTimelineDetail({ content: [{ type: "text", text: "  native output\n" }] })).toBe(
+      "native output",
+    );
+    expect(piToolTimelineDetail({ content: [{ type: "text", text: "  \n" }] })).toBeUndefined();
+  });
+});
 
 describe("Pi credential gate", () => {
   it("requires configured auth for the selected upstream model", () => {
