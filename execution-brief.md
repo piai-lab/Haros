@@ -106,6 +106,6 @@ OmniMind Agent 是内部最深验收路线。stock Pi 与其他 shipped Provider
 
 ## 10. 当前唯一下一动作
 
-Stage 0–2 已形成 candidate；当前先继续收口 Stage 3 的 F-17：用现有唯一 message catalog 清除正常可达 OmniMind-owned 产品面的硬编码文案，以 source falsifier 和隔离 macOS Electron 的中英真实路径证伪覆盖缺口。F-17 的当前 focused 闭环完成后、Stage 3 字节冻结前，恢复 Workbench owner 定义的侧栏顶部 `Agent` 左/`Chat` 右同时可见、一次激活入口；只复用当前 route/restore/prewarm 和既有 UI 机制，并补最窄 browser/真实 Electron 反证。同时从 Public Surface sole owner 的唯一 denylist 建立窄 production-source 泄漏检查，不恢复旧 identity-governance。上述双入口与 public-surface 回归均闭合后，才在同一 frozen SHA 运行一次相关总门并更新受影响 Campaign evidence；在此之前不得进入 Stage 4/F-18。
+Stage 0–3 已形成 producer candidate；Stage 3 产品字节冻结在 `57b4aec02efcb4ce0b581764ef6a57c7feecf6e0`，相关总门已在该 SHA 运行一次。当前停在 Stage 4/F-18 之前，不继续扩大产品面、生态矩阵或重复总门；只有维护者显式启动发行阶段后，才进入三平台 artifact/install/update/signing/SBOM/legal 与 fresh completion audit。candidate 不能被本 Runner 自证为 verified 或可发布 V1。
 
 任何继续扩充 Product Truth semantic meter、平行 Product Control Plane、跨 Provider Package lifecycle、Remote 或 settings taxonomy 重写的工作都应停止。
