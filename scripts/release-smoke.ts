@@ -374,6 +374,16 @@ function verifyDesktopStageLockAuthority(): void {
     "omnimindWindowsPublisherSubject: resolvedBuildConfig.windowsPublisherSubject",
     "Expected signed Windows packages to carry the independently configured certificate subject DN.",
   );
+  assertContains(
+    buildScript,
+    "buildConfig.publish = null",
+    "Expected build-only artifacts to deny ambient update-provider inference.",
+  );
+  assertContains(
+    buildScript,
+    "delete buildEnv.GITHUB_TOKEN",
+    "Expected build-only artifacts to remove ambient publication authority from the packager.",
+  );
 
   const lockfile = readFileSync(resolve(repoRoot, RELEASE_LOCKFILE_PATH), "utf8");
   const packagesSectionOffset = lockfile.indexOf('\n  "packages": {');

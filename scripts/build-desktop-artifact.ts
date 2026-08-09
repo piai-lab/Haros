@@ -754,7 +754,12 @@ const createBuildConfig = Effect.fn("createBuildConfig")(function* (
         url: `http://localhost:${mockUpdateServerPort ?? 3000}`,
       },
     ];
+  } else {
+    // Explicit null prevents electron-builder from inferring a provider from an
+    // unrelated ambient token. A build-only artifact has no update authority.
+    buildConfig.publish = null;
   }
+  const macUpdateZipIncluded = platform === "mac" && Boolean(publishConfig || mockUpdates);
 
   const windowsSigningConfig =
     platform === "win" && signed ? yield* AzureTrustedSigningOptionsConfig : undefined;
@@ -774,6 +779,7 @@ const createBuildConfig = Effect.fn("createBuildConfig")(function* (
     platform,
     target,
     signed,
+    includeMacUpdateZip: macUpdateZipIncluded,
     ...(windowsAzureSignOptions ? { windowsAzureSignOptions } : {}),
   } as const;
 
@@ -781,6 +787,7 @@ const createBuildConfig = Effect.fn("createBuildConfig")(function* (
 
   return {
     buildConfig,
+    macUpdateZipIncluded,
     windowsPublisherSubject: windowsSigningConfig?.subjectDistinguishedName ?? null,
   };
 });
@@ -1080,6 +1087,13 @@ const buildDesktopArtifact = Effect.fn("buildDesktopArtifact")(function* (
     delete buildEnv.APPLE_API_KEY_ID;
     delete buildEnv.APPLE_API_ISSUER;
   }
+  if (!resolveGitHubPublishConfig() && !options.mockUpdates) {
+    delete buildEnv.GH_TOKEN;
+    delete buildEnv.GITHUB_TOKEN;
+    delete buildEnv.GITLAB_TOKEN;
+    delete buildEnv.KEYGEN_TOKEN;
+    delete buildEnv.BITBUCKET_TOKEN;
+  }
 
   if (process.platform === "win32") {
     const python = resolvePythonForNodeGyp();
@@ -1132,7 +1146,7 @@ const buildDesktopArtifact = Effect.fn("buildDesktopArtifact")(function* (
     );
   }
 
-  if (options.platform === "mac") {
+  if (options.platform === "mac" && resolvedBuildConfig.macUpdateZipIncluded) {
     yield* Effect.log("[desktop-artifact] Repacking and validating macOS update zip...");
     const finalizedZip = yield* Effect.tryPromise({
       try: () =>

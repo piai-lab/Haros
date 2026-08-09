@@ -31,6 +31,7 @@ export interface CreateDesktopPlatformBuildConfigInput {
   readonly platform: "linux" | "mac" | "win";
   readonly target: string;
   readonly signed?: boolean;
+  readonly includeMacUpdateZip?: boolean;
   readonly windowsAzureSignOptions?: Record<string, string>;
 }
 
@@ -69,7 +70,10 @@ export function createDesktopPlatformBuildConfig(
 
   if (input.platform === "mac") {
     const mac = {
-      target: input.target === "dmg" ? [input.target, "zip"] : [input.target],
+      target:
+        input.target === "dmg" && input.includeMacUpdateZip !== false
+          ? [input.target, "zip"]
+          : [input.target],
       icon: MAC_DMG_ICON_PATH,
       category: "public.app-category.developer-tools",
       hardenedRuntime: input.signed === true,

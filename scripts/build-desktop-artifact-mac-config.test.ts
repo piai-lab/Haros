@@ -63,6 +63,17 @@ describe("createDesktopPlatformBuildConfig", () => {
     assert.deepStrictEqual(config.dmg, { sign: false, writeUpdateInfo: false });
   });
 
+  it("omits the updater ZIP when a build-only DMG has no feed authority", () => {
+    const config = createDesktopPlatformBuildConfig({
+      platform: "mac",
+      target: "dmg",
+      signed: false,
+      includeMacUpdateZip: false,
+    });
+
+    assert.deepStrictEqual((config.mac as Record<string, unknown>).target, ["dmg"]);
+  });
+
   it("leaves non-macOS platform configs unchanged", () => {
     const linux = createDesktopPlatformBuildConfig({
       platform: "linux",
