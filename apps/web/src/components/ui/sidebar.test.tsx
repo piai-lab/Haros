@@ -83,7 +83,7 @@ describe("sidebar interactive cursors", () => {
     );
 
     expect(html).toContain('data-slot="sidebar-trigger"');
-    expect(html).toContain("Toggle Sidebar");
+    expect(html).toContain("Toggle sidebar");
   });
 
   it("omits the header trigger when the desktop sidebar is expanded", () => {
