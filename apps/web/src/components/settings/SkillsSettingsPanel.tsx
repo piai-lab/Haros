@@ -20,6 +20,7 @@ import { serverQueryKeys, serverSettingsQueryOptions } from "~/lib/serverReactQu
 import {
   buildSettingsSkillGroups,
   buildSettingsSkillSections,
+  isOmniMindSkillSource,
   providerDisplayName,
   settingsSkillNameKey,
 } from "./skillsSettingsModel";
@@ -93,8 +94,12 @@ export function SkillsSettingsPanel() {
       });
   };
 
-  const totalSkills = skillGroups.length;
-  const enabledSkills = skillGroups.filter((group) => !disabledSkillNames.has(group.key)).length;
+  const omnimindSkillGroups = skillGroups.filter((group) =>
+    group.sources.some((source) => isOmniMindSkillSource(source.skill)),
+  );
+  const enabledOmniMindSkills = omnimindSkillGroups.filter(
+    (group) => !disabledSkillNames.has(group.key),
+  ).length;
   const omnimindSkillsDir = catalogQuery.data?.omnimindSkillsDir;
 
   return (
@@ -102,7 +107,7 @@ export function SkillsSettingsPanel() {
       <SettingsSection title="Portable skills">
         <SettingsRow
           title="OmniMind skills folder"
-          description="Skills placed here are available on every provider. When a provider already ships its own copy of a skill, that copy is used; otherwise OmniMind's copy is the fallback."
+          description="Skills placed here are projected into compatible Engines without copying into their private homes. Same-named Engine-native assets remain separate."
           status={
             omnimindSkillsDir ? (
               <code className="break-all text-[11px] text-muted-foreground">
@@ -114,7 +119,7 @@ export function SkillsSettingsPanel() {
             <span className="text-xs font-medium text-muted-foreground">
               {catalogQuery.isLoading
                 ? "Scanning…"
-                : `${enabledSkills} of ${totalSkills} skill${totalSkills === 1 ? "" : "s"} enabled`}
+                : `${enabledOmniMindSkills} of ${omnimindSkillGroups.length} OmniMind skill${omnimindSkillGroups.length === 1 ? "" : "s"} enabled`}
             </span>
           }
         />
@@ -129,7 +134,7 @@ export function SkillsSettingsPanel() {
         </SettingsSection>
       ) : null}
 
-      {!catalogQuery.isLoading && !catalogQuery.isError && totalSkills === 0 ? (
+      {!catalogQuery.isLoading && !catalogQuery.isError && skillGroups.length === 0 ? (
         <SettingsSection title="Skills">
           <SettingsRow
             title="No skills found"
@@ -142,6 +147,9 @@ export function SkillsSettingsPanel() {
         return (
           <SettingsSection key={section.key} title={section.title}>
             {section.groups.map((group) => {
+              const omnimindOwned = group.sources.some((source) =>
+                isOmniMindSkillSource(source.skill),
+              );
               const enabled = !disabledSkillNames.has(group.key);
               return (
                 <SettingsRow
@@ -175,13 +183,17 @@ export function SkillsSettingsPanel() {
                     </span>
                   }
                   control={
-                    <Switch
-                      checked={enabled}
-                      onCheckedChange={(checked) =>
-                        setSkillEnabled(group.primarySkill.name, Boolean(checked))
-                      }
-                      aria-label={`Enable the ${group.displayName} skill`}
-                    />
+                    omnimindOwned ? (
+                      <Switch
+                        checked={enabled}
+                        onCheckedChange={(checked) =>
+                          setSkillEnabled(group.primarySkill.name, Boolean(checked))
+                        }
+                        aria-label={`Enable the ${group.displayName} OmniMind skill`}
+                      />
+                    ) : (
+                      <span className="text-xs text-muted-foreground">Engine managed</span>
+                    )
                   }
                 />
               );

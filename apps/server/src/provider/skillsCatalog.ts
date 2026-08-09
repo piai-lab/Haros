@@ -1,13 +1,12 @@
 // FILE: skillsCatalog.ts
 // Purpose: Generic Agent Skill discovery primitives (frontmatter parsing, SKILL.md
-//          walking) plus the unified cross-provider skills catalog backing OmniMind
-//          portable skills. Aggregates `~/.omnimind/skills` with every provider-native
-//          skills folder, deduping by name with provider-native copies winning for
-//          the active provider.
+//          walking) plus the selected Engine's native skill roots and OmniMind
+//          Library skills. Distinct same-named files retain their own identity.
 // Layer: Server provider discovery helper
 // Exports: parseSkillFrontmatter, collectSkillsFromRoots, discoverSkillsCatalog,
 //          mergeSkillsIntoCatalog, filterDisabledSkills, ensureOmniMindSkillsDir
 
+import { existsSync, realpathSync } from "node:fs";
 import * as fs from "node:fs/promises";
 import * as nodePath from "node:path";
 
@@ -115,6 +114,22 @@ export function ancestorsFromDeepest(cwd: string): string[] {
     }
     current = parent;
   }
+}
+
+function projectAncestors(cwd: string, homeDir: string): string[] {
+  const ancestors = ancestorsFromDeepest(cwd);
+  const repositoryBoundaryIndex = ancestors.findIndex((ancestor) =>
+    existsSync(nodePath.join(ancestor, ".git")),
+  );
+  if (repositoryBoundaryIndex >= 0) {
+    return ancestors.slice(0, repositoryBoundaryIndex + 1);
+  }
+
+  const configuredHome = nodePath.resolve(homeDir);
+  const homeBoundaryIndex = ancestors.findIndex(
+    (ancestor) => nodePath.resolve(ancestor) === configuredHome,
+  );
+  return homeBoundaryIndex >= 0 ? ancestors.slice(0, homeBoundaryIndex + 1) : ancestors.slice(0, 1);
 }
 
 async function readdirOrEmpty(path: string): Promise<import("node:fs").Dirent[]> {
@@ -481,8 +496,8 @@ function projectRootNamesForOrigin(origin: SkillsHomeOrigin): readonly string[] 
   return SKILL_ORIGIN_ROOTS[origin].projectRootNames;
 }
 
-// Native copies first so an agent keeps using its own skill, then OmniMind as the
-// portable fallback, then the remaining provider homes for cross-provider reuse.
+// Keep each selected Engine's documented compatible native roots together. The
+// OmniMind Library root is added separately; unrelated Engine homes stay out.
 function preferredOriginsForProvider(
   provider: ProviderKind | null | undefined,
 ): ReadonlyArray<SkillsHomeOrigin> {
@@ -534,7 +549,7 @@ function rootsForOrderedOrigins(
   const projectRoots: SkillRoot[] = [];
   const cwd = input.cwd?.trim();
   if (cwd) {
-    for (const ancestor of ancestorsFromDeepest(cwd)) {
+    for (const ancestor of projectAncestors(cwd, input.homeDir)) {
       const seenRootNames = new Set<string>();
       for (const origin of orderedOrigins) {
         for (const rootName of projectRootNamesForOrigin(origin)) {
@@ -566,7 +581,11 @@ function rootsForOrderedOrigins(
 export function skillsCatalogRoots(input: SkillsCatalogRootInput): SkillRoot[] {
   return rootsForOrderedOrigins(
     input,
-    orderedOriginsForProvider(input.provider, input.includeOmniMindRoot !== false),
+    orderedOriginsForProvider(
+      input.provider,
+      input.includeOmniMindRoot !== false,
+      input.provider === null || input.provider === undefined,
+    ),
   );
 }
 
@@ -599,12 +618,18 @@ export async function discoverSkillsCatalog(
 
   const scan = (async () => {
     await ensureOmniMindSkillsDir(input.omnimindBaseDir);
+    const includesClaudeNativeRoots =
+      input.provider === null ||
+      input.provider === undefined ||
+      preferredOriginsForProvider(input.provider).includes("claude");
     const roots = [
       ...skillsCatalogRoots(input),
-      ...(await discoverClaudePluginSkillRoots({
-        homeDir: input.homeDir,
-        ...(input.cwd ? { cwd: input.cwd } : {}),
-      })),
+      ...(includesClaudeNativeRoots
+        ? await discoverClaudePluginSkillRoots({
+            homeDir: input.homeDir,
+            ...(input.cwd ? { cwd: input.cwd } : {}),
+          })
+        : []),
     ];
     const skills = input.includeDuplicateOrigins
       ? await collectSkillDescriptorsFromRoots(roots)
@@ -630,19 +655,34 @@ export async function discoverSkillsCatalog(
   }
 }
 
-// Provider-native discovery results win on name conflicts; catalog entries fill the gaps.
+// Provider-native discovery may rediscover the same physical file as the filesystem
+// catalog. Collapse that exact identity only; same-named files at different paths are
+// intentionally preserved so the UI and dispatch reference never silently switch origin.
 export function mergeSkillsIntoCatalog(input: {
   readonly native: ReadonlyArray<ProviderSkillDescriptor>;
   readonly catalog: ReadonlyArray<ProviderSkillDescriptor>;
 }): ProviderSkillDescriptor[] {
-  const byName = new Map<string, ProviderSkillDescriptor>();
+  const byIdentity = new Map<string, ProviderSkillDescriptor>();
   for (const skill of [...input.native, ...input.catalog]) {
-    const key = skillNameKey(skill.name);
-    if (!byName.has(key)) {
-      byName.set(key, skill);
+    let canonicalPath: string;
+    try {
+      canonicalPath = realpathSync.native(skill.path);
+    } catch {
+      canonicalPath = nodePath.resolve(skill.path);
+    }
+    const key = `${skillNameKey(skill.name)}\u0000${canonicalPath}`;
+    if (!byIdentity.has(key)) {
+      byIdentity.set(key, skill);
     }
   }
-  return [...byName.values()];
+  return [...byIdentity.values()];
+}
+
+export function isOmniMindLibrarySkill(skill: ProviderSkillDescriptor): boolean {
+  if (skill.scope === "omnimind") {
+    return true;
+  }
+  return skill.path.split(/[\\/]+/).includes(".omnimind");
 }
 
 export function filterDisabledSkills(
@@ -653,5 +693,7 @@ export function filterDisabledSkills(
     return [...skills];
   }
   const disabled = new Set(disabledNames.map((name) => skillNameKey(name)));
-  return skills.filter((skill) => !disabled.has(skillNameKey(skill.name)));
+  return skills.filter(
+    (skill) => !isOmniMindLibrarySkill(skill) || !disabled.has(skillNameKey(skill.name)),
+  );
 }

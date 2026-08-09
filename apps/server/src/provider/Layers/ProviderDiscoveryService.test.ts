@@ -169,6 +169,7 @@ describe("ProviderDiscoveryService.listSkills", () => {
 
     const shared = result.skills.find((skill) => skill.name === "shared");
     expect(shared?.path).toBe(nativeShared.path);
+    expect(result.skills.filter((skill) => skill.name.toLowerCase() === "shared")).toHaveLength(2);
     expect(result.skills.some((skill) => skill.name === "portable")).toBe(true);
   });
 

@@ -146,6 +146,24 @@ describe("discoverSkillsCatalog", () => {
     expect(piRoots.some((root) => root.path.includes(`${path.sep}.pi${path.sep}`))).toBe(true);
   });
 
+  it("does not scan unrelated Engine homes for a selected provider", () => {
+    const codexRoots = skillsCatalogRoots({
+      homeDir,
+      omnimindBaseDir,
+      provider: "codex",
+    });
+    const paths = codexRoots.map((root) => root.path);
+
+    expect(paths.some((rootPath) => rootPath.includes(`${path.sep}.codex${path.sep}`))).toBe(true);
+    expect(paths.some((rootPath) => rootPath.includes(`${path.sep}.omnimind${path.sep}`))).toBe(
+      true,
+    );
+    expect(paths.some((rootPath) => rootPath.includes(`${path.sep}.claude${path.sep}`))).toBe(
+      false,
+    );
+    expect(paths.some((rootPath) => rootPath.includes(`${path.sep}.pi${path.sep}`))).toBe(false);
+  });
+
   it("discovers only the registered Claude plugin version for Grok with its native namespace", async () => {
     const currentInstallPath = claudePluginInstallPath("skill-forge", "workflow-kit", "1.21.0");
     const staleInstallPath = claudePluginInstallPath("skill-forge", "workflow-kit", "1.20.0");
@@ -455,6 +473,7 @@ description: Direct Pi markdown skill
   it("includes project-level .omnimind skills when a cwd is provided", async () => {
     const cwd = path.join(root, "repo", "packages", "web");
     await mkdir(cwd, { recursive: true });
+    await mkdir(path.join(root, "repo", ".git"));
     await writeSkill(
       path.join(root, "repo", ".omnimind", "skills", "repo-skill"),
       "repo-skill",
@@ -463,6 +482,26 @@ description: Direct Pi markdown skill
 
     const skills = await discoverSkillsCatalog({ cwd, homeDir, omnimindBaseDir });
     expect(skills.find((skill) => skill.name === "repo-skill")?.scope).toBe("project");
+  });
+
+  it("does not scan Engine homes above the nearest repository boundary", async () => {
+    const cwd = path.join(root, "repo", "packages", "web");
+    await mkdir(cwd, { recursive: true });
+    await mkdir(path.join(root, "repo", ".git"));
+    await writeSkill(
+      path.join(root, ".omnimind", "skills", "outside-repo"),
+      "outside-repo",
+      "Must stay outside the selected project",
+    );
+    await writeSkill(
+      path.join(root, "repo", ".omnimind", "skills", "inside-repo"),
+      "inside-repo",
+      "Selected project skill",
+    );
+
+    const skills = await discoverSkillsCatalog({ cwd, homeDir, omnimindBaseDir });
+    expect(skills.some((skill) => skill.name === "outside-repo")).toBe(false);
+    expect(skills.find((skill) => skill.name === "inside-repo")?.scope).toBe("project");
   });
 
   it("keeps home origins when the cwd lives under the home dir", async () => {
@@ -500,28 +539,75 @@ describe("mergeSkillsIntoCatalog", () => {
     scope,
   });
 
-  it("keeps provider-native entries and appends catalog-only entries", () => {
+  it("preserves same-named identities from different paths", () => {
     const merged = mergeSkillsIntoCatalog({
       native: [descriptor("shared", "codex-native")],
       catalog: [descriptor("Shared", "omnimind"), descriptor("extra", "omnimind")],
     });
-    expect(merged).toHaveLength(2);
-    expect(merged.find((skill) => skill.name.toLowerCase() === "shared")?.scope).toBe(
-      "codex-native",
-    );
+    expect(merged).toHaveLength(3);
+    expect(
+      merged.filter((skill) => skill.name.toLowerCase() === "shared").map((skill) => skill.scope),
+    ).toEqual(["codex-native", "omnimind"]);
     expect(merged.some((skill) => skill.name === "extra")).toBe(true);
+  });
+
+  it("dedupes the same physical identity rediscovered by an adapter", () => {
+    const native = descriptor("shared", "codex-native");
+    const merged = mergeSkillsIntoCatalog({
+      native: [native],
+      catalog: [{ ...native, scope: "codex-catalog" }],
+    });
+
+    expect(merged).toEqual([native]);
+  });
+
+  it("dedupes the same physical identity reached through a symlinked path", async () => {
+    const skillDir = path.join(root, "physical-skill");
+    const aliasDir = path.join(root, "skill-alias");
+    await writeSkill(skillDir, "shared", "One physical skill");
+    await symlink(skillDir, aliasDir, "dir");
+    const native: ProviderSkillDescriptor = {
+      name: "shared",
+      path: path.join(skillDir, "SKILL.md"),
+      enabled: true,
+      scope: "native",
+    };
+
+    expect(
+      mergeSkillsIntoCatalog({
+        native: [native],
+        catalog: [{ ...native, path: path.join(aliasDir, "SKILL.md"), scope: "catalog" }],
+      }),
+    ).toEqual([native]);
   });
 });
 
 describe("filterDisabledSkills", () => {
-  it("filters disabled skills case-insensitively", () => {
+  it("filters OmniMind-owned skills without disabling Engine-native copies", () => {
     const skills: ProviderSkillDescriptor[] = [
-      { name: "Reviewer", path: "/tmp/a/SKILL.md", enabled: true },
-      { name: "writer", path: "/tmp/b/SKILL.md", enabled: true },
+      {
+        name: "Reviewer",
+        path: "/Users/test/.omnimind/skills/reviewer/SKILL.md",
+        enabled: true,
+        scope: "omnimind",
+      },
+      {
+        name: "Reviewer",
+        path: "/Users/test/.codex/skills/reviewer/SKILL.md",
+        enabled: true,
+        scope: "codex",
+      },
+      {
+        name: "writer",
+        path: "/Users/test/.omnimind/skills/writer/SKILL.md",
+        enabled: true,
+        scope: "omnimind",
+      },
     ];
-    expect(filterDisabledSkills(skills, ["reviewer"]).map((skill) => skill.name)).toEqual([
-      "writer",
+    expect(filterDisabledSkills(skills, ["reviewer"]).map((skill) => skill.path)).toEqual([
+      "/Users/test/.codex/skills/reviewer/SKILL.md",
+      "/Users/test/.omnimind/skills/writer/SKILL.md",
     ]);
-    expect(filterDisabledSkills(skills, [])).toHaveLength(2);
+    expect(filterDisabledSkills(skills, [])).toHaveLength(3);
   });
 });

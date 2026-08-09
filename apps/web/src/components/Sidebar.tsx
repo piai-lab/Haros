@@ -5374,6 +5374,14 @@ export default function Sidebar() {
         shortcutLabel: importThreadShortcutLabel,
       },
       {
+        id: "plugins",
+        label: "Library",
+        description: "Browse Engine-native capabilities and compatible OmniMind assets.",
+        keywords: ["library", "plugins", "skills", "mcp", "tools", "engine"],
+        run: () => void navigate({ to: "/plugins" }),
+        icon: BookIcon,
+      },
+      {
         id: "feedback",
         label: "Feedback OmniMind",
         description: "Send feedback or report an issue to the OmniMind team.",
@@ -5441,6 +5449,7 @@ export default function Sidebar() {
       importThreadShortcutLabel,
       newChatShortcutLabel,
       newThreadShortcutLabel,
+      navigate,
       openSpaceCreator,
       spaces,
       usageSettingsShortcutLabel,

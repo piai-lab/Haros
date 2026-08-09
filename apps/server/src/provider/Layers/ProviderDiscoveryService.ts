@@ -110,6 +110,7 @@ const make = Effect.gen(function* () {
           homeDir: serverConfig.homeDir,
           omnimindBaseDir: serverConfig.baseDir,
           provider: parsed.provider,
+          includeDuplicateOrigins: true,
           ...(parsed.forceReload !== undefined ? { forceReload: parsed.forceReload } : {}),
         }),
       ).pipe(

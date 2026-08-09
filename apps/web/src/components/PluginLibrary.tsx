@@ -32,6 +32,7 @@ import { DEFAULT_PROVIDER_ORDER } from "~/providerOrdering";
 import {
   buildPluginSearchFields,
   buildSkillSearchFields,
+  formatSkillScope,
   isInstalledProviderPlugin,
   normalizeProviderDiscoveryText,
   rankProviderDiscoveryItems,
@@ -338,18 +339,38 @@ function PluginGridItem({ entry }: { entry: PluginEntry }) {
   );
 }
 
-function SkillGridItem({ skill }: { skill: ProviderSkillDescriptor }) {
+function skillSourceLabel(skill: ProviderSkillDescriptor, providerLabel: string): string {
+  const segments = new Set(skill.path.split(/[\\/]+/));
+  if (skill.scope === "omnimind" || segments.has(".omnimind")) {
+    return "OmniMind Library";
+  }
+  if (skill.scope === "agents") {
+    return "Compatible shared asset (.agents)";
+  }
+  return `${providerLabel} native · ${formatSkillScope(skill.scope)}`;
+}
+
+function SkillGridItem({
+  skill,
+  providerLabel,
+}: {
+  skill: ProviderSkillDescriptor;
+  providerLabel: string;
+}) {
   const description =
     skill.interface?.shortDescription ?? skill.description ?? "No description available.";
 
   return (
     <div className="flex items-center gap-3 rounded-xl px-3 py-3 transition-colors hover:bg-[var(--sidebar-accent)]">
       <SkillGlyph skill={skill} />
-      <div className="min-w-0 flex-1">
+      <div className="min-w-0 flex-1" title={skill.path}>
         <p className="text-[13px] font-semibold leading-snug text-foreground">
           {skill.interface?.displayName ?? skill.name}
         </p>
         <p className="mt-0.5 truncate text-[12px] text-muted-foreground">{description}</p>
+        <p className="mt-0.5 truncate text-[11px] text-muted-foreground/70">
+          {skillSourceLabel(skill, providerLabel)}
+        </p>
       </div>
       <InstalledStatus installed={skill.enabled} />
     </div>
@@ -370,13 +391,10 @@ export function PluginLibrary() {
   const { activeProject: focusedProject, activeThread, focusedThreadId } = useFocusedChatContext();
   const activeProject = focusedProject ?? firstProject ?? null;
 
-  const preferredProvider =
-    activeThread?.modelSelection.provider ??
-    activeProject?.defaultModelSelection?.provider ??
-    "codex";
+  const preferredProvider = activeThread?.modelSelection.provider ?? "omnimind";
 
   const [selectedProvider, setSelectedProvider] = useState<ProviderKind>(preferredProvider);
-  const [selectedTab, setSelectedTab] = useState<DiscoveryTab>("plugins");
+  const [selectedTab, setSelectedTab] = useState<DiscoveryTab>("skills");
   const [pluginSearch, setPluginSearch] = useState("");
   const [skillSearch, setSkillSearch] = useState("");
   const deferredPluginSearch = useDeferredValue(pluginSearch);
@@ -384,9 +402,7 @@ export function PluginLibrary() {
   const providerThreadId = focusedThreadId;
 
   const serverConfigQuery = useQuery(serverConfigQueryOptions());
-  const omniMindCapabilitiesQuery = useQuery(
-    providerComposerCapabilitiesQueryOptions("omnimind"),
-  );
+  const omniMindCapabilitiesQuery = useQuery(providerComposerCapabilitiesQueryOptions("omnimind"));
   const codexCapabilitiesQuery = useQuery(providerComposerCapabilitiesQueryOptions("codex"));
   const claudeCapabilitiesQuery = useQuery(providerComposerCapabilitiesQueryOptions("claudeAgent"));
   const cursorCapabilitiesQuery = useQuery(providerComposerCapabilitiesQueryOptions("cursor"));
@@ -442,25 +458,9 @@ export function PluginLibrary() {
     },
   };
 
-  // Auto-fallback: when the current tab/provider combo is unsupported, render
-  // the first capable provider. Derived (not synced into state) so switching
-  // tabs never renders an unsupported frame, and the user's own selection
-  // resurfaces if its provider becomes capable again.
-  const supportsSelectedTab =
-    selectedTab === "plugins"
-      ? providerCapabilities[selectedProvider].plugins
-      : providerCapabilities[selectedProvider].skills;
-  const providerFallbackOrder =
-    selectedTab === "plugins"
-      ? DEFAULT_PROVIDER_ORDER
-      : [preferredProvider, ...DEFAULT_PROVIDER_ORDER.filter((p) => p !== preferredProvider)];
-  const effectiveProvider = supportsSelectedTab
-    ? selectedProvider
-    : (providerFallbackOrder.find((provider) =>
-        selectedTab === "plugins"
-          ? providerCapabilities[provider].plugins
-          : providerCapabilities[provider].skills,
-      ) ?? selectedProvider);
+  // Library discovery stays bound to the Engine the user selected. Unsupported
+  // tabs render an accurate unavailable state instead of reading another Engine.
+  const effectiveProvider = selectedProvider;
 
   const discoveryCwd = resolveProviderDiscoveryCwd({
     activeThreadWorktreePath: activeThread?.worktreePath ?? null,
@@ -593,9 +593,10 @@ export function PluginLibrary() {
         <div className="min-h-0 flex-1 overflow-y-auto">
           {/* Hero */}
           <div className="px-6 py-10 text-center">
-            <h1 className="text-[28px] font-semibold text-foreground">
-              Make {providerLabel} work your way
-            </h1>
+            <h1 className="text-[28px] font-semibold text-foreground">{providerLabel} Library</h1>
+            <p className="mt-2 text-sm text-muted-foreground">
+              Native capabilities plus compatible OmniMind Library assets.
+            </p>
           </div>
 
           {/* Search */}
@@ -663,7 +664,7 @@ export function PluginLibrary() {
                 ) : filteredPluginEntries.length === 0 ? (
                   <EmptyPanel
                     title="No installed plugins found"
-                    description="This view only shows plugins already available in your Codex setup."
+                    description={`This view only shows plugins already available to ${providerLabel}.`}
                   />
                 ) : (
                   <div className="space-y-6">
@@ -702,7 +703,11 @@ export function PluginLibrary() {
                     <SectionHeader title="Skills" />
                     <div className="grid grid-cols-1 sm:grid-cols-2">
                       {filteredSkills.map((skill) => (
-                        <SkillGridItem key={skill.path} skill={skill} />
+                        <SkillGridItem
+                          key={skill.path}
+                          skill={skill}
+                          providerLabel={providerLabel}
+                        />
                       ))}
                     </div>
                   </div>

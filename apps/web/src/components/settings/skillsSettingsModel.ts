@@ -94,6 +94,10 @@ export function skillDisplayName(skill: ProviderSkillDescriptor): string {
   return skill.interface?.displayName ?? skill.name;
 }
 
+export function isOmniMindSkillSource(skill: ProviderSkillDescriptor): boolean {
+  return skill.scope === "omnimind" || skill.path.split(/[\\/]+/).includes(".omnimind");
+}
+
 export function providerDisplayName(provider: ProviderKind): string {
   return PROVIDER_DISPLAY_NAMES[provider];
 }

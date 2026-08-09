@@ -245,5 +245,6 @@ export function formatSkillScope(scope: string | undefined): string {
   if (!scope) return "Personal";
   const normalized = scope.trim();
   if (normalized.length === 0) return "Personal";
+  if (normalized.toLowerCase() === "omnimind") return "OmniMind Library";
   return normalized.charAt(0).toUpperCase() + normalized.slice(1);
 }

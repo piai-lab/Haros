@@ -5,7 +5,11 @@
 import type { ProviderSkillDescriptor } from "@synara/contracts";
 import { describe, expect, it } from "vitest";
 
-import { buildSettingsSkillGroups, buildSettingsSkillSections } from "./skillsSettingsModel";
+import {
+  buildSettingsSkillGroups,
+  buildSettingsSkillSections,
+  isOmniMindSkillSource,
+} from "./skillsSettingsModel";
 
 function skill(partial: Partial<ProviderSkillDescriptor>): ProviderSkillDescriptor {
   return {
@@ -64,6 +68,21 @@ describe("buildSettingsSkillGroups", () => {
 
     expect(groups[0]?.providers).toEqual([]);
     expect(groups[0]?.section).toBe("agents");
+  });
+});
+
+describe("isOmniMindSkillSource", () => {
+  it("distinguishes OmniMind-owned assets from Engine-native homes", () => {
+    expect(
+      isOmniMindSkillSource(
+        skill({ path: "/Users/test/.omnimind/skills/reviewer/SKILL.md", scope: "project" }),
+      ),
+    ).toBe(true);
+    expect(
+      isOmniMindSkillSource(
+        skill({ path: "/Users/test/.codex/skills/reviewer/SKILL.md", scope: "codex" }),
+      ),
+    ).toBe(false);
   });
 });
 
