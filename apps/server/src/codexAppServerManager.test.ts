@@ -1976,6 +1976,45 @@ describe("steerTurn", () => {
 });
 
 describe("CodexAppServerManager discovery", () => {
+  it("reads account limits through the initialized app-server context", async () => {
+    const manager = new CodexAppServerManager();
+    const context = {
+      session: {
+        provider: "codex",
+        status: "ready",
+        threadId: "thread_1",
+        runtimeMode: "full-access",
+        model: "gpt-5.5",
+      },
+      account: {
+        type: "chatgpt",
+        planType: "plus",
+        sparkEnabled: true,
+      },
+      collabReceiverTurns: new Map(),
+      collabReceiverParents: new Map(),
+    };
+
+    vi.spyOn(
+      manager as unknown as {
+        resolveContextForDiscovery: (threadId?: string) => unknown;
+      },
+      "resolveContextForDiscovery",
+    ).mockReturnValue(context);
+    const response = { rateLimits: { planType: "plus" } };
+    const sendRequest = vi
+      .spyOn(
+        manager as unknown as {
+          sendRequest: (...args: unknown[]) => Promise<unknown>;
+        },
+        "sendRequest",
+      )
+      .mockResolvedValue(response);
+
+    await expect(manager.readAccountRateLimits()).resolves.toEqual(response);
+    expect(sendRequest).toHaveBeenCalledWith(context, "account/rateLimits/read", undefined);
+  });
+
   it("wires model discovery through model/list", async () => {
     const manager = new CodexAppServerManager();
     const context = {

@@ -15,6 +15,7 @@ import { Effect } from "effect";
 import { ServerConfig } from "../config";
 import { buildProviderChildEnvironment, type ProviderChildKind } from "../providerChildEnvironment";
 import { ServerSettingsService } from "../serverSettings";
+import { ProviderAdapterRegistry } from "../provider/Services/ProviderAdapterRegistry";
 import { loadLocalProviderUsageLines } from "../providerUsageSnapshot";
 import { errorSnapshot } from "./parse";
 import { PROVIDER_USAGE_FETCHERS } from "./registry";
@@ -217,7 +218,9 @@ export async function collectProviderUsageSnapshots(
 export const listProviderUsage = Effect.fn(function* (input: ServerListProviderUsageInput) {
   const serverConfig = yield* ServerConfig;
   const serverSettings = yield* ServerSettingsService;
+  const providerRegistry = yield* ProviderAdapterRegistry;
   const settings = yield* serverSettings.getSettings;
+  const codexAdapter = yield* providerRegistry.getByProvider("codex");
   return yield* Effect.tryPromise({
     try: () =>
       collectProviderUsageSnapshots(
@@ -225,6 +228,11 @@ export const listProviderUsage = Effect.fn(function* (input: ServerListProviderU
           ...buildContext(),
           homeDir: serverConfig.homeDir,
           claudeBinaryPath: settings.providers.claudeAgent.binaryPath,
+          ...(codexAdapter.readAccountRateLimits
+            ? {
+                codexRateLimits: () => Effect.runPromise(codexAdapter.readAccountRateLimits!()),
+              }
+            : {}),
         },
         {
           forceRefresh: input.forceRefresh === true,

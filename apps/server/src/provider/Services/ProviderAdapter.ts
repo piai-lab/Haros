@@ -284,6 +284,9 @@ export interface ProviderAdapterShape<TError> {
     input: ProviderListModelsInput,
   ) => Effect.Effect<ProviderListModelsResult, TError>;
 
+  /** Read provider-native account limits when the Engine protocol exposes them. */
+  readonly readAccountRateLimits?: () => Effect.Effect<unknown, TError>;
+
   /**
    * List agents/subagents directly from the provider runtime when supported.
    */

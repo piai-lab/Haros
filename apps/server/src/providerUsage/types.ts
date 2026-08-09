@@ -19,6 +19,8 @@ export interface ProviderUsageContext {
   readonly nowMs: number;
   /** Claude CLI binary (settings.providers.claudeAgent.binaryPath); defaults to "claude". */
   readonly claudeBinaryPath?: string;
+  /** Provider-native Codex app-server reader; avoids owning Codex auth or private state. */
+  readonly codexRateLimits?: () => Promise<unknown>;
 }
 
 export interface ProviderUsageFetcher {

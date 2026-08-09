@@ -2420,6 +2420,11 @@ export class CodexAppServerManager extends EventEmitter<CodexAppServerManagerEve
     return result;
   }
 
+  async readAccountRateLimits(): Promise<Record<string, unknown>> {
+    const context = await this.resolveContextForDiscovery(undefined);
+    return this.sendRequest<Record<string, unknown>>(context, "account/rateLimits/read", undefined);
+  }
+
   async transcribeVoice(
     input: ServerVoiceTranscriptionInput,
   ): Promise<ServerVoiceTranscriptionResult> {

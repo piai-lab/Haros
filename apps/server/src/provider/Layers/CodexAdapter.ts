@@ -2129,6 +2129,18 @@ const makeCodexAdapter = (options?: CodexAdapterLiveOptions) =>
           }),
       }).pipe(Effect.map((result) => result satisfies ProviderListModelsResult));
 
+    const readAccountRateLimits: NonNullable<CodexAdapterShape["readAccountRateLimits"]> = () =>
+      Effect.tryPromise({
+        try: () => manager.readAccountRateLimits(),
+        catch: (cause) =>
+          new ProviderAdapterRequestError({
+            provider: PROVIDER,
+            method: "account/rateLimits/read",
+            detail: toMessage(cause, "account/rateLimits/read failed"),
+            cause,
+          }),
+      });
+
     const transcribeVoice: NonNullable<CodexAdapterShape["transcribeVoice"]> = (input) =>
       Effect.tryPromise({
         try: () => manager.transcribeVoice(input),
@@ -2271,6 +2283,7 @@ const makeCodexAdapter = (options?: CodexAdapterLiveOptions) =>
       listPlugins,
       readPlugin,
       listModels,
+      readAccountRateLimits,
       prewarmVoice,
       transcribeVoice,
       streamEvents: Stream.fromQueue(runtimeEventQueue),

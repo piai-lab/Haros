@@ -96,6 +96,10 @@ class FakeCodexManager extends CodexAppServerManager {
 
   public stopAllImpl = vi.fn(() => undefined);
 
+  public readAccountRateLimitsImpl = vi.fn(async () => ({
+    rateLimits: { planType: "plus" },
+  }));
+
   override startSession(input: CodexAppServerStartSessionInput): Promise<ProviderSession> {
     return this.startSessionImpl(input);
   }
@@ -153,6 +157,10 @@ class FakeCodexManager extends CodexAppServerManager {
   override async stopAll(): Promise<void> {
     this.stopAllImpl();
   }
+
+  override readAccountRateLimits(): Promise<Record<string, unknown>> {
+    return this.readAccountRateLimitsImpl();
+  }
 }
 
 const providerSessionDirectoryTestLayer = Layer.succeed(ProviderSessionDirectory, {
@@ -175,6 +183,18 @@ const validationLayer = it.layer(
 );
 
 validationLayer("CodexAdapterLive validation", (it) => {
+  it.effect("delegates account limits to Codex app-server", () =>
+    Effect.gen(function* () {
+      validationManager.readAccountRateLimitsImpl.mockClear();
+      const adapter = yield* CodexAdapter;
+
+      const result = yield* adapter.readAccountRateLimits!();
+
+      assert.deepStrictEqual(result, { rateLimits: { planType: "plus" } });
+      assert.equal(validationManager.readAccountRateLimitsImpl.mock.calls.length, 1);
+    }),
+  );
+
   it.effect("returns validation error for non-codex provider on startSession", () =>
     Effect.gen(function* () {
       const adapter = yield* CodexAdapter;
