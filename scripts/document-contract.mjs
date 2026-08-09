@@ -225,6 +225,58 @@ function validateEngineCapabilityComposition(findings, documents) {
   }
 }
 
+function validateBundledPiRuntimeAdoption(findings, documents) {
+  const documentPath = "README.md";
+  const blocks = blocksFor(documents.get(documentPath) ?? "", "source-adoptions");
+  if (blocks.length !== 1) return;
+
+  let record;
+  try {
+    const parsed = JSON.parse(blocks[0]);
+    record = parsed?.adopted?.find(
+      (entry) => entry?.id === "bundled-omnimind-agent-runtime",
+    );
+  } catch {
+    return;
+  }
+
+  const expected = {
+    url: "https://github.com/earendil-works/pi.git",
+    revision: "53fa77ccd8a279eb87e92294ef3687b03ff80112",
+    paths: ["vendor/omnimind-pi-coding-agent-0.84.1.tgz"],
+    sourcePaths: ["packages/coding-agent"],
+    archiveSha256: "16b3ae817e700684e58be750b2edb5a14bc4aac4ac318fcd949e1c9e9ba934a9",
+    upstreamPackage: "@earendil-works/pi-coding-agent@0.84.1",
+    upstreamPackageIntegrity:
+      "sha512-ncAqFrG+iybuPGOhMiZoEHkEzTpJgz3guYD32pD+M7ucc0WeHmauP6wa7qwP8V/KWvsZDVNa5XGsdZ7fkC7w7A==",
+    licenseFiles: ["LICENSES/pi-coding-agent-MIT.txt"],
+    sharedRuntimeBytes: "unchanged",
+    behavioralDifferences: ["package identity", "piConfig.configDir"],
+  };
+  const actual = record
+    ? {
+        url: record.url,
+        revision: record.revision,
+        paths: record.paths,
+        sourcePaths: record.sourcePaths,
+        archiveSha256: record.archiveSha256,
+        upstreamPackage: record.upstreamPackage,
+        upstreamPackageIntegrity: record.upstreamPackageIntegrity,
+        licenseFiles: record.licenseFiles,
+        sharedRuntimeBytes: record.generation?.sharedRuntimeBytes,
+        behavioralDifferences: record.generation?.behavioralDifferences,
+      }
+    : null;
+  if (JSON.stringify(actual) !== JSON.stringify(expected)) {
+    addFinding(
+      findings,
+      "source-adoption.bundled-pi-runtime",
+      documentPath,
+      "bundled OmniMind Agent must retain its exact Pi source, artifact, generation, and legal identity",
+    );
+  }
+}
+
 /**
  * Validate only the durable document graph and machine-readable owner blocks.
  * Product semantics remain in the sole owners and are reviewed as prose/design;
@@ -256,6 +308,7 @@ export async function validateDocumentContract({ root, read = readFile }) {
   validateMachineBlocks(findings, documents);
   validateCurrentState(findings, documents);
   validateEngineCapabilityComposition(findings, documents);
+  validateBundledPiRuntimeAdoption(findings, documents);
 
   return findings;
 }

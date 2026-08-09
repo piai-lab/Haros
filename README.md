@@ -113,6 +113,26 @@ authority，也不得带入 donor branding、竞争编排、第二 Session 状�
       "licenseFiles": ["LICENSES/ui-mother-MIT.txt"]
     },
     {
+      "id": "bundled-omnimind-agent-runtime",
+      "url": "https://github.com/earendil-works/pi.git",
+      "revision": "53fa77ccd8a279eb87e92294ef3687b03ff80112",
+      "paths": ["vendor/omnimind-pi-coding-agent-0.84.1.tgz"],
+      "sourcePaths": ["packages/coding-agent"],
+      "archiveSha256": "16b3ae817e700684e58be750b2edb5a14bc4aac4ac318fcd949e1c9e9ba934a9",
+      "upstreamPackage": "@earendil-works/pi-coding-agent@0.84.1",
+      "upstreamPackageIntegrity": "sha512-ncAqFrG+iybuPGOhMiZoEHkEzTpJgz3guYD32pD+M7ucc0WeHmauP6wa7qwP8V/KWvsZDVNa5XGsdZ7fkC7w7A==",
+      "generation": {
+        "sharedRuntimeBytes": "unchanged",
+        "behavioralDifferences": ["package identity", "piConfig.configDir"],
+        "archiveDisposition": "The product archive keeps the shared built runtime files byte-identical to the exact 0.84.1 npm artifact, adds the upstream LICENSE, removes standalone CLI entrypoint exposure, omits development/public documentation and example payloads, and exact-pins the Pi-family dependency closure. Those archive-only manifest changes do not add a second runtime implementation."
+      },
+      "rights": "The fixed Pi coding-agent source and generated runtime are MIT-licensed. The shipped archive retains its upstream LICENSE, and the exact root redistribution text is LICENSES/pi-coding-agent-MIT.txt.",
+      "mode": "adapt",
+      "changes": "The product-owned physical module is generated from packages/coding-agent at the fixed revision. Shared executable runtime bytes are unchanged from the exact npm artifact whose gitHead is the same revision; runtime behavior differs only through the @omnimind package identity and piConfig configDir/name that route private state to .omnimind. Packaging metadata removes the standalone pi bin and development-only scripts/dependencies, omits unshipped docs/examples, and pins the Pi-family dependency closure without adding runtime code.",
+      "updatePolicy": "Pinned revision, upstream npm integrity and product archive SHA-256. Reproduction uses the immutable Git tree in a task-only temporary directory, rebuilds packages/coding-agent, verifies shared runtime byte identity and retained LICENSE, applies only the recorded package identity/configDir and archive-closure metadata changes, and proves temporary input cleanup. Pi post-tag code is excluded. Any source, version, generation rule, dependency closure, archive digest, rights or license change requires explicit source intake and affected runtime/ecosystem revalidation before replacement.",
+      "licenseFiles": ["LICENSES/pi-coding-agent-MIT.txt"]
+    },
+    {
       "id": "pi-todo-headless-package",
       "url": "https://github.com/earendil-works/pi.git",
       "revision": "20be4b18d4c57487f8993d2762bace129f0cf7c6",

@@ -168,6 +168,22 @@ test("Engine native ecosystem cannot be redefined as replaced", async (t) => {
   );
 });
 
+test("bundled Pi runtime adoption cannot lose its exact artifact identity", async (t) => {
+  const root = await createFixture(t);
+  await replaceText(
+    root,
+    "README.md",
+    "16b3ae817e700684e58be750b2edb5a14bc4aac4ac318fcd949e1c9e9ba934a9",
+    "0".repeat(64),
+  );
+
+  assertFinding(
+    await validateDocumentContract({ root }),
+    "source-adoption.bundled-pi-runtime",
+    "README.md",
+  );
+});
+
 test("Campaign canonical identity is structural", async (t) => {
   const root = await createFixture(t);
   await replaceText(root, "missions/independent-omnimind-v1.md", "Status: active", "Status: done");
