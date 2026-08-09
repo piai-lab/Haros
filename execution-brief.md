@@ -106,6 +106,6 @@ OmniMind Agent 是内部最深验收路线。stock Pi 与其他 shipped Provider
 
 ## 10. 当前唯一下一动作
 
-冻结 Stage 0 文档 candidate 后，立即执行 Stage 1，不再追加研究型 meter：列出 exact source/keep/delete paths 和 dry-run tree diff；在一个可回退 commit 中恢复 source 物理树并删除重复生产拓扑；安装依赖，依次跑最窄 import/typecheck、source unit/browser/build gate。只有这个 transplant candidate 绿色后，才在同一新基线上实现 Pi-family 双实例和 bundled OmniMind Agent vertical。
+Stage 0–2 已形成 candidate；当前只继续收口 Stage 3 的 F-17：用现有唯一 message catalog 清除正常可达 OmniMind-owned 产品面的硬编码文案，以 source falsifier 和隔离 macOS Electron 的中英真实路径证伪覆盖缺口，再在 frozen SHA 运行一次相关总门。F-17 重新成为 candidate 前不得进入 Stage 4/F-18。
 
 任何继续扩充 Product Truth semantic meter、平行 Product Control Plane、跨 Provider Package lifecycle、Remote 或 settings taxonomy 重写的工作都应停止。
