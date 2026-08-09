@@ -44,6 +44,7 @@ import {
 } from "./sidebarContextMenuStyles";
 import { Menu, MenuGroup, MenuItem } from "./ui/menu";
 import { Tooltip, TooltipPopup, TooltipTrigger } from "./ui/tooltip";
+import { useI18n } from "~/i18n";
 
 export type SpaceActivityTone = "attention" | "running" | "completed";
 
@@ -417,6 +418,7 @@ export function SpaceSwitcher(props: SpaceSwitcherProps) {
 }
 
 function SpaceSwitcherStrip(props: SpaceSwitcherProps) {
+  const { t } = useI18n();
   const { onSelect } = props;
   const sensors = useSensors(useSensor(PointerSensor, { activationConstraint: { distance: 4 } }));
   const [contextState, setContextState] = useState<{
@@ -535,7 +537,7 @@ function SpaceSwitcherStrip(props: SpaceSwitcherProps) {
       <div className="flex items-center gap-1 px-1">
         <div
           role="tablist"
-          aria-label="Spaces"
+          aria-label={t("nav.groups")}
           aria-orientation="horizontal"
           className="flex min-w-0 flex-1 items-center gap-1"
           onKeyDown={handleTabStripKeyDown}
@@ -624,7 +626,7 @@ function SpaceSwitcherStrip(props: SpaceSwitcherProps) {
             render={
               <button
                 type="button"
-                aria-label="New space"
+                aria-label={t("nav.newGroup")}
                 onClick={props.onCreate}
                 className={cn(SPACE_TAB_CLASS_NAME, "text-muted-foreground/55")}
               />
@@ -632,7 +634,7 @@ function SpaceSwitcherStrip(props: SpaceSwitcherProps) {
           >
             <PlusIcon className="size-3.5" />
           </TooltipTrigger>
-          <TooltipPopup side="bottom">New space</TooltipPopup>
+          <TooltipPopup side="bottom">{t("nav.newGroup")}</TooltipPopup>
         </Tooltip>
       </div>
 

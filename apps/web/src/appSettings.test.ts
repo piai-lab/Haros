@@ -621,9 +621,7 @@ describe("provider-indexed custom model settings", () => {
   });
 
   it("reads custom models for each provider", () => {
-    expect(getCustomModelsForProvider(settings, "omnimind")).toEqual([
-      "deepseek/custom-omnimind",
-    ]);
+    expect(getCustomModelsForProvider(settings, "omnimind")).toEqual(["deepseek/custom-omnimind"]);
     expect(getCustomModelsForProvider(settings, "codex")).toEqual(["custom/codex-model"]);
     expect(getCustomModelsForProvider(settings, "claudeAgent")).toEqual(["claude/custom-opus"]);
     expect(getCustomModelsForProvider(settings, "cursor")).toEqual(["cursor/custom-model"]);
@@ -739,9 +737,7 @@ describe("provider-indexed custom model settings", () => {
     const modelOptionsByProvider = getCustomModelOptionsByProvider(settings);
 
     expect(
-      modelOptionsByProvider.omnimind.some(
-        (option) => option.slug === "deepseek/custom-omnimind",
-      ),
+      modelOptionsByProvider.omnimind.some((option) => option.slug === "deepseek/custom-omnimind"),
     ).toBe(true);
     expect(
       modelOptionsByProvider.codex.some((option) => option.slug === "custom/codex-model"),
@@ -887,6 +883,7 @@ describe("AppSettingsSchema", () => {
       ),
     ).toMatchObject({
       claudeBinaryPath: "",
+      localePreference: "system",
       uiDensity: "comfortable",
       chatFontSizePx: DEFAULT_CHAT_FONT_SIZE_PX,
       codexBinaryPath: "/usr/local/bin/codex",

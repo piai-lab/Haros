@@ -99,6 +99,7 @@ import {
   useAppSettings,
 } from "../appSettings";
 import { isElectron } from "../env";
+import { useI18n } from "../i18n";
 import { formatRelativeTime } from "../lib/relativeTime";
 import { isMacPlatform, newCommandId, newProjectId, newThreadId, randomUUID } from "../lib/utils";
 import { isOrdinarySpaceProject } from "../lib/spaces";
@@ -451,10 +452,6 @@ const ADD_PROJECT_SNAPSHOT_CATCH_UP_MAX_ATTEMPTS = 6;
 const ADD_PROJECT_SNAPSHOT_CATCH_UP_DELAY_MS = 50;
 const GITHUB_CANCEL_RECOVERY_MAX_ATTEMPTS = 40;
 const GITHUB_CANCEL_RECOVERY_DELAY_MS = 250;
-const SIDEBAR_VIEW_LABELS: Record<SidebarView, string> = {
-  threads: "Projects",
-  studio: "Studio",
-};
 /** Snap the optimistic segment selection back if the navigation never lands. */
 const EMPTY_PROJECT_SIDEBAR_DATA: ReadonlyMap<ProjectId, SidebarDerivedProjectData> = new Map();
 const DebugFeatureFlagsMenu = import.meta.env.DEV
@@ -1101,6 +1098,7 @@ function SidebarActivityBellButton({
   shortcutLabel: string | null;
   onClick: () => void;
 }) {
+  const { t } = useI18n();
   const [onboardingVisible, setOnboardingVisible] = useState(shouldShowActivityOnboarding);
   const [tooltipOpen, setTooltipOpen] = useState(onboardingVisible);
 
@@ -1135,7 +1133,7 @@ function SidebarActivityBellButton({
         render={
           <button
             type="button"
-            aria-label={active ? "Switch to classic view" : "Switch to activity view"}
+            aria-label={active ? t("shell.switchToAgent") : t("shell.switchToActivity")}
             aria-pressed={active}
             onClick={() => {
               dismissOnboarding();
@@ -1172,23 +1170,18 @@ function SidebarActivityBellButton({
       >
         {onboardingVisible ? (
           <div className="text-left">
-            <div className="text-xs font-semibold">Activity</div>
+            <div className="text-xs font-semibold">{t("shell.activity")}</div>
             <div className="mt-0.5 text-[11px] leading-4 text-white/85">
-              See running tasks, completed work, and anything that needs your attention.
+              {t("shell.activityDescription")}
             </div>
           </div>
         ) : (
-          `Activity view${shortcutLabel ? ` (${shortcutLabel})` : ""}`
+          `${t("shell.activityView")}${shortcutLabel ? ` (${shortcutLabel})` : ""}`
         )}
       </TooltipPopup>
     </Tooltip>
   );
 }
-
-const SIDEBAR_SURFACE_PICKER_COPY: Record<SidebarView, { title: string; description: string }> = {
-  threads: { title: "OmniMind", description: "Build, debug, and ship" },
-  studio: { title: "Studio", description: "Open-ended agent work" },
-};
 
 /**
  * App-switcher style surface picker: a compact pill with the active surface
@@ -1206,7 +1199,12 @@ export function SidebarSurfacePicker({
   onSelectView: (view: SidebarView) => void;
   onPrewarmView?: (view: SidebarView) => void;
 }) {
-  const activeCopy = SIDEBAR_SURFACE_PICKER_COPY[activeView];
+  const { t } = useI18n();
+  const copyByView: Record<SidebarView, { title: string; description: string }> = {
+    threads: { title: t("nav.agent"), description: t("nav.agentDescription") },
+    studio: { title: t("nav.chat"), description: t("nav.chatDescription") },
+  };
+  const activeCopy = copyByView[activeView];
 
   return (
     <Menu>
@@ -1214,7 +1212,7 @@ export function SidebarSurfacePicker({
         render={
           <button
             type="button"
-            aria-label="Switch sidebar surface"
+            aria-label={t("shell.switchSurface")}
             className={cn(
               "flex h-8 min-w-0 cursor-pointer items-center gap-1.5 rounded-lg px-2.5",
               SIDEBAR_ROW_FOCUS_CLASS_NAME,
@@ -1243,7 +1241,7 @@ export function SidebarSurfacePicker({
           }}
         >
           {views.map((view) => {
-            const copy = SIDEBAR_SURFACE_PICKER_COPY[view];
+            const copy = copyByView[view];
             return (
               <MenuRadioItem
                 key={view}
@@ -1373,6 +1371,7 @@ export default function Sidebar() {
     [automationListQuery.data],
   );
   const { settings: appSettings, updateSettings } = useAppSettings();
+  const { t } = useI18n();
   // Projects is always available; Studio and the standalone Chats footer can be hidden
   // independently from Settings.
   const chatsSectionVisible = appSettings.showChatsSection;
@@ -5294,6 +5293,23 @@ export default function Sidebar() {
   const desktopUpdateButtonPresentation = getDesktopUpdateButtonPresentation(desktopUpdateState, {
     installing: installingDesktopUpdate,
   });
+  const desktopUpdateButtonLabel = installingDesktopUpdate
+    ? t("updater.updating")
+    : desktopUpdateState?.status === "checking"
+      ? t("updater.checking")
+      : desktopUpdateState?.status === "downloading"
+        ? t("updater.preparing")
+        : desktopUpdateButtonAction === "check"
+          ? t("updater.check")
+          : desktopUpdateButtonAction === "download"
+            ? desktopUpdateState?.errorContext
+              ? t("updater.retry")
+              : t("updater.preparing")
+            : desktopUpdateButtonAction === "install"
+              ? desktopUpdateState?.errorContext === "install"
+                ? t("updater.retry")
+                : t("updater.update")
+              : t("updater.update");
   const showArm64IntelBuildWarning =
     isElectron && shouldShowArm64IntelBuildWarning(desktopUpdateState);
   const arm64IntelBuildWarningDescription =
@@ -5337,21 +5353,21 @@ export default function Sidebar() {
     () => [
       {
         id: "new-chat",
-        label: "New chat",
+        label: t("nav.newChat"),
         description: "Open the new chat landing screen.",
         keywords: ["chat", "new", "home"],
         shortcutLabel: newChatShortcutLabel,
       },
       {
         id: "new-thread",
-        label: "New thread",
+        label: t("nav.newAgent"),
         description: "Start a fresh thread in the current or most recently used project.",
         keywords: ["thread", "new", "project"],
         shortcutLabel: newThreadShortcutLabel,
       },
       {
         id: "add-project",
-        label: "Add project",
+        label: t("nav.addProject"),
         description: "Open a repository or folder in the sidebar.",
         keywords: ["folder", "repo", "repository", "open"],
         shortcutLabel: addProjectShortcutLabel,
@@ -5375,7 +5391,7 @@ export default function Sidebar() {
       },
       {
         id: "plugins",
-        label: "Library",
+        label: t("nav.library"),
         description: "Browse Engine-native capabilities and compatible OmniMind assets.",
         keywords: ["library", "plugins", "skills", "mcp", "tools", "engine"],
         run: () => void navigate({ to: "/plugins" }),
@@ -5389,7 +5405,7 @@ export default function Sidebar() {
       },
       {
         id: "settings",
-        label: "Settings",
+        label: t("nav.settings"),
         description: "Open app settings.",
         keywords: ["preferences", "config"],
       },
@@ -5452,6 +5468,7 @@ export default function Sidebar() {
       navigate,
       openSpaceCreator,
       spaces,
+      t,
       usageSettingsShortcutLabel,
       voidSpace,
     ],
@@ -5779,10 +5796,14 @@ export default function Sidebar() {
               <div className="ml-auto flex items-center gap-1.5">
                 <SidebarIconButton
                   icon={SearchIcon}
-                  label="Search"
+                  label={t("common.search")}
                   glyph="leading"
                   size="header"
-                  tooltip={searchShortcutLabel ? `Search (${searchShortcutLabel})` : "Search"}
+                  tooltip={
+                    searchShortcutLabel
+                      ? `${t("common.search")} (${searchShortcutLabel})`
+                      : t("common.search")
+                  }
                   tooltipSide="bottom"
                   onClick={() => {
                     setSearchPaletteOpen(true);
@@ -5812,7 +5833,7 @@ export default function Sidebar() {
                       <SidebarPrimaryAction
                         icon={NewThreadIcon}
                         iconClassName="size-3.5"
-                        label="New studio chat"
+                        label={t("nav.newChat")}
                         onClick={handleCreateStudioChat}
                       />
                     </>
@@ -5821,7 +5842,7 @@ export default function Sidebar() {
                       <SidebarPrimaryAction
                         icon={NewThreadIcon}
                         iconClassName="size-3.5"
-                        label="New thread"
+                        label={t("nav.newAgent")}
                         onClick={handlePrimaryNewThread}
                         onMouseEnter={prefetchModelsForPrimaryNewThread}
                         onFocus={prefetchModelsForPrimaryNewThread}
@@ -5866,12 +5887,12 @@ export default function Sidebar() {
                 <SidebarGroup className="px-1.5 py-1.5">
                   {renderPinnedThreadsSection()}
                   {renderListSectionHeader(
-                    "Studio",
+                    t("nav.chat"),
                     <>
                       <SidebarIconButton
                         icon={NewThreadIcon}
-                        label="New studio chat"
-                        tooltip="New studio chat"
+                        label={t("nav.newChat")}
+                        tooltip={t("nav.newChat")}
                         tooltipSide="top"
                         onClick={handleCreateStudioChat}
                       />
@@ -5890,7 +5911,7 @@ export default function Sidebar() {
                       )
                     ) : (
                       <div className="px-2 pt-4 text-center text-[length:var(--app-font-size-ui,12px)] text-muted-foreground/58">
-                        {threadsHydrated ? "No studio chats yet" : "Loading Studio..."}
+                        {threadsHydrated ? t("nav.noChats") : t("nav.loadingChat")}
                       </div>
                     )}
                   </SidebarMenu>
@@ -5952,7 +5973,7 @@ export default function Sidebar() {
                   />
                   {renderPinnedThreadsSection()}
                   {renderListSectionHeader(
-                    "Projects",
+                    t("nav.projects"),
                     <>
                       {standardProjects.length > 0 ? (
                         <SidebarIconButton
@@ -6083,7 +6104,7 @@ export default function Sidebar() {
                 >
                   <div className="flex min-w-0 flex-1 items-center gap-1 overflow-hidden">
                     <span className="truncate font-system-ui text-[length:var(--app-font-size-ui,12px)] font-normal text-muted-foreground/79">
-                      Chats
+                      {t("nav.chat")}
                     </span>
                     <DisclosureChevron
                       open={chatSectionExpanded}
@@ -6130,7 +6151,7 @@ export default function Sidebar() {
                       )
                     ) : (
                       <div className="px-2 py-2 text-[length:var(--app-font-size-ui,12px)] text-muted-foreground/48">
-                        No chats yet
+                        {t("nav.noChats")}
                       </div>
                     )}
                     {canShowMoreChatThreads || canShowLessChatThreads ? (
@@ -6203,7 +6224,7 @@ export default function Sidebar() {
                     <SidebarLeadingIcon size="sm" tone={SIDEBAR_ROW_LABEL_TEXT_CLASS_NAME}>
                       <SidebarGlyph icon={SettingsIcon} variant="leading" />
                     </SidebarLeadingIcon>
-                    <span>Settings</span>
+                    <span>{t("nav.settings")}</span>
                   </SidebarMenuButton>
                 )}
                 {showDesktopUpdateButton ? (
@@ -6220,7 +6241,7 @@ export default function Sidebar() {
                         >
                           <span className="flex min-w-0 flex-1 items-center justify-between gap-1.5 leading-tight">
                             <span className="min-w-0 truncate text-center">
-                              {desktopUpdateButtonPresentation.label}
+                              {desktopUpdateButtonLabel}
                             </span>
                             {desktopUpdateButtonPresentation.secondaryLabel ? (
                               <span className="min-w-0 truncate text-center text-[length:var(--app-font-size-ui-xs,10px)] text-white/80">

@@ -346,6 +346,7 @@ import {
   resolveFollowUpDispatchMode,
   useAppSettings,
 } from "../appSettings";
+import { useI18n } from "../i18n";
 import { isTerminalFocused } from "../lib/terminalFocus";
 import { isEditableEventTarget } from "../lib/editableEventTarget";
 import {
@@ -1198,6 +1199,7 @@ export default function ChatView({
   const setStoreThreadError = useStore((store) => store.setError);
   const setStoreThreadWorkspace = useStore((store) => store.setThreadWorkspace);
   const { settings, updateSettings } = useAppSettings();
+  const { t } = useI18n();
   const assistantDeliveryMode = resolveAssistantDeliveryMode(settings);
   const desktopTopBarTrafficLightGutterClassName = useDesktopTopBarTrafficLightGutterClassName();
   const desktopTopBarWindowControlsGutterClassName =
@@ -9890,14 +9892,14 @@ export default function ChatView({
         provider: selectedProvider,
       });
       if (!targetThreadId) {
-        throw new Error("Unable to prepare the Agent thread.");
+        throw new Error(t("error.prepareAgent"));
       }
 
       const draftStore = useComposerDraftStore.getState();
       draftStore.copyTransferableComposerState(threadId, targetThreadId);
       draftStore.setModelSelection(targetThreadId, selectedModelSelection);
     },
-    [handleNewThread, selectedModelSelection, selectedProvider, threadId],
+    [handleNewThread, selectedModelSelection, selectedProvider, t, threadId],
   );
 
   const handleCreateAgentProjectFromPickerPath = useCallback(
@@ -11435,20 +11437,20 @@ export default function ChatView({
                       : {})}
                     placeholder={
                       isComposerApprovalState
-                        ? "Resolve this approval request to continue"
+                        ? t("composer.resolveApproval")
                         : activePendingProgress
                           ? activePendingProgress.activeQuestion?.options.length === 0
-                            ? "Type your answer to continue"
-                            : "Type your own answer, or leave this blank to use the selected option"
+                            ? t("composer.answer")
+                            : t("composer.answerOrOption")
                           : showPlanFollowUpPrompt && activeProposedPlan
-                            ? "Add feedback to refine the plan, or leave this blank to implement it"
+                            ? t("composer.planFeedback")
                             : activeThread?.parentThreadId
-                              ? "Message this subagent while it works"
+                              ? t("composer.messageSubagent")
                               : hasLiveTurn
-                                ? "Ask for follow-up changes"
+                                ? t("composer.followUp")
                                 : phase === "disconnected"
-                                  ? "Ask for follow-up changes or attach images"
-                                  : "Ask anything, @tag files/folders, or use / to show available commands"
+                                  ? t("composer.followUpWithImages")
+                                  : t("composer.askAnything")
                     }
                     disabled={isComposerEditorDisabled}
                   />
@@ -11676,7 +11678,7 @@ export default function ChatView({
                                         ? "Preparing worktree"
                                         : isSendBusy
                                           ? "Sending"
-                                          : "Send message"
+                                          : t("composer.send")
                               }
                             >
                               {isConnecting || isSendBusy || isPreparingComposerImages ? (
@@ -11856,9 +11858,13 @@ export default function ChatView({
                 onSelectProject={handleSendToAgentProject}
                 onCreateProjectFromPath={handleCreateAgentProjectFromPickerPath}
                 renderTrigger={
-                  <ChatHeaderButton type="button" tone="outline" aria-label="Send to Agent">
+                  <ChatHeaderButton
+                    type="button"
+                    tone="outline"
+                    aria-label={t("composer.sendToAgent")}
+                  >
                     <FolderClosed className="size-3.5 shrink-0" />
-                    <span className="truncate font-normal">Send to Agent</span>
+                    <span className="truncate font-normal">{t("composer.sendToAgent")}</span>
                   </ChatHeaderButton>
                 }
               />
@@ -11956,10 +11962,10 @@ export default function ChatView({
                       className="text-[26px] font-normal leading-[1.15] tracking-[-0.015em] text-foreground/95 sm:text-[30px]"
                     >
                       {isEmptyChatLanding ? (
-                        "What should we work on?"
+                        t("composer.emptyChat")
                       ) : (
                         <>
-                          What should we do in{" "}
+                          {t("composer.emptyAgentPrefix")}{" "}
                           {showEmptyLandingProjectPicker ? (
                             <ProjectPicker
                               align="center"
@@ -11977,16 +11983,16 @@ export default function ChatView({
                                   data-testid="empty-landing-heading-project-trigger"
                                   className="cursor-pointer rounded-sm text-inherit underline decoration-dotted decoration-[1.5px] underline-offset-[6px] transition-colors duration-150 ease-out hover:text-foreground/70 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring/60 motion-reduce:transition-none"
                                 >
-                                  {activeProjectDisplayName ?? "this folder"}
+                                  {activeProjectDisplayName ?? t("composer.thisFolder")}
                                 </button>
                               }
                             />
                           ) : (
                             <span className="text-inherit">
-                              {activeProjectDisplayName ?? "this folder"}
+                              {activeProjectDisplayName ?? t("composer.thisFolder")}
                             </span>
                           )}
-                          ?
+                          {t("composer.emptyAgentSuffix")}
                         </>
                       )}
                     </h2>

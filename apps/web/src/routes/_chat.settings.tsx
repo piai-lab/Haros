@@ -85,6 +85,7 @@ import { useDesktopTopBarTrafficLightGutterClassName } from "../hooks/useDesktop
 import { useTheme } from "../hooks/useTheme";
 import { isUiDensity } from "../lib/appDensity";
 import { isElectron } from "../env";
+import { useI18n } from "../i18n";
 import { RotateCcwIcon } from "../lib/icons";
 import { cn, isMacPlatform } from "../lib/utils";
 import { ensureNativeApi, readNativeApi } from "../nativeApi";
@@ -176,6 +177,7 @@ function SettingsRouteView() {
     setSystemUiFont,
   } = useTheme();
   const { settings, defaults, updateSettings, resetSettings } = useAppSettings();
+  const { t } = useI18n();
   const desktopTopBarTrafficLightGutterClassName = useDesktopTopBarTrafficLightGutterClassName();
   const [resetEpoch, setResetEpoch] = useState(0);
   const shouldShowFontSmoothing = isMacPlatform(
@@ -206,6 +208,7 @@ function SettingsRouteView() {
   }, [activeSection, settingsTarget]);
 
   const changedSettingLabels = [
+    ...(settings.localePreference !== defaults.localePreference ? [t("settings.language")] : []),
     ...(theme !== "system" ? ["Theme"] : []),
     ...(!isDefaultActiveTheme ? [`${resolvedTheme === "dark" ? "Dark" : "Light"} theme pack`] : []),
     ...(settings.defaultProvider !== defaults.defaultProvider ? ["Default provider"] : []),
@@ -217,7 +220,7 @@ function SettingsRouteView() {
       ? ["Thread sort order"]
       : []),
     ...(settings.showChatsSection !== defaults.showChatsSection ? ["Chats section"] : []),
-    ...(settings.showStudioSection !== defaults.showStudioSection ? ["Studio section"] : []),
+    ...(settings.showStudioSection !== defaults.showStudioSection ? [t("nav.chat")] : []),
     ...(settings.uiDensity !== defaults.uiDensity ? ["UI density"] : []),
     ...(settings.desktopAppIcon !== defaults.desktopAppIcon ? ["App icon"] : []),
     ...(settings.chatFontSizePx !== defaults.chatFontSizePx ? ["Base font size"] : []),
@@ -336,10 +339,51 @@ function SettingsRouteView() {
 
   const renderGeneralPanel = () => (
     <div className="space-y-6">
-      <SettingsSection title="Core defaults">
+      <SettingsSection title={t("settings.coreDefaults")}>
         <SettingsRow
-          title="Default provider"
-          description="Choose the provider used for new chats."
+          title={t("settings.language")}
+          description={t("settings.languageDescription")}
+          resetAction={
+            settings.localePreference !== defaults.localePreference ? (
+              <SettingResetButton
+                label={t("settings.language")}
+                onClick={() => updateSettings({ localePreference: defaults.localePreference })}
+              />
+            ) : null
+          }
+          control={
+            <SettingsSelectControl
+              value={settings.localePreference}
+              onValueChange={(value) => {
+                if (value !== "system" && value !== "zh-CN" && value !== "en") return;
+                updateSettings({ localePreference: value });
+              }}
+              ariaLabel={t("settings.language")}
+              triggerClassName="w-full sm:w-40"
+              valueContent={
+                settings.localePreference === "system"
+                  ? t("common.system")
+                  : settings.localePreference === "zh-CN"
+                    ? t("common.chinese")
+                    : t("common.english")
+              }
+            >
+              <SelectItem hideIndicator value="system">
+                {t("common.system")}
+              </SelectItem>
+              <SelectItem hideIndicator value="zh-CN">
+                {t("common.chinese")}
+              </SelectItem>
+              <SelectItem hideIndicator value="en">
+                {t("common.english")}
+              </SelectItem>
+            </SettingsSelectControl>
+          }
+        />
+
+        <SettingsRow
+          title={t("settings.defaultProvider")}
+          description={t("settings.defaultProviderDescription")}
           resetAction={
             settings.defaultProvider !== defaults.defaultProvider ? (
               <SettingResetButton
@@ -355,7 +399,7 @@ function SettingsRouteView() {
                 if (!isProviderSelectOption(value)) return;
                 updateSettings({ defaultProvider: value });
               }}
-              ariaLabel="Default provider"
+              ariaLabel={t("settings.defaultProvider")}
               valueContent={
                 <ProviderOptionLabel
                   provider={settings.defaultProvider}
@@ -504,10 +548,10 @@ function SettingsRouteView() {
 
         {renderBooleanSettingRow({
           settingKey: "showStudioSection",
-          title: "Studio",
-          description: "Show the Studio tab in the sidebar switcher.",
-          resetLabel: "studio section",
-          ariaLabel: "Show the Studio section in the sidebar",
+          title: t("nav.chat"),
+          description: t("settings.chatSurfaceDescription"),
+          resetLabel: t("nav.chat"),
+          ariaLabel: t("settings.chatSurfaceDescription"),
         })}
       </SettingsSection>
 
@@ -872,7 +916,7 @@ function SettingsRouteView() {
           : null}
       </SettingsSection>
 
-      <SettingsSection title="Time and reading">
+      <SettingsSection title={t("settings.timeAndReading")}>
         <SettingsRow
           title="Time format"
           description="System default follows your browser or OS clock preference."
@@ -1067,10 +1111,22 @@ function SettingsRouteView() {
                 <div className="mb-8 flex items-start justify-between gap-4">
                   <div className="min-w-0">
                     <h1 className="text-xl font-medium tracking-tight text-foreground">
-                      {activeSectionItem.label}
+                      {activeSection === "general"
+                        ? t("settings.general")
+                        : activeSection === "appearance"
+                          ? t("settings.appearance")
+                          : activeSection === "behavior"
+                            ? t("settings.behavior")
+                            : activeSectionItem.label}
                     </h1>
                     <p className="mt-1.5 text-sm leading-relaxed text-muted-foreground">
-                      {activeSectionItem.description}
+                      {activeSection === "general"
+                        ? t("settings.generalDescription")
+                        : activeSection === "appearance"
+                          ? t("settings.appearanceDescription")
+                          : activeSection === "behavior"
+                            ? t("settings.behaviorDescription")
+                            : activeSectionItem.description}
                     </p>
                   </div>
                   <Button

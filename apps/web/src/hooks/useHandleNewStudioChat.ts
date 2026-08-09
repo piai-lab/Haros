@@ -8,8 +8,10 @@ import { startContainerChat, type StartContainerChatResult } from "../lib/startC
 import { useComposerDraftStore } from "../composerDraftStore";
 import { useWorkspacePathsStore } from "../workspacePathsStore";
 import { useHandleNewThread } from "./useHandleNewThread";
+import { useI18n } from "../i18n";
 
 export function useHandleNewStudioChat() {
+  const { t } = useI18n();
   const homeDir = useWorkspacePathsStore((state) => state.homeDir);
   const chatWorkspaceRoot = useWorkspacePathsStore((state) => state.chatWorkspaceRoot);
   const studioWorkspaceRoot = useWorkspacePathsStore((state) => state.studioWorkspaceRoot);
@@ -39,7 +41,7 @@ export function useHandleNewStudioChat() {
       // Studio owns one durable local workspace. Reopening its stored draft must never
       // inherit an old project/worktree environment.
       forceLocalWorkspace: true,
-      errorLabel: "Unable to prepare a new Studio chat.",
+      errorLabel: t("error.prepareChat"),
     });
 
   return { handleNewStudioChat };

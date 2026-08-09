@@ -247,7 +247,7 @@ describe("studioProjects", () => {
       type: "project.create",
       projectId,
       kind: "studio",
-      title: "Studio",
+      title: "Chat",
       workspaceRoot: "/Users/tester/Documents/OmniMind/Studio",
       createWorkspaceRootIfMissing: true,
     });

@@ -41,6 +41,7 @@ import {
 } from "./composerTraits";
 import { Tooltip, TooltipPopup, TooltipTrigger } from "../ui/tooltip";
 import { ShortcutKbd } from "../ui/shortcut-kbd";
+import { useI18n } from "~/i18n";
 
 const ULTRATHINK_PROMPT_PREFIX = "Ultrathink:\n";
 
@@ -278,6 +279,7 @@ export const TraitsMenuContent = memo(function TraitsMenuContentImpl({
   modelOptions,
   onSelectionComplete,
 }: TraitsMenuContentProps) {
+  const { t } = useI18n();
   const includeFastMode = includeFastModeProp ?? true;
   const setProviderModelOptions = useComposerDraftStore((store) => store.setProviderModelOptions);
   const {
@@ -376,11 +378,11 @@ export const TraitsMenuContent = memo(function TraitsMenuContentImpl({
     <>
       {thinkingEnabled !== null ? (
         <TraitRadioSection
-          label="Thinking"
+          label={t("composer.thinking")}
           value={thinkingEnabled ? "on" : "off"}
           options={[
-            { value: "on", label: "On (default)" },
-            { value: "off", label: "Off" },
+            { value: "on", label: t("common.onDefault") },
+            { value: "off", label: t("common.off") },
           ]}
           onValueChange={(value) => commitTrait({ thinking: value === "on" })}
           onSelectionComplete={onSelectionComplete}

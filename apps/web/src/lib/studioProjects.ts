@@ -202,7 +202,7 @@ export async function ensureStudioProject(paths: ServerWorkspacePaths): Promise<
         commandId: newCommandId(),
         projectId,
         kind: "studio",
-        title: "Studio",
+        title: "Chat",
         workspaceRoot,
         createWorkspaceRootIfMissing: true,
         createdAt: new Date().toISOString(),
@@ -223,7 +223,7 @@ export async function ensureStudioProject(paths: ServerWorkspacePaths): Promise<
           // cross-kind ownership). Adopting a user's visible project into the hidden container
           // would make it vanish from Projects, so surface the conflict instead.
           throw new Error(
-            `Studio can't use "${workspaceRoot}" because another project already uses that folder. Remove or move that project, then retry.`,
+            `Chat can't use "${workspaceRoot}" because another project already uses that folder. Remove or move that project, then retry.`,
             { cause: error },
           );
         }
@@ -238,7 +238,7 @@ export async function ensureStudioProject(paths: ServerWorkspacePaths): Promise<
       maxAttempts: CREATED_CONTAINER_SYNC_MAX_ATTEMPTS,
     });
     if (!syncedContainer) {
-      throw new Error("Studio was created but hasn't finished syncing yet. Try again in a moment.");
+      throw new Error("Chat was created but hasn't finished syncing yet. Try again in a moment.");
     }
     return projectId;
   })().finally(() => {

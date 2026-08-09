@@ -69,8 +69,9 @@ export const SETTINGS_SEARCH_ENTRIES: readonly SettingsSearchEntry[] = [
   {
     id: "general:studio-section",
     section: "general",
-    title: "Studio",
-    keywords: "Show the Studio tab in the sidebar switcher. sidebar section content outbox",
+    title: "Chat",
+    keywords:
+      "Show the Chat tab in the Agent | Chat switcher. sidebar section content outbox studio",
   },
   {
     id: "general:environment-default-open",

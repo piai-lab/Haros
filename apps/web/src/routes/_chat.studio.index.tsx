@@ -25,12 +25,14 @@ import { useHandleNewStudioChat } from "../hooks/useHandleNewStudioChat";
 import { collectStudioProjectIds, findStudioDraftThreadId } from "../lib/studioProjects";
 import { EMPTY_THREAD_IDS, useStore } from "../store";
 import { useWorkspacePathsStore } from "../workspacePathsStore";
+import { useI18n } from "../i18n";
 
 // How long the splash below waits for the welcome's Studio root before surfacing an error —
 // generous next to a normal welcome round-trip, mirroring the home route's eventual error+retry.
 const WORKSPACE_PATHS_TIMEOUT_MS = 10_000;
 
 function StudioIndexRouteView() {
+  const { t } = useI18n();
   const { settings: appSettings } = useAppSettings();
   const { handleNewStudioChat } = useHandleNewStudioChat();
   const threadIds = useStore((state) => state.threadIds ?? EMPTY_THREAD_IDS);
@@ -133,11 +135,7 @@ function StudioIndexRouteView() {
   if (!studioWorkspaceRoot) {
     return (
       <SplashScreen
-        errorMessage={
-          pathsWaitTimedOut
-            ? "Studio is taking too long to load — the server has not reported its Studio folder yet."
-            : null
-        }
+        errorMessage={pathsWaitTimedOut ? t("error.chatWorkspaceTimeout") : null}
         onRetry={pathsWaitTimedOut ? () => setPathsWaitTimedOut(false) : null}
       />
     );

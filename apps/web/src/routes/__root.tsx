@@ -116,6 +116,7 @@ import { arraysShallowEqual } from "../storeNormalization";
 import { providerModelDiscoveryInvalidationFingerprint } from "../lib/providerDiscoveryInvalidation";
 import { providerDiscoveryQueryKeys } from "../lib/providerDiscoveryReactQuery";
 import { useAppSettings } from "../appSettings";
+import { DocumentLocaleSync, I18nProvider } from "../i18n";
 import {
   getNotifiableProviderUpdateStatuses,
   isProviderUpdateActive,
@@ -252,18 +253,21 @@ function RootRouteView() {
   return (
     <>
       <ToastProvider position="top-center">
-        <AnchoredToastProvider>
-          <GitProgressToastPreviewDev />
-          <EventRouter />
-          <ProviderStatusRefreshCoordinator />
-          <GlobalShortcutsDialog />
-          <GlobalFeedbackDialog />
-          <TaskCompletionNotifications />
-          <AppSnapWelcomeDialog />
-          <AppSnapCoordinator />
-          <DesktopProjectBootstrap />
-          <Outlet />
-        </AnchoredToastProvider>
+        <I18nProvider>
+          <AnchoredToastProvider>
+            <DocumentLocaleSync />
+            <GitProgressToastPreviewDev />
+            <EventRouter />
+            <ProviderStatusRefreshCoordinator />
+            <GlobalShortcutsDialog />
+            <GlobalFeedbackDialog />
+            <TaskCompletionNotifications />
+            <AppSnapWelcomeDialog />
+            <AppSnapCoordinator />
+            <DesktopProjectBootstrap />
+            <Outlet />
+          </AnchoredToastProvider>
+        </I18nProvider>
       </ToastProvider>
       {desktopWindowControls}
     </>

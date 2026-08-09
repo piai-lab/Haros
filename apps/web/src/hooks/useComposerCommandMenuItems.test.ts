@@ -72,7 +72,7 @@ describe("buildThreadMentionComposerItems", () => {
     expect(Object.fromEntries(items.map((item) => [item.id, item.description]))).toEqual({
       "thread:chat-thread": "Chats",
       "thread:project-thread": "OmniMind",
-      "thread:studio-thread": "Studio",
+      "thread:studio-thread": "Chat",
     });
     expect(items.find((item) => item.id === "thread:studio-thread")).toMatchObject({
       provider: "claudeAgent",

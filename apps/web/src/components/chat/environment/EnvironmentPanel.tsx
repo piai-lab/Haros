@@ -23,6 +23,7 @@ import type {
 import { useNavigate } from "@tanstack/react-router";
 
 import { useAppSettings } from "~/appSettings";
+import { useI18n } from "~/i18n";
 import { SETTINGS_TARGETS } from "~/settingsNavigation";
 import {
   ENVIRONMENT_PANEL_MOTION_CLASS,
@@ -259,6 +260,7 @@ export function EnvironmentPanel({
   const onOpenEditorView = onOpenEditorViewProp ?? null;
   const navigate = useNavigate();
   const { settings } = useAppSettings();
+  const { t } = useI18n();
   const { additions, deletions, hasChanges } = diffTotals;
 
   // Disable the Changes row only when the diff cannot be opened *and* is not already open
@@ -288,15 +290,15 @@ export function EnvironmentPanel({
       ) : null}
 
       <div className="flex items-center justify-between gap-2 px-2 pb-0.5 pt-0.5">
-        <EnvironmentPanelTitle>Environment</EnvironmentPanelTitle>
+        <EnvironmentPanelTitle>{t("workbench.environment")}</EnvironmentPanelTitle>
         {/*
           icon-xs centers the 14px gear inside a 28/24px box, insetting it ~7/5px from the
           content edge; pull it back so the glyph's right edge lines up with the rows' chevrons
           (which sit flush against the same px-2 gutter).
         */}
         <IconButton
-          label="Panel sections"
-          tooltip="Panel sections"
+          label={t("workbench.panelSections")}
+          tooltip={t("workbench.panelSections")}
           className="-mr-[7px] sm:-mr-[5px]"
           onClick={() =>
             void navigate({
@@ -323,8 +325,8 @@ export function EnvironmentPanel({
             if (!api) {
               toastManager.add({
                 type: "error",
-                title: "Unable to open folder",
-                description: "The desktop connection is not available yet.",
+                title: t("error.openFolder"),
+                description: t("error.desktopUnavailable"),
               });
               return;
             }
@@ -334,9 +336,8 @@ export function EnvironmentPanel({
               .catch((error) => {
                 toastManager.add({
                   type: "error",
-                  title: "Unable to open folder",
-                  description:
-                    error instanceof Error ? error.message : "An unknown error occurred.",
+                  title: t("error.openFolder"),
+                  description: error instanceof Error ? error.message : t("error.unknown"),
                 });
               });
           }}
@@ -346,7 +347,7 @@ export function EnvironmentPanel({
       {isGitRepo ? (
         <EnvironmentRow
           icon={<ChangesIcon className={ENVIRONMENT_ROW_ICON_CLASS_NAME} aria-hidden />}
-          label="Changes"
+          label={t("workbench.changes")}
           trailing={
             hasChanges ? (
               <>
@@ -384,7 +385,7 @@ export function EnvironmentPanel({
       {settings.showEnvironmentUsage ? <EnvironmentUsageSection provider={activeProvider} /> : null}
 
       {settings.showEnvironmentRepository && githubRepository && onOpenGithubRepository ? (
-        <EnvironmentLabeledSection label="Repository">
+        <EnvironmentLabeledSection label={t("workbench.repository")}>
           <EnvironmentRow
             icon={<GitHubIcon className={ENVIRONMENT_ROW_ICON_CLASS_NAME} aria-hidden />}
             label={<span className="truncate">{githubRepository.nameWithOwner}</span>}

@@ -32,7 +32,6 @@ import { DEFAULT_PROVIDER_ORDER } from "~/providerOrdering";
 import {
   buildPluginSearchFields,
   buildSkillSearchFields,
-  formatSkillDiscoveryWarning,
   formatSkillScope,
   isInstalledProviderPlugin,
   normalizeProviderDiscoveryText,
@@ -66,6 +65,7 @@ import {
   useDesktopTopBarWindowControlsGutterClassName,
 } from "~/hooks/useDesktopTopBarGutter";
 import { Skeleton } from "./ui/skeleton";
+import { useI18n } from "~/i18n";
 
 // ── Types ──────────────────────────────────────────────────────────────────
 
@@ -385,6 +385,7 @@ function SectionHeader({ title }: { title: string }) {
 // ── Main component ─────────────────────────────────────────────────────────
 
 export function PluginLibrary() {
+  const { t } = useI18n();
   const desktopTopBarTrafficLightGutterClassName = useDesktopTopBarTrafficLightGutterClassName();
   const desktopTopBarWindowControlsGutterClassName =
     useDesktopTopBarWindowControlsGutterClassName();
@@ -553,12 +554,12 @@ export function PluginLibrary() {
           <SidebarHeaderNavigationControls />
           <div className="flex items-end gap-3">
             <TabButton
-              label="Plugins"
+              label={t("library.plugins")}
               active={selectedTab === "plugins"}
               onClick={() => setSelectedTab("plugins")}
             />
             <TabButton
-              label="Skills"
+              label={t("library.skills")}
               active={selectedTab === "skills"}
               onClick={() => setSelectedTab("skills")}
             />
@@ -594,10 +595,10 @@ export function PluginLibrary() {
         <div className="min-h-0 flex-1 overflow-y-auto">
           {/* Hero */}
           <div className="px-6 py-10 text-center">
-            <h1 className="text-[28px] font-semibold text-foreground">{providerLabel} Library</h1>
-            <p className="mt-2 text-sm text-muted-foreground">
-              Native capabilities plus compatible OmniMind Library assets.
-            </p>
+            <h1 className="text-[28px] font-semibold text-foreground">
+              {t("library.title", { provider: providerLabel })}
+            </h1>
+            <p className="mt-2 text-sm text-muted-foreground">{t("library.subtitle")}</p>
           </div>
 
           {/* Search */}
@@ -614,7 +615,9 @@ export function PluginLibrary() {
                   if (selectedTab === "plugins") setPluginSearch(e.target.value);
                   else setSkillSearch(e.target.value);
                 }}
-                placeholder={selectedTab === "plugins" ? "Search plugins" : "Search skills"}
+                placeholder={
+                  selectedTab === "plugins" ? t("library.searchPlugins") : t("library.searchSkills")
+                }
                 className="text-sm"
               />
             </InputGroup>
@@ -628,14 +631,14 @@ export function PluginLibrary() {
               (pluginsQuery.data?.marketplaceLoadErrors.length ?? 0) > 0)) && (
             <div className="mx-auto max-w-2xl space-y-1.5 px-6 pb-4">
               {!discoveryCwd && selectedTab === "skills" ? (
-                <InlineWarning>
-                  Skills need a workspace path. Open a project or thread first.
-                </InlineWarning>
+                <InlineWarning>{t("library.workspaceRequired")}</InlineWarning>
               ) : null}
               {selectedTab === "skills"
                 ? (skillsQuery.data?.warnings ?? []).map((warning) => (
                     <InlineWarning key={`${warning.source}:${warning.reason}`}>
-                      {formatSkillDiscoveryWarning(warning, providerLabel)}
+                      {warning.source === "engine-native"
+                        ? t("library.nativeDiscoveryFailed", { provider: providerLabel })
+                        : t("library.catalogDiscoveryFailed", { provider: providerLabel })}
                     </InlineWarning>
                   ))
                 : null}
@@ -660,8 +663,8 @@ export function PluginLibrary() {
                 {!canListPlugins ? (
                   <div className="mx-auto max-w-2xl">
                     <EmptyPanel
-                      title={`Plugins unavailable for ${providerLabel}`}
-                      description="This provider does not expose plugin discovery."
+                      title={t("library.pluginsUnavailable", { provider: providerLabel })}
+                      description={t("library.pluginDiscoveryUnsupported")}
                     />
                   </div>
                 ) : pluginsQuery.isLoading && pluginEntries.length === 0 ? (
@@ -672,8 +675,8 @@ export function PluginLibrary() {
                   </div>
                 ) : filteredPluginEntries.length === 0 ? (
                   <EmptyPanel
-                    title="No installed plugins found"
-                    description={`This view only shows plugins already available to ${providerLabel}.`}
+                    title={t("library.noPlugins")}
+                    description={t("library.onlyInstalledPlugins", { provider: providerLabel })}
                   />
                 ) : (
                   <div className="space-y-6">
@@ -695,8 +698,8 @@ export function PluginLibrary() {
                 {!canListSkills ? (
                   <div className="mx-auto max-w-2xl">
                     <EmptyPanel
-                      title={`Skills unavailable for ${providerLabel}`}
-                      description="This provider does not expose skill discovery."
+                      title={t("library.skillsUnavailable", { provider: providerLabel })}
+                      description={t("library.skillDiscoveryUnsupported")}
                     />
                   </div>
                 ) : skillsQuery.isLoading && discoveredSkills.length === 0 ? (
@@ -706,10 +709,13 @@ export function PluginLibrary() {
                     ))}
                   </div>
                 ) : filteredSkills.length === 0 ? (
-                  <EmptyPanel title="No skills found" description="No skills match this search." />
+                  <EmptyPanel
+                    title={t("library.noSkills")}
+                    description={t("library.noSkillMatch")}
+                  />
                 ) : (
                   <div>
-                    <SectionHeader title="Skills" />
+                    <SectionHeader title={t("library.skills")} />
                     <div className="grid grid-cols-1 sm:grid-cols-2">
                       {filteredSkills.map((skill) => (
                         <SkillGridItem

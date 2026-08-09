@@ -59,6 +59,7 @@ import {
 } from "./chat/workspaceExplorer";
 import { ProjectMenuPicker, type ProjectMenuPickerOption } from "./ProjectMenuPicker";
 import { WorkspaceFilePreview } from "./WorkspaceFilePreview";
+import { useI18n } from "~/i18n";
 
 type EditorCenterMode = "file" | "diff";
 type EditorActivityBarItem = EditorCenterMode | "search";
@@ -325,6 +326,7 @@ function EditorActivityBar(props: {
   sidebarVisible: boolean;
   onSelectItem: (item: EditorActivityBarItem) => void;
 }) {
+  const { t } = useI18n();
   const filesActive = props.sidebarVisible && !props.searchActive && props.centerMode === "file";
   const diffActive = props.sidebarVisible && !props.searchActive && props.centerMode === "diff";
   const searchActive = props.sidebarVisible && props.searchActive;
@@ -334,21 +336,21 @@ function EditorActivityBar(props: {
       aria-label="Editor activity bar"
     >
       <ExplorerActivityBarButton
-        label={filesActive ? "Hide files sidebar" : "Files"}
+        label={filesActive ? t("workbench.hideFiles") : t("workbench.files")}
         active={filesActive}
         onClick={() => props.onSelectItem("file")}
       >
         <FoldersIcon className="size-5" />
       </ExplorerActivityBarButton>
       <ExplorerActivityBarButton
-        label={diffActive ? "Hide diff sidebar" : "Diff"}
+        label={diffActive ? t("workbench.hideDiff") : t("workbench.diff")}
         active={diffActive}
         onClick={() => props.onSelectItem("diff")}
       >
         <ChangesIcon className="size-5" />
       </ExplorerActivityBarButton>
       <ExplorerActivityBarButton
-        label={searchActive ? "Hide search sidebar" : "Search files"}
+        label={searchActive ? t("workbench.hideSearch") : t("workbench.searchFiles")}
         active={searchActive}
         onClick={() => props.onSelectItem("search")}
       >
