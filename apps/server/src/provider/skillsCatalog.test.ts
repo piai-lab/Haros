@@ -18,6 +18,7 @@ import {
   filterDisabledSkills,
   mergeSkillsIntoCatalog,
   parseSkillFrontmatter,
+  skillsCatalogRoots,
 } from "./skillsCatalog.ts";
 import { pathIsWithin } from "./claudePluginSkills.ts";
 
@@ -96,7 +97,7 @@ describe("discoverSkillsCatalog", () => {
     await expect(access(path.join(omnimindBaseDir, "skills"))).resolves.toBeUndefined();
   });
 
-  it("aggregates skills from omnimind and provider home folders with origin scopes", async () => {
+  it("aggregates shared provider homes without touching stock Pi state", async () => {
     await writeSkill(
       path.join(omnimindBaseDir, "skills", "portable"),
       "portable",
@@ -132,7 +133,17 @@ describe("discoverSkillsCatalog", () => {
     expect(byName.get("grok-only")?.scope).toBe("grok");
     expect(byName.get("kilo-only")?.scope).toBe("kilo");
     expect(byName.get("opencode-only")?.scope).toBe("opencode");
-    expect(byName.get("pi-only")?.scope).toBe("pi");
+    expect(byName.get("pi-only")).toBeUndefined();
+  });
+
+  it("includes stock Pi roots only after Pi is explicitly selected", () => {
+    const neutralRoots = skillsCatalogRoots({ homeDir, omnimindBaseDir });
+    expect(neutralRoots.some((root) => root.path.includes(`${path.sep}.pi${path.sep}`))).toBe(
+      false,
+    );
+
+    const piRoots = skillsCatalogRoots({ homeDir, omnimindBaseDir, provider: "pi" });
+    expect(piRoots.some((root) => root.path.includes(`${path.sep}.pi${path.sep}`))).toBe(true);
   });
 
   it("discovers only the registered Claude plugin version for Grok with its native namespace", async () => {
@@ -418,7 +429,7 @@ description: Direct Pi markdown skill
 `,
     );
 
-    const skills = await discoverSkillsCatalog({ homeDir, omnimindBaseDir });
+    const skills = await discoverSkillsCatalog({ homeDir, omnimindBaseDir, provider: "pi" });
 
     const directSkill = skills.find((skill) => skill.name === "direct-review");
     expect(directSkill?.scope).toBe("pi");

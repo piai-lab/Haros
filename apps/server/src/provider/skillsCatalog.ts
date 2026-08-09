@@ -502,6 +502,11 @@ function orderedOriginsForProvider(
     return ordered.filter((origin) => includeOmniMindRoot || origin !== "omnimind");
   }
   for (const origin of HOME_ORIGIN_ORDER) {
+    // Stock Pi owns `.pi`. Do not enumerate its roots until the user has
+    // explicitly selected Pi for this provider view.
+    if (origin === "pi" && provider !== "pi") {
+      continue;
+    }
     if (!includeOmniMindRoot && origin === "omnimind") {
       continue;
     }

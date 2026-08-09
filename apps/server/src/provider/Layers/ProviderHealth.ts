@@ -120,6 +120,7 @@ const DROID_PROVIDER = "droid" as const;
 const KILO_PROVIDER = "kilo" as const;
 const OPENCODE_PROVIDER = "opencode" as const;
 const PI_PROVIDER = "pi" as const;
+const BUNDLED_PI_VERSION = "0.84.1";
 type ProviderStatuses = ReadonlyArray<ServerProviderStatus>;
 const DISABLED_PROVIDER_STATUS_MESSAGE = "Provider is disabled in OmniMind settings.";
 const MINIMUM_ANTIGRAVITY_CLI_VERSION = "1.0.12";
@@ -283,14 +284,12 @@ export const PACKAGE_MANAGED_PROVIDER_UPDATES: Partial<
   pi: {
     provider: PI_PROVIDER,
     binaryName: "pi",
-    npmPackageName: "@earendil-works/pi-coding-agent",
+    // Pi is part of the OmniMind App runtime. App updates own this version;
+    // provider maintenance must never mutate it behind the App's back.
+    npmPackageName: null,
     homebrew: null,
-    nativeUpdate: {
-      executable: "pi",
-      args: () => ["update"],
-      lockKey: "pi-native",
-      strategy: "always",
-    },
+    latestVersionSource: null,
+    nativeUpdate: null,
   },
 };
 
@@ -836,15 +835,6 @@ function cursorModelsOutputHasModels(output: string): boolean {
 function cursorModelsOutputHasNoModels(output: string): boolean {
   return output.toLowerCase().includes("no models available");
 }
-
-const runPiCommand = (args: ReadonlyArray<string>, executable = "pi") =>
-  runProviderCommand(executable, args, providerCommandEnv(PI_PROVIDER)).pipe(
-    Effect.flatMap((result) =>
-      isWindowsShellCommandMissingResult({ code: result.code, stderr: result.stderr })
-        ? Effect.fail(new Error(`spawn ${executable} ENOENT`))
-        : Effect.succeed(result),
-    ),
-  );
 
 const runAntigravityCommand = (args: ReadonlyArray<string>, executable = "agy") =>
   runProviderCommand(executable, args, providerCommandEnv(ANTIGRAVITY_PROVIDER)).pipe(
@@ -1551,78 +1541,23 @@ export const checkKiloProviderStatus = makeCheckKiloProviderStatus();
 
 // ── Pi health check ─────────────────────────────────────────────
 
-export const checkPiProviderStatus = (
-  agentDir?: string,
-  binaryPath?: string,
-): Effect.Effect<ServerProviderStatus, never, ChildProcessSpawner.ChildProcessSpawner> =>
-  Effect.gen(function* () {
-    const checkedAt = new Date().toISOString();
-    const executable = nonEmptyTrimmed(binaryPath) ?? "pi";
-
-    const versionProbe = yield* probeProviderCliVersion(
-      runPiCommand(["--version"], executable),
-      DEFAULT_TIMEOUT_MS,
-    );
-
-    // Pi itself is SDK-backed in OmniMind. Keep this CLI probe advisory so health
-    // refreshes do not import the SDK and initialize its native clipboard module.
-    if (versionProbe.outcome === "missing" || versionProbe.outcome === "failure") {
-      const error = versionProbe.cause;
-      return {
+// Stock Pi is bundled and SDK-backed. Startup health projection deliberately
+// remains pure: importing the SDK or invoking the native CLI here would allow
+// background startup to discover the user's `.pi` state before explicit use.
+export const checkPiProviderStatus = (): Effect.Effect<ServerProviderStatus> =>
+  Effect.sync(
+    () =>
+      ({
         provider: PI_PROVIDER,
-        status: "warning" as const,
+        status: "ready",
         available: true,
-        authStatus: "unknown" as const,
-        checkedAt,
+        authStatus: "unknown",
+        version: BUNDLED_PI_VERSION,
+        checkedAt: new Date().toISOString(),
         message:
-          versionProbe.outcome === "missing"
-            ? "Pi SDK is bundled, but the Pi CLI (`pi`) is not on PATH, so OmniMind could not verify the installed CLI version."
-            : `Pi SDK is bundled, but the CLI health check failed: ${error instanceof Error ? error.message : String(error)}.`,
-      } satisfies ServerProviderStatus;
-    }
-
-    if (versionProbe.outcome === "timeout") {
-      return {
-        provider: PI_PROVIDER,
-        status: "warning" as const,
-        available: true,
-        authStatus: "unknown" as const,
-        checkedAt,
-        message:
-          "Pi SDK is bundled, but the CLI health check timed out before OmniMind could verify the installed version.",
-      } satisfies ServerProviderStatus;
-    }
-
-    if (versionProbe.outcome === "nonzero") {
-      const version = versionProbe.result;
-      const detail = detailFromResult(version);
-      return {
-        provider: PI_PROVIDER,
-        status: "warning" as const,
-        available: true,
-        authStatus: "unknown" as const,
-        checkedAt,
-        message: detail
-          ? `Pi SDK is bundled, but the CLI health check failed. ${detail}`
-          : "Pi SDK is bundled, but the CLI health check failed.",
-      } satisfies ServerProviderStatus;
-    }
-
-    const version = versionProbe.result;
-    const parsedVersion = parseGenericCliVersion(`${version.stdout}\n${version.stderr}`);
-    const configuredAgentDir = nonEmptyTrimmed(agentDir);
-    return {
-      provider: PI_PROVIDER,
-      status: "ready" as const,
-      available: true,
-      authStatus: "unknown" as const,
-      version: parsedVersion,
-      checkedAt,
-      message: configuredAgentDir
-        ? `Pi CLI is installed. OmniMind will use Pi agent dir ${configuredAgentDir}.`
-        : "Pi CLI is installed. Configure provider credentials inside Pi as needed.",
-    } satisfies ServerProviderStatus;
-  });
+          "Pi 0.84.1 is bundled. Native Pi discovery and state access begin only after you select Pi.",
+      }) satisfies ServerProviderStatus,
+  );
 
 // ── Antigravity CLI health check ──────────────────────────────────
 
@@ -2411,14 +2346,7 @@ export function makeProviderHealthLive(options?: { readonly providerUpdateTimeou
                   OPENCODE_PROVIDER,
                   makeCheckOpenCodeProviderStatus(settings.providers.opencode.binaryPath),
                 ),
-                checkProviderWhenEnabled(
-                  settings,
-                  PI_PROVIDER,
-                  checkPiProviderStatus(
-                    settings.providers.pi.agentDir,
-                    settings.providers.pi.binaryPath,
-                  ),
-                ),
+                checkProviderWhenEnabled(settings, PI_PROVIDER, checkPiProviderStatus()),
               ],
               {
                 concurrency: "unbounded",

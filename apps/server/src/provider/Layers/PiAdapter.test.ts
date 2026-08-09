@@ -22,9 +22,22 @@ import {
   makePiBashProcessSupervisor,
   makePiRuntimeEventBase,
   makePiUserInputOptions,
+  piModelHasConfiguredCredentials,
   PLAIN_PI_EXTENSION_THEME,
   toPiProviderModelDescriptor,
 } from "./PiAdapter";
+
+describe("Pi credential gate", () => {
+  it("requires configured auth for the selected upstream model", () => {
+    const configured = {
+      hasConfiguredAuth: (provider: string) => provider === "deepseek",
+    } as Pick<ModelRuntime, "hasConfiguredAuth">;
+
+    expect(piModelHasConfiguredCredentials(configured, undefined)).toBe(false);
+    expect(piModelHasConfiguredCredentials(configured, { provider: "anthropic" })).toBe(false);
+    expect(piModelHasConfiguredCredentials(configured, { provider: "deepseek" })).toBe(true);
+  });
+});
 
 describe("Pi native OmniMind gateway tools", () => {
   it("uses canonical MCP schemas and keeps same-cwd thread tokens distinct", async () => {

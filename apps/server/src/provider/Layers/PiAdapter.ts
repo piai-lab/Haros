@@ -1201,6 +1201,22 @@ function makeAgentDir(
   return trimToUndefined(agentDir) ?? piSdk.getAgentDir();
 }
 
+// Mirrors Pi 0.84.1's own session path encoding while honoring the explicit
+// agentDir already passed through the SDK services. Pi's public SessionManager
+// accepts this path but does not expose its default-path helper.
+function piSessionDir(agentDir: string, cwd: string): string {
+  const resolvedCwd = path.resolve(cwd);
+  const safePath = `--${resolvedCwd.replace(/^[/\\]/u, "").replace(/[/\\:]/gu, "-")}--`;
+  return path.join(path.resolve(agentDir), "sessions", safePath);
+}
+
+export function piModelHasConfiguredCredentials(
+  modelRuntime: Pick<ModelRuntime, "hasConfiguredAuth">,
+  model: Pick<Model<Api>, "provider"> | undefined,
+): boolean {
+  return model !== undefined && modelRuntime.hasConfiguredAuth(model.provider);
+}
+
 // Keep session runtimes isolated so project extension provider registrations
 // cannot leak between threads that share an agent directory.
 export async function createPiModelRuntime(
@@ -2143,7 +2159,7 @@ const makePiAdapter = (options?: PiAdapterLiveOptions) =>
         const sessionFile = extractResumeSessionFile(input.resumeCursor);
         const sessionManager = sessionFile
           ? piSdk.SessionManager.open(sessionFile, undefined, cwd)
-          : piSdk.SessionManager.create(cwd);
+          : piSdk.SessionManager.create(cwd, piSessionDir(agentDir, cwd));
         const modelId =
           input.modelSelection?.provider === "pi" ? input.modelSelection.model : undefined;
         const thinkingLevel =
@@ -2442,6 +2458,16 @@ const makePiAdapter = (options?: PiAdapterLiveOptions) =>
           if (thinkingLevel) {
             context.runtime.session.setThinkingLevel(thinkingLevel);
           }
+        }
+        const activeModel = context.runtime.session.model;
+        if (!piModelHasConfiguredCredentials(context.runtime.services.modelRuntime, activeModel)) {
+          return yield* new ProviderAdapterValidationError({
+            provider: PROVIDER,
+            operation: "sendTurn",
+            issue: activeModel
+              ? `Pi cannot send with provider '${activeModel.provider}' because no credentials are configured. Add credentials in Pi, then retry.`
+              : "Pi cannot send because no model with configured credentials is selected.",
+          });
         }
         const payload = yield* buildPromptPayload(input);
         const turnId = TurnId.makeUnsafe(crypto.randomUUID());

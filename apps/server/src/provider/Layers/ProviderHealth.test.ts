@@ -1903,61 +1903,19 @@ it.layer(NodeServices.layer)("ProviderHealth", (it) => {
   });
 
   describe("checkPiProviderStatus", () => {
-    it.effect("returns ready using only the Pi CLI version probe", () =>
+    it.effect("projects the locked bundled Pi runtime without native discovery", () =>
       Effect.gen(function* () {
         const status = yield* checkPiProviderStatus();
         assert.strictEqual(status.provider, "pi");
         assert.strictEqual(status.status, "ready");
         assert.strictEqual(status.available, true);
         assert.strictEqual(status.authStatus, "unknown");
+        assert.strictEqual(status.version, "0.84.1");
         assert.strictEqual(
           status.message,
-          "Pi CLI is installed. Configure provider credentials inside Pi as needed.",
+          "Pi 0.84.1 is bundled. Native Pi discovery and state access begin only after you select Pi.",
         );
-      }).pipe(
-        Effect.provide(
-          mockSpawnerLayer((args, command) => {
-            assert.strictEqual(command, "pi");
-            const joined = args.join(" ");
-            if (joined === "--version") return { stdout: "pi 0.74.0\n", stderr: "", code: 0 };
-            throw new Error(`Unexpected args: ${joined}`);
-          }),
-        ),
-      ),
-    );
-
-    it.effect("uses configured Pi binary and agent dir without SDK registry reads", () =>
-      Effect.gen(function* () {
-        const status = yield* checkPiProviderStatus("/tmp/pi-agent", "/custom/bin/pi");
-        assert.strictEqual(status.status, "ready");
-        assert.strictEqual(
-          status.message,
-          "Pi CLI is installed. OmniMind will use Pi agent dir /tmp/pi-agent.",
-        );
-      }).pipe(
-        Effect.provide(
-          mockSpawnerLayer((args, command) => {
-            assert.strictEqual(command, "/custom/bin/pi");
-            const joined = args.join(" ");
-            if (joined === "--version") return { stdout: "pi 0.74.0\n", stderr: "", code: 0 };
-            throw new Error(`Unexpected args: ${joined}`);
-          }),
-        ),
-      ),
-    );
-
-    it.effect("keeps Pi usable when the advisory CLI probe is missing", () =>
-      Effect.gen(function* () {
-        const status = yield* checkPiProviderStatus();
-        assert.strictEqual(status.provider, "pi");
-        assert.strictEqual(status.status, "warning");
-        assert.strictEqual(status.available, true);
-        assert.strictEqual(status.authStatus, "unknown");
-        assert.strictEqual(
-          status.message,
-          "Pi SDK is bundled, but the Pi CLI (`pi`) is not on PATH, so OmniMind could not verify the installed CLI version.",
-        );
-      }).pipe(Effect.provide(failingSpawnerLayer("spawn pi ENOENT"))),
+      }),
     );
   });
 
