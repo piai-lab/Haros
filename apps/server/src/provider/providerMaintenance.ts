@@ -434,11 +434,13 @@ function detectInstallSource(
   if (isPnpmGlobalCommandPath(commandPath)) {
     return "pnpm";
   }
-  if (isNpmGlobalCommandPath(commandPath)) {
-    return "npm";
-  }
+  // Homebrew formulae may embed an npm-style lib/node_modules tree inside Cellar.
+  // The outer installation owner must win or a formula gets sent through `npm -g`.
   if (isHomebrewCommandPath(commandPath)) {
     return "homebrew";
+  }
+  if (isNpmGlobalCommandPath(commandPath)) {
+    return "npm";
   }
   return "unknown";
 }
@@ -650,9 +652,11 @@ export const resolveProviderMaintenanceCapabilitiesEffect = Effect.fn(
     });
   }
 
-  return resolvePackageManagedProviderMaintenance(definition, {
-    ...options,
-    binaryPath,
+  // A stale health/advisory cache must not turn a missing CLI into a spawn attempt.
+  // Keep the manual command visible, but only expose one-click update after locating a binary.
+  return makeManualOnlyProviderMaintenanceCapabilities({
+    provider: definition.provider,
+    packageName: definition.npmPackageName,
   });
 });
 

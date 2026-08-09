@@ -2166,6 +2166,18 @@ export function makeProviderHealthLive(options?: { readonly providerUpdateTimeou
         }
       };
 
+      const resolveProviderMaintenanceBinaryPath = (
+        provider: ProviderKind,
+        settings: ServerSettings,
+      ) => {
+        const configuredPath = getProviderBinaryPath(provider, settings);
+        // Droid's installer commonly writes outside the PATH inherited by a GUI app.
+        // Keep maintenance on the same executable resolution used by health and ACP runtime.
+        return provider === DROID_PROVIDER
+          ? resolveDroidCliBinaryPath(configuredPath)
+          : configuredPath;
+      };
+
       const getProviderMaintenanceCapabilities = Effect.fn("getProviderMaintenanceCapabilities")(
         function* (provider: ProviderKind) {
           const settings = yield* serverSettings.getSettings;
@@ -2202,7 +2214,7 @@ export function makeProviderHealthLive(options?: { readonly providerUpdateTimeou
             });
           }
           return yield* resolveProviderMaintenanceCapabilitiesEffect(definition, {
-            binaryPath: getProviderBinaryPath(provider, settings),
+            binaryPath: resolveProviderMaintenanceBinaryPath(provider, settings),
             env: providerCommandEnv(provider),
             platform: process.platform,
           }).pipe(Effect.provideService(FileSystem.FileSystem, fileSystem));

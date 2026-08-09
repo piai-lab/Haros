@@ -39,6 +39,19 @@ const OPENCODE_DEFINITION = {
   },
 } as const satisfies PackageManagedProviderMaintenanceDefinition;
 
+const DROID_DEFINITION = {
+  provider: "droid",
+  binaryName: "droid",
+  npmPackageName: "@factory/cli",
+  homebrew: null,
+  nativeUpdate: {
+    executable: "droid",
+    args: () => ["update"],
+    lockKey: "droid-native",
+    strategy: "always",
+  },
+} as const satisfies PackageManagedProviderMaintenanceDefinition;
+
 const CLAUDE_DEFINITION = {
   provider: "claudeAgent",
   binaryName: "claude",
@@ -202,7 +215,8 @@ describe("providerMaintenance", () => {
   it("uses Homebrew updates but keeps npm latest metadata for tapped OpenCode installs", () => {
     const capabilities = resolvePackageManagedProviderMaintenance(OPENCODE_DEFINITION, {
       binaryPath: "opencode",
-      realCommandPath: "/opt/homebrew/Cellar/opencode/1.14.46/bin/opencode",
+      realCommandPath:
+        "/opt/homebrew/Cellar/opencode/1.14.46/libexec/lib/node_modules/opencode-ai/bin/opencode",
     });
 
     assert.deepStrictEqual(capabilities.update, {
@@ -334,6 +348,23 @@ describe("providerMaintenance", () => {
       });
 
       assert.deepStrictEqual(probed, []);
+    });
+
+    it("does not offer one-click update when the native CLI cannot be located", async () => {
+      const layer = FileSystem.layerNoop({ exists: () => Effect.succeed(false) });
+
+      const capabilities = await Effect.runPromise(
+        resolveProviderMaintenanceCapabilitiesEffect(DROID_DEFINITION, {
+          platform: "darwin",
+          env: { PATH: "/usr/bin:/bin" },
+        }).pipe(Effect.provide(layer)),
+      );
+
+      assert.strictEqual(capabilities.update, null);
+      assert.deepStrictEqual(capabilities.latestVersionSource, {
+        kind: "npm",
+        name: "@factory/cli",
+      });
     });
   });
 
