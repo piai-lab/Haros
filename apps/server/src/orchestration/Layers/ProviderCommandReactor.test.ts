@@ -1191,12 +1191,13 @@ describe("ProviderCommandReactor", () => {
       outcome: "safe_retry",
       state: "succeeded",
     });
-    await waitFor(() => harness.interruptTurn.mock.calls.length === 4);
+    // The escape-hatch interrupt already settled thread-1's active turn. The
+    // authorized rollback retry therefore proceeds without a duplicate interrupt.
+    expect(harness.interruptTurn.mock.calls.length).toBe(3);
     expect(harness.interruptTurn.mock.calls.map(([request]) => request.threadId)).toEqual([
       ThreadId.makeUnsafe("thread-1"),
       ThreadId.makeUnsafe("thread-1"),
       ThreadId.makeUnsafe("thread-2"),
-      ThreadId.makeUnsafe("thread-1"),
     ]);
     // The authorized retry completed the previously blocked rollback and
     // replayed the side effect the quarantine had skipped.
