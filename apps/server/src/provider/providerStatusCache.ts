@@ -11,6 +11,7 @@ import { Cause, Effect, FileSystem, Schema } from "effect";
 import { writeFileStringAtomically } from "../atomicWrite";
 
 const PROVIDER_STATUS_CACHE_IDS = [
+  "omnimind",
   "codex",
   "claudeAgent",
   "cursor",

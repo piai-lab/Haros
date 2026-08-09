@@ -23,6 +23,13 @@ export interface ProviderDescriptor {
 
 export const PROVIDER_DESCRIPTORS = [
   {
+    kind: "omnimind",
+    displayName: PROVIDER_DISPLAY_NAMES.omnimind,
+    available: true,
+    supportsNativeTurnSteering: true,
+    usage: null,
+  },
+  {
     kind: "codex",
     displayName: PROVIDER_DISPLAY_NAMES.codex,
     available: true,

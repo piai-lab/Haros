@@ -54,6 +54,7 @@ export const ORCHESTRATION_WS_CHANNELS = {
 } as const;
 
 export const ProviderKind = Schema.Literals([
+  "omnimind",
   "codex",
   "claudeAgent",
   "cursor",
@@ -78,7 +79,14 @@ export const ProviderSandboxMode = Schema.Literals([
   "danger-full-access",
 ]);
 export type ProviderSandboxMode = typeof ProviderSandboxMode.Type;
-export const DEFAULT_PROVIDER_KIND: ProviderKind = "codex";
+export const DEFAULT_PROVIDER_KIND: ProviderKind = "omnimind";
+
+export const OmniMindModelSelection = Schema.Struct({
+  provider: Schema.Literal("omnimind"),
+  model: TrimmedNonEmptyString,
+  options: Schema.optional(PiModelOptions),
+});
+export type OmniMindModelSelection = typeof OmniMindModelSelection.Type;
 
 export const CodexModelSelection = Schema.Struct({
   provider: Schema.Literal("codex"),
@@ -145,6 +153,7 @@ export const PiModelSelection = Schema.Struct({
 export type PiModelSelection = typeof PiModelSelection.Type;
 
 export const ModelSelection = Schema.Union([
+  OmniMindModelSelection,
   CodexModelSelection,
   ClaudeModelSelection,
   CursorModelSelection,
@@ -202,6 +211,7 @@ export const PiProviderStartOptions = Schema.Struct({
 });
 
 export const ProviderStartOptions = Schema.Struct({
+  omnimind: Schema.optional(Schema.Struct({})),
   codex: Schema.optional(CodexProviderStartOptions),
   claudeAgent: Schema.optional(ClaudeProviderStartOptions),
   cursor: Schema.optional(CursorProviderStartOptions),

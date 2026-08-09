@@ -312,6 +312,8 @@ function formatMostWorkedProjectLabel(project: ProfileStats["mostWorkedProject"]
 
 function formatProviderLabel(provider: ProviderKind): string {
   switch (provider) {
+    case "omnimind":
+      return "OmniMind Agent";
     case "codex":
       return "Codex";
     case "claudeAgent":

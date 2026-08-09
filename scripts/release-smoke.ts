@@ -19,6 +19,7 @@ import {
   resolveReleaseUpdatePolicy,
 } from "./lib/release-update-policy.ts";
 import {
+  OMNIMIND_PI_RUNTIME_PACKAGE_PATH,
   RELEASE_LOCKFILE_PATH,
   RELEASE_PATCHES_PATH,
   RELEASE_WORKSPACE_MANIFEST_PATHS,
@@ -37,6 +38,9 @@ function copyWorkspaceManifestFixture(targetRoot: string): void {
   cpSync(resolve(repoRoot, RELEASE_PATCHES_PATH), resolve(targetRoot, RELEASE_PATCHES_PATH), {
     recursive: true,
   });
+  const runtimePackageDestination = resolve(targetRoot, OMNIMIND_PI_RUNTIME_PACKAGE_PATH);
+  mkdirSync(dirname(runtimePackageDestination), { recursive: true });
+  cpSync(resolve(repoRoot, OMNIMIND_PI_RUNTIME_PACKAGE_PATH), runtimePackageDestination);
 }
 
 function writeMacManifestFixtures(targetRoot: string): { arm64Path: string; x64Path: string } {

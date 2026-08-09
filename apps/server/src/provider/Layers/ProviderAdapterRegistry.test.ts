@@ -12,6 +12,10 @@ import { GrokAdapter, GrokAdapterShape } from "../Services/GrokAdapter.ts";
 import { KiloAdapter, KiloAdapterShape } from "../Services/KiloAdapter.ts";
 import { OpenCodeAdapter, OpenCodeAdapterShape } from "../Services/OpenCodeAdapter.ts";
 import { PiAdapter, PiAdapterShape } from "../Services/PiAdapter.ts";
+import {
+  OmniMindAgentAdapter,
+  OmniMindAgentAdapterShape,
+} from "../Services/OmniMindAgentAdapter.ts";
 import { AntigravityAdapter, AntigravityAdapterShape } from "../Services/AntigravityAdapter.ts";
 import { ProviderAdapterRegistry } from "../Services/ProviderAdapterRegistry.ts";
 import { ProviderAdapterRegistryLive } from "./ProviderAdapterRegistry.ts";
@@ -158,6 +162,11 @@ const fakePiAdapter: PiAdapterShape = {
   streamEvents: Stream.empty,
 };
 
+const fakeOmniMindAgentAdapter: OmniMindAgentAdapterShape = {
+  ...fakePiAdapter,
+  provider: "omnimind",
+};
+
 const fakeAntigravityAdapter: AntigravityAdapterShape = {
   provider: "antigravity",
   capabilities: { sessionModelSwitch: "restart-session" },
@@ -188,6 +197,7 @@ const layer = it.layer(
         Layer.succeed(DroidAdapter, fakeDroidAdapter),
         Layer.succeed(KiloAdapter, fakeKiloAdapter),
         Layer.succeed(OpenCodeAdapter, fakeOpenCodeAdapter),
+        Layer.succeed(OmniMindAgentAdapter, fakeOmniMindAgentAdapter),
         Layer.succeed(PiAdapter, fakePiAdapter),
       ),
     ),
@@ -207,6 +217,7 @@ layer("ProviderAdapterRegistryLive", (it) => {
       const droid = yield* registry.getByProvider("droid");
       const kilo = yield* registry.getByProvider("kilo");
       const opencode = yield* registry.getByProvider("opencode");
+      const omnimind = yield* registry.getByProvider("omnimind");
       const pi = yield* registry.getByProvider("pi");
       assert.equal(codex, fakeCodexAdapter);
       assert.equal(claude, fakeClaudeAdapter);
@@ -216,6 +227,7 @@ layer("ProviderAdapterRegistryLive", (it) => {
       assert.equal(droid, fakeDroidAdapter);
       assert.equal(kilo, fakeKiloAdapter);
       assert.equal(opencode, fakeOpenCodeAdapter);
+      assert.equal(omnimind, fakeOmniMindAgentAdapter);
       assert.equal(pi, fakePiAdapter);
 
       const providers = yield* registry.listProviders();
@@ -228,6 +240,7 @@ layer("ProviderAdapterRegistryLive", (it) => {
         "droid",
         "kilo",
         "opencode",
+        "omnimind",
         "pi",
       ]);
     }),

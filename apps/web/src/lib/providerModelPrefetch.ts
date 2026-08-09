@@ -71,6 +71,8 @@ export function providerModelsPrefetchQueryOptions(input: {
   const cwd = input.cwd ?? null;
 
   switch (provider) {
+    case "omnimind":
+      return providerModelsQueryOptions({ provider: "omnimind", cwd });
     case "claudeAgent":
       return providerModelsQueryOptions({ provider: "claudeAgent" });
     case "codex":

@@ -274,6 +274,11 @@ function getProviderStateFromCapabilities(
 }
 
 const composerProviderRegistry: Record<ProviderKind, ProviderRegistryEntry> = {
+  omnimind: {
+    getState: (input) => getProviderStateFromCapabilities(input),
+    renderTraitsMenuContent: (input) => renderTraitsMenuContentForProvider("omnimind", input),
+    renderTraitsPicker: (input) => renderTraitsPickerForProvider("omnimind", input),
+  },
   codex: {
     getState: (input) => getProviderStateFromCapabilities(input),
     renderTraitsMenuContent: (input) => renderTraitsMenuContentForProvider("codex", input),

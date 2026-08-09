@@ -10,6 +10,9 @@ describe("providerStartOptionsFromServerSettings", () => {
     const settings = {
       ...DEFAULT_SERVER_SETTINGS,
       providers: {
+        omnimind: {
+          ...DEFAULT_SERVER_SETTINGS.providers.omnimind,
+        },
         codex: {
           ...DEFAULT_SERVER_SETTINGS.providers.codex,
           binaryPath: "",

@@ -7,6 +7,21 @@ import { assert, it } from "@effect/vitest";
 
 import { normalizePersistedModelSelection } from "./modelSelectionCompatibility.ts";
 
+it("preserves canonical OmniMind Agent model selections", () => {
+  assert.deepEqual(
+    normalizePersistedModelSelection({
+      provider: "omnimind",
+      model: "deepseek/deepseek-chat",
+      options: { thinkingLevel: "medium" },
+    }),
+    {
+      provider: "omnimind",
+      model: "deepseek/deepseek-chat",
+      options: { thinkingLevel: "medium" },
+    },
+  );
+});
+
 it("preserves canonical Pi model selections", () => {
   assert.deepEqual(normalizePersistedModelSelection({ provider: "pi", model: "openai/gpt-5.5" }), {
     provider: "pi",

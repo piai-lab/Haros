@@ -2447,6 +2447,8 @@ export default function Sidebar() {
       // is unset. Nested function bodies are lowered separately and are unaffected, and the
       // catch below still sees every rejection. See Sidebar.compiler.test.ts.
       const runAddProject = async () => {
+        const defaultProvider =
+          appSettings.defaultProvider === "pi" ? "codex" : appSettings.defaultProvider;
         const existing = findWorkspaceRootMatch(projects, cwd, (project) => project.cwd);
         const existingRecovery = await recoverExistingAddProjectTarget({
           existingProjectId: existing?.id,
@@ -2466,6 +2468,10 @@ export default function Sidebar() {
         const creationResult = await createOrRecoverProjectFromPath({
           api,
           workspaceRoot: cwd,
+          defaultModelSelection: {
+            provider: defaultProvider,
+            model: getDefaultModel(defaultProvider),
+          },
           ...(options.createIfMissing === undefined
             ? {}
             : { createIfMissing: options.createIfMissing }),
@@ -2512,6 +2518,7 @@ export default function Sidebar() {
       await runExclusiveProjectAddition(projectAdditionLockRef, runAddProject);
     },
     [
+      appSettings.defaultProvider,
       appSettings.defaultThreadEnvMode,
       handleNewThread,
       projects,
@@ -3303,8 +3310,15 @@ export default function Sidebar() {
                     projectId: requestedProjectId,
                     newProjectSpaceId: value.spaceId,
                     defaultModelSelection: {
-                      provider: "codex",
-                      model: getDefaultModel("codex"),
+                      provider:
+                        appSettings.defaultProvider === "pi"
+                          ? "codex"
+                          : appSettings.defaultProvider,
+                      model: getDefaultModel(
+                        appSettings.defaultProvider === "pi"
+                          ? "codex"
+                          : appSettings.defaultProvider,
+                      ),
                     },
                     createdAt: new Date().toISOString(),
                   },
@@ -3357,6 +3371,7 @@ export default function Sidebar() {
     [
       activeSpaceId,
       addProjectFromPath,
+      appSettings.defaultProvider,
       handleSelectSpaceForIncomingProject,
       homeDir,
       openExistingProjectFromSnapshot,

@@ -587,6 +587,7 @@ describe("getProviderStartOptions", () => {
 
 describe("provider-indexed custom model settings", () => {
   const settings = {
+    customOmniMindModels: ["deepseek/custom-omnimind"],
     customCodexModels: ["custom/codex-model"],
     customClaudeModels: ["claude/custom-opus"],
     customCursorModels: ["cursor/custom-model"],
@@ -600,6 +601,7 @@ describe("provider-indexed custom model settings", () => {
 
   it("exports one provider config per provider", () => {
     expect(MODEL_PROVIDER_SETTINGS.map((config) => config.provider)).toEqual([
+      "omnimind",
       "codex",
       "claudeAgent",
       "cursor",
@@ -619,6 +621,9 @@ describe("provider-indexed custom model settings", () => {
   });
 
   it("reads custom models for each provider", () => {
+    expect(getCustomModelsForProvider(settings, "omnimind")).toEqual([
+      "deepseek/custom-omnimind",
+    ]);
     expect(getCustomModelsForProvider(settings, "codex")).toEqual(["custom/codex-model"]);
     expect(getCustomModelsForProvider(settings, "claudeAgent")).toEqual(["claude/custom-opus"]);
     expect(getCustomModelsForProvider(settings, "cursor")).toEqual(["cursor/custom-model"]);
@@ -631,6 +636,7 @@ describe("provider-indexed custom model settings", () => {
 
   it("reads default custom models for each provider", () => {
     const defaults = {
+      customOmniMindModels: ["deepseek/default-omnimind"],
       customCodexModels: ["default/codex-model"],
       customClaudeModels: ["claude/default-opus"],
       customCursorModels: ["cursor/default-model"],
@@ -642,6 +648,9 @@ describe("provider-indexed custom model settings", () => {
       customPiModels: ["anthropic/default-pi"],
     } as const;
 
+    expect(getDefaultCustomModelsForProvider(defaults, "omnimind")).toEqual([
+      "deepseek/default-omnimind",
+    ]);
     expect(getDefaultCustomModelsForProvider(defaults, "codex")).toEqual(["default/codex-model"]);
     expect(getDefaultCustomModelsForProvider(defaults, "claudeAgent")).toEqual([
       "claude/default-opus",
@@ -713,6 +722,7 @@ describe("provider-indexed custom model settings", () => {
 
   it("builds a complete provider-indexed custom model record", () => {
     expect(getCustomModelsByProvider(settings)).toEqual({
+      omnimind: ["deepseek/custom-omnimind"],
       codex: ["custom/codex-model"],
       claudeAgent: ["claude/custom-opus"],
       cursor: ["cursor/custom-model"],
@@ -728,6 +738,11 @@ describe("provider-indexed custom model settings", () => {
   it("builds provider-indexed model options including custom models", () => {
     const modelOptionsByProvider = getCustomModelOptionsByProvider(settings);
 
+    expect(
+      modelOptionsByProvider.omnimind.some(
+        (option) => option.slug === "deepseek/custom-omnimind",
+      ),
+    ).toBe(true);
     expect(
       modelOptionsByProvider.codex.some((option) => option.slug === "custom/codex-model"),
     ).toBe(true);

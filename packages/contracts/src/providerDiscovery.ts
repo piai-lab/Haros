@@ -8,6 +8,7 @@ import { TrimmedNonEmptyString } from "./baseSchemas";
 import { ProviderOptionDescriptor } from "./model";
 
 const ProviderDiscoveryKind = Schema.Literals([
+  "omnimind",
   "codex",
   "claudeAgent",
   "cursor",

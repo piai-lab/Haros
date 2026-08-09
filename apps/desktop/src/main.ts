@@ -1821,6 +1821,7 @@ function resolveUserDataPath(): string {
   return resolveDesktopUserDataPath({
     appDataBase,
     userDataDirectoryName: desktopIdentity.userDataDirectoryName,
+    ...(process.env.OMNIMIND_HOME ? { productHome: process.env.OMNIMIND_HOME } : {}),
   });
 }
 

@@ -122,7 +122,7 @@ export function useEffectiveComposerModelState(input: {
   selectedProvider: ProviderKind;
   threadModelSelection: ModelSelection | null | undefined;
   projectModelSelection: ModelSelection | null | undefined;
-  customModelsByProvider: Record<ProviderKind, readonly string[]>;
+  customModelsByProvider: Partial<Record<ProviderKind, readonly string[]>>;
   availableModelOptionsByProvider?: Partial<
     Record<ProviderKind, ReadonlyArray<{ slug: string; name: string }>>
   >;

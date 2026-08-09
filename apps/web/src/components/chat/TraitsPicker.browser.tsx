@@ -40,6 +40,7 @@ function ClaudeTraitsPickerHarness(props: {
     threadModelSelection: props.fallbackModelSelection,
     projectModelSelection: null,
     customModelsByProvider: {
+      omnimind: [],
       codex: [],
       claudeAgent: [],
       cursor: [],
@@ -642,6 +643,7 @@ function OpenCodeTraitsPickerHarness(props: {
     threadModelSelection: props.fallbackModelSelection,
     projectModelSelection: null,
     customModelsByProvider: {
+      omnimind: [],
       codex: [],
       claudeAgent: [],
       cursor: [],

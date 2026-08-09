@@ -1808,6 +1808,7 @@ function toLegacySessionStatus(
 
 function toLegacyProvider(providerName: string | null): ProviderKind {
   if (
+    providerName === "omnimind" ||
     providerName === "codex" ||
     providerName === "claudeAgent" ||
     providerName === "cursor" ||

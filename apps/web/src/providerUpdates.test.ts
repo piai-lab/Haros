@@ -60,6 +60,7 @@ function serverSettings(overrides: Partial<ServerSettings["providers"]> = {}): S
     addProjectBaseDirectory: "",
     textGenerationModelSelection: { provider: "codex", model: "gpt-5.4-mini" },
     providers: {
+      omnimind: { enabled: true, customModels: [] },
       codex: { ...provider, binaryPath: "codex", homePath: "" },
       claudeAgent: { ...provider, binaryPath: "claude", launchArgs: "" },
       cursor: { ...provider, binaryPath: "cursor-agent", apiEndpoint: "" },

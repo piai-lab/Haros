@@ -14,6 +14,12 @@ const ProviderSettingsBase = {
   customModels: CustomModels,
 };
 
+export const OmniMindServerProviderSettings = Schema.Struct({
+  enabled: Schema.Boolean.pipe(Schema.withDecodingDefault(() => true)),
+  customModels: CustomModels,
+});
+export type OmniMindServerProviderSettings = typeof OmniMindServerProviderSettings.Type;
+
 export const CodexServerProviderSettings = Schema.Struct({
   ...ProviderSettingsBase,
   binaryPath: StringSetting.pipe(Schema.withDecodingDefault(() => "codex")),
@@ -102,6 +108,7 @@ export const ServerSettings = Schema.Struct({
     })),
   ),
   providers: Schema.Struct({
+    omnimind: OmniMindServerProviderSettings.pipe(Schema.withDecodingDefault(() => ({}))),
     codex: CodexServerProviderSettings.pipe(Schema.withDecodingDefault(() => ({}))),
     claudeAgent: ClaudeServerProviderSettings.pipe(Schema.withDecodingDefault(() => ({}))),
     cursor: CursorServerProviderSettings.pipe(Schema.withDecodingDefault(() => ({}))),
@@ -147,6 +154,12 @@ export const ServerSettingsPatch = Schema.Struct({
   textGenerationModelSelection: Schema.optionalKey(ModelSelectionPatch),
   providers: Schema.optionalKey(
     Schema.Struct({
+      omnimind: Schema.optionalKey(
+        Schema.Struct({
+          enabled: Schema.optionalKey(Schema.Boolean),
+          customModels: Schema.optionalKey(CustomModels),
+        }),
+      ),
       codex: Schema.optionalKey(
         Schema.Struct({
           ...ProviderSettingsBasePatch,

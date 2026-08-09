@@ -80,7 +80,12 @@ export function formatProviderModelOptionName(input: {
     return trimmedSlug;
   }
 
-  if (input.provider === "kilo" || input.provider === "opencode" || input.provider === "pi") {
+  if (
+    input.provider === "kilo" ||
+    input.provider === "opencode" ||
+    input.provider === "pi" ||
+    input.provider === "omnimind"
+  ) {
     const modelIdentifier = trimmedSlug.includes("/")
       ? trimmedSlug.slice(trimmedSlug.lastIndexOf("/") + 1)
       : trimmedSlug;
@@ -399,6 +404,10 @@ export function buildModelSelection(
   supportsAutoMode?: boolean | undefined,
 ): ModelSelection {
   switch (provider) {
+    case "omnimind":
+      return options
+        ? { provider, model, options: options as PiModelOptions }
+        : { provider, model };
     case "antigravity":
       return options
         ? {

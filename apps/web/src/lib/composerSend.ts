@@ -211,6 +211,8 @@ export function resolvePromptEffortFromModelSelection(
   modelSelection: ModelSelection,
 ): string | null {
   switch (modelSelection.provider) {
+    case "omnimind":
+      return modelSelection.options?.thinkingLevel ?? null;
     case "antigravity":
       return null;
     case "codex":

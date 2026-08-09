@@ -23,6 +23,7 @@ import { GrokAdapter } from "../Services/GrokAdapter.ts";
 import { KiloAdapter } from "../Services/KiloAdapter.ts";
 import { OpenCodeAdapter } from "../Services/OpenCodeAdapter.ts";
 import { PiAdapter } from "../Services/PiAdapter.ts";
+import { OmniMindAgentAdapter } from "../Services/OmniMindAgentAdapter.ts";
 import { AntigravityAdapter } from "../Services/AntigravityAdapter.ts";
 
 export interface ProviderAdapterRegistryLiveOptions {
@@ -43,6 +44,7 @@ const makeProviderAdapterRegistry = (options?: ProviderAdapterRegistryLiveOption
             yield* DroidAdapter,
             yield* KiloAdapter,
             yield* OpenCodeAdapter,
+            yield* OmniMindAgentAdapter,
             yield* PiAdapter,
           ];
     const byProvider = new Map(adapters.map((adapter) => [adapter.provider, adapter]));

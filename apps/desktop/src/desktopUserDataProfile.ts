@@ -25,6 +25,11 @@ export function resolveDesktopAppDataBase(input?: {
 export function resolveDesktopUserDataPath(input: {
   readonly appDataBase: string;
   readonly userDataDirectoryName: string;
+  readonly productHome?: string;
 }): string {
+  const productHome = input.productHome?.trim();
+  if (productHome) {
+    return Path.join(productHome, "electron", input.userDataDirectoryName);
+  }
   return Path.join(input.appDataBase, input.userDataDirectoryName);
 }

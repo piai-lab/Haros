@@ -712,6 +712,32 @@ describe("store projection", () => {
     expect(threadsOf(next)[0]?.modelSelection.model).toBe("claude-sonnet-5");
   });
 
+  it("preserves OmniMind Agent as the active session provider", () => {
+    const initialState = makeState(makeThread());
+    const readModel = makeReadModel(
+      makeReadModelThread({
+        modelSelection: {
+          provider: "omnimind",
+          model: "deepseek/deepseek-chat",
+        },
+        session: {
+          threadId: ThreadId.makeUnsafe("thread-1"),
+          status: "error",
+          providerName: "omnimind",
+          runtimeMode: "full-access",
+          activeTurnId: null,
+          lastError: "OmniMind Agent credentials are not configured.",
+          updatedAt: "2026-02-27T00:00:00.000Z",
+        },
+      }),
+    );
+
+    const next = syncServerReadModel(initialState, readModel);
+
+    expect(threadsOf(next)[0]?.modelSelection.provider).toBe("omnimind");
+    expect(threadsOf(next)[0]?.session?.provider).toBe("omnimind");
+  });
+
   it("preserves OpenCode as the active session provider", () => {
     const initialState = makeState(makeThread());
     const readModel = makeReadModel(

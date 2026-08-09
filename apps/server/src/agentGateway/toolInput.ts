@@ -10,6 +10,7 @@ import { Schema } from "effect";
 import { AGENT_GATEWAY_TARGET_OPTIONS_DESCRIPTION } from "./targetResolver.ts";
 
 export const PROVIDER_KINDS: ReadonlyArray<ProviderKind> = [
+  "omnimind",
   "codex",
   "claudeAgent",
   "cursor",
@@ -133,9 +134,9 @@ export function buildModelSelection(
 ): ModelSelection {
   const effectiveModel =
     model ??
-    (provider === "pi"
+    (provider === "pi" || provider === "omnimind"
       ? undefined
-      : DEFAULT_MODEL_BY_PROVIDER[provider as Exclude<ProviderKind, "pi">]);
+      : DEFAULT_MODEL_BY_PROVIDER[provider]);
   if (!effectiveModel) {
     throw new ToolInputError(
       `Provider "${provider}" has no default model; pass an explicit "model" argument.`,

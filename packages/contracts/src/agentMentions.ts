@@ -211,6 +211,7 @@ export const AGENT_MENTION_ALIASES_BY_PROVIDER: Record<
   ProviderKind,
   Record<string, AgentAliasDefinition>
 > = {
+  omnimind: {},
   codex: CODEX_AGENT_MENTION_ALIASES,
   claudeAgent: CLAUDE_AGENT_MENTION_ALIASES,
   cursor: {},
@@ -229,6 +230,7 @@ export const AGENT_MENTION_ALIASES: Record<string, AgentAliasDefinition> = Objec
 );
 
 const AGENT_MENTION_AUTOCOMPLETE_ALIASES_BY_PROVIDER: Record<ProviderKind, readonly string[]> = {
+  omnimind: [],
   codex: ["5.5", "5.4", "mini", "5.3-codex", "spark", "5.2", "5.2-codex"],
   claudeAgent: ["explore", "review", "build", "plan"],
   cursor: [],

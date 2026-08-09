@@ -27,6 +27,7 @@ import {
   type ProviderListCommandsResult,
   type ProviderListModelsResult,
   type ProviderListSkillsResult,
+  type ProviderKind,
   ProviderItemId,
   type ProviderRuntimeEvent,
   type ProviderSession,
@@ -62,14 +63,17 @@ import { ServerConfig } from "../../config.ts";
 import { lazyModule } from "../../lazyModule.ts";
 import { buildProviderChildEnvironment } from "../../providerChildEnvironment.ts";
 import {
+  type ProviderAdapterError,
   ProviderAdapterRequestError,
   ProviderAdapterSessionClosedError,
   ProviderAdapterSessionNotFoundError,
   ProviderAdapterValidationError,
 } from "../Errors.ts";
 import { PiAdapter, type PiAdapterShape } from "../Services/PiAdapter.ts";
+import { OmniMindAgentAdapter } from "../Services/OmniMindAgentAdapter.ts";
 import {
   PROVIDER_ADAPTER_RUNTIME_EVENT_BUFFER_CAPACITY,
+  type ProviderAdapterShape,
   type ProviderThreadSnapshot,
 } from "../Services/ProviderAdapter.ts";
 import { appendFileAttachmentsPromptBlock } from "../attachmentProjection.ts";
@@ -89,7 +93,7 @@ import {
   teardownProviderProcessTree,
 } from "../supervisedProcessTeardown.ts";
 
-const PROVIDER = "pi" as const;
+type PiFamilyProvider = Extract<ProviderKind, "pi" | "omnimind">;
 const DEFAULT_PI_THINKING_LEVEL: ThinkingLevel = "medium";
 const PI_THINKING_OPTIONS: ReadonlyArray<{
   readonly value: ThinkingLevel;
@@ -322,6 +326,35 @@ export function makePiBashProcessSupervisor(
 const loadPiCodingAgentModule: () => Promise<PiCodingAgentModule> = lazyModule(
   () => import("@earendil-works/pi-coding-agent"),
 );
+const loadOmniMindCodingAgentModule: () => Promise<PiCodingAgentModule> = lazyModule(
+  () => import("@omnimind/pi-coding-agent") as unknown as Promise<PiCodingAgentModule>,
+);
+
+interface PiFamilyAdapterConfig<P extends PiFamilyProvider> {
+  readonly provider: P;
+  readonly displayName: string;
+  readonly loadModule: () => Promise<PiCodingAgentModule>;
+  readonly resolveAgentDir: (
+    requestedAgentDir: string | undefined,
+    serverBaseDir: string,
+    sdk: Pick<PiCodingAgentModule, "getAgentDir">,
+  ) => string;
+}
+
+const STOCK_PI_FAMILY = {
+  provider: "pi",
+  displayName: "Pi",
+  loadModule: loadPiCodingAgentModule,
+  resolveAgentDir: (requestedAgentDir, _serverBaseDir, sdk) => makeAgentDir(requestedAgentDir, sdk),
+} satisfies PiFamilyAdapterConfig<"pi">;
+
+const OMNIMIND_AGENT_FAMILY = {
+  provider: "omnimind",
+  displayName: "OmniMind Agent",
+  loadModule: loadOmniMindCodingAgentModule,
+  // Product state is App-owned and cannot be redirected into stock Pi state.
+  resolveAgentDir: (_requestedAgentDir, serverBaseDir) => path.join(serverBaseDir, "agent"),
+} satisfies PiFamilyAdapterConfig<"omnimind">;
 
 interface PiSessionContext {
   harnessPolicyDelivered?: boolean;
@@ -346,6 +379,7 @@ interface PiSessionContext {
 
 export function makePiRuntimeEventBase(
   context: {
+    readonly provider?: PiFamilyProvider;
     readonly lifecycleGeneration?: string;
     readonly session: Pick<ProviderSession, "threadId">;
     readonly activeTurnId: TurnId | undefined;
@@ -354,7 +388,7 @@ export function makePiRuntimeEventBase(
 ) {
   return {
     eventId: EventId.makeUnsafe(crypto.randomUUID()),
-    provider: PROVIDER,
+    provider: context.provider ?? "pi",
     threadId: context.session.threadId,
     createdAt: new Date().toISOString(),
     ...(context.lifecycleGeneration !== undefined
@@ -727,10 +761,13 @@ function getSessionFile(session: PiAgentSession): string | undefined {
   return session.sessionFile ?? session.sessionManager.getSessionFile();
 }
 
-function makeSessionSnapshot(context: PiSessionContext): ProviderSession {
+function makeSessionSnapshot(
+  context: PiSessionContext,
+  provider: PiFamilyProvider = "pi",
+): ProviderSession {
   const resumeCursor = getSessionFile(context.runtime.session);
   return {
-    provider: PROVIDER,
+    provider,
     status: context.stopped ? "closed" : context.activeTurnId ? "running" : "ready",
     runtimeMode: context.session.runtimeMode,
     threadId: context.session.threadId,
@@ -1320,8 +1357,14 @@ export const PLAIN_PI_EXTENSION_THEME = {
   },
 } as unknown as ExtensionUIContext["theme"];
 
-const makePiAdapter = (options?: PiAdapterLiveOptions) =>
+const makePiAdapter = <P extends PiFamilyProvider>(
+  family: PiFamilyAdapterConfig<P>,
+  options?: PiAdapterLiveOptions,
+) =>
   Effect.gen(function* () {
+    const provider = family.provider;
+    const displayName = family.displayName;
+    const extensionLabel = `${displayName} extension`;
     const serverConfig = yield* ServerConfig;
     const fileSystem = yield* FileSystem.FileSystem;
     const agentGatewayCredentials = Option.getOrUndefined(
@@ -1358,17 +1401,20 @@ const makePiAdapter = (options?: PiAdapterLiveOptions) =>
 
     const loadPiSdk = (method: string) =>
       Effect.tryPromise({
-        try: () => loadPiCodingAgentModule(),
+        try: () => family.loadModule(),
         catch: (cause) =>
           new ProviderAdapterRequestError({
-            provider: PROVIDER,
+            provider: provider,
             method,
-            detail: toMessage(cause, "Failed to load Pi SDK."),
+            detail: toMessage(cause, `Failed to load ${displayName} runtime.`),
             cause,
           }),
       });
 
-    const makeEventBase = makePiRuntimeEventBase;
+    const makeEventBase = (
+      context: Parameters<typeof makePiRuntimeEventBase>[0],
+      eventOptions?: Parameters<typeof makePiRuntimeEventBase>[1],
+    ) => makePiRuntimeEventBase({ ...context, provider }, eventOptions);
 
     const offerRuntimeEvent = (event: ProviderRuntimeEvent) => {
       runtimeEventIngress.offer(compactProviderRuntimeEventForIngress(event));
@@ -1492,7 +1538,7 @@ const makePiAdapter = (options?: PiAdapterLiveOptions) =>
           ...makeEventBase(context, { includeTurnId: false }),
           type: "runtime.warning",
           payload: {
-            message: `Pi extension UI API '${method}' is not supported in OmniMind yet.`,
+            message: `${extensionLabel} UI API '${method}' is not supported in OmniMind yet.`,
             detail: { method },
           },
           raw: {
@@ -1508,7 +1554,7 @@ const makePiAdapter = (options?: PiAdapterLiveOptions) =>
         offerRuntimeEvent({
           ...makeEventBase(context),
           type: "tool.progress",
-          payload: { toolName: "Pi plugin", summary: normalized },
+          payload: { toolName: extensionLabel, summary: normalized },
           raw: {
             source: "pi.sdk.event",
             method: "extension/ui-progress",
@@ -1526,7 +1572,7 @@ const makePiAdapter = (options?: PiAdapterLiveOptions) =>
             opts,
             question: {
               id: questionId,
-              header: trimToUndefined(title) ?? "Pi plugin",
+              header: trimToUndefined(title) ?? extensionLabel,
               question: trimToUndefined(title) ?? "Choose an option.",
               options: optionMappings.map((mapping) => mapping.option),
             },
@@ -1542,7 +1588,7 @@ const makePiAdapter = (options?: PiAdapterLiveOptions) =>
             opts,
             question: {
               id: questionId,
-              header: trimToUndefined(title) ?? "Pi plugin",
+              header: trimToUndefined(title) ?? extensionLabel,
               question:
                 trimToUndefined(message) ?? trimToUndefined(title) ?? "Confirm this action?",
               options: [makePiUserInputOption("Yes"), makePiUserInputOption("No")],
@@ -1558,7 +1604,7 @@ const makePiAdapter = (options?: PiAdapterLiveOptions) =>
             opts,
             question: {
               id: questionId,
-              header: trimToUndefined(title) ?? "Pi plugin",
+              header: trimToUndefined(title) ?? extensionLabel,
               question:
                 trimToUndefined(placeholder) ?? trimToUndefined(title) ?? "Type a response.",
               options: [],
@@ -1654,7 +1700,7 @@ const makePiAdapter = (options?: PiAdapterLiveOptions) =>
           return undefined;
         },
         setTheme() {
-          return { success: false, error: "OmniMind does not expose Pi themes." };
+          return { success: false, error: `Themes are not available for ${displayName}.` };
         },
         getToolsExpanded() {
           return false;
@@ -1669,7 +1715,7 @@ const makePiAdapter = (options?: PiAdapterLiveOptions) =>
         return;
       }
 
-      const message = toMessage(cause, "Pi turn failed.");
+      const message = toMessage(cause, `${displayName} turn failed.`);
       const failure = classifyPiTurnFailure(message);
       const completionBase = makeEventBase(context);
       if (failure.state === "failed") {
@@ -1680,7 +1726,7 @@ const makePiAdapter = (options?: PiAdapterLiveOptions) =>
       context.activeAssistantItemId = undefined;
       context.activeReasoningItemId = undefined;
       context.activeToolItems.clear();
-      context.session = makeSessionSnapshot(context);
+      context.session = makeSessionSnapshot(context, provider);
       offerRuntimeEvent({
         ...completionBase,
         type: "turn.completed",
@@ -1703,10 +1749,10 @@ const makePiAdapter = (options?: PiAdapterLiveOptions) =>
     const requireSession = Effect.fn("PiAdapter.requireSession")(function* (threadId: ThreadId) {
       const context = sessions.get(threadId);
       if (!context) {
-        return yield* new ProviderAdapterSessionNotFoundError({ provider: PROVIDER, threadId });
+        return yield* new ProviderAdapterSessionNotFoundError({ provider: provider, threadId });
       }
       if (context.stopped) {
-        return yield* new ProviderAdapterSessionClosedError({ provider: PROVIDER, threadId });
+        return yield* new ProviderAdapterSessionClosedError({ provider: provider, threadId });
       }
       return context;
     });
@@ -2037,7 +2083,7 @@ const makePiAdapter = (options?: PiAdapterLiveOptions) =>
             const replacementLease = acquireAgentGatewaySessionLease(
               agentGatewayCredentials,
               context.session.threadId,
-              PROVIDER,
+              provider,
             );
             if (replacementLease) {
               context.gatewaySessionLease = replacementLease;
@@ -2057,7 +2103,7 @@ const makePiAdapter = (options?: PiAdapterLiveOptions) =>
           context.activeAssistantItemId = undefined;
           context.activeReasoningItemId = undefined;
           context.activeToolItems.clear();
-          context.session = makeSessionSnapshot(context);
+          context.session = makeSessionSnapshot(context, provider);
           offerRuntimeEvent({
             ...completionBase,
             type: "turn.completed",
@@ -2105,7 +2151,7 @@ const makePiAdapter = (options?: PiAdapterLiveOptions) =>
         const model = findModelInRegistry(registry, input.modelId);
         if (input.modelId && !model) {
           throw new Error(
-            `Pi model '${input.modelId}' is not available. Use a discovered model or a provider-qualified custom model slug like 'openai/gpt-5.5'.`,
+            `${displayName} model '${input.modelId}' is not available. Use a discovered model or a provider-qualified custom model slug like 'openai/gpt-5.5'.`,
           );
         }
         const shellPath = services.settingsManager.getShellPath();
@@ -2155,15 +2201,19 @@ const makePiAdapter = (options?: PiAdapterLiveOptions) =>
             ? { teardownProcessTree: options.teardownProcessTree }
             : {}),
         });
-        const agentDir = makeAgentDir(input.providerOptions?.pi?.agentDir, piSdk);
+        const agentDir = family.resolveAgentDir(
+          input.providerOptions?.pi?.agentDir,
+          serverConfig.baseDir,
+          piSdk,
+        );
         const sessionFile = extractResumeSessionFile(input.resumeCursor);
         const sessionManager = sessionFile
           ? piSdk.SessionManager.open(sessionFile, undefined, cwd)
           : piSdk.SessionManager.create(cwd, piSessionDir(agentDir, cwd));
         const modelId =
-          input.modelSelection?.provider === "pi" ? input.modelSelection.model : undefined;
+          input.modelSelection?.provider === provider ? input.modelSelection.model : undefined;
         const thinkingLevel =
-          input.modelSelection?.provider === "pi"
+          input.modelSelection?.provider === provider
             ? normalizePiThinkingLevel(input.modelSelection.options?.thinkingLevel)
             : undefined;
         const existingContext = sessions.get(input.threadId);
@@ -2172,9 +2222,9 @@ const makePiAdapter = (options?: PiAdapterLiveOptions) =>
             try: () => disposeSessionContext(existingContext),
             catch: (cause) =>
               new ProviderAdapterRequestError({
-                provider: PROVIDER,
+                provider: provider,
                 method: "session/restart",
-                detail: toMessage(cause, "Failed to dispose previous Pi session."),
+                detail: toMessage(cause, `Failed to dispose previous ${displayName} session.`),
                 cause,
               }),
           });
@@ -2185,7 +2235,7 @@ const makePiAdapter = (options?: PiAdapterLiveOptions) =>
         const agentGatewaySessionLease = acquireAgentGatewaySessionLease(
           agentGatewayCredentials,
           input.threadId,
-          PROVIDER,
+          provider,
         );
         const agentGatewayConnection = agentGatewaySessionLease?.connection;
         const gatewayTools = agentGatewayConnection
@@ -2236,9 +2286,9 @@ const makePiAdapter = (options?: PiAdapterLiveOptions) =>
               }),
             catch: (cause) =>
               new ProviderAdapterRequestError({
-                provider: PROVIDER,
+                provider: provider,
                 method: "session/start",
-                detail: toMessage(cause, "Failed to start Pi session."),
+                detail: toMessage(cause, `Failed to start ${displayName} session.`),
                 cause,
               }),
           }),
@@ -2255,7 +2305,7 @@ const makePiAdapter = (options?: PiAdapterLiveOptions) =>
           : modelId;
         const resumeCursor = getSessionFile(runtime.session);
         const session: ProviderSession = {
-          provider: PROVIDER,
+          provider: provider,
           status: "ready",
           runtimeMode: input.runtimeMode,
           cwd,
@@ -2299,9 +2349,9 @@ const makePiAdapter = (options?: PiAdapterLiveOptions) =>
             runtime.session.bindExtensions({ uiContext: makePiExtensionUIContext(context) }),
           catch: (cause) =>
             new ProviderAdapterRequestError({
-              provider: PROVIDER,
+              provider: provider,
               method: "extension/bind",
-              detail: toMessage(cause, "Failed to bind Pi extensions."),
+              detail: toMessage(cause, `Failed to bind ${displayName} extensions.`),
               cause,
             }),
         }).pipe(
@@ -2311,9 +2361,12 @@ const makePiAdapter = (options?: PiAdapterLiveOptions) =>
                 try: () => disposeSessionContext(context),
                 catch: (cause) =>
                   new ProviderAdapterRequestError({
-                    provider: PROVIDER,
+                    provider: provider,
                     method: "session/start-cleanup",
-                    detail: toMessage(cause, "Failed to prove Pi startup cleanup completed."),
+                    detail: toMessage(
+                      cause,
+                      `Failed to prove ${displayName} startup cleanup completed.`,
+                    ),
                     cause,
                   }),
               });
@@ -2331,8 +2384,7 @@ const makePiAdapter = (options?: PiAdapterLiveOptions) =>
             ...makeEventBase(context, { includeTurnId: false }),
             type: "runtime.warning",
             payload: {
-              message:
-                "Pi extensions are loaded with OmniMind's limited UI bridge. select/confirm/input/notify/status are supported; TUI-only widgets and editor hooks are ignored.",
+              message: `${displayName} extensions are loaded with OmniMind's limited UI bridge. select/confirm/input/notify/status are supported; TUI-only widgets and editor hooks are ignored.`,
               detail: {
                 extensionCount: loadedExtensions.length,
                 extensions: extensionNames,
@@ -2348,7 +2400,7 @@ const makePiAdapter = (options?: PiAdapterLiveOptions) =>
         offerRuntimeEvent({
           ...makeEventBase(context),
           type: "session.started",
-          payload: { message: "Pi session started", resume: session.resumeCursor },
+          payload: { message: `${displayName} session started`, resume: session.resumeCursor },
         } satisfies ProviderRuntimeEvent);
         offerRuntimeEvent({
           ...makeEventBase(context),
@@ -2393,7 +2445,7 @@ const makePiAdapter = (options?: PiAdapterLiveOptions) =>
               });
               if (!attachmentPath) {
                 return yield* new ProviderAdapterValidationError({
-                  provider: PROVIDER,
+                  provider: provider,
                   operation: "turn/start",
                   issue: `Invalid attachment id '${attachment.id}'.`,
                 });
@@ -2402,7 +2454,7 @@ const makePiAdapter = (options?: PiAdapterLiveOptions) =>
                 Effect.mapError(
                   (cause) =>
                     new ProviderAdapterRequestError({
-                      provider: PROVIDER,
+                      provider: provider,
                       method: "turn/start",
                       detail: toMessage(cause, "Failed to read attachment file."),
                       cause,
@@ -2428,27 +2480,37 @@ const makePiAdapter = (options?: PiAdapterLiveOptions) =>
         const context = yield* requireSession(input.threadId);
         if (context.activeTurnId) {
           return yield* new ProviderAdapterValidationError({
-            provider: PROVIDER,
+            provider: provider,
             operation: "sendTurn",
-            issue: "A Pi turn is already active for this thread.",
+            issue: `A ${displayName} turn is already active for this thread.`,
           });
         }
-        if (input.modelSelection?.provider === "pi") {
+        if (input.modelSelection?.provider === provider) {
           const model = findModelInRegistry(context.modelRegistry, input.modelSelection.model);
           if (!model) {
             return yield* new ProviderAdapterValidationError({
-              provider: PROVIDER,
+              provider: provider,
               operation: "model/set",
-              issue: `Pi model '${input.modelSelection.model}' is not available. Use a discovered model or a provider-qualified custom model slug like 'openai/gpt-5.5'.`,
+              issue: `${displayName} model '${input.modelSelection.model}' is not available. Use a discovered model or a provider-qualified custom model slug like 'openai/gpt-5.5'.`,
+            });
+          }
+          // Pi's setModel rejects an unauthenticated model before the adapter's
+          // general send gate runs. Check the requested model first so the product
+          // reports a deliberate credential block instead of leaking an SDK stack.
+          if (!piModelHasConfiguredCredentials(context.runtime.services.modelRuntime, model)) {
+            return yield* new ProviderAdapterValidationError({
+              provider: provider,
+              operation: "sendTurn",
+              issue: `${displayName} cannot send with provider '${model.provider}' because no credentials are configured. Add credentials for ${displayName}, then retry.`,
             });
           }
           yield* Effect.tryPromise({
             try: () => context.runtime.session.setModel(model),
             catch: (cause) =>
               new ProviderAdapterRequestError({
-                provider: PROVIDER,
+                provider: provider,
                 method: "model/set",
-                detail: toMessage(cause, "Failed to set Pi model."),
+                detail: toMessage(cause, `Failed to set ${displayName} model.`),
                 cause,
               }),
           });
@@ -2462,18 +2524,18 @@ const makePiAdapter = (options?: PiAdapterLiveOptions) =>
         const activeModel = context.runtime.session.model;
         if (!piModelHasConfiguredCredentials(context.runtime.services.modelRuntime, activeModel)) {
           return yield* new ProviderAdapterValidationError({
-            provider: PROVIDER,
+            provider: provider,
             operation: "sendTurn",
             issue: activeModel
-              ? `Pi cannot send with provider '${activeModel.provider}' because no credentials are configured. Add credentials in Pi, then retry.`
-              : "Pi cannot send because no model with configured credentials is selected.",
+              ? `${displayName} cannot send with provider '${activeModel.provider}' because no credentials are configured. Add credentials for ${displayName}, then retry.`
+              : `${displayName} cannot send because no model with configured credentials is selected.`,
           });
         }
         const payload = yield* buildPromptPayload(input);
         const turnId = TurnId.makeUnsafe(crypto.randomUUID());
         context.activeTurnId = turnId;
         context.turns.push({ id: turnId, items: [] });
-        context.session = makeSessionSnapshot(context);
+        context.session = makeSessionSnapshot(context, provider);
         if (payload.images.length === 0 && isPiReloadCommand(payload.text)) {
           offerRuntimeEvent({
             ...makeEventBase(context),
@@ -2492,9 +2554,9 @@ const makePiAdapter = (options?: PiAdapterLiveOptions) =>
             try: () => context.runtime.session.reload(),
             catch: (cause) =>
               new ProviderAdapterRequestError({
-                provider: PROVIDER,
+                provider: provider,
                 method: "session/reload",
-                detail: toMessage(cause, "Failed to reload Pi resources."),
+                detail: toMessage(cause, `Failed to reload ${displayName} resources.`),
                 cause,
               }),
           }).pipe(
@@ -2514,7 +2576,7 @@ const makePiAdapter = (options?: PiAdapterLiveOptions) =>
                 });
                 yield* cancelAgentGatewayTurn(context.gatewaySessionLease, context.activeTurnId);
                 context.activeTurnId = undefined;
-                context.session = makeSessionSnapshot(context);
+                context.session = makeSessionSnapshot(context, provider);
                 return yield* Effect.fail(error);
               }),
             ),
@@ -2527,7 +2589,7 @@ const makePiAdapter = (options?: PiAdapterLiveOptions) =>
           } satisfies ProviderRuntimeEvent);
           yield* cancelAgentGatewayTurn(context.gatewaySessionLease, context.activeTurnId);
           context.activeTurnId = undefined;
-          context.session = makeSessionSnapshot(context);
+          context.session = makeSessionSnapshot(context, provider);
           return {
             threadId: input.threadId,
             turnId,
@@ -2535,7 +2597,7 @@ const makePiAdapter = (options?: PiAdapterLiveOptions) =>
           };
         }
         const harnessPolicy = takeOmniMindHarnessPolicyForProviderSession(context, {
-          provider: PROVIDER,
+          provider: provider,
           scopedGatewayConnectionAvailable: context.gatewayControlAvailable,
         });
         const providerText = [harnessPolicy, payload.text].filter(Boolean).join("\n\n");
@@ -2556,7 +2618,7 @@ const makePiAdapter = (options?: PiAdapterLiveOptions) =>
         const context = yield* requireSession(input.threadId);
         const payload = yield* buildPromptPayload(input);
         const harnessPolicy = takeOmniMindHarnessPolicyForProviderSession(context, {
-          provider: PROVIDER,
+          provider: provider,
           scopedGatewayConnectionAvailable: context.gatewayControlAvailable,
         });
         const providerText = [harnessPolicy, payload.text].filter(Boolean).join("\n\n");
@@ -2570,9 +2632,9 @@ const makePiAdapter = (options?: PiAdapterLiveOptions) =>
             try: () => context.runtime.session.steer(providerText, payload.images),
             catch: (cause) =>
               new ProviderAdapterRequestError({
-                provider: PROVIDER,
+                provider: provider,
                 method: "turn/steer",
-                detail: toMessage(cause, "Failed to steer Pi turn."),
+                detail: toMessage(cause, `Failed to steer ${displayName} turn.`),
                 cause,
               }),
           });
@@ -2612,9 +2674,9 @@ const makePiAdapter = (options?: PiAdapterLiveOptions) =>
             try: () => context.runtime.session.abort(),
             catch: (cause) =>
               new ProviderAdapterRequestError({
-                provider: PROVIDER,
+                provider: provider,
                 method: "turn/interrupt",
-                detail: toMessage(cause, "Failed to interrupt Pi turn."),
+                detail: toMessage(cause, `Failed to interrupt ${displayName} turn.`),
                 cause,
               }),
           }),
@@ -2624,9 +2686,9 @@ const makePiAdapter = (options?: PiAdapterLiveOptions) =>
     const respondUnsupported = (threadId: ThreadId, method: string) =>
       Effect.fail(
         new ProviderAdapterRequestError({
-          provider: PROVIDER,
+          provider: provider,
           method,
-          detail: `Pi does not expose OmniMind approval/user-input requests for thread ${threadId}.`,
+          detail: `${displayName} does not expose OmniMind approval/user-input requests for thread ${threadId}.`,
         }),
       );
 
@@ -2639,9 +2701,9 @@ const makePiAdapter = (options?: PiAdapterLiveOptions) =>
         const context = yield* requireSession(threadId);
         if (!resolvePiExtensionUserInput(context, requestId, answers)) {
           return yield* new ProviderAdapterRequestError({
-            provider: PROVIDER,
+            provider: provider,
             method: "user-input/respond",
-            detail: `Unknown pending Pi user-input request: ${requestId}`,
+            detail: `Unknown pending ${displayName} user-input request: ${requestId}`,
           });
         }
       });
@@ -2654,9 +2716,9 @@ const makePiAdapter = (options?: PiAdapterLiveOptions) =>
           try: () => disposeSessionContext(context),
           catch: (cause) =>
             new ProviderAdapterRequestError({
-              provider: PROVIDER,
+              provider: provider,
               method: "session/stop",
-              detail: toMessage(cause, "Failed to stop Pi session."),
+              detail: toMessage(cause, `Failed to stop ${displayName} session.`),
               cause,
             }),
         });
@@ -2676,7 +2738,9 @@ const makePiAdapter = (options?: PiAdapterLiveOptions) =>
       });
 
     const listSessions: PiAdapterShape["listSessions"] = () =>
-      Effect.sync(() => Array.from(sessions.values()).map(makeSessionSnapshot));
+      Effect.sync(() =>
+        Array.from(sessions.values()).map((context) => makeSessionSnapshot(context, provider)),
+      );
 
     const hasSession: PiAdapterShape["hasSession"] = (threadId) =>
       Effect.sync(() => sessions.has(threadId));
@@ -2731,9 +2795,9 @@ const makePiAdapter = (options?: PiAdapterLiveOptions) =>
             try: () => context.runtime.session.compact(),
             catch: (cause) =>
               new ProviderAdapterRequestError({
-                provider: PROVIDER,
+                provider: provider,
                 method: "thread/compact",
-                detail: toMessage(cause, "Failed to compact Pi thread."),
+                detail: toMessage(cause, `Failed to compact ${displayName} thread.`),
                 cause,
               }),
           }),
@@ -2750,8 +2814,8 @@ const makePiAdapter = (options?: PiAdapterLiveOptions) =>
     const listModels: NonNullable<PiAdapterShape["listModels"]> = (input) =>
       Effect.tryPromise({
         try: async () => {
-          const piSdk = await loadPiCodingAgentModule();
-          const agentDir = makeAgentDir(input.agentDir, piSdk);
+          const piSdk = await family.loadModule();
+          const agentDir = family.resolveAgentDir(input.agentDir, serverConfig.baseDir, piSdk);
           const cwd = trimToUndefined(input.cwd) ?? serverConfig.cwd;
           const modelRuntime = await createPiModelRuntime(agentDir, piSdk);
           const services = await piSdk.createAgentSessionServices({
@@ -2776,9 +2840,9 @@ const makePiAdapter = (options?: PiAdapterLiveOptions) =>
         },
         catch: (cause) =>
           new ProviderAdapterRequestError({
-            provider: PROVIDER,
+            provider: provider,
             method: "model/list",
-            detail: toMessage(cause, "Failed to list Pi models."),
+            detail: toMessage(cause, `Failed to list ${displayName} models.`),
             cause,
           }),
       });
@@ -2797,10 +2861,10 @@ const makePiAdapter = (options?: PiAdapterLiveOptions) =>
             | Awaited<ReturnType<PiCodingAgentModule["createAgentSessionServices"]>>
             | undefined;
           if (!loader) {
-            const piSdk = await loadPiCodingAgentModule();
+            const piSdk = await family.loadModule();
             services = await piSdk.createAgentSessionServices({
               cwd: input.cwd,
-              agentDir: makeAgentDir(input.agentDir, piSdk),
+              agentDir: family.resolveAgentDir(input.agentDir, serverConfig.baseDir, piSdk),
             });
           }
           if (services && input.forceReload) {
@@ -2808,7 +2872,7 @@ const makePiAdapter = (options?: PiAdapterLiveOptions) =>
           }
           const resourceLoader = loader ?? services?.resourceLoader;
           if (!resourceLoader) {
-            throw new Error("Failed to create Pi resource loader.");
+            throw new Error(`Failed to create ${displayName} resource loader.`);
           }
           const result = resourceLoader.getSkills();
           return {
@@ -2829,9 +2893,9 @@ const makePiAdapter = (options?: PiAdapterLiveOptions) =>
         },
         catch: (cause) =>
           new ProviderAdapterRequestError({
-            provider: PROVIDER,
+            provider: provider,
             method: "skill/list",
-            detail: toMessage(cause, "Failed to list Pi skills."),
+            detail: toMessage(cause, `Failed to list ${displayName} skills.`),
             cause,
           }),
       });
@@ -2845,7 +2909,7 @@ const makePiAdapter = (options?: PiAdapterLiveOptions) =>
           const session = active?.runtime.session;
           const reloadCommand = {
             name: "reload",
-            description: "Reload Pi extensions, skills, prompts, themes, tools, and settings",
+            description: `Reload ${displayName} extensions, skills, prompts, themes, tools, and settings`,
           };
           if (session) {
             if (input.forceReload) {
@@ -2871,10 +2935,10 @@ const makePiAdapter = (options?: PiAdapterLiveOptions) =>
               cached: false,
             } satisfies ProviderListCommandsResult;
           }
-          const piSdk = await loadPiCodingAgentModule();
+          const piSdk = await family.loadModule();
           const services = await piSdk.createAgentSessionServices({
             cwd: input.cwd,
-            agentDir: makeAgentDir(input.agentDir, piSdk),
+            agentDir: family.resolveAgentDir(input.agentDir, serverConfig.baseDir, piSdk),
           });
           if (input.forceReload) {
             await services.resourceLoader.reload();
@@ -2895,16 +2959,16 @@ const makePiAdapter = (options?: PiAdapterLiveOptions) =>
         },
         catch: (cause) =>
           new ProviderAdapterRequestError({
-            provider: PROVIDER,
+            provider: provider,
             method: "command/list",
-            detail: toMessage(cause, "Failed to list Pi commands."),
+            detail: toMessage(cause, `Failed to list ${displayName} commands.`),
             cause,
           }),
       });
 
     const getComposerCapabilities: NonNullable<PiAdapterShape["getComposerCapabilities"]> = () =>
       Effect.succeed({
-        provider: PROVIDER,
+        provider: provider,
         supportsSkillMentions: true,
         supportsSkillDiscovery: true,
         supportsNativeSlashCommandDiscovery: true,
@@ -2929,7 +2993,7 @@ const makePiAdapter = (options?: PiAdapterLiveOptions) =>
     );
 
     return {
-      provider: PROVIDER,
+      provider: provider,
       capabilities: {
         sessionModelSwitch: "in-session",
         supportsSkillMentions: true,
@@ -2960,11 +3024,20 @@ const makePiAdapter = (options?: PiAdapterLiveOptions) =>
       get streamEvents() {
         return Stream.fromQueue(runtimeEventQueue);
       },
-    } satisfies PiAdapterShape;
+    } satisfies ProviderAdapterShape<ProviderAdapterError> & { readonly provider: P };
   });
 
-export const PiAdapterLive = Layer.effect(PiAdapter, makePiAdapter());
+export const PiAdapterLive = Layer.effect(PiAdapter, makePiAdapter(STOCK_PI_FAMILY));
 
 export function makePiAdapterLive(options?: PiAdapterLiveOptions) {
-  return Layer.effect(PiAdapter, makePiAdapter(options));
+  return Layer.effect(PiAdapter, makePiAdapter(STOCK_PI_FAMILY, options));
+}
+
+export const OmniMindAgentAdapterLive = Layer.effect(
+  OmniMindAgentAdapter,
+  makePiAdapter(OMNIMIND_AGENT_FAMILY),
+);
+
+export function makeOmniMindAgentAdapterLive(options?: PiAdapterLiveOptions) {
+  return Layer.effect(OmniMindAgentAdapter, makePiAdapter(OMNIMIND_AGENT_FAMILY, options));
 }

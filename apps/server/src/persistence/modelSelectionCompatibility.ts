@@ -6,6 +6,7 @@
 import { MODEL_OPTIONS_BY_PROVIDER } from "@synara/contracts";
 
 type ModelProviderKind =
+  | "omnimind"
   | "codex"
   | "claudeAgent"
   | "cursor"
@@ -48,6 +49,9 @@ function readTrimmedString(record: Record<string, unknown>, key: string): string
 // Imported instance ids may be runtime names rather than OmniMind provider literals.
 function inferProviderFromLabel(label: string): ModelProviderKind | undefined {
   const lowerLabel = label.toLowerCase();
+  if (lowerLabel.includes("omnimind")) {
+    return "omnimind";
+  }
   if (/(^|[^a-z0-9])pi([^a-z0-9]|$)/u.test(lowerLabel)) {
     return "pi";
   }
@@ -83,6 +87,7 @@ function inferProviderFromLabel(label: string): ModelProviderKind | undefined {
 
 function inferLegacyModelProvider(provider: unknown, model: string): ModelProviderKind {
   if (
+    provider === "omnimind" ||
     provider === "codex" ||
     provider === "claudeAgent" ||
     provider === "cursor" ||

@@ -25,4 +25,14 @@ describe("desktopUserDataProfile", () => {
       }),
     ).toBe("/tmp/xdg");
   });
+
+  it("keeps Electron profile state under an explicit OmniMind home", () => {
+    expect(
+      resolveDesktopUserDataPath({
+        appDataBase: "/Users/tester/Library/Application Support",
+        userDataDirectoryName: "omnimind-dev",
+        productHome: "/tmp/product/.omnimind",
+      }),
+    ).toBe("/tmp/product/.omnimind/electron/omnimind-dev");
+  });
 });

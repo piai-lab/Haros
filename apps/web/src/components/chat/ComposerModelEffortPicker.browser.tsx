@@ -18,6 +18,7 @@ describe("ComposerModelEffortPicker", () => {
         model={GROK_4_5}
         lockedProvider={null}
         modelOptionsByProvider={{
+          omnimind: [],
           claudeAgent: [],
           codex: [],
           cursor: [],

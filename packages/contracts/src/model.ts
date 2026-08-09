@@ -145,6 +145,7 @@ export const DroidModelOptions = Schema.Struct({
 export type DroidModelOptions = typeof DroidModelOptions.Type;
 
 export const ProviderModelOptions = Schema.Struct({
+  omnimind: Schema.optional(PiModelOptions),
   codex: Schema.optional(CodexModelOptions),
   claudeAgent: Schema.optional(ClaudeModelOptions),
   cursor: Schema.optional(CursorModelOptions),
@@ -497,6 +498,7 @@ type ModelDefinition = {
  * should return its own model list over the WS API.
  */
 export const MODEL_OPTIONS_BY_PROVIDER = {
+  omnimind: [],
   codex: [
     {
       slug: "gpt-5.5",
@@ -1020,6 +1022,7 @@ export type ModelSlug = BuiltInModelSlug | (string & {});
 export type ProviderWithDefaultModel = Exclude<ProviderKind, "pi">;
 
 export const DEFAULT_MODEL_BY_PROVIDER: Record<ProviderWithDefaultModel, ModelSlug> = {
+  omnimind: "deepseek/deepseek-chat",
   codex: "gpt-5.5",
   claudeAgent: "claude-sonnet-5",
   cursor: "auto",
@@ -1036,6 +1039,7 @@ export const DEFAULT_MODEL = DEFAULT_MODEL_BY_PROVIDER.codex;
 export const DEFAULT_GIT_TEXT_GENERATION_MODEL = "gpt-5.4-mini" as const;
 
 export const MODEL_SLUG_ALIASES_BY_PROVIDER: Record<ProviderKind, Record<string, ModelSlug>> = {
+  omnimind: {},
   codex: {
     "5.5": "gpt-5.5",
     "5.4": "gpt-5.4",
@@ -1189,6 +1193,7 @@ export const MODEL_CAPABILITIES_INDEX = Object.fromEntries(
 // ── Provider display names ────────────────────────────────────────────
 
 export const PROVIDER_DISPLAY_NAMES: Record<ProviderKind, string> = {
+  omnimind: "OmniMind Agent",
   codex: "Codex",
   claudeAgent: "Claude",
   cursor: "Cursor",

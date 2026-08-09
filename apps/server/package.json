@@ -26,6 +26,7 @@
     "@earendil-works/pi-agent-core": "0.84.1",
     "@earendil-works/pi-ai": "0.84.1",
     "@earendil-works/pi-coding-agent": "0.84.1",
+    "@omnimind/pi-coding-agent": "file:../../vendor/omnimind-pi-coding-agent-0.84.1.tgz",
     "@effect/platform-node": "catalog:",
     "@effect/sql-sqlite-bun": "catalog:",
     "@opencode-ai/sdk": "^1.15.13",

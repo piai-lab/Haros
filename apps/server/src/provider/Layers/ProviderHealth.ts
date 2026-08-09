@@ -120,12 +120,14 @@ const DROID_PROVIDER = "droid" as const;
 const KILO_PROVIDER = "kilo" as const;
 const OPENCODE_PROVIDER = "opencode" as const;
 const PI_PROVIDER = "pi" as const;
+const OMNIMIND_AGENT_PROVIDER = "omnimind" as const;
 const BUNDLED_PI_VERSION = "0.84.1";
 type ProviderStatuses = ReadonlyArray<ServerProviderStatus>;
 const DISABLED_PROVIDER_STATUS_MESSAGE = "Provider is disabled in OmniMind settings.";
 const MINIMUM_ANTIGRAVITY_CLI_VERSION = "1.0.12";
 
 const PROVIDERS = [
+  OMNIMIND_AGENT_PROVIDER,
   CODEX_PROVIDER,
   CLAUDE_AGENT_PROVIDER,
   CURSOR_PROVIDER,
@@ -138,7 +140,11 @@ const PROVIDERS = [
 ] as const satisfies ReadonlyArray<ProviderKind>;
 
 const providerChildKind = (provider: ProviderKind): ProviderChildKind =>
-  provider === CLAUDE_AGENT_PROVIDER ? "claude" : provider;
+  provider === CLAUDE_AGENT_PROVIDER
+    ? "claude"
+    : provider === OMNIMIND_AGENT_PROVIDER
+      ? "pi"
+      : provider;
 
 const providerCommandEnv = (provider: ProviderKind): NodeJS.ProcessEnv =>
   buildProviderChildEnvironment({ provider: providerChildKind(provider) });
@@ -1559,6 +1565,20 @@ export const checkPiProviderStatus = (): Effect.Effect<ServerProviderStatus> =>
       }) satisfies ServerProviderStatus,
   );
 
+export const checkOmniMindAgentProviderStatus = (): Effect.Effect<ServerProviderStatus> =>
+  Effect.sync(
+    () =>
+      ({
+        provider: OMNIMIND_AGENT_PROVIDER,
+        status: "ready",
+        available: true,
+        authStatus: "unknown",
+        version: BUNDLED_PI_VERSION,
+        checkedAt: new Date().toISOString(),
+        message: "OmniMind Agent is bundled and ready. Add provider credentials before sending.",
+      }) satisfies ServerProviderStatus,
+  );
+
 // ── Antigravity CLI health check ──────────────────────────────────
 
 export const checkAntigravityProviderStatus = (
@@ -2123,6 +2143,8 @@ export function makeProviderHealthLive(options?: { readonly providerUpdateTimeou
 
       const getProviderBinaryPath = (provider: ProviderKind, settings: ServerSettings) => {
         switch (provider) {
+          case "omnimind":
+            return null;
           case "codex":
             return settings.providers.codex.binaryPath;
           case "claudeAgent":
@@ -2299,6 +2321,11 @@ export function makeProviderHealthLive(options?: { readonly providerUpdateTimeou
           Effect.flatMap((settings) =>
             Effect.all(
               [
+                checkProviderWhenEnabled(
+                  settings,
+                  OMNIMIND_AGENT_PROVIDER,
+                  checkOmniMindAgentProviderStatus(),
+                ),
                 checkProviderWhenEnabled(
                   settings,
                   CODEX_PROVIDER,

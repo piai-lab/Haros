@@ -16,6 +16,10 @@ import { createOrRecoverProjectFromPath } from "./projectCreation";
 
 const NOW_ISO = "2026-06-26T20:00:00.000Z";
 const WORKSPACE_ROOT = "/Users/tester/Developer/omnimind";
+const DEFAULT_PROJECT_MODEL = {
+  provider: "omnimind" as const,
+  model: "deepseek/deepseek-chat",
+};
 
 function makeProject(id: string, workspaceRoot = WORKSPACE_ROOT) {
   return {
@@ -71,6 +75,7 @@ describe("createOrRecoverProjectFromPath", () => {
     const result = await createOrRecoverProjectFromPath({
       api: makeApi(dispatchCommand),
       workspaceRoot: WORKSPACE_ROOT,
+      defaultModelSelection: DEFAULT_PROJECT_MODEL,
       loadSnapshot,
     });
 
@@ -81,6 +86,7 @@ describe("createOrRecoverProjectFromPath", () => {
         title: "omnimind",
         workspaceRoot: WORKSPACE_ROOT,
         createWorkspaceRootIfMissing: false,
+        defaultModelSelection: DEFAULT_PROJECT_MODEL,
       }),
     );
     expect(createdProjectId).not.toBeNull();
@@ -103,6 +109,7 @@ describe("createOrRecoverProjectFromPath", () => {
     const result = await createOrRecoverProjectFromPath({
       api: makeApi(dispatchCommand),
       workspaceRoot: WORKSPACE_ROOT,
+      defaultModelSelection: DEFAULT_PROJECT_MODEL,
       loadSnapshot,
     });
 
@@ -125,6 +132,7 @@ describe("createOrRecoverProjectFromPath", () => {
     await createOrRecoverProjectFromPath({
       api: makeApi(dispatchCommand),
       workspaceRoot: WORKSPACE_ROOT,
+      defaultModelSelection: DEFAULT_PROJECT_MODEL,
       loadSnapshot: async () =>
         makeSnapshot(createdProjectId ? [makeProject(createdProjectId)] : []),
     });

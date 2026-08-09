@@ -212,6 +212,10 @@ const PROVIDER_TARGET_OPTION_RULES = {
     primaryOptionKey: "thinkingLevel",
     options: { thinkingLevel: providerOptionRule("string", PI_THINKING_LEVEL_OPTIONS) },
   }),
+  omnimind: defineProviderOptionConfig<"omnimind">({
+    primaryOptionKey: "thinkingLevel",
+    options: { thinkingLevel: providerOptionRule("string", PI_THINKING_LEVEL_OPTIONS) },
+  }),
   antigravity: defineProviderOptionConfig<"antigravity">({
     primaryOptionKey: "reasoningEffort",
     options: { reasoningEffort: providerOptionRule("string", [], "model-discovery") },

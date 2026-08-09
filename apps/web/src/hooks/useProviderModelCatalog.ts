@@ -105,6 +105,7 @@ export function useProviderModelCatalog(input: {
     return prefetchProviderSet?.has(provider) ?? !hiddenProviderSet.has(provider);
   };
 
+  const omniMindModelDiscoveryEnabled = shouldDiscoverProvider("omnimind");
   const claudeModelDiscoveryEnabled = shouldDiscoverProvider("claudeAgent");
   const codexModelDiscoveryEnabled = shouldDiscoverProvider("codex");
   const cursorModelDiscoveryEnabled = shouldDiscoverProvider("cursor");
@@ -113,7 +114,18 @@ export function useProviderModelCatalog(input: {
   const droidModelDiscoveryEnabled = shouldDiscoverProvider("droid", false);
   const kiloModelDiscoveryEnabled = shouldDiscoverProvider("kilo");
   const openCodeModelDiscoveryEnabled = shouldDiscoverProvider("opencode");
-  const piModelDiscoveryEnabled = shouldDiscoverProvider("pi");
+  // Stock Pi must never touch `.pi` because a picker opened. Only an explicit
+  // provider selection unlocks its native discovery/state path.
+  const piModelDiscoveryEnabled =
+    selectedProvider === "pi" && shouldDiscoverProvider("pi", false);
+
+  const omniMindDynamicModelsQuery = useQuery(
+    providerModelsQueryOptions({
+      provider: "omnimind",
+      cwd: discoveryCwd,
+      enabled: omniMindModelDiscoveryEnabled,
+    }),
+  );
 
   const claudeDynamicModelsQuery = useQuery(
     providerModelsQueryOptions({
@@ -260,6 +272,13 @@ export function useProviderModelCatalog(input: {
     piModelDiscoveryEnabled &&
     !hasResolvedPiModelDiscovery &&
     isInitialModelDiscoveryPending(piDynamicModelsQuery);
+  const hasResolvedOmniMindModelDiscovery =
+    omniMindDynamicModelsQuery.data?.source?.startsWith("pi.sdk") === true &&
+    (omniMindDynamicModelsQuery.data.models.length ?? 0) > 0;
+  const omniMindModelDiscoveryPending =
+    omniMindModelDiscoveryEnabled &&
+    !hasResolvedOmniMindModelDiscovery &&
+    isInitialModelDiscoveryPending(omniMindDynamicModelsQuery);
   const antigravityModelDiscoveryPending =
     antigravityModelDiscoveryEnabled &&
     !(
@@ -270,6 +289,11 @@ export function useProviderModelCatalog(input: {
 
   const modelOptionsByProvider = useMemo(() => {
     const staticOptions: Record<ProviderKind, ReturnType<typeof getAppModelOptions>> = {
+      omnimind: getAppModelOptions(
+        "omnimind",
+        customModelsByProvider.omnimind,
+        modelHintByProvider?.omnimind,
+      ),
       codex: getAppModelOptions("codex", customModelsByProvider.codex, modelHintByProvider?.codex),
       claudeAgent: getAppModelOptions(
         "claudeAgent",
@@ -301,6 +325,7 @@ export function useProviderModelCatalog(input: {
       ReadonlyArray<ProviderModelOption & { isCustom?: boolean }>
     > = { ...staticOptions };
     const dynamicSources: Record<ProviderKind, typeof claudeDynamicModelsQuery.data> = {
+      omnimind: omniMindDynamicModelsQuery.data,
       claudeAgent: claudeDynamicModelsQuery.data,
       codex: codexDynamicModelsQuery.data,
       cursor:
@@ -315,6 +340,7 @@ export function useProviderModelCatalog(input: {
       pi: piDynamicModelsQuery.data,
     };
     for (const provider of [
+      "omnimind",
       "claudeAgent",
       "codex",
       "cursor",
@@ -347,11 +373,13 @@ export function useProviderModelCatalog(input: {
     kiloDynamicModelsQuery.data,
     modelHintByProvider,
     openCodeDynamicModelsQuery.data,
+    omniMindDynamicModelsQuery.data,
     piDynamicModelsQuery.data,
   ]);
 
   const loadingModelProviders = useMemo<Partial<Record<ProviderKind, boolean>>>(
     () => ({
+      omnimind: omniMindModelDiscoveryPending,
       antigravity: antigravityModelDiscoveryPending,
       cursor: cursorModelDiscoveryPending,
       droid: droidModelDiscoveryPending,
@@ -365,6 +393,7 @@ export function useProviderModelCatalog(input: {
       droidModelDiscoveryPending,
       kiloModelDiscoveryPending,
       openCodeModelDiscoveryPending,
+      omniMindModelDiscoveryPending,
       piModelDiscoveryPending,
     ],
   );
@@ -373,6 +402,7 @@ export function useProviderModelCatalog(input: {
     Record<ProviderKind, ReadonlyArray<ProviderModelDescriptor>>
   >(
     () => ({
+      omnimind: omniMindDynamicModelsQuery.data?.models ?? [],
       claudeAgent: claudeDynamicModelsQuery.data?.models ?? [],
       codex: codexDynamicModelsQuery.data?.models ?? [],
       cursor: cursorRuntimeModels,
@@ -392,6 +422,7 @@ export function useProviderModelCatalog(input: {
       grokDynamicModelsQuery.data?.models,
       kiloDynamicModelsQuery.data?.models,
       openCodeDynamicModelsQuery.data?.models,
+      omniMindDynamicModelsQuery.data?.models,
       piDynamicModelsQuery.data?.models,
     ],
   );
@@ -427,7 +458,9 @@ export function useProviderModelCatalog(input: {
   const selectedProviderRuntimeModelDiscoveryPending =
     loadingModelProviders[selectedProvider] ?? false;
   const selectedProviderModelsQuery =
-    selectedProvider === "claudeAgent"
+    selectedProvider === "omnimind"
+      ? omniMindDynamicModelsQuery
+      : selectedProvider === "claudeAgent"
       ? claudeDynamicModelsQuery
       : selectedProvider === "codex"
         ? codexDynamicModelsQuery

@@ -384,6 +384,9 @@ export function PluginLibrary() {
   const providerThreadId = focusedThreadId;
 
   const serverConfigQuery = useQuery(serverConfigQueryOptions());
+  const omniMindCapabilitiesQuery = useQuery(
+    providerComposerCapabilitiesQueryOptions("omnimind"),
+  );
   const codexCapabilitiesQuery = useQuery(providerComposerCapabilitiesQueryOptions("codex"));
   const claudeCapabilitiesQuery = useQuery(providerComposerCapabilitiesQueryOptions("claudeAgent"));
   const cursorCapabilitiesQuery = useQuery(providerComposerCapabilitiesQueryOptions("cursor"));
@@ -397,6 +400,10 @@ export function PluginLibrary() {
   const piCapabilitiesQuery = useQuery(providerComposerCapabilitiesQueryOptions("pi"));
 
   const providerCapabilities: Record<ProviderKind, ProviderCapabilities> = {
+    omnimind: {
+      plugins: supportsPluginDiscovery(omniMindCapabilitiesQuery.data),
+      skills: supportsSkillDiscovery(omniMindCapabilitiesQuery.data),
+    },
     codex: {
       plugins: supportsPluginDiscovery(codexCapabilitiesQuery.data),
       skills: supportsSkillDiscovery(codexCapabilitiesQuery.data),

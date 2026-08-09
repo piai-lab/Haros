@@ -25,6 +25,7 @@ import { parseBooleanEnvValue } from "./lib/env-bool.ts";
 import { finalizeSignedMacDmg } from "./lib/mac-dmg-finalize.ts";
 import { finalizeMacUpdateZip } from "./lib/mac-update-zip-finalize.ts";
 import {
+  OMNIMIND_PI_RUNTIME_PACKAGE_PATH,
   RELEASE_LOCKFILE_PATH,
   RELEASE_PATCHES_PATH,
   RELEASE_WORKSPACE_MANIFEST_PATHS,
@@ -665,6 +666,14 @@ const installFrozenStageDependencies = Effect.fn("installFrozenStageDependencies
     path.join(repoRoot, RELEASE_PATCHES_PATH),
     path.join(stageAppDir, RELEASE_PATCHES_PATH),
   );
+  yield* fs.makeDirectory(
+    path.dirname(path.join(stageAppDir, OMNIMIND_PI_RUNTIME_PACKAGE_PATH)),
+    { recursive: true },
+  );
+  yield* fs.copyFile(
+    path.join(repoRoot, OMNIMIND_PI_RUNTIME_PACKAGE_PATH),
+    path.join(stageAppDir, OMNIMIND_PI_RUNTIME_PACKAGE_PATH),
+  );
 
   yield* Effect.log(
     "[desktop-artifact] Installing staged production dependencies from the repository lockfile...",
@@ -715,6 +724,7 @@ const installFrozenStageDependencies = Effect.fn("installFrozenStageDependencies
   }
   yield* fs.remove(path.join(stageAppDir, RELEASE_LOCKFILE_PATH));
   yield* fs.remove(path.join(stageAppDir, RELEASE_PATCHES_PATH), { recursive: true });
+  yield* fs.remove(path.join(stageAppDir, OMNIMIND_PI_RUNTIME_PACKAGE_PATH));
 });
 
 const createBuildConfig = Effect.fn("createBuildConfig")(function* (

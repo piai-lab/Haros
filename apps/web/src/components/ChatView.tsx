@@ -41,7 +41,7 @@ import {
 import { automationRequiresTargetThread } from "@synara/shared/automationMode";
 import { respondingInteractionReclaimAt } from "@synara/shared/pendingInteractions";
 import { providerSupportsNativeTurnSteering } from "@synara/shared/providerMetadata";
-import { getModelCapabilities, normalizeModelSlug } from "@synara/shared/model";
+import { getDefaultModel, getModelCapabilities, normalizeModelSlug } from "@synara/shared/model";
 import {
   resolveLatestTailUserMessageEditTarget,
   resolveTailUserMessageEditTarget,
@@ -916,6 +916,8 @@ function getProviderStartOptionsCustomBinaryPath(
   provider: ProviderKind,
 ): string | null {
   switch (provider) {
+    case "omnimind":
+      return null;
     case "codex":
       return normalizeCustomBinaryPath(providerOptions?.codex?.binaryPath);
     case "claudeAgent":
@@ -1795,21 +1797,25 @@ export default function ChatView({
   );
 
   const localDraftError = serverThread ? null : (localDraftErrorsByThreadId[threadId] ?? null);
-  const localDraftThread = useMemo(
-    () =>
-      draftThread
-        ? buildLocalDraftThread(
-            threadId,
-            draftThread,
-            fallbackDraftProject?.defaultModelSelection ?? {
-              provider: "codex",
-              model: DEFAULT_MODEL_BY_PROVIDER.codex,
-            },
-            localDraftError,
-          )
-        : undefined,
-    [draftThread, fallbackDraftProject?.defaultModelSelection, localDraftError, threadId],
-  );
+  const localDraftThread = useMemo(() => {
+    if (!draftThread) return undefined;
+    const defaultProvider = settings.defaultProvider === "pi" ? "codex" : settings.defaultProvider;
+    return buildLocalDraftThread(
+      threadId,
+      draftThread,
+      fallbackDraftProject?.defaultModelSelection ?? {
+        provider: defaultProvider,
+        model: getDefaultModel(defaultProvider),
+      },
+      localDraftError,
+    );
+  }, [
+    draftThread,
+    fallbackDraftProject?.defaultModelSelection,
+    localDraftError,
+    settings.defaultProvider,
+    threadId,
+  ]);
   const activeThread = serverThread ?? localDraftThread;
   useEffect(() => {
     if (
@@ -2223,6 +2229,7 @@ export default function ChatView({
       (projectModelSelection?.provider === provider ? projectModelSelection.model : null);
 
     return {
+      omnimind: resolveHint("omnimind"),
       codex: resolveHint("codex"),
       claudeAgent: resolveHint("claudeAgent"),
       cursor: resolveHint("cursor"),
@@ -7761,6 +7768,7 @@ export default function ChatView({
       activeProject,
       chatWorkspaceRoot,
       createdAt: firstSendCreatedAt,
+      defaultModelSelection: selectedModelSelectionForSend,
       isFirstMessage,
       isHomeChatContainer,
       isStudioContainer,
@@ -9844,6 +9852,7 @@ export default function ChatView({
         api,
         workspaceRoot,
         createIfMissing: false,
+        defaultModelSelection: selectedModelSelection,
         loadSnapshot: () => api.orchestration.getShellSnapshot().catch(() => null),
       });
       if (creationResult.snapshot) {
@@ -9861,6 +9870,7 @@ export default function ChatView({
       handleSelectProjectForEmptyDraft,
       isLocalDraftThread,
       moveEmptyDraftToLocalProject,
+      selectedModelSelection,
       syncServerShellSnapshot,
     ],
   );

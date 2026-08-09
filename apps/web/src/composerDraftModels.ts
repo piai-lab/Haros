@@ -28,6 +28,7 @@ import type { ComposerThreadDraftState } from "./composerDraftDomain";
 import { classifyProviderReasoningEffortSupport } from "./lib/codexReasoningEffort";
 
 export const COMPOSER_PROVIDER_KINDS = [
+  "omnimind",
   "codex",
   "claudeAgent",
   "cursor",
@@ -132,6 +133,14 @@ export function makeModelSelection(
   supportsAutoMode?: boolean,
 ): ModelSelection {
   switch (provider) {
+    case "omnimind":
+      return {
+        provider,
+        model,
+        ...(options
+          ? { options: options as Extract<ModelSelection, { provider: "omnimind" }>["options"] }
+          : {}),
+      };
     case "antigravity":
       return {
         provider,
@@ -253,6 +262,10 @@ export function normalizeProviderModelOptions(
   const piCandidate =
     candidate?.pi && typeof candidate.pi === "object"
       ? (candidate.pi as Record<string, unknown>)
+      : null;
+  const omniMindCandidate =
+    candidate?.omnimind && typeof candidate.omnimind === "object"
+      ? (candidate.omnimind as Record<string, unknown>)
       : null;
 
   const codexReasoningEffort: CodexReasoningEffort | undefined =
@@ -389,7 +402,19 @@ export function normalizeProviderModelOptions(
       ? piCandidate.thinkingLevel
       : undefined;
   const pi = piThinkingLevel !== undefined ? { thinkingLevel: piThinkingLevel } : undefined;
+  const omniMindThinkingLevel: PiThinkingLevel | undefined =
+    omniMindCandidate?.thinkingLevel === "off" ||
+    omniMindCandidate?.thinkingLevel === "minimal" ||
+    omniMindCandidate?.thinkingLevel === "low" ||
+    omniMindCandidate?.thinkingLevel === "medium" ||
+    omniMindCandidate?.thinkingLevel === "high" ||
+    omniMindCandidate?.thinkingLevel === "xhigh"
+      ? omniMindCandidate.thinkingLevel
+      : undefined;
+  const omnimind =
+    omniMindThinkingLevel !== undefined ? { thinkingLevel: omniMindThinkingLevel } : undefined;
   if (
+    !omnimind &&
     !codex &&
     !claude &&
     !cursor &&
@@ -403,6 +428,7 @@ export function normalizeProviderModelOptions(
     return null;
   }
   return {
+    ...(omnimind ? { omnimind } : {}),
     ...(codex ? { codex } : {}),
     ...(claude ? { claudeAgent: claude } : {}),
     ...(cursor ? { cursor } : {}),
@@ -483,7 +509,9 @@ export function normalizeModelSelection(
                   ? modelOptions?.cursor
                   : provider === "opencode"
                     ? modelOptions?.opencode
-                    : provider === "pi"
+                    : provider === "omnimind"
+                      ? modelOptions?.omnimind
+                      : provider === "pi"
                       ? modelOptions?.pi
                       : undefined;
   const normalizedOptions =
@@ -673,7 +701,7 @@ export function deriveEffectiveComposerModelState(input: {
   selectedProvider: ProviderKind;
   threadModelSelection: ModelSelection | null | undefined;
   projectModelSelection: ModelSelection | null | undefined;
-  customModelsByProvider: Record<ProviderKind, readonly string[]>;
+  customModelsByProvider: Partial<Record<ProviderKind, readonly string[]>>;
   availableModelOptionsByProvider?: Partial<
     Record<ProviderKind, ReadonlyArray<{ slug: string; name: string }>>
   >;

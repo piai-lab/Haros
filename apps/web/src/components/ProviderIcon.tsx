@@ -8,6 +8,7 @@ import { type ProviderKind } from "@synara/contracts";
 import type { ReactNode, SVGProps } from "react";
 
 import { CentralIcon } from "~/lib/central-icons";
+import { OmniMindLogo } from "./OmniMindLogo";
 import { cn } from "~/lib/utils";
 import {
   AntigravityIcon,
@@ -64,6 +65,7 @@ const OpenCodeProviderIcon = ({
 };
 
 export const PROVIDER_ICON_COMPONENT_BY_PROVIDER: Record<ProviderKind, Icon> = {
+  omnimind: OmniMindLogo,
   codex: OpenAI,
   claudeAgent: ClaudeAI,
   cursor: CursorIcon,

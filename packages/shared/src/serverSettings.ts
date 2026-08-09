@@ -51,6 +51,7 @@ export function providerStartOptionsFromServerSettings(
 ): ProviderStartOptions {
   const { providers } = settings;
   return {
+    omnimind: {},
     codex: {
       ...(providers.codex.binaryPath ? { binaryPath: providers.codex.binaryPath } : {}),
       ...(providers.codex.homePath ? { homePath: providers.codex.homePath } : {}),
