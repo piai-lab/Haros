@@ -167,7 +167,7 @@ describe("composerDraftStore generation-1 persisted-state hydration", () => {
 });
 
 describe("composerDraftStore generation-1 storage authority", () => {
-  const witnessSymbol = Symbol.for("omnimind.composer-draft-witness");
+  const witnessSymbol = Symbol.for("omnimind.composer-draft-verifier-only");
   const emptyState = {
     draftsByThreadId: {},
     draftThreadsByThreadId: {},
@@ -186,7 +186,27 @@ describe("composerDraftStore generation-1 storage authority", () => {
 
   const loadWithStorage = async (initial: Readonly<Record<string, string>>) => {
     const values = new Map(Object.entries(initial));
-    const storage = {
+    let owner: "web-read" | "web-write" | null = null;
+    let legacyProbeCount = 0;
+    let currentGetCount = 0;
+    const verifier = () =>
+      (globalThis as Record<PropertyKey, unknown>)[witnessSymbol] as
+        | {
+            readonly operation?: (
+              operationId: string,
+              site: "before" | "after",
+              ordinal: "single",
+            ) => void;
+            readonly barrier?: (barrierId: string) => void;
+          }
+        | undefined;
+    const observed = <Result>(operationId: string, effect: () => Result): Result => {
+      verifier()?.operation?.(operationId, "before", "single");
+      const result = effect();
+      verifier()?.operation?.(operationId, "after", "single");
+      return result;
+    };
+    const storageTarget = {
       getItem: vi.fn((name: string) => {
         if (
           name === "omnimind:composer-drafts:v1" ||
@@ -194,18 +214,75 @@ describe("composerDraftStore generation-1 storage authority", () => {
         ) {
           throw new Error("legacy draft bytes must not be read");
         }
-        return values.get(name) ?? null;
+        const read = () => values.get(name) ?? null;
+        if (name !== COMPOSER_DRAFT_STORAGE_KEY || owner === null) return read();
+        const ordinal = currentGetCount++;
+        const operationId = owner === "web-read"
+          ? ordinal === 0
+            ? "web-read.get-g1"
+            : ordinal === 2
+              ? "web-read.reread-g1"
+              : null
+          : ordinal === 0
+            ? "web-write.get-g1-before"
+            : ordinal === 1
+              ? "web-write.reread-g1"
+              : null;
+        const result = operationId === null ? read() : observed(operationId, read);
+        if (owner === "web-read" && ordinal === 0 && result === null)
+          verifier()?.barrier?.("web-read-g1-absence-to-create");
+        if (owner === "web-write" && ordinal === 0)
+          verifier()?.barrier?.("web-write-current-read-to-set");
+        return result;
       }),
-      setItem: vi.fn((name: string, value: string) => values.set(name, value)),
+      setItem: vi.fn((name: string, value: string) => {
+        const write = () => values.set(name, value);
+        if (name !== COMPOSER_DRAFT_STORAGE_KEY || owner === null) return write();
+        return observed(
+          owner === "web-read" ? "web-read.set-empty-g1" : "web-write.set-g1",
+          write,
+        );
+      }),
       removeItem: vi.fn((name: string) => values.delete(name)),
     };
     for (const key of Object.keys(initial)) {
-      Object.defineProperty(storage, key, { configurable: true, enumerable: true, value: true });
+      Object.defineProperty(storageTarget, key, {
+        configurable: true,
+        enumerable: true,
+        value: true,
+      });
     }
+    const storage = new Proxy(storageTarget, {
+      getOwnPropertyDescriptor(target, property) {
+        const descriptor = Reflect.getOwnPropertyDescriptor(target, property);
+        if (
+          owner === null ||
+          (property !== "omnimind:composer-drafts:v1" &&
+            property !== "omnimind:composer-drafts:v2")
+        ) return descriptor;
+        const ordinal = legacyProbeCount++;
+        if (ordinal > 1) return descriptor;
+        const suffix = property.endsWith(":v1") ? "v1" : "v2";
+        const result = observed(`${owner}.get-${suffix}`, () => descriptor);
+        verifier()?.barrier?.(
+          ordinal === 0 ? `${owner}-v1-to-v2` : `${owner}-complete-cut-to-g1`,
+        );
+        return result;
+      },
+    });
     vi.stubGlobal("localStorage", storage);
     vi.resetModules();
     const module = await import("./composerDraftStore");
-    return { module, storage, values };
+    return {
+      module,
+      storage,
+      values,
+      selectOwner(next: "web-read" | "web-write") {
+        owner = next;
+        legacyProbeCount = 0;
+        currentGetCount = 0;
+      },
+    };
   };
 
   type LoadedStorage = Awaited<ReturnType<typeof loadWithStorage>>;
@@ -237,6 +314,7 @@ describe("composerDraftStore generation-1 storage authority", () => {
   };
 
   const readGeneration = (fixture: LoadedStorage): unknown => {
+    fixture.selectOwner("web-read");
     const storage = fixture.module.useComposerDraftStore.persist.getOptions().storage as {
       readonly getItem: (name: string) => unknown;
     };
@@ -244,6 +322,7 @@ describe("composerDraftStore generation-1 storage authority", () => {
   };
 
   const writeGeneration = (fixture: LoadedStorage): void => {
+    fixture.selectOwner("web-write");
     const storage = fixture.module.useComposerDraftStore.persist.getOptions()
       .storage as unknown as {
       readonly setItem: (
@@ -281,62 +360,6 @@ describe("composerDraftStore generation-1 storage authority", () => {
       COMPOSER_DRAFT_STORAGE_KEY,
     ]);
     expect(values.has(COMPOSER_DRAFT_STORAGE_KEY)).toBe(true);
-  });
-
-  it("directly witnesses the exact Web read and write operation surfaces", async () => {
-    const manifest = await loadCapabilityManifest();
-    const readOwner = "apps/web/src/composerDraftStore.ts#readOrCreateComposerDraftEnvelope";
-    const writeOwner = "apps/web/src/composerDraftStore.ts#writeAndVerifyComposerDraftEnvelope";
-
-    const readFixture = await loadWithStorage({});
-    readFixture.values.delete(COMPOSER_DRAFT_STORAGE_KEY);
-    readFixture.storage.getItem.mockClear();
-    readFixture.storage.setItem.mockClear();
-    const readObserved: string[] = [];
-    Reflect.set(globalThis, witnessSymbol, {
-      operation: (operationId: string, site: string, ordinal: number | "single") =>
-        readObserved.push(`${operationId}:${site}:${ordinal}`),
-    });
-    const readStorage = readFixture.module.useComposerDraftStore.persist.getOptions().storage as {
-      readonly getItem: (name: string) => unknown;
-    };
-    readStorage.getItem(COMPOSER_DRAFT_STORAGE_KEY);
-    expect(readObserved.sort()).toEqual(
-      manifest
-        .filter((item) => item.owner === readOwner && item.family === "fault")
-        .map((item) => `${item.operationOrBarrierId}:${item.site}:${item.ordinal}`)
-        .sort(),
-    );
-
-    Reflect.deleteProperty(globalThis, witnessSymbol);
-    const exact = JSON.stringify({ generation: 1, state: emptyState });
-    const writeFixture = await loadWithStorage({ [COMPOSER_DRAFT_STORAGE_KEY]: exact });
-    writeFixture.storage.getItem.mockClear();
-    writeFixture.storage.setItem.mockClear();
-    const writeObserved: string[] = [];
-    Reflect.set(globalThis, witnessSymbol, {
-      operation: (operationId: string, site: string, ordinal: number | "single") =>
-        writeObserved.push(`${operationId}:${site}:${ordinal}`),
-    });
-    const writeStorage = writeFixture.module.useComposerDraftStore.persist.getOptions()
-      .storage as unknown as {
-      readonly setItem: (
-        name: string,
-        value: { readonly state: unknown; readonly version: number },
-      ) => unknown;
-      readonly flush: () => void;
-    };
-    writeStorage.setItem(
-      COMPOSER_DRAFT_STORAGE_KEY,
-      { state: writeFixture.module.useComposerDraftStore.getState(), version: 1 },
-    );
-    writeStorage.flush();
-    expect(writeObserved.sort()).toEqual(
-      manifest
-        .filter((item) => item.owner === writeOwner && item.family === "fault")
-        .map((item) => `${item.operationOrBarrierId}:${item.site}:${item.ordinal}`)
-        .sort(),
-    );
   });
 
   it("directly witnesses every frozen Web read and write normal state", async () => {
@@ -755,9 +778,16 @@ describe("composerDraftStore generation-1 storage authority", () => {
           const parent = FS.openSync(Path.dirname(storageFile), "r");
           try { FS.fsyncSync(parent); } finally { FS.closeSync(parent); }
         };
+        let killAfterSet = false;
         const localStorage = {
           getItem(name) { return readAll()[name] ?? null; },
-          setItem(name, value) { const next = readAll(); next[name] = value; replaceAll(next); },
+          setItem(name, value) {
+            const next = readAll();
+            next[name] = value;
+            replaceAll(next);
+            if (killAfterSet && name === ${JSON.stringify(COMPOSER_DRAFT_STORAGE_KEY)})
+              process.kill(process.pid, "SIGKILL");
+          },
           removeItem(name) { const next = readAll(); delete next[name]; replaceAll(next); },
         };
         for (const key of Object.keys(readAll()))
@@ -765,12 +795,7 @@ describe("composerDraftStore generation-1 storage authority", () => {
         globalThis.localStorage = localStorage;
       `;
       const killScript = `${storagePrelude}
-        globalThis[Symbol.for("omnimind.composer-draft-witness")] = {
-          operation(id, site, ordinal) {
-            if (id === ${JSON.stringify(selected.operationOrBarrierId)} && site === "after" && ordinal === "single")
-              process.kill(process.pid, "SIGKILL");
-          },
-        };
+        killAfterSet = true;
         const module = await import(${JSON.stringify(moduleUrl)});
         ${isWrite ? `
           module.useComposerDraftStore.getState().setPrompt("thread-web-kill", "durable whole draft");

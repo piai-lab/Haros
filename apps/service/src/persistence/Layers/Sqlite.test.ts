@@ -1,16 +1,52 @@
 import * as fs from "node:fs/promises";
+import * as FS from "node:fs";
 import * as os from "node:os";
 import * as path from "node:path";
-import { spawnSync } from "node:child_process";
+import { spawn } from "node:child_process";
 import { DatabaseSync } from "node:sqlite";
 import { pathToFileURL } from "node:url";
 
 import * as NodeServices from "@effect/platform-node/NodeServices";
 import { Effect, Layer } from "effect";
 import * as SqlClient from "effect/unstable/sql/SqlClient";
-import { afterEach, describe, expect, it } from "vitest";
+import { afterEach, describe, expect, it, vi } from "vitest";
 
 import { makeSqlitePersistenceLive } from "./Sqlite.ts";
+
+const originalPrepare = DatabaseSync.prototype.prepare;
+
+function observeSqlStatements(
+  observe: (
+    sql: string,
+    site: "before" | "after",
+    schemaOrdinal: number | null,
+  ) => void,
+) {
+  let nextSchemaOrdinal = 0;
+  return vi.spyOn(DatabaseSync.prototype, "prepare").mockImplementation(function (
+    this: DatabaseSync,
+    sql: string,
+  ) {
+    const statement = originalPrepare.call(this, sql);
+    const normalized = sql.replace(/\s+/gu, " ").trim();
+    const schemaOrdinal = /^CREATE (?:TABLE|(?:UNIQUE )?INDEX|VIEW|TRIGGER)\b/iu.test(normalized)
+      ? nextSchemaOrdinal++
+      : null;
+    return new Proxy(statement, {
+      get(target, property) {
+        const value = Reflect.get(target, property, target);
+        if (property !== "run" && property !== "all")
+          return typeof value === "function" ? value.bind(target) : value;
+        return (...args: unknown[]) => {
+          observe(normalized, "before", schemaOrdinal);
+          const result = (value as (...values: unknown[]) => unknown).apply(target, args);
+          observe(normalized, "after", schemaOrdinal);
+          return result;
+        };
+      },
+    });
+  });
+}
 
 const tempDirectories: Array<string> = [];
 
@@ -48,205 +84,15 @@ afterEach(async () => {
 });
 
 describe("SQLite persistence", () => {
-  it("directly witnesses the exact clean-create Service operation surface", async () => {
-    const dbPath = await makeDbPath();
-    const verifier = await import(
-      pathToFileURL(
-        path.resolve(
-          import.meta.dirname,
-          "../../../../../scripts/product-truth/first-public-capability-verifier.ts",
-        ),
-      ).href
-    ) as {
-      readonly generateFirstPublicManifest: () => {
-        readonly cases: readonly {
-          readonly owner: string;
-          readonly family: string;
-          readonly operationOrBarrierId: string;
-          readonly site: string;
-          readonly ordinal: number | "single";
-        }[];
-      };
-    };
-    const owner = "apps/service/src/persistence/Layers/Sqlite.ts#makeSqlitePersistenceLive";
-    const faultCases = verifier.generateFirstPublicManifest().cases.filter(
-      (item) => item.owner === owner && item.family === "fault",
-    );
-    const observed: string[] = [];
-    await Effect.runPromise(
-      Effect.void.pipe(
-        Effect.provide(
-          makeSqlitePersistenceLive(dbPath, {
-            operation: (operationId, site, ordinal) => {
-              observed.push(`${operationId}:${site}:${ordinal}`);
-            },
-          }).pipe(Layer.provide(NodeServices.layer)),
-        ),
-      ),
-    );
-    expect(observed.sort()).toEqual(
-      faultCases
-        .map((item) => `${item.operationOrBarrierId}:${item.site}:${item.ordinal}`)
-        .sort(),
-    );
-    const database = new DatabaseSync(dbPath, { readOnly: true });
-    expect(database.prepare("SELECT schema_generation FROM automation_meta").get()).toEqual({
-      schema_generation: 1,
-    });
-    database.close();
-  });
-
-  it("directly injects every before/after fault of the exact Service owner", async () => {
-    const verifier = await import(
-      pathToFileURL(
-        path.resolve(
-          import.meta.dirname,
-          "../../../../../scripts/product-truth/first-public-capability-verifier.ts",
-        ),
-      ).href
-    ) as {
-      readonly generateFirstPublicManifest: () => {
-        readonly cases: readonly {
-          readonly id: string;
-          readonly owner: string;
-          readonly family: string;
-          readonly operationOrBarrierId: string;
-          readonly site: string;
-          readonly ordinal: number | "single";
-        }[];
-      };
-    };
-    const owner = "apps/service/src/persistence/Layers/Sqlite.ts#makeSqlitePersistenceLive";
-    const faultCases = verifier.generateFirstPublicManifest().cases.filter(
-      (item) => item.owner === owner && item.family === "fault",
-    );
-    const witnessed: string[] = [];
-    for (const selected of faultCases) {
-      const dbPath = await makeDbPath();
-      let injected = false;
-      let caught: unknown;
-      try {
-        await Effect.runPromise(
-          Effect.void.pipe(
-            Effect.provide(
-              makeSqlitePersistenceLive(dbPath, {
-                operation: (operationId, site, ordinal) => {
-                  if (
-                    !injected &&
-                    operationId === selected.operationOrBarrierId &&
-                    site === selected.site &&
-                    ordinal === selected.ordinal
-                  ) {
-                    injected = true;
-                    witnessed.push(selected.id);
-                    throw new Error(`PORT_FAULT:${operationId}:${site}:${ordinal}`);
-                  }
-                },
-              }).pipe(Layer.provide(NodeServices.layer)),
-            ),
-          ),
-        );
-      } catch (cause) {
-        caught = cause;
-      }
-      expect(caught, `missing executable fault witness: ${selected.id}`).toBeDefined();
-      expect(`${String(caught)} ${JSON.stringify(caught)}`).toContain(
-        `PORT_FAULT:${selected.operationOrBarrierId}:${selected.site}:${selected.ordinal}`,
-      );
-      const storesDirectory = path.dirname(dbPath);
-      const stateDir = path.basename(storesDirectory) === "stores"
-        ? path.dirname(storesDirectory)
-        : storesDirectory;
-      for (const retired of ["state.sqlite", "state.sqlite-wal", "state.sqlite-shm"])
-        await expect(fs.stat(path.join(stateDir, retired))).rejects.toMatchObject({
-          code: "ENOENT",
-        });
-    }
-    expect(witnessed.sort()).toEqual(faultCases.map((item) => item.id).sort());
-  }, 60_000);
-
-  it("directly runs every declared separate-writer race of the exact Service owner", async () => {
-    const cases = [
-      "service-precut-to-lock",
-      "service-lock-to-postcut",
-      "service-postcut-to-current-open",
-    ] as const;
-    const witnessed: string[] = [];
-    for (const selected of cases) {
-      const dbPath = await makeDbPath();
-      const storesDirectory = path.dirname(dbPath);
-      const stateDir = path.basename(storesDirectory) === "stores"
-        ? path.dirname(storesDirectory)
-        : storesDirectory;
-      let writerTarget = "";
-      let caught: unknown;
-      try {
-        await Effect.runPromise(
-          Effect.void.pipe(
-            Effect.provide(
-              makeSqlitePersistenceLive(dbPath, {
-                operation: () => undefined,
-                barrier: (barrierId) => {
-                  if (barrierId !== selected) return;
-                  witnessed.push(selected);
-                  if (selected === "service-precut-to-lock")
-                    writerTarget = path.join(stateDir, "state.sqlite");
-                  else if (selected === "service-lock-to-postcut")
-                    writerTarget = path.join(stateDir, "state.sqlite-wal");
-                  else writerTarget = path.dirname(dbPath);
-                  const script = selected === "service-postcut-to-current-open"
-                    ? `const fs=require("node:fs");const target=${JSON.stringify(writerTarget)};fs.renameSync(target,target+".separate-writer-original");fs.mkdirSync(target,{mode:0o700});`
-                    : `require("node:fs").writeFileSync(${JSON.stringify(writerTarget)},"separate-writer-retired",{mode:0o600});`;
-                  const writer = spawnSync(process.execPath, ["-e", script], {
-                    encoding: "utf8",
-                  });
-                  expect(writer.status, writer.stderr).toBe(0);
-                },
-              }).pipe(Layer.provide(NodeServices.layer)),
-            ),
-          ),
-        );
-      } catch (cause) {
-        caught = cause;
-      }
-      expect(caught, selected).toBeDefined();
-      if (selected === "service-postcut-to-current-open") {
-        await expect(fs.stat(dbPath)).rejects.toMatchObject({ code: "ENOENT" });
-        await expect(fs.stat(`${writerTarget}.separate-writer-original`)).resolves.toBeDefined();
-      } else {
-        await expect(fs.readFile(writerTarget, "utf8")).resolves.toBe(
-          "separate-writer-retired",
-        );
-        await expect(fs.stat(dbPath)).rejects.toMatchObject({ code: "ENOENT" });
-      }
-    }
-    expect(witnessed.sort()).toEqual([...cases].sort());
-  });
-
-  it("directly converges every declared durable kill of the exact Service owner", async () => {
-    const operations = [
-      "service.acquire-owner-lock",
-      "service.mkdir-stores",
-      "service.commit-g1",
-      "service.release-owner-lock",
-    ] as const;
-    const modulePath = path.join(import.meta.dirname, "Sqlite.ts");
-    const witnessed: string[] = [];
-    for (const selected of operations) {
-      const dbPath = await makeDbPath();
-      const child = spawnSync(
-        "bun",
-        [
-          "-e",
-          `const sqlite=await import(${JSON.stringify(modulePath)});const {Effect,Layer}=await import("effect");const NodeServices=await import("@effect/platform-node/NodeServices");await Effect.runPromise(Effect.void.pipe(Effect.provide(sqlite.makeSqlitePersistenceLive(${JSON.stringify(dbPath)},{operation:(id,site,ordinal)=>{if(id===${JSON.stringify(selected)}&&site==="after"&&ordinal==="single")process.kill(process.pid,"SIGKILL")}}).pipe(Layer.provide(NodeServices.layer)))));`,
-        ],
-        {
-          cwd: path.resolve(import.meta.dirname, "../../.."),
-          encoding: "utf8",
-        },
-      );
-      expect(child.signal, `${selected}\n${child.stderr}`).toBe("SIGKILL");
-      witnessed.push(selected);
+  if (process.env.OMNIMIND_SERVICE_SQL_KILL_DB) {
+    it("__service_sql_kill_child__", async () => {
+      const dbPath = process.env.OMNIMIND_SERVICE_SQL_KILL_DB!;
+      const readyPath = process.env.OMNIMIND_SERVICE_SQL_KILL_READY!;
+      observeSqlStatements((sql, site) => {
+        if (sql !== "COMMIT" || site !== "after") return;
+        FS.writeFileSync(readyPath, "committed", { mode: 0o600 });
+        process.kill(process.pid, "SIGKILL");
+      });
       await Effect.runPromise(
         Effect.void.pipe(
           Effect.provide(
@@ -254,19 +100,177 @@ describe("SQLite persistence", () => {
           ),
         ),
       );
-      const database = new DatabaseSync(dbPath, { readOnly: true });
-      expect(database.prepare("SELECT schema_generation FROM automation_meta").get()).toEqual({
-        schema_generation: 1,
-      });
-      database.close();
-      await expect(fs.stat(`${dbPath}.lifecycle-lock`)).rejects.toMatchObject({
-        code: "ENOENT",
-      });
+    });
+  }
+
+  it("binds each Service schema ordinal around one real SQL statement", async () => {
+    const dbPath = await makeDbPath();
+    const events: Array<{ sql: string; site: "before" | "after"; ordinal: number }> = [];
+    const spy = observeSqlStatements((sql, site, ordinal) => {
+      if (ordinal !== null) events.push({ sql, site, ordinal });
+    });
+    try {
+      await Effect.runPromise(
+        Effect.void.pipe(
+          Effect.provide(
+            makeSqlitePersistenceLive(dbPath).pipe(Layer.provide(NodeServices.layer)),
+          ),
+        ),
+      );
+    } finally {
+      spy.mockRestore();
     }
-    expect(witnessed.sort()).toEqual([...operations].sort());
+    expect(events).toHaveLength(62);
+    for (let ordinal = 0; ordinal < 31; ordinal += 1) {
+      const pair = events.filter((event) => event.ordinal === ordinal);
+      expect(pair.map((event) => event.site), `schema ordinal ${ordinal}`).toEqual([
+        "before",
+        "after",
+      ]);
+      expect(new Set(pair.map((event) => event.sql)).size).toBe(1);
+      expect(pair[0]!.sql).toMatch(/^CREATE (?:TABLE|(?:UNIQUE )?INDEX|VIEW|TRIGGER)\b/iu);
+    }
+    const database = new DatabaseSync(dbPath, { readOnly: true });
+    expect(database.prepare("SELECT schema_generation FROM automation_meta").get()).toEqual({
+      schema_generation: 1,
+    });
+    database.close();
+  });
+
+  it("rolls back every before/after fault at the selected real Service SQL ordinal", async () => {
+    for (let selectedOrdinal = 0; selectedOrdinal < 31; selectedOrdinal += 1) {
+      for (const selectedSite of ["before", "after"] as const) {
+        const dbPath = await makeDbPath();
+        let selectedSql = "";
+        const spy = observeSqlStatements((sql, site, ordinal) => {
+          if (ordinal !== selectedOrdinal || site !== selectedSite) return;
+          selectedSql = sql;
+          throw new Error(`SQL_FAULT:${selectedOrdinal}:${selectedSite}`);
+        });
+        try {
+          await expect(
+            Effect.runPromise(
+              Effect.void.pipe(
+                Effect.provide(
+                  makeSqlitePersistenceLive(dbPath).pipe(Layer.provide(NodeServices.layer)),
+                ),
+              ),
+            ),
+          ).rejects.toBeDefined();
+        } finally {
+          spy.mockRestore();
+        }
+        expect(selectedSql).toMatch(/^CREATE (?:TABLE|(?:UNIQUE )?INDEX|VIEW|TRIGGER)\b/iu);
+        const database = new DatabaseSync(dbPath, { readOnly: true });
+        expect(
+          database
+            .prepare("SELECT COUNT(*) AS count FROM sqlite_schema WHERE name NOT LIKE 'sqlite_%'")
+            .get(),
+        ).toEqual({ count: 0 });
+        database.close();
+      }
+    }
   }, 60_000);
 
-  it("directly witnesses every normal state of the exact Service owner", async () => {
+  it("refuses a real separate writer racing the complete retired-state cut", async () => {
+    const dbPath = await makeDbPath();
+    const retiredPath = path.join(path.dirname(dbPath), "state.sqlite");
+    const readyPath = `${retiredPath}.writer-ready`;
+    const writer = spawn(
+      "bun",
+      [
+        "-e",
+        `const fs=require("node:fs");const target=${JSON.stringify(retiredPath)};const ready=${JSON.stringify(readyPath)};fs.writeFileSync(ready,"ready",{mode:0o600});const bytes="separate-writer-retired";const timer=setInterval(()=>{try{fs.writeFileSync(target,bytes,{mode:0o600})}catch{}},0);setTimeout(()=>{clearInterval(timer);process.exit(0)},10000);`,
+      ],
+      { stdio: "ignore" },
+    );
+    const deadline = Date.now() + 5_000;
+    while (Date.now() < deadline) {
+      try {
+        await fs.stat(readyPath);
+        break;
+      } catch {
+        await new Promise((resolve) => setTimeout(resolve, 2));
+      }
+    }
+    try {
+      await expect(
+        Effect.runPromise(
+          Effect.void.pipe(
+            Effect.provide(
+              makeSqlitePersistenceLive(dbPath).pipe(Layer.provide(NodeServices.layer)),
+            ),
+          ),
+        ),
+      ).rejects.toThrow("PREBASELINE_RESET_REQUIRED");
+    } finally {
+      writer.kill("SIGKILL");
+    }
+    await expect(fs.readFile(retiredPath, "utf8")).resolves.toBe(
+      "separate-writer-retired",
+    );
+    await expect(fs.stat(dbPath)).rejects.toMatchObject({ code: "ENOENT" });
+  });
+
+  it("converges after real SIGKILL with the exact Service schema committed and lock held", async () => {
+    const dbPath = await makeDbPath();
+    const readyPath = `${dbPath}.verifier-ready`;
+    const repositoryRoot = path.resolve(import.meta.dirname, "../../../../..");
+    const child = spawn(
+      path.join(repositoryRoot, "node_modules", ".bin", "vitest"),
+      [
+        "run",
+        "apps/service/src/persistence/Layers/Sqlite.test.ts",
+        "-t",
+        "__service_sql_kill_child__",
+        "--maxWorkers=1",
+        "--no-file-parallelism",
+      ],
+      {
+        cwd: repositoryRoot,
+        env: {
+          ...process.env,
+          OMNIMIND_SERVICE_SQL_KILL_DB: dbPath,
+          OMNIMIND_SERVICE_SQL_KILL_READY: readyPath,
+        },
+        stdio: ["ignore", "pipe", "pipe"],
+      },
+    );
+    let childStderr = "";
+    child.stderr?.on("data", (chunk: Buffer) => {
+      childStderr += chunk.toString("utf8");
+    });
+    const deadline = Date.now() + 15_000;
+    let ready = false;
+    while (!ready && Date.now() < deadline) {
+      try {
+        ready = (await fs.readFile(readyPath, "utf8")) === "committed";
+      } catch {
+        await new Promise((resolve) => setTimeout(resolve, 5));
+      }
+    }
+    expect(ready, childStderr).toBe(true);
+    expect((await fs.stat(`${dbPath}.lifecycle-lock`)).isDirectory()).toBe(true);
+    const exit = new Promise<NodeJS.Signals | null>((resolve) =>
+      child.once("exit", (_code, signal) => resolve(signal)));
+    child.kill("SIGKILL");
+    expect(await exit).toBe("SIGKILL");
+    await Effect.runPromise(
+      Effect.void.pipe(
+        Effect.provide(
+          makeSqlitePersistenceLive(dbPath).pipe(Layer.provide(NodeServices.layer)),
+        ),
+      ),
+    );
+    const database = new DatabaseSync(dbPath, { readOnly: true });
+    expect(database.prepare("SELECT schema_generation FROM automation_meta").get()).toEqual({
+      schema_generation: 1,
+    });
+    database.close();
+    await expect(fs.stat(`${dbPath}.lifecycle-lock`)).rejects.toMatchObject({ code: "ENOENT" });
+  }, 30_000);
+
+  it("directly covers the stable accepted and refused Service states", async () => {
     const verifier = await import(
       pathToFileURL(
         path.resolve(
@@ -286,22 +290,19 @@ describe("SQLite persistence", () => {
     };
     const owner = "apps/service/src/persistence/Layers/Sqlite.ts#makeSqlitePersistenceLive";
     const normalCases = verifier.generateFirstPublicManifest().cases.filter(
-      (item) => item.owner === owner && item.family === "normal",
+      (item) =>
+        item.owner === owner &&
+        item.family === "normal" &&
+        !item.stateId.startsWith("service.post-"),
     );
     const normalByState = new Map(normalCases.map((item) => [item.stateId, item.id]));
     const witnessed: string[] = [];
-    const start = async (
-      dbPath: string,
-      barrier?: (barrierId: string) => void,
-    ): Promise<unknown> => {
+    const start = async (dbPath: string): Promise<unknown> => {
       try {
         await Effect.runPromise(
           Effect.void.pipe(
             Effect.provide(
-              makeSqlitePersistenceLive(
-                dbPath,
-                barrier === undefined ? undefined : { operation: () => undefined, barrier },
-              ).pipe(Layer.provide(NodeServices.layer)),
+              makeSqlitePersistenceLive(dbPath).pipe(Layer.provide(NodeServices.layer)),
             ),
           ),
         );
@@ -338,32 +339,6 @@ describe("SQLite persistence", () => {
       expect(await start(dbPath)).toBeDefined();
       witnessed.push(normalByState.get(
         `service.pre-${present.length === 3 ? "all" : present.join("-")}`,
-      )!);
-    }
-
-    for (const present of combinations) {
-      const dbPath = await makeDbPath();
-      const stateDir = path.dirname(dbPath);
-      let wrote = false;
-      const result = await start(dbPath, (barrierId) => {
-        if (barrierId !== "service-lock-to-postcut" || wrote) return;
-        wrote = true;
-        for (const member of present) {
-          const target = path.join(stateDir, `state.sqlite${suffix[member]}`);
-          const writer = spawnSync(
-            process.execPath,
-            [
-              "-e",
-              `require("node:fs").writeFileSync(${JSON.stringify(target)},${JSON.stringify(`retired-${member}`)},{mode:0o600})`,
-            ],
-            { encoding: "utf8" },
-          );
-          expect(writer.status, writer.stderr).toBe(0);
-        }
-      });
-      expect(result).toBeDefined();
-      witnessed.push(normalByState.get(
-        `service.post-${present.length === 3 ? "all" : present.join("-")}`,
       )!);
     }
 

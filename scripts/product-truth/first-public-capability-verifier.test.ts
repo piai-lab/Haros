@@ -3,22 +3,154 @@ import { spawnSync } from "node:child_process";
 import { createHash, randomBytes, randomUUID } from "node:crypto";
 import * as OS from "node:os";
 import * as Path from "node:path";
+import { pathToFileURL } from "node:url";
 import { ClassicLevel } from "classic-level";
-import { afterEach, describe, expect, it } from "vitest";
+import { afterAll, afterEach, describe, expect, it } from "vitest";
 
 import { LEGACY_DRAFT_KEYS } from "./contracts.ts";
 import {
   chromiumLocalStorageDataKeysForTest,
-  deleteLegacyProfileDraftKeys,
-  inspectProfileDraftKeys,
+  deleteLegacyProfileDraftKeys as deleteLegacyProfileDraftKeysProduction,
+  inspectProfileDraftKeys as inspectProfileDraftKeysProduction,
 } from "./chromium-leveldb.ts";
 import {
   assertExecutedCaseBijection,
   generateFirstPublicManifest,
 } from "./first-public-capability-verifier.ts";
-import { withProductTruthDatabaseLocks } from "./database-lock.ts";
+import { withProductTruthDatabaseLocks as withProductTruthDatabaseLocksProduction } from "./database-lock.ts";
 
 const temporaryDirectories: string[] = [];
+
+interface TestPort {
+  readonly operation?: (
+    operationId: string,
+    site: "before" | "after",
+    ordinal: number | "single",
+  ) => void;
+  readonly processState?: (
+    pid: number,
+    actual: "live" | "dead" | "unknown",
+  ) => "live" | "dead" | "unknown";
+  readonly barrier?: (
+    barrierId: string,
+    ordinal: number | "single",
+    action?: () => void | Promise<void>,
+  ) => void | Promise<void>;
+}
+
+interface TestLockPort extends Omit<TestPort, "barrier"> {
+  readonly barrier?: (
+    barrierId: string,
+    ordinal: number,
+    action?: () => void,
+  ) => void;
+}
+
+const verifierDirectory = FS.mkdtempSync(
+  Path.join(OS.tmpdir(), "omnimind-capability-verifier-only-"),
+);
+for (const name of ["contracts.ts", "chromium-leveldb.ts", "database-lock.ts"]) {
+  let source = FS.readFileSync(Path.join(import.meta.dirname, name), "utf8");
+  if (name === "chromium-leveldb.ts") {
+    source = source
+      .replace(
+        "let instrumentation: ProfileInspectInstrumentationPort | undefined;",
+        "let instrumentation = process.__omnimindProfileInspectPort as ProfileInspectInstrumentationPort | undefined;",
+      )
+      .replace(
+        "let checkpoint: ((boundary: \"profile-batch-committed\" | \"profile-reread\", target: string) => void) | undefined;",
+        "let checkpoint = process.__omnimindProfileCheckpoint as ((boundary: \"profile-batch-committed\" | \"profile-reread\", target: string) => void) | undefined;",
+      )
+      .replace(
+        "let instrumentation: ProfileDeleteInstrumentationPort | undefined;",
+        "let instrumentation = process.__omnimindProfileDeletePort as ProfileDeleteInstrumentationPort | undefined;",
+      );
+  } else if (name === "database-lock.ts") {
+    source = source
+      .replace(
+        "let afterAcquire: ((kind: \"profile\" | \"database\", identity: string) => void) | undefined;",
+        "let afterAcquire = process.__omnimindLockCheckpoint as ((kind: \"profile\" | \"database\", identity: string) => void) | undefined;",
+      )
+      .replace(
+        "let instrumentation: DatabaseLockInstrumentationPort | undefined;",
+        "let instrumentation = process.__omnimindLockPort as DatabaseLockInstrumentationPort | undefined;",
+      );
+  }
+  FS.writeFileSync(Path.join(verifierDirectory, name), source, { mode: 0o600 });
+}
+FS.symlinkSync(
+  Path.resolve(import.meta.dirname, "../node_modules"),
+  Path.join(verifierDirectory, "node_modules"),
+  "dir",
+);
+const verifierNonce = `${process.pid}-${Date.now()}`;
+const verifierChromium = await import(
+  `${pathToFileURL(Path.join(verifierDirectory, "chromium-leveldb.ts")).href}?${verifierNonce}`
+) as typeof import("./chromium-leveldb.ts");
+const verifierLocks = await import(
+  `${pathToFileURL(Path.join(verifierDirectory, "database-lock.ts")).href}?${verifierNonce}`
+) as typeof import("./database-lock.ts");
+
+afterAll(() => {
+  FS.rmSync(verifierDirectory, { recursive: true, force: true });
+});
+
+function testGlobals(): Record<string, unknown> {
+  return process as unknown as Record<string, unknown>;
+}
+
+async function inspectProfileDraftKeys(
+  identity: "omnimind-dev" | "omnimind",
+  profilePath: string,
+  port?: TestPort,
+) {
+  if (port === undefined) return inspectProfileDraftKeysProduction(identity, profilePath);
+  const globals = testGlobals();
+  globals.__omnimindProfileInspectPort = port;
+  try {
+    return await verifierChromium.inspectProfileDraftKeys(identity, profilePath);
+  } finally {
+    delete globals.__omnimindProfileInspectPort;
+  }
+}
+
+async function deleteLegacyProfileDraftKeys(
+  identity: "omnimind-dev" | "omnimind",
+  profilePath: string,
+  checkpoint?: (boundary: "profile-batch-committed" | "profile-reread", target: string) => void,
+  port?: TestPort,
+) {
+  if (checkpoint === undefined && port === undefined)
+    return deleteLegacyProfileDraftKeysProduction(identity, profilePath);
+  const globals = testGlobals();
+  globals.__omnimindProfileCheckpoint = checkpoint;
+  globals.__omnimindProfileDeletePort = port;
+  try {
+    return await verifierChromium.deleteLegacyProfileDraftKeys(identity, profilePath);
+  } finally {
+    delete globals.__omnimindProfileCheckpoint;
+    delete globals.__omnimindProfileDeletePort;
+  }
+}
+
+async function withProductTruthDatabaseLocks<Result>(
+  canonicalHome: string,
+  effect: (locks: import("./database-lock.ts").ProductTruthOwnerLocks) => Promise<Result>,
+  checkpoint?: (kind: "profile" | "database", identity: string) => void,
+  port?: TestLockPort,
+): Promise<Result> {
+  if (checkpoint === undefined && port === undefined)
+    return withProductTruthDatabaseLocksProduction(canonicalHome, effect);
+  const globals = testGlobals();
+  globals.__omnimindLockCheckpoint = checkpoint;
+  globals.__omnimindLockPort = port;
+  try {
+    return await verifierLocks.withProductTruthDatabaseLocks(canonicalHome, effect);
+  } finally {
+    delete globals.__omnimindLockCheckpoint;
+    delete globals.__omnimindLockPort;
+  }
+}
 
 async function seedProfileInspectFixture(profile: string): Promise<string> {
   const levelPath = Path.join(profile, "Local Storage", "leveldb");
@@ -310,7 +442,7 @@ describe("first-public frozen capability catalog", () => {
     const killCases = manifest.cases.filter(
       (item) => item.owner === owner && item.family === "kill",
     );
-    const modulePath = Path.join(import.meta.dirname, "chromium-leveldb.ts");
+    const modulePath = Path.join(verifierDirectory, "chromium-leveldb.ts");
     const witnessed: string[] = [];
     for (const selected of killCases) {
       const profile = FS.mkdtempSync(Path.join(OS.tmpdir(), "omnimind-profile-inspect-kill-"));
@@ -329,11 +461,11 @@ describe("first-public frozen capability catalog", () => {
         process.execPath,
         [
           "-e",
-          `const {inspectProfileDraftKeys}=await import(${JSON.stringify(modulePath)});await inspectProfileDraftKeys("omnimind-dev",${JSON.stringify(profile)},{operation:(id,site,ordinal)=>{if(id===${JSON.stringify(selected.operationOrBarrierId)}&&site==="after"&&ordinal===${JSON.stringify(selected.ordinal)})process.kill(process.pid,"SIGKILL")}});`,
+          `process.__omnimindProfileInspectPort={operation:(id,site,ordinal)=>{if(id===${JSON.stringify(selected.operationOrBarrierId)}&&site==="after"&&ordinal===${JSON.stringify(selected.ordinal)})process.kill(process.pid,"SIGKILL")}};const {inspectProfileDraftKeys}=await import(${JSON.stringify(modulePath)});await inspectProfileDraftKeys("omnimind-dev",${JSON.stringify(profile)});`,
         ],
         { encoding: "utf8", env: childEnvironment },
       );
-      expect(killed.signal, selected.id).toBe("SIGKILL");
+      expect(killed.signal, `${selected.id}\n${killed.stderr}`).toBe("SIGKILL");
       witnessed.push(selected.id);
       const scratchRoot = Path.join(
         isolatedTemp,
@@ -621,7 +753,7 @@ describe("first-public frozen capability catalog", () => {
     const killCases = manifest.cases.filter(
       (item) => item.owner === owner && item.family === "kill",
     );
-    const modulePath = Path.join(import.meta.dirname, "database-lock.ts");
+    const modulePath = Path.join(verifierDirectory, "database-lock.ts");
     const deadOwner = spawnSync(
       process.execPath,
       ["-e", "process.exit(0)"],
@@ -646,7 +778,7 @@ describe("first-public frozen capability catalog", () => {
         process.execPath,
         [
           "-e",
-          `const {withProductTruthDatabaseLocks}=await import(${JSON.stringify(modulePath)});await withProductTruthDatabaseLocks(${JSON.stringify(canonicalHome)},async()=>undefined,undefined,{operation:(id,site,ordinal)=>{if(id===${JSON.stringify(selected.operationOrBarrierId)}&&site==="after"&&ordinal===${JSON.stringify(selected.ordinal)})process.kill(process.pid,"SIGKILL")}});`,
+          `process.__omnimindLockPort={operation:(id,site,ordinal)=>{if(id===${JSON.stringify(selected.operationOrBarrierId)}&&site==="after"&&ordinal===${JSON.stringify(selected.ordinal)})process.kill(process.pid,"SIGKILL")}};const {withProductTruthDatabaseLocks}=await import(${JSON.stringify(modulePath)});await withProductTruthDatabaseLocks(${JSON.stringify(canonicalHome)},async()=>undefined);`,
         ],
         { encoding: "utf8", env: childEnvironment },
       );
@@ -805,16 +937,16 @@ describe("first-public frozen capability catalog", () => {
     for (const key of [...LEGACY_DRAFT_KEYS, "omnimind:composer-drafts:g1"])
       await database.put(chromiumLocalStorageDataKeysForTest(key)[0]!, Buffer.from(key));
     await database.close();
-    const modulePath = Path.join(import.meta.dirname, "chromium-leveldb.ts");
+    const modulePath = Path.join(verifierDirectory, "chromium-leveldb.ts");
     const child = spawnSync(
       process.execPath,
       [
         "-e",
-        `const {deleteLegacyProfileDraftKeys}=await import(${JSON.stringify(modulePath)});await deleteLegacyProfileDraftKeys("omnimind-dev",${JSON.stringify(profile)},(boundary)=>{if(boundary==="profile-batch-committed")process.kill(process.pid,"SIGKILL")});`,
+        `process.__omnimindProfileCheckpoint=(boundary)=>{if(boundary==="profile-batch-committed")process.kill(process.pid,"SIGKILL")};const {deleteLegacyProfileDraftKeys}=await import(${JSON.stringify(modulePath)});await deleteLegacyProfileDraftKeys("omnimind-dev",${JSON.stringify(profile)});`,
       ],
       { encoding: "utf8" },
     );
-    expect(child.signal).toBe("SIGKILL");
+    expect(child.signal, child.stderr).toBe("SIGKILL");
     await deleteLegacyProfileDraftKeys("omnimind-dev", profile);
     const after = new ClassicLevel<Buffer, Buffer>(levelPath, {
       keyEncoding: "buffer",

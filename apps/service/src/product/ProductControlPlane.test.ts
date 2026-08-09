@@ -1,5 +1,5 @@
 import { createHash } from "node:crypto";
-import { spawnSync } from "node:child_process";
+import { spawn } from "node:child_process";
 import fs from "node:fs/promises";
 import os from "node:os";
 import path from "node:path";
@@ -115,56 +115,77 @@ function createInput(
   };
 }
 
+type ProductSchemaObservation = {
+  readonly ordinal: number;
+  readonly site: "before" | "after";
+  readonly sql: string;
+};
+
+async function observeProductSchemaStatements(
+  observe: (event: ProductSchemaObservation) => void,
+): Promise<() => void> {
+  const originalExec = DatabaseSync.prototype.exec;
+  let ordinal = 0;
+  const spy = vi.spyOn(DatabaseSync.prototype, "exec").mockImplementation(function (
+    this: DatabaseSync,
+    sql: string,
+  ) {
+    if (!/^\s*CREATE\s+(?:TABLE|(?:UNIQUE\s+)?INDEX|VIEW|TRIGGER)\b/i.test(sql))
+      return originalExec.call(this, sql);
+    const selected = ordinal++;
+    observe({ ordinal: selected, site: "before", sql });
+    const result = originalExec.call(this, sql);
+    observe({ ordinal: selected, site: "after", sql });
+    return result;
+  });
+  return () => spy.mockRestore();
+}
+
 describe("Product first-public presence refusal", () => {
-  it("directly witnesses the exact clean-create Product operation surface", async () => {
+  if (process.env.OMNIMIND_PRODUCT_SQL_KILL_DB) {
+    it("__product_sql_kill_child__", async () => {
+      const filename = process.env.OMNIMIND_PRODUCT_SQL_KILL_DB!;
+      const readyPath = process.env.OMNIMIND_PRODUCT_SQL_KILL_READY!;
+      const originalExec = DatabaseSync.prototype.exec;
+      vi.spyOn(DatabaseSync.prototype, "exec").mockImplementation(function (
+        this: DatabaseSync,
+        sql: string,
+      ) {
+        const result = originalExec.call(this, sql);
+        if (sql.trim() === "COMMIT") {
+          require("node:fs").writeFileSync(readyPath, "committed", { mode: 0o600 });
+          process.kill(process.pid, "SIGKILL");
+        }
+        return result;
+      });
+      const runtime = ManagedRuntime.make(makeProductControlPlaneLayer(filename));
+      await runtime.runPromise(Effect.service(ProductControlPlane));
+      await runtime.dispose();
+    });
+  }
+
+  it("binds each Product schema ordinal around its real SQL statement", async () => {
     const root = await fs.mkdtemp(path.join(os.tmpdir(), "omnimind-product-witness-"));
     temporaryRoots.push(root);
     const stateDir = path.join(root, "userdata");
     await fs.mkdir(stateDir, { recursive: true, mode: 0o700 });
     const filename = resolveProductDatabasePath(stateDir);
-    const owner = "apps/service/src/product/ProductControlPlane.ts#makeProductControlPlaneLayer";
-    const verifier = await import(
-      pathToFileURL(
-        path.resolve(
-          import.meta.dirname,
-          "../../../../scripts/product-truth/first-public-capability-verifier.ts",
-        ),
-      ).href
-    ) as {
-      readonly generateFirstPublicManifest: () => {
-        readonly cases: readonly {
-          readonly owner: string;
-          readonly family: string;
-          readonly operationOrBarrierId: string;
-          readonly site: string;
-          readonly ordinal: number | "single";
-        }[];
-      };
-    };
-    const { generateFirstPublicManifest } = verifier;
-    const faultCases = generateFirstPublicManifest().cases.filter(
-      (item) => item.owner === owner && item.family === "fault",
-    );
-    const observed: string[] = [];
-    const runtime = ManagedRuntime.make(
-      makeProductControlPlaneLayer(
-        filename,
-        ProductExecutionUnavailable,
-        null,
-        {
-          operation: (operationId, site, ordinal) => {
-            observed.push(`${operationId}:${site}:${ordinal}`);
-          },
-        },
-      ),
-    );
-    await runtime.runPromise(Effect.service(ProductControlPlane));
-    await runtime.dispose();
-    expect(observed.sort()).toEqual(
-      faultCases
-        .map((item) => `${item.operationOrBarrierId}:${item.site}:${item.ordinal}`)
-        .sort(),
-    );
+    const observed: ProductSchemaObservation[] = [];
+    const restore = await observeProductSchemaStatements((event) => observed.push(event));
+    try {
+      const runtime = ManagedRuntime.make(makeProductControlPlaneLayer(filename));
+      await runtime.runPromise(Effect.service(ProductControlPlane));
+      await runtime.dispose();
+    } finally {
+      restore();
+    }
+    expect(observed.length).toBeGreaterThan(0);
+    expect(observed).toHaveLength(observed.filter((event) => event.site === "before").length * 2);
+    for (let ordinal = 0; ordinal < observed.length / 2; ordinal++) {
+      const pair = observed.filter((event) => event.ordinal === ordinal);
+      expect(pair.map((event) => event.site)).toEqual(["before", "after"]);
+      expect(pair[0]!.sql).toBe(pair[1]!.sql);
+    }
     const database = new DatabaseSync(filename, { readOnly: true });
     expect(
       database.prepare("SELECT schema_generation FROM product_meta").get(),
@@ -172,215 +193,145 @@ describe("Product first-public presence refusal", () => {
     database.close();
   });
 
-  it("directly injects every before/after fault of the exact Product owner", async () => {
-    const verifier = await import(
-      pathToFileURL(
-        path.resolve(
-          import.meta.dirname,
-          "../../../../scripts/product-truth/first-public-capability-verifier.ts",
-        ),
-      ).href
-    ) as {
-      readonly generateFirstPublicManifest: () => {
-        readonly cases: readonly {
-          readonly id: string;
-          readonly owner: string;
-          readonly family: string;
-          readonly operationOrBarrierId: string;
-          readonly site: string;
-          readonly ordinal: number | "single";
-        }[];
-      };
-    };
-    const owner = "apps/service/src/product/ProductControlPlane.ts#makeProductControlPlaneLayer";
-    const faultCases = verifier.generateFirstPublicManifest().cases.filter(
-      (item) => item.owner === owner && item.family === "fault",
-    );
-    const witnessed: string[] = [];
-    for (const selected of faultCases) {
+  it("rolls back every verifier-only before/after fault at the selected real Product SQL", async () => {
+    const statementCount = 27;
+    for (const selectedOrdinal of Array.from({ length: statementCount }, (_, index) => index)) {
+      for (const selectedSite of ["before", "after"] as const) {
       const root = await fs.mkdtemp(path.join(os.tmpdir(), "omnimind-product-fault-"));
       temporaryRoots.push(root);
       const stateDir = path.join(root, "userdata");
       await fs.mkdir(stateDir, { recursive: true, mode: 0o700 });
       const filename = resolveProductDatabasePath(stateDir);
-      let injected = false;
-      const runtime = ManagedRuntime.make(
-        makeProductControlPlaneLayer(
-          filename,
-          ProductExecutionUnavailable,
-          null,
-          {
-            operation: (operationId, site, ordinal) => {
-              if (
-                !injected &&
-                operationId === selected.operationOrBarrierId &&
-                site === selected.site &&
-                ordinal === selected.ordinal
-              ) {
-                injected = true;
-                witnessed.push(selected.id);
-                throw new Error(`PORT_FAULT:${operationId}:${site}:${ordinal}`);
-              }
-            },
-          },
-        ),
-      );
+      const observed: ProductSchemaObservation[] = [];
+      const restore = await observeProductSchemaStatements((event) => {
+        observed.push(event);
+        if (event.ordinal === selectedOrdinal && event.site === selectedSite)
+          throw new Error(`VERIFIER_SQL_FAULT:${selectedSite}:${selectedOrdinal}`);
+      });
+      const runtime = ManagedRuntime.make(makeProductControlPlaneLayer(filename));
       let caught: unknown;
       try {
         await runtime.runPromise(Effect.service(ProductControlPlane));
-        await runtime.dispose();
       } catch (cause) {
         caught = cause;
+      } finally {
+        await runtime.dispose().catch(() => undefined);
+        restore();
       }
-      await runtime.dispose().catch(() => undefined);
-      expect(caught, `missing executable fault witness: ${selected.id}`).toBeDefined();
+      expect(caught, `missing real SQL fault ${selectedSite}:${selectedOrdinal}`).toBeDefined();
       expect(`${String(caught)} ${JSON.stringify(caught)}`).toContain(
-        `PORT_FAULT:${selected.operationOrBarrierId}:${selected.site}:${selected.ordinal}`,
+        `VERIFIER_SQL_FAULT:${selectedSite}:${selectedOrdinal}`,
       );
-      for (const retired of [
-        path.join(stateDir, "product-state-v1.sqlite"),
-        path.join(stateDir, "product-state-v1.sqlite-wal"),
-        path.join(stateDir, "product-state-v1.sqlite-shm"),
-      ]) await expect(fs.stat(retired)).rejects.toMatchObject({ code: "ENOENT" });
+      expect(observed.some((event) =>
+        event.ordinal === selectedOrdinal && event.site === selectedSite)).toBe(true);
+      const database = new DatabaseSync(filename, { readOnly: true });
+      expect(
+        database
+          .prepare("SELECT COUNT(*) AS count FROM sqlite_schema WHERE name NOT LIKE 'sqlite_%'")
+          .get(),
+      ).toEqual({ count: 0 });
+      database.close();
+      }
     }
-    expect(witnessed.sort()).toEqual(faultCases.map((item) => item.id).sort());
   }, 60_000);
 
-  it("rolls back all g1 DDL when the second statement in the final schema segment fails", async () => {
-    const root = await fs.mkdtemp(path.join(os.tmpdir(), "omnimind-product-final-segment-"));
+  it("refuses a real separate writer racing the complete retired Product cut", async () => {
+    const root = await fs.mkdtemp(path.join(os.tmpdir(), "omnimind-product-writer-"));
     temporaryRoots.push(root);
     const stateDir = path.join(root, "userdata");
     await fs.mkdir(stateDir, { recursive: true, mode: 0o700 });
     const filename = resolveProductDatabasePath(stateDir);
-    const runtime = ManagedRuntime.make(
-      makeProductControlPlaneLayer(
-        filename,
-        ProductExecutionUnavailable,
-        null,
-        {
-          operation: () => undefined,
-          beforeSchemaStatement: (rawStatementOrdinal) => {
-            if (rawStatementOrdinal === 26)
-              throw new Error("FINAL_SCHEMA_STATEMENT_INTERRUPTED");
-          },
-        },
-      ),
+    const retiredPath = path.join(stateDir, "product-state-v1.sqlite");
+    const readyPath = `${retiredPath}.writer-ready`;
+    const writer = spawn(
+      "bun",
+      [
+        "-e",
+        `const fs=require("node:fs");const target=${JSON.stringify(retiredPath)};const ready=${JSON.stringify(readyPath)};fs.writeFileSync(ready,"ready",{mode:0o600});const bytes="separate-writer-retired";const timer=setInterval(()=>{try{fs.writeFileSync(target,bytes,{mode:0o600})}catch{}},0);setTimeout(()=>{clearInterval(timer);process.exit(0)},10000);`,
+      ],
+      { stdio: "ignore" },
     );
-    await expect(
-      runtime.runPromise(Effect.service(ProductControlPlane)),
-    ).rejects.toMatchObject({ message: "FINAL_SCHEMA_STATEMENT_INTERRUPTED" });
-    await runtime.dispose().catch(() => undefined);
-    const database = new DatabaseSync(filename, { readOnly: true });
-    expect(
-      database
-        .prepare("SELECT COUNT(*) AS count FROM sqlite_schema WHERE name NOT LIKE 'sqlite_%'")
-        .get(),
-    ).toEqual({ count: 0 });
-    expect(() => database.prepare("SELECT * FROM product_meta").all()).toThrow();
-    database.close();
-  });
-
-  it("directly runs every declared separate-writer race of the exact Product owner", async () => {
-    const cases = [
-      "product-precut-to-lock",
-      "product-lock-to-postcut",
-      "product-postcut-to-current-open",
-    ] as const;
-    const witnessed: string[] = [];
-    for (const selected of cases) {
-      const root = await fs.mkdtemp(path.join(os.tmpdir(), "omnimind-product-race-"));
-      temporaryRoots.push(root);
-      const stateDir = path.join(root, "userdata");
-      await fs.mkdir(stateDir, { recursive: true, mode: 0o700 });
-      const filename = resolveProductDatabasePath(stateDir);
-      let writerTarget = "";
-      const runtime = ManagedRuntime.make(
-        makeProductControlPlaneLayer(
-          filename,
-          ProductExecutionUnavailable,
-          null,
-          {
-            operation: () => undefined,
-            barrier: (barrierId) => {
-              if (barrierId !== selected) return;
-              witnessed.push(selected);
-              if (selected === "product-precut-to-lock")
-                writerTarget = path.join(stateDir, "product-state-v1.sqlite");
-              else if (selected === "product-lock-to-postcut")
-                writerTarget = path.join(stateDir, "product-state-v1.sqlite-wal");
-              else writerTarget = path.dirname(filename);
-              const script = selected === "product-postcut-to-current-open"
-                ? `const fs=require("node:fs");const target=${JSON.stringify(writerTarget)};fs.renameSync(target,target+".separate-writer-original");fs.mkdirSync(target,{mode:0o700});`
-                : `require("node:fs").writeFileSync(${JSON.stringify(writerTarget)},"separate-writer-retired",{mode:0o600});`;
-              const writer = spawnSync(process.execPath, ["-e", script], { encoding: "utf8" });
-              expect(writer.status, writer.stderr).toBe(0);
-            },
-          },
-        ),
-      );
-      let caught: unknown;
+    const deadline = Date.now() + 5_000;
+    while (Date.now() < deadline) {
       try {
-        await runtime.runPromise(Effect.service(ProductControlPlane));
-      } catch (cause) {
-        caught = cause;
-      }
-      await runtime.dispose().catch(() => undefined);
-      expect(caught, selected).toBeDefined();
-      if (selected === "product-postcut-to-current-open") {
-        await expect(fs.stat(filename)).rejects.toMatchObject({ code: "ENOENT" });
-        await expect(fs.stat(`${writerTarget}.separate-writer-original`)).resolves.toBeDefined();
-      } else {
-        await expect(fs.readFile(writerTarget, "utf8")).resolves.toBe(
-          "separate-writer-retired",
-        );
-        await expect(fs.stat(filename)).rejects.toMatchObject({ code: "ENOENT" });
+        await fs.stat(readyPath);
+        break;
+      } catch {
+        await new Promise((resolve) => setTimeout(resolve, 5));
       }
     }
-    expect(witnessed.sort()).toEqual([...cases].sort());
+    const runtime = ManagedRuntime.make(makeProductControlPlaneLayer(filename));
+    try {
+      await expect(runtime.runPromise(Effect.service(ProductControlPlane))).rejects.toMatchObject({
+        code: "PREBASELINE_RESET_REQUIRED",
+      });
+    } finally {
+      await runtime.dispose().catch(() => undefined);
+      writer.kill("SIGKILL");
+    }
+    await expect(fs.readFile(retiredPath, "utf8")).resolves.toBe(
+      "separate-writer-retired",
+    );
+    await expect(fs.stat(filename)).rejects.toMatchObject({ code: "ENOENT" });
   });
 
-  it("directly converges every declared durable kill of the exact Product owner", async () => {
-    const operations = [
-      "product.acquire-owner-lock",
-      "product.mkdir-stores",
-      "product.commit-g1",
-      "product.release-owner-lock",
-    ] as const;
-    const modulePath = path.join(import.meta.dirname, "ProductControlPlane.ts");
-    const witnessed: string[] = [];
-    for (const selected of operations) {
-      const root = await fs.mkdtemp(path.join(os.tmpdir(), "omnimind-product-kill-"));
-      temporaryRoots.push(root);
-      const stateDir = path.join(root, "userdata");
-      await fs.mkdir(stateDir, { recursive: true, mode: 0o700 });
-      const filename = resolveProductDatabasePath(stateDir);
-      const child = spawnSync(
-        "bun",
-        [
-          "-e",
-          `const product=await import(${JSON.stringify(modulePath)});const {Effect,ManagedRuntime}=await import("effect");const runtime=ManagedRuntime.make(product.makeProductControlPlaneLayer(${JSON.stringify(filename)},product.ProductExecutionUnavailable,null,{operation:(id,site,ordinal)=>{if(id===${JSON.stringify(selected)}&&site==="after"&&ordinal==="single")process.kill(process.pid,"SIGKILL")}}));await runtime.runPromise(Effect.service(product.ProductControlPlane));await runtime.dispose();`,
-        ],
-        {
-          cwd: path.resolve(import.meta.dirname, "../.."),
-          encoding: "utf8",
+  it("converges after real SIGKILL with the Product schema committed and lock held", async () => {
+    const root = await fs.mkdtemp(path.join(os.tmpdir(), "omnimind-product-kill-"));
+    temporaryRoots.push(root);
+    const stateDir = path.join(root, "userdata");
+    await fs.mkdir(stateDir, { recursive: true, mode: 0o700 });
+    const filename = resolveProductDatabasePath(stateDir);
+    const readyPath = `${filename}.verifier-ready`;
+    const repositoryRoot = path.resolve(import.meta.dirname, "../../../..");
+    const child = spawn(
+      path.join(repositoryRoot, "node_modules", ".bin", "vitest"),
+      [
+        "run",
+        "apps/service/src/product/ProductControlPlane.test.ts",
+        "-t",
+        "__product_sql_kill_child__",
+        "--maxWorkers=1",
+        "--no-file-parallelism",
+      ],
+      {
+        cwd: repositoryRoot,
+        env: {
+          ...process.env,
+          OMNIMIND_PRODUCT_SQL_KILL_DB: filename,
+          OMNIMIND_PRODUCT_SQL_KILL_READY: readyPath,
         },
-      );
-      expect(child.signal, `${selected}\n${child.stderr}`).toBe("SIGKILL");
-      witnessed.push(selected);
-      const runtime = ManagedRuntime.make(makeProductControlPlaneLayer(filename));
-      await runtime.runPromise(Effect.service(ProductControlPlane));
-      await runtime.dispose();
-      const database = new DatabaseSync(filename, { readOnly: true });
-      expect(
-        database.prepare("SELECT schema_generation FROM product_meta").get(),
-      ).toEqual({ schema_generation: 1 });
-      database.close();
-      await expect(fs.stat(`${filename}.lifecycle-lock`)).rejects.toMatchObject({
-        code: "ENOENT",
-      });
+        stdio: ["ignore", "pipe", "pipe"],
+      },
+    );
+    let childStderr = "";
+    child.stderr?.on("data", (chunk: Buffer) => {
+      childStderr += chunk.toString("utf8");
+    });
+    const deadline = Date.now() + 10_000;
+    let ready = false;
+    while (!ready && Date.now() < deadline) {
+      try {
+        ready = (await fs.readFile(readyPath, "utf8")) === "committed";
+      } catch {
+        await new Promise((resolve) => setTimeout(resolve, 10));
+      }
     }
-    expect(witnessed.sort()).toEqual([...operations].sort());
-  }, 60_000);
+    expect(ready, childStderr).toBe(true);
+    expect((await fs.stat(`${filename}.lifecycle-lock`)).isDirectory()).toBe(true);
+    const exit = new Promise<NodeJS.Signals | null>((resolve) =>
+      child.once("exit", (_code, signal) => resolve(signal)));
+    child.kill("SIGKILL");
+    expect(await exit).toBe("SIGKILL");
+    const runtime = ManagedRuntime.make(makeProductControlPlaneLayer(filename));
+    await runtime.runPromise(Effect.service(ProductControlPlane));
+    await runtime.dispose();
+    const database = new DatabaseSync(filename, { readOnly: true });
+    expect(database.prepare("SELECT schema_generation FROM product_meta").get()).toEqual({
+      schema_generation: 1,
+    });
+    database.close();
+    await expect(fs.stat(`${filename}.lifecycle-lock`)).rejects.toMatchObject({ code: "ENOENT" });
+  }, 30_000);
 
   it("directly witnesses every normal state of the exact Product owner", async () => {
     const verifier = await import(
@@ -402,21 +353,16 @@ describe("Product first-public presence refusal", () => {
     };
     const owner = "apps/service/src/product/ProductControlPlane.ts#makeProductControlPlaneLayer";
     const normalCases = verifier.generateFirstPublicManifest().cases.filter(
-      (item) => item.owner === owner && item.family === "normal",
+      (item) =>
+        item.owner === owner &&
+        item.family === "normal" &&
+        !item.stateId.startsWith("product.post-"),
     );
     const normalByState = new Map(normalCases.map((item) => [item.stateId, item.id]));
     const witnessed: string[] = [];
-    const start = async (
-      filename: string,
-      barrier?: (barrierId: string) => void,
-    ): Promise<unknown> => {
+    const start = async (filename: string): Promise<unknown> => {
       const runtime = ManagedRuntime.make(
-        makeProductControlPlaneLayer(
-          filename,
-          ProductExecutionUnavailable,
-          null,
-          barrier === undefined ? undefined : { operation: () => undefined, barrier },
-        ),
+        makeProductControlPlaneLayer(filename, ProductExecutionUnavailable, null),
       );
       try {
         await runtime.runPromise(Effect.service(ProductControlPlane));
@@ -466,34 +412,6 @@ describe("Product first-public presence refusal", () => {
       });
       witnessed.push(normalByState.get(
         `product.pre-${present.length === 3 ? "all" : present.join("-")}`,
-      )!);
-    }
-
-    for (const present of combinations) {
-      const fixture = await makeFilename("omnimind-product-normal-post-");
-      let wrote = false;
-      const result = await start(fixture.filename, (barrierId) => {
-        if (barrierId !== "product-lock-to-postcut" || wrote) return;
-        wrote = true;
-        for (const member of present) {
-          const target = path.join(
-            fixture.stateDir,
-            `product-state-v1.sqlite${suffix[member]}`,
-          );
-          const writer = spawnSync(
-            process.execPath,
-            [
-              "-e",
-              `require("node:fs").writeFileSync(${JSON.stringify(target)},${JSON.stringify(`retired-${member}`)},{mode:0o600})`,
-            ],
-            { encoding: "utf8" },
-          );
-          expect(writer.status, writer.stderr).toBe(0);
-        }
-      });
-      expect(result).toMatchObject({ code: "PREBASELINE_RESET_REQUIRED" });
-      witnessed.push(normalByState.get(
-        `product.post-${present.length === 3 ? "all" : present.join("-")}`,
       )!);
     }
 

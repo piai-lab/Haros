@@ -105,44 +105,8 @@ export const PRODUCT_SCHEMA_GENERATION = 1;
 export const resolveProductDatabasePath = (stateDir: string): string =>
   path.join(stateDir, "stores", PRODUCT_DATABASE_FILENAME);
 
-export interface ProductControlPlaneWitnessPort {
-  readonly operation: (
-    operationId: string,
-    site: "before" | "after",
-    ordinal: number | "single",
-  ) => void;
-  readonly barrier?: (barrierId: string) => void;
-  readonly beforeSchemaStatement?: (rawStatementOrdinal: number) => void;
-}
-
-const productOperation = <Result>(
-  witness: ProductControlPlaneWitnessPort | undefined,
-  operationId: string,
-  ordinal: number | "single",
-  effect: () => Result,
-): Result => {
-  witness?.operation(operationId, "before", ordinal);
-  const result = effect();
-  witness?.operation(operationId, "after", ordinal);
-  return result;
-};
-
-const productAsyncOperation = async <Result>(
-  witness: ProductControlPlaneWitnessPort | undefined,
-  operationId: string,
-  ordinal: number | "single",
-  effect: () => Promise<Result>,
-): Promise<Result> => {
-  witness?.operation(operationId, "before", ordinal);
-  const result = await effect();
-  witness?.operation(operationId, "after", ordinal);
-  return result;
-};
-
 const assertRetiredProductBundleAbsent = (
   filename: string,
-  phase: "pre" | "post" = "pre",
-  witness?: ProductControlPlaneWitnessPort,
 ): void => {
   const databaseDirectory = path.dirname(filename);
   const stateDirectory =
@@ -150,28 +114,21 @@ const assertRetiredProductBundleAbsent = (
       ? path.dirname(databaseDirectory)
       : databaseDirectory;
   const retiredDatabase = path.join(stateDirectory, "product-state-v1.sqlite");
-  for (const [ordinal, target] of [
+  for (const target of [
     retiredDatabase,
     `${retiredDatabase}-wal`,
     `${retiredDatabase}-shm`,
-  ].entries()) {
-    productOperation(
-      witness,
-      `product.probe-${phase}-${["main", "wal", "shm"][ordinal]!}`,
-      "single",
-      () => {
-        try {
-          lstatSync(target);
-          throw new ProductFailure(
-            "PREBASELINE_RESET_REQUIRED",
-            "A retired Product database bundle exists; run the direct first-public rebuild tool.",
-          );
-        } catch (cause) {
-          if (cause instanceof ProductFailure) throw cause;
-          if ((cause as NodeJS.ErrnoException).code !== "ENOENT") throw cause;
-        }
-      },
-    );
+  ]) {
+    try {
+      lstatSync(target);
+      throw new ProductFailure(
+        "PREBASELINE_RESET_REQUIRED",
+        "A retired Product database bundle exists; run the direct first-public rebuild tool.",
+      );
+    } catch (cause) {
+      if (cause instanceof ProductFailure) throw cause;
+      if ((cause as NodeJS.ErrnoException).code !== "ENOENT") throw cause;
+    }
   }
 };
 const RUNTIME_CATALOG_OBSERVATION_INTERVAL_MS = 5_000;
@@ -833,14 +790,8 @@ const configureProductDatabase = (database: PortableDatabase): void => {
 
 const validateProductSchema = (
   database: PortableDatabase,
-  witness?: ProductControlPlaneWitnessPort,
 ): void => {
-  const marker = productOperation(
-    witness,
-    "product.validate-reopen-query",
-    0,
-    () => database.prepare("SELECT schema_generation FROM product_meta").all(),
-  );
+  const marker = database.prepare("SELECT schema_generation FROM product_meta").all();
   if (
     marker.length !== 1 ||
     requiredNumber(asRecord(marker[0]), "schema_generation") !== PRODUCT_SCHEMA_GENERATION
@@ -850,12 +801,7 @@ const validateProductSchema = (
       "Product Store does not contain the exact generation-1 marker.",
     );
   }
-  const fingerprint = productOperation(
-    witness,
-    "product.validate-reopen-query",
-    1,
-    () => productSchemaFingerprint(database),
-  );
+  const fingerprint = productSchemaFingerprint(database);
   if (fingerprint !== PRODUCT_SCHEMA_FINGERPRINT) {
     throw new ProductFailure(
       "FIRST_PUBLIC_CREATION_INCOMPLETE",
@@ -866,7 +812,6 @@ const validateProductSchema = (
 
 const initializeProductSchema = (
   database: PortableDatabase,
-  witness?: ProductControlPlaneWitnessPort,
   allowCreate = true,
 ): boolean => {
   configureProductDatabase(database);
@@ -884,22 +829,14 @@ const initializeProductSchema = (
       "Product Store existed without the exact generation-1 schema.",
     );
   }
-  productOperation(witness, "product.begin-g1", "single", () =>
-    database.exec("BEGIN IMMEDIATE"));
+  database.exec("BEGIN IMMEDIATE");
   try {
-    let rawStatementOrdinal = 0;
-    for (const [ordinal, segment] of productSchemaSegments.entries())
-      productOperation(witness, "product.create-schema-statement", ordinal, () =>
-        segment.forEach((statement) => {
-          witness?.beforeSchemaStatement?.(rawStatementOrdinal++);
-          database.exec(statement);
-        }));
-    productOperation(witness, "product.write-marker-last", "single", () =>
-      database
-        .prepare("INSERT INTO product_meta(schema_generation) VALUES (?)")
-        .run(PRODUCT_SCHEMA_GENERATION));
-    productOperation(witness, "product.commit-g1", "single", () =>
-      database.exec("COMMIT"));
+    for (const segment of productSchemaSegments)
+      segment.forEach((statement) => database.exec(statement));
+    database
+      .prepare("INSERT INTO product_meta(schema_generation) VALUES (?)")
+      .run(PRODUCT_SCHEMA_GENERATION);
+    database.exec("COMMIT");
     return true;
   } catch (cause) {
     try {
@@ -927,23 +864,12 @@ const fsyncProductDatabase = (filename: string): void => {
 
 const closeProductDatabase = (
   database: PortableDatabase,
-  operationId: "product.close-after-create" | "product.close-current",
-  witness?: ProductControlPlaneWitnessPort,
 ): void => {
-  let injected: unknown;
-  try {
-    witness?.operation(operationId, "before", "single");
-  } catch (cause) {
-    injected = cause;
-  }
   database.close();
-  if (injected !== undefined) throw injected;
-  witness?.operation(operationId, "after", "single");
 };
 
 const openValidatedProductDatabase = async (
   filename: string,
-  witness?: ProductControlPlaneWitnessPort,
   allowCreate = true,
 ): Promise<PortableDatabase> => {
   if (filename === ":memory:") {
@@ -952,24 +878,14 @@ const openValidatedProductDatabase = async (
     validateProductSchema(database);
     return database;
   }
-  let database = await productAsyncOperation(
-    witness,
-    "product.open-current",
-    "single",
-    () => openPortableDatabase(filename),
-  );
-  const created = initializeProductSchema(database, witness, allowCreate);
-  closeProductDatabase(database, "product.close-after-create", witness);
+  let database = await openPortableDatabase(filename);
+  const created = initializeProductSchema(database, allowCreate);
+  closeProductDatabase(database);
   if (created) fsyncProductDatabase(filename);
-  database = await productAsyncOperation(
-    witness,
-    "product.reopen-current",
-    "single",
-    () => openPortableDatabase(filename, { readOnly: true }),
-  );
+  database = await openPortableDatabase(filename, { readOnly: true });
   configureProductDatabase(database);
-  validateProductSchema(database, witness);
-  closeProductDatabase(database, "product.close-current", witness);
+  validateProductSchema(database);
+  closeProductDatabase(database);
   database = await openPortableDatabase(filename);
   configureProductDatabase(database);
   validateProductSchema(database);
@@ -5095,23 +5011,16 @@ export function makeProductControlPlaneLayer(
   filename: string,
   executionBoundary: ProductExecutionBoundary = ProductExecutionUnavailable,
   runtimeCatalog: ProductRuntimeCatalog | null = null,
-  witness?: ProductControlPlaneWitnessPort,
 ): Layer.Layer<ProductControlPlane, ProductControlPlaneError> {
   const acquire = Effect.tryPromise({
     try: async () => {
       if (filename !== ":memory:") {
-        assertRetiredProductBundleAbsent(filename, "pre", witness);
-        witness?.barrier?.("product-precut-to-lock");
+        assertRetiredProductBundleAbsent(filename);
       }
       const lock =
         filename === ":memory:"
           ? null
-          : await productAsyncOperation(
-              witness,
-              "product.acquire-owner-lock",
-              "single",
-              () => Effect.runPromise(acquireDatabaseLifecycleLock(filename)),
-            );
+          : await Effect.runPromise(acquireDatabaseLifecycleLock(filename));
       const lockedParent = lock === null
         ? null
         : (() => {
@@ -5129,9 +5038,7 @@ export function makeProductControlPlaneLayer(
       let database: PortableDatabase | undefined;
       try {
         if (filename !== ":memory:") {
-          witness?.barrier?.("product-lock-to-postcut");
-          assertRetiredProductBundleAbsent(filename, "post", witness);
-          witness?.barrier?.("product-postcut-to-current-open");
+          assertRetiredProductBundleAbsent(filename);
           const parent = path.dirname(filename);
           const currentParent = lstatSync(parent);
           if (
@@ -5151,27 +5058,20 @@ export function makeProductControlPlaneLayer(
           } catch (cause) {
             if ((cause as NodeJS.ErrnoException).code !== "ENOENT") throw cause;
           }
-          productOperation(witness, "product.mkdir-stores", "single", () =>
-            ensurePrivateDirectorySync(parent));
+          ensurePrivateDirectorySync(parent);
           ensurePrivateFileSync(filename);
           database = await openValidatedProductDatabase(
             filename,
-            witness,
             !currentExisted,
           );
         } else {
-          database = await openValidatedProductDatabase(filename, witness);
+          database = await openValidatedProductDatabase(filename);
         }
         return { database, lock };
       } catch (cause) {
         database?.close();
         if (lock)
-          await productAsyncOperation(
-            witness,
-            "product.release-owner-lock",
-            "single",
-            () => Effect.runPromise(releaseDatabaseLifecycleLock(lock)),
-          );
+          await Effect.runPromise(releaseDatabaseLifecycleLock(lock));
         throw cause;
       }
     },
@@ -5195,12 +5095,7 @@ export function makeProductControlPlaneLayer(
           await executionBoundary.close?.();
           database.close();
           if (lock)
-            await productAsyncOperation(
-              witness,
-              "product.release-owner-lock",
-              "single",
-              () => Effect.runPromise(releaseDatabaseLifecycleLock(lock)),
-            );
+            await Effect.runPromise(releaseDatabaseLifecycleLock(lock));
         }),
       );
       const database = acquired.database;

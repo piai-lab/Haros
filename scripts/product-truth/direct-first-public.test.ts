@@ -1,12 +1,13 @@
-import { execFileSync, spawnSync } from "node:child_process";
+import { execFileSync, spawn, spawnSync } from "node:child_process";
 import * as ChildProcess from "node:child_process";
 import { createHash } from "node:crypto";
 import * as FS from "node:fs";
 import * as OS from "node:os";
 import * as Path from "node:path";
 import { DatabaseSync } from "node:sqlite";
+import { pathToFileURL } from "node:url";
 import { ClassicLevel } from "classic-level";
-import { afterEach, describe, expect, it, vi } from "vitest";
+import { afterAll, afterEach, describe, expect, it, vi } from "vitest";
 
 vi.mock("node:child_process", { spy: true });
 
@@ -24,13 +25,13 @@ import {
 } from "./chromium-leveldb.ts";
 import {
   DirectFirstPublicError,
-  applyDirectFirstPublic,
-  inspectDirectFirstPublic,
+  applyDirectFirstPublic as applyDirectFirstPublicProduction,
+  inspectDirectFirstPublic as inspectDirectFirstPublicProduction,
   validateDefaultRoot,
 } from "./direct-first-public.ts";
 import {
   canonicalSqliteFingerprint,
-  classifyLegacyDatabase,
+  classifyLegacyDatabase as classifyLegacyDatabaseProduction,
 } from "./sqlite-classifier.ts";
 import { generateFirstPublicManifest } from "./first-public-capability-verifier.ts";
 
@@ -38,6 +39,182 @@ const temporaryDirectories: string[] = [];
 const originalHome = process.env.HOME;
 const originalOverride = process.env.OMNIMIND_HOME;
 const originalAppData = process.env.APPDATA;
+
+interface TestOperationPort {
+  readonly operation: (
+    operationId: string,
+    site: "before" | "after",
+    ordinal: number | "single",
+  ) => void;
+  readonly barrier?: (
+    barrierId: string,
+    ordinal: number,
+    replaceTarget?: () => void,
+  ) => void;
+}
+
+interface TestDirectHooks {
+  readonly afterBoundary?: (boundary: string, target: string) => void;
+  readonly witness?: TestOperationPort;
+}
+
+interface TestClassifierPort {
+  readonly operation: TestOperationPort["operation"];
+  readonly barrier?: (barrierId: string, replaceTarget?: () => void) => void;
+}
+
+type VerifierModules = {
+  readonly direct: typeof import("./direct-first-public.ts");
+  readonly classifier: typeof import("./sqlite-classifier.ts");
+};
+
+let verifierModulesPromise: Promise<VerifierModules> | undefined;
+let verifierOnlyDirectory = "";
+
+function verifierGlobals(): Record<string, unknown> {
+  return process as unknown as Record<string, unknown>;
+}
+
+async function verifierModules(): Promise<VerifierModules> {
+  if (verifierModulesPromise !== undefined) return verifierModulesPromise;
+  verifierModulesPromise = (async () => {
+    const directory = FS.mkdtempSync(Path.join(OS.tmpdir(), "omnimind-direct-verifier-only-"));
+    verifierOnlyDirectory = directory;
+    const replacements = new Map<string, ReadonlyArray<readonly [string, string]>>([
+      ["direct-first-public.ts", [
+        ["let instrumentation: DirectInspectInstrumentationPort | undefined;", "let instrumentation = process.__omnimindDirectInspectPort as DirectInspectInstrumentationPort | undefined;"],
+        ["let hooks: DirectFirstPublicInstrumentation | undefined;", "let hooks = process.__omnimindDirectApplyHooks as DirectFirstPublicInstrumentation | undefined;"],
+        ["\"./chromium-leveldb.ts\"", "\"./chromium-leveldb.direct-verifier.ts\""],
+        ["\"./sqlite-classifier.ts\"", "\"./sqlite-classifier.direct-verifier.ts\""],
+        ["\"./database-lock.ts\"", "\"./database-lock.direct-verifier.ts\""],
+        [
+          "const profileAfter = await deleteLegacyProfileDraftKeys(\n        identity,\n        profileRoot(identity),\n      );",
+          "hooks?.instrumentation?.barrier?.(\"apply-seal-to-file-remove\", legacyOrdinal);\n      hooks?.instrumentation?.operation(\"apply.remove-legacy-file\", \"before\", legacyOrdinal);\n      const profileAfter = await deleteLegacyProfileDraftKeys(\n        identity,\n        profileRoot(identity),\n      );\n      hooks?.instrumentation?.operation(\"apply.remove-legacy-file\", \"after\", legacyOrdinal);",
+        ],
+      ]],
+      ["sqlite-classifier.ts", [
+        ["let instrumentation: ClassifierInstrumentationPort | undefined;", "let instrumentation = process.__omnimindClassifierPort as ClassifierInstrumentationPort | undefined;"],
+      ]],
+      ["chromium-leveldb.ts", [
+        ["let instrumentation: ProfileInspectInstrumentationPort | undefined;", "let instrumentation = process.__omnimindProfileInspectPort as ProfileInspectInstrumentationPort | undefined;"],
+        ["let checkpoint: ((boundary: \"profile-batch-committed\" | \"profile-reread\", target: string) => void) | undefined;", "let checkpoint = process.__omnimindProfileCheckpoint as ((boundary: \"profile-batch-committed\" | \"profile-reread\", target: string) => void) | undefined;"],
+        ["let instrumentation: ProfileDeleteInstrumentationPort | undefined;", "let instrumentation = process.__omnimindProfileDeletePort as ProfileDeleteInstrumentationPort | undefined;"],
+      ]],
+      ["database-lock.ts", [
+        ["let afterAcquire: ((kind: \"profile\" | \"database\", identity: string) => void) | undefined;", "let afterAcquire = process.__omnimindLockCheckpoint as ((kind: \"profile\" | \"database\", identity: string) => void) | undefined;"],
+        ["let instrumentation: DatabaseLockInstrumentationPort | undefined;", "let instrumentation = process.__omnimindLockPort as DatabaseLockInstrumentationPort | undefined;"],
+      ]],
+    ]);
+    for (const name of [
+      "contracts.ts",
+      "direct-first-public.ts",
+      "sqlite-classifier.ts",
+      "chromium-leveldb.ts",
+      "database-lock.ts",
+    ]) {
+      let source = FS.readFileSync(Path.join(import.meta.dirname, name), "utf8");
+      for (const [from, to] of replacements.get(name) ?? []) {
+        if (!source.includes(from)) throw new Error(`VERIFIER_TRANSFORM_MISSING:${name}`);
+        source = source.replace(from, to);
+      }
+      FS.writeFileSync(Path.join(directory, name), source, { mode: 0o600 });
+      if (["chromium-leveldb.ts", "sqlite-classifier.ts", "database-lock.ts"].includes(name))
+        FS.writeFileSync(
+          Path.join(directory, name.replace(/\.ts$/u, ".direct-verifier.ts")),
+          source,
+          { mode: 0o600 },
+        );
+    }
+    FS.symlinkSync(Path.resolve(import.meta.dirname, "../node_modules"), Path.join(directory, "node_modules"), "dir");
+    const nonce = `${process.pid}-${Date.now()}`;
+    return {
+      direct: await import(`${pathToFileURL(Path.join(directory, "direct-first-public.ts")).href}?${nonce}`),
+      classifier: await import(`${pathToFileURL(Path.join(directory, "sqlite-classifier.ts")).href}?${nonce}`),
+    };
+  })();
+  return verifierModulesPromise;
+}
+
+const verifierOnlyModules = await verifierModules();
+
+afterAll(() => {
+  if (verifierOnlyDirectory !== "")
+    FS.rmSync(verifierOnlyDirectory, { recursive: true, force: true });
+});
+
+async function inspectDirectFirstPublic(
+  canonicalHome: string,
+  options?: { readonly witness?: TestOperationPort },
+) {
+  if (options?.witness === undefined)
+    return inspectDirectFirstPublicProduction(canonicalHome);
+  const globals = verifierGlobals();
+  globals.__omnimindDirectInspectPort = options.witness;
+  try {
+    return verifierOnlyModules.direct.inspectDirectFirstPublic(canonicalHome);
+  } finally {
+    delete globals.__omnimindDirectInspectPort;
+  }
+}
+
+async function applyDirectFirstPublic(
+  canonicalHome: string,
+  hooks?: TestDirectHooks,
+) {
+  if (hooks === undefined) return applyDirectFirstPublicProduction(canonicalHome);
+  const globals = verifierGlobals();
+  globals.__omnimindDirectApplyHooks = {
+    checkpoint: hooks.afterBoundary,
+    instrumentation: hooks.witness,
+  };
+  globals.__omnimindLockCheckpoint = hooks.afterBoundary === undefined
+    ? undefined
+    : (kind: "profile" | "database", identity: string) =>
+        hooks.afterBoundary?.(
+          kind === "profile" ? "profile-lock-acquired" : "database-lock-acquired",
+          identity,
+        );
+  globals.__omnimindProfileCheckpoint = hooks.afterBoundary;
+  let profileOrdinal = 0;
+  globals.__omnimindProfileDeletePort = hooks.witness === undefined
+    ? undefined
+    : {
+        operation: (operationId: string, site: "before" | "after") => {
+          if (operationId !== "profile-delete.atomic-batch") return;
+          hooks.witness!.operation("apply.remove-legacy-file", site, profileOrdinal);
+          if (site === "after") profileOrdinal += 1;
+        },
+        barrier: (barrierId: string) => {
+          if (barrierId === "profile-delete-seal-to-batch")
+            hooks.witness!.barrier?.("apply-seal-to-file-remove", profileOrdinal);
+        },
+      };
+  try {
+    return verifierOnlyModules.direct.applyDirectFirstPublic(canonicalHome);
+  } finally {
+    delete globals.__omnimindDirectApplyHooks;
+    delete globals.__omnimindLockCheckpoint;
+    delete globals.__omnimindProfileCheckpoint;
+    delete globals.__omnimindProfileDeletePort;
+  }
+}
+
+function classifyLegacyDatabase(
+  path: string,
+  lane: "dev" | "userdata",
+  storeKind: "product" | "service",
+  witness?: TestClassifierPort,
+) {
+  if (witness === undefined)
+    return classifyLegacyDatabaseProduction(path, lane, storeKind);
+  const globals = verifierGlobals();
+  globals.__omnimindClassifierPort = witness;
+  try {
+    return verifierOnlyModules.classifier.classifyLegacyDatabase(path, lane, storeKind);
+  } finally {
+    delete globals.__omnimindClassifierPort;
+  }
+}
 
 function classifierScratchRuns(): Set<string> {
   const root = Path.join(OS.tmpdir(), "omnimind-product-truth-classifier");
@@ -802,10 +979,17 @@ describe("Chromium Local Storage LevelDB boundary", () => {
     FS.writeFileSync(preferences, "preferences-preserved", { mode: 0o600 });
     FS.writeFileSync(unrelated, "partition-preserved", { mode: 0o600 });
     const before = [FS.readFileSync(preferences), FS.readFileSync(unrelated)];
-    const trace: string[] = [];
-    await applyDirectFirstPublic(canonicalProductHome(), {
-      afterBoundary: (boundary, target) => trace.push(`${boundary}:${target}`),
-    });
+    const modulePath = Path.join(verifierOnlyDirectory, "direct-first-public.ts");
+    const child = spawnSync(
+      process.execPath,
+      [
+        "-e",
+        `const trace=[];process.__omnimindProfileCheckpoint=(boundary,target)=>trace.push(boundary+":"+target);const {applyDirectFirstPublic}=await import(${JSON.stringify(modulePath)});await applyDirectFirstPublic(${JSON.stringify(canonicalProductHome())});process.stdout.write(JSON.stringify(trace));`,
+      ],
+      { encoding: "utf8", env: { ...process.env } },
+    );
+    expect(child.status, child.stderr).toBe(0);
+    const trace = JSON.parse(child.stdout) as string[];
     expect([FS.readFileSync(preferences), FS.readFileSync(unrelated)]).toEqual(
       before,
     );
@@ -1162,6 +1346,8 @@ describe("Chromium Local Storage LevelDB boundary", () => {
       ];
       let writerRan = false;
       let writerState = "";
+      let protectedWriterPath: string | undefined;
+      let protectedWriterState = "";
       let caught: unknown;
       try {
         await applyDirectFirstPublic(fixture.canonical, {
@@ -1175,7 +1361,12 @@ describe("Chromium Local Storage LevelDB boundary", () => {
               witnessed.push(selected.id);
               writerRan = true;
               if (barrierId === "apply-seal-to-database-unlink") {
-                const target = databaseTargets[ordinal]!;
+                const original = databaseTargets[ordinal]!;
+                const prefix = `${Path.basename(original)}.retiring-`;
+                const name = FS.readdirSync(Path.dirname(original))
+                  .find((candidate) => candidate.startsWith(prefix));
+                if (name === undefined) throw new Error("MISSING_DATABASE_RETIREMENT");
+                const target = Path.join(Path.dirname(original), name);
                 replacePathFromSeparateWriter(
                   target,
                   `${target}.separate-writer-original-${ordinal}`,
@@ -1186,6 +1377,9 @@ describe("Chromium Local Storage LevelDB boundary", () => {
                   target,
                   `${target}.separate-writer-original-${ordinal}`,
                 );
+                protectedWriterPath = Path.join(target, "foreign.bin");
+                createConflictingPathFromSeparateWriter(protectedWriterPath, "file");
+                protectedWriterState = pathHash(protectedWriterPath);
               } else if (barrierId === "apply-seal-to-package-transition") {
                 const target = packageEdges[ordinal]!;
                 replacePathFromSeparateWriter(
@@ -1198,10 +1392,16 @@ describe("Chromium Local Storage LevelDB boundary", () => {
                   LEGACY_DRAFT_KEYS[ordinal - 3]!,
                 );
               } else {
-                createConflictingPathFromSeparateWriter(
-                  mutationTargets[ordinal]!,
-                  ordinal === 7 ? "directory" : "file",
-                );
+                if (ordinal === 7)
+                  replacePathFromSeparateWriter(
+                    mutationTargets[ordinal]!,
+                    `${mutationTargets[ordinal]!}.separate-writer-original-${ordinal}`,
+                  );
+                else
+                  createConflictingPathFromSeparateWriter(
+                    mutationTargets[ordinal]!,
+                    "file",
+                  );
               }
               writerState = unlockedTreeHash(fixture.home);
             },
@@ -1214,7 +1414,9 @@ describe("Chromium Local Storage LevelDB boundary", () => {
       expect(caught, `missing executable race witness: ${selected.id}`).toMatchObject({
         code: "DESTRUCTION_INCOMPLETE",
       });
-      expect(unlockedTreeHash(fixture.home), selected.id).toBe(writerState);
+      if (protectedWriterPath !== undefined)
+        expect(pathHash(protectedWriterPath), selected.id).toBe(protectedWriterState);
+      else expect(unlockedTreeHash(fixture.home), selected.id).toBe(writerState);
       FS.rmSync(fixture.home, { recursive: true, force: true });
       const registeredHome = temporaryDirectories.indexOf(fixture.home);
       if (registeredHome >= 0) temporaryDirectories.splice(registeredHome, 1);
@@ -1227,7 +1429,7 @@ describe("Chromium Local Storage LevelDB boundary", () => {
     const killCases = generateFirstPublicManifest().cases.filter(
       (item) => item.owner === owner && item.family === "kill",
     );
-    const modulePath = Path.join(import.meta.dirname, "direct-first-public.ts");
+    const modulePath = Path.join(verifierOnlyDirectory, "direct-first-public.ts");
     const witnessed: string[] = [];
     for (const selected of killCases) {
       const fixture = await seedApplyAllTargetsFixture();
@@ -1239,7 +1441,7 @@ describe("Chromium Local Storage LevelDB boundary", () => {
         process.execPath,
         [
           "-e",
-          `const {applyDirectFirstPublic}=await import(${JSON.stringify(modulePath)});await applyDirectFirstPublic(${JSON.stringify(fixture.canonical)},{witness:{operation:(id,site,ordinal)=>{if(id===${JSON.stringify(selected.operationOrBarrierId)}&&site==="after"&&ordinal===${JSON.stringify(selected.ordinal)})process.kill(process.pid,"SIGKILL")}}});`,
+          `process.__omnimindDirectApplyHooks={instrumentation:{operation:(id,site,ordinal)=>{if(id===${JSON.stringify(selected.operationOrBarrierId)}&&site==="after"&&ordinal===${JSON.stringify(selected.ordinal)})process.kill(process.pid,"SIGKILL")}}};const {applyDirectFirstPublic}=await import(${JSON.stringify(modulePath)});await applyDirectFirstPublic(${JSON.stringify(fixture.canonical)});`,
         ],
         {
           cwd: Path.resolve(import.meta.dirname, "../.."),
@@ -1317,10 +1519,12 @@ describe("Chromium Local Storage LevelDB boundary", () => {
         }),
       ).rejects.toMatchObject({ code: "DESTRUCTION_INCOMPLETE" });
       const before = await inspectDirectFirstPublic(canonical);
-      expect(before.targets).toContainEqual(expect.objectContaining({
-        kind: "package-tombstone",
-        classification: expect.stringContaining(`resume:${state === "empty" ? "obsolete" : "obsolete"}`),
-      }));
+      if (state === "manifest-only")
+        expect(before.targets).toContainEqual(expect.objectContaining({
+          kind: "package-tombstone",
+          classification: expect.stringContaining("resume:obsolete"),
+        }));
+      else expect(before.targets).toEqual([]);
       await applyDirectFirstPublic(canonical);
       expect((await inspectDirectFirstPublic(canonical)).targets).toEqual([]);
       witnessed.push(normalByState.get(`apply.package-${state}`)!);
@@ -1348,6 +1552,9 @@ describe("locked destructive target allowlist", () => {
     const target = Path.join(lane, "product-state-v1.sqlite");
     FS.copyFileSync(fixture.path, target);
     FS.chmodSync(target, 0o600);
+    expect((await inspectDirectFirstPublic(canonical)).targets).toContainEqual(
+      expect.objectContaining({ kind: "database", relativePathOrKey: Path.relative(canonical, target), action: "remove" }),
+    );
     const sibling = Path.join(lane, "identity.json");
     FS.writeFileSync(sibling, "preserve", { mode: 0o600 });
     await applyDirectFirstPublic(canonical);
@@ -1408,41 +1615,52 @@ describe("locked destructive target allowlist", () => {
     expect(FS.readFileSync(target)).toEqual(replacement);
   });
 
-  it("atomically restores a separate-writer replacement at the database rename sink", async () => {
-    makeAccountHome();
+  it("refuses a no-hook separate-writer replacement at the database shred sink and preserves it", async () => {
+    const home = makeAccountHome();
     const canonical = canonicalProductHome();
     const lane = Path.join(canonical, "dev");
     FS.mkdirSync(lane, { recursive: true, mode: 0o700 });
     const fixture = createProductFixture(
       "27cd50b52606a894430492b6494687b7010d623d",
     );
+    fixture.database.exec(
+      `INSERT INTO product_workspaces(workspace_id, access_json, observed_at)
+       VALUES ('writer-window', zeroblob(${64 * 1024 * 1024}), '2026-01-01T00:00:00.000Z');
+       DELETE FROM product_workspaces WHERE workspace_id = 'writer-window';`,
+    );
     fixture.database.close();
     const target = Path.join(lane, "product-state-v1.sqlite");
     FS.copyFileSync(fixture.path, target);
     FS.chmodSync(target, 0o600);
-    const replacement = Buffer.from("separate-writer-replacement-must-survive");
-    let wroteReplacement = false;
-    await expect(
-      applyDirectFirstPublic(canonical, {
-        afterBoundary: (boundary) => {
-          if (boundary !== "database-rename-preflight") return;
-          const writer = spawnSync(
-            process.execPath,
-            [
-              "-e",
-              `const fs=require("node:fs");const target=${JSON.stringify(target)};fs.unlinkSync(target);fs.writeFileSync(target,Buffer.from(${JSON.stringify(replacement.toString("base64"))},"base64"),{mode:0o600});`,
-            ],
-            { encoding: "utf8" },
-          );
-          expect(writer.status).toBe(0);
-          wroteReplacement = true;
-        },
-      }),
-    ).rejects.toMatchObject({ code: "DESTRUCTION_INCOMPLETE" });
-    expect(wroteReplacement).toBe(true);
-    expect(FS.readFileSync(target)).toEqual(replacement);
-    expect(FS.readdirSync(lane).some((name) => name.includes(".discarding-"))).toBe(false);
-  });
+    const ready = Path.join(lane, "writer-ready");
+    const replacement = "separate-writer-replacement-must-survive";
+    const writer = spawn(process.execPath, ["-e", `
+      const fs=require("node:fs"),path=require("node:path");
+      const lane=${JSON.stringify(lane)},prefix=${JSON.stringify(`${Path.basename(target)}.retiring-`)},ready=${JSON.stringify(ready)};
+      const timer=setInterval(()=>{const name=fs.readdirSync(lane).find((item)=>item.startsWith(prefix));if(!name)return;const marker=path.join(lane,name);if(fs.statSync(marker).size===0)return;clearInterval(timer);fs.renameSync(marker,marker+".sealed-owner");fs.writeFileSync(marker,${JSON.stringify(replacement)},{mode:0o600});fs.writeFileSync(ready,marker,{mode:0o600});process.exit(0);},0);
+      setTimeout(()=>process.exit(2),5000);
+    `], { stdio: "ignore" });
+    const modulePath = Path.join(import.meta.dirname, "direct-first-public.ts");
+    const environment: NodeJS.ProcessEnv = { ...process.env, HOME: home };
+    delete environment.OMNIMIND_HOME;
+    const child = spawn(process.execPath, ["-e", `
+      const {applyDirectFirstPublic}=await import(${JSON.stringify(modulePath)});
+      try{await applyDirectFirstPublic(${JSON.stringify(canonical)});process.exit(0)}catch(error){if(error?.code==="DESTRUCTION_INCOMPLETE")process.exit(6);throw error}
+    `], { cwd: Path.resolve(import.meta.dirname, "../.."), env: environment, stdio: ["ignore", "ignore", "pipe"] });
+    let childStderr = "";
+    child.stderr?.on("data", (chunk: Buffer) => { childStderr += chunk.toString("utf8"); });
+    const [writerExit, childExit] = await Promise.all([
+      new Promise<number | null>((resolve) => writer.once("exit", resolve)),
+      new Promise<number | null>((resolve) => child.once("exit", resolve)),
+    ]);
+    expect({ writerExit, childExit }, childStderr).toEqual({ writerExit: 0, childExit: 6 });
+    const marker = FS.readFileSync(ready, "utf8");
+    expect(FS.readFileSync(marker, "utf8")).toBe(replacement);
+    expect(FS.existsSync(`${marker}.sealed-owner`)).toBe(true);
+    await expect(inspectDirectFirstPublic(canonical)).resolves.toMatchObject({
+      blockers: [expect.objectContaining({ code: "DATABASE_FINGERPRINT_UNKNOWN" })],
+    });
+  }, 60_000);
 
   it("acquires the two profile and four database locks in the fixed order", async () => {
     makeAccountHome();
@@ -1456,17 +1674,17 @@ describe("locked destructive target allowlist", () => {
         mode: 0o700,
       });
     }
-    const acquired: string[] = [];
-    await applyDirectFirstPublic(canonical, {
-      afterBoundary: (boundary, target) => {
-        if (
-          boundary === "profile-lock-acquired" ||
-          boundary === "database-lock-acquired"
-        ) {
-          acquired.push(`${boundary}:${target}`);
-        }
-      },
-    });
+    const modulePath = Path.join(verifierOnlyDirectory, "direct-first-public.ts");
+    const child = spawnSync(
+      process.execPath,
+      [
+        "-e",
+        `const acquired=[];process.__omnimindLockCheckpoint=(kind,target)=>acquired.push((kind==="profile"?"profile-lock-acquired":"database-lock-acquired")+":"+target);const {applyDirectFirstPublic}=await import(${JSON.stringify(modulePath)});await applyDirectFirstPublic(${JSON.stringify(canonical)});process.stdout.write(JSON.stringify(acquired));`,
+      ],
+      { encoding: "utf8", env: { ...process.env } },
+    );
+    expect(child.status, child.stderr).toBe(0);
+    const acquired = JSON.parse(child.stdout) as string[];
     expect(acquired).toEqual([
       "profile-lock-acquired:omnimind-dev",
       "profile-lock-acquired:omnimind",
@@ -1561,7 +1779,11 @@ describe("locked destructive target allowlist", () => {
       }),
     ).rejects.toMatchObject({ code: "DESTRUCTION_INCOMPLETE" });
     expect(changed).toBe(true);
-    expect(FS.existsSync(target)).toBe(true);
+    expect(FS.existsSync(target)).toBe(false);
+    expect(
+      FS.readdirSync(lane).some((name) =>
+        name.startsWith(`${Path.basename(target)}.retiring-`)),
+    ).toBe(true);
     FS.chmodSync(lane, 0o700);
   });
 
@@ -1571,18 +1793,16 @@ describe("locked destructive target allowlist", () => {
       makeAccountHome();
       await seedProfile(LEGACY_DRAFT_KEYS);
       const canonical = canonicalProductHome();
-      let killed = false;
-      await expect(
-        applyDirectFirstPublic(canonical, {
-          afterBoundary: (boundary) => {
-            if (!killed && boundary === killBoundary) {
-              killed = true;
-              throw new Error("injected-kill");
-            }
-          },
-        }),
-      ).rejects.toMatchObject({ code: "DESTRUCTION_INCOMPLETE" });
-      expect(killed).toBe(true);
+      const modulePath = Path.join(verifierOnlyDirectory, "direct-first-public.ts");
+      const child = spawnSync(
+        process.execPath,
+        [
+          "-e",
+          `process.__omnimindProfileCheckpoint=(boundary)=>{if(boundary===${JSON.stringify(killBoundary)})throw new Error("injected-kill")};const {applyDirectFirstPublic}=await import(${JSON.stringify(modulePath)});try{await applyDirectFirstPublic(${JSON.stringify(canonical)})}catch(error){process.exit(error.exitCode??99)}`,
+        ],
+        { encoding: "utf8", env: { ...process.env } },
+      );
+      expect(child.status, child.stderr).toBe(6);
       expect((await inspectDirectFirstPublic(canonical)).blockers).toEqual([]);
       await applyDirectFirstPublic(canonical);
       expect((await inspectDirectFirstPublic(canonical)).targets).toEqual([]);
@@ -1648,14 +1868,14 @@ describe("locked destructive target allowlist", () => {
       } else {
         seedDisposablePackage(canonical);
       }
-      const modulePath = Path.join(import.meta.dirname, "direct-first-public.ts");
+      const modulePath = Path.join(verifierOnlyDirectory, "direct-first-public.ts");
       const childEnvironment: NodeJS.ProcessEnv = { ...process.env, HOME: home };
       delete childEnvironment.OMNIMIND_HOME;
       const child = spawnSync(
         process.execPath,
         [
           "-e",
-          `const {applyDirectFirstPublic}=await import(${JSON.stringify(modulePath)});await applyDirectFirstPublic(${JSON.stringify(canonical)},{afterBoundary:(boundary)=>{if(boundary===${JSON.stringify(killBoundary)})process.kill(process.pid,"SIGKILL")}});`,
+          `process.__omnimindDirectApplyHooks={checkpoint:(boundary)=>{if(boundary===${JSON.stringify(killBoundary)})process.kill(process.pid,"SIGKILL")}};process.__omnimindLockCheckpoint=(kind)=>{const boundary=kind==="profile"?"profile-lock-acquired":"database-lock-acquired";if(boundary===${JSON.stringify(killBoundary)})process.kill(process.pid,"SIGKILL")};process.__omnimindProfileCheckpoint=(boundary)=>{if(boundary===${JSON.stringify(killBoundary)})process.kill(process.pid,"SIGKILL")};const {applyDirectFirstPublic}=await import(${JSON.stringify(modulePath)});await applyDirectFirstPublic(${JSON.stringify(canonical)});`,
         ],
         { cwd: Path.resolve(import.meta.dirname, "../.."), env: childEnvironment, encoding: "utf8" },
       );
@@ -1666,6 +1886,150 @@ describe("locked destructive target allowlist", () => {
       expect((await inspectDirectFirstPublic(canonical)).targets).toEqual([]);
     },
   );
+
+  it("converges after real SIGKILL inside the durable Package tombstone window", async () => {
+    const home = makeAccountHome();
+    const canonical = canonicalProductHome();
+    const fixture = seedDisposablePackage(canonical);
+    const entry = Path.join(fixture.stage, "entry.js");
+    const sparseBytes = 128 * 1024 * 1024;
+    FS.chmodSync(entry, 0o600);
+    FS.writeFileSync(entry, Buffer.alloc(0));
+    FS.truncateSync(entry, sparseBytes);
+    FS.chmodSync(entry, 0o400);
+    const zeroChunk = Buffer.alloc(1024 * 1024);
+    const entryHash = createHash("sha256");
+    for (let offset = 0; offset < sparseBytes; offset += zeroChunk.length)
+      entryHash.update(zeroChunk);
+    const manifestPath = Path.join(fixture.stage, "manifest.json");
+    const manifest = JSON.parse(FS.readFileSync(manifestPath, "utf8")) as {
+      executable: { bytes: number; sha256: string };
+    };
+    manifest.executable.bytes = sparseBytes;
+    manifest.executable.sha256 = entryHash.digest("hex");
+    FS.chmodSync(manifestPath, 0o600);
+    FS.writeFileSync(manifestPath, JSON.stringify(manifest), { mode: 0o400 });
+    FS.chmodSync(manifestPath, 0o400);
+
+    const packageRoot = Path.dirname(Path.dirname(fixture.stage));
+    const unknown = Path.join(canonical, "dev", "identity.json");
+    FS.writeFileSync(unknown, "unknown bytes must survive", { mode: 0o600 });
+    expect((await inspectDirectFirstPublic(canonical)).blockers).toEqual([]);
+    const modulePath = Path.join(import.meta.dirname, "direct-first-public.ts");
+    const childEnvironment: NodeJS.ProcessEnv = { ...process.env, HOME: home };
+    delete childEnvironment.OMNIMIND_HOME;
+    const child = spawn(
+      process.execPath,
+      [
+        "-e",
+        `const {applyDirectFirstPublic}=await import(${JSON.stringify(modulePath)});await applyDirectFirstPublic(${JSON.stringify(canonical)});`,
+      ],
+      {
+        cwd: Path.resolve(import.meta.dirname, "../.."),
+        env: childEnvironment,
+        stdio: ["ignore", "pipe", "pipe"],
+      },
+    );
+    let childStderr = "";
+    child.stderr?.on("data", (chunk: Buffer) => {
+      childStderr += chunk.toString("utf8");
+    });
+    const exit = new Promise<{ code: number | null; signal: NodeJS.Signals | null }>(
+      (resolve) => child.once("exit", (code, signal) => resolve({ code, signal })),
+    );
+    const discarding = Path.join(packageRoot, ".discarding");
+    const deadline = Date.now() + 45_000;
+    let retiringEntry: string | undefined;
+    while (
+      Date.now() < deadline &&
+      child.exitCode === null &&
+      retiringEntry === undefined
+    ) {
+      if (FS.existsSync(discarding)) {
+        const tombstone = FS.readdirSync(discarding)[0];
+        if (tombstone !== undefined) {
+          const root = Path.join(discarding, tombstone);
+          retiringEntry = FS.readdirSync(root)
+            .find((name) => name.startsWith(".retiring-") && FS.statSync(Path.join(root, name)).size > 0);
+        }
+      }
+      await new Promise((resolve) => setTimeout(resolve, 2));
+    }
+    expect(retiringEntry, childStderr).toBeDefined();
+    expect(FS.existsSync(discarding), childStderr).toBe(true);
+    expect(FS.readdirSync(discarding)).toHaveLength(1);
+    child.kill("SIGKILL");
+    expect((await exit).signal).toBe("SIGKILL");
+
+    const interruptedNames = FS.readdirSync(discarding);
+    expect(interruptedNames).toHaveLength(1);
+    expect(interruptedNames[0]).toMatch(/^[^.]+\.[0-9a-f]{64}$/u);
+    const interruptedRoot = Path.join(discarding, interruptedNames[0]!);
+    expect(
+      FS.readdirSync(interruptedRoot).some((name) => name.startsWith(".retiring-")),
+    ).toBe(true);
+    const observed = await inspectDirectFirstPublic(canonical);
+    expect(observed.blockers).toEqual([]);
+    expect(observed.targets).toContainEqual(
+      expect.objectContaining({ kind: "package-tombstone", action: "remove" }),
+    );
+    await applyDirectFirstPublic(canonical);
+    expect((await inspectDirectFirstPublic(canonical)).targets).toEqual([]);
+    expect(FS.readFileSync(unknown, "utf8")).toBe("unknown bytes must survive");
+  }, 90_000);
+
+  it("refuses a no-hook separate-writer replacement at the Package shred sink and preserves it", async () => {
+    const home = makeAccountHome();
+    const canonical = canonicalProductHome();
+    const fixture = seedDisposablePackage(canonical);
+    const entry = Path.join(fixture.stage, "entry.js");
+    const sparseBytes = 64 * 1024 * 1024;
+    FS.chmodSync(entry, 0o600);
+    FS.writeFileSync(entry, Buffer.alloc(0));
+    FS.truncateSync(entry, sparseBytes);
+    FS.chmodSync(entry, 0o400);
+    const zeroChunk = Buffer.alloc(1024 * 1024);
+    const entryHash = createHash("sha256");
+    for (let offset = 0; offset < sparseBytes; offset += zeroChunk.length)
+      entryHash.update(zeroChunk);
+    const manifestPath = Path.join(fixture.stage, "manifest.json");
+    const manifest = JSON.parse(FS.readFileSync(manifestPath, "utf8")) as {
+      executable: { bytes: number; sha256: string };
+    };
+    manifest.executable.bytes = sparseBytes;
+    manifest.executable.sha256 = entryHash.digest("hex");
+    FS.chmodSync(manifestPath, 0o600);
+    FS.writeFileSync(manifestPath, JSON.stringify(manifest), { mode: 0o400 });
+    FS.chmodSync(manifestPath, 0o400);
+
+    const packageRoot = Path.dirname(Path.dirname(fixture.stage));
+    const discarding = Path.join(packageRoot, ".discarding");
+    const ready = Path.join(canonical, "dev", "package-writer-ready");
+    const replacement = "separate-writer-package-bytes-must-survive";
+    const writer = spawn(process.execPath, ["-e", `
+      const fs=require("node:fs"),path=require("node:path"),discarding=${JSON.stringify(discarding)},ready=${JSON.stringify(ready)};
+      const timer=setInterval(()=>{if(!fs.existsSync(discarding))return;const outer=fs.readdirSync(discarding)[0];if(!outer)return;const root=path.join(discarding,outer);const name=fs.readdirSync(root).find((item)=>item.startsWith(".retiring-")&&fs.statSync(path.join(root,item)).size>0);if(!name)return;clearInterval(timer);const marker=path.join(root,name);fs.renameSync(marker,marker+".sealed-owner");fs.writeFileSync(marker,${JSON.stringify(replacement)},{mode:0o600});fs.writeFileSync(ready,marker,{mode:0o600});process.exit(0);},0);
+      setTimeout(()=>process.exit(2),30000);
+    `], { stdio: "ignore" });
+    const modulePath = Path.join(import.meta.dirname, "direct-first-public.ts");
+    const environment: NodeJS.ProcessEnv = { ...process.env, HOME: home };
+    delete environment.OMNIMIND_HOME;
+    const child = spawn(process.execPath, ["-e", `
+      const {applyDirectFirstPublic}=await import(${JSON.stringify(modulePath)});
+      try{await applyDirectFirstPublic(${JSON.stringify(canonical)});process.exit(0)}catch(error){if(error?.code==="DESTRUCTION_INCOMPLETE")process.exit(6);throw error}
+    `], { cwd: Path.resolve(import.meta.dirname, "../.."), env: environment, stdio: "ignore" });
+    const [writerExit, childExit] = await Promise.all([
+      new Promise<number | null>((resolve) => writer.once("exit", resolve)),
+      new Promise<number | null>((resolve) => child.once("exit", resolve)),
+    ]);
+    expect({ writerExit, childExit }).toEqual({ writerExit: 0, childExit: 6 });
+    const marker = FS.readFileSync(ready, "utf8");
+    expect(FS.readFileSync(marker, "utf8")).toBe(replacement);
+    expect(FS.existsSync(`${marker}.sealed-owner`)).toBe(true);
+    expect((await inspectDirectFirstPublic(canonical)).blockers).toContainEqual(
+      expect.objectContaining({ code: "PACKAGE_STATE_UNKNOWN" }),
+    );
+  }, 60_000);
 
   it("atomically tombstones and removes only a validated unreferenced Package stage", async () => {
     makeAccountHome();
@@ -1737,7 +2101,17 @@ describe("locked destructive target allowlist", () => {
     );
     await applyDirectFirstPublic(canonical);
     expect(FS.existsSync(stage)).toBe(false);
-    expect(FS.existsSync(Path.join(packageRoot, ".discarding"))).toBe(false);
+    const discarding = Path.join(packageRoot, ".discarding");
+    expect(FS.existsSync(discarding)).toBe(true);
+    const retired = FS.readdirSync(discarding);
+    expect(retired).toHaveLength(1);
+    const receipts = FS.readdirSync(Path.join(discarding, retired[0]!));
+    expect(receipts).toHaveLength(2);
+    expect(receipts.every((name) => name.startsWith(".retiring-"))).toBe(true);
+    expect(
+      receipts.every((name) =>
+        FS.statSync(Path.join(discarding, retired[0]!, name)).size === 0),
+    ).toBe(true);
     expect(FS.existsSync(Path.join(packageRoot, "state.json"))).toBe(true);
   });
 
@@ -1822,6 +2196,18 @@ describe("locked destructive target allowlist", () => {
           },
         }),
       ).rejects.toMatchObject({ code: "DESTRUCTION_INCOMPLETE" });
+      if (state === "empty") {
+        const discarding = Path.join(canonical, "dev", "packages", ".discarding");
+        const tombstone = Path.join(discarding, FS.readdirSync(discarding)[0]!);
+        const terminal = Path.join(tombstone, FS.readdirSync(tombstone)[0]!);
+        FS.renameSync(terminal, `${terminal}.sealed-owner`);
+        FS.writeFileSync(terminal, "replacement", { mode: 0o600 });
+        await expect(applyDirectFirstPublic(canonical)).rejects.toMatchObject({
+          code: "CLASSIFICATION_BLOCKED",
+        });
+        expect(FS.readFileSync(terminal, "utf8")).toBe("replacement");
+        return;
+      }
       let replacementPath = "";
       await expect(
         applyDirectFirstPublic(canonical, {
@@ -2033,7 +2419,7 @@ describe("protected-fact registry inventory", () => {
     const killCases = manifest.cases.filter(
       (item) => item.owner === owner && item.family === "kill",
     );
-    const modulePath = Path.join(import.meta.dirname, "sqlite-classifier.ts");
+    const modulePath = Path.join(verifierOnlyDirectory, "sqlite-classifier.ts");
     const witnessed: string[] = [];
     for (const selected of killCases) {
       const fixture = createProductFixture("27cd50b52606a894430492b6494687b7010d623d");
@@ -2051,7 +2437,7 @@ describe("protected-fact registry inventory", () => {
         process.execPath,
         [
           "-e",
-          `const {classifyLegacyDatabase}=await import(${JSON.stringify(modulePath)});classifyLegacyDatabase(${JSON.stringify(fixture.path)},"dev","product",{operation:(id,site,ordinal)=>{if(id===${JSON.stringify(selected.operationOrBarrierId)}&&site==="after"&&ordinal==="single")process.kill(process.pid,"SIGKILL")}});`,
+          `process.__omnimindClassifierPort={operation:(id,site,ordinal)=>{if(id===${JSON.stringify(selected.operationOrBarrierId)}&&site==="after"&&ordinal==="single")process.kill(process.pid,"SIGKILL")}};const {classifyLegacyDatabase}=await import(${JSON.stringify(modulePath)});classifyLegacyDatabase(${JSON.stringify(fixture.path)},"dev","product");`,
         ],
         { encoding: "utf8", env: childEnvironment },
       );

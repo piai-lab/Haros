@@ -14,7 +14,7 @@ import {
 
 type RawLevel = ClassicLevel<Buffer, Buffer>;
 
-export interface ProfileDeleteWitnessPort {
+interface ProfileDeleteInstrumentationPort {
   readonly operation: (
     operationId: string,
     site: "before" | "after",
@@ -27,7 +27,7 @@ export interface ProfileDeleteWitnessPort {
   ) => void | Promise<void>;
 }
 
-export interface ProfileInspectWitnessPort {
+interface ProfileInspectInstrumentationPort {
   readonly operation: (
     operationId: string,
     site: "before" | "after",
@@ -46,9 +46,9 @@ type InspectOperation = <Result>(
   effect: () => Result,
 ) => Result;
 
-interface InspectWitnessContext {
+interface InspectInstrumentationContext {
   readonly operation: InspectOperation;
-  readonly port: ProfileInspectWitnessPort | undefined;
+  readonly port: ProfileInspectInstrumentationPort | undefined;
   readonly canonicalEntryOrdinals: ReadonlyMap<string, number>;
   readonly chunkOrdinals: Map<string, number>;
 }
@@ -101,12 +101,12 @@ function sameFileIdentity(
 function hashStableFile(
   path: string,
   expected: Omit<TreeIdentity, "sha256">,
-  witness?: {
+  instrumentation?: {
     readonly openId: string;
     readonly readId: string;
     readonly closeId: string;
     readonly entryOrdinal: number;
-    readonly context: InspectWitnessContext;
+    readonly context: InspectInstrumentationContext;
   },
 ): string {
   const flags =
@@ -114,11 +114,11 @@ function hashStableFile(
       ? FS.constants.O_RDONLY
       : FS.constants.O_RDONLY | FS.constants.O_NOFOLLOW;
   let descriptor: number;
-  if (witness) {
-    witness.context.port?.operation(witness.openId, "before", witness.entryOrdinal);
+  if (instrumentation) {
+    instrumentation.context.port?.operation(instrumentation.openId, "before", instrumentation.entryOrdinal);
     descriptor = FS.openSync(path, flags);
     try {
-      witness.context.port?.operation(witness.openId, "after", witness.entryOrdinal);
+      instrumentation.context.port?.operation(instrumentation.openId, "after", instrumentation.entryOrdinal);
     } catch (cause) {
       FS.closeSync(descriptor);
       throw cause;
@@ -134,17 +134,17 @@ function hashStableFile(
     const buffer = Buffer.allocUnsafe(64 * 1024);
     let position = 0;
     while (true) {
-      const count = witness
-        ? witness.context.operation(
-            witness.readId,
-            witness.context.chunkOrdinals.get(witness.readId) ?? 0,
+      const count = instrumentation
+        ? instrumentation.context.operation(
+            instrumentation.readId,
+            instrumentation.context.chunkOrdinals.get(instrumentation.readId) ?? 0,
             () => FS.readSync(descriptor, buffer, 0, buffer.length, position),
           )
         : FS.readSync(descriptor, buffer, 0, buffer.length, position);
-      if (witness)
-        witness.context.chunkOrdinals.set(
-          witness.readId,
-          (witness.context.chunkOrdinals.get(witness.readId) ?? 0) + 1,
+      if (instrumentation)
+        instrumentation.context.chunkOrdinals.set(
+          instrumentation.readId,
+          (instrumentation.context.chunkOrdinals.get(instrumentation.readId) ?? 0) + 1,
         );
       if (count === 0) break;
       hash.update(buffer.subarray(0, count));
@@ -153,10 +153,10 @@ function hashStableFile(
     if (!sameFileIdentity({ ...expected, sha256: null }, FS.fstatSync(descriptor, { bigint: true })))
       throw new Error("INSPECTION_UNSAFE");
   } finally {
-    if (witness) {
+    if (instrumentation) {
       let injected: unknown;
       try {
-        witness.context.operation(witness.closeId, witness.entryOrdinal, () => undefined);
+        instrumentation.context.operation(instrumentation.closeId, instrumentation.entryOrdinal, () => undefined);
       } catch (cause) {
         injected = cause;
       }
@@ -175,17 +175,17 @@ function treeEntry(
   root: string,
   path: string,
   relativePath: string,
-  witness?: {
+  instrumentation?: {
     readonly lstatId: string;
     readonly openId?: string;
     readonly readId?: string;
     readonly closeId?: string;
-    readonly context: InspectWitnessContext;
+    readonly context: InspectInstrumentationContext;
   },
 ): TreeIdentity {
-  const entryOrdinal = witness?.context.canonicalEntryOrdinals.get(relativePath);
-  const stat = witness !== undefined && entryOrdinal !== undefined
-    ? witness.context.operation(witness.lstatId, entryOrdinal, () =>
+  const entryOrdinal = instrumentation?.context.canonicalEntryOrdinals.get(relativePath);
+  const stat = instrumentation !== undefined && entryOrdinal !== undefined
+    ? instrumentation.context.operation(instrumentation.lstatId, entryOrdinal, () =>
         FS.lstatSync(path, { bigint: true }))
     : FS.lstatSync(path, { bigint: true });
   if (stat.isSymbolicLink() || (stat.isFile() && stat.nlink !== 1n))
@@ -207,15 +207,15 @@ function treeEntry(
     sha256: hashStableFile(
       path,
       base,
-      witness?.openId !== undefined &&
-      witness.readId !== undefined &&
-      witness.closeId !== undefined &&
+      instrumentation?.openId !== undefined &&
+      instrumentation.readId !== undefined &&
+      instrumentation.closeId !== undefined &&
       entryOrdinal !== undefined
         ? {
-            openId: witness.openId,
-            readId: witness.readId,
-            closeId: witness.closeId,
-            context: witness.context,
+            openId: instrumentation.openId,
+            readId: instrumentation.readId,
+            closeId: instrumentation.closeId,
+            context: instrumentation.context,
             entryOrdinal,
           }
         : undefined,
@@ -225,27 +225,27 @@ function treeEntry(
 
 function snapshotTree(
   root: string,
-  witness?: {
+  instrumentation?: {
     readonly enumerateId: string;
     readonly lstatId: string;
     readonly openId?: string;
     readonly readId?: string;
     readonly closeId?: string;
-    readonly context: InspectWitnessContext;
+    readonly context: InspectInstrumentationContext;
   },
 ): TreeIdentity[] {
   if (!FS.existsSync(root)) return [];
   const result: TreeIdentity[] = [treeEntry(root, root, ".")];
   if (result[0]?.kind !== "directory") throw new Error("INSPECTION_UNSAFE");
   const walk = (directory: string): void => {
-    const names = directory === root && witness
-      ? witness.context.operation(witness.enumerateId, "single", () =>
+    const names = directory === root && instrumentation
+      ? instrumentation.context.operation(instrumentation.enumerateId, "single", () =>
           FS.readdirSync(directory).sort())
       : FS.readdirSync(directory).sort();
     for (const name of names) {
       const path = Path.join(directory, name);
       const relativePath = Path.relative(root, path);
-      const entry = treeEntry(root, path, relativePath, witness);
+      const entry = treeEntry(root, path, relativePath, instrumentation);
       result.push(entry);
       if (entry.kind === "directory") walk(path);
     }
@@ -258,7 +258,7 @@ function copyTree(
   source: string,
   destination: string,
   sealed: readonly TreeIdentity[],
-  context?: InspectWitnessContext,
+  context?: InspectInstrumentationContext,
 ): void {
   FS.mkdirSync(destination, { mode: 0o700 });
   for (const entry of sealed) {
@@ -497,7 +497,7 @@ function ownerProcessIsLive(pid: number): boolean {
 function removeScratchTree(
   scratch: string,
   scratchIdentity: TreeIdentity,
-  context?: InspectWitnessContext,
+  context?: InspectInstrumentationContext,
 ): void {
   const copy = Path.join(scratch, "leveldb");
   let injected: unknown;
@@ -671,12 +671,12 @@ function toProfilePlan(
 export async function inspectProfileDraftKeys(
   identity: ProfileIdentity,
   profilePath: string,
-  witness?: ProfileInspectWitnessPort,
 ): Promise<ProfilePlan> {
+  let instrumentation: ProfileInspectInstrumentationPort | undefined;
   const operation: InspectOperation = (operationId, ordinal, effect) => {
-    witness?.operation(operationId, "before", ordinal);
+    instrumentation?.operation(operationId, "before", ordinal);
     const result = effect();
-    witness?.operation(operationId, "after", ordinal);
+    instrumentation?.operation(operationId, "after", ordinal);
     return result;
   };
   const source = operation("profile-inspect.resolve", "single", () => levelPath(profilePath));
@@ -684,9 +684,9 @@ export async function inspectProfileDraftKeys(
   if (!FS.existsSync(source)) return toProfilePlan(identity, { v1: false, v2: false, g1: false });
   const preliminary = snapshotTree(source);
   const canonical = canonicalProfileEntries(preliminary);
-  const context: InspectWitnessContext = {
+  const context: InspectInstrumentationContext = {
     operation,
-    port: witness,
+    port: instrumentation,
     canonicalEntryOrdinals: new Map(
       canonical.map((entry, ordinal) => [entry.relativePath, ordinal] as const),
     ),
@@ -697,7 +697,7 @@ export async function inspectProfileDraftKeys(
     lstatId: "profile-inspect.lstat-source-entry",
     context,
   });
-  witness?.operation("profile-inspect.create-scratch", "before", "single");
+  instrumentation?.operation("profile-inspect.create-scratch", "before", "single");
   const scratch = FS.mkdtempSync(
     Path.join(ensureProfileScratchRoot(), `run-${randomUUID()}-`),
   );
@@ -707,15 +707,15 @@ export async function inspectProfileDraftKeys(
   const copy = Path.join(scratch, "leveldb");
   let database: RawLevel | undefined;
   try {
-    witness?.operation("profile-inspect.create-scratch", "after", "single");
+    instrumentation?.operation("profile-inspect.create-scratch", "after", "single");
     for (const [ordinal] of canonical.entries())
-      await witness?.barrier?.("profile-inspect.manifest-to-copy", ordinal, () => {
+      await instrumentation?.barrier?.("profile-inspect.manifest-to-copy", ordinal, () => {
         const entry = canonical[ordinal]!;
         const path = Path.join(source, entry.relativePath);
         FS.appendFileSync(path, Buffer.from(`race:${ordinal}`));
       });
     copyTree(source, copy, before, context);
-    await witness?.barrier?.("profile-inspect.copy-to-source-recheck", "single", () => {
+    await instrumentation?.barrier?.("profile-inspect.copy-to-source-recheck", "single", () => {
       FS.appendFileSync(Path.join(source, "LOG"), Buffer.from("race:source-recheck"));
     });
     const sourceAfter = snapshotTree(source, {
@@ -730,7 +730,7 @@ export async function inspectProfileDraftKeys(
       throw new Error("INSPECTION_UNSAFE");
     }
     for (const [ordinal] of canonical.entries())
-      await witness?.barrier?.("profile-inspect-source-recheck-to-copy-hash", ordinal, () => {
+      await instrumentation?.barrier?.("profile-inspect-source-recheck-to-copy-hash", ordinal, () => {
         const entry = canonical[ordinal]!;
         FS.appendFileSync(Path.join(source, entry.relativePath), Buffer.from(`race:late:${ordinal}`));
       });
@@ -744,43 +744,43 @@ export async function inspectProfileDraftKeys(
     });
     if (contentManifest(before) !== contentManifest(copyTreeAfter))
       throw new Error("INSPECTION_UNSAFE");
-    await witness?.barrier?.("profile-inspect.copy-manifest-to-open", "single", () => {
+    await instrumentation?.barrier?.("profile-inspect.copy-manifest-to-open", "single", () => {
       FS.appendFileSync(Path.join(copy, "LOG"), Buffer.from("race:copy-open"));
     });
     if (JSON.stringify(copyTreeAfter) !== JSON.stringify(snapshotTree(copy)))
       throw new Error("INSPECTION_UNSAFE");
-    witness?.operation("profile-inspect.open-copy-level", "before", "single");
+    instrumentation?.operation("profile-inspect.open-copy-level", "before", "single");
     database = await openRaw(copy, false);
     try {
-      witness?.operation("profile-inspect.open-copy-level", "after", "single");
+      instrumentation?.operation("profile-inspect.open-copy-level", "after", "single");
     } catch (cause) {
       await database.close();
       database = undefined;
       throw cause;
     }
     const v1 = await (async () => {
-      witness?.operation("profile-inspect.get-key", "before", 0);
+      instrumentation?.operation("profile-inspect.get-key", "before", 0);
       const value = await hasLogicalKey(database!, LEGACY_DRAFT_KEYS[0]);
-      witness?.operation("profile-inspect.get-key", "after", 0);
+      instrumentation?.operation("profile-inspect.get-key", "after", 0);
       return value;
     })();
     const v2 = await (async () => {
-      witness?.operation("profile-inspect.get-key", "before", 1);
+      instrumentation?.operation("profile-inspect.get-key", "before", 1);
       const value = await hasLogicalKey(database!, LEGACY_DRAFT_KEYS[1]);
-      witness?.operation("profile-inspect.get-key", "after", 1);
+      instrumentation?.operation("profile-inspect.get-key", "after", 1);
       return value;
     })();
     const presence = { v1, v2, g1: await hasLogicalKey(database, CURRENT_DRAFT_KEY) };
     let closeInjected: unknown;
     try {
-      witness?.operation("profile-inspect.close-copy-level", "before", "single");
+      instrumentation?.operation("profile-inspect.close-copy-level", "before", "single");
     } catch (cause) {
       closeInjected = cause;
     }
     await database.close();
     database = undefined;
     if (closeInjected !== undefined) throw closeInjected;
-    witness?.operation("profile-inspect.close-copy-level", "after", "single");
+    instrumentation?.operation("profile-inspect.close-copy-level", "after", "single");
     if (JSON.stringify(before) !== JSON.stringify(snapshotTree(source))) {
       throw new Error("INSPECTION_UNSAFE");
     }
@@ -794,17 +794,17 @@ export async function inspectProfileDraftKeys(
 export async function deleteLegacyProfileDraftKeys(
   identity: ProfileIdentity,
   profilePath: string,
-  afterBoundary?: (boundary: "profile-batch-committed" | "profile-reread", target: string) => void,
-  witness?: ProfileDeleteWitnessPort,
 ): Promise<ProfilePlan> {
+  let checkpoint: ((boundary: "profile-batch-committed" | "profile-reread", target: string) => void) | undefined;
+  let instrumentation: ProfileDeleteInstrumentationPort | undefined;
   const operation = async <Result>(
     operationId: string,
     ordinal: number | "single",
     effect: () => Result | Promise<Result>,
   ): Promise<Result> => {
-    witness?.operation(operationId, "before", ordinal);
+    instrumentation?.operation(operationId, "before", ordinal);
     const result = await effect();
-    witness?.operation(operationId, "after", ordinal);
+    instrumentation?.operation(operationId, "after", ordinal);
     return result;
   };
   const source = await operation(
@@ -819,11 +819,11 @@ export async function deleteLegacyProfileDraftKeys(
       throw new Error("DESTRUCTION_INCOMPLETE");
     return { dev: stat.dev, ino: stat.ino, mode: stat.mode };
   });
-  await witness?.barrier?.("profile-delete.identity-to-open", "single");
-  witness?.operation("profile-delete.open-source-level", "before", "single");
+  await instrumentation?.barrier?.("profile-delete.identity-to-open", "single");
+  instrumentation?.operation("profile-delete.open-source-level", "before", "single");
   const database = await openRaw(source, false);
   try {
-    witness?.operation("profile-delete.open-source-level", "after", "single");
+    instrumentation?.operation("profile-delete.open-source-level", "after", "single");
   } catch (cause) {
     await database.close();
     throw cause;
@@ -842,7 +842,7 @@ export async function deleteLegacyProfileDraftKeys(
           () => readLogicalValue(database, key),
         ),
       );
-      await witness?.barrier?.(
+      await instrumentation?.barrier?.(
         "profile-delete-read-to-batch",
         ordinal,
         () => database.put(dataKeys(key)[0]!, Buffer.from(`race:${ordinal}`)),
@@ -858,7 +858,7 @@ export async function deleteLegacyProfileDraftKeys(
           : dataKeys(logicalKey).map((key) => ({ type: "del" as const, key })),
       ),
     );
-    await witness?.barrier?.(
+    await instrumentation?.barrier?.(
       "profile-delete-seal-to-batch",
       "single",
       () => database.put(dataKeys(LEGACY_DRAFT_KEYS[0])[0]!, Buffer.from("race:seal")),
@@ -889,7 +889,7 @@ export async function deleteLegacyProfileDraftKeys(
         "single",
         () => database.batch(operations),
       );
-      afterBoundary?.("profile-batch-committed", identity);
+      checkpoint?.("profile-batch-committed", identity);
     }
     const rereadValues = [];
     for (const [ordinal, key] of [
@@ -906,7 +906,7 @@ export async function deleteLegacyProfileDraftKeys(
       );
     }
     const afterValues = { v1: rereadValues[0]!, v2: rereadValues[1]!, g1: rereadValues[2]! };
-    afterBoundary?.("profile-reread", identity);
+    checkpoint?.("profile-reread", identity);
     if (
       afterValues.v1 !== null ||
       afterValues.v2 !== null ||
@@ -924,13 +924,13 @@ export async function deleteLegacyProfileDraftKeys(
   } finally {
     let injected: unknown;
     try {
-      witness?.operation("profile-delete.close-source-level", "before", "single");
+      instrumentation?.operation("profile-delete.close-source-level", "before", "single");
     } catch (cause) {
       injected = cause;
     }
     await database.close();
     if (injected !== undefined) throw injected;
-    witness?.operation("profile-delete.close-source-level", "after", "single");
+    instrumentation?.operation("profile-delete.close-source-level", "after", "single");
   }
 }
 

@@ -25,22 +25,6 @@ type RuntimeSqliteLayerConfig = {
   readonly filename: string;
 };
 
-export interface ServiceSqliteWitnessPort {
-  readonly operation: (
-    operationId: string,
-    site: "before" | "after",
-    ordinal: number | "single",
-  ) => void;
-  readonly barrier?: (barrierId: string) => void;
-}
-
-const serviceWitness = (
-  witness: ServiceSqliteWitnessPort | undefined,
-  operationId: string,
-  site: "before" | "after",
-  ordinal: number | "single" = "single",
-): void => witness?.operation(operationId, site, ordinal);
-
 type Loader = {
   layer: (config: RuntimeSqliteLayerConfig) => Layer.Layer<SqlClient.SqlClient>;
 };
@@ -76,8 +60,6 @@ const repairSqliteFilePermissions = (dbPath: string) =>
 
 const assertRetiredServiceBundleAbsent = (
   dbPath: string,
-  phase: "pre" | "post" = "pre",
-  witness?: ServiceSqliteWitnessPort,
 ): void => {
   const storesDirectory = nodePath.dirname(dbPath);
   const stateDirectory =
@@ -85,23 +67,17 @@ const assertRetiredServiceBundleAbsent = (
       ? nodePath.dirname(storesDirectory)
       : storesDirectory;
   const retiredDatabase = nodePath.join(stateDirectory, "state.sqlite");
-  for (const [ordinal, target] of [
+  for (const target of [
     retiredDatabase,
     `${retiredDatabase}-wal`,
     `${retiredDatabase}-shm`,
-  ].entries()) {
-    const operationId = `service.probe-${phase}-${["main", "wal", "shm"][ordinal]!}`;
-    serviceWitness(witness, operationId, "before");
+  ]) {
     try {
-      try {
-        lstatSync(target);
-        throw new Error("PREBASELINE_RESET_REQUIRED");
-      } catch (cause) {
-        if (cause instanceof Error && cause.message === "PREBASELINE_RESET_REQUIRED") throw cause;
-        if (errnoCode(cause) !== "ENOENT") throw cause;
-      }
-    } finally {
-      serviceWitness(witness, operationId, "after");
+      lstatSync(target);
+      throw new Error("PREBASELINE_RESET_REQUIRED");
+    } catch (cause) {
+      if (cause instanceof Error && cause.message === "PREBASELINE_RESET_REQUIRED") throw cause;
+      if (errnoCode(cause) !== "ENOENT") throw cause;
     }
   }
 };
@@ -201,9 +177,7 @@ const serviceSchemaFingerprint = Effect.fn(function* (sql: SqlClient.SqlClient) 
 
 const validateFirstPublicServiceSchema = Effect.fn(function* (
   sql: SqlClient.SqlClient,
-  witness?: ServiceSqliteWitnessPort,
 ) {
-  yield* Effect.sync(() => serviceWitness(witness, "service.validate-reopen-query", "before", 0));
   const markerTable = yield* sql<{ readonly count: number }>`
     SELECT COUNT(*) AS count
     FROM sqlite_schema
@@ -222,22 +196,17 @@ const validateFirstPublicServiceSchema = Effect.fn(function* (
       new Error("Service Store does not contain the exact generation-1 marker."),
     );
   }
-  yield* Effect.sync(() => serviceWitness(witness, "service.validate-reopen-query", "after", 0));
-  yield* Effect.sync(() => serviceWitness(witness, "service.validate-reopen-query", "before", 1));
   const fingerprint = yield* serviceSchemaFingerprint(sql);
   if (fingerprint !== SERVICE_SCHEMA_FINGERPRINT) {
     return yield* Effect.fail(
       new Error("Service Store schema fingerprint does not match generation 1."),
     );
   }
-  yield* Effect.sync(() => serviceWitness(witness, "service.validate-reopen-query", "after", 1));
 });
 
 const ensureFirstPublicServiceSchema = Effect.fn(function* (
   sql: SqlClient.SqlClient,
-  witness?: ServiceSqliteWitnessPort,
   allowCreate = true,
-  witnessValidation = true,
 ) {
   const objects = yield* sql<{ readonly count: number }>`
     SELECT COUNT(*) AS count FROM sqlite_schema WHERE name NOT LIKE 'sqlite_%'
@@ -248,32 +217,14 @@ const ensureFirstPublicServiceSchema = Effect.fn(function* (
         new Error("Service Store existed without the exact generation-1 schema."),
       );
     }
-    yield* Effect.sync(() => serviceWitness(witness, "service.begin-g1", "before"));
     yield* sql`BEGIN IMMEDIATE`;
-    yield* Effect.sync(() => serviceWitness(witness, "service.begin-g1", "after"));
     yield* Effect.gen(function* () {
-      for (let ordinal = 0; ordinal < 31; ordinal += 1)
-        yield* Effect.sync(() => serviceWitness(
-          witness,
-          "service.create-schema-statement",
-          "before",
-          ordinal,
-        ));
+      // Every yielded schema effect below executes its own real SQL statement;
+      // verifier tests observe the SqlClient adapter rather than a synthetic loop.
       yield* initializeSystemCapabilitySchema;
-      for (let ordinal = 0; ordinal < 31; ordinal += 1)
-        yield* Effect.sync(() => serviceWitness(
-          witness,
-          "service.create-schema-statement",
-          "after",
-          ordinal,
-        ));
       // The marker row is intentionally the final application statement.
-      yield* Effect.sync(() => serviceWitness(witness, "service.write-marker-last", "before"));
       yield* sql`INSERT INTO automation_meta(schema_generation) VALUES (1)`;
-      yield* Effect.sync(() => serviceWitness(witness, "service.write-marker-last", "after"));
-      yield* Effect.sync(() => serviceWitness(witness, "service.commit-g1", "before"));
       yield* sql`COMMIT`;
-      yield* Effect.sync(() => serviceWitness(witness, "service.commit-g1", "after"));
     }).pipe(
       Effect.catch((cause) =>
         Effect.gen(function* () {
@@ -283,25 +234,15 @@ const ensureFirstPublicServiceSchema = Effect.fn(function* (
       ),
     );
   }
-  yield* validateFirstPublicServiceSchema(sql, witnessValidation ? witness : undefined);
+  yield* validateFirstPublicServiceSchema(sql);
 });
 
-const makeSetup = (dbPath?: string, witness?: ServiceSqliteWitnessPort) =>
+const makeSetup = (dbPath?: string) =>
   Layer.effectDiscard(
     Effect.gen(function* () {
-      if (witness)
-        yield* Effect.sync(() => serviceWitness(witness, "service.reopen-current", "before"));
       const sql = yield* SqlClient.SqlClient;
-      if (witness) {
-        yield* Effect.sync(() => serviceWitness(witness, "service.reopen-current", "after"));
-        yield* Effect.addFinalizer(() =>
-          Effect.sync(() => {
-            serviceWitness(witness, "service.close-current", "before");
-            serviceWitness(witness, "service.close-current", "after");
-          }));
-      }
       // Validate existing application objects before any operational PRAGMA can mutate the file.
-      yield* ensureFirstPublicServiceSchema(sql, witness, true, true);
+      yield* ensureFirstPublicServiceSchema(sql, true);
       if (dbPath) {
         // The runtime owns this database for its entire lifetime (enforced by
         // DatabaseLifecycleLock), so make SQLite enforce the same boundary.
@@ -349,43 +290,19 @@ const makeSetup = (dbPath?: string, witness?: ServiceSqliteWitnessPort) =>
     }),
   );
 
-export const makeSqlitePersistenceLive = (
-  dbPath: string,
-  witness?: ServiceSqliteWitnessPort,
-) =>
+export const makeSqlitePersistenceLive = (dbPath: string) =>
   Effect.sync(() => {
-    assertRetiredServiceBundleAbsent(dbPath, "pre", witness);
-    witness?.barrier?.("service-precut-to-lock");
+    assertRetiredServiceBundleAbsent(dbPath);
   }).pipe(
     Effect.flatMap(() =>
       Effect.acquireRelease(
         Effect.gen(function* () {
-          yield* Effect.sync(() => serviceWitness(
-            witness,
-            "service.acquire-owner-lock",
-            "before",
-          ));
           const lock = yield* acquireDatabaseLifecycleLock(dbPath);
-          yield* Effect.sync(() => serviceWitness(
-            witness,
-            "service.acquire-owner-lock",
-            "after",
-          ));
           return lock;
         }),
         (lock) =>
           Effect.gen(function* () {
-            yield* Effect.sync(() => serviceWitness(
-              witness,
-              "service.release-owner-lock",
-              "before",
-            ));
             yield* releaseDatabaseLifecycleLock(lock).pipe(Effect.orDie);
-            yield* Effect.sync(() => serviceWitness(
-              witness,
-              "service.release-owner-lock",
-              "after",
-            ));
           }),
       ),
     ),
@@ -401,9 +318,7 @@ export const makeSqlitePersistenceLive = (
           return { dev: stat.dev, ino: stat.ino, realpath: nodePath.dirname(lock.dbPath) };
         });
         yield* Effect.sync(() => {
-          witness?.barrier?.("service-lock-to-postcut");
-          assertRetiredServiceBundleAbsent(dbPath, "post", witness);
-          witness?.barrier?.("service-postcut-to-current-open");
+          assertRetiredServiceBundleAbsent(dbPath);
           const currentParent = lstatSync(parent);
           if (
             !currentParent.isDirectory() ||
@@ -424,9 +339,7 @@ export const makeSqlitePersistenceLive = (
             if (errnoCode(cause) !== "ENOENT") throw cause;
           }
         });
-        yield* Effect.sync(() => serviceWitness(witness, "service.mkdir-stores", "before"));
         yield* fs.makeDirectory(parent, { recursive: true });
-        yield* Effect.sync(() => serviceWitness(witness, "service.mkdir-stores", "after"));
         yield* Effect.promise(() => validateExistingServiceDatabaseBeforeOpen(dbPath));
         // Set the mode before SQLite opens the database. Never reopen the
         // database, WAL, or SHM merely to chmod them while this connection is
@@ -438,19 +351,15 @@ export const makeSqlitePersistenceLive = (
 
         // Create and validate in a short-lived connection, then close it before
         // the long-lived Service connection reopens and validates the same bytes.
-        yield* Effect.sync(() => serviceWitness(witness, "service.open-current", "before"));
         yield* Effect.scoped(
           Effect.gen(function* () {
             const sql = yield* SqlClient.SqlClient;
-            yield* Effect.sync(() => serviceWitness(witness, "service.open-current", "after"));
-            yield* ensureFirstPublicServiceSchema(sql, witness, !currentExisted, false);
-            yield* Effect.sync(() => serviceWitness(witness, "service.close-after-create", "before"));
+            yield* ensureFirstPublicServiceSchema(sql, !currentExisted);
           }).pipe(Effect.provide(makeRuntimeSqliteLayer({ filename: dbPath }))),
         );
-        yield* Effect.sync(() => serviceWitness(witness, "service.close-after-create", "after"));
 
         return Layer.provideMerge(
-          makeSetup(dbPath, witness),
+          makeSetup(dbPath),
           makeRuntimeSqliteLayer({ filename: dbPath }),
         );
       }),

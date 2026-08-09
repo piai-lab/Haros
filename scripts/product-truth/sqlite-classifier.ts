@@ -34,7 +34,7 @@ interface ClassifierScratchOwner {
 const CLASSIFIER_SCRATCH_ROOT = "omnimind-product-truth-classifier";
 const CLASSIFIER_SCRATCH_OWNER = "owner.json";
 
-export interface ClassifierWitnessPort {
+interface ClassifierInstrumentationPort {
   readonly operation: (
     operationId: string,
     site: "before" | "after",
@@ -47,26 +47,26 @@ export interface ClassifierWitnessPort {
 }
 
 function classifierOperation<Result>(
-  witness: ClassifierWitnessPort | undefined,
+  instrumentation: ClassifierInstrumentationPort | undefined,
   operationId: string,
   ordinal: number | "single",
   effect: () => Result,
 ): Result {
-  witness?.operation(operationId, "before", ordinal);
+  instrumentation?.operation(operationId, "before", ordinal);
   const result = effect();
-  witness?.operation(operationId, "after", ordinal);
+  instrumentation?.operation(operationId, "after", ordinal);
   return result;
 }
 
 function openClassifierDescriptor(
-  witness: ClassifierWitnessPort | undefined,
+  instrumentation: ClassifierInstrumentationPort | undefined,
   operationId: string,
   effect: () => number,
 ): number {
-  witness?.operation(operationId, "before", "single");
+  instrumentation?.operation(operationId, "before", "single");
   const descriptor = effect();
   try {
-    witness?.operation(operationId, "after", "single");
+    instrumentation?.operation(operationId, "after", "single");
   } catch (cause) {
     FS.closeSync(descriptor);
     throw cause;
@@ -76,23 +76,23 @@ function openClassifierDescriptor(
 
 function closeClassifierDescriptor(
   descriptor: number,
-  witness: ClassifierWitnessPort | undefined,
+  instrumentation: ClassifierInstrumentationPort | undefined,
   operationId: string,
 ): void {
   let injected: unknown;
   try {
-    witness?.operation(operationId, "before", "single");
+    instrumentation?.operation(operationId, "before", "single");
   } catch (cause) {
     injected = cause;
   }
   FS.closeSync(descriptor);
   if (injected !== undefined) throw injected;
-  witness?.operation(operationId, "after", "single");
+  instrumentation?.operation(operationId, "after", "single");
 }
 
 function hashFileDescriptor(
   descriptor: number,
-  witness: ClassifierWitnessPort | undefined,
+  instrumentation: ClassifierInstrumentationPort | undefined,
   operationId: "classifier.read-source-chunk" | "classifier.read-copy-hash-chunk",
   write?: (bytes: Buffer, position: number, ordinal: number) => void,
   size?: number,
@@ -102,7 +102,7 @@ function hashFileDescriptor(
   let position = 0;
   let ordinal = 0;
   while (true) {
-    const count = classifierOperation(witness, operationId, ordinal, () =>
+    const count = classifierOperation(instrumentation, operationId, ordinal, () =>
       FS.readSync(descriptor, buffer, 0, buffer.length, position));
     if (count === 0) break;
     const bytes = buffer.subarray(0, count);
@@ -291,7 +291,7 @@ function requireSafeDatabase(database: DatabaseSync): void {
 }
 
 interface ClassifierContext {
-  readonly witness: ClassifierWitnessPort | undefined;
+  readonly instrumentation: ClassifierInstrumentationPort | undefined;
   queryOrdinal: number;
 }
 
@@ -302,7 +302,7 @@ function count(
 ): number {
   const row = (context
     ? classifierOperation(
-        context.witness,
+        context.instrumentation,
         "classifier.query-protected-aggregate",
         context.queryOrdinal++,
         () => database.prepare(sql).get(),
@@ -889,7 +889,7 @@ function classifyProductFacts(
        LEFT JOIN product_outbox AS outbox ON outbox.run_id = runs.run_id`;
   const rows = (context
     ? classifierOperation(
-        context.witness,
+        context.instrumentation,
         "classifier.query-protected-aggregate",
         context.queryOrdinal++,
         () => database.prepare(rowsQuery).all(),
@@ -978,7 +978,7 @@ function classifyProductFacts(
     const query = `SELECT ${sequence} AS sequence FROM product_runtime_activities WHERE kind = 'package'`;
     const activityRows = (context
       ? classifierOperation(
-          context.witness,
+          context.instrumentation,
           "classifier.query-protected-aggregate",
           context.queryOrdinal++,
           () => database.prepare(query).all(),
@@ -1121,9 +1121,9 @@ export function classifyLegacyDatabase(
   path: string,
   lane: Lane,
   storeKind: "product" | "service",
-  witness?: ClassifierWitnessPort,
 ): ClassifiedDatabase {
-  path = classifierOperation(witness, "classifier.resolve-retired", "single", () => path);
+  let instrumentation: ClassifierInstrumentationPort | undefined;
+  path = classifierOperation(instrumentation, "classifier.resolve-retired", "single", () => path);
   reapDeadClassifierScratch(path);
   const suffixes = ["", "-wal", "-shm"] as const;
   const initialPresence = new Map(
@@ -1158,7 +1158,7 @@ export function classifyLegacyDatabase(
   const before = new Map<string, StableFileIdentity>();
   for (const suffix of suffixes)
     if (initialPresence.get(suffix)) before.set(suffix, identity(`${path}${suffix}`));
-  witness?.operation("classifier.create-scratch-dir", "before", "single");
+  instrumentation?.operation("classifier.create-scratch-dir", "before", "single");
   const scratch = FS.mkdtempSync(
     Path.join(classifierScratchRoot(), `run-${randomUUID()}-`),
   );
@@ -1168,31 +1168,31 @@ export function classifyLegacyDatabase(
   const scratchMain = Path.join(scratch, "database.sqlite");
   let database: DatabaseSync | undefined;
   let sourceDigest = "";
-  const context: ClassifierContext = { witness, queryOrdinal: 0 };
+  const context: ClassifierContext = { instrumentation, queryOrdinal: 0 };
   try {
-    witness?.operation("classifier.create-scratch-dir", "after", "single");
+    instrumentation?.operation("classifier.create-scratch-dir", "after", "single");
     for (const suffix of suffixes) {
       const source = `${path}${suffix}`;
       if (!initialPresence.get(suffix)) continue;
       const initial = suffix === ""
-        ? classifierOperation(witness, "classifier.lstat-source-before", "single", () => identity(source))
+        ? classifierOperation(instrumentation, "classifier.lstat-source-before", "single", () => identity(source))
         : identity(source);
       before.set(suffix, initial);
       if (suffix === "") {
-        witness?.barrier?.("classifier.source-identity-to-open", () =>
+        instrumentation?.barrier?.("classifier.source-identity-to-open", () =>
           FS.appendFileSync(source, Buffer.from("race:source-open")));
         const flags = process.platform === "win32"
           ? FS.constants.O_RDONLY
           : FS.constants.O_RDONLY | FS.constants.O_NOFOLLOW;
         const sourceDescriptor = openClassifierDescriptor(
-          witness,
+          instrumentation,
           "classifier.open-source-nofollow",
           () => FS.openSync(source, flags),
         );
         let copyDescriptor: number;
         try {
           copyDescriptor = openClassifierDescriptor(
-            witness,
+            instrumentation,
             "classifier.open-copy-exclusive",
             () => FS.openSync(scratchMain, "wx", 0o600),
           );
@@ -1203,24 +1203,24 @@ export function classifyLegacyDatabase(
         try {
           sourceDigest = hashFileDescriptor(
             sourceDescriptor,
-            witness,
+            instrumentation,
             "classifier.read-source-chunk",
             (bytes, position, ordinal) =>
-              classifierOperation(witness, "classifier.write-copy-chunk", ordinal, () =>
+              classifierOperation(instrumentation, "classifier.write-copy-chunk", ordinal, () =>
                 FS.writeSync(copyDescriptor, bytes, 0, bytes.length, position)),
             initial.size,
           );
-          classifierOperation(witness, "classifier.fsync-copy", "single", () =>
+          classifierOperation(instrumentation, "classifier.fsync-copy", "single", () =>
             FS.fsyncSync(copyDescriptor));
         } finally {
           let injected: unknown;
           try {
-            closeClassifierDescriptor(copyDescriptor, witness, "classifier.close-copy-writer");
+            closeClassifierDescriptor(copyDescriptor, instrumentation, "classifier.close-copy-writer");
           } catch (cause) {
             injected = cause;
           }
           try {
-            closeClassifierDescriptor(sourceDescriptor, witness, "classifier.close-source");
+            closeClassifierDescriptor(sourceDescriptor, instrumentation, "classifier.close-source");
           } catch (cause) {
             injected ??= cause;
           }
@@ -1233,22 +1233,22 @@ export function classifyLegacyDatabase(
       if (suffix !== "" && !sameIdentity(initial, identity(source)))
         throw new Error("INSPECTION_UNSAFE");
     }
-    witness?.barrier?.("classifier.source-copy-to-recheck", () =>
+    instrumentation?.barrier?.("classifier.source-copy-to-recheck", () =>
       FS.appendFileSync(path, Buffer.from("race:source-recheck")));
     if (!sameIdentity(
       before.get("")!,
-      classifierOperation(witness, "classifier.lstat-source-after", "single", () => identity(path)),
+      classifierOperation(instrumentation, "classifier.lstat-source-after", "single", () => identity(path)),
     )) throw new Error("INSPECTION_UNSAFE");
     const copyBefore = classifierOperation(
-      witness,
+      instrumentation,
       "classifier.lstat-copy",
       "single",
       () => identity(scratchMain),
     );
-    witness?.barrier?.("classifier.copy-identity-to-hash-open", () =>
+    instrumentation?.barrier?.("classifier.copy-identity-to-hash-open", () =>
       FS.appendFileSync(scratchMain, Buffer.from("race:copy-hash")));
     const copyHashDescriptor = openClassifierDescriptor(
-      witness,
+      instrumentation,
       "classifier.open-copy-hash",
       () => FS.openSync(
         scratchMain,
@@ -1261,23 +1261,23 @@ export function classifyLegacyDatabase(
     try {
       copyDigest = hashFileDescriptor(
         copyHashDescriptor,
-        witness,
+        instrumentation,
         "classifier.read-copy-hash-chunk",
         undefined,
         copyBefore.size,
       );
     } finally {
-      closeClassifierDescriptor(copyHashDescriptor, witness, "classifier.close-copy-hash");
+      closeClassifierDescriptor(copyHashDescriptor, instrumentation, "classifier.close-copy-hash");
     }
     if (!sameIdentity(copyBefore, identity(scratchMain)) || copyDigest !== sourceDigest)
       throw new Error("INSPECTION_UNSAFE");
-    witness?.barrier?.("classifier.copy-hash-to-sqlite-open", () =>
+    instrumentation?.barrier?.("classifier.copy-hash-to-sqlite-open", () =>
       FS.appendFileSync(scratchMain, Buffer.from("race:copy-open")));
     if (!sameIdentity(copyBefore, identity(scratchMain))) throw new Error("INSPECTION_UNSAFE");
-    witness?.operation("classifier.open-copy-sqlite-readonly", "before", "single");
+    instrumentation?.operation("classifier.open-copy-sqlite-readonly", "before", "single");
     database = new DatabaseSync(scratchMain, { readOnly: true });
     try {
-      witness?.operation("classifier.open-copy-sqlite-readonly", "after", "single");
+      instrumentation?.operation("classifier.open-copy-sqlite-readonly", "after", "single");
     } catch (cause) {
       database.close();
       database = undefined;
@@ -1354,7 +1354,7 @@ export function classifyLegacyDatabase(
     let finalFailure: unknown;
     if (database !== undefined) {
       try {
-        witness?.operation("classifier.close-copy-database", "before", "single");
+        instrumentation?.operation("classifier.close-copy-database", "before", "single");
       } catch (cause) {
         finalFailure = cause;
       }
@@ -1362,7 +1362,7 @@ export function classifyLegacyDatabase(
       database = undefined;
       if (finalFailure === undefined) {
         try {
-          witness?.operation("classifier.close-copy-database", "after", "single");
+          instrumentation?.operation("classifier.close-copy-database", "after", "single");
         } catch (cause) {
           finalFailure = cause;
         }
@@ -1381,7 +1381,7 @@ export function classifyLegacyDatabase(
       finalFailure ??= cause;
     }
     try {
-      classifierOperation(witness, "classifier.remove-copy", "single", () => {
+      classifierOperation(instrumentation, "classifier.remove-copy", "single", () => {
         for (const suffix of [...suffixes].reverse()) {
           const copy = `${scratchMain}${suffix}`;
           if (FS.existsSync(copy)) FS.unlinkSync(copy);
@@ -1402,14 +1402,14 @@ export function classifyLegacyDatabase(
       else FS.unlinkSync(ownerPath);
     }
     try {
-      classifierOperation(witness, "classifier.remove-scratch-dir", "single", () =>
+      classifierOperation(instrumentation, "classifier.remove-scratch-dir", "single", () =>
         FS.rmdirSync(scratch));
     } catch (cause) {
       finalFailure ??= cause;
       if (FS.existsSync(scratch)) FS.rmdirSync(scratch);
     }
     try {
-      classifierOperation(witness, "classifier.verify-scratch-absent", "single", () => {
+      classifierOperation(instrumentation, "classifier.verify-scratch-absent", "single", () => {
         if (FS.existsSync(scratch)) throw new Error("INSPECTION_UNSAFE");
       });
     } catch (cause) {

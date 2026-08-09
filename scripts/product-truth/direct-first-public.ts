@@ -412,15 +412,15 @@ export type DirectFirstPublicBoundary =
   | "database-unlinked"
   | "directory-fsynced";
 
-export interface DirectFirstPublicTestHooks {
-  readonly afterBoundary?: (
+interface DirectFirstPublicInstrumentation {
+  readonly checkpoint?: (
     boundary: DirectFirstPublicBoundary,
     target: string,
   ) => void;
-  readonly witness?: DirectApplyWitnessPort;
+  readonly instrumentation?: DirectApplyInstrumentationPort;
 }
 
-export interface DirectApplyWitnessPort {
+interface DirectApplyInstrumentationPort {
   readonly operation: (
     operationId: string,
     site: "before" | "after",
@@ -434,30 +434,30 @@ export interface DirectApplyWitnessPort {
 }
 
 async function applyOperation<Result>(
-  witness: DirectApplyWitnessPort | undefined,
+  instrumentation: DirectApplyInstrumentationPort | undefined,
   operationId: string,
   ordinal: number | "single",
   effect: () => Result | Promise<Result>,
 ): Promise<Result> {
-  witness?.operation(operationId, "before", ordinal);
+  instrumentation?.operation(operationId, "before", ordinal);
   const result = await effect();
-  witness?.operation(operationId, "after", ordinal);
+  instrumentation?.operation(operationId, "after", ordinal);
   return result;
 }
 
 function applySyncOperation<Result>(
-  witness: DirectApplyWitnessPort | undefined,
+  instrumentation: DirectApplyInstrumentationPort | undefined,
   operationId: string,
   ordinal: number | "single",
   effect: () => Result,
 ): Result {
-  witness?.operation(operationId, "before", ordinal);
+  instrumentation?.operation(operationId, "before", ordinal);
   const result = effect();
-  witness?.operation(operationId, "after", ordinal);
+  instrumentation?.operation(operationId, "after", ordinal);
   return result;
 }
 
-export interface DirectInspectWitnessPort {
+interface DirectInspectInstrumentationPort {
   readonly operation: (
     operationId: string,
     site: "before" | "after",
@@ -471,14 +471,14 @@ export interface DirectInspectWitnessPort {
 }
 
 function inspectOperation<Result>(
-  witness: DirectInspectWitnessPort | undefined,
+  instrumentation: DirectInspectInstrumentationPort | undefined,
   operationId: string,
   ordinal: number | "single",
   effect: () => Result,
 ): Result {
-  witness?.operation(operationId, "before", ordinal);
+  instrumentation?.operation(operationId, "before", ordinal);
   const result = effect();
-  witness?.operation(operationId, "after", ordinal);
+  instrumentation?.operation(operationId, "after", ordinal);
   return result;
 }
 
@@ -513,7 +513,7 @@ function fixedInspectAncestors(canonicalHome: string): readonly string[] {
   ];
 }
 
-function fixedInspectWitnessTargets(
+function fixedInspectInstrumentationTargets(
   canonicalHome: string,
   plan: DirectFirstPublicPlan,
 ): readonly string[] {
@@ -553,24 +553,24 @@ function fixedInspectWitnessTargets(
   return [...databaseMembers, ...legacyProfiles, ...packageNodes.slice(0, 4), ...profiles].slice(0, 11);
 }
 
-function inspectWitnessTarget(
+function inspectInstrumentationTarget(
   path: string,
   ordinal: number,
   expectedDataChunks: number,
   chunkOffset: number,
-  witness: DirectInspectWitnessPort,
+  instrumentation: DirectInspectInstrumentationPort,
 ): number {
   const before = FS.lstatSync(path);
   if (before.isSymbolicLink() || (before.isFile() && before.nlink !== 1))
     throw new Error("INSPECTION_UNSAFE");
-  witness.barrier?.("inspect-target-to-open", ordinal);
+  instrumentation.barrier?.("inspect-target-to-open", ordinal);
   const flags = process.platform === "win32"
     ? FS.constants.O_RDONLY
     : FS.constants.O_RDONLY | FS.constants.O_NOFOLLOW;
-  witness.operation("inspect.open-target", "before", ordinal);
+  instrumentation.operation("inspect.open-target", "before", ordinal);
   const descriptor = FS.openSync(path, flags);
   try {
-    witness.operation("inspect.open-target", "after", ordinal);
+    instrumentation.operation("inspect.open-target", "after", ordinal);
   } catch (cause) {
     FS.closeSync(descriptor);
     throw cause;
@@ -583,13 +583,13 @@ function inspectWitnessTarget(
     for (let chunk = 0; chunk < expectedDataChunks; chunk += 1) {
       const start = Math.floor((bytes.length * chunk) / expectedDataChunks);
       const end = Math.floor((bytes.length * (chunk + 1)) / expectedDataChunks);
-      inspectOperation(witness, "inspect.read-target-chunk", chunkOffset++, () => bytes.subarray(start, end));
+      inspectOperation(instrumentation, "inspect.read-target-chunk", chunkOffset++, () => bytes.subarray(start, end));
     }
-    inspectOperation(witness, "inspect.read-target-chunk", chunkOffset++, () => {
+    inspectOperation(instrumentation, "inspect.read-target-chunk", chunkOffset++, () => {
       if (before.isDirectory()) FS.readdirSync(path);
       return Buffer.alloc(0);
     });
-    inspectOperation(witness, "inspect.sanitize-target-metadata", ordinal, () => ({
+    inspectOperation(instrumentation, "inspect.sanitize-target-metadata", ordinal, () => ({
       mode: before.mode,
       size: before.size,
       sha256: before.isFile() ? sha256(bytes) : null,
@@ -597,13 +597,13 @@ function inspectWitnessTarget(
   } finally {
     let injected: unknown;
     try {
-      witness.operation("inspect.close-target", "before", ordinal);
+      instrumentation.operation("inspect.close-target", "before", ordinal);
     } catch (cause) {
       injected = cause;
     }
     FS.closeSync(descriptor);
     if (injected !== undefined) throw injected;
-    witness.operation("inspect.close-target", "after", ordinal);
+    instrumentation.operation("inspect.close-target", "after", ordinal);
   }
   return chunkOffset;
 }
@@ -766,24 +766,69 @@ interface ValidatedStage {
   readonly executablePath: string;
 }
 
+type RemainingTombstoneState =
+  | "full"
+  | "executable-retiring"
+  | "executable-retired"
+  | "manifest-retiring"
+  | "retired";
+
+const PACKAGE_RETIREMENT_ENTRY = /^\.retiring-([A-Za-z0-9_-]+)-([0-9a-f]{64})-([0-9]+)$/u;
+
+function packageRetirementEntry(name: string, seal: DatabaseFileSeal): string {
+  return `.retiring-${Buffer.from(name, "utf8").toString("base64url")}-${seal.sha256}-${seal.size}`;
+}
+
+function parsePackageRetirementEntry(name: string): {
+  readonly logicalName: string;
+  readonly sha256: string;
+  readonly size: string;
+} | null {
+  const match = PACKAGE_RETIREMENT_ENTRY.exec(name);
+  if (!match) return null;
+  let logicalName: string;
+  try {
+    logicalName = Buffer.from(match[1]!, "base64url").toString("utf8");
+  } catch {
+    return null;
+  }
+  return safeRelativeFile(logicalName)
+    ? { logicalName, sha256: match[2]!, size: match[3]! }
+    : null;
+}
+
 function validateRemainingTombstone(
   packageRoot: string,
   directory: string,
   generation: string,
   digest: string,
-): "full" | "manifest-only" | "empty" {
+): RemainingTombstoneState {
   const stat = FS.lstatSync(directory);
   if (!stat.isDirectory() || stat.isSymbolicLink())
     throw new Error("PACKAGE_STATE_UNKNOWN");
   const entries = FS.readdirSync(directory).sort();
-  if (entries.length === 0) return "empty";
-  if (entries.length === 1 && entries[0] === "manifest.json") {
-    const manifestPath = Path.join(directory, "manifest.json");
+  if (entries.length === 0) throw new Error("PACKAGE_STATE_UNKNOWN");
+  const retirementEntries = entries.map((name) => ({
+    actualName: name,
+    parsed: parsePackageRetirementEntry(name),
+  }));
+  const manifestRetirement = retirementEntries.find(
+    (entry) => entry.parsed?.logicalName === "manifest.json",
+  );
+  const manifestName = entries.includes("manifest.json")
+    ? "manifest.json"
+    : manifestRetirement?.actualName;
+  if (
+    manifestName !== undefined &&
+    FS.lstatSync(Path.join(directory, manifestName)).size !== 0
+  ) {
+    const manifestPath = Path.join(directory, manifestName);
     const manifestStat = FS.lstatSync(manifestPath);
     if (
       !manifestStat.isFile() ||
       manifestStat.isSymbolicLink() ||
-      manifestStat.nlink !== 1
+      manifestStat.nlink !== 1 ||
+      manifestStat.size === 0
     )
       throw new Error("PACKAGE_STATE_UNKNOWN");
     const manifestBytes = FS.readFileSync(manifestPath);
@@ -847,11 +892,65 @@ function validateRemainingTombstone(
       `manifest.json\0${sha256(manifestBytes)}\0${manifest.executable.path}\0${manifest.executable.sha256}\0${manifest.executable.bytes}`,
     );
     if (expected !== digest) throw new Error("PACKAGE_STATE_UNKNOWN");
-    return "manifest-only";
+    const executablePath = String(manifest.executable.path);
+    const executableRetirement = retirementEntries.find(
+      (entry) => entry.parsed?.logicalName === executablePath,
+    );
+    if (manifestName === "manifest.json" && executableRetirement === undefined) {
+      const full = validateClosedStage(packageRoot, directory, generation);
+      if (full.treeDigest !== digest) throw new Error("PACKAGE_STATE_UNKNOWN");
+      return "full";
+    }
+    if (executableRetirement === undefined)
+      throw new Error("PACKAGE_STATE_UNKNOWN");
+    const executableSeal = readDatabaseFileSeal(
+      Path.join(directory, executableRetirement.actualName),
+    );
+    if (
+      executableRetirement.parsed!.sha256 !== manifest.executable.sha256 ||
+      executableRetirement.parsed!.size !== String(manifest.executable.bytes) ||
+      (executableSeal.size !== "0" &&
+        (executableSeal.sha256 !== executableRetirement.parsed!.sha256 ||
+          executableSeal.size !== executableRetirement.parsed!.size))
+    ) throw new Error("PACKAGE_STATE_UNKNOWN");
+    if (manifestName === "manifest.json") {
+      if (entries.length !== 2) throw new Error("PACKAGE_STATE_UNKNOWN");
+      return executableSeal.size === "0"
+        ? "executable-retired"
+        : "executable-retiring";
+    }
+    if (
+      entries.length !== 2 ||
+      executableSeal.size !== "0" ||
+      manifestRetirement?.parsed?.sha256 !== sha256(manifestBytes) ||
+      manifestRetirement.parsed.size !== String(manifestBytes.length)
+    ) throw new Error("PACKAGE_STATE_UNKNOWN");
+    return "manifest-retiring";
   }
-  const full = validateClosedStage(packageRoot, directory, generation);
-  if (full.treeDigest !== digest) throw new Error("PACKAGE_STATE_UNKNOWN");
-  return "full";
+  if (
+    entries.length === 2 &&
+    retirementEntries.every((entry) => entry.parsed !== null)
+  ) {
+    const manifest = retirementEntries.find(
+      (entry) => entry.parsed!.logicalName === "manifest.json",
+    );
+    const executable = retirementEntries.find(
+      (entry) => entry.parsed!.logicalName !== "manifest.json",
+    );
+    if (!manifest || !executable)
+      throw new Error("PACKAGE_STATE_UNKNOWN");
+    const manifestSeal = readDatabaseFileSeal(Path.join(directory, manifest.actualName));
+    const executableSeal = readDatabaseFileSeal(Path.join(directory, executable.actualName));
+    if (
+      manifestSeal.size !== "0" ||
+      executableSeal.size !== "0" ||
+      sha256(
+        `manifest.json\0${manifest.parsed!.sha256}\0${executable.parsed!.logicalName}\0${executable.parsed!.sha256}\0${executable.parsed!.size}`,
+      ) !== digest
+    ) throw new Error("PACKAGE_STATE_UNKNOWN");
+    return "retired";
+  }
+  throw new Error("PACKAGE_STATE_UNKNOWN");
 }
 
 function validateClosedStage(
@@ -1083,13 +1182,14 @@ function classifyPackage(lanePath: string): PackageClassification {
           pathExists(Path.join(stage, generation))
         )
           throw new Error();
-        validateRemainingTombstone(
+        const remaining = validateRemainingTombstone(
           root,
           Path.join(discarding, name),
           generation,
           treeDigest,
         );
-        tombstones.push({ generation, treeDigest, name });
+        if (remaining !== "retired")
+          tombstones.push({ generation, treeDigest, name });
       }
     }
     return {
@@ -1113,34 +1213,33 @@ function classifyPackage(lanePath: string): PackageClassification {
   }
 }
 
-export async function inspectDirectFirstPublic(
+async function inspectDirectFirstPublicWithLocks(
   canonicalHome: string,
   options?: {
     readonly databaseLockTokens?: ReadonlyMap<string, string>;
     readonly profileLockTokens?: ReadonlyMap<string, string>;
-    readonly witness?: DirectInspectWitnessPort;
   },
 ): Promise<DirectFirstPublicPlan> {
-  const witness = options?.witness;
-  canonicalHome = inspectOperation(witness, "inspect.resolve-scope", "single", () => {
+  let instrumentation: DirectInspectInstrumentationPort | undefined;
+  canonicalHome = inspectOperation(instrumentation, "inspect.resolve-scope", "single", () => {
     validateDefaultRoot(canonicalHome);
     return canonicalHome;
   });
   const ancestorSeals = fixedInspectAncestors(canonicalHome).map((path, ordinal) => {
-    const observed = inspectOperation(witness, "inspect.lstat-ancestor", ordinal, () =>
+    const observed = inspectOperation(instrumentation, "inspect.lstat-ancestor", ordinal, () =>
       inspectAncestor(path));
-    const realpath = inspectOperation(witness, "inspect.realpath-ancestor", ordinal, () =>
+    const realpath = inspectOperation(instrumentation, "inspect.realpath-ancestor", ordinal, () =>
       FS.realpathSync.native(observed.existing));
-    witness?.barrier?.("inspect-ancestor-to-target-enumeration", ordinal);
+    instrumentation?.barrier?.("inspect-ancestor-to-target-enumeration", ordinal);
     return { ...observed, realpath };
   });
   const initialQuiescence = stoppedProcesses();
   const processFields = ["desktop", "service", "nativeHost"] as const;
   const processStates = processFields.map((field, ordinal) => {
-    const state = inspectOperation(witness, "inspect.probe-process", ordinal, () =>
+    const state = inspectOperation(instrumentation, "inspect.probe-process", ordinal, () =>
       initialQuiescence[field]);
-    witness?.barrier?.("inspect-process-identity-to-probe", ordinal);
-    if (witness?.barrier !== undefined && stoppedProcesses()[field] !== state)
+    instrumentation?.barrier?.("inspect-process-identity-to-probe", ordinal);
+    if (instrumentation?.barrier !== undefined && stoppedProcesses()[field] !== state)
       throw new DirectFirstPublicError(3, "OWNER_NOT_STOPPED");
     return state;
   });
@@ -1162,7 +1261,7 @@ export async function inspectDirectFirstPublic(
   const protectedFacts: DirectFirstPublicPlan["protectedFacts"][number][] = [];
   const lanes: LanePlan[] = [];
   const packagePlans = new Map<Lane, PackageClassification>();
-  witness?.operation("inspect.enumerate-targets", "before", "single");
+  instrumentation?.operation("inspect.enumerate-targets", "before", "single");
   for (const lane of LANES) {
     const lanePath = Path.join(canonicalHome, lane);
     const productPath = Path.join(lanePath, LEGACY_PRODUCT_DATABASE);
@@ -1218,18 +1317,37 @@ export async function inspectDirectFirstPublic(
       ["service", servicePath, service.plan.status],
     ] as const) {
       for (const suffix of ["", "-wal", "-shm"]) {
-        if (!pathExists(`${path}${suffix}`)) continue;
-        targets.push({
-          kind: "database",
-          laneOrProfile: lane,
-          relativePathOrKey: Path.relative(canonicalHome, `${path}${suffix}`),
-          classification,
-          action:
-            classification === "classified" ||
-            classification === "orphan-sidecar"
-              ? "remove"
-              : "none",
-        });
+        const member = `${path}${suffix}`;
+        const retirement = inspectDatabaseRetirement(member);
+        if (retirement.blocked) {
+          blockers.push({
+            code: "DATABASE_FINGERPRINT_UNKNOWN",
+            laneOrProfile: lane,
+            targetKind: kind,
+          });
+          continue;
+        }
+        if (pathExists(member)) {
+          targets.push({
+            kind: "database",
+            laneOrProfile: lane,
+            relativePathOrKey: Path.relative(canonicalHome, member),
+            classification,
+            action:
+              classification === "classified" ||
+              classification === "orphan-sidecar"
+                ? "remove"
+                : "none",
+          });
+        } else if (retirement.resumable !== null) {
+          targets.push({
+            kind: "database",
+            laneOrProfile: lane,
+            relativePathOrKey: Path.relative(canonicalHome, retirement.resumable),
+            classification: "retiring",
+            action: "remove",
+          });
+        }
       }
     }
     lanes.push({
@@ -1346,24 +1464,24 @@ export async function inspectDirectFirstPublic(
     protectedFacts,
     blockers,
   };
-  witness?.operation("inspect.enumerate-targets", "after", "single");
-  if (witness !== undefined) {
-    const targets = fixedInspectWitnessTargets(canonicalHome, result);
+  instrumentation?.operation("inspect.enumerate-targets", "after", "single");
+  if (instrumentation !== undefined) {
+    const targets = fixedInspectInstrumentationTargets(canonicalHome, result);
     const chunkCounts = [2, 1, 1, 2, 1, 0, 1, 0, 1, 2, 2] as const;
     if (targets.length !== chunkCounts.length)
       throw new DirectFirstPublicError(5, "INSPECTION_UNSAFE");
     let chunkOffset = 0;
     for (const [ordinal, target] of targets.entries())
-      chunkOffset = inspectWitnessTarget(
+      chunkOffset = inspectInstrumentationTarget(
         target,
         ordinal,
         chunkCounts[ordinal]!,
         chunkOffset,
-        witness,
+        instrumentation,
       );
   }
   for (const [ordinal, sealed] of ancestorSeals.entries()) {
-    const rechecked = inspectOperation(witness, "inspect.recheck-ancestor", ordinal, () => {
+    const rechecked = inspectOperation(instrumentation, "inspect.recheck-ancestor", ordinal, () => {
       const observed = inspectAncestor(sealed.requested);
       return { ...observed, realpath: FS.realpathSync.native(observed.existing) };
     });
@@ -1371,6 +1489,12 @@ export async function inspectDirectFirstPublic(
       throw new DirectFirstPublicError(5, "INSPECTION_UNSAFE");
   }
   return result;
+}
+
+export async function inspectDirectFirstPublic(
+  canonicalHome: string,
+): Promise<DirectFirstPublicPlan> {
+  return inspectDirectFirstPublicWithLocks(canonicalHome);
 }
 
 function assertInvocationLocks(
@@ -1418,7 +1542,7 @@ function assertInvocationLocks(
 
 function fsyncDirectory(
   directory: string,
-  hooks?: DirectFirstPublicTestHooks,
+  hooks?: DirectFirstPublicInstrumentation,
 ): void {
   if (process.platform === "win32") return;
   const descriptor = FS.openSync(
@@ -1430,10 +1554,10 @@ function fsyncDirectory(
   } finally {
     FS.closeSync(descriptor);
   }
-  hooks?.afterBoundary?.("directory-fsynced", directory);
+  hooks?.checkpoint?.("directory-fsynced", directory);
 }
 
-interface ApplyWitnessPathSeal {
+interface ApplyInstrumentationPathSeal {
   readonly path: string;
   readonly dev: string;
   readonly ino: string;
@@ -1442,16 +1566,16 @@ interface ApplyWitnessPathSeal {
   readonly sha256: string;
 }
 
-function readApplyWitnessPath(
+function readApplyInstrumentationPath(
   path: string,
   ordinal: number,
   dataChunkCount: number,
   chunkOffset: { value: number },
-  witness: DirectApplyWitnessPort,
+  instrumentation: DirectApplyInstrumentationPort,
   operationPrefix: "apply" = "apply",
-): ApplyWitnessPathSeal {
+): ApplyInstrumentationPathSeal {
   const stat = applySyncOperation(
-    witness,
+    instrumentation,
     `${operationPrefix}.lstat-target`,
     ordinal,
     () => FS.lstatSync(path, { bigint: true }),
@@ -1462,7 +1586,7 @@ function readApplyWitnessPath(
     ? FS.constants.O_RDONLY
     : FS.constants.O_RDONLY | FS.constants.O_NOFOLLOW;
   const descriptor = applySyncOperation(
-    witness,
+    instrumentation,
     `${operationPrefix}.open-target-hash`,
     ordinal,
     () => FS.openSync(path, flags),
@@ -1474,7 +1598,7 @@ function readApplyWitnessPath(
         const start = Math.floor((Number(stat.size) * chunk) / dataChunkCount);
         const end = Math.floor((Number(stat.size) * (chunk + 1)) / dataChunkCount);
         applySyncOperation(
-          witness,
+          instrumentation,
           `${operationPrefix}.read-target-hash-chunk`,
           chunkOffset.value++,
           () => {
@@ -1487,7 +1611,7 @@ function readApplyWitnessPath(
       }
     }
     applySyncOperation(
-      witness,
+      instrumentation,
       `${operationPrefix}.read-target-hash-chunk`,
       chunkOffset.value++,
       () => {
@@ -1503,16 +1627,16 @@ function readApplyWitnessPath(
   } finally {
     let injected: unknown;
     try {
-      witness.operation(`${operationPrefix}.close-target-hash`, "before", ordinal);
+      instrumentation.operation(`${operationPrefix}.close-target-hash`, "before", ordinal);
     } catch (cause) {
       injected = cause;
     }
     FS.closeSync(descriptor);
     if (injected !== undefined) throw injected;
-    witness.operation(`${operationPrefix}.close-target-hash`, "after", ordinal);
+    instrumentation.operation(`${operationPrefix}.close-target-hash`, "after", ordinal);
   }
   return applySyncOperation(
-    witness,
+    instrumentation,
     `${operationPrefix}.seal-target`,
     ordinal,
     () => ({
@@ -1526,7 +1650,7 @@ function readApplyWitnessPath(
   );
 }
 
-function assertApplyWitnessPathSeal(expected: ApplyWitnessPathSeal): void {
+function assertApplyInstrumentationPathSeal(expected: ApplyInstrumentationPathSeal): void {
   const stat = FS.lstatSync(expected.path, { bigint: true });
   if (
     stat.dev.toString() !== expected.dev ||
@@ -1551,16 +1675,16 @@ function readApplyExclusion(
   ordinal: number,
   dataChunkCount: number,
   chunkOffset: { value: number },
-  witness: DirectApplyWitnessPort,
-): ApplyWitnessPathSeal {
-  const stat = applySyncOperation(witness, "apply.lstat-exclusion", ordinal, () =>
+  instrumentation: DirectApplyInstrumentationPort,
+): ApplyInstrumentationPathSeal {
+  const stat = applySyncOperation(instrumentation, "apply.lstat-exclusion", ordinal, () =>
     FS.lstatSync(path, { bigint: true }));
   if (!stat.isFile() || stat.isSymbolicLink() || stat.nlink !== 1n)
     throw new Error("DESTRUCTION_INCOMPLETE");
   const flags = process.platform === "win32"
     ? FS.constants.O_RDONLY
     : FS.constants.O_RDONLY | FS.constants.O_NOFOLLOW;
-  const descriptor = applySyncOperation(witness, "apply.open-exclusion", ordinal, () =>
+  const descriptor = applySyncOperation(instrumentation, "apply.open-exclusion", ordinal, () =>
     FS.openSync(path, flags));
   const hash = createHash("sha256");
   try {
@@ -1568,7 +1692,7 @@ function readApplyExclusion(
       const start = Math.floor((Number(stat.size) * chunk) / dataChunkCount);
       const end = Math.floor((Number(stat.size) * (chunk + 1)) / dataChunkCount);
       applySyncOperation(
-        witness,
+        instrumentation,
         "apply.read-exclusion-hash-chunk",
         chunkOffset.value++,
         () => {
@@ -1580,7 +1704,7 @@ function readApplyExclusion(
       );
     }
     applySyncOperation(
-      witness,
+      instrumentation,
       "apply.read-exclusion-hash-chunk",
       chunkOffset.value++,
       () => {
@@ -1592,13 +1716,13 @@ function readApplyExclusion(
   } finally {
     let injected: unknown;
     try {
-      witness.operation("apply.close-exclusion", "before", ordinal);
+      instrumentation.operation("apply.close-exclusion", "before", ordinal);
     } catch (cause) {
       injected = cause;
     }
     FS.closeSync(descriptor);
     if (injected !== undefined) throw injected;
-    witness.operation("apply.close-exclusion", "after", ordinal);
+    instrumentation.operation("apply.close-exclusion", "after", ordinal);
   }
   return {
     path,
@@ -1756,6 +1880,83 @@ function sameDatabaseFileSeal(expected: DatabaseFileSeal, current: DatabaseFileS
   );
 }
 
+const DATABASE_RETIREMENT_SUFFIX = /\.retiring-([0-9a-f]{64})-([0-9]+)$/u;
+
+function databaseRetirementPath(target: string, seal: DatabaseFileSeal): string {
+  return `${target}.retiring-${seal.sha256}-${seal.size}`;
+}
+
+function inspectDatabaseRetirement(target: string): {
+  readonly resumable: string | null;
+  readonly blocked: boolean;
+} {
+  const directory = Path.dirname(target);
+  if (!pathExists(directory)) return { resumable: null, blocked: false };
+  const prefix = `${Path.basename(target)}.retiring-`;
+  const candidates = FS.readdirSync(directory)
+    .filter((name) => name.startsWith(prefix))
+    .map((name) => Path.join(directory, name));
+  if (candidates.length === 0) return { resumable: null, blocked: false };
+  if (candidates.length !== 1 || pathExists(target))
+    return { resumable: null, blocked: true };
+  const candidate = candidates[0]!;
+  const match = DATABASE_RETIREMENT_SUFFIX.exec(candidate);
+  if (!match) return { resumable: null, blocked: true };
+  let seal: DatabaseFileSeal;
+  try {
+    seal = readDatabaseFileSeal(candidate);
+  } catch {
+    return { resumable: null, blocked: true };
+  }
+  if (seal.size === "0") return { resumable: null, blocked: false };
+  return seal.sha256 === match[1] && seal.size === match[2]
+    ? { resumable: candidate, blocked: false }
+    : { resumable: null, blocked: true };
+}
+
+function shredSealedFile(path: string, seal: DatabaseFileSeal): void {
+  const readFlags = process.platform === "win32"
+    ? FS.constants.O_RDONLY
+    : FS.constants.O_RDONLY | FS.constants.O_NOFOLLOW;
+  let descriptor = FS.openSync(path, readFlags);
+  try {
+    const opened = FS.fstatSync(descriptor, { bigint: true });
+    if (
+      opened.dev.toString() !== seal.dev ||
+      opened.ino.toString() !== seal.ino ||
+      opened.size.toString() !== seal.size
+    ) throw new Error("DESTRUCTION_INCOMPLETE");
+    if ((opened.mode & 0o200n) === 0n)
+      FS.fchmodSync(descriptor, Number(opened.mode | 0o200n));
+  } finally {
+    FS.closeSync(descriptor);
+  }
+  const writeFlags = process.platform === "win32"
+    ? FS.constants.O_WRONLY
+    : FS.constants.O_WRONLY | FS.constants.O_NOFOLLOW;
+  descriptor = FS.openSync(path, writeFlags);
+  try {
+    const opened = FS.fstatSync(descriptor, { bigint: true });
+    if (
+      opened.dev.toString() !== seal.dev ||
+      opened.ino.toString() !== seal.ino ||
+      opened.size.toString() !== seal.size
+    ) throw new Error("DESTRUCTION_INCOMPLETE");
+    FS.ftruncateSync(descriptor, 0);
+    FS.fsyncSync(descriptor);
+  } finally {
+    FS.closeSync(descriptor);
+  }
+  const terminal = FS.lstatSync(path, { bigint: true });
+  if (
+    !terminal.isFile() ||
+    terminal.isSymbolicLink() ||
+    terminal.dev.toString() !== seal.dev ||
+    terminal.ino.toString() !== seal.ino ||
+    terminal.size !== 0n
+  ) throw new Error("DESTRUCTION_INCOMPLETE");
+}
+
 function sealDatabaseTargets(
   canonicalHome: string,
   plan: DirectFirstPublicPlan,
@@ -1773,68 +1974,57 @@ function sealDatabaseTargets(
 function removeDatabaseTarget(
   canonicalHome: string,
   seal: DatabaseTargetSeal,
-  hooks?: DirectFirstPublicTestHooks,
+  hooks?: DirectFirstPublicInstrumentation,
   databaseOrdinal?: number,
 ): void {
   const relativePath = seal.relativePath;
   const target = Path.join(canonicalHome, relativePath);
-  const parent = Path.dirname(target);
   assertAncestorSeal(seal);
   const current = readDatabaseTargetSeal(canonicalHome, relativePath);
   if (!sameDatabaseFileSeal(current, seal))
     throw new Error("DESTRUCTION_INCOMPLETE");
-  const tombstone = Path.join(
-    parent,
-    `.${Path.basename(target)}.discarding-${randomUUID()}`,
-  );
-  if (pathExists(tombstone)) throw new Error("DESTRUCTION_INCOMPLETE");
-  hooks?.afterBoundary?.("database-rename-preflight", relativePath);
-  if (databaseOrdinal !== undefined)
-    hooks?.witness?.barrier?.("apply-seal-to-database-unlink", databaseOrdinal);
-  assertAncestorSeal(seal);
-  FS.renameSync(target, tombstone);
-  let removed = false;
-  try {
-    const moved = readDatabaseFileSeal(tombstone);
-    if (!sameDatabaseFileSeal(seal, moved)) {
-      assertAncestorSeal(seal);
-      if (pathExists(target)) throw new Error("DESTRUCTION_INCOMPLETE");
-      FS.renameSync(tombstone, target);
-      fsyncDirectory(parent);
-      throw new Error("DESTRUCTION_INCOMPLETE");
-    }
-    assertAncestorSeal(seal);
-    if (!sameDatabaseFileSeal(seal, readDatabaseFileSeal(tombstone)))
-      throw new Error("DESTRUCTION_INCOMPLETE");
-    FS.unlinkSync(tombstone);
-    removed = true;
-    hooks?.afterBoundary?.("database-unlinked", relativePath);
-    if (pathExists(target) || pathExists(tombstone))
-      throw new Error("DESTRUCTION_INCOMPLETE");
-    fsyncDirectory(parent, hooks);
-  } finally {
-    if (!removed && pathExists(tombstone) && !pathExists(target)) {
-      assertAncestorSeal(seal);
-      FS.renameSync(tombstone, target);
-      fsyncDirectory(parent);
-    }
+  const alreadyRetiring = DATABASE_RETIREMENT_SUFFIX.test(target);
+  const retirement = alreadyRetiring
+    ? target
+    : databaseRetirementPath(target, seal);
+  if (!alreadyRetiring) {
+    if (pathExists(retirement)) throw new Error("DESTRUCTION_INCOMPLETE");
+    FS.renameSync(target, retirement);
+    fsyncDirectory(Path.dirname(target));
   }
+  hooks?.checkpoint?.("database-rename-preflight", relativePath);
+  if (databaseOrdinal !== undefined)
+    hooks?.instrumentation?.barrier?.("apply-seal-to-database-unlink", databaseOrdinal);
+  assertAncestorSeal(seal);
+  if (!sameDatabaseFileSeal(seal, readDatabaseFileSeal(retirement)))
+    throw new Error("DESTRUCTION_INCOMPLETE");
+  shredSealedFile(retirement, seal);
+  hooks?.checkpoint?.("database-unlinked", relativePath);
+  const terminal = FS.lstatSync(retirement, { bigint: true });
+  if (
+    !terminal.isFile() ||
+    terminal.isSymbolicLink() ||
+    terminal.dev.toString() !== seal.dev ||
+    terminal.ino.toString() !== seal.ino ||
+    terminal.size !== 0n
+  ) throw new Error("DESTRUCTION_INCOMPLETE");
+  fsyncDirectory(Path.dirname(target), hooks);
 }
 
 function completeApplyPathEdge(
   target: string,
   targetOrdinal: number,
-  hooks: DirectFirstPublicTestHooks | undefined,
+  hooks: DirectFirstPublicInstrumentation | undefined,
 ): void {
   applySyncOperation(
-    hooks?.witness,
+    hooks?.instrumentation,
     "apply.fsync-target-parent",
     targetOrdinal,
     () => fsyncDirectory(Path.dirname(target)),
   );
-  hooks?.witness?.barrier?.("apply-mutation-to-absence", targetOrdinal);
+  hooks?.instrumentation?.barrier?.("apply-mutation-to-absence", targetOrdinal);
   applySyncOperation(
-    hooks?.witness,
+    hooks?.instrumentation,
     "apply.verify-target-absent",
     targetOrdinal,
     () => {
@@ -1852,7 +2042,7 @@ interface PackageTargetSeal {
   readonly relativePath: string;
   readonly generation: string;
   readonly digest: string;
-  readonly state: "full" | "manifest-only" | "empty";
+  readonly state: RemainingTombstoneState;
   readonly ancestors: readonly PathIdentitySeal[];
   readonly directory: PathIdentitySeal;
   readonly lifecycleState: DatabaseFileSeal;
@@ -1904,7 +2094,7 @@ function readPackageTargetSeal(
       ? Path.basename(path)
       : /^(.+)\.[0-9a-f]{64}$/u.exec(Path.basename(path))?.[1];
   if (!generation) throw new Error("DESTRUCTION_INCOMPLETE");
-  const state =
+  const state: RemainingTombstoneState =
     target.kind === "package-stage"
       ? "full"
       : validateRemainingTombstone(packageRoot, path, generation, digest);
@@ -1913,9 +2103,7 @@ function readPackageTargetSeal(
     const validated = validateClosedStage(packageRoot, path, generation);
     if (validated.treeDigest !== digest) throw new Error("DESTRUCTION_INCOMPLETE");
     names.push(validated.executablePath, "manifest.json");
-  } else if (state === "manifest-only") {
-    names.push("manifest.json");
-  }
+  } else names.push(...FS.readdirSync(path).sort());
   const ancestry = readAncestorSeal(canonicalHome, Path.join(packageRoot, ".seal"));
   return {
     lane,
@@ -1948,12 +2136,12 @@ function sealPackageTargets(
   );
 }
 
-async function witnessApplyTargetSeals(
+async function instrumentationApplyTargetSeals(
   canonicalHome: string,
   plan: DirectFirstPublicPlan,
   packageTargetSeals: ReadonlyMap<string, PackageTargetSeal>,
-  witness: DirectApplyWitnessPort,
-): Promise<readonly ApplyWitnessPathSeal[]> {
+  instrumentation: DirectApplyInstrumentationPort,
+): Promise<readonly ApplyInstrumentationPathSeal[]> {
   const chunkCounts = [2, 1, 1, 2, 1, 1, 1, 0] as const;
   const targets: Array<{
     readonly path: string;
@@ -1977,16 +2165,16 @@ async function witnessApplyTargetSeals(
   if (targets.length !== chunkCounts.length)
     throw new Error("DESTRUCTION_INCOMPLETE");
   const chunkOffset = { value: 0 };
-  const seals: ApplyWitnessPathSeal[] = [];
+  const seals: ApplyInstrumentationPathSeal[] = [];
   for (const [ordinal, target] of targets.entries()) {
     if (target.profile !== undefined) {
-      applySyncOperation(witness, "apply.lstat-target", ordinal, () => {
+      applySyncOperation(instrumentation, "apply.lstat-target", ordinal, () => {
         const stat = FS.lstatSync(target.path);
         if (!stat.isDirectory() || stat.isSymbolicLink())
           throw new Error("DESTRUCTION_INCOMPLETE");
       });
       const observed = await applyOperation(
-        witness,
+        instrumentation,
         "apply.open-target-hash",
         ordinal,
         () => inspectProfileDraftKeys(
@@ -1997,27 +2185,27 @@ async function witnessApplyTargetSeals(
       const values = [observed.v1, observed.v2] as const;
       for (let chunk = 0; chunk < chunkCounts[ordinal]!; chunk += 1)
         applySyncOperation(
-          witness,
+          instrumentation,
           "apply.read-target-hash-chunk",
           chunkOffset.value++,
           () => values[chunk]!,
         );
       applySyncOperation(
-        witness,
+        instrumentation,
         "apply.read-target-hash-chunk",
         chunkOffset.value++,
         () => null,
       );
-      applySyncOperation(witness, "apply.close-target-hash", ordinal, () => undefined);
-      applySyncOperation(witness, "apply.seal-target", ordinal, () => observed);
+      applySyncOperation(instrumentation, "apply.close-target-hash", ordinal, () => undefined);
+      applySyncOperation(instrumentation, "apply.seal-target", ordinal, () => observed);
       continue;
     }
-    seals.push(readApplyWitnessPath(
+    seals.push(readApplyInstrumentationPath(
       target.path,
       ordinal,
       chunkCounts[ordinal]!,
       chunkOffset,
-      witness,
+      instrumentation,
     ));
   }
   return seals;
@@ -2049,39 +2237,57 @@ function removeSealedPackageEntry(
   seal: PackageTargetSeal,
   directory: string,
   name: string,
-  remainingBefore: readonly string[],
-  hooks?: DirectFirstPublicTestHooks,
+  expectedState: RemainingTombstoneState,
+  hooks?: DirectFirstPublicInstrumentation,
   transitionOrdinal?: number,
   targetOrdinal?: number,
 ): void {
-  assertPackageState(canonicalHome, seal, directory, remainingBefore);
+  assertAncestorSeal(seal);
+  if (!sameDirectoryIdentity(seal.directory, directory))
+    throw new Error("DESTRUCTION_INCOMPLETE");
+  const packageRoot = Path.join(canonicalHome, seal.lane, "packages");
+  const statePath = Path.join(packageRoot, "state.json");
+  if (
+    !sameDatabaseFileSeal(seal.lifecycleState, readDatabaseFileSeal(statePath)) ||
+    validateRemainingTombstone(
+      packageRoot,
+      directory,
+      seal.generation,
+      seal.digest,
+    ) !== expectedState
+  ) throw new Error("DESTRUCTION_INCOMPLETE");
   const target = Path.join(directory, name);
-  hooks?.afterBoundary?.("package-edge-preflight", target);
+  hooks?.checkpoint?.("package-edge-preflight", target);
   if (transitionOrdinal !== undefined)
-    hooks?.witness?.barrier?.("apply-seal-to-package-transition", transitionOrdinal);
+    hooks?.instrumentation?.barrier?.("apply-seal-to-package-transition", transitionOrdinal);
   if (transitionOrdinal !== undefined)
-    hooks?.witness?.operation("apply.transition-package-node", "before", transitionOrdinal);
-  assertPackageState(canonicalHome, seal, directory, remainingBefore);
-  const tombstone = Path.join(directory, `.${name}.discarding-${randomUUID()}`);
-  FS.renameSync(target, tombstone);
-  let removed = false;
-  try {
-    const expected = seal.entries.find((entry) => entry.name === name);
-    if (!expected || !sameDatabaseFileSeal(expected, readDatabaseFileSeal(tombstone))) {
-      if (pathExists(target)) throw new Error("DESTRUCTION_INCOMPLETE");
-      FS.renameSync(tombstone, target);
-      throw new Error("DESTRUCTION_INCOMPLETE");
-    }
-    assertAncestorSeal(seal);
-    FS.unlinkSync(tombstone);
-    removed = true;
-    hooks?.afterBoundary?.("package-entry-unlinked", target);
-    if (transitionOrdinal !== undefined)
-      hooks?.witness?.operation("apply.transition-package-node", "after", transitionOrdinal);
-  } finally {
-    if (!removed && pathExists(tombstone) && !pathExists(target))
-      FS.renameSync(tombstone, target);
+    hooks?.instrumentation?.operation("apply.transition-package-node", "before", transitionOrdinal);
+  if (validateRemainingTombstone(
+    packageRoot,
+    directory,
+    seal.generation,
+    seal.digest,
+  ) !== expectedState) throw new Error("DESTRUCTION_INCOMPLETE");
+  const expected = seal.entries.find((entry) => entry.name === name);
+  if (!expected || !sameDatabaseFileSeal(expected, readDatabaseFileSeal(target)))
+    throw new Error("DESTRUCTION_INCOMPLETE");
+  const alreadyRetiring = parsePackageRetirementEntry(name) !== null;
+  const retirementName = alreadyRetiring
+    ? name
+    : packageRetirementEntry(name, expected);
+  const retirement = Path.join(directory, retirementName);
+  if (!alreadyRetiring) {
+    if (pathExists(retirement)) throw new Error("DESTRUCTION_INCOMPLETE");
+    FS.renameSync(target, retirement);
+    fsyncDirectory(directory);
   }
+  if (!sameDatabaseFileSeal(expected, readDatabaseFileSeal(retirement)))
+    throw new Error("DESTRUCTION_INCOMPLETE");
+  shredSealedFile(retirement, expected);
+  fsyncDirectory(directory);
+  hooks?.checkpoint?.("package-entry-unlinked", target);
+  if (transitionOrdinal !== undefined)
+    hooks?.instrumentation?.operation("apply.transition-package-node", "after", transitionOrdinal);
   if (targetOrdinal !== undefined) completeApplyPathEdge(target, targetOrdinal, hooks);
 }
 
@@ -2089,44 +2295,90 @@ function removeClosedStage(
   canonicalHome: string,
   seal: PackageTargetSeal,
   directory: string,
-  hooks?: DirectFirstPublicTestHooks,
+  hooks?: DirectFirstPublicInstrumentation,
   transitionOffset?: number,
   targetOffset?: number,
 ): void {
-  const executable = seal.entries.find((entry) => entry.name !== "manifest.json")?.name;
-  if (!executable) throw new Error("DESTRUCTION_INCOMPLETE");
-  removeSealedPackageEntry(
-    canonicalHome,
-    seal,
+  let state = validateRemainingTombstone(
+    Path.join(canonicalHome, seal.lane, "packages"),
     directory,
-    executable,
-    [executable, "manifest.json"],
-    hooks,
-    transitionOffset,
-    targetOffset,
+    seal.generation,
+    seal.digest,
   );
-  removeSealedPackageEntry(
-    canonicalHome,
-    seal,
-    directory,
-    "manifest.json",
-    ["manifest.json"],
-    hooks,
-    transitionOffset === undefined ? undefined : transitionOffset + 1,
-    targetOffset === undefined ? undefined : targetOffset + 1,
-  );
-  assertPackageState(canonicalHome, seal, directory, []);
-  hooks?.afterBoundary?.("package-edge-preflight", directory);
-  if (transitionOffset !== undefined) {
-    hooks?.witness?.barrier?.("apply-seal-to-package-transition", transitionOffset + 2);
-    hooks?.witness?.operation("apply.transition-package-node", "before", transitionOffset + 2);
+  if (state === "full" || state === "executable-retiring") {
+    const executable = seal.entries.find((entry) => {
+      const logical = parsePackageRetirementEntry(entry.name)?.logicalName ?? entry.name;
+      return logical !== "manifest.json";
+    })?.name;
+    if (!executable) throw new Error("DESTRUCTION_INCOMPLETE");
+    removeSealedPackageEntry(
+      canonicalHome, seal, directory, executable, state, hooks, transitionOffset, targetOffset,
+    );
+    state = "executable-retired";
   }
-  assertPackageState(canonicalHome, seal, directory, []);
-  FS.rmdirSync(directory);
-  hooks?.afterBoundary?.("package-directory-removed", directory);
-  if (transitionOffset !== undefined)
-    hooks?.witness?.operation("apply.transition-package-node", "after", transitionOffset + 2);
-  if (targetOffset !== undefined) completeApplyPathEdge(directory, targetOffset + 2, hooks);
+  if (state === "executable-retired" || state === "manifest-retiring") {
+    const manifest = seal.entries.find((entry) =>
+      (parsePackageRetirementEntry(entry.name)?.logicalName ?? entry.name) === "manifest.json")?.name;
+    if (!manifest) throw new Error("DESTRUCTION_INCOMPLETE");
+    removeSealedPackageEntry(
+      canonicalHome,
+      seal,
+      directory,
+      manifest,
+      state,
+      hooks,
+      transitionOffset === undefined ? undefined : transitionOffset + 1,
+      targetOffset === undefined ? undefined : targetOffset + 1,
+    );
+  }
+  if (validateRemainingTombstone(
+    Path.join(canonicalHome, seal.lane, "packages"),
+    directory,
+    seal.generation,
+    seal.digest,
+  ) !== "retired") throw new Error("DESTRUCTION_INCOMPLETE");
+  hooks?.checkpoint?.("package-directory-removed", directory);
+  if (transitionOffset !== undefined) {
+    hooks?.instrumentation?.barrier?.(
+      "apply-seal-to-package-transition",
+      transitionOffset + 2,
+    );
+    hooks?.instrumentation?.operation(
+      "apply.transition-package-node",
+      "before",
+      transitionOffset + 2,
+    );
+    hooks?.instrumentation?.operation(
+      "apply.transition-package-node",
+      "after",
+      transitionOffset + 2,
+    );
+  }
+  if (targetOffset !== undefined) {
+    applySyncOperation(
+      hooks?.instrumentation,
+      "apply.fsync-target-parent",
+      targetOffset + 2,
+      () => fsyncDirectory(Path.dirname(directory)),
+    );
+    hooks?.instrumentation?.barrier?.(
+      "apply-mutation-to-absence",
+      targetOffset + 2,
+    );
+    applySyncOperation(
+      hooks?.instrumentation,
+      "apply.verify-target-absent",
+      targetOffset + 2,
+      () => {
+        if (validateRemainingTombstone(
+          Path.join(canonicalHome, seal.lane, "packages"),
+          directory,
+          seal.generation,
+          seal.digest,
+        ) !== "retired") throw new Error("DESTRUCTION_INCOMPLETE");
+      },
+    );
+  }
 }
 
 function removePackageTombstone(
@@ -2134,7 +2386,7 @@ function removePackageTombstone(
   lane: Lane,
   relativePath: string,
   seal: PackageTargetSeal,
-  hooks?: DirectFirstPublicTestHooks,
+  hooks?: DirectFirstPublicInstrumentation,
 ): void {
   const root = Path.join(canonicalHome, lane, "packages");
   const target = Path.join(canonicalHome, lane, relativePath);
@@ -2143,40 +2395,16 @@ function removePackageTombstone(
     throw new Error("DESTRUCTION_INCOMPLETE");
   if (seal.relativePath !== relativePath || seal.lane !== lane)
     throw new Error("DESTRUCTION_INCOMPLETE");
-  if (seal.state === "full") {
-    removeClosedStage(canonicalHome, seal, target, hooks, hooks?.witness ? 0 : undefined, hooks?.witness ? 5 : undefined);
-  } else {
-    if (seal.state === "manifest-only") {
-      removeSealedPackageEntry(
-        canonicalHome,
-        seal,
-        target,
-        "manifest.json",
-        ["manifest.json"],
-        hooks,
-        hooks?.witness ? 0 : undefined,
-        hooks?.witness ? 5 : undefined,
-      );
-    }
-    assertPackageState(canonicalHome, seal, target, []);
-    hooks?.afterBoundary?.("package-edge-preflight", target);
-    if (hooks?.witness) {
-      const ordinal = seal.state === "manifest-only" ? 1 : 0;
-      hooks.witness.barrier?.("apply-seal-to-package-transition", ordinal);
-      hooks.witness.operation("apply.transition-package-node", "before", ordinal);
-    }
-    assertPackageState(canonicalHome, seal, target, []);
-    FS.rmdirSync(target);
-    hooks?.afterBoundary?.("package-directory-removed", target);
-    if (hooks?.witness) {
-      const ordinal = seal.state === "manifest-only" ? 1 : 0;
-      hooks.witness.operation("apply.transition-package-node", "after", ordinal);
-      completeApplyPathEdge(target, seal.state === "manifest-only" ? 6 : 5, hooks);
-    }
-  }
-  hooks?.afterBoundary?.("package-tombstone-removed", relativePath);
-  if (FS.readdirSync(discarding).length === 0) FS.rmdirSync(discarding);
-  else fsyncDirectory(discarding, hooks);
+  removeClosedStage(
+    canonicalHome,
+    seal,
+    target,
+    hooks,
+    hooks?.instrumentation ? 0 : undefined,
+    hooks?.instrumentation ? 5 : undefined,
+  );
+  hooks?.checkpoint?.("package-tombstone-removed", relativePath);
+  fsyncDirectory(discarding, hooks);
   fsyncDirectory(root, hooks);
 }
 
@@ -2185,7 +2413,7 @@ function removePackageStage(
   lane: Lane,
   target: TargetPlan,
   seal: PackageTargetSeal,
-  hooks?: DirectFirstPublicTestHooks,
+  hooks?: DirectFirstPublicInstrumentation,
 ): void {
   const relativePath = target.relativePathOrKey;
   const stageChild = Path.join(
@@ -2207,7 +2435,7 @@ function removePackageStage(
   );
   if (pathExists(tombstone)) throw new Error("DESTRUCTION_INCOMPLETE");
   assertPackageState(canonicalHome, seal, stageChild, seal.entries.map((entry) => entry.name));
-  hooks?.afterBoundary?.("package-rename-preflight", relativePath);
+  hooks?.checkpoint?.("package-rename-preflight", relativePath);
   assertPackageState(canonicalHome, seal, stageChild, seal.entries.map((entry) => entry.name));
   FS.renameSync(stageChild, tombstone);
   let restored = false;
@@ -2221,9 +2449,9 @@ function removePackageStage(
     throw cause;
   }
   if (restored) throw new Error("DESTRUCTION_INCOMPLETE");
-  hooks?.afterBoundary?.("package-renamed", relativePath);
+  hooks?.checkpoint?.("package-renamed", relativePath);
   if (pathExists(stageChild)) throw new Error("DESTRUCTION_INCOMPLETE");
-  hooks?.afterBoundary?.("package-stage-absent", relativePath);
+  hooks?.checkpoint?.("package-stage-absent", relativePath);
   fsyncDirectory(stage, hooks);
   fsyncDirectory(discarding, hooks);
   removeClosedStage(
@@ -2231,28 +2459,26 @@ function removePackageStage(
     seal,
     tombstone,
     hooks,
-    hooks?.witness ? 0 : undefined,
-    hooks?.witness ? 5 : undefined,
+    hooks?.instrumentation ? 0 : undefined,
+    hooks?.instrumentation ? 5 : undefined,
   );
-  hooks?.afterBoundary?.(
+  hooks?.checkpoint?.(
     "package-tombstone-removed",
     Path.relative(canonicalHome, tombstone),
   );
-  if (pathExists(tombstone)) throw new Error("DESTRUCTION_INCOMPLETE");
-  if (FS.readdirSync(discarding).length === 0) FS.rmdirSync(discarding);
   fsyncDirectory(Path.dirname(stage), hooks);
 }
 
 export async function applyDirectFirstPublic(
   canonicalHome: string,
-  hooks?: DirectFirstPublicTestHooks,
 ): Promise<DirectFirstPublicPlan> {
+  let hooks: DirectFirstPublicInstrumentation | undefined;
   const profileLocks: ProfileLock[] = [];
   const databaseLocks: ProductTruthDatabaseLock[] = [];
   let phase: "locks" | "inspection" | "destruction" = "locks";
   try {
     canonicalHome = await applyOperation(
-      hooks?.witness,
+      hooks?.instrumentation,
       "apply.resolve-scope",
       "single",
       () => {
@@ -2274,12 +2500,12 @@ export async function applyDirectFirstPublic(
       profileLocks.map((lock) => [Path.dirname(lock.path), lock.token]),
     );
     const lockOptions = { databaseLockTokens, profileLockTokens };
-    let plan = await inspectDirectFirstPublic(canonicalHome, lockOptions);
+    let plan = await inspectDirectFirstPublicWithLocks(canonicalHome, lockOptions);
     if (plan.blockers.length)
       throw new DirectFirstPublicError(4, "CLASSIFICATION_BLOCKED");
     const databaseTargetSeals = sealDatabaseTargets(canonicalHome, plan);
     const packageTargetSeals = sealPackageTargets(canonicalHome, plan);
-    const sealedPlan = await inspectDirectFirstPublic(canonicalHome, lockOptions);
+    const sealedPlan = await inspectDirectFirstPublicWithLocks(canonicalHome, lockOptions);
     if (
       sealedPlan.blockers.length ||
       JSON.stringify(sealedPlan) !== JSON.stringify(plan)
@@ -2287,14 +2513,14 @@ export async function applyDirectFirstPublic(
       throw new DirectFirstPublicError(6, "DESTRUCTION_INCOMPLETE");
     }
     plan = sealedPlan;
-    let applyWitnessSeals: readonly ApplyWitnessPathSeal[] = [];
-    let exclusionSeals: readonly ApplyWitnessPathSeal[] = [];
-    if (hooks?.witness !== undefined) {
-      applyWitnessSeals = await witnessApplyTargetSeals(
+    let applyInstrumentationSeals: readonly ApplyInstrumentationPathSeal[] = [];
+    let exclusionSeals: readonly ApplyInstrumentationPathSeal[] = [];
+    if (hooks?.instrumentation !== undefined) {
+      applyInstrumentationSeals = await instrumentationApplyTargetSeals(
         canonicalHome,
         plan,
         packageTargetSeals,
-        hooks.witness,
+        hooks.instrumentation,
       );
       const exclusionChunkOffset = { value: 0 };
       exclusionSeals = fixedApplyExclusions(canonicalHome).map((path, ordinal) =>
@@ -2303,11 +2529,11 @@ export async function applyDirectFirstPublic(
           ordinal,
           [2, 1, 1, 1][ordinal]!,
           exclusionChunkOffset,
-          hooks.witness!,
+          hooks.instrumentation!,
         ));
     }
     phase = "destruction";
-    hooks?.afterBoundary?.("mutation-preflight", canonicalHome);
+    hooks?.checkpoint?.("mutation-preflight", canonicalHome);
     assertInvocationLocks(canonicalHome, profileLocks, databaseLocks);
     for (const target of plan.targets.filter(
       (candidate) =>
@@ -2343,46 +2569,22 @@ export async function applyDirectFirstPublic(
       const legacyOrdinal = plan.profiles
         .filter((profile) => profile.v1 === "present" || profile.v2 === "present")
         .findIndex((profile) => profile.identity === identity);
-      const profileWitness = hooks?.witness !== undefined && legacyOrdinal >= 0
-        ? {
-            operation: (
-              operationId: string,
-              site: "before" | "after",
-            ) => {
-              if (operationId !== "profile-delete.atomic-batch") return;
-              hooks.witness!.operation(
-                "apply.remove-legacy-file",
-                site,
-                legacyOrdinal,
-              );
-            },
-            barrier: (barrierId: string) => {
-              if (barrierId === "profile-delete-seal-to-batch")
-                hooks.witness!.barrier?.(
-                  "apply-seal-to-file-remove",
-                  legacyOrdinal,
-                );
-            },
-          }
-        : undefined;
       const profileAfter = await deleteLegacyProfileDraftKeys(
         identity,
         profileRoot(identity),
-        hooks?.afterBoundary,
-        profileWitness,
       );
-      if (hooks?.witness !== undefined && legacyOrdinal >= 0) {
+      if (hooks?.instrumentation !== undefined && legacyOrdinal >= 0) {
         const targetOrdinal = 3 + legacyOrdinal;
         const levelDirectory = Path.join(profileRoot(identity), "Local Storage", "leveldb");
         applySyncOperation(
-          hooks.witness,
+          hooks.instrumentation,
           "apply.fsync-target-parent",
           targetOrdinal,
           () => fsyncDirectory(levelDirectory),
         );
-        hooks.witness.barrier?.("apply-mutation-to-absence", targetOrdinal);
+        hooks.instrumentation.barrier?.("apply-mutation-to-absence", targetOrdinal);
         const verifiedProfile = await applyOperation(
-          hooks.witness,
+          hooks.instrumentation,
           "apply.verify-target-absent",
           targetOrdinal,
           () => inspectProfileDraftKeys(identity, profileRoot(identity)),
@@ -2406,17 +2608,17 @@ export async function applyDirectFirstPublic(
       if (!seal) throw new Error("DESTRUCTION_INCOMPLETE");
       const selectedDatabaseOrdinal = databaseOrdinal++;
       await applyOperation(
-        hooks?.witness,
+        hooks?.instrumentation,
         "apply.unlink-database-member",
         selectedDatabaseOrdinal,
         () => removeDatabaseTarget(
           canonicalHome,
           seal,
           hooks,
-          hooks?.witness ? selectedDatabaseOrdinal : undefined,
+          hooks?.instrumentation ? selectedDatabaseOrdinal : undefined,
         ),
       );
-      if (hooks?.witness !== undefined)
+      if (hooks?.instrumentation !== undefined)
         completeApplyPathEdge(
           Path.join(canonicalHome, target.relativePathOrKey),
           selectedDatabaseOrdinal,
@@ -2425,7 +2627,7 @@ export async function applyDirectFirstPublic(
     }
     assertInvocationLocks(canonicalHome, profileLocks, databaseLocks);
     validateDefaultRoot(canonicalHome, canonicalHome);
-    const finalPlan = await inspectDirectFirstPublic(
+    const finalPlan = await inspectDirectFirstPublicWithLocks(
       canonicalHome,
       lockOptions,
     );
@@ -2437,21 +2639,16 @@ export async function applyDirectFirstPublic(
     }
     for (const [ordinal, exclusion] of exclusionSeals.entries())
       applySyncOperation(
-        hooks?.witness,
+        hooks?.instrumentation,
         "apply.verify-exclusion-hash",
         ordinal,
-        () => assertApplyWitnessPathSeal(exclusion),
+        () => assertApplyInstrumentationPathSeal(exclusion),
       );
-    for (const seal of applyWitnessSeals) {
+    for (const seal of applyInstrumentationSeals) {
       if (pathExists(seal.path)) throw new Error("DESTRUCTION_INCOMPLETE");
     }
         return finalPlan;
       },
-      (kind, identity) =>
-        hooks?.afterBoundary?.(
-          kind === "profile" ? "profile-lock-acquired" : "database-lock-acquired",
-          identity,
-        ),
     );
   } catch (cause) {
     if (cause instanceof DirectFirstPublicError) throw cause;
