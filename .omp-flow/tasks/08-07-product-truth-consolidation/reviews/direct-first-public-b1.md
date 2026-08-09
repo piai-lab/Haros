@@ -1,225 +1,197 @@
 ---
 type: "Implementation Review"
-title: "Review: Direct first-public rebuild and immutable unsplit B1"
+title: "Review: Direct-first public B1 repair candidate"
 work: "../work/direct-first-public-b1.md"
 handoff: "../handoffs/direct-first-public-b1.md"
 verdict: "FAIL"
-revision: "review-direct-first-public-b1-product-r2"
-actor_id: "direct_first_public_b1_product_review"
-dispatch_receipt: "4e09674cb24140dc9a552bb9e15c9bf5"
-predecessor_receipt: "f457f4f3b7fa42d1b8e6174f680a2892"
+revision: "review-direct-first-public-b1-repair-r1"
+actor_id: "direct_first_public_b1_repair_review"
+dispatch_receipt: "ba57e0889569452989684aebddf12779"
+predecessor_receipt: "3f690240ae57495293a232e7ea668341"
 predecessor_output: "../handoffs/direct-first-public-b1.md"
-reviewed_candidate: "280976e44435d2331f589a9100397ba9d50446e3"
-reviewed_parent: "cea92ba2ab2d99b20f138d45fe42c08ca95deb90"
-reviewed_base: "f2a32c3abb84b6d76b6c3920fa139ffe6035bb5f"
+reviewed_candidate: "452b587208287b3383eff8eeecc5a3fd0d1baecc"
+reviewed_parent: "62a6f013361623ae56e9eb6cbacb30113457c14b"
+reviewed_tree: "dd5561eff91cce87bc90c42732056da91ddb828d"
 ---
 
-# Review: Direct first-public rebuild and immutable unsplit B1
+# Review: Direct-first public B1 repair candidate
 
 ## Verdict
 
-`FAIL` / changes requested for immutable Product SHA
-`280976e44435d2331f589a9100397ba9d50446e3` (tree
-`de03741a72a43908045d0559bc65310aa24c377e`).
+`FAIL` / changes requested for immutable candidate
+`452b587208287b3383eff8eeecc5a3fd0d1baecc`.
 
-The predecessor operation is completed, resolves to the linked handoff, and uses implementer actor
-`direct_first_public_b1_alternate_impl`, distinct from reviewer
-`direct_first_public_b1_product_review`. The handoff links back to the assigned Work and binds the
-reviewed SHA. The real Git scope is exact: base-to-candidate contains 18 accepted paths, nine
-production and nine verification, with zero out-of-scope paths. Product bytes at current `HEAD`
-match the reviewed candidate.
+The predecessor operation is completed, resolves to the required linked handoff, and uses
+implementer actor `direct_first_public_b1_repair_r1`, distinct from reviewer actor
+`direct_first_public_b1_repair_review`. The handoff links back to this Work and freezes the same
+candidate. The real parent-to-candidate diff contains exactly twelve authorized paths and no
+out-of-scope path; the candidate tree is `dd5561eff91cce87bc90c42732056da91ddb828d`.
 
-The focused suites are green, but four material findings prevent acceptance. A real isolated
-SIGKILL leaves deleted Package bytes in an unmodelled random tombstone and fresh inspection cannot
-converge. The Service owner manufactures 62 schema-statement events around one opaque initializer,
-so the claimed 1,263 real owner operations are not real at that owner. Production exposes verifier
-control and raw paths to callers, including a global renderer hook. Finally, the packaged
-fresh/reopen/restart claim has no retained artifact or executable transcript that this reviewer can
-reproduce or bind to the reported hashes.
+The retained packaged fresh/reopen/same-home restart chain, actual Product/Service SQL statement
+mapping, static 1,263-case manifest, and reviewer-owned 69-path control-reference closure all
+reproduce. They do not overcome three material findings: the required Scripts final gate fails, the
+destructive sink can truncate content that no longer matches the sealed bytes, and successful apply
+intentionally leaves database and Package retirement artifacts that the controlling Work and
+Interface require to become absent.
 
-No product repair was made. No runtime/session record, Campaign status, Evidence ledger, commit,
-branch, worktree, push, merge, publication, or maintainer home was touched.
+No code repair, runtime/session record, Campaign status, Evidence ledger, commit, branch, worktree,
+push, merge, publication, or maintainer canonical home was touched. No fix is approved by this
+review.
 
 ## Findings
 
-### P0 — SIGKILL inside the Package `rename -> hash/unlink` window leaves a hidden, non-convergent copy
+### P0 — the required Scripts final gate fails an exact profile-inspect fault case
 
-`removeSealedPackageEntry` renames each sealed entry to a fresh random
-`.NAME.discarding-${randomUUID()}`, hashes the renamed file, and only then unlinks it
-(`scripts/product-truth/direct-first-public.ts:2047-2084`). Its `finally` restores the entry only
-for a catchable in-process failure; SIGKILL cannot execute that restoration. The durable witnesses
-surround the larger Package transition, not this internal rename-to-unlink interval. The existing
-kill tests terminate after `apply.transition-package-node` or `package-entry-unlinked`, both after
-the hidden file has already been removed.
+The exact missing final command completed with exit `1`: 1 file failed, 2 passed; 1 test failed and
+88 passed. The failed case was
+`first-public-capability-verifier.test.ts > directly injects every before/after fault of the exact
+profile-inspect owner`. For case
+`profile-inspect.relstat-source-entry:before:2`, the test required the selected
+`PORT_FAULT` to be the terminal error, but received an `ENOENT` while lstat-ing the verifier scratch
+run directory. The assertion is at
+`scripts/product-truth/first-public-capability-verifier.test.ts:376-381`.
 
-An independent probe used a generated temporary HOME and a valid disposable Package with a 512 MiB
-sparse entry, watched the Package root, and sent real SIGKILL as soon as the random entry tombstone
-appeared. The child died by `SIGKILL`; the fresh process observed:
+This is not a cosmetic test-name mismatch. The Work makes every actual operation ordinal's
+before/after fault and full terminal disposition part of the exact execution bijection. The static
+manifest still generates 10 owners, 146 operations, 87 states and 1,263 unique cases, but the
+required executable verifier does not preserve the selected fault disposition for this case. PASS
+requires zero failed tests and a complete execution bijection, so this final-gate failure alone
+rejects the candidate.
 
-```text
-sawDiscarding=true
-stage=.discarding/<sealed-generation>/.entry.js.discarding-<uuid>, manifest.json
-fresh inspect blockers=["PACKAGE_STATE_UNKNOWN"]
-remove targets=[]
-```
+### P0 — the final destructive sink can erase unknown same-inode content
 
-The temporary HOME was removed in `finally`. This is a direct counterexample to the Work's
-requirements that abrupt kill at each Package graph edge converge by fresh inspect/apply, that
-full/manifest-only/empty tombstones converge only through modelled digest rules, and that no hidden
-copy exist (`work/direct-first-public-b1.md:281-285,292-302`). The same unobserved shape exists for
-database removal at `direct-first-public.ts:1773-1821`, where a random same-directory tombstone is
-also created and rehashed before unlink. The demonstrated Package path alone is sufficient for P0.
+`removeDatabaseTarget` rehashes the retirement path and compares the full seal, then closes that
+inspection descriptor before calling `shredSealedFile`
+(`scripts/product-truth/direct-first-public.ts:1982-2001`). `shredSealedFile` opens the path again
+and, immediately before `ftruncate(0)`, checks only `dev`, `ino`, and `size`
+(`:1917-1946`). It does not compare the sealed SHA-256, mtime, mode, or link count on the descriptor
+that performs the destructive write. The same helper is used for Package entries at
+`removeSealedPackageEntry`.
 
-The repair must make the intermediate identity durable and enumerable/recoverable across process
-death, or reduce the sink to a genuinely single identity-matched unlink, and add real kill coverage
-inside every multi-step destructive interval. This requires a new candidate SHA and independent
-review; no fix is authorized in this review.
+Therefore a separate writer can change the already-renamed inode in place to different bytes of the
+same length after the full-seal read closes and before the write descriptor truncates it. Those
+bytes retain the accepted inode and size and are destroyed. The new no-hook tests cover path
+replacement by renaming the sealed inode aside and creating a new inode; they do not cover this
+same-inode content replacement. This violates the Interface requirement that any content change
+stop before mutation and the assignment's requirement that unknown bytes are never deleted.
 
-### P0 — the Service schema fault matrix counts synthetic events, not 31 actual SQL statement operations
+### P0 — successful apply leaves retirement artifacts instead of reaching exact absence
 
-The frozen catalog declares `service.create-schema-statement` as
-`G1Transaction+Ordinal -> SchemaStatementApplied` with atomicity `single-sql-statement`
-(`interfaces/product-truth-complexity-v7.md:503`). Production instead emits all 31 `before` events
-in a loop, invokes `initializeSystemCapabilitySchema` once as an opaque aggregate, then emits all 31
-`after` events in another loop (`apps/service/src/persistence/Layers/Sqlite.ts:251-269`). No event
-pair wraps an individual SQL statement.
+The repair changes deletion into permanent zero-byte receipts. Database members are renamed to
+`<member>.retiring-<sha256>-<size>`, truncated, and deliberately retained
+(`scripts/product-truth/direct-first-public.ts:1883-1914,1974-2011`). Fresh inspection treats a
+zero-byte database receipt as neither resumable nor blocking. Package entries are likewise renamed
+to `.retiring-*`, truncated, and classified as terminal `retired`; `classifyPackage` then omits the
+retired directory from its target list (`:769-800,1170-1200`). The focused Package test explicitly
+requires `.discarding/<generation.digest>/` and its two zero-byte files to remain
+(`scripts/product-truth/direct-first-public.test.ts:2102-2115`).
 
-Consequently, a fault at any `before` ordinal happens before every schema statement; a fault at any
-`after` ordinal happens after every schema statement. The test at
-`apps/service/src/persistence/Layers/Sqlite.test.ts:99-166` only selects each manifest case, throws
-when its synthetic event is observed, and checks that the case ID was appended. It never proves
-that the selected ordinal is the corresponding real SQL operation. The normal witness test likewise
-compares emitted labels with manifest labels, not event-to-operation mediation.
+That behavior directly contradicts the binding contracts:
 
-This falsifies the handoff's statements that every count comes from real owner calls, that no
-expected-ID loop was used to mark execution, and that all 1,263 cases have real owner witnesses
-(`handoffs/direct-first-public-b1.md:93-126`). It also violates the Work's required actual-operation
-ordinal bijection, complete prefix, fault terminal disposition, and hard rejection of coarsened
-operations (`work/direct-first-public-b1.md:307-328`). Green 92/92 Service tests reproduce the
-synthetic event surface; they do not close this source-level mismatch.
+- Work done condition requires the sealed Package graph
+  `full -> manifest-only -> empty -> absent` and says there is no hidden copy or output artifact
+  (`work/direct-first-public-b1.md:277-302`).
+- The direct-rebuild Interface requires exact unlink/rmdir edges, removal of `.discarding` when
+  empty, a final receipt only after the whole allowlisted set is absent, and clean absence after the
+  final target disappears (`interfaces/direct-first-public-rebuild.md:167-190,202-209`).
 
-### P0 — production callers can inject/suppress verifier behavior and receive raw destructive paths
+Stable enumeration fixes the prior random hidden-tombstone bug only for the nonterminal interval; it
+does not authorize a new persistent receipt state or redefine `absent`. The handoff cannot broaden
+or replace the Work and Interface. A repaired candidate must either complete the authored graph to
+absence without deleting unsealed bytes or obtain an authorized contract change before Product
+acceptance.
 
-The Work requires owner-private verifier ports, typed intent/sanitized results, no raw path or
-adapter escape, and no production caller ability to choose or suppress verifier events
-(`work/direct-first-public-b1.md:67-72,307-314`). The candidate exposes the opposite:
+## Independently accepted closures
 
-- `scripts/product-truth/direct-first-public.ts:415-433` publicly exports
-  `DirectFirstPublicTestHooks`, `DirectApplyWitnessPort`, an `afterBoundary` callback receiving a raw
-  target string, and a barrier callback receiving a `replaceTarget` mutation closure. Public
-  `applyDirectFirstPublic(..., hooks?)` accepts this control at `:2246-2249`.
-- `scripts/product-truth/chromium-leveldb.ts:17-51,674,797-798` and
-  `scripts/product-truth/database-lock.ts:45-63,136-562` export and accept equivalent witness ports;
-  `apps/service/src/persistence/Layers/Sqlite.ts:28-42,352-355` and
-  `apps/service/src/product/ProductControlPlane.ts:108-145,5094-5099` expose them on normal
-  production layer factories.
-- `apps/web/src/composerDraftStore.ts:63-80` reads a process-global
-  `Symbol.for("omnimind.composer-draft-witness")` before and after store effects. Any renderer code
-  that knows the stable symbol can install a callback, throw during ordinary production operations,
-  or alter the observed prefix. The verification test uses that same global injection path.
+### Actual Product/Service SQL evidence
 
-This is not merely an exported test type: these callbacks execute inline at destructive/runtime
-sinks and can throw or mutate between checks. It is a public raw-capability leak and unmediated
-effect, which the Work classifies as a hard B1 rejection.
+The synthetic production witness loops and public layer-factory ports are gone. The changed tests
+intercept the real Node SQLite statement boundary: Service proxies each real `prepare(...).run/all`
+and Product proxies each real schema `exec`. The focused two-file run passed 67/67 tests, including
+31 Service schema statement ordinals at both fault sites, Product's 27 statement ordinals, rollback
+to zero application objects, and real SIGKILL/reopen convergence. This closes the prior synthetic
+SQL-event finding for the exercised Node path.
 
-The reviewer-owned deterministic inventory parsed every
-`omp-flow-production-boundary-v1.production` block across the five Works into a 69-path fixed
-universe (56 present, 13 declared-but-absent; sorted-universe SHA-256
-`d6014dfcaf7f99050250f5a0b448a076771d250da27484bc88b66fd9c60399bf`). It scanned the full
-present universe without candidate/config filtering for filesystem adapters and verifier-control
-references. It produced 377 canonical hits and 86 verifier-control records; their canonical JSON
-SHA-256 is `3a13af789d3a5c06cee112ffc192f0b68202f3227d67f548ba1be12142670048`.
-The complete unexplained set is the line-addressed set matching `TestHooks`, `WitnessPort`,
-`afterBoundary`, `Symbol.for(`, or `globalThis[` in these seven files:
+### Production-callable control removal and 69-path closure
 
-```text
-apps/service/src/persistence/Layers/Sqlite.ts:28,38,80,204,238,289,354
-apps/service/src/product/ProductControlPlane.ts:108,119,131,145,836,869,931,946,5098
-apps/web/src/composerDraftStore.ts:63,64,72,74
-scripts/product-truth/chromium-leveldb.ts:17,30,51,674,797,798,892,909
-scripts/product-truth/database-lock.ts:45,63,75,93,136,234,304,327,379,435,470,535,562
-scripts/product-truth/direct-first-public.ts:415,416,420,423,437,449,460,474,561,1121,1421,1433,
-  1450,1554,1776,1791,1811,1827,1955,2053,2059,2078,2092,2119,2126,2137,2162,2170,2177,
-  2188,2210,2224,2226,2237,2248,2310,2371,2451
-scripts/product-truth/sqlite-classifier.ts:37,50,62,79,95,294,1124
-```
+Normal production exports accept no witness/test hook, raw target callback, barrier, mutation
+closure, or renderer-global Symbol. The seven formerly affected files have zero matches for the
+failed Review union, extended with `witness`, `__omnimind`, and `process.__`. Instrumentation types
+remaining in the direct-tool modules are private and their production-local variables are
+unassigned; verifier tests inject only by transforming runtime-generated copies in an OS temporary
+directory.
 
-The fully expanded enumeration command was a Node `-e` program that: globbed the five exact
-`.omp-flow/tasks/08-07-product-truth-consolidation/work/*.md` files; parsed every fenced JSON
-`omp-flow-production-boundary-v1` block; sorted/deduplicated each `production[].path`; read every
-present file line-by-line; emitted canonical `{path,line,text}` records for the regex union
-`TestHooks|WitnessPort|afterBoundary|Symbol\\.for\\(|globalThis\\[` and filesystem operation names
-`readFile|writeFile|open|rename|unlink|rm|mkdir|readdir|stat|lstat|realpath|symlink|link`; and hashed
-the sorted universe and canonical unexplained JSON with Node `crypto.createHash("sha256")`.
-Runtime was Node `v25.9.0`; Bun was `1.3.14`. Because 86 references remain unexplained and several
-are conclusively public, the required zero-unexplained raw-reference closure fails; no meter result
-can substitute for it.
+The reviewer-owned enumerator parsed every `omp-flow-production-boundary-v1.production` row from
+the five authored Works, without candidate/config filtering. Its literal inline source SHA-256 is
+`5fe5314cef33aa9a5742645ffe1d0c70ff4b766ef4c67d0a2db4d5a640fae318`. Results:
 
-### P1 — the packaged fresh/reopen/restart proof is not independently reproducible from the handoff
+- universe: 69 paths; 56 present and 13 authored-absent;
+- newline-joined sorted universe SHA-256:
+  `d6014dfcaf7f99050250f5a0b448a076771d250da27484bc88b66fd9c60399bf`;
+- 562 canonical raw-adapter/control line records; JSON SHA-256:
+  `3ede67a1101ed6d9f18ae0015212a13ab9f16d62fdc561d2ae5587ae0a38158c`;
+- forbidden/unexplained control records: 0.
 
-The Work requires an isolated generated-home packaged Electron→Service→Host fresh/open/reopen and
-restart proof with exact g1 state and recorded commands, exit codes, and sanitized results
-(`work/direct-first-public-b1.md:414-420`). The handoff reports ZIP/DMG SHA-256 values and prose
-readiness outcomes (`handoffs/direct-first-public-b1.md:217-232`), but provides no artifact path,
-build command, launch command, captured readiness transcript, generated-home layout, or retained
-read-only reopen observation. Neither reported artifact is present in the repository; the only ZIPs
-found are unrelated cached OpenCode brand assets.
+The fully expanded command was a Node `-e` program that parsed the five exact Work fences, sorted
+and deduplicated `production[].path`, read all present files line-by-line, recorded
+`{path,line,kind,spanSha256}` for filesystem adapter names and the control union
+`TestHooks|WitnessPort|afterBoundary|Symbol.for(|globalThis[|witness|__omnimind|process.__`, and
+hashed the universe and ordered records with Node `crypto`. Runtime versions were Node `v25.9.0`
+and Bun `1.3.14`.
 
-A hash with no available byte source cannot bind the claimed journey to the reviewed SHA, and prose
-cannot be replayed as independent verification. Because the candidate already has three P0 product
-failures, this review did not create a replacement distributable and does not convert a new local
-build into evidence for the unavailable producer artifact. A future candidate handoff must retain a
-sanitized, replayable artifact/command/transcript chain and the independent reviewer must rerun the
-fresh, reopen, shutdown, and same-home restart journey.
+### Frozen universe identity
 
-## Independent verification
+Direct generation from the unchanged catalog returned exactly 10 owners, 146 operations, 87
+states, and 1,263 unique case IDs: 87 normal, 1,026 fault, 85 race, and 65 kill. Sorted case-ID JSON
+SHA-256 was `0b04c0c18f62f213f9ea6f7479a2c5f0ab5e306541c8891aee2d857acdf7f61f`.
+The catalog source remains the immutable v7 interface and was not expanded. The static
+`assertExecutedCaseBijection` accepts the exact list and rejects missing/extra/duplicate lists, but
+the executable final gate finding above prevents claiming the required behavioral bijection.
 
-### Operation, authority, and scope
+### Retained exact-provenance packaged replay
 
-- Read-only resolution of `.omp-flow/.runtime/operations/f457f4f3b7fa42d1b8e6174f680a2892.json`
-  confirmed a completed implementer operation, correct Bundle/Work/output, and actor distinct from
-  this reviewer. Read-only resolution of this review receipt confirmed the assigned reviewer role,
-  output boundary, and predecessor. The CLI `operation show` could not be used because this shell had
-  no active task; selecting one would have modified forbidden session state.
-- `git log --format='%H %P' -3 280976e...` confirmed candidate → `cea92ba...` → base
-  `f2a32c...`; `git rev-parse 280976e...^{tree}` returned the handoff tree
-  `de03741a72a43908045d0559bc65310aa24c377e`.
-- `git diff --name-status --no-renames f2a32c... 280976e...` returned exactly the 18 paths recorded
-  by the handoff. Parsing them against the Work production fence and the Design's exact B1
-  verification rows produced nine production, nine verification, zero rejected, zero deletion,
-  rename, mode, lifecycle, dependency, lockfile, meter, runtime, or Harness changes.
-- `git diff --check f2a32c... 280976e...` — PASS. Initial and final pre-Review
-  `git status --short` were clean.
+The retained ZIP, DMG and replay verifier match the handoff and `artifact-manifest.json` exactly:
 
-### Focused executable gates
+- ZIP: 169,203,720 bytes,
+  `6ecbbb17dd66e2facc9c46da05620242a0e320d1ca6bd82750dab01a9da7cf23`;
+- DMG: 169,178,146 bytes,
+  `fe0913ee51c001a6884dde2ca933f17417514e2c7c5e30ce53c54ec6454d6fe5`;
+- replay verifier:
+  `e7ef3469aca291ff9146a799869a6a9181f8487dd479356e95842a51165fd14d`;
+- candidate `bun.lock`:
+  `05960c3b0c2b51ca90ad5f2411ff6eb4c24356a028f72ed0fb2ca364347bed91`.
 
+The reviewer replayed `prepare`, `fresh`, `reopen-fresh`, `restart`, and `reopen-restart` in order.
+All exited 0. Both launches satisfied all five readiness predicates with exactly one Service, one
+Native Host and one renderer, and stopped the complete process tree by SIGTERM. Both read-only
+reopens observed Product/Service generation 1, mode `0600`, zero Product runs, Automation runs and
+outbox rows, all six retired database bundle members absent, and unchanged database identities
+across the same-home restart.
+
+## Exact commands and results
+
+- `git diff --name-status --no-renames 62a6f013... 452b5872...` — 12 paths, all authorized;
+  default-reject comparison against the Work production fence plus 16 Design verification rows:
+  12 accepted, 0 rejected.
+- `git diff --check 62a6f013... 452b5872...` — exit 0.
 - From `scripts`,
   `bun run test -- product-truth/direct-first-public.test.ts product-truth/first-public-capability-verifier.test.ts release-update-policy.test.ts`
-  — PASS, 3 files / 87 tests.
+  — exit 1; 1 failed file / 2 passed, 1 failed test / 88 passed.
 - From repository root,
-  `bun run vitest run apps/service/src/config.permissions.test.ts apps/service/src/native-host/executionBoundary.test.ts apps/service/src/opencode/liveJourneyProbe.test.ts apps/service/src/persistence/Layers/Sqlite.test.ts apps/service/src/product/ProductControlPlane.test.ts --maxWorkers=1 --no-file-parallelism`
-  — PASS, 5 files / 92 tests.
+  `bun run vitest run apps/service/src/persistence/Layers/Sqlite.test.ts apps/service/src/product/ProductControlPlane.test.ts --maxWorkers=1 --no-file-parallelism`
+  — exit 0; 2 files / 67 tests.
 - From `apps/web`,
-  `bun run vitest run src/appSettings.test.ts src/bootstrap.test.ts src/components/chat/ComposerImageAttachmentChip.test.tsx src/composerDraftStore.attachments.test.ts src/composerDraftStore.persistence.test.ts src/lib/composerImageSource.test.ts --maxWorkers=1 --no-file-parallelism`
-  — PASS, 6 files / 85 tests.
-- The isolated 512 MiB sparse-Package SIGKILL probe described under finding 1 — FAILS candidate
-  convergence exactly as recorded; child signal `SIGKILL`, hidden random tombstone retained, fresh
-  inspect `PACKAGE_STATE_UNKNOWN`. The probe used only a just-created temporary HOME, restored
-  process environment, and recursively removed that exact temporary directory in `finally`.
-- The deterministic 69-path raw-reference inventory described under finding 3 — FAILS the required
-  zero-unexplained closure with 86 verifier-control records. A first exploratory parser incorrectly
-  treated the fenced JSON as Markdown list rows and returned an empty universe; it was discarded,
-  corrected to parse the authoritative JSON, and is not evidence.
+  `bun run vitest run src/composerDraftStore.persistence.test.ts --maxWorkers=1 --no-file-parallelism`
+  — exit 0; 1 file / 45 tests.
+- Static manifest generation plus `assertExecutedCaseBijection` — exit 0; exact
+  10/146/87/1,263 and 87/1,026/85/65 counts.
+- Retained packaged five-command replay — all five commands exit 0 with the facts recorded above.
 
-These green tests establish that the submitted test surface is reproducible. They do not override
-the destructive counterexample, synthetic operation mapping, public capability leakage, or missing
-packaged evidence.
+## Return boundary
 
-## Review boundary and required return
-
-This review covers only immutable Product SHA
-`280976e44435d2331f589a9100397ba9d50446e3` against the linked Work, handoff, PRD, Design,
-decisions, interface, destructive safety boundary, frozen verifier universe, and exact B1 path
-authority. It does not approve any repair. The owner must create a new immutable candidate that
-closes all findings, regenerate truthful owner evidence, retain replayable packaged proof, and send
-it to a different reviewer.
+Review path: `.omp-flow/tasks/08-07-product-truth-consolidation/reviews/direct-first-public-b1.md`.
+Verdict: `FAIL`. Reviewer actor: `direct_first_public_b1_repair_review`. Dispatch receipt:
+`ba57e0889569452989684aebddf12779`. Completed predecessor:
+`3f690240ae57495293a232e7ea668341`, output
+`.omp-flow/tasks/08-07-product-truth-consolidation/handoffs/direct-first-public-b1.md`.
+Explicitly allowed fix by this review: none.
