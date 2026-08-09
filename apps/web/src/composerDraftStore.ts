@@ -58,6 +58,28 @@ export type { BrowserAnnotationDraft } from "./lib/browserAnnotations";
 export { partializeComposerDraftStoreState } from "./composerDraftPersistence";
 
 const COMPOSER_PERSIST_DEBOUNCE_MS = 300;
+const RETIRED_COMPOSER_DRAFT_STORAGE_V1 = "omnimind:composer-drafts:v1";
+const RETIRED_COMPOSER_DRAFT_STORAGE_V2 = "omnimind:composer-drafts:v2";
+const COMPOSER_DRAFT_WITNESS = Symbol.for("omnimind.composer-draft-witness");
+interface ComposerDraftWitnessPort {
+  readonly operation: (
+    operationId: string,
+    site: "before" | "after",
+    ordinal: "single",
+  ) => void;
+  readonly barrier?: (barrierId: string) => void;
+}
+const composerDraftWitness = (): ComposerDraftWitnessPort | undefined =>
+  (globalThis as Record<PropertyKey, unknown>)[COMPOSER_DRAFT_WITNESS] as
+    | ComposerDraftWitnessPort
+    | undefined;
+const webOperation = <Result>(operationId: string, effect: () => Result): Result => {
+  const witness = composerDraftWitness();
+  witness?.operation(operationId, "before", "single");
+  const result = effect();
+  witness?.operation(operationId, "after", "single");
+  return result;
+};
 const composerBaseStorage: StateStorage =
   typeof localStorage !== "undefined" &&
   typeof localStorage.getItem === "function" &&
@@ -65,6 +87,30 @@ const composerBaseStorage: StateStorage =
   typeof localStorage.removeItem === "function"
     ? localStorage
     : createMemoryStorage();
+
+const readStorageValue = (key: string): string | null => {
+  const value = composerBaseStorage.getItem(key);
+  if (value instanceof Promise) throw new Error("Composer draft storage must be synchronous.");
+  return value;
+};
+
+const retiredComposerDraftPresent = (key: string): boolean =>
+  Object.prototype.hasOwnProperty.call(composerBaseStorage, key);
+
+const assertRetiredComposerDraftsAbsent = (owner: "web-read" | "web-write"): void => {
+  const witness = composerDraftWitness();
+  const v1Present = webOperation(`${owner}.get-v1`, () =>
+    retiredComposerDraftPresent(RETIRED_COMPOSER_DRAFT_STORAGE_V1));
+  witness?.barrier?.(`${owner}-v1-to-v2`);
+  const v2Present = webOperation(`${owner}.get-v2`, () =>
+    retiredComposerDraftPresent(RETIRED_COMPOSER_DRAFT_STORAGE_V2));
+  witness?.barrier?.(`${owner}-complete-cut-to-g1`);
+  const changedDuringCut =
+    retiredComposerDraftPresent(RETIRED_COMPOSER_DRAFT_STORAGE_V1) ||
+    retiredComposerDraftPresent(RETIRED_COMPOSER_DRAFT_STORAGE_V2);
+  if (v1Present || v2Present || changedDuringCut)
+    throw new Error("PREBASELINE_RESET_REQUIRED");
+};
 
 const decodeComposerDraftEnvelope = (
   raw: string,
@@ -87,23 +133,42 @@ const decodeComposerDraftEnvelope = (
 };
 
 const writeAndVerifyComposerDraftEnvelope = (state: PersistedComposerDraftStoreState): void => {
+  const normalized = normalizeCurrentPersistedComposerDraftStoreState(state);
+  assertRetiredComposerDraftsAbsent("web-write");
+  const current = webOperation("web-write.get-g1-before", () =>
+    readStorageValue(COMPOSER_DRAFT_STORAGE_KEY));
+  if (current !== null) decodeComposerDraftEnvelope(current);
+  composerDraftWitness()?.barrier?.("web-write-current-read-to-set");
   const encoded = JSON.stringify({
     generation: COMPOSER_DRAFT_STORAGE_GENERATION,
-    state: normalizeCurrentPersistedComposerDraftStoreState(state),
+    state: normalized,
   });
-  composerBaseStorage.setItem(COMPOSER_DRAFT_STORAGE_KEY, encoded);
-  const reread = composerBaseStorage.getItem(COMPOSER_DRAFT_STORAGE_KEY);
-  if (reread instanceof Promise) throw new Error("Composer draft storage must be synchronous.");
+  webOperation("web-write.set-g1", () =>
+    composerBaseStorage.setItem(COMPOSER_DRAFT_STORAGE_KEY, encoded));
+  const reread = webOperation("web-write.reread-g1", () =>
+    readStorageValue(COMPOSER_DRAFT_STORAGE_KEY));
   if (reread === null) throw new Error("Composer draft generation-1 write was not durable.");
   decodeComposerDraftEnvelope(reread);
 };
 
 const readOrCreateComposerDraftEnvelope = (): PersistedComposerDraftStoreState => {
-  const raw = composerBaseStorage.getItem(COMPOSER_DRAFT_STORAGE_KEY);
-  if (raw instanceof Promise) throw new Error("Composer draft storage must be synchronous.");
+  assertRetiredComposerDraftsAbsent("web-read");
+  const raw = webOperation("web-read.get-g1", () =>
+    readStorageValue(COMPOSER_DRAFT_STORAGE_KEY));
   if (raw === null) {
-    writeAndVerifyComposerDraftEnvelope(EMPTY_PERSISTED_DRAFT_STORE_STATE);
-    return EMPTY_PERSISTED_DRAFT_STORE_STATE;
+    composerDraftWitness()?.barrier?.("web-read-g1-absence-to-create");
+    const concurrent = readStorageValue(COMPOSER_DRAFT_STORAGE_KEY);
+    if (concurrent !== null) return decodeComposerDraftEnvelope(concurrent).state;
+    const encoded = JSON.stringify({
+      generation: COMPOSER_DRAFT_STORAGE_GENERATION,
+      state: EMPTY_PERSISTED_DRAFT_STORE_STATE,
+    });
+    webOperation("web-read.set-empty-g1", () =>
+      composerBaseStorage.setItem(COMPOSER_DRAFT_STORAGE_KEY, encoded));
+    const reread = webOperation("web-read.reread-g1", () =>
+      readStorageValue(COMPOSER_DRAFT_STORAGE_KEY));
+    if (reread === null) throw new Error("Composer draft generation-1 write was not durable.");
+    return decodeComposerDraftEnvelope(reread).state;
   }
   return decodeComposerDraftEnvelope(raw).state;
 };

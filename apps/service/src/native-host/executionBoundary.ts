@@ -8,16 +8,15 @@ import {
   type ProductRuntimeCatalog,
   type ProductRunId,
 } from "@omnimind/contracts";
-import path from "node:path";
 import { Effect, Layer } from "effect";
 
 import {
-  PRODUCT_DATABASE_FILENAME,
   ProductControlPlaneError,
   ProductExecutionUnavailable,
   isProductPackageFatalCode,
   makeProductControlPlaneLayer,
   readProductPackageLifecycleFacts,
+  resolveProductDatabasePath,
   type ProductExecutionBoundary,
 } from "../product/ProductControlPlane";
 import { ServerConfig } from "../config";
@@ -713,7 +712,7 @@ export const makeNativeHostProductControlPlaneLayer = (input: {
       },
     });
     const catalog = yield* gateway.catalog!().pipe(Effect.catch(() => Effect.succeed(null)));
-    const productDatabase = path.join(input.stateDir, PRODUCT_DATABASE_FILENAME);
+    const productDatabase = resolveProductDatabasePath(input.stateDir);
     return makeProductControlPlaneLayer(productDatabase, gateway, catalog);
   });
 
@@ -721,7 +720,7 @@ export const NativeHostProductControlPlaneLive = Layer.unwrap(
   Effect.gen(function* () {
     const { stateDir } = yield* ServerConfig;
     const client = makeNativeHostClientFromEnvironment(process.env);
-    const productDatabase = path.join(stateDir, PRODUCT_DATABASE_FILENAME);
+    const productDatabase = resolveProductDatabasePath(stateDir);
     const applicationRoot = process.env.OMNIMIND_APP_ROOT?.trim();
     const lifecycleStartup = yield* Effect.tryPromise(() =>
       initializeProductPackageLifecycle({

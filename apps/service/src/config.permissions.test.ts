@@ -132,6 +132,16 @@ describe.skipIf(process.platform === "win32")("private server state permissions"
       expect(() => preparePrivateServerPaths(paths)).toThrow(/retired Service database bundle/i);
       expect(fs.readFileSync(retired)).toEqual(before);
       expect(mode(retired)).toBe(beforeMode);
+      for (const currentPath of [
+        path.dirname(paths.dbPath),
+        paths.secretsDir,
+        paths.attachmentsDir,
+        paths.logsDir,
+        paths.terminalLogsDir,
+        path.join(paths.stateDir, PRIVATE_STATE_REPAIR_MARKER),
+      ]) {
+        expect(fs.existsSync(currentPath)).toBe(false);
+      }
     },
   );
 

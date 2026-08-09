@@ -19,7 +19,8 @@ import {
   type ProductExecutionFact,
   type ProductRuntimeCatalog,
 } from "@omnimind/contracts";
-import { Effect, ManagedRuntime } from "effect";
+import * as NodeServices from "@effect/platform-node/NodeServices";
+import { Effect, Layer, ManagedRuntime } from "effect";
 import { describe, expect, it } from "vitest";
 
 import {
@@ -27,12 +28,14 @@ import {
   resolveProductDatabasePath,
   type ProductExecutionBoundary,
 } from "../product/ProductControlPlane";
+import { ServerConfig } from "../config";
 import { NativeHostClient } from "./client";
 import {
   initializeProductPackageLifecycle,
   makeNativeHostExecutionBoundary,
   makeNativeHostProductControlPlaneLayer,
   makePackageStateUnavailableBoundary,
+  NativeHostProductControlPlaneLive,
 } from "./executionBoundary";
 import { EMPTY_PI_PACKAGE_GENERATION, PiPackageLifecycle } from "./packageLifecycle";
 
@@ -92,6 +95,29 @@ async function waitUntil(predicate: () => boolean): Promise<void> {
 }
 
 describe("Native Host production Product composition", () => {
+  it("uses the canonical stores Product database for control-plane and Package lifecycle startup", async () => {
+    const root = mkdtempSync(path.join(tmpdir(), "omnimind-product-composition-"));
+    const baseDir = path.join(root, "product-home");
+    const stateDir = path.join(baseDir, "userdata");
+    const productDatabase = resolveProductDatabasePath(stateDir);
+    const retiredRootDatabase = path.join(stateDir, "product.sqlite");
+    const runtime = ManagedRuntime.make(
+      NativeHostProductControlPlaneLive.pipe(
+        Layer.provide(
+          ServerConfig.layerTest(process.cwd(), baseDir).pipe(Layer.provide(NodeServices.layer)),
+        ),
+      ),
+    );
+    try {
+      await runtime.runPromise(Effect.service(ProductControlPlane));
+      expect(lstatSync(productDatabase).isFile()).toBe(true);
+      expect(() => lstatSync(retiredRootDatabase)).toThrow();
+    } finally {
+      await runtime.dispose();
+      rmSync(root, { recursive: true, force: true });
+    }
+  });
+
   it("keeps Pi available when a foreign OpenCode scratch child fails validation", async () => {
     const root = mkdtempSync(path.join(tmpdir(), "omnimind-scratch-isolation-"));
     const stateDir = path.join(root, "userdata");

@@ -32,10 +32,17 @@ import {
   canonicalSqliteFingerprint,
   classifyLegacyDatabase,
 } from "./sqlite-classifier.ts";
+import { generateFirstPublicManifest } from "./first-public-capability-verifier.ts";
 
 const temporaryDirectories: string[] = [];
 const originalHome = process.env.HOME;
 const originalOverride = process.env.OMNIMIND_HOME;
+const originalAppData = process.env.APPDATA;
+
+function classifierScratchRuns(): Set<string> {
+  const root = Path.join(OS.tmpdir(), "omnimind-product-truth-classifier");
+  return new Set(FS.existsSync(root) ? FS.readdirSync(root).filter((name) => name.startsWith("run-")) : []);
+}
 
 function makeAccountHome(): string {
   const home = FS.mkdtempSync(
@@ -61,6 +68,33 @@ function treeHash(root: string): string {
   };
   walk(root);
   return hash.digest("hex");
+}
+
+function unlockedTreeHash(root: string): string {
+  if (!FS.existsSync(root)) return "absent";
+  const hash = createHash("sha256");
+  const walk = (directory: string): void => {
+    for (const name of FS.readdirSync(directory).sort()) {
+      if (name === "SingletonLock" || name.endsWith(".lifecycle-lock")) continue;
+      const path = Path.join(directory, name);
+      const stat = FS.lstatSync(path);
+      hash.update(`${Path.relative(root, path)}\0${stat.mode}\0${stat.isDirectory() ? 0 : stat.size}\0`);
+      if (stat.isDirectory()) walk(path);
+      else hash.update(FS.readFileSync(path));
+    }
+  };
+  walk(root);
+  return hash.digest("hex");
+}
+
+function pathHash(path: string): string {
+  if (!FS.existsSync(path)) return "absent";
+  const stat = FS.lstatSync(path);
+  if (stat.isDirectory()) return treeHash(path);
+  return createHash("sha256")
+    .update(`${stat.mode}\0${stat.size}\0`)
+    .update(FS.readFileSync(path))
+    .digest("hex");
 }
 
 async function seedProfile(
@@ -154,6 +188,102 @@ function seedDisposablePackage(
     { mode: 0o600 },
   );
   return { packageRoot, stage, generation };
+}
+
+interface InspectWitnessFixture {
+  readonly home: string;
+  readonly canonical: string;
+  readonly database: DatabaseSync;
+  readonly ancestors: readonly string[];
+  readonly targets: readonly string[];
+}
+
+async function createInspectWitnessFixture(): Promise<InspectWitnessFixture> {
+  const home = makeAccountHome();
+  const canonical = canonicalProductHome();
+  const devProfile = await seedProfile([LEGACY_DRAFT_KEYS[0]], "omnimind-dev");
+  const productionProfile = await seedProfile([LEGACY_DRAFT_KEYS[1]], "omnimind");
+  const packageFixture = seedDisposablePackage(canonical, "dev");
+  FS.mkdirSync(Path.join(canonical, "userdata", "packages"), {
+    recursive: true,
+    mode: 0o700,
+  });
+  const databasePath = Path.join(canonical, "dev", "product-state-v1.sqlite");
+  const database = new DatabaseSync(databasePath);
+  database.exec("PRAGMA journal_mode = WAL; PRAGMA wal_autocheckpoint = 0;");
+  database.exec(extractProductSchema("27cd50b52606a894430492b6494687b7010d623d"));
+  database.exec("INSERT INTO product_meta(schema_version) VALUES (1)");
+  const databaseMembers = [databasePath, `${databasePath}-wal`, `${databasePath}-shm`]
+    .sort((left, right) =>
+      Path.relative(canonical, left).localeCompare(Path.relative(canonical, right)),
+    );
+  const legacyProfiles = [devProfile.profile, productionProfile.profile].map((profile) =>
+    Path.join(profile, "Local Storage", "leveldb"));
+  const targets = [
+    ...databaseMembers,
+    ...legacyProfiles,
+    Path.join(packageFixture.packageRoot, "state.json"),
+    packageFixture.stage,
+    Path.join(packageFixture.stage, "manifest.json"),
+    Path.join(packageFixture.stage, "entry.js"),
+    ...legacyProfiles,
+  ];
+  const ancestors = [
+    home,
+    canonical,
+    Path.join(canonical, "dev"),
+    Path.join(canonical, "userdata"),
+    devProfile.profile,
+    productionProfile.profile,
+    Path.join(canonical, "dev", "packages"),
+    Path.join(canonical, "userdata", "packages"),
+  ];
+  expect(targets).toHaveLength(11);
+  expect(ancestors).toHaveLength(8);
+  expect(targets.every((target) => FS.existsSync(target))).toBe(true);
+  expect(ancestors.every((target) => FS.existsSync(target))).toBe(true);
+  return { home, canonical, database, ancestors, targets };
+}
+
+function replacePathFromSeparateWriter(target: string, replacement: string): void {
+  const writer = spawnSync(
+    process.execPath,
+    [
+      "-e",
+      `const fs=require("node:fs");const target=${JSON.stringify(target)};const replacement=${JSON.stringify(replacement)};const stat=fs.lstatSync(target);fs.renameSync(target,replacement);if(stat.isDirectory())fs.mkdirSync(target,{mode:0o700});else fs.writeFileSync(target,Buffer.from("separate-writer-replacement"),{mode:0o600});`,
+    ],
+    { encoding: "utf8" },
+  );
+  expect(writer.status, writer.stderr).toBe(0);
+}
+
+function createConflictingPathFromSeparateWriter(
+  target: string,
+  kind: "file" | "directory",
+): void {
+  const writer = spawnSync(
+    process.execPath,
+    [
+      "-e",
+      `const fs=require("node:fs");const target=${JSON.stringify(target)};fs.mkdirSync(require("node:path").dirname(target),{recursive:true,mode:0o700});${kind === "directory" ? "fs.mkdirSync(target,{mode:0o700});" : "fs.writeFileSync(target,Buffer.from('separate-writer-conflict'),{mode:0o600});"}`,
+    ],
+    { encoding: "utf8" },
+  );
+  expect(writer.status, writer.stderr).toBe(0);
+}
+
+function putLegacyKeyFromSeparateWriter(profile: string, logicalKey: string): void {
+  const rawKey = chromiumLocalStorageDataKeysForTest(logicalKey)[0]!.toString("hex");
+  const levelPath = Path.join(profile, "Local Storage", "leveldb");
+  const writer = spawnSync(
+    process.execPath,
+    [
+      "-e",
+      `const {ClassicLevel}=await import("classic-level");const db=new ClassicLevel(${JSON.stringify(levelPath)},{keyEncoding:"buffer",valueEncoding:"buffer",createIfMissing:false});await db.open();await db.put(Buffer.from(${JSON.stringify(rawKey)},"hex"),Buffer.from("separate-writer-conflict"));await db.close();`,
+    ],
+    { cwd: Path.resolve(import.meta.dirname, ".."), encoding: "utf8" },
+  );
+  expect(writer.status, writer.stderr).toBe(0);
 }
 
 function markPackageReferenced(
@@ -265,6 +395,62 @@ function createProductFixture(revision: string): {
   return { path, database };
 }
 
+async function seedApplyAllTargetsFixture(): Promise<{
+  readonly home: string;
+  readonly canonical: string;
+}> {
+  const home = makeAccountHome();
+  const canonical = canonicalProductHome();
+  const devProfile = await seedProfile([LEGACY_DRAFT_KEYS[0]], "omnimind-dev");
+  const productionProfile = await seedProfile([LEGACY_DRAFT_KEYS[1]], "omnimind");
+  FS.writeFileSync(Path.join(devProfile.profile, "Preferences"), "dev-preferences", {
+    mode: 0o600,
+  });
+  FS.writeFileSync(
+    Path.join(productionProfile.profile, "Preferences"),
+    "production-preferences",
+    { mode: 0o600 },
+  );
+  seedDisposablePackage(canonical, "dev");
+  const userdataPackages = Path.join(canonical, "userdata", "packages");
+  FS.mkdirSync(userdataPackages, { recursive: true, mode: 0o700 });
+  FS.writeFileSync(
+    Path.join(userdataPackages, "state.json"),
+    JSON.stringify({
+      version: 1,
+      currentGeneration: null,
+      lastKnownGoodGeneration: null,
+      validatedGenerations: {},
+      quarantinedGenerations: {},
+    }),
+    { mode: 0o600 },
+  );
+  const source = createProductFixture("27cd50b52606a894430492b6494687b7010d623d");
+  source.database.exec("PRAGMA journal_mode = WAL; PRAGMA wal_autocheckpoint = 0;");
+  source.database.exec("CREATE TABLE wal_probe(value TEXT); DROP TABLE wal_probe;");
+  const destination = Path.join(canonical, "dev", "product-state-v1.sqlite");
+  for (const suffix of ["", "-wal", "-shm"] as const) {
+    expect(FS.existsSync(`${source.path}${suffix}`)).toBe(true);
+    FS.copyFileSync(`${source.path}${suffix}`, `${destination}${suffix}`);
+    FS.chmodSync(`${destination}${suffix}`, 0o600);
+  }
+  source.database.close();
+  const sourceDirectory = Path.dirname(source.path);
+  FS.rmSync(sourceDirectory, { recursive: true, force: true });
+  const registeredSource = temporaryDirectories.indexOf(sourceDirectory);
+  if (registeredSource >= 0) temporaryDirectories.splice(registeredSource, 1);
+  return { home, canonical };
+}
+
+function fixedApplyExclusionPathsForTest(canonical: string): readonly string[] {
+  return [
+    Path.join(canonical, "dev", "packages", "state.json"),
+    Path.join(canonical, "userdata", "packages", "state.json"),
+    Path.join(profileRoot("omnimind-dev"), "Preferences"),
+    Path.join(profileRoot("omnimind"), "Preferences"),
+  ];
+}
+
 function createServiceFixture(revision: string): {
   path: string;
   database: DatabaseSync;
@@ -297,6 +483,8 @@ afterEach(() => {
   process.env.HOME = originalHome;
   if (originalOverride === undefined) delete process.env.OMNIMIND_HOME;
   else process.env.OMNIMIND_HOME = originalOverride;
+  if (originalAppData === undefined) delete process.env.APPDATA;
+  else process.env.APPDATA = originalAppData;
   for (const directory of temporaryDirectories.splice(0))
     FS.rmSync(directory, { recursive: true });
 });
@@ -373,10 +561,91 @@ describe("direct first-public root and inspection safety", () => {
     for (const [command, args, options] of processSpy.mock.calls) {
       expect(command).toBe("ps");
       expect(args).toEqual(["-axo", "uid=,pid=,command="]);
-      expect(options).toEqual({ encoding: "utf8", timeout: 5_000 });
+      expect(options).toEqual({
+        encoding: "utf8",
+        timeout: 5_000,
+        maxBuffer: 1024 * 1024,
+      });
     }
     processSpy.mockRestore();
     fetchSpy.mockRestore();
+  });
+
+  it("uses one fixed bounded Windows CIM query and rejects a current-user Desktop process", async () => {
+    const home = makeAccountHome();
+    process.env.APPDATA = Path.join(home, "AppData", "Roaming");
+    const platformSpy = vi.spyOn(process, "platform", "get").mockReturnValue("win32");
+    const processSpy = vi.spyOn(ChildProcess, "execFileSync").mockReturnValue(
+      JSON.stringify({
+        currentSid: "S-1-5-21-1000",
+        rows: [
+          {
+            sid: "S-1-5-21-1000",
+            pid: 4242,
+            executablePath: "C:\\Program Files\\OmniMind\\OmniMind.exe",
+            commandLine: "OmniMind.app",
+          },
+        ],
+      }),
+    );
+    processSpy.mockClear();
+    try {
+      const before = treeHash(home);
+      await expect(inspectDirectFirstPublic(canonicalProductHome())).rejects.toMatchObject({
+        code: "OWNER_NOT_STOPPED",
+        exitCode: 3,
+      });
+      expect(treeHash(home)).toBe(before);
+      expect(processSpy).toHaveBeenCalledOnce();
+      const [command, args, options] = processSpy.mock.calls[0]!;
+      expect(command).toBe("powershell.exe");
+      expect(args).toHaveLength(5);
+      expect(args?.slice(0, 4)).toEqual([
+        "-NoLogo",
+        "-NoProfile",
+        "-NonInteractive",
+        "-Command",
+      ]);
+      expect(args?.[4]).toContain("Get-CimInstance Win32_Process");
+      expect(args?.[4]).not.toContain(home);
+      expect(options).toEqual({
+        encoding: "utf8",
+        timeout: 5_000,
+        maxBuffer: 1024 * 1024,
+      });
+    } finally {
+      processSpy.mockRestore();
+      platformSpy.mockRestore();
+    }
+  });
+
+  it("fails closed when Windows process ownership does not match the current SID", async () => {
+    const home = makeAccountHome();
+    process.env.APPDATA = Path.join(home, "AppData", "Roaming");
+    const platformSpy = vi.spyOn(process, "platform", "get").mockReturnValue("win32");
+    const processSpy = vi.spyOn(ChildProcess, "execFileSync").mockReturnValue(
+      JSON.stringify({
+        currentSid: "S-1-5-21-1000",
+        rows: [
+          {
+            sid: "S-1-5-21-2000",
+            pid: 4242,
+            executablePath: "C:\\Windows\\System32\\notepad.exe",
+            commandLine: "notepad.exe",
+          },
+        ],
+      }),
+    );
+    processSpy.mockClear();
+    try {
+      await expect(inspectDirectFirstPublic(canonicalProductHome())).rejects.toMatchObject({
+        code: "OWNER_NOT_STOPPED",
+        exitCode: 3,
+      });
+    } finally {
+      processSpy.mockRestore();
+      platformSpy.mockRestore();
+    }
   });
 
   it("exposes only exact sanitized inspect/apply CLI shapes and exit classes", () => {
@@ -543,14 +812,14 @@ describe("Chromium Local Storage LevelDB boundary", () => {
     expect(
       trace.some((entry) =>
         entry.includes(
-          "profile-key-removed:omnimind-dev:omnimind:composer-drafts:v1",
+          "profile-batch-committed:omnimind-dev",
         ),
       ),
     ).toBe(true);
     expect(
       trace.some((entry) =>
         entry.includes(
-          "profile-key-removed:omnimind-dev:omnimind:composer-drafts:v2",
+          "profile-batch-committed:omnimind-dev",
         ),
       ),
     ).toBe(true);
@@ -595,6 +864,475 @@ describe("Chromium Local Storage LevelDB boundary", () => {
     await applyDirectFirstPublic(canonical);
     expect((await inspectDirectFirstPublic(canonical)).targets).toEqual([]);
   });
+
+  it("directly injects every before/after fault of the exact inspect owner", async () => {
+    makeAccountHome();
+    const canonical = canonicalProductHome();
+    await seedProfile([LEGACY_DRAFT_KEYS[0]], "omnimind-dev");
+    await seedProfile([LEGACY_DRAFT_KEYS[1]], "omnimind");
+    seedDisposablePackage(canonical, "dev");
+    const databasePath = Path.join(canonical, "dev", "product-state-v1.sqlite");
+    const database = new DatabaseSync(databasePath);
+    database.exec("PRAGMA journal_mode = WAL; PRAGMA wal_autocheckpoint = 0;");
+    database.exec(extractProductSchema("27cd50b52606a894430492b6494687b7010d623d"));
+    database.exec("INSERT INTO product_meta(schema_version) VALUES (1)");
+    expect(FS.existsSync(`${databasePath}-wal`)).toBe(true);
+    expect(FS.existsSync(`${databasePath}-shm`)).toBe(true);
+    const manifest = generateFirstPublicManifest();
+    const owner = "scripts/product-truth/direct-first-public.ts#inspectDirectFirstPublic";
+    const faultCases = manifest.cases.filter(
+      (item) => item.owner === owner && item.family === "fault",
+    );
+    const witnessed: string[] = [];
+    const sourceHash = treeHash(OS.homedir());
+    try {
+      for (const selected of faultCases) {
+        let caught: unknown;
+        try {
+          await inspectDirectFirstPublic(canonical, {
+            witness: {
+              operation: (operationId, site, ordinal) => {
+                if (
+                  operationId === selected.operationOrBarrierId &&
+                  site === selected.site &&
+                  ordinal === selected.ordinal
+                ) {
+                  witnessed.push(selected.id);
+                  throw new Error(`PORT_FAULT:${operationId}:${site}:${ordinal}`);
+                }
+              },
+            },
+          });
+        } catch (cause) {
+          caught = cause;
+        }
+        expect(caught, `missing executable fault witness: ${selected.id}`).toBeInstanceOf(Error);
+        expect((caught as Error).message).toContain(
+          `PORT_FAULT:${selected.operationOrBarrierId}:${selected.site}:${selected.ordinal}`,
+        );
+        expect(treeHash(OS.homedir())).toBe(sourceHash);
+      }
+    } finally {
+      database.close();
+    }
+    expect(witnessed.sort()).toEqual(faultCases.map((item) => item.id).sort());
+  }, 60_000);
+
+  it("directly runs every declared writer race of the exact inspect owner", async () => {
+    const manifest = generateFirstPublicManifest();
+    const owner = "scripts/product-truth/direct-first-public.ts#inspectDirectFirstPublic";
+    const raceCases = manifest.cases.filter(
+      (item) => item.owner === owner && item.family === "race",
+    );
+    const witnessed: string[] = [];
+    for (const selected of raceCases) {
+      const fixture = await createInspectWitnessFixture();
+      const sourceState = treeHash(fixture.home);
+      let writerRan = false;
+      let writerState = "";
+      let liveWriter: ChildProcess.ChildProcess | undefined;
+      let replacement: string | undefined;
+      try {
+        let caught: unknown;
+        try {
+          await inspectDirectFirstPublic(fixture.canonical, {
+            witness: {
+              operation: () => undefined,
+              barrier: (barrierId, ordinal) => {
+                if (
+                  barrierId !== selected.operationOrBarrierId ||
+                  ordinal !== selected.ordinal
+                ) return;
+                witnessed.push(selected.id);
+                writerRan = true;
+                if (barrierId === "inspect-process-identity-to-probe") {
+                  const markers = [
+                    "OmniMind.app",
+                    "@omnimind/service",
+                    "@omnimind/native-host",
+                  ] as const;
+                  liveWriter = ChildProcess.spawn(
+                    process.execPath,
+                    ["-e", "setInterval(() => undefined, 1000)", markers[ordinal]!],
+                    { stdio: "ignore" },
+                  );
+                  return;
+                }
+                const target = barrierId === "inspect-ancestor-to-target-enumeration"
+                  ? fixture.ancestors[ordinal]!
+                  : fixture.targets[ordinal]!;
+                replacement = `${target}.separate-writer-original-${ordinal}`;
+                replacePathFromSeparateWriter(target, replacement);
+                writerState = `${treeHash(fixture.home)}:${pathHash(replacement)}`;
+              },
+            },
+          });
+        } catch (cause) {
+          caught = cause;
+        }
+        expect(writerRan, `writer did not run: ${selected.id}`).toBe(true);
+        expect(caught, `missing executable race witness: ${selected.id}`).toBeInstanceOf(Error);
+        if (selected.operationOrBarrierId === "inspect-process-identity-to-probe") {
+          expect(caught).toMatchObject({ code: "OWNER_NOT_STOPPED" });
+          expect(treeHash(fixture.home)).toBe(sourceState);
+        } else {
+          expect((caught as Error).message).toMatch(/INSPECTION_UNSAFE/u);
+          expect(`${treeHash(fixture.home)}:${pathHash(replacement!)}`).toBe(writerState);
+        }
+      } finally {
+        fixture.database.close();
+        if (liveWriter?.pid !== undefined) {
+          liveWriter.kill("SIGKILL");
+          await new Promise<void>((resolve) => liveWriter!.once("exit", () => resolve()));
+        }
+      }
+    }
+    expect(witnessed.sort()).toEqual(raceCases.map((item) => item.id).sort());
+  }, 120_000);
+
+  it("directly witnesses every normal state of the exact inspect owner", async () => {
+    const owner = "scripts/product-truth/direct-first-public.ts#inspectDirectFirstPublic";
+    const normalCases = generateFirstPublicManifest().cases.filter(
+      (item) => item.owner === owner && item.family === "normal",
+    );
+    const normalByState = new Map(normalCases.map((item) => [item.stateId, item.id]));
+    const witnessed: string[] = [];
+
+    makeAccountHome();
+    const clean = await inspectDirectFirstPublic(canonicalProductHome());
+    expect(clean.targets).toEqual([]);
+    expect(clean.blockers).toEqual([]);
+    witnessed.push(normalByState.get("inspect.clean")!);
+
+    const mixedFixture = await createInspectWitnessFixture();
+    try {
+      const mixed = await inspectDirectFirstPublic(mixedFixture.canonical);
+      expect(mixed.targets.some((target) => target.kind === "database")).toBe(true);
+      expect(mixed.targets.some((target) => target.kind === "draft-key")).toBe(true);
+      expect(mixed.targets.some((target) => target.kind === "package-stage")).toBe(true);
+      expect(JSON.stringify(mixed)).not.toContain("separate-writer-replacement");
+      witnessed.push(normalByState.get("inspect.legacy-mixed")!);
+    } finally {
+      mixedFixture.database.close();
+    }
+
+    makeAccountHome();
+    const protectedCanonical = canonicalProductHome();
+    const protectedLane = Path.join(protectedCanonical, "dev");
+    FS.mkdirSync(protectedLane, { recursive: true, mode: 0o700 });
+    const protectedFixture = createServiceFixture(
+      "1f09baa8bfb295ba404ab3d3354df413f7ed7000",
+    );
+    protectedFixture.database.exec(`
+      INSERT INTO auth_sessions(session_id, subject, role, method, issued_at, expires_at)
+      VALUES ('protected-session', 'protected-subject', 'user', 'pair', '2026-01-01T00:00:00.000Z', '2027-01-01T00:00:00.000Z')
+    `);
+    protectedFixture.database.close();
+    FS.copyFileSync(protectedFixture.path, Path.join(protectedLane, "state.sqlite"));
+    const protectedPlan = await inspectDirectFirstPublic(protectedCanonical);
+    expect(protectedPlan.blockers).toContainEqual({
+      code: "PROTECTED_IDENTITY",
+      laneOrProfile: "dev",
+      targetKind: "service",
+    });
+    expect(JSON.stringify(protectedPlan)).not.toContain("protected-subject");
+    witnessed.push(normalByState.get("inspect.protected")!);
+
+    makeAccountHome();
+    await seedProfile([LEGACY_DRAFT_KEYS[0]], "omnimind-dev");
+    const activeHomeState = treeHash(OS.homedir());
+    const activeOwner = ChildProcess.spawn(
+      process.execPath,
+      ["-e", "setInterval(() => undefined, 1000)", "@omnimind/service"],
+      { stdio: "ignore" },
+    );
+    try {
+      await expect(
+        inspectDirectFirstPublic(canonicalProductHome()),
+      ).rejects.toMatchObject({ code: "OWNER_NOT_STOPPED" });
+      expect(treeHash(OS.homedir())).toBe(activeHomeState);
+      witnessed.push(normalByState.get("inspect.active-owner")!);
+    } finally {
+      activeOwner.kill("SIGKILL");
+      await new Promise<void>((resolve) => activeOwner.once("exit", () => resolve()));
+    }
+
+    expect(witnessed.sort()).toEqual(normalCases.map((item) => item.id).sort());
+  }, 60_000);
+
+  it("directly witnesses the exact apply operation surface on all target kinds", async () => {
+    const fixture = await seedApplyAllTargetsFixture();
+    const owner = "scripts/product-truth/direct-first-public.ts#applyDirectFirstPublic";
+    const faultCases = generateFirstPublicManifest().cases.filter(
+      (item) => item.owner === owner && item.family === "fault",
+    );
+    const expected = faultCases.map((item) =>
+      `${item.operationOrBarrierId}:${item.site}:${item.ordinal}`);
+    const observed: string[] = [];
+    const exclusions = fixedApplyExclusionPathsForTest(fixture.canonical);
+    const exclusionBefore = exclusions.map(pathHash);
+    const result = await applyDirectFirstPublic(fixture.canonical, {
+      witness: {
+        operation: (operationId, site, ordinal) => {
+          observed.push(`${operationId}:${site}:${ordinal}`);
+        },
+      },
+    });
+    expect(result.targets.filter((target) => target.action === "remove")).toEqual([]);
+    expect(observed.sort()).toEqual(expected.sort());
+    expect(exclusions.map(pathHash)).toEqual(exclusionBefore);
+  }, 60_000);
+
+  it("directly injects every before/after fault of the exact apply owner", async () => {
+    const owner = "scripts/product-truth/direct-first-public.ts#applyDirectFirstPublic";
+    const faultCases = generateFirstPublicManifest().cases.filter(
+      (item) => item.owner === owner && item.family === "fault",
+    );
+    const witnessed: string[] = [];
+    for (const selected of faultCases) {
+      const fixture = await seedApplyAllTargetsFixture();
+      const exclusions = fixedApplyExclusionPathsForTest(fixture.canonical);
+      const exclusionBefore = exclusions.map(pathHash);
+      let caught: unknown;
+      try {
+        await applyDirectFirstPublic(fixture.canonical, {
+          witness: {
+            operation: (operationId, site, ordinal) => {
+              if (
+                operationId === selected.operationOrBarrierId &&
+                site === selected.site &&
+                ordinal === selected.ordinal
+              ) {
+                witnessed.push(selected.id);
+                throw new Error(`PORT_FAULT:${operationId}:${site}:${ordinal}`);
+              }
+            },
+          },
+        });
+      } catch (cause) {
+        caught = cause;
+      }
+      expect(caught, `missing executable fault witness: ${selected.id}`).toBeInstanceOf(Error);
+      expect((caught as Error).message).toContain(
+        `PORT_FAULT:${selected.operationOrBarrierId}:${selected.site}:${selected.ordinal}`,
+      );
+      expect(exclusions.map(pathHash)).toEqual(exclusionBefore);
+      FS.rmSync(fixture.home, { recursive: true, force: true });
+      const registeredHome = temporaryDirectories.indexOf(fixture.home);
+      if (registeredHome >= 0) temporaryDirectories.splice(registeredHome, 1);
+    }
+    expect(witnessed.sort()).toEqual(faultCases.map((item) => item.id).sort());
+  }, 300_000);
+
+  it("directly runs every declared writer race of the exact apply owner", async () => {
+    const owner = "scripts/product-truth/direct-first-public.ts#applyDirectFirstPublic";
+    const raceCases = generateFirstPublicManifest().cases.filter(
+      (item) => item.owner === owner && item.family === "race",
+    );
+    const witnessed: string[] = [];
+    for (const selected of raceCases) {
+      const fixture = await seedApplyAllTargetsFixture();
+      const plan = await inspectDirectFirstPublic(fixture.canonical);
+      const databaseTargets = plan.targets
+        .filter((target) => target.action === "remove" && target.kind === "database")
+        .map((target) => Path.join(fixture.canonical, target.relativePathOrKey));
+      const packageTarget = plan.targets.find((target) => target.kind === "package-stage")!;
+      const packageDigest = packageTarget.classification.split(":").at(-1)!;
+      const generation = Path.basename(packageTarget.relativePathOrKey);
+      const packageTombstone = Path.join(
+        fixture.canonical,
+        "dev",
+        "packages",
+        ".discarding",
+        `${generation}.${packageDigest}`,
+      );
+      const packageEdges = [
+        Path.join(packageTombstone, "entry.js"),
+        Path.join(packageTombstone, "manifest.json"),
+        packageTombstone,
+      ];
+      const profileTargets = [
+        Path.join(profileRoot("omnimind-dev"), "Local Storage", "leveldb"),
+        Path.join(profileRoot("omnimind"), "Local Storage", "leveldb"),
+      ];
+      const mutationTargets = [
+        ...databaseTargets,
+        ...profileTargets,
+        ...packageEdges,
+      ];
+      let writerRan = false;
+      let writerState = "";
+      let caught: unknown;
+      try {
+        await applyDirectFirstPublic(fixture.canonical, {
+          witness: {
+            operation: () => undefined,
+            barrier: (barrierId, ordinal) => {
+              if (
+                barrierId !== selected.operationOrBarrierId ||
+                ordinal !== selected.ordinal
+              ) return;
+              witnessed.push(selected.id);
+              writerRan = true;
+              if (barrierId === "apply-seal-to-database-unlink") {
+                const target = databaseTargets[ordinal]!;
+                replacePathFromSeparateWriter(
+                  target,
+                  `${target}.separate-writer-original-${ordinal}`,
+                );
+              } else if (barrierId === "apply-seal-to-file-remove") {
+                const target = profileTargets[ordinal]!;
+                replacePathFromSeparateWriter(
+                  target,
+                  `${target}.separate-writer-original-${ordinal}`,
+                );
+              } else if (barrierId === "apply-seal-to-package-transition") {
+                const target = packageEdges[ordinal]!;
+                replacePathFromSeparateWriter(
+                  target,
+                  `${target}.separate-writer-original-${ordinal}`,
+                );
+              } else if (ordinal === 3 || ordinal === 4) {
+                putLegacyKeyFromSeparateWriter(
+                  profileRoot(ordinal === 3 ? "omnimind-dev" : "omnimind"),
+                  LEGACY_DRAFT_KEYS[ordinal - 3]!,
+                );
+              } else {
+                createConflictingPathFromSeparateWriter(
+                  mutationTargets[ordinal]!,
+                  ordinal === 7 ? "directory" : "file",
+                );
+              }
+              writerState = unlockedTreeHash(fixture.home);
+            },
+          },
+        });
+      } catch (cause) {
+        caught = cause;
+      }
+      expect(writerRan, `writer did not run: ${selected.id}`).toBe(true);
+      expect(caught, `missing executable race witness: ${selected.id}`).toMatchObject({
+        code: "DESTRUCTION_INCOMPLETE",
+      });
+      expect(unlockedTreeHash(fixture.home), selected.id).toBe(writerState);
+      FS.rmSync(fixture.home, { recursive: true, force: true });
+      const registeredHome = temporaryDirectories.indexOf(fixture.home);
+      if (registeredHome >= 0) temporaryDirectories.splice(registeredHome, 1);
+    }
+    expect(witnessed.sort()).toEqual(raceCases.map((item) => item.id).sort());
+  }, 180_000);
+
+  it("directly converges every declared durable kill of the exact apply owner", async () => {
+    const owner = "scripts/product-truth/direct-first-public.ts#applyDirectFirstPublic";
+    const killCases = generateFirstPublicManifest().cases.filter(
+      (item) => item.owner === owner && item.family === "kill",
+    );
+    const modulePath = Path.join(import.meta.dirname, "direct-first-public.ts");
+    const witnessed: string[] = [];
+    for (const selected of killCases) {
+      const fixture = await seedApplyAllTargetsFixture();
+      const exclusions = fixedApplyExclusionPathsForTest(fixture.canonical);
+      const exclusionBefore = exclusions.map(pathHash);
+      const childEnvironment: NodeJS.ProcessEnv = { ...process.env, HOME: fixture.home };
+      delete childEnvironment.OMNIMIND_HOME;
+      const child = spawnSync(
+        process.execPath,
+        [
+          "-e",
+          `const {applyDirectFirstPublic}=await import(${JSON.stringify(modulePath)});await applyDirectFirstPublic(${JSON.stringify(fixture.canonical)},{witness:{operation:(id,site,ordinal)=>{if(id===${JSON.stringify(selected.operationOrBarrierId)}&&site==="after"&&ordinal===${JSON.stringify(selected.ordinal)})process.kill(process.pid,"SIGKILL")}}});`,
+        ],
+        {
+          cwd: Path.resolve(import.meta.dirname, "../.."),
+          env: childEnvironment,
+          encoding: "utf8",
+        },
+      );
+      expect(child.signal, `${selected.id}\n${child.stderr}`).toBe("SIGKILL");
+      witnessed.push(selected.id);
+      const observed = await inspectDirectFirstPublic(fixture.canonical);
+      expect(observed.blockers, selected.id).toEqual([]);
+      await applyDirectFirstPublic(fixture.canonical);
+      const converged = await inspectDirectFirstPublic(fixture.canonical);
+      expect(converged.blockers, selected.id).toEqual([]);
+      expect(
+        converged.targets.filter((target) => target.action === "remove"),
+        selected.id,
+      ).toEqual([]);
+      expect(exclusions.map(pathHash), selected.id).toEqual(exclusionBefore);
+      FS.rmSync(fixture.home, { recursive: true, force: true });
+      const registeredHome = temporaryDirectories.indexOf(fixture.home);
+      if (registeredHome >= 0) temporaryDirectories.splice(registeredHome, 1);
+    }
+    expect(witnessed.sort()).toEqual(killCases.map((item) => item.id).sort());
+  }, 180_000);
+
+  it("directly witnesses every normal state of the exact apply owner", async () => {
+    const owner = "scripts/product-truth/direct-first-public.ts#applyDirectFirstPublic";
+    const normalCases = generateFirstPublicManifest().cases.filter(
+      (item) => item.owner === owner && item.family === "normal",
+    );
+    const normalByState = new Map(normalCases.map((item) => [item.stateId, item.id]));
+    const witnessed: string[] = [];
+
+    const databaseFixture = await seedApplyAllTargetsFixture();
+    for (const identity of ["omnimind-dev", "omnimind"] as const)
+      FS.rmSync(profileRoot(identity), { recursive: true, force: true });
+    FS.rmSync(Path.join(databaseFixture.canonical, "dev", "packages", "stage"), {
+      recursive: true,
+      force: true,
+    });
+    const databaseResult = await applyDirectFirstPublic(databaseFixture.canonical);
+    expect(databaseResult.targets.filter((target) => target.action === "remove")).toEqual([]);
+    witnessed.push(normalByState.get("apply.database-bundle")!);
+
+    makeAccountHome();
+    await seedProfile([LEGACY_DRAFT_KEYS[0]], "omnimind-dev");
+    await seedProfile([LEGACY_DRAFT_KEYS[1]], "omnimind");
+    const legacyResult = await applyDirectFirstPublic(canonicalProductHome());
+    expect(legacyResult.targets.filter((target) => target.action === "remove")).toEqual([]);
+    witnessed.push(normalByState.get("apply.legacy-files")!);
+
+    makeAccountHome();
+    const fullCanonical = canonicalProductHome();
+    const fullPackage = seedDisposablePackage(fullCanonical);
+    await applyDirectFirstPublic(fullCanonical);
+    expect(FS.existsSync(fullPackage.stage)).toBe(false);
+    witnessed.push(normalByState.get("apply.package-full")!);
+
+    for (const state of ["manifest-only", "empty"] as const) {
+      makeAccountHome();
+      const canonical = canonicalProductHome();
+      seedDisposablePackage(canonical);
+      let removedEntries = 0;
+      await expect(
+        applyDirectFirstPublic(canonical, {
+          afterBoundary: (boundary) => {
+            if (boundary !== "package-entry-unlinked") return;
+            removedEntries += 1;
+            if (
+              (state === "manifest-only" && removedEntries === 1) ||
+              (state === "empty" && removedEntries === 2)
+            ) throw new Error("fixture-stop");
+          },
+        }),
+      ).rejects.toMatchObject({ code: "DESTRUCTION_INCOMPLETE" });
+      const before = await inspectDirectFirstPublic(canonical);
+      expect(before.targets).toContainEqual(expect.objectContaining({
+        kind: "package-tombstone",
+        classification: expect.stringContaining(`resume:${state === "empty" ? "obsolete" : "obsolete"}`),
+      }));
+      await applyDirectFirstPublic(canonical);
+      expect((await inspectDirectFirstPublic(canonical)).targets).toEqual([]);
+      witnessed.push(normalByState.get(`apply.package-${state}`)!);
+    }
+
+    const allFixture = await seedApplyAllTargetsFixture();
+    const allResult = await applyDirectFirstPublic(allFixture.canonical);
+    expect(allResult.targets.filter((target) => target.action === "remove")).toEqual([]);
+    witnessed.push(normalByState.get("apply.all-target-kinds")!);
+
+    expect(witnessed.sort()).toEqual(normalCases.map((item) => item.id).sort());
+  }, 60_000);
 });
 
 describe("locked destructive target allowlist", () => {
@@ -645,6 +1383,67 @@ describe("locked destructive target allowlist", () => {
     expect(FS.existsSync(target)).toBe(true);
   });
 
+  it("preserves a regular-file replacement that no longer matches the sealed database target", async () => {
+    makeAccountHome();
+    const canonical = canonicalProductHome();
+    const lane = Path.join(canonical, "dev");
+    FS.mkdirSync(lane, { recursive: true, mode: 0o700 });
+    const fixture = createProductFixture(
+      "27cd50b52606a894430492b6494687b7010d623d",
+    );
+    fixture.database.close();
+    const target = Path.join(lane, "product-state-v1.sqlite");
+    FS.copyFileSync(fixture.path, target);
+    FS.chmodSync(target, 0o600);
+    const replacement = Buffer.from("replacement-must-survive");
+    await expect(
+      applyDirectFirstPublic(canonical, {
+        afterBoundary: (boundary) => {
+          if (boundary !== "mutation-preflight") return;
+          FS.unlinkSync(target);
+          FS.writeFileSync(target, replacement, { mode: 0o600 });
+        },
+      }),
+    ).rejects.toMatchObject({ code: "DESTRUCTION_INCOMPLETE" });
+    expect(FS.readFileSync(target)).toEqual(replacement);
+  });
+
+  it("atomically restores a separate-writer replacement at the database rename sink", async () => {
+    makeAccountHome();
+    const canonical = canonicalProductHome();
+    const lane = Path.join(canonical, "dev");
+    FS.mkdirSync(lane, { recursive: true, mode: 0o700 });
+    const fixture = createProductFixture(
+      "27cd50b52606a894430492b6494687b7010d623d",
+    );
+    fixture.database.close();
+    const target = Path.join(lane, "product-state-v1.sqlite");
+    FS.copyFileSync(fixture.path, target);
+    FS.chmodSync(target, 0o600);
+    const replacement = Buffer.from("separate-writer-replacement-must-survive");
+    let wroteReplacement = false;
+    await expect(
+      applyDirectFirstPublic(canonical, {
+        afterBoundary: (boundary) => {
+          if (boundary !== "database-rename-preflight") return;
+          const writer = spawnSync(
+            process.execPath,
+            [
+              "-e",
+              `const fs=require("node:fs");const target=${JSON.stringify(target)};fs.unlinkSync(target);fs.writeFileSync(target,Buffer.from(${JSON.stringify(replacement.toString("base64"))},"base64"),{mode:0o600});`,
+            ],
+            { encoding: "utf8" },
+          );
+          expect(writer.status).toBe(0);
+          wroteReplacement = true;
+        },
+      }),
+    ).rejects.toMatchObject({ code: "DESTRUCTION_INCOMPLETE" });
+    expect(wroteReplacement).toBe(true);
+    expect(FS.readFileSync(target)).toEqual(replacement);
+    expect(FS.readdirSync(lane).some((name) => name.includes(".discarding-"))).toBe(false);
+  });
+
   it("acquires the two profile and four database locks in the fixed order", async () => {
     makeAccountHome();
     const canonical = canonicalProductHome();
@@ -678,6 +1477,49 @@ describe("locked destructive target allowlist", () => {
     ]);
   });
 
+  it("observes without mutation then reaps a profile lock left by an abruptly killed owner", async () => {
+    makeAccountHome();
+    const canonical = canonicalProductHome();
+    const profile = profileRoot("omnimind-dev");
+    FS.mkdirSync(profile, { recursive: true, mode: 0o700 });
+    const lock = Path.join(profile, "SingletonLock");
+    const token = "11111111-1111-4111-8111-111111111111";
+    const owner = spawnSync(
+      process.execPath,
+      [
+        "-e",
+        `const fs=require("node:fs");const path=${JSON.stringify(lock)};const fd=fs.openSync(path,"wx",0o600);fs.writeFileSync(fd,JSON.stringify({pid:process.pid,token:${JSON.stringify(token)}})+"\\n");fs.fsyncSync(fd);fs.closeSync(fd);process.kill(process.pid,"SIGKILL");`,
+      ],
+      { encoding: "utf8" },
+    );
+    expect(owner.signal).toBe("SIGKILL");
+    const before = treeHash(profile);
+    await expect(inspectDirectFirstPublic(canonical)).resolves.toMatchObject({
+      quiescence: { profiles: "offline" },
+    });
+    expect(treeHash(profile)).toBe(before);
+    await applyDirectFirstPublic(canonical);
+    expect(FS.existsSync(lock)).toBe(false);
+    expect(FS.readdirSync(profile).filter((name) => name.startsWith("SingletonLock"))).toEqual([]);
+  });
+
+  it("converges a dead profile-lock tombstone before publishing a new owner", async () => {
+    makeAccountHome();
+    const canonical = canonicalProductHome();
+    const profile = profileRoot("omnimind-dev");
+    FS.mkdirSync(profile, { recursive: true, mode: 0o700 });
+    const token = "22222222-2222-4222-8222-222222222222";
+    const tombstone = Path.join(
+      profile,
+      `SingletonLock.stale.${token}.33333333-3333-4333-8333-333333333333`,
+    );
+    FS.writeFileSync(tombstone, `${JSON.stringify({ pid: 2_147_483_647, token })}\n`, {
+      mode: 0o600,
+    });
+    await applyDirectFirstPublic(canonical);
+    expect(FS.readdirSync(profile).filter((name) => name.startsWith("SingletonLock"))).toEqual([]);
+  });
+
   it("revalidates lane path safety after locking and before mutation", async () => {
     makeAccountHome();
     const canonical = canonicalProductHome();
@@ -696,7 +1538,34 @@ describe("locked destructive target allowlist", () => {
     FS.chmodSync(lane, 0o700);
   });
 
-  it.each(["profile-key-removed", "profile-reread"] as const)(
+  it("revalidates the sealed intermediate lane immediately before the database rename", async () => {
+    makeAccountHome();
+    const canonical = canonicalProductHome();
+    const lane = Path.join(canonical, "dev");
+    FS.mkdirSync(lane, { recursive: true, mode: 0o700 });
+    const fixture = createProductFixture(
+      "27cd50b52606a894430492b6494687b7010d623d",
+    );
+    fixture.database.close();
+    const target = Path.join(lane, "product-state-v1.sqlite");
+    FS.copyFileSync(fixture.path, target);
+    FS.chmodSync(target, 0o600);
+    let changed = false;
+    await expect(
+      applyDirectFirstPublic(canonical, {
+        afterBoundary: (boundary) => {
+          if (boundary !== "database-rename-preflight") return;
+          FS.chmodSync(lane, 0o770);
+          changed = true;
+        },
+      }),
+    ).rejects.toMatchObject({ code: "DESTRUCTION_INCOMPLETE" });
+    expect(changed).toBe(true);
+    expect(FS.existsSync(target)).toBe(true);
+    FS.chmodSync(lane, 0o700);
+  });
+
+  it.each(["profile-batch-committed", "profile-reread"] as const)(
     "converges from an interruption after %s",
     async (killBoundary) => {
       makeAccountHome();
@@ -745,6 +1614,54 @@ describe("locked destructive target allowlist", () => {
       ).rejects.toMatchObject({ code: "DESTRUCTION_INCOMPLETE" });
       expect(killed).toBe(true);
       expect((await inspectDirectFirstPublic(canonical)).blockers).toEqual([]);
+      await applyDirectFirstPublic(canonical);
+      expect((await inspectDirectFirstPublic(canonical)).targets).toEqual([]);
+    },
+  );
+
+  it.each([
+    "profile-lock-acquired",
+    "database-lock-acquired",
+    "profile-batch-committed",
+    "database-unlinked",
+    "package-renamed",
+    "package-entry-unlinked",
+    "package-directory-removed",
+  ] as const)(
+    "converges after a real subprocess is killed at durable boundary %s",
+    async (killBoundary) => {
+      const home = makeAccountHome();
+      const canonical = canonicalProductHome();
+      if (killBoundary === "profile-lock-acquired" || killBoundary === "profile-batch-committed") {
+        if (killBoundary === "profile-batch-committed") await seedProfile(LEGACY_DRAFT_KEYS);
+        else FS.mkdirSync(profileRoot("omnimind-dev"), { recursive: true, mode: 0o700 });
+      } else if (killBoundary === "database-lock-acquired" || killBoundary === "database-unlinked") {
+        const lane = Path.join(canonical, "dev");
+        FS.mkdirSync(lane, { recursive: true, mode: 0o700 });
+        if (killBoundary === "database-unlinked") {
+          const fixture = createProductFixture(
+            "27cd50b52606a894430492b6494687b7010d623d",
+          );
+          fixture.database.close();
+          FS.copyFileSync(fixture.path, Path.join(lane, "product-state-v1.sqlite"));
+        }
+      } else {
+        seedDisposablePackage(canonical);
+      }
+      const modulePath = Path.join(import.meta.dirname, "direct-first-public.ts");
+      const childEnvironment: NodeJS.ProcessEnv = { ...process.env, HOME: home };
+      delete childEnvironment.OMNIMIND_HOME;
+      const child = spawnSync(
+        process.execPath,
+        [
+          "-e",
+          `const {applyDirectFirstPublic}=await import(${JSON.stringify(modulePath)});await applyDirectFirstPublic(${JSON.stringify(canonical)},{afterBoundary:(boundary)=>{if(boundary===${JSON.stringify(killBoundary)})process.kill(process.pid,"SIGKILL")}});`,
+        ],
+        { cwd: Path.resolve(import.meta.dirname, "../.."), env: childEnvironment, encoding: "utf8" },
+      );
+      expect(child.signal).toBe("SIGKILL");
+      const observed = await inspectDirectFirstPublic(canonical);
+      expect(observed.blockers).toEqual([]);
       await applyDirectFirstPublic(canonical);
       expect((await inspectDirectFirstPublic(canonical)).targets).toEqual([]);
     },
@@ -856,6 +1773,75 @@ describe("locked destructive target allowlist", () => {
     );
   });
 
+  it("preserves a separate-writer directory replacement at the Package rename sink", async () => {
+    makeAccountHome();
+    const canonical = canonicalProductHome();
+    const { stage } = seedDisposablePackage(canonical);
+    const replacementMarker = Path.join(stage, "replacement.bin");
+    let replaced = false;
+    await expect(
+      applyDirectFirstPublic(canonical, {
+        afterBoundary: (boundary) => {
+          if (boundary !== "package-rename-preflight") return;
+          const writer = spawnSync(
+            process.execPath,
+            [
+              "-e",
+              `const fs=require("node:fs");const stage=${JSON.stringify(stage)};fs.renameSync(stage,stage+".writer-original");fs.mkdirSync(stage,{mode:0o700});fs.writeFileSync(stage+"/replacement.bin","replacement",{mode:0o600});`,
+            ],
+            { encoding: "utf8" },
+          );
+          expect(writer.status).toBe(0);
+          replaced = true;
+        },
+      }),
+    ).rejects.toMatchObject({ code: "DESTRUCTION_INCOMPLETE" });
+    expect(replaced).toBe(true);
+    expect(FS.readFileSync(replacementMarker, "utf8")).toBe("replacement");
+  });
+
+  it.each(["full", "manifest-only", "empty"] as const)(
+    "preserves a separate-writer replacement at the Package %s edge",
+    async (state) => {
+      makeAccountHome();
+      const canonical = canonicalProductHome();
+      seedDisposablePackage(canonical);
+      let removedEntries = 0;
+      await expect(
+        applyDirectFirstPublic(canonical, {
+          afterBoundary: (boundary) => {
+            if (state === "full" && boundary === "package-renamed")
+              throw new Error("fixture-stop");
+            if (boundary === "package-entry-unlinked") {
+              removedEntries += 1;
+              if (state === "manifest-only" && removedEntries === 1)
+                throw new Error("fixture-stop");
+              if (state === "empty" && removedEntries === 2)
+                throw new Error("fixture-stop");
+            }
+          },
+        }),
+      ).rejects.toMatchObject({ code: "DESTRUCTION_INCOMPLETE" });
+      let replacementPath = "";
+      await expect(
+        applyDirectFirstPublic(canonical, {
+          afterBoundary: (boundary, target) => {
+            if (boundary !== "package-edge-preflight" || replacementPath) return;
+            const isDirectory = FS.lstatSync(target).isDirectory();
+            replacementPath = isDirectory ? Path.join(target, "writer.bin") : target;
+            const script = isDirectory
+              ? `require("node:fs").writeFileSync(${JSON.stringify(replacementPath)},"replacement",{mode:0o600})`
+              : `const fs=require("node:fs");const target=${JSON.stringify(target)};fs.unlinkSync(target);fs.writeFileSync(target,"replacement",{mode:0o600})`;
+            const writer = spawnSync(process.execPath, ["-e", script], { encoding: "utf8" });
+            expect(writer.status).toBe(0);
+          },
+        }),
+      ).rejects.toMatchObject({ code: "DESTRUCTION_INCOMPLETE" });
+      expect(replacementPath).not.toBe("");
+      expect(FS.readFileSync(replacementPath, "utf8")).toBe("replacement");
+    },
+  );
+
   it.each([
     "package-renamed",
     "package-entry-unlinked",
@@ -954,6 +1940,144 @@ describe("locked destructive target allowlist", () => {
 });
 
 describe("protected-fact registry inventory", () => {
+  it("directly injects every before/after fault of the exact classifier owner", () => {
+    const manifest = generateFirstPublicManifest();
+    const owner = "scripts/product-truth/sqlite-classifier.ts#classifyLegacyDatabase";
+    const faultCases = manifest.cases.filter(
+      (item) => item.owner === owner && item.family === "fault",
+    );
+    const fixture = createProductFixture("27cd50b52606a894430492b6494687b7010d623d");
+    fixture.database.close();
+    const sourceDigest = createHash("sha256").update(FS.readFileSync(fixture.path)).digest("hex");
+    const scratchBefore = classifierScratchRuns();
+    const witnessed: string[] = [];
+    for (const selected of faultCases) {
+      let caught: unknown;
+      try {
+        classifyLegacyDatabase(fixture.path, "dev", "product", {
+          operation: (operationId, site, ordinal) => {
+            if (
+              operationId === selected.operationOrBarrierId &&
+              site === selected.site &&
+              ordinal === selected.ordinal
+            ) {
+              witnessed.push(selected.id);
+              throw new Error(`PORT_FAULT:${operationId}:${site}:${ordinal}`);
+            }
+          },
+        });
+      } catch (cause) {
+        caught = cause;
+      }
+      expect(caught, `missing executable fault witness: ${selected.id}`).toBeInstanceOf(Error);
+      expect((caught as Error).message).toContain(
+        `PORT_FAULT:${selected.operationOrBarrierId}:${selected.site}:${selected.ordinal}`,
+      );
+      expect(createHash("sha256").update(FS.readFileSync(fixture.path)).digest("hex"))
+        .toBe(sourceDigest);
+      expect(classifierScratchRuns()).toEqual(scratchBefore);
+    }
+    expect(witnessed.sort()).toEqual(faultCases.map((item) => item.id).sort());
+  }, 30_000);
+
+  it("directly runs every declared writer race of the exact classifier owner", () => {
+    const manifest = generateFirstPublicManifest();
+    const owner = "scripts/product-truth/sqlite-classifier.ts#classifyLegacyDatabase";
+    const raceCases = manifest.cases.filter(
+      (item) => item.owner === owner && item.family === "race",
+    );
+    const witnessed: string[] = [];
+    for (const selected of raceCases) {
+      const fixture = createProductFixture("27cd50b52606a894430492b6494687b7010d623d");
+      fixture.database.close();
+      const sourceBefore = createHash("sha256").update(FS.readFileSync(fixture.path)).digest("hex");
+      let sourceAfterWriter = sourceBefore;
+      expect(() =>
+        classifyLegacyDatabase(fixture.path, "dev", "product", {
+          operation: () => undefined,
+          barrier: (barrierId, replaceTarget) => {
+            if (barrierId !== selected.operationOrBarrierId) return;
+            witnessed.push(selected.id);
+            if (
+              barrierId === "classifier.copy-identity-to-hash-open" ||
+              barrierId === "classifier.copy-hash-to-sqlite-open"
+            ) {
+              replaceTarget?.();
+              return;
+            }
+            const writer = spawnSync(
+              process.execPath,
+              [
+                "-e",
+                `const fs=require("node:fs");fs.appendFileSync(${JSON.stringify(fixture.path)},Buffer.from("separate-writer"));`,
+              ],
+              { encoding: "utf8" },
+            );
+            expect(writer.status).toBe(0);
+            sourceAfterWriter = createHash("sha256").update(FS.readFileSync(fixture.path)).digest("hex");
+          },
+        }),
+      ).toThrow("INSPECTION_UNSAFE");
+      expect(createHash("sha256").update(FS.readFileSync(fixture.path)).digest("hex"))
+        .toBe(sourceAfterWriter);
+      if (selected.operationOrBarrierId.startsWith("classifier.copy-"))
+        expect(sourceAfterWriter).toBe(sourceBefore);
+      else expect(sourceAfterWriter).not.toBe(sourceBefore);
+    }
+    expect(witnessed.sort()).toEqual(raceCases.map((item) => item.id).sort());
+  });
+
+  it("directly converges every declared durable kill of the exact classifier owner", () => {
+    const manifest = generateFirstPublicManifest();
+    const owner = "scripts/product-truth/sqlite-classifier.ts#classifyLegacyDatabase";
+    const killCases = manifest.cases.filter(
+      (item) => item.owner === owner && item.family === "kill",
+    );
+    const modulePath = Path.join(import.meta.dirname, "sqlite-classifier.ts");
+    const witnessed: string[] = [];
+    for (const selected of killCases) {
+      const fixture = createProductFixture("27cd50b52606a894430492b6494687b7010d623d");
+      fixture.database.close();
+      const sourceDigest = createHash("sha256").update(FS.readFileSync(fixture.path)).digest("hex");
+      const isolatedTemp = FS.mkdtempSync(Path.join(OS.tmpdir(), "omnimind-classifier-kill-temp-"));
+      temporaryDirectories.push(isolatedTemp);
+      const childEnvironment = {
+        ...process.env,
+        TMPDIR: isolatedTemp,
+        TMP: isolatedTemp,
+        TEMP: isolatedTemp,
+      };
+      const killed = spawnSync(
+        process.execPath,
+        [
+          "-e",
+          `const {classifyLegacyDatabase}=await import(${JSON.stringify(modulePath)});classifyLegacyDatabase(${JSON.stringify(fixture.path)},"dev","product",{operation:(id,site,ordinal)=>{if(id===${JSON.stringify(selected.operationOrBarrierId)}&&site==="after"&&ordinal==="single")process.kill(process.pid,"SIGKILL")}});`,
+        ],
+        { encoding: "utf8", env: childEnvironment },
+      );
+      expect(killed.signal, `${selected.id}\n${killed.stderr}`).toBe("SIGKILL");
+      witnessed.push(selected.id);
+      const scratchRoot = Path.join(isolatedTemp, "omnimind-product-truth-classifier");
+      const runsAfterKill = FS.readdirSync(scratchRoot).filter((name) => name.startsWith("run-"));
+      expect(runsAfterKill).toHaveLength(
+        selected.operationOrBarrierId === "classifier.remove-scratch-dir" ? 0 : 1,
+      );
+      const converged = spawnSync(
+        process.execPath,
+        [
+          "-e",
+          `const {classifyLegacyDatabase}=await import(${JSON.stringify(modulePath)});const result=classifyLegacyDatabase(${JSON.stringify(fixture.path)},"dev","product");if(result.plan.status!=="classified"||result.blockers.length!==0)process.exit(23);`,
+        ],
+        { encoding: "utf8", env: childEnvironment },
+      );
+      expect(converged.status, `${selected.id}\n${converged.stderr}`).toBe(0);
+      expect(FS.readdirSync(scratchRoot).filter((name) => name.startsWith("run-"))).toEqual([]);
+      expect(createHash("sha256").update(FS.readFileSync(fixture.path)).digest("hex"))
+        .toBe(sourceDigest);
+    }
+    expect(witnessed.sort()).toEqual(killCases.map((item) => item.id).sort());
+  }, 30_000);
+
   it("is an exact 4 Product + 2 service fingerprint bijection over baseline revisions", () => {
     const productFixtures = {
       "27cd50b52606a894430492b6494687b7010d623d":
@@ -1210,6 +2334,38 @@ describe("protected-fact registry inventory", () => {
     expect(v2Result.facts.activeLeaseCount).toBe(1);
     expect(v2Result.blockers).toContainEqual({
       code: "PROTECTED_ACTIVE_PACKAGE_LEASE",
+      laneOrProfile: "dev",
+      targetKind: "product",
+    });
+
+    const duplicate = new DatabaseSync(v2.path);
+    duplicate
+      .prepare("UPDATE product_operation_receipts SET receipt_json = ? WHERE receipt_id = 'receipt'")
+      .run(
+        sentReceipt.replace(
+          '"engineId":"native"',
+          '"engineId":"native","engineId":"shadow"',
+        ),
+      );
+    duplicate.close();
+    expect(classifyLegacyDatabase(v2.path, "dev", "product").blockers).toContainEqual({
+      code: "PROTECTED_FACT_UNDECODABLE",
+      laneOrProfile: "dev",
+      targetKind: "product",
+    });
+
+    const recursive = new DatabaseSync(v2.path);
+    recursive
+      .prepare("UPDATE product_operation_receipts SET receipt_json = ? WHERE receipt_id = 'receipt'")
+      .run(
+        sentReceipt.replace(
+          '"executionTarget":null',
+          '"executionTarget":{"kind":"local","targetRef":"local","observedAt":"2026-01-01T00:00:00.000Z","extra":true}',
+        ),
+      );
+    recursive.close();
+    expect(classifyLegacyDatabase(v2.path, "dev", "product").blockers).toContainEqual({
+      code: "PROTECTED_FACT_UNDECODABLE",
       laneOrProfile: "dev",
       targetKind: "product",
     });

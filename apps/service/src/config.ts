@@ -112,6 +112,18 @@ export function preparePrivateServerPaths(
   paths: ServerDerivedPaths,
   platform: NodeJS.Platform = process.platform,
 ): void {
+  const retiredServiceDatabase = path.join(paths.stateDir, "state.sqlite");
+  if (
+    [
+      retiredServiceDatabase,
+      `${retiredServiceDatabase}-wal`,
+      `${retiredServiceDatabase}-shm`,
+    ].some((target) => existsSync(target))
+  ) {
+    throw new Error(
+      "A retired Service database bundle exists; run the direct first-public rebuild tool.",
+    );
+  }
   for (const directoryPath of [
     paths.stateDir,
     path.dirname(paths.dbPath),
@@ -121,16 +133,6 @@ export function preparePrivateServerPaths(
     paths.terminalLogsDir,
   ]) {
     ensurePrivateDirectorySync(directoryPath, platform);
-  }
-  const legacyServiceDatabase = path.join(paths.stateDir, "state.sqlite");
-  if (
-    [legacyServiceDatabase, `${legacyServiceDatabase}-wal`, `${legacyServiceDatabase}-shm`].some(
-      (target) => existsSync(target),
-    )
-  ) {
-    throw new Error(
-      "A retired Service database bundle exists; run the direct first-public rebuild tool.",
-    );
   }
   const repairMarkerPath = path.join(paths.stateDir, PRIVATE_STATE_REPAIR_MARKER);
   if (!existsSync(repairMarkerPath)) {

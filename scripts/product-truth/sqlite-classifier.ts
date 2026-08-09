@@ -23,6 +23,97 @@ interface StableFileIdentity {
   readonly nlink: number;
 }
 
+interface ClassifierScratchOwner {
+  readonly version: 1;
+  readonly source: string;
+  readonly pid: number;
+  readonly dev: number;
+  readonly ino: number;
+}
+
+const CLASSIFIER_SCRATCH_ROOT = "omnimind-product-truth-classifier";
+const CLASSIFIER_SCRATCH_OWNER = "owner.json";
+
+export interface ClassifierWitnessPort {
+  readonly operation: (
+    operationId: string,
+    site: "before" | "after",
+    ordinal: number | "single",
+  ) => void;
+  readonly barrier?: (
+    barrierId: string,
+    replaceTarget?: () => void,
+  ) => void;
+}
+
+function classifierOperation<Result>(
+  witness: ClassifierWitnessPort | undefined,
+  operationId: string,
+  ordinal: number | "single",
+  effect: () => Result,
+): Result {
+  witness?.operation(operationId, "before", ordinal);
+  const result = effect();
+  witness?.operation(operationId, "after", ordinal);
+  return result;
+}
+
+function openClassifierDescriptor(
+  witness: ClassifierWitnessPort | undefined,
+  operationId: string,
+  effect: () => number,
+): number {
+  witness?.operation(operationId, "before", "single");
+  const descriptor = effect();
+  try {
+    witness?.operation(operationId, "after", "single");
+  } catch (cause) {
+    FS.closeSync(descriptor);
+    throw cause;
+  }
+  return descriptor;
+}
+
+function closeClassifierDescriptor(
+  descriptor: number,
+  witness: ClassifierWitnessPort | undefined,
+  operationId: string,
+): void {
+  let injected: unknown;
+  try {
+    witness?.operation(operationId, "before", "single");
+  } catch (cause) {
+    injected = cause;
+  }
+  FS.closeSync(descriptor);
+  if (injected !== undefined) throw injected;
+  witness?.operation(operationId, "after", "single");
+}
+
+function hashFileDescriptor(
+  descriptor: number,
+  witness: ClassifierWitnessPort | undefined,
+  operationId: "classifier.read-source-chunk" | "classifier.read-copy-hash-chunk",
+  write?: (bytes: Buffer, position: number, ordinal: number) => void,
+  size?: number,
+): string {
+  const hash = createHash("sha256");
+  const buffer = Buffer.allocUnsafe(Math.max(1, Math.ceil((size ?? 128 * 1024) / 2)));
+  let position = 0;
+  let ordinal = 0;
+  while (true) {
+    const count = classifierOperation(witness, operationId, ordinal, () =>
+      FS.readSync(descriptor, buffer, 0, buffer.length, position));
+    if (count === 0) break;
+    const bytes = buffer.subarray(0, count);
+    hash.update(bytes);
+    write?.(bytes, position, ordinal);
+    position += count;
+    ordinal += 1;
+  }
+  return hash.digest("hex");
+}
+
 function identity(path: string): StableFileIdentity {
   const stat = FS.lstatSync(path, { bigint: true });
   if (!stat.isFile() || stat.isSymbolicLink() || stat.nlink !== 1n) {
@@ -43,6 +134,115 @@ function sameIdentity(
   right: StableFileIdentity,
 ): boolean {
   return JSON.stringify(left) === JSON.stringify(right);
+}
+
+function classifierScratchRoot(): string {
+  const root = Path.join(OS.tmpdir(), CLASSIFIER_SCRATCH_ROOT);
+  FS.mkdirSync(root, { recursive: true, mode: 0o700 });
+  const stat = FS.lstatSync(root);
+  if (!stat.isDirectory() || stat.isSymbolicLink()) throw new Error("INSPECTION_UNSAFE");
+  FS.chmodSync(root, 0o700);
+  return root;
+}
+
+function writeClassifierScratchOwner(
+  scratch: string,
+  source: string,
+  scratchStat: FS.Stats,
+): void {
+  const owner: ClassifierScratchOwner = {
+    version: 1,
+    source,
+    pid: process.pid,
+    dev: scratchStat.dev,
+    ino: scratchStat.ino,
+  };
+  const descriptor = FS.openSync(Path.join(scratch, CLASSIFIER_SCRATCH_OWNER), "wx", 0o600);
+  try {
+    FS.writeFileSync(descriptor, `${JSON.stringify(owner)}\n`);
+    FS.fsyncSync(descriptor);
+  } finally {
+    FS.closeSync(descriptor);
+  }
+  const directory = FS.openSync(scratch, FS.constants.O_RDONLY);
+  try { FS.fsyncSync(directory); } finally { FS.closeSync(directory); }
+}
+
+function readClassifierScratchOwner(scratch: string): ClassifierScratchOwner | null {
+  const path = Path.join(scratch, CLASSIFIER_SCRATCH_OWNER);
+  if (!FS.existsSync(path)) return null;
+  const stat = FS.lstatSync(path);
+  if (!stat.isFile() || stat.isSymbolicLink() || stat.nlink !== 1 || stat.size > 4096)
+    return null;
+  try {
+    const parsed = JSON.parse(FS.readFileSync(path, "utf8")) as Record<string, unknown>;
+    if (
+      Object.keys(parsed).sort().join(",") !== "dev,ino,pid,source,version" ||
+      parsed.version !== 1 ||
+      typeof parsed.source !== "string" ||
+      !Number.isSafeInteger(parsed.pid) ||
+      Number(parsed.pid) <= 0 ||
+      !Number.isSafeInteger(parsed.dev) ||
+      !Number.isSafeInteger(parsed.ino)
+    ) return null;
+    return parsed as unknown as ClassifierScratchOwner;
+  } catch {
+    return null;
+  }
+}
+
+function classifierOwnerIsLive(pid: number): boolean {
+  try { process.kill(pid, 0); return true; } catch (cause) {
+    return (cause as NodeJS.ErrnoException).code !== "ESRCH";
+  }
+}
+
+function removeClassifierScratch(scratch: string, expectedDev: number, expectedIno: number): void {
+  const scratchStat = FS.lstatSync(scratch);
+  if (
+    !scratchStat.isDirectory() ||
+    scratchStat.isSymbolicLink() ||
+    scratchStat.dev !== expectedDev ||
+    scratchStat.ino !== expectedIno
+  ) throw new Error("INSPECTION_UNSAFE");
+  const allowed = new Set([
+    CLASSIFIER_SCRATCH_OWNER,
+    "database.sqlite",
+    "database.sqlite-wal",
+    "database.sqlite-shm",
+  ]);
+  const names = FS.readdirSync(scratch);
+  if (names.some((name) => !allowed.has(name))) throw new Error("INSPECTION_UNSAFE");
+  for (const name of names) {
+    const path = Path.join(scratch, name);
+    const before = FS.lstatSync(path);
+    if (!before.isFile() || before.isSymbolicLink() || before.nlink !== 1)
+      throw new Error("INSPECTION_UNSAFE");
+    const after = FS.lstatSync(path);
+    if (before.dev !== after.dev || before.ino !== after.ino)
+      throw new Error("INSPECTION_UNSAFE");
+    FS.unlinkSync(path);
+  }
+  FS.rmdirSync(scratch);
+}
+
+function reapDeadClassifierScratch(source: string): void {
+  const root = classifierScratchRoot();
+  for (const name of FS.readdirSync(root).sort()) {
+    if (!name.startsWith("run-")) continue;
+    const scratch = Path.join(root, name);
+    const stat = FS.lstatSync(scratch);
+    if (!stat.isDirectory() || stat.isSymbolicLink()) continue;
+    const owner = readClassifierScratchOwner(scratch);
+    if (
+      owner === null ||
+      owner.source !== source ||
+      owner.dev !== stat.dev ||
+      owner.ino !== stat.ino ||
+      classifierOwnerIsLive(owner.pid)
+    ) continue;
+    removeClassifierScratch(scratch, owner.dev, owner.ino);
+  }
 }
 
 export function canonicalSqliteFingerprint(
@@ -90,8 +290,24 @@ function requireSafeDatabase(database: DatabaseSync): void {
   if (foreignKeys.length !== 0) throw new Error("INSPECTION_UNSAFE");
 }
 
-function count(database: DatabaseSync, sql: string): number {
-  const row = database.prepare(sql).get() as
+interface ClassifierContext {
+  readonly witness: ClassifierWitnessPort | undefined;
+  queryOrdinal: number;
+}
+
+function count(
+  database: DatabaseSync,
+  sql: string,
+  context?: ClassifierContext,
+): number {
+  const row = (context
+    ? classifierOperation(
+        context.witness,
+        "classifier.query-protected-aggregate",
+        context.queryOrdinal++,
+        () => database.prepare(sql).get(),
+      )
+    : database.prepare(sql).get()) as
     | Record<string, unknown>
     | undefined;
   const value = Number(row?.count);
@@ -119,6 +335,85 @@ function nonEmpty(value: unknown, maximum: number): boolean {
     value.length > 0 &&
     value.length <= maximum
   );
+}
+
+function validExecutionTarget(value: unknown): boolean {
+  if (value === null) return true;
+  if (!value || typeof value !== "object" || Array.isArray(value)) return false;
+  const record = value as Record<string, unknown>;
+  return (
+    exactKeys(record, ["kind", "targetRef", "observedAt"]) &&
+    (record.kind === "local" || record.kind === "remote") &&
+    nonEmpty(record.targetRef, 512) &&
+    typeof record.observedAt === "string" &&
+    Number.isFinite(Date.parse(record.observedAt))
+  );
+}
+
+function hasDuplicateJsonObjectKeys(source: string): boolean {
+  let index = 0;
+  const whitespace = (): void => {
+    while (/\s/u.test(source[index] ?? "")) index += 1;
+  };
+  const stringValue = (): string => {
+    const start = index;
+    if (source[index] !== '"') throw new Error();
+    index += 1;
+    while (index < source.length) {
+      const character = source[index++];
+      if (character === "\\") {
+        index += 1;
+        continue;
+      }
+      if (character === '"') return JSON.parse(source.slice(start, index)) as string;
+    }
+    throw new Error();
+  };
+  let duplicate = false;
+  const value = (): void => {
+    whitespace();
+    if (source[index] === "{") {
+      index += 1;
+      whitespace();
+      const keys = new Set<string>();
+      if (source[index] === "}") { index += 1; return; }
+      while (true) {
+        whitespace();
+        const key = stringValue();
+        if (keys.has(key)) duplicate = true;
+        keys.add(key);
+        whitespace();
+        if (source[index++] !== ":") throw new Error();
+        value();
+        whitespace();
+        const separator = source[index++];
+        if (separator === "}") return;
+        if (separator !== ",") throw new Error();
+      }
+    }
+    if (source[index] === "[") {
+      index += 1;
+      whitespace();
+      if (source[index] === "]") { index += 1; return; }
+      while (true) {
+        value();
+        whitespace();
+        const separator = source[index++];
+        if (separator === "]") return;
+        if (separator !== ",") throw new Error();
+      }
+    }
+    if (source[index] === '"') { stringValue(); return; }
+    const match = /^(?:-?(?:0|[1-9]\d*)(?:\.\d+)?(?:[eE][+-]?\d+)?|true|false|null)/u.exec(
+      source.slice(index),
+    );
+    if (!match) throw new Error();
+    index += match[0].length;
+  };
+  value();
+  whitespace();
+  if (index !== source.length) throw new Error();
+  return duplicate;
 }
 
 function validBinding(value: unknown): boolean {
@@ -168,10 +463,7 @@ function validV1Selection(
     ["host-enforced", "engine-enforced", "mixed", "unverified"].includes(
       String(record.enforcement),
     ) &&
-    (record.executionTarget === null ||
-      (!!record.executionTarget &&
-        typeof record.executionTarget === "object" &&
-        !Array.isArray(record.executionTarget))) &&
+    validExecutionTarget(record.executionTarget) &&
     nonEmpty(record.packageGeneration, 256)
   );
 }
@@ -200,10 +492,7 @@ function validV2Selection(value: unknown): boolean {
     ["host-enforced", "engine-enforced", "mixed", "unverified"].includes(
       String(record.enforcement),
     ) &&
-    (record.executionTarget === null ||
-      (!!record.executionTarget &&
-        typeof record.executionTarget === "object" &&
-        !Array.isArray(record.executionTarget))) &&
+    validExecutionTarget(record.executionTarget) &&
     (record.packageGeneration === null ||
       nonEmpty(record.packageGeneration, 256))
   );
@@ -218,6 +507,21 @@ function validAbort(value: unknown): boolean {
     typeof record.requestedAt === "string" &&
     Number.isFinite(Date.parse(record.requestedAt)) &&
     typeof record.confirmed === "boolean"
+  );
+}
+
+function validBlocked(value: unknown): boolean {
+  if (value === null) return true;
+  if (!value || typeof value !== "object" || Array.isArray(value)) return false;
+  const record = value as Record<string, unknown>;
+  return (
+    exactKeys(record, ["kind", "code", "message", "retryable", "observedAt"]) &&
+    record.kind === "selected-engine-unavailable" &&
+    nonEmpty(record.code, 128) &&
+    nonEmpty(record.message, 2_000) &&
+    record.retryable === true &&
+    typeof record.observedAt === "string" &&
+    Number.isFinite(Date.parse(record.observedAt))
   );
 }
 
@@ -251,10 +555,7 @@ function decodeV2Receipt(record: Record<string, unknown>): DecodedReceipt {
     (state === "pending" &&
       exactKeys(record, ["state", "lastConfirmedBoundary", "blocked"]) &&
       record.lastConfirmedBoundary === "pre-send" &&
-      (record.blocked === null ||
-        (!!record.blocked &&
-          typeof record.blocked === "object" &&
-          !Array.isArray(record.blocked)))) ||
+      validBlocked(record.blocked)) ||
     (state === "sent" &&
       exactKeys(record, [
         "state",
@@ -426,6 +727,8 @@ function decodeReceipt(
   if (typeof value !== "string") throw new Error("PROTECTED_FACT_UNDECODABLE");
   let parsed: unknown;
   try {
+    if (hasDuplicateJsonObjectKeys(value))
+      throw new Error("PROTECTED_FACT_UNDECODABLE");
     parsed = JSON.parse(value);
   } catch {
     throw new Error("PROTECTED_FACT_UNDECODABLE");
@@ -565,11 +868,11 @@ function classifyProductFacts(
   database: DatabaseSync,
   lane: Lane,
   fingerprint: keyof typeof PRODUCT_FINGERPRINTS,
+  context?: ClassifierContext,
 ): { readonly facts: ProtectedFacts; readonly blockers: Blocker[] } {
   const registry = PRODUCT_FINGERPRINTS[fingerprint];
   validateProductMarker(database, registry.receiptDecoder);
-  const rows = database
-    .prepare(
+  const rowsQuery =
       `SELECT runs.run_id, runs.receipt_id, runs.package_generation,
               receipts.receipt_id AS joined_receipt_id,
               receipts.dispatch_id AS receipt_dispatch_id,
@@ -583,20 +886,29 @@ function classifyProductFacts(
               outbox.automatic_replay_count
        FROM product_runs AS runs
        LEFT JOIN product_operation_receipts AS receipts ON receipts.run_id = runs.run_id
-       LEFT JOIN product_outbox AS outbox ON outbox.run_id = runs.run_id`,
-    )
-    .all() as Record<string, unknown>[];
+       LEFT JOIN product_outbox AS outbox ON outbox.run_id = runs.run_id`;
+  const rows = (context
+    ? classifierOperation(
+        context.witness,
+        "classifier.query-protected-aggregate",
+        context.queryOrdinal++,
+        () => database.prepare(rowsQuery).all(),
+      )
+    : database.prepare(rowsQuery).all()) as Record<string, unknown>[];
   const runCount = count(
     database,
     "SELECT COUNT(run_id) AS count FROM product_runs",
+    context,
   );
   const receiptCount = count(
     database,
     "SELECT COUNT(receipt_id) AS count FROM product_operation_receipts",
+    context,
   );
   const outboxCount = count(
     database,
     "SELECT COUNT(dispatch_id) AS count FROM product_outbox",
+    context,
   );
   let activeLeaseCount = 0;
   let uncertainRunCount = 0;
@@ -663,11 +975,15 @@ function classifyProductFacts(
     contradictory = true;
   if (registry.runtimeActivitySequence) {
     const sequence = registry.runtimeActivitySequence;
-    const activityRows = database
-      .prepare(
-        `SELECT ${sequence} AS sequence FROM product_runtime_activities WHERE kind = 'package'`,
-      )
-      .all() as Record<string, unknown>[];
+    const query = `SELECT ${sequence} AS sequence FROM product_runtime_activities WHERE kind = 'package'`;
+    const activityRows = (context
+      ? classifierOperation(
+          context.witness,
+          "classifier.query-protected-aggregate",
+          context.queryOrdinal++,
+          () => database.prepare(query).all(),
+        )
+      : database.prepare(query).all()) as Record<string, unknown>[];
     if (
       activityRows.some(
         (row) =>
@@ -708,6 +1024,7 @@ function classifyProductFacts(
 function classifyServiceFacts(
   database: DatabaseSync,
   lane: Lane,
+  context?: ClassifierContext,
 ): {
   readonly facts: ProtectedFacts;
   readonly blockers: Blocker[];
@@ -716,22 +1033,27 @@ function classifyServiceFacts(
     count(
       database,
       "SELECT COUNT(attachment_id) AS count FROM managed_attachment_blobs",
+      context,
     ) +
     count(
       database,
       "SELECT COUNT(attachment_id) AS count FROM managed_attachment_cleanup_jobs",
+      context,
     );
   const credentialCount = count(
     database,
     "SELECT COUNT(credential) AS count FROM auth_pairing_links",
+    context,
   );
   const identityCount = count(
     database,
     "SELECT COUNT(session_id) AS count FROM auth_sessions",
+    context,
   );
   const globalConfigurationCount = count(
     database,
     "SELECT COUNT(setting_key) AS count FROM automation_settings",
+    context,
   );
   const facts = {
     ...emptyProtectedFacts(lane, "service"),
@@ -799,7 +1121,10 @@ export function classifyLegacyDatabase(
   path: string,
   lane: Lane,
   storeKind: "product" | "service",
+  witness?: ClassifierWitnessPort,
 ): ClassifiedDatabase {
+  path = classifierOperation(witness, "classifier.resolve-retired", "single", () => path);
+  reapDeadClassifierScratch(path);
   const suffixes = ["", "-wal", "-shm"] as const;
   const initialPresence = new Map(
     suffixes.map((suffix) => [suffix, FS.existsSync(`${path}${suffix}`)]),
@@ -830,29 +1155,134 @@ export function classifyLegacyDatabase(
       blockers: [],
     };
   }
+  const before = new Map<string, StableFileIdentity>();
+  for (const suffix of suffixes)
+    if (initialPresence.get(suffix)) before.set(suffix, identity(`${path}${suffix}`));
+  witness?.operation("classifier.create-scratch-dir", "before", "single");
   const scratch = FS.mkdtempSync(
-    Path.join(OS.tmpdir(), `omnimind-product-truth-${randomUUID()}-`),
+    Path.join(classifierScratchRoot(), `run-${randomUUID()}-`),
   );
   FS.chmodSync(scratch, 0o700);
+  const scratchStat = FS.lstatSync(scratch);
+  writeClassifierScratchOwner(scratch, path, scratchStat);
   const scratchMain = Path.join(scratch, "database.sqlite");
-  const before = new Map<string, StableFileIdentity>();
   let database: DatabaseSync | undefined;
+  let sourceDigest = "";
+  const context: ClassifierContext = { witness, queryOrdinal: 0 };
   try {
+    witness?.operation("classifier.create-scratch-dir", "after", "single");
     for (const suffix of suffixes) {
       const source = `${path}${suffix}`;
       if (!initialPresence.get(suffix)) continue;
-      const initial = identity(source);
+      const initial = suffix === ""
+        ? classifierOperation(witness, "classifier.lstat-source-before", "single", () => identity(source))
+        : identity(source);
       before.set(suffix, initial);
-      FS.copyFileSync(
-        source,
-        `${scratchMain}${suffix}`,
-        FS.constants.COPYFILE_EXCL,
-      );
+      if (suffix === "") {
+        witness?.barrier?.("classifier.source-identity-to-open", () =>
+          FS.appendFileSync(source, Buffer.from("race:source-open")));
+        const flags = process.platform === "win32"
+          ? FS.constants.O_RDONLY
+          : FS.constants.O_RDONLY | FS.constants.O_NOFOLLOW;
+        const sourceDescriptor = openClassifierDescriptor(
+          witness,
+          "classifier.open-source-nofollow",
+          () => FS.openSync(source, flags),
+        );
+        let copyDescriptor: number;
+        try {
+          copyDescriptor = openClassifierDescriptor(
+            witness,
+            "classifier.open-copy-exclusive",
+            () => FS.openSync(scratchMain, "wx", 0o600),
+          );
+        } catch (cause) {
+          FS.closeSync(sourceDescriptor);
+          throw cause;
+        }
+        try {
+          sourceDigest = hashFileDescriptor(
+            sourceDescriptor,
+            witness,
+            "classifier.read-source-chunk",
+            (bytes, position, ordinal) =>
+              classifierOperation(witness, "classifier.write-copy-chunk", ordinal, () =>
+                FS.writeSync(copyDescriptor, bytes, 0, bytes.length, position)),
+            initial.size,
+          );
+          classifierOperation(witness, "classifier.fsync-copy", "single", () =>
+            FS.fsyncSync(copyDescriptor));
+        } finally {
+          let injected: unknown;
+          try {
+            closeClassifierDescriptor(copyDescriptor, witness, "classifier.close-copy-writer");
+          } catch (cause) {
+            injected = cause;
+          }
+          try {
+            closeClassifierDescriptor(sourceDescriptor, witness, "classifier.close-source");
+          } catch (cause) {
+            injected ??= cause;
+          }
+          if (injected !== undefined) throw injected;
+        }
+      } else {
+        FS.copyFileSync(source, `${scratchMain}${suffix}`, FS.constants.COPYFILE_EXCL);
+      }
       FS.chmodSync(`${scratchMain}${suffix}`, 0o600);
-      if (!sameIdentity(initial, identity(source)))
+      if (suffix !== "" && !sameIdentity(initial, identity(source)))
         throw new Error("INSPECTION_UNSAFE");
     }
+    witness?.barrier?.("classifier.source-copy-to-recheck", () =>
+      FS.appendFileSync(path, Buffer.from("race:source-recheck")));
+    if (!sameIdentity(
+      before.get("")!,
+      classifierOperation(witness, "classifier.lstat-source-after", "single", () => identity(path)),
+    )) throw new Error("INSPECTION_UNSAFE");
+    const copyBefore = classifierOperation(
+      witness,
+      "classifier.lstat-copy",
+      "single",
+      () => identity(scratchMain),
+    );
+    witness?.barrier?.("classifier.copy-identity-to-hash-open", () =>
+      FS.appendFileSync(scratchMain, Buffer.from("race:copy-hash")));
+    const copyHashDescriptor = openClassifierDescriptor(
+      witness,
+      "classifier.open-copy-hash",
+      () => FS.openSync(
+        scratchMain,
+        process.platform === "win32"
+          ? FS.constants.O_RDONLY
+          : FS.constants.O_RDONLY | FS.constants.O_NOFOLLOW,
+      ),
+    );
+    let copyDigest: string;
+    try {
+      copyDigest = hashFileDescriptor(
+        copyHashDescriptor,
+        witness,
+        "classifier.read-copy-hash-chunk",
+        undefined,
+        copyBefore.size,
+      );
+    } finally {
+      closeClassifierDescriptor(copyHashDescriptor, witness, "classifier.close-copy-hash");
+    }
+    if (!sameIdentity(copyBefore, identity(scratchMain)) || copyDigest !== sourceDigest)
+      throw new Error("INSPECTION_UNSAFE");
+    witness?.barrier?.("classifier.copy-hash-to-sqlite-open", () =>
+      FS.appendFileSync(scratchMain, Buffer.from("race:copy-open")));
+    if (!sameIdentity(copyBefore, identity(scratchMain))) throw new Error("INSPECTION_UNSAFE");
+    witness?.operation("classifier.open-copy-sqlite-readonly", "before", "single");
     database = new DatabaseSync(scratchMain, { readOnly: true });
+    try {
+      witness?.operation("classifier.open-copy-sqlite-readonly", "after", "single");
+    } catch (cause) {
+      database.close();
+      database = undefined;
+      throw cause;
+    }
     requireSafeDatabase(database);
     const fingerprint = sqliteFingerprint(database);
     if (storeKind === "product") {
@@ -873,6 +1303,7 @@ export function classifyLegacyDatabase(
         database,
         lane,
         fingerprint as keyof typeof PRODUCT_FINGERPRINTS,
+        context,
       );
       return { plan: { status: "classified", fingerprint }, ...classified };
     }
@@ -907,7 +1338,7 @@ export function classifyLegacyDatabase(
         ],
       };
     }
-    const classified = classifyServiceFacts(database, lane);
+    const classified = classifyServiceFacts(database, lane, context);
     return { plan: { status: "classified", fingerprint }, ...classified };
   } catch (cause) {
     const code = (cause as Error).message;
@@ -920,16 +1351,70 @@ export function classifyLegacyDatabase(
     }
     throw cause;
   } finally {
-    database?.close();
-    for (const suffix of suffixes) {
-      const source = `${path}${suffix}`;
-      const wasPresent = initialPresence.get(suffix) === true;
-      if (FS.existsSync(source) !== wasPresent) {
-        throw new Error("INSPECTION_UNSAFE");
+    let finalFailure: unknown;
+    if (database !== undefined) {
+      try {
+        witness?.operation("classifier.close-copy-database", "before", "single");
+      } catch (cause) {
+        finalFailure = cause;
       }
-      if (wasPresent && !sameIdentity(before.get(suffix)!, identity(source)))
-        throw new Error("INSPECTION_UNSAFE");
+      database.close();
+      database = undefined;
+      if (finalFailure === undefined) {
+        try {
+          witness?.operation("classifier.close-copy-database", "after", "single");
+        } catch (cause) {
+          finalFailure = cause;
+        }
+      }
     }
-    FS.rmSync(scratch, { recursive: true });
+    try {
+      for (const suffix of suffixes) {
+        const source = `${path}${suffix}`;
+        const wasPresent = initialPresence.get(suffix) === true;
+        if (FS.existsSync(source) !== wasPresent)
+          throw new Error("INSPECTION_UNSAFE");
+        if (wasPresent && !sameIdentity(before.get(suffix)!, identity(source)))
+          throw new Error("INSPECTION_UNSAFE");
+      }
+    } catch (cause) {
+      finalFailure ??= cause;
+    }
+    try {
+      classifierOperation(witness, "classifier.remove-copy", "single", () => {
+        for (const suffix of [...suffixes].reverse()) {
+          const copy = `${scratchMain}${suffix}`;
+          if (FS.existsSync(copy)) FS.unlinkSync(copy);
+        }
+      });
+    } catch (cause) {
+      finalFailure ??= cause;
+      for (const suffix of [...suffixes].reverse()) {
+        const copy = `${scratchMain}${suffix}`;
+        if (FS.existsSync(copy)) FS.unlinkSync(copy);
+      }
+    }
+    const ownerPath = Path.join(scratch, CLASSIFIER_SCRATCH_OWNER);
+    if (FS.existsSync(ownerPath)) {
+      const ownerStat = FS.lstatSync(ownerPath);
+      if (!ownerStat.isFile() || ownerStat.isSymbolicLink() || ownerStat.nlink !== 1)
+        finalFailure ??= new Error("INSPECTION_UNSAFE");
+      else FS.unlinkSync(ownerPath);
+    }
+    try {
+      classifierOperation(witness, "classifier.remove-scratch-dir", "single", () =>
+        FS.rmdirSync(scratch));
+    } catch (cause) {
+      finalFailure ??= cause;
+      if (FS.existsSync(scratch)) FS.rmdirSync(scratch);
+    }
+    try {
+      classifierOperation(witness, "classifier.verify-scratch-absent", "single", () => {
+        if (FS.existsSync(scratch)) throw new Error("INSPECTION_UNSAFE");
+      });
+    } catch (cause) {
+      finalFailure ??= cause;
+    }
+    if (finalFailure !== undefined) throw finalFailure;
   }
 }
