@@ -27,6 +27,7 @@ describe("discoverCursorSkills", () => {
       await mkdir(nestedSkill, { recursive: true });
       await mkdir(userSkill, { recursive: true });
       await mkdir(cwd, { recursive: true });
+      await mkdir(path.join(root, "repo", ".git"));
 
       await writeFile(
         path.join(projectSkill, "SKILL.md"),
