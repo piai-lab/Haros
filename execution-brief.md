@@ -12,7 +12,7 @@ OmniMind Agent 是 Pi-derived 独立 runtime，随 App 开箱发行；它可以�
 2. `Agent | Chat` 直接映射到 inherited Project/Thread/Space/Home/Studio；
 3. 正常 UI 只呈现 OmniMind；`omnimind` 与 `pi` 是同一 Registry 中两个真实 identity，stock Pi 只在用户主动选择 Provider 或查看详情时显示；
 4. OmniMind Agent 使用 `.omnimind` global/project-local state；stock Pi 仅在被显式选择时使用自己的 `.pi`，二者不迁移、同步或共享；
-5. 恢复 Synara PluginLibrary/Skills/provider discovery；只有 OmniMind Agent 原生 API 已提供时补 provider-scoped lifecycle，不追求 stock Pi/其他 Provider 功能齐平；
+5. 恢复 Synara PluginLibrary/Skills/provider discovery；Engine capability composition 以 [`architecture/execution.md`](architecture/execution.md#扩展与生态) 为唯一语义 owner；只有 OmniMind Agent 原生 API 已提供时补 provider-scoped lifecycle，不追求 stock Pi/其他 Provider 功能齐平；
 6. File、Git、Terminal 直接复用现有实现，不建新 client 或 observed-version platform；
 7. Settings IA、performance、a11y、packaging 与 updater 优先保全 source；双语是明确的 OmniMind 产品差异，不虚构为 source 已有能力；
 8. 只补可复现的 OmniMind 差异；未证明缺口时不得重写；

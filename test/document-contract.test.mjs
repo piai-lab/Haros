@@ -152,6 +152,22 @@ test("authority reset remains before production source reset", async (t) => {
   );
 });
 
+test("Engine native ecosystem cannot be redefined as replaced", async (t) => {
+  const root = await createFixture(t);
+  await replaceText(
+    root,
+    "architecture/execution.md",
+    '"nativeEcosystemDisposition": "preserve"',
+    '"nativeEcosystemDisposition": "replace"',
+  );
+
+  assertFinding(
+    await validateDocumentContract({ root }),
+    "execution.engine-capability-composition",
+    "architecture/execution.md",
+  );
+});
+
 test("Campaign canonical identity is structural", async (t) => {
   const root = await createFixture(t);
   await replaceText(root, "missions/independent-omnimind-v1.md", "Status: active", "Status: done");

@@ -53,6 +53,11 @@ const MACHINE_BLOCKS = [
     tag: "public-surface-denylist",
     format: "unique-lines",
   },
+  {
+    path: "architecture/execution.md",
+    tag: "engine-capability-composition",
+    format: "json",
+  },
 ];
 
 function normalize(value) {
@@ -187,6 +192,39 @@ function validateCurrentState(findings, documents) {
   }
 }
 
+function validateEngineCapabilityComposition(findings, documents) {
+  const documentPath = "architecture/execution.md";
+  const blocks = blocksFor(documents.get(documentPath) ?? "", "engine-capability-composition");
+  if (blocks.length !== 1) return;
+
+  let policy;
+  try {
+    policy = JSON.parse(blocks[0]);
+  } catch {
+    return;
+  }
+  const expectedCapabilities = [
+    "engine-native-ecosystem",
+    "compatible-omnimind-library",
+    "omnimind-workbench",
+  ];
+  if (
+    JSON.stringify(policy.effectiveCapabilities) !== JSON.stringify(expectedCapabilities) ||
+    policy.nativeEcosystemDisposition !== "preserve" ||
+    policy.omnimindAssetDelivery !== "adapter-or-session-mount" ||
+    policy.enginePrivateHomeMutation !== "forbidden" ||
+    policy.identityConflict !== "explicit" ||
+    policy.crossEngineDurableState !== "forbidden"
+  ) {
+    addFinding(
+      findings,
+      "execution.engine-capability-composition",
+      documentPath,
+      "Engine native ecosystem must remain the preserved base of additive OmniMind composition",
+    );
+  }
+}
+
 /**
  * Validate only the durable document graph and machine-readable owner blocks.
  * Product semantics remain in the sole owners and are reviewed as prose/design;
@@ -217,6 +255,7 @@ export async function validateDocumentContract({ root, read = readFile }) {
   validateRoutes(findings, documents);
   validateMachineBlocks(findings, documents);
   validateCurrentState(findings, documents);
+  validateEngineCapabilityComposition(findings, documents);
 
   return findings;
 }

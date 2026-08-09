@@ -103,6 +103,10 @@ restart 优先使用 Provider native resume/session cursor。无法恢复时明�
 
 ## 扩展与生态
 
+用户显式选择某个 Engine（即当前 Provider runtime）后，其有效能力集合是 **该 Engine 的完整 native ecosystem + 与该 Engine 真实兼容的 OmniMind Library assets + OmniMind Workbench**。Codex、Pi、OpenCode 等 Engine 自己的 Skill、MCP、Tool、configuration、authentication 与 Session 能力不得因进入 OmniMind 而被替换、裁掉或伪装成 OmniMind 能力。
+
+OmniMind-owned Skill/MCP 的生命周期归 OmniMind，通过现有 adapter 或 Session projection 注入/挂载；不得复制、覆盖或迁移到 `~/.codex`、`.pi` 或其他 Engine private home。native 与 OmniMind asset 的 provenance、identity 始终保留；同名冲突不得静默覆盖，只有经实际 capability 检查兼容的资产才进入有效集合，不兼容时准确显示 unavailable。OmniMind Agent 可以消费可移植的 Codex/Pi assets，但 Codex/Pi 专属 runtime semantics 仍只属于相应 Engine，不能因资产可读而冒充支持。
+
 Package lifecycle 不跨 Provider归一：
 
 - OmniMind Agent UI 直接调用 bundled Pi-compatible manager/loader/settings/trust，并写入独立 OmniMind state root；
@@ -112,6 +116,23 @@ Package lifecycle 不跨 Provider归一：
 - curated/preinstalled OmniMind Agent 资源使用发行时 manifest 记录 source、hash、license 与 ecosystem API compatibility，不成为运行时 state store。
 
 不得新增 `PackageActivation`、current/LKG、generation lease、跨 Provider rollback 或第二 Marketplace。Package 更新对活跃 Session 的影响完全按原生 runtime 行为呈现；若原生 contract 不足以安全暴露某动作，就暂不提供该按钮。
+
+上述组合不产生 shared `PackageActivation`/current/LKG、generic plugin platform、permission broker 或跨 Engine durable state；PluginLibrary/Registry 只投影 native + additive 能力事实，不接管 Engine 私有运行时责任。
+
+```engine-capability-composition
+{
+  "effectiveCapabilities": [
+    "engine-native-ecosystem",
+    "compatible-omnimind-library",
+    "omnimind-workbench"
+  ],
+  "nativeEcosystemDisposition": "preserve",
+  "omnimindAssetDelivery": "adapter-or-session-mount",
+  "enginePrivateHomeMutation": "forbidden",
+  "identityConflict": "explicit",
+  "crossEngineDurableState": "forbidden"
+}
+```
 
 ## First-public storage
 
