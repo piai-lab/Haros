@@ -46,7 +46,7 @@ function statusPill(status: ServerProviderUsageSnapshot["status"]): StatusPill |
       return { labelKey: "settings.unsupported", className: "bg-muted text-muted-foreground" };
     case "error":
       return {
-        labelKey: "settings.unavailable",
+        labelKey: "settings.usageUnavailable",
         className: "bg-red-500/12 text-red-600 dark:text-red-400",
       };
     default:
@@ -129,6 +129,11 @@ function ProviderUsageCard({
                 : (snapshot.detail ?? t("settings.noUsageData"))}
           </p>
         )}
+        {status === "error" ? (
+          <p className="text-[11px] leading-relaxed text-muted-foreground">
+            {t("settings.providerUsageErrorScope")}
+          </p>
+        ) : null}
       </div>
     </SettingsCard>
   );

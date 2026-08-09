@@ -1,10 +1,13 @@
 import { describe, expect, it } from "vitest";
 
+import type { ServerProviderStatus } from "@synara/contracts";
+
 import { type AppSettings, AppSettingsSchema } from "~/appSettings";
 
 import {
   createProviderInstallResetPatch,
   isProviderInstallSettingsDirty,
+  providerUpdateFailureMessage,
 } from "./ProvidersSettingsPanel";
 
 const defaults = AppSettingsSchema.makeUnsafe({});
@@ -82,5 +85,28 @@ describe("createProviderInstallResetPatch", () => {
     );
     expect(patch.kiloServerPassword).toBe("");
     expect(patch.openCodeServerPassword).toBe("");
+  });
+});
+
+describe("providerUpdateFailureMessage", () => {
+  it("keeps raw CLI progress output out of the toast", () => {
+    const provider = {
+      provider: "opencode",
+      status: "warning",
+      available: true,
+      authStatus: "unknown",
+      checkedAt: "2026-08-10T00:00:00.000Z",
+      updateState: {
+        status: "failed",
+        startedAt: "2026-08-10T00:00:00.000Z",
+        finishedAt: "2026-08-10T00:00:01.000Z",
+        message: "Update command exited with code 1.",
+        output: "\u001b[2J[999D Upgrading\n".repeat(100),
+      },
+    } satisfies ServerProviderStatus;
+
+    expect(providerUpdateFailureMessage(provider, "Update incomplete.")).toBe(
+      "Update command exited with code 1.",
+    );
   });
 });

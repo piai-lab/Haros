@@ -248,7 +248,7 @@ function RootRouteView() {
   return (
     <>
       <I18nProvider>
-        <ToastProvider position="top-center">
+        <ToastProvider position="bottom-right">
           <AnchoredToastProvider>
             <DocumentLocaleSync />
             <GitProgressToastPreviewDev />

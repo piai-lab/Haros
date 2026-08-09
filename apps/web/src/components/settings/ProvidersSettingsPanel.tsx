@@ -546,13 +546,15 @@ function providerUpdateStatusLabel(
   return currentVersion ? t("settings.currentVersion", { version: currentVersion }) : null;
 }
 
-function providerUpdateFailureMessage(
+export function providerUpdateFailureMessage(
   provider: ServerProviderStatus | undefined,
-  t: SettingsTranslator,
+  fallback: string,
 ): string | null {
   const state = provider?.updateState;
   if (!state || (state.status !== "failed" && state.status !== "unchanged")) return null;
-  return state.output?.trim() || state.message || t("settings.providerUpdateIncomplete");
+  // Full CLI output remains available in provider diagnostics. A transient toast should stay
+  // readable and must not turn ANSI progress streams into a screen-sized error notification.
+  return state.message?.trim() || fallback;
 }
 
 function ProviderUpdateAction(props: {
@@ -889,7 +891,10 @@ export function ProvidersSettingsPanel({
       })
         .then((result) => {
           const refreshedProvider = result.providers.find((status) => status.provider === provider);
-          const failureMessage = providerUpdateFailureMessage(refreshedProvider, t);
+          const failureMessage = providerUpdateFailureMessage(
+            refreshedProvider,
+            t("settings.providerUpdateIncomplete"),
+          );
           if (failureMessage) {
             const manualCommand = refreshedProvider?.versionAdvisory?.updateCommand?.trim();
             toastManager.add({

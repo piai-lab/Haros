@@ -581,9 +581,12 @@ export const EN_MESSAGES = {
   "settings.notSignedIn": "Not signed in",
   "settings.unsupported": "Unsupported",
   "settings.unavailable": "Unavailable",
+  "settings.usageUnavailable": "Usage unavailable",
   "settings.noUsageData": "No usage data reported yet.",
   "settings.providerUsageSignIn": "Sign in with the provider CLI to see usage.",
   "settings.providerUsage": "Provider usage",
+  "settings.providerUsageErrorScope":
+    "Only usage reporting is unavailable; this does not mean the engine or its sessions are offline.",
   "settings.refresh": "Refresh",
   "settings.loadingProviderUsage": "Loading provider usage…",
   "settings.providerUsagePrivacy":
@@ -1771,9 +1774,11 @@ export const ZH_CN_MESSAGES = {
   "settings.notSignedIn": "未登录",
   "settings.unsupported": "不支持",
   "settings.unavailable": "不可用",
+  "settings.usageUnavailable": "用量暂不可用",
   "settings.noUsageData": "尚未报告用量数据。",
   "settings.providerUsageSignIn": "请先通过 Provider CLI 登录，再查看用量。",
   "settings.providerUsage": "Provider 用量",
+  "settings.providerUsageErrorScope": "这里只是用量查询暂不可用，不代表 Engine 或会话离线。",
   "settings.refresh": "刷新",
   "settings.loadingProviderUsage": "正在加载 Provider 用量…",
   "settings.providerUsagePrivacy":
