@@ -161,13 +161,15 @@ describe("agent gateway MCP injection", () => {
     assert.isTrue(configHasTomlTableHeader('[mcp_servers."omnimind"]', "[mcp_servers.omnimind]"));
     assert.isTrue(configHasTomlTableHeader("['mcp_servers'.'omnimind']", "[mcp_servers.omnimind]"));
     assert.isTrue(
-      configHasTomlTableHeader('[mcp_servers."syn\\u0061ra"]', "[mcp_servers.omnimind]"),
+      configHasTomlTableHeader('[mcp_servers."omni\\u006dind"]', "[mcp_servers.omnimind]"),
     );
     assert.isTrue(
       configHasTomlTableHeader('["shell_environment_policy"]', "[shell_environment_policy]"),
     );
     assert.isFalse(configHasTomlTableHeader('["mcp_servers.omnimind"]', "[mcp_servers.omnimind]"));
-    assert.isFalse(configHasTomlTableHeader('[mcp_servers."syn\\qara"]', "[mcp_servers.omnimind]"));
+    assert.isFalse(
+      configHasTomlTableHeader('[mcp_servers."omni\\qmind"]', "[mcp_servers.omnimind]"),
+    );
     // A commented-out example block must not count as the table being present.
     assert.isFalse(configHasTomlTableHeader("# [mcp_servers.omnimind]", "[mcp_servers.omnimind]"));
     assert.isFalse(
