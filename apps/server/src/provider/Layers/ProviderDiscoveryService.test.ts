@@ -33,7 +33,7 @@ import type { ProviderAdapterShape } from "../Services/ProviderAdapter.ts";
 import { ProviderAdapterRegistry } from "../Services/ProviderAdapterRegistry.ts";
 import { ProviderDiscoveryService } from "../Services/ProviderDiscoveryService.ts";
 import { clearSkillsCatalogCacheForTests } from "../skillsCatalog.ts";
-import { ProviderDiscoveryServiceLive } from "./ProviderDiscoveryService.ts";
+import { combineProviderSkills, ProviderDiscoveryServiceLive } from "./ProviderDiscoveryService.ts";
 
 let root: string;
 let homeDir: string;
@@ -147,6 +147,8 @@ describe("ProviderDiscoveryService.listSkills", () => {
     const result = await runListSkills({ adapter: {}, provider: "antigravity" });
 
     expect(result.skills.map((skill) => skill.name)).toEqual(["portable"]);
+    expect(result.source).toBe("omnimind.catalog");
+    expect(result.warnings).toEqual([]);
   });
 
   it("prefers provider-native entries and appends catalog-only skills", async () => {
@@ -186,7 +188,7 @@ describe("ProviderDiscoveryService.listSkills", () => {
     expect(result.skills.map((skill) => skill.name)).toEqual(["portable"]);
   });
 
-  it("falls back to the catalog when native discovery fails", async () => {
+  it("keeps catalog skills and reports a sanitized native discovery failure", async () => {
     await writeSkill(path.join(baseDir, "skills", "portable"), "portable");
 
     const result = await runListSkills({
@@ -204,6 +206,45 @@ describe("ProviderDiscoveryService.listSkills", () => {
     });
 
     expect(result.skills.map((skill) => skill.name)).toEqual(["portable"]);
+    expect(result.source).toBe("omnimind.catalog");
+    expect(result.warnings).toEqual([{ source: "engine-native", reason: "discovery-failed" }]);
+    expect(JSON.stringify(result)).not.toContain("codex binary missing");
+  });
+
+  it("keeps native skills and reports a sanitized OmniMind Library discovery failure", async () => {
+    const nativeSkill = {
+      name: "native-only",
+      path: path.join(homeDir, ".codex", "skills", "native-only", "SKILL.md"),
+      enabled: true,
+      scope: "user",
+    };
+    const result = combineProviderSkills({
+      native: { skills: [nativeSkill], source: "codex-app-server", cached: false },
+      catalog: "failed",
+      disabledSkillNames: [],
+    });
+
+    expect(result.skills).toEqual([nativeSkill]);
+    expect(result.source).toBe("codex-app-server");
+    expect(result.warnings).toEqual([{ source: "omnimind-library", reason: "discovery-failed" }]);
+  });
+
+  it("distinguishes both failed sources from unsupported native discovery", () => {
+    expect(
+      combineProviderSkills({ native: "failed", catalog: "failed", disabledSkillNames: [] }),
+    ).toEqual({
+      skills: [],
+      source: "unavailable",
+      cached: false,
+      warnings: [
+        { source: "engine-native", reason: "discovery-failed" },
+        { source: "omnimind-library", reason: "discovery-failed" },
+      ],
+    });
+    expect(
+      combineProviderSkills({ native: "unsupported", catalog: [], disabledSkillNames: [] })
+        .warnings,
+    ).toEqual([]);
   });
 });
 

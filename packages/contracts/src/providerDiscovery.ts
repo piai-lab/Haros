@@ -76,10 +76,17 @@ export const ProviderListSkillsInput = Schema.Struct({
 });
 export type ProviderListSkillsInput = typeof ProviderListSkillsInput.Type;
 
+export const ProviderSkillDiscoveryWarning = Schema.Struct({
+  source: Schema.Literals(["engine-native", "omnimind-library"]),
+  reason: Schema.Literal("discovery-failed"),
+});
+export type ProviderSkillDiscoveryWarning = typeof ProviderSkillDiscoveryWarning.Type;
+
 export const ProviderListSkillsResult = Schema.Struct({
   skills: Schema.Array(ProviderSkillDescriptor),
   source: Schema.optional(TrimmedNonEmptyString),
   cached: Schema.optional(Schema.Boolean),
+  warnings: Schema.optional(Schema.Array(ProviderSkillDiscoveryWarning)),
 });
 export type ProviderListSkillsResult = typeof ProviderListSkillsResult.Type;
 

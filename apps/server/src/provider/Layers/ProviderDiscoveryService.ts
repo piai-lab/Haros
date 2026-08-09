@@ -9,6 +9,7 @@ import {
   ProviderListSkillsInput,
   type ProviderListSkillsResult,
   ProviderReadPluginInput,
+  type ProviderSkillDiscoveryWarning,
   type ProviderSkillDescriptor,
 } from "@synara/contracts";
 import { Effect, Layer, Schema, SchemaIssue } from "effect";
@@ -57,6 +58,39 @@ const disabledCapabilitiesForProvider = (
   supportsThreadImport: false,
 });
 
+type NativeSkillDiscovery = ProviderListSkillsResult | "failed" | "unsupported";
+type CatalogSkillDiscovery = ReadonlyArray<ProviderSkillDescriptor> | "failed";
+
+export function combineProviderSkills(input: {
+  readonly native: NativeSkillDiscovery;
+  readonly catalog: CatalogSkillDiscovery;
+  readonly disabledSkillNames: ReadonlyArray<string>;
+}): ProviderListSkillsResult {
+  const nativeResult = typeof input.native === "string" ? null : input.native;
+  const catalogSkills = input.catalog === "failed" ? [] : input.catalog;
+  const warnings: ProviderSkillDiscoveryWarning[] = [];
+  if (input.native === "failed") {
+    warnings.push({ source: "engine-native", reason: "discovery-failed" });
+  }
+  if (input.catalog === "failed") {
+    warnings.push({ source: "omnimind-library", reason: "discovery-failed" });
+  }
+  const nativeSource = nativeResult ? (nativeResult.source ?? "provider-native") : null;
+  const catalogSource = input.catalog === "failed" ? null : "omnimind.catalog";
+  return {
+    skills: filterDisabledSkills(
+      mergeSkillsIntoCatalog({ native: nativeResult?.skills ?? [], catalog: catalogSkills }),
+      input.disabledSkillNames,
+    ),
+    source:
+      nativeSource && catalogSource
+        ? `${nativeSource}+${catalogSource}`
+        : (nativeSource ?? catalogSource ?? "unavailable"),
+    cached: nativeResult?.cached ?? false,
+    warnings,
+  };
+}
+
 const make = Effect.gen(function* () {
   const registry = yield* ProviderAdapterRegistry;
   const serverConfig = yield* ServerConfig;
@@ -92,19 +126,18 @@ const make = Effect.gen(function* () {
         payload: input,
       });
       const adapter = yield* registry.getByProvider(parsed.provider);
-      const nativeResult: ProviderListSkillsResult | null = adapter.listSkills
-        ? yield* adapter
-            .listSkills(parsed)
-            .pipe(
-              Effect.catch((error) =>
-                Effect.logWarning(
-                  "provider-native skill discovery failed; serving the OmniMind skills catalog only",
-                  { provider: parsed.provider, error },
-                ).pipe(Effect.as(null)),
-              ),
-            )
-        : null;
-      const catalogSkills = yield* Effect.tryPromise(() =>
+      const nativeDiscovery = adapter.listSkills
+        ? yield* adapter.listSkills(parsed).pipe(
+            Effect.map((result) => ({ _tag: "success", result }) as const),
+            Effect.catch(() =>
+              Effect.logWarning("provider-native skill discovery failed", {
+                provider: parsed.provider,
+                surface: "skills",
+              }).pipe(Effect.as({ _tag: "failed" } as const)),
+            ),
+          )
+        : ({ _tag: "unsupported" } as const);
+      const catalogDiscovery = yield* Effect.tryPromise(() =>
         discoverSkillsCatalog({
           cwd: parsed.cwd,
           homeDir: serverConfig.homeDir,
@@ -114,27 +147,22 @@ const make = Effect.gen(function* () {
           ...(parsed.forceReload !== undefined ? { forceReload: parsed.forceReload } : {}),
         }),
       ).pipe(
-        Effect.catchCause((cause) =>
+        Effect.map((skills) => ({ _tag: "success", skills }) as const),
+        Effect.catchCause(() =>
           Effect.logWarning("omnimind skills catalog discovery failed", {
             provider: parsed.provider,
-            cause,
-          }).pipe(Effect.as([] as ProviderSkillDescriptor[])),
+            surface: "skills",
+          }).pipe(Effect.as({ _tag: "failed" } as const)),
         ),
       );
-      const merged = mergeSkillsIntoCatalog({
-        native: nativeResult?.skills ?? [],
-        catalog: catalogSkills,
-      });
       const settings = yield* serverSettings.getSettings.pipe(
         Effect.orElseSucceed(() => DEFAULT_SERVER_SETTINGS),
       );
-      return {
-        skills: filterDisabledSkills(merged, settings.skills.disabled),
-        source: nativeResult?.source
-          ? `${nativeResult.source}+omnimind.catalog`
-          : "omnimind.catalog",
-        cached: nativeResult?.cached ?? false,
-      } satisfies ProviderListSkillsResult;
+      return combineProviderSkills({
+        native: nativeDiscovery._tag === "success" ? nativeDiscovery.result : nativeDiscovery._tag,
+        catalog: catalogDiscovery._tag === "success" ? catalogDiscovery.skills : "failed",
+        disabledSkillNames: settings.skills.disabled,
+      });
     });
 
   const listCommands: ProviderDiscoveryServiceShape["listCommands"] = (input) =>

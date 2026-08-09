@@ -5,7 +5,11 @@
 
 import type { ProviderSkillDescriptor } from "@synara/contracts";
 import { describe, expect, it } from "vitest";
-import { buildSkillSearchFields, rankProviderDiscoveryItems } from "./providerDiscovery";
+import {
+  buildSkillSearchFields,
+  formatSkillDiscoveryWarning,
+  rankProviderDiscoveryItems,
+} from "./providerDiscovery";
 
 function makeSkill(partial: Partial<ProviderSkillDescriptor>): ProviderSkillDescriptor {
   return {
@@ -105,5 +109,21 @@ describe("rankProviderDiscoveryItems", () => {
     );
 
     expect(ranked.map((skill) => skill.name)).toEqual(["workflow-kit:feature-delivery"]);
+  });
+});
+
+describe("formatSkillDiscoveryWarning", () => {
+  it("names the failed side while preserving the usable partial result", () => {
+    expect(
+      formatSkillDiscoveryWarning({ source: "engine-native", reason: "discovery-failed" }, "Codex"),
+    ).toBe(
+      "Codex native skill discovery failed. Any available OmniMind Library skills are shown below.",
+    );
+    expect(
+      formatSkillDiscoveryWarning(
+        { source: "omnimind-library", reason: "discovery-failed" },
+        "Codex",
+      ),
+    ).toBe("OmniMind Library discovery failed. Any available Codex native skills are shown below.");
   });
 });

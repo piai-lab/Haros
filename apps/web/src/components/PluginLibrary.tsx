@@ -32,6 +32,7 @@ import { DEFAULT_PROVIDER_ORDER } from "~/providerOrdering";
 import {
   buildPluginSearchFields,
   buildSkillSearchFields,
+  formatSkillDiscoveryWarning,
   formatSkillScope,
   isInstalledProviderPlugin,
   normalizeProviderDiscoveryText,
@@ -621,6 +622,7 @@ export function PluginLibrary() {
 
           {/* Warnings */}
           {((!discoveryCwd && selectedTab === "skills") ||
+            (selectedTab === "skills" && (skillsQuery.data?.warnings?.length ?? 0) > 0) ||
             (selectedTab === "plugins" && !!pluginsQuery.data?.remoteSyncError) ||
             (selectedTab === "plugins" &&
               (pluginsQuery.data?.marketplaceLoadErrors.length ?? 0) > 0)) && (
@@ -630,6 +632,13 @@ export function PluginLibrary() {
                   Skills need a workspace path. Open a project or thread first.
                 </InlineWarning>
               ) : null}
+              {selectedTab === "skills"
+                ? (skillsQuery.data?.warnings ?? []).map((warning) => (
+                    <InlineWarning key={`${warning.source}:${warning.reason}`}>
+                      {formatSkillDiscoveryWarning(warning, providerLabel)}
+                    </InlineWarning>
+                  ))
+                : null}
               {selectedTab === "plugins" && pluginsQuery.data?.remoteSyncError ? (
                 <InlineWarning>{pluginsQuery.data.remoteSyncError}</InlineWarning>
               ) : null}

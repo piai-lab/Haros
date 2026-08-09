@@ -7,6 +7,7 @@ import { resolveThreadBranchSourceCwd } from "@synara/shared/threadEnvironment";
 import type {
   ProviderNativeCommandDescriptor,
   ProviderPluginDescriptor,
+  ProviderSkillDiscoveryWarning,
   ProviderSkillDescriptor,
 } from "@synara/contracts";
 
@@ -247,4 +248,14 @@ export function formatSkillScope(scope: string | undefined): string {
   if (normalized.length === 0) return "Personal";
   if (normalized.toLowerCase() === "omnimind") return "OmniMind Library";
   return normalized.charAt(0).toUpperCase() + normalized.slice(1);
+}
+
+export function formatSkillDiscoveryWarning(
+  warning: ProviderSkillDiscoveryWarning,
+  providerLabel: string,
+): string {
+  if (warning.source === "engine-native") {
+    return `${providerLabel} native skill discovery failed. Any available OmniMind Library skills are shown below.`;
+  }
+  return `OmniMind Library discovery failed. Any available ${providerLabel} native skills are shown below.`;
 }
