@@ -7,6 +7,7 @@ import { describe, expect, it } from "vitest";
 
 import { buildShortcutSheetSections, listEditableShortcutDefinitions } from "./shortcutsSheet";
 import type { ProjectScript } from "./types";
+import { translate } from "./i18n";
 
 const PROJECT_SCRIPTS: ProjectScript[] = [
   {
@@ -144,6 +145,24 @@ describe("buildShortcutSheetSections", () => {
     });
 
     expect(sections[0]?.entries.some((entry) => entry.id === "sidebar.toggle")).toBe(true);
+  });
+
+  it("projects product-owned labels through the selected locale", () => {
+    const sections = buildShortcutSheetSections({
+      keybindings: [],
+      projectScripts: [],
+      platform: "MacIntel",
+      context: {
+        terminalFocus: false,
+        terminalOpen: false,
+        terminalWorkspaceOpen: false,
+      },
+      translate: (key, params) => translate("zh-CN", key, params),
+    });
+
+    expect(sections[0]?.title).toBe("当前可用");
+    expect(sections[0]?.entries[0]?.label).toBe("显示快捷键");
+    expect(sections[1]?.title).toBe("工作区模式中");
   });
 });
 

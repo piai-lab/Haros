@@ -23,6 +23,7 @@ import {
   type ShortcutSheetSection,
 } from "../shortcutsSheet";
 import type { ProjectScript } from "../types";
+import { useI18n } from "../i18n";
 
 export default function ShortcutsDialog(props: {
   open: boolean;
@@ -55,6 +56,7 @@ function ShortcutsDialogContent(props: {
   platform: string;
   context: ShortcutSheetContext;
 }) {
+  const { t } = useI18n();
   const [query, setQuery] = useState("");
   const inputRef = useRef<HTMLInputElement>(null);
 
@@ -74,6 +76,7 @@ function ShortcutsDialogContent(props: {
     projectScripts: props.projectScripts,
     platform: props.platform,
     context: props.context,
+    translate: t,
   });
   const filteredSections = filterShortcutSheetSections(sections, query);
   const hasResults = filteredSections.some((section) => section.entries.length > 0);
@@ -81,16 +84,16 @@ function ShortcutsDialogContent(props: {
   return (
     <>
       <DialogHeader className="pb-2">
-        <DialogTitle className="text-base">Keybindings</DialogTitle>
+        <DialogTitle className="text-base">{t("shortcuts.title")}</DialogTitle>
         <DialogDescription className="text-xs">
-          Reflects the bindings active in your current context.
+          {t("shortcuts.contextDescription")}
         </DialogDescription>
         <div className="pt-2">
           <Input
             ref={inputRef}
             type="search"
             size="sm"
-            placeholder="Search shortcuts..."
+            placeholder={t("shortcuts.search")}
             value={query}
             onChange={(event) => setQuery(event.target.value)}
             onKeyDown={(event) => {
@@ -102,7 +105,7 @@ function ShortcutsDialogContent(props: {
             }}
             className="rounded-md"
             nativeInput
-            aria-label="Search shortcuts"
+            aria-label={t("shortcuts.searchAria")}
           />
         </div>
       </DialogHeader>
@@ -116,7 +119,7 @@ function ShortcutsDialogContent(props: {
           </div>
         ) : (
           <div className="px-6 py-10 text-center text-sm text-muted-foreground">
-            No shortcuts match &ldquo;{query}&rdquo;.
+            {t("shortcuts.noMatch", { query })}
           </div>
         )}
       </DialogPanel>

@@ -21,13 +21,15 @@ const harness = vi.hoisted(() => ({
   invalidateQueries: vi.fn(),
 }));
 
-vi.mock("@tanstack/react-query", () => ({
+vi.mock("@tanstack/react-query", async (importOriginal) => ({
+  ...(await importOriginal<typeof import("@tanstack/react-query")>()),
   useQuery: () => ({ data: { worktrees: harness.worktrees }, isLoading: false, isError: false }),
   useMutation: () => ({ isPending: false, mutateAsync: harness.mutateAsync }),
   useQueryClient: () => ({ invalidateQueries: harness.invalidateQueries }),
 }));
 
-vi.mock("~/lib/serverReactQuery", () => ({
+vi.mock("~/lib/serverReactQuery", async (importOriginal) => ({
+  ...(await importOriginal<typeof import("~/lib/serverReactQuery")>()),
   serverQueryKeys: { worktrees: () => ["worktrees"] },
   serverWorktreesQueryOptions: () => ({ queryKey: ["worktrees"] }),
 }));

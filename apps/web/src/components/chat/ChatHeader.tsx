@@ -172,6 +172,7 @@ function EditorChatHistoryMenu(props: {
   onNavigateToThread: (threadId: ThreadId) => void;
 }) {
   const { settings } = useAppSettings();
+  const { t } = useI18n();
   const selectDisplayThreads = createSidebarDisplayThreadsSelector();
   const displayThreads = useStore(selectDisplayThreads);
   const historyThreads = sortThreadsForSidebar(
@@ -186,8 +187,8 @@ function EditorChatHistoryMenu(props: {
           <IconButton
             variant="ghost"
             size="icon-xs"
-            label="Chat history"
-            title="Chat history"
+            label={t("workbench.chatHistory")}
+            title={t("workbench.chatHistory")}
             className="size-5 shrink-0 text-muted-foreground hover:text-foreground"
           >
             <HistoryIcon className="size-3.5" />
@@ -196,7 +197,7 @@ function EditorChatHistoryMenu(props: {
       />
       <ComposerPickerMenuPopup align="start" side="bottom" sideOffset={6} className="w-72 min-w-72">
         {historyThreads.length === 0 ? (
-          <MenuItem disabled>No chats in this project yet</MenuItem>
+          <MenuItem disabled>{t("workbench.noProjectChats")}</MenuItem>
         ) : (
           historyThreads.map((thread) => (
             <MenuItem
@@ -406,8 +407,8 @@ function EditorRailTabs(props: {
               <IconButton
                 variant="ghost"
                 size="icon-xs"
-                label="New editor rail item"
-                title="New"
+                label={t("workbench.newEditorRailItem")}
+                title={t("workbench.new")}
                 className="size-5 shrink-0 text-muted-foreground hover:text-foreground"
               >
                 <PlusIcon className="size-3.5" />
@@ -422,11 +423,11 @@ function EditorRailTabs(props: {
           >
             <MenuItem onClick={props.onNewChat}>
               <MessageCircleIcon className="size-3.5 shrink-0 text-muted-foreground" />
-              <span>New chat</span>
+              <span>{t("workbench.newChat")}</span>
             </MenuItem>
             <MenuItem onClick={newTerminalTab}>
               <TerminalIcon className="size-3.5 shrink-0 text-muted-foreground" />
-              <span>New terminal</span>
+              <span>{t("workbench.newTerminal")}</span>
             </MenuItem>
           </ComposerPickerMenuPopup>
         </Menu>
@@ -446,7 +447,7 @@ function EditorRailTabs(props: {
               key={thread.id}
               active={props.activeSurface === "chat" && thread.id === props.activeThreadId}
               title={thread.title}
-              label={`Chat ${index + 1}`}
+              label={t("workbench.chatNumber", { number: index + 1 })}
               labelClassName="max-w-24"
               icon={
                 <ProviderIcon
@@ -455,7 +456,7 @@ function EditorRailTabs(props: {
                   className="size-3 shrink-0"
                 />
               }
-              closeLabel={`Close ${thread.title}`}
+              closeLabel={t("workbench.closeNamed", { name: thread.title })}
               onSelect={() => openChatTab(thread.id)}
               onClose={() => closeChatTab(thread.id)}
             />
@@ -621,7 +622,9 @@ export function ChatHeader({
             )}
             pressed={togglesRightDock ? rightDockOpen : diffOpen}
             onPressedChange={togglesRightDock ? onToggleRightDock : onToggleDiff}
-            aria-label={togglesRightDock ? "Toggle right sidebar" : "Toggle diff panel"}
+            aria-label={
+              togglesRightDock ? t("workbench.toggleRightSidebar") : t("workbench.toggleDiffPanel")
+            }
             variant="default"
             size="xs"
             disabled={
@@ -645,15 +648,15 @@ export function ChatHeader({
       <TooltipPopup side="bottom">
         {togglesRightDock
           ? rightDockOpen
-            ? "Close right sidebar"
-            : "Open right sidebar"
+            ? t("workbench.closeRightSidebar")
+            : t("workbench.openRightSidebar")
           : !isGitRepo
-            ? "Diff panel is unavailable because this project is not a git repository."
+            ? t("workbench.diffUnavailableNonGit")
             : diffDisabledReason && !diffOpen
               ? diffDisabledReason
               : diffToggleShortcutLabel
-                ? `Toggle diff panel (${diffToggleShortcutLabel})`
-                : "Toggle diff panel"}
+                ? t("workbench.toggleDiffPanelShortcut", { shortcut: diffToggleShortcutLabel })
+                : t("workbench.toggleDiffPanel")}
       </TooltipPopup>
     </Tooltip>
   ) : null;
@@ -709,7 +712,7 @@ export function ChatHeader({
                     className="inline-flex size-3.5 shrink-0 items-center justify-center"
                     title={
                       threadIconKind === "terminal"
-                        ? "Terminal"
+                        ? t("workbench.terminal")
                         : PROVIDER_DISPLAY_NAMES[activeProvider]
                     }
                   >
@@ -731,8 +734,8 @@ export function ChatHeader({
                   <IconButton
                     variant="chrome"
                     size="icon-xs"
-                    label="Close selected Side"
-                    tooltip="Close selected Side"
+                    label={t("workbench.closeSelectedSide")}
+                    tooltip={t("workbench.closeSelectedSide")}
                     tooltipSide="bottom"
                     className="size-5 rounded-lg [-webkit-app-region:no-drag] [&_svg]:size-3"
                     onClick={(event) => {

@@ -4,13 +4,14 @@
 
 import type { DesktopAppIcon } from "@synara/contracts";
 import { cn } from "~/lib/utils";
+import { useI18n, type MessageKey } from "~/i18n";
 
 const APP_ICON_OPTIONS = [
-  { value: "default", label: "Default icon", src: "/app-icons/default.png" },
-  { value: "icon", label: "Icon", src: "/app-icons/icon-full-bleed-v2.png" },
+  { value: "default", labelKey: "settings.defaultIcon", src: "/app-icons/default.png" },
+  { value: "icon", labelKey: "settings.alternateIcon", src: "/app-icons/icon-full-bleed-v2.png" },
 ] as const satisfies ReadonlyArray<{
   value: DesktopAppIcon;
-  label: string;
+  labelKey: MessageKey;
   src: string;
 }>;
 
@@ -21,16 +22,18 @@ export function AppIconPicker({
   readonly value: DesktopAppIcon;
   readonly onValueChange: (value: DesktopAppIcon) => void;
 }) {
+  const { t } = useI18n();
   return (
-    <div className="flex items-center gap-2" role="group" aria-label="App icon">
+    <div className="flex items-center gap-2" role="group" aria-label={t("settings.appIcon")}>
       {APP_ICON_OPTIONS.map((option) => {
         const selected = value === option.value;
+        const label = t(option.labelKey);
         return (
           <button
             key={option.value}
             type="button"
-            title={option.label}
-            aria-label={option.label}
+            title={label}
+            aria-label={label}
             aria-pressed={selected}
             className={cn(
               "relative grid size-16 place-items-center rounded-[18px] border transition-colors",

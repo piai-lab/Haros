@@ -5360,29 +5360,29 @@ export default function Sidebar() {
       {
         id: "new-chat",
         label: t("nav.newChat"),
-        description: "Open the new chat landing screen.",
+        description: t("search.newChatDescription"),
         keywords: ["chat", "new", "home"],
         shortcutLabel: newChatShortcutLabel,
       },
       {
         id: "new-thread",
         label: t("nav.newAgent"),
-        description: "Start a fresh thread in the current or most recently used project.",
+        description: t("search.newAgentDescription"),
         keywords: ["thread", "new", "project"],
         shortcutLabel: newThreadShortcutLabel,
       },
       {
         id: "add-project",
         label: t("nav.addProject"),
-        description: "Open a repository or folder in the sidebar.",
+        description: t("search.addProjectDescription"),
         keywords: ["folder", "repo", "repository", "open"],
         shortcutLabel: addProjectShortcutLabel,
         run: handleStartAddProject,
       },
       {
         id: "import-thread",
-        label: "Import thread from...",
-        description: "Attach a local thread to an existing provider session.",
+        label: t("search.importThread"),
+        description: t("search.importThreadDescription"),
         keywords: [
           "import",
           "resume",
@@ -5398,27 +5398,27 @@ export default function Sidebar() {
       {
         id: "plugins",
         label: t("nav.library"),
-        description: "Browse Engine-native capabilities and compatible OmniMind assets.",
+        description: t("search.libraryDescription"),
         keywords: ["library", "plugins", "skills", "mcp", "tools", "engine"],
         run: () => void navigate({ to: "/plugins" }),
         icon: BookIcon,
       },
       {
         id: "feedback",
-        label: "Feedback OmniMind",
-        description: "Send feedback or report an issue to the OmniMind team.",
+        label: t("search.feedback"),
+        description: t("search.feedbackDescription"),
         keywords: ["feedback", "bug", "issue", "problem", "report", "support", "omnimind"],
       },
       {
         id: "settings",
         label: t("nav.settings"),
-        description: "Open app settings.",
+        description: t("search.settingsDescription"),
         keywords: ["preferences", "config"],
       },
       {
         id: "usage-settings",
-        label: "Usage settings",
-        description: "Open provider usage and remaining credits.",
+        label: t("search.usageSettings"),
+        description: t("search.usageSettingsDescription"),
         keywords: ["usage", "limits", "credits", "quota", "providers"],
         shortcutLabel: usageSettingsShortcutLabel,
       },
@@ -5428,8 +5428,8 @@ export default function Sidebar() {
         ? [
             {
               id: "switch-space-void",
-              label: `Switch to ${voidSpace.name}`,
-              description: "Jump to unassigned projects.",
+              label: t("search.switchSpace", { space: voidSpace.name }),
+              description: t("search.switchVoidDescription"),
               // "void" stays a keyword after a rename: it is what the palette answered to
               // before, and it is still the only word for this group in the docs.
               keywords: ["space", "switch", "void", "unassigned", voidSpace.name],
@@ -5445,8 +5445,8 @@ export default function Sidebar() {
         (space) =>
           ({
             id: `switch-space-${space.id}`,
-            label: `Switch to ${space.name}`,
-            description: "Jump to this space and restore its last context.",
+            label: t("search.switchSpace", { space: space.name }),
+            description: t("search.switchSpaceDescription"),
             keywords: ["space", "switch", space.name],
             requiresQuery: true,
             run: () => handleSelectSpace(space.id),
@@ -5457,8 +5457,8 @@ export default function Sidebar() {
       ),
       {
         id: "new-space",
-        label: "New space",
-        description: "Group projects into a focused work context.",
+        label: t("search.newSpace"),
+        description: t("search.newSpaceDescription"),
         keywords: ["space", "create", "new", "group", "workspace"],
         run: () => openSpaceCreator(),
         icon: AddPlusIcon,

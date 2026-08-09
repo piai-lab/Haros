@@ -33,10 +33,6 @@ export function formatNumber(value: number | null | undefined): string {
   return WHOLE_NUMBER_FORMATTER.format(value);
 }
 
-export function formatDays(value: number): string {
-  return `${formatNumber(value)} ${value === 1 ? "day" : "days"}`;
-}
-
 // Title-case a home-directory basename into a friendly display name.
 export function toDisplayName(basename: string): string {
   const cleaned = basename
@@ -63,7 +59,7 @@ export function normalizeHandle(value: string): string {
 }
 
 // Pretty short date for "peak day" tooltips ("Apr 3").
-export function formatShortDate(day: string | null): string | null {
+export function formatShortDate(day: string | null, locale?: string): string | null {
   if (!day) {
     return null;
   }
@@ -71,8 +67,11 @@ export function formatShortDate(day: string | null): string | null {
   if (!year || !month || !date) {
     return null;
   }
-  return MONTH_DAY_FORMATTER.format(new Date(Date.UTC(year, month - 1, date)));
+  return new Intl.DateTimeFormat(locale, {
+    month: "short",
+    day: "numeric",
+    timeZone: "UTC",
+  }).format(new Date(Date.UTC(year, month - 1, date)));
 }
 
 const WHOLE_NUMBER_FORMATTER = new Intl.NumberFormat(undefined, { maximumFractionDigits: 0 });
-const MONTH_DAY_FORMATTER = new Intl.DateTimeFormat(undefined, { month: "short", day: "numeric" });

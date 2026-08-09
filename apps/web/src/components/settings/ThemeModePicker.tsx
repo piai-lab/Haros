@@ -7,6 +7,7 @@
 import { cn } from "~/lib/utils";
 import type { ThemeMode, ThemeVariant } from "~/hooks/useTheme";
 import { useRadioGroupKeyboardNav } from "~/hooks/useRadioGroupKeyboardNav";
+import { useI18n, type MessageKey } from "~/i18n";
 
 // The mockups always show a fixed grayscale rendering of each appearance — they must
 // look "light" and "dark" regardless of the app's current theme or chrome overrides,
@@ -65,10 +66,10 @@ const MOCKUP_LAYOUT = {
 } as const;
 
 const THEME_MODE_CHOICES = [
-  { value: "system", label: "System" },
-  { value: "light", label: "Light" },
-  { value: "dark", label: "Dark" },
-] as const satisfies ReadonlyArray<{ value: ThemeMode; label: string }>;
+  { value: "system", labelKey: "settings.themeSystem" },
+  { value: "light", labelKey: "settings.themeLight" },
+  { value: "dark", labelKey: "settings.themeDark" },
+] as const satisfies ReadonlyArray<{ value: ThemeMode; labelKey: MessageKey }>;
 
 const THEME_MODE_VALUES = THEME_MODE_CHOICES.map((choice) => choice.value);
 
@@ -174,6 +175,7 @@ export function ThemeModePicker({
   onValueChange: (value: ThemeMode) => void;
   ariaLabel: string;
 }) {
+  const { t } = useI18n();
   const radioItemProps = useRadioGroupKeyboardNav({
     values: THEME_MODE_VALUES,
     value,
@@ -212,7 +214,7 @@ export function ThemeModePicker({
                 isActive ? "font-medium text-foreground" : "text-muted-foreground",
               )}
             >
-              {choice.label}
+              {t(choice.labelKey)}
             </span>
           </button>
         );

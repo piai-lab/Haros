@@ -32,21 +32,6 @@ export const CARD_HEATMAP_INTENSITY_CLASSES: readonly string[] = [
   "bg-[var(--info)]",
 ];
 
-const MONTH_LABELS = [
-  "Jan",
-  "Feb",
-  "Mar",
-  "Apr",
-  "May",
-  "Jun",
-  "Jul",
-  "Aug",
-  "Sep",
-  "Oct",
-  "Nov",
-  "Dec",
-];
-
 interface ActivityHeatmapProps {
   readonly cells: ReadonlyArray<ProfileHeatmapCell>;
   readonly cellSize?: number;
@@ -72,6 +57,8 @@ interface ActivityHeatmapProps {
   readonly tooltip?: boolean;
   /** Noun used in the tooltip, e.g. "prompts" or "tokens". */
   readonly tooltipUnit?: string;
+  readonly locale?: string;
+  readonly formatTooltip?: (cell: ProfileHeatmapCell) => string;
   readonly className?: string;
 }
 
@@ -106,6 +93,8 @@ export function ActivityHeatmap({
   maxCellSize,
   tooltip: tooltipProp,
   tooltipUnit: tooltipUnitProp,
+  locale,
+  formatTooltip,
   className,
 }: ActivityHeatmapProps) {
   const cellSize = cellSizeProp ?? 13;
@@ -147,12 +136,17 @@ export function ActivityHeatmap({
     if (!firstCell) {
       return null;
     }
-    const monthIndex = Number(firstCell.cell.day.split("-")[1]) - 1;
+    const [year, month] = firstCell.cell.day.split("-").map(Number);
+    const monthIndex = (month ?? 0) - 1;
     if (monthIndex === previousMonth || monthIndex < 0) {
       return null;
     }
     previousMonth = monthIndex;
-    return MONTH_LABELS[monthIndex] ?? null;
+    return year && month
+      ? new Intl.DateTimeFormat(locale, { month: "short", timeZone: "UTC" }).format(
+          new Date(Date.UTC(year, monthIndex, 1)),
+        )
+      : null;
   });
 
   const columnCount = columns.length;
@@ -247,7 +241,7 @@ export function ActivityHeatmap({
                     render={<div className={cellClassName} style={cellStyle} />}
                   />
                   <TooltipPopup side="top" sideOffset={6}>
-                    {heatmapTooltipText(slot.cell, tooltipUnit)}
+                    {formatTooltip?.(slot.cell) ?? heatmapTooltipText(slot.cell, tooltipUnit)}
                   </TooltipPopup>
                 </Tooltip>
               );

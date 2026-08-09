@@ -17,6 +17,7 @@ import {
   skillsCatalogQueryOptions,
 } from "~/lib/providerDiscoveryReactQuery";
 import { serverQueryKeys, serverSettingsQueryOptions } from "~/lib/serverReactQuery";
+import { useI18n } from "~/i18n";
 import {
   buildSettingsSkillGroups,
   buildSettingsSkillSections,
@@ -26,12 +27,18 @@ import {
 } from "./skillsSettingsModel";
 
 function SkillProviderStack({ providers }: { providers: ReadonlyArray<ProviderKind> }) {
+  const { t } = useI18n();
   if (providers.length === 0) {
     return null;
   }
 
   const label = providers.map(providerDisplayName).join(", ");
-  const stackLabel = `Provider ${providers.length === 1 ? "copy" : "copies"}: ${label}`;
+  const stackLabel = t(
+    providers.length === 1 ? "settings.providerCopy" : "settings.providerCopies",
+    {
+      providers: label,
+    },
+  );
   return (
     <span
       className="inline-flex shrink-0 items-center -space-x-1"
@@ -51,6 +58,7 @@ function SkillProviderStack({ providers }: { providers: ReadonlyArray<ProviderKi
 }
 
 export function SkillsSettingsPanel() {
+  const { t } = useI18n();
   const queryClient = useQueryClient();
   const catalogQuery = useQuery(skillsCatalogQueryOptions());
   const serverSettingsQuery = useQuery(serverSettingsQueryOptions());
@@ -104,10 +112,10 @@ export function SkillsSettingsPanel() {
 
   return (
     <div className="space-y-8">
-      <SettingsSection title="Portable skills">
+      <SettingsSection title={t("settings.portableSkills")}>
         <SettingsRow
-          title="OmniMind skills folder"
-          description="Skills placed here are projected into compatible Engines without copying into their private homes. Same-named Engine-native assets remain separate."
+          title={t("settings.skillsFolder")}
+          description={t("settings.skillsFolderDescription")}
           status={
             omnimindSkillsDir ? (
               <code className="break-all text-[11px] text-muted-foreground">
@@ -118,27 +126,30 @@ export function SkillsSettingsPanel() {
           control={
             <span className="text-xs font-medium text-muted-foreground">
               {catalogQuery.isLoading
-                ? "Scanning…"
-                : `${enabledOmniMindSkills} of ${omnimindSkillGroups.length} OmniMind skill${omnimindSkillGroups.length === 1 ? "" : "s"} enabled`}
+                ? t("settings.scanning")
+                : t("settings.enabledSkillsSummary", {
+                    enabled: enabledOmniMindSkills,
+                    total: omnimindSkillGroups.length,
+                  })}
             </span>
           }
         />
       </SettingsSection>
 
       {catalogQuery.isError ? (
-        <SettingsSection title="Skills">
+        <SettingsSection title={t("settings.skills")}>
           <SettingsRow
-            title="Skill discovery failed"
-            description="OmniMind could not scan the skill folders. Retry after checking that the server is running."
+            title={t("settings.skillDiscoveryFailed")}
+            description={t("settings.skillDiscoveryFailedDescription")}
           />
         </SettingsSection>
       ) : null}
 
       {!catalogQuery.isLoading && !catalogQuery.isError && skillGroups.length === 0 ? (
-        <SettingsSection title="Skills">
+        <SettingsSection title={t("settings.skills")}>
           <SettingsRow
-            title="No skills found"
-            description="Add a skill folder containing a SKILL.md to the OmniMind skills folder above, or install skills for any supported provider."
+            title={t("settings.noSkills")}
+            description={t("settings.noSkillsDescription")}
           />
         </SettingsSection>
       ) : null}
@@ -189,10 +200,14 @@ export function SkillsSettingsPanel() {
                         onCheckedChange={(checked) =>
                           setSkillEnabled(group.primarySkill.name, Boolean(checked))
                         }
-                        aria-label={`Enable the ${group.displayName} OmniMind skill`}
+                        aria-label={t("settings.enableOmniMindSkill", {
+                          skill: group.displayName,
+                        })}
                       />
                     ) : (
-                      <span className="text-xs text-muted-foreground">Engine managed</span>
+                      <span className="text-xs text-muted-foreground">
+                        {t("settings.engineManaged")}
+                      </span>
                     )
                   }
                 />

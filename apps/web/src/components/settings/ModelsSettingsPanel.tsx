@@ -26,6 +26,7 @@ import { PlusIcon, XIcon } from "~/lib/icons";
 import { resolveProviderDiscoveryCwd } from "~/lib/providerDiscovery";
 import { serverConfigQueryOptions } from "~/lib/serverReactQuery";
 import { cn } from "~/lib/utils";
+import { useI18n } from "~/i18n";
 import {
   SETTINGS_CARD_ROW_DIVIDER_CLASS_NAME,
   SETTINGS_INSET_LIST_CLASS_NAME,
@@ -80,6 +81,7 @@ export function ModelsSettingsPanel({
   resetEpoch,
   active,
 }: AppSettingsBinding & { readonly resetEpoch: number; readonly active: boolean }) {
+  const { t } = useI18n();
   const serverConfigQuery = useQuery(serverConfigQueryOptions());
   const [selectedCustomModelProvider, setSelectedCustomModelProvider] =
     useState<ProviderKind>("codex");
@@ -189,7 +191,14 @@ export function ModelsSettingsPanel({
       if ("error" in result) {
         setCustomModelErrorByProvider((existing) => ({
           ...existing,
-          [provider]: result.error,
+          [provider]:
+            result.error === "Enter a model slug."
+              ? t("settings.enterModelSlug")
+              : result.error === "That model is already built in."
+                ? t("settings.modelAlreadyBuiltIn")
+                : result.error === "That custom model is already saved."
+                  ? t("settings.customModelAlreadySaved")
+                  : t("settings.modelSlugTooLong", { max: MAX_CUSTOM_MODEL_LENGTH }),
         }));
         return;
       }
@@ -198,7 +207,7 @@ export function ModelsSettingsPanel({
       setCustomModelInputByProvider((existing) => ({ ...existing, [provider]: "" }));
       setCustomModelErrorByProvider((existing) => ({ ...existing, [provider]: null }));
     },
-    [customModelInputByProvider, settings, updateSettings],
+    [customModelInputByProvider, settings, t, updateSettings],
   );
 
   const removeCustomModel = useCallback(
@@ -245,7 +254,7 @@ export function ModelsSettingsPanel({
       <button
         type="button"
         className="shrink-0 opacity-0 transition-opacity group-hover:opacity-100 hover:opacity-100"
-        aria-label={`Remove ${row.slug}`}
+        aria-label={t("settings.removeModel", { model: row.slug })}
         onClick={() => removeCustomModel(row.provider, row.slug)}
       >
         <XIcon className="size-3.5 text-muted-foreground hover:text-foreground" />
@@ -257,14 +266,14 @@ export function ModelsSettingsPanel({
 
   return (
     <div className="space-y-6">
-      <SettingsSection title="Generation defaults">
+      <SettingsSection title={t("settings.generationDefaults")}>
         <SettingsRow
-          title="Git writing model"
-          description="Used for generated commit messages, PR titles, and branch names."
+          title={t("settings.gitWritingModel")}
+          description={t("settings.gitWritingModelDescription")}
           resetAction={
             isGitTextGenerationModelDirty ? (
               <SettingResetButton
-                label="git writing model"
+                label={t("settings.gitWritingModel")}
                 onClick={() =>
                   updateSettings({
                     textGenerationProvider: defaults.textGenerationProvider,
@@ -288,7 +297,7 @@ export function ModelsSettingsPanel({
                   textGenerationModel: model,
                 });
               }}
-              ariaLabel="Git text generation model"
+              ariaLabel={t("settings.gitTextGenerationModel")}
               triggerClassName="w-full sm:w-52"
               valueContent={selectedGitTextGenerationModelLabel}
             >
@@ -306,13 +315,13 @@ export function ModelsSettingsPanel({
         />
       </SettingsSection>
 
-      <SettingsSection title="Custom models">
+      <SettingsSection title={t("settings.customModels")}>
         <SettingsRow
-          title="Saved model slugs"
-          description="Add custom model slugs for supported providers."
+          title={t("settings.savedModelSlugs")}
+          description={t("settings.savedModelSlugsDescription")}
           resetAction={
             savedCustomModelRows.length > 0 ? (
-              <SettingResetButton label="custom models" onClick={resetCustomModels} />
+              <SettingResetButton label={t("settings.customModels")} onClick={resetCustomModels} />
             ) : null
           }
         >
@@ -329,7 +338,7 @@ export function ModelsSettingsPanel({
                 <SelectTrigger
                   size="sm"
                   className="w-full sm:w-40"
-                  aria-label="Custom model provider"
+                  aria-label={t("settings.customModelProvider")}
                 >
                   <SelectValue>{selectedCustomModelProviderSettings.title}</SelectValue>
                 </SelectTrigger>
@@ -373,7 +382,7 @@ export function ModelsSettingsPanel({
                 onClick={() => addCustomModel(selectedCustomModelProvider)}
               >
                 <PlusIcon className="size-3.5" />
-                Add
+                {t("settings.add")}
               </Button>
             </div>
 
@@ -398,8 +407,8 @@ export function ModelsSettingsPanel({
                       onClick={() => setShowAllCustomModels((value) => !value)}
                     >
                       {showAllCustomModels
-                        ? "Show less"
-                        : `Show more (${overflowCustomModelRows.length})`}
+                        ? t("settings.showLess")
+                        : t("settings.showMore", { count: overflowCustomModelRows.length })}
                     </button>
                   </>
                 ) : null}

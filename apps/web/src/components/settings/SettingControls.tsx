@@ -12,6 +12,7 @@ import { Tooltip, TooltipPopup, TooltipTrigger } from "~/components/ui/tooltip";
 import { useRadioGroupKeyboardNav } from "~/hooks/useRadioGroupKeyboardNav";
 import { Undo2Icon } from "~/lib/icons";
 import { SETTINGS_CONTROL_RADIUS_CLASS_NAME } from "~/settingsPanelStyles";
+import { useI18n } from "~/i18n";
 import { SettingsSelectPopup } from "./SettingsPanelPrimitives";
 
 export function useSettingsRestoreSignal(epoch: number, onRestore: () => void): void {
@@ -26,6 +27,7 @@ export function useSettingsRestoreSignal(epoch: number, onRestore: () => void): 
 }
 
 export function SettingResetButton({ label, onClick }: { label: string; onClick: () => void }) {
+  const { t } = useI18n();
   return (
     <Tooltip>
       <TooltipTrigger
@@ -33,7 +35,7 @@ export function SettingResetButton({ label, onClick }: { label: string; onClick:
           <Button
             size="icon-xs"
             variant="ghost"
-            aria-label={`Reset ${label} to default`}
+            aria-label={t("settings.resetNamedToDefault", { setting: label })}
             className="size-5 rounded-lg p-0 text-muted-foreground hover:text-foreground"
             onClick={(event) => {
               event.stopPropagation();
@@ -44,7 +46,7 @@ export function SettingResetButton({ label, onClick }: { label: string; onClick:
           </Button>
         }
       />
-      <TooltipPopup side="top">Reset to default</TooltipPopup>
+      <TooltipPopup side="top">{t("settings.resetToDefault")}</TooltipPopup>
     </Tooltip>
   );
 }

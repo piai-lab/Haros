@@ -114,7 +114,7 @@ function RightDockLauncher(props: {
   const localizedLabel = useRightDockLabel();
   return (
     <nav
-      aria-label="Open a panel"
+      aria-label={t("workbench.openPanelNavigation")}
       className="flex h-full min-h-0 items-center justify-center overflow-y-auto p-6"
     >
       <div className="flex w-full max-w-sm flex-col gap-1.5">

@@ -32,6 +32,7 @@ import {
 import { useDiffRouteSearch } from "../../hooks/useDiffRouteSearch";
 import { selectSplitView, useSplitViewStore } from "../../splitViewStore";
 import { selectRightDockState, useRightDockStore } from "../../rightDockStore";
+import { useI18n } from "~/i18n";
 import {
   resolveVisibleToastThreadIds,
   shouldRenderToastForVisibleThreads,
@@ -242,6 +243,7 @@ function ToastActions({
   copyText: string | undefined;
   secondaryActionProps: ThreadToastData["secondaryActionProps"];
 }) {
+  const { t } = useI18n();
   const { copyToClipboard, isCopied } = useCopyToClipboard();
 
   if (!actionProps && !copyText && !secondaryActionProps) return null;
@@ -250,17 +252,17 @@ function ToastActions({
     <div className="mt-2 flex flex-wrap items-center gap-1.5">
       {copyText && (
         <Button
-          aria-label={isCopied ? "Copied error message" : "Copy error message"}
+          aria-label={isCopied ? t("common.errorCopied") : t("common.copyError")}
           className="self-start rounded-md border-[var(--notification-fg)]/20 bg-[var(--notification-fg)]/10 text-[var(--notification-fg)] hover:bg-[var(--notification-fg)]/20"
           onClick={() => {
             copyToClipboard(copyText, undefined);
           }}
           size="xs"
-          title={isCopied ? "Copied error message" : "Copy error message"}
+          title={isCopied ? t("common.errorCopied") : t("common.copyError")}
           variant="outline"
         >
           {isCopied ? <CheckIcon className="size-3" /> : <CopyIcon className="size-3" />}
-          <span>{isCopied ? "Copied" : "Copy"}</span>
+          <span>{isCopied ? t("common.copied") : t("common.copy")}</span>
         </Button>
       )}
       {actionProps && (
@@ -300,11 +302,12 @@ function ToastCloseButton({
   onDismiss: () => void;
   onClose?: (() => void) | undefined;
 }) {
+  const { t } = useI18n();
   const compact = compactProp ?? false;
   return (
     <button
       type="button"
-      aria-label="Dismiss toast"
+      aria-label={t("common.dismissNotification")}
       className={cn(
         // pointer-events-auto keeps the X clickable even when a stacked/collapsed
         // toast still gates its content with pointer-events-none.
@@ -316,7 +319,7 @@ function ToastCloseButton({
         onClose?.();
         onDismiss();
       }}
-      title="Dismiss toast"
+      title={t("common.dismissNotification")}
     >
       <XIcon className={compact ? "size-3" : "size-3.5"} />
     </button>
@@ -336,6 +339,7 @@ function ArchiveUndoToastSurface({
   hideCollapsedContent: boolean;
   onDismiss: () => void;
 }) {
+  const { t } = useI18n();
   const [undoPending, setUndoPending] = useState(false);
   // A pending Undo owns the next navigation; keep the Settings path idle until it settles.
   const actionsDisabled = undoPending;
@@ -390,9 +394,9 @@ function ArchiveUndoToastSurface({
             disabled={actionsDisabled}
             onClick={handleUndoClick}
           >
-            Undo
+            {t("common.undo")}
           </button>{" "}
-          or view archived chats in{" "}
+          {t("toast.viewArchivedPrefix")}{" "}
           <button
             type="button"
             className={ARCHIVE_UNDO_TOAST_LINK_CLASS_NAME}
@@ -400,8 +404,9 @@ function ArchiveUndoToastSurface({
             disabled={actionsDisabled}
             onClick={handleViewArchivedClick}
           >
-            Settings
+            {t("nav.settings")}
           </button>
+          {t("toast.viewArchivedSuffix")}
         </Toast.Title>
         <ToastCloseButton compact onDismiss={onDismiss} />
       </Toast.Content>

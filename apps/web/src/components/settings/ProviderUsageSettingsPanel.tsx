@@ -4,11 +4,7 @@
 // Usage is fetched read-only from each CLI's stored credentials by the server.
 
 import type { ProviderKind, ServerProviderUsageSnapshot } from "@synara/contracts";
-import {
-  PROVIDER_USAGE_PROVIDERS,
-  providerUsageDisplayName,
-  providerUsageNeedsAuthDetail,
-} from "@synara/shared/providerUsage";
+import { PROVIDER_USAGE_PROVIDERS, providerUsageDisplayName } from "@synara/shared/providerUsage";
 import { useMemo } from "react";
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 
@@ -30,11 +26,12 @@ import {
 import { cn } from "~/lib/utils";
 import { useStore } from "~/store";
 import { createAllThreadsSelector } from "~/storeSelectors";
+import { useI18n, type MessageKey } from "~/i18n";
 
 const PILL_CLASS_NAME = "shrink-0 rounded-full px-2 py-1 text-[11px] font-medium leading-none";
 
 interface StatusPill {
-  label: string;
+  labelKey: MessageKey;
   className: string;
 }
 
@@ -42,13 +39,16 @@ function statusPill(status: ServerProviderUsageSnapshot["status"]): StatusPill |
   switch (status) {
     case "needs-auth":
       return {
-        label: "Not signed in",
+        labelKey: "settings.notSignedIn",
         className: "bg-amber-500/12 text-amber-600 dark:text-amber-400",
       };
     case "unsupported":
-      return { label: "Unsupported", className: "bg-muted text-muted-foreground" };
+      return { labelKey: "settings.unsupported", className: "bg-muted text-muted-foreground" };
     case "error":
-      return { label: "Unavailable", className: "bg-red-500/12 text-red-600 dark:text-red-400" };
+      return {
+        labelKey: "settings.unavailable",
+        className: "bg-red-500/12 text-red-600 dark:text-red-400",
+      };
     default:
       return null;
   }
@@ -63,6 +63,7 @@ function ProviderUsageCard({
   threadRateLimits: ReadonlyArray<ProviderRateLimit>;
   codexHomePath: string | null;
 }) {
+  const { t } = useI18n();
   const provider = snapshot.provider;
   const status = snapshot.status ?? "ok";
   const usageSummary = useProviderUsageSummary({
@@ -94,7 +95,7 @@ function ProviderUsageCard({
               {snapshot.planName}
             </span>
           ) : pill ? (
-            <span className={cn(PILL_CLASS_NAME, pill.className)}>{pill.label}</span>
+            <span className={cn(PILL_CLASS_NAME, pill.className)}>{t(pill.labelKey)}</span>
           ) : null}
         </div>
 
@@ -122,8 +123,10 @@ function ProviderUsageCard({
         ) : (
           <p className="text-xs leading-relaxed text-muted-foreground">
             {status === "ok"
-              ? "No usage data reported yet."
-              : (snapshot.detail ?? providerUsageNeedsAuthDetail(provider))}
+              ? t("settings.noUsageData")
+              : status === "needs-auth"
+                ? t("settings.providerUsageSignIn")
+                : (snapshot.detail ?? t("settings.noUsageData"))}
           </p>
         )}
       </div>
@@ -139,7 +142,6 @@ function missingSnapshot(provider: ProviderKind): ServerProviderUsageSnapshot {
     usageLines: [],
     source: "unavailable",
     status: "error",
-    detail: "Usage is currently unavailable.",
   };
 }
 
@@ -158,6 +160,7 @@ function mergeProviderUsageRefresh(
 }
 
 export function ProviderUsageSettingsPanel() {
+  const { t } = useI18n();
   const queryClient = useQueryClient();
   const { settings } = useAppSettings();
   const codexHomePath = settings.codexHomePath || null;
@@ -191,7 +194,7 @@ export function ProviderUsageSettingsPanel() {
 
   return (
     <SettingsSectionShell
-      title="Provider usage"
+      title={t("settings.providerUsage")}
       action={
         <Button
           size="xs"
@@ -201,13 +204,15 @@ export function ProviderUsageSettingsPanel() {
           onClick={() => refreshMutation.mutate()}
         >
           <RotateCcwIcon className={cn("size-3.5", isRefreshing && "animate-spin")} />
-          Refresh
+          {t("settings.refresh")}
         </Button>
       }
     >
       {showInitialLoading ? (
         <SettingsCard>
-          <div className="px-4 py-3.5 text-xs text-muted-foreground">Loading provider usage…</div>
+          <div className="px-4 py-3.5 text-xs text-muted-foreground">
+            {t("settings.loadingProviderUsage")}
+          </div>
         </SettingsCard>
       ) : (
         <div className="flex flex-col gap-3">
@@ -223,9 +228,7 @@ export function ProviderUsageSettingsPanel() {
       )}
 
       <p className="px-2 text-[11px] leading-relaxed text-muted-foreground">
-        Usage is read locally from each provider CLI&apos;s stored credentials and fetched directly
-        from the provider. Short-lived tokens are refreshed through the provider&apos;s own CLI or
-        official token endpoint; if a provider shows “Not signed in”, re-authenticate with its CLI.
+        {t("settings.providerUsagePrivacy")}
       </p>
     </SettingsSectionShell>
   );

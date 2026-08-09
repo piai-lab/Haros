@@ -120,7 +120,7 @@ export function SettingsSidebarNav(props: {
   const [query, setQuery] = useState("");
   const trimmedQuery = query.trim();
   const isSearching = trimmedQuery.length > 0;
-  const results = rankSettingsSearchEntries(trimmedQuery, SETTINGS_SEARCH_RESULTS_LIMIT);
+  const results = rankSettingsSearchEntries(trimmedQuery, SETTINGS_SEARCH_RESULTS_LIMIT, t);
 
   const handleSelectResult = (entry: SettingsSearchEntry) => {
     const target = settingsSearchEntryTarget(entry);
@@ -179,7 +179,7 @@ export function SettingsSidebarNav(props: {
           <p className={SETTINGS_SIDEBAR_SECTION_LABEL_CLASS_NAME}>{t("settings.noMatches")}</p>
         ) : (
           <ul
-            aria-label="Settings search results"
+            aria-label={t("settings.searchResults")}
             className={cn("flex flex-col", SETTINGS_SIDEBAR_LIST_GAP_CLASS_NAME)}
           >
             {results.map((entry) => (
@@ -188,7 +188,7 @@ export function SettingsSidebarNav(props: {
           </ul>
         )
       ) : (
-        <nav aria-label="Settings sections" className="flex flex-col">
+        <nav aria-label={t("settings.sections")} className="flex flex-col">
           {SETTINGS_NAV_GROUPS.map((group) => {
             const items = SETTINGS_NAV_ITEMS.filter((item) => item.group === group.id);
             if (items.length === 0) {

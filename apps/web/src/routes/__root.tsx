@@ -148,6 +148,7 @@ type ActiveProviderUpdateToast =
   | {
       readonly kind: "prompt";
       readonly key: string;
+      readonly locale: "en" | "zh-CN";
       readonly toastId: ProviderUpdateToastId;
     }
   | {
@@ -228,32 +229,26 @@ function RootRouteView() {
 
   if (compatibilityIssue) {
     return (
-      <>
+      <I18nProvider>
         <TransportCompatibilityView issue={compatibilityIssue} />
         {desktopWindowControls}
-      </>
+      </I18nProvider>
     );
   }
 
   if (!readNativeApi()) {
     return (
-      <>
-        <div className="flex h-screen flex-col bg-background text-foreground">
-          <div className="flex flex-1 items-center justify-center">
-            <p className="text-sm text-muted-foreground">
-              Connecting to {APP_DISPLAY_NAME} server...
-            </p>
-          </div>
-        </div>
+      <I18nProvider>
+        <ConnectingView />
         {desktopWindowControls}
-      </>
+      </I18nProvider>
     );
   }
 
   return (
     <>
-      <ToastProvider position="top-center">
-        <I18nProvider>
+      <I18nProvider>
+        <ToastProvider position="top-center">
           <AnchoredToastProvider>
             <DocumentLocaleSync />
             <GitProgressToastPreviewDev />
@@ -267,26 +262,40 @@ function RootRouteView() {
             <DesktopProjectBootstrap />
             <Outlet />
           </AnchoredToastProvider>
-        </I18nProvider>
-      </ToastProvider>
+        </ToastProvider>
+      </I18nProvider>
       {desktopWindowControls}
     </>
   );
 }
 
+function ConnectingView() {
+  const { t } = useI18n();
+  return (
+    <div className="flex h-screen flex-col bg-background text-foreground">
+      <div className="flex flex-1 items-center justify-center">
+        <p className="text-sm text-muted-foreground">
+          {t("shell.connectingServer", { app: APP_DISPLAY_NAME })}
+        </p>
+      </div>
+    </div>
+  );
+}
+
 function TransportCompatibilityView({ issue }: { issue: WsCompatibilityError }) {
+  const { t } = useI18n();
   const title =
     issue.action === "update-client"
-      ? "This OmniMind client needs an update."
+      ? t("error.updateClientTitle")
       : issue.action === "update-server"
-        ? "The OmniMind server needs an update."
-        : "OmniMind needs to reconnect with a matching build.";
+        ? t("error.updateServerTitle")
+        : t("error.reconnectTitle");
   const guidance =
     issue.action === "update-client"
-      ? "Update or reload this client, then reconnect."
+      ? t("error.updateClientGuidance")
       : issue.action === "update-server"
-        ? "Update or restart the server, then reload this client."
-        : "Reload the app. If this repeats, restart OmniMind so the client and server use matching builds.";
+        ? t("error.updateServerGuidance")
+        : t("error.reconnectGuidance");
 
   return (
     <div className="relative flex min-h-screen items-center justify-center overflow-hidden bg-background px-4 py-10 text-foreground sm:px-6">
@@ -300,7 +309,10 @@ function TransportCompatibilityView({ issue }: { issue: WsCompatibilityError }) 
         <p className="mt-2 text-sm leading-relaxed text-muted-foreground">{issue.message}</p>
         <p className="mt-2 text-sm leading-relaxed text-muted-foreground">{guidance}</p>
         <p className="mt-4 text-xs text-muted-foreground/80">
-          Client {APP_VERSION} · Server {issue.serverBuild}
+          {t("error.clientServerVersions", {
+            client: APP_VERSION,
+            server: issue.serverBuild,
+          })}
         </p>
         <div className="mt-5">
           <Button
@@ -308,7 +320,7 @@ function TransportCompatibilityView({ issue }: { issue: WsCompatibilityError }) 
             className={dialogActionButtonClassName}
             onClick={() => window.location.reload()}
           >
-            Reload app
+            {t("common.reloadApp")}
           </Button>
         </div>
       </section>
@@ -390,6 +402,7 @@ async function runProviderUpdateAll(params: {
   isUpdatingAllRef: { current: boolean };
   progressToastDismissedRef: { current: boolean };
   setIsUpdatingAll: (value: boolean) => void;
+  t: ReturnType<typeof useI18n>["t"];
 }): Promise<void> {
   const {
     providers,
@@ -398,6 +411,7 @@ async function runProviderUpdateAll(params: {
     isUpdatingAllRef,
     progressToastDismissedRef,
     setIsUpdatingAll,
+    t,
   } = params;
   const activeNotificationKey = providerUpdateNotificationKey(providers);
   if (isUpdatingAllRef.current || providers.length === 0 || !activeNotificationKey) {
@@ -412,11 +426,13 @@ async function runProviderUpdateAll(params: {
     trackedToast?.toastId ??
     toastManager.add({
       type: "loading",
-      title: "Updating providers...",
+      title: t("updater.updatingProviders"),
       description:
         providers.length === 1
-          ? `Updating ${PROVIDER_DISPLAY_NAMES[providers[0]!.provider]}.`
-          : `Updating ${providers.length} providers.`,
+          ? t("updater.updatingProvider", {
+              provider: PROVIDER_DISPLAY_NAMES[providers[0]!.provider],
+            })
+          : t("updater.updatingProvidersCount", { count: providers.length }),
       timeout: 0,
     });
   activeToastRef.current = { kind: "update", key: activeNotificationKey, toastId };
@@ -430,11 +446,13 @@ async function runProviderUpdateAll(params: {
 
   toastManager.update(toastId, {
     type: "loading",
-    title: "Updating providers...",
+    title: t("updater.updatingProviders"),
     description:
       providers.length === 1
-        ? `Updating ${PROVIDER_DISPLAY_NAMES[providers[0]!.provider]}.`
-        : `Updating ${providers.length} providers.`,
+        ? t("updater.updatingProvider", {
+            provider: PROVIDER_DISPLAY_NAMES[providers[0]!.provider],
+          })
+        : t("updater.updatingProvidersCount", { count: providers.length }),
     actionProps: undefined,
     data: { onClose: dismissProgressToast },
     timeout: 0,
@@ -455,18 +473,18 @@ async function runProviderUpdateAll(params: {
         if (updateState?.status === "failed" || updateState?.status === "unchanged") {
           failures.push({
             provider,
-            reason: updateState.message ?? "The update command did not complete successfully.",
+            reason: updateState.message ?? t("updater.commandFailed"),
           });
         } else if (refreshed?.versionAdvisory?.status === "behind_latest") {
           failures.push({
             provider,
-            reason: "The provider still appears outdated after updating.",
+            reason: t("updater.stillOutdated"),
           });
         }
       } catch (error) {
         failures.push({
           provider,
-          reason: error instanceof Error ? error.message : "The update request failed.",
+          reason: error instanceof Error ? error.message : t("updater.requestFailed"),
         });
       }
     }
@@ -474,8 +492,7 @@ async function runProviderUpdateAll(params: {
     for (const provider of providers) {
       failures.push({
         provider,
-        reason:
-          error instanceof Error ? error.message : "The provider update request could not start.",
+        reason: error instanceof Error ? error.message : t("updater.requestCouldNotStart"),
       });
     }
   } finally {
@@ -511,13 +528,12 @@ async function runProviderUpdateAll(params: {
       .join("\n");
     toastManager.update(toastId, {
       type: "error",
-      title:
-        failures.length === providers.length
-          ? "Provider updates failed"
-          : "Some provider updates failed",
+      title: failures.length === providers.length ? t("updater.failed") : t("updater.someFailed"),
       description:
         manualCommands.length > 0
-          ? `${failureLines}\n\nCopy the command${manualCommands.length === 1 ? "" : "s"} below to update manually in a terminal.`
+          ? `${failureLines}\n\n${t(
+              manualCommands.length === 1 ? "updater.copyCommand" : "updater.copyCommands",
+            )}`
           : failureLines,
       data: {
         onClose: dismissProgressToast,
@@ -533,9 +549,11 @@ async function runProviderUpdateAll(params: {
     type: "success",
     title:
       providers.length === 1
-        ? `${PROVIDER_DISPLAY_NAMES[providers[0]!.provider]} updated`
-        : `${providers.length} providers updated`,
-    description: "New sessions will use the refreshed provider tools.",
+        ? t("updater.providerUpdated", {
+            provider: PROVIDER_DISPLAY_NAMES[providers[0]!.provider],
+          })
+        : t("updater.providersUpdated", { count: providers.length }),
+    description: t("updater.refreshedDescription"),
     data: { onClose: dismissProgressToast },
     timeout: 6000,
   });
@@ -546,7 +564,7 @@ function ProviderUpdateNotifications({
 }: {
   readonly liveVersionCheckCompleted: boolean;
 }) {
-  const { t } = useI18n();
+  const { locale, t } = useI18n();
   const navigate = useNavigate();
   const queryClient = useQueryClient();
   const { settings } = useAppSettings();
@@ -582,8 +600,9 @@ function ProviderUpdateNotifications({
         isUpdatingAllRef,
         progressToastDismissedRef,
         setIsUpdatingAll,
+        t,
       }),
-    [queryClient],
+    [queryClient, t],
   );
 
   useEffect(() => {
@@ -591,6 +610,15 @@ function ProviderUpdateNotifications({
     if (activeToast?.kind === "prompt" && activeToast.key !== notificationKey) {
       toastManager.close(activeToast.toastId);
       activeToastRef.current = null;
+    }
+    if (
+      activeToast?.kind === "prompt" &&
+      activeToast.key === notificationKey &&
+      activeToast.locale !== locale
+    ) {
+      toastManager.close(activeToast.toastId);
+      activeToastRef.current = null;
+      seenProviderUpdateNotificationKeys.delete(notificationKey);
     }
 
     if (
@@ -660,9 +688,10 @@ function ProviderUpdateNotifications({
         },
       },
     });
-    activeToastRef.current = { kind: "prompt", key: notificationKey, toastId };
+    activeToastRef.current = { kind: "prompt", key: notificationKey, locale, toastId };
   }, [
     isUpdatingAll,
+    locale,
     navigate,
     notificationKey,
     oneClickProviders,
@@ -748,8 +777,17 @@ function GlobalFeedbackDialog() {
   return <FeedbackDialog open={isOpen} context={context} onOpenChange={setOpen} />;
 }
 
-function RootRouteErrorView({ error, reset }: ErrorComponentProps) {
-  const message = errorMessage(error);
+function RootRouteErrorView(props: ErrorComponentProps) {
+  return (
+    <I18nProvider>
+      <RootRouteErrorContent {...props} />
+    </I18nProvider>
+  );
+}
+
+function RootRouteErrorContent({ error, reset }: ErrorComponentProps) {
+  const { t } = useI18n();
+  const message = errorMessage(error, t("error.unexpectedRouter"));
   const details = errorDetails(error);
 
   return (
@@ -761,12 +799,12 @@ function RootRouteErrorView({ error, reset }: ErrorComponentProps) {
 
       <section className="relative w-full max-w-xl rounded-2xl border border-border/80 bg-card/90 p-6 shadow-2xl shadow-black/20 backdrop-blur-md sm:p-8">
         <p className="text-[11px] font-semibold text-muted-foreground">{APP_DISPLAY_NAME}</p>
-        <h1 className="mt-3 text-2xl font-semibold sm:text-3xl">Something went wrong.</h1>
+        <h1 className="mt-3 text-2xl font-semibold sm:text-3xl">{t("error.somethingWrong")}</h1>
         <p className="mt-2 text-sm leading-relaxed text-muted-foreground">{message}</p>
 
         <div className="mt-5 flex flex-wrap gap-2">
           <Button size="sm" className={dialogActionButtonClassName} onClick={() => reset()}>
-            Try again
+            {t("common.tryAgain")}
           </Button>
           <Button
             size="sm"
@@ -774,14 +812,14 @@ function RootRouteErrorView({ error, reset }: ErrorComponentProps) {
             className={dialogActionButtonClassName}
             onClick={() => window.location.reload()}
           >
-            Reload app
+            {t("common.reloadApp")}
           </Button>
         </div>
 
         <details className="group mt-5 overflow-hidden rounded-lg border border-border/70 bg-background/55">
           <summary className="cursor-pointer list-none px-3 py-2 text-xs font-medium text-muted-foreground">
-            <span className="group-open:hidden">Show error details</span>
-            <span className="hidden group-open:inline">Hide error details</span>
+            <span className="group-open:hidden">{t("error.showDetails")}</span>
+            <span className="hidden group-open:inline">{t("error.hideDetails")}</span>
           </summary>
           <pre className="max-h-56 overflow-auto border-t border-border/70 bg-background/80 px-3 py-2 text-xs text-foreground/85">
             {details}
@@ -792,7 +830,7 @@ function RootRouteErrorView({ error, reset }: ErrorComponentProps) {
   );
 }
 
-function errorMessage(error: unknown): string {
+function errorMessage(error: unknown, fallback: string): string {
   if (error instanceof Error && error.message.trim().length > 0) {
     return error.message;
   }
@@ -801,7 +839,7 @@ function errorMessage(error: unknown): string {
     return error;
   }
 
-  return "An unexpected router error occurred.";
+  return fallback;
 }
 
 function errorDetails(error: unknown): string {
@@ -969,6 +1007,7 @@ function releaseOrphanedThreadDetail(input: {
 }
 
 function EventRouter() {
+  const { t } = useI18n();
   const syncServerShellSnapshot = useStore((store) => store.syncServerShellSnapshot);
   const syncServerThreadDetailHotPath = useStore((store) => store.syncServerThreadDetailHotPath);
   const applyShellEvent = useStore((store) => store.applyShellEvent);
@@ -1856,26 +1895,26 @@ function EventRouter() {
 
       toastManager.add({
         type: "warning",
-        title: "Invalid keybindings configuration",
+        title: t("shortcuts.invalidConfiguration"),
         description: issue.message,
         actionProps: {
-          children: "Open keybindings.json",
+          children: t("shortcuts.openConfiguration"),
           onClick: () => {
             void queryClient
               .ensureQueryData(serverConfigQueryOptions())
               .then((config) => {
                 const editor = resolveAndPersistPreferredEditor(config.availableEditors);
                 if (!editor) {
-                  throw new Error("No available editors found.");
+                  throw new Error(t("shortcuts.noEditors"));
                 }
                 return api.shell.openInEditor(config.keybindingsConfigPath, editor);
               })
               .catch((error) => {
                 toastManager.add({
                   type: "error",
-                  title: "Unable to open keybindings file",
+                  title: t("shortcuts.unableToOpenConfiguration"),
                   description:
-                    error instanceof Error ? error.message : "Unknown error opening file.",
+                    error instanceof Error ? error.message : t("shortcuts.unknownOpenError"),
                 });
               });
           },
@@ -2025,6 +2064,7 @@ function EventRouter() {
     setServerWorkspacePaths,
     syncServerShellSnapshot,
     syncServerThreadDetailHotPath,
+    t,
   ]);
 
   useLayoutEffect(() => {

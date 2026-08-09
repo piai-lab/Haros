@@ -5,6 +5,7 @@
 // Exports: entry type, the index, section label lookup, and the ranking helper
 
 import { rankProviderDiscoveryItems } from "~/lib/providerDiscovery";
+import type { MessageKey } from "~/i18n";
 import {
   settingRowAnchorId,
   SETTINGS_NAV_ITEMS,
@@ -432,15 +433,81 @@ export function settingsSectionLabel(section: SettingsSectionId): string {
 export function rankSettingsSearchEntries(
   query: string,
   limit: number,
+  translate?: (key: MessageKey) => string,
 ): readonly SettingsSearchEntry[] {
   const trimmed = query.trim();
   if (trimmed.length === 0) {
     return [];
   }
-  const ranked = rankProviderDiscoveryItems(SETTINGS_SEARCH_ENTRIES, trimmed, (entry) => [
+  const entries = translate
+    ? SETTINGS_SEARCH_ENTRIES.map((entry) => {
+        const titleKey = SETTINGS_SEARCH_TITLE_KEY_BY_TITLE[entry.title];
+        if (!titleKey) {
+          throw new Error(`Missing localized Settings search title: ${entry.title}`);
+        }
+        return { ...entry, title: translate(titleKey) };
+      })
+    : SETTINGS_SEARCH_ENTRIES;
+  const ranked = rankProviderDiscoveryItems(entries, trimmed, (entry) => [
     { value: entry.title },
     { value: entry.keywords, weight: 200 },
     { value: settingsSectionLabel(entry.section), weight: 400 },
   ]);
   return ranked.slice(0, limit);
 }
+
+const SETTINGS_SEARCH_TITLE_KEY_BY_TITLE: Readonly<Record<string, MessageKey>> = {
+  "Activity toasts": "settings.activityToasts",
+  "App icon": "settings.appIcon",
+  "Archive confirmation": "settings.archiveConfirmation",
+  "Archived threads": "settings.archived",
+  "Assistant output": "settings.assistantOutput",
+  "Automatic CLI update checks": "settings.automaticCliUpdates",
+  "Base font size": "settings.baseFontSize",
+  "Capture sound": "settings.captureSound",
+  Chat: "nav.chat",
+  Chats: "settings.chats",
+  "Default provider": "settings.defaultProvider",
+  "Delete confirmation": "settings.deleteConfirmation",
+  "Desktop notifications": "settings.desktopNotifications",
+  Destination: "settings.destination",
+  "Diff line wrapping": "settings.diffLineWrapping",
+  Editor: "settings.editor",
+  "Enable AppSnap": "settings.enableAppSnap",
+  "External MCP integrations": "settings.integrations",
+  "Follow-up behavior": "settings.followUpBehavior",
+  "Font smoothing": "settings.fontSmoothing",
+  "Git writing model": "settings.gitWritingModel",
+  "Installed CLIs": "settings.installedClis",
+  Keybindings: "settings.keybindings",
+  "Managed worktrees": "settings.worktrees",
+  "New threads": "settings.newThreads",
+  Notepad: "settings.notepad",
+  "Open by default": "settings.openByDefault",
+  "Permission status": "settings.permissionStatus",
+  "Pinned messages": "settings.pinnedMessages",
+  "Project instructions": "settings.projectInstructions",
+  "Project order": "settings.projectOrder",
+  "Provider updates": "settings.providerUpdates",
+  "Pull request": "settings.pullRequest",
+  Recap: "settings.recap",
+  "Recovery tools": "settings.recoveryTools",
+  "Release history": "settings.releaseHistory",
+  Repository: "settings.repositoryLabel",
+  "Saved model slugs": "settings.savedModelSlugs",
+  Shortcut: "settings.shortcut",
+  Skills: "settings.skills",
+  "Terminal close confirmation": "settings.terminalCloseConfirmation",
+  "Terminal font": "settings.terminalFont",
+  "Terminal font size": "settings.terminalFontSize",
+  "Text markers": "settings.textMarkers",
+  Theme: "settings.theme",
+  "Thread order": "settings.threadOrder",
+  "Time format": "settings.timeFormat",
+  "UI density": "settings.uiDensity",
+  Usage: "settings.usageLabel",
+  "Usage and billing": "settings.usage",
+  "Use system UI font": "settings.systemUiFont",
+  Version: "settings.version",
+  "Visible providers": "settings.visibleProviders",
+};

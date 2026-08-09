@@ -7,7 +7,12 @@
 
 import { useState } from "react";
 import { useQuery } from "@tanstack/react-query";
-import { type ProfileStats, type ProfileTokenStats, type ProviderKind } from "@synara/contracts";
+import {
+  type ProfileHeatmapCell,
+  type ProfileStats,
+  type ProfileTokenStats,
+  type ProviderKind,
+} from "@synara/contracts";
 import {
   serverProfileStatsQueryOptions,
   serverProfileTokenStatsQueryOptions,
@@ -28,14 +33,16 @@ import { useProfileName } from "../profile/useProfileName";
 import { useProfileAvatarColor } from "../profile/useProfileAvatarColor";
 import { useProfileAvatarImage } from "../profile/useProfileAvatarImage";
 import { ProfileAvatar } from "../profile/ProfileAvatar";
+import { useI18n } from "~/i18n";
 import {
   formatCompact,
-  formatDays,
   formatNumber,
+  formatShortDate,
   toDisplayName,
 } from "../profile/profileFormatting";
 
 export function ProfileSettingsPanel() {
+  const { t } = useI18n();
   const coreQuery = useQuery(serverProfileStatsQueryOptions());
   const tokenQuery = useQuery(serverProfileTokenStatsQueryOptions());
 
@@ -45,9 +52,9 @@ export function ProfileSettingsPanel() {
   if (coreQuery.isError || !coreQuery.data) {
     return (
       <div className="flex flex-col items-center gap-3 py-24 text-center">
-        <p className="text-sm text-muted-foreground">Couldn’t load your local stats.</p>
+        <p className="text-sm text-muted-foreground">{t("settings.profileLoadFailed")}</p>
         <Button variant="outline" size="sm" onClick={() => void coreQuery.refetch()}>
-          Try again
+          {t("settings.tryAgain")}
         </Button>
       </div>
     );
@@ -71,6 +78,7 @@ function ProfileContent({
   tokenStats: ProfileTokenStats | null;
   tokensPending: boolean;
 }) {
+  const { locale, t } = useI18n();
   const [editOpen, setEditOpen] = useState(false);
 
   const defaultName = toDisplayName(stats.identity.homeDirBasename);
@@ -83,8 +91,27 @@ function ProfileContent({
   const heatmap = selectProfileHeatmap(stats, tokenStats);
   const topProvider = selectProfileTopProvider(stats, tokenStats);
   const modelUsage = selectProfileModelUsage(stats, tokenStats);
-  const peakHourLabel = formatPeakHourLabel(stats.activeHours.startHour);
-  const mostWorkedProjectLabel = formatMostWorkedProjectLabel(stats.mostWorkedProject);
+  const peakHourLabel = formatPeakHourLabel(stats.activeHours.startHour, locale);
+  const mostWorkedProjectLabel = stats.mostWorkedProject
+    ? t("settings.projectPromptCount", {
+        project: stats.mostWorkedProject.title,
+        count: formatNumber(stats.mostWorkedProject.promptCount),
+      })
+    : "—";
+  const formatHeatmapTooltip = (cell: ProfileHeatmapCell) => {
+    const date = formatShortDate(cell.day, locale) ?? cell.day;
+    const unit =
+      heatmap.unit === "tokens"
+        ? t(cell.count === 1 ? "settings.tokenSingular" : "settings.tokenPlural")
+        : t(cell.count === 1 ? "settings.promptSingular" : "settings.promptPlural");
+    return cell.count <= 0
+      ? t("settings.noHeatmapActivity", { unit, date })
+      : t("settings.heatmapActivity", {
+          count: formatCompact(cell.count),
+          unit,
+          date,
+        });
+  };
 
   return (
     <div className="flex min-w-0 flex-col gap-7">
@@ -92,7 +119,7 @@ function ProfileContent({
       <div className="flex items-center justify-end gap-2">
         <Button variant="outline" size="sm" onClick={() => setEditOpen(true)}>
           <CentralIcon name="pencil" />
-          Edit
+          {t("settings.edit")}
         </Button>
       </div>
 
@@ -120,21 +147,36 @@ function ProfileContent({
       {/* Stat tiles */}
       <div className="grid grid-cols-2 divide-x divide-y divide-border/50 overflow-hidden rounded-2xl border border-border/60 sm:grid-cols-3 lg:grid-cols-5 lg:divide-y-0">
         <StatTile
-          label="Lifetime tokens"
+          label={t("settings.lifetimeTokens")}
           value={tokensPending ? null : formatCompact(tokenStats?.lifetimeTotalTokens ?? null)}
         />
         <StatTile
-          label="Peak day"
+          label={t("settings.peakDay")}
           value={tokensPending ? null : formatCompact(tokenStats?.peakDayTokens ?? null)}
         />
-        <StatTile label="Total prompts" value={formatNumber(stats.activity.totalPromptsSent)} />
-        <StatTile label="Current streak" value={formatDays(stats.activity.currentStreakDays)} />
-        <StatTile label="Longest streak" value={formatDays(stats.activity.longestStreakDays)} />
+        <StatTile
+          label={t("settings.totalPrompts")}
+          value={formatNumber(stats.activity.totalPromptsSent)}
+        />
+        <StatTile
+          label={t("settings.currentStreak")}
+          value={t(
+            stats.activity.currentStreakDays === 1 ? "settings.daySingular" : "settings.dayPlural",
+            { count: formatNumber(stats.activity.currentStreakDays) },
+          )}
+        />
+        <StatTile
+          label={t("settings.longestStreak")}
+          value={t(
+            stats.activity.longestStreakDays === 1 ? "settings.daySingular" : "settings.dayPlural",
+            { count: formatNumber(stats.activity.longestStreakDays) },
+          )}
+        />
       </div>
 
       {/* Heatmap */}
       <section className="flex min-w-0 flex-col gap-3">
-        <h3 className="text-sm font-medium">Activity</h3>
+        <h3 className="text-sm font-medium">{t("settings.activity")}</h3>
         {tokensPending ? (
           <Skeleton className="h-28 w-full rounded-lg" />
         ) : (
@@ -145,6 +187,8 @@ function ProfileContent({
             gap={3}
             tooltip
             tooltipUnit={heatmap.unit}
+            locale={locale}
+            formatTooltip={formatHeatmapTooltip}
             showMonths
             monthsPosition="bottom"
           />
@@ -154,10 +198,10 @@ function ProfileContent({
       {/* Insights + plugins */}
       <div className="grid gap-x-12 gap-y-7 md:grid-cols-2">
         <section className="flex flex-col gap-3">
-          <h3 className="text-sm font-medium">Activity insights</h3>
+          <h3 className="text-sm font-medium">{t("settings.activityInsights")}</h3>
           <dl className="flex flex-col gap-2.5">
             <InsightRow
-              label="Most used provider"
+              label={t("settings.mostUsedProvider")}
               value={
                 topProvider.provider
                   ? `${formatProviderLabel(topProvider.provider)}${
@@ -167,7 +211,7 @@ function ProfileContent({
               }
             />
             <InsightRow
-              label="Most used reasoning"
+              label={t("settings.mostUsedReasoning")}
               value={
                 stats.insights.topReasoning
                   ? `${capitalize(stats.insights.topReasoning)}${
@@ -178,22 +222,25 @@ function ProfileContent({
                   : "—"
               }
             />
-            <InsightRow label="Most active hour" value={peakHourLabel} />
-            <InsightRow label="Most worked project" value={mostWorkedProjectLabel} />
+            <InsightRow label={t("settings.mostActiveHour")} value={peakHourLabel} />
+            <InsightRow label={t("settings.mostWorkedProject")} value={mostWorkedProjectLabel} />
             <InsightRow
-              label="Skills explored"
+              label={t("settings.skillsExplored")}
               value={formatNumber(stats.insights.skillsExplored)}
             />
             <InsightRow
-              label="Total skills used"
+              label={t("settings.totalSkillsUsed")}
               value={formatNumber(stats.insights.totalSkillsUsed)}
             />
-            <InsightRow label="Total threads" value={formatNumber(stats.activity.totalThreads)} />
+            <InsightRow
+              label={t("settings.totalThreads")}
+              value={formatNumber(stats.activity.totalThreads)}
+            />
           </dl>
         </section>
 
         <section className="flex flex-col gap-3">
-          <h3 className="text-sm font-medium">Most used plugins</h3>
+          <h3 className="text-sm font-medium">{t("settings.mostUsedPlugins")}</h3>
           {stats.skills.length > 0 ? (
             <ul className="flex flex-col gap-2.5">
               {stats.skills.slice(0, 6).map((skill) => (
@@ -211,20 +258,20 @@ function ProfileContent({
                     <span className="truncate text-sm">{skill.displayName}</span>
                   </span>
                   <span className="shrink-0 text-sm tabular-nums text-muted-foreground">
-                    {formatNumber(skill.runCount)} runs
+                    {t("settings.runCount", { count: formatNumber(skill.runCount) })}
                   </span>
                 </li>
               ))}
             </ul>
           ) : (
-            <p className="text-sm text-muted-foreground">No skills or agents used yet.</p>
+            <p className="text-sm text-muted-foreground">{t("settings.noSkillsOrAgents")}</p>
           )}
         </section>
       </div>
 
       {/* Model usage */}
       <section className="flex flex-col gap-3">
-        <h3 className="text-sm font-medium">Model usage</h3>
+        <h3 className="text-sm font-medium">{t("settings.modelUsage")}</h3>
         {modelUsage.entries.length > 0 ? (
           <ul className="grid grid-cols-1 gap-x-12 gap-y-3 sm:grid-cols-2">
             {modelUsage.entries.slice(0, 6).map((entry) => (
@@ -237,7 +284,7 @@ function ProfileContent({
             ))}
           </ul>
         ) : (
-          <p className="text-sm text-muted-foreground">No model activity yet.</p>
+          <p className="text-sm text-muted-foreground">{t("settings.noModelActivity")}</p>
         )}
       </section>
 
@@ -291,23 +338,12 @@ function InsightRow({ label, value }: { label: string; value: string }) {
   );
 }
 
-function formatHour(hour: number): string {
-  const normalized = ((hour % 24) + 24) % 24;
-  if (normalized === 0) return "12 AM";
-  if (normalized === 12) return "12 PM";
-  return normalized < 12 ? `${normalized} AM` : `${normalized - 12} PM`;
-}
-
-function formatPeakHourLabel(startHour: number | null): string {
-  return startHour === null ? "—" : formatHour(startHour);
-}
-
-function formatMostWorkedProjectLabel(project: ProfileStats["mostWorkedProject"]): string {
-  if (!project) {
-    return "—";
-  }
-  const promptLabel = project.promptCount === 1 ? "prompt" : "prompts";
-  return `${project.title} · ${formatNumber(project.promptCount)} ${promptLabel}`;
+function formatPeakHourLabel(startHour: number | null, locale: "en" | "zh-CN"): string {
+  if (startHour === null) return "—";
+  const normalized = ((startHour % 24) + 24) % 24;
+  return new Intl.DateTimeFormat(locale, { hour: "numeric", timeZone: "UTC" }).format(
+    new Date(Date.UTC(2024, 0, 1, normalized)),
+  );
 }
 
 function formatProviderLabel(provider: ProviderKind): string {

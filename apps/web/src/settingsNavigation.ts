@@ -187,7 +187,7 @@ export const SETTINGS_NAV_ITEMS: readonly SettingsNavItem[] = [
 export function settingRowAnchorId(title: string): string {
   const slug = title
     .toLowerCase()
-    .replace(/[^a-z0-9]+/g, "-")
+    .replace(/[^\p{Letter}\p{Number}]+/gu, "-")
     .replace(/^-+|-+$/g, "");
   return `setting-${slug}`;
 }

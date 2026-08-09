@@ -21,13 +21,15 @@ const harness = vi.hoisted(() => ({
   syncServerReadModel: vi.fn(),
 }));
 
-vi.mock("@tanstack/react-query", () => ({
+vi.mock("@tanstack/react-query", async (importOriginal) => ({
+  ...(await importOriginal<typeof import("@tanstack/react-query")>()),
   useQuery: (options: { queryKey: readonly string[] }) => ({
     data: options.queryKey[0] === "config" ? harness.config : harness.auth,
   }),
 }));
 
-vi.mock("~/lib/serverReactQuery", () => ({
+vi.mock("~/lib/serverReactQuery", async (importOriginal) => ({
+  ...(await importOriginal<typeof import("~/lib/serverReactQuery")>()),
   serverConfigQueryOptions: () => ({ queryKey: ["config"] }),
   serverAuthSessionQueryOptions: () => ({ queryKey: ["auth"] }),
 }));

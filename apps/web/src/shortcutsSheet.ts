@@ -13,6 +13,14 @@ import { isMacPlatform } from "./lib/utils";
 import { formatShortcutLabel, resolveKeybindingForCommand } from "./keybindings";
 import { commandForProjectScript } from "./projectScripts";
 import type { ProjectScript } from "./types";
+import { translate, type MessageKey } from "./i18n";
+
+type ShortcutTranslate = (
+  key: MessageKey,
+  params?: Readonly<Record<string, string | number>>,
+) => string;
+
+const english: ShortcutTranslate = (key, params) => translate("en", key, params);
 
 export interface ShortcutSheetContext {
   terminalFocus: boolean;
@@ -43,12 +51,14 @@ interface BuildShortcutSheetSectionsOptions {
   projectScripts: ReadonlyArray<ProjectScript>;
   platform: string;
   context: ShortcutSheetContext;
+  translate?: ShortcutTranslate;
 }
 
 interface ShortcutDefinition {
   command: KeybindingCommand | readonly KeybindingCommand[];
-  label: string;
-  description: string;
+  labelKey: MessageKey;
+  descriptionKey: MessageKey;
+  params?: Readonly<Record<string, string | number>>;
 }
 
 // Space jumps address the switcher's visual tab order, so slot 1 is always Void.
@@ -56,162 +66,159 @@ const SPACE_JUMP_DEFINITIONS: readonly ShortcutDefinition[] = Array.from(
   { length: 9 },
   (_, index) => ({
     command: `space.jump.${index + 1}` as KeybindingCommand,
-    label: index === 0 ? "Jump to Void" : `Jump to space ${index + 1}`,
-    description:
-      index === 0
-        ? "Switch straight to the Void tab of the space switcher."
-        : "Switch straight to this tab of the space switcher.",
+    labelKey: index === 0 ? "shortcuts.jumpVoid" : "shortcuts.jumpSpace",
+    descriptionKey:
+      index === 0 ? "shortcuts.jumpVoidDescription" : "shortcuts.jumpSpaceDescription",
+    params: { number: index + 1 },
   }),
 );
 
 const AVAILABLE_NOW_DEFINITIONS: readonly ShortcutDefinition[] = [
   {
     command: "sidebar.addProject",
-    label: "Add project",
-    description: "Open the Create project dialog to import a local folder.",
+    labelKey: "shortcuts.addProject",
+    descriptionKey: "shortcuts.addProjectDescription",
   },
   {
     command: "sidebar.search",
-    label: "Search projects and threads",
-    description: "Open the sidebar search palette from anywhere in the app.",
+    labelKey: "shortcuts.searchProjects",
+    descriptionKey: "shortcuts.searchProjectsDescription",
   },
   {
     command: "sidebar.activity",
-    label: "Toggle Activity",
-    description: "Show or hide running tasks, completed work, and items that need attention.",
+    labelKey: "shortcuts.toggleActivity",
+    descriptionKey: "shortcuts.toggleActivityDescription",
   },
   {
     command: "sidebar.importThread",
-    label: "Import thread",
-    description: "Bring an existing conversation into the current workspace.",
+    labelKey: "shortcuts.importThread",
+    descriptionKey: "shortcuts.importThreadDescription",
   },
   {
     command: "space.previous",
-    label: "Previous space",
-    description: "Switch to the previous project space and restore its last working context.",
+    labelKey: "shortcuts.previousSpace",
+    descriptionKey: "shortcuts.previousSpaceDescription",
   },
   {
     command: "space.next",
-    label: "Next space",
-    description: "Switch to the next project space and restore its last working context.",
+    labelKey: "shortcuts.nextSpace",
+    descriptionKey: "shortcuts.nextSpaceDescription",
   },
   ...SPACE_JUMP_DEFINITIONS,
   {
     command: "chat.new",
-    label: "New thread",
-    description: "Start a fresh thread in the current project, or the most recent one.",
+    labelKey: "shortcuts.newThread",
+    descriptionKey: "shortcuts.newThreadDescription",
   },
   {
     command: "chat.newLatestProject",
-    label: "New thread in latest project",
-    description: "Jump back into the most recently used project with a new thread.",
+    labelKey: "shortcuts.newLatestProjectThread",
+    descriptionKey: "shortcuts.newLatestProjectThreadDescription",
   },
   {
     command: ["chat.newChat", "chat.newLocal"],
-    label: "New chat",
-    description: "Open the empty chat landing view.",
+    labelKey: "shortcuts.newChat",
+    descriptionKey: "shortcuts.newChatDescription",
   },
   {
     command: "chat.newTerminal",
-    label: "New terminal thread",
-    description: "Create a thread that opens directly into terminal mode.",
+    labelKey: "shortcuts.newTerminalThread",
+    descriptionKey: "shortcuts.newTerminalThreadDescription",
   },
   {
     command: "chat.newClaude",
-    label: "New Claude thread",
-    description: "Start a fresh thread with Claude selected.",
+    labelKey: "shortcuts.newClaudeThread",
+    descriptionKey: "shortcuts.newClaudeThreadDescription",
   },
   {
     command: "chat.newCodex",
-    label: "New Codex thread",
-    description: "Start a fresh thread with Codex selected.",
+    labelKey: "shortcuts.newCodexThread",
+    descriptionKey: "shortcuts.newCodexThreadDescription",
   },
   {
     command: "chat.newCursor",
-    label: "New Cursor thread",
-    description: "Start a fresh thread with Cursor selected.",
+    labelKey: "shortcuts.newCursorThread",
+    descriptionKey: "shortcuts.newCursorThreadDescription",
   },
   {
     command: "chat.split",
-    label: "Split chat",
-    description: "Open the current conversation in a second pane.",
+    labelKey: "shortcuts.splitChat",
+    descriptionKey: "shortcuts.splitChatDescription",
   },
   {
     command: "view.recent.previous",
-    label: "Previous recent view",
-    description: "Cycle backward through recently opened primary views.",
+    labelKey: "shortcuts.previousRecentView",
+    descriptionKey: "shortcuts.previousRecentViewDescription",
   },
   {
     command: "view.recent.next",
-    label: "Next recent view",
-    description: "Cycle forward through recently opened primary views.",
+    labelKey: "shortcuts.nextRecentView",
+    descriptionKey: "shortcuts.nextRecentViewDescription",
   },
   {
     command: "modelPicker.toggle",
-    label: "Model picker",
-    description: "Open the composer provider and model picker.",
+    labelKey: "shortcuts.modelPicker",
+    descriptionKey: "shortcuts.modelPickerDescription",
   },
   {
     command: "model.next",
-    label: "Next model",
-    description:
-      "Cycle to the next model for the active provider (favorites first, then remaining models).",
+    labelKey: "shortcuts.nextModel",
+    descriptionKey: "shortcuts.nextModelDescription",
   },
   {
     command: "model.previous",
-    label: "Previous model",
-    description:
-      "Cycle to the previous model for the active provider (favorites first, then remaining models).",
+    labelKey: "shortcuts.previousModel",
+    descriptionKey: "shortcuts.previousModelDescription",
   },
   {
     command: "traitsPicker.toggle",
-    label: "Reasoning picker",
-    description: "Open the composer reasoning and trait controls.",
+    labelKey: "shortcuts.reasoningPicker",
+    descriptionKey: "shortcuts.reasoningPickerDescription",
   },
   {
     command: "composer.focus.toggle",
-    label: "Focus composer",
-    description: "Focus or blur the chat prompt composer.",
+    labelKey: "shortcuts.focusComposer",
+    descriptionKey: "shortcuts.focusComposerDescription",
   },
   {
     command: "terminal.toggle",
-    label: "Toggle terminal",
-    description: "Show or hide the terminal surface for the active thread.",
+    labelKey: "shortcuts.toggleTerminal",
+    descriptionKey: "shortcuts.toggleTerminalDescription",
   },
   {
     command: "diff.toggle",
-    label: "Toggle diff",
-    description: "Open or close the working tree diff panel.",
+    labelKey: "shortcuts.toggleDiff",
+    descriptionKey: "shortcuts.toggleDiffDescription",
   },
   {
     command: "browser.toggle",
-    label: "Toggle browser",
-    description: "Reveal the built-in browser panel for the active thread.",
+    labelKey: "shortcuts.toggleBrowser",
+    descriptionKey: "shortcuts.toggleBrowserDescription",
   },
   {
     command: "thread.copyId",
-    label: "Copy thread ID",
-    description: "Copy the active thread's ID to the clipboard.",
+    labelKey: "shortcuts.copyThreadId",
+    descriptionKey: "shortcuts.copyThreadIdDescription",
   },
   {
     command: "chat.visible.previous",
-    label: "Previous visible thread",
-    description: "Cycle to the previous thread that is currently visible in the sidebar.",
+    labelKey: "shortcuts.previousVisibleThread",
+    descriptionKey: "shortcuts.previousVisibleThreadDescription",
   },
   {
     command: "chat.visible.next",
-    label: "Next visible thread",
-    description: "Cycle to the next thread that is currently visible in the sidebar.",
+    labelKey: "shortcuts.nextVisibleThread",
+    descriptionKey: "shortcuts.nextVisibleThreadDescription",
   },
   {
     command: "editor.openFavorite",
-    label: "Open in favorite editor",
-    description: "Send the current thread or workspace target to your preferred editor.",
+    labelKey: "shortcuts.openFavoriteEditor",
+    descriptionKey: "shortcuts.openFavoriteEditorDescription",
   },
   {
     command: "git.commitAndPush",
-    label: "Commit and push",
-    description: "Commit pending changes and push the active thread's repo.",
+    labelKey: "shortcuts.commitAndPush",
+    descriptionKey: "shortcuts.commitAndPushDescription",
   },
 ] as const;
 
@@ -219,38 +226,39 @@ const THREAD_JUMP_DEFINITIONS: readonly ShortcutDefinition[] = Array.from(
   { length: 9 },
   (_, index) => ({
     command: `thread.jump.${index + 1}` as KeybindingCommand,
-    label: `Jump to visible thread ${index + 1}`,
-    description: "Focus a visible thread directly from the sidebar number row.",
+    labelKey: "shortcuts.jumpVisibleThread",
+    descriptionKey: "shortcuts.jumpVisibleThreadDescription",
+    params: { number: index + 1 },
   }),
 );
 
 const WORKSPACE_DEFINITIONS: readonly ShortcutDefinition[] = [
   {
     command: "terminal.workspace.newFullWidth",
-    label: "Open full-width terminal workspace",
-    description: "Expand the active thread into the workspace terminal layout.",
+    labelKey: "shortcuts.openTerminalWorkspace",
+    descriptionKey: "shortcuts.openTerminalWorkspaceDescription",
   },
   {
     command: "terminal.workspace.terminal",
-    label: "Focus terminal tab",
-    description: "Switch the workspace to the terminal tab.",
+    labelKey: "shortcuts.focusTerminal",
+    descriptionKey: "shortcuts.focusTerminalDescription",
   },
   {
     command: "terminal.workspace.chat",
-    label: "Focus chat tab",
-    description: "Switch the workspace back to the chat tab.",
+    labelKey: "shortcuts.focusChat",
+    descriptionKey: "shortcuts.focusChatDescription",
   },
   {
     command: "terminal.workspace.closeActive",
-    label: "Close active workspace panel",
-    description: "Close the currently focused workspace panel or tab.",
+    labelKey: "shortcuts.closeWorkspacePanel",
+    descriptionKey: "shortcuts.closeWorkspacePanelDescription",
   },
 ] as const;
 
 const SIDEBAR_TOGGLE_DEFINITION: ShortcutDefinition = {
   command: "sidebar.toggle",
-  label: "Toggle sidebar",
-  description: "Collapse or reveal the sidebar shell.",
+  labelKey: "shortcuts.toggleSidebar",
+  descriptionKey: "shortcuts.toggleSidebarDescription",
 };
 
 export interface EditableShortcutDefinition {
@@ -260,7 +268,9 @@ export interface EditableShortcutDefinition {
 }
 
 /** All built-in commands that can be assigned from Settings → Keybindings. */
-export function listEditableShortcutDefinitions(): EditableShortcutDefinition[] {
+export function listEditableShortcutDefinitions(
+  t: ShortcutTranslate = english,
+): EditableShortcutDefinition[] {
   const definitionsByCommand = new Map<KeybindingCommand, EditableShortcutDefinition>();
   for (const definition of [
     SIDEBAR_TOGGLE_DEFINITION,
@@ -272,8 +282,8 @@ export function listEditableShortcutDefinitions(): EditableShortcutDefinition[] 
     for (const command of commands) {
       definitionsByCommand.set(command, {
         command,
-        label: definition.label,
-        description: definition.description,
+        label: t(definition.labelKey, definition.params),
+        description: t(definition.descriptionKey, definition.params),
       });
     }
   }
@@ -283,7 +293,7 @@ export function listEditableShortcutDefinitions(): EditableShortcutDefinition[] 
       definitionsByCommand.get(command) ?? {
         command,
         label: command,
-        description: "Assign a shortcut to this built-in command.",
+        description: t("shortcuts.assignBuiltInDescription"),
       },
   );
 }
@@ -293,7 +303,10 @@ function modSlashLabel(platform: string): string {
 }
 
 /** Human-readable sheet label for a keybinding command, e.g. `chat.new` → "New thread". */
-export function shortcutSheetCommandLabel(command: KeybindingCommand): string | null {
+export function shortcutSheetCommandLabel(
+  command: KeybindingCommand,
+  t: ShortcutTranslate = english,
+): string | null {
   for (const definitions of [
     AVAILABLE_NOW_DEFINITIONS,
     WORKSPACE_DEFINITIONS,
@@ -303,7 +316,7 @@ export function shortcutSheetCommandLabel(command: KeybindingCommand): string | 
       const commands = Array.isArray(definition.command)
         ? definition.command
         : [definition.command];
-      if (commands.includes(command)) return definition.label;
+      if (commands.includes(command)) return t(definition.labelKey, definition.params);
     }
   }
   return null;
@@ -314,6 +327,7 @@ function definitionToEntry(
   keybindings: ResolvedKeybindingsConfig,
   platform: string,
   context: ShortcutSheetContext,
+  t: ShortcutTranslate,
 ): ShortcutSheetEntry | null {
   const commands = Array.isArray(definition.command) ? definition.command : [definition.command];
   const binding = commands.reduce<ResolvedKeybindingRule | null>(
@@ -326,8 +340,8 @@ function definitionToEntry(
     id: binding.command,
     command: binding.command,
     binding,
-    label: definition.label,
-    description: definition.description,
+    label: t(definition.labelKey, definition.params),
+    description: t(definition.descriptionKey, definition.params),
     shortcutLabel: formatShortcutLabel(binding.shortcut, platform),
   };
 }
@@ -337,9 +351,10 @@ function definitionsToEntries(
   keybindings: ResolvedKeybindingsConfig,
   platform: string,
   context: ShortcutSheetContext,
+  t: ShortcutTranslate,
 ): ShortcutSheetEntry[] {
   return definitions
-    .map((definition) => definitionToEntry(definition, keybindings, platform, context))
+    .map((definition) => definitionToEntry(definition, keybindings, platform, context, t))
     .filter((entry): entry is ShortcutSheetEntry => entry !== null);
 }
 
@@ -347,14 +362,15 @@ export function buildShortcutSheetSections(
   options: BuildShortcutSheetSectionsOptions,
 ): ShortcutSheetSection[] {
   const sections: ShortcutSheetSection[] = [];
+  const t = options.translate ?? english;
 
   const currentEntries: ShortcutSheetEntry[] = [
     {
       id: "shortcuts.show",
       command: null,
       binding: null,
-      label: "Show keybindings",
-      description: "Open this sheet from anywhere without leaving your current context.",
+      label: t("shortcuts.show"),
+      description: t("shortcuts.showDescription"),
       shortcutLabel: modSlashLabel(options.platform),
     },
     ...definitionsToEntries(
@@ -362,6 +378,7 @@ export function buildShortcutSheetSections(
       options.keybindings,
       options.platform,
       options.context,
+      t,
     ),
   ];
 
@@ -370,6 +387,7 @@ export function buildShortcutSheetSections(
     options.keybindings,
     options.platform,
     options.context,
+    t,
   );
   if (sidebarToggle) {
     currentEntries.splice(1, 0, sidebarToggle);
@@ -381,20 +399,22 @@ export function buildShortcutSheetSections(
         options.keybindings,
         options.platform,
         options.context,
+        t,
       )
     : definitionsToEntries(
         THREAD_JUMP_DEFINITIONS,
         options.keybindings,
         options.platform,
         options.context,
+        t,
       );
 
   sections.push({
     id: "available-now",
-    title: "Available now",
+    title: t("shortcuts.availableNow"),
     description: options.context.terminalWorkspaceOpen
-      ? "These reflect the active workspace-terminal context."
-      : "These reflect the current chat and sidebar context.",
+      ? t("shortcuts.activeWorkspaceContext")
+      : t("shortcuts.activeChatContext"),
     entries: [...currentEntries, ...currentNavigationEntries],
   });
 
@@ -413,14 +433,17 @@ export function buildShortcutSheetSections(
     options.keybindings,
     options.platform,
     alternateContext,
+    t,
   );
   if (alternateEntries.length > 0) {
     sections.push({
       id: "alternate-context",
-      title: options.context.terminalWorkspaceOpen ? "Outside workspace mode" : "In workspace mode",
+      title: options.context.terminalWorkspaceOpen
+        ? t("shortcuts.outsideWorkspace")
+        : t("shortcuts.inWorkspace"),
       description: options.context.terminalWorkspaceOpen
-        ? "Number-row jumps return when the terminal workspace is closed."
-        : "These bindings take over when the terminal switches into workspace mode.",
+        ? t("shortcuts.outsideWorkspaceDescription")
+        : t("shortcuts.inWorkspaceDescription"),
       tone: "muted",
       entries: alternateEntries,
     });
@@ -437,10 +460,12 @@ export function buildShortcutSheetSections(
         id: script.id,
         command,
         binding,
-        label: script.runOnWorktreeCreate ? `${script.name} setup script` : script.name,
+        label: script.runOnWorktreeCreate
+          ? t("shortcuts.projectSetupScript", { name: script.name })
+          : script.name,
         description: script.runOnWorktreeCreate
-          ? "Run the project setup script directly from the keyboard."
-          : "Run this project script without opening the scripts menu.",
+          ? t("shortcuts.projectSetupScriptDescription")
+          : t("shortcuts.projectScriptDescription"),
         shortcutLabel: formatShortcutLabel(binding.shortcut, options.platform),
       };
     })
@@ -449,8 +474,8 @@ export function buildShortcutSheetSections(
   if (projectScriptEntries.length > 0) {
     sections.push({
       id: "project-scripts",
-      title: "Project scripts",
-      description: "Custom shortcuts defined for the active project's scripts.",
+      title: t("shortcuts.projectScripts"),
+      description: t("shortcuts.projectScriptsDescription"),
       entries: projectScriptEntries,
     });
   }

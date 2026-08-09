@@ -19,7 +19,7 @@ import { CentralIcon } from "~/lib/central-icons";
 import { cn } from "~/lib/utils";
 import { isElectron } from "~/env";
 import {
-  buildNotificationSettingsSupportText,
+  type BrowserNotificationPermissionState,
   readBrowserNotificationPermissionState,
   requestBrowserNotificationPermission,
 } from "~/notifications/taskCompletion";
@@ -31,34 +31,55 @@ import { Button } from "~/components/ui/button";
 import { Switch } from "~/components/ui/switch";
 import { toastManager } from "~/components/ui/toast";
 import { serverConfigQueryOptions } from "~/lib/serverReactQuery";
+import { useI18n, type MessageKey } from "~/i18n";
 import { AppSnapShortcutControl } from "./AppSnapShortcutControl";
 import { SettingResetButton } from "./SettingControls";
 import { SettingsCard, SettingsRow, SettingsSection } from "./SettingsPanelPrimitives";
 
-function appSnapStatusText(state: DesktopAppSnapState | null): string {
-  if (!state) return "Available in the OmniMind desktop app";
-  if (!state.supported) return state.message ?? "Available on macOS only";
+type SettingsTranslator = ReturnType<typeof useI18n>["t"];
+
+function notificationSupportText(
+  state: BrowserNotificationPermissionState,
+  t: SettingsTranslator,
+): string {
+  if (isElectron) return t("settings.notificationDesktopCenter");
+  const key: Record<BrowserNotificationPermissionState, MessageKey> = {
+    granted: "settings.notificationGranted",
+    denied: "settings.notificationDenied",
+    insecure: "settings.notificationInsecure",
+    unsupported: "settings.notificationUnsupported",
+    default: "settings.notificationDefault",
+  };
+  return t(key[state]);
+}
+
+function appSnapStatusText(state: DesktopAppSnapState | null, t: SettingsTranslator): string {
+  if (!state) return t("settings.appSnapDesktopAvailable");
+  if (!state.supported) return state.message ?? t("settings.appSnapAvailableMac");
   if (state.status === "ready") {
     const shortcut = state.shortcut;
-    const label = shortcut ? appSnapShortcutLabels(shortcut).join(" + ") : "the shortcut";
-    return `Listening — press ${label} to snap`;
+    const label = shortcut
+      ? appSnapShortcutLabels(shortcut).join(" + ")
+      : t("settings.appSnapShortcutGeneric");
+    return t("settings.appSnapListening", { shortcut: label });
   }
-  if (state.status === "disabled") return "Off";
-  if (state.status === "starting") return "Starting the capture listener…";
-  return state.message ?? "Permission setup required";
+  if (state.status === "disabled") return t("settings.appSnapOff");
+  if (state.status === "starting") return t("settings.appSnapStarting");
+  return state.message ?? t("settings.appSnapPermissionSetup");
 }
 
 const EMPTY_KEYBINDINGS: ResolvedKeybindingsConfig = [];
 
-const APPSNAP_PERMISSION_LABELS: Record<DesktopAppSnapPermission, string> = {
-  granted: "Granted",
-  denied: "Denied",
-  "not-determined": "Not requested yet",
-  restricted: "Restricted",
-  unknown: "Unknown",
+const APPSNAP_PERMISSION_LABEL_KEYS: Record<DesktopAppSnapPermission, MessageKey> = {
+  granted: "settings.permissionGranted",
+  denied: "settings.permissionDenied",
+  "not-determined": "settings.permissionNotRequested",
+  restricted: "settings.permissionRestricted",
+  unknown: "settings.permissionUnknown",
 };
 
 function AppSnapPermissionBadge({ permission }: { permission: DesktopAppSnapPermission }) {
+  const { t } = useI18n();
   return (
     <span className="inline-flex items-center gap-1.5 text-xs font-medium text-muted-foreground">
       <span
@@ -72,7 +93,7 @@ function AppSnapPermissionBadge({ permission }: { permission: DesktopAppSnapPerm
               : "bg-[color:var(--color-border)]",
         )}
       />
-      {APPSNAP_PERMISSION_LABELS[permission]}
+      {t(APPSNAP_PERMISSION_LABEL_KEYS[permission])}
     </span>
   );
 }
@@ -83,6 +104,7 @@ export function NotificationsSettingsPanel({
   updateSettings,
   active,
 }: AppSettingsBinding & { readonly active: boolean }) {
+  const { t } = useI18n();
   const [browserNotificationPermission, setBrowserNotificationPermission] = useState(
     readBrowserNotificationPermissionState(),
   );
@@ -116,23 +138,23 @@ export function NotificationsSettingsPanel({
     updateSettings({ enableSystemTaskCompletionNotifications: false });
     toastManager.add({
       type: permission === "denied" ? "warning" : "error",
-      title: "Desktop notifications unavailable",
-      description: buildNotificationSettingsSupportText(permission),
+      title: t("settings.desktopNotificationsUnavailable"),
+      description: notificationSupportText(permission, t),
     });
   }
 
   async function sendTestNotification() {
-    const title = "Activity notification";
-    const body = "Notification test for chats and terminal agents.";
+    const title = t("settings.activityNotification");
+    const body = t("settings.notificationTestBody");
 
     if (window.desktopBridge) {
       const shown = await window.desktopBridge.notifications.show({ title, body, silent: false });
       toastManager.add({
         type: shown ? "success" : "warning",
-        title: shown ? "Test notification sent" : "Notifications unavailable",
+        title: shown ? t("settings.testNotificationSent") : t("settings.notificationsUnavailable"),
         description: shown
-          ? "Your operating system should show the notification."
-          : "Desktop notifications are not supported on this device.",
+          ? t("settings.osNotificationExpected")
+          : t("settings.desktopNotificationsUnsupported"),
       });
       return;
     }
@@ -142,8 +164,8 @@ export function NotificationsSettingsPanel({
     if (permission !== "granted") {
       toastManager.add({
         type: permission === "denied" ? "warning" : "error",
-        title: "Desktop notifications unavailable",
-        description: buildNotificationSettingsSupportText(permission),
+        title: t("settings.desktopNotificationsUnavailable"),
+        description: notificationSupportText(permission, t),
       });
       return;
     }
@@ -154,8 +176,8 @@ export function NotificationsSettingsPanel({
     });
     toastManager.add({
       type: "success",
-      title: "Test notification sent",
-      description: "Your browser should show the notification.",
+      title: t("settings.testNotificationSent"),
+      description: t("settings.browserNotificationExpected"),
     });
   }
 
@@ -163,14 +185,14 @@ export function NotificationsSettingsPanel({
 
   return (
     <div className="space-y-6">
-      <SettingsSection title="Activity alerts">
+      <SettingsSection title={t("settings.activityAlerts")}>
         <SettingsRow
-          title="Activity toasts"
-          description="Show an in-app toast when a chat or managed terminal agent finishes or needs input."
+          title={t("settings.activityToasts")}
+          description={t("settings.activityToastsDescription")}
           resetAction={
             settings.enableTaskCompletionToasts !== defaults.enableTaskCompletionToasts ? (
               <SettingResetButton
-                label="activity toasts"
+                label={t("settings.activityToasts")}
                 onClick={() =>
                   updateSettings({
                     enableTaskCompletionToasts: defaults.enableTaskCompletionToasts,
@@ -185,20 +207,20 @@ export function NotificationsSettingsPanel({
               onCheckedChange={(checked) =>
                 updateSettings({ enableTaskCompletionToasts: Boolean(checked) })
               }
-              aria-label="Activity toast notifications"
+              aria-label={t("settings.activityToastAria")}
             />
           }
         />
 
         <SettingsRow
-          title="Desktop notifications"
-          description="Show an OS notification when a chat or managed terminal agent finishes or needs input while the app is in the background."
-          status={buildNotificationSettingsSupportText(browserNotificationPermission)}
+          title={t("settings.desktopNotifications")}
+          description={t("settings.desktopNotificationsDescription")}
+          status={notificationSupportText(browserNotificationPermission, t)}
           resetAction={
             settings.enableSystemTaskCompletionNotifications !==
             defaults.enableSystemTaskCompletionNotifications ? (
               <SettingResetButton
-                label="desktop notifications"
+                label={t("settings.desktopNotifications")}
                 onClick={() =>
                   updateSettings({
                     enableSystemTaskCompletionNotifications:
@@ -211,14 +233,14 @@ export function NotificationsSettingsPanel({
           control={
             <div className="flex w-full items-center gap-2 sm:w-auto sm:justify-end">
               <Button size="xs" variant="outline" onClick={() => void sendTestNotification()}>
-                Test
+                {t("settings.test")}
               </Button>
               <Switch
                 checked={settings.enableSystemTaskCompletionNotifications}
                 onCheckedChange={(checked) => {
                   void setSystemNotificationsEnabled(Boolean(checked));
                 }}
-                aria-label="Desktop activity notifications"
+                aria-label={t("settings.desktopActivityNotifications")}
               />
             </div>
           }
@@ -234,6 +256,7 @@ export function AppSnapSettingsPanel({
   updateSettings,
   active,
 }: AppSettingsBinding & { readonly active: boolean }) {
+  const { t } = useI18n();
   const [appSnapState, setAppSnapState] = useState<DesktopAppSnapState | null>(null);
   const appSnapRequestGuardRef = useRef(createLatestAppSnapRequestGuard());
   const serverConfigQuery = useQuery({ ...serverConfigQueryOptions(), enabled: active });
@@ -265,8 +288,8 @@ export function AppSnapSettingsPanel({
     if (!bridge) {
       toastManager.add({
         type: "warning",
-        title: "AppSnap unavailable",
-        description: "AppSnap requires the OmniMind desktop app on macOS.",
+        title: t("settings.appsnapUnavailable"),
+        description: t("settings.appsnapDesktopRequired"),
       });
       return;
     }
@@ -285,8 +308,8 @@ export function AppSnapSettingsPanel({
       if (nextEnabled && (state.status === "permission-required" || state.status === "error")) {
         toastManager.add({
           type: "warning",
-          title: "Finish AppSnap setup",
-          description: state.message ?? "Allow the required macOS permissions, then try again.",
+          title: t("settings.appsnapFinishSetup"),
+          description: state.message ?? t("settings.appsnapPermissionRequired"),
         });
       }
     } catch (error) {
@@ -294,8 +317,8 @@ export function AppSnapSettingsPanel({
       updateSettings({ enableAppSnap: false });
       toastManager.add({
         type: "error",
-        title: "AppSnap setup failed",
-        description: error instanceof Error ? error.message : "Could not configure AppSnap.",
+        title: t("settings.appsnapSetupFailed"),
+        description: error instanceof Error ? error.message : t("settings.appsnapConfigureFailed"),
       });
     }
   }
@@ -314,8 +337,9 @@ export function AppSnapSettingsPanel({
       if (!requestGuard.isCurrent(requestId)) return;
       toastManager.add({
         type: "error",
-        title: "Could not check AppSnap permissions",
-        description: error instanceof Error ? error.message : "Permission check failed.",
+        title: t("settings.appsnapPermissionCheckFailed"),
+        description:
+          error instanceof Error ? error.message : t("settings.appsnapPermissionCheckUnknown"),
       });
     }
   }
@@ -332,33 +356,29 @@ export function AppSnapSettingsPanel({
           <CentralIcon name="screen-capture" className="size-4" />
         </span>
         <div className="min-w-0 space-y-1">
-          <p className={SETTINGS_CARD_ROW_TITLE_CLASS_NAME}>
-            Take an AppSnap to show your agent another app's window
-          </p>
+          <p className={SETTINGS_CARD_ROW_TITLE_CLASS_NAME}>{t("settings.appsnapIntroduction")}</p>
           <p className={SETTINGS_CARD_ROW_DESCRIPTION_CLASS_NAME}>
-            Press your two-key shortcut while any app is frontmost. OmniMind captures that window as
-            an image, brings itself forward, and attaches the snap to a task composer — the capture
-            stays on this device until you send the message.
+            {t("settings.appsnapIntroductionDescription")}
           </p>
           {!supported ? (
             <p className={cn(SETTINGS_CARD_ROW_DESCRIPTION_CLASS_NAME, "pt-0.5")}>
               {appSnapState
-                ? (appSnapState.message ?? "AppSnap is available only in the macOS desktop app.")
-                : "AppSnap requires the OmniMind desktop app on macOS."}
+                ? (appSnapState.message ?? t("settings.appsnapMacOnly"))
+                : t("settings.appsnapDesktopRequired")}
             </p>
           ) : null}
         </div>
       </SettingsCard>
 
-      <SettingsSection title="Capture">
+      <SettingsSection title={t("settings.capture")}>
         <SettingsRow
-          title="Enable AppSnap"
-          description="Run the capture listener in the background while OmniMind is open."
-          status={appSnapStatusText(appSnapState)}
+          title={t("settings.enableAppSnap")}
+          description={t("settings.enableAppSnapDescription")}
+          status={appSnapStatusText(appSnapState, t)}
           resetAction={
             settings.enableAppSnap !== defaults.enableAppSnap ? (
               <SettingResetButton
-                label="AppSnap"
+                label={t("settings.appsnap")}
                 onClick={() => void setAppSnapEnabled(defaults.enableAppSnap)}
               />
             ) : null
@@ -368,14 +388,14 @@ export function AppSnapSettingsPanel({
               checked={enabled}
               disabled={!supported}
               onCheckedChange={(checked) => void setAppSnapEnabled(Boolean(checked))}
-              aria-label="Enable AppSnap"
+              aria-label={t("settings.enableAppSnap")}
             />
           }
         />
 
         <SettingsRow
-          title="Shortcut"
-          description="Choose exactly two keys: one modifier and one other key. OmniMind checks its own bindings and asks macOS whether another app already owns the shortcut before saving it."
+          title={t("settings.shortcut")}
+          description={t("settings.appSnapShortcutDescription")}
           control={
             <AppSnapShortcutControl
               key={
@@ -396,18 +416,22 @@ export function AppSnapSettingsPanel({
         />
 
         <SettingsRow
-          title="Destination"
-          description="Snaps join the task you interacted with in the last minute, and consecutive snaps stay together. Otherwise OmniMind opens a fresh task with the capture attached."
-          control={<span className="text-xs font-medium text-muted-foreground">Automatic</span>}
+          title={t("settings.destination")}
+          description={t("settings.appSnapDestinationDescription")}
+          control={
+            <span className="text-xs font-medium text-muted-foreground">
+              {t("settings.automatic")}
+            </span>
+          }
         />
 
         <SettingsRow
-          title="Capture sound"
-          description="Play a short shutter cue when a window is captured."
+          title={t("settings.captureSound")}
+          description={t("settings.captureSoundDescription")}
           resetAction={
             settings.appSnapPlaySound !== defaults.appSnapPlaySound ? (
               <SettingResetButton
-                label="capture sound"
+                label={t("settings.captureSound")}
                 onClick={() => updateSettings({ appSnapPlaySound: defaults.appSnapPlaySound })}
               />
             ) : null
@@ -415,14 +439,14 @@ export function AppSnapSettingsPanel({
           control={
             <div className="flex w-full items-center gap-2 sm:w-auto sm:justify-end">
               <Button size="xs" variant="outline" onClick={() => void playAppSnapCaptureSound()}>
-                Preview
+                {t("settings.preview")}
               </Button>
               <Switch
                 checked={settings.appSnapPlaySound}
                 onCheckedChange={(checked) =>
                   updateSettings({ appSnapPlaySound: Boolean(checked) })
                 }
-                aria-label="Play a sound when an AppSnap is captured"
+                aria-label={t("settings.captureSoundAria")}
               />
             </div>
           }
@@ -430,20 +454,20 @@ export function AppSnapSettingsPanel({
       </SettingsSection>
 
       {supported ? (
-        <SettingsSection title="macOS permissions">
+        <SettingsSection title={t("settings.macosPermissions")}>
           <SettingsRow
-            title="Input Monitoring"
-            description="Lets OmniMind notice the double-Option chord while another app owns the keyboard. Nothing you type is recorded."
+            title={t("settings.inputMonitoring")}
+            description={t("settings.inputMonitoringDescription")}
             control={<AppSnapPermissionBadge permission={appSnapState.inputMonitoringPermission} />}
           />
           <SettingsRow
-            title="Screen Recording"
-            description="Lets OmniMind capture an image of the frontmost window. Only the single window you snap is captured, only at the moment you press the chord."
+            title={t("settings.screenRecording")}
+            description={t("settings.screenRecordingDescription")}
             control={<AppSnapPermissionBadge permission={appSnapState.screenRecordingPermission} />}
           />
           <SettingsRow
-            title="Permission status"
-            description="Grant both permissions to OmniMind under System Settings → Privacy & Security, then recheck here. macOS may require relaunching the app after a change."
+            title={t("settings.permissionStatus")}
+            description={t("settings.permissionStatusDescription")}
             control={
               <Button
                 type="button"
@@ -451,7 +475,7 @@ export function AppSnapSettingsPanel({
                 variant="outline"
                 onClick={() => void recheckAppSnapPermissions()}
               >
-                Recheck permissions
+                {t("settings.recheckPermissions")}
               </Button>
             }
           />

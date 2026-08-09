@@ -8,6 +8,7 @@ import { useId, useRef, type ChangeEvent } from "react";
 import { GoTasklist } from "react-icons/go";
 
 import { PaperclipIcon, PlusIcon } from "~/lib/icons";
+import { useI18n } from "~/i18n";
 import { ComposerPickerMenuPopup, ComposerPickerMenuSubPopup } from "./ComposerPickerMenuPopup";
 import { Button } from "../ui/button";
 import {
@@ -30,6 +31,7 @@ export const ComposerExtrasMenu = function ComposerExtrasMenu(props: {
   onToggleFastMode: () => void;
   onSetPlanMode: (enabled: boolean) => void;
 }) {
+  const { t } = useI18n();
   const inputId = useId();
   const fileInputRef = useRef<HTMLInputElement | null>(null);
 
@@ -60,7 +62,7 @@ export const ComposerExtrasMenu = function ComposerExtrasMenu(props: {
               size="icon-sm"
               variant="chrome"
               className="shrink-0 rounded-md"
-              aria-label="Composer extras"
+              aria-label={t("composer.extras")}
             />
           }
         >
@@ -73,7 +75,7 @@ export const ComposerExtrasMenu = function ComposerExtrasMenu(props: {
             }}
           >
             <PaperclipIcon className="size-4 shrink-0" />
-            Add files
+            {t("composer.addFiles")}
           </MenuItem>
 
           <MenuSeparator />
@@ -86,7 +88,7 @@ export const ComposerExtrasMenu = function ComposerExtrasMenu(props: {
           >
             <span className="inline-flex items-center gap-2">
               <GoTasklist className="size-4 shrink-0" />
-              Plan mode
+              {t("composer.planMode")}
             </span>
           </MenuCheckboxItem>
 
@@ -94,7 +96,7 @@ export const ComposerExtrasMenu = function ComposerExtrasMenu(props: {
             <>
               <MenuSeparator />
               <MenuSub>
-                <MenuSubTrigger>Fast</MenuSubTrigger>
+                <MenuSubTrigger>{t("composer.fast")}</MenuSubTrigger>
                 <ComposerPickerMenuSubPopup>
                   <MenuRadioGroup
                     value={props.fastModeEnabled ? "fast" : "normal"}
@@ -104,8 +106,8 @@ export const ComposerExtrasMenu = function ComposerExtrasMenu(props: {
                       props.onToggleFastMode();
                     }}
                   >
-                    <MenuRadioItem value="normal">Default</MenuRadioItem>
-                    <MenuRadioItem value="fast">Fast</MenuRadioItem>
+                    <MenuRadioItem value="normal">{t("composer.default")}</MenuRadioItem>
+                    <MenuRadioItem value="fast">{t("composer.fast")}</MenuRadioItem>
                   </MenuRadioGroup>
                 </ComposerPickerMenuSubPopup>
               </MenuSub>
