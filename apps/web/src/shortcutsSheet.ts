@@ -173,6 +173,11 @@ const AVAILABLE_NOW_DEFINITIONS: readonly ShortcutDefinition[] = [
     descriptionKey: "shortcuts.toggleBrowserDescription",
   },
   {
+    command: "device.toggle",
+    labelKey: "shortcuts.toggleDevice",
+    descriptionKey: "shortcuts.toggleDeviceDescription",
+  },
+  {
     command: "thread.copyId",
     labelKey: "shortcuts.copyThreadId",
     descriptionKey: "shortcuts.copyThreadIdDescription",

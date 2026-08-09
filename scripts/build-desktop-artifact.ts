@@ -18,6 +18,7 @@ import { BRAND_ASSET_PATHS } from "./lib/brand-assets.ts";
 import {
   createDesktopPlatformBuildConfig,
   MAC_APPSNAP_HELPER_STAGE_PATH,
+  MAC_DEVICE_HELPER_RESOURCE_PATH,
   validateDesktopNativeBuildHost,
 } from "./lib/desktop-platform-build-config.ts";
 import { OMNIMIND_PRODUCTION_BUNDLE_ID } from "@omnimind/shared/desktopIdentity";
@@ -840,6 +841,34 @@ const stageMacAppSnapHelper = Effect.fn("stageMacAppSnapHelper")(function* (
   }
 });
 
+const assertPackagedMacDeviceHelper = Effect.fn("assertPackagedMacDeviceHelper")(function* (
+  stageDistDir: string,
+  productName: string,
+) {
+  const path = yield* Path.Path;
+  const fs = yield* FileSystem.FileSystem;
+  const entries = yield* fs.readDirectory(stageDistDir);
+  for (const entry of entries) {
+    const helperRoot = path.join(
+      stageDistDir,
+      entry,
+      `${productName}.app`,
+      "Contents",
+      MAC_DEVICE_HELPER_RESOURCE_PATH,
+    );
+    if (
+      (yield* fs.exists(path.join(helperRoot, "build.sh"))) &&
+      (yield* fs.exists(path.join(helperRoot, "Sources/main.swift"))) &&
+      (yield* fs.exists(path.join(helperRoot, "LICENSE.facebook-idb")))
+    ) {
+      return;
+    }
+  }
+  return yield* new BuildScriptError({
+    message: `Packaged macOS app is missing physical device helper sources or their third-party license under Contents/${MAC_DEVICE_HELPER_RESOURCE_PATH}`,
+  });
+});
+
 const buildDesktopArtifact = Effect.fn("buildDesktopArtifact")(function* (
   options: ResolvedBuildOptions,
 ) {
@@ -1160,6 +1189,10 @@ const buildDesktopArtifact = Effect.fn("buildDesktopArtifact")(function* (
     yield* Effect.log(
       `[desktop-artifact] Verified ${result.componentCount} disclosed dependency identities in ${result.archivePath}.`,
     );
+  }
+
+  if (options.platform === "mac") {
+    yield* assertPackagedMacDeviceHelper(stageDistDir, desktopPackageJson.productName ?? "OmniMind");
   }
 
   if (options.platform === "mac" && options.target === "dmg" && options.signed) {

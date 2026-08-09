@@ -53,6 +53,7 @@ import {
 import type { ContextMenuItem } from "@omnimind/contracts";
 import { isKeyboardShortcutsHelpChord } from "@omnimind/shared/browserShortcuts";
 import { getMacTrafficLightPosition } from "@omnimind/shared/desktopChrome";
+import { DEVICE_HELPER_SOURCE_DIR_ENV } from "@omnimind/shared/deviceHelperCache";
 import {
   OMNIMIND_DESKTOP_UPDATE_CHANNEL,
   resolveOmniMindDesktopFlavor,
@@ -3165,6 +3166,9 @@ function backendEnv(): NodeJS.ProcessEnv {
     // Point the backend's HTTP static route at the same swap-immune snapshot the
     // omnimind:// protocol serves, so both surfaces survive app.asar being replaced.
     ...(servedStaticRoot?.snapshotted ? { OMNIMIND_STATIC_DIR: servedStaticRoot.dir } : {}),
+    ...(app.isPackaged
+      ? { [DEVICE_HELPER_SOURCE_DIR_ENV]: Path.join(process.resourcesPath, "device-helper") }
+      : {}),
     OMNIMIND_MODE: "desktop",
     OMNIMIND_NO_BROWSER: "1",
     OMNIMIND_PORT: String(backendPort),

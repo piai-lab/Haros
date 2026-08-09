@@ -12,6 +12,8 @@ export const MAC_APPSNAP_HELPER_STAGE_PATH =
   "apps/desktop/native/appsnap/build/omnimind-appsnap-helper";
 export const MAC_APPSNAP_HELPER_ASAR_EXCLUSION = "!apps/desktop/native/appsnap/build/**";
 export const MAC_APPSNAP_HELPER_BUNDLE_PATH = "Contents/Helpers/omnimind-appsnap-helper";
+export const MAC_DEVICE_HELPER_STAGE_PATH = "apps/server/dist/device-helper";
+export const MAC_DEVICE_HELPER_RESOURCE_PATH = "Resources/device-helper";
 export const WINDOWS_INSTALLER_GUID = "368107a8-afe6-5db5-ab3b-d4f331684868";
 const MAC_DMG_ICON_PATH = "icon.icns";
 export const NODE_PTY_ASAR_UNPACK_GLOBS = ["node_modules/node-pty/**"] as const;
@@ -103,6 +105,10 @@ export function createDesktopPlatformBuildConfig(
         {
           from: MAC_APPSNAP_HELPER_STAGE_PATH,
           to: "Helpers/omnimind-appsnap-helper",
+        },
+        {
+          from: MAC_DEVICE_HELPER_STAGE_PATH,
+          to: MAC_DEVICE_HELPER_RESOURCE_PATH,
         },
       ],
       mac,

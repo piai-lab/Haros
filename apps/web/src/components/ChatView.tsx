@@ -141,6 +141,10 @@ import {
   type BrowserPromptAttachmentResolution,
 } from "../lib/browserPromptContext";
 import {
+  maybeResolveDevicePromptAttachment,
+  type DevicePromptAttachmentResolution,
+} from "../lib/devicePromptContext";
+import {
   buildComposerFileAttachmentsFromFiles,
   stageUploadComposerAttachments,
   cloneComposerImageAttachment,
@@ -1118,6 +1122,7 @@ interface ChatViewProps {
   onToggleRightDock?: () => void;
   onToggleBrowserPanel?: () => void;
   onRevealBrowserPanel?: () => void;
+  onToggleDevicePanel?: () => void;
   onOpenBrowserUrl?: (url: string) => void;
   onOpenTurnDiffPanel?: (turnId: TurnId, filePath?: string) => void;
   onSplitSurface?: () => void;
@@ -1182,6 +1187,7 @@ export default function ChatView({
   onToggleRightDock,
   onToggleBrowserPanel,
   onRevealBrowserPanel,
+  onToggleDevicePanel,
   onOpenBrowserUrl,
   onOpenTurnDiffPanel,
   onSplitSurface,
@@ -6525,6 +6531,15 @@ export default function ChatView({
         return;
       }
 
+      if (command === "device.toggle") {
+        event.preventDefault();
+        event.stopPropagation();
+        // Unlike the browser this works in a plain tab, but only against a macOS
+        // server; the surface leaves the handler unwired when it cannot host one.
+        onToggleDevicePanel?.();
+        return;
+      }
+
       if (command === "chat.split") {
         event.preventDefault();
         event.stopPropagation();
@@ -6574,6 +6589,7 @@ export default function ChatView({
     terminalWorkspaceOpen,
     terminalWorkspaceTerminalTabActive,
     onToggleBrowser,
+    onToggleDevicePanel,
     onToggleDiff,
     onInterruptFromStopControl,
     onSplitSurface,
@@ -7727,6 +7743,49 @@ export default function ChatView({
       toastManager.add({
         type: "warning",
         title: t("conversation.browserContextAttachFailed"),
+        description,
+      });
+    }
+
+    const devicePromptAttachment: DevicePromptAttachmentResolution =
+      await maybeResolveDevicePromptAttachment({
+        api,
+        threadId: activeThread.id,
+        prompt: promptForSend,
+      }).catch(
+        (): DevicePromptAttachmentResolution => ({
+          requested: false,
+          image: null,
+        }),
+      );
+    if (devicePromptAttachment.image) {
+      const nextAttachmentCount =
+        composerImagesForSend.length +
+        composerFilesForSend.length +
+        composerAssistantSelectionsForSend.length +
+        1;
+      if (nextAttachmentCount <= PROVIDER_SEND_TURN_MAX_ATTACHMENTS) {
+        composerImagesForSend = [...composerImagesForSend, devicePromptAttachment.image];
+      } else {
+        toastManager.add({
+          type: "warning",
+          title: `You can attach up to ${PROVIDER_SEND_TURN_MAX_ATTACHMENTS} references per message.`,
+          description:
+            "The simulator screenshot was skipped because this message is already at the attachment limit.",
+        });
+      }
+    } else if (devicePromptAttachment.requested) {
+      const description =
+        devicePromptAttachment.reason === "no-attached-device"
+          ? "Open the iOS Simulator panel and choose a device first, then try again."
+          : devicePromptAttachment.reason === "device-not-booted"
+            ? "The selected simulator is still starting up."
+            : devicePromptAttachment.reason === "attachment-processing-failed"
+              ? "The simulator screenshot could not be optimized for attachment."
+              : "The current simulator context could not be attached.";
+      toastManager.add({
+        type: "warning",
+        title: "Couldn’t attach the simulator screen",
         description,
       });
     }
