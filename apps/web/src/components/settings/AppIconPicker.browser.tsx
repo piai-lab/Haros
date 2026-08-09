@@ -30,10 +30,10 @@ it("uses the official light and dark app-icon variants and selects the alternate
   const buttonRect = iconButton.element().getBoundingClientRect();
   const artworkRect = artwork.getBoundingClientRect();
 
-  expect(buttonRect.width).toBe(64);
+  expect(buttonRect.width).toBe(50);
   expect(artworkRect.width).toBe(40);
-  expect(artworkRect.left).toBe(buttonRect.left + 12);
-  expect(artworkRect.top).toBe(buttonRect.top + 12);
+  expect(artworkRect.left).toBe(buttonRect.left + 5);
+  expect(artworkRect.top).toBe(buttonRect.top + 5);
   expect(artwork.getAttribute("src")).toBe("/app-icons/alternate.png");
   expect(readTopLeftAlpha(artwork)).toBe(0);
 

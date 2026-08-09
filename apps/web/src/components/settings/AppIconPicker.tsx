@@ -24,7 +24,7 @@ export function AppIconPicker({
 }) {
   const { t } = useI18n();
   return (
-    <div className="flex items-center gap-2" role="group" aria-label={t("settings.appIcon")}>
+    <div className="flex items-center gap-1" role="group" aria-label={t("settings.appIcon")}>
       {APP_ICON_OPTIONS.map((option) => {
         const selected = value === option.value;
         const label = t(option.labelKey);
@@ -36,11 +36,11 @@ export function AppIconPicker({
             aria-label={label}
             aria-pressed={selected}
             className={cn(
-              "relative grid size-16 place-items-center rounded-[18px] border transition-colors",
-              "focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring",
-              selected
-                ? "border-foreground bg-accent"
-                : "border-border/70 bg-muted/30 hover:border-border hover:bg-muted/60",
+              // Same selection language as ThemeModePicker: the artwork is the whole
+              // control, so no filled tile — just a stroke that appears when selected.
+              "grid place-items-center rounded-[14px] border-2 p-[3px] transition-colors motion-reduce:transition-none",
+              "focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring/50",
+              selected ? "border-foreground" : "border-transparent hover:border-foreground/25",
             )}
             onClick={() => onValueChange(option.value)}
           >
