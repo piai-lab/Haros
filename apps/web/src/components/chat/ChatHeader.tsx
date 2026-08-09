@@ -49,6 +49,7 @@ import ProjectScriptsControl, { type NewProjectScriptInput } from "../ProjectScr
 import { Toggle } from "../ui/toggle";
 import { useSidebar } from "../ui/sidebar";
 import { useAppSettings } from "../../appSettings";
+import { useI18n } from "../../i18n";
 import { useStore } from "../../store";
 import { createSidebarDisplayThreadsSelector } from "../../storeSelectors";
 import { sortThreadsForSidebar } from "../Sidebar.logic";
@@ -243,6 +244,7 @@ function EditorRailTabs(props: {
   onNavigateToThread: (threadId: ThreadId) => void;
 }) {
   const { settings } = useAppSettings();
+  const { t } = useI18n();
   const [openChatTabs, setOpenChatTabs] = useState<ReadonlyArray<EditorRailChatTab>>(() => {
     const storedTabs = readEditorRailChatTabs(props.projectId);
     return storedTabs.length > 0
@@ -461,8 +463,8 @@ function EditorRailTabs(props: {
           {terminalTabVisible ? (
             <SurfaceTabChip
               active={props.activeSurface === "terminal"}
-              title="Terminal"
-              label="Terminal"
+              title={t("workbench.terminal")}
+              label={t("workbench.terminal")}
               labelClassName="max-w-24"
               icon={<TerminalIcon className="size-3 shrink-0 text-[var(--color-text-accent)]" />}
               trailing={
@@ -542,6 +544,7 @@ export function ChatHeader({
   onRenameThread,
   onCloseThreadPane,
 }: ChatHeaderProps) {
+  const { t } = useI18n();
   const hideSidebarControls = hideSidebarControlsProp ?? false;
   const hideHandoffControls = hideHandoffControlsProp ?? false;
   const showGitActions = showGitActionsProp ?? true;
@@ -805,7 +808,9 @@ export function ChatHeader({
                     }
                   >
                     <HandoffIcon className="size-[1em] shrink-0 opacity-80" />
-                    {!compact ? <span className="truncate font-normal">Hand off</span> : null}
+                    {!compact ? (
+                      <span className="truncate font-normal">{t("composer.handoff")}</span>
+                    ) : null}
                   </MenuTrigger>
                 }
               />
@@ -816,7 +821,11 @@ export function ChatHeader({
                 <MenuItem key={provider} onClick={() => onCreateHandoff(provider)}>
                   {/* opacity-100 opts brand icons out of the option row's 80% icon dim. */}
                   {renderProviderIcon(provider, "size-3.5 shrink-0 opacity-100")}
-                  <span>Handoff to {PROVIDER_DISPLAY_NAMES[provider]}</span>
+                  <span>
+                    {t("composer.handoffTo", {
+                      provider: PROVIDER_DISPLAY_NAMES[provider],
+                    })}
+                  </span>
                 </MenuItem>
               ))}
             </ComposerPickerMenuPopup>

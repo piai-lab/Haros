@@ -16,6 +16,7 @@ import { useNavigate } from "@tanstack/react-router";
 import { useEffect, useRef, useState } from "react";
 
 import { useLocalStorage } from "../hooks/useLocalStorage";
+import { useI18n } from "../i18n";
 import { CentralIcon } from "../lib/central-icons";
 import { Button } from "./ui/button";
 import {
@@ -38,6 +39,7 @@ const INITIAL_STORAGE: AppSnapWelcomeStorage = { acknowledged: false };
 
 export function AppSnapWelcomeDialog() {
   const navigate = useNavigate();
+  const { t } = useI18n();
   const [storage, setStorage] = useLocalStorage(
     APP_SNAP_WELCOME_STORAGE_KEY,
     INITIAL_STORAGE,
@@ -114,23 +116,20 @@ export function AppSnapWelcomeDialog() {
           </span>
 
           <DialogHeader className="gap-2 p-0">
-            <DialogTitle className="text-[19px] leading-tight">
-              OmniMind AppSnaps are live!
-            </DialogTitle>
+            <DialogTitle className="text-[19px] leading-tight">{t("appsnap.title")}</DialogTitle>
             {/* Two lines at 378px wide is the reference sheet's proportion; longer copy
                 wraps to three and throws the whole vertical rhythm off. */}
             <DialogDescription className="text-[14px] leading-[19.5px]">
-              Press both Option keys (⌥&thinsp;⌥) to snap any app&rsquo;s window into the task
-              you&rsquo;re working in.
+              {t("appsnap.description")}
             </DialogDescription>
           </DialogHeader>
 
           <DialogFooter className="gap-2 p-0 pt-3">
             <Button variant="ghost" className="rounded-[10px]" onClick={acknowledge}>
-              Not now
+              {t("appsnap.notNow")}
             </Button>
             <Button className="rounded-[10px]" onClick={openSettings}>
-              Set up AppSnap
+              {t("appsnap.setup")}
             </Button>
           </DialogFooter>
         </div>

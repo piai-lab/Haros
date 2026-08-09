@@ -433,15 +433,6 @@ const THREAD_PREVIEW_PAGE_SIZE = 5;
 const preventFocusOnMouseDown = (event: React.MouseEvent) => {
   event.preventDefault();
 };
-const SIDEBAR_SORT_LABELS: Record<SidebarProjectSortOrder, string> = {
-  updated_at: "Last user message",
-  created_at: "Created at",
-  manual: "Manual",
-};
-const SIDEBAR_THREAD_SORT_LABELS: Record<SidebarThreadSortOrder, string> = {
-  updated_at: "Last user message",
-  created_at: "Created at",
-};
 const SIDEBAR_LIST_ANIMATION_OPTIONS = {
   duration: 180,
   easing: "ease-out",
@@ -791,19 +782,25 @@ function ProjectSortMenu({
   onProjectSortOrderChange: (sortOrder: SidebarProjectSortOrder) => void;
   onThreadSortOrderChange: (sortOrder: SidebarThreadSortOrder) => void;
 }) {
+  const { t } = useI18n();
+  const projectSortLabels: Record<SidebarProjectSortOrder, string> = {
+    updated_at: t("nav.lastUserMessage"),
+    created_at: t("nav.createdAt"),
+    manual: t("nav.manual"),
+  };
   return (
     <Menu>
       <SidebarIconButton
         render={<MenuTrigger />}
         icon={SortFilterIcon}
-        label="Sort projects"
-        tooltip="Sort projects"
+        label={t("nav.sortProjects")}
+        tooltip={t("nav.sortProjects")}
         tooltipSide="right"
       />
       <ComposerPickerMenuPopup align="end" side="bottom" className="min-w-44">
         <MenuGroup>
           <div className="px-2 py-1 sm:text-xs font-medium text-muted-foreground">
-            Sort projects
+            {t("nav.sortProjects")}
           </div>
           <MenuRadioGroup
             value={projectSortOrder}
@@ -811,7 +808,7 @@ function ProjectSortMenu({
               onProjectSortOrderChange(value as SidebarProjectSortOrder);
             }}
           >
-            {(Object.entries(SIDEBAR_SORT_LABELS) as Array<[SidebarProjectSortOrder, string]>).map(
+            {(Object.entries(projectSortLabels) as Array<[SidebarProjectSortOrder, string]>).map(
               ([value, label]) => (
                 <MenuRadioItem key={value} value={value} className="min-h-7 py-1 sm:text-xs">
                   {label}
@@ -822,7 +819,7 @@ function ProjectSortMenu({
         </MenuGroup>
         <MenuGroup>
           <div className="px-2 pt-2 pb-1 sm:text-xs font-medium text-muted-foreground">
-            Sort threads
+            {t("nav.sortThreads")}
           </div>
           <ThreadSortMenuItems
             threadSortOrder={threadSortOrder}
@@ -871,13 +868,14 @@ function SidebarHelpMenu({
   onOpenShortcuts: () => void;
   onOpenFeedback: () => void;
 }) {
+  const { t } = useI18n();
   return (
     <Menu>
       <SidebarIconButton
         render={<MenuTrigger />}
         icon={CircleQuestionIcon}
-        label="Help"
-        tooltip="Help"
+        label={t("common.help")}
+        tooltip={t("common.help")}
       />
       <ComposerPickerMenuPopup align="end" side="top" className="w-64 min-w-64">
         <MenuGroup>
@@ -905,6 +903,11 @@ function ThreadSortMenuItems({
   threadSortOrder: SidebarThreadSortOrder;
   onThreadSortOrderChange: (sortOrder: SidebarThreadSortOrder) => void;
 }) {
+  const { t } = useI18n();
+  const threadSortLabels: Record<SidebarThreadSortOrder, string> = {
+    updated_at: t("nav.lastUserMessage"),
+    created_at: t("nav.createdAt"),
+  };
   return (
     <MenuRadioGroup
       value={threadSortOrder}
@@ -912,7 +915,7 @@ function ThreadSortMenuItems({
         onThreadSortOrderChange(value as SidebarThreadSortOrder);
       }}
     >
-      {(Object.entries(SIDEBAR_THREAD_SORT_LABELS) as Array<[SidebarThreadSortOrder, string]>).map(
+      {(Object.entries(threadSortLabels) as Array<[SidebarThreadSortOrder, string]>).map(
         ([value, label]) => (
           <MenuRadioItem key={value} value={value} className="min-h-7 py-1 sm:text-xs">
             {label}
@@ -930,18 +933,21 @@ function ChatSortMenu({
   threadSortOrder: SidebarThreadSortOrder;
   onThreadSortOrderChange: (sortOrder: SidebarThreadSortOrder) => void;
 }) {
+  const { t } = useI18n();
   return (
     <Menu>
       <SidebarIconButton
         render={<MenuTrigger />}
         icon={SortFilterIcon}
-        label="Sort chats"
-        tooltip="Sort chats"
+        label={t("nav.sortChats")}
+        tooltip={t("nav.sortChats")}
         tooltipSide="top"
       />
       <ComposerPickerMenuPopup align="end" side="bottom" className="min-w-44">
         <MenuGroup>
-          <div className="px-2 py-1 sm:text-xs font-medium text-muted-foreground">Sort chats</div>
+          <div className="px-2 py-1 sm:text-xs font-medium text-muted-foreground">
+            {t("nav.sortChats")}
+          </div>
           <ThreadSortMenuItems
             threadSortOrder={threadSortOrder}
             onThreadSortOrderChange={onThreadSortOrderChange}
@@ -5849,7 +5855,7 @@ export default function Sidebar() {
                       />
                       <SidebarPrimaryAction
                         icon={KanbanIcon}
-                        label="Kanban"
+                        label={t("nav.kanban")}
                         active={isOnKanban}
                         onClick={() => {
                           void navigate({ to: "/kanban" });
@@ -5857,7 +5863,7 @@ export default function Sidebar() {
                       />
                       <SidebarPrimaryAction
                         icon={IoIosGitCompare}
-                        label="Pull requests"
+                        label={t("nav.pullRequests")}
                         active={isOnPullRequests}
                         badge={pullRequestsReviewBadge}
                         onClick={() => {
@@ -5869,7 +5875,7 @@ export default function Sidebar() {
                       />
                       <SidebarPrimaryAction
                         icon={ClockIcon}
-                        label="Automations"
+                        label={t("nav.automations")}
                         active={isOnAutomations}
                         badge={automationAttentionBadge}
                         onClick={() => {
@@ -6009,9 +6015,9 @@ export default function Sidebar() {
                       />
                       <SidebarIconButton
                         icon={AddPlusIcon}
-                        label="Add project"
+                        label={t("nav.addProject")}
                         onClick={handleStartAddProject}
-                        tooltip="Add project"
+                        tooltip={t("nav.addProject")}
                         tooltipSide="right"
                       />
                     </>,
@@ -6121,14 +6127,16 @@ export default function Sidebar() {
                   />
                   <SidebarIconButton
                     icon={NewThreadIcon}
-                    label="Open new chat home"
+                    label={t("nav.openNewChat")}
                     onClick={(event) => {
                       event.preventDefault();
                       event.stopPropagation();
                       void handleCreateHomeChat();
                     }}
                     tooltip={
-                      newChatShortcutLabel ? `New chat (${newChatShortcutLabel})` : "New chat"
+                      newChatShortcutLabel
+                        ? `${t("nav.newChat")} (${newChatShortcutLabel})`
+                        : t("nav.newChat")
                     }
                     tooltipSide="top"
                   />

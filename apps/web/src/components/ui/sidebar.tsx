@@ -19,6 +19,7 @@ import { Skeleton } from "~/components/ui/skeleton";
 import { Tooltip, TooltipPopup, TooltipTrigger } from "~/components/ui/tooltip";
 import { useIsMobile } from "~/hooks/useMediaQuery";
 import { getLocalStorageItem, setLocalStorageItem } from "~/hooks/useLocalStorage";
+import { useI18n } from "~/i18n";
 import { Schema } from "effect";
 
 const SIDEBAR_COOKIE_NAME = "sidebar_state";
@@ -385,6 +386,7 @@ function Sidebar({
 
 function SidebarTrigger({ className, onClick, ...props }: React.ComponentProps<typeof Button>) {
   const { toggleSidebar } = useSidebar();
+  const { t } = useI18n();
 
   return (
     <Button
@@ -400,7 +402,7 @@ function SidebarTrigger({ className, onClick, ...props }: React.ComponentProps<t
       {...props}
     >
       <CentralIcon name="sidebar-hidden-left-wide" />
-      <span className="sr-only">Toggle Sidebar</span>
+      <span className="sr-only">{t("nav.toggleSidebar")}</span>
     </Button>
   );
 }
@@ -441,6 +443,7 @@ function SidebarRail({
   /** `content-seam` sits on the chat column edge above the card; `sidebar-shell` stays on the sidebar container. */
   placement?: "sidebar-shell" | "content-seam";
 }) {
+  const { t } = useI18n();
   const placement = placementProp ?? "sidebar-shell";
   const { open, toggleSidebar } = useSidebar();
   const sidebarInstance = React.useContext(SidebarInstanceContext);
@@ -464,8 +467,8 @@ function SidebarRail({
   } | null>(null);
   const resolvedResizable = sidebarInstance?.resizable ?? null;
   const canResize = resolvedResizable !== null && open;
-  const railLabel = canResize ? "Resize Sidebar" : "Toggle Sidebar";
-  const railTitle = canResize ? "Drag to resize sidebar" : "Toggle Sidebar";
+  const railLabel = canResize ? t("nav.resizeSidebar") : t("nav.toggleSidebar");
+  const railTitle = canResize ? t("nav.dragResizeSidebar") : t("nav.toggleSidebar");
 
   const stopResize = React.useCallback(
     (pointerId: number) => {

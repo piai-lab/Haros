@@ -8,6 +8,7 @@
 import type { EditorId, ResolvedKeybindingsConfig } from "@synara/contracts";
 
 import { useEditorLaunchers } from "~/hooks/useEditorLaunchers";
+import { useI18n } from "~/i18n";
 import { LayoutSidebarIcon } from "~/lib/icons";
 
 import { ComposerPickerMenuPopup } from "../ComposerPickerMenuPopup";
@@ -33,6 +34,7 @@ export function EnvironmentEditorSection({
   /** Open the in-app editor workspace view; omitted on surfaces that can't host it. */
   onOpenEditorView?: () => void;
 }) {
+  const { t } = useI18n();
   const {
     options,
     preferredEditor,
@@ -56,11 +58,11 @@ export function EnvironmentEditorSection({
   const ActiveIcon = activeOption?.Icon;
 
   return (
-    <EnvironmentLabeledSection label="Editor">
+    <EnvironmentLabeledSection label={t("workbench.editor")}>
       {onOpenEditorView ? (
         <EnvironmentRow
           icon={<LayoutSidebarIcon aria-hidden className={ENVIRONMENT_ROW_ICON_CLASS_NAME} />}
-          label="Editor view"
+          label={t("workbench.editorView")}
           onClick={onOpenEditorView}
         />
       ) : null}
@@ -76,7 +78,11 @@ export function EnvironmentEditorSection({
                   <ActiveIcon aria-hidden className={ENVIRONMENT_ROW_ICON_CLASS_NAME} />
                 ) : null
               }
-              label={activeOption ? `Open in ${activeOption.label}` : "Open in editor"}
+              label={
+                activeOption
+                  ? t("workbench.openIn", { editor: activeOption.label })
+                  : t("workbench.openInEditor")
+              }
               trailing={<EnvironmentRowChevron />}
             />
           </MenuTrigger>

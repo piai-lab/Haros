@@ -13,16 +13,14 @@ import { HiOutlineHandRaised } from "react-icons/hi2";
 import { CentralIcon } from "~/lib/central-icons";
 import { useCallback, useMemo, useState, type ReactNode } from "react";
 import { useAppSettings } from "~/appSettings";
+import { useI18n } from "~/i18n";
 
 import { newCommandId, cn } from "../lib/utils";
 import { readNativeApi } from "../nativeApi";
 import { useComposerDraftStore } from "../composerDraftStore";
 import { useProviderUsageSummary } from "../hooks/useProviderUsageSummary";
 import { resolveThreadEnvironmentPresentation } from "../lib/threadEnvironment";
-import {
-  RUNTIME_MODE_PRESENTATION,
-  providerModelSupportsAutoRuntimeMode,
-} from "../lib/runtimeMode";
+import { providerModelSupportsAutoRuntimeMode } from "../lib/runtimeMode";
 import { useStore } from "../store";
 import {
   createAllThreadsSelector,
@@ -117,7 +115,22 @@ function RuntimeModeMenuItem({
   icon: ReactNode;
   accent?: boolean;
 }) {
-  const presentation = RUNTIME_MODE_PRESENTATION[mode];
+  const { t } = useI18n();
+  const presentation =
+    mode === "full-access"
+      ? {
+          label: t("composer.fullAccess"),
+          description: t("composer.fullAccessDescription"),
+        }
+      : mode === "auto"
+        ? {
+            label: t("composer.approveForMe"),
+            description: t("composer.approveForMeDescription"),
+          }
+        : {
+            label: t("composer.askApproval"),
+            description: t("composer.askApprovalDescription"),
+          };
   return (
     <MenuRadioItem
       value={mode}
@@ -192,10 +205,25 @@ export function RuntimeUsageControls({
   className,
   hideLabel: hideLabelProp,
 }: RuntimeUsageControlsProps) {
+  const { t } = useI18n();
   const autoModeAvailable =
     provider !== undefined &&
     providerModelSupportsAutoRuntimeMode(provider, runtimeModel, providerStatus);
-  const runtimePresentation = RUNTIME_MODE_PRESENTATION[runtimeMode ?? "approval-required"];
+  const runtimePresentation =
+    runtimeMode === "full-access"
+      ? {
+          label: t("composer.fullAccess"),
+          description: t("composer.fullAccessDescription"),
+        }
+      : runtimeMode === "auto"
+        ? {
+            label: t("composer.approveForMe"),
+            description: t("composer.approveForMeDescription"),
+          }
+        : {
+            label: t("composer.askApproval"),
+            description: t("composer.askApprovalDescription"),
+          };
   const hideLabel = hideLabelProp ?? false;
   return (
     <div
@@ -217,7 +245,7 @@ export function RuntimeUsageControls({
                   runtimeMode === "auto" && RUNTIME_AUTO_ACCENT_CLASS_NAME,
                   runtimeMode === "full-access" && RUNTIME_FULL_ACCESS_ACCENT_CLASS_NAME,
                 )}
-                title={`${runtimePresentation.label}: ${runtimePresentation.description}. Click to change permissions.`}
+                title={`${runtimePresentation.label}: ${runtimePresentation.description}. ${t("composer.changePermissions")}.`}
               />
             }
           >

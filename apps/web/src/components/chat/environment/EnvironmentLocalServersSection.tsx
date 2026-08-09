@@ -18,17 +18,13 @@ import {
   serverStopLocalServerMutationOptions,
 } from "~/lib/serverReactQuery";
 import { cn } from "~/lib/utils";
+import { useI18n } from "~/i18n";
 import {
   ENVIRONMENT_ROW_CLASS_NAME,
   ENVIRONMENT_ROW_ICON_CLASS_NAME,
   EnvironmentRowBody,
   EnvironmentRowChevron,
 } from "./EnvironmentRow";
-
-function describeServerCount(count: number): string {
-  if (count === 0) return "No servers running";
-  return `${count} server${count === 1 ? "" : "s"} running`;
-}
 
 /** Compact, non-closing icon action used for the menu's Refresh affordance. */
 function LocalServersRefreshButton({
@@ -128,6 +124,7 @@ function LocalServersPlaceholder({
 }
 
 export function EnvironmentLocalServersSection({ enabled }: { enabled: boolean }) {
+  const { t } = useI18n();
   const queryClient = useQueryClient();
   const localServersQuery = useQuery(serverLocalServersQueryOptions(enabled));
   const stopLocalServerMutation = useMutation(
@@ -162,14 +159,20 @@ export function EnvironmentLocalServersSection({ enabled }: { enabled: boolean }
       <MenuTrigger render={<button type="button" className={ENVIRONMENT_ROW_CLASS_NAME} />}>
         <EnvironmentRowBody
           icon={<GlobeIcon className={ENVIRONMENT_ROW_ICON_CLASS_NAME} aria-hidden />}
-          label="Local Servers"
+          label={t("workbench.localServers")}
           trailing={trailing}
         />
       </MenuTrigger>
       <ComposerPickerMenuPopup align="start" side="bottom" className="w-72 min-w-72">
         <div className="flex items-center justify-between gap-2 pb-0.5 pl-2 pr-3 pt-px">
           <span className="truncate text-[length:var(--app-font-size-ui-xs,10px)] font-normal text-muted-foreground/50">
-            {localServersQuery.isLoading ? "Scanning ports…" : describeServerCount(serverCount)}
+            {localServersQuery.isLoading
+              ? t("workbench.scanningPorts")
+              : serverCount === 0
+                ? t("workbench.noServers")
+                : serverCount === 1
+                  ? t("workbench.oneServerRunning")
+                  : t("workbench.serversRunning", { count: serverCount })}
           </span>
           <LocalServersRefreshButton
             refreshing={localServersQuery.isFetching}

@@ -6,6 +6,7 @@
 import { AppNavigationButtons } from "./AppNavigationButtons";
 import { SidebarTrigger, useSidebar } from "./ui/sidebar";
 import { cn } from "~/lib/utils";
+import { useI18n } from "~/i18n";
 
 /**
  * The leading chrome cluster: the sidebar toggle followed by the route nav arrows.
@@ -19,11 +20,12 @@ import { cn } from "~/lib/utils";
  * so it is passed in via `className`; the inner controls stay constant.
  */
 export function SidebarLeadingControls({ className }: { className?: string }) {
+  const { t } = useI18n();
   return (
     <div className={cn("flex shrink-0 items-center gap-0.5", className)}>
       <SidebarTrigger
         className="size-7 shrink-0 text-muted-foreground/75 hover:text-foreground"
-        aria-label="Toggle thread sidebar"
+        aria-label={t("nav.toggleSidebar")}
       />
       <AppNavigationButtons className="ms-0" />
     </div>

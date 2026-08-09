@@ -13,6 +13,7 @@ import {
 } from "react";
 
 import { cn } from "~/lib/utils";
+import { useI18n } from "~/i18n";
 import {
   type DockPaneRuntimeMode,
   EMPTY_PANE_ID_SET,
@@ -46,7 +47,6 @@ import {
   getRightDockPaneMeta,
   type RightDockLauncherItem,
   resolveRightDockPaneIcon,
-  resolveRightDockPaneLabel,
 } from "./rightDockPaneMeta";
 import { useDesktopTopBarWindowControlsGutterClassName } from "~/hooks/useDesktopTopBarGutter";
 
@@ -82,29 +82,58 @@ interface RightDockProps {
   ) => ReactNode;
 }
 
+function useRightDockLabel() {
+  const { t } = useI18n();
+  return (kind: RightDockPaneKind, fallback: string): string => {
+    switch (kind) {
+      case "browser":
+        return t("workbench.browser");
+      case "diff":
+        return fallback === "Review" ? t("workbench.review") : t("workbench.diff");
+      case "explorer":
+        return t("workbench.files");
+      case "file":
+        return t("workbench.file");
+      case "terminal":
+        return t("workbench.terminal");
+      case "sidechat":
+        return t("workbench.sideChats");
+      case "git":
+        return fallback === "Source control" ? t("workbench.sourceControl") : t("workbench.git");
+      case "pullRequest":
+        return t("workbench.pullRequest");
+    }
+  };
+}
+
 function RightDockLauncher(props: {
   items: readonly RightDockLauncherItem[];
   onOpen: (kind: RightDockPaneKind) => void;
 }) {
+  const { t } = useI18n();
+  const localizedLabel = useRightDockLabel();
   return (
     <nav
       aria-label="Open a panel"
       className="flex h-full min-h-0 items-center justify-center overflow-y-auto p-6"
     >
       <div className="flex w-full max-w-sm flex-col gap-1.5">
-        {props.items.map(({ kind, Icon, label }) => (
-          <Button
-            key={kind}
-            variant="subtle"
-            size="xl"
-            className="h-11 w-full justify-start gap-3 rounded-xl px-4 text-[length:var(--app-font-size-ui-lg,13px)] font-normal"
-            aria-label={`Open ${label}`}
-            onClick={() => props.onOpen(kind)}
-          >
-            <Icon className="size-4 shrink-0" />
-            <span>{label}</span>
-          </Button>
-        ))}
+        {props.items.map(({ kind, Icon, label }) => {
+          const visibleLabel = localizedLabel(kind, label);
+          return (
+            <Button
+              key={kind}
+              variant="subtle"
+              size="xl"
+              className="h-11 w-full justify-start gap-3 rounded-xl px-4 text-[length:var(--app-font-size-ui-lg,13px)] font-normal"
+              aria-label={t("workbench.openPanel", { panel: visibleLabel })}
+              onClick={() => props.onOpen(kind)}
+            >
+              <Icon className="size-4 shrink-0" />
+              <span>{visibleLabel}</span>
+            </Button>
+          );
+        })}
       </div>
     </nav>
   );
@@ -171,6 +200,8 @@ function useKeepMountedPaneIds(
 }
 
 export function RightDock(props: RightDockProps) {
+  const { t } = useI18n();
+  const localizedLabel = useRightDockLabel();
   const activePane = resolveActivePane(props.state);
   const onSelectPane = props.onSelectPane;
   const activePaneRuntimeMode = props.activePaneRuntimeMode ?? "live";
@@ -272,7 +303,10 @@ export function RightDock(props: RightDockProps) {
                 <RightDockTab
                   key={pane.id}
                   pane={pane}
-                  label={resolveRightDockPaneLabel(pane, props.paneLabelOverrides)}
+                  label={
+                    props.paneLabelOverrides?.[pane.id] ??
+                    localizedLabel(pane.kind, getRightDockPaneMeta(pane.kind).label)
+                  }
                   icon={props.paneIconOverrides?.[pane.id]}
                   active={pane.id === props.state.activePaneId}
                   onSelect={onSelectPane ? () => onSelectPane(pane.id) : undefined}
@@ -287,8 +321,8 @@ export function RightDock(props: RightDockProps) {
                     <Button
                       variant="chrome"
                       size="icon-xs"
-                      aria-label="Add panel"
-                      title="Add panel"
+                      aria-label={t("workbench.addPanel")}
+                      title={t("workbench.addPanel")}
                       className={DOCK_HEADER_ICON_BUTTON_CLASS}
                     />
                   }
@@ -301,7 +335,7 @@ export function RightDock(props: RightDockProps) {
                     return (
                       <MenuItem key={kind} onClick={() => props.onAddPane(kind)}>
                         <Icon className="size-3.5 shrink-0" />
-                        <span>{label}</span>
+                        <span>{localizedLabel(kind, label)}</span>
                       </MenuItem>
                     );
                   })}
@@ -311,8 +345,8 @@ export function RightDock(props: RightDockProps) {
             <IconButton
               variant="chrome"
               size="icon-xs"
-              label="Collapse panel"
-              tooltip="Collapse panel"
+              label={t("workbench.collapsePanel")}
+              tooltip={t("workbench.collapsePanel")}
               tooltipSide="bottom"
               className={DOCK_HEADER_ICON_BUTTON_CLASS}
               onClick={props.onCollapse}

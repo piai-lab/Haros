@@ -42,6 +42,7 @@ import {
 } from "../ui/combobox";
 import { useWorkspacePathsStore } from "../../workspacePathsStore";
 import { useSpacesUiStore } from "../../spacesUiStore";
+import { useI18n } from "../../i18n";
 
 interface ProjectPickerProps {
   align?: "start" | "center" | "end";
@@ -154,15 +155,16 @@ export const ProjectPicker = memo(function ProjectPicker({
   resetActionLabel: resetActionLabelProp,
   searchPlaceholder: searchPlaceholderProp,
 }: ProjectPickerProps) {
+  const { t } = useI18n();
   const align = alignProp ?? "start";
   const side = sideProp ?? "bottom";
   const selectionMode = selectionModeProp ?? "workspace-root";
   const showResetToHome = showResetToHomeProp ?? false;
   const selectedProjectId = selectedProjectIdProp ?? null;
   const selectedWorkspaceRoot = selectedWorkspaceRootProp ?? null;
-  const emptyTriggerLabel = emptyTriggerLabelProp ?? "Work in a project";
-  const resetActionLabel = resetActionLabelProp ?? "Don't work in a project";
-  const searchPlaceholder = searchPlaceholderProp ?? "Search projects";
+  const emptyTriggerLabel = emptyTriggerLabelProp ?? t("composer.workInProject");
+  const resetActionLabel = resetActionLabelProp ?? t("composer.noProject");
+  const searchPlaceholder = searchPlaceholderProp ?? t("composer.searchProjects");
   const projects = useStore((state) => state.projects);
   const spaces = useStore((state) => state.spaces);
   const sidebarThreads = useStore(useMemo(() => createSidebarDisplayThreadsSelector(), []));
@@ -571,6 +573,7 @@ export const ProjectPicker = memo(function ProjectPicker({
                 data-testid={
                   isProjectSelectionMode ? "project-picker-trigger" : "workspace-picker-trigger"
                 }
+                aria-label={triggerLabel}
                 icon={
                   <FolderClosed
                     className={cn(

@@ -4,6 +4,7 @@
 // Depends on: shared button styling and caller-owned voice recording state callbacks.
 
 import { Loader2Icon, MicIcon } from "~/lib/icons";
+import { useI18n } from "~/i18n";
 import { Button } from "../ui/button";
 
 export const ComposerVoiceButton = function ComposerVoiceButton(props: {
@@ -13,11 +14,12 @@ export const ComposerVoiceButton = function ComposerVoiceButton(props: {
   durationLabel: string;
   onClick: () => void;
 }) {
+  const { t } = useI18n();
   const label = props.isTranscribing
-    ? "Transcribing voice note"
+    ? t("composer.transcribingVoice")
     : props.isRecording
-      ? `Stop voice note (${props.durationLabel})`
-      : "Record voice note";
+      ? t("composer.stopVoice", { duration: props.durationLabel })
+      : t("composer.recordVoice");
 
   return (
     <Button

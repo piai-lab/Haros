@@ -116,7 +116,7 @@ import { arraysShallowEqual } from "../storeNormalization";
 import { providerModelDiscoveryInvalidationFingerprint } from "../lib/providerDiscoveryInvalidation";
 import { providerDiscoveryQueryKeys } from "../lib/providerDiscoveryReactQuery";
 import { useAppSettings } from "../appSettings";
-import { DocumentLocaleSync, I18nProvider } from "../i18n";
+import { DocumentLocaleSync, I18nProvider, useI18n } from "../i18n";
 import {
   getNotifiableProviderUpdateStatuses,
   isProviderUpdateActive,
@@ -546,6 +546,7 @@ function ProviderUpdateNotifications({
 }: {
   readonly liveVersionCheckCompleted: boolean;
 }) {
+  const { t } = useI18n();
   const navigate = useNavigate();
   const queryClient = useQueryClient();
   const { settings } = useAppSettings();
@@ -572,15 +573,18 @@ function ProviderUpdateNotifications({
   );
   const notificationKey = providerUpdateNotificationKey(outdatedProviders);
 
-  const updateAll = (providers: ReadonlyArray<ServerProviderStatus>) =>
-    runProviderUpdateAll({
-      providers,
-      queryClient,
-      activeToastRef,
-      isUpdatingAllRef,
-      progressToastDismissedRef,
-      setIsUpdatingAll,
-    });
+  const updateAll = useCallback(
+    (providers: ReadonlyArray<ServerProviderStatus>) =>
+      runProviderUpdateAll({
+        providers,
+        queryClient,
+        activeToastRef,
+        isUpdatingAllRef,
+        progressToastDismissedRef,
+        setIsUpdatingAll,
+      }),
+    [queryClient],
+  );
 
   useEffect(() => {
     const activeToast = activeToastRef.current;
@@ -609,12 +613,17 @@ function ProviderUpdateNotifications({
     const providerName = PROVIDER_DISPLAY_NAMES[firstProvider.provider];
     const title =
       outdatedProviders.length === 1
-        ? `${providerName} update available`
-        : `${outdatedProviders.length} provider updates available`;
+        ? t("updater.providerAvailable", { provider: providerName })
+        : t("updater.providersAvailable", { count: outdatedProviders.length });
     const description =
       outdatedProviders.length === 1
-        ? `${providerName} has a newer version available.`
-        : `${providerName} and ${additionalCount} more provider${additionalCount === 1 ? "" : "s"} have newer versions available.`;
+        ? t("updater.providerDescription", { provider: providerName })
+        : additionalCount === 1
+          ? t("updater.providerPairDescription", { provider: providerName })
+          : t("updater.providersDescription", {
+              provider: providerName,
+              count: additionalCount,
+            });
 
     let toastId!: ProviderUpdateToastId;
     const closeTrackedPrompt = () => {
@@ -629,7 +638,7 @@ function ProviderUpdateNotifications({
       description,
       timeout: 0,
       actionProps: {
-        children: "Review updates",
+        children: t("updater.review"),
         onClick: () => {
           if (activeToastRef.current?.toastId === toastId) {
             toastManager.close(toastId);
@@ -644,7 +653,7 @@ function ProviderUpdateNotifications({
       data: {
         onClose: closeTrackedPrompt,
         secondaryActionProps: {
-          children: "Update all",
+          children: t("updater.updateAll"),
           onClick: () => {
             void updateAll(oneClickProviders);
           },
@@ -652,7 +661,15 @@ function ProviderUpdateNotifications({
       },
     });
     activeToastRef.current = { kind: "prompt", key: notificationKey, toastId };
-  }, [isUpdatingAll, navigate, notificationKey, oneClickProviders, outdatedProviders, updateAll]);
+  }, [
+    isUpdatingAll,
+    navigate,
+    notificationKey,
+    oneClickProviders,
+    outdatedProviders,
+    t,
+    updateAll,
+  ]);
 
   return null;
 }
