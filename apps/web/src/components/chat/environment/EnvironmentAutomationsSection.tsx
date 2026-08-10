@@ -8,6 +8,7 @@ import type { AutomationDefinition } from "@synara/contracts";
 
 import { formatCadence } from "~/routes/-automations.shared";
 import { ClockIcon } from "~/lib/icons";
+import { useI18n } from "~/i18n";
 import { cn } from "~/lib/utils";
 
 import {
@@ -27,15 +28,18 @@ export function EnvironmentAutomationsSection({
   readonly automations: readonly EnvironmentAutomationPanelItem[];
   readonly onOpenAutomation: (definition: AutomationDefinition) => void;
 }) {
+  const { locale, t } = useI18n();
   if (automations.length === 0) {
     return null;
   }
 
   return (
     <div className="flex flex-col gap-0.5">
-      <EnvironmentSectionLabel>Automations</EnvironmentSectionLabel>
+      <EnvironmentSectionLabel>{t("automation.title")}</EnvironmentSectionLabel>
       {automations.map(({ definition }) => {
-        const cadence = definition.enabled ? formatCadence(definition.schedule) : "Paused";
+        const cadence = definition.enabled
+          ? formatCadence(definition.schedule, locale)
+          : t("automation.paused");
         return (
           <EnvironmentRow
             key={definition.id}
@@ -54,8 +58,8 @@ export function EnvironmentAutomationsSection({
                 {cadence}
               </span>
             }
-            aria-label={`Edit automation ${definition.name}`}
-            title={`${definition.name} - ${cadence}`}
+            aria-label={t("automation.editNamed", { name: definition.name })}
+            title={t("automation.nameCadence", { name: definition.name, cadence })}
             onClick={() => onOpenAutomation(definition)}
           />
         );

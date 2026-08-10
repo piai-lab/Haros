@@ -24,6 +24,8 @@ import {
   useDesktopTopBarWindowControlsGutterClassName,
 } from "~/hooks/useDesktopTopBarGutter";
 import { CentralIcon } from "~/lib/central-icons";
+import { useI18n } from "~/i18n";
+import type { AppLocale } from "~/locale";
 import { cn } from "~/lib/utils";
 import { ELEVATED_HOVER_SURFACE_CLASS_NAME } from "~/surfaceStyles";
 import { ensureNativeApi } from "~/nativeApi";
@@ -74,6 +76,7 @@ function AutomationListRow({
   detail,
   meta,
   onDelete,
+  deleteLabel,
   dimmed: dimmedProp,
 }: {
   readonly onClick: () => void;
@@ -82,6 +85,7 @@ function AutomationListRow({
   readonly detail: string;
   readonly meta?: ReactNode;
   readonly onDelete?: () => void;
+  readonly deleteLabel: string;
   readonly dimmed?: boolean;
 }) {
   const dimmed = dimmedProp ?? false;
@@ -132,8 +136,8 @@ function AutomationListRow({
       {onDelete ? (
         <button
           type="button"
-          aria-label="Delete automation"
-          title="Delete"
+          aria-label={deleteLabel}
+          title={deleteLabel}
           onClick={(event) => {
             event.stopPropagation();
             onDelete();
@@ -161,18 +165,20 @@ function rowSubtitle(
   definition: AutomationDefinition,
   latestRun: AutomationRun | null,
   now: number,
+  locale: AppLocale,
+  t: ReturnType<typeof useI18n>["t"],
 ): string {
-  const segments = [formatCadenceLong(definition.schedule)];
+  const segments = [formatCadenceLong(definition.schedule, locale)];
   if (isLiveRun(latestRun)) {
-    segments.push(runStatusLabel(latestRun.status));
+    segments.push(runStatusLabel(latestRun.status, locale));
     return segments.join(" · ");
   }
-  const attention = latestRun === null ? null : automationAttentionLabel(latestRun);
+  const attention = latestRun === null ? null : automationAttentionLabel(latestRun, locale);
   if (definition.enabled) {
-    const nextRun = formatNextRun(definition.nextRunAt, now);
-    if (nextRun) segments.push(`Next run ${nextRun}`);
+    const nextRun = formatNextRun(definition.nextRunAt, now, locale);
+    if (nextRun) segments.push(t("automation.nextRunValue", { value: nextRun }));
   } else if (attention === null && automationLifecycleState(definition) === "done") {
-    segments.push("Done");
+    segments.push(t("common.done"));
   }
   if (attention) segments.push(attention);
   return segments.join(" · ");
@@ -180,6 +186,7 @@ function rowSubtitle(
 
 function AutomationsRouteView() {
   const navigate = useNavigate();
+  const { locale, t } = useI18n();
   const { settings } = useAppSettings();
   const desktopTopBarTrafficLightGutterClassName = useDesktopTopBarTrafficLightGutterClassName();
   const desktopTopBarWindowControlsGutterClassName =
@@ -266,7 +273,9 @@ function AutomationsRouteView() {
   };
 
   const deleteDefinition = async (definition: AutomationDefinition) => {
-    const confirmed = await ensureNativeApi().dialogs.confirm(`Delete "${definition.name}"?`);
+    const confirmed = await ensureNativeApi().dialogs.confirm(
+      t("automation.deleteConfirm", { name: definition.name }),
+    );
     if (!confirmed) return;
     deleteMutation.mutate(definition);
   };
@@ -297,9 +306,10 @@ function AutomationsRouteView() {
           return <CentralIcon name={icon.name} className={icon.className} />;
         })()}
         title={definition.name}
-        detail={rowSubtitle(definition, latestRun, now)}
-        meta={hasUnreadResult(latestRun) ? "New result" : undefined}
+        detail={rowSubtitle(definition, latestRun, now, locale, t)}
+        meta={hasUnreadResult(latestRun) ? t("automation.newResult") : undefined}
         onDelete={() => void deleteDefinition(definition)}
+        deleteLabel={t("automation.delete")}
       />
     );
   };
@@ -318,7 +328,13 @@ function AutomationsRouteView() {
               : "text-muted-foreground hover:text-foreground",
           )}
         >
-          {value}
+          {t(
+            value === "all"
+              ? "automation.filterAll"
+              : value === "active"
+                ? "automation.filterActive"
+                : "automation.filterPaused",
+          )}
         </button>
       ))}
     </div>
@@ -329,7 +345,7 @@ function AutomationsRouteView() {
       {renderStatusFilter()}
       {filteredDefinitions.length === 0 ? (
         <div className="px-2 py-4 text-xs text-muted-foreground">
-          {statusFilter === "paused" ? "No paused automations." : "No active automations."}
+          {t(statusFilter === "paused" ? "automation.emptyPaused" : "automation.emptyActive")}
         </div>
       ) : (
         <div className="flex flex-col">{filteredDefinitions.map(renderRow)}</div>
@@ -362,8 +378,8 @@ function AutomationsRouteView() {
                 type="button"
                 size="icon-sm"
                 variant="ghost"
-                aria-label="Refresh"
-                title="Refresh"
+                aria-label={t("common.refresh")}
+                title={t("common.refresh")}
                 onClick={() => void refetch()}
               >
                 <CentralIcon name="arrow-rotate-clockwise" className="size-4" />
@@ -375,7 +391,7 @@ function AutomationsRouteView() {
                 disabled={projects.length === 0}
               >
                 <CentralIcon name="plus-small" className="size-4" />
-                New automation
+                {t("automation.new")}
               </Button>
             </div>
           </div>
@@ -384,17 +400,17 @@ function AutomationsRouteView() {
         <main className="min-h-0 flex-1 overflow-y-auto">
           <div className="mx-auto flex w-full max-w-3xl flex-col gap-6 px-6 pb-12 pt-8">
             <h1 className="px-2 font-heading text-2xl font-semibold tracking-tight text-foreground">
-              Automations
+              {t("automation.title")}
             </h1>
             {isLoading ? (
               <div className="py-16 text-center text-sm text-muted-foreground">
-                Loading automations...
+                {t("automation.loading")}
               </div>
             ) : data.definitions.length === 0 ? (
               <div className="flex flex-col items-center gap-1 py-16 text-center">
-                <p className="text-sm font-medium text-foreground">No automations yet</p>
+                <p className="text-sm font-medium text-foreground">{t("automation.empty")}</p>
                 <p className="max-w-xs text-xs text-muted-foreground">
-                  Schedule a prompt to run on its own, or wake an existing thread on a loop.
+                  {t("automation.emptyDescription")}
                 </p>
               </div>
             ) : (

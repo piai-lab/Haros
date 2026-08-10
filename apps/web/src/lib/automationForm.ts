@@ -303,7 +303,7 @@ export function formatCadence(schedule: AutomationSchedule, locale: AppLocale = 
         : `Weekdays at ${formatClockTime(schedule.timeOfDay)}`;
     case "weekly":
       return locale === "zh-CN"
-        ? `${weekdayLabelForLocale(schedule.dayOfWeek, locale)} ${formatClockTime(schedule.timeOfDay)}`
+        ? `${weekdayLabel(schedule.dayOfWeek, locale)} ${formatClockTime(schedule.timeOfDay)}`
         : `${weekdayLabel(schedule.dayOfWeek)} at ${formatClockTime(schedule.timeOfDay)}`;
     case "cron":
       return `Cron ${schedule.expression}`;
@@ -331,27 +331,35 @@ export function formatCadenceLong(schedule: AutomationSchedule, locale: AppLocal
  * A past-due `nextRunAt` (scheduler catching up) also reads "now". Null when unscheduled
  * or unparseable so callers can drop the segment entirely.
  */
-export function formatNextRun(nextRunAt: string | null, now: number = Date.now()): string | null {
+export function formatNextRun(
+  nextRunAt: string | null,
+  now: number = Date.now(),
+  locale: AppLocale = "en",
+): string | null {
   if (!nextRunAt) return null;
   const time = new Date(nextRunAt).getTime();
   if (Number.isNaN(time)) return null;
   const seconds = Math.round((time - now) / 1000);
-  if (seconds < 60) return "now";
+  if (seconds < 60) return locale === "zh-CN" ? "现在" : "now";
   const minutes = Math.round(seconds / 60);
-  if (minutes < 60) return minutes === 1 ? "in 1 minute" : `in ${minutes} minutes`;
+  if (minutes < 60) {
+    if (locale === "zh-CN") return `${minutes} 分钟后`;
+    return minutes === 1 ? "in 1 minute" : `in ${minutes} minutes`;
+  }
   const hours = Math.round(minutes / 60);
-  if (hours < 24) return hours === 1 ? "in 1 hour" : `in ${hours} hours`;
+  if (hours < 24) {
+    if (locale === "zh-CN") return `${hours} 小时后`;
+    return hours === 1 ? "in 1 hour" : `in ${hours} hours`;
+  }
   const days = Math.round(hours / 24);
+  if (locale === "zh-CN") return `${days} 天后`;
   return days === 1 ? "in 1 day" : `in ${days} days`;
 }
 
-export function weekdayLabel(value: number): string {
-  return ["Sun", "Mon", "Tue", "Wed", "Thu", "Fri", "Sat"][value] ?? "Sun";
-}
-
-function weekdayLabelForLocale(value: number, locale: AppLocale): string {
-  if (locale !== "zh-CN") return weekdayLabel(value);
-  return ["周日", "周一", "周二", "周三", "周四", "周五", "周六"][value] ?? "周日";
+export function weekdayLabel(value: number, locale: AppLocale = "en"): string {
+  return locale === "zh-CN"
+    ? (["周日", "周一", "周二", "周三", "周四", "周五", "周六"][value] ?? "周日")
+    : (["Sun", "Mon", "Tue", "Wed", "Thu", "Fri", "Sat"][value] ?? "Sun");
 }
 
 // --- Thread automation lookups ---------------------------------------------

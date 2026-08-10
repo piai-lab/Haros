@@ -43,6 +43,7 @@ import {
   reconcileAutomationFormAutoModeSupport,
   runResultSummary,
   runResultTitle,
+  runStatusLabel,
   scheduleKindFromSchedule,
   scheduleFromForm,
   updateWeeklyScheduleDay,
@@ -213,6 +214,7 @@ describe("automation shared route helpers", () => {
     expect(formatNextRun("2026-06-22T00:00:00.000Z", now)).toBe("in 3 days");
     expect(formatNextRun(null, now)).toBeNull();
     expect(formatNextRun("not-a-date", now)).toBeNull();
+    expect(formatNextRun("2026-06-19T00:01:30.000Z", now, "zh-CN")).toBe("2 分钟后");
   });
 
   it("labels only badly-ended or approval-blocked runs as needing attention", () => {
@@ -372,7 +374,18 @@ describe("automation shared route helpers", () => {
           status: "succeeded",
         }),
       ),
-    ).toBe("Completed; open the thread for the reply");
+    ).toBe("Completed; open the task for the reply");
+    expect(runStatusLabel("waiting-for-approval", "zh-CN")).toBe("等待审批");
+    expect(automationAttentionLabel(runWith({ status: "failed" }), "zh-CN")).toBe("上次运行失败");
+    expect(
+      runResultSummary(
+        runWith({
+          result: { ...baseRun.result!, summary: null, outcome: "unknown" },
+          status: "succeeded",
+        }),
+        "zh-CN",
+      ),
+    ).toBe("已完成；打开任务查看回复");
   });
 
   it("exposes the structured automation result title", () => {

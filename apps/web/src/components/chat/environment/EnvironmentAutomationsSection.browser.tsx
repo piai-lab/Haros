@@ -9,6 +9,16 @@ import { page } from "vitest/browser";
 import { afterEach, describe, expect, it, vi } from "vitest";
 import { render } from "vitest-browser-react";
 
+const harness = vi.hoisted(() => ({
+  settings: { localePreference: "en" },
+}));
+
+vi.mock("~/appSettings", async (importOriginal) => ({
+  ...(await importOriginal<typeof import("~/appSettings")>()),
+  useAppSettings: () => ({ settings: harness.settings }),
+}));
+
+import { I18nProvider } from "~/i18n";
 import { EnvironmentAutomationsSection } from "./EnvironmentAutomationsSection";
 
 const baseAutomation = (overrides: Partial<AutomationDefinition> = {}): AutomationDefinition => ({
@@ -46,6 +56,7 @@ const baseAutomation = (overrides: Partial<AutomationDefinition> = {}): Automati
 describe("EnvironmentAutomationsSection", () => {
   afterEach(() => {
     document.body.innerHTML = "";
+    harness.settings.localePreference = "en";
   });
 
   it("shows the thread automation cadence and opens the editor callback", async () => {
@@ -78,5 +89,21 @@ describe("EnvironmentAutomationsSection", () => {
     );
 
     expect(page.getByText("Paused")).toBeInTheDocument();
+  });
+
+  it("renders Automation-owned labels and cadence in Chinese", async () => {
+    harness.settings.localePreference = "zh-CN";
+    const definition = baseAutomation();
+    await render(
+      <I18nProvider>
+        <EnvironmentAutomationsSection automations={[{ definition }]} onOpenAutomation={vi.fn()} />
+      </I18nProvider>,
+    );
+
+    expect(page.getByText("自动化")).toBeInTheDocument();
+    expect(page.getByText("每 3 分钟")).toBeInTheDocument();
+    expect(
+      page.getByRole("button", { name: "编辑自动化 Monitor PR #220 Codex review" }),
+    ).toBeInTheDocument();
   });
 });
