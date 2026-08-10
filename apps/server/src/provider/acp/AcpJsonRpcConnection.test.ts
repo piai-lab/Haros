@@ -384,8 +384,8 @@ describe("AcpSessionRuntime", () => {
             args: [mockAgentPath],
             env: {
               VITEST: "true",
-              SYNARA_ACP_SUPPORT_SESSION_FORK: "1",
-              SYNARA_ACP_SUPPORT_SESSION_LOAD: "0",
+              OMNIMIND_ACP_SUPPORT_SESSION_FORK: "1",
+              OMNIMIND_ACP_SUPPORT_SESSION_LOAD: "0",
             },
           },
           cwd: process.cwd(),
