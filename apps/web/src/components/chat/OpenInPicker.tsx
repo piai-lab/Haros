@@ -26,6 +26,7 @@ import {
   CHAT_HEADER_SPLIT_LEADING_CLASS_NAME,
   CHAT_HEADER_SPLIT_TRAILING_CLASS_NAME,
 } from "./chatHeaderControls";
+import { useI18n } from "../../i18n";
 
 const EMPTY_KEYBINDINGS: ResolvedKeybindingsConfig = [];
 const EMPTY_AVAILABLE_EDITORS: ReadonlyArray<EditorId> = [];
@@ -54,6 +55,7 @@ export function OpenInPicker({
   // to the OS viewer (e.g. Preview) while still listing installed editors.
   defaultEditor?: EditorId;
 }) {
+  const { t } = useI18n();
   const labelMode = labelModeProp ?? "responsive";
   // Only subscribe to the config query when the caller did not supply config.
   const needsConfig = keybindingsProp === undefined || availableEditorsProp === undefined;
@@ -72,7 +74,7 @@ export function OpenInPicker({
   } = useEditorLaunchers({ keybindings, availableEditors, openInTarget, defaultEditor });
 
   return (
-    <ChatHeaderSplitGroup label="Open in editor">
+    <ChatHeaderSplitGroup label={t("openIn.editor")}>
       <ChatHeaderButton
         tone="outline"
         className={CHAT_HEADER_SPLIT_LEADING_CLASS_NAME}
@@ -88,7 +90,7 @@ export function OpenInPicker({
               : "sr-only @sm/header-actions:not-sr-only @sm/header-actions:ml-0.5",
           )}
         >
-          Open
+          {t("openIn.open")}
         </span>
       </ChatHeaderButton>
       <ChatHeaderSplitDivider />
@@ -96,7 +98,7 @@ export function OpenInPicker({
         <MenuTrigger
           render={
             <ChatHeaderIconButton
-              label="Editor options"
+              label={t("openIn.options")}
               tone="outline"
               className={CHAT_HEADER_SPLIT_TRAILING_CLASS_NAME}
             />
@@ -105,7 +107,7 @@ export function OpenInPicker({
           <ChevronDownIcon aria-hidden="true" className="size-3.5" />
         </MenuTrigger>
         <ComposerPickerMenuPopup align="end" side="bottom" className="w-44 min-w-44">
-          {options.length === 0 && <MenuItem disabled>No installed editors found</MenuItem>}
+          {options.length === 0 && <MenuItem disabled>{t("openIn.noEditors")}</MenuItem>}
           <MenuRadioGroup
             value={preferredEditor ?? ""}
             onValueChange={(value) => setDefaultEditor(value as EditorId)}
