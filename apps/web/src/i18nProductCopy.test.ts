@@ -13,6 +13,7 @@ const PRODUCT_COPY_SOURCES = [
   "routes/__root.tsx",
   "components/CreateGitHubProjectFields.tsx",
   "components/CreateProjectDialog.tsx",
+  "components/ChatView.tsx",
   "components/ChatMarkdown.tsx",
   "components/BrowserPanel.tsx",
   "components/BranchToolbarBranchSelector.tsx",
@@ -135,7 +136,20 @@ const PRODUCT_COPY_SOURCES = [
   "components/terminal/TerminalViewportPane.tsx",
   "hooks/useCopyToClipboard.ts",
   "hooks/useComposerCommandMenuItems.ts",
+  "hooks/useHandleNewThread.ts",
+  "lib/sidechatCreation.ts",
   "shortcutsSheet.ts",
+] as const;
+
+// These owners define the normal shell journey. Keep this independent of the scan list so a
+// future cleanup cannot silently drop a whole surface while leaving the scanner green.
+const REQUIRED_SHELL_COPY_SOURCES = [
+  "routes/__root.tsx",
+  "routes/_chat.settings.tsx",
+  "components/ChatView.tsx",
+  "components/Sidebar.tsx",
+  "components/chat/ChatHeader.tsx",
+  "components/PluginLibrary.tsx",
 ] as const;
 
 const PRODUCT_COPY_PROPERTIES = new Set([
@@ -194,6 +208,14 @@ const RAW_FACT_ALLOWLIST = [
   "SidebarSearchPalette.tsx:text:Codex",
   "SidebarSearchPalette.tsx:text:Enter",
   "SidebarActivityView.tsx:text:OmniMind",
+  "Sidebar.tsx:property:`#${pr.number} ${label}: ${pr.title}`",
+  "useComposerCommandMenuItems.ts:property:`@${name}`",
+  "useComposerCommandMenuItems.ts:property:`@${alias}`",
+  "useComposerCommandMenuItems.ts:property:`@${LOCAL_FOLDER_MENTION_NAME}`",
+  "useComposerCommandMenuItems.ts:property:`/${command.name}`",
+  "useComposerCommandMenuItems.ts:property:`${providerLabel} · ${slug}`",
+  // Persisted internal placeholder; ChatView maps it through the catalog at presentation time.
+  "useHandleNewThread.ts:property:New terminal",
   "TerminalSearch.tsx:text:Aa",
 ] as const satisfies readonly string[];
 
@@ -256,6 +278,12 @@ function sourceFindings(relativePath: (typeof PRODUCT_COPY_SOURCES)[number]): Fi
       (ts.isStringLiteral(node.initializer) || ts.isNoSubstitutionTemplateLiteral(node.initializer))
     ) {
       record(node, "property", node.initializer.text);
+    } else if (
+      ts.isPropertyAssignment(node) &&
+      PRODUCT_COPY_PROPERTIES.has(node.name.getText(sourceFile)) &&
+      ts.isTemplateExpression(node.initializer)
+    ) {
+      record(node, "property", node.initializer.getText(sourceFile));
     } else if (ts.isJsxText(node)) {
       record(node, "text", node.text);
     } else if (ts.isStringLiteral(node) || ts.isNoSubstitutionTemplateLiteral(node)) {
@@ -294,6 +322,14 @@ function sourceFindings(relativePath: (typeof PRODUCT_COPY_SOURCES)[number]): Fi
 }
 
 describe("reachable OmniMind-owned product copy", () => {
+  it("keeps every normal shell owner inside the source-level gate", () => {
+    const scannedSources = new Set<string>(PRODUCT_COPY_SOURCES);
+    expect(
+      REQUIRED_SHELL_COPY_SOURCES.filter((source) => !scannedSources.has(source)),
+      "add every normal shell owner to PRODUCT_COPY_SOURCES",
+    ).toEqual([]);
+  });
+
   it("routes reachable product copy through the sole message catalog", () => {
     const allFindings = PRODUCT_COPY_SOURCES.flatMap(sourceFindings);
     const allowlist = new Set<string>(RAW_FACT_ALLOWLIST);

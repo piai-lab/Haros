@@ -739,6 +739,8 @@ describe("voice helpers", () => {
       resolveActiveThreadTitle({
         title: "Roadmap scratchpad",
         subagentTitle: null,
+        entryPoint: "chat",
+        genericTerminalTitle: "New terminal",
       }),
     ).toBe("Roadmap scratchpad");
   });
@@ -748,6 +750,8 @@ describe("voice helpers", () => {
       resolveActiveThreadTitle({
         title: "New thread",
         subagentTitle: null,
+        entryPoint: "chat",
+        genericTerminalTitle: "New terminal",
       }),
     ).toBe("New thread");
   });
@@ -757,8 +761,21 @@ describe("voice helpers", () => {
       resolveActiveThreadTitle({
         title: "Ignored raw title",
         subagentTitle: "Reviewer / Fix follow-up",
+        entryPoint: "chat",
+        genericTerminalTitle: "New terminal",
       }),
     ).toBe("Reviewer / Fix follow-up");
+  });
+
+  it("localizes only the generic terminal title at presentation time", () => {
+    expect(
+      resolveActiveThreadTitle({
+        title: "New terminal",
+        subagentTitle: null,
+        entryPoint: "terminal",
+        genericTerminalTitle: "新建终端",
+      }),
+    ).toBe("新建终端");
   });
 
   it("hides only untouched Agent and Chat draft identities", () => {

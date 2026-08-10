@@ -232,7 +232,7 @@ export async function createSidechatThread(input: {
     sourceThreadId: input.sourceThread.id,
     sidechatSourceThreadId: input.sourceThread.id,
     projectId: input.project.id,
-    title: `Sidechat: ${titleSeed}`,
+    title: titleSeed,
     modelSelection: input.selectedModelSelection,
     runtimeMode: "approval-required",
     interactionMode: "default",

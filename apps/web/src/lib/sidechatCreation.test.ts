@@ -106,6 +106,28 @@ describe("createSidechatThread", () => {
     expect(dispatchCommand).toHaveBeenCalledTimes(2);
   });
 
+  it("keeps the real title seed without adding an English Sidechat prefix", async () => {
+    const dispatchCommand = vi.fn().mockResolvedValue(undefined);
+
+    await createSidechatThread({
+      api: makeApi({ dispatchCommand }),
+      project,
+      sourceThread,
+      selectedModelSelection,
+      initialPrompt: "Investigate this",
+      openSidechat: vi.fn(),
+      syncServerShellSnapshot: vi.fn(),
+    });
+
+    expect(dispatchCommand).toHaveBeenNthCalledWith(
+      1,
+      expect.objectContaining({
+        type: "thread.fork.create",
+        title: "Investigate this",
+      }),
+    );
+  });
+
   it("retains the pane without a deadline while snapshot synchronization is in flight", async () => {
     let resolveSnapshot: ((snapshot: OrchestrationShellSnapshot) => void) | undefined;
     const getShellSnapshot = vi.fn().mockImplementation(

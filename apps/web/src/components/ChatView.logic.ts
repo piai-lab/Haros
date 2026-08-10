@@ -723,9 +723,14 @@ export function buildLocalDraftThread(
 export function resolveActiveThreadTitle(input: {
   title: string;
   subagentTitle: string | null;
+  entryPoint: ThreadPrimarySurface;
+  genericTerminalTitle: string;
 }): string {
   if (input.subagentTitle) {
     return input.subagentTitle;
+  }
+  if (input.entryPoint === "terminal" && isGenericTerminalThreadTitle(input.title)) {
+    return input.genericTerminalTitle;
   }
   return input.title;
 }
