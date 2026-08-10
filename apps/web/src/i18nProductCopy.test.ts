@@ -24,6 +24,7 @@ const PRODUCT_COPY_SOURCES = [
   "components/chat/GeneratedMarkdownImage.tsx",
   "components/chat/RightDock.tsx",
   "components/chat/WorkspaceFilePreviewHeader.tsx",
+  "components/chat/workspaceExplorer.tsx",
   "components/kanban/KanbanCardView.tsx",
   "components/kanban/KanbanColumn.tsx",
   "components/kanban/KanbanNewTaskDialog.tsx",

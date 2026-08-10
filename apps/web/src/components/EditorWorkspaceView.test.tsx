@@ -420,7 +420,7 @@ describe("EditorWorkspaceView", () => {
       </QueryClientProvider>,
     );
 
-    expect(markup).toContain('placeholder="Search files..."');
+    expect(markup).toContain('placeholder="Search files…"');
     expect(markup).toContain("Search files by name or path.");
   });
 

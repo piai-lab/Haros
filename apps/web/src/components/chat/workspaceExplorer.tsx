@@ -22,6 +22,7 @@ import {
   formatChatFileReference,
   type ChatFileReference,
 } from "~/lib/chatReferences";
+import { useI18n } from "~/i18n";
 import { splitRepoRelativePath } from "~/lib/diffRendering";
 import { showFileReferenceContextMenu } from "~/lib/fileReferenceContextMenu";
 import {
@@ -195,12 +196,13 @@ const ExplorerRow = forwardRef<
 const EXPLORER_SKELETON_ROW_WIDTHS = ["w-9/12", "w-6/12", "w-7/12"];
 
 function ExplorerLoadingRows(props: { depth: number }) {
+  const { t } = useI18n();
   return (
     <div
       className="space-y-1.5 py-1.5 pr-2"
       style={fileRowIndentStyle(props.depth)}
       role="status"
-      aria-label="Loading directory..."
+      aria-label={t("file.loadingDirectory")}
     >
       {EXPLORER_SKELETON_ROW_WIDTHS.map((width) => (
         <div key={width} className="flex h-5 items-center gap-1.5">
@@ -223,6 +225,7 @@ function WorkspaceDirectory(props: {
   onPrefetchEntry: (entry: ProjectFileSystemEntry) => void;
   onEntryContextMenu: (entry: ProjectFileSystemEntry, position: { x: number; y: number }) => void;
 }) {
+  const { t } = useI18n();
   const query = useQuery(
     projectListDirectoriesQueryOptions({
       cwd: props.cwd,
@@ -237,9 +240,17 @@ function WorkspaceDirectory(props: {
 
   if (query.error) {
     return (
-      <p className="px-3 py-2 text-[11px] text-destructive/80">
-        {query.error instanceof Error ? query.error.message : "Could not load directory."}
-      </p>
+      <div className="px-3 py-2 text-[11px] text-destructive/80">
+        <p>{t("file.loadDirectoryFailed")}</p>
+        {query.error instanceof Error && query.error.message ? (
+          <details className="mt-1 text-muted-foreground">
+            <summary className="cursor-pointer">{t("error.showDetails")}</summary>
+            <pre className="mt-1 max-h-24 overflow-auto whitespace-pre-wrap break-words">
+              {query.error.message}
+            </pre>
+          </details>
+        ) : null}
+      </div>
     );
   }
 
@@ -332,6 +343,7 @@ function WorkspaceFilesTreeBody(props: {
   onPrefetchEntry: (entry: ProjectFileSystemEntry) => void;
   onEntryContextMenu: (entry: ProjectFileSystemEntry, position: { x: number; y: number }) => void;
 }) {
+  const { t } = useI18n();
   return (
     <div className="min-h-0 flex-1 overflow-auto px-1 py-1">
       {props.workspaceRoot ? (
@@ -348,7 +360,7 @@ function WorkspaceFilesTreeBody(props: {
         />
       ) : (
         <PanelStateMessage density="compact" fill="flex">
-          <p>No workspace.</p>
+          <p>{t("file.noWorkspaceShort")}</p>
         </PanelStateMessage>
       )}
     </div>
@@ -485,6 +497,7 @@ function WorkspaceSearchInputHeader(props: {
   onQueryChange: (query: string) => void;
   onSelectFile: (path: string) => void;
 }) {
+  const { t } = useI18n();
   const { onQueryChange, onSelectFile, query, search } = props;
   const handleInputKeyDown = (event: ReactKeyboardEvent<HTMLInputElement>) => {
     if (event.key === "Enter") {
@@ -512,8 +525,8 @@ function WorkspaceSearchInputHeader(props: {
         spellCheck={false}
         autoCorrect="off"
         autoCapitalize="off"
-        placeholder="Search files..."
-        aria-label="Search files"
+        placeholder={t("file.searchPlaceholder")}
+        aria-label={t("workbench.searchFiles")}
         onChange={(event) => onQueryChange(event.target.value)}
         onKeyDown={handleInputKeyDown}
       />
@@ -531,6 +544,7 @@ function WorkspaceSearchResultsBody(props: {
   onPrefetchEntry: (entry: Pick<ProjectFileSystemEntry, "path" | "kind">) => void;
   onEntryContextMenu: (path: string, position: { x: number; y: number }) => void;
 }) {
+  const { t } = useI18n();
   const { fileMatches } = props.search;
   return (
     <>
@@ -542,22 +556,28 @@ function WorkspaceSearchResultsBody(props: {
       >
         {!props.workspaceRoot ? (
           <PanelStateMessage density="compact" fill="flex">
-            <p>No workspace.</p>
+            <p>{t("file.noWorkspaceShort")}</p>
           </PanelStateMessage>
         ) : props.search.searchResultsCurrent && props.search.error ? (
           <PanelStateMessage density="compact" fill="flex">
-            <p className="text-destructive/85">
-              {props.search.error instanceof Error
-                ? props.search.error.message
-                : "Could not search files."}
-            </p>
+            <div className="text-destructive/85">
+              <p>{t("file.searchFailed")}</p>
+              {props.search.error instanceof Error && props.search.error.message ? (
+                <details className="mt-1 text-muted-foreground">
+                  <summary className="cursor-pointer">{t("error.showDetails")}</summary>
+                  <pre className="mt-1 max-h-24 overflow-auto whitespace-pre-wrap break-words">
+                    {props.search.error.message}
+                  </pre>
+                </details>
+              ) : null}
+            </div>
           </PanelStateMessage>
         ) : fileMatches.length === 0 ? (
           props.search.searchResultsPending || props.search.isFetching ? (
             <ExplorerLoadingRows depth={0} />
           ) : (
             <PanelStateMessage density="compact" fill="flex">
-              <p>No matching files.</p>
+              <p>{t("file.noMatches")}</p>
             </PanelStateMessage>
           )
         ) : (
@@ -575,7 +595,7 @@ function WorkspaceSearchResultsBody(props: {
       </div>
       {fileMatches.length > 0 && props.search.truncated ? (
         <p className="shrink-0 border-t border-border/45 px-3 py-1.5 text-[10px] text-muted-foreground/70">
-          Showing the top matches. Refine the search to narrow them down.
+          {t("file.topMatches")}
         </p>
       ) : null}
     </>
@@ -591,6 +611,7 @@ export function WorkspaceSearchSidebar(props: {
   onSelectFile: (path: string) => void;
   onReferenceInChat: ((reference: ChatFileReference) => void) | undefined;
 }) {
+  const { t } = useI18n();
   const prefetchEntry = useExplorerEntryPrefetch(props.workspaceRoot);
   const handleEntryContextMenu = useResultEntryContextMenu(props.onReferenceInChat);
   const handleListKeyDown = useExplorerListNavigation();
@@ -611,7 +632,7 @@ export function WorkspaceSearchSidebar(props: {
       {search.inputQuery.length === 0 ? (
         <div className="flex min-h-0 flex-1 flex-col px-1 py-1">
           <PanelStateMessage density="compact" fill="flex">
-            <p>Search files by name or path.</p>
+            <p>{t("file.searchInstruction")}</p>
           </PanelStateMessage>
         </div>
       ) : (
