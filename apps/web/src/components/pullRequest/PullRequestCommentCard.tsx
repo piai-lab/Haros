@@ -24,6 +24,7 @@ import { ensureNativeApi } from "~/nativeApi";
 import { PullRequestActorLabel } from "./PullRequestActorLabel";
 import { PullRequestMarkdown } from "./PullRequestMarkdown";
 import { parseFindingComment, type PullRequestCommentSeverity } from "./pullRequestComment.logic";
+import { useI18n } from "~/i18n";
 
 function severityToneClassName(severity: PullRequestCommentSeverity): string {
   if (severity === "High") return "text-destructive";
@@ -44,10 +45,20 @@ export function PullRequestCommentCard({
    *  dozens of markdown trees. */
   defaultOpen?: boolean;
 }) {
+  const { locale, t } = useI18n();
   const defaultOpen = defaultOpenProp ?? true;
   const [open, setOpen] = useState(defaultOpen);
   const finding = parseFindingComment(comment.body);
   const replyUrl = comment.url ?? prUrl;
+  const severityLabel = finding
+    ? t(
+        finding.severity === "High"
+          ? "pullRequest.severityHigh"
+          : finding.severity === "Medium"
+            ? "pullRequest.severityMedium"
+            : "pullRequest.severityLow",
+      )
+    : null;
 
   return (
     <Collapsible
@@ -63,7 +74,7 @@ export function PullRequestCommentCard({
         <span
           className={cn(PR_FINE_TEXT_CLASS_NAME, "shrink-0 tabular-nums text-muted-foreground")}
         >
-          {formatRelativeTime(comment.createdAt)}
+          {formatRelativeTime(comment.createdAt, locale)}
         </span>
         <DisclosureChevron open={open} />
       </CollapsibleTrigger>
@@ -91,13 +102,13 @@ export function PullRequestCommentCard({
                   severityToneClassName(finding.severity),
                 )}
               >
-                {finding.severity} Severity
+                {t("pullRequest.severity", { severity: severityLabel ?? finding.severity })}
               </p>
             </div>
           ) : null}
           <PullRequestMarkdown
             text={finding ? finding.body : comment.body}
-            fallback="_No review body._"
+            fallback={t("pullRequest.noReviewBodyMarkdown")}
             cwd={workspaceRoot}
           />
           <div className="mt-2 flex justify-end">
@@ -109,7 +120,7 @@ export function PullRequestCommentCard({
                 "rounded px-1.5 py-0.5 font-medium text-muted-foreground transition-colors hover:bg-muted/60 hover:text-foreground",
               )}
             >
-              Reply
+              {t("pullRequest.reply")}
             </button>
           </div>
         </div>

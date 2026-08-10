@@ -119,6 +119,18 @@ describe("groupPullRequestEntriesByInvolvement", () => {
     expect(groupPullRequestEntriesByInvolvement([], "viewer")).toEqual([]);
   });
 
+  it("accepts presentation labels without changing grouping authority", () => {
+    const entry = makeEntry({ author: makeActor("viewer") });
+    expect(
+      groupPullRequestEntriesByInvolvement([entry], "viewer", {
+        pinned: "置顶",
+        reviewRequested: "待我评审",
+        authored: "我创建的",
+        others: "其他",
+      }),
+    ).toEqual([{ key: "authored", label: "我创建的", entries: [entry] }]);
+  });
+
   it("falls back gracefully when the viewer login is unknown", () => {
     const entry = makeEntry({ author: makeActor("someone") });
     const groups = groupPullRequestEntriesByInvolvement([entry], null);

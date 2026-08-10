@@ -8,6 +8,7 @@ import {
   buildResolveConflictsPrompt,
   describePullRequestComment,
   FIX_PROMPT_MAX_COMMENTS,
+  pullRequestCheckStatusLabel,
   summarizePullRequestChecks,
   summarizePullRequestComments,
   summarizePullRequestDiffStat,
@@ -74,6 +75,13 @@ describe("summarizePullRequestChecks", () => {
   it("handles the no-checks case", () => {
     expect(summarizePullRequestChecks([])).toEqual({ label: "No checks", tone: "none" });
   });
+
+  it("localizes check summaries and status labels", () => {
+    expect(
+      summarizePullRequestChecks([{ name: "test", status: "failure", url: null }], "zh-CN"),
+    ).toEqual({ label: "1 项检查失败", tone: "failure" });
+    expect(pullRequestCheckStatusLabel("success", "zh-CN")).toBe("已通过");
+  });
 });
 
 describe("withStableCheckKeys", () => {
@@ -100,6 +108,11 @@ describe("summarizePullRequestComments", () => {
     expect(summarizePullRequestComments(0, true)).toBe("Comments may exist");
     expect(summarizePullRequestComments(20, true)).toBe("20+ comments");
   });
+
+  it("localizes comment counts", () => {
+    expect(summarizePullRequestComments(0, false, "zh-CN")).toBe("无评论");
+    expect(summarizePullRequestComments(20, true, "zh-CN")).toBe("20+ 条评论");
+  });
 });
 
 describe("summarizePullRequestDiffStat", () => {
@@ -112,6 +125,12 @@ describe("summarizePullRequestDiffStat", () => {
       deletions: 0,
       filesLabel: "1 file",
     });
+  });
+
+  it("localizes the file count without changing diff numbers", () => {
+    expect(
+      summarizePullRequestDiffStat({ additions: 38, deletions: 36, changedFiles: 3 }, "zh-CN"),
+    ).toEqual({ additions: 38, deletions: 36, filesLabel: "3 个文件" });
   });
 
   it("omits the file label when only line counts were reported", () => {

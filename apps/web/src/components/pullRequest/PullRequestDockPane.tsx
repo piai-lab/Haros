@@ -14,6 +14,7 @@ import {
   pullRequestDetailInputKey,
 } from "./pullRequestDetail.logic";
 import { PullRequestDetailPanel } from "./PullRequestDetailPanel";
+import { useI18n } from "~/i18n";
 
 export function PullRequestDockPane({
   pane,
@@ -24,10 +25,11 @@ export function PullRequestDockPane({
   onClose?: (() => void) | undefined;
   pollingEnabled?: boolean;
 }) {
+  const { t } = useI18n();
   const pollingEnabled = pollingEnabledProp ?? true;
   const input = pullRequestDetailInputFromPane(pane);
   if (!input) {
-    return <PanelStateMessage>Select a pull request to open it here.</PanelStateMessage>;
+    return <PanelStateMessage>{t("pullRequest.selectToOpen")}</PanelStateMessage>;
   }
   return (
     <PullRequestDetailPanel

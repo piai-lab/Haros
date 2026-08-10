@@ -17,6 +17,7 @@ import type {
 import type { RightDockPane } from "~/rightDockStore.logic";
 
 import { pullRequestMarkdownPreview } from "./pullRequestMarkdown.logic";
+import type { AppLocale } from "~/locale";
 
 /** Canonical identity for one detail surface — used as the React key so switching the
  *  selected pull request remounts the panel (resetting its tab and diff state). */
@@ -51,11 +52,15 @@ export function pullRequestDetailInputFromPane(pane: RightDockPane): PullRequest
 // Plain-language state descriptor shown next to the author line — the state color itself is
 // already conveyed by the PullRequestStateGlyph in the header, so this stays neutral text.
 // State only, matching git: conflicts are a merge signal and render as their own row.
-export function describePullRequestState(state: PullRequestState, isDraft: boolean): string {
-  if (isDraft && state === "open") return "Draft";
-  if (state === "open") return "Ready for review";
-  if (state === "merged") return "Merged";
-  return "Closed";
+export function describePullRequestState(
+  state: PullRequestState,
+  isDraft: boolean,
+  locale: AppLocale = "en",
+): string {
+  if (isDraft && state === "open") return locale === "zh-CN" ? "草稿" : "Draft";
+  if (state === "open") return locale === "zh-CN" ? "等待评审" : "Ready for review";
+  if (state === "merged") return locale === "zh-CN" ? "已合并" : "Merged";
+  return locale === "zh-CN" ? "已关闭" : "Closed";
 }
 
 // stripHtmlComments now lives with the rest of the markdown preprocessing.
@@ -79,32 +84,55 @@ type PullRequestTimelineSource = Pick<
  *  merge, and showing "closed" for a merged pull request would misstate what happened. */
 export function buildPullRequestTimelineEvents(
   detail: PullRequestTimelineSource,
+  locale: AppLocale = "en",
 ): PullRequestTimelineEvent[] {
+  const someone = locale === "zh-CN" ? "有人" : "Someone";
   const events: PullRequestTimelineEvent[] = [
     {
       id: "created",
       at: detail.createdAt,
-      title: `${detail.author?.login ?? "Someone"} opened this pull request`,
+      title:
+        locale === "zh-CN"
+          ? `${detail.author?.login ?? someone} 开启了此拉取请求`
+          : `${detail.author?.login ?? someone} opened this pull request`,
       body: null,
     },
     ...detail.commits.map((commit) => ({
       id: commit.oid,
       at: commit.committedDate,
-      title: `Commit ${commit.oid.slice(0, 7)}`,
-      body: commit.messageHeadline || "No commit message.",
+      title:
+        locale === "zh-CN" ? `提交 ${commit.oid.slice(0, 7)}` : `Commit ${commit.oid.slice(0, 7)}`,
+      body: commit.messageHeadline || (locale === "zh-CN" ? "无提交消息。" : "No commit message."),
     })),
     ...detail.comments.map((comment) => ({
       id: comment.id,
       at: comment.createdAt,
-      title: `${comment.author?.login ?? "Someone"} ${comment.kind === "review" ? "reviewed" : "commented"}`,
+      title:
+        locale === "zh-CN"
+          ? `${comment.author?.login ?? someone} ${comment.kind === "review" ? "完成了评审" : "发表了评论"}`
+          : `${comment.author?.login ?? someone} ${comment.kind === "review" ? "reviewed" : "commented"}`,
       // Timeline previews are plain text, so raw markdown/HTML would print literally.
       body: pullRequestMarkdownPreview(comment.body) || null,
     })),
     ...(detail.mergedAt
-      ? [{ id: "merged", at: detail.mergedAt, title: "Pull request merged", body: null }]
+      ? [
+          {
+            id: "merged",
+            at: detail.mergedAt,
+            title: locale === "zh-CN" ? "拉取请求已合并" : "Pull request merged",
+            body: null,
+          },
+        ]
       : []),
     ...(detail.closedAt && !detail.mergedAt
-      ? [{ id: "closed", at: detail.closedAt, title: "Pull request closed", body: null }]
+      ? [
+          {
+            id: "closed",
+            at: detail.closedAt,
+            title: locale === "zh-CN" ? "拉取请求已关闭" : "Pull request closed",
+            body: null,
+          },
+        ]
       : []),
   ];
   return events.toSorted((left, right) => left.at.localeCompare(right.at));

@@ -116,6 +116,7 @@ export function orderPullRequestEntriesPinnedFirst(
 export function groupPullRequestEntriesByInvolvement(
   entries: readonly PullRequestListEntry[],
   viewerLogin: string | null | undefined,
+  labels: Readonly<Record<PullRequestListGroupKey, string>> = GROUP_LABELS,
 ): PullRequestListGroup[] {
   const normalizedViewer = viewerLogin?.trim().toLowerCase() || null;
 
@@ -144,5 +145,5 @@ export function groupPullRequestEntriesByInvolvement(
   const order: PullRequestListGroupKey[] = ["pinned", "reviewRequested", "authored", "others"];
   return order
     .filter((key) => buckets[key].length > 0)
-    .map((key) => ({ key, label: GROUP_LABELS[key], entries: buckets[key] }));
+    .map((key) => ({ key, label: labels[key], entries: buckets[key] }));
 }

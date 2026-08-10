@@ -78,6 +78,12 @@ describe("describePullRequestState", () => {
     expect(describePullRequestState("merged", true)).toBe("Merged");
     expect(describePullRequestState("closed", false)).toBe("Closed");
   });
+
+  it("renders the same states in simplified Chinese", () => {
+    expect(describePullRequestState("open", true, "zh-CN")).toBe("草稿");
+    expect(describePullRequestState("open", false, "zh-CN")).toBe("等待评审");
+    expect(describePullRequestState("merged", false, "zh-CN")).toBe("已合并");
+  });
 });
 
 describe("buildPullRequestTimelineEvents", () => {
@@ -129,6 +135,13 @@ describe("buildPullRequestTimelineEvents", () => {
       closedAt: "2026-07-04T10:00:00Z",
     });
     expect(events.at(-1)?.title).toBe("Pull request closed");
+  });
+
+  it("localizes product-authored timeline framing without changing raw identities", () => {
+    const events = buildPullRequestTimelineEvents(makeTimelineSource(), "zh-CN");
+    expect(events[0]?.title).toBe("author 开启了此拉取请求");
+    expect(events[1]?.title).toBe("提交 abcdef1");
+    expect(events[2]?.title).toBe("reviewer 发表了评论");
   });
 });
 

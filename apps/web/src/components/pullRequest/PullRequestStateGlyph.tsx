@@ -13,22 +13,28 @@ import {
   PR_STATE_PRESENTATION_ICONS,
   resolvePrStatePresentation,
 } from "./pullRequestStatePresentation";
+import { useI18n } from "~/i18n";
 
 const SIZE_CLASS_NAME = {
   sm: "size-4",
   md: "size-[1.125rem]",
 } as const;
 
-function pullRequestStateLabel(
+function pullRequestStateKey(
   state: PullRequestState,
   isDraft: boolean,
   mergeability: GitPullRequestMergeability | undefined,
-): string {
-  if (isDraft && state === "open") return "Draft";
-  if (state === "open" && mergeability === "conflicting") return "Has conflicts";
-  if (state === "open") return "Open";
-  if (state === "merged") return "Merged";
-  return "Closed";
+):
+  | "pullRequest.stateDraft"
+  | "pullRequest.stateConflicts"
+  | "pullRequest.stateOpen"
+  | "pullRequest.stateMerged"
+  | "pullRequest.stateClosed" {
+  if (isDraft && state === "open") return "pullRequest.stateDraft";
+  if (state === "open" && mergeability === "conflicting") return "pullRequest.stateConflicts";
+  if (state === "open") return "pullRequest.stateOpen";
+  if (state === "merged") return "pullRequest.stateMerged";
+  return "pullRequest.stateClosed";
 }
 
 // Draft always shows as draft (a draft isn't heading for a merge); an open non-draft PR
@@ -47,15 +53,17 @@ export function PullRequestStateGlyph({
   size?: keyof typeof SIZE_CLASS_NAME;
   className?: string;
 }) {
+  const { t } = useI18n();
   const size = sizeProp ?? "sm";
   const presentation = resolvePrStatePresentation({ state, isDraft, mergeability });
   const Icon = PR_STATE_PRESENTATION_ICONS[presentation.iconKind];
+  const stateLabel = t(pullRequestStateKey(state, isDraft, mergeability));
   return (
     <span
       className={cn("flex shrink-0 items-center justify-center", SIZE_CLASS_NAME[size], className)}
-      title={pullRequestStateLabel(state, isDraft, mergeability)}
+      title={stateLabel}
       role="img"
-      aria-label={presentation.label}
+      aria-label={stateLabel}
     >
       <Icon className={cn("size-full", presentation.colorClass)} aria-hidden="true" />
     </span>

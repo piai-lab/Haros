@@ -11,6 +11,7 @@ import type {
   PullRequestComment,
 } from "@synara/contracts";
 import { pluralize } from "@synara/shared/text";
+import type { AppLocale } from "~/locale";
 
 export type PullRequestChecksTone = "pending" | "success" | "failure" | "none";
 
@@ -31,27 +32,49 @@ export const PULL_REQUEST_CHECKS_TONE_TEXT_CLASS: Record<PullRequestChecksTone, 
 // Failure outranks pending so a red state never hides behind "N pending checks".
 export function summarizePullRequestChecks(
   checks: ReadonlyArray<GitPullRequestCheck>,
+  locale: AppLocale = "en",
 ): PullRequestChecksSummary {
   const failing = checks.filter((check) => check.status === "failure").length;
   if (failing > 0) {
-    return { label: `${failing} ${pluralize(failing, "failing check")}`, tone: "failure" };
+    return {
+      label:
+        locale === "zh-CN"
+          ? `${failing} 项检查失败`
+          : `${failing} ${pluralize(failing, "failing check")}`,
+      tone: "failure",
+    };
   }
   const cancelled = checks.filter((check) => check.status === "cancelled").length;
   if (cancelled > 0) {
-    return { label: `${cancelled} ${pluralize(cancelled, "cancelled check")}`, tone: "failure" };
+    return {
+      label:
+        locale === "zh-CN"
+          ? `${cancelled} 项检查已取消`
+          : `${cancelled} ${pluralize(cancelled, "cancelled check")}`,
+      tone: "failure",
+    };
   }
   const pending = checks.filter((check) => check.status === "pending").length;
   if (pending > 0) {
-    return { label: `${pending} ${pluralize(pending, "pending check")}`, tone: "pending" };
+    return {
+      label:
+        locale === "zh-CN"
+          ? `${pending} 项检查进行中`
+          : `${pending} ${pluralize(pending, "pending check")}`,
+      tone: "pending",
+    };
   }
   if (checks.length === 0) {
-    return { label: "No checks", tone: "none" };
+    return { label: locale === "zh-CN" ? "无检查" : "No checks", tone: "none" };
   }
   const successful = checks.filter((check) => check.status === "success").length;
   if (successful === 0) {
-    return { label: "No required checks", tone: "none" };
+    return {
+      label: locale === "zh-CN" ? "无必需检查" : "No required checks",
+      tone: "none",
+    };
   }
-  return { label: "All checks passed", tone: "success" };
+  return { label: locale === "zh-CN" ? "全部检查通过" : "All checks passed", tone: "success" };
 }
 
 export const PULL_REQUEST_CHECK_STATUS_LABELS: Record<GitPullRequestCheck["status"], string> = {
@@ -62,6 +85,21 @@ export const PULL_REQUEST_CHECK_STATUS_LABELS: Record<GitPullRequestCheck["statu
   neutral: "Neutral",
   cancelled: "Cancelled",
 };
+
+export function pullRequestCheckStatusLabel(
+  status: GitPullRequestCheck["status"],
+  locale: AppLocale = "en",
+): string {
+  if (locale === "en") return PULL_REQUEST_CHECK_STATUS_LABELS[status];
+  return {
+    pending: "进行中",
+    success: "已通过",
+    failure: "失败",
+    skipped: "已跳过",
+    neutral: "中性",
+    cancelled: "已取消",
+  }[status];
+}
 
 // Check names alone can collide (matrix jobs, re-runs, a check run named like an old commit
 // status), so list keys combine name + url and disambiguate exact duplicates by occurrence.
@@ -86,11 +124,14 @@ export interface PullRequestDiffStat {
 
 // Null when gh reported no diff sizes at all, so the panel can omit the row instead of
 // showing a misleading "+0 −0".
-export function summarizePullRequestDiffStat(pr: {
-  additions: number | null;
-  deletions: number | null;
-  changedFiles: number | null;
-}): PullRequestDiffStat | null {
+export function summarizePullRequestDiffStat(
+  pr: {
+    additions: number | null;
+    deletions: number | null;
+    changedFiles: number | null;
+  },
+  locale: AppLocale = "en",
+): PullRequestDiffStat | null {
   if (pr.additions === null && pr.deletions === null && pr.changedFiles === null) {
     return null;
   }
@@ -98,11 +139,23 @@ export function summarizePullRequestDiffStat(pr: {
     additions: pr.additions ?? 0,
     deletions: pr.deletions ?? 0,
     filesLabel:
-      pr.changedFiles === null ? null : `${pr.changedFiles} ${pluralize(pr.changedFiles, "file")}`,
+      pr.changedFiles === null
+        ? null
+        : locale === "zh-CN"
+          ? `${pr.changedFiles} 个文件`
+          : `${pr.changedFiles} ${pluralize(pr.changedFiles, "file")}`,
   };
 }
 
-export function summarizePullRequestComments(count: number, truncated = false): string {
+export function summarizePullRequestComments(
+  count: number,
+  truncated = false,
+  locale: AppLocale = "en",
+): string {
+  if (locale === "zh-CN") {
+    if (count === 0) return truncated ? "可能还有评论" : "无评论";
+    return truncated ? `${count}+ 条评论` : `${count} 条评论`;
+  }
   if (count === 0) return truncated ? "Comments may exist" : "No comments";
   const noun = pluralize(count, "comment");
   return truncated ? `${count}+ ${noun}` : `${count} ${noun}`;
@@ -165,6 +218,7 @@ function isDecorationOnlyLine(line: string): boolean {
 
 export function describePullRequestComment(
   comment: GitPullRequestComment,
+  locale: AppLocale = "en",
 ): PullRequestCommentDisplay {
   // Strip markup per line before picking the title so a leading badge line cannot shadow
   // the real summary line below it. Bot description markers can span lines, so remove them
@@ -176,7 +230,7 @@ export function describePullRequestComment(
     .filter((line) => line.text.length > 0);
   const first = lines[0];
   if (!first) {
-    return { title: "(empty comment)", snippet: null };
+    return { title: locale === "zh-CN" ? "（空评论）" : "(empty comment)", snippet: null };
   }
   // A badge-only first line folds into the next line: "P2" + "Missing null check" reads as
   // one title instead of a cryptic "P2" row.

@@ -90,7 +90,10 @@ export function pullRequestMarkdownPreview(markdown: string): string {
 /** Splits a body into plain-markdown segments and `<details>` sections. GitHub renders the
  * latter as closed disclosures; leaving them inline floods the view with boilerplate and
  * leaks literal tags. Blocks that start inside a code fence are treated as content. */
-export function splitPullRequestMarkdownSections(markdown: string): PullRequestMarkdownSection[] {
+export function splitPullRequestMarkdownSections(
+  markdown: string,
+  detailsFallback = "Details",
+): PullRequestMarkdownSection[] {
   const ranges = fenceRanges(markdown);
   const sections: PullRequestMarkdownSection[] = [];
   let cursor = 0;
@@ -99,7 +102,7 @@ export function splitPullRequestMarkdownSections(markdown: string): PullRequestM
     if (insideAnyRange(match.index, ranges)) continue;
     const leading = markdown.slice(cursor, match.index).trim();
     if (leading.length > 0) sections.push({ kind: "markdown", text: leading });
-    const summary = (match[1] ?? "").replace(HTML_TAG_PATTERN, "").trim() || "Details";
+    const summary = (match[1] ?? "").replace(HTML_TAG_PATTERN, "").trim() || detailsFallback;
     sections.push({ kind: "details", summary, body: (match[2] ?? "").trim() });
     cursor = match.index + match[0].length;
   }

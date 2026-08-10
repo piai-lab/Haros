@@ -19,6 +19,7 @@ import {
   PR_META_TEXT_CLASS_NAME,
 } from "./pullRequestText";
 import { ELEVATED_HOVER_SURFACE_CLASS_NAME } from "~/surfaceStyles";
+import { useI18n } from "~/i18n";
 
 /** One selectable project in the filter popover — full-width row with a trailing check. */
 const PROJECT_FILTER_OPTION_CLASS_NAME = cn(
@@ -75,19 +76,22 @@ export function PullRequestProjectFilterPopover({
   value: ProjectId | undefined;
   onChange: (projectId: ProjectId | undefined) => void;
 }) {
+  const { t } = useI18n();
   const [open, setOpen] = useState(false);
   const active = value !== undefined;
   const selectedProjectName = value
     ? projects.find(([projectId]) => projectId === value)?.[1]
     : undefined;
-  const triggerLabel = `Filter pull requests by project: ${selectedProjectName ?? "All projects"}`;
+  const triggerLabel = t("pullRequests.filterByProjectValue", {
+    project: selectedProjectName ?? t("pullRequests.allProjects"),
+  });
   return (
     <Popover open={open} onOpenChange={setOpen}>
       <PopoverTrigger
         render={
           <IconButton
             label={triggerLabel}
-            tooltip="Filter by project"
+            tooltip={t("pullRequests.filterByProject")}
             aria-pressed={active}
             className={cn("relative", active && "text-foreground")}
           >
@@ -103,7 +107,7 @@ export function PullRequestProjectFilterPopover({
       />
       <PopoverPopup align="end" className="w-64 p-1">
         <div className={cn(PR_FINE_TEXT_CLASS_NAME, "px-2 py-1 font-medium text-muted-foreground")}>
-          Project
+          {t("nav.projects")}
         </div>
         <div className="max-h-72 overflow-y-auto">
           <button
@@ -118,7 +122,7 @@ export function PullRequestProjectFilterPopover({
               value === undefined && "text-foreground",
             )}
           >
-            <span className="min-w-0 truncate">All projects</span>
+            <span className="min-w-0 truncate">{t("pullRequests.allProjects")}</span>
             {value === undefined ? <CheckIcon aria-hidden className="size-3.5 shrink-0" /> : null}
           </button>
           {projects.map(([id, title]) => (

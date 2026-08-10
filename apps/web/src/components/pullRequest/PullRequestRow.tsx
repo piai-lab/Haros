@@ -9,7 +9,7 @@ import type { PullRequestListEntry } from "@synara/contracts";
 import { pullRequestListProjectContexts } from "@synara/shared/githubRepository";
 
 import { Tooltip, TooltipPopup, TooltipTrigger } from "~/components/ui/tooltip";
-import { PinStatusIcon, pinActionLabel } from "~/lib/pin";
+import { PinStatusIcon } from "~/lib/pin";
 import { formatRelativeTime } from "~/lib/relativeTime";
 import { cn } from "~/lib/utils";
 import {
@@ -22,6 +22,7 @@ import { PullRequestAvatar } from "./PullRequestAvatar";
 import { PullRequestDiffStat } from "./PullRequestDiffStat";
 import { PullRequestMetaLine } from "./PullRequestMetaLine";
 import { PullRequestStateGlyph } from "./PullRequestStateGlyph";
+import { useI18n } from "~/i18n";
 
 function TruncatedTitle({ title, number }: { title: string; number: number }) {
   return (
@@ -58,19 +59,22 @@ export const PullRequestRow = function PullRequestRow({
   onClick: (entry: PullRequestListEntry) => void;
   onTogglePinned: (entry: PullRequestListEntry) => void;
 }) {
+  const { locale, t } = useI18n();
   const showProjectTitle = showProjectTitleProp ?? false;
   const showDiffColors = showDiffColorsProp ?? true;
   const isPinned = entry.isPinned === true;
   const projectContexts = pullRequestListProjectContexts(entry);
   const projectLabel =
-    projectContexts.length > 1 ? `${projectContexts.length} projects` : entry.projectTitle;
+    projectContexts.length > 1
+      ? t("pullRequests.projectCount", { count: projectContexts.length })
+      : entry.projectTitle;
   const projectTitle = projectContexts.map((context) => context.projectTitle).join(", ");
-  const pinLabel = pinActionLabel(
-    showProjectTitle
-      ? `pull request #${entry.number} in ${projectLabel}`
-      : `pull request #${entry.number}`,
-    isPinned,
-  );
+  const pinLabel = showProjectTitle
+    ? t(isPinned ? "pullRequests.unpinInProject" : "pullRequests.pinInProject", {
+        number: entry.number,
+        project: projectLabel,
+      })
+    : t(isPinned ? "pullRequests.unpin" : "pullRequests.pin", { number: entry.number });
   return (
     <div
       className={cn(
@@ -140,7 +144,7 @@ export const PullRequestRow = function PullRequestRow({
             "flex shrink-0 flex-col items-end gap-0.5 tabular-nums",
           )}
         >
-          <span>{formatRelativeTime(entry.updatedAt)}</span>
+          <span>{formatRelativeTime(entry.updatedAt, locale)}</span>
           <PullRequestDiffStat
             additions={entry.additions}
             deletions={entry.deletions}

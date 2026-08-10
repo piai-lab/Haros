@@ -17,6 +17,7 @@ import {
   splitPullRequestMarkdownSections,
 } from "./pullRequestMarkdown.logic";
 import { PR_BODY_TEXT_CLASS_NAME, PR_META_TEXT_CLASS_NAME } from "./pullRequestText";
+import { useI18n } from "~/i18n";
 
 function DetailsSection({ summary, body, cwd }: { summary: string; body: string; cwd: string }) {
   // Closed by default, matching GitHub: these blocks are boilerplate by convention.
@@ -58,7 +59,11 @@ export function PullRequestMarkdown({
   fallback: string;
   cwd: string;
 }) {
-  const sections = splitPullRequestMarkdownSections(preparePullRequestMarkdown(text));
+  const { t } = useI18n();
+  const sections = splitPullRequestMarkdownSections(
+    preparePullRequestMarkdown(text),
+    t("pullRequest.details"),
+  );
   if (sections.length === 0) {
     return (
       <ChatMarkdown

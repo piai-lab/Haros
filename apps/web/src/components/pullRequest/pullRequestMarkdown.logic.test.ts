@@ -72,6 +72,9 @@ describe("splitPullRequestMarkdownSections", () => {
     expect(splitPullRequestMarkdownSections("<details>y</details>")).toEqual([
       { kind: "details", summary: "Details", body: "y" },
     ]);
+    expect(splitPullRequestMarkdownSections("<details>y</details>", "详情")).toEqual([
+      { kind: "details", summary: "详情", body: "y" },
+    ]);
   });
 
   it("treats details markup inside code fences as content", () => {

@@ -10,7 +10,7 @@ import type { PullRequestDetail } from "@synara/contracts";
 import { useState, type ReactNode } from "react";
 
 import {
-  PULL_REQUEST_CHECK_STATUS_LABELS,
+  pullRequestCheckStatusLabel,
   summarizePullRequestChecks,
   summarizePullRequestComments,
   withStableCheckKeys,
@@ -38,6 +38,7 @@ import {
   PR_SECTION_TITLE_TEXT_CLASS_NAME,
 } from "./pullRequestText";
 import { cn } from "~/lib/utils";
+import { useI18n } from "~/i18n";
 
 /** A branch name in the Branch meta row (head and base render identically). Plain text at the
  *  row's own size — no chip, no width cap: it gives up characters only once the row genuinely
@@ -110,6 +111,7 @@ function DisclosureSection({
 }
 
 export function PullRequestSummaryTab({ detail }: { detail: PullRequestDetail }) {
+  const { locale, t } = useI18n();
   return (
     <div className="h-full overflow-y-auto">
       <section className="space-y-4 px-5 py-5">
@@ -120,12 +122,12 @@ export function PullRequestSummaryTab({ detail }: { detail: PullRequestDetail })
             className={cn(PR_META_TEXT_CLASS_NAME, "mt-1.5 flex-wrap text-muted-foreground")}
           >
             <PullRequestActorLabel actor={detail.author} className="font-medium text-foreground" />
-            <span>{formatRelativeTime(detail.updatedAt)}</span>
-            <span>{describePullRequestState(detail.state, detail.isDraft)}</span>
+            <span>{formatRelativeTime(detail.updatedAt, locale)}</span>
+            <span>{describePullRequestState(detail.state, detail.isDraft, locale)}</span>
           </PullRequestMetaLine>
         </div>
         <div>
-          <MetaRow icon={<GitBranchIcon className="size-3.5" />} label="Branch">
+          <MetaRow icon={<GitBranchIcon className="size-3.5" />} label={t("pullRequest.branch")}>
             {/* One line: the branch names absorb every pixel the row has spare, and only the
                 separator and the counts are pinned. */}
             <span className="flex items-center gap-1.5">
@@ -145,13 +147,16 @@ export function PullRequestSummaryTab({ detail }: { detail: PullRequestDetail })
               meta rows, and the call to action lives in the header (a disabled Merge pill
               that says why, plus "Resolve conflicts" in its "…" menu). */}
           {detail.state === "open" && detail.mergeability === "conflicting" ? (
-            <MetaRow icon={<PullRequestConflictIcon className="size-3.5" />} label="Merge">
-              Conflicts with {detail.baseBranch}
+            <MetaRow
+              icon={<PullRequestConflictIcon className="size-3.5" />}
+              label={t("pullRequest.merge")}
+            >
+              {t("pullRequest.conflictsWith", { branch: detail.baseBranch })}
             </MetaRow>
           ) : null}
-          <MetaRow icon={<UsersIcon className="size-3.5" />} label="Reviewers">
+          <MetaRow icon={<UsersIcon className="size-3.5" />} label={t("pullRequest.reviewers")}>
             {detail.reviewers.length === 0 ? (
-              <span className="text-muted-foreground">None</span>
+              <span className="text-muted-foreground">{t("common.none")}</span>
             ) : (
               <span className="flex flex-wrap items-center gap-1.5">
                 {detail.reviewers.map((actor) => (
@@ -164,29 +169,32 @@ export function PullRequestSummaryTab({ detail }: { detail: PullRequestDetail })
               </span>
             )}
           </MetaRow>
-          <MetaRow icon={<ChatBubbleIcon className="size-3.5" />} label="Comments">
-            {summarizePullRequestComments(detail.comments.length)}
+          <MetaRow icon={<ChatBubbleIcon className="size-3.5" />} label={t("pullRequest.comments")}>
+            {summarizePullRequestComments(detail.comments.length, false, locale)}
           </MetaRow>
           {/* Tone tinting intentionally omitted: the summary reads as plain metadata
               here, matching the muted meta rows around it. */}
-          <MetaRow icon={<PullRequestChecksRing checks={detail.checks} />} label="Checks">
-            {summarizePullRequestChecks(detail.checks).label}
+          <MetaRow
+            icon={<PullRequestChecksRing checks={detail.checks} />}
+            label={t("pullRequest.checks")}
+          >
+            {summarizePullRequestChecks(detail.checks, locale).label}
           </MetaRow>
         </div>
       </section>
       {/* No edit pencil here: there is no backend "edit PR description" action to back it. */}
-      <DisclosureSection label="Description">
+      <DisclosureSection label={t("pullRequest.description")}>
         <PullRequestMarkdown
           text={detail.body}
-          fallback="_No description provided._"
+          fallback={t("pullRequest.noDescriptionMarkdown")}
           cwd={detail.workspaceRoot}
         />
       </DisclosureSection>
-      <DisclosureSection label="Checks" count={detail.checks.length}>
+      <DisclosureSection label={t("pullRequest.checks")} count={detail.checks.length}>
         <div className="space-y-1">
           {detail.checks.length === 0 ? (
             <p className={cn(PR_META_TEXT_CLASS_NAME, "text-muted-foreground")}>
-              No checks reported.
+              {t("pullRequest.noChecksReported")}
             </p>
           ) : (
             withStableCheckKeys(detail.checks).map(({ key, check }) => (
@@ -207,7 +215,7 @@ export function PullRequestSummaryTab({ detail }: { detail: PullRequestDetail })
                 <PullRequestCheckStatusIcon status={check.status} />
                 <span className="min-w-0 flex-1 truncate">{check.name}</span>
                 <span className="text-muted-foreground">
-                  {PULL_REQUEST_CHECK_STATUS_LABELS[check.status]}
+                  {pullRequestCheckStatusLabel(check.status, locale)}
                 </span>
               </button>
             ))
@@ -215,18 +223,18 @@ export function PullRequestSummaryTab({ detail }: { detail: PullRequestDetail })
         </div>
       </DisclosureSection>
       {/* Open by default so the comment composer is immediately reachable. */}
-      <DisclosureSection label="Comments" count={detail.comments.length}>
+      <DisclosureSection label={t("pullRequest.comments")} count={detail.comments.length}>
         <div className="space-y-2">
           {detail.commentsTruncated || detail.commentsIncomplete ? (
             <PullRequestWarningNote>
               {detail.commentsIncomplete
-                ? "Some unresolved review comments could not be loaded. Check GitHub for the complete review."
-                : "More unresolved review comments may be available on GitHub."}
+                ? t("pullRequest.commentsIncomplete")
+                : t("pullRequest.commentsTruncated")}
             </PullRequestWarningNote>
           ) : null}
           {detail.comments.length === 0 ? (
             <p className={cn(PR_BODY_TEXT_CLASS_NAME, "py-4 text-center text-muted-foreground")}>
-              No comments
+              {t("pullRequest.noComments")}
             </p>
           ) : (
             <div>
