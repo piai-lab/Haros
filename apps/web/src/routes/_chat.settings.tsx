@@ -386,7 +386,6 @@ function SettingsRouteView() {
                 updateSettings({ localePreference: value });
               }}
               ariaLabel={t("settings.language")}
-              triggerClassName="w-full sm:w-40"
               valueContent={
                 settings.localePreference === "system"
                   ? t("common.system")

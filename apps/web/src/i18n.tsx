@@ -1673,7 +1673,8 @@ export const EN_MESSAGES = {
   "settings.coreDefaults": "Core defaults",
   "settings.defaultProvider": "Default engine",
   "settings.defaultProviderDescription": "Choose the engine used for new chats.",
-  "settings.chatSurfaceDescription": "Show the Chat surface in the Agent | Chat switcher.",
+  "settings.chatSurfaceDescription":
+    "Show Chat at the top of the sidebar so you can switch between Agent and Chat. When off, only Agent is shown.",
   "settings.timeAndReading": "Time and reading",
   "settings.restoreDefaults": "Restore defaults",
   "settings.newThreads": "New tasks",
@@ -4185,7 +4186,8 @@ export const ZH_CN_MESSAGES = {
   "settings.coreDefaults": "核心默认值",
   "settings.defaultProvider": "默认引擎",
   "settings.defaultProviderDescription": "选择新 Chat 默认使用的引擎。",
-  "settings.chatSurfaceDescription": "在 Agent | Chat 切换器中显示 Chat。",
+  "settings.chatSurfaceDescription":
+    "在侧栏顶部显示 Chat 入口，方便在 Agent 和 Chat 之间切换。关闭后，侧栏仅显示 Agent。",
   "settings.timeAndReading": "时间与阅读",
   "settings.restoreDefaults": "恢复默认值",
   "settings.newThreads": "新任务",
