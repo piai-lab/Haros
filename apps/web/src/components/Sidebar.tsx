@@ -2577,7 +2577,7 @@ export default function Sidebar() {
 
   const handleStartAddProject = useCallback(() => {
     setCreateProjectDialogOpen(true);
-  }, []);
+  }, [setCreateProjectDialogOpen]);
 
   const agentProjects = ordinarySpaceProjects;
   const currentProjectShortcutTargetId = useMemo(
@@ -2802,9 +2802,12 @@ export default function Sidebar() {
     [t],
   );
 
-  const openRenameThreadDialog = useCallback((threadId: ThreadId) => {
-    setRenameDialogThreadId(threadId);
-  }, []);
+  const openRenameThreadDialog = useCallback(
+    (threadId: ThreadId) => {
+      setRenameDialogThreadId(threadId);
+    },
+    [setRenameDialogThreadId],
+  );
 
   const handleThreadRenamePointerUp = useCallback(
     (event: ReactPointerEvent<HTMLElement>, threadId: ThreadId) => {
@@ -3137,6 +3140,7 @@ export default function Sidebar() {
       resolveThreadStatusForSidebar,
       serverSettingsQuery.data?.providers,
       sidebarThreadSummaryById,
+      setGroupPickerTarget,
       studioWorkspaceRoot,
       t,
       toggleThreadPinned,
@@ -3503,6 +3507,8 @@ export default function Sidebar() {
       projectById,
       removeDeletedProjectFromClientState,
       sidebarThreads,
+      setProjectContextMenuState,
+      setRenameProjectDialogId,
       toggleProjectPinned,
       t,
     ],
@@ -3514,7 +3520,7 @@ export default function Sidebar() {
       if (!projectById.has(projectId)) return;
       setProjectContextMenuState({ projectId, position });
     },
-    [projectById],
+    [projectById, setProjectContextMenuState],
   );
 
   const projectDnDSensors = useSensors(
@@ -3769,7 +3775,7 @@ export default function Sidebar() {
         await handleDeleteGroup(group);
       }
     },
-    [handleDeleteGroup, t],
+    [handleDeleteGroup, setGroupEditorTarget, setGroupPickerTarget, t],
   );
   const standardProjectSidebarDataById = useMemo<ReadonlyMap<ProjectId, SidebarDerivedProjectData>>(
     () =>
@@ -5349,93 +5355,74 @@ export default function Sidebar() {
       })),
     [chatWorkspaceRoot, homeDir, projects, studioWorkspaceRoot, t],
   );
-  const searchPaletteActions = useMemo<SidebarSearchAction[]>(
-    () => [
-      {
-        id: "new-chat",
-        label: t("nav.newChat"),
-        description: t("search.newChatDescription"),
-        keywords: ["chat", "new", "home"],
-        shortcutLabel: newChatShortcutLabel,
-      },
-      {
-        id: "new-thread",
-        label: t("nav.newAgent"),
-        description: t("search.newAgentDescription"),
-        keywords: ["thread", "new", "project"],
-        shortcutLabel: newThreadShortcutLabel,
-      },
-      {
-        id: "add-project",
-        label: t("nav.addProject"),
-        description: t("search.addProjectDescription"),
-        keywords: ["folder", "repo", "repository", "open"],
-        shortcutLabel: addProjectShortcutLabel,
-        run: handleStartAddProject,
-      },
-      {
-        id: "import-thread",
-        label: t("search.importThread"),
-        description: t("search.importThreadDescription"),
-        keywords: [
-          "import",
-          "resume",
-          "thread",
-          "session",
-          "codex",
-          "claude",
-          "cursor",
-          "opencode",
-        ],
-        shortcutLabel: importThreadShortcutLabel,
-      },
-      {
-        id: "plugins",
-        label: t("nav.library"),
-        description: t("search.libraryDescription"),
-        keywords: ["library", "plugins", "skills", "mcp", "tools", "engine"],
-        run: () => void navigate({ to: "/plugins" }),
-        icon: BookIcon,
-      },
-      {
-        id: "feedback",
-        label: t("search.feedback"),
-        description: t("search.feedbackDescription"),
-        keywords: ["feedback", "bug", "issue", "problem", "report", "support", "omnimind"],
-      },
-      {
-        id: "settings",
-        label: t("nav.settings"),
-        description: t("search.settingsDescription"),
-        keywords: ["preferences", "config"],
-      },
-      {
-        id: "usage-settings",
-        label: t("search.usageSettings"),
-        description: t("search.usageSettingsDescription"),
-        keywords: ["usage", "limits", "credits", "quota", "providers"],
-        shortcutLabel: usageSettingsShortcutLabel,
-      },
-      {
-        id: "new-group",
-        label: t("nav.newGroup"),
-        description: t("groups.createDescription"),
-        keywords: ["group", "label", "conversation"],
-        run: () => setGroupEditorTarget({ mode: "create" }),
-        icon: TagIcon,
-      },
-    ],
-    [
-      addProjectShortcutLabel,
-      handleStartAddProject,
-      importThreadShortcutLabel,
-      newChatShortcutLabel,
-      newThreadShortcutLabel,
-      navigate,
-      t,
-      usageSettingsShortcutLabel,
-    ],
-  );
+  // React Compiler owns this derived array. A hand-written dependency list here
+  // cannot preserve the shortcut label's inferred scope and bails out the entire Sidebar.
+  const searchPaletteActions: SidebarSearchAction[] = [
+    {
+      id: "new-chat",
+      label: t("nav.newChat"),
+      description: t("search.newChatDescription"),
+      keywords: ["chat", "new", "home"],
+      shortcutLabel: newChatShortcutLabel,
+    },
+    {
+      id: "new-thread",
+      label: t("nav.newAgent"),
+      description: t("search.newAgentDescription"),
+      keywords: ["thread", "new", "project"],
+      shortcutLabel: newThreadShortcutLabel,
+    },
+    {
+      id: "add-project",
+      label: t("nav.addProject"),
+      description: t("search.addProjectDescription"),
+      keywords: ["folder", "repo", "repository", "open"],
+      shortcutLabel: addProjectShortcutLabel,
+      run: handleStartAddProject,
+    },
+    {
+      id: "import-thread",
+      label: t("search.importThread"),
+      description: t("search.importThreadDescription"),
+      keywords: ["import", "resume", "thread", "session", "codex", "claude", "cursor", "opencode"],
+      shortcutLabel: importThreadShortcutLabel,
+    },
+    {
+      id: "plugins",
+      label: t("nav.library"),
+      description: t("search.libraryDescription"),
+      keywords: ["library", "plugins", "skills", "mcp", "tools", "engine"],
+      run: () => void navigate({ to: "/plugins" }),
+      icon: BookIcon,
+    },
+    {
+      id: "feedback",
+      label: t("search.feedback"),
+      description: t("search.feedbackDescription"),
+      keywords: ["feedback", "bug", "issue", "problem", "report", "support", "omnimind"],
+    },
+    {
+      id: "settings",
+      label: t("nav.settings"),
+      description: t("search.settingsDescription"),
+      keywords: ["preferences", "config"],
+    },
+    {
+      id: "usage-settings",
+      label: t("search.usageSettings"),
+      description: t("search.usageSettingsDescription"),
+      keywords: ["usage", "limits", "credits", "quota", "providers"],
+      shortcutLabel: usageSettingsShortcutLabel,
+    },
+    {
+      id: "new-group",
+      label: t("nav.newGroup"),
+      description: t("groups.createDescription"),
+      keywords: ["group", "label", "conversation"],
+      run: () => setGroupEditorTarget({ mode: "create" }),
+      icon: TagIcon,
+    },
+  ];
 
   const handleDesktopUpdateButtonClick = useCallback(() => {
     const bridge = window.desktopBridge;
