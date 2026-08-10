@@ -61,6 +61,7 @@ import {
   parseComposerChipSegment,
 } from "../lib/remarkComposerChips";
 import { IconButton } from "./ui/icon-button";
+import { useI18n } from "../i18n";
 
 const EXTERNAL_HTTP_HREF_PATTERN = /^https?:\/\//i;
 // Trailing `:line` / `:line:col` position suffix on a resolved file link. Kept on
@@ -850,6 +851,7 @@ function MarkdownCodeBlock({
   fence: CodeFenceInfo;
   children: ReactNode;
 }) {
+  const { t } = useI18n();
   const [copied, setCopied] = useState(false);
   const [wrap, setWrap] = useState(false);
   const copiedTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
@@ -887,8 +889,8 @@ function MarkdownCodeBlock({
           <IconButton
             className="chat-markdown-codeblock__action"
             onClick={toggleWrap}
-            title={wrap ? "Disable soft wrap" : "Enable soft wrap"}
-            label={wrap ? "Disable soft wrap" : "Enable soft wrap"}
+            title={wrap ? t("common.disableSoftWrap") : t("common.enableSoftWrap")}
+            label={wrap ? t("common.disableSoftWrap") : t("common.enableSoftWrap")}
             aria-pressed={wrap}
             data-active={wrap ? "true" : "false"}
             size="icon-xs"
@@ -899,8 +901,8 @@ function MarkdownCodeBlock({
           <IconButton
             className="chat-markdown-codeblock__action"
             onClick={handleCopy}
-            title={copied ? "Copied" : "Copy code"}
-            label={copied ? "Copied" : "Copy code"}
+            title={copied ? t("common.copied") : t("common.copyCode")}
+            label={copied ? t("common.copied") : t("common.copyCode")}
             size="icon-xs"
             variant="ghost"
           >
