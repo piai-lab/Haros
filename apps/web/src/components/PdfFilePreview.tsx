@@ -14,6 +14,7 @@
 import { useEffect, useState } from "react";
 
 import { basenameOfPath } from "~/file-icons";
+import { useI18n } from "~/i18n";
 import { Loader2Icon, TriangleAlertIcon } from "~/lib/icons";
 import { buildLocalImageUrl } from "~/lib/localImageUrls";
 import { useContainerSize } from "~/lib/pdf/useContainerSize";
@@ -38,6 +39,7 @@ export function PdfFilePreview(props: {
   onPreviewReady?: (() => void) | undefined;
   onPreviewError?: (() => void) | undefined;
 }) {
+  const { t } = useI18n();
   const previewUrl = buildLocalImageUrl({
     src: props.filePath,
     cwd: props.cwd ?? undefined,
@@ -121,9 +123,15 @@ export function PdfFilePreview(props: {
       <div className={outerClassName}>
         <div className="flex min-h-0 flex-1 flex-col items-center justify-center gap-2 px-4 text-center">
           <TriangleAlertIcon className="size-5 text-destructive/80" aria-hidden="true" />
-          <p className="text-[12px] text-muted-foreground">
-            {doc.error ?? "Could not open this PDF."}
-          </p>
+          <p className="text-[12px] text-muted-foreground">{t("pdf.openFailed")}</p>
+          {doc.error ? (
+            <details className="max-w-full text-left text-[11px] text-muted-foreground">
+              <summary className="cursor-pointer">{t("error.showDetails")}</summary>
+              <pre className="mt-1 max-h-24 max-w-full overflow-auto whitespace-pre-wrap break-words">
+                {doc.error}
+              </pre>
+            </details>
+          ) : null}
         </div>
       </div>
     );
@@ -134,7 +142,7 @@ export function PdfFilePreview(props: {
       <div
         className="flex min-h-0 flex-1 items-center justify-center"
         role="status"
-        aria-label="Loading PDF..."
+        aria-label={t("pdf.loading")}
       >
         <Loader2Icon className="size-4 animate-spin opacity-60" aria-hidden="true" />
       </div>

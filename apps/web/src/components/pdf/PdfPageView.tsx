@@ -12,6 +12,7 @@
 
 import { useEffect, useRef, useState } from "react";
 
+import { useI18n } from "~/i18n";
 import type { PDFDocumentProxy } from "~/lib/pdf/pdfEngine";
 import type { PdfLink } from "~/lib/pdf/pdfLinks";
 import { usePdfPageRender } from "~/lib/pdf/usePdfPageRender";
@@ -43,6 +44,7 @@ export const PdfPageView = function PdfPageView({
   registerElement,
   onJumpToPage,
 }: PdfPageViewProps) {
+  const { t } = useI18n();
   const wrapperRef = useRef<HTMLDivElement>(null);
   const canvasRef = useRef<HTMLCanvasElement>(null);
   const textLayerRef = useRef<HTMLDivElement>(null);
@@ -100,7 +102,7 @@ export const PdfPageView = function PdfPageView({
       <canvas
         ref={canvasRef}
         className="pdf-viewer-page__canvas"
-        aria-label={`Page ${pageNumber}`}
+        aria-label={t("pdf.page", { page: pageNumber })}
       />
       <div
         ref={textLayerRef}
@@ -116,8 +118,11 @@ export const PdfPageView = function PdfPageView({
       ) : null}
       {error ? (
         <div className="pdf-viewer-page__error" role="alert">
-          <span>Could not render page {pageNumber}</span>
-          <span className="pdf-viewer-page__error-detail">{error}</span>
+          <span>{t("pdf.renderFailed", { page: pageNumber })}</span>
+          <details className="max-w-full text-left">
+            <summary className="cursor-pointer">{t("error.showDetails")}</summary>
+            <span className="pdf-viewer-page__error-detail">{error}</span>
+          </details>
         </div>
       ) : null}
     </div>
@@ -131,6 +136,7 @@ function PdfLinkAnchor({
   link: PdfLink;
   onJumpToPage: (pageNumber: number) => void;
 }) {
+  const { t } = useI18n();
   const style = {
     left: `${link.left}px`,
     top: `${link.top}px`,
@@ -156,16 +162,19 @@ function PdfLinkAnchor({
     );
   }
 
+  const targetPageNumber = link.targetPageNumber;
+  if (targetPageNumber == null) {
+    return null;
+  }
+
   return (
     <button
       type="button"
       className="pdf-viewer-page__link"
       style={style}
-      aria-label={`Go to page ${link.targetPageNumber}`}
+      aria-label={t("pdf.goToPage", { page: targetPageNumber })}
       onClick={() => {
-        if (link.targetPageNumber != null) {
-          onJumpToPage(link.targetPageNumber);
-        }
+        onJumpToPage(targetPageNumber);
       }}
     />
   );
