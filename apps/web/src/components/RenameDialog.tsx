@@ -15,6 +15,7 @@ import {
   DialogTitle,
 } from "./ui/dialog";
 import { Input } from "./ui/input";
+import { useI18n } from "~/i18n";
 
 export interface RenameDialogProps {
   open: boolean;
@@ -45,8 +46,9 @@ export function RenameDialog({
   onOpenChange,
   onSave,
 }: RenameDialogProps) {
+  const { t } = useI18n();
   const allowEmpty = allowEmptyProp ?? false;
-  const saveLabel = saveLabelProp ?? "Save";
+  const saveLabel = saveLabelProp ?? t("common.save");
   return (
     <Dialog open={open} onOpenChange={onOpenChange}>
       <DialogPopup className="max-w-md">
@@ -85,6 +87,7 @@ function RenameDialogForm({
   onOpenChange: (open: boolean) => void;
   onSave: (value: string) => Promise<void> | void;
 }) {
+  const { t } = useI18n();
   const [value, setValue] = useState(initialValue);
   const [isSaving, setIsSaving] = useState(false);
   const inputRef = useRef<HTMLInputElement>(null);
@@ -140,10 +143,10 @@ function RenameDialogForm({
       </DialogPanel>
       <DialogFooter>
         <Button variant="outline" size="sm" onClick={() => onOpenChange(false)} disabled={isSaving}>
-          Cancel
+          {t("common.cancel")}
         </Button>
         <Button size="sm" onClick={() => void handleSubmit()} disabled={!canSave}>
-          {isSaving ? "Saving..." : saveLabel}
+          {isSaving ? t("common.saving") : saveLabel}
         </Button>
       </DialogFooter>
     </>

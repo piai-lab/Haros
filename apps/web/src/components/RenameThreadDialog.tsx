@@ -1,4 +1,5 @@
 import { RenameDialog } from "./RenameDialog";
+import { useI18n } from "~/i18n";
 
 interface RenameThreadDialogProps {
   open: boolean;
@@ -13,11 +14,12 @@ export function RenameThreadDialog({
   onOpenChange,
   onSave,
 }: RenameThreadDialogProps) {
+  const { t } = useI18n();
   return (
     <RenameDialog
       open={open}
-      title="Rename chat"
-      description="Keep it short and recognizable."
+      title={t("renameTask.title")}
+      description={t("renameTask.description")}
       initialValue={currentTitle}
       onOpenChange={onOpenChange}
       onSave={onSave}

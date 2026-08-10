@@ -10,6 +10,7 @@ import {
   DialogTitle,
 } from "./ui/dialog";
 import { Input } from "./ui/input";
+import { useI18n } from "~/i18n";
 
 interface ThreadWorktreeHandoffDialogProps {
   open: boolean;
@@ -28,6 +29,7 @@ export function ThreadWorktreeHandoffDialog({
   onOpenChange,
   onConfirm,
 }: ThreadWorktreeHandoffDialogProps) {
+  const { t } = useI18n();
   const busy = busyProp ?? false;
   const worktreeInputRef = useRef<HTMLInputElement>(null);
 
@@ -61,10 +63,8 @@ export function ThreadWorktreeHandoffDialog({
     >
       <DialogPopup className="max-w-md">
         <DialogHeader>
-          <DialogTitle>Hand off to worktree</DialogTitle>
-          <DialogDescription>
-            Create a detached worktree from the current branch to continue working in parallel.
-          </DialogDescription>
+          <DialogTitle>{t("worktreeHandoff.title")}</DialogTitle>
+          <DialogDescription>{t("worktreeHandoff.description")}</DialogDescription>
         </DialogHeader>
         <DialogPanel>
           <form
@@ -74,7 +74,9 @@ export function ThreadWorktreeHandoffDialog({
             }}
           >
             <label className="grid gap-1.5">
-              <span className="text-xs font-medium text-foreground">Worktree name</span>
+              <span className="text-xs font-medium text-foreground">
+                {t("worktreeHandoff.name")}
+              </span>
               <Input
                 ref={worktreeInputRef}
                 value={worktreeName}
@@ -93,10 +95,10 @@ export function ThreadWorktreeHandoffDialog({
         </DialogPanel>
         <DialogFooter>
           <Button variant="outline" size="sm" onClick={() => onOpenChange(false)} disabled={busy}>
-            Cancel
+            {t("common.cancel")}
           </Button>
           <Button size="sm" onClick={handleSubmit} disabled={!canSubmit}>
-            {busy ? "Handing off..." : "Hand off"}
+            {busy ? t("worktreeHandoff.inProgress") : t("worktreeHandoff.action")}
           </Button>
         </DialogFooter>
       </DialogPopup>

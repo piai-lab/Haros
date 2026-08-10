@@ -10,6 +10,13 @@ import { afterEach, describe, expect, it, vi } from "vitest";
 import { render } from "vitest-browser-react";
 
 import ProjectScriptsControl, { type NewProjectScriptInput } from "./ProjectScriptsControl";
+import { I18nProvider } from "~/i18n";
+
+const harness = vi.hoisted(() => ({ settings: { localePreference: "zh-CN" } }));
+
+vi.mock("~/appSettings", () => ({
+  useAppSettings: () => ({ settings: harness.settings }),
+}));
 
 const EMPTY_KEYBINDINGS: ResolvedKeybindingsConfig = [];
 
@@ -61,7 +68,7 @@ describe("ProjectScriptsControl", () => {
 
     await page.getByRole("button", { name: "Add action" }).click();
 
-    await expect.poll(() => document.body.textContent).toContain("Add Action");
+    await expect.poll(() => document.body.textContent).toContain("Add action");
     expect(document.body.textContent).toContain(
       "Actions are project-scoped commands you can run from the top bar or keybindings.",
     );
@@ -83,7 +90,7 @@ describe("ProjectScriptsControl", () => {
     await page.getByRole("button", { name: "Run Setup" }).click();
     expect(control.onRunScript).toHaveBeenCalledWith(setupScript);
 
-    await page.getByLabelText("Script actions").click();
+    await page.getByLabelText("Action menu").click();
     await expect.poll(() => document.body.textContent).toContain("Setup (setup)");
     await expect.poll(() => document.body.textContent).toContain("Add action");
   });
@@ -101,18 +108,40 @@ describe("ProjectScriptsControl", () => {
       preferredScriptId: "setup",
     });
 
-    await page.getByLabelText("Script actions").click();
+    await page.getByLabelText("Action menu").click();
     await expect
       .poll(() => document.querySelector<HTMLButtonElement>('button[aria-label="Edit Setup"]'))
       .not.toBeNull();
     document.querySelector<HTMLButtonElement>('button[aria-label="Edit Setup"]')?.click();
 
-    await expect.poll(() => document.body.textContent).toContain("Edit Action");
+    await expect.poll(() => document.body.textContent).toContain("Edit action");
     const deleteButton = Array.from(document.querySelectorAll<HTMLButtonElement>("button")).find(
       (button) => button.textContent?.trim() === "Delete",
     );
 
     expect(deleteButton?.className).toContain("text-destructive");
     expect(deleteButton?.className).not.toContain("text-destructive-foreground");
+  });
+
+  it("renders the add-action journey in simplified Chinese", async () => {
+    const screen = await render(
+      <I18nProvider>
+        <ProjectScriptsControl
+          scripts={[]}
+          keybindings={EMPTY_KEYBINDINGS}
+          onRunScript={vi.fn()}
+          onAddScript={vi.fn()}
+          onUpdateScript={vi.fn()}
+          onDeleteScript={vi.fn()}
+        />
+      </I18nProvider>,
+    );
+
+    await page.getByRole("button", { name: "添加操作" }).click();
+    await expect.element(page.getByRole("heading", { name: "添加操作" })).toBeVisible();
+    await expect
+      .element(page.getByText("操作是项目范围的命令，可从顶部栏或快捷键运行。"))
+      .toBeVisible();
+    await screen.unmount();
   });
 });

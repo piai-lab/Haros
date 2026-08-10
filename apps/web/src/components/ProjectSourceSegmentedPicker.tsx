@@ -4,22 +4,20 @@ import { GitHubIcon } from "~/lib/icons";
 import { cn } from "~/lib/utils";
 
 import { FolderClosed } from "./FolderClosed";
+import { useI18n } from "~/i18n";
 
 export type ProjectSource = "local" | "github";
 
 const PROJECT_SOURCES: ReadonlyArray<{
   readonly value: ProjectSource;
-  readonly label: string;
   readonly icon: ReactNode;
 }> = [
   {
     value: "local",
-    label: "Folder",
     icon: <FolderClosed className="size-3.5" aria-hidden="true" />,
   },
   {
     value: "github",
-    label: "GitHub",
     icon: <GitHubIcon className="size-3.5" aria-hidden="true" />,
   },
 ];
@@ -35,6 +33,7 @@ export function ProjectSourceSegmentedPicker(props: {
   readonly onValueChange: (value: ProjectSource) => void;
   readonly className?: string;
 }) {
+  const { t } = useI18n();
   const activeIndex = PROJECT_SOURCES.findIndex((source) => source.value === props.value);
   const cell = `(100% - 0.25rem) / ${PROJECT_SOURCES.length}`;
   const overhang = "5px";
@@ -46,7 +45,7 @@ export function ProjectSourceSegmentedPicker(props: {
     <div className={cn("px-1", props.className)}>
       <div
         role="radiogroup"
-        aria-label="Project source"
+        aria-label={t("projectSource.label")}
         className="sidebar-segmented-picker relative isolate inline-flex w-full rounded-lg p-0.5"
       >
         <div
@@ -67,9 +66,7 @@ export function ProjectSourceSegmentedPicker(props: {
               role="radio"
               aria-checked={active}
               disabled={props.disabled || sourceUnavailable}
-              title={
-                sourceUnavailable ? "Update the OmniMind server to add GitHub projects." : undefined
-              }
+              title={sourceUnavailable ? t("projectSource.githubUnavailable") : undefined}
               className={cn(
                 "relative z-10 flex flex-1 items-center justify-center gap-1.5 rounded-md px-2.5 py-1 text-[11.5px] font-medium transition-colors duration-200 disabled:opacity-50",
                 active
@@ -83,7 +80,7 @@ export function ProjectSourceSegmentedPicker(props: {
                 style={{ transform: `translateX(${labelShift})` }}
               >
                 {source.icon}
-                {source.label}
+                {source.value === "local" ? t("projectSource.folder") : "GitHub"}
               </span>
             </button>
           );
