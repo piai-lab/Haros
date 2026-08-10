@@ -12,6 +12,7 @@ import { executableCandidates, hasPathSeparator } from "../executableLookup.ts";
 const LATEST_VERSION_CACHE_TTL_MS = 60 * 60 * 1_000;
 const LATEST_VERSION_TIMEOUT_MS = 4_000;
 const PROVIDER_UPDATE_ACTION_MESSAGE = "Install the update now or review provider settings.";
+export const HOMEBREW_PROVIDER_UPDATE_TIMEOUT_MS = 15 * 60_000;
 
 type ProviderInstallSource = "npm" | "bun" | "pnpm" | "homebrew" | "native" | "unknown";
 
@@ -46,6 +47,7 @@ export interface ProviderMaintenanceCommandAction {
   readonly executable: string;
   readonly args: ReadonlyArray<string>;
   readonly lockKey: string;
+  readonly timeoutMs?: number;
   /** Put the selected provider binary's directory first so its package manager matches. */
   readonly pathPrepend?: string;
 }
@@ -234,6 +236,7 @@ export function makeProviderMaintenanceCapabilities(input: {
   readonly updateExecutable: string | null;
   readonly updateArgs: ReadonlyArray<string>;
   readonly updateLockKey: string | null;
+  readonly updateTimeoutMs?: number;
   readonly updatePathPrepend?: string | null;
 }): ProviderMaintenanceCapabilities {
   const update =
@@ -246,6 +249,7 @@ export function makeProviderMaintenanceCapabilities(input: {
           executable: input.updateExecutable,
           args: input.updateArgs,
           lockKey: input.updateLockKey,
+          ...(input.updateTimeoutMs === undefined ? {} : { timeoutMs: input.updateTimeoutMs }),
           ...(nonEmptyString(input.updatePathPrepend)
             ? { pathPrepend: nonEmptyString(input.updatePathPrepend)! }
             : {}),
@@ -369,6 +373,7 @@ function makeHomebrewProviderMaintenanceCapabilities(
         ? ["upgrade", "--cask", homebrewPackage.name]
         : ["upgrade", homebrewPackage.name],
     updateLockKey: "homebrew",
+    updateTimeoutMs: HOMEBREW_PROVIDER_UPDATE_TIMEOUT_MS,
     ...(pathPrepend === undefined ? {} : { updatePathPrepend: pathPrepend }),
   });
 }

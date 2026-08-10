@@ -43,7 +43,10 @@ import {
   readCodexConfigModelProvider,
   stabilizeProviderStatusesAgainstTransientTimeouts,
 } from "./ProviderHealth";
-import { resolvePackageManagedProviderMaintenance } from "../providerMaintenance";
+import {
+  HOMEBREW_PROVIDER_UPDATE_TIMEOUT_MS,
+  resolvePackageManagedProviderMaintenance,
+} from "../providerMaintenance";
 
 // ── Test helpers ────────────────────────────────────────────────────
 
@@ -286,6 +289,7 @@ it.layer(NodeServices.layer)("ProviderHealth", (it) => {
         executable: "brew",
         args: ["upgrade", "--cask", "claude-code@latest"],
         lockKey: "homebrew",
+        timeoutMs: HOMEBREW_PROVIDER_UPDATE_TIMEOUT_MS,
       });
     });
 

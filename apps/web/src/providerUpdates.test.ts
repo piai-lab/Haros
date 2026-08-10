@@ -11,6 +11,7 @@ import {
   getVisibleProviderUpdateStatuses,
   isProviderLatestVersionKnowable,
   isProviderUpdateActive,
+  PROVIDER_UPDATE_REQUEST_TIMEOUT_MS,
   providerUpdateNotificationKey,
   shouldOfferProviderUpdateAction,
   shouldPromptProviderUpdate,
@@ -265,6 +266,10 @@ describe("isProviderUpdateActive", () => {
 });
 
 describe("withProviderUpdateTimeout", () => {
+  it("keeps the transport watchdog beyond the bounded Homebrew update window", () => {
+    expect(PROVIDER_UPDATE_REQUEST_TIMEOUT_MS).toBe(15 * 60_000 + 15_000);
+  });
+
   it("rejects a provider request that never settles", async () => {
     vi.useFakeTimers();
     const pending = new Promise<never>(() => undefined);

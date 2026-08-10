@@ -6,6 +6,7 @@ import { Effect, FileSystem } from "effect";
 import {
   createProviderVersionAdvisory,
   deriveNpmGlobalPrefix,
+  HOMEBREW_PROVIDER_UPDATE_TIMEOUT_MS,
   makeProviderMaintenanceCapabilities,
   parseGenericCliVersion,
   resolvePackageManagedProviderMaintenance,
@@ -156,6 +157,7 @@ describe("providerMaintenance", () => {
       executable: "brew",
       args: ["upgrade", "--cask", "codex"],
       lockKey: "homebrew",
+      timeoutMs: HOMEBREW_PROVIDER_UPDATE_TIMEOUT_MS,
     });
     assert.strictEqual(capabilities.packageName, null);
   });
@@ -186,6 +188,7 @@ describe("providerMaintenance", () => {
       executable: "brew",
       args: ["upgrade", "--cask", "claude-code@latest"],
       lockKey: "homebrew",
+      timeoutMs: HOMEBREW_PROVIDER_UPDATE_TIMEOUT_MS,
     });
     assert.deepStrictEqual(capabilities.latestVersionSource, {
       kind: "homebrew",
@@ -224,6 +227,7 @@ describe("providerMaintenance", () => {
       executable: "brew",
       args: ["upgrade", "anomalyco/tap/opencode"],
       lockKey: "homebrew",
+      timeoutMs: HOMEBREW_PROVIDER_UPDATE_TIMEOUT_MS,
     });
     assert.deepStrictEqual(capabilities.latestVersionSource, {
       kind: "npm",
@@ -330,6 +334,7 @@ describe("providerMaintenance", () => {
         executable: "brew",
         args: ["upgrade", "--cask", "claude-code@latest"],
         lockKey: "homebrew",
+        timeoutMs: HOMEBREW_PROVIDER_UPDATE_TIMEOUT_MS,
       });
       assert.deepStrictEqual(capabilities.latestVersionSource, {
         kind: "homebrew",

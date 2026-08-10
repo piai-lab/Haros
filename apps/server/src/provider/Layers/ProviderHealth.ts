@@ -2590,6 +2590,10 @@ export function makeProviderHealthLive(options?: { readonly providerUpdateTimeou
         }
 
         const run = Effect.gen(function* () {
+          // A Homebrew update may legitimately include a tap refresh and a release-asset
+          // download before installation. Keep native/npm-style updates on the short bound,
+          // but do not kill a healthy Homebrew upgrade after only two minutes.
+          const updateTimeoutMs = update.timeoutMs ?? providerUpdateTimeoutMs;
           const startedAt = yield* nowIso;
           yield* setProviderUpdateState(
             provider,
@@ -2608,7 +2612,7 @@ export function makeProviderHealthLive(options?: { readonly providerUpdateTimeou
             ...(update.pathPrepend ? { pathPrepend: update.pathPrepend } : {}),
           }).pipe(
             Effect.scoped,
-            Effect.timeoutOption(Duration.millis(providerUpdateTimeoutMs)),
+            Effect.timeoutOption(Duration.millis(updateTimeoutMs)),
             Effect.result,
           );
           const finishedAt = yield* nowIso;
@@ -2625,13 +2629,31 @@ export function makeProviderHealthLive(options?: { readonly providerUpdateTimeou
             return { providers };
           }
           const result = commandResult.success;
+          if (Option.isNone(result)) {
+            // The package manager can finish linking the requested version and then stall in
+            // cleanup. Reconcile against fresh provider truth before reporting a false failure.
+            const reconciledProviders = yield* refreshNow.pipe(Effect.mapError(toUpdateError));
+            const reconciled = reconciledProviders.find((status) => status.provider === provider);
+            if (reconciled?.available && reconciled.versionAdvisory?.status === "current") {
+              const providers = yield* setProviderUpdateState(
+                provider,
+                makeUpdateState({
+                  status: "succeeded",
+                  startedAt,
+                  finishedAt,
+                  message: "Provider version is current after the package manager timed out.",
+                }),
+              );
+              return { providers };
+            }
+          }
           const output = Option.isSome(result)
             ? [result.value.stderr, result.value.stdout].filter(Boolean).join("\n\n").trim() || null
             : null;
           const failed = Option.isNone(result) || result.value.exitCode !== 0;
           if (failed) {
             const message = Option.isNone(result)
-              ? `Update timed out after ${formatProviderUpdateTimeout(providerUpdateTimeoutMs)}. The provider process was stopped.`
+              ? `Update timed out after ${formatProviderUpdateTimeout(updateTimeoutMs)}. The provider process was stopped.`
               : `Update command exited with code ${result.value.exitCode}.`;
             const providers = yield* setProviderUpdateState(
               provider,
