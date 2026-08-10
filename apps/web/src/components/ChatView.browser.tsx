@@ -31,7 +31,7 @@ import { afterAll, afterEach, beforeAll, beforeEach, describe, expect, it, vi } 
 import { render } from "vitest-browser-react";
 
 import { type ComposerImageAttachment, useComposerDraftStore } from "../composerDraftStore";
-import { EN_MESSAGES } from "../i18n";
+import { EN_MESSAGES, ZH_CN_MESSAGES } from "../i18n";
 import {
   AUTO_SCROLL_BOTTOM_THRESHOLD_PX,
   getScrollContainerDistanceFromBottom,
@@ -588,6 +588,30 @@ function createDraftOnlySnapshot(): OrchestrationReadModel {
     ...snapshot,
     threads: [],
   };
+}
+
+function seedLocalDraftThread(input: {
+  threadId: ThreadId;
+  projectId: ProjectId;
+  entryPoint?: "chat" | "terminal";
+}): void {
+  useComposerDraftStore.setState({
+    draftThreadsByThreadId: {
+      [input.threadId]: {
+        projectId: input.projectId,
+        createdAt: NOW_ISO,
+        runtimeMode: "full-access",
+        interactionMode: "default",
+        entryPoint: input.entryPoint ?? "chat",
+        branch: null,
+        worktreePath: null,
+        envMode: "local",
+      },
+    },
+    projectDraftThreadIdByProjectId: {
+      [input.projectId]: input.threadId,
+    },
+  });
 }
 
 function withOpenProjectPickerFixtures(snapshot: OrchestrationReadModel): OrchestrationReadModel {
@@ -2092,6 +2116,143 @@ describe("ChatView timeline estimator parity (full app)", () => {
     await resetStudioProjectPrewarmStateForTests();
     resetRetainedThreadDetailSubscriptionsForTests();
     document.body.innerHTML = "";
+  });
+
+  it.each([
+    { locale: "en", mode: "Agent", projectId: PROJECT_ID, threadId: "draft-agent-en" },
+    { locale: "zh-CN", mode: "Agent", projectId: PROJECT_ID, threadId: "draft-agent-zh" },
+    { locale: "en", mode: "Chat", projectId: STUDIO_PROJECT_ID, threadId: "draft-chat-en" },
+    {
+      locale: "zh-CN",
+      mode: "Chat",
+      projectId: STUDIO_PROJECT_ID,
+      threadId: "draft-chat-zh",
+    },
+  ] as const)(
+    "keeps an empty $mode header identity-free in $locale",
+    async ({ locale, mode, projectId, threadId }) => {
+      localStorage.setItem(
+        "omnimind:app-settings:v1",
+        JSON.stringify({ localePreference: locale }),
+      );
+      const draftThreadId = ThreadId.makeUnsafe(threadId);
+      seedLocalDraftThread({ threadId: draftThreadId, projectId });
+
+      const mounted = await mountChatView({
+        viewport: DEFAULT_VIEWPORT,
+        snapshot:
+          mode === "Chat"
+            ? withStudioProject(createDraftOnlySnapshot())
+            : createDraftOnlySnapshot(),
+        initialEntry: `/${draftThreadId}`,
+        ...(mode === "Chat"
+          ? {
+              configureFixture: (nextFixture: TestFixture) => {
+                nextFixture.welcome = {
+                  ...nextFixture.welcome,
+                  homeDir: "/Users/tester",
+                  chatWorkspaceRoot: "/Users/tester/Documents/OmniMind",
+                  studioWorkspaceRoot: "/Users/tester/Documents/OmniMind/Studio",
+                };
+              },
+            }
+          : {}),
+      });
+
+      try {
+        const header = await waitForElement(
+          () => document.querySelector<HTMLElement>('[data-slot="chat-surface-header"]'),
+          "Unable to find the conversation header.",
+        );
+        expect(header.querySelector('[data-slot="chat-thread-identity"]')).toBeNull();
+        expect(header.querySelector('[data-slot="chat-thread-title"]')).toBeNull();
+        expect(header.querySelector("h2")).toBeNull();
+
+        const messages = locale === "zh-CN" ? ZH_CN_MESSAGES : EN_MESSAGES;
+        const visibleButtons = Array.from(document.querySelectorAll<HTMLButtonElement>("button"))
+          .filter((button) => button.getBoundingClientRect().width > 0)
+          .map((button) => button.textContent?.trim() ?? "");
+        expect(visibleButtons).toContain(messages["nav.agent"]);
+        expect(visibleButtons).toContain(messages["nav.chat"]);
+        expect(visibleButtons).toContain(
+          mode === "Chat" ? messages["nav.newChat"] : messages["nav.newAgent"],
+        );
+        await mounted.setViewport({ ...DEFAULT_VIEWPORT, width: 720 });
+        await waitForLayout();
+        expect(header.querySelector('[data-slot="chat-thread-identity"]')).toBeNull();
+        expect(header.scrollWidth).toBeLessThanOrEqual(header.clientWidth);
+      } finally {
+        await mounted.cleanup();
+      }
+    },
+  );
+
+  it("shows only a real task title and keeps double-click rename available", async () => {
+    const mounted = await mountChatView({
+      viewport: DEFAULT_VIEWPORT,
+      snapshot: createSnapshotForTargetUser({
+        targetMessageId: "msg-user-header-title" as MessageId,
+        targetText: "header title",
+      }),
+    });
+
+    try {
+      const identity = await waitForElement(
+        () => document.querySelector<HTMLElement>('[data-slot="chat-thread-identity"]'),
+        "Unable to find the titled task identity.",
+      );
+      const title = identity.querySelector<HTMLElement>('[data-slot="chat-thread-title"]');
+      expect(title?.textContent).toBe(THREAD_TITLE);
+      expect(identity.querySelector('[data-slot="chat-thread-icon"]')).toBeNull();
+
+      title?.dispatchEvent(new MouseEvent("dblclick", { bubbles: true }));
+      await vi.waitFor(() => {
+        const textbox = page.getByRole("textbox").element() as HTMLInputElement;
+        expect(textbox.value).toBe(THREAD_TITLE);
+      });
+    } finally {
+      await mounted.cleanup();
+    }
+  });
+
+  it("shows only a real Chat title without claiming a single Provider identity", async () => {
+    const baseSnapshot = createSnapshotForTargetUser({
+      targetMessageId: "msg-user-chat-header-title" as MessageId,
+      targetText: "chat header title",
+    });
+    const titledChatSnapshot = withStudioProject({
+      ...baseSnapshot,
+      threads: baseSnapshot.threads.map((thread) => ({
+        ...thread,
+        projectId: STUDIO_PROJECT_ID,
+        title: "Research summary",
+      })),
+    });
+    const mounted = await mountChatView({
+      viewport: DEFAULT_VIEWPORT,
+      snapshot: titledChatSnapshot,
+      configureFixture: (nextFixture) => {
+        nextFixture.welcome = {
+          ...nextFixture.welcome,
+          homeDir: "/Users/tester",
+          chatWorkspaceRoot: "/Users/tester/Documents/OmniMind",
+          studioWorkspaceRoot: "/Users/tester/Documents/OmniMind/Studio",
+        };
+      },
+    });
+
+    try {
+      const identity = await waitForElement(
+        () => document.querySelector<HTMLElement>('[data-slot="chat-thread-identity"]'),
+        "Unable to find the titled Chat identity.",
+      );
+      expect(identity.querySelector('[data-slot="chat-thread-title"]')?.textContent).toBe(
+        "Research summary",
+      );
+      expect(identity.querySelector('[data-slot="chat-thread-icon"]')).toBeNull();
+    } finally {
+      await mounted.cleanup();
+    }
   });
 
   it("keeps near-cap composer work bounded while live activities arrive", async () => {
@@ -6803,6 +6964,14 @@ describe("ChatView timeline estimator parity (full app)", () => {
         "Route should have changed to a new terminal-first draft thread UUID from the shortcut.",
       );
       const newThreadId = newThreadPath.slice(1) as ThreadId;
+
+      await vi.waitFor(() => {
+        const identity = document.querySelector<HTMLElement>('[data-slot="chat-thread-identity"]');
+        expect(identity?.querySelector('[data-slot="chat-thread-icon"]')).not.toBeNull();
+        expect(identity?.querySelector('[data-slot="chat-thread-title"]')?.textContent).toBe(
+          "New terminal",
+        );
+      });
 
       await vi.waitFor(
         () => {

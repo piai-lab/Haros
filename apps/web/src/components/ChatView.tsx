@@ -198,6 +198,7 @@ import {
   shouldHandlePromptHistoryNavigationKey,
   shouldEnableComposerPastedTextCollapse,
   shouldConsumePendingCustomBinaryConfirmation,
+  shouldShowActiveThreadHeaderIdentity,
   shouldShowComposerModelBootstrapSkeleton,
 } from "./ChatView.logic";
 import {
@@ -10888,16 +10889,20 @@ export default function ChatView({
     );
   }
 
+  const activeThreadSubagentTitle = activeThread.parentThreadId
+    ? resolveSubagentPresentationForThread({
+        thread: activeThread,
+        threads: threadLineageThreads,
+      }).fullLabel
+    : null;
   const activeThreadDisplayTitle = resolveActiveThreadTitle({
     title: activeThread.title,
-    subagentTitle: activeThread.parentThreadId
-      ? resolveSubagentPresentationForThread({
-          thread: activeThread,
-          threads: threadLineageThreads,
-        }).fullLabel
-      : null,
-    isHomeChat: isChatProject,
-    isEmpty: timelineEntries.length === 0,
+    subagentTitle: activeThreadSubagentTitle,
+  });
+  const showActiveThreadHeaderIdentity = shouldShowActiveThreadHeaderIdentity({
+    title: activeThread.title,
+    subagentTitle: activeThreadSubagentTitle,
+    entryPoint: terminalState.entryPoint,
   });
 
   const handleRenameActiveThread = async (newTitle: string) => {
@@ -11764,6 +11769,7 @@ export default function ChatView({
       />
       {/* Top bar */}
       <header
+        data-slot="chat-surface-header"
         className={cn(
           CHAT_SURFACE_HEADER_DIVIDER_CLASS_NAME,
           !isEditorRail && CHAT_SURFACE_HEADER_PADDING_X_CLASS,
@@ -11782,6 +11788,7 @@ export default function ChatView({
           activeThreadId={activeThread.id}
           activeThreadTitle={activeThreadDisplayTitle}
           activeThreadEntryPoint={terminalState.entryPoint}
+          showThreadIdentity={showActiveThreadHeaderIdentity}
           activeProvider={activeThread.session?.provider ?? activeThread.modelSelection.provider}
           activeProjectName={isEditorRail ? undefined : activeProjectDisplayName}
           threadBreadcrumbs={threadBreadcrumbs}

@@ -12,7 +12,6 @@ import {
   type ResolvedKeybindingsConfig,
   type ThreadId,
 } from "@synara/contracts";
-import { isGenericChatThreadTitle } from "@synara/shared/chatThreads";
 import React, { type Dispatch, type SetStateAction, useEffect, useRef, useState } from "react";
 import { FiGitBranch } from "react-icons/fi";
 import { HiMiniArrowsPointingOut } from "react-icons/hi2";
@@ -76,6 +75,7 @@ interface ChatHeaderProps {
   activeThreadId: ThreadId;
   activeThreadTitle: string;
   activeThreadEntryPoint: ThreadPrimarySurface;
+  showThreadIdentity: boolean;
   activeProvider: ProviderKind;
   activeProjectName: string | undefined;
   threadBreadcrumbs: ReadonlyArray<{
@@ -484,22 +484,19 @@ function EditorRailTabs(props: {
   );
 }
 
-export type ChatHeaderThreadIconKind = "none" | "provider" | "terminal";
+export type ChatHeaderThreadIconKind = "none" | "terminal";
 
 export function resolveChatHeaderThreadIconKind(
   entryPoint: ThreadPrimarySurface,
-  title?: string,
 ): ChatHeaderThreadIconKind {
-  if (entryPoint === "chat" && isGenericChatThreadTitle(title)) {
-    return "none";
-  }
-  return entryPoint === "terminal" ? "terminal" : "provider";
+  return entryPoint === "terminal" ? "terminal" : "none";
 }
 
 export function ChatHeader({
   activeThreadId,
   activeThreadTitle,
   activeThreadEntryPoint,
+  showThreadIdentity,
   activeProvider,
   activeProjectName,
   threadBreadcrumbs,
@@ -581,7 +578,7 @@ export function ChatHeader({
   // Split-chat creation moved to a shortcut only; the header keeps just the inline
   // "maximize" affordance for an already-split focused pane.
   const inlineChatLayoutAction = chatLayoutAction?.kind === "maximize" ? chatLayoutAction : null;
-  const threadIconKind = resolveChatHeaderThreadIconKind(activeThreadEntryPoint, activeThreadTitle);
+  const threadIconKind = resolveChatHeaderThreadIconKind(activeThreadEntryPoint);
   const showSidechatTitleChip = isSidechat && compact;
 
   useEffect(() => {
@@ -700,53 +697,50 @@ export function ChatHeader({
               </div>
             ) : null}
             <div className={cn("flex min-w-0 items-center gap-2", editorChatControls && "h-full")}>
-              <div
-                className={cn(
-                  "flex min-w-0 items-center gap-2",
-                  showSidechatTitleChip &&
-                    "rounded-lg bg-secondary py-1 pl-2 pr-1 text-secondary-foreground",
-                )}
-              >
-                {threadIconKind === "none" ? null : (
-                  <span
-                    className="inline-flex size-3.5 shrink-0 items-center justify-center"
-                    title={
-                      threadIconKind === "terminal"
-                        ? t("workbench.terminal")
-                        : PROVIDER_DISPLAY_NAMES[activeProvider]
-                    }
-                  >
-                    {threadIconKind === "terminal" ? (
-                      <TerminalIcon className="size-3.5 text-[var(--color-text-accent)]" />
-                    ) : (
-                      renderProviderIcon(activeProvider, "size-3.5")
-                    )}
-                  </span>
-                )}
-                <h2
-                  className="max-w-[clamp(12rem,42vw,36rem)] truncate font-system-ui text-[length:var(--app-font-size-ui,12px)] font-normal text-foreground"
-                  title={activeThreadTitle}
-                  onDoubleClick={() => onRenameThread()}
+              {showThreadIdentity ? (
+                <div
+                  data-slot="chat-thread-identity"
+                  className={cn(
+                    "flex min-w-0 items-center gap-2",
+                    showSidechatTitleChip &&
+                      "rounded-lg bg-secondary py-1 pl-2 pr-1 text-secondary-foreground",
+                  )}
                 >
-                  {activeThreadTitle}
-                </h2>
-                {showSidechatTitleChip && onCloseThreadPane ? (
-                  <IconButton
-                    variant="chrome"
-                    size="icon-xs"
-                    label={t("workbench.closeSelectedSide")}
-                    tooltip={t("workbench.closeSelectedSide")}
-                    tooltipSide="bottom"
-                    className="size-5 rounded-lg [-webkit-app-region:no-drag] [&_svg]:size-3"
-                    onClick={(event) => {
-                      event.stopPropagation();
-                      onCloseThreadPane();
-                    }}
+                  {threadIconKind === "terminal" ? (
+                    <span
+                      data-slot="chat-thread-icon"
+                      className="inline-flex size-3.5 shrink-0 items-center justify-center"
+                      title={t("workbench.terminal")}
+                    >
+                      <TerminalIcon className="size-3.5 text-[var(--color-text-accent)]" />
+                    </span>
+                  ) : null}
+                  <h2
+                    data-slot="chat-thread-title"
+                    className="max-w-[clamp(12rem,42vw,36rem)] truncate font-system-ui text-[length:var(--app-font-size-ui,12px)] font-normal text-foreground"
+                    title={activeThreadTitle}
+                    onDoubleClick={() => onRenameThread()}
                   >
-                    <XIcon />
-                  </IconButton>
-                ) : null}
-              </div>
+                    {activeThreadTitle}
+                  </h2>
+                  {showSidechatTitleChip && onCloseThreadPane ? (
+                    <IconButton
+                      variant="chrome"
+                      size="icon-xs"
+                      label={t("workbench.closeSelectedSide")}
+                      tooltip={t("workbench.closeSelectedSide")}
+                      tooltipSide="bottom"
+                      className="size-5 rounded-lg [-webkit-app-region:no-drag] [&_svg]:size-3"
+                      onClick={(event) => {
+                        event.stopPropagation();
+                        onCloseThreadPane();
+                      }}
+                    >
+                      <XIcon />
+                    </IconButton>
+                  ) : null}
+                </div>
+              ) : null}
               {editorChatControls ? (
                 <EditorRailTabs
                   projectId={editorChatControls.projectId}

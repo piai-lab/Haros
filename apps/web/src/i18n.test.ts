@@ -59,6 +59,10 @@ describe("message catalogs", () => {
     expect(ZH_CN_MESSAGES["nav.newAgent"]).toBe("新建任务");
     expect(EN_MESSAGES["nav.newChat"]).toBe("New Chat");
     expect(ZH_CN_MESSAGES["nav.newChat"]).toBe("新建对话");
+    expect(EN_MESSAGES["workbench.newChat"]).toBe("New chat");
+    expect(ZH_CN_MESSAGES["workbench.newChat"]).toBe("新建对话");
+    expect(EN_MESSAGES["shortcuts.newChat"]).toBe("New chat");
+    expect(ZH_CN_MESSAGES["shortcuts.newChat"]).toBe("新建对话");
     expect(EN_MESSAGES["common.system"]).toBe("System");
     expect(ZH_CN_MESSAGES["common.system"]).toBe("跟随系统");
 

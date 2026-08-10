@@ -216,6 +216,22 @@ test("Groups remain many-to-many conversation labels below complete Projects", a
   );
 });
 
+test("blank conversations cannot regain placeholder or Provider header identity", async (t) => {
+  const root = await createFixture(t);
+  await replaceText(
+    root,
+    "architecture/workbench.md",
+    '"emptyAgentOrChat": "hidden"',
+    '"emptyAgentOrChat": "provider-icon-and-placeholder"',
+  );
+
+  assertFinding(
+    await validateDocumentContract({ root }),
+    "workbench.work-surface-ia",
+    "architecture/workbench.md",
+  );
+});
+
 test("Campaign canonical identity is structural", async (t) => {
   const root = await createFixture(t);
   await replaceText(root, "missions/independent-omnimind-v1.md", "Status: active", "Status: done");

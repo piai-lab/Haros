@@ -723,16 +723,22 @@ export function buildLocalDraftThread(
 export function resolveActiveThreadTitle(input: {
   title: string;
   subagentTitle: string | null;
-  isHomeChat: boolean;
-  isEmpty: boolean;
 }): string {
   if (input.subagentTitle) {
     return input.subagentTitle;
   }
-  if (input.isHomeChat && input.isEmpty && isGenericChatThreadTitle(input.title)) {
-    return "New Chat";
-  }
   return input.title;
+}
+
+export function shouldShowActiveThreadHeaderIdentity(input: {
+  title: string;
+  subagentTitle: string | null;
+  entryPoint: ThreadPrimarySurface;
+}): boolean {
+  if (input.entryPoint === "terminal" || input.subagentTitle) {
+    return true;
+  }
+  return !isGenericChatThreadTitle(input.title);
 }
 
 // Sidechats carry imported fork history for provider context, but their transcript should start

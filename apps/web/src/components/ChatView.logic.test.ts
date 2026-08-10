@@ -66,6 +66,7 @@ import {
   shouldHandlePromptHistoryNavigationKey,
   shouldRenderProviderHealthBanner,
   shouldShowComposerModelBootstrapSkeleton,
+  shouldShowActiveThreadHeaderIdentity,
   shouldStartActiveTurnLayoutGrace,
   shouldRenderTerminalWorkspace,
   worktreeSetupHasError,
@@ -738,21 +739,17 @@ describe("voice helpers", () => {
       resolveActiveThreadTitle({
         title: "Roadmap scratchpad",
         subagentTitle: null,
-        isHomeChat: true,
-        isEmpty: true,
       }),
     ).toBe("Roadmap scratchpad");
   });
 
-  it("maps untouched empty home chats to the friendly header label", () => {
+  it("keeps the raw placeholder out of presentation-specific title rewriting", () => {
     expect(
       resolveActiveThreadTitle({
         title: "New thread",
         subagentTitle: null,
-        isHomeChat: true,
-        isEmpty: true,
       }),
-    ).toBe("New Chat");
+    ).toBe("New thread");
   });
 
   it("prefers the resolved subagent label when present", () => {
@@ -760,10 +757,42 @@ describe("voice helpers", () => {
       resolveActiveThreadTitle({
         title: "Ignored raw title",
         subagentTitle: "Reviewer / Fix follow-up",
-        isHomeChat: false,
-        isEmpty: false,
       }),
     ).toBe("Reviewer / Fix follow-up");
+  });
+
+  it("hides only untouched Agent and Chat draft identities", () => {
+    expect(
+      shouldShowActiveThreadHeaderIdentity({
+        title: "New thread",
+        subagentTitle: null,
+        entryPoint: "chat",
+      }),
+    ).toBe(false);
+    expect(
+      shouldShowActiveThreadHeaderIdentity({
+        title: "Roadmap scratchpad",
+        subagentTitle: null,
+        entryPoint: "chat",
+      }),
+    ).toBe(true);
+  });
+
+  it("keeps meaningful subagent and Terminal identities visible", () => {
+    expect(
+      shouldShowActiveThreadHeaderIdentity({
+        title: "New thread",
+        subagentTitle: "Reviewer / Fix follow-up",
+        entryPoint: "chat",
+      }),
+    ).toBe(true);
+    expect(
+      shouldShowActiveThreadHeaderIdentity({
+        title: "New terminal",
+        subagentTitle: null,
+        entryPoint: "terminal",
+      }),
+    ).toBe(true);
   });
 
   it("hides fork-imported transcript rows only for sidechats", () => {

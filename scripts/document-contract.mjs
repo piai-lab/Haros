@@ -303,13 +303,18 @@ function validateWorkSurfaceInformationArchitecture(findings, documents) {
     groupCardinality: "many-to-many",
     ungroupedPresentation: "projects-only",
     groupsDefaultState: "collapsed",
+    threadHeaderIdentity: {
+      emptyAgentOrChat: "hidden",
+      titledAgentOrChat: "title-only",
+      terminal: "terminal-icon-and-title",
+    },
   };
   if (JSON.stringify(policy) !== JSON.stringify(expected)) {
     addFinding(
       findings,
       "workbench.work-surface-ia",
       documentPath,
-      "Agent navigation must keep Kanban secondary, Projects complete, and Groups as collapsed many-to-many conversation labels",
+      "Agent navigation and conversation headers must preserve their direct-mode, grouping, and identity semantics",
     );
   }
 }
