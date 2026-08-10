@@ -38,6 +38,8 @@ export type ThreadHoverCardContentProps = {
   model: ThreadModelSummary | null;
   /** Current live/actionable state, shown as text so compact row glyphs stay discoverable. */
   status: ThreadStatusPill | null;
+  /** Localized presentation label; status.label remains the stable semantic state. */
+  statusLabel?: string | null;
 };
 
 const META_ROW_CLASS_NAME = `${SIDEBAR_HOVER_CARD_ROW_CLASS_NAME} text-foreground/80`;
@@ -79,6 +81,7 @@ export function ThreadHoverCardContent({
   worktreeName,
   model,
   status,
+  statusLabel,
 }: ThreadHoverCardContentProps) {
   const hasMeta =
     Boolean(projectName) ||
@@ -111,11 +114,14 @@ export function ThreadHoverCardContent({
                   aria-hidden="true"
                   className="inline-flex size-3.5 items-center justify-center"
                 >
-                  <SidebarStatusTrailingGlyph status={status} />
+                  <SidebarStatusTrailingGlyph
+                    status={status}
+                    ariaLabel={statusLabel ?? status.label}
+                  />
                 </span>
               }
             >
-              {status.label}
+              {statusLabel ?? status.label}
             </MetaRow>
           ) : null}
           {projectName ? (

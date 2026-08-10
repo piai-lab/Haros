@@ -8,6 +8,7 @@ import { HiOutlineArchiveBox } from "react-icons/hi2";
 
 import type { ThreadId } from "@synara/contracts";
 
+import { useI18n } from "~/i18n";
 import { cn } from "~/lib/utils";
 import { SIDEBAR_TRAILING_ICON_CLASS, sidebarGlyphClass } from "./sidebarGlyphs";
 import { SidebarIconButton } from "./SidebarIconButton";
@@ -24,12 +25,13 @@ export function ThreadArchiveActionButton({
   compact?: boolean;
   onArchive: () => void;
 }) {
+  const { t } = useI18n();
   const isCompact = compact === true;
   return (
     <SidebarIconButton
       icon={HiOutlineArchiveBox}
-      label="Archive thread"
-      title="Archive thread"
+      label={t("thread.archive")}
+      title={t("thread.archive")}
       data-testid={`thread-archive-${threadId}`}
       size={isCompact ? "sm" : "md"}
       // Match the pin and the right-side meta chips (shared trailing-icon size);

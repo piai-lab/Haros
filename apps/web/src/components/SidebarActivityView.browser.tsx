@@ -10,6 +10,16 @@ import { page, userEvent } from "vitest/browser";
 import { afterEach, describe, expect, it, vi } from "vitest";
 import { render } from "vitest-browser-react";
 
+const harness = vi.hoisted(() => ({
+  settings: { localePreference: "en" },
+}));
+
+vi.mock("../appSettings", async (importOriginal) => ({
+  ...(await importOriginal<typeof import("../appSettings")>()),
+  useAppSettings: () => ({ settings: harness.settings }),
+}));
+
+import { I18nProvider } from "../i18n";
 import type { Project, SidebarThreadSummary } from "../types";
 import type { ThreadStatusPill } from "./Sidebar.logic";
 import { SidebarActivityView } from "./SidebarActivityView";
@@ -113,6 +123,7 @@ function renderActivity(input: {
 describe("SidebarActivityView", () => {
   afterEach(() => {
     document.body.innerHTML = "";
+    harness.settings.localePreference = "en";
   });
 
   it("pages project groups, reports only mounted rows, and prefers live PR state", async () => {
@@ -223,7 +234,7 @@ describe("SidebarActivityView", () => {
       expect(document.querySelector('[role="menu"]')).toBeNull();
     });
 
-    const pinButton = page.getByRole("button", { name: "Pin thread" }).element();
+    const pinButton = page.getByRole("button", { name: "Pin task" }).element();
     pinButton.dispatchEvent(
       new PointerEvent("pointerup", { bubbles: true, cancelable: true, pointerType: "touch" }),
     );
@@ -395,6 +406,22 @@ describe("SidebarActivityView", () => {
         .element()
         .parentElement?.querySelector('[role="img"][aria-label="Working"]'),
     ).not.toBeNull();
+    await mounted.unmount();
+  });
+
+  it("renders Activity navigation and empty state in Chinese", async () => {
+    harness.settings.localePreference = "zh-CN";
+    const mounted = await render(<I18nProvider>{renderActivity({ threads: [] })}</I18nProvider>);
+
+    await expect.element(page.getByText("暂无动态", { exact: true })).toBeVisible();
+    await expect
+      .element(page.getByRole("button", { name: "按项目筛选动态" }))
+      .toHaveTextContent("全部动态");
+    await expect.element(page.getByRole("button", { name: "动态选项" })).toBeVisible();
+    await expect
+      .element(page.getByRole("button", { name: "在最近使用的项目中新建任务" }))
+      .toBeVisible();
+    await expect.element(page.getByRole("button", { name: "添加项目" })).toBeVisible();
     await mounted.unmount();
   });
 });

@@ -5,9 +5,19 @@
 import "../index.css";
 
 import { ProjectId, ThreadId } from "@synara/contracts";
-import { afterEach, describe, expect, it } from "vitest";
+import { afterEach, describe, expect, it, vi } from "vitest";
 import { render } from "vitest-browser-react";
 
+const harness = vi.hoisted(() => ({
+  settings: { localePreference: "en" },
+}));
+
+vi.mock("../appSettings", async (importOriginal) => ({
+  ...(await importOriginal<typeof import("../appSettings")>()),
+  useAppSettings: () => ({ settings: harness.settings }),
+}));
+
+import { I18nProvider } from "../i18n";
 import { DEFAULT_INTERACTION_MODE, type SidebarThreadSummary } from "../types";
 import { SidebarThreadRowContent } from "./SidebarThreadRowContent";
 
@@ -35,6 +45,7 @@ function makeThread(overrides: Partial<SidebarThreadSummary> = {}): SidebarThrea
 describe("SidebarThreadRowContent", () => {
   afterEach(() => {
     document.body.innerHTML = "";
+    harness.settings.localePreference = "en";
   });
 
   it("preserves the pinned title, pending state, terminal count, and suffix", async () => {
@@ -80,5 +91,25 @@ describe("SidebarThreadRowContent", () => {
 
     await expect.element(screen.getByText("Scout")).toBeVisible();
     await expect.element(screen.getByText("(reviewer)")).toBeVisible();
+  });
+
+  it("renders task status and terminal metadata in Chinese", async () => {
+    harness.settings.localePreference = "zh-CN";
+    const screen = await render(
+      <I18nProvider>
+        <SidebarThreadRowContent
+          thread={makeThread()}
+          terminalEntryPoint={false}
+          terminalStatus={null}
+          terminalCount={2}
+          isActive
+          variant="pinned"
+          pendingStatusColorClass="text-amber-600"
+        />
+      </I18nProvider>,
+    );
+
+    await expect.element(screen.getByLabelText("等待审批")).toHaveTextContent("待审批");
+    await expect.element(screen.getByLabelText("已打开 2 个终端")).toBeVisible();
   });
 });

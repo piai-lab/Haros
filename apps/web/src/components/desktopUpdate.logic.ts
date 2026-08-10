@@ -7,6 +7,56 @@ import type { DesktopUpdateActionResult, DesktopUpdateState } from "@synara/cont
 
 export type DesktopUpdateButtonAction = "check" | "download" | "install" | "none";
 
+export interface DesktopUpdateCopy {
+  correctArchitecture: string;
+  armPreparing: string;
+  armReady: string;
+  armNextUpdate: string;
+  applying: string;
+  check: string;
+  checking: string;
+  upToDate: (version: string) => string;
+  restartedNotInstalled: (version: string) => string;
+  prepareFailed: (version: string) => string;
+  installFailed: (version: string) => string;
+  preparingVersion: (version: string) => string;
+  preparing: (percent: number | null) => string;
+  readyVersion: string;
+  ready: (version: string) => string;
+  checkFailedWithDetail: (detail: string) => string;
+  checkFailed: string;
+  updateFailed: string;
+  available: string;
+  alreadyCurrent: (version: string) => string;
+}
+
+const DEFAULT_DESKTOP_UPDATE_COPY: DesktopUpdateCopy = {
+  correctArchitecture: "This install is using the correct architecture.",
+  armPreparing:
+    "This Mac has Apple Silicon, but OmniMind is still running the Intel build under Rosetta. OmniMind is preparing the native Apple Silicon update.",
+  armReady:
+    "This Mac has Apple Silicon, but OmniMind is still running the Intel build under Rosetta. Click Update to restart into the native Apple Silicon build.",
+  armNextUpdate:
+    "This Mac has Apple Silicon, but OmniMind is still running the Intel build under Rosetta. The next app update will replace it with the native Apple Silicon build.",
+  applying: "Applying update...",
+  check: "Check for updates",
+  checking: "Checking for updates...",
+  upToDate: (version) => `You're up to date on ${version}. Click to check again.`,
+  restartedNotInstalled: (version) =>
+    `OmniMind restarted, but update ${version} was not installed. Click to try again.`,
+  prepareFailed: (version) => `Could not prepare update ${version}. Click to retry.`,
+  installFailed: (version) => `Could not install update ${version}. Click to retry.`,
+  preparingVersion: (version) => `Preparing update ${version}`.trim(),
+  preparing: (percent) => `Preparing update${percent === null ? "" : ` (${percent}%)`}`,
+  readyVersion: "ready",
+  ready: (version) => `Update ${version} is ready. Click to restart and install.`,
+  checkFailedWithDetail: (detail) => `${detail}. Click to check again.`,
+  checkFailed: "Update check failed. Click to try again.",
+  updateFailed: "Update failed",
+  available: "Update available",
+  alreadyCurrent: (version) => `You're already on the latest version (${version}).`,
+};
+
 export function resolveDesktopUpdateButtonAction(
   state: DesktopUpdateState,
 ): DesktopUpdateButtonAction {
@@ -160,72 +210,74 @@ export function getDesktopUpdateDownloadPercent(state: DesktopUpdateState | null
   return Math.max(0, Math.min(100, Math.floor(percent)));
 }
 
-export function getArm64IntelBuildWarningDescription(state: DesktopUpdateState): string {
+export function getArm64IntelBuildWarningDescription(
+  state: DesktopUpdateState,
+  copy: DesktopUpdateCopy = DEFAULT_DESKTOP_UPDATE_COPY,
+): string {
   if (!shouldShowArm64IntelBuildWarning(state)) {
-    return "This install is using the correct architecture.";
+    return copy.correctArchitecture;
   }
 
   const action = resolveDesktopUpdateButtonAction(state);
   if (action === "download") {
-    return "This Mac has Apple Silicon, but OmniMind is still running the Intel build under Rosetta. OmniMind is preparing the native Apple Silicon update.";
+    return copy.armPreparing;
   }
   if (action === "install") {
-    return "This Mac has Apple Silicon, but OmniMind is still running the Intel build under Rosetta. Click Update to restart into the native Apple Silicon build.";
+    return copy.armReady;
   }
-  return "This Mac has Apple Silicon, but OmniMind is still running the Intel build under Rosetta. The next app update will replace it with the native Apple Silicon build.";
+  return copy.armNextUpdate;
 }
 
 export function getDesktopUpdateButtonTooltip(
   state: DesktopUpdateState,
-  options?: { installing?: boolean },
+  options?: { installing?: boolean; copy?: DesktopUpdateCopy },
 ): string {
+  const copy = options?.copy ?? DEFAULT_DESKTOP_UPDATE_COPY;
   if (options?.installing) {
-    return "Applying update...";
+    return copy.applying;
   }
   if (state.status === "idle") {
-    return "Check for updates";
+    return copy.check;
   }
   if (state.status === "checking") {
-    return "Checking for updates...";
+    return copy.checking;
   }
   if (state.status === "up-to-date") {
-    return `You're up to date on ${state.currentVersion}. Click to check again.`;
+    return copy.upToDate(state.currentVersion);
   }
   if (state.errorContext === "install" && !state.downloadedVersion && state.availableVersion) {
-    return `OmniMind restarted, but update ${state.availableVersion} was not installed. Click to try again.`;
+    return copy.restartedNotInstalled(state.availableVersion);
   }
   if (state.errorContext === "download" && state.availableVersion) {
-    return `Could not prepare update ${state.availableVersion}. Click to retry.`;
+    return copy.prepareFailed(state.availableVersion);
   }
   if (state.errorContext === "install" && (state.downloadedVersion || state.availableVersion)) {
-    return `Could not install update ${state.downloadedVersion ?? state.availableVersion}. Click to retry.`;
+    return copy.installFailed((state.downloadedVersion ?? state.availableVersion)!);
   }
   if (state.status === "available") {
-    return `Preparing update ${state.availableVersion ?? ""}`.trim();
+    return copy.preparingVersion(state.availableVersion ?? "");
   }
   if (state.status === "downloading") {
-    const progress =
-      typeof state.downloadPercent === "number" ? ` (${Math.floor(state.downloadPercent)}%)` : "";
-    return `Preparing update${progress}`;
+    return copy.preparing(
+      typeof state.downloadPercent === "number" ? Math.floor(state.downloadPercent) : null,
+    );
   }
   if (state.status === "downloaded") {
-    return `Update ${state.downloadedVersion ?? state.availableVersion ?? "ready"} is ready. Click to restart and install.`;
+    return copy.ready(state.downloadedVersion ?? state.availableVersion ?? copy.readyVersion);
   }
   if (state.status === "error") {
     if (state.errorContext === "check") {
-      return state.message
-        ? `${state.message}. Click to check again.`
-        : "Update check failed. Click to try again.";
+      return state.message ? copy.checkFailedWithDetail(state.message) : copy.checkFailed;
     }
     if (state.errorContext === "download" && state.availableVersion) {
-      return `Could not prepare update ${state.availableVersion}. Click to retry.`;
+      return copy.prepareFailed(state.availableVersion);
     }
     if (state.errorContext === "install" && state.downloadedVersion) {
-      return `Could not install update ${state.downloadedVersion}. Click to retry.`;
+      return copy.installFailed(state.downloadedVersion);
     }
-    return state.message ?? "Update failed";
+    return state.message ?? copy.updateFailed;
   }
-  return "Update available";
+  return copy.available;
 }
 
 export function getDesktopUpdateActionError(result: DesktopUpdateActionResult): string | null {
@@ -244,11 +296,12 @@ export function shouldToastDesktopUpdateActionResult(result: DesktopUpdateAction
 // should show an informational notice instead of silently resetting the button.
 export function getDesktopUpdateAlreadyCurrentNotice(
   result: DesktopUpdateActionResult,
+  copy: DesktopUpdateCopy = DEFAULT_DESKTOP_UPDATE_COPY,
 ): string | null {
   if (result.completed || result.state.status !== "up-to-date") {
     return null;
   }
-  return `You're already on the latest version (${result.state.currentVersion}).`;
+  return copy.alreadyCurrent(result.state.currentVersion);
 }
 
 export function shouldHighlightDesktopUpdateError(state: DesktopUpdateState | null): boolean {

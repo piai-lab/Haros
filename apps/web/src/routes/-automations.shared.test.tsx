@@ -428,6 +428,13 @@ describe("automation shared route helpers", () => {
 
     expect(formatSchedule(schedule)).toBe("Every 90 sec");
     expect(formatCadence(schedule)).toBe("Every 90s");
+    expect(formatCadence(schedule, "zh-CN")).toBe("每 90 秒");
+    expect(
+      formatCadence(
+        { type: "weekly", dayOfWeek: 1, timeOfDay: "09:00", timezone: "Asia/Shanghai" },
+        "zh-CN",
+      ),
+    ).toBe("周一 9:00");
   });
 
   it("requires a hard iteration cap for sub-minute interval forms", () => {

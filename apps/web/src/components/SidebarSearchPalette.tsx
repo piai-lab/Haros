@@ -364,7 +364,7 @@ function HighlightedText(props: { text: string; query: string; className?: strin
 }
 
 export function SidebarSearchPalette(props: SidebarSearchPaletteProps) {
-  const { t } = useI18n();
+  const { locale, t } = useI18n();
   const { activeTheme, resolvedTheme, setCodeThemeId, setTheme, theme } = useTheme();
   const [query, setQuery] = useState("");
   const [highlightedItemValue, setHighlightedItemValue] = useState<string | null>(null);
@@ -947,7 +947,10 @@ export function SidebarSearchPalette(props: SidebarSearchPaletteProps) {
                                 </span>
                                 {thread.updatedAt || thread.createdAt ? (
                                   <span className="w-10 shrink-0 text-right text-[length:var(--app-font-size-ui-timestamp,10px)] text-muted-foreground/79">
-                                    {formatRelativeTime(thread.updatedAt ?? thread.createdAt)}
+                                    {formatRelativeTime(
+                                      thread.updatedAt ?? thread.createdAt,
+                                      locale,
+                                    )}
                                   </span>
                                 ) : (
                                   <span className="w-10 shrink-0" />

@@ -30,6 +30,7 @@ import {
   automationContinuationThreadId,
   automationRequiresTargetThread,
 } from "@synara/shared/automationMode";
+import type { AppLocale } from "../locale";
 import {
   acknowledgedRiskIdsForDraft,
   buildAutomationDraftWarnings,
@@ -244,7 +245,13 @@ function formatIntervalSchedule(seconds: number): string {
   return seconds % 60 === 0 ? `Every ${seconds / 60} min` : `Every ${seconds} sec`;
 }
 
-function formatIntervalCadence(seconds: number): string {
+function formatIntervalCadence(seconds: number, locale: AppLocale): string {
+  if (locale === "zh-CN") {
+    if (seconds === 3600) return "每小时";
+    if (seconds % 3600 === 0) return `每 ${seconds / 3600} 小时`;
+    if (seconds % 60 === 0) return `每 ${seconds / 60} 分钟`;
+    return `每 ${seconds} 秒`;
+  }
   if (seconds === 3600) return "Hourly";
   if (seconds % 3600 === 0) return `Every ${seconds / 3600}h`;
   if (seconds % 60 === 0) return `Every ${seconds / 60}m`;
@@ -278,26 +285,33 @@ export function formatClockTime(timeOfDay: string): string {
   return `${hour}:${minutes ?? "00"}`;
 }
 
-export function formatCadence(schedule: AutomationSchedule): string {
+export function formatCadence(schedule: AutomationSchedule, locale: AppLocale = "en"): string {
   switch (schedule.type) {
     case "manual":
-      return "Manual";
+      return locale === "zh-CN" ? "手动" : "Manual";
     case "once":
       return formatDateTime(schedule.runAt);
     case "interval":
-      return formatIntervalCadence(schedule.everySeconds);
+      return formatIntervalCadence(schedule.everySeconds, locale);
     case "daily":
-      return `Daily at ${formatClockTime(schedule.timeOfDay)}`;
+      return locale === "zh-CN"
+        ? `每天 ${formatClockTime(schedule.timeOfDay)}`
+        : `Daily at ${formatClockTime(schedule.timeOfDay)}`;
     case "weekdays":
-      return `Weekdays at ${formatClockTime(schedule.timeOfDay)}`;
+      return locale === "zh-CN"
+        ? `工作日 ${formatClockTime(schedule.timeOfDay)}`
+        : `Weekdays at ${formatClockTime(schedule.timeOfDay)}`;
     case "weekly":
-      return `${weekdayLabel(schedule.dayOfWeek)} at ${formatClockTime(schedule.timeOfDay)}`;
+      return locale === "zh-CN"
+        ? `${weekdayLabelForLocale(schedule.dayOfWeek, locale)} ${formatClockTime(schedule.timeOfDay)}`
+        : `${weekdayLabel(schedule.dayOfWeek)} at ${formatClockTime(schedule.timeOfDay)}`;
     case "cron":
       return `Cron ${schedule.expression}`;
   }
 }
 
-function formatIntervalCadenceLong(seconds: number): string {
+function formatIntervalCadenceLong(seconds: number, locale: AppLocale): string {
+  if (locale === "zh-CN") return formatIntervalCadence(seconds, locale);
   if (seconds === 3600) return "Hourly";
   if (seconds % 3600 === 0) return `Every ${seconds / 3600} hours`;
   if (seconds === 60) return "Every minute";
@@ -306,10 +320,10 @@ function formatIntervalCadenceLong(seconds: number): string {
 }
 
 /** Like {@link formatCadence} but with interval units spelled out ("Every 5 minutes"). */
-export function formatCadenceLong(schedule: AutomationSchedule): string {
+export function formatCadenceLong(schedule: AutomationSchedule, locale: AppLocale = "en"): string {
   return schedule.type === "interval"
-    ? formatIntervalCadenceLong(schedule.everySeconds)
-    : formatCadence(schedule);
+    ? formatIntervalCadenceLong(schedule.everySeconds, locale)
+    : formatCadence(schedule, locale);
 }
 
 /**
@@ -333,6 +347,11 @@ export function formatNextRun(nextRunAt: string | null, now: number = Date.now()
 
 export function weekdayLabel(value: number): string {
   return ["Sun", "Mon", "Tue", "Wed", "Thu", "Fri", "Sat"][value] ?? "Sun";
+}
+
+function weekdayLabelForLocale(value: number, locale: AppLocale): string {
+  if (locale !== "zh-CN") return weekdayLabel(value);
+  return ["周日", "周一", "周二", "周三", "周四", "周五", "周六"][value] ?? "周日";
 }
 
 // --- Thread automation lookups ---------------------------------------------

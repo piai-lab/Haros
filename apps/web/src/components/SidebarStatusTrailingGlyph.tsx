@@ -6,23 +6,35 @@ import { cn } from "~/lib/utils";
 import type { ThreadStatusPill } from "./Sidebar.logic";
 import { ThreadRunningSpinner } from "./ThreadRunningSpinner";
 
-export function SidebarUnreadCompletionGlyph({ className }: { className?: string }) {
+export function SidebarUnreadCompletionGlyph({
+  className,
+  ariaLabel = "Unread completion",
+}: {
+  className?: string;
+  ariaLabel?: string;
+}) {
   return (
     <span
       role="img"
-      aria-label="Unread completion"
+      aria-label={ariaLabel}
       className={cn("size-[7px] shrink-0 rounded-full bg-[var(--color-text-accent)]", className)}
     />
   );
 }
 
-export function SidebarStatusTrailingGlyph({ status }: { status: ThreadStatusPill }) {
+export function SidebarStatusTrailingGlyph({
+  status,
+  ariaLabel = status.label,
+}: {
+  status: ThreadStatusPill;
+  ariaLabel?: string;
+}) {
   if (status.label === "Completed") {
-    return <SidebarUnreadCompletionGlyph />;
+    return <SidebarUnreadCompletionGlyph ariaLabel={ariaLabel} />;
   }
   if (status.pulse) {
     return (
-      <span role="img" aria-label={status.label} className="inline-flex shrink-0">
+      <span role="img" aria-label={ariaLabel} className="inline-flex shrink-0">
         <ThreadRunningSpinner />
       </span>
     );
@@ -30,7 +42,7 @@ export function SidebarStatusTrailingGlyph({ status }: { status: ThreadStatusPil
   return (
     <span
       role="img"
-      aria-label={status.label}
+      aria-label={ariaLabel}
       className={cn("size-1.5 shrink-0 rounded-full", status.dotClass)}
     />
   );

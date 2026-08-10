@@ -4,13 +4,13 @@
 
 import { useMemo, type ReactNode } from "react";
 
+import { PROVIDER_DISPLAY_NAMES } from "@synara/contracts";
 import { isGenericChatThreadTitle } from "@synara/shared/chatThreads";
-import { pluralize } from "@synara/shared/text";
 
+import { useI18n } from "../i18n";
 import { createThreadSelector } from "../storeSelectors";
 import { useStore } from "../store";
 import { resolveSubagentPresentationForThread } from "../lib/subagentPresentation";
-import { resolveThreadHandoffBadgeLabel } from "../lib/threadHandoff";
 import { SIDEBAR_ROW_LABEL_TEXT_CLASS_NAME } from "../sidebarRowStyles";
 import type { SidebarThreadSummary } from "../types";
 import { TerminalIcon } from "../lib/icons";
@@ -20,7 +20,7 @@ import { SidebarGlyph } from "./sidebarGlyphs";
 import { Tooltip, TooltipPopup, TooltipTrigger } from "./ui/tooltip";
 
 export interface SidebarThreadTerminalStatus {
-  label: "Terminal input needed" | "Terminal task completed" | "Terminal process running";
+  label: string;
   colorClass: string;
   pulse: boolean;
 }
@@ -34,14 +34,17 @@ function ProviderAvatarWithTerminal({
   terminalStatus: SidebarThreadTerminalStatus | null;
   terminalCount: number;
 }) {
+  const { t } = useI18n();
   const provider = thread.session?.provider ?? thread.modelSelection.provider;
   const handoffSourceProvider = thread.handoff?.sourceProvider ?? null;
-  const handoffTooltip = resolveThreadHandoffBadgeLabel(thread);
+  const handoffTooltip = handoffSourceProvider
+    ? t("thread.handoffFrom", { provider: PROVIDER_DISPLAY_NAMES[handoffSourceProvider] })
+    : null;
   const showBadge = terminalCount > 1 || terminalStatus !== null;
   const badgeTooltip =
     terminalCount > 1
-      ? `${terminalCount} ${pluralize(terminalCount, "terminal")} open`
-      : (terminalStatus?.label ?? "Terminal open");
+      ? t("terminal.openCount", { count: terminalCount })
+      : (terminalStatus?.label ?? t("terminal.open"));
   const badgeColorClass = terminalStatus?.colorClass ?? "text-muted-foreground/55";
 
   const hasHandoff = Boolean(handoffSourceProvider);
@@ -184,6 +187,7 @@ export function SidebarThreadRowContent({
   pendingStatusColorClass?: string | null | undefined;
   suffix?: ReactNode;
 }) {
+  const { t } = useI18n();
   const subagentIndentPx = subagentIndentPxProp ?? 0;
   const isSubagentThread = Boolean(thread.parentThreadId);
   const subagentPresentation =
@@ -252,10 +256,10 @@ export function SidebarThreadRowContent({
         </span>
         {!isSubagentThread && pendingStatusColorClass ? (
           <span
-            aria-label="Pending approval"
+            aria-label={t("thread.statusPendingApproval")}
             className={cn("shrink-0 text-[10px] font-medium", pendingStatusColorClass)}
           >
-            Pending
+            {t("thread.statusPendingShort")}
           </span>
         ) : null}
       </div>

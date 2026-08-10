@@ -7,7 +7,8 @@
 //       override suppresses the pin hover affordance.
 
 import type React from "react";
-import { PinStatusIcon, pinActionLabel } from "~/lib/pin";
+import { useI18n } from "~/i18n";
+import { PinStatusIcon } from "~/lib/pin";
 import { cn } from "~/lib/utils";
 import { IconButton } from "./ui/icon-button";
 import { SIDEBAR_TRAILING_ICON_CLASS } from "./sidebarGlyphs";
@@ -15,18 +16,16 @@ import { SIDEBAR_TRAILING_ICON_CLASS } from "./sidebarGlyphs";
 export function ThreadPinToggleButton({
   pinned,
   presentation,
-  targetLabel: targetLabelProp,
   toneClassName,
   onToggle,
 }: {
   pinned: boolean;
   presentation: "overlay" | "inline" | "leading";
-  targetLabel?: string;
   toneClassName?: string;
   onToggle: (event: React.MouseEvent<HTMLButtonElement> | React.MouseEvent) => void;
 }) {
-  const targetLabel = targetLabelProp ?? "thread";
-  const label = pinActionLabel(targetLabel, pinned);
+  const { t } = useI18n();
+  const label = t(pinned ? "thread.unpin" : "thread.pin");
 
   return (
     <IconButton
