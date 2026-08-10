@@ -9,6 +9,7 @@ import { Button } from "../ui/button";
 import { cn } from "~/lib/utils";
 import { Badge } from "../ui/badge";
 import { ProposedPlanActions } from "./ProposedPlanActions";
+import { useI18n } from "../../i18n";
 
 export const ProposedPlanCard = function ProposedPlanCard({
   planMarkdown,
@@ -21,8 +22,9 @@ export const ProposedPlanCard = function ProposedPlanCard({
   workspaceRoot: string | undefined;
   chatTypographyStyle?: CSSProperties;
 }) {
+  const { t } = useI18n();
   const [expanded, setExpanded] = useState(false);
-  const title = proposedPlanTitle(planMarkdown) ?? "Proposed plan";
+  const title = proposedPlanTitle(planMarkdown) ?? t("plan.proposed");
   const lineCount = planMarkdown.split("\n").length;
   const canCollapse = planMarkdown.length > 900 || lineCount > 20;
   const displayedPlanMarkdown = stripDisplayedPlanMarkdown(planMarkdown);
@@ -33,7 +35,7 @@ export const ProposedPlanCard = function ProposedPlanCard({
     <div className="rounded-[24px] border border-border/80 bg-card/70 p-4 sm:p-5">
       <div className="flex flex-wrap items-center justify-between gap-3">
         <div className="flex min-w-0 items-center gap-2">
-          <Badge variant="secondary">Plan</Badge>
+          <Badge variant="secondary">{t("plan.badge")}</Badge>
           <p className="truncate text-sm font-medium text-foreground">{title}</p>
         </div>
         <ProposedPlanActions planMarkdown={planMarkdown} workspaceRoot={workspaceRoot} />
@@ -67,7 +69,7 @@ export const ProposedPlanCard = function ProposedPlanCard({
               data-scroll-anchor-ignore
               onClick={() => setExpanded((value) => !value)}
             >
-              {expanded ? "Collapse plan" : "Expand plan"}
+              {expanded ? t("plan.collapse") : t("plan.expand")}
             </Button>
           </div>
         ) : null}
