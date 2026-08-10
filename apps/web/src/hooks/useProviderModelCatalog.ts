@@ -52,11 +52,14 @@ const EMPTY_PROVIDER_AGENTS: ReadonlyArray<ProviderAgentDescriptor> = [];
 export function useProviderModelCatalog(input: {
   selectedProvider: ProviderKind;
   /**
-   * Enables discovery for the on-demand providers (cursor/grok/droid/kilo/opencode/pi)
+   * Enables discovery for the on-demand providers (cursor/grok/droid/kilo/opencode)
    * even when they are not selected — pass the picker's open state so their lists
-   * are warm by the time the user browses them.
+   * are warm by the time the user browses them. Stock Pi is deliberately excluded:
+   * its native state is only read after `piDiscoveryRequested` records explicit intent.
    */
   discoveryEnabled: boolean;
+  /** User explicitly opened the stock Pi provider submenu in the current picker session. */
+  piDiscoveryRequested?: boolean;
   /** Effective cwd for providers whose model catalog can be extended by project resources. */
   cwd?: string | null;
   /** Per-provider selected-model hints so an unknown selection still lists itself. */
@@ -114,10 +117,12 @@ export function useProviderModelCatalog(input: {
   const droidModelDiscoveryEnabled = shouldDiscoverProvider("droid", false);
   const kiloModelDiscoveryEnabled = shouldDiscoverProvider("kilo");
   const openCodeModelDiscoveryEnabled = shouldDiscoverProvider("opencode");
-  // Stock Pi must never touch `.pi` because a picker opened. Only an explicit
-  // provider selection unlocks its native discovery/state path.
+  // Opening the whole picker is not consent to inspect `.pi`. Browsing the Pi submenu
+  // is explicit provider intent, and selecting Pi keeps its native discovery active.
   const piModelDiscoveryEnabled =
-    selectedProvider === "pi" && shouldDiscoverProvider("pi", false);
+    selectedProvider === "pi"
+      ? shouldDiscoverProvider("pi", false)
+      : input.piDiscoveryRequested === true && shouldDiscoverProvider("pi", true);
 
   const omniMindDynamicModelsQuery = useQuery(
     providerModelsQueryOptions({

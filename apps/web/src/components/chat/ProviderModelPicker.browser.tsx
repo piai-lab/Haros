@@ -153,6 +153,7 @@ async function mountPicker(props: {
   providers?: ReadonlyArray<ServerProviderStatus>;
   loadingModelProviders?: Partial<Record<ProviderKind, boolean>>;
   onSelectionCommitted?: () => void;
+  onProviderBrowse?: (provider: ProviderKind) => void;
   modelOptionsByProvider?: Record<
     ProviderKind,
     ReadonlyArray<ProviderModelOption & { slug: ModelSlug }>
@@ -172,6 +173,7 @@ async function mountPicker(props: {
         : {})}
       {...(props.providers ? { providers: props.providers } : {})}
       {...(props.onSelectionCommitted ? { onSelectionCommitted: props.onSelectionCommitted } : {})}
+      {...(props.onProviderBrowse ? { onProviderBrowse: props.onProviderBrowse } : {})}
       onProviderModelChange={onProviderModelChange}
     />,
     { container: host },
@@ -207,6 +209,37 @@ describe("ProviderModelPicker", () => {
         expect(text).toContain("Codex");
         expect(text).toContain("Claude");
         expect(text).not.toContain("Claude Sonnet 4.6");
+      });
+    } finally {
+      await mounted.cleanup();
+    }
+  });
+
+  it("reports explicit provider browse without treating the root picker as Pi intent", async () => {
+    const onProviderBrowse = vi.fn();
+    const mounted = await mountPicker({
+      provider: "claudeAgent",
+      model: "claude-opus-4-6",
+      lockedProvider: null,
+      onProviderBrowse,
+      providers: [
+        {
+          provider: "pi",
+          status: "ready",
+          available: true,
+          authStatus: "authenticated",
+          checkedAt: "2026-08-10T00:00:00.000Z",
+        },
+      ],
+    });
+
+    try {
+      await page.getByRole("button").click();
+      expect(onProviderBrowse).not.toHaveBeenCalledWith("pi");
+
+      await page.getByRole("menuitem", { name: "Pi" }).click();
+      await vi.waitFor(() => {
+        expect(onProviderBrowse).toHaveBeenCalledWith("pi");
       });
     } finally {
       await mounted.cleanup();

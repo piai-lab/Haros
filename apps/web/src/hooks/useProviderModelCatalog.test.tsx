@@ -173,6 +173,47 @@ describe("useProviderModelCatalog", () => {
     expect(readModelQueryEnabled("antigravity")).toBe(true);
   });
 
+  it("discovers stock Pi only after explicit browse intent or selection", () => {
+    readCatalogRenders({ selectedProvider: "codex", discoveryEnabled: true });
+    expect(readModelQueryEnabled("pi")).toBe(false);
+
+    mocks.useQuery.mockClear();
+    readCatalogRenders({
+      selectedProvider: "codex",
+      discoveryEnabled: true,
+      piDiscoveryRequested: true,
+    });
+    expect(readModelQueryEnabled("pi")).toBe(true);
+
+    mocks.useQuery.mockClear();
+    readCatalogRenders({ selectedProvider: "pi", discoveryEnabled: false });
+    expect(readModelQueryEnabled("pi")).toBe(true);
+  });
+
+  it("does not discover disabled stock Pi after explicit browse intent", () => {
+    mocks.useAppSettings.mockReturnValue({
+      settings: SETTINGS,
+      serverSettings: {
+        ...DEFAULT_SERVER_SETTINGS,
+        providers: {
+          ...DEFAULT_SERVER_SETTINGS.providers,
+          pi: {
+            ...DEFAULT_SERVER_SETTINGS.providers.pi,
+            enabled: false,
+          },
+        },
+      },
+    });
+
+    readCatalogRenders({
+      selectedProvider: "codex",
+      discoveryEnabled: true,
+      piDiscoveryRequested: true,
+    });
+
+    expect(readModelQueryEnabled("pi")).toBe(false);
+  });
+
   it("keeps an enabled selected provider discoverable when it is hidden", () => {
     mocks.useAppSettings.mockReturnValue({
       settings: { ...SETTINGS, hiddenProviders: ["cursor"] },

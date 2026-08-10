@@ -848,6 +848,7 @@ export function AutomationModelPicker({
   const serverConfigQuery = useQuery(serverConfigQueryOptions());
   const providerStatuses = useProviderStatusesForLocalConfig();
   const [open, setOpen] = useState(false);
+  const [piDiscoveryRequested, setPiDiscoveryRequested] = useState(false);
   const modelHintByProvider: Partial<Record<ProviderKind, string | null>> = {
     [value.provider]: value.model,
   };
@@ -864,6 +865,7 @@ export function AutomationModelPicker({
   } = useProviderModelCatalog({
     selectedProvider: value.provider,
     discoveryEnabled: open,
+    piDiscoveryRequested,
     cwd: providerModelDiscoveryCwd,
     modelHintByProvider,
   });
@@ -897,7 +899,13 @@ export function AutomationModelPicker({
       hiddenProviders={settings.hiddenProviders}
       providerOrder={settings.providerOrder}
       open={open}
-      onOpenChange={setOpen}
+      onOpenChange={(nextOpen) => {
+        setOpen(nextOpen);
+        if (!nextOpen) setPiDiscoveryRequested(false);
+      }}
+      onProviderBrowse={(provider) => {
+        if (provider === "pi") setPiDiscoveryRequested(true);
+      }}
       onProviderModelChange={(provider, model) => {
         const runtimeModel = resolveRuntimeModelDescriptor({
           provider,

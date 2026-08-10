@@ -171,6 +171,7 @@ export function KanbanNewTaskDialog({
   const [sendAsDraft, setSendAsDraft] = useState(initialSendAsDraft);
   const [isModelPickerOpen, setIsModelPickerOpen] = useState(false);
   const [isTraitsPickerOpen, setIsTraitsPickerOpen] = useState(false);
+  const [piDiscoveryRequested, setPiDiscoveryRequested] = useState(false);
   const [isDragOverComposer, setIsDragOverComposer] = useState(false);
   const [expandedImage, setExpandedImage] = useState<ExpandedImagePreview | null>(null);
   const selectedProject = useMemo(
@@ -209,6 +210,7 @@ export function KanbanNewTaskDialog({
     // Keep discovery warm whenever either picker can open so cursor/codex effort
     // and fast-mode controls are populated, not just the model list.
     discoveryEnabled: isModelPickerOpen || isTraitsPickerOpen,
+    piDiscoveryRequested,
     cwd: providerModelDiscoveryCwd,
     modelHintByProvider,
   });
@@ -603,7 +605,13 @@ export function KanbanNewTaskDialog({
                     providerOrder={settings.providerOrder}
                     onProviderModelChange={handleProviderModelChange}
                     open={isModelPickerOpen}
-                    onOpenChange={setIsModelPickerOpen}
+                    onOpenChange={(open) => {
+                      setIsModelPickerOpen(open);
+                      if (!open) setPiDiscoveryRequested(false);
+                    }}
+                    onProviderBrowse={(provider) => {
+                      if (provider === "pi") setPiDiscoveryRequested(true);
+                    }}
                   />
                   <TraitsPicker
                     provider={selectedProvider}

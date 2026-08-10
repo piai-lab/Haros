@@ -179,6 +179,8 @@ type ProviderModelMenuItemsProps = {
   providerOrder?: ReadonlyArray<ProviderKind>;
   disabled?: boolean;
   onProviderModelChange: (provider: ProviderKind, model: ModelSlug) => void;
+  /** Reports an explicitly opened provider submenu before model selection. */
+  onProviderBrowse?: (provider: ProviderKind) => void;
   // Invoked after a model selection commits so callers can close ancestor
   // menus and refocus the composer.
   onAfterSelection?: () => void;
@@ -397,7 +399,12 @@ export const ProviderModelMenuItems = function ProviderModelMenuItems(
           );
         }
         return (
-          <MenuSub key={option.value}>
+          <MenuSub
+            key={option.value}
+            onOpenChange={(open) => {
+              if (open) props.onProviderBrowse?.(option.value);
+            }}
+          >
             <MenuSubTrigger>
               <OptionIcon
                 aria-hidden="true"
@@ -476,6 +483,7 @@ type ProviderModelPickerProps = {
   onSelectionCommitted?: () => void;
   shortcutLabel?: string | null;
   onProviderModelChange: (provider: ProviderKind, model: ModelSlug) => void;
+  onProviderBrowse?: (provider: ProviderKind) => void;
 };
 
 export const ProviderModelPicker = function ProviderModelPicker(props: ProviderModelPickerProps) {
@@ -590,6 +598,7 @@ export const ProviderModelPicker = function ProviderModelPicker(props: ProviderM
           {...(props.providerOrder ? { providerOrder: props.providerOrder } : {})}
           {...(props.disabled !== undefined ? { disabled: props.disabled } : {})}
           onProviderModelChange={props.onProviderModelChange}
+          {...(props.onProviderBrowse ? { onProviderBrowse: props.onProviderBrowse } : {})}
           onAfterSelection={handleAfterSelection}
         />
       </ComposerPickerMenuPopup>

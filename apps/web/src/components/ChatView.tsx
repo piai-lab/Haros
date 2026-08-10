@@ -1530,6 +1530,7 @@ export default function ChatView({
   );
   const [isModelPickerOpen, setIsModelPickerOpen] = useState(false);
   const [isTraitsPickerOpen, setIsTraitsPickerOpen] = useState(false);
+  const [piDiscoveryRequested, setPiDiscoveryRequested] = useState(false);
   const legendListRef = useRef<LegendListRef | null>(null);
   const timelineControllerRef = useRef<MessagesTimelineController | null>(null);
   const isAtEndRef = useRef(true);
@@ -1550,6 +1551,7 @@ export default function ChatView({
       setComposerCommandPicker(null);
       setIsModelPickerOpen(false);
       setIsTraitsPickerOpen(false);
+      setPiDiscoveryRequested(false);
     }, 0);
     return () => window.clearTimeout(settle);
   }, [threadId]);
@@ -2264,6 +2266,7 @@ export default function ChatView({
   } = useProviderModelCatalog({
     selectedProvider,
     discoveryEnabled: isModelPickerOpen,
+    piDiscoveryRequested,
     cwd: providerModelDiscoveryCwd,
     modelHintByProvider: composerModelHintByProvider,
     agentDiscoveryPolicy: "eager-core",
@@ -4288,16 +4291,24 @@ export default function ChatView({
   // Keep the two composer picker menus mutually exclusive so shortcuts always open one surface.
   const handleModelPickerOpenChange = useCallback((open: boolean) => {
     setIsModelPickerOpen(open);
+    if (!open) {
+      setPiDiscoveryRequested(false);
+    }
     if (open) {
       setIsTraitsPickerOpen(false);
+    }
+  }, []);
+  const handleProviderBrowse = useCallback((provider: ProviderKind) => {
+    if (provider === "pi") {
+      setPiDiscoveryRequested(true);
     }
   }, []);
   const handleTraitsPickerOpenChange = useCallback((open: boolean) => {
     setIsTraitsPickerOpen(open);
     if (open) {
-      setIsModelPickerOpen(false);
+      handleModelPickerOpenChange(false);
     }
-  }, []);
+  }, [handleModelPickerOpenChange]);
   const appendVoiceTranscriptToComposer = useCallback(
     (transcript: string) => {
       const nextPrompt = appendVoiceTranscriptToPrompt(promptRef.current, transcript);
@@ -9483,7 +9494,7 @@ export default function ChatView({
       if (open) {
         handleModelPickerOpenChange(true);
       } else {
-        setIsModelPickerOpen(false);
+        handleModelPickerOpenChange(false);
         setIsTraitsPickerOpen(false);
       }
     },
@@ -9518,6 +9529,7 @@ export default function ChatView({
         hiddenProviders={settings.hiddenProviders}
         providerOrder={settings.providerOrder}
         onProviderModelChange={onProviderModelSelect}
+        onProviderBrowse={handleProviderBrowse}
         onSelectionCommitted={scheduleComposerFocus}
         open={isModelPickerOpen}
         onOpenChange={handleModelPickerOpenChange}
@@ -9561,6 +9573,7 @@ export default function ChatView({
       prompt={prompt}
       onPromptChange={setPromptFromTraits}
       onProviderModelChange={onProviderModelSelect}
+      onProviderBrowse={handleProviderBrowse}
       onSelectionCommitted={scheduleComposerFocus}
       open={isComposerModelEffortPickerOpen}
       onOpenChange={handleComposerModelEffortPickerOpenChange}
