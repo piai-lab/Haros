@@ -30,6 +30,7 @@ import {
   COMPOSER_COMMAND_MENU_SURFACE_CLASS_NAME,
   COMPOSER_PICKER_MENU_POPUP_BODY_CLASS_NAME,
 } from "./composerPickerStyles";
+import { useI18n } from "~/i18n";
 
 type EntriesByPath = Record<string, readonly ProjectFileSystemEntry[] | undefined>;
 
@@ -128,18 +129,18 @@ function isRootDirectory(directoryPath: string): boolean {
 
 // Effect/fs errors come through with deep stack traces and absolute internal paths.
 // Surface a short, user-friendly reason so the popover stays tidy on missing/denied paths.
-function summarizeDirectoryLoadError(error: unknown): string {
+function summarizeDirectoryLoadError(error: unknown, t: ReturnType<typeof useI18n>["t"]): string {
   const raw = error instanceof Error ? error.message : String(error ?? "");
   if (/ENOENT|no such file or directory/i.test(raw)) {
-    return "Folder not found.";
+    return t("composer.local.folderNotFound");
   }
   if (/EACCES|permission denied/i.test(raw)) {
-    return "Permission denied.";
+    return t("composer.local.permissionDenied");
   }
   if (/ENOTDIR|not a directory/i.test(raw)) {
-    return "Not a folder.";
+    return t("composer.local.notFolder");
   }
-  return "Unable to load folders.";
+  return t("composer.local.loadFailed");
 }
 
 export function ComposerLocalDirectoryMenu(props: {
@@ -150,6 +151,7 @@ export function ComposerLocalDirectoryMenu(props: {
   onNavigateFolder: (absolutePath: string) => void;
   handleRef?: Ref<ComposerLocalDirectoryMenuHandle>;
 }) {
+  const { t } = useI18n();
   const { mentionQuery, rootLabel, homeDir, onSelectEntry, onNavigateFolder, handleRef } = props;
   const [entriesByPath, setEntriesByPath] = useState<EntriesByPath>({});
   const [loadingPaths, setLoadingPaths] = useState<ReadonlySet<string>>(() => new Set());
@@ -191,7 +193,7 @@ export function ComposerLocalDirectoryMenu(props: {
       if (cancelled) return;
       const api = readNativeApi();
       if (!api) {
-        setErrorMessage("App is still connecting. Try again in a moment.");
+        setErrorMessage(t("composer.local.connecting"));
         return;
       }
 
@@ -206,7 +208,7 @@ export function ComposerLocalDirectoryMenu(props: {
         })
         .catch((error) => {
           setEntriesByPath((current) => ({ ...current, [expandedDirectory]: [] }));
-          setErrorMessage(summarizeDirectoryLoadError(error));
+          setErrorMessage(summarizeDirectoryLoadError(error, t));
         })
         .finally(() => {
           setLoadingPaths((current) => {
@@ -220,7 +222,7 @@ export function ComposerLocalDirectoryMenu(props: {
       cancelled = true;
       window.clearTimeout(timeoutId);
     };
-  }, [entriesByPath, expandedDirectory, isAwaitingHomeDir, loadingPaths]);
+  }, [entriesByPath, expandedDirectory, isAwaitingHomeDir, loadingPaths, t]);
 
   const rawEntries = entriesByPath[expandedDirectory];
   const isLoading = loadingPaths.has(expandedDirectory);
@@ -385,7 +387,9 @@ export function ComposerLocalDirectoryMenu(props: {
     node?.scrollIntoView({ block: "nearest" });
   }, [highlightedIndex]);
 
-  const headerLabel = directory || rootLabel;
+  const localizedRootLabel =
+    rootLabel === "Local folders unavailable" ? t("composer.local.unavailable") : rootLabel;
+  const headerLabel = directory || localizedRootLabel;
   const visibleCount = visibleRows.length;
 
   const entryRowStartIndex = currentFolderRow ? 1 : 0;
@@ -399,7 +403,7 @@ export function ComposerLocalDirectoryMenu(props: {
           {parent ? (
             <button
               type="button"
-              aria-label="Go up one directory"
+              aria-label={t("composer.local.goUp")}
               onMouseDown={(event) => event.preventDefault()}
               onClick={handleGoUp}
               className={cn(
@@ -422,7 +426,7 @@ export function ComposerLocalDirectoryMenu(props: {
               onClick={handleSelectCurrentDirectory}
               className={cn(DIRECTORY_MENU_HEADER_ACTION_CLASS_NAME, "px-1.5 py-0.5 text-[10.5px]")}
             >
-              Use this folder
+              {t("composer.local.useFolder")}
             </button>
           ) : null}
         </div>
@@ -490,7 +494,7 @@ export function ComposerLocalDirectoryMenu(props: {
                 ) : null}
                 <CommandGroup>
                   <CommandGroupLabel className="px-2 pt-1.5 pb-1 text-[10px] font-semibold text-muted-foreground/55">
-                    Matches deeper
+                    {t("composer.local.deeperMatches")}
                   </CommandGroupLabel>
                   {searchRows.map((entry, searchIndex) => {
                     const absoluteIndex = searchRowStartIndex + searchIndex;
@@ -513,23 +517,25 @@ export function ComposerLocalDirectoryMenu(props: {
         </div>
         {isAwaitingHomeDir ? (
           <p className="px-2 py-1.5 text-muted-foreground/50 text-[11px]">
-            Waiting for home directory from server…
+            {t("composer.local.waitingForHome")}
           </p>
         ) : isLoading && visibleCount === 0 ? (
-          <p className="px-2 py-1.5 text-muted-foreground/50 text-[11px]">Loading local files…</p>
+          <p className="px-2 py-1.5 text-muted-foreground/50 text-[11px]">
+            {t("composer.local.loadingFiles")}
+          </p>
         ) : errorMessage ? (
           <p className="px-2 py-1.5 text-destructive/80 text-[11px]">{errorMessage}</p>
         ) : isSearchPending ? (
           <p className="px-2 py-1.5 text-muted-foreground/50 text-[11px]">
-            Searching nested files…
+            {t("composer.local.searchingNested")}
           </p>
         ) : visibleCount === 0 ? (
           <p className="px-2 py-1.5 text-muted-foreground/50 text-[11px]">
-            {filter.trim().length > 0 ? "No matches." : "No files or folders here."}
+            {filter.trim().length > 0 ? t("composer.local.noMatches") : t("composer.local.empty")}
           </p>
         ) : searchQuery.data?.truncated ? (
           <p className="px-2 py-1 text-muted-foreground/40 text-[10.5px]">
-            Showing top matches. Keep typing to narrow.
+            {t("composer.local.topMatches")}
           </p>
         ) : null}
       </div>
@@ -544,6 +550,7 @@ function UseCurrentFolderRow(props: {
   onHighlight: (index: number) => void;
   onActivate: () => void;
 }) {
+  const { t } = useI18n();
   const { directoryLabel, index, isHighlighted, onHighlight, onActivate } = props;
   return (
     <CommandItem
@@ -561,7 +568,7 @@ function UseCurrentFolderRow(props: {
       <FolderClosed className="size-3.5 text-muted-foreground/60" />
       <div className="min-w-0 flex flex-1 items-center gap-1.5 overflow-hidden">
         <span className="shrink-0 text-[11.5px] font-medium text-foreground/80">
-          Use this folder
+          {t("composer.local.useFolder")}
         </span>
         <span className="truncate text-[11px] text-muted-foreground/55">{directoryLabel}</span>
       </div>

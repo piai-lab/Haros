@@ -11,7 +11,9 @@ function productCopy(message: string): string {
   return message
     .replaceAll(/\{[^}]+\}/g, "")
     .replaceAll("SKILL.md", "")
-    .replaceAll("~/projects/my-app", "");
+    .replaceAll("~/projects/my-app", "")
+    .replaceAll("thread.json", "")
+    .replaceAll("transcript.md", "");
 }
 
 describe("message catalogs", () => {

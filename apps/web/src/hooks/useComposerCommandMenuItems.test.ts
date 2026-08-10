@@ -70,7 +70,7 @@ describe("buildThreadMentionComposerItems", () => {
       "thread:studio-thread",
     ]);
     expect(Object.fromEntries(items.map((item) => [item.id, item.description]))).toEqual({
-      "thread:chat-thread": "Chats",
+      "thread:chat-thread": "Chat",
       "thread:project-thread": "OmniMind",
       "thread:studio-thread": "Chat",
     });
@@ -98,9 +98,25 @@ describe("buildThreadMentionComposerItems", () => {
     });
 
     expect(items).toHaveLength(20);
-    expect(items[0]).toMatchObject({ label: "Untitled thread", id: "thread:thread-23" });
+    expect(items[0]).toMatchObject({ label: "Untitled task", id: "thread:thread-23" });
     expect(items.some((item) => item.id === "thread:thread-22")).toBe(false);
     expect(items.at(-1)?.id).toBe("thread:thread-3");
+  });
+
+  it("localizes empty task and container fallbacks without changing mention identity", () => {
+    const items = buildThreadMentionComposerItems({
+      projects: [],
+      currentThreadId: null,
+      query: "",
+      threads: [thread({ id: "localized", projectId: "missing", title: "" })],
+      copy: {
+        untitledTask: "未命名任务",
+        unknownProject: "未知项目",
+        chat: "Chat",
+        untitledProject: "未命名项目",
+      },
+    });
+    expect(items[0]).toMatchObject({ label: "未命名任务", description: "未知项目" });
   });
 
   it("caps query-filtered results to the suggestion limit", () => {
@@ -133,7 +149,7 @@ describe("buildThreadMentionComposerItems", () => {
       items.map((item) => [item.id, item.type === "thread" ? item.mention.name : null]),
     );
     expect(mentionNamesById["thread:in-project"]).toBe("Planning (OmniMind)");
-    expect(mentionNamesById["thread:in-chats"]).toBe("Planning (Chats)");
+    expect(mentionNamesById["thread:in-chats"]).toBe("Planning (Chat)");
     expect(mentionNamesById["thread:unique"]).toBe("Planning extras");
     expect(items.every((item) => item.label.startsWith("Planning"))).toBe(true);
   });

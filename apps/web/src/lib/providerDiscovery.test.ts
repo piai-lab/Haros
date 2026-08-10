@@ -8,8 +8,17 @@ import { describe, expect, it } from "vitest";
 import {
   buildSkillSearchFields,
   formatSkillDiscoveryWarning,
+  formatSkillScope,
   rankProviderDiscoveryItems,
 } from "./providerDiscovery";
+
+describe("formatSkillScope", () => {
+  it("localizes known product scopes and preserves engine-specific identities", () => {
+    expect(formatSkillScope("project", "zh-CN")).toBe("项目");
+    expect(formatSkillScope("omnimind", "zh-CN")).toBe("OmniMind 能力库");
+    expect(formatSkillScope("factory-plugin:reviewer", "zh-CN")).toBe("Factory-plugin:reviewer");
+  });
+});
 
 function makeSkill(partial: Partial<ProviderSkillDescriptor>): ProviderSkillDescriptor {
   return {

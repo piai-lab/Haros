@@ -5,6 +5,13 @@ import { afterEach, describe, expect, it, vi } from "vitest";
 import { render } from "vitest-browser-react";
 
 import { ComposerCommandMenu } from "./ComposerCommandMenu";
+import { I18nProvider } from "~/i18n";
+
+const harness = vi.hoisted(() => ({ settings: { localePreference: "zh-CN" } }));
+
+vi.mock("~/appSettings", () => ({
+  useAppSettings: () => ({ settings: harness.settings }),
+}));
 
 async function mountMenu(input: {
   isLoading: boolean;
@@ -41,9 +48,9 @@ describe("ComposerCommandMenu empty states", () => {
   });
 
   it.each([
-    ["mention", "mention", "Searching mentions..."],
-    ["skill", "skill", "Loading skills..."],
-    ["slash command", "slash-command", "Loading commands..."],
+    ["mention", "mention", "Searching mentions…"],
+    ["skill", "skill", "Loading skills…"],
+    ["slash command", "slash-command", "Loading commands…"],
   ] as const)(
     "shows the %s loading label before results are available",
     async (_label, triggerKind, text) => {
@@ -73,9 +80,29 @@ describe("ComposerCommandMenu empty states", () => {
       await expect
         .element(page.getByText("No commands are available for this provider.", { exact: true }))
         .toBeVisible();
-      expect(document.body.textContent).not.toContain("Loading commands...");
+      expect(document.body.textContent).not.toContain("Loading commands…");
     } finally {
       await menu.cleanup();
     }
+  });
+
+  it("renders product-owned menu framing in simplified Chinese", async () => {
+    const screen = await render(
+      <I18nProvider>
+        <ComposerCommandMenu
+          items={[]}
+          resolvedTheme="dark"
+          isLoading
+          triggerKind="mention"
+          activeItemId={null}
+          onHighlightedItemChange={vi.fn()}
+          onSelect={vi.fn()}
+        />
+      </I18nProvider>,
+    );
+
+    await expect.element(page.getByText("正在搜索引用…", { exact: true })).toBeVisible();
+    await expect.element(page.getByText("文件", { exact: true })).toBeVisible();
+    await screen.unmount();
   });
 });

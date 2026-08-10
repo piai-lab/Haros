@@ -49,6 +49,7 @@ import {
   COMPOSER_COMMAND_MENU_ITEM_CLASS_NAME,
   COMPOSER_COMMAND_MENU_SURFACE_CLASS_NAME,
 } from "./composerPickerStyles";
+import { useI18n } from "~/i18n";
 
 function humanizeProviderCommandName(command: string): string {
   return command
@@ -60,44 +61,53 @@ function humanizeProviderCommandName(command: string): string {
 
 function commandMenuTitle(
   item: Extract<ComposerCommandItem, { type: "slash-command" | "provider-native-command" }>,
+  t: ReturnType<typeof useI18n>["t"],
 ): string {
   switch (item.command) {
     case "clear":
-      return "Clear";
+      return t("composer.command.clear");
     case "compact":
-      return "Compact Context";
+      return t("composer.command.compact");
     case "model":
-      return "Model";
+      return t("term.model");
     case "fast":
-      return "Fast Mode";
+      return t("composer.command.fast");
     case "plan":
-      return "Plan Mode";
+      return t("composer.command.plan");
     case "default":
-      return "Default Mode";
+      return t("composer.command.default");
     case "review":
-      return "Code Review";
+      return t("composer.command.review");
     case "fork":
-      return "Fork";
+      return t("composer.command.fork");
     case "side":
-      return "Sidechat";
+      return t("composer.command.side");
     case "status":
-      return "Status";
+      return t("composer.command.status");
     case "subagents":
-      return "Subagents";
+      return t("composer.command.subagents");
+    case "export":
+      return t("composer.command.export");
     case "feedback":
-      return "Feedback OmniMind";
+      return t("composer.command.feedback");
+    case "automation":
+      return t("composer.command.automation");
     default:
       return humanizeProviderCommandName(item.command);
   }
 }
 
-function commandMenuTrailingMeta(item: ComposerCommandItem): string | null {
+function commandMenuTrailingMeta(
+  item: ComposerCommandItem,
+  locale: ReturnType<typeof useI18n>["locale"],
+  t: ReturnType<typeof useI18n>["t"],
+): string | null {
   if (item.type === "agent") {
-    return "delegate task to subagent";
+    return t("composer.command.delegateToSubagent");
   }
 
   if (item.type === "plugin") {
-    return "Plugin";
+    return t("term.plugin");
   }
 
   if (item.type === "thread") {
@@ -105,15 +115,15 @@ function commandMenuTrailingMeta(item: ComposerCommandItem): string | null {
   }
 
   if (item.type === "local-root") {
-    return "Local";
+    return t("composer.command.local");
   }
 
   if (item.type === "skill") {
-    return formatSkillScope(item.skill.scope);
+    return formatSkillScope(item.skill.scope, locale);
   }
 
   if (item.type === "model") {
-    return "Model";
+    return t("term.model");
   }
 
   if (item.type === "slash-command" || item.type === "provider-native-command") {
@@ -243,6 +253,26 @@ type ComposerCommandGroupModel = {
   items: ComposerCommandItem[];
 };
 
+type ComposerCommandGroupLabels = {
+  plugins: string;
+  tasks: string;
+  local: string;
+  subagents: string;
+  builtIn: string;
+  engine: string;
+  skills: string;
+};
+
+const DEFAULT_GROUP_LABELS: ComposerCommandGroupLabels = {
+  plugins: "Plugins",
+  tasks: "Tasks",
+  local: "Local",
+  subagents: "Subagents",
+  builtIn: "Built-in",
+  engine: "Engine",
+  skills: "Skills",
+};
+
 const COMPOSER_COMMAND_GROUP_LABEL_CLASSNAME =
   "px-2 pt-1.5 pb-1 text-[11px] font-normal text-muted-foreground/60";
 
@@ -250,6 +280,7 @@ export function groupCommandItems(
   items: ComposerCommandItem[],
   triggerKind: ComposerTriggerKind | null,
   groupSlashCommandSections: boolean,
+  labels: ComposerCommandGroupLabels = DEFAULT_GROUP_LABELS,
 ): ComposerCommandGroupModel[] {
   if (triggerKind === "mention") {
     const pluginItems = items.filter((item) => item.type === "plugin");
@@ -267,16 +298,16 @@ export function groupCommandItems(
 
     const groups: ComposerCommandGroupModel[] = [];
     if (pluginItems.length > 0) {
-      groups.push({ id: "plugins", label: "Plugins", items: pluginItems });
+      groups.push({ id: "plugins", label: labels.plugins, items: pluginItems });
     }
     if (threadItems.length > 0) {
-      groups.push({ id: "chats", label: "Chats", items: threadItems });
+      groups.push({ id: "chats", label: labels.tasks, items: threadItems });
     }
     if (localItems.length > 0) {
-      groups.push({ id: "local", label: "Local", items: localItems });
+      groups.push({ id: "local", label: labels.local, items: localItems });
     }
     if (agentItems.length > 0) {
-      groups.push({ id: "subagents", label: "Subagents", items: agentItems });
+      groups.push({ id: "subagents", label: labels.subagents, items: agentItems });
     }
     if (otherItems.length > 0) {
       groups.push({ id: "other", label: null, items: otherItems });
@@ -300,13 +331,13 @@ export function groupCommandItems(
 
   const groups: ComposerCommandGroupModel[] = [];
   if (builtInItems.length > 0) {
-    groups.push({ id: "built-in", label: "Built-in", items: builtInItems });
+    groups.push({ id: "built-in", label: labels.builtIn, items: builtInItems });
   }
   if (providerItems.length > 0) {
-    groups.push({ id: "provider", label: "Provider", items: providerItems });
+    groups.push({ id: "provider", label: labels.engine, items: providerItems });
   }
   if (skillItems.length > 0) {
-    groups.push({ id: "skills", label: "Skills", items: skillItems });
+    groups.push({ id: "skills", label: labels.skills, items: skillItems });
   }
   if (otherItems.length > 0) {
     groups.push({ id: "other", label: null, items: otherItems });
@@ -325,11 +356,21 @@ export function ComposerCommandMenu(props: {
   onHighlightedItemChange: (itemId: string | null) => void;
   onSelect: (item: ComposerCommandItem) => void;
 }) {
+  const { t } = useI18n();
   const itemRefs = useRef<Record<string, HTMLElement | null>>({});
   const groups = groupCommandItems(
     props.items,
     props.triggerKind,
     props.groupSlashCommandSections ?? true,
+    {
+      plugins: t("term.plugins"),
+      tasks: t("term.tasks"),
+      local: t("composer.command.local"),
+      subagents: t("composer.command.subagents"),
+      builtIn: t("composer.command.builtIn"),
+      engine: t("term.engine"),
+      skills: t("term.skills"),
+    },
   );
   const shouldRenderList = props.items.length > 0 || props.triggerKind === "mention";
 
@@ -392,10 +433,10 @@ export function ComposerCommandMenu(props: {
                       "px-2 py-0 font-medium text-muted-foreground text-xs",
                     )}
                   >
-                    Files
+                    {t("term.files")}
                   </p>
                   <p className="px-2 pt-0.5 text-[11px] text-muted-foreground/55">
-                    Type to search for files
+                    {t("composer.command.typeToSearchFiles")}
                   </p>
                 </div>
               </>
@@ -413,16 +454,16 @@ export function ComposerCommandMenu(props: {
           >
             {props.isLoading
               ? props.triggerKind === "mention"
-                ? "Searching mentions..."
+                ? t("composer.command.searchingMentions")
                 : props.triggerKind === "skill"
-                  ? "Loading skills..."
-                  : "Loading commands..."
+                  ? t("composer.command.loadingSkills")
+                  : t("composer.command.loadingCommands")
               : (props.emptyStateText ??
                 (props.triggerKind === "mention"
-                  ? "No matching plugin, chat, or file."
+                  ? t("composer.command.noMentionMatch")
                   : props.triggerKind === "skill"
-                    ? "No matching skill."
-                    : "No matching command."))}
+                    ? t("composer.command.noSkillMatch")
+                    : t("composer.command.noCommandMatch")))}
           </p>
         )}
       </div>
@@ -555,8 +596,9 @@ const ComposerCommandMenuItem = memo(function ComposerCommandMenuItem({
   onHighlight: (itemId: string | null) => void;
   onSelect: (item: ComposerCommandItem) => void;
 }) {
+  const { locale, t } = useI18n();
   const secondaryText = commandMenuSecondaryText(item);
-  const trailingMeta = commandMenuTrailingMeta(item);
+  const trailingMeta = commandMenuTrailingMeta(item, locale, t);
 
   return (
     <CommandItem
@@ -581,7 +623,7 @@ const ComposerCommandMenuItem = memo(function ComposerCommandMenuItem({
         <div className="min-w-0 flex flex-1 items-center gap-1.5 overflow-hidden">
           <span className="shrink-0 text-[11.5px] font-medium text-foreground/80">
             {item.type === "slash-command" || item.type === "provider-native-command"
-              ? commandMenuTitle(item)
+              ? commandMenuTitle(item, t)
               : item.label}
           </span>
           {secondaryText ? (

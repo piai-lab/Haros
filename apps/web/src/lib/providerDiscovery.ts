@@ -10,6 +10,7 @@ import type {
   ProviderSkillDiscoveryWarning,
   ProviderSkillDescriptor,
 } from "@synara/contracts";
+import type { AppLocale } from "~/locale";
 
 // Prefer the most specific workspace context so discovery reflects the active thread first.
 export function resolveProviderDiscoveryCwd(options: {
@@ -242,11 +243,24 @@ export function buildCommandSearchFields(
   ];
 }
 
-export function formatSkillScope(scope: string | undefined): string {
-  if (!scope) return "Personal";
+export function formatSkillScope(scope: string | undefined, locale: AppLocale = "en"): string {
+  if (!scope) return locale === "zh-CN" ? "个人" : "Personal";
   const normalized = scope.trim();
-  if (normalized.length === 0) return "Personal";
-  if (normalized.toLowerCase() === "omnimind") return "OmniMind Library";
+  if (normalized.length === 0) return locale === "zh-CN" ? "个人" : "Personal";
+  const normalizedLower = normalized.toLowerCase();
+  if (normalizedLower === "omnimind") {
+    return locale === "zh-CN" ? "OmniMind 能力库" : "OmniMind Library";
+  }
+  if (locale === "zh-CN") {
+    const localized = {
+      user: "用户",
+      project: "项目",
+      local: "本地",
+      managed: "受管理",
+      agents: "共享资产（.agents）",
+    }[normalizedLower];
+    if (localized) return localized;
+  }
   return normalized.charAt(0).toUpperCase() + normalized.slice(1);
 }
 

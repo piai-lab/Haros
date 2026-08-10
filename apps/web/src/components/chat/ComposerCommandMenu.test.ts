@@ -72,7 +72,7 @@ describe("groupCommandItems", () => {
       },
       {
         id: "chats",
-        label: "Chats",
+        label: "Tasks",
         items: [items[4]],
       },
       {
@@ -129,7 +129,7 @@ describe("groupCommandItems", () => {
       },
       {
         id: "provider",
-        label: "Provider",
+        label: "Engine",
         items: [items[1]],
       },
       {
@@ -138,5 +138,25 @@ describe("groupCommandItems", () => {
         items: [items[2]],
       },
     ]);
+  });
+
+  it("accepts localized group labels without changing item grouping", () => {
+    const item: ComposerCommandItem = {
+      id: "local-root",
+      type: "local-root",
+      label: "@local",
+      description: "浏览本地文件",
+    };
+    expect(
+      groupCommandItems([item], "mention", true, {
+        plugins: "插件",
+        tasks: "任务",
+        local: "本地",
+        subagents: "子 Agent",
+        builtIn: "内置",
+        engine: "引擎",
+        skills: "技能",
+      }),
+    ).toEqual([{ id: "local", label: "本地", items: [item] }]);
   });
 });

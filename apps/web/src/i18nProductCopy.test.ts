@@ -41,7 +41,9 @@ const PRODUCT_COPY_SOURCES = [
   "components/chat/BrowserAnnotationStrip.tsx",
   "components/chat/AutomationCreatedCard.tsx",
   "components/chat/ComposerAutomationSetupBanner.tsx",
+  "components/chat/ComposerCommandMenu.tsx",
   "components/chat/ComposerExtrasMenu.tsx",
+  "components/chat/ComposerLocalDirectoryMenu.tsx",
   "components/chat/ComposerModelEffortPicker.tsx",
   "components/chat/ContextWindowMeter.tsx",
   "components/chat/GeneratedMarkdownImage.tsx",
@@ -110,6 +112,7 @@ const PRODUCT_COPY_SOURCES = [
   "components/terminal/TerminalChrome.tsx",
   "components/terminal/TerminalViewportPane.tsx",
   "hooks/useCopyToClipboard.ts",
+  "hooks/useComposerCommandMenuItems.ts",
   "shortcutsSheet.ts",
 ] as const;
 

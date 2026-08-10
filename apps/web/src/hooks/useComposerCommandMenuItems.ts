@@ -34,6 +34,7 @@ import type { ComposerCommandItem } from "../components/chat/ComposerCommandMenu
 import type { ProviderModelOption } from "../providerModelOptions";
 import { compareProvidersByOrder } from "../providerOrdering";
 import type { ComposerThreadMentionSource, Project } from "../types";
+import { useI18n } from "~/i18n";
 
 type ComposerPluginSuggestion = {
   plugin: ProviderPluginDescriptor;
@@ -53,15 +54,31 @@ export type SearchableModelOption = {
 
 const THREAD_MENTION_SUGGESTION_LIMIT = 20;
 
-function threadSuggestionTitle(title: string): string {
-  return title.trim() || "Untitled thread";
+type ThreadSuggestionCopy = {
+  untitledTask: string;
+  unknownProject: string;
+  chat: string;
+  untitledProject: string;
+};
+
+const DEFAULT_THREAD_SUGGESTION_COPY: ThreadSuggestionCopy = {
+  untitledTask: "Untitled task",
+  unknownProject: "Unknown project",
+  chat: "Chat",
+  untitledProject: "Untitled project",
+};
+
+function threadSuggestionTitle(title: string, copy: ThreadSuggestionCopy): string {
+  return title.trim() || copy.untitledTask;
 }
 
-function threadSuggestionContainerName(project: Project | undefined): string {
-  if (!project) return "Unknown project";
-  if (project.kind === "chat") return "Chats";
-  if (project.kind === "studio") return "Chat";
-  return project.name.trim() || project.folderName.trim() || "Untitled project";
+function threadSuggestionContainerName(
+  project: Project | undefined,
+  copy: ThreadSuggestionCopy,
+): string {
+  if (!project) return copy.unknownProject;
+  if (project.kind === "chat" || project.kind === "studio") return copy.chat;
+  return project.name.trim() || project.folderName.trim() || copy.untitledProject;
 }
 
 function threadSuggestionRecency(thread: ComposerThreadMentionSource): string {
@@ -169,7 +186,9 @@ export function buildThreadMentionComposerItems(input: {
   readonly projects: readonly Project[];
   readonly currentThreadId: string | null;
   readonly query: string;
+  readonly copy?: ThreadSuggestionCopy;
 }): ComposerCommandItem[] {
+  const copy = input.copy ?? DEFAULT_THREAD_SUGGESTION_COPY;
   const projectById = new Map(input.projects.map((project) => [project.id, project]));
   const candidates = withDisambiguatedMentionNames(
     input.threads
@@ -178,8 +197,8 @@ export function buildThreadMentionComposerItems(input: {
       )
       .map((thread) => ({
         thread,
-        title: threadSuggestionTitle(thread.title),
-        projectName: threadSuggestionContainerName(projectById.get(thread.projectId)),
+        title: threadSuggestionTitle(thread.title, copy),
+        projectName: threadSuggestionContainerName(projectById.get(thread.projectId), copy),
       })),
   );
   const query = normalizeProviderDiscoveryText(input.query);
@@ -259,6 +278,7 @@ export function useComposerCommandMenuItems(input: {
     readonly currentThreadId: string | null;
   };
 }): ComposerCommandItem[] {
+  const { t } = useI18n();
   const {
     composerTrigger,
     provider,
@@ -335,7 +355,7 @@ export function useComposerCommandMenuItems(input: {
               id: "local-root",
               type: "local-root" as const,
               label: `@${LOCAL_FOLDER_MENTION_NAME}`,
-              description: "Browse folders on this computer",
+              description: t("composer.command.browseLocalFolders"),
             },
           ]
         : [];
@@ -351,6 +371,12 @@ export function useComposerCommandMenuItems(input: {
       ? buildThreadMentionComposerItems({
           ...threadMentionSources,
           query: composerTrigger.query,
+          copy: {
+            untitledTask: t("composer.command.untitledTask"),
+            unknownProject: t("composer.command.unknownProject"),
+            chat: "Chat",
+            untitledProject: t("composer.command.untitledProject"),
+          },
         })
       : [];
     // Keep mention suggestions ordered by primary intent: plugins and chats
@@ -380,7 +406,26 @@ export function useComposerCommandMenuItems(input: {
         type: "slash-command" as const,
         command: definition.command,
         label: definition.label,
-        description: definition.description,
+        description: t(
+          (
+            {
+              clear: "composer.command.clearDescription",
+              compact: "composer.command.compactDescription",
+              model: "composer.command.modelDescription",
+              plan: "composer.command.planDescription",
+              default: "composer.command.defaultDescription",
+              review: "composer.command.reviewDescription",
+              fork: "composer.command.forkDescription",
+              side: "composer.command.sideDescription",
+              status: "composer.command.statusDescription",
+              subagents: "composer.command.subagentsDescription",
+              fast: "composer.command.fastDescription",
+              export: "composer.command.exportDescription",
+              feedback: "composer.command.feedbackDescription",
+              automation: "composer.command.automationDescription",
+            } as const
+          )[definition.command],
+        ),
         source: definition.source,
       }),
     );
@@ -409,7 +454,7 @@ export function useComposerCommandMenuItems(input: {
       provider,
       command: command.name,
       label: `/${command.name}`,
-      description: command.description ?? `Run ${provider} native command`,
+      description: command.description ?? t("composer.command.nativeDescription", { provider }),
     }));
     // `/` is the universal picker surface; provider dispatch can adapt the
     // visible slash token to backend-specific skill syntax when needed.
