@@ -345,7 +345,7 @@ export function ArchivedSettingsPanel({ active }: { readonly active: boolean }) 
       if (!api) return;
       const confirmed = await api.dialogs.confirm(
         [
-          t("settings.permanentDeleteConfirm", { thread: threadTitle }),
+          t("settings.permanentDeleteConfirm", { task: threadTitle }),
           t("settings.permanentDeleteDescription"),
         ].join("\n\n"),
       );
