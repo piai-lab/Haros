@@ -7,6 +7,8 @@ import { isSupportedLocalImagePath } from "@synara/shared/localPreviewFiles";
 import { type MouseEvent as ReactMouseEvent } from "react";
 import { ChevronDownIcon, CopyIcon, EllipsisIcon, MessageCircleIcon } from "~/lib/icons";
 
+import { useCopyPathToClipboard } from "~/hooks/useCopyToClipboard";
+import { useI18n } from "~/i18n";
 import { buildFileDiffRenderKey, resolveFileDiffPath } from "~/lib/diffRendering";
 import { FileDiffCard, FileDiffSurface } from "./chat/FileDiffView";
 import { LocalImagePreview } from "./LocalImagePreview";
@@ -28,6 +30,8 @@ const DIFF_FILE_ACTIONS_MENU_ICON_CLASS_NAME = "size-3.5 shrink-0 text-muted-for
 // the collapse chevron. Marked with data-diff-header-menu so header clicks on
 // it do not toggle the file collapse state.
 function DiffFileHeaderActionsMenu(props: { filePath: string; chatActions: DiffFileChatActions }) {
+  const { t } = useI18n();
+  const copyPath = useCopyPathToClipboard();
   return (
     <Menu>
       <MenuTrigger
@@ -35,8 +39,8 @@ function DiffFileHeaderActionsMenu(props: { filePath: string; chatActions: DiffF
           <IconButton
             variant="ghost"
             size="icon-xs"
-            label="File actions"
-            title="File actions"
+            label={t("diff.fileActions")}
+            title={t("diff.fileActions")}
             className="text-muted-foreground hover:text-foreground"
           >
             <EllipsisIcon className="size-3.5" />
@@ -50,7 +54,7 @@ function DiffFileHeaderActionsMenu(props: { filePath: string; chatActions: DiffF
           }}
         >
           <MessageCircleIcon className={DIFF_FILE_ACTIONS_MENU_ICON_CLASS_NAME} />
-          <span>Reference in chat</span>
+          <span>{t("file.referenceInChat")}</span>
         </MenuItem>
         <MenuItem
           onClick={() => {
@@ -58,15 +62,15 @@ function DiffFileHeaderActionsMenu(props: { filePath: string; chatActions: DiffF
           }}
         >
           <MessageCircleIcon className={DIFF_FILE_ACTIONS_MENU_ICON_CLASS_NAME} />
-          <span>Ask why this changed</span>
+          <span>{t("file.askWhyChanged")}</span>
         </MenuItem>
         <MenuItem
           onClick={() => {
-            void navigator.clipboard?.writeText(props.filePath);
+            copyPath(props.filePath);
           }}
         >
           <CopyIcon className={DIFF_FILE_ACTIONS_MENU_ICON_CLASS_NAME} />
-          <span>Copy path</span>
+          <span>{t("diff.copyPath")}</span>
         </MenuItem>
       </ComposerPickerMenuPopup>
     </Menu>
@@ -106,6 +110,7 @@ const DiffPanelFileRow = function DiffPanelFileRow(props: {
   onToggleFileCollapsed: (fileKey: string) => void;
   chatActions?: DiffFileChatActions | undefined;
 }) {
+  const { t } = useI18n();
   const filePath = resolveFileDiffPath(props.fileDiff);
   const fileKey = buildFileDiffRenderKey(props.fileDiff);
   const { chatActions, isCollapsed } = props;
@@ -160,7 +165,7 @@ const DiffPanelFileRow = function DiffPanelFileRow(props: {
         <LocalImagePreview
           src={filePath}
           cwd={props.workspaceRoot}
-          alt={`Preview of ${filePath}`}
+          alt={t("diff.imagePreview", { path: filePath })}
           className="diff-render-file__image-preview"
           imageClassName="max-h-[320px]"
         />
@@ -179,11 +184,12 @@ export const DiffPanelFileList = function DiffPanelFileList(props: {
   onToggleFileCollapsed: (fileKey: string) => void;
   chatActions?: DiffFileChatActions | undefined;
 }) {
+  const { t } = useI18n();
   if (props.renderableFiles.length === 0) {
     return (
       <FileDiffSurface className="h-full min-h-0 overflow-auto px-2 pb-2">
         <PanelStateMessage density="compact" fill="flex">
-          <p>No files in this diff.</p>
+          <p>{t("workbench.noFilesInDiff")}</p>
         </PanelStateMessage>
       </FileDiffSurface>
     );

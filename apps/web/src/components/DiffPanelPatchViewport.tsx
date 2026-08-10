@@ -26,15 +26,19 @@ export const DiffPanelPatchViewport = memo(
     chatActions?: DiffFileChatActions | undefined;
     isLoading: boolean;
     hasNoChanges: boolean;
-    error: string | null;
+    hasError: boolean;
+    errorDetail: string | null;
+    errorLabel: string;
+    showErrorDetailsLabel: string;
     loadingLabel: string;
     emptyLabel: string;
     unavailableLabel: string;
+    noPatchLabel: string;
     viewKind: "repo" | "turn";
   }) {
     const viewportClassName = "flex h-full min-h-0 w-full flex-1 flex-col";
 
-    if (props.error && !props.renderablePatch) {
+    if (props.hasError && !props.renderablePatch) {
       return (
         <div className={viewportClassName}>
           <PanelStateMessage
@@ -42,7 +46,17 @@ export const DiffPanelPatchViewport = memo(
             fill="flex"
             className="items-start justify-start px-3 pt-3"
           >
-            <p className="text-left text-[11px] text-red-500/80">{props.error}</p>
+            <div className="text-left text-[11px] text-red-500/80">
+              <p>{props.errorLabel}</p>
+              {props.errorDetail ? (
+                <details className="mt-1 text-muted-foreground">
+                  <summary className="cursor-pointer">{props.showErrorDetailsLabel}</summary>
+                  <pre className="mt-1 max-h-24 overflow-auto whitespace-pre-wrap break-words">
+                    {props.errorDetail}
+                  </pre>
+                </details>
+              ) : null}
+            </div>
           </PanelStateMessage>
         </div>
       );
@@ -64,7 +78,7 @@ export const DiffPanelPatchViewport = memo(
                 ? props.emptyLabel
                 : props.viewKind === "repo"
                   ? props.unavailableLabel
-                  : "No patch available for this selection."}
+                  : props.noPatchLabel}
             </p>
           </PanelStateMessage>
         </div>
@@ -119,10 +133,14 @@ export const DiffPanelPatchViewport = memo(
       previous.chatActions === next.chatActions &&
       previous.isLoading === next.isLoading &&
       previous.hasNoChanges === next.hasNoChanges &&
-      previous.error === next.error &&
+      previous.hasError === next.hasError &&
+      previous.errorDetail === next.errorDetail &&
+      previous.errorLabel === next.errorLabel &&
+      previous.showErrorDetailsLabel === next.showErrorDetailsLabel &&
       previous.loadingLabel === next.loadingLabel &&
       previous.emptyLabel === next.emptyLabel &&
       previous.unavailableLabel === next.unavailableLabel &&
+      previous.noPatchLabel === next.noPatchLabel &&
       previous.viewKind === next.viewKind
     );
   },

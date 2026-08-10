@@ -13,6 +13,7 @@ import { DiffPanelPatchViewport } from "~/components/DiffPanelPatchViewport";
 import { DiffWorkerPoolProvider } from "~/components/DiffWorkerPoolProvider";
 import { DiffPanelLoadingState } from "~/components/DiffPanelShell";
 import { useTheme } from "~/hooks/useTheme";
+import { useI18n } from "~/i18n";
 import { getRenderablePatch, sortFileDiffsByPath, summarizePatchTotals } from "~/lib/diffRendering";
 import { pullRequestDiffQueryOptions } from "~/lib/pullRequestReactQuery";
 import { cn } from "~/lib/utils";
@@ -28,6 +29,7 @@ export function PullRequestCodeTab({
   input: PullRequestDetailInput;
   detail: PullRequestDetail;
 }) {
+  const { t } = useI18n();
   const { resolvedTheme } = useTheme();
   const [collapsedFiles, setCollapsedFiles] = useState<Set<string>>(() => new Set());
   const diffQuery = useQuery(pullRequestDiffQueryOptions(input));
@@ -45,7 +47,7 @@ export function PullRequestCodeTab({
       <div className="flex h-full min-h-0 flex-col">
         {diffQuery.data?.truncated ? (
           <PullRequestWarningNote shape="banner">
-            Diff exceeded 8 MiB and was truncated.
+            {t("pullRequest.diffTruncated")}
           </PullRequestWarningNote>
         ) : null}
         {patchTotals ? (
@@ -55,7 +57,14 @@ export function PullRequestCodeTab({
               "border-b border-border/60 px-3 py-2 text-muted-foreground",
             )}
           >
-            <span>{patchTotals.fileCount} files</span>
+            <span>
+              {t(
+                patchTotals.fileCount === 1
+                  ? "pullRequest.fileCount"
+                  : "pullRequest.fileCountPlural",
+                { count: patchTotals.fileCount },
+              )}
+            </span>
             <PullRequestDiffStat
               additions={patchTotals.additions}
               deletions={patchTotals.deletions}
@@ -64,7 +73,7 @@ export function PullRequestCodeTab({
           </PullRequestMetaLine>
         ) : null}
         {diffQuery.isPending ? (
-          <DiffPanelLoadingState label="Loading pull request diff…" />
+          <DiffPanelLoadingState label={t("pullRequest.loadingDiff")} />
         ) : (
           <DiffPanelPatchViewport
             renderablePatch={renderablePatch}
@@ -84,16 +93,14 @@ export function PullRequestCodeTab({
             }
             isLoading={diffQuery.isFetching}
             hasNoChanges={diffQuery.isSuccess && !renderablePatch}
-            error={
-              diffQuery.isError
-                ? diffQuery.error instanceof Error
-                  ? diffQuery.error.message
-                  : "Could not load diff."
-                : null
-            }
-            loadingLabel="Loading pull request diff…"
-            emptyLabel="This pull request has no file changes."
-            unavailableLabel="The pull request diff is unavailable."
+            hasError={diffQuery.isError}
+            errorDetail={diffQuery.error instanceof Error ? diffQuery.error.message : null}
+            errorLabel={t("diff.loadFailed")}
+            showErrorDetailsLabel={t("error.showDetails")}
+            loadingLabel={t("pullRequest.loadingDiff")}
+            emptyLabel={t("pullRequest.noFileChanges")}
+            unavailableLabel={t("pullRequest.diffUnavailable")}
+            noPatchLabel={t("diff.noPatch")}
             viewKind="repo"
           />
         )}
