@@ -64,13 +64,20 @@ describe("packaged desktop startup verification", () => {
       { platform: "linux", version: "1.2.3" },
       {
         PATH: process.env.PATH,
+        LANG: "zh_CN.UTF-8",
         OMNIMIND_AUTH_TOKEN: "must-not-leak",
+        OPENAI_API_KEY: "must-not-leak",
+        PROVIDER_ACCESS_TOKEN: "must-not-leak",
         ELECTRON_RUN_AS_NODE: "1",
       },
     );
 
     expect(env.OMNIMIND_AUTH_TOKEN).toBeUndefined();
     expect(env.ELECTRON_RUN_AS_NODE).toBeUndefined();
+    expect(env.OPENAI_API_KEY).toBeUndefined();
+    expect(env.PROVIDER_ACCESS_TOKEN).toBeUndefined();
+    expect(env.PATH).toBe(process.env.PATH);
+    expect(env.LANG).toBe("zh_CN.UTF-8");
     for (const name of [
       "HOME",
       "USERPROFILE",
@@ -80,6 +87,9 @@ describe("packaged desktop startup verification", () => {
       "XDG_CACHE_HOME",
       "XDG_DATA_HOME",
       "OMNIMIND_HOME",
+      "TEMP",
+      "TMP",
+      "TMPDIR",
     ] as const) {
       expect(env[name]?.startsWith(root)).toBe(true);
       expect(existsSync(env[name]!)).toBe(true);

@@ -30,6 +30,41 @@ export interface PackagedDesktopStartupOptions {
   readonly timeoutMs: number;
 }
 
+// A release smoke must not become an ambient credential consumer. Keep only
+// operating-system/session values required to start a GUI process; product and
+// provider authority is deliberately absent.
+const PACKAGED_SMOKE_INHERITED_ENV_ALLOWLIST = [
+  "PATH",
+  "LANG",
+  "LC_ALL",
+  "LC_CTYPE",
+  "SHELL",
+  "USER",
+  "LOGNAME",
+  "USERNAME",
+  "SystemRoot",
+  "windir",
+  "ComSpec",
+  "PATHEXT",
+  "DISPLAY",
+  "WAYLAND_DISPLAY",
+  "XAUTHORITY",
+  "XDG_RUNTIME_DIR",
+  "DBUS_SESSION_BUS_ADDRESS",
+  "PULSE_SERVER",
+] as const;
+
+function selectPackagedSmokeInheritedEnvironment(
+  inheritedEnvironment: NodeJS.ProcessEnv,
+): NodeJS.ProcessEnv {
+  const selected: NodeJS.ProcessEnv = {};
+  for (const name of PACKAGED_SMOKE_INHERITED_ENV_ALLOWLIST) {
+    const value = inheritedEnvironment[name];
+    if (value) selected[name] = value;
+  }
+  return selected;
+}
+
 export function parsePackagedDesktopStartupArgs(
   argv: ReadonlyArray<string>,
 ): PackagedDesktopStartupOptions {
@@ -196,8 +231,9 @@ export function createPackagedDesktopSmokeEnvironment(
   options: Pick<PackagedDesktopStartupOptions, "platform" | "version">,
   inheritedEnvironment: NodeJS.ProcessEnv = process.env,
 ): NodeJS.ProcessEnv {
+  const isolatedTemp = join(root, "tmp");
   const env: NodeJS.ProcessEnv = {
-    ...inheritedEnvironment,
+    ...selectPackagedSmokeInheritedEnvironment(inheritedEnvironment),
     HOME: join(root, "home"),
     USERPROFILE: join(root, "home"),
     APPDATA: join(root, "appdata"),
@@ -206,11 +242,12 @@ export function createPackagedDesktopSmokeEnvironment(
     XDG_CACHE_HOME: join(root, "xdg-cache"),
     XDG_DATA_HOME: join(root, "xdg-data"),
     OMNIMIND_HOME: join(root, "omnimind-home"),
+    TEMP: isolatedTemp,
+    TMP: isolatedTemp,
+    TMPDIR: isolatedTemp,
     OMNIMIND_DISABLE_AUTO_UPDATE: "1",
     ELECTRON_ENABLE_LOGGING: "1",
   };
-  delete env.OMNIMIND_AUTH_TOKEN;
-  delete env.ELECTRON_RUN_AS_NODE;
   for (const path of [
     env.HOME,
     env.APPDATA,
@@ -219,6 +256,7 @@ export function createPackagedDesktopSmokeEnvironment(
     env.XDG_CACHE_HOME,
     env.XDG_DATA_HOME,
     env.OMNIMIND_HOME,
+    env.TMPDIR,
   ]) {
     if (path) mkdirSync(path, { recursive: true });
   }
