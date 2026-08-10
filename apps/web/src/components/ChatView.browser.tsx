@@ -6969,7 +6969,7 @@ describe("ChatView timeline estimator parity (full app)", () => {
     });
 
     try {
-      await page.getByLabelText("Composer extras").click();
+      await page.getByLabelText("Message box options").click();
       await page.getByText("Plan mode").click();
 
       await vi.waitFor(() => {

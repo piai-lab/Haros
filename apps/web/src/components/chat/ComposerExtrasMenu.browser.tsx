@@ -78,7 +78,7 @@ describe("ComposerExtrasMenu", () => {
   it("shows the attachment action in the menu", async () => {
     await using _ = await mountMenu({ interactionMode: "plan", fastModeEnabled: true });
 
-    await page.getByLabelText("Composer extras").click();
+    await page.getByLabelText("Message box options").click();
 
     await vi.waitFor(() => {
       const text = document.body.textContent ?? "";
@@ -92,7 +92,7 @@ describe("ComposerExtrasMenu", () => {
   it("wires the plan and speed controls", async () => {
     await using menu = await mountMenu();
 
-    await page.getByLabelText("Composer extras").click();
+    await page.getByLabelText("Message box options").click();
     await page.getByText("Plan mode").click();
     await page.getByText("Fast").click();
     await page.getByRole("menuitemradio", { name: "Fast" }).click();

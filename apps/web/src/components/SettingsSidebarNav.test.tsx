@@ -92,10 +92,10 @@ describe("SettingsSidebarNav", () => {
     expect(markup).toContain("Archived");
     expect(markup).toContain("Chat behavior");
     expect(markup).toContain("MCP connections");
-    expect(markup).toContain("Agent providers");
+    expect(markup).toContain("Agent engines");
     expect(markup).toContain("Managed worktrees");
     expect(markup).toContain("System tools");
-    expect(markup).toContain("Archived threads");
+    expect(markup).toContain("Archived tasks and chats");
     expect(markup).not.toContain(">App<");
     expect(markup).not.toContain(">OmniMind<");
   });
