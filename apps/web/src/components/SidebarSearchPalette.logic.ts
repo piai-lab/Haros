@@ -21,7 +21,6 @@ export interface SidebarSearchAction {
    * Type-to-jump targets (one per space) only appear once the user types; listing them
    * all in the empty palette would push threads and projects below the fold.
    */
-  requiresQuery?: boolean;
 }
 
 export interface SidebarSearchTheme {
@@ -43,7 +42,7 @@ export interface SidebarSearchProject {
   folderName: string;
   localName: string | null;
   cwd: string;
-  spaceName: string;
+  sectionName: string;
   createdAt?: string | undefined;
   updatedAt?: string | undefined;
 }
@@ -59,7 +58,7 @@ export interface SidebarSearchThread {
   projectId: string;
   projectName: string;
   projectRemoteName: string;
-  spaceName: string;
+  sectionName: string;
   provider: ProviderKind;
   createdAt: string;
   updatedAt?: string | undefined;
@@ -229,7 +228,7 @@ function scoreProject(project: SidebarSearchProject, query: string): number | nu
   const remoteName = normalizeText(project.remoteName);
   const cwd = normalizeText(project.cwd);
   const folder = normalizeText(project.folderName || basenameOfPath(project.cwd));
-  const spaceName = normalizeText(project.spaceName);
+  const sectionName = normalizeText(project.sectionName);
 
   if (name === query) return 150;
   if (remoteName === query) return 150;
@@ -240,9 +239,9 @@ function scoreProject(project: SidebarSearchProject, query: string): number | nu
   if (name.includes(query)) return 105;
   if (remoteName.includes(query)) return 105;
   if (folder.includes(query)) return 95;
-  if (spaceName === query) return 90;
+  if (sectionName === query) return 90;
   if (cwd.includes(query)) return 70;
-  if (spaceName.includes(query)) return 60;
+  if (sectionName.includes(query)) return 60;
   return null;
 }
 
@@ -253,7 +252,6 @@ export function matchSidebarSearchActions(
   const normalizedQuery = normalizeText(query);
 
   return actions
-    .filter((action) => !action.requiresQuery || normalizedQuery.length > 0)
     .map((action, index) => ({
       action,
       index,
@@ -352,7 +350,7 @@ export function matchSidebarSearchThreads(
       const title = normalizeText(thread.title);
       const projectName = normalizeText(thread.projectName);
       const projectRemoteName = normalizeText(thread.projectRemoteName);
-      const spaceName = normalizeText(thread.spaceName);
+      const sectionName = normalizeText(thread.sectionName);
       const messageMatch = scoreMessage(thread.messages, normalizedQuery, queryTokens);
       let score: number | null = null;
       let matchKind: SidebarSearchThreadMatch["matchKind"] = "title";
@@ -383,7 +381,7 @@ export function matchSidebarSearchThreads(
       ) {
         score = 65;
         matchKind = "project";
-      } else if (spaceName.includes(normalizedQuery)) {
+      } else if (sectionName.includes(normalizedQuery)) {
         score = 55;
         matchKind = "project";
       }

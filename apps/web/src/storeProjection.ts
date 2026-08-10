@@ -78,6 +78,7 @@ function toThreadShell(thread: Thread): ThreadShell {
     id: thread.id,
     codexThreadId: thread.codexThreadId,
     projectId: thread.projectId,
+    groupIds: thread.groupIds ?? [],
     title: thread.title,
     modelSelection: thread.modelSelection,
     runtimeMode: thread.runtimeMode,
@@ -290,8 +291,48 @@ export function removeSpace(
         : {}),
     };
   });
-  if (spaces.length === state.spaces.length && !projectsChanged) return state;
-  return { ...state, spaces, projects: projectsChanged ? projects : state.projects };
+  let threadGroupsChanged = false;
+  const threadShellById = state.threadShellById
+    ? (Object.fromEntries(
+        Object.entries(state.threadShellById).map(([threadId, thread]) => {
+          if (!(thread.groupIds ?? []).includes(spaceId)) return [threadId, thread];
+          threadGroupsChanged = true;
+          return [
+            threadId,
+            {
+              ...thread,
+              groupIds: (thread.groupIds ?? []).filter((groupId) => groupId !== spaceId),
+            },
+          ];
+        }),
+      ) as NonNullable<AppState["threadShellById"]>)
+    : state.threadShellById;
+  let sidebarGroupsChanged = false;
+  const sidebarThreadSummaryById = Object.fromEntries(
+    Object.entries(state.sidebarThreadSummaryById).map(([threadId, thread]) => {
+      if (!(thread.groupIds ?? []).includes(spaceId)) return [threadId, thread];
+      sidebarGroupsChanged = true;
+      return [
+        threadId,
+        { ...thread, groupIds: (thread.groupIds ?? []).filter((groupId) => groupId !== spaceId) },
+      ];
+    }),
+  ) as AppState["sidebarThreadSummaryById"];
+  if (
+    spaces.length === state.spaces.length &&
+    !projectsChanged &&
+    !threadGroupsChanged &&
+    !sidebarGroupsChanged
+  ) {
+    return state;
+  }
+  return {
+    ...state,
+    spaces,
+    projects: projectsChanged ? projects : state.projects,
+    ...(threadGroupsChanged ? { threadShellById } : {}),
+    ...(sidebarGroupsChanged ? { sidebarThreadSummaryById } : {}),
+  };
 }
 
 export function applySpaceOrder(
@@ -319,6 +360,7 @@ function sidebarThreadSummariesEqual(
     left !== undefined &&
     left.id === right.id &&
     left.projectId === right.projectId &&
+    deepEqualJson(left.groupIds ?? [], right.groupIds ?? []) &&
     left.title === right.title &&
     left.modelSelection === right.modelSelection &&
     left.interactionMode === right.interactionMode &&
@@ -361,6 +403,7 @@ function buildSidebarThreadSummary(
   const nextSummary: SidebarThreadSummary = {
     id: thread.id,
     projectId: thread.projectId,
+    groupIds: thread.groupIds ?? [],
     title: thread.title,
     modelSelection: thread.modelSelection,
     interactionMode: thread.interactionMode,

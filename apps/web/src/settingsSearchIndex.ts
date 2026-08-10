@@ -61,13 +61,6 @@ export const SETTINGS_SEARCH_ENTRIES: readonly SettingsSearchEntry[] = [
       "Controls how threads are arranged inside each project in the main sidebar. sort updated created",
   },
   {
-    id: "general:chats-section",
-    section: "general",
-    title: "Chats",
-    keywords:
-      "Show the standalone Chats list in the sidebar footer chats not tied to a project. sidebar section",
-  },
-  {
     id: "general:studio-section",
     section: "general",
     title: "Chat",
@@ -466,7 +459,6 @@ const SETTINGS_SEARCH_TITLE_KEY_BY_TITLE: Readonly<Record<string, MessageKey>> =
   "Base font size": "settings.baseFontSize",
   "Capture sound": "settings.captureSound",
   Chat: "nav.chat",
-  Chats: "settings.chats",
   "Default provider": "settings.defaultProvider",
   "Delete confirmation": "settings.deleteConfirmation",
   "Desktop notifications": "settings.desktopNotifications",

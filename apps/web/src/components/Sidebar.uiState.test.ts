@@ -36,8 +36,6 @@ describe("Sidebar.uiState", () => {
 
   it("defaults collapsed sidebar UI state with no thread list paging", () => {
     expect(readSidebarUiState()).toEqual({
-      chatSectionExpanded: false,
-      chatThreadListExtraPages: 0,
       projectThreadListExtraPagesByCwd: {},
       dismissedThreadStatusKeyByThreadId: {},
       lastThreadRoute: null,
@@ -47,8 +45,6 @@ describe("Sidebar.uiState", () => {
 
   it("persists project thread list paging by normalized cwd", () => {
     persistSidebarUiState({
-      chatSectionExpanded: true,
-      chatThreadListExtraPages: 2,
       projectThreadListExtraPagesByCwd: {
         "/Users/tester/Code/demo": 1,
         "/Users/tester/Code/demo/": 3,
@@ -65,8 +61,6 @@ describe("Sidebar.uiState", () => {
     });
 
     expect(readSidebarUiState()).toEqual({
-      chatSectionExpanded: true,
-      chatThreadListExtraPages: 2,
       projectThreadListExtraPagesByCwd: {
         // Duplicate cwds that normalize to the same key keep the deepest paging.
         [normalizeSidebarProjectThreadListCwd("/Users/tester/Code/demo")]: 3,
@@ -87,8 +81,6 @@ describe("Sidebar.uiState", () => {
     window.localStorage.setItem(
       "omnimind:sidebar-ui:v1",
       JSON.stringify({
-        chatSectionExpanded: true,
-        chatThreadListExtraPages: -4,
         projectThreadListExtraPagesByCwd: {
           "/Users/tester/Code/demo": 2,
           "/Users/tester/Code/zero": 0,
@@ -109,8 +101,6 @@ describe("Sidebar.uiState", () => {
     );
 
     expect(readSidebarUiState()).toEqual({
-      chatSectionExpanded: true,
-      chatThreadListExtraPages: 0,
       projectThreadListExtraPagesByCwd: {
         [normalizeSidebarProjectThreadListCwd("/Users/tester/Code/demo")]: 2,
       },
@@ -128,14 +118,11 @@ describe("Sidebar.uiState", () => {
     window.localStorage.setItem(
       "omnimind:sidebar-ui:v1",
       JSON.stringify({
-        chatSectionExpanded: false,
-        chatThreadListExpanded: true,
         expandedProjectThreadListCwds: ["/Users/tester/Code/demo", "/Users/tester/Code/other"],
       }),
     );
 
     expect(readSidebarUiState()).toMatchObject({
-      chatThreadListExtraPages: 1,
       projectThreadListExtraPagesByCwd: {
         [normalizeSidebarProjectThreadListCwd("/Users/tester/Code/demo")]: 1,
         [normalizeSidebarProjectThreadListCwd("/Users/tester/Code/other")]: 1,
@@ -155,8 +142,6 @@ describe("Sidebar.uiState", () => {
     );
 
     expect(readSidebarUiState()).toEqual({
-      chatSectionExpanded: false,
-      chatThreadListExtraPages: 0,
       projectThreadListExtraPagesByCwd: {},
       dismissedThreadStatusKeyByThreadId: {},
       lastThreadRoute: null,

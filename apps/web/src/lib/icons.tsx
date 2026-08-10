@@ -55,6 +55,7 @@ import {
   IconStar,
   IconStarFilled,
   IconSun,
+  IconTag,
   IconTextWrap,
   IconTrash,
   IconX,
@@ -111,6 +112,7 @@ export const ArrowRightIcon = adaptIcon(IconArrowRight);
 export const ArrowDownIcon = adaptIcon(IconArrowDown);
 export const ArrowUpIcon = adaptIcon(IconArrowUp);
 export const ArrowUpRightIcon = adaptIcon(IconArrowUpRight);
+export const TagIcon = adaptIcon(IconTag);
 export const SortIcon: LucideIcon = centralIconWrapper("arrow-top-bottom");
 // Single source for the robot/agent glyph. Sourced from the Central icon set so
 // every robot affordance (reasoning rows, agent-task rows, agent mention chips,

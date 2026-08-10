@@ -901,6 +901,8 @@ function applyOrchestrationEvent(
 
           if (
             (event.payload.title === undefined || event.payload.title === thread.title) &&
+            (event.payload.groupIds === undefined ||
+              deepEqualJson(event.payload.groupIds, thread.groupIds ?? [])) &&
             modelSelection === thread.modelSelection &&
             (event.payload.envMode === undefined || event.payload.envMode === thread.envMode) &&
             nextBranch === thread.branch &&
@@ -938,6 +940,9 @@ function applyOrchestrationEvent(
 
           return {
             ...thread,
+            ...(event.payload.groupIds !== undefined
+              ? { groupIds: [...event.payload.groupIds] }
+              : {}),
             ...(event.payload.title !== undefined ? { title: event.payload.title } : {}),
             modelSelection,
             ...(event.payload.envMode !== undefined ? { envMode: event.payload.envMode } : {}),

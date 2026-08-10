@@ -34,7 +34,6 @@ import { OrchestrationCommandInvariantError } from "./Errors.ts";
 import { hasNativeHandoffMessages } from "./handoff.ts";
 import { resolveStableMessageTurnId } from "./messageTurnId.ts";
 import {
-  findSpaceById,
   isLegacyHomeChatContainerRow,
   CHECKPOINT_REVERT_STARTED_ACTIVITY_KIND,
   CHECKPOINT_REVERT_SUCCEEDED_ACTIVITY_KIND,
@@ -50,7 +49,6 @@ import {
   requireProjectWorkspaceRootAvailable,
   requireSpace,
   requireSpaceAbsent,
-  requireSpaceAssignableProject,
   requireSpaceNameAvailable,
   type SpaceAssignmentWorkspacePaths,
   requireThread,
@@ -520,9 +518,8 @@ export const decideOrchestrationCommand = Effect.fn("decideOrchestrationCommand"
     case "space.delete": {
       yield* requireSpace({ readModel, command, spaceId: command.spaceId });
       const occurredAt = nowIso();
-      // The deletion event owns the re-filing invariant. Projectors clear every matching
-      // assignment in one pass, avoiding an unbounded event fanout for large spaces while
-      // still including soft-deleted projects that a recovery flow could resurrect.
+      // One deletion event lets projectors remove the Group from every Thread atomically.
+      // They also clear inherited Project assignments left by pre-Groups installs.
       return {
         ...withEventBase({
           aggregateKind: "space",
@@ -533,54 +530,6 @@ export const decideOrchestrationCommand = Effect.fn("decideOrchestrationCommand"
         type: "space.deleted",
         payload: { spaceId: command.spaceId, deletedAt: occurredAt },
       };
-    }
-
-    case "space.projects.assign": {
-      yield* requireSpace({ readModel, command, spaceId: command.spaceId });
-      const occurredAt = nowIso();
-      const seenProjectIds = new Set<string>();
-      const events: Array<Omit<OrchestrationEvent, "sequence">> = [];
-      for (const projectId of command.projectIds) {
-        if (seenProjectIds.has(projectId)) continue;
-        seenProjectIds.add(projectId);
-        const project = yield* requireProject({ readModel, command, projectId });
-        // Already-filed and concurrently-deleted projects are settled, not errors: the
-        // batch stays atomic for real failures without rejecting a raced retry.
-        if (project.deletedAt !== null || project.spaceId === command.spaceId) continue;
-        if ((project.kind ?? "project") !== "project") {
-          return yield* new OrchestrationCommandInvariantError({
-            commandType: command.type,
-            detail: "Only ordinary projects can be assigned to a space.",
-          });
-        }
-        yield* requireSpaceAssignableProject({
-          command,
-          projectTitle: project.title,
-          projectWorkspaceRoot: project.workspaceRoot,
-          workspacePaths,
-        });
-        events.push({
-          ...withEventBase({
-            aggregateKind: "project",
-            aggregateId: project.id,
-            occurredAt,
-            commandId: command.commandId,
-          }),
-          type: "project.meta-updated" as const,
-          payload: {
-            projectId: project.id,
-            spaceId: command.spaceId,
-            updatedAt: occurredAt,
-          },
-        });
-      }
-      if (events.length === 0) {
-        return yield* new OrchestrationCommandInvariantError({
-          commandType: command.type,
-          detail: "None of the selected projects need to be assigned to this space.",
-        });
-      }
-      return events;
     }
 
     case "project.create": {
@@ -666,23 +615,6 @@ export const decideOrchestrationCommand = Effect.fn("decideOrchestrationCommand"
         staleProjectIds: new Set(staleProjects.map((project) => project.id)),
       });
 
-      // Filing a new project into the requested space is best-effort: creation must never
-      // fail because the space raced a delete, so an unusable target degrades to Void.
-      const requestedSpace =
-        command.spaceId != null ? findSpaceById(readModel, command.spaceId) : undefined;
-      const creationSpaceId =
-        command.spaceId != null &&
-        nextProjectKind === "project" &&
-        requestedSpace !== undefined &&
-        requestedSpace.deletedAt === null &&
-        !isLegacyHomeChatContainerRow({
-          projectTitle: command.title,
-          projectWorkspaceRoot: command.workspaceRoot,
-          workspacePaths,
-        })
-          ? command.spaceId
-          : null;
-
       events.push({
         ...withEventBase({
           aggregateKind: "project",
@@ -699,7 +631,7 @@ export const decideOrchestrationCommand = Effect.fn("decideOrchestrationCommand"
           defaultModelSelection: command.defaultModelSelection ?? null,
           scripts: [],
           isPinned: command.isPinned,
-          spaceId: creationSpaceId,
+          spaceId: null,
           createdAt: command.createdAt,
           updatedAt: command.createdAt,
         },
@@ -714,25 +646,10 @@ export const decideOrchestrationCommand = Effect.fn("decideOrchestrationCommand"
         projectId: command.projectId,
       });
       const nextProjectKind = command.kind ?? existingProject.kind ?? "project";
-      const requestedSpaceId =
-        command.spaceId !== undefined
-          ? command.spaceId
-          : nextProjectKind !== "project" && existingProject.spaceId !== null
-            ? null
-            : undefined;
-      const effectiveSpaceId =
-        requestedSpaceId !== undefined ? requestedSpaceId : existingProject.spaceId;
+      // Legacy installs may still carry a Project Space assignment. Changing a managed
+      // container kind clears that stale projection, but no command can create a new one.
       const changedSpaceId =
-        requestedSpaceId !== undefined && requestedSpaceId !== existingProject.spaceId
-          ? requestedSpaceId
-          : undefined;
-      const hasOtherMetadataInput =
-        command.kind !== undefined ||
-        command.title !== undefined ||
-        command.workspaceRoot !== undefined ||
-        command.defaultModelSelection !== undefined ||
-        command.scripts !== undefined ||
-        command.isPinned !== undefined;
+        nextProjectKind !== "project" && existingProject.spaceId !== null ? null : undefined;
       const isLegacyHomeChatContainer = isLegacyHomeChatContainerRow({
         projectTitle: existingProject.title,
         projectWorkspaceRoot: existingProject.workspaceRoot,
@@ -758,42 +675,6 @@ export const decideOrchestrationCommand = Effect.fn("decideOrchestrationCommand"
         return yield* new OrchestrationCommandInvariantError({
           commandType: command.type,
           detail: "The legacy Chats container workspace root cannot be changed.",
-        });
-      }
-      if (effectiveSpaceId !== null) {
-        // Assignability is an invariant of the resulting row, not only of commands that
-        // explicitly set spaceId. Metadata-only updates must not turn an already-filed
-        // project into the legacy Home/Chats container while retaining its space.
-        yield* requireSpaceAssignableProject({
-          command,
-          projectTitle: command.title ?? existingProject.title,
-          projectWorkspaceRoot: command.workspaceRoot ?? existingProject.workspaceRoot,
-          workspacePaths,
-        });
-      }
-      if (command.spaceId !== undefined && command.spaceId !== null) {
-        if (existingProject.deletedAt !== null) {
-          return yield* new OrchestrationCommandInvariantError({
-            commandType: command.type,
-            detail: "Deleted projects cannot be assigned to a space.",
-          });
-        }
-        if (nextProjectKind !== "project") {
-          return yield* new OrchestrationCommandInvariantError({
-            commandType: command.type,
-            detail: "Only ordinary projects can be assigned to a space.",
-          });
-        }
-        yield* requireSpace({ readModel, command, spaceId: command.spaceId });
-      }
-      if (
-        requestedSpaceId !== undefined &&
-        changedSpaceId === undefined &&
-        !hasOtherMetadataInput
-      ) {
-        return yield* new OrchestrationCommandInvariantError({
-          commandType: command.type,
-          detail: "Project is already assigned to this space.",
         });
       }
       // Ownership must hold for the project's *effective* root, not only when the root field is
@@ -1221,6 +1102,28 @@ export const decideOrchestrationCommand = Effect.fn("decideOrchestrationCommand"
         threadId: command.threadId,
       });
       const project = readModel.projects.find((candidate) => candidate.id === thread.projectId);
+      if (command.groupIds !== undefined) {
+        if (!project || (project.kind ?? "project") !== "project") {
+          return yield* Effect.fail(
+            new OrchestrationCommandInvariantError({
+              commandType: command.type,
+              detail: "Only folder-backed Agent conversations can belong to Groups.",
+            }),
+          );
+        }
+        const uniqueGroupIds = new Set(command.groupIds);
+        if (uniqueGroupIds.size !== command.groupIds.length) {
+          return yield* Effect.fail(
+            new OrchestrationCommandInvariantError({
+              commandType: command.type,
+              detail: "Thread group memberships must be unique.",
+            }),
+          );
+        }
+        yield* Effect.forEach(command.groupIds, (spaceId) =>
+          requireSpace({ readModel, command, spaceId }),
+        );
+      }
       // Provider-native threads: see thread.create — the selection mirrors the
       // provider's own subagent, so the Auto-mode capability check doesn't apply.
       if (command.modelSelection !== undefined && thread.creationSource !== "provider_native") {
@@ -1237,6 +1140,7 @@ export const decideOrchestrationCommand = Effect.fn("decideOrchestrationCommand"
         type: "thread.meta-updated",
         payload: {
           threadId: command.threadId,
+          ...(command.groupIds !== undefined ? { groupIds: command.groupIds } : {}),
           ...(command.title !== undefined ? { title: command.title } : {}),
           ...(command.modelSelection !== undefined
             ? { modelSelection: command.modelSelection }

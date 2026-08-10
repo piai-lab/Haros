@@ -39,7 +39,7 @@ import { DEFAULT_INTERACTION_MODE, DEFAULT_RUNTIME_MODE } from "./types";
 describe("store event reducer", () => {
   it("hydrates and removes Spaces while clearing matching project assignments", () => {
     const spaceId = SpaceId.makeUnsafe("space-work");
-    let state = applyOrchestrationEvents(makeState(makeThread()), [
+    let state = applyOrchestrationEvents(makeState(makeThread({ groupIds: [spaceId] })), [
       makeDomainEvent("space.created", {
         spaceId,
         name: "Work",
@@ -68,6 +68,7 @@ describe("store event reducer", () => {
     expect(state.spaces).toEqual([]);
     expect(state.projects[0]?.spaceId).toBeNull();
     expect(state.projects[0]?.updatedAt).toBe("2026-07-15T10:00:02.000Z");
+    expect(threadsOf(state)[0]?.groupIds).toEqual([]);
   });
 
   it("preserves plugin mention references from live thread.message-sent events", () => {

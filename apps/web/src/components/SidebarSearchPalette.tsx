@@ -1008,12 +1008,10 @@ export function SidebarSearchPalette(props: SidebarSearchPaletteProps) {
                               <div className="min-w-0 flex-1 truncate text-[length:var(--app-font-size-ui,12px)] text-foreground">
                                 {project.name || t("search.untitledProject")}
                               </div>
-                              {/* Opening a project from here can switch Space, so the
-                                  destination is worth naming. It rides in the same right-hand
-                                  column the thread rows use for their parent, rather than
-                                  in front of the path, which is what identifies a project. */}
+                              {/* Keep the section in the same right-hand column used by thread
+                                  parent labels, leaving the path as the primary identity. */}
                               <span className="w-24 shrink-0 truncate text-right text-[length:var(--app-font-size-ui-meta,10px)] text-muted-foreground/79">
-                                {project.spaceName}
+                                {project.sectionName}
                               </span>
                             </div>
                             <div className="truncate text-[length:var(--app-font-size-ui-meta,10px)] text-muted-foreground/79">

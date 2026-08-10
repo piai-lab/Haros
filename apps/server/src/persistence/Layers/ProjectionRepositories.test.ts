@@ -197,6 +197,55 @@ projectionRepositoriesLayer("Projection repositories", (it) => {
     }),
   );
 
+  it.effect("removes one deleted Group from Thread membership without deleting the Thread", () =>
+    Effect.gen(function* () {
+      const threads = yield* ProjectionThreadRepository;
+      const removedGroupId = SpaceId.makeUnsafe("group-removed");
+      const retainedGroupId = SpaceId.makeUnsafe("group-retained");
+      const threadId = ThreadId.makeUnsafe("thread-group-membership");
+
+      yield* threads.upsert({
+        threadId,
+        projectId: ProjectId.makeUnsafe("project-groups"),
+        groupIds: [removedGroupId, retainedGroupId],
+        title: "Grouped thread",
+        modelSelection: { provider: "codex", model: "gpt-5.4" },
+        runtimeMode: "approval-required",
+        interactionMode: "default",
+        envMode: "local",
+        branch: null,
+        worktreePath: null,
+        associatedWorktreePath: null,
+        associatedWorktreeBranch: null,
+        associatedWorktreeRef: null,
+        createBranchFlowCompleted: false,
+        lastKnownPr: null,
+        latestTurnId: null,
+        handoff: null,
+        pinnedMessages: null,
+        threadMarkers: null,
+        notes: null,
+        latestUserMessageAt: null,
+        pendingApprovalCount: 0,
+        pendingUserInputCount: 0,
+        hasActionableProposedPlan: 0,
+        createdAt: "2026-08-10T00:00:00.000Z",
+        updatedAt: "2026-08-10T00:00:02.000Z",
+        deletedAt: null,
+      });
+
+      yield* threads.removeGroup({
+        spaceId: removedGroupId,
+        updatedAt: "2026-08-10T00:00:01.000Z",
+      });
+
+      const persisted = Option.getOrNull(yield* threads.getById({ threadId }));
+      assert.deepStrictEqual(persisted?.groupIds, [retainedGroupId]);
+      assert.strictEqual(persisted?.updatedAt, "2026-08-10T00:00:02.000Z");
+      assert.strictEqual(persisted?.deletedAt, null);
+    }),
+  );
+
   it.effect("keeps projection cursors monotonic during concurrent catch-up", () =>
     Effect.gen(function* () {
       const states = yield* ProjectionStateRepository;

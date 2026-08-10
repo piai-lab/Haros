@@ -10,6 +10,7 @@ import {
   ListProjectionThreadsByProjectInput,
   ProjectionThread,
   ProjectionThreadRepository,
+  RemoveProjectionThreadGroupInput,
   type ProjectionThreadRepositoryShape,
 } from "../Services/ProjectionThreads.ts";
 import {
@@ -18,6 +19,7 @@ import {
   ThreadPinnedMessages,
   ThreadMarkers,
   ThreadHandoff,
+  SpaceId,
 } from "@synara/contracts";
 
 const SqliteBoolean = Schema.Number.pipe(
@@ -31,6 +33,7 @@ const ProjectionThreadDbRow = ProjectionThread.mapFields(
   Struct.assign({
     createBranchFlowCompleted: SqliteBoolean,
     isPinned: SqliteBoolean,
+    groupIds: Schema.fromJsonString(Schema.Array(SpaceId)),
     handoff: Schema.NullOr(Schema.fromJsonString(ThreadHandoff)),
     lastKnownPr: Schema.NullOr(Schema.fromJsonString(OrchestrationThreadPullRequest)),
     pinnedMessages: Schema.NullOr(Schema.fromJsonString(ThreadPinnedMessages)),
@@ -50,6 +53,7 @@ const makeProjectionThreadRepository = Effect.gen(function* () {
         INSERT INTO projection_threads (
           thread_id,
           project_id,
+          group_ids_json,
           title,
           model_selection_json,
           runtime_mode,
@@ -93,6 +97,7 @@ const makeProjectionThreadRepository = Effect.gen(function* () {
         VALUES (
           ${row.threadId},
           ${row.projectId},
+          ${JSON.stringify(row.groupIds ?? [])},
           ${row.title},
           ${JSON.stringify(row.modelSelection)},
           ${row.runtimeMode},
@@ -136,6 +141,7 @@ const makeProjectionThreadRepository = Effect.gen(function* () {
         ON CONFLICT (thread_id)
         DO UPDATE SET
           project_id = excluded.project_id,
+          group_ids_json = excluded.group_ids_json,
           title = excluded.title,
           model_selection_json = excluded.model_selection_json,
           runtime_mode = excluded.runtime_mode,
@@ -186,6 +192,7 @@ const makeProjectionThreadRepository = Effect.gen(function* () {
         SELECT
           thread_id AS "threadId",
           project_id AS "projectId",
+          group_ids_json AS "groupIds",
           title,
           model_selection_json AS "modelSelection",
           runtime_mode AS "runtimeMode",
@@ -238,6 +245,7 @@ const makeProjectionThreadRepository = Effect.gen(function* () {
         SELECT
           thread_id AS "threadId",
           project_id AS "projectId",
+          group_ids_json AS "groupIds",
           title,
           model_selection_json AS "modelSelection",
           runtime_mode AS "runtimeMode",
@@ -292,6 +300,28 @@ const makeProjectionThreadRepository = Effect.gen(function* () {
       `,
   });
 
+  const removeProjectionThreadGroup = SqlSchema.void({
+    Request: RemoveProjectionThreadGroupInput,
+    execute: ({ spaceId, updatedAt }) =>
+      sql`
+        UPDATE projection_threads
+        SET group_ids_json = (
+              SELECT json_group_array(value)
+              FROM json_each(projection_threads.group_ids_json)
+              WHERE value <> ${spaceId}
+            ),
+            updated_at = CASE
+              WHEN updated_at > ${updatedAt} THEN updated_at
+              ELSE ${updatedAt}
+            END
+        WHERE EXISTS (
+          SELECT 1
+          FROM json_each(projection_threads.group_ids_json)
+          WHERE value = ${spaceId}
+        )
+      `,
+  });
+
   const upsert: ProjectionThreadRepositoryShape["upsert"] = (row) =>
     upsertProjectionThreadRow(row).pipe(
       Effect.mapError(toPersistenceSqlError("ProjectionThreadRepository.upsert:query")),
@@ -312,11 +342,17 @@ const makeProjectionThreadRepository = Effect.gen(function* () {
       Effect.mapError(toPersistenceSqlError("ProjectionThreadRepository.deleteById:query")),
     );
 
+  const removeGroup: ProjectionThreadRepositoryShape["removeGroup"] = (input) =>
+    removeProjectionThreadGroup(input).pipe(
+      Effect.mapError(toPersistenceSqlError("ProjectionThreadRepository.removeGroup:query")),
+    );
+
   return {
     upsert,
     getById,
     listByProjectId,
     deleteById,
+    removeGroup,
   } satisfies ProjectionThreadRepositoryShape;
 });
 

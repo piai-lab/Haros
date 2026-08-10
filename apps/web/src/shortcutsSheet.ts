@@ -61,18 +61,6 @@ interface ShortcutDefinition {
   params?: Readonly<Record<string, string | number>>;
 }
 
-// Space jumps address the switcher's visual tab order, so slot 1 is always Void.
-const SPACE_JUMP_DEFINITIONS: readonly ShortcutDefinition[] = Array.from(
-  { length: 9 },
-  (_, index) => ({
-    command: `space.jump.${index + 1}` as KeybindingCommand,
-    labelKey: index === 0 ? "shortcuts.jumpVoid" : "shortcuts.jumpSpace",
-    descriptionKey:
-      index === 0 ? "shortcuts.jumpVoidDescription" : "shortcuts.jumpSpaceDescription",
-    params: { number: index + 1 },
-  }),
-);
-
 const AVAILABLE_NOW_DEFINITIONS: readonly ShortcutDefinition[] = [
   {
     command: "sidebar.addProject",
@@ -94,17 +82,6 @@ const AVAILABLE_NOW_DEFINITIONS: readonly ShortcutDefinition[] = [
     labelKey: "shortcuts.importThread",
     descriptionKey: "shortcuts.importThreadDescription",
   },
-  {
-    command: "space.previous",
-    labelKey: "shortcuts.previousSpace",
-    descriptionKey: "shortcuts.previousSpaceDescription",
-  },
-  {
-    command: "space.next",
-    labelKey: "shortcuts.nextSpace",
-    descriptionKey: "shortcuts.nextSpaceDescription",
-  },
-  ...SPACE_JUMP_DEFINITIONS,
   {
     command: "chat.new",
     labelKey: "shortcuts.newThread",
@@ -288,7 +265,7 @@ export function listEditableShortcutDefinitions(
     }
   }
 
-  return STATIC_KEYBINDING_COMMANDS.map(
+  return STATIC_KEYBINDING_COMMANDS.filter((command) => !command.startsWith("space.")).map(
     (command): EditableShortcutDefinition =>
       definitionsByCommand.get(command) ?? {
         command,

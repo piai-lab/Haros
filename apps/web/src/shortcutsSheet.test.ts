@@ -167,9 +167,9 @@ describe("buildShortcutSheetSections", () => {
 });
 
 describe("listEditableShortcutDefinitions", () => {
-  it("includes every built-in keybinding command", () => {
+  it("includes every currently supported built-in keybinding command", () => {
     expect(listEditableShortcutDefinitions().map((definition) => definition.command)).toEqual(
-      STATIC_KEYBINDING_COMMANDS,
+      STATIC_KEYBINDING_COMMANDS.filter((command) => !command.startsWith("space.")),
     );
   });
 });

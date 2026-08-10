@@ -111,7 +111,6 @@ function commandToAggregateRef(command: OrchestrationCommand): {
     case "space.meta.update":
     case "space.reorder":
     case "space.delete":
-    case "space.projects.assign":
       return {
         aggregateKind: "space",
         aggregateId: command.spaceId,

@@ -47,7 +47,7 @@ const projects: SidebarSearchProject[] = [
     folderName: "alpha-repo",
     localName: null,
     cwd: "/repos/alpha-repo",
-    spaceName: "Work",
+    sectionName: "Projects",
     updatedAt: "2026-04-09T10:00:00.000Z",
   },
   {
@@ -57,7 +57,7 @@ const projects: SidebarSearchProject[] = [
     folderName: "beta-repo",
     localName: "Docs",
     cwd: "/repos/beta-repo",
-    spaceName: "Void",
+    sectionName: "Chat",
     updatedAt: "2026-04-09T11:00:00.000Z",
   },
 ];
@@ -110,7 +110,7 @@ const threads: SidebarSearchThread[] = [
     projectId: "project-alpha",
     projectName: "Alpha Repo",
     projectRemoteName: "Alpha Repo",
-    spaceName: "Work",
+    sectionName: "Projects",
     provider: "claudeAgent",
     createdAt: "2026-04-09T09:00:00.000Z",
     updatedAt: "2026-04-09T11:30:00.000Z",
@@ -126,7 +126,7 @@ const threads: SidebarSearchThread[] = [
     projectId: "project-alpha",
     projectName: "Alpha Repo",
     projectRemoteName: "Alpha Repo",
-    spaceName: "Work",
+    sectionName: "Projects",
     provider: "codex",
     createdAt: "2026-04-09T08:00:00.000Z",
     updatedAt: "2026-04-09T10:30:00.000Z",
@@ -145,7 +145,7 @@ const threads: SidebarSearchThread[] = [
     projectId: "project-beta",
     projectName: "Docs",
     projectRemoteName: "Beta Repo",
-    spaceName: "Void",
+    sectionName: "Chat",
     provider: "claudeAgent",
     createdAt: "2026-04-09T07:00:00.000Z",
     updatedAt: "2026-04-09T09:00:00.000Z",
@@ -176,28 +176,6 @@ describe("SidebarSearchPalette.logic", () => {
       matchSidebarSearchActions(actions, "bug").map((action) => action.id),
       ["feedback"],
     );
-  });
-
-  it("hides requiresQuery actions from the empty palette but matches them once typed", () => {
-    const withSpaceJump: SidebarSearchAction[] = [
-      ...actions,
-      {
-        id: "switch-space-work",
-        label: "Switch to Work",
-        description: "Jump to this space.",
-        keywords: ["space", "switch", "Work"],
-        requiresQuery: true,
-      },
-    ];
-
-    const emptyQuery = matchSidebarSearchActions(withSpaceJump, "");
-    assert.equal(
-      emptyQuery.some((action) => action.id === "switch-space-work"),
-      false,
-    );
-
-    const typed = matchSidebarSearchActions(withSpaceJump, "work");
-    assert.equal(typed[0]?.id, "switch-space-work");
   });
 
   it("matches usage settings by keyword", () => {
@@ -242,13 +220,13 @@ describe("SidebarSearchPalette.logic", () => {
     assert.equal(result[0]?.project.id, "project-beta");
   });
 
-  it("matches projects and threads through their space label", () => {
+  it("matches projects and threads through their shell section", () => {
     assert.deepEqual(
-      matchSidebarSearchProjects(projects, "work").map((match) => match.project.id),
+      matchSidebarSearchProjects(projects, "projects").map((match) => match.project.id),
       ["project-alpha"],
     );
     assert.deepEqual(
-      matchSidebarSearchThreads(threads, "void").map((match) => match.thread.id),
+      matchSidebarSearchThreads(threads, "chat").map((match) => match.thread.id),
       ["thread-beta-settings"],
     );
   });

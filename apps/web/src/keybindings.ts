@@ -4,8 +4,6 @@ import {
   type KeybindingShortcut,
   type KeybindingWhenNode,
   type ResolvedKeybindingsConfig,
-  SPACE_JUMP_KEYBINDING_COMMANDS,
-  type SpaceJumpKeybindingCommand,
   THREAD_JUMP_KEYBINDING_COMMANDS,
   type ThreadJumpKeybindingCommand,
 } from "@synara/contracts";
@@ -196,14 +194,6 @@ export const DEFAULT_SHORTCUT_FALLBACKS: ResolvedKeybindingsConfig = [
     shortcut: commandShortcut("p", { ctrlKey: true, altKey: true, modKey: false }),
     whenAst: whenAnd(whenNotTerminalFocus, whenNot(whenIdentifier("isMac"))),
   },
-  // Numbered space jumps target the switcher's visual tab order (mod+alt+1 = Void).
-  // Same guard as the creation chords: Cmd+Alt never reaches the PTY on macOS, while
-  // Ctrl+Alt+digit doubles as AltGr input on Linux/Windows and must yield to terminals.
-  ...SPACE_JUMP_KEYBINDING_COMMANDS.map((command, index) => ({
-    command,
-    shortcut: commandShortcut(String(index + 1), { altKey: true }),
-    whenAst: whenModChordAllowed,
-  })),
   {
     command: "thread.jump.1",
     shortcut: commandShortcut("1"),
@@ -641,15 +631,6 @@ export function threadJumpCommandForIndex(index: number): ThreadJumpKeybindingCo
 
 export function threadJumpIndexFromCommand(command: string): number | null {
   const index = THREAD_JUMP_KEYBINDING_COMMANDS.indexOf(command as ThreadJumpKeybindingCommand);
-  return index === -1 ? null : index;
-}
-
-export function spaceJumpCommandForIndex(index: number): SpaceJumpKeybindingCommand | null {
-  return SPACE_JUMP_KEYBINDING_COMMANDS[index] ?? null;
-}
-
-export function spaceJumpIndexFromCommand(command: string): number | null {
-  const index = SPACE_JUMP_KEYBINDING_COMMANDS.indexOf(command as SpaceJumpKeybindingCommand);
   return index === -1 ? null : index;
 }
 

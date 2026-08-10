@@ -349,6 +349,40 @@ it.effect("trims branded ids and command string fields at decode boundaries", ()
   }),
 );
 
+it.effect("removes Project-to-Group assignment from the command boundary", () =>
+  Effect.gen(function* () {
+    const create = yield* decodeProjectCreateCommand({
+      type: "project.create",
+      commandId: "cmd-project-create",
+      projectId: "project-create",
+      title: "Project",
+      workspaceRoot: "/tmp/project",
+      spaceId: "group-legacy",
+      createdAt: "2026-08-10T00:00:00.000Z",
+    });
+    assert.equal("spaceId" in create, false);
+
+    const update = yield* decodeClientOrchestrationCommand({
+      type: "project.meta.update",
+      commandId: "cmd-project-update",
+      projectId: "project-create",
+      title: "Renamed",
+      spaceId: "group-legacy",
+    });
+    assert.equal("spaceId" in update, false);
+
+    const bulkAssignment = yield* Effect.exit(
+      decodeClientOrchestrationCommand({
+        type: "space.projects.assign",
+        commandId: "cmd-project-groups",
+        spaceId: "group-legacy",
+        projectIds: ["project-create"],
+      }),
+    );
+    assert.strictEqual(bulkAssignment._tag, "Failure");
+  }),
+);
+
 it.effect("decodes historical project.created payloads with a default provider", () =>
   Effect.gen(function* () {
     const parsed = yield* decodeProjectCreatedPayload({

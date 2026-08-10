@@ -1,6 +1,6 @@
 import { Schema } from "effect";
 
-import { CommandId, IsoDateTime, ProjectId, SpaceId, TrimmedNonEmptyString } from "./baseSchemas";
+import { CommandId, IsoDateTime, ProjectId, TrimmedNonEmptyString } from "./baseSchemas";
 import { ModelSelection } from "./orchestration";
 
 const BoundedRepositoryInput = TrimmedNonEmptyString.check(Schema.isMaxLength(512));
@@ -21,8 +21,6 @@ export const GitHubProjectProvisionInput = Schema.Struct({
   directoryName: BoundedDirectoryName,
   commandId: CommandId,
   projectId: ProjectId,
-  /** Destination for a newly registered project; reusing an existing project preserves its Space. */
-  newProjectSpaceId: Schema.NullOr(SpaceId),
   defaultModelSelection: ModelSelection,
   createdAt: IsoDateTime,
 });

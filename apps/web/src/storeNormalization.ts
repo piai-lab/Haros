@@ -1442,6 +1442,11 @@ export function normalizeThreadFromReadModel(
   previous: Thread | undefined,
 ): Thread {
   const modelSelection = normalizeModelSelection(incoming.modelSelection, previous?.modelSelection);
+  const incomingGroupIds = incoming.groupIds ?? [];
+  const groupIds =
+    previous?.groupIds && deepEqualJson(previous.groupIds, incomingGroupIds)
+      ? previous.groupIds
+      : [...incomingGroupIds];
   const session = normalizeThreadSession(incoming.session, previous?.session);
   const messages = normalizeChatMessages(incoming.messages, previous?.messages);
   const proposedPlans = normalizeProposedPlans(incoming.proposedPlans, previous?.proposedPlans);
@@ -1525,6 +1530,7 @@ export function normalizeThreadFromReadModel(
   if (
     previous &&
     previous.projectId === incoming.projectId &&
+    previous.groupIds === groupIds &&
     previous.title === incoming.title &&
     previous.modelSelection === modelSelection &&
     previous.runtimeMode === incoming.runtimeMode &&
@@ -1577,6 +1583,7 @@ export function normalizeThreadFromReadModel(
     id: incoming.id,
     codexThreadId: null,
     projectId: incoming.projectId,
+    groupIds,
     title: incoming.title,
     modelSelection,
     runtimeMode: incoming.runtimeMode,
@@ -1641,6 +1648,11 @@ export function normalizeThreadShellSnapshot(
   turnState: ThreadTurnState;
 } {
   const modelSelection = normalizeModelSelection(incoming.modelSelection, previous?.modelSelection);
+  const incomingGroupIds = incoming.groupIds ?? [];
+  const groupIds =
+    previous?.groupIds && deepEqualJson(previous.groupIds, incomingGroupIds)
+      ? previous.groupIds
+      : [...incomingGroupIds];
   const session = normalizeThreadSession(incoming.session, previous?.session);
   const latestTurn = normalizeLatestTurn(incoming.latestTurn, previous?.latestTurn);
   const handoff =
@@ -1682,6 +1694,7 @@ export function normalizeThreadShellSnapshot(
     id: incoming.id,
     codexThreadId: previous?.codexThreadId ?? null,
     projectId: incoming.projectId,
+    groupIds,
     title: incoming.title,
     modelSelection,
     runtimeMode: incoming.runtimeMode,

@@ -29,8 +29,6 @@ describe("CreateProjectDialog GitHub source", () => {
       <CreateProjectDialog
         open
         githubProvisioningAvailable={false}
-        spaces={[]}
-        activeSpaceId={null}
         defaultCloneParent="/Users/test/Developer"
         onOpenChange={vi.fn()}
         onSubmit={vi.fn()}
@@ -49,8 +47,6 @@ describe("CreateProjectDialog GitHub source", () => {
       <CreateProjectDialog
         open
         githubProvisioningAvailable
-        spaces={[]}
-        activeSpaceId={null}
         defaultCloneParent="/Users/test/Developer"
         onOpenChange={onOpenChange}
         onSubmit={onSubmit}
@@ -73,7 +69,6 @@ describe("CreateProjectDialog GitHub source", () => {
       repository: "openai/codex",
       destinationParent: "/Users/test/Developer",
       directoryName: "codex",
-      spaceId: null,
     });
     expect(value.operationId).toEqual(expect.any(String));
     expect(options.signal).toBeInstanceOf(AbortSignal);
@@ -85,8 +80,6 @@ describe("CreateProjectDialog GitHub source", () => {
       <CreateProjectDialog
         open
         githubProvisioningAvailable
-        spaces={[]}
-        activeSpaceId={null}
         defaultCloneParent="/Users/test/Developer"
         onOpenChange={vi.fn()}
         onSubmit={onSubmit}
@@ -120,8 +113,6 @@ describe("CreateProjectDialog GitHub source", () => {
         <CreateProjectDialog
           open={open}
           githubProvisioningAvailable
-          spaces={[]}
-          activeSpaceId={null}
           defaultCloneParent="/Users/test"
           onOpenChange={(nextOpen) => {
             onOpenChange(nextOpen);

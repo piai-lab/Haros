@@ -513,10 +513,16 @@ const makeOrchestrationProjectionPipeline = Effect.gen(function* () {
       case "space.deleted":
         return applySpaceMetadataProjection({ event, projectionSpaceRepository }).pipe(
           Effect.andThen(
-            projectionProjectRepository.clearSpaceAssignments({
-              spaceId: event.payload.spaceId,
-              updatedAt: event.payload.deletedAt,
-            }),
+            Effect.all([
+              projectionProjectRepository.clearSpaceAssignments({
+                spaceId: event.payload.spaceId,
+                updatedAt: event.payload.deletedAt,
+              }),
+              projectionThreadRepository.removeGroup({
+                spaceId: event.payload.spaceId,
+                updatedAt: event.payload.deletedAt,
+              }),
+            ]),
           ),
           Effect.asVoid,
         );
@@ -546,6 +552,7 @@ const makeOrchestrationProjectionPipeline = Effect.gen(function* () {
           yield* projectionThreadRepository.upsert({
             threadId: event.payload.threadId,
             projectId: event.payload.projectId,
+            groupIds: [],
             title: event.payload.title,
             modelSelection: event.payload.modelSelection,
             runtimeMode: event.payload.runtimeMode,
@@ -617,6 +624,7 @@ const makeOrchestrationProjectionPipeline = Effect.gen(function* () {
             return {
               ...thread,
               ...(event.payload.title !== undefined ? { title: event.payload.title } : {}),
+              ...(event.payload.groupIds !== undefined ? { groupIds: event.payload.groupIds } : {}),
               ...(event.payload.modelSelection !== undefined
                 ? { modelSelection: event.payload.modelSelection }
                 : {}),
@@ -2182,10 +2190,16 @@ const makeOrchestrationProjectionPipeline = Effect.gen(function* () {
       case "space.deleted":
         return applySpaceMetadataProjection({ event, projectionSpaceRepository }).pipe(
           Effect.andThen(
-            projectionProjectRepository.clearSpaceAssignments({
-              spaceId: event.payload.spaceId,
-              updatedAt: event.payload.deletedAt,
-            }),
+            Effect.all([
+              projectionProjectRepository.clearSpaceAssignments({
+                spaceId: event.payload.spaceId,
+                updatedAt: event.payload.deletedAt,
+              }),
+              projectionThreadRepository.removeGroup({
+                spaceId: event.payload.spaceId,
+                updatedAt: event.payload.deletedAt,
+              }),
+            ]),
           ),
         );
       case "project.created":

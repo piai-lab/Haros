@@ -20,6 +20,7 @@ import {
   RuntimeMode,
   ThreadEnvironmentMode,
   ThreadId,
+  SpaceId,
   TurnId,
 } from "@synara/contracts";
 import { Option, Schema, ServiceMap } from "effect";
@@ -30,6 +31,7 @@ import type { ProjectionRepositoryError } from "../Errors.ts";
 export const ProjectionThread = Schema.Struct({
   threadId: ThreadId,
   projectId: ProjectId,
+  groupIds: Schema.optional(Schema.Array(SpaceId)).pipe(Schema.withDecodingDefault(() => [])),
   title: Schema.String,
   modelSelection: ModelSelection,
   runtimeMode: RuntimeMode,
@@ -101,6 +103,12 @@ export const ListProjectionThreadsByProjectInput = Schema.Struct({
 });
 export type ListProjectionThreadsByProjectInput = typeof ListProjectionThreadsByProjectInput.Type;
 
+export const RemoveProjectionThreadGroupInput = Schema.Struct({
+  spaceId: SpaceId,
+  updatedAt: IsoDateTime,
+});
+export type RemoveProjectionThreadGroupInput = typeof RemoveProjectionThreadGroupInput.Type;
+
 /**
  * ProjectionThreadRepositoryShape - Service API for projected thread records.
  */
@@ -133,6 +141,11 @@ export interface ProjectionThreadRepositoryShape {
    */
   readonly deleteById: (
     input: DeleteProjectionThreadInput,
+  ) => Effect.Effect<void, ProjectionRepositoryError>;
+
+  /** Remove a deleted Group identity from every Thread without deleting a Thread. */
+  readonly removeGroup: (
+    input: RemoveProjectionThreadGroupInput,
   ) => Effect.Effect<void, ProjectionRepositoryError>;
 }
 

@@ -99,6 +99,7 @@ const ProjectionThreadDbRowSchema = ProjectionThread.mapFields(
   Struct.assign({
     createBranchFlowCompleted: Schema.Number,
     isPinned: Schema.Number,
+    groupIds: Schema.fromJsonString(Schema.Array(SpaceId)),
     handoff: Schema.NullOr(Schema.fromJsonString(ThreadHandoff)),
     lastKnownPr: Schema.NullOr(Schema.fromJsonString(OrchestrationThreadPullRequest)),
     pinnedMessages: Schema.NullOr(Schema.fromJsonString(ThreadPinnedMessages)),
@@ -116,6 +117,7 @@ const ProjectionThreadShellDbRowSchema = Schema.Struct(ProjectionThreadShellFiel
   Struct.assign({
     createBranchFlowCompleted: Schema.Number,
     isPinned: Schema.Number,
+    groupIds: Schema.fromJsonString(Schema.Array(SpaceId)),
     handoff: Schema.NullOr(Schema.fromJsonString(ThreadHandoff)),
     lastKnownPr: Schema.NullOr(Schema.fromJsonString(OrchestrationThreadPullRequest)),
     modelSelection: ModelSelectionJsonUnknown,
@@ -613,6 +615,7 @@ function toProjectedThreadShellFromStoredSummary(input: {
   return {
     id: threadRow.threadId,
     projectId: threadRow.projectId,
+    groupIds: threadRow.groupIds,
     title: threadRow.title,
     modelSelection: threadRow.modelSelection,
     runtimeMode: threadRow.runtimeMode,
@@ -667,6 +670,7 @@ function toProjectedThread(input: {
   return {
     id: threadRow.threadId,
     projectId: threadRow.projectId,
+    groupIds: threadRow.groupIds,
     title: threadRow.title,
     modelSelection: threadRow.modelSelection,
     runtimeMode: threadRow.runtimeMode,
@@ -801,6 +805,7 @@ const makeProjectionSnapshotQuery = Effect.gen(function* () {
         SELECT
           thread_id AS "threadId",
           project_id AS "projectId",
+          group_ids_json AS "groupIds",
           title,
           model_selection_json AS "modelSelection",
           runtime_mode AS "runtimeMode",
@@ -853,6 +858,7 @@ const makeProjectionSnapshotQuery = Effect.gen(function* () {
         SELECT
           thread_id AS "threadId",
           project_id AS "projectId",
+          group_ids_json AS "groupIds",
           title,
           model_selection_json AS "modelSelection",
           runtime_mode AS "runtimeMode",
@@ -1368,6 +1374,7 @@ const makeProjectionSnapshotQuery = Effect.gen(function* () {
         SELECT
           thread_id AS "threadId",
           project_id AS "projectId",
+          group_ids_json AS "groupIds",
           title,
           model_selection_json AS "modelSelection",
           runtime_mode AS "runtimeMode",
@@ -1422,6 +1429,7 @@ const makeProjectionSnapshotQuery = Effect.gen(function* () {
         SELECT
           thread_id AS "threadId",
           project_id AS "projectId",
+          group_ids_json AS "groupIds",
           title,
           model_selection_json AS "modelSelection",
           runtime_mode AS "runtimeMode",

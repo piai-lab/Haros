@@ -391,6 +391,18 @@ export function projectEvent(
                 }
               : project,
           ),
+          threads: nextBase.threads.map((thread) =>
+            (thread.groupIds ?? []).includes(payload.spaceId)
+              ? {
+                  ...thread,
+                  groupIds: (thread.groupIds ?? []).filter(
+                    (spaceId) => spaceId !== payload.spaceId,
+                  ),
+                  updatedAt:
+                    thread.updatedAt > payload.deletedAt ? thread.updatedAt : payload.deletedAt,
+                }
+              : thread,
+          ),
         })),
       );
 
@@ -480,6 +492,7 @@ export function projectEvent(
           {
             id: payload.threadId,
             projectId: payload.projectId,
+            groupIds: [],
             title: payload.title,
             modelSelection: payload.modelSelection,
             runtimeMode: payload.runtimeMode,
@@ -589,6 +602,7 @@ export function projectEvent(
           return {
             ...nextBase,
             threads: updateThread(nextBase.threads, payload.threadId, {
+              ...(payload.groupIds !== undefined ? { groupIds: payload.groupIds } : {}),
               ...(payload.title !== undefined ? { title: payload.title } : {}),
               ...(payload.modelSelection !== undefined
                 ? { modelSelection: payload.modelSelection }

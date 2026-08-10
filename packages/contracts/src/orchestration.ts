@@ -404,7 +404,6 @@ export const SPACES_MAX_COUNT = 50;
 /** Reserved client-side identity for the virtual collection of unassigned projects. */
 export const RESERVED_VOID_SPACE_ID = "void";
 /** Per-command cap for bulk assignment; clients chunk larger selections. */
-export const SPACE_PROJECTS_ASSIGN_MAX_COUNT = 200;
 export const SPACE_ICON_NAMES = [
   "bag",
   "home",
@@ -719,6 +718,7 @@ export type OrchestrationPendingInteraction = typeof OrchestrationPendingInterac
 export const OrchestrationThread = Schema.Struct({
   id: ThreadId,
   projectId: ProjectId,
+  groupIds: Schema.optional(Schema.Array(SpaceId)).pipe(Schema.withDecodingDefault(() => [])),
   title: TrimmedNonEmptyString,
   modelSelection: ModelSelection,
   runtimeMode: RuntimeMode,
@@ -806,6 +806,7 @@ export type OrchestrationThread = typeof OrchestrationThread.Type;
 export const OrchestrationThreadShell = Schema.Struct({
   id: ThreadId,
   projectId: ProjectId,
+  groupIds: Schema.optional(Schema.Array(SpaceId)).pipe(Schema.withDecodingDefault(() => [])),
   title: TrimmedNonEmptyString,
   modelSelection: ModelSelection,
   runtimeMode: RuntimeMode,
@@ -978,21 +979,6 @@ export const SpaceDeleteCommand = Schema.Struct({
   spaceId: SpaceId,
 });
 
-/**
- * Bulk assignment into one target space, applied atomically in a single transaction.
- * Moving projects out to Void stays per-project via `project.meta.update` — the only
- * bulk surface in the app files projects *into* a space.
- */
-export const SpaceProjectsAssignCommand = Schema.Struct({
-  type: Schema.Literal("space.projects.assign"),
-  commandId: CommandId,
-  spaceId: SpaceId,
-  projectIds: Schema.Array(ProjectId).check(
-    Schema.isMinLength(1),
-    Schema.isMaxLength(SPACE_PROJECTS_ASSIGN_MAX_COUNT),
-  ),
-});
-
 export const ProjectCreateCommand = Schema.Struct({
   type: Schema.Literal("project.create"),
   commandId: CommandId,
@@ -1005,12 +991,6 @@ export const ProjectCreateCommand = Schema.Struct({
   ),
   defaultModelSelection: Schema.optional(Schema.NullOr(ModelSelection)),
   isPinned: Schema.optional(Schema.Boolean).pipe(Schema.withDecodingDefault(() => false)),
-  /**
-   * Space the project is born into (usually the client's active space). Best-effort:
-   * an unusable target (deleted space, non-ordinary kind) degrades to Void rather
-   * than failing creation.
-   */
-  spaceId: Schema.optional(Schema.NullOr(SpaceId)),
   createdAt: IsoDateTime,
 });
 
@@ -1027,7 +1007,6 @@ const ProjectMetaUpdateCommand = Schema.Struct({
   defaultModelSelection: Schema.optional(Schema.NullOr(ModelSelection)),
   scripts: Schema.optional(Schema.Array(ProjectScript)),
   isPinned: Schema.optional(Schema.Boolean),
-  spaceId: Schema.optional(Schema.NullOr(SpaceId)),
 });
 
 const ProjectDeleteCommand = Schema.Struct({
@@ -1166,6 +1145,7 @@ const ThreadMetaUpdateCommand = Schema.Struct({
   type: Schema.Literal("thread.meta.update"),
   commandId: CommandId,
   threadId: ThreadId,
+  groupIds: Schema.optional(Schema.Array(SpaceId).check(Schema.isMaxLength(SPACES_MAX_COUNT))),
   title: Schema.optional(TrimmedNonEmptyString),
   modelSelection: Schema.optional(ModelSelection),
   envMode: Schema.optional(ThreadEnvironmentMode),
@@ -1446,7 +1426,6 @@ const DispatchableClientOrchestrationCommand = Schema.Union([
   SpaceMetaUpdateCommand,
   SpaceReorderCommand,
   SpaceDeleteCommand,
-  SpaceProjectsAssignCommand,
   ProjectCreateCommand,
   ProjectMetaUpdateCommand,
   ProjectDeleteCommand,
@@ -1486,7 +1465,6 @@ export const ClientOrchestrationCommand = Schema.Union([
   SpaceMetaUpdateCommand,
   SpaceReorderCommand,
   SpaceDeleteCommand,
-  SpaceProjectsAssignCommand,
   ProjectCreateCommand,
   ProjectMetaUpdateCommand,
   ProjectDeleteCommand,
@@ -1806,6 +1784,7 @@ export const ThreadUnarchivedPayload = Schema.Struct({
 
 export const ThreadMetaUpdatedPayload = Schema.Struct({
   threadId: ThreadId,
+  groupIds: Schema.optional(Schema.Array(SpaceId).check(Schema.isMaxLength(SPACES_MAX_COUNT))),
   title: Schema.optional(TrimmedNonEmptyString),
   modelSelection: Schema.optional(ModelSelection),
   envMode: Schema.optional(ThreadEnvironmentMode),

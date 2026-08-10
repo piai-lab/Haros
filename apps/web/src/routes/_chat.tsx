@@ -29,11 +29,10 @@ import { resolveInheritedThreadContext } from "../lib/threadBootstrap";
 import { isTerminalFocused } from "../lib/terminalFocus";
 import { serverConfigQueryOptions } from "../lib/serverReactQuery";
 import { startFreshChatForActiveSurface } from "../lib/startContainerChat";
-import { isOrdinarySpaceProject } from "../lib/spaces";
+import { isFolderBackedProject } from "../lib/projectClassification";
 import { isKeyboardShortcutsHelpShortcut, resolveShortcutCommand } from "../keybindings";
 import { useStore } from "../store";
 import { createProjectLastActivityAtSelector } from "../storeSelectors";
-import { useSpacesUiStore } from "../spacesUiStore";
 import { selectThreadTerminalState, useTerminalStateStore } from "../terminalStateStore";
 import { useThreadSelectionStore } from "../threadSelectionStore";
 import { onServerMaintenanceUpdated } from "../wsNativeApi";
@@ -242,7 +241,6 @@ function ChatRouteGlobalShortcuts() {
   const threadsHydrated = useStore((state) => state.threadsHydrated);
   const selectProjectLastActivityAt = useMemo(() => createProjectLastActivityAtSelector(), []);
   const projectLastActivityAt = useStore(selectProjectLastActivityAt);
-  const activeSpaceId = useSpacesUiStore((state) => state.activeSpaceId);
   useTemporaryThreadLifecycle(activeContextThreadId);
   const serverConfigQuery = useQuery(serverConfigQueryOptions());
   const keybindings = serverConfigQuery.data?.keybindings ?? EMPTY_KEYBINDINGS;
@@ -262,35 +260,23 @@ function ChatRouteGlobalShortcuts() {
     presentationMode: activeThreadTerminalState?.presentationMode ?? "drawer",
     terminalOpen,
   });
-  // Shortcuts that target "a project" must stay inside the Space you are looking at, or
-  // mod+alt+arrow would switch Space and the next new-thread shortcut would drop you back
-  // out of it.
-  const activeSpaceProjects = useMemo(
+  const agentProjects = useMemo(
     () =>
-      projects.filter(
-        (project) =>
-          isOrdinarySpaceProject(project, { homeDir, chatWorkspaceRoot, studioWorkspaceRoot }) &&
-          (project.spaceId ?? null) === activeSpaceId,
+      projects.filter((project) =>
+        isFolderBackedProject(project, { homeDir, chatWorkspaceRoot, studioWorkspaceRoot }),
       ),
-    [activeSpaceId, chatWorkspaceRoot, homeDir, projects, studioWorkspaceRoot],
+    [chatWorkspaceRoot, homeDir, projects, studioWorkspaceRoot],
   );
-  const currentProjectId = resolveCurrentProjectTargetId(
-    activeSpaceProjects,
-    activeProject?.id ?? null,
-  );
-  // The remembered project is global, so it is unusable the moment you switch Space. Fall
-  // back to this Space's most recently touched project rather than to nothing.
+  const currentProjectId = resolveCurrentProjectTargetId(agentProjects, activeProject?.id ?? null);
   const latestUsableProjectId = useMemo(
     () =>
       resolveLatestProjectTargetIdWithFallback(
-        activeSpaceProjects,
+        agentProjects,
         latestProjectId,
         projectLastActivityAt,
       ),
-    [activeSpaceProjects, latestProjectId, projectLastActivityAt],
+    [agentProjects, latestProjectId, projectLastActivityAt],
   );
-  // Deliberately unscoped: the persisted id is only cleared once the project is gone from
-  // the app entirely, not merely absent from the Space you happen to be in.
   const persistedLatestProjectStillExists = resolveLatestProjectTargetId(projects, latestProjectId);
   const handleNewChatForActiveSurface = useCallback(
     () =>

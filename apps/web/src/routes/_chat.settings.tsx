@@ -238,7 +238,6 @@ function SettingsRouteView() {
     ...(settings.sidebarThreadSortOrder !== defaults.sidebarThreadSortOrder
       ? [t("settings.threadOrder")]
       : []),
-    ...(settings.showChatsSection !== defaults.showChatsSection ? [t("settings.chats")] : []),
     ...(settings.showStudioSection !== defaults.showStudioSection ? [t("nav.chat")] : []),
     ...(settings.uiDensity !== defaults.uiDensity ? [t("settings.uiDensity")] : []),
     ...(settings.desktopAppIcon !== defaults.desktopAppIcon ? [t("settings.appIcon")] : []),
@@ -579,14 +578,6 @@ function SettingsRouteView() {
       </SettingsSection>
 
       <SettingsSection title={t("settings.sidebarSections")}>
-        {renderBooleanSettingRow({
-          settingKey: "showChatsSection",
-          title: t("settings.chats"),
-          description: t("settings.chatsDescription"),
-          resetLabel: t("settings.chats"),
-          ariaLabel: t("settings.chatsDescription"),
-        })}
-
         {renderBooleanSettingRow({
           settingKey: "showStudioSection",
           title: t("nav.chat"),
