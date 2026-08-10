@@ -42,6 +42,11 @@ const PRODUCT_COPY_SOURCES = [
   "components/settings/SettingControls.tsx",
   "components/settings/SkillsSettingsPanel.tsx",
   "components/settings/ThemeModePicker.tsx",
+  "components/ui/combobox.tsx",
+  "components/ui/dialog.tsx",
+  "components/ui/sheet.tsx",
+  "components/ui/spinner.tsx",
+  "components/ui/time-picker.tsx",
   "components/ui/toast.tsx",
   "shortcutsSheet.ts",
 ] as const;
