@@ -2,6 +2,7 @@ import type { KeyboardEvent, ReactNode } from "react";
 
 import { GitHubIcon } from "~/lib/icons";
 import { cn } from "~/lib/utils";
+import { useI18n } from "../i18n";
 
 import { FolderClosed } from "./FolderClosed";
 import { Button } from "./ui/button";
@@ -30,24 +31,26 @@ export function CreateGitHubProjectFields(props: {
   readonly onBrowse: () => void;
   readonly onSubmitKeyDown: (event: KeyboardEvent<HTMLInputElement>) => void;
 }) {
+  const { t } = useI18n();
   return (
     <div className="space-y-3">
       <div className="rounded-xl border border-foreground/10 bg-foreground/[0.025] px-3.5 py-3">
         <p className="text-[length:var(--app-font-size-ui,12px)] font-medium text-foreground">
-          What you need
+          {t("project.githubRequirements")}
         </p>
         <ol className="mt-2.5 space-y-2">
-          <GitHubRequirement index={1} title="Repository">
-            Paste an <span className="font-medium text-foreground">owner/repository</span> name or
-            its GitHub URL.
+          <GitHubRequirement index={1} title={t("project.repository")}>
+            {t("project.githubRepositoryInstructionStart")}{" "}
+            <span className="font-medium text-foreground">owner/repository</span>{" "}
+            {t("project.githubRepositoryInstructionEnd")}
           </GitHubRequirement>
-          <GitHubRequirement index={2} title="Destination">
-            Choose the parent folder where OmniMind should create the checkout.
+          <GitHubRequirement index={2} title={t("project.destination")}>
+            {t("project.destinationInstruction")}
           </GitHubRequirement>
-          <GitHubRequirement index={3} title="Private access">
-            Public repositories work immediately. For private repositories, run{" "}
-            <code className="font-mono text-foreground">gh auth login</code> or configure Git
-            credentials.
+          <GitHubRequirement index={3} title={t("project.privateAccess")}>
+            {t("project.privateAccessInstructionStart")}{" "}
+            <code className="font-mono text-foreground">gh auth login</code>{" "}
+            {t("project.privateAccessInstructionEnd")}
           </GitHubRequirement>
         </ol>
       </div>
@@ -61,7 +64,7 @@ export function CreateGitHubProjectFields(props: {
             "text-[length:var(--app-font-size-ui,12px)] text-foreground",
           )}
         >
-          Repository
+          {t("project.repository")}
         </label>
         <InputGroup className={PROJECT_DIALOG_FIELD_CONTROL_CLASS_NAME}>
           <InputGroupAddon className="w-10 self-stretch border-e border-foreground/12 ps-0">
@@ -72,7 +75,7 @@ export function CreateGitHubProjectFields(props: {
             value={props.repositoryInput}
             aria-invalid={props.formError ? true : undefined}
             {...(props.formError ? { "aria-describedby": props.errorId } : {})}
-            placeholder="owner/repository or GitHub URL"
+            placeholder={t("project.repositoryPlaceholder")}
             spellCheck={false}
             autoCorrect="off"
             autoCapitalize="off"
@@ -91,7 +94,7 @@ export function CreateGitHubProjectFields(props: {
             "text-[length:var(--app-font-size-ui,12px)] text-foreground",
           )}
         >
-          Clone into
+          {t("project.cloneInto")}
         </label>
         <div className="flex items-center gap-2">
           <InputGroup className={cn(PROJECT_DIALOG_FIELD_CONTROL_CLASS_NAME, "min-w-0 flex-1")}>
@@ -117,7 +120,7 @@ export function CreateGitHubProjectFields(props: {
               disabled={props.isPickingFolder || props.submitting}
               onClick={props.onBrowse}
             >
-              Browse
+              {t("project.browse")}
             </Button>
           ) : null}
         </div>
@@ -132,7 +135,7 @@ export function CreateGitHubProjectFields(props: {
             "text-[length:var(--app-font-size-ui,12px)] text-foreground",
           )}
         >
-          Folder name
+          {t("project.folderName")}
         </label>
         <InputGroup className={PROJECT_DIALOG_FIELD_CONTROL_CLASS_NAME}>
           <InputGroupInput
@@ -148,7 +151,7 @@ export function CreateGitHubProjectFields(props: {
         </InputGroup>
         {props.finalClonePath ? (
           <p className="truncate text-[length:var(--app-font-size-ui-xs,10px)] text-muted-foreground/70">
-            Final location: {props.finalClonePath}
+            {t("project.finalLocation", { path: props.finalClonePath })}
           </p>
         ) : null}
       </div>

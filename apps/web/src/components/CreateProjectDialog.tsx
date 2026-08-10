@@ -4,12 +4,16 @@
 // Layer: Web UI dialog
 // Exports: CreateProjectDialog, CreateProjectSubmitValue
 
-import type { GitHubProjectProvisionProgressEvent } from "@synara/contracts";
+import type {
+  GitHubProjectProvisionPhase,
+  GitHubProjectProvisionProgressEvent,
+} from "@synara/contracts";
 import { parseGitHubRepositoryInput } from "@synara/shared/githubRepository";
 import { normalizeProjectDirectoryName } from "@synara/shared/projectDirectoryName";
 import { useCallback, useEffect, useId, useRef, useState, type KeyboardEvent } from "react";
 
 import { isElectron } from "../env";
+import { useI18n, type MessageKey } from "../i18n";
 import {
   isDroppedComposerDirectory,
   resolveDroppedFileAbsolutePath,
@@ -45,18 +49,28 @@ function isFileDrag(event: globalThis.DragEvent): boolean {
   return Array.from(event.dataTransfer?.types ?? []).includes("Files");
 }
 
-type DroppedFolderResult = { readonly path: string } | { readonly error: string };
+type DroppedFolderResult =
+  | { readonly path: string }
+  | { readonly error: "folder-only" | "path-unreadable" };
+
+const PROJECT_PHASE_MESSAGE_KEY: Record<GitHubProjectProvisionPhase, MessageKey> = {
+  validating: "project.phaseValidating",
+  "resolving-access": "project.phaseResolvingAccess",
+  cloning: "project.phaseCloning",
+  verifying: "project.phaseVerifying",
+  registering: "project.phaseRegistering",
+};
 
 function resolveDroppedFolder(dataTransfer: DataTransfer): DroppedFolderResult | null {
   const item = Array.from(dataTransfer.items).find((entry) => entry.kind === "file");
   const file = item?.getAsFile() ?? dataTransfer.files[0] ?? null;
   if (!item || !file) return null;
   if (!isDroppedComposerDirectory(item)) {
-    return { error: "Drop a folder, not a file." };
+    return { error: "folder-only" };
   }
   const absolutePath = resolveDroppedFileAbsolutePath(file);
   if (!absolutePath) {
-    return { error: "Could not read the folder's path. Use browse or type it instead." };
+    return { error: "path-unreadable" };
   }
   return { path: absolutePath };
 }
@@ -91,6 +105,7 @@ export function CreateProjectDialog(props: {
   onOpenChange: (open: boolean) => void;
   onSubmit: (value: CreateProjectSubmitValue, options: CreateProjectSubmitOptions) => Promise<void>;
 }) {
+  const { t } = useI18n();
   const [source, setSource] = useState<"local" | "github">("local");
   const [path, setPath] = useState("");
   const [repositoryInput, setRepositoryInput] = useState("");
@@ -157,6 +172,12 @@ export function CreateProjectDialog(props: {
   const trimmedDirectoryName = directoryName.trim();
   const normalizedDirectoryName = normalizeProjectDirectoryName(directoryName);
   const formErrorMeaning = formError ? describeAddProjectError(formError) : null;
+  const formErrorExplanation =
+    formErrorMeaning === "duplicate-workspace-root"
+      ? t("project.duplicateExplanation")
+      : formErrorMeaning === "absolute-root-path"
+        ? t("project.absolutePathExplanation")
+        : null;
   useEffect(() => {
     if (!props.open) return;
     const api = readNativeApi();
@@ -164,12 +185,14 @@ export function CreateProjectDialog(props: {
     return api.projects.onProvisionProgress((event: GitHubProjectProvisionProgressEvent) => {
       if (event.operationId !== activeOperationIdRef.current) return;
       if (event.kind === "completed") {
-        setProvisionProgress("Project added");
+        setProvisionProgress(t("project.added"));
         return;
       }
-      setProvisionProgress(event.message);
+      setProvisionProgress(
+        event.kind === "clone-progress" ? event.message : t(PROJECT_PHASE_MESSAGE_KEY[event.phase]),
+      );
     });
-  }, [props.open]);
+  }, [props.open, t]);
 
   const applyPickedFolder = useCallback(
     (picked: string) => {
@@ -195,7 +218,7 @@ export function CreateProjectDialog(props: {
     if (isPickingFolder || submitting) return;
     const api = readNativeApi();
     if (!api) {
-      setFormError("The app server is unavailable.");
+      setFormError(t("project.appServerUnavailable"));
       return;
     }
     setIsPickingFolder(true);
@@ -207,7 +230,7 @@ export function CreateProjectDialog(props: {
         else applyPickedFolder(picked);
       }
     } catch (error) {
-      setFormError(error instanceof Error ? error.message : "Unable to open the folder picker.");
+      setFormError(error instanceof Error ? error.message : t("project.folderPickerUnavailable"));
     }
     setIsPickingFolder(false);
   };
@@ -242,7 +265,13 @@ export function CreateProjectDialog(props: {
       const dropped = event.dataTransfer ? resolveDroppedFolder(event.dataTransfer) : null;
       if (!dropped) return;
       if ("error" in dropped) {
-        setFormError(dropped.error);
+        setFormError(
+          t(
+            dropped.error === "folder-only"
+              ? "project.dropFolderOnly"
+              : "project.folderPathUnreadable",
+          ),
+        );
         return;
       }
       applyPickedFolder(dropped.path);
@@ -257,37 +286,35 @@ export function CreateProjectDialog(props: {
       window.removeEventListener("dragleave", handleDragLeave, true);
       window.removeEventListener("drop", handleDrop, true);
     };
-  }, [applyPickedFolder, props.open, source]);
+  }, [applyPickedFolder, props.open, source, t]);
 
   const submit = async () => {
     if (submitting) return;
     // The confirm button stays enabled (and white) like the reference dialog;
     // an empty submit explains what is missing instead of being unclickable.
     if (source === "local" && trimmedPath.length === 0) {
-      setFormError("Type a folder path, or drop a folder above.");
+      setFormError(t("project.pathRequired"));
       return;
     }
     if (source === "github" && !parsedRepository) {
-      setFormError("Enter a GitHub repository as owner/repository or a GitHub.com repository URL.");
+      setFormError(t("project.repositoryRequired"));
       return;
     }
     if (source === "github" && !props.githubProvisioningAvailable) {
-      setFormError("Update the OmniMind server before adding a project from GitHub.");
+      setFormError(t("project.githubUnavailable"));
       return;
     }
     if (source === "github" && trimmedDestinationParent.length === 0) {
-      setFormError("Choose the parent folder where the repository should be cloned.");
+      setFormError(t("project.cloneParentRequired"));
       return;
     }
     if (source === "github" && !normalizedDirectoryName) {
-      setFormError(
-        "Choose a valid folder name without slashes, reserved device names, or a trailing dot.",
-      );
+      setFormError(t("project.folderNameInvalid"));
       return;
     }
     setSubmitting(true);
     setFormError(null);
-    setProvisionProgress(source === "github" ? "Validating repository" : null);
+    setProvisionProgress(source === "github" ? t("project.validatingRepository") : null);
     const abortController = new AbortController();
     submitAbortRef.current = abortController;
     try {
@@ -322,11 +349,11 @@ export function CreateProjectDialog(props: {
       setFormError(
         abortController.signal.aborted
           ? source === "github"
-            ? "GitHub clone cancelled. You can retry safely."
-            : "Project creation cancelled."
+            ? t("project.cloneCancelled")
+            : t("project.creationCancelled")
           : error instanceof Error
             ? error.message
-            : "An error occurred while adding the project.",
+            : t("project.addFailed"),
       );
       setProvisionProgress(null);
       setSubmitting(false);
@@ -356,7 +383,7 @@ export function CreateProjectDialog(props: {
     <Dialog open={props.open} onOpenChange={handleOpenChange}>
       <DialogPopup>
         <DialogHeader className="px-5 pt-5">
-          <DialogTitle>Create project</DialogTitle>
+          <DialogTitle>{t("project.createTitle")}</DialogTitle>
         </DialogHeader>
         <DialogPanel className="space-y-4 px-5">
           <ProjectSourceSegmentedPicker
@@ -385,7 +412,7 @@ export function CreateProjectDialog(props: {
                 <InputGroupInput
                   id={pathInputId}
                   value={path}
-                  aria-label="Project folder path"
+                  aria-label={t("project.folderPath")}
                   aria-invalid={formError ? true : undefined}
                   {...(formError ? { "aria-describedby": errorId } : {})}
                   placeholder="/path/to/project"
@@ -410,7 +437,7 @@ export function CreateProjectDialog(props: {
                       "text-[length:var(--app-font-size-ui,12px)] text-foreground",
                     )}
                   >
-                    Source folder
+                    {t("project.sourceFolder")}
                   </span>
                   <button
                     type="button"
@@ -425,7 +452,7 @@ export function CreateProjectDialog(props: {
                   >
                     <CentralIcon name="folder-add-left" className="size-4.5" aria-hidden="true" />
                     {isPickingFolder ? (
-                      "Opening the folder picker…"
+                      t("project.openingFolderPicker")
                     ) : pickedFolderName ? (
                       <span className="flex min-w-0 flex-col">
                         <span className="truncate">{pickedFolderName}</span>
@@ -434,7 +461,7 @@ export function CreateProjectDialog(props: {
                         </span>
                       </span>
                     ) : (
-                      "Drop a folder here, or browse"
+                      t("project.dropOrBrowse")
                     )}
                   </button>
                 </div>
@@ -482,9 +509,9 @@ export function CreateProjectDialog(props: {
               <p className="text-[length:var(--app-font-size-ui-xs,10px)] text-destructive">
                 {formError}
               </p>
-              {formErrorMeaning ? (
+              {formErrorExplanation ? (
                 <p className="text-[length:var(--app-font-size-ui-xs,10px)] text-muted-foreground/70">
-                  {formErrorMeaning}
+                  {formErrorExplanation}
                 </p>
               ) : null}
             </div>
@@ -498,7 +525,7 @@ export function CreateProjectDialog(props: {
             onClick={() => handleOpenChange(false)}
             disabled={submitting && source === "local"}
           >
-            {submitting && source === "github" ? "Cancel clone" : "Cancel"}
+            {submitting && source === "github" ? t("project.cancelClone") : t("project.cancel")}
           </Button>
           <Button
             id={submitButtonId}
@@ -509,11 +536,11 @@ export function CreateProjectDialog(props: {
           >
             {submitting
               ? source === "github"
-                ? "Cloning…"
-                : "Creating…"
+                ? t("project.cloning")
+                : t("project.creating")
               : source === "github"
-                ? "Clone and add"
-                : "Create project"}
+                ? t("project.cloneAndAdd")
+                : t("project.create")}
           </Button>
         </DialogFooter>
       </DialogPopup>

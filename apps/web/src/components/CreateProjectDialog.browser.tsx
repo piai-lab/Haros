@@ -9,13 +9,17 @@ const nativeApi = vi.hoisted(() => ({
   onProvisionProgress: vi.fn(() => () => undefined),
 }));
 
-vi.mock("../nativeApi", () => ({
-  readNativeApi: () => ({
-    projects: {
-      onProvisionProgress: nativeApi.onProvisionProgress,
-    },
-  }),
-}));
+vi.mock("../nativeApi", async (importOriginal) => {
+  const actual = await importOriginal<typeof import("../nativeApi")>();
+  return {
+    ...actual,
+    readNativeApi: () => ({
+      projects: {
+        onProvisionProgress: nativeApi.onProvisionProgress,
+      },
+    }),
+  };
+});
 
 import { CreateProjectDialog } from "./CreateProjectDialog";
 

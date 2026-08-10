@@ -881,13 +881,13 @@ describe("add-project error helpers", () => {
       describeAddProjectError(
         "Orchestration command invariant failed (project.create): Project 'project-duplicate' already uses workspace root 'C:\\Labs\\influenzo'.",
       ),
-    ).toContain("already linked to an existing project");
+    ).toBe("duplicate-workspace-root");
   });
 
   it("explains root-absolute add-project paths that probably missed the home directory", () => {
     expect(
       describeAddProjectError("Failed to create project directory: /Developer/Testing/omnimind"),
-    ).toContain("/Users/<name>/Developer");
+    ).toBe("absolute-root-path");
   });
 
   it("returns no explanation for unrelated add-project errors", () => {

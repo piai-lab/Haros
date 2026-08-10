@@ -6,6 +6,8 @@ import { describe, expect, it } from "vitest";
 const PRODUCT_COPY_SOURCES = [
   "routes/_chat.settings.tsx",
   "routes/__root.tsx",
+  "components/CreateGitHubProjectFields.tsx",
+  "components/CreateProjectDialog.tsx",
   "components/SettingsSidebarNav.tsx",
   "components/SidebarSearchPalette.tsx",
   "components/ShortcutsDialog.tsx",
@@ -67,6 +69,11 @@ type Finding = {
 // (for example a command, path, model name, or wire identifier). Every entry must remain used.
 const RAW_FACT_ALLOWLIST = [
   "_chat.settings.tsx:text:px",
+  "CreateGitHubProjectFields.tsx:text:owner/repository",
+  "CreateGitHubProjectFields.tsx:text:gh auth login",
+  "CreateGitHubProjectFields.tsx:attribute:/parent/folder",
+  "CreateGitHubProjectFields.tsx:attribute:repository",
+  "CreateProjectDialog.tsx:attribute:/path/to/project",
   'ThemePackEditor.tsx:attribute:"JetBrains Mono"',
   "ThemePackEditor.tsx:text:Aa",
   'ThemePackEditor.tsx:attribute:codex-theme-v1:{"codeThemeId":"linear",...}',
