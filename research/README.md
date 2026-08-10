@@ -15,4 +15,5 @@
 
 - [source-review.md](source-review.md)：固定 UI 母体及其原生 Engine 接入的源码、权利、构建和兼容事实。
 - [source-update-intake.md](source-update-intake.md)：维护者主动发起 adopted source 更新时的长期 taste、只读审查、共同裁决与显式施工授权协议。
+- [interface-surface-inventory.md](interface-surface-inventory.md)：OmniMind Desktop、公共网站、反馈、发行与本地集成接口的现状清单、公开分级和复验触发器；只保存可复核观察，不取代架构 owner。
 - [decision-record.md](decision-record.md)：已明确 superseded 的历史路线、当时的反方压力测试与被替代原因；不拥有当前执行权。
