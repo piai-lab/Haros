@@ -1715,32 +1715,9 @@ function initializeDesktopAppSnap(): void {
     onError: (error, focusApp) => {
       const window = focusApp ? ensureMainWindowForAppSnap() : mainWindow;
       if (!sendAppSnapEvent(window, (webContents) => sendAppSnapError(webContents, error))) {
-        const isChinese = app.getLocale().toLowerCase().startsWith("zh");
-        const overflow = error.code === "pending-capture-overflow";
-        const body = overflow
-          ? isChinese
-            ? "消息输入区不可用期间，只能保留最近的窗口快照；最早的一张已丢弃。"
-            : error.message
-          : error.code === "input-monitoring-required"
-            ? isChinese
-              ? "请在 macOS 系统设置中允许输入监控，然后重试。"
-              : error.message
-            : error.code === "screen-recording-required"
-              ? isChinese
-                ? "请在 macOS 系统设置中允许屏幕录制，然后重试。"
-                : error.message
-              : isChinese
-                ? "无法截取当前窗口。请打开 OmniMind 查看详情。"
-                : error.message;
         showDesktopNotification({
-          title: overflow
-            ? isChinese
-              ? "窗口快照已丢弃"
-              : "Screenshot discarded"
-            : isChinese
-              ? "窗口快照失败"
-              : "Screenshot failed",
-          body,
+          title: error.code === "pending-capture-overflow" ? "AppSnap discarded" : "AppSnap failed",
+          body: error.message,
         });
       }
     },

@@ -65,13 +65,8 @@ describe("message catalogs", () => {
     expect(ZH_CN_MESSAGES["shortcuts.newChat"]).toBe("新建对话");
     expect(EN_MESSAGES["common.system"]).toBe("System");
     expect(ZH_CN_MESSAGES["common.system"]).toBe("跟随系统");
-    expect(EN_MESSAGES["settings.appsnap"]).toBe("Screenshot");
-    expect(ZH_CN_MESSAGES["settings.appsnap"]).toBe("窗口快照");
 
     for (const [key, message] of Object.entries(EN_MESSAGES)) {
-      expect(productCopy(message), `${key} exposes the retired AppSnap product name`).not.toMatch(
-        /\bAppSnaps?\b/,
-      );
       expect(productCopy(message), `${key} exposes internal Thread vocabulary`).not.toMatch(
         /\bthreads?\b/i,
       );

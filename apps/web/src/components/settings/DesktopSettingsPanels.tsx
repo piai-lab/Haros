@@ -55,7 +55,7 @@ function notificationSupportText(
 
 function appSnapStatusText(state: DesktopAppSnapState | null, t: SettingsTranslator): string {
   if (!state) return t("settings.appSnapDesktopAvailable");
-  if (!state.supported) return t("settings.appSnapAvailableMac");
+  if (!state.supported) return state.message ?? t("settings.appSnapAvailableMac");
   if (state.status === "ready") {
     const shortcut = state.shortcut;
     const label = shortcut
@@ -65,8 +65,7 @@ function appSnapStatusText(state: DesktopAppSnapState | null, t: SettingsTransla
   }
   if (state.status === "disabled") return t("settings.appSnapOff");
   if (state.status === "starting") return t("settings.appSnapStarting");
-  if (state.status === "permission-required") return t("settings.appSnapPermissionSetup");
-  return t("settings.appsnapConfigureFailed");
+  return state.message ?? t("settings.appSnapPermissionSetup");
 }
 
 const EMPTY_KEYBINDINGS: ResolvedKeybindingsConfig = [];
@@ -310,17 +309,16 @@ export function AppSnapSettingsPanel({
         toastManager.add({
           type: "warning",
           title: t("settings.appsnapFinishSetup"),
-            description: t("settings.appsnapPermissionRequired"),
+          description: state.message ?? t("settings.appsnapPermissionRequired"),
         });
       }
     } catch (error) {
       if (!requestGuard.isCurrent(requestId)) return;
-      console.warn("[appsnap] Could not configure screenshot capture", error);
       updateSettings({ enableAppSnap: false });
       toastManager.add({
         type: "error",
         title: t("settings.appsnapSetupFailed"),
-        description: t("settings.appsnapConfigureFailed"),
+        description: error instanceof Error ? error.message : t("settings.appsnapConfigureFailed"),
       });
     }
   }
@@ -337,11 +335,11 @@ export function AppSnapSettingsPanel({
       setAppSnapState(state);
     } catch (error) {
       if (!requestGuard.isCurrent(requestId)) return;
-      console.warn("[appsnap] Could not check screenshot permissions", error);
       toastManager.add({
         type: "error",
         title: t("settings.appsnapPermissionCheckFailed"),
-        description: t("settings.appsnapPermissionCheckUnknown"),
+        description:
+          error instanceof Error ? error.message : t("settings.appsnapPermissionCheckUnknown"),
       });
     }
   }
@@ -365,7 +363,7 @@ export function AppSnapSettingsPanel({
           {!supported ? (
             <p className={cn(SETTINGS_CARD_ROW_DESCRIPTION_CLASS_NAME, "pt-0.5")}>
               {appSnapState
-                ? t("settings.appsnapMacOnly")
+                ? (appSnapState.message ?? t("settings.appsnapMacOnly"))
                 : t("settings.appsnapDesktopRequired")}
             </p>
           ) : null}

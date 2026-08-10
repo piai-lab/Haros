@@ -457,7 +457,7 @@ func preparePrivateOutputDirectory(_ directory: URL) throws {
 }
 
 func writePrivatePNG(_ data: Data, id: String, to directory: URL) throws -> (path: String, name: String) {
-    let name = "Screenshot-\(id).png"
+    let name = "appsnap-\(id).png"
     let destination = directory.appendingPathComponent(name, isDirectory: false)
     do {
         try data.write(to: destination, options: .atomic)
@@ -515,7 +515,7 @@ final class AppSnapCaptureCoordinator {
             emitter.emitError(
                 AppSnapFailure(
                     code: "capture_in_progress",
-                    message: "A previous screenshot is still in progress."
+                    message: "A previous AppSnap capture is still in progress."
                 ),
                 capturedAt: capturedAt,
                 id: id
