@@ -112,4 +112,40 @@ describe("SidebarThreadRowContent", () => {
     await expect.element(screen.getByLabelText("等待审批")).toHaveTextContent("待审批");
     await expect.element(screen.getByLabelText("已打开 2 个终端")).toBeVisible();
   });
+
+  it("localizes a generic Terminal title without rewriting a meaningful title", async () => {
+    harness.settings.localePreference = "zh-CN";
+    const generic = await render(
+      <I18nProvider>
+        <SidebarThreadRowContent
+          thread={makeThread({ title: "New terminal" })}
+          terminalEntryPoint
+          terminalStatus={null}
+          terminalCount={1}
+          isActive
+          variant="pinned"
+        />
+      </I18nProvider>,
+    );
+    await expect
+      .element(generic.getByTestId("thread-title-thread-row-content"))
+      .toHaveTextContent("新建终端");
+
+    document.body.innerHTML = "";
+    const named = await render(
+      <I18nProvider>
+        <SidebarThreadRowContent
+          thread={makeThread({ title: "Release smoke" })}
+          terminalEntryPoint
+          terminalStatus={null}
+          terminalCount={1}
+          isActive
+          variant="pinned"
+        />
+      </I18nProvider>,
+    );
+    await expect
+      .element(named.getByTestId("thread-title-thread-row-content"))
+      .toHaveTextContent("Release smoke");
+  });
 });

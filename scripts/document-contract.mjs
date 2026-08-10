@@ -307,6 +307,7 @@ function validateWorkSurfaceInformationArchitecture(findings, documents) {
       emptyAgentOrChat: "hidden",
       titledAgentOrChat: "title-only",
       terminal: "terminal-icon-and-title",
+      genericTerminalTitle: "localized-ui-only",
     },
   };
   if (JSON.stringify(policy) !== JSON.stringify(expected)) {

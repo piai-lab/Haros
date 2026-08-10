@@ -232,6 +232,22 @@ test("blank conversations cannot regain placeholder or Provider header identity"
   );
 });
 
+test("generic Terminal titles remain localized presentation, not migrated state", async (t) => {
+  const root = await createFixture(t);
+  await replaceText(
+    root,
+    "architecture/workbench.md",
+    '"genericTerminalTitle": "localized-ui-only"',
+    '"genericTerminalTitle": "rewrite-persisted-title"',
+  );
+
+  assertFinding(
+    await validateDocumentContract({ root }),
+    "workbench.work-surface-ia",
+    "architecture/workbench.md",
+  );
+});
+
 test("Campaign canonical identity is structural", async (t) => {
   const root = await createFixture(t);
   await replaceText(root, "missions/independent-omnimind-v1.md", "Status: active", "Status: done");

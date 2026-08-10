@@ -142,6 +142,7 @@ describe("recent view MRU logic", () => {
     } as SidebarThreadSummary;
 
     const entries = buildRecentViewDisplayEntries({
+      genericTerminalTitle: "New terminal",
       recentViews: [{ kind: "thread", threadId: terminalThreadId }],
       currentView: null,
       threadsById: { [terminalThreadId]: threadSummary },
@@ -172,5 +173,28 @@ describe("recent view MRU logic", () => {
         title: "bun dev",
       },
     });
+
+    const localizedEntries = buildRecentViewDisplayEntries({
+      genericTerminalTitle: "新建终端",
+      recentViews: [{ kind: "thread", threadId: terminalThreadId }],
+      currentView: null,
+      threadsById: {
+        [terminalThreadId]: { ...threadSummary, title: "New terminal" },
+      },
+      projects: [project],
+      pinnedThreadIds: [],
+      terminalVisualIdentityByThreadId: new Map([
+        [
+          terminalThreadId,
+          {
+            cliKind: null,
+            iconKey: "terminal",
+            state: "idle",
+            title: "Terminal",
+          } as ResolvedTerminalVisualIdentity,
+        ],
+      ]),
+    });
+    expect(localizedEntries[0]?.title).toBe("新建终端");
   });
 });

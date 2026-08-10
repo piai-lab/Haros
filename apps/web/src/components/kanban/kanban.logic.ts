@@ -14,12 +14,14 @@ import {
   hasLiveLatestTurn,
 } from "../../session-logic";
 import type { Project, SidebarThreadSummary } from "../../types";
+import { resolveThreadDisplayTitle } from "../../lib/threadDisplayTitle";
 
 export type KanbanColumnKey = "draft" | "inProgress" | "done";
 
 export interface KanbanBoardCopy {
   readonly attachedReferences: string;
   readonly newThread: string;
+  readonly newTerminal: string;
 }
 
 /** Pending composer content for one thread, projected from the composer draft store. */
@@ -277,6 +279,7 @@ function buildThreadCard(
   thread: SidebarThreadSummary,
   composerDraftByThreadId: BuildKanbanBoardInput["composerDraftByThreadId"],
   isTerminal: boolean,
+  copy: KanbanBoardCopy,
 ): KanbanCard {
   const column = deriveKanbanColumn(thread);
   const composerDraft = resolveComposerDraft(composerDraftByThreadId, thread.id);
@@ -293,7 +296,11 @@ function buildThreadCard(
     threadId: thread.id,
     projectId: thread.projectId,
     column,
-    title: thread.title,
+    title: resolveThreadDisplayTitle({
+      title: thread.title,
+      isTerminal,
+      genericTerminalTitle: copy.newTerminal,
+    }),
     provider:
       column === "draft" && composerDraft.provider ? composerDraft.provider : threadProvider,
     isTerminal,
@@ -568,7 +575,7 @@ export function buildKanbanBoard(input: BuildKanbanBoardInput): KanbanBoard {
     threadIds.add(thread.id);
     const bucket = bucketFor(boardProjectId);
     const isTerminal = input.terminalEntryThreadIds?.has(thread.id) ?? false;
-    const card = buildThreadCard(thread, input.composerDraftByThreadId, isTerminal);
+    const card = buildThreadCard(thread, input.composerDraftByThreadId, isTerminal, input.copy);
     const optimisticEntry = optimisticDispatchByThreadId[thread.id];
     if (optimisticEntry) {
       handledOptimisticThreadIds.add(thread.id);

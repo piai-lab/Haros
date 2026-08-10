@@ -55,6 +55,8 @@ export interface SidebarSearchProjectMatch {
 export interface SidebarSearchThread {
   id: string;
   title: string;
+  /** Localized presentation only; matching remains anchored to the stored title. */
+  displayTitle?: string;
   projectId: string;
   projectName: string;
   projectRemoteName: string;

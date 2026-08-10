@@ -77,7 +77,11 @@ function makeSidebarThreadSummary(
 
 function makeBoardInput(overrides: Partial<BuildKanbanBoardInput> = {}): BuildKanbanBoardInput {
   return {
-    copy: { attachedReferences: "Attached references", newThread: "New thread" },
+    copy: {
+      attachedReferences: "Attached references",
+      newThread: "New thread",
+      newTerminal: "New terminal",
+    },
     projects: [{ id: ProjectId.makeUnsafe("project-1"), kind: "project", name: "OmniMind" }],
     threads: [],
     draftThreads: [],
@@ -189,6 +193,26 @@ describe("deriveKanbanColumn", () => {
 });
 
 describe("buildKanbanBoard", () => {
+  it("localizes only generic titles on proven Terminal cards", () => {
+    const terminalThread = makeSidebarThreadSummary({
+      id: ThreadId.makeUnsafe("thread-terminal-title"),
+      title: "New terminal",
+    });
+    const board = buildKanbanBoard(
+      makeBoardInput({
+        copy: {
+          attachedReferences: "附件",
+          newThread: "新建任务",
+          newTerminal: "新建终端",
+        },
+        threads: [terminalThread],
+        terminalEntryThreadIds: new Set([terminalThread.id]),
+      }),
+    );
+
+    expect(board.projects[0]?.draft[0]?.title).toBe("新建终端");
+  });
+
   it("groups thread cards per project with recency-sorted columns", () => {
     const projectId = ProjectId.makeUnsafe("project-1");
     const olderDone = makeSidebarThreadSummary({

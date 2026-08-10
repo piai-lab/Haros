@@ -11,6 +11,7 @@ import { useI18n } from "../i18n";
 import { createThreadSelector } from "../storeSelectors";
 import { useStore } from "../store";
 import { resolveSubagentPresentationForThread } from "../lib/subagentPresentation";
+import { resolveThreadDisplayTitle } from "../lib/threadDisplayTitle";
 import { SIDEBAR_ROW_LABEL_TEXT_CLASS_NAME } from "../sidebarRowStyles";
 import type { SidebarThreadSummary } from "../types";
 import { TerminalIcon } from "../lib/icons";
@@ -204,6 +205,11 @@ export function SidebarThreadRowContent({
         })
       : null;
   const showThreadProviderAvatar = !isGenericChatThreadTitle(thread.title);
+  const displayTitle = resolveThreadDisplayTitle({
+    title: thread.title,
+    isTerminal: terminalEntryPoint,
+    genericTerminalTitle: t("workbench.newTerminal"),
+  });
 
   return (
     <>
@@ -251,7 +257,7 @@ export function SidebarThreadRowContent({
               roleClassName={variant === "standard" ? "text-muted-foreground/42" : undefined}
             />
           ) : (
-            thread.title
+            displayTitle
           )}
         </span>
         {!isSubagentThread && pendingStatusColorClass ? (

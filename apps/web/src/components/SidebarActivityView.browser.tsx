@@ -91,6 +91,7 @@ function renderActivity(input: {
   onThreadContextMenu?: (threadId: ThreadId, position: { x: number; y: number }) => void;
   onProjectContextMenu?: (projectId: ProjectId, position: { x: number; y: number }) => void;
   resolveThreadStatus?: (thread: SidebarThreadSummary) => ThreadStatusPill | null;
+  isTerminalThread?: (threadId: ThreadId) => boolean;
 }) {
   const projects = input.projects ?? [makeProject(PROJECT_A, "Project A")];
   return (
@@ -104,6 +105,7 @@ function renderActivity(input: {
       prByThreadId={input.prByThreadId ?? new Map()}
       onVisibleThreadIdsChange={input.onVisibleThreadIdsChange ?? (() => {})}
       resolveThreadStatus={input.resolveThreadStatus ?? (() => null)}
+      isTerminalThread={input.isTerminalThread ?? (() => false)}
       onOpenThread={() => {}}
       onSetThreadSettled={input.onSetThreadSettled ?? (() => {})}
       onToggleThreadPinned={() => {}}
@@ -124,6 +126,22 @@ describe("SidebarActivityView", () => {
   afterEach(() => {
     document.body.innerHTML = "";
     harness.settings.localePreference = "en";
+  });
+
+  it("shows a proven generic Terminal task in the active locale", async () => {
+    harness.settings.localePreference = "zh-CN";
+    const terminalThread = makeThread(99, { title: "New terminal" });
+    const mounted = await render(
+      <I18nProvider>
+        {renderActivity({
+          threads: [terminalThread],
+          isTerminalThread: (threadId) => threadId === terminalThread.id,
+        })}
+      </I18nProvider>,
+    );
+
+    await expect.element(mounted.getByText("新建终端")).toBeVisible();
+    await expect.element(mounted.getByText("New terminal")).not.toBeInTheDocument();
   });
 
   it("pages project groups, reports only mounted rows, and prefers live PR state", async () => {

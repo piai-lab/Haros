@@ -27,6 +27,7 @@ import {
   type WorktreeSetupStepId,
 } from "../types";
 import { type DraftThreadState } from "../composerDraftStore";
+import { resolveThreadDisplayTitle } from "../lib/threadDisplayTitle";
 import { Schema } from "effect";
 import {
   filterTerminalContextsWithText,
@@ -729,10 +730,11 @@ export function resolveActiveThreadTitle(input: {
   if (input.subagentTitle) {
     return input.subagentTitle;
   }
-  if (input.entryPoint === "terminal" && isGenericTerminalThreadTitle(input.title)) {
-    return input.genericTerminalTitle;
-  }
-  return input.title;
+  return resolveThreadDisplayTitle({
+    title: input.title,
+    isTerminal: input.entryPoint === "terminal",
+    genericTerminalTitle: input.genericTerminalTitle,
+  });
 }
 
 export function shouldShowActiveThreadHeaderIdentity(input: {

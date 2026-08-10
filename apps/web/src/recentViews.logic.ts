@@ -9,6 +9,7 @@ import type {
   TerminalIconKey,
 } from "@synara/shared/terminalThreads";
 import type { Project, SidebarThreadSummary } from "./types";
+import { resolveThreadDisplayTitle } from "./lib/threadDisplayTitle";
 
 export const MAX_RECENT_VIEWS = 5;
 
@@ -221,6 +222,7 @@ export function buildRecentViewDisplayEntries(input: {
   projects: readonly Project[];
   pinnedThreadIds: readonly ThreadId[];
   terminalVisualIdentityByThreadId?: ReadonlyMap<ThreadId, ResolvedTerminalVisualIdentity>;
+  genericTerminalTitle: string;
 }): RecentViewDisplayEntry[] {
   const currentKey = input.currentView ? recentViewKey(input.currentView) : null;
   const projectNameById = new Map(input.projects.map((project) => [project.id, project.name]));
@@ -247,7 +249,12 @@ export function buildRecentViewDisplayEntries(input: {
         const thread = summary ?? input.draftThreadsById?.[view.threadId];
         const projectName = thread ? projectNameById.get(thread.projectId) : null;
         const provider = summary?.modelSelection.provider;
-        const title = normalizeOptionalId(thread?.title) ?? "New chat";
+        const rawTitle = normalizeOptionalId(thread?.title) ?? "New chat";
+        const title = resolveThreadDisplayTitle({
+          title: rawTitle,
+          isTerminal: base.isTerminal,
+          genericTerminalTitle: input.genericTerminalTitle,
+        });
         const subtitleParts = [
           projectName ?? "Chat",
           base.isTerminal ? "Terminal" : "Chat",

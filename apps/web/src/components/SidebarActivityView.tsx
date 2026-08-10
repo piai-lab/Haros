@@ -24,10 +24,12 @@ import {
   GitBranchIcon,
   NewThreadIcon,
   SortIcon,
+  TerminalIcon,
   Undo2Icon,
   WorktreeIcon,
 } from "~/lib/icons";
 import { cn } from "~/lib/utils";
+import { resolveThreadDisplayTitle } from "../lib/threadDisplayTitle";
 import {
   SIDEBAR_ROW_ACTIVE_CLASS_NAME,
   SIDEBAR_ROW_FOCUS_CLASS_NAME,
@@ -121,6 +123,7 @@ function ActivityThreadRow({
   thread,
   project,
   isActive,
+  isTerminal,
   isSettled,
   isPinned,
   pr,
@@ -137,6 +140,7 @@ function ActivityThreadRow({
   thread: SidebarThreadSummary;
   project: Project | undefined;
   isActive: boolean;
+  isTerminal: boolean;
   isSettled: boolean;
   isPinned: boolean;
   pr: OrchestrationThreadPullRequest | null;
@@ -152,6 +156,11 @@ function ActivityThreadRow({
 }) {
   const { t } = useI18n();
   const provider = thread.session?.provider ?? thread.modelSelection.provider;
+  const displayTitle = resolveThreadDisplayTitle({
+    title: thread.title,
+    isTerminal,
+    genericTerminalTitle: t("workbench.newTerminal"),
+  });
   const branch = resolveThreadDisplayBranch(thread);
   const isWorktree =
     resolveThreadEnvironmentMode({
@@ -209,20 +218,24 @@ function ActivityThreadRow({
               "group-hover/activity-row:pr-[4.25rem] group-focus-within/activity-row:pr-[4.25rem]",
             )}
           >
-            <ProviderIcon
-              provider={provider}
-              className="size-3 shrink-0"
-              fallback={
-                <span className="size-3 shrink-0 rounded-full border border-dashed border-muted-foreground/40" />
-              }
-            />
+            {isTerminal ? (
+              <TerminalIcon className="size-3 shrink-0" aria-hidden />
+            ) : (
+              <ProviderIcon
+                provider={provider}
+                className="size-3 shrink-0"
+                fallback={
+                  <span className="size-3 shrink-0 rounded-full border border-dashed border-muted-foreground/40" />
+                }
+              />
+            )}
             <span
               className={cn(
                 "min-w-0 shrink truncate text-[length:var(--app-font-size-ui,12px)] leading-5 font-normal",
                 isActive ? "text-foreground" : SIDEBAR_ROW_LABEL_TEXT_CLASS_NAME,
               )}
             >
-              {thread.title}
+              {displayTitle}
             </span>
           </span>
           <span className="flex min-w-0 items-center gap-1.5">
@@ -555,6 +568,7 @@ export function SidebarActivityView({
   settledOverrideByThreadId,
   threadsHydrated,
   resolveThreadStatus,
+  isTerminalThread,
   onOpenThread,
   onSetThreadSettled,
   onToggleThreadPinned,
@@ -579,6 +593,7 @@ export function SidebarActivityView({
   prByThreadId: ReadonlyMap<ThreadId, OrchestrationThreadPullRequest | null>;
   onVisibleThreadIdsChange: (threadIds: readonly ThreadId[]) => void;
   resolveThreadStatus: (thread: SidebarThreadSummary) => ThreadStatusPill | null;
+  isTerminalThread: (threadId: ThreadId) => boolean;
   onOpenThread: (threadId: ThreadId) => void;
   onSetThreadSettled: (threadId: ThreadId, settled: boolean) => void;
   onToggleThreadPinned: (threadId: ThreadId) => void;
@@ -731,6 +746,7 @@ export function SidebarActivityView({
       thread={thread}
       project={projectById.get(thread.projectId)}
       isActive={activeThreadId === thread.id}
+      isTerminal={isTerminalThread(thread.id)}
       isSettled={isSettled}
       isPinned={pinnedThreadIdSet.has(thread.id)}
       pr={

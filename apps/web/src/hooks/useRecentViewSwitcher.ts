@@ -9,6 +9,7 @@ import { useLocation, useNavigate, useParams, useSearch } from "@tanstack/react-
 import { useEffect, useRef, useState } from "react";
 
 import { useComposerDraftStore } from "../composerDraftStore";
+import { useI18n } from "../i18n";
 import { usePinnedThreadsStore } from "../pinnedThreadsStore";
 import {
   buildRecentViewDisplayEntries,
@@ -51,6 +52,7 @@ interface UseRecentViewSwitcherInput {
 
 // Encapsulates recent-view persistence, pruning, prewarm, and activation.
 export function useRecentViewSwitcher(input: UseRecentViewSwitcherInput) {
+  const { t } = useI18n();
   const navigate = useNavigate();
   const pathname = useLocation({ select: (location) => location.pathname });
   const routeThreadId = useParams({
@@ -133,6 +135,7 @@ export function useRecentViewSwitcher(input: UseRecentViewSwitcherInput) {
       projects: input.projects,
       pinnedThreadIds: persistedPinnedThreadIds,
       terminalVisualIdentityByThreadId,
+      genericTerminalTitle: t("workbench.newTerminal"),
     });
   }
   const currentRecentViewRef = useRef<RecentView | null>(currentRecentView);

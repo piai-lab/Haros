@@ -159,6 +159,7 @@ import { useComposerDraftStore } from "../composerDraftStore";
 import { useLatestProjectStore } from "../latestProjectStore";
 import { resolveThreadEnvironmentPresentation } from "../lib/threadEnvironment";
 import { dispatchThreadRename } from "../lib/threadRename";
+import { resolveThreadDisplayTitle } from "../lib/threadDisplayTitle";
 import { quotePosixShellArgument } from "../lib/shellQuote";
 import {
   DEFAULT_THREAD_TERMINAL_ID,
@@ -4216,6 +4217,10 @@ export default function Sidebar() {
     hoverAnchorId: string,
     isActive: boolean,
   ) {
+    const hoverThreadEntryPoint = selectThreadTerminalState(
+      terminalStateByThreadId,
+      thread.id,
+    ).entryPoint;
     const hoverProject = projectById.get(thread.projectId) ?? null;
     const hoverMetadata = resolveThreadHoverCardMetadata({
       thread,
@@ -4236,7 +4241,11 @@ export default function Sidebar() {
         className={cn(SIDEBAR_HOVER_CARD_SURFACE_CLASS_NAME, "whitespace-normal leading-tight")}
       >
         <ThreadHoverCardContent
-          title={thread.title}
+          title={resolveThreadDisplayTitle({
+            title: thread.title,
+            isTerminal: hoverThreadEntryPoint === "terminal",
+            genericTerminalTitle: t("workbench.newTerminal"),
+          })}
           timeLabel={formatRelativeTime(thread.updatedAt ?? thread.createdAt, locale)}
           projectName={hoverMetadata.projectName}
           projectCwd={hoverMetadata.projectCwd}
@@ -5876,6 +5885,10 @@ export default function Sidebar() {
                     settledOverrideByThreadId={settledOverrideByThreadId}
                     threadsHydrated={threadsHydrated}
                     resolveThreadStatus={resolveThreadStatusForSidebar}
+                    isTerminalThread={(threadId) =>
+                      selectThreadTerminalState(terminalStateByThreadId, threadId).entryPoint ===
+                      "terminal"
+                    }
                     onOpenThread={activateThreadFromSidebarIntent}
                     onSetThreadSettled={setThreadSettledWithToast}
                     onToggleThreadPinned={toggleThreadPinned}
@@ -6560,6 +6573,9 @@ function SidebarSearchPaletteController(props: {
   });
   const threads = useStore(selectAllThreads);
   const sidebarDisplayThreads = useStore(selectSidebarDisplayThreads);
+  const searchTerminalStateByThreadId = useTerminalStateStore(
+    (state) => state.terminalStateByThreadId,
+  );
   const importProviders: ReadonlyArray<ImportProviderKind> = (
     ["codex", "claudeAgent", "cursor", "kilo", "opencode"] as const
   ).filter((provider, index) => supportsThreadImport(importProviderCapabilityQueries[index]?.data));
@@ -6578,6 +6594,13 @@ function SidebarSearchPaletteController(props: {
         {
           id: thread.id,
           title: thread.title,
+          displayTitle: resolveThreadDisplayTitle({
+            title: thread.title,
+            isTerminal:
+              selectThreadTerminalState(searchTerminalStateByThreadId, thread.id).entryPoint ===
+              "terminal",
+            genericTerminalTitle: t("workbench.newTerminal"),
+          }),
           projectId: thread.projectId,
           projectName: props.projectById.get(thread.projectId)?.name ?? t("project.unknown"),
           projectRemoteName:
@@ -6592,7 +6615,14 @@ function SidebarSearchPaletteController(props: {
         },
       ];
     });
-  }, [props.projectById, props.projects, sidebarDisplayThreads, t, threads]);
+  }, [
+    props.projectById,
+    props.projects,
+    searchTerminalStateByThreadId,
+    sidebarDisplayThreads,
+    t,
+    threads,
+  ]);
 
   return (
     <SidebarSearchPalette

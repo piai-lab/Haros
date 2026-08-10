@@ -934,7 +934,11 @@ export function SidebarSearchPalette(props: SidebarSearchPaletteProps) {
                               <div className="flex items-baseline gap-3">
                                 <div className="min-w-0 flex-1 truncate text-[length:var(--app-font-size-ui,12px)] text-foreground">
                                   <HighlightedText
-                                    text={thread.title || t("search.untitledThread")}
+                                    text={
+                                      thread.displayTitle ||
+                                      thread.title ||
+                                      t("search.untitledThread")
+                                    }
                                     query={query}
                                   />
                                 </div>

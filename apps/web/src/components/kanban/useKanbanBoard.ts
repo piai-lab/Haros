@@ -209,6 +209,7 @@ export function useKanbanBoard(): KanbanBoard {
     copy: {
       attachedReferences: t("kanban.attachedReferences"),
       newThread: t("kanban.newThread"),
+      newTerminal: t("workbench.newTerminal"),
     },
     projects,
     threads,
