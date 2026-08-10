@@ -13,17 +13,27 @@ import type { WorkLogLiveActivity } from "../../workLog";
 import {
   formatLiveActivityElapsed,
   formatLiveActivityProgress,
-  formatLiveActivityStateLabel,
   useLiveActivityNow,
 } from "../../lib/liveActivityPresentation";
 import { formatTimestamp } from "../../timestampFormat";
 import ChatMarkdown from "../ChatMarkdown";
+import { useI18n } from "../../i18n";
 
 const DETAIL_HEADER_CLASS_NAME = "border-b border-border/45 px-3 py-2 text-[10px] font-medium";
 const DETAIL_CODE_BLOCK_CLASS_NAME =
   "max-h-[min(46vh,30rem)] overflow-auto whitespace-pre-wrap break-words font-chat-code text-[11px] leading-relaxed text-foreground/88";
 const TOOL_DETAILS_MARKDOWN_CLASS_NAME =
   "text-[length:var(--app-font-size-ui,12px)] leading-relaxed";
+const LIVE_ACTIVITY_STATE_KEYS = {
+  starting: "toolDetails.stateStarting",
+  thinking: "toolDetails.stateThinking",
+  running_tool: "toolDetails.stateRunningTool",
+  waiting: "toolDetails.stateWaiting",
+  streaming: "toolDetails.stateStreaming",
+  completed: "toolDetails.stateCompleted",
+  failed: "toolDetails.stateFailed",
+  cancelled: "toolDetails.stateCancelled",
+} as const;
 
 export function ToolCallDetailsContent({
   details,
@@ -34,10 +44,11 @@ export function ToolCallDetailsContent({
   activity?: WorkLogLiveActivity | undefined;
   timestampFormat: TimestampFormat;
 }) {
+  const { t } = useI18n();
   if (!details && !activity) {
     return (
       <div className="rounded-lg border border-border/45 bg-background/60 px-3 py-2 text-sm text-muted-foreground">
-        No detailed payload was available for this tool call.
+        {t("toolDetails.none")}
       </div>
     );
   }
@@ -58,7 +69,7 @@ export function ToolCallDetailsContent({
       ) : null}
 
       {details?.files?.length ? (
-        <ToolDetailSection title="Files">
+        <ToolDetailSection title={t("toolDetails.files")}>
           <div className="flex flex-wrap gap-1.5">
             {details.files.map((file) => (
               <span
@@ -74,13 +85,13 @@ export function ToolCallDetailsContent({
       ) : null}
 
       {details?.diff ? (
-        <ToolDetailSection title="Diff">
+        <ToolDetailSection title={t("toolDetails.diff")}>
           <DiffCodeBlock>{details.diff}</DiffCodeBlock>
         </ToolDetailSection>
       ) : null}
 
       {details?.edits?.length ? (
-        <ToolDetailSection title="Edits">
+        <ToolDetailSection title={t("toolDetails.edits")}>
           <div className="space-y-3">
             {details.edits.map((edit, index) => (
               <div
@@ -94,12 +105,12 @@ export function ToolCallDetailsContent({
                 ) : null}
                 <div className="grid gap-0 md:grid-cols-2">
                   {edit.oldText !== undefined ? (
-                    <TextChangeBlock title="Before" tone="remove">
+                    <TextChangeBlock title={t("toolDetails.before")} tone="remove">
                       {edit.oldText}
                     </TextChangeBlock>
                   ) : null}
                   {edit.newText !== undefined ? (
-                    <TextChangeBlock title="After" tone="add">
+                    <TextChangeBlock title={t("toolDetails.after")} tone="add">
                       {edit.newText}
                     </TextChangeBlock>
                   ) : null}
@@ -111,7 +122,7 @@ export function ToolCallDetailsContent({
       ) : null}
 
       {details?.content ? (
-        <ToolDetailSection title="Written Content">
+        <ToolDetailSection title={t("toolDetails.writtenContent")}>
           <MarkdownToolCodeBlock language="text">{details.content}</MarkdownToolCodeBlock>
         </ToolDetailSection>
       ) : null}
@@ -136,20 +147,21 @@ function LiveActivityMetadata({
   activity: WorkLogLiveActivity;
   timestampFormat: TimestampFormat;
 }) {
-  const stateLabel = formatLiveActivityStateLabel(activity.state);
+  const { t } = useI18n();
+  const stateLabel = t(LIVE_ACTIVITY_STATE_KEYS[activity.state]);
   const nowMs = useLiveActivityNow(activity);
   const elapsed = formatLiveActivityElapsed(activity, nowMs);
   const progress =
     activity.progress !== undefined ? formatLiveActivityProgress(activity.progress) : null;
 
   return (
-    <ToolDetailSection title="Activity">
+    <ToolDetailSection title={t("toolDetails.activity")}>
       <dl className="grid grid-cols-[max-content_minmax(0,1fr)] gap-x-3 gap-y-1.5 rounded-lg border border-border/45 bg-background/60 px-3 py-2.5 text-[11px]">
-        <dt className="text-muted-foreground/56">Status</dt>
+        <dt className="text-muted-foreground/56">{t("toolDetails.status")}</dt>
         <dd className="text-foreground/84">{stateLabel}</dd>
         {activity.startedAt ? (
           <>
-            <dt className="text-muted-foreground/56">Started</dt>
+            <dt className="text-muted-foreground/56">{t("toolDetails.started")}</dt>
             <dd className="text-foreground/84">
               <time dateTime={activity.startedAt} title={activity.startedAt}>
                 {formatActivityTimestamp(activity.startedAt, timestampFormat)}
@@ -157,7 +169,7 @@ function LiveActivityMetadata({
             </dd>
           </>
         ) : null}
-        <dt className="text-muted-foreground/56">Last activity</dt>
+        <dt className="text-muted-foreground/56">{t("toolDetails.lastActivity")}</dt>
         <dd className="text-foreground/84">
           <time dateTime={activity.lastActivityAt} title={activity.lastActivityAt}>
             {formatActivityTimestamp(activity.lastActivityAt, timestampFormat)}
@@ -165,19 +177,19 @@ function LiveActivityMetadata({
         </dd>
         {elapsed ? (
           <>
-            <dt className="text-muted-foreground/56">Elapsed</dt>
+            <dt className="text-muted-foreground/56">{t("toolDetails.elapsed")}</dt>
             <dd className="tabular-nums text-foreground/84">{elapsed}</dd>
           </>
         ) : null}
         {progress ? (
           <>
-            <dt className="text-muted-foreground/56">Progress</dt>
+            <dt className="text-muted-foreground/56">{t("toolDetails.progress")}</dt>
             <dd className="tabular-nums text-foreground/84">{progress}</dd>
           </>
         ) : null}
         {activity.detail ? (
           <>
-            <dt className="text-muted-foreground/56">Detail</dt>
+            <dt className="text-muted-foreground/56">{t("toolDetails.detail")}</dt>
             <dd className="break-words text-foreground/84">{activity.detail}</dd>
           </>
         ) : null}
@@ -206,6 +218,7 @@ function ToolDetailSection(props: { title: string; children: ReactNode }) {
 }
 
 function ToolOutputMetadata({ output }: { output: WorkLogToolOutputDetails }) {
+  const { t } = useI18n();
   if (output.exitCode === undefined && !output.truncated) {
     return null;
   }
@@ -213,12 +226,12 @@ function ToolOutputMetadata({ output }: { output: WorkLogToolOutputDetails }) {
     <div className="flex flex-wrap items-center gap-2 text-[11px] text-muted-foreground/68">
       {output.exitCode !== undefined ? (
         <span className="rounded-full border border-border/45 px-2 py-0.5">
-          Exit code {output.exitCode}
+          {t("toolDetails.exitCode", { code: output.exitCode })}
         </span>
       ) : null}
       {output.truncated ? (
         <span className="rounded-full border border-amber-500/30 bg-amber-500/8 px-2 py-0.5 text-amber-200/90">
-          Truncated
+          {t("toolDetails.truncated")}
         </span>
       ) : null}
     </div>
@@ -226,19 +239,20 @@ function ToolOutputMetadata({ output }: { output: WorkLogToolOutputDetails }) {
 }
 
 function ToolOutputSection({ output }: { output: WorkLogToolOutputDetails }) {
+  const { t } = useI18n();
   return (
-    <ToolDetailSection title="Output">
+    <ToolDetailSection title={t("toolDetails.output")}>
       <div className="space-y-3">
         {output.output ? (
           <MarkdownToolCodeBlock language="text">{output.output}</MarkdownToolCodeBlock>
         ) : null}
         {output.stdout ? (
-          <LabeledCodeBlock title="Stdout" tone="output">
+          <LabeledCodeBlock title={t("toolDetails.stdout")} tone="output">
             {output.stdout}
           </LabeledCodeBlock>
         ) : null}
         {output.stderr ? (
-          <LabeledCodeBlock title="Stderr" tone="error">
+          <LabeledCodeBlock title={t("toolDetails.stderr")} tone="error">
             {output.stderr}
           </LabeledCodeBlock>
         ) : null}
