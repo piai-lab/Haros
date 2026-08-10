@@ -9,6 +9,7 @@
 
 import { type ImgHTMLAttributes, type MouseEvent, useState } from "react";
 
+import { useI18n } from "~/i18n";
 import { downloadUrlAsBlob } from "~/lib/browserDownload";
 import { DownloadIcon, Loader2Icon, TriangleAlertIcon } from "~/lib/icons";
 import { buildLocalImageUrl, localImageFileName } from "~/lib/localImageUrls";
@@ -105,18 +106,18 @@ export function useLocalImageDownloadClick(input: {
   downloadName: string;
   errorTitle?: string | undefined;
 }) {
+  const { t } = useI18n();
   return (event: MouseEvent<HTMLElement>) => {
     event.preventDefault();
     event.stopPropagation();
     void downloadUrlAsBlob({
       url: input.downloadUrl,
       filename: input.downloadName,
-    }).catch((error: unknown) => {
+    }).catch(() => {
       toastManager.add({
         type: "error",
-        title: input.errorTitle ?? "Could not download image",
-        description:
-          error instanceof Error ? error.message : "The file may have moved or be unavailable.",
+        title: input.errorTitle ?? t("image.downloadFailed"),
+        description: t("image.fileUnavailable"),
       });
     });
   };
@@ -131,26 +132,25 @@ export function LocalImageErrorCard(props: {
   downloadAriaLabel?: string;
   onDownloadClick?: ((event: MouseEvent<HTMLElement>) => void) | undefined;
 }) {
+  const { t } = useI18n();
   return (
     <span className={cn("local-image-error", props.className)}>
       <span className="local-image-error__icon" aria-hidden="true">
         <TriangleAlertIcon className="size-4" />
       </span>
       <span className="local-image-error__body">
-        <span className="local-image-error__title">Couldn’t open this image</span>
-        <span className="local-image-error__subtitle">
-          The file may have moved or be unavailable.
-        </span>
+        <span className="local-image-error__title">{t("image.openFailed")}</span>
+        <span className="local-image-error__subtitle">{t("image.fileUnavailable")}</span>
       </span>
       <a
         href={props.downloadUrl}
         download={props.downloadName}
         onClick={props.onDownloadClick}
         className="local-image-error__action"
-        aria-label={props.downloadAriaLabel ?? "Download image"}
+        aria-label={props.downloadAriaLabel ?? t("image.downloadImage")}
       >
         <DownloadIcon className="size-3.5" aria-hidden="true" />
-        <span>Download</span>
+        <span>{t("image.download")}</span>
       </a>
     </span>
   );
@@ -166,6 +166,7 @@ export function LocalImagePreview(props: {
   onPreviewReady?: (() => void) | undefined;
   onPreviewError?: (() => void) | undefined;
 }) {
+  const { t } = useI18n();
   const { downloadUrl, downloadName, status, imgProps } = useLocalImagePreview({
     src: props.src,
     cwd: props.cwd,
@@ -203,8 +204,8 @@ export function LocalImagePreview(props: {
         download={downloadName}
         onClick={handleDownloadClick}
         className="local-image-preview__download"
-        aria-label="Download image"
-        title="Download"
+        aria-label={t("image.downloadImage")}
+        title={t("image.download")}
       >
         <DownloadIcon className="size-3.5" aria-hidden="true" />
       </a>

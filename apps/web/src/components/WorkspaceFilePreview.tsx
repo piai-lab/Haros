@@ -36,9 +36,10 @@ import {
 
 import { basenameOfPath } from "~/file-icons";
 import { useTheme } from "~/hooks/useTheme";
+import { useI18n } from "~/i18n";
 import { getSelectionWithin, type ChatFileReference } from "~/lib/chatReferences";
 import { resolveDiffThemeName, type DiffThemeName } from "~/lib/diffRendering";
-import { formatFileCommentRange, type FileCommentSelection } from "~/lib/fileComments";
+import { type FileCommentSelection } from "~/lib/fileComments";
 import { showFileReferenceContextMenu } from "~/lib/fileReferenceContextMenu";
 import { PlusIcon } from "~/lib/icons";
 import { toggleMarkdownTaskMarker } from "~/lib/markdownTaskList";
@@ -265,11 +266,12 @@ const FILE_PREVIEW_SKELETON_LINES = [
 ];
 
 function FilePreviewLoadingState() {
+  const { t } = useI18n();
   return (
     <div
       className="min-h-0 flex-1 space-y-2.5 overflow-hidden px-3 py-3"
       role="status"
-      aria-label="Loading file..."
+      aria-label={t("file.loading")}
     >
       {FILE_PREVIEW_SKELETON_LINES.map((line) => (
         <div key={`${line.indent}-${line.width}`} className="flex h-3 items-center gap-2">
@@ -280,7 +282,7 @@ function FilePreviewLoadingState() {
           />
         </div>
       ))}
-      <span className="sr-only">Loading file...</span>
+      <span className="sr-only">{t("file.loading")}</span>
     </div>
   );
 }
@@ -323,8 +325,12 @@ interface EditableFileDocument {
 interface FileEditBuffer extends EditableFileDocument {
   savedContents: string;
   saving: boolean;
-  error: string | null;
+  error: FileEditError | null;
 }
+
+type FileEditError =
+  | { readonly kind: "unavailable" }
+  | { readonly kind: "failed"; readonly detail: string | null };
 
 function makeFileEditBuffer(document: EditableFileDocument): FileEditBuffer {
   return {
@@ -348,13 +354,34 @@ function resolveFileEditBuffer(
   return !dirty && sourceChanged ? makeFileEditBuffer(document) : current;
 }
 
-function readFileSaveError(error: unknown): string {
-  return error instanceof Error && error.message.length > 0
-    ? error.message
-    : "Could not save this file.";
+function readFileSaveError(error: unknown): FileEditError {
+  return {
+    kind: "failed",
+    detail: error instanceof Error && error.message.length > 0 ? error.message : null,
+  };
+}
+
+function FilePreviewErrorState(props: { message: string; detail?: string | null }) {
+  const { t } = useI18n();
+  return (
+    <PanelStateMessage density="compact" fill="flex" className="items-start justify-start p-3">
+      <div className="text-left text-[11px] text-destructive/85">
+        <p>{props.message}</p>
+        {props.detail ? (
+          <details className="mt-1 max-w-full text-muted-foreground">
+            <summary className="cursor-pointer">{t("error.showDetails")}</summary>
+            <pre className="mt-1 max-h-24 max-w-full overflow-auto whitespace-pre-wrap break-words">
+              {props.detail}
+            </pre>
+          </details>
+        ) : null}
+      </div>
+    </PanelStateMessage>
+  );
 }
 
 export function WorkspaceFilePreview(props: WorkspaceFilePreviewProps) {
+  const { t } = useI18n();
   const { resolvedTheme } = useTheme();
   const diffThemeName = resolveDiffThemeName(resolvedTheme);
   const contentsRef = useRef<HTMLDivElement>(null);
@@ -519,13 +546,13 @@ export function WorkspaceFilePreview(props: WorkspaceFilePreviewProps) {
     !props.editable || showMarkdownPreview || fileQuery.data === undefined
       ? null
       : !fileIsWorkspaceRelative
-        ? "Only files inside the project can be edited."
+        ? t("file.projectOnlyEditable")
         : fileQuery.data.truncated
-          ? "Large files are read-only."
+          ? t("file.largeReadOnly")
           : fileQuery.data.lineEnding === "mixed"
-            ? "Files with mixed line endings are read-only to preserve their exact format."
+            ? t("file.mixedLineEndingsReadOnly")
             : fileQuery.data.version === null || fileQuery.data.encoding === null
-              ? "This file format is read-only."
+              ? t("file.formatReadOnly")
               : null;
 
   const handleEditBufferChange = (contents: string) => {
@@ -551,7 +578,7 @@ export function WorkspaceFilePreview(props: WorkspaceFilePreviewProps) {
     if (!api) {
       setEditBuffer((current) => ({
         ...resolveFileEditBuffer(current, editableDocument),
-        error: "File saving is unavailable.",
+        error: { kind: "unavailable" },
       }));
       return;
     }
@@ -768,7 +795,7 @@ export function WorkspaceFilePreview(props: WorkspaceFilePreviewProps) {
   if (!props.workspaceRoot && !fileIsLocalAbsolute && !fileIsScratchBinaryPreview) {
     return (
       <PanelStateMessage density="compact" fill="flex">
-        <p>No workspace is attached to this chat.</p>
+        <p>{t("file.noWorkspace")}</p>
       </PanelStateMessage>
     );
   }
@@ -777,7 +804,7 @@ export function WorkspaceFilePreview(props: WorkspaceFilePreviewProps) {
     return (
       props.emptyState ?? (
         <PanelStateMessage density="compact" fill="flex">
-          <p>Select a file from the explorer.</p>
+          <p>{t("file.selectFromExplorer")}</p>
         </PanelStateMessage>
       )
     );
@@ -785,13 +812,14 @@ export function WorkspaceFilePreview(props: WorkspaceFilePreviewProps) {
   if (fileNeedsLocalPreviewGrant && !localPreviewGrant) {
     if (localPreviewGrantQuery.error) {
       return (
-        <PanelStateMessage density="compact" fill="flex" className="items-start justify-start p-3">
-          <p className="text-left text-[11px] text-destructive/85">
-            {localPreviewGrantQuery.error instanceof Error
+        <FilePreviewErrorState
+          message={t("file.previewGrantFailed")}
+          detail={
+            localPreviewGrantQuery.error instanceof Error
               ? localPreviewGrantQuery.error.message
-              : "Could not create local file preview grant."}
-          </p>
-        </PanelStateMessage>
+              : null
+          }
+        />
       );
     }
     return <FilePreviewLoadingState />;
@@ -844,13 +872,25 @@ export function WorkspaceFilePreview(props: WorkspaceFilePreviewProps) {
           role="alert"
           className="flex shrink-0 items-center gap-3 border-b border-destructive/25 bg-destructive/5 px-3 py-2 text-[11px] text-destructive"
         >
-          <span className="min-w-0 flex-1">{activeEditBuffer.error}</span>
+          <span className="min-w-0 flex-1">
+            {activeEditBuffer.error.kind === "unavailable"
+              ? t("file.saveUnavailable")
+              : t("file.saveFailed")}
+            {activeEditBuffer.error.kind === "failed" && activeEditBuffer.error.detail ? (
+              <details className="mt-1 max-w-full text-muted-foreground">
+                <summary className="cursor-pointer">{t("error.showDetails")}</summary>
+                <pre className="mt-1 max-h-24 max-w-full overflow-auto whitespace-pre-wrap break-words">
+                  {activeEditBuffer.error.detail}
+                </pre>
+              </details>
+            ) : null}
+          </span>
           <button
             type="button"
             className="shrink-0 rounded-md px-2 py-1 font-medium text-foreground/80 hover:bg-foreground/8"
             onClick={handleEditBufferReload}
           >
-            Reload from disk
+            {t("file.reloadFromDisk")}
           </button>
         </div>
       ) : null}
@@ -876,15 +916,14 @@ export function WorkspaceFilePreview(props: WorkspaceFilePreviewProps) {
       ) : fileQuery.isLoading ? (
         <FilePreviewLoadingState />
       ) : fileQuery.error ? (
-        <PanelStateMessage density="compact" fill="flex" className="items-start justify-start p-3">
-          <p className="text-left text-[11px] text-destructive/85">
-            {fileQuery.error instanceof Error ? fileQuery.error.message : "Could not read file."}
-          </p>
-        </PanelStateMessage>
+        <FilePreviewErrorState
+          message={t("file.readFailed")}
+          detail={fileQuery.error instanceof Error ? fileQuery.error.message : null}
+        />
       ) : activeEditBuffer && editableDocument && !showMarkdownPreview ? (
         <textarea
           className="editor-file-editor"
-          aria-label={`Edit ${filePath}`}
+          aria-label={t("file.edit", { path: filePath })}
           aria-busy={activeEditBuffer.saving}
           aria-invalid={activeEditBuffer.error ? "true" : undefined}
           value={activeEditBuffer.contents}
@@ -925,7 +964,11 @@ export function WorkspaceFilePreview(props: WorkspaceFilePreviewProps) {
             <FileContentsView path={filePath} contents={fileContents} themeName={diffThemeName} />
           )}
           {!showMarkdownPreview && lineCount > 0 ? (
-            <span className="sr-only">{lineCount} lines</span>
+            <span className="sr-only">
+              {t(lineCount === 1 ? "file.lineCount" : "file.lineCountPlural", {
+                count: lineCount,
+              })}
+            </span>
           ) : null}
           {previewSelectionAction.pendingAction ? (
             <TranscriptSelectionAction
@@ -944,8 +987,8 @@ export function WorkspaceFilePreview(props: WorkspaceFilePreviewProps) {
                 left: hoveredCommentLine.left,
                 height: hoveredCommentLine.height,
               }}
-              aria-label={`Comment on line ${hoveredCommentLine.lineNumber}`}
-              title="Comment"
+              aria-label={t("file.commentOnLine", { line: hoveredCommentLine.lineNumber })}
+              title={t("file.comment")}
               onMouseDown={(event) => event.preventDefault()}
               onClick={(event) => {
                 event.preventDefault();
@@ -966,10 +1009,7 @@ export function WorkspaceFilePreview(props: WorkspaceFilePreviewProps) {
                 aria-hidden="true"
               />
               <FileLineCommentBox
-                lineLabel={formatFileCommentRange({
-                  startLine: activeCommentLine.lineNumber,
-                  endLine: activeCommentLine.lineNumber,
-                })}
+                lineLabel={t("file.line", { line: activeCommentLine.lineNumber })}
                 top={activeCommentLine.top + activeCommentLine.height}
                 left={activeCommentLine.left}
                 width={Math.max(

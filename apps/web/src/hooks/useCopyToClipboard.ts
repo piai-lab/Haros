@@ -1,6 +1,7 @@
 import * as React from "react";
 
 import { toastManager } from "../components/ui/toast";
+import { useI18n } from "../i18n";
 
 function fallbackCopyTextToClipboard(value: string): boolean {
   if (typeof document === "undefined" || typeof document.execCommand !== "function") {
@@ -151,6 +152,7 @@ interface CopyToastLabels {
  * one success/error toast shape, one place to change it.
  */
 function useCopyWithToasts(): (value: string, labels: CopyToastLabels) => void {
+  const { t } = useI18n();
   const { copyToClipboard } = useCopyToClipboard<CopyToastLabels>({
     onCopy: (labels) =>
       toastManager.add({
@@ -158,11 +160,11 @@ function useCopyWithToasts(): (value: string, labels: CopyToastLabels) => void {
         title: labels.successTitle,
         description: labels.successDescription,
       }),
-    onError: (error, labels) =>
+    onError: (_error, labels) =>
       toastManager.add({
         type: "error",
         title: labels.errorTitle,
-        description: error instanceof Error ? error.message : "An error occurred.",
+        description: t("copy.failedDescription"),
       }),
   });
   return copyToClipboard;
@@ -173,12 +175,13 @@ function useCopyWithToasts(): (value: string, labels: CopyToastLabels) => void {
  * of truth for the "Path copied" affordance used by the sidebar and the kanban board.
  */
 export function useCopyPathToClipboard(): (path: string) => void {
+  const { t } = useI18n();
   const copy = useCopyWithToasts();
   return (path: string) =>
     copy(path, {
-      successTitle: "Path copied",
+      successTitle: t("copy.pathCopied"),
       successDescription: path,
-      errorTitle: "Failed to copy path",
+      errorTitle: t("copy.pathFailed"),
     });
 }
 
@@ -195,36 +198,42 @@ export function useCopyFileContentsToClipboard(): (
   fileName: string,
   options?: { partial?: boolean },
 ) => void {
+  const { t } = useI18n();
   const copy = useCopyWithToasts();
   return (contents: string, fileName: string, options?: { partial?: boolean }) => {
     if (contents.length === 0) {
-      toastManager.add({ type: "info", title: "Nothing to copy", description: "File is empty" });
+      toastManager.add({
+        type: "info",
+        title: t("copy.nothing"),
+        description: t("copy.fileEmpty"),
+      });
       return;
     }
     copy(
       contents,
       options?.partial
         ? {
-            successTitle: "Partial contents copied",
-            successDescription: "Large file — only the loaded part was copied",
-            errorTitle: "Failed to copy contents",
+            successTitle: t("copy.partialContentsCopied"),
+            successDescription: t("copy.partialContentsDescription"),
+            errorTitle: t("copy.contentsFailed"),
           }
         : {
-            successTitle: "Contents copied",
+            successTitle: t("copy.contentsCopied"),
             successDescription: fileName,
-            errorTitle: "Failed to copy contents",
+            errorTitle: t("copy.contentsFailed"),
           },
     );
   };
 }
 
-/** Copy a thread id and surface the shared "Thread ID copied" toast. */
+/** Copy an internal task ID and surface the shared localized toast. */
 export function useCopyThreadIdToClipboard(): (threadId: string) => void {
+  const { t } = useI18n();
   const copy = useCopyWithToasts();
   return (threadId: string) =>
     copy(threadId, {
-      successTitle: "Thread ID copied",
+      successTitle: t("copy.taskIdCopied"),
       successDescription: threadId,
-      errorTitle: "Failed to copy thread ID",
+      errorTitle: t("copy.taskIdFailed"),
     });
 }

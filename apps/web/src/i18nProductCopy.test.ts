@@ -10,6 +10,7 @@ const PRODUCT_COPY_SOURCES = [
   "components/CreateProjectDialog.tsx",
   "components/ChatMarkdown.tsx",
   "components/DesktopWindowControls.tsx",
+  "components/LocalImagePreview.tsx",
   "components/PdfFilePreview.tsx",
   "components/RecentViewSwitcher.tsx",
   "components/SettingsSidebarNav.tsx",
@@ -19,7 +20,9 @@ const PRODUCT_COPY_SOURCES = [
   "components/chat/ComposerExtrasMenu.tsx",
   "components/chat/ComposerModelEffortPicker.tsx",
   "components/chat/ContextWindowMeter.tsx",
+  "components/chat/GeneratedMarkdownImage.tsx",
   "components/chat/RightDock.tsx",
+  "components/chat/WorkspaceFilePreviewHeader.tsx",
   "components/kanban/KanbanCardView.tsx",
   "components/kanban/KanbanColumn.tsx",
   "components/kanban/KanbanNewTaskDialog.tsx",
@@ -54,6 +57,8 @@ const PRODUCT_COPY_SOURCES = [
   "components/ui/spinner.tsx",
   "components/ui/time-picker.tsx",
   "components/ui/toast.tsx",
+  "components/WorkspaceFilePreview.tsx",
+  "hooks/useCopyToClipboard.ts",
   "shortcutsSheet.ts",
 ] as const;
 
