@@ -8,6 +8,8 @@ const PRODUCT_COPY_SOURCES = [
   "routes/__root.tsx",
   "components/CreateGitHubProjectFields.tsx",
   "components/CreateProjectDialog.tsx",
+  "components/DesktopWindowControls.tsx",
+  "components/RecentViewSwitcher.tsx",
   "components/SettingsSidebarNav.tsx",
   "components/SidebarSearchPalette.tsx",
   "components/ShortcutsDialog.tsx",

@@ -4,6 +4,7 @@ import type { DesktopWindowState } from "@synara/contracts";
 
 import { isElectron } from "~/env";
 import { cn, isWindowsPlatform } from "~/lib/utils";
+import { useI18n } from "~/i18n";
 
 const DEFAULT_WINDOW_STATE: DesktopWindowState = {
   isMaximized: false,
@@ -43,6 +44,7 @@ function CaptionGlyph({ glyph }: { glyph: string }) {
 }
 
 export function DesktopWindowControls({ className }: { className?: string }) {
+  const { t } = useI18n();
   const [windowState, setWindowState] = useState<DesktopWindowState>(DEFAULT_WINDOW_STATE);
   const platform = typeof navigator === "undefined" ? "" : navigator.platform;
   const isWindowsDesktop = isWindowsPlatform(platform);
@@ -73,8 +75,8 @@ export function DesktopWindowControls({ className }: { className?: string }) {
     <div className={cn("flex h-[46px] items-stretch [-webkit-app-region:no-drag]", className)}>
       <button
         type="button"
-        aria-label="Minimize"
-        title="Minimize"
+        aria-label={t("common.minimize")}
+        title={t("common.minimize")}
         className={CAPTION_BUTTON_CLASS}
         onClick={() => {
           void controls.minimize();
@@ -84,8 +86,8 @@ export function DesktopWindowControls({ className }: { className?: string }) {
       </button>
       <button
         type="button"
-        aria-label={isMaximized ? "Restore" : "Maximize"}
-        title={isMaximized ? "Restore" : "Maximize"}
+        aria-label={isMaximized ? t("common.restore") : t("common.maximize")}
+        title={isMaximized ? t("common.restore") : t("common.maximize")}
         className={CAPTION_BUTTON_CLASS}
         onClick={() => {
           void controls.toggleMaximize().then(setWindowState);
@@ -95,8 +97,8 @@ export function DesktopWindowControls({ className }: { className?: string }) {
       </button>
       <button
         type="button"
-        aria-label="Close"
-        title="Close"
+        aria-label={t("common.close")}
+        title={t("common.close")}
         className={cn(CAPTION_BUTTON_CLASS, CLOSE_BUTTON_CLASS)}
         onClick={() => {
           void controls.close();

@@ -14,6 +14,7 @@ import {
   SettingsIcon,
 } from "../lib/icons";
 import { cn } from "../lib/utils";
+import { useI18n } from "../i18n";
 import type { RecentViewDisplayEntry } from "../recentViews.logic";
 import { ProviderIcon } from "./ProviderIcon";
 import TerminalIdentityIcon from "./terminal/TerminalIdentityIcon";
@@ -85,6 +86,7 @@ export function RecentViewSwitcher(props: {
   entries: ReadonlyArray<RecentViewDisplayEntry>;
   selectedIndex: number;
 }) {
+  const { t } = useI18n();
   if (props.entries.length === 0) {
     return null;
   }
@@ -98,7 +100,7 @@ export function RecentViewSwitcher(props: {
     <div className="pointer-events-none fixed inset-0 z-[90] flex items-start justify-center pt-[14vh]">
       <div
         role="listbox"
-        aria-label="Recent views"
+        aria-label={t("shell.recentViews")}
         aria-activedescendant={`recent-view-switcher-${selectedIndex}`}
         className="w-[min(34rem,calc(100vw-2rem))] overflow-hidden rounded-xl border border-border/70 bg-popover/95 text-popover-foreground shadow-2xl shadow-black/30 backdrop-blur-xl"
       >
@@ -126,7 +128,7 @@ export function RecentViewSwitcher(props: {
                     <span className="truncate text-sm font-medium leading-5">{entry.title}</span>
                     {entry.isCurrent ? (
                       <span className="shrink-0 rounded-full border border-border/60 bg-muted/70 px-1.5 py-px text-[10px] font-medium leading-4 text-muted-foreground">
-                        Current
+                        {t("shell.current")}
                       </span>
                     ) : null}
                   </div>
@@ -136,10 +138,10 @@ export function RecentViewSwitcher(props: {
                 </div>
                 <div className="flex shrink-0 items-center gap-1.5 text-muted-foreground">
                   {entry.isSplit ? (
-                    <PanelLeftIcon className="size-3.5" aria-label="Split view" />
+                    <PanelLeftIcon className="size-3.5" aria-label={t("shell.splitView")} />
                   ) : null}
                   {entry.isPinned ? (
-                    <PinFilledIcon className="size-3.5" aria-label="Pinned" />
+                    <PinFilledIcon className="size-3.5" aria-label={t("shell.pinned")} />
                   ) : null}
                 </div>
               </div>
@@ -148,7 +150,10 @@ export function RecentViewSwitcher(props: {
         </div>
         <div className="flex items-center justify-between gap-3 border-t border-border/60 px-3 py-2 text-[11px] text-muted-foreground">
           <span className="shrink-0">
-            {props.entries.length} recent {props.entries.length === 1 ? "view" : "views"}
+            {t(
+              props.entries.length === 1 ? "shell.recentViewCount" : "shell.recentViewCountPlural",
+              { count: props.entries.length },
+            )}
           </span>
           <div className="pointer-events-auto flex items-center gap-2">
             {SWITCHER_FOOTER_SHORTCUTS.map((shortcut) => (
