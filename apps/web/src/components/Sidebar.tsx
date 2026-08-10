@@ -5871,7 +5871,7 @@ export default function Sidebar() {
                         aria-expanded={groupsSectionExpanded}
                         className={cn(
                           SIDEBAR_HEADER_ROW_CLASS_NAME,
-                          SIDEBAR_ROW_IDLE_TEXT_CLASS_NAME,
+                          SIDEBAR_SECTION_LABEL_CLASS_NAME,
                           SIDEBAR_ROW_HOVER_CLASS_NAME,
                           "cursor-pointer pr-8",
                         )}
