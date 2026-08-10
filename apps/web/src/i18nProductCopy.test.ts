@@ -10,6 +10,7 @@ const PRODUCT_COPY_SOURCES = [
   "components/CreateProjectDialog.tsx",
   "components/ChatMarkdown.tsx",
   "components/DesktopWindowControls.tsx",
+  "components/EditorWorkspaceView.tsx",
   "components/LocalImagePreview.tsx",
   "components/PdfFilePreview.tsx",
   "components/RecentViewSwitcher.tsx",

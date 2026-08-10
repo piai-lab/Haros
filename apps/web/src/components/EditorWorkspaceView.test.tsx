@@ -155,7 +155,7 @@ describe("EditorWorkspaceView", () => {
       </SidebarProvider>,
     );
 
-    expect(markup).toContain('aria-label="Loading changed files..."');
+    expect(markup).toContain('aria-label="Loading changed files…"');
     expect(markup).not.toContain("No files in this diff.");
   });
 
