@@ -1,5 +1,9 @@
 import * as NodeServices from "@effect/platform-node/NodeServices";
-import { DEFAULT_MODEL_BY_PROVIDER } from "@omnimind/contracts";
+import { dirname } from "node:path";
+import {
+  DEFAULT_GIT_TEXT_GENERATION_MODEL,
+  DEFAULT_MODEL_BY_PROVIDER,
+} from "@omnimind/contracts";
 import { Effect, FileSystem, Layer } from "effect";
 import { describe, expect, it } from "vitest";
 import { ServerConfig } from "./config";
@@ -29,6 +33,46 @@ describe("ServerSettingsService", () => {
     expect(settings.providers.grok.binaryPath).toBe("grok");
     expect(settings.defaultThreadEnvMode).toBe("local");
     expect(settings.enableProviderUpdateChecks).toBe(true);
+    expect(settings.textGenerationModelSelection).toEqual({
+      provider: "codex",
+      model: DEFAULT_GIT_TEXT_GENERATION_MODEL,
+    });
+  });
+
+  it("preserves an explicitly selected previous Git writing model", async () => {
+    const result = await runWithSettings(
+      Effect.gen(function* () {
+        const service = yield* ServerSettingsService;
+        const { settingsPath } = yield* ServerConfig;
+        const fs = yield* FileSystem.FileSystem;
+        yield* fs.makeDirectory(dirname(settingsPath), { recursive: true });
+        yield* fs.writeFileString(
+          settingsPath,
+          JSON.stringify({
+            revision: 7,
+            migrationVersion: 1,
+            settings: {
+              textGenerationModelSelection: {
+                provider: "codex",
+                model: "gpt-5.4-mini",
+              },
+            },
+          }),
+        );
+
+        yield* service.start;
+        const settings = yield* service.getSettings;
+        const persisted = JSON.parse(yield* fs.readFileString(settingsPath)) as {
+          migrationVersion: number;
+          settings: { textGenerationModelSelection: { model: string } };
+        };
+        return { settings, persisted };
+      }),
+    );
+
+    expect(result.settings.textGenerationModelSelection.model).toBe("gpt-5.4-mini");
+    expect(result.persisted.migrationVersion).toBe(1);
+    expect(result.persisted.settings.textGenerationModelSelection.model).toBe("gpt-5.4-mini");
   });
 
   it("persists updates and reloads them", async () => {
