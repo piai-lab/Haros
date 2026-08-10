@@ -31,4 +31,17 @@ describe("Sidebar module", () => {
     expect(groupsHeader).toContain("SIDEBAR_SECTION_LABEL_CLASS_NAME");
     expect(groupsHeader).not.toContain("SIDEBAR_ROW_IDLE_TEXT_CLASS_NAME");
   });
+
+  it("does not repeat Chat as a list heading inside the Chat surface", () => {
+    const source = readFileSync(new URL("./Sidebar.tsx", import.meta.url), "utf8");
+    const chatListStart = source.indexOf('data-slot="sidebar-chat-list"');
+    const chatListEnd = source.indexOf(") : activityViewEnabled ? (", chatListStart);
+    const chatList = source.slice(chatListStart, chatListEnd);
+
+    expect(chatListStart).toBeGreaterThan(-1);
+    expect(chatListEnd).toBeGreaterThan(chatListStart);
+    expect(source).not.toMatch(/renderListSectionHeader\(\s*t\("nav\.chat"\)/);
+    expect(chatList).not.toContain('label={t("nav.newChat")}');
+    expect(chatList).toContain("<SidebarMenu ref={attachProjectListAutoAnimateRef}");
+  });
 });

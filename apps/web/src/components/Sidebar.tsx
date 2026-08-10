@@ -998,7 +998,7 @@ function ChatSortMenu({
         icon={SortFilterIcon}
         label={t("nav.sortChats")}
         tooltip={t("nav.sortChats")}
-        tooltipSide="top"
+        tooltipSide="bottom"
       />
       <ComposerPickerMenuPopup align="end" side="bottom" className="min-w-44">
         <MenuGroup>
@@ -5782,6 +5782,14 @@ export default function Sidebar() {
                     setSearchPaletteOpen(true);
                   }}
                 />
+                {isOnStudio && studioChatThreadRows.length > 1 ? (
+                  <ChatSortMenu
+                    threadSortOrder={appSettings.sidebarThreadSortOrder}
+                    onThreadSortOrderChange={(sortOrder) => {
+                      updateSettings({ sidebarThreadSortOrder: sortOrder });
+                    }}
+                  />
+                ) : null}
                 {!isOnStudio ? (
                   <SidebarActivityBellButton
                     active={activityViewEnabled}
@@ -5855,28 +5863,10 @@ export default function Sidebar() {
               </SidebarGroup>
 
               {isOnStudio ? (
-                // Studio is "just chats": a labeled Studio block holding a flat list of threads
-                // rooted at the Studio workspace (no project-folder chrome).
-                <SidebarGroup className="px-1.5 py-1.5">
+                // Chat is already named by the primary surface selector. Keep the list flat and
+                // avoid repeating that mode as a second section heading.
+                <SidebarGroup className="px-1.5 py-1.5" data-slot="sidebar-chat-list">
                   {renderPinnedThreadsSection()}
-                  {renderListSectionHeader(
-                    t("nav.chat"),
-                    <>
-                      <SidebarIconButton
-                        icon={NewThreadIcon}
-                        label={t("nav.newChat")}
-                        tooltip={t("nav.newChat")}
-                        tooltipSide="top"
-                        onClick={handleCreateStudioChat}
-                      />
-                      <ChatSortMenu
-                        threadSortOrder={appSettings.sidebarThreadSortOrder}
-                        onThreadSortOrderChange={(sortOrder) => {
-                          updateSettings({ sidebarThreadSortOrder: sortOrder });
-                        }}
-                      />
-                    </>,
-                  )}
                   <SidebarMenu ref={attachProjectListAutoAnimateRef} className="gap-1">
                     {studioChatThreadRows.length > 0 ? (
                       studioChatThreadRows.map((row) =>

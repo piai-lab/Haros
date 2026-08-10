@@ -5571,13 +5571,26 @@ describe("ChatView timeline estimator parity (full app)", () => {
     });
 
     try {
-      const newStudioChatButton = await waitForElement(
-        () =>
-          Array.from(document.querySelectorAll<HTMLButtonElement>("button")).find(
-            (button) => button.getAttribute("aria-label") === EN_MESSAGES["nav.newChat"],
-          ) ?? null,
-        "Unable to find the Studio new-chat action.",
+      const chatList = await waitForElement(
+        () => document.querySelector<HTMLElement>('[data-slot="sidebar-chat-list"]'),
+        "Unable to find the Chat sidebar list.",
       );
+      const visibleChatLabels = Array.from(document.querySelectorAll<HTMLButtonElement>("button"))
+        .filter((element) => element.textContent?.trim() === EN_MESSAGES["nav.chat"])
+        .filter((element) => element.getBoundingClientRect().width > 0);
+      const newStudioChatButtons = Array.from(
+        document.querySelectorAll<HTMLButtonElement>("button"),
+      ).filter(
+        (button) =>
+          button.textContent?.trim() === EN_MESSAGES["nav.newChat"] ||
+          button.getAttribute("aria-label") === EN_MESSAGES["nav.newChat"],
+      );
+
+      expect(chatList.textContent).not.toContain(EN_MESSAGES["nav.chat"]);
+      expect(visibleChatLabels).toHaveLength(1);
+      expect(newStudioChatButtons).toHaveLength(1);
+
+      const newStudioChatButton = newStudioChatButtons[0]!;
       newStudioChatButton.click();
       newStudioChatButton.click();
 
