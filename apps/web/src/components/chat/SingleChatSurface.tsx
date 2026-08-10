@@ -856,6 +856,7 @@ export function SingleChatSurface(props: {
             panelState={DOCK_EMBEDDED_PANEL_STATE}
             onToggleDiff={noopChatSurfaceAction}
             onToggleBrowser={noopChatSurfaceAction}
+            onRevealBrowser={noopChatSurfaceAction}
             onOpenBrowserUrl={noopChatSurfaceAction}
             onOpenTurnDiff={noopChatSurfaceAction}
             onCloseThreadPane={() => closePane(props.threadId, pane.id)}
@@ -988,6 +989,7 @@ export function SingleChatSurface(props: {
                     panelState={editorChatPanelState}
                     onToggleDiff={handleEditorToggleDiff}
                     onToggleBrowser={noopChatSurfaceAction}
+                    onRevealBrowser={noopChatSurfaceAction}
                     onOpenBrowserUrl={noopChatSurfaceAction}
                     onOpenTurnDiff={handleEditorOpenTurnDiff}
                   />
@@ -1022,6 +1024,7 @@ export function SingleChatSurface(props: {
               onToggleDiff={handleToggleDiff}
               onToggleRightDock={handleToggleRightDock}
               onToggleBrowser={handleToggleBrowser}
+              onRevealBrowser={handleOpenBrowserUrl}
               onOpenBrowserUrl={handleOpenBrowserUrl}
               onOpenTurnDiff={handleOpenTurnDiff}
               onSplitSurface={handleSplitSurface}

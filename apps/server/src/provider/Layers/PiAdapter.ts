@@ -95,6 +95,13 @@ import {
   teardownChildProcessTree,
   teardownProviderProcessTree,
 } from "../supervisedProcessTeardown.ts";
+import { BrowserAutomationHost } from "../../browserAutomation/Services/BrowserAutomationHost.ts";
+import {
+  engineWebSurfacePresentationMetadata,
+  extractPiCuratorWebSurfaceUrl,
+  registerEngineWebSurfaceIntent,
+  sanitizeEngineWebSurfacePayload,
+} from "../../engineWebSurface/engineWebSurfaceHost.ts";
 
 type PiFamilyProvider = Extract<ProviderKind, "pi" | "omnimind">;
 const DEFAULT_PI_THINKING_LEVEL: ThinkingLevel = "medium";
@@ -414,6 +421,10 @@ interface PiTrackedToolCall {
   readonly args: unknown;
   readonly itemId: RuntimeItemId;
   readonly itemType: "command_execution" | "file_change" | "dynamic_tool_call" | "web_search";
+  engineWebSurface?: {
+    readonly url: string;
+    readonly unregister: () => void;
+  };
 }
 
 interface PiPendingUserInput {
@@ -1067,6 +1078,7 @@ function toolItemType(toolName: string): PiTrackedToolCall["itemType"] {
       return "file_change";
     case "grep":
     case "find":
+    case "web_search":
       return "web_search";
     default:
       return "dynamic_tool_call";
@@ -1097,6 +1109,7 @@ function toolLifecycleData(input: {
   result?: unknown;
   partialResult?: unknown;
   isError?: boolean;
+  engineWebSurfaceStatus?: "waiting-for-user" | "unavailable" | "completed";
 }): Record<string, unknown> {
   const { toolCallId, toolName, args } = input;
   const rawOutput = toolRawOutput(input.result ?? input.partialResult);
@@ -1121,6 +1134,13 @@ function toolLifecycleData(input: {
     ...(input.partialResult !== undefined ? { partialResult: input.partialResult } : {}),
     ...(input.result !== undefined ? { result: input.result } : {}),
     ...(input.isError !== undefined ? { isError: input.isError } : {}),
+    ...(input.engineWebSurfaceStatus
+      ? {
+          engineWebSurface: engineWebSurfacePresentationMetadata(
+            input.engineWebSurfaceStatus,
+          ),
+        }
+      : {}),
   };
 
   switch (toolName) {
@@ -1243,6 +1263,8 @@ function mapMessageHistory(session: PiAgentSession): unknown[] {
       const toolName = pending?.toolName ?? message.toolName;
       const args = pending?.args;
       const result = { content: message.content };
+      const surfaceUrl = extractPiCuratorWebSurfaceUrl(toolName, result);
+      const safeResult = sanitizeEngineWebSurfacePayload(result, surfaceUrl);
       items.push({
         type: "tool_call",
         status: message.isError ? "failed" : "completed",
@@ -1250,14 +1272,15 @@ function mapMessageHistory(session: PiAgentSession): unknown[] {
         toolName,
         itemType: toolItemType(toolName),
         title: toolTitle(toolName, args),
-        output: textFromContent(message.content),
+        output: piToolTimelineDetail(safeResult),
         isError: message.isError,
         data: toolLifecycleData({
           toolCallId: message.toolCallId,
           toolName,
           args,
-          result,
+          result: safeResult,
           isError: message.isError,
+          ...(surfaceUrl ? { engineWebSurfaceStatus: "completed" } : {}),
         }),
       });
     }
@@ -1404,6 +1427,9 @@ const makePiAdapter = <P extends PiFamilyProvider>(
     const agentGatewayCredentials = Option.getOrUndefined(
       yield* Effect.serviceOption(AgentGatewayCredentials),
     );
+    const browserAutomationHost = Option.getOrUndefined(
+      yield* Effect.serviceOption(BrowserAutomationHost),
+    );
     const runtimeEventQueue = yield* Queue.bounded<ProviderRuntimeEvent>(
       PROVIDER_ADAPTER_RUNTIME_EVENT_BUFFER_CAPACITY,
     );
@@ -1478,6 +1504,75 @@ const makePiAdapter = <P extends PiFamilyProvider>(
           payload: input.cause ?? { message: input.message },
         },
       } satisfies ProviderRuntimeEvent);
+    };
+
+    const offerEngineWebSurfaceUnavailable = (
+      context: PiSessionContext,
+      tracked: PiTrackedToolCall,
+    ) => {
+      const message =
+        "OmniMind Browser could not open this temporary Engine page. The Engine tool remains active; check Browser availability, then rerun the tool.";
+      offerRuntimeEvent({
+        ...makeEventBase(context),
+        itemId: tracked.itemId,
+        providerRefs: { providerItemId: ProviderItemId.makeUnsafe(tracked.toolCallId) },
+        type: "item.updated",
+        payload: {
+          itemType: tracked.itemType,
+          status: "inProgress",
+          title: toolTitle(tracked.toolName, tracked.args),
+          detail: message,
+          data: toolLifecycleData({
+            toolCallId: tracked.toolCallId,
+            toolName: tracked.toolName,
+            args: tracked.args,
+            engineWebSurfaceStatus: "unavailable",
+          }),
+        },
+        raw: {
+          source: "pi.sdk.event",
+          method: "engine-web-surface/unavailable",
+          payload: { toolCallId: tracked.toolCallId, message },
+        },
+      } satisfies ProviderRuntimeEvent);
+    };
+
+    const registerPiCuratorWebSurface = (
+      context: PiSessionContext,
+      tracked: PiTrackedToolCall,
+      url: string,
+    ) => {
+      if (tracked.engineWebSurface?.url === url) return;
+      tracked.engineWebSurface?.unregister();
+      const unregister = registerEngineWebSurfaceIntent({
+        url,
+        identity: {
+          provider,
+          threadId: context.session.threadId,
+          toolCallId: tracked.toolCallId,
+        },
+        present: async () => {
+          if (context.stopped || !browserAutomationHost?.available) {
+            offerEngineWebSurfaceUnavailable(context, tracked);
+            return;
+          }
+          try {
+            await Effect.runPromise(
+              browserAutomationHost.execute({
+                sessionKey: `engine-web-surface:${provider}:${context.session.threadId}:${tracked.toolCallId}`,
+                provider,
+                threadId: context.session.threadId,
+                name: "browser_open",
+                arguments: { url, show: true, reuse: true },
+                timeoutMs: 10_000,
+              }),
+            );
+          } catch {
+            offerEngineWebSurfaceUnavailable(context, tracked);
+          }
+        },
+      });
+      tracked.engineWebSurface = { url, unregister };
     };
 
     const resolvePiExtensionUserInput = (
@@ -1802,6 +1897,10 @@ const makePiAdapter = <P extends PiFamilyProvider>(
           pending.resolve({});
         }
         context.pendingUserInputs.clear();
+        for (const tracked of context.activeToolItems.values()) {
+          tracked.engineWebSurface?.unregister();
+        }
+        context.activeToolItems.clear();
         context.stopped = true;
         let runtimeFailure: unknown;
         try {
@@ -1957,7 +2056,20 @@ const makePiAdapter = <P extends PiFamilyProvider>(
         case "tool_execution_update": {
           const tracked = context.activeToolItems.get(event.toolCallId);
           if (!tracked) return;
-          const detail = piToolTimelineDetail(event.partialResult);
+          const discoveredSurfaceUrl = extractPiCuratorWebSurfaceUrl(
+            event.toolName,
+            event.partialResult,
+          );
+          if (discoveredSurfaceUrl) {
+            registerPiCuratorWebSurface(context, tracked, discoveredSurfaceUrl);
+          }
+          const surfaceUrl = tracked.engineWebSurface?.url;
+          const safePartialResult = sanitizeEngineWebSurfacePayload(
+            event.partialResult,
+            surfaceUrl,
+          );
+          const safeEvent = sanitizeEngineWebSurfacePayload(event, surfaceUrl);
+          const detail = piToolTimelineDetail(safePartialResult);
           recordItem(context, {
             type: "tool_call",
             status: "updated",
@@ -1978,10 +2090,11 @@ const makePiAdapter = <P extends PiFamilyProvider>(
                 toolCallId: event.toolCallId,
                 toolName: event.toolName,
                 args: tracked.args,
-                partialResult: event.partialResult,
+                partialResult: safePartialResult,
+                ...(surfaceUrl ? { engineWebSurfaceStatus: "waiting-for-user" } : {}),
               }),
             },
-            raw: { source: "pi.sdk.event", messageType: event.type, payload: event },
+            raw: { source: "pi.sdk.event", messageType: event.type, payload: safeEvent },
           } satisfies ProviderRuntimeEvent);
           return;
         }
@@ -1993,14 +2106,20 @@ const makePiAdapter = <P extends PiFamilyProvider>(
             itemId: RuntimeItemId.makeUnsafe(`pi-tool-${event.toolCallId}`),
             itemType: toolItemType(event.toolName),
           };
+          const surfaceUrl =
+            tracked.engineWebSurface?.url ??
+            extractPiCuratorWebSurfaceUrl(event.toolName, event.result);
+          const safeResult = sanitizeEngineWebSurfacePayload(event.result, surfaceUrl);
+          const safeEvent = sanitizeEngineWebSurfacePayload(event, surfaceUrl);
           context.activeToolItems.delete(event.toolCallId);
-          const detail = piToolTimelineDetail(event.result);
+          tracked.engineWebSurface?.unregister();
+          const detail = piToolTimelineDetail(safeResult);
           recordItem(context, {
             type: "tool_call",
             status: event.isError ? "failed" : "completed",
             toolName: event.toolName,
             output: detail,
-            result: event.result,
+            result: safeResult,
           });
           offerRuntimeEvent({
             ...makeEventBase(context),
@@ -2016,11 +2135,12 @@ const makePiAdapter = <P extends PiFamilyProvider>(
                 toolCallId: event.toolCallId,
                 toolName: event.toolName,
                 args: tracked.args,
-                result: event.result,
+                result: safeResult,
                 isError: event.isError,
+                ...(surfaceUrl ? { engineWebSurfaceStatus: "completed" } : {}),
               }),
             },
-            raw: { source: "pi.sdk.event", messageType: event.type, payload: event },
+            raw: { source: "pi.sdk.event", messageType: event.type, payload: safeEvent },
           } satisfies ProviderRuntimeEvent);
           return;
         }

@@ -1,6 +1,7 @@
 import { Effect, Layer } from "effect";
 
 import { AgentGatewayCredentialsWithSecretsLive } from "../agentGateway/Layers/AgentGatewayCredentials";
+import { BrowserAutomationHostLive } from "../browserAutomation/Layers/BrowserAutomationHost";
 import { ServerConfig } from "../config";
 import {
   makeProviderServerPasswordResolver,
@@ -82,10 +83,16 @@ export function makeServerProviderLayer(
     ).pipe(Layer.provide(agentGatewayCredentialsLayer));
     const piAdapterLayer = makePiAdapterLive(
       nativeEventLogger ? { nativeEventLogger } : undefined,
-    ).pipe(Layer.provide(agentGatewayCredentialsLayer));
+    ).pipe(
+      Layer.provide(agentGatewayCredentialsLayer),
+      Layer.provide(BrowserAutomationHostLive),
+    );
     const omniMindAgentAdapterLayer = makeOmniMindAgentAdapterLive(
       nativeEventLogger ? { nativeEventLogger } : undefined,
-    ).pipe(Layer.provide(agentGatewayCredentialsLayer));
+    ).pipe(
+      Layer.provide(agentGatewayCredentialsLayer),
+      Layer.provide(BrowserAutomationHostLive),
+    );
     const adapterRegistryLayer = ProviderAdapterRegistryLive.pipe(
       Layer.provide(codexAdapterLayer),
       Layer.provide(claudeAdapterLayer),

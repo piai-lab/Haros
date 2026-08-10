@@ -215,7 +215,11 @@ function validateEngineCapabilityComposition(findings, documents) {
     policy.omnimindAssetDelivery !== "adapter-or-session-mount" ||
     policy.enginePrivateHomeMutation !== "forbidden" ||
     policy.identityConflict !== "explicit" ||
-    policy.crossEngineDurableState !== "forbidden"
+    policy.crossEngineDurableState !== "forbidden" ||
+    policy.temporaryWebSurfacePresentation !== "current-thread-omnimind-browser" ||
+    policy.temporaryWebSurfaceProvenance !== "engine-thread-tool-required" ||
+    policy.externalBrowserActivation !== "explicit-user-only" ||
+    policy.temporaryWebSurfaceDurability !== "memory-only"
   ) {
     addFinding(
       findings,

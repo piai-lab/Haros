@@ -1114,6 +1114,7 @@ interface ChatViewProps {
   onToggleDiffPanel?: () => void;
   onToggleRightDock?: () => void;
   onToggleBrowserPanel?: () => void;
+  onRevealBrowserPanel?: () => void;
   onOpenBrowserUrl?: (url: string) => void;
   onOpenTurnDiffPanel?: (turnId: TurnId, filePath?: string) => void;
   onSplitSurface?: () => void;
@@ -1177,6 +1178,7 @@ export default function ChatView({
   onToggleDiffPanel,
   onToggleRightDock,
   onToggleBrowserPanel,
+  onRevealBrowserPanel,
   onOpenBrowserUrl,
   onOpenTurnDiffPanel,
   onSplitSurface,
@@ -12067,6 +12069,7 @@ export default function ChatView({
                     onOpenTurnDiff={onOpenTurnDiff}
                     onOpenThread={onNavigateToThread}
                     onOpenAutomation={onOpenAutomation}
+                    onOpenEngineWebSurface={onRevealBrowserPanel}
                     revertTurnCountByUserMessageId={revertTurnCountByUserMessageId}
                     onRevertUserMessage={onRevertUserMessage}
                     onUndoTurnFiles={onUndoTurnFiles}

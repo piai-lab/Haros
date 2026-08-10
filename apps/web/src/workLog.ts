@@ -68,6 +68,11 @@ export interface WorkLogEntry {
   subagentAction?: WorkLogSubagentAction;
   automation?: WorkLogAutomation;
   omnimindThreadCreation?: WorkLogOmniMindThreadCreation;
+  engineWebSurface?: {
+    status: "waiting-for-user" | "unavailable" | "completed";
+    provenance: "engine-native";
+    presentation: "omnimind-browser";
+  };
   // Source activity kind, kept so the timeline can pick a kind-specific icon
   // (e.g. user-input.requested -> question glyph) instead of the generic
   // tone fallback. Same rationale as `toolName` below.
@@ -448,6 +453,7 @@ function toDerivedWorkLogEntry(activity: OrchestrationThreadActivity): DerivedWo
   const toolName = extractToolName(payload);
   const toolCallId = extractToolCallId(payload);
   const toolStatus = deriveToolLifecycleStatus(activity.kind, payload);
+  const engineWebSurface = extractEngineWebSurface(payload);
   const entry: DerivedWorkLogEntry = {
     id: activity.id,
     createdAt: activity.createdAt,
@@ -458,6 +464,7 @@ function toDerivedWorkLogEntry(activity: OrchestrationThreadActivity): DerivedWo
     ...(toolName ? { toolName } : {}),
     ...(toolCallId ? { toolCallId } : {}),
     ...(toolStatus ? { toolStatus } : {}),
+    ...(engineWebSurface ? { engineWebSurface } : {}),
   };
   const itemType = extractWorkLogItemType(payload);
   const requestKind = extractWorkLogRequestKind(payload);
@@ -596,6 +603,22 @@ function toDerivedWorkLogEntry(activity: OrchestrationThreadActivity): DerivedWo
     entry.collapseCommand = collapseCommand;
   }
   return entry;
+}
+
+function extractEngineWebSurface(
+  payload: Record<string, unknown> | null,
+): WorkLogEntry["engineWebSurface"] | undefined {
+  const data = asRecord(payload?.data);
+  const surface = asRecord(data?.engineWebSurface);
+  const status = surface?.status;
+  if (
+    (status !== "waiting-for-user" && status !== "unavailable" && status !== "completed") ||
+    surface?.provenance !== "engine-native" ||
+    surface?.presentation !== "omnimind-browser"
+  ) {
+    return undefined;
+  }
+  return { status, provenance: "engine-native", presentation: "omnimind-browser" };
 }
 
 function deriveProviderRuntimeReconciliationCollapseKey(

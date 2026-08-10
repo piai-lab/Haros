@@ -94,7 +94,7 @@ V1 直接保全 Synara 已有能力：
 - editable/saveable Explorer files、Diff、Changes、Output 与 Artifact；
 - real PTY Terminal 与 per-thread terminal state；
 - Git、commit、push、Pull Request、Kanban、Automations；
-- Browser、Source Control、Side Chat、Subagents 和 Studio outputs。
+- Browser、Source Control、Side Chat、Subagents 和 Studio outputs；Engine 临时 Web UI 的 Host presentation policy 只由 [`architecture/execution.md`](execution.md#扩展与生态) 定义，Workbench 继续复用当前 Thread 的右侧非模态 Browser。
 
 每个 Thread 恢复其 tabs、open files、layout、viewer refs 与 terminal state。具体 state 直接复用 source 实现，不新增 WorkbenchLayout aggregate。
 

@@ -11,6 +11,40 @@ import {
 import { makeActivity } from "./storeTestFixtures";
 
 describe("deriveWorkLogEntries", () => {
+  it("keeps a sanitized Engine-native web-surface presentation marker", () => {
+    const entries = deriveWorkLogEntries(
+      [
+        makeActivity({
+          id: "pi-curator-update",
+          createdAt: "2026-08-10T12:00:00.000Z",
+          kind: "tool.updated",
+          summary: "Web search",
+          payload: {
+            itemType: "web_search",
+            status: "inProgress",
+            title: "web_search",
+            data: {
+              toolCallId: "pi-web-search-1",
+              toolName: "web_search",
+              engineWebSurface: {
+                status: "waiting-for-user",
+                provenance: "engine-native",
+                presentation: "omnimind-browser",
+              },
+            },
+          },
+        }),
+      ],
+      undefined,
+    );
+
+    expect(entries[0]?.engineWebSurface).toEqual({
+      status: "waiting-for-user",
+      provenance: "engine-native",
+      presentation: "omnimind-browser",
+    });
+  });
+
   it("keeps started tool entries so pending Cursor calls appear immediately", () => {
     const activities: OrchestrationThreadActivity[] = [
       makeActivity({

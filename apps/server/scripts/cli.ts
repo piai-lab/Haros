@@ -144,6 +144,14 @@ const buildCmd = Command.make(
 
       const webDist = path.join(repoRoot, "apps/web/dist");
       const clientTarget = path.join(serverDir, "dist/client");
+      const engineWebSurfaceModules = path.join(serverDir, "engine-web-surface-modules");
+      const engineWebSurfaceModulesTarget = path.join(
+        serverDir,
+        "dist/engine-web-surface-modules",
+      );
+
+      yield* fs.copy(engineWebSurfaceModules, engineWebSurfaceModulesTarget);
+      yield* Effect.log("[cli] Bundled Engine web-surface presenter modules");
 
       if (yield* fs.exists(webDist)) {
         yield* fs.copy(webDist, clientTarget);

@@ -101,6 +101,43 @@ beforeAll(() => {
 });
 
 describe("MessagesTimeline", () => {
+  it("renders a focused, token-free reopen affordance for a waiting Engine web surface", async () => {
+    const { MessagesTimeline } = await import("./MessagesTimeline");
+    const markup = renderToStaticMarkup(
+      <MessagesTimeline
+        {...makeTimelineBaseProps()}
+        onOpenEngineWebSurface={() => {}}
+        timelineEntries={[
+          {
+            id: "entry-pi-curator",
+            kind: "work",
+            createdAt: "2026-08-10T12:00:00.000Z",
+            entry: {
+              id: "work-pi-curator",
+              createdAt: "2026-08-10T12:00:00.000Z",
+              label: "Web search",
+              tone: "tool",
+              itemType: "web_search",
+              toolTitle: "Web search",
+              toolName: "web_search",
+              activityKind: "tool.updated",
+              engineWebSurface: {
+                status: "waiting-for-user",
+                provenance: "engine-native",
+                presentation: "omnimind-browser",
+              },
+            },
+          },
+        ]}
+      />,
+    );
+
+    expect(markup).toContain('data-engine-web-surface-status="waiting-for-user"');
+    expect(markup).toContain('aria-label="Reopen in OmniMind Browser"');
+    expect(markup).toContain("Waiting for curation");
+    expect(markup).not.toContain("session=");
+  });
+
   it("keeps small transcripts on the simple non-virtualized path", async () => {
     const { MessagesTimeline } = await import("./MessagesTimeline");
     const markup = renderToStaticMarkup(

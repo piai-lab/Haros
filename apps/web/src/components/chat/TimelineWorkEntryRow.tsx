@@ -76,6 +76,7 @@ import {
 } from "../../lib/toolCallLabel";
 import { formatLiveActivityMeta, useLiveActivityNow } from "../../lib/liveActivityPresentation";
 import { openWorkspaceFileReference, useWorkspaceFileOpener } from "../../lib/workspaceFileOpener";
+import { useI18n } from "~/i18n";
 
 const TRANSCRIPT_DISCLOSURE_TRANSITION_MS = 220;
 const TRANSCRIPT_DISCLOSURE_CLEANUP_BUFFER_MS = 40;
@@ -441,6 +442,7 @@ export const TimelineWorkEntryRow = memo(function TimelineWorkEntryRow(props: {
   onOpenTurnDiff?: (turnId: TurnId, filePath?: string) => void;
   onOpenAgentActivity?: (activityId: string) => void;
   onOpenAutomation?: (automationId: string) => void;
+  onOpenEngineWebSurface?: () => void;
   timestampFormat: TimestampFormat;
 }) {
   // Defaults are applied in the body (not in the destructuring pattern): a default
@@ -458,10 +460,12 @@ export const TimelineWorkEntryRow = memo(function TimelineWorkEntryRow(props: {
     onOpenTurnDiff,
     onOpenAgentActivity,
     onOpenAutomation,
+    onOpenEngineWebSurface,
     timestampFormat,
   } = props;
   const textFontSizePx = textFontSizePxProp ?? chatMetaFontSizePx;
   const density = densityProp ?? "default";
+  const { t } = useI18n();
   const compact = density === "compact";
   const isCodexStatusRow = isCodexActivityStatusWorkEntry(workEntry);
   const EntryIcon = workEntryIcon(workEntry);
@@ -541,6 +545,8 @@ export const TimelineWorkEntryRow = memo(function TimelineWorkEntryRow(props: {
   const liveActivityMetaText = workEntry.liveActivity
     ? formatLiveActivityMeta(workEntry.liveActivity, liveActivityNowMs)
     : null;
+  const engineWebSurfaceWaiting = workEntry.engineWebSurface?.status === "waiting-for-user";
+  const canOpenEngineWebSurface = engineWebSurfaceWaiting && Boolean(onOpenEngineWebSurface);
 
   // A created-automation row renders as its own card instead of a tool-call line.
   // Kept after the hooks above so the early return never changes hook order.
@@ -722,9 +728,18 @@ export const TimelineWorkEntryRow = memo(function TimelineWorkEntryRow(props: {
                   </p>
                 )}
               </div>
+              {engineWebSurfaceWaiting ? (
+                <span
+                  className="shrink-0 text-muted-foreground/60"
+                  style={{ fontSize: `${Math.max(11, rowFontSizePx - 1)}px` }}
+                  data-engine-web-surface-status="waiting-for-user"
+                >
+                  · {t("timeline.engineWebSurfaceWaiting")}
+                </span>
+              ) : null}
             </>
           );
-          if (canOpenToolDetails) {
+          if (canOpenToolDetails && !canOpenEngineWebSurface) {
             return (
               <ToolDetailsDisclosure
                 details={workEntry.toolDetails}
@@ -740,10 +755,17 @@ export const TimelineWorkEntryRow = memo(function TimelineWorkEntryRow(props: {
 
           const rowContent = (
             <AgentActivityOpenSurface
-              canOpen={canOpenAgentActivity || canOpenReadFile}
+              canOpen={canOpenAgentActivity || canOpenReadFile || canOpenEngineWebSurface}
               compact={compact}
-              onOpen={openAgentActivity ?? openReadFile}
+              onOpen={
+                canOpenEngineWebSurface
+                  ? onOpenEngineWebSurface
+                  : (openAgentActivity ?? openReadFile)
+              }
               onHover={prefetchReadFile}
+              ariaLabel={
+                canOpenEngineWebSurface ? t("timeline.reopenEngineWebSurface") : undefined
+              }
               tooltip={toolRowTooltipContent(
                 rawCommand,
                 displayText,
@@ -826,6 +848,7 @@ function AgentActivityOpenSurface(props: {
   /** Styled frosted hover tooltip (preferred over the native `title`). */
   tooltip?: ReactNode;
   dataToolDetailTrigger?: boolean | undefined;
+  ariaLabel?: string | undefined;
 }) {
   const className = cn(
     "group/tool-row flex w-full items-center text-left transition-[opacity,translate] duration-200",
@@ -840,6 +863,7 @@ function AgentActivityOpenSurface(props: {
       type="button"
       className={className}
       title={props.title}
+      aria-label={props.ariaLabel}
       onClick={props.onOpen}
       data-tool-detail-trigger={props.dataToolDetailTrigger ? "true" : undefined}
       {...(props.onHover ? { onPointerEnter: props.onHover, onFocus: props.onHover } : {})}

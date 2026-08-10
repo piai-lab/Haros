@@ -107,6 +107,8 @@ restart 优先使用 Provider native resume/session cursor。无法恢复时明�
 
 OmniMind-owned Skill/MCP 的生命周期归 OmniMind，通过现有 adapter 或 Session projection 注入/挂载；不得复制、覆盖或迁移到 `~/.codex`、`.pi` 或其他 Engine private home。native 与 OmniMind asset 的 provenance、identity 始终保留；同名冲突不得静默覆盖，只有经实际 capability 检查兼容的资产才进入有效集合，不兼容时准确显示 unavailable。OmniMind Agent 可以消费可移植的 Codex/Pi assets，但 Codex/Pi 专属 runtime semantics 仍只属于相应 Engine，不能因资产可读而冒充支持。
 
+Engine native tool/extension 在当前 Session 产生的短时 Web UI 保留原生能力，由 OmniMind Host 负责桌面呈现：只有 adapter 已观察到、带 Engine/Thread/Tool provenance、仍在有效期内的 exact intent，才默认进入当前 Thread 的 OmniMind Browser/Workbench；不覆盖当前 route、不抢 Composer focus。系统浏览器只由用户在 Browser 中显式选择“Open externally”后打开。不得拦截普通 localhost、开发服务器或任意 URL，也不得修改 Engine private home 或插件字节来偷改语义；短时 bearer URL 只在内存中完成 Host handoff，不进入 Product facts、Timeline raw payload、日志、Campaign 或证据截图。Host 不可用时准确显示 unavailable，不 silent fallback 到系统浏览器。
+
 Package lifecycle 不跨 Provider归一：
 
 - OmniMind Agent UI 直接调用 bundled Pi-compatible manager/loader/settings/trust，并写入独立 OmniMind state root；
@@ -130,7 +132,11 @@ Package lifecycle 不跨 Provider归一：
   "omnimindAssetDelivery": "adapter-or-session-mount",
   "enginePrivateHomeMutation": "forbidden",
   "identityConflict": "explicit",
-  "crossEngineDurableState": "forbidden"
+  "crossEngineDurableState": "forbidden",
+  "temporaryWebSurfacePresentation": "current-thread-omnimind-browser",
+  "temporaryWebSurfaceProvenance": "engine-thread-tool-required",
+  "externalBrowserActivation": "explicit-user-only",
+  "temporaryWebSurfaceDurability": "memory-only"
 }
 ```
 

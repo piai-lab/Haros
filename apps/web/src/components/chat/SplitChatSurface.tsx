@@ -467,6 +467,7 @@ function SplitPaneSurface(props: {
   onFocus: () => void;
   onToggleDiff: () => void;
   onToggleBrowser: () => void;
+  onRevealBrowser: () => void;
   onOpenBrowserUrl: (url: string) => void;
   onOpenTurnDiff: (turnId: TurnId, filePath?: string) => void;
   onClosePanel: () => void;
@@ -533,6 +534,7 @@ function SplitPaneSurface(props: {
               panelState={props.panelState}
               onToggleDiff={props.onToggleDiff}
               onToggleBrowser={props.onToggleBrowser}
+              onRevealBrowser={props.onRevealBrowser}
               onOpenBrowserUrl={props.onOpenBrowserUrl}
               onOpenTurnDiff={props.onOpenTurnDiff}
               onMaximize={props.onMaximize}
@@ -953,6 +955,7 @@ export function SplitChatSurface(props: { splitViewId: SplitViewId; routeThreadI
         onFocus={() => setPaneFocus(leaf.id)}
         onToggleDiff={() => togglePanePanel(leaf.id, "diff")}
         onToggleBrowser={() => togglePanePanel(leaf.id, "browser")}
+        onRevealBrowser={() => updatePanePanelState(leaf.id, { panel: "browser" })}
         onOpenBrowserUrl={() => updatePanePanelState(leaf.id, { panel: "browser" })}
         onOpenTurnDiff={(turnId, filePath) => openPaneTurnDiff(leaf.id, turnId, filePath)}
         onClosePanel={() => closePanePanel(leaf.id)}

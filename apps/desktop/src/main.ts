@@ -3044,6 +3044,10 @@ function backendNodeArgs(): string[] {
 
 function backendEnv(): NodeJS.ProcessEnv {
   const servedStaticRoot = resolveServedStaticRoot();
+  const engineWebSurfaceModuleRoot = Path.join(
+    Path.dirname(resolveBackendEntry()),
+    "engine-web-surface-modules",
+  );
   const env: NodeJS.ProcessEnv = {
     ...resolveBrowserHostPipeBackendEnv(
       process.env,
@@ -3059,6 +3063,9 @@ function backendEnv(): NodeJS.ProcessEnv {
     OMNIMIND_HOME: BASE_DIR,
     OMNIMIND_AUTH_TOKEN: backendAuthToken,
     OMNIMIND_DESKTOP_SHUTDOWN_TOKEN: DESKTOP_BACKEND_SHUTDOWN_TOKEN,
+    NODE_PATH: process.env.NODE_PATH
+      ? `${engineWebSurfaceModuleRoot}${Path.delimiter}${process.env.NODE_PATH}`
+      : engineWebSurfaceModuleRoot,
   };
   // The backend runs the same login-shell probe at startup and does not begin listening
   // until it returns, so an unmarked child serializes a second ~1s hydration behind ours.
