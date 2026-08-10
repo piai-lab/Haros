@@ -28,6 +28,7 @@ const PRODUCT_COPY_SOURCES = [
   "components/chat/ComposerModelEffortPicker.tsx",
   "components/chat/ContextWindowMeter.tsx",
   "components/chat/GeneratedMarkdownImage.tsx",
+  "components/chat/ComposerPendingTerminalContexts.tsx",
   "components/chat/RightDock.tsx",
   "components/chat/WorkspaceFilePreviewHeader.tsx",
   "components/chat/workspaceExplorer.tsx",
@@ -67,6 +68,11 @@ const PRODUCT_COPY_SOURCES = [
   "components/ui/time-picker.tsx",
   "components/ui/toast.tsx",
   "components/WorkspaceFilePreview.tsx",
+  "components/TerminalScrollToBottom.tsx",
+  "components/TerminalSearch.tsx",
+  "components/ThreadTerminalDrawer.tsx",
+  "components/terminal/TerminalChrome.tsx",
+  "components/terminal/TerminalViewportPane.tsx",
   "hooks/useCopyToClipboard.ts",
   "shortcutsSheet.ts",
 ] as const;
@@ -115,6 +121,7 @@ const RAW_FACT_ALLOWLIST = [
   "SidebarSearchPalette.tsx:text:OpenCode",
   "SidebarSearchPalette.tsx:text:Codex",
   "SidebarSearchPalette.tsx:text:Enter",
+  "TerminalSearch.tsx:text:Aa",
 ] as const satisfies readonly string[];
 
 function normalizedText(value: string): string {

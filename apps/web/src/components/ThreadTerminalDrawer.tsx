@@ -17,6 +17,7 @@ import { type TerminalActivityState, type TerminalCliKind } from "@synara/shared
 import { Terminal } from "@xterm/xterm";
 import { useCallback, useEffect, useLayoutEffect, useMemo, useRef, useState } from "react";
 import { type TerminalContextSelection } from "~/lib/terminalContext";
+import { useI18n } from "~/i18n";
 import { readNativeApi } from "~/nativeApi";
 import {
   MAX_TERMINALS_PER_GROUP,
@@ -92,6 +93,7 @@ function getTerminalSelectionRect(mountElement: HTMLElement): DOMRect | null {
 }
 
 function TerminalRuntimeStatusOverlay({ status }: { status: TerminalRuntimeStatus }) {
+  const { t } = useI18n();
   if (status !== "error") return null;
 
   return (
@@ -102,7 +104,7 @@ function TerminalRuntimeStatusOverlay({ status }: { status: TerminalRuntimeStatu
       )}
     >
       <TriangleAlertIcon className="size-3" />
-      <span className="truncate">Error</span>
+      <span className="truncate">{t("terminal.error")}</span>
     </div>
   );
 }
@@ -546,6 +548,7 @@ export default function ThreadTerminalDrawer({
   onTogglePanel,
   isPanelOpen,
 }: ThreadTerminalDrawerProps) {
+  const { t } = useI18n();
   const isVisible = isVisibleProp ?? true;
   const isWorkspaceMode = presentationMode === "workspace";
   const previousRuntimeKeysRef = useRef<Set<string>>(new Set());
@@ -606,24 +609,24 @@ export default function ThreadTerminalDrawer({
   }, [normalizedTerminalIds, threadId]);
 
   const splitTerminalActionLabel = hasReachedSplitLimit
-    ? `Split Terminal (max ${MAX_TERMINALS_PER_GROUP} per group)`
+    ? t("terminal.splitLimit", { count: MAX_TERMINALS_PER_GROUP })
     : splitShortcutLabel
-      ? `Split Right (${splitShortcutLabel})`
-      : "Split Right";
+      ? t("terminal.splitRightShortcut", { shortcut: splitShortcutLabel })
+      : t("terminal.splitRight");
   const splitTerminalDownActionLabel = hasReachedSplitLimit
-    ? `Split Down (max ${MAX_TERMINALS_PER_GROUP} per group)`
+    ? t("terminal.splitDownLimit", { count: MAX_TERMINALS_PER_GROUP })
     : splitDownShortcutLabel
-      ? `Split Down (${splitDownShortcutLabel})`
-      : "Split Down";
+      ? t("terminal.splitDownShortcut", { shortcut: splitDownShortcutLabel })
+      : t("terminal.splitDown");
   const newTerminalActionLabel = newShortcutLabel
-    ? `New Terminal (${newShortcutLabel})`
-    : "New Terminal";
+    ? t("terminal.newShortcut", { shortcut: newShortcutLabel })
+    : t("terminal.new");
   const resolvedCloseShortcutLabel = isWorkspaceMode
     ? (workspaceCloseShortcutLabel ?? closeShortcutLabel)
     : closeShortcutLabel;
   const closeTerminalActionLabel = resolvedCloseShortcutLabel
-    ? `Close Terminal (${resolvedCloseShortcutLabel})`
-    : "Close Terminal";
+    ? t("terminal.closeShortcut", { shortcut: resolvedCloseShortcutLabel })
+    : t("terminal.close");
   const onSplitTerminalAction = useCallback(() => {
     if (hasReachedSplitLimit) return;
     onSplitTerminal();
@@ -745,7 +748,9 @@ export default function ThreadTerminalDrawer({
                   key={terminalId}
                   threadId={threadId}
                   terminalId={terminalId}
-                  terminalLabel={terminalVisualIdentityById.get(terminalId)?.title ?? "Terminal"}
+                  terminalLabel={
+                    terminalVisualIdentityById.get(terminalId)?.title ?? t("workbench.terminal")
+                  }
                   terminalCliKind={terminalVisualIdentityById.get(terminalId)?.cliKind ?? null}
                   cwd={cwd}
                   {...(runtimeEnv ? { runtimeEnv } : {})}
