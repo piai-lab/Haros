@@ -18,29 +18,44 @@ import {
   DialogTitle,
 } from "../ui/dialog";
 import { ContextWindowMeter } from "./ContextWindowMeter";
+import { useI18n } from "../../i18n";
+import type { AppLocale } from "../../locale";
 
-function formatRateLimitMessage(rateLimitStatus: RateLimitStatus): string {
+type StatusTranslate = ReturnType<typeof useI18n>["t"];
+
+function formatRateLimitMessage(
+  rateLimitStatus: RateLimitStatus,
+  t: StatusTranslate,
+  locale: AppLocale,
+): string {
   const resetSuffix = rateLimitStatus.resetsAt
-    ? ` Resets at ${new Date(rateLimitStatus.resetsAt).toLocaleTimeString()}.`
+    ? t("taskStatus.rateLimitReset", {
+        time: new Date(rateLimitStatus.resetsAt).toLocaleTimeString(locale),
+      })
     : "";
   if (rateLimitStatus.status === "rejected") {
-    return `Rate limit reached.${resetSuffix}`;
+    return `${t("taskStatus.rateLimitReached")}${resetSuffix}`;
   }
-  const utilizationSuffix =
+  const utilization =
     typeof rateLimitStatus.utilization === "number"
-      ? ` (${Math.round(rateLimitStatus.utilization * 100)}% used)`
+      ? t("taskStatus.rateLimitUtilization", {
+          percent: Math.round(rateLimitStatus.utilization * 100),
+        })
       : "";
-  return `Approaching rate limit${utilizationSuffix}.${resetSuffix}`;
+  return `${t("taskStatus.rateLimitApproaching", { utilization })}${resetSuffix}`;
 }
 
 function formatEnvironmentLabel(
   envMode: DraftThreadEnvMode,
   envState: ResolvedThreadWorkspaceState,
+  t: StatusTranslate,
 ): string {
   if (envMode === "local") {
-    return "Local";
+    return t("taskStatus.local");
   }
-  return envState === "worktree-pending" ? "New worktree (pending)" : "Worktree";
+  return envState === "worktree-pending"
+    ? t("taskStatus.newWorktreePending")
+    : t("thread.worktree");
 }
 
 export function ComposerSlashStatusDialog(props: {
@@ -59,6 +74,7 @@ export function ComposerSlashStatusDialog(props: {
   activeContextWindowLabel?: string | null;
   pendingContextWindowLabel?: string | null;
 }) {
+  const { locale, t } = useI18n();
   const {
     open,
     onOpenChange,
@@ -80,54 +96,60 @@ export function ComposerSlashStatusDialog(props: {
     <Dialog open={open} onOpenChange={onOpenChange}>
       <DialogPopup className="max-w-xl">
         <DialogHeader>
-          <DialogTitle>Session Status</DialogTitle>
-          <DialogDescription>
-            Runtime controls and local thread state for the active composer.
-          </DialogDescription>
+          <DialogTitle>{t("taskStatus.title")}</DialogTitle>
+          <DialogDescription>{t("taskStatus.description")}</DialogDescription>
         </DialogHeader>
         <DialogPanel className="space-y-4">
           <div className="grid gap-3 rounded-lg border border-border/60 bg-muted/20 p-4 text-sm sm:grid-cols-2">
             <div className="space-y-1">
-              <p className="text-xs text-muted-foreground">Model</p>
-              <p className="font-medium text-foreground">{selectedModel}</p>
-            </div>
-            <div className="space-y-1">
-              <p className="text-xs text-muted-foreground">Fast Mode</p>
-              <p className="font-medium text-foreground">{fastModeEnabled ? "On" : "Off"}</p>
-            </div>
-            <div className="space-y-1">
-              <p className="text-xs text-muted-foreground">Reasoning</p>
-              <p className="font-medium text-foreground">{selectedPromptEffort ?? "Default"}</p>
-            </div>
-            <div className="space-y-1">
-              <p className="text-xs text-muted-foreground">Mode</p>
+              <p className="text-xs text-muted-foreground">{t("term.model")}</p>
               <p className="font-medium text-foreground">
-                {interactionMode === "plan" ? "Plan" : "Default"}
+                {selectedModel ?? t("taskStatus.unknown")}
               </p>
             </div>
             <div className="space-y-1">
-              <p className="text-xs text-muted-foreground">Environment</p>
+              <p className="text-xs text-muted-foreground">{t("taskStatus.fastMode")}</p>
               <p className="font-medium text-foreground">
-                {formatEnvironmentLabel(envMode, envState)}
+                {fastModeEnabled ? t("common.on") : t("common.off")}
               </p>
             </div>
             <div className="space-y-1">
-              <p className="text-xs text-muted-foreground">Branch</p>
-              <p className="font-medium text-foreground">{branch ?? "Unknown"}</p>
+              <p className="text-xs text-muted-foreground">{t("taskStatus.reasoning")}</p>
+              <p className="font-medium text-foreground">
+                {selectedPromptEffort ?? t("taskStatus.default")}
+              </p>
+            </div>
+            <div className="space-y-1">
+              <p className="text-xs text-muted-foreground">{t("taskStatus.mode")}</p>
+              <p className="font-medium text-foreground">
+                {interactionMode === "plan" ? t("taskStatus.plan") : t("taskStatus.default")}
+              </p>
+            </div>
+            <div className="space-y-1">
+              <p className="text-xs text-muted-foreground">{t("taskStatus.environment")}</p>
+              <p className="font-medium text-foreground">
+                {formatEnvironmentLabel(envMode, envState, t)}
+              </p>
+            </div>
+            <div className="space-y-1">
+              <p className="text-xs text-muted-foreground">{t("git.pr.branch")}</p>
+              <p className="font-medium text-foreground">
+                {branch ?? t("taskStatus.unknown")}
+              </p>
             </div>
           </div>
 
           <div className="space-y-3 rounded-lg border border-border/60 bg-card p-4">
             <div className="flex items-center justify-between gap-3">
               <div>
-                <p className="text-xs text-muted-foreground">Context Window</p>
-                <p className="text-sm text-muted-foreground">
-                  Latest usage reported by the active thread.
-                </p>
+                <p className="text-xs text-muted-foreground">{t("taskStatus.contextWindow")}</p>
+                <p className="text-sm text-muted-foreground">{t("taskStatus.latestUsage")}</p>
                 {pendingContextWindowLabel ? (
                   <p className="text-sm text-muted-foreground">
-                    Current session: {activeContextWindowLabel ?? "Unknown"}. Next turn:{" "}
-                    {pendingContextWindowLabel}.
+                    {t("taskStatus.windowTransition", {
+                      current: activeContextWindowLabel ?? t("taskStatus.unknown"),
+                      next: pendingContextWindowLabel,
+                    })}
                   </p>
                 ) : null}
               </div>
@@ -143,53 +165,51 @@ export function ComposerSlashStatusDialog(props: {
             {contextWindow ? (
               <div className="grid gap-3 text-sm sm:grid-cols-2">
                 <div>
-                  <p className="text-muted-foreground">Used</p>
+                  <p className="text-muted-foreground">{t("taskStatus.used")}</p>
                   <p className="font-medium text-foreground">
                     {formatContextWindowTokens(contextWindow.usedTokens)}
                   </p>
                 </div>
                 <div>
-                  <p className="text-muted-foreground">Remaining</p>
+                  <p className="text-muted-foreground">{t("taskStatus.remaining")}</p>
                   <p className="font-medium text-foreground">
                     {formatContextWindowTokens(contextWindow.remainingTokens)}
                   </p>
                 </div>
                 <div>
-                  <p className="text-muted-foreground">Window</p>
+                  <p className="text-muted-foreground">{t("taskStatus.window")}</p>
                   <p className="font-medium text-foreground">
                     {formatContextWindowTokens(contextWindow.maxTokens)}
                   </p>
                 </div>
                 <div>
-                  <p className="text-muted-foreground">Cost</p>
+                  <p className="text-muted-foreground">{t("taskStatus.cost")}</p>
                   <p className="font-medium text-foreground">
                     {cumulativeCostUsd !== null
                       ? formatCostUsd(cumulativeCostUsd)
-                      : "Not available"}
+                      : t("taskStatus.notAvailable")}
                   </p>
                 </div>
               </div>
             ) : (
-              <p className="text-sm text-muted-foreground">
-                Context usage has not been reported yet for this thread.
-              </p>
+              <p className="text-sm text-muted-foreground">{t("taskStatus.noContext")}</p>
             )}
           </div>
 
           <div className="space-y-2 rounded-lg border border-border/60 bg-card p-4">
-            <p className="text-xs text-muted-foreground">Rate Limits</p>
+            <p className="text-xs text-muted-foreground">{t("taskStatus.rateLimits")}</p>
             {rateLimitStatus ? (
-              <p className="text-sm text-foreground">{formatRateLimitMessage(rateLimitStatus)}</p>
-            ) : (
-              <p className="text-sm text-muted-foreground">
-                No active rate-limit warning for this thread.
+              <p className="text-sm text-foreground">
+                {formatRateLimitMessage(rateLimitStatus, t, locale)}
               </p>
+            ) : (
+              <p className="text-sm text-muted-foreground">{t("taskStatus.noRateLimit")}</p>
             )}
           </div>
         </DialogPanel>
         <DialogFooter variant="bare">
           <Button type="button" size="sm" onClick={() => onOpenChange(false)}>
-            Close
+            {t("common.close")}
           </Button>
         </DialogFooter>
       </DialogPopup>

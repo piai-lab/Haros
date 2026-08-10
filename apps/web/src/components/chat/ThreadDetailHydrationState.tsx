@@ -5,6 +5,7 @@
 
 import { Button } from "~/components/ui/button";
 import { Spinner } from "~/components/ui/spinner";
+import { useI18n } from "~/i18n";
 
 export const ThreadDetailHydrationState = function ThreadDetailHydrationState({
   state,
@@ -13,19 +14,20 @@ export const ThreadDetailHydrationState = function ThreadDetailHydrationState({
   state: "loading" | "failed";
   onRetry: () => void;
 }) {
+  const { t } = useI18n();
   if (state === "loading") {
     return (
       <div className="flex flex-col items-center gap-3 select-none">
-        <Spinner aria-label="Loading conversation" className="size-5 text-muted-foreground/50" />
-        <span className="text-sm text-muted-foreground/50">Loading conversation</span>
+        <Spinner aria-label={t("hydration.loading")} className="size-5 text-muted-foreground/50" />
+        <span className="text-sm text-muted-foreground/50">{t("hydration.loading")}</span>
       </div>
     );
   }
   return (
     <div className="flex flex-col items-center gap-3 select-none">
-      <span className="text-sm text-muted-foreground">This conversation didn't load.</span>
+      <span className="text-sm text-muted-foreground">{t("hydration.failed")}</span>
       <Button onClick={onRetry} size="sm" variant="outline">
-        Try again
+        {t("common.tryAgain")}
       </Button>
     </div>
   );

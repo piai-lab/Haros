@@ -3,7 +3,6 @@
 // Layer: Chat composer UI
 // Exports: ActiveTaskListCard
 
-import { pluralize } from "@synara/shared/text";
 import {
   PiArrowsInSimple,
   PiArrowsOutSimple,
@@ -15,6 +14,7 @@ import type { ActiveTaskListState } from "../../session-logic";
 import { BotIcon, CheckIcon, LoaderIcon } from "~/lib/icons";
 import { cn } from "~/lib/utils";
 import { Button } from "../ui/button";
+import { useI18n } from "../../i18n";
 import {
   ComposerStackedPanelHeaderRow,
   ComposerStackedPanelRowLabel,
@@ -55,6 +55,7 @@ export function ActiveTaskListCard({
   onCompactChange,
   onOpenSidebar,
 }: ActiveTaskListCardProps) {
+  const { t } = useI18n();
   const backgroundTaskCount = backgroundTaskCountProp ?? 0;
   const compact = compactProp ?? false;
   const totalCount = activeTaskList.tasks.length;
@@ -72,7 +73,7 @@ export function ActiveTaskListCard({
             <PiSlidersHorizontal className={COMPOSER_STACKED_PANEL_ICON_CLASS_NAME} />
           )}
           <ComposerStackedPanelRowLabel tone="meta">
-            {completedCount} out of {totalCount} tasks completed
+            {t("taskList.progress", { completed: completedCount, total: totalCount })}
           </ComposerStackedPanelRowLabel>
         </ComposerStackedPanelRowMain>
         <div className="flex shrink-0 items-center gap-0.5">
@@ -82,8 +83,8 @@ export function ActiveTaskListCard({
             size="icon-xs"
             className={COMPOSER_STACKED_PANEL_ICON_BUTTON_CLASS_NAME}
             onClick={onOpenSidebar}
-            aria-label="Open tasks sidebar"
-            title="Open tasks sidebar"
+            aria-label={t("taskList.openSidebar")}
+            title={t("taskList.openSidebar")}
           >
             <PiSidebarSimple className="size-3" />
           </Button>
@@ -93,8 +94,8 @@ export function ActiveTaskListCard({
             size="icon-xs"
             className={COMPOSER_STACKED_PANEL_ICON_BUTTON_CLASS_NAME}
             onClick={() => onCompactChange(!compact)}
-            aria-label={compact ? "Expand task banner" : "Collapse task banner"}
-            title={compact ? "Expand task banner" : "Collapse task banner"}
+            aria-label={compact ? t("taskList.expand") : t("taskList.collapse")}
+            title={compact ? t("taskList.expand") : t("taskList.collapse")}
           >
             {compact ? (
               <PiArrowsOutSimple className="size-3" />
@@ -158,7 +159,12 @@ export function ActiveTaskListCard({
               <div className="flex min-w-0 items-center gap-1.5">
                 <BotIcon className="size-3 shrink-0" />
                 <span className="truncate">
-                  {backgroundTaskCount} background {pluralize(backgroundTaskCount, "agent")}
+                  {t(
+                    backgroundTaskCount === 1
+                      ? "taskList.backgroundAgent"
+                      : "taskList.backgroundAgents",
+                    { count: backgroundTaskCount },
+                  )}
                 </span>
               </div>
             </div>
