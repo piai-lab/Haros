@@ -32,6 +32,7 @@
 
 - 开始前核相关入口、`git status --short` 和一个可观察成功条件；只改任务允许的路径，保留未知修改。
 - 使用最小完整实现和现有模式；不创建平行架构真相、ledger、manifest、第二 Campaign 或无必要的兼容双轨。
+- 任何新增或修改的 OmniMind-owned 用户可见功能必须默认在同一变更中完整交付简体中文与英文；两种已支持语言的 catalog key 必须一一对应，正常可达路径不得以硬编码或缺失 key 回退成中英混杂。原始 Provider 输出、资产身份、路径、命令与诊断等不属于产品文案的边界，以及未来语言的准入规则，唯一遵循 `architecture/workbench.md`。
 - 开发期运行最窄、能证伪当前结论的检查；候选冻结后才在同一 SHA 运行相关 final gate。局部绿色不得扩张为未覆盖结论。
 - 一个真实闭合的关注点完成 focused 验证后，默认提交并推送当前任务分支到 GitHub；push 只同步该分支，不等于公开发行、创建 Release、修改 update feed 或合并受保护分支。用户明确暂停 push、权限不足或外部策略阻止时，必须准确标为仅本地 candidate，不能把未同步状态写成交付完成。
 - 任何改变 Desktop 用户可观察行为的代码改动，交付链必须继续从该精确 pushed SHA 重建产物、安装或替换本机 OmniMind App，并使用 fresh、任务专用 profile 完成启动、真实 journey、关闭和重开验证；源码、focused test、HMR 或 dev Electron 单独通过都不能证明当前安装 App 已获得修复。纯文档、测试或不进入 shipped bytes 的变更不重复打包；构建、安装或真实 App 复验被明确暂停或阻塞时，必须标为 source-only candidate，不能宣称用户已拿到修复。安装验证不得读取、迁移或改写真实用户 `.pi`、`.omnimind` 或其他 Provider private home。
