@@ -188,11 +188,14 @@ describe("createDesktopPlatformBuildConfig", () => {
     assert.ok(issue?.includes("Build mac/arm64 on macOS"));
   });
 
-  it("uses the canonical OmniMind export for both macOS icon variants", () => {
-    assert.equal(BRAND_ASSET_PATHS.productionMacIconPng, "assets/brand/exports/app-icon-512.png");
+  it("uses canonical OmniMind app icons instead of browser favicons for desktop", () => {
+    assert.equal(BRAND_ASSET_PATHS.productionMacIconPng, "assets/brand/exports/app-icon-1024.png");
     assert.equal(
       BRAND_ASSET_PATHS.productionMacLegacyIconPng,
-      "assets/brand/exports/app-icon-512.png",
+      "assets/brand/exports/app-icon-1024.png",
     );
+    assert.equal(BRAND_ASSET_PATHS.productionLinuxIconPng, "assets/brand/exports/app-icon-512.png");
+    assert.equal(BRAND_ASSET_PATHS.productionWindowsIconIco, "assets/brand/exports/app-icon.ico");
+    assert.equal(BRAND_ASSET_PATHS.productionWebFaviconIco, "assets/brand/exports/favicon.ico");
   });
 });

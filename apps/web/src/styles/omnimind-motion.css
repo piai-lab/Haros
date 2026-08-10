@@ -1,0 +1,40 @@
+:root {
+  --omnimind-motion-duration: 650ms;
+  --omnimind-motion-easing: cubic-bezier(.22, 1, .36, 1);
+  --omnimind-motion-hit-area: 44px;
+}
+
+.omnimind-logo-trigger {
+  display: inline-grid;
+  min-width: var(--omnimind-motion-hit-area);
+  min-height: var(--omnimind-motion-hit-area);
+  padding: 0;
+  place-items: center;
+  border: 0;
+  border-radius: 10px;
+  color: inherit;
+  background: transparent;
+  cursor: pointer;
+  -webkit-tap-highlight-color: transparent;
+}
+
+.omnimind-logo-trigger:focus-visible {
+  outline: 2px solid var(--ring);
+  outline-offset: 3px;
+}
+
+.omnimind-logo-trigger:disabled {
+  cursor: default;
+  opacity: .45;
+}
+
+.omnimind-logo-motion-target {
+  display: block;
+  transform-box: fill-box;
+  transform-origin: 50% 50%;
+}
+
+.omnimind-logo-motion-target > svg,
+.omnimind-logo-motion-target > img {
+  display: block;
+}

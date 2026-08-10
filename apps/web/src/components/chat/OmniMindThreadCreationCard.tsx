@@ -37,7 +37,7 @@ export const OmniMindThreadCreationCard = memo(function OmniMindThreadCreationCa
     >
       <div className="flex min-w-0 items-center gap-3 px-3 py-2.5">
         <span className="flex size-10 shrink-0 items-center justify-center rounded-lg bg-[var(--color-background-elevated-secondary)] text-foreground">
-          <OmniMindLogo className="h-[22px] w-auto" aria-label="OmniMind" />
+          <OmniMindLogo size={22} aria-label="OmniMind" />
         </span>
         <div className="min-w-0 flex-1">
           <p className="truncate font-system-ui text-[length:var(--app-font-size-ui-lg,13px)] font-medium text-foreground/95">

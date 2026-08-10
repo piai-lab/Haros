@@ -20,7 +20,7 @@ function OriginContent(): ReactNode {
   return (
     <>
       <span className="flex size-4 shrink-0 items-center justify-center text-muted-foreground/70">
-        <OmniMindLogo className="h-4 w-auto" aria-label="OmniMind" />
+        <OmniMindLogo size={16} aria-label="OmniMind" />
       </span>
       <span className="truncate">Sent by OmniMind from another thread</span>
     </>

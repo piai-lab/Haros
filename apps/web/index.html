@@ -3,8 +3,11 @@
   <head>
     <meta charset="UTF-8" />
     <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-    <link rel="icon" href="/favicon.ico" sizes="48x48" />
+    <link rel="icon" href="/omnimind-favicon.svg" type="image/svg+xml" />
+    <link rel="icon" href="/favicon-32x32.png" sizes="32x32" type="image/png" />
+    <link rel="icon" href="/favicon.ico" sizes="16x16 32x32 48x48" />
     <link rel="apple-touch-icon" href="/apple-touch-icon.png" />
+    <link rel="manifest" href="/site.webmanifest" />
     <link rel="preconnect" href="https://fonts.googleapis.com" />
     <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
     <link
@@ -40,25 +43,12 @@
         height: 112px;
         opacity: 0;
         transform: scale(0.96);
-        animation:
-          app-boot-splash-in 420ms ease-out forwards,
-          app-boot-splash-pulse 2.4s ease-in-out 420ms infinite;
+        animation: app-boot-splash-in 420ms ease-out forwards;
       }
       @keyframes app-boot-splash-in {
         to {
           opacity: 1;
           transform: scale(1);
-        }
-      }
-      @keyframes app-boot-splash-pulse {
-        0%,
-        100% {
-          transform: scale(1);
-          opacity: 1;
-        }
-        50% {
-          transform: scale(0.98);
-          opacity: 0.85;
         }
       }
       @media (prefers-reduced-motion: reduce) {
@@ -71,12 +61,20 @@
   <body>
     <div id="root">
       <div class="app-boot-splash" aria-hidden="true">
-        <img
-          class="app-boot-splash__icon"
-          src="/omnimind-icon-light.svg"
-          alt=""
-          draggable="false"
-        />
+        <picture>
+          <source
+            media="(prefers-color-scheme: dark)"
+            srcset="/brand/omnimind-logo-satin-dark.svg"
+          />
+          <img
+            class="app-boot-splash__icon"
+            src="/brand/omnimind-logo-satin.svg"
+            alt=""
+            draggable="false"
+            width="112"
+            height="112"
+          />
+        </picture>
       </div>
     </div>
     <script type="module" src="/src/bootstrap.ts"></script>

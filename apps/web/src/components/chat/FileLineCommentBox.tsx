@@ -71,7 +71,7 @@ export function FileLineCommentBox(props: FileLineCommentBoxProps) {
       <div className="flex items-center justify-between gap-2">
         <span className="inline-flex items-center gap-2 text-[13px] font-semibold text-[var(--color-text-foreground)]">
           <span className="editor-file-viewer__comment-badge">
-            <OmniMindLogo className="size-3 text-[var(--color-text-foreground-secondary)]" />
+            <OmniMindLogo size={12} className="text-[var(--color-text-foreground-secondary)]" />
           </span>
           Local comment
         </span>

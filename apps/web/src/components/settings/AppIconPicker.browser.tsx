@@ -18,7 +18,7 @@ function readTopLeftAlpha(image: HTMLImageElement): number {
   return context?.getImageData(0, 0, 1, 1).data[3] ?? -1;
 }
 
-it("uses inset transparent artwork and selects it", async () => {
+it("uses the official light and dark app-icon variants and selects the alternate", async () => {
   const onValueChange = vi.fn();
   const mounted = await render(<AppIconPicker value="default" onValueChange={onValueChange} />);
 
@@ -34,6 +34,7 @@ it("uses inset transparent artwork and selects it", async () => {
   expect(artworkRect.width).toBe(40);
   expect(artworkRect.left).toBe(buttonRect.left + 12);
   expect(artworkRect.top).toBe(buttonRect.top + 12);
+  expect(artwork.getAttribute("src")).toBe("/app-icons/alternate.png");
   expect(readTopLeftAlpha(artwork)).toBe(0);
 
   await iconButton.click();

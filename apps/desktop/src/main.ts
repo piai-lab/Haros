@@ -28,6 +28,7 @@ import {
   session,
   shell,
   systemPreferences,
+  Tray,
 } from "electron";
 import type {
   BrowserWindowConstructorOptions,
@@ -85,6 +86,10 @@ import {
   isDesktopAppIcon,
   shouldUpdateDesktopAppIcon,
 } from "./desktopAppIcon";
+import {
+  desktopStatusItemResourceName,
+  revealDesktopStatusItemWindow,
+} from "./desktopStatusItem";
 import {
   makeUpdateInstallPreparationCoordinator,
   type UpdateInstallPreparationAttempt,
@@ -298,11 +303,13 @@ const DESKTOP_MENU_ZOOM_FACTOR_STEP = 1.1;
 const DESKTOP_MENU_MIN_ZOOM_FACTOR = 0.25;
 const DESKTOP_MENU_MAX_ZOOM_FACTOR = 5;
 const OMNIMIND_BROWSER_LABEL = "OmniMind browser";
+const DESKTOP_STATUS_ITEM_GUID = "3f07c178-5d42-4f43-8ae4-6c8d7ed286b2";
 const browserPerfLoggingEnabled = process.env.OMNIMIND_BROWSER_PERF === "1";
 
 type DesktopUpdateErrorContext = DesktopUpdateState["errorContext"];
 
 let mainWindow: BrowserWindow | null = null;
+let desktopStatusItem: Tray | null = null;
 let backendProcess: ChildProcess.ChildProcess | null = null;
 let backendPort = 0;
 let backendAuthToken = "";
@@ -1764,6 +1771,67 @@ function focusMainWindow(options: { stealAppFocus?: boolean } = {}): void {
     app.focus({ steal: true });
   }
   mainWindow.focus();
+}
+
+function revealMainWindowFromDesktopStatusItem(): void {
+  if (desktopStartupBlockedForMigrationRecovery || isQuitting) {
+    return;
+  }
+  handleDesktopAppForegrounded();
+  const currentWindow =
+    mainWindow && !mainWindow.isDestroyed()
+      ? mainWindow
+      : (BrowserWindow.getAllWindows()[0] ?? null);
+  mainWindow = revealDesktopStatusItemWindow({
+    currentWindow,
+    createWindow,
+    activateApp: () => {
+      if (process.platform === "darwin") {
+        app.show();
+        app.focus({ steal: true });
+      }
+    },
+  });
+}
+
+function initializeDesktopStatusItem(): void {
+  if (
+    desktopStatusItem ||
+    (process.platform !== "darwin" && process.platform !== "win32")
+  ) {
+    return;
+  }
+  const resourceName = desktopStatusItemResourceName(process.platform);
+  if (!resourceName) return;
+  const resourcePath = resolveResourcePath(resourceName);
+  if (!resourcePath) {
+    console.warn(`[desktop] Status item resource is missing: ${resourceName}`);
+    return;
+  }
+  const image = nativeImage.createFromPath(resourcePath);
+  if (image.isEmpty()) {
+    console.warn(`[desktop] Status item resource is invalid: ${resourceName}`);
+    return;
+  }
+  if (process.platform === "darwin") {
+    image.setTemplateImage(true);
+  }
+
+  try {
+    const nextStatusItem = new Tray(
+      image,
+      process.platform === "darwin" ? DESKTOP_STATUS_ITEM_GUID : undefined,
+    );
+    nextStatusItem.setToolTip("OmniMind");
+    if (process.platform === "darwin") {
+      nextStatusItem.setIgnoreDoubleClickEvents(true);
+    }
+    nextStatusItem.on("click", revealMainWindowFromDesktopStatusItem);
+    desktopStatusItem = nextStatusItem;
+    console.info(`[desktop] Status item initialized platform=${process.platform}`);
+  } catch (error) {
+    console.warn(`[desktop] Failed to initialize status item: ${formatErrorMessage(error)}`);
+  }
 }
 
 // Show a native OS notification and refocus the app window when the alert is clicked.
@@ -4304,6 +4372,7 @@ async function bootstrap(): Promise<void> {
   }
   startBackend();
   writeDesktopLogHeader("bootstrap backend start requested");
+  initializeDesktopStatusItem();
 
   if (isDevelopment) {
     void waitForBackendWindowReady(backendHttpUrl)
@@ -4474,6 +4543,11 @@ app.on("window-all-closed", () => {
   if (process.platform !== "darwin") {
     app.quit();
   }
+});
+
+app.on("will-quit", () => {
+  desktopStatusItem?.destroy();
+  desktopStatusItem = null;
 });
 
 if (process.platform !== "win32") {

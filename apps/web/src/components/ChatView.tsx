@@ -295,7 +295,7 @@ import {
   normalizeRuntimeModeForProvider,
   providerModelSupportsAutoRuntimeMode,
 } from "../lib/runtimeMode";
-import { OmniMindLogo } from "./OmniMindLogo";
+import { OmniMindLogoButton } from "./OmniMindLogoButton";
 import { ThreadWorktreeHandoffDialog } from "./ThreadWorktreeHandoffDialog";
 import {
   formatShortcutLabel,
@@ -11965,7 +11965,13 @@ export default function ChatView({
                       CHAT_COLUMN_FRAME_CLASS_NAME,
                     )}
                   >
-                    <OmniMindLogo aria-label="OmniMind logo" className="size-10" />
+                    <OmniMindLogoButton
+                      size={64}
+                      variant="satin"
+                      aria-label={t("shortcuts.focusComposer")}
+                      className="-my-3"
+                      onClick={focusComposer}
+                    />
                     <h2
                       data-testid="empty-landing-heading"
                       className="text-[26px] font-normal leading-[1.15] tracking-[-0.015em] text-foreground/95 sm:text-[30px]"

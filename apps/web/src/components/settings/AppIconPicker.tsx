@@ -8,7 +8,7 @@ import { useI18n, type MessageKey } from "~/i18n";
 
 const APP_ICON_OPTIONS = [
   { value: "default", labelKey: "settings.defaultIcon", src: "/app-icons/default.png" },
-  { value: "icon", labelKey: "settings.alternateIcon", src: "/app-icons/icon-full-bleed-v2.png" },
+  { value: "icon", labelKey: "settings.alternateIcon", src: "/app-icons/alternate.png" },
 ] as const satisfies ReadonlyArray<{
   value: DesktopAppIcon;
   labelKey: MessageKey;
