@@ -149,11 +149,14 @@ interface BuildBrowserAddressSuggestionsInput {
   activeTabId: string | null;
   tabs: Array<Pick<BrowserTabState, "id" | "title" | "url" | "faviconUrl" | "lastCommittedUrl">>;
   recentHistory: BrowserHistoryEntry[];
+  formatSearchTitle: (query: string) => string;
+  formatOpenTitle: (url: string) => string;
 }
 
 export interface BrowserChromeStatus {
   tone: "default" | "error";
-  label: string;
+  kind: "local-error" | "thread-error" | "no-tabs" | "starting" | "restoring";
+  detail?: string;
 }
 
 export function browserAnnotationDraftFromCommittedEvent(
@@ -316,30 +319,40 @@ export function browserAnnotationTheme(
   };
 }
 
-export function formatBrowserAnnotationActionError(
+export type BrowserAnnotationActionErrorKind =
+  | "bring-tab-into-view"
+  | "page-loading"
+  | "tab-unavailable"
+  | "already-active"
+  | "cancel-failed"
+  | "sync-failed"
+  | "start-failed"
+  | "draft-full";
+
+export function resolveBrowserAnnotationActionError(
   error: unknown,
   action: "start" | "cancel" | "sync",
-): string {
+): BrowserAnnotationActionErrorKind {
   const message = error instanceof Error ? error.message : "";
   if (/not (?:currently )?visible|must be visible/i.test(message)) {
-    return "Bring the browser tab into view before annotating.";
+    return "bring-tab-into-view";
   }
   if (/document.*not ready|page.*not ready|still loading/i.test(message)) {
-    return "This page is still loading. Try annotating again in a moment.";
+    return "page-loading";
   }
   if (/guest.*(?:missing|unavailable|not found)|tab.*not found/i.test(message)) {
-    return "This browser tab isn't available for annotation.";
+    return "tab-unavailable";
   }
   if (/session.*active|already.*annotat/i.test(message)) {
-    return "Annotation mode is already active.";
+    return "already-active";
   }
   if (action === "cancel") {
-    return "Couldn't close annotation mode. Try again.";
+    return "cancel-failed";
   }
   if (action === "sync") {
-    return "Couldn't refresh annotation markers.";
+    return "sync-failed";
   }
-  return "Couldn't start annotation mode. Try again.";
+  return "start-failed";
 }
 
 // Hides about:blank from the address bar so new tabs behave like real browsers.
@@ -402,8 +415,8 @@ export function buildBrowserAddressSuggestions(
 
   if (query.length > 0) {
     const directTitle = directTarget.startsWith(BROWSER_SEARCH_URL_PREFIX)
-      ? `Search the web for "${input.query.trim()}"`
-      : `Open ${directTarget}`;
+      ? input.formatSearchTitle(input.query.trim())
+      : input.formatOpenTitle(directTarget);
     pushSuggestion(suggestions, seenUrls, {
       id: `direct:${directTarget}`,
       kind: "navigate",
@@ -463,28 +476,30 @@ export function resolveBrowserChromeStatus(input: {
   if (input.localError) {
     return {
       tone: "error",
-      label: input.localError,
+      kind: "local-error",
+      detail: input.localError,
     };
   }
 
   if (input.threadLastError) {
     return {
       tone: "error",
-      label: input.threadLastError,
+      kind: "thread-error",
+      detail: input.threadLastError,
     };
   }
 
   if (!input.hasActiveTab) {
     return {
       tone: "default",
-      label: input.workspaceReady ? "No tabs open" : "Starting browser...",
+      kind: input.workspaceReady ? "no-tabs" : "starting",
     };
   }
 
   if (input.activeTabStatus === "suspended") {
     return {
       tone: "default",
-      label: "Restoring tab...",
+      kind: "restoring",
     };
   }
 

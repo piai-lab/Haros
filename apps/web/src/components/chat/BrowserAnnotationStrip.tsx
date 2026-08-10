@@ -2,8 +2,7 @@
 // Purpose: Keep browser annotations to one compact row, with overflow available on demand.
 // Layer: Chat attachment presentation
 
-import { pluralize } from "@synara/shared/text";
-
+import { useI18n } from "~/i18n";
 import type { BrowserAnnotationDraft } from "~/lib/browserAnnotations";
 import { cn } from "~/lib/utils";
 import { COMPOSER_ATTACHMENT_CHIP_CLASS_NAME } from "../composerInlineChip";
@@ -18,15 +17,12 @@ interface BrowserAnnotationStripProps {
   className?: string | undefined;
 }
 
-function overflowLabel(count: number): string {
-  return `+${count} ${pluralize(count, "other")}`;
-}
-
 export function BrowserAnnotationStrip({
   annotations,
   onRemove,
   className,
 }: BrowserAnnotationStripProps) {
+  const { t } = useI18n();
   if (annotations.length === 0) {
     return null;
   }
@@ -60,13 +56,17 @@ export function BrowserAnnotationStrip({
                   COMPOSER_ATTACHMENT_CHIP_CLASS_NAME,
                   "h-6 shrink-0 px-2 transition-colors hover:bg-[var(--color-background-button-secondary-hover)]",
                 )}
-                aria-label={`Show ${hiddenAnnotations.length} more browser ${pluralize(
-                  hiddenAnnotations.length,
-                  "annotation",
-                )}`}
+                aria-label={t(
+                  hiddenAnnotations.length === 1
+                    ? "browser.showMoreAnnotation"
+                    : "browser.showMoreAnnotations",
+                  { count: hiddenAnnotations.length },
+                )}
                 data-testid="browser-annotation-overflow"
               >
-                {overflowLabel(hiddenAnnotations.length)}
+                {t(hiddenAnnotations.length === 1 ? "browser.other" : "browser.others", {
+                  count: hiddenAnnotations.length,
+                })}
               </button>
             }
           />
@@ -78,7 +78,12 @@ export function BrowserAnnotationStrip({
           >
             <div className="min-w-0 py-1">
               <p className="px-2 pb-1.5 text-[11px] font-medium text-muted-foreground">
-                {hiddenAnnotations.length} more {pluralize(hiddenAnnotations.length, "annotation")}
+                {t(
+                  hiddenAnnotations.length === 1
+                    ? "browser.moreAnnotation"
+                    : "browser.moreAnnotations",
+                  { count: hiddenAnnotations.length },
+                )}
               </p>
               <div
                 className="max-h-52 overflow-y-auto overscroll-contain pr-0.5"

@@ -78,6 +78,7 @@ import {
 } from "./composerPickerStyles";
 import { routeSplitBrowserPanelOpenRequest } from "./browserPanelOpenRequest";
 import { cn } from "~/lib/utils";
+import { useI18n } from "~/i18n";
 
 const SPLIT_PANE_PANEL_DEFAULT_WIDTH_PX = 22 * 16;
 const BROWSER_SPLIT_PANE_PANEL_DEFAULT_WIDTH_PX = 30 * 16;
@@ -109,6 +110,7 @@ function SplitPaneEmbeddedPanel(props: {
     patch: Partial<Pick<SplitViewPanePanelState, "panel" | "diffTurnId" | "diffFilePath">>,
   ) => void;
 }) {
+  const { t } = useI18n();
   const wrapperRef = useRef<HTMLDivElement>(null);
   const panelWidthStorageKey =
     props.panel === "browser" ? "browser" : props.panel === "diff" ? "diff" : "panel";
@@ -206,7 +208,7 @@ function SplitPaneEmbeddedPanel(props: {
         onPointerDown={startResize}
       />
       {props.panel === "browser" ? (
-        <Suspense fallback={<PanelStateMessage>Loading browser...</PanelStateMessage>}>
+        <Suspense fallback={<PanelStateMessage>{t("browser.loading")}</PanelStateMessage>}>
           <LazyBrowserPanel
             mode="sidebar"
             threadId={props.threadId}
@@ -240,6 +242,7 @@ function SplitPaneEmptyState(props: {
   excludedThreadIds: ReadonlySet<ThreadId>;
   onSelectThread: (threadId: ThreadId) => void;
 }) {
+  const { t } = useI18n();
   return (
     <div
       className={cn(
@@ -250,12 +253,13 @@ function SplitPaneEmptyState(props: {
       onMouseDown={props.onFocus}
     >
       <div className="w-full max-w-sm space-y-4">
-        <p className="text-center text-sm font-medium text-foreground/70">Select a chat</p>
+        <p className="text-center text-sm font-medium text-foreground/70">{t("chat.selectChat")}</p>
         <div className="max-h-[60vh] space-y-1 overflow-y-auto">
           {props.threads.map((thread) => {
             const isUsed = props.excludedThreadIds.has(thread.id);
             const projectName =
-              props.projects.find((p) => p.id === thread.projectId)?.name ?? "Project";
+              props.projects.find((p) => p.id === thread.projectId)?.name ??
+              t("chat.unknownProject");
             return (
               <button
                 key={thread.id}
@@ -277,7 +281,7 @@ function SplitPaneEmptyState(props: {
                 />
                 <div className="min-w-0 flex-1">
                   <div className="truncate text-sm font-medium text-foreground">
-                    {resolveThreadPickerTitle(thread.title)}
+                    {resolveThreadPickerTitle(thread.title, t("nav.newChat"))}
                   </div>
                   <div className="truncate text-xs text-muted-foreground">{projectName}</div>
                 </div>
@@ -583,6 +587,7 @@ function SplitPaneSurface(props: {
 }
 
 export function SplitChatSurface(props: { splitViewId: SplitViewId; routeThreadId: ThreadId }) {
+  const { t } = useI18n();
   const navigate = useNavigate();
   const { handleNewChat } = useHandleNewChat();
   const selectAllThreads = createAllThreadsSelector();
@@ -999,16 +1004,17 @@ export function SplitChatSurface(props: { splitViewId: SplitViewId; routeThreadI
       >
         <DialogPopup className="max-w-lg">
           <DialogHeader className="items-center text-center">
-            <DialogTitle>Choose Chat</DialogTitle>
+            <DialogTitle>{t("chat.chooseChat")}</DialogTitle>
             <DialogDescription className="max-w-sm text-center">
-              Pick which chat should appear in the focused split pane.
+              {t("chat.chooseSplitDescription")}
             </DialogDescription>
           </DialogHeader>
           <DialogPanel className="space-y-3">
             <div className="max-h-[56vh] space-y-1 overflow-y-auto">
               {selectableThreads.map((thread) => {
                 const projectName =
-                  projects.find((project) => project.id === thread.projectId)?.name ?? "Project";
+                  projects.find((project) => project.id === thread.projectId)?.name ??
+                  t("chat.unknownProject");
                 const isSelected = pickerLeaf?.threadId === thread.id;
                 return (
                   <button
@@ -1028,7 +1034,7 @@ export function SplitChatSurface(props: { splitViewId: SplitViewId; routeThreadI
                     />
                     <div className="min-w-0 flex-1">
                       <div className="truncate text-sm font-medium text-foreground">
-                        {resolveThreadPickerTitle(thread.title)}
+                        {resolveThreadPickerTitle(thread.title, t("nav.newChat"))}
                       </div>
                       <div className="truncate text-xs text-muted-foreground">{projectName}</div>
                     </div>
@@ -1038,7 +1044,7 @@ export function SplitChatSurface(props: { splitViewId: SplitViewId; routeThreadI
             </div>
             <DialogFooter variant="bare">
               <Button type="button" variant="outline" onClick={() => setThreadPickerPaneId(null)}>
-                Cancel
+                {t("common.cancel")}
               </Button>
             </DialogFooter>
           </DialogPanel>

@@ -9,9 +9,9 @@ import {
   browserWebviewInitialUrl,
   createBrowserPanelHideScheduler,
   createBrowserRendererLossHandler,
-  formatBrowserAnnotationActionError,
   isBrowserAnnotationEventInScope,
   normalizeBrowserAddressInput,
+  resolveBrowserAnnotationActionError,
   resolveBrowserChromeStatus,
   resolveBrowserAddressSync,
   shouldOccludeBrowserWebview,
@@ -162,11 +162,11 @@ describe("browser annotation presentation", () => {
       primaryText: "rgb(24, 24, 27)",
     });
     expect(
-      formatBrowserAnnotationActionError(
+      resolveBrowserAnnotationActionError(
         new Error("Browser annotation document is not ready"),
         "start",
       ),
-    ).toBe("This page is still loading. Try annotating again in a moment.");
+    ).toBe("page-loading");
   });
 });
 
@@ -370,6 +370,8 @@ describe("buildBrowserAddressSuggestions", () => {
     const suggestions = buildBrowserAddressSuggestions({
       query: "open",
       activeTabId: "tab-1",
+      formatSearchTitle: (query) => `Search the web for "${query}"`,
+      formatOpenTitle: (url) => `Open ${url}`,
       tabs: [
         {
           id: "tab-1",
@@ -421,7 +423,8 @@ describe("resolveBrowserChromeStatus", () => {
       }),
     ).toEqual({
       tone: "error",
-      label: "Couldn't complete that browser action.",
+      kind: "local-error",
+      detail: "Couldn't complete that browser action.",
     });
   });
 
@@ -437,6 +440,43 @@ describe("resolveBrowserChromeStatus", () => {
     ).toBeNull();
   });
 
+  it("keeps engine diagnostics separate from the localized status kind", () => {
+    expect(
+      resolveBrowserChromeStatus({
+        localError: null,
+        threadLastError: "ERR_CONNECTION_REFUSED at http://127.0.0.1:4173",
+        activeTabStatus: "ready",
+        hasActiveTab: true,
+        workspaceReady: true,
+      }),
+    ).toEqual({
+      tone: "error",
+      kind: "thread-error",
+      detail: "ERR_CONNECTION_REFUSED at http://127.0.0.1:4173",
+    });
+  });
+
+  it("distinguishes an empty ready browser from a tab being restored", () => {
+    expect(
+      resolveBrowserChromeStatus({
+        localError: null,
+        threadLastError: null,
+        activeTabStatus: "ready",
+        hasActiveTab: false,
+        workspaceReady: true,
+      }),
+    ).toEqual({ tone: "default", kind: "no-tabs" });
+    expect(
+      resolveBrowserChromeStatus({
+        localError: null,
+        threadLastError: null,
+        activeTabStatus: "suspended",
+        hasActiveTab: true,
+        workspaceReady: true,
+      }),
+    ).toEqual({ tone: "default", kind: "restoring" });
+  });
+
   it("keeps onboarding copy for empty browser states", () => {
     expect(
       resolveBrowserChromeStatus({
@@ -448,7 +488,7 @@ describe("resolveBrowserChromeStatus", () => {
       }),
     ).toEqual({
       tone: "default",
-      label: "Starting browser...",
+      kind: "starting",
     });
   });
 });

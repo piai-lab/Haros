@@ -3,6 +3,7 @@
 
 import { type ComponentPropsWithoutRef } from "react";
 
+import { useI18n } from "~/i18n";
 import type { BrowserAnnotationDraft } from "~/lib/browserAnnotations";
 import { formatBrowserAnnotationLabel } from "~/lib/browserAnnotations";
 import { cn } from "~/lib/utils";
@@ -26,9 +27,15 @@ export function BrowserAnnotationChip({
   className,
   ...rest
 }: BrowserAnnotationChipProps) {
-  const label = formatBrowserAnnotationLabel(annotation);
+  const { t } = useI18n();
+  const label = formatBrowserAnnotationLabel(annotation, t("browser.pageElement"));
   const pageLabel = annotation.source.pageTitle || annotation.source.url;
-  const removeLabel = `Remove browser annotation ${annotation.ordinal}`;
+  const removeLabel = t("browser.removeAnnotation", { number: annotation.ordinal });
+  const annotationLabel = t("browser.annotation", {
+    number: annotation.ordinal,
+    label,
+    page: pageLabel,
+  });
   const trigger =
     variant === "list" ? (
       <span
@@ -37,7 +44,7 @@ export function BrowserAnnotationChip({
           onRemove && "pr-8",
           className,
         )}
-        aria-label={`Browser annotation ${annotation.ordinal}: ${label}, ${pageLabel}`}
+        aria-label={annotationLabel}
         data-testid="browser-annotation-chip"
         {...rest}
       >
@@ -66,7 +73,7 @@ export function BrowserAnnotationChip({
           onRemove && "pr-5",
           className,
         )}
-        aria-label={`Browser annotation ${annotation.ordinal}: ${label}, ${pageLabel}`}
+        aria-label={annotationLabel}
         data-testid="browser-annotation-chip"
         {...rest}
       >

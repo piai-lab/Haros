@@ -46,8 +46,8 @@ export type SplitPaneCloseDecision =
       kind: "new-chat";
     };
 
-export function resolveThreadPickerTitle(title: string | null): string {
-  return title || "New chat";
+export function resolveThreadPickerTitle(title: string | null, fallback = "New chat"): string {
+  return title || fallback;
 }
 
 // File previews follow the thread runtime cwd so worktree chats open the files they actually edit.

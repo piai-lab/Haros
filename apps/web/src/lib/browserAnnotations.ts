@@ -168,13 +168,14 @@ export function nextBrowserAnnotationOrdinal(
 
 export function formatBrowserAnnotationLabel(
   annotation: Pick<BrowserAnnotationDraft, "comment" | "name" | "tagName" | "selector">,
+  fallback = "Page element",
 ): string {
   return (
     annotation.comment?.trim() ||
     annotation.name?.trim() ||
     annotation.tagName.trim() ||
     annotation.selector.trim() ||
-    "Page element"
+    fallback
   );
 }
 

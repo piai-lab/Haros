@@ -15,8 +15,9 @@ import {
   browserAnnotationDraftFromCommittedEvent,
   browserAnnotationMarkers,
   browserAnnotationTheme,
-  formatBrowserAnnotationActionError,
   isBrowserAnnotationEventInScope,
+  resolveBrowserAnnotationActionError,
+  type BrowserAnnotationActionErrorKind,
 } from "../BrowserPanel.logic";
 
 interface PendingBrowserAnnotationSession {
@@ -43,7 +44,7 @@ interface UseBrowserAnnotationsInput {
     threadId: ThreadId,
     annotation: Omit<BrowserAnnotationDraft, "ordinal">,
   ) => boolean;
-  readonly onError: (message: string | null) => void;
+  readonly onError: (kind: BrowserAnnotationActionErrorKind | null) => void;
 }
 
 // Main survives renderer reloads, so a module-local 1,2,3 counter could move
@@ -101,7 +102,7 @@ export function useBrowserAnnotations({
         .cancel({ threadId: pending.threadId, tabId: pending.tabId })
         .catch((error: unknown) => {
           if (surfaceError) {
-            onError(formatBrowserAnnotationActionError(error, "cancel"));
+            onError(resolveBrowserAnnotationActionError(error, "cancel"));
           }
         });
     },
@@ -160,7 +161,7 @@ export function useBrowserAnnotations({
             return;
           }
           clearLocalSession();
-          onError(formatBrowserAnnotationActionError(error, "start"));
+          onError(resolveBrowserAnnotationActionError(error, "start"));
         },
       );
   }, [activeTabId, cancelPendingSession, clearLocalSession, enabled, methods, onError, threadId]);
@@ -208,7 +209,7 @@ export function useBrowserAnnotations({
         );
         if (!added) {
           cancelPendingSession(false);
-          onError("This draft can't accept another browser annotation.");
+          onError("draft-full");
         } else {
           onError(null);
         }
@@ -266,7 +267,7 @@ export function useBrowserAnnotations({
           scope.threadId === threadId &&
           scope.activeTabId === activeTabId
         ) {
-          onError(formatBrowserAnnotationActionError(error, "sync"));
+          onError(resolveBrowserAnnotationActionError(error, "sync"));
         }
       });
   }, [
