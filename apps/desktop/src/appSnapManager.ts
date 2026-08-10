@@ -376,7 +376,7 @@ export class DesktopAppSnapManager {
     this.#platform = desktopAppSnapPlatform(options.platform);
     this.#status = this.#platform === "macos" ? "disabled" : "unsupported";
     this.#message =
-      this.#platform === "macos" ? null : "AppSnap is available only in the macOS desktop app.";
+      this.#platform === "macos" ? null : "Screenshot is available only in the macOS desktop app.";
   }
 
   getState(): DesktopAppSnapState {
@@ -415,7 +415,7 @@ export class DesktopAppSnapManager {
 
   checkShortcut(shortcut: unknown): DesktopAppSnapShortcutAvailability {
     if (this.#platform !== "macos") {
-      return { available: false, reason: "AppSnap shortcuts are available only on macOS." };
+      return { available: false, reason: "Screenshot shortcuts are available only on macOS." };
     }
     if (!isAppSnapShortcut(shortcut)) {
       return {
@@ -555,7 +555,7 @@ export class DesktopAppSnapManager {
         );
         const stored = parseStoredPendingCapture(JSON.parse(metadataBytes.toString("utf8")));
         if (!stored || pendingCaptureStorageKey(stored.id) !== storageKey) {
-          throw new Error("Pending AppSnap metadata is invalid.");
+          throw new Error("Pending screenshot metadata is invalid.");
         }
         const bytes = await readValidatedPendingPng(imagePath, stored.sizeBytes);
         records.push({
@@ -651,7 +651,7 @@ export class DesktopAppSnapManager {
     try {
       const metadata = Buffer.from(`${JSON.stringify(toStoredPendingCapture(capture))}\n`, "utf8");
       if (metadata.byteLength > MAX_PENDING_CAPTURE_METADATA_BYTES) {
-        throw new Error("Pending AppSnap metadata exceeds its storage limit.");
+        throw new Error("Pending screenshot metadata exceeds its storage limit.");
       }
       await writePrivateFileAtomically(paths.metadataPath, metadata);
     } catch (error) {
@@ -732,12 +732,12 @@ export class DesktopAppSnapManager {
     if (!FS.existsSync(this.#options.helperPath)) {
       this.#stopWatchProcess();
       this.#releaseShortcutReservation();
-      this.#setState("error", "The AppSnap native helper is missing from this desktop build.");
+      this.#setState("error", "The Screenshot helper is missing from this desktop build.");
       return;
     }
     if (this.#shortcut.kind === "key-chord" && !this.#reserveShortcut(this.#shortcut)) {
       this.#stopWatchProcess();
-      this.#setState("error", "The AppSnap shortcut is already used by macOS or another app.");
+      this.#setState("error", "The Screenshot shortcut is already used by macOS or another app.");
       return;
     }
     if (this.#shortcut.kind === "both-option-keys") this.#releaseShortcutReservation();
@@ -760,7 +760,7 @@ export class DesktopAppSnapManager {
       this.#releaseShortcutReservation();
       this.#setState(
         "error",
-        `Could not start AppSnap: ${error instanceof Error ? error.message : String(error)}`,
+        `Could not start Screenshot: ${error instanceof Error ? error.message : String(error)}`,
       );
     }
   }
@@ -795,7 +795,7 @@ export class DesktopAppSnapManager {
       this.#watchOutputLines?.close();
       this.#watchOutputLines = null;
       this.#releaseShortcutReservation();
-      const message = `Could not start AppSnap: ${error.message}`;
+      const message = `Could not start Screenshot: ${error.message}`;
       this.#setState("error", message);
       this.#emitCaptureError("helper-stopped", message, undefined, false);
     });
@@ -806,7 +806,7 @@ export class DesktopAppSnapManager {
       this.#watchOutputLines = null;
       if (this.#disposed || this.#intentionalWatchStop || !this.#enabled) return;
       this.#releaseShortcutReservation();
-      const message = `The AppSnap helper stopped unexpectedly (${signal ?? `exit ${code ?? "unknown"}`}).`;
+      const message = `The Screenshot helper stopped unexpectedly (${signal ?? `exit ${code ?? "unknown"}`}).`;
       this.#setState("error", message);
       this.#emitCaptureError("helper-stopped", message, undefined, false);
     });
@@ -896,7 +896,7 @@ export class DesktopAppSnapManager {
   ): Promise<boolean> {
     if (this.#disposed || this.#platform !== "macos") return false;
     if (!FS.existsSync(this.#options.helperPath)) {
-      this.#setState("error", "The AppSnap native helper is missing from this desktop build.");
+      this.#setState("error", "The Screenshot helper is missing from this desktop build.");
       return false;
     }
 
@@ -909,7 +909,7 @@ export class DesktopAppSnapManager {
       } catch (error) {
         this.#setState(
           "error",
-          `Could not inspect AppSnap permissions: ${error instanceof Error ? error.message : String(error)}`,
+          `Could not inspect Screenshot permissions: ${error instanceof Error ? error.message : String(error)}`,
         );
         resolve(false);
         return;
@@ -931,7 +931,7 @@ export class DesktopAppSnapManager {
       child.once("error", (error) => {
         spawnFailed = true;
         if (this.#permissionProcess === child) this.#permissionProcess = null;
-        this.#setState("error", `Could not inspect AppSnap permissions: ${error.message}`);
+        this.#setState("error", `Could not inspect Screenshot permissions: ${error.message}`);
         resolve(false);
       });
       child.once("close", () => {
@@ -943,7 +943,7 @@ export class DesktopAppSnapManager {
         if (!receivedPermissions && !spawnFailed) {
           this.#setState(
             "error",
-            reportedError ?? "The AppSnap helper did not report its permission state.",
+            reportedError ?? "The Screenshot helper did not report its permission state.",
           );
         }
         resolve(receivedPermissions);
@@ -976,7 +976,7 @@ export class DesktopAppSnapManager {
         .catch((error) => {
           this.#emitCaptureError(
             "capture-read-failed",
-            error instanceof Error ? error.message : "Could not read the captured AppSnap.",
+            error instanceof Error ? error.message : "Could not read the captured screenshot.",
             message.capturedAt,
             true,
           );
@@ -1020,7 +1020,7 @@ export class DesktopAppSnapManager {
   ): Promise<void> {
     const capturePath = Path.resolve(message.path);
     if (!isPathInsideDirectory(this.#options.captureDirectory, capturePath)) {
-      throw new Error("The AppSnap helper returned a capture outside its private directory.");
+      throw new Error("The Screenshot helper returned a capture outside its private directory.");
     }
 
     await this.#ensurePendingCapturesLoaded();
@@ -1031,7 +1031,7 @@ export class DesktopAppSnapManager {
       capturedAt: normalizeDate(message.capturedAt, now),
       name:
         normalizeOptionalText(message.name, 240) ??
-        `AppSnap-${now.toISOString().replace(/[:.]/g, "-")}.png`,
+        `Screenshot-${now.toISOString().replace(/[:.]/g, "-")}.png`,
       mimeType: "image/png",
       sizeBytes: bytes.byteLength,
       bytes: new Uint8Array(bytes),
@@ -1058,7 +1058,7 @@ export class DesktopAppSnapManager {
       );
       this.#emitCaptureError(
         "pending-capture-overflow",
-        `OmniMind could retain only the latest ${MAX_PENDING_CAPTURES} AppSnaps while the composer was unavailable. The oldest capture was discarded.`,
+        `OmniMind could retain only the latest ${MAX_PENDING_CAPTURES} screenshots while the message box was unavailable. The oldest screenshot was discarded.`,
         discardedRecord.capture.capturedAt,
         false,
       );
@@ -1075,7 +1075,7 @@ export class DesktopAppSnapManager {
     this.#options.onError(
       {
         code: normalizeOptionalText(code, 128) ?? "capture-failed",
-        message: normalizeOptionalText(message, 1_000) ?? "AppSnap capture failed.",
+        message: normalizeOptionalText(message, 1_000) ?? "Screenshot failed.",
         capturedAt: normalizeDate(capturedAt, this.#options.now()),
       },
       focusApp,

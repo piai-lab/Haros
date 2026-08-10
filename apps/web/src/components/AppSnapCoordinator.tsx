@@ -4,6 +4,7 @@
 // Depends on: Desktop bridge, focused chat context, and existing composer attachment intake.
 
 import {
+  PROVIDER_SEND_TURN_MAX_ATTACHMENTS,
   type DesktopAppSnapCapture,
   type DesktopAppSnapShortcut,
   type ThreadId,
@@ -29,6 +30,7 @@ import {
 } from "../composerDraftStore";
 import { requestComposerFocus } from "../composerFocusRequestStore";
 import { useFocusedChatContext } from "../focusedChatContext";
+import { useI18n } from "../i18n";
 import { useHandleNewChat } from "../hooks/useHandleNewChat";
 import {
   effectiveComposerAttachmentCount,
@@ -53,6 +55,21 @@ import { useTerminalStateStore } from "../terminalStateStore";
 import { toastManager } from "./ui/toast";
 
 const MAX_REMEMBERED_CAPTURE_IDS = 100;
+
+function screenshotErrorDescription(
+  code: string,
+  t: ReturnType<typeof useI18n>["t"],
+): string {
+  if (code === "input-monitoring-required") return t("appsnap.inputMonitoringRequired");
+  if (code === "screen-recording-required") return t("appsnap.screenRecordingRequired");
+  if (code === "capture_in_progress" || code === "capture-in-progress") {
+    return t("appsnap.captureInProgress");
+  }
+  if (code === "pending-capture-overflow") {
+    return t("appsnap.pendingOverflow", { count: PROVIDER_SEND_TURN_MAX_ATTACHMENTS });
+  }
+  return t("appsnap.captureFailedDescription");
+}
 
 interface PersistedAppSnapHydrationTarget {
   attachments: ReadonlyArray<PersistedComposerImageAttachment>;
@@ -197,7 +214,7 @@ async function hydratePersistedAppSnaps(
           });
           existingImageIds.add(attachment.id);
         } catch (error) {
-          console.warn("[appsnap] Could not restore persisted AppSnap", error);
+          console.warn("[appsnap] Could not restore persisted screenshot", error);
         } finally {
           blobHydrationInFlight.delete(attachment.blobKey);
         }
@@ -207,6 +224,8 @@ async function hydratePersistedAppSnaps(
 }
 
 export function AppSnapCoordinator() {
+  const { t } = useI18n();
+  const translateRef = useRef(t);
   const navigate = useNavigate();
   const { settings } = useAppSettings();
   const { handleNewChat } = useHandleNewChat();
@@ -226,6 +245,10 @@ export function AppSnapCoordinator() {
   // capture listener (which would re-deliver pending captures).
   const playCaptureSoundRef = useRef(settings.appSnapPlaySound);
   const enableAppSnapRef = useRef(settings.enableAppSnap);
+
+  useEffect(() => {
+    translateRef.current = t;
+  }, [t]);
   useEffect(() => {
     playCaptureSoundRef.current = settings.appSnapPlaySound;
     enableAppSnapRef.current = settings.enableAppSnap;
@@ -383,14 +406,14 @@ export function AppSnapCoordinator() {
           // fresh-thread creation: the user actively went somewhere else, so
           // follow them there instead of failing the capture.
           const focused = focusedTargetRef.current;
-          if (!focused) throw new Error("OmniMind could not create a task for this AppSnap.");
+          if (!focused) throw new Error(t("appsnap.createTaskFailed"));
           target = focused;
           openChatThreadPage(target.threadId);
         }
       }
 
       const bytes = new Uint8Array(capture.bytes);
-      if (bytes.byteLength === 0) throw new Error("The captured AppSnap is empty.");
+      if (bytes.byteLength === 0) throw new Error(t("appsnap.emptyCapture"));
       const file = new File([bytes], capture.name, {
         type: capture.mimeType,
         lastModified: captureAtMs,
@@ -403,7 +426,7 @@ export function AppSnapCoordinator() {
         existingAttachmentCount,
       });
       const image = images[0];
-      if (!image) throw new Error(error ?? "OmniMind could not attach the captured AppSnap.");
+      if (!image) throw new Error(error ?? t("appsnap.attachFailed"));
 
       let imageAddedToDraft = false;
       let blobKey: string | null = null;
@@ -429,9 +452,7 @@ export function AppSnapCoordinator() {
         // Match ordinary composer mutations: recalled prompt-history state no longer owns the draft.
         draftStore.setPromptHistorySavedDraft(target.threadId, null);
         if (!draftStore.addImage(target.threadId, appSnapImage)) {
-          throw new Error(
-            "The AppSnap was prepared, but this message already has the maximum number of references.",
-          );
+          throw new Error(t("appsnap.referenceLimit"));
         }
         imageAddedToDraft = true;
         const currentPersistedAttachments =
@@ -453,7 +474,7 @@ export function AppSnapCoordinator() {
           await deleteComposerImageBlob(blobKey).catch((error) =>
             console.warn("[appsnap] Could not roll back rejected capture", error),
           );
-          throw new Error("The AppSnap was captured, but its draft metadata was rejected.");
+          throw new Error(t("appsnap.metadataRejected"));
         }
         persistenceResult = result;
       } catch (error) {
@@ -472,18 +493,20 @@ export function AppSnapCoordinator() {
       toastManager.add({
         type: persistenceResult === "unverified" ? "warning" : "success",
         title:
-          persistenceResult === "unverified" ? "AppSnap added with a warning" : "AppSnap added",
+          persistenceResult === "unverified"
+            ? t("appsnap.addedWarningTitle")
+            : t("appsnap.addedTitle"),
         description:
           persistenceResult === "unverified"
-            ? "The capture is attached, but OmniMind could not verify its draft metadata. If it is missing after a reload, OmniMind will attach it again."
+            ? t("appsnap.addedWarningDescription")
             : capture.sourceAppName
-              ? `Captured ${capture.sourceAppName} and added it to the composer.`
-              : "The frontmost window was added to the composer.",
+              ? t("appsnap.addedFromApp", { app: capture.sourceAppName })
+              : t("appsnap.addedGeneric"),
         data: { allowCrossThreadVisibility: true },
       });
       return persistenceResult;
     },
-    [activateExistingTarget, handleNewChat, openChatThreadPage],
+    [activateExistingTarget, handleNewChat, openChatThreadPage, t],
   );
   // Keep the native subscription stable while navigation callbacks change.
   // Pending captures can then never cross a cleanup/re-subscribe dedupe gap.
@@ -533,15 +556,18 @@ export function AppSnapCoordinator() {
             // rebuilding it from the desktop pending copy.
             useComposerDraftStore.getState().removeAppSnapCapture(capture.id);
             const attach = attachCaptureRef.current;
-            if (!attach) throw new Error("The AppSnap composer is not ready yet.");
+            if (!attach) throw new Error(translateRef.current("appsnap.coordinatorUnavailable"));
             persistence = await attach(capture);
           } catch (error) {
             toastManager.add({
               type: "error",
-              title: "AppSnap could not be added",
-              description: error instanceof Error ? error.message : "AppSnap capture failed.",
+              title: translateRef.current("appsnap.addFailedTitle"),
+              description:
+                error instanceof Error
+                  ? error.message
+                  : translateRef.current("appsnap.captureFailedDescription"),
               actionProps: {
-                children: "Retry",
+                children: translateRef.current("appsnap.retry"),
                 onClick: () => {
                   captureIdsRef.current.delete(capture.id);
                   enqueueCapture(capture);
@@ -573,12 +599,12 @@ export function AppSnapCoordinator() {
     const unsubscribeError = bridge.onError((error) => {
       toastManager.add({
         type: "error",
-        title: "AppSnap failed",
-        description: error.message,
+        title: translateRef.current("appsnap.failedTitle"),
+        description: screenshotErrorDescription(error.code, translateRef.current),
         ...(error.code === "helper-stopped"
           ? {
               actionProps: {
-                children: "Restart",
+                children: translateRef.current("appsnap.restart"),
                 onClick: () => {
                   void bridge
                     .setEnabled(enableAppSnapRef.current)

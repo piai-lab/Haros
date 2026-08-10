@@ -82,8 +82,8 @@ describe("ComposerImageAttachmentChip", () => {
     // Provenance collapses to one line joining distinct app + window labels.
     expect(markup).toContain("AppSnapCoordinator.tsx — omnimind / Visual Studio Code");
     expect(markup).toContain("data:image/png;base64,aWNvbg==");
-    expect(markup).toContain("Preview AppSnap from Visual Studio Code");
-    expect(markup).toContain("Remove AppSnap from Visual Studio Code");
+    expect(markup).toContain("Preview screenshot from Visual Studio Code");
+    expect(markup).toContain("Remove screenshot from Visual Studio Code");
     expect(markup).not.toContain("Draft attachment may not persist");
   });
 
@@ -150,7 +150,7 @@ describe("ComposerImageAttachmentChip", () => {
     );
 
     expect(markup).toContain("w-52");
-    expect(markup).toContain("Preview AppSnap from Safari");
+    expect(markup).toContain("Preview screenshot from Safari");
     expect(markup).toContain("OmniMind / Safari");
   });
 });

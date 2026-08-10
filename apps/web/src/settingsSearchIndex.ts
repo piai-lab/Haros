@@ -209,11 +209,11 @@ export const SETTINGS_SEARCH_ENTRIES: readonly SettingsSearchEntry[] = [
       "Show an OS notification when a chat or managed terminal agent finishes or needs input while the app is in the background. alerts toast",
   },
 
-  // ── AppSnap ───────────────────────────────────────────────────────────────────
+  // ── Screenshot ────────────────────────────────────────────────────────────────
   {
     id: "appsnap:enable",
     section: "appsnap",
-    title: "Enable AppSnap",
+    title: "Enable Screenshot",
     keywords:
       "Capture the frontmost macOS app window with a configurable two-key shortcut and add it to a recent task. appshot screenshot snap window capture hotkey",
   },
@@ -241,7 +241,7 @@ export const SETTINGS_SEARCH_ENTRIES: readonly SettingsSearchEntry[] = [
     section: "appsnap",
     title: "Permission status",
     keywords:
-      "Input Monitoring and Screen Recording permissions for AppSnap in macOS System Settings. privacy security recheck grant",
+      "Input Monitoring and Screen Recording permissions for window screenshots in macOS System Settings. privacy security recheck grant",
     // Renders only in the macOS desktop app, so no stable anchor on other platforms.
     target: null,
   },
@@ -465,7 +465,7 @@ const SETTINGS_SEARCH_TITLE_KEY_BY_TITLE: Readonly<Record<string, MessageKey>> =
   Destination: "settings.destination",
   "Diff line wrapping": "settings.diffLineWrapping",
   Editor: "settings.editor",
-  "Enable AppSnap": "settings.enableAppSnap",
+  "Enable Screenshot": "settings.enableAppSnap",
   "External MCP integrations": "settings.integrations",
   "Follow-up behavior": "settings.followUpBehavior",
   "Font smoothing": "settings.fontSmoothing",

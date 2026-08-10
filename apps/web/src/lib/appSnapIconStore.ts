@@ -53,12 +53,12 @@ function openAppSnapIconDatabase(): Promise<IDBDatabase> {
     version: DATABASE_VERSION,
     storeName: ICON_STORE_NAME,
     keyPath: "bundleIdentifier",
-    label: "AppSnap icon cache",
+    label: "screenshot icon cache",
   });
 }
 
 function waitForTransaction(transaction: IDBTransaction): Promise<void> {
-  return waitForIdbTransaction(transaction, "AppSnap icon storage");
+  return waitForIdbTransaction(transaction, "screenshot icon storage");
 }
 
 export async function persistAppSnapIcon(input: {
@@ -101,7 +101,7 @@ export async function readAppSnapIcon(bundleIdentifier: string): Promise<string 
     const completion = waitForTransaction(transaction);
     const stored = (await awaitIdbRequest(
       transaction.objectStore(ICON_STORE_NAME).get(normalizedBundleIdentifier),
-      "Could not read the AppSnap icon cache.",
+      "Could not read the screenshot icon cache.",
     )) as StoredAppSnapIcon | undefined;
     await completion;
     return normalizeIconDataUrl(stored?.dataUrl);

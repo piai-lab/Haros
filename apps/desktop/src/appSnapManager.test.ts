@@ -77,7 +77,7 @@ describe("desktop AppSnap platform state", () => {
     expect(await manager.setEnabled(true)).toMatchObject({
       status: "error",
       shortcut: { kind: "both-option-keys" },
-      message: "The AppSnap native helper is missing from this desktop build.",
+      message: "The Screenshot helper is missing from this desktop build.",
     });
   });
 });
@@ -468,12 +468,12 @@ describe("AppSnap helper protocol", () => {
     expect(manager.getState()).toMatchObject({
       enabled: true,
       status: "error",
-      message: "The AppSnap helper stopped unexpectedly (exit 1).",
+      message: "The Screenshot helper stopped unexpectedly (exit 1).",
     });
     expect(onError).toHaveBeenCalledWith(
       expect.objectContaining({
         code: "helper-stopped",
-        message: "The AppSnap helper stopped unexpectedly (exit 1).",
+        message: "The Screenshot helper stopped unexpectedly (exit 1).",
       }),
       false,
     );
@@ -665,7 +665,7 @@ describe("AppSnap helper protocol", () => {
         `${JSON.stringify({
           type: "error",
           code: "capture_in_progress",
-          message: "A previous AppSnap capture is still in progress.",
+          message: "A previous screenshot is still in progress.",
         })}\n`,
       );
       watchChild.stdout.write(

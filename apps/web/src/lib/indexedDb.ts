@@ -8,7 +8,7 @@ export function openIndexedDbDatabase(input: {
   version: number;
   storeName: string;
   keyPath: string;
-  /** Lower-case noun used in error copy, e.g. "AppSnap icon cache". */
+  /** Lower-case noun used in error copy, e.g. "screenshot icon cache". */
   label: string;
 }): Promise<IDBDatabase> {
   if (typeof indexedDB === "undefined") {

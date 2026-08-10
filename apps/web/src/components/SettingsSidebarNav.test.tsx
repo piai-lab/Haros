@@ -7,7 +7,7 @@ import { renderToStaticMarkup } from "react-dom/server";
 import { describe, expect, it, vi } from "vitest";
 
 import { SettingsSidebarNav } from "./SettingsSidebarNav";
-import { settingRowAnchorId } from "../settingsNavigation";
+import { SETTINGS_NAV_ITEMS, settingRowAnchorId } from "../settingsNavigation";
 import {
   SETTINGS_SEARCH_ENTRIES,
   rankSettingsSearchEntries,
@@ -91,6 +91,7 @@ describe("SettingsSidebarNav", () => {
     expect(markup).toContain("System");
     expect(markup).toContain("Archived");
     expect(markup).toContain("Chat behavior");
+    expect(markup).toContain("Screenshot");
     expect(markup).toContain("MCP connections");
     expect(markup).toContain("Agent engines");
     expect(markup).toContain("Managed worktrees");
@@ -98,5 +99,11 @@ describe("SettingsSidebarNav", () => {
     expect(markup).toContain("Archived tasks and chats");
     expect(markup).not.toContain(">App<");
     expect(markup).not.toContain(">OmniMind<");
+
+    const screenshot = SETTINGS_NAV_ITEMS.find((item) => item.id === "appsnap");
+    expect(screenshot).toMatchObject({ group: "personal", label: "Screenshot" });
+    expect(SETTINGS_NAV_ITEMS.findIndex((item) => item.id === "appsnap")).toBe(
+      SETTINGS_NAV_ITEMS.findIndex((item) => item.id === "shortcuts") + 1,
+    );
   });
 });

@@ -105,20 +105,20 @@ export const SETTINGS_NAV_ITEMS: readonly SettingsNavItem[] = [
     eyebrow: "Key bindings",
   },
   {
+    id: "appsnap",
+    group: "personal",
+    label: "Screenshot",
+    description: "Capture another app's frontmost window directly into a task.",
+    icon: "screen-capture",
+    eyebrow: "Window screenshot",
+  },
+  {
     id: "usage",
     group: "personal",
     label: "Usage & limits",
     description: "See remaining quota and credits for every signed-in provider.",
     icon: "gauge",
     eyebrow: "Provider limits",
-  },
-  {
-    id: "appsnap",
-    group: "integrations",
-    label: "AppSnap",
-    description: "Capture another app's frontmost window directly into a task.",
-    icon: "screen-capture",
-    eyebrow: "Screen capture",
   },
   {
     id: "integrations",

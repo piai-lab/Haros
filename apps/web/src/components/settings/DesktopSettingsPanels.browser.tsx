@@ -160,7 +160,7 @@ describe("AppSnapSettingsPanel", () => {
     expect(onState).toHaveBeenCalledOnce();
     expect(unsubscribe).not.toHaveBeenCalled();
 
-    await mounted.getByLabelText("Enable AppSnap").click();
+    await mounted.getByLabelText("Enable Screenshot").click();
     await vi.waitFor(() => {
       expect(requestPermissions).toHaveBeenCalledOnce();
       expect(setEnabled).toHaveBeenCalledWith(true);
@@ -193,9 +193,9 @@ describe("AppSnapSettingsPanel", () => {
     });
 
     const mounted = await render(<AppSnapActivityHarness />);
-    await mounted.getByRole("button", { name: "Record AppSnap shortcut" }).click();
+    await mounted.getByRole("button", { name: "Record Screenshot shortcut" }).click();
     const recorder = document.querySelector<HTMLButtonElement>(
-      'button[aria-label="Record AppSnap shortcut"]',
+      'button[aria-label="Record Screenshot shortcut"]',
     );
     recorder?.dispatchEvent(
       new KeyboardEvent("keydown", {
