@@ -4,7 +4,7 @@
 // Layer: UI component (pure; drag wiring lives in KanbanColumn)
 // Exports: KanbanCardView
 
-import type { ThreadId } from "@synara/contracts";
+import type { ThreadId } from "@omnimind/contracts";
 import { GoRepoForked } from "react-icons/go";
 
 import {

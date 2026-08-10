@@ -2,7 +2,7 @@
 // Purpose: Characterizes Sidebar project-run lifecycle, attribution, and dialog behavior.
 // Layer: Web hook tests
 
-import { ProjectId } from "@synara/contracts";
+import { ProjectId } from "@omnimind/contracts";
 import { beforeEach, describe, expect, it, vi } from "vitest";
 
 const reactHarness = vi.hoisted(() => {

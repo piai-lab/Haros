@@ -14,7 +14,7 @@ import type {
   ProviderKind,
   ProviderListModelsResult,
   ProviderListSkillsResult,
-} from "@synara/contracts";
+} from "@omnimind/contracts";
 import * as NodeServices from "@effect/platform-node/NodeServices";
 import { Effect, Layer } from "effect";
 import { afterEach, beforeEach, describe, expect, it } from "vitest";

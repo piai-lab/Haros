@@ -7,8 +7,8 @@ import type {
   NativeApi,
   OrchestrationShellSnapshot,
   ThreadId,
-} from "@synara/contracts";
-import { buildPromptThreadTitleFallback } from "@synara/shared/chatThreads";
+} from "@omnimind/contracts";
+import { buildPromptThreadTitleFallback } from "@omnimind/shared/chatThreads";
 
 import { newCommandId, newMessageId, newThreadId } from "./utils";
 import { buildThreadHandoffImportedMessages } from "./threadHandoff";

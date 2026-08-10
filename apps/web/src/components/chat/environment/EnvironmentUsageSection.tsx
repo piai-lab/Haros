@@ -1,7 +1,7 @@
 // FILE: EnvironmentUsageSection.tsx
 // Purpose: "Usage" section of the Environment panel — same menu as the header chip.
 
-import type { ProviderKind } from "@synara/contracts";
+import type { ProviderKind } from "@omnimind/contracts";
 
 import {
   ProviderUsageMenuPopup,

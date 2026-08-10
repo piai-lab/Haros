@@ -1,6 +1,6 @@
 import { useEffect, useState } from "react";
 
-import type { DesktopWindowState } from "@synara/contracts";
+import type { DesktopWindowState } from "@omnimind/contracts";
 
 import { isElectron } from "~/env";
 import { cn, isWindowsPlatform } from "~/lib/utils";

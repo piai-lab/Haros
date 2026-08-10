@@ -1,5 +1,5 @@
 import { beforeEach, describe, expect, it, vi } from "vitest";
-import { ThreadId } from "@synara/contracts";
+import { ThreadId } from "@omnimind/contracts";
 
 import { registerSidechatCreator, waitForSidechatCreator } from "./sidechatCreatorRegistry";
 

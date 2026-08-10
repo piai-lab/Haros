@@ -1,5 +1,5 @@
-import { type ModelSelection } from "@synara/contracts";
-import { workspaceRootsEqual } from "@synara/shared/threadWorkspace";
+import { type ModelSelection } from "@omnimind/contracts";
+import { workspaceRootsEqual } from "@omnimind/shared/threadWorkspace";
 
 import type { Project } from "../types";
 import { buildChatWorkspaceFolderPath } from "./chatWorkspaceFolders";

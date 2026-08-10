@@ -17,18 +17,18 @@ import {
   type ProviderStartOptions,
   type ServerSettingsView,
   type ServerSettingsPatch,
-} from "@synara/contracts";
+} from "@omnimind/contracts";
 import {
   getDefaultModel,
   getModelOptions,
   normalizeModelSlug,
   resolveSelectableModel,
-} from "@synara/shared/model";
+} from "@omnimind/shared/model";
 import {
   APP_SNAP_SHORTCUT_KEYS,
   APP_SNAP_SHORTCUT_MODIFIERS,
   DEFAULT_APP_SNAP_SHORTCUT,
-} from "@synara/shared/appSnapShortcut";
+} from "@omnimind/shared/appSnapShortcut";
 import { useLocalStorage } from "./hooks/useLocalStorage";
 import { EnvMode } from "./components/BranchToolbar.logic";
 import { normalizeCursorModelVariantBaseId } from "./cursorModelVariants";

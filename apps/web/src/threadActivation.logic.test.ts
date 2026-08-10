@@ -1,6 +1,6 @@
 import { describe, expect, it } from "vitest";
 
-import { ProjectId, ThreadId } from "@synara/contracts";
+import { ProjectId, ThreadId } from "@omnimind/contracts";
 import type { SplitView } from "./splitViewStore";
 import {
   resolvePreferredSplitForCommand,

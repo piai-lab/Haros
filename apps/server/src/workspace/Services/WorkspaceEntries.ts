@@ -11,7 +11,7 @@ import type {
   ProjectSearchEntriesResult,
   ProjectSearchLocalEntriesInput,
   ProjectSearchLocalEntriesResult,
-} from "@synara/contracts";
+} from "@omnimind/contracts";
 
 export interface WorkspaceEntriesShape {
   readonly browse: (

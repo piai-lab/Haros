@@ -5,7 +5,7 @@ import {
   SpaceId,
   ThreadId,
   type OrchestrationEvent,
-} from "@synara/contracts";
+} from "@omnimind/contracts";
 import { Effect } from "effect";
 import { describe, expect, it } from "vitest";
 

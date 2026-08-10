@@ -5,7 +5,7 @@ import {
   MessageId,
   ProjectId,
   ThreadId,
-} from "@synara/contracts";
+} from "@omnimind/contracts";
 import { describe, expect, it } from "vitest";
 import { Effect } from "effect";
 

@@ -2,7 +2,7 @@
 // Purpose: Persists project-only renderer preferences without depending on the Zustand facade.
 // Exports: Persistence I/O plus read-only remembered project UI state.
 
-import { normalizeWorkspaceRootForComparison } from "@synara/shared/threadWorkspace";
+import { normalizeWorkspaceRootForComparison } from "@omnimind/shared/threadWorkspace";
 
 import type { AppState } from "./storeState";
 import type { Project } from "./types";

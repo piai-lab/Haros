@@ -29,11 +29,11 @@ import {
   type BrowserWaitInput,
   type ThreadBrowserState,
   type ThreadId,
-} from "@synara/contracts";
+} from "@omnimind/contracts";
 import {
   BROWSER_TOOL_DEFINITIONS_BY_NAME,
   stableJsonStringify,
-} from "@synara/shared/browserAutomationCatalogue";
+} from "@omnimind/shared/browserAutomationCatalogue";
 import { Schema } from "effect";
 
 import type {

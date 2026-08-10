@@ -1,6 +1,6 @@
 import { describe, expect, it, vi } from "vitest";
 
-import type { ServerProviderStatus } from "@synara/contracts";
+import type { ServerProviderStatus } from "@omnimind/contracts";
 import {
   isProviderUsable,
   normalizeProviderStatusForLocalConfig,

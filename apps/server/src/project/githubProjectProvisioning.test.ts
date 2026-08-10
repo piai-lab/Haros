@@ -1,5 +1,5 @@
 import * as NodeServices from "@effect/platform-node/NodeServices";
-import { CommandId, ProjectId, type GitHubProjectProvisionInput } from "@synara/contracts";
+import { CommandId, ProjectId, type GitHubProjectProvisionInput } from "@omnimind/contracts";
 import { Deferred, Effect, Fiber, FileSystem, Path, PlatformError } from "effect";
 import { describe, expect, it } from "vitest";
 

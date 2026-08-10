@@ -3,7 +3,7 @@
 // Layer: Server host integration
 // Exports: narrow intent registration plus Pi curator extraction/sanitization helpers
 
-import type { ProviderKind, ThreadId } from "@synara/contracts";
+import type { ProviderKind, ThreadId } from "@omnimind/contracts";
 
 const ENGINE_WEB_SURFACE_PRESENTER_SYMBOL = Symbol.for(
   "omnimind.engineWebSurface.presenter.v1",

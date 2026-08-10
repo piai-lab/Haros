@@ -7,7 +7,7 @@
  * only; the health check in ProviderHealth owns spawning, locking, and
  * retries.
  */
-import type { ServerProviderAuthStatus, ServerProviderStatusState } from "@synara/contracts";
+import type { ServerProviderAuthStatus, ServerProviderStatusState } from "@omnimind/contracts";
 
 import {
   detailFromResult,

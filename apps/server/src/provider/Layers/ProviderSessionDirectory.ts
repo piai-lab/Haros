@@ -1,4 +1,4 @@
-import { ProviderKind, type ThreadId } from "@synara/contracts";
+import { ProviderKind, type ThreadId } from "@omnimind/contracts";
 import { Effect, Layer, Option, Schema } from "effect";
 
 import { ProviderSessionRuntimeRepository } from "../../persistence/Services/ProviderSessionRuntime.ts";

@@ -2,7 +2,7 @@ import {
   PROVIDER_DISPLAY_NAMES,
   type ProviderKind,
   type ServerProviderStatus,
-} from "@synara/contracts";
+} from "@omnimind/contracts";
 
 export interface ProviderSendAvailability {
   readonly provider: ProviderKind;

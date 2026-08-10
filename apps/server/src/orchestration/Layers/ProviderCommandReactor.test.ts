@@ -14,7 +14,7 @@ import type {
   ProviderForkThreadResult,
   ProviderRuntimeEvent,
   ProviderSession,
-} from "@synara/contracts";
+} from "@omnimind/contracts";
 import {
   ApprovalRequestId,
   type ChatAttachment,
@@ -27,8 +27,8 @@ import {
   ProjectId,
   ThreadId,
   TurnId,
-} from "@synara/contracts";
-import { PROVIDER_DELIVERY_BLOCK_SUMMARY } from "@synara/shared/providerDeliveryBlock";
+} from "@omnimind/contracts";
+import { PROVIDER_DELIVERY_BLOCK_SUMMARY } from "@omnimind/shared/providerDeliveryBlock";
 import {
   Duration,
   Effect,

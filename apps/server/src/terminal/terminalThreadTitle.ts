@@ -11,4 +11,4 @@ export {
   deriveTerminalTitleFromCommand as deriveTerminalThreadTitleFromCommand,
   isGenericTerminalThreadTitle,
   resolveTerminalVisualIdentity,
-} from "@synara/shared/terminalThreads";
+} from "@omnimind/shared/terminalThreads";

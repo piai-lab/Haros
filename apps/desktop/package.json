@@ -1,5 +1,5 @@
 {
-  "name": "@synara/desktop",
+  "name": "@omnimind/desktop",
   "version": "0.1.0-alpha.0",
   "private": true,
   "main": "dist-electron/main.js",
@@ -19,8 +19,8 @@
     "electron-updater": "^6.6.2"
   },
   "devDependencies": {
-    "@synara/contracts": "workspace:*",
-    "@synara/shared": "workspace:*",
+    "@omnimind/contracts": "workspace:*",
+    "@omnimind/shared": "workspace:*",
     "@types/node": "catalog:",
     "tsdown": "catalog:",
     "typescript": "catalog:",

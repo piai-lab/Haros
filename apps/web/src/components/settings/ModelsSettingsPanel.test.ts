@@ -1,4 +1,4 @@
-import { getModelOptions } from "@synara/shared/model";
+import { getModelOptions } from "@omnimind/shared/model";
 import { describe, expect, it } from "vitest";
 
 import { MAX_CUSTOM_MODEL_LENGTH } from "~/appSettings";

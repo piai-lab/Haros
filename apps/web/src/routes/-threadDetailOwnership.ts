@@ -3,7 +3,7 @@
 // Layer: Route utility
 // Depends on: Thread ids only, so the rule stays testable without a store or transport.
 
-import type { ThreadId } from "@synara/contracts";
+import type { ThreadId } from "@omnimind/contracts";
 
 /**
  * Thread detail is owned by exactly two things: an open stream lease, or the

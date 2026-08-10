@@ -1,6 +1,6 @@
 import { describe, expect, it } from "vitest";
 
-import type { TerminalEvent, TerminalSessionSnapshot } from "@synara/contracts";
+import type { TerminalEvent, TerminalSessionSnapshot } from "@omnimind/contracts";
 import { terminalActivityFromEvent } from "./terminalActivity";
 
 const snapshot: TerminalSessionSnapshot = {

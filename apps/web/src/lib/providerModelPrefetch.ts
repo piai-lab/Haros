@@ -6,7 +6,7 @@
 // Layer: Web lib
 // Exports: resolve + prefetch helpers that mirror ChatView's listModels query keys.
 
-import type { ProviderKind } from "@synara/contracts";
+import type { ProviderKind } from "@omnimind/contracts";
 import type { QueryClient } from "@tanstack/react-query";
 
 import type { AppSettings } from "../appSettings";

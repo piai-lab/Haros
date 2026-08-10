@@ -410,7 +410,7 @@ jobs:
         run: bun install --frozen-lockfile --ignore-scripts
 
       - name: Build CLI package
-        run: bun run build --filter=@synara/web --filter=@synara/cli
+        run: bun run build --filter=@omnimind/web --filter=@omnimind/server
 
       - name: Publish CLI package
         run: node apps/server/scripts/cli.ts publish --tag latest --app-version "${{ needs.preflight.outputs.version }}" --verbose

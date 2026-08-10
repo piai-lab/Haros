@@ -133,15 +133,19 @@ test("public surface denylist blocks authored and existing built product leakage
   assert.deepEqual([...sourceFindings, ...builtFindings], []);
 });
 
-test("leakage check rejects denylisted destinations without blocking upstream or provider URLs", () => {
-  const rules = ["tryomnimind.com", "trysynara.com", "@trySynara"];
+test("leakage check rejects denylisted destinations without blocking upstream or provider URLs", async () => {
+  const ownerText = await readFile(path.join(root, ownerPath), "utf8");
+  const rules = parseOwnerDenylist(ownerText);
+  const [firstRule, secondRule] = rules;
+  assert.ok(firstRule);
+  assert.ok(secondRule);
   const blocked = [
-    scanText("apps/web/src/help.ts", "https://tryomnimind.com/docs", rules, "source"),
-    scanText("apps/web/dist/app.js", "https://trysynara.com", rules, "built"),
+    scanText("apps/web/src/help.ts", `https://${firstRule}/docs`, rules, "source"),
+    scanText("apps/web/dist/app.js", `https://${secondRule}`, rules, "built"),
   ].flat();
   const allowed = scanText(
     "apps/web/src/providers.ts",
-    "https://github.com/try-synara/synara https://api.deepseek.com/docs",
+    "https://github.com/upstream/project https://api.deepseek.com/docs",
     rules,
     "source",
   );
@@ -149,8 +153,8 @@ test("leakage check rejects denylisted destinations without blocking upstream or
   assert.deepEqual(
     blocked.map(({ rule, surface }) => ({ rule, surface })),
     [
-      { rule: "tryomnimind.com", surface: "source" },
-      { rule: "trysynara.com", surface: "built" },
+      { rule: firstRule, surface: "source" },
+      { rule: secondRule, surface: "built" },
     ],
   );
   assert.deepEqual(allowed, []);

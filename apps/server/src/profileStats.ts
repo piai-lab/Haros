@@ -15,8 +15,8 @@ import type {
   ProviderKind,
   StatsGetProfileStatsInput,
   StatsGetProfileTokenStatsInput,
-} from "@synara/contracts";
-import { isBuiltInComposerSlashCommandName } from "@synara/shared/composerSlashCommands";
+} from "@omnimind/contracts";
+import { isBuiltInComposerSlashCommandName } from "@omnimind/shared/composerSlashCommands";
 import { Effect, Layer, ServiceMap } from "effect";
 import * as SqlClient from "effect/unstable/sql/SqlClient";
 

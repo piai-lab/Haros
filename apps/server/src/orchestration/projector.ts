@@ -1,22 +1,22 @@
-import type { OrchestrationEvent, OrchestrationReadModel, ThreadId } from "@synara/contracts";
+import type { OrchestrationEvent, OrchestrationReadModel, ThreadId } from "@omnimind/contracts";
 import {
   OrchestrationCheckpointSummary,
   OrchestrationMessage,
   OrchestrationSession,
   OrchestrationThread,
-} from "@synara/contracts";
+} from "@omnimind/contracts";
 import {
   addPinnedMessage,
   removePinnedMessage,
   setPinnedMessageDone,
   setPinnedMessageLabel,
-} from "@synara/shared/pinnedMessages";
+} from "@omnimind/shared/pinnedMessages";
 import {
   addThreadMarker,
   removeThreadMarker,
   setThreadMarkerDone,
   setThreadMarkerLabel,
-} from "@synara/shared/threadMarkers";
+} from "@omnimind/shared/threadMarkers";
 import { Effect, Schema } from "effect";
 
 import { toProjectorDecodeError, type OrchestrationProjectorDecodeError } from "./Errors.ts";

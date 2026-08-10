@@ -1,6 +1,6 @@
 import { describe, expect, it } from "vitest";
 
-import type { PullRequestActor, PullRequestListEntry } from "@synara/contracts";
+import type { PullRequestActor, PullRequestListEntry } from "@omnimind/contracts";
 
 import {
   countUniqueViewerReviewRequests,

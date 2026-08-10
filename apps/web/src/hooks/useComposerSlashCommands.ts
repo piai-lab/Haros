@@ -7,8 +7,8 @@ import {
   type ProviderModelOptions,
   type RuntimeMode,
   type ThreadId,
-} from "@synara/contracts";
-import { deriveAssociatedWorktreeMetadata } from "@synara/shared/threadWorkspace";
+} from "@omnimind/contracts";
+import { deriveAssociatedWorktreeMetadata } from "@omnimind/shared/threadWorkspace";
 import { useCallback, useEffect, useRef, useState } from "react";
 import { newCommandId, newMessageId, newThreadId } from "../lib/utils";
 import { readNativeApi } from "../nativeApi";

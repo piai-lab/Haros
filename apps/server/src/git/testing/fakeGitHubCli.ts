@@ -12,7 +12,7 @@ import type {
   GitPullRequestCheck,
   GitPullRequestComment,
   PullRequestMergeCapabilities,
-} from "@synara/contracts";
+} from "@omnimind/contracts";
 
 import { GitHubCliError } from "../Errors.ts";
 import {

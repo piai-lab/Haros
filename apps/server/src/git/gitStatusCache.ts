@@ -2,7 +2,7 @@ import type {
   GitStatusLocalResult,
   GitStatusRemoteResult,
   GitStatusResult,
-} from "@synara/contracts";
+} from "@omnimind/contracts";
 
 import type { GitStatusDetails } from "./Services/GitCore";
 

@@ -12,7 +12,7 @@ import {
   type ProviderModelOptions,
   type ServerProviderStatus,
   type ThreadId,
-} from "@synara/contracts";
+} from "@omnimind/contracts";
 import { useState } from "react";
 
 import { ChevronDownIcon, FastModeIcon, SettingsIcon } from "~/lib/icons";

@@ -17,18 +17,18 @@ import {
   type ProviderKind,
   type ProviderRuntimeEvent,
   type RuntimeMode,
-} from "@synara/contracts";
+} from "@omnimind/contracts";
 import { Cache, Cause, Deferred, Duration, Effect, Layer, Option, Ref, Stream } from "effect";
 import * as Semaphore from "effect/Semaphore";
-import { makeDrainableWorker, startDrainableWorkerProducers } from "@synara/shared/DrainableWorker";
-import { providerSupportsNativeTurnSteering } from "@synara/shared/providerMetadata";
-import { buildStalePendingRequestFailureDetail } from "@synara/shared/threadSummary";
+import { makeDrainableWorker, startDrainableWorkerProducers } from "@omnimind/shared/DrainableWorker";
+import { providerSupportsNativeTurnSteering } from "@omnimind/shared/providerMetadata";
+import { buildStalePendingRequestFailureDetail } from "@omnimind/shared/threadSummary";
 import {
   buildSubagentIdentityDirectory,
   collectSubagentProviderThreadIds,
   extractSubagentIdentityHints,
   resolveSubagentIdentityFromDirectory,
-} from "@synara/shared/subagents";
+} from "@omnimind/shared/subagents";
 
 import {
   generatedImageMarkdown,

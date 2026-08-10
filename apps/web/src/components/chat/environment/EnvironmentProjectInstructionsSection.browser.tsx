@@ -4,7 +4,7 @@
 
 import "../../../index.css";
 
-import { ProjectId } from "@synara/contracts";
+import { ProjectId } from "@omnimind/contracts";
 import { useState } from "react";
 import { page } from "vitest/browser";
 import { afterEach, describe, expect, it, vi } from "vitest";

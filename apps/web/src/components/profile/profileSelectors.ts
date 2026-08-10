@@ -8,7 +8,7 @@ import type {
   ProfileStats,
   ProfileTokenStats,
   ProviderKind,
-} from "@synara/contracts";
+} from "@omnimind/contracts";
 
 export interface ProfileHeatmapSelection {
   readonly cells: ReadonlyArray<ProfileHeatmapCell>;

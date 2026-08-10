@@ -10,7 +10,7 @@
 //   bridge can be absent (web build) or predate the zoom channel — so the read and
 //   the subscription live here instead of being re-derived per call site.
 
-import { normalizeDesktopZoomFactor } from "@synara/shared/desktopChrome";
+import { normalizeDesktopZoomFactor } from "@omnimind/shared/desktopChrome";
 
 /** Current shell zoom factor, or 1 when the desktop bridge cannot report one. */
 export function readDesktopZoomFactor(): number {

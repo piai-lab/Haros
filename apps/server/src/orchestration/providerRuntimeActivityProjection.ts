@@ -6,8 +6,8 @@ import {
   type ProviderRuntimeEvent,
   ThreadId,
   TurnId,
-} from "@synara/contracts";
-import { nonEmptyTrimmed } from "@synara/shared/text";
+} from "@omnimind/contracts";
+import { nonEmptyTrimmed } from "@omnimind/shared/text";
 
 const MAX_ACTIVITY_DATA_JSON_CHARS = 16_000;
 const MAX_ACTIVITY_DATA_STRING_CHARS = 2_000;

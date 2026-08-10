@@ -9,8 +9,8 @@ import type {
   GitPullRequestComment,
   PullRequestCheck,
   PullRequestComment,
-} from "@synara/contracts";
-import { pluralize } from "@synara/shared/text";
+} from "@omnimind/contracts";
+import { pluralize } from "@omnimind/shared/text";
 import type { AppLocale } from "~/locale";
 
 export type PullRequestChecksTone = "pending" | "success" | "failure" | "none";

@@ -7,8 +7,8 @@ import { rmSync } from "node:fs";
 import { tmpdir } from "node:os";
 import path from "node:path";
 
-import { ThreadId } from "@synara/contracts";
-import { SCRATCH_WORKSPACES_DIRNAME } from "@synara/shared/threadWorkspace";
+import { ThreadId } from "@omnimind/contracts";
+import { SCRATCH_WORKSPACES_DIRNAME } from "@omnimind/shared/threadWorkspace";
 import { describe, expect, it } from "vitest";
 
 import { ensureIsolatedScratchWorkspace } from "./scratchWorkspaces";

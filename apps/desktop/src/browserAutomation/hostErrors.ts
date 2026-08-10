@@ -2,8 +2,8 @@ import {
   type BrowserAutomationError,
   type BrowserAutomationErrorInput,
   type BrowserMcpToolErrorEnvelope,
-} from "@synara/contracts";
-import { makeBrowserMcpToolErrorEnvelope } from "@synara/shared/browserAutomationErrors";
+} from "@omnimind/contracts";
+import { makeBrowserMcpToolErrorEnvelope } from "@omnimind/shared/browserAutomationErrors";
 
 export class BrowserAutomationHostError extends Error {
   readonly envelope: BrowserMcpToolErrorEnvelope;

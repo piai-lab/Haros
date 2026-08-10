@@ -2,14 +2,14 @@
 // Purpose: Normalizes generic tool-call titles and humanizes command executions for timeline rows.
 // Layer: UI utility
 // Exports: deriveReadableToolTitle, deriveReadableCommandDisplay, deriveFriendlyCommandTarget, command icon classifiers, deriveInlineCommandCall, normalizeCompactToolLabel, isGenericToolTitle, extractWebFetchUrl
-// Depends on: @synara/contracts tool lifecycle item types
+// Depends on: @omnimind/contracts tool lifecycle item types
 
 import {
   BROWSER_TOOL_NAMES,
   type BrowserToolName,
   type ToolLifecycleItemType,
-} from "@synara/contracts";
-import { BROWSER_TOOL_TITLES } from "@synara/shared/browserAutomationPresentation";
+} from "@omnimind/contracts";
+import { BROWSER_TOOL_TITLES } from "@omnimind/shared/browserAutomationPresentation";
 import { basenameOfPath } from "../file-icons";
 import { extractToolArgumentField } from "./toolArgumentSummary";
 

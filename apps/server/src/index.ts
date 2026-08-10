@@ -8,7 +8,7 @@ import { OpenLive } from "./open";
 import { Command } from "effect/unstable/cli";
 import { version } from "../package.json" with { type: "json" };
 import { ServerLive } from "./effectServer";
-import { NetService } from "@synara/shared/Net";
+import { NetService } from "@omnimind/shared/Net";
 import { FetchHttpClient } from "effect/unstable/http";
 
 const RuntimeLayer = Layer.empty.pipe(

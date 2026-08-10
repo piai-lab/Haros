@@ -4,7 +4,7 @@
 
 import { useEffect } from "react";
 
-import type { DesktopAppIcon } from "@synara/contracts";
+import type { DesktopAppIcon } from "@omnimind/contracts";
 import { useAppSettings } from "~/appSettings";
 
 let lastAppliedIcon: DesktopAppIcon | null = null;

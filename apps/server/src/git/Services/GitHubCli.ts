@@ -19,7 +19,7 @@ import type {
   PullRequestMergeCapabilities,
   PullRequestMergeMethod,
   PullRequestState,
-} from "@synara/contracts";
+} from "@omnimind/contracts";
 
 import type { ProcessRunResult } from "../../processRunner";
 import type { GitHubCliError } from "../Errors.ts";

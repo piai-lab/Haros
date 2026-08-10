@@ -1,6 +1,6 @@
 import { describe, expect, it } from "vitest";
 
-import type { GitPullRequestComment, PullRequestComment } from "@synara/contracts";
+import type { GitPullRequestComment, PullRequestComment } from "@omnimind/contracts";
 
 import {
   buildFixReviewCommentsPrompt,

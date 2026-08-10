@@ -9,7 +9,7 @@
 import { ServiceMap } from "effect";
 import type { Effect, Scope } from "effect";
 
-import type { ThreadId } from "@synara/contracts";
+import type { ThreadId } from "@omnimind/contracts";
 import type {
   ProviderBlockingDeliveryEvidence,
   ProviderDeliveryReconciliationOutcome,

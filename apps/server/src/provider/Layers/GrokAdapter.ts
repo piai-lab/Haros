@@ -20,9 +20,9 @@ import {
   RuntimeRequestId,
   type ThreadId,
   TurnId,
-} from "@synara/contracts";
-import { prepareWindowsSafeProcess } from "@synara/shared/windowsProcess";
-import { decodeOutboundJson, decodeOutboundText, outboundHttp } from "@synara/shared/outboundHttp";
+} from "@omnimind/contracts";
+import { prepareWindowsSafeProcess } from "@omnimind/shared/windowsProcess";
+import { decodeOutboundJson, decodeOutboundText, outboundHttp } from "@omnimind/shared/outboundHttp";
 import {
   Cause,
   DateTime,

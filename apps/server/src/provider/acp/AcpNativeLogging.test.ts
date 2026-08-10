@@ -2,7 +2,7 @@ import fs from "node:fs";
 import os from "node:os";
 import path from "node:path";
 
-import { ThreadId } from "@synara/contracts";
+import { ThreadId } from "@omnimind/contracts";
 import { assert, describe, it } from "@effect/vitest";
 import { Effect } from "effect";
 

@@ -1,4 +1,4 @@
-import type { PullRequestDetailInput } from "@synara/contracts";
+import type { PullRequestDetailInput } from "@omnimind/contracts";
 
 /** Whether a dock-triggered close should return keyboard focus to the selected list row. */
 export function isFocusInsideRightDock(activeElement: Element | null): boolean {

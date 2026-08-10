@@ -1,4 +1,4 @@
-import type { ThreadId } from "@synara/contracts";
+import type { ThreadId } from "@omnimind/contracts";
 
 import { findLeafPaneById } from "../../splitView.logic";
 import type { PaneId, SplitView } from "../../splitViewStore";

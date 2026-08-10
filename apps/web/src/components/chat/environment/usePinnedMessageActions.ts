@@ -8,7 +8,7 @@ import {
   type MessageId,
   type PinnedMessage,
   type ThreadId,
-} from "@synara/contracts";
+} from "@omnimind/contracts";
 import { useEffect, useRef } from "react";
 
 import { toastManager } from "~/components/ui/toast";

@@ -1,4 +1,4 @@
-import { RuntimeRequestId, TurnId } from "@synara/contracts";
+import { RuntimeRequestId, TurnId } from "@omnimind/contracts";
 import { describe, expect, it } from "vitest";
 
 import {

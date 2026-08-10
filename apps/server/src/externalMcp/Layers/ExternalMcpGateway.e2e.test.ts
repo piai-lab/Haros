@@ -9,8 +9,8 @@ import type {
   OrchestrationThread,
   OrchestrationThreadShell,
   ServerProviderStatus,
-} from "@synara/contracts";
-import { MessageId, ProjectId, TurnId } from "@synara/contracts";
+} from "@omnimind/contracts";
+import { MessageId, ProjectId, TurnId } from "@omnimind/contracts";
 import { Effect, Fiber, Layer, Option, Stream } from "effect";
 import * as SqlClient from "effect/unstable/sql/SqlClient";
 import { afterEach, describe, expect, it } from "vitest";

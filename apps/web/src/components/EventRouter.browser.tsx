@@ -14,7 +14,7 @@ import {
   type ServerConfig,
   type WsWelcomePayload,
   WS_METHODS,
-} from "@synara/contracts";
+} from "@omnimind/contracts";
 import { RouterProvider, createMemoryHistory } from "@tanstack/react-router";
 import { HttpResponse, http, ws } from "msw";
 import { setupWorker } from "msw/browser";

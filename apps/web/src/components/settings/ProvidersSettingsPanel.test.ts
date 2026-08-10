@@ -1,6 +1,6 @@
 import { describe, expect, it } from "vitest";
 
-import type { ServerProviderStatus } from "@synara/contracts";
+import type { ServerProviderStatus } from "@omnimind/contracts";
 
 import { type AppSettings, AppSettingsSchema } from "~/appSettings";
 

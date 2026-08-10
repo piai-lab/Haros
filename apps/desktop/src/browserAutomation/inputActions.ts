@@ -15,7 +15,7 @@ import type {
   BrowserTabId,
   BrowserTypeInput,
   BrowserTypeOutput,
-} from "@synara/contracts";
+} from "@omnimind/contracts";
 
 import type { BrowserAutomationVisibleRuntime } from "../browserManager";
 import { type ActionableTarget, waitForActionableTarget } from "./actionability";

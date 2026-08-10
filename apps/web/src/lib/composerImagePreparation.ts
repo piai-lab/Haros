@@ -5,7 +5,7 @@
 import {
   PROVIDER_SEND_TURN_MAX_IMAGE_BYTES,
   PROVIDER_SEND_TURN_MAX_IMAGE_IMPORT_BYTES,
-} from "@synara/contracts";
+} from "@omnimind/contracts";
 
 const MEBIBYTE = 1024 * 1024;
 const JPEG_HEADER_READ_BYTES = 1024 * 1024;

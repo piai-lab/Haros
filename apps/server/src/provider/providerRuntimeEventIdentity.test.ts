@@ -1,4 +1,4 @@
-import { EventId, RuntimeTaskId, ThreadId, type ProviderRuntimeEvent } from "@synara/contracts";
+import { EventId, RuntimeTaskId, ThreadId, type ProviderRuntimeEvent } from "@omnimind/contracts";
 import { describe, expect, it } from "vitest";
 
 import { assignDerivedProviderRuntimeEventIds } from "./providerRuntimeEventIdentity.ts";

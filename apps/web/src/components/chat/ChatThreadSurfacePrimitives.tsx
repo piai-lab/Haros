@@ -1,5 +1,5 @@
 import type { FileDiffMetadata } from "@pierre/diffs/react";
-import type { ThreadId, TurnId } from "@synara/contracts";
+import type { ThreadId, TurnId } from "@omnimind/contracts";
 import { lazy, type ReactNode, Suspense, useEffect, useState } from "react";
 
 import ChatView from "../ChatView";

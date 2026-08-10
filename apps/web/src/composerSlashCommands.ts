@@ -1,10 +1,10 @@
-import type { GitBranch, ProviderKind } from "@synara/contracts";
+import type { GitBranch, ProviderKind } from "@omnimind/contracts";
 import {
   BUILT_IN_COMPOSER_SLASH_COMMANDS,
   isBuiltInComposerSlashCommandName,
   normalizeComposerSlashCommandName,
   type BuiltInComposerSlashCommand,
-} from "@synara/shared/composerSlashCommands";
+} from "@omnimind/shared/composerSlashCommands";
 import { rankProviderDiscoveryItems } from "./lib/providerDiscovery";
 
 export { BUILT_IN_COMPOSER_SLASH_COMMANDS };

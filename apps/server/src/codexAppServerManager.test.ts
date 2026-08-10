@@ -19,7 +19,7 @@ import {
   ThreadId,
   TurnId,
   type RuntimeMode,
-} from "@synara/contracts";
+} from "@omnimind/contracts";
 
 import {
   buildCodexProcessEnv,

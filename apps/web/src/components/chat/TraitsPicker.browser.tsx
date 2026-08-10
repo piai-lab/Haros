@@ -10,7 +10,7 @@ import {
   type ProviderModelDescriptor,
   ProjectId,
   ThreadId,
-} from "@synara/contracts";
+} from "@omnimind/contracts";
 import { page } from "vitest/browser";
 import { afterEach, describe, expect, it, vi } from "vitest";
 import { render } from "vitest-browser-react";

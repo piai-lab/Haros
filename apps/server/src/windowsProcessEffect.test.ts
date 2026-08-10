@@ -3,7 +3,7 @@
 // Layer: Server process integration test
 
 import * as NodeServices from "@effect/platform-node/NodeServices";
-import { prepareWindowsSafeProcess } from "@synara/shared/windowsProcess";
+import { prepareWindowsSafeProcess } from "@omnimind/shared/windowsProcess";
 import { mkdirSync, mkdtempSync, readFileSync, rmSync, writeFileSync } from "node:fs";
 import { tmpdir } from "node:os";
 import * as Path from "node:path";

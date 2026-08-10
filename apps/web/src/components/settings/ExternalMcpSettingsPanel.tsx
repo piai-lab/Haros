@@ -2,7 +2,7 @@ import {
   ProjectId,
   type ExternalMcpCapability,
   type ExternalMcpCreateIntegrationResult,
-} from "@synara/contracts";
+} from "@omnimind/contracts";
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import { useEffect, useMemo, useState } from "react";
 

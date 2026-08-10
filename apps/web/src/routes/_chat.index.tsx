@@ -3,7 +3,7 @@
 // Layer: Routing
 // Depends on: the shared restore/create route surface plus the home-chat new-chat handler.
 
-import type { ProjectId } from "@synara/contracts";
+import type { ProjectId } from "@omnimind/contracts";
 import { createFileRoute } from "@tanstack/react-router";
 
 import {

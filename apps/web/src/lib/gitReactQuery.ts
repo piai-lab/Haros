@@ -5,7 +5,7 @@ import type {
   ModelSelection,
   NativeApi,
   ProviderStartOptions,
-} from "@synara/contracts";
+} from "@omnimind/contracts";
 import { mutationOptions, queryOptions, type QueryClient } from "@tanstack/react-query";
 import { ensureNativeApi } from "../nativeApi";
 

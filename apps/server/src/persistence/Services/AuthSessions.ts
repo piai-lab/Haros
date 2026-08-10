@@ -1,4 +1,4 @@
-import { AuthClientMetadataDeviceType, AuthSessionId } from "@synara/contracts";
+import { AuthClientMetadataDeviceType, AuthSessionId } from "@omnimind/contracts";
 import { Option, Schema, ServiceMap } from "effect";
 import type { Effect } from "effect";
 

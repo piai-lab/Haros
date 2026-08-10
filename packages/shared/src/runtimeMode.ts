@@ -1,4 +1,4 @@
-import type { ProviderKind, RuntimeMode } from "@synara/contracts";
+import type { ProviderKind, RuntimeMode } from "@omnimind/contracts";
 
 const AUTO_RUNTIME_MODE_PROVIDERS = new Set<ProviderKind>(["codex", "claudeAgent"]);
 const RUNTIME_MODE_PRIVILEGE = {

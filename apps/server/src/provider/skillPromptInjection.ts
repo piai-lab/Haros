@@ -8,7 +8,7 @@
 import * as fs from "node:fs/promises";
 import * as nodePath from "node:path";
 
-import type { ProviderKind, ProviderSkillReference } from "@synara/contracts";
+import type { ProviderKind, ProviderSkillReference } from "@omnimind/contracts";
 
 // Per-skill cap keeps a single oversized SKILL.md from eating the turn budget.
 const MAX_INLINE_SKILL_CONTENT_CHARS = 24_000;

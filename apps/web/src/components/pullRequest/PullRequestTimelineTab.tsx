@@ -5,7 +5,7 @@
 // Layer: Pull request presentation
 // Exports: PullRequestTimelineTab
 
-import type { PullRequestDetail } from "@synara/contracts";
+import type { PullRequestDetail } from "@omnimind/contracts";
 import { formatRelativeTime } from "~/lib/relativeTime";
 import { buildPullRequestTimelineEvents } from "./pullRequestDetail.logic";
 import { PR_BODY_TEXT_CLASS_NAME, PR_META_TEXT_CLASS_NAME } from "./pullRequestText";

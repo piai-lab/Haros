@@ -1,5 +1,5 @@
 import { describe, expect, it } from "vitest";
-import type { OrchestrationEvent } from "@synara/contracts";
+import type { OrchestrationEvent } from "@omnimind/contracts";
 
 import {
   decodeDiagnosticCursor,

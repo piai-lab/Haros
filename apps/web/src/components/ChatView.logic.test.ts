@@ -7,7 +7,7 @@ import {
   type GitWorktreeSetupProgressEvent,
   type ModelSlug,
   type RuntimeMode,
-} from "@synara/contracts";
+} from "@omnimind/contracts";
 import { describe, expect, it, vi } from "vitest";
 
 import type { WorkLogEntry } from "../session-logic";

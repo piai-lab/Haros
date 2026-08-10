@@ -3,7 +3,7 @@ import type {
   OrchestrationSession,
   RuntimeMode,
   ThreadId,
-} from "@synara/contracts";
+} from "@omnimind/contracts";
 
 export function deriveTurnStartModelSelection(input: {
   readonly currentModelSelection: ModelSelection;

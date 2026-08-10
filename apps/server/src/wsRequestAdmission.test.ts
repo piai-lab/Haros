@@ -1,4 +1,4 @@
-import { ORCHESTRATION_WS_METHODS, WS_METHODS } from "@synara/contracts";
+import { ORCHESTRATION_WS_METHODS, WS_METHODS } from "@omnimind/contracts";
 import { Deferred, Effect, Fiber } from "effect";
 import { describe, expect, it } from "vitest";
 

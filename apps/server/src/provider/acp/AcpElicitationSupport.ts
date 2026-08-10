@@ -3,7 +3,7 @@
 // Layer: Provider ACP protocol mapping
 // Exports: question extraction and typed ACP response construction.
 
-import type { ProviderUserInputAnswers, UserInputQuestion } from "@synara/contracts";
+import type { ProviderUserInputAnswers, UserInputQuestion } from "@omnimind/contracts";
 import type * as Acp from "@agentclientprotocol/sdk";
 
 type FormElicitationRequest = Acp.ElicitationFormMode & {

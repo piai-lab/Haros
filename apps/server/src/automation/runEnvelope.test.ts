@@ -4,7 +4,7 @@ import {
   ProjectId,
   type AutomationDefinition,
   type AutomationRun,
-} from "@synara/contracts";
+} from "@omnimind/contracts";
 import { describe, expect, it } from "vitest";
 
 import {

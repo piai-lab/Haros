@@ -10,7 +10,7 @@ import {
   type ProviderModelDescriptor,
   type ProviderModelOptions,
   type ThreadId,
-} from "@synara/contracts";
+} from "@omnimind/contracts";
 import {
   getDefaultContextWindow,
   getDefaultEffort,
@@ -23,7 +23,7 @@ import {
   normalizePiModelOptions,
   resolveLabeledOptionValue,
   trimOrNull,
-} from "@synara/shared/model";
+} from "@omnimind/shared/model";
 import type { ReactNode } from "react";
 import { classifyCodexReasoningEffortSupport } from "../../lib/codexReasoningEffort";
 import { TraitsMenuContent, TraitsPicker } from "./TraitsPicker";

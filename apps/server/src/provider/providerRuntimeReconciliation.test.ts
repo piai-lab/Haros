@@ -7,7 +7,7 @@ import {
   type OrchestrationSession,
   type OrchestrationThreadShell,
   type ProviderSession,
-} from "@synara/contracts";
+} from "@omnimind/contracts";
 import { Schema } from "effect";
 import { describe, expect, it } from "vitest";
 

@@ -13,7 +13,7 @@ import type {
   ProviderInteractionMode,
   ProviderKind,
   RuntimeMode,
-} from "@synara/contracts";
+} from "@omnimind/contracts";
 import { useQuery } from "@tanstack/react-query";
 import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 

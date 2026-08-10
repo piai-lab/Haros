@@ -6,7 +6,7 @@
 // Layer: Shared domain helper
 // Exports: chat-container root resolution, legacy Home row detection, ordinary-project rule
 
-import type { ProjectKind } from "@synara/contracts";
+import type { ProjectKind } from "@omnimind/contracts";
 
 import {
   workspaceRootsEqual,

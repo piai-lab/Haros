@@ -3,7 +3,7 @@ import {
   type ClaudeSubagentAliasDefinition,
   type ProviderKind,
   type ResolvedAgentAlias,
-} from "@synara/contracts";
+} from "@omnimind/contracts";
 
 export interface ParsedAgentMentionInvocation {
   readonly alias: string;

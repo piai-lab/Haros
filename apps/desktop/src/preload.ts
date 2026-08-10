@@ -3,7 +3,7 @@ import type {
   BrowserAnnotationEvent,
   BrowserUseOpenPanelRequest,
   DesktopBridge,
-} from "@synara/contracts";
+} from "@omnimind/contracts";
 import { normalizeDesktopWsUrl, resolveDesktopWsUrlFromEnv } from "./desktopWsBridge";
 import { DESKTOP_IPC_CHANNELS } from "./ipcChannels";
 

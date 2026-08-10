@@ -42,7 +42,7 @@ import type {
   DesktopTheme,
   DesktopUpdateActionResult,
   DesktopUpdateState,
-} from "@synara/contracts";
+} from "@omnimind/contracts";
 import {
   autoUpdater,
   BaseUpdater,
@@ -50,18 +50,18 @@ import {
   type UpdateDownloadedEvent,
 } from "electron-updater";
 
-import type { ContextMenuItem } from "@synara/contracts";
-import { isKeyboardShortcutsHelpChord } from "@synara/shared/browserShortcuts";
-import { getMacTrafficLightPosition } from "@synara/shared/desktopChrome";
+import type { ContextMenuItem } from "@omnimind/contracts";
+import { isKeyboardShortcutsHelpChord } from "@omnimind/shared/browserShortcuts";
+import { getMacTrafficLightPosition } from "@omnimind/shared/desktopChrome";
 import {
   OMNIMIND_DESKTOP_UPDATE_CHANNEL,
   resolveOmniMindDesktopFlavor,
   omnimindDesktopIdentity,
-} from "@synara/shared/desktopIdentity";
-import { NetService } from "@synara/shared/Net";
-import { applyShellEnvironmentHydrationMarker } from "@synara/shared/shell";
-import { RotatingFileSink } from "@synara/shared/logging";
-import { ensureStaticSnapshot, findAsarArchivePath } from "@synara/shared/staticSnapshot";
+} from "@omnimind/shared/desktopIdentity";
+import { NetService } from "@omnimind/shared/Net";
+import { applyShellEnvironmentHydrationMarker } from "@omnimind/shared/shell";
+import { RotatingFileSink } from "@omnimind/shared/logging";
+import { ensureStaticSnapshot, findAsarArchivePath } from "@omnimind/shared/staticSnapshot";
 import { isBackendReadinessAborted, waitForHttpReady } from "./backendReadiness";
 import { resolveBackendNodeArgs } from "./backendNodeOptions";
 import {
@@ -3978,7 +3978,7 @@ function getTitleBarOptions(): BrowserWindowConstructorOptions {
   }
   return {
     titleBarStyle: "hiddenInset",
-    // Derived from the shared chat-surface header geometry (@synara/shared/desktopChrome)
+    // Derived from the shared chat-surface header geometry (@omnimind/shared/desktopChrome)
     // so the native lights and the renderer's leading toggle/arrow controls always share
     // the same vertical center. Tune the height/radius there, never the raw px here.
     trafficLightPosition: getMacTrafficLightPosition(),

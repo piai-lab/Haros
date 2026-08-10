@@ -14,7 +14,7 @@ import {
   RuntimeItemId,
   ThreadId,
   TurnId,
-} from "@synara/contracts";
+} from "@omnimind/contracts";
 import { Effect, Layer, Option, Queue, Stream } from "effect";
 
 import {

@@ -5,7 +5,7 @@
 // Layer: Chat composer logic
 // Exports: deriveComposerSubagentStripItems and the strip row types
 
-import { ThreadId, type TurnId } from "@synara/contracts";
+import { ThreadId, type TurnId } from "@omnimind/contracts";
 
 import type { WorkLogEntry, WorkLogSubagent } from "../../session-logic";
 import {

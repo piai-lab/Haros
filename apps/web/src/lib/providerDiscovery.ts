@@ -3,13 +3,13 @@
 // Layer: Web lib
 // Exports: cwd resolution, search normalization, and provider skill/plugin display helpers.
 
-import { resolveThreadBranchSourceCwd } from "@synara/shared/threadEnvironment";
+import { resolveThreadBranchSourceCwd } from "@omnimind/shared/threadEnvironment";
 import type {
   ProviderNativeCommandDescriptor,
   ProviderPluginDescriptor,
   ProviderSkillDiscoveryWarning,
   ProviderSkillDescriptor,
-} from "@synara/contracts";
+} from "@omnimind/contracts";
 import type { AppLocale } from "~/locale";
 
 // Prefer the most specific workspace context so discovery reflects the active thread first.

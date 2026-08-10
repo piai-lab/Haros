@@ -11,7 +11,7 @@ import {
   ProviderReadPluginInput,
   type ProviderSkillDiscoveryWarning,
   type ProviderSkillDescriptor,
-} from "@synara/contracts";
+} from "@omnimind/contracts";
 import { Effect, Layer, Schema, SchemaIssue } from "effect";
 
 import { ServerConfig } from "../../config.ts";

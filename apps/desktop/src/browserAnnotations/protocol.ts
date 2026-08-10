@@ -15,8 +15,8 @@ import {
   type BrowserAnnotationMarker,
   type BrowserAnnotationSource,
   type BrowserAnnotationTheme,
-} from "@synara/contracts";
-import { sanitizeBrowserAnnotationPageTitle } from "@synara/shared/browserAnnotations";
+} from "@omnimind/contracts";
+import { sanitizeBrowserAnnotationPageTitle } from "@omnimind/shared/browserAnnotations";
 
 export const BROWSER_ANNOTATION_PROTOCOL_VERSION = 1 as const;
 

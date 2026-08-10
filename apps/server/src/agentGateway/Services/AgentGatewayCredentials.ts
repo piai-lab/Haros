@@ -8,7 +8,7 @@
  *
  * @module agentGateway/Services/AgentGatewayCredentials
  */
-import type { ProviderKind, ThreadId } from "@synara/contracts";
+import type { ProviderKind, ThreadId } from "@omnimind/contracts";
 import { ServiceMap } from "effect";
 import type {
   AgentGatewaySessionIdentity,

@@ -1,5 +1,5 @@
 {
-  "name": "@synara/cli",
+  "name": "@omnimind/server",
   "version": "0.1.0-alpha.0",
   "private": true,
   "license": "MIT",
@@ -41,9 +41,9 @@
   "devDependencies": {
     "@effect/language-service": "catalog:",
     "@effect/vitest": "catalog:",
-    "@synara/contracts": "workspace:*",
-    "@synara/shared": "workspace:*",
-    "@synara/web": "workspace:*",
+    "@omnimind/contracts": "workspace:*",
+    "@omnimind/shared": "workspace:*",
+    "@omnimind/web": "workspace:*",
     "@types/bun": "catalog:",
     "@types/node": "catalog:",
     "@types/ws": "^8.5.13",

@@ -33,11 +33,11 @@ import {
   type ServerVoiceTranscriptionInput,
   type ServerVoiceTranscriptionResult,
   type UserInputQuestion,
-} from "@synara/contracts";
-import { prewarmChatGptVoiceTranscriptionConnection } from "@synara/shared/chatGptVoiceTranscription";
-import { getModelSelectionBooleanOptionValue, normalizeModelSlug } from "@synara/shared/model";
-import { decodeSubagentReceiverThreadIds } from "@synara/shared/subagents";
-import { prepareWindowsSafeProcess } from "@synara/shared/windowsProcess";
+} from "@omnimind/contracts";
+import { prewarmChatGptVoiceTranscriptionConnection } from "@omnimind/shared/chatGptVoiceTranscription";
+import { getModelSelectionBooleanOptionValue, normalizeModelSlug } from "@omnimind/shared/model";
+import { decodeSubagentReceiverThreadIds } from "@omnimind/shared/subagents";
+import { prepareWindowsSafeProcess } from "@omnimind/shared/windowsProcess";
 import { Effect, ServiceMap } from "effect";
 
 import {

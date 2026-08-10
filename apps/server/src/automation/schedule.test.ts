@@ -1,5 +1,5 @@
 import { describe, expect, it } from "vitest";
-import { AutomationId } from "@synara/contracts";
+import { AutomationId } from "@omnimind/contracts";
 
 import {
   computeAutomationScheduleSpacingSeconds,

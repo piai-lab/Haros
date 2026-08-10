@@ -20,8 +20,8 @@ import {
   ProjectSearchEntriesResult,
   ProjectSearchLocalEntriesInput,
   ProjectSearchLocalEntriesResult,
-} from "@synara/contracts";
-import { isExplicitRelativePath, isWindowsAbsolutePath } from "@synara/shared/path";
+} from "@omnimind/contracts";
+import { isExplicitRelativePath, isWindowsAbsolutePath } from "@omnimind/shared/path";
 import { resolveRealPathWithinRoot } from "./workspace/realPathContainment";
 
 const WORKSPACE_CACHE_TTL_MS = 15_000;

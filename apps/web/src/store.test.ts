@@ -7,7 +7,7 @@ import {
   ThreadId,
   TurnId,
   type OrchestrationReadModel,
-} from "@synara/contracts";
+} from "@omnimind/contracts";
 import { describe, expect, it, vi } from "vitest";
 
 import {

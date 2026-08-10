@@ -6,7 +6,7 @@
 import {
   DEFAULT_AUTOMATION_FAST_INTERVAL_MAX_ITERATIONS,
   DEFAULT_AUTOMATION_MINIMUM_INTERVAL_SECONDS,
-} from "@synara/contracts";
+} from "@omnimind/contracts";
 import type {
   AutomationCreateInput,
   AutomationDefinition,
@@ -20,16 +20,16 @@ import type {
   ProviderStartOptions,
   RuntimeMode,
   ThreadId,
-} from "@synara/contracts";
+} from "@omnimind/contracts";
 
 import {
   completionPolicyFromStopWhen,
   stopWhenFromCompletionPolicy,
-} from "@synara/shared/automationCompletionPolicy";
+} from "@omnimind/shared/automationCompletionPolicy";
 import {
   automationContinuationThreadId,
   automationRequiresTargetThread,
-} from "@synara/shared/automationMode";
+} from "@omnimind/shared/automationMode";
 import type { AppLocale } from "../locale";
 import {
   acknowledgedRiskIdsForDraft,

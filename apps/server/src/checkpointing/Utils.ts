@@ -6,8 +6,8 @@ import {
   type ProjectKind,
   type ThreadId,
   TurnId,
-} from "@synara/contracts";
-import { resolveThreadWorkspaceCwd as resolveSharedThreadWorkspaceCwd } from "@synara/shared/threadEnvironment";
+} from "@omnimind/contracts";
+import { resolveThreadWorkspaceCwd as resolveSharedThreadWorkspaceCwd } from "@omnimind/shared/threadEnvironment";
 
 export const CHECKPOINT_REFS_PREFIX = "refs/omnimind/checkpoints";
 

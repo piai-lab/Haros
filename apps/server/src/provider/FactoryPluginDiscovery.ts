@@ -12,7 +12,7 @@ import type {
   ProviderPluginMarketplaceDescriptor,
   ProviderPluginMarketplaceLoadError,
   ProviderReadPluginResult,
-} from "@synara/contracts";
+} from "@omnimind/contracts";
 
 import { collectSkillsFromRoots } from "./skillsCatalog.ts";
 

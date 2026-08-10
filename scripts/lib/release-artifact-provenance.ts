@@ -16,7 +16,7 @@ import {
 import { tmpdir } from "node:os";
 import { join, resolve } from "node:path";
 
-import { matchesDistinguishedName } from "@synara/shared/windowsCertificate";
+import { matchesDistinguishedName } from "@omnimind/shared/windowsCertificate";
 
 export type ReleaseArtifactPlatform = "linux" | "mac" | "win";
 

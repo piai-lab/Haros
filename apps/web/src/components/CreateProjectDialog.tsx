@@ -7,9 +7,9 @@
 import type {
   GitHubProjectProvisionPhase,
   GitHubProjectProvisionProgressEvent,
-} from "@synara/contracts";
-import { parseGitHubRepositoryInput } from "@synara/shared/githubRepository";
-import { normalizeProjectDirectoryName } from "@synara/shared/projectDirectoryName";
+} from "@omnimind/contracts";
+import { parseGitHubRepositoryInput } from "@omnimind/shared/githubRepository";
+import { normalizeProjectDirectoryName } from "@omnimind/shared/projectDirectoryName";
 import { useCallback, useEffect, useId, useRef, useState, type KeyboardEvent } from "react";
 
 import { isElectron } from "../env";

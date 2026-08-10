@@ -9,7 +9,7 @@ import {
   type ThreadId,
   type WsWelcomePayload,
   WS_METHODS,
-} from "@synara/contracts";
+} from "@omnimind/contracts";
 import { RouterProvider, createMemoryHistory } from "@tanstack/react-router";
 import { ws, http, HttpResponse } from "msw";
 import { setupWorker } from "msw/browser";

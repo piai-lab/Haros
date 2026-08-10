@@ -4,7 +4,7 @@
 
 import "../index.css";
 
-import type { NativeApi } from "@synara/contracts";
+import type { NativeApi } from "@omnimind/contracts";
 import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
 import { afterEach, expect, it, vi } from "vitest";
 import { render } from "vitest-browser-react";

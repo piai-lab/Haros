@@ -10,14 +10,14 @@ import {
   PROVIDER_SEND_TURN_MAX_IMAGE_BYTES,
   SERVER_VOICE_TRANSCRIPTION_MAX_AUDIO_BYTES,
   ThreadId,
-} from "@synara/contracts";
+} from "@omnimind/contracts";
 import {
   ATTACHMENT_CANCEL_ROUTE_PATH,
   ATTACHMENT_UPLOAD_ROUTE_PATH,
   VOICE_TRANSCRIPTION_UPLOAD_ROUTE_PATH,
-} from "@synara/shared/binaryTransfer";
-import { EDITOR_ICON_ROUTE_PATH } from "@synara/shared/editorIcons";
-import { threadExportBlockedReason } from "@synara/shared/threadExport";
+} from "@omnimind/shared/binaryTransfer";
+import { EDITOR_ICON_ROUTE_PATH } from "@omnimind/shared/editorIcons";
+import { threadExportBlockedReason } from "@omnimind/shared/threadExport";
 import { Cause, DateTime, Effect, FileSystem, Layer, Option, Path, Schema, Stream } from "effect";
 import { HttpRouter, HttpServerRequest, HttpServerResponse } from "effect/unstable/http";
 

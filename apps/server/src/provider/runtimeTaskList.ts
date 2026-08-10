@@ -1,4 +1,4 @@
-import type { RuntimeTaskListItem, RuntimeTaskStatus } from "@synara/contracts";
+import type { RuntimeTaskListItem, RuntimeTaskStatus } from "@omnimind/contracts";
 
 export function normalizeRuntimeTaskStatus(value: unknown): RuntimeTaskStatus {
   if (value === "completed") {

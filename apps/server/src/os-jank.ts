@@ -9,12 +9,12 @@ import {
   mergePathEntries,
   readPathFromLaunchctl,
   readPathFromLoginShell,
-} from "@synara/shared/shell";
-import { createCachedLoginShellPathReader } from "@synara/shared/loginShellEnvironment";
+} from "@omnimind/shared/shell";
+import { createCachedLoginShellPathReader } from "@omnimind/shared/loginShellEnvironment";
 import {
   expandHomePath as expandHomePathSync,
   resolveOmniMindHomeDirectory,
-} from "@synara/shared/omnimindHome";
+} from "@omnimind/shared/omnimindHome";
 
 function logPathHydrationWarning(message: string, error?: unknown): void {
   console.warn(`[server] ${message}`, error instanceof Error ? error.message : (error ?? ""));

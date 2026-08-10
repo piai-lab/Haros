@@ -14,7 +14,7 @@ import type {
   ModelSelection,
   ProviderStartOptions,
   ServerGenerateAutomationIntentResult,
-} from "@synara/contracts";
+} from "@omnimind/contracts";
 
 import type { TextGenerationError } from "../Errors.ts";
 

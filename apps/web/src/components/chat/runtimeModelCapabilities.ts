@@ -8,13 +8,13 @@ import type {
   ModelCapabilities,
   ProviderKind,
   ProviderModelDescriptor,
-} from "@synara/contracts";
+} from "@omnimind/contracts";
 import {
   getDefaultEffort,
   getModelCapabilities,
   normalizeModelSlug,
   trimOrNull,
-} from "@synara/shared/model";
+} from "@omnimind/shared/model";
 import { normalizeCursorModelVariantBaseId } from "../../cursorModelVariants";
 
 function runtimeEffortLabel(value: string): string {

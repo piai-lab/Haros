@@ -3,13 +3,13 @@ import type {
   NonNullableUsage,
   SDKControlGetContextUsageResponse,
 } from "@anthropic-ai/claude-agent-sdk";
-import type { ThreadTokenUsageSnapshot } from "@synara/contracts";
+import type { ThreadTokenUsageSnapshot } from "@omnimind/contracts";
 import {
   getDefaultAutoCompactWindow,
   getModelCapabilities,
   hasAutoCompactWindowOption,
   trimOrNull,
-} from "@synara/shared/model";
+} from "@omnimind/shared/model";
 
 import { positiveFiniteNumber } from "./tokenUsage.ts";
 

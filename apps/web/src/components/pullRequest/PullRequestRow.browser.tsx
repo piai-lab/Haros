@@ -4,7 +4,7 @@
 
 import "../../index.css";
 
-import type { PullRequestListEntry } from "@synara/contracts";
+import type { PullRequestListEntry } from "@omnimind/contracts";
 import { page } from "vitest/browser";
 import { afterEach, describe, expect, it, vi } from "vitest";
 import { render } from "vitest-browser-react";

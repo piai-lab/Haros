@@ -3,7 +3,7 @@
 // Layer: Web UI hook
 // Depends on: dockPaneActivation pure policy and rightDockStore pane metadata.
 
-import type { ThreadId } from "@synara/contracts";
+import type { ThreadId } from "@omnimind/contracts";
 import { useCallback, useLayoutEffect, useMemo, useRef, useState } from "react";
 
 import {

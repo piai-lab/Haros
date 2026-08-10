@@ -8,7 +8,7 @@ import {
   type ModelSelection,
   type OrchestrationShellSnapshot,
   type ProjectId,
-} from "@synara/contracts";
+} from "@omnimind/contracts";
 
 import {
   extractDuplicateProjectCreateProjectId,

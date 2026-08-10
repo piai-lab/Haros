@@ -15,8 +15,8 @@ import {
   type ProviderKind,
   type RuntimeMode,
   type ThreadId,
-} from "@synara/contracts";
-import { automationRequiresTargetThread } from "@synara/shared/automationMode";
+} from "@omnimind/contracts";
+import { automationRequiresTargetThread } from "@omnimind/shared/automationMode";
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import { useCallback, useEffect, useState } from "react";
 

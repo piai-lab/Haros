@@ -8,7 +8,7 @@ import type {
   KeybindingCommand,
   KeybindingRule,
   ResolvedKeybindingsConfig,
-} from "@synara/contracts";
+} from "@omnimind/contracts";
 import { useState, type KeyboardEvent as ReactKeyboardEvent } from "react";
 import { useQuery, useQueryClient } from "@tanstack/react-query";
 

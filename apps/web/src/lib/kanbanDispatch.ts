@@ -11,9 +11,9 @@ import type {
   ProviderStartOptions,
   ThreadEnvironmentMode,
   ThreadId,
-} from "@synara/contracts";
-import { buildPromptThreadTitleFallback } from "@synara/shared/chatThreads";
-import { isPendingThreadWorktree } from "@synara/shared/threadEnvironment";
+} from "@omnimind/contracts";
+import { buildPromptThreadTitleFallback } from "@omnimind/shared/chatThreads";
+import { isPendingThreadWorktree } from "@omnimind/shared/threadEnvironment";
 import {
   buildKanbanComposerDraftSnapshot,
   resolveKanbanDraftOpenThreadReason,

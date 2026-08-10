@@ -9,7 +9,7 @@ import type {
   ServerListProviderUsageInput,
   ServerListProviderUsageResult,
   ServerProviderUsageSnapshot,
-} from "@synara/contracts";
+} from "@omnimind/contracts";
 import { Effect } from "effect";
 
 import { ServerConfig } from "../config";

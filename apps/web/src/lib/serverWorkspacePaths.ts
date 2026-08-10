@@ -3,7 +3,7 @@
 // Layer: Web domain helper
 // Exports: ServerWorkspacePaths plus normalization and fallback helpers.
 
-import { resolveChatContainerWorkspaceRoot } from "@synara/shared/projectContainers";
+import { resolveChatContainerWorkspaceRoot } from "@omnimind/shared/projectContainers";
 
 export interface ServerWorkspacePaths {
   readonly homeDir: string | null | undefined;

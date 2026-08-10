@@ -19,7 +19,7 @@ import {
   RuntimeTaskId,
   ThreadId,
   TurnId,
-} from "@synara/contracts";
+} from "@omnimind/contracts";
 import {
   Cause,
   DateTime,

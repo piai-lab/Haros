@@ -4,11 +4,11 @@ import type {
   BrowserAnnotationMarker,
   BrowserAnnotationSource,
   BrowserAnnotationTheme,
-} from "@synara/contracts";
+} from "@omnimind/contracts";
 import {
   browserAnnotationDocumentIdentityUrl,
   sanitizeBrowserAnnotationUrl,
-} from "@synara/shared/browserAnnotations";
+} from "@omnimind/shared/browserAnnotations";
 
 import { BROWSER_ANNOTATION_GUEST_COMMAND_CHANNEL, BROWSER_IPC_CHANNELS } from "../ipcChannels";
 import {

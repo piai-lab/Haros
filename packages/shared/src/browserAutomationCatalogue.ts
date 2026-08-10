@@ -46,7 +46,7 @@ import {
   BrowserWaitInput,
   BrowserWaitOutput,
   type BrowserToolName,
-} from "@synara/contracts";
+} from "@omnimind/contracts";
 import { Schema } from "effect";
 
 import { BROWSER_TOOL_TITLES } from "./browserAutomationPresentation";

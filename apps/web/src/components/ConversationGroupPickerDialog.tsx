@@ -1,4 +1,4 @@
-import type { SpaceId, ThreadId } from "@synara/contracts";
+import type { SpaceId, ThreadId } from "@omnimind/contracts";
 import { useEffect, useMemo, useRef, useState, type ReactNode } from "react";
 
 import { useI18n } from "../i18n";

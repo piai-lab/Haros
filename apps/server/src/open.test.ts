@@ -1,7 +1,7 @@
 import * as NodeServices from "@effect/platform-node/NodeServices";
 import { assert, it } from "@effect/vitest";
 import { assertSuccess } from "@effect/vitest/utils";
-import { EDITORS } from "@synara/contracts";
+import { EDITORS } from "@omnimind/contracts";
 import { FileSystem, Path, Effect } from "effect";
 
 import {

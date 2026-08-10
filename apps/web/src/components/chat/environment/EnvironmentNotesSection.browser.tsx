@@ -4,7 +4,7 @@
 
 import "../../../index.css";
 
-import { ThreadId } from "@synara/contracts";
+import { ThreadId } from "@omnimind/contracts";
 import { useState, type ComponentProps } from "react";
 import { page } from "vitest/browser";
 import { afterEach, describe, expect, it, vi } from "vitest";

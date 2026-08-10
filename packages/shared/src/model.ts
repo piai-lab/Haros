@@ -21,7 +21,7 @@ import {
   type ProviderKind,
   type ProviderWithDefaultModel,
   CodexReasoningEffort,
-} from "@synara/contracts";
+} from "@omnimind/contracts";
 
 const MODEL_SLUG_SET_BY_PROVIDER: Record<ProviderKind, ReadonlySet<ModelSlug>> = {
   omnimind: new Set<ModelSlug>(),

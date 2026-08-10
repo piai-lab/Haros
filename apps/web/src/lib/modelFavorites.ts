@@ -2,7 +2,7 @@
 // Purpose: Shared storage keys + readers for per-provider favorite model slugs.
 // Layer: Web local-storage helpers used by the model picker and model cycle shortcuts.
 
-import type { ProviderKind } from "@synara/contracts";
+import type { ProviderKind } from "@omnimind/contracts";
 import { Schema } from "effect";
 
 export const FAVORITE_MODEL_STORAGE_KEYS = {

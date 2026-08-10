@@ -3,7 +3,7 @@ import type {
   ExternalMcpClientKind,
   ExternalMcpProjectScope,
   ExternalMcpStdioConfiguration,
-} from "@synara/contracts";
+} from "@omnimind/contracts";
 
 export interface ExternalMcpClientConfiguration {
   readonly format: "command" | "json";

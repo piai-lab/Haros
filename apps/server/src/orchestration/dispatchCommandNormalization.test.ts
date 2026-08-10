@@ -11,7 +11,7 @@ import {
   type ClientOrchestrationCommand,
   ProjectId,
   ThreadId,
-} from "@synara/contracts";
+} from "@omnimind/contracts";
 import { Effect } from "effect";
 import type { FileSystem, Path } from "effect";
 import { describe, expect, it } from "vitest";

@@ -2,7 +2,7 @@ import assert from "node:assert/strict";
 import path from "node:path";
 import { afterEach, describe, it } from "vitest";
 
-import type { ProviderRuntimeEvent } from "@synara/contracts";
+import type { ProviderRuntimeEvent } from "@omnimind/contracts";
 
 import {
   CODEX_GENERATED_IMAGE_ARTIFACT_KIND,

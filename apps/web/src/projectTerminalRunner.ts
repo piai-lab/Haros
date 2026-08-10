@@ -3,11 +3,11 @@
 // Layer: Web terminal orchestration helper
 // Exports: runProjectCommandInTerminal and default dimensions for script terminals.
 
-import type { NativeApi, TerminalSessionSnapshot, ThreadId } from "@synara/contracts";
+import type { NativeApi, TerminalSessionSnapshot, ThreadId } from "@omnimind/contracts";
 import {
   deriveTerminalCommandIdentity,
   type TerminalCliKind,
-} from "@synara/shared/terminalThreads";
+} from "@omnimind/shared/terminalThreads";
 
 import { projectScriptRuntimeEnv } from "./projectScripts";
 

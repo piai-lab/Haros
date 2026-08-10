@@ -2,7 +2,7 @@
 // Purpose: Map each supported ProviderKind to its live usage fetcher. Adding a provider is a
 // one-file change: implement a ProviderUsageFetcher and register it here.
 
-import type { ProviderKind } from "@synara/contracts";
+import type { ProviderKind } from "@omnimind/contracts";
 
 import { claudeUsageFetcher } from "./providers/claude";
 import { codexUsageFetcher } from "./providers/codex";

@@ -10,7 +10,7 @@ import type {
   ProviderPluginDescriptor,
   ProviderPluginDetail,
   ProviderSkillDescriptor,
-} from "@synara/contracts";
+} from "@omnimind/contracts";
 
 function readObject(value: unknown, key?: string): Record<string, unknown> | undefined {
   const target =

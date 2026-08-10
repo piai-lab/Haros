@@ -11,7 +11,7 @@ import type {
   ServerProviderUpdateInput,
   ServerProviderUpdateResult,
   ServerProviderUpdateError,
-} from "@synara/contracts";
+} from "@omnimind/contracts";
 import { ServiceMap } from "effect";
 import type { Effect, Stream } from "effect";
 

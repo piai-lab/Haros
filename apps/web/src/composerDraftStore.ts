@@ -2,7 +2,7 @@
 // Purpose: Public Zustand facade for composer drafts, model choices, attachments, and persistence.
 // Exports: Stable composer draft API, hooks, and promotion helpers.
 
-import { type ModelSelection, type ProviderKind, type ThreadId } from "@synara/contracts";
+import { type ModelSelection, type ProviderKind, type ThreadId } from "@omnimind/contracts";
 import { create } from "zustand";
 import { persist } from "zustand/middleware";
 

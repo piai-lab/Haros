@@ -8,7 +8,7 @@ import {
   type ProviderKind,
   type ProviderPluginDescriptor,
   type ProviderSkillDescriptor,
-} from "@synara/contracts";
+} from "@omnimind/contracts";
 import { useQuery } from "@tanstack/react-query";
 import React, { useMemo, type ReactNode, useDeferredValue, useState } from "react";
 import type { IconType } from "react-icons";

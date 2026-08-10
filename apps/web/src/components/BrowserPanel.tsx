@@ -13,7 +13,7 @@ import {
   type ServerLocalServerProcess,
   type ThreadBrowserState,
   type ThreadId,
-} from "@synara/contracts";
+} from "@omnimind/contracts";
 import {
   ArrowLeftIcon,
   ArrowRightIcon,
@@ -29,14 +29,14 @@ import {
   XIcon,
 } from "~/lib/icons";
 
-import { localServerPrimaryLabel } from "@synara/shared/localServers";
-import { resolveDesktopDipRectFromCssRect } from "@synara/shared/desktopChrome";
+import { localServerPrimaryLabel } from "@omnimind/shared/localServers";
+import { resolveDesktopDipRectFromCssRect } from "@omnimind/shared/desktopChrome";
 import {
   BROWSER_BLANK_URL,
   isBlankBrowserTabUrl,
   resolveCopyableBrowserTabUrl,
-} from "@synara/shared/browserSession";
-import { isBrowserCopyLinkChord } from "@synara/shared/browserShortcuts";
+} from "@omnimind/shared/browserSession";
+import { isBrowserCopyLinkChord } from "@omnimind/shared/browserShortcuts";
 
 import { isElectron } from "~/env";
 import { useI18n } from "~/i18n";

@@ -7,12 +7,12 @@
 import * as fs from "node:fs/promises";
 import path from "node:path";
 
-import { readActiveCodexProviderEnvKey } from "@synara/shared/codexConfig";
+import { readActiveCodexProviderEnvKey } from "@omnimind/shared/codexConfig";
 import {
   readEnvironmentFromLoginShell,
   resolveLoginShell,
   type ShellEnvironmentReader,
-} from "@synara/shared/shell";
+} from "@omnimind/shared/shell";
 
 import { resolveBaseCodexHomePath, resolveOmniMindCodexHomeOverlayPath } from "./codexHomePaths.ts";
 import { buildProviderChildEnvironment } from "./providerChildEnvironment.ts";

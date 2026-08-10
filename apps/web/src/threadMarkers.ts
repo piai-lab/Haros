@@ -10,8 +10,8 @@ import {
   type ThreadMarkerColor,
   type ThreadMarkerId,
   type ThreadMarkerStyle,
-} from "@synara/contracts";
-import { normalizeThreadMarkerLabel } from "@synara/shared/threadMarkers";
+} from "@omnimind/contracts";
+import { normalizeThreadMarkerLabel } from "@omnimind/shared/threadMarkers";
 
 import { newCommandId } from "./lib/utils";
 import { readNativeApi } from "./nativeApi";

@@ -10,11 +10,11 @@ import {
   migrationBackupDirectory,
   migrationRecoveryMarkerPath,
   parseMigrationRecoveryResumeState,
-} from "@synara/shared/migrationRecovery";
+} from "@omnimind/shared/migrationRecovery";
 export {
   migrationBackupDirectory,
   migrationRecoveryMarkerPath,
-} from "@synara/shared/migrationRecovery";
+} from "@omnimind/shared/migrationRecovery";
 
 import { ensurePrivateDirectorySync, repairPrivateFile } from "../privatePathPermissions.ts";
 import { withDatabaseLifecycleLock } from "./DatabaseLifecycleLock.ts";

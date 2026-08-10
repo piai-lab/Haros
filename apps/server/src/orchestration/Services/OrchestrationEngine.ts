@@ -14,7 +14,7 @@ import type {
   OrchestrationCommand,
   OrchestrationEvent,
   OrchestrationReadModel,
-} from "@synara/contracts";
+} from "@omnimind/contracts";
 import { ServiceMap } from "effect";
 import type { Effect, Scope, Stream } from "effect";
 

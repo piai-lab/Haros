@@ -8,7 +8,7 @@
 // Layer: Pull request presentation
 // Exports: PullRequestCommentCard
 
-import type { PullRequestComment } from "@synara/contracts";
+import type { PullRequestComment } from "@omnimind/contracts";
 import { useState } from "react";
 
 import { Collapsible, CollapsiblePanel, CollapsibleTrigger } from "~/components/ui/collapsible";

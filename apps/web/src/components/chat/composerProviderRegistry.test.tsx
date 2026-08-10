@@ -1,4 +1,4 @@
-import { type ProviderModelDescriptor, ThreadId } from "@synara/contracts";
+import { type ProviderModelDescriptor, ThreadId } from "@omnimind/contracts";
 import { describe, expect, it, vi } from "vitest";
 import {
   getComposerProviderState,

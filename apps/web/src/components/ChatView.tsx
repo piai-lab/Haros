@@ -37,30 +37,30 @@ import {
   OrchestrationThreadActivity,
   ProviderInteractionMode,
   RuntimeMode,
-} from "@synara/contracts";
-import { automationRequiresTargetThread } from "@synara/shared/automationMode";
-import { respondingInteractionReclaimAt } from "@synara/shared/pendingInteractions";
-import { providerSupportsNativeTurnSteering } from "@synara/shared/providerMetadata";
-import { getDefaultModel, getModelCapabilities, normalizeModelSlug } from "@synara/shared/model";
+} from "@omnimind/contracts";
+import { automationRequiresTargetThread } from "@omnimind/shared/automationMode";
+import { respondingInteractionReclaimAt } from "@omnimind/shared/pendingInteractions";
+import { providerSupportsNativeTurnSteering } from "@omnimind/shared/providerMetadata";
+import { getDefaultModel, getModelCapabilities, normalizeModelSlug } from "@omnimind/shared/model";
 import {
   resolveLatestTailUserMessageEditTarget,
   resolveTailUserMessageEditTarget,
-} from "@synara/shared/conversationEdit";
-import { threadExportBlockedReason } from "@synara/shared/threadExport";
-import { pendingRequestInstanceKey } from "@synara/shared/threadSummary";
+} from "@omnimind/shared/conversationEdit";
+import { threadExportBlockedReason } from "@omnimind/shared/threadExport";
+import { pendingRequestInstanceKey } from "@omnimind/shared/threadSummary";
 import {
   buildPromptThreadTitleFallback,
   GENERIC_CHAT_THREAD_TITLE,
-} from "@synara/shared/chatThreads";
+} from "@omnimind/shared/chatThreads";
 import {
   resolveThreadWorkspaceState,
   resolveThreadBranchSourceCwd,
   resolveThreadWorkspaceCwd as resolveSharedThreadWorkspaceCwd,
-} from "@synara/shared/threadEnvironment";
+} from "@omnimind/shared/threadEnvironment";
 import {
   deriveAssociatedWorktreeMetadata,
   workspaceRootsEqual,
-} from "@synara/shared/threadWorkspace";
+} from "@omnimind/shared/threadWorkspace";
 import {
   lazy,
   Suspense,
@@ -78,7 +78,7 @@ import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import { Debouncer, useDebouncedValue } from "@tanstack/react-pacer";
 import { useNavigate } from "@tanstack/react-router";
 import { type LegendListRef } from "@legendapp/list/react";
-import { buildTemporaryWorktreeBranchName } from "@synara/shared/git";
+import { buildTemporaryWorktreeBranchName } from "@omnimind/shared/git";
 import {
   GIT_WORKING_TREE_DIFF_LIVE_REFETCH_INTERVAL_MS,
   gitCreateDetachedWorktreeMutationOptions,

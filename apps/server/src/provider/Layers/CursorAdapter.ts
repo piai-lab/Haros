@@ -21,8 +21,8 @@ import {
   type RuntimeMode,
   type ThreadId,
   TurnId,
-} from "@synara/contracts";
-import { prepareWindowsSafeProcess } from "@synara/shared/windowsProcess";
+} from "@omnimind/contracts";
+import { prepareWindowsSafeProcess } from "@omnimind/shared/windowsProcess";
 import {
   DateTime,
   Deferred,

@@ -5,7 +5,7 @@
 
 import "../../index.css";
 
-import { MessageId } from "@synara/contracts";
+import { MessageId } from "@omnimind/contracts";
 import { afterEach, describe, expect, it } from "vitest";
 import { render } from "vitest-browser-react";
 

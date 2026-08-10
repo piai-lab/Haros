@@ -11,7 +11,7 @@ import {
   type ProviderKind,
   type ResolvedKeybindingsConfig,
   type ThreadId,
-} from "@synara/contracts";
+} from "@omnimind/contracts";
 import React, { type Dispatch, type SetStateAction, useEffect, useRef, useState } from "react";
 import { FiGitBranch } from "react-icons/fi";
 import { HiMiniArrowsPointingOut } from "react-icons/hi2";

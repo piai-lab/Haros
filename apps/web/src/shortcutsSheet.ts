@@ -8,7 +8,7 @@ import {
   type KeybindingCommand,
   type ResolvedKeybindingRule,
   type ResolvedKeybindingsConfig,
-} from "@synara/contracts";
+} from "@omnimind/contracts";
 import { isMacPlatform } from "./lib/utils";
 import { formatShortcutLabel, resolveKeybindingForCommand } from "./keybindings";
 import { commandForProjectScript } from "./projectScripts";

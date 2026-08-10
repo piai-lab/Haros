@@ -3,7 +3,7 @@
   "configVersion": 1,
   "workspaces": {
     "": {
-      "name": "@synara/monorepo",
+      "name": "@omnimind/monorepo",
       "devDependencies": {
         "@types/node": "catalog:",
         "oxfmt": "^0.40.0",
@@ -13,7 +13,7 @@
       },
     },
     "apps/desktop": {
-      "name": "@synara/desktop",
+      "name": "@omnimind/desktop",
       "version": "0.1.0-alpha.0",
       "dependencies": {
         "effect": "catalog:",
@@ -21,8 +21,8 @@
         "electron-updater": "^6.6.2",
       },
       "devDependencies": {
-        "@synara/contracts": "workspace:*",
-        "@synara/shared": "workspace:*",
+        "@omnimind/contracts": "workspace:*",
+        "@omnimind/shared": "workspace:*",
         "@types/node": "catalog:",
         "tsdown": "catalog:",
         "typescript": "catalog:",
@@ -31,7 +31,7 @@
       },
     },
     "apps/server": {
-      "name": "@synara/cli",
+      "name": "@omnimind/server",
       "version": "0.1.0-alpha.0",
       "bin": {
         "omnimind": "dist/index.mjs",
@@ -59,9 +59,9 @@
       "devDependencies": {
         "@effect/language-service": "catalog:",
         "@effect/vitest": "catalog:",
-        "@synara/contracts": "workspace:*",
-        "@synara/shared": "workspace:*",
-        "@synara/web": "workspace:*",
+        "@omnimind/contracts": "workspace:*",
+        "@omnimind/shared": "workspace:*",
+        "@omnimind/web": "workspace:*",
         "@types/bun": "catalog:",
         "@types/node": "catalog:",
         "@types/ws": "^8.5.13",
@@ -72,7 +72,7 @@
       },
     },
     "apps/web": {
-      "name": "@synara/web",
+      "name": "@omnimind/web",
       "version": "0.1.0-alpha.0",
       "dependencies": {
         "@base-ui/react": "^1.5.0",
@@ -85,8 +85,8 @@
         "@legendapp/list": "3.3.3",
         "@lexical/react": "^0.41.0",
         "@pierre/diffs": "^1.2.12",
-        "@synara/contracts": "workspace:*",
-        "@synara/shared": "workspace:*",
+        "@omnimind/contracts": "workspace:*",
+        "@omnimind/shared": "workspace:*",
         "@tabler/icons-react": "^3.44.0",
         "@tanstack/react-pacer": "^0.19.4",
         "@tanstack/react-query": "^5.90.0",
@@ -141,7 +141,7 @@
       },
     },
     "packages/contracts": {
-      "name": "@synara/contracts",
+      "name": "@omnimind/contracts",
       "version": "0.7.0",
       "dependencies": {
         "effect": "catalog:",
@@ -155,10 +155,10 @@
       },
     },
     "packages/shared": {
-      "name": "@synara/shared",
+      "name": "@omnimind/shared",
       "version": "0.0.0-alpha.1",
       "dependencies": {
-        "@synara/contracts": "workspace:*",
+        "@omnimind/contracts": "workspace:*",
         "effect": "catalog:",
       },
       "devDependencies": {
@@ -170,12 +170,12 @@
       },
     },
     "scripts": {
-      "name": "@synara/scripts",
+      "name": "@omnimind/scripts",
       "dependencies": {
         "@anthropic-ai/claude-agent-sdk": "^0.3.207",
         "@effect/platform-node": "catalog:",
-        "@synara/contracts": "workspace:*",
-        "@synara/shared": "workspace:*",
+        "@omnimind/contracts": "workspace:*",
+        "@omnimind/shared": "workspace:*",
         "effect": "catalog:",
       },
       "devDependencies": {
@@ -867,17 +867,17 @@
 
     "@standard-schema/spec": ["@standard-schema/spec@1.1.0", "", {}, "sha512-l2aFy5jALhniG5HgqrD6jXLi/rUWrKvqN/qJx6yoJsgKhblVd+iqqU4RCXavm/jPityDo5TCvKMnpjKnOriy0w=="],
 
-    "@synara/cli": ["@synara/cli@workspace:apps/server"],
+    "@omnimind/server": ["@omnimind/server@workspace:apps/server"],
 
-    "@synara/contracts": ["@synara/contracts@workspace:packages/contracts"],
+    "@omnimind/contracts": ["@omnimind/contracts@workspace:packages/contracts"],
 
-    "@synara/desktop": ["@synara/desktop@workspace:apps/desktop"],
+    "@omnimind/desktop": ["@omnimind/desktop@workspace:apps/desktop"],
 
-    "@synara/scripts": ["@synara/scripts@workspace:scripts"],
+    "@omnimind/scripts": ["@omnimind/scripts@workspace:scripts"],
 
-    "@synara/shared": ["@synara/shared@workspace:packages/shared"],
+    "@omnimind/shared": ["@omnimind/shared@workspace:packages/shared"],
 
-    "@synara/web": ["@synara/web@workspace:apps/web"],
+    "@omnimind/web": ["@omnimind/web@workspace:apps/web"],
 
     "@szmarczak/http-timer": ["@szmarczak/http-timer@4.0.6", "", { "dependencies": { "defer-to-connect": "^2.0.0" } }, "sha512-4BAffykYOgO+5nzBWYwE3W90sBgLJoUPRWWcL8wlyiM8IB8ipJz3UMJ9KXQd1RKQXpKp8Tutn80HZtWsu2u76w=="],
 

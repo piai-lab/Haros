@@ -1,4 +1,4 @@
-import { MessageId, ThreadId } from "@synara/contracts";
+import { MessageId, ThreadId } from "@omnimind/contracts";
 import { assert, it } from "@effect/vitest";
 import { Effect, Layer } from "effect";
 

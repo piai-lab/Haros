@@ -5,7 +5,7 @@ import {
   ProjectId,
   ThreadId,
   ThreadMarkerId,
-} from "@synara/contracts";
+} from "@omnimind/contracts";
 import { Effect, Layer, ManagedRuntime, Option } from "effect";
 import { describe, expect, it } from "vitest";
 

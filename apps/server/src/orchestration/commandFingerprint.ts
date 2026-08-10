@@ -1,6 +1,6 @@
 import * as Crypto from "node:crypto";
 
-import { OrchestrationCommand, type OrchestrationCommand as Command } from "@synara/contracts";
+import { OrchestrationCommand, type OrchestrationCommand as Command } from "@omnimind/contracts";
 import { Schema } from "effect";
 
 export const ORCHESTRATION_COMMAND_FINGERPRINT_VERSION = 1;

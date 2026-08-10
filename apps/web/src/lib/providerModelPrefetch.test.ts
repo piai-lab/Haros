@@ -3,7 +3,7 @@
 //          the same React Query keys ChatView uses for listModels.
 // Layer: Web lib tests
 
-import type { ProviderKind } from "@synara/contracts";
+import type { ProviderKind } from "@omnimind/contracts";
 import { QueryClient } from "@tanstack/react-query";
 import { afterEach, describe, expect, it, vi } from "vitest";
 

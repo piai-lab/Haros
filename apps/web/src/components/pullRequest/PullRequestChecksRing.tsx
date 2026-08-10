@@ -6,7 +6,7 @@
 // Layer: Pull request presentation
 // Exports: PullRequestChecksRing
 
-import type { PullRequestCheck, PullRequestCheckStatus } from "@synara/contracts";
+import type { PullRequestCheck, PullRequestCheckStatus } from "@omnimind/contracts";
 
 import { cn } from "~/lib/utils";
 

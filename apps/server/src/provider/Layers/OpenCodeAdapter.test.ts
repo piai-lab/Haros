@@ -1,4 +1,4 @@
-import { ApprovalRequestId, ThreadId, TurnId } from "@synara/contracts";
+import { ApprovalRequestId, ThreadId, TurnId } from "@omnimind/contracts";
 import * as NodeServices from "@effect/platform-node/NodeServices";
 import type {
   Agent,

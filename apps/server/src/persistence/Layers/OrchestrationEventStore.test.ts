@@ -1,4 +1,4 @@
-import { CommandId, EventId, ProjectId, ThreadId } from "@synara/contracts";
+import { CommandId, EventId, ProjectId, ThreadId } from "@omnimind/contracts";
 import { assert, it } from "@effect/vitest";
 import { Effect, Layer, Schema, Stream } from "effect";
 import * as SqlClient from "effect/unstable/sql/SqlClient";

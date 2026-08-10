@@ -1,17 +1,17 @@
-import { ApprovalRequestId, CommandId, type OrchestrationEvent } from "@synara/contracts";
+import { ApprovalRequestId, CommandId, type OrchestrationEvent } from "@omnimind/contracts";
 import {
   addPinnedMessage,
   removePinnedMessage,
   setPinnedMessageDone,
   setPinnedMessageLabel,
-} from "@synara/shared/pinnedMessages";
+} from "@omnimind/shared/pinnedMessages";
 import {
   addThreadMarker,
   removeThreadMarker,
   setThreadMarkerDone,
   setThreadMarkerLabel,
-} from "@synara/shared/threadMarkers";
-import { isStalePendingRequestFailureDetail } from "@synara/shared/threadSummary";
+} from "@omnimind/shared/threadMarkers";
+import { isStalePendingRequestFailureDetail } from "@omnimind/shared/threadSummary";
 import * as NodeServices from "@effect/platform-node/NodeServices";
 import { Effect, FileSystem, Layer, Option, Path, Stream } from "effect";
 import * as SqlClient from "effect/unstable/sql/SqlClient";

@@ -5,7 +5,7 @@
 // Layer: Web UI state utilities
 // Exports: load/save helpers for the confirmed-path record.
 
-import type { ProviderKind } from "@synara/contracts";
+import type { ProviderKind } from "@omnimind/contracts";
 import { isPlainObject } from "./persistedRecord";
 
 const STORAGE_KEY = "omnimind:confirmed-custom-binary-paths:v1";

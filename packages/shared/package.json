@@ -1,5 +1,5 @@
 {
-  "name": "@synara/shared",
+  "name": "@omnimind/shared",
   "version": "0.0.0-alpha.1",
   "private": true,
   "type": "module",
@@ -279,7 +279,7 @@
     "test": "vitest run"
   },
   "dependencies": {
-    "@synara/contracts": "workspace:*",
+    "@omnimind/contracts": "workspace:*",
     "effect": "catalog:"
   },
   "devDependencies": {

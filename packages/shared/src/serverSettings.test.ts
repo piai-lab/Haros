@@ -1,4 +1,4 @@
-import { DEFAULT_SERVER_SETTINGS, ProviderSessionStartInput } from "@synara/contracts";
+import { DEFAULT_SERVER_SETTINGS, ProviderSessionStartInput } from "@omnimind/contracts";
 import { Schema } from "effect";
 import { describe, expect, it } from "vitest";
 import { providerStartOptionsFromServerSettings } from "./serverSettings";

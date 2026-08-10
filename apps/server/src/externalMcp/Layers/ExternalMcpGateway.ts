@@ -10,7 +10,7 @@ import {
   type ExternalMcpCapability,
   type ProviderKind,
   type ServerProviderStatus,
-} from "@synara/contracts";
+} from "@omnimind/contracts";
 import { Effect, Layer, Option, Schema } from "effect";
 
 import { GitCore } from "../../git/Services/GitCore.ts";

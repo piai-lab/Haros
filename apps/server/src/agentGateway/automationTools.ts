@@ -13,11 +13,11 @@ import {
   type AutomationSchedule as AutomationScheduleType,
   type AutomationWorktreeMode,
   type OrchestrationThreadShell,
-} from "@synara/contracts";
+} from "@omnimind/contracts";
 import {
   automationContinuesThread,
   automationRequiresTargetThread,
-} from "@synara/shared/automationMode";
+} from "@omnimind/shared/automationMode";
 import { Effect, Option, Schema } from "effect";
 
 import type { AutomationServiceShape } from "../automation/Services/AutomationService.ts";

@@ -3,12 +3,12 @@
 // Layer: Web UI primitive (shared between the Environment menu and the in-app browser home).
 // Depends on: shared local-server presentation helpers.
 
-import type { ServerLocalServerProcess } from "@synara/contracts";
+import type { ServerLocalServerProcess } from "@omnimind/contracts";
 import {
   localServerAddressLabel,
   localServerFolderLabel,
   localServerPrimaryLabel,
-} from "@synara/shared/localServers";
+} from "@omnimind/shared/localServers";
 
 import { cn } from "~/lib/utils";
 

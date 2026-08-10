@@ -5,7 +5,7 @@ import type {
   PullRequestSetPinnedInput,
   PullRequestState,
   PullRequestsListResult,
-} from "@synara/contracts";
+} from "@omnimind/contracts";
 import {
   coalescePullRequestListEntries,
   pullRequestListEntryHasProject,
@@ -13,7 +13,7 @@ import {
   pullRequestListProjectPin,
   pullRequestListRepositoryIdentity,
   updatePullRequestListEntryProjectPin,
-} from "@synara/shared/githubRepository";
+} from "@omnimind/shared/githubRepository";
 import type { QueryClient, QueryKey } from "@tanstack/react-query";
 
 import { PULL_REQUEST_STATES } from "./pullRequestQueryOptions";

@@ -5,8 +5,8 @@ import type {
   ProjectId,
   SpaceId,
   ThreadId,
-} from "@synara/contracts";
-import { OrchestrationCommand, ORCHESTRATION_WS_METHODS } from "@synara/contracts";
+} from "@omnimind/contracts";
+import { OrchestrationCommand, ORCHESTRATION_WS_METHODS } from "@omnimind/contracts";
 import {
   Cause,
   Deferred,

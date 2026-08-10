@@ -108,7 +108,7 @@ authority，也不得带入 donor branding、竞争编排、第二 Session 状�
       ],
       "rights": "The fixed source is MIT-licensed under the retained exact legal text. The maintainer has authorized retention, adaptation and redistribution of the fixed code and complete source icon corpus. Former product identity assets are not adopted.",
       "mode": "adapt",
-      "changes": "The exact physical Desktop, Web, Server, contracts, shared, patch, build and release substrate was transplanted once. OmniMind changes only first-public package, app, protocol, updater, profile, storage and artifact identity; replaces first-party graphics with the retained OmniMind brand; removes donor profile/storage migration entrypoints, marketing, release-history and social surfaces, donor-specific governance, apps/service and apps/native-host; and keeps the internal @synara/* package scope as implementation lineage only.",
+      "changes": "The exact physical Desktop, Web, Server, contracts, shared, patch, build and release substrate was transplanted once. OmniMind changes only first-public package, app, protocol, updater, profile, storage and artifact identity; replaces first-party graphics with the retained OmniMind brand; removes donor profile/storage migration entrypoints, marketing, release-history and social surfaces, donor-specific governance, apps/service and apps/native-host; and hard-cuts the private workspace package scope from @synara/* to @omnimind/* without a compatibility alias while retaining exact source and legal lineage here.",
       "updatePolicy": "Pinned revision; source updates begin only after a maintainer-requested read-only intake and explicit approval of that intake set.",
       "licenseFiles": ["LICENSES/ui-mother-MIT.txt"]
     },
@@ -147,7 +147,7 @@ authority，也不得带入 donor branding、竞争编排、第二 Session 状�
 }
 ```
 
-身份扫描只阻止 donor/旧产品身份进入普通产品表面；内部 `@synara/*` 包作用域按 adoption record 保留。Pi 与实际 shipped Provider 是公开产品依赖，不属于需要洗掉的身份。Provider 名称可以出现在真实 integration、选择器、详情、诊断、About 与 Licenses 中，但不得作为虚假能力或 donor 品牌泄漏。
+身份扫描只阻止 donor/旧产品身份进入普通产品表面；OmniMind 自有 workspace package 统一使用私有 `@omnimind/*` 作用域，不保留 `@synara/*` alias。Synara 名称只在本 adoption record、research、法定文本和明确的 About/Licenses/provenance 中准确保留。Pi 与实际 shipped Provider 是公开产品依赖，不属于需要洗掉的身份。Provider 名称可以出现在真实 integration、选择器、详情、诊断、About 与 Licenses 中，但不得作为虚假能力或 donor 品牌泄漏。
 
 ```identity-denylist
 t3-code

@@ -2,8 +2,8 @@
 // Purpose: End-of-turn recap for threads created through the OmniMind MCP harness.
 // Layer: Chat transcript UI
 
-import { PROVIDER_DISPLAY_NAMES } from "@synara/contracts";
-import { formatModelDisplayName } from "@synara/shared/model";
+import { PROVIDER_DISPLAY_NAMES } from "@omnimind/contracts";
+import { formatModelDisplayName } from "@omnimind/shared/model";
 import { memo } from "react";
 
 import type { WorkLogOmniMindThreadCreation } from "../../session-logic";

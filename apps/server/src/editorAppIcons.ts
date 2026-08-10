@@ -12,8 +12,8 @@ import os from "node:os";
 import path from "node:path";
 import { promisify } from "node:util";
 
-import { EDITORS, type EditorId } from "@synara/contracts";
-import { EDITOR_ICON_ROUTE_PATH } from "@synara/shared/editorIcons";
+import { EDITORS, type EditorId } from "@omnimind/contracts";
+import { EDITOR_ICON_ROUTE_PATH } from "@omnimind/shared/editorIcons";
 
 import {
   getEditorMacApplications,

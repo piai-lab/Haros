@@ -20,7 +20,7 @@ export default defineConfig({
   external: [/^bun:/u],
   sourcemap: buildSourcemap,
   clean: true,
-  noExternal: (id) => id.startsWith("@synara/"),
+  noExternal: (id) => id.startsWith("@omnimind/"),
   inlineOnly: false,
   banner: {
     js: "#!/usr/bin/env node\n",

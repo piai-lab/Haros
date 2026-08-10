@@ -11,8 +11,8 @@ import { statSync } from "node:fs";
 import { dirname, extname } from "node:path";
 import pathWin32 from "node:path/win32";
 
-import { EDITORS, type EditorId } from "@synara/contracts";
-import { prepareWindowsSafeProcess, resolveWindowsSystemRoot } from "@synara/shared/windowsProcess";
+import { EDITORS, type EditorId } from "@omnimind/contracts";
+import { prepareWindowsSafeProcess, resolveWindowsSystemRoot } from "@omnimind/shared/windowsProcess";
 import { ServiceMap, Schema, Effect, Layer } from "effect";
 import {
   getEditorMacApplications,

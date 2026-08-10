@@ -6,7 +6,7 @@
  * side-effect reactors therefore hold this shared lease while crossing their
  * respective mutation boundaries.
  */
-import type { ThreadId } from "@synara/contracts";
+import type { ThreadId } from "@omnimind/contracts";
 import { ServiceMap, type Effect } from "effect";
 
 export interface TurnCheckpointCoordinatorShape {

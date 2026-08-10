@@ -1,6 +1,6 @@
 import { Effect, Layer, PubSub, Ref, ServiceMap, Stream } from "effect";
 
-import type { ProjectId, ThreadId } from "@synara/contracts";
+import type { ProjectId, ThreadId } from "@omnimind/contracts";
 
 export interface ServerLifecycleWelcomePayload {
   readonly cwd: string;

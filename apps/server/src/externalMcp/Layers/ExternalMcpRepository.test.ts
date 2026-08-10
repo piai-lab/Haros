@@ -1,4 +1,4 @@
-import type { ExternalMcpClientKind } from "@synara/contracts";
+import type { ExternalMcpClientKind } from "@omnimind/contracts";
 import { assert, it } from "@effect/vitest";
 import { Effect, Layer } from "effect";
 import * as SqlClient from "effect/unstable/sql/SqlClient";

@@ -7,7 +7,7 @@ import {
   ApprovalRequestId,
   type ProviderApprovalDecision,
   type ProviderRequestKind,
-} from "@synara/contracts";
+} from "@omnimind/contracts";
 import { page } from "vitest/browser";
 import { describe, expect, it, vi } from "vitest";
 import { render } from "vitest-browser-react";

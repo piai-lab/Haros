@@ -6,7 +6,7 @@
 // a fetcher that redeems a refresh token itself must persist the rotated pair back to the
 // CLI's credential store, because providers rotate single-use refresh tokens.
 
-import type { ProviderKind, ServerProviderUsageSnapshot } from "@synara/contracts";
+import type { ProviderKind, ServerProviderUsageSnapshot } from "@omnimind/contracts";
 
 export interface ProviderUsageContext {
   /** Resolved user home directory (ServerConfig.homeDir). */

@@ -1,4 +1,4 @@
-import type { OrchestrationEvent } from "@synara/contracts";
+import type { OrchestrationEvent } from "@omnimind/contracts";
 
 import { sanitizeDiagnosticValue } from "./diagnosticSanitizer.ts";
 import { readNumberArg } from "./toolInput.ts";

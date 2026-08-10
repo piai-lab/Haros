@@ -1,4 +1,4 @@
-import { ProjectId, ThreadId, TurnId } from "@synara/contracts";
+import { ProjectId, ThreadId, TurnId } from "@omnimind/contracts";
 import { describe, expect, it } from "vitest";
 
 import {

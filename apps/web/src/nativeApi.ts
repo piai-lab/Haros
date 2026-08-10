@@ -1,4 +1,4 @@
-import { WS_GITHUB_PROJECT_PROVISIONING_CAPABILITY, type NativeApi } from "@synara/contracts";
+import { WS_GITHUB_PROJECT_PROVISIONING_CAPABILITY, type NativeApi } from "@omnimind/contracts";
 
 import {
   createWsNativeApi,

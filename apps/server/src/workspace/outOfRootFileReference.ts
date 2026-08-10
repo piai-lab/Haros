@@ -16,7 +16,7 @@
 import * as fs from "node:fs/promises";
 import * as path from "node:path";
 
-import { isWorkspaceRelativePathSafe } from "@synara/shared/path";
+import { isWorkspaceRelativePathSafe } from "@omnimind/shared/path";
 
 import { isContainedPath } from "./realPathContainment";
 

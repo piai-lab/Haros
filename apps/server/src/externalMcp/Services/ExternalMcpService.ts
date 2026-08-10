@@ -4,7 +4,7 @@ import type {
   ExternalMcpIntegration,
   ExternalMcpPairResult,
   ExternalMcpRefreshPairingInput,
-} from "@synara/contracts";
+} from "@omnimind/contracts";
 import { Data, ServiceMap } from "effect";
 import type { Effect } from "effect";
 

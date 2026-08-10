@@ -3,11 +3,11 @@ import type {
   ProviderModelDescriptor,
   RuntimeMode,
   ServerProviderStatus,
-} from "@synara/contracts";
+} from "@omnimind/contracts";
 import {
   normalizeRuntimeModeForProvider,
   providerSupportsAutoRuntimeMode,
-} from "@synara/shared/runtimeMode";
+} from "@omnimind/shared/runtimeMode";
 
 export { normalizeRuntimeModeForProvider, providerSupportsAutoRuntimeMode };
 

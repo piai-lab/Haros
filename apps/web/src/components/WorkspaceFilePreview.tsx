@@ -9,18 +9,18 @@ import type {
   ProjectFileEncoding,
   ProjectFileLineEnding,
   ProjectReadFileResult,
-} from "@synara/contracts";
+} from "@omnimind/contracts";
 import {
   isSupportedLocalImagePath,
   isSupportedLocalPdfPath,
   lowerCaseExtensionOf,
-} from "@synara/shared/localPreviewFiles";
+} from "@omnimind/shared/localPreviewFiles";
 import {
   isLocalAbsolutePath,
   isWorkspaceRelativePathSafe,
   joinWorkspaceRelativePath,
-} from "@synara/shared/path";
-import { isScratchWorkspacePath } from "@synara/shared/threadWorkspace";
+} from "@omnimind/shared/path";
+import { isScratchWorkspacePath } from "@omnimind/shared/threadWorkspace";
 import { useQuery, useQueryClient } from "@tanstack/react-query";
 import {
   Component,

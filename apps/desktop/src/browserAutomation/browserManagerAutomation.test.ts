@@ -1,6 +1,6 @@
 import { EventEmitter } from "node:events";
 
-import { ThreadId } from "@synara/contracts";
+import { ThreadId } from "@omnimind/contracts";
 import type { WebContents } from "electron";
 import { describe, expect, it, vi } from "vitest";
 

@@ -3,7 +3,7 @@
 // Layer: Provider adapter tests
 // Depends on: GrokAdapter helper exports and shared contract ids.
 
-import { TurnId } from "@synara/contracts";
+import { TurnId } from "@omnimind/contracts";
 import { Schema } from "effect";
 import { describe, expect, it } from "vitest";
 import { OMNIMIND_HARNESS_POLICY_MARKER } from "../../agentGateway/harnessPolicy.ts";

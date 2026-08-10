@@ -1,5 +1,5 @@
 import * as NodeServices from "@effect/platform-node/NodeServices";
-import { DEFAULT_MODEL_BY_PROVIDER } from "@synara/contracts";
+import { DEFAULT_MODEL_BY_PROVIDER } from "@omnimind/contracts";
 import { Effect, FileSystem, Layer } from "effect";
 import { describe, expect, it } from "vitest";
 import { ServerConfig } from "./config";

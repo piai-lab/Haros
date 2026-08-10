@@ -1,4 +1,4 @@
-import type { OrchestrationCommand } from "@synara/contracts";
+import type { OrchestrationCommand } from "@omnimind/contracts";
 import { Effect, Option, Queue } from "effect";
 
 export const ORCHESTRATION_COMMAND_QUEUE_CAPACITY = 256;

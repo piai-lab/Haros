@@ -9,8 +9,8 @@ import type {
   ServerProviderUsageLimit,
   ServerProviderUsageLine,
   ServerProviderUsageSnapshot,
-} from "@synara/contracts";
-import { providerUsageNeedsAuthDetail } from "@synara/shared/providerUsage";
+} from "@omnimind/contracts";
+import { providerUsageNeedsAuthDetail } from "@omnimind/shared/providerUsage";
 
 export function asRecord(value: unknown): Record<string, unknown> | null {
   return value && typeof value === "object" ? (value as Record<string, unknown>) : null;

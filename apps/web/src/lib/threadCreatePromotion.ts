@@ -3,7 +3,7 @@
 // Layer: Web orchestration helper
 // Exports: promoteThreadCreate, isDuplicateThreadCreateError
 
-import type { ClientOrchestrationCommand, NativeApi, ThreadId } from "@synara/contracts";
+import type { ClientOrchestrationCommand, NativeApi, ThreadId } from "@omnimind/contracts";
 import { markPromotedDraftThreads } from "../composerDraftStore";
 import { readNativeApi } from "../nativeApi";
 import { useStore } from "../store";

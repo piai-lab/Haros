@@ -12,7 +12,7 @@ import type {
   PullRequestDetail,
   PullRequestDetailInput,
   PullRequestState,
-} from "@synara/contracts";
+} from "@omnimind/contracts";
 
 import type { RightDockPane } from "~/rightDockStore.logic";
 

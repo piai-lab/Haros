@@ -15,7 +15,7 @@ import {
   type ProviderModelOption,
   type ProviderModelOptionGroup,
 } from "../../providerModelOptions";
-import type { ProviderKind } from "@synara/contracts";
+import type { ProviderKind } from "@omnimind/contracts";
 import { Collapsible, CollapsiblePanel, CollapsibleTrigger } from "../ui/collapsible";
 import { DisclosureChevron } from "../ui/DisclosureChevron";
 import { MenuGroup, MenuGroupLabel, MenuRadioItem } from "../ui/menu";

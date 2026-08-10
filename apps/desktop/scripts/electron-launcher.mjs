@@ -15,7 +15,7 @@ import { createRequire } from "node:module";
 import {
   resolveOmniMindDesktopFlavor,
   omnimindDesktopIdentity,
-} from "@synara/shared/desktopIdentity";
+} from "@omnimind/shared/desktopIdentity";
 import { dirname, join, resolve } from "node:path";
 import { fileURLToPath } from "node:url";
 

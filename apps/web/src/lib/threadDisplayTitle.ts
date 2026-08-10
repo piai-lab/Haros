@@ -3,7 +3,7 @@
 // Layer: Web presentation helper
 // Exports: resolveThreadDisplayTitle
 
-import { isGenericTerminalThreadTitle } from "@synara/shared/terminalThreads";
+import { isGenericTerminalThreadTitle } from "@omnimind/shared/terminalThreads";
 
 /**
  * Generic titles stay stable in storage and diagnostics. UI surfaces that already

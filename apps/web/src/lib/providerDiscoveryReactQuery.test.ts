@@ -3,7 +3,7 @@
 //          stale-catalog preservation, and initial-vs-background pending (#103).
 // Layer: Web data fetching tests
 
-import type { NativeApi } from "@synara/contracts";
+import type { NativeApi } from "@omnimind/contracts";
 import { QueryClient } from "@tanstack/react-query";
 import { afterEach, describe, expect, it, vi } from "vitest";
 

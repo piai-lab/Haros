@@ -2,7 +2,7 @@
 // Purpose: Characterizes terminal split limits, focus requests, and final-tab close behavior.
 // Layer: Chat terminal controller tests
 
-import { ThreadId } from "@synara/contracts";
+import { ThreadId } from "@omnimind/contracts";
 import { beforeEach, describe, expect, it, vi } from "vitest";
 
 const reactHarness = vi.hoisted(() => {

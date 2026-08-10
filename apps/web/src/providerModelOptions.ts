@@ -2,7 +2,7 @@ import {
   formatModelDisplayName,
   humanizeModelSlug,
   normalizeModelSlug,
-} from "@synara/shared/model";
+} from "@omnimind/shared/model";
 import {
   PROVIDER_DISPLAY_NAMES,
   type AntigravityModelOptions,
@@ -25,7 +25,7 @@ import {
   type PiModelSelection,
   type ProviderKind,
   type ProviderModelOptions,
-} from "@synara/contracts";
+} from "@omnimind/contracts";
 import { normalizeCursorModelVariantBaseId } from "./cursorModelVariants";
 
 export type ProviderOptions = ProviderModelOptions[ProviderKind];

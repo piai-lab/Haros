@@ -1,6 +1,6 @@
 /// <reference types="vite/client" />
 
-import type { NativeApi, DesktopBridge } from "@synara/contracts";
+import type { NativeApi, DesktopBridge } from "@omnimind/contracts";
 
 interface ImportMetaEnv {
   readonly APP_VERSION: string;

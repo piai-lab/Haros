@@ -3,7 +3,7 @@ import type { Dirent } from "node:fs";
 import * as fs from "node:fs/promises";
 import * as path from "node:path";
 
-import type { ServerManagedWorktree } from "@synara/contracts";
+import type { ServerManagedWorktree } from "@omnimind/contracts";
 import { Effect } from "effect";
 
 import type { GitCoreShape } from "./git/Services/GitCore.ts";

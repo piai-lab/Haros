@@ -12,7 +12,7 @@ import {
   type ProfileStats,
   type ProfileTokenStats,
   type ProviderKind,
-} from "@synara/contracts";
+} from "@omnimind/contracts";
 import {
   serverProfileStatsQueryOptions,
   serverProfileTokenStatsQueryOptions,

@@ -12,7 +12,7 @@ import type {
   OrchestrationMessage,
   OrchestrationThread,
   OrchestrationThreadShell,
-} from "@synara/contracts";
+} from "@omnimind/contracts";
 
 export type AgentThreadStatus =
   | "working"

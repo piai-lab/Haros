@@ -8,10 +8,10 @@ import {
   type ProjectId,
   type PullRequestReviewRequestCountResult,
   type ThreadId,
-} from "@synara/contracts";
-import { pluralize } from "@synara/shared/text";
-import { resolveThreadEnvironmentMode } from "@synara/shared/threadEnvironment";
-import { isWorkspaceRootWithin, workspaceRootsEqual } from "@synara/shared/threadWorkspace";
+} from "@omnimind/contracts";
+import { pluralize } from "@omnimind/shared/text";
+import { resolveThreadEnvironmentMode } from "@omnimind/shared/threadEnvironment";
+import { isWorkspaceRootWithin, workspaceRootsEqual } from "@omnimind/shared/threadWorkspace";
 import type { SidebarProjectSortOrder, SidebarThreadSortOrder } from "../appSettings";
 import { resolveRestorableThreadRoute, type LastThreadRoute } from "../chatRouteRestore";
 import type { ChatMessage, Project, SidebarThreadSummary, Thread } from "../types";

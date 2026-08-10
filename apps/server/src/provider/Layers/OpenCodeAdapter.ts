@@ -15,7 +15,7 @@ import {
   type ToolLifecycleItemType,
   TurnId,
   type UserInputQuestion,
-} from "@synara/contracts";
+} from "@omnimind/contracts";
 import { Cause, Deferred, Effect, Exit, Layer, Option, Queue, Ref, Scope, Stream } from "effect";
 import type {
   AssistantMessage,

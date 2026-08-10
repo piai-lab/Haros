@@ -2,7 +2,7 @@
 // Purpose: Validate app-icon preferences and map them to platform resources.
 // Layer: Desktop-native preference logic
 
-import { DesktopAppIcon } from "@synara/contracts";
+import { DesktopAppIcon } from "@omnimind/contracts";
 import { Schema } from "effect";
 
 type DesktopPlatform = "darwin" | "linux" | "win32";

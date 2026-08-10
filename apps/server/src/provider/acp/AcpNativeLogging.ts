@@ -1,4 +1,4 @@
-import type { ProviderKind, ThreadId } from "@synara/contracts";
+import type { ProviderKind, ThreadId } from "@omnimind/contracts";
 import { Cause, Effect } from "effect";
 
 import type { EventNdjsonLogger } from "../Layers/EventNdjsonLogger.ts";

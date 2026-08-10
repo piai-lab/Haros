@@ -11,8 +11,8 @@ import {
   ThreadId,
   TurnId,
   type ThreadEnvironmentMode,
-} from "@synara/contracts";
-import { resolveThreadWorkspaceCwd } from "@synara/shared/threadEnvironment";
+} from "@omnimind/contracts";
+import { resolveThreadWorkspaceCwd } from "@omnimind/shared/threadEnvironment";
 import { Cause, Effect, Layer, ServiceMap } from "effect";
 import * as SqlClient from "effect/unstable/sql/SqlClient";
 import { redactCreationPlanForPurgedCaller } from "./agentGateway/operationPlan.ts";

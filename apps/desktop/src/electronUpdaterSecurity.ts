@@ -14,10 +14,10 @@ import * as Path from "node:path";
 import {
   matchesDistinguishedName,
   parseDistinguishedName,
-} from "@synara/shared/windowsCertificate";
-import { prepareWindowsSafeProcess, resolveWindowsSystemRoot } from "@synara/shared/windowsProcess";
+} from "@omnimind/shared/windowsCertificate";
+import { prepareWindowsSafeProcess, resolveWindowsSystemRoot } from "@omnimind/shared/windowsProcess";
 
-export { parseDistinguishedName } from "@synara/shared/windowsCertificate";
+export { parseDistinguishedName } from "@omnimind/shared/windowsCertificate";
 
 type Logger = {
   info?(message: string): void;

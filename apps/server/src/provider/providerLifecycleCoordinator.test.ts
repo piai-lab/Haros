@@ -3,7 +3,7 @@
 // Layer: Provider lifecycle unit tests
 // Depends on: makeProviderLifecycleCoordinator.
 
-import { ThreadId } from "@synara/contracts";
+import { ThreadId } from "@omnimind/contracts";
 import { Deferred, Effect, Fiber } from "effect";
 import { describe, expect, it } from "vitest";
 

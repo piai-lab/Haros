@@ -11,11 +11,11 @@ import {
   type RuntimeMode,
   type ServerProviderAuthStatus,
   type ThreadId as ThreadIdType,
-} from "@synara/contracts";
-import { normalizeModelSlug } from "@synara/shared/model";
-import { buildOmniMindBranchName } from "@synara/shared/git";
-import { isGenericChatThreadTitle } from "@synara/shared/chatThreads";
-import { isGenericTerminalThreadTitle } from "@synara/shared/terminalThreads";
+} from "@omnimind/contracts";
+import { normalizeModelSlug } from "@omnimind/shared/model";
+import { buildOmniMindBranchName } from "@omnimind/shared/git";
+import { isGenericChatThreadTitle } from "@omnimind/shared/chatThreads";
+import { isGenericTerminalThreadTitle } from "@omnimind/shared/terminalThreads";
 import {
   type ChatMessage,
   type SessionPhase,

@@ -15,7 +15,7 @@ import {
   type ProviderStartOptions,
   type RuntimeMode,
   type ThreadId,
-} from "@synara/contracts";
+} from "@omnimind/contracts";
 import * as Equal from "effect/Equal";
 import * as Schema from "effect/Schema";
 

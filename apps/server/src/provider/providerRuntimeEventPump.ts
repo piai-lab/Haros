@@ -7,7 +7,7 @@
  *
  * @module providerRuntimeEventPump
  */
-import type { ProviderKind, ProviderRuntimeEvent } from "@synara/contracts";
+import type { ProviderKind, ProviderRuntimeEvent } from "@omnimind/contracts";
 import { Cause, Effect, Stream } from "effect";
 
 import type {

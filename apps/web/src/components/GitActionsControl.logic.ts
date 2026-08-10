@@ -2,8 +2,8 @@ import type {
   GitRunStackedActionResult,
   GitStackedAction,
   GitStatusResult,
-} from "@synara/contracts";
-import { isTemporaryWorktreeBranch, resolveUniqueOmniMindBranchName } from "@synara/shared/git";
+} from "@omnimind/contracts";
+import { isTemporaryWorktreeBranch, resolveUniqueOmniMindBranchName } from "@omnimind/shared/git";
 
 export type GitActionIconName = "commit" | "push" | "pr";
 
@@ -753,4 +753,4 @@ export function resolveLiveThreadBranchUpdate(input: {
 }
 
 // Re-export from shared for backwards compatibility in this module's exports
-export { resolveAutoFeatureBranchName } from "@synara/shared/git";
+export { resolveAutoFeatureBranchName } from "@omnimind/shared/git";

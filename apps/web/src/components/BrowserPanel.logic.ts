@@ -8,14 +8,14 @@ import {
   BROWSER_BLANK_URL,
   BROWSER_SEARCH_URL_PREFIX,
   normalizeBrowserUrlInput,
-} from "@synara/shared/browserSession";
+} from "@omnimind/shared/browserSession";
 import type {
   BrowserAnnotationEvent,
   BrowserAnnotationMarker,
   BrowserAnnotationTheme,
   BrowserTabState,
   ThreadId,
-} from "@synara/contracts";
+} from "@omnimind/contracts";
 import type { BrowserHistoryEntry } from "../browserStateStore";
 import type { BrowserAnnotationDraft } from "../lib/browserAnnotations";
 

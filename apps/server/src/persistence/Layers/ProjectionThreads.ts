@@ -20,7 +20,7 @@ import {
   ThreadMarkers,
   ThreadHandoff,
   SpaceId,
-} from "@synara/contracts";
+} from "@omnimind/contracts";
 
 const SqliteBoolean = Schema.Number.pipe(
   Schema.decodeTo(Schema.Boolean, {

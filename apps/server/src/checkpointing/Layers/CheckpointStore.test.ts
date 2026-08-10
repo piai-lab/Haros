@@ -14,7 +14,7 @@ import { CheckpointStoreLive } from "./CheckpointStore.ts";
 import { CheckpointStore } from "../Services/CheckpointStore.ts";
 import { GitCore, type GitCoreShape } from "../../git/Services/GitCore.ts";
 import { GitCommandError } from "../../git/Errors.ts";
-import { CheckpointRef } from "@synara/contracts";
+import { CheckpointRef } from "@omnimind/contracts";
 
 async function waitFor(predicate: () => boolean, timeoutMs = 1_000): Promise<void> {
   const started = Date.now();

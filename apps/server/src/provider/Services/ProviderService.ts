@@ -30,7 +30,7 @@ import type {
   ProviderStopTaskInput,
   ThreadId,
   ProviderTurnStartResult,
-} from "@synara/contracts";
+} from "@omnimind/contracts";
 import { ServiceMap } from "effect";
 import type { Effect, Stream } from "effect";
 

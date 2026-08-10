@@ -11,7 +11,7 @@ import {
   type ProviderInteractionMode,
   type RuntimeMode,
   type ThreadId,
-} from "@synara/contracts";
+} from "@omnimind/contracts";
 import { type DraftThreadEnvMode } from "../composerDraftStore";
 import { readNativeApi } from "../nativeApi";
 import { promoteThreadCreate } from "./threadCreatePromotion";

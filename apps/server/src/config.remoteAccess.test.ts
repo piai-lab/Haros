@@ -68,7 +68,7 @@ describe("remote access policy", () => {
     );
     for (const value of [
       "http://omnimind.example.test/",
-      "https://user:pass@synara.example.test/",
+      "https://user:pass@omnimind.example.test/",
       "https://omnimind.example.test/app",
       "https://omnimind.example.test/?query=1",
       "https://omnimind.example.test/#fragment",

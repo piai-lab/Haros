@@ -12,8 +12,8 @@ import {
   ProviderStartOptions,
   ProjectId,
   TurnId,
-} from "@synara/contracts";
-import { automationRequiresTargetThread } from "@synara/shared/automationMode";
+} from "@omnimind/contracts";
+import { automationRequiresTargetThread } from "@omnimind/shared/automationMode";
 import { Effect, Layer, Option, Schema } from "effect";
 import * as SqlClient from "effect/unstable/sql/SqlClient";
 import * as SqlSchema from "effect/unstable/sql/SqlSchema";

@@ -34,15 +34,15 @@ import type {
   BrowserThreadInput,
   ThreadBrowserState,
   ThreadId,
-} from "@synara/contracts";
-import { isBrowserCopyLinkChord } from "@synara/shared/browserShortcuts";
+} from "@omnimind/contracts";
+import { isBrowserCopyLinkChord } from "@omnimind/shared/browserShortcuts";
 import {
   BROWSER_BLANK_URL as ABOUT_BLANK_URL,
   classifyBrowserWindowOpen,
   isBlankBrowserTabUrl,
   normalizeBrowserUrlInput as normalizeUrlInput,
   resolveCopyableBrowserTabUrl,
-} from "@synara/shared/browserSession";
+} from "@omnimind/shared/browserSession";
 import {
   BROWSER_SESSION_PARTITION,
   BrowserSessionPolicy,

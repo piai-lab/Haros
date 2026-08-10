@@ -3,7 +3,7 @@
 // Layer: Web chat presentation component
 // Exports: TimelineWorkEntryRow, EditedFileRowContent, prefersCompactWorkEntryRow
 
-import type { TurnId } from "@synara/contracts";
+import type { TurnId } from "@omnimind/contracts";
 import {
   createElement,
   memo,

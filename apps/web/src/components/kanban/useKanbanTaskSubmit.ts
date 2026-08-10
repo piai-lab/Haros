@@ -13,7 +13,7 @@ import type {
   RuntimeMode,
   ServerProviderStatus,
   ThreadId,
-} from "@synara/contracts";
+} from "@omnimind/contracts";
 import { useNavigate } from "@tanstack/react-router";
 import { useRef, useState } from "react";
 

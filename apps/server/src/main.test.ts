@@ -15,7 +15,7 @@ import * as Command from "effect/unstable/cli/Command";
 import { FetchHttpClient } from "effect/unstable/http";
 import * as SqlClient from "effect/unstable/sql/SqlClient";
 import { afterEach, beforeEach, vi } from "vitest";
-import { NetService } from "@synara/shared/Net";
+import { NetService } from "@omnimind/shared/Net";
 
 import { ServerConfig, type ServerConfigShape } from "./config";
 import { Open, type OpenShape } from "./open";
@@ -274,7 +274,7 @@ it.layer(testLayer)("server CLI command", (it) => {
   it.effect("consumes desktop shutdown authority before generic child launches", () =>
     Effect.gen(function* () {
       const canonicalKey = "OMNIMIND_DESKTOP_SHUTDOWN_TOKEN";
-      const mixedCaseKey = "sYnArA_dEsKtOp_ShUtDoWn_ToKeN";
+      const mixedCaseKey = "oMnImInD_dEsKtOp_ShUtDoWn_ToKeN";
       const liveToken = "live-process-shutdown-token";
       const injectedToken = "injected-shutdown-token";
       const posixCaseSensitiveSentinel = "posix-case-sensitive-sentinel";

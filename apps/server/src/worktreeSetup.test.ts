@@ -1,4 +1,4 @@
-import type { ProjectScript } from "@synara/contracts";
+import type { ProjectScript } from "@omnimind/contracts";
 import { beforeEach, describe, expect, it, vi } from "vitest";
 
 vi.mock("./processRunner.ts", () => ({

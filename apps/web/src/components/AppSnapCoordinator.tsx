@@ -7,7 +7,7 @@ import {
   type DesktopAppSnapCapture,
   type DesktopAppSnapShortcut,
   type ThreadId,
-} from "@synara/contracts";
+} from "@omnimind/contracts";
 import { useNavigate } from "@tanstack/react-router";
 import { useCallback, useEffect, useRef } from "react";
 

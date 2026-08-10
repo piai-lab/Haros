@@ -2,7 +2,7 @@
 // Purpose: Renders the compact file-comment count chip used in composer and user bubbles.
 // Layer: Chat attachment presentation
 
-import { pluralize } from "@synara/shared/text";
+import { pluralize } from "@omnimind/shared/text";
 
 import { formatFileCommentLabel } from "~/lib/fileComments";
 import { MessageCircleIcon } from "~/lib/icons";

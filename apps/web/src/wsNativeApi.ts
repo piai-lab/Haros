@@ -45,8 +45,8 @@ import {
   type WsWelcomePayload,
   type WsBootstrapNegotiateResult,
   type AutomationStreamEvent,
-} from "@synara/contracts";
-import { VOICE_TRANSCRIPTION_UPLOAD_ROUTE_PATH } from "@synara/shared/binaryTransfer";
+} from "@omnimind/contracts";
+import { VOICE_TRANSCRIPTION_UPLOAD_ROUTE_PATH } from "@omnimind/shared/binaryTransfer";
 
 import { showConfirmDialogFallback } from "./confirmDialogFallback";
 import { showContextMenuFallback } from "./contextMenuFallback";

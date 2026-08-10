@@ -28,7 +28,7 @@ import type {
   GitStashInfoResult,
   GitStatusInput,
   GitStatusResult,
-} from "@synara/contracts";
+} from "@omnimind/contracts";
 
 import type { GitCheckoutDirtyWorktreeError, GitCommandError } from "../Errors.ts";
 

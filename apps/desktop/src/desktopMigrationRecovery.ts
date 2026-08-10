@@ -9,7 +9,7 @@ import { promisify } from "node:util";
 import {
   migrationRecoveryMarkerPath,
   parseMigrationRecoveryResumeState,
-} from "@synara/shared/migrationRecovery";
+} from "@omnimind/shared/migrationRecovery";
 
 const execFile = promisify(ChildProcess.execFile);
 const RECOVERY_OUTPUT_LIMIT_BYTES = 64 * 1024;

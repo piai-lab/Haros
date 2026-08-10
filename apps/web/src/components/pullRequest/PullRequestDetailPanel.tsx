@@ -10,7 +10,7 @@ import type {
   PullRequestAction,
   PullRequestDetailInput,
   PullRequestMergeMethod,
-} from "@synara/contracts";
+} from "@omnimind/contracts";
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import { lazy, Suspense, useRef, useState } from "react";
 

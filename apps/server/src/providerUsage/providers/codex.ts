@@ -5,7 +5,7 @@
 import type {
   ServerProviderUsageLimit,
   ServerProviderUsageLine,
-} from "@synara/contracts";
+} from "@omnimind/contracts";
 
 import { createLogger } from "../../logger";
 import {

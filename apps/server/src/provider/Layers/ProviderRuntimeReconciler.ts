@@ -12,7 +12,7 @@ import {
   EventId,
   type OrchestrationSession,
   type OrchestrationThreadShell,
-} from "@synara/contracts";
+} from "@omnimind/contracts";
 import { Cause, Duration, Effect, Layer, Option, Schedule } from "effect";
 
 import { OrchestrationEngineService } from "../../orchestration/Services/OrchestrationEngine.ts";

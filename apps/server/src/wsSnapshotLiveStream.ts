@@ -1,4 +1,4 @@
-import { WsRpcError, type OrchestrationEvent } from "@synara/contracts";
+import { WsRpcError, type OrchestrationEvent } from "@omnimind/contracts";
 import { Cause, Effect, Queue, Scope, Stream } from "effect";
 
 export const ORCHESTRATION_SNAPSHOT_REPLAY_LIMIT = 4_096;

@@ -5,7 +5,7 @@
 // Exports: mark/clear/has helpers consumed by ChatView and the EventRouter
 //          catch-up watchdog.
 
-import type { ThreadId } from "@synara/contracts";
+import type { ThreadId } from "@omnimind/contracts";
 
 // The catch-up watchdog otherwise re-syncs only threads the store already
 // believes are busy. A lost `thread.session-set(running)` event corrupts

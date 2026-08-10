@@ -11,7 +11,7 @@ import type {
   ProviderKind,
   ServerProviderStatus,
   ThreadId as ThreadIdType,
-} from "@synara/contracts";
+} from "@omnimind/contracts";
 import {
   AutomationId,
   DEFAULT_AUTOMATION_STOP_CONFIDENCE_THRESHOLD,
@@ -21,8 +21,8 @@ import {
   ProjectId,
   ThreadId,
   TurnId,
-} from "@synara/contracts";
-import { isTemporaryWorktreeBranch } from "@synara/shared/git";
+} from "@omnimind/contracts";
+import { isTemporaryWorktreeBranch } from "@omnimind/shared/git";
 import { realpathSync } from "node:fs";
 import { homedir } from "node:os";
 

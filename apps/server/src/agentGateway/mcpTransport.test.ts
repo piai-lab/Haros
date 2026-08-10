@@ -1,5 +1,5 @@
 import { assert, describe, it } from "@effect/vitest";
-import { ProjectId, ThreadId, TurnId, type OrchestrationThreadShell } from "@synara/contracts";
+import { ProjectId, ThreadId, TurnId, type OrchestrationThreadShell } from "@omnimind/contracts";
 import { Deferred, Effect, Fiber, Option } from "effect";
 
 import type { ProjectionSnapshotQueryShape } from "../orchestration/Services/ProjectionSnapshotQuery.ts";

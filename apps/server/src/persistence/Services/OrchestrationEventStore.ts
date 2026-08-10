@@ -9,7 +9,7 @@
  *
  * @module OrchestrationEventStore
  */
-import { OrchestrationEvent } from "@synara/contracts";
+import { OrchestrationEvent } from "@omnimind/contracts";
 import { ServiceMap } from "effect";
 import type { Effect, Stream } from "effect";
 

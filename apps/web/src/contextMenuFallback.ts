@@ -1,4 +1,4 @@
-import type { ContextMenuItem } from "@synara/contracts";
+import type { ContextMenuItem } from "@omnimind/contracts";
 
 export interface ContextMenuItemWithIcon<T extends string = string> extends ContextMenuItem<T> {
   icon?: string; // SVG string

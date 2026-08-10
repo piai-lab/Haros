@@ -16,7 +16,7 @@ import {
   buildAcceptLanguageHeader,
   buildChromeClientHints,
   deriveChromeUserAgent,
-} from "@synara/shared/browserSession";
+} from "@omnimind/shared/browserSession";
 import { LOCAL_HTML_PREVIEW_SCHEME, LocalHtmlPreviewRegistry } from "./localHtmlPreviewProtocol";
 
 export const BROWSER_SESSION_PARTITION = "persist:omnimind-browser";

@@ -8,7 +8,7 @@ import {
   type ProviderKind,
   type ServerProviderStatus,
   type ServerSettings,
-} from "@synara/contracts";
+} from "@omnimind/contracts";
 
 export const PROVIDER_UPDATE_INITIAL_REFRESH_DELAY_MS = 10_000;
 export const PROVIDER_UPDATE_REFRESH_INTERVAL_MS = 60 * 60 * 1_000;

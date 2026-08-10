@@ -3,7 +3,7 @@
 // Layer: Provider adapter utilities
 // Depends on: shared chat attachment contracts.
 
-import type { ChatAttachment, ChatImageAttachment, ProviderKind } from "@synara/contracts";
+import type { ChatAttachment, ChatImageAttachment, ProviderKind } from "@omnimind/contracts";
 import { Effect } from "effect";
 
 import { resolveProviderAttachmentPath } from "./providerAttachmentPaths.ts";

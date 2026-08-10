@@ -1,4 +1,4 @@
-import { CommandId, MessageId, ProjectId, SpaceId, ThreadId } from "@synara/contracts";
+import { CommandId, MessageId, ProjectId, SpaceId, ThreadId } from "@omnimind/contracts";
 import { type CxOptions, cx } from "class-variance-authority";
 import { twMerge } from "tailwind-merge";
 import * as Random from "effect/Random";

@@ -4,8 +4,8 @@
 
 import { useMemo, type ReactNode } from "react";
 
-import { PROVIDER_DISPLAY_NAMES } from "@synara/contracts";
-import { isGenericChatThreadTitle } from "@synara/shared/chatThreads";
+import { PROVIDER_DISPLAY_NAMES } from "@omnimind/contracts";
+import { isGenericChatThreadTitle } from "@omnimind/shared/chatThreads";
 
 import { useI18n } from "../i18n";
 import { createThreadSelector } from "../storeSelectors";

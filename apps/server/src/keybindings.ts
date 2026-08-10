@@ -16,7 +16,7 @@ import {
   ResolvedKeybindingRule,
   ResolvedKeybindingsConfig,
   type ServerConfigIssue,
-} from "@synara/contracts";
+} from "@omnimind/contracts";
 import { Mutable } from "effect/Types";
 import {
   Array,

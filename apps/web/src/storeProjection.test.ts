@@ -12,7 +12,7 @@ import {
   type OrchestrationReadModel,
   type OrchestrationShellStreamEvent,
   type ThreadMarker,
-} from "@synara/contracts";
+} from "@omnimind/contracts";
 import { beforeEach, describe, expect, it } from "vitest";
 
 import {

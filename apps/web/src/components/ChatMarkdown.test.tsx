@@ -1,5 +1,5 @@
 import { readFileSync } from "node:fs";
-import { MessageId, ThreadMarkerId, type ThreadMarker } from "@synara/contracts";
+import { MessageId, ThreadMarkerId, type ThreadMarker } from "@omnimind/contracts";
 import { renderToStaticMarkup } from "react-dom/server";
 import { describe, expect, it, vi } from "vitest";
 

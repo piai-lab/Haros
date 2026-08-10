@@ -2,7 +2,7 @@ import * as FS from "node:fs";
 import * as Net from "node:net";
 import * as OS from "node:os";
 
-import type { BrowserToolName, ProviderKind, ThreadId } from "@synara/contracts";
+import type { BrowserToolName, ProviderKind, ThreadId } from "@omnimind/contracts";
 
 const FRAME_HEADER_BYTES = 4;
 // A bounded 8 MiB PNG expands to roughly 10.7 MiB as base64 inside the

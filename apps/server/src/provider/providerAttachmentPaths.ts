@@ -5,7 +5,7 @@
 
 import { statSync } from "node:fs";
 
-import type { ChatAttachment, ProviderKind, ThreadId } from "@synara/contracts";
+import type { ChatAttachment, ProviderKind, ThreadId } from "@omnimind/contracts";
 import { Effect, Option } from "effect";
 
 import { resolveAttachmentRelativePath } from "../attachmentPaths.ts";

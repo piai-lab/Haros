@@ -8,7 +8,7 @@ import {
   BROWSER_ANNOTATION_MAX_TEXT_LENGTH,
   BROWSER_ANNOTATION_MAX_URL_LENGTH,
   type BrowserAnnotationTheme,
-} from "@synara/contracts";
+} from "@omnimind/contracts";
 import { describe, expect, it } from "vitest";
 
 import { createGuestIdentifier } from "./guestIdentity";

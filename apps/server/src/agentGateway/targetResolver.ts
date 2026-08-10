@@ -10,7 +10,7 @@ import {
   type ProviderListModelsResult,
   type ProviderModelDescriptor,
   type ServerProviderAuthStatus,
-} from "@synara/contracts";
+} from "@omnimind/contracts";
 import { Effect } from "effect";
 
 import type { ProviderDiscoveryServiceShape } from "../provider/Services/ProviderDiscoveryService.ts";

@@ -2,7 +2,7 @@ import fs from "node:fs";
 import os from "node:os";
 import path from "node:path";
 
-import { EDITORS } from "@synara/contracts";
+import { EDITORS } from "@omnimind/contracts";
 import { afterEach, describe, expect, it } from "vitest";
 
 import { clearEditorIconInFlightCache, resolveCachedEditorIcon } from "./editorAppIcons";

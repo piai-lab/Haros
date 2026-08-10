@@ -1,4 +1,4 @@
-import { type AutomationDefinition, type AutomationRun } from "@synara/contracts";
+import { type AutomationDefinition, type AutomationRun } from "@omnimind/contracts";
 import { createFileRoute, useNavigate } from "@tanstack/react-router";
 import { useEffect, useState, type ReactNode } from "react";
 

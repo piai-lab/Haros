@@ -1,4 +1,4 @@
-import type { NativeApi, SpaceId } from "@synara/contracts";
+import type { NativeApi, SpaceId } from "@omnimind/contracts";
 
 import { newCommandId, newSpaceId } from "./utils";
 

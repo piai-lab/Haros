@@ -1,4 +1,4 @@
-import type { ServerConfig } from "@synara/contracts";
+import type { ServerConfig } from "@omnimind/contracts";
 
 export function createBrowserTestServerConfig(checkedAt: string): ServerConfig {
   return {

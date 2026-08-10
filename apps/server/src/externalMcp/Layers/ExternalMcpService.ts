@@ -8,7 +8,7 @@ import {
   type ExternalMcpIntegration,
   type ExternalMcpPairResult,
   ThreadId,
-} from "@synara/contracts";
+} from "@omnimind/contracts";
 import { Effect, Layer, Option } from "effect";
 
 import { ServerConfig } from "../../config.ts";

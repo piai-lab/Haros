@@ -1,6 +1,6 @@
 import "../index.css";
 
-import { ProjectId, SpaceId, ThreadId } from "@synara/contracts";
+import { ProjectId, SpaceId, ThreadId } from "@omnimind/contracts";
 import { page } from "vitest/browser";
 import { describe, expect, it, vi } from "vitest";
 import { render } from "vitest-browser-react";

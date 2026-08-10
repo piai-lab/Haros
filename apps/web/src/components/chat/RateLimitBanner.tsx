@@ -3,7 +3,7 @@
 // Layer: Chat status presentation
 // Exports: RateLimitBanner and rate-limit derivation helpers.
 
-import type { OrchestrationThreadActivity } from "@synara/contracts";
+import type { OrchestrationThreadActivity } from "@omnimind/contracts";
 import { Alert, AlertAction, AlertDescription } from "../ui/alert";
 import { IconButton } from "../ui/icon-button";
 import { CircleAlertIcon, XIcon } from "~/lib/icons";

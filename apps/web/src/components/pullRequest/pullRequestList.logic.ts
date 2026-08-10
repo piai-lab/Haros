@@ -11,11 +11,11 @@ import type {
   PullRequestInvolvement,
   PullRequestListEntry,
   PullRequestSetPinnedInput,
-} from "@synara/contracts";
+} from "@omnimind/contracts";
 import {
   pullRequestListProjectContexts,
   pullRequestListRepositoryIdentity,
-} from "@synara/shared/githubRepository";
+} from "@omnimind/shared/githubRepository";
 
 export type PullRequestListGroupKey = "pinned" | "reviewRequested" | "authored" | "others";
 

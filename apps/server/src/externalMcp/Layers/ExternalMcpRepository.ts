@@ -2,7 +2,7 @@ import type {
   ExternalMcpCapability,
   ExternalMcpClientKind,
   ExternalMcpProjectScope,
-} from "@synara/contracts";
+} from "@omnimind/contracts";
 import { Effect, Layer } from "effect";
 import * as SqlClient from "effect/unstable/sql/SqlClient";
 

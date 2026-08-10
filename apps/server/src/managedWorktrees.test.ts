@@ -2,7 +2,7 @@ import * as fs from "node:fs/promises";
 import { tmpdir } from "node:os";
 import * as path from "node:path";
 
-import type { OrchestrationThread } from "@synara/contracts";
+import type { OrchestrationThread } from "@omnimind/contracts";
 import { Effect } from "effect";
 import { afterEach, describe, expect, it } from "vitest";
 

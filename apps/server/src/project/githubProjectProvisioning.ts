@@ -4,12 +4,12 @@ import type {
   GitHubProjectProvisionInput,
   GitHubProjectProvisionPhase,
   GitHubProjectProvisionProgressEvent,
-} from "@synara/contracts";
+} from "@omnimind/contracts";
 import {
   parseGitHubRepositoryInput,
   parseGitHubRepositoryNameWithOwnerFromRemoteUrl,
-} from "@synara/shared/githubRepository";
-import { normalizeProjectDirectoryName } from "@synara/shared/projectDirectoryName";
+} from "@omnimind/shared/githubRepository";
+import { normalizeProjectDirectoryName } from "@omnimind/shared/projectDirectoryName";
 import { Effect, FileSystem, Path, PlatformError, Schema, Semaphore } from "effect";
 
 import { GitCommandError, GitHubCliError } from "../git/Errors";

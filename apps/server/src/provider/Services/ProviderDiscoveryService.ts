@@ -13,7 +13,7 @@ import type {
   ProviderListSkillsResult,
   ProviderReadPluginInput,
   ProviderReadPluginResult,
-} from "@synara/contracts";
+} from "@omnimind/contracts";
 import { ServiceMap } from "effect";
 import type { Effect } from "effect";
 

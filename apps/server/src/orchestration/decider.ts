@@ -5,7 +5,7 @@ import type {
   OrchestrationThread,
   ProjectKind,
   ThreadMarker,
-} from "@synara/contracts";
+} from "@omnimind/contracts";
 import {
   EventId,
   MAX_PINNED_PROJECTS,
@@ -14,20 +14,20 @@ import {
   SPACES_MAX_COUNT,
   THREAD_MARKERS_MAX_COUNT,
   TurnId,
-} from "@synara/contracts";
+} from "@omnimind/contracts";
 import {
   deriveAssociatedWorktreeMetadata,
   deriveAssociatedWorktreeMetadataPatch,
   workspaceRootsEqual,
-} from "@synara/shared/threadWorkspace";
-import { doThreadMarkerRangesOverlap } from "@synara/shared/threadMarkers";
-import { collectSubagentDescendants } from "@synara/shared/threadHierarchy";
-import { autoRuntimeModeSelectionIssue } from "@synara/shared/runtimeMode";
-import { providerSupportsNativeTurnSteering } from "@synara/shared/providerMetadata";
+} from "@omnimind/shared/threadWorkspace";
+import { doThreadMarkerRangesOverlap } from "@omnimind/shared/threadMarkers";
+import { collectSubagentDescendants } from "@omnimind/shared/threadHierarchy";
+import { autoRuntimeModeSelectionIssue } from "@omnimind/shared/runtimeMode";
+import { providerSupportsNativeTurnSteering } from "@omnimind/shared/providerMetadata";
 import {
   collectTailTurnIds,
   resolveTailUserMessageEditTarget,
-} from "@synara/shared/conversationEdit";
+} from "@omnimind/shared/conversationEdit";
 import { Effect } from "effect";
 
 import { OrchestrationCommandInvariantError } from "./Errors.ts";

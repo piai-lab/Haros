@@ -6,7 +6,7 @@
 
 import { HiOutlineArchiveBox } from "react-icons/hi2";
 
-import type { ThreadId } from "@synara/contracts";
+import type { ThreadId } from "@omnimind/contracts";
 
 import { useI18n } from "~/i18n";
 import { cn } from "~/lib/utils";

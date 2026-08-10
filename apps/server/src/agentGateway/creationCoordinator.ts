@@ -14,11 +14,11 @@ import {
   type ProviderKind,
   type OmniMindCreateThreadsInput,
   type OmniMindCreateThreadsResult,
-} from "@synara/contracts";
-import { buildPromptThreadTitleFallback } from "@synara/shared/chatThreads";
-import { WORKTREE_BRANCH_PREFIX } from "@synara/shared/git";
-import { parseGitHubRepositoryNameWithOwnerFromPullRequestUrl } from "@synara/shared/githubRepository";
-import { runtimeModeEscalatesPrivilege } from "@synara/shared/runtimeMode";
+} from "@omnimind/contracts";
+import { buildPromptThreadTitleFallback } from "@omnimind/shared/chatThreads";
+import { WORKTREE_BRANCH_PREFIX } from "@omnimind/shared/git";
+import { parseGitHubRepositoryNameWithOwnerFromPullRequestUrl } from "@omnimind/shared/githubRepository";
+import { runtimeModeEscalatesPrivilege } from "@omnimind/shared/runtimeMode";
 import { Cause, Effect, Option, Semaphore } from "effect";
 
 import type { ServerConfigShape } from "../config.ts";

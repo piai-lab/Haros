@@ -1,4 +1,4 @@
-import { ThreadId, type ModelSelection } from "@synara/contracts";
+import { ThreadId, type ModelSelection } from "@omnimind/contracts";
 import { beforeEach, describe, expect, it } from "vitest";
 import {
   deriveEffectiveComposerModelState,

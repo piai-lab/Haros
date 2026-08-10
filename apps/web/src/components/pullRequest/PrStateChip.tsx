@@ -4,7 +4,7 @@
 // Layer: UI component (pure)
 // Exports: PrStateChip
 
-import type { OrchestrationThreadPullRequest } from "@synara/contracts";
+import type { OrchestrationThreadPullRequest } from "@omnimind/contracts";
 
 import { useI18n, type MessageKey } from "~/i18n";
 import { cn } from "~/lib/utils";

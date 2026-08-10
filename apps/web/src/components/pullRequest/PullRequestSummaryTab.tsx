@@ -6,7 +6,7 @@
 // Layer: Pull request presentation
 // Exports: PullRequestSummaryTab
 
-import type { PullRequestDetail } from "@synara/contracts";
+import type { PullRequestDetail } from "@omnimind/contracts";
 import { useState, type ReactNode } from "react";
 
 import {

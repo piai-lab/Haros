@@ -1,6 +1,6 @@
 import "../../index.css";
 
-import { type ModelSlug, ThreadId } from "@synara/contracts";
+import { type ModelSlug, ThreadId } from "@omnimind/contracts";
 import { page } from "vitest/browser";
 import { describe, expect, it, vi } from "vitest";
 import { render } from "vitest-browser-react";

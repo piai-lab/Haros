@@ -8,15 +8,15 @@ import type {
   GitStackedAction,
   ModelSelection,
   ProviderStartOptions,
-} from "@synara/contracts";
+} from "@omnimind/contracts";
 import {
   resolveAutoFeatureBranchName,
   sanitizeBranchFragment,
   sanitizeFeatureBranchName,
-} from "@synara/shared/git";
-import { parseGitHubRepositoryNameWithOwnerFromRemoteUrl } from "@synara/shared/githubRepository";
-import { summarizeUnifiedPatchTotals } from "@synara/shared/unifiedPatchStats";
-import { resolveWorktreeHandoffIntent } from "@synara/shared/worktreeHandoff";
+} from "@omnimind/shared/git";
+import { parseGitHubRepositoryNameWithOwnerFromRemoteUrl } from "@omnimind/shared/githubRepository";
+import { summarizeUnifiedPatchTotals } from "@omnimind/shared/unifiedPatchStats";
+import { resolveWorktreeHandoffIntent } from "@omnimind/shared/worktreeHandoff";
 
 import { GitManagerError } from "../Errors.ts";
 import {

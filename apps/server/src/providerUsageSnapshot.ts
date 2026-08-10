@@ -11,7 +11,7 @@ import type {
   ServerGetProviderUsageSnapshotResult,
   ServerProviderUsageLimit,
   ServerProviderUsageLine,
-} from "@synara/contracts";
+} from "@omnimind/contracts";
 import { Effect } from "effect";
 
 import { ServerConfig } from "./config";

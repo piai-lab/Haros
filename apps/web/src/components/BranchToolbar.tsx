@@ -7,7 +7,7 @@ import type {
   ServerProviderStatus,
   ThreadId,
   RuntimeMode,
-} from "@synara/contracts";
+} from "@omnimind/contracts";
 import { CheckIcon, ChevronDownIcon, HandoffIcon, WorktreeIcon } from "~/lib/icons";
 import { HiOutlineHandRaised } from "react-icons/hi2";
 import { CentralIcon } from "~/lib/central-icons";

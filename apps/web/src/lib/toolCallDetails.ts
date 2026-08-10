@@ -4,7 +4,7 @@
 // Exports: deriveWorkLogToolDetails, mergeWorkLogToolDetails
 // Depends on: provider runtime item metadata already truncated by server ingestion
 
-import type { ToolLifecycleItemType } from "@synara/contracts";
+import type { ToolLifecycleItemType } from "@omnimind/contracts";
 
 type WorkLogRequestKind = "command" | "file-read" | "file-change" | "permissions";
 

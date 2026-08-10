@@ -2,7 +2,7 @@
 // Purpose: Render the visual desktop app-icon choices used by Appearance settings.
 // Layer: Settings UI component
 
-import type { DesktopAppIcon } from "@synara/contracts";
+import type { DesktopAppIcon } from "@omnimind/contracts";
 import { cn } from "~/lib/utils";
 import { useI18n, type MessageKey } from "~/i18n";
 

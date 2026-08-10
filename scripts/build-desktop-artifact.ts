@@ -20,7 +20,7 @@ import {
   MAC_APPSNAP_HELPER_STAGE_PATH,
   validateDesktopNativeBuildHost,
 } from "./lib/desktop-platform-build-config.ts";
-import { OMNIMIND_PRODUCTION_BUNDLE_ID } from "@synara/shared/desktopIdentity";
+import { OMNIMIND_PRODUCTION_BUNDLE_ID } from "@omnimind/shared/desktopIdentity";
 import { parseBooleanEnvValue } from "./lib/env-bool.ts";
 import { finalizeSignedMacDmg } from "./lib/mac-dmg-finalize.ts";
 import { finalizeMacUpdateZip } from "./lib/mac-update-zip-finalize.ts";

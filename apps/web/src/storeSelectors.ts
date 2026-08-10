@@ -2,7 +2,7 @@
 // Purpose: Stable Zustand selectors for entity lookups and lightweight sidebar projections.
 // Exports: Selector factories used by routes and sidebar-heavy components.
 
-import type { ProjectId, ThreadEnvironmentMode, ThreadId } from "@synara/contracts";
+import type { ProjectId, ThreadEnvironmentMode, ThreadId } from "@omnimind/contracts";
 
 import type { AppState } from "./storeState";
 import { resolveThreadDisplayProvider } from "./lib/threadDisplayProvider";

@@ -3,7 +3,7 @@
 // Layer: Orchestration mapping tests
 // Depends on: handoff.
 
-import { MessageId, type OrchestrationMessage } from "@synara/contracts";
+import { MessageId, type OrchestrationMessage } from "@omnimind/contracts";
 import { describe, expect, it } from "vitest";
 
 import { buildPriorTranscriptBootstrapText } from "./handoff.ts";

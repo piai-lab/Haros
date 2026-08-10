@@ -1,4 +1,4 @@
-import { SPACE_NAME_MAX_LENGTH } from "@synara/contracts";
+import { SPACE_NAME_MAX_LENGTH } from "@omnimind/contracts";
 import { useEffect, useId, useRef, useState } from "react";
 
 import { useI18n } from "../i18n";

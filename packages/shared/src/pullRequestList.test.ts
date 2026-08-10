@@ -1,4 +1,4 @@
-import type { PullRequestListEntry } from "@synara/contracts";
+import type { PullRequestListEntry } from "@omnimind/contracts";
 import { describe, expect, it } from "vitest";
 
 import {

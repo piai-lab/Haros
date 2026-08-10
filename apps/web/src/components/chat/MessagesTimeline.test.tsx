@@ -3,7 +3,7 @@
 // Layer: Web chat component tests
 // Depends on: renderToStaticMarkup and a mocked LegendList.
 
-import { CheckpointRef, MessageId, ThreadId, TurnId } from "@synara/contracts";
+import { CheckpointRef, MessageId, ThreadId, TurnId } from "@omnimind/contracts";
 import { renderToStaticMarkup } from "react-dom/server";
 import { beforeAll, describe, expect, it, vi } from "vitest";
 import { formatShortTimestamp } from "../../timestampFormat";

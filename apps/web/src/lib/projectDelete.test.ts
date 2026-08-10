@@ -1,7 +1,7 @@
 // FILE: projectDelete.test.ts
 // Purpose: Verifies project deletion reconciles local state only after server acceptance.
 
-import { ProjectId } from "@synara/contracts";
+import { ProjectId } from "@omnimind/contracts";
 import { describe, expect, it, vi } from "vitest";
 
 import { deleteProjectFromClient } from "./projectDelete";

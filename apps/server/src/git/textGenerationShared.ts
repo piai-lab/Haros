@@ -4,8 +4,8 @@ import {
   ServerGenerateAutomationIntentResult,
   type AutomationMode,
   type ChatAttachment,
-} from "@synara/contracts";
-import { MAX_CHAT_THREAD_TITLE_WORDS } from "@synara/shared/chatThreads";
+} from "@omnimind/contracts";
+import { MAX_CHAT_THREAD_TITLE_WORDS } from "@omnimind/shared/chatThreads";
 
 import { TextGenerationError } from "./Errors.ts";
 

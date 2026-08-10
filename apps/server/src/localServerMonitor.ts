@@ -13,7 +13,7 @@ import type {
   ServerLocalServerProcess,
   ServerStopLocalServerInput,
   ServerStopLocalServerResult,
-} from "@synara/contracts";
+} from "@omnimind/contracts";
 
 import { redactSensitiveProcessArgs } from "./processArgumentRedaction";
 

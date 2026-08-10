@@ -14,8 +14,8 @@ import {
   type ReactNode,
 } from "react";
 
-import type { OrchestrationThreadPullRequest, ProjectId, ThreadId } from "@synara/contracts";
-import { resolveThreadEnvironmentMode } from "@synara/shared/threadEnvironment";
+import type { OrchestrationThreadPullRequest, ProjectId, ThreadId } from "@omnimind/contracts";
+import { resolveThreadEnvironmentMode } from "@omnimind/shared/threadEnvironment";
 
 import { useI18n, type MessageKey } from "../i18n";
 import {

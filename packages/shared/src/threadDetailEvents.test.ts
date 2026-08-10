@@ -1,4 +1,4 @@
-import { ThreadId, type OrchestrationEvent } from "@synara/contracts";
+import { ThreadId, type OrchestrationEvent } from "@omnimind/contracts";
 import { describe, expect, it } from "vitest";
 
 import { isThreadDetailEventFor, THREAD_DETAIL_EVENT_TYPES } from "./threadDetailEvents";

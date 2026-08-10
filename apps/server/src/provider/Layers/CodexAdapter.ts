@@ -30,7 +30,7 @@ import {
   ProviderItemId,
   ThreadId,
   TurnId,
-} from "@synara/contracts";
+} from "@omnimind/contracts";
 import { Cause, Effect, Layer, Option, Queue, Schema, ServiceMap, Stream } from "effect";
 
 import {

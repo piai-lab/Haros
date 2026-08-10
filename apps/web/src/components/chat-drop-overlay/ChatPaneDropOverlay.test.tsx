@@ -4,7 +4,7 @@
 // Targets: getDropZoneFromPointer, dropZoneToDirectionSide.
 
 import { describe, expect, it } from "vitest";
-import { ThreadId } from "@synara/contracts";
+import { ThreadId } from "@omnimind/contracts";
 
 import {
   dropZoneToDirectionSide,

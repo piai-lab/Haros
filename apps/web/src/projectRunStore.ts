@@ -3,7 +3,7 @@
 // Layer: Web UI state
 // Exports: useProjectRunStore plus helpers for syncing dev-server lifecycle events.
 
-import type { ProjectDevServer, ProjectId } from "@synara/contracts";
+import type { ProjectDevServer, ProjectId } from "@omnimind/contracts";
 
 /**
  * A tracked dev server as projected from the server. This mirrors the

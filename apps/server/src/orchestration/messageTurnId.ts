@@ -1,4 +1,4 @@
-import type { TurnId } from "@synara/contracts";
+import type { TurnId } from "@omnimind/contracts";
 
 export function resolveStableMessageTurnId(input: {
   readonly existingTurnId?: TurnId | null | undefined;

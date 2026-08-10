@@ -1,7 +1,7 @@
 import http from "node:http";
 import type { ListenOptions, Socket } from "node:net";
 
-import { WS_FEATURE_PATH } from "@synara/contracts";
+import { WS_FEATURE_PATH } from "@omnimind/contracts";
 import * as NodeHttpServer from "@effect/platform-node/NodeHttpServer";
 import { Effect, Scope } from "effect";
 import * as HttpServer from "effect/unstable/http/HttpServer";

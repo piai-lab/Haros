@@ -12,7 +12,7 @@ import { fileURLToPath } from "node:url";
 import {
   OMNIMIND_DESKTOP_UPDATE_CHANNEL,
   OMNIMIND_PRODUCTION_BUNDLE_ID,
-} from "@synara/shared/desktopIdentity";
+} from "@omnimind/shared/desktopIdentity";
 
 import {
   readReleaseUpdatePolicyConfig,
@@ -95,8 +95,8 @@ function verifyCanonicalIdentity(): void {
   const serverPackage = JSON.parse(
     readFileSync(resolve(repoRoot, "apps/server/package.json"), "utf8"),
   ) as { name?: string; bin?: Record<string, string> };
-  if (serverPackage.name !== "@synara/cli") {
-    throw new Error(`Expected CLI package @synara/cli, got ${serverPackage.name ?? "<missing>"}.`);
+  if (serverPackage.name !== "@omnimind/server") {
+    throw new Error(`Expected CLI package @omnimind/server, got ${serverPackage.name ?? "<missing>"}.`);
   }
   const expectedBinaries = {
     omnimind: "dist/index.mjs",
@@ -321,7 +321,7 @@ function verifyDesktopStageLockAuthority(): void {
   );
   assertNotContains(
     buildScript,
-    "--filter @synara/",
+    "--filter @omnimind/",
     "Desktop staging must not use Bun workspace filters because filtered hoisted installs can diverge from bun.lock.",
   );
   assertContains(

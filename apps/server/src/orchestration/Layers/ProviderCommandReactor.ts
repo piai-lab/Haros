@@ -25,7 +25,7 @@ import {
   type ProviderSession,
   type RuntimeMode,
   TurnId,
-} from "@synara/contracts";
+} from "@omnimind/contracts";
 import {
   Cache,
   Cause,
@@ -44,20 +44,20 @@ import {
 import {
   buildPromptThreadTitleFallback,
   isGenericChatThreadTitle,
-} from "@synara/shared/chatThreads";
+} from "@omnimind/shared/chatThreads";
 import {
   collectTailTurnIds,
   resolveTailUserMessageEditTarget,
-} from "@synara/shared/conversationEdit";
-import { isTemporaryWorktreeBranch, WORKTREE_BRANCH_PREFIX } from "@synara/shared/git";
-import { claudeSelectionRequiresRestart } from "@synara/shared/model";
-import { providerSupportsNativeTurnSteering } from "@synara/shared/providerMetadata";
+} from "@omnimind/shared/conversationEdit";
+import { isTemporaryWorktreeBranch, WORKTREE_BRANCH_PREFIX } from "@omnimind/shared/git";
+import { claudeSelectionRequiresRestart } from "@omnimind/shared/model";
+import { providerSupportsNativeTurnSteering } from "@omnimind/shared/providerMetadata";
 import {
   formatProviderDeliveryBlockDetail,
   PROVIDER_DELIVERY_BLOCK_SUMMARY,
-} from "@synara/shared/providerDeliveryBlock";
-import { buildStalePendingRequestFailureDetail } from "@synara/shared/threadSummary";
-import { resolveThreadWorkspaceState } from "@synara/shared/threadEnvironment";
+} from "@omnimind/shared/providerDeliveryBlock";
+import { buildStalePendingRequestFailureDetail } from "@omnimind/shared/threadSummary";
+import { resolveThreadWorkspaceState } from "@omnimind/shared/threadEnvironment";
 
 import {
   checkpointRefForThreadMessageStart,
@@ -98,7 +98,7 @@ import { QueuedTurnPromotionRepository } from "../../persistence/Services/Queued
 import { ManagedAttachmentRepository } from "../../persistence/Services/ManagedAttachments.ts";
 import { ServerConfig } from "../../config.ts";
 import { ServerSettingsService } from "../../serverSettings.ts";
-import { providerStartOptionsFromServerSettings } from "@synara/shared/serverSettings";
+import { providerStartOptionsFromServerSettings } from "@omnimind/shared/serverSettings";
 import { clearWorkspaceIndexCache } from "../../workspaceEntries.ts";
 import {
   buildPriorTranscriptBootstrapText,

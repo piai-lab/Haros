@@ -2,7 +2,7 @@ import type {
   ExternalMcpCapability,
   ExternalMcpClientKind,
   ExternalMcpProjectScope,
-} from "@synara/contracts";
+} from "@omnimind/contracts";
 import { ServiceMap } from "effect";
 import type { Effect } from "effect";
 

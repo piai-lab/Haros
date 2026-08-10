@@ -6,7 +6,7 @@ import {
   DEFAULT_SERVER_SETTINGS,
   type ProviderKind,
   type ProviderModelDescriptor,
-} from "@synara/contracts";
+} from "@omnimind/contracts";
 import { useState } from "react";
 import { renderToStaticMarkup } from "react-dom/server";
 import { beforeEach, describe, expect, it, vi } from "vitest";

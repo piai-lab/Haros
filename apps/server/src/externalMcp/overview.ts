@@ -1,4 +1,4 @@
-import type { ExternalMcpCapability } from "@synara/contracts";
+import type { ExternalMcpCapability } from "@omnimind/contracts";
 
 interface OverviewProjectInput {
   readonly id: string;

@@ -17,8 +17,8 @@ import {
   TerminalWriteInput,
   type TerminalEvent,
   type TerminalSessionSnapshot,
-} from "@synara/contracts";
-import { describeErrorMessage } from "@synara/shared/errorMessages";
+} from "@omnimind/contracts";
+import { describeErrorMessage } from "@omnimind/shared/errorMessages";
 import {
   consumeTerminalIdentityInput,
   terminalCliKindFromValue,
@@ -27,7 +27,7 @@ import {
   type TerminalActivityState,
   type TerminalAgentHookEventType,
   type TerminalCliKind,
-} from "@synara/shared/terminalThreads";
+} from "@omnimind/shared/terminalThreads";
 import { Effect, Encoding, Layer, Schema } from "effect";
 
 import { createLogger } from "../../logger";

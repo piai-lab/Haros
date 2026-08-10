@@ -2,7 +2,7 @@
 // Purpose: Resolve the active thread route into either a single chat surface or a persisted split view.
 // Layer: Route container
 
-import { type ProjectId, ThreadId } from "@synara/contracts";
+import { type ProjectId, ThreadId } from "@omnimind/contracts";
 import { createFileRoute, useNavigate } from "@tanstack/react-router";
 import { useEffect, useMemo, useRef, useState } from "react";
 

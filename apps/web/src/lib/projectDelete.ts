@@ -2,7 +2,7 @@
 // Purpose: Removes a project locally only after the server accepts its deletion.
 // Exports: deleteProjectFromClient
 
-import type { NativeApi, ProjectId } from "@synara/contracts";
+import type { NativeApi, ProjectId } from "@omnimind/contracts";
 
 import { newCommandId } from "./utils";
 

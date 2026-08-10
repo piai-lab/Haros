@@ -6,7 +6,7 @@
 // Layer: Pull request presentation
 // Exports: PullRequestList
 
-import type { ProjectId, PullRequestListEntry } from "@synara/contracts";
+import type { ProjectId, PullRequestListEntry } from "@omnimind/contracts";
 import { pullRequestListEntryKey, type PullRequestListGroup } from "./pullRequestList.logic";
 import { PullRequestRow } from "./PullRequestRow";
 import { PR_FINE_TEXT_CLASS_NAME, PR_QUIET_INK_CLASS_NAME } from "./pullRequestText";

@@ -2,7 +2,7 @@
 // Purpose: Covers voice transcription request identity and recorder action guards.
 // Layer: Chat composer hook tests
 
-import { ProjectId, ThreadId, type ProviderKind } from "@synara/contracts";
+import { ProjectId, ThreadId, type ProviderKind } from "@omnimind/contracts";
 import { beforeEach, describe, expect, it, vi } from "vitest";
 
 const reactHarness = vi.hoisted(() => {

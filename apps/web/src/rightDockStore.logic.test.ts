@@ -1,5 +1,5 @@
 import { describe, expect, it } from "vitest";
-import { ThreadId } from "@synara/contracts";
+import { ThreadId } from "@omnimind/contracts";
 
 import {
   RIGHT_DOCK_PANE_KINDS,

@@ -7,8 +7,8 @@ import {
   type DesktopAppSnapPermission,
   type DesktopAppSnapState,
   type ResolvedKeybindingsConfig,
-} from "@synara/contracts";
-import { appSnapShortcutLabels } from "@synara/shared/appSnapShortcut";
+} from "@omnimind/contracts";
+import { appSnapShortcutLabels } from "@omnimind/shared/appSnapShortcut";
 import { useQuery } from "@tanstack/react-query";
 import { useEffect, useRef, useState } from "react";
 

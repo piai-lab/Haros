@@ -1,4 +1,4 @@
-import type { ModelSelection, ProviderKind, ProviderStartOptions } from "@synara/contracts";
+import type { ModelSelection, ProviderKind, ProviderStartOptions } from "@omnimind/contracts";
 
 export interface TextGenerationProviderInput {
   readonly modelSelection: ModelSelection;

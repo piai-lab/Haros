@@ -42,7 +42,7 @@ import {
   type WsPushChannel,
   type WsPushMessage,
   ThreadId,
-} from "@synara/contracts";
+} from "@omnimind/contracts";
 import {
   Cause,
   Data,

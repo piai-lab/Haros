@@ -3,7 +3,7 @@
 //          underpins domain-level dedup (every URL on a site shares one cache key).
 // Layer: Server utility tests
 
-import { outboundHttp, type OutboundHttpResponse } from "@synara/shared/outboundHttp";
+import { outboundHttp, type OutboundHttpResponse } from "@omnimind/shared/outboundHttp";
 import { afterEach, describe, expect, it, vi } from "vitest";
 
 import {

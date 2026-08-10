@@ -11,8 +11,8 @@ import {
   type CodexGeneratedImageArtifact,
   type ProviderRuntimeEvent,
   type ThreadId,
-} from "@synara/contracts";
-import { isSupportedLocalImagePath as isSupportedLocalImagePathShared } from "@synara/shared/localPreviewFiles";
+} from "@omnimind/contracts";
+import { isSupportedLocalImagePath as isSupportedLocalImagePathShared } from "@omnimind/shared/localPreviewFiles";
 
 import {
   resolveActiveCodexHomeWritePath,

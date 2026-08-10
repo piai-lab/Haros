@@ -2,9 +2,9 @@
 // Purpose: Reuse one hidden home-scoped chat project as the backing container for chat rows.
 // Layer: Web orchestration helper
 
-import { type ProjectId } from "@synara/contracts";
-import { matchesLegacyHomeChatWorkspaceRoot } from "@synara/shared/projectContainers";
-import { isWorkspaceRootWithin, workspaceRootsEqual } from "@synara/shared/threadWorkspace";
+import { type ProjectId } from "@omnimind/contracts";
+import { matchesLegacyHomeChatWorkspaceRoot } from "@omnimind/shared/projectContainers";
+import { isWorkspaceRootWithin, workspaceRootsEqual } from "@omnimind/shared/threadWorkspace";
 import type { Project } from "../types";
 import { readNativeApi } from "../nativeApi";
 import { useStore } from "../store";

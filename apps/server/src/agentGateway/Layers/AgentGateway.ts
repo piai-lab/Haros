@@ -24,8 +24,8 @@ import {
   type RuntimeMode,
   type ServerProviderStatus,
   type TurnDispatchMode,
-} from "@synara/contracts";
-import { runtimeModeEscalatesPrivilege } from "@synara/shared/runtimeMode";
+} from "@omnimind/contracts";
+import { runtimeModeEscalatesPrivilege } from "@omnimind/shared/runtimeMode";
 import { Effect, Layer, Option } from "effect";
 
 import { GitCore } from "../../git/Services/GitCore.ts";

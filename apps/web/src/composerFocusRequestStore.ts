@@ -3,7 +3,7 @@
 //          ask the active thread's composer to take focus after inserting text.
 // Layer: Web UI state store
 
-import type { ThreadId } from "@synara/contracts";
+import type { ThreadId } from "@omnimind/contracts";
 import { create } from "zustand";
 
 interface ComposerFocusRequestState {

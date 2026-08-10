@@ -1,7 +1,7 @@
 // FILE: projectCreateRecovery.test.ts
 // Purpose: Verifies duplicate `project.create` recovery helpers used by import flows.
 
-import { ProjectId } from "@synara/contracts";
+import { ProjectId } from "@omnimind/contracts";
 import { describe, expect, it } from "vitest";
 
 import {

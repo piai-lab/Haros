@@ -3,11 +3,11 @@ import { randomUUID } from "node:crypto";
 import { Effect, FileSystem, Layer, Option, Path, Schema, Stream } from "effect";
 import { ChildProcess, ChildProcessSpawner } from "effect/unstable/process";
 
-import { DEFAULT_GIT_TEXT_GENERATION_MODEL } from "@synara/contracts";
-import { sanitizeGeneratedThreadTitle } from "@synara/shared/chatThreads";
-import { resolveCodexHome } from "@synara/shared/codexConfig";
-import { sanitizeBranchFragment, sanitizeFeatureBranchName } from "@synara/shared/git";
-import { prepareWindowsSafeProcess } from "@synara/shared/windowsProcess";
+import { DEFAULT_GIT_TEXT_GENERATION_MODEL } from "@omnimind/contracts";
+import { sanitizeGeneratedThreadTitle } from "@omnimind/shared/chatThreads";
+import { resolveCodexHome } from "@omnimind/shared/codexConfig";
+import { sanitizeBranchFragment, sanitizeFeatureBranchName } from "@omnimind/shared/git";
+import { prepareWindowsSafeProcess } from "@omnimind/shared/windowsProcess";
 
 import { resolveProviderAttachmentPath } from "../../provider/providerAttachmentPaths.ts";
 import { buildCodexProcessEnv } from "../../codexProcessEnv.ts";

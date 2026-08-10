@@ -4,7 +4,7 @@
 // Layer: Route UI logic helpers
 // Exports: home-chat restore-route resolution.
 
-import type { ProjectId, ThreadId } from "@synara/contracts";
+import type { ProjectId, ThreadId } from "@omnimind/contracts";
 
 import { resolveRestorableThreadRoute, type LastThreadRoute } from "../chatRouteRestore";
 

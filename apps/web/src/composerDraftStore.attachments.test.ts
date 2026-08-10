@@ -2,7 +2,7 @@ import {
   OrchestrationProposedPlanId,
   PROVIDER_SEND_TURN_MAX_ATTACHMENTS,
   ThreadId,
-} from "@synara/contracts";
+} from "@omnimind/contracts";
 import * as Schema from "effect/Schema";
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 import { pendingComposerAttachmentSyncGenerationCount } from "./composerDraftAttachments";

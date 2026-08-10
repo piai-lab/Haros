@@ -14,9 +14,9 @@ import {
   ServerSettingsError,
   type ServerSettingsPatch,
   type ServerSettingsView,
-} from "@synara/contracts";
-import { deepMerge, type DeepPartial } from "@synara/shared/Struct";
-import { applyServerSettingsPatch } from "@synara/shared/serverSettings";
+} from "@omnimind/contracts";
+import { deepMerge, type DeepPartial } from "@omnimind/shared/Struct";
+import { applyServerSettingsPatch } from "@omnimind/shared/serverSettings";
 import {
   Cause,
   Deferred,

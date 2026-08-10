@@ -86,11 +86,11 @@ import {
   ThreadId,
   type ResolvedKeybindingsConfig,
   WS_GITHUB_PROJECT_PROVISIONING_CAPABILITY,
-} from "@synara/contracts";
-import { isGenericChatThreadTitle } from "@synara/shared/chatThreads";
-import { getDefaultModel } from "@synara/shared/model";
-import { pluralize } from "@synara/shared/text";
-import { resolveThreadWorkspaceCwd } from "@synara/shared/threadEnvironment";
+} from "@omnimind/contracts";
+import { isGenericChatThreadTitle } from "@omnimind/shared/chatThreads";
+import { getDefaultModel } from "@omnimind/shared/model";
+import { pluralize } from "@omnimind/shared/text";
+import { resolveThreadWorkspaceCwd } from "@omnimind/shared/threadEnvironment";
 import { useQueries, useQuery, useQueryClient } from "@tanstack/react-query";
 import { useLocation, useNavigate, useParams, useSearch } from "@tanstack/react-router";
 import {

@@ -4,7 +4,7 @@
 
 import "../index.css";
 
-import { ProjectId, ThreadId, type OrchestrationThreadPullRequest } from "@synara/contracts";
+import { ProjectId, ThreadId, type OrchestrationThreadPullRequest } from "@omnimind/contracts";
 import type { PointerEvent as ReactPointerEvent } from "react";
 import { page, userEvent } from "vitest/browser";
 import { afterEach, describe, expect, it, vi } from "vitest";

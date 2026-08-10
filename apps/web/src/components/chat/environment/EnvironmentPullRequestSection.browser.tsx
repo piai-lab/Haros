@@ -9,7 +9,7 @@ import {
   type GitPullRequestSnapshotResult,
   type GitResolvedPullRequest,
   type GitStatusResult,
-} from "@synara/contracts";
+} from "@omnimind/contracts";
 import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
 import { afterEach, describe, expect, it, vi } from "vitest";
 import { page } from "vitest/browser";

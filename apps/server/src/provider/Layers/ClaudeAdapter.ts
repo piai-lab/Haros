@@ -59,7 +59,7 @@ import {
   type ProviderListAgentsResult,
   type ProviderListModelsResult,
   getAgentMentionAliases,
-} from "@synara/contracts";
+} from "@omnimind/contracts";
 import {
   applyClaudePromptEffortPrefix,
   getDefaultModel,
@@ -68,9 +68,9 @@ import {
   hasEffortLevel,
   resolveApiModelId,
   trimOrNull,
-} from "@synara/shared/model";
-import { buildClaudeSubagentPrompt } from "@synara/shared/agentMentions";
-import { prepareWindowsSafeProcess } from "@synara/shared/windowsProcess";
+} from "@omnimind/shared/model";
+import { buildClaudeSubagentPrompt } from "@omnimind/shared/agentMentions";
+import { prepareWindowsSafeProcess } from "@omnimind/shared/windowsProcess";
 import {
   Cause,
   DateTime,
@@ -1016,7 +1016,7 @@ function toolLifecycleEventData(
 
 // Receiver identity for the shared subagent-thread machinery: ingestion spawns a
 // child thread per receiverThreadId on collab_agent_tool_call items and titles it
-// from these hints (see extractSubagentIdentityHints in @synara/shared/subagents).
+// from these hints (see extractSubagentIdentityHints in @omnimind/shared/subagents).
 function subagentReceiverData(
   tool: Pick<ToolInFlight, "itemId" | "input">,
 ): Record<string, unknown> {

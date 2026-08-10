@@ -2,8 +2,8 @@
 // Purpose: Centralizes rate-limit parsing, normalization, formatting, and row derivation
 // for provider runtime events so UI components can stay presentation-only.
 
-import type { OrchestrationThread } from "@synara/contracts";
-import { providerUsageLearnMoreHref } from "@synara/shared/providerUsage";
+import type { OrchestrationThread } from "@omnimind/contracts";
+import { providerUsageLearnMoreHref } from "@omnimind/shared/providerUsage";
 
 export interface RateLimitWindow {
   window: string;

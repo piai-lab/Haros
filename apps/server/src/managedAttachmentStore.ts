@@ -2,7 +2,7 @@ import { createHash, randomUUID } from "node:crypto";
 import fs from "node:fs/promises";
 import path from "node:path";
 
-import type { ChatFileAttachment, ChatImageAttachment } from "@synara/contracts";
+import type { ChatFileAttachment, ChatImageAttachment } from "@omnimind/contracts";
 import { Effect } from "effect";
 
 import { resolveAttachmentRelativePath } from "./attachmentPaths";

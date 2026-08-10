@@ -7,8 +7,8 @@ import {
   type ProviderKind,
   type ServerProviderStatus,
   type ServerSettings,
-} from "@synara/contracts";
-import { PROVIDER_DESCRIPTORS } from "@synara/shared/providerMetadata";
+} from "@omnimind/contracts";
+import { PROVIDER_DESCRIPTORS } from "@omnimind/shared/providerMetadata";
 import {
   closestCenter,
   DndContext,

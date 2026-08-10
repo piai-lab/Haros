@@ -3,7 +3,7 @@
 // Layer: Web UI provider discovery
 // Exports: providerModelDiscoveryInvalidationFingerprint
 
-import type { ServerProviderStatus } from "@synara/contracts";
+import type { ServerProviderStatus } from "@omnimind/contracts";
 
 type ProviderModelDiscoveryFingerprintEntry = readonly [
   provider: ServerProviderStatus["provider"],

@@ -10,7 +10,7 @@ import {
   EXTERNAL_MCP_DEFAULT_WAIT_MS,
   EXTERNAL_MCP_MAX_WAIT_MS,
   type ExternalMcpPairResult,
-} from "@synara/contracts";
+} from "@omnimind/contracts";
 
 import type { PersistedServerRuntimeState } from "../serverRuntimeState.ts";
 import { ensurePrivateDirectorySync } from "../privatePathPermissions.ts";

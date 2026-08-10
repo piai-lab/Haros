@@ -15,7 +15,7 @@ import type {
   ProviderStartReviewInput,
   ProviderSteerTurnInput,
   ProviderTurnStartResult,
-} from "@synara/contracts";
+} from "@omnimind/contracts";
 import {
   ApprovalRequestId,
   EventId,
@@ -23,7 +23,7 @@ import {
   ProviderSessionStartInput,
   ThreadId,
   TurnId,
-} from "@synara/contracts";
+} from "@omnimind/contracts";
 import { it, assert, vi } from "@effect/vitest";
 import { assertFailure } from "@effect/vitest/utils";
 

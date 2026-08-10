@@ -7,7 +7,7 @@ import {
   ThreadId,
   type OrchestrationEvent,
   type OrchestrationThread,
-} from "@synara/contracts";
+} from "@omnimind/contracts";
 import {
   Effect,
   Exit,

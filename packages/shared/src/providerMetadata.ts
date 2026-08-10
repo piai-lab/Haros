@@ -1,7 +1,7 @@
 // FILE: providerMetadata.ts
 // Purpose: Exhaustive non-secret provider identity and presentation metadata.
 
-import { PROVIDER_DISPLAY_NAMES, type ProviderKind } from "@synara/contracts";
+import { PROVIDER_DISPLAY_NAMES, type ProviderKind } from "@omnimind/contracts";
 
 export interface ProviderDescriptor {
   readonly kind: ProviderKind;

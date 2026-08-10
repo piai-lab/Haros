@@ -1,4 +1,4 @@
-import { PROVIDER_SEND_TURN_MAX_IMAGE_BYTES } from "@synara/contracts";
+import { PROVIDER_SEND_TURN_MAX_IMAGE_BYTES } from "@omnimind/contracts";
 import { describe, expect, it } from "vitest";
 
 import { prepareComposerImageFile } from "./composerImagePreparation";

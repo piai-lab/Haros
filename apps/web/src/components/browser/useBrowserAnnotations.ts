@@ -8,7 +8,7 @@ import type {
   BrowserAnnotationMethods,
   BrowserAnnotationSession,
   ThreadId,
-} from "@synara/contracts";
+} from "@omnimind/contracts";
 
 import type { BrowserAnnotationDraft } from "../../lib/browserAnnotations";
 import {

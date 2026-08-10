@@ -17,7 +17,7 @@ import { CheckpointInvariantError, type CheckpointStoreError } from "../Errors.t
 import { GitCommandError } from "../../git/Errors.ts";
 import { GitCore } from "../../git/Services/GitCore.ts";
 import { CheckpointStore, type CheckpointStoreShape } from "../Services/CheckpointStore.ts";
-import { CheckpointRef } from "@synara/contracts";
+import { CheckpointRef } from "@omnimind/contracts";
 
 const CHECKPOINT_DIFF_MAX_OUTPUT_BYTES = 10_000_000;
 

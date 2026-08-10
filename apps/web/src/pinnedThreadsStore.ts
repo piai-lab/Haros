@@ -3,7 +3,7 @@
 // Layer: UI state store
 // Exports: usePinnedThreadsStore
 
-import { type ThreadId } from "@synara/contracts";
+import { type ThreadId } from "@omnimind/contracts";
 import { create } from "zustand";
 import { createJSONStorage, persist } from "zustand/middleware";
 import { normalizePinnedIds, pinId, prunePinnedIds, unpinId } from "./pinning.logic";

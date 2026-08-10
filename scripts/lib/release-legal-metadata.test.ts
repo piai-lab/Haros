@@ -99,7 +99,7 @@ describe("release legal metadata", () => {
       JSON.stringify({
         dependencies: {
           "@earendil-works/pi-agent-core": "0.84.1",
-          "@synara/contracts": "workspace:*",
+          "@omnimind/contracts": "workspace:*",
           effect: "1.0.0",
         },
       }),

@@ -3,7 +3,7 @@
 // Layer: UI helpers
 // Exports: visible-thread resolver shared by toast containers and split-aware tests
 
-import type { ThreadId } from "@synara/contracts";
+import type { ThreadId } from "@omnimind/contracts";
 import { resolveSplitViewThreadIds, type SplitView } from "../../splitViewStore";
 import type { RightDockThreadState } from "../../rightDockStore.logic";
 

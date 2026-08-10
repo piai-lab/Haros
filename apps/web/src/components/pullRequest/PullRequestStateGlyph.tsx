@@ -6,7 +6,7 @@
 // Layer: Pull request presentation
 // Exports: PullRequestStateGlyph
 
-import type { GitPullRequestMergeability, PullRequestState } from "@synara/contracts";
+import type { GitPullRequestMergeability, PullRequestState } from "@omnimind/contracts";
 
 import { cn } from "~/lib/utils";
 import {

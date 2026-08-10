@@ -6,20 +6,20 @@ import {
   type ProviderKind,
   type ToolLifecycleItemType,
   type TurnId,
-} from "@synara/contracts";
+} from "@omnimind/contracts";
 import {
   decodeSubagentAgentStates,
   extractSubagentIdentityHints,
   decodeSubagentReceiverAgents,
   decodeSubagentReceiverThreadIds,
-} from "@synara/shared/subagents";
+} from "@omnimind/shared/subagents";
 import {
   approvalRequestKindFromRequestType,
   type ApprovalRequestKind,
-} from "@synara/shared/threadSummary";
-import { summarizeToolRawOutput } from "@synara/shared/toolOutputSummary";
-import { pluralize } from "@synara/shared/text";
-import { PROVIDER_DESCRIPTORS } from "@synara/shared/providerMetadata";
+} from "@omnimind/shared/threadSummary";
+import { summarizeToolRawOutput } from "@omnimind/shared/toolOutputSummary";
+import { pluralize } from "@omnimind/shared/text";
+import { PROVIDER_DESCRIPTORS } from "@omnimind/shared/providerMetadata";
 import {
   deriveReadableToolTitle,
   deriveOmniMindMcpToolTitle,

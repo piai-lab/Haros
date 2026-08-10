@@ -31,11 +31,11 @@ import {
   TurnId,
   type ProviderRuntimeEvent,
   type ProviderSession,
-} from "@synara/contracts";
+} from "@omnimind/contracts";
 import {
   providerSupportsAutoRuntimeMode,
   unsupportedAutoRuntimeModeMessage,
-} from "@synara/shared/runtimeMode";
+} from "@omnimind/shared/runtimeMode";
 import { createHash, randomUUID } from "node:crypto";
 import {
   Array as EffectArray,
@@ -51,7 +51,7 @@ import {
   Scope,
   Stream,
 } from "effect";
-import { nonEmptyTrimmed } from "@synara/shared/text";
+import { nonEmptyTrimmed } from "@omnimind/shared/text";
 
 import { ProviderValidationError } from "../Errors.ts";
 import { ProviderAdapterRegistry } from "../Services/ProviderAdapterRegistry.ts";

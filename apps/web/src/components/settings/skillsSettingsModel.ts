@@ -3,8 +3,8 @@
 // Layer: Settings UI logic
 // Exports: origin metadata, canonical skill grouping, and section ordering helpers.
 
-import type { ProviderKind, ProviderSkillDescriptor } from "@synara/contracts";
-import { PROVIDER_DISPLAY_NAMES } from "@synara/contracts";
+import type { ProviderKind, ProviderSkillDescriptor } from "@omnimind/contracts";
+import { PROVIDER_DISPLAY_NAMES } from "@omnimind/contracts";
 import { DEFAULT_PROVIDER_ORDER } from "~/providerOrdering";
 
 export interface SkillOriginInfo {

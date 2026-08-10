@@ -1,4 +1,4 @@
-import type { ProviderRuntimeEvent } from "@synara/contracts";
+import type { ProviderRuntimeEvent } from "@omnimind/contracts";
 
 export const PROVIDER_RUNTIME_CALLBACK_BUFFER_MAX_BYTES = 32 * 1024 * 1024;
 export const PROVIDER_RUNTIME_CALLBACK_TERMINAL_RESERVE = 64;

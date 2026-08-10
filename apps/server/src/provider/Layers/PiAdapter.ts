@@ -38,7 +38,7 @@ import {
   type ThreadTokenUsageSnapshot,
   TurnId,
   type UserInputQuestion,
-} from "@synara/contracts";
+} from "@omnimind/contracts";
 import { Effect, FileSystem, Layer, Option, Queue, Stream } from "effect";
 
 import {

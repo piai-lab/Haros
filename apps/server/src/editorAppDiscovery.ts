@@ -9,7 +9,7 @@ import { execFileSync } from "node:child_process";
 import { readdirSync, statSync } from "node:fs";
 import { join } from "node:path";
 
-import { EDITORS } from "@synara/contracts";
+import { EDITORS } from "@omnimind/contracts";
 
 export type EditorDefinition = (typeof EDITORS)[number];
 

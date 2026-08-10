@@ -1,4 +1,4 @@
-import { ThreadId, type OrchestrationSession } from "@synara/contracts";
+import { ThreadId, type OrchestrationSession } from "@omnimind/contracts";
 import { describe, expect, it } from "vitest";
 
 import { deriveTurnStartModelSelection, deriveTurnStartSession } from "./turnStartSession.ts";

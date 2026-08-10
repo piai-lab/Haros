@@ -1,4 +1,4 @@
-import type { OrchestrationThread, ThreadId } from "@synara/contracts";
+import type { OrchestrationThread, ThreadId } from "@omnimind/contracts";
 import { Deferred, Effect, Fiber, Option } from "effect";
 import { describe, expect, it, vi } from "vitest";
 

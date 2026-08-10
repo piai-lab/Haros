@@ -1,4 +1,4 @@
-import type { OrchestrationThreadActivity, ProviderRuntimeEvent } from "@synara/contracts";
+import type { OrchestrationThreadActivity, ProviderRuntimeEvent } from "@omnimind/contracts";
 import {
   ApprovalRequestId,
   CommandId,
@@ -7,7 +7,7 @@ import {
   RuntimeItemId,
   ThreadId,
   TurnId,
-} from "@synara/contracts";
+} from "@omnimind/contracts";
 import { Schema } from "effect";
 import { describe, expect, it } from "vitest";
 

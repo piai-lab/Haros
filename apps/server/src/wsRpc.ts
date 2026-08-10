@@ -28,7 +28,7 @@ import {
   type ServerConfigStreamEvent,
   type ServerDiagnosticsResult,
   type ServerLifecycleStreamEvent,
-} from "@synara/contracts";
+} from "@omnimind/contracts";
 import { clamp } from "effect/Number";
 import { Effect, FileSystem, Layer, Option, Path, Queue, Schema, Scope, Stream } from "effect";
 import { Headers, HttpRouter, HttpServerRequest, HttpServerResponse } from "effect/unstable/http";
@@ -48,11 +48,11 @@ import { CheckpointDiffQuery } from "./checkpointing/Services/CheckpointDiffQuer
 import { resolveThreadWorkspaceCwd } from "./checkpointing/Utils";
 import { ServerConfig, type ServerConfigShape } from "./config";
 import { realpathNearestExisting } from "./realpathNearestExisting";
-import { workspaceRootsEqual } from "@synara/shared/threadWorkspace";
+import { workspaceRootsEqual } from "@omnimind/shared/threadWorkspace";
 import {
   isThreadDetailEventFor,
   THREAD_DETAIL_EVENT_TYPES,
-} from "@synara/shared/threadDetailEvents";
+} from "@omnimind/shared/threadDetailEvents";
 import { listStudioThreadOutputs } from "./studioOutputs";
 import {
   ensureStudioWorkspaceInstructionsFiles,

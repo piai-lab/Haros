@@ -27,7 +27,7 @@ export default defineConfig([
     define: {
       __OMNIMIND_WINDOWS_UPDATER_PUBLISHER__: JSON.stringify(windowsUpdaterPublisher),
     },
-    noExternal: (id) => id.startsWith("@synara/"),
+    noExternal: (id) => id.startsWith("@omnimind/"),
   },
   {
     ...shared,

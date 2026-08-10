@@ -3,7 +3,7 @@ import type {
   AuthClientSession,
   AuthPairingLink,
   AuthSessionId,
-} from "@synara/contracts";
+} from "@omnimind/contracts";
 import { Data, DateTime, Duration, Effect, ServiceMap } from "effect";
 import type { SessionRole } from "./SessionCredentialService";
 

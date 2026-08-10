@@ -1,4 +1,4 @@
-import { MessageId, TurnId, type OrchestrationThreadActivity } from "@synara/contracts";
+import { MessageId, TurnId, type OrchestrationThreadActivity } from "@omnimind/contracts";
 import { describe, expect, it } from "vitest";
 
 import {

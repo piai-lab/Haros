@@ -19,7 +19,7 @@ import {
   TurnId,
   IsoDateTime,
   NonNegativeInt,
-} from "@synara/contracts";
+} from "@omnimind/contracts";
 import { Schema, ServiceMap } from "effect";
 import type { Effect, Option } from "effect";
 

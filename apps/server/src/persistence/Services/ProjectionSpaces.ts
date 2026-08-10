@@ -1,5 +1,5 @@
 /** Durable projection repository for custom Spaces. Void remains virtual (`spaceId = null`). */
-import { IsoDateTime, NonNegativeInt, SpaceIconName, SpaceId, SpaceName } from "@synara/contracts";
+import { IsoDateTime, NonNegativeInt, SpaceIconName, SpaceId, SpaceName } from "@omnimind/contracts";
 import { Option, Schema, ServiceMap } from "effect";
 import type { Effect } from "effect";
 

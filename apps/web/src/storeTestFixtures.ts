@@ -11,7 +11,7 @@ import {
   type OrchestrationReadModel,
   type OrchestrationShellSnapshot,
   type OrchestrationThreadActivity,
-} from "@synara/contracts";
+} from "@omnimind/contracts";
 
 import { getThreadsFromState } from "./threadDerivation";
 import type { AppState } from "./storeState";

@@ -1,4 +1,4 @@
-import { OrchestrationProposedPlanId, ProjectId, ThreadId } from "@synara/contracts";
+import { OrchestrationProposedPlanId, ProjectId, ThreadId } from "@omnimind/contracts";
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 import { partializeComposerDraftStoreState, useComposerDraftStore } from "./composerDraftStore";
 import { normalizeCurrentPersistedComposerDraftStoreState } from "./composerDraftPersistence";

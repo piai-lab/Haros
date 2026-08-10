@@ -8,7 +8,7 @@ import type {
   DesktopAppSnapCapture,
   DesktopAppSnapErrorEvent,
   DesktopAppSnapState,
-} from "@synara/contracts";
+} from "@omnimind/contracts";
 
 import type { DesktopAppSnapManager } from "./appSnapManager";
 import { APPSNAP_IPC_CHANNELS } from "./ipcChannels";

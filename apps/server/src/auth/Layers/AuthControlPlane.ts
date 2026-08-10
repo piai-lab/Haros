@@ -1,4 +1,4 @@
-import type { AuthClientSession, AuthPairingLink } from "@synara/contracts";
+import type { AuthClientSession, AuthPairingLink } from "@omnimind/contracts";
 import { DateTime, Effect, Layer } from "effect";
 
 import { BootstrapCredentialService } from "../Services/BootstrapCredentialService";

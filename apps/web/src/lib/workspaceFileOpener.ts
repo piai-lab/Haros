@@ -9,13 +9,13 @@
 //          resolveDockFileOpenTarget,
 //          openWorkspaceFileReference, prefetchWorkspaceFile
 
-import { isSupportedLocalPreviewFilePath } from "@synara/shared/localPreviewFiles";
+import { isSupportedLocalPreviewFilePath } from "@omnimind/shared/localPreviewFiles";
 import {
   isLocalAbsolutePath,
   isWorkspaceRelativePathSafe,
   workspaceRelativePathOf,
-} from "@synara/shared/path";
-import { isScratchWorkspacePath } from "@synara/shared/threadWorkspace";
+} from "@omnimind/shared/path";
+import { isScratchWorkspacePath } from "@omnimind/shared/threadWorkspace";
 import type { QueryClient } from "@tanstack/react-query";
 import { createContext, useContext } from "react";
 

@@ -1,6 +1,6 @@
 import { existsSync } from "node:fs";
 
-import { CommandId, ThreadId } from "@synara/contracts";
+import { CommandId, ThreadId } from "@omnimind/contracts";
 import { Effect, Option } from "effect";
 
 import type { GitCoreShape } from "../git/Services/GitCore.ts";

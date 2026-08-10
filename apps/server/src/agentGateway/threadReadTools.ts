@@ -4,7 +4,7 @@ import {
   TurnId,
   type OrchestrationThreadShell,
   type ProviderKind,
-} from "@synara/contracts";
+} from "@omnimind/contracts";
 import { Effect, Option } from "effect";
 
 import {

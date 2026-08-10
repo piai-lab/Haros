@@ -4,7 +4,7 @@
 // Depends on: EditorWorkspaceView and React server rendering.
 
 import type { FileDiffMetadata } from "@pierre/diffs/react";
-import { ProjectId } from "@synara/contracts";
+import { ProjectId } from "@omnimind/contracts";
 import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
 import { renderToStaticMarkup } from "react-dom/server";
 import { describe, expect, it, vi } from "vitest";

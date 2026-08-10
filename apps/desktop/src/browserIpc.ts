@@ -21,7 +21,7 @@ import type {
   BrowserTabInput,
   BrowserThreadInput,
   ThreadBrowserState,
-} from "@synara/contracts";
+} from "@omnimind/contracts";
 
 import type { DesktopBrowserManager } from "./browserManager";
 import { BROWSER_IPC_CHANNELS } from "./ipcChannels";

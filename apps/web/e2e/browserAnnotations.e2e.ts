@@ -4,7 +4,7 @@ import { tmpdir } from "node:os";
 import { dirname, join, resolve } from "node:path";
 import { fileURLToPath } from "node:url";
 
-import type { BrowserAnnotationEvent, BrowserAnnotationTheme } from "@synara/contracts";
+import type { BrowserAnnotationEvent, BrowserAnnotationTheme } from "@omnimind/contracts";
 import { _electron as electron, expect, test, type ElectronApplication } from "playwright/test";
 
 import { createBrowserMcpHarness } from "./fixtures/mcpBrowserHarness";

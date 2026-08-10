@@ -1,4 +1,4 @@
-import type { ProviderKind } from "@synara/contracts";
+import type { ProviderKind } from "@omnimind/contracts";
 import type { Effect } from "effect";
 
 import type { AgentGatewayTargetError } from "./targetResolver.ts";
