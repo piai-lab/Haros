@@ -9,7 +9,7 @@ OmniMind Agent 是 Pi-derived 独立 runtime，随 App 开箱发行；它可以�
 ## 2. 不变量
 
 1. 一个 Product Orchestration、Provider Registry、Project/Thread/Space command/event/projection authority 和 Provider binding path；
-2. `Agent | Chat` 直接映射到 inherited Project/Thread/Space/Home/Studio；
+2. `Agent | Chat` 直接映射到 inherited Project/Thread/Space/Home/Studio；Groups 复用 Space identity/lifecycle，并由 Thread metadata 保存会话多分组事实；
 3. 正常 UI 只呈现 OmniMind；`omnimind` 与 `pi` 是同一 Registry 中两个真实 identity，stock Pi 只在用户主动选择 Provider 或查看详情时显示；
 4. OmniMind Agent 使用 `.omnimind` global/project-local state；stock Pi 仅在被显式选择时使用自己的 `.pi`，二者不迁移、同步或共享；
 5. 恢复 Synara PluginLibrary/Skills/provider discovery；Engine capability composition 以 [`architecture/execution.md`](architecture/execution.md#扩展与生态) 为唯一语义 owner；只有 OmniMind Agent 原生 API 已提供时补 provider-scoped lifecycle，不追求 stock Pi/其他 Provider 功能齐平；
@@ -82,7 +82,7 @@ OmniMind Agent 是内部最深验收路线。stock Pi 与其他 shipped Provider
 
 - Campaign required claims 全部 verified，blocked = 0；
 - only one inherited Product Orchestration/Registry and Project/Thread/Space product-truth authority；
-- Agent/Chat/Groups 无平行 durable object；
+- Agent/Chat/Groups 无平行 durable object；Group membership 只存在于 inherited Thread command/event/projection；
 - 普通产品旅程只呈现 OmniMind；实现来源只在 About/Licenses/诊断/显式 Provider 详情中出现；
 - bundled OmniMind Agent 以自身 identity/version 免安装运行，在模型未配置时准确阻止发送并引导 auth；Pi `v0.84.1` lineage 可追踪，代表性 Pi ecosystem 与 real-provider journey 通过；
 - stock Pi 独立可选，实际 runtime version 与 optional local CLI version 分离，`.pi` 不与 OmniMind Agent 的 `.omnimind` 混用；

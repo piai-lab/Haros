@@ -200,6 +200,22 @@ test("Kanban remains the Agent domain's secondary console", async (t) => {
   );
 });
 
+test("Groups remain many-to-many conversation labels below complete Projects", async (t) => {
+  const root = await createFixture(t);
+  await replaceText(
+    root,
+    "architecture/workbench.md",
+    '"groupTarget": "conversation-thread"',
+    '"groupTarget": "project"',
+  );
+
+  assertFinding(
+    await validateDocumentContract({ root }),
+    "workbench.work-surface-ia",
+    "architecture/workbench.md",
+  );
+});
+
 test("Campaign canonical identity is structural", async (t) => {
   const root = await createFixture(t);
   await replaceText(root, "missions/independent-omnimind-v1.md", "Status: active", "Status: done");

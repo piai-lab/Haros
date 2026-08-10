@@ -24,7 +24,7 @@ flowchart LR
     Root["OmniMind"] --> Agent["Agent"]
     Root --> Chat["Chat"]
     Agent --> Projects["Projects"]
-    Agent --> Groups["Groups · backed by Spaces"]
+    Agent --> Groups["Groups · conversation labels"]
     Agent --> Workbench["Files · Diff · Terminal · Git · Artifacts"]
     Agent --> Thread["Project Thread"]
     Chat --> Studio["Home / Studio managed Thread"]
@@ -45,7 +45,12 @@ flowchart LR
   "kanbanRoutes": ["/kanban", "/kanban/:projectId"],
   "kanbanPrimaryMode": "Agent",
   "kanbanCardTarget": "folder-backed Agent Thread",
-  "projectContextAction": "Open in Kanban"
+  "projectContextAction": "Open in Kanban",
+  "agentSidebarSections": ["Projects", "Groups"],
+  "groupTarget": "conversation-thread",
+  "groupCardinality": "many-to-many",
+  "ungroupedPresentation": "projects-only",
+  "groupsDefaultState": "collapsed"
 }
 ```
 
@@ -57,7 +62,10 @@ flowchart LR
 - 显示 Files、Viewer、Diff、Changes、Terminal、Git、Output、Artifact 与完整 Workbench；
 - Provider 默认为 OmniMind Agent，也可以选择 stock Pi 或其他当前可用的 inherited adapter；
 - 改变工作目录通过选择/创建 Project 完成，不在有实质工作后静默换 cwd；
-- Groups 只是 Synara Spaces 的 OmniMind 产品标签，不另存 membership。
+- Projects 是 folder-backed Agent conversations 的完整来源，保持文件夹图标；Groups 是其下方默认折叠的会话归类视图，不过滤 Projects，也不给 Project 打标签。
+- 一个 Thread 可以属于多个 Group；未分组 Thread 只留在 Projects，不出现“未分组”伪 Group。每个具体 Group 使用带稳定颜色的 tag glyph，section header 本身不放 tag glyph。
+- Group 右键提供“添加会话…”，从 Projects 中多选 Thread；Projects 中的 Thread 右键提供“添加到分组…”，可多选 Group，并支持 `Shift+F10`。Project folder 本身不加入 Group；每个 Group 底部不重复放“添加会话”。
+- 删除 Group 或移除 membership 不删除、不移动底层 Thread。Group identity/name/order 直接复用 Space；多分组 membership 是既有 Thread metadata 的 canonical field，不新增 `Group` aggregate、membership ledger、第二导航或恢复状态。
 
 ### Chat
 

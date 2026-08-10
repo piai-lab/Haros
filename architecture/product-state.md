@@ -2,7 +2,7 @@
 
 ## 核心原则
 
-OmniMind 直接继承 Synara 的 Project、Thread、Space、Studio 与单一 Product Orchestration。`Agent | Chat` 是两种用户工作方式，不是两套持久对象，也不授权创建第二个 Workspace、Conversation、Run、Group、Handoff 或 Package 生命周期。
+OmniMind 直接继承 Synara 的 Project、Thread、Space、Studio 与单一 Product Orchestration。`Agent | Chat` 是两种用户工作方式，不是两套持久对象，也不授权创建第二个 Workspace、Conversation、Run、Group aggregate、Handoff 或 Package 生命周期。
 
 产品层只保存已经由继承 substrate 证明必须跨 Provider 稳定、恢复和解释的用户事实。Provider adapter/runtime 继续拥有 native Session、protocol、transcript、Tool、permission 和私有生态语义；filesystem、Git 与 PTY 继续拥有各自真实状态。
 
@@ -12,7 +12,7 @@ OmniMind 直接继承 Synara 的 Project、Thread、Space、Studio 与单一 Pro
 | ------------------- | ------------------------------------------------------------------------------------------------- | ------------------------------------------------------- |
 | Agent               | folder-backed Synara Project + Thread + Workbench                                                 | `AgentWorkspace`、第二 Conversation/Run store           |
 | Chat                | Synara Home/Studio managed Project + Thread + managed workspace/outbox                            | 用户 Primary Folder、平行 Chat database                 |
-| Groups              | Synara Space 的产品标签与交互                                                                     | 新 `Group` aggregate 或 membership ledger               |
+| Groups              | Synara Space identity/name/order + Thread 的 `groupIds` metadata                                   | 新 `Group` aggregate、Project 标签或 membership ledger   |
 | Send to Agent       | 创建或打开普通 folder-backed Project Thread，并带入用户选择的 prompt、attachment 与 artifact refs | Handoff protocol、跨对象 replay、隐藏 cwd 切换          |
 | Conversation        | Synara Thread 的用户可见身份                                                                      | Provider Session 的复制品                               |
 | Agent/Provider 选择 | 现有 Provider binding 与 adapter registry；独立 `omnimind` 与 `pi` identities                     | 第二 Provider Registry 或跨 Provider Session            |
@@ -36,7 +36,9 @@ Chat 复用 Synara 的 managed Home/Studio container。它没有用户选择的 
 
 ### Groups
 
-产品可把 Synara Spaces 呈现为 Groups，但 identity、排序、membership、恢复和持久化全部沿用 Space。Groups 只组织 Project/Thread，不拥有 Folder、Provider Session、Run、permission、File 或 Git。
+产品把 Synara Space 收窄呈现为 Group：Space 继续拥有 identity、name、order 与 lifecycle；membership 则是既有 Thread 上的去重 `groupIds` metadata。一条 Thread 可以属于多个 Group，未分组用空数组表达，并且只在 Projects 完整列表中出现；Project 自身没有 Group membership。
+
+删除 Group 时，所有 Thread 对该 identity 的 membership 一并移除，但 Thread、Project、Folder、Provider Session、Run、permission、File 与 Git 均不删除、不移动。这个最小字段属于既有 Thread command/event/projection authority，不授权 join-table ledger、`Group` aggregate、Project-space 双轨或第二恢复状态。
 
 ## Conversation 与 Provider Session
 

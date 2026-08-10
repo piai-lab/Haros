@@ -45,16 +45,16 @@ apps/server    one Orchestration + projections + Provider Registry
 
 共用层只包含 Synara 已经证明稳定的最小事实。Provider-specific capability 通过现有 optional methods、capability data 与 namespaced detail 呈现；没有第二个“更统一”的 runtime contract。
 
-## Agent、Chat 与 Spaces
+## Agent、Chat 与 Groups
 
 `Agent | Chat` 只改变入口与用户边界：
 
 - Agent 路由到 folder-backed Project Thread 和现有 Workbench；
 - Chat 路由到 Home/Studio managed Project Thread 与 managed workspace/outbox；
-- Groups 直接使用 Synara Spaces；
+- Groups 直接使用 Synara Space identity/name/order/lifecycle，并由同一 Thread command/event/projection 的 `groupIds` 表达多对多 membership；
 - `Send to Agent` 只创建/打开 folder-backed Project Thread，并携带用户选择的 prompt、attachments 与 artifact refs。
 
-这些动作不创建新 aggregate，不复制 native Session，不承诺跨 Provider continuation，也不改变 Provider Registry。
+Projects 不再按 Space 过滤或归组；Group 删除只从 Thread metadata 移除其 identity，不删除/移动 Thread。上述动作不创建新 aggregate、join ledger 或第二恢复状态，不复制 native Session，不承诺跨 Provider continuation，也不改变 Provider Registry。
 
 ## Provider Registry 与 adapter
 

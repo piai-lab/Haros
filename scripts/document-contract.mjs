@@ -298,13 +298,18 @@ function validateWorkSurfaceInformationArchitecture(findings, documents) {
     kanbanPrimaryMode: "Agent",
     kanbanCardTarget: "folder-backed Agent Thread",
     projectContextAction: "Open in Kanban",
+    agentSidebarSections: ["Projects", "Groups"],
+    groupTarget: "conversation-thread",
+    groupCardinality: "many-to-many",
+    ungroupedPresentation: "projects-only",
+    groupsDefaultState: "collapsed",
   };
   if (JSON.stringify(policy) !== JSON.stringify(expected)) {
     addFinding(
       findings,
       "workbench.work-surface-ia",
       documentPath,
-      "Kanban must remain the Agent domain's secondary console, not a third primary mode",
+      "Agent navigation must keep Kanban secondary, Projects complete, and Groups as collapsed many-to-many conversation labels",
     );
   }
 }
