@@ -23,6 +23,7 @@ const PRODUCT_COPY_SOURCES = [
   "components/EditorWorkspaceView.tsx",
   "components/LocalImagePreview.tsx",
   "components/PdfFilePreview.tsx",
+  "components/PluginLibrary.tsx",
   "components/ProjectHoverCardContent.tsx",
   "components/RecentViewSwitcher.tsx",
   "components/ReviewFileTreePanel.tsx",

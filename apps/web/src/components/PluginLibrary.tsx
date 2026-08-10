@@ -109,9 +109,9 @@ function pluginEntryKey(entry: Pick<PluginEntry, "marketplacePath" | "plugin">):
   return `${entry.marketplacePath}::${entry.plugin.name}`;
 }
 
-function sectionTitle(value: string): string {
+function sectionTitle(value: string, fallback: string): string {
   const n = value.trim();
-  return n.length === 0 ? "Unknown" : n;
+  return n.length === 0 ? fallback : n;
 }
 
 function resolvePluginAccent(plugin: ProviderPluginDescriptor): string | undefined {
@@ -340,15 +340,35 @@ function PluginGridItem({ entry }: { entry: PluginEntry }) {
   );
 }
 
-function skillSourceLabel(skill: ProviderSkillDescriptor, providerLabel: string): string {
+function localizedSkillScope(
+  scope: string | undefined,
+  t: ReturnType<typeof useI18n>["t"],
+): string {
+  const normalized = scope?.trim().toLowerCase();
+  if (!normalized || normalized === "personal") return t("library.scopePersonal");
+  if (normalized === "user") return t("library.scopeUser");
+  if (normalized === "project") return t("library.scopeProject");
+  if (normalized === "local") return t("library.scopeLocal");
+  if (normalized === "managed") return t("library.scopeManaged");
+  return formatSkillScope(scope);
+}
+
+function skillSourceLabel(
+  skill: ProviderSkillDescriptor,
+  providerLabel: string,
+  t: ReturnType<typeof useI18n>["t"],
+): string {
   const segments = new Set(skill.path.split(/[\\/]+/));
   if (skill.scope === "omnimind" || segments.has(".omnimind")) {
-    return "OmniMind Library";
+    return t("library.omnimindLibrary");
   }
   if (skill.scope === "agents") {
-    return "Compatible shared asset (.agents)";
+    return t("library.compatibleSharedAsset");
   }
-  return `${providerLabel} native · ${formatSkillScope(skill.scope)}`;
+  return t("library.nativeSource", {
+    provider: providerLabel,
+    scope: localizedSkillScope(skill.scope, t),
+  });
 }
 
 function SkillGridItem({
@@ -358,8 +378,9 @@ function SkillGridItem({
   skill: ProviderSkillDescriptor;
   providerLabel: string;
 }) {
+  const { t } = useI18n();
   const description =
-    skill.interface?.shortDescription ?? skill.description ?? "No description available.";
+    skill.interface?.shortDescription ?? skill.description ?? t("library.noDescription");
 
   return (
     <div className="flex items-center gap-3 rounded-xl px-3 py-3 transition-colors hover:bg-[var(--sidebar-accent)]">
@@ -370,7 +391,7 @@ function SkillGridItem({
         </p>
         <p className="mt-0.5 truncate text-[12px] text-muted-foreground">{description}</p>
         <p className="mt-0.5 truncate text-[11px] text-muted-foreground/70">
-          {skillSourceLabel(skill, providerLabel)}
+          {skillSourceLabel(skill, providerLabel, t)}
         </p>
       </div>
       <InstalledStatus installed={skill.enabled} />
@@ -522,7 +543,7 @@ export function PluginLibrary() {
       existing.entries.push(entry);
     } else {
       marketplaceSectionsByPath.set(entry.marketplacePath, {
-        title: sectionTitle(entry.marketplaceName),
+        title: sectionTitle(entry.marketplaceName, t("library.unknownSource")),
         entries: [entry],
       });
     }
@@ -649,7 +670,10 @@ export function PluginLibrary() {
               (pluginsQuery.data?.marketplaceLoadErrors.length ?? 0) > 0 ? (
                 <InlineWarning>
                   {pluginsQuery.data?.marketplaceLoadErrors
-                    .map((err) => `${sectionTitle(err.marketplacePath)}: ${err.message}`)
+                    .map(
+                      (err) =>
+                        `${sectionTitle(err.marketplacePath, t("library.unknownSource"))}: ${err.message}`,
+                    )
                     .join(" • ")}
                 </InlineWarning>
               ) : null}
