@@ -24,6 +24,7 @@ import {
 } from "./GitActionsControl.logic";
 import { ArrowUpRightIcon, GitPullRequestDraftIcon, GitPullRequestIcon } from "~/lib/icons";
 import { cn, isMacPlatform } from "~/lib/utils";
+import { useI18n } from "~/i18n";
 
 export interface GitCreatePrDialogSubmission {
   action: "create_pr" | "commit_push_pr";
@@ -87,6 +88,7 @@ export function GitCreatePrDialog({
   onSubmit,
   onOpenInBrowser,
 }: GitCreatePrDialogProps) {
+  const { t } = useI18n();
   const [title, setTitle] = useState("");
   const [body, setBody] = useState("");
   const [includeLocalChanges, setIncludeLocalChanges] = useState(true);
@@ -109,7 +111,22 @@ export function GitCreatePrDialog({
   );
   const canCreate = execution.kind === "run_action";
   const canOpenInBrowser = browserPreparation.kind !== "unavailable";
-  const unavailableHint = execution.kind === "unavailable" ? execution.hint : null;
+  const unavailableHint =
+    execution.kind === "unavailable"
+      ? execution.hint === "Git action in progress."
+        ? t("git.pr.busy")
+        : execution.hint === "Git status is unavailable."
+          ? t("git.pr.statusUnavailable")
+          : execution.hint === "Detached HEAD: checkout a branch before creating a PR."
+            ? t("git.pr.detachedUnavailable")
+            : execution.hint === "Branch has diverged from upstream. Rebase/merge first."
+              ? t("git.pr.divergedUnavailable")
+              : execution.hint === "Branch is behind upstream. Pull before creating a PR."
+                ? t("git.pr.behindUnavailable")
+                : execution.hint === 'Add an "origin" remote before creating a PR.'
+                  ? t("git.pr.originUnavailable")
+                  : t("git.pr.noChanges")
+      : null;
   const isMac = isMacPlatform(typeof navigator === "undefined" ? "" : navigator.platform);
 
   const submit = (draft: boolean) => {
@@ -137,7 +154,9 @@ export function GitCreatePrDialog({
       >
         <DialogHeader className="gap-0.5">
           <DialogTitle className="font-normal font-sans text-muted-foreground text-xs">
-            {view.isNewBranch ? "New branch" : "Branch"} → {view.baseBranchName}
+            {view.isNewBranch ? t("git.pr.newBranch") : t("git.pr.branch")} →{
+              view.baseBranchName
+            }
           </DialogTitle>
           <DialogDescription
             className={cn(
@@ -148,25 +167,25 @@ export function GitCreatePrDialog({
             )}
           >
             {view.willCreateFeatureBranch
-              ? "Auto-named feature branch"
-              : (view.branchName ?? "(detached HEAD)")}
+              ? t("git.pr.autoNamedBranch")
+              : (view.branchName ?? t("git.pr.detachedHead"))}
           </DialogDescription>
         </DialogHeader>
         <DialogPanel className="space-y-1 pt-2">
           <input
             autoFocus
-            aria-label="Pull request title"
+            aria-label={t("git.pr.titleLabel")}
             className="w-full bg-transparent py-1 font-system-ui text-sm outline-none placeholder:text-muted-foreground/70"
             maxLength={300}
-            placeholder="Title (leave empty to generate)"
+            placeholder={t("git.pr.titlePlaceholder")}
             value={title}
             onChange={(event) => setTitle(event.target.value)}
           />
           <textarea
-            aria-label="Pull request description"
+            aria-label={t("git.pr.descriptionLabel")}
             className="w-full resize-none bg-transparent py-1 font-system-ui text-sm outline-none placeholder:text-muted-foreground/70"
             maxLength={60_000}
-            placeholder="Description (leave empty to generate)"
+            placeholder={t("git.pr.descriptionPlaceholder")}
             rows={2}
             value={body}
             onChange={(event) => setBody(event.target.value)}
@@ -177,7 +196,7 @@ export function GitCreatePrDialog({
                 checked={includeLocalChanges}
                 onCheckedChange={(checked) => setIncludeLocalChanges(checked === true)}
               />
-              <span className="flex-1">Commit and push local changes</span>
+              <span className="flex-1">{t("git.pr.commitPushLocal")}</span>
               <span className="shrink-0 font-mono text-xs">
                 <span className="text-success">+{view.insertions}</span>{" "}
                 <span className="text-destructive">−{view.deletions}</span>
@@ -190,21 +209,21 @@ export function GitCreatePrDialog({
           <CreatePrActionRow
             disabled={!canCreate}
             icon={<GitPullRequestDraftIcon />}
-            label="Create draft PR"
+            label={t("git.pr.createDraft")}
             onClick={() => submit(true)}
           />
           <CreatePrActionRow
             highlighted
             disabled={!canCreate}
             icon={<GitPullRequestIcon />}
-            label="Create PR"
+            label={t("git.pr.create")}
             trailing={<Kbd>{isMac ? "⌘↵" : "Ctrl ↵"}</Kbd>}
             onClick={() => submit(false)}
           />
           <CreatePrActionRow
             disabled={!canOpenInBrowser}
             icon={<ArrowUpRightIcon />}
-            label="Open PR in browser"
+            label={t("git.pr.openBrowser")}
             onClick={() =>
               onOpenInBrowser({ preparation: browserPreparation, includeLocalChanges })
             }
