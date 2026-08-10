@@ -13,9 +13,9 @@ import {
 export const PROVIDER_UPDATE_INITIAL_REFRESH_DELAY_MS = 10_000;
 export const PROVIDER_UPDATE_REFRESH_INTERVAL_MS = 60 * 60 * 1_000;
 // Homebrew updates may spend time refreshing taps and downloading release assets; the server
-// gives that path 15 minutes while retaining the shorter bound for other provider commands.
+// gives that path one hour while retaining the shorter bound for other provider commands.
 // This slightly longer client watchdog only owns a transport that outlives the server bound.
-export const PROVIDER_UPDATE_REQUEST_TIMEOUT_MS = 15 * 60_000 + 15_000;
+export const PROVIDER_UPDATE_REQUEST_TIMEOUT_MS = 60 * 60_000 + 15_000;
 
 function formatUpdateTimeout(timeoutMs: number): string {
   if (timeoutMs % 60_000 === 0) {

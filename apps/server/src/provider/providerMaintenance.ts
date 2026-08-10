@@ -12,7 +12,9 @@ import { executableCandidates, hasPathSeparator } from "../executableLookup.ts";
 const LATEST_VERSION_CACHE_TTL_MS = 60 * 60 * 1_000;
 const LATEST_VERSION_TIMEOUT_MS = 4_000;
 const PROVIDER_UPDATE_ACTION_MESSAGE = "Install the update now or review provider settings.";
-export const HOMEBREW_PROVIDER_UPDATE_TIMEOUT_MS = 15 * 60_000;
+// This is a last-resort safety cap, not a normal download deadline. Homebrew may refresh its
+// own metadata and taps before fetching a large release asset over a slow GitHub connection.
+export const HOMEBREW_PROVIDER_UPDATE_TIMEOUT_MS = 60 * 60_000;
 
 type ProviderInstallSource = "npm" | "bun" | "pnpm" | "homebrew" | "native" | "unknown";
 
