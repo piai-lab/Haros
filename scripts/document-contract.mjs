@@ -293,7 +293,7 @@ function validateWorkSurfaceInformationArchitecture(findings, documents) {
   }
   const expected = {
     primaryModes: ["Agent", "Chat"],
-    agentSecondary: ["New Agent", "Kanban", "Pull Requests", "Automations"],
+    agentSecondary: ["New Task", "Kanban", "Pull Requests", "Automations"],
     kanbanRoutes: ["/kanban", "/kanban/:projectId"],
     kanbanPrimaryMode: "Agent",
     kanbanCardTarget: "folder-backed Agent Thread",
