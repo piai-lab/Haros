@@ -23,6 +23,7 @@ const PRODUCT_COPY_SOURCES = [
   "components/DiffPanelPatchViewport.tsx",
   "components/DiffPanelToolbar.tsx",
   "components/EditorWorkspaceView.tsx",
+  "components/FeedbackDialog.tsx",
   "components/GitCreatePrDialog.tsx",
   "components/GitActionsControl.tsx",
   "components/LocalImagePreview.tsx",

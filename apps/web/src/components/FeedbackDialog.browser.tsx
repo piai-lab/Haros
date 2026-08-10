@@ -9,6 +9,11 @@ import { afterEach, describe, expect, it, vi } from "vitest";
 import { cleanup, render } from "vitest-browser-react";
 
 const delivery = vi.hoisted(() => ({ submit: vi.fn() }));
+const i18n = vi.hoisted(() => ({ settings: { localePreference: "zh-CN" } }));
+
+vi.mock("../appSettings", () => ({
+  useAppSettings: () => ({ settings: i18n.settings }),
+}));
 
 vi.mock("../feedback", async (importOriginal) => {
   const actual = await importOriginal<typeof import("../feedback")>();
@@ -17,6 +22,7 @@ vi.mock("../feedback", async (importOriginal) => {
 
 import { FeedbackDialog } from "./FeedbackDialog";
 import { FeedbackDeliveryCancelledError } from "../feedback";
+import { I18nProvider } from "../i18n";
 
 const EMPTY_CONTEXT = {
   provider: null,
@@ -52,6 +58,21 @@ describe("FeedbackDialog", () => {
     await details.fill("Keep this local draft.");
     await expect.element(page.getByRole("button", { name: "Submit" })).toBeDisabled();
     expect(delivery.submit).not.toHaveBeenCalled();
+  });
+
+  it("renders categories and privacy boundaries in simplified Chinese", async () => {
+    await render(
+      <I18nProvider>
+        <FeedbackDialog open context={EMPTY_CONTEXT} onOpenChange={vi.fn()} />
+      </I18nProvider>,
+    );
+
+    await expect.element(page.getByRole("heading", { name: "提交反馈" })).toBeVisible();
+    await expect.element(page.getByRole("button", { name: /任务/ })).toBeVisible();
+    await expect
+      .element(page.getByText(/绝不会发送提示、消息、代码或文件内容/))
+      .toBeVisible();
+    await expect.element(page.getByRole("button", { name: "提交" })).toBeDisabled();
   });
 
   it("keeps the draft and dialog open when an activated delivery fails", async () => {

@@ -20,6 +20,16 @@ import { Dialog, DialogHeader, DialogPopup, DialogTitle } from "./ui/dialog";
 import { Spinner } from "./ui/spinner";
 import { Textarea } from "./ui/textarea";
 import { toastManager } from "./ui/toast";
+import { useI18n } from "../i18n";
+
+const FEEDBACK_CATEGORY_KEYS = {
+  bug: "feedback.categoryBug",
+  session: "feedback.categoryTask",
+  ui: "feedback.categoryUi",
+  performance: "feedback.categoryPerformance",
+  idea: "feedback.categoryIdea",
+  other: "feedback.categoryOther",
+} as const satisfies Record<FeedbackCategory, Parameters<ReturnType<typeof useI18n>["t"]>[0]>;
 
 export interface FeedbackDialogProps {
   open: boolean;
@@ -35,6 +45,7 @@ export function FeedbackDialog({
   onOpenChange,
   deliveryOptions,
 }: FeedbackDialogProps) {
+  const { t } = useI18n();
   const [isSending, setIsSending] = useState(false);
   const requestControllerRef = useRef<AbortController | null>(null);
   const deliveryAvailable = isFeedbackDeliveryAvailable(deliveryOptions);
@@ -51,8 +62,8 @@ export function FeedbackDialog({
       onOpenChange(false);
       toastManager.add({
         type: "success",
-        title: "Feedback sent",
-        description: "Thanks for helping make OmniMind better.",
+        title: t("feedback.sent"),
+        description: t("feedback.thanks"),
       });
     } finally {
       if (requestControllerRef.current === requestController) {
@@ -71,7 +82,7 @@ export function FeedbackDialog({
     >
       <DialogPopup className="max-w-xl" showCloseButton={!isSending}>
         <DialogHeader className="gap-0 px-5 pt-5 pb-3">
-          <DialogTitle className="text-xl tracking-[-0.01em]">Share feedback</DialogTitle>
+          <DialogTitle className="text-xl tracking-[-0.01em]">{t("feedback.title")}</DialogTitle>
         </DialogHeader>
         {/* The form state lives below DialogPopup, which unmounts its children
             once the close transition ends — every open starts from a blank
@@ -98,6 +109,7 @@ function FeedbackDialogForm({
   onSubmit: (category: FeedbackCategory | null, details: string) => Promise<void>;
   onCancel: () => void;
 }) {
+  const { t } = useI18n();
   const [category, setCategory] = useState<FeedbackCategory | null>(null);
   const [details, setDetails] = useState("");
   const [deliveryError, setDeliveryError] = useState<string | null>(null);
@@ -117,9 +129,7 @@ function FeedbackDialogForm({
       await onSubmit(category, details);
     } catch (error) {
       setDeliveryError(
-        error instanceof Error
-          ? error.message
-          : "Feedback could not be delivered. Your draft has been kept.",
+        error instanceof Error ? error.message : "",
       );
     }
   };
@@ -132,7 +142,7 @@ function FeedbackDialogForm({
         void handleSubmit();
       }}
     >
-      <div className="flex flex-wrap gap-1.5" aria-label="Feedback category">
+      <div className="flex flex-wrap gap-1.5" aria-label={t("feedback.category")}>
         {FEEDBACK_CATEGORIES.map((option) => {
           const selected = category === option.value;
           return (
@@ -152,7 +162,7 @@ function FeedbackDialogForm({
               onClick={() => setCategory(selected ? null : option.value)}
             >
               <span aria-hidden="true">{selected ? "−" : "+"}</span>
-              {option.label}
+              {t(FEEDBACK_CATEGORY_KEYS[option.value])}
             </Button>
           );
         })}
@@ -162,8 +172,8 @@ function FeedbackDialogForm({
         ref={textareaRef}
         value={details}
         maxLength={MAX_FEEDBACK_DETAILS_LENGTH}
-        placeholder="Share details (required)"
-        aria-label="Feedback details"
+        placeholder={t("feedback.detailsPlaceholder")}
+        aria-label={t("feedback.details")}
         disabled={isSending}
         className="[&_[data-slot=textarea]]:min-h-32 [&_[data-slot=textarea]]:resize-y"
         onChange={(event) => {
@@ -174,33 +184,31 @@ function FeedbackDialogForm({
 
       {!deliveryAvailable ? (
         <p role="status" className="text-xs leading-relaxed text-muted-foreground">
-          Feedback delivery is unavailable in this build. You can draft here, but Submit stays
-          disabled and no request will be sent.
+          {t("feedback.unavailable")}
         </p>
       ) : null}
 
       {deliveryError ? (
-        <p role="alert" className="text-xs leading-relaxed text-destructive">
-          {deliveryError}
-        </p>
+        <div role="alert" className="space-y-1 text-xs leading-relaxed text-destructive">
+          <p>{t("feedback.deliveryFailed")}</p>
+          {deliveryError ? <p className="font-mono">{deliveryError}</p> : null}
+        </div>
       ) : null}
 
       <p className="text-xs leading-relaxed text-muted-foreground">
         {deliveryAvailable
-          ? `Recipient: ${FEEDBACK_RECIPIENT_LABEL}. An explicit submission sends your feedback plus app version, OS, language, viewport, provider/model, modes, and session state.`
-          : "If feedback delivery is activated in a future production build, an explicit submission will send your feedback plus app version, OS, language, viewport, provider/model, modes, and session state."}{" "}
-        It never sends prompts, messages, code or file content, file paths, terminal output,
-        environment variables, credentials, logs, screenshots, or attachments.
+          ? t("feedback.recipientPrivacy", { recipient: FEEDBACK_RECIPIENT_LABEL })
+          : t("feedback.futurePrivacy")} {t("feedback.neverSends")}
       </p>
 
       {isSending ? (
         <Button type="button" variant="outline" className="w-full" onClick={onCancel}>
           <Spinner />
-          Cancel sending
+          {t("feedback.cancelSending")}
         </Button>
       ) : (
         <Button type="submit" className="w-full" disabled={!canSubmit}>
-          Submit
+          {t("feedback.submit")}
         </Button>
       )}
     </form>
