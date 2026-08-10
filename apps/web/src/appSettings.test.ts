@@ -241,21 +241,21 @@ describe("isGitTextGenerationSettingsDirty", () => {
 });
 
 describe("environment panel defaults", () => {
-  it("starts optional text sections disabled without overriding explicit preferences", () => {
+  it("starts text markers enabled while preserving explicit optional-section preferences", () => {
     const defaults = AppSettingsSchema.makeUnsafe({});
     expect(defaults).toMatchObject({
-      showEnvironmentMarkers: false,
+      showEnvironmentMarkers: true,
       showEnvironmentInstructions: false,
       showEnvironmentNotepad: false,
     });
 
-    const enabled = AppSettingsSchema.makeUnsafe({
-      showEnvironmentMarkers: true,
+    const explicit = AppSettingsSchema.makeUnsafe({
+      showEnvironmentMarkers: false,
       showEnvironmentInstructions: true,
       showEnvironmentNotepad: true,
     });
-    expect(enabled).toMatchObject({
-      showEnvironmentMarkers: true,
+    expect(explicit).toMatchObject({
+      showEnvironmentMarkers: false,
       showEnvironmentInstructions: true,
       showEnvironmentNotepad: true,
     });
