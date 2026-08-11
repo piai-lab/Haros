@@ -5638,10 +5638,9 @@ export default function Sidebar() {
   // in useDesktopTopBarTrafficLightGutterClassName used by the closed-state surfaces).
   const isMacDesktop = typeof navigator !== "undefined" ? isMacPlatform(navigator.platform) : false;
 
-  // Open-sidebar (in-sidebar) and non-electron wordmark clusters share the one
-  // SidebarLeadingControls primitive with the closed-state host headers, so the
-  // toggle + arrows look identical whether the sidebar is open or collapsed; only
-  // the wrapper layout differs per host.
+  // Open-sidebar and closed-state host headers share the same leading-controls
+  // primitive, including the compact product mark. The browser-only wordmark stays
+  // separate because it is not constrained by native desktop titlebar geometry.
   const productWordmark = (
     <span className="sidebar-product-wordmark font-display shrink-0 text-[17px] leading-none tracking-[-0.018em] text-foreground">
       {t("shell.productName")}
@@ -5649,9 +5648,8 @@ export default function Sidebar() {
   );
 
   const titlebarControls = (
-    <div className="hidden min-w-0 flex-1 items-center gap-3 md:flex">
+    <div className="hidden min-w-0 flex-1 items-center md:flex">
       <SidebarLeadingControls className="shrink-0" />
-      {productWordmark}
     </div>
   );
 
