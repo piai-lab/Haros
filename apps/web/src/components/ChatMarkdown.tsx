@@ -1219,8 +1219,9 @@ function ChatMarkdown({
       a({ node: _node, href, children, ...props }) {
         const restoredHref = href ? restoreLiteralDollarPlaceholders(href) : href;
         const isExternalHttp = isExternalHttpHref(restoredHref);
-        const isInternalFragment = restoredHref?.startsWith("#") === true;
-        if (isInternalFragment) {
+        const isOwnFootnoteFragment =
+          restoredHref?.startsWith(`#${footnoteClobberPrefix}`) === true;
+        if (isOwnFootnoteFragment) {
           const isFootnoteReference = _node?.properties.dataFootnoteRef === true;
           return (
             <a

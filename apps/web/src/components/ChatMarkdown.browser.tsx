@@ -253,4 +253,52 @@ describe("ChatMarkdown footnote navigation", () => {
     expect(window.location.hash).toBe("#/thread-under-test");
     expect(document.activeElement).toBe(secondReference);
   });
+
+  it("returns repeated references to their exact callsite", async () => {
+    window.history.replaceState(
+      null,
+      "",
+      `${window.location.pathname}${window.location.search}#/repeated-reference-test`,
+    );
+    const mounted = await render(
+      <main data-testid="repeated-footnote-host">
+        <ChatMarkdown text={"First.[^1] Second.[^1]\n\n[^1]: Note"} cwd={undefined} />
+      </main>,
+    );
+    const host = mounted.getByTestId("repeated-footnote-host").element();
+    const references = Array.from(host.querySelectorAll<HTMLAnchorElement>("a[data-footnote-ref]"));
+    const backreferences = Array.from(
+      host.querySelectorAll<HTMLAnchorElement>("a[data-footnote-backref]"),
+    );
+    const definition = host.querySelector<HTMLElement>("section[data-footnotes] li");
+
+    expect(references).toHaveLength(2);
+    expect(backreferences).toHaveLength(2);
+    expect(definition).not.toBeNull();
+    expect(backreferences[1]!.getAttribute("href")).toBe(`#${references[1]!.id}`);
+    expect(backreferences[1]!.getAttribute("aria-label")).toBe("Back to reference 1-2");
+
+    await userEvent.click(references[1]!);
+    expect(window.location.hash).toBe("#/repeated-reference-test");
+    expect(document.activeElement).toBe(definition);
+    await userEvent.click(backreferences[1]!);
+    expect(window.location.hash).toBe("#/repeated-reference-test");
+    expect(document.activeElement).toBe(references[1]);
+  });
+
+  it("leaves unrelated fragments on the generic markdown link path", async () => {
+    const mounted = await render(
+      <main data-testid="generic-fragment-host">
+        <ChatMarkdown text={"[Jump](#unrelated-target)"} cwd={undefined} />
+      </main>,
+    );
+    const link = mounted
+      .getByTestId("generic-fragment-host")
+      .element()
+      .querySelector<HTMLAnchorElement>('a[href="#unrelated-target"]');
+
+    expect(link).not.toBeNull();
+    expect(link!.target).toBe("_blank");
+    expect(link!.rel).toBe("noopener noreferrer");
+  });
 });
