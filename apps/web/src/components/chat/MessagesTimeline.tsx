@@ -716,6 +716,10 @@ export const MessagesTimeline = memo(function MessagesTimeline({
   const fallbackListRef = useRef<LegendListRef | null>(null);
   const resolvedListRef = listRef ?? fallbackListRef;
   const timelineRootRef = useRef<HTMLDivElement | null>(null);
+  const tailAnchorEndSpaceSizeRef = useRef<number | null>(null);
+  useLayoutEffect(() => {
+    tailAnchorEndSpaceSizeRef.current = null;
+  }, [tailAnchorMessageId]);
   const observeTimelineRow = useTimelineRowOverlapGuard();
   useTailAnchorScroll({
     listRef: resolvedListRef,
@@ -726,7 +730,9 @@ export const MessagesTimeline = memo(function MessagesTimeline({
     anchorScrollInFlightRef: tailAnchorScrollInFlightRef,
     onAnchorSlideFinished: handleTailAnchorSlideFinished,
     contentChangeSignal: timelineEntries,
+    anchorEndSpaceSizeRef: tailAnchorEndSpaceSizeRef,
     animateAnchorSlide: !followLiveOutput,
+    holdAnchorWhileLive: isWorking || activeTurnInProgress || followLiveOutput,
   });
 
   const presentedWorktreeSetup = useWorktreeSetupPresentation(worktreeSetup);
@@ -842,8 +848,9 @@ export const MessagesTimeline = memo(function MessagesTimeline({
           },
     [anchorVerticalInsetPx, tailAnchorRowIndex],
   );
-  // `anchoredEndSpaceSize` is an internal LegendList signal used only to make
-  // the native reserve observable to the browser regression harness. Its
+  // `anchoredEndSpaceSize` is an internal LegendList signal used to distinguish
+  // a live reserve from a true overflow and to expose that boundary to browser
+  // regression tests. Its
   // public listener union deliberately omits it, so narrow the internal hook
   // locally rather than weakening the ref type throughout the transcript.
   useEffect(() => {
@@ -853,6 +860,13 @@ export const MessagesTimeline = memo(function MessagesTimeline({
       | undefined;
     return listenForAnchoredEndSpace?.("anchoredEndSpaceSize", (size) => {
       timelineRootRef.current?.setAttribute("data-anchored-end-space", String(Math.round(size)));
+      if (size > 0.5) {
+        tailAnchorEndSpaceSizeRef.current = size;
+      } else if (tailAnchorEndSpaceSizeRef.current !== null) {
+        // Initial zero is only the unmeasured state. Zero becomes exhaustion
+        // after this anchor has owned a real positive reserve.
+        tailAnchorEndSpaceSizeRef.current = 0;
+      }
     });
   }, [resolvedListRef]);
   // The newest work group renders its rows inline while the turn is live; every

@@ -44,11 +44,6 @@ const ANCHOR_MOUNT_MAX_WAIT_MS = 1_000;
 // hands off to follow-the-tail, so a one-frame reserve recompute in the middle
 // of a stream cannot end the hold early.
 const ANCHOR_OVERFLOW_HANDOFF_FRAMES = 3;
-// How far past the viewport bottom the transcript may sit while the anchor is
-// held before that counts as overflow. While the reserve is doing its job the
-// tail sits exactly at the viewport bottom, so this only has to cover
-// reserve-recompute rounding.
-const ANCHOR_OVERFLOW_SLACK_PX = 8;
 // A freshly committed row can report a transient position for one frame before
 // the list assigns its real offset. The first move of the slide waits for the
 // row's content position to repeat, but no longer than this.
@@ -69,8 +64,12 @@ interface UseTailAnchorScrollOptions {
   onAnchorSlideFinished?: ((messageId: MessageId) => void) | undefined;
   /** Changes whenever transcript content may have moved the anchor row. */
   contentChangeSignal?: unknown;
+  /** Last measured native end-space reserve; null until a positive reserve exists. */
+  anchorEndSpaceSizeRef: RefObject<number | null>;
   /** Normal sends slide; steering an already-streaming turn anchors immediately. */
   animateAnchorSlide?: boolean | undefined;
+  /** Keep ownership while the anchored turn is still producing visible state. */
+  holdAnchorWhileLive?: boolean | undefined;
 }
 
 function getScrollContainer(listRef: RefObject<LegendListRef | null>): HTMLElement | null {
@@ -124,16 +123,23 @@ export function useTailAnchorScroll({
   anchorScrollInFlightRef,
   onAnchorSlideFinished,
   contentChangeSignal,
+  anchorEndSpaceSizeRef,
   animateAnchorSlide = true,
+  holdAnchorWhileLive = false,
 }: UseTailAnchorScrollOptions): void {
   const anchorSlideCorrectionRef = useRef<(() => void) | null>(null);
   const animateAnchorSlideRef = useRef(animateAnchorSlide);
+  const holdAnchorWhileLiveRef = useRef(holdAnchorWhileLive);
 
   // Capture the mode selected for each new anchor without restarting an active
   // steering settle when `followLiveOutput` later flips to false.
   useLayoutEffect(() => {
     animateAnchorSlideRef.current = animateAnchorSlide;
   }, [anchorMessageId, animateAnchorSlide]);
+
+  useLayoutEffect(() => {
+    holdAnchorWhileLiveRef.current = holdAnchorWhileLive;
+  }, [holdAnchorWhileLive]);
 
   useLayoutEffect(() => {
     if (anchorMessageId === null) {
@@ -266,7 +272,9 @@ export function useTailAnchorScroll({
       // below the viewport bottom, so the response has outgrown its reserve.
       // That is the hand-off to the list's own follow-the-tail — from here the
       // anchor is meant to scroll up and out of view.
-      if (hasLanded && target.maxScrollTopPx - target.desired > ANCHOR_OVERFLOW_SLACK_PX) {
+      const reserveExhausted =
+        anchorEndSpaceSizeRef.current !== null && anchorEndSpaceSizeRef.current <= 0.5;
+      if (hasLanded && reserveExhausted) {
         overflowFrames += 1;
         if (overflowFrames >= ANCHOR_OVERFLOW_HANDOFF_FRAMES) {
           // Complete the motion the hand-off implies rather than releasing at
@@ -365,7 +373,10 @@ export function useTailAnchorScroll({
 
       const minHoldMs = easeToAnchor ? 0 : STEER_ANCHOR_MIN_SETTLE_MS;
       const quiet = hasLanded && now - lastCorrectionAt >= ANCHOR_HOLD_QUIET_MS;
-      if ((!quiet || elapsedMs < minHoldMs) && elapsedMs < ANCHOR_SLIDE_MAX_MS) {
+      if (
+        (holdAnchorWhileLiveRef.current || !quiet || elapsedMs < minHoldMs) &&
+        elapsedMs < ANCHOR_SLIDE_MAX_MS
+      ) {
         return false;
       }
       finishAnchorSlide();
@@ -428,7 +439,14 @@ export function useTailAnchorScroll({
         anchorScrollInFlightRef.current = false;
       }
     };
-  }, [anchorMessageId, anchorScrollInFlightRef, listRef, onAnchorSlideFinished, timelineRootRef]);
+  }, [
+    anchorEndSpaceSizeRef,
+    anchorMessageId,
+    anchorScrollInFlightRef,
+    listRef,
+    onAnchorSlideFinished,
+    timelineRootRef,
+  ]);
 
   // React commits streamed text before paint. Re-apply the current slide
   // coordinate in that layout window so a chunk landing above the anchor cannot
