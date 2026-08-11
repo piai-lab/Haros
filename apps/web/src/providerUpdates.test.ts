@@ -7,18 +7,51 @@ import type { ProviderKind, ServerProviderStatus, ServerSettings } from "@omnimi
 import { afterEach, describe, expect, it, vi } from "vitest";
 
 import {
+  createProviderUpdateToastData,
   getNotifiableProviderUpdateStatuses,
   getVisibleProviderUpdateStatuses,
   isProviderLatestVersionKnowable,
   isProviderUpdateActive,
   PROVIDER_UPDATE_REQUEST_TIMEOUT_MS,
   PROVIDER_UPDATE_SUCCESS_VISIBLE_MS,
+  ProviderUpdateTimeoutError,
   providerUpdateNotificationKey,
   shouldOfferProviderUpdateAction,
   shouldPromptProviderUpdate,
   shouldShowProviderUpdateStatus,
   withProviderUpdateTimeout,
 } from "./providerUpdates";
+
+describe("createProviderUpdateToastData", () => {
+  it("keeps progress and failure persistent while giving success one visible-time owner", () => {
+    const onClose = vi.fn();
+
+    expect(
+      createProviderUpdateToastData({
+        stage: "progress",
+        closeLabel: "Hide progress",
+        onClose,
+      }),
+    ).toEqual({
+      closeLabel: "Hide progress",
+      onClose,
+      statusMotion: true,
+    });
+    expect(createProviderUpdateToastData({ stage: "success", onClose })).toEqual({
+      compactContextual: true,
+      dismissAfterVisibleMs: PROVIDER_UPDATE_SUCCESS_VISIBLE_MS,
+      onClose,
+      statusMotion: true,
+    });
+    expect(
+      createProviderUpdateToastData({ stage: "error", copyText: "npm update", onClose }),
+    ).toEqual({
+      copyText: "npm update",
+      onClose,
+      statusMotion: true,
+    });
+  });
+});
 
 afterEach(() => {
   vi.useRealTimers();
@@ -280,13 +313,16 @@ describe("withProviderUpdateTimeout", () => {
   it("rejects a provider request that never settles", async () => {
     vi.useFakeTimers();
     const pending = new Promise<never>(() => undefined);
-    const assertion = expect(
-      withProviderUpdateTimeout({
-        provider: "kilo",
-        request: pending,
-        timeoutMs: 1_000,
-      }),
-    ).rejects.toThrow("Kilo update timed out after 1 second");
+    const request = withProviderUpdateTimeout({
+      provider: "kilo",
+      request: pending,
+      timeoutMs: 1_000,
+    });
+    const assertion = expect(request).rejects.toMatchObject({
+      name: "ProviderUpdateTimeoutError",
+      provider: "kilo",
+      timeoutMs: 1_000,
+    } satisfies Partial<ProviderUpdateTimeoutError>);
 
     await vi.advanceTimersByTimeAsync(1_000);
     await assertion;

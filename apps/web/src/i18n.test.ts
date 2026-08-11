@@ -67,6 +67,9 @@ describe("message catalogs", () => {
     ).toBe("Updating 2/3 · Codex");
     expect(EN_MESSAGES["updater.refreshedDescription"]).toBe("Applies to new sessions");
     expect(EN_MESSAGES["updater.hideProgress"]).toBe("Hide update progress");
+    expect(translate("en", "updater.requestTimedOut", { provider: "Codex" })).toBe(
+      "Codex update timed out. Try again.",
+    );
 
     expect(translate("zh-CN", "updater.updatingProvider", { provider: "Claude" })).toBe(
       "正在更新 Claude…",
@@ -80,6 +83,9 @@ describe("message catalogs", () => {
     ).toBe("正在更新 2/3 · Codex");
     expect(ZH_CN_MESSAGES["updater.refreshedDescription"]).toBe("新会话生效");
     expect(ZH_CN_MESSAGES["updater.hideProgress"]).toBe("隐藏更新进度");
+    expect(translate("zh-CN", "updater.requestTimedOut", { provider: "Codex" })).toBe(
+      "更新 Codex 超时，请重试。",
+    );
   });
 
   it("locks the user-facing task, conversation, engine, and System vocabulary", () => {

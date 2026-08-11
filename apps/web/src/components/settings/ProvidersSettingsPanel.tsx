@@ -47,7 +47,8 @@ import {
   shouldOfferProviderUpdateAction,
   shouldPromptProviderUpdate,
   shouldShowProviderUpdateStatus,
-  PROVIDER_UPDATE_SUCCESS_VISIBLE_MS,
+  ProviderUpdateTimeoutError,
+  createProviderUpdateToastData,
   withProviderUpdateTimeout,
 } from "~/providerUpdates";
 import { SETTINGS_TARGETS } from "~/settingsNavigation";
@@ -897,11 +898,11 @@ export function ProvidersSettingsPanel({
       const toastId = toastManager.add({
         type: "loading",
         title: t("updater.updatingProvider", { provider: providerName }),
-        data: {
+        data: createProviderUpdateToastData({
+          stage: "progress",
           closeLabel: t("updater.hideProgress"),
           onClose: dismissProgressToast,
-          statusMotion: true,
-        },
+        }),
         timeout: 0,
       });
       setUpdatingProviders((current) => new Set(current).add(provider));
@@ -931,11 +932,11 @@ export function ProvidersSettingsPanel({
               description: manualCommand
                 ? t("settings.manualUpdateInstruction", { failure: failureMessage })
                 : failureMessage,
-              data: {
+              data: createProviderUpdateToastData({
+                stage: "error",
                 onClose: dismissProgressToast,
-                statusMotion: true,
                 ...(manualCommand ? { copyText: manualCommand } : {}),
-              },
+              }),
               timeout: 0,
             });
             return;
@@ -945,12 +946,10 @@ export function ProvidersSettingsPanel({
             type: "success",
             title: t("updater.providerUpdated", { provider: providerName }),
             description: t("updater.refreshedDescription"),
-            data: {
-              compactContextual: true,
-              dismissAfterVisibleMs: PROVIDER_UPDATE_SUCCESS_VISIBLE_MS,
+            data: createProviderUpdateToastData({
+              stage: "success",
               onClose: dismissProgressToast,
-              statusMotion: true,
-            },
+            }),
             timeout: 0,
           });
         })
@@ -962,11 +961,17 @@ export function ProvidersSettingsPanel({
               provider: providerName,
             }),
             description:
-              error instanceof Error ? error.message : t("settings.providerUpdateUnknownFailure"),
-            data: {
+              error instanceof ProviderUpdateTimeoutError
+                ? t("updater.requestTimedOut", {
+                    provider: PROVIDER_DISPLAY_NAMES[error.provider],
+                  })
+                : error instanceof Error
+                  ? error.message
+                  : t("settings.providerUpdateUnknownFailure"),
+            data: createProviderUpdateToastData({
+              stage: "error",
               onClose: dismissProgressToast,
-              statusMotion: true,
-            },
+            }),
             timeout: 0,
           });
         })

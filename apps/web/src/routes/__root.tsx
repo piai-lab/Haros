@@ -123,7 +123,8 @@ import {
   providerUpdateNotificationKey,
   PROVIDER_UPDATE_INITIAL_REFRESH_DELAY_MS,
   PROVIDER_UPDATE_REFRESH_INTERVAL_MS,
-  PROVIDER_UPDATE_SUCCESS_VISIBLE_MS,
+  ProviderUpdateTimeoutError,
+  createProviderUpdateToastData,
   withProviderUpdateTimeout,
 } from "../providerUpdates";
 import {
@@ -467,11 +468,11 @@ async function runProviderUpdateAll(params: {
     title: firstProgressTitle,
     description: undefined,
     actionProps: undefined,
-    data: {
+    data: createProviderUpdateToastData({
+      stage: "progress",
       closeLabel: t("updater.hideProgress"),
       onClose: dismissProgressToast,
-      statusMotion: true,
-    },
+    }),
     timeout: 0,
   });
 
@@ -491,11 +492,11 @@ async function runProviderUpdateAll(params: {
           }),
           description: undefined,
           actionProps: undefined,
-          data: {
+          data: createProviderUpdateToastData({
+            stage: "progress",
             closeLabel: t("updater.hideProgress"),
             onClose: dismissProgressToast,
-            statusMotion: true,
-          },
+          }),
           timeout: 0,
         });
       }
@@ -521,7 +522,14 @@ async function runProviderUpdateAll(params: {
       } catch (error) {
         failures.push({
           provider,
-          reason: error instanceof Error ? error.message : t("updater.requestFailed"),
+          reason:
+            error instanceof ProviderUpdateTimeoutError
+              ? t("updater.requestTimedOut", {
+                  provider: PROVIDER_DISPLAY_NAMES[error.provider],
+                })
+              : error instanceof Error
+                ? error.message
+                : t("updater.requestFailed"),
         });
       }
     }
@@ -574,11 +582,11 @@ async function runProviderUpdateAll(params: {
               manualCommands.length === 1 ? "updater.copyCommand" : "updater.copyCommands",
             )}`
           : failureLines,
-      data: {
+      data: createProviderUpdateToastData({
+        stage: "error",
         onClose: dismissProgressToast,
-        statusMotion: true,
         ...(manualCommands.length > 0 ? { copyText: manualCommands.join("\n") } : {}),
-      },
+      }),
       timeout: 0,
     });
     return;
@@ -594,12 +602,10 @@ async function runProviderUpdateAll(params: {
           })
         : t("updater.providersUpdated", { count: providers.length }),
     description: t("updater.refreshedDescription"),
-    data: {
-      compactContextual: true,
-      dismissAfterVisibleMs: PROVIDER_UPDATE_SUCCESS_VISIBLE_MS,
+    data: createProviderUpdateToastData({
+      stage: "success",
       onClose: dismissProgressToast,
-      statusMotion: true,
-    },
+    }),
     timeout: 0,
   });
 }

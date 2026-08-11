@@ -3,12 +3,7 @@
 // Layer: Web settings/notification utility
 // Exports: update candidate helpers, notification keys, and auto-refresh timing.
 
-import {
-  PROVIDER_DISPLAY_NAMES,
-  type ProviderKind,
-  type ServerProviderStatus,
-  type ServerSettings,
-} from "@omnimind/contracts";
+import type { ProviderKind, ServerProviderStatus, ServerSettings } from "@omnimind/contracts";
 
 export const PROVIDER_UPDATE_INITIAL_REFRESH_DELAY_MS = 10_000;
 export const PROVIDER_UPDATE_REFRESH_INTERVAL_MS = 60 * 60 * 1_000;
@@ -20,13 +15,45 @@ export const PROVIDER_UPDATE_SUCCESS_VISIBLE_MS = 3_000;
 // This slightly longer client watchdog only owns a transport that outlives the server bound.
 export const PROVIDER_UPDATE_REQUEST_TIMEOUT_MS = 60 * 60_000 + 15_000;
 
-function formatUpdateTimeout(timeoutMs: number): string {
-  if (timeoutMs % 60_000 === 0) {
-    const minutes = timeoutMs / 60_000;
-    return `${minutes} ${minutes === 1 ? "minute" : "minutes"}`;
+type ProviderUpdateToastStage = "progress" | "success" | "error";
+
+type ProviderUpdateToastDataInput = {
+  readonly stage: ProviderUpdateToastStage;
+  readonly closeLabel?: string;
+  readonly copyText?: string;
+  readonly onClose?: () => void;
+};
+
+/**
+ * The one visual-state contract for provider update toasts. Callers still own
+ * their product copy and update loop, while motion, visible-time dismissal and
+ * optional recovery affordances cannot drift between global and Settings flows.
+ */
+export function createProviderUpdateToastData(input: ProviderUpdateToastDataInput) {
+  return {
+    statusMotion: true as const,
+    ...(input.stage === "success"
+      ? {
+          compactContextual: true as const,
+          dismissAfterVisibleMs: PROVIDER_UPDATE_SUCCESS_VISIBLE_MS,
+        }
+      : {}),
+    ...(input.closeLabel === undefined ? {} : { closeLabel: input.closeLabel }),
+    ...(input.copyText === undefined ? {} : { copyText: input.copyText }),
+    ...(input.onClose === undefined ? {} : { onClose: input.onClose }),
+  };
+}
+
+export class ProviderUpdateTimeoutError extends Error {
+  readonly provider: ProviderKind;
+  readonly timeoutMs: number;
+
+  constructor(provider: ProviderKind, timeoutMs: number) {
+    super("provider_update_timeout");
+    this.name = "ProviderUpdateTimeoutError";
+    this.provider = provider;
+    this.timeoutMs = timeoutMs;
   }
-  const seconds = timeoutMs / 1_000;
-  return `${seconds} ${seconds === 1 ? "second" : "seconds"}`;
 }
 
 export async function withProviderUpdateTimeout<T>(input: {
@@ -38,11 +65,7 @@ export async function withProviderUpdateTimeout<T>(input: {
   let timeoutId: ReturnType<typeof setTimeout> | undefined;
   const timeout = new Promise<never>((_resolve, reject) => {
     timeoutId = setTimeout(() => {
-      reject(
-        new Error(
-          `${PROVIDER_DISPLAY_NAMES[input.provider]} update timed out after ${formatUpdateTimeout(timeoutMs)}.`,
-        ),
-      );
+      reject(new ProviderUpdateTimeoutError(input.provider, timeoutMs));
     }, timeoutMs);
   });
 
