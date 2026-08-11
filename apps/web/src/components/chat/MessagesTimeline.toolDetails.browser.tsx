@@ -226,6 +226,44 @@ describe("MessagesTimeline tool details", () => {
     }
   });
 
+  it("opens a Codex image-view row in the shared local image preview", async () => {
+    const onImageExpand = vi.fn();
+    const imagePath = "/private/tmp/omnimind/image-preview.png";
+    const screen = await render(
+      <TimelineWorkEntryRow
+        workEntry={{
+          id: "work-image-view",
+          createdAt: "2026-03-17T19:12:28.000Z",
+          label: "Viewed image",
+          tone: "tool",
+          itemType: "image_view",
+          detail: imagePath,
+        }}
+        chatMetaFontSizePx={12}
+        textFontSizePx={13}
+        density="compact"
+        onImageExpand={onImageExpand}
+        markdownCwd="/private/tmp/omnimind"
+        timestampFormat="24-hour"
+      />,
+    );
+
+    (
+      screen.getByRole("button", { name: "Open viewed image" }).element() as HTMLButtonElement
+    ).click();
+
+    expect(onImageExpand).toHaveBeenCalledOnce();
+    expect(onImageExpand).toHaveBeenCalledWith({
+      images: [
+        {
+          src: expect.stringContaining("path=%2Fprivate%2Ftmp%2Fomnimind%2Fimage-preview.png"),
+          name: "image-preview.png",
+        },
+      ],
+      index: 0,
+    });
+  });
+
   it("states settled tool calls as a sentence without a lifecycle tail", async () => {
     const host = createTimelineHost();
     const screen = await render(

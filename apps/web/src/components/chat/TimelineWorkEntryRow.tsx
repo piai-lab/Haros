@@ -39,6 +39,11 @@ import {
   ZapIcon,
 } from "~/lib/icons";
 import { describeLinkChip } from "~/lib/linkChips";
+import {
+  buildLocalImageUrl,
+  isLocalImageMarkdownSrc,
+  localImageFileName,
+} from "~/lib/localImageUrls";
 import { cn } from "~/lib/utils";
 
 import { isFileChangeWorkLogEntry, type WorkLogEntry } from "../../session-logic";
@@ -527,6 +532,23 @@ export const TimelineWorkEntryRow = memo(function TimelineWorkEntryRow(props: {
   const openAgentActivity = canOpenAgentActivity
     ? () => onOpenAgentActivity?.(workEntry.id)
     : undefined;
+  const viewedImagePath =
+    workEntry.itemType === "image_view" && isLocalImageMarkdownSrc(workEntry.detail)
+      ? workEntry.detail
+      : null;
+  const canOpenViewedImage = viewedImagePath !== null;
+  const openViewedImage = viewedImagePath
+    ? () =>
+        onImageExpand({
+          images: [
+            {
+              src: buildLocalImageUrl({ src: viewedImagePath, cwd: markdownCwd }),
+              name: localImageFileName(viewedImagePath) || t("timeline.viewedImage"),
+            },
+          ],
+          index: 0,
+        })
+    : undefined;
   const hasToolDetails = Boolean(workEntry.toolDetails);
   // File-read rows open the referenced file in the in-app viewer when the
   // hosting surface provides an opener (right-dock file pane / editor pane).
@@ -577,6 +599,7 @@ export const TimelineWorkEntryRow = memo(function TimelineWorkEntryRow(props: {
   const canOpenReadFile = readFilePath !== null;
   const canOpenToolDetails =
     !canOpenAgentActivity &&
+    !canOpenViewedImage &&
     Boolean(workEntry.toolDetails || (workEntry.liveActivity && !canOpenReadFile));
   const openReadFile = readFilePath
     ? () => openWorkspaceFileReference(opener, readFilePath)
@@ -755,19 +778,34 @@ export const TimelineWorkEntryRow = memo(function TimelineWorkEntryRow(props: {
 
           const rowContent = (
             <AgentActivityOpenSurface
-              canOpen={canOpenAgentActivity || canOpenReadFile || canOpenEngineWebSurface}
+              canOpen={
+                canOpenAgentActivity ||
+                canOpenViewedImage ||
+                canOpenReadFile ||
+                canOpenEngineWebSurface
+              }
               compact={compact}
               onOpen={
                 canOpenEngineWebSurface
                   ? onOpenEngineWebSurface
-                  : (openAgentActivity ?? openReadFile)
+                  : (openViewedImage ?? openAgentActivity ?? openReadFile)
               }
               onHover={prefetchReadFile}
-              ariaLabel={canOpenEngineWebSurface ? t("timeline.reopenEngineWebSurface") : undefined}
+              ariaLabel={
+                canOpenEngineWebSurface
+                  ? t("timeline.reopenEngineWebSurface")
+                  : canOpenViewedImage
+                    ? t("timeline.openViewedImage")
+                    : undefined
+              }
               tooltip={toolRowTooltipContent(
                 rawCommand,
                 displayText,
-                canOpenReadFile ? (readFilePath ?? hoverText) : hoverText,
+                canOpenViewedImage
+                  ? viewedImagePath
+                  : canOpenReadFile
+                    ? (readFilePath ?? hoverText)
+                    : hoverText,
               )}
             >
               {rowContentChildren}
