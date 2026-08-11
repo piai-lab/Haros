@@ -1,0 +1,38 @@
+// FILE: useAccountCapacity.ts
+// Purpose: Provider-native account capacity only; never reads local history or thread signals.
+
+import type { ProviderKind, ServerProviderUsageSnapshot } from "@omnimind/contracts";
+import { useQuery } from "@tanstack/react-query";
+
+import {
+  isProviderUsageSnapshotNonOk,
+  normalizeServerProviderUsageLines,
+  normalizeServerProviderUsageRateLimit,
+} from "~/lib/providerUsageSnapshot";
+import { deriveProviderUsageLearnMoreHref, deriveRateLimitLearnMoreHref } from "~/lib/rateLimits";
+import { serverAllProviderUsageQueryOptions } from "~/lib/serverReactQuery";
+
+export function useAccountCapacity(input: {
+  provider: ProviderKind | null | undefined;
+  providerSnapshot?: ServerProviderUsageSnapshot | undefined;
+}) {
+  const provider = input.provider ?? null;
+  const shouldFetch = provider !== null && input.providerSnapshot === undefined;
+  const query = useQuery(serverAllProviderUsageQueryOptions({ enabled: shouldFetch }));
+  const fetched = (query.data ?? []).find((snapshot) => snapshot.provider === provider);
+  const snapshot = fetched ?? input.providerSnapshot ?? null;
+  const unavailable = isProviderUsageSnapshotNonOk(snapshot);
+  const liveRateLimit = unavailable ? null : normalizeServerProviderUsageRateLimit(snapshot);
+  const rateLimits = liveRateLimit ? [liveRateLimit] : [];
+  const usageLines = unavailable ? [] : normalizeServerProviderUsageLines(snapshot);
+  const detail = unavailable ? undefined : snapshot?.detail?.trim() || undefined;
+
+  return {
+    isLoading: shouldFetch && query.isPending && !snapshot,
+    learnMoreHref:
+      deriveRateLimitLearnMoreHref(rateLimits) ?? deriveProviderUsageLearnMoreHref(provider),
+    rateLimits,
+    usageLines,
+    usageNotice: detail,
+  } as const;
+}

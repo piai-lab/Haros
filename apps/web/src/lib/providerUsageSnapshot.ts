@@ -2,19 +2,19 @@
 // Purpose: Normalize provider usage snapshots returned by the server into the
 // same shapes consumed by the shared usage/rate-limit UI in the web app.
 
-import type { ServerGetProviderUsageSnapshotResult } from "@omnimind/contracts";
+import type { ServerProviderUsageSnapshot } from "@omnimind/contracts";
 
 import type { OpenUsageUsageLine } from "./openUsageRateLimits";
 import type { ProviderRateLimit } from "./rateLimits";
 
 export function isProviderUsageSnapshotNonOk(
-  snapshot: ServerGetProviderUsageSnapshotResult | null | undefined,
+  snapshot: ServerProviderUsageSnapshot | null | undefined,
 ): boolean {
   return snapshot?.status !== undefined && snapshot.status !== "ok";
 }
 
 export function normalizeServerProviderUsageRateLimit(
-  snapshot: ServerGetProviderUsageSnapshotResult | null | undefined,
+  snapshot: ServerProviderUsageSnapshot | null | undefined,
 ): ProviderRateLimit | null {
   if (!snapshot || snapshot.limits.length === 0) {
     return null;
@@ -35,7 +35,7 @@ export function normalizeServerProviderUsageRateLimit(
 }
 
 export function normalizeServerProviderUsageLines(
-  snapshot: ServerGetProviderUsageSnapshotResult | null | undefined,
+  snapshot: ServerProviderUsageSnapshot | null | undefined,
 ): OpenUsageUsageLine[] {
   if (!snapshot || snapshot.usageLines.length === 0) {
     return [];

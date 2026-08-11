@@ -5,7 +5,7 @@
 //          given site shares one outbound fetch and one cached blob.
 // Layer: Server runtime utility (plain module; called from the HTTP route via
 //          Effect.promise). Follows the Map + TTL + max-size eviction pattern
-//          used by providerUsageSnapshot.ts / workspaceEntries.ts.
+//          used by other bounded server-side caches such as workspaceEntries.ts.
 
 import { outboundHttp } from "@omnimind/shared/outboundHttp";
 

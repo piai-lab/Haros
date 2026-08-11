@@ -170,8 +170,10 @@ import type {
   ServerGenerateThreadRecapInput,
   ServerGenerateThreadRecapResult,
   ServerGetEnvironmentResult,
-  ServerGetProviderUsageSnapshotInput,
-  ServerGetProviderUsageSnapshotResult,
+  ServerGetUsageHistoryInput,
+  ServerGetUsageHistoryResult,
+  ServerCommandUsageHistoryInput,
+  ServerCommandUsageHistoryResult,
   ServerListProviderUsageInput,
   ServerListProviderUsageResult,
   ServerGetSettingsResult,
@@ -737,12 +739,13 @@ export interface NativeApi {
     listWorktrees: () => Promise<ServerListWorktreesResult>;
     listLocalServers: () => Promise<ServerListLocalServersResult>;
     stopLocalServer: (input: ServerStopLocalServerInput) => Promise<ServerStopLocalServerResult>;
-    getProviderUsageSnapshot: (
-      input: ServerGetProviderUsageSnapshotInput,
-    ) => Promise<ServerGetProviderUsageSnapshotResult>;
     listProviderUsage: (
       input: ServerListProviderUsageInput,
     ) => Promise<ServerListProviderUsageResult>;
+    getUsageHistory: (input: ServerGetUsageHistoryInput) => Promise<ServerGetUsageHistoryResult>;
+    commandUsageHistory: (
+      input: ServerCommandUsageHistoryInput,
+    ) => Promise<ServerCommandUsageHistoryResult>;
     getDiagnostics: () => Promise<ServerDiagnosticsResult>;
     generateThreadRecap: (
       input: ServerGenerateThreadRecapInput,

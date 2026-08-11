@@ -4,8 +4,7 @@
 import { PROVIDER_DISPLAY_NAMES, type ProviderKind } from "@omnimind/contracts";
 import { type ReactNode } from "react";
 
-import { useAppSettings } from "~/appSettings";
-import { useProviderUsageSummary } from "~/hooks/useProviderUsageSummary";
+import { useAccountCapacity } from "~/hooks/useAccountCapacity";
 import {
   deriveProviderUsageDisplayRows,
   selectPrimaryProviderUsageDisplayRow,
@@ -13,8 +12,6 @@ import {
 } from "~/lib/providerUsageDisplay";
 import type { OpenUsageUsageLine } from "~/lib/openUsageRateLimits";
 import type { ProviderRateLimit } from "~/lib/rateLimits";
-import { useStore } from "~/store";
-import { createAllThreadsSelector } from "~/storeSelectors";
 
 import { ComposerPickerMenuPopup } from "./chat/ComposerPickerMenuPopup";
 import { ChatHeaderButton } from "./chat/chatHeaderControls";
@@ -33,15 +30,8 @@ export interface ProviderUsageMenuModel {
 }
 
 export function useProviderUsageMenuModel(provider: ProviderKind): ProviderUsageMenuModel | null {
-  const { settings } = useAppSettings();
-  const selectAllThreads = createAllThreadsSelector();
-  const threads = useStore(selectAllThreads);
-  const usageSummary = useProviderUsageSummary({
+  const usageSummary = useAccountCapacity({
     provider,
-    threads,
-    codexHomePath: settings.codexHomePath || null,
-    fetchOpenUsageData: false,
-    fetchLocalUsageData: false,
   });
   const usageRows = deriveProviderUsageDisplayRows(usageSummary.rateLimits);
   const primaryRow = selectPrimaryProviderUsageDisplayRow(usageRows);

@@ -35,6 +35,7 @@ import { ServerAuthPolicyLive } from "./auth/Layers/ServerAuthPolicy";
 import { ServerSecretStoreLive } from "./auth/Layers/ServerSecretStore";
 import { SessionCredentialServiceLive } from "./auth/Layers/SessionCredentialService";
 import { ProfileStatsQueryLive } from "./profileStats";
+import { UsageHistoryLive } from "./usageHistory/UsageHistory";
 import { ProfileStatsArchiveLive } from "./profileStatsArchive";
 import { ServerLifecycleEventsLive } from "./serverLifecycleEvents";
 import { ServerRuntimeStartupLive } from "./serverRuntimeStartup";
@@ -121,6 +122,7 @@ export function makeServerRuntimeServicesLayer(
   const profileStatsArchiveLayer = ProfileStatsArchiveLive.pipe(
     Layer.provideMerge(checkpointStoreLayer),
   );
+  const usageHistoryLayer = UsageHistoryLive.pipe(Layer.provideMerge(ServerSettingsLive));
   const orchestrationReactorLayer = OrchestrationReactorLive.pipe(
     Layer.provideMerge(runtimeIngestionLayer),
     Layer.provideMerge(providerCommandReactorLayer),
@@ -240,6 +242,7 @@ export function makeServerRuntimeServicesLayer(
     ServerSettingsLive,
     ServerEnvironmentLive,
     ProfileStatsQueryLive,
+    usageHistoryLayer,
     authServicesLayer,
     ServerLifecycleEventsLive,
     ServerRuntimeStartupLive,

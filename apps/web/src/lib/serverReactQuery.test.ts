@@ -12,7 +12,7 @@ import {
   refreshServerConfigAfterTransportOpen,
   serverAllProviderUsageQueryOptions,
   serverLocalServersQueryOptions,
-  serverProviderUsageSnapshotQueryOptions,
+  serverUsageHistoryQueryOptions,
   serverQueryKeys,
   sidebarLocalServersQueryOptions,
 } from "./serverReactQuery";
@@ -201,13 +201,11 @@ describe("serverAllProviderUsageQueryOptions", () => {
   });
 });
 
-describe("serverProviderUsageSnapshotQueryOptions", () => {
-  it("can be disabled by privacy-safe active surfaces", () => {
-    const options = serverProviderUsageSnapshotQueryOptions({
-      provider: "cursor",
-      enabled: false,
-    });
+describe("serverUsageHistoryQueryOptions", () => {
+  it("uses a separate DB-backed cache key without an archive polling interval", () => {
+    const options = serverUsageHistoryQueryOptions({ range: "7d", groupBy: "model" });
 
-    expect(options.enabled).toBe(false);
+    expect(options.queryKey).toEqual(serverQueryKeys.usageHistory("7d", "model"));
+    expect(typeof options.refetchInterval).toBe("function");
   });
 });

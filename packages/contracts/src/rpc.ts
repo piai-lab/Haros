@@ -188,8 +188,10 @@ import {
   ServerGenerateThreadRecapInput,
   ServerGenerateThreadRecapResult,
   ServerGetEnvironmentResult,
-  ServerGetProviderUsageSnapshotInput,
-  ServerGetProviderUsageSnapshotResult,
+  ServerGetUsageHistoryInput,
+  ServerGetUsageHistoryResult,
+  ServerCommandUsageHistoryInput,
+  ServerCommandUsageHistoryResult,
   ServerListProviderUsageInput,
   ServerListProviderUsageResult,
   ServerLifecycleStreamEvent,
@@ -970,18 +972,21 @@ export const WsServerStopLocalServerRpc = Rpc.make(WS_METHODS.serverStopLocalSer
   error: WsRpcError,
 });
 
-export const WsServerGetProviderUsageSnapshotRpc = Rpc.make(
-  WS_METHODS.serverGetProviderUsageSnapshot,
-  {
-    payload: ServerGetProviderUsageSnapshotInput,
-    success: ServerGetProviderUsageSnapshotResult,
-    error: WsRpcError,
-  },
-);
-
 export const WsServerListProviderUsageRpc = Rpc.make(WS_METHODS.serverListProviderUsage, {
   payload: ServerListProviderUsageInput,
   success: ServerListProviderUsageResult,
+  error: WsRpcError,
+});
+
+export const WsServerGetUsageHistoryRpc = Rpc.make(WS_METHODS.serverGetUsageHistory, {
+  payload: ServerGetUsageHistoryInput,
+  success: ServerGetUsageHistoryResult,
+  error: WsRpcError,
+});
+
+export const WsServerCommandUsageHistoryRpc = Rpc.make(WS_METHODS.serverCommandUsageHistory, {
+  payload: ServerCommandUsageHistoryInput,
+  success: ServerCommandUsageHistoryResult,
   error: WsRpcError,
 });
 
@@ -1278,8 +1283,9 @@ export const WsFeatureRpcGroup = RpcGroup.make(
   WsServerListWorktreesRpc,
   WsServerListLocalServersRpc,
   WsServerStopLocalServerRpc,
-  WsServerGetProviderUsageSnapshotRpc,
   WsServerListProviderUsageRpc,
+  WsServerGetUsageHistoryRpc,
+  WsServerCommandUsageHistoryRpc,
   WsStatsGetProfileStatsRpc,
   WsStatsGetProfileTokenStatsRpc,
   WsServerGetDiagnosticsRpc,

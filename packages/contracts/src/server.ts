@@ -158,15 +158,6 @@ export const ServerProviderUsageSnapshot = Schema.Struct({
 });
 export type ServerProviderUsageSnapshot = typeof ServerProviderUsageSnapshot.Type;
 
-export const ServerGetProviderUsageSnapshotInput = Schema.Struct({
-  provider: ProviderKind,
-  homePath: Schema.optional(TrimmedNonEmptyString),
-});
-export type ServerGetProviderUsageSnapshotInput = typeof ServerGetProviderUsageSnapshotInput.Type;
-
-export const ServerGetProviderUsageSnapshotResult = Schema.NullOr(ServerProviderUsageSnapshot);
-export type ServerGetProviderUsageSnapshotResult = typeof ServerGetProviderUsageSnapshotResult.Type;
-
 // Batch live-usage fetch for supported providers, powering the Settings → Usage section and
 // provider-scoped usage chips. Unfiltered requests return one entry per supported provider
 // (including needs-auth/error) so the UI can render a row each.
@@ -178,6 +169,107 @@ export type ServerListProviderUsageInput = typeof ServerListProviderUsageInput.T
 
 export const ServerListProviderUsageResult = Schema.Array(ServerProviderUsageSnapshot);
 export type ServerListProviderUsageResult = typeof ServerListProviderUsageResult.Type;
+
+export const UsageHistoryProvider = Schema.Literals(["codex", "claudeAgent"]);
+export type UsageHistoryProvider = typeof UsageHistoryProvider.Type;
+
+export const UsageHistoryRange = Schema.Literals(["24h", "7d", "30d", "all"]);
+export type UsageHistoryRange = typeof UsageHistoryRange.Type;
+
+export const UsageHistoryGroupBy = Schema.Literals(["provider", "model", "workspace", "date"]);
+export type UsageHistoryGroupBy = typeof UsageHistoryGroupBy.Type;
+
+export const UsageHistoryStatus = Schema.Literals([
+  "not-authorized",
+  "idle",
+  "indexing",
+  "partial",
+  "ready",
+  "paused",
+  "stale",
+]);
+export type UsageHistoryStatus = typeof UsageHistoryStatus.Type;
+
+export const UsageHistoryProviderStatus = Schema.Literals([
+  "pending",
+  "indexing",
+  "ready",
+  "partial",
+  "paused",
+  "unsupported",
+]);
+export type UsageHistoryProviderStatus = typeof UsageHistoryProviderStatus.Type;
+
+export const UsageHistoryProgress = Schema.Struct({
+  filesDiscovered: NonNegativeInt,
+  filesIndexed: NonNegativeInt,
+  bytesDiscovered: NonNegativeInt,
+  bytesRead: NonNegativeInt,
+  skippedFiles: NonNegativeInt,
+  discoveryComplete: Schema.Boolean,
+});
+export type UsageHistoryProgress = typeof UsageHistoryProgress.Type;
+
+export const UsageHistoryProviderSummary = Schema.Struct({
+  provider: UsageHistoryProvider,
+  status: UsageHistoryProviderStatus,
+  progress: UsageHistoryProgress,
+  detailCode: Schema.optional(TrimmedNonEmptyString),
+  lastCompletedAt: Schema.optional(IsoDateTime),
+});
+export type UsageHistoryProviderSummary = typeof UsageHistoryProviderSummary.Type;
+
+export const UsageHistoryRow = Schema.Struct({
+  key: TrimmedNonEmptyString,
+  provider: Schema.optional(UsageHistoryProvider),
+  model: Schema.optional(TrimmedNonEmptyString),
+  workspace: Schema.optional(TrimmedNonEmptyString),
+  date: Schema.optional(TrimmedNonEmptyString),
+  sessionCount: NonNegativeInt,
+  inputTokens: NonNegativeInt,
+  outputTokens: NonNegativeInt,
+  cacheReadTokens: NonNegativeInt,
+  cacheWriteTokens: NonNegativeInt,
+  totalTokens: NonNegativeInt,
+  estimatedCostMicros: Schema.optional(NonNegativeInt),
+  estimateUncertain: Schema.Boolean,
+});
+export type UsageHistoryRow = typeof UsageHistoryRow.Type;
+
+export const ServerGetUsageHistoryInput = Schema.Struct({
+  range: Schema.optional(UsageHistoryRange),
+  groupBy: Schema.optional(UsageHistoryGroupBy),
+});
+export type ServerGetUsageHistoryInput = typeof ServerGetUsageHistoryInput.Type;
+
+export const ServerGetUsageHistoryResult = Schema.Struct({
+  status: UsageHistoryStatus,
+  authorizedAt: Schema.optional(IsoDateTime),
+  updatedAt: Schema.optional(IsoDateTime),
+  lastCompletedAt: Schema.optional(IsoDateTime),
+  pricingVersion: TrimmedNonEmptyString,
+  progress: UsageHistoryProgress,
+  providers: Schema.Array(UsageHistoryProviderSummary),
+  rows: Schema.Array(UsageHistoryRow),
+});
+export type ServerGetUsageHistoryResult = typeof ServerGetUsageHistoryResult.Type;
+
+export const UsageHistoryCommandAction = Schema.Literals([
+  "authorize",
+  "refresh",
+  "pause",
+  "resume",
+  "reindex",
+  "clear",
+]);
+export type UsageHistoryCommandAction = typeof UsageHistoryCommandAction.Type;
+
+export const ServerCommandUsageHistoryInput = Schema.Struct({
+  action: UsageHistoryCommandAction,
+});
+export type ServerCommandUsageHistoryInput = typeof ServerCommandUsageHistoryInput.Type;
+export const ServerCommandUsageHistoryResult = ServerGetUsageHistoryResult;
+export type ServerCommandUsageHistoryResult = typeof ServerCommandUsageHistoryResult.Type;
 
 export const ServerLocalServerAddress = Schema.Struct({
   host: TrimmedNonEmptyString,

@@ -12,7 +12,7 @@ OmniMind 直接继承 Synara 的 Project、Thread、Space、Studio 与单一 Pro
 | ------------------- | ------------------------------------------------------------------------------------------------- | ------------------------------------------------------- |
 | Agent               | folder-backed Synara Project + Thread + Workbench                                                 | `AgentWorkspace`、第二 Conversation/Run store           |
 | Chat                | Synara Home/Studio managed Project + Thread + managed workspace/outbox                            | 用户 Primary Folder、平行 Chat database                 |
-| Groups              | Synara Space identity/name/order + Thread 的 `groupIds` metadata                                   | 新 `Group` aggregate、Project 标签或 membership ledger   |
+| Groups              | Synara Space identity/name/order + Thread 的 `groupIds` metadata                                  | 新 `Group` aggregate、Project 标签或 membership ledger  |
 | Send to Agent       | 创建或打开普通 folder-backed Project Thread，并带入用户选择的 prompt、attachment 与 artifact refs | Handoff protocol、跨对象 replay、隐藏 cwd 切换          |
 | Conversation        | Synara Thread 的用户可见身份                                                                      | Provider Session 的复制品                               |
 | Agent/Provider 选择 | 现有 Provider binding 与 adapter registry；独立 `omnimind` 与 `pi` identities                     | 第二 Provider Registry 或跨 Provider Session            |
@@ -66,6 +66,17 @@ Composer draft/QueueItem 在 Product Orchestration 接纳前可编辑、删除�
 Timeline 继续消费继承的 canonical events，并保留 Provider、Model 与必要 native references。只长期显示用户输入、Assistant 可见结果、结构化请求、重要 Activity/Tool，以及 File、Diff、Terminal、Artifact 等引用；raw event 只进入有界 diagnostics。
 
 Workbench state 沿用 Synara 已有的 per-thread tabs、panes、viewer、terminal 和 layout state。File、Git、Terminal 不成为 Product database 的副本；重新观察外部变化并按现有机制提示即可。
+
+## 账户额度与历史用量
+
+账户额度与历史用量是两个独立事实域，不共享 fallback、刷新或失败状态：
+
+- **账户额度**来自当前 Provider 的原生账户/rate-limit authority，只表达服务端可证明的容量、剩余额度、重置时间、套餐与 Credits。没有可靠来源时保持 `unsupported`、`unavailable` 或 `unknown`；不得从本地 transcript、Thread activity 或费用估算反推额度。
+- **历史用量**来自用户明确授权读取的 Provider 私有 archive。原始 archive 始终是 source authority；OmniMind 只在现有 `state.sqlite` 中保存可删除、可重建的派生索引、file cursor、parser/pricing version、最小去重 identity 与聚合，不复制 prompt、回复正文、凭据或原始 JSONL。
+
+历史索引不是第二 Conversation、Session、event store 或 transcript authority。它不进入 Orchestration replay，也不能被 Provider adapter 当作 native resume/usage truth。索引表只由 Server 的单一 SQLite writer 更新；隔离 reader process 不打开数据库。文件替换、截断、删除或 parser version 变化时，Server 在事务中撤销对应派生贡献并定向重算；清除索引只删除派生行，绝不删除 Provider archive。
+
+用户 consent、暂停、checkpoint、last-good、partial/stale 与 provider-scoped failure 属于同一历史索引 owner。未确认前 archive 零读取；确认后允许低优先级、可取消的增量维护。启动、Header、普通对话恢复与账户额度查询只读各自现有状态，不触发 archive discovery 或扫描。
 
 ## 扩展与生态边界
 

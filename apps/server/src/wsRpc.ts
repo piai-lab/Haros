@@ -101,7 +101,7 @@ import { ProviderAdapterRegistry } from "./provider/Services/ProviderAdapterRegi
 import { ProviderHealth } from "./provider/Services/ProviderHealth";
 import { ProviderService } from "./provider/Services/ProviderService";
 import { listProviderUsage } from "./providerUsage";
-import { getProviderUsageSnapshot } from "./providerUsageSnapshot";
+import { UsageHistory } from "./usageHistory/UsageHistory";
 import { ProfileStatsQuery } from "./profileStats";
 import { redactSensitiveProcessArgs } from "./processArgumentRedaction";
 import { ServerEnvironment } from "./environment/Services/ServerEnvironment";
@@ -331,6 +331,7 @@ const makeWsRpcHandlersLayer = () =>
       const path = yield* Path.Path;
       const pullRequests = yield* PullRequestService;
       const profileStatsQuery = yield* ProfileStatsQuery;
+      const usageHistory = yield* UsageHistory;
       const projectionReadModelQuery = yield* ProjectionSnapshotQuery;
       const providerAdapterRegistry = yield* ProviderAdapterRegistry;
       const providerDiscoveryService = yield* ProviderDiscoveryService;
@@ -818,20 +819,27 @@ const makeWsRpcHandlersLayer = () =>
             ),
           );
 
-      const requireOwner = Effect.gen(function* () {
+      const requireOwnerRole = Effect.gen(function* () {
         if (!canManageExternalMcp(yield* CurrentWsSessionRole)) {
           return yield* Effect.fail(
             new WsRpcError({ message: "Owner authorization is required for this operation." }),
           );
         }
-        if (!isLoopbackHost(config.host) || config.publicUrl !== undefined) {
-          return yield* Effect.fail(
-            new WsRpcError({
-              message: "External MCP management is available only on a loopback-only instance.",
-            }),
-          );
-        }
       });
+
+      const requireOwner = requireOwnerRole.pipe(
+        Effect.andThen(
+          Effect.gen(function* () {
+            if (!isLoopbackHost(config.host) || config.publicUrl !== undefined) {
+              return yield* Effect.fail(
+                new WsRpcError({
+                  message: "External MCP management is available only on a loopback-only instance.",
+                }),
+              );
+            }
+          }),
+        ),
+      );
 
       return AdmittedWsFeatureRpcGroup.of({
         [ORCHESTRATION_WS_METHODS.dispatchCommand]: (command) =>
@@ -1634,10 +1642,18 @@ const makeWsRpcHandlersLayer = () =>
             profileStatsQuery.getProfileTokenStats(input),
             "Failed to load profile token stats",
           ),
-        [WS_METHODS.serverGetProviderUsageSnapshot]: (input) =>
-          rpcEffect(getProviderUsageSnapshot(input), "Failed to load provider usage"),
         [WS_METHODS.serverListProviderUsage]: (input) =>
           rpcEffect(listProviderUsage(input), "Failed to load provider usage"),
+        [WS_METHODS.serverGetUsageHistory]: (input) =>
+          rpcEffect(
+            requireOwnerRole.pipe(Effect.andThen(usageHistory.get(input))),
+            "Failed to load usage history",
+          ),
+        [WS_METHODS.serverCommandUsageHistory]: (input) =>
+          rpcEffect(
+            requireOwnerRole.pipe(Effect.andThen(usageHistory.command(input))),
+            "Failed to update usage history",
+          ),
         [WS_METHODS.serverGetDiagnostics]: () =>
           rpcEffect(
             Effect.gen(function* () {

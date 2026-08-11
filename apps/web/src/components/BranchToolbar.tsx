@@ -12,21 +12,16 @@ import { CheckIcon, ChevronDownIcon, HandoffIcon, WorktreeIcon } from "~/lib/ico
 import { HiOutlineHandRaised } from "react-icons/hi2";
 import { CentralIcon } from "~/lib/central-icons";
 import { useCallback, useMemo, useState, type ReactNode } from "react";
-import { useAppSettings } from "~/appSettings";
 import { useI18n } from "~/i18n";
 
 import { newCommandId, cn } from "../lib/utils";
 import { readNativeApi } from "../nativeApi";
 import { useComposerDraftStore } from "../composerDraftStore";
-import { useProviderUsageSummary } from "../hooks/useProviderUsageSummary";
+import { useAccountCapacity } from "../hooks/useAccountCapacity";
 import { resolveThreadEnvironmentPresentation } from "../lib/threadEnvironment";
 import { providerModelSupportsAutoRuntimeMode } from "../lib/runtimeMode";
 import { useStore } from "../store";
-import {
-  createAllThreadsSelector,
-  createProjectSelector,
-  createThreadSelector,
-} from "../storeSelectors";
+import { createProjectSelector, createThreadSelector } from "../storeSelectors";
 import {
   EnvMode,
   resolveAssociatedWorktreeMetadataAfterWorkspacePatch,
@@ -332,10 +327,6 @@ export default function BranchToolbar({
   const setThreadWorkspaceAction = useStore((store) => store.setThreadWorkspace);
   const draftThread = useComposerDraftStore((store) => store.getDraftThread(threadId));
   const setDraftThreadContext = useComposerDraftStore((store) => store.setDraftThreadContext);
-  const [allThreadsSelector] = useState(() => createAllThreadsSelector());
-  const threads = useStore(allThreadsSelector);
-  const { settings } = useAppSettings();
-
   const serverThread = useStore(useMemo(() => createThreadSelector(threadId), [threadId]));
   const activeProjectId = serverThread?.projectId ?? draftThread?.projectId ?? null;
   const activeProject = useStore(
@@ -513,11 +504,8 @@ export default function BranchToolbar({
   );
   const showEnvPicker = effectiveEnvMode === "local" || canSwitchToLocal;
 
-  const usageSummary = useProviderUsageSummary({
+  const usageSummary = useAccountCapacity({
     provider: activeProvider,
-    threads,
-    codexHomePath: settings.codexHomePath || null,
-    fetchOpenUsageData: false,
   });
   const [rateLimitsOpen, setRateLimitsOpen] = useState(true);
   const [envPickerOpen, setEnvPickerOpen] = useState(false);

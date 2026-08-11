@@ -22,6 +22,34 @@ apps/server    one Orchestration + projections + Provider Registry
 
 当前仓库中平行的 Product Control Plane、第二 event/store/projection、独立 Registry 或 Run/receipt/outbox 都是删除候选。OmniMind Agent 可以拥有自己的 runtime implementation，却不能拥有第二 orchestration、Thread model 或 Workbench。
 
+## 账户容量与历史索引故障域
+
+Provider usage 分为两个不相互降级的执行边界：
+
+```text
+Account capacity A
+  Web → Server Provider-usage fetcher → Provider native account/rate-limit source
+  never reads Provider archives or OpenUsage
+
+Usage history B
+  Web → Server UsageHistory coordinator → existing state.sqlite derived tables
+                                      └── bounded child reader → approved Provider roots
+```
+
+账户容量 A 保留 Provider 专属 fetcher、single-flight、健康/降级 TTL、last-good 与单 Provider 错误隔离。A 的失败不能改写历史索引状态；B 的 last-good、估算或 transcript token 也不能成为 A 的 fallback。
+
+历史索引 B 是 Server 内一个具体产品能力，不是第二 Orchestration 或通用 worker platform：
+
+- Server 是唯一控制与数据库 writer；隔离 child 只做 Provider-specific discovery/stream parse，经有界 IPC 返回规范化 batch，不打开 `state.sqlite`，不拥有 consent、checkpoint 或重试 authority；
+- child 有独立 heap 上限、批次 IO/时间预算和显式 kill；异常、timeout、OOM、SIGKILL 或格式变化只把对应 provider/file 标为 partial/paused/stale，并保留 last-good aggregate，不能退出 Server、重启 Desktop 或影响 Provider Session；
+- discovery 按 Provider root 分批并保存 cursor，不把全部路径常驻内存；文件读取保存 identity、size、mtime、complete-line offset、parser version 与必要聚合，后续只读新增字节；
+- 文件截断、替换、inode 变化、删除与 parser upgrade 由 Server 事务性撤销旧贡献并重算。checkpoint 先提交数据库再确认 batch，App 关闭或 child 被杀后从最后提交点恢复；
+- 同一 Server 只允许一个索引任务，多窗口与多表面共享该状态。自动重试有上限；手动刷新只做增量 discovery，明确“重新索引”才失效现有派生贡献；
+- 未 consent 时不读取 `.codex/sessions`、`.claude/projects` 等 archive。启动、Header、普通对话和 A 查询对这些目录读取为零；已 consent 后只允许低优先级、debounced 的增量维护，不做 15/30 秒全量轮询或每文件 watcher；
+- OpenUsage 若保留，只能作为 B 的显式可选 connector/import source，不能进入 A 或内置 archive index 的核心 hook、权威或失败边界。
+
+进程隔离只证明 crash/resource failure containment，不宣传为 OS sandbox。允许的 Provider roots 由现有 Provider settings/environment authority 解析；reader 对 symlink、realpath 与相对路径做 containment 检查，不能越过已确认 root。
+
 ## 继承层与 Provider 私有层
 
 ### 直接继承的共用层

@@ -9,7 +9,11 @@ const sourcemapEnv = process.env.OMNIMIND_SERVER_SOURCEMAP?.trim().toLowerCase()
 const buildSourcemap = sourcemapEnv === "1" || sourcemapEnv === "true";
 
 export default defineConfig({
-  entry: ["src/index.ts", "src/restoreMigrationBackup.ts"],
+  entry: {
+    index: "src/index.ts",
+    restoreMigrationBackup: "src/restoreMigrationBackup.ts",
+    usageHistoryIndexer: "src/usageHistory/indexerProcess.ts",
+  },
   format: ["esm", "cjs"],
   checks: {
     legacyCjs: false,

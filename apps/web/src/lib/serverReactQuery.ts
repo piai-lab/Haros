@@ -1,6 +1,6 @@
 import type {
-  ProviderKind,
   ServerConfig,
+  ServerGetUsageHistoryInput,
   ServerListProviderUsageInput,
   ServerProviderStatus,
   ServerStopLocalServerInput,
@@ -20,9 +20,10 @@ export const serverQueryKeys = {
   settings: () => ["server", "settings"] as const,
   worktrees: () => ["server", "worktrees"] as const,
   localServers: () => ["server", "localServers"] as const,
-  providerUsage: (provider: ProviderKind | null | undefined, homePath?: string | null) =>
-    ["server", "providerUsage", provider ?? null, homePath ?? null] as const,
   allProviderUsage: () => ["server", "allProviderUsage"] as const,
+  usageHistoryAll: () => ["server", "usageHistory"] as const,
+  usageHistory: (range: string, groupBy: string) =>
+    ["server", "usageHistory", range, groupBy] as const,
   profileStats: (utcOffsetMinutes: number) =>
     ["server", "profileStats", "peak-hour-v2", utcOffsetMinutes] as const,
   profileTokenStats: (utcOffsetMinutes: number) =>
@@ -267,32 +268,25 @@ export function serverStopLocalServerMutationOptions(input: { queryClient: Query
   });
 }
 
-export function serverProviderUsageSnapshotQueryOptions(input: {
-  provider: ProviderKind | null | undefined;
-  homePath?: string | null;
-  enabled?: boolean;
-}) {
-  return queryOptions({
-    queryKey: serverQueryKeys.providerUsage(input.provider, input.homePath),
-    enabled: (input.enabled ?? true) && input.provider !== null && input.provider !== undefined,
-    staleTime: 30_000,
-    refetchInterval: 30_000,
-    refetchOnWindowFocus: false,
-    retry: false,
-    queryFn: async () => {
-      if (!input.provider) return null;
-      const api = ensureNativeApi();
-      return api.server.getProviderUsageSnapshot({
-        provider: input.provider,
-        ...(input.homePath ? { homePath: input.homePath } : {}),
-      });
-    },
-  });
-}
-
 export async function fetchAllProviderUsage(input: ServerListProviderUsageInput = {}) {
   const api = ensureNativeApi();
   return api.server.listProviderUsage(input);
+}
+
+export function serverUsageHistoryQueryOptions(input: ServerGetUsageHistoryInput = {}) {
+  const range = input.range ?? "30d";
+  const groupBy = input.groupBy ?? "provider";
+  return queryOptions({
+    queryKey: serverQueryKeys.usageHistory(range, groupBy),
+    staleTime: 1_000,
+    refetchOnWindowFocus: false,
+    retry: false,
+    queryFn: async () => {
+      const api = ensureNativeApi();
+      return api.server.getUsageHistory({ range, groupBy });
+    },
+    refetchInterval: (query) => (query.state.data?.status === "indexing" ? 1_500 : false),
+  });
 }
 
 // Local profile + shareable-card core statistics. The client passes its own fixed

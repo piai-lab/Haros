@@ -376,16 +376,29 @@ Read-only comparison against adopted Synara head
   later namespace adaptation did not alter the usage behavior. Neither source contained a large
   archive regression test.
 
-Disposition: keep the inherited Provider-usage owner, but replace the unsafe mechanism in
-OmniMind. Codex archive reads are bounded tail reads; Claude transcripts are chunked and aggregated
-without retaining whole files or all samples; archive reads have explicit concurrency, line and
-total-byte ceilings and fail closed with no partial totals. Live Provider snapshots no longer own
-local archive enrichment, and surfaces that hide local totals do not request them. Desktop automatic
-lifecycle starts respect the existing give-up latch; only an explicit user retry re-arms it. No new
-storage, index, process, public contract or Provider-private-state writer was introduced.
+Historical hotfix disposition: Codex archive reads were changed to bounded tail reads; Claude
+transcripts were chunked; reads gained concurrency, line and total-byte ceilings; live Provider
+snapshots stopped owning local archive enrichment. Desktop automatic lifecycle starts retained the
+existing give-up latch. That source-only reader and its focused tests were intentionally removed by
+the final indexed-history replacement below; commit `efb8f3833bc082cccb496d1cde30bb614ccc5d00`
+remains the provenance and safety-baseline evidence, not the current product contract.
 
-Focused proof is owned by `apps/server/src/providerUsageSnapshot.test.ts`,
-`apps/server/src/providerUsage/index.test.ts`, `apps/web/src/hooks/useProviderUsageSummary.test.tsx`
-and `apps/desktop/src/backendSupervisionPolicy.test.ts`. Revalidate if Synara changes archive usage
-collection, if Provider transcript formats change, or if a bounded reader cannot recover the final
-Codex summary / complete Claude totals within the declared budget.
+### Maintainer follow-up: hotfix baseline versus final product contract
+
+On 2026-08-11 the maintainer confirmed that `efb8f3833bc082cccb496d1cde30bb614ccc5d00`
+is a required safety baseline, not the final archive product. The permanent design keeps both
+Provider-native account capacity and complete local history analysis, but separates their queries,
+UI state and failure domains. The 2,000-file/128 MiB/null behavior is retained only until the
+incremental index replaces the request-time scanner; it is not accepted long-term completeness
+semantics.
+
+The approved replacement uses the existing OmniMind database as the sole writer-owned home for a
+rebuildable derived index and consent/checkpoint state. A memory-limited child process reads only
+explicitly approved Provider roots and returns bounded normalized batches; it never opens the
+database or owns retries. Revalidate with checkpoint resume, append-only byte counts, file
+replacement rollback, parser-version invalidation, symlink containment, worker kill/OOM isolation,
+dual-locale UI and an exact-SHA packaged journey before describing the history feature as complete.
+Focused source proof is now owned by `apps/server/src/usageHistory/indexerProcess.test.ts`,
+`apps/server/src/usageHistory/UsageHistory.test.ts`,
+`apps/server/src/providerUsage/index.test.ts`, `apps/web/src/hooks/useAccountCapacity.test.tsx`
+and `apps/desktop/src/backendSupervisionPolicy.test.ts`.
