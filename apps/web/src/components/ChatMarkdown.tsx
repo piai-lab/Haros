@@ -1120,26 +1120,25 @@ function ChatMarkdown({
   // streaming or under reduced motion. Governs cadence only; the deferred value below still
   // bounds the markdown re-parse cost.
   const smoothedText = useSmoothStreamedText(text, isStreaming);
+  // Defer the source and its normalization as one unit. Besides avoiding normalization work for
+  // stream frames React coalesces, this keeps the integrity fallback's exact source aligned with
+  // the mdast positions parsed from the normalized text.
+  const deferredSmoothedText = useDeferredValue(smoothedText);
+  const renderedSourceText = isStreaming ? deferredSmoothedText : smoothedText;
   // The dollar rewrite exists to disambiguate math from currency; the user
   // variant has no math, so its text must stay byte-for-byte what was typed.
   // Table repair runs first and can change text length, so the thread-marker
   // plugin below must resolve offsets against the same repaired text.
-  const normalizedText = useMemo(
+  const renderedText = useMemo(
     () =>
       isUserVariant
-        ? smoothedText
-        : protectLiteralMarkdownDollars(repairMarkdownTableDelimiters(smoothedText)),
-    [isUserVariant, smoothedText],
+        ? renderedSourceText
+        : protectLiteralMarkdownDollars(repairMarkdownTableDelimiters(renderedSourceText)),
+    [isUserVariant, renderedSourceText],
   );
-  // While streaming, let React deprioritize and coalesce the markdown re-parse so a
-  // fast token stream (one flush per ~100ms) doesn't re-render the full ReactMarkdown
-  // tree on every flush. The deferred value always converges to the latest text, and
-  // completed messages render the exact current text immediately (no visual change).
-  const deferredNormalizedText = useDeferredValue(normalizedText);
-  const renderedText = isStreaming ? deferredNormalizedText : normalizedText;
   const tableIntegrityRemarkPlugin = useMemo(
-    () => createTableIntegrityRemarkPlugin(renderedText),
-    [renderedText],
+    () => createTableIntegrityRemarkPlugin(renderedSourceText),
+    [renderedSourceText],
   );
   // Marker offsets are applied against mdast positions, which come from the
   // repaired text — validate them against the same string. A marker recorded

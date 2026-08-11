@@ -171,7 +171,22 @@ describe("ChatMarkdown", () => {
     expect(markup).toContain('class="chat-markdown-table-integrity"');
     expect(markup).toContain("Table structure mismatch");
     expect(markup).toContain("contains 4");
+    expect(markup).toContain("$18.07");
     expect(markup).toContain("extra-cell");
+  });
+
+  it("preserves the pre-repair source when delimiter repair reveals a lossy body row", async () => {
+    const original = [
+      "| Provider | Model | Cost |",
+      "| --- | --- |",
+      "| DeepSeek | reasoner | $18.07 | extra-cell |",
+    ].join("\n");
+    const markup = await renderMarkdown(original);
+
+    expect(markup).not.toContain("<table>");
+    expect(markup).toContain("Table structure mismatch");
+    expect(markup).toContain(original);
+    expect(markup).not.toContain("| --- | --- | --- |");
   });
 
   it("keeps short body rows as valid tables because they do not discard source cells", async () => {

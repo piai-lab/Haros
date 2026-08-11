@@ -31,17 +31,39 @@ export function refreshMarkdownTableOverflow(input: {
   const atStart = viewport.scrollLeft <= 1;
   const atEnd = viewport.scrollLeft + viewport.clientWidth >= viewport.scrollWidth - 1;
 
-  frame.dataset.overflow = String(overflowing);
-  frame.dataset.scrollStart = String(!overflowing || atStart);
-  frame.dataset.scrollEnd = String(!overflowing || atEnd);
-  viewport.tabIndex = overflowing ? 0 : -1;
+  const overflowValue = String(overflowing);
+  const scrollStartValue = String(!overflowing || atStart);
+  const scrollEndValue = String(!overflowing || atEnd);
+  if (frame.dataset.overflow !== overflowValue) {
+    frame.dataset.overflow = overflowValue;
+  }
+  if (frame.dataset.scrollStart !== scrollStartValue) {
+    frame.dataset.scrollStart = scrollStartValue;
+  }
+  if (frame.dataset.scrollEnd !== scrollEndValue) {
+    frame.dataset.scrollEnd = scrollEndValue;
+  }
 
   if (overflowing) {
-    viewport.setAttribute("role", "region");
-    viewport.setAttribute("aria-label", regionLabel);
+    if (viewport.tabIndex !== 0) {
+      viewport.tabIndex = 0;
+    }
+    if (viewport.getAttribute("role") !== "region") {
+      viewport.setAttribute("role", "region");
+    }
+    if (viewport.getAttribute("aria-label") !== regionLabel) {
+      viewport.setAttribute("aria-label", regionLabel);
+    }
   } else {
-    viewport.removeAttribute("role");
-    viewport.removeAttribute("aria-label");
+    if (viewport.tabIndex !== -1) {
+      viewport.tabIndex = -1;
+    }
+    if (viewport.hasAttribute("role")) {
+      viewport.removeAttribute("role");
+    }
+    if (viewport.hasAttribute("aria-label")) {
+      viewport.removeAttribute("aria-label");
+    }
   }
 }
 
@@ -60,8 +82,6 @@ export function connectMarkdownTableOverflow(input: {
     observer.observe(viewport);
     observedViewportCount += 1;
   }
-  update();
-
   return () => {
     viewport.removeEventListener("scroll", update);
     if (!observer) {

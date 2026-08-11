@@ -18,6 +18,12 @@ const TABLE_MARKDOWN = [
   "| DeepSeek | deepseek-reasoner | 9,442,781 | 5,740,218 | $18.0721 |",
 ].join("\n");
 const EMBEDDED_TABLE_MARKDOWN = ["Before", "", TABLE_MARKDOWN, "", "After"].join("\n");
+const COMPARISON_MARKDOWN = [
+  "| Option | Operational tradeoff |",
+  "| --- | --- |",
+  "| Current owner | This comparison explains a deliberately long operational tradeoff with recovery semantics, ownership boundaries, maintenance costs, and future compatibility obligations that must remain readable on a narrow desktop pane. |",
+].join("\n");
+const COMPACT_TABLE_MARKDOWN = ["| A | B |", "| --- | --- |", "| 1 | 2 |"].join("\n");
 
 describe("ChatMarkdown table overflow", () => {
   afterEach(() => {
@@ -47,7 +53,7 @@ describe("ChatMarkdown table overflow", () => {
     expect(viewport.getAttribute("aria-label")).toBe("Scrollable table");
     const firstBodyCell = viewport.querySelector<HTMLElement>("tbody td");
     expect(firstBodyCell).not.toBeNull();
-    expect(getComputedStyle(firstBodyCell!).whiteSpace).toBe("nowrap");
+    expect(getComputedStyle(firstBodyCell!).whiteSpace).toBe("normal");
 
     viewport.focus();
     await userEvent.keyboard("{ArrowRight}");
@@ -60,6 +66,73 @@ describe("ChatMarkdown table overflow", () => {
     expect(viewport.hasAttribute("role")).toBe(false);
     expect(viewport.hasAttribute("aria-label")).toBe(false);
     expect(getComputedStyle(firstBodyCell!).whiteSpace).toBe("normal");
+  });
+
+  it("keeps a pure table usable inside the real shrink-wrapped user-bubble geometry", async () => {
+    const mounted = await render(
+      <div data-testid="host" style={{ width: 320 }}>
+        <div
+          data-testid="user-bubble"
+          className="w-max max-w-full min-w-0 self-end border px-3 py-1.5"
+        >
+          <div className="min-w-0 overflow-hidden">
+            <ChatMarkdown text={TABLE_MARKDOWN} cwd={undefined} variant="user" />
+          </div>
+        </div>
+      </div>,
+    );
+    const host = mounted.getByTestId("host").element();
+    const bubble = mounted.getByTestId("user-bubble").element();
+    const frame = bubble.querySelector<HTMLElement>(".chat-markdown-table-frame");
+    const viewport = bubble.querySelector<HTMLElement>(".chat-markdown-table-viewport");
+    expect(frame).not.toBeNull();
+    expect(viewport).not.toBeNull();
+    if (!frame || !viewport) return;
+
+    await vi.waitFor(() => expect(frame.dataset.overflow).toBe("true"));
+    expect(host.scrollWidth).toBe(host.clientWidth);
+    expect(bubble.getBoundingClientRect().width).toBeGreaterThan(250);
+    expect(bubble.getBoundingClientRect().width).toBeLessThanOrEqual(host.clientWidth);
+    expect(viewport.clientWidth).toBeGreaterThan(0);
+  });
+
+  it("wraps prose-heavy comparison cells instead of creating an extreme scroll surface", async () => {
+    const mounted = await render(
+      <div data-testid="host" style={{ width: 320 }}>
+        <ChatMarkdown text={COMPARISON_MARKDOWN} cwd={undefined} />
+      </div>,
+    );
+    const host = mounted.getByTestId("host").element();
+    const proseCell = host.querySelector<HTMLElement>("tbody td:last-child");
+    expect(proseCell).not.toBeNull();
+    if (!proseCell) return;
+
+    expect(host.scrollWidth).toBe(host.clientWidth);
+    expect(getComputedStyle(proseCell).whiteSpace).toBe("normal");
+    expect(proseCell.getBoundingClientRect().width).toBeLessThan(300);
+    expect(proseCell.getBoundingClientRect().height).toBeGreaterThan(
+      Number.parseFloat(getComputedStyle(proseCell).lineHeight) * 2,
+    );
+  });
+
+  it("remeasures when a committed table grows wider without a container resize", async () => {
+    const mounted = await render(
+      <div data-testid="host" style={{ width: 320 }}>
+        <ChatMarkdown text={COMPACT_TABLE_MARKDOWN} cwd={undefined} />
+      </div>,
+    );
+    const host = mounted.getByTestId("host").element();
+    const frame = host.querySelector<HTMLElement>(".chat-markdown-table-frame");
+    expect(frame).not.toBeNull();
+    if (!frame) return;
+    await vi.waitFor(() => expect(frame.dataset.overflow).toBe("false"));
+
+    await mounted.rerender(
+      <div data-testid="host" style={{ width: 320 }}>
+        <ChatMarkdown text={TABLE_MARKDOWN} cwd={undefined} />
+      </div>,
+    );
+    await vi.waitFor(() => expect(frame.dataset.overflow).toBe("true"));
   });
 
   it("keeps header and row surfaces distinct in both supported themes", async () => {

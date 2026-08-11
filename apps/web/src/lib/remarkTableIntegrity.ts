@@ -7,9 +7,14 @@ export const TABLE_INTEGRITY_FALLBACK_TAG_NAME = "table-integrity-fallback";
 export const TABLE_INTEGRITY_EXPECTED_COLUMNS_ATTRIBUTE = "data-expected-columns";
 export const TABLE_INTEGRITY_ACTUAL_COLUMNS_ATTRIBUTE = "data-actual-columns";
 
+interface MdastPoint {
+  line?: number;
+  column?: number;
+}
+
 interface MdastPosition {
-  start?: { offset?: number };
-  end?: { offset?: number };
+  start?: MdastPoint;
+  end?: MdastPoint;
 }
 
 interface MdastNode {
@@ -23,7 +28,37 @@ interface MdastNode {
   };
 }
 
-function fallbackForTable(input: string, table: MdastNode): MdastNode | null {
+function lineStartOffsets(input: string): number[] {
+  const offsets = [0];
+  for (let index = 0; index < input.length; index += 1) {
+    if (input[index] === "\n") {
+      offsets.push(index + 1);
+    }
+  }
+  return offsets;
+}
+
+function offsetForPoint(
+  input: string,
+  offsets: readonly number[],
+  point: MdastPoint | undefined,
+): number | null {
+  if (!point?.line || !point.column || point.line < 1 || point.column < 1) {
+    return null;
+  }
+  const lineStart = offsets[point.line - 1];
+  if (lineStart === undefined) {
+    return null;
+  }
+  const offset = lineStart + point.column - 1;
+  return offset <= input.length ? offset : null;
+}
+
+function fallbackForTable(
+  sourceInput: string,
+  sourceLineStarts: readonly number[],
+  table: MdastNode,
+): MdastNode | null {
   const rows = table.children;
   const headerWidth = rows?.[0]?.children?.length ?? 0;
   if (headerWidth === 0 || !rows) {
@@ -38,9 +73,12 @@ function fallbackForTable(input: string, table: MdastNode): MdastNode | null {
     return null;
   }
 
-  const start = table.position?.start?.offset;
-  const end = table.position?.end?.offset;
-  if (start === undefined || end === undefined || start < 0 || end < start) {
+  // Delimiter repair can change offsets, but it never adds/removes lines or rewrites the header
+  // and body rows. Mapping the parsed table's line/column range back to the pre-repair source
+  // therefore preserves the exact Markdown the user or provider supplied.
+  const start = offsetForPoint(sourceInput, sourceLineStarts, table.position?.start);
+  const end = offsetForPoint(sourceInput, sourceLineStarts, table.position?.end);
+  if (start === null || end === null || end < start) {
     return null;
   }
 
@@ -53,7 +91,7 @@ function fallbackForTable(input: string, table: MdastNode): MdastNode | null {
         dataActualColumns: String(widestBodyRow),
       },
     },
-    children: [{ type: "text", value: input.slice(start, end) }],
+    children: [{ type: "text", value: sourceInput.slice(start, end) }],
   };
   if (table.position) {
     fallback.position = table.position;
@@ -61,16 +99,20 @@ function fallbackForTable(input: string, table: MdastNode): MdastNode | null {
   return fallback;
 }
 
-function replaceMalformedTables(input: string, node: MdastNode): void {
+function replaceMalformedTables(
+  sourceInput: string,
+  sourceLineStarts: readonly number[],
+  node: MdastNode,
+): void {
   if (!node.children || node.children.length === 0) {
     return;
   }
 
   node.children = node.children.map((child) => {
     if (child.type === "table") {
-      return fallbackForTable(input, child) ?? child;
+      return fallbackForTable(sourceInput, sourceLineStarts, child) ?? child;
     }
-    replaceMalformedTables(input, child);
+    replaceMalformedTables(sourceInput, sourceLineStarts, child);
     return child;
   });
 }
@@ -80,8 +122,9 @@ function replaceMalformedTables(input: string, node: MdastNode): void {
  * Replace only those lossy tables with an inspectable raw-source fallback. Short body rows
  * remain valid: GFM represents their absent trailing values as empty cells without losing data.
  */
-export function createTableIntegrityRemarkPlugin(input: string) {
+export function createTableIntegrityRemarkPlugin(sourceInput: string) {
+  const sourceLineStarts = lineStartOffsets(sourceInput);
   return () => (tree: unknown) => {
-    replaceMalformedTables(input, tree as MdastNode);
+    replaceMalformedTables(sourceInput, sourceLineStarts, tree as MdastNode);
   };
 }

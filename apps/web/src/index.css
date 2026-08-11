@@ -2481,7 +2481,6 @@ label:has(> select#reasoning-effort) select {
 
 .chat-markdown-table-frame {
   position: relative;
-  container-type: inline-size;
   width: 100%;
   max-width: 100%;
   margin-block: 0.8rem;
@@ -2590,13 +2589,6 @@ label:has(> select#reasoning-effort) select {
 
 .chat-markdown tbody tr:hover > * {
   background: color-mix(in srgb, var(--color-background-elevated-secondary) 68%, transparent);
-}
-
-@container (max-width: 32rem) {
-  .chat-markdown th,
-  .chat-markdown td {
-    white-space: nowrap;
-  }
 }
 
 .chat-markdown-table-integrity {
