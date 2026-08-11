@@ -8,6 +8,13 @@
   --font-sans: var(--font-ui-family);
   --font-display: var(--font-display-family);
   --font-mono: var(--font-mono-family);
+  /* Tailwind's two dominant product-copy roles must follow the persisted app
+     scale. Keeping the mapping here lets existing shared primitives inherit
+     the semantic typography owner without rewriting hundreds of class lists. */
+  --text-xs: var(--app-font-size-ui-xs);
+  --text-xs--line-height: 1.35;
+  --text-sm: var(--app-font-size-ui);
+  --text-sm--line-height: 1.45;
   --color-warning-foreground: var(--warning-foreground);
   --color-warning: var(--warning);
   --color-success-foreground: var(--success-foreground);

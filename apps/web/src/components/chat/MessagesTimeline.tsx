@@ -334,7 +334,7 @@ function WorktreeSetupCard({
     <div className="w-fit max-w-full rounded-xl border border-[color:var(--color-border-light)] bg-[var(--color-background-elevated-primary)] px-3.5 py-3 font-system-ui shadow-xs">
       <div className="flex items-center gap-2">
         <WorktreeIcon className="size-3.5 shrink-0 text-[var(--color-text-foreground-tertiary)]" />
-        <span className="shimmer text-[13px] font-medium text-[var(--color-text-foreground-secondary)]">
+        <span className="shimmer text-[length:var(--app-font-size-activity,13px)] font-medium text-[var(--color-text-foreground-secondary)]">
           Preparing worktree...
         </span>
       </div>
@@ -359,7 +359,7 @@ function WorktreeSetupCard({
               </span>
               <span
                 className={cn(
-                  "text-[13px] leading-5",
+                  "text-[length:var(--app-font-size-activity,13px)] leading-[1.54]",
                   step.status === "active" || step.status === "done"
                     ? "text-[var(--color-text-foreground)]"
                     : step.status === "error"
