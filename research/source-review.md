@@ -199,8 +199,8 @@ in OmniMind.
 The maintainer explicitly approved this table on 2026-08-05. Implementation is limited to two
 new bounded Works after the accepted authority-retirement commit and before Freeze:
 
-1. [`Harden active Workbench mechanisms`](../.omp-flow/tasks/08-04-ui-chassis-takeover/work/harden-active-workbench-mechanisms.md).
-2. [`Align completion signals with Product facts`](../.omp-flow/tasks/08-04-ui-chassis-takeover/work/align-product-completion-signals.md).
+1. **Harden active Workbench mechanisms**.
+2. **Align completion signals with Product facts**.
 
 Every deferred row remains evidence with a concrete trigger, not current backlog, public ontology or
 permission to widen either Work. Every direct or translated adoption must bind its actual source

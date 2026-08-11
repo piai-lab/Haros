@@ -137,7 +137,7 @@ test("identity scan permits donor identity only on exact evidence surfaces", asy
     "README.md",
     "AGENTS.md",
     `research/${rule}-source-review.md`,
-    `.omp-flow/tasks/task-one/${rule}-handoff.md`,
+    `.codex/tasks/task-one/${rule}-handoff.md`,
   ];
   const authoredFiles = [
     `apps/${rule}-product.ts`,
@@ -247,20 +247,20 @@ test("generated output discovery includes ignored-style build roots but excludes
   await mkdir(path.join(temporaryRoot, "apps", "desktop", "dist"), { recursive: true });
   await mkdir(path.join(temporaryRoot, "node_modules", "package", "dist"), { recursive: true });
   await mkdir(path.join(temporaryRoot, "vendor", "ui", "dist"), { recursive: true });
-  await mkdir(path.join(temporaryRoot, ".omp-flow", "dist"), { recursive: true });
+  await mkdir(path.join(temporaryRoot, ".codex", "dist"), { recursive: true });
   await writeFile(path.join(temporaryRoot, "apps", "desktop", "dist", "bundle.js"), "export {};\n");
   await writeFile(
     path.join(temporaryRoot, "node_modules", "package", "dist", "dependency.js"),
     "export {};\n",
   );
   await writeFile(path.join(temporaryRoot, "vendor", "ui", "dist", "bundle.js"), "export {};\n");
-  await writeFile(path.join(temporaryRoot, ".omp-flow", "dist", "bundle.js"), "export {};\n");
+  await writeFile(path.join(temporaryRoot, ".codex", "dist", "bundle.js"), "export {};\n");
 
   const generated = await discoverGeneratedFiles(
     temporaryRoot,
     structurePolicy,
     [],
-    ["vendor/ui", ".omp-flow"],
+    ["vendor/ui", ".codex"],
   );
 
   assert.deepEqual(generated, ["apps/desktop/dist/bundle.js"]);
@@ -295,15 +295,15 @@ test("structure policy keeps installed workflow tooling outside production namin
   const temporaryRoot = await mkdtemp(path.join(tmpdir(), "structure-tooling-"));
   const rule = rules[0];
   await writeFile(path.join(temporaryRoot, "README.md"), policyReadme(rule));
-  await mkdir(path.join(temporaryRoot, ".omp-flow", "scripts", "common"), { recursive: true });
+  await mkdir(path.join(temporaryRoot, ".codex", "scripts", "common"), { recursive: true });
   await writeFile(
-    path.join(temporaryRoot, ".omp-flow", "scripts", "common", "runtime.py"),
+    path.join(temporaryRoot, ".codex", "scripts", "common", "runtime.py"),
     "pass\n",
   );
 
   const result = await scanIdentity({
     root: temporaryRoot,
-    sourceFiles: ["README.md", ".omp-flow/scripts/common/runtime.py"],
+    sourceFiles: ["README.md", ".codex/scripts/common/runtime.py"],
   });
 
   assert.equal(result.findings.length, 0);
@@ -506,7 +506,7 @@ test("exact provenance roots and tool roots must be ancestry-disjoint", () => {
   const toolBelowExact = validateSourceAdoptions([adoption], tracked, {
     toolRoots: ["vendor/source/tools"],
   });
-  const disjoint = validateSourceAdoptions([adoption], tracked, { toolRoots: [".omp-flow"] });
+  const disjoint = validateSourceAdoptions([adoption], tracked, { toolRoots: [".codex"] });
 
   assert.ok(equal.some((error) => error.includes("vendor/source and vendor/source")));
   assert.ok(exactBelowTool.some((error) => error.includes("vendor/source and vendor")));
@@ -575,7 +575,7 @@ test("exact provenance roots cannot duplicate, overlap, or nest", () => {
     "vendor/source/nested/index.ts",
     "LICENSES/source.txt",
   ];
-  const errors = validateSourceAdoptions([first, second], tracked, { toolRoots: [".omp-flow"] });
+  const errors = validateSourceAdoptions([first, second], tracked, { toolRoots: [".codex"] });
 
   assert.ok(errors.filter((error) => error.includes("exact provenance roots overlap")).length >= 2);
 
@@ -589,7 +589,7 @@ test("exact provenance roots cannot duplicate, overlap, or nest", () => {
   });
   assert.deepEqual(
     validateSourceAdoptions([second, disjoint], [...tracked, "vendor/other/index.ts"], {
-      toolRoots: [".omp-flow"],
+      toolRoots: [".codex"],
     }),
     [],
   );
@@ -603,7 +603,7 @@ test("exact provenance validation detects working modification, addition, and de
       adoptions: [fixture.adoption],
       trackedFiles: fixture.inventoryFiles,
       inventoryFiles: fixture.inventoryFiles,
-      toolRoots: [".omp-flow"],
+      toolRoots: [".codex"],
     });
 
   assert.deepEqual(validate(), { errors: [], exactRoots: ["vendor/source"] });
@@ -647,7 +647,7 @@ test("exact provenance validation rejects candidate drift and missing Git object
     adoptions: [fixture.adoption],
     trackedFiles: fixture.inventoryFiles,
     inventoryFiles: fixture.inventoryFiles,
-    toolRoots: [".omp-flow"],
+    toolRoots: [".codex"],
   });
   assert.ok(drifted.errors.some((error) => error.includes("candidate tree mismatch")));
 
@@ -662,7 +662,7 @@ test("exact provenance validation rejects candidate drift and missing Git object
     adoptions: [missingCommit],
     trackedFiles: fixture.inventoryFiles,
     inventoryFiles: fixture.inventoryFiles,
-    toolRoots: [".omp-flow"],
+    toolRoots: [".codex"],
   });
   assert.ok(missing.errors.some((error) => error.includes("missing provenance commit")));
 
@@ -677,7 +677,7 @@ test("exact provenance validation rejects candidate drift and missing Git object
     adoptions: [wrongBaselineTree],
     trackedFiles: fixture.inventoryFiles,
     inventoryFiles: fixture.inventoryFiles,
-    toolRoots: [".omp-flow"],
+    toolRoots: [".codex"],
     candidate: fixture.commit,
   });
   assert.ok(wrongTree.errors.some((error) => error.includes("provenance tree mismatch")));
@@ -694,7 +694,7 @@ test("exact provenance validation rejects candidate drift and missing Git object
     adoptions: [missingPath],
     trackedFiles: ["LICENSES/source.txt", "vendor/missing/declared.txt"],
     inventoryFiles: ["LICENSES/source.txt", "vendor/missing/declared.txt"],
-    toolRoots: [".omp-flow"],
+    toolRoots: [".codex"],
     candidate: fixture.commit,
   });
   assert.ok(missingTree.errors.some((error) => error.includes("provenance path is not a tree")));
@@ -708,7 +708,7 @@ test("vendor content without a complete exact declaration is rejected", async (t
     adoptions: [unbound],
     trackedFiles: fixture.inventoryFiles,
     inventoryFiles: [...fixture.inventoryFiles, "vendor/other/file.txt"],
-    toolRoots: [".omp-flow"],
+    toolRoots: [".codex"],
   });
 
   assert.deepEqual(result.exactRoots, []);
@@ -783,7 +783,7 @@ test("source entry detects ignored vendor source while excluding first-level and
     trackedFiles: trackedRepositoryFiles(temporaryRoot),
     inventoryFiles,
     ignoredVendorFiles,
-    toolRoots: [".omp-flow"],
+    toolRoots: [".codex"],
   });
   assert.deepEqual(result.exactRoots, []);
   assert.ok(
@@ -802,11 +802,11 @@ test("identity partitions exact, tool, evidence, author, and generated surfaces"
   await writeFile(path.join(temporaryRoot, "README.md"), policyReadme(rule));
   const files = [
     `vendor/source/${rule}.txt`,
-    `.omp-flow/${rule}.txt`,
+    `.codex/${rule}.txt`,
     `research/${rule}.md`,
     `apps/${rule}.txt`,
     `vendor/source/dist/${rule}.js`,
-    `.omp-flow/dist/${rule}.js`,
+    `.codex/dist/${rule}.js`,
     `apps/web/dist/${rule}.js`,
   ];
   for (const relativePath of files) {
@@ -823,8 +823,8 @@ test("identity partitions exact, tool, evidence, author, and generated surfaces"
 
   assert.ok(result.findings.some((finding) => finding.path === `apps/${rule}.txt`));
   assert.ok(result.findings.some((finding) => finding.path === `apps/web/dist/${rule}.js`));
-  assert.ok(result.findings.some((finding) => finding.path === `.omp-flow/${rule}.txt`));
-  assert.ok(result.findings.some((finding) => finding.path === `.omp-flow/dist/${rule}.js`));
+  assert.ok(result.findings.some((finding) => finding.path === `.codex/${rule}.txt`));
+  assert.ok(result.findings.some((finding) => finding.path === `.codex/dist/${rule}.js`));
   assert.ok(result.findings.every((finding) => finding.path !== `research/${rule}.md`));
   assert.ok(result.findings.every((finding) => !finding.path.startsWith("vendor/source/")));
 });

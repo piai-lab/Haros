@@ -172,7 +172,7 @@ omni-harness
 ```structure-policy
 {
   "authorRoots": ["apps", "architecture", "assets", "packages", "patches", "research", "scripts", "test", "missions", "LICENSES"],
-  "toolRoots": [".agents", ".claude", ".codex", ".cursor", ".obsidian", ".omp", ".omp-flow", ".snow"],
+  "toolRoots": [".agents", ".claude", ".codex", ".cursor", ".obsidian", ".snow"],
   "generatedDirectoryNames": ["build", "coverage", "dist", "out", "release"],
   "maxDirectoryDepth": 7,
   "forbiddenNameTokens": [
