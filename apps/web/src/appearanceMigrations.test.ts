@@ -63,7 +63,8 @@ describe("appearance migrations", () => {
   it("upgrades only the former sidebar floor/default band", () => {
     expect(resolveMigratedThreadSidebarWidth(208)).toBe(DEFAULT_THREAD_SIDEBAR_WIDTH_PX);
     expect(resolveMigratedThreadSidebarWidth(256)).toBe(DEFAULT_THREAD_SIDEBAR_WIDTH_PX);
-    expect(resolveMigratedThreadSidebarWidth(263.7890625)).toBe(DEFAULT_THREAD_SIDEBAR_WIDTH_PX);
+    expect(resolveMigratedThreadSidebarWidth(258.0078125)).toBe(258.0078125);
+    expect(resolveMigratedThreadSidebarWidth(263.7890625)).toBe(263.7890625);
     expect(resolveMigratedThreadSidebarWidth(300)).toBe(300);
     expect(resolveMigratedThreadSidebarWidth(338.30859375)).toBe(338.30859375);
   });

@@ -17,10 +17,6 @@ const TYPOGRAPHY_DEFAULTS_MIGRATION_STORAGE_KEY = "omnimind:typography-defaults-
 const SIDEBAR_WIDTH_DEFAULTS_MIGRATION_STORAGE_KEY = "omnimind:sidebar-width-defaults-migrated:v1";
 const LEGACY_THREAD_SIDEBAR_MIN_WIDTH_PX = 13 * 16;
 const LEGACY_THREAD_SIDEBAR_DEFAULT_WIDTH_PX = 16 * 16;
-// Fractional zoom and native display scaling produced persisted values such as
-// 258.0 and 263.789 for the former 16rem default. Keep the band deliberately
-// narrow so a real user width outside the known default signature survives.
-const LEGACY_THREAD_SIDEBAR_DEFAULT_TOLERANCE_PX = 8;
 
 export type AppearanceMigrationDisposition = "already-complete" | "migrated" | "preserved";
 
@@ -81,9 +77,7 @@ function migratePersistedTypographyDefaults(
 
 export function resolveMigratedThreadSidebarWidth(width: number): number {
   const wasLegacyMinimum = Math.abs(width - LEGACY_THREAD_SIDEBAR_MIN_WIDTH_PX) < 0.5;
-  const wasLegacyDefault =
-    Math.abs(width - LEGACY_THREAD_SIDEBAR_DEFAULT_WIDTH_PX) <=
-    LEGACY_THREAD_SIDEBAR_DEFAULT_TOLERANCE_PX;
+  const wasLegacyDefault = Math.abs(width - LEGACY_THREAD_SIDEBAR_DEFAULT_WIDTH_PX) < 0.5;
   return wasLegacyMinimum || wasLegacyDefault ? DEFAULT_THREAD_SIDEBAR_WIDTH_PX : width;
 }
 
