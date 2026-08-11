@@ -3,7 +3,7 @@
 // Layer: Web appearance override hook
 // Exports: useNativeFontSmoothing
 
-import { useEffect } from "react";
+import { useLayoutEffect } from "react";
 import { useAppSettings } from "../appSettings";
 import { isMacPlatform } from "../lib/utils";
 
@@ -13,7 +13,7 @@ export function useNativeFontSmoothing() {
     settings.enableNativeFontSmoothing &&
     isMacPlatform(typeof navigator === "undefined" ? "" : navigator.platform);
 
-  useEffect(() => {
+  useLayoutEffect(() => {
     const rootStyle = document.documentElement.style;
     if (shouldApply) {
       rootStyle.setProperty("-webkit-font-smoothing", "antialiased");

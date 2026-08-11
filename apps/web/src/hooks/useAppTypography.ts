@@ -1,4 +1,4 @@
-import { useEffect } from "react";
+import { useLayoutEffect } from "react";
 import { resolveTerminalFontFamilyStack, useAppSettings } from "../appSettings";
 import { getAppTypographyScale } from "../lib/appTypography";
 
@@ -6,6 +6,7 @@ const TERMINAL_FONT_FAMILY_CSS_VARIABLE = "--terminal-font-family";
 
 const TYPOGRAPHY_CSS_VARIABLES = [
   "--app-font-size-base",
+  "--app-font-size-activity",
   "--app-font-size-ui",
   "--app-font-size-ui-lg",
   "--app-font-size-ui-sm",
@@ -23,11 +24,15 @@ const TYPOGRAPHY_CSS_VARIABLES = [
 export function useAppTypography() {
   const { settings } = useAppSettings();
 
-  useEffect(() => {
+  // Typography changes affect every measured workbench surface. Apply the
+  // persisted scale before paint so custom settings never flash at the CSS
+  // fallback size or feed stale geometry into the virtualized transcript.
+  useLayoutEffect(() => {
     const scale = getAppTypographyScale(settings.chatFontSizePx);
     const rootStyle = document.documentElement.style;
     const variableValues: Record<(typeof TYPOGRAPHY_CSS_VARIABLES)[number], string> = {
       "--app-font-size-base": `${scale.basePx}px`,
+      "--app-font-size-activity": `${scale.activityPx}px`,
       "--app-font-size-ui": `${scale.uiPx}px`,
       "--app-font-size-ui-lg": `${scale.uiLgPx}px`,
       "--app-font-size-ui-sm": `${scale.uiSmPx}px`,

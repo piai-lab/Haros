@@ -1076,7 +1076,7 @@ function SidebarPrimaryAction({
         <span className="truncate">{label}</span>
         {badge ? (
           <span
-            className="ml-auto inline-flex h-4 min-w-4 items-center justify-center rounded-md bg-muted px-1 text-[10px] font-medium text-muted-foreground"
+            className="ml-auto inline-flex h-4 min-w-4 items-center justify-center rounded-md bg-muted px-1 text-[length:var(--app-font-size-ui-2xs,10px)] font-medium text-muted-foreground"
             aria-label={badge.accessibleLabel}
             title={badge.accessibleLabel}
           >
@@ -1302,7 +1302,7 @@ export function SidebarSurfacePicker({
               onSelectView(view);
             }}
             className={cn(
-              "flex min-w-0 items-center justify-center rounded-md px-2 text-[13px] font-medium transition-colors motion-reduce:transition-none",
+              "flex min-w-0 items-center justify-center rounded-md px-2 text-[length:var(--app-font-size-ui,12px)] font-medium transition-colors motion-reduce:transition-none",
               SIDEBAR_ROW_FOCUS_CLASS_NAME,
               active
                 ? "bg-[var(--color-background-button-secondary-hover)] text-foreground shadow-xs"
@@ -4776,7 +4776,7 @@ export default function Sidebar() {
                   {project.name}
                 </span>
                 {project.localName ? (
-                  <span className="shrink-0 truncate text-[length:var(--app-font-size-ui,12px)] text-muted-foreground/40">
+                  <span className="shrink-0 truncate text-[length:var(--app-font-size-ui-sm,11px)] text-[var(--color-text-foreground-secondary)]">
                     {project.folderName}
                   </span>
                 ) : null}

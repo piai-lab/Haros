@@ -139,7 +139,9 @@ function renderSubagentLabel(input: {
         {presentation.nickname ?? presentation.primaryLabel}
       </span>
       {supportingLabel ? (
-        <span className={cn("ml-1 text-muted-foreground/48", input.roleClassName)}>
+        <span
+          className={cn("ml-1 text-[var(--color-text-foreground-secondary)]", input.roleClassName)}
+        >
           {presentation.role ? `(${presentation.role})` : supportingLabel}
         </span>
       ) : null}
@@ -244,7 +246,9 @@ export function SidebarThreadRowContent({
         <span
           className={cn(
             "min-w-0 flex-1 truncate-fade text-[length:var(--app-font-size-ui,12px)]",
-            isActive ? "text-foreground" : SIDEBAR_ROW_LABEL_TEXT_CLASS_NAME,
+            isActive
+              ? "font-medium text-foreground"
+              : cn("font-normal", SIDEBAR_ROW_LABEL_TEXT_CLASS_NAME),
             variant === "standard" && isSubagentThread
               ? "leading-[18px] text-foreground/80"
               : "leading-5",
@@ -254,7 +258,9 @@ export function SidebarThreadRowContent({
           {isSubagentThread ? (
             <SidebarSubagentLabel
               thread={thread}
-              roleClassName={variant === "standard" ? "text-muted-foreground/42" : undefined}
+              roleClassName={
+                variant === "standard" ? "text-[var(--color-text-foreground-secondary)]" : undefined
+              }
             />
           ) : (
             displayTitle
@@ -263,7 +269,10 @@ export function SidebarThreadRowContent({
         {!isSubagentThread && pendingStatusColorClass ? (
           <span
             aria-label={t("thread.statusPendingApproval")}
-            className={cn("shrink-0 text-[10px] font-medium", pendingStatusColorClass)}
+            className={cn(
+              "shrink-0 text-[length:var(--app-font-size-ui-2xs,10px)] font-medium",
+              pendingStatusColorClass,
+            )}
           >
             {t("thread.statusPendingShort")}
           </span>

@@ -1,11 +1,12 @@
 import {
-  DEFAULT_CHAT_FONT_SIZE_PX,
+  DEFAULT_APP_FONT_SIZE_PX,
   MAX_CHAT_FONT_SIZE_PX,
   normalizeChatFontSizePx,
 } from "../appSettings";
 
 export interface AppTypographyScale {
   basePx: number;
+  activityPx: number;
   uiPx: number;
   uiLgPx: number;
   uiSmPx: number;
@@ -24,22 +25,26 @@ function clampTypographyPx(value: number, min: number, max = MAX_CHAT_FONT_SIZE_
 }
 
 export function getAppTypographyScale(
-  baseFontSizePx = DEFAULT_CHAT_FONT_SIZE_PX,
+  baseFontSizePx = DEFAULT_APP_FONT_SIZE_PX,
 ): AppTypographyScale {
   const basePx = normalizeChatFontSizePx(baseFontSizePx);
 
   return {
     basePx,
+    // Work/tool activity is supporting evidence, not reading copy. Keep it one
+    // optical step below the transcript at normal sizes without collapsing a
+    // user-selected 11–12px scale into unreadable microcopy.
+    activityPx: clampTypographyPx(basePx * 0.96, 11),
     uiPx: basePx,
     uiLgPx: clampTypographyPx(basePx * 1.08, basePx),
-    uiSmPx: clampTypographyPx(basePx * 0.92, 10),
-    uiXsPx: clampTypographyPx(basePx * 0.84, 10),
-    ui2XsPx: clampTypographyPx(basePx * 0.76, 9),
-    uiMetaPx: clampTypographyPx(basePx * 0.84, 10),
-    uiTimestampPx: clampTypographyPx(basePx * 0.72, 8),
+    uiSmPx: clampTypographyPx(basePx * 0.92, 11),
+    uiXsPx: clampTypographyPx(basePx * 0.84, 11),
+    ui2XsPx: clampTypographyPx(basePx * 0.76, 10),
+    uiMetaPx: clampTypographyPx(basePx * 0.84, 11),
+    uiTimestampPx: clampTypographyPx(basePx * 0.78, 10),
     chatPx: basePx,
-    chatCodePx: clampTypographyPx(basePx * 0.95, 10),
-    chatMetaPx: clampTypographyPx(basePx * 0.72, 8),
-    chatTinyPx: clampTypographyPx(basePx * 0.66, 8),
+    chatCodePx: clampTypographyPx(basePx * 0.95, 11),
+    chatMetaPx: clampTypographyPx(basePx * 0.78, 10),
+    chatTinyPx: clampTypographyPx(basePx * 0.72, 10),
   };
 }

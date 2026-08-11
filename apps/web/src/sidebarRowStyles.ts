@@ -22,7 +22,7 @@ export const SIDEBAR_ROW_HOVER_CLASS_NAME =
   "hover:bg-[var(--sidebar-accent)] hover:text-[var(--sidebar-accent-foreground)]";
 
 export const SIDEBAR_ROW_ACTIVE_CLASS_NAME =
-  "bg-[var(--sidebar-accent-active)] text-[var(--sidebar-accent-foreground)] hover:bg-[var(--sidebar-accent-active)] hover:text-[var(--sidebar-accent-foreground)]";
+  "bg-[var(--sidebar-accent-active)] font-medium text-[var(--sidebar-accent-foreground)] hover:bg-[var(--sidebar-accent-active)] hover:text-[var(--sidebar-accent-foreground)]";
 
 export const SIDEBAR_ROW_IDLE_TEXT_CLASS_NAME = "text-foreground/89";
 
@@ -36,7 +36,7 @@ export const SIDEBAR_ROW_LABEL_TEXT_CLASS_NAME = "text-foreground/95";
 
 /** Section label ("Threads"/"Pinned" and settings "App"/"OmniMind"). */
 export const SIDEBAR_SECTION_LABEL_CLASS_NAME =
-  "text-[length:var(--app-font-size-ui,12px)] font-normal text-muted-foreground/58";
+  "text-[length:var(--app-font-size-ui,12px)] font-normal text-[var(--color-text-foreground-secondary)]";
 
 /** Project/chat/settings header rows and settings sidebar nav items. */
 export const SIDEBAR_HEADER_ROW_CLASS_NAME = [
@@ -54,7 +54,8 @@ export const SIDEBAR_THREAD_ROW_BASE_CLASS_NAME = [
   "w-full translate-x-0 cursor-pointer justify-start text-left select-none",
   SIDEBAR_ROW_HEIGHT_CLASS_NAME,
   SIDEBAR_ROW_RADIUS_CLASS_NAME,
-  "pl-8 text-[13px]",
+  "pl-8",
+  SIDEBAR_ROW_TEXT_CLASS_NAME,
   SIDEBAR_ROW_FOCUS_CLASS_NAME,
 ].join(" ");
 

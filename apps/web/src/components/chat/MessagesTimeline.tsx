@@ -1198,7 +1198,7 @@ export const MessagesTimeline = memo(function MessagesTimeline({
               key={`work-row:${workEntry.id}`}
               workEntry={workEntry}
               chatMetaFontSizePx={appTypographyScale.chatMetaPx}
-              textFontSizePx={normalizedChatFontSizePx}
+              textFontSizePx={appTypographyScale.activityPx}
               density={prefersCompactWorkEntryRow(workEntry) ? "compact" : "default"}
               markdownCwd={markdownCwd}
               onImageExpand={onImageExpand}
@@ -1235,7 +1235,7 @@ export const MessagesTimeline = memo(function MessagesTimeline({
                         summary={summary}
                         open={toolGroupSummaryOverrides[summaryKey] ?? false}
                         onToggle={(open) => setToolGroupSummaryOpen(summaryKey, open)}
-                        fontSizePx={normalizedChatFontSizePx}
+                        fontSizePx={appTypographyScale.activityPx}
                         renderChildren={() => (
                           <div className="space-y-0.5 pt-0.5">
                             {chunk.entries.map(renderEntryRow)}
@@ -1249,7 +1249,7 @@ export const MessagesTimeline = memo(function MessagesTimeline({
                   <div className="mt-1.5 flex items-center justify-start gap-2 px-0.5">
                     <button
                       type="button"
-                      className="font-system-ui text-muted-foreground/55 transition-colors duration-150 hover:text-foreground/75"
+                      className="font-system-ui text-[var(--color-text-foreground-secondary)] transition-colors duration-150 hover:text-foreground"
                       style={{ fontSize: `${appTypographyScale.uiSmPx}px` }}
                       onClick={() => handleToggleWorkGroup(groupId)}
                     >
@@ -1275,7 +1275,7 @@ export const MessagesTimeline = memo(function MessagesTimeline({
                 <div className="mt-1.5 flex items-center justify-start gap-2 px-0.5">
                   <button
                     type="button"
-                    className="font-system-ui text-muted-foreground/55 transition-colors duration-150 hover:text-foreground/75"
+                    className="font-system-ui text-[var(--color-text-foreground-secondary)] transition-colors duration-150 hover:text-foreground"
                     style={{ fontSize: `${appTypographyScale.uiSmPx}px` }}
                     onClick={() => handleToggleWorkGroup(groupId)}
                   >
@@ -1677,7 +1677,7 @@ export const MessagesTimeline = memo(function MessagesTimeline({
                 key={`${placement}-tool-row:${row.message.id}:${workEntry.id}`}
                 workEntry={workEntry}
                 chatMetaFontSizePx={appTypographyScale.chatMetaPx}
-                textFontSizePx={normalizedChatFontSizePx}
+                textFontSizePx={appTypographyScale.activityPx}
                 density="compact"
                 fileDiffStatByPath={fileDiffStatByPath}
                 markdownCwd={markdownCwd}
@@ -1734,7 +1734,7 @@ export const MessagesTimeline = memo(function MessagesTimeline({
                               summary={summary}
                               open={toolGroupSummaryOverrides[summaryOverrideKey] ?? false}
                               onToggle={(open) => setToolGroupSummaryOpen(summaryOverrideKey, open)}
-                              fontSizePx={normalizedChatFontSizePx}
+                              fontSizePx={appTypographyScale.activityPx}
                               renderChildren={() => (
                                 <div className="space-y-px pt-0.5">
                                   {chunk.entries.map(renderInlineToolRow)}
@@ -1748,8 +1748,8 @@ export const MessagesTimeline = memo(function MessagesTimeline({
                         <div className="py-0.5">
                           <button
                             type="button"
-                            className="text-muted-foreground/50 transition-colors duration-150 hover:text-foreground/72"
-                            style={{ fontSize: `${normalizedChatFontSizePx}px` }}
+                            className="text-[var(--color-text-foreground-secondary)] transition-colors duration-150 hover:text-foreground"
+                            style={{ fontSize: `${appTypographyScale.activityPx}px` }}
                             onClick={() => handleToggleWorkGroup(display.toolGroupId!)}
                           >
                             {display.toolExpanded
@@ -1772,8 +1772,8 @@ export const MessagesTimeline = memo(function MessagesTimeline({
                           <div className="py-0.5">
                             <button
                               type="button"
-                              className="text-muted-foreground/50 transition-colors duration-150 hover:text-foreground/72"
-                              style={{ fontSize: `${normalizedChatFontSizePx}px` }}
+                              className="text-[var(--color-text-foreground-secondary)] transition-colors duration-150 hover:text-foreground"
+                              style={{ fontSize: `${appTypographyScale.activityPx}px` }}
                               onClick={() => handleToggleWorkGroup(display.toolGroupId!)}
                             >
                               {display.toolExpanded
@@ -1800,7 +1800,7 @@ export const MessagesTimeline = memo(function MessagesTimeline({
                         key={`${placement}-status-row:${row.message.id}:${workEntry.id}`}
                         workEntry={workEntry}
                         chatMetaFontSizePx={appTypographyScale.chatMetaPx}
-                        textFontSizePx={normalizedChatFontSizePx}
+                        textFontSizePx={appTypographyScale.activityPx}
                         density={prefersCompactWorkEntryRow(workEntry) ? "compact" : "default"}
                         markdownCwd={markdownCwd}
                         onImageExpand={onImageExpand}
@@ -1821,7 +1821,7 @@ export const MessagesTimeline = memo(function MessagesTimeline({
                 key={`${keyPrefix}:work:${row.message.id}:${item.id}`}
                 workEntry={item.entry}
                 chatMetaFontSizePx={appTypographyScale.chatMetaPx}
-                textFontSizePx={normalizedChatFontSizePx}
+                textFontSizePx={appTypographyScale.activityPx}
                 density={prefersCompactWorkEntryRow(item.entry) ? "compact" : "default"}
                 markdownCwd={markdownCwd}
                 onImageExpand={onImageExpand}
@@ -1833,7 +1833,7 @@ export const MessagesTimeline = memo(function MessagesTimeline({
             ) : (
               <div
                 key={`${keyPrefix}:narration:${row.message.id}:${item.id}`}
-                className="text-muted-foreground/80"
+                className="text-[var(--color-text-foreground-secondary)]"
               >
                 <ChatMarkdown
                   text={item.message.text}
@@ -1861,7 +1861,7 @@ export const MessagesTimeline = memo(function MessagesTimeline({
                 summary={summary}
                 open={toolGroupSummaryOverrides[summaryOverrideKey] ?? false}
                 onToggle={(open) => setToolGroupSummaryOpen(summaryOverrideKey, open)}
-                fontSizePx={normalizedChatFontSizePx}
+                fontSizePx={appTypographyScale.activityPx}
                 renderChildren={() => (
                   <div className="space-y-0.5 pt-0.5">
                     {chunk.entries.map((entry) =>
@@ -1908,8 +1908,8 @@ export const MessagesTimeline = memo(function MessagesTimeline({
                       // -ml-0.5 optically aligns the leading "W" with the reply
                       // text below: the box is already flush, but the W glyph
                       // carries a left side-bearing that reads as an inset.
-                      className="-ml-0.5 inline-flex items-center gap-1 pb-2 text-left text-muted-foreground/70 transition-colors duration-200 hover:text-muted-foreground/90"
-                      style={{ fontSize: chatTypographyStyle.fontSize }}
+                      className="-ml-0.5 inline-flex items-center gap-1 pb-2 text-left text-[var(--color-text-foreground-secondary)] transition-colors duration-200 hover:text-foreground"
+                      style={{ fontSize: `${appTypographyScale.activityPx}px` }}
                     >
                       <span>
                         {row.collapsedWorkElapsed
@@ -1918,7 +1918,7 @@ export const MessagesTimeline = memo(function MessagesTimeline({
                       </span>
                       <DisclosureChevron
                         open={isCollapsedWorkExpanded}
-                        className="text-muted-foreground/55"
+                        className="text-[var(--color-text-foreground-tertiary)]"
                       />
                     </CollapsibleTrigger>
                     <CollapsiblePanel>
@@ -1966,7 +1966,7 @@ export const MessagesTimeline = memo(function MessagesTimeline({
                           filePath={file.path}
                           additions={file.additions}
                           deletions={file.deletions}
-                          fontSizePx={normalizedChatFontSizePx}
+                          fontSizePx={appTypographyScale.activityPx}
                           compact={false}
                         />
                       </button>
@@ -2231,8 +2231,8 @@ export const MessagesTimeline = memo(function MessagesTimeline({
               tone, size, and full-width divider, but counting up live. -ml-0.5
               optically aligns the leading "W" with the reply text below. */}
           <div
-            className="-ml-0.5 pb-2 text-muted-foreground/70"
-            style={{ fontSize: chatTypographyStyle.fontSize }}
+            className="-ml-0.5 pb-2 text-[var(--color-text-foreground-secondary)]"
+            style={{ fontSize: `${appTypographyScale.activityPx}px` }}
           >
             Working for{" "}
             {nowIso ? (
@@ -2247,8 +2247,8 @@ export const MessagesTimeline = memo(function MessagesTimeline({
 
       {row.kind === "working" && (
         <div
-          className="shimmer pt-0.5 text-muted-foreground/70 font-system-ui"
-          style={{ fontSize: `${appTypographyScale.chatPx}px` }}
+          className="shimmer pt-0.5 font-system-ui text-[var(--color-text-foreground-secondary)]"
+          style={{ fontSize: `${appTypographyScale.activityPx}px` }}
         >
           {workingLabel}
         </div>

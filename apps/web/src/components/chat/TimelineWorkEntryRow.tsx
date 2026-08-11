@@ -82,9 +82,9 @@ const TRANSCRIPT_DISCLOSURE_TRANSITION_MS = 220;
 const TRANSCRIPT_DISCLOSURE_CLEANUP_BUFFER_MS = 40;
 const WORK_ROW_MUTED_HOVER_TONE: Record<"tool-row" | "file-row", string> = {
   "tool-row":
-    "text-muted-foreground/70 transition-colors group-hover/tool-row:text-foreground group-focus-visible/tool-row:text-foreground",
+    "text-[var(--color-text-foreground-secondary)] transition-colors group-hover/tool-row:text-foreground group-focus-visible/tool-row:text-foreground",
   "file-row":
-    "text-muted-foreground/70 transition-colors group-hover/file-row:text-foreground group-focus-visible/file-row:text-foreground",
+    "text-[var(--color-text-foreground-secondary)] transition-colors group-hover/file-row:text-foreground group-focus-visible/file-row:text-foreground",
 };
 const EMPTY_FILE_DIFF_STATS: ReadonlyMap<string, { additions: number; deletions: number }> =
   new Map();
@@ -689,7 +689,7 @@ export const TimelineWorkEntryRow = memo(function TimelineWorkEntryRow(props: {
                 {showInlineAgentTaskPreview ? (
                   <div className={cn(compact ? "space-y-[1px]" : "space-y-0.5")}>
                     <p
-                      className="truncate font-medium leading-5 text-muted-foreground/72"
+                      className="truncate font-medium leading-5 text-[var(--color-text-foreground-secondary)]"
                       style={{ fontSize: `${rowFontSizePx}px` }}
                     >
                       <span data-work-entry-display-text="true">{heading}</span>
@@ -703,7 +703,7 @@ export const TimelineWorkEntryRow = memo(function TimelineWorkEntryRow(props: {
                       isStreaming={false}
                       className="leading-relaxed"
                       style={{
-                        color: "color-mix(in srgb, var(--muted-foreground) 72%, transparent)",
+                        color: "var(--color-text-foreground-secondary)",
                         fontSize: `${Math.max(11, rowFontSizePx - 1)}px`,
                         lineHeight: compact ? "18px" : "19px",
                       }}
@@ -730,7 +730,7 @@ export const TimelineWorkEntryRow = memo(function TimelineWorkEntryRow(props: {
               </div>
               {engineWebSurfaceWaiting ? (
                 <span
-                  className="shrink-0 text-muted-foreground/60"
+                  className="shrink-0 text-[var(--color-text-foreground-secondary)]"
                   style={{ fontSize: `${Math.max(11, rowFontSizePx - 1)}px` }}
                   data-engine-web-surface-status="waiting-for-user"
                 >
@@ -763,9 +763,7 @@ export const TimelineWorkEntryRow = memo(function TimelineWorkEntryRow(props: {
                   : (openAgentActivity ?? openReadFile)
               }
               onHover={prefetchReadFile}
-              ariaLabel={
-                canOpenEngineWebSurface ? t("timeline.reopenEngineWebSurface") : undefined
-              }
+              ariaLabel={canOpenEngineWebSurface ? t("timeline.reopenEngineWebSurface") : undefined}
               tooltip={toolRowTooltipContent(
                 rawCommand,
                 displayText,
@@ -953,7 +951,7 @@ function ToolDetailsDisclosure(props: {
       {props.children}
       <DisclosureChevron
         open={open}
-        className="text-muted-foreground/38 group-hover/tool-row:text-foreground group-hover/file-row:text-foreground group-focus-visible/tool-row:text-foreground group-focus-visible/file-row:text-foreground"
+        className="text-[var(--color-text-foreground-tertiary)] group-hover/tool-row:text-foreground group-hover/file-row:text-foreground group-focus-visible/tool-row:text-foreground group-focus-visible/file-row:text-foreground"
       />
     </button>
   );

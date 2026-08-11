@@ -398,6 +398,23 @@
   color-scheme: light;
   --radius: 0.625rem;
   --radius-user-message: 0.8rem;
+  /* Static defaults keep first paint, isolated component renders, and recovery
+     screens on the same semantic scale as getAppTypographyScale(14). The
+     persisted Appearance value replaces these tokens before paint. */
+  --app-font-size-base: 14px;
+  --app-font-size-activity: 13px;
+  --app-font-size-ui: 14px;
+  --app-font-size-ui-lg: 15px;
+  --app-font-size-ui-sm: 13px;
+  --app-font-size-ui-xs: 12px;
+  --app-font-size-ui-2xs: 11px;
+  --app-font-size-ui-meta: 12px;
+  --app-font-size-ui-timestamp: 11px;
+  --app-font-size-chat: 14px;
+  --app-font-size-chat-code: 13px;
+  --app-font-size-chat-meta: 11px;
+  --app-font-size-chat-tiny: 10px;
+  --app-font-size-terminal: 12px;
   --font-ui-family: var(
     --theme-font-ui-family,
     -apple-system,
@@ -546,6 +563,9 @@
 
 body {
   font-family: var(--font-ui-family);
+  /* The persisted Appearance control is the one base for unclassified app copy;
+     semantic UI/chat roles derive from the same value in useAppTypography. */
+  font-size: var(--app-font-size-base, 14px);
   /* Neutral tracking: let the system UI font (SF Pro on macOS via the
      -apple-system fallback) use its own optical metrics instead of a squeezed
      web-style negative tracking, so text reads native rather than "designed". */

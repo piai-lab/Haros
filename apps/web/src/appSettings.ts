@@ -54,7 +54,9 @@ const MAX_CUSTOM_MODEL_COUNT = 32;
 export const MAX_CUSTOM_MODEL_LENGTH = 256;
 export const MIN_CHAT_FONT_SIZE_PX = 11;
 export const MAX_CHAT_FONT_SIZE_PX = 18;
-export const DEFAULT_CHAT_FONT_SIZE_PX = 12;
+export const DEFAULT_APP_FONT_SIZE_PX = 14;
+/** Historical public name retained for chat geometry and persisted-setting compatibility. */
+export const DEFAULT_CHAT_FONT_SIZE_PX = DEFAULT_APP_FONT_SIZE_PX;
 export const MIN_TERMINAL_FONT_SIZE_PX = 10;
 export const MAX_TERMINAL_FONT_SIZE_PX = 22;
 export const DEFAULT_TERMINAL_FONT_SIZE_PX = 12;
@@ -105,8 +107,12 @@ const AppSnapShortcut = Schema.Union([
   }),
 ]);
 
-export function getDefaultNativeFontSmoothing(platform = globalThis.navigator?.platform ?? "") {
-  return /mac|iphone|ipad|ipod/i.test(platform);
+export function getDefaultNativeFontSmoothing(_platform = globalThis.navigator?.platform ?? "") {
+  // `-webkit-font-smoothing: antialiased` is a deliberately lighter rasterization
+  // override, not the platform default. Keep it opt-in so new profiles preserve
+  // the host WebView's native text weight; existing explicit preferences remain
+  // stored and continue to work.
+  return false;
 }
 
 type CustomModelSettingsKey =
@@ -182,7 +188,9 @@ export const AppSettingsSchema = Schema.Struct({
   localePreference: LocalePreference.pipe(withDefaults(() => DEFAULT_LOCALE_PREFERENCE)),
   claudeBinaryPath: Schema.String.check(Schema.isMaxLength(4096)).pipe(withDefaults(() => "")),
   uiDensity: UiDensity.pipe(withDefaults(() => DEFAULT_UI_DENSITY)),
-  chatFontSizePx: Schema.Number.pipe(withDefaults(() => DEFAULT_CHAT_FONT_SIZE_PX)),
+  // The persisted key predates the global typography scale. It now owns the
+  // shared app/chat base without forcing a settings migration or a second knob.
+  chatFontSizePx: Schema.Number.pipe(withDefaults(() => DEFAULT_APP_FONT_SIZE_PX)),
   chatCodeFontFamily: Schema.String.check(Schema.isMaxLength(256)).pipe(withDefaults(() => "")),
   terminalFontSizePx: Schema.Number.pipe(withDefaults(() => DEFAULT_TERMINAL_FONT_SIZE_PX)),
   terminalFontFamily: Schema.String.check(Schema.isMaxLength(256)).pipe(
@@ -454,7 +462,7 @@ export function normalizeCustomModelSlugs(
 
 export function normalizeChatFontSizePx(value: number | null | undefined): number {
   if (typeof value !== "number" || !Number.isFinite(value)) {
-    return DEFAULT_CHAT_FONT_SIZE_PX;
+    return DEFAULT_APP_FONT_SIZE_PX;
   }
 
   return Math.min(MAX_CHAT_FONT_SIZE_PX, Math.max(MIN_CHAT_FONT_SIZE_PX, Math.round(value)));

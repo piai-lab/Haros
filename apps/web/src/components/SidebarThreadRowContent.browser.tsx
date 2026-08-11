@@ -45,10 +45,16 @@ function makeThread(overrides: Partial<SidebarThreadSummary> = {}): SidebarThrea
 describe("SidebarThreadRowContent", () => {
   afterEach(() => {
     document.body.innerHTML = "";
+    document.documentElement.style.removeProperty("--app-font-size-base");
+    document.documentElement.style.removeProperty("--app-font-size-ui");
+    document.documentElement.style.removeProperty("--app-font-size-ui-2xs");
     harness.settings.localePreference = "en";
   });
 
   it("preserves the pinned title, pending state, terminal count, and suffix", async () => {
+    document.documentElement.style.setProperty("--app-font-size-base", "14px");
+    document.documentElement.style.setProperty("--app-font-size-ui", "14px");
+    document.documentElement.style.setProperty("--app-font-size-ui-2xs", "11px");
     const thread = makeThread();
     const screen = await render(
       <SidebarThreadRowContent
@@ -63,12 +69,16 @@ describe("SidebarThreadRowContent", () => {
       />,
     );
 
-    await expect
-      .element(screen.getByTestId(`thread-title-${thread.id}`))
-      .toHaveTextContent("Shared thread row");
-    await expect.element(screen.getByLabelText("Pending approval")).toHaveTextContent("Pending");
+    const title = screen.getByTestId(`thread-title-${thread.id}`);
+    const pending = screen.getByLabelText("Pending approval");
+    await expect.element(title).toHaveTextContent("Shared thread row");
+    await expect.element(pending).toHaveTextContent("Pending");
     await expect.element(screen.getByLabelText("2 terminals open")).toBeVisible();
     await expect.element(screen.getByText("Project Alpha")).toBeVisible();
+    expect(getComputedStyle(document.body).fontSize).toBe("14px");
+    expect(getComputedStyle(title.element()).fontSize).toBe("14px");
+    expect(getComputedStyle(title.element()).fontWeight).toBe("500");
+    expect(getComputedStyle(pending.element()).fontSize).toBe("11px");
   });
 
   it("keeps standard subagent nickname and role presentation", async () => {

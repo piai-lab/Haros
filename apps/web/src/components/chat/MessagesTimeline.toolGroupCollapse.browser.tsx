@@ -139,6 +139,9 @@ describe("MessagesTimeline tool group collapse", () => {
       await expect.poll(() => findSummaryTrigger("Ran 4 commands") !== null).toBe(true);
       const trigger = findSummaryTrigger("Ran 4 commands")!;
       expect(trigger.getAttribute("aria-expanded")).toBe("false");
+      // The default 14px reading base maps work evidence to its semantic 13px
+      // activity role instead of shrinking the entire application back to 12px.
+      expect(getComputedStyle(trigger).fontSize).toBe("13px");
 
       // Closed groups do not mount every tool row; this keeps large settled
       // transcripts cheap until the user asks to inspect the details.
@@ -151,6 +154,11 @@ describe("MessagesTimeline tool group collapse", () => {
       for (const command of LIVE_COMMANDS) {
         expect(isVisibleOutsideClosedDisclosure(command)).toBe(true);
       }
+      const liveCommandLabel = [
+        ...document.querySelectorAll<HTMLElement>("[data-work-entry-display-text]"),
+      ].find((element) => (element.textContent ?? "").includes(LIVE_COMMANDS[0]!));
+      expect(liveCommandLabel).toBeDefined();
+      expect(getComputedStyle(liveCommandLabel!).fontSize).toBe("13px");
 
       trigger.click();
 

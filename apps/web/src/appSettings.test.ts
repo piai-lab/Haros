@@ -9,6 +9,7 @@ import { describe, expect, it } from "vitest";
 import {
   AppSettingsSchema,
   CUSTOM_MODEL_EDITOR_PROVIDER_SETTINGS,
+  DEFAULT_APP_FONT_SIZE_PX,
   DEFAULT_CHAT_FONT_SIZE_PX,
   DEFAULT_FOLLOW_UP_BEHAVIOR,
   DEFAULT_SIDEBAR_PROJECT_SORT_ORDER,
@@ -371,8 +372,9 @@ describe("timestamp format defaults", () => {
 });
 
 describe("chat font size defaults", () => {
-  it("defaults chat font size to 12px", () => {
-    expect(DEFAULT_CHAT_FONT_SIZE_PX).toBe(12);
+  it("defaults the app and chat font scale to 14px", () => {
+    expect(DEFAULT_APP_FONT_SIZE_PX).toBe(14);
+    expect(DEFAULT_CHAT_FONT_SIZE_PX).toBe(14);
   });
 
   it("clamps chat font size updates into the supported range", () => {
@@ -431,8 +433,8 @@ describe("sidebar sort defaults", () => {
 });
 
 describe("normalizeStoredAppSettings", () => {
-  it("defaults native font smoothing by platform", () => {
-    expect(getDefaultNativeFontSmoothing("MacIntel")).toBe(true);
+  it("keeps lighter font smoothing opt-in on every platform", () => {
+    expect(getDefaultNativeFontSmoothing("MacIntel")).toBe(false);
     expect(getDefaultNativeFontSmoothing("Win32")).toBe(false);
     expect(getDefaultNativeFontSmoothing("Linux x86_64")).toBe(false);
   });
