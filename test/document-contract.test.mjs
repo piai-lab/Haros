@@ -89,6 +89,15 @@ test("broken owner route fails without interpreting architecture prose", async (
   assertFinding(await validateDocumentContract({ root }), "route.required", "README.md");
 });
 
+test("Synara intake instructions cannot bypass the root handbook", async (t) => {
+  const root = await createFixture(t);
+  await replaceText(root, "AGENTS.md", "SYNARA-INTAKE.md", "research/source-update-intake.md", {
+    all: true,
+  });
+
+  assertFinding(await validateDocumentContract({ root }), "route.required", "AGENTS.md");
+});
+
 test("mandatory read route order is structural", async (t) => {
   const root = await createFixture(t);
   const agentsPath = path.join(root, "AGENTS.md");
@@ -96,8 +105,8 @@ test("mandatory read route order is structural", async (t) => {
   await writeFile(
     agentsPath,
     content.replace(
-      "1. `README.md`；\n2. `architecture/README.md`",
-      "1. `architecture/README.md`；\n2. `README.md`",
+      "1. `README.md`；\n2. 任务涉及审查、借鉴、吸收、同步或更新 Synara 时，完整读取 `SYNARA-INTAKE.md`；\n3. `architecture/README.md`",
+      "1. `architecture/README.md`；\n2. 任务涉及审查、借鉴、吸收、同步或更新 Synara 时，完整读取 `SYNARA-INTAKE.md`；\n3. `README.md`",
     ),
   );
 

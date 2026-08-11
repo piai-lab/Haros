@@ -7,10 +7,11 @@
 开始任何设计、代码或移植前按同一顺序读取：
 
 1. `README.md`；
-2. `architecture/README.md`，并完整读取本任务涉及的专题 owner；
-3. `execution-brief.md`；
-4. `missions/independent-omnimind-v1.md`（status 为 active 时），仅用于状态与证据引用；
-5. 只有来源、既往裁决或潜在反证与任务相关时，才读取 `research/README.md` 与对应研究文件。
+2. 任务涉及审查、借鉴、吸收、同步或更新 Synara 时，完整读取 `SYNARA-INTAKE.md`；
+3. `architecture/README.md`，并完整读取本任务涉及的专题 owner；
+4. `execution-brief.md`；
+5. `missions/independent-omnimind-v1.md`（status 为 active 时），仅用于状态与证据引用；
+6. 只有来源、既往裁决或潜在反证与任务相关时，才读取 `research/README.md` 与对应研究文件。
 
 顺序不授予权威。若两个文件对同一事实给出可执行但冲突的要求，停止产品施工，先在获授权范围内修复 sole owner 与全部路由；不能修复时报告阻塞，不凭更新时间、聊天记录或 Campaign 状态选边。
 
@@ -23,8 +24,8 @@
 - 当前施工顺序、进入/停止条件和阶段 proof：`execution-brief.md`。
 - Claim 状态与已有证据指针：active Campaign。
 - 固定来源、版本、权利、构建/运行观察或结构性反证：`research/README.md` 路由的对应 evidence owner。
-- 用户主动要求审查、借鉴、吸收或更新 Synara/其他 adopted source：必须读取
-  `research/source-update-intake.md`，先完成只读研究与人类讨论；只有用户对当次明确更新集再次确认后才能修改产品。
+- 用户主动要求审查、借鉴、吸收、同步或更新 Synara：必须完整遵循根 `SYNARA-INTAKE.md`。长期默认是尽量吸收，但不自动轮询或静默实施；每轮先完成只读研究，并用 `$converge` 消除会影响范围、产品结果、安全、权利或验证方式的不确定性，只有用户对当次明确更新集再次确认后才能修改产品。
+- 其他 adopted source 的更新继续先完成只读研究与人类讨论；没有对应专门手册时，参照 `SYNARA-INTAKE.md` 的两门、证据与授权边界，但不得把 Synara 的默认采用倾向自动扩张到其他来源。
 
 新会话不能用历史聊天、自动摘要或旧 handoff 补齐权威文档缺口。实现意图仍不能唯一推出时，先修 owner；当前任务未授权该修复时，停止并指出精确冲突。
 

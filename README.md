@@ -193,6 +193,8 @@ omni-harness
 
 当前 adopted UI mother 是 exact reviewed Synara head `712d88f…` 的选择性单一物理 substrate：`apps/desktop + apps/web + apps/server + packages/contracts + packages/shared`，实际接受与排除边界由上方 adoption record 拥有。`apps/service`、`apps/native-host`、donor profile/storage migration 与旧 Product Control Plane 不再属于生产拓扑。Pi 与其他对照项目仍只是研究来源，除非进入上述 adoption 清单；exact revision/tree、rights/lineage/assets、构建/测试/运行观察和兼容限制只以 [`research/source-review.md`](research/source-review.md) 为证据 owner，法定文本保存在 `LICENSES/`。
 
+未来每轮 Synara 审查、辩证吸收、`$converge` 提问、实施授权与 exact-SHA 交付统一遵循根 [`SYNARA-INTAKE.md`](SYNARA-INTAKE.md)；该手册不自动轮询上游，也不取代本 README 的 production adoption authority。
+
 ## 5. 已有证据与当前下一步
 
 Source Review 已记录 fixed source 的 exact comparison及其局限；当前 production bytes、focused/final gates 与真实 App journey 只在 active Campaign 记录 candidate evidence。局部绿色不证明视觉等价、Windows/Linux、签名 packaging 或 OmniMind V1。

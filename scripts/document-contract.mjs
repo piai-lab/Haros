@@ -4,6 +4,7 @@ import { readFile } from "node:fs/promises";
 export const DOCUMENT_CONTRACT_PATHS = [
   "AGENTS.md",
   "README.md",
+  "SYNARA-INTAKE.md",
   "architecture/README.md",
   "architecture/workbench.md",
   "architecture/public-surface.md",
@@ -25,6 +26,13 @@ const REQUIRED_ROUTES = [
   ["README.md", "execution-brief.md"],
   ["README.md", "missions/independent-omnimind-v1.md"],
   ["README.md", "research/README.md"],
+  ["README.md", "SYNARA-INTAKE.md"],
+  ["AGENTS.md", "SYNARA-INTAKE.md"],
+  ["SYNARA-INTAKE.md", "README.md"],
+  ["SYNARA-INTAKE.md", "research/source-review.md"],
+  ["SYNARA-INTAKE.md", "architecture/README.md"],
+  ["SYNARA-INTAKE.md", "execution-brief.md"],
+  ["SYNARA-INTAKE.md", "missions/independent-omnimind-v1.md"],
   ["architecture/README.md", "workbench.md"],
   ["architecture/README.md", "public-surface.md"],
   ["architecture/README.md", "product-state.md"],
@@ -33,11 +41,13 @@ const REQUIRED_ROUTES = [
   ["architecture/README.md", "../missions/independent-omnimind-v1.md"],
   ["missions/independent-omnimind-v1.md", "../execution-brief.md"],
   ["research/README.md", "source-update-intake.md"],
+  ["research/README.md", "../SYNARA-INTAKE.md"],
   ["research/README.md", "decision-record.md"],
 ];
 
 const REQUIRED_READ_ORDER = [
   "README.md",
+  "SYNARA-INTAKE.md",
   "architecture/README.md",
   "execution-brief.md",
   "missions/independent-omnimind-v1.md",

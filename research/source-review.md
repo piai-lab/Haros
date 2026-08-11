@@ -147,8 +147,8 @@ Re-run only the affected review when any of these changes:
 
 ### 8.1 Exact review boundary
 
-This is a maintainer-initiated Gate A review and explicit Gate B decision under
-[`source-update-intake.md`](source-update-intake.md). It does not replace the production adoption
+This is a maintainer-initiated Gate A review and explicit Gate B decision under the protocol now
+owned by [`SYNARA-INTAKE.md`](../SYNARA-INTAKE.md). It does not replace the production adoption
 record or claim that the full upstream range enters OmniMind.
 
 - Production UI-mother baseline: `6aca3dcc505894481430967c2acb762b3dd1b358`.
