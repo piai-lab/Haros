@@ -174,4 +174,61 @@ describe("status toast visible timing", () => {
       await cleanup();
     }
   });
+
+  it("spends the dismissal budget only when a stacked status toast can be seen", async () => {
+    vi.spyOn(document, "hasFocus").mockReturnValue(true);
+    const { cleanup } = await mountToastSurface();
+
+    try {
+      const statusToastId = toastManager.add({
+        type: "loading",
+        title: "Updating 1/3 · Claude",
+        timeout: 0,
+        data: { statusMotion: true },
+      });
+      toastManager.add({ type: "info", title: "Newer notification 1", timeout: 0 });
+      toastManager.update(statusToastId, {
+        type: "success",
+        title: "Claude updated behind stack",
+        timeout: 0,
+        data: {
+          dismissAfterVisibleMs: TEST_DISMISS_AFTER_VISIBLE_MS,
+          statusMotion: true,
+        },
+      });
+
+      const statusRoot = await waitForStatusToast("Claude updated behind stack");
+      await new Promise((resolve) =>
+        window.setTimeout(resolve, TEST_DISMISS_AFTER_VISIBLE_MS + 80),
+      );
+      expect(statusRoot.hasAttribute("data-ending-style")).toBe(false);
+
+      toastManager.add({ type: "info", title: "Newer notification 2", timeout: 0 });
+      const newestToastId = toastManager.add({
+        type: "info",
+        title: "Newer notification 3",
+        timeout: 0,
+      });
+      await vi.waitFor(() => expect(statusRoot.hasAttribute("data-limited")).toBe(true));
+
+      const viewport = statusRoot.closest<HTMLElement>('[data-slot="toast-viewport"]');
+      expect(viewport).toBeTruthy();
+      viewport!.dispatchEvent(new MouseEvent("mouseover", { bubbles: true }));
+      await vi.waitFor(() => expect(statusRoot.hasAttribute("data-expanded")).toBe(true));
+      await new Promise((resolve) =>
+        window.setTimeout(resolve, TEST_DISMISS_AFTER_VISIBLE_MS + 80),
+      );
+      expect(statusRoot.hasAttribute("data-ending-style")).toBe(false);
+
+      const visibleStartedAt = performance.now();
+      toastManager.close(newestToastId);
+      await vi.waitFor(() => expect(statusRoot.hasAttribute("data-limited")).toBe(false));
+      const endingAt = await waitForEnding(statusRoot);
+      expect(endingAt - visibleStartedAt).toBeGreaterThanOrEqual(
+        TEST_DISMISS_AFTER_VISIBLE_MS - 35,
+      );
+    } finally {
+      await cleanup();
+    }
+  });
 });

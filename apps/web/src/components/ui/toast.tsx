@@ -1,7 +1,7 @@
 "use client";
 
 import { Toast, type ToastObject } from "@base-ui/react/toast";
-import { useMemo, useEffect, useState, type CSSProperties } from "react";
+import { useMemo, useEffect, useRef, useState, type CSSProperties } from "react";
 import { useParams } from "@tanstack/react-router";
 import { ThreadId } from "@omnimind/contracts";
 import {
@@ -163,15 +163,18 @@ function useVisibleThreadIdsFromRoute(): ReadonlySet<ThreadId> {
 function ThreadToastVisibleAutoDismiss({
   toastId,
   dismissAfterVisibleMs,
+  hiddenByCollapsedStack,
   paused: pausedProp,
 }: {
   toastId: ToastId;
   dismissAfterVisibleMs: number | undefined;
+  hiddenByCollapsedStack: boolean;
   // While paused (e.g. an Undo is in flight) the visible timer holds so the
   // toast can't auto-dismiss out from under an action the user just triggered.
   paused?: boolean;
 }) {
   const paused = pausedProp ?? false;
+  const visibilityMarkerRef = useRef<HTMLSpanElement>(null);
   useEffect(() => {
     if (!dismissAfterVisibleMs || dismissAfterVisibleMs <= 0) return;
     if (typeof window === "undefined" || typeof document === "undefined") return;
@@ -217,8 +220,18 @@ function ThreadToastVisibleAutoDismiss({
       }, remainingMs);
     };
 
+    const toastRoot =
+      visibilityMarkerRef.current?.closest<HTMLElement>('[data-slot="toast-root"]') ?? null;
     const syncTimer = () => {
-      const shouldRun = !paused && document.visibilityState === "visible" && document.hasFocus();
+      const stackAllowsVisibility =
+        toastRoot !== null &&
+        !toastRoot.hasAttribute("data-limited") &&
+        (!hiddenByCollapsedStack || toastRoot.hasAttribute("data-expanded"));
+      const shouldRun =
+        !paused &&
+        stackAllowsVisibility &&
+        document.visibilityState === "visible" &&
+        document.hasFocus();
       if (shouldRun) {
         start();
         return;
@@ -230,17 +243,25 @@ function ThreadToastVisibleAutoDismiss({
     document.addEventListener("visibilitychange", syncTimer);
     window.addEventListener("focus", syncTimer);
     window.addEventListener("blur", syncTimer);
+    const stackVisibilityObserver = toastRoot === null ? null : new MutationObserver(syncTimer);
+    if (toastRoot && stackVisibilityObserver) {
+      stackVisibilityObserver.observe(toastRoot, {
+        attributeFilter: ["data-expanded", "data-limited"],
+        attributes: true,
+      });
+    }
 
     return () => {
       document.removeEventListener("visibilitychange", syncTimer);
       window.removeEventListener("focus", syncTimer);
       window.removeEventListener("blur", syncTimer);
+      stackVisibilityObserver?.disconnect();
       pause();
       clearTimer();
     };
-  }, [dismissAfterVisibleMs, toastId, paused]);
+  }, [dismissAfterVisibleMs, hiddenByCollapsedStack, toastId, paused]);
 
-  return null;
+  return <span ref={visibilityMarkerRef} aria-hidden="true" hidden />;
 }
 
 function ToastActions({
@@ -384,6 +405,7 @@ function ArchiveUndoToastSurface({
       <ThreadToastVisibleAutoDismiss
         toastId={toastId}
         dismissAfterVisibleMs={dismissAfterVisibleMs}
+        hiddenByCollapsedStack={hideCollapsedContent}
         paused={undoPending}
       />
       <Toast.Content
@@ -674,6 +696,7 @@ function Toasts({ position: positionProp }: { position: ToastPosition }) {
                 "data-ending-style:pointer-events-none data-limited:pointer-events-none",
               )}
               data-position={position}
+              data-slot="toast-root"
               data-status-motion={statusMotion ? "" : undefined}
               key={toast.id}
               style={
@@ -703,6 +726,7 @@ function Toasts({ position: positionProp }: { position: ToastPosition }) {
                 <>
                   <ThreadToastVisibleAutoDismiss
                     dismissAfterVisibleMs={toast.data?.dismissAfterVisibleMs}
+                    hiddenByCollapsedStack={hideCollapsedContent}
                     toastId={toast.id}
                   />
                   <ToastSurface
