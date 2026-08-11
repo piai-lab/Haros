@@ -151,9 +151,36 @@ describe("ChatMarkdown", () => {
     );
 
     expect(markup).toContain("<table>");
-    expect(markup).toContain("<th>Studio</th>");
+    expect(markup).toContain('class="chat-markdown-table-frame"');
+    expect(markup).toContain('class="chat-markdown-table-viewport" tabindex="-1"');
+    expect(markup).toContain('<th scope="col">Studio</th>');
     expect(markup).toContain("<td>Purpose</td>");
     expect(markup).not.toContain("|---|");
+  });
+
+  it("preserves the raw source when a body row contains cells GFM would drop", async () => {
+    const markup = await renderMarkdown(
+      [
+        "| Provider | Model | Cost |",
+        "| --- | --- | --- |",
+        "| DeepSeek | reasoner | $18.07 | extra-cell |",
+      ].join("\n"),
+    );
+
+    expect(markup).not.toContain("<table>");
+    expect(markup).toContain('class="chat-markdown-table-integrity"');
+    expect(markup).toContain("Table structure mismatch");
+    expect(markup).toContain("contains 4");
+    expect(markup).toContain("extra-cell");
+  });
+
+  it("keeps short body rows as valid tables because they do not discard source cells", async () => {
+    const markup = await renderMarkdown(
+      ["| a | b | c |", "| --- | --- | --- |", "| 1 | 2 |"].join("\n"),
+    );
+
+    expect(markup).toContain("<table>");
+    expect(markup).not.toContain("Table structure mismatch");
   });
 
   it("keeps pipe-and-dash lines inside code fences out of table repair", async () => {

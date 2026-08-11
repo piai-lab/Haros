@@ -992,6 +992,11 @@ label:has(> select#reasoning-effort) select {
   background: color-mix(in srgb, var(--foreground) 7%, transparent);
 }
 
+.chat-markdown--user .chat-markdown-table-frame,
+.chat-markdown--user .chat-markdown-table-integrity {
+  margin-block: 0.45rem;
+}
+
 .chat-markdown--user .chat-markdown-codeblock pre {
   background: transparent;
 }
@@ -1438,6 +1443,11 @@ label:has(> select#reasoning-effort) select {
 
 .editor-markdown-preview .chat-markdown li + li {
   margin-top: 0.35rem;
+}
+
+.editor-markdown-preview .chat-markdown-table-frame,
+.editor-markdown-preview .chat-markdown-table-integrity {
+  margin-block: 0.85rem;
 }
 
 /* Local image preview used by editor file and diff views. */
@@ -2469,21 +2479,213 @@ label:has(> select#reasoning-effort) select {
   outline-offset: 2px;
 }
 
+.chat-markdown-table-frame {
+  position: relative;
+  container-type: inline-size;
+  width: 100%;
+  max-width: 100%;
+  margin-block: 0.8rem;
+  overflow: hidden;
+  border: 1px solid var(--color-border-light, var(--border));
+  border-radius: 0.55rem;
+  background: color-mix(in srgb, var(--background) 96%, var(--card));
+}
+
+.chat-markdown-table-frame::before,
+.chat-markdown-table-frame::after {
+  position: absolute;
+  inset-block: 0;
+  z-index: 2;
+  width: 1.1rem;
+  opacity: 0;
+  pointer-events: none;
+  content: "";
+  transition: opacity 100ms ease;
+}
+
+.chat-markdown-table-frame::before {
+  inset-inline-start: 0;
+  background: linear-gradient(
+    90deg,
+    color-mix(in srgb, var(--foreground) 9%, transparent),
+    transparent
+  );
+}
+
+.chat-markdown-table-frame::after {
+  inset-inline-end: 0;
+  background: linear-gradient(
+    270deg,
+    color-mix(in srgb, var(--foreground) 9%, transparent),
+    transparent
+  );
+}
+
+.chat-markdown-table-frame[data-overflow="true"][data-scroll-start="false"]::before,
+.chat-markdown-table-frame[data-overflow="true"][data-scroll-end="false"]::after {
+  opacity: 1;
+}
+
+.chat-markdown-table-viewport {
+  width: 100%;
+  max-width: 100%;
+  overflow-x: auto;
+  overscroll-behavior-inline: contain;
+  scrollbar-width: thin;
+  scrollbar-color: var(--color-border-strong, var(--border)) transparent;
+}
+
+.chat-markdown-table-viewport:focus-visible {
+  outline: none;
+  box-shadow: inset 0 0 0 2px var(--ring);
+}
+
+.chat-markdown-table-viewport::-webkit-scrollbar {
+  height: 0.55rem;
+}
+
+.chat-markdown-table-viewport::-webkit-scrollbar-track {
+  background: transparent;
+}
+
+.chat-markdown-table-viewport::-webkit-scrollbar-thumb {
+  border: 2px solid transparent;
+  border-radius: 999px;
+  background: var(--color-border-strong, var(--border));
+  background-clip: padding-box;
+}
+
 .chat-markdown table {
   width: 100%;
-  border-collapse: collapse;
+  min-width: 100%;
+  margin: 0;
+  border-collapse: separate;
+  border-spacing: 0;
+  font-variant-numeric: tabular-nums;
 }
 
 .chat-markdown th,
 .chat-markdown td {
-  border: 1px solid var(--color-border-light, var(--border));
-  padding: 0.55rem 0.65rem;
+  padding: 0.58rem 0.72rem;
+  border: 0;
+  border-block-start: 1px solid var(--color-border-light, var(--border));
   text-align: left;
+  vertical-align: middle;
+  overflow-wrap: normal;
+  word-break: normal;
 }
 
-.chat-markdown th {
+.chat-markdown thead th {
+  border-block-start: 0;
   background: var(--color-background-elevated-secondary);
+  color: var(--color-text-foreground-secondary, var(--muted-foreground));
+  font-size: 0.88em;
+  font-weight: 650;
+  white-space: nowrap;
+}
+
+.chat-markdown tbody tr {
+  background: color-mix(in srgb, var(--background) 96%, var(--card));
+}
+
+.chat-markdown tbody tr:hover > * {
+  background: color-mix(in srgb, var(--color-background-elevated-secondary) 68%, transparent);
+}
+
+@container (max-width: 32rem) {
+  .chat-markdown th,
+  .chat-markdown td {
+    white-space: nowrap;
+  }
+}
+
+.chat-markdown-table-integrity {
+  margin-block: 0.8rem;
+  overflow: hidden;
+  border: 1px solid color-mix(in srgb, var(--warning) 38%, var(--border));
+  border-radius: 0.5rem;
+  background: color-mix(in srgb, var(--warning) 5%, var(--background));
+}
+
+.chat-markdown-table-integrity summary {
+  display: flex;
+  min-height: 2.5rem;
+  align-items: center;
+  gap: 0.5rem;
+  padding: 0.5rem 0.68rem;
+  color: var(--color-text-foreground-secondary, var(--muted-foreground));
+  font-size: 0.9em;
   font-weight: 600;
+  cursor: pointer;
+  list-style: none;
+}
+
+.chat-markdown-table-integrity summary::-webkit-details-marker {
+  display: none;
+}
+
+.chat-markdown-table-integrity summary::after {
+  margin-inline-start: auto;
+  color: var(--color-text-foreground-tertiary, var(--muted-foreground));
+  content: "+";
+}
+
+.chat-markdown-table-integrity[open] summary::after {
+  content: "−";
+}
+
+.chat-markdown-table-integrity summary svg {
+  width: 0.9rem;
+  height: 0.9rem;
+  flex: none;
+  color: var(--warning);
+}
+
+.chat-markdown-table-integrity__body {
+  padding: 0 0.68rem 0.68rem;
+  border-block-start: 1px solid color-mix(in srgb, var(--warning) 20%, var(--border));
+}
+
+.chat-markdown-table-integrity__body p {
+  margin: 0;
+  padding-block: 0.65rem;
+  color: var(--color-text-foreground-secondary, var(--muted-foreground));
+  font-size: 0.88em;
+}
+
+.chat-markdown .chat-markdown-table-integrity__body pre {
+  max-width: 100%;
+  margin: 0;
+  padding: 0.65rem;
+  overflow-x: auto;
+  border: 1px solid var(--color-border-light, var(--border));
+  border-radius: 0.4rem;
+  background: var(--color-background-elevated-secondary);
+  white-space: pre;
+}
+
+.chat-markdown > .chat-markdown-table-frame:first-child,
+.chat-markdown > .chat-markdown-table-integrity:first-child {
+  margin-block-start: 0;
+}
+
+.chat-markdown > .chat-markdown-table-frame:last-child,
+.chat-markdown > .chat-markdown-table-integrity:last-child {
+  margin-block-end: 0;
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .chat-markdown-table-frame::before,
+  .chat-markdown-table-frame::after {
+    transition: none;
+  }
+}
+
+@media (forced-colors: active) {
+  .chat-markdown-table-frame::before,
+  .chat-markdown-table-frame::after {
+    display: none;
+  }
 }
 
 /* Keep diff chrome aligned with the user-configured code font, not the base mono fallback. */

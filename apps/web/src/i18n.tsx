@@ -72,6 +72,10 @@ export const EN_MESSAGES = {
   "common.saving": "Saving…",
   "common.saveChanges": "Save changes",
   "common.cannotUndo": "This action cannot be undone.",
+  "markdown.table.scrollRegionLabel": "Scrollable table",
+  "markdown.table.integrityTitle": "Table structure mismatch",
+  "markdown.table.integrityDescription":
+    "The header defines {expected} columns, but a row contains {actual}. OmniMind preserved the original Markdown instead of dropping data.",
   "term.task": "Task",
   "term.project": "Project",
   "term.model": "Model",
@@ -2817,6 +2821,10 @@ export const ZH_CN_MESSAGES = {
   "common.saving": "正在保存…",
   "common.saveChanges": "保存更改",
   "common.cannotUndo": "此操作无法撤销。",
+  "markdown.table.scrollRegionLabel": "可横向滚动的表格",
+  "markdown.table.integrityTitle": "表格结构不一致",
+  "markdown.table.integrityDescription":
+    "表头定义了 {expected} 列，但其中一行包含 {actual} 列。OmniMind 已保留原始 Markdown，没有静默丢弃数据。",
   "term.task": "任务",
   "term.project": "项目",
   "term.model": "模型",

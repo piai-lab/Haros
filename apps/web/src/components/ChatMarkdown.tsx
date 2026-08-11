@@ -3,7 +3,7 @@
 // Layer: Web chat presentation component
 // Exports: ChatMarkdown
 
-import { CheckIcon, CopyIcon, TextWrapIcon } from "~/lib/icons";
+import { CheckIcon, CopyIcon, TextWrapIcon, TriangleAlertIcon } from "~/lib/icons";
 import type { ProviderMentionReference, ThreadMarker } from "@omnimind/contracts";
 import "katex/dist/katex.min.css";
 import React, {
@@ -34,6 +34,16 @@ import { getFileIconName, pathLooksLikeKnownFile } from "../file-icons";
 import { CentralIcon } from "~/lib/central-icons";
 import { isLocalImageMarkdownSrc } from "../lib/localImageUrls";
 import { repairMarkdownTableDelimiters } from "../lib/markdownTableRepair";
+import {
+  connectMarkdownTableOverflow,
+  refreshMarkdownTableOverflow,
+} from "../lib/markdownTableOverflow";
+import {
+  TABLE_INTEGRITY_ACTUAL_COLUMNS_ATTRIBUTE,
+  TABLE_INTEGRITY_EXPECTED_COLUMNS_ATTRIBUTE,
+  TABLE_INTEGRITY_FALLBACK_TAG_NAME,
+  createTableIntegrityRemarkPlugin,
+} from "../lib/remarkTableIntegrity";
 import { useTheme } from "../hooks/useTheme";
 import { useSmoothStreamedText } from "../hooks/useSmoothStreamedText";
 import { openWorkspaceFileReference, useWorkspaceFileOpener } from "../lib/workspaceFileOpener";
@@ -713,6 +723,76 @@ function nodeToPlainText(node: ReactNode): string {
   return "";
 }
 
+function MarkdownTable({ children, className, ...props }: React.ComponentPropsWithoutRef<"table">) {
+  const { t } = useI18n();
+  const frameRef = useRef<HTMLDivElement>(null);
+  const viewportRef = useRef<HTMLDivElement>(null);
+  const regionLabel = t("markdown.table.scrollRegionLabel");
+
+  useEffect(() => {
+    const frame = frameRef.current;
+    const viewport = viewportRef.current;
+    if (!frame || !viewport) {
+      return;
+    }
+    return connectMarkdownTableOverflow({ frame, viewport, regionLabel });
+  }, [regionLabel]);
+
+  // Streamed Markdown can add columns without changing the viewport's own size. Re-check
+  // after each committed table render; the DOM-only update avoids a second React render.
+  useEffect(() => {
+    const frame = frameRef.current;
+    const viewport = viewportRef.current;
+    if (frame && viewport) {
+      refreshMarkdownTableOverflow({ frame, viewport, regionLabel });
+    }
+  }, [children, regionLabel]);
+
+  return (
+    <div
+      ref={frameRef}
+      className="chat-markdown-table-frame"
+      data-overflow="false"
+      data-scroll-start="true"
+      data-scroll-end="true"
+    >
+      <div ref={viewportRef} className="chat-markdown-table-viewport" tabIndex={-1}>
+        <table {...props} className={className}>
+          {children}
+        </table>
+      </div>
+    </div>
+  );
+}
+
+function MarkdownTableIntegrityFallback(props: {
+  children?: ReactNode;
+  expectedColumns?: string | undefined;
+  actualColumns?: string | undefined;
+}) {
+  const { t } = useI18n();
+  const rawSource = nodeToPlainText(props.children);
+  return (
+    <details className="chat-markdown-table-integrity">
+      <summary>
+        <TriangleAlertIcon aria-hidden="true" />
+        <span>{t("markdown.table.integrityTitle")}</span>
+      </summary>
+      <div className="chat-markdown-table-integrity__body">
+        <p>
+          {t("markdown.table.integrityDescription", {
+            expected: props.expectedColumns ?? "?",
+            actual: props.actualColumns ?? "?",
+          })}
+        </p>
+        <pre>
+          <code>{rawSource}</code>
+        </pre>
+      </div>
+    </details>
+  );
+}
+
 function extractCodeBlock(
   children: ReactNode,
 ): { className: string | undefined; code: string } | null {
@@ -1057,6 +1137,10 @@ function ChatMarkdown({
   // completed messages render the exact current text immediately (no visual change).
   const deferredNormalizedText = useDeferredValue(normalizedText);
   const renderedText = isStreaming ? deferredNormalizedText : normalizedText;
+  const tableIntegrityRemarkPlugin = useMemo(
+    () => createTableIntegrityRemarkPlugin(renderedText),
+    [renderedText],
+  );
   // Marker offsets are applied against mdast positions, which come from the
   // repaired text — validate them against the same string. A marker recorded
   // after a repaired delimiter row fails its `selectedText` check and is
@@ -1083,12 +1167,16 @@ function ChatMarkdown({
   );
   const remarkPlugins = useMemo<MarkdownRemarkPlugins>(() => {
     if (composerChipsRemarkPlugin) {
-      return [...USER_MARKDOWN_REMARK_PLUGINS, composerChipsRemarkPlugin];
+      return [
+        ...USER_MARKDOWN_REMARK_PLUGINS,
+        composerChipsRemarkPlugin,
+        tableIntegrityRemarkPlugin,
+      ];
     }
     return threadMarkerRemarkPlugin
-      ? [...MARKDOWN_REMARK_PLUGINS, threadMarkerRemarkPlugin]
-      : MARKDOWN_REMARK_PLUGINS;
-  }, [composerChipsRemarkPlugin, threadMarkerRemarkPlugin]);
+      ? [...MARKDOWN_REMARK_PLUGINS, threadMarkerRemarkPlugin, tableIntegrityRemarkPlugin]
+      : [...MARKDOWN_REMARK_PLUGINS, tableIntegrityRemarkPlugin];
+  }, [composerChipsRemarkPlugin, tableIntegrityRemarkPlugin, threadMarkerRemarkPlugin]);
   const rehypePlugins = isUserVariant ? USER_MARKDOWN_REHYPE_PLUGINS : MARKDOWN_REHYPE_PLUGINS;
   const markdownComponents = useMemo<Components>(
     () => ({
@@ -1223,6 +1311,16 @@ function ChatMarkdown({
         }
         return <input {...props} />;
       },
+      table({ node: _node, children, ...props }) {
+        return <MarkdownTable {...props}>{children}</MarkdownTable>;
+      },
+      th({ node: _node, children, ...props }) {
+        return (
+          <th {...props} scope="col">
+            {children}
+          </th>
+        );
+      },
       // Custom elements emitted by the composer-chips remark plugin (user
       // variant only; they never appear in assistant markdown). `Components`
       // only models intrinsic tags, so these entries are typed on their own
@@ -1251,6 +1349,18 @@ function ChatMarkdown({
             context.body.length > 0 ? `${context.header}\n${context.body}` : context.header;
           return <TerminalContextInlineChip label={context.header} tooltipText={tooltipText} />;
         },
+        [TABLE_INTEGRITY_FALLBACK_TAG_NAME]: (props: {
+          children?: ReactNode;
+          [TABLE_INTEGRITY_EXPECTED_COLUMNS_ATTRIBUTE]?: string | undefined;
+          [TABLE_INTEGRITY_ACTUAL_COLUMNS_ATTRIBUTE]?: string | undefined;
+        }) => (
+          <MarkdownTableIntegrityFallback
+            expectedColumns={props[TABLE_INTEGRITY_EXPECTED_COLUMNS_ATTRIBUTE]}
+            actualColumns={props[TABLE_INTEGRITY_ACTUAL_COLUMNS_ATTRIBUTE]}
+          >
+            {props.children}
+          </MarkdownTableIntegrityFallback>
+        ),
       } as unknown as Components),
     }),
     [
