@@ -415,6 +415,7 @@
   --app-font-size-ui-sm: 13px;
   --app-font-size-ui-xs: 12px;
   --app-font-size-ui-2xs: 11px;
+  --app-font-size-ui-micro: 10px;
   --app-font-size-ui-meta: 12px;
   --app-font-size-ui-timestamp: 11px;
   --app-font-size-chat: 14px;
@@ -580,6 +581,33 @@ body {
   margin: 0;
   padding: 0;
   min-height: 100vh;
+}
+
+/* Legacy arbitrary-size utilities are still widespread in dense product
+   surfaces. Route their normal copy sizes through the single persisted app
+   scale so Appearance changes the whole UI without a second font system. */
+[class~="text-[10px]"] {
+  font-size: var(--app-font-size-ui-micro, 10px);
+}
+
+[class~="text-[11px]"] {
+  font-size: var(--app-font-size-ui-2xs, 11px);
+}
+
+[class~="text-[12px]"] {
+  font-size: var(--app-font-size-ui-xs, 12px);
+}
+
+[class~="text-[13px]"] {
+  font-size: var(--app-font-size-ui-sm, 13px);
+}
+
+[class~="text-[14px]"] {
+  font-size: var(--app-font-size-ui, 14px);
+}
+
+[class~="text-[15px]"] {
+  font-size: var(--app-font-size-ui-lg, 15px);
 }
 
 /* Reuse the OS UI stack on chat surfaces that should feel native and utilitarian. */

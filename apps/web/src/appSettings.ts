@@ -50,6 +50,7 @@ import {
 
 const APP_SETTINGS_STORAGE_KEY = "omnimind:app-settings:v1";
 const SERVER_SETTINGS_MIGRATION_STORAGE_KEY = "omnimind:server-settings-migrated:v1";
+const TYPOGRAPHY_DEFAULTS_MIGRATION_STORAGE_KEY = "omnimind:typography-defaults-migrated:v1";
 const MAX_CUSTOM_MODEL_COUNT = 32;
 export const MAX_CUSTOM_MODEL_LENGTH = 256;
 export const MIN_CHAT_FONT_SIZE_PX = 11;
@@ -856,6 +857,30 @@ export function normalizeStoredAppSettings(settings: AppSettings): AppSettings {
   return normalizeAppSettings(settings);
 }
 
+/**
+ * The pre-typography-profile macOS defaults were exactly 12px plus native font
+ * smoothing. Upgrade only that old default signature; any customized value is
+ * preserved. The caller records a one-time marker so a later explicit choice of
+ * the same values is never reinterpreted as legacy state.
+ */
+export function migrateLegacyTypographyDefaults(
+  settings: AppSettings,
+  platform = globalThis.navigator?.platform ?? "",
+): AppSettings {
+  const isLegacyMacDefault =
+    /mac|iphone|ipad|ipod/i.test(platform) &&
+    settings.chatFontSizePx === 12 &&
+    settings.enableNativeFontSmoothing === true;
+  if (!isLegacyMacDefault) {
+    return settings;
+  }
+  return {
+    ...settings,
+    chatFontSizePx: DEFAULT_APP_FONT_SIZE_PX,
+    enableNativeFontSmoothing: getDefaultNativeFontSmoothing(platform),
+  };
+}
+
 export function getCustomModelsForProvider(
   settings: Partial<Pick<AppSettings, CustomModelSettingsKey>>,
   provider: ProviderKind,
@@ -1254,7 +1279,16 @@ export function useAppSettings() {
     }
     normalizedStoredSettingsRef.current = true;
 
-    setSettings((previous) => normalizeStoredAppSettings(previous));
+    const shouldMigrateTypographyDefaults =
+      globalThis.localStorage?.getItem(TYPOGRAPHY_DEFAULTS_MIGRATION_STORAGE_KEY) !== "1";
+    setSettings((previous) =>
+      normalizeStoredAppSettings(
+        shouldMigrateTypographyDefaults ? migrateLegacyTypographyDefaults(previous) : previous,
+      ),
+    );
+    if (shouldMigrateTypographyDefaults) {
+      globalThis.localStorage?.setItem(TYPOGRAPHY_DEFAULTS_MIGRATION_STORAGE_KEY, "1");
+    }
   }, [setSettings]);
 
   useEffect(() => {

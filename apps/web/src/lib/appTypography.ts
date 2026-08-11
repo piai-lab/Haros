@@ -12,6 +12,7 @@ export interface AppTypographyScale {
   uiSmPx: number;
   uiXsPx: number;
   ui2XsPx: number;
+  uiMicroPx: number;
   uiMetaPx: number;
   uiTimestampPx: number;
   chatPx: number;
@@ -40,6 +41,7 @@ export function getAppTypographyScale(
     uiSmPx: clampTypographyPx(basePx * 0.92, 11),
     uiXsPx: clampTypographyPx(basePx * 0.84, 11),
     ui2XsPx: clampTypographyPx(basePx * 0.76, 10),
+    uiMicroPx: clampTypographyPx(basePx * 0.72, 9),
     uiMetaPx: clampTypographyPx(basePx * 0.84, 11),
     uiTimestampPx: clampTypographyPx(basePx * 0.78, 10),
     chatPx: basePx,

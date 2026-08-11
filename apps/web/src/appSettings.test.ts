@@ -27,6 +27,7 @@ import {
   isGitTextGenerationSettingsDirty,
   getProviderStartOptions,
   MODEL_PROVIDER_SETTINGS,
+  migrateLegacyTypographyDefaults,
   normalizeChatFontSizePx,
   normalizeCustomModelSlugs,
   normalizeStoredAppSettings,
@@ -443,6 +444,28 @@ describe("normalizeStoredAppSettings", () => {
     const decodedSettings = Schema.decodeSync(Schema.fromJsonString(AppSettingsSchema))("{}");
 
     expect(decodedSettings.enableNativeFontSmoothing).toBe(getDefaultNativeFontSmoothing());
+  });
+
+  it("upgrades only the exact legacy macOS typography defaults", () => {
+    const legacyDefaults = Schema.decodeSync(AppSettingsSchema)({
+      chatFontSizePx: 12,
+      enableNativeFontSmoothing: true,
+    });
+
+    expect(migrateLegacyTypographyDefaults(legacyDefaults, "MacIntel")).toMatchObject({
+      chatFontSizePx: DEFAULT_APP_FONT_SIZE_PX,
+      enableNativeFontSmoothing: false,
+    });
+    expect(
+      migrateLegacyTypographyDefaults(
+        { ...legacyDefaults, enableNativeFontSmoothing: false },
+        "MacIntel",
+      ),
+    ).toMatchObject({ chatFontSizePx: 12, enableNativeFontSmoothing: false });
+    expect(migrateLegacyTypographyDefaults(legacyDefaults, "Win32")).toMatchObject({
+      chatFontSizePx: 12,
+      enableNativeFontSmoothing: true,
+    });
   });
 
   it("preserves an explicitly stored updated_at project sort order", () => {
