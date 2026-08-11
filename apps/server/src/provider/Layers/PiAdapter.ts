@@ -1138,9 +1138,7 @@ function toolLifecycleData(input: {
     ...(input.isError !== undefined ? { isError: input.isError } : {}),
     ...(input.engineWebSurfaceStatus
       ? {
-          engineWebSurface: engineWebSurfacePresentationMetadata(
-            input.engineWebSurfaceStatus,
-          ),
+          engineWebSurface: engineWebSurfacePresentationMetadata(input.engineWebSurfaceStatus),
         }
       : {}),
   };

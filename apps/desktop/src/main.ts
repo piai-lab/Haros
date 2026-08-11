@@ -87,10 +87,7 @@ import {
   isDesktopAppIcon,
   shouldUpdateDesktopAppIcon,
 } from "./desktopAppIcon";
-import {
-  desktopStatusItemResourceName,
-  revealDesktopStatusItemWindow,
-} from "./desktopStatusItem";
+import { desktopStatusItemResourceName, revealDesktopStatusItemWindow } from "./desktopStatusItem";
 import {
   makeUpdateInstallPreparationCoordinator,
   type UpdateInstallPreparationAttempt,
@@ -1834,10 +1831,7 @@ function revealMainWindowFromDesktopStatusItem(): void {
 }
 
 function initializeDesktopStatusItem(): void {
-  if (
-    desktopStatusItem ||
-    (process.platform !== "darwin" && process.platform !== "win32")
-  ) {
+  if (desktopStatusItem || (process.platform !== "darwin" && process.platform !== "win32")) {
     return;
   }
   const resourceName = desktopStatusItemResourceName(process.platform);

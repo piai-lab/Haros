@@ -1192,7 +1192,10 @@ const buildDesktopArtifact = Effect.fn("buildDesktopArtifact")(function* (
   }
 
   if (options.platform === "mac") {
-    yield* assertPackagedMacDeviceHelper(stageDistDir, desktopPackageJson.productName ?? "OmniMind");
+    yield* assertPackagedMacDeviceHelper(
+      stageDistDir,
+      desktopPackageJson.productName ?? "OmniMind",
+    );
   }
 
   if (options.platform === "mac" && options.target === "dmg" && options.signed) {

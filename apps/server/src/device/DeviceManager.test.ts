@@ -192,7 +192,11 @@ describe("DeviceManager discovery before the helper exists", () => {
     kind: "setup-required" as const,
     steps: [
       { id: "install-xcode" as const, label: "Install Xcode", done: true },
-      { id: "build-device-helper" as const, label: "Build the OmniMind device helper", done: false },
+      {
+        id: "build-device-helper" as const,
+        label: "Build the OmniMind device helper",
+        done: false,
+      },
     ],
   };
 

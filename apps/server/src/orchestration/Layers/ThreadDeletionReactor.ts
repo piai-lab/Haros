@@ -1,5 +1,8 @@
 import { ThreadId, type OrchestrationEvent } from "@omnimind/contracts";
-import { makeDrainableWorker, startDrainableWorkerProducers } from "@omnimind/shared/DrainableWorker";
+import {
+  makeDrainableWorker,
+  startDrainableWorkerProducers,
+} from "@omnimind/shared/DrainableWorker";
 import { Cause, Effect, Layer, Option, Stream } from "effect";
 
 import { DeviceService } from "../../device/Services/DeviceService";

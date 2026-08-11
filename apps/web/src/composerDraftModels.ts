@@ -513,8 +513,8 @@ export function normalizeModelSelection(
                     : provider === "omnimind"
                       ? modelOptions?.omnimind
                       : provider === "pi"
-                      ? modelOptions?.pi
-                      : undefined;
+                        ? modelOptions?.pi
+                        : undefined;
   const normalizedOptions =
     provider === "antigravity" && hasLegacyAntigravityEffort
       ? {
