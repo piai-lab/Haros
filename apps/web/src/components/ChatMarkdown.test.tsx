@@ -37,6 +37,17 @@ async function renderUserMarkdown(text: string) {
   );
 }
 
+async function renderMarkdownPair(text: string) {
+  const { default: ChatMarkdown } = await import("./ChatMarkdown");
+
+  return renderToStaticMarkup(
+    <main>
+      <ChatMarkdown text={text} cwd={undefined} isStreaming={false} />
+      <ChatMarkdown text={text} cwd={undefined} isStreaming={false} />
+    </main>,
+  );
+}
+
 describe("ChatMarkdown", () => {
   it("uses the theme foreground token for markdown text", async () => {
     const markup = await renderMarkdown("Theme-aware text");
@@ -95,6 +106,53 @@ describe("ChatMarkdown", () => {
     );
     expect(markup).toContain("inline-block size-[1em] shrink-0 align-middle -translate-y-px mr-1");
     expect(markup).toContain("OpenAI benchmark");
+  });
+
+  it("keeps footnote references in the current document with localized accessible labels", async () => {
+    const markup = await renderMarkdown(
+      "A supported claim.[^source]\n\n[^source]: [Source](https://example.com/source)",
+    );
+    const referenceId = markup.match(/id="([^"]+fnref-source)"/)?.[1];
+    const footnoteId = markup.match(/id="([^"]+fn-source)"/)?.[1];
+    const labelId = markup.match(/<h2 class="sr-only" id="([^"]+)">Footnotes<\/h2>/)?.[1];
+
+    expect(referenceId).toBeDefined();
+    expect(footnoteId).toBeDefined();
+    expect(labelId).toBeDefined();
+    expect(markup).toContain(`href="#${footnoteId}"`);
+    expect(markup).toContain(`href="#${referenceId}"`);
+    expect(markup).toContain(`aria-describedby="${labelId}"`);
+    expect(markup).toContain('aria-label="Back to reference 1"');
+    expect(markup).not.toContain(`href="#${footnoteId}" target="_blank"`);
+    expect(markup).not.toContain(`href="#${referenceId}" target="_blank"`);
+  });
+
+  it("scopes footnote and accessibility ids to each markdown instance", async () => {
+    const markup = await renderMarkdownPair("Claim.[^1]\n\n[^1]: Note");
+    const definitionIds = Array.from(
+      markup.matchAll(/<li id="([^"]+fn-1)">/g),
+      (match) => match[1],
+    );
+    const referenceIds = Array.from(
+      markup.matchAll(/id="([^"]+fnref-1)" data-footnote-ref/g),
+      (match) => match[1],
+    );
+    const labelIds = Array.from(
+      markup.matchAll(/<h2 class="sr-only" id="([^"]+)">Footnotes<\/h2>/g),
+      (match) => match[1],
+    );
+
+    expect(definitionIds).toHaveLength(2);
+    expect(referenceIds).toHaveLength(2);
+    expect(labelIds).toHaveLength(2);
+    expect(new Set(definitionIds).size).toBe(2);
+    expect(new Set(referenceIds).size).toBe(2);
+    expect(new Set(labelIds).size).toBe(2);
+    for (let index = 0; index < 2; index += 1) {
+      expect(markup).toContain(`id="${referenceIds[index]}"`);
+      expect(markup).toContain(`href="#${definitionIds[index]}"`);
+      expect(markup).toContain(`aria-describedby="${labelIds[index]}"`);
+    }
   });
 
   it("keeps dollar signs in markdown file links from becoming math", async () => {

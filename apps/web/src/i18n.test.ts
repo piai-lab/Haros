@@ -54,6 +54,17 @@ describe("message catalogs", () => {
     expect(translate("zh-CN", "library.title", { provider: "Pi" })).toBe("Pi 能力库");
   });
 
+  it("localizes Markdown footnote navigation", () => {
+    expect(translate("en", "markdown.footnotes.label")).toBe("Footnotes");
+    expect(translate("en", "markdown.footnotes.backLabel", { reference: "2-2" })).toBe(
+      "Back to reference 2-2",
+    );
+    expect(translate("zh-CN", "markdown.footnotes.label")).toBe("脚注");
+    expect(translate("zh-CN", "markdown.footnotes.backLabel", { reference: "2-2" })).toBe(
+      "返回引用 2-2",
+    );
+  });
+
   it("keeps engine update feedback concise and truthful in both supported languages", () => {
     expect(translate("en", "updater.updatingProvider", { provider: "Claude" })).toBe(
       "Updating Claude…",

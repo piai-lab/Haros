@@ -76,6 +76,8 @@ export const EN_MESSAGES = {
   "markdown.table.integrityTitle": "Table structure mismatch",
   "markdown.table.integrityDescription":
     "The header defines {expected} columns, but a row contains {actual}. OmniMind preserved the original Markdown instead of dropping data.",
+  "markdown.footnotes.label": "Footnotes",
+  "markdown.footnotes.backLabel": "Back to reference {reference}",
   "term.task": "Task",
   "term.project": "Project",
   "term.model": "Model",
@@ -2825,6 +2827,8 @@ export const ZH_CN_MESSAGES = {
   "markdown.table.integrityTitle": "表格结构不一致",
   "markdown.table.integrityDescription":
     "表头定义了 {expected} 列，但其中一行包含 {actual} 列。OmniMind 已保留原始 Markdown，没有静默丢弃数据。",
+  "markdown.footnotes.label": "脚注",
+  "markdown.footnotes.backLabel": "返回引用 {reference}",
   "term.task": "任务",
   "term.project": "项目",
   "term.model": "模型",

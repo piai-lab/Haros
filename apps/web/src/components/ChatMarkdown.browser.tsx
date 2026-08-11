@@ -1,5 +1,6 @@
 // FILE: ChatMarkdown.browser.tsx
-// Purpose: Verify Markdown tables own narrow-container overflow without widening the chat surface.
+// Purpose: Verify Markdown tables own narrow-container overflow and footnote navigation stays
+//          scoped to the originating chat message.
 // Layer: Browser UI regression
 
 import "../index.css";
@@ -190,5 +191,58 @@ describe("ChatMarkdown table overflow", () => {
     const assistantMargin = tableMargin("assistant-surface");
     expect(tableMargin("user-surface")).toBeLessThan(assistantMargin);
     expect(tableMargin("document-surface")).toBeGreaterThan(assistantMargin);
+  });
+});
+
+describe("ChatMarkdown footnote navigation", () => {
+  afterEach(() => {
+    document.body.innerHTML = "";
+    window.history.replaceState(null, "", `${window.location.pathname}${window.location.search}`);
+  });
+
+  it("keeps references and backreferences inside their own message", async () => {
+    const footnoteMarkdown = "Claim.[^1]\n\n[^1]: Note";
+    const mounted = await render(
+      <main data-testid="footnote-host">
+        <ChatMarkdown text={footnoteMarkdown} cwd={undefined} />
+        <ChatMarkdown text={footnoteMarkdown} cwd={undefined} />
+      </main>,
+    );
+    const host = mounted.getByTestId("footnote-host").element();
+    const references = Array.from(host.querySelectorAll<HTMLAnchorElement>("a[data-footnote-ref]"));
+    const backreferences = Array.from(
+      host.querySelectorAll<HTMLAnchorElement>("a[data-footnote-backref]"),
+    );
+    const definitions = Array.from(
+      host.querySelectorAll<HTMLElement>("section[data-footnotes] li"),
+    );
+    const labels = Array.from(
+      host.querySelectorAll<HTMLElement>("section[data-footnotes] > h2.sr-only"),
+    );
+
+    expect(references).toHaveLength(2);
+    expect(backreferences).toHaveLength(2);
+    expect(definitions).toHaveLength(2);
+    expect(labels).toHaveLength(2);
+    expect(new Set(references.map((reference) => reference.id)).size).toBe(2);
+    expect(new Set(definitions.map((definition) => definition.id)).size).toBe(2);
+    expect(new Set(labels.map((label) => label.id)).size).toBe(2);
+
+    const secondReference = references[1]!;
+    const secondBackreference = backreferences[1]!;
+    const secondDefinition = definitions[1]!;
+    const secondLabel = labels[1]!;
+    expect(secondReference.target).toBe("");
+    expect(secondReference.rel).toBe("");
+    expect(secondReference.getAttribute("href")).toBe(`#${secondDefinition.id}`);
+    expect(secondReference.getAttribute("aria-describedby")).toBe(secondLabel.id);
+    expect(secondBackreference.target).toBe("");
+    expect(secondBackreference.rel).toBe("");
+    expect(secondBackreference.getAttribute("href")).toBe(`#${secondReference.id}`);
+
+    await userEvent.click(secondReference);
+    expect(window.location.hash).toBe(`#${secondDefinition.id}`);
+    await userEvent.click(secondBackreference);
+    expect(window.location.hash).toBe(`#${secondReference.id}`);
   });
 });

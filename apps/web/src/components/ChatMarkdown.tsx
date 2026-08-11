@@ -15,6 +15,7 @@ import React, {
   use,
   useDeferredValue,
   useEffect,
+  useId,
   useMemo,
   useRef,
   useState,
@@ -1112,9 +1113,30 @@ function ChatMarkdown({
   const isStreaming = isStreamingProp ?? false;
   const className = classNameProp ?? "text-sm leading-[1.7]";
   const variant = variantProp ?? "assistant";
+  const { t } = useI18n();
   const { resolvedTheme } = useTheme();
   const diffThemeName = resolveDiffThemeName(resolvedTheme);
   const isUserVariant = variant === "user";
+  // Footnote ids are document-global. Scope every Markdown instance so two
+  // messages can both use `[^1]` without their references crossing. `useId`
+  // stays stable through streaming updates and hydration; punctuation is
+  // removed so the generated ids remain straightforward fragment targets.
+  const footnoteScopeId = useId().replaceAll(/[^A-Za-z0-9_-]/g, "");
+  const footnoteClobberPrefix = `omnimind-footnote-${footnoteScopeId}-`;
+  const footnoteLabelId = `${footnoteClobberPrefix}label`;
+  const remarkRehypeOptions = useMemo(
+    () => ({
+      clobberPrefix: footnoteClobberPrefix,
+      footnoteLabel: t("markdown.footnotes.label"),
+      footnoteBackLabel(referenceIndex: number, rereferenceIndex: number) {
+        const reference = `${referenceIndex + 1}${
+          rereferenceIndex > 1 ? `-${rereferenceIndex}` : ""
+        }`;
+        return t("markdown.footnotes.backLabel", { reference });
+      },
+    }),
+    [footnoteClobberPrefix, t],
+  );
   // Reveal streamed text at a steady, adaptive cadence so tokens appear fluidly instead of
   // in the ~100ms network clumps that land in the store. No-ops (returns `text`) when not
   // streaming or under reduced motion. Governs cadence only; the deferred value below still
@@ -1182,6 +1204,19 @@ function ChatMarkdown({
       a({ node: _node, href, children, ...props }) {
         const restoredHref = href ? restoreLiteralDollarPlaceholders(href) : href;
         const isExternalHttp = isExternalHttpHref(restoredHref);
+        const isInternalFragment = restoredHref?.startsWith("#") === true;
+        if (isInternalFragment) {
+          const isFootnoteReference = _node?.properties.dataFootnoteRef === true;
+          return (
+            <a
+              {...props}
+              href={restoredHref}
+              {...(isFootnoteReference ? { "aria-describedby": footnoteLabelId } : {})}
+            >
+              {children}
+            </a>
+          );
+        }
         if (isUserVariant && isExternalHttp) {
           // GFM autolinks a pasted URL before the chips plugin can see it; when the
           // link text is just the URL itself, render the composer's link chip so a
@@ -1320,6 +1355,13 @@ function ChatMarkdown({
           </th>
         );
       },
+      h2({ node: _node, children, ...props }) {
+        return (
+          <h2 {...props} id={props.id === "footnote-label" ? footnoteLabelId : props.id}>
+            {children}
+          </h2>
+        );
+      },
       // Custom elements emitted by the composer-chips remark plugin (user
       // variant only; they never appear in assistant markdown). `Components`
       // only models intrinsic tags, so these entries are typed on their own
@@ -1365,6 +1407,7 @@ function ChatMarkdown({
     [
       cwd,
       diffThemeName,
+      footnoteLabelId,
       isStreaming,
       isUserVariant,
       mentionReferences,
@@ -1383,6 +1426,7 @@ function ChatMarkdown({
       <ReactMarkdown
         remarkPlugins={remarkPlugins}
         rehypePlugins={rehypePlugins}
+        remarkRehypeOptions={remarkRehypeOptions}
         components={markdownComponents}
         urlTransform={markdownUrlTransform}
       >
