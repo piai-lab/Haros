@@ -1281,6 +1281,86 @@ describe("ProviderRuntimeIngestion", () => {
     expect(assistantMessage?.streaming).toBe(false);
   });
 
+  it("does not append an image viewed by the provider to the assistant reply", async () => {
+    const harness = await createHarness();
+    const turnId = asTurnId("turn-image-view");
+    const viewedImagePath = "/tmp/provider-thread/inspected-input.png";
+    const createdAt = new Date().toISOString();
+
+    harness.emit({
+      type: "turn.started",
+      eventId: asEventId("evt-image-view-turn-started"),
+      provider: "codex",
+      createdAt,
+      threadId: asThreadId("thread-1"),
+      turnId,
+    });
+    harness.emit({
+      type: "content.delta",
+      eventId: asEventId("evt-image-view-answer-delta"),
+      provider: "codex",
+      createdAt,
+      threadId: asThreadId("thread-1"),
+      turnId,
+      itemId: asItemId("image-view-answer"),
+      payload: { streamKind: "assistant_text", delta: "I inspected the input image." },
+    });
+    harness.emit({
+      type: "item.completed",
+      eventId: asEventId("evt-image-view-answer-completed"),
+      provider: "codex",
+      createdAt,
+      threadId: asThreadId("thread-1"),
+      turnId,
+      itemId: asItemId("image-view-answer"),
+      payload: { itemType: "assistant_message", status: "completed" },
+    });
+
+    await waitForThread(harness.engine, (thread) =>
+      thread.messages.some(
+        (message) => message.id === "assistant:image-view-answer" && message.streaming === false,
+      ),
+    );
+
+    harness.emit({
+      type: "item.completed",
+      eventId: asEventId("evt-image-view-completed"),
+      provider: "codex",
+      createdAt,
+      threadId: asThreadId("thread-1"),
+      turnId,
+      itemId: asItemId("image-view-call"),
+      payload: {
+        itemType: "image_view",
+        status: "completed",
+        title: "Viewed image",
+        detail: viewedImagePath,
+        data: {
+          kind: "codex.generated_image",
+          path: viewedImagePath,
+          callId: "image-view-call",
+        },
+      },
+    });
+    harness.emit({
+      type: "turn.completed",
+      eventId: asEventId("evt-image-view-turn-completed"),
+      provider: "codex",
+      createdAt,
+      threadId: asThreadId("thread-1"),
+      turnId,
+      payload: { state: "completed" },
+    });
+
+    const thread = await waitForThread(harness.engine, (entry) =>
+      entry.activities.some((activity) => activity.id === "evt-image-view-turn-completed"),
+    );
+    expect(
+      thread.messages.find((message) => message.id === "assistant:image-view-answer")?.text,
+    ).toBe("I inspected the input image.");
+    expect(thread.messages.some((message) => message.text.includes(viewedImagePath))).toBe(false);
+  });
+
   it("prefers a persisted Studio copy over its provider-home image source", () => {
     expect(
       collectPersistedGeneratedImagePaths([
