@@ -63,6 +63,14 @@ function SurfaceHarness({
   );
 }
 
+function WordmarkWidthHarness({ width }: { width: number }) {
+  return (
+    <div style={{ containerType: "inline-size", width }}>
+      <span className="sidebar-product-wordmark">OmniMind</span>
+    </div>
+  );
+}
+
 describe("SidebarSurfacePicker", () => {
   afterEach(() => {
     document.body.innerHTML = "";
@@ -90,6 +98,15 @@ describe("SidebarSurfacePicker", () => {
       expect(navigation.element().querySelector('[role="menu"], [role="tab"]')).toBeNull();
     },
   );
+
+  it("never clips the product wordmark at preserved narrow widths", async () => {
+    const narrow = await render(<WordmarkWidthHarness width={258.0078125} />);
+    await expect.element(narrow.getByText("OmniMind")).not.toBeVisible();
+
+    document.body.innerHTML = "";
+    const authored = await render(<WordmarkWidthHarness width={368} />);
+    await expect.element(authored.getByText("OmniMind")).toBeVisible();
+  });
 
   it("switches once through route-owned buttons and exposes the current page", async () => {
     const onSelectView = vi.fn();

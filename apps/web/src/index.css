@@ -110,7 +110,7 @@
     display: none;
   }
 
-  @container (min-width: 16rem) {
+  @container (min-width: 18rem) {
     .sidebar-product-wordmark {
       display: inline;
     }
