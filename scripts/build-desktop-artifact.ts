@@ -849,9 +849,16 @@ const assertPackagedMacDeviceHelper = Effect.fn("assertPackagedMacDeviceHelper")
   const fs = yield* FileSystem.FileSystem;
   const entries = yield* fs.readDirectory(stageDistDir);
   for (const entry of entries) {
+    const entryPath = path.join(stageDistDir, entry);
+    const entryStat = yield* fs.stat(entryPath).pipe(Effect.catch(() => Effect.succeed(null)));
+    // electron-builder writes both unpacked app directories and archive files
+    // into dist. Never traverse a .dmg/.zip as though it were a directory:
+    // Effect's FileSystem.exists surfaces ENOTDIR for that malformed path.
+    if (!entryStat || entryStat.type !== "Directory") {
+      continue;
+    }
     const helperRoot = path.join(
-      stageDistDir,
-      entry,
+      entryPath,
       `${productName}.app`,
       "Contents",
       MAC_DEVICE_HELPER_RESOURCE_PATH,
