@@ -335,8 +335,12 @@ describe("buildThemeCssVariables", () => {
     expect(cssVariables.variables["--card"]).toBe("#151517");
     expect(cssVariables.variables["--composer-surface"]).toBe("rgb(27, 27, 29)");
     expect(cssVariables.variables["--composer-surface"]).not.toBe(cssVariables.variables["--card"]);
-    expect(cssVariables.variables["--sidebar-accent"]).toBe("rgba(227, 228, 230, 0.058)");
-    expect(cssVariables.variables["--sidebar-accent-active"]).toBe("rgba(227, 228, 230, 0.058)");
+    expect(cssVariables.variables["--sidebar-accent"]).toBe(
+      "color-mix(in srgb, var(--color-text-foreground) 5%, transparent)",
+    );
+    expect(cssVariables.variables["--sidebar-accent-active"]).toBe(
+      "color-mix(in srgb, var(--color-text-foreground) 7%, transparent)",
+    );
     expect(cssVariables.variables["--theme-font-ui-family"]).toBe("Inter");
     expect(cssVariables.variables["--theme-font-code-family"]).toBe(
       `"Jetbrains Mono", ${DEFAULT_MONOSPACE_FONT_FAMILY_STACK}`,
@@ -401,8 +405,8 @@ describe("buildThemeCssVariables", () => {
       "dark",
     );
 
-    expect(tokens.derived.controlBackgroundOpaque).toBe("rgb(30, 30, 30)");
-    expect(tokens.aliases["--color-token-dropdown-background"]).toBe("rgb(30, 30, 30)");
+    expect(tokens.derived.controlBackgroundOpaque).toBe("rgb(38, 38, 38)");
+    expect(tokens.aliases["--color-token-dropdown-background"]).toBe("rgb(38, 38, 38)");
   });
 
   it("matches Codex's light composer surface token path", () => {
@@ -418,7 +422,7 @@ describe("buildThemeCssVariables", () => {
     expect(cssVariables.variables["--composer-surface"]).toBe(
       "color-mix(in oklab, var(--color-background-control) 90%, transparent)",
     );
-    expect(cssVariables.variables["--color-background-control"]).toBe("rgba(249, 249, 248, 0.96)");
+    expect(cssVariables.variables["--color-background-control"]).toBe("rgba(250, 250, 248, 0.96)");
   });
 
   it("uses the light-theme foreground color for the primary button background", () => {

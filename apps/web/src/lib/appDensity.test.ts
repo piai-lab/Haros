@@ -26,9 +26,9 @@ describe("appDensity", () => {
 
     expect(compact["--density-scale"]).toBe("0.85");
     expect(comfortable["--density-scale"]).toBe("1");
-    expect(compact["--app-density-row-height"]).toBe("1.4875rem");
-    expect(comfortable["--app-density-row-height"]).toBe("1.75rem");
+    expect(compact["--app-density-row-height"]).toBe("1.59375rem");
+    expect(comfortable["--app-density-row-height"]).toBe("1.875rem");
     expect(compact["--app-density-composer-editor-min-height"]).toBe("calc(2lh * 0.85)");
-    expect(comfortable["--app-density-composer-footer-padding-end"]).toBe("0.5rem");
+    expect(comfortable["--app-density-composer-footer-padding-end"]).toBe("0.625rem");
   });
 });

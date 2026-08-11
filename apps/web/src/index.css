@@ -99,8 +99,21 @@
 
 @layer components {
   .sidebar-icon-button {
-    @apply items-center justify-center rounded-sm p-0.5 text-muted-foreground/60 transition-colors hover:text-foreground/82 focus-visible:outline-none focus-visible:ring-1 focus-visible:ring-ring;
+    @apply items-center justify-center rounded-sm p-0.5 text-[var(--color-text-foreground-secondary)] transition-colors hover:text-foreground focus-visible:outline-none focus-visible:ring-1 focus-visible:ring-ring;
     background: transparent;
+  }
+
+  /* The titlebar controls own most of the 13rem resize floor. Hide the product
+     wordmark there instead of degrading it into a clipped "Omni…" fragment; the
+     full mark returns once the resizable sidebar has enough real inline space. */
+  .sidebar-product-wordmark {
+    display: none;
+  }
+
+  @container (min-width: 18rem) {
+    .sidebar-product-wordmark {
+      display: inline;
+    }
   }
 
   .sidebar-icon-button:hover {
@@ -448,9 +461,9 @@
   --font-chat-code-family: var(--theme-font-code-family, var(--font-mono-family));
   --terminal-font-family: "JetBrainsMono NFM", "JetBrainsMono NF", "JetBrains Mono", monospace;
   --app-shell-background: transparent;
-  --app-sidebar-backdrop-filter: blur(8px) saturate(135%);
+  --app-sidebar-backdrop-filter: blur(18px) saturate(110%);
   --app-sidebar-shadow: inset 0 1px 0 rgba(0, 0, 0, 0.025);
-  --app-sidebar-surface: color-mix(in srgb, var(--card) 48%, transparent);
+  --app-sidebar-surface: color-mix(in srgb, var(--card) 88%, transparent);
   --background: #fcfcfc;
   --foreground: var(--color-neutral-800);
   --card: var(--color-white);
@@ -559,9 +572,9 @@
     --sidebar-accent-foreground: var(--color-text-foreground, var(--foreground));
     --sidebar-border: var(--border);
     --sidebar-ring: var(--ring);
-    --app-sidebar-backdrop-filter: blur(8px) saturate(135%);
+    --app-sidebar-backdrop-filter: blur(18px) saturate(110%);
     --app-sidebar-shadow: inset 0 1px 0 rgba(255, 255, 255, 0.024);
-    --app-sidebar-surface: color-mix(in srgb, var(--card) 56%, transparent);
+    --app-sidebar-surface: color-mix(in srgb, var(--card) 82%, transparent);
     --color-background-button-secondary-hover: var(--secondary);
     --color-background-elevated-secondary: var(--secondary);
     --warning: var(--color-amber-500);
@@ -740,7 +753,7 @@ label:has(> select#reasoning-effort) select {
 
 .chat-markdown strong,
 .chat-markdown b {
-  font-weight: 500;
+  font-weight: 600;
   font-synthesis: none;
 }
 
@@ -758,7 +771,7 @@ label:has(> select#reasoning-effort) select {
 .chat-markdown blockquote,
 .chat-markdown pre,
 .chat-markdown table {
-  margin: 0.65rem 0;
+  margin: 0.8rem 0;
 }
 
 .chat-markdown ul {
@@ -788,7 +801,7 @@ label:has(> select#reasoning-effort) select {
 }
 
 .chat-markdown li + li {
-  margin-top: 0.25rem;
+  margin-top: 0.35rem;
 }
 
 /* GFM task lists: drop the bullet and paint the checkbox into the list gutter
@@ -823,7 +836,7 @@ label:has(> select#reasoning-effort) select {
 .chat-markdown h4,
 .chat-markdown h5,
 .chat-markdown h6 {
-  margin: 1.1em 0 0.35em;
+  margin: 1.4em 0 0.45em;
   font-weight: 600;
   line-height: 1.25;
   letter-spacing: -0.01em;
@@ -2463,9 +2476,14 @@ label:has(> select#reasoning-effort) select {
 
 .chat-markdown th,
 .chat-markdown td {
-  border: 1px solid var(--border);
-  padding: 0.35rem 0.45rem;
+  border: 1px solid var(--color-border-light, var(--border));
+  padding: 0.55rem 0.65rem;
   text-align: left;
+}
+
+.chat-markdown th {
+  background: var(--color-background-elevated-secondary);
+  font-weight: 600;
 }
 
 /* Keep diff chrome aligned with the user-configured code font, not the base mono fallback. */
@@ -2622,12 +2640,17 @@ diffs-container {
 
    `--composer-glass-opacity` keeps every composer-family surface on one knob. */
 :root {
-  --composer-glass-opacity: 55%;
-  --composer-glass-stacked-opacity: calc(var(--composer-glass-opacity) / 2);
-  --composer-glass-filter: blur(40px) saturate(150%);
+  --composer-glass-opacity: 88%;
+  --composer-glass-stacked-opacity: 72%;
+  --composer-glass-filter: blur(24px) saturate(115%);
   /* Same base as `.composer-picker-menu-surface`, kept opaque here so the shared
      `--composer-glass-opacity` knob is the only thing thinning it. */
   --composer-glass-surface: var(--popover);
+}
+
+.dark {
+  --composer-glass-opacity: 82%;
+  --composer-glass-stacked-opacity: 68%;
 }
 
 .chat-composer-surface,
@@ -2721,7 +2744,7 @@ diffs-container {
 
 /* Frosted translucent shell shared by floating menus & pickers (dropdown menus,
    selects, popovers, comboboxes) and composer pickers. Background + blur are
-   theme-aware via the tokens set in theme.logic (control-opaque @70% + blur). */
+   theme-aware via the tokens set in theme.logic (high-opacity surface + blur). */
 .composer-picker-menu-surface {
   background: var(
     --app-composer-picker-surface,

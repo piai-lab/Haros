@@ -678,11 +678,13 @@ export function ChatHeader({
             )}
           >
             {threadBreadcrumbs.length > 0 ? (
-              <div className="flex min-w-0 items-center gap-1 overflow-hidden text-[11px] text-muted-foreground/55">
+              <div className="flex min-w-0 items-center gap-1 overflow-hidden text-[length:var(--app-font-size-ui-xs,12px)] text-[var(--color-text-foreground-tertiary)]">
                 {threadBreadcrumbs.map((breadcrumb, index) => (
                   <React.Fragment key={breadcrumb.threadId}>
                     {index > 0 ? (
-                      <span className="shrink-0 text-muted-foreground/35">/</span>
+                      <span className="shrink-0 text-[var(--color-text-foreground-tertiary)]">
+                        /
+                      </span>
                     ) : null}
                     <button
                       type="button"
@@ -717,7 +719,7 @@ export function ChatHeader({
                   ) : null}
                   <h2
                     data-slot="chat-thread-title"
-                    className="max-w-[clamp(12rem,42vw,36rem)] truncate font-system-ui text-[length:var(--app-font-size-ui,12px)] font-normal text-foreground"
+                    className="max-w-[clamp(12rem,42vw,36rem)] truncate font-system-ui text-[length:var(--app-font-size-ui,14px)] font-medium text-foreground"
                     title={activeThreadTitle}
                     onDoubleClick={() => onRenameThread()}
                   >

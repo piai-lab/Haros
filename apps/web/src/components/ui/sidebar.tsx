@@ -24,7 +24,7 @@ import { Schema } from "effect";
 
 const SIDEBAR_COOKIE_NAME = "sidebar_state";
 const SIDEBAR_COOKIE_MAX_AGE = 60 * 60 * 24 * 7;
-const SIDEBAR_WIDTH = "16rem";
+const SIDEBAR_WIDTH = "24rem";
 const SIDEBAR_WIDTH_MOBILE = "calc(100vw - var(--spacing(3)))";
 const SIDEBAR_WIDTH_ICON = "3rem";
 export const SIDEBAR_RESIZE_DEFAULT_MIN_WIDTH = 13 * 16;
@@ -369,7 +369,7 @@ function Sidebar({
               fixed positioning, width transitions, and the resize rail hit area. */}
           <div
             className={cn(
-              "relative z-0 flex h-full w-full flex-col group-data-[variant=floating]:rounded-lg group-data-[variant=floating]:border group-data-[variant=floating]:border-sidebar-border group-data-[variant=floating]:shadow-sm/5",
+              "relative z-0 flex h-full w-full flex-col [container-type:inline-size] group-data-[variant=floating]:rounded-lg group-data-[variant=floating]:border group-data-[variant=floating]:border-sidebar-border group-data-[variant=floating]:shadow-sm/5",
               !transparentSurface && "bg-sidebar",
               innerClassName,
             )}

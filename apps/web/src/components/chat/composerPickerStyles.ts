@@ -9,7 +9,7 @@ export { COMPOSER_PICKER_SIZE, type ComposerPickerSize } from "./composerPickerS
 
 /** Soft, dispersed outer shadow for the composer input shell and floating pickers. */
 export const COMPOSER_SURFACE_SHADOW_CLASS_NAME =
-  "shadow-[0_4px_18px_-6px_color-mix(in_srgb,var(--foreground)_7%,transparent)] dark:shadow-[0_6px_24px_-10px_rgba(0,0,0,0.30)]";
+  "shadow-[0_12px_32px_-18px_color-mix(in_srgb,var(--foreground)_24%,transparent)] dark:shadow-[0_16px_40px_-20px_rgba(0,0,0,0.55)]";
 
 // Uses the UI-sm token so picker labels sit slightly below the editor text size.
 // The sm: override is required to beat the Button component's base responsive text classes.
@@ -34,7 +34,7 @@ export const COMPOSER_PICKER_SEARCH_HEADER_CLASS_NAME =
 
 /** Search field styling inside composer picker submenus. */
 export const COMPOSER_PICKER_SEARCH_INPUT_CLASS_NAME =
-  "rounded-lg border-[color:color-mix(in_srgb,var(--foreground)_8%,transparent)] bg-[color-mix(in_srgb,white_92%,transparent)] shadow-none before:hidden has-focus-visible:border-[color:color-mix(in_srgb,var(--foreground)_14%,transparent)] has-focus-visible:ring-0 [&_input]:font-sans [&_input]:placeholder:text-muted-foreground/55";
+  "rounded-lg border-[color:color-mix(in_srgb,var(--foreground)_10%,transparent)] bg-[color-mix(in_srgb,white_94%,transparent)] shadow-none before:hidden has-focus-visible:border-[color:color-mix(in_srgb,var(--foreground)_18%,transparent)] has-focus-visible:ring-0 [&_input]:font-sans [&_input]:placeholder:text-[var(--color-text-foreground-tertiary)]";
 
 /** Scrollable model list body inside searchable provider submenus. */
 export const COMPOSER_PICKER_MODEL_LIST_MAX_HEIGHT_CLASS_NAME =
@@ -50,13 +50,13 @@ export const COMPOSER_PICKER_RADIUS_CLASS_NAME = "rounded-[0.65rem]";
 export const COMPOSER_PICKER_OPTION_RADIUS_CLASS_NAME = "rounded-[0.5rem]";
 
 /** Collapsible section headers inside model provider lists. */
-export const COMPOSER_PICKER_MODEL_GROUP_HEADER_CLASS_NAME = `grid w-full grid-cols-[0.75rem_minmax(0,1fr)_2.5rem] items-center gap-x-1.5 ${COMPOSER_PICKER_RADIUS_CLASS_NAME} px-2 py-1 text-left text-[10px] font-medium text-muted-foreground/80 outline-none transition-colors hover:bg-[color-mix(in_srgb,var(--foreground)_4%,transparent)] focus-visible:ring-0`;
+export const COMPOSER_PICKER_MODEL_GROUP_HEADER_CLASS_NAME = `grid w-full grid-cols-[0.75rem_minmax(0,1fr)_2.5rem] items-center gap-x-1.5 ${COMPOSER_PICKER_RADIUS_CLASS_NAME} px-2 py-1.5 text-left text-[length:var(--app-font-size-ui-xs,12px)] font-medium text-[var(--color-text-foreground-secondary)] outline-none transition-colors hover:bg-[color-mix(in_srgb,var(--foreground)_5%,transparent)] focus-visible:ring-0`;
 
 /** Indents model row labels under collapsible group headers. */
 export const COMPOSER_PICKER_MODEL_ROW_LABEL_INDENT_CLASS_NAME = "pl-[1.125rem]";
 
 /** Muted accent text for effort labels and empty-landing folder names. */
-export const COMPOSER_MUTED_ACCENT_TEXT_CLASS_NAME = "text-muted-foreground/45";
+export const COMPOSER_MUTED_ACCENT_TEXT_CLASS_NAME = "text-[var(--color-text-foreground-tertiary)]";
 
 // NOTE: Composer picker section headers (Effort, Thinking, Mode, …) now render
 // through the shared `MenuGroupLabel` primitive (../ui/menu) so they stay in
@@ -150,7 +150,7 @@ export const COMPOSER_INPUT_SURFACE_CLASS_NAME = `chat-composer-surface border $
 
 /** Shadcn default-translucent shell for floating menus, pickers, and popovers. */
 export const APP_TRANSLUCENT_POPUP_SURFACE_BASE_CLASS_NAME =
-  "relative overflow-hidden border border-border bg-popover/70 text-popover-foreground before:pointer-events-none before:absolute before:inset-0 before:-z-1 before:rounded-[inherit] before:backdrop-blur-2xl before:backdrop-saturate-150";
+  "relative overflow-hidden border border-border bg-popover/88 text-popover-foreground before:pointer-events-none before:absolute before:inset-0 before:-z-1 before:rounded-[inherit] before:backdrop-blur-xl before:backdrop-saturate-125";
 
 /** Default floating popup shell (dropdown menus, selects, popovers). */
 export const APP_TRANSLUCENT_POPUP_SURFACE_CLASS_NAME = `${APP_TRANSLUCENT_POPUP_SURFACE_BASE_CLASS_NAME} rounded-2xl shadow-xl`;
@@ -237,14 +237,14 @@ export const RUNTIME_AUTO_ACCENT_CLASS_NAME = "text-[var(--color-text-accent)] h
 export const RUNTIME_AUTO_ICON_ACCENT_CLASS_NAME = "text-[var(--color-text-accent)]";
 
 /** Minimum composer editor height — two lines at the element's line-height.
- *  `leading-relaxed` (1.625) keeps the input in step with the transcript/bubble leading. */
-export const COMPOSER_EDITOR_LINE_HEIGHT_CLASS_NAME = "leading-relaxed";
+ *  The 1.7 leading keeps the input in step with the transcript/bubble rhythm. */
+export const COMPOSER_EDITOR_LINE_HEIGHT_CLASS_NAME = "leading-[1.7]";
 export const COMPOSER_EDITOR_TEXT_CLASS_NAME = "text-[length:var(--app-font-size-chat,12px)]";
 /** Font, size, and leading shared by the composer editor and its placeholder so the
  *  placeholder always aligns with typed text. Keep both surfaces on this one token. */
 export const COMPOSER_EDITOR_TYPOGRAPHY_CLASS_NAME = `font-system-ui ${COMPOSER_EDITOR_TEXT_CLASS_NAME} ${COMPOSER_EDITOR_LINE_HEIGHT_CLASS_NAME}`;
 /** Muted empty-state copy for the composer prompt editor. */
-export const COMPOSER_PLACEHOLDER_TEXT_CLASS_NAME = "text-muted-foreground/40";
+export const COMPOSER_PLACEHOLDER_TEXT_CLASS_NAME = "text-[var(--color-text-foreground-tertiary)]";
 export const COMPOSER_EDITOR_MIN_HEIGHT_CLASS_NAME =
   "min-h-[var(--app-density-composer-editor-min-height,2lh)]";
 /** Lexical wraps lines in `<p>` nodes; reset default margins so text sits flush above the footer. */

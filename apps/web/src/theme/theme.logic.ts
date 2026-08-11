@@ -140,8 +140,9 @@ const HEX_COLOR_RE = /^#[0-9a-fA-F]{6}$/;
 const THEME_SHARE_PREFIX = "codex-theme-v1:";
 const CONTRAST_CURVE_BELOW_BASELINE = 0.7;
 const CONTRAST_CURVE_ABOVE_BASELINE = 2;
-// Keep Codex's original curve anchors even though OmniMind presets start at zero.
-// This makes the new default render exactly like manually moving the old slider to zero.
+// Keep Codex's original curve anchors while treating OmniMind's zero setting as the
+// neutral optical baseline. The old curve continued below zero, which compounded with
+// component opacity utilities and washed secondary copy down into near-invisible ink.
 const CONTRAST_CURVE_BASELINE: Record<ThemeVariant, number> = {
   dark: 60,
   light: 45,
@@ -715,7 +716,7 @@ export function buildThemeCssVariables(
   // Mirrors Codex Electron's [cmdk-root] dropdown shell: thin the dropdown-background
   // token by 5% in oklab over the existing backdrop blur. Light vs dark is already
   // handled by --color-background-control-opaque (white in light, dark control in dark).
-  const composerPickerMenuSurface = "color-mix(in oklab, var(--popover) 70%, transparent)";
+  const composerPickerMenuSurface = "color-mix(in oklab, var(--popover) 88%, transparent)";
   const composerFocusBorder = buildComposerFocusBorder(
     pack,
     variant,
@@ -745,7 +746,7 @@ export function buildThemeCssVariables(
     "--app-chat-code-surface": chatCodeSurface,
     "--app-user-message-background": chatCodeSurface,
     "--app-sidebar-backdrop-filter":
-      material === "translucent" ? "blur(8px) saturate(135%)" : "none",
+      material === "translucent" ? "blur(18px) saturate(110%)" : "none",
     // Settings mirrors the chat surface (opaque --color-background-surface) so every
     // settings element reads as outline-only. With an opaque page there is nothing to
     // frost, so we skip the backdrop blur (and its compositing cost) entirely.
@@ -761,8 +762,8 @@ export function buildThemeCssVariables(
     "--app-sidebar-surface":
       material === "translucent"
         ? variant === "dark"
-          ? `color-mix(in srgb, ${sidebarSurface} 56%, transparent)`
-          : `color-mix(in srgb, ${sidebarSurface} 48%, transparent)`
+          ? `color-mix(in srgb, ${sidebarSurface} 82%, transparent)`
+          : `color-mix(in srgb, ${sidebarSurface} 88%, transparent)`
         : sidebarSurface,
     // Always opaque so the settings page background matches the chat surface exactly,
     // regardless of window material.
@@ -790,8 +791,8 @@ export function buildThemeCssVariables(
     "--secondary": readCodexVariable("--color-background-button-secondary"),
     "--secondary-foreground": readCodexVariable("--color-text-button-secondary"),
     "--sidebar": readCodexVariable("--color-background-surface"),
-    "--sidebar-accent": readCodexVariable("--color-background-button-secondary-hover"),
-    "--sidebar-accent-active": readCodexVariable("--color-background-button-secondary-hover"),
+    "--sidebar-accent": "color-mix(in srgb, var(--color-text-foreground) 5%, transparent)",
+    "--sidebar-accent-active": "color-mix(in srgb, var(--color-text-foreground) 7%, transparent)",
     "--sidebar-accent-foreground": readCodexVariable("--color-text-foreground"),
     "--sidebar-border": readCodexVariable("--color-border"),
     "--sidebar-foreground": readCodexVariable("--color-text-foreground"),
@@ -1218,6 +1219,12 @@ function normalizeContrastStrength(value: number, variant: ThemeVariant): number
   const baseline = CONTRAST_CURVE_BASELINE[variant];
   const baselineRatio = baseline / 100;
   const curvedValue = value / 100 + ((value - baseline) / 60) * CONTRAST_CURVE_BELOW_BASELINE;
+
+  // All bundled OmniMind themes seed at exactly zero. Correct that default without
+  // reinterpreting any non-zero value a user already tuned or imported.
+  if (value === 0) {
+    return 0;
+  }
 
   if (value <= baseline) {
     return curvedValue;

@@ -586,7 +586,7 @@ function threadRowStatusSlotClassName(isSubagentThread: boolean, toneClassName?:
       : // Nudge the timestamp a hair above the meta scale while still tracking the user's
         // typography setting (the CSS var is always set; the 11px is just an SSR fallback).
         "text-[length:calc(var(--app-font-size-ui-meta,11px)+0.5px)]",
-    toneClassName ?? (isSubagentThread ? "text-muted-foreground/26" : "text-muted-foreground/38"),
+    toneClassName ?? "text-[var(--color-text-foreground-tertiary)]",
   );
 }
 
@@ -691,7 +691,7 @@ function resolveThreadRowMetaChips(input: {
         <SidebarGlyph
           icon={ClockIcon}
           variant="meta"
-          className={anyEnabled ? "text-muted-foreground/55" : "text-muted-foreground/40"}
+          className="text-[var(--color-text-foreground-tertiary)]"
         />
       ),
     });
@@ -1282,7 +1282,7 @@ export function SidebarSurfacePicker({
   return (
     <nav
       aria-label={t("shell.switchSurface")}
-      className="grid h-8 min-w-0 flex-1 max-w-40 grid-cols-2 gap-0.5 rounded-lg bg-[var(--color-background-button-secondary)] p-0.5"
+      className="sidebar-segmented-picker grid h-8 min-w-0 flex-1 max-w-40 grid-cols-2 gap-0.5 rounded-lg p-0.5"
       data-slot="sidebar-surface-navigation"
     >
       {views.map((view) => {
@@ -1305,8 +1305,8 @@ export function SidebarSurfacePicker({
               "flex min-w-0 items-center justify-center rounded-md px-2 text-[length:var(--app-font-size-ui,12px)] font-medium transition-colors motion-reduce:transition-none",
               SIDEBAR_ROW_FOCUS_CLASS_NAME,
               active
-                ? "bg-[var(--color-background-button-secondary-hover)] text-foreground shadow-xs"
-                : "text-muted-foreground hover:bg-[var(--color-background-button-secondary-hover)]/65 hover:text-foreground",
+                ? "sidebar-segmented-thumb text-foreground"
+                : "text-[var(--color-text-foreground-secondary)] hover:bg-[var(--color-background-button-secondary-hover)] hover:text-foreground",
             )}
           >
             <span className="min-w-0 truncate">{titleByView[view]}</span>
@@ -4426,7 +4426,7 @@ export default function Sidebar() {
                   // touching the worktree chip. It costs no space when the row is idle.
                   <span
                     className={cn(
-                      "max-w-[40%] shrink-0 truncate text-right text-[length:var(--app-font-size-ui-meta,10px)] text-muted-foreground/38 transition-[margin] duration-150 ease-out",
+                      "max-w-[40%] shrink-0 truncate text-right text-[length:var(--app-font-size-ui-meta,12px)] text-[var(--color-text-foreground-tertiary)] transition-[margin] duration-150 ease-out",
                       hasTrailingStatusGlyph && "mr-2",
                     )}
                   >
@@ -4442,10 +4442,10 @@ export default function Sidebar() {
                 threadJumpLabelParts,
                 rightMetaChips,
                 threadStatus,
-                timestampToneClassName: "text-muted-foreground/38",
+                timestampToneClassName: "text-[var(--color-text-foreground-tertiary)]",
                 hoverActions: renderThreadHoverActions({
                   threadId: thread.id,
-                  toneClassName: "text-muted-foreground/42",
+                  toneClassName: "text-[var(--color-text-foreground-secondary)]",
                   isPinned: true,
                   compact: isSubagentThread,
                 }),
@@ -4494,8 +4494,8 @@ export default function Sidebar() {
       temporaryThreadIds[thread.id] === true ||
       draftThreadsByThreadId[thread.id]?.isTemporary === true;
     const secondaryMetaClass = isHighlighted
-      ? "text-foreground/54 dark:text-foreground/64"
-      : "text-muted-foreground/34";
+      ? "text-[var(--color-text-foreground-secondary)]"
+      : "text-[var(--color-text-foreground-tertiary)]";
     const rightMetaChips = resolveThreadRowMetaChips({
       thread,
       includeHandoffBadge: !isTemporaryThread,
@@ -4647,7 +4647,7 @@ export default function Sidebar() {
                     <Tooltip>
                       <TooltipTrigger
                         render={
-                          <span className="inline-flex shrink-0 items-center text-muted-foreground/55">
+                          <span className="inline-flex shrink-0 items-center text-[var(--color-text-foreground-tertiary)]">
                             <TemporaryThreadIcon />
                           </span>
                         }
@@ -4666,9 +4666,7 @@ export default function Sidebar() {
                 rightMetaChips: showCompactMeta ? rightMetaChips : [],
                 threadStatus,
                 timestampToneClassName: isSubagentThread
-                  ? isHighlighted
-                    ? "text-foreground/38 dark:text-foreground/46"
-                    : "text-muted-foreground/24"
+                  ? "text-[var(--color-text-foreground-tertiary)]"
                   : secondaryMetaClass,
                 hoverActions: renderThreadHoverActions({
                   threadId: thread.id,
@@ -5644,13 +5642,25 @@ export default function Sidebar() {
   // SidebarLeadingControls primitive with the closed-state host headers, so the
   // toggle + arrows look identical whether the sidebar is open or collapsed; only
   // the wrapper layout differs per host.
-  const titlebarControls = <SidebarLeadingControls className="hidden md:flex" />;
+  const productWordmark = (
+    <span className="sidebar-product-wordmark font-display shrink-0 text-[16px] leading-none tracking-[-0.015em] text-foreground">
+      {t("shell.productName")}
+    </span>
+  );
+
+  const titlebarControls = (
+    <div className="hidden min-w-0 flex-1 items-center gap-3 md:flex">
+      <SidebarLeadingControls className="shrink-0" />
+      {productWordmark}
+    </div>
+  );
 
   const headerControls = <SidebarLeadingControls className="ml-auto hidden md:flex" />;
 
   const wordmark = (
     <div className="flex w-full items-center gap-1.5">
       <SidebarTrigger className="shrink-0 text-muted-foreground/75 hover:text-foreground md:hidden" />
+      {productWordmark}
       {headerControls}
     </div>
   );

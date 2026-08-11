@@ -37,9 +37,10 @@ export function userMessageBubbleBorderClassName(isTemporaryThread: boolean): st
 
 const CHAT_TRANSCRIPT_USER_CHAR_WIDTH_RATIO = 0.48;
 const CHAT_TRANSCRIPT_ASSISTANT_CHAR_WIDTH_RATIO = 0.52;
-// Matches Tailwind `leading-relaxed` (1.625). Shared by the assistant transcript text,
-// user message bubbles, and the composer input so every chat surface reads at one leading.
-const CHAT_TRANSCRIPT_LINE_HEIGHT_RATIO = 1.625;
+// A slightly roomier editorial leading keeps mixed CJK/Latin prose, lists, and inline code
+// readable without making the transcript feel like a document viewer. Shared by assistant
+// copy, user bubbles, and the composer so the writing surfaces keep one vertical rhythm.
+const CHAT_TRANSCRIPT_LINE_HEIGHT_RATIO = 1.7;
 
 export function getChatTranscriptLineHeightPx(chatFontSizePx = DEFAULT_CHAT_FONT_SIZE_PX): number {
   return normalizeChatFontSizePx(chatFontSizePx) * CHAT_TRANSCRIPT_LINE_HEIGHT_RATIO;
