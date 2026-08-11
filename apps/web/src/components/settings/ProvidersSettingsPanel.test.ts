@@ -89,6 +89,27 @@ describe("createProviderInstallResetPatch", () => {
 });
 
 describe("providerUpdateFailureMessage", () => {
+  it("does not report success while the refreshed provider is still outdated", () => {
+    const provider = {
+      provider: "codex",
+      status: "ready",
+      available: true,
+      authStatus: "authenticated",
+      checkedAt: "2026-08-10T00:00:00.000Z",
+      versionAdvisory: {
+        status: "behind_latest",
+        currentVersion: "1.0.0",
+        latestVersion: "1.1.0",
+        updateCommand: "npm install -g @openai/codex@latest",
+        canUpdate: true,
+        checkedAt: "2026-08-10T00:00:00.000Z",
+        message: "Update available.",
+      },
+    } satisfies ServerProviderStatus;
+
+    expect(providerUpdateFailureMessage(provider, "Update incomplete.")).toBe("Update incomplete.");
+  });
+
   it("keeps raw CLI progress output out of the toast", () => {
     const provider = {
       provider: "opencode",

@@ -47,6 +47,7 @@ import {
   shouldOfferProviderUpdateAction,
   shouldPromptProviderUpdate,
   shouldShowProviderUpdateStatus,
+  PROVIDER_UPDATE_SUCCESS_VISIBLE_MS,
   withProviderUpdateTimeout,
 } from "~/providerUpdates";
 import { SETTINGS_TARGETS } from "~/settingsNavigation";
@@ -552,6 +553,9 @@ export function providerUpdateFailureMessage(
   fallback: string,
 ): string | null {
   const state = provider?.updateState;
+  if (provider?.versionAdvisory?.status === "behind_latest") {
+    return state?.message?.trim() || fallback;
+  }
   if (!state || (state.status !== "failed" && state.status !== "unchanged")) return null;
   // Full CLI output remains available in provider diagnostics. A transient toast should stay
   // readable and must not turn ANSI progress streams into a screen-sized error notification.
@@ -885,6 +889,21 @@ export function ProvidersSettingsPanel({
   const runProviderUpdate = useCallback(
     async (provider: ProviderKind) => {
       if (updatingProviders.has(provider)) return;
+      let progressToastDismissed = false;
+      const dismissProgressToast = () => {
+        progressToastDismissed = true;
+      };
+      const providerName = PROVIDER_DISPLAY_NAMES[provider];
+      const toastId = toastManager.add({
+        type: "loading",
+        title: t("updater.updatingProvider", { provider: providerName }),
+        data: {
+          closeLabel: t("updater.hideProgress"),
+          onClose: dismissProgressToast,
+          statusMotion: true,
+        },
+        timeout: 0,
+      });
       setUpdatingProviders((current) => new Set(current).add(provider));
       await withProviderUpdateTimeout({
         provider,
@@ -895,34 +914,59 @@ export function ProvidersSettingsPanel({
             () => undefined,
           );
           const refreshedProvider = result.providers.find((status) => status.provider === provider);
-          const failureMessage = providerUpdateFailureMessage(
-            refreshedProvider,
-            t("settings.providerUpdateIncomplete"),
-          );
+          const failureMessage = refreshedProvider
+            ? providerUpdateFailureMessage(
+                refreshedProvider,
+                t("settings.providerUpdateIncomplete"),
+              )
+            : t("settings.providerUpdateIncomplete");
           if (failureMessage) {
             const manualCommand = refreshedProvider?.versionAdvisory?.updateCommand?.trim();
-            toastManager.add({
+            if (progressToastDismissed) return;
+            toastManager.update(toastId, {
               type: "error",
               title: t("settings.couldNotUpdateProvider", {
-                provider: PROVIDER_DISPLAY_NAMES[provider],
+                provider: providerName,
               }),
               description: manualCommand
                 ? t("settings.manualUpdateInstruction", { failure: failureMessage })
                 : failureMessage,
-              ...(manualCommand ? { data: { copyText: manualCommand } } : {}),
+              data: {
+                onClose: dismissProgressToast,
+                statusMotion: true,
+                ...(manualCommand ? { copyText: manualCommand } : {}),
+              },
               timeout: 0,
             });
             return;
           }
+          if (progressToastDismissed) return;
+          toastManager.update(toastId, {
+            type: "success",
+            title: t("updater.providerUpdated", { provider: providerName }),
+            description: t("updater.refreshedDescription"),
+            data: {
+              compactContextual: true,
+              dismissAfterVisibleMs: PROVIDER_UPDATE_SUCCESS_VISIBLE_MS,
+              onClose: dismissProgressToast,
+              statusMotion: true,
+            },
+            timeout: 0,
+          });
         })
         .catch((error: unknown) => {
-          toastManager.add({
+          if (progressToastDismissed) return;
+          toastManager.update(toastId, {
             type: "error",
             title: t("settings.couldNotUpdateProvider", {
-              provider: PROVIDER_DISPLAY_NAMES[provider],
+              provider: providerName,
             }),
             description:
               error instanceof Error ? error.message : t("settings.providerUpdateUnknownFailure"),
+            data: {
+              onClose: dismissProgressToast,
+              statusMotion: true,
+            },
             timeout: 0,
           });
         })
