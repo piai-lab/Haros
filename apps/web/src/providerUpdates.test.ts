@@ -12,6 +12,7 @@ import {
   isProviderLatestVersionKnowable,
   isProviderUpdateActive,
   PROVIDER_UPDATE_REQUEST_TIMEOUT_MS,
+  PROVIDER_UPDATE_SUCCESS_VISIBLE_MS,
   providerUpdateNotificationKey,
   shouldOfferProviderUpdateAction,
   shouldPromptProviderUpdate,
@@ -262,6 +263,12 @@ describe("isProviderUpdateActive", () => {
     expect(isProviderUpdateActive(providerStatus("codex", { updateState: succeededState }))).toBe(
       false,
     );
+  });
+});
+
+describe("provider update feedback timing", () => {
+  it("keeps successful update feedback to three visible seconds", () => {
+    expect(PROVIDER_UPDATE_SUCCESS_VISIBLE_MS).toBe(3_000);
   });
 });
 

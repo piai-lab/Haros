@@ -123,6 +123,7 @@ import {
   providerUpdateNotificationKey,
   PROVIDER_UPDATE_INITIAL_REFRESH_DELAY_MS,
   PROVIDER_UPDATE_REFRESH_INTERVAL_MS,
+  PROVIDER_UPDATE_SUCCESS_VISIBLE_MS,
   withProviderUpdateTimeout,
 } from "../providerUpdates";
 import {
@@ -156,6 +157,22 @@ type ActiveProviderUpdateToast =
       readonly key: string;
       readonly toastId: ProviderUpdateToastId;
     };
+
+function providerUpdateProgressTitle(params: {
+  readonly current: number;
+  readonly provider: ServerProviderStatus;
+  readonly t: ReturnType<typeof useI18n>["t"];
+  readonly total: number;
+}): string {
+  const provider = PROVIDER_DISPLAY_NAMES[params.provider.provider];
+  return params.total === 1
+    ? params.t("updater.updatingProvider", { provider })
+    : params.t("updater.updatingProviderProgress", {
+        current: params.current,
+        provider,
+        total: params.total,
+      });
+}
 
 function shellThreadHasStarted(thread: OrchestrationShellSnapshot["threads"][number]): boolean {
   return thread.latestTurn !== null || thread.session !== null;
@@ -422,17 +439,17 @@ async function runProviderUpdateAll(params: {
   progressToastDismissedRef.current = false;
   setIsUpdatingAll(true);
   const trackedToast = activeToastRef.current;
+  const firstProgressTitle = providerUpdateProgressTitle({
+    current: 1,
+    provider: providers[0]!,
+    t,
+    total: providers.length,
+  });
   const toastId =
     trackedToast?.toastId ??
     toastManager.add({
       type: "loading",
-      title: t("updater.updatingProviders"),
-      description:
-        providers.length === 1
-          ? t("updater.updatingProvider", {
-              provider: PROVIDER_DISPLAY_NAMES[providers[0]!.provider],
-            })
-          : t("updater.updatingProvidersCount", { count: providers.length }),
+      title: firstProgressTitle,
       timeout: 0,
     });
   activeToastRef.current = { kind: "update", key: activeNotificationKey, toastId };
@@ -446,15 +463,14 @@ async function runProviderUpdateAll(params: {
 
   toastManager.update(toastId, {
     type: "loading",
-    title: t("updater.updatingProviders"),
-    description:
-      providers.length === 1
-        ? t("updater.updatingProvider", {
-            provider: PROVIDER_DISPLAY_NAMES[providers[0]!.provider],
-          })
-        : t("updater.updatingProvidersCount", { count: providers.length }),
+    title: firstProgressTitle,
+    description: undefined,
     actionProps: undefined,
-    data: { onClose: dismissProgressToast },
+    data: {
+      closeLabel: t("updater.hideProgress"),
+      onClose: dismissProgressToast,
+      statusMotion: true,
+    },
     timeout: 0,
   });
 
@@ -462,12 +478,32 @@ async function runProviderUpdateAll(params: {
 
   try {
     const api = ensureNativeApi();
-    for (const provider of providers) {
+    for (const [index, provider] of providers.entries()) {
+      if (index > 0 && !progressToastDismissedRef.current) {
+        toastManager.update(toastId, {
+          type: "loading",
+          title: providerUpdateProgressTitle({
+            current: index + 1,
+            provider,
+            t,
+            total: providers.length,
+          }),
+          description: undefined,
+          actionProps: undefined,
+          data: {
+            closeLabel: t("updater.hideProgress"),
+            onClose: dismissProgressToast,
+            statusMotion: true,
+          },
+          timeout: 0,
+        });
+      }
       try {
         const result = await withProviderUpdateTimeout({
           provider: provider.provider,
           request: api.server.updateProvider({ provider: provider.provider }),
         });
+        void reconcileServerProviderStatuses(queryClient, result.providers).catch(() => undefined);
         const refreshed = result.providers.find((entry) => entry.provider === provider.provider);
         const updateState = refreshed?.updateState;
         if (updateState?.status === "failed" || updateState?.status === "unchanged") {
@@ -496,8 +532,10 @@ async function runProviderUpdateAll(params: {
       });
     }
   } finally {
-    // Refresh is best-effort UI sync; it must not keep the progress toast alive.
-    await queryClient
+    // The update response already reconciles authoritative provider state. Keep
+    // this best-effort cache refresh behind the feedback transition so it cannot
+    // hold a completed progress toast on screen.
+    void queryClient
       .invalidateQueries({ queryKey: serverQueryKeys.config() })
       .catch(() => undefined);
     isUpdatingAllRef.current = false;
@@ -537,6 +575,7 @@ async function runProviderUpdateAll(params: {
           : failureLines,
       data: {
         onClose: dismissProgressToast,
+        statusMotion: true,
         ...(manualCommands.length > 0 ? { copyText: manualCommands.join("\n") } : {}),
       },
       timeout: 0,
@@ -554,8 +593,13 @@ async function runProviderUpdateAll(params: {
           })
         : t("updater.providersUpdated", { count: providers.length }),
     description: t("updater.refreshedDescription"),
-    data: { onClose: dismissProgressToast },
-    timeout: 6000,
+    data: {
+      compactContextual: true,
+      dismissAfterVisibleMs: PROVIDER_UPDATE_SUCCESS_VISIBLE_MS,
+      onClose: dismissProgressToast,
+      statusMotion: true,
+    },
+    timeout: 0,
   });
 }
 

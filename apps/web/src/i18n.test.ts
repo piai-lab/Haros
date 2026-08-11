@@ -54,6 +54,34 @@ describe("message catalogs", () => {
     expect(translate("zh-CN", "library.title", { provider: "Pi" })).toBe("Pi 能力库");
   });
 
+  it("keeps engine update feedback concise and truthful in both supported languages", () => {
+    expect(translate("en", "updater.updatingProvider", { provider: "Claude" })).toBe(
+      "Updating Claude…",
+    );
+    expect(
+      translate("en", "updater.updatingProviderProgress", {
+        current: 2,
+        provider: "Codex",
+        total: 3,
+      }),
+    ).toBe("Updating 2/3 · Codex");
+    expect(EN_MESSAGES["updater.refreshedDescription"]).toBe("Applies to new sessions");
+    expect(EN_MESSAGES["updater.hideProgress"]).toBe("Hide update progress");
+
+    expect(translate("zh-CN", "updater.updatingProvider", { provider: "Claude" })).toBe(
+      "正在更新 Claude…",
+    );
+    expect(
+      translate("zh-CN", "updater.updatingProviderProgress", {
+        current: 2,
+        provider: "Codex",
+        total: 3,
+      }),
+    ).toBe("正在更新 2/3 · Codex");
+    expect(ZH_CN_MESSAGES["updater.refreshedDescription"]).toBe("新会话生效");
+    expect(ZH_CN_MESSAGES["updater.hideProgress"]).toBe("隐藏更新进度");
+  });
+
   it("locks the user-facing task, conversation, engine, and System vocabulary", () => {
     expect(EN_MESSAGES["nav.newAgent"]).toBe("New Task");
     expect(ZH_CN_MESSAGES["nav.newAgent"]).toBe("新建任务");

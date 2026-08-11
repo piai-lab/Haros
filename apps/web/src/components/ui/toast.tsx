@@ -40,10 +40,12 @@ import {
 
 type ThreadToastData = {
   allowCrossThreadVisibility?: boolean;
+  closeLabel?: string;
   compactContextual?: boolean;
   copyText?: string;
   onClose?: () => void;
   secondaryActionProps?: React.ComponentProps<typeof Button>;
+  statusMotion?: boolean;
   threadId?: ThreadId | null;
   tooltipStyle?: boolean;
   dismissAfterVisibleMs?: number;
@@ -102,8 +104,15 @@ function toastRootClassName(
   );
 }
 
-function toastIconClassName(type: ToastObject<ThreadToastData>["type"]): string {
-  return cn(NOTIFICATION_ICON_CLASS_NAME, type === "loading" && "animate-spin opacity-90");
+function toastIconClassName(
+  type: ToastObject<ThreadToastData>["type"],
+  statusMotion: boolean,
+): string {
+  return cn(
+    NOTIFICATION_ICON_CLASS_NAME,
+    type === "loading" && "animate-spin opacity-90 motion-reduce:animate-none",
+    statusMotion && type === "success" && "text-success",
+  );
 }
 
 type ToastPosition =
@@ -295,19 +304,22 @@ function ToastActions({
 
 function ToastCloseButton({
   compact: compactProp,
+  label: labelProp,
   onDismiss,
   onClose,
 }: {
   compact?: boolean;
+  label?: string | undefined;
   onDismiss: () => void;
   onClose?: (() => void) | undefined;
 }) {
   const { t } = useI18n();
   const compact = compactProp ?? false;
+  const label = labelProp ?? t("common.dismissNotification");
   return (
     <button
       type="button"
-      aria-label={t("common.dismissNotification")}
+      aria-label={label}
       className={cn(
         // pointer-events-auto keeps the X clickable even when a stacked/collapsed
         // toast still gates its content with pointer-events-none.
@@ -319,7 +331,7 @@ function ToastCloseButton({
         onClose?.();
         onDismiss();
       }}
-      title={t("common.dismissNotification")}
+      title={label}
     >
       <XIcon className={compact ? "size-3" : "size-3.5"} />
     </button>
@@ -427,6 +439,7 @@ function ToastSurface({
 }) {
   const Icon = toast.type ? TOAST_ICONS[toast.type as keyof typeof TOAST_ICONS] : null;
   const compactContextual = compact && toast.data?.compactContextual === true;
+  const statusMotion = toast.data?.statusMotion === true;
 
   return (
     <Toast.Content
@@ -445,21 +458,28 @@ function ToastSurface({
         <div
           className={cn(
             "shrink-0 [&_svg]:pointer-events-none [&_svg]:shrink-0",
+            statusMotion &&
+              "animate-in fade-in [animation-duration:180ms] motion-reduce:animate-none",
             compact
               ? cn("[&>svg]:size-3.5", compactContextual && "pt-0.5")
               : "[&>svg]:h-lh [&>svg]:w-4",
           )}
           data-slot="toast-icon"
+          key={statusMotion ? `toast-icon-${toast.updateKey ?? 0}` : "toast-icon"}
         >
-          <Icon className={toastIconClassName(toast.type)} />
+          <Icon className={toastIconClassName(toast.type, statusMotion)} />
         </div>
       ) : null}
 
       <div
         className={cn(
           "min-w-0 flex-1",
+          statusMotion &&
+            "animate-in fade-in [animation-duration:180ms] motion-reduce:animate-none",
           compact && !compactContextual ? "flex items-center" : "flex flex-col gap-0.5",
         )}
+        data-slot="toast-copy"
+        key={statusMotion ? `toast-copy-${toast.updateKey ?? 0}` : "toast-copy"}
       >
         <Toast.Title
           className={cn(
@@ -502,7 +522,12 @@ function ToastSurface({
           {toast.actionProps.children}
         </Toast.Action>
       ) : null}
-      <ToastCloseButton compact={compact} onClose={toast.data?.onClose} onDismiss={onDismiss} />
+      <ToastCloseButton
+        compact={compact}
+        label={toast.data?.closeLabel}
+        onClose={toast.data?.onClose}
+        onDismiss={onDismiss}
+      />
     </Toast.Content>
   );
 }
@@ -576,11 +601,15 @@ function Toasts({ position: positionProp }: { position: ToastPosition }) {
           );
           const compact = shouldUseCompactToast(toast);
           const archiveUndoToast = isArchiveUndoToast(toast);
+          const statusMotion = toast.data?.statusMotion === true;
 
           return (
             <Toast.Root
               className={cn(
-                "absolute z-[calc(9999-var(--toast-index))] h-(--toast-calc-height) select-none [transition:transform_.5s_cubic-bezier(.22,1,.36,1),opacity_.5s,height_.15s]",
+                "absolute z-[calc(9999-var(--toast-index))] h-(--toast-calc-height) select-none",
+                statusMotion
+                  ? "[--toast-status-duration:180ms] [interpolate-size:allow-keywords] [transition:transform_var(--toast-status-duration)_cubic-bezier(.22,1,.36,1),opacity_var(--toast-status-duration)_ease-out,height_var(--toast-status-duration)_cubic-bezier(.22,1,.36,1),width_var(--toast-status-duration)_cubic-bezier(.22,1,.36,1)] data-ending-style:[--toast-status-duration:200ms] motion-reduce:transition-none"
+                  : "[transition:transform_.5s_cubic-bezier(.22,1,.36,1),opacity_.5s,height_.15s]",
                 archiveUndoToast
                   ? cn(
                       ARCHIVE_UNDO_TOAST_SURFACE_CLASS_NAME,
@@ -617,15 +646,20 @@ function Toasts({ position: positionProp }: { position: ToastPosition }) {
                 // Expanded state
                 "data-expanded:h-(--toast-height)",
                 "data-position:data-expanded:transform-[translateX(var(--toast-swipe-movement-x))_translateY(var(--toast-calc-offset-y))]",
-                // Starting and ending animations
-                "data-[position*=top]:data-starting-style:transform-[translateY(calc(-100%-var(--toast-inset)))]",
-                "data-[position=top-center]:data-ending-style:not-data-limited:not-data-swipe-direction:transform-[translateY(calc(var(--toast-swipe-movement-y)-100%-var(--toast-inset)))]",
-                "data-[position*=bottom]:data-starting-style:transform-[translateY(calc(100%+var(--toast-inset)))]",
-                "data-[position*=top]:data-[position*=right]:data-starting-style:transform-[translateX(calc(100%+var(--toast-inset)))_translateY(var(--toast-calc-offset-y))]",
+                // Status updates stay spatially attached to the existing toast. Other
+                // notifications retain the direction-aware enter/exit travel.
+                statusMotion
+                  ? "data-starting-style:transform-[translateY(6px)] data-starting-style:opacity-0 data-ending-style:not-data-limited:not-data-swipe-direction:transform-[translateY(6px)]"
+                  : cn(
+                      "data-[position*=top]:data-starting-style:transform-[translateY(calc(-100%-var(--toast-inset)))]",
+                      "data-[position=top-center]:data-ending-style:not-data-limited:not-data-swipe-direction:transform-[translateY(calc(var(--toast-swipe-movement-y)-100%-var(--toast-inset)))]",
+                      "data-[position*=bottom]:data-starting-style:transform-[translateY(calc(100%+var(--toast-inset)))]",
+                      "data-[position*=top]:data-[position*=right]:data-starting-style:transform-[translateX(calc(100%+var(--toast-inset)))_translateY(var(--toast-calc-offset-y))]",
+                      "data-ending-style:not-data-limited:not-data-swipe-direction:transform-[translateY(calc(100%+var(--toast-inset)))]",
+                      "data-[position*=top]:data-[position*=right]:data-ending-style:not-data-limited:not-data-swipe-direction:transform-[translateX(calc(100%+var(--toast-inset)))_translateY(var(--toast-calc-offset-y))]",
+                    ),
                 "data-ending-style:opacity-0",
-                // Ending animations (direction-aware)
-                "data-ending-style:not-data-limited:not-data-swipe-direction:transform-[translateY(calc(100%+var(--toast-inset)))]",
-                "data-[position*=top]:data-[position*=right]:data-ending-style:not-data-limited:not-data-swipe-direction:transform-[translateX(calc(100%+var(--toast-inset)))_translateY(var(--toast-calc-offset-y))]",
+                // Swipe exits remain direction-aware for every toast motion preset.
                 "data-ending-style:data-[swipe-direction=left]:transform-[translateX(calc(var(--toast-swipe-movement-x)-100%-var(--toast-inset)))_translateY(var(--toast-calc-offset-y))]",
                 "data-ending-style:data-[swipe-direction=right]:transform-[translateX(calc(var(--toast-swipe-movement-x)+100%+var(--toast-inset)))_translateY(var(--toast-calc-offset-y))]",
                 "data-ending-style:data-[swipe-direction=up]:transform-[translateY(calc(var(--toast-swipe-movement-y)-100%-var(--toast-inset)))]",
@@ -640,6 +674,7 @@ function Toasts({ position: positionProp }: { position: ToastPosition }) {
                 "data-ending-style:pointer-events-none data-limited:pointer-events-none",
               )}
               data-position={position}
+              data-status-motion={statusMotion ? "" : undefined}
               key={toast.id}
               style={
                 {

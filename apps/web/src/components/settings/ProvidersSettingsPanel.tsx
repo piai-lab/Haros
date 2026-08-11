@@ -32,6 +32,7 @@ import type { AppSettings, AppSettingsBinding } from "~/appSettings";
 import { CentralIcon } from "~/lib/central-icons";
 import { DownloadIcon, ExternalLinkIcon, Loader2Icon } from "~/lib/icons";
 import {
+  reconcileServerProviderStatuses,
   serverConfigQueryOptions,
   serverQueryKeys,
   serverSettingsQueryOptions,
@@ -890,6 +891,9 @@ export function ProvidersSettingsPanel({
         request: ensureNativeApi().server.updateProvider({ provider }),
       })
         .then((result) => {
+          void reconcileServerProviderStatuses(queryClient, result.providers).catch(
+            () => undefined,
+          );
           const refreshedProvider = result.providers.find((status) => status.provider === provider);
           const failureMessage = providerUpdateFailureMessage(
             refreshedProvider,
@@ -906,16 +910,10 @@ export function ProvidersSettingsPanel({
                 ? t("settings.manualUpdateInstruction", { failure: failureMessage })
                 : failureMessage,
               ...(manualCommand ? { data: { copyText: manualCommand } } : {}),
+              timeout: 0,
             });
             return;
           }
-          toastManager.add({
-            type: "success",
-            title: t("settings.providerUpdateFinished", {
-              provider: PROVIDER_DISPLAY_NAMES[provider],
-            }),
-            description: t("settings.providerUpdateFinishedDescription"),
-          });
         })
         .catch((error: unknown) => {
           toastManager.add({
@@ -925,10 +923,11 @@ export function ProvidersSettingsPanel({
             }),
             description:
               error instanceof Error ? error.message : t("settings.providerUpdateUnknownFailure"),
+            timeout: 0,
           });
         })
-        .finally(async () => {
-          await queryClient
+        .finally(() => {
+          void queryClient
             .invalidateQueries({ queryKey: serverQueryKeys.config() })
             .catch(() => undefined);
           setUpdatingProviders((current) => {

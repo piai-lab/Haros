@@ -12,6 +12,9 @@ import {
 
 export const PROVIDER_UPDATE_INITIAL_REFRESH_DELAY_MS = 10_000;
 export const PROVIDER_UPDATE_REFRESH_INTERVAL_MS = 60 * 60 * 1_000;
+// Count only foreground-visible time. The provider toast routes this through the
+// shared visible timer so hovering never turns a completed update into a sticky chip.
+export const PROVIDER_UPDATE_SUCCESS_VISIBLE_MS = 3_000;
 // Homebrew updates may spend time refreshing taps and downloading release assets; the server
 // gives that path one hour while retaining the shorter bound for other provider commands.
 // This slightly longer client watchdog only owns a transport that outlives the server bound.
