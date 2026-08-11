@@ -21,11 +21,12 @@ import {
 
 export { CODEX_GENERATED_IMAGE_ARTIFACT_KIND };
 
+// `imageView` is a distinct Codex item for inspecting an input image. Treating it as
+// generated output leaks the viewed attachment back into the assistant message.
 const CODEX_GENERATED_IMAGE_ITEM_TYPES = new Set([
   "imagegeneration",
   "imagegenerationcall",
   "imagegenerationend",
-  "imageview",
 ]);
 
 const IMAGE_PATH_KEYS = ["saved_path", "savedPath", "path", "file_path"] as const;
