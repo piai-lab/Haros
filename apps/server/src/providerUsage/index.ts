@@ -16,13 +16,9 @@ import { ServerConfig } from "../config";
 import { buildProviderChildEnvironment, type ProviderChildKind } from "../providerChildEnvironment";
 import { ServerSettingsService } from "../serverSettings";
 import { ProviderAdapterRegistry } from "../provider/Services/ProviderAdapterRegistry";
-import { loadLocalProviderUsageLines } from "../providerUsageSnapshot";
 import { errorSnapshot } from "./parse";
 import { PROVIDER_USAGE_FETCHERS } from "./registry";
 import type { ProviderUsageContext } from "./types";
-
-// Providers whose live snapshot is enriched with on-disk token-total lines (24h/7d/30d).
-const LOCAL_ARCHIVE_PROVIDERS: ReadonlySet<ProviderKind> = new Set(["codex", "claudeAgent"]);
 
 const providerChildKind = (provider: ProviderKind): ProviderChildKind =>
   provider === "claudeAgent" ? "claude" : provider === "omnimind" ? "pi" : provider;
@@ -147,25 +143,24 @@ async function getProviderUsageSnapshot(
 
   const fetchPromise = (async () => {
     const snapshot = await fetchProviderUsage(provider, providerContext);
-    const enriched = snapshot ? await enrichWithLocalUsage(snapshot, ctx) : null;
     const refreshedCredentialKey = await resolveCredentialKey(provider, providerContext);
-    if (enriched && credentialKey !== null && refreshedCredentialKey === credentialKey) {
+    if (snapshot && credentialKey !== null && refreshedCredentialKey === credentialKey) {
       const current = snapshotCache.get(provider);
       const hasFreshHealthySnapshot =
         current?.credentialKey === credentialKey &&
         snapshotCacheTtlMs(current.snapshot) === SNAPSHOT_CACHE_TTL_MS &&
         ctx.nowMs - current.fetchedAtMs < SNAPSHOT_CACHE_TTL_MS;
-      const fetchedFailedSnapshot = (enriched.status ?? "ok") === "error";
+      const fetchedFailedSnapshot = (snapshot.status ?? "ok") === "error";
       if (fetchedFailedSnapshot && hasFreshHealthySnapshot && current) {
         return current.snapshot;
       }
       snapshotCache.set(provider, {
-        snapshot: enriched,
+        snapshot,
         fetchedAtMs: ctx.nowMs,
         credentialKey,
       });
     }
-    return enriched;
+    return snapshot;
   })();
   if (credentialKey !== null) {
     inFlightFetches.set(provider, { credentialKey, promise: fetchPromise });
@@ -177,23 +172,6 @@ async function getProviderUsageSnapshot(
       inFlightFetches.delete(provider);
     }
   }
-}
-
-async function enrichWithLocalUsage(
-  snapshot: ServerProviderUsageSnapshot,
-  ctx: ProviderUsageContext,
-): Promise<ServerProviderUsageSnapshot> {
-  if ((snapshot.status ?? "ok") !== "ok" || !LOCAL_ARCHIVE_PROVIDERS.has(snapshot.provider)) {
-    return snapshot;
-  }
-  const localLines = await loadLocalProviderUsageLines({
-    provider: snapshot.provider,
-    homeDir: ctx.homeDir,
-  });
-  if (localLines.length === 0) {
-    return snapshot;
-  }
-  return { ...snapshot, usageLines: [...snapshot.usageLines, ...localLines] };
 }
 
 /** Plain async batch fetch for supported providers. Never throws. */

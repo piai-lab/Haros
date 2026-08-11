@@ -57,6 +57,7 @@ function readProviderUsageSummary(input: {
   threadRateLimits?: ReadonlyArray<ProviderRateLimit> | undefined;
   providerSnapshot?: ServerProviderUsageSnapshot | undefined;
   fetchOpenUsageData?: boolean;
+  fetchLocalUsageData?: boolean;
 }) {
   // Capture into a ref-style holder: the hook only runs inside the closure, so a
   // plain `let` would narrow to `never` after the guard (TS can't see <Probe/> run).
@@ -71,6 +72,7 @@ function readProviderUsageSummary(input: {
       threadRateLimits: input.threadRateLimits,
       providerSnapshot: input.providerSnapshot,
       fetchOpenUsageData: input.fetchOpenUsageData,
+      fetchLocalUsageData: input.fetchLocalUsageData,
     });
     return <span />;
   }
@@ -107,6 +109,19 @@ describe("useProviderUsageSummary", () => {
     ).toBeDefined();
   });
 
+  it("can keep local archive scanning disabled on surfaces that do not show local rows", () => {
+    const queryClient = createQueryClient();
+
+    readProviderUsageSummary({ queryClient, fetchLocalUsageData: false });
+
+    const query = queryClient
+      .getQueryCache()
+      .find({ queryKey: serverQueryKeys.providerUsage("claudeAgent", null) });
+    expect(query).toBeDefined();
+    expect((query?.options as { enabled?: boolean }).enabled).toBe(false);
+    expect(query?.state.fetchStatus).toBe("idle");
+  });
+
   it("does not show local fallback rows when the live batch reports a non-ok status", () => {
     const queryClient = createQueryClient();
     queryClient.setQueryData(serverQueryKeys.allProviderUsage(), [
@@ -135,6 +150,23 @@ describe("useProviderUsageSummary", () => {
 
     expect(summary.rateLimits).toHaveLength(1);
     expect(summary.rateLimits[0]?.limits?.[0]?.window).toBe("Weekly");
+    expect(summary.usageLines).toEqual([
+      { label: "24h", value: "123M tokens", subtitle: "12 recent sessions" },
+    ]);
+  });
+
+  it("still loads local rows for a settings card with a precomputed live snapshot", () => {
+    const queryClient = createQueryClient();
+    queryClient.setQueryData(
+      serverQueryKeys.providerUsage("claudeAgent", null),
+      fallbackSnapshot(),
+    );
+
+    const summary = readProviderUsageSummary({
+      queryClient,
+      providerSnapshot: snapshot({ status: "ok" }),
+    });
+
     expect(summary.usageLines).toEqual([
       { label: "24h", value: "123M tokens", subtitle: "12 recent sessions" },
     ]);

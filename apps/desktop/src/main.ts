@@ -3283,9 +3283,10 @@ function presentBackendStartupGiveUp(reason: string): void {
       }
 
       if (result.response === 0) {
-        // A user-driven retry is a fresh lifecycle start, not another crash cycle.
+        // Only this explicit user action may re-arm a tripped crash circuit.
         backendLifecycleDialogInFlight = null;
-        await restartBackendAfterCrash("manual retry after backend startup failure", "lifecycle");
+        writeDesktopLogHeader("backend manual retry requested after startup give-up");
+        await restartBackendAfterCrash("manual retry after backend startup failure", "user-retry");
         return;
       }
 
@@ -3343,7 +3344,7 @@ function handleBackendStartupBlock(block: BackendStartupBlock): void {
       // Let a fast failed retry present the block again instead of racing this
       // dialog task's finalizer and leaving the window inert.
       backendLifecycleDialogInFlight = null;
-      await restartBackendAfterCrash("database lifecycle lock retry", "lifecycle");
+      await restartBackendAfterCrash("database lifecycle lock retry", "user-retry");
     } else {
       requestGracefulAppQuit("database lifecycle lock");
     }
@@ -3357,16 +3358,16 @@ function handleBackendStartupBlock(block: BackendStartupBlock): void {
 
 async function restartBackendAfterCrash(
   reason: string,
-  trigger: BackendStartTrigger = "crash-restart",
+  trigger: BackendRestartTrigger = "crash-restart",
 ): Promise<void> {
   if (isQuitting || backendProcess) {
     return;
   }
 
-  if (trigger === "lifecycle") {
+  if (trigger === "user-retry") {
     // Reset before reserving the port so a user-driven retry gets a full restart
     // budget even when the retry itself fails before the process is spawned.
-    backendSupervision.reset();
+    backendSupervision.resetForUserRetry();
   }
 
   cancelBackendReadinessWait();
@@ -3383,29 +3384,28 @@ async function restartBackendAfterCrash(
     return;
   }
 
-  startBackend(trigger);
+  startBackend();
   ensureInitialBackendWindowOpen(backendHttpUrl);
 }
 
 /**
- * "lifecycle" covers every deliberate start — bootstrap, a failed update install
- * handing the backend back, or a user-driven retry — and clears the crash backoff
- * and circuit breaker. Only the supervised crash path keeps the failure count.
+ * Automatic lifecycle paths must never clear a tripped breaker. Only the explicit
+ * retry action in the blocking failure dialog gets a user-retry trigger.
  */
-type BackendStartTrigger = "lifecycle" | "crash-restart";
+type BackendRestartTrigger = "user-retry" | "crash-restart";
 
-function startBackend(trigger: BackendStartTrigger = "lifecycle"): void {
+function startBackend(): void {
   if (isQuitting || backendProcess) return;
+  if (backendSupervision.hasGivenUp) {
+    writeDesktopLogHeader("automatic backend start suppressed after supervision gave up");
+    return;
+  }
   // Recovery owns the database until it clears the marker. Callers that restart
   // the backend after an unrelated failure — a given-up update install, say —
   // must not hand it a database the user is being asked how to repair.
   if (desktopStartupBlockedForMigrationRecovery) {
     writeDesktopLogHeader("backend start suppressed while migration recovery is pending");
     return;
-  }
-
-  if (trigger === "lifecycle") {
-    backendSupervision.reset();
   }
 
   const backendEntry = resolveBackendEntry();

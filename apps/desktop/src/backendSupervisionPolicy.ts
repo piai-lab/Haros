@@ -54,7 +54,7 @@ export interface BackendStartFailureInput {
  *
  * Spawning a child process practically always succeeds — the failures we care
  * about happen afterwards, while the backend boots — so the counter is cleared by
- * readiness (or by a deliberate lifecycle start), never by a successful spawn.
+ * readiness (or by an explicit user retry), never by a successful spawn.
  * Clearing it on spawn is what pins the backoff at its first step forever.
  */
 export class BackendSupervisionPolicy {
@@ -76,15 +76,16 @@ export class BackendSupervisionPolicy {
     return this.migrationRecoveryPrompted;
   }
 
-  /** Clears the backoff and the breaker for a deliberate (non-crash) backend start. */
-  reset(): void {
+  /** Clears the backoff and the breaker only after the user explicitly asks to retry. */
+  resetForUserRetry(): void {
     this.failures = 0;
     this.givenUp = false;
   }
 
   /** The backend actually reached readiness, so the previous failures are history. */
   recordReadiness(): void {
-    this.reset();
+    this.failures = 0;
+    this.givenUp = false;
   }
 
   respondToStartFailure(input: BackendStartFailureInput): BackendCrashResponse {

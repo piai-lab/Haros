@@ -112,7 +112,7 @@ describe("BackendSupervisionPolicy circuit breaker", () => {
     }
     expect(policy.hasGivenUp).toBe(true);
 
-    policy.reset();
+    policy.resetForUserRetry();
 
     expect(policy.hasGivenUp).toBe(false);
     expect(failure(policy)).toMatchObject({ kind: "retry", delayMs: 500 });
@@ -168,7 +168,7 @@ describe("BackendSupervisionPolicy mid-session migration recovery", () => {
     const policy = new BackendSupervisionPolicy();
 
     failure(policy, { migrationRecoveryMarkerPresent: true });
-    policy.reset();
+    policy.resetForUserRetry();
     policy.recordReadiness();
 
     expect(failure(policy, { migrationRecoveryMarkerPresent: true })).toMatchObject({

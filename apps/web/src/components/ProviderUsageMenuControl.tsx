@@ -41,6 +41,7 @@ export function useProviderUsageMenuModel(provider: ProviderKind): ProviderUsage
     threads,
     codexHomePath: settings.codexHomePath || null,
     fetchOpenUsageData: false,
+    fetchLocalUsageData: false,
   });
   const usageRows = deriveProviderUsageDisplayRows(usageSummary.rateLimits);
   const primaryRow = selectPrimaryProviderUsageDisplayRow(usageRows);

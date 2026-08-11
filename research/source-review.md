@@ -352,3 +352,40 @@ The Device HID bridge adapts the Indigo layout/delivery mechanism from facebook/
 `dd0cb550510331f2d11e9130cb003d2425688e28`; the canonical MIT text is retained at
 `LICENSES/facebook-idb-MIT.txt` and beside the packaged helper source. This section is research
 evidence only; the root `source-adoptions` block remains the production adoption authority.
+
+## 12. Adopted provider-usage archive OOM follow-up
+
+A maintainer-supplied packaged-App diagnostic bundle exposed thirteen Server-child `SIGABRT`
+failures with V8 heap exhaustion while the Desktop process remained alive. Native crash stacks and
+Server logs were consistent with asynchronous whole-file reads completing during local Provider
+usage collection; renderer, GPU and macOS resource termination were not the cause.
+
+Read-only comparison against adopted Synara head
+`712d88f98b9afed9a4617b78dc62a8f342d93177` established the provenance:
+
+- Synara `7360b55bff675cf4879bd196bf81916d4d53bce1` introduced 30-second local archive
+  polling, up to 2,000 JSONL files, and whole-file `readFile("utf8")` plus line splitting.
+- Synara `48d16d1e8e5d2656e687c60112d8ca54916b674d` increased archive reads to sixteen-way
+  concurrency without adding byte, line or transient-memory bounds.
+- Synara `3f579d74d66916e4c3128b4987bd47cacc755f57` kept local usage collection active in a
+  header surface that explicitly hid the resulting usage lines.
+- Synara `0e21939e4fac51ae8f03f4c5a76b694ef76996ef` restored shared batch polling under the
+  assumption that request coalescing made the operation cheap; the batch still enriched live
+  snapshots by scanning local archives.
+- OmniMind transplanted these mechanisms unchanged in `a54ef5ba49ac496604cd05eeaad0646f37faca8e`;
+  later namespace adaptation did not alter the usage behavior. Neither source contained a large
+  archive regression test.
+
+Disposition: keep the inherited Provider-usage owner, but replace the unsafe mechanism in
+OmniMind. Codex archive reads are bounded tail reads; Claude transcripts are chunked and aggregated
+without retaining whole files or all samples; archive reads have explicit concurrency, line and
+total-byte ceilings and fail closed with no partial totals. Live Provider snapshots no longer own
+local archive enrichment, and surfaces that hide local totals do not request them. Desktop automatic
+lifecycle starts respect the existing give-up latch; only an explicit user retry re-arms it. No new
+storage, index, process, public contract or Provider-private-state writer was introduced.
+
+Focused proof is owned by `apps/server/src/providerUsageSnapshot.test.ts`,
+`apps/server/src/providerUsage/index.test.ts`, `apps/web/src/hooks/useProviderUsageSummary.test.tsx`
+and `apps/desktop/src/backendSupervisionPolicy.test.ts`. Revalidate if Synara changes archive usage
+collection, if Provider transcript formats change, or if a bounded reader cannot recover the final
+Codex summary / complete Claude totals within the declared budget.
