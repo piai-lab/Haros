@@ -1,7 +1,7 @@
 // FILE: usageHistory/indexerProcess.test.ts
 // Purpose: Adversarial fixtures for bounded discovery, checkpointing, dedupe and path safety.
 
-import { mkdtemp, mkdir, open, symlink, writeFile } from "node:fs/promises";
+import { chmod, mkdtemp, mkdir, open, symlink, utimes, writeFile } from "node:fs/promises";
 import os from "node:os";
 import path from "node:path";
 
@@ -66,6 +66,8 @@ async function parseCodex(
     rootPath: root,
     files: [file],
     workspaceHashSalt: "test-salt",
+    unknownModel: "__unknown-model__",
+    unknownWorkspace: "__unknown-workspace__",
     maxBatchBytes: maxFileBytes,
     maxFileBytes,
     maxEvents: 2_000,
@@ -116,6 +118,54 @@ describe("usage history indexer", () => {
     });
     expect(response.type === "discover-result" ? response.files : []).toEqual([]);
   });
+
+  it("discovers valid archives at arbitrary directory depth", async () => {
+    const root = await makeRoot();
+    const relativeDirectory = Array.from({ length: 18 }, (_, index) => `level-${index}`).join("/");
+    await mkdir(path.join(root, relativeDirectory), { recursive: true });
+    await writeFile(path.join(root, relativeDirectory, "session.jsonl"), "{}\n");
+
+    const response = await handleUsageHistoryWorkerRequest({
+      type: "discover",
+      provider: "codex",
+      rootPath: root,
+      cursor: null,
+      limit: 128,
+    });
+
+    expect(response.type).toBe("discover-result");
+    if (response.type !== "discover-result") return;
+    expect(response.files.map((file) => file.relativePath)).toEqual([
+      `${relativeDirectory}/session.jsonl`,
+    ]);
+    expect(response.complete).toBe(true);
+  });
+
+  it.runIf(process.platform !== "win32")(
+    "reports an unreadable subtree as scoped partial discovery",
+    async () => {
+      const root = await makeRoot();
+      const denied = path.join(root, "denied");
+      await mkdir(denied);
+      await writeFile(path.join(denied, "session.jsonl"), "{}\n");
+      await chmod(denied, 0o000);
+      try {
+        const response = await handleUsageHistoryWorkerRequest({
+          type: "discover",
+          provider: "codex",
+          rootPath: root,
+          cursor: null,
+          limit: 128,
+        });
+        expect(response.type).toBe("discover-result");
+        if (response.type !== "discover-result") return;
+        expect(response.complete).toBe(true);
+        expect(response.issueCodes).toContain("discovery-permission-denied");
+      } finally {
+        await chmod(denied, 0o700);
+      }
+    },
+  );
 
   it("deduplicates cumulative Codex counters while preserving incremental token events", async () => {
     const root = await makeRoot();
@@ -168,6 +218,42 @@ describe("usage history indexer", () => {
     expect(result.events.reduce((sum, event) => sum + event.outputTokens, 0)).toBe(20);
   });
 
+  it("keeps the cumulative baseline aligned when Codex emits last and total usage together", async () => {
+    const root = await makeRoot();
+    const relativePath = "mixed-counters.jsonl";
+    const lines = [
+      { type: "session_meta", payload: { id: "s1", cwd: "/work/a", model: "gpt-5" } },
+      {
+        type: "event_msg",
+        timestamp: "2026-08-11T00:00:00Z",
+        payload: {
+          type: "token_count",
+          id: "i1",
+          info: {
+            last_token_usage: { input_tokens: 100, output_tokens: 10 },
+            total_token_usage: { input_tokens: 100, output_tokens: 10 },
+          },
+        },
+      },
+      {
+        type: "event_msg",
+        timestamp: "2026-08-11T00:01:00Z",
+        payload: {
+          type: "token_count",
+          info: { total_token_usage: { input_tokens: 150, output_tokens: 15 } },
+        },
+      },
+    ];
+    await writeFile(
+      path.join(root, relativePath),
+      `${lines.map((line) => JSON.stringify(line)).join("\n")}\n`,
+    );
+
+    const result = await parseCodex(root, await fileDescriptor(root, relativePath));
+    expect(result.events.reduce((sum, event) => sum + event.inputTokens, 0)).toBe(150);
+    expect(result.events.reduce((sum, event) => sum + event.outputTokens, 0)).toBe(15);
+  });
+
   it("leaves a half-written UTF-8 tail uncommitted and resumes from the last complete line", async () => {
     const root = await makeRoot();
     const relativePath = "tail.jsonl";
@@ -189,6 +275,42 @@ describe("usage history indexer", () => {
     const first = await parseCodex(root, await fileDescriptor(root, relativePath));
     expect(first.nextOffset).toBe(Buffer.byteLength(`${metadata}\n`));
     await writeFile(path.join(root, relativePath), `${metadata}\n${event}\n`);
+    const second = await parseCodex(
+      root,
+      await fileDescriptor(root, relativePath, first.nextOffset, first.parserState),
+    );
+    expect(second.events).toHaveLength(1);
+    expect(second.events[0]?.inputTokens).toBe(9);
+  });
+
+  it("never advances past a stale half-written tail", async () => {
+    const root = await makeRoot();
+    const relativePath = "stale-tail.jsonl";
+    const metadata = JSON.stringify({
+      type: "session_meta",
+      payload: { id: "s1", cwd: "/work/a", model: "gpt-5" },
+    });
+    const event = JSON.stringify({
+      type: "event_msg",
+      timestamp: "2026-08-11T00:00:00Z",
+      payload: {
+        type: "token_count",
+        id: "i1",
+        info: { last_token_usage: { input_tokens: 9, output_tokens: 1 } },
+      },
+    });
+    const split = Math.floor(event.length / 2);
+    const completePrefix = `${metadata}\n`;
+    const absolutePath = path.join(root, relativePath);
+    await writeFile(absolutePath, `${completePrefix}${event.slice(0, split)}`);
+    const stale = new Date(Date.now() - 60_000);
+    await utimes(absolutePath, stale, stale);
+
+    const first = await parseCodex(root, await fileDescriptor(root, relativePath));
+    expect(first.nextOffset).toBe(Buffer.byteLength(completePrefix));
+    expect(first.detailCode).toBe("incomplete-tail");
+
+    await writeFile(absolutePath, `${completePrefix}${event}\n`);
     const second = await parseCodex(
       root,
       await fileDescriptor(root, relativePath, first.nextOffset, first.parserState),

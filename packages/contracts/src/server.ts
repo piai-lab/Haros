@@ -179,6 +179,10 @@ export type UsageHistoryRange = typeof UsageHistoryRange.Type;
 export const UsageHistoryGroupBy = Schema.Literals(["provider", "model", "workspace", "date"]);
 export type UsageHistoryGroupBy = typeof UsageHistoryGroupBy.Type;
 
+// Language-neutral values cross the RPC boundary; the Web catalog owns their display copy.
+export const USAGE_HISTORY_UNKNOWN_MODEL = "__omnimind_usage_unknown_model__";
+export const USAGE_HISTORY_UNKNOWN_WORKSPACE = "__omnimind_usage_unknown_workspace__";
+
 export const UsageHistoryStatus = Schema.Literals([
   "not-authorized",
   "idle",

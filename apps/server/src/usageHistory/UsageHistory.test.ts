@@ -84,7 +84,7 @@ describe("UsageHistory", () => {
 
         yield* history.command({ action: "authorize" });
         const first = yield* Effect.promise(() => waitForSettled(history));
-        expect(first.status).toBe("ready");
+        expect(first.status, JSON.stringify(first)).toBe("ready");
         expect(first.rows).toHaveLength(1);
         expect(first.rows[0]?.inputTokens).toBe(100);
         expect(first.progress.bytesRead).toBe(initialBytes);
@@ -106,6 +106,45 @@ describe("UsageHistory", () => {
         expect(refreshed.rows[0]?.inputTokens).toBe(125);
         expect(refreshed.rows[0]?.outputTokens).toBe(15);
         expect(refreshed.progress.bytesRead).toBe(Buffer.byteLength(appended));
+      }).pipe(Effect.provide(layer), Effect.scoped),
+    );
+  });
+
+  it("keeps an unfinished tail as scoped partial data without a read loop", async () => {
+    const root = await mkdtemp(path.join(os.tmpdir(), "omnimind-usage-tail-"));
+    tempRoots.push(root);
+    const codexHome = path.join(root, ".codex");
+    const claudeHome = path.join(root, ".claude");
+    await mkdir(path.join(codexHome, "sessions"), { recursive: true });
+    await mkdir(path.join(claudeHome, "projects"), { recursive: true });
+    process.env.CLAUDE_CONFIG_DIR = claudeHome;
+    await writeFile(
+      path.join(codexHome, "sessions", "writing.jsonl"),
+      '{"type":"session_meta","payload":{"id":"session-tail","cwd":"/tmp/work"}}\n{"type":',
+    );
+
+    const layer = UsageHistoryLive.pipe(
+      Layer.provideMerge(SqlitePersistenceMemory),
+      Layer.provideMerge(
+        ServerSettingsService.layerTest({ providers: { codex: { homePath: codexHome } } }),
+      ),
+      Layer.provide(ServerConfig.layerTest(process.cwd(), { prefix: "omnimind-usage-tail-test-" })),
+      Layer.provide(NodeServices.layer),
+    );
+
+    await Effect.runPromise(
+      Effect.gen(function* () {
+        const history = yield* UsageHistory;
+        yield* history.command({ action: "authorize" });
+        const first = yield* Effect.promise(() => waitForSettled(history));
+        expect(first.status).toBe("partial");
+        expect(
+          first.providers.find((provider) => provider.provider === "codex")?.progress.skippedFiles,
+        ).toBe(1);
+        const bytesRead = first.progress.bytesRead;
+        yield* Effect.promise(() => new Promise((resolve) => setTimeout(resolve, 100)));
+        const unchanged = yield* history.get({ range: "all", groupBy: "model" });
+        expect(unchanged.progress.bytesRead).toBe(bytesRead);
       }).pipe(Effect.provide(layer), Effect.scoped),
     );
   });
@@ -142,6 +181,57 @@ describe("UsageHistory", () => {
         expect(settled.providers.every((provider) => provider.status === "paused")).toBe(true);
         expect(settled.rows).toEqual([]);
         expect(process.pid).toBeGreaterThan(0);
+      }).pipe(Effect.provide(layer), Effect.scoped),
+    );
+  });
+
+  it("fences an in-flight worker before clearing the derived index", async () => {
+    const root = await mkdtemp(path.join(os.tmpdir(), "omnimind-usage-clear-race-"));
+    tempRoots.push(root);
+    const codexHome = path.join(root, ".codex");
+    const claudeHome = path.join(root, ".claude");
+    await mkdir(path.join(codexHome, "sessions"), { recursive: true });
+    await mkdir(path.join(claudeHome, "projects"), { recursive: true });
+    process.env.CLAUDE_CONFIG_DIR = claudeHome;
+    const slowWorker = path.join(root, "slow-worker.mjs");
+    await writeFile(
+      slowWorker,
+      `let input = "";
+process.stdin.setEncoding("utf8");
+process.stdin.on("data", (chunk) => { input += chunk; });
+process.stdin.on("end", () => setTimeout(() => {
+  const request = JSON.parse(input);
+  process.stdout.write(JSON.stringify(request.type === "discover"
+    ? { type: "discover-result", rootAvailable: true, files: [], nextCursor: null, complete: true, issueCodes: [] }
+    : { type: "parse-result", files: [], bytesRead: 0, eventLimitReached: false }));
+}, 250));
+`,
+    );
+    process.env.OMNIMIND_USAGE_HISTORY_WORKER = slowWorker;
+
+    const layer = UsageHistoryLive.pipe(
+      Layer.provideMerge(SqlitePersistenceMemory),
+      Layer.provideMerge(
+        ServerSettingsService.layerTest({ providers: { codex: { homePath: codexHome } } }),
+      ),
+      Layer.provide(
+        ServerConfig.layerTest(process.cwd(), { prefix: "omnimind-usage-clear-race-test-" }),
+      ),
+      Layer.provide(NodeServices.layer),
+    );
+
+    await Effect.runPromise(
+      Effect.gen(function* () {
+        const history = yield* UsageHistory;
+        yield* history.command({ action: "authorize" });
+        yield* Effect.promise(() => new Promise((resolve) => setTimeout(resolve, 40)));
+        const cleared = yield* history.command({ action: "clear" });
+        expect(cleared.status).toBe("idle");
+        yield* Effect.promise(() => new Promise((resolve) => setTimeout(resolve, 350)));
+        const after = yield* history.get({ range: "all", groupBy: "provider" });
+        expect(after.status).toBe("idle");
+        expect(after.rows).toEqual([]);
+        expect(after.providers.every((provider) => provider.status === "pending")).toBe(true);
       }).pipe(Effect.provide(layer), Effect.scoped),
     );
   });

@@ -1,7 +1,7 @@
 // FILE: usageHistory/pricing.ts
 // Purpose: Versioned API-price estimates for normalized local usage events.
 
-export const USAGE_HISTORY_PRICING_VERSION = "official-api-prices-2026-08-11-v1";
+export const USAGE_HISTORY_PRICING_VERSION = "official-api-prices-2026-08-11-v2";
 
 interface TokenRatesPerMillion {
   readonly input: number;
@@ -49,8 +49,20 @@ const PRICING_RULES: ReadonlyArray<PricingRule> = [
     rates: { input: 1.25, cacheRead: 0.125, cacheWrite: 1.5625, output: 10 },
   },
   {
-    matches: (model) => /claude-(?:[^/]*-)?opus-4(?:\.|-|$)/u.test(model),
+    matches: (model) => /claude-(?:[^/]*-)?opus-(?:5|4[.-](?:5|6|7|8))(?:[./_-]|$)/u.test(model),
+    rates: { input: 5, cacheRead: 0.5, cacheWrite: 6.25, output: 25 },
+  },
+  {
+    matches: (model) => /claude-(?:[^/]*-)?opus-4(?:[.-]1)?(?:[./_-]|$)/u.test(model),
     rates: { input: 15, cacheRead: 1.5, cacheWrite: 18.75, output: 75 },
+  },
+  {
+    matches: (model) => /claude-(?:[^/]*-)?sonnet-5(?:[./_-]|$)/u.test(model),
+    rates: { input: 2, cacheRead: 0.2, cacheWrite: 2.5, output: 10 },
+  },
+  {
+    matches: (model) => /claude-(?:[^/]*-)?haiku-4[.-]5(?:[./_-]|$)/u.test(model),
+    rates: { input: 1, cacheRead: 0.1, cacheWrite: 1.25, output: 5 },
   },
   {
     matches: (model) => /claude-(?:[^/]*-)?sonnet-(?:4|3\.7)(?:\.|-|$)/u.test(model),

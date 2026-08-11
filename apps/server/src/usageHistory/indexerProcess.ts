@@ -22,8 +22,17 @@ import type {
 import { USAGE_HISTORY_MAX_LINE_BYTES, USAGE_HISTORY_READ_CHUNK_BYTES } from "./protocol.ts";
 
 const MAX_REQUEST_BYTES = 2 * 1024 * 1024;
-const MAX_DISCOVERY_DEPTH = 12;
-const STABLE_UNTERMINATED_LINE_AGE_MS = 5_000;
+
+interface DiscoveryCursorFrame {
+  readonly relativeDirectory: string;
+  afterEntry: string | null;
+}
+
+interface DiscoveryCursorState {
+  readonly version: 1;
+  readonly stack: DiscoveryCursorFrame[];
+  readonly legacyAfterPath?: string;
+}
 
 function asRecord(value: unknown): Record<string, unknown> | null {
   return value !== null && typeof value === "object" ? (value as Record<string, unknown>) : null;
@@ -67,64 +76,84 @@ async function resolveContainedFile(
   }
 }
 
-async function* walkJsonlFiles(
-  rootRealPath: string,
-  directoryPath: string,
-  relativeDirectory: string,
-  depth: number,
-): AsyncGenerator<UsageHistoryDiscoveredFile> {
-  if (depth > MAX_DISCOVERY_DEPTH) return;
+function discoveryIssueCode(error: unknown): string {
+  const code = (error as NodeJS.ErrnoException | null)?.code;
+  return code === "EACCES" || code === "EPERM"
+    ? "discovery-permission-denied"
+    : "discovery-read-failed";
+}
 
-  let entries: Dirent<string>[];
+function isSafeRelativeDirectory(value: unknown): value is string {
+  return (
+    typeof value === "string" &&
+    !nodePath.isAbsolute(value) &&
+    !value.split("/").some((segment) => segment === "..")
+  );
+}
+
+function decodeDiscoveryCursor(cursor: string | null): DiscoveryCursorState {
+  if (!cursor) {
+    return { version: 1, stack: [{ relativeDirectory: "", afterEntry: null }] };
+  }
   try {
-    entries = await fs.readdir(directoryPath, { withFileTypes: true });
-  } catch {
-    return;
-  }
-
-  entries.sort((left, right) => {
-    const leftKey = left.isDirectory() ? `${left.name}/` : left.name;
-    const rightKey = right.isDirectory() ? `${right.name}/` : right.name;
-    return leftKey < rightKey ? -1 : leftKey > rightKey ? 1 : 0;
-  });
-  for (const entry of entries) {
-    if (entry.isSymbolicLink()) continue;
-    const relativePath = relativeDirectory
-      ? nodePath.posix.join(relativeDirectory, entry.name)
-      : entry.name;
-    const absolutePath = nodePath.join(directoryPath, entry.name);
-
-    if (entry.isDirectory()) {
-      const realDirectory = await fs.realpath(absolutePath).catch(() => null);
-      if (!realDirectory || !pathIsInside(rootRealPath, realDirectory)) continue;
-      yield* walkJsonlFiles(rootRealPath, realDirectory, relativePath, depth + 1);
-      continue;
+    const decoded = JSON.parse(cursor) as Partial<DiscoveryCursorState>;
+    if (
+      decoded.version === 1 &&
+      Array.isArray(decoded.stack) &&
+      decoded.stack.length > 0 &&
+      decoded.stack.every(
+        (frame) =>
+          frame &&
+          isSafeRelativeDirectory(frame.relativeDirectory) &&
+          (frame.afterEntry === null || typeof frame.afterEntry === "string"),
+      )
+    ) {
+      return {
+        version: 1,
+        stack: decoded.stack.map((frame) => ({
+          relativeDirectory: frame.relativeDirectory,
+          afterEntry: frame.afterEntry,
+        })),
+      };
     }
-
-    if (!entry.isFile() || !entry.name.endsWith(".jsonl")) continue;
-    const contained = await resolveContainedFile(rootRealPath, relativePath);
-    if (!contained) continue;
-    yield {
-      relativePath,
-      deviceId: String(contained.stats.dev),
-      inodeId: String(contained.stats.ino),
-      sizeBytes: Math.max(0, Number(contained.stats.size)),
-      mtimeMs: Math.max(0, Math.trunc(Number(contained.stats.mtimeMs))),
-    };
+  } catch {
+    // A cursor written by the first release was the last relative file path.
+    // Resume it once without creating a second durable cursor format.
   }
+  return {
+    version: 1,
+    stack: [{ relativeDirectory: "", afterEntry: null }],
+    legacyAfterPath: cursor,
+  };
+}
+
+function encodeDiscoveryCursor(state: DiscoveryCursorState): string {
+  return JSON.stringify({ version: 1, stack: state.stack });
+}
+
+function entrySortKey(entry: Dirent<string>): string {
+  return entry.isDirectory() ? `${entry.name}/` : entry.name;
 }
 
 async function discover(
   request: UsageHistoryDiscoverRequest,
 ): Promise<UsageHistoryDiscoverResponse> {
-  const rootRealPath = await fs.realpath(request.rootPath).catch(() => null);
+  const issueCodes = new Set<string>();
+  let rootError: unknown = null;
+  const rootRealPath = await fs.realpath(request.rootPath).catch((error) => {
+    rootError = error;
+    return null;
+  });
   if (!rootRealPath) {
+    const code = (rootError as NodeJS.ErrnoException | null)?.code;
+    if (code !== "ENOENT" && code !== "ENOTDIR") issueCodes.add(discoveryIssueCode(rootError));
     return {
       type: "discover-result",
       rootAvailable: false,
       files: [],
       nextCursor: null,
       complete: true,
+      issueCodes: [...issueCodes],
     };
   }
 
@@ -136,26 +165,99 @@ async function discover(
       files: [],
       nextCursor: null,
       complete: true,
+      issueCodes: ["discovery-read-failed"],
     };
   }
 
+  const cursor = decodeDiscoveryCursor(request.cursor);
   const files: UsageHistoryDiscoveredFile[] = [];
-  let moreAvailable = false;
-  for await (const file of walkJsonlFiles(rootRealPath, rootRealPath, "", 0)) {
-    if (request.cursor && file.relativePath <= request.cursor) continue;
-    if (files.length >= request.limit) {
-      moreAvailable = true;
-      break;
+  const limit = Math.max(1, Math.min(request.limit, 1_024));
+  while (cursor.stack.length > 0) {
+    const frame = cursor.stack.at(-1)!;
+    const directoryPath = nodePath.resolve(rootRealPath, frame.relativeDirectory);
+    if (!pathIsInside(rootRealPath, directoryPath)) {
+      issueCodes.add("discovery-path-rejected");
+      cursor.stack.pop();
+      continue;
     }
-    files.push(file);
+
+    let entries: Dirent<string>[];
+    try {
+      entries = await fs.readdir(directoryPath, { withFileTypes: true });
+    } catch (error) {
+      issueCodes.add(discoveryIssueCode(error));
+      cursor.stack.pop();
+      continue;
+    }
+    entries.sort((left, right) => {
+      const leftKey = entrySortKey(left);
+      const rightKey = entrySortKey(right);
+      return leftKey < rightKey ? -1 : leftKey > rightKey ? 1 : 0;
+    });
+
+    let descended = false;
+    for (const entry of entries) {
+      const sortKey = entrySortKey(entry);
+      if (frame.afterEntry && sortKey <= frame.afterEntry) continue;
+      frame.afterEntry = sortKey;
+      if (entry.isSymbolicLink()) continue;
+
+      const relativePath = frame.relativeDirectory
+        ? nodePath.posix.join(frame.relativeDirectory, entry.name)
+        : entry.name;
+      const absolutePath = nodePath.join(directoryPath, entry.name);
+      if (entry.isDirectory()) {
+        let realDirectory: string | null = null;
+        try {
+          realDirectory = await fs.realpath(absolutePath);
+        } catch (error) {
+          issueCodes.add(discoveryIssueCode(error));
+        }
+        if (!realDirectory || !pathIsInside(rootRealPath, realDirectory)) {
+          if (realDirectory) issueCodes.add("discovery-path-rejected");
+          continue;
+        }
+        cursor.stack.push({ relativeDirectory: relativePath, afterEntry: null });
+        descended = true;
+        break;
+      }
+
+      if (!entry.isFile() || !entry.name.endsWith(".jsonl")) continue;
+      if (cursor.legacyAfterPath && relativePath <= cursor.legacyAfterPath) continue;
+      const contained = await resolveContainedFile(rootRealPath, relativePath);
+      if (!contained) {
+        issueCodes.add("discovery-file-unavailable");
+        continue;
+      }
+      files.push({
+        relativePath,
+        deviceId: String(contained.stats.dev),
+        inodeId: String(contained.stats.ino),
+        sizeBytes: Math.max(0, Number(contained.stats.size)),
+        mtimeMs: Math.max(0, Math.trunc(Number(contained.stats.mtimeMs))),
+      });
+      if (files.length >= limit) {
+        return {
+          type: "discover-result",
+          rootAvailable: true,
+          files,
+          nextCursor: encodeDiscoveryCursor(cursor),
+          complete: false,
+          issueCodes: [...issueCodes],
+        };
+      }
+    }
+    if (descended) continue;
+    cursor.stack.pop();
   }
 
   return {
     type: "discover-result",
     rootAvailable: true,
     files,
-    nextCursor: files.at(-1)?.relativePath ?? request.cursor,
-    complete: !moreAvailable,
+    nextCursor: null,
+    complete: true,
+    issueCodes: [...issueCodes],
   };
 }
 
@@ -171,12 +273,13 @@ function workspaceFromPath(
   provider: UsageHistoryParseRequest["provider"],
   salt: string,
   rawPath: string,
+  unknownWorkspace: string,
 ): { readonly key: string; readonly label: string } {
   const normalized = nodePath.resolve(rawPath);
   const basename = nodePath.basename(normalized).trim();
   return {
     key: hmac(salt, `${provider}:workspace:${normalized}`),
-    label: basename || "Workspace",
+    label: basename || unknownWorkspace,
   };
 }
 
@@ -256,6 +359,8 @@ function normalizedEvent(input: {
   timestamp: string;
   state: MutableParserState;
   tokens: TokenFields;
+  unknownModel: string;
+  unknownWorkspace: string;
 }): UsageHistoryParsedEvent | null {
   if (!hasTokens(input.tokens)) return null;
   const session = input.state.sessionKey;
@@ -264,10 +369,10 @@ function normalizedEvent(input: {
     eventKey: hmac(input.salt, `${input.provider}:event:${semanticHash(input.stableIdentity)}`),
     occurredAt: input.timestamp,
     sessionKey: session,
-    model: input.state.model ?? "Unknown model",
+    model: input.state.model ?? input.unknownModel,
     workspaceKey:
       input.state.workspaceKey ?? hmac(input.salt, `${input.provider}:workspace:unknown`),
-    workspaceLabel: input.state.workspaceLabel ?? "Unknown workspace",
+    workspaceLabel: input.state.workspaceLabel ?? input.unknownWorkspace,
     ...input.tokens,
   };
 }
@@ -276,6 +381,8 @@ function parseCodexLine(input: {
   readonly record: Record<string, unknown>;
   readonly state: MutableParserState;
   readonly salt: string;
+  readonly unknownModel: string;
+  readonly unknownWorkspace: string;
 }): UsageHistoryParsedEvent | null {
   const payload = asRecord(input.record.payload);
   if (input.record.type === "session_meta") {
@@ -283,7 +390,7 @@ function parseCodexLine(input: {
     if (rawSession) input.state.sessionKey = sessionKey("codex", input.salt, rawSession);
     const cwd = nonEmptyString(payload?.cwd ?? input.record.cwd);
     if (cwd) {
-      const workspace = workspaceFromPath("codex", input.salt, cwd);
+      const workspace = workspaceFromPath("codex", input.salt, cwd, input.unknownWorkspace);
       input.state.workspaceKey = workspace.key;
       input.state.workspaceLabel = workspace.label;
     }
@@ -294,7 +401,7 @@ function parseCodexLine(input: {
   if (input.record.type === "turn_context") {
     const cwd = nonEmptyString(payload?.cwd ?? input.record.cwd);
     if (cwd) {
-      const workspace = workspaceFromPath("codex", input.salt, cwd);
+      const workspace = workspaceFromPath("codex", input.salt, cwd, input.unknownWorkspace);
       input.state.workspaceKey = workspace.key;
       input.state.workspaceLabel = workspace.label;
     }
@@ -322,6 +429,7 @@ function parseCodexLine(input: {
   if (!input.state.sessionKey) return null;
 
   const currentTokens = readTokenFields(usage, "codex");
+  const cumulativeTokens = cumulativeUsage ? readTokenFields(cumulativeUsage, "codex") : null;
   const tokens = incrementalUsage
     ? currentTokens
     : {
@@ -342,11 +450,16 @@ function parseCodexLine(input: {
             ? currentTokens.cacheWriteTokens - input.state.cumulativeCacheWriteTokens
             : currentTokens.cacheWriteTokens,
       };
-  if (!incrementalUsage) {
-    input.state.cumulativeInputTokens = currentTokens.inputTokens;
-    input.state.cumulativeOutputTokens = currentTokens.outputTokens;
-    input.state.cumulativeCacheReadTokens = currentTokens.cacheReadTokens;
-    input.state.cumulativeCacheWriteTokens = currentTokens.cacheWriteTokens;
+  if (cumulativeTokens) {
+    input.state.cumulativeInputTokens = cumulativeTokens.inputTokens;
+    input.state.cumulativeOutputTokens = cumulativeTokens.outputTokens;
+    input.state.cumulativeCacheReadTokens = cumulativeTokens.cacheReadTokens;
+    input.state.cumulativeCacheWriteTokens = cumulativeTokens.cacheWriteTokens;
+  } else if (incrementalUsage) {
+    input.state.cumulativeInputTokens += currentTokens.inputTokens;
+    input.state.cumulativeOutputTokens += currentTokens.outputTokens;
+    input.state.cumulativeCacheReadTokens += currentTokens.cacheReadTokens;
+    input.state.cumulativeCacheWriteTokens += currentTokens.cacheWriteTokens;
   }
   const stableIdentity = {
     session: input.state.sessionKey,
@@ -362,6 +475,8 @@ function parseCodexLine(input: {
     timestamp,
     state: input.state,
     tokens,
+    unknownModel: input.unknownModel,
+    unknownWorkspace: input.unknownWorkspace,
   });
 }
 
@@ -369,12 +484,14 @@ function parseClaudeLine(input: {
   readonly record: Record<string, unknown>;
   readonly state: MutableParserState;
   readonly salt: string;
+  readonly unknownModel: string;
+  readonly unknownWorkspace: string;
 }): UsageHistoryParsedEvent | null {
   const rawSession = nonEmptyString(input.record.sessionId ?? input.record.session_id);
   if (rawSession) input.state.sessionKey = sessionKey("claudeAgent", input.salt, rawSession);
   const cwd = nonEmptyString(input.record.cwd);
   if (cwd) {
-    const workspace = workspaceFromPath("claudeAgent", input.salt, cwd);
+    const workspace = workspaceFromPath("claudeAgent", input.salt, cwd, input.unknownWorkspace);
     input.state.workspaceKey = workspace.key;
     input.state.workspaceLabel = workspace.label;
   }
@@ -397,6 +514,8 @@ function parseClaudeLine(input: {
       timestamp,
       state: input.state,
       tokens: readTokenFields(usage, "claudeAgent"),
+      unknownModel: input.unknownModel,
+      unknownWorkspace: input.unknownWorkspace,
     });
   }
 
@@ -413,6 +532,8 @@ function parseClaudeLine(input: {
     timestamp,
     state: input.state,
     tokens: readTokenFields(usage, "claudeAgent"),
+    unknownModel: input.unknownModel,
+    unknownWorkspace: input.unknownWorkspace,
   });
 }
 
@@ -492,28 +613,41 @@ async function parseFile(
   let oversizedLines = discardingOversizedLine ? 1 : 0;
   let stopped = false;
 
-  const processLine = (lineBuffer: Buffer): void => {
+  const processLine = (lineBuffer: Buffer): boolean => {
     const line = lineBuffer.toString("utf8").replace(/\r$/u, "").trim();
-    if (!line) return;
+    if (!line) return true;
     let parsed: unknown;
     try {
       parsed = JSON.parse(line);
     } catch {
       badLines += 1;
-      return;
+      return false;
     }
     const record = asRecord(parsed);
     if (!record) {
       badLines += 1;
-      return;
+      return false;
     }
     const event =
       request.provider === "codex"
-        ? parseCodexLine({ record, state: initialState, salt: request.workspaceHashSalt })
-        : parseClaudeLine({ record, state: initialState, salt: request.workspaceHashSalt });
-    if (!event) return;
+        ? parseCodexLine({
+            record,
+            state: initialState,
+            salt: request.workspaceHashSalt,
+            unknownModel: request.unknownModel,
+            unknownWorkspace: request.unknownWorkspace,
+          })
+        : parseClaudeLine({
+            record,
+            state: initialState,
+            salt: request.workspaceHashSalt,
+            unknownModel: request.unknownModel,
+            unknownWorkspace: request.unknownWorkspace,
+          });
+    if (!event) return true;
     eventMap.set(event.eventKey, event);
     budget.eventsRemaining -= 1;
+    return true;
   };
 
   try {
@@ -583,25 +717,24 @@ async function parseFile(
     }
 
     const atEof = readPosition >= Number(contained.stats.size);
-    const stableUnterminatedTail =
-      atEof &&
-      !discardingOversizedLine &&
-      lineBytes > 0 &&
-      Date.now() - Number(contained.stats.mtimeMs) >= STABLE_UNTERMINATED_LINE_AGE_MS &&
-      budget.eventsRemaining > 0;
-    if (stableUnterminatedTail) {
-      processLine(Buffer.concat(lineParts, lineBytes));
-      checkpointOffset = Number(contained.stats.size);
-      lineParts.length = 0;
-      lineBytes = 0;
+    let incompleteTail = false;
+    if (atEof && !discardingOversizedLine && lineBytes > 0 && budget.eventsRemaining > 0) {
+      if (processLine(Buffer.concat(lineParts, lineBytes))) {
+        checkpointOffset = Number(contained.stats.size);
+        lineParts.length = 0;
+        lineBytes = 0;
+      } else {
+        incompleteTail = true;
+      }
     }
     if (atEof && discardingOversizedLine) {
       checkpointOffset = Number(contained.stats.size);
     }
 
     const complete = checkpointOffset >= Number(contained.stats.size);
-    const detailCode =
-      oversizedLines > 0
+    const detailCode = incompleteTail
+      ? "incomplete-tail"
+      : oversizedLines > 0
         ? "oversized-line-skipped"
         : badLines > 0
           ? "malformed-line-skipped"

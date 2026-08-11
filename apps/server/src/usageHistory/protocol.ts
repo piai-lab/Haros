@@ -3,7 +3,7 @@
 
 import type { UsageHistoryProvider } from "@omnimind/contracts";
 
-export const USAGE_HISTORY_PARSER_VERSION = 1;
+export const USAGE_HISTORY_PARSER_VERSION = 2;
 export const USAGE_HISTORY_DISCOVERY_BATCH_FILES = 128;
 export const USAGE_HISTORY_PARSE_BATCH_FILES = 4;
 export const USAGE_HISTORY_PARSE_BATCH_BYTES = 8 * 1024 * 1024;
@@ -34,6 +34,7 @@ export interface UsageHistoryDiscoverResponse {
   readonly files: ReadonlyArray<UsageHistoryDiscoveredFile>;
   readonly nextCursor: string | null;
   readonly complete: boolean;
+  readonly issueCodes: ReadonlyArray<string>;
 }
 
 export interface UsageHistoryParserState {
@@ -65,6 +66,8 @@ export interface UsageHistoryParseRequest {
   readonly rootPath: string;
   readonly files: ReadonlyArray<UsageHistoryParseFile>;
   readonly workspaceHashSalt: string;
+  readonly unknownModel: string;
+  readonly unknownWorkspace: string;
   readonly maxBatchBytes: number;
   readonly maxFileBytes: number;
   readonly maxEvents: number;

@@ -6,9 +6,12 @@
 import type {
   ProviderKind,
   ServerProviderUsageSnapshot,
+  UsageHistoryRow,
   UsageHistoryGroupBy,
   UsageHistoryRange,
 } from "@omnimind/contracts";
+import { USAGE_HISTORY_UNKNOWN_MODEL, USAGE_HISTORY_UNKNOWN_WORKSPACE } from "@omnimind/contracts";
+import { formatBytes } from "@omnimind/shared/formatBytes";
 import { PROVIDER_USAGE_PROVIDERS, providerUsageDisplayName } from "@omnimind/shared/providerUsage";
 import { useState } from "react";
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
@@ -183,7 +186,7 @@ function formatEstimatedCost(micros: number | undefined): string {
   }).format(micros / 1_000_000);
 }
 
-function historyStatusKey(status: string): MessageKey {
+export function historyStatusKey(status: string): MessageKey {
   switch (status) {
     case "not-authorized":
       return "settings.usageHistoryNotAuthorized";
@@ -195,12 +198,35 @@ function historyStatusKey(status: string): MessageKey {
       return "settings.usageHistoryPaused";
     case "stale":
       return "settings.usageHistoryStale";
+    case "idle":
+      return "settings.usageHistoryIdle";
     default:
       return "settings.usageHistoryReady";
   }
 }
 
-function UsageHistorySection() {
+function formatUsageHistoryDate(value: string | undefined): string | null {
+  if (!value) return null;
+  const date = new Date(value);
+  if (!Number.isFinite(date.getTime())) return null;
+  return new Intl.DateTimeFormat(undefined, {
+    dateStyle: "medium",
+    timeStyle: "short",
+  }).format(date);
+}
+
+export function usageHistoryDimensionLabel(
+  row: UsageHistoryRow,
+  t: (key: MessageKey) => string,
+): string {
+  if (row.provider) return providerUsageDisplayName(row.provider);
+  if (row.model === USAGE_HISTORY_UNKNOWN_MODEL) return t("settings.usageHistoryUnknownModel");
+  if (row.workspace === USAGE_HISTORY_UNKNOWN_WORKSPACE)
+    return t("settings.usageHistoryUnknownWorkspace");
+  return row.model ?? row.workspace ?? row.date ?? row.key;
+}
+
+export function UsageHistorySection() {
   const { t } = useI18n();
   const [range, setRange] = useState<UsageHistoryRange>("30d");
   const [groupBy, setGroupBy] = useState<UsageHistoryGroupBy>("provider");
@@ -209,8 +235,9 @@ function UsageHistorySection() {
   );
   const { query, command } = useUsageHistory({ range, groupBy });
   const history = query.data;
-  const isAuthorized = history?.status !== "not-authorized";
+  const isAuthorized = Boolean(history && history.status !== "not-authorized");
   const isBusy = command.isPending || history?.status === "indexing";
+  const lastUpdated = formatUsageHistoryDate(history?.lastCompletedAt ?? history?.updatedAt);
 
   return (
     <SettingsSectionShell
@@ -218,7 +245,7 @@ function UsageHistorySection() {
       action={
         isAuthorized ? (
           <div className="flex items-center gap-1.5">
-            {history?.status === "paused" ? (
+            {history?.status === "paused" || history?.status === "idle" ? (
               <Button
                 size="xs"
                 variant="outline"
@@ -252,7 +279,21 @@ function UsageHistorySection() {
     >
       <SettingsCard divided={false}>
         <div className="space-y-4 p-4">
-          {query.isPending && !history ? (
+          {query.isError && !history ? (
+            <div className="flex flex-col items-start gap-3">
+              <div className="space-y-1">
+                <p className="text-sm font-medium text-foreground">
+                  {t("settings.usageHistoryLoadFailed")}
+                </p>
+                <p className="max-w-2xl text-xs leading-relaxed text-muted-foreground">
+                  {t("settings.usageHistoryScopeNote")}
+                </p>
+              </div>
+              <Button size="sm" variant="outline" onClick={() => void query.refetch()}>
+                {t("common.tryAgain")}
+              </Button>
+            </div>
+          ) : query.isPending && !history ? (
             <p className="text-xs text-muted-foreground">{t("settings.loadingUsageHistory")}</p>
           ) : !isAuthorized ? (
             <div className="flex flex-col items-start gap-3">
@@ -280,9 +321,18 @@ function UsageHistorySection() {
                       ? t("settings.usageHistoryProgress", {
                           indexed: history.progress.filesIndexed,
                           discovered: history.progress.filesDiscovered,
+                          read: formatBytes(history.progress.bytesRead),
+                          bytes: formatBytes(history.progress.bytesDiscovered),
                         })
-                      : t("settings.usageHistoryScopeNote")}
+                      : history?.status === "idle"
+                        ? t("settings.usageHistoryIdleDetail")
+                        : t("settings.usageHistoryScopeNote")}
                   </p>
+                  {lastUpdated ? (
+                    <p className="text-[11px] text-muted-foreground">
+                      {t("settings.usageHistoryLastUpdated", { time: lastUpdated })}
+                    </p>
+                  ) : null}
                 </div>
                 <div className="flex flex-wrap gap-1">
                   {HISTORY_RANGES.map((item) => (
@@ -317,9 +367,13 @@ function UsageHistorySection() {
                               ? t("settings.usageHistoryFilesSkipped", {
                                   count: provider.progress.skippedFiles,
                                 })
-                              : provider.status === "indexing"
-                                ? t("settings.usageHistoryProviderIndexing")
-                                : t("settings.usageHistoryProviderReady")}
+                              : provider.status === "partial" || provider.detailCode
+                                ? t("settings.usageHistoryProviderPartial")
+                                : provider.status === "indexing"
+                                  ? t("settings.usageHistoryProviderIndexing")
+                                  : provider.status === "pending"
+                                    ? t("settings.usageHistoryProviderPending")
+                                    : t("settings.usageHistoryProviderReady")}
                       </span>
                     </div>
                   ))}
@@ -368,7 +422,7 @@ function UsageHistorySection() {
                       {history.rows.map((row) => (
                         <tr key={row.key}>
                           <td className="max-w-56 truncate px-3 py-2.5 font-medium text-foreground">
-                            {row.provider ?? row.model ?? row.workspace ?? row.date ?? row.key}
+                            {usageHistoryDimensionLabel(row, (key) => t(key))}
                           </td>
                           <td className="px-3 py-2.5 text-right tabular-nums">
                             {formatNumber(row.sessionCount)}
@@ -419,6 +473,11 @@ function UsageHistorySection() {
                   </Button>
                 </div>
               </div>
+              {command.isError ? (
+                <p className="text-xs leading-relaxed text-red-600 dark:text-red-400">
+                  {t("settings.usageHistoryCommandFailed")}
+                </p>
+              ) : null}
             </>
           )}
         </div>

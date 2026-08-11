@@ -285,7 +285,11 @@ export function serverUsageHistoryQueryOptions(input: ServerGetUsageHistoryInput
       const api = ensureNativeApi();
       return api.server.getUsageHistory({ range, groupBy });
     },
-    refetchInterval: (query) => (query.state.data?.status === "indexing" ? 1_500 : false),
+    refetchInterval: (query) => {
+      const status = query.state.data?.status;
+      if (status === "indexing") return 2_000;
+      return status === "ready" || status === "partial" || status === "stale" ? 15_000 : false;
+    },
   });
 }
 

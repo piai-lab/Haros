@@ -18,6 +18,7 @@ import type {
   UsageHistoryProgress,
   UsageHistoryRow,
 } from "@omnimind/contracts";
+import { USAGE_HISTORY_UNKNOWN_MODEL, USAGE_HISTORY_UNKNOWN_WORKSPACE } from "@omnimind/contracts";
 import { Effect, Exit, Layer, ServiceMap } from "effect";
 import * as SqlClient from "effect/unstable/sql/SqlClient";
 
@@ -145,8 +146,16 @@ function runWorker(
   return new Promise((resolve, reject) => {
     const entry = workerEntryPath();
     const args = process.versions.bun ? [entry] : ["--max-old-space-size=96", entry];
+    const childEnvironment = Object.fromEntries(
+      ["LANG", "LC_ALL", "LC_CTYPE", "TZ", "TMPDIR"].flatMap((key) => {
+        const value = process.env[key];
+        return value ? [[key, value]] : [];
+      }),
+    );
     const child = spawn(process.execPath, args, {
-      env: { ...process.env, ELECTRON_RUN_AS_NODE: "1" },
+      env: process.versions.bun
+        ? childEnvironment
+        : { ...childEnvironment, ELECTRON_RUN_AS_NODE: "1" },
       stdio: ["pipe", "pipe", "pipe"],
     });
     onSpawn(child);
@@ -310,7 +319,12 @@ const makeUsageHistory = Effect.gen(function* () {
         Effect.runFork(
           Effect.gen(function* () {
             const control = yield* readControl();
-            if (control.consentState !== "authorized") return;
+            if (
+              control.consentState !== "authorized" ||
+              control.status === "paused" ||
+              control.status === "idle"
+            )
+              return;
             yield* sql`
               UPDATE usage_history_provider_state SET status = 'pending', discovery_cursor = NULL,
                 discovery_generation = discovery_generation + 1, discovery_complete = 0,
@@ -403,10 +417,16 @@ const makeUsageHistory = Effect.gen(function* () {
         yield* sql`
           UPDATE usage_history_control SET status = 'indexing', updated_at = ${new Date().toISOString()}
           WHERE singleton_id = 1 AND consent_state = 'authorized'
+            AND status NOT IN ('paused', 'idle')
         `;
       }),
     );
   }
+
+  const persistedControl = yield* readControl();
+  pauseRequested =
+    persistedControl.consentState === "authorized" &&
+    (persistedControl.status === "paused" || persistedControl.status === "idle");
 
   const discoverBatch = (provider: UsageHistoryProvider, rootPath: string, state: ProviderRow) =>
     Effect.gen(function* () {
@@ -427,12 +447,18 @@ const makeUsageHistory = Effect.gen(function* () {
       if (response.type === "failure") throw new Error(response.code);
       if (response.type !== "discover-result") throw new Error("worker-response-kind");
       const result: UsageHistoryDiscoverResponse = response;
+      const currentGeneration = yield* sql<{ readonly discoveryGeneration: number }>`
+        SELECT discovery_generation AS "discoveryGeneration"
+        FROM usage_history_provider_state WHERE provider = ${provider}
+      `;
+      if (Number(currentGeneration[0]?.discoveryGeneration) !== state.discoveryGeneration) return;
+      const discoveryIssue = result.issueCodes[0] ?? null;
       if (!result.rootAvailable) {
         yield* sql`
           UPDATE usage_history_provider_state
-          SET status = 'unsupported', discovery_complete = 1,
-              discovery_cursor = NULL, detail_code = 'archive-unavailable'
-          WHERE provider = ${provider}
+          SET status = ${discoveryIssue ? "partial" : "unsupported"}, discovery_complete = 1,
+              discovery_cursor = NULL, detail_code = ${discoveryIssue ?? "archive-unavailable"}
+          WHERE provider = ${provider} AND discovery_generation = ${state.discoveryGeneration}
         `;
         return;
       }
@@ -496,10 +522,10 @@ const makeUsageHistory = Effect.gen(function* () {
           discovery_complete = ${result.complete ? 1 : 0},
           files_discovered = files_discovered + ${result.files.length},
           bytes_discovered = bytes_discovered + ${result.files.reduce((sum, file) => sum + file.sizeBytes, 0)},
-          detail_code = NULL
-        WHERE provider = ${provider}
+          detail_code = COALESCE(detail_code, ${discoveryIssue})
+        WHERE provider = ${provider} AND discovery_generation = ${state.discoveryGeneration}
       `;
-      if (result.complete) {
+      if (result.complete && result.issueCodes.length === 0) {
         const missing = yield* sql<{ readonly fileId: number }>`
           SELECT file_id AS "fileId" FROM usage_history_files
           WHERE provider = ${provider} AND last_seen_generation < ${state.discoveryGeneration}
@@ -512,7 +538,12 @@ const makeUsageHistory = Effect.gen(function* () {
       }
     });
 
-  const parseBatch = (provider: UsageHistoryProvider, rootPath: string, salt: string) =>
+  const parseBatch = (
+    provider: UsageHistoryProvider,
+    rootPath: string,
+    salt: string,
+    expectedGeneration: number,
+  ) =>
     Effect.gen(function* () {
       const rows = yield* sql<FileRow>`
         SELECT file_id AS "fileId", relative_path AS "relativePath", device_id AS "deviceId",
@@ -558,6 +589,8 @@ const makeUsageHistory = Effect.gen(function* () {
             rootPath,
             files,
             workspaceHashSalt: salt,
+            unknownModel: USAGE_HISTORY_UNKNOWN_MODEL,
+            unknownWorkspace: USAGE_HISTORY_UNKNOWN_WORKSPACE,
             maxBatchBytes: USAGE_HISTORY_PARSE_BATCH_BYTES,
             maxFileBytes: USAGE_HISTORY_PARSE_FILE_BYTES,
             maxEvents: USAGE_HISTORY_PARSE_MAX_EVENTS,
@@ -571,8 +604,14 @@ const makeUsageHistory = Effect.gen(function* () {
       if (response.type === "failure") throw new Error(response.code);
       if (response.type !== "parse-result") throw new Error("worker-response-kind");
       const result: UsageHistoryParseResponse = response;
-      yield* sql.withTransaction(
+      const committed = yield* sql.withTransaction(
         Effect.gen(function* () {
+          const currentGeneration = yield* sql<{ readonly discoveryGeneration: number }>`
+            SELECT discovery_generation AS "discoveryGeneration"
+            FROM usage_history_provider_state WHERE provider = ${provider}
+          `;
+          if (Number(currentGeneration[0]?.discoveryGeneration) !== expectedGeneration)
+            return false;
           for (const file of result.files) {
             if (file.detailCode === "identity-changed") {
               yield* sql`DELETE FROM usage_history_event_sources WHERE file_id = ${file.fileId}`;
@@ -595,17 +634,30 @@ const makeUsageHistory = Effect.gen(function* () {
               `;
               continue;
             }
-            for (const event of file.events) {
+            if (file.events.length > 0) {
+              const eventBatch = JSON.stringify(file.events);
               yield* sql`
                 INSERT INTO usage_history_events (
                   provider, event_key, occurred_at, occurred_on, session_key, model,
                   workspace_key, workspace_label, input_tokens, output_tokens,
                   cache_read_tokens, cache_write_tokens
-                ) VALUES (
-                  ${provider}, ${event.eventKey}, ${event.occurredAt}, ${event.occurredAt.slice(0, 10)},
-                  ${event.sessionKey}, ${event.model}, ${event.workspaceKey}, ${event.workspaceLabel},
-                  ${event.inputTokens}, ${event.outputTokens}, ${event.cacheReadTokens}, ${event.cacheWriteTokens}
-                ) ON CONFLICT (provider, event_key) DO UPDATE SET
+                )
+                SELECT
+                  ${provider},
+                  CAST(json_extract(item.value, '$.eventKey') AS TEXT),
+                  CAST(json_extract(item.value, '$.occurredAt') AS TEXT),
+                  substr(CAST(json_extract(item.value, '$.occurredAt') AS TEXT), 1, 10),
+                  CAST(json_extract(item.value, '$.sessionKey') AS TEXT),
+                  CAST(json_extract(item.value, '$.model') AS TEXT),
+                  CAST(json_extract(item.value, '$.workspaceKey') AS TEXT),
+                  CAST(json_extract(item.value, '$.workspaceLabel') AS TEXT),
+                  CAST(json_extract(item.value, '$.inputTokens') AS INTEGER),
+                  CAST(json_extract(item.value, '$.outputTokens') AS INTEGER),
+                  CAST(json_extract(item.value, '$.cacheReadTokens') AS INTEGER),
+                  CAST(json_extract(item.value, '$.cacheWriteTokens') AS INTEGER)
+                FROM json_each(${eventBatch}) AS item
+                WHERE 1
+                ON CONFLICT (provider, event_key) DO UPDATE SET
                   occurred_at = excluded.occurred_at, occurred_on = excluded.occurred_on,
                   session_key = excluded.session_key, model = excluded.model,
                   workspace_key = excluded.workspace_key, workspace_label = excluded.workspace_label,
@@ -615,7 +667,9 @@ const makeUsageHistory = Effect.gen(function* () {
               `;
               yield* sql`
                 INSERT OR IGNORE INTO usage_history_event_sources (file_id, provider, event_key)
-                VALUES (${file.fileId}, ${provider}, ${event.eventKey})
+                SELECT ${file.fileId}, ${provider},
+                  CAST(json_extract(item.value, '$.eventKey') AS TEXT)
+                FROM json_each(${eventBatch}) AS item
               `;
             }
             const complete =
@@ -623,6 +677,12 @@ const makeUsageHistory = Effect.gen(function* () {
               file.nextOffset >=
                 (files.find((item) => item.fileId === file.fileId)?.sizeBytes ?? 0);
             const detailCode = file.detailCode === "checkpointed" ? null : file.detailCode;
+            const shouldWaitForMoreBytes =
+              !complete &&
+              detailCode !== "permission-denied" &&
+              detailCode !== "file-unavailable" &&
+              detailCode !== "read-failed" &&
+              detailCode !== "incomplete-tail";
             yield* sql`
               UPDATE usage_history_files SET
                 indexed_offset = ${file.nextOffset},
@@ -636,9 +696,7 @@ const makeUsageHistory = Effect.gen(function* () {
                 cumulative_cache_read_tokens = ${file.parserState.cumulativeCacheReadTokens},
                 cumulative_cache_write_tokens = ${file.parserState.cumulativeCacheWriteTokens},
                 state = CASE
-                  WHEN ${complete ? 1 : 0} = 0
-                    AND ${detailCode === "permission-denied" || detailCode === "file-unavailable" || detailCode === "read-failed" ? 1 : 0} = 0
-                  THEN 'pending'
+                  WHEN ${shouldWaitForMoreBytes ? 1 : 0} = 1 THEN 'pending'
                   WHEN ${detailCode} IS NOT NULL OR usage_history_files.detail_code IS NOT NULL
                   THEN 'partial'
                   WHEN ${complete ? 1 : 0} = 1 THEN 'indexed'
@@ -655,11 +713,12 @@ const makeUsageHistory = Effect.gen(function* () {
                 WHERE provider = ${provider} AND state = 'indexed'),
               skipped_files = (SELECT COUNT(*) FROM usage_history_files
                 WHERE provider = ${provider} AND state IN ('partial', 'skipped'))
-            WHERE provider = ${provider}
+            WHERE provider = ${provider} AND discovery_generation = ${expectedGeneration}
           `;
+          return true;
         }),
       );
-      return true;
+      return committed;
     });
 
   const runIndex = Effect.gen(function* () {
@@ -673,13 +732,20 @@ const makeUsageHistory = Effect.gen(function* () {
         UPDATE usage_history_control SET status = 'indexing', updated_at = ${new Date().toISOString()}
         WHERE singleton_id = 1 AND consent_state = 'authorized'
       `;
-      for (const provider of PROVIDERS) {
-        if (stopped) break;
-        let keepGoing = true;
-        while (keepGoing && !stopped && !pauseRequested) {
+      const activeProviders = new Set<UsageHistoryProvider>(PROVIDERS);
+      while (activeProviders.size > 0) {
+        if (stopped || pauseRequested) break;
+        for (const provider of PROVIDERS) {
+          if (!activeProviders.has(provider) || stopped || pauseRequested) continue;
           const current = (yield* readProviders()).find((row) => row.provider === provider)!;
-          if (current.status === "paused") break;
-          yield* sql`UPDATE usage_history_provider_state SET status = 'indexing' WHERE provider = ${provider}`;
+          if (current.status === "paused" || current.status === "unsupported") {
+            activeProviders.delete(provider);
+            continue;
+          }
+          yield* sql`
+            UPDATE usage_history_provider_state SET status = 'indexing'
+            WHERE provider = ${provider} AND discovery_generation = ${current.discoveryGeneration}
+          `;
           const stepExit = yield* Effect.exit(
             Effect.gen(function* () {
               if (current.discoveryComplete !== 1) {
@@ -689,50 +755,50 @@ const makeUsageHistory = Effect.gen(function* () {
                 provider,
                 providerRoots[provider],
                 control.workspaceHashSalt,
+                current.discoveryGeneration,
               );
               const next = (yield* readProviders()).find((row) => row.provider === provider)!;
               return next.discoveryComplete !== 1 || parsed;
             }),
           );
           if (Exit.isSuccess(stepExit)) {
-            keepGoing = stepExit.value;
             yield* sql`
-              UPDATE usage_history_provider_state SET restart_attempts = 0, detail_code = NULL
-              WHERE provider = ${provider}
+              UPDATE usage_history_provider_state SET restart_attempts = 0
+              WHERE provider = ${provider} AND discovery_generation = ${current.discoveryGeneration}
             `;
-          } else {
-            if (pauseRequested) {
-              yield* sql`
-                UPDATE usage_history_provider_state SET status = 'paused', detail_code = NULL
-                WHERE provider = ${provider}
-              `;
-              keepGoing = false;
-              continue;
+            if (!stepExit.value) {
+              const settled = (yield* readProviders()).find((row) => row.provider === provider)!;
+              if (settled.status !== "paused" && settled.status !== "unsupported") {
+                const partial = Number(settled.skippedFiles) > 0 || settled.detailCode !== null;
+                yield* sql`
+                  UPDATE usage_history_provider_state SET status = ${partial ? "partial" : "ready"},
+                    last_completed_at = ${new Date().toISOString()}
+                  WHERE provider = ${provider}
+                    AND discovery_generation = ${settled.discoveryGeneration}
+                `;
+              }
+              activeProviders.delete(provider);
             }
+          } else {
+            if (pauseRequested) return;
             const attempts = Number(current.restartAttempts) + 1;
             yield* sql`
               UPDATE usage_history_provider_state SET restart_attempts = ${attempts},
                 status = ${attempts >= MAX_PROVIDER_RESTARTS ? "paused" : "partial"},
                 detail_code = 'indexer-interrupted'
-              WHERE provider = ${provider}
+              WHERE provider = ${provider} AND discovery_generation = ${current.discoveryGeneration}
             `;
-            keepGoing = attempts < MAX_PROVIDER_RESTARTS;
+            if (attempts >= MAX_PROVIDER_RESTARTS) activeProviders.delete(provider);
           }
           yield* Effect.yieldNow;
         }
-        const current = (yield* readProviders()).find((row) => row.provider === provider)!;
-        if (current.status !== "paused" && current.status !== "unsupported") {
-          const partial = Number(current.skippedFiles) > 0;
-          yield* sql`
-            UPDATE usage_history_provider_state SET status = ${partial ? "partial" : "ready"},
-              last_completed_at = ${new Date().toISOString()}
-            WHERE provider = ${provider}
-          `;
-        }
       }
+      if (pauseRequested || stopped) return;
       const providerStates = yield* readProviders();
       const hasPaused = providerStates.some((row) => row.status === "paused");
-      const hasPartial = providerStates.some((row) => row.status === "partial");
+      const hasPartial = providerStates.some(
+        (row) => row.status === "partial" || row.status === "unsupported",
+      );
       const completedAt = new Date().toISOString();
       yield* sql`
         UPDATE usage_history_control SET
@@ -848,7 +914,11 @@ const makeUsageHistory = Effect.gen(function* () {
       if (control.consentState === "authorized" && control.status === "indexing" && !running) {
         startBackground();
       }
-      if (control.consentState === "authorized") {
+      if (
+        control.consentState === "authorized" &&
+        control.status !== "paused" &&
+        control.status !== "idle"
+      ) {
         const providerRoots = yield* roots;
         yield* Effect.sync(() => installRootWatchers(providerRoots));
       }
@@ -941,7 +1011,11 @@ const makeUsageHistory = Effect.gen(function* () {
         pauseRequested = true;
         activeChild?.kill("SIGKILL");
         yield* sql`UPDATE usage_history_control SET status = 'paused', updated_at = ${now} WHERE singleton_id = 1`;
-        yield* sql`UPDATE usage_history_provider_state SET status = 'paused' WHERE status = 'indexing'`;
+        yield* sql`
+          UPDATE usage_history_provider_state
+          SET status = CASE WHEN status = 'unsupported' THEN status ELSE 'paused' END,
+            discovery_generation = discovery_generation + 1
+        `;
       } else if (input.action === "clear") {
         pauseRequested = true;
         activeChild?.kill("SIGKILL");
