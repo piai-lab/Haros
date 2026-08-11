@@ -4175,20 +4175,23 @@ export default function Sidebar() {
 
   // Section header (label + hover-revealed toolbar) shared by the Threads and Studio surfaces,
   // so spacing/typography stay in lockstep; only the label and toolbar contents vary.
-  function renderListSectionHeader(label: string, toolbar: ReactNode) {
+  function renderListSectionHeader(label: string, toolbar?: ReactNode) {
     return (
       <div className="group/project-header relative my-1">
         <div
           className={cn(
-            "flex h-7 w-full min-w-0 items-center px-2 py-0.5 pr-[4.75rem]",
+            "flex h-7 w-full min-w-0 items-center px-2 py-0.5",
+            toolbar && "pr-[4.75rem]",
             SIDEBAR_SECTION_LABEL_CLASS_NAME,
           )}
         >
           <span className="truncate">{label}</span>
         </div>
-        <SidebarSectionToolbar placement="overlay" revealOnHover>
-          {toolbar}
-        </SidebarSectionToolbar>
+        {toolbar ? (
+          <SidebarSectionToolbar placement="overlay" revealOnHover>
+            {toolbar}
+          </SidebarSectionToolbar>
+        ) : null}
       </div>
     );
   }
@@ -4200,9 +4203,7 @@ export default function Sidebar() {
     }
     return (
       <div className="mb-3">
-        <div className="my-1 flex items-center justify-between px-2 py-1">
-          <span className={SIDEBAR_SECTION_LABEL_CLASS_NAME}>{t("nav.pinned")}</span>
-        </div>
+        {renderListSectionHeader(t("nav.pinned"))}
         <div className="flex flex-col gap-0.5">
           {pinnedThreads.map((thread) => renderPinnedThreadRow(thread))}
         </div>
@@ -6024,7 +6025,7 @@ export default function Sidebar() {
                     </div>
                   )}
 
-                  <div className="mt-4 border-t border-sidebar-border pt-2">
+                  <div className="mt-3" data-slot="sidebar-groups-section">
                     <div className="group/project-header relative">
                       <SidebarMenuButton
                         size="sm"

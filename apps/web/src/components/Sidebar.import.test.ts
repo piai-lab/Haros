@@ -32,6 +32,26 @@ describe("Sidebar module", () => {
     expect(groupsHeader).not.toContain("SIDEBAR_ROW_IDLE_TEXT_CLASS_NAME");
   });
 
+  it("separates Projects and Groups with rhythm instead of a redundant divider", () => {
+    const source = readFileSync(new URL("./Sidebar.tsx", import.meta.url), "utf8");
+    const groupsSection = source.match(
+      /<div className="mt-3" data-slot="sidebar-groups-section">[\s\S]*?aria-expanded=\{groupsSectionExpanded\}/,
+    )?.[0];
+
+    expect(groupsSection).toBeDefined();
+    expect(groupsSection).not.toContain("border-t");
+    expect(groupsSection).not.toContain("pt-2");
+  });
+
+  it("renders Pinned through the shared list-section header geometry", () => {
+    const source = readFileSync(new URL("./Sidebar.tsx", import.meta.url), "utf8");
+    const pinnedSection = source.match(
+      /function renderPinnedThreadsSection\(\)[\s\S]*?function renderThreadHoverCardPopup/,
+    )?.[0];
+
+    expect(pinnedSection).toContain('renderListSectionHeader(t("nav.pinned"))');
+  });
+
   it("does not repeat Chat as a list heading inside the Chat surface", () => {
     const source = readFileSync(new URL("./Sidebar.tsx", import.meta.url), "utf8");
     const chatListStart = source.indexOf('data-slot="sidebar-chat-list"');
