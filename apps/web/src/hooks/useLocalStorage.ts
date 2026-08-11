@@ -110,7 +110,14 @@ export function useLocalStorage<T, E>(
   // Return a wrapped version of useState's setter function that persists the new value to localStorage
   const setValue = useCallback(
     (value: T | ((val: T) => T)) => {
-      setStoredValue((prev) => persistLocalStorageValue(key, prev, value, schema));
+      setStoredValue((previousState) => {
+        // Multiple product surfaces can bind the same preference key at once.
+        // Resolve functional updates from the latest durable value, not this
+        // hook instance's possibly stale React snapshot, so concurrent settings
+        // normalization cannot undo an earlier write from another subscriber.
+        const latestStoredValue = readLocalStorageItemOrFallback(key, previousState, schema);
+        return persistLocalStorageValue(key, latestStoredValue, value, schema);
+      });
     },
     [key, schema],
   );

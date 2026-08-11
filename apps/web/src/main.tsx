@@ -8,8 +8,13 @@ import "./index.css";
 import { appHistory } from "./appNavigation";
 import { getRouter } from "./router";
 import { APP_DISPLAY_NAME } from "./branding";
+import { migratePersistedAppearanceDefaults } from "./appearanceMigrations";
 import { isElectron } from "./env";
 import { isMacPlatform } from "./lib/utils";
+
+// Appearance defaults are upgraded once, synchronously, before any of the
+// independently mounted settings consumers can read or normalize local state.
+migratePersistedAppearanceDefaults();
 
 const router = getRouter(appHistory);
 

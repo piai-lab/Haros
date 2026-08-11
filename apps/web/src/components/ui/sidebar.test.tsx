@@ -27,6 +27,12 @@ function renderWithQueryClient(node: ReactNode) {
 }
 
 describe("sidebar interactive cursors", () => {
+  it("starts desktop workbench sidebars at the authored reading width", () => {
+    const html = renderSidebarButton();
+
+    expect(html).toContain("--sidebar-width:23rem");
+  });
+
   it("uses a pointer cursor for menu buttons by default", () => {
     const html = renderSidebarButton();
 

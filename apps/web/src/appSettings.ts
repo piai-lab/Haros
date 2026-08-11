@@ -48,9 +48,8 @@ import {
   normalizeUiDensity as normalizeUiDensityValue,
 } from "./lib/appDensity";
 
-const APP_SETTINGS_STORAGE_KEY = "omnimind:app-settings:v1";
+export const APP_SETTINGS_STORAGE_KEY = "omnimind:app-settings:v1";
 const SERVER_SETTINGS_MIGRATION_STORAGE_KEY = "omnimind:server-settings-migrated:v1";
-const TYPOGRAPHY_DEFAULTS_MIGRATION_STORAGE_KEY = "omnimind:typography-defaults-migrated:v1";
 const MAX_CUSTOM_MODEL_COUNT = 32;
 export const MAX_CUSTOM_MODEL_LENGTH = 256;
 export const MIN_CHAT_FONT_SIZE_PX = 11;
@@ -1279,16 +1278,7 @@ export function useAppSettings() {
     }
     normalizedStoredSettingsRef.current = true;
 
-    const shouldMigrateTypographyDefaults =
-      globalThis.localStorage?.getItem(TYPOGRAPHY_DEFAULTS_MIGRATION_STORAGE_KEY) !== "1";
-    setSettings((previous) =>
-      normalizeStoredAppSettings(
-        shouldMigrateTypographyDefaults ? migrateLegacyTypographyDefaults(previous) : previous,
-      ),
-    );
-    if (shouldMigrateTypographyDefaults) {
-      globalThis.localStorage?.setItem(TYPOGRAPHY_DEFAULTS_MIGRATION_STORAGE_KEY, "1");
-    }
+    setSettings((previous) => normalizeStoredAppSettings(previous));
   }, [setSettings]);
 
   useEffect(() => {

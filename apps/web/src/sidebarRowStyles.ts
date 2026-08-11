@@ -36,7 +36,7 @@ export const SIDEBAR_ROW_LABEL_TEXT_CLASS_NAME = "text-foreground/95";
 
 /** Section label ("Threads"/"Pinned" and settings "App"/"OmniMind"). */
 export const SIDEBAR_SECTION_LABEL_CLASS_NAME =
-  "text-[length:var(--app-font-size-ui,12px)] font-normal text-[var(--color-text-foreground-secondary)]";
+  "text-[length:var(--app-font-size-ui-sm,13px)] font-medium text-[var(--color-text-foreground-secondary)]";
 
 /** Project/chat/settings header rows and settings sidebar nav items. */
 export const SIDEBAR_HEADER_ROW_CLASS_NAME = [

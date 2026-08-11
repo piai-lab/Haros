@@ -5643,7 +5643,7 @@ export default function Sidebar() {
   // toggle + arrows look identical whether the sidebar is open or collapsed; only
   // the wrapper layout differs per host.
   const productWordmark = (
-    <span className="sidebar-product-wordmark font-display shrink-0 text-[16px] leading-none tracking-[-0.015em] text-foreground">
+    <span className="sidebar-product-wordmark font-display shrink-0 text-[17px] leading-none tracking-[-0.018em] text-foreground">
       {t("shell.productName")}
     </span>
   );
@@ -5765,7 +5765,7 @@ export default function Sidebar() {
           </SidebarGroup>
         ) : (
           <>
-            <div className="flex items-center gap-1 pt-0 pb-1 pr-2.5 pl-1.5">
+            <div className="flex items-center gap-2 px-2 pb-1.5 pt-0.5">
               <SidebarSurfacePicker
                 views={["threads", ...(studioSectionVisible ? (["studio"] as const) : [])]}
                 activeView={isOnStudio ? "studio" : "threads"}
@@ -5813,7 +5813,7 @@ export default function Sidebar() {
               className="sidebar-surface-enter"
             >
               {/* Primary sidebar actions stay limited to features we currently ship. */}
-              <SidebarGroup className="px-1.5 pt-1 pb-1.5">
+              <SidebarGroup className="px-2 pb-2 pt-1">
                 <SidebarMenu className="gap-0.5">
                   {isOnStudio ? (
                     <>
@@ -5871,7 +5871,7 @@ export default function Sidebar() {
               {isOnStudio ? (
                 // Chat is already named by the primary surface selector. Keep the list flat and
                 // avoid repeating that mode as a second section heading.
-                <SidebarGroup className="px-1.5 py-1.5" data-slot="sidebar-chat-list">
+                <SidebarGroup className="px-2 py-2" data-slot="sidebar-chat-list">
                   {renderPinnedThreadsSection()}
                   <SidebarMenu ref={attachProjectListAutoAnimateRef} className="gap-1">
                     {studioChatThreadRows.length > 0 ? (
@@ -5886,7 +5886,7 @@ export default function Sidebar() {
                   </SidebarMenu>
                 </SidebarGroup>
               ) : activityViewEnabled ? (
-                <SidebarGroup className="px-1.5 py-1.5">
+                <SidebarGroup className="px-2 py-2">
                   <SidebarActivityView
                     threads={nonStudioSidebarThreads}
                     projectById={projectById}
@@ -5924,7 +5924,7 @@ export default function Sidebar() {
                   />
                 </SidebarGroup>
               ) : (
-                <SidebarGroup className="px-1.5 py-1.5">
+                <SidebarGroup className="px-2 py-2">
                   {renderPinnedThreadsSection()}
                   {renderListSectionHeader(
                     t("nav.projects"),
@@ -6026,7 +6026,7 @@ export default function Sidebar() {
                     </div>
                   )}
 
-                  <div className="mt-3 border-t border-border/45 pt-1">
+                  <div className="mt-4 border-t border-sidebar-border pt-2">
                     <div className="group/project-header relative">
                       <SidebarMenuButton
                         size="sm"
@@ -6140,7 +6140,7 @@ export default function Sidebar() {
         )}
       </SidebarContent>
 
-      <SidebarFooter className="gap-2 border-sidebar-border border-t p-2 font-system-ui">
+      <SidebarFooter className="gap-2 border-sidebar-border border-t px-2 py-2.5 font-system-ui">
         <SidebarMenu>
           <SidebarMenuItem>
             <div className="flex flex-col gap-1">

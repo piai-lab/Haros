@@ -24,7 +24,9 @@ import { Schema } from "effect";
 
 const SIDEBAR_COOKIE_NAME = "sidebar_state";
 const SIDEBAR_COOKIE_MAX_AGE = 60 * 60 * 24 * 7;
-const SIDEBAR_WIDTH = "24rem";
+// 23rem matches the information density of the desktop workbench: project and
+// conversation titles remain legible without stealing the 46rem reading column.
+const SIDEBAR_WIDTH = "23rem";
 const SIDEBAR_WIDTH_MOBILE = "calc(100vw - var(--spacing(3)))";
 const SIDEBAR_WIDTH_ICON = "3rem";
 export const SIDEBAR_RESIZE_DEFAULT_MIN_WIDTH = 13 * 16;

@@ -702,11 +702,9 @@ export function buildThemeCssVariables(
       ? "translucent"
       : "opaque";
   const warningColor = WARNING_COLOR_BY_VARIANT[variant];
-  // Codex paints the app sidebar with the PRIMARY surface (--color-background-surface,
-  // mapped through --color-token-side-bar-background), not the darker "under" surface.
-  // The under-surface is reserved for the window body behind the content (see
-  // --app-shell-background / --background). Sourcing the sidebar from the primary
-  // surface keeps its pure color matching Codex in both light and dark.
+  // Keep the navigation plane slightly distinct from the reading surface. The
+  // neutral ink mix is opaque and theme-derived: it avoids wallpaper tinting on
+  // macOS while preserving the native light/dark temperature of each theme.
   const sidebarSurface = readCodexVariable("--color-background-surface");
   const settingsSurface = readCodexVariable("--color-background-surface");
   const composerSurface =
@@ -745,26 +743,19 @@ export function buildThemeCssVariables(
     "--app-composer-picker-surface": composerPickerMenuSurface,
     "--app-chat-code-surface": chatCodeSurface,
     "--app-user-message-background": chatCodeSurface,
-    "--app-sidebar-backdrop-filter":
-      material === "translucent" ? "blur(18px) saturate(110%)" : "none",
+    "--app-sidebar-backdrop-filter": "none",
     // Settings mirrors the chat surface (opaque --color-background-surface) so every
     // settings element reads as outline-only. With an opaque page there is nothing to
     // frost, so we skip the backdrop blur (and its compositing cost) entirely.
     "--app-settings-backdrop-filter": "none",
     "--app-sidebar-shadow":
-      material === "translucent"
-        ? variant === "dark"
-          ? "inset 0 1px 0 rgba(255,255,255,0.024)"
-          : "inset 0 1px 0 rgba(0,0,0,0.025)"
-        : variant === "dark"
-          ? "inset 0 1px 0 rgba(255,255,255,0.025)"
-          : "inset 0 1px 0 rgba(0,0,0,0.03)",
+      variant === "dark"
+        ? "inset -1px 0 0 color-mix(in srgb, var(--color-text-foreground) 5%, transparent)"
+        : "inset -1px 0 0 color-mix(in srgb, var(--color-text-foreground) 4%, transparent)",
     "--app-sidebar-surface":
-      material === "translucent"
-        ? variant === "dark"
-          ? `color-mix(in srgb, ${sidebarSurface} 82%, transparent)`
-          : `color-mix(in srgb, ${sidebarSurface} 88%, transparent)`
-        : sidebarSurface,
+      variant === "dark"
+        ? `color-mix(in oklab, ${sidebarSurface} 94%, var(--color-text-foreground) 6%)`
+        : `color-mix(in oklab, ${sidebarSurface} 96%, var(--color-text-foreground) 4%)`,
     // Always opaque so the settings page background matches the chat surface exactly,
     // regardless of window material.
     "--app-settings-surface": settingsSurface,
@@ -792,7 +783,7 @@ export function buildThemeCssVariables(
     "--secondary-foreground": readCodexVariable("--color-text-button-secondary"),
     "--sidebar": readCodexVariable("--color-background-surface"),
     "--sidebar-accent": "color-mix(in srgb, var(--color-text-foreground) 5%, transparent)",
-    "--sidebar-accent-active": "color-mix(in srgb, var(--color-text-foreground) 7%, transparent)",
+    "--sidebar-accent-active": "color-mix(in srgb, var(--color-text-foreground) 8%, transparent)",
     "--sidebar-accent-foreground": readCodexVariable("--color-text-foreground"),
     "--sidebar-border": readCodexVariable("--color-border"),
     "--sidebar-foreground": readCodexVariable("--color-text-foreground"),

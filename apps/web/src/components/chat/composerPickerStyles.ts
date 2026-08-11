@@ -7,9 +7,9 @@ import { ELEVATED_HOVER_SURFACE_CLASS_NAME } from "~/surfaceStyles";
 
 export { COMPOSER_PICKER_SIZE, type ComposerPickerSize } from "./composerPickerSize";
 
-/** Soft, dispersed outer shadow for the composer input shell and floating pickers. */
+/** Restrained two-plane shadow for the composer input shell and floating pickers. */
 export const COMPOSER_SURFACE_SHADOW_CLASS_NAME =
-  "shadow-[0_12px_32px_-18px_color-mix(in_srgb,var(--foreground)_24%,transparent)] dark:shadow-[0_16px_40px_-20px_rgba(0,0,0,0.55)]";
+  "shadow-[0_10px_28px_-16px_color-mix(in_srgb,var(--foreground)_28%,transparent),0_1px_2px_0_color-mix(in_srgb,var(--foreground)_7%,transparent)] dark:shadow-[0_16px_40px_-20px_rgba(0,0,0,0.62),0_1px_2px_0_rgba(0,0,0,0.42)]";
 
 // Uses the UI-sm token so picker labels sit slightly below the editor text size.
 // The sm: override is required to beat the Button component's base responsive text classes.
