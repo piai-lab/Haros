@@ -424,7 +424,10 @@ export function ComposerLocalDirectoryMenu(props: {
               type="button"
               onMouseDown={(event) => event.preventDefault()}
               onClick={handleSelectCurrentDirectory}
-              className={cn(DIRECTORY_MENU_HEADER_ACTION_CLASS_NAME, "px-1.5 py-0.5 text-[10.5px]")}
+              className={cn(
+                DIRECTORY_MENU_HEADER_ACTION_CLASS_NAME,
+                "px-1.5 py-0.5 text-[length:var(--app-font-size-ui-2xs,11px)]",
+              )}
             >
               {t("composer.local.useFolder")}
             </button>
@@ -534,7 +537,7 @@ export function ComposerLocalDirectoryMenu(props: {
             {filter.trim().length > 0 ? t("composer.local.noMatches") : t("composer.local.empty")}
           </p>
         ) : searchQuery.data?.truncated ? (
-          <p className="px-2 py-1 text-muted-foreground/40 text-[10.5px]">
+          <p className="px-2 py-1 text-[length:var(--app-font-size-ui-2xs,11px)] text-muted-foreground/40">
             {t("composer.local.topMatches")}
           </p>
         ) : null}
@@ -567,7 +570,7 @@ function UseCurrentFolderRow(props: {
     >
       <FolderClosed className="size-3.5 text-muted-foreground/60" />
       <div className="min-w-0 flex flex-1 items-center gap-1.5 overflow-hidden">
-        <span className="shrink-0 text-[11.5px] font-medium text-foreground/80">
+        <span className="shrink-0 text-[length:var(--app-font-size-ui-xs,12px)] font-medium text-foreground/80">
           {t("composer.local.useFolder")}
         </span>
         <span className="truncate text-[11px] text-muted-foreground/55">{directoryLabel}</span>
@@ -621,11 +624,11 @@ function LocalSearchRow(props: {
         <FileIcon className="size-3.5 text-muted-foreground/60" />
       )}
       <div className="min-w-0 flex flex-1 items-center gap-3">
-        <span className="min-w-0 flex-1 truncate text-[11.5px] font-medium text-foreground/80">
+        <span className="min-w-0 flex-1 truncate text-[length:var(--app-font-size-ui-xs,12px)] font-medium text-foreground/80">
           {entry.name}
         </span>
         {subtitle ? (
-          <span className="shrink-0 max-w-[60%] truncate pl-2 text-right text-[10.5px] text-muted-foreground/42">
+          <span className="shrink-0 max-w-[60%] truncate pl-2 text-right text-[length:var(--app-font-size-ui-2xs,11px)] text-muted-foreground/42">
             {subtitle}
           </span>
         ) : null}
@@ -663,7 +666,9 @@ function LocalEntryRow(props: {
         <FileIcon className="size-3.5 text-muted-foreground/60" />
       )}
       <div className="min-w-0 flex flex-1 items-center gap-1.5 overflow-hidden">
-        <span className="truncate text-[11.5px] font-medium text-foreground/80">{entry.name}</span>
+        <span className="truncate text-[length:var(--app-font-size-ui-xs,12px)] font-medium text-foreground/80">
+          {entry.name}
+        </span>
       </div>
     </CommandItem>
   );

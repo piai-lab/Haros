@@ -124,7 +124,7 @@ export const ComposerPendingApprovalPanel = function ComposerPendingApprovalPane
           ) : null}
         </p>
         {pendingCount > 1 ? (
-          <span className="flex h-4 shrink-0 items-center rounded bg-[var(--color-background-elevated-secondary)] px-1 text-[9.5px] font-medium tabular-nums text-[var(--color-text-foreground-secondary)]">
+          <span className="flex h-4 shrink-0 items-center rounded bg-[var(--color-background-elevated-secondary)] px-1 text-[length:var(--app-font-size-ui-micro,10px)] font-medium leading-none tabular-nums text-[var(--color-text-foreground-secondary)]">
             1/{pendingCount}
           </span>
         ) : null}
@@ -168,7 +168,7 @@ function ApprovalDetail({
     return (
       <div className="mt-2">
         {parsed.fallback ? (
-          <p className="mb-1.5 text-[11.5px] leading-snug text-muted-foreground/70">
+          <p className="mb-1.5 text-[length:var(--app-font-size-ui-xs,12px)] leading-snug text-muted-foreground/70">
             {parsed.fallback}
           </p>
         ) : null}
@@ -186,14 +186,14 @@ function ApprovalDetail({
     return (
       <div className="mt-2">
         <p
-          className="truncate text-[12.5px] font-medium leading-tight text-foreground/85"
+          className="truncate text-[length:var(--app-font-size-ui-sm,13px)] font-medium leading-tight text-foreground/85"
           title={parsed.fileDir ? `${parsed.fileDir}/${parsed.fileName}` : parsed.fileName}
         >
           {parsed.fileName}
         </p>
         {parsed.fileDir ? (
           <p
-            className="mt-0.5 truncate font-mono text-[10.5px] leading-tight text-muted-foreground/55"
+            className="mt-0.5 truncate font-mono text-[length:var(--app-font-size-ui-2xs,11px)] leading-tight text-muted-foreground/55"
             title={parsed.fileDir}
           >
             {shortenPath(parsed.fileDir)}
@@ -207,7 +207,7 @@ function ApprovalDetail({
   if (code) {
     return (
       <pre
-        className="mt-2 overflow-hidden rounded-md bg-[var(--color-background-elevated-secondary)] px-2.5 py-1.5 font-mono text-[11.5px] leading-snug text-foreground/85"
+        className="mt-2 overflow-hidden rounded-md bg-[var(--color-background-elevated-secondary)] px-2.5 py-1.5 font-mono text-[length:var(--app-font-size-ui-xs,12px)] leading-snug text-foreground/85"
         title={code}
       >
         <code className="block truncate">{code}</code>

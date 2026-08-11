@@ -59,7 +59,9 @@ function DiffFileJumpRow(props: {
       </span>
       <div className="min-w-0 flex flex-1 items-center gap-2 overflow-hidden">
         <div className="min-w-0 flex flex-1 items-baseline gap-1.5 overflow-hidden">
-          <span className="shrink-0 text-[11.5px] font-medium text-foreground/85">{name}</span>
+          <span className="shrink-0 text-[length:var(--app-font-size-ui-xs,12px)] font-medium text-foreground/85">
+            {name}
+          </span>
           {dir ? (
             <span className="truncate text-[11px] text-muted-foreground/55">{dir}</span>
           ) : null}

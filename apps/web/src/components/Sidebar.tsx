@@ -581,11 +581,7 @@ function threadRowStatusSlotClassName(isSubagentThread: boolean, toneClassName?:
   return cn(
     "flex w-[15px] shrink-0 items-center justify-center leading-none tabular-nums",
     sidebarHoverRevealHideClassName("thread-row"),
-    isSubagentThread
-      ? "text-[10px]"
-      : // Nudge the timestamp a hair above the meta scale while still tracking the user's
-        // typography setting (the CSS var is always set; the 11px is just an SSR fallback).
-        "text-[length:calc(var(--app-font-size-ui-meta,11px)+0.5px)]",
+    isSubagentThread ? "text-[10px]" : "text-[length:var(--app-font-size-ui-timestamp,11px)]",
     toneClassName ?? "text-[var(--color-text-foreground-tertiary)]",
   );
 }

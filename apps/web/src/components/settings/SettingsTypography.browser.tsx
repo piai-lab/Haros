@@ -28,6 +28,7 @@ describe("settings typography", () => {
         <span className="text-xs">Supporting detail</span>
         <span className="text-[10px]">Micro label</span>
         <span className="text-[11px]">Dense label</span>
+        <span className="text-[length:var(--app-font-size-ui-xs,12px)]">Semantic fine copy</span>
         <span className="text-[13px]">Secondary label</span>
         <span className="text-[15px]">Large label</span>
       </section>,
@@ -41,6 +42,9 @@ describe("settings typography", () => {
     expect(getComputedStyle(supportingCopy).lineHeight).toBe("16px");
     expect(getComputedStyle(screen.getByText("Micro label").element()).fontSize).toBe("10px");
     expect(getComputedStyle(screen.getByText("Dense label").element()).fontSize).toBe("11px");
+    expect(getComputedStyle(screen.getByText("Semantic fine copy").element()).fontSize).toBe(
+      "12px",
+    );
     expect(getComputedStyle(screen.getByText("Secondary label").element()).fontSize).toBe("13px");
     expect(getComputedStyle(screen.getByText("Large label").element()).fontSize).toBe("15px");
 
@@ -59,6 +63,9 @@ describe("settings typography", () => {
     expect(getComputedStyle(supportingCopy).lineHeight).toBe("20px");
     expect(getComputedStyle(screen.getByText("Micro label").element()).fontSize).toBe("13px");
     expect(getComputedStyle(screen.getByText("Dense label").element()).fontSize).toBe("14px");
+    expect(getComputedStyle(screen.getByText("Semantic fine copy").element()).fontSize).toBe(
+      "15px",
+    );
     expect(getComputedStyle(screen.getByText("Secondary label").element()).fontSize).toBe("17px");
     expect(getComputedStyle(screen.getByText("Large label").element()).fontSize).toBe("19px");
   });

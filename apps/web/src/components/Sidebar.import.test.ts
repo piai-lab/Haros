@@ -52,6 +52,16 @@ describe("Sidebar module", () => {
     expect(pinnedSection).toContain('renderListSectionHeader(t("nav.pinned"))');
   });
 
+  it("keeps thread timestamps on the global timestamp typography role", () => {
+    const source = readFileSync(new URL("./Sidebar.tsx", import.meta.url), "utf8");
+    const statusSlot = source.match(
+      /function threadRowStatusSlotClassName[\s\S]*?function resolveWorktreeBadgeLabel/,
+    )?.[0];
+
+    expect(statusSlot).toContain("--app-font-size-ui-timestamp");
+    expect(statusSlot).not.toContain("calc(var(--app-font-size-ui-meta");
+  });
+
   it("does not repeat Chat as a list heading inside the Chat surface", () => {
     const source = readFileSync(new URL("./Sidebar.tsx", import.meta.url), "utf8");
     const chatListStart = source.indexOf('data-slot="sidebar-chat-list"');

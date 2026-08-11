@@ -621,7 +621,7 @@ const ComposerCommandMenuItem = memo(function ComposerCommandMenuItem({
       <ComposerCommandItemIcon item={item} resolvedTheme={resolvedTheme} isActive={isActive} />
       <div className="min-w-0 flex flex-1 items-center gap-3">
         <div className="min-w-0 flex flex-1 items-center gap-1.5 overflow-hidden">
-          <span className="shrink-0 text-[11.5px] font-medium text-foreground/80">
+          <span className="shrink-0 text-[length:var(--app-font-size-ui-xs,12px)] font-medium text-foreground/80">
             {item.type === "slash-command" || item.type === "provider-native-command"
               ? commandMenuTitle(item, t)
               : item.label}
@@ -631,7 +631,7 @@ const ComposerCommandMenuItem = memo(function ComposerCommandMenuItem({
           ) : null}
         </div>
         {trailingMeta ? (
-          <span className="shrink-0 pl-2 text-right text-[10.5px] text-muted-foreground/42">
+          <span className="shrink-0 pl-2 text-right text-[length:var(--app-font-size-ui-2xs,11px)] text-muted-foreground/42">
             {trailingMeta}
           </span>
         ) : null}
