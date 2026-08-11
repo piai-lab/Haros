@@ -206,11 +206,11 @@ upstream work.
 
 ## 6. Current observation and re-entry
 
-Three revisions have different roles and must not be collapsed:
+The 2026-08-11 intake changed the current roles as follows:
 
-- production-adopted physical baseline: Synara `6aca3dcc505894481430967c2acb762b3dd1b358`, until actual source bytes and the root adoption record change;
+- production-adopted reviewed head: Synara `712d88f98b9afed9a4617b78dc62a8f342d93177`, with actual selective adoption and exclusions owned by the root `source-adoptions` block and [`source-review.md` §11](source-review.md#11-maintainer-approved-synara-02c8a6c712d88f-intake);
 - historical reviewed candidate: Synara `v0.6.7`, `be6dcad3f63fa121fbe3180f257ba1ff128696c4`; its accepted/deferred rows remain historical evidence in [`source-review.md` §8](source-review.md#8-maintainer-initiated-synara-v067-intake);
-- current maintainer-approved responsibility comparison input: Synara `02c8a6cb9948eba0afc828492764e7236965c61f`, used by the active execution brief to decide Restore source / Keep narrow difference / Delete duplicate. It is not production adoption until implementation and legal/provenance closure update the sole root record.
+- historical responsibility-reset baseline: Synara `02c8a6cb9948eba0afc828492764e7236965c61f`; it remains the start of the reviewed `02c8a6c…712d88f` range, not the current production head.
 
 The maintainer approved two implementation Works: active Workbench mechanism hardening followed by
 Product completion-signal alignment. Approval does not mean the full upstream range was adopted;
@@ -218,4 +218,4 @@ all other rows remain explicitly deferred, already covered or code-declined with
 retained. The root production adoption record changes only for actual reviewed implementation and
 legal closure.
 
-The active `02c8a6c…` responsibility reset is already an approved implementation scope; do not route it back through this protocol merely because its production adoption record has not yet changed. A later maintainer-initiated source update must first read the then-current root adoption record and active execution baseline, resolve the requested candidate, and verify ancestry from the exact comparison/review point named there. It must not default to `be6dcad3`, automatically poll beyond `02c8a6c…`, or infer that unimplemented source bytes are already adopted. If a later source change materially alters an approved but unfinished responsibility, return only that changed portion to Gate A.
+The `02c8a6c…712d88f` update has completed Gate B and implementation intake; do not route it back through this protocol. A later maintainer-initiated source update must first read the then-current root adoption record and active execution baseline, resolve the requested candidate, and verify ancestry from exact adopted head `712d88f…`. It must not default to `be6dcad3` or `02c8a6c`, automatically poll beyond the requested candidate, or infer that unimplemented source bytes are already adopted. If a later source change materially alters an approved but unfinished responsibility, return only that changed portion to Gate A.

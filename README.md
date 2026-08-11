@@ -63,7 +63,7 @@ OmniMind 的价值不是“能启动 Pi”，也不是“再造一个多 Engine 
 
 这四条规定产品结果。`omnimind` 与 `pi` 是两个真实 Provider identity，但仍服从同一个 inherited orchestration；这与重建通用多 Engine 平台不同。
 
-OmniMind Agent 的首个技术 lineage/生态兼容基准是 Pi stable `v0.84.1`，之后使用自己的 runtime version；它不以 Pi version 作为长期产品身份。它使用独立构建或等价的 instance-level 配置，使全局与 project-local private state 都进入 `.omnimind`。stock Pi 仅在被用户显式选择时使用自己的 `.pi` native state；产品 reset、OmniMind Agent 和后台 discovery 都不得读取、迁移、同步或改写它。stock Pi 的实际 session runtime version 与可选本机 CLI version 必须分别呈现，不能互相冒充。本轮 responsibility comparison 使用 exact Synara `02c8a6cb9948eba0afc828492764e7236965c61f`；实际 source bytes 和 Pi-derived runtime 进入 production 后，才更新本文件唯一 adoption record。
+OmniMind Agent 的首个技术 lineage/生态兼容基准是 Pi stable `v0.84.1`，之后使用自己的 runtime version；它不以 Pi version 作为长期产品身份。它使用独立构建或等价的 instance-level 配置，使全局与 project-local private state 都进入 `.omnimind`。stock Pi 仅在被用户显式选择时使用自己的 `.pi` native state；产品 reset、OmniMind Agent 和后台 discovery 都不得读取、迁移、同步或改写它。stock Pi 的实际 session runtime version 与可选本机 CLI version 必须分别呈现，不能互相冒充。Synara production adoption 已从初始 responsibility baseline `02c8a6cb9948eba0afc828492764e7236965c61f` 经维护者批准的 intake 更新到 exact reviewed head `712d88f98b9afed9a4617b78dc62a8f342d93177`；选择性边界见下方唯一 adoption record。
 
 ## 4. 来源、身份与结构
 
@@ -84,7 +84,7 @@ authority，也不得带入 donor branding、竞争编排、第二 Session 状�
     {
       "id": "ui-mother",
       "url": "https://github.com/Emanuele-web04/synara.git",
-      "revision": "02c8a6cb9948eba0afc828492764e7236965c61f",
+      "revision": "712d88f98b9afed9a4617b78dc62a8f342d93177",
       "paths": [
         ".github",
         ".gitattributes",
@@ -106,11 +106,23 @@ authority，也不得带入 donor branding、竞争编排、第二 Session 状�
         "turbo.json",
         "vitest.config.ts"
       ],
-      "rights": "The fixed source is MIT-licensed under the retained exact legal text. The maintainer has authorized retention, adaptation and redistribution of the fixed code and complete source icon corpus. Former product identity assets are not adopted.",
+      "rights": "The fixed source is MIT-licensed under the retained exact legal text. The maintainer has authorized retention, adaptation and redistribution of the reviewed code. Former product identity assets, release identity and release history are not adopted.",
       "mode": "adapt",
-      "changes": "The exact physical Desktop, Web, Server, contracts, shared, patch, build and release substrate was transplanted once. OmniMind changes only first-public package, app, protocol, updater, profile, storage and artifact identity; replaces first-party graphics with the retained OmniMind brand; removes donor profile/storage migration entrypoints, marketing, release-history and social surfaces, donor-specific governance, apps/service and apps/native-host; and hard-cuts the private workspace package scope from @synara/* to @omnimind/* without a compatibility alias while retaining exact source and legal lineage here.",
+      "changes": "The exact physical Desktop, Web, Server, contracts, shared, patch, build and release substrate was transplanted from 02c8a6c, then the maintainer-approved 02c8a6c..712d88f intake was adopted by reviewed responsibility. Accepted mechanisms include appearance persistence/polish, reliability and scroll fixes, Pi max/model isolation, native provider forks and source context, Luna/high defaults, and the iOS Simulator Device pane. OmniMind retains its product authority, bilingual catalog, package/app/protocol/updater/profile/storage/artifact namespace and brand; excludes donor icons, version/changelog/release identity, forced settings migration and any competing approval or control plane; agent-triggered Device mutations fail closed without a verifiable approval receipt.",
       "updatePolicy": "Pinned revision; source updates begin only after a maintainer-requested read-only intake and explicit approval of that intake set.",
       "licenseFiles": ["LICENSES/ui-mother-MIT.txt"]
+    },
+    {
+      "id": "device-helper-hid-reference",
+      "url": "https://github.com/facebook/idb.git",
+      "revision": "dd0cb550510331f2d11e9130cb003d2425688e28",
+      "paths": ["apps/server/native/device-helper/Sources/HIDBridge.h", "apps/server/native/device-helper/Sources/HIDBridge.m"],
+      "sourcePaths": ["PrivateHeaders/SimulatorApp/Indigo.h", "FBSimulatorControl/HID/FBSimulatorIndigoHID.swift"],
+      "rights": "The selected HID message layout and delivery mechanism are adapted from facebook/idb under its retained MIT license. No idb binary, service, product identity or unrelated source is adopted.",
+      "mode": "adapt",
+      "changes": "Namespaced Objective-C bridge for OmniMind's locally built iOS Simulator helper; packaged artifacts must retain the exact license notice.",
+      "updatePolicy": "Pinned revision; re-review private API compatibility and rights before changing the reference revision.",
+      "licenseFiles": ["LICENSES/facebook-idb-MIT.txt", "apps/server/native/device-helper/LICENSE.facebook-idb"]
     },
     {
       "id": "bundled-omnimind-agent-runtime",
@@ -179,7 +191,7 @@ omni-harness
 }
 ```
 
-当前 adopted UI mother 是 exact Synara `02c8a6c…` 的单一物理 substrate：`apps/desktop + apps/web + apps/server + packages/contracts + packages/shared`。`apps/service`、`apps/native-host`、donor profile/storage migration 与旧 Product Control Plane 不再属于生产拓扑。Pi 与其他对照项目仍只是研究来源，除非进入上述 adoption 清单；exact revision/tree、rights/lineage/assets、构建/测试/运行观察和兼容限制只以 [`research/source-review.md`](research/source-review.md) 为证据 owner，法定文本保存在 `LICENSES/`。
+当前 adopted UI mother 是 exact reviewed Synara head `712d88f…` 的选择性单一物理 substrate：`apps/desktop + apps/web + apps/server + packages/contracts + packages/shared`，实际接受与排除边界由上方 adoption record 拥有。`apps/service`、`apps/native-host`、donor profile/storage migration 与旧 Product Control Plane 不再属于生产拓扑。Pi 与其他对照项目仍只是研究来源，除非进入上述 adoption 清单；exact revision/tree、rights/lineage/assets、构建/测试/运行观察和兼容限制只以 [`research/source-review.md`](research/source-review.md) 为证据 owner，法定文本保存在 `LICENSES/`。
 
 ## 5. 已有证据与当前下一步
 

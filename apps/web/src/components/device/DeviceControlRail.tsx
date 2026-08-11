@@ -18,6 +18,7 @@ import {
   DeviceShutterIcon,
   type LucideIcon,
 } from "~/lib/icons";
+import { type MessageKey, useI18n } from "~/i18n";
 import { cn } from "~/lib/utils";
 import { Tooltip, TooltipPopup, TooltipTrigger } from "../ui/tooltip";
 
@@ -25,7 +26,7 @@ export type DeviceRailAction = "home" | "screenshot" | "record" | "rotate" | "sh
 
 export interface DeviceRailItem {
   readonly id: DeviceRailAction;
-  readonly label: string;
+  readonly labelKey: MessageKey;
   readonly shortcut?: string;
   readonly Icon: LucideIcon;
 }
@@ -48,22 +49,22 @@ export const DEVICE_RAIL_GROUPS: readonly DeviceRailGroup[] = [
   {
     id: "screen",
     items: [
-      { id: "home", label: "Home", shortcut: "⌘⇧H", Icon: DeviceHomeIcon },
-      { id: "rotate", label: "Rotate view", Icon: DeviceRotateIcon },
+      { id: "home", labelKey: "device.action.home", shortcut: "⌘⇧H", Icon: DeviceHomeIcon },
+      { id: "rotate", labelKey: "device.action.rotate", Icon: DeviceRotateIcon },
     ],
   },
   {
     id: "capture",
     items: [
-      { id: "screenshot", label: "Save screenshot", Icon: DeviceShutterIcon },
-      { id: "record", label: "Record video", Icon: DeviceRecordIcon },
+      { id: "screenshot", labelKey: "device.action.screenshot", Icon: DeviceShutterIcon },
+      { id: "record", labelKey: "device.action.record", Icon: DeviceRecordIcon },
     ],
   },
   {
     id: "session",
     items: [
-      { id: "shutdown", label: "Shut down simulator", Icon: DevicePowerIcon },
-      { id: "detach", label: "Detach simulator", Icon: DeviceDetachIcon },
+      { id: "shutdown", labelKey: "device.action.shutdown", Icon: DevicePowerIcon },
+      { id: "detach", labelKey: "device.action.detach", Icon: DeviceDetachIcon },
     ],
   },
 ];
@@ -82,6 +83,7 @@ export function DeviceControlRail(props: {
   landscape: boolean;
   onAction: (action: DeviceRailAction) => void;
 }) {
+  const { t } = useI18n();
   return (
     <div className={cn("flex items-center justify-center gap-1", DEVICE_RAIL_HEIGHT_CLASS)}>
       {DEVICE_RAIL_GROUPS.map((group, groupIndex) => (
@@ -92,7 +94,7 @@ export function DeviceControlRail(props: {
           {group.items.map((item) => {
             const isRecordStop = item.id === "record" && props.recording;
             const Icon = isRecordStop ? DeviceRecordStopIcon : item.Icon;
-            const label = isRecordStop ? "Stop recording" : item.label;
+            const label = isRecordStop ? t("device.action.stopRecording") : t(item.labelKey);
             const pressed =
               item.id === "record"
                 ? props.recording

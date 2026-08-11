@@ -14,6 +14,7 @@ import type {
 } from "@omnimind/contracts";
 import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 
+import { type MessageKey, useI18n } from "~/i18n";
 import { ensureNativeApi } from "~/nativeApi";
 import { addWsTransportStateListener } from "~/wsTransportEvents";
 import type { DockPaneRuntimeMode } from "~/lib/dockPaneActivation";
@@ -41,6 +42,7 @@ import {
   shouldSubscribeToDeviceStream,
   stepDeviceRecording,
   type DevicePoint,
+  type DeviceTranslate,
 } from "./DevicePanel.logic";
 import { DeviceScreen, deviceKindFor, RESOLUTION_SCALE } from "./device/DeviceFrame";
 import {
@@ -88,6 +90,34 @@ import { toastManager } from "./ui/toast";
  */
 const DEVICE_SETUP_POLL_INTERVAL_MS = 5_000;
 
+const DEVICE_SETUP_LABEL_KEYS = {
+  "install-xcode": "device.step.installXcode",
+  "select-xcode-command-line-tools": "device.step.selectXcode",
+  "accept-xcode-license": "device.step.acceptLicense",
+  "install-ios-runtime": "device.step.installRuntime",
+  "build-device-helper": "device.step.buildHelper",
+} as const satisfies Record<import("@omnimind/contracts").DeviceSetupStepId, MessageKey>;
+
+function localizeDeviceSetupSteps(
+  steps: readonly import("@omnimind/contracts").DeviceSetupStep[],
+  t: DeviceTranslate,
+): readonly import("@omnimind/contracts").DeviceSetupStep[] {
+  return steps.map((step) => ({
+    ...step,
+    label: t(DEVICE_SETUP_LABEL_KEYS[step.id]),
+    ...(step.detail
+      ? {
+          detail:
+            step.id === "install-xcode"
+              ? t("device.step.installXcodeDetail")
+              : step.id === "build-device-helper"
+                ? t("device.step.buildHelperDetail")
+                : step.detail,
+        }
+      : {}),
+  }));
+}
+
 function errorMessage(error: unknown, fallback: string): string {
   return error instanceof Error && error.message.length > 0 ? error.message : fallback;
 }
@@ -101,6 +131,7 @@ export default function DevicePanel(props: {
   onRequestLive?: () => void;
 }) {
   const { threadId, runtimeMode, isVisible } = props;
+  const { t } = useI18n();
   const canvasRef = useRef<HTMLCanvasElement | null>(null);
   const threadState = useDeviceStateStore(selectThreadDeviceState(threadId));
   const upsertThreadState = useDeviceStateStore((store) => store.upsertThreadState);
@@ -123,6 +154,7 @@ export default function DevicePanel(props: {
   const attachedDevice = resolveDisplayedDevice({ threadState, pending: pendingDevice });
   const availabilityView = resolveDeviceAvailabilityView(
     threadState?.availability ?? { kind: "available" },
+    t,
   );
 
   // The server has answered — with this device or another — so the optimistic
@@ -181,11 +213,14 @@ export default function DevicePanel(props: {
   // cold boot spends most of a minute here, and "Starting up…" versus "Waiting
   // for the screen…" is the difference between progress and a hang.
   const attachStatusLabel = attachedDevice
-    ? deviceAttachStatusLabel({
-        phase: threadState?.attachPhase,
-        deviceState: attachedDevice.state,
-        pendingSelection: pendingDevice !== null,
-      })
+    ? deviceAttachStatusLabel(
+        {
+          phase: threadState?.attachPhase,
+          deviceState: attachedDevice.state,
+          pendingSelection: pendingDevice !== null,
+        },
+        t,
+      )
     : null;
 
   const streamEnabled = shouldSubscribeToDeviceStream({
@@ -208,24 +243,28 @@ export default function DevicePanel(props: {
       buildDevicePickerEntries({
         devices: threadState?.devices ?? [],
         attachedDeviceUdid: threadState?.attachedDeviceUdid ?? null,
+        t,
       }),
-    [threadState?.devices, threadState?.attachedDeviceUdid],
+    [threadState?.devices, threadState?.attachedDeviceUdid, t],
   );
 
-  const runDeviceAction = useCallback(async (action: () => Promise<void>, failureTitle: string) => {
-    setBusy(true);
-    try {
-      await action();
-    } catch (error) {
-      toastManager.add({
-        type: "error",
-        title: failureTitle,
-        description: errorMessage(error, "The simulator did not respond."),
-      });
-    } finally {
-      setBusy(false);
-    }
-  }, []);
+  const runDeviceAction = useCallback(
+    async (action: () => Promise<void>, failureTitle: string) => {
+      setBusy(true);
+      try {
+        await action();
+      } catch (error) {
+        toastManager.add({
+          type: "error",
+          title: failureTitle,
+          description: errorMessage(error, t("device.didNotRespond")),
+        });
+      } finally {
+        setBusy(false);
+      }
+    },
+    [t],
+  );
 
   const attachDevice = useCallback(
     async (udid: DeviceUdid) => {
@@ -266,9 +305,9 @@ export default function DevicePanel(props: {
           setPendingDevice(null);
           throw error;
         }
-      }, "Could not open that simulator");
+      }, t("device.openFailed"));
     },
-    [attachDevice, reportedUdid, runDeviceAction],
+    [attachDevice, reportedUdid, runDeviceAction, t],
   );
 
   const shutdownForBootLimit = useCallback(
@@ -295,33 +334,33 @@ export default function DevicePanel(props: {
           setPendingDevice(null);
           throw error;
         }
-      }, "Could not free a simulator slot");
+      }, t("device.freeSlotFailed"));
     },
-    [attachDevice, bootLimit, reportedUdid, runDeviceAction, threadState?.devices],
+    [attachDevice, bootLimit, reportedUdid, runDeviceAction, t, threadState?.devices],
   );
 
   const detachDevice = useCallback(() => {
     setPendingDevice(null);
     void runDeviceAction(async () => {
       upsertThreadState(await ensureNativeApi().device.detach({ threadId }));
-    }, "Could not detach the simulator");
-  }, [runDeviceAction, threadId, upsertThreadState]);
+    }, t("device.detachFailed"));
+  }, [runDeviceAction, t, threadId, upsertThreadState]);
 
   const shutdownAttached = useCallback(() => {
     if (!attachedDevice) return;
     void runDeviceAction(async () => {
       await ensureNativeApi().device.shutdown({ udid: attachedDevice.udid });
-    }, "Could not shut down the simulator");
-  }, [attachedDevice, runDeviceAction]);
+    }, t("device.shutdownFailed"));
+  }, [attachedDevice, runDeviceAction, t]);
 
   const pressButton = useCallback(
     (button: DeviceHardwareButton) => {
       if (!attachedDevice) return;
       void runDeviceAction(async () => {
         await ensureNativeApi().device.pressButton({ udid: attachedDevice.udid, button });
-      }, "Could not press that button");
+      }, t("device.buttonFailed"));
     },
-    [attachedDevice, runDeviceAction],
+    [attachedDevice, runDeviceAction, t],
   );
 
   // ── Recording ──────────────────────────────────────────────────────
@@ -360,8 +399,8 @@ export default function DevicePanel(props: {
           setRecording((state) => stepDeviceRecording(state, { kind: "failed" }));
           toastManager.add({
             type: "error",
-            title: "Could not start recording",
-            description: errorMessage(error, "The simulator did not start recording."),
+            title: t("device.recordStartFailed"),
+            description: errorMessage(error, t("device.recordStartFailedDescription")),
           });
         });
       return;
@@ -374,7 +413,7 @@ export default function DevicePanel(props: {
         setRecording((state) => stepDeviceRecording(state, { kind: "stopped" }));
         toastManager.add({
           type: "success",
-          title: "Recording saved",
+          title: t("device.recordingSaved"),
           description: result.path,
           data: { copyText: result.path },
         });
@@ -383,11 +422,11 @@ export default function DevicePanel(props: {
         setRecording((state) => stepDeviceRecording(state, { kind: "failed" }));
         toastManager.add({
           type: "error",
-          title: "Could not stop recording",
-          description: errorMessage(error, "The recording may be incomplete."),
+          title: t("device.recordStopFailed"),
+          description: errorMessage(error, t("device.recordStopFailedDescription")),
         });
       });
-  }, [attachedDevice, recording]);
+  }, [attachedDevice, recording, t]);
 
   const saveScreenshot = useCallback(() => {
     if (!attachedDevice) return;
@@ -406,12 +445,12 @@ export default function DevicePanel(props: {
       // thing you want after saving a file somewhere.
       toastManager.add({
         type: "success",
-        title: "Screenshot saved",
+        title: t("device.screenshotSaved"),
         description: shot.path ?? shot.name,
         ...(shot.path ? { data: { copyText: shot.path } } : {}),
       });
-    }, "Could not save the screenshot");
-  }, [attachedDevice, runDeviceAction]);
+    }, t("device.screenshotFailed"));
+  }, [attachedDevice, runDeviceAction, t]);
 
   // ── Pointer input ──────────────────────────────────────────────────
 
@@ -543,12 +582,12 @@ export default function DevicePanel(props: {
       void sent.catch((error: unknown) => {
         toastManager.add({
           type: "error",
-          title: "The simulator did not accept that input",
-          description: errorMessage(error, "The input could not be delivered."),
+          title: t("device.inputRejected"),
+          description: errorMessage(error, t("device.inputRejectedDescription")),
         });
       });
     },
-    [attachedDevice, pointFromEvent],
+    [attachedDevice, pointFromEvent, t],
   );
 
   // ── Keyboard passthrough ───────────────────────────────────────────
@@ -624,21 +663,23 @@ export default function DevicePanel(props: {
     <div className="flex h-full w-full min-w-0 items-center gap-1.5">
       {availabilityView.kind === "blocked" ? (
         <span className="truncate px-2 font-medium text-muted-foreground text-xs">
-          iOS Simulator
+          {t("workbench.device")}
         </span>
       ) : (
         <Menu>
           <MenuTrigger
             render={
               <Button variant="ghost" size="sm" className="min-w-0 gap-1" disabled={busy}>
-                <span className="truncate">{attachedDevice?.name ?? "Choose a simulator"}</span>
+                <span className="truncate">
+                  {attachedDevice?.name ?? t("device.chooseSimulator")}
+                </span>
                 <ChevronDownIcon />
               </Button>
             }
           />
           <ComposerPickerMenuPopup align="start">
             {pickerEntries.length === 0 ? (
-              <MenuItem disabled>No simulators found</MenuItem>
+              <MenuItem disabled>{t("device.noSimulators")}</MenuItem>
             ) : (
               pickerEntries.map((entry) => (
                 <MenuItem
@@ -669,8 +710,8 @@ export default function DevicePanel(props: {
           variant="ghost"
           size="icon-sm"
           onClick={props.onClosePanel}
-          title="Close"
-          aria-label="Close simulator panel"
+          title={t("common.close")}
+          aria-label={t("device.closePanel")}
         >
           <XIcon />
         </Button>
@@ -682,20 +723,17 @@ export default function DevicePanel(props: {
   // rather than a video rectangle with chrome stacked around it.
   const screen = (() => {
     if (availabilityView.kind === "blocked") {
-      const action = resolveDeviceSetupAction(availabilityView.steps);
+      const localizedSteps = localizeDeviceSetupSteps(availabilityView.steps, t);
+      const action = resolveDeviceSetupAction(availabilityView.steps, t);
       return (
         <DeviceSetupScreen
           title={availabilityView.title}
           description={availabilityView.description}
-          steps={availabilityView.steps}
+          steps={localizedSteps}
           checkingLabel={
-            availabilityView.retryable ? deviceSetupCheckingLabel(availabilityView.steps) : null
+            availabilityView.retryable ? deviceSetupCheckingLabel(availabilityView.steps, t) : null
           }
-          footnote={
-            availabilityView.steps.length > 0
-              ? "Xcode is a free download from Apple and needs about 10 GB of disk space."
-              : null
-          }
+          footnote={availabilityView.steps.length > 0 ? t("device.xcodeFootnote") : null}
           action={
             action
               ? {
@@ -711,7 +749,7 @@ export default function DevicePanel(props: {
     }
 
     if (!attachedDevice) {
-      return <DeviceEmptyScreen message="Choose a simulator to start streaming it here." />;
+      return <DeviceEmptyScreen message={t("device.empty")} />;
     }
 
     // Anything that is not yet a picture belongs on the boot screen, which
@@ -730,7 +768,7 @@ export default function DevicePanel(props: {
         <canvas
           ref={canvasRef}
           tabIndex={0}
-          aria-label={`${attachedDevice.name} screen`}
+          aria-label={t("device.screenAria", { device: attachedDevice.name })}
           // object-cover so the frame is filled edge to edge: the canvas already
           // carries the device's own aspect ratio, so nothing is actually cropped.
           className="h-full w-full object-cover outline-none ring-inset focus-visible:ring-2 focus-visible:ring-ring/70"
@@ -746,7 +784,7 @@ export default function DevicePanel(props: {
           <div className="pointer-events-none absolute inset-0 flex items-center justify-center px-[12%]">
             <DeviceVideoOverlay
               status={videoStatus}
-              label={attachStatusLabel ?? "Connecting…"}
+              label={attachStatusLabel ?? t("device.connecting")}
               runtimeMode={runtimeMode}
               {...(props.onRequestLive ? { onRequestLive: props.onRequestLive } : {})}
             />
@@ -827,7 +865,7 @@ export default function DevicePanel(props: {
 
       <DeviceBootLimitDialog
         state={bootLimit}
-        deviceName={bootLimit?.pendingName ?? "that simulator"}
+        deviceName={bootLimit?.pendingName ?? t("device.thatSimulator")}
         onDismiss={() => setBootLimit(null)}
         onShutdown={shutdownForBootLimit}
       />
@@ -841,15 +879,17 @@ export default function DevicePanel(props: {
         <AlertDialogPopup>
           <AlertDialogHeader>
             <AlertDialogTitle>
-              Shut down {attachedDevice?.name ?? "this simulator"}?
+              {t("device.shutdownConfirmTitle", {
+                device: attachedDevice?.name ?? t("device.thisSimulator"),
+              })}
             </AlertDialogTitle>
             <AlertDialogDescription>
-              Anything running on the simulator closes. Booting it again takes about a minute.
+              {t("device.shutdownConfirmDescription")}
             </AlertDialogDescription>
           </AlertDialogHeader>
           <AlertDialogFooter>
             <AlertDialogClose render={<Button variant="outline" size="sm" />}>
-              Cancel
+              {t("common.cancel")}
             </AlertDialogClose>
             <Button
               variant="destructive"
@@ -859,7 +899,7 @@ export default function DevicePanel(props: {
                 shutdownAttached();
               }}
             >
-              Shut down
+              {t("device.shutdown")}
             </Button>
           </AlertDialogFooter>
         </AlertDialogPopup>
@@ -876,6 +916,7 @@ function DeviceVideoOverlay(props: {
   onRequestLive?: () => void;
 }) {
   const { status } = props;
+  const { t } = useI18n();
 
   if (props.runtimeMode === "preview") {
     return (
@@ -884,7 +925,7 @@ function DeviceVideoOverlay(props: {
         className="pointer-events-auto rounded-full bg-white/95 px-3 py-1.5 font-medium text-[10px] text-black"
         onClick={props.onRequestLive}
       >
-        Show the live simulator
+        {t("device.showLive")}
       </button>
     );
   }
@@ -892,8 +933,7 @@ function DeviceVideoOverlay(props: {
   if (status.kind === "unsupported") {
     return (
       <p className="text-balance text-center text-[10px] text-white/70 leading-snug">
-        This browser cannot decode the simulator stream. Chrome, Edge, or Safari 17+ support the
-        WebCodecs video decoder OmniMind uses.
+        {t("device.webCodecsUnsupported")}
       </p>
     );
   }
@@ -925,12 +965,13 @@ function DeviceBootLimitDialog(props: {
   onShutdown: (candidate: DeviceDescriptor) => void;
 }) {
   const { state } = props;
+  const { t } = useI18n();
 
   return (
     <Dialog open={state !== null} onOpenChange={(open) => (open ? undefined : props.onDismiss())}>
       <DialogPopup>
         <DialogHeader>
-          <DialogTitle>Shut down a simulator to start {props.deviceName}</DialogTitle>
+          <DialogTitle>{t("device.bootLimitTitle", { device: props.deviceName })}</DialogTitle>
           {/*
             The cap is about memory, and saying so is what makes it read as a
             guardrail rather than an arbitrary refusal. The consequence of the
@@ -938,9 +979,10 @@ function DeviceBootLimitDialog(props: {
             and one of them is about to lose whatever is on it.
           */}
           <DialogDescription>
-            OmniMind keeps at most {state?.limit ?? 0} simulators running at once, because each one
-            holds a few gigabytes of memory. Pick one to shut down — anything running on it closes —
-            and {props.deviceName} starts in its place.
+            {t("device.bootLimitDescription", {
+              limit: state?.limit ?? 0,
+              device: props.deviceName,
+            })}
           </DialogDescription>
         </DialogHeader>
         <ul className="space-y-1">
@@ -952,7 +994,9 @@ function DeviceBootLimitDialog(props: {
                 className="w-full justify-between"
                 onClick={() => props.onShutdown(candidate)}
               >
-                <span className="truncate">Shut down {candidate.name}</span>
+                <span className="truncate">
+                  {t("device.shutdownNamed", { device: candidate.name })}
+                </span>
                 <span className="shrink-0 text-muted-foreground text-xs">{candidate.runtime}</span>
               </Button>
             </li>
@@ -960,7 +1004,7 @@ function DeviceBootLimitDialog(props: {
         </ul>
         <DialogFooter>
           <Button variant="ghost" size="sm" onClick={props.onDismiss}>
-            Keep them all running
+            {t("device.keepRunning")}
           </Button>
         </DialogFooter>
       </DialogPopup>

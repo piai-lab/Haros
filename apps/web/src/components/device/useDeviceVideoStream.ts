@@ -8,6 +8,7 @@ import type { DeviceUdid } from "@omnimind/contracts";
 import type { DeviceFrame } from "@omnimind/shared/deviceFrame";
 import { useEffect, useRef, useState } from "react";
 
+import { useI18n } from "~/i18n";
 import {
   createDeviceFrameGateState,
   stepDeviceFrameGate,
@@ -90,6 +91,7 @@ export function useDeviceVideoStream(input: {
   readonly enabled: boolean;
 }): { readonly status: DeviceVideoStatus; readonly dimensions: DeviceVideoDimensions | null } {
   const { canvasRef, udid, enabled } = input;
+  const { t } = useI18n();
   const [status, setStatus] = useState<DeviceVideoStatus>({ kind: "idle" });
   const [dimensions, setDimensions] = useState<DeviceVideoDimensions | null>(null);
 
@@ -177,7 +179,7 @@ export function useDeviceVideoStream(input: {
     const configureDecoder = (frame: DeviceFrame) => {
       const codec = avcCodecStringFromConfig(frame.payload);
       if (!codec) {
-        failStream("The simulator stream sent parameters OmniMind could not read.");
+        failStream(t("device.streamParametersUnreadable"));
         return;
       }
       teardownDecoder();
@@ -194,7 +196,7 @@ export function useDeviceVideoStream(input: {
           // capture session yields fresh parameter sets and an IDR, which
           // reconfigures this decoder rather than waiting out the encoder's
           // next natural keyframe (up to two seconds away).
-          failStream(error instanceof Error ? error.message : "The video decoder failed.");
+          failStream(error instanceof Error ? error.message : t("device.videoDecoderFailed"));
           source?.requestResync();
         },
       });
@@ -205,7 +207,7 @@ export function useDeviceVideoStream(input: {
         next.configure({ codec, optimizeForLatency: true });
       } catch (error) {
         failStream(
-          error instanceof Error ? error.message : "The video decoder could not be configured.",
+          error instanceof Error ? error.message : t("device.videoDecoderConfigureFailed"),
         );
         return;
       }
@@ -234,7 +236,7 @@ export function useDeviceVideoStream(input: {
           }),
         );
       } catch (error) {
-        failStream(error instanceof Error ? error.message : "A video frame could not be decoded.");
+        failStream(error instanceof Error ? error.message : t("device.videoFrameDecodeFailed"));
         source?.requestResync();
       }
     };
@@ -283,8 +285,8 @@ export function useDeviceVideoStream(input: {
         kind: "error",
         message:
           reason === "decode-failed"
-            ? "The simulator stream sent a frame OmniMind could not read."
-            : "The simulator stream disconnected.",
+            ? t("device.streamFrameUnreadable")
+            : t("device.streamDisconnected"),
       });
     };
 
@@ -297,7 +299,7 @@ export function useDeviceVideoStream(input: {
       source?.close();
       teardownDecoder();
     };
-  }, [canvasRef, udid, enabled]);
+  }, [canvasRef, udid, enabled, t]);
 
   return { status, dimensions };
 }

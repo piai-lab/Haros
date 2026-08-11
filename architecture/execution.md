@@ -150,6 +150,10 @@ V1 只保留 inherited orchestration 对 Project/Thread/Space command/event/proj
 
 File、Git 与 Terminal 分别由 filesystem、Git repository 与 local process/PTY 拥有。OmniMind 直接复用 Synara 的 typed commands、viewer、save/conflict behavior、Git journey 和 per-thread terminal state。
 
+iOS Simulator Device 是同一 Desktop→Server 系统能力链的一部分，不是 Provider runtime 或第二控制面。`DeviceService`/`DeviceManager` 唯一拥有设备枚举、boot ownership、每 Thread attachment、helper lifecycle、frame transport 与操作结果；Web 只消费 typed RPC/event/frame contract，native helper 只负责 CoreSimulator/SimulatorKit 桥接。helper 源码随 macOS App 物理打包，并在用户机器上按当前 Xcode build 编译到 `~/Library/Caches/omnimind/device-helper/<xcode-build>/`；缓存、binary、环境变量、Unix socket 与临时路径全部使用 OmniMind namespace，打包必须同时保留 facebook/idb 精确 MIT notice。
+
+Device 的 read-only discovery、screen、UI tree 与 screenshot 可作为现有 Agent Gateway 的 system tools 暴露；tap、swipe、key、text、hardware button、boot、shutdown、install、launch 与 open-url 等 mutation 只有在同一精确 invocation 存在可验证 approval receipt 时才执行。当前 Host 没有 receipt bridge，因此 Agent mutation 默认 fail-closed，并引导用户在 Device pane 显式操作；不得从 Provider 名称、full-access 标签、历史批准或 pane 可见性推断授权，也不得为 Device 建第二 permission broker。macOS helper 的 sandbox profile 缺失或不可读时启动失败；仅显式 development opt-out 可运行 unconfined helper，且不得包装成 production sandbox 保证。
+
 不建设 observed-version 平台。只有现实可复现的静默覆盖风险才增加最小 precondition；外部工具或 Provider Tool 改写文件后重新观察并呈现即可。
 
 Remote/SSH 不属于 V1；普通 Git remote、push/pull/PR 不受影响。

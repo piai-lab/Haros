@@ -329,3 +329,26 @@ evidence for `0.84.1`, and post-tag Pi main fixes cannot be silently mixed into 
 
 Re-run this review when either exact selected input changes, rights/security facts change, or a focused
 OmniMind journey disproves the accepted disposition.
+
+## 11. Maintainer-approved Synara `02c8a6c…712d88f` intake
+
+On 2026-08-11 the maintainer approved adopting every change from exact baseline
+`02c8a6cb9948eba0afc828492764e7236965c61f` through exact reviewed head
+`712d88f98b9afed9a4617b78dc62a8f342d93177` that did not displace OmniMind's existing product
+authority. The local Synara worktree was reviewed read-only and remained at the exact head. Gate B
+approval was explicit; implementation then preserved the existing Product Orchestration, Provider
+Registry, bilingual catalog, brand, first-public storage/update identities and settings ownership.
+
+| Responsibility               | Adopted result                                                                                                                                              | Deliberate boundary                                                                                                                                            |
+| ---------------------------- | ----------------------------------------------------------------------------------------------------------------------------------------------------------- | -------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| Appearance and Workbench     | App icon preference/layout, translucent sidebar, font-scale propagation, toast visibility accounting, transcript scroll takeover and focused UI regressions | Retain OmniMind icons and catalog; no donor brand asset or parallel theme/settings owner                                                                       |
+| Provider/session reliability | Codex imported-history fork, Windows Bun PTY, updater quit intent, queue replay safety, ChatView recovery, Pi `max`, malformed-model isolation              | Preserve existing OmniMind skills/model composition and first-public updater authority                                                                         |
+| Fork/source context          | Native Codex/Claude/ACP forks, source context and localized continuation affordance                                                                         | No generic cross-Provider durable fork authority; adapters keep native truth                                                                                   |
+| Defaults                     | Luna/high defaults for fresh settings                                                                                                                       | No forced migration of an explicit existing model selection                                                                                                    |
+| Device                       | iOS Simulator manager/helper, typed RPC/events/frame transport, right-dock pane, capture and user controls                                                  | Existing system-capability owner only; no second permission broker; Agent mutation fails closed without an exact approval receipt; helper sandbox fails closed |
+| Release/identity             | No product behavior adopted                                                                                                                                 | Donor icons, changelog, version, release metadata and release identity excluded                                                                                |
+
+The Device HID bridge adapts the Indigo layout/delivery mechanism from facebook/idb exact revision
+`dd0cb550510331f2d11e9130cb003d2425688e28`; the canonical MIT text is retained at
+`LICENSES/facebook-idb-MIT.txt` and beside the packaged helper source. This section is research
+evidence only; the root `source-adoptions` block remains the production adoption authority.

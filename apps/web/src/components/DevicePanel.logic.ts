@@ -2,7 +2,7 @@
 // Purpose: Pure decision logic for the iOS Simulator dock pane (video gating, input mapping, picker/availability views).
 // Layer: Component logic helper
 // Exports: frame-gate state machine, canvas/device coordinate mapping, hardware-button and key translation, picker + availability view models
-// Depends on: device contracts and the shared frame envelope header only — no DOM, no React.
+// Depends on: device contracts, shared frame envelope header, and the app message catalog — no DOM or React.
 
 import type {
   DeviceAvailability,
@@ -20,7 +20,12 @@ import type {
   ThreadDeviceState,
 } from "@omnimind/contracts";
 
-import { DEVICE_CAPABILITY_LABELS } from "@omnimind/contracts";
+import type { MessageKey } from "../i18n";
+
+export type DeviceTranslate = (
+  key: MessageKey,
+  params?: Readonly<Record<string, string | number>>,
+) => string;
 
 // ── Frame gating ─────────────────────────────────────────────────────
 //
@@ -428,15 +433,18 @@ export interface DevicePickerEntry {
   readonly detail: string;
 }
 
-const RUNTIME_STATE_LABELS = {
-  shutdown: "Shut down",
-  booting: "Booting",
-  booted: "Booted",
-  "shutting-down": "Shutting down",
-} as const satisfies Record<DeviceDescriptor["state"], string>;
+const RUNTIME_STATE_LABEL_KEYS = {
+  shutdown: "device.state.shutdown",
+  booting: "device.state.booting",
+  booted: "device.state.booted",
+  "shutting-down": "device.state.shuttingDown",
+} as const satisfies Record<DeviceDescriptor["state"], MessageKey>;
 
-export function deviceRuntimeStateLabel(state: DeviceDescriptor["state"]): string {
-  return RUNTIME_STATE_LABELS[state];
+export function deviceRuntimeStateLabel(
+  state: DeviceDescriptor["state"],
+  t: DeviceTranslate,
+): string {
+  return t(RUNTIME_STATE_LABEL_KEYS[state]);
 }
 
 function devicePickerAction(state: DeviceDescriptor["state"]): DevicePickerAction {
@@ -458,6 +466,7 @@ function devicePickerAction(state: DeviceDescriptor["state"]): DevicePickerActio
 export function buildDevicePickerEntries(input: {
   readonly devices: readonly DeviceDescriptor[];
   readonly attachedDeviceUdid: DeviceUdid | null;
+  readonly t: DeviceTranslate;
 }): readonly DevicePickerEntry[] {
   const rank = (device: DeviceDescriptor): number => {
     if (device.udid === input.attachedDeviceUdid) return 0;
@@ -472,7 +481,7 @@ export function buildDevicePickerEntries(input: {
       device,
       attached: device.udid === input.attachedDeviceUdid,
       action: devicePickerAction(device.state),
-      detail: `${device.runtime} · ${deviceRuntimeStateLabel(device.state)}`,
+      detail: `${device.runtime} · ${deviceRuntimeStateLabel(device.state, input.t)}`,
     }));
 }
 
@@ -509,22 +518,47 @@ export type DeviceAvailabilityView =
 export function describeDegradedCapabilities(
   capabilities: readonly DeviceCapabilityStatus[],
   toolchain: DeviceToolchain | undefined,
+  t: DeviceTranslate,
 ): string {
   const broken = capabilities.filter((capability) => !capability.ok);
   const working = capabilities.filter((capability) => capability.ok);
-  const list = (entries: readonly DeviceCapabilityStatus[]): string => {
-    const names = entries.map((entry) => DEVICE_CAPABILITY_LABELS[entry.id]);
+  const list = (entries: readonly DeviceCapabilityStatus[], sentenceStart: boolean): string => {
+    const names = entries.map((entry, index) =>
+      t(
+        (sentenceStart && index === 0
+          ? ({
+              framebuffer: "device.capability.framebuffer",
+              hid: "device.capability.hid",
+              accessibility: "device.capability.accessibility",
+              encoder: "device.capability.encoder",
+            } as const satisfies Record<DeviceCapabilityId, MessageKey>)
+          : ({
+              framebuffer: "device.capability.framebufferContinuation",
+              hid: "device.capability.hidContinuation",
+              accessibility: "device.capability.accessibilityContinuation",
+              encoder: "device.capability.encoderContinuation",
+            } as const satisfies Record<DeviceCapabilityId, MessageKey>))[entry.id],
+      ),
+    );
     if (names.length <= 1) return names[0] ?? "";
-    return `${names.slice(0, -1).join(", ")} and ${names[names.length - 1]!.toLowerCase()}`;
+    return t("device.listAnd", {
+      items: names.slice(0, -1).join(t("device.listSeparator")),
+      last: names[names.length - 1]!,
+    });
   };
 
   const xcode = toolchain?.xcodeVersion
-    ? ` with Xcode ${toolchain.xcodeVersion}`
+    ? t("device.withXcodeVersion", { version: toolchain.xcodeVersion })
     : toolchain?.xcodeBuild
-      ? ` with Xcode build ${toolchain.xcodeBuild}`
+      ? t("device.withXcodeBuild", { build: toolchain.xcodeBuild })
       : "";
-  const unaffected = working.length > 0 ? ` — ${list(working).toLowerCase()} unaffected` : "";
-  return `${list(broken)} unavailable${xcode}${unaffected}.`;
+  const unaffected =
+    working.length > 0 ? t("device.unaffected", { capabilities: list(working, false) }) : "";
+  return t("device.capabilitiesUnavailable", {
+    capabilities: list(broken, true),
+    xcode,
+    unaffected,
+  });
 }
 
 /**
@@ -539,6 +573,7 @@ function onlyHelperBuildRemains(steps: readonly DeviceSetupStep[]): boolean {
 
 export function resolveDeviceAvailabilityView(
   availability: DeviceAvailability,
+  t: DeviceTranslate,
 ): DeviceAvailabilityView {
   switch (availability.kind) {
     case "available":
@@ -546,8 +581,8 @@ export function resolveDeviceAvailabilityView(
     case "unsupported-platform":
       return {
         kind: "blocked",
-        title: "iOS Simulator needs macOS",
-        description: `This OmniMind server runs on ${availability.platform}. Simulators are only available when the server runs on a Mac with Xcode installed.`,
+        title: t("device.macRequired"),
+        description: t("device.unsupportedPlatform", { platform: availability.platform }),
         steps: [],
         retryable: false,
       };
@@ -560,15 +595,15 @@ export function resolveDeviceAvailabilityView(
       if (onlyHelperBuildRemains(availability.steps)) return { kind: "ready" };
       return {
         kind: "blocked",
-        title: "Set up the iOS Simulator",
-        description: "Progress updates automatically as each step finishes.",
+        title: t("device.setupTitle"),
+        description: t("device.setupDescription"),
         steps: availability.steps,
         retryable: true,
       };
     case "degraded":
       return {
         kind: "degraded",
-        notice: describeDegradedCapabilities(availability.capabilities, availability.toolchain),
+        notice: describeDegradedCapabilities(availability.capabilities, availability.toolchain, t),
         brokenCapabilities: availability.capabilities
           .filter((capability) => !capability.ok)
           .map((capability) => capability.id),
@@ -576,7 +611,7 @@ export function resolveDeviceAvailabilityView(
     case "helper-unavailable":
       return {
         kind: "blocked",
-        title: "Simulator helper could not start",
+        title: t("device.helperUnavailable"),
         description: availability.message,
         steps: [],
         retryable: true,
@@ -746,20 +781,19 @@ export interface DeviceSetupAction {
  * its own or is driven from Xcode itself — so the screen shows a single button
  * or none, rather than a row of links that mostly go nowhere.
  */
-const DEVICE_SETUP_ACTIONS: Partial<Record<DeviceSetupStepId, DeviceSetupAction>> = {
+const DEVICE_SETUP_ACTION_URLS: Partial<Record<DeviceSetupStepId, string>> = {
   // The https form rather than macappstore://: the shell bridge only forwards
   // http(s), and macOS hands this link to the App Store app regardless.
-  "install-xcode": {
-    label: "Open Mac App Store",
-    url: "https://apps.apple.com/app/xcode/id497799835",
-  },
+  "install-xcode": "https://apps.apple.com/app/xcode/id497799835",
 };
 
 export function resolveDeviceSetupAction(
   steps: readonly DeviceSetupStep[],
+  t: DeviceTranslate,
 ): DeviceSetupAction | null {
   const next = steps.find((step) => !step.done);
-  return next ? (DEVICE_SETUP_ACTIONS[next.id] ?? null) : null;
+  const url = next ? DEVICE_SETUP_ACTION_URLS[next.id] : undefined;
+  return url ? { label: t("device.openMacAppStore"), url } : null;
 }
 
 /**
@@ -767,10 +801,13 @@ export function resolveDeviceSetupAction(
  * steps remain. Once everything is done the pane is about to flip to the picker
  * and a spinner would be a lie.
  */
-export function deviceSetupCheckingLabel(steps: readonly DeviceSetupStep[]): string | null {
+export function deviceSetupCheckingLabel(
+  steps: readonly DeviceSetupStep[],
+  t: DeviceTranslate,
+): string | null {
   const next = steps.find((step) => !step.done);
   if (!next) return null;
-  return next.id === "install-xcode" ? "Checking for Xcode…" : "Checking your setup…";
+  return next.id === "install-xcode" ? t("device.checkingXcode") : t("device.checkingSetup");
 }
 
 // ── Thread state helpers ─────────────────────────────────────────────
@@ -835,24 +872,28 @@ export function resolveDisplayedDevice(input: {
  * client-only stage before the first response, and every stage names the device
  * so the pane never shows an anonymous spinner.
  */
-export function deviceAttachStatusLabel(input: {
-  readonly phase: ThreadDeviceState["attachPhase"] | undefined;
-  readonly deviceState: DeviceDescriptor["state"];
-  readonly pendingSelection: boolean;
-}): string | null {
+export function deviceAttachStatusLabel(
+  input: {
+    readonly phase: ThreadDeviceState["attachPhase"] | undefined;
+    readonly deviceState: DeviceDescriptor["state"];
+    readonly pendingSelection: boolean;
+  },
+  t: DeviceTranslate,
+): string | null {
   switch (input.phase) {
     case "booting":
-      return "Starting up…";
+      return t("device.startingUp");
     case "waiting-for-display":
-      return "Waiting for the screen…";
+      return t("device.waitingForScreen");
     case "connecting":
-      return "Connecting…";
+      return t("device.connecting");
     default:
       break;
   }
-  if (input.deviceState === "booting") return "Starting up…";
-  if (input.deviceState === "shutdown") return input.pendingSelection ? "Starting up…" : null;
-  return input.pendingSelection ? "Connecting…" : null;
+  if (input.deviceState === "booting") return t("device.startingUp");
+  if (input.deviceState === "shutdown")
+    return input.pendingSelection ? t("device.startingUp") : null;
+  return input.pendingSelection ? t("device.connecting") : null;
 }
 
 /**

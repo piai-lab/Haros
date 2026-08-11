@@ -5,7 +5,7 @@ import { NUB_ACTIONS, deviceKindFor, screenGeometry } from "./DeviceFrame";
 describe("side button controls", () => {
   it("presses every nub the hardware has", () => {
     // Lock lands: it blanks the screen and shows up in SpringBoard's log.
-    expect(NUB_ACTIONS.power).toMatchObject({ label: "Lock", button: "lock" });
+    expect(NUB_ACTIONS.power).toMatchObject({ labelKey: "device.button.lock", button: "lock" });
     // Volume travels as a HID Consumer-page event rather than an Indigo button
     // source, which is how Simulator.app's own menu items send it. Verified
     // against the volume HUD in the framebuffer.

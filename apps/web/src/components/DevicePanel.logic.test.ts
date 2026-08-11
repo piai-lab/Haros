@@ -1,5 +1,6 @@
 import type { DeviceDescriptor, DeviceUdid } from "@omnimind/contracts";
 import { describe, expect, it } from "vitest";
+import { translate } from "../i18n";
 
 import {
   attachedDeviceFromThreadState,
@@ -31,6 +32,7 @@ import {
 
 const UDID = "AAAA-BBBB" as DeviceUdid;
 const OTHER_UDID = "CCCC-DDDD" as DeviceUdid;
+const t = translate.bind(null, "en");
 
 function header(overrides: {
   sequence: number;
@@ -532,6 +534,7 @@ describe("device picker", () => {
         device({ udid: "d-booting" as DeviceUdid, name: "iPhone 15", state: "booting" }),
       ],
       attachedDeviceUdid: "d-attached" as DeviceUdid,
+      t,
     });
 
     expect(entries.map((entry) => entry.device.udid)).toEqual([
@@ -552,6 +555,7 @@ describe("device picker", () => {
         device({ udid: "d" as DeviceUdid, name: "D", state: "shutting-down" }),
       ],
       attachedDeviceUdid: null,
+      t,
     });
 
     const actionByUdid = Object.fromEntries(
@@ -569,6 +573,7 @@ describe("device picker", () => {
     const [entry] = buildDevicePickerEntries({
       devices: [device({ runtime: "iOS 18.2", state: "booted" })],
       attachedDeviceUdid: null,
+      t,
     });
     expect(entry?.detail).toBe("iOS 18.2 · Booted");
   });
@@ -576,43 +581,52 @@ describe("device picker", () => {
 
 describe("availability", () => {
   it("reports ready when the backend is available", () => {
-    expect(resolveDeviceAvailabilityView({ kind: "available" })).toEqual({ kind: "ready" });
+    expect(resolveDeviceAvailabilityView({ kind: "available" }, t)).toEqual({ kind: "ready" });
   });
 
   it("shows the picker when only the helper build is left", () => {
     // The deadlock this prevents: the helper is built on first attach, so
     // blocking the picker on it means the user is shown a checklist whose one
     // remaining step is the thing the checklist itself makes impossible.
-    const view = resolveDeviceAvailabilityView({
-      kind: "setup-required",
-      steps: [
-        { id: "install-xcode", label: "Install Xcode", done: true },
-        { id: "install-ios-runtime", label: "Install an iOS runtime", done: true },
-        { id: "build-device-helper", label: "Build the OmniMind device helper", done: false },
-      ],
-    });
+    const view = resolveDeviceAvailabilityView(
+      {
+        kind: "setup-required",
+        steps: [
+          { id: "install-xcode", label: "Install Xcode", done: true },
+          { id: "install-ios-runtime", label: "Install an iOS runtime", done: true },
+          { id: "build-device-helper", label: "Build the OmniMind device helper", done: false },
+        ],
+      },
+      t,
+    );
     expect(view).toEqual({ kind: "ready" });
   });
 
   it("still blocks when a step the user must perform is outstanding", () => {
     // Only the helper is self-healing; anything the user has to install keeps
     // the checklist up.
-    const view = resolveDeviceAvailabilityView({
-      kind: "setup-required",
-      steps: [
-        { id: "install-xcode", label: "Install Xcode", done: true },
-        { id: "install-ios-runtime", label: "Install an iOS runtime", done: false },
-        { id: "build-device-helper", label: "Build the OmniMind device helper", done: false },
-      ],
-    });
+    const view = resolveDeviceAvailabilityView(
+      {
+        kind: "setup-required",
+        steps: [
+          { id: "install-xcode", label: "Install Xcode", done: true },
+          { id: "install-ios-runtime", label: "Install an iOS runtime", done: false },
+          { id: "build-device-helper", label: "Build the OmniMind device helper", done: false },
+        ],
+      },
+      t,
+    );
     expect(view.kind).toBe("blocked");
   });
 
   it("explains an unsupported platform and marks it unrecoverable", () => {
-    const view = resolveDeviceAvailabilityView({
-      kind: "unsupported-platform",
-      platform: "linux",
-    });
+    const view = resolveDeviceAvailabilityView(
+      {
+        kind: "unsupported-platform",
+        platform: "linux",
+      },
+      t,
+    );
     expect(view.kind).toBe("blocked");
     if (view.kind !== "blocked") return;
     expect(view.description).toContain("linux");
@@ -625,7 +639,7 @@ describe("availability", () => {
       { id: "install-xcode", label: "Install Xcode", done: true },
       { id: "install-ios-runtime", label: "Install an iOS runtime", done: false },
     ] as const;
-    const view = resolveDeviceAvailabilityView({ kind: "setup-required", steps });
+    const view = resolveDeviceAvailabilityView({ kind: "setup-required", steps }, t);
 
     expect(view.kind).toBe("blocked");
     if (view.kind !== "blocked") return;
@@ -635,10 +649,13 @@ describe("availability", () => {
   });
 
   it("surfaces the helper failure message verbatim", () => {
-    const view = resolveDeviceAvailabilityView({
-      kind: "helper-unavailable",
-      message: "Swift compile failed: no such module 'SimulatorKit'",
-    });
+    const view = resolveDeviceAvailabilityView(
+      {
+        kind: "helper-unavailable",
+        message: "Swift compile failed: no such module 'SimulatorKit'",
+      },
+      t,
+    );
     expect(view.kind).toBe("blocked");
     if (view.kind !== "blocked") return;
     expect(view.description).toBe("Swift compile failed: no such module 'SimulatorKit'");
@@ -646,16 +663,19 @@ describe("availability", () => {
   });
 
   it("does not block the pane when a capability is degraded", () => {
-    const view = resolveDeviceAvailabilityView({
-      kind: "degraded",
-      capabilities: [
-        { id: "framebuffer", ok: true },
-        { id: "hid", ok: true },
-        { id: "accessibility", ok: false, missingSymbol: "AXPTranslator" },
-        { id: "encoder", ok: true },
-      ],
-      toolchain: { xcodeVersion: "26.3" },
-    });
+    const view = resolveDeviceAvailabilityView(
+      {
+        kind: "degraded",
+        capabilities: [
+          { id: "framebuffer", ok: true },
+          { id: "hid", ok: true },
+          { id: "accessibility", ok: false, missingSymbol: "AXPTranslator" },
+          { id: "encoder", ok: true },
+        ],
+        toolchain: { xcodeVersion: "26.3" },
+      },
+      t,
+    );
 
     // Blocking here would cost streaming and input over a broken tree read.
     expect(view.kind).toBe("degraded");
@@ -672,6 +692,7 @@ describe("availability", () => {
         { id: "encoder", ok: true },
       ],
       { xcodeVersion: "26.3" },
+      t,
     );
 
     expect(notice).toBe(
@@ -686,9 +707,31 @@ describe("availability", () => {
         { id: "hid", ok: false },
       ],
       undefined,
+      t,
     );
 
     expect(notice).toBe("Accessibility inspection and touch and keyboard input unavailable.");
+  });
+
+  it("renders runtime and degraded capability state through the Chinese catalog", () => {
+    const zh = translate.bind(null, "zh-CN");
+    const [entry] = buildDevicePickerEntries({
+      devices: [device({ runtime: "iOS 18.2", state: "booted" })],
+      attachedDeviceUdid: null,
+      t: zh,
+    });
+    expect(entry?.detail).toBe("iOS 18.2 · 已启动");
+
+    expect(
+      describeDegradedCapabilities(
+        [
+          { id: "accessibility", ok: false },
+          { id: "framebuffer", ok: true },
+        ],
+        { xcodeVersion: "26.3" },
+        zh,
+      ),
+    ).toBe("辅助功能检查（Xcode 26.3）不可用；屏幕采集不受影响。");
   });
 });
 
@@ -849,7 +892,7 @@ describe("optimistic device selection", () => {
 describe("attach status label", () => {
   it("names the stage the server says it is waiting on", () => {
     const label = (phase: "booting" | "waiting-for-display" | "connecting") =>
-      deviceAttachStatusLabel({ phase, deviceState: "booted", pendingSelection: false });
+      deviceAttachStatusLabel({ phase, deviceState: "booted", pendingSelection: false }, t);
 
     expect(label("booting")).toBe("Starting up…");
     // The distinction that matters on a cold boot: the device is up, the screen
@@ -860,23 +903,26 @@ describe("attach status label", () => {
 
   it("covers the window before the first response, from the click alone", () => {
     expect(
-      deviceAttachStatusLabel({
-        phase: undefined,
-        deviceState: "shutdown",
-        pendingSelection: true,
-      }),
+      deviceAttachStatusLabel(
+        {
+          phase: undefined,
+          deviceState: "shutdown",
+          pendingSelection: true,
+        },
+        t,
+      ),
     ).toBe("Starting up…");
   });
 
   it("says nothing once the device is simply booted and attached", () => {
     expect(
-      deviceAttachStatusLabel({ phase: null, deviceState: "booted", pendingSelection: false }),
+      deviceAttachStatusLabel({ phase: null, deviceState: "booted", pendingSelection: false }, t),
     ).toBeNull();
   });
 
   it("still reports a booting device with no phase from the server", () => {
     expect(
-      deviceAttachStatusLabel({ phase: null, deviceState: "booting", pendingSelection: false }),
+      deviceAttachStatusLabel({ phase: null, deviceState: "booting", pendingSelection: false }, t),
     ).toBe("Starting up…");
   });
 });
