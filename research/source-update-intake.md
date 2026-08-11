@@ -212,10 +212,11 @@ The 2026-08-11 intake changed the current roles as follows:
 - historical reviewed candidate: Synara `v0.6.7`, `be6dcad3f63fa121fbe3180f257ba1ff128696c4`; its accepted/deferred rows remain historical evidence in [`source-review.md` §8](source-review.md#8-maintainer-initiated-synara-v067-intake);
 - historical responsibility-reset baseline: Synara `02c8a6cb9948eba0afc828492764e7236965c61f`; it remains the start of the reviewed `02c8a6c…712d88f` range, not the current production head.
 
-The maintainer approved two implementation Works: active Workbench mechanism hardening followed by
-Product completion-signal alignment. Approval does not mean the full upstream range was adopted;
-all other rows remain explicitly deferred, already covered or code-declined with their insight
-retained. The root production adoption record changes only for actual reviewed implementation and
-legal closure.
+The exact 19-commit `02c8a6c…712d88f` range now has a closed implementation disposition: 15
+mechanism commits were adopted directly or semantically under OmniMind's existing owners; donor
+icon-asset commits `2bd77649f`, `bd1c76b69` and `ce8728c47`, plus the v0.7.1 release/identity commit
+`6ba0508ba`, were explicitly excluded. No unlisted row in this exact range remains deferred. The
+root `source-adoptions` block is still the production authority; [`source-review.md` §11](source-review.md#11-maintainer-approved-synara-02c8a6c712d88f-intake)
+owns the supporting disposition and legal provenance rather than creating a parallel manifest.
 
 The `02c8a6c…712d88f` update has completed Gate B and implementation intake; do not route it back through this protocol. A later maintainer-initiated source update must first read the then-current root adoption record and active execution baseline, resolve the requested candidate, and verify ancestry from exact adopted head `712d88f…`. It must not default to `be6dcad3` or `02c8a6c`, automatically poll beyond the requested candidate, or infer that unimplemented source bytes are already adopted. If a later source change materially alters an approved but unfinished responsibility, return only that changed portion to Gate A.
