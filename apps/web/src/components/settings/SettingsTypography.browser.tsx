@@ -17,11 +17,7 @@ describe("settings typography", () => {
     document.documentElement.style.removeProperty("--app-font-size-ui-xs");
   });
 
-  it("scales shared text-sm and text-xs roles with the app preference", async () => {
-    document.documentElement.style.setProperty("--app-font-size-base", "18px");
-    document.documentElement.style.setProperty("--app-font-size-ui", "18px");
-    document.documentElement.style.setProperty("--app-font-size-ui-xs", "15px");
-
+  it("preserves default geometry and scales shared text-sm and text-xs roles", async () => {
     const screen = await render(
       <section>
         <SettingsEmptyState>Nothing configured</SettingsEmptyState>
@@ -29,10 +25,21 @@ describe("settings typography", () => {
       </section>,
     );
 
+    const primaryCopy = screen.getByText("Nothing configured").element();
+    const supportingCopy = screen.getByText("Supporting detail").element();
+    expect(getComputedStyle(primaryCopy).fontSize).toBe("14px");
+    expect(getComputedStyle(primaryCopy).lineHeight).toBe("20px");
+    expect(getComputedStyle(supportingCopy).fontSize).toBe("12px");
+    expect(getComputedStyle(supportingCopy).lineHeight).toBe("16px");
+
+    document.documentElement.style.setProperty("--app-font-size-base", "18px");
+    document.documentElement.style.setProperty("--app-font-size-ui", "18px");
+    document.documentElement.style.setProperty("--app-font-size-ui-xs", "15px");
+
     expect(getComputedStyle(document.body).fontSize).toBe("18px");
-    expect(getComputedStyle(screen.getByText("Nothing configured").element()).fontSize).toBe(
-      "18px",
-    );
-    expect(getComputedStyle(screen.getByText("Supporting detail").element()).fontSize).toBe("15px");
+    expect(getComputedStyle(primaryCopy).fontSize).toBe("18px");
+    expect(Number.parseFloat(getComputedStyle(primaryCopy).lineHeight)).toBeCloseTo(25.714, 2);
+    expect(getComputedStyle(supportingCopy).fontSize).toBe("15px");
+    expect(getComputedStyle(supportingCopy).lineHeight).toBe("20px");
   });
 });
