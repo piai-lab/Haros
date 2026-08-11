@@ -130,7 +130,7 @@ describe("ChatMarkdown", () => {
   it("scopes footnote and accessibility ids to each markdown instance", async () => {
     const markup = await renderMarkdownPair("Claim.[^1]\n\n[^1]: Note");
     const definitionIds = Array.from(
-      markup.matchAll(/<li id="([^"]+fn-1)">/g),
+      markup.matchAll(/<li id="([^"]+fn-1)"[^>]*>/g),
       (match) => match[1],
     );
     const referenceIds = Array.from(

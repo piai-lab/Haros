@@ -200,7 +200,12 @@ describe("ChatMarkdown footnote navigation", () => {
     window.history.replaceState(null, "", `${window.location.pathname}${window.location.search}`);
   });
 
-  it("keeps references and backreferences inside their own message", async () => {
+  it("keeps references inside their own message without replacing the app route hash", async () => {
+    window.history.replaceState(
+      null,
+      "",
+      `${window.location.pathname}${window.location.search}#/thread-under-test`,
+    );
     const footnoteMarkdown = "Claim.[^1]\n\n[^1]: Note";
     const mounted = await render(
       <main data-testid="footnote-host">
@@ -239,10 +244,13 @@ describe("ChatMarkdown footnote navigation", () => {
     expect(secondBackreference.target).toBe("");
     expect(secondBackreference.rel).toBe("");
     expect(secondBackreference.getAttribute("href")).toBe(`#${secondReference.id}`);
+    expect(secondDefinition.tabIndex).toBe(-1);
 
     await userEvent.click(secondReference);
-    expect(window.location.hash).toBe(`#${secondDefinition.id}`);
+    expect(window.location.hash).toBe("#/thread-under-test");
+    expect(document.activeElement).toBe(secondDefinition);
     await userEvent.click(secondBackreference);
-    expect(window.location.hash).toBe(`#${secondReference.id}`);
+    expect(window.location.hash).toBe("#/thread-under-test");
+    expect(document.activeElement).toBe(secondReference);
   });
 });

@@ -196,6 +196,21 @@ function markdownUrlTransform(href: string): string {
   return rewriteMarkdownFileUriHref(restoredHref) ?? defaultUrlTransform(restoredHref);
 }
 
+function focusMarkdownFragment(href: string): void {
+  const encodedTargetId = href.slice(1);
+  let targetId = encodedTargetId;
+  try {
+    targetId = decodeURIComponent(encodedTargetId);
+  } catch {
+    // Keep the literal fragment when malformed percent escapes make decoding impossible.
+  }
+
+  const target = document.getElementById(targetId);
+  if (!target) return;
+  target.scrollIntoView({ block: "nearest" });
+  target.focus({ preventScroll: true });
+}
+
 function restoreLiteralDollarsInNode(node: unknown): void {
   if (!node || typeof node !== "object") {
     return;
@@ -1211,6 +1226,12 @@ function ChatMarkdown({
             <a
               {...props}
               href={restoredHref}
+              onClick={(event) => {
+                props.onClick?.(event);
+                if (event.defaultPrevented) return;
+                event.preventDefault();
+                focusMarkdownFragment(restoredHref);
+              }}
               {...(isFootnoteReference ? { "aria-describedby": footnoteLabelId } : {})}
             >
               {children}
@@ -1322,6 +1343,14 @@ function ChatMarkdown({
         return <img {...props} src={restoredSrc} alt={alt} loading="lazy" />;
       },
       li({ node, children, ...props }) {
+        const isFootnoteDefinition = props.id?.startsWith(`${footnoteClobberPrefix}fn-`) === true;
+        if (isFootnoteDefinition) {
+          return (
+            <li {...props} tabIndex={-1}>
+              {children}
+            </li>
+          );
+        }
         // Task items carry their source line down to the checkbox via context.
         const isTaskItem =
           typeof props.className === "string" && props.className.includes("task-list-item");
@@ -1407,6 +1436,7 @@ function ChatMarkdown({
     [
       cwd,
       diffThemeName,
+      footnoteClobberPrefix,
       footnoteLabelId,
       isStreaming,
       isUserVariant,
