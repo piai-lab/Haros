@@ -922,6 +922,15 @@ export const EN_MESSAGES = {
   "conversation.browserAttachmentProcessingFailed":
     "The browser screenshot could not be optimized for attachment.",
   "conversation.browserAttachmentFailed": "The current browser context could not be attached.",
+  "conversation.deviceAttachmentSkipped":
+    "The simulator screenshot was skipped because this message is already at the attachment limit.",
+  "conversation.deviceContextAttachFailed": "Could not attach the simulator screen",
+  "conversation.deviceOpenFirst":
+    "Open the iOS Simulator panel and choose a device first, then try again.",
+  "conversation.deviceStillStarting": "The selected simulator is still starting up.",
+  "conversation.deviceAttachmentProcessingFailed":
+    "The simulator screenshot could not be optimized for attachment.",
+  "conversation.deviceAttachmentFailed": "The current simulator context could not be attached.",
   "conversation.implementationCreateFailed": "Could not create implementation task",
   "conversation.clearUnavailable": "Could not clear this task",
   "conversation.clearUnavailableDescription": "Select or create a task before clearing it.",
@@ -3564,6 +3573,12 @@ export const ZH_CN_MESSAGES = {
   "conversation.browserNoActiveTab": "内置浏览器暂无可截取的活动标签页。",
   "conversation.browserAttachmentProcessingFailed": "无法将浏览器截图优化为附件。",
   "conversation.browserAttachmentFailed": "无法附加当前浏览器上下文。",
+  "conversation.deviceAttachmentSkipped": "此消息已达到附件上限，未附加模拟器截图。",
+  "conversation.deviceContextAttachFailed": "无法附加模拟器屏幕",
+  "conversation.deviceOpenFirst": "请先打开 iOS 模拟器面板并选择设备，然后重试。",
+  "conversation.deviceStillStarting": "所选模拟器仍在启动。",
+  "conversation.deviceAttachmentProcessingFailed": "无法将模拟器截图优化为附件。",
+  "conversation.deviceAttachmentFailed": "无法附加当前模拟器上下文。",
   "conversation.implementationCreateFailed": "无法创建实施任务",
   "conversation.clearUnavailable": "无法清除此任务",
   "conversation.clearUnavailableDescription": "请先选择或创建任务。",

@@ -7769,23 +7769,22 @@ export default function ChatView({
       } else {
         toastManager.add({
           type: "warning",
-          title: `You can attach up to ${PROVIDER_SEND_TURN_MAX_ATTACHMENTS} references per message.`,
-          description:
-            "The simulator screenshot was skipped because this message is already at the attachment limit.",
+          title: t("browser.attachmentLimit", { count: PROVIDER_SEND_TURN_MAX_ATTACHMENTS }),
+          description: t("conversation.deviceAttachmentSkipped"),
         });
       }
     } else if (devicePromptAttachment.requested) {
       const description =
         devicePromptAttachment.reason === "no-attached-device"
-          ? "Open the iOS Simulator panel and choose a device first, then try again."
+          ? t("conversation.deviceOpenFirst")
           : devicePromptAttachment.reason === "device-not-booted"
-            ? "The selected simulator is still starting up."
+            ? t("conversation.deviceStillStarting")
             : devicePromptAttachment.reason === "attachment-processing-failed"
-              ? "The simulator screenshot could not be optimized for attachment."
-              : "The current simulator context could not be attached.";
+              ? t("conversation.deviceAttachmentProcessingFailed")
+              : t("conversation.deviceAttachmentFailed");
       toastManager.add({
         type: "warning",
-        title: "Couldn’t attach the simulator screen",
+        title: t("conversation.deviceContextAttachFailed"),
         description,
       });
     }
