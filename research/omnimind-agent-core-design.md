@@ -97,16 +97,16 @@ packaged → available → activated → invoked → context-loaded
 
 Agent Runtime Core 只定义 OmniMind Agent 必不可少的运行保证。它不是用户功能目录，也不是跨 Engine orchestration。任何新增 Core 项必须证明无法由现有保证、Product substrate 或按需能力包组合得到。
 
-| Core guarantee | 真实职责 | 不拥有 |
-|---|---|---|
-| Model/Auth target truth | exact provider/model/options/auth readiness | Model marketplace、第二凭据库 |
-| AgentSession lifecycle | prompt、steer、follow-up、abort、idle/settlement | Product Thread、Goal queue |
-| Native durability | session JSONL、resume、branch、compaction | 跨 Engine latent continuation |
-| Capability discovery | ResourceLoader、Skill/Tool 可用性、权限与来源 | 统一伪 plugin runtime |
-| Minimal workspace tools | `read/bash/edit/write` | 重型 IDE/runtime platform |
-| Bounded delegate | focused child、exact model/tools/context、result/provenance、cancel/timeout/usage | Fleet、Mission、Scheduler、第二 Team state |
-| Result-driven native loop | root 看到工具/child 结果后继续决策，允许有界并行 | DSL、DAG、Workflow DB |
-| Runtime economics truth | input/output/cacheRead/cacheWrite/latency/settlement | 新 cache service |
+| Core guarantee            | 真实职责                                                                          | 不拥有                                     |
+| ------------------------- | --------------------------------------------------------------------------------- | ------------------------------------------ |
+| Model/Auth target truth   | exact provider/model/options/auth readiness                                       | Model marketplace、第二凭据库              |
+| AgentSession lifecycle    | prompt、steer、follow-up、abort、idle/settlement                                  | Product Thread、Goal queue                 |
+| Native durability         | session JSONL、resume、branch、compaction                                         | 跨 Engine latent continuation              |
+| Capability discovery      | ResourceLoader、Skill/Tool 可用性、权限与来源                                     | 统一伪 plugin runtime                      |
+| Minimal workspace tools   | `read/bash/edit/write`                                                            | 重型 IDE/runtime platform                  |
+| Bounded delegate          | focused child、exact model/tools/context、result/provenance、cancel/timeout/usage | Fleet、Mission、Scheduler、第二 Team state |
+| Result-driven native loop | root 看到工具/child 结果后继续决策，允许有界并行                                  | DSL、DAG、Workflow DB                      |
+| Runtime economics truth   | input/output/cacheRead/cacheWrite/latency/settlement                              | 新 cache service                           |
 
 Core 的核心不变量：
 
@@ -125,12 +125,12 @@ Core 的核心不变量：
 
 以下机制重要，但已有更高层 owner，不能塞进 Agent Runtime Core：
 
-| 机制 | 真实 owner | Core 只需要提供什么 |
-|---|---|---|
-| Exact Engine escape hatch | 现有 Product Orchestration、Provider adapters 与 Host child Thread | child/result/provenance 可投影，不把它变成默认 delegate backend |
-| Product Thread、Queue、receipt、recovery | `architecture/product-state.md` 对应产品 owner | native lifecycle 与 terminal truth |
-| Workbench availability/origin/status | `architecture/workbench.md` 与现有 projection | 可查询的真实 capability/result/diagnostic |
-| Browser/Device/Automation | 现有 Gateway、Thread runtime mode 与 Product Automation owner | 受 caller mode、scope 和当前 turn authority 约束的 tool call |
+| 机制                                     | 真实 owner                                                         | Core 只需要提供什么                                             |
+| ---------------------------------------- | ------------------------------------------------------------------ | --------------------------------------------------------------- |
+| Exact Engine escape hatch                | 现有 Product Orchestration、Provider adapters 与 Host child Thread | child/result/provenance 可投影，不把它变成默认 delegate backend |
+| Product Thread、Queue、receipt、recovery | `architecture/product-state.md` 对应产品 owner                     | native lifecycle 与 terminal truth                              |
+| Workbench availability/origin/status     | `architecture/workbench.md` 与现有 projection                      | 可查询的真实 capability/result/diagnostic                       |
+| Browser/Device/Automation                | 现有 Gateway、Thread runtime mode 与 Product Automation owner      | 受 caller mode、scope 和当前 turn authority 约束的 tool call    |
 
 边界层可以翻译、投影和路由，不能复制 Engine lifecycle 或建立第二控制面。
 
@@ -138,19 +138,19 @@ Core 的核心不变量：
 
 下表是机制拆解，不是固定功能清单、导航数量或承诺“必须有十项”。真实 journey 若证明两个概念应合并、一个概念不需要独立入口，或出现新的能力组合，应修改产品表面而不是新增 Core owner。判断标准始终是用户结果与唯一 lifecycle，不是沿用今天的名词。
 
-| 用户可见能力 | 最小机制 | 不应新增的实体 |
-|---|---|---|
-| Agent 团队 | 多个 bounded delegate + root synthesis + Workbench origin | Team registry、Fleet scheduler |
-| 目标 | 一个 active objective 的 continuation/complete/blocked/wait policy | Goal database、Goal queue、第二 lifecycle |
-| 动态工作流 | root 读取结果后在同一 native loop 决定下一步；必要时并行 tool calls | 默认 workflowScript/DSL/DAG/journal |
-| 知识库 | 普通任务实际使用 durable sources 后，自动维护 workspace-scoped evidence、linked Markdown 与 index；JIT search/read | “更新知识”按钮、首次写入审阅、向量库、graph、daemon、全局 vault |
-| 记忆 | settled 后有界、稀疏、自动提取高价值 preference/constraint/project fact；按需召回并可查看/纠正/遗忘 | 保存全部 transcript、逐条回执、复制 Engine-native memory、第二数据库 |
-| 会话恢复 | Engine-native resume/compaction；跨 session 用 artifact/handoff | OmniMind 伪造 latent state |
-| Computer Use | 现有 Browser/Device Gateway tools + caller Thread runtime mode | 第二设备控制栈、每个 Host tool 再发明一层 approval |
-| Todo | 当前步骤的轻量任务资产；继续复用已采用 `pi-todo` | 项目管理平台 |
-| Review/Verification | 按需 Skill + tests/checks + 可审查 receipt | 常驻 reviewer daemon |
-| Search | 本地 `rg/read`；未来可选固定、窄 web route | 多 provider 自动 fallback 平台 |
-| Automation | 现有产品 scheduler/automation owner | Agent Core 内第二 scheduler |
+| 用户可见能力        | 最小机制                                                                                                           | 不应新增的实体                                                       |
+| ------------------- | ------------------------------------------------------------------------------------------------------------------ | -------------------------------------------------------------------- |
+| Agent 团队          | 多个 bounded delegate + root synthesis + Workbench origin                                                          | Team registry、Fleet scheduler                                       |
+| 目标                | 一个 active objective 的 continuation/complete/blocked/wait policy                                                 | Goal database、Goal queue、第二 lifecycle                            |
+| 动态工作流          | root 读取结果后在同一 native loop 决定下一步；必要时并行 tool calls                                                | 默认 workflowScript/DSL/DAG/journal                                  |
+| 知识库              | 普通任务实际使用 durable sources 后，自动维护 workspace-scoped evidence、linked Markdown 与 index；JIT search/read | “更新知识”按钮、首次写入审阅、向量库、graph、daemon、全局 vault      |
+| 记忆                | settled 后有界、稀疏、自动提取高价值 preference/constraint/project fact；按需召回并可查看/纠正/遗忘                | 保存全部 transcript、逐条回执、复制 Engine-native memory、第二数据库 |
+| 会话恢复            | Engine-native resume/compaction；跨 session 用 artifact/handoff                                                    | OmniMind 伪造 latent state                                           |
+| Computer Use        | 现有 Browser/Device Gateway tools + caller Thread runtime mode                                                     | 第二设备控制栈、每个 Host tool 再发明一层 approval                   |
+| Todo                | 当前步骤的轻量任务资产；继续复用已采用 `pi-todo`                                                                   | 项目管理平台                                                         |
+| Review/Verification | 按需 Skill + tests/checks + 可审查 receipt                                                                         | 常驻 reviewer daemon                                                 |
+| Search              | 本地 `rg/read`；未来可选固定、窄 web route                                                                         | 多 provider 自动 fallback 平台                                       |
+| Automation          | 现有产品 scheduler/automation owner                                                                                | Agent Core 内第二 scheduler                                          |
 
 “Goal、Agent Team、Dynamic Workflow、Memory、Wiki”是产品语义，不是必须常驻的入口。多数应由自然语言或运行条件自动触发，只在有可行动状态时投影；UI 名称更不授权后台各建一套系统。
 
@@ -502,13 +502,13 @@ Engine native ecosystem
 
 生产 adoption 的唯一根级身份在 [`README.md`](../README.md) 的 `source-adoptions`：bundled Pi `0.84.1` lineage 与 adopted `pi-todo` 是当前基线，不在本研究表复制版本真相。以下只记录截至证据日期的外部候选裁决；升级或重开必须按 `PI-ECOSYSTEM-INTAKE.md` 重新验证。
 
-| 来源 | Exact identity | 证据成熟度 | 当前裁决 | 最强原因与重开触发器 |
-|---|---|---|---|---|
-| `pi-subagents` | `0.47.0`; [commit `2243d13c…`](https://github.com/nicobailon/pi-subagents/commit/2243d13c052e2aa87353ad7c1c896062b657a7a5); integrity `sha512-7ihuBxK052+CWvk1EuJDAjwrFou0Y7JXsDYRzEdRiGVS+fUGh/+ziUUdpfkAlFnmdg/9b4WARz66aPe7z+5Xlw==`; shasum `969e4ac1b6c8a846e5ace51a282c374ae91e810a`; MIT | source-matched；source tests 部分闭合；product/packaged 未证明 | **Defer with trigger**；保留 delegate/Role/recovery 洞察 | 无法配置成真正 execution-only；仍注册 Fleet/Mission/Schedule/management/state/UI，默认写 `.pi/subagents`，installer clone/pull `~/.pi`。只有 upstream 提供 public leaf executor/真实 core profile，或 benchmark 证明收益足以支持 upstream patch 时重开 |
-| `@narumitw/pi-goal` | `0.51.0`; [commit `c98af43a…`](https://github.com/narumiruna/pi-extensions/commit/c98af43a6c71c5839b2e0671db71ed1cc1fc0c51); integrity `sha512-JeEu+iCT4zMP41LLYfZxHsHG6ghhLA0Fb6pCQL/hzLyQVYd3E/Op+qJyMDOwU8dqdtEf92hrN5G9Gr0XP24hLw==`; shasum `3e2fec1cf97ca4e9edda5e6ef8e564c0c98e46ef`; MIT | source-matched；source tests 闭合；product/packaged 未证明 | Runtime **Decline**；guards **Translate mechanism** | 原包持有第二 Goal/session continuation state；复用 complete/blocked/wait/stale-id/settled-idle 测试思想 |
-| `@zosmaai/pi-llm-wiki` | `0.11.3`; SLSA source commit `42d6fd15912bd3eea71abb0d7a017bab462dc4aa`; integrity `sha512-Xn8ZJjXFKtCm0cE8yjN+Y549Q/ZGpprDX0xmLNA0fMIL/O3/HMIDJfRwIRWzmnhNV3oH9aAtlgAZU8mI1y640g==`; shasum `38d79d0e7ebea66d2c6df109aeef8c95cf392eda`; MIT | source-matched；阻断行为已从 exact runtime/source 观察；product/packaged 未证明 | **Donor / read-only comparator**；默认 runtime **No-go** | extension 无真正 ambient gate，自动 personal vault/recall/tool surface；capture 有 SSRF/local exfil/shell injection；写入缺少可靠锁/事务。只允许绝对隔离 root 下的受控对照，不能原装打包 |
-| `pi-mcp-adapter` | `2.23.0`; [commit `49e25be1…`](https://github.com/nicobailon/pi-mcp-adapter/commit/49e25be1cb917329980eb7a40786c5b91dddb277); integrity `sha512-4jtofg55o6tEP47XGYGkR2oykKMlQiJBqZcx4y9SeguNHOdBJ3sr5gT8DktLSTdZX8XGj/A6BITgV6/vLz8TGA==`; shasum `c9ea49075979319ec943fd0f7072014f794e1a0f`; MIT | artifact/release-source identity closed；exact tests 与 packaged 未证明 | Existing Gateway owner **Decline**；external MCP **Defer/narrow bridge** | 不能与现有 Gateway 重复；未来只考虑 programmatic、URL-only、无 ambient discovery 的 outbound client |
-| `pi-web-access` | `0.22.0`; [commit `7e488620…`](https://github.com/nicobailon/pi-web-access/commit/7e488620f32de239992d45eac83235d03c9c6bbd); integrity `sha512-xzeU0q9OCYJv3yufK3vqIoelvPT/1/aoV5Pj7NbsQiW2QnB0FOlMxhP29TBTWkPJdleRnch6/MH8P2ebhwUTBQ==`; shasum `189e04a0d0b0957145e4fefcd6ac627f12591c05`; MIT | artifact/release-source identity closed；exact tests 与 packaged 未证明 | **Defer**；search mechanism donor | stock schema 允许模型覆盖 provider，且 cookies/fetch/curator 表面过大；未来只接受 OmniMind-owned fixed SearXNG search-only wrapper、无 fallback |
+| 来源                   | Exact identity                                                                                                                                                                                                                                                                                    | 证据成熟度                                                                      | 当前裁决                                                                 | 最强原因与重开触发器                                                                                                                                                                                                                                   |
+| ---------------------- | ------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- | ------------------------------------------------------------------------------- | ------------------------------------------------------------------------ | ------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------ |
+| `pi-subagents`         | `0.47.0`; [commit `2243d13c…`](https://github.com/nicobailon/pi-subagents/commit/2243d13c052e2aa87353ad7c1c896062b657a7a5); integrity `sha512-7ihuBxK052+CWvk1EuJDAjwrFou0Y7JXsDYRzEdRiGVS+fUGh/+ziUUdpfkAlFnmdg/9b4WARz66aPe7z+5Xlw==`; shasum `969e4ac1b6c8a846e5ace51a282c374ae91e810a`; MIT   | source-matched；source tests 部分闭合；product/packaged 未证明                  | **Defer with trigger**；保留 delegate/Role/recovery 洞察                 | 无法配置成真正 execution-only；仍注册 Fleet/Mission/Schedule/management/state/UI，默认写 `.pi/subagents`，installer clone/pull `~/.pi`。只有 upstream 提供 public leaf executor/真实 core profile，或 benchmark 证明收益足以支持 upstream patch 时重开 |
+| `@narumitw/pi-goal`    | `0.51.0`; [commit `c98af43a…`](https://github.com/narumiruna/pi-extensions/commit/c98af43a6c71c5839b2e0671db71ed1cc1fc0c51); integrity `sha512-JeEu+iCT4zMP41LLYfZxHsHG6ghhLA0Fb6pCQL/hzLyQVYd3E/Op+qJyMDOwU8dqdtEf92hrN5G9Gr0XP24hLw==`; shasum `3e2fec1cf97ca4e9edda5e6ef8e564c0c98e46ef`; MIT  | source-matched；source tests 闭合；product/packaged 未证明                      | Runtime **Decline**；guards **Translate mechanism**                      | 原包持有第二 Goal/session continuation state；复用 complete/blocked/wait/stale-id/settled-idle 测试思想                                                                                                                                                |
+| `@zosmaai/pi-llm-wiki` | `0.11.3`; SLSA source commit `42d6fd15912bd3eea71abb0d7a017bab462dc4aa`; integrity `sha512-Xn8ZJjXFKtCm0cE8yjN+Y549Q/ZGpprDX0xmLNA0fMIL/O3/HMIDJfRwIRWzmnhNV3oH9aAtlgAZU8mI1y640g==`; shasum `38d79d0e7ebea66d2c6df109aeef8c95cf392eda`; MIT                                                      | source-matched；阻断行为已从 exact runtime/source 观察；product/packaged 未证明 | **Donor / read-only comparator**；默认 runtime **No-go**                 | extension 无真正 ambient gate，自动 personal vault/recall/tool surface；capture 有 SSRF/local exfil/shell injection；写入缺少可靠锁/事务。只允许绝对隔离 root 下的受控对照，不能原装打包                                                               |
+| `pi-mcp-adapter`       | `2.23.0`; [commit `49e25be1…`](https://github.com/nicobailon/pi-mcp-adapter/commit/49e25be1cb917329980eb7a40786c5b91dddb277); integrity `sha512-4jtofg55o6tEP47XGYGkR2oykKMlQiJBqZcx4y9SeguNHOdBJ3sr5gT8DktLSTdZX8XGj/A6BITgV6/vLz8TGA==`; shasum `c9ea49075979319ec943fd0f7072014f794e1a0f`; MIT | artifact/release-source identity closed；exact tests 与 packaged 未证明         | Existing Gateway owner **Decline**；external MCP **Defer/narrow bridge** | 不能与现有 Gateway 重复；未来只考虑 programmatic、URL-only、无 ambient discovery 的 outbound client                                                                                                                                                    |
+| `pi-web-access`        | `0.22.0`; [commit `7e488620…`](https://github.com/nicobailon/pi-web-access/commit/7e488620f32de239992d45eac83235d03c9c6bbd); integrity `sha512-xzeU0q9OCYJv3yufK3vqIoelvPT/1/aoV5Pj7NbsQiW2QnB0FOlMxhP29TBTWkPJdleRnch6/MH8P2ebhwUTBQ==`; shasum `189e04a0d0b0957145e4fefcd6ac627f12591c05`; MIT  | artifact/release-source identity closed；exact tests 与 packaged 未证明         | **Defer**；search mechanism donor                                        | stock schema 允许模型覆盖 provider，且 cookies/fetch/curator 表面过大；未来只接受 OmniMind-owned fixed SearXNG search-only wrapper、无 fallback                                                                                                        |
 
 审计完备性必须保守表达：
 
@@ -557,7 +557,13 @@ Skill 与 Plugin 属于全局一致的基础概念，不应为每个 Engine 或�
 
 图标资产的最终 owner 是 `architecture/workbench.md` 和对应 UI 实现。维护者已经锁定：目标 `target-arrow`、Agent 团队 `agent-duo`、动态工作流 `flow-adaptive`、知识库 `knowledge-linked`、记忆 `memory-bookmark`、会话恢复 `resume-chat`。其中目标来自现有 Central asset，其余为已确认的低密度 Central-compatible SVG；正式进入产品前在当次 HEAD 复验占用和视觉冲突。知识库/记忆不得改成 database/brain glyph，Skill/Plugin 的同一概念必须跨入口保持同名、同义和同一图标词汇。能力强度不能靠 icon 数量和色彩密度表达。
 
-`agent-duo` 只表示“子智能体集合/入口”，不能成为每个 child 的相同头像。每个真实 child 需要一个确定性的低密度身份纹样，并在 Environment、right dock、Timeline、Composer 和来源引用中连续；这属于现有 `subagentPresentation.ts` 的 UI identity projection，不是 Agent Core 状态。Workflow 同理：继续复用现有 `WorkflowRunCard` 的 compact header、动作和 state，点击后才在 existing right dock 打开同一 Engine-owned run 的只读空间详情；不新增通用 Workflow owner、DAG database 或 editor。当前 `WorkflowRunState` 只有有序 phases 与 Agent membership，没有 dependency edges，因此 V1 只组合既有 UI primitives 形成 phase map，不猜测 Agent 间连线，也不先引入 graph dependency。只有 exact Engine/adapter 将稳定 node ids 与 explicit dependency edges 提升为真实产品事实时，React Flow 才是第一 challenger，AntV X6 才是复杂图升级候选；完整裁决与 proof 见 `omnimind-agent-capability-surface.md`。
+`agent-duo` 只表示“子智能体集合/入口”，不能成为每个 child 的相同头像。每个真实 child 需要一个确定性的低密度身份纹样，并在 Environment、right dock、Timeline、Composer 和来源引用中连续；首个候选池从现有 Central 资产策展 24 个 16px 仍清晰的 glyph，与 `subagentPresentation.ts` 现有 8 色 palette 组合成 192 个候选，并在同一 parent/workflow 内稳定消碰撞。它属于现有 UI identity projection，不是 Agent Core 状态。
+
+Workflow 复用的是 canonical Provider activities、现有 `WorkflowRunCard.logic.ts` projection、`WorkflowRunCard.tsx` action wiring 和 `workflowRunUiStore.ts` 的 bounded paused/dismissed flags，不是冻结现有密集 card 的视觉形态。当前 pause 是 mark+stop，resume 是携带 script/run identity 的新 Composer turn 并 dismiss 旧 run；UI 不得把这套补偿文案伪装成新的 Provider runtime state。当前 selector 又把 latest run、Composer visibility 与 snapshot construction 黏在一起，RightDock/旧 Timeline milestone 正式实现前必须先提取按 exact `workflowTaskId` 重建的共享纯 selector，不能复制 parser。
+
+同一个 Engine-owned run 只做四个职责互斥的投影：Timeline 从 persisted activities 去重投影有意义里程碑；Composer 只在 running 或 paused/failed/stopped 且 exact run 可 resume 时保留一条近手控制行；Environment 是可重新找到的当前任务索引；existing right dock 承担 phase/Agent 空间详情、搜索和筛选。四者不得复制状态、timer、Agent list 或 optimistic command state；已包含在 `WorkflowRunState.taskIds` 的 member 继续从 generic background/subagent 摘要排除，同一 child 不重复计数。normal completed 或无可行动恢复后 Composer 退场，Timeline 封存；exact resumable settled run 可留在 Environment，直到用户 dismiss 或被新 run 明确替换。当前 contract 没有 waiting status，不能从 `runningCount` 猜。
+
+当前 `WorkflowRunState` 只有有序 phases 与 Agent membership，没有 dependency edges，因此 phase map 只画真实 phase-order spine 与 containment，不猜测 Agent 间因果边，也不新增通用 Workflow owner、DAG database 或 editor。4/20/120-Agent fixture 必须同时成立：120-Agent 默认聚合非当前 phase，只展开 current/selected phase 的 bounded children 与搜索命中。宿主 DOM/SVG 与 React Flow read-only grouped-node profile 应用同一 fixture focused bake-off；100+ Agent、pan/zoom/fit、visible-element rendering 或自写 layout/keyboard/viewport 责任任一成立时即可采用通过 proof 的成熟 renderer，explicit Agent edges 不是唯一门。AntV X6 只在一个明确的 React Flow 路由、嵌套或规模失败反例下升级；完整裁决与 proof 见 `omnimind-agent-capability-surface.md`。
 
 ## 15. 主要风险与反架构清单
 

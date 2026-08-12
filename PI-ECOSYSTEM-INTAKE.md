@@ -230,16 +230,16 @@ Gate A 不应制造实施 plan、改依赖或更新 Campaign claim。
 
 每个来源或机制只能使用以下主 disposition 之一；复杂 package 可按独立机制拆分：
 
-| Disposition | 含义 | 适用条件 |
-|---|---|---|
-| **Preserve / adopt directly** | 保留或直接采用 exact artifact | owner 与产品一致，公开 seam 稳定，隔离和 journey 已证明 |
-| **Configure / curate** | 原包保留，只用配置或资产策展缩小表面 | 关闭项真的不注册 owner，而非仅隐藏 |
-| **Bridge narrowly** | 用窄 adapter 接入现有 owner | 不复制 lifecycle/state/policy，桥可删除 |
-| **Translate mechanism** | 吸收算法、状态机 guard 或测试，不运行原包 | 原包 owner 冲突，但机制有独立价值 |
-| **Donor / comparator** | 只作代码供体、对照组或实验基线 | 尚不具备产品准入条件 |
-| **Defer with trigger** | 当前不采用；写明唯一重开条件 | 证据不足、时机未到或需要 upstream seam |
-| **Decline, retain insight** | 拒绝运行时与长期责任，只保留洞察 | 净收益为负或违反 owner |
-| **Fork narrowly** | 最后手段；只维护最小 patch inventory | 配置/桥/翻译均失败，基准证明收益，维护者再次授权 |
+| Disposition                   | 含义                                      | 适用条件                                                |
+| ----------------------------- | ----------------------------------------- | ------------------------------------------------------- |
+| **Preserve / adopt directly** | 保留或直接采用 exact artifact             | owner 与产品一致，公开 seam 稳定，隔离和 journey 已证明 |
+| **Configure / curate**        | 原包保留，只用配置或资产策展缩小表面      | 关闭项真的不注册 owner，而非仅隐藏                      |
+| **Bridge narrowly**           | 用窄 adapter 接入现有 owner               | 不复制 lifecycle/state/policy，桥可删除                 |
+| **Translate mechanism**       | 吸收算法、状态机 guard 或测试，不运行原包 | 原包 owner 冲突，但机制有独立价值                       |
+| **Donor / comparator**        | 只作代码供体、对照组或实验基线            | 尚不具备产品准入条件                                    |
+| **Defer with trigger**        | 当前不采用；写明唯一重开条件              | 证据不足、时机未到或需要 upstream seam                  |
+| **Decline, retain insight**   | 拒绝运行时与长期责任，只保留洞察          | 净收益为负或违反 owner                                  |
+| **Fork narrowly**             | 最后手段；只维护最小 patch inventory      | 配置/桥/翻译均失败，基准证明收益，维护者再次授权        |
 
 “Already covered”不是采用动作。若现有 OmniMind owner 已提供用户结果，应将候选判为 `Decline` 或只保留未覆盖机制，不能并行安装第二份实现。
 
@@ -314,6 +314,25 @@ Codex、Claude Code、OpenCode 等能力必须通过各自官方 seam 评估：
 - official docs 只证明当前可能的公开 seam；生产结论还要 feature-detect exact installed version，并从 Engine 的 init/list/status 回报建立 loaded inventory；
 - 同名冲突审计同时覆盖 native 配置、OmniMind session overlay、动态注册和 UI display name。即使不改 source home，session 层静默遮蔽仍是冲突；
 - 现有 OmniMind 注入也受本节约束，不能因它是 first-party 就跳过 namespace、credential、settlement 和 shutdown 审计。
+
+### 8.5 用户可见 projection / package UI
+
+外部 package 带有 TUI、card、command、status view、notification 或完整 dashboard 时，**默认只把它当机制证据，不把它当 OmniMind 产品母版**。Gate A 必须把“runtime/state/action 值得继承”与“原作者 UI 值得继承”拆成两个独立结论：可以保留公开 state/action seam，同时拒绝其可见组件、导航、术语和聚合模型。
+
+每个候选能力在进入 Gate B 前必须完成一张最小 projection map，并链接到 [`architecture/workbench.md`](architecture/workbench.md) 的现有 owner：
+
+| 问题                 | 必须得到的结论                                                                                                                                           |
+| -------------------- | -------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| 平时是否需要 UI      | `none / quiet receipt / active control / blocking intervention` 四选一，以最低充分级别为准                                                               |
+| 用户此刻为什么看见它 | 当前可行动、可恢复、可追溯或必须人工介入；“package 注册了功能”不是理由                                                                                   |
+| 现有宿主是谁         | Timeline、Composer stack、Environment、RightDock、Files/Diff、Browser/Device、Settings/Library 或现有 child Thread；没有证据不得新增顶层 route/pane/card |
+| 同一事实如何避免重复 | 每个投影必须有独占职责和生命周期；共享 canonical identity/state/action，不复制 timer、list、optimistic command 或 terminal truth                         |
+| 完成后留下什么       | 运行控制退场；durable result 回到文件、Thread、Activity 或已有索引；不靠常驻“已完成卡”证明能力存在                                                       |
+| 规模与维护如何证明   | 用真实最小/典型/压力 fixture 验证密度、搜索/筛选、键盘、双语、reduced motion、hidden/background 和 continuous update；不能只看作者 demo                  |
+
+对 subagent/workflow 类候选还要额外证明：集合图标与实例 identity 分离；同一 child 在 Timeline、Environment、详情和 child Thread 保持稳定 identity；100+ Agent 时使用分组、聚合、按需展开和搜索，不把所有节点同时渲染/动画。只有 source contract 真正提供 dependency edge 才画 Agent 因果边，不能从时间顺序、文案或 tool activity 猜 DAG。成熟 renderer 可以进入 focused bake-off，但它只拥有纯 projection，不得借机引入 editor、canvas document、第二 Workflow runtime 或 layout database。
+
+名称与图标属于产品词汇 owner，而不是 package/Engine 私有皮肤：Skill、Plugin 以及同一 canonical asset 跨入口保持同名、同义、同一图标；`native / projected / unavailable / conflict` 可以准确显示来源差异，但不得把一个概念复制成多个用户对象。任何新用户可见文案同时闭合简体中文和英文。
 
 ## 9. Gate B：实施与晋级
 

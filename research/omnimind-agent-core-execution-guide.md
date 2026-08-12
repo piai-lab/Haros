@@ -40,7 +40,7 @@
 6. `missions/independent-omnimind-v1.md`（仅 active 时）；
 7. `research/README.md` 与：
    - `research/omnimind-agent-core-design.md`
-   - UI、能力发现、运行状态、干预或结果投影相关时：完整读取 `research/omnimind-agent-capability-surface.md`，并以真实 `apps/web` owner 为母体；其 HTML 只验证 Workflow right-dock 唯一新增空间，不是 Todo、子智能体、审批、Computer Use、Knowledge、Memory 或恢复的组件母版
+   - UI、能力发现、运行状态、干预或结果投影相关时：完整读取 `research/omnimind-agent-capability-surface.md`，并以真实 `apps/web` owner 为母体；其 HTML 只验证同一 Workflow 在 Timeline、Composer、Environment、RightDock 的职责关系、空间详情与 100+ Agent 层级，不是 Todo、审批、Computer Use、Knowledge、Memory 或恢复的组件母版
    - 本指南。
 
 研究外部 Pi/Engine 来源时，必须完整执行 `PI-ECOSYSTEM-INTAKE.md` Gate A；不能用本指南替代 exact-source intake。
@@ -110,24 +110,24 @@ stop condition 是否触发？
 
 不要从旧行号开始。先用 `rg` 找 symbol，再读完整局部 owner。
 
-| 事实 | 当前入口 | 新会话必须确认什么 |
-|---|---|---|
-| Pi runtime/session | `apps/server/src/provider/Layers/PiAdapter.ts` | ModelRuntime、AgentSession、SessionManager、ResourceLoader、event settlement |
-| Product usage contract | `packages/contracts/src/providerRuntime.ts` | input/output/cacheRead/cacheWrite 是否完整 |
-| Skill catalog | `apps/server/src/provider/skillsCatalog.ts` | root、source、dedupe、same-name 行为 |
-| Skill discovery projection | `apps/server/src/provider/Layers/ProviderDiscoveryService.ts` | native/projected/unavailable 是否诚实 |
-| Turn-time Skill projection | `apps/server/src/provider/skillPromptInjection.ts` | path admission、budget、resource 兼容 |
-| Skill reference contract | `packages/contracts/src/providerDiscovery.ts` | 是否仍信任 client raw path |
-| Codex Skill seam | `apps/server/src/codexAppServerManager.ts` | `skills/extraRoots/set` scope 与隔离 |
-| Gateway MCP injection | `apps/server/src/agentGateway/mcpInjection.ts` | 每 Engine seam、credential、name conflict |
-| Gateway transport/authority | `apps/server/src/agentGateway/mcpTransport.ts` 及 Layer owner | bearer、active turn、abort、tool dispatch |
-| Provider-native child projection | `apps/server/src/orchestration/Layers/ProviderRuntimeIngestion.ts` | origin、cap、Product Thread materialization |
-| Claude private workflow | `apps/server/src/provider/Layers/ClaudeAdapter.ts`、`claudeWorkflowRuntime.ts`、`claudeWorkflowScript.ts` | provider-private truth，不提升成全局 owner |
-| Workbench | `apps/web/src` 对应组件 + `architecture/workbench.md` | 用户只看到真实 availability/origin/status |
-| Composer task/subagent/workflow/approval | `ChatView.tsx`、`ComposerActiveTaskListCard.tsx`、`ComposerSubagentStrip.tsx`、`WorkflowRunCard.tsx`、`ComposerPendingApprovalPanel.tsx` | 复用既有 stacked surfaces，不为每项能力新增卡或 aggregate state |
-| Agent identity projection | `apps/web/src/lib/subagentPresentation.ts`、`ComposerSubagentStrip.logic.ts` | 在既有 deterministic accent owner 上增加 glyph variant；不建 avatar registry，不用 status 改写 identity |
-| Workflow spatial detail | `EnvironmentPanel.tsx`、`RightDock.tsx`、`rightDockStore.logic.ts`、`rightDockPaneMeta.tsx`、`WorkflowRunCard.tsx` | 直接复用现有 card/actions/state，一行摘要打开同一 run 的只读 workflow pane；当前 phase-only truth 只用 host primitives 渲染有序 phase lanes 与 Agent membership，不画 dependency edges、不复制 provider state、不从普通 tool sequence 推图；只有 exact Engine 上报 explicit graph 后才以 React Flow 做 challenger proof，X6 只作复杂图升级 |
-| Thread Recap | `apps/web/src/lib/threadRecap.ts`、`apps/web/src/hooks/useThreadRecap.ts`、`EnvironmentPanel.tsx` | 当前是有界 UI recap/local cache，不是 durable Agent memory |
+| 事实                                     | 当前入口                                                                                                                                                                                                                                                                                                    | 新会话必须确认什么                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                   |
+| ---------------------------------------- | ----------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- | ---------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| Pi runtime/session                       | `apps/server/src/provider/Layers/PiAdapter.ts`                                                                                                                                                                                                                                                              | ModelRuntime、AgentSession、SessionManager、ResourceLoader、event settlement                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                         |
+| Product usage contract                   | `packages/contracts/src/providerRuntime.ts`                                                                                                                                                                                                                                                                 | input/output/cacheRead/cacheWrite 是否完整                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                           |
+| Skill catalog                            | `apps/server/src/provider/skillsCatalog.ts`                                                                                                                                                                                                                                                                 | root、source、dedupe、same-name 行为                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                 |
+| Skill discovery projection               | `apps/server/src/provider/Layers/ProviderDiscoveryService.ts`                                                                                                                                                                                                                                               | native/projected/unavailable 是否诚实                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                |
+| Turn-time Skill projection               | `apps/server/src/provider/skillPromptInjection.ts`                                                                                                                                                                                                                                                          | path admission、budget、resource 兼容                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                |
+| Skill reference contract                 | `packages/contracts/src/providerDiscovery.ts`                                                                                                                                                                                                                                                               | 是否仍信任 client raw path                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                           |
+| Codex Skill seam                         | `apps/server/src/codexAppServerManager.ts`                                                                                                                                                                                                                                                                  | `skills/extraRoots/set` scope 与隔离                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                 |
+| Gateway MCP injection                    | `apps/server/src/agentGateway/mcpInjection.ts`                                                                                                                                                                                                                                                              | 每 Engine seam、credential、name conflict                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                            |
+| Gateway transport/authority              | `apps/server/src/agentGateway/mcpTransport.ts` 及 Layer owner                                                                                                                                                                                                                                               | bearer、active turn、abort、tool dispatch                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                            |
+| Provider-native child projection         | `apps/server/src/orchestration/Layers/ProviderRuntimeIngestion.ts`                                                                                                                                                                                                                                          | origin、cap、Product Thread materialization                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                          |
+| Claude private workflow                  | `apps/server/src/provider/Layers/ClaudeAdapter.ts`、`claudeWorkflowRuntime.ts`、`claudeWorkflowScript.ts`                                                                                                                                                                                                   | provider-private truth，不提升成全局 owner                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                           |
+| Workbench                                | `apps/web/src` 对应组件 + `architecture/workbench.md`                                                                                                                                                                                                                                                       | 用户只看到真实 availability/origin/status                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                            |
+| Composer task/subagent/workflow/approval | `ChatView.tsx`、`ComposerActiveTaskListCard.tsx`、`ComposerSubagentStrip.tsx`、`WorkflowRunCard.tsx`、`ComposerPendingApprovalPanel.tsx`                                                                                                                                                                    | 复用既有 stacked surfaces，不为每项能力新增卡或 aggregate state                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                      |
+| Agent identity projection                | `apps/web/src/lib/subagentPresentation.ts`、`ComposerSubagentStrip.logic.ts`                                                                                                                                                                                                                                | 在既有 deterministic accent owner 上增加 glyph variant；不建 avatar registry，不用 status 改写 identity                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                              |
+| Workflow 四投影与 spatial detail         | `apps/web/src/components/chat/TimelineWorkEntryRow.tsx`、`WorkflowRunCard.logic.ts`、`WorkflowRunCard.tsx`、`workflowRunUiStore.ts`、`EnvironmentPanel.tsx`、`RightDock.tsx`、`rightDockStore.logic.ts`、`rightDockPaneMeta.tsx`，以及 `apps/server/src/orchestration/providerRuntimeActivityProjection.ts` | 保留现有 activity truth、action wiring 与 paused/dismissed UI owner，不冻结密集 card 视觉。先把 latest/visibility 与 exact-task snapshot selector 拆开，RightDock/旧 Timeline milestone 才能按 `workflowTaskId` 重建。Timeline=持久 activity 的去重里程碑、Composer=running 或 paused/failed/stopped 且 exact resumable 的近手控制、Environment=持久索引、RightDock=完整详情；当前无 waiting status，不猜。当前 truth 只画 phase-order spine 与 membership containment，不猜 dependency edges。4/20/120-Agent fixture 对比 host DOM/SVG 与 React Flow read-only profile；100+、pan/zoom/fit、visible rendering 或自写 viewport/layout 责任任一成立即可采用成熟 renderer，X6 只作有明确失败反例的升级 |
+| Thread Recap                             | `apps/web/src/lib/threadRecap.ts`、`apps/web/src/hooks/useThreadRecap.ts`、`EnvironmentPanel.tsx`                                                                                                                                                                                                           | 当前是有界 UI recap/local cache，不是 durable Agent memory                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                           |
 
 建议 focused 搜索：
 
@@ -172,16 +172,17 @@ Project Context 当前也有一个必须先承认的 absence：现有 Thread Rec
 
 旧指南的 X0–X9 串行大链已废弃。以下 Slice 彼此独立；只有共同 contract 发生真实依赖时才排序。
 
-| Slice | 用户结果 | 默认前置 | 是否互相阻塞 |
-|---|---|---|---|
-| A. Runtime and boundary truth repairs | 自动化边界/完成/费用/Skill/Gateway identity 真实 | `execution-brief` 准入具体修复 | 其他 runtime/capability Slice 的真实性前置；A0–A4 可独立 |
-| B. Bounded delegate | OmniMind Agent 可委派一个有界 child | settlement truth、exact model target | 不依赖 Knowledge/Goal/UI 大改 |
-| C. Result-driven workflow | root 可依据一个或多个结果继续/分支/收口 | B 或现有 tools | 不依赖 DSL、Host multiwave |
-| D. Cross-Engine Capability Pack | OmniMind Library 加法投影到选定 Engine | Skill admission/availability 与 Gateway identity/conflict truth | 不依赖 delegate |
-| E. Goal/Todo behavior | 单 active objective 能可靠继续/完成/阻塞/等待 | settlement truth | 不依赖 `pi-goal` runtime |
-| F. Automatic Knowledge experiment | 普通任务实际使用来源后自动维护 workspace knowledge | exact-source intake + isolated comparator + project-context owner | 不能阻塞 B/C |
-| G. External MCP/Search | 用户配置的窄 external capability | credential/trust/isolation owner | 最后评估，不复用 fixed Gateway 推断 |
-| H. Automatic project memory | settled 后自动保存并按需召回少量高价值项目事实 | 与 F 共用 project-context owner、scope/provenance/forget contract、settlement truth | 与 Knowledge page intent、Recap、native Engine memory 分责；不阻塞 B/C |
+| Slice                                 | 用户结果                                                                             | 默认前置                                                                                   | 是否互相阻塞                                                                   |
+| ------------------------------------- | ------------------------------------------------------------------------------------ | ------------------------------------------------------------------------------------------ | ------------------------------------------------------------------------------ |
+| A. Runtime and boundary truth repairs | 自动化边界/完成/费用/Skill/Gateway identity 真实                                     | `execution-brief` 准入具体修复                                                             | 其他 runtime/capability Slice 的真实性前置；A0–A4 可独立                       |
+| B. Bounded delegate                   | OmniMind Agent 可委派一个有界 child                                                  | settlement truth、exact model target                                                       | 不依赖 Knowledge/Goal/UI 大改                                                  |
+| C. Result-driven workflow             | root 可依据一个或多个结果继续/分支/收口                                              | B 或现有 tools                                                                             | 不依赖 DSL、Host multiwave                                                     |
+| D. Cross-Engine Capability Pack       | OmniMind Library 加法投影到选定 Engine                                               | Skill admission/availability 与 Gateway identity/conflict truth                            | 不依赖 delegate                                                                |
+| E. Goal/Todo behavior                 | 单 active objective 能可靠继续/完成/阻塞/等待                                        | settlement truth                                                                           | 不依赖 `pi-goal` runtime                                                       |
+| F. Automatic Knowledge experiment     | 普通任务实际使用来源后自动维护 workspace knowledge                                   | exact-source intake + isolated comparator + project-context owner                          | 不能阻塞 B/C                                                                   |
+| G. External MCP/Search                | 用户配置的窄 external capability                                                     | credential/trust/isolation owner                                                           | 最后评估，不复用 fixed Gateway 推断                                            |
+| H. Automatic project memory           | settled 后自动保存并按需召回少量高价值项目事实                                       | 与 F 共用 project-context owner、scope/provenance/forget contract、settlement truth        | 与 Knowledge page intent、Recap、native Engine memory 分责；不阻塞 B/C         |
+| UI-W. Workflow projection             | 用户在对话中有运行体感，能从 Environment 找回并在 RightDock 理解 100+ Agent workflow | 可按 exact task 重建的 Provider activities + 当前 Web owners；不要求先有通用 Workflow Core | 独立 UI slice；不阻塞 B/C/F/H，也不把 Claude private workflow 提升成全局 owner |
 
 一个 Slice 只能在 `execution-brief.md` 明确准入时施工。不要一次提交 “Agent Core suite”。
 
@@ -199,6 +200,7 @@ flowchart LR
   A2 -.-> D
   A2 -.-> F
   A2 -.-> H
+  ExistingW["Existing Provider activities + bounded UI flags"] --> UIW["UI-W four projections + spatial detail"]
 ```
 
 箭头只表示真实 contract 依赖，不表示施工顺序。没有箭头的 Slice 不应互相等待；A2 是经济性事实面，可以独立修复，但任何声称“更省 token/更高 cache”的后续 Slice 都必须使用它或等价的准确 usage proof。
@@ -747,17 +749,17 @@ Trigger 只告诉当前 Engine project context 的存在、可调用能力和 po
 
 固定任务和判分：
 
-| 任务 | 主要判分 |
-|---|---|
-| single fact | source support、延迟、token |
-| cross-source synthesis | claim-level citation、omission |
-| incremental source | 受影响页面、重复编译成本 |
-| contradiction | 冲突发现与不确定性 |
-| stale/deleted source | 修正与删除传播 |
-| no-answer | 不编造、缺证据说明 |
-| cross-session reuse | break-even reuse count |
-| novice first-use | 用户除正常提供资料外的额外配置/命令/确认次数应为 0 |
-| crash/restart | source/derived/index 一致性 |
+| 任务                   | 主要判分                                           |
+| ---------------------- | -------------------------------------------------- |
+| single fact            | source support、延迟、token                        |
+| cross-source synthesis | claim-level citation、omission                     |
+| incremental source     | 受影响页面、重复编译成本                           |
+| contradiction          | 冲突发现与不确定性                                 |
+| stale/deleted source   | 修正与删除传播                                     |
+| no-answer              | 不编造、缺证据说明                                 |
+| cross-session reuse    | break-even reuse count                             |
+| novice first-use       | 用户除正常提供资料外的额外配置/命令/确认次数应为 0 |
+| crash/restart          | source/derived/index 一致性                        |
 
 同时记录 input/output/cacheRead/cacheWrite、TTFR/总时长、工具数、schema、文件数、后台进程、private-home I/O。
 
@@ -941,11 +943,86 @@ Exit：证明自动、稀疏、project-scoped、跨 compatible Engine 可 JIT �
 
 Stop：若必须保存完整 transcript、复制 native Engine memory、为 Knowledge/Memory 建两个 writer/database、建立 daemon、默认 personal scope、逐条弹确认/回执，或 recall 成本/错误率不优于简单 JIT workspace read，则停止产品化并保留现有 Recap/文件机制。
 
-## 12. 验证阶梯
+## 12. Slice UI-W — Workflow four projections and spatial detail
+
+### 12.1 Outcome
+
+用户不需要打开一个新“Workflow 产品”，也不会在 Composer、Timeline 和 Environment 同时看到三张竞争卡：运行中的结构化 workflow 在对话里留下有意义体感；用户始终能从 Environment 找回；点击任何摘要都进入同一个 RightDock 空间详情；100+ Agent 时仍可搜索、筛选和定位失败/当前阶段。
+
+### 12.2 Entry
+
+- `execution-brief.md` 明确准入 Workflow UI projection，不能从本文或历史聊天反推施工权；
+- exact Engine/adapter 已持久化足以按 `workflowTaskId` 重建同一 workflow snapshot 的 Provider activities，至少有两个 phase 或多个 Agent；
+- 当次 HEAD 重新确认 `WorkflowRunCard.logic.ts` 的字段、现有 pause/stop/resume/dismiss/open-child wiring、Timeline activity primitive、Environment section/row primitive 与 RightDock pane owner；
+- 确认 `workflowRunUiStore.ts` 仍是 pausedByUser/dismissed 的唯一 bounded per-Thread owner；pause 仍为 mark+stop、resume 仍为新 Composer turn + dismiss old run。不得把展示文案误写成新的 runtime state；
+- 确认 `deriveWorkflowRunState()` 是否仍只选 latest workflow 并内嵌 Composer visibility；若是，先建立共享 exact-task snapshot selector，不得让 RightDock/Timeline 复制 parser 或受 Composer dismiss policy 影响；
+- fixture 明确区分真实 phase order、Agent membership 与不存在的 Agent dependency edge；普通 tool sequence、Todo、无结构 Pi/Codex loop 不进入；
+- 先有四投影 contract test/fixture，再改视觉；不能先把研究 HTML 复制进 production。
+
+### 12.3 One state owner, four non-competing projections
+
+| Projection  | 唯一职责                   | 最小内容                                                                                                | 生命周期                                                                                                        |
+| ----------- | -------------------------- | ------------------------------------------------------------------------------------------------------- | --------------------------------------------------------------------------------------------------------------- |
+| Timeline    | 已发生的 durable milestone | start、phase transition、重要 failure/recovery、terminal settlement；必要时带 Agent identity/provenance | 稳定后封存；不为 poll、heartbeat、每个 Agent tick 刷行                                                          |
+| Composer    | 当前可立即干预的近手控制   | 名称、当前 phase、最短进度、pause/stop/resume/open                                                      | running，或 paused/failed/stopped 且 exact run 可 resume；normal completed/无恢复动作后退场                     |
+| Environment | 当前任务的可重新找到索引   | 名称、phase、status、done/total、最多三个 identity glyph + `+N`                                         | running、pausedByUser、failed/stopped/completed 且 exact resumable 时保留；用户 dismiss 或新同类 run 替换时移除 |
+| RightDock   | 完整解释和导航             | phase overview、Agent membership、aggregate counts、search/filter、usage/provenance、open child         | 打开时按 state 重建；selected phase/Agent/filter/viewport 是 pane-local ephemeral state                         |
+
+四处只保存 bounded workflow identity，消费由同一 Provider activities + bounded UI flags 构造的 exact-task snapshot，并复用现有 action owner。不得复制 timer、Agent list、optimistic command state、settlement 或 provider provenance。Composer 不是“只能留 Plan”，而是只保留此刻不与 Plan/Subagent/Approval 冲突的可行动信息。
+
+Timeline 的 milestone owner 仍是 canonical persisted activities。使用 `task.started/progress/completed/updated` 与 `workflowTaskId` 做纯 projection，连续相同 phase/status 只生成一个稳定 milestone；禁止在 React mount/effect 中追加伪 event。若现有 activity payload 缺少不可推导事实，修复现有 Provider Runtime activity projection/contract，而不是写 localStorage receipt。
+
+### 12.4 Phase map and 100+ Agent level of detail
+
+- phase 是 group/parent；phase-order spine 只表达真实顺序；Agent membership 用 containment；没有 explicit dependency truth 就不画 Agent edge；
+- 默认 overview 展示 3–8 个 phase 与 aggregate `done/running/failed/total`；只展开 current/selected phase 的 bounded children 和搜索命中；
+- Environment 永不展开 100 个 Agent；Timeline 不逐 Agent tick；Composer 不展示成员列表；
+- Agent 节点点击打开既有 child Thread/Agent detail，不创建第二 Agent inspector；
+- identity 使用 `subagentPresentation.ts` 同一 deterministic owner：从 Central 策展 24 个低密度 glyph × 8 accent，canonical child/thread id seed，同 parent/workflow 内稳定消碰撞；名称与状态文字始终存在；
+- active frontier 最多一条低频动效；节点状态改变可短暂过渡。hidden/background/reduced-motion 时无持续动画。
+
+### 12.5 Renderer focused bake-off
+
+用同一 4/20/120-Agent、3–8-phase fixture 对比：
+
+1. host DOM/SVG `WorkflowPhaseMap` composition；
+2. React Flow read-only grouped-node profile。
+
+React Flow profile 必须关闭 drag/connect/delete/editor，只保留 select、pan/zoom/fit 和必要的 visible-element rendering；nodes/edges 是 `WorkflowRunState` 纯投影，不成为 canvas document。出现 100+ Agent、pan/zoom/fit、visible-element rendering 或自写 layout/keyboard/focus/viewport 责任增长任一事实，就优先采用通过 proof 的成熟 renderer。必须复核 exact version、MIT source、bundle、重复 Zustand runtime、React 19、keyboard/screen-reader、`ariaLabelConfig` 双语、theme、offline packaged 与 continuous-update 成本。X6 只有在记录了一个 React Flow 无法闭合的嵌套、路由或规模反例时才能进入；不默认引入 Dagre/ELK。
+
+### 12.6 Minimal implementation map
+
+- 将 `WorkflowRunCard.logic.ts` 拆成共享纯 snapshot builder（支持 exact `workflowTaskId`）与每个宿主的 visibility selector；保留/收敛 `WorkflowRunCard.tsx` action wiring，将可见 Composer surface 重构为薄控制行；
+- 继续复用 `workflowRunUiStore.ts` 的 pausedByUser/dismissed 和 50-entry/thread bounded persistence；不创建第二 flags owner；
+- 用现有 `TimelineWorkEntryRow`/activity owner 表达 milestone，不新增 Workflow log；
+- 用现有 `EnvironmentSection`/`EnvironmentRow` 组合索引，不新增 Environment store；
+- 保留 `ChatView.tsx` 现有 `workflowRunState.taskIds` 对 generic background task 的去重，并将同一 exclusion 应用于 Environment generic subagent summary；同一 child 不得同时计入 Workflow 行和“子智能体”行；
+- 只在 `RightDockPaneKind`/meta owner 增加 `workflow` 和 bounded `workflowTaskId`，同步更新 `RightDockPane`、constructor、persisted sanitizer、`singletonPaneReopenPatch`、singleton/meta/label/i18n 与 tests；点击另一个 Timeline milestone 必须替换同一 singleton pane 的 `workflowTaskId`，不能只激活后继续显示旧 run。RightDock selection/filter 不进入 persisted pane identity；
+- persisted pane 指向的 run 已不在 retained activities 时，pane 显示一条可关闭的 unavailable state，并保留 exact task identity 供诊断；不得静默回退到 latest workflow；
+- 新 presentation component 只接收 projection；search/filter/selection/viewport 属于 pane-local state；
+- 文案同时交付 zh-CN/en；集合图标用已锁定 `flow-adaptive`，Agent 实例只用 deterministic identity glyph；
+- 不新增 route、workflow registry/database、layout persistence、editor、DSL、第二 Run、第二 action handler 或第二 settlement owner。
+
+### 12.7 Proof / Exit / Stop
+
+Proof 至少覆盖：
+
+- 4/20/120 Agent、3–8 phase；running/completed/failed/stopped/pausedByUser/resumable churn；验证当前无 waiting truth 时 UI 不猜 waiting；
+- milestone 去重与封存；Composer completed 时退场，paused/failed/stopped 且 exact resumable 时保留恢复；Environment dismiss/replacement；Workflow member 不在 generic subagent summary 重复计数；三入口打开同一 pane；
+- search/filter、current/selected phase bounded expansion、open child、pause/stop/resume 单 owner、不同 Timeline milestone 连续打开会替换 singleton target、关闭/重开无 stale selection；retained activities 缺失时不回退 latest；
+- 382–800px RightDock、窄主窗口、light/dark、zh-CN/en 长标签、keyboard/screen reader、reduced motion、hidden/background；
+- render/update memory/CPU、120-Agent 状态 churn、无 120 个 simultaneous animation；
+- focused tests、document contracts、`git diff --check`；代码若进入 shipped bytes，再按项目规则做 exact pushed SHA packaged fresh-profile journey。
+
+Exit：四个投影职责唯一、运行过程有体感、completed 后不污染 Composer、exact resumable settled run 仍可从 Environment 找回、100+ Agent 可理解，且未新增 runtime/state owner。
+
+Stop：若只能靠复制 workflow state/action 维持四处一致、需要猜测 Agent dependency、需要把普通 tool activity 提升成 workflow、renderer 迫使引入 editor/canvas owner，或 120-Agent fixture 无法在合理资源内保持可用，则停止并缩回 Timeline + Environment + textual detail，不用假动态图掩盖数据不足。
+
+## 13. 验证阶梯
 
 每个 Slice 根据真实风险选择最窄但完整的阶梯；不能跳过适用层。
 
-### 12.1 Source/contract
+### 13.1 Source/contract
 
 - typecheck/lint/unit；
 - contract fixtures；
@@ -954,7 +1031,7 @@ Stop：若必须保存完整 transcript、复制 native Engine memory、为 Know
 - `git diff --check`；
 - 文档/owner contract。
 
-### 12.2 Isolated runtime
+### 13.2 Isolated runtime
 
 - fresh task profile/home/cwd；
 - process tree、network、file I/O；
@@ -963,7 +1040,7 @@ Stop：若必须保存完整 transcript、复制 native Engine memory、为 Know
 - no private-home mutation；
 - secrets redacted。
 
-### 12.3 Real provider
+### 13.3 Real provider
 
 涉及 model/thinking/stream/tool/usage/abort/recovery 时，在 focused fixture 后主动使用授权资源做最少 live probe：
 
@@ -972,7 +1049,7 @@ Stop：若必须保存完整 transcript、复制 native Engine memory、为 Know
 - 硬超时、费用边界、脱敏；
 - 不把单渠道偶发现象写成全局 fallback。
 
-### 12.4 Packaged Desktop
+### 13.4 Packaged Desktop
 
 任何改变用户可观察行为的 candidate：
 
@@ -987,14 +1064,14 @@ Stop：若必须保存完整 transcript、复制 native Engine memory、为 Know
 
 只通过 dev/HMR/source test 只能称 source candidate。
 
-### 12.5 Candidate honesty
+### 13.5 Candidate honesty
 
 - producer 只能提交受影响 claim 为 candidate；
 - `verified` 由 Campaign 对应授权与 evidence 决定；
 - 未打包、未 live、未 fresh-profile 必须精确标注；
 - 不把单个 Slice 绿色称为 Agent Core suite 完成。
 
-## 13. 性能、Context 与 Cache 回归
+## 14. 性能、Context 与 Cache 回归
 
 每个 Runtime/Pack Slice 至少记录：
 
@@ -1024,19 +1101,19 @@ files/processes/network endpoints
 
 任何新能力若显著增加常驻 schema/prompt，但只在少量任务有用，应移出 Core 成为 dormant Pack。
 
-## 14. Source adoption 与维护
+## 15. Source adoption 与维护
 
-### 14.1 每个外部来源先 Intake Gate A
+### 15.1 每个外部来源先 Intake Gate A
 
 按 `PI-ECOSYSTEM-INTAKE.md` 记录 exact identity、owner、运行边界、disposition、Required proof、stop-loss 和重开触发器。package 热度只决定研究顺序。
 
-### 14.2 Upstream first，fork last
+### 15.2 Upstream first，fork last
 
 优先级：public API → configure → narrow bridge → translate mechanism/tests → upstream patch → narrow fork → decline。
 
 Fork 必须有：exact base、patch inventory、删除条件、同步预算、license/SBOM、reproducible packaging、rollback。多个 donor 不拼成多 lineage runtime。
 
-### 14.3 Re-entry triggers
+### 15.3 Re-entry triggers
 
 以下变化后只重跑受影响且能证伪结论的 proof：
 
@@ -1050,7 +1127,7 @@ Fork 必须有：exact base、patch inventory、删除条件、同步预算、li
 
 不要自动追 latest，不建立后台 ecosystem watcher。
 
-## 15. Commit、文档与 owner 收口
+## 16. Commit、文档与 owner 收口
 
 一个 commit 一个真实关注点，只 stage 本任务路径。不要把 unrelated dirty changes 带入。
 
@@ -1065,7 +1142,7 @@ Fork 必须有：exact base、patch inventory、删除条件、同步预算、li
 
 新能力正式准入时，应更新所有必要路由，但不复制同一事实全文。若 owner 文档未授权，保持研究 candidate，不偷偷修改 architecture。
 
-## 16. 全局 Stop conditions
+## 17. 全局 Stop conditions
 
 任一条件成立就停止当前 Slice：
 
@@ -1085,7 +1162,7 @@ Fork 必须有：exact base、patch inventory、删除条件、同步预算、li
 
 停止后应输出：已证明事实、未证明事实、最强阻断、最小重开触发器和可安全保留的机制。不要用临时兼容层掩盖失败。
 
-## 17. 单 Slice 交接模板
+## 18. 单 Slice 交接模板
 
 任何需要新会话继续的 Slice，使用已有 canonical Campaign spec（若是 Campaign）或项目根唯一 `HANDOFF.md`（非 Campaign）。不要为 Agent Core另建 ledger。
 
@@ -1106,13 +1183,13 @@ One next action:
 Paths that must not be touched:
 ```
 
-## 18. 完成判定
+## 19. 完成判定
 
-### 18.1 单能力 candidate
+### 19.1 单能力 candidate
 
 只有当该 Slice 的 Outcome、negative proof、failure/abort/reopen、usage/context、private-home 和 packaged journey 全部按风险闭合，才可称该能力为 candidate。
 
-### 18.2 Agent Runtime Core candidate
+### 19.2 Agent Runtime Core candidate
 
 至少需要：
 
@@ -1129,7 +1206,7 @@ Paths that must not be touched:
 
 Automatic Knowledge、project Memory、Goal、Computer Use、Review 和 external MCP 可以各自作为独立 capability candidate 晋级，不阻塞 Runtime Core；Knowledge/Memory 共用一个 OmniMind project-context owner，Engine-native Memory 保持 native owner，不强行包装或镜像成 OmniMind state。
 
-### 18.3 最终产品判断
+### 19.3 最终产品判断
 
 新会话执行正确的标志不是“实现了最多能力”，而是：
 

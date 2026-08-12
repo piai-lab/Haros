@@ -3,41 +3,40 @@
   <head>
     <meta charset="UTF-8" />
     <meta name="viewport" content="width=device-width, initial-scale=1" />
-    <title>OmniMind · Workflow 详情面原型</title>
+    <title>OmniMind · Workflow 四投影原型</title>
     <meta
       name="description"
-      content="Focused storyboard for the only new Agent capability surface: a truthful workflow phase map inside the existing OmniMind right dock."
+      content="Reference-only storyboard for one Engine-owned workflow projected into the existing OmniMind Timeline, Composer, Environment and RightDock."
     />
     <style>
       :root {
         color-scheme: light;
-        --page: #f3f3f1;
+        --page: #f1f1ef;
         --shell: #fbfbfa;
         --surface: #ffffff;
-        --surface-soft: #f6f6f4;
-        --surface-raised: #fdfdfc;
+        --surface-2: #f7f7f5;
+        --surface-3: #f1f2ef;
+        --surface-hover: #eeefec;
         --ink: #171817;
-        --ink-2: #60635f;
-        --ink-3: #949892;
-        --line: #dedfdc;
+        --ink-2: #5f625e;
+        --ink-3: #959993;
+        --line: #dedfdb;
         --line-soft: #e9eae7;
-        --shadow: 0 18px 48px rgba(21, 24, 21, 0.11), 0 2px 7px rgba(21, 24, 21, 0.06);
-        --green: #2f865f;
-        --green-soft: #e7f4ed;
-        --amber: #a36b20;
-        --amber-soft: #f8efdd;
-        --red: #b5534b;
-        --red-soft: #f8e9e7;
-        --blue: #4c71a8;
-        --blue-soft: #eaf0f8;
-        --active: #4e8f72;
-        --focus: #39765d;
-        --agent-1: #61a96b;
-        --agent-2: #42a78e;
-        --agent-3: #8a7ab7;
-        --agent-4: #bf7f4f;
-        --agent-5: #4e78ad;
-        --agent-6: #a76380;
+        --line-strong: #d1d3ce;
+        --shadow: 0 18px 48px rgba(22, 24, 21, 0.11), 0 2px 7px rgba(22, 24, 21, 0.05);
+        --shadow-soft: 0 10px 32px rgba(22, 24, 21, 0.09), 0 1px 4px rgba(22, 24, 21, 0.05);
+        --green: #368563;
+        --green-soft: #e9f3ed;
+        --amber: #a16d28;
+        --amber-soft: #f7efe0;
+        --red: #b55b52;
+        --red-soft: #f7eae8;
+        --blue: #5578a6;
+        --blue-soft: #eaf0f7;
+        --violet: #7b70a8;
+        --focus: #39775d;
+        --sidebar: 23rem;
+        --dock: clamp(35rem, 44vw, 46rem);
       }
 
       :root[data-theme="dark"] {
@@ -45,24 +44,27 @@
         --page: #111311;
         --shell: #171917;
         --surface: #1c1f1c;
-        --surface-soft: #222522;
-        --surface-raised: #202320;
-        --ink: #eff1ed;
-        --ink-2: #afb4ad;
-        --ink-3: #777d76;
+        --surface-2: #222522;
+        --surface-3: #282b28;
+        --surface-hover: #2a2e2a;
+        --ink: #eef0ec;
+        --ink-2: #b0b4ae;
+        --ink-3: #777c76;
         --line: #353935;
-        --line-soft: #292d29;
-        --shadow: 0 20px 54px rgba(0, 0, 0, 0.38), 0 2px 9px rgba(0, 0, 0, 0.24);
-        --green: #67b58a;
-        --green-soft: #20352a;
-        --amber: #d09a52;
-        --amber-soft: #392f20;
-        --red: #d27a72;
+        --line-soft: #2a2e2a;
+        --line-strong: #424742;
+        --shadow: 0 20px 55px rgba(0, 0, 0, 0.4), 0 2px 8px rgba(0, 0, 0, 0.25);
+        --shadow-soft: 0 13px 36px rgba(0, 0, 0, 0.31), 0 1px 5px rgba(0, 0, 0, 0.2);
+        --green: #70b18e;
+        --green-soft: #23372b;
+        --amber: #d09b55;
+        --amber-soft: #3b3020;
+        --red: #d17a71;
         --red-soft: #3d2927;
-        --blue: #7f9fd0;
-        --blue-soft: #253044;
-        --active: #73b692;
-        --focus: #8bc9a8;
+        --blue: #86a2cc;
+        --blue-soft: #273246;
+        --violet: #a499cf;
+        --focus: #8bc8a8;
       }
 
       * {
@@ -74,13 +76,7 @@
       }
       body {
         margin: 0;
-        background:
-          radial-gradient(
-            circle at 68% 12%,
-            color-mix(in srgb, var(--green) 7%, transparent),
-            transparent 29rem
-          ),
-          var(--page);
+        background: var(--page);
         color: var(--ink);
         font-family:
           Inter,
@@ -93,279 +89,479 @@
         font-size: 13px;
         -webkit-font-smoothing: antialiased;
       }
-
       button,
-      select {
-        font: inherit;
+      input,
+      select,
+      textarea {
         color: inherit;
+        font: inherit;
       }
       button {
         cursor: pointer;
       }
       button:focus-visible,
-      select:focus-visible {
+      input:focus-visible,
+      select:focus-visible,
+      textarea:focus-visible {
         outline: 2px solid color-mix(in srgb, var(--focus) 72%, transparent);
         outline-offset: 2px;
       }
       svg {
         display: block;
       }
+      .icon {
+        width: 17px;
+        height: 17px;
+        fill: none;
+        stroke: currentColor;
+        stroke-width: 1.55;
+        stroke-linecap: round;
+        stroke-linejoin: round;
+      }
+      .icon-sm {
+        width: 15px;
+        height: 15px;
+      }
+      .flow-icon {
+        width: 17px;
+        height: 17px;
+        color: var(--ink-2);
+        fill: none;
+        stroke: currentColor;
+        stroke-width: 1.45;
+        stroke-linecap: round;
+        stroke-linejoin: round;
+      }
+      .flow-icon .dot {
+        fill: currentColor;
+        stroke: none;
+      }
 
       .review-bar {
-        min-height: 54px;
+        min-height: 50px;
         display: flex;
         align-items: center;
-        gap: 12px;
-        padding: 8px 18px;
+        gap: 10px;
+        padding: 8px 16px;
         border-bottom: 1px solid var(--line);
-        background: color-mix(in srgb, var(--surface) 91%, transparent);
-        backdrop-filter: blur(18px);
+        background: color-mix(in srgb, var(--surface) 94%, transparent);
       }
-      .review-title {
-        min-width: 0;
+      .review-copy {
+        min-width: 210px;
       }
-      .review-title strong {
+      .review-copy strong {
         display: block;
         font-size: 12px;
-        letter-spacing: 0.01em;
+        font-weight: 620;
       }
-      .review-title span {
+      .review-copy span {
         display: block;
         margin-top: 2px;
         color: var(--ink-3);
-        font-size: 11px;
+        font-size: 10.5px;
       }
       .review-spacer {
         flex: 1;
       }
       .review-control {
         min-height: 30px;
+        padding: 0 10px;
         border: 1px solid var(--line);
         border-radius: 8px;
         background: var(--surface);
-        padding: 0 10px;
       }
       button.review-control:hover {
-        background: var(--surface-soft);
+        background: var(--surface-2);
+      }
+      .review-note {
+        color: var(--ink-3);
+        font-size: 10.5px;
       }
 
-      .page {
-        width: min(1460px, calc(100vw - 34px));
-        margin: 22px auto;
+      .stage {
+        width: min(1740px, calc(100vw - 28px));
+        margin: 16px auto 24px;
       }
-      .decision-note {
+      .app {
+        height: min(870px, calc(100vh - 86px));
+        min-height: 700px;
         display: grid;
-        grid-template-columns: auto 1fr;
-        gap: 11px;
-        align-items: start;
-        margin: 0 0 14px;
-        padding: 10px 12px;
-        border: 1px solid var(--line);
-        border-radius: 11px;
-        background: color-mix(in srgb, var(--surface) 88%, transparent);
-        color: var(--ink-2);
-        box-shadow: 0 1px 0 rgba(255, 255, 255, 0.45) inset;
-      }
-      .decision-note svg {
-        width: 17px;
-        height: 17px;
-        color: var(--green);
-      }
-      .decision-note strong {
-        color: var(--ink);
-      }
-      .decision-note code {
-        font-family: "SFMono-Regular", Consolas, monospace;
-        font-size: 11px;
-      }
-
-      .app-frame {
-        min-height: 750px;
-        display: grid;
-        grid-template-columns: minmax(430px, 1fr) minmax(430px, 520px);
+        grid-template-columns: var(--sidebar) minmax(28rem, 1fr) var(--dock);
         overflow: hidden;
         border: 1px solid var(--line);
         border-radius: 15px;
         background: var(--shell);
         box-shadow: var(--shadow);
+        transition: grid-template-columns 280ms cubic-bezier(0.32, 0.72, 0, 1);
+      }
+      .app.dock-closed {
+        grid-template-columns: var(--sidebar) minmax(32rem, 1fr) 0;
       }
 
-      /* The left side is context only. It names the real host component rather than
-         pretending this HTML is a replacement ChatView implementation. */
-      .host-context {
+      .sidebar {
         min-width: 0;
         display: flex;
         flex-direction: column;
-        border-right: 1px solid var(--line);
-        background: var(--shell);
+        padding: 8px;
+        overflow: hidden;
+        border-right: 1px solid var(--line-soft);
+        background: var(--surface-2);
       }
-      .host-topbar {
-        height: 46px;
-        display: flex;
-        align-items: center;
-        gap: 8px;
-        padding: 0 14px;
-        border-bottom: 1px solid var(--line-soft);
-      }
-      .host-topbar img {
-        width: 19px;
-        height: 19px;
-      }
-      .host-topbar strong {
-        font-size: 12.5px;
-      }
-      .host-badge {
-        margin-left: 4px;
-        padding: 2px 6px;
-        border-radius: 5px;
-        color: var(--ink-3);
-        background: var(--surface-soft);
-        font-size: 10px;
-      }
-      .host-main {
-        flex: 1;
-        min-height: 0;
-        display: flex;
-        flex-direction: column;
-        padding: 28px 26px 22px;
-      }
-      .host-copy {
-        max-width: 650px;
-        color: var(--ink-2);
-        line-height: 1.7;
-      }
-      .host-copy h1 {
-        margin: 0 0 12px;
-        color: var(--ink);
-        font-size: 19px;
-        font-weight: 620;
-      }
-      .host-copy p {
-        margin: 0 0 9px;
-      }
-      .reuse-ledger {
-        margin-top: 18px;
-        display: grid;
-        grid-template-columns: repeat(2, minmax(0, 1fr));
-        gap: 8px;
-        max-width: 660px;
-      }
-      .reuse-item {
-        min-width: 0;
-        padding: 9px 10px;
-        border: 1px solid var(--line-soft);
-        border-radius: 9px;
-        background: color-mix(in srgb, var(--surface) 74%, transparent);
-      }
-      .reuse-item strong {
-        display: block;
-        font-size: 11.5px;
-      }
-      .reuse-item span {
-        display: block;
-        margin-top: 3px;
-        color: var(--ink-3);
-        font-size: 10.5px;
-        line-height: 1.35;
-      }
-      .reuse-item.only-new {
-        border-color: color-mix(in srgb, var(--green) 36%, var(--line));
-        background: color-mix(in srgb, var(--green-soft) 53%, var(--surface));
-      }
-
-      .composer-zone {
-        margin-top: auto;
-        padding-top: 24px;
-      }
-      .host-component-label {
-        margin-bottom: 6px;
-        color: var(--ink-3);
-        font-family: "SFMono-Regular", Consolas, monospace;
-        font-size: 10px;
-      }
-      .workflow-summary {
-        width: 100%;
-        min-height: 40px;
+      .brand-row {
+        height: 39px;
         display: flex;
         align-items: center;
         gap: 9px;
-        padding: 7px 8px 7px 10px;
-        border: 1px solid var(--line);
-        border-radius: 10px 10px 5px 5px;
-        background: var(--surface-raised);
+        padding: 0 9px;
+      }
+      .brand-row img {
+        width: 20px;
+        height: 20px;
+      }
+      .brand-row strong {
+        font-size: 12.5px;
+        font-weight: 640;
+      }
+      .sidebar-action,
+      .thread-row {
+        width: 100%;
+        min-height: 34px;
+        display: flex;
+        align-items: center;
+        gap: 9px;
+        padding: 0 9px;
+        border: 0;
+        border-radius: 8px;
+        background: transparent;
         text-align: left;
-        box-shadow: 0 1px 1px rgba(20, 22, 20, 0.04);
       }
-      .workflow-summary:hover {
-        background: var(--surface-soft);
+      .sidebar-action:hover,
+      .thread-row:hover {
+        background: var(--surface-hover);
       }
-      .workflow-summary .workflow-mark {
-        color: var(--green);
+      .thread-row.active {
+        background: var(--surface);
+        box-shadow: 0 0 0 1px var(--line-soft) inset;
       }
-      .workflow-summary-main {
+      .thread-row span {
         min-width: 0;
+        overflow: hidden;
+        text-overflow: ellipsis;
+        white-space: nowrap;
+      }
+      .sidebar-section {
+        margin: 18px 9px 6px;
+        color: var(--ink-3);
+        font-size: 10.5px;
+      }
+      .sidebar-footer {
+        margin-top: auto;
+        border-top: 1px solid var(--line-soft);
+        padding-top: 8px;
+      }
+
+      .chat {
+        position: relative;
+        min-width: 0;
+        display: flex;
+        flex-direction: column;
+        overflow: hidden;
+        background: var(--shell);
+      }
+      .chat-header {
+        height: 47px;
+        flex: 0 0 47px;
+        display: flex;
+        align-items: center;
+        gap: 8px;
+        padding: 0 12px;
+        border-bottom: 1px solid var(--line-soft);
+      }
+      .chat-title {
+        min-width: 0;
+        font-size: 12.5px;
+        font-weight: 620;
+        overflow: hidden;
+        text-overflow: ellipsis;
+        white-space: nowrap;
+      }
+      .header-spacer {
         flex: 1;
       }
-      .workflow-summary-main strong {
-        font-size: 12px;
-        font-weight: 600;
+      .header-button,
+      .icon-button {
+        height: 29px;
+        display: inline-flex;
+        align-items: center;
+        justify-content: center;
+        gap: 6px;
+        padding: 0 8px;
+        border: 1px solid var(--line);
+        border-radius: 8px;
+        background: var(--surface);
       }
-      .workflow-summary-main span {
-        margin-left: 7px;
+      .icon-button {
+        width: 29px;
+        padding: 0;
+      }
+      .header-button:hover,
+      .icon-button:hover {
+        background: var(--surface-2);
+      }
+
+      .transcript {
+        min-height: 0;
+        flex: 1;
+        overflow: auto;
+        padding: 34px 22px 218px;
+        scrollbar-width: thin;
+      }
+      .message {
+        width: min(760px, 100%);
+        margin: 0 auto 24px;
+      }
+      .user-row {
+        display: flex;
+        justify-content: flex-end;
+      }
+      .user-bubble {
+        max-width: 78%;
+        padding: 10px 13px;
+        border-radius: 14px 14px 4px 14px;
+        background: var(--surface-3);
+        line-height: 1.55;
+      }
+      .assistant-copy {
+        color: var(--ink);
+        font-size: 13px;
+        line-height: 1.65;
+      }
+      .assistant-copy p {
+        margin: 0 0 11px;
+      }
+      .activity-stack {
+        display: flex;
+        flex-direction: column;
+        gap: 3px;
+        margin-top: 8px;
+      }
+      .activity-row {
+        min-height: 31px;
+        display: flex;
+        align-items: center;
+        gap: 8px;
+        margin-left: -6px;
+        padding: 4px 6px;
+        border: 0;
+        border-radius: 8px;
+        background: transparent;
+        color: var(--ink-2);
+        text-align: left;
+      }
+      button.activity-row:hover {
+        background: var(--surface-2);
+      }
+      .activity-label {
+        color: var(--ink-2);
+      }
+      .activity-detail {
+        color: var(--ink-3);
+        font-size: 11.5px;
+      }
+      .activity-arrow {
+        margin-left: auto;
+        color: var(--ink-3);
+      }
+      .agent-chip {
+        display: inline-flex;
+        align-items: center;
+        gap: 5px;
+        max-width: 150px;
+        padding: 3px 7px 3px 4px;
+        border: 1px solid var(--line-soft);
+        border-radius: 999px;
+        background: var(--surface);
+        color: var(--ink-2);
+        font-size: 11px;
+      }
+
+      .environment {
+        position: absolute;
+        z-index: 8;
+        top: 59px;
+        right: 12px;
+        width: 288px;
+        overflow: hidden;
+        border: 1px solid var(--line);
+        border-radius: 16px;
+        background: var(--surface);
+        box-shadow: var(--shadow-soft);
+        transform-origin: top right;
+        transition:
+          opacity 180ms ease,
+          transform 220ms cubic-bezier(0.32, 0.72, 0, 1);
+      }
+      .environment.hidden {
+        opacity: 0;
+        pointer-events: none;
+        transform: translateY(-6px) scale(0.985);
+      }
+      .environment-title {
+        display: flex;
+        align-items: center;
+        padding: 11px 12px 5px;
         color: var(--ink-3);
         font-size: 11px;
       }
-      .summary-actions {
-        display: flex;
-        gap: 2px;
+      .env-section {
+        padding: 3px 6px 6px;
       }
-      .icon-button {
-        width: 27px;
-        height: 27px;
-        display: grid;
-        place-items: center;
-        border: 0;
-        border-radius: 7px;
-        background: transparent;
+      .env-section + .env-section {
+        border-top: 1px solid var(--line-soft);
+      }
+      .env-label {
+        padding: 7px 8px 3px;
         color: var(--ink-3);
+        font-size: 10.5px;
       }
-      .icon-button:hover {
-        background: var(--surface-soft);
-        color: var(--ink);
+      .env-row {
+        width: 100%;
+        min-height: 30px;
+        display: flex;
+        align-items: center;
+        gap: 8px;
+        padding: 4px 8px;
+        border: 0;
+        border-radius: 8px;
+        background: transparent;
+        text-align: left;
       }
-      .icon-button svg {
-        width: 14px;
-        height: 14px;
+      button.env-row:hover {
+        background: var(--surface-2);
       }
-      .composer-shell {
-        min-height: 86px;
-        padding: 12px;
+      .env-row > span:nth-child(2) {
+        min-width: 0;
+        flex: 1;
+        overflow: hidden;
+        text-overflow: ellipsis;
+        white-space: nowrap;
+      }
+      .env-trailing {
+        display: inline-flex;
+        align-items: center;
+        gap: 5px;
+        color: var(--ink-3);
+        font-size: 10.5px;
+      }
+      .diff-plus {
+        color: #25884d;
+      }
+      .diff-minus {
+        color: #c94747;
+      }
+
+      .composer-area {
+        position: absolute;
+        z-index: 6;
+        inset: auto 0 0;
+        padding: 0 14px 14px;
+        background: linear-gradient(transparent, var(--shell) 22%, var(--shell));
+      }
+      .composer-stack {
+        width: min(760px, 100%);
+        margin: 0 auto;
+      }
+      .stack-row {
+        min-height: 34px;
+        display: flex;
+        align-items: center;
+        gap: 8px;
+        padding: 6px 10px;
         border: 1px solid var(--line);
-        border-top: 0;
-        border-radius: 5px 5px 13px 13px;
+        border-bottom: 0;
         background: var(--surface);
       }
-      .composer-shell p {
-        margin: 1px 0 25px;
+      .stack-row:first-child {
+        border-radius: 11px 11px 0 0;
+      }
+      .stack-row + .stack-row {
+        border-top-color: var(--line-soft);
+      }
+      .stack-label {
+        min-width: 0;
+        flex: 1;
+        overflow: hidden;
+        text-overflow: ellipsis;
+        white-space: nowrap;
+      }
+      .stack-label strong {
+        font-size: 11.5px;
+        font-weight: 620;
+      }
+      .stack-label span {
+        margin-left: 5px;
         color: var(--ink-3);
+        font-size: 11px;
+      }
+      .stack-action {
+        height: 24px;
+        padding: 0 7px;
+        border: 0;
+        border-radius: 6px;
+        background: transparent;
+        color: var(--ink-2);
+        font-size: 10.5px;
+      }
+      .stack-action:hover {
+        background: var(--surface-2);
+      }
+      .stack-action.danger:hover {
+        color: var(--red);
+        background: var(--red-soft);
+      }
+      .composer {
+        min-height: 102px;
+        overflow: hidden;
+        border: 1px solid var(--line);
+        border-radius: 0 0 15px 15px;
+        background: var(--surface);
+        box-shadow: var(--shadow-soft);
+      }
+      .composer.no-stack {
+        border-radius: 15px;
+      }
+      .composer textarea {
+        width: 100%;
+        height: 56px;
+        resize: none;
+        border: 0;
+        outline: 0;
+        background: transparent;
+        padding: 13px;
+        color: var(--ink);
       }
       .composer-footer {
         display: flex;
         align-items: center;
-        gap: 8px;
+        gap: 6px;
+        padding: 5px 8px 8px;
       }
-      .composer-chip {
-        padding: 4px 7px;
+      .composer-pill {
+        height: 27px;
+        padding: 0 8px;
         border: 0;
-        border-radius: 6px;
-        background: var(--surface-soft);
+        border-radius: 7px;
+        background: transparent;
         color: var(--ink-2);
         font-size: 10.5px;
       }
-      .composer-send {
+      .composer-pill:hover {
+        background: var(--surface-2);
+      }
+      .send {
         margin-left: auto;
-        width: 27px;
-        height: 27px;
+        width: 29px;
+        height: 29px;
         display: grid;
         place-items: center;
         border: 0;
@@ -376,322 +572,332 @@
 
       .dock {
         min-width: 0;
-        height: 750px;
         display: flex;
         flex-direction: column;
+        overflow: hidden;
+        border-left: 1px solid var(--line);
         background: var(--surface);
+        opacity: 1;
+        transition: opacity 180ms ease;
+      }
+      .app.dock-closed .dock {
+        opacity: 0;
+        pointer-events: none;
       }
       .dock-tabs {
-        height: 38px;
-        display: flex;
-        align-items: end;
-        gap: 2px;
-        padding: 0 7px;
-        border-bottom: 1px solid var(--line);
-        background: var(--shell);
-      }
-      .dock-tab {
-        height: 32px;
+        height: 47px;
+        flex: 0 0 47px;
         display: flex;
         align-items: center;
         gap: 7px;
         padding: 0 10px;
-        border: 1px solid var(--line);
-        border-bottom-color: var(--surface);
-        border-radius: 8px 8px 0 0;
-        background: var(--surface);
-        font-size: 11px;
-      }
-      .dock-tab svg {
-        width: 14px;
-        height: 14px;
-        color: var(--green);
-      }
-      .dock-tab .close {
-        margin-left: 3px;
-        color: var(--ink-3);
-      }
-      .dock-tab-add {
-        margin: 0 0 6px auto;
-      }
-
-      .workflow-pane {
-        min-height: 0;
-        flex: 1;
-        display: flex;
-        flex-direction: column;
-      }
-      .pane-header {
-        display: flex;
-        align-items: center;
-        gap: 9px;
-        min-height: 50px;
-        padding: 0 13px;
         border-bottom: 1px solid var(--line-soft);
       }
-      .pane-title {
-        min-width: 0;
-        flex: 1;
-      }
-      .pane-title strong {
-        display: block;
-        font-size: 12.5px;
-        font-weight: 620;
-      }
-      .pane-title span {
-        display: block;
-        margin-top: 2px;
-        color: var(--ink-3);
-        font-size: 10.5px;
-      }
-      .status-label {
+      .dock-tab {
+        height: 29px;
         display: inline-flex;
         align-items: center;
-        gap: 5px;
-        padding: 4px 7px;
-        border-radius: 7px;
-        background: var(--green-soft);
-        color: var(--green);
-        font-size: 10.5px;
+        gap: 6px;
+        padding: 0 9px;
+        border: 1px solid var(--line);
+        border-radius: 8px;
+        background: var(--surface-2);
+        font-size: 11px;
       }
-      .status-label::before {
-        content: "";
-        width: 5px;
-        height: 5px;
-        border-radius: 999px;
-        background: currentColor;
+      .dock-tabs .icon-button {
+        margin-left: auto;
+        border-color: transparent;
+        background: transparent;
       }
-
-      .metrics {
-        display: grid;
-        grid-template-columns: repeat(4, minmax(0, 1fr));
-        gap: 1px;
+      .dock-hero {
+        padding: 15px 16px 11px;
         border-bottom: 1px solid var(--line-soft);
-        background: var(--line-soft);
       }
-      .metric {
-        min-width: 0;
-        padding: 8px 10px;
-        background: var(--surface);
-      }
-      .metric span {
-        display: block;
-        color: var(--ink-3);
-        font-size: 9.5px;
-      }
-      .metric strong {
-        display: block;
-        margin-top: 2px;
-        overflow: hidden;
-        text-overflow: ellipsis;
-        white-space: nowrap;
-        font-size: 11.5px;
-        font-weight: 590;
-        font-variant-numeric: tabular-nums;
-      }
-
-      .map-toolbar {
+      .dock-title-row {
         display: flex;
         align-items: center;
         gap: 8px;
-        min-height: 38px;
-        padding: 0 11px;
-        border-bottom: 1px solid var(--line-soft);
       }
-      .map-toolbar strong {
-        font-size: 11px;
-      }
-      .map-toolbar span {
-        color: var(--ink-3);
-        font-size: 10px;
-      }
-      .toolbar-spacer {
-        flex: 1;
-      }
-      .toolbar-button {
-        min-height: 25px;
-        padding: 0 7px;
-        border: 1px solid transparent;
-        border-radius: 7px;
-        background: transparent;
-        color: var(--ink-3);
-        font-size: 10px;
-      }
-      .toolbar-button:hover {
-        border-color: var(--line);
-        background: var(--surface-soft);
-        color: var(--ink);
-      }
-
-      .map-viewport {
-        min-height: 0;
-        flex: 1;
-        overflow: auto;
-        padding: 12px;
-        background:
-          linear-gradient(var(--line-soft) 1px, transparent 1px),
-          linear-gradient(90deg, var(--line-soft) 1px, transparent 1px), var(--surface-soft);
-        background-size: 28px 28px;
-        scrollbar-width: thin;
-      }
-      .phase-map {
-        min-width: 100%;
-        width: max-content;
-        display: grid;
-        grid-auto-flow: column;
-        grid-auto-columns: 148px;
-        gap: 12px;
-        align-items: start;
-        padding: 2px 2px 12px;
-      }
-      .phase {
-        position: relative;
-        min-height: 290px;
-        padding: 8px;
-        border: 1px solid color-mix(in srgb, var(--line) 76%, transparent);
-        border-radius: 12px;
-        background: color-mix(in srgb, var(--surface) 88%, transparent);
-        box-shadow:
-          0 1px 1px rgba(20, 22, 20, 0.035),
-          0 8px 24px rgba(20, 22, 20, 0.025);
-      }
-      .phase:not(:last-child)::after {
-        content: "";
-        position: absolute;
-        z-index: 0;
-        top: 26px;
-        left: calc(100% + 1px);
-        width: 12px;
-        height: 1px;
-        background: var(--line);
-      }
-      .phase[data-state="running"]:not(:last-child)::after {
-        height: 2px;
-        background: linear-gradient(
-          90deg,
-          var(--active),
-          color-mix(in srgb, var(--active) 18%, var(--line)),
-          var(--active)
-        );
-        background-size: 200% 100%;
-        animation: edge-flow 2.6s linear infinite;
-      }
-      .phase-head {
-        position: relative;
-        z-index: 1;
-        display: grid;
-        grid-template-columns: 21px 1fr;
-        gap: 7px;
-        align-items: center;
-        padding-bottom: 8px;
-        border-bottom: 1px solid var(--line-soft);
-      }
-      .phase-index {
-        width: 21px;
-        height: 21px;
-        display: grid;
-        place-items: center;
-        border: 1px solid var(--line);
-        border-radius: 7px;
-        background: var(--surface-soft);
-        color: var(--ink-3);
-        font-family: "SFMono-Regular", Consolas, monospace;
-        font-size: 9px;
-      }
-      .phase[data-state="running"] .phase-index {
-        border-color: color-mix(in srgb, var(--green) 48%, var(--line));
-        background: var(--green-soft);
-        color: var(--green);
-      }
-      .phase-title {
+      .dock-title-row h1 {
         min-width: 0;
-      }
-      .phase-title strong {
-        display: block;
+        flex: 1;
+        margin: 0;
+        font-size: 14px;
+        font-weight: 650;
         overflow: hidden;
         text-overflow: ellipsis;
         white-space: nowrap;
+      }
+      .origin {
+        color: var(--ink-3);
         font-size: 10.5px;
       }
-      .phase-title span {
+      .dock-summary {
+        display: flex;
+        align-items: center;
+        gap: 10px;
+        margin-top: 7px;
+        color: var(--ink-2);
+        font-size: 11px;
+      }
+      .status-dot {
+        width: 6px;
+        height: 6px;
+        border-radius: 50%;
+        background: var(--green);
+        box-shadow: 0 0 0 3px color-mix(in srgb, var(--green) 12%, transparent);
+      }
+      .dock-tools {
+        display: flex;
+        align-items: center;
+        gap: 7px;
+        padding: 9px 12px;
+        border-bottom: 1px solid var(--line-soft);
+      }
+      .search {
+        min-width: 120px;
+        flex: 1;
+        position: relative;
+      }
+      .search input {
+        width: 100%;
+        height: 30px;
+        padding: 0 9px 0 29px;
+        border: 1px solid var(--line);
+        border-radius: 8px;
+        background: var(--surface-2);
+        outline: 0;
+      }
+      .search .icon {
+        position: absolute;
+        left: 8px;
+        top: 7px;
+        color: var(--ink-3);
+      }
+      .filter {
+        height: 29px;
+        padding: 0 8px;
+        border: 1px solid transparent;
+        border-radius: 7px;
+        background: transparent;
+        color: var(--ink-2);
+        font-size: 10.5px;
+      }
+      .filter:hover {
+        background: var(--surface-2);
+      }
+      .filter.active {
+        border-color: var(--line);
+        background: var(--surface-2);
+        color: var(--ink);
+      }
+
+      .map-scroll {
+        min-height: 0;
+        flex: 1;
+        overflow: auto;
+        background: var(--surface-2);
+        scrollbar-width: thin;
+      }
+      .map-canvas {
+        position: relative;
+        width: 940px;
+        min-height: 660px;
+        overflow: hidden;
+        background:
+          radial-gradient(
+            circle at 50% 43%,
+            color-mix(in srgb, var(--green) 5%, transparent),
+            transparent 17rem
+          ),
+          linear-gradient(color-mix(in srgb, var(--line) 33%, transparent) 1px, transparent 1px),
+          linear-gradient(
+            90deg,
+            color-mix(in srgb, var(--line) 33%, transparent) 1px,
+            transparent 1px
+          ),
+          var(--surface-2);
+        background-size:
+          auto,
+          28px 28px,
+          28px 28px,
+          auto;
+      }
+      .map-caption {
+        position: absolute;
+        left: 20px;
+        top: 18px;
+        color: var(--ink-3);
+        font-size: 10px;
+        letter-spacing: 0.02em;
+      }
+      .spine {
+        position: absolute;
+        inset: 0;
+        width: 940px;
+        height: 660px;
+        pointer-events: none;
+      }
+      .spine path {
+        fill: none;
+        stroke: var(--line-strong);
+        stroke-width: 1.25;
+      }
+      .spine .active-path {
+        stroke: color-mix(in srgb, var(--green) 82%, var(--line));
+        stroke-dasharray: 5 7;
+        animation: flow 5s linear infinite;
+      }
+      .spine .membership {
+        stroke: color-mix(in srgb, var(--green) 46%, var(--line));
+        stroke-dasharray: 2 7;
+      }
+      @keyframes flow {
+        to {
+          stroke-dashoffset: -24;
+        }
+      }
+      .phase-node {
+        position: absolute;
+        width: 142px;
+        min-height: 62px;
+        display: flex;
+        align-items: flex-start;
+        gap: 8px;
+        padding: 10px;
+        border: 1px solid var(--line);
+        border-radius: 11px;
+        background: color-mix(in srgb, var(--surface) 96%, transparent);
+        box-shadow: 0 7px 22px rgba(22, 24, 21, 0.05);
+        text-align: left;
+      }
+      .phase-node:hover {
+        border-color: var(--line-strong);
+        background: var(--surface);
+      }
+      .phase-node.selected {
+        border-color: color-mix(in srgb, var(--green) 58%, var(--line));
+        box-shadow:
+          0 0 0 3px color-mix(in srgb, var(--green) 9%, transparent),
+          0 8px 26px rgba(22, 24, 21, 0.07);
+      }
+      .phase-copy {
+        min-width: 0;
+        flex: 1;
+      }
+      .phase-copy strong {
         display: block;
-        margin-top: 1px;
+        font-size: 11px;
+        font-weight: 630;
+        white-space: nowrap;
+        overflow: hidden;
+        text-overflow: ellipsis;
+      }
+      .phase-copy span {
+        display: block;
+        margin-top: 5px;
         color: var(--ink-3);
         font-size: 9.5px;
       }
-      .agent-list {
-        display: flex;
-        flex-direction: column;
-        gap: 7px;
-        padding-top: 8px;
+      .phase-index {
+        color: var(--ink-3);
+        font:
+          9px/1.2 "SFMono-Regular",
+          Consolas,
+          monospace;
+      }
+      .p0 {
+        left: 24px;
+        top: 76px;
+      }
+      .p1 {
+        left: 176px;
+        top: 35px;
+      }
+      .p2 {
+        left: 332px;
+        top: 86px;
+      }
+      .p3 {
+        left: 488px;
+        top: 35px;
+      }
+      .p4 {
+        left: 644px;
+        top: 86px;
+      }
+      .p5 {
+        left: 796px;
+        top: 35px;
+        width: 124px;
       }
 
-      .agent-node {
-        position: relative;
-        width: 100%;
-        min-height: 58px;
+      .phase-region {
+        position: absolute;
+        left: 178px;
+        top: 215px;
+        width: 600px;
+        min-height: 385px;
+        padding: 14px;
+        border: 1px solid color-mix(in srgb, var(--green) 26%, var(--line));
+        border-radius: 18px;
+        background: color-mix(in srgb, var(--surface) 93%, transparent);
+        box-shadow: 0 18px 48px rgba(22, 24, 21, 0.07);
+      }
+      .region-head {
+        display: flex;
+        align-items: flex-start;
+        gap: 10px;
+        padding-bottom: 11px;
+        border-bottom: 1px solid var(--line-soft);
+      }
+      .region-head h2 {
+        margin: 0;
+        font-size: 12.5px;
+        font-weight: 650;
+      }
+      .region-head p {
+        margin: 4px 0 0;
+        color: var(--ink-3);
+        font-size: 10px;
+      }
+      .region-count {
+        margin-left: auto;
+        color: var(--ink-3);
+        font:
+          10px/1.4 "SFMono-Regular",
+          Consolas,
+          monospace;
+      }
+      .agent-grid {
         display: grid;
-        grid-template-columns: 23px minmax(0, 1fr);
-        gap: 7px;
+        grid-template-columns: repeat(4, minmax(0, 1fr));
+        gap: 8px;
+        margin-top: 12px;
+      }
+      .agent-node {
+        min-width: 0;
+        min-height: 54px;
+        display: flex;
         align-items: center;
-        padding: 7px;
-        overflow: hidden;
-        border: 1px solid var(--line);
-        border-radius: 9px;
-        background: var(--surface-raised);
+        gap: 8px;
+        padding: 8px;
+        border: 1px solid var(--line-soft);
+        border-radius: 10px;
+        background: var(--surface);
         text-align: left;
-        box-shadow: 0 1px 1px rgba(18, 20, 18, 0.05);
-        transition:
-          transform 150ms ease,
-          border-color 150ms ease,
-          box-shadow 150ms ease,
-          opacity 150ms ease;
+        box-shadow: 0 3px 10px rgba(22, 24, 21, 0.035);
       }
       .agent-node:hover {
+        border-color: var(--line-strong);
         transform: translateY(-1px);
-        border-color: color-mix(in srgb, var(--ink-3) 58%, var(--line));
       }
-      .agent-node[aria-pressed="true"] {
-        border-color: color-mix(in srgb, var(--green) 60%, var(--line));
-        box-shadow:
-          0 0 0 2px color-mix(in srgb, var(--green) 11%, transparent),
-          0 5px 16px rgba(25, 50, 37, 0.08);
-      }
-      .agent-node[data-state="queued"] {
-        opacity: 0.62;
-      }
-      .agent-node[data-state="running"]::after {
-        content: "";
-        position: absolute;
-        inset: auto 0 0;
-        height: 2px;
-        background: linear-gradient(90deg, transparent, var(--agent-color), transparent);
-        background-size: 220% 100%;
-        animation: node-scan 2.1s ease-in-out infinite;
-      }
-      .agent-node[data-state="failed"] {
-        border-color: color-mix(in srgb, var(--red) 42%, var(--line));
-      }
-      .agent-node[data-state="completed"] {
-        background: color-mix(in srgb, var(--surface) 80%, var(--green-soft));
-      }
-      .agent-glyph {
-        width: 23px;
-        height: 23px;
-        color: var(--agent-color);
-        fill: none;
-        stroke: currentColor;
-        stroke-width: 1.35;
-        stroke-linecap: round;
-        stroke-linejoin: round;
-      }
-      .agent-glyph .fill {
-        fill: currentColor;
-        stroke: none;
-        opacity: 0.24;
+      .agent-node.hidden {
+        display: none;
       }
       .agent-copy {
         min-width: 0;
+        flex: 1;
       }
       .agent-copy strong {
         display: block;
@@ -701,147 +907,137 @@
         font-size: 10.5px;
         font-weight: 610;
       }
-      .agent-meta {
-        display: flex;
-        align-items: center;
-        gap: 5px;
+      .agent-copy span {
+        display: block;
         margin-top: 4px;
         color: var(--ink-3);
         font-size: 9px;
       }
-      .state-dot {
-        width: 5px;
-        height: 5px;
-        border-radius: 999px;
-        background: var(--ink-3);
+      .region-empty {
+        display: none;
+        padding: 42px 0;
+        color: var(--ink-3);
+        text-align: center;
       }
-      [data-state="completed"] .state-dot {
-        background: var(--green);
+      .region-empty.visible {
+        display: block;
       }
-      [data-state="running"] .state-dot {
-        background: var(--agent-color);
-        box-shadow: 0 0 0 3px color-mix(in srgb, var(--agent-color) 12%, transparent);
+      .region-foot {
+        display: flex;
+        align-items: center;
+        gap: 8px;
+        margin-top: 11px;
+        color: var(--ink-3);
+        font-size: 9.5px;
       }
-      [data-state="failed"] .state-dot {
-        background: var(--red);
+      .show-more {
+        margin-left: auto;
+        padding: 4px 7px;
+        border: 0;
+        border-radius: 6px;
+        background: transparent;
+        color: var(--ink-2);
+      }
+      .show-more:hover {
+        background: var(--surface-2);
       }
 
-      .node-detail {
-        min-height: 142px;
-        padding: 11px 13px 12px;
-        border-top: 1px solid var(--line);
-        background: var(--surface);
+      .agent-glyph {
+        --agent-color: #5da46b;
+        --glyph-url: url("../../apps/web/public/central-icons-reversed/asterisk.svg");
+        width: 18px;
+        height: 18px;
+        flex: 0 0 18px;
+        display: inline-block;
+        background: var(--agent-color);
+        -webkit-mask: var(--glyph-url) center / contain no-repeat;
+        mask: var(--glyph-url) center / contain no-repeat;
+        opacity: 0.92;
       }
-      .detail-head {
+      .agent-glyph.tiny {
+        width: 14px;
+        height: 14px;
+        flex-basis: 14px;
+      }
+      .glyph-cluster {
+        display: inline-flex;
+        align-items: center;
+        padding-left: 3px;
+      }
+      .glyph-cluster .agent-glyph {
+        margin-left: -3px;
+        filter: drop-shadow(0 0 1px var(--surface));
+      }
+
+      .agent-detail {
+        position: absolute;
+        z-index: 4;
+        top: 10px;
+        right: 10px;
+        width: 260px;
+        padding: 12px;
+        border: 1px solid var(--line);
+        border-radius: 13px;
+        background: var(--surface);
+        box-shadow: var(--shadow-soft);
+        transform: translateX(0);
+        transition:
+          opacity 150ms ease,
+          transform 180ms ease;
+      }
+      .agent-detail.hidden {
+        opacity: 0;
+        pointer-events: none;
+        transform: translateX(8px);
+      }
+      .agent-detail-head {
         display: flex;
         align-items: center;
         gap: 8px;
       }
-      .detail-head .agent-glyph {
-        width: 26px;
-        height: 26px;
-      }
-      .detail-title {
+      .agent-detail-head strong {
         min-width: 0;
         flex: 1;
+        overflow: hidden;
+        text-overflow: ellipsis;
+        white-space: nowrap;
       }
-      .detail-title strong {
-        display: block;
-        font-size: 11.5px;
-      }
-      .detail-title span {
-        display: block;
-        margin-top: 2px;
-        color: var(--ink-3);
-        font-size: 9.5px;
-      }
-      .detail-action {
-        min-height: 27px;
-        padding: 0 8px;
-        border: 1px solid var(--line);
-        border-radius: 7px;
-        background: var(--surface);
-        color: var(--ink-2);
-        font-size: 9.5px;
-      }
-      .detail-action:hover {
-        background: var(--surface-soft);
-      }
-      .detail-description {
-        margin: 9px 0 8px;
+      .agent-detail p {
+        margin: 10px 0;
         color: var(--ink-2);
         font-size: 10.5px;
         line-height: 1.55;
       }
-      .detail-grid {
-        display: grid;
-        grid-template-columns: repeat(3, minmax(0, 1fr));
-        gap: 6px;
-      }
-      .detail-stat {
-        padding: 6px 7px;
-        border-radius: 7px;
-        background: var(--surface-soft);
-      }
-      .detail-stat span {
-        display: block;
-        color: var(--ink-3);
-        font-size: 8.5px;
-      }
-      .detail-stat strong {
-        display: block;
-        margin-top: 2px;
-        overflow: hidden;
-        text-overflow: ellipsis;
-        white-space: nowrap;
-        font-size: 9.5px;
-        font-weight: 560;
-      }
-
-      .truth-footnote {
+      .detail-row {
         display: flex;
-        gap: 8px;
-        align-items: flex-start;
-        padding: 8px 11px;
+        justify-content: space-between;
+        gap: 12px;
+        padding: 6px 0;
         border-top: 1px solid var(--line-soft);
-        background: var(--surface-soft);
         color: var(--ink-3);
         font-size: 9.5px;
-        line-height: 1.4;
       }
-      .truth-footnote svg {
-        width: 13px;
-        height: 13px;
-        flex: 0 0 auto;
-        color: var(--blue);
-      }
-
-      .workflow-mark,
-      .line-icon {
-        width: 17px;
-        height: 17px;
-        fill: none;
-        stroke: currentColor;
-        stroke-width: 1.45;
-        stroke-linecap: round;
-        stroke-linejoin: round;
+      .open-thread {
+        width: 100%;
+        height: 29px;
+        margin-top: 7px;
+        border: 1px solid var(--line);
+        border-radius: 8px;
+        background: var(--surface-2);
       }
 
-      @keyframes edge-flow {
-        to {
-          background-position: -200% 0;
-        }
+      .state-running .status-dot {
+        background: var(--green);
       }
-      @keyframes node-scan {
-        0%,
-        100% {
-          background-position: 0 0;
-          opacity: 0.42;
-        }
-        50% {
-          background-position: -200% 0;
-          opacity: 0.95;
-        }
+      .state-paused .status-dot {
+        background: var(--amber);
+      }
+      .state-stopped .status-dot,
+      .state-failed .status-dot {
+        background: var(--red);
+      }
+      .state-completed .status-dot {
+        background: var(--blue);
       }
 
       @media (prefers-reduced-motion: reduce) {
@@ -849,646 +1045,835 @@
         *::before,
         *::after {
           scroll-behavior: auto !important;
+          transition-duration: 0.001ms !important;
           animation-duration: 0.001ms !important;
           animation-iteration-count: 1 !important;
-          transition-duration: 0.001ms !important;
         }
       }
-
-      @media (max-width: 980px) {
-        .page {
-          width: min(760px, calc(100vw - 20px));
-          margin-top: 12px;
+      @media (max-width: 1420px) {
+        :root {
+          --sidebar: 17rem;
+          --dock: 35rem;
         }
-        .app-frame {
-          grid-template-columns: 1fr;
-        }
-        .host-context {
+        .environment {
           display: none;
-        }
-        .dock {
-          height: min(780px, calc(100vh - 132px));
         }
       }
-      @media (max-width: 560px) {
-        .review-title span,
-        .decision-note {
-          display: none;
+      @media (max-width: 1120px) {
+        :root {
+          --dock: min(44rem, 54vw);
         }
-        .review-bar {
-          padding-inline: 10px;
+        .app {
+          grid-template-columns: 0 minmax(26rem, 1fr) var(--dock);
         }
-        .review-control {
-          max-width: 132px;
+        .app.dock-closed {
+          grid-template-columns: 0 minmax(26rem, 1fr) 0;
         }
-        .page {
-          width: 100%;
+        .sidebar {
+          opacity: 0;
+          pointer-events: none;
+        }
+      }
+      @media (max-width: 820px) {
+        .stage {
+          width: 100vw;
           margin: 0;
         }
-        .app-frame {
-          min-height: calc(100vh - 54px);
-          border: 0;
+        .app {
+          height: calc(100vh - 50px);
+          min-height: 620px;
           border-radius: 0;
+          grid-template-columns: minmax(22rem, 1fr) 0;
+        }
+        .app.dock-closed {
+          grid-template-columns: 100vw 0;
+        }
+        .app:not(.dock-closed) {
+          grid-template-columns: 0 100vw;
+        }
+        .chat {
+          grid-column: 1;
+          grid-row: 1;
         }
         .dock {
-          height: calc(100vh - 54px);
+          grid-column: 2;
+          grid-row: 1;
         }
-        .metrics {
-          grid-template-columns: repeat(2, 1fr);
-        }
-        .metric:nth-child(2) {
-          border-right: 0;
+        .review-note,
+        .review-copy span {
+          display: none;
         }
       }
     </style>
   </head>
   <body>
-    <svg width="0" height="0" aria-hidden="true" focusable="false" style="position: absolute">
+    <svg width="0" height="0" aria-hidden="true" style="position: absolute">
+      <symbol id="i-plus" viewBox="0 0 24 24"><path d="M12 5v14M5 12h14" /></symbol>
+      <symbol id="i-search" viewBox="0 0 24 24">
+        <circle cx="10.5" cy="10.5" r="6" />
+        <path d="m15 15 5 5" />
+      </symbol>
+      <symbol id="i-panel" viewBox="0 0 24 24">
+        <rect x="3.5" y="4" width="17" height="16" rx="2" />
+        <path d="M15 4v16" />
+      </symbol>
+      <symbol id="i-x" viewBox="0 0 24 24"><path d="m6 6 12 12M18 6 6 18" /></symbol>
+      <symbol id="i-folder" viewBox="0 0 24 24"><path d="M3.5 7.5h6l2-2h9v13h-17z" /></symbol>
+      <symbol id="i-branch" viewBox="0 0 24 24">
+        <circle cx="6" cy="5" r="2" />
+        <circle cx="18" cy="7" r="2" />
+        <circle cx="6" cy="19" r="2" />
+        <path d="M6 7v10M8 12h4a6 6 0 0 0 6-3" />
+      </symbol>
+      <symbol id="i-code" viewBox="0 0 24 24">
+        <path d="m8 8-4 4 4 4M16 8l4 4-4 4M14 5l-4 14" />
+      </symbol>
+      <symbol id="i-check" viewBox="0 0 24 24"><path d="m5 12 4 4 10-10" /></symbol>
+      <symbol id="i-pause" viewBox="0 0 24 24"><path d="M9 6v12M15 6v12" /></symbol>
+      <symbol id="i-play" viewBox="0 0 24 24"><path d="m8 5 11 7-11 7Z" /></symbol>
+      <symbol id="i-stop" viewBox="0 0 24 24">
+        <rect x="7" y="7" width="10" height="10" rx="1" />
+      </symbol>
+      <symbol id="i-up" viewBox="0 0 24 24"><path d="m7 11 5-5 5 5M12 6v12" /></symbol>
+      <symbol id="i-chevron" viewBox="0 0 24 24"><path d="m9 10 3 3 3-3" /></symbol>
       <symbol id="flow-adaptive" viewBox="0 0 24 24">
         <circle cx="5" cy="17" r="2" />
         <circle cx="12" cy="7" r="2" />
         <circle cx="19" cy="17" r="2" />
         <path d="M6.2 15.4 10.8 8.6M13.2 8.6l4.6 6.8M16.8 17H9" />
         <path d="m10.5 15.5-1.5 1.5 1.5 1.5" />
+        <path d="M3.2 10.2 4 8l2.2-.8L4 6.4 3.2 4.2 2.4 6.4.2 7.2l2.2.8.8 2.2Z" />
       </symbol>
-      <symbol id="agent-bloom" viewBox="0 0 24 24">
-        <path d="M12 3.2 14.1 9.9 20.8 12 14.1 14.1 12 20.8 9.9 14.1 3.2 12 9.9 9.9Z" />
-        <circle class="fill" cx="12" cy="12" r="1.4" />
+      <!--
+        Locked research geometry for the other selected capability glyphs.
+        These symbols are not extra UI in this Workflow storyboard. They preserve the
+        maintainer-approved 24x24 paths until production materializes one canonical asset
+        per name under the existing icon owner; do not redraw them from the names alone.
+      -->
+      <symbol id="agent-duo" viewBox="0 0 24 24">
+        <rect x="2.5" y="7.5" width="8.5" height="8" rx="2" />
+        <path d="M6.75 7.5V5.8" />
+        <circle cx="6.75" cy="4.9" r=".7" />
+        <circle class="dot" cx="5.4" cy="11.4" r=".55" />
+        <circle class="dot" cx="8.1" cy="11.4" r=".55" />
+        <path d="M5.2 14h3.1" />
+        <rect x="13" y="7.5" width="8.5" height="8" rx="2" />
+        <path d="M17.25 7.5V5.8" />
+        <circle cx="17.25" cy="4.9" r=".7" />
+        <circle class="dot" cx="15.9" cy="11.4" r=".55" />
+        <circle class="dot" cx="18.6" cy="11.4" r=".55" />
+        <path d="M15.7 14h3.1M11 11.5h2" />
       </symbol>
-      <symbol id="agent-orbit" viewBox="0 0 24 24">
-        <circle cx="12" cy="12" r="7.2" />
-        <path d="M4.8 12c2.1-3.2 12.3-3.2 14.4 0M12 4.8c3.1 2.2 3.1 12.2 0 14.4" />
-        <circle class="fill" cx="16.7" cy="7" r="1.2" />
+      <symbol id="knowledge-linked" viewBox="0 0 24 24">
+        <rect x="3" y="4" width="7" height="8" rx="1.5" />
+        <path d="M5.2 7h2.6M5.2 9h1.8" />
+        <rect x="14" y="12" width="7" height="8" rx="1.5" />
+        <path d="M16.2 15h2.6M16.2 17h1.8M10 8h2.2c1 0 1.8.8 1.8 1.8V12" />
+        <circle cx="12" cy="8" r="1" />
       </symbol>
-      <symbol id="agent-kite" viewBox="0 0 24 24">
-        <path d="m12 3.5 3.2 5.3 5.3 3.2-5.3 3.2-3.2 5.3-3.2-5.3L3.5 12l5.3-3.2Z" />
-        <path d="M12 7.2V12l3.7 2.2" />
+      <symbol id="memory-bookmark" viewBox="0 0 24 24">
+        <path d="M6 3.5h12v17l-6-3.6-6 3.6v-17Z" />
+        <path d="M12 7.2 12.8 9l1.8.8-1.8.8-.8 1.8-.8-1.8-1.8-.8 1.8-.8.8-1.8Z" />
       </symbol>
-      <symbol id="agent-rings" viewBox="0 0 24 24">
-        <circle cx="9" cy="12" r="5.5" />
-        <circle cx="15" cy="12" r="5.5" />
-        <circle class="fill" cx="12" cy="12" r="1.2" />
-      </symbol>
-      <symbol id="agent-spark" viewBox="0 0 24 24">
-        <path d="M12 3v18M3 12h18M5.7 5.7l12.6 12.6M18.3 5.7 5.7 18.3" />
-        <circle class="fill" cx="12" cy="12" r="2" />
-      </symbol>
-      <symbol id="agent-hex" viewBox="0 0 24 24">
-        <path d="m12 3.8 7.1 4.1v8.2L12 20.2l-7.1-4.1V7.9Z" />
-        <path d="m8.2 12 2.4 2.4 5-5" />
-      </symbol>
-      <symbol id="icon-pause" viewBox="0 0 24 24"><path d="M8 6v12M16 6v12" /></symbol>
-      <symbol id="icon-stop" viewBox="0 0 24 24">
-        <rect x="7" y="7" width="10" height="10" rx="1.5" />
-      </symbol>
-      <symbol id="icon-plus" viewBox="0 0 24 24"><path d="M12 5v14M5 12h14" /></symbol>
-      <symbol id="icon-x" viewBox="0 0 24 24"><path d="m6 6 12 12M18 6 6 18" /></symbol>
-      <symbol id="icon-info" viewBox="0 0 24 24">
-        <circle cx="12" cy="12" r="8.5" />
-        <path d="M12 10.5V17M12 7.2h.01" />
-      </symbol>
-      <symbol id="icon-arrow" viewBox="0 0 24 24"><path d="m7 12 10 0M13 8l4 4-4 4" /></symbol>
-      <symbol id="icon-moon" viewBox="0 0 24 24">
-        <path d="M20 15.2A8 8 0 0 1 8.8 4 8 8 0 1 0 20 15.2Z" />
+      <symbol id="resume-chat" viewBox="0 0 24 24">
+        <path d="M4 4.5h11A3.5 3.5 0 0 1 18.5 8v4A3.5 3.5 0 0 1 15 15.5H9l-4.5 3v-14Z" />
+        <path d="M11 10h9M17.5 7.5 20 10l-2.5 2.5" />
       </symbol>
     </svg>
 
-    <div class="review-bar">
-      <div class="review-title">
-        <strong>Workflow 详情面 · focused storyboard</strong>
-        <span>原型评审控件不进入产品；既有 OmniMind UI 不在这里重做</span>
+    <header class="review-bar">
+      <div class="review-copy">
+        <strong>Workflow 四投影 · reference only</strong>
+        <span>同一 state/action owner；宿主关系与 100+ Agent 层级评审</span>
       </div>
-      <div class="review-spacer"></div>
-      <select class="review-control" id="fixture-select" aria-label="选择工作流规模">
-        <option value="focused">典型 · 7 个 Agent</option>
-        <option value="compact">精简 · 4 个 Agent</option>
-        <option value="dense">密集 · 20 个 Agent</option>
+      <span class="review-note">测试规模</span>
+      <select id="scale" class="review-control" aria-label="Agent 数量">
+        <option value="4">4 Agents</option>
+        <option value="20" selected>20 Agents</option>
+        <option value="120">120 Agents</option>
       </select>
-      <button class="review-control" id="advance-button">推进一次状态</button>
-      <button class="review-control" id="theme-button" aria-label="切换明暗主题">主题</button>
-    </div>
+      <button id="advance" class="review-control">推进阶段</button>
+      <button id="theme" class="review-control">深色</button>
+      <span class="review-spacer"></span>
+      <span class="review-note">原型控件不会进入产品</span>
+    </header>
 
-    <div class="page">
-      <div class="decision-note">
-        <svg class="line-icon"><use href="#icon-info" /></svg>
-        <div>
-          <strong>唯一新增表面：</strong>现有 <code>WorkflowRunCard.tsx</code> 打开现有 RightDock
-          后的阶段地图。当前 <code>WorkflowRunState</code> 没有 dependency edges，因此只画真实 phase
-          order 与 agent membership，不伪造 DAG。
-        </div>
-      </div>
-
-      <div class="app-frame">
-        <section class="host-context" aria-label="现有 OmniMind 宿主上下文">
-          <div class="host-topbar">
-            <img src="../../apps/web/public/brand/omnimind-logo-flat.svg" alt="" />
-            <strong>发布候选验证</strong>
-            <span class="host-badge">现有 ChatView · 不施工</span>
+    <main class="stage">
+      <div class="app state-running" id="app">
+        <aside class="sidebar" aria-label="OmniMind 主导航">
+          <div class="brand-row">
+            <img src="../../apps/web/public/brand/omnimind-logo-flat.svg" alt="" /><strong
+              >OmniMind</strong
+            >
           </div>
-          <div class="host-main">
-            <div class="host-copy">
-              <h1>不再做“大而全能力原型”</h1>
-              <p>
-                Todo、子智能体、审批、Browser、Device、Files、Diff、Environment
-                都已有真实组件。它们只在真实产品里继续复用，不再由研究 HTML 重新画一套。
-              </p>
-              <p>
-                这张 storyboard 只回答一个仍未被现有组件覆盖的问题：结构化 workflow 点开后，right
-                dock 怎样用更清晰、更有质感的空间关系解释阶段、Agent 与实时状态。
-              </p>
-            </div>
+          <button class="sidebar-action">
+            <svg class="icon icon-sm"><use href="#i-plus" /></svg><span>新建任务</span>
+          </button>
+          <button class="sidebar-action">
+            <svg class="icon icon-sm"><use href="#i-search" /></svg><span>搜索</span>
+          </button>
+          <div class="sidebar-section">今天</div>
+          <button class="thread-row active"><span>深度 review Agent Core</span></button>
+          <button class="thread-row"><span>Model services composer</span></button>
+          <div class="sidebar-section">昨天</div>
+          <button class="thread-row"><span>OmniMind packaged journey</span></button>
+          <button class="thread-row"><span>Engine capability intake</span></button>
+          <div class="sidebar-footer">
+            <button class="sidebar-action">
+              <svg class="icon icon-sm"><use href="#i-folder" /></svg><span>OmniMind</span>
+            </button>
+          </div>
+        </aside>
 
-            <div class="reuse-ledger" aria-label="复用清单">
-              <div class="reuse-item">
-                <strong>Todo / 当前步骤</strong
-                ><span>direct-import · ComposerActiveTaskListCard</span>
-              </div>
-              <div class="reuse-item">
-                <strong>子智能体</strong
-                ><span>direct-import · ComposerSubagentStrip + child Thread</span>
-              </div>
-              <div class="reuse-item">
-                <strong>审批</strong><span>direct-import · ComposerPendingApprovalPanel</span>
-              </div>
-              <div class="reuse-item">
-                <strong>Computer Use</strong><span>direct-import · BrowserPanel / DevicePanel</span>
-              </div>
-              <div class="reuse-item">
-                <strong>知识与文件结果</strong
-                ><span>direct-import · Explorer / File / Diff / Activity</span>
-              </div>
-              <div class="reuse-item">
-                <strong>记忆与恢复</strong
-                ><span>backend truth first · existing Environment / Activity primitive</span>
-              </div>
-              <div class="reuse-item">
-                <strong>Workflow 摘要</strong><span>direct-import · WorkflowRunCard</span>
-              </div>
-              <div class="reuse-item only-new">
-                <strong>Workflow 空间详情</strong
-                ><span>唯一新增 · existing RightDock 的 read-only phase map</span>
-              </div>
-            </div>
+        <section class="chat">
+          <header class="chat-header">
+            <span class="chat-title">深度 review Agent Core 与前端投影</span>
+            <span class="header-spacer"></span>
+            <button class="header-button">
+              <svg class="icon icon-sm"><use href="#i-folder" /></svg><span>打开位置</span
+              ><svg class="icon icon-sm"><use href="#i-chevron" /></svg>
+            </button>
+            <button id="environment-toggle" class="icon-button" aria-label="切换环境信息">
+              <svg class="icon icon-sm"><use href="#i-panel" /></svg>
+            </button>
+          </header>
 
-            <div class="composer-zone">
-              <div class="host-component-label">现有 WorkflowRunCard.tsx · compact header</div>
-              <button
-                class="workflow-summary"
-                id="open-workflow"
-                aria-label="打开发布验证工作流详情"
-              >
-                <svg class="workflow-mark"><use href="#flow-adaptive" /></svg>
-                <span class="workflow-summary-main"
-                  ><strong>发布验证</strong
-                  ><span id="summary-copy">2/4 阶段 · 3/7 Agent 运行中 · 01:42</span></span
-                >
-                <span class="summary-actions">
-                  <span class="icon-button" role="img" aria-label="暂停"
-                    ><svg class="line-icon"><use href="#icon-pause" /></svg
-                  ></span>
-                  <span class="icon-button" role="img" aria-label="停止"
-                    ><svg class="line-icon"><use href="#icon-stop" /></svg
-                  ></span>
-                  <span class="icon-button" role="img" aria-label="打开详情"
-                    ><svg class="line-icon"><use href="#icon-arrow" /></svg
-                  ></span>
-                </span>
-              </button>
-              <div class="composer-shell">
-                <p>补充要求</p>
-                <div class="composer-footer">
-                  <button class="composer-chip">＋</button
-                  ><button class="composer-chip">完全访问</button
-                  ><button class="composer-chip">Claude Code</button
-                  ><button class="composer-send" aria-label="发送">↑</button>
+          <div class="transcript">
+            <article class="message user-row">
+              <div class="user-bubble">
+                深度 review 当前 Agent Core，按真实 OmniMind 架构拆分检查；过程别刷过去，我需要知道
+                workflow 在怎么推进。
+              </div>
+            </article>
+            <article class="message">
+              <div class="assistant-copy">
+                <p>
+                  我会保留现有 owner，并让 Workflow 在对话、Composer、Environment
+                  与右侧详情中各自只承担一个角色。当前进入“前端与可维护性复核”。
+                </p>
+              </div>
+              <div class="activity-stack">
+                <div class="activity-row">
+                  <svg class="icon icon-sm"><use href="#i-check" /></svg>
+                  <span class="activity-label">已完成架构与运行边界复核</span>
+                  <span class="agent-chip"
+                    ><span class="agent-glyph tiny" data-agent="0"></span>Kepler</span
+                  >
+                  <span class="agent-chip"
+                    ><span class="agent-glyph tiny" data-agent="1"></span>Zeno</span
+                  >
                 </div>
+                <button class="activity-row open-workflow" type="button">
+                  <svg class="flow-icon"><use href="#flow-adaptive" /></svg>
+                  <span class="activity-label">动态工作流 · 前端与可维护性复核</span>
+                  <span class="activity-detail" id="timeline-progress">阶段 3/5 · 7/20 完成</span>
+                  <span class="activity-arrow">查看流程 ›</span>
+                </button>
+                <div class="activity-row">
+                  <svg class="icon icon-sm"><use href="#i-code" /></svg>
+                  <span class="activity-label">编辑了文档并复核实际组件 owner</span>
+                  <span class="agent-chip"
+                    ><span class="agent-glyph tiny" data-agent="2"></span>Dewey</span
+                  >
+                  <span class="activity-detail">已更新</span>
+                </div>
+              </div>
+            </article>
+          </div>
+
+          <aside class="environment" id="environment" aria-label="环境信息">
+            <div class="environment-title"><span>环境信息</span></div>
+            <div class="env-section">
+              <button class="env-row">
+                <svg class="icon icon-sm"><use href="#i-code" /></svg><span>变更</span
+                ><span class="env-trailing"
+                  ><span class="diff-plus">+5,883</span><span class="diff-minus">-1,455</span></span
+                >
+              </button>
+              <button class="env-row">
+                <svg class="icon icon-sm"><use href="#i-folder" /></svg><span>本地</span
+                ><span class="env-trailing">⌄</span>
+              </button>
+              <button class="env-row">
+                <svg class="icon icon-sm"><use href="#i-branch" /></svg
+                ><span>codex/agent-core-ui-spec</span><span class="env-trailing">⌄</span>
+              </button>
+            </div>
+            <div class="env-section">
+              <div class="env-label">工作流</div>
+              <button class="env-row open-workflow">
+                <svg class="flow-icon"><use href="#flow-adaptive" /></svg>
+                <span>Agent Core 深度复核</span>
+                <span class="env-trailing"
+                  ><span class="glyph-cluster" id="env-glyphs"></span
+                  ><span id="env-count">7/20</span></span
+                >
+              </button>
+            </div>
+            <div class="env-section">
+              <div class="env-label">来源</div>
+              <button class="env-row">
+                <svg class="icon icon-sm"><use href="#i-folder" /></svg
+                ><span>architecture/workbench.md</span>
+              </button>
+              <button class="env-row">
+                <svg class="icon icon-sm"><use href="#i-folder" /></svg
+                ><span>WorkflowRunCard.logic.ts</span>
+              </button>
+            </div>
+          </aside>
+
+          <div class="composer-area">
+            <div class="composer-stack" id="composer-stack">
+              <div class="stack-row">
+                <span class="status-dot"></span>
+                <div class="stack-label">
+                  <strong>第 3/6 步</strong><span>重构四投影合同与 100+ Agent 层级</span>
+                </div>
+                <button class="stack-action">展开</button>
+              </div>
+              <div class="stack-row" id="workflow-control">
+                <svg class="flow-icon"><use href="#flow-adaptive" /></svg>
+                <div class="stack-label">
+                  <strong>Agent Core 深度复核</strong
+                  ><span id="composer-progress">前端与可维护性复核 · 7/20</span>
+                </div>
+                <button class="stack-action open-workflow">打开</button>
+                <button class="stack-action" id="pause" aria-label="暂停工作流">
+                  <svg class="icon icon-sm"><use href="#i-pause" /></svg>
+                </button>
+                <button class="stack-action danger" id="stop" aria-label="停止工作流">
+                  <svg class="icon icon-sm"><use href="#i-stop" /></svg>
+                </button>
+              </div>
+            </div>
+            <div class="composer">
+              <textarea aria-label="消息" placeholder="补充要求"></textarea>
+              <div class="composer-footer">
+                <button class="composer-pill">＋</button>
+                <button class="composer-pill">完全访问</button>
+                <button class="composer-pill">Claude Code</button>
+                <button class="send" aria-label="发送">
+                  <svg class="icon icon-sm"><use href="#i-up" /></svg>
+                </button>
               </div>
             </div>
           </div>
         </section>
 
-        <aside class="dock" aria-label="Workflow right dock prototype">
+        <aside class="dock" aria-label="动态工作流详情">
           <div class="dock-tabs">
             <div class="dock-tab">
-              <svg class="line-icon"><use href="#flow-adaptive" /></svg><span>发布验证</span
-              ><span class="close">×</span>
+              <svg class="flow-icon"><use href="#flow-adaptive" /></svg><span>动态工作流</span>
             </div>
-            <button class="icon-button dock-tab-add" aria-label="添加面板">
-              <svg class="line-icon"><use href="#icon-plus" /></svg>
+            <button id="close-dock" class="icon-button" aria-label="关闭右侧详情">
+              <svg class="icon icon-sm"><use href="#i-x" /></svg>
             </button>
           </div>
-
-          <div class="workflow-pane">
-            <div class="pane-header">
-              <svg class="workflow-mark" style="color: var(--green)">
-                <use href="#flow-adaptive" />
-              </svg>
-              <div class="pane-title">
-                <strong>发布验证</strong><span>Claude Code · 原生工作流 · 只读详情</span>
-              </div>
-              <span class="status-label" id="run-status">运行中</span>
-              <button class="icon-button" aria-label="关闭 Workflow 详情">
-                <svg class="line-icon"><use href="#icon-x" /></svg>
-              </button>
+          <div class="dock-hero">
+            <div class="dock-title-row">
+              <svg class="flow-icon"><use href="#flow-adaptive" /></svg>
+              <h1>Agent Core 深度复核</h1>
+              <span class="origin">Claude Code 原生</span>
             </div>
-
-            <div class="metrics" aria-label="工作流运行摘要">
-              <div class="metric">
-                <span>当前阶段</span><strong id="metric-phase">并行检查</strong>
-              </div>
-              <div class="metric"><span>进度</span><strong id="metric-progress">2 / 4</strong></div>
-              <div class="metric">
-                <span>Agent</span><strong id="metric-agents">3 运行 · 2 完成</strong>
-              </div>
-              <div class="metric">
-                <span>用量</span><strong id="metric-usage">84.6k token</strong>
-              </div>
+            <div class="dock-summary">
+              <span class="status-dot"></span
+              ><span id="dock-status">运行中 · 前端与可维护性复核</span
+              ><span id="dock-count">7 / 20 Agents 完成</span><span>12:48</span>
             </div>
-
-            <div class="map-toolbar">
-              <strong>阶段地图</strong><span>顺序与归属来自真实 run</span>
-              <div class="toolbar-spacer"></div>
-              <button class="toolbar-button" id="jump-current">定位当前阶段</button>
-            </div>
-
-            <div class="map-viewport" id="map-viewport">
-              <div class="phase-map" id="phase-map" aria-label="工作流阶段与 Agent"></div>
-            </div>
-
-            <div class="node-detail" id="node-detail" aria-live="polite"></div>
-            <div class="truth-footnote">
-              <svg class="line-icon"><use href="#icon-info" /></svg
-              ><span
-                >当前数据模型只证明 phase 顺序和 Agent 归属。跨 Agent 连线只有在 Engine 上报显式
-                dependency edge 后才显示；届时首选 React Flow 做 renderer
-                challenger，不从零开发图引擎。</span
+          </div>
+          <div class="dock-tools">
+            <label class="search"
+              ><svg class="icon icon-sm"><use href="#i-search" /></svg
+              ><input id="agent-search" type="search" placeholder="搜索 Agent"
+            /></label>
+            <button class="filter active" data-filter="all">全部</button>
+            <button class="filter" data-filter="running">运行中</button>
+            <button class="filter" data-filter="failed">失败</button>
+            <button class="filter" data-filter="queued">排队</button>
+          </div>
+          <div class="map-scroll">
+            <div class="map-canvas" id="map-canvas">
+              <div class="map-caption">PHASE OVERVIEW · 点击阶段展开成员</div>
+              <svg
+                class="spine"
+                viewBox="0 0 940 660"
+                preserveAspectRatio="none"
+                aria-hidden="true"
               >
+                <path
+                  id="full-spine"
+                  d="M95 106 C135 106 142 65 176 65 S292 65 332 116 S448 116 488 65 S604 65 644 116 S760 116 796 65"
+                />
+                <path
+                  class="active-path"
+                  id="active-spine"
+                  d="M95 106 C135 106 142 65 176 65 S292 65 332 116"
+                />
+                <path
+                  class="membership"
+                  id="membership-line"
+                  d="M403 148 C403 182 478 180 478 215"
+                />
+              </svg>
+              <div id="phase-nodes"></div>
+              <section class="phase-region" id="phase-region">
+                <div class="region-head">
+                  <svg class="flow-icon"><use href="#flow-adaptive" /></svg>
+                  <div>
+                    <h2 id="region-title">前端与可维护性复核</h2>
+                    <p id="region-subtitle">当前阶段 · 成员归属，不表示 Agent 因果边</p>
+                  </div>
+                  <span class="region-count" id="region-count">7 agents</span>
+                </div>
+                <div class="agent-grid" id="agent-grid"></div>
+                <div class="region-empty" id="region-empty">没有匹配的 Agent</div>
+                <div class="region-foot">
+                  <span>默认只展开当前/选中阶段；其余阶段保持聚合。</span
+                  ><button class="show-more" id="show-more">显示更多</button>
+                </div>
+              </section>
+              <aside class="agent-detail hidden" id="agent-detail">
+                <div class="agent-detail-head">
+                  <span class="agent-glyph" id="detail-glyph"></span
+                  ><strong id="detail-name">Agent</strong
+                  ><button class="icon-button" id="close-detail" aria-label="关闭 Agent 详情">
+                    <svg class="icon icon-sm"><use href="#i-x" /></svg>
+                  </button>
+                </div>
+                <p id="detail-copy">正在复核当前阶段的真实实现与维护成本。</p>
+                <div class="detail-row">
+                  <span>状态</span><span id="detail-status">运行中</span>
+                </div>
+                <div class="detail-row"><span>模型</span><span>Claude Sonnet 4.5</span></div>
+                <div class="detail-row"><span>最近工具</span><span>Read · rg · test</span></div>
+                <button class="open-thread">打开子任务</button>
+              </aside>
             </div>
           </div>
         </aside>
       </div>
-    </div>
+    </main>
 
     <script>
-      const glyphs = [
-        "agent-bloom",
-        "agent-orbit",
-        "agent-kite",
-        "agent-rings",
-        "agent-spark",
-        "agent-hex",
-      ];
-      const colors = [
-        "var(--agent-1)",
-        "var(--agent-2)",
-        "var(--agent-3)",
-        "var(--agent-4)",
-        "var(--agent-5)",
-        "var(--agent-6)",
-      ];
-
-      const fixtures = {
-        compact: [
-          {
-            id: "prepare",
-            title: "准备",
-            detail: "1/1",
-            state: "completed",
-            agents: [
-              agent(
-                "范围核对",
-                "completed",
-                0,
-                "Claude Sonnet 4.5",
-                "12.2k",
-                "读取 owner 与变更范围",
-              ),
-            ],
-          },
-          {
-            id: "check",
-            title: "检查",
-            detail: "1/2",
-            state: "running",
-            agents: [
-              agent("代码审查", "completed", 1, "Claude Opus 4.5", "18.7k", "核对实现与测试"),
-              agent(
-                "真实旅程",
-                "running",
-                2,
-                "Claude Sonnet 4.5",
-                "9.3k",
-                "验证 packaged Desktop 旅程",
-              ),
-            ],
-          },
-          {
-            id: "finish",
-            title: "收口",
-            detail: "0/1",
-            state: "queued",
-            agents: [
-              agent("汇总结论", "queued", 3, "Claude Sonnet 4.5", "—", "汇总证据并给出裁决"),
-            ],
-          },
-        ],
-        focused: [
-          {
-            id: "prepare",
-            title: "预检",
-            detail: "1/1 完成",
-            state: "completed",
-            agents: [
-              agent(
-                "范围核对",
-                "completed",
-                0,
-                "Claude Sonnet 4.5",
-                "12.2k",
-                "读取 owner、冻结输入与停止条件",
-              ),
-            ],
-          },
-          {
-            id: "parallel",
-            title: "并行检查",
-            detail: "2/3 完成",
-            state: "running",
-            agents: [
-              agent(
-                "后端审计",
-                "completed",
-                1,
-                "Claude Opus 4.5",
-                "24.8k",
-                "核对 adapter、settlement 与失败边界",
-              ),
-              agent(
-                "桌面旅程",
-                "running",
-                2,
-                "Claude Sonnet 4.5",
-                "19.6k",
-                "以 fresh profile 验证启动、执行与重开",
-              ),
-              agent(
-                "契约检查",
-                "running",
-                3,
-                "Claude Sonnet 4.5",
-                "14.1k",
-                "核对中英文、状态语义与 owner",
-              ),
-            ],
-          },
-          {
-            id: "repair",
-            title: "修复验证",
-            detail: "0/2",
-            state: "queued",
-            agents: [
-              agent(
-                "Focused tests",
-                "running",
-                4,
-                "Claude Haiku 4.5",
-                "7.4k",
-                "运行最窄测试并归因失败",
-              ),
-              agent(
-                "视觉复核",
-                "queued",
-                5,
-                "Claude Sonnet 4.5",
-                "—",
-                "在真实视口复核 Workflow pane",
-              ),
-            ],
-          },
-          {
-            id: "finish",
-            title: "收口",
-            detail: "0/1",
-            state: "queued",
-            agents: [
-              agent(
-                "最终裁决",
-                "queued",
-                0,
-                "Claude Opus 4.5",
-                "—",
-                "合并证据、列出残余边界并停止",
-              ),
-            ],
-          },
-        ],
-        dense: [
-          {
-            id: "prepare",
-            title: "准备",
-            detail: "3/3",
-            state: "completed",
-            agents: manyAgents("准备", 3, 0, "completed"),
-          },
-          {
-            id: "research",
-            title: "研究",
-            detail: "4/5",
-            state: "running",
-            agents: manyAgents("研究", 5, 3, "mixed"),
-          },
-          {
-            id: "implement",
-            title: "实现",
-            detail: "2/5",
-            state: "running",
-            agents: manyAgents("实现", 5, 8, "mixed"),
-          },
-          {
-            id: "verify",
-            title: "验证",
-            detail: "1/4",
-            state: "running",
-            agents: manyAgents("验证", 4, 13, "mixed"),
-          },
-          {
-            id: "finish",
-            title: "收口",
-            detail: "0/3",
-            state: "queued",
-            agents: manyAgents("收口", 3, 17, "queued"),
-          },
-        ],
-      };
-
-      function agent(label, state, seed, model, usage, description) {
-        return {
-          id: `${label}-${seed}`,
-          label,
-          state,
-          seed,
-          model,
-          usage,
-          description,
-          effort: seed % 2 ? "High" : "Medium",
-          recent:
-            state === "running"
-              ? "read · exec · view"
-              : state === "completed"
-                ? "settled"
-                : "尚未开始",
+      (function () {
+        var glyphs = [
+          "asterisk",
+          "atom",
+          "bezier-circle",
+          "burst",
+          "circle-dots-center-1",
+          "circle-dots-center-2",
+          "circles-three",
+          "compass-round",
+          "diamond-shine",
+          "flower-shape",
+          "form-capsule",
+          "form-circle",
+          "form-diamond",
+          "form-flower",
+          "form-hexagon",
+          "form-octagon-rotate",
+          "form-octagon",
+          "form-oval",
+          "form-pentagon",
+          "form-pyramide",
+          "form-rhombus",
+          "form-seal",
+          "galaxy",
+          "propeller",
+        ];
+        var colors = [
+          "#64ad6d",
+          "#46aa92",
+          "#8b7db8",
+          "#bd8054",
+          "#537eaf",
+          "#aa6681",
+          "#89974f",
+          "#5f91a0",
+        ];
+        var phaseNames = [
+          "界定范围",
+          "架构复核",
+          "前端与可维护性复核",
+          "验证与反证",
+          "文档收口",
+          "交付候选",
+        ];
+        var agentNames = [
+          "Engine boundary",
+          "Workflow surface",
+          "Identity system",
+          "Cache economics",
+          "Knowledge audit",
+          "Memory lifecycle",
+          "Composer ownership",
+          "Environment index",
+          "Timeline receipts",
+          "RightDock layout",
+          "A11y review",
+          "i18n contract",
+          "Packaged journey",
+          "Provider truth",
+          "Settlement audit",
+          "Failure recovery",
+          "Renderer benchmark",
+          "Interaction review",
+          "Performance probe",
+          "Source provenance",
+          "Security boundary",
+          "Contract tests",
+          "Visual density",
+          "Maintenance audit",
+          "Runtime isolation",
+          "Usage truth",
+          "Resume semantics",
+          "Tool admission",
+          "Project context",
+          "Agent detail",
+        ];
+        var app = document.getElementById("app");
+        var scale = document.getElementById("scale");
+        var phaseNodes = document.getElementById("phase-nodes");
+        var agentGrid = document.getElementById("agent-grid");
+        var agentSearch = document.getElementById("agent-search");
+        var currentFilter = "all";
+        var selectedPhase = 2;
+        var currentPhase = 2;
+        var state = "running";
+        var expanded = false;
+        var distributions = {
+          4: [1, 2, 1],
+          20: [3, 4, 7, 4, 2],
+          120: [12, 22, 34, 26, 18, 8],
         };
-      }
 
-      function manyAgents(prefix, count, start, mode) {
-        return Array.from({ length: count }, (_, index) => {
-          const seed = start + index;
-          const state =
-            mode === "completed"
-              ? "completed"
-              : mode === "queued"
-                ? "queued"
-                : index < Math.ceil(count / 2)
-                  ? "completed"
-                  : index === Math.ceil(count / 2)
-                    ? "running"
-                    : "queued";
-          return agent(
-            `${prefix} ${index + 1}`,
-            state,
-            seed,
-            index % 3 === 0 ? "Claude Opus 4.5" : "Claude Sonnet 4.5",
-            state === "queued" ? "—" : `${(8 + seed * 1.7) | 0}.${seed % 9}k`,
-            `${prefix}阶段的独立工作单元 ${index + 1}`,
+        function iconUrl(index) {
+          return (
+            'url("../../apps/web/public/central-icons-reversed/' +
+            glyphs[index % glyphs.length] +
+            '.svg")'
           );
-        });
-      }
-
-      const labels = { completed: "已完成", running: "运行中", queued: "排队中", failed: "失败" };
-      let fixtureName = "focused";
-      let selectedAgentId = null;
-
-      function currentPhases() {
-        return fixtures[fixtureName];
-      }
-      function flattenAgents() {
-        return currentPhases().flatMap((phase) =>
-          phase.agents.map((entry) => ({ ...entry, phaseTitle: phase.title })),
-        );
-      }
-
-      function render() {
-        const phases = currentPhases();
-        const agents = flattenAgents();
-        const selected =
-          agents.find((entry) => entry.id === selectedAgentId) ??
-          agents.find((entry) => entry.state === "running") ??
-          agents[0];
-        selectedAgentId = selected?.id ?? null;
-        const map = document.getElementById("phase-map");
-        map.innerHTML = "";
-        phases.forEach((phase, phaseIndex) => {
-          const phaseElement = document.createElement("section");
-          phaseElement.className = "phase";
-          phaseElement.dataset.state = phase.state;
-          phaseElement.dataset.phaseId = phase.id;
-          phaseElement.innerHTML = `<div class="phase-head"><span class="phase-index">${String(phaseIndex + 1).padStart(2, "0")}</span><span class="phase-title"><strong>${phase.title}</strong><span>${phase.detail}</span></span></div><div class="agent-list"></div>`;
-          const list = phaseElement.querySelector(".agent-list");
-          phase.agents.forEach((entry) => {
-            const node = document.createElement("button");
-            node.className = "agent-node";
-            node.dataset.state = entry.state;
-            node.style.setProperty("--agent-color", colors[entry.seed % colors.length]);
-            node.setAttribute("aria-pressed", String(selectedAgentId === entry.id));
-            node.setAttribute("aria-label", `${entry.label}，${labels[entry.state]}`);
-            node.innerHTML = `<svg class="agent-glyph"><use href="#${glyphs[entry.seed % glyphs.length]}" /></svg><span class="agent-copy"><strong>${entry.label}</strong><span class="agent-meta"><i class="state-dot"></i>${labels[entry.state]} · ${entry.usage}</span></span>`;
-            node.addEventListener("click", () => {
-              selectedAgentId = entry.id;
-              render();
-            });
-            list.appendChild(node);
-          });
-          map.appendChild(phaseElement);
-        });
-
-        renderDetail(selected);
-
-        const completedPhases = phases.filter((phase) => phase.state === "completed").length;
-        const current = phases.find((phase) => phase.state === "running") ?? phases.at(-1);
-        const running = agents.filter((entry) => entry.state === "running").length;
-        const completed = agents.filter((entry) => entry.state === "completed").length;
-        const settled = agents.length > 0 && completed === agents.length;
-        const totalUsage = agents.reduce(
-          (sum, entry) => sum + (Number.parseFloat(entry.usage) || 0),
-          0,
-        );
-        document.getElementById("run-status").textContent = settled ? "已完成" : "运行中";
-        document.getElementById("metric-phase").textContent = settled
-          ? "已完成"
-          : (current?.title ?? "等待中");
-        document.getElementById("metric-progress").textContent =
-          `${Math.min(phases.length, completedPhases + (current?.state === "running" ? 1 : 0))} / ${phases.length}`;
-        document.getElementById("metric-agents").textContent =
-          `${running} 运行 · ${completed} 完成`;
-        document.getElementById("metric-usage").textContent = `${totalUsage.toFixed(1)}k token`;
-        document.getElementById("summary-copy").textContent =
-          `${Math.min(phases.length, completedPhases + 1)}/${phases.length} 阶段 · ${running}/${agents.length} Agent 运行中 · 01:42`;
-      }
-
-      function renderDetail(entry) {
-        const detail = document.getElementById("node-detail");
-        if (!entry) {
-          detail.innerHTML = "";
-          return;
         }
-        const color = colors[entry.seed % colors.length];
-        detail.innerHTML = `<div class="detail-head"><svg class="agent-glyph" style="--agent-color:${color};color:${color}"><use href="#${glyphs[entry.seed % glyphs.length]}" /></svg><div class="detail-title"><strong>${entry.label} · ${labels[entry.state]}</strong><span>${entry.phaseTitle} · ${entry.model}</span></div><button class="detail-action">打开子任务</button></div><p class="detail-description">${entry.description}</p><div class="detail-grid"><div class="detail-stat"><span>推理强度</span><strong>${entry.effort}</strong></div><div class="detail-stat"><span>用量</span><strong>${entry.usage} token</strong></div><div class="detail-stat"><span>最近活动</span><strong>${entry.recent}</strong></div></div>`;
-      }
+        function decorateGlyph(el, index) {
+          el.style.setProperty("--glyph-url", iconUrl(index));
+          el.style.setProperty("--agent-color", colors[index % colors.length]);
+        }
+        function decorateStaticGlyphs() {
+          document.querySelectorAll("[data-agent]").forEach(function (el) {
+            decorateGlyph(el, Number(el.getAttribute("data-agent")) || 0);
+          });
+        }
+        function countsFor(size) {
+          return distributions[size];
+        }
+        function doneCount(size) {
+          var counts = countsFor(size);
+          var done = 0;
+          counts.forEach(function (count, index) {
+            if (index < currentPhase) done += count;
+            if (index === currentPhase) done += Math.max(1, Math.floor(count * 0.34));
+          });
+          return state === "completed" ? size : done;
+        }
+        function statusFor(phaseIndex, localIndex) {
+          if (state === "stopped") return localIndex % 5 === 0 ? "failed" : "queued";
+          if (state === "completed" || phaseIndex < currentPhase) return "completed";
+          if (phaseIndex > currentPhase) return "queued";
+          if (state === "paused") return localIndex % 3 === 0 ? "completed" : "paused";
+          if (localIndex % 11 === 0 && localIndex > 0) return "failed";
+          if (localIndex % 4 === 0) return "completed";
+          return "running";
+        }
+        function statusLabel(status) {
+          return {
+            running: "运行中",
+            completed: "已完成",
+            failed: "失败",
+            queued: "排队中",
+            paused: "已暂停",
+          }[status];
+        }
+        function phaseStatus(index) {
+          if (state === "completed" || index < currentPhase) return "已完成";
+          if (index === currentPhase)
+            return state === "paused" ? "已暂停" : state === "stopped" ? "已停止" : "运行中";
+          return "等待中";
+        }
+        function phasePosition(index) {
+          return "p" + index;
+        }
+        function updateSpines(count) {
+          var centers = [
+            [95, 106],
+            [247, 65],
+            [403, 116],
+            [559, 65],
+            [715, 116],
+            [858, 65],
+          ];
+          var fullByCount = {
+            3: "M95 106 C135 106 142 65 176 65 S292 65 332 116",
+            5: "M95 106 C135 106 142 65 176 65 S292 65 332 116 S448 116 488 65 S604 65 644 116",
+            6: "M95 106 C135 106 142 65 176 65 S292 65 332 116 S448 116 488 65 S604 65 644 116 S760 116 796 65",
+          };
+          var activeByPhase = [
+            "M95 106",
+            "M95 106 C135 106 142 65 176 65",
+            "M95 106 C135 106 142 65 176 65 S292 65 332 116",
+            "M95 106 C135 106 142 65 176 65 S292 65 332 116 S448 116 488 65",
+            "M95 106 C135 106 142 65 176 65 S292 65 332 116 S448 116 488 65 S604 65 644 116",
+            "M95 106 C135 106 142 65 176 65 S292 65 332 116 S448 116 488 65 S604 65 644 116 S760 116 796 65",
+          ];
+          document.getElementById("full-spine").setAttribute("d", fullByCount[count]);
+          document
+            .getElementById("active-spine")
+            .setAttribute("d", activeByPhase[Math.min(currentPhase, count - 1)]);
+          var selected = centers[Math.min(selectedPhase, centers.length - 1)];
+          var startY = selected[1] + 32;
+          document
+            .getElementById("membership-line")
+            .setAttribute(
+              "d",
+              "M" + selected[0] + " " + startY + " C" + selected[0] + " 182 478 180 478 215",
+            );
+        }
+        function renderPhases() {
+          var size = Number(scale.value);
+          var counts = countsFor(size);
+          phaseNodes.innerHTML = "";
+          counts.forEach(function (count, index) {
+            var button = document.createElement("button");
+            button.className =
+              "phase-node " + phasePosition(index) + (index === selectedPhase ? " selected" : "");
+            button.type = "button";
+            button.innerHTML =
+              '<span class="phase-index">0' +
+              (index + 1) +
+              '</span><span class="phase-copy"><strong>' +
+              phaseNames[index] +
+              "</strong><span>" +
+              phaseStatus(index) +
+              " · " +
+              count +
+              " Agents</span></span>";
+            button.addEventListener("click", function () {
+              selectedPhase = index;
+              expanded = false;
+              renderAll();
+            });
+            phaseNodes.appendChild(button);
+          });
+          updateSpines(counts.length);
+        }
+        function makeAgent(index, phaseIndex, localIndex) {
+          var status = statusFor(phaseIndex, localIndex);
+          var name =
+            agentNames[index % agentNames.length] +
+            (index >= agentNames.length ? " " + (Math.floor(index / agentNames.length) + 1) : "");
+          return { index: index, name: name, status: status, phase: phaseIndex };
+        }
+        function agentsForPhase(size, phaseIndex) {
+          var counts = countsFor(size);
+          var start = 0;
+          for (var i = 0; i < phaseIndex; i += 1) start += counts[i];
+          var agents = [];
+          for (var j = 0; j < counts[phaseIndex]; j += 1)
+            agents.push(makeAgent(start + j, phaseIndex, j));
+          return agents;
+        }
+        function renderAgents() {
+          var size = Number(scale.value);
+          var agents = agentsForPhase(size, selectedPhase);
+          var query = agentSearch.value.trim().toLowerCase();
+          var matching = agents.filter(function (agent) {
+            var statusMatch = currentFilter === "all" || agent.status === currentFilter;
+            return statusMatch && (!query || agent.name.toLowerCase().indexOf(query) >= 0);
+          });
+          var limit = expanded ? 24 : size >= 120 ? 12 : 12;
+          agentGrid.innerHTML = "";
+          matching.slice(0, limit).forEach(function (agent) {
+            var button = document.createElement("button");
+            button.type = "button";
+            button.className = "agent-node";
+            button.setAttribute("data-status", agent.status);
+            var glyph = document.createElement("span");
+            glyph.className = "agent-glyph";
+            decorateGlyph(glyph, agent.index);
+            var copy = document.createElement("span");
+            copy.className = "agent-copy";
+            copy.innerHTML =
+              "<strong>" +
+              agent.name +
+              "</strong><span>" +
+              statusLabel(agent.status) +
+              " · Claude Sonnet 4.5</span>";
+            button.appendChild(glyph);
+            button.appendChild(copy);
+            button.addEventListener("click", function () {
+              openAgent(agent);
+            });
+            agentGrid.appendChild(button);
+          });
+          document
+            .getElementById("region-empty")
+            .classList.toggle("visible", matching.length === 0);
+          document.getElementById("region-count").textContent =
+            agents.length + " agents · " + matching.length + " 匹配";
+          var more = document.getElementById("show-more");
+          more.hidden = matching.length <= 12;
+          more.textContent = expanded
+            ? "收起"
+            : "再显示 " + Math.min(12, matching.length - 12) + " 个";
+          document.getElementById("region-title").textContent = phaseNames[selectedPhase];
+          document.getElementById("region-subtitle").textContent =
+            (selectedPhase === currentPhase ? "当前阶段" : "选中阶段") +
+            " · 成员归属，不表示 Agent 因果边";
+        }
+        function openAgent(agent) {
+          var detail = document.getElementById("agent-detail");
+          detail.classList.remove("hidden");
+          document.getElementById("detail-name").textContent = agent.name;
+          document.getElementById("detail-status").textContent = statusLabel(agent.status);
+          decorateGlyph(document.getElementById("detail-glyph"), agent.index);
+        }
+        function renderClusters() {
+          var size = Number(scale.value);
+          var env = document.getElementById("env-glyphs");
+          env.innerHTML = "";
+          for (var i = 0; i < Math.min(3, size); i += 1) {
+            var glyph = document.createElement("span");
+            glyph.className = "agent-glyph tiny";
+            decorateGlyph(glyph, i + currentPhase * 3);
+            env.appendChild(glyph);
+          }
+          if (size > 3) {
+            var more = document.createElement("span");
+            more.textContent = "+" + (size - 3);
+            more.style.marginLeft = "5px";
+            env.appendChild(more);
+          }
+        }
+        function renderProgress() {
+          var size = Number(scale.value);
+          var done = doneCount(size);
+          var phaseTotal = countsFor(size).length;
+          var stateText =
+            state === "paused"
+              ? "已暂停"
+              : state === "stopped"
+                ? "已停止"
+                : state === "completed"
+                  ? "已完成"
+                  : "运行中";
+          document.getElementById("timeline-progress").textContent =
+            state === "running"
+              ? "阶段 " +
+                (currentPhase + 1) +
+                "/" +
+                phaseTotal +
+                " · " +
+                done +
+                "/" +
+                size +
+                " 完成"
+              : stateText + " · " + done + "/" + size + " 完成";
+          document.getElementById("composer-progress").textContent =
+            phaseNames[currentPhase] + " · " + done + "/" + size;
+          document.getElementById("env-count").textContent = stateText + " · " + done + "/" + size;
+          document.getElementById("dock-count").textContent = done + " / " + size + " Agents 完成";
+          document.getElementById("dock-status").textContent =
+            stateText + " · " + phaseNames[currentPhase];
+          document.getElementById("workflow-control").style.display =
+            state === "completed" ? "none" : "flex";
+          document.querySelector(".composer").classList.toggle("no-stack", false);
+          var pause = document.getElementById("pause");
+          pause.setAttribute(
+            "aria-label",
+            state === "paused" || state === "stopped" ? "继续工作流" : "暂停工作流",
+          );
+          pause.innerHTML =
+            state === "paused" || state === "stopped"
+              ? '<svg class="icon icon-sm"><use href="#i-play" /></svg>'
+              : '<svg class="icon icon-sm"><use href="#i-pause" /></svg>';
+          document.getElementById("stop").style.display =
+            state === "stopped" ? "none" : "inline-flex";
+          app.className =
+            "app state-" + state + (app.classList.contains("dock-closed") ? " dock-closed" : "");
+        }
+        function renderAll() {
+          var size = Number(scale.value);
+          if (selectedPhase >= countsFor(size).length) selectedPhase = countsFor(size).length - 1;
+          if (currentPhase >= countsFor(size).length) currentPhase = countsFor(size).length - 1;
+          renderPhases();
+          renderAgents();
+          renderClusters();
+          renderProgress();
+          decorateStaticGlyphs();
+        }
 
-      function advance() {
-        const phases = currentPhases();
-        const running = phases
-          .flatMap((phase) => phase.agents)
-          .find((entry) => entry.state === "running");
-        if (running) running.state = "completed";
-        const next = phases
-          .flatMap((phase) => phase.agents)
-          .find((entry) => entry.state === "queued");
-        if (next) next.state = "running";
-        phases.forEach((phase) => {
-          if (phase.agents.every((entry) => entry.state === "completed")) phase.state = "completed";
-          else if (phase.agents.some((entry) => entry.state === "running")) phase.state = "running";
-          else phase.state = "queued";
+        document.querySelectorAll(".open-workflow").forEach(function (button) {
+          button.addEventListener("click", function () {
+            app.classList.remove("dock-closed");
+          });
         });
-        render();
-      }
-
-      document.getElementById("fixture-select").addEventListener("change", (event) => {
-        fixtureName = event.target.value;
-        selectedAgentId = null;
-        render();
-      });
-      document.getElementById("advance-button").addEventListener("click", advance);
-      document.getElementById("theme-button").addEventListener("click", () => {
-        document.documentElement.dataset.theme =
-          document.documentElement.dataset.theme === "dark" ? "light" : "dark";
-      });
-      document.getElementById("jump-current").addEventListener("click", () => {
-        const current = document.querySelector('.phase[data-state="running"]');
-        current?.scrollIntoView({
-          behavior: matchMedia("(prefers-reduced-motion: reduce)").matches ? "auto" : "smooth",
-          inline: "center",
-          block: "nearest",
+        document.getElementById("close-dock").addEventListener("click", function () {
+          app.classList.add("dock-closed");
         });
-      });
-      document.getElementById("open-workflow").addEventListener("click", () =>
-        document.querySelector(".dock")?.scrollIntoView({
-          behavior: matchMedia("(prefers-reduced-motion: reduce)").matches ? "auto" : "smooth",
-          inline: "end",
-        }),
-      );
-
-      render();
+        document.getElementById("environment-toggle").addEventListener("click", function () {
+          document.getElementById("environment").classList.toggle("hidden");
+        });
+        document.getElementById("close-detail").addEventListener("click", function () {
+          document.getElementById("agent-detail").classList.add("hidden");
+        });
+        document.getElementById("show-more").addEventListener("click", function () {
+          expanded = !expanded;
+          renderAgents();
+        });
+        document.getElementById("pause").addEventListener("click", function () {
+          state = state === "paused" || state === "stopped" ? "running" : "paused";
+          renderAll();
+        });
+        document.getElementById("stop").addEventListener("click", function () {
+          state = "stopped";
+          renderAll();
+        });
+        document.getElementById("advance").addEventListener("click", function () {
+          var count = countsFor(Number(scale.value)).length;
+          if (state === "completed" || state === "stopped") {
+            state = "running";
+            currentPhase = 0;
+          } else if (currentPhase < count - 1) currentPhase += 1;
+          else state = "completed";
+          selectedPhase = currentPhase;
+          renderAll();
+        });
+        document.getElementById("theme").addEventListener("click", function () {
+          var root = document.documentElement;
+          var dark = root.getAttribute("data-theme") === "dark";
+          root.setAttribute("data-theme", dark ? "light" : "dark");
+          document.getElementById("theme").textContent = dark ? "深色" : "浅色";
+        });
+        scale.addEventListener("change", function () {
+          currentPhase = Math.min(2, countsFor(Number(scale.value)).length - 1);
+          selectedPhase = currentPhase;
+          expanded = false;
+          state = "running";
+          renderAll();
+        });
+        agentSearch.addEventListener("input", renderAgents);
+        document.querySelectorAll(".filter").forEach(function (button) {
+          button.addEventListener("click", function () {
+            currentFilter = button.getAttribute("data-filter");
+            document.querySelectorAll(".filter").forEach(function (other) {
+              other.classList.toggle("active", other === button);
+            });
+            renderAgents();
+          });
+        });
+        renderAll();
+      })();
     </script>
   </body>
 </html>

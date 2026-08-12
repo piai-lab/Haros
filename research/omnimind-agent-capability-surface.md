@@ -22,43 +22,44 @@
 
 **能力进入执行，不进入导航。** 普通用户不需要先认识能力名、配置工作流或组建团队，才可以完成任务。开箱即用的含义是默认能力已经可用，而不是默认把所有能力展示出来。
 
-[交互原型](prototypes/omnimind-agent-capability-surface.html) 已在 2026-08-12 的 host-reuse 复审后收缩为 **Workflow right-dock focused storyboard**。它不再重画 Todo、子智能体、审批、Browser、Device、Files/Diff、Memory 或恢复界面；这些责任已有宿主，重复画一套会误导新会话建立第二组件树。原型只验证当前唯一有新增视觉设计价值的表面：现有 `WorkflowRunCard` 打开现有 RightDock 后的只读阶段地图。评审工具不进入产品。
+[交互原型](prototypes/omnimind-agent-capability-surface.html) 是**从同一 Provider activities + bounded UI flags 派生的 exact-task workflow snapshot 在真实 OmniMind 宿主中的四投影 storyboard**：Timeline 里程碑、Composer 近手控制、Environment 持久索引和 RightDock 空间详情。它不是第二套 shell，也不为 Todo、审批、Browser、Device、Files/Diff、Memory 或恢复重画平行组件；这些责任继续留在既有宿主。原型的 production 价值是验证四个投影能否互不冲突、100+ Agent 时能否保持可理解，以及动态图的空间/材质与交互密度；它的 DOM/CSS/fixture/评审控件都不能直接成为产品 owner。
 
 ## 1. 当前产品事实：先承认宿主，再谈新增
 
 以下是 2026-08-12 当前代码已经存在的真实宿主。实现前必须重新核对 exact HEAD，不能把本文当静态截图规范。
 
-| 用户责任 | 当前宿主 | 关键代码 | 约束 |
-|---|---|---|---|
-| 输入任务、选择 Engine/model、附加上下文 | 主 Composer | `apps/web/src/components/ChatView.tsx` | 不新增第二 Composer、能力工具栏或前置配置向导 |
-| 当前步骤/Todo | Composer 上方 task list | `ComposerActiveTaskListCard.tsx`、`ActiveTaskListCard.tsx` | 不升级成 Goal 数据库或项目规划器 |
-| 子 Agent | Composer 上方 subagent strip + child Thread | `ComposerSubagentStrip.tsx` | 成员、状态、后台、停止、打开 Thread 已有宿主 |
-| Claude Code 原生动态工作流 | Composer 上方 workflow card | `WorkflowRunCard.tsx` | 只显示真实 Claude workflow，不伪装成跨 Engine 通用 DAG |
-| 文件变化 | Composer live changes + Files/Diff | `ComposerLiveChangesHeader`、现有 Files/Diff | Knowledge、Review 等结果继续回到文件世界 |
-| 权限请求 | Composer 前的 detached approval card | `ComposerPendingApprovalPanel.tsx` | 不另建通知中心、全屏 modal 或 capability-specific approval |
-| 用户问题 | Composer 前的 pending input panel | `ComposerPendingUserInputPanel` | 只有确实阻塞时出现 |
-| 工具与过程详情 | Timeline/Activity detail | `TimelineWorkEntryRow.tsx`、`AgentActivityDetailView.tsx` | 默认不暴露 raw log、tool schema 或内部状态机 |
-| 环境、说明、便笺、Recap、编辑器 | 右上 Workbench 浮层 | `chat/environment/EnvironmentPanel.tsx` | 当前是约 288px 的浮层卡，不是全高 inspector |
-| Browser/Device/Terminal/Diff 等工作面 | 现有 right dock | `architecture/workbench.md` 路由的现有 pane | Computer Use 不创建新浏览器或设备面板 |
-| Skills/Plugins | 既有 Library/Settings | `PluginLibrary.tsx`、`SkillsSettingsPanel.tsx` | 同一资产跨入口保持同名、同图标、同来源 |
-| 稳定偏好与诊断 | Settings | 现有设置路由 | 日常运行不应要求用户先来设置页 |
+| 用户责任                                | 当前宿主                                    | 关键代码                                                   | 约束                                                                                                                     |
+| --------------------------------------- | ------------------------------------------- | ---------------------------------------------------------- | ------------------------------------------------------------------------------------------------------------------------ |
+| 输入任务、选择 Engine/model、附加上下文 | 主 Composer                                 | `apps/web/src/components/ChatView.tsx`                     | 不新增第二 Composer、能力工具栏或前置配置向导                                                                            |
+| 当前步骤/Todo                           | Composer 上方 task list                     | `ComposerActiveTaskListCard.tsx`、`ActiveTaskListCard.tsx` | 不升级成 Goal 数据库或项目规划器                                                                                         |
+| 子 Agent                                | Composer 上方 subagent strip + child Thread | `ComposerSubagentStrip.tsx`                                | 成员、状态、后台、停止、打开 Thread 已有宿主                                                                             |
+| Claude Code 原生动态工作流              | Composer 上方 workflow card                 | `WorkflowRunCard.tsx`、`WorkflowRunCard.logic.ts`          | 这是当前实现事实，不等于目标形态；保留真实 state/action owner，只显示真实 Claude workflow，不伪装成跨 Engine 通用 DAG    |
+| Workflow pause/dismiss UI flags         | per-Thread persisted UI store               | `apps/web/src/workflowRunUiStore.ts`                       | 这是现有 bounded UI owner：pause 因 Provider 只回报普通 stop 而需要额外标记，dismiss 无 domain event；不得另建第二 store |
+| 文件变化                                | Composer live changes + Files/Diff          | `ComposerLiveChangesHeader`、现有 Files/Diff               | Knowledge、Review 等结果继续回到文件世界                                                                                 |
+| 权限请求                                | Composer 前的 detached approval card        | `ComposerPendingApprovalPanel.tsx`                         | 不另建通知中心、全屏 modal 或 capability-specific approval                                                               |
+| 用户问题                                | Composer 前的 pending input panel           | `ComposerPendingUserInputPanel`                            | 只有确实阻塞时出现                                                                                                       |
+| 工具与过程详情                          | Timeline/Activity detail                    | `TimelineWorkEntryRow.tsx`、`AgentActivityDetailView.tsx`  | 默认不暴露 raw log、tool schema 或内部状态机                                                                             |
+| 环境、说明、便笺、Recap、编辑器         | 右上 Workbench 浮层                         | `chat/environment/EnvironmentPanel.tsx`                    | 当前是约 288px 的浮层卡，不是全高 inspector                                                                              |
+| Browser/Device/Terminal/Diff 等工作面   | 现有 right dock                             | `architecture/workbench.md` 路由的现有 pane                | Computer Use 不创建新浏览器或设备面板                                                                                    |
+| Skills/Plugins                          | 既有 Library/Settings                       | `PluginLibrary.tsx`、`SkillsSettingsPanel.tsx`             | 同一资产跨入口保持同名、同图标、同来源                                                                                   |
+| 稳定偏好与诊断                          | Settings                                    | 现有设置路由                                               | 日常运行不应要求用户先来设置页                                                                                           |
 
 ### 1.1 Host-reuse 审计：哪些不许再画，哪个才是缺口
 
 静态 HTML 曾把“解释能力”误写成“为能力重新制作 UI”。新会话必须先执行下面的 disposition；不能因为原型更容易改就绕过 production host：
 
-| 语义/旧原型场景 | 当前真实 owner | Disposition | 允许新增的最小差异 |
-|---|---|---|---|
-| 空闲 shell、header、Composer | `ChatView.tsx` 及当前 route/shell | **Direct reuse；原型不重画** | 无 |
-| Todo / 当前步骤 | `ComposerActiveTaskListCard.tsx`、`ActiveTaskListCard.tsx` | **Direct reuse；原型不重画** | 只允许在现有 compact mode 内修文案、密度与 disclosure |
-| 子智能体 | `ComposerSubagentStrip.tsx`、child Thread、现有 right dock/sidechat | **Direct reuse；原型不重画** | 在 `subagentPresentation.ts` 现有 identity owner 上增加稳定低密度 glyph；替换单一 leading visual，不叠加第二图标 |
-| Workflow 摘要、pause/stop/resume | `WorkflowRunCard.tsx` | **Direct reuse；原型不重画** | compact header 点击打开详情；不复制 action/state |
-| 审批 | `ComposerPendingApprovalPanel.tsx` | **Direct reuse；原型删除该场景** | 只修 runtime-mode truth、双语和真实 task scope 文案 |
-| Computer Use | `BrowserPanel.tsx`、`DevicePanel.tsx`、现有 Timeline/Artifact | **Direct reuse；原型删除该场景** | 无第二 Browser/Device surface |
-| Knowledge 结果 | Explorer、File、Diff、Changes、Activity detail | **Direct reuse；原型删除专用知识面板** | 仅补 provenance/stale/conflict 的缺失事实 |
-| 自动 Memory | 当前尚无 durable runtime owner；未来落在 existing Environment row/section + Activity detail | **Backend truth first；不得先画 fixture UI** | runtime owner 闭合后只组合现有 section/row primitive |
-| Resume / recovery | Product Thread + Engine native session + Timeline/Activity primitive | **通常无 UI；原型删除正常恢复场景** | degraded/ambiguous 时组合现有介入 primitive，不建恢复中心 |
-| Workflow 空间详情 | RightDock 尚无 `workflow` pane；`WorkflowRunState` 已有 phase/agent/status/usage | **唯一新 UI** | 在现有 RightDock 增加 bounded pane projection；不新增 workflow store/runtime |
+| 语义/旧原型场景                   | 当前真实 owner                                                                              | Disposition                                           | 允许新增的最小差异                                                                                                                                                               |
+| --------------------------------- | ------------------------------------------------------------------------------------------- | ----------------------------------------------------- | -------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| 空闲 shell、header、Composer      | `ChatView.tsx` 及当前 route/shell                                                           | **Direct reuse；原型不重画**                          | 无                                                                                                                                                                               |
+| Todo / 当前步骤                   | `ComposerActiveTaskListCard.tsx`、`ActiveTaskListCard.tsx`                                  | **Direct reuse；原型不重画**                          | 只允许在现有 compact mode 内修文案、密度与 disclosure                                                                                                                            |
+| 子智能体                          | `ComposerSubagentStrip.tsx`、child Thread、现有 right dock/sidechat                         | **Direct reuse；原型不重画**                          | 在 `subagentPresentation.ts` 现有 identity owner 上增加稳定低密度 glyph；替换单一 leading visual，不叠加第二图标；继续用 `WorkflowRunState.taskIds` 排除已被 Workflow 投影的成员 |
+| Workflow state、pause/stop/resume | `WorkflowRunCard.logic.ts`、`WorkflowRunCard.tsx` action wiring、`workflowRunUiStore.ts`    | **Direct reuse state/actions/UI flags；重构可见表面** | Composer 只保留运行中近手控制；同一 activity truth 另投影到 Timeline、Environment 和 RightDock；不复制 action/state/paused/dismissed flags                                       |
+| 审批                              | `ComposerPendingApprovalPanel.tsx`                                                          | **Direct reuse；原型删除该场景**                      | 只修 runtime-mode truth、双语和真实 task scope 文案                                                                                                                              |
+| Computer Use                      | `BrowserPanel.tsx`、`DevicePanel.tsx`、现有 Timeline/Artifact                               | **Direct reuse；原型删除该场景**                      | 无第二 Browser/Device surface                                                                                                                                                    |
+| Knowledge 结果                    | Explorer、File、Diff、Changes、Activity detail                                              | **Direct reuse；原型删除专用知识面板**                | 仅补 provenance/stale/conflict 的缺失事实                                                                                                                                        |
+| 自动 Memory                       | 当前尚无 durable runtime owner；未来落在 existing Environment row/section + Activity detail | **Backend truth first；不得先画 fixture UI**          | runtime owner 闭合后只组合现有 section/row primitive                                                                                                                             |
+| Resume / recovery                 | Product Thread + Engine native session + Timeline/Activity primitive                        | **通常无 UI；原型删除正常恢复场景**                   | degraded/ambiguous 时组合现有介入 primitive，不建恢复中心                                                                                                                        |
+| Workflow 空间详情                 | RightDock 尚无 `workflow` pane；`WorkflowRunState` 已有 phase/agent/status/usage            | **唯一新的详情 composition**                          | 在现有 RightDock 增加 bounded pane projection；Timeline/Composer/Environment 只复用其既有 primitive；不新增 workflow store/runtime                                               |
 
 这张表的目的不是冻结具体 DOM，而是阻止责任重复。production 修改必须从上述 owner 原位发生；研究 HTML 不再被当成组件 donor。
 
@@ -76,7 +77,7 @@ pending approval / pending user input（detached card）
 Composer input shell
 ```
 
-这是一组共享视觉语法但各自由真实 owner 投影的组件，不是一个新的“统一 Run”。未来可以去重标题、压缩重复元信息和优化 attached chrome；不能为了视觉统一把 Task、Workflow、Subagent、Approval 合并成一份前端状态。
+这是一组共享视觉语法但各自由真实 owner 投影的组件，不是一个新的“统一 Run”。**目标不是机械地只留 Plan，也不是保留所有现有卡片。** 判断标准是职责与生命周期：Plan/Todo 表达当前步骤；Workflow 只有在 running，或 paused/failed/stopped 且 exact run 可 resume、用户此刻可 pause/stop/resume/open 时才以一条薄控制行出现；Subagent 只表达未被 structured workflow 摘要覆盖的独立 child 即时状态，继续用现有 `workflowRunState.taskIds` 去重；Approval/Input 只在真实阻塞时出现。未来可以去重标题、压缩重复元信息和优化 attached chrome；不能为了视觉统一把 Task、Workflow、Subagent、Approval 合并成一份前端状态，也不能让同一事实同时在多个卡片里争夺主动作。
 
 ### 1.3 当前 Recap 不是耐久记忆
 
@@ -96,12 +97,12 @@ Composer input shell
 
 每项能力只能选择满足用户任务所需的最低级别：
 
-| 级别 | 何时使用 | 表面 |
-|---|---|---|
-| 无 UI | 能力自动发生且没有可行动信息 | 不显示；只保留可审计内部事件 |
-| 低噪声 receipt | 自动行为产生了用户此刻确实需要知道的结果或可逆动作 | Timeline/Activity 一行，可查看、撤销或定位；日常后台维护不占 Timeline |
-| 运行投影 | 用户需要知道正在做什么或可停止 | 复用现有 Composer stack / Timeline / right dock |
-| 阻塞介入 | 登录/2FA/系统授权必须由人完成，或任务意图真实分叉且 Agent 无法继续 | 复用 approval、question 或 Diff review |
+| 级别           | 何时使用                                                           | 表面                                                                                                |
+| -------------- | ------------------------------------------------------------------ | --------------------------------------------------------------------------------------------------- |
+| 无 UI          | 能力自动发生且没有可行动信息                                       | 不显示；只保留可审计内部事件                                                                        |
+| 低噪声 receipt | 自动行为产生了用户此刻确实需要知道的结果或可逆动作                 | Timeline/Activity 一行，可查看、撤销或定位；日常后台维护不占 Timeline                               |
+| 运行投影       | 用户需要知道正在做什么或可停止                                     | 近手控制进 Composer；有意义里程碑进 Timeline；可重新找到的索引进 Environment；完整详情进 right dock |
+| 阻塞介入       | 登录/2FA/系统授权必须由人完成，或任务意图真实分叉且 Agent 无法继续 | 复用 approval、question 或 Diff review                                                              |
 
 禁止把“后端有一个 part”自动翻译成“前端有一个 card”。如果一个能力在绝大多数 turn 都没有可行动信息，它不应常驻。
 
@@ -135,11 +136,11 @@ failed/partial       → 保留影响范围和恢复动作
 
 Composer 已经显示当前 runtime mode，权限卡不能与它自相矛盾：
 
-| 当前模式 | Provider command/file approval | 允许出现的其他权限 |
-|---|---|---|
-| 完全访问（`full-access`） | 不显示；Codex 是 `approvalPolicy: never` / `danger-full-access`，Claude Code 是 `bypassPermissions` | Browser、Device、下载和 Gateway 普通 mutation 同样不显示 approval；OAuth/2FA/系统原生权限按 human-presence 呈现 |
-| 自动批准（`auto`） | 仅在 exact Engine/model 有真实 reviewer 时显示 | Host 也只有在存在可验证 reviewer 时参与；否则该 Engine+Host 组合不提供此项 |
-| 需要时询问（`approval-required`） | 显示 Engine 实际发出的 request | Host 也必须有可完成 request/response bridge；没有 bridge 时该模式不可选 |
+| 当前模式                          | Provider command/file approval                                                                      | 允许出现的其他权限                                                                                              |
+| --------------------------------- | --------------------------------------------------------------------------------------------------- | --------------------------------------------------------------------------------------------------------------- |
+| 完全访问（`full-access`）         | 不显示；Codex 是 `approvalPolicy: never` / `danger-full-access`，Claude Code 是 `bypassPermissions` | Browser、Device、下载和 Gateway 普通 mutation 同样不显示 approval；OAuth/2FA/系统原生权限按 human-presence 呈现 |
+| 自动批准（`auto`）                | 仅在 exact Engine/model 有真实 reviewer 时显示                                                      | Host 也只有在存在可验证 reviewer 时参与；否则该 Engine+Host 组合不提供此项                                      |
+| 需要时询问（`approval-required`） | 显示 Engine 实际发出的 request                                                                      | Host 也必须有可完成 request/response bridge；没有 bridge 时该模式不可选                                         |
 
 因此，同一个 Composer 若显示“完全访问”，就不能再展示普通 `bun test`、文件读写、网络请求、网页点击、设备输入或任务内下载的 approval。登录、2FA、macOS/Windows 原生权限、物理设备到场等不是“再批准一个工具”，应准确写成“需要你完成登录/系统授权”。当前 Pi-family 没有 approval request path 时，只显示它能真实执行的 mode，不能给用户一个无效选项。
 
@@ -147,40 +148,40 @@ Composer 已经显示当前 runtime mode，权限卡不能与它自相矛盾：
 
 2026-08-12 维护者提供的四张 Codex app 截图不是新母版，也不授权照抄视觉资产；它们揭示了四个可迁移的产品结构：
 
-| 截图事实 | 深层作用 | OmniMind target | 不应误读为 |
-|---|---|---|---|
-| Environment card 把 changes、local/git、子智能体和 sources 分 section 压在约 288px 卡中 | 当前任务的“目录/索引”，不是详情面 | 继续扩展现有 `EnvironmentPanel` row/section；Workflow 也只占一行摘要 | 把所有能力塞进新 dashboard |
-| “子智能体”右侧详情按运行中/完成分组，每个 Agent 有不同彩色小纹样 | identity 是跨表面的视觉 join key | 集合 tab 用 `agent-duo`，实例用 deterministic identity glyph；同一 glyph 贯穿 Environment、right dock、Timeline、child Thread | 为每种 role 画一个能力 icon；用一个机器人图标复制所有行 |
-| Timeline 用带 identity glyph 的 Agent chip 串起“谁读取、谁更新、谁完成” | 低成本表达 causality/provenance | 只有真正需要 attribution 的 activity 才出现 chip；名称与 glyph 同时保留 | 给每条工具事件加彩色 badge 制造噪声 |
-| Todo 平时只有 `第 x/n 步` 一行，点击后向上展开完整步骤 | Composer 只保留 glanceable current truth | 收敛现有 `ActiveTaskListCard` 的 compact mode；详情用 anchored popover/disclosure，状态仍来自原 task owner | 新建 Todo 页面、Goal card 或第二任务 store |
+| 截图事实                                                                                | 深层作用                                 | OmniMind target                                                                                                               | 不应误读为                                              |
+| --------------------------------------------------------------------------------------- | ---------------------------------------- | ----------------------------------------------------------------------------------------------------------------------------- | ------------------------------------------------------- |
+| Environment card 把 changes、local/git、子智能体和 sources 分 section 压在约 288px 卡中 | 当前任务的“目录/索引”，不是详情面        | 继续扩展现有 `EnvironmentPanel` row/section；Workflow 也只占一行摘要                                                          | 把所有能力塞进新 dashboard                              |
+| “子智能体”右侧详情按运行中/完成分组，每个 Agent 有不同彩色小纹样                        | identity 是跨表面的视觉 join key         | 集合 tab 用 `agent-duo`，实例用 deterministic identity glyph；同一 glyph 贯穿 Environment、right dock、Timeline、child Thread | 为每种 role 画一个能力 icon；用一个机器人图标复制所有行 |
+| Timeline 用带 identity glyph 的 Agent chip 串起“谁读取、谁更新、谁完成”                 | 低成本表达 causality/provenance          | 只有真正需要 attribution 的 activity 才出现 chip；名称与 glyph 同时保留                                                       | 给每条工具事件加彩色 badge 制造噪声                     |
+| Todo 平时只有 `第 x/n 步` 一行，点击后向上展开完整步骤                                  | Composer 只保留 glanceable current truth | 收敛现有 `ActiveTaskListCard` 的 compact mode；详情用 anchored popover/disclosure，状态仍来自原 task owner                    | 新建 Todo 页面、Goal card 或第二任务 store              |
 
 由此形成统一空间语法：
 
 ```text
 Environment = 当前任务目录
-Composer stack = 正在运行且可干预的一句话
+Composer stack = 此刻可干预的一句话，不是所有运行状态的常驻摘要
 Timeline = 发生过什么、由谁完成
 RightDock = 用户点开的空间详情
 ```
 
-Workflow proposal 正好遵循这套语法：Environment/Composer 显示一句；right dock 才显示动态图。Memory/Knowledge 则通常没有运行中可干预状态，不能因为 Workflow 适合 right dock 就连带升级成常驻 pane。
+Workflow 正好遵循这套语法，但不是“四处重复同一句”：Timeline 只留里程碑，Composer 只留当前控制，Environment 只留索引，right dock 才显示动态图与完整成员。Memory/Knowledge 则通常没有运行中可干预状态，不能因为 Workflow 适合 right dock 就连带升级成常驻 pane。
 
 ## 3. 能力逐项裁决
 
 “能力”不是固定七项，也不是越多越强。以后新增能力也必须按相同问题判断：用户是否需要主动选择、运行时是否可干预、结果属于哪个现有 owner、失败如何恢复。
 
-| 能力/机制 | 默认触发 | 平时界面 | 运行中 | 完成/恢复 | 明确禁止 |
-|---|---|---|---|---|---|
-| 目标 | 用户自然语言中的任务目标；必要时 runtime continuation policy | 无独立入口、无常驻 Goal 卡 | 复用 task list 与当前对话；仅当目标状态本身可行动时显示一句 | 进入任务总结/Activity | Goal 页面、目标队列、Goal picker、第二 store |
-| Todo/计划 | Agent 为当前任务拆步 | 已有 task list | Composer 默认只显示一行真实进度；点击弹出完整步骤 | 完成后折叠 | 为了“目标”再复制一份步骤或 Todo pane |
-| Agent 团队 | Agent 判断并行有收益，或用户要求分工 | 无 team builder、无默认成员配置 | `ComposerSubagentStrip` + Environment 身份纹样簇；点击打开 child/right dock | Timeline 汇总结果，身份纹样贯穿引用 | 独立团队仪表盘、第二 Run/permission owner、所有 Agent 共用同一图标 |
-| 动态工作流 | Engine 确实创建结构化 workflow | 无通用 workflow 入口 | Environment/Composer 一行摘要；点击 right dock 的只读动态流程图 | 原生 resume/结果 receipt | 把普通 tool sequence 画成 DAG；跨 Engine 伪统一；V1 workflow editor |
-| 自动记忆 | settled 后有高价值、可复用的项目事实/偏好/约束 | 无 picker、无每次确认、无常驻卡 | 通常无 UI；只有实质影响回答或发生冲突时显示来源 | 在 Workbench existing Environment card 中查看、纠正、遗忘、关闭 | 保存所有聊天、逐条 receipt、复制 native Memory、第二数据库 |
-| 知识库 | 普通任务实际使用了值得长期复用的文件、链接或 workspace evidence | 无知识仪表盘、无“更新知识”按钮 | 当前任务照常执行；settled 后自动有界维护 | Sources/Markdown/index/Diff 回到 Files/Workbench；日常更新安静 | ingest 每个访问网页/全部历史；首次写入审批；把 derived page 当事实源 |
-| 会话恢复 | 用户重开 Product Thread；native Engine 能真实 resume | 正常恢复不弹问句 | 安静继续；只有 degraded/ambiguous 才出现恢复条 | 一行 native resume 或 artifact handoff receipt | 每次“继续上次任务？”modal；跨 Engine 冒充同一 latent state |
-| Computer Use | 任务自然触发，或用户明确要求浏览器/设备 | 无 capability card | 现有 Browser/Device pane；过程折叠进 Activity 并继承 Thread runtime mode | 只有截图、文件、下载或任务结果进入现有 artifact/Timeline | 新 Computer Use 页面、重复浏览器、Host 二次 permission layer |
-| Review/Verification | 用户请求、提交前检查、真实 policy 触发 | Files/Diff/PR 的已有入口 | Timeline、Diff、checks | findings 与可行动结果 | “Review Agent”常驻能力卡 |
-| Skills/Plugins | 用户或 Agent 选择已发现资产 | Library/Settings 统一 | 仅调用时显示真实资产名/来源 | 普通 receipt | 因 Engine 不同而改名、换图标或复制 catalog |
+| 能力/机制           | 默认触发                                                        | 平时界面                        | 运行中                                                                                                                 | 完成/恢复                                                                                               | 明确禁止                                                                              |
+| ------------------- | --------------------------------------------------------------- | ------------------------------- | ---------------------------------------------------------------------------------------------------------------------- | ------------------------------------------------------------------------------------------------------- | ------------------------------------------------------------------------------------- |
+| 目标                | 用户自然语言中的任务目标；必要时 runtime continuation policy    | 无独立入口、无常驻 Goal 卡      | 复用 task list 与当前对话；仅当目标状态本身可行动时显示一句                                                            | 进入任务总结/Activity                                                                                   | Goal 页面、目标队列、Goal picker、第二 store                                          |
+| Todo/计划           | Agent 为当前任务拆步                                            | 已有 task list                  | Composer 默认只显示一行真实进度；点击弹出完整步骤                                                                      | 完成后折叠                                                                                              | 为了“目标”再复制一份步骤或 Todo pane                                                  |
+| Agent 团队          | Agent 判断并行有收益，或用户要求分工                            | 无 team builder、无默认成员配置 | `ComposerSubagentStrip` + Environment 身份纹样簇；点击打开 child/right dock                                            | Timeline 汇总结果，身份纹样贯穿引用                                                                     | 独立团队仪表盘、第二 Run/permission owner、所有 Agent 共用同一图标                    |
+| 动态工作流          | Engine 确实创建结构化 workflow                                  | 无通用 workflow 入口            | Timeline 里程碑 + Environment 索引；只有存在即时控制价值时 Composer 才显示薄控制行；三者点击同一 right-dock 动态流程图 | normal completed/无恢复动作后 Composer 退场；Timeline 保留；exact resumable run 继续由 Environment 找回 | 四处复制同一摘要；把普通 tool sequence 画成 DAG；跨 Engine 伪统一；V1 workflow editor |
+| 自动记忆            | settled 后有高价值、可复用的项目事实/偏好/约束                  | 无 picker、无每次确认、无常驻卡 | 通常无 UI；只有实质影响回答或发生冲突时显示来源                                                                        | 在 Workbench existing Environment card 中查看、纠正、遗忘、关闭                                         | 保存所有聊天、逐条 receipt、复制 native Memory、第二数据库                            |
+| 知识库              | 普通任务实际使用了值得长期复用的文件、链接或 workspace evidence | 无知识仪表盘、无“更新知识”按钮  | 当前任务照常执行；settled 后自动有界维护                                                                               | Sources/Markdown/index/Diff 回到 Files/Workbench；日常更新安静                                          | ingest 每个访问网页/全部历史；首次写入审批；把 derived page 当事实源                  |
+| 会话恢复            | 用户重开 Product Thread；native Engine 能真实 resume            | 正常恢复不弹问句                | 安静继续；只有 degraded/ambiguous 才出现恢复条                                                                         | 一行 native resume 或 artifact handoff receipt                                                          | 每次“继续上次任务？”modal；跨 Engine 冒充同一 latent state                            |
+| Computer Use        | 任务自然触发，或用户明确要求浏览器/设备                         | 无 capability card              | 现有 Browser/Device pane；过程折叠进 Activity 并继承 Thread runtime mode                                               | 只有截图、文件、下载或任务结果进入现有 artifact/Timeline                                                | 新 Computer Use 页面、重复浏览器、Host 二次 permission layer                          |
+| Review/Verification | 用户请求、提交前检查、真实 policy 触发                          | Files/Diff/PR 的已有入口        | Timeline、Diff、checks                                                                                                 | findings 与可行动结果                                                                                   | “Review Agent”常驻能力卡                                                              |
+| Skills/Plugins      | 用户或 Agent 选择已发现资产                                     | Library/Settings 统一           | 仅调用时显示真实资产名/来源                                                                                            | 普通 receipt                                                                                            | 因 Engine 不同而改名、换图标或复制 catalog                                            |
 
 ### 3.1 Goal 为什么几乎不需要新 UI
 
@@ -207,56 +208,71 @@ Workflow proposal 正好遵循这套语法：Environment/Composer 显示一句�
 
 但“不做 team builder”不等于把所有 child 压成同一个机器人图标。Codex 的成熟点在于把**集合语义**和**实例身份**分开：标题/tab 使用统一“子智能体”图标；每个 child 使用稳定、不同、低密度的彩色几何纹样。这个纹样在 Environment 小簇、子智能体列表、Timeline chip、来源引用和 child Thread 间保持连续，因此用户无需反复读长名称也能追踪“谁做了什么”。
 
-OmniMind 已有 `subagentPresentation.ts` 的确定性 `accentColor`，正确实现是为同一 presentation 增加 `glyphVariant`/identity seed，并由 canonical child/thread id 保持稳定；不是随机 emoji，不是按 role 固定一个头像，也不是另建 avatar registry。`agent-duo` 继续只表示集合。
+OmniMind 已有 `subagentPresentation.ts` 的确定性 `accentColor`，正确实现是为同一 presentation 增加 `glyphVariant`/identity seed，并由 canonical child/thread id 保持稳定；不是随机 emoji，不是按 role 固定一个头像，也不是另建 avatar registry。首批候选从现有 Central 库策展 24 个 16px 仍清晰的低密度纹样，与现有 8 色 palette 组合为 192 个确定性候选，再在同一 parent/workflow 内做 collision 顺延。名称永远同时出现，glyph 只是视觉 join key。`agent-duo` 继续只表示集合。
 
 ### 3.3 动态工作流必须保留 Engine provenance
 
-当前 `WorkflowRunCard.tsx` 明确服务 Claude dynamic workflows。它已有 phase、agent、model、effort、usage、暂停、停止、resume 与详情。只有当 exact Engine 回报这个真实对象时才显示。当前卡片本身已经提供 compact header；正确路径是让这个既有 header 打开空间详情，不是再造一张“更漂亮的 workflow card”。
+当前 `WorkflowRunCard.tsx` 明确服务 Claude dynamic workflows；`WorkflowRunCard.logic.ts` 已提供 phase、agent、model、effort、usage、settlement 等 projection，现有 wiring 已提供暂停、停止、resume 与打开 child。只有 exact Engine 回报这个真实对象时才显示。应保留这套 state/action owner，但**不能因为现有组件是一张密集卡片，就把该视觉形态冻结为目标**：Composer 目标是运行中薄控制行，Timeline 与 Environment 使用各自既有 primitive，完整空间详情进入 RightDock。
 
 普通 Pi loop、Codex subagent 或一串 tool calls 不应被前端包装成同一 workflow。未来其他 Engine 有正式结构化 run 时，可以共享视觉 token 与交互原则，但 adapter 仍分别映射真实字段；不先发明一个最小公倍数 Workflow state。
 
 Workflow 的正确空间关系是：
 
 ```text
-Environment / Composer 一行摘要
-              ↓ click
-existing RightDock → workflow pane → 当前真实 phase order / Agent membership / status / usage / provenance
+Provider activities + bounded workflow UI flags
+  ├─ Timeline：start / phase transition / important failure+recovery / settlement
+  ├─ Composer：running，或 paused/failed/stopped 且 exact resumable 时的 pause / stop / resume / open
+  ├─ Environment：当前任务中可重新找到的 workflow 索引
+  └─ RightDock：phase order / Agent membership / status / usage / provenance / search+filter
 ```
 
 right dock 只是同一 `WorkflowRunState` 的只读可视化投影。当前真实类型只有有序 `phases`、每个 Agent 的 phase membership、状态、usage、model/effort、child Thread 与最近工具信息；**没有任意 dependency edge**。因此 V1 只能画阶段顺序和成员归属，不能把 root、fan-out、fan-in、汇总节点或 Agent 间依赖从文案/时间顺序猜出来。V1 不做拖拽编排、画布保存、模板市场或跨 Engine workflow DSL。
 
+四个投影必须共享 identity、status、counts、actions 和 provider provenance，但不共享视觉密度：Timeline 不逐 Agent tick；Composer 不列模型/token/最近工具；Environment 最多显示三个 glyph 加 `+N`；RightDock 才允许搜索、筛选、phase 聚合与 Agent 详情。normal completed 或无可行动恢复后 Composer 退场，Timeline 里程碑封存；Environment 对 running、pausedByUser，以及 failed/stopped/completed 且 exact run 可 resume 时保留，直到用户 dismiss 或新的同类 run 明确替换。当前 `WorkflowRunState` 没有 waiting truth；未来只有 contract 明确增加时才显示，不能从零 running Agent 猜。这样既避免“过程刷过去毫无体感”，也避免四处常驻同一张卡。
+
+#### 3.3.1 当前实现的三个冰山 seam
+
+1. `deriveWorkflowRunState()` 当前在全部 activities 中只取 **latest `local_workflow`**，并把“是否可显示”与“如何构造完整 snapshot”绑在一起：settled 且已 dismiss，或既非 paused 又不可 resume 的 run 会直接返回 `null`。这适合当前 Composer card，不适合 Timeline 旧里程碑和按 `workflowTaskId` 重开 RightDock。实现前应先提取一个按 exact task id 构造 snapshot 的纯 selector，再在 Composer/Environment 外层应用各自 visibility policy；不能复制一份解析逻辑。
+2. `workflowRunUiStore.ts` 已用 key `omnimind:workflow-run-ui:v1` 按 Thread 持久化 `pausedByUser`/`dismissed`，每列上限 50。pause 的真实路径是先 `markPaused`，再发送 `thread.task.stop`；resume 是带 `scriptPath/runId` 的新 Composer turn，并 dismiss 旧 run。四个投影必须调用同一 action wiring 和这份 flags owner，不能把 `paused` 猜成 Provider 原生状态，也不能在 RightDock 新建 pause/dismiss store。
+3. canonical orchestration activities 已有 `task.started/progress/completed/updated`、`workflowTaskId`、phases、agents 与 terminal payload，但现有 Timeline 不等于已经有低噪声 Workflow milestone。milestone 应由这些已持久 activities 做纯、确定性、去重 projection；如果 exact payload 缺少一个不可推导的事实，先在现有 Provider Runtime ingestion/projection owner 增加最小 typed fact，不能用 React effect、localStorage 或计时器伪造 durable history。
+
+因此 `WorkflowRunState` 在本文中是用户可理解的统称，不授权把当前单个 `deriveWorkflowRunState()` 返回值提升成新 domain aggregate。canonical truth 仍是现有 Provider activities + existing bounded UI flags；四个视图只是不同 selector/presentation。
+
 ### 3.4 Renderer intake：先匹配真实数据，再决定是否需要图引擎
 
-“当前仓库没有直接依赖”不等于“互联网没有成熟组件”。网络上已有成熟 workflow/graph renderer；但“有组件”也不等于“当前数据必须套进图引擎”。V1 分两条不并行的准入路径：
+“当前仓库没有直接依赖”不等于“互联网没有成熟组件”。网络上已有成熟 workflow/graph renderer；“当前没有 Agent dependency edge”也不等于“100+ grouped nodes、pan/zoom/fit、focus、virtual visibility 和 stable layout 都适合手写”。因此 V1 先用同一份 4/20/120-Agent fixture 做 focused bake-off，而不是预先选边：
 
-1. **当前 phase-only truth**：使用现有 RightDock、Button、Disclosure、token、Agent identity glyph 组合一个轻量 `WorkflowPhaseMap`。布局是有序 phase lanes，Agent 由 containment 表达 membership；不画跨 Agent edge。这是产品特有 composition，不是自研 graph engine，也不引入第二 Zustand/runtime。
-2. **未来 explicit-graph truth**：只有 exact Engine/adapter 上报稳定 node ids 与 dependency edges 时，才进入成熟 graph renderer intake；React Flow 是第一 challenger，X6 只在真实路由/嵌套/规模反例下升级。
+1. **宿主 DOM/SVG composition**：现有 RightDock、Button、Disclosure、token 与 identity glyph 组成只读 phase map。适合证明最小信息架构和小规模材质，不得自然长成自研 graph engine。
+2. **React Flow read-only grouped-node profile**：phase 是 group/parent node，Agent membership 是 containment，phase-order spine 是真实顺序 edge；关闭 drag/connect/delete/editor，只保留 select、pan、zoom、fit 和按需可见元素渲染。
 
-候选表因此不是当前 V1 的 dependency list，而是 explicit-graph 进入门后的选择顺序：
+出现任一事实就优先采用成熟 renderer：代表性 workflow 会达到 100+ Agent、需要 pan/zoom/fit、需要 visible-element rendering，或宿主实现开始自行承担 layout/viewport/keyboard/focus 的长期责任。explicit dependency edges 不是唯一准入门；它们只决定是否增加 Agent 间 edge。X6 仍只在 React Flow 的嵌套、路由或规模 proof 失败时升级。
 
-| 候选 | 网络一手证据 | 与 OmniMind 的匹配 | 当前裁决 |
-|---|---|---|---|
-| React Flow 12 / `@xyflow/react` | 官方提供 custom nodes、custom/animated edges、horizontal flow、Dagre、ELK、dynamic layout、position animation；MIT | explicit graph 时可承载 Agent identity、状态、provenance；可关闭 drag/connect/edit，只保留 select、pan、zoom、fit | **explicit edges 后的第一 challenger；不是 phase-only V1 默认依赖** |
-| AntV X6 3.x | 官方 gallery 有 Agent Flow、Flow Chart、DAG、ELK、edge animation、virtual rendering；HTML/SVG/React custom node；MIT | 路由、嵌套、动画与大图能力更强，但 graph MVC、插件和 React shape 增加第二套交互/生命周期责任 | **第二 challenger；仅在 React Flow 的路由/规模 proof 失败时升级** |
-| Cytoscape.js | 官方支持多 layout、元素/viewport animation、headless graph analysis | 擅长网络分析和大图，不天然贴合 OmniMind 的 React card/node 视觉与小型 workflow 详情 | **规模/分析型备选，不是 V1 默认** |
-| Mermaid | 文本到 SVG、适合可复制文档与静态导出 | 对实时状态更新、节点选择、Agent identity、细粒度动效和 right dock 交互控制较弱 | **导出/文档 fallback；不作为 live pane renderer** |
+候选表是当前 focused bake-off 和未来升级的选择顺序：
+
+| 候选                            | 网络一手证据                                                                                                                             | 与 OmniMind 的匹配                                                                                                                                            | 当前裁决                                                                     |
+| ------------------------------- | ---------------------------------------------------------------------------------------------------------------------------------------- | ------------------------------------------------------------------------------------------------------------------------------------------------------------- | ---------------------------------------------------------------------------- |
+| React Flow 12 / `@xyflow/react` | 官方提供 custom/group nodes、subflows、visible-element rendering、keyboard/screen-reader、pan/zoom/fit 与可关闭的 edit interactions；MIT | phase-only grouped projection 与未来 explicit graph 都可承载；必须关闭 editor 行为，并证明重复 Zustand runtime、bundle、continuous update 与 packaged offline | **当前 focused bake-off 的成熟 challenger；100+ 或 viewport 责任成立时优先** |
+| AntV X6 3.x                     | 官方 gallery 有 Agent Flow、Flow Chart、DAG、ELK、edge animation、virtual rendering；HTML/SVG/React custom node；MIT                     | 路由、嵌套、动画与大图能力更强，但 graph MVC、插件和 React shape 增加第二套交互/生命周期责任                                                                  | **第二 challenger；仅在 React Flow 的路由/规模 proof 失败时升级**            |
+| Cytoscape.js                    | 官方支持多 layout、元素/viewport animation、headless graph analysis                                                                      | 擅长网络分析和大图，不天然贴合 OmniMind 的 React card/node 视觉与小型 workflow 详情                                                                           | **规模/分析型备选，不是 V1 默认**                                            |
+| Mermaid                         | 文本到 SVG、适合可复制文档与静态导出                                                                                                     | 对实时状态更新、节点选择、Agent identity、细粒度动效和 right dock 交互控制较弱                                                                                | **导出/文档 fallback；不作为 live pane renderer**                            |
 
 来源：[React Flow examples](https://reactflow.dev/examples)、[React Flow custom nodes](https://reactflow.dev/learn/customization/custom-nodes)、[React Flow custom edges](https://reactflow.dev/examples/edges/custom-edges)、[xyflow repository](https://github.com/xyflow/xyflow)、[X6 gallery](https://x6.antv.antgroup.com/en/examples)、[X6 animation](https://x6.antv.antgroup.com/en/tutorial/basic/animation)、[X6 repository](https://github.com/antvis/x6)、[Cytoscape.js docs](https://js.cytoscape.org/)。
 
-若 explicit-graph 进入门成立，最小 React Flow profile 仍不是 workflow builder：
+最小 React Flow profile 仍不是 workflow builder：
 
 ```text
-nodes/edges = pure projection from provider-owned WorkflowRunState
-custom node = Agent identity + label + status + concise metric
-custom edge = causal edge + optional active animation
+nodes/edges = pure projection from the shared exact-task workflow snapshot
+phase node = group + aggregate counts + ordered phase position
+Agent node = identity + label + status + concise metric; parentId = real phase membership
+phase-order edge = real ordered spine; Agent edge = only explicit dependency truth
 editable/connectable/draggable/delete = false
 pan/zoom/fitView = only when graph exceeds pane
-layout = deterministic; start with Dagre, escalate to ELK only for crossings/nesting
+layout = deterministic; do not add Dagre/ELK until fixture proves manual grouped layout insufficient
 MiniMap/toolbar/background chrome = off unless scale proves useful
 hidden/offscreen/reduced-motion = no continuous edge animation
 ```
 
-phase-only V1 用 4/7/20 Agent、3–5 phases、状态 churn、right dock 382–800px、light/dark、中英文长标签、keyboard/screen reader、memory/CPU 与关闭/重开做 focused proof。explicit graph 才增加 5/20/100 nodes、linear/branch/fan-in/nested、pan/zoom 与 edge routing bake-off。只有 React Flow 不能以最小 profile 通过时才升级 X6。focused HTML 的 DOM/CSS phase map 只表达产品空间与材质，不是可复制进 production 的组件。
+phase-only V1 用 4/20/120 Agent、3–8 phases、状态 churn、right dock 382–800px、light/dark、中英文长标签、keyboard/screen reader、memory/CPU 与关闭/重开做 focused proof。120-Agent 默认只展开 current/selected phase 的 bounded children 与搜索命中；其他 phase 只显示 aggregate counts，不能让 120 个节点同时动画。explicit graph 进入后再增加 linear/branch/fan-in/nested 与 edge-routing proof。只有 React Flow read-only profile 失败且存在明确 X6 能解决的反例时才升级 X6。focused HTML 只表达产品空间与材质，不是可复制进 production 的组件。
 
 2026-08-12 npm registry 的初筛快照进一步支持这个顺序，但**还不是 Gate A exact-source 准入**：
 
@@ -265,7 +281,7 @@ phase-only V1 用 4/7/20 Agent、3–5 phases、状态 churn、right dock 382–
 - `cytoscape@3.34.1`：MIT，registry unpacked size 约 5.72 MB；
 - `@dagrejs/dagre@3.1.1`：MIT，约 1.41 MB；`elkjs@0.12.0` 约 8.05 MB，license 为 `EPL-2.0 OR GPL-3.0-or-later`。因此 V1 不应因 React Flow demo 常用 ELK 就默认引入 ELK；先证明 Dagre 不足，再做权利与 packaging 审查。
 
-React Flow 官方同时提供 keyboard/screen-reader、可本地化 `ariaLabelConfig`、只渲染可见元素、memoization、node status indicator 与 animated edge 机制。这使它在 explicit-graph 进入后成为更可信的第一候选，但不自动证明 OmniMind 的双语、焦点、right-dock resize 和 continuous update 已通过。参考：[React Flow accessibility](https://reactflow.dev/learn/advanced-use/accessibility)、[React Flow performance](https://reactflow.dev/learn/advanced-use/performance)、[ReactFlow API](https://reactflow.dev/api-reference/react-flow)、[Node status indicator](https://reactflow.dev/ui/components/node-status-indicator)、[Animating edges](https://reactflow.dev/examples/edges/animating-edges)。
+React Flow 官方同时提供 keyboard/screen-reader、可本地化 `ariaLabelConfig`、`onlyRenderVisibleElements`、memoization、subflows 与可控交互。这使它在 100+ Agent 或 viewport 责任成立时成为更可信的第一候选，但不自动证明 OmniMind 的双语、焦点、right-dock resize 和 continuous update 已通过；`onlyRenderVisibleElements` 自身也有计算开销，必须用真实 fixture 测而不是默认打开。参考：[React Flow accessibility](https://reactflow.dev/learn/advanced-use/accessibility)、[React Flow performance](https://reactflow.dev/learn/advanced-use/performance)、[ReactFlow API](https://reactflow.dev/api-reference/react-flow)、[React Flow subflows](https://reactflow.dev/examples/grouping/sub-flows)。
 
 ## 4. 自动记忆与知识：默认无操作，需要时可追溯
 
@@ -337,12 +353,12 @@ V1 产品默认 scope 是当前 workspace/project。理由不是保守主义，�
 
 ### 4.5 Recap、Memory、Knowledge 的边界
 
-| 概念 | 目的 | 当前/未来 owner | 是否自动 | 默认 UI |
-|---|---|---|---|---|
-| Thread Recap | 快速理解当前对话近况 | 当前 Web UI local recap | 空闲生成，但只在当前表面启用 | Workbench Recap |
-| Memory | 跨任务复用少量高价值事实 | Engine-native 私有 owner + 不镜像的 OmniMind project-context page intent | 是，有界且稀疏 | 平时无；实质影响时来源 + Workbench 管理 |
-| Knowledge | 围绕任务实际使用的 durable sources 做可审查综合 | 同一 OmniMind project-context file-world | 自动 event-driven maintenance，查询按需 | 平时无；Files/Diff/Artifact 按需 |
-| Resume state | 恢复执行位置与真实 session | Product Thread + Engine native session | 系统行为 | 正常无；degraded 时提示 |
+| 概念         | 目的                                            | 当前/未来 owner                                                          | 是否自动                                | 默认 UI                                 |
+| ------------ | ----------------------------------------------- | ------------------------------------------------------------------------ | --------------------------------------- | --------------------------------------- |
+| Thread Recap | 快速理解当前对话近况                            | 当前 Web UI local recap                                                  | 空闲生成，但只在当前表面启用            | Workbench Recap                         |
+| Memory       | 跨任务复用少量高价值事实                        | Engine-native 私有 owner + 不镜像的 OmniMind project-context page intent | 是，有界且稀疏                          | 平时无；实质影响时来源 + Workbench 管理 |
+| Knowledge    | 围绕任务实际使用的 durable sources 做可审查综合 | 同一 OmniMind project-context file-world                                 | 自动 event-driven maintenance，查询按需 | 平时无；Files/Diff/Artifact 按需        |
+| Resume state | 恢复执行位置与真实 session                      | Product Thread + Engine native session                                   | 系统行为                                | 正常无；degraded 时提示                 |
 
 四者可以相互引用，不能互相冒充。尤其不能用 Thread Recap 替代 durable Memory，也不能让 Knowledge derived pages 自动升级为系统指令。
 
@@ -405,7 +421,7 @@ Knowledge 是 Bundled Capability Pack，不是 Agent Runtime Core，也不是 Me
 
 ## 7. 场景规格
 
-以下是未来 production proof 的场景矩阵，不是要求研究 HTML 为每个场景复制一套宿主。focused HTML 只覆盖 Scene C 的新增 Workflow right-dock projection；其余场景必须在真实组件/真实状态中验证。
+以下是未来 production proof 的场景矩阵，不是要求研究 HTML 为每个场景复制一套宿主。HTML 只把 Scene C 放回接近真实 OmniMind 的 Timeline、Composer、Environment 与 RightDock 关系中，验证同一 workflow 的四个 projection；其余场景必须在真实组件/真实状态中验证。
 
 ### Scene A：当前空闲态
 
@@ -423,11 +439,14 @@ Knowledge 是 Bundled Capability Pack，不是 Agent Runtime Core，也不是 Me
 
 ### Scene C：Engine-native workflow
 
-- Composer 继续使用既有 `WorkflowRunCard` compact header；Environment 若增加摘要，只组合一个 existing `EnvironmentRow`，两者只显示 workflow 名、当前 phase、真实进度和状态；
-- 点击摘要，在 existing right dock 打开只读阶段地图；phase order、Agent membership、status/usage/provenance 全部来自同一 `WorkflowRunState`；当前没有 dependency edges 就不显示跨 Agent 连线；
-- 保留 `WorkflowRunCard` 已有 pause/stop/resume/open-child 能力，不在画布复制控制状态；
+- Timeline 只在 start、phase transition、重要 failure/recovery 与 terminal settlement 写有意义 milestone；不逐 tick、逐 poll 或逐 Agent 刷屏；
+- Composer 不机械保留现有密集 card：仅当 workflow 正在运行，或 paused/failed/stopped 且 exact run 可 resume 时，把同一 `WorkflowRunCard` action/state owner 收敛成薄控制行；normal completed 或无恢复动作后退场；
+- Environment 用 existing section/row primitive 保留可重新找到的索引：workflow 名、当前 phase、状态、`done/total`、最多三个 identity glyph 与 `+N`；completed-but-resumable 不自动消失；
+- Timeline、Composer、Environment 三处点击都在 existing right dock 打开同一 pane；phase order、Agent membership、status/usage/provenance 全部来自同一 exact-task snapshot，不复制 action/state；
+- RightDock 默认是 phase overview；只展开 current/selected phase 的 bounded children，提供 Agent 搜索和 running/failed/queued filter。当前没有 dependency edges 就不显示跨 Agent 连线；
+- 保留现有 pause/stop/resume/open-child handler：pause/stop/resume 的唯一近手控制位在 Composer；RightDock 只显示状态、筛选与 open-child 导航，不复制运行控制或 optimistic state；
 - 明确来源为 Claude Code native workflow；
-- 不把其他 Engine 的 tool sequence 填进同一 fixture。
+- 4/20/120-Agent fixture 都必须成立；不把其他 Engine 的普通 tool sequence 填进同一 fixture。
 
 ### Scene D：自动记忆
 
@@ -473,7 +492,7 @@ Knowledge 是 Bundled Capability Pack，不是 Agent Runtime Core，也不是 Me
 - 真实母版是当前产品，不是 Synara 截图重画，也不是新的 AI dashboard；
 - 左侧栏宽度、header、Composer、Workbench 浮层与 right dock 的真实层级优先；
 - 使用现有 semantic CSS variables、Base UI/Tailwind primitives 与 `~/lib/icons`；
-- production 直接复用现有组件，不从静态原型拷贝一套平行组件；focused HTML 中只有 Workflow phase-map 的空间/材质判断可作 `reference-only`，其 DOM/CSS/JS 不是 donor。
+- production 直接复用现有 Timeline、Composer、Environment、RightDock 与 Agent detail 组件，不从静态原型拷贝一套平行 shell；focused HTML 中只有四投影的职责关系、Workflow phase-map 的空间/材质与 100+ Agent 的层级策略可作 `reference-only`，其 DOM/CSS/JS/fixture 不是 donor。
 
 ### 8.2 密度
 
@@ -488,18 +507,18 @@ Knowledge 是 Bundled Capability Pack，不是 Agent Runtime Core，也不是 Me
 
 维护者已经从同一轮候选中选择以下映射；原型和未来 UI 有真实语义槽位时必须使用它们，不得再用 emoji、圆点、数据库、大脑、通用 users/history 或 CSS 临时图形代替：
 
-| 语义 | Asset | 选择 | 冲突边界 |
-|---|---|---|---|
-| 目标 | `target-arrow` | 第一项 | 现有 Central reversed；只用于 objective state |
-| Agent 团队 | `agent-duo` | 第一项 | custom Central-compatible；不用于人类 collaborators |
-| 动态工作流 | `flow-adaptive` | 第二项 | custom；不替代 Git branch/merge 或 Automations |
-| 知识库 | `knowledge-linked` | 第三项 | custom；不替代普通 files/link |
-| 记忆 | `memory-bookmark` | 第二项 | custom；不替代普通 bookmark/pin |
-| 会话恢复 | `resume-chat` | 第一项 | custom；不用于 send/forward/handoff |
+| 语义       | Asset              | 选择   | 冲突边界                                            |
+| ---------- | ------------------ | ------ | --------------------------------------------------- |
+| 目标       | `target-arrow`     | 第一项 | 现有 Central reversed；只用于 objective state       |
+| Agent 团队 | `agent-duo`        | 第一项 | custom Central-compatible；不用于人类 collaborators |
+| 动态工作流 | `flow-adaptive`    | 第二项 | custom；不替代 Git branch/merge 或 Automations      |
+| 知识库     | `knowledge-linked` | 第三项 | custom；不替代普通 files/link                       |
+| 记忆       | `memory-bookmark`  | 第二项 | custom；不替代普通 bookmark/pin                     |
+| 会话恢复   | `resume-chat`      | 第一项 | custom；不用于 send/forward/handoff                 |
 
-这六个是能力/集合图标，不是 child avatar 集。子智能体必须另用确定性实例纹样：有限 geometry family 与现有 `SUBAGENT_ACCENT_PALETTE` 组合，以 canonical child/thread id 为 seed；同一 parent 内消除碰撞，同一 resumed child 保持稳定。纹样不得编码 running/completed、角色、模型或 Engine，避免身份随着状态变化。状态仍有文字，不能只靠颜色。
+这六个是能力/集合图标，不是 child avatar 集。子智能体必须另用确定性实例纹样：从现有 Central 资产库策展 24 个在 16/20/24px 都保持清晰、低填充、低节点密度的 glyph，与现有 8 色 `SUBAGENT_ACCENT_PALETTE` 组合为 192 个候选；以 canonical child/thread id 为 seed，同一 parent/workflow 内遇到碰撞就按稳定顺序寻找下一组合，同一 resumed child 保持稳定。名称始终与 glyph 同时出现。纹样不得编码 running/completed、角色、模型或 Engine，避免身份随着状态变化；状态仍有文字，不能只靠颜色。若邻接复核中两个 glyph 过于相似，应从池中剔除并换 Central 候选，不得靠加粗、填满或加饱和度补救。
 
-2026-08-12 对 `apps/web/src` 和 `apps/web/public` 的名称扫描未发现上述六个 asset 的现有产品调用；`target-arrow.svg` 已存在但尚无 wrapper/consumer，其余五个尚未 materialize。这个结论只证明当前名称占用，正式实现仍须在当次 HEAD 做 16/20/24px、light/dark、邻接图标和语义 collision review。custom path 来自已确认的第二轮候选，保持 24×24、`currentColor`、约 1.5px stroke、低节点密度；不得在实现时“顺手优化”成另一套图形。
+2026-08-12 对 `apps/web/src` 和 `apps/web/public` 的名称扫描未发现上述六个 asset 的现有产品调用；`target-arrow.svg` 已存在但尚无 wrapper/consumer，其余五个尚未 materialize。这个结论只证明当前名称占用，正式实现仍须在当次 HEAD 做 16/20/24px、light/dark、邻接图标和语义 collision review。五个 custom glyph 的维护者已选 24×24 path 已作为同名 `<symbol>` 保存在 [`research/prototypes/omnimind-agent-capability-surface.html`](prototypes/omnimind-agent-capability-surface.html) 的 hidden SVG sprite 中；它是物化前的精确 research geometry，不是生产 asset owner。实现时从这些 exact paths 生成 existing icon owner 下的一份 canonical SVG，保留 `currentColor`、约 1.5px stroke 与低节点密度，不得根据名字重画或“顺手优化”成另一套图形；物化并通过视觉复核后，以产品 asset 替代 prototype symbol 作为唯一 owner。
 
 ### 8.4 文案
 
@@ -541,23 +560,32 @@ Knowledge 是 Bundled Capability Pack，不是 Agent Runtime Core，也不是 Me
 - 清理任何 prototype-only controls 进入 production 的可能；
 - focused proof：当前空闲态与现有产品几乎不变。
 
-### UI-1：现有 Composer stack 去重
+### UI-1：现有 Composer stack 职责去重
 
 - direct-import 现有 stacked panels；
-- 只调整重复 heading、attached border、compact summary 与 blocked priority；
+- 不以“只留 Plan”为目标，也不以“保留所有现状”为目标；按职责和生命周期决定是否出现；
+- Plan/Todo 只表达当前步骤；Workflow 只在 running，或 paused/failed/stopped 且 exact resumable 时表达近手控制；Subagent 只表达 child 即时状态；Approval/Input 只表达真实阻塞；
+- 调整重复 heading、attached border、compact summary 与 blocked priority；Workflow normal completed/无恢复动作后从 Composer 退场；
 - 不合并 owner/state；
-- proof：task/workflow/subagent/queued/approval 的排列与各自 action 不丢失。
+- proof：task/workflow/subagent/queued/approval 的排列与各自 action 不丢失，同一事实没有两张竞争卡，`full-access` 没有普通 command/file approval。
 
-### UI-W：Workflow spatial detail（唯一新增 UI）
+### UI-W：Workflow 四投影与 spatial detail
 
-- Entry：exact Engine/adapter 已产生同一个可查询的 `WorkflowRunState`，且至少有两个 phases 或多个 Agent；普通 tool sequence、Todo 与无结构 Agent loop 不进入；
-- 直接复用 `WorkflowRunCard.tsx` 的 compact header、pause/stop/resume/dismiss、provider provenance 与真实 state；点击 header 才打开 existing RightDock；
-- 只在 `RightDockPaneKind` owner 增加 `workflow`，pane identity 只保存 bounded `workflowTaskId`；不得新增 route、workflow store、canvas document、layout persistence 或前端 aggregate Run；
-- 新增的最小 presentation component 是 `WorkflowPhaseMap`：从同一 run 纯投影 phase order、Agent membership、status、usage、model/effort、child Thread 与 recent tools；selected Agent 属于 pane-local ephemeral UI state，关闭即丢弃；
-- 当前 contract 没有 dependency edges，phase map 只能用 ordered lanes + containment，不得从时间、名称、tool activity 或 Agent 顺序猜边；
-- 现有 pause/stop/resume/open-child 动作仍由当前 owner 执行，phase map 不复制 command handler 或 optimistic state；
-- proof：4/7/20 Agent、3–5 phases、running/settled/failed/paused churn、382–800px right dock、light/dark、中英文长标签、keyboard/screen reader、reduced motion、关闭/重开不残留错误 selection；
-- 只有 contract 未来明确提供 stable node ids + explicit dependency edges，才另开 renderer intake；届时 React Flow 是第一 challenger，不得把本 HTML 的 DOM/CSS/JS 复制成 production graph engine。
+- Entry：exact Engine/adapter 已持久化足以按 `workflowTaskId` 重建同一 workflow snapshot 的 Provider activities，且至少有两个 phases 或多个 Agent；普通 tool sequence、Todo 与无结构 Agent loop 不进入；
+- 直接复用 `WorkflowRunCard.logic.ts` 的 state projection 与现有 pause/stop/resume/dismiss/open-child action wiring；不冻结现有密集 card 的视觉形态；
+- 先把当前 “latest + Composer visibility + snapshot construction” 拆为共享纯 selector：能按 exact `workflowTaskId` 重建任意 retained run；Composer/Environment 再分别套 visibility policy。Timeline 旧 milestone 和 RightDock 不得调用一个会因 dismiss/non-resumable 而返回 `null` 的 Composer selector；
+- `workflowRunUiStore.ts` 继续唯一拥有 pausedByUser/dismissed；不得迁入 RightDock store、Timeline event 或新的 workflow store。RightDock 只扩展 bounded `workflowTaskId` 并在 sanitizer 中验证；
+- 保留 `ChatView.tsx` 现有基于 `workflowRunState.taskIds` 的 generic background-task 去重，并把同一规则用于 Environment 的 generic subagent summary；Workflow 成员只在 Workflow 索引/详情中聚合，不能再作为第二个“子智能体”集合重复计数；
+- Composer 只新增/重构一条 running，或 paused/failed/stopped 且 exact resumable 的薄控制行；Timeline 用现有 activity primitive 写 milestone；Environment 用现有 section/row primitive 写索引；三者都只保存 bounded `workflowTaskId` 并打开同一 RightDock pane；
+- Timeline milestone 从已持久 `task.started/progress/completed/updated` 纯投影并按 phase/status transition 去重；不得在组件 mount/effect 时创建第二份事件。若现有 payload 不足，最小修复落在现有 Provider Runtime activity projection owner；
+- milestone 只允许 start、phase transition、重要 failure/recovery、terminal settlement；Environment 行最多三个 glyph + `+N`；Composer normal completed/无恢复动作后退场；
+- 只在 `RightDockPaneKind` owner 增加 `workflow`，pane identity 只保存 bounded `workflowTaskId`；singleton reopen 必须更新该 identity，使另一个 Timeline milestone 不会继续显示旧 run。retained activities 已无该 id 时显示 unavailable，不静默回退 latest；不得新增 route、workflow store、canvas document、layout persistence 或前端 aggregate Run；
+- 新增的最小 presentation composition 是 `WorkflowPhaseMap`：从同一 run 纯投影 phase order、Agent membership、status、usage、model/effort、child Thread 与 recent tools；selected phase、selected Agent、search/filter 与 viewport 属于 pane-local ephemeral UI state，关闭即丢弃；
+- 当前 contract 没有 dependency edges：phase map 用 phase group、真实 phase-order spine 与 containment，不得从时间、名称、tool activity 或 Agent 顺序猜边；
+- 4/20/120-Agent 同数据 fixture 对比 host DOM/SVG 与 React Flow read-only grouped-node profile。100+ Agent、pan/zoom/fit、visible-element rendering 或 layout/keyboard/viewport 责任任一成立，就优先采用通过 proof 的成熟 renderer；explicit edges 只控制 Agent edge，不是 renderer 唯一门；
+- 现有 pause/stop/resume/open-child 动作仍由当前 owner 执行，任何 projection 都不复制 command handler 或 optimistic state；
+- proof：4/20/120 Agent、3–8 phases、running/completed/failed/stopped/pausedByUser/resumable churn、382–800px right dock、light/dark、中英文长标签、search/filter、keyboard/screen reader、reduced motion、隐藏/后台动画停止、关闭/重开不残留错误 selection；
+- 不得把本 HTML 的 DOM/CSS/JS 复制成 production graph engine；React Flow 通过 focused proof 才可 direct dependency，X6 仅在一个明确的 React Flow 失败反例下升级。
 
 ### UI-2：Memory projection（仅在 runtime owner 闭合后）
 
