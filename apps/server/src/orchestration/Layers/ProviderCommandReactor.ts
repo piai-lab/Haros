@@ -92,6 +92,7 @@ import { OrchestrationEventDeliveryRepositoryLive } from "../../persistence/Laye
 import { ProjectionPendingInteractionRepositoryLive } from "../../persistence/Layers/ProjectionPendingInteractions.ts";
 import { ProjectionTurnRepositoryLive } from "../../persistence/Layers/ProjectionTurns.ts";
 import { QueuedTurnPromotionRepositoryLive } from "../../persistence/Layers/QueuedTurnPromotions.ts";
+import { OrchestrationEventStore } from "../../persistence/Services/OrchestrationEventStore.ts";
 import { ProjectionPendingInteractionRepository } from "../../persistence/Services/ProjectionPendingInteractions.ts";
 import { ProjectionTurnRepository } from "../../persistence/Services/ProjectionTurns.ts";
 import {
@@ -290,6 +291,7 @@ const turnStartKeyForEvent = (event: ProviderIntentEvent): string =>
 
 const HANDLED_TURN_START_KEY_MAX = 10_000;
 const HANDLED_TURN_START_KEY_TTL = Duration.minutes(30);
+const ACTIVE_TURN_ADMISSION_LOOKBACK_LIMIT = 16;
 const PROVIDER_COMMAND_CLAIM_LEASE_MS = 30_000;
 const PROVIDER_COMMAND_SAFE_RETRY_LIMIT = 3;
 const PROVIDER_COMMAND_SAFE_RETRY_DELAY = Duration.millis(50);
@@ -491,6 +493,7 @@ const make = Effect.gen(function* () {
   const turnCheckpointCoordinator = yield* TurnCheckpointCoordinator;
   const queuedTurnPromotions = yield* QueuedTurnPromotionRepository;
   const projectionTurns = yield* ProjectionTurnRepository;
+  const eventStore = yield* OrchestrationEventStore;
   const projectionSnapshotQuery = yield* ProjectionSnapshotQuery;
   const providerService = yield* ProviderService;
   const pendingInteractions = yield* ProjectionPendingInteractionRepository;
@@ -553,8 +556,14 @@ const make = Effect.gen(function* () {
   const resolveActiveTurnAdmission = Effect.fnUntraced(function* (input: {
     readonly threadId: ThreadId;
     readonly turnId: TurnId;
+    readonly throughSequenceInclusive: number;
   }) {
-    const projectedTurn = Option.getOrNull(yield* projectionTurns.getByTurnId(input));
+    const projectedTurn = Option.getOrNull(
+      yield* projectionTurns.getByTurnId({
+        threadId: input.threadId,
+        turnId: input.turnId,
+      }),
+    );
     if (
       projectedTurn === null ||
       projectedTurn.pendingMessageId === null ||
@@ -564,15 +573,14 @@ const make = Effect.gen(function* () {
       return null;
     }
 
-    const events = Array.from(
-      yield* orchestrationEngine
-        .readThreadEvents(input.threadId, 0, ["thread.turn-start-requested"])
-        .pipe(Stream.runCollect),
-    );
+    const events = yield* eventStore.readThreadEvents({
+      threadId: input.threadId,
+      throughSequenceInclusive: input.throughSequenceInclusive,
+      limit: ACTIVE_TURN_ADMISSION_LOOKBACK_LIMIT,
+      eventTypes: ["thread.turn-start-requested"],
+    });
     const matchingAdmissions = events.filter(
-      (
-        event,
-      ): event is Extract<OrchestrationEvent, { type: "thread.turn-start-requested" }> =>
+      (event): event is Extract<OrchestrationEvent, { type: "thread.turn-start-requested" }> =>
         event.type === "thread.turn-start-requested" &&
         event.payload.messageId === projectedTurn.pendingMessageId &&
         event.payload.createdAt === projectedTurn.requestedAt,
@@ -2454,6 +2462,7 @@ const make = Effect.gen(function* () {
           : yield* resolveActiveTurnAdmission({
               threadId: liveSession?.threadId ?? event.payload.threadId,
               turnId: liveTurnId,
+              throughSequenceInclusive: event.sequence - 1,
             });
       const activeTurnModelSelection = activeTurnAdmission?.payload.modelSelection;
       // Steering is only meaningful against a live turn. The projection can

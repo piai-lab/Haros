@@ -54,6 +54,7 @@ import {
   ProviderValidationError,
 } from "../../provider/Errors.ts";
 import { OrchestrationEventStoreLive } from "../../persistence/Layers/OrchestrationEventStore.ts";
+import { OrchestrationEventStore } from "../../persistence/Services/OrchestrationEventStore.ts";
 import { OrchestrationCommandReceiptRepositoryLive } from "../../persistence/Layers/OrchestrationCommandReceipts.ts";
 import { OrchestrationEventDeliveryRepositoryLive } from "../../persistence/Layers/OrchestrationEventDeliveries.ts";
 import { PersistenceSqlError } from "../../persistence/Errors.ts";
@@ -498,10 +499,11 @@ describe("ProviderCommandReactor", () => {
       streamEvents: Stream.fromPubSub(runtimeEventPubSub),
     };
 
+    const eventStoreLayer = OrchestrationEventStoreLive;
     const orchestrationLayer = OrchestrationEngineLive.pipe(
       Layer.provide(OrchestrationProjectionPipelineLive),
       Layer.provide(OrchestrationProjectionSnapshotQueryLive),
-      Layer.provide(OrchestrationEventStoreLive),
+      Layer.provide(eventStoreLayer),
       Layer.provide(OrchestrationCommandReceiptRepositoryLive),
     );
     const layer = makeProviderCommandReactorLive(
@@ -510,6 +512,7 @@ describe("ProviderCommandReactor", () => {
         : { commandEventTimeout: input.commandEventTimeout },
     ).pipe(
       Layer.provideMerge(orchestrationLayer),
+      Layer.provideMerge(eventStoreLayer),
       Layer.provideMerge(OrchestrationProjectionSnapshotQueryLive),
       Layer.provideMerge(TurnCheckpointCoordinatorLive),
       Layer.provideMerge(Layer.succeed(ProviderService, service)),
@@ -546,6 +549,8 @@ describe("ProviderCommandReactor", () => {
       Effect.runPromise(PubSub.publish(runtimeEventPubSub, event).pipe(Effect.asVoid));
 
     const engine = await runtime.runPromise(Effect.service(OrchestrationEngineService));
+    const eventStore = await runtime.runPromise(Effect.service(OrchestrationEventStore));
+    const readThreadEvents = vi.spyOn(eventStore, "readThreadEvents");
     // Fault injection for command admission. The reactor resolves
     // `dispatch` off the shared engine service on every call, so swapping the
     // property here is observed by the reactor without rebuilding the layer.
@@ -626,6 +631,7 @@ describe("ProviderCommandReactor", () => {
 
     return {
       engine,
+      readThreadEvents,
       reactor,
       startSession,
       listSessions,
@@ -779,6 +785,13 @@ describe("ProviderCommandReactor", () => {
         }
         return persisted;
       },
+      fastForwardProviderConsumerThrough: (eventSequence: number) =>
+        runtime.runPromise(sql`
+          UPDATE orchestration_consumer_state
+          SET last_acked_sequence = ${eventSequence},
+              updated_at = ${new Date().toISOString()}
+          WHERE consumer_name = ${PROVIDER_COMMAND_REACTOR_CONSUMER}
+        `),
       persistSessionWithoutLivePublication: async (input: {
         readonly threadId: ThreadId;
         readonly turnId: TurnId;
@@ -6534,10 +6547,38 @@ describe("ProviderCommandReactor", () => {
     });
   });
 
-  it("steers immediately for codex sessions when Cmd/Ctrl+Enter is used", async () => {
+  it("steers immediately after more than 1000 prior turn starts", async () => {
     const harness = await createHarness();
     const now = new Date().toISOString();
     const activeTurnId = asTurnId("turn-1");
+
+    const historicalStarts = await harness.persistWithoutLivePublication(
+      Array.from({ length: 1_001 }, (_, index) => ({
+        eventId: asEventId(`evt-historical-turn-start-${index}`),
+        aggregateKind: "thread" as const,
+        aggregateId: ThreadId.makeUnsafe("thread-1"),
+        occurredAt: now,
+        commandId: CommandId.makeUnsafe(`cmd-historical-turn-start-${index}`),
+        causationEventId: null,
+        correlationId: null,
+        metadata: {},
+        type: "thread.turn-start-requested" as const,
+        payload: {
+          threadId: ThreadId.makeUnsafe("thread-1"),
+          messageId: asMessageId(`msg-historical-turn-start-${index}`),
+          dispatchMode: "queue" as const,
+          modelSelection: { provider: "codex" as const, model: "gpt-5-codex" },
+          runtimeMode: "approval-required" as const,
+          interactionMode: DEFAULT_PROVIDER_INTERACTION_MODE,
+          createdAt: now,
+        },
+      })),
+    );
+    // These rows exercise the lookup only, so keep them behind the durable
+    // provider-consumer fence instead of replaying synthetic commands.
+    await harness.fastForwardProviderConsumerThrough(
+      historicalStarts[historicalStarts.length - 1]!.sequence,
+    );
 
     await Effect.runPromise(
       harness.engine.dispatch({
@@ -6583,8 +6624,9 @@ describe("ProviderCommandReactor", () => {
     harness.sendTurn.mockClear();
     harness.steerTurn.mockClear();
     harness.interruptTurn.mockClear();
+    harness.readThreadEvents.mockClear();
 
-    await Effect.runPromise(
+    const receipt = await Effect.runPromise(
       harness.engine.dispatch({
         type: "thread.turn.start",
         commandId: CommandId.makeUnsafe("cmd-turn-steer-codex"),
@@ -6609,6 +6651,13 @@ describe("ProviderCommandReactor", () => {
       threadId: ThreadId.makeUnsafe("thread-1"),
       input: "pivot now",
       interactionMode: DEFAULT_PROVIDER_INTERACTION_MODE,
+    });
+    expect(harness.readThreadEvents).toHaveBeenCalledTimes(1);
+    expect(harness.readThreadEvents.mock.calls[0]?.[0]).toEqual({
+      threadId: ThreadId.makeUnsafe("thread-1"),
+      throughSequenceInclusive: receipt.sequence - 1,
+      limit: 16,
+      eventTypes: ["thread.turn-start-requested"],
     });
   });
 
