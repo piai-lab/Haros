@@ -361,6 +361,63 @@ function createSnapshotForTargetUser(options: {
   };
 }
 
+function withTurnStartFailureRestoredToCodex(
+  snapshot: OrchestrationReadModel,
+  input: { messageId: MessageId; messageText: string },
+): OrchestrationReadModel {
+  const failedAt = isoAt(2_000);
+  return {
+    ...snapshot,
+    snapshotSequence: snapshot.snapshotSequence + 1,
+    threads: snapshot.threads.map((thread) =>
+      thread.id === THREAD_ID
+        ? {
+            ...thread,
+            modelSelection: { provider: "codex", model: "gpt-5" },
+            runtimeMode: "full-access",
+            interactionMode: "default",
+            messages: [
+              ...thread.messages,
+              createUserMessage({
+                id: input.messageId,
+                text: input.messageText,
+                offsetSeconds: 1_999,
+              }),
+            ],
+            activities: [
+              ...thread.activities,
+              {
+                id: EventId.makeUnsafe(`activity-cross-provider-failure-${input.messageId}`),
+                createdAt: failedAt,
+                kind: "provider.turn.start.failed",
+                summary: "Provider turn start failed",
+                tone: "error" as const,
+                turnId: null,
+                payload: {
+                  messageId: input.messageId,
+                  detail: "Target provider failed to start.",
+                },
+              },
+            ],
+            session: thread.session
+              ? {
+                  ...thread.session,
+                  status: "ready" as const,
+                  providerName: "codex" as const,
+                  runtimeMode: "full-access" as const,
+                  activeTurnId: null,
+                  lastError: null,
+                  updatedAt: failedAt,
+                }
+              : null,
+            updatedAt: failedAt,
+          }
+        : thread,
+    ),
+    updatedAt: failedAt,
+  };
+}
+
 function createIssue550Snapshot(options: {
   messageCount: number;
   activityCount: number;
@@ -4489,7 +4546,7 @@ describe("ChatView timeline estimator parity (full app)", () => {
           const planButton = Array.from(
             document.querySelectorAll<HTMLButtonElement>("button"),
           ).find((button) => button.textContent?.trim() === "Plan");
-          expect(planButton?.title).toContain("return to normal build mode");
+          expect(planButton?.title).toContain("return to build mode");
         },
         { timeout: 8_000, interval: 16 },
       );
@@ -4509,6 +4566,11 @@ describe("ChatView timeline estimator parity (full app)", () => {
         },
         { timeout: 8_000, interval: 16 },
       );
+      expect(
+        wsRequests
+          .map(readDispatchedCommand)
+          .filter((command) => command?.type === "thread.interaction-mode.set"),
+      ).toHaveLength(0);
     } finally {
       await mounted.cleanup();
     }
@@ -4650,9 +4712,9 @@ describe("ChatView timeline estimator parity (full app)", () => {
       await page.getByRole("button", { name: "Change engine. Current: Codex" }).click();
       await page.getByRole("menuitemradio", { name: /Claude/ }).click();
       await vi.waitFor(() => {
-        expect(
-          useComposerDraftStore.getState().draftsByThreadId[THREAD_ID]?.activeProvider,
-        ).toBe("claudeAgent");
+        expect(useComposerDraftStore.getState().draftsByThreadId[THREAD_ID]?.activeProvider).toBe(
+          "claudeAgent",
+        );
         expect(requestedModelProviders()).toContain("claudeAgent");
       });
 
@@ -4818,6 +4880,350 @@ describe("ChatView timeline estimator parity (full app)", () => {
       }
     },
   );
+
+  it("restores a cross-Engine send after the exact target-start failure rolls back", async () => {
+    const restoreNativeApi = installDeterministicSendNativeApi();
+    let currentSnapshot = createSnapshotForTargetUser({
+      targetMessageId: "msg-user-cross-provider-recovery" as MessageId,
+      targetText: "cross-provider recovery baseline",
+      sessionStatus: "ready",
+    });
+    const failedPrompt = "preserve this prompt when Claude fails to start";
+    const failedImage = createComposerImage({
+      id: "cross-provider-recovery-image",
+      previewUrl: "blob:cross-provider-recovery-image",
+      name: "cross-provider-recovery.png",
+    });
+    const mounted = await mountChatView({
+      viewport: DEFAULT_VIEWPORT,
+      snapshot: currentSnapshot,
+      configureFixture: (nextFixture) => {
+        nextFixture.providerModelsByProvider.claudeAgent = {
+          source: "browser.fixture",
+          models: [{ slug: "claude-sonnet-4-5", name: "Claude Sonnet 4.5" }],
+        };
+        nextFixture.serverConfig = {
+          ...nextFixture.serverConfig,
+          providers: [
+            ...nextFixture.serverConfig.providers,
+            {
+              provider: "claudeAgent",
+              status: "ready",
+              available: true,
+              authStatus: "authenticated",
+              supportsAutoRuntimeMode: false,
+              checkedAt: NOW_ISO,
+            },
+          ],
+        };
+      },
+    });
+
+    try {
+      await waitForServerConfigToApply();
+      await page.getByRole("button", { name: "Change engine. Current: Codex" }).click();
+      await page.getByRole("menuitemradio", { name: /Claude/ }).click();
+      await vi.waitFor(() => {
+        expect(useComposerDraftStore.getState().draftsByThreadId[THREAD_ID]?.activeProvider).toBe(
+          "claudeAgent",
+        );
+        expect(
+          wsRequests.some(
+            (request) =>
+              request._tag === WS_METHODS.providerListModels && request.provider === "claudeAgent",
+          ),
+        ).toBe(true);
+        expect(
+          page.getByRole("button", { name: "Model and options" }).element().textContent,
+        ).toContain("Claude Sonnet 4.5");
+      });
+
+      useComposerDraftStore.getState().setPrompt(THREAD_ID, failedPrompt);
+      useComposerDraftStore.getState().addImage(THREAD_ID, failedImage);
+      await vi.waitFor(() => {
+        expect(document.querySelector('[contenteditable="true"]')?.textContent).toContain(
+          failedPrompt,
+        );
+      });
+      const firstSendButton = await waitForSendButton();
+      await vi.waitFor(() => expect(firstSendButton.disabled).toBe(false));
+      firstSendButton.click();
+
+      let failedMessageId: MessageId | null = null;
+      await vi.waitFor(
+        () => {
+          const turnStart = wsRequests
+            .map(readDispatchedCommand)
+            .find(
+              (command) =>
+                command?.type === "thread.turn.start" &&
+                typeof command.message === "object" &&
+                command.message !== null &&
+                "text" in command.message &&
+                typeof command.message.text === "string" &&
+                command.message.text.includes(failedPrompt),
+            );
+          expect(turnStart).toBeDefined();
+          expect(turnStart?.modelSelection).toMatchObject({
+            provider: "claudeAgent",
+            model: "claude-sonnet-4-5",
+          });
+          const message = turnStart?.message as { messageId?: unknown } | undefined;
+          expect(typeof message?.messageId).toBe("string");
+          failedMessageId = MessageId.makeUnsafe(message!.messageId as string);
+          expect(useComposerDraftStore.getState().draftsByThreadId[THREAD_ID]?.prompt ?? "").toBe(
+            "",
+          );
+        },
+        { timeout: 8_000, interval: 16 },
+      );
+
+      currentSnapshot = withTurnStartFailureRestoredToCodex(currentSnapshot, {
+        messageId: failedMessageId!,
+        messageText: failedPrompt,
+      });
+      fixture = { ...fixture, snapshot: currentSnapshot };
+      useStore.getState().syncServerReadModel(currentSnapshot);
+
+      await vi.waitFor(
+        () => {
+          const draft = useComposerDraftStore.getState().draftsByThreadId[THREAD_ID];
+          expect(draft?.prompt).toBe(failedPrompt);
+          expect(draft?.activeProvider).toBe("codex");
+          expect(draft?.modelSelectionByProvider.codex).toMatchObject({
+            provider: "codex",
+            model: "gpt-5",
+          });
+          expect(draft?.runtimeMode).toBe("full-access");
+          expect(draft?.images.map((image) => image.name)).toEqual(["cross-provider-recovery.png"]);
+          expect(
+            wsRequests
+              .map(readDispatchedCommand)
+              .filter((command) => command?.type === "thread.turn.start"),
+          ).toHaveLength(1);
+        },
+        { timeout: 8_000, interval: 16 },
+      );
+
+      const secondFailedPrompt = "restore content without replacing my newer binding";
+      useComposerDraftStore.getState().setPrompt(THREAD_ID, secondFailedPrompt);
+      await page.getByRole("button", { name: "Change engine. Current: Codex" }).click();
+      await page.getByRole("menuitemradio", { name: /Claude/ }).click();
+      await vi.waitFor(() => {
+        expect(useComposerDraftStore.getState().draftsByThreadId[THREAD_ID]?.activeProvider).toBe(
+          "claudeAgent",
+        );
+        expect(
+          page.getByRole("button", { name: "Model and options" }).element().textContent,
+        ).toContain("Claude Sonnet 4.5");
+        expect(document.querySelector('[contenteditable="true"]')?.textContent).toContain(
+          secondFailedPrompt,
+        );
+      });
+      const secondSendButton = await waitForSendButton();
+      await vi.waitFor(() => expect(secondSendButton.disabled).toBe(false));
+      secondSendButton.click();
+
+      let secondFailedMessageId: MessageId | null = null;
+      await vi.waitFor(
+        () => {
+          const turnStart = wsRequests
+            .map(readDispatchedCommand)
+            .find(
+              (command) =>
+                command?.type === "thread.turn.start" &&
+                typeof command.message === "object" &&
+                command.message !== null &&
+                "text" in command.message &&
+                typeof command.message.text === "string" &&
+                command.message.text.includes(secondFailedPrompt),
+            );
+          const message = turnStart?.message as { messageId?: unknown } | undefined;
+          expect(typeof message?.messageId).toBe("string");
+          secondFailedMessageId = MessageId.makeUnsafe(message!.messageId as string);
+          expect(useComposerDraftStore.getState().draftsByThreadId[THREAD_ID]?.prompt ?? "").toBe(
+            "",
+          );
+        },
+        { timeout: 8_000, interval: 16 },
+      );
+
+      useComposerDraftStore.getState().setModelSelection(THREAD_ID, {
+        provider: "codex",
+        model: "gpt-5.4",
+      });
+      useComposerDraftStore.getState().setRuntimeMode(THREAD_ID, "approval-required");
+      await vi.waitFor(() => {
+        const draft = useComposerDraftStore.getState().draftsByThreadId[THREAD_ID];
+        expect(draft?.activeProvider).toBe("codex");
+        expect(draft?.modelSelectionByProvider.codex).toMatchObject({ model: "gpt-5.4" });
+        expect(draft?.runtimeMode).toBe("approval-required");
+      });
+
+      currentSnapshot = withTurnStartFailureRestoredToCodex(currentSnapshot, {
+        messageId: secondFailedMessageId!,
+        messageText: secondFailedPrompt,
+      });
+      fixture = { ...fixture, snapshot: currentSnapshot };
+      useStore.getState().syncServerReadModel(currentSnapshot);
+
+      await vi.waitFor(
+        () => {
+          const draft = useComposerDraftStore.getState().draftsByThreadId[THREAD_ID];
+          expect(draft?.prompt).toBe(secondFailedPrompt);
+          expect(draft?.activeProvider).toBe("codex");
+          expect(draft?.modelSelectionByProvider.codex).toMatchObject({
+            provider: "codex",
+            model: "gpt-5.4",
+          });
+          expect(draft?.runtimeMode).toBe("approval-required");
+          expect(draft?.images.map((image) => image.name)).toEqual(["cross-provider-recovery.png"]);
+          expect(
+            wsRequests
+              .map(readDispatchedCommand)
+              .filter((command) => command?.type === "thread.turn.start"),
+          ).toHaveLength(2);
+        },
+        { timeout: 8_000, interval: 16 },
+      );
+    } finally {
+      await mounted.cleanup();
+      restoreNativeApi();
+    }
+  });
+
+  it("restores a same-Engine exact binding unless a newer draft supersedes it", async () => {
+    const restoreNativeApi = installDeterministicSendNativeApi();
+    let currentSnapshot = createSnapshotForTargetUser({
+      targetMessageId: "msg-user-same-provider-recovery" as MessageId,
+      targetText: "same-provider recovery baseline",
+      sessionStatus: "ready",
+    });
+    const mounted = await mountChatView({
+      viewport: DEFAULT_VIEWPORT,
+      snapshot: currentSnapshot,
+    });
+
+    const selectTargetBinding = () => {
+      useComposerDraftStore.getState().setModelSelection(THREAD_ID, {
+        provider: "codex",
+        model: "gpt-5.4",
+        options: { reasoningEffort: "low" },
+      });
+      useComposerDraftStore.getState().setRuntimeMode(THREAD_ID, "approval-required");
+    };
+    const sendAndReadMessageId = async (prompt: string): Promise<MessageId> => {
+      useComposerDraftStore.getState().setPrompt(THREAD_ID, prompt);
+      await vi.waitFor(() => {
+        expect(
+          page
+            .getByRole("button", { name: "Model and options" })
+            .element()
+            .textContent?.toLowerCase(),
+        ).toContain("gpt-5.4");
+        expect(document.querySelector('[contenteditable="true"]')?.textContent).toContain(prompt);
+      });
+      const sendButton = await waitForSendButton();
+      await vi.waitFor(() => expect(sendButton.disabled).toBe(false));
+      sendButton.click();
+      let messageId: MessageId | null = null;
+      await vi.waitFor(
+        () => {
+          const turnStart = wsRequests
+            .map(readDispatchedCommand)
+            .find(
+              (command) =>
+                command?.type === "thread.turn.start" &&
+                typeof command.message === "object" &&
+                command.message !== null &&
+                "text" in command.message &&
+                command.message.text === prompt,
+            );
+          expect(turnStart?.modelSelection).toEqual({
+            provider: "codex",
+            model: "gpt-5.4",
+            options: { reasoningEffort: "low" },
+          });
+          expect(turnStart?.runtimeMode).toBe("approval-required");
+          const message = turnStart?.message as { messageId?: unknown } | undefined;
+          expect(typeof message?.messageId).toBe("string");
+          messageId = MessageId.makeUnsafe(message!.messageId as string);
+        },
+        { timeout: 8_000, interval: 16 },
+      );
+      return messageId!;
+    };
+
+    try {
+      await waitForServerConfigToApply();
+      selectTargetBinding();
+      const firstPrompt = "restore my same-provider model restart";
+      const firstMessageId = await sendAndReadMessageId(firstPrompt);
+
+      currentSnapshot = withTurnStartFailureRestoredToCodex(currentSnapshot, {
+        messageId: firstMessageId,
+        messageText: firstPrompt,
+      });
+      fixture = { ...fixture, snapshot: currentSnapshot };
+      useStore.getState().syncServerReadModel(currentSnapshot);
+
+      await vi.waitFor(
+        () => {
+          const draft = useComposerDraftStore.getState().draftsByThreadId[THREAD_ID];
+          expect(draft?.prompt).toBe(firstPrompt);
+          expect(draft?.modelSelectionByProvider.codex).toEqual({
+            provider: "codex",
+            model: "gpt-5",
+          });
+          expect(draft?.runtimeMode).toBe("full-access");
+        },
+        { timeout: 8_000, interval: 16 },
+      );
+
+      selectTargetBinding();
+      const secondPrompt = "do not revive this superseded prompt";
+      const secondMessageId = await sendAndReadMessageId(secondPrompt);
+      const editor = page.getByRole("textbox");
+      await editor.fill("newer draft intent");
+      await editor.fill("");
+      // A binding ABA is still newer intent: returning to the failed target
+      // must not make the old one-shot recovery snapshot authoritative again.
+      useComposerDraftStore.getState().setModelSelection(THREAD_ID, {
+        provider: "codex",
+        model: "gpt-5.5",
+      });
+      selectTargetBinding();
+
+      currentSnapshot = withTurnStartFailureRestoredToCodex(currentSnapshot, {
+        messageId: secondMessageId,
+        messageText: secondPrompt,
+      });
+      fixture = { ...fixture, snapshot: currentSnapshot };
+      useStore.getState().syncServerReadModel(currentSnapshot);
+
+      await vi.waitFor(
+        () => {
+          const draft = useComposerDraftStore.getState().draftsByThreadId[THREAD_ID];
+          expect(draft?.prompt ?? "").toBe("");
+          expect(draft?.modelSelectionByProvider.codex).toEqual({
+            provider: "codex",
+            model: "gpt-5.4",
+            options: { reasoningEffort: "low" },
+          });
+          expect(draft?.runtimeMode).toBe("approval-required");
+          expect(
+            wsRequests
+              .map(readDispatchedCommand)
+              .filter((command) => command?.type === "thread.turn.start"),
+          ).toHaveLength(2);
+        },
+        { timeout: 8_000, interval: 16 },
+      );
+    } finally {
+      await mounted.cleanup();
+      restoreNativeApi();
+    }
+  });
 
   it("cycles the active provider model without opening the picker", async () => {
     const mounted = await mountChatView({

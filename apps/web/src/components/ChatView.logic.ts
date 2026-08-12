@@ -3,8 +3,10 @@ import {
   ThreadId,
   type GitWorktreeSetupPhase,
   type GitWorktreeSetupProgressEvent,
+  type MessageId,
   type ModelSelection,
   type ModelSlug,
+  type OrchestrationThreadActivity,
   type ProviderApprovalDecision,
   type ProviderKind,
   type ProviderRequestKind,
@@ -27,7 +29,7 @@ import {
   type WorktreeSetupSnapshot,
   type WorktreeSetupStepId,
 } from "../types";
-import { type DraftThreadState } from "../composerDraftStore";
+import { type ComposerThreadDraftState, type DraftThreadState } from "../composerDraftStore";
 import { resolveThreadDisplayTitle } from "../lib/threadDisplayTitle";
 import { Schema } from "effect";
 import {
@@ -187,6 +189,121 @@ export function modelSelectionsEqual(left: ModelSelection, right: ModelSelection
       right.provider !== "claudeAgent" ||
       left.supportsAutoMode === right.supportsAutoMode)
   );
+}
+
+export type TurnStartRecoveryDisposition =
+  | "pending"
+  | "target-committed"
+  | "old-binding-restored"
+  | "terminal-unrecovered";
+
+/**
+ * A turn-start failure activity is correlated by its durable message id. The
+ * activity summary/detail is user-facing diagnostics, never an implicit
+ * protocol for Composer recovery.
+ */
+function hasExactProviderTurnStartFailure(
+  activities: ReadonlyArray<Pick<OrchestrationThreadActivity, "kind" | "payload">>,
+  messageId: MessageId,
+): boolean {
+  return activities.some((activity) => {
+    if (activity.kind !== "provider.turn.start.failed") {
+      return false;
+    }
+    const payload = activity.payload;
+    return (
+      typeof payload === "object" &&
+      payload !== null &&
+      !Array.isArray(payload) &&
+      "messageId" in payload &&
+      payload.messageId === messageId
+    );
+  });
+}
+
+/**
+ * Resolves only the canonical projection facts needed by the component-local
+ * exact-binding send snapshot. Target adoption wins over a later send error;
+ * old-binding recovery requires both an exact failure receipt and the restored
+ * ready Session, so a restore failure cannot be painted as recovered.
+ */
+export function resolveTurnStartRecoveryDisposition(input: {
+  readonly messageId: MessageId;
+  readonly previousModelSelection: ModelSelection;
+  readonly previousRuntimeMode: RuntimeMode;
+  readonly previousInteractionMode: "default" | "plan";
+  readonly targetModelSelection: ModelSelection;
+  readonly targetRuntimeMode: RuntimeMode;
+  readonly targetInteractionMode: "default" | "plan";
+  readonly threadModelSelection: ModelSelection;
+  readonly threadRuntimeMode: RuntimeMode;
+  readonly threadInteractionMode: "default" | "plan";
+  readonly session: Pick<ThreadSession, "provider" | "orchestrationStatus"> | null;
+  readonly activities: ReadonlyArray<Pick<OrchestrationThreadActivity, "kind" | "payload">>;
+}): TurnStartRecoveryDisposition {
+  if (
+    input.session?.provider === input.targetModelSelection.provider &&
+    modelSelectionsEqual(input.threadModelSelection, input.targetModelSelection) &&
+    input.threadRuntimeMode === input.targetRuntimeMode &&
+    input.threadInteractionMode === input.targetInteractionMode
+  ) {
+    return "target-committed";
+  }
+
+  if (!hasExactProviderTurnStartFailure(input.activities, input.messageId)) {
+    return "pending";
+  }
+
+  if (input.session?.orchestrationStatus === "error") {
+    return "terminal-unrecovered";
+  }
+
+  const oldBindingIsRestored =
+    input.session?.provider === input.previousModelSelection.provider &&
+    input.session.orchestrationStatus === "ready" &&
+    modelSelectionsEqual(input.threadModelSelection, input.previousModelSelection) &&
+    input.threadRuntimeMode === input.previousRuntimeMode &&
+    input.threadInteractionMode === input.previousInteractionMode;
+  return oldBindingIsRestored ? "old-binding-restored" : "pending";
+}
+
+/**
+ * A mounted send snapshot is one-shot recovery state. Any semantic Composer
+ * mutation after the send-owned clear permanently supersedes it, including an
+ * add-then-remove attachment or a binding B -> C -> B cycle that happens to
+ * end at the failed target again.
+ */
+export function resolveComposerDraftTurnStartRecoveryMutation(
+  previous: ComposerThreadDraftState | undefined,
+  current: ComposerThreadDraftState | undefined,
+): "none" | "content" | "binding" {
+  if (previous === current) return "none";
+  if (previous === undefined || current === undefined) return "content";
+
+  if (
+    previous.prompt !== current.prompt ||
+    previous.promptHistorySavedDraft !== current.promptHistorySavedDraft ||
+    previous.images !== current.images ||
+    previous.files !== current.files ||
+    previous.assistantSelections !== current.assistantSelections ||
+    previous.browserAnnotations !== current.browserAnnotations ||
+    previous.terminalContexts !== current.terminalContexts ||
+    previous.fileComments !== current.fileComments ||
+    previous.pastedTexts !== current.pastedTexts ||
+    previous.skills !== current.skills ||
+    previous.mentions !== current.mentions
+  ) {
+    return "content";
+  }
+  if (
+    previous.modelSelectionByProvider !== current.modelSelectionByProvider ||
+    previous.activeProvider !== current.activeProvider ||
+    previous.runtimeMode !== current.runtimeMode ||
+    previous.interactionMode !== current.interactionMode
+  ) {
+    return "binding";
+  }
+  return "none";
 }
 
 /**

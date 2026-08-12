@@ -179,10 +179,12 @@ import {
   createRuntimeModePersistenceQueue,
   derivePromptHistoryFromMessages,
   desiredBindingCanPersistWithoutActiveSession,
+  resolveComposerDraftTurnStartRecoveryMutation,
   enrichSubagentWorkEntries,
   hasFileUndoSettled,
   persistModelSelectionBeforeRuntimeMode,
   promptStillMatchesActiveHistoryBrowse,
+  modelSelectionsEqual,
   type PendingFileUndo,
   type PromptHistoryNavigationState,
   resolveActiveThreadTitle,
@@ -198,6 +200,7 @@ import {
   resolveGitRepoUiState,
   resolveProjectScriptTerminalTarget,
   resolvePromptHistoryNavigation,
+  resolveTurnStartRecoveryDisposition,
   resolveThreadDetailHydration,
   shouldHandlePromptHistoryNavigationKey,
   shouldEnableComposerPastedTextCollapse,
@@ -1051,6 +1054,21 @@ interface PlanFollowUpSubmission {
   queuedTurn?: QueuedComposerPlanFollowUp;
 }
 
+interface ComposerBindingSnapshot {
+  readonly modelSelection: ModelSelection;
+  readonly runtimeMode: RuntimeMode;
+  readonly interactionMode: ProviderInteractionMode;
+}
+
+interface PendingTurnStartRecovery {
+  readonly threadId: ThreadId;
+  readonly messageId: MessageId;
+  readonly previousBinding: ComposerBindingSnapshot;
+  readonly targetBinding: ComposerBindingSnapshot;
+  readonly queuedTurn: QueuedComposerChatTurn;
+  bindingSuperseded: boolean;
+}
+
 /**
  * Send-path handlers that are declared *after* `onSend` in the component body (they depend on
  * state and callbacks that are set up later) yet have to be reachable from it — and, for
@@ -1224,6 +1242,7 @@ export default function ChatView({
   const composerPastedTexts = composerDraft.pastedTexts;
   const composerSkills = composerDraft.skills;
   const composerMentions = composerDraft.mentions;
+  const composerActiveProvider = composerDraft.activeProvider;
   const queuedComposerTurns = composerDraft.queuedTurns;
   const restoredSourceProposedPlan = composerDraft.restoredSourceProposedPlan;
   const composerSendState = useMemo(
@@ -1388,6 +1407,24 @@ export default function ChatView({
   const [expandedImage, setExpandedImage] = useState<ExpandedImagePreview | null>(null);
   const [optimisticUserMessages, setOptimisticUserMessages] = useState<ChatMessage[]>([]);
   const optimisticUserMessagesRef = useRef(optimisticUserMessages);
+  const pendingTurnStartRecoveryRef = useRef<PendingTurnStartRecovery | null>(null);
+  useEffect(
+    () =>
+      useComposerDraftStore.subscribe((state, previousState) => {
+        const pendingRecovery = pendingTurnStartRecoveryRef.current;
+        if (!pendingRecovery) return;
+        const mutation = resolveComposerDraftTurnStartRecoveryMutation(
+          previousState.draftsByThreadId[pendingRecovery.threadId],
+          state.draftsByThreadId[pendingRecovery.threadId],
+        );
+        if (mutation === "content") {
+          pendingTurnStartRecoveryRef.current = null;
+        } else if (mutation === "binding") {
+          pendingRecovery.bindingSuperseded = true;
+        }
+      }),
+    [],
+  );
   // Mirror during the commit, before events or async continuations can observe
   // the new UI with the previous render's preview URLs.
   useLayoutEffect(() => {
@@ -3932,7 +3969,7 @@ export default function ChatView({
   const handoffTargetProviders = useMemo(
     () =>
       activeThread
-          ? resolveAvailableHandoffTargetProviders({
+        ? resolveAvailableHandoffTargetProviders({
             sourceProvider: activeThread.modelSelection.provider,
             providerSettings: serverSettingsQuery.data?.providers,
             providerStatuses,
@@ -4988,7 +5025,7 @@ export default function ChatView({
       if (isLocalDraftThread) {
         setDraftThreadContext(threadId, { interactionMode: mode });
       }
-      if (serverThread) {
+      if (serverThread && desiredBindingCanPersistRuntimeMode) {
         const api = readNativeApi();
         if (api) {
           void api.orchestration
@@ -5012,6 +5049,7 @@ export default function ChatView({
     },
     [
       interactionMode,
+      desiredBindingCanPersistRuntimeMode,
       isLocalDraftThread,
       scheduleComposerFocus,
       serverThread,
@@ -5041,57 +5079,6 @@ export default function ChatView({
     },
     [handleInteractionModeChange],
   );
-  const persistThreadSettingsForNextTurn = useCallback(
-    async (input: {
-      threadId: ThreadId;
-      createdAt: string;
-      modelSelection?: ModelSelection;
-      runtimeMode: RuntimeMode;
-      interactionMode: ProviderInteractionMode;
-    }) => {
-      if (!serverThread) {
-        return;
-      }
-      const api = readNativeApi();
-      if (!api) {
-        return;
-      }
-
-      await persistModelSelectionBeforeRuntimeMode({
-        currentModelSelection: serverThread.modelSelection,
-        ...(input.modelSelection !== undefined ? { nextModelSelection: input.modelSelection } : {}),
-        currentRuntimeMode: serverThread.runtimeMode,
-        nextRuntimeMode: input.runtimeMode,
-        persistModelSelection: (modelSelection) =>
-          api.orchestration.dispatchCommand({
-            type: "thread.meta.update",
-            commandId: newCommandId(),
-            threadId: input.threadId,
-            modelSelection,
-          }),
-        persistRuntimeMode: (runtimeMode) =>
-          api.orchestration.dispatchCommand({
-            type: "thread.runtime-mode.set",
-            commandId: newCommandId(),
-            threadId: input.threadId,
-            runtimeMode,
-            createdAt: input.createdAt,
-          }),
-      });
-
-      if (input.interactionMode !== serverThread.interactionMode) {
-        await api.orchestration.dispatchCommand({
-          type: "thread.interaction-mode.set",
-          commandId: newCommandId(),
-          threadId: input.threadId,
-          interactionMode: input.interactionMode,
-          createdAt: input.createdAt,
-        });
-      }
-    },
-    [serverThread],
-  );
-
   // Scroll helpers stay list-owned so transcript updates stop bouncing through
   // a separate measurement/controller loop during streaming.
   // Guards isAtEndRef from flipping during reflow-induced scroll events that
@@ -7207,10 +7194,18 @@ export default function ChatView({
   ]);
 
   const restoreQueuedTurnToComposer = useCallback(
-    (queuedTurn: QueuedComposerTurn) => {
+    (queuedTurn: QueuedComposerTurn, restoredBindingOverride?: ComposerBindingSnapshot | null) => {
       if (!activeThread) {
         return;
       }
+      const restoredBinding =
+        restoredBindingOverride === undefined
+          ? {
+              modelSelection: queuedTurn.modelSelection,
+              runtimeMode: queuedTurn.runtimeMode,
+              interactionMode: queuedTurn.interactionMode,
+            }
+          : restoredBindingOverride;
       const nextPrompt = queuedTurn.kind === "chat" ? queuedTurn.prompt : queuedTurn.text;
       const restoredImages =
         queuedTurn.kind === "chat" ? queuedTurn.images.map(cloneComposerImageAttachment) : [];
@@ -7225,8 +7220,12 @@ export default function ChatView({
       setComposerDraftPrompt(activeThread.id, nextPrompt);
       // Editing a queued turn should recreate the same draft state the user queued.
       setDraftThreadContext(activeThread.id, {
-        runtimeMode: queuedTurn.runtimeMode,
-        interactionMode: queuedTurn.interactionMode,
+        ...(restoredBinding
+          ? {
+              runtimeMode: restoredBinding.runtimeMode,
+              interactionMode: restoredBinding.interactionMode,
+            }
+          : {}),
         ...(queuedTurn.kind === "chat" ? { envMode: queuedTurn.envMode } : {}),
       });
       if (queuedTurn.kind === "chat") {
@@ -7267,9 +7266,11 @@ export default function ChatView({
             }
           : null,
       );
-      setComposerDraftModelSelection(activeThread.id, queuedTurn.modelSelection);
-      setComposerDraftRuntimeMode(activeThread.id, queuedTurn.runtimeMode);
-      setComposerDraftInteractionMode(activeThread.id, queuedTurn.interactionMode);
+      if (restoredBinding) {
+        setComposerDraftModelSelection(activeThread.id, restoredBinding.modelSelection);
+        setComposerDraftRuntimeMode(activeThread.id, restoredBinding.runtimeMode);
+        setComposerDraftInteractionMode(activeThread.id, restoredBinding.interactionMode);
+      }
       setComposerCursor(collapseExpandedComposerCursor(nextPrompt, nextPrompt.length));
       setComposerTrigger(detectComposerTrigger(nextPrompt, nextPrompt.length));
       scheduleComposerFocus();
@@ -7295,6 +7296,90 @@ export default function ChatView({
       updateSelectedComposerSkills,
     ],
   );
+
+  useEffect(() => {
+    const pendingRecovery = pendingTurnStartRecoveryRef.current;
+    if (!pendingRecovery || !serverThread || pendingRecovery.threadId !== serverThread.id) {
+      return;
+    }
+
+    const disposition = resolveTurnStartRecoveryDisposition({
+      messageId: pendingRecovery.messageId,
+      previousModelSelection: pendingRecovery.previousBinding.modelSelection,
+      previousRuntimeMode: pendingRecovery.previousBinding.runtimeMode,
+      previousInteractionMode: pendingRecovery.previousBinding.interactionMode,
+      targetModelSelection: pendingRecovery.targetBinding.modelSelection,
+      targetRuntimeMode: pendingRecovery.targetBinding.runtimeMode,
+      targetInteractionMode: pendingRecovery.targetBinding.interactionMode,
+      threadModelSelection: serverThread.modelSelection,
+      threadRuntimeMode: serverThread.runtimeMode,
+      threadInteractionMode: serverThread.interactionMode,
+      session: serverThread.session,
+      activities: serverThread.activities,
+    });
+    if (disposition === "target-committed") {
+      pendingTurnStartRecoveryRef.current = null;
+      return;
+    }
+    if (disposition === "terminal-unrecovered") {
+      pendingTurnStartRecoveryRef.current = null;
+      return;
+    }
+    if (disposition !== "old-binding-restored") {
+      return;
+    }
+
+    const composerIsEmpty =
+      prompt.length === 0 &&
+      composerPromptHistorySavedDraft === null &&
+      composerImages.length === 0 &&
+      composerFiles.length === 0 &&
+      composerAssistantSelections.length === 0 &&
+      composerBrowserAnnotations.length === 0 &&
+      composerFileComments.length === 0 &&
+      composerTerminalContexts.length === 0 &&
+      composerPastedTexts.length === 0 &&
+      selectedComposerSkills.length === 0 &&
+      selectedComposerMentions.length === 0;
+    if (!composerIsEmpty) {
+      // Any new draft content is a newer user intent. Permanently supersede
+      // the old send snapshot now so typing and then clearing cannot revive it
+      // when a delayed provider-start failure finally projects.
+      pendingTurnStartRecoveryRef.current = null;
+      return;
+    }
+
+    const desiredBindingIsStillFailedTarget =
+      !pendingRecovery.bindingSuperseded &&
+      composerActiveProvider === pendingRecovery.targetBinding.modelSelection.provider &&
+      selectedModelSelection !== null &&
+      modelSelectionsEqual(selectedModelSelection, pendingRecovery.targetBinding.modelSelection) &&
+      runtimeMode === pendingRecovery.targetBinding.runtimeMode &&
+      interactionMode === pendingRecovery.targetBinding.interactionMode;
+    pendingTurnStartRecoveryRef.current = null;
+    restoreQueuedTurnToComposer(
+      pendingRecovery.queuedTurn,
+      desiredBindingIsStillFailedTarget ? pendingRecovery.previousBinding : null,
+    );
+  }, [
+    composerAssistantSelections.length,
+    composerActiveProvider,
+    composerBrowserAnnotations.length,
+    composerFileComments.length,
+    composerFiles.length,
+    composerImages.length,
+    composerPastedTexts.length,
+    composerPromptHistorySavedDraft,
+    composerTerminalContexts.length,
+    interactionMode,
+    prompt,
+    restoreQueuedTurnToComposer,
+    runtimeMode,
+    selectedComposerMentions.length,
+    selectedComposerSkills.length,
+    selectedModelSelection,
+    serverThread,
+  ]);
 
   const removeQueuedComposerTurn = useCallback(
     (queuedTurnId: string) => {
@@ -8080,6 +8165,84 @@ export default function ChatView({
       messageIdForSend,
     );
     const messageCreatedAt = new Date().toISOString();
+    let pendingTurnStartRecoveryCandidate: PendingTurnStartRecovery | null = null;
+    if (queuedChatTurn === null) {
+      // A newer direct send supersedes any unresolved component-local
+      // recovery snapshot. Exact message ids still fence late activities, but
+      // keeping the old ref would let a delayed old failure restore stale
+      // content after this newer send has already cleared the Composer.
+      pendingTurnStartRecoveryRef.current = null;
+    }
+    const currentThreadForRecovery = isServerThread
+      ? getThreadFromState(useStore.getState(), threadIdForSend)
+      : undefined;
+    const currentSessionForRecovery = currentThreadForRecovery?.session ?? null;
+    if (
+      queuedChatTurn === null &&
+      currentThreadForRecovery &&
+      currentSessionForRecovery &&
+      (currentSessionForRecovery.orchestrationStatus === "ready" ||
+        currentSessionForRecovery.orchestrationStatus === "running") &&
+      currentSessionForRecovery.provider === currentThreadForRecovery.modelSelection.provider &&
+      (!modelSelectionsEqual(
+        currentThreadForRecovery.modelSelection,
+        selectedModelSelectionForSend,
+      ) ||
+        currentThreadForRecovery.runtimeMode !== nextRuntimeModeForSend ||
+        currentThreadForRecovery.interactionMode !== interactionModeForSend)
+    ) {
+      pendingTurnStartRecoveryCandidate = {
+        threadId: threadIdForSend,
+        messageId: messageIdForSend,
+        previousBinding: {
+          modelSelection: currentThreadForRecovery.modelSelection,
+          runtimeMode: currentThreadForRecovery.runtimeMode,
+          interactionMode: currentThreadForRecovery.interactionMode,
+        },
+        targetBinding: {
+          modelSelection: selectedModelSelectionForSend,
+          runtimeMode: nextRuntimeModeForSend,
+          interactionMode: interactionModeForSend,
+        },
+        bindingSuperseded: false,
+        queuedTurn: {
+          id: `turn-start-recovery:${messageIdForSend}`,
+          kind: "chat",
+          createdAt: messageCreatedAt,
+          previewText: buildQueuedComposerPreviewText({
+            trimmedPrompt: trimmedPromptForSend,
+            images: composerImagesSnapshot,
+            files: composerFilesSnapshot,
+            assistantSelections: composerAssistantSelectionsSnapshot,
+            browserAnnotations: composerBrowserAnnotationsSnapshot,
+            terminalContexts: composerTerminalContextsSnapshot,
+            fileComments: composerFileCommentsSnapshot,
+            pastedTexts: composerPastedTextsSnapshot,
+          }),
+          prompt: promptForSend,
+          images: composerImagesSnapshot,
+          files: composerFilesSnapshot,
+          assistantSelections: composerAssistantSelectionsSnapshot,
+          browserAnnotations: composerBrowserAnnotationsSnapshot,
+          terminalContexts: composerTerminalContextsSnapshot,
+          fileComments: composerFileCommentsSnapshot,
+          pastedTexts: composerPastedTextsSnapshot,
+          skills: composerSkillsSnapshot,
+          mentions: composerMentionsSnapshot,
+          selectedProvider: selectedProviderForSend,
+          selectedModel: selectedModelForSend,
+          selectedPromptEffort: selectedPromptEffortForSend,
+          modelSelection: selectedModelSelectionForSend,
+          ...(providerOptionsForDispatchForSend
+            ? { providerOptionsForDispatch: providerOptionsForDispatchForSend }
+            : {}),
+          ...(sourceProposedPlanForSend ? { sourceProposedPlan: sourceProposedPlanForSend } : {}),
+          runtimeMode: nextRuntimeModeForSend,
+          interactionMode: interactionModeForSend,
+          envMode: nextThreadEnvMode,
+        },
+      };
+    }
     const outgoingTextSeed =
       messageTextForSend || (composerImagesSnapshot.length > 0 ? IMAGE_ONLY_BOOTSTRAP_PROMPT : "");
     const outgoingMessageText = formatOutgoingComposerPrompt({
@@ -8187,6 +8350,12 @@ export default function ChatView({
       // A clicked submit button steals focus; return it after the controlled
       // draft reset so rapid follow-up typing lands in the composer.
       scheduleComposerFocus();
+    }
+    // Arm only after the send-owned reset. From this point onward, the store
+    // subscription treats the first semantic draft mutation as newer intent
+    // and permanently supersedes this one-shot recovery snapshot.
+    if (pendingTurnStartRecoveryCandidate !== null) {
+      pendingTurnStartRecoveryRef.current = pendingTurnStartRecoveryCandidate;
     }
 
     let createdServerThreadForLocalDraft = false;
@@ -8433,16 +8602,6 @@ export default function ChatView({
       // script ran (the creation-step race above only guards the first step).
       await consumeWorktreeSetupResolution();
 
-      if (isServerThread) {
-        await persistThreadSettingsForNextTurn({
-          threadId: threadIdForSend,
-          createdAt: messageCreatedAt,
-          modelSelection: selectedModelSelectionForSend,
-          runtimeMode: nextRuntimeModeForSend,
-          interactionMode: interactionModeForSend,
-        });
-      }
-
       const stagedTurnAttachments = await turnAttachmentsPromise;
       // Keep setup resolvable while attachment uploads are still preparing the
       // turn. Once they settle, consume the last possible choice before the
@@ -8537,6 +8696,9 @@ export default function ChatView({
         // The turn RPC never resolved, so no server turn exists for the
         // watchdog to recover — drop the marker armed when the dispatch began.
         clearPendingTurnDispatch(threadIdForSend);
+        if (pendingTurnStartRecoveryRef.current?.messageId === messageIdForSend) {
+          pendingTurnStartRecoveryRef.current = null;
+        }
       }
       if (createdServerThreadForLocalDraft && !turnStartSucceeded) {
         // This rollback cleans up a retryable draft promotion; do not tombstone the draft id.
@@ -8966,14 +9128,6 @@ export default function ChatView({
     // Nested function so the `try` body holds no value blocks — see the comment on
     // `deleteEmptyTerminalThread` above for why React Compiler requires this shape.
     const dispatchPlanFollowUpTurn = async () => {
-      await persistThreadSettingsForNextTurn({
-        threadId: threadIdForSend,
-        createdAt: messageCreatedAt,
-        modelSelection: modelSelectionForPlanDispatch,
-        runtimeMode: queuedTurn?.runtimeMode ?? runtimeMode,
-        interactionMode: nextInteractionMode,
-      });
-
       // Keep the mode toggle and plan-follow-up banner in sync immediately
       // while the same-thread implementation turn is starting.
       setComposerDraftInteractionMode(threadIdForSend, nextInteractionMode);
@@ -9113,13 +9267,6 @@ export default function ChatView({
         text: editedTextWithOriginalContext,
       });
       return await (async () => {
-        await persistThreadSettingsForNextTurn({
-          threadId: activeThread.id,
-          createdAt: messageCreatedAt,
-          modelSelection: selectedModelSelection,
-          runtimeMode,
-          interactionMode,
-        });
         await api.orchestration.dispatchCommand({
           type: "thread.message.edit-and-resend",
           commandId: newCommandId(),
@@ -9153,7 +9300,6 @@ export default function ChatView({
       isSendBusy,
       isServerThread,
       interactionMode,
-      persistThreadSettingsForNextTurn,
       providerOptionsForDispatch,
       runtimeMode,
       selectedModel,

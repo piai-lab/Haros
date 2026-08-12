@@ -12,6 +12,8 @@ import {
 import { describe, expect, it, vi } from "vitest";
 
 import type { WorkLogEntry } from "../session-logic";
+import type { ThreadSession } from "../types";
+import { createEmptyThreadDraft } from "../composerDraftDomain";
 
 import {
   appendVoiceTranscriptToPrompt,
@@ -19,6 +21,7 @@ import {
   buildTranscriptAutoFollowSignal,
   createRuntimeModePersistenceQueue,
   desiredBindingCanPersistWithoutActiveSession,
+  resolveComposerDraftTurnStartRecoveryMutation,
   persistModelSelectionBeforeRuntimeMode,
   createLocalDispatchSnapshot,
   createWorktreeSetupResolution,
@@ -32,6 +35,7 @@ import {
   type LocalDispatchSnapshot,
   promptStillMatchesActiveHistoryBrowse,
   resolvePromptHistoryNavigation,
+  resolveTurnStartRecoveryDisposition,
   resolveNextLocalDispatchSnapshot,
   resolveWorkingLabel,
   deriveComposerSendState,
@@ -71,7 +75,47 @@ import {
   shouldRenderTerminalWorkspace,
   worktreeSetupHasError,
 } from "./ChatView.logic";
-import type { ThreadSession } from "../types";
+
+describe("resolveComposerDraftTurnStartRecoveryMutation", () => {
+  it("is monotonic for content and exact-binding intent changes", () => {
+    const baseline = createEmptyThreadDraft();
+    expect(resolveComposerDraftTurnStartRecoveryMutation(baseline, baseline)).toBe("none");
+
+    const withAttachmentIntent = {
+      ...baseline,
+      files: [
+        {
+          type: "file" as const,
+          id: "file-new-intent",
+          name: "new-intent.txt",
+          mimeType: "text/plain",
+          sizeBytes: 1,
+          file: new File(["x"], "new-intent.txt", { type: "text/plain" }),
+        },
+      ],
+    };
+    expect(resolveComposerDraftTurnStartRecoveryMutation(baseline, withAttachmentIntent)).toBe(
+      "content",
+    );
+
+    const targetBinding = {
+      ...baseline,
+      activeProvider: "codex" as const,
+      modelSelectionByProvider: {
+        codex: { provider: "codex" as const, model: "gpt-5.4" },
+      },
+    };
+    const newerBinding = {
+      ...targetBinding,
+      modelSelectionByProvider: {
+        codex: { provider: "codex" as const, model: "gpt-5.5" },
+      },
+    };
+    expect(resolveComposerDraftTurnStartRecoveryMutation(targetBinding, newerBinding)).toBe(
+      "binding",
+    );
+  });
+});
 
 const ACTIVE_SESSION: ThreadSession = {
   provider: "codex",
@@ -85,6 +129,122 @@ const CODEX_BINDING: ModelSelection = {
   provider: "codex",
   model: "gpt-5.4",
 };
+
+const CLAUDE_BINDING: ModelSelection = {
+  provider: "claudeAgent",
+  model: "claude-sonnet-4-5",
+};
+
+const CROSS_PROVIDER_MESSAGE_ID = MessageId.makeUnsafe("cross-provider-message");
+
+describe("turn-start recovery disposition", () => {
+  const matchingFailure = [
+    {
+      kind: "provider.turn.start.failed",
+      payload: { messageId: CROSS_PROVIDER_MESSAGE_ID, detail: "target failed" },
+    },
+  ];
+
+  it("clears the snapshot when the target binding has committed", () => {
+    expect(
+      resolveTurnStartRecoveryDisposition({
+        messageId: CROSS_PROVIDER_MESSAGE_ID,
+        previousModelSelection: CODEX_BINDING,
+        previousRuntimeMode: "full-access",
+        previousInteractionMode: "default",
+        targetModelSelection: CLAUDE_BINDING,
+        targetRuntimeMode: "approval-required",
+        targetInteractionMode: "default",
+        threadModelSelection: CLAUDE_BINDING,
+        threadRuntimeMode: "approval-required",
+        threadInteractionMode: "default",
+        session: { provider: "claudeAgent", orchestrationStatus: "running" },
+        activities: matchingFailure,
+      }),
+    ).toBe("target-committed");
+  });
+
+  it("does not recover from a failure for another message", () => {
+    expect(
+      resolveTurnStartRecoveryDisposition({
+        messageId: CROSS_PROVIDER_MESSAGE_ID,
+        previousModelSelection: CODEX_BINDING,
+        previousRuntimeMode: "full-access",
+        previousInteractionMode: "default",
+        targetModelSelection: CLAUDE_BINDING,
+        targetRuntimeMode: "approval-required",
+        targetInteractionMode: "default",
+        threadModelSelection: CODEX_BINDING,
+        threadRuntimeMode: "full-access",
+        threadInteractionMode: "default",
+        session: { provider: "codex", orchestrationStatus: "ready" },
+        activities: [
+          {
+            kind: "provider.turn.start.failed",
+            payload: { messageId: MessageId.makeUnsafe("another-message") },
+          },
+        ],
+      }),
+    ).toBe("pending");
+  });
+
+  it("recovers only after the exact failure and old ready binding are projected", () => {
+    expect(
+      resolveTurnStartRecoveryDisposition({
+        messageId: CROSS_PROVIDER_MESSAGE_ID,
+        previousModelSelection: CODEX_BINDING,
+        previousRuntimeMode: "full-access",
+        previousInteractionMode: "default",
+        targetModelSelection: CLAUDE_BINDING,
+        targetRuntimeMode: "approval-required",
+        targetInteractionMode: "default",
+        threadModelSelection: CODEX_BINDING,
+        threadRuntimeMode: "full-access",
+        threadInteractionMode: "default",
+        session: { provider: "codex", orchestrationStatus: "ready" },
+        activities: matchingFailure,
+      }),
+    ).toBe("old-binding-restored");
+  });
+
+  it("settles the snapshot without restoring stale content when the old Session restore failed", () => {
+    expect(
+      resolveTurnStartRecoveryDisposition({
+        messageId: CROSS_PROVIDER_MESSAGE_ID,
+        previousModelSelection: CODEX_BINDING,
+        previousRuntimeMode: "full-access",
+        previousInteractionMode: "default",
+        targetModelSelection: CLAUDE_BINDING,
+        targetRuntimeMode: "approval-required",
+        targetInteractionMode: "default",
+        threadModelSelection: CODEX_BINDING,
+        threadRuntimeMode: "full-access",
+        threadInteractionMode: "default",
+        session: { provider: "codex", orchestrationStatus: "error" },
+        activities: matchingFailure,
+      }),
+    ).toBe("terminal-unrecovered");
+  });
+
+  it("waits for the complete target binding commit, including interaction mode", () => {
+    expect(
+      resolveTurnStartRecoveryDisposition({
+        messageId: CROSS_PROVIDER_MESSAGE_ID,
+        previousModelSelection: CODEX_BINDING,
+        previousRuntimeMode: "full-access",
+        previousInteractionMode: "default",
+        targetModelSelection: CLAUDE_BINDING,
+        targetRuntimeMode: "approval-required",
+        targetInteractionMode: "plan",
+        threadModelSelection: CLAUDE_BINDING,
+        threadRuntimeMode: "approval-required",
+        threadInteractionMode: "default",
+        session: { provider: "claudeAgent", orchestrationStatus: "running" },
+        activities: [],
+      }),
+    ).toBe("pending");
+  });
+});
 
 describe("desiredBindingCanPersistWithoutActiveSession", () => {
   it("accepts an exact durable binding only when no live Session exists", () => {
