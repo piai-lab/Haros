@@ -171,9 +171,8 @@ export interface ProviderServiceShape {
   }) => Effect.Effect<void, ProviderServiceError>;
 
   /**
-   * List active provider sessions.
-   *
-   * Aggregates runtime session lists from all registered adapters.
+   * List authoritative active provider sessions. Persisted binding identity
+   * filters stale or duplicate physical sessions left by failed replacement.
    */
   readonly listSessions: () => Effect.Effect<ReadonlyArray<ProviderSession>>;
 
