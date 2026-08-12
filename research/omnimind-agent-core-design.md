@@ -291,6 +291,18 @@ Root 拥有拆分、并行上限、验收、综合与是否继续。Child 不拥
 
 这已经覆盖大多数“动态”价值：下一步由运行结果决定，而不是在开始前写死 DAG。
 
+对外部生态的最新复核没有改变这个 runtime 裁决，但修正了前端表达：workflow 名称很多，结构原语只有 **顺序、并行、选择、回环**。orchestrator-worker 是顺序 + 并行 + join；evaluator-optimizer 是顺序 + 回环；fallback 是选择；handoff 是 active owner 转移的 transition 语义。OmniMind 不把这些名称做成新的 Core mode、registry 或 DSL。
+
+同一个只读 UI grammar 可以投影三类完全不同、不能混 owner 的 truth：
+
+1. 当前 Claude private workflow：只能投影 phase order 与 Agent membership；
+2. OmniMind Agent result-driven loop：root 每次观察 result 后，若现有 Provider activity owner 持久化 stable step/group id 与 exact transition，再投影实际 event trail；
+3. 未来 Engine-native graph/team：只映射 Engine 明确回报的 dependency、route、iteration 或 handoff。
+
+这里的 presentation event 不是新 workflow journal。优先复用现有 Product/Provider activity，只在 UI 无法从现有 typed payload 得到一个不可推导事实时，向同一 activity payload 增加最小字段。可视化事实最多由四类组成：`group`、`step`、`transition`、`result`；transition 只需要 `next / dispatch / join / selected / retry / handoff`。不为每种 framework pattern 建 union variant。
+
+terminal 仍由现有 runtime settlement 拥有。前端应区分 lifecycle status 与 root conclusion：当前只有 running/paused/completed/failed/stopped，不因一个 child 失败就发明 `partial success`；第一版使用现有 `TaskCompletedPayload.status + summary + workflowAgents + usage` 形成一份可重开的结果投影。完成后 Composer 控制退场，Timeline 保存一条 terminal milestone，Environment 保留当前任务最近一次 Run 的索引，RightDock 把运行图冻结为结果图；不新增 Outcome database。
+
 V1 不需要：
 
 - 默认 `workflowScript`；
@@ -561,7 +573,7 @@ Skill 与 Plugin 属于全局一致的基础概念，不应为每个 Engine 或�
 
 Workflow 复用的是 canonical Provider activities、现有 `WorkflowRunCard.logic.ts` projection、`WorkflowRunCard.tsx` action wiring 和 `workflowRunUiStore.ts` 的 bounded paused/dismissed flags，不是冻结现有密集 card 的视觉形态。当前 pause 是 mark+stop，resume 是携带 script/run identity 的新 Composer turn 并 dismiss 旧 run；UI 不得把这套补偿文案伪装成新的 Provider runtime state。当前 selector 又把 latest run、Composer visibility 与 snapshot construction 黏在一起，RightDock/旧 Timeline milestone 正式实现前必须先提取按 exact `workflowTaskId` 重建的共享纯 selector，不能复制 parser。
 
-同一个 Engine-owned run 只做四个职责互斥的投影：Timeline 从 persisted activities 去重投影有意义里程碑；Composer 只在 running 或 paused/failed/stopped 且 exact run 可 resume 时保留一条近手控制行；Environment 是可重新找到的当前任务索引；existing right dock 承担 phase/Agent 空间详情、搜索和筛选。四者不得复制状态、timer、Agent list 或 optimistic command state；已包含在 `WorkflowRunState.taskIds` 的 member 继续从 generic background/subagent 摘要排除，同一 child 不重复计数。normal completed 或无可行动恢复后 Composer 退场，Timeline 封存；exact resumable settled run 可留在 Environment，直到用户 dismiss 或被新 run 明确替换。当前 contract 没有 waiting status，不能从 `runningCount` 猜。
+同一个 Engine-owned run 只做四个职责互斥的投影：Timeline 从 persisted activities 去重投影有意义里程碑；Composer 只在 running 或 paused/failed/stopped 且 exact run 可 resume 时保留一条近手控制行；Environment 是当前任务的 latest index；existing right dock 承担 topology/Agent 空间详情、搜索、筛选与 terminal result。四者不得复制状态、timer、Agent list 或 optimistic command state；已包含在 `WorkflowRunState.taskIds` 的 member 继续从 generic background/subagent 摘要排除，同一 child 不重复计数。normal completed 或无可行动恢复后 Composer 退场，Timeline 封存；Environment 将 latest Run 原位冻结为一行 terminal receipt，直到用户收起或被新同类 Run 替换。当前 contract 没有 waiting status，不能从 `runningCount` 猜。
 
 当前 `WorkflowRunState` 只有有序 phases 与 Agent membership，没有 dependency edges，因此 phase map 只画真实 phase-order spine 与 containment，不猜测 Agent 间因果边，也不新增通用 Workflow owner、DAG database 或 editor。4/20/120-Agent fixture 必须同时成立：120-Agent 默认聚合非当前 phase，只展开 current/selected phase 的 bounded children 与搜索命中。宿主 DOM/SVG 与 React Flow read-only grouped-node profile 应用同一 fixture focused bake-off；100+ Agent、pan/zoom/fit、visible-element rendering 或自写 layout/keyboard/viewport 责任任一成立时即可采用通过 proof 的成熟 renderer，explicit Agent edges 不是唯一门。AntV X6 只在一个明确的 React Flow 路由、嵌套或规模失败反例下升级；完整裁决与 proof 见 `omnimind-agent-capability-surface.md`。
 

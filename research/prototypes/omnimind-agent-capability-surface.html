@@ -3,7 +3,7 @@
   <head>
     <meta charset="UTF-8" />
     <meta name="viewport" content="width=device-width, initial-scale=1" />
-    <title>OmniMind · Workflow 四投影原型</title>
+    <title>OmniMind · 动态工作流拓扑与结果原型</title>
     <meta
       name="description"
       content="Reference-only storyboard for one Engine-owned workflow projected into the existing OmniMind Timeline, Composer, Environment and RightDock."
@@ -23,8 +23,10 @@
         --line: #dedfdb;
         --line-soft: #e9eae7;
         --line-strong: #d1d3ce;
-        --shadow: 0 18px 48px rgba(22, 24, 21, 0.11), 0 2px 7px rgba(22, 24, 21, 0.05);
-        --shadow-soft: 0 10px 32px rgba(22, 24, 21, 0.09), 0 1px 4px rgba(22, 24, 21, 0.05);
+        --shadow:
+          0 18px 48px rgba(22, 24, 21, 0.11), 0 2px 7px rgba(22, 24, 21, 0.05);
+        --shadow-soft:
+          0 10px 32px rgba(22, 24, 21, 0.09), 0 1px 4px rgba(22, 24, 21, 0.05);
         --green: #368563;
         --green-soft: #e9f3ed;
         --amber: #a16d28;
@@ -54,7 +56,8 @@
         --line-soft: #2a2e2a;
         --line-strong: #424742;
         --shadow: 0 20px 55px rgba(0, 0, 0, 0.4), 0 2px 8px rgba(0, 0, 0, 0.25);
-        --shadow-soft: 0 13px 36px rgba(0, 0, 0, 0.31), 0 1px 5px rgba(0, 0, 0, 0.2);
+        --shadow-soft:
+          0 13px 36px rgba(0, 0, 0, 0.31), 0 1px 5px rgba(0, 0, 0, 0.2);
         --green: #70b18e;
         --green-soft: #23372b;
         --amber: #d09b55;
@@ -465,7 +468,11 @@
         z-index: 6;
         inset: auto 0 0;
         padding: 0 14px 14px;
-        background: linear-gradient(transparent, var(--shell) 22%, var(--shell));
+        background: linear-gradient(
+          transparent,
+          var(--shell) 22%,
+          var(--shell)
+        );
       }
       .composer-stack {
         width: min(760px, 100%);
@@ -640,6 +647,40 @@
         color: var(--ink-2);
         font-size: 11px;
       }
+      .outcome-summary {
+        min-height: 34px;
+        display: flex;
+        align-items: center;
+        gap: 9px;
+        margin-top: 9px;
+        padding-top: 9px;
+        border-top: 1px solid var(--line-soft);
+        color: var(--ink-2);
+        font-size: 10.5px;
+      }
+      .outcome-summary[hidden] {
+        display: none;
+      }
+      .outcome-summary strong {
+        color: var(--ink);
+        font-weight: 650;
+      }
+      .outcome-summary span {
+        min-width: 0;
+        flex: 1;
+        overflow: hidden;
+        text-overflow: ellipsis;
+        white-space: nowrap;
+      }
+      .outcome-action {
+        height: 27px;
+        padding: 0 8px;
+        border: 1px solid var(--line);
+        border-radius: 7px;
+        background: var(--surface-2);
+        color: var(--ink-2);
+        font-size: 10px;
+      }
       .status-dot {
         width: 6px;
         height: 6px;
@@ -710,7 +751,10 @@
             color-mix(in srgb, var(--green) 5%, transparent),
             transparent 17rem
           ),
-          linear-gradient(color-mix(in srgb, var(--line) 33%, transparent) 1px, transparent 1px),
+          linear-gradient(
+            color-mix(in srgb, var(--line) 33%, transparent) 1px,
+            transparent 1px
+          ),
           linear-gradient(
             90deg,
             color-mix(in srgb, var(--line) 33%, transparent) 1px,
@@ -743,10 +787,35 @@
         stroke: var(--line-strong);
         stroke-width: 1.25;
       }
-      .spine .active-path {
+      .spine marker path {
+        fill: var(--line-strong);
+        stroke: none;
+      }
+      .spine .edge {
+        marker-end: url(#edge-arrow);
+        opacity: 0.72;
+      }
+      .spine .edge.active {
         stroke: color-mix(in srgb, var(--green) 82%, var(--line));
-        stroke-dasharray: 5 7;
+        stroke-dasharray: 4 7;
         animation: flow 5s linear infinite;
+        opacity: 1;
+      }
+      .spine .edge.muted {
+        stroke-dasharray: 2 7;
+        opacity: 0.25;
+      }
+      .spine .edge.retry {
+        stroke: color-mix(in srgb, var(--amber) 62%, var(--line));
+      }
+      .state-completed .spine .edge,
+      .state-failed .spine .edge,
+      .state-stopped .spine .edge,
+      .state-paused .spine .edge {
+        animation: none;
+      }
+      .state-completed .spine .edge.active {
+        stroke-dasharray: none;
       }
       .spine .membership {
         stroke: color-mix(in srgb, var(--green) 46%, var(--line));
@@ -781,63 +850,101 @@
           0 0 0 3px color-mix(in srgb, var(--green) 9%, transparent),
           0 8px 26px rgba(22, 24, 21, 0.07);
       }
-      .phase-copy {
+      .topology-node {
+        width: 132px;
+        min-height: 58px;
+        align-items: center;
+        padding: 9px 10px;
+        border-radius: 12px;
+        box-shadow: 0 5px 18px rgba(22, 24, 21, 0.045);
+      }
+      .topology-node::before {
+        width: 7px;
+        height: 7px;
+        flex: 0 0 7px;
+        border: 1.5px solid var(--ink-3);
+        border-radius: 50%;
+        content: "";
+      }
+      .topology-node.done::before {
+        border-color: var(--green);
+        background: var(--green);
+        box-shadow: inset 0 0 0 2px var(--surface);
+      }
+      .topology-node.current::before {
+        border-color: var(--green);
+        box-shadow: 0 0 0 4px color-mix(in srgb, var(--green) 11%, transparent);
+      }
+      .topology-node.failed::before {
+        border-color: var(--red);
+        background: var(--red);
+        border-radius: 2px;
+      }
+      .topology-node.exception::before {
+        border-color: var(--red);
+        background: var(--red);
+        border-radius: 2px;
+        box-shadow: inset 0 0 0 2px var(--surface);
+      }
+      .topology-node.muted {
+        opacity: 0.42;
+      }
+      .topology-node.node-parallel {
+        width: 168px;
+      }
+      .topology-node.node-decision {
+        width: 92px;
+        min-height: 64px;
+        justify-content: center;
+        border-radius: 24px;
+        text-align: center;
+      }
+      .topology-node.node-loop {
+        border-color: color-mix(in srgb, var(--amber) 38%, var(--line));
+      }
+      .topology-node.node-result {
+        width: 118px;
+        border-color: color-mix(in srgb, var(--green) 42%, var(--line));
+        background: color-mix(in srgb, var(--green-soft) 48%, var(--surface));
+      }
+      .topology-node .node-copy {
         min-width: 0;
         flex: 1;
       }
-      .phase-copy strong {
+      .topology-node .node-copy strong {
         display: block;
-        font-size: 11px;
-        font-weight: 630;
-        white-space: nowrap;
         overflow: hidden;
+        color: var(--ink);
+        font-size: 11px;
+        font-weight: 640;
         text-overflow: ellipsis;
+        white-space: nowrap;
       }
-      .phase-copy span {
+      .topology-node .node-meta {
         display: block;
-        margin-top: 5px;
+        margin-top: 4px;
+        overflow: hidden;
         color: var(--ink-3);
         font-size: 9.5px;
+        text-overflow: ellipsis;
+        white-space: nowrap;
       }
-      .phase-index {
-        color: var(--ink-3);
-        font:
-          9px/1.2 "SFMono-Regular",
-          Consolas,
-          monospace;
+      .node-glyphs {
+        display: flex;
+        align-items: center;
+        margin-left: auto;
+        padding-left: 5px;
       }
-      .p0 {
-        left: 24px;
-        top: 76px;
+      .node-glyphs .agent-glyph {
+        margin-left: -4px;
+        filter: drop-shadow(0 0 1px var(--surface));
       }
-      .p1 {
-        left: 176px;
-        top: 35px;
-      }
-      .p2 {
-        left: 332px;
-        top: 86px;
-      }
-      .p3 {
-        left: 488px;
-        top: 35px;
-      }
-      .p4 {
-        left: 644px;
-        top: 86px;
-      }
-      .p5 {
-        left: 796px;
-        top: 35px;
-        width: 124px;
-      }
-
       .phase-region {
         position: absolute;
-        left: 178px;
-        top: 215px;
-        width: 600px;
-        min-height: 385px;
+        left: 145px;
+        top: 225px;
+        width: 650px;
+        min-height: 365px;
         padding: 14px;
         border: 1px solid color-mix(in srgb, var(--green) 26%, var(--line));
         border-radius: 18px;
@@ -847,7 +954,6 @@
       .region-head {
         display: flex;
         align-items: flex-start;
-        gap: 10px;
         padding-bottom: 11px;
         border-bottom: 1px solid var(--line-soft);
       }
@@ -877,7 +983,7 @@
       }
       .agent-node {
         min-width: 0;
-        min-height: 54px;
+        min-height: 50px;
         display: flex;
         align-items: center;
         gap: 8px;
@@ -912,6 +1018,9 @@
         margin-top: 4px;
         color: var(--ink-3);
         font-size: 9px;
+      }
+      .agent-node[data-status="completed"] .agent-copy span {
+        display: none;
       }
       .region-empty {
         display: none;
@@ -1108,7 +1217,9 @@
   </head>
   <body>
     <svg width="0" height="0" aria-hidden="true" style="position: absolute">
-      <symbol id="i-plus" viewBox="0 0 24 24"><path d="M12 5v14M5 12h14" /></symbol>
+      <symbol id="i-plus" viewBox="0 0 24 24">
+        <path d="M12 5v14M5 12h14" />
+      </symbol>
       <symbol id="i-search" viewBox="0 0 24 24">
         <circle cx="10.5" cy="10.5" r="6" />
         <path d="m15 15 5 5" />
@@ -1117,8 +1228,12 @@
         <rect x="3.5" y="4" width="17" height="16" rx="2" />
         <path d="M15 4v16" />
       </symbol>
-      <symbol id="i-x" viewBox="0 0 24 24"><path d="m6 6 12 12M18 6 6 18" /></symbol>
-      <symbol id="i-folder" viewBox="0 0 24 24"><path d="M3.5 7.5h6l2-2h9v13h-17z" /></symbol>
+      <symbol id="i-x" viewBox="0 0 24 24">
+        <path d="m6 6 12 12M18 6 6 18" />
+      </symbol>
+      <symbol id="i-folder" viewBox="0 0 24 24">
+        <path d="M3.5 7.5h6l2-2h9v13h-17z" />
+      </symbol>
       <symbol id="i-branch" viewBox="0 0 24 24">
         <circle cx="6" cy="5" r="2" />
         <circle cx="18" cy="7" r="2" />
@@ -1128,21 +1243,33 @@
       <symbol id="i-code" viewBox="0 0 24 24">
         <path d="m8 8-4 4 4 4M16 8l4 4-4 4M14 5l-4 14" />
       </symbol>
-      <symbol id="i-check" viewBox="0 0 24 24"><path d="m5 12 4 4 10-10" /></symbol>
-      <symbol id="i-pause" viewBox="0 0 24 24"><path d="M9 6v12M15 6v12" /></symbol>
-      <symbol id="i-play" viewBox="0 0 24 24"><path d="m8 5 11 7-11 7Z" /></symbol>
+      <symbol id="i-check" viewBox="0 0 24 24">
+        <path d="m5 12 4 4 10-10" />
+      </symbol>
+      <symbol id="i-pause" viewBox="0 0 24 24">
+        <path d="M9 6v12M15 6v12" />
+      </symbol>
+      <symbol id="i-play" viewBox="0 0 24 24">
+        <path d="m8 5 11 7-11 7Z" />
+      </symbol>
       <symbol id="i-stop" viewBox="0 0 24 24">
         <rect x="7" y="7" width="10" height="10" rx="1" />
       </symbol>
-      <symbol id="i-up" viewBox="0 0 24 24"><path d="m7 11 5-5 5 5M12 6v12" /></symbol>
-      <symbol id="i-chevron" viewBox="0 0 24 24"><path d="m9 10 3 3 3-3" /></symbol>
+      <symbol id="i-up" viewBox="0 0 24 24">
+        <path d="m7 11 5-5 5 5M12 6v12" />
+      </symbol>
+      <symbol id="i-chevron" viewBox="0 0 24 24">
+        <path d="m9 10 3 3 3-3" />
+      </symbol>
       <symbol id="flow-adaptive" viewBox="0 0 24 24">
         <circle cx="5" cy="17" r="2" />
         <circle cx="12" cy="7" r="2" />
         <circle cx="19" cy="17" r="2" />
         <path d="M6.2 15.4 10.8 8.6M13.2 8.6l4.6 6.8M16.8 17H9" />
         <path d="m10.5 15.5-1.5 1.5 1.5 1.5" />
-        <path d="M3.2 10.2 4 8l2.2-.8L4 6.4 3.2 4.2 2.4 6.4.2 7.2l2.2.8.8 2.2Z" />
+        <path
+          d="M3.2 10.2 4 8l2.2-.8L4 6.4 3.2 4.2 2.4 6.4.2 7.2l2.2.8.8 2.2Z"
+        />
       </symbol>
       <!--
         Locked research geometry for the other selected capability glyphs.
@@ -1173,26 +1300,47 @@
       </symbol>
       <symbol id="memory-bookmark" viewBox="0 0 24 24">
         <path d="M6 3.5h12v17l-6-3.6-6 3.6v-17Z" />
-        <path d="M12 7.2 12.8 9l1.8.8-1.8.8-.8 1.8-.8-1.8-1.8-.8 1.8-.8.8-1.8Z" />
+        <path
+          d="M12 7.2 12.8 9l1.8.8-1.8.8-.8 1.8-.8-1.8-1.8-.8 1.8-.8.8-1.8Z"
+        />
       </symbol>
       <symbol id="resume-chat" viewBox="0 0 24 24">
-        <path d="M4 4.5h11A3.5 3.5 0 0 1 18.5 8v4A3.5 3.5 0 0 1 15 15.5H9l-4.5 3v-14Z" />
+        <path
+          d="M4 4.5h11A3.5 3.5 0 0 1 18.5 8v4A3.5 3.5 0 0 1 15 15.5H9l-4.5 3v-14Z"
+        />
         <path d="M11 10h9M17.5 7.5 20 10l-2.5 2.5" />
       </symbol>
     </svg>
 
     <header class="review-bar">
       <div class="review-copy">
-        <strong>Workflow 四投影 · reference only</strong>
-        <span>同一 state/action owner；宿主关系与 100+ Agent 层级评审</span>
+        <strong>动态工作流 · 研究原型</strong>
+        <span>四种结构 · 100+ Agent · 完成态</span>
       </div>
-      <span class="review-note">测试规模</span>
-      <select id="scale" class="review-control" aria-label="Agent 数量">
-        <option value="4">4 Agents</option>
-        <option value="20" selected>20 Agents</option>
-        <option value="120">120 Agents</option>
+      <span class="review-note">结构</span>
+      <select id="pattern" class="review-control" aria-label="工作流结构">
+        <option value="hybrid" selected>混合 · 结果驱动</option>
+        <option value="phase">现有 Claude 阶段</option>
+        <option value="sequence">顺序</option>
+        <option value="parallel">并行</option>
+        <option value="choice">选择</option>
+        <option value="loop">回环</option>
       </select>
-      <button id="advance" class="review-control">推进阶段</button>
+      <span class="review-note">规模</span>
+      <select id="scale" class="review-control" aria-label="Agent 数量">
+        <option value="4">4 Agent</option>
+        <option value="20" selected>20 Agent</option>
+        <option value="120">120 Agent</option>
+      </select>
+      <span class="review-note">状态</span>
+      <select id="run-state" class="review-control" aria-label="工作流状态">
+        <option value="running" selected>运行中</option>
+        <option value="completed">已完成</option>
+        <option value="failed">失败</option>
+        <option value="paused">已暂停</option>
+        <option value="stopped">已停止</option>
+      </select>
+      <button id="advance" class="review-control">推进</button>
       <button id="theme" class="review-control">深色</button>
       <span class="review-spacer"></span>
       <span class="review-note">原型控件不会进入产品</span>
@@ -1202,25 +1350,37 @@
       <div class="app state-running" id="app">
         <aside class="sidebar" aria-label="OmniMind 主导航">
           <div class="brand-row">
-            <img src="../../apps/web/public/brand/omnimind-logo-flat.svg" alt="" /><strong
-              >OmniMind</strong
-            >
+            <img
+              src="../../apps/web/public/brand/omnimind-logo-flat.svg"
+              alt=""
+            /><strong>OmniMind</strong>
           </div>
           <button class="sidebar-action">
-            <svg class="icon icon-sm"><use href="#i-plus" /></svg><span>新建任务</span>
+            <svg class="icon icon-sm"><use href="#i-plus" /></svg
+            ><span>新建任务</span>
           </button>
           <button class="sidebar-action">
-            <svg class="icon icon-sm"><use href="#i-search" /></svg><span>搜索</span>
+            <svg class="icon icon-sm"><use href="#i-search" /></svg
+            ><span>搜索</span>
           </button>
           <div class="sidebar-section">今天</div>
-          <button class="thread-row active"><span>深度 review Agent Core</span></button>
-          <button class="thread-row"><span>Model services composer</span></button>
+          <button class="thread-row active">
+            <span>深度 review Agent Core</span>
+          </button>
+          <button class="thread-row">
+            <span>Model services composer</span>
+          </button>
           <div class="sidebar-section">昨天</div>
-          <button class="thread-row"><span>OmniMind packaged journey</span></button>
-          <button class="thread-row"><span>Engine capability intake</span></button>
+          <button class="thread-row">
+            <span>OmniMind packaged journey</span>
+          </button>
+          <button class="thread-row">
+            <span>Engine capability intake</span>
+          </button>
           <div class="sidebar-footer">
             <button class="sidebar-action">
-              <svg class="icon icon-sm"><use href="#i-folder" /></svg><span>OmniMind</span>
+              <svg class="icon icon-sm"><use href="#i-folder" /></svg
+              ><span>OmniMind</span>
             </button>
           </div>
         </aside>
@@ -1230,10 +1390,15 @@
             <span class="chat-title">深度 review Agent Core 与前端投影</span>
             <span class="header-spacer"></span>
             <button class="header-button">
-              <svg class="icon icon-sm"><use href="#i-folder" /></svg><span>打开位置</span
+              <svg class="icon icon-sm"><use href="#i-folder" /></svg
+              ><span>打开位置</span
               ><svg class="icon icon-sm"><use href="#i-chevron" /></svg>
             </button>
-            <button id="environment-toggle" class="icon-button" aria-label="切换环境信息">
+            <button
+              id="environment-toggle"
+              class="icon-button"
+              aria-label="切换环境信息"
+            >
               <svg class="icon icon-sm"><use href="#i-panel" /></svg>
             </button>
           </header>
@@ -1241,15 +1406,14 @@
           <div class="transcript">
             <article class="message user-row">
               <div class="user-bubble">
-                深度 review 当前 Agent Core，按真实 OmniMind 架构拆分检查；过程别刷过去，我需要知道
-                workflow 在怎么推进。
+                深度 review 当前 Agent Core，按真实 OmniMind
+                架构拆分检查；过程别刷过去，我需要知道 workflow 在怎么推进。
               </div>
             </article>
             <article class="message">
               <div class="assistant-copy">
                 <p>
-                  我会保留现有 owner，并让 Workflow 在对话、Composer、Environment
-                  与右侧详情中各自只承担一个角色。当前进入“前端与可维护性复核”。
+                  保留现有 owner；工作流只投影到对话、Composer、环境与右侧详情。
                 </p>
               </div>
               <div class="activity-stack">
@@ -1257,23 +1421,34 @@
                   <svg class="icon icon-sm"><use href="#i-check" /></svg>
                   <span class="activity-label">已完成架构与运行边界复核</span>
                   <span class="agent-chip"
-                    ><span class="agent-glyph tiny" data-agent="0"></span>Kepler</span
+                    ><span class="agent-glyph tiny" data-agent="0"></span
+                    >Kepler</span
                   >
                   <span class="agent-chip"
-                    ><span class="agent-glyph tiny" data-agent="1"></span>Zeno</span
+                    ><span class="agent-glyph tiny" data-agent="1"></span
+                    >Zeno</span
                   >
                 </div>
                 <button class="activity-row open-workflow" type="button">
                   <svg class="flow-icon"><use href="#flow-adaptive" /></svg>
-                  <span class="activity-label">动态工作流 · 前端与可维护性复核</span>
-                  <span class="activity-detail" id="timeline-progress">阶段 3/5 · 7/20 完成</span>
-                  <span class="activity-arrow">查看流程 ›</span>
+                  <span class="activity-label" id="timeline-label"
+                    >Agent Core 深度复核</span
+                  >
+                  <span class="activity-detail" id="timeline-progress"
+                    >运行中 · 7/20</span
+                  >
+                  <span class="activity-arrow" id="timeline-action"
+                    >查看 ›</span
+                  >
                 </button>
                 <div class="activity-row">
                   <svg class="icon icon-sm"><use href="#i-code" /></svg>
-                  <span class="activity-label">编辑了文档并复核实际组件 owner</span>
+                  <span class="activity-label"
+                    >编辑了文档并复核实际组件 owner</span
+                  >
                   <span class="agent-chip"
-                    ><span class="agent-glyph tiny" data-agent="2"></span>Dewey</span
+                    ><span class="agent-glyph tiny" data-agent="2"></span
+                    >Dewey</span
                   >
                   <span class="activity-detail">已更新</span>
                 </div>
@@ -1285,18 +1460,21 @@
             <div class="environment-title"><span>环境信息</span></div>
             <div class="env-section">
               <button class="env-row">
-                <svg class="icon icon-sm"><use href="#i-code" /></svg><span>变更</span
+                <svg class="icon icon-sm"><use href="#i-code" /></svg
+                ><span>变更</span
                 ><span class="env-trailing"
-                  ><span class="diff-plus">+5,883</span><span class="diff-minus">-1,455</span></span
+                  ><span class="diff-plus">+5,883</span
+                  ><span class="diff-minus">-1,455</span></span
                 >
               </button>
               <button class="env-row">
-                <svg class="icon icon-sm"><use href="#i-folder" /></svg><span>本地</span
-                ><span class="env-trailing">⌄</span>
+                <svg class="icon icon-sm"><use href="#i-folder" /></svg
+                ><span>本地</span><span class="env-trailing">⌄</span>
               </button>
               <button class="env-row">
                 <svg class="icon icon-sm"><use href="#i-branch" /></svg
-                ><span>codex/agent-core-ui-spec</span><span class="env-trailing">⌄</span>
+                ><span>codex/agent-core-ui-spec</span
+                ><span class="env-trailing">⌄</span>
               </button>
             </div>
             <div class="env-section">
@@ -1328,7 +1506,8 @@
               <div class="stack-row">
                 <span class="status-dot"></span>
                 <div class="stack-label">
-                  <strong>第 3/6 步</strong><span>重构四投影合同与 100+ Agent 层级</span>
+                  <strong>第 3/6 步</strong
+                  ><span>重构四投影合同与 100+ Agent 层级</span>
                 </div>
                 <button class="stack-action">展开</button>
               </div>
@@ -1342,7 +1521,11 @@
                 <button class="stack-action" id="pause" aria-label="暂停工作流">
                   <svg class="icon icon-sm"><use href="#i-pause" /></svg>
                 </button>
-                <button class="stack-action danger" id="stop" aria-label="停止工作流">
+                <button
+                  class="stack-action danger"
+                  id="stop"
+                  aria-label="停止工作流"
+                >
                   <svg class="icon icon-sm"><use href="#i-stop" /></svg>
                 </button>
               </div>
@@ -1364,22 +1547,32 @@
         <aside class="dock" aria-label="动态工作流详情">
           <div class="dock-tabs">
             <div class="dock-tab">
-              <svg class="flow-icon"><use href="#flow-adaptive" /></svg><span>动态工作流</span>
+              <svg class="flow-icon"><use href="#flow-adaptive" /></svg
+              ><span>动态工作流</span>
             </div>
-            <button id="close-dock" class="icon-button" aria-label="关闭右侧详情">
+            <button
+              id="close-dock"
+              class="icon-button"
+              aria-label="关闭右侧详情"
+            >
               <svg class="icon icon-sm"><use href="#i-x" /></svg>
             </button>
           </div>
           <div class="dock-hero">
             <div class="dock-title-row">
-              <svg class="flow-icon"><use href="#flow-adaptive" /></svg>
               <h1>Agent Core 深度复核</h1>
-              <span class="origin">Claude Code 原生</span>
+              <span class="origin" id="dock-origin">OmniMind Agent</span>
             </div>
             <div class="dock-summary">
               <span class="status-dot"></span
-              ><span id="dock-status">运行中 · 前端与可维护性复核</span
-              ><span id="dock-count">7 / 20 Agents 完成</span><span>12:48</span>
+              ><span id="dock-status">运行中 · 取舍</span
+              ><span id="dock-count">7/20</span
+              ><span id="dock-time">12:48</span>
+            </div>
+            <div class="outcome-summary" id="outcome-summary" hidden>
+              <strong id="outcome-title">已完成</strong>
+              <span id="outcome-copy">架构复核已完成；2 个 Agent 失败。</span>
+              <button type="button" class="outcome-action">查看更改</button>
             </div>
           </div>
           <div class="dock-tools">
@@ -1390,26 +1583,30 @@
             <button class="filter active" data-filter="all">全部</button>
             <button class="filter" data-filter="running">运行中</button>
             <button class="filter" data-filter="failed">失败</button>
-            <button class="filter" data-filter="queued">排队</button>
+            <button class="filter" data-filter="queued">等待</button>
           </div>
           <div class="map-scroll">
             <div class="map-canvas" id="map-canvas">
-              <div class="map-caption">PHASE OVERVIEW · 点击阶段展开成员</div>
+              <div class="map-caption" id="map-caption">实际轨迹</div>
               <svg
                 class="spine"
                 viewBox="0 0 940 660"
                 preserveAspectRatio="none"
                 aria-hidden="true"
               >
-                <path
-                  id="full-spine"
-                  d="M95 106 C135 106 142 65 176 65 S292 65 332 116 S448 116 488 65 S604 65 644 116 S760 116 796 65"
-                />
-                <path
-                  class="active-path"
-                  id="active-spine"
-                  d="M95 106 C135 106 142 65 176 65 S292 65 332 116"
-                />
+                <defs>
+                  <marker
+                    id="edge-arrow"
+                    markerWidth="7"
+                    markerHeight="7"
+                    refX="6"
+                    refY="3.5"
+                    orient="auto"
+                  >
+                    <path d="M0 0 7 3.5 0 7Z" />
+                  </marker>
+                </defs>
+                <g id="topology-edges"></g>
                 <path
                   class="membership"
                   id="membership-line"
@@ -1419,17 +1616,18 @@
               <div id="phase-nodes"></div>
               <section class="phase-region" id="phase-region">
                 <div class="region-head">
-                  <svg class="flow-icon"><use href="#flow-adaptive" /></svg>
                   <div>
-                    <h2 id="region-title">前端与可维护性复核</h2>
-                    <p id="region-subtitle">当前阶段 · 成员归属，不表示 Agent 因果边</p>
+                    <h2 id="region-title">并行复核</h2>
+                    <p id="region-subtitle">运行中 · 3/11</p>
                   </div>
-                  <span class="region-count" id="region-count">7 agents</span>
+                  <span class="region-count" id="region-count">11 Agent</span>
                 </div>
                 <div class="agent-grid" id="agent-grid"></div>
-                <div class="region-empty" id="region-empty">没有匹配的 Agent</div>
+                <div class="region-empty" id="region-empty">
+                  没有匹配的 Agent
+                </div>
                 <div class="region-foot">
-                  <span>默认只展开当前/选中阶段；其余阶段保持聚合。</span
+                  <span id="region-foot-copy">其余分组保持聚合。</span
                   ><button class="show-more" id="show-more">显示更多</button>
                 </div>
               </section>
@@ -1437,7 +1635,11 @@
                 <div class="agent-detail-head">
                   <span class="agent-glyph" id="detail-glyph"></span
                   ><strong id="detail-name">Agent</strong
-                  ><button class="icon-button" id="close-detail" aria-label="关闭 Agent 详情">
+                  ><button
+                    class="icon-button"
+                    id="close-detail"
+                    aria-label="关闭 Agent 详情"
+                  >
                     <svg class="icon icon-sm"><use href="#i-x" /></svg>
                   </button>
                 </div>
@@ -1445,8 +1647,12 @@
                 <div class="detail-row">
                   <span>状态</span><span id="detail-status">运行中</span>
                 </div>
-                <div class="detail-row"><span>模型</span><span>Claude Sonnet 4.5</span></div>
-                <div class="detail-row"><span>最近工具</span><span>Read · rg · test</span></div>
+                <div class="detail-row">
+                  <span>模型</span><span>Claude Sonnet 4.5</span>
+                </div>
+                <div class="detail-row">
+                  <span>最近工具</span><span>Read · rg · test</span>
+                </div>
                 <button class="open-thread">打开子任务</button>
               </aside>
             </div>
@@ -1534,7 +1740,9 @@
           "Agent detail",
         ];
         var app = document.getElementById("app");
+        var pattern = document.getElementById("pattern");
         var scale = document.getElementById("scale");
+        var stateSelect = document.getElementById("run-state");
         var phaseNodes = document.getElementById("phase-nodes");
         var agentGrid = document.getElementById("agent-grid");
         var agentSearch = document.getElementById("agent-search");
@@ -1543,10 +1751,179 @@
         var currentPhase = 2;
         var state = "running";
         var expanded = false;
-        var distributions = {
-          4: [1, 2, 1],
-          20: [3, 4, 7, 4, 2],
-          120: [12, 22, 34, 26, 18, 8],
+        var workflowTemplates = {
+          sequence: {
+            name: "顺序",
+            origin: "OmniMind Agent",
+            nodes: [
+              { id: "scope", label: "界定", x: 28, y: 68, order: 0 },
+              { id: "research", label: "研究", x: 198, y: 68, order: 1 },
+              { id: "design", label: "设计", x: 368, y: 68, order: 2 },
+              { id: "verify", label: "验证", x: 538, y: 68, order: 3 },
+              {
+                id: "result",
+                label: "结果",
+                x: 718,
+                y: 68,
+                order: 4,
+                kind: "result",
+              },
+            ],
+            edges: [
+              ["scope", "research", "next"],
+              ["research", "design", "next"],
+              ["design", "verify", "next"],
+              ["verify", "result", "next"],
+            ],
+          },
+          parallel: {
+            name: "并行",
+            origin: "OmniMind Agent",
+            nodes: [
+              { id: "plan", label: "拆解", x: 42, y: 68, order: 0 },
+              {
+                id: "workers",
+                label: "并行复核",
+                x: 230,
+                y: 48,
+                order: 1,
+                kind: "parallel",
+              },
+              { id: "join", label: "汇合", x: 472, y: 68, order: 2 },
+              {
+                id: "result",
+                label: "结果",
+                x: 700,
+                y: 68,
+                order: 3,
+                kind: "result",
+              },
+            ],
+            edges: [
+              ["plan", "workers", "dispatch"],
+              ["workers", "join", "join"],
+              ["join", "result", "next"],
+            ],
+          },
+          choice: {
+            name: "选择",
+            origin: "OmniMind Agent",
+            nodes: [
+              { id: "evidence", label: "证据", x: 22, y: 76, order: 0 },
+              {
+                id: "choice",
+                label: "取舍",
+                x: 190,
+                y: 73,
+                order: 1,
+                kind: "decision",
+              },
+              { id: "route-a", label: "路径 A", x: 348, y: 28, order: 2 },
+              {
+                id: "route-b",
+                label: "路径 B",
+                x: 348,
+                y: 128,
+                order: 2,
+                muted: true,
+              },
+              { id: "verify", label: "验证", x: 548, y: 76, order: 3 },
+              {
+                id: "result",
+                label: "结果",
+                x: 748,
+                y: 76,
+                order: 4,
+                kind: "result",
+              },
+            ],
+            edges: [
+              ["evidence", "choice", "next"],
+              ["choice", "route-a", "selected"],
+              ["choice", "route-b", "selected", true],
+              ["route-a", "verify", "next"],
+              ["route-b", "verify", "next", true],
+              ["verify", "result", "next"],
+            ],
+          },
+          loop: {
+            name: "回环",
+            origin: "OmniMind Agent",
+            nodes: [
+              { id: "draft", label: "草案", x: 55, y: 76, order: 0 },
+              {
+                id: "review",
+                label: "评审",
+                x: 290,
+                y: 35,
+                order: 1,
+                kind: "loop",
+              },
+              { id: "revise", label: "修订", x: 490, y: 125, order: 2 },
+              {
+                id: "result",
+                label: "结果",
+                x: 745,
+                y: 76,
+                order: 3,
+                kind: "result",
+              },
+            ],
+            edges: [
+              ["draft", "review", "next"],
+              ["review", "revise", "selected"],
+              ["revise", "review", "retry"],
+              ["review", "result", "selected"],
+            ],
+          },
+          hybrid: {
+            name: "混合",
+            origin: "OmniMind Agent",
+            nodes: [
+              { id: "scope", label: "界定", x: 20, y: 76, order: 0 },
+              {
+                id: "workers",
+                label: "并行复核",
+                x: 174,
+                y: 35,
+                order: 1,
+                kind: "parallel",
+              },
+              {
+                id: "choice",
+                label: "取舍",
+                x: 380,
+                y: 73,
+                order: 2,
+                kind: "decision",
+              },
+              { id: "verify", label: "验证", x: 500, y: 35, order: 3 },
+              {
+                id: "review",
+                label: "复核",
+                x: 652,
+                y: 86,
+                order: 4,
+                kind: "loop",
+              },
+              {
+                id: "result",
+                label: "结果",
+                x: 810,
+                y: 35,
+                order: 5,
+                kind: "result",
+              },
+            ],
+            edges: [
+              ["scope", "workers", "dispatch"],
+              ["workers", "choice", "join"],
+              ["choice", "verify", "selected"],
+              ["verify", "review", "next"],
+              ["review", "verify", "retry"],
+              ["review", "result", "selected"],
+            ],
+          },
         };
 
         function iconUrl(index) {
@@ -1565,99 +1942,265 @@
             decorateGlyph(el, Number(el.getAttribute("data-agent")) || 0);
           });
         }
-        function countsFor(size) {
-          return distributions[size];
+        function phaseTemplate() {
+          var size = Number(scale.value);
+          var count = size === 4 ? 3 : size === 20 ? 5 : 6;
+          var gap = count > 1 ? 780 / (count - 1) : 0;
+          var nodes = [];
+          var edges = [];
+          for (var i = 0; i < count; i += 1) {
+            nodes.push({
+              id: "phase-" + i,
+              label: phaseNames[i],
+              x: 22 + Math.round(i * gap),
+              y: i % 2 === 0 ? 76 : 35,
+              order: i,
+            });
+            if (i > 0) edges.push(["phase-" + (i - 1), "phase-" + i, "next"]);
+          }
+          return {
+            name: "阶段",
+            origin: "Claude Code 原生",
+            nodes: nodes,
+            edges: edges,
+          };
+        }
+        function activeTemplate() {
+          return pattern.value === "phase"
+            ? phaseTemplate()
+            : workflowTemplates[pattern.value];
+        }
+        function maxOrder(template) {
+          return template.nodes.reduce(function (max, node) {
+            return Math.max(max, node.order);
+          }, 0);
+        }
+        function countsFor(size, template) {
+          var counts = new Array(template.nodes.length).fill(0);
+          var weighted = template.nodes
+            .map(function (node, index) {
+              var weight = node.muted
+                ? 0
+                : node.kind === "result"
+                  ? 0
+                  : node.kind === "parallel"
+                    ? 4
+                    : node.kind === "loop"
+                      ? 2
+                      : 1;
+              return { index: index, weight: weight };
+            })
+            .filter(function (entry) {
+              return entry.weight > 0;
+            });
+          var totalWeight = weighted.reduce(function (sum, entry) {
+            return sum + entry.weight;
+          }, 0);
+          var assigned = 0;
+          weighted.forEach(function (entry) {
+            counts[entry.index] = Math.floor(
+              (size * entry.weight) / totalWeight,
+            );
+            assigned += counts[entry.index];
+          });
+          for (var i = 0; assigned < size; i += 1, assigned += 1) {
+            counts[weighted[i % weighted.length].index] += 1;
+          }
+          return counts;
         }
         function doneCount(size) {
-          var counts = countsFor(size);
-          var done = 0;
-          counts.forEach(function (count, index) {
-            if (index < currentPhase) done += count;
-            if (index === currentPhase) done += Math.max(1, Math.floor(count * 0.34));
-          });
-          return state === "completed" ? size : done;
+          if (state === "completed") return size;
+          var template = activeTemplate();
+          var counts = countsFor(size, template);
+          return counts.reduce(function (done, count, index) {
+            var node = template.nodes[index];
+            if (node.muted) return done;
+            if (node.order < currentPhase) return done + count;
+            if (node.order === currentPhase)
+              return done + Math.floor(count * 0.42);
+            return done;
+          }, 0);
         }
-        function statusFor(phaseIndex, localIndex) {
-          if (state === "stopped") return localIndex % 5 === 0 ? "failed" : "queued";
-          if (state === "completed" || phaseIndex < currentPhase) return "completed";
-          if (phaseIndex > currentPhase) return "queued";
-          if (state === "paused") return localIndex % 3 === 0 ? "completed" : "paused";
+        function statusFor(groupIndex, localIndex) {
+          var template = activeTemplate();
+          var node = template.nodes[groupIndex];
+          if (node.muted) return "queued";
+          if (state === "completed") {
+            var exceptionTarget = Math.max(0, maxOrder(template) - 1);
+            if (
+              Number(scale.value) > 4 &&
+              node.order === exceptionTarget &&
+              localIndex < 2
+            )
+              return "failed";
+            return "completed";
+          }
+          if (node.order < currentPhase) return "completed";
+          if (node.order > currentPhase) return "queued";
+          if (state === "failed")
+            return localIndex % 3 === 0 ? "failed" : "completed";
+          if (state === "stopped")
+            return localIndex % 5 === 0 ? "failed" : "queued";
+          if (state === "paused")
+            return localIndex % 3 === 0 ? "completed" : "paused";
           if (localIndex % 11 === 0 && localIndex > 0) return "failed";
           if (localIndex % 4 === 0) return "completed";
           return "running";
+        }
+        function exceptionsForGroup(groupIndex, count) {
+          var failures = 0;
+          for (var i = 0; i < count; i += 1) {
+            if (statusFor(groupIndex, i) === "failed") failures += 1;
+          }
+          return failures;
         }
         function statusLabel(status) {
           return {
             running: "运行中",
             completed: "已完成",
             failed: "失败",
-            queued: "排队中",
+            queued: "等待",
             paused: "已暂停",
           }[status];
         }
-        function phaseStatus(index) {
-          if (state === "completed" || index < currentPhase) return "已完成";
-          if (index === currentPhase)
-            return state === "paused" ? "已暂停" : state === "stopped" ? "已停止" : "运行中";
-          return "等待中";
+        function nodeWidth(node) {
+          if (node.kind === "parallel") return 168;
+          if (node.kind === "decision") return 92;
+          if (node.kind === "result") return 118;
+          return 132;
         }
-        function phasePosition(index) {
-          return "p" + index;
+        function nodeState(node) {
+          if (node.muted) return "muted";
+          if (state === "completed" || node.order < currentPhase) return "done";
+          if (node.order > currentPhase) return "waiting";
+          if (state === "failed") return "failed";
+          return "current";
         }
-        function updateSpines(count) {
-          var centers = [
-            [95, 106],
-            [247, 65],
-            [403, 116],
-            [559, 65],
-            [715, 116],
-            [858, 65],
-          ];
-          var fullByCount = {
-            3: "M95 106 C135 106 142 65 176 65 S292 65 332 116",
-            5: "M95 106 C135 106 142 65 176 65 S292 65 332 116 S448 116 488 65 S604 65 644 116",
-            6: "M95 106 C135 106 142 65 176 65 S292 65 332 116 S448 116 488 65 S604 65 644 116 S760 116 796 65",
-          };
-          var activeByPhase = [
-            "M95 106",
-            "M95 106 C135 106 142 65 176 65",
-            "M95 106 C135 106 142 65 176 65 S292 65 332 116",
-            "M95 106 C135 106 142 65 176 65 S292 65 332 116 S448 116 488 65",
-            "M95 106 C135 106 142 65 176 65 S292 65 332 116 S448 116 488 65 S604 65 644 116",
-            "M95 106 C135 106 142 65 176 65 S292 65 332 116 S448 116 488 65 S604 65 644 116 S760 116 796 65",
-          ];
-          document.getElementById("full-spine").setAttribute("d", fullByCount[count]);
-          document
-            .getElementById("active-spine")
-            .setAttribute("d", activeByPhase[Math.min(currentPhase, count - 1)]);
-          var selected = centers[Math.min(selectedPhase, centers.length - 1)];
-          var startY = selected[1] + 32;
-          document
-            .getElementById("membership-line")
-            .setAttribute(
-              "d",
-              "M" + selected[0] + " " + startY + " C" + selected[0] + " 182 478 180 478 215",
+        function nodeStateLabel(node) {
+          var value = nodeState(node);
+          if (value === "done") return "已完成";
+          if (value === "failed") return "失败";
+          if (value === "muted") return "未选择";
+          if (value === "waiting") return "等待";
+          return state === "paused"
+            ? "已暂停"
+            : state === "stopped"
+              ? "已停止"
+              : "运行中";
+        }
+        function edgePath(from, to) {
+          var fromX = from.x + nodeWidth(from);
+          var fromY = from.y + 29;
+          var toX = to.x;
+          var toY = to.y + 29;
+          if (toX < fromX) {
+            return (
+              "M" +
+              (from.x + nodeWidth(from) / 2) +
+              " " +
+              from.y +
+              " C" +
+              (from.x + 42) +
+              " " +
+              (from.y - 55) +
+              " " +
+              (to.x + 90) +
+              " " +
+              (to.y - 55) +
+              " " +
+              (to.x + nodeWidth(to) / 2) +
+              " " +
+              to.y
             );
+          }
+          var bend = Math.max(30, (toX - fromX) * 0.52);
+          return (
+            "M" +
+            fromX +
+            " " +
+            fromY +
+            " C" +
+            (fromX + bend) +
+            " " +
+            fromY +
+            " " +
+            (toX - bend) +
+            " " +
+            toY +
+            " " +
+            toX +
+            " " +
+            toY
+          );
+        }
+        function renderEdges(template) {
+          var group = document.getElementById("topology-edges");
+          group.innerHTML = "";
+          template.edges.forEach(function (edge) {
+            var from = template.nodes.find(function (node) {
+              return node.id === edge[0];
+            });
+            var to = template.nodes.find(function (node) {
+              return node.id === edge[1];
+            });
+            var muted = edge[3] === true;
+            var reached =
+              state === "completed" ||
+              (from.order <= currentPhase && to.order <= currentPhase) ||
+              (edge[2] === "retry" && currentPhase >= from.order);
+            var path = document.createElementNS(
+              "http://www.w3.org/2000/svg",
+              "path",
+            );
+            path.setAttribute("d", edgePath(from, to));
+            path.setAttribute(
+              "class",
+              "edge " + edge[2] + (muted ? " muted" : reached ? " active" : ""),
+            );
+            group.appendChild(path);
+          });
         }
         function renderPhases() {
           var size = Number(scale.value);
-          var counts = countsFor(size);
+          var template = activeTemplate();
+          var counts = countsFor(size, template);
           phaseNodes.innerHTML = "";
-          counts.forEach(function (count, index) {
+          template.nodes.forEach(function (node, index) {
+            var count = counts[index];
             var button = document.createElement("button");
+            var exceptions = exceptionsForGroup(index, count);
             button.className =
-              "phase-node " + phasePosition(index) + (index === selectedPhase ? " selected" : "");
+              "phase-node topology-node " +
+              "node-" +
+              (node.kind || "step") +
+              " " +
+              nodeState(node) +
+              (exceptions > 0 ? " exception" : "") +
+              (index === selectedPhase ? " selected" : "");
             button.type = "button";
+            button.style.left = node.x + "px";
+            button.style.top = node.y + "px";
+            button.setAttribute(
+              "aria-label",
+              node.label + "，" + nodeStateLabel(node),
+            );
+            var meta = node.muted
+              ? "未选择"
+              : state === "completed" && exceptions > 0
+                ? exceptions + " 失败"
+                : node.kind === "loop" && state === "completed"
+                  ? "2 轮"
+                  : node.order === currentPhase && state !== "completed"
+                    ? Math.floor(count * 0.42) + "/" + count
+                    : count > 0
+                      ? count + " Agent"
+                      : "";
             button.innerHTML =
-              '<span class="phase-index">0' +
-              (index + 1) +
-              '</span><span class="phase-copy"><strong>' +
-              phaseNames[index] +
-              "</strong><span>" +
-              phaseStatus(index) +
-              " · " +
-              count +
-              " Agents</span></span>";
+              '<span class="node-copy"><strong>' +
+              node.label +
+              '</strong><span class="node-meta">' +
+              meta +
+              "</span></span>";
             button.addEventListener("click", function () {
               selectedPhase = index;
               expanded = false;
@@ -1665,31 +2208,68 @@
             });
             phaseNodes.appendChild(button);
           });
-          updateSpines(counts.length);
+          renderEdges(template);
+          var selected = template.nodes[selectedPhase];
+          var selectedCount = counts[selectedPhase];
+          var center = selected.x + nodeWidth(selected) / 2;
+          var startY = selected.y + 58;
+          var membership = document.getElementById("membership-line");
+          membership.style.display =
+            selected.kind === "result" || selectedCount === 0
+              ? "none"
+              : "block";
+          membership.setAttribute(
+            "d",
+            "M" +
+              center +
+              " " +
+              startY +
+              " C" +
+              center +
+              " 188 470 188 470 225",
+          );
         }
-        function makeAgent(index, phaseIndex, localIndex) {
-          var status = statusFor(phaseIndex, localIndex);
+        function makeAgent(index, groupIndex, localIndex) {
+          var status = statusFor(groupIndex, localIndex);
           var name =
             agentNames[index % agentNames.length] +
-            (index >= agentNames.length ? " " + (Math.floor(index / agentNames.length) + 1) : "");
-          return { index: index, name: name, status: status, phase: phaseIndex };
+            (index >= agentNames.length
+              ? " " + (Math.floor(index / agentNames.length) + 1)
+              : "");
+          return {
+            index: index,
+            name: name,
+            status: status,
+            group: groupIndex,
+          };
         }
-        function agentsForPhase(size, phaseIndex) {
-          var counts = countsFor(size);
+        function agentsForPhase(size, groupIndex) {
+          var counts = countsFor(size, activeTemplate());
           var start = 0;
-          for (var i = 0; i < phaseIndex; i += 1) start += counts[i];
+          for (var i = 0; i < groupIndex; i += 1) start += counts[i];
           var agents = [];
-          for (var j = 0; j < counts[phaseIndex]; j += 1)
-            agents.push(makeAgent(start + j, phaseIndex, j));
+          for (var j = 0; j < counts[groupIndex]; j += 1)
+            agents.push(makeAgent(start + j, groupIndex, j));
           return agents;
         }
         function renderAgents() {
           var size = Number(scale.value);
+          var selected = activeTemplate().nodes[selectedPhase];
+          var region = document.getElementById("phase-region");
+          region.style.display = selected.kind === "result" ? "none" : "block";
+          if (selected.kind === "result") {
+            agentGrid.innerHTML = "";
+            return;
+          }
           var agents = agentsForPhase(size, selectedPhase);
           var query = agentSearch.value.trim().toLowerCase();
           var matching = agents.filter(function (agent) {
-            var statusMatch = currentFilter === "all" || agent.status === currentFilter;
-            return statusMatch && (!query || agent.name.toLowerCase().indexOf(query) >= 0);
+            var statusMatch =
+              currentFilter === "all" || agent.status === currentFilter;
+            return (
+              statusMatch &&
+              (!query || agent.name.toLowerCase().indexOf(query) >= 0)
+            );
           });
           var limit = expanded ? 24 : size >= 120 ? 12 : 12;
           agentGrid.innerHTML = "";
@@ -1708,7 +2288,7 @@
               agent.name +
               "</strong><span>" +
               statusLabel(agent.status) +
-              " · Claude Sonnet 4.5</span>";
+              "</span>";
             button.appendChild(glyph);
             button.appendChild(copy);
             button.addEventListener("click", function () {
@@ -1720,22 +2300,38 @@
             .getElementById("region-empty")
             .classList.toggle("visible", matching.length === 0);
           document.getElementById("region-count").textContent =
-            agents.length + " agents · " + matching.length + " 匹配";
+            query || currentFilter !== "all"
+              ? matching.length + "/" + agents.length
+              : agents.length + " Agent";
           var more = document.getElementById("show-more");
           more.hidden = matching.length <= 12;
           more.textContent = expanded
             ? "收起"
             : "再显示 " + Math.min(12, matching.length - 12) + " 个";
-          document.getElementById("region-title").textContent = phaseNames[selectedPhase];
+          var selectedDone = agents.filter(function (agent) {
+            return agent.status === "completed";
+          }).length;
+          document.getElementById("region-title").textContent = selected.label;
           document.getElementById("region-subtitle").textContent =
-            (selectedPhase === currentPhase ? "当前阶段" : "选中阶段") +
-            " · 成员归属，不表示 Agent 因果边";
+            selected.muted
+              ? "未选择"
+              : selected.order === currentPhase && state !== "completed"
+                ? nodeStateLabel(selected) +
+                  " · " +
+                  selectedDone +
+                  "/" +
+                  agents.length
+                : nodeStateLabel(selected);
+          document.getElementById("region-foot-copy").textContent =
+            "其余分组保持聚合。";
         }
         function openAgent(agent) {
           var detail = document.getElementById("agent-detail");
           detail.classList.remove("hidden");
           document.getElementById("detail-name").textContent = agent.name;
-          document.getElementById("detail-status").textContent = statusLabel(agent.status);
+          document.getElementById("detail-status").textContent = statusLabel(
+            agent.status,
+          );
           decorateGlyph(document.getElementById("detail-glyph"), agent.index);
         }
         function renderClusters() {
@@ -1757,55 +2353,91 @@
         }
         function renderProgress() {
           var size = Number(scale.value);
+          var template = activeTemplate();
           var done = doneCount(size);
-          var phaseTotal = countsFor(size).length;
+          var currentNode =
+            template.nodes.find(function (node) {
+              return node.order === currentPhase && !node.muted;
+            }) || template.nodes[template.nodes.length - 1];
           var stateText =
             state === "paused"
               ? "已暂停"
               : state === "stopped"
                 ? "已停止"
-                : state === "completed"
-                  ? "已完成"
-                  : "运行中";
+                : state === "failed"
+                  ? "失败"
+                  : state === "completed"
+                    ? "已完成"
+                    : "运行中";
+          var exceptionCount = 0;
+          countsFor(size, template).forEach(function (count, index) {
+            exceptionCount += exceptionsForGroup(index, count);
+          });
           document.getElementById("timeline-progress").textContent =
-            state === "running"
-              ? "阶段 " +
-                (currentPhase + 1) +
-                "/" +
-                phaseTotal +
-                " · " +
-                done +
-                "/" +
+            state === "completed"
+              ? "已完成 · " +
                 size +
-                " 完成"
-              : stateText + " · " + done + "/" + size + " 完成";
+                " Agent" +
+                (exceptionCount ? " · " + exceptionCount + " 失败" : "")
+              : stateText + " · " + done + "/" + size;
+          document.getElementById("timeline-action").textContent =
+            state === "completed" || state === "failed" || state === "stopped"
+              ? "结果 ›"
+              : "查看 ›";
           document.getElementById("composer-progress").textContent =
-            phaseNames[currentPhase] + " · " + done + "/" + size;
-          document.getElementById("env-count").textContent = stateText + " · " + done + "/" + size;
-          document.getElementById("dock-count").textContent = done + " / " + size + " Agents 完成";
+            currentNode.label + " · " + done + "/" + size;
+          document.getElementById("env-count").textContent =
+            stateText + " · " + done + "/" + size;
+          document.getElementById("dock-count").textContent = done + "/" + size;
           document.getElementById("dock-status").textContent =
-            stateText + " · " + phaseNames[currentPhase];
+            stateText + " · " + currentNode.label;
+          document.getElementById("dock-origin").textContent = template.origin;
+          document.getElementById("map-caption").textContent =
+            pattern.value === "phase" ? "阶段" : "实际轨迹";
           document.getElementById("workflow-control").style.display =
             state === "completed" ? "none" : "flex";
-          document.querySelector(".composer").classList.toggle("no-stack", false);
+          var outcome = document.getElementById("outcome-summary");
+          var showOutcome =
+            state === "completed" || state === "failed" || state === "stopped";
+          outcome.hidden = !showOutcome;
+          if (showOutcome) {
+            document.getElementById("outcome-title").textContent = stateText;
+            document.getElementById("outcome-copy").textContent =
+              state === "completed"
+                ? exceptionCount
+                  ? exceptionCount + " 个 Agent 失败。"
+                  : "复核完成。"
+                : state === "failed"
+                  ? currentNode.label + " 未通过。"
+                  : "停止于" + currentNode.label + "。";
+            document.querySelector(".outcome-action").textContent =
+              state === "completed" ? "查看更改" : "查看失败";
+          }
           var pause = document.getElementById("pause");
           pause.setAttribute(
             "aria-label",
-            state === "paused" || state === "stopped" ? "继续工作流" : "暂停工作流",
+            state === "paused" || state === "stopped" || state === "failed"
+              ? "继续工作流"
+              : "暂停工作流",
           );
           pause.innerHTML =
-            state === "paused" || state === "stopped"
+            state === "paused" || state === "stopped" || state === "failed"
               ? '<svg class="icon icon-sm"><use href="#i-play" /></svg>'
               : '<svg class="icon icon-sm"><use href="#i-pause" /></svg>';
           document.getElementById("stop").style.display =
-            state === "stopped" ? "none" : "inline-flex";
+            state === "stopped" || state === "failed" ? "none" : "inline-flex";
           app.className =
-            "app state-" + state + (app.classList.contains("dock-closed") ? " dock-closed" : "");
+            "app state-" +
+            state +
+            (app.classList.contains("dock-closed") ? " dock-closed" : "");
         }
         function renderAll() {
           var size = Number(scale.value);
-          if (selectedPhase >= countsFor(size).length) selectedPhase = countsFor(size).length - 1;
-          if (currentPhase >= countsFor(size).length) currentPhase = countsFor(size).length - 1;
+          var template = activeTemplate();
+          if (selectedPhase >= template.nodes.length)
+            selectedPhase = template.nodes.length - 1;
+          if (currentPhase > maxOrder(template))
+            currentPhase = maxOrder(template);
           renderPhases();
           renderAgents();
           renderClusters();
@@ -1818,37 +2450,63 @@
             app.classList.remove("dock-closed");
           });
         });
-        document.getElementById("close-dock").addEventListener("click", function () {
-          app.classList.add("dock-closed");
-        });
-        document.getElementById("environment-toggle").addEventListener("click", function () {
-          document.getElementById("environment").classList.toggle("hidden");
-        });
-        document.getElementById("close-detail").addEventListener("click", function () {
-          document.getElementById("agent-detail").classList.add("hidden");
-        });
-        document.getElementById("show-more").addEventListener("click", function () {
-          expanded = !expanded;
-          renderAgents();
-        });
+        document
+          .getElementById("close-dock")
+          .addEventListener("click", function () {
+            app.classList.add("dock-closed");
+          });
+        document
+          .getElementById("environment-toggle")
+          .addEventListener("click", function () {
+            document.getElementById("environment").classList.toggle("hidden");
+          });
+        document
+          .getElementById("close-detail")
+          .addEventListener("click", function () {
+            document.getElementById("agent-detail").classList.add("hidden");
+          });
+        document
+          .getElementById("show-more")
+          .addEventListener("click", function () {
+            expanded = !expanded;
+            renderAgents();
+          });
         document.getElementById("pause").addEventListener("click", function () {
-          state = state === "paused" || state === "stopped" ? "running" : "paused";
+          state =
+            state === "paused" || state === "stopped" || state === "failed"
+              ? "running"
+              : "paused";
+          stateSelect.value = state;
           renderAll();
         });
         document.getElementById("stop").addEventListener("click", function () {
           state = "stopped";
+          stateSelect.value = state;
           renderAll();
         });
-        document.getElementById("advance").addEventListener("click", function () {
-          var count = countsFor(Number(scale.value)).length;
-          if (state === "completed" || state === "stopped") {
-            state = "running";
-            currentPhase = 0;
-          } else if (currentPhase < count - 1) currentPhase += 1;
-          else state = "completed";
-          selectedPhase = currentPhase;
-          renderAll();
-        });
+        document
+          .getElementById("advance")
+          .addEventListener("click", function () {
+            var last = maxOrder(activeTemplate());
+            if (
+              state === "completed" ||
+              state === "stopped" ||
+              state === "failed"
+            ) {
+              state = "running";
+              currentPhase = 0;
+            } else if (currentPhase < last) currentPhase += 1;
+            else state = "completed";
+            var template = activeTemplate();
+            selectedPhase = Math.max(
+              0,
+              template.nodes.findIndex(function (node) {
+                return node.order === currentPhase && !node.muted;
+              }),
+            );
+            stateSelect.value = state;
+            renderAll();
+          });
         document.getElementById("theme").addEventListener("click", function () {
           var root = document.documentElement;
           var dark = root.getAttribute("data-theme") === "dark";
@@ -1856,10 +2514,33 @@
           document.getElementById("theme").textContent = dark ? "深色" : "浅色";
         });
         scale.addEventListener("change", function () {
-          currentPhase = Math.min(2, countsFor(Number(scale.value)).length - 1);
-          selectedPhase = currentPhase;
+          currentPhase = Math.min(2, maxOrder(activeTemplate()));
+          selectedPhase = Math.min(2, activeTemplate().nodes.length - 1);
           expanded = false;
           state = "running";
+          stateSelect.value = state;
+          renderAll();
+        });
+        pattern.addEventListener("change", function () {
+          currentPhase = Math.min(2, maxOrder(activeTemplate()));
+          selectedPhase = Math.min(2, activeTemplate().nodes.length - 1);
+          expanded = false;
+          state = "running";
+          stateSelect.value = state;
+          document.getElementById("agent-detail").classList.add("hidden");
+          renderAll();
+        });
+        stateSelect.addEventListener("change", function () {
+          state = stateSelect.value;
+          if (state === "completed") {
+            var template = activeTemplate();
+            var resultIndex = template.nodes.findIndex(function (node) {
+              return node.kind === "result";
+            });
+            currentPhase = maxOrder(template);
+            selectedPhase =
+              resultIndex >= 0 ? resultIndex : template.nodes.length - 1;
+          }
           renderAll();
         });
         agentSearch.addEventListener("input", renderAgents);
