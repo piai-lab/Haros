@@ -7839,6 +7839,67 @@ describe("ChatView timeline estimator parity (full app)", () => {
     }
   });
 
+  it.each(["omnimind", "pi"] as const)(
+    "keeps a no-model Pi terminal rename local when the app default is %s",
+    async (defaultProvider) => {
+      localStorage.setItem(
+        "omnimind:app-settings:v1",
+        JSON.stringify({ defaultProvider }),
+      );
+      const draftThreadId = ThreadId.makeUnsafe(`thread-terminal-pi-rename-${defaultProvider}`);
+      seedLocalDraftThread({
+        threadId: draftThreadId,
+        projectId: PROJECT_ID,
+        entryPoint: "terminal",
+      });
+      useComposerDraftStore.getState().setActiveProviderAndSticky(draftThreadId, "pi");
+
+      const mounted = await mountChatView({
+        viewport: DEFAULT_VIEWPORT,
+        snapshot: createDraftOnlySnapshot(),
+        initialEntry: `/${draftThreadId}`,
+        configureFixture: (nextFixture) => {
+          nextFixture.providerModelsByProvider.pi = {
+            source: "browser.fixture",
+            models: [],
+          };
+        },
+      });
+
+      try {
+        await vi.waitFor(() => {
+          expect(
+            page.getByRole("button", { name: "Change engine. Current: Pi" }).element(),
+          ).toBeTruthy();
+          expect(document.body.textContent).toContain("No available model");
+        });
+
+        const identity = await waitForElement(
+          () => document.querySelector<HTMLElement>('[data-slot="chat-thread-identity"]'),
+          "Unable to find the local terminal identity.",
+        );
+        const title = identity.querySelector<HTMLElement>('[data-slot="chat-thread-title"]');
+        expect(title?.textContent).toBe("New terminal");
+        title?.dispatchEvent(new MouseEvent("dblclick", { bubbles: true }));
+
+        const renameInput = page.getByRole("textbox");
+        await renameInput.fill("Local Pi terminal");
+        await userEvent.keyboard("{Enter}");
+        await waitForLayout();
+
+        expect(hasDispatchedCommandType("thread.create")).toBe(false);
+        expect(hasDispatchedCommandType("thread.meta.update")).toBe(false);
+        expect(useComposerDraftStore.getState().draftThreadsByThreadId[draftThreadId]).toBeDefined();
+        expect(
+          useComposerDraftStore.getState().draftsByThreadId[draftThreadId]?.activeProvider,
+        ).toBe("pi");
+        expect(mounted.router.state.location.pathname).toBe(`/${draftThreadId}`);
+      } finally {
+        await mounted.cleanup();
+      }
+    },
+  );
+
   it("promotes a stored terminal draft using its saved context and model selection", async () => {
     const restoreNativeApi = installDeterministicSendNativeApi();
     const draftThreadId = ThreadId.makeUnsafe("thread-terminal-draft-reuse");

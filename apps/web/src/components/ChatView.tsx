@@ -1838,17 +1838,27 @@ export default function ChatView({
   const localDraftError = serverThread ? null : (localDraftErrorsByThreadId[threadId] ?? null);
   const localDraftThread = useMemo(() => {
     if (!draftThread) return undefined;
-    const defaultProvider = settings.defaultProvider === "pi" ? "codex" : settings.defaultProvider;
+    const desiredProvider =
+      composerDraft.activeProvider ??
+      fallbackDraftProject?.defaultModelSelection?.provider ??
+      settings.defaultProvider;
+    const desiredModelSelection =
+      composerDraft.modelSelectionByProvider[desiredProvider] ??
+      (fallbackDraftProject?.defaultModelSelection?.provider === desiredProvider
+        ? fallbackDraftProject.defaultModelSelection
+        : null);
     return buildLocalDraftThread(
       threadId,
       draftThread,
-      fallbackDraftProject?.defaultModelSelection ?? {
-        provider: defaultProvider,
-        model: getDefaultModel(defaultProvider),
+      desiredModelSelection ?? {
+        provider: desiredProvider,
+        model: getDefaultModel(desiredProvider) ?? "",
       },
       localDraftError,
     );
   }, [
+    composerDraft.activeProvider,
+    composerDraft.modelSelectionByProvider,
     draftThread,
     fallbackDraftProject?.defaultModelSelection,
     localDraftError,
@@ -11118,14 +11128,11 @@ export default function ChatView({
   });
 
   const handleRenameActiveThread = async (newTitle: string) => {
-    const outcome = await dispatchThreadRename({
-      threadId: activeThread.id,
-      newTitle,
-      unchangedTitles: [activeThread.title],
-      createIfMissing: isLocalDraftThread
+    const localDraftPromotion =
+      isLocalDraftThread && selectedModelSelection
         ? {
             projectId: activeThread.projectId,
-            modelSelection: activeThread.modelSelection,
+            modelSelection: selectedModelSelection,
             runtimeMode: activeThread.runtimeMode,
             interactionMode: activeThread.interactionMode,
             envMode: activeThread.envMode ?? "local",
@@ -11137,7 +11144,18 @@ export default function ChatView({
               : {}),
             createdAt: activeThread.createdAt,
           }
-        : undefined,
+        : null;
+    // A local draft is only promotable once the current Composer has an exact,
+    // selectable binding. The synthetic Thread used for presentation is not a
+    // durable model authority.
+    if (isLocalDraftThread && localDraftPromotion === null) {
+      return;
+    }
+    const outcome = await dispatchThreadRename({
+      threadId: activeThread.id,
+      newTitle,
+      unchangedTitles: [activeThread.title],
+      createIfMissing: localDraftPromotion ?? undefined,
     }).catch((error) => {
       toastManager.add({
         type: "error",
