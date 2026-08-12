@@ -235,7 +235,7 @@ E2 + E3 + E4 + E5/E6 required scope
              └── E8  live + packaged exact-SHA proof
 ```
 
-默认优先闭合 `E1 -> E2`，再完成 `E3 -> E4`。原因见设计说明 §12：默认 OmniMind 没有可用模型服务时，漂亮的 Composer selector 仍是空壳。
+默认优先闭合 `E1 -> E2`，再完成 `E3 -> E4`；这是优先级，不是把依赖图改写成数字串行。某一 slice 命中 stop 后，只能进入依赖图中不依赖它的边；因此 E1 stop 不允许 E2，但不阻塞 `E0 -> E3 -> E4`。原因见设计说明 §12：默认 OmniMind 没有可用模型服务时，漂亮的 Composer selector 仍是空壳。
 
 每个切片单独满足：
 
@@ -348,6 +348,9 @@ safe stale/error summary
 - 不把一个全局可变 ModelRuntime 注入所有 Thread；
 - 不触碰 `.pi`；
 - 页面 mount 只读取静态/last-good state，不 `allowNetwork: true`。
+- 同一个 physically-contained、no-follow、hard-byte-bounded、caller-cancellable reader 拥有 config/cache read；禁止 preflight 后让 runtime reopen、含 secret 的临时副本与第二套 `models.json` parser/schema；
+- 被动 mount 不加载/执行 extension；extension provenance 只来自已经由显式 intent scope 加载的 Pi runtime；
+- OAuth 静态 access expiry 只映射 `refresh_required`，不能称 `sign_in_expired`。
 
 ### Web
 
@@ -355,7 +358,7 @@ safe stale/error summary
 
 - title `Model services / 模型服务`；
 - 普通描述使用 `OmniMind`；
-- 已配置/被引用/保存过的服务列表；
+- 已配置/保存过的服务列表；只有 Product State 提供 exact stable service id 时才 join 被引用服务，否则延后到 E3，不从默认模型或 model slug 推导；
 - setup-required、checking、stale/error、empty；
 - 已知/可用模型数量口径；
 - Git writing default 仍在底部作为次级 section。
@@ -365,8 +368,9 @@ safe stale/error summary
 ### Focused proof
 
 - list/get contract schema tests；
-- `.omnimind` exact agentDir tests；
-- `.pi` zero-read/zero-write falsifier；
+- `.omnimind` physical agentDir、directory/leaf symlink fail-closed tests；
+- 隔离 fake `.pi` 的 physical zero-read/zero-write trace falsifier，而不是 lexical mock 断言；
+- oversized `models.json` 与 abort-during-read falsifier；
 - secret redaction tests；
 - `ModelsSettingsPanel` loading/empty/connected/stale/error tests；
 - zh-CN/en key parity。
@@ -931,6 +935,7 @@ fresh launch
 12. packaged journey 使用默认 profile，无法证明 private-home isolation；
 13. UI diff 扩张成 Settings taxonomy 或视觉系统重做；
 14. 同一失败重复且没有新假设。
+15. 锁定 Pi runtime 对 `models.json` 只有 path-based direct reopen，无法注入 physically-contained、bounded、cancellable reader；此时不得 patch vendor、落 secret-bearing temp copy或复制 Pi schema。E1 保持 blocked，可按依赖图转入 E3；E2 仍 gated。
 
 停止后只允许：
 

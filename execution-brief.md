@@ -108,7 +108,11 @@ OmniMind Agent 是内部最深验收路线。stock Pi 与其他 shipped Provider
 
 维护者于 2026-08-12 明确启动 Stage 3 内的 **Model services + Composer Engine/Model/Engine-native options** 纵向工作。当前唯一实施入口是 [`research/model-services-composer-new-session-execution-guide.md`](research/model-services-composer-new-session-execution-guide.md)，产品依据与 source observation 见 [`research/model-services-composer-product-design.md`](research/model-services-composer-product-design.md)；两者只消费本 brief 与 architecture sole owners，不形成第二套状态或全局施工顺序。
 
-本轮严格按指南的 `E0 → E8` 依赖推进：先在 E0 钉住 authority、Queue binding、next-turn selection、failure rollback、Pi intent gate 与无跨 Engine default fallback；再依次闭合 Pi-backed Model services 只读投影、API Key/provider-scoped refresh、稳定 Composer `Engine → Model → native options`、跨 Engine stop-first replacement、OAuth、满足 hard gate 时的 custom provider/多实例、Settings 收口与 exact-SHA live/packaged proof。前一 slice 未形成可证伪的 focused exit 时不得抢跑后一 slice，也不得把 E0–E8 当作并行清单。
+本轮按指南的 E0–E8 依赖图推进：先在 E0 钉住 authority、Queue binding、next-turn selection、failure rollback、Pi intent gate 与无跨 Engine default fallback；每个 slice 只有在自己的 DAG predecessor 已 exit 时才可进入，不能把编号误作无条件串行，也不得把 E0–E8 当作并行清单。
+
+E1 已证实存在锁定 Pi `v0.84.1` public-API blocker：`ModelRuntime` 会 path-based reopen `models.json`，不能注入 physically-contained、no-follow、hard-byte-bounded、caller-cancellable reader。Host pre-read 仍有 TOCTOU；临时副本会复制可能存在的 literal credential/header；自建 parser/schema 会形成第二 authority。被动 mount 也不得执行 extension，Composer/Project reference join 必须等待 E3 的 exact Product State identity。因此 E1 当前只允许 built-in/auth metadata characterization，并在 `models.json` 存在时 typed fail；它未达到完整 Exit，E2 与其下游保持 gated。E1 只在一次独立授权并 adopted 的 Pi loader/source intake 后恢复，不能把 vendor patch 藏进本轮 UI diff。
+
+当前唯一下一动作转为独立分支 `E0 → E3`：以现有 Composer primitives 和 Engine asset registry 落稳定 `context ring → Engine icon → Model → Engine-native options` 结构，并删除 PiAdapter 的静态模型注入与任意 provider-qualified fallback；随后按 E4 的 next-turn/stop-first/failure restore 语义闭环。此转向遵循指南依赖图，不代表 E1 完成或放宽 E2 门槛。
 
 进入门是：`Model services / 模型服务`、普通展示名 `OmniMind`、Pi ModelRuntime authority、`.omnimind/.pi` 隔离和 next-turn/stop-first 语义已在 Workbench、Product State 与 Execution sole owner 中唯一；当前 snapshot 与 Pi stable `v0.84.1` 仍匹配。停止门是任何方案需要第二 Provider/Model Registry、静态供应商能力镜像、通用推理策略、跨 Engine Session continuation、新 switch RPC、未举证的持久化，或在 Pi 没有公开持久 mutation API且没有维护者独立授权时写 custom-provider 配置。
 

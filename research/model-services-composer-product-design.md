@@ -1020,7 +1020,7 @@ serviceId / providerId
 displayName
 origin: builtin | models_json | extension
 authMethods[]: api_key | oauth（含 Pi 提供的 label）
-authStatus: configured + source + safe label
+authStatus: configured | setup_required | refresh_required | unavailable + source + safe label
 knownModelCount / availableModelCount
 supportsNetworkRefresh
 configurableFields（只表示 UI capability，不含值或 secret）
@@ -1029,9 +1029,13 @@ catalogError/stale summary（若 Pi 有真实证据）
 
 不得返回 stored key/token、完整 credential、任意 command 展开结果或未经脱敏的 headers。`ServerProviderStatus` 的 Engine-level `ready/authStatus: unknown` 不能填充这些 service-level 字段。
 
+这里的 `origin` union 是最终 provenance contract，不是允许 Settings mount 执行 extension 的授权。`extension` 只能来自已经由显式 intent scope 加载的 Pi runtime/provenance；被动只读页面不能为了补齐一行而运行第三方 extension。静态发现 OAuth access token 已到期只证明需要 refresh/check，不能证明 refresh token 或登录整体已经失效，因此此时只能投影 `refresh_required`，`sign_in_expired` 保留给 Pi provider-owned auth/refresh 的明确失败证据。
+
 ### 10.7 ModelRuntime 生命周期与持久化
 
 当前 Pi adapter 会按 Session/operation 创建隔离的 ModelRuntime，防止 project extension provider 注册泄漏到其他 Thread。Settings 不能为了方便把一个全局可变 ModelRuntime 注入所有 Session。
+
+被动 Settings operation 还必须以同一个 physically-contained、no-follow、byte-bounded、caller-cancellable reader 完成所有 config/cache 读取，且不加载 extension。Pi `v0.84.1` 的公开 `ModelRuntime`/`ModelConfig` 只接收 `modelsPath`，随后直接重新打开文件，没有 reader/content/max-bytes/signal 注入点；Host 预读无法消除 TOCTOU，临时副本可能复制 literal apiKey/header，自建 parser 又会形成第二 schema authority。因此完整 `models_json` 只读投影在采用独立上游 loader API 前是明确 stop：`modelsPath: null` 的 built-in characterization 不是本 Slice 的 Exit。
 
 建议：
 
@@ -1154,7 +1158,7 @@ Pi 当前没有公开的持久 custom-provider mutation API
 
 - 已有 stored/runtime/environment/models-json auth 的 service；
 - 用户保存过的 custom instance，即使它当前需要修复；
-- 当前 Composer/Project 明确引用但尚未配置的 service，便于解除阻塞。
+- 当前 Composer/Project 通过 Product State owner 给出 exact stable service id、但尚未配置的 service，便于解除阻塞；此 join 在 E3 前不存在时必须延后，不能从 `DEFAULT_MODEL_BY_PROVIDER`、品牌或 model slug 推导。
 
 其余 Pi-supported provider 放在“可连接的服务 / 添加服务”入口中搜索。是否“已连接”必须来自 `getProviderAuthStatus()`/`checkAuth()` 的安全投影，不能只看 auth.json：环境变量、AWS/ADC 等 ambient auth、models.json fallback 都可能令 service 可用。
 
@@ -1176,6 +1180,7 @@ Logo 不是 provider identity 的前提。Pi provider metadata 当前保证 id/n
 已连接 / Connected
 需要配置 / Setup required
 登录已过期 / Sign-in expired
+需要刷新 / Refresh required
 正在检查 / Checking
 目录刷新失败但保留上次结果 / Refresh failed, using last known models
 不可用 / Unavailable
@@ -1577,6 +1582,8 @@ OmniMind 要复制的是 **任务流质量**，不是 Proma 的维护负担。
 4. 保留 Git writing default；
 5. 不做 mutation，先证明真实数据、空态、错误和隔离。
 
+锁定 Pi `v0.84.1` 尚无 physically-contained、bounded、cancellable 的 `models.json` loader，因此本 Slice 当前只能安全 characterization built-in/auth metadata，并对存在 `models.json` 的 projection typed fail；不得把它称为 Slice 1 完成。恢复条件是一次独立授权并 adopted 的 Pi source/API intake，不能在本 UI diff 中 patch vendor、写 secret-bearing temp copy 或复制 Pi schema。
+
 #### Settings Slice 2：API Key 与 refresh
 
 1. 桥接 Pi typed auth interaction，持久 API Key 走 `login(..., "api_key")` / `logout()`；
@@ -1618,7 +1625,7 @@ OmniMind 要复制的是 **任务流质量**，不是 Proma 的维护负担。
 
 | Case                      | 预期                                                                    |
 | ------------------------- | ----------------------------------------------------------------------- |
-| 打开 Model services       | 读取 `.omnimind` ModelRuntime；不触碰 `.pi`                             |
+| 打开 Model services       | 物理 no-follow 读取 `.omnimind`；不触碰 `.pi`，symlink 逃逸 typed fail  |
 | 未配置任何 credential     | 显示 setup-required，不把 provider 误报为不存在                         |
 | 同供应商两个实例          | 行、credential、catalog、model slug 可独立区分                          |
 | API Key 保存              | 走 Pi api-key login 并在 packaged restart 后仍存在；renderer 不回读明文 |

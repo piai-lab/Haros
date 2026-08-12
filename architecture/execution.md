@@ -123,6 +123,10 @@ Server 通过 OmniMind-Agent-scoped typed surface 把 Pi 的 provider/auth/catal
 - 同一商业供应商可用不同稳定 Pi provider id 表达多个服务实例，但只呈现 Pi config/extension 对该 identity 真实支持的 auth、catalog 与 stream 能力；不能按品牌名复制 built-in OAuth 或动态 fetcher；
 - custom provider 持久化优先等待/采用 Pi 公开的 provider-config mutation API。没有该 API 时不建立 `model-services.json`、Channel store 或 renderer 文件写入；若提前施工，必须有维护者对单一临时 models.json adapter 的明确授权，并保证 locked read-modify-write、unknown-field preservation、原子替换和 Pi reload validation，待上游 API adopted 后删除。
 
+被动 Settings 投影还有更窄的安全门：Server 必须解析并证明 `.omnimind` agent root 的物理 containment，所有本地 config/cache read 都由同一个 no-follow、hard byte bound、caller-cancellable reader 完成；字符串路径正确或先检查再让 runtime 重新打开文件都不构成证明。不得用含 credential/header 的临时副本或 OmniMind 自建 `models.json` parser/schema 绕开此门。锁定 Pi API 无法注入该 reader 时，受影响的 projection 必须 typed fail，不能偷偷降级或读取。被动 mount 不加载/执行 extension；`origin: extension` 只可来自已经由显式 intent scope 加载并提供 provenance 的 Pi runtime。
+
+Model-service projection 不拥有 Composer/Project reference。需要把被引用但未配置的 service 加入列表时，只接受 Product State owner 给出的 exact stable service id，不能从品牌、产品默认或 model slug 推导。离线观察到 OAuth access token 到期只能投影 `refresh_required`；只有 provider-owned login/refresh 的明确失败证据才能称 `sign_in_expired`。
+
 Model-service mutation 只能失效 OmniMind Agent 的 service/catalog projection 与相关 Session snapshot，不能改写 Conversation transcript、Project facts、其他 Engine state 或 stock Pi `.pi`。当前 selection 失效时要求用户重选，不 silent fallback 到另一 provider/Engine。
 
 ## 其他 Provider
