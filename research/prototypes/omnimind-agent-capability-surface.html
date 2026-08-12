@@ -1,1955 +1,1494 @@
 <!doctype html>
-<html lang="zh-CN">
+<html lang="zh-CN" data-theme="light">
   <head>
     <meta charset="UTF-8" />
     <meta name="viewport" content="width=device-width, initial-scale=1" />
+    <title>OmniMind · Workflow 详情面原型</title>
     <meta
       name="description"
-      content="OmniMind Agent capability projection prototype based on the current product shell"
+      content="Focused storyboard for the only new Agent capability surface: a truthful workflow phase map inside the existing OmniMind right dock."
     />
-    <meta
-      name="zq-ui-states"
-      content="idle task native-workflow automatic-memory approval computer-use knowledge resume"
-    />
-    <title>OmniMind · Agent 能力投影原型</title>
     <style>
       :root {
         color-scheme: light;
-        --ink: #0d0d0d;
-        --ink-2: rgba(13, 13, 13, 0.67);
-        --ink-3: rgba(13, 13, 13, 0.43);
-        --ink-4: rgba(13, 13, 13, 0.27);
-        --line: rgba(13, 13, 13, 0.09);
-        --line-strong: rgba(13, 13, 13, 0.14);
-        --sidebar: #f6f6f6;
+        --page: #f3f3f1;
+        --shell: #fbfbfa;
         --surface: #ffffff;
-        --surface-2: #f8f8f8;
-        --surface-3: #f1f1f1;
-        --hover: rgba(13, 13, 13, 0.055);
-        --accent: #0169cc;
-        --accent-soft: #e9f3ff;
-        --green: #24845d;
-        --amber: #a16b1f;
-        --red: #b4453d;
-        --composer-width: 736px;
-        --radius: 10px;
-        --shadow-soft: 0 10px 28px rgba(13, 13, 13, 0.07), 0 1px 2px rgba(13, 13, 13, 0.04);
-        --shadow-composer: 0 8px 28px rgba(13, 13, 13, 0.08), 0 1px 3px rgba(13, 13, 13, 0.05);
+        --surface-soft: #f6f6f4;
+        --surface-raised: #fdfdfc;
+        --ink: #171817;
+        --ink-2: #60635f;
+        --ink-3: #949892;
+        --line: #dedfdc;
+        --line-soft: #e9eae7;
+        --shadow: 0 18px 48px rgba(21, 24, 21, 0.11), 0 2px 7px rgba(21, 24, 21, 0.06);
+        --green: #2f865f;
+        --green-soft: #e7f4ed;
+        --amber: #a36b20;
+        --amber-soft: #f8efdd;
+        --red: #b5534b;
+        --red-soft: #f8e9e7;
+        --blue: #4c71a8;
+        --blue-soft: #eaf0f8;
+        --active: #4e8f72;
+        --focus: #39765d;
+        --agent-1: #61a96b;
+        --agent-2: #42a78e;
+        --agent-3: #8a7ab7;
+        --agent-4: #bf7f4f;
+        --agent-5: #4e78ad;
+        --agent-6: #a76380;
       }
 
       :root[data-theme="dark"] {
         color-scheme: dark;
-        --ink: #f4f4f3;
-        --ink-2: rgba(244, 244, 243, 0.7);
-        --ink-3: rgba(244, 244, 243, 0.45);
-        --ink-4: rgba(244, 244, 243, 0.28);
-        --line: rgba(255, 255, 255, 0.09);
-        --line-strong: rgba(255, 255, 255, 0.14);
-        --sidebar: #171717;
-        --surface: #111111;
-        --surface-2: #181818;
-        --surface-3: #202020;
-        --hover: rgba(255, 255, 255, 0.065);
-        --accent-soft: rgba(1, 105, 204, 0.18);
-        --shadow-soft: 0 14px 34px rgba(0, 0, 0, 0.32), 0 1px 2px rgba(0, 0, 0, 0.45);
-        --shadow-composer: 0 10px 34px rgba(0, 0, 0, 0.32), 0 1px 3px rgba(0, 0, 0, 0.48);
+        --page: #111311;
+        --shell: #171917;
+        --surface: #1c1f1c;
+        --surface-soft: #222522;
+        --surface-raised: #202320;
+        --ink: #eff1ed;
+        --ink-2: #afb4ad;
+        --ink-3: #777d76;
+        --line: #353935;
+        --line-soft: #292d29;
+        --shadow: 0 20px 54px rgba(0, 0, 0, 0.38), 0 2px 9px rgba(0, 0, 0, 0.24);
+        --green: #67b58a;
+        --green-soft: #20352a;
+        --amber: #d09a52;
+        --amber-soft: #392f20;
+        --red: #d27a72;
+        --red-soft: #3d2927;
+        --blue: #7f9fd0;
+        --blue-soft: #253044;
+        --active: #73b692;
+        --focus: #8bc9a8;
       }
 
       * {
         box-sizing: border-box;
       }
-
       html,
       body {
-        width: 100%;
-        height: 100%;
+        min-height: 100%;
       }
-
       body {
         margin: 0;
-        overflow: hidden;
-        background: var(--surface);
+        background:
+          radial-gradient(
+            circle at 68% 12%,
+            color-mix(in srgb, var(--green) 7%, transparent),
+            transparent 29rem
+          ),
+          var(--page);
         color: var(--ink);
         font-family:
-          Inter, ui-sans-serif, -apple-system, BlinkMacSystemFont, "Segoe UI", "PingFang SC",
-          "Noto Sans CJK SC", sans-serif;
+          Inter,
+          ui-sans-serif,
+          -apple-system,
+          BlinkMacSystemFont,
+          "SF Pro Text",
+          "Segoe UI",
+          sans-serif;
         font-size: 13px;
         -webkit-font-smoothing: antialiased;
       }
 
       button,
-      textarea {
+      select {
         font: inherit;
-      }
-
-      button {
         color: inherit;
       }
-
+      button {
+        cursor: pointer;
+      }
       button:focus-visible,
-      textarea:focus-visible {
-        outline: 2px solid rgba(1, 105, 204, 0.58);
+      select:focus-visible {
+        outline: 2px solid color-mix(in srgb, var(--focus) 72%, transparent);
         outline-offset: 2px;
       }
-
-      .icon {
-        width: 16px;
-        height: 16px;
-        flex: 0 0 auto;
-        fill: none;
-        stroke: currentColor;
-        stroke-linecap: round;
-        stroke-linejoin: round;
-        stroke-width: 1.55;
-      }
-
-      .icon-sm {
-        width: 13px;
-        height: 13px;
-      }
-
-      .cap-icon {
-        width: 16px;
-        height: 16px;
-        flex: 0 0 auto;
-        fill: none;
-        stroke: currentColor;
-        stroke-linecap: round;
-        stroke-linejoin: round;
-        stroke-width: 1.5;
-      }
-
-      .cap-icon .dot {
-        fill: currentColor;
-        stroke: none;
-      }
-
-      .central-icon {
-        display: inline-block;
-        width: 16px;
-        height: 16px;
-        flex: 0 0 auto;
-        background: currentColor;
-        -webkit-mask: var(--icon-url) center / contain no-repeat;
-        mask: var(--icon-url) center / contain no-repeat;
-      }
-
-      .target-arrow {
-        --icon-url: url("../../apps/web/public/central-icons-reversed/target-arrow.svg");
-      }
-
-      .app {
-        display: grid;
-        grid-template-columns: 23rem minmax(0, 1fr);
-        width: 100%;
-        height: 100%;
-        background: var(--surface);
-      }
-
-      .sidebar {
-        position: relative;
-        z-index: 5;
-        display: flex;
-        min-width: 0;
-        flex-direction: column;
-        padding: 10px 9px 9px;
-        background: var(--sidebar);
-        box-shadow: inset -1px 0 var(--line);
-      }
-
-      .brand-row {
-        display: flex;
-        height: 36px;
-        align-items: center;
-        gap: 9px;
-        padding: 0 9px;
-      }
-
-      .brand-row img {
-        width: 18px;
-        height: 18px;
-      }
-
-      .brand-row strong {
-        font-size: 13px;
-        font-weight: 650;
-        letter-spacing: -0.015em;
-      }
-
-      .sidebar-toggle {
-        display: grid;
-        grid-template-columns: 1fr 1fr;
-        gap: 2px;
-        margin: 8px 5px 9px;
-        padding: 3px;
-        border-radius: 8px;
-        background: rgba(13, 13, 13, 0.055);
-      }
-
-      .sidebar-toggle button {
-        height: 27px;
-        border: 0;
-        border-radius: 6px;
-        background: transparent;
-        color: var(--ink-2);
-        cursor: pointer;
-        font-size: 12px;
-      }
-
-      .sidebar-toggle button[aria-selected="true"] {
-        background: var(--surface);
-        color: var(--ink);
-        box-shadow: 0 1px 3px rgba(13, 13, 13, 0.08);
-        font-weight: 580;
-      }
-
-      .new-task {
-        display: flex;
-        height: 34px;
-        align-items: center;
-        gap: 9px;
-        margin: 0 5px 7px;
-        padding: 0 10px;
-        border: 0;
-        border-radius: 7px;
-        background: transparent;
-        cursor: pointer;
-        text-align: left;
-      }
-
-      .new-task:hover,
-      .nav-row:hover,
-      .sidebar-action:hover {
-        background: var(--hover);
-      }
-
-      .new-task span {
-        font-weight: 570;
-      }
-
-      .nav-list {
-        display: grid;
-        gap: 1px;
-        margin: 0 5px;
-      }
-
-      .nav-row,
-      .sidebar-action {
-        display: flex;
-        height: 32px;
-        min-width: 0;
-        align-items: center;
-        gap: 10px;
-        padding: 0 10px;
-        border: 0;
-        border-radius: 7px;
-        background: transparent;
-        color: var(--ink-2);
-        cursor: pointer;
-        text-align: left;
-      }
-
-      .nav-row span,
-      .sidebar-action span {
-        overflow: hidden;
-        text-overflow: ellipsis;
-        white-space: nowrap;
-      }
-
-      .section-label {
-        margin: 17px 14px 7px;
-        color: var(--ink-3);
-        font-size: 11px;
-        font-weight: 520;
-      }
-
-      .project-row {
-        color: var(--ink-2);
-      }
-
-      .project-dot {
-        width: 7px;
-        height: 7px;
-        border-radius: 2px;
-        background: #90a9c1;
-      }
-
-      .sidebar-spacer {
-        flex: 1;
-      }
-
-      .sidebar-bottom {
-        display: grid;
-        gap: 1px;
-        margin: 0 5px;
-      }
-
-      .sidebar-action.active {
-        background: var(--hover);
-        color: var(--ink);
-      }
-
-      .main {
-        position: relative;
-        display: grid;
-        min-width: 0;
-        grid-template-rows: 46px minmax(0, 1fr);
-        overflow: hidden;
-        background: var(--surface);
-      }
-
-      .topbar {
-        position: relative;
-        z-index: 8;
-        display: flex;
-        align-items: center;
-        gap: 6px;
-        padding: 0 12px 0 18px;
-        border-bottom: 1px solid transparent;
-      }
-
-      .topbar-title {
-        min-width: 0;
-        flex: 1;
-        overflow: hidden;
-        color: var(--ink-2);
-        font-size: 12px;
-        text-overflow: ellipsis;
-        white-space: nowrap;
-      }
-
-      .top-action,
-      .icon-action {
-        height: 28px;
-        border: 0;
-        border-radius: 6px;
-        background: transparent;
-        color: var(--ink-2);
-        cursor: pointer;
-      }
-
-      .top-action {
-        padding: 0 9px;
-        font-size: 11.5px;
-      }
-
-      .icon-action {
-        display: grid;
-        width: 28px;
-        place-items: center;
-      }
-
-      .top-action:hover,
-      .icon-action:hover,
-      .top-action.active {
-        background: var(--hover);
-        color: var(--ink);
-      }
-
-      .stage {
-        position: relative;
-        min-width: 0;
-        min-height: 0;
-        overflow: hidden;
-      }
-
-      .scene {
-        position: absolute;
-        inset: 0;
-        display: none;
-        min-width: 0;
-        min-height: 0;
-      }
-
-      .scene.active {
+      svg {
         display: block;
       }
 
-      .chat-canvas {
-        position: absolute;
-        inset: 0;
-        overflow: hidden;
-        background: var(--surface);
-      }
-
-      .chat-scroll {
-        position: absolute;
-        inset: 0;
-        overflow: auto;
-        padding: 38px max(32px, calc((100% - 820px) / 2)) 238px;
-      }
-
-      .chat-scroll.with-dock {
-        right: 382px;
-      }
-
-      .empty-state {
-        position: absolute;
-        inset: 0;
+      .review-bar {
+        min-height: 54px;
         display: flex;
         align-items: center;
-        flex-direction: column;
-        justify-content: center;
-        padding-bottom: 34px;
-      }
-
-      .empty-state img {
-        width: 64px;
-        height: 64px;
-        margin-bottom: 14px;
-      }
-
-      .empty-state h1 {
-        margin: 0 0 22px;
-        font-size: 30px;
-        font-weight: 420;
-        letter-spacing: -0.025em;
-      }
-
-      .empty-state .composer-wrap {
-        position: static;
-        width: min(var(--composer-width), calc(100% - 48px));
-        margin: 0;
-      }
-
-      .composer-wrap {
-        position: absolute;
-        z-index: 5;
-        right: 0;
-        bottom: 18px;
-        left: 0;
-        width: min(var(--composer-width), calc(100% - 48px));
-        margin: auto;
-      }
-
-      .composer-wrap.with-dock {
-        right: 382px;
-      }
-
-      .composer {
-        position: relative;
-        z-index: 1;
-        overflow: hidden;
-        border: 1px solid var(--line-strong);
-        border-radius: 16px;
-        background: var(--surface);
-        box-shadow: var(--shadow-composer);
-      }
-
-      .composer textarea {
-        display: block;
-        width: 100%;
-        min-height: 76px;
-        resize: none;
-        border: 0;
-        outline: 0;
-        padding: 17px 17px 7px;
-        background: transparent;
-        color: var(--ink);
-        line-height: 1.5;
-      }
-
-      .composer textarea::placeholder {
-        color: var(--ink-3);
-      }
-
-      .composer-footer {
-        display: flex;
-        height: 42px;
-        align-items: center;
-        gap: 6px;
-        padding: 0 9px 7px 10px;
-      }
-
-      .composer-small,
-      .composer-round {
-        height: 28px;
-        border: 0;
-        border-radius: 7px;
-        background: transparent;
-        color: var(--ink-2);
-        cursor: pointer;
-      }
-
-      .composer-small {
-        display: flex;
-        min-width: 0;
-        align-items: center;
-        gap: 6px;
-        padding: 0 7px;
-        font-size: 11.5px;
-      }
-
-      .composer-small:hover,
-      .composer-round:hover {
-        background: var(--hover);
-      }
-
-      .composer-round {
-        display: grid;
-        width: 28px;
-        place-items: center;
-      }
-
-      .composer-send {
-        display: grid;
-        width: 28px;
-        height: 28px;
-        margin-left: auto;
-        place-items: center;
-        border: 0;
-        border-radius: 8px;
-        background: var(--ink);
-        color: white;
-        cursor: pointer;
-      }
-
-      .composer-send .icon {
-        width: 14px;
-        height: 14px;
-      }
-
-      .composer-meta {
-        display: flex;
-        justify-content: space-between;
-        padding: 8px 4px 0;
-        color: var(--ink-3);
-        font-size: 10.5px;
-      }
-
-      .message {
-        max-width: 760px;
-        margin: 0 auto 26px;
-      }
-
-      .message.user {
-        display: flex;
-        justify-content: flex-end;
-      }
-
-      .user-bubble {
-        max-width: 610px;
-        padding: 10px 13px;
-        border-radius: 14px 14px 4px 14px;
-        background: var(--surface-3);
-        line-height: 1.55;
-      }
-
-      .assistant-copy {
-        max-width: 720px;
-        font-size: 13.5px;
-        line-height: 1.7;
-      }
-
-      .assistant-copy p {
-        margin: 0 0 11px;
-      }
-
-      .assistant-copy code {
-        padding: 1px 4px;
-        border-radius: 4px;
-        background: var(--surface-3);
-        font-family: "SFMono-Regular", Consolas, monospace;
-        font-size: 12px;
-      }
-
-      .answer-meta {
-        display: flex;
-        min-height: 24px;
-        align-items: center;
-        gap: 7px;
-        margin-top: 10px;
-        color: var(--ink-3);
-        font-size: 10.5px;
-      }
-
-      .answer-meta button {
-        border: 0;
-        background: transparent;
-        color: var(--ink-2);
-        cursor: pointer;
-        font-size: 10.5px;
-      }
-
-      .answer-meta button:hover {
-        text-decoration: underline;
-      }
-
-      .activity-line {
-        display: flex;
-        max-width: 720px;
-        min-height: 28px;
-        align-items: center;
-        gap: 8px;
-        margin: 2px 0 15px;
-        color: var(--ink-3);
-        font-size: 11px;
-      }
-
-      .activity-line .dot {
-        width: 5px;
-        height: 5px;
-        border-radius: 50%;
-        background: var(--ink-4);
-      }
-
-      .activity-line .success {
-        background: var(--green);
-      }
-
-      .activity-action {
-        border: 0;
-        background: transparent;
-        color: var(--ink-2);
-        cursor: pointer;
-        font-size: 11px;
-      }
-
-      .activity-action:hover {
-        text-decoration: underline;
-      }
-
-      .stack {
-        width: 91.666667%;
-        overflow: hidden;
-        margin: 0 auto -1px;
-        border: 1px solid var(--line-strong);
-        border-bottom: 0;
-        border-radius: 16px;
-        background: rgba(255, 255, 255, 0.98);
-        box-shadow: 0 -4px 18px rgba(13, 13, 13, 0.025);
-      }
-
-      .stack-row {
-        border-top: 1px solid var(--line);
-      }
-
-      .stack-row:first-child {
-        border-top: 0;
-      }
-
-      .stack-head {
-        display: flex;
-        min-height: 34px;
-        align-items: center;
-        gap: 8px;
-        padding: 0 11px;
-        color: var(--ink-2);
-        font-size: 11px;
-      }
-
-      .stack-head strong {
-        color: var(--ink);
-        font-weight: 560;
-      }
-
-      .stack-head .spacer {
-        flex: 1;
-      }
-
-      .status-dot {
-        width: 6px;
-        height: 6px;
-        border-radius: 50%;
-        background: var(--ink-4);
-      }
-
-      .status-dot.running {
-        background: var(--accent);
-        box-shadow: 0 0 0 3px rgba(1, 105, 204, 0.09);
-      }
-
-      .status-dot.done {
-        background: var(--green);
-      }
-
-      .stack-body {
-        display: grid;
-        gap: 4px;
-        padding: 1px 11px 9px 25px;
-      }
-
-      .task-row,
-      .agent-row {
-        display: flex;
-        min-height: 25px;
-        align-items: center;
-        gap: 8px;
-        color: var(--ink-2);
-        font-size: 11px;
-      }
-
-      .task-check {
-        display: grid;
-        width: 13px;
-        height: 13px;
-        place-items: center;
-        border: 1px solid var(--line-strong);
-        border-radius: 4px;
-        color: var(--green);
-        font-size: 9px;
-      }
-
-      .task-row.done-text {
-        color: var(--ink-3);
-      }
-
-      .agent-row .role {
-        color: var(--ink-3);
-      }
-
-      .agent-row .state {
-        margin-left: auto;
-        color: var(--ink-3);
-      }
-
-      .agent-id {
-        width: 16px;
-        height: 16px;
-        flex: 0 0 auto;
-        overflow: visible;
-        color: var(--agent-color, var(--accent));
-        fill: none;
-        stroke: currentColor;
-        stroke-linecap: round;
-        stroke-linejoin: round;
-        stroke-width: 1.35;
-      }
-
-      .agent-id .agent-fill {
-        fill: currentColor;
-        stroke: none;
-      }
-
-      .agent-cluster {
-        display: flex;
-        align-items: center;
-        padding-left: 3px;
-      }
-
-      .agent-cluster .agent-id {
-        margin-left: -3px;
-        filter: drop-shadow(0 0 0.5px var(--surface));
-      }
-
-      .agent-chip {
-        display: inline-flex;
-        height: 23px;
-        align-items: center;
-        gap: 5px;
-        padding: 0 7px 0 5px;
-        border: 1px solid var(--line);
-        border-radius: 999px;
-        background: var(--surface);
-        color: var(--ink-2);
-        font-size: 10.5px;
-      }
-
-      .agent-chip .agent-id {
-        width: 13px;
-        height: 13px;
-      }
-
-      .todo-popover {
-        position: absolute;
-        z-index: 8;
-        right: 4%;
-        bottom: 170px;
-        left: 4%;
-        overflow: hidden;
-        padding: 8px 10px;
-        border: 1px solid var(--line-strong);
-        border-radius: 12px;
-        background: var(--surface);
-        box-shadow: var(--shadow-soft);
-      }
-
-      .todo-popover[hidden] {
-        display: none;
-      }
-
-      .todo-popover .task-row {
-        min-height: 28px;
-      }
-
-      .todo-summary {
-        width: 100%;
-        border: 0;
-        background: transparent;
-        cursor: pointer;
-        text-align: left;
-      }
-
-      .todo-summary:hover {
-        background: var(--hover);
-      }
-
-      .tiny-button {
-        height: 23px;
-        padding: 0 7px;
-        border: 0;
-        border-radius: 5px;
-        background: transparent;
-        color: var(--ink-2);
-        cursor: pointer;
-        font-size: 10.5px;
-      }
-
-      .tiny-button:hover {
-        background: var(--hover);
-      }
-
-      .workflow-layout {
-        display: grid;
-        grid-template-columns: 150px minmax(0, 1fr);
-        min-height: 130px;
-        border-top: 1px solid var(--line);
-      }
-
-      .phase-list {
-        padding: 7px;
-        border-right: 1px solid var(--line);
-      }
-
-      .phase {
-        display: flex;
-        height: 28px;
-        align-items: center;
-        gap: 7px;
-        padding: 0 8px;
-        border-radius: 5px;
-        color: var(--ink-3);
-        font-size: 10.5px;
-      }
-
-      .phase.active {
-        background: var(--hover);
-        color: var(--ink);
-      }
-
-      .workflow-agents {
-        padding: 8px 10px;
-      }
-
-      .workflow-note {
-        padding: 0 10px 8px;
-        color: var(--ink-3);
-        font-size: 10px;
-      }
-
-      .workflow-canvas {
-        display: flex;
-        min-height: 0;
-        flex: 1;
-        flex-direction: column;
-        overflow: auto;
-        padding: 14px;
-        background:
-          radial-gradient(circle at 1px 1px, var(--line) 1px, transparent 1.2px) 0 0 / 18px 18px,
-          var(--surface);
-      }
-
-      .workflow-overview {
-        display: flex;
-        align-items: flex-start;
-        justify-content: space-between;
         gap: 12px;
-        margin-bottom: 11px;
-        padding: 0 2px;
+        padding: 8px 18px;
+        border-bottom: 1px solid var(--line);
+        background: color-mix(in srgb, var(--surface) 91%, transparent);
+        backdrop-filter: blur(18px);
       }
-
-      .workflow-overview strong {
+      .review-title {
+        min-width: 0;
+      }
+      .review-title strong {
         display: block;
-        margin-bottom: 3px;
         font-size: 12px;
-        font-weight: 620;
+        letter-spacing: 0.01em;
       }
-
-      .workflow-overview span {
-        color: var(--ink-3);
-        font-size: 10px;
-      }
-
-      .workflow-graph {
-        position: relative;
-        min-height: 292px;
-        border: 1px solid var(--line);
-        border-radius: 12px;
-        background: color-mix(in srgb, var(--surface) 93%, transparent);
-      }
-
-      .workflow-edges {
-        position: absolute;
-        inset: 0;
-        width: 100%;
-        height: 100%;
-        fill: none;
-        stroke: var(--line-strong);
-        stroke-width: 1.2;
-      }
-
-      .workflow-edges .active-edge {
-        stroke: var(--accent);
-        stroke-dasharray: 5 7;
-        animation: edge-flow 1.7s linear infinite;
-      }
-
-      @keyframes edge-flow {
-        to { stroke-dashoffset: -24; }
-      }
-
-      .workflow-node {
-        position: absolute;
-        display: grid;
-        width: 96px;
-        min-height: 48px;
-        grid-template-columns: 17px minmax(0, 1fr);
-        align-items: center;
-        gap: 6px;
-        padding: 7px;
-        border: 1px solid var(--line-strong);
-        border-radius: 9px;
-        background: var(--surface);
-        box-shadow: 0 3px 12px rgba(13, 13, 13, 0.05);
-      }
-
-      .workflow-node.active {
-        border-color: rgba(1, 105, 204, 0.4);
-        box-shadow: 0 0 0 2px rgba(1, 105, 204, 0.08);
-      }
-
-      .workflow-node strong,
-      .workflow-node span {
+      .review-title span {
         display: block;
-        overflow: hidden;
-        text-overflow: ellipsis;
-        white-space: nowrap;
-      }
-
-      .workflow-node strong {
-        font-size: 10.5px;
-        font-weight: 590;
-      }
-
-      .workflow-node span {
         margin-top: 2px;
         color: var(--ink-3);
-        font-size: 8.5px;
+        font-size: 11px;
       }
-
-      .node-root { left: 10px; top: 117px; }
-      .node-audit { left: 124px; top: 30px; }
-      .node-journey { left: 124px; top: 117px; }
-      .node-contract { left: 124px; top: 204px; }
-      .node-final { right: 10px; top: 117px; }
-
-      .workflow-detail {
-        margin-top: 11px;
-        padding: 10px 11px;
+      .review-spacer {
+        flex: 1;
+      }
+      .review-control {
+        min-height: 30px;
         border: 1px solid var(--line);
-        border-radius: 10px;
+        border-radius: 8px;
         background: var(--surface);
+        padding: 0 10px;
+      }
+      button.review-control:hover {
+        background: var(--surface-soft);
       }
 
-      .workflow-detail strong {
-        display: block;
-        margin-bottom: 5px;
-        font-size: 10.5px;
+      .page {
+        width: min(1460px, calc(100vw - 34px));
+        margin: 22px auto;
+      }
+      .decision-note {
+        display: grid;
+        grid-template-columns: auto 1fr;
+        gap: 11px;
+        align-items: start;
+        margin: 0 0 14px;
+        padding: 10px 12px;
+        border: 1px solid var(--line);
+        border-radius: 11px;
+        background: color-mix(in srgb, var(--surface) 88%, transparent);
+        color: var(--ink-2);
+        box-shadow: 0 1px 0 rgba(255, 255, 255, 0.45) inset;
+      }
+      .decision-note svg {
+        width: 17px;
+        height: 17px;
+        color: var(--green);
+      }
+      .decision-note strong {
+        color: var(--ink);
+      }
+      .decision-note code {
+        font-family: "SFMono-Regular", Consolas, monospace;
+        font-size: 11px;
       }
 
-      .workflow-detail p {
-        margin: 0;
-        color: var(--ink-3);
-        font-size: 9.5px;
-        line-height: 1.5;
-      }
-
-      @media (prefers-reduced-motion: reduce) {
-        .workflow-edges .active-edge { animation: none; }
-      }
-
-      .approval {
-        margin-bottom: 8px;
+      .app-frame {
+        min-height: 750px;
+        display: grid;
+        grid-template-columns: minmax(430px, 1fr) minmax(430px, 520px);
         overflow: hidden;
-        border: 1px solid rgba(161, 107, 31, 0.26);
-        border-radius: 10px;
-        background: #fffdf8;
-        box-shadow: var(--shadow-soft);
+        border: 1px solid var(--line);
+        border-radius: 15px;
+        background: var(--shell);
+        box-shadow: var(--shadow);
       }
 
-      .approval-title {
+      /* The left side is context only. It names the real host component rather than
+         pretending this HTML is a replacement ChatView implementation. */
+      .host-context {
+        min-width: 0;
         display: flex;
-        align-items: flex-start;
-        gap: 10px;
-        padding: 12px 13px 8px;
+        flex-direction: column;
+        border-right: 1px solid var(--line);
+        background: var(--shell);
+      }
+      .host-topbar {
+        height: 46px;
+        display: flex;
+        align-items: center;
+        gap: 8px;
+        padding: 0 14px;
+        border-bottom: 1px solid var(--line-soft);
+      }
+      .host-topbar img {
+        width: 19px;
+        height: 19px;
+      }
+      .host-topbar strong {
+        font-size: 12.5px;
+      }
+      .host-badge {
+        margin-left: 4px;
+        padding: 2px 6px;
+        border-radius: 5px;
+        color: var(--ink-3);
+        background: var(--surface-soft);
+        font-size: 10px;
+      }
+      .host-main {
+        flex: 1;
+        min-height: 0;
+        display: flex;
+        flex-direction: column;
+        padding: 28px 26px 22px;
+      }
+      .host-copy {
+        max-width: 650px;
+        color: var(--ink-2);
+        line-height: 1.7;
+      }
+      .host-copy h1 {
+        margin: 0 0 12px;
+        color: var(--ink);
+        font-size: 19px;
+        font-weight: 620;
+      }
+      .host-copy p {
+        margin: 0 0 9px;
+      }
+      .reuse-ledger {
+        margin-top: 18px;
+        display: grid;
+        grid-template-columns: repeat(2, minmax(0, 1fr));
+        gap: 8px;
+        max-width: 660px;
+      }
+      .reuse-item {
+        min-width: 0;
+        padding: 9px 10px;
+        border: 1px solid var(--line-soft);
+        border-radius: 9px;
+        background: color-mix(in srgb, var(--surface) 74%, transparent);
+      }
+      .reuse-item strong {
+        display: block;
+        font-size: 11.5px;
+      }
+      .reuse-item span {
+        display: block;
+        margin-top: 3px;
+        color: var(--ink-3);
+        font-size: 10.5px;
+        line-height: 1.35;
+      }
+      .reuse-item.only-new {
+        border-color: color-mix(in srgb, var(--green) 36%, var(--line));
+        background: color-mix(in srgb, var(--green-soft) 53%, var(--surface));
       }
 
-      .approval-title strong {
-        display: block;
-        margin-bottom: 3px;
+      .composer-zone {
+        margin-top: auto;
+        padding-top: 24px;
+      }
+      .host-component-label {
+        margin-bottom: 6px;
+        color: var(--ink-3);
+        font-family: "SFMono-Regular", Consolas, monospace;
+        font-size: 10px;
+      }
+      .workflow-summary {
+        width: 100%;
+        min-height: 40px;
+        display: flex;
+        align-items: center;
+        gap: 9px;
+        padding: 7px 8px 7px 10px;
+        border: 1px solid var(--line);
+        border-radius: 10px 10px 5px 5px;
+        background: var(--surface-raised);
+        text-align: left;
+        box-shadow: 0 1px 1px rgba(20, 22, 20, 0.04);
+      }
+      .workflow-summary:hover {
+        background: var(--surface-soft);
+      }
+      .workflow-summary .workflow-mark {
+        color: var(--green);
+      }
+      .workflow-summary-main {
+        min-width: 0;
+        flex: 1;
+      }
+      .workflow-summary-main strong {
         font-size: 12px;
         font-weight: 600;
       }
-
-      .approval-title p {
-        margin: 0;
-        color: var(--ink-2);
-        font-size: 11px;
-        line-height: 1.5;
-      }
-
-      .command {
-        margin: 0 13px 10px 37px;
-        overflow: hidden;
-        padding: 8px 9px;
-        border-radius: 6px;
-        background: var(--surface-3);
-        color: var(--ink-2);
-        font-family: "SFMono-Regular", Consolas, monospace;
-        font-size: 10.5px;
-        text-overflow: ellipsis;
-        white-space: nowrap;
-      }
-
-      .approval-actions {
-        display: flex;
-        justify-content: flex-end;
-        gap: 6px;
-        padding: 9px 11px;
-        border-top: 1px solid rgba(161, 107, 31, 0.14);
-      }
-
-      .button-secondary,
-      .button-primary {
-        height: 28px;
-        padding: 0 10px;
-        border-radius: 6px;
-        cursor: pointer;
+      .workflow-summary-main span {
+        margin-left: 7px;
+        color: var(--ink-3);
         font-size: 11px;
       }
-
-      .button-secondary {
-        border: 1px solid var(--line-strong);
-        background: var(--surface);
-        color: var(--ink-2);
-      }
-
-      .button-primary {
-        border: 1px solid var(--ink);
-        background: var(--ink);
-        color: white;
-      }
-
-      .workbench {
-        position: absolute;
-        z-index: 12;
-        top: 8px;
-        right: 12px;
-        width: 288px;
-        overflow: hidden;
-        border: 1px solid var(--line-strong);
-        border-radius: 16px;
-        background: rgba(255, 255, 255, 0.985);
-        box-shadow: var(--shadow-soft);
-      }
-
-      :root[data-theme="dark"] .workbench,
-      :root[data-theme="dark"] .stack {
-        background: rgba(24, 24, 24, 0.985);
-      }
-
-      :root[data-theme="dark"] .approval {
-        border-color: rgba(209, 154, 75, 0.28);
-        background: #1c1915;
-      }
-
-      :root[data-theme="dark"] .browser-page,
-      :root[data-theme="dark"] .browser-mock {
-        background: #17191c;
-      }
-
-      :root[data-theme="dark"] .browser-mock,
-      :root[data-theme="dark"] .browser-mock-head,
-      :root[data-theme="dark"] .browser-card {
-        border-color: rgba(255, 255, 255, 0.08);
-      }
-
-      .workbench.hidden {
-        display: none;
-      }
-
-      .workbench-title {
+      .summary-actions {
         display: flex;
-        height: 39px;
-        align-items: center;
-        padding: 0 9px 0 12px;
-        border-bottom: 1px solid var(--line);
+        gap: 2px;
       }
-
-      .workbench-title strong {
-        flex: 1;
-        font-size: 12px;
-        font-weight: 610;
+      .icon-button {
+        width: 27px;
+        height: 27px;
+        display: grid;
+        place-items: center;
+        border: 0;
+        border-radius: 7px;
+        background: transparent;
+        color: var(--ink-3);
       }
-
-      .wb-section {
-        border-top: 1px solid var(--line);
+      .icon-button:hover {
+        background: var(--surface-soft);
+        color: var(--ink);
       }
-
-      .wb-section:first-of-type {
+      .icon-button svg {
+        width: 14px;
+        height: 14px;
+      }
+      .composer-shell {
+        min-height: 86px;
+        padding: 12px;
+        border: 1px solid var(--line);
         border-top: 0;
+        border-radius: 5px 5px 13px 13px;
+        background: var(--surface);
       }
-
-      .wb-head {
+      .composer-shell p {
+        margin: 1px 0 25px;
+        color: var(--ink-3);
+      }
+      .composer-footer {
         display: flex;
-        min-height: 36px;
         align-items: center;
         gap: 8px;
-        padding: 0 11px;
+      }
+      .composer-chip {
+        padding: 4px 7px;
+        border: 0;
+        border-radius: 6px;
+        background: var(--surface-soft);
         color: var(--ink-2);
-        font-size: 11px;
+        font-size: 10.5px;
+      }
+      .composer-send {
+        margin-left: auto;
+        width: 27px;
+        height: 27px;
+        display: grid;
+        place-items: center;
+        border: 0;
+        border-radius: 8px;
+        background: var(--ink);
+        color: var(--surface);
       }
 
-      .wb-head strong {
+      .dock {
+        min-width: 0;
+        height: 750px;
+        display: flex;
+        flex-direction: column;
+        background: var(--surface);
+      }
+      .dock-tabs {
+        height: 38px;
+        display: flex;
+        align-items: end;
+        gap: 2px;
+        padding: 0 7px;
+        border-bottom: 1px solid var(--line);
+        background: var(--shell);
+      }
+      .dock-tab {
+        height: 32px;
+        display: flex;
+        align-items: center;
+        gap: 7px;
+        padding: 0 10px;
+        border: 1px solid var(--line);
+        border-bottom-color: var(--surface);
+        border-radius: 8px 8px 0 0;
+        background: var(--surface);
+        font-size: 11px;
+      }
+      .dock-tab svg {
+        width: 14px;
+        height: 14px;
+        color: var(--green);
+      }
+      .dock-tab .close {
+        margin-left: 3px;
+        color: var(--ink-3);
+      }
+      .dock-tab-add {
+        margin: 0 0 6px auto;
+      }
+
+      .workflow-pane {
+        min-height: 0;
+        flex: 1;
+        display: flex;
+        flex-direction: column;
+      }
+      .pane-header {
+        display: flex;
+        align-items: center;
+        gap: 9px;
+        min-height: 50px;
+        padding: 0 13px;
+        border-bottom: 1px solid var(--line-soft);
+      }
+      .pane-title {
+        min-width: 0;
+        flex: 1;
+      }
+      .pane-title strong {
+        display: block;
+        font-size: 12.5px;
+        font-weight: 620;
+      }
+      .pane-title span {
+        display: block;
+        margin-top: 2px;
+        color: var(--ink-3);
+        font-size: 10.5px;
+      }
+      .status-label {
+        display: inline-flex;
+        align-items: center;
+        gap: 5px;
+        padding: 4px 7px;
+        border-radius: 7px;
+        background: var(--green-soft);
+        color: var(--green);
+        font-size: 10.5px;
+      }
+      .status-label::before {
+        content: "";
+        width: 5px;
+        height: 5px;
+        border-radius: 999px;
+        background: currentColor;
+      }
+
+      .metrics {
+        display: grid;
+        grid-template-columns: repeat(4, minmax(0, 1fr));
+        gap: 1px;
+        border-bottom: 1px solid var(--line-soft);
+        background: var(--line-soft);
+      }
+      .metric {
+        min-width: 0;
+        padding: 8px 10px;
+        background: var(--surface);
+      }
+      .metric span {
+        display: block;
+        color: var(--ink-3);
+        font-size: 9.5px;
+      }
+      .metric strong {
+        display: block;
+        margin-top: 2px;
+        overflow: hidden;
+        text-overflow: ellipsis;
+        white-space: nowrap;
+        font-size: 11.5px;
+        font-weight: 590;
+        font-variant-numeric: tabular-nums;
+      }
+
+      .map-toolbar {
+        display: flex;
+        align-items: center;
+        gap: 8px;
+        min-height: 38px;
+        padding: 0 11px;
+        border-bottom: 1px solid var(--line-soft);
+      }
+      .map-toolbar strong {
+        font-size: 11px;
+      }
+      .map-toolbar span {
+        color: var(--ink-3);
+        font-size: 10px;
+      }
+      .toolbar-spacer {
+        flex: 1;
+      }
+      .toolbar-button {
+        min-height: 25px;
+        padding: 0 7px;
+        border: 1px solid transparent;
+        border-radius: 7px;
+        background: transparent;
+        color: var(--ink-3);
+        font-size: 10px;
+      }
+      .toolbar-button:hover {
+        border-color: var(--line);
+        background: var(--surface-soft);
         color: var(--ink);
+      }
+
+      .map-viewport {
+        min-height: 0;
+        flex: 1;
+        overflow: auto;
+        padding: 12px;
+        background:
+          linear-gradient(var(--line-soft) 1px, transparent 1px),
+          linear-gradient(90deg, var(--line-soft) 1px, transparent 1px), var(--surface-soft);
+        background-size: 28px 28px;
+        scrollbar-width: thin;
+      }
+      .phase-map {
+        min-width: 100%;
+        width: max-content;
+        display: grid;
+        grid-auto-flow: column;
+        grid-auto-columns: 148px;
+        gap: 12px;
+        align-items: start;
+        padding: 2px 2px 12px;
+      }
+      .phase {
+        position: relative;
+        min-height: 290px;
+        padding: 8px;
+        border: 1px solid color-mix(in srgb, var(--line) 76%, transparent);
+        border-radius: 12px;
+        background: color-mix(in srgb, var(--surface) 88%, transparent);
+        box-shadow:
+          0 1px 1px rgba(20, 22, 20, 0.035),
+          0 8px 24px rgba(20, 22, 20, 0.025);
+      }
+      .phase:not(:last-child)::after {
+        content: "";
+        position: absolute;
+        z-index: 0;
+        top: 26px;
+        left: calc(100% + 1px);
+        width: 12px;
+        height: 1px;
+        background: var(--line);
+      }
+      .phase[data-state="running"]:not(:last-child)::after {
+        height: 2px;
+        background: linear-gradient(
+          90deg,
+          var(--active),
+          color-mix(in srgb, var(--active) 18%, var(--line)),
+          var(--active)
+        );
+        background-size: 200% 100%;
+        animation: edge-flow 2.6s linear infinite;
+      }
+      .phase-head {
+        position: relative;
+        z-index: 1;
+        display: grid;
+        grid-template-columns: 21px 1fr;
+        gap: 7px;
+        align-items: center;
+        padding-bottom: 8px;
+        border-bottom: 1px solid var(--line-soft);
+      }
+      .phase-index {
+        width: 21px;
+        height: 21px;
+        display: grid;
+        place-items: center;
+        border: 1px solid var(--line);
+        border-radius: 7px;
+        background: var(--surface-soft);
+        color: var(--ink-3);
+        font-family: "SFMono-Regular", Consolas, monospace;
+        font-size: 9px;
+      }
+      .phase[data-state="running"] .phase-index {
+        border-color: color-mix(in srgb, var(--green) 48%, var(--line));
+        background: var(--green-soft);
+        color: var(--green);
+      }
+      .phase-title {
+        min-width: 0;
+      }
+      .phase-title strong {
+        display: block;
+        overflow: hidden;
+        text-overflow: ellipsis;
+        white-space: nowrap;
+        font-size: 10.5px;
+      }
+      .phase-title span {
+        display: block;
+        margin-top: 1px;
+        color: var(--ink-3);
+        font-size: 9.5px;
+      }
+      .agent-list {
+        display: flex;
+        flex-direction: column;
+        gap: 7px;
+        padding-top: 8px;
+      }
+
+      .agent-node {
+        position: relative;
+        width: 100%;
+        min-height: 58px;
+        display: grid;
+        grid-template-columns: 23px minmax(0, 1fr);
+        gap: 7px;
+        align-items: center;
+        padding: 7px;
+        overflow: hidden;
+        border: 1px solid var(--line);
+        border-radius: 9px;
+        background: var(--surface-raised);
+        text-align: left;
+        box-shadow: 0 1px 1px rgba(18, 20, 18, 0.05);
+        transition:
+          transform 150ms ease,
+          border-color 150ms ease,
+          box-shadow 150ms ease,
+          opacity 150ms ease;
+      }
+      .agent-node:hover {
+        transform: translateY(-1px);
+        border-color: color-mix(in srgb, var(--ink-3) 58%, var(--line));
+      }
+      .agent-node[aria-pressed="true"] {
+        border-color: color-mix(in srgb, var(--green) 60%, var(--line));
+        box-shadow:
+          0 0 0 2px color-mix(in srgb, var(--green) 11%, transparent),
+          0 5px 16px rgba(25, 50, 37, 0.08);
+      }
+      .agent-node[data-state="queued"] {
+        opacity: 0.62;
+      }
+      .agent-node[data-state="running"]::after {
+        content: "";
+        position: absolute;
+        inset: auto 0 0;
+        height: 2px;
+        background: linear-gradient(90deg, transparent, var(--agent-color), transparent);
+        background-size: 220% 100%;
+        animation: node-scan 2.1s ease-in-out infinite;
+      }
+      .agent-node[data-state="failed"] {
+        border-color: color-mix(in srgb, var(--red) 42%, var(--line));
+      }
+      .agent-node[data-state="completed"] {
+        background: color-mix(in srgb, var(--surface) 80%, var(--green-soft));
+      }
+      .agent-glyph {
+        width: 23px;
+        height: 23px;
+        color: var(--agent-color);
+        fill: none;
+        stroke: currentColor;
+        stroke-width: 1.35;
+        stroke-linecap: round;
+        stroke-linejoin: round;
+      }
+      .agent-glyph .fill {
+        fill: currentColor;
+        stroke: none;
+        opacity: 0.24;
+      }
+      .agent-copy {
+        min-width: 0;
+      }
+      .agent-copy strong {
+        display: block;
+        overflow: hidden;
+        text-overflow: ellipsis;
+        white-space: nowrap;
+        font-size: 10.5px;
+        font-weight: 610;
+      }
+      .agent-meta {
+        display: flex;
+        align-items: center;
+        gap: 5px;
+        margin-top: 4px;
+        color: var(--ink-3);
+        font-size: 9px;
+      }
+      .state-dot {
+        width: 5px;
+        height: 5px;
+        border-radius: 999px;
+        background: var(--ink-3);
+      }
+      [data-state="completed"] .state-dot {
+        background: var(--green);
+      }
+      [data-state="running"] .state-dot {
+        background: var(--agent-color);
+        box-shadow: 0 0 0 3px color-mix(in srgb, var(--agent-color) 12%, transparent);
+      }
+      [data-state="failed"] .state-dot {
+        background: var(--red);
+      }
+
+      .node-detail {
+        min-height: 142px;
+        padding: 11px 13px 12px;
+        border-top: 1px solid var(--line);
+        background: var(--surface);
+      }
+      .detail-head {
+        display: flex;
+        align-items: center;
+        gap: 8px;
+      }
+      .detail-head .agent-glyph {
+        width: 26px;
+        height: 26px;
+      }
+      .detail-title {
+        min-width: 0;
+        flex: 1;
+      }
+      .detail-title strong {
+        display: block;
+        font-size: 11.5px;
+      }
+      .detail-title span {
+        display: block;
+        margin-top: 2px;
+        color: var(--ink-3);
+        font-size: 9.5px;
+      }
+      .detail-action {
+        min-height: 27px;
+        padding: 0 8px;
+        border: 1px solid var(--line);
+        border-radius: 7px;
+        background: var(--surface);
+        color: var(--ink-2);
+        font-size: 9.5px;
+      }
+      .detail-action:hover {
+        background: var(--surface-soft);
+      }
+      .detail-description {
+        margin: 9px 0 8px;
+        color: var(--ink-2);
+        font-size: 10.5px;
+        line-height: 1.55;
+      }
+      .detail-grid {
+        display: grid;
+        grid-template-columns: repeat(3, minmax(0, 1fr));
+        gap: 6px;
+      }
+      .detail-stat {
+        padding: 6px 7px;
+        border-radius: 7px;
+        background: var(--surface-soft);
+      }
+      .detail-stat span {
+        display: block;
+        color: var(--ink-3);
+        font-size: 8.5px;
+      }
+      .detail-stat strong {
+        display: block;
+        margin-top: 2px;
+        overflow: hidden;
+        text-overflow: ellipsis;
+        white-space: nowrap;
+        font-size: 9.5px;
         font-weight: 560;
       }
 
-      .wb-head .spacer {
-        flex: 1;
-      }
-
-      .switch {
-        position: relative;
-        width: 28px;
-        height: 16px;
-        border: 0;
-        border-radius: 999px;
-        background: var(--ink);
-        cursor: pointer;
-      }
-
-      .switch::after {
-        position: absolute;
-        top: 2px;
-        right: 2px;
-        width: 12px;
-        height: 12px;
-        border-radius: 50%;
-        background: white;
-        content: "";
-      }
-
-      .switch.off {
-        background: rgba(13, 13, 13, 0.18);
-      }
-
-      .switch.off::after {
-        right: 14px;
-      }
-
-      .wb-body {
-        padding: 0 11px 10px;
-      }
-
-      .wb-description {
-        margin: 0 0 9px;
-        color: var(--ink-3);
-        font-size: 10.5px;
-        line-height: 1.45;
-      }
-
-      .memory-item {
-        padding: 8px 0;
-        border-top: 1px solid var(--line);
-      }
-
-      .memory-item:first-of-type {
-        border-top: 0;
-      }
-
-      .memory-item p {
-        margin: 0 0 5px;
-        color: var(--ink-2);
-        font-size: 11px;
-        line-height: 1.45;
-      }
-
-      .memory-meta {
+      .truth-footnote {
         display: flex;
-        align-items: center;
-        gap: 7px;
-        color: var(--ink-3);
-        font-size: 9.5px;
-      }
-
-      .memory-meta button {
-        margin-left: auto;
-        border: 0;
-        background: transparent;
-        color: var(--ink-2);
-        cursor: pointer;
-        font-size: 9.5px;
-      }
-
-      .right-dock {
-        position: absolute;
-        z-index: 7;
-        top: 0;
-        right: 0;
-        bottom: 0;
-        width: 382px;
-        display: flex;
-        flex-direction: column;
-        border-left: 1px solid var(--line);
-        background: var(--surface);
-      }
-
-      .right-dock.hidden {
-        display: none;
-      }
-
-      .dock-head {
-        display: flex;
-        height: 39px;
-        align-items: center;
-        gap: 7px;
-        padding: 0 10px 0 12px;
-        border-bottom: 1px solid var(--line);
-      }
-
-      .dock-head strong {
-        flex: 1;
-        font-size: 11.5px;
-        font-weight: 590;
-      }
-
-      .browser-bar {
-        display: flex;
-        height: 38px;
-        align-items: center;
         gap: 8px;
-        padding: 0 9px;
-        border-bottom: 1px solid var(--line);
-      }
-
-      .address {
-        min-width: 0;
-        flex: 1;
-        overflow: hidden;
-        padding: 6px 9px;
-        border-radius: 6px;
-        background: var(--surface-3);
+        align-items: flex-start;
+        padding: 8px 11px;
+        border-top: 1px solid var(--line-soft);
+        background: var(--surface-soft);
         color: var(--ink-3);
-        font-size: 10px;
-        text-overflow: ellipsis;
-        white-space: nowrap;
+        font-size: 9.5px;
+        line-height: 1.4;
       }
-
-      .browser-page {
-        position: relative;
-        flex: 1;
-        overflow: hidden;
-        background: #f7f8fa;
-      }
-
-      .browser-mock {
-        width: calc(100% - 28px);
-        margin: 22px auto;
-        overflow: hidden;
-        border: 1px solid #e0e3e8;
-        border-radius: 10px;
-        background: white;
-        box-shadow: 0 8px 26px rgba(34, 44, 55, 0.06);
-      }
-
-      .browser-mock-head {
-        height: 70px;
-        padding: 19px;
-        border-bottom: 1px solid #edf0f2;
-      }
-
-      .browser-mock-head strong {
-        display: block;
-        margin-bottom: 6px;
-        font-size: 15px;
-      }
-
-      .browser-mock-line {
-        width: 80%;
-        height: 7px;
-        border-radius: 4px;
-        background: #edf0f3;
-      }
-
-      .browser-mock-body {
-        display: grid;
-        gap: 11px;
-        padding: 18px;
-      }
-
-      .browser-card {
-        height: 46px;
-        border: 1px solid #edf0f2;
-        border-radius: 7px;
-        background: #fafbfc;
-      }
-
-      .cursor {
-        position: absolute;
-        top: 164px;
-        left: 206px;
+      .truth-footnote svg {
         width: 13px;
-        height: 18px;
-        filter: drop-shadow(0 1px 1px rgba(0, 0, 0, 0.2));
-      }
-
-      .files-dock {
-        padding: 8px;
-      }
-
-      .file-row {
-        display: flex;
-        height: 31px;
-        align-items: center;
-        gap: 8px;
-        padding: 0 8px;
-        border-radius: 6px;
-        color: var(--ink-2);
-        font-size: 11px;
-      }
-
-      .file-row.active {
-        background: var(--hover);
-        color: var(--ink);
-      }
-
-      .file-status {
-        margin-left: auto;
-        color: var(--green);
-        font-size: 10px;
-      }
-
-      .diff-block {
-        margin: 12px 8px;
-        overflow: hidden;
-        border: 1px solid var(--line);
-        border-radius: 7px;
-        font-family: "SFMono-Regular", Consolas, monospace;
-        font-size: 9.5px;
-        line-height: 1.55;
-      }
-
-      .diff-line {
-        padding: 2px 8px;
-        color: var(--ink-2);
-      }
-
-      .diff-line.add {
-        background: #eef8f2;
-        color: #276949;
-      }
-
-      .recovery-note {
-        display: flex;
-        max-width: 720px;
-        align-items: center;
-        gap: 8px;
-        margin: 0 0 18px;
-        color: var(--ink-3);
-        font-size: 11px;
-      }
-
-      .review-rail {
-        display: flex;
-        min-width: 0;
-        align-items: center;
-        gap: 7px;
-        margin: 0 5px 8px;
-        padding: 6px 7px;
-        border: 1px solid var(--line-strong);
-        border-radius: 7px;
-        background: rgba(255, 255, 255, 0.72);
-      }
-
-      .review-label {
+        height: 13px;
         flex: 0 0 auto;
-        color: var(--ink-3);
-        font-size: 9.5px;
-        white-space: nowrap;
+        color: var(--blue);
       }
 
-      .scene-select {
-        min-width: 0;
-        flex: 1;
-        height: 27px;
-        padding: 0 7px;
-        border: 1px solid var(--line);
-        border-radius: 6px;
-        background: var(--surface);
-        color: var(--ink-2);
-        cursor: pointer;
-        font-size: 10.5px;
+      .workflow-mark,
+      .line-icon {
+        width: 17px;
+        height: 17px;
+        fill: none;
+        stroke: currentColor;
+        stroke-width: 1.45;
+        stroke-linecap: round;
+        stroke-linejoin: round;
       }
 
-      @media (max-width: 1060px) {
-        .app {
-          grid-template-columns: 272px minmax(0, 1fr);
+      @keyframes edge-flow {
+        to {
+          background-position: -200% 0;
         }
+      }
+      @keyframes node-scan {
+        0%,
+        100% {
+          background-position: 0 0;
+          opacity: 0.42;
+        }
+        50% {
+          background-position: -200% 0;
+          opacity: 0.95;
+        }
+      }
 
-        .top-action.optional {
+      @media (prefers-reduced-motion: reduce) {
+        *,
+        *::before,
+        *::after {
+          scroll-behavior: auto !important;
+          animation-duration: 0.001ms !important;
+          animation-iteration-count: 1 !important;
+          transition-duration: 0.001ms !important;
+        }
+      }
+
+      @media (max-width: 980px) {
+        .page {
+          width: min(760px, calc(100vw - 20px));
+          margin-top: 12px;
+        }
+        .app-frame {
+          grid-template-columns: 1fr;
+        }
+        .host-context {
           display: none;
         }
-      }
-
-      @media (max-width: 820px) {
-        .app {
-          grid-template-columns: 64px minmax(0, 1fr);
+        .dock {
+          height: min(780px, calc(100vh - 132px));
         }
-
-        .brand-row strong,
-        .sidebar-toggle,
-        .new-task span,
-        .nav-row span,
-        .section-label,
-        .sidebar-action span,
-        .project-dot,
-        .review-rail {
+      }
+      @media (max-width: 560px) {
+        .review-title span,
+        .decision-note {
           display: none;
         }
-
-        .brand-row,
-        .new-task,
-        .nav-row,
-        .sidebar-action {
-          justify-content: center;
-          padding: 0;
+        .review-bar {
+          padding-inline: 10px;
         }
-
-        .right-dock {
-          width: 330px;
+        .review-control {
+          max-width: 132px;
         }
-
-        .chat-scroll.with-dock,
-        .composer-wrap.with-dock {
-          right: 0;
+        .page {
+          width: 100%;
+          margin: 0;
         }
-
-        .chat-scroll.with-dock {
-          opacity: 0.2;
+        .app-frame {
+          min-height: calc(100vh - 54px);
+          border: 0;
+          border-radius: 0;
+        }
+        .dock {
+          height: calc(100vh - 54px);
+        }
+        .metrics {
+          grid-template-columns: repeat(2, 1fr);
+        }
+        .metric:nth-child(2) {
+          border-right: 0;
         }
       }
     </style>
   </head>
   <body>
-    <svg width="0" height="0" aria-hidden="true" style="position: absolute">
-      <symbol id="i-plus" viewBox="0 0 24 24"><path d="M12 5v14M5 12h14" /></symbol>
-      <symbol id="i-board" viewBox="0 0 24 24"><rect x="4" y="4" width="16" height="16" rx="2" /><path d="M9 4v16M15 4v16" /></symbol>
-      <symbol id="i-branch" viewBox="0 0 24 24"><circle cx="6" cy="5" r="2" /><circle cx="18" cy="7" r="2" /><circle cx="6" cy="19" r="2" /><path d="M6 7v10M8 12h4a6 6 0 0 0 6-3" /></symbol>
-      <symbol id="i-clock" viewBox="0 0 24 24"><circle cx="12" cy="12" r="8" /><path d="M12 8v4l3 2" /></symbol>
-      <symbol id="i-folder" viewBox="0 0 24 24"><path d="M3.5 7.5h6l2-2h9v13h-17z" /></symbol>
-      <symbol id="i-users" viewBox="0 0 24 24"><circle cx="9" cy="9" r="3" /><circle cx="17" cy="8" r="2" /><path d="M4 19a5 5 0 0 1 10 0M15 14a4 4 0 0 1 5 4" /></symbol>
-      <symbol id="i-search" viewBox="0 0 24 24"><circle cx="10.5" cy="10.5" r="6" /><path d="m15 15 5 5" /></symbol>
-      <symbol id="i-activity" viewBox="0 0 24 24"><path d="M4 13h4l2-6 4 11 2-5h4" /></symbol>
-      <symbol id="i-settings" viewBox="0 0 24 24"><circle cx="12" cy="12" r="3" /><path d="M12 3v2M12 19v2M3 12h2M19 12h2M5.6 5.6 7 7M17 17l1.4 1.4M18.4 5.6 17 7M7 17l-1.4 1.4" /></symbol>
-      <symbol id="i-panel" viewBox="0 0 24 24"><rect x="3.5" y="4" width="17" height="16" rx="2" /><path d="M15 4v16" /></symbol>
-      <symbol id="i-arrow-up" viewBox="0 0 24 24"><path d="m7 11 5-5 5 5M12 6v12" /></symbol>
-      <symbol id="i-paperclip" viewBox="0 0 24 24"><path d="m8.5 12.5 5.8-5.8a3 3 0 1 1 4.2 4.2l-7.8 7.8a5 5 0 0 1-7-7l7.5-7.5" /></symbol>
-      <symbol id="i-chevron" viewBox="0 0 24 24"><path d="m9 10 3 3 3-3" /></symbol>
-      <symbol id="i-code" viewBox="0 0 24 24"><path d="m8 8-4 4 4 4M16 8l4 4-4 4M14 5l-4 14" /></symbol>
-      <symbol id="i-stop" viewBox="0 0 24 24"><rect x="7" y="7" width="10" height="10" rx="1" /></symbol>
-      <symbol id="i-check" viewBox="0 0 24 24"><path d="m5 12 4 4 10-10" /></symbol>
-      <symbol id="i-shield" viewBox="0 0 24 24"><path d="M12 3 20 6v5c0 5-3.3 8-8 10-4.7-2-8-5-8-10V6z" /><path d="M12 8v4M12 16h.01" /></symbol>
-      <symbol id="i-refresh" viewBox="0 0 24 24"><path d="M19 8a8 8 0 1 0 1 6M19 4v4h-4" /></symbol>
-      <symbol id="i-x" viewBox="0 0 24 24"><path d="m6 6 12 12M18 6 6 18" /></symbol>
-      <!-- 已由维护者锁定的五个 custom capability glyph。目标复用现有 target-arrow.svg。 -->
-      <symbol id="agent-duo" viewBox="0 0 24 24">
-        <rect x="2.5" y="7.5" width="8.5" height="8" rx="2" /><path d="M6.75 7.5V5.8" /><circle cx="6.75" cy="4.9" r=".7" /><circle class="dot" cx="5.4" cy="11.4" r=".55" /><circle class="dot" cx="8.1" cy="11.4" r=".55" /><path d="M5.2 14h3.1" />
-        <rect x="13" y="7.5" width="8.5" height="8" rx="2" /><path d="M17.25 7.5V5.8" /><circle cx="17.25" cy="4.9" r=".7" /><circle class="dot" cx="15.9" cy="11.4" r=".55" /><circle class="dot" cx="18.6" cy="11.4" r=".55" /><path d="M15.7 14h3.1M11 11.5h2" />
-      </symbol>
+    <svg width="0" height="0" aria-hidden="true" focusable="false" style="position: absolute">
       <symbol id="flow-adaptive" viewBox="0 0 24 24">
-        <circle cx="5" cy="17" r="2" /><circle cx="12" cy="7" r="2" /><circle cx="19" cy="17" r="2" /><path d="M6.2 15.4 10.8 8.6M13.2 8.6l4.6 6.8M16.8 17H9" /><path d="m10.5 15.5-1.5 1.5 1.5 1.5" /><path d="M3.2 10.2 4 8l2.2-.8L4 6.4 3.2 4.2 2.4 6.4.2 7.2l2.2.8.8 2.2Z" />
+        <circle cx="5" cy="17" r="2" />
+        <circle cx="12" cy="7" r="2" />
+        <circle cx="19" cy="17" r="2" />
+        <path d="M6.2 15.4 10.8 8.6M13.2 8.6l4.6 6.8M16.8 17H9" />
+        <path d="m10.5 15.5-1.5 1.5 1.5 1.5" />
       </symbol>
-      <symbol id="knowledge-linked" viewBox="0 0 24 24">
-        <rect x="3" y="4" width="7" height="8" rx="1.5" /><path d="M5.2 7h2.6M5.2 9h1.8" /><rect x="14" y="12" width="7" height="8" rx="1.5" /><path d="M16.2 15h2.6M16.2 17h1.8M10 8h2.2c1 0 1.8.8 1.8 1.8V12" /><circle cx="12" cy="8" r="1" />
-      </symbol>
-      <symbol id="memory-bookmark" viewBox="0 0 24 24">
-        <path d="M6 3.5h12v17l-6-3.6-6 3.6v-17Z" /><path d="M12 7.2 12.8 9l1.8.8-1.8.8-.8 1.8-.8-1.8-1.8-.8 1.8-.8.8-1.8Z" />
-      </symbol>
-      <symbol id="resume-chat" viewBox="0 0 24 24">
-        <path d="M4 4.5h11A3.5 3.5 0 0 1 18.5 8v4A3.5 3.5 0 0 1 15 15.5H9l-4.5 3v-14Z" /><path d="M11 10h9M17.5 7.5 20 10l-2.5 2.5" />
-      </symbol>
-      <!-- Instance identity glyphs: stable join keys, not capability or status icons. -->
       <symbol id="agent-bloom" viewBox="0 0 24 24">
-        <path d="M12 3.2 14.1 9.9 20.8 12 14.1 14.1 12 20.8 9.9 14.1 3.2 12 9.9 9.9Z" /><circle class="agent-fill" cx="12" cy="12" r="1.4" />
+        <path d="M12 3.2 14.1 9.9 20.8 12 14.1 14.1 12 20.8 9.9 14.1 3.2 12 9.9 9.9Z" />
+        <circle class="fill" cx="12" cy="12" r="1.4" />
       </symbol>
       <symbol id="agent-orbit" viewBox="0 0 24 24">
-        <circle cx="12" cy="12" r="7.2" /><path d="M4.8 12c2.1-3.2 12.3-3.2 14.4 0M12 4.8c3.1 2.2 3.1 12.2 0 14.4" /><circle class="agent-fill" cx="16.7" cy="7" r="1.2" />
+        <circle cx="12" cy="12" r="7.2" />
+        <path d="M4.8 12c2.1-3.2 12.3-3.2 14.4 0M12 4.8c3.1 2.2 3.1 12.2 0 14.4" />
+        <circle class="fill" cx="16.7" cy="7" r="1.2" />
       </symbol>
       <symbol id="agent-kite" viewBox="0 0 24 24">
-        <path d="m12 3.5 3.2 5.3 5.3 3.2-5.3 3.2-3.2 5.3-3.2-5.3L3.5 12l5.3-3.2Z" /><path d="M12 7.2V12l3.7 2.2" />
+        <path d="m12 3.5 3.2 5.3 5.3 3.2-5.3 3.2-3.2 5.3-3.2-5.3L3.5 12l5.3-3.2Z" />
+        <path d="M12 7.2V12l3.7 2.2" />
       </symbol>
-      <symbol id="i-moon" viewBox="0 0 24 24"><path d="M20 15.2A8 8 0 0 1 8.8 4 8 8 0 1 0 20 15.2Z" /></symbol>
+      <symbol id="agent-rings" viewBox="0 0 24 24">
+        <circle cx="9" cy="12" r="5.5" />
+        <circle cx="15" cy="12" r="5.5" />
+        <circle class="fill" cx="12" cy="12" r="1.2" />
+      </symbol>
+      <symbol id="agent-spark" viewBox="0 0 24 24">
+        <path d="M12 3v18M3 12h18M5.7 5.7l12.6 12.6M18.3 5.7 5.7 18.3" />
+        <circle class="fill" cx="12" cy="12" r="2" />
+      </symbol>
+      <symbol id="agent-hex" viewBox="0 0 24 24">
+        <path d="m12 3.8 7.1 4.1v8.2L12 20.2l-7.1-4.1V7.9Z" />
+        <path d="m8.2 12 2.4 2.4 5-5" />
+      </symbol>
+      <symbol id="icon-pause" viewBox="0 0 24 24"><path d="M8 6v12M16 6v12" /></symbol>
+      <symbol id="icon-stop" viewBox="0 0 24 24">
+        <rect x="7" y="7" width="10" height="10" rx="1.5" />
+      </symbol>
+      <symbol id="icon-plus" viewBox="0 0 24 24"><path d="M12 5v14M5 12h14" /></symbol>
+      <symbol id="icon-x" viewBox="0 0 24 24"><path d="m6 6 12 12M18 6 6 18" /></symbol>
+      <symbol id="icon-info" viewBox="0 0 24 24">
+        <circle cx="12" cy="12" r="8.5" />
+        <path d="M12 10.5V17M12 7.2h.01" />
+      </symbol>
+      <symbol id="icon-arrow" viewBox="0 0 24 24"><path d="m7 12 10 0M13 8l4 4-4 4" /></symbol>
+      <symbol id="icon-moon" viewBox="0 0 24 24">
+        <path d="M20 15.2A8 8 0 0 1 8.8 4 8 8 0 1 0 20 15.2Z" />
+      </symbol>
     </svg>
 
-    <div class="app">
-      <aside class="sidebar" aria-label="OmniMind 主导航">
-        <div class="brand-row">
-          <img src="../../apps/web/public/brand/omnimind-logo-flat.svg" alt="" />
-          <strong>OmniMind</strong>
+    <div class="review-bar">
+      <div class="review-title">
+        <strong>Workflow 详情面 · focused storyboard</strong>
+        <span>原型评审控件不进入产品；既有 OmniMind UI 不在这里重做</span>
+      </div>
+      <div class="review-spacer"></div>
+      <select class="review-control" id="fixture-select" aria-label="选择工作流规模">
+        <option value="focused">典型 · 7 个 Agent</option>
+        <option value="compact">精简 · 4 个 Agent</option>
+        <option value="dense">密集 · 20 个 Agent</option>
+      </select>
+      <button class="review-control" id="advance-button">推进一次状态</button>
+      <button class="review-control" id="theme-button" aria-label="切换明暗主题">主题</button>
+    </div>
+
+    <div class="page">
+      <div class="decision-note">
+        <svg class="line-icon"><use href="#icon-info" /></svg>
+        <div>
+          <strong>唯一新增表面：</strong>现有 <code>WorkflowRunCard.tsx</code> 打开现有 RightDock
+          后的阶段地图。当前 <code>WorkflowRunState</code> 没有 dependency edges，因此只画真实 phase
+          order 与 agent membership，不伪造 DAG。
         </div>
+      </div>
 
-        <div class="sidebar-toggle" aria-label="工作模式">
-          <button aria-selected="true">Agent</button>
-          <button aria-selected="false">对话</button>
-        </div>
+      <div class="app-frame">
+        <section class="host-context" aria-label="现有 OmniMind 宿主上下文">
+          <div class="host-topbar">
+            <img src="../../apps/web/public/brand/omnimind-logo-flat.svg" alt="" />
+            <strong>发布候选验证</strong>
+            <span class="host-badge">现有 ChatView · 不施工</span>
+          </div>
+          <div class="host-main">
+            <div class="host-copy">
+              <h1>不再做“大而全能力原型”</h1>
+              <p>
+                Todo、子智能体、审批、Browser、Device、Files、Diff、Environment
+                都已有真实组件。它们只在真实产品里继续复用，不再由研究 HTML 重新画一套。
+              </p>
+              <p>
+                这张 storyboard 只回答一个仍未被现有组件覆盖的问题：结构化 workflow 点开后，right
+                dock 怎样用更清晰、更有质感的空间关系解释阶段、Agent 与实时状态。
+              </p>
+            </div>
 
-        <button class="new-task">
-          <svg class="icon"><use href="#i-plus" /></svg><span>新建任务</span>
-        </button>
+            <div class="reuse-ledger" aria-label="复用清单">
+              <div class="reuse-item">
+                <strong>Todo / 当前步骤</strong
+                ><span>direct-import · ComposerActiveTaskListCard</span>
+              </div>
+              <div class="reuse-item">
+                <strong>子智能体</strong
+                ><span>direct-import · ComposerSubagentStrip + child Thread</span>
+              </div>
+              <div class="reuse-item">
+                <strong>审批</strong><span>direct-import · ComposerPendingApprovalPanel</span>
+              </div>
+              <div class="reuse-item">
+                <strong>Computer Use</strong><span>direct-import · BrowserPanel / DevicePanel</span>
+              </div>
+              <div class="reuse-item">
+                <strong>知识与文件结果</strong
+                ><span>direct-import · Explorer / File / Diff / Activity</span>
+              </div>
+              <div class="reuse-item">
+                <strong>记忆与恢复</strong
+                ><span>backend truth first · existing Environment / Activity primitive</span>
+              </div>
+              <div class="reuse-item">
+                <strong>Workflow 摘要</strong><span>direct-import · WorkflowRunCard</span>
+              </div>
+              <div class="reuse-item only-new">
+                <strong>Workflow 空间详情</strong
+                ><span>唯一新增 · existing RightDock 的 read-only phase map</span>
+              </div>
+            </div>
 
-        <nav class="nav-list">
-          <button class="nav-row"><svg class="icon"><use href="#i-board" /></svg><span>看板</span></button>
-          <button class="nav-row"><svg class="icon"><use href="#i-branch" /></svg><span>拉取请求</span></button>
-          <button class="nav-row"><svg class="icon"><use href="#i-clock" /></svg><span>自动化</span></button>
-        </nav>
-
-        <div class="section-label">项目</div>
-        <nav class="nav-list">
-          <button class="nav-row project-row"><span class="project-dot"></span><span>OmniMind</span></button>
-        </nav>
-
-        <div class="section-label">分组</div>
-        <nav class="nav-list">
-          <button class="nav-row"><svg class="icon"><use href="#i-users" /></svg><span>研究</span></button>
-        </nav>
-
-        <div class="sidebar-spacer"></div>
-
-        <label class="review-rail">
-          <span class="review-label">原型场景</span>
-          <select class="scene-select" id="scene-select" aria-label="选择原型评审场景">
-            <option value="idle">当前界面</option>
-            <option value="task">复杂任务</option>
-            <option value="workflow">原生工作流</option>
-            <option value="memory">自动记忆</option>
-            <option value="approval">询问模式（可选）</option>
-            <option value="computer">Computer Use</option>
-            <option value="knowledge">自动知识维护</option>
-            <option value="resume">安静恢复</option>
-          </select>
-        </label>
-
-        <div class="sidebar-bottom">
-          <button class="sidebar-action"><svg class="icon"><use href="#i-search" /></svg><span>搜索</span></button>
-          <button class="sidebar-action" id="activity-button"><svg class="icon"><use href="#i-activity" /></svg><span>活动</span></button>
-          <button class="sidebar-action"><svg class="icon"><use href="#i-settings" /></svg><span>设置</span></button>
-        </div>
-      </aside>
-
-      <main class="main">
-        <header class="topbar">
-          <div class="topbar-title" id="topbar-title">OmniMind</div>
-          <button class="top-action optional">发送给 Agent</button>
-          <button class="top-action optional">移交</button>
-          <button class="top-action" id="workbench-button">工作台</button>
-          <button class="icon-action" id="theme-button" aria-label="切换明暗主题" title="切换明暗主题">
-            <svg class="icon"><use href="#i-moon" /></svg>
-          </button>
-          <button class="icon-action" id="dock-button" aria-label="开关右侧工作区" title="开关右侧工作区">
-            <svg class="icon"><use href="#i-panel" /></svg>
-          </button>
-        </header>
-
-        <div class="stage" id="stage">
-          <section class="scene active" data-scene="idle">
-            <div class="chat-canvas">
-              <div class="empty-state">
-                <img src="../../apps/web/public/brand/omnimind-logo-satin.svg" alt="OmniMind" />
-                <h1>我们要做什么？</h1>
-                <div class="composer-wrap">
-                  <div class="composer">
-                    <textarea aria-label="消息" placeholder="让 OmniMind 处理任何事情"></textarea>
-                    <div class="composer-footer">
-                      <button class="composer-round" aria-label="添加上下文"><svg class="icon"><use href="#i-plus" /></svg></button>
-                      <button class="composer-small">完全访问 <svg class="icon icon-sm"><use href="#i-chevron" /></svg></button>
-                      <button class="composer-small">DeepSeek Chat <svg class="icon icon-sm"><use href="#i-chevron" /></svg></button>
-                      <button class="composer-send" aria-label="发送"><svg class="icon"><use href="#i-arrow-up" /></svg></button>
-                    </div>
-                  </div>
-                  <div class="composer-meta"><span>在项目中工作</span><span>⌘ Enter 发送</span></div>
+            <div class="composer-zone">
+              <div class="host-component-label">现有 WorkflowRunCard.tsx · compact header</div>
+              <button
+                class="workflow-summary"
+                id="open-workflow"
+                aria-label="打开发布验证工作流详情"
+              >
+                <svg class="workflow-mark"><use href="#flow-adaptive" /></svg>
+                <span class="workflow-summary-main"
+                  ><strong>发布验证</strong
+                  ><span id="summary-copy">2/4 阶段 · 3/7 Agent 运行中 · 01:42</span></span
+                >
+                <span class="summary-actions">
+                  <span class="icon-button" role="img" aria-label="暂停"
+                    ><svg class="line-icon"><use href="#icon-pause" /></svg
+                  ></span>
+                  <span class="icon-button" role="img" aria-label="停止"
+                    ><svg class="line-icon"><use href="#icon-stop" /></svg
+                  ></span>
+                  <span class="icon-button" role="img" aria-label="打开详情"
+                    ><svg class="line-icon"><use href="#icon-arrow" /></svg
+                  ></span>
+                </span>
+              </button>
+              <div class="composer-shell">
+                <p>补充要求</p>
+                <div class="composer-footer">
+                  <button class="composer-chip">＋</button
+                  ><button class="composer-chip">完全访问</button
+                  ><button class="composer-chip">Claude Code</button
+                  ><button class="composer-send" aria-label="发送">↑</button>
                 </div>
               </div>
             </div>
-          </section>
+          </div>
+        </section>
 
-          <section class="scene" data-scene="task">
-            <div class="chat-canvas">
-              <div class="chat-scroll">
-                <div class="message user"><div class="user-bubble">深度 review 当前实现，分工检查架构、测试和用户体验，然后给我一个结论。</div></div>
-                <div class="message">
-                  <div class="assistant-copy"><p>我会先核对现有 owner，再并行检查三个独立面；最终由主 Agent 汇总结论。</p></div>
-                  <div class="activity-line"><span>已读取聊天</span><span class="agent-chip"><svg class="agent-id" style="--agent-color:#61b96c"><use href="#agent-bloom" /></svg>Kepler</span><span class="agent-chip"><svg class="agent-id" style="--agent-color:#44bea2"><use href="#agent-orbit" /></svg>Zeno</span><span>已更新</span></div>
-                  <div class="activity-line"><span>已读取文件并运行检查</span><span class="agent-chip"><svg class="agent-id" style="--agent-color:#8d80bf"><use href="#agent-kite" /></svg>Dewey</span><span>已完成</span></div>
-                </div>
-              </div>
-              <div class="composer-wrap">
-                <div class="todo-popover" data-todo-popover hidden>
-                  <div class="task-row done-text"><span class="task-check">✓</span><span>核对当前 architecture owner</span></div>
-                  <div class="task-row done-text"><span class="task-check">✓</span><span>检查后端运行状态与失败路径</span></div>
-                  <div class="task-row"><span class="task-check"></span><span>收敛前端信息层级与身份连续性</span></div>
-                  <div class="task-row"><span class="task-check"></span><span>更新设计 owner 与执行 proof</span></div>
-                </div>
-                <div class="stack">
-                  <div class="stack-row">
-                    <div class="stack-head"><svg class="icon icon-sm"><use href="#i-code" /></svg><strong>3 个文件已更改</strong><span class="spacer"></span><button class="tiny-button">查看更改</button></div>
-                  </div>
-                  <div class="stack-row">
-                    <button class="stack-head todo-summary" data-toggle-todo><span class="status-dot running"></span><strong>第 3/4 步</strong><span>· 收敛前端信息层级与身份连续性</span><span class="spacer"></span><span>展开</span></button>
-                  </div>
-                  <div class="stack-row">
-                    <button class="stack-head todo-summary" data-open-dock><svg class="cap-icon" aria-hidden="true"><use href="#agent-duo" /></svg><strong>子智能体</strong><span class="agent-cluster"><svg class="agent-id" style="--agent-color:#61b96c"><use href="#agent-bloom" /></svg><svg class="agent-id" style="--agent-color:#44bea2"><use href="#agent-orbit" /></svg><svg class="agent-id" style="--agent-color:#8d80bf"><use href="#agent-kite" /></svg></span><span>2 运行 · 1 完成</span><span class="spacer"></span><span>打开</span></button>
-                  </div>
-                </div>
-                <div class="composer">
-                  <textarea aria-label="消息">补充关注未来维护成本。</textarea>
-                  <div class="composer-footer">
-                    <button class="composer-round"><svg class="icon"><use href="#i-plus" /></svg></button>
-                    <button class="composer-small">完全访问</button>
-                    <button class="composer-small">OmniMind Agent</button>
-                    <button class="composer-send"><svg class="icon"><use href="#i-arrow-up" /></svg></button>
-                  </div>
-                </div>
-              </div>
-              <aside class="workbench" data-workbench>
-                <div class="workbench-title"><strong>环境信息</strong><button class="icon-action" data-close-workbench aria-label="关闭环境信息"><svg class="icon icon-sm"><use href="#i-x" /></svg></button></div>
-                <div class="wb-section"><div class="wb-head"><svg class="icon icon-sm"><use href="#i-code" /></svg><span>变更</span><span class="spacer"></span><span style="color:var(--green)">+428</span><span style="color:var(--red)">-96</span></div></div>
-                <div class="wb-section"><button class="wb-head todo-summary" data-open-dock><svg class="cap-icon" aria-hidden="true"><use href="#agent-duo" /></svg><span>子智能体</span><span class="spacer"></span><span class="agent-cluster"><svg class="agent-id" style="--agent-color:#61b96c"><use href="#agent-bloom" /></svg><svg class="agent-id" style="--agent-color:#44bea2"><use href="#agent-orbit" /></svg><svg class="agent-id" style="--agent-color:#8d80bf"><use href="#agent-kite" /></svg></span><span>3</span></button></div>
-                <div class="wb-section"><div class="wb-head"><strong>来源</strong></div><div class="wb-body"><div class="file-row"><svg class="icon icon-sm"><use href="#i-folder" /></svg><span>architecture/workbench.md</span></div><div class="file-row"><svg class="icon icon-sm"><use href="#i-folder" /></svg><span>Codex 界面参考</span></div></div></div>
-              </aside>
-              <aside class="right-dock hidden">
-                <div class="dock-head"><svg class="cap-icon" aria-hidden="true"><use href="#agent-duo" /></svg><strong>子智能体</strong><button class="icon-action" data-hide-dock aria-label="关闭"><svg class="icon icon-sm"><use href="#i-x" /></svg></button></div>
-                <div class="files-dock">
-                  <div class="section-label" style="margin:10px 8px 6px">已开启 · 2</div>
-                  <div class="file-row"><svg class="agent-id" style="--agent-color:#61b96c"><use href="#agent-bloom" /></svg><span>Kepler · 架构审查</span><span class="file-status">运行中</span></div>
-                  <div class="file-row"><svg class="agent-id" style="--agent-color:#44bea2"><use href="#agent-orbit" /></svg><span>Zeno · 前端体验</span><span class="file-status">运行中</span></div>
-                  <div class="section-label" style="margin:18px 8px 6px">完成 · 1</div>
-                  <div class="file-row"><svg class="agent-id" style="--agent-color:#8d80bf"><use href="#agent-kite" /></svg><span>Dewey · 测试审计</span><span class="state">5 分钟前</span></div>
-                </div>
-              </aside>
+        <aside class="dock" aria-label="Workflow right dock prototype">
+          <div class="dock-tabs">
+            <div class="dock-tab">
+              <svg class="line-icon"><use href="#flow-adaptive" /></svg><span>发布验证</span
+              ><span class="close">×</span>
             </div>
-          </section>
+            <button class="icon-button dock-tab-add" aria-label="添加面板">
+              <svg class="line-icon"><use href="#icon-plus" /></svg>
+            </button>
+          </div>
 
-          <section class="scene" data-scene="workflow">
-            <div class="chat-canvas">
-              <div class="chat-scroll">
-                <div class="message user"><div class="user-bubble">用 Claude Code 的原生工作流检查这次发布候选。</div></div>
-                <div class="message">
-                  <div class="assistant-copy"><p>已启动 Claude Code 原生 workflow。当前处于“运行检查”，3 个 child 中 1 个已完成。</p></div>
-                  <div class="activity-line"><svg class="cap-icon" aria-hidden="true"><use href="#flow-adaptive" /></svg><span>发布验证 · 运行检查</span><span class="agent-cluster"><svg class="agent-id" style="--agent-color:#61b96c"><use href="#agent-bloom" /></svg><svg class="agent-id" style="--agent-color:#44bea2"><use href="#agent-orbit" /></svg><svg class="agent-id" style="--agent-color:#8d80bf"><use href="#agent-kite" /></svg></span><button class="activity-action" data-open-dock>查看流程</button></div>
-                </div>
+          <div class="workflow-pane">
+            <div class="pane-header">
+              <svg class="workflow-mark" style="color: var(--green)">
+                <use href="#flow-adaptive" />
+              </svg>
+              <div class="pane-title">
+                <strong>发布验证</strong><span>Claude Code · 原生工作流 · 只读详情</span>
               </div>
-              <div class="composer-wrap">
-                <div class="stack">
-                  <div class="stack-row">
-                    <button class="stack-head todo-summary" data-open-dock><svg class="cap-icon" aria-hidden="true"><use href="#flow-adaptive" /></svg><strong>发布验证</strong><span>· 运行检查 · 1/3 完成</span><span class="spacer"></span><span>查看流程</span></button>
-                  </div>
-                </div>
-                <div class="composer">
-                  <textarea aria-label="消息" placeholder="补充要求"></textarea>
-                  <div class="composer-footer"><button class="composer-round"><svg class="icon"><use href="#i-plus" /></svg></button><button class="composer-small">完全访问</button><button class="composer-small">Claude Code</button><button class="composer-send"><svg class="icon"><use href="#i-arrow-up" /></svg></button></div>
-                </div>
-              </div>
-              <aside class="workbench" data-workbench>
-                <div class="workbench-title"><strong>环境信息</strong><button class="icon-action" data-close-workbench aria-label="关闭环境信息"><svg class="icon icon-sm"><use href="#i-x" /></svg></button></div>
-                <div class="wb-section"><div class="wb-head"><svg class="icon icon-sm"><use href="#i-code" /></svg><span>变更</span><span class="spacer"></span><span style="color:var(--green)">+428</span><span style="color:var(--red)">-96</span></div></div>
-                <div class="wb-section"><button class="wb-head todo-summary" data-open-dock><svg class="cap-icon" aria-hidden="true"><use href="#flow-adaptive" /></svg><span>发布验证</span><span class="spacer"></span><span>运行检查 · 1/3</span></button></div>
-                <div class="wb-section"><div class="wb-head"><svg class="cap-icon" aria-hidden="true"><use href="#agent-duo" /></svg><span>子智能体</span><span class="spacer"></span><span class="agent-cluster"><svg class="agent-id" style="--agent-color:#61b96c"><use href="#agent-bloom" /></svg><svg class="agent-id" style="--agent-color:#44bea2"><use href="#agent-orbit" /></svg><svg class="agent-id" style="--agent-color:#8d80bf"><use href="#agent-kite" /></svg></span><span>3</span></div></div>
-                <div class="wb-section"><div class="wb-head"><strong>来源</strong></div><div class="wb-body"><div class="file-row"><svg class="icon icon-sm"><use href="#i-folder" /></svg><span>Claude Code workflow</span></div></div></div>
-              </aside>
-              <aside class="right-dock hidden">
-                <div class="dock-head"><svg class="cap-icon" aria-hidden="true"><use href="#flow-adaptive" /></svg><strong>发布验证</strong><button class="tiny-button">暂停</button><button class="tiny-button">停止</button><button class="icon-action" data-hide-dock aria-label="关闭"><svg class="icon icon-sm"><use href="#i-x" /></svg></button></div>
-                <div class="workflow-canvas">
-                  <div class="workflow-overview"><div><strong>运行检查</strong><span>Claude Code 原生工作流 · 1/3 完成</span></div><span>01:42</span></div>
-                  <div class="workflow-graph" aria-label="发布验证动态流程图">
-                    <svg class="workflow-edges" viewBox="0 0 356 292" preserveAspectRatio="none" aria-hidden="true">
-                      <path d="M106 142 C122 142 112 55 124 55" />
-                      <path class="active-edge" d="M106 142 H124" />
-                      <path d="M106 142 C122 142 112 229 124 229" />
-                      <path d="M220 55 C252 55 244 142 258 142" />
-                      <path class="active-edge" d="M220 142 H258" />
-                      <path d="M220 229 C252 229 244 142 258 142" />
-                    </svg>
-                    <div class="workflow-node node-root"><svg class="cap-icon"><use href="#flow-adaptive" /></svg><div><strong>分派检查</strong><span>已完成</span></div></div>
-                    <div class="workflow-node node-audit"><svg class="agent-id" style="--agent-color:#61b96c"><use href="#agent-bloom" /></svg><div><strong>后端审计</strong><span>已完成</span></div></div>
-                    <div class="workflow-node node-journey active"><svg class="agent-id" style="--agent-color:#44bea2"><use href="#agent-orbit" /></svg><div><strong>桌面旅程</strong><span>运行中</span></div></div>
-                    <div class="workflow-node node-contract"><svg class="agent-id" style="--agent-color:#8d80bf"><use href="#agent-kite" /></svg><div><strong>契约检查</strong><span>排队中</span></div></div>
-                    <div class="workflow-node node-final"><span class="central-icon target-arrow"></span><div><strong>汇总结论</strong><span>等待输入</span></div></div>
-                  </div>
-                  <div class="workflow-detail"><strong>桌面旅程 · 运行中</strong><p>正在以 fresh profile 验证启动、任务执行、关闭与重开。选中节点只解释真实状态；流程布局本身不创建新的 workflow owner。本页 SVG 是信息架构 storyboard，production renderer 首选 React Flow 12 challenger，不手搓图引擎。</p></div>
-                </div>
-              </aside>
+              <span class="status-label" id="run-status">运行中</span>
+              <button class="icon-button" aria-label="关闭 Workflow 详情">
+                <svg class="line-icon"><use href="#icon-x" /></svg>
+              </button>
             </div>
-          </section>
 
-          <section class="scene" data-scene="memory">
-            <div class="chat-canvas">
-              <div class="chat-scroll">
-                <div class="message user"><div class="user-bubble">以后这个项目的用户可见文案都要同时提供中文和英文，不要再问我。</div></div>
-                <div class="message">
-                  <div class="assistant-copy"><p>明白。当前改动会同时闭合中文和英文 catalog；后续这个项目我也会遵循这一约束。</p></div>
-                </div>
+            <div class="metrics" aria-label="工作流运行摘要">
+              <div class="metric">
+                <span>当前阶段</span><strong id="metric-phase">并行检查</strong>
               </div>
-              <div class="composer-wrap">
-                <div class="composer">
-                  <textarea aria-label="消息" placeholder="继续任务"></textarea>
-                  <div class="composer-footer"><button class="composer-round"><svg class="icon"><use href="#i-plus" /></svg></button><button class="composer-small">完全访问</button><button class="composer-small">OmniMind Agent</button><button class="composer-send"><svg class="icon"><use href="#i-arrow-up" /></svg></button></div>
-                </div>
+              <div class="metric"><span>进度</span><strong id="metric-progress">2 / 4</strong></div>
+              <div class="metric">
+                <span>Agent</span><strong id="metric-agents">3 运行 · 2 完成</strong>
               </div>
-              <aside class="workbench" data-workbench>
-                <div class="workbench-title"><strong>工作台</strong><button class="icon-action" data-close-workbench aria-label="关闭工作台"><svg class="icon icon-sm"><use href="#i-x" /></svg></button></div>
-                <div class="wb-section">
-                  <div class="wb-head"><strong>上下文与便笺</strong></div>
-                </div>
-                <div class="wb-section">
-                  <div class="wb-head"><span>会话摘要</span><span class="spacer"></span><span style="color:var(--ink-3);font-size:10px">仅当前任务</span></div>
-                </div>
-                <div class="wb-section">
-                  <div class="wb-head"><svg class="cap-icon" aria-hidden="true"><use href="#memory-bookmark" /></svg><strong>项目记忆</strong><span class="spacer"></span><button class="switch" id="memory-switch" aria-label="开关自动记忆"></button></div>
-                  <div class="wb-body">
-                    <p class="wb-description">自动保留少量可复用的项目事实与约束，不保存完整对话。作用域：OmniMind 项目。</p>
-                    <div class="memory-item">
-                      <p>用户可见功能必须同时提供简体中文与英文。</p>
-                      <div class="memory-meta"><span>当前任务 · 刚刚</span><button>纠正</button><button class="forget-memory">遗忘</button></div>
-                    </div>
-                    <div class="memory-item">
-                      <p>优先复用现有 owner，避免新增平行控制面。</p>
-                      <div class="memory-meta"><span>来自 AGENTS.md · 2h</span><button>查看来源</button></div>
-                    </div>
-                  </div>
-                </div>
-                <div class="wb-section">
-                  <div class="wb-head"><svg class="cap-icon" aria-hidden="true"><use href="#knowledge-linked" /></svg><span>知识库</span><span class="spacer"></span><span style="color:var(--ink-3);font-size:10px">12 个关联页面</span></div>
-                </div>
-                <div class="wb-section"><div class="wb-head"><span>项目说明</span></div></div>
-                <div class="wb-section"><div class="wb-head"><span>便笺</span></div></div>
-              </aside>
-            </div>
-          </section>
-
-          <section class="scene" data-scene="approval" data-runtime-mode="approval-required">
-            <div class="chat-canvas">
-              <div class="chat-scroll">
-                <div class="message user"><div class="user-bubble">运行 focused test 并修复失败。</div></div>
-                <div class="message"><div class="assistant-copy"><p>当前任务选择了“需要时询问”。执行会更新工作区测试产物的命令前，请确认一次；在“完全访问”模式下不会出现这张卡。</p></div></div>
-              </div>
-              <div class="composer-wrap">
-                <div class="approval" id="approval-card">
-                  <div class="approval-title"><svg class="icon" style="color:var(--amber)"><use href="#i-shield" /></svg><div><strong>允许执行这个命令吗？</strong><p>该命令可能更新当前工作区内生成的测试产物。</p></div></div>
-                  <div class="command">bun test test/document-contract.test.mjs --update-snapshots</div>
-                  <div class="approval-actions"><button class="button-secondary" data-approval="declined">拒绝</button><button class="button-secondary" data-approval="task">此任务始终允许</button><button class="button-primary" data-approval="approved">仅允许这一次</button></div>
-                </div>
-                <div class="stack">
-                  <div class="stack-row"><div class="stack-head"><span class="status-dot running"></span><strong>已完成 1/3 个任务</strong><span class="spacer"></span><span>正在等待授权</span></div></div>
-                </div>
-                <div class="composer"><textarea aria-label="消息" placeholder="授权后才能继续"></textarea><div class="composer-footer"><button class="composer-round"><svg class="icon"><use href="#i-plus" /></svg></button><button class="composer-small">需要时询问</button><button class="composer-small">OmniMind Agent</button><button class="composer-send"><svg class="icon"><use href="#i-arrow-up" /></svg></button></div></div>
+              <div class="metric">
+                <span>用量</span><strong id="metric-usage">84.6k token</strong>
               </div>
             </div>
-          </section>
 
-          <section class="scene" data-scene="computer">
-            <div class="chat-canvas">
-              <div class="chat-scroll with-dock">
-                <div class="message user"><div class="user-bubble">在当前浏览器里检查本地原型的窄窗口表现。</div></div>
-                <div class="message">
-                  <div class="assistant-copy"><p>已使用现有 Browser pane 检查 1280px、820px 和 720px 宽度。窄屏下侧栏会折叠，但 Composer 仍保持可操作。</p></div>
-                  <div class="activity-line"><span class="dot success"></span><span>浏览器检查完成 · 截图已保存到当前项目</span><button class="activity-action">打开截图</button></div>
-                </div>
-              </div>
-              <div class="composer-wrap with-dock">
-                <div class="composer"><textarea aria-label="消息" placeholder="补充要求"></textarea><div class="composer-footer"><button class="composer-round"><svg class="icon"><use href="#i-plus" /></svg></button><button class="composer-small">完全访问</button><button class="composer-small">Codex</button><button class="composer-send"><svg class="icon"><use href="#i-arrow-up" /></svg></button></div></div>
-              </div>
-              <aside class="right-dock">
-                <div class="dock-head"><strong>浏览器</strong><button class="tiny-button">截图</button><button class="icon-action" data-hide-dock aria-label="关闭"><svg class="icon icon-sm"><use href="#i-x" /></svg></button></div>
-                <div class="browser-bar"><button class="icon-action"><svg class="icon icon-sm"><use href="#i-refresh" /></svg></button><div class="address">file:///…/omnimind-agent-capability-surface.html</div></div>
-                <div class="browser-page"><div class="browser-mock"><div class="browser-mock-head"><strong>OmniMind</strong><div class="browser-mock-line"></div></div><div class="browser-mock-body"><div class="browser-card"></div><div class="browser-card"></div><div class="browser-card"></div></div></div><svg class="cursor" viewBox="0 0 16 22"><path d="M2 1.5v16l4.2-4 3 6.5 2.8-1.3-3-6.4h5z" fill="#fff" stroke="#111" stroke-width="1.2" /></svg></div>
-              </aside>
+            <div class="map-toolbar">
+              <strong>阶段地图</strong><span>顺序与归属来自真实 run</span>
+              <div class="toolbar-spacer"></div>
+              <button class="toolbar-button" id="jump-current">定位当前阶段</button>
             </div>
-          </section>
 
-          <section class="scene" data-scene="knowledge">
-            <div class="chat-canvas">
-              <div class="chat-scroll with-dock">
-                <div class="message user"><div class="user-bubble">比较这三份实现指南，告诉我当前 bundled Pi runtime 的准确版本，以及旧文档为什么不一致。</div></div>
-                <div class="message">
-                  <div class="assistant-copy">
-                    <p>当前 bundled Pi runtime 基线是 <code>v0.84.1</code>。旧指南里的 <code>0.81.0</code> 来自较早的开发依赖，不代表现在随 OmniMind 交付的运行时。</p>
-                    <p>我保留了两个版本来源，并把当前判断与替代关系写入关联页面；没有把旧来源静默删掉。</p>
-                    <div class="answer-meta"><svg class="cap-icon" aria-hidden="true"><use href="#knowledge-linked" /></svg><span>参考 3 份项目来源 · 关联知识已自动同步</span><button data-open-dock>查看来源</button></div>
-                  </div>
-                </div>
-              </div>
-              <div class="composer-wrap with-dock">
-                <div class="composer"><textarea aria-label="消息" placeholder="询问这些来源"></textarea><div class="composer-footer"><button class="composer-round"><svg class="icon"><use href="#i-plus" /></svg></button><button class="composer-small">完全访问</button><button class="composer-small">OmniMind Agent</button><button class="composer-send"><svg class="icon"><use href="#i-arrow-up" /></svg></button></div></div>
-              </div>
-              <aside class="right-dock">
-                <div class="dock-head"><svg class="cap-icon" aria-hidden="true"><use href="#knowledge-linked" /></svg><strong>项目知识来源</strong><span style="color:var(--ink-3);font-size:10px">2 个关联页面</span><button class="icon-action" data-hide-dock aria-label="关闭"><svg class="icon icon-sm"><use href="#i-x" /></svg></button></div>
-                <div class="files-dock">
-                  <div class="file-row active"><svg class="icon icon-sm"><use href="#i-folder" /></svg><span>knowledge/runtime.md</span><span class="file-status">+12</span></div>
-                  <div class="file-row"><svg class="icon icon-sm"><use href="#i-folder" /></svg><span>knowledge/index.md</span><span class="file-status">+3</span></div>
-                  <div class="diff-block"><div class="diff-line">## Runtime version</div><div class="diff-line add">+ Current bundled baseline: 0.84.1.</div><div class="diff-line add">+ Older 0.81.0 refers to a dev dependency.</div><div class="diff-line add">+ Both sources retained; current judgment recorded.</div></div>
-                </div>
-              </aside>
+            <div class="map-viewport" id="map-viewport">
+              <div class="phase-map" id="phase-map" aria-label="工作流阶段与 Agent"></div>
             </div>
-          </section>
 
-          <section class="scene" data-scene="resume">
-            <div class="chat-canvas">
-              <div class="chat-scroll">
-                <div class="recovery-note"><svg class="cap-icon" aria-hidden="true"><use href="#resume-chat" /></svg><span>已从 Claude Code 原生会话继续</span><button class="activity-action">查看详情</button></div>
-                <div class="message user"><div class="user-bubble">继续完成刚才的修复。</div></div>
-                <div class="message"><div class="assistant-copy"><p>已经从同一 Claude Code session 恢复。我会从未完成的验证继续，不会再次执行已经完成的步骤。</p></div><div class="activity-line"><span class="dot"></span><span>上次停在：packaged Desktop reopen proof</span></div></div>
-              </div>
-              <div class="composer-wrap">
-                <div class="stack"><div class="stack-row"><div class="stack-head"><span class="central-icon target-arrow" aria-hidden="true"></span><strong>完成发布候选验证</strong><span>· 3/4</span><span class="spacer"></span><span>正在继续打包验证</span></div></div></div>
-                <div class="composer"><textarea aria-label="消息" placeholder="补充要求"></textarea><div class="composer-footer"><button class="composer-round"><svg class="icon"><use href="#i-plus" /></svg></button><button class="composer-small">完全访问</button><button class="composer-small">Claude Code</button><button class="composer-send"><svg class="icon"><use href="#i-arrow-up" /></svg></button></div></div>
-              </div>
+            <div class="node-detail" id="node-detail" aria-live="polite"></div>
+            <div class="truth-footnote">
+              <svg class="line-icon"><use href="#icon-info" /></svg
+              ><span
+                >当前数据模型只证明 phase 顺序和 Agent 归属。跨 Agent 连线只有在 Engine 上报显式
+                dependency edge 后才显示；届时首选 React Flow 做 renderer
+                challenger，不从零开发图引擎。</span
+              >
             </div>
-          </section>
-        </div>
-      </main>
+          </div>
+        </aside>
+      </div>
     </div>
 
     <script>
-      const titles = {
-        idle: "OmniMind",
-        task: "深度审查当前实现",
-        workflow: "发布验证",
-        memory: "项目文案约束",
-        approval: "运行 focused test",
-        computer: "检查本地原型",
-        knowledge: "比较 bundled runtime",
-        resume: "继续打包验证",
+      const glyphs = [
+        "agent-bloom",
+        "agent-orbit",
+        "agent-kite",
+        "agent-rings",
+        "agent-spark",
+        "agent-hex",
+      ];
+      const colors = [
+        "var(--agent-1)",
+        "var(--agent-2)",
+        "var(--agent-3)",
+        "var(--agent-4)",
+        "var(--agent-5)",
+        "var(--agent-6)",
+      ];
+
+      const fixtures = {
+        compact: [
+          {
+            id: "prepare",
+            title: "准备",
+            detail: "1/1",
+            state: "completed",
+            agents: [
+              agent(
+                "范围核对",
+                "completed",
+                0,
+                "Claude Sonnet 4.5",
+                "12.2k",
+                "读取 owner 与变更范围",
+              ),
+            ],
+          },
+          {
+            id: "check",
+            title: "检查",
+            detail: "1/2",
+            state: "running",
+            agents: [
+              agent("代码审查", "completed", 1, "Claude Opus 4.5", "18.7k", "核对实现与测试"),
+              agent(
+                "真实旅程",
+                "running",
+                2,
+                "Claude Sonnet 4.5",
+                "9.3k",
+                "验证 packaged Desktop 旅程",
+              ),
+            ],
+          },
+          {
+            id: "finish",
+            title: "收口",
+            detail: "0/1",
+            state: "queued",
+            agents: [
+              agent("汇总结论", "queued", 3, "Claude Sonnet 4.5", "—", "汇总证据并给出裁决"),
+            ],
+          },
+        ],
+        focused: [
+          {
+            id: "prepare",
+            title: "预检",
+            detail: "1/1 完成",
+            state: "completed",
+            agents: [
+              agent(
+                "范围核对",
+                "completed",
+                0,
+                "Claude Sonnet 4.5",
+                "12.2k",
+                "读取 owner、冻结输入与停止条件",
+              ),
+            ],
+          },
+          {
+            id: "parallel",
+            title: "并行检查",
+            detail: "2/3 完成",
+            state: "running",
+            agents: [
+              agent(
+                "后端审计",
+                "completed",
+                1,
+                "Claude Opus 4.5",
+                "24.8k",
+                "核对 adapter、settlement 与失败边界",
+              ),
+              agent(
+                "桌面旅程",
+                "running",
+                2,
+                "Claude Sonnet 4.5",
+                "19.6k",
+                "以 fresh profile 验证启动、执行与重开",
+              ),
+              agent(
+                "契约检查",
+                "running",
+                3,
+                "Claude Sonnet 4.5",
+                "14.1k",
+                "核对中英文、状态语义与 owner",
+              ),
+            ],
+          },
+          {
+            id: "repair",
+            title: "修复验证",
+            detail: "0/2",
+            state: "queued",
+            agents: [
+              agent(
+                "Focused tests",
+                "running",
+                4,
+                "Claude Haiku 4.5",
+                "7.4k",
+                "运行最窄测试并归因失败",
+              ),
+              agent(
+                "视觉复核",
+                "queued",
+                5,
+                "Claude Sonnet 4.5",
+                "—",
+                "在真实视口复核 Workflow pane",
+              ),
+            ],
+          },
+          {
+            id: "finish",
+            title: "收口",
+            detail: "0/1",
+            state: "queued",
+            agents: [
+              agent(
+                "最终裁决",
+                "queued",
+                0,
+                "Claude Opus 4.5",
+                "—",
+                "合并证据、列出残余边界并停止",
+              ),
+            ],
+          },
+        ],
+        dense: [
+          {
+            id: "prepare",
+            title: "准备",
+            detail: "3/3",
+            state: "completed",
+            agents: manyAgents("准备", 3, 0, "completed"),
+          },
+          {
+            id: "research",
+            title: "研究",
+            detail: "4/5",
+            state: "running",
+            agents: manyAgents("研究", 5, 3, "mixed"),
+          },
+          {
+            id: "implement",
+            title: "实现",
+            detail: "2/5",
+            state: "running",
+            agents: manyAgents("实现", 5, 8, "mixed"),
+          },
+          {
+            id: "verify",
+            title: "验证",
+            detail: "1/4",
+            state: "running",
+            agents: manyAgents("验证", 4, 13, "mixed"),
+          },
+          {
+            id: "finish",
+            title: "收口",
+            detail: "0/3",
+            state: "queued",
+            agents: manyAgents("收口", 3, 17, "queued"),
+          },
+        ],
       };
 
-      const stage = document.getElementById("stage");
-      const title = document.getElementById("topbar-title");
-      const workbenchButton = document.getElementById("workbench-button");
-      const dockButton = document.getElementById("dock-button");
-      const themeButton = document.getElementById("theme-button");
-      const sceneSelect = document.getElementById("scene-select");
-
-      function activeScene() {
-        return document.querySelector(".scene.active");
+      function agent(label, state, seed, model, usage, description) {
+        return {
+          id: `${label}-${seed}`,
+          label,
+          state,
+          seed,
+          model,
+          usage,
+          description,
+          effort: seed % 2 ? "High" : "Medium",
+          recent:
+            state === "running"
+              ? "read · exec · view"
+              : state === "completed"
+                ? "settled"
+                : "尚未开始",
+        };
       }
 
-      function setScene(name) {
-        document.querySelectorAll(".scene").forEach((scene) => {
-          scene.classList.toggle("active", scene.dataset.scene === name);
+      function manyAgents(prefix, count, start, mode) {
+        return Array.from({ length: count }, (_, index) => {
+          const seed = start + index;
+          const state =
+            mode === "completed"
+              ? "completed"
+              : mode === "queued"
+                ? "queued"
+                : index < Math.ceil(count / 2)
+                  ? "completed"
+                  : index === Math.ceil(count / 2)
+                    ? "running"
+                    : "queued";
+          return agent(
+            `${prefix} ${index + 1}`,
+            state,
+            seed,
+            index % 3 === 0 ? "Claude Opus 4.5" : "Claude Sonnet 4.5",
+            state === "queued" ? "—" : `${(8 + seed * 1.7) | 0}.${seed % 9}k`,
+            `${prefix}阶段的独立工作单元 ${index + 1}`,
+          );
         });
-        sceneSelect.value = name;
-        title.textContent = titles[name] || "OmniMind";
-        const scene = activeScene();
-        workbenchButton.classList.toggle("active", Boolean(scene?.querySelector("[data-workbench]:not(.hidden)")));
-        dockButton.classList.toggle("active", Boolean(scene?.querySelector(".right-dock:not(.hidden)")));
-        window.location.hash = name;
       }
 
-      sceneSelect.addEventListener("change", () => setScene(sceneSelect.value));
+      const labels = { completed: "已完成", running: "运行中", queued: "排队中", failed: "失败" };
+      let fixtureName = "focused";
+      let selectedAgentId = null;
 
-      document.querySelectorAll("[data-toggle-body]").forEach((button) => {
-        button.addEventListener("click", () => {
-          const body = button.closest(".stack-row").querySelector(".stack-body");
-          const collapsed = body.hidden;
-          body.hidden = !collapsed;
-          button.textContent = collapsed ? "收起" : "展开";
+      function currentPhases() {
+        return fixtures[fixtureName];
+      }
+      function flattenAgents() {
+        return currentPhases().flatMap((phase) =>
+          phase.agents.map((entry) => ({ ...entry, phaseTitle: phase.title })),
+        );
+      }
+
+      function render() {
+        const phases = currentPhases();
+        const agents = flattenAgents();
+        const selected =
+          agents.find((entry) => entry.id === selectedAgentId) ??
+          agents.find((entry) => entry.state === "running") ??
+          agents[0];
+        selectedAgentId = selected?.id ?? null;
+        const map = document.getElementById("phase-map");
+        map.innerHTML = "";
+        phases.forEach((phase, phaseIndex) => {
+          const phaseElement = document.createElement("section");
+          phaseElement.className = "phase";
+          phaseElement.dataset.state = phase.state;
+          phaseElement.dataset.phaseId = phase.id;
+          phaseElement.innerHTML = `<div class="phase-head"><span class="phase-index">${String(phaseIndex + 1).padStart(2, "0")}</span><span class="phase-title"><strong>${phase.title}</strong><span>${phase.detail}</span></span></div><div class="agent-list"></div>`;
+          const list = phaseElement.querySelector(".agent-list");
+          phase.agents.forEach((entry) => {
+            const node = document.createElement("button");
+            node.className = "agent-node";
+            node.dataset.state = entry.state;
+            node.style.setProperty("--agent-color", colors[entry.seed % colors.length]);
+            node.setAttribute("aria-pressed", String(selectedAgentId === entry.id));
+            node.setAttribute("aria-label", `${entry.label}，${labels[entry.state]}`);
+            node.innerHTML = `<svg class="agent-glyph"><use href="#${glyphs[entry.seed % glyphs.length]}" /></svg><span class="agent-copy"><strong>${entry.label}</strong><span class="agent-meta"><i class="state-dot"></i>${labels[entry.state]} · ${entry.usage}</span></span>`;
+            node.addEventListener("click", () => {
+              selectedAgentId = entry.id;
+              render();
+            });
+            list.appendChild(node);
+          });
+          map.appendChild(phaseElement);
         });
-      });
 
-      document.querySelectorAll("[data-toggle-todo]").forEach((button) => {
-        button.addEventListener("click", () => {
-          const popover = button.closest(".composer-wrap")?.querySelector("[data-todo-popover]");
-          if (!popover) return;
-          popover.hidden = !popover.hidden;
-          button.lastElementChild.textContent = popover.hidden ? "展开" : "收起";
-        });
-      });
+        renderDetail(selected);
 
-      document.querySelectorAll("[data-approval]").forEach((button) => {
-        button.addEventListener("click", () => {
-          const card = document.getElementById("approval-card");
-          const state = button.dataset.approval;
-          card.innerHTML = `<div class="approval-title"><span class="status-dot ${state === "declined" ? "" : "done"}"></span><div><strong>${state === "declined" ? "已拒绝命令" : "已获得授权"}</strong><p>${state === "declined" ? "任务保持暂停，没有执行命令。" : "命令现在可以执行；开始运行后，这张授权卡会自动退场。"}</p></div></div>`;
-        });
-      });
+        const completedPhases = phases.filter((phase) => phase.state === "completed").length;
+        const current = phases.find((phase) => phase.state === "running") ?? phases.at(-1);
+        const running = agents.filter((entry) => entry.state === "running").length;
+        const completed = agents.filter((entry) => entry.state === "completed").length;
+        const settled = agents.length > 0 && completed === agents.length;
+        const totalUsage = agents.reduce(
+          (sum, entry) => sum + (Number.parseFloat(entry.usage) || 0),
+          0,
+        );
+        document.getElementById("run-status").textContent = settled ? "已完成" : "运行中";
+        document.getElementById("metric-phase").textContent = settled
+          ? "已完成"
+          : (current?.title ?? "等待中");
+        document.getElementById("metric-progress").textContent =
+          `${Math.min(phases.length, completedPhases + (current?.state === "running" ? 1 : 0))} / ${phases.length}`;
+        document.getElementById("metric-agents").textContent =
+          `${running} 运行 · ${completed} 完成`;
+        document.getElementById("metric-usage").textContent = `${totalUsage.toFixed(1)}k token`;
+        document.getElementById("summary-copy").textContent =
+          `${Math.min(phases.length, completedPhases + 1)}/${phases.length} 阶段 · ${running}/${agents.length} Agent 运行中 · 01:42`;
+      }
 
-      function toggleWorkbench(forceOpen) {
-        const scene = activeScene();
-        const wb = scene?.querySelector("[data-workbench]");
-        if (!wb) {
-          setScene("memory");
+      function renderDetail(entry) {
+        const detail = document.getElementById("node-detail");
+        if (!entry) {
+          detail.innerHTML = "";
           return;
         }
-        const shouldOpen = forceOpen === undefined ? wb.classList.contains("hidden") : forceOpen;
-        wb.classList.toggle("hidden", !shouldOpen);
-        if (shouldOpen) {
-          scene.querySelector(".right-dock")?.classList.add("hidden");
-          scene.querySelector(".chat-scroll")?.classList.remove("with-dock");
-          scene.querySelector(".composer-wrap")?.classList.remove("with-dock");
-          dockButton.classList.remove("active");
-        }
-        workbenchButton.classList.toggle("active", !wb.classList.contains("hidden"));
+        const color = colors[entry.seed % colors.length];
+        detail.innerHTML = `<div class="detail-head"><svg class="agent-glyph" style="--agent-color:${color};color:${color}"><use href="#${glyphs[entry.seed % glyphs.length]}" /></svg><div class="detail-title"><strong>${entry.label} · ${labels[entry.state]}</strong><span>${entry.phaseTitle} · ${entry.model}</span></div><button class="detail-action">打开子任务</button></div><p class="detail-description">${entry.description}</p><div class="detail-grid"><div class="detail-stat"><span>推理强度</span><strong>${entry.effort}</strong></div><div class="detail-stat"><span>用量</span><strong>${entry.usage} token</strong></div><div class="detail-stat"><span>最近活动</span><strong>${entry.recent}</strong></div></div>`;
       }
 
-      workbenchButton.addEventListener("click", () => toggleWorkbench());
-      document.querySelectorAll("[data-open-workbench]").forEach((button) => button.addEventListener("click", () => toggleWorkbench(true)));
-      document.querySelectorAll("[data-close-workbench]").forEach((button) => button.addEventListener("click", () => toggleWorkbench(false)));
+      function advance() {
+        const phases = currentPhases();
+        const running = phases
+          .flatMap((phase) => phase.agents)
+          .find((entry) => entry.state === "running");
+        if (running) running.state = "completed";
+        const next = phases
+          .flatMap((phase) => phase.agents)
+          .find((entry) => entry.state === "queued");
+        if (next) next.state = "running";
+        phases.forEach((phase) => {
+          if (phase.agents.every((entry) => entry.state === "completed")) phase.state = "completed";
+          else if (phase.agents.some((entry) => entry.state === "running")) phase.state = "running";
+          else phase.state = "queued";
+        });
+        render();
+      }
 
-      const memorySwitch = document.getElementById("memory-switch");
-      memorySwitch?.addEventListener("click", () => memorySwitch.classList.toggle("off"));
-      document.querySelectorAll(".forget-memory").forEach((button) => button.addEventListener("click", () => button.closest(".memory-item").remove()));
-
-      themeButton.addEventListener("click", () => {
-        const root = document.documentElement;
-        root.dataset.theme = root.dataset.theme === "dark" ? "light" : "dark";
+      document.getElementById("fixture-select").addEventListener("change", (event) => {
+        fixtureName = event.target.value;
+        selectedAgentId = null;
+        render();
       });
-
-      document.querySelectorAll("[data-hide-dock]").forEach((button) => {
-        button.addEventListener("click", () => {
-          const scene = activeScene();
-          scene.querySelector(".right-dock")?.classList.add("hidden");
-          scene.querySelector(".chat-scroll")?.classList.remove("with-dock");
-          scene.querySelector(".composer-wrap")?.classList.remove("with-dock");
-          dockButton.classList.remove("active");
+      document.getElementById("advance-button").addEventListener("click", advance);
+      document.getElementById("theme-button").addEventListener("click", () => {
+        document.documentElement.dataset.theme =
+          document.documentElement.dataset.theme === "dark" ? "light" : "dark";
+      });
+      document.getElementById("jump-current").addEventListener("click", () => {
+        const current = document.querySelector('.phase[data-state="running"]');
+        current?.scrollIntoView({
+          behavior: matchMedia("(prefers-reduced-motion: reduce)").matches ? "auto" : "smooth",
+          inline: "center",
+          block: "nearest",
         });
       });
+      document.getElementById("open-workflow").addEventListener("click", () =>
+        document.querySelector(".dock")?.scrollIntoView({
+          behavior: matchMedia("(prefers-reduced-motion: reduce)").matches ? "auto" : "smooth",
+          inline: "end",
+        }),
+      );
 
-      function openDock() {
-        const scene = activeScene();
-        const dock = scene?.querySelector(".right-dock");
-        if (!dock) return false;
-        dock.classList.remove("hidden");
-        scene.querySelector("[data-workbench]")?.classList.add("hidden");
-        scene.querySelector(".chat-scroll")?.classList.add("with-dock");
-        scene.querySelector(".composer-wrap")?.classList.add("with-dock");
-        workbenchButton.classList.remove("active");
-        dockButton.classList.add("active");
-        return true;
-      }
-
-      document.querySelectorAll("[data-open-dock]").forEach((button) => button.addEventListener("click", openDock));
-
-      dockButton.addEventListener("click", () => {
-        const dock = activeScene()?.querySelector(".right-dock");
-        if (!dock) {
-          setScene("computer");
-          return;
-        }
-        if (dock?.classList.contains("hidden")) openDock();
-      });
-
-      const initial = window.location.hash.slice(1);
-      if (titles[initial]) setScene(initial);
+      render();
     </script>
   </body>
 </html>

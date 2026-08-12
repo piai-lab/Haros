@@ -40,7 +40,7 @@
 6. `missions/independent-omnimind-v1.md`（仅 active 时）；
 7. `research/README.md` 与：
    - `research/omnimind-agent-core-design.md`
-   - UI、能力发现、运行状态、干预或结果投影相关时：`research/omnimind-agent-capability-surface.md` 及其 deterministic HTML 原型
+   - UI、能力发现、运行状态、干预或结果投影相关时：完整读取 `research/omnimind-agent-capability-surface.md`，并以真实 `apps/web` owner 为母体；其 HTML 只验证 Workflow right-dock 唯一新增空间，不是 Todo、子智能体、审批、Computer Use、Knowledge、Memory 或恢复的组件母版
    - 本指南。
 
 研究外部 Pi/Engine 来源时，必须完整执行 `PI-ECOSYSTEM-INTAKE.md` Gate A；不能用本指南替代 exact-source intake。
@@ -126,7 +126,7 @@ stop condition 是否触发？
 | Workbench | `apps/web/src` 对应组件 + `architecture/workbench.md` | 用户只看到真实 availability/origin/status |
 | Composer task/subagent/workflow/approval | `ChatView.tsx`、`ComposerActiveTaskListCard.tsx`、`ComposerSubagentStrip.tsx`、`WorkflowRunCard.tsx`、`ComposerPendingApprovalPanel.tsx` | 复用既有 stacked surfaces，不为每项能力新增卡或 aggregate state |
 | Agent identity projection | `apps/web/src/lib/subagentPresentation.ts`、`ComposerSubagentStrip.logic.ts` | 在既有 deterministic accent owner 上增加 glyph variant；不建 avatar registry，不用 status 改写 identity |
-| Workflow spatial detail | `EnvironmentPanel.tsx`、`RightDock.tsx`、`rightDockStore.logic.ts`、`rightDockPaneMeta.tsx`、`WorkflowRunCard.tsx` | 一行摘要打开同一 run 的只读 workflow pane；renderer 先以 React Flow 12 做 exact-version challenger proof，X6 只作复杂图升级；不复制 provider state，不从普通 tool sequence 推图 |
+| Workflow spatial detail | `EnvironmentPanel.tsx`、`RightDock.tsx`、`rightDockStore.logic.ts`、`rightDockPaneMeta.tsx`、`WorkflowRunCard.tsx` | 直接复用现有 card/actions/state，一行摘要打开同一 run 的只读 workflow pane；当前 phase-only truth 只用 host primitives 渲染有序 phase lanes 与 Agent membership，不画 dependency edges、不复制 provider state、不从普通 tool sequence 推图；只有 exact Engine 上报 explicit graph 后才以 React Flow 做 challenger proof，X6 只作复杂图升级 |
 | Thread Recap | `apps/web/src/lib/threadRecap.ts`、`apps/web/src/hooks/useThreadRecap.ts`、`EnvironmentPanel.tsx` | 当前是有界 UI recap/local cache，不是 durable Agent memory |
 
 建议 focused 搜索：

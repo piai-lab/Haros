@@ -557,7 +557,7 @@ Skill 与 Plugin 属于全局一致的基础概念，不应为每个 Engine 或�
 
 图标资产的最终 owner 是 `architecture/workbench.md` 和对应 UI 实现。维护者已经锁定：目标 `target-arrow`、Agent 团队 `agent-duo`、动态工作流 `flow-adaptive`、知识库 `knowledge-linked`、记忆 `memory-bookmark`、会话恢复 `resume-chat`。其中目标来自现有 Central asset，其余为已确认的低密度 Central-compatible SVG；正式进入产品前在当次 HEAD 复验占用和视觉冲突。知识库/记忆不得改成 database/brain glyph，Skill/Plugin 的同一概念必须跨入口保持同名、同义和同一图标词汇。能力强度不能靠 icon 数量和色彩密度表达。
 
-`agent-duo` 只表示“子智能体集合/入口”，不能成为每个 child 的相同头像。每个真实 child 需要一个确定性的低密度身份纹样，并在 Environment、right dock、Timeline、Composer 和来源引用中连续；这属于现有 `subagentPresentation.ts` 的 UI identity projection，不是 Agent Core 状态。Workflow 同理：Environment/Composer 只显示一句真实摘要，点击后由 existing right dock 渲染同一 Engine-owned structured workflow 的只读动态图；不新增通用 Workflow owner、DAG database 或 editor。动态图 renderer 不从零开发：UI intake 当前以 React Flow 12 为第一 challenger、AntV X6 3.x 为复杂图 challenger，完整裁决与 proof 见 `omnimind-agent-capability-surface.md`。
+`agent-duo` 只表示“子智能体集合/入口”，不能成为每个 child 的相同头像。每个真实 child 需要一个确定性的低密度身份纹样，并在 Environment、right dock、Timeline、Composer 和来源引用中连续；这属于现有 `subagentPresentation.ts` 的 UI identity projection，不是 Agent Core 状态。Workflow 同理：继续复用现有 `WorkflowRunCard` 的 compact header、动作和 state，点击后才在 existing right dock 打开同一 Engine-owned run 的只读空间详情；不新增通用 Workflow owner、DAG database 或 editor。当前 `WorkflowRunState` 只有有序 phases 与 Agent membership，没有 dependency edges，因此 V1 只组合既有 UI primitives 形成 phase map，不猜测 Agent 间连线，也不先引入 graph dependency。只有 exact Engine/adapter 将稳定 node ids 与 explicit dependency edges 提升为真实产品事实时，React Flow 才是第一 challenger，AntV X6 才是复杂图升级候选；完整裁决与 proof 见 `omnimind-agent-capability-surface.md`。
 
 ## 15. 主要风险与反架构清单
 

@@ -234,11 +234,13 @@ Codex 截图所体现的可复用原则是“稳定身份 + 极短事实 + 渐�
 - Todo 默认行只显示 `第 x/n 步`、当前步骤和必要的 change totals；点击后用现有 popover/disclosure primitive 展开真实 task list，不创建 Todo pane；
 - 子智能体摘要显示最多三个稳定身份纹样和 running/completed 数量；点击打开既有 child detail/right dock，列表、Timeline chip 与来源引用必须复用同一纹样；
 - structured workflow 摘要显示 workflow 名、当前 phase、`done/total` 与状态；点击打开 right dock 的 workflow pane，消费同一个 provider-owned `WorkflowRunState`；
-- workflow pane V1 是只读空间解释，不是 editor：显示真实 node、edge、phase、agent、状态、usage/provenance，并复用已有 pause/stop/resume/open-child 动作；
+- workflow pane V1 是只读空间解释，不是 editor：显示真实 phase order、Agent membership、状态、usage/provenance 与 child Thread；当前 `WorkflowRunState` 没有 dependency edges，因此不得从时间顺序、文案或 tool activity 猜测 Agent 间连线；
 - 普通 tool calls、Todo 或无结构 Pi loop 不推断成 DAG。没有 provider structured workflow 时，不显示流程图入口；
-- active edge 可有低频流动提示，node 状态变化可短暂过渡；布局必须稳定，后台/不可见时停止动画，`prefers-reduced-motion` 下改为静态强调。
+- 当前 phase-only projection 用有序阶段轨道与 phase containment 表达结构；active phase spine 可有低频流动提示，node 状态变化可短暂过渡。只有 exact Engine/adapter 上报稳定 node ids 与 explicit dependency edges 时才渲染跨节点 edge；布局必须稳定，后台/不可见时停止动画，`prefers-reduced-motion` 下改为静态强调。
 
-right dock 是既有宿主；实现时只新增 `workflow` pane kind 与指向真实 run 的 bounded identity，不新增 workflow route、store、database 或第二 runtime。当前仓库没有**直接产品依赖**的 graph renderer，但互联网已有成熟方案，production 不应先手写 renderer：首个 challenger 是 MIT 的 React Flow 12 `@xyflow/react`，以 custom node/custom edge、只读交互和 Dagre-first layout 组成最小接入；AntV X6 3.x 作为复杂路由、嵌套与大图 challenger，ELK 仅在 Dagre 被真实 fixture 证伪且权利/packaging 复核后进入。Cytoscape.js 只在真实规模需要图分析时进入，Mermaid 只作为文档/导出 fallback。任何采用仍需 exact-version license、bundle、性能、keyboard/screen-reader、theme、offline packaged proof；不能偷用 Pi 的 transitive `grok-mermaid`，也不能因已有库而引入 workflow editor/runtime。
+right dock 是既有宿主；实现时只在现有 `RightDockPaneKind` owner 中增加 `workflow` 与指向真实 `workflowTaskId` 的 bounded identity，不新增 workflow route、store、database 或第二 runtime。当前 phase-only 数据优先组合既有 RightDock、Button、Disclosure、token 与 identity glyph 做轻量 `WorkflowPhaseMap`；这不是 graph engine。只有 explicit dependency graph 进入产品事实后才评估成熟 renderer，第一 challenger 是 React Flow，X6 仅在真实路由/嵌套/规模反例下升级；Mermaid 只作静态文档/导出。任何采用都必须 exact-version 复核 license、bundle、keyboard/screen-reader、theme、offline packaged 与 continuous-update 性能，不能偷用 Pi transitive package，也不能因 renderer 存在而引入 workflow editor/runtime。证据与候选顺序由 [`research/omnimind-agent-capability-surface.md`](../research/omnimind-agent-capability-surface.md#34-renderer-intake先匹配真实数据再决定是否需要图引擎) 维护。
+
+phase-only V1 用 4/7/20 Agent、3–5 phases、live status churn、right dock 382–800px、light/dark、中英文长标签、keyboard/screen reader、memory/CPU 与关闭/重开位置稳定做 focused proof。explicit dependency graph 进入后才增加 5/20/100 nodes、linear/branch/fan-in/nested、pan/zoom 与 edge-routing bake-off。不能用官网 demo 选美替代真实 fixture，也不能让研究原型成为 production component donor。
 
 当前代码扫描中 `target-arrow` 尚无产品调用点，其余五个名称尚未进入 `apps/web`；因此名称层面没有现有占用。正式 materialize 到 `apps/web/public/central-icons-reversed` 前仍要在当次 HEAD 重跑 usage/visual collision scan，并在 16/20/24px、light/dark、currentColor、1x/2x 下校验。图形保持单色、轻描边、低节点密度；不得再用 emoji、CSS 假图标、临时通用 glyph 或未经维护者确认的重画版本代替。
 
