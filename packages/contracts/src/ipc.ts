@@ -248,6 +248,12 @@ import type {
 } from "./providerDiscovery";
 import type { ProviderCompactThreadInput } from "./provider";
 import type {
+  OmniMindModelServicesGetInput,
+  OmniMindModelServicesGetResult,
+  OmniMindModelServicesListInput,
+  OmniMindModelServicesListResult,
+} from "./omnimindModelServices";
+import type {
   StatsGetProfileStatsInput,
   StatsGetProfileStatsResult,
   StatsGetProfileTokenStatsInput,
@@ -777,6 +783,16 @@ export interface NativeApi {
     readPlugin: (input: ProviderReadPluginInput) => Promise<ProviderReadPluginResult>;
     listModels: (input: ProviderListModelsInput) => Promise<ProviderListModelsResult>;
     listAgents: (input: ProviderListAgentsInput) => Promise<ProviderListAgentsResult>;
+  };
+  omnimindModelServices: {
+    list: (
+      input?: OmniMindModelServicesListInput,
+      options?: { readonly signal?: AbortSignal },
+    ) => Promise<OmniMindModelServicesListResult>;
+    get: (
+      input: OmniMindModelServicesGetInput,
+      options?: { readonly signal?: AbortSignal },
+    ) => Promise<OmniMindModelServicesGetResult>;
   };
   orchestration: {
     getSnapshot: () => Promise<OrchestrationReadModel>;

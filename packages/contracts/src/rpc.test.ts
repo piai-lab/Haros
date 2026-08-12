@@ -13,6 +13,7 @@ import {
   WsRpcGroup,
 } from "./rpc";
 import { ORCHESTRATION_WS_METHODS } from "./orchestration";
+import { WS_METHODS } from "./ws";
 
 describe("WS RPC contracts", () => {
   it("exports the additive Effect RPC group", () => {
@@ -25,6 +26,8 @@ describe("WS RPC contracts", () => {
     expect(WsFeatureRpcGroup.requests.has(ORCHESTRATION_WS_METHODS.reconcileProviderDelivery)).toBe(
       true,
     );
+    expect(WsFeatureRpcGroup.requests.has(WS_METHODS.omnimindModelServicesList)).toBe(true);
+    expect(WsFeatureRpcGroup.requests.has(WS_METHODS.omnimindModelServicesGet)).toBe(true);
   });
 
   it("uses a schema-backed transport error", () => {

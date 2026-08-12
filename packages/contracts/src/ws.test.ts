@@ -94,6 +94,28 @@ it.effect("accepts project script discovery requests", () =>
   }),
 );
 
+it.effect("accepts credential-blind OmniMind model-services requests", () =>
+  Effect.gen(function* () {
+    const list = yield* decode(WebSocketRequest, {
+      id: "req-model-services-list",
+      body: { _tag: WS_METHODS.omnimindModelServicesList },
+    });
+    const get = yield* decode(WebSocketRequest, {
+      id: "req-model-services-get",
+      body: {
+        _tag: WS_METHODS.omnimindModelServicesGet,
+        serviceId: "deepseek",
+      },
+    });
+
+    assert.strictEqual(list.body._tag, WS_METHODS.omnimindModelServicesList);
+    assert.strictEqual(get.body._tag, WS_METHODS.omnimindModelServicesGet);
+    if (get.body._tag === WS_METHODS.omnimindModelServicesGet) {
+      assert.deepStrictEqual(Object.keys(get.body).sort(), ["_tag", "serviceId"]);
+    }
+  }),
+);
+
 it.effect("accepts automation create requests", () =>
   Effect.gen(function* () {
     const parsed = yield* decode(WebSocketRequest, {

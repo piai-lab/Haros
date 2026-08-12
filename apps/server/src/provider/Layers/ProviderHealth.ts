@@ -1575,7 +1575,7 @@ export const checkOmniMindAgentProviderStatus = (): Effect.Effect<ServerProvider
         authStatus: "unknown",
         version: BUNDLED_PI_VERSION,
         checkedAt: new Date().toISOString(),
-        message: "OmniMind Agent is bundled and ready. Add provider credentials before sending.",
+        message: "OmniMind is bundled and ready. Add provider credentials before sending.",
       }) satisfies ServerProviderStatus,
   );
 

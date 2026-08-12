@@ -95,6 +95,7 @@ import { ProviderCommandReactor } from "./orchestration/Services/ProviderCommand
 import { ProjectionSnapshotQuery } from "./orchestration/Services/ProjectionSnapshotQuery";
 import { shouldPublishThreadShellForEvent } from "./orchestration/threadShellEvents";
 import { ProviderDiscoveryService } from "./provider/Services/ProviderDiscoveryService";
+import { OmniMindModelServices } from "./provider/Services/OmniMindModelServices";
 import { discoverSkillsCatalog, omnimindSkillsDir } from "./provider/skillsCatalog";
 import { recoverUnregisteredGitHubCheckout } from "./project/githubProjectRegistration";
 import { ProviderAdapterRegistry } from "./provider/Services/ProviderAdapterRegistry";
@@ -335,6 +336,7 @@ const makeWsRpcHandlersLayer = () =>
       const projectionReadModelQuery = yield* ProjectionSnapshotQuery;
       const providerAdapterRegistry = yield* ProviderAdapterRegistry;
       const providerDiscoveryService = yield* ProviderDiscoveryService;
+      const omniMindModelServices = yield* OmniMindModelServices;
       const providerHealth = yield* ProviderHealth;
       const providerService = yield* ProviderService;
       const lifecycleEvents = yield* ServerLifecycleEvents;
@@ -1914,6 +1916,16 @@ const makeWsRpcHandlersLayer = () =>
           rpcEffect(providerDiscoveryService.listModels(input), "Failed to list models"),
         [WS_METHODS.providerListAgents]: (input) =>
           rpcEffect(providerDiscoveryService.listAgents(input), "Failed to list agents"),
+        [WS_METHODS.omnimindModelServicesList]: () =>
+          rpcEffect(
+            requireOwnerRole.pipe(Effect.andThen(omniMindModelServices.list())),
+            "Failed to list OmniMind model services",
+          ),
+        [WS_METHODS.omnimindModelServicesGet]: (input) =>
+          rpcEffect(
+            requireOwnerRole.pipe(Effect.andThen(omniMindModelServices.get(input))),
+            "Failed to read an OmniMind model service",
+          ),
         [WS_METHODS.automationList]: (input) =>
           rpcEffect(automationService.list(input), "Failed to list automations"),
         [WS_METHODS.automationGetMemory]: ({ automationId }) =>

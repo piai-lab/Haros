@@ -1195,7 +1195,7 @@ export const MODEL_CAPABILITIES_INDEX = Object.fromEntries(
 // ── Provider display names ────────────────────────────────────────────
 
 export const PROVIDER_DISPLAY_NAMES: Record<ProviderKind, string> = {
-  omnimind: "OmniMind Agent",
+  omnimind: "OmniMind",
   codex: "Codex",
   claudeAgent: "Claude",
   cursor: "Cursor",

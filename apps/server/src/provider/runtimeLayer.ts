@@ -20,6 +20,7 @@ import { makeKiloAdapterLive, makeOpenCodeAdapterLive } from "./Layers/OpenCodeA
 import { makeOmniMindAgentAdapterLive, makePiAdapterLive } from "./Layers/PiAdapter";
 import { ProviderAdapterRegistryLive } from "./Layers/ProviderAdapterRegistry";
 import { ProviderDiscoveryServiceLive } from "./Layers/ProviderDiscoveryService";
+import { OmniMindModelServicesLive } from "./Layers/OmniMindModelServices";
 import { makeDurableProviderServiceLive } from "./Layers/ProviderService";
 import { ProviderSessionDirectoryLive } from "./Layers/ProviderSessionDirectory";
 import { ProviderSessionRuntimeRepositoryLive } from "../persistence/Layers/ProviderSessionRuntime";
@@ -83,16 +84,10 @@ export function makeServerProviderLayer(
     ).pipe(Layer.provide(agentGatewayCredentialsLayer));
     const piAdapterLayer = makePiAdapterLive(
       nativeEventLogger ? { nativeEventLogger } : undefined,
-    ).pipe(
-      Layer.provide(agentGatewayCredentialsLayer),
-      Layer.provide(BrowserAutomationHostLive),
-    );
+    ).pipe(Layer.provide(agentGatewayCredentialsLayer), Layer.provide(BrowserAutomationHostLive));
     const omniMindAgentAdapterLayer = makeOmniMindAgentAdapterLive(
       nativeEventLogger ? { nativeEventLogger } : undefined,
-    ).pipe(
-      Layer.provide(agentGatewayCredentialsLayer),
-      Layer.provide(BrowserAutomationHostLive),
-    );
+    ).pipe(Layer.provide(agentGatewayCredentialsLayer), Layer.provide(BrowserAutomationHostLive));
     const adapterRegistryLayer = ProviderAdapterRegistryLive.pipe(
       Layer.provide(codexAdapterLayer),
       Layer.provide(claudeAdapterLayer),
@@ -122,6 +117,7 @@ export function makeServerProviderLayer(
     return Layer.mergeAll(
       providerServiceLayer,
       providerDiscoveryLayer,
+      OmniMindModelServicesLive,
       adapterRegistryLayer,
       providerSessionDirectoryLayer,
     );

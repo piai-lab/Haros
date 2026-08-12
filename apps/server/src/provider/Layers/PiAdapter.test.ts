@@ -15,7 +15,7 @@ import type { Api, Model } from "@earendil-works/pi-ai";
 import { describe, expect, it } from "vitest";
 import {
   createPiModelRuntime,
-  ensurePiAnthropicCatalogModels,
+  findModelInRegistry,
   getPiDiscoverableModels,
   getPiSupportedThinkingOptions,
   buildPiAgentGatewayCustomTools,
@@ -375,7 +375,7 @@ describe("getPiDiscoverableModels", () => {
     }
   });
 
-  it("restores Fable 5 and Opus 4.8 after an extension replaces the Anthropic catalog", async () => {
+  it("preserves the exact extension catalog without synthesizing Anthropic models", async () => {
     const agentDir = mkdtempSync(path.join(tmpdir(), "omnimind-pi-anthropic-"));
     const modelsPath = path.join(agentDir, "models.json");
     const authPath = path.join(agentDir, "auth.json");
@@ -426,67 +426,41 @@ describe("getPiDiscoverableModels", () => {
       const models = getPiDiscoverableModels(registry);
 
       expect(
-        models.some((model) => model.provider === "anthropic" && model.id === "claude-fable-5"),
-      ).toBe(true);
-      expect(
-        models.some((model) => model.provider === "anthropic" && model.id === "claude-opus-4-8"),
-      ).toBe(true);
+        models.filter((model) => model.provider === "anthropic").map((model) => model.id),
+      ).toEqual(["claude-opus-4-7"]);
     } finally {
       rmSync(agentDir, { recursive: true, force: true });
     }
   });
 });
 
-describe("ensurePiAnthropicCatalogModels", () => {
-  it("does not invent Anthropic models when Anthropic is unauthenticated", () => {
-    const models = ensurePiAnthropicCatalogModels([
-      {
-        id: "glm-5.2",
-        name: "GLM 5.2",
-        api: "openai-completions",
-        provider: "local",
-        baseUrl: "http://127.0.0.1:11434/v1",
-        reasoning: false,
-        input: ["text"],
-        cost: { input: 0, output: 0, cacheRead: 0, cacheWrite: 0 },
-        contextWindow: 128_000,
-        maxTokens: 16_384,
-      },
-    ]);
+describe("findModelInRegistry", () => {
+  const makeModel = (provider: string, id: string) =>
+    ({ provider, id, name: id, api: "openai-completions" }) as Model<Api>;
 
-    expect(models.every((model) => model.provider !== "anthropic")).toBe(true);
+  it("accepts only exact qualified models and never fabricates provider peers", () => {
+    const existing = makeModel("openai", "gpt-existing");
+    const registry = {
+      find: (provider: string, id: string) =>
+        provider === existing.provider && id === existing.id ? existing : undefined,
+      getAll: () => [existing],
+      getAvailable: () => [existing],
+    };
+
+    expect(findModelInRegistry(registry, "openai/gpt-existing")).toBe(existing);
+    expect(findModelInRegistry(registry, "openai/made-up")).toBeUndefined();
   });
 
-  it("restores Fable 5 and Opus 4.8 when an oauth catalog omitted them", () => {
-    const peer = {
-      id: "claude-opus-4-7",
-      name: "Claude Opus 4.7",
-      api: "anthropic-messages" as const,
-      provider: "anthropic",
-      baseUrl: "https://api.anthropic.com",
-      reasoning: true,
-      input: ["text", "image"] as Array<"text" | "image">,
-      cost: { input: 5, output: 25, cacheRead: 0.5, cacheWrite: 6.25 },
-      contextWindow: 1_000_000,
-      maxTokens: 128_000,
+  it("rejects an ambiguous legacy unqualified model id", () => {
+    const first = makeModel("provider-a", "shared-model");
+    const second = makeModel("provider-b", "shared-model");
+    const registry = {
+      find: () => undefined,
+      getAll: () => [first, second],
+      getAvailable: () => [first, second],
     };
-    const models = ensurePiAnthropicCatalogModels([peer], [peer]);
 
-    expect(models.map((model) => model.id)).toEqual([
-      "claude-opus-4-7",
-      "claude-fable-5",
-      "claude-opus-4-8",
-    ]);
-    expect(models.find((model) => model.id === "claude-fable-5")).toMatchObject({
-      provider: "anthropic",
-      name: "Claude Fable 5",
-      reasoning: true,
-    });
-    expect(models.find((model) => model.id === "claude-opus-4-8")).toMatchObject({
-      provider: "anthropic",
-      name: "Claude Opus 4.8",
-      reasoning: true,
-    });
+    expect(findModelInRegistry(registry, "shared-model")).toBeUndefined();
   });
 });
 

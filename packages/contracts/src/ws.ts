@@ -139,6 +139,10 @@ import {
 } from "./providerDiscovery";
 import { ProviderCompactThreadInput } from "./provider";
 import {
+  OmniMindModelServicesGetInput,
+  OmniMindModelServicesListInput,
+} from "./omnimindModelServices";
+import {
   PullRequestActionInput,
   PullRequestCommentInput,
   PullRequestDetailInput,
@@ -271,6 +275,10 @@ export const WS_METHODS = {
   providerReadPlugin: "provider.readPlugin",
   providerListModels: "provider.listModels",
   providerListAgents: "provider.listAgents",
+
+  // OmniMind Agent model services
+  omnimindModelServicesList: "omnimindModelServices.list",
+  omnimindModelServicesGet: "omnimindModelServices.get",
 
   // Automation methods
   automationList: "automation.list",
@@ -466,6 +474,8 @@ const WebSocketRequestBody = Schema.Union([
   tagRequestBody(WS_METHODS.providerReadPlugin, ProviderReadPluginInput),
   tagRequestBody(WS_METHODS.providerListModels, ProviderListModelsInput),
   tagRequestBody(WS_METHODS.providerListAgents, ProviderListAgentsInput),
+  tagRequestBody(WS_METHODS.omnimindModelServicesList, OmniMindModelServicesListInput),
+  tagRequestBody(WS_METHODS.omnimindModelServicesGet, OmniMindModelServicesGetInput),
 
   // Automation methods
   tagRequestBody(WS_METHODS.automationList, AutomationListInput),

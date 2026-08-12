@@ -102,6 +102,7 @@ import {
   registerEngineWebSurfaceIntent,
   sanitizeEngineWebSurfacePayload,
 } from "../../engineWebSurface/engineWebSurfaceHost.ts";
+import { loadOmniMindCodingAgentModule, resolveOmniMindAgentDir } from "../omnimindAgentRuntime.ts";
 
 type PiFamilyProvider = Extract<ProviderKind, "pi" | "omnimind">;
 const DEFAULT_PI_THINKING_LEVEL: ThinkingLevel = "medium";
@@ -126,50 +127,6 @@ const PI_DEFAULT_SUPPORTED_THINKING_LEVELS = new Set<ThinkingLevel>([
   "medium",
   "high",
 ]);
-const PI_ANTHROPIC_ENSURED_MODEL_IDS = ["claude-fable-5", "claude-opus-4-8"] as const;
-type PiAnthropicEnsuredModelId = (typeof PI_ANTHROPIC_ENSURED_MODEL_IDS)[number];
-
-/**
- * Metadata used when an OAuth/extension Anthropic catalog replaced Pi's built-ins
- * and omitted Fable / Opus 4.8. Values mirror `@earendil-works/pi-ai` Anthropic models.
- */
-const PI_ANTHROPIC_ENSURED_MODEL_TEMPLATES: Record<
-  PiAnthropicEnsuredModelId,
-  {
-    readonly id: PiAnthropicEnsuredModelId;
-    readonly name: string;
-    readonly reasoning: true;
-    readonly thinkingLevelMap: NonNullable<Model<Api>["thinkingLevelMap"]>;
-    readonly compat: NonNullable<Model<Api>["compat"]>;
-    readonly input: Array<"text" | "image">;
-    readonly cost: Model<Api>["cost"];
-    readonly contextWindow: number;
-    readonly maxTokens: number;
-  }
-> = {
-  "claude-fable-5": {
-    id: "claude-fable-5",
-    name: "Claude Fable 5",
-    reasoning: true,
-    thinkingLevelMap: { off: null, xhigh: "xhigh", max: "max" },
-    compat: { forceAdaptiveThinking: true },
-    input: ["text", "image"],
-    cost: { input: 10, output: 50, cacheRead: 1, cacheWrite: 12.5 },
-    contextWindow: 1_000_000,
-    maxTokens: 128_000,
-  },
-  "claude-opus-4-8": {
-    id: "claude-opus-4-8",
-    name: "Claude Opus 4.8",
-    reasoning: true,
-    thinkingLevelMap: { xhigh: "xhigh", max: "max" },
-    compat: { forceAdaptiveThinking: true, supportsTemperature: false },
-    input: ["text", "image"],
-    cost: { input: 5, output: 25, cacheRead: 0.5, cacheWrite: 6.25 },
-    contextWindow: 1_000_000,
-    maxTokens: 128_000,
-  },
-};
 
 type PiModelRegistry = Pick<ModelRegistry, "find" | "getAll" | "getAvailable">;
 type PiCodingAgentModule = typeof import("@earendil-works/pi-coding-agent");
@@ -337,10 +294,6 @@ export function makePiBashProcessSupervisor(
 const loadPiCodingAgentModule: () => Promise<PiCodingAgentModule> = lazyModule(
   () => import("@earendil-works/pi-coding-agent"),
 );
-const loadOmniMindCodingAgentModule: () => Promise<PiCodingAgentModule> = lazyModule(
-  () => import("@omnimind/pi-coding-agent") as unknown as Promise<PiCodingAgentModule>,
-);
-
 interface PiFamilyAdapterConfig<P extends PiFamilyProvider> {
   readonly provider: P;
   readonly displayName: string;
@@ -361,10 +314,10 @@ const STOCK_PI_FAMILY = {
 
 const OMNIMIND_AGENT_FAMILY = {
   provider: "omnimind",
-  displayName: "OmniMind Agent",
+  displayName: "OmniMind",
   loadModule: loadOmniMindCodingAgentModule,
   // Product state is App-owned and cannot be redirected into stock Pi state.
-  resolveAgentDir: (_requestedAgentDir, serverBaseDir) => path.join(serverBaseDir, "agent"),
+  resolveAgentDir: (_requestedAgentDir, serverBaseDir) => resolveOmniMindAgentDir(serverBaseDir),
 } satisfies PiFamilyAdapterConfig<"omnimind">;
 
 interface PiSessionContext {
@@ -587,53 +540,10 @@ export function getPiSupportedThinkingOptions(
   return PI_THINKING_OPTIONS.filter((option) => supportedLevels.has(option.value));
 }
 
-/**
- * When Anthropic is already authenticated, ensure Fable 5 and Opus 4.8 appear even
- * if an older pi-anthropic-oauth extension replaced the built-in Anthropic catalog.
- */
-export function ensurePiAnthropicCatalogModels(
-  available: ReadonlyArray<Model<Api>>,
-  all: ReadonlyArray<Model<Api>> = available,
-): Model<Api>[] {
-  const hasAnthropic = available.some((model) => model.provider === "anthropic");
-  if (!hasAnthropic) {
-    return [...available];
-  }
-
-  const result = [...available];
-  const peer = result.find((model) => model.provider === "anthropic");
-  if (!peer) {
-    return result;
-  }
-
-  for (const modelId of PI_ANTHROPIC_ENSURED_MODEL_IDS) {
-    if (result.some((model) => model.provider === "anthropic" && model.id === modelId)) {
-      continue;
-    }
-    const fromAll = all.find((model) => model.provider === "anthropic" && model.id === modelId);
-    if (fromAll) {
-      result.push(fromAll);
-      continue;
-    }
-    const template = PI_ANTHROPIC_ENSURED_MODEL_TEMPLATES[modelId];
-    result.push({
-      ...peer,
-      ...template,
-      id: template.id,
-      name: template.name,
-      provider: "anthropic",
-      api: peer.api,
-      baseUrl: peer.baseUrl,
-    });
-  }
-
-  return result;
-}
-
 export function getPiDiscoverableModels(
-  registry: Pick<ModelRegistry, "getAvailable" | "getAll">,
+  registry: Pick<ModelRegistry, "getAvailable">,
 ): ReadonlyArray<Model<Api>> {
-  return ensurePiAnthropicCatalogModels(registry.getAvailable(), registry.getAll());
+  return registry.getAvailable();
 }
 
 /**
@@ -673,10 +583,6 @@ export function toPiProviderModelDescriptor(
   };
 }
 
-function isPiAnthropicEnsuredModelId(modelId: string): modelId is PiAnthropicEnsuredModelId {
-  return (PI_ANTHROPIC_ENSURED_MODEL_IDS as ReadonlyArray<string>).includes(modelId);
-}
-
 function parseModelReference(
   modelId: string | null | undefined,
 ): { readonly provider?: string; readonly id: string } | undefined {
@@ -701,42 +607,7 @@ function parseModelReference(
   return { id: trimmed };
 }
 
-function createProviderModelFallback(
-  registry: PiModelRegistry,
-  parsed: { readonly provider: string; readonly id: string },
-): Model<Api> | undefined {
-  const providerDefault = registry.getAll().find((model) => model.provider === parsed.provider);
-  if (!providerDefault) {
-    return undefined;
-  }
-  if (parsed.provider === "anthropic" && isPiAnthropicEnsuredModelId(parsed.id)) {
-    const template = PI_ANTHROPIC_ENSURED_MODEL_TEMPLATES[parsed.id];
-    return {
-      ...providerDefault,
-      ...template,
-      id: template.id,
-      name: template.name,
-      provider: "anthropic",
-      api: providerDefault.api,
-      baseUrl: providerDefault.baseUrl,
-    };
-  }
-  return {
-    id: parsed.id,
-    name: parsed.id,
-    api: providerDefault.api,
-    provider: parsed.provider,
-    baseUrl: providerDefault.baseUrl,
-    reasoning: false,
-    input: ["text"],
-    cost: { input: 0, output: 0, cacheRead: 0, cacheWrite: 0 },
-    contextWindow: 128_000,
-    maxTokens: 16_384,
-    ...(providerDefault.compat ? { compat: providerDefault.compat } : {}),
-  };
-}
-
-function findModelInRegistry(
+export function findModelInRegistry(
   registry: PiModelRegistry,
   modelId: string | null | undefined,
 ): Model<Api> | undefined {
@@ -745,14 +616,10 @@ function findModelInRegistry(
     return undefined;
   }
   if (parsed.provider) {
-    return (
-      registry.find(parsed.provider, parsed.id) ??
-      createProviderModelFallback(registry, { provider: parsed.provider, id: parsed.id })
-    );
+    return registry.find(parsed.provider, parsed.id);
   }
-  return registry
-    .getAll()
-    .find((model) => model.id === parsed.id || `${model.provider}/${model.id}` === parsed.id);
+  const matches = registry.getAll().filter((model) => model.id === parsed.id);
+  return matches.length === 1 ? matches[0] : undefined;
 }
 
 function extractResumeSessionFile(resumeCursor: unknown): string | undefined {
@@ -2309,7 +2176,7 @@ const makePiAdapter = <P extends PiFamilyProvider>(
         const model = findModelInRegistry(registry, input.modelId);
         if (input.modelId && !model) {
           throw new Error(
-            `${displayName} model '${input.modelId}' is not available. Use a discovered model or a provider-qualified custom model slug like 'openai/gpt-5.5'.`,
+            `${displayName} model '${input.modelId}' is not available in the current runtime catalog. Choose a discovered model and try again.`,
           );
         }
         const shellPath = services.settingsManager.getShellPath();
@@ -2670,7 +2537,7 @@ const makePiAdapter = <P extends PiFamilyProvider>(
             return yield* new ProviderAdapterValidationError({
               provider: provider,
               operation: "model/set",
-              issue: `${displayName} model '${input.modelSelection.model}' is not available. Use a discovered model or a provider-qualified custom model slug like 'openai/gpt-5.5'.`,
+              issue: `${displayName} model '${input.modelSelection.model}' is not available in the current runtime catalog. Choose a discovered model and try again.`,
             });
           }
           // Pi's setModel rejects an unauthenticated model before the adapter's

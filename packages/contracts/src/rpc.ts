@@ -138,6 +138,12 @@ import {
 } from "./orchestration";
 import { ProviderCompactThreadInput } from "./provider";
 import {
+  OmniMindModelServicesGetInput,
+  OmniMindModelServicesGetResult,
+  OmniMindModelServicesListInput,
+  OmniMindModelServicesListResult,
+} from "./omnimindModelServices";
+import {
   ProviderGetComposerCapabilitiesInput,
   ProviderComposerCapabilities,
   ProviderListAgentsInput,
@@ -1129,6 +1135,18 @@ export const WsProviderListAgentsRpc = Rpc.make(WS_METHODS.providerListAgents, {
   error: WsRpcError,
 });
 
+export const WsOmniMindModelServicesListRpc = Rpc.make(WS_METHODS.omnimindModelServicesList, {
+  payload: OmniMindModelServicesListInput,
+  success: OmniMindModelServicesListResult,
+  error: WsRpcError,
+});
+
+export const WsOmniMindModelServicesGetRpc = Rpc.make(WS_METHODS.omnimindModelServicesGet, {
+  payload: OmniMindModelServicesGetInput,
+  success: OmniMindModelServicesGetResult,
+  error: WsRpcError,
+});
+
 export const WsAutomationListRpc = Rpc.make(WS_METHODS.automationList, {
   payload: AutomationListInput,
   success: AutomationListResult,
@@ -1307,6 +1325,8 @@ export const WsFeatureRpcGroup = RpcGroup.make(
   WsProviderReadPluginRpc,
   WsProviderListModelsRpc,
   WsProviderListAgentsRpc,
+  WsOmniMindModelServicesListRpc,
+  WsOmniMindModelServicesGetRpc,
   WsAutomationListRpc,
   WsAutomationGetMemoryRpc,
   WsAutomationCreateRpc,
