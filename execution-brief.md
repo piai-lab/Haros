@@ -106,11 +106,15 @@ OmniMind Agent 是内部最深验收路线。stock Pi 与其他 shipped Provider
 
 ## 10. 当前唯一下一动作
 
-维护者于 2026-08-11 明确重新打开 Stage 3 的 Usage 质量边界：保留 `efb8f383…` 的 OOM 止血基线，但把账户容量与历史用量拆成独立事实域，建立现有 DB 内的可恢复派生索引和隔离 child reader，并在既有 `Usage & limits` 完成 consent、progress、partial/stale/paused 与双语控制。进入门是启动/Header/普通对话 archive 零读取；停止门是任何方案仍依赖永久文件上限、主 Server 内现场全扫、第二数据库、混合 fallback 或无状态 null。
+维护者于 2026-08-12 明确启动 Stage 3 内的 **Model services + Composer Engine/Model/Engine-native options** 纵向工作。当前唯一实施入口是 [`research/model-services-composer-new-session-execution-guide.md`](research/model-services-composer-new-session-execution-guide.md)，产品依据与 source observation 见 [`research/model-services-composer-product-design.md`](research/model-services-composer-product-design.md)；两者只消费本 brief 与 architecture sole owners，不形成第二套状态或全局施工顺序。
 
-这一纵向切片先证明：A/B 互不触发；大量文件分批最终完整；中断从 checkpoint 恢复；第二次只读新增字节；坏行/权限/parser mismatch scoped；worker kill/OOM 不影响 Server、聊天或 Desktop。候选冻结后才做 full relevant gate、exact pushed-SHA packaging 与隔离 Usage journey。原事故 archive 的维护者外部复测仍单独标为现场验证。
+本轮严格按指南的 `E0 → E8` 依赖推进：先在 E0 钉住 authority、Queue binding、next-turn selection、failure rollback、Pi intent gate 与无跨 Engine default fallback；再依次闭合 Pi-backed Model services 只读投影、API Key/provider-scoped refresh、稳定 Composer `Engine → Model → native options`、跨 Engine stop-first replacement、OAuth、满足 hard gate 时的 custom provider/多实例、Settings 收口与 exact-SHA live/packaged proof。前一 slice 未形成可证伪的 focused exit 时不得抢跑后一 slice，也不得把 E0–E8 当作并行清单。
 
-Stage 4/F-18 的已冻结本地证据继续有效；Apple signing/notary、Windows Trusted Signing、Windows/Linux runner journey 与独立 fresh-context completion audit仍按维护者此前决定暂停，不因本轮 Usage 施工被伪装为已闭合。
+进入门是：`Model services / 模型服务`、普通展示名 `OmniMind`、Pi ModelRuntime authority、`.omnimind/.pi` 隔离和 next-turn/stop-first 语义已在 Workbench、Product State 与 Execution sole owner 中唯一；当前 snapshot 与 Pi stable `v0.84.1` 仍匹配。停止门是任何方案需要第二 Provider/Model Registry、静态供应商能力镜像、通用推理策略、跨 Engine Session continuation、新 switch RPC、未举证的持久化，或在 Pi 没有公开持久 mutation API且没有维护者独立授权时写 custom-provider 配置。
+
+2026-08-11 的 Usage quality 纵向切片不再是当前 next action；其既有 candidate/blocked 证据与架构边界保持原样，后续恢复必须再次成为本节唯一答案，不能与本轮并行维护两个施工入口。
+
+Stage 4/F-18 的已冻结本地证据继续有效；Apple signing/notary、Windows Trusted Signing、Windows/Linux runner journey 与独立 fresh-context completion audit仍按维护者此前决定暂停，不因本轮 Model services/Composer 施工被伪装为已闭合。
 
 后续显式恢复跨平台验收时，优先直接运行现有 `.github/workflows/release.yml` 的手动 build-only 模式（`publish_release=false`）：GitHub-hosted `windows-2022` 与 `ubuntu-24.04` lane 构建 artifact、执行 packaged startup smoke 并只保存 Actions artifact，不创建 GitHub Release、不上传 updater feed。Windows 未配置 Trusted Signing 时只能形成未签名构建/启动证据，不能闭合签名或 production release claim。不得以本地未签名 DMG、Docker arm64、authored test 或本 Runner 自审改写为三平台 candidate/verified。
 

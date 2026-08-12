@@ -17,4 +17,6 @@
 - [../SYNARA-INTAKE.md](../SYNARA-INTAKE.md)：未来每轮 Synara 审查、辩证吸收、`$converge` 提问、实施授权与 exact-SHA 交付的唯一操作手册。
 - [source-update-intake.md](source-update-intake.md)：2026-08-11 已完成 intake 的历史协议兼容入口；仅供旧链接与研究上下文引用，不拥有未来操作规则。
 - [interface-surface-inventory.md](interface-surface-inventory.md)：OmniMind Desktop、公共网站、反馈、发行与本地集成接口的现状清单、公开分级和复验触发器；只保存可复核观察，不取代架构 owner。
+- [model-services-composer-product-design.md](model-services-composer-product-design.md)：Model services 设置中心与 Composer Engine/模型/私有选项的产品设计说明，覆盖当前实现、Proma 可借鉴机制、Pi ModelRuntime 边界、目标交互、失败语义与完整验收矩阵；保存设计依据，不取代 Workbench、Product State、Execution 或 Campaign owner。
+- [model-services-composer-new-session-execution-guide.md](model-services-composer-new-session-execution-guide.md)：面向零聊天记忆新会话的实施执行指南，map/ref 前述设计说明与现有 sole owner，按 entry、纵向切片、文件 owner、focused/live/packaged proof 和 stop-loss 指导施工；不保存 Campaign 状态或第二套全局施工顺序。
 - [decision-record.md](decision-record.md)：已明确 superseded 的历史路线、当时的反方压力测试与被替代原因；不拥有当前执行权。

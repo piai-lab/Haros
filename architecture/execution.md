@@ -109,6 +109,22 @@ stock Pi 继续由 inherited `pi` adapter 拥有其 Session、Pi version、confi
 
 stock Pi 的“实际会话 runtime version”和“本机可选 `pi` CLI version”是两个事实。若 session 使用 bundled SDK，就不能用 `pi --version` 冒充其执行版本；local CLI 只能作为独立诊断字段显示。
 
+### OmniMind Agent Model services authority
+
+`Model services / 模型服务` 只配置 OmniMind Agent 内置 Pi ModelRuntime 的 provider、authentication、model catalog 与 Pi-compatible custom provider；它不是跨 Engine credential center。Codex、Claude、OpenCode、stock Pi 等独立 Engine 继续由各自 adapter/native configuration 拥有登录、目录和 Session，凭据不得迁入 OmniMind Agent 的 private home。
+
+Server 通过 OmniMind-Agent-scoped typed surface 把 Pi 的 provider/auth/catalog capability 安全投影给 Web，authority 仍是锁定 Pi package 与 `.omnimind` 下的 Pi-compatible state：
+
+- provider、auth method/status、known/available model 与 network-refresh capability 来自 Pi ModelRuntime，不由 OmniMind 维护静态供应商/模型 capability 镜像；
+- 持久 API key 与 OAuth 走 Pi `login()`/`logout()` credential-store lifecycle；runtime API-key override 只用于明确的一次性/未保存操作，不得显示为已保存；
+- Pi `AuthInteraction` 的 text/secret/select/manual-code prompt 与 info/auth-url/device-code/progress event 通过短生命周期、可取消的 typed bridge 呈现，secret/token 不进入 Product state、query cache、Timeline 或日志；
+- provider-scoped network refresh、last-good catalog 与 cache 语义由 Pi models store/provider implementation 拥有；普通 model-list refetch 不得冒充网络刷新；
+- Settings operation 使用 task-local ModelRuntime，不能把一个全局可变 runtime 注入所有 Thread。credential/config/catalog mutation 不热切当前 turn；每个隔离 Session 在下一次 send admission 前按同一 agentDir 的 process-local mutation revision 刷新自身 runtime snapshot。该 revision 只做失效通知，不是第二持久化真相；
+- 同一商业供应商可用不同稳定 Pi provider id 表达多个服务实例，但只呈现 Pi config/extension 对该 identity 真实支持的 auth、catalog 与 stream 能力；不能按品牌名复制 built-in OAuth 或动态 fetcher；
+- custom provider 持久化优先等待/采用 Pi 公开的 provider-config mutation API。没有该 API 时不建立 `model-services.json`、Channel store 或 renderer 文件写入；若提前施工，必须有维护者对单一临时 models.json adapter 的明确授权，并保证 locked read-modify-write、unknown-field preservation、原子替换和 Pi reload validation，待上游 API adopted 后删除。
+
+Model-service mutation 只能失效 OmniMind Agent 的 service/catalog projection 与相关 Session snapshot，不能改写 Conversation transcript、Project facts、其他 Engine state 或 stock Pi `.pi`。当前 selection 失效时要求用户重选，不 silent fallback 到另一 provider/Engine。
+
 ## 其他 Provider
 
 stock Pi、Codex、Claude、OpenCode 等 inherited adapters 留在 V1。产品只要求：
