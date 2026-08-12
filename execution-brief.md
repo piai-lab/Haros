@@ -106,12 +106,25 @@ OmniMind Agent 是内部最深验收路线。stock Pi 与其他 shipped Provider
 
 ## 10. 当前唯一下一动作
 
-维护者于 2026-08-11 明确重新打开 Stage 3 的 Usage 质量边界：保留 `efb8f383…` 的 OOM 止血基线，但把账户容量与历史用量拆成独立事实域，建立现有 DB 内的可恢复派生索引和隔离 child reader，并在既有 `Usage & limits` 完成 consent、progress、partial/stale/paused 与双语控制。进入门是启动/Header/普通对话 archive 零读取；停止门是任何方案仍依赖永久文件上限、主 Server 内现场全扫、第二数据库、混合 fallback 或无状态 null。
+维护者于 2026-08-12 明确暂停此前的 Usage Stage 3 切片；它不再构成当前准入，也不得阻塞 Agent Core/自动化体验的权威收口。当前唯一准入是一个可独立闭合的 **Full-access end-to-end truth repair**：让 Composer 中的任务运行模式真实贯穿 Engine adapter、Agent Gateway、Browser、Device 与 approval UI。
 
-这一纵向切片先证明：A/B 互不触发；大量文件分批最终完整；中断从 checkpoint 恢复；第二次只读新增字节；坏行/权限/parser mismatch scoped；worker kill/OOM 不影响 Server、聊天或 Desktop。候选冻结后才做 full relevant gate、exact pushed-SHA packaging 与隔离 Usage journey。原事故 archive 的维护者外部复测仍单独标为现场验证。
+用户可观察 Outcome：当任务显示 `完全访问 / Full access` 时，普通文件、命令、测试、依赖、网络、Browser、Device 和任务内下载不再请求二次批准；不支持 approval 的 Engine 不显示虚假的 `需要时询问`；需要登录、2FA、系统原生授权或真正扩张到用户未表达的不可逆外部结果时，才准确要求人介入。
 
-Stage 4/F-18 的已冻结本地证据继续有效；Apple signing/notary、Windows Trusted Signing、Windows/Linux runner journey 与独立 fresh-context completion audit仍按维护者此前决定暂停，不因本轮 Usage 施工被伪装为已闭合。
+实施必须从现有 owner 原位修复，不新增 permission broker、Host approval ledger 或第二 runtime-mode store：
 
-后续显式恢复跨平台验收时，优先直接运行现有 `.github/workflows/release.yml` 的手动 build-only 模式（`publish_release=false`）：GitHub-hosted `windows-2022` 与 `ubuntu-24.04` lane 构建 artifact、执行 packaged startup smoke 并只保存 Actions artifact，不创建 GitHub Release、不上传 updater feed。Windows 未配置 Trusted Signing 时只能形成未签名构建/启动证据，不能闭合签名或 production release claim。不得以本地未签名 DMG、Docker arm64、authored test 或本 Runner 自审改写为三平台 candidate/verified。
+1. 以 `packages/contracts/src/orchestration.ts` 的 `RuntimeMode` 和 Product Thread 持久字段为唯一产品事实；沿当前 Provider dispatch 与 Agent Gateway caller context 传递，不复制 mode；
+2. 复验 Codex、Claude、OpenCode 的现有 mapping，保持其 native semantics；Pi-family 当前没有 approval request path 时，只提供能真实执行的 mode，不允许 UI 选择后运行时一律拒绝；
+3. 删除 Device Gateway “无 receipt 永远拒绝”的生产死路，使 mutation 继承 caller Thread mode；`full-access` 直接执行，其他 mode 只有在 exact bridge/reviewer 存在时才可用；
+4. 将 Browser download 的无条件 `BrowserDownloadApprovalRequired` 取消路径改为 mode-aware：`full-access` 落到当前 workspace 或 OmniMind managed artifact/download root 并产生真实 file/artifact result；OAuth/2FA 与系统选择器保持 human-presence flow；
+5. 修正 approval UI 的文案与持久语义：当前 `acceptForSession` 会把 Thread 切到 `full-access` 时显示“此任务始终允许 / Always allow for this task”，并把全部新增/修改文案接入唯一 zh-CN/en catalog；
+6. 更新 Harness policy，使模型看到的 Browser/Device 行为与运行时一致，不再要求用户去 Device pane 手工完成本可自动执行的操作。
 
-任何继续扩充 Product Truth semantic meter、平行 Product Control Plane、跨 Provider Package lifecycle、Remote 或 settings taxonomy 重写的工作都应停止。
+进入门：当前 HEAD 复现并冻结三个 falsifier——`full-access` Device mutation 被 `DeviceApprovalRequired` 拒绝、Browser 下载被无条件取消、Pi-family UI 可选择底层无法响应的 approval mode；同时证明 Codex/Claude/OpenCode 的 full-access mapping 现状没有回归。
+
+停止门：任何方案需要第二 permission/state owner、用 Provider 名称猜权限、把 `full-access` 降成工作区沙箱、让 `approval-required` 在无 bridge 时继续可选，或用无条件 allow 绕过 Thread mode/active-turn/target containment。登录、2FA、OS 授权与用户未表达的发布/付费/远端删除不属于本切片的自动批准范围。
+
+完成证据：focused contract/adapter/UI tests；Device normal/failure/abort、Browser download/cancel/OAuth、approval copy/persistence 与 child privilege inheritance；Codex/Claude/OpenCode/Pi-family capability matrix；zh-CN/en、keyboard/focus；从 exact pushed SHA 打包后以任务专用 `userData`、home 与 Provider private home 运行一次 `full-access` Browser + Device 真实 journey，并证明无普通 approval、无默认 profile I/O、无 late effect。只通过 source test 只能称 source candidate。
+
+该 slice 完成后停止。Settlement、usage/cache、Skill identity、Gateway MCP conflict、Delegate、Workflow、自动 Project Context（Memory/Knowledge）均按 [`research/omnimind-agent-core-execution-guide.md`](research/omnimind-agent-core-execution-guide.md) 的独立 Slice 重新取得本文准入；不得在本次 permission repair 中顺带实现。此前 Usage 设计和已冻结证据保留为暂停研究，不自动恢复 next action。
+
+Stage 4/F-18 的已冻结本地证据继续有效；Apple signing/notary、Windows Trusted Signing、Windows/Linux runner journey 与独立 fresh-context completion audit继续暂停。任何继续扩充 Product Truth semantic meter、平行 Product Control Plane、跨 Provider Package lifecycle、Remote 或 settings taxonomy 重写的工作都应停止。

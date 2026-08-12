@@ -17,6 +17,7 @@ OmniMind 直接继承 Synara 的 Project、Thread、Space、Studio 与单一 Pro
 | Conversation        | Synara Thread 的用户可见身份                                                                      | Provider Session 的复制品                               |
 | Agent/Provider 选择 | 现有 Provider binding 与 adapter registry；独立 `omnimind` 与 `pi` identities                     | 第二 Provider Registry 或跨 Provider Session            |
 | Extensions / Skills | 既有 PluginLibrary/Skills discovery；有原生 API 时显示 Provider-scoped lifecycle                  | 顶层 Package aggregate、跨 Provider lifecycle authority |
+| 运行模式            | Thread 上既有 `runtimeMode`，随下一次 dispatch 进入当前 Engine 与 Host capability                  | Provider 外再叠一套 permission profile 或逐工具授权账本  |
 
 命名映射只允许改变产品呈现，不改变底层唯一 owner。若现有 Synara 类型已经表达同一事实，OmniMind 必须直接复用或最小改名，不能再包装一层“更通用”的状态。
 
@@ -108,6 +109,12 @@ Product Orchestration 恢复 command/event/projection；Provider adapter 恢复 
 
 ## 权限真实性
 
-OmniMind 不建设统一 permission broker，也不维护跨 Provider deny-side-effect matrix。共同 UI 只呈现当前 Provider/Host 实际发出的 approval、scope、consequence 与 result；Provider-native policy 保持 namespaced。
+Thread 的 `runtimeMode` 是用户对该任务自动化程度的唯一产品级选择。它不是 OS sandbox 声明，也不抹平各 Engine 的 native permission 模型；adapter 和 Host 只能把它翻译到真实可执行的底层语义：
 
-Pi adapter 当前没有暴露 Synara approval/user-input request 时，产品就不声称 Pi 具备该交互。进程隔离、Package verification 或 Provider 自述都不等于 OS sandbox；只有真实 call path 能证明的限制才进入产品文案和验收。
+- `full-access`：当前任务范围内的普通文件、命令、网络、Browser、Device 与工具副作用不再逐项询问；只有登录、2FA、系统原生授权或用户尚未表达的不可逆外部结果确实需要人完成时才介入；
+- `auto`：仅在当前 Engine/Host 有可验证的自动裁决路径时可选；没有真实 reviewer/classifier 就不显示，不得退化成每步询问；
+- `approval-required`：仅在当前 Engine/Host 有可完成的 approval request/response path 时可选；没有 bridge 就显示该模式不可用，不能先让用户选择再在运行时一律拒绝。
+
+共同 UI 不建设第二 permission broker，也不维护跨 Provider deny-side-effect matrix。一次 `acceptForSession` 若实际会把持久 Thread 切换为 `full-access`，产品文案必须准确写成“此任务始终允许”，不能声称只影响易失 runtime session。Provider-native permission set、macOS/Windows 系统授权、OAuth/2FA 与不可逆外部发布继续保留自己的真实名称、scope、结果和取消语义。
+
+Pi adapter 当前没有暴露 OmniMind approval request 时，`approval-required` 对该 Engine 就不是可用产品能力；记录一个未执行的 mode 不构成支持。进程隔离、Package verification、Provider 自述或“完全访问”标签都不等于 OS sandbox；只有 exact call path 能证明的自动执行、拒绝或介入行为才进入产品文案和验收。

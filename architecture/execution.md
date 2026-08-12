@@ -109,6 +109,22 @@ stock Pi 继续由 inherited `pi` adapter 拥有其 Session、Pi version、confi
 
 stock Pi 的“实际会话 runtime version”和“本机可选 `pi` CLI version”是两个事实。若 session 使用 bundled SDK，就不能用 `pi --version` 冒充其执行版本；local CLI 只能作为独立诊断字段显示。
 
+### OmniMind Agent Model services authority
+
+`Model services / 模型服务` 只配置 OmniMind Agent 内置 Pi ModelRuntime 的 provider、authentication、model catalog 与 Pi-compatible custom provider；它不是跨 Engine credential center。Codex、Claude、OpenCode、stock Pi 等独立 Engine 继续由各自 adapter/native configuration 拥有登录、目录和 Session，凭据不得迁入 OmniMind Agent 的 private home。
+
+Server 通过 OmniMind-Agent-scoped typed surface 把 Pi 的 provider/auth/catalog capability 安全投影给 Web，authority 仍是锁定 Pi package 与 `.omnimind` 下的 Pi-compatible state：
+
+- provider、auth method/status、known/available model 与 network-refresh capability 来自 Pi ModelRuntime，不由 OmniMind 维护静态供应商/模型 capability 镜像；
+- 持久 API key 与 OAuth 走 Pi `login()`/`logout()` credential-store lifecycle；runtime API-key override 只用于明确的一次性/未保存操作，不得显示为已保存；
+- Pi `AuthInteraction` 的 text/secret/select/manual-code prompt 与 info/auth-url/device-code/progress event 通过短生命周期、可取消的 typed bridge 呈现，secret/token 不进入 Product state、query cache、Timeline 或日志；
+- provider-scoped network refresh、last-good catalog 与 cache 语义由 Pi models store/provider implementation 拥有；普通 model-list refetch 不得冒充网络刷新；
+- Settings operation 使用 task-local ModelRuntime，不能把一个全局可变 runtime 注入所有 Thread。credential/config/catalog mutation 不热切当前 turn；每个隔离 Session 在下一次 send admission 前按同一 agentDir 的 process-local mutation revision 刷新自身 runtime snapshot。该 revision 只做失效通知，不是第二持久化真相；
+- 同一商业供应商可用不同稳定 Pi provider id 表达多个服务实例，但只呈现 Pi config/extension 对该 identity 真实支持的 auth、catalog 与 stream 能力；不能按品牌名复制 built-in OAuth 或动态 fetcher；
+- custom provider 持久化优先等待/采用 Pi 公开的 provider-config mutation API。没有该 API 时不建立 `model-services.json`、Channel store 或 renderer 文件写入；若提前施工，必须有维护者对单一临时 models.json adapter 的明确授权，并保证 locked read-modify-write、unknown-field preservation、原子替换和 Pi reload validation，待上游 API adopted 后删除。
+
+Model-service mutation 只能失效 OmniMind Agent 的 service/catalog projection 与相关 Session snapshot，不能改写 Conversation transcript、Project facts、其他 Engine state 或 stock Pi `.pi`。当前 selection 失效时要求用户重选，不 silent fallback 到另一 provider/Engine。
+
 ## 其他 Provider
 
 stock Pi、Codex、Claude、OpenCode 等 inherited adapters 留在 V1。产品只要求：
@@ -128,6 +144,22 @@ adapter 把 native event 映射到现有 canonical facts，并保留 Provider/na
 Product command receipt 只证明外层 admission。native acceptance/turn/session reference、interrupt acknowledgement 与 settlement 必须来自当前 adapter；失联时显示 waiting、failed 或 unknown，不自动转交另一 Provider。
 
 restart 优先使用 Provider native resume/session cursor。无法恢复时明确创建 fresh context/new lineage；不能用 Product Timeline 冒充完整 native continuation。
+
+## Runtime mode：一个任务只有一个自动化边界
+
+Product Thread 的 `runtimeMode` 是 Engine adapter 与 OmniMind Host capability 的共同输入，不是只约束 Provider command 的装饰标签。它由 Product state 持久化、由每次 dispatch 携带，并在子 Thread/child capability 创建时沿现有 privilege rule 继承；Browser、Device、Gateway 和 future Host tool 不能再各自发明一层默认拒绝或 approval ledger。
+
+| Mode | Engine adapter | OmniMind Host | UI truth |
+|---|---|---|---|
+| `full-access` | 映射到该 Engine 可证明的 unrestricted/no-ask 语义 | 当前任务已经表达的普通 Browser、Device、文件、命令、网络和下载直接执行 | 不出现普通操作 approval；成功只留必要结果 |
+| `auto` | 只在 exact Engine/model 有真实 reviewer/classifier 时提供 | 只在 Host 也有可验证的自动裁决路径时覆盖 Host mutation；否则该组合不可选 | 仅真实高风险分类结果可介入 |
+| `approval-required` | 只在 adapter 有 request/response path 时提供 | 只在 Host 有可完成的 approval bridge 时提供 | 显示 exact scope/consequence；没有 bridge 时不可选而不是运行时一律拒绝 |
+
+登录、2FA、系统原生权限面板、物理设备到场以及用户没有表达过的发布、付费或远端删除，是“需要人完成或需要扩张任务意图”，不应伪装成普通工具权限。相反，测试、依赖安装、工作区写入、网页点击、模拟器输入和任务内下载不能因为底层换成 Host tool 就重新收费一次确认。
+
+`acceptForSession` 是 wire decision 名，不拥有用户语义。当前实现若会把持久 Thread mode 改为 `full-access`，UI 必须表达“此任务始终允许”；若未来要提供真正的 process-session override，应由 adapter 保存为易失 native state，不能与 Thread mode 同名。
+
+Engine/Host 对某一 mode 没有真实实现时，capability projection 必须返回 unavailable/unsupported，并由 Composer 隐藏该选项。尤其 Pi-family adapter 当前只保存 `runtimeMode`、没有 OmniMind approval request path；在实现真实 gate 之前不能把 `approval-required` 宣称为可用。
 
 ## 扩展与生态
 
@@ -149,6 +181,8 @@ Package lifecycle 不跨 Provider归一：
 
 上述组合不产生 shared `PackageActivation`/current/LKG、generic plugin platform、permission broker 或跨 Engine durable state；PluginLibrary/Registry 只投影 native + additive 能力事实，不接管 Engine 私有运行时责任。
 
+这里禁止的是复制 Engine-native Session、resume、memory store 或 plugin lifecycle，不是禁止 OmniMind-owned workspace artifacts。OmniMind 可以把同一份、可审查的 project context 作为 additive capability 提供给不同 Engine，只要它不读取或镜像 Engine private home，且 writer、scope、provenance、删除与 JIT load 仍只有一个 OmniMind owner。
+
 ```engine-capability-composition
 {
   "effectiveCapabilities": [
@@ -161,6 +195,7 @@ Package lifecycle 不跨 Provider归一：
   "enginePrivateHomeMutation": "forbidden",
   "identityConflict": "explicit",
   "crossEngineDurableState": "forbidden",
+  "omnimindWorkspaceArtifacts": "additive-single-owner-jit",
   "temporaryWebSurfacePresentation": "current-thread-omnimind-browser",
   "temporaryWebSurfaceProvenance": "engine-thread-tool-required",
   "externalBrowserActivation": "explicit-user-only",
@@ -174,13 +209,40 @@ V1 只保留 inherited orchestration 对 Project/Thread/Space command/event/proj
 
 不得为不同 Provider 建平行 Product databases，也不得为了清理历史发布 destructive rebuild。Provider native state 可以不同，但 Project/Thread/Space/Timeline 只有 inherited 一份。
 
+## Project context：自动记忆与知识共用一个文件世界
+
+Memory 与 Knowledge 不是两个数据库，也不属于 Engine-native resume。它们是 OmniMind-owned、workspace-scoped、可审查的 project context，作为 additive capability 对当前选定 Engine 可用：
+
+```text
+source evidence / current workspace facts
+  → bounded post-settlement curation
+    → sparse project memory + linked derived knowledge + small index
+      → later JIT search/read from any compatible selected Engine
+```
+
+唯一 owner 位于 OmniMind project-local state root；实际路径和格式由该 owner一次定义，不由每个 adapter、Skill、Pack 或 UI 分别选择。V1 不建数据库、向量库、graph、personal global vault 或常驻 daemon。当前 Thread 的 Recap 仍是 Web UI recap，不升级成该 owner。
+
+默认行为是自动而安静：
+
+- 普通任务中实际使用、且判断为未来仍有价值的文件、链接或 workspace evidence，会在 root turn 真正 settled 后进入一个有界维护任务；用户不需要再发送“更新知识”；
+- Memory 只保留稀疏 preference、constraint、项目事实、昂贵上下文和恢复指针；Knowledge 保留 immutable evidence、关联页面、index、stale 与 contradiction；两者可以互相引用但不互相冒充；
+- 首次写入、普通增量更新和无冲突综合自动落盘，不弹确认框；版本、来源和原子写入让操作可追溯、可撤销、可修复；
+- 矛盾默认保留双方来源、标记当前判断并继续；只有它会实质改变当前任务结果且无法从 workspace/evidence 判定时才询问；
+- 外部内容始终作为 data 处理，不能覆盖 system/developer/user 当前指令；这属于事实正确性，不产生用户审批流程；
+- 写入、index、recall、cleanup 都是 event-driven bounded work，不创建 daemon 或第二 scheduler；失败不能阻塞已完成的主任务；
+- session 开始只暴露小 index/pointer，正文通过现有 `rg/read` 或 Engine 官方 Skill/MCP seam 按需读取，不把 wiki/memory 塞进稳定 prefix。
+
+Codex、Claude Code 等 native memory 继续拥有自己的私有目录、retention 和优化语义。OmniMind 不读取、迁移或镜像它们；OmniMind project context 只积累产品可审查的共享项目事实，因此二者可以并存而不是形成双写同一 state。
+
 ## 本地系统能力
 
 File、Git 与 Terminal 分别由 filesystem、Git repository 与 local process/PTY 拥有。OmniMind 直接复用 Synara 的 typed commands、viewer、save/conflict behavior、Git journey 和 per-thread terminal state。
 
 iOS Simulator Device 是同一 Desktop→Server 系统能力链的一部分，不是 Provider runtime 或第二控制面。`DeviceService`/`DeviceManager` 唯一拥有设备枚举、boot ownership、每 Thread attachment、helper lifecycle、frame transport 与操作结果；Web 只消费 typed RPC/event/frame contract，native helper 只负责 CoreSimulator/SimulatorKit 桥接。helper 源码随 macOS App 物理打包，并在用户机器上按当前 Xcode build 编译到 `~/Library/Caches/omnimind/device-helper/<xcode-build>/`；缓存、binary、环境变量、Unix socket 与临时路径全部使用 OmniMind namespace，打包必须同时保留 facebook/idb 精确 MIT notice。
 
-Device 的 read-only discovery、screen、UI tree 与 screenshot 可作为现有 Agent Gateway 的 system tools 暴露；tap、swipe、key、text、hardware button、boot、shutdown、install、launch 与 open-url 等 mutation 只有在同一精确 invocation 存在可验证 approval receipt 时才执行。当前 Host 没有 receipt bridge，因此 Agent mutation 默认 fail-closed，并引导用户在 Device pane 显式操作；不得从 Provider 名称、full-access 标签、历史批准或 pane 可见性推断授权，也不得为 Device 建第二 permission broker。macOS helper 的 sandbox profile 缺失或不可读时启动失败；仅显式 development opt-out 可运行 unconfined helper，且不得包装成 production sandbox 保证。
+Device 的 discovery、screen、UI tree、screenshot 与 mutation 都通过现有 Agent Gateway 暴露，并继承 caller Thread 的 `runtimeMode`。`full-access` 下，tap、swipe、key、text、hardware button、boot、shutdown、install、launch 与 open-url 等任务内操作直接执行；`approval-required` 只有在 Host 已有真实 request/response bridge 时才可选，不能像当前实现一样因 bridge 缺失而对所有调用一律 fail-closed。`auto` 只有在 Host 有可验证 reviewer 时才覆盖 Device mutation。不得从 Provider 名称或 pane 可见性推断 mode，也不得为 Device 建第二 permission broker。macOS helper 的 sandbox profile缺失或不可读仍属于运行条件错误：production 启动失败；仅显式 development opt-out 可运行 unconfined helper，且不得包装成 sandbox 保证。
+
+Browser 的导航、点击、输入、上传和任务内下载使用同一 mode。`full-access` 下下载不弹二次批准：落到当前 project/workspace 或 OmniMind managed artifact/download root，结果以普通文件/artifact receipt 呈现；目标路径需要系统原生选择器、网站弹出 OAuth/2FA 或用户实际接管页面时，才进入 human-presence flow。现有 `BrowserDownloadApprovalRequired` 的无条件取消只能作为当前缺口，不能成为 V1 产品合同。
 
 不建设 observed-version 平台。只有现实可复现的静默覆盖风险才增加最小 precondition；外部工具或 Provider Tool 改写文件后重新观察并呈现即可。
 

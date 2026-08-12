@@ -33,6 +33,8 @@ OmniMind 的价值不是“能启动 Pi”，也不是“再造一个多 Engine 
 | 稳定职责、产品事实、完整 UI 与进程边界                         | [`architecture/`](architecture/README.md) 的专题 owner                       |
 | canonical public origin、公共出口、激活与独立 trust boundaries | [`architecture/public-surface.md`](architecture/public-surface.md)           |
 | 固定来源事实、失败、反例与复验触发器                           | [`research/`](research/README.md)                                            |
+| Synara 持续 source intake 方法与人工确认边界                    | [`SYNARA-INTAKE.md`](SYNARA-INTAKE.md)                                      |
+| Pi Core、Pi ecosystem 与 Agent Core 外部来源的持续 intake 方法  | [`PI-ECOSYSTEM-INTAKE.md`](PI-ECOSYSTEM-INTAKE.md)                          |
 | 施工顺序、进入/停止条件与阶段 proof                            | [`execution-brief.md`](execution-brief.md)                                   |
 | Campaign claim 状态与证据指针                                  | [`missions/independent-omnimind-v1.md`](missions/independent-omnimind-v1.md) |
 
@@ -108,7 +110,7 @@ authority，也不得带入 donor branding、竞争编排、第二 Session 状�
       ],
       "rights": "The fixed source is MIT-licensed under the retained exact legal text. The maintainer has authorized retention, adaptation and redistribution of the reviewed code. Former product identity assets, release identity and release history are not adopted.",
       "mode": "adapt",
-      "changes": "The exact physical Desktop, Web, Server, contracts, shared, patch, build and release substrate was transplanted from 02c8a6c, then the maintainer-approved 02c8a6c..712d88f intake was adopted by reviewed responsibility. Accepted mechanisms include appearance persistence/polish, reliability and scroll fixes, Pi max/model isolation, native provider forks and source context, Luna/high defaults, and the iOS Simulator Device pane. OmniMind retains its product authority, bilingual catalog, package/app/protocol/updater/profile/storage/artifact namespace and brand; excludes donor icons, version/changelog/release identity, forced settings migration and any competing approval or control plane; agent-triggered Device mutations fail closed without a verifiable approval receipt.",
+      "changes": "The exact physical Desktop, Web, Server, contracts, shared, patch, build and release substrate was transplanted from 02c8a6c, then the maintainer-approved 02c8a6c..712d88f intake was adopted by reviewed responsibility. Accepted mechanisms include appearance persistence/polish, reliability and scroll fixes, Pi max/model isolation, native provider forks and source context, Luna/high defaults, and the iOS Simulator Device pane. OmniMind retains its product authority, bilingual catalog, package/app/protocol/updater/profile/storage/artifact namespace and brand; excludes donor icons, version/changelog/release identity, forced settings migration and any competing approval or control plane. The inherited per-invocation fail-closed Device guard is retained only as current source behavior, not as the target permission contract; Device and Browser mutations must use the single Thread runtimeMode path defined by architecture/execution.md before production activation.",
       "updatePolicy": "Pinned revision; source updates begin only after a maintainer-requested read-only intake and explicit approval of that intake set.",
       "licenseFiles": ["LICENSES/ui-mother-MIT.txt"]
     },
@@ -141,7 +143,7 @@ authority，也不得带入 donor branding、竞争编排、第二 Session 状�
       "rights": "The fixed Pi coding-agent source and generated runtime are MIT-licensed. The shipped archive retains its upstream LICENSE, and the exact root redistribution text is LICENSES/pi-coding-agent-MIT.txt.",
       "mode": "adapt",
       "changes": "The product-owned physical module is generated from packages/coding-agent at the fixed revision. Shared executable runtime bytes are unchanged from the exact npm artifact whose gitHead is the same revision; runtime behavior differs only through the @omnimind package identity and piConfig configDir/name that route private state to .omnimind. Packaging metadata removes the standalone pi bin and development-only scripts/dependencies, omits unshipped docs/examples, and pins the Pi-family dependency closure without adding runtime code.",
-      "updatePolicy": "Pinned revision, upstream npm integrity and product archive SHA-256. Reproduction uses the immutable Git tree in a task-only temporary directory, rebuilds packages/coding-agent, verifies shared runtime byte identity and retained LICENSE, applies only the recorded package identity/configDir and archive-closure metadata changes, and proves temporary input cleanup. Pi post-tag code is excluded. Any source, version, generation rule, dependency closure, archive digest, rights or license change requires explicit source intake and affected runtime/ecosystem revalidation before replacement.",
+      "updatePolicy": "Pinned revision, upstream npm integrity and product archive SHA-256. Reproduction uses the immutable Git tree in a task-only temporary directory, rebuilds packages/coding-agent, verifies shared runtime byte identity and retained LICENSE, applies only the recorded package identity/configDir and archive-closure metadata changes, and proves temporary input cleanup. Pi post-tag code is excluded. Any source, version, generation rule, dependency closure, archive digest, rights or license change requires the explicit Gate A/Gate B process in PI-ECOSYSTEM-INTAKE.md and affected runtime/ecosystem revalidation before replacement.",
       "licenseFiles": ["LICENSES/pi-coding-agent-MIT.txt"]
     },
     {
@@ -152,7 +154,7 @@ authority，也不得带入 donor branding、竞争编排、第二 Session 状�
       "rights": "The copied todo extension source is MIT-licensed under the retained canonical legal text. This adoption is limited to the exact selected file and does not adopt the Pi repository as OmniMind product source.",
       "mode": "transplant",
       "changes": "The selected todo.ts bytes are retained exactly from packages/coding-agent/examples/extensions/todo.ts at the fixed revision. Its V1 runtime proof must be redone against the isolated OmniMind Agent rather than inherited from the retired host.",
-      "updatePolicy": "Pinned revision and exact SHA-256; any source, version, digest, rights, trust-surface or runtime-compatibility change requires a new explicit source review and revalidation before activation.",
+      "updatePolicy": "Pinned revision and exact SHA-256; any source, version, digest, rights, trust-surface or runtime-compatibility change requires the explicit Gate A/Gate B process in PI-ECOSYSTEM-INTAKE.md and affected revalidation before activation.",
       "licenseFiles": ["LICENSES/pi-todo-MIT.txt"]
     }
   ]

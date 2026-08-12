@@ -98,6 +98,19 @@ test("Synara intake instructions cannot bypass the root handbook", async (t) => 
   assertFinding(await validateDocumentContract({ root }), "route.required", "AGENTS.md");
 });
 
+test("Pi ecosystem intake instructions cannot bypass the root handbook", async (t) => {
+  const root = await createFixture(t);
+  await replaceText(
+    root,
+    "AGENTS.md",
+    "PI-ECOSYSTEM-INTAKE.md",
+    "research/omnimind-agent-core-design.md",
+    { all: true },
+  );
+
+  assertFinding(await validateDocumentContract({ root }), "route.required", "AGENTS.md");
+});
+
 test("mandatory read route order is structural", async (t) => {
   const root = await createFixture(t);
   const agentsPath = path.join(root, "AGENTS.md");
@@ -105,8 +118,8 @@ test("mandatory read route order is structural", async (t) => {
   await writeFile(
     agentsPath,
     content.replace(
-      "1. `README.md`；\n2. 任务涉及审查、借鉴、吸收、同步或更新 Synara 时，完整读取 `SYNARA-INTAKE.md`；\n3. `architecture/README.md`",
-      "1. `architecture/README.md`；\n2. 任务涉及审查、借鉴、吸收、同步或更新 Synara 时，完整读取 `SYNARA-INTAKE.md`；\n3. `README.md`",
+      "1. `README.md`；\n2. 任务涉及审查、借鉴、吸收、同步或更新 Synara 时，完整读取 `SYNARA-INTAKE.md`；\n3. 任务涉及审查、借鉴、吸收、同步、升级或 fork Pi Core、Pi-compatible package/extension/skill/prompt/tool/MCP 或 OmniMind Agent Core 外部来源时，完整读取 `PI-ECOSYSTEM-INTAKE.md`；\n4. `architecture/README.md`",
+      "1. `architecture/README.md`；\n2. 任务涉及审查、借鉴、吸收、同步或更新 Synara 时，完整读取 `SYNARA-INTAKE.md`；\n3. 任务涉及审查、借鉴、吸收、同步、升级或 fork Pi Core、Pi-compatible package/extension/skill/prompt/tool/MCP 或 OmniMind Agent Core 外部来源时，完整读取 `PI-ECOSYSTEM-INTAKE.md`；\n4. `README.md`",
     ),
   );
 
@@ -168,6 +181,22 @@ test("Engine native ecosystem cannot be redefined as replaced", async (t) => {
     "architecture/execution.md",
     '"nativeEcosystemDisposition": "preserve"',
     '"nativeEcosystemDisposition": "replace"',
+  );
+
+  assertFinding(
+    await validateDocumentContract({ root }),
+    "execution.engine-capability-composition",
+    "architecture/execution.md",
+  );
+});
+
+test("OmniMind workspace artifacts remain additive and single-owner", async (t) => {
+  const root = await createFixture(t);
+  await replaceText(
+    root,
+    "architecture/execution.md",
+    '"omnimindWorkspaceArtifacts": "additive-single-owner-jit"',
+    '"omnimindWorkspaceArtifacts": "cross-engine-state-mirror"',
   );
 
   assertFinding(

@@ -5,6 +5,7 @@ export const DOCUMENT_CONTRACT_PATHS = [
   "AGENTS.md",
   "README.md",
   "SYNARA-INTAKE.md",
+  "PI-ECOSYSTEM-INTAKE.md",
   "architecture/README.md",
   "architecture/workbench.md",
   "architecture/public-surface.md",
@@ -27,12 +28,21 @@ const REQUIRED_ROUTES = [
   ["README.md", "missions/independent-omnimind-v1.md"],
   ["README.md", "research/README.md"],
   ["README.md", "SYNARA-INTAKE.md"],
+  ["README.md", "PI-ECOSYSTEM-INTAKE.md"],
   ["AGENTS.md", "SYNARA-INTAKE.md"],
+  ["AGENTS.md", "PI-ECOSYSTEM-INTAKE.md"],
   ["SYNARA-INTAKE.md", "README.md"],
   ["SYNARA-INTAKE.md", "research/source-review.md"],
   ["SYNARA-INTAKE.md", "architecture/README.md"],
   ["SYNARA-INTAKE.md", "execution-brief.md"],
   ["SYNARA-INTAKE.md", "missions/independent-omnimind-v1.md"],
+  ["PI-ECOSYSTEM-INTAKE.md", "README.md"],
+  ["PI-ECOSYSTEM-INTAKE.md", "research/README.md"],
+  ["PI-ECOSYSTEM-INTAKE.md", "architecture/README.md"],
+  ["PI-ECOSYSTEM-INTAKE.md", "execution-brief.md"],
+  ["PI-ECOSYSTEM-INTAKE.md", "missions/independent-omnimind-v1.md"],
+  ["PI-ECOSYSTEM-INTAKE.md", "research/omnimind-agent-core-design.md"],
+  ["PI-ECOSYSTEM-INTAKE.md", "research/omnimind-agent-core-execution-guide.md"],
   ["architecture/README.md", "workbench.md"],
   ["architecture/README.md", "public-surface.md"],
   ["architecture/README.md", "product-state.md"],
@@ -42,12 +52,14 @@ const REQUIRED_ROUTES = [
   ["missions/independent-omnimind-v1.md", "../execution-brief.md"],
   ["research/README.md", "source-update-intake.md"],
   ["research/README.md", "../SYNARA-INTAKE.md"],
+  ["research/README.md", "../PI-ECOSYSTEM-INTAKE.md"],
   ["research/README.md", "decision-record.md"],
 ];
 
 const REQUIRED_READ_ORDER = [
   "README.md",
   "SYNARA-INTAKE.md",
+  "PI-ECOSYSTEM-INTAKE.md",
   "architecture/README.md",
   "execution-brief.md",
   "missions/independent-omnimind-v1.md",
@@ -226,6 +238,7 @@ function validateEngineCapabilityComposition(findings, documents) {
     policy.enginePrivateHomeMutation !== "forbidden" ||
     policy.identityConflict !== "explicit" ||
     policy.crossEngineDurableState !== "forbidden" ||
+    policy.omnimindWorkspaceArtifacts !== "additive-single-owner-jit" ||
     policy.temporaryWebSurfacePresentation !== "current-thread-omnimind-browser" ||
     policy.temporaryWebSurfaceProvenance !== "engine-thread-tool-required" ||
     policy.externalBrowserActivation !== "explicit-user-only" ||

@@ -28,7 +28,7 @@ flowchart LR
     Agent --> Workbench["Files · Diff · Terminal · Git · Artifacts"]
     Agent --> Thread["Project Thread"]
     Chat --> Studio["Home / Studio managed Thread"]
-    Thread --> Providers["OmniMind Agent · Pi · Codex · Claude · OpenCode · …"]
+    Thread --> Providers["OmniMind · Pi · Codex · Claude · OpenCode · …"]
     Studio --> Providers
 ```
 
@@ -66,7 +66,7 @@ flowchart LR
 
 - 使用 folder-backed Project Thread；
 - 显示 Files、Viewer、Diff、Changes、Terminal、Git、Output、Artifact 与完整 Workbench；
-- Provider 默认为 OmniMind Agent，也可以选择 stock Pi 或其他当前可用的 inherited adapter；
+- 默认引擎显示为 OmniMind，技术实体是 bundled OmniMind Agent；也可以选择 stock Pi 或其他当前可用的 inherited adapter；
 - 改变工作目录通过选择/创建 Project 完成，不在有实质工作后静默换 cwd；
 - Projects 是 folder-backed Agent conversations 的完整来源，保持文件夹图标；Groups 是其下方默认折叠的会话归类视图，不过滤 Projects，也不给 Project 打标签。
 - 一个 Thread 可以属于多个 Group；未分组 Thread 只留在 Projects，不出现“未分组”伪 Group。每个具体 Group 使用带稳定颜色的 tag glyph，section header 本身不放 tag glyph。
@@ -85,7 +85,7 @@ flowchart LR
 
 ## 3. Provider 与 Composer
 
-Composer 复用现有输入、attachments、`+`、`@`、Provider、Model、traits、send、Queue 与 running controls。默认态只显示当前选择 `OmniMind Agent`；用户主动打开 Provider selector 时，列表明确区分 `OmniMind Agent`、`Pi` 与其他真实 Provider，绝不合并。OmniMind Agent detail 显示自身 runtime/version；Pi lineage 与 license 放在 About、Licenses 和 technical detail，而不是把产品 label 写成 Pi。
+Composer 复用现有输入、attachments、`+`、`@`、Provider、Model、traits、send、Queue 与 running controls。默认态和 Engine selector 的普通用户展示名使用 `OmniMind`，并与 `Pi` 及其他真实 Engine 明确区分，绝不合并。`OmniMind Agent` 只作为技术实体全称出现在 Engine technical detail、runtime/version、诊断、About 与 Licenses；内部 identity 继续为 `omnimind`。Pi lineage 与 license 不进入普通产品 label。
 
 选择变化只影响下一次发送。当前 operation 不热换；Provider 切换沿用 stop-first replacement，失败恢复上一 exact binding。Timeline 可保留混合 Provider turns，但每个 turn 显示自己的 provenance。
 
@@ -100,6 +100,23 @@ Timeline 长期显示用户输入、Assistant 可见结果、结构化请求、�
 wire noise、逐 token event、重复系统消息与不应展示的 reasoning 不进入 Timeline。同一 stream item 原位归并；自然成功不额外 Toast。只有失败、结果未知、隐藏副作用或需要用户处理时升级提示。
 
 Child Agent、Todo、Question 继续使用 source 已有的最小产品语义；不得借此创建第二 task system 或 Run hierarchy。
+
+### 自动能力的显示原则
+
+Goal、Agent 团队、动态工作流、记忆、知识库、会话恢复与 Computer Use 不是七个导航入口，也不是七张常驻卡。默认通过自然语言与运行条件自动触发，并只投影到已经存在的表面：
+
+| 能力语义 | 平时 | 运行时 | 结果/异常 |
+|---|---|---|---|
+| 目标 | 不显示独立 Goal 实体 | 复用 task list；范围真正变化才问 | 最终回答准确说明完成/未完成 |
+| Todo/当前步骤 | 无独立任务管理页 | Composer 只保留一行真实进度；点击后在锚定 popover 展开步骤 | 完成后折叠或退场；不复制 task state |
+| Agent 团队 | 不显示 team builder | 活跃时复用 `ComposerSubagentStrip`；Environment 用稳定身份纹样簇显示数量，点击进入 right dock/child Thread | root 汇总来源；settled 成员只在有复查价值的详情中保留 |
+| 动态工作流 | 不显示通用 workflow editor | Environment/Composer 只显示一行真实 workflow 摘要；点击在 right dock 打开只读动态流程图 | 保留 Engine provenance，不把普通 tool sequence 画成 DAG |
+| 记忆 | 自动、安静、无每条确认 | 通常零 UI；确实影响回答时可显示一条可展开来源 | 通过 Workbench 的现有 Environment card 按需管理，不建 Memory pane |
+| 知识库 | 用户正常提供/使用资料即可，不要求发起“知识更新” | 复用 File/Tool activity；后台维护不占 Composer | Sources、Markdown、index、Diff 回到 Files/Changes；冲突只在影响结果时介入 |
+| 会话恢复 | 正常重开直接恢复 | native resume 安静继续 | degraded/ambiguous 才在 Composer 前显示一条恢复介入 |
+| Computer Use | 无 capability card | 复用现有 Browser/Device pane 与 Timeline tool activity | 文件、截图、下载与结果进入现有 Artifact/File 表面 |
+
+UI 不展示 packaged、registered、context-loaded、cache breakpoint 或内部 candidate extraction。自然成功不 Toast；自动 Memory/Knowledge 的日常 write/recall 默认只进入可展开 Activity detail，不在 Timeline 为每次维护增加一行。用户主动打开 Workbench、查看来源、纠正、遗忘或诊断时，才加载完整详情。
 
 ## 5. 本地 Workbench
 
@@ -122,11 +139,17 @@ Terminal 使用真实 PTY，区分 running/exited，支持 input/copy/search/res
 
 V1 保留 Synara 当前设置 IA、搜索、deep-link、分组和 keyboard behavior，不另起 `Models / Agents / Packages / Application` 四域重构。
 
-当前 section 继续以 source 为准，例如 General、Profile、Appearance、Notifications、Chat behavior、Keybindings、Usage & limits、Agent providers、Models & writing、Agent skills、MCP connections、Managed worktrees、System tools 与 Archived threads。OmniMind 只做：
+当前 section 继续以 source 为准，例如 General、Profile、Appearance、Notifications、Chat behavior、Keybindings、Usage & limits、Agent providers、Model services、Agent skills、MCP connections、Managed worktrees、System tools 与 Archived threads。`Model services / 模型服务` 是对原 `Models & writing / 模型与写作` section 的定向改名与职责修正：保留现有 route、内部 section id `models`、搜索、deep-link、分组和 keyboard behavior，不借此重排整个 Settings taxonomy。
+
+`Model services` 是 OmniMind 内置 Agent runtime 的模型/API 服务配置中心；技术上由 bundled OmniMind Agent 的 Pi ModelRuntime 负责。页面呈现 Pi 实际支持的 provider、credential/API key、OAuth、模型目录刷新、目录缓存与 custom provider instance；同一上游供应商允许以不同稳定 provider id 配置多个 Pi 可表达的服务实例。这里复用并跟随锁定 Pi package 的真实 API、持久化格式与 capability，不维护平行的供应商枚举、静态模型镜像、逐供应商网络 fetcher 或独立 Channel runtime。Pi 上游不能表达的 auth、catalog 或 provider 语义不为界面对称而伪造。
+
+`Agent providers / Agent engines` 继续拥有 Codex、Claude、OpenCode、stock Pi 等独立 Engine 的安装、登录、健康状态与原生配置；这些 Engine 不被扁平化为 OmniMind Agent 的模型服务，也不把凭据迁入 OmniMind Agent 的 Pi private home。现有 Git writing default 作为 `Model services` 内的次级产品默认值保留，不再定义整页名称或首要职责。
+
+OmniMind 只做：
 
 - donor 品牌替换；
 - OmniMind Agent 默认、bundled runtime version 与 model/auth readiness；stock Pi 的实际 session runtime version 和可选 local CLI version 分开显示；Pi lineage 只放在 provenance detail；
-- Provider-specific fields 的最小接线；
+- Engine-specific 与 model-service-specific fields 的最小接线；
 - About、Licenses、update 与 diagnostics 的准确内容。
 
 新增设置必须进入最接近的既有 section，并通过现有 search/deep-link；不能为了架构整齐重排成熟 taxonomy。
@@ -155,9 +178,16 @@ OmniMind-curated/preinstalled resources 用发行 manifest 说明 source、hash�
 
 ## 8. 权限与真实性
 
-共同 UI 只呈现 Provider/Host 实际产生的 approval、scope、consequence 与 result。Provider-native policy 字段保持 namespaced；没有请求就不显示虚构 permission flow。
+Composer 的运行模式是当前任务唯一的自动化选择；用户不应在 Provider、Browser、Device、下载和每个 Tool 上重复支付确认成本。完整语义由 [`architecture/execution.md`](execution.md#runtime-mode一个任务只有一个自动化边界) 拥有，Workbench 只负责准确投影：
 
-不建设第二 permission broker，不建立跨 Provider deny-side-effect 测试矩阵，不把不同产品的 full access/sandbox 词汇判为等价。进程隔离、Package verification 与 Provider 声明都不得包装成 OS sandbox。
+- `完全访问 / Full access`：普通文件、命令、网络、Browser、Device、依赖、测试与任务内下载不出现 approval；
+- `自动批准 / Approve for me`：只有 exact Engine/Host 存在真实自动 reviewer 时显示；
+- `需要时询问 / Ask for approval`：只有 exact Engine/Host 存在可完成 request/response bridge 时显示；
+- OAuth、2FA、系统原生权限、物理设备到场和用户未表达的不可逆外部动作使用“需要你完成/确认”的真实语言，不混称普通工具权限。
+
+Provider/Host capability 改变时，Composer mode menu 由 loaded capability truth 决定：不支持的项隐藏或显示 unavailable reason，不能允许用户选择一个底层只会一律拒绝的 mode。Pi-family 当前没有 OmniMind approval request path 时，不显示 `需要时询问`。`acceptForSession` 若实际持久切换当前 Thread 为 `full-access`，按钮显示“此任务始终允许 / Always allow for this task”，不能显示“本会话始终允许”。
+
+共同 UI 仍不建设第二 permission broker，也不把不同产品的 sandbox 字段判为相同底层实现。进程隔离、Package verification 与 Provider 声明不得包装成 OS sandbox；但这些隐藏工程边界不能被转化为无必要的用户审批仪式。
 
 ## 9. 运行时状态
 
@@ -175,6 +205,43 @@ iOS Simulator 作为现有 right dock 的 `device` pane 呈现，不新增顶层
 
 先保全 Synara 当前 shell、panel geometry、Composer、Timeline、list density、theme、focus、motion 与 stream/scroll，再做一次完整 OmniMind 品牌和整体视觉校准。普通用户路径不得出现 Synara、Pi-derived、Native Host、adapter、donor 或 source-alignment 术语。拒绝重复 headers、胶囊泛滥、过度 cards、假 Activity 与模板化 AI 风。
 
+能力图标只在真实状态、详情入口或管理动作出现，不组成能力墙。图标分为三个不能混用的层级：
+
+1. **能力/集合图标**：表示“子智能体”“动态工作流”等 section 或 pane，跨入口保持统一；
+2. **实例身份纹样**：表示某一个真实 child Agent。它不是能力图标，必须按 canonical child identity 确定性生成，并在 Environment、right dock、Timeline chip、Composer strip 和重开后的同一 child 中保持同一颜色与几何纹样；同一 parent 下发生碰撞时确定性顺延到下一候选；
+3. **状态语义**：running、queued、completed、failed、blocked 由文字、tone 和必要的轻量 motion 表达，不能靠更换身份纹样或只靠颜色表达。
+
+`apps/web/src/lib/subagentPresentation.ts` 已经以 label seed 生成八色 `accentColor`，因此实例纹样应扩展这一 owner，增加稳定 `glyphVariant`/identity seed，而不是新建 avatar store。`agent-duo` 只属于第一层：用于“子智能体”集合标题、tab 或入口，不能复制到每个 Agent 行。Skill、Plugin、MCP 与所有既有全局概念继续复用当前统一图标，不做 Engine-specific 变体。
+
+以下六项是维护者已锁定的能力/集合语义映射：
+
+| 语义 | 锁定资产 | 来源与使用限制 |
+|---|---|---|
+| 目标 | `target-arrow` | 现有 Central reversed asset；仅在目标状态确实可行动时出现 |
+| Agent 团队 | `agent-duo` | 已确认的 Central-compatible 低密度 custom SVG；只用于 team/subagent 集合语义 |
+| 动态工作流 | `flow-adaptive` | 已确认的 Central-compatible custom SVG；不替代 Git branch/Automations |
+| 知识库 | `knowledge-linked` | 已确认的 Central-compatible custom SVG；表达关联页面，不使用 database glyph |
+| 记忆 | `memory-bookmark` | 已确认的 Central-compatible custom SVG；表达精选、可复用记忆，不使用 brain/database |
+| 会话恢复 | `resume-chat` | 已确认的 Central-compatible custom SVG；只用于已证明的 resume/recovery，不用于 send/handoff |
+
+子智能体身份纹样采用小尺寸、低填充密度的有限生成语法，而不是为每个 Agent 维护一份手工 SVG：6–8 个可辨认 geometry family × 现有 restrained palette，以 canonical child/thread id 取 seed；16px 仍须可辨，24px 不应显得浓重。纹样不编码角色、模型、Engine 或状态；这些信息由旁边文字和 provenance 承担。新 child 即使角色同名也应可区分，native resume 的同一 child 则必须保持身份连续。
+
+### 运行摘要与右侧详情
+
+Codex 截图所体现的可复用原则是“稳定身份 + 极短事实 + 渐进披露”，不是增加卡片：
+
+- Environment card 是当前 Thread 的低噪声目录，可显示 changes、Todo、子智能体、structured workflow 与 sources 的一行摘要；没有真实状态的 section 不占位；
+- Todo 默认行只显示 `第 x/n 步`、当前步骤和必要的 change totals；点击后用现有 popover/disclosure primitive 展开真实 task list，不创建 Todo pane；
+- 子智能体摘要显示最多三个稳定身份纹样和 running/completed 数量；点击打开既有 child detail/right dock，列表、Timeline chip 与来源引用必须复用同一纹样；
+- structured workflow 摘要显示 workflow 名、当前 phase、`done/total` 与状态；点击打开 right dock 的 workflow pane，消费同一个 provider-owned `WorkflowRunState`；
+- workflow pane V1 是只读空间解释，不是 editor：显示真实 node、edge、phase、agent、状态、usage/provenance，并复用已有 pause/stop/resume/open-child 动作；
+- 普通 tool calls、Todo 或无结构 Pi loop 不推断成 DAG。没有 provider structured workflow 时，不显示流程图入口；
+- active edge 可有低频流动提示，node 状态变化可短暂过渡；布局必须稳定，后台/不可见时停止动画，`prefers-reduced-motion` 下改为静态强调。
+
+right dock 是既有宿主；实现时只新增 `workflow` pane kind 与指向真实 run 的 bounded identity，不新增 workflow route、store、database 或第二 runtime。当前仓库没有**直接产品依赖**的 graph renderer，但互联网已有成熟方案，production 不应先手写 renderer：首个 challenger 是 MIT 的 React Flow 12 `@xyflow/react`，以 custom node/custom edge、只读交互和 Dagre-first layout 组成最小接入；AntV X6 3.x 作为复杂路由、嵌套与大图 challenger，ELK 仅在 Dagre 被真实 fixture 证伪且权利/packaging 复核后进入。Cytoscape.js 只在真实规模需要图分析时进入，Mermaid 只作为文档/导出 fallback。任何采用仍需 exact-version license、bundle、性能、keyboard/screen-reader、theme、offline packaged proof；不能偷用 Pi 的 transitive `grok-mermaid`，也不能因已有库而引入 workflow editor/runtime。
+
+当前代码扫描中 `target-arrow` 尚无产品调用点，其余五个名称尚未进入 `apps/web`；因此名称层面没有现有占用。正式 materialize 到 `apps/web/public/central-icons-reversed` 前仍要在当次 HEAD 重跑 usage/visual collision scan，并在 16/20/24px、light/dark、currentColor、1x/2x 下校验。图形保持单色、轻描边、低节点密度；不得再用 emoji、CSS 假图标、临时通用 glyph 或未经维护者确认的重画版本代替。
+
 性能以真实 journey/profile 验证：startup、Thread switch、continuous stream、long thread、large list/output、Viewer/Diff、Terminal、watcher storm、background work、memory growth 与 IME。不设任意 100k 字符门槛。
 
 Synara `02c8a6c…` 没有覆盖完整产品面的 i18n catalog；浏览器 locale、零散本地文案和英文默认 UI 不能冒充完整双语。source reset 后只新增一套逻辑上的轻量 OmniMind message catalog；实现可以按语言或稳定产品域拆开源码，但不能形成第二套运行时 catalog、Settings 或 localization platform。继续沿用 source 的组件、DOM、focus、geometry 与交互，不为翻译重写 Workbench。
@@ -183,8 +250,9 @@ Settings 提供 `System / 简体中文 / English`，默认跟随 OS/browser；�
 
 双语以用户语义和内容 ownership 为边界，而不是逐词翻译：
 
-- `OmniMind`、`Agent`、`Chat` 保留产品身份；Agent 域使用“新建任务 / New Task”和“任务”，Chat 域使用“新建对话 / New Chat”和“对话”。`Thread` 不进入普通用户语言，`Session` 只在真实认证、连接、恢复 ID 或诊断语境出现。
-- Codex、Pi、OpenCode 与 OmniMind Agent 在普通界面称为“引擎”；OpenAI、MiMo、DeepSeek 等模型/API 来源称为“模型服务商”。`Provider` 只在内部 API 或主动展开的技术详情中保留。
+- `OmniMind`、`Agent`、`Chat` 保留产品身份；Agent 域使用“新建任务 / New Task”和“任务”，Chat 域使用“新建对话 / New Chat”和“对话”。`OmniMind Agent` 只在技术详情、runtime、诊断、About、Licenses 与来源语境中作为完整技术实体名。`Thread` 不进入普通用户语言，`Session` 只在真实认证、连接、恢复 ID 或诊断语境出现。
+- “Agent 团队 / Agent Team”是能力与研究语义；运行时集合标题使用更具体的“子智能体 / Subagents”，单个实例直接显示其 nickname/任务名，不把“团队”重复到每一行。`agent-duo` 表示集合，实例身份纹样表示具体 child。
+- Codex、Pi、OpenCode 与 OmniMind 在普通界面称为“引擎”；OpenAI、MiMo、DeepSeek 等模型/API 来源称为“模型服务商”。`Provider` 只在内部 API 或主动展开的技术详情中保留。
 - Workbench、Library、Project、Group、Kanban、Terminal、Skill、Plugin、Repository、Branch、Commit、Push、Diff、Worktree、Pull Request 等采用自然中文产品词；`Git`、`MCP`、`API`、`CLI`、`JSON`、`URL`、`ID` 与 AI 计量单位 `token` 保留标准写法。命令、参数、环境变量、路径、文件名、模型名和品牌名保持原文。
 - 技能、插件、工具与 MCP 服务的真实名称始终保留来源原文。OmniMind-owned 资产的名称说明与操作文案完整双语；Engine-native 或第三方资产的原始简介保留 provenance，不由 Host 擅自翻译或运行时机翻。
 - 中文产品文案简洁、直接、友好；标签和按钮省略无意义主语，引导在必要时使用“你”而不用“您”，错误明确说明发生了什么和下一步动作。英文独立按自然英文写作，不从中文逐字回译。
@@ -218,6 +286,9 @@ V1 UI 候选至少证明：
 - Settings IA、中文/英文、keyboard、screen reader、reduced motion 与真实性能通过；
 - macOS、Windows、Linux 安装后的核心 journey 通过；
 - 没有第二 Product Control Plane、Package state、silent fallback、fake parity、fake progress 或 fake permission；
+- `full-access` 从 Engine 到 Browser/Device/Gateway 的普通操作无二次确认，其他 mode 只在真实 supported 时出现；
+- 自动 Memory/Knowledge 不要求用户发起维护命令或逐条批准，默认 UI 安静，来源与管理按需可达；
+- 六个锁定能力图标只出现在真实语义位置，Skills/Plugins 等全局概念不发生图标分裂或冲突；
 - 同状态人工视觉复核无 material finding。
 
 本文冻结 UI 结果，不自证当前代码已经满足。
