@@ -6537,11 +6537,30 @@ describe("ProviderCommandReactor", () => {
   it("steers immediately for codex sessions when Cmd/Ctrl+Enter is used", async () => {
     const harness = await createHarness();
     const now = new Date().toISOString();
+    const activeTurnId = asTurnId("turn-1");
+
+    await Effect.runPromise(
+      harness.engine.dispatch({
+        type: "thread.turn.start",
+        commandId: CommandId.makeUnsafe("cmd-live-steer-codex-baseline"),
+        threadId: ThreadId.makeUnsafe("thread-1"),
+        message: {
+          messageId: asMessageId("msg-live-steer-codex-baseline"),
+          role: "user",
+          text: "start the live codex turn",
+          attachments: [],
+        },
+        runtimeMode: "approval-required",
+        interactionMode: DEFAULT_PROVIDER_INTERACTION_MODE,
+        createdAt: now,
+      }),
+    );
+    await waitFor(() => harness.sendTurn.mock.calls.length === 1);
 
     harness.setRuntimeSessionTurnState({
       threadId: "thread-1",
       status: "running",
-      activeTurnId: asTurnId("turn-running"),
+      activeTurnId,
     });
     await Effect.runPromise(
       harness.engine.dispatch({
@@ -6553,7 +6572,7 @@ describe("ProviderCommandReactor", () => {
           status: "running",
           providerName: "codex",
           runtimeMode: "approval-required",
-          activeTurnId: asTurnId("turn-running"),
+          activeTurnId,
           lastError: null,
           updatedAt: now,
         },
@@ -6593,14 +6612,125 @@ describe("ProviderCommandReactor", () => {
     });
   });
 
+  it("steers the exact in-session turn model even when the spawned Session model is older", async () => {
+    const harness = await createHarness();
+    const now = new Date().toISOString();
+    const threadId = ThreadId.makeUnsafe("thread-1");
+    const activeTurnId = asTurnId("turn-in-session-model");
+    const activeSelection: ModelSelection = {
+      provider: "codex",
+      model: "gpt-5.1-codex",
+      options: { reasoningEffort: "high" },
+    };
+
+    // The native Session was spawned with the original model, but Codex can
+    // accept a per-turn in-session model override without changing that
+    // Session-level field.
+    await Effect.runPromise(
+      harness.startSession(threadId, {
+        threadId,
+        provider: "codex",
+        modelSelection: { provider: "codex", model: "gpt-5-codex" },
+        runtimeMode: "approval-required",
+      }),
+    );
+    harness.sendTurn.mockImplementationOnce(() =>
+      Effect.succeed({ threadId, turnId: activeTurnId }),
+    );
+    await Effect.runPromise(
+      harness.engine.dispatch({
+        type: "thread.turn.start",
+        commandId: CommandId.makeUnsafe("cmd-in-session-model-active-turn"),
+        threadId,
+        message: {
+          messageId: asMessageId("msg-in-session-model-active-turn"),
+          role: "user",
+          text: "run the in-session model",
+          attachments: [],
+        },
+        modelSelection: activeSelection,
+        runtimeMode: "approval-required",
+        interactionMode: DEFAULT_PROVIDER_INTERACTION_MODE,
+        createdAt: now,
+      }),
+    );
+    await waitFor(() => harness.sendTurn.mock.calls.length === 1);
+    harness.setRuntimeSessionTurnState({ threadId, status: "running", activeTurnId });
+    await Effect.runPromise(
+      harness.engine.dispatch({
+        type: "thread.session.set",
+        commandId: CommandId.makeUnsafe("cmd-in-session-model-running"),
+        threadId,
+        session: {
+          threadId,
+          status: "running",
+          providerName: "codex",
+          runtimeMode: "approval-required",
+          activeTurnId,
+          lastError: null,
+          updatedAt: now,
+        },
+        createdAt: now,
+      }),
+    );
+
+    harness.sendTurn.mockClear();
+    harness.steerTurn.mockClear();
+    harness.interruptTurn.mockClear();
+    await Effect.runPromise(
+      harness.engine.dispatch({
+        type: "thread.turn.start",
+        commandId: CommandId.makeUnsafe("cmd-steer-in-session-model"),
+        threadId,
+        message: {
+          messageId: asMessageId("msg-steer-in-session-model"),
+          role: "user",
+          text: "steer the exact in-session model",
+          attachments: [],
+        },
+        dispatchMode: "steer",
+        modelSelection: activeSelection,
+        runtimeMode: "approval-required",
+        interactionMode: DEFAULT_PROVIDER_INTERACTION_MODE,
+        createdAt: now,
+      }),
+    );
+
+    await waitFor(() => harness.steerTurn.mock.calls.length === 1);
+    expect(harness.interruptTurn).not.toHaveBeenCalled();
+    expect(harness.sendTurn).not.toHaveBeenCalled();
+    expect(harness.steerTurn.mock.calls[0]?.[0]).toMatchObject({
+      threadId,
+      input: "steer the exact in-session model",
+      modelSelection: activeSelection,
+    });
+  });
+
   it.each([
     {
-      change: "model and runtime",
+      change: "model",
       targetSelection: {
         provider: "codex" as const,
         model: "gpt-5.1-codex",
+      },
+      targetRuntimeMode: "approval-required" as const,
+      targetInteractionMode: DEFAULT_PROVIDER_INTERACTION_MODE,
+      expectsRestart: true,
+    },
+    {
+      change: "options",
+      targetSelection: {
+        provider: "codex" as const,
+        model: "gpt-5-codex",
         options: { reasoningEffort: "low" as const },
       },
+      targetRuntimeMode: "approval-required" as const,
+      targetInteractionMode: DEFAULT_PROVIDER_INTERACTION_MODE,
+      expectsRestart: false,
+    },
+    {
+      change: "runtime mode",
+      targetSelection: { provider: "codex" as const, model: "gpt-5-codex" },
       targetRuntimeMode: "full-access" as const,
       targetInteractionMode: DEFAULT_PROVIDER_INTERACTION_MODE,
       expectsRestart: true,
@@ -6616,16 +6746,26 @@ describe("ProviderCommandReactor", () => {
     const harness = await createHarness({ sessionModelSwitch: "restart-session" });
     const now = new Date().toISOString();
     const threadId = ThreadId.makeUnsafe("thread-1");
-    const activeTurnId = asTurnId("turn-running-binding-change");
+    const activeTurnId = asTurnId("turn-1");
 
     await Effect.runPromise(
-      harness.startSession(threadId, {
+      harness.engine.dispatch({
+        type: "thread.turn.start",
+        commandId: CommandId.makeUnsafe("cmd-active-exact-binding-baseline"),
         threadId,
-        provider: "codex",
+        message: {
+          messageId: asMessageId("msg-active-exact-binding-baseline"),
+          role: "user",
+          text: "start the exact baseline turn",
+          attachments: [],
+        },
         modelSelection: { provider: "codex", model: "gpt-5-codex" },
         runtimeMode: "approval-required",
+        interactionMode: DEFAULT_PROVIDER_INTERACTION_MODE,
+        createdAt: now,
       }),
     );
+    await waitFor(() => harness.sendTurn.mock.calls.length === 1);
     harness.setRuntimeSessionTurnState({
       threadId,
       status: "running",
@@ -6704,8 +6844,328 @@ describe("ProviderCommandReactor", () => {
     expect(harness.sendTurn.mock.calls[0]?.[0]).toMatchObject({
       threadId,
       input: "use the new exact binding after this turn",
+      modelSelection: targetSelection,
+      interactionMode: testCase.targetInteractionMode,
     });
   });
+
+  it("queues a native steer when desired interaction metadata changed after the live turn started", async () => {
+    const harness = await createHarness();
+    const now = new Date().toISOString();
+    const threadId = ThreadId.makeUnsafe("thread-1");
+    const activeTurnId = asTurnId("turn-1");
+
+    await Effect.runPromise(
+      harness.engine.dispatch({
+        type: "thread.turn.start",
+        commandId: CommandId.makeUnsafe("cmd-live-interaction-baseline"),
+        threadId,
+        message: {
+          messageId: asMessageId("msg-live-interaction-baseline"),
+          role: "user",
+          text: "start the default interaction",
+          attachments: [],
+        },
+        modelSelection: { provider: "codex", model: "gpt-5-codex" },
+        runtimeMode: "approval-required",
+        interactionMode: DEFAULT_PROVIDER_INTERACTION_MODE,
+        createdAt: now,
+      }),
+    );
+    await waitFor(() => harness.sendTurn.mock.calls.length === 1);
+
+    harness.setRuntimeSessionTurnState({ threadId, status: "running", activeTurnId });
+    await Effect.runPromise(
+      harness.engine.dispatch({
+        type: "thread.session.set",
+        commandId: CommandId.makeUnsafe("cmd-live-interaction-running"),
+        threadId,
+        session: {
+          threadId,
+          status: "running",
+          providerName: "codex",
+          runtimeMode: "approval-required",
+          activeTurnId,
+          lastError: null,
+          updatedAt: now,
+        },
+        createdAt: now,
+      }),
+    );
+    await Effect.runPromise(
+      harness.engine.dispatch({
+        type: "thread.interaction-mode.set",
+        commandId: CommandId.makeUnsafe("cmd-desired-interaction-plan"),
+        threadId,
+        interactionMode: "plan",
+        createdAt: now,
+      }),
+    );
+
+    harness.sendTurn.mockClear();
+    harness.steerTurn.mockClear();
+    harness.interruptTurn.mockClear();
+    await Effect.runPromise(
+      harness.engine.dispatch({
+        type: "thread.turn.start",
+        commandId: CommandId.makeUnsafe("cmd-steer-desired-interaction-plan"),
+        threadId,
+        message: {
+          messageId: asMessageId("msg-steer-desired-interaction-plan"),
+          role: "user",
+          text: "use plan after the current turn",
+          attachments: [],
+        },
+        dispatchMode: "steer",
+        modelSelection: { provider: "codex", model: "gpt-5-codex" },
+        runtimeMode: "approval-required",
+        interactionMode: "plan",
+        createdAt: now,
+      }),
+    );
+
+    await harness.drain();
+    expect(harness.steerTurn).not.toHaveBeenCalled();
+    expect(harness.sendTurn).not.toHaveBeenCalled();
+    expect(harness.interruptTurn).toHaveBeenCalledTimes(1);
+
+    harness.setRuntimeSessionTurnState({ threadId, status: "ready" });
+    await harness.emitRuntimeEvent({
+      type: "turn.completed",
+      eventId: asEventId("evt-live-interaction-completed"),
+      provider: "codex",
+      threadId,
+      createdAt: new Date().toISOString(),
+      turnId: activeTurnId,
+      payload: { state: "interrupted" },
+      providerRefs: {},
+    } as ProviderRuntimeEvent);
+
+    await waitFor(() => harness.sendTurn.mock.calls.length === 1);
+    expect(harness.sendTurn.mock.calls[0]?.[0]).toMatchObject({
+      threadId,
+      input: "use plan after the current turn",
+      interactionMode: "plan",
+    });
+  });
+
+  it("does not mistake the current steer admission for a delayed live-turn receipt", async () => {
+    const harness = await createHarness({ startReactor: false });
+    const now = new Date().toISOString();
+    const threadId = ThreadId.makeUnsafe("thread-1");
+    const liveTurnId = asTurnId("turn-delayed-live-receipt");
+    const selection: ModelSelection = { provider: "codex", model: "gpt-5-codex" };
+
+    await Effect.runPromise(
+      harness.startSession(threadId, {
+        threadId,
+        provider: "codex",
+        modelSelection: selection,
+        runtimeMode: "approval-required",
+      }),
+    );
+    harness.setRuntimeSessionTurnState({
+      threadId,
+      status: "running",
+      activeTurnId: liveTurnId,
+    });
+
+    // The steer admission is projected before the delayed Session projection
+    // for the already-live turn. ProjectionTurns can therefore attach the
+    // current pending message to the older turn id; its event sequence must
+    // never be accepted as proof of that active operation.
+    await Effect.runPromise(
+      harness.engine.dispatch({
+        type: "thread.turn.start",
+        commandId: CommandId.makeUnsafe("cmd-steer-before-delayed-live-receipt"),
+        threadId,
+        message: {
+          messageId: asMessageId("msg-steer-before-delayed-live-receipt"),
+          role: "user",
+          text: "queue behind the already-live turn",
+          attachments: [],
+        },
+        dispatchMode: "steer",
+        modelSelection: selection,
+        runtimeMode: "approval-required",
+        interactionMode: DEFAULT_PROVIDER_INTERACTION_MODE,
+        createdAt: now,
+      }),
+    );
+    await Effect.runPromise(
+      harness.engine.dispatch({
+        type: "thread.session.set",
+        commandId: CommandId.makeUnsafe("cmd-delayed-live-receipt"),
+        threadId,
+        session: {
+          threadId,
+          status: "running",
+          providerName: "codex",
+          runtimeMode: "approval-required",
+          activeTurnId: liveTurnId,
+          lastError: null,
+          updatedAt: now,
+        },
+        createdAt: now,
+      }),
+    );
+
+    harness.sendTurn.mockClear();
+    harness.steerTurn.mockClear();
+    harness.interruptTurn.mockClear();
+    await harness.startReactor();
+    await harness.drain();
+
+    expect(harness.steerTurn).not.toHaveBeenCalled();
+    expect(harness.sendTurn).not.toHaveBeenCalled();
+    expect(harness.interruptTurn).toHaveBeenCalledTimes(1);
+  });
+
+  it.each([
+    {
+      drift: "model/options",
+      automationSelection: {
+        provider: "codex" as const,
+        model: "gpt-5-codex",
+        options: { reasoningEffort: "high" as const },
+      },
+      automationInteractionMode: DEFAULT_PROVIDER_INTERACTION_MODE,
+    },
+    {
+      drift: "interaction mode",
+      automationSelection: {
+        provider: "codex" as const,
+        model: "gpt-5-codex",
+      },
+      automationInteractionMode: "plan" as const,
+    },
+  ])(
+    "queues a native steer when automation left the live operation on another exact $drift",
+    async ({ automationSelection, automationInteractionMode }) => {
+      const harness = await createHarness();
+      const now = new Date().toISOString();
+      const threadId = ThreadId.makeUnsafe("thread-1");
+      const committedSelection: ModelSelection = {
+        provider: "codex",
+        model: "gpt-5-codex",
+      };
+
+      await Effect.runPromise(
+        harness.engine.dispatch({
+          type: "thread.turn.start",
+          commandId: CommandId.makeUnsafe("cmd-user-committed-binding-baseline"),
+          threadId,
+          message: {
+            messageId: asMessageId("msg-user-committed-binding-baseline"),
+            role: "user",
+            text: "committed user baseline",
+            attachments: [],
+          },
+          modelSelection: committedSelection,
+          runtimeMode: "approval-required",
+          interactionMode: DEFAULT_PROVIDER_INTERACTION_MODE,
+          createdAt: now,
+        }),
+      );
+      await waitFor(() => harness.sendTurn.mock.calls.length === 1);
+      harness.sendTurn.mockClear();
+
+      const activeTurnId = asTurnId("turn-automation-binding");
+      harness.sendTurn.mockImplementationOnce(() =>
+        Effect.succeed({
+          threadId,
+          turnId: activeTurnId,
+        }),
+      );
+
+      await Effect.runPromise(
+        harness.engine.dispatch({
+          type: "thread.turn.start",
+          commandId: CommandId.makeUnsafe("cmd-automation-live-binding"),
+          threadId,
+          message: {
+            messageId: asMessageId("msg-automation-live-binding"),
+            role: "user",
+            text: "automation work",
+            attachments: [],
+          },
+          modelSelection: automationSelection,
+          dispatchOrigin: "automation",
+          runtimeMode: "approval-required",
+          interactionMode: automationInteractionMode,
+          createdAt: now,
+        }),
+      );
+      await waitFor(() => harness.sendTurn.mock.calls.length === 1);
+      expect((await readHarnessThread(harness))?.modelSelection).toEqual(committedSelection);
+
+      harness.setRuntimeSessionTurnState({ threadId, status: "running", activeTurnId });
+      await Effect.runPromise(
+        harness.engine.dispatch({
+          type: "thread.session.set",
+          commandId: CommandId.makeUnsafe("cmd-session-running-automation-binding"),
+          threadId,
+          session: {
+            threadId,
+            status: "running",
+            providerName: "codex",
+            runtimeMode: "approval-required",
+            activeTurnId,
+            lastError: null,
+            updatedAt: now,
+          },
+          createdAt: now,
+        }),
+      );
+
+      harness.sendTurn.mockClear();
+      harness.steerTurn.mockClear();
+      harness.interruptTurn.mockClear();
+
+      await Effect.runPromise(
+        harness.engine.dispatch({
+          type: "thread.turn.start",
+          commandId: CommandId.makeUnsafe("cmd-user-steer-after-automation-binding"),
+          threadId,
+          message: {
+            messageId: asMessageId("msg-user-steer-after-automation-binding"),
+            role: "user",
+            text: "use the committed model after automation",
+            attachments: [],
+          },
+          dispatchMode: "steer",
+          modelSelection: committedSelection,
+          runtimeMode: "approval-required",
+          interactionMode: DEFAULT_PROVIDER_INTERACTION_MODE,
+          createdAt: now,
+        }),
+      );
+
+      await harness.drain();
+      expect(harness.steerTurn).not.toHaveBeenCalled();
+      expect(harness.sendTurn).not.toHaveBeenCalled();
+      expect(harness.interruptTurn).toHaveBeenCalledTimes(1);
+
+      harness.setRuntimeSessionTurnState({ threadId, status: "ready" });
+      await harness.emitRuntimeEvent({
+        type: "turn.completed",
+        eventId: asEventId("evt-automation-binding-completed"),
+        provider: "codex",
+        threadId,
+        createdAt: new Date().toISOString(),
+        turnId: activeTurnId,
+        payload: { state: "interrupted" },
+        providerRefs: {},
+      } as ProviderRuntimeEvent);
+
+      await waitFor(() => harness.sendTurn.mock.calls.length === 1);
+      expect(harness.sendTurn.mock.calls[0]?.[0]).toMatchObject({
+        threadId,
+        input: "use the committed model after automation",
+        modelSelection: committedSelection,
+      });
+    },
+  );
 
   it("dispatches a codex steer as a queued turn when the live provider turn already settled", async () => {
     const harness = await createHarness();
@@ -6772,11 +7232,30 @@ describe("ProviderCommandReactor", () => {
       },
     });
     const now = new Date().toISOString();
+    const activeTurnId = asTurnId("turn-1");
+
+    await Effect.runPromise(
+      harness.engine.dispatch({
+        type: "thread.turn.start",
+        commandId: CommandId.makeUnsafe("cmd-live-steer-claude-baseline"),
+        threadId: ThreadId.makeUnsafe("thread-1"),
+        message: {
+          messageId: asMessageId("msg-live-steer-claude-baseline"),
+          role: "user",
+          text: "start the live claude turn",
+          attachments: [],
+        },
+        runtimeMode: "approval-required",
+        interactionMode: DEFAULT_PROVIDER_INTERACTION_MODE,
+        createdAt: now,
+      }),
+    );
+    await waitFor(() => harness.sendTurn.mock.calls.length === 1);
 
     harness.setRuntimeSessionTurnState({
       threadId: "thread-1",
       status: "running",
-      activeTurnId: asTurnId("turn-running"),
+      activeTurnId,
     });
     await Effect.runPromise(
       harness.engine.dispatch({
@@ -6788,7 +7267,7 @@ describe("ProviderCommandReactor", () => {
           status: "running",
           providerName: "claudeAgent",
           runtimeMode: "approval-required",
-          activeTurnId: asTurnId("turn-running"),
+          activeTurnId,
           lastError: null,
           updatedAt: now,
         },
@@ -7904,6 +8383,109 @@ describe("ProviderCommandReactor", () => {
     expect(thread?.modelSelection).toEqual({
       provider: "claudeAgent",
       model: "claude-opus-4-6",
+    });
+  });
+
+  it("survives a target Session projection failure without false failure or provider replay", async () => {
+    const harness = await createHarness();
+    const now = new Date().toISOString();
+    const threadId = ThreadId.makeUnsafe("thread-1");
+    await Effect.runPromise(
+      harness.engine.dispatch({
+        type: "thread.turn.start",
+        commandId: CommandId.makeUnsafe("cmd-session-projection-retry-baseline"),
+        threadId,
+        message: {
+          messageId: asMessageId("message-session-projection-retry-baseline"),
+          role: "user",
+          text: "old provider baseline",
+          attachments: [],
+        },
+        runtimeMode: "approval-required",
+        interactionMode: DEFAULT_PROVIDER_INTERACTION_MODE,
+        createdAt: now,
+      }),
+    );
+    await waitFor(() => harness.sendTurn.mock.calls.length === 1);
+    harness.startSession.mockClear();
+    harness.sendTurn.mockClear();
+
+    let targetSessionProjectionAttempts = 0;
+    harness.interceptEngineDispatch((command) => {
+      if (command.type !== "thread.session.set" || command.session.providerName !== "claudeAgent") {
+        return undefined;
+      }
+      targetSessionProjectionAttempts += 1;
+      return targetSessionProjectionAttempts === 1
+        ? Effect.fail(
+            new PersistenceSqlError({
+              operation: "provider-session-projection",
+              detail: "injected transient target Session projection failure",
+            }),
+          )
+        : undefined;
+    });
+
+    const targetSelection: ModelSelection = {
+      provider: "claudeAgent",
+      model: "claude-opus-4-6",
+    };
+    const messageId = asMessageId("message-session-projection-retry-target");
+    await Effect.runPromise(
+      harness.engine.dispatch({
+        type: "thread.turn.start",
+        commandId: CommandId.makeUnsafe("cmd-session-projection-retry-target"),
+        threadId,
+        message: {
+          messageId,
+          role: "user",
+          text: "project the target Session before sending",
+          attachments: [],
+        },
+        modelSelection: targetSelection,
+        runtimeMode: "approval-required",
+        interactionMode: DEFAULT_PROVIDER_INTERACTION_MODE,
+        createdAt: now,
+      }),
+    );
+    await waitFor(() => harness.sendTurn.mock.calls.length === 1);
+
+    expect(targetSessionProjectionAttempts).toBe(2);
+    expect(harness.startSession).toHaveBeenCalledTimes(1);
+    expect(harness.sendTurn).toHaveBeenCalledTimes(1);
+    expect(harness.sendTurn.mock.calls[0]?.[0]).toMatchObject({
+      threadId,
+      modelSelection: targetSelection,
+    });
+    const thread = await readHarnessThread(harness);
+    expect(thread?.session).toMatchObject({
+      providerName: "claudeAgent",
+      status: "ready",
+      runtimeMode: "approval-required",
+    });
+    expect(
+      thread?.activities.some((activity) => activity.kind === "provider.turn.start.failed"),
+    ).toBe(false);
+
+    const events = await Effect.runPromise(
+      Stream.runCollect(harness.engine.readEvents(0)).pipe(
+        Effect.map((collected) => Array.from(collected)),
+      ),
+    );
+    const requested = events.find(
+      (event) =>
+        event.type === "thread.turn-start-requested" && event.payload.messageId === messageId,
+    );
+    expect(requested).toBeDefined();
+    const delivery = await Effect.runPromise(
+      harness.deliveryRepository.getDelivery({
+        consumerName: PROVIDER_COMMAND_REACTOR_CONSUMER,
+        eventSequence: requested!.sequence,
+      }),
+    );
+    expect(delivery.pipe(Option.getOrThrow)).toMatchObject({
+      state: "succeeded",
+      attemptCount: 2,
     });
   });
 

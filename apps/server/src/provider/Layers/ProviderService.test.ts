@@ -1085,6 +1085,84 @@ routing.layer("ProviderServiceLive routing", (it) => {
     }),
   );
 
+  it.effect(
+    "keeps ownership unknown when a half-started replacement cannot be retired",
+    () =>
+      Effect.gen(function* () {
+        const provider = yield* ProviderService;
+        const directory = yield* ProviderSessionDirectory;
+        const threadId = asThreadId("thread-replacement-target-retire-failure");
+        yield* provider.startSession(threadId, {
+          provider: "codex",
+          threadId,
+          cwd: "/tmp/replacement-target-retire-failure",
+          runtimeMode: "full-access",
+          modelSelection: { provider: "codex", model: "gpt-5-codex" },
+        });
+
+        const defaultClaudeStart = routing.claude.startSession.getMockImplementation();
+        if (!defaultClaudeStart) assert.fail("Expected the fake Claude start implementation");
+        const targetStartFailure = new ProviderAdapterSessionNotFoundError({
+          provider: "claudeAgent",
+          threadId,
+        });
+        const targetStopFailure = new ProviderAdapterSessionNotFoundError({
+          provider: "claudeAgent",
+          threadId,
+        });
+        const codexStartCount = routing.codex.startSession.mock.calls.length;
+        const claudeStopCount = routing.claude.stopSession.mock.calls.length;
+        const codexSendCount = routing.codex.sendTurn.mock.calls.length;
+        const claudeSendCount = routing.claude.sendTurn.mock.calls.length;
+        routing.claude.startSession.mockImplementationOnce((input) =>
+          defaultClaudeStart(input).pipe(Effect.andThen(Effect.fail(targetStartFailure))),
+        );
+        routing.claude.stopSession.mockImplementationOnce(() => Effect.fail(targetStopFailure));
+
+        const replacement = yield* Effect.exit(
+          provider.startSession(threadId, {
+            provider: "claudeAgent",
+            threadId,
+            cwd: "/tmp/replacement-target-retire-failure",
+            runtimeMode: "approval-required",
+            modelSelection: { provider: "claudeAgent", model: "claude-opus-4-6" },
+          }),
+        );
+
+        assert.equal(Exit.isFailure(replacement), true);
+        assert.equal(routing.claude.stopSession.mock.calls.length, claudeStopCount + 1);
+        assert.equal(routing.codex.startSession.mock.calls.length, codexStartCount);
+        assert.equal(yield* routing.codex.hasSession(threadId), false);
+        assert.equal(yield* routing.claude.hasSession(threadId), true);
+        const uncertainBinding = Option.getOrUndefined(yield* directory.getBinding(threadId));
+        assert.equal(uncertainBinding?.provider, "codex");
+        assert.equal(uncertainBinding?.status, "error");
+        assert.equal(
+          asRuntimePayloadRecord(uncertainBinding?.runtimePayload).lastRuntimeEvent,
+          "provider.replacement.restore.failed",
+        );
+        assert.equal(
+          asRuntimePayloadRecord(uncertainBinding?.runtimePayload).replacementTargetProvider,
+          "claudeAgent",
+        );
+
+        const send = yield* Effect.exit(
+          provider.sendTurn({
+            threadId,
+            input: "must not reach either uncertain runtime",
+            attachments: [],
+          }),
+        );
+        assert.equal(Exit.isFailure(send), true);
+        assert.equal(routing.codex.sendTurn.mock.calls.length, codexSendCount);
+        assert.equal(routing.claude.sendTurn.mock.calls.length, claudeSendCount);
+
+        yield* provider.stopSession({ threadId });
+        assert.equal(yield* routing.codex.hasSession(threadId), false);
+        assert.equal(yield* routing.claude.hasSession(threadId), false);
+      }),
+  );
+
   it.effect("retires a half-spawned initial runtime before exposing the start failure", () =>
     Effect.gen(function* () {
       const provider = yield* ProviderService;

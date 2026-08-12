@@ -90,8 +90,10 @@ import { ProviderService } from "../../provider/Services/ProviderService.ts";
 import { resolveProviderDispatchAttachments } from "../../provider/providerAttachmentPaths.ts";
 import { OrchestrationEventDeliveryRepositoryLive } from "../../persistence/Layers/OrchestrationEventDeliveries.ts";
 import { ProjectionPendingInteractionRepositoryLive } from "../../persistence/Layers/ProjectionPendingInteractions.ts";
+import { ProjectionTurnRepositoryLive } from "../../persistence/Layers/ProjectionTurns.ts";
 import { QueuedTurnPromotionRepositoryLive } from "../../persistence/Layers/QueuedTurnPromotions.ts";
 import { ProjectionPendingInteractionRepository } from "../../persistence/Services/ProjectionPendingInteractions.ts";
+import { ProjectionTurnRepository } from "../../persistence/Services/ProjectionTurns.ts";
 import {
   OrchestrationEventDeliveryRepository,
   PROVIDER_COMMAND_REACTOR_CONSUMER,
@@ -488,6 +490,7 @@ const make = Effect.gen(function* () {
   const deliveryRepository = yield* OrchestrationEventDeliveryRepository;
   const turnCheckpointCoordinator = yield* TurnCheckpointCoordinator;
   const queuedTurnPromotions = yield* QueuedTurnPromotionRepository;
+  const projectionTurns = yield* ProjectionTurnRepository;
   const projectionSnapshotQuery = yield* ProjectionSnapshotQuery;
   const providerService = yield* ProviderService;
   const pendingInteractions = yield* ProjectionPendingInteractionRepository;
@@ -546,6 +549,36 @@ const make = Effect.gen(function* () {
     Cache.getOption(handledTurnStartKeys, key).pipe(Effect.map(Option.isSome));
 
   const markTurnStartAccepted = (key: string) => Cache.set(handledTurnStartKeys, key, true);
+
+  const resolveActiveTurnAdmission = Effect.fnUntraced(function* (input: {
+    readonly threadId: ThreadId;
+    readonly turnId: TurnId;
+  }) {
+    const projectedTurn = Option.getOrNull(yield* projectionTurns.getByTurnId(input));
+    if (
+      projectedTurn === null ||
+      projectedTurn.pendingMessageId === null ||
+      projectedTurn.state !== "running" ||
+      projectedTurn.completedAt !== null
+    ) {
+      return null;
+    }
+
+    const events = Array.from(
+      yield* orchestrationEngine
+        .readThreadEvents(input.threadId, 0, ["thread.turn-start-requested"])
+        .pipe(Stream.runCollect),
+    );
+    const matchingAdmissions = events.filter(
+      (
+        event,
+      ): event is Extract<OrchestrationEvent, { type: "thread.turn-start-requested" }> =>
+        event.type === "thread.turn-start-requested" &&
+        event.payload.messageId === projectedTurn.pendingMessageId &&
+        event.payload.createdAt === projectedTurn.requestedAt,
+    );
+    return matchingAdmissions.length === 1 ? matchingAdmissions[0]! : null;
+  });
 
   const threadProviderOptions = new Map<string, ProviderStartOptions>();
   // The selection last applied to each live session. Keep this separate from
@@ -1282,6 +1315,24 @@ const make = Effect.gen(function* () {
       });
 
       if (!shouldReplaceSession) {
+        const projectedStatus =
+          reusableSession.status === "connecting"
+            ? "starting"
+            : reusableSession.status === "closed"
+              ? "stopped"
+              : reusableSession.status;
+        if (
+          reusableSession.status !== "running" &&
+          (thread.session?.providerName !== reusableSession.provider ||
+            thread.session?.runtimeMode !== desiredRuntimeMode ||
+            thread.session?.status !== projectedStatus)
+        ) {
+          // A durable-delivery retry can arrive after ProviderService already
+          // started and bound the exact runtime but the first Session
+          // projection write failed. Reconcile that authoritative live
+          // Session before committing metadata or dispatching the prompt.
+          yield* bindSessionToThread(reusableSession);
+        }
         return {
           activeSessionBeforeEnsure,
           activeSession: reusableSession,
@@ -1419,7 +1470,6 @@ const make = Effect.gen(function* () {
     readonly dispatchMode?: "queue" | "steer";
     readonly dispatchOrigin?: MessageDispatchOrigin;
     readonly preEnsureLiveSession: ProviderSession | null;
-    readonly onSessionPrepared?: () => Effect.Effect<void>;
     readonly onProviderAttempted?: () => Effect.Effect<void>;
     readonly onProviderAccepted?: () => Effect.Effect<void>;
     readonly createdAt: string;
@@ -1551,9 +1601,6 @@ const make = Effect.gen(function* () {
         ...(input.runtimeMode !== undefined ? { runtimeMode: input.runtimeMode } : {}),
       },
     );
-    if (input.onSessionPrepared) {
-      yield* input.onSessionPrepared();
-    }
     if (input.providerOptions !== undefined) {
       threadProviderOptions.set(input.threadId, input.providerOptions);
     }
@@ -2401,6 +2448,14 @@ const make = Effect.gen(function* () {
       const hasLiveTurn = liveTurnId !== undefined;
       const editResendKey = editResendTurnStartKey(event.payload.threadId, event.payload.messageId);
       const isEditResendTurnStart = editResendTurnStartKeys.has(editResendKey);
+      const activeTurnAdmission =
+        liveTurnId === undefined
+          ? null
+          : yield* resolveActiveTurnAdmission({
+              threadId: liveSession?.threadId ?? event.payload.threadId,
+              turnId: liveTurnId,
+            });
+      const activeTurnModelSelection = activeTurnAdmission?.payload.modelSelection;
       // Steering is only meaningful against a live turn. The projection can
       // lag the runtime in the other direction too (turn already settled but
       // still projected as running), so recheck live state and dispatch a
@@ -2409,10 +2464,15 @@ const make = Effect.gen(function* () {
       const isNativeSteer =
         event.payload.dispatchMode === "steer" &&
         targetProvider === activeProvider &&
+        activeTurnAdmission !== null &&
+        activeTurnAdmission.sequence < event.sequence &&
+        activeTurnModelSelection !== undefined &&
+        activeTurnModelSelection.provider === liveSession?.provider &&
+        activeTurnAdmission.payload.runtimeMode === liveSession.runtimeMode &&
         turnStartBindingMatchesCommitted({
-          currentModelSelection: thread.modelSelection,
-          currentRuntimeMode: liveSession?.runtimeMode ?? thread.runtimeMode,
-          currentInteractionMode: thread.interactionMode,
+          currentModelSelection: activeTurnModelSelection,
+          currentRuntimeMode: activeTurnAdmission.payload.runtimeMode,
+          currentInteractionMode: activeTurnAdmission.payload.interactionMode,
           requestedModelSelection: admittedModelSelection,
           requestedRuntimeMode: event.payload.runtimeMode,
           requestedInteractionMode: event.payload.interactionMode,
@@ -2496,7 +2556,6 @@ const make = Effect.gen(function* () {
         event.payload.dispatchMode === "steer" && !isNativeSteer
           ? "queue"
           : event.payload.dispatchMode;
-      let sessionPrepared = false;
       let providerTurnAttempted = false;
       let providerTurnAccepted = false;
       const startedTurn = yield* dispatchTurnForThread({
@@ -2524,10 +2583,6 @@ const make = Effect.gen(function* () {
         ...(event.payload.dispatchOrigin !== undefined
           ? { dispatchOrigin: event.payload.dispatchOrigin }
           : {}),
-        onSessionPrepared: () =>
-          Effect.sync(() => {
-            sessionPrepared = true;
-          }),
         onProviderAttempted: () =>
           Effect.sync(() => {
             providerTurnAttempted = true;
@@ -2545,12 +2600,14 @@ const make = Effect.gen(function* () {
                 const outcome = classifyProviderAttemptOutcome(Exit.failCause(cause));
                 if (
                   providerTurnAccepted ||
-                  (sessionPrepared && !providerTurnAttempted && outcome._tag === "safe_retry")
+                  (!providerTurnAttempted && outcome._tag === "safe_retry")
                 ) {
-                  // A prepared target Session plus a pre-send persistence
-                  // failure is retried by the durable delivery owner. Once a
-                  // provider has accepted the turn, no later local bookkeeping
-                  // failure may repaint it as a failed start or replay it.
+                  // Any safe-retry failure before native provider acceptance is
+                  // retried by the durable delivery owner. This includes the
+                  // target Session projection written after ProviderService has
+                  // already started and bound the runtime. Once a provider has
+                  // accepted the turn, no later local bookkeeping failure may
+                  // repaint it as a failed start or replay it.
                   return yield* Effect.failCause(cause);
                 }
                 const detail = Cause.pretty(cause);
@@ -4499,6 +4556,7 @@ export const makeProviderCommandReactorLive = (options?: ProviderCommandReactorL
     Layer.provideMerge(OrchestrationEventDeliveryRepositoryLive),
     Layer.provideMerge(QueuedTurnPromotionRepositoryLive),
     Layer.provideMerge(ProjectionPendingInteractionRepositoryLive),
+    Layer.provideMerge(ProjectionTurnRepositoryLive),
   );
 
 export const ProviderCommandReactorLive = makeProviderCommandReactorLive();
