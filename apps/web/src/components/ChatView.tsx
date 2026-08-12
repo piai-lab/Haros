@@ -2253,7 +2253,7 @@ export default function ChatView({
     selectedRuntimeAgents: dynamicAgents,
   } = useProviderModelCatalog({
     selectedProvider,
-    discoveryEnabled: isModelPickerOpen,
+    discoveryEnabled: false,
     piDiscoveryRequested,
     cwd: providerModelDiscoveryCwd,
     modelHintByProvider: composerModelHintByProvider,

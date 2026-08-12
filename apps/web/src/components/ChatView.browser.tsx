@@ -4614,6 +4614,57 @@ describe("ChatView timeline estimator parity (full app)", () => {
     }
   });
 
+  it("only discovers models for the current Engine when Model/options opens", async () => {
+    const mounted = await mountChatView({
+      viewport: DEFAULT_VIEWPORT,
+      snapshot: createSnapshotForTargetUser({
+        targetMessageId: "msg-user-current-engine-model-discovery" as MessageId,
+        targetText: "Current Engine model discovery",
+      }),
+      configureFixture: (nextFixture) => {
+        nextFixture.providerModelsByProvider.claudeAgent = {
+          source: "browser.fixture",
+          models: [{ slug: "claude-sonnet-4-5", name: "Claude Sonnet 4.5" }],
+        };
+      },
+    });
+
+    const requestedModelProviders = () =>
+      wsRequests.flatMap((request) =>
+        request._tag === WS_METHODS.providerListModels && typeof request.provider === "string"
+          ? [request.provider]
+          : [],
+      );
+
+    try {
+      await waitForServerConfigToApply();
+      await vi.waitFor(() => {
+        expect(requestedModelProviders()).toContain("codex");
+      });
+
+      await page.getByRole("button", { name: "Model and options" }).click();
+      await waitForComposerPickerSurfaceOpen();
+      expect(new Set(requestedModelProviders())).toEqual(new Set(["codex"]));
+
+      await userEvent.keyboard("{Escape}");
+      await page.getByRole("button", { name: "Change engine. Current: Codex" }).click();
+      await page.getByRole("menuitemradio", { name: /Claude/ }).click();
+      await vi.waitFor(() => {
+        expect(
+          useComposerDraftStore.getState().draftsByThreadId[THREAD_ID]?.activeProvider,
+        ).toBe("claudeAgent");
+        expect(requestedModelProviders()).toContain("claudeAgent");
+      });
+
+      await page.getByRole("button", { name: "Model and options" }).click();
+      await vi.waitFor(() => {
+        expect(new Set(requestedModelProviders())).toEqual(new Set(["codex", "claudeAgent"]));
+      });
+    } finally {
+      await mounted.cleanup();
+    }
+  });
+
   it.each(["empty", "started"] as const)(
     "keeps the same Engine and Model/options controls in an %s Thread",
     async (threadState) => {
