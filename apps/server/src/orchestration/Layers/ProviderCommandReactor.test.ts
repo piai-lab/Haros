@@ -169,6 +169,16 @@ async function waitFor(
 }
 
 describe("ProviderCommandReactor", () => {
+  it.todo(
+    "does not replace an idle runtime from a desired model metadata change before turn admission",
+  );
+  it.todo(
+    "freezes the effective model selection at admission when a non-Composer caller omits it",
+  );
+  it.todo(
+    "restores the exact old binding and committed selection when cross-provider target start fails",
+  );
+
   let runtime: ManagedRuntime.ManagedRuntime<
     OrchestrationEngineService | ProviderCommandReactor,
     unknown

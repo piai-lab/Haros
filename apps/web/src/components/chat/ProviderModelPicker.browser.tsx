@@ -189,6 +189,12 @@ async function mountPicker(props: {
 }
 
 describe("ProviderModelPicker", () => {
+  it.todo(
+    "uses the same Engine to Model to native-options control structure for empty and started threads",
+  );
+  it.todo("changes only the desired next-turn Engine before send admission");
+  it.todo("fails closed when the target Engine has no authoritative selectable model");
+
   afterEach(() => {
     document.body.innerHTML = "";
     localStorage.clear();

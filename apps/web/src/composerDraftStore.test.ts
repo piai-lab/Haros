@@ -26,6 +26,46 @@ describe("composerDraftStore stable empty draft identity", () => {
   });
 });
 
+describe("composerDraftStore queued model binding", () => {
+  const threadId = ThreadId.makeUnsafe("thread-queued-model-binding");
+
+  beforeEach(() => {
+    resetComposerDraftStore();
+  });
+
+  it("keeps an enqueued turn's exact model selection when the Composer selection changes", () => {
+    const store = useComposerDraftStore.getState();
+    store.enqueueQueuedTurn(threadId, {
+      ...makeQueuedChatTurn("queued-claude"),
+      selectedProvider: "claudeAgent",
+      selectedModel: "claude-sonnet-4-6",
+      modelSelection: {
+        provider: "claudeAgent",
+        model: "claude-sonnet-4-6",
+        options: { effort: "high" },
+      },
+    });
+
+    store.setModelSelection(threadId, {
+      provider: "codex",
+      model: "gpt-5.4",
+      options: { effort: "xhigh", fastMode: true },
+    });
+
+    expect(useComposerDraftStore.getState().draftsByThreadId[threadId]?.queuedTurns[0]).toMatchObject(
+      {
+        selectedProvider: "claudeAgent",
+        selectedModel: "claude-sonnet-4-6",
+        modelSelection: {
+          provider: "claudeAgent",
+          model: "claude-sonnet-4-6",
+          options: { effort: "high" },
+        },
+      },
+    );
+  });
+});
+
 describe("composerDraftStore clearComposerContent", () => {
   const threadId = ThreadId.makeUnsafe("thread-clear");
   let originalRevokeObjectUrl: typeof URL.revokeObjectURL;
