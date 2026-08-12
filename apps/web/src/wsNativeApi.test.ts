@@ -893,6 +893,37 @@ describe("wsNativeApi", () => {
     });
   });
 
+  it("forwards credential-blind OmniMind model-service reads", async () => {
+    requestMock
+      .mockResolvedValueOnce({ state: "empty", services: [], errorCode: null })
+      .mockResolvedValueOnce({ state: "empty", service: null, errorCode: null });
+    const { createWsNativeApi } = await import("./wsNativeApi");
+    const api = createWsNativeApi();
+
+    const listController = new AbortController();
+    const getController = new AbortController();
+    await api.omnimindModelServices.list({}, { signal: listController.signal });
+    await api.omnimindModelServices.get(
+      { serviceId: "deepseek" },
+      { signal: getController.signal },
+    );
+
+    expect(requestMock).toHaveBeenNthCalledWith(
+      1,
+      WS_METHODS.omnimindModelServicesList,
+      {},
+      {
+        signal: listController.signal,
+      },
+    );
+    expect(requestMock).toHaveBeenNthCalledWith(
+      2,
+      WS_METHODS.omnimindModelServicesGet,
+      { serviceId: "deepseek" },
+      { signal: getController.signal },
+    );
+  });
+
   it("forwards browser webview detach requests to the desktop bridge", async () => {
     const detachWebview = vi.fn().mockResolvedValue(undefined);
     Object.defineProperty(getWindowForTest(), "desktopBridge", {

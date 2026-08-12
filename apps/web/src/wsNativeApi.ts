@@ -742,6 +742,20 @@ export function createWsNativeApi(): NativeApi {
       listModels: (input) => transport.request(WS_METHODS.providerListModels, input),
       listAgents: (input) => transport.request(WS_METHODS.providerListAgents, input),
     },
+    omnimindModelServices: {
+      list: (input = {}, options) =>
+        transport.request(
+          WS_METHODS.omnimindModelServicesList,
+          input,
+          options?.signal ? { signal: options.signal } : undefined,
+        ),
+      get: (input, options) =>
+        transport.request(
+          WS_METHODS.omnimindModelServicesGet,
+          input,
+          options?.signal ? { signal: options.signal } : undefined,
+        ),
+    },
     orchestration: {
       getSnapshot: () => transport.request(ORCHESTRATION_WS_METHODS.getSnapshot),
       getShellSnapshot: () => transport.request(ORCHESTRATION_WS_METHODS.getShellSnapshot),

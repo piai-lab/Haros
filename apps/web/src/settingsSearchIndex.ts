@@ -315,6 +315,14 @@ export const SETTINGS_SEARCH_ENTRIES: readonly SettingsSearchEntry[] = [
 
   // ── Models ────────────────────────────────────────────────────────────────────
   {
+    id: "models:model-services",
+    section: "models",
+    title: "Model services",
+    keywords:
+      "Configure OmniMind model services credentials authentication available models catalog provider API key OAuth.",
+    target: null,
+  },
+  {
     id: "models:git-writing-model",
     section: "models",
     title: "Git writing model",
@@ -323,8 +331,9 @@ export const SETTINGS_SEARCH_ENTRIES: readonly SettingsSearchEntry[] = [
   {
     id: "models:saved-model-slugs",
     section: "models",
-    title: "Saved model slugs",
-    keywords: "Add custom model slugs for supported providers. custom model",
+    title: "Independent engine models",
+    keywords: "Review custom model slugs managed by each engine. legacy saved model identifiers",
+    target: "setting-saved-model-slugs",
   },
 
   // ── Providers ─────────────────────────────────────────────────────────────────
@@ -470,9 +479,11 @@ const SETTINGS_SEARCH_TITLE_KEY_BY_TITLE: Readonly<Record<string, MessageKey>> =
   "Follow-up behavior": "settings.followUpBehavior",
   "Font smoothing": "settings.fontSmoothing",
   "Git writing model": "settings.gitWritingModel",
+  "Independent engine models": "settings.independentEngineModels",
   "Installed CLIs": "settings.installedClis",
   Keybindings: "settings.keybindings",
   "Managed worktrees": "settings.worktrees",
+  "Model services": "settings.models",
   "New threads": "settings.newThreads",
   Notepad: "settings.notepad",
   "Open by default": "settings.openByDefault",
@@ -486,7 +497,6 @@ const SETTINGS_SEARCH_TITLE_KEY_BY_TITLE: Readonly<Record<string, MessageKey>> =
   "Recovery tools": "settings.recoveryTools",
   "Release history": "settings.releaseHistory",
   Repository: "settings.repositoryLabel",
-  "Saved model slugs": "settings.savedModelSlugs",
   Shortcut: "settings.shortcut",
   Skills: "settings.skills",
   "Terminal close confirmation": "settings.terminalCloseConfirmation",

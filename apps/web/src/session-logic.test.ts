@@ -862,7 +862,7 @@ describe("PROVIDER_OPTIONS", () => {
     const opencode = PROVIDER_OPTIONS.find((option) => option.value === "opencode");
     const pi = PROVIDER_OPTIONS.find((option) => option.value === "pi");
     expect(PROVIDER_OPTIONS).toEqual([
-      { value: "omnimind", label: "OmniMind Agent", available: true },
+      { value: "omnimind", label: "OmniMind", available: true },
       { value: "codex", label: "Codex", available: true },
       { value: "claudeAgent", label: "Claude", available: true },
       { value: "cursor", label: "Cursor", available: true },
@@ -875,7 +875,7 @@ describe("PROVIDER_OPTIONS", () => {
     ]);
     expect(omnimind).toEqual({
       value: "omnimind",
-      label: "OmniMind Agent",
+      label: "OmniMind",
       available: true,
     });
     expect(claude).toEqual({

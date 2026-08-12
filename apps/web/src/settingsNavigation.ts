@@ -139,10 +139,10 @@ export const SETTINGS_NAV_ITEMS: readonly SettingsNavItem[] = [
   {
     id: "models",
     group: "coding",
-    label: "Models & writing",
-    description: "Choose the model used for Git writing and add custom model slugs.",
+    label: "Model services",
+    description: "Configure the model services, credentials, and available models OmniMind uses.",
     icon: "brain",
-    eyebrow: "Model configuration",
+    eyebrow: "Model services",
   },
   {
     id: "skills",

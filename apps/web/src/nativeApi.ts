@@ -1,4 +1,8 @@
-import { WS_GITHUB_PROJECT_PROVISIONING_CAPABILITY, type NativeApi } from "@omnimind/contracts";
+import {
+  WS_GITHUB_PROJECT_PROVISIONING_CAPABILITY,
+  WS_OMNIMIND_MODEL_SERVICES_CAPABILITY,
+  type NativeApi,
+} from "@omnimind/contracts";
 
 import {
   createWsNativeApi,
@@ -28,15 +32,26 @@ export function ensureNativeApi(): NativeApi {
   return api;
 }
 
-export function readNativeApiServerCapability(capability: string): boolean {
-  if (typeof window === "undefined") return false;
+export function readNativeApiServerCapabilityState(capability: string): boolean | null {
+  if (typeof window === "undefined") return null;
   if (window.nativeApi) {
-    return (
-      capability === WS_GITHUB_PROJECT_PROVISIONING_CAPABILITY &&
-      typeof window.nativeApi.projects?.provisionFromGitHub === "function"
-    );
+    if (capability === WS_GITHUB_PROJECT_PROVISIONING_CAPABILITY) {
+      return typeof window.nativeApi.projects?.provisionFromGitHub === "function";
+    }
+    if (capability === WS_OMNIMIND_MODEL_SERVICES_CAPABILITY) {
+      return (
+        typeof window.nativeApi.omnimindModelServices?.list === "function" &&
+        typeof window.nativeApi.omnimindModelServices?.get === "function"
+      );
+    }
+    return false;
   }
-  return readWsServerCapabilities()?.includes(capability) === true;
+  const capabilities = readWsServerCapabilities();
+  return capabilities === null ? null : capabilities.includes(capability);
+}
+
+export function readNativeApiServerCapability(capability: string): boolean {
+  return readNativeApiServerCapabilityState(capability) === true;
 }
 
 export function onNativeApiServerCapabilitiesChange(

@@ -40,6 +40,16 @@ describe("rankSettingsSearchEntries", () => {
     expect(results.some((entry) => entry.id === "notifications:activity-toasts")).toBe(true);
   });
 
+  it("localizes Model services search without losing its stable entry", () => {
+    const results = rankSettingsSearchEntries("模型", SETTINGS_SEARCH_ENTRIES.length, (key) =>
+      key === "settings.models" ? "模型服务" : String(key),
+    );
+
+    expect(results).toContainEqual(
+      expect.objectContaining({ id: "models:model-services", title: "模型服务" }),
+    );
+  });
+
   it("indexes environment instructions and the system UI font row", () => {
     expect(SETTINGS_SEARCH_ENTRIES.map((entry) => entry.id)).toEqual(
       expect.arrayContaining(["general:environment-instructions", "appearance:system-ui-font"]),
@@ -55,12 +65,15 @@ describe("rankSettingsSearchEntries", () => {
     expect(rankSettingsSearchEntries("e", 3)).toHaveLength(3);
   });
 
-  it("derives a deep-link anchor target from each entry's title", () => {
+  it("derives or preserves each entry's stable deep-link anchor", () => {
     const themeEntry = SETTINGS_SEARCH_ENTRIES.find((entry) => entry.id === "appearance:theme")!;
     expect(settingsSearchEntryTarget(themeEntry)).toBe("setting-theme");
     for (const entry of SETTINGS_SEARCH_ENTRIES) {
       if (entry.target === null) {
         expect(settingsSearchEntryTarget(entry)).toBeNull();
+      } else if (entry.target !== undefined) {
+        expect(settingsSearchEntryTarget(entry)).toBe(entry.target);
+        expect(entry.target.startsWith("setting-")).toBe(true);
       } else {
         expect(settingsSearchEntryTarget(entry)).toBe(settingRowAnchorId(entry.title));
         expect(settingsSearchEntryTarget(entry)?.startsWith("setting-")).toBe(true);
