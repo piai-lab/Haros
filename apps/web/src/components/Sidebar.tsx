@@ -306,6 +306,7 @@ import {
   runExclusiveProjectAddition,
   runProjectProvisionWithCancellationRecovery,
   resolvePullRequestReviewBadge,
+  resolveNewProjectDefaultModelSelection,
   resolveSidebarThreadListPaging,
   DEBUG_FEATURE_FLAGS_MENU_STORAGE_KEY,
   resolveProjectEmptyState,
@@ -2488,8 +2489,6 @@ export default function Sidebar() {
       // is unset. Nested function bodies are lowered separately and are unaffected, and the
       // catch below still sees every rejection. See Sidebar.compiler.test.ts.
       const runAddProject = async () => {
-        const defaultProvider =
-          appSettings.defaultProvider === "pi" ? "codex" : appSettings.defaultProvider;
         const existing = findWorkspaceRootMatch(projects, cwd, (project) => project.cwd);
         const existingRecovery = await recoverExistingAddProjectTarget({
           existingProjectId: existing?.id,
@@ -2509,10 +2508,9 @@ export default function Sidebar() {
         const creationResult = await createOrRecoverProjectFromPath({
           api,
           workspaceRoot: cwd,
-          defaultModelSelection: {
-            provider: defaultProvider,
-            model: getDefaultModel(defaultProvider),
-          },
+          defaultModelSelection: resolveNewProjectDefaultModelSelection(
+            appSettings.defaultProvider,
+          ),
           ...(options.createIfMissing === undefined
             ? {}
             : { createIfMissing: options.createIfMissing }),
@@ -3314,17 +3312,9 @@ export default function Sidebar() {
                     directoryName: value.directoryName,
                     commandId: newCommandId(),
                     projectId: requestedProjectId,
-                    defaultModelSelection: {
-                      provider:
-                        appSettings.defaultProvider === "pi"
-                          ? "codex"
-                          : appSettings.defaultProvider,
-                      model: getDefaultModel(
-                        appSettings.defaultProvider === "pi"
-                          ? "codex"
-                          : appSettings.defaultProvider,
-                      ),
-                    },
+                    defaultModelSelection: resolveNewProjectDefaultModelSelection(
+                      appSettings.defaultProvider,
+                    ),
                     createdAt: new Date().toISOString(),
                   },
                   { signal: options.signal },

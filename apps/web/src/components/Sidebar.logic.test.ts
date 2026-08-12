@@ -36,6 +36,7 @@ import {
   runExclusiveProjectAddition,
   runProjectProvisionWithCancellationRecovery,
   resolvePullRequestReviewBadge,
+  resolveNewProjectDefaultModelSelection,
   resolveSidebarThreadPullRequest,
   resolveThreadDisplayBranch,
   resolveSidebarThreadListPaging,
@@ -84,6 +85,19 @@ describe("isProjectsSidebarSurface", () => {
     expect(isProjectsSidebarSurface({ isOnSettings: false, isOnStudio: false })).toBe(true);
     expect(isProjectsSidebarSurface({ isOnSettings: false, isOnStudio: true })).toBe(false);
     expect(isProjectsSidebarSurface({ isOnSettings: true, isOnStudio: false })).toBe(false);
+  });
+});
+
+describe("resolveNewProjectDefaultModelSelection", () => {
+  it("keeps a Pi project unbound instead of silently switching to Codex", () => {
+    expect(resolveNewProjectDefaultModelSelection("pi")).toBeNull();
+  });
+
+  it("preserves the existing default for other Engines", () => {
+    expect(resolveNewProjectDefaultModelSelection("codex")).toEqual({
+      provider: "codex",
+      model: "gpt-5.5",
+    });
   });
 });
 
