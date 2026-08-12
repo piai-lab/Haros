@@ -65,3 +65,16 @@ export function compareProvidersByOrder(
     rightIndex >= 0 ? rightIndex : DEFAULT_PROVIDER_ORDER.indexOf(right) + providerOrder.length;
   return normalizedLeftIndex - normalizedRightIndex;
 }
+
+export function filterProviderOptionsByVisibility<T extends { value: ProviderKind }>(
+  options: ReadonlyArray<T>,
+  hiddenProviders: ReadonlySet<ProviderKind>,
+  protectedProviders: ReadonlySet<ProviderKind>,
+): ReadonlyArray<T> {
+  if (hiddenProviders.size === 0) {
+    return options;
+  }
+  return options.filter(
+    (option) => protectedProviders.has(option.value) || !hiddenProviders.has(option.value),
+  );
+}

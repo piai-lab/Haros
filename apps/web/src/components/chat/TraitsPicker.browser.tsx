@@ -11,11 +11,12 @@ import {
   ProjectId,
   ThreadId,
 } from "@omnimind/contracts";
-import { page } from "vitest/browser";
+import { page, userEvent } from "vitest/browser";
 import { afterEach, describe, expect, it, vi } from "vitest";
 import { render } from "vitest-browser-react";
 
 import { TraitsPicker } from "./TraitsPicker";
+import { I18nProvider } from "../../i18n";
 import {
   COMPOSER_DRAFT_STORAGE_KEY,
   ComposerThreadDraftState,
@@ -23,6 +24,14 @@ import {
   useComposerThreadDraft,
   useEffectiveComposerModelState,
 } from "../../composerDraftStore";
+
+const i18nHarness = vi.hoisted((): { settings: { localePreference: "en" | "zh-CN" } } => ({
+  settings: { localePreference: "en" },
+}));
+
+vi.mock("../../appSettings", () => ({
+  useAppSettings: () => ({ settings: i18nHarness.settings }),
+}));
 
 // ── Claude TraitsPicker tests ─────────────────────────────────────────
 
@@ -50,6 +59,9 @@ function ClaudeTraitsPickerHarness(props: {
       kilo: [],
       opencode: [],
       pi: [],
+    },
+    availableModelOptionsByProvider: {
+      claudeAgent: [{ slug: props.model, name: props.model }],
     },
   });
   const handlePromptChange = (nextPrompt: string) => {
@@ -165,9 +177,10 @@ describe("TraitsPicker (Claude)", () => {
     await vi.waitFor(() => {
       expect(document.body.textContent ?? "").toContain("Effort");
       expect(document.body.textContent ?? "").not.toContain("Speed");
-      const toggle = document.body.querySelector('[aria-label="Fast mode"]');
+      const toggle = document.body.querySelector('[role="menuitemcheckbox"]');
       expect(toggle).not.toBeNull();
-      expect(toggle?.getAttribute("aria-pressed")).toBe("false");
+      expect(toggle?.textContent).toContain("Fast mode");
+      expect(toggle?.getAttribute("aria-checked")).toBe("false");
     });
   });
 
@@ -175,12 +188,14 @@ describe("TraitsPicker (Claude)", () => {
     await using _ = await mountClaudePicker();
 
     await page.getByRole("button").click();
-    await page.getByRole("button", { name: "Fast mode" }).click();
+    await page.getByRole("menuitemcheckbox", { name: "Fast mode" }).click();
 
     await vi.waitFor(() => {
       expect(document.body.textContent ?? "").toContain("Effort");
       expect(
-        document.body.querySelector('[aria-label="Fast mode"]')?.getAttribute("aria-pressed"),
+        document.body
+          .querySelector('[role="menuitemcheckbox"]')
+          ?.getAttribute("aria-checked"),
       ).toBe("true");
     });
   });
@@ -192,7 +207,7 @@ describe("TraitsPicker (Claude)", () => {
 
     await vi.waitFor(() => {
       const text = document.body.textContent ?? "";
-      expect(text).toContain("Auto-compact");
+      expect(text).toContain("Context");
       expect(text).toContain("200k");
       expect(text).toContain("1M");
     });
@@ -205,7 +220,7 @@ describe("TraitsPicker (Claude)", () => {
 
     await vi.waitFor(() => {
       expect(document.body.textContent ?? "").toContain("Effort");
-      expect(document.body.querySelector('[aria-label="Fast mode"]')).toBeNull();
+      expect(document.body.querySelector('[role="menuitemcheckbox"]')).toBeNull();
     });
   });
 
@@ -416,9 +431,10 @@ describe("TraitsPicker (Codex)", () => {
     await vi.waitFor(() => {
       expect(document.body.textContent ?? "").toContain("Effort");
       expect(document.body.textContent ?? "").not.toContain("Speed");
-      const toggle = document.body.querySelector('[aria-label="Fast mode"]');
+      const toggle = document.body.querySelector('[role="menuitemcheckbox"]');
       expect(toggle).not.toBeNull();
-      expect(toggle?.getAttribute("aria-pressed")).toBe("false");
+      expect(toggle?.textContent).toContain("Fast mode");
+      expect(toggle?.getAttribute("aria-checked")).toBe("false");
     });
   });
 
@@ -472,7 +488,7 @@ describe("TraitsPicker (Codex)", () => {
     });
 
     await page.getByRole("button").click();
-    await page.getByRole("button", { name: "Fast mode" }).click();
+    await page.getByRole("menuitemcheckbox", { name: "Fast mode" }).click();
 
     expect(useComposerDraftStore.getState().stickyModelSelectionByProvider.codex).toMatchObject({
       provider: "codex",
@@ -486,6 +502,26 @@ describe("TraitsPicker (Codex)", () => {
       expect(document.body.textContent ?? "").toContain("Effort");
     });
   });
+
+  it("reaches and toggles Fast through the menu keyboard composite", async () => {
+    await using _ = await mountCodexPicker({
+      options: { fastMode: false },
+    });
+
+    const trigger = page.getByRole("button");
+    trigger.element().focus();
+    await userEvent.keyboard("{Enter}{End}");
+    const fastItem = page.getByRole("menuitemcheckbox", { name: "Fast mode" });
+    await expect.element(fastItem).toHaveAttribute("aria-checked", "false");
+    expect(document.activeElement).toBe(fastItem.element());
+    await userEvent.keyboard(" ");
+
+    expect(useComposerDraftStore.getState().stickyModelSelectionByProvider.codex).toMatchObject({
+      provider: "codex",
+      options: { fastMode: true },
+    });
+    await expect.element(fastItem).toBeVisible();
+  });
 });
 
 // ── Cursor TraitsPicker tests ─────────────────────────────────────────
@@ -498,15 +534,17 @@ async function mountCursorPicker(props: {
   const host = document.createElement("div");
   document.body.append(host);
   const screen = await render(
-    <TraitsPicker
-      provider="cursor"
-      threadId={threadId}
-      model={props.runtimeModel.slug}
-      runtimeModel={props.runtimeModel}
-      prompt=""
-      modelOptions={props.options}
-      onPromptChange={() => {}}
-    />,
+    <I18nProvider>
+      <TraitsPicker
+        provider="cursor"
+        threadId={threadId}
+        model={props.runtimeModel.slug}
+        runtimeModel={props.runtimeModel}
+        prompt=""
+        modelOptions={props.options}
+        onPromptChange={() => {}}
+      />
+    </I18nProvider>,
     { container: host },
   );
 
@@ -597,6 +635,30 @@ describe("TraitsPicker (Cursor)", () => {
       expect(text).toContain("Max");
     });
   });
+
+  it("localizes the runtime-owned Context section heading in zh-CN", async () => {
+    i18nHarness.settings.localePreference = "zh-CN";
+    try {
+      await using _ = await mountCursorPicker({
+        runtimeModel: {
+          slug: "claude-fable-5",
+          name: "Fable 5",
+          contextWindowOptions: [
+            { value: "300k", label: "300K", isDefault: true },
+            { value: "1m", label: "1M" },
+          ],
+          defaultContextWindow: "300k",
+        },
+        options: { contextWindow: "300k" },
+      });
+
+      await page.getByRole("button", { name: "选项" }).click();
+      await expect.element(page.getByText("上下文", { exact: true })).toBeVisible();
+      expect(document.body.textContent ?? "").not.toContain("Context Window");
+    } finally {
+      i18nHarness.settings.localePreference = "en";
+    }
+  });
 });
 
 // ── OpenCode TraitsPicker tests ───────────────────────────────────────
@@ -634,6 +696,7 @@ function OpenCodeTraitsPickerHarness(props: {
   model: string;
   runtimeModel?: ProviderModelDescriptor;
   fallbackModelSelection: ModelSelection | null;
+  shortcutLabel?: string;
 }) {
   const prompt = useComposerThreadDraft(OPENCODE_THREAD_ID).prompt;
   const setPrompt = useComposerDraftStore((store) => store.setPrompt);
@@ -654,6 +717,9 @@ function OpenCodeTraitsPickerHarness(props: {
       opencode: [],
       pi: [],
     },
+    availableModelOptionsByProvider: {
+      opencode: [{ slug: props.model, name: props.model }],
+    },
   });
   const handlePromptChange = (nextPrompt: string) => {
     setPrompt(OPENCODE_THREAD_ID, nextPrompt);
@@ -667,6 +733,7 @@ function OpenCodeTraitsPickerHarness(props: {
       runtimeModel={props.runtimeModel}
       prompt={prompt}
       modelOptions={modelOptions?.opencode}
+      {...(props.shortcutLabel ? { shortcutLabel: props.shortcutLabel } : {})}
       onPromptChange={handlePromptChange}
     />
   );
@@ -677,7 +744,10 @@ async function mountOpenCodePicker(props?: {
   options?: OpenCodeModelOptions;
   runtimeModel?: ProviderModelDescriptor;
   fallbackModelOptions?: OpenCodeModelOptions | null;
+  shortcutLabel?: string;
+  locale?: "en" | "zh-CN";
 }) {
+  i18nHarness.settings.localePreference = props?.locale ?? "en";
   const model = props?.model ?? DEFAULT_MODEL_BY_PROVIDER.opencode;
   const draftsByThreadId: Record<ThreadId, ComposerThreadDraftState> = {
     [OPENCODE_THREAD_ID]: {
@@ -721,11 +791,14 @@ async function mountOpenCodePicker(props?: {
     ...(props?.fallbackModelOptions ? { options: props.fallbackModelOptions } : {}),
   };
   const screen = await render(
-    <OpenCodeTraitsPickerHarness
-      model={model}
-      {...(props?.runtimeModel ? { runtimeModel: props.runtimeModel } : {})}
-      fallbackModelSelection={fallbackModelSelection}
-    />,
+    <I18nProvider>
+      <OpenCodeTraitsPickerHarness
+        model={model}
+        {...(props?.runtimeModel ? { runtimeModel: props.runtimeModel } : {})}
+        {...(props?.shortcutLabel ? { shortcutLabel: props.shortcutLabel } : {})}
+        fallbackModelSelection={fallbackModelSelection}
+      />
+    </I18nProvider>,
     { container: host },
   );
 
@@ -751,6 +824,7 @@ describe("TraitsPicker (OpenCode)", () => {
       projectDraftThreadIdByProjectId: {},
       stickyModelSelectionByProvider: {},
     });
+    i18nHarness.settings.localePreference = "en";
   });
 
   it("does not render an empty traits trigger when the model exposes no controls", async () => {
@@ -775,6 +849,19 @@ describe("TraitsPicker (OpenCode)", () => {
       expect(text).toContain("Medium");
       expect(text).not.toMatch(/\bThinking\b/u);
     });
+  });
+
+  it("uses a neutral Options accessible name and tooltip for OpenCode variants", async () => {
+    await using _ = await mountOpenCodePicker({
+      model: "openai/gpt-5.4",
+      runtimeModel: OPENCODE_RUNTIME_MODEL_WITH_REASONING,
+      shortcutLabel: "⌘⇧M",
+    });
+
+    const trigger = page.getByRole("button", { name: "Options" });
+    await expect.element(trigger).toBeVisible();
+    await trigger.hover();
+    await expect.element(page.getByText("Options", { exact: true })).toBeVisible();
   });
 
   it("falls back to the first runtime variant label when OpenCode does not expose a default", async () => {
@@ -816,5 +903,99 @@ describe("TraitsPicker (OpenCode)", () => {
     await vi.waitFor(() => {
       expect(mounted.host.textContent ?? "").toContain("High");
     });
+  });
+
+  it("localizes Kilo Mode options without inventing reasoning semantics", async () => {
+    i18nHarness.settings.localePreference = "zh-CN";
+    const host = document.createElement("div");
+    document.body.append(host);
+    const longModeName = "代码模式与一个非常长的私有工作流名称以及最终用于区分的后缀";
+    const screen = await render(
+      <I18nProvider>
+        <TraitsPicker
+          provider="kilo"
+          threadId={ThreadId.makeUnsafe("thread-kilo-options-a11y")}
+          model="kilo/kilo-auto/free"
+          runtimeAgents={[
+            {
+              name: "code",
+              displayName: longModeName,
+              description: "Kilo-owned mode",
+            },
+          ]}
+          prompt=""
+          modelOptions={undefined}
+          shortcutLabel="⌘⇧M"
+          onPromptChange={vi.fn()}
+        />
+      </I18nProvider>,
+      { container: host },
+    );
+
+    try {
+      const trigger = page.getByRole("button", { name: "选项" });
+      await trigger.hover();
+      await expect.element(page.getByText("选项", { exact: true })).toBeVisible();
+      await trigger.click();
+      await expect.element(page.getByText("模式", { exact: true })).toBeVisible();
+      const row = page.getByRole("menuitemradio", { name: `${longModeName}（默认）` });
+      await expect.element(row).toHaveAttribute("aria-checked", "true");
+      expect(row.element().getAttribute("title")).toBe(`${longModeName}（默认）`);
+      expect(row.element().querySelector(".truncate")).not.toBeNull();
+      expect(row.element().querySelector("svg")).not.toBeNull();
+    } finally {
+      await screen.unmount();
+      host.remove();
+      i18nHarness.settings.localePreference = "en";
+    }
+  });
+});
+
+describe("TraitsPicker (Pi-backed thinking)", () => {
+  it.each([
+    { provider: "pi", locale: "en", trigger: "Options", label: "Thinking level" },
+    { provider: "omnimind", locale: "en", trigger: "Options", label: "Thinking level" },
+    { provider: "pi", locale: "zh-CN", trigger: "选项", label: "思考强度" },
+    { provider: "omnimind", locale: "zh-CN", trigger: "选项", label: "思考强度" },
+  ] as const)("labels $provider native options truthfully in $locale", async (testCase) => {
+    i18nHarness.settings.localePreference = testCase.locale;
+    const host = document.createElement("div");
+    document.body.append(host);
+    const model = `${testCase.provider}/thinking-model`;
+    const screen = await render(
+      <I18nProvider>
+        <TraitsPicker
+          provider={testCase.provider}
+          threadId={ThreadId.makeUnsafe(`thread-${testCase.provider}-${testCase.locale}`)}
+          model={model}
+          runtimeModel={{
+            slug: model,
+            name: "Thinking model",
+            supportedReasoningEfforts: [
+              { value: "off", label: "Off" },
+              { value: "medium", label: "Medium" },
+              { value: "high", label: "High" },
+            ],
+            defaultReasoningEffort: "medium",
+          }}
+          prompt=""
+          modelOptions={undefined}
+          onPromptChange={vi.fn()}
+        />
+      </I18nProvider>,
+      { container: host },
+    );
+
+    try {
+      await page.getByRole("button", { name: testCase.trigger }).click();
+      await expect.element(page.getByText(testCase.label, { exact: true })).toBeVisible();
+      await expect
+        .element(page.getByText(testCase.locale === "en" ? "Effort" : "推理强度", { exact: true }))
+        .not.toBeInTheDocument();
+    } finally {
+      await screen.unmount();
+      host.remove();
+      i18nHarness.settings.localePreference = "en";
+    }
   });
 });

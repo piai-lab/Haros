@@ -5,6 +5,7 @@ import {
   ThreadId,
   TurnId,
   type GitWorktreeSetupProgressEvent,
+  type ModelSelection,
   type ModelSlug,
   type RuntimeMode,
 } from "@omnimind/contracts";
@@ -16,8 +17,8 @@ import {
   appendVoiceTranscriptToPrompt,
   buildComposerMenuSelectionKey,
   buildTranscriptAutoFollowSignal,
-  commitAfterRuntimeModePersistence,
   createRuntimeModePersistenceQueue,
+  desiredBindingCanPersistWithoutActiveSession,
   persistModelSelectionBeforeRuntimeMode,
   createLocalDispatchSnapshot,
   createWorktreeSetupResolution,
@@ -65,12 +66,57 @@ import {
   shouldEnableComposerPastedTextCollapse,
   shouldHandlePromptHistoryNavigationKey,
   shouldRenderProviderHealthBanner,
-  shouldShowComposerModelBootstrapSkeleton,
   shouldShowActiveThreadHeaderIdentity,
   shouldStartActiveTurnLayoutGrace,
   shouldRenderTerminalWorkspace,
   worktreeSetupHasError,
 } from "./ChatView.logic";
+import type { ThreadSession } from "../types";
+
+const ACTIVE_SESSION: ThreadSession = {
+  provider: "codex",
+  status: "ready",
+  orchestrationStatus: "ready",
+  createdAt: "2026-08-12T00:00:00.000Z",
+  updatedAt: "2026-08-12T00:00:02.000Z",
+};
+
+const CODEX_BINDING: ModelSelection = {
+  provider: "codex",
+  model: "gpt-5.4",
+};
+
+describe("desiredBindingCanPersistWithoutActiveSession", () => {
+  it("accepts an exact durable binding only when no live Session exists", () => {
+    expect(
+      desiredBindingCanPersistWithoutActiveSession({
+        desiredModelSelection: CODEX_BINDING,
+        serverModelSelection: CODEX_BINDING,
+        activeSession: null,
+      }),
+    ).toBe(true);
+  });
+
+  it("rejects a different desired Engine without a live Session", () => {
+    expect(
+      desiredBindingCanPersistWithoutActiveSession({
+        desiredModelSelection: { provider: "pi", model: "anthropic/claude-sonnet-4-5" },
+        serverModelSelection: CODEX_BINDING,
+        activeSession: null,
+      }),
+    ).toBe(false);
+  });
+
+  it("rejects even a newer same-provider Session because it has no model generation", () => {
+    expect(
+      desiredBindingCanPersistWithoutActiveSession({
+        desiredModelSelection: CODEX_BINDING,
+        serverModelSelection: CODEX_BINDING,
+        activeSession: ACTIVE_SESSION,
+      }),
+    ).toBe(false);
+  });
+});
 
 describe("composer strip work-log derivation", () => {
   it("reuses the active derivation unless a subagent view needs its parent source", () => {
@@ -1318,114 +1364,6 @@ describe("resolveActiveTurnLiveDiffState", () => {
   });
 });
 
-describe("shouldShowComposerModelBootstrapSkeleton", () => {
-  it("shows a skeleton while a provider requires runtime-discovered models", () => {
-    expect(
-      shouldShowComposerModelBootstrapSkeleton({
-        selectedProvider: "cursor",
-        selectedModel: "auto",
-        persistedModelSelection: null,
-        draftModelSelection: null,
-        providerModelsLoading: true,
-        requiresDiscoveredModels: true,
-      }),
-    ).toBe(true);
-  });
-
-  it("hides the skeleton for a provider requiring discovered models after loading completes", () => {
-    expect(
-      shouldShowComposerModelBootstrapSkeleton({
-        selectedProvider: "cursor",
-        selectedModel: "auto",
-        persistedModelSelection: null,
-        draftModelSelection: null,
-        providerModelsLoading: false,
-        requiresDiscoveredModels: true,
-      }),
-    ).toBe(false);
-  });
-
-  it("shows a skeleton while provider discovery is still resolving a persisted thread model", () => {
-    expect(
-      shouldShowComposerModelBootstrapSkeleton({
-        selectedProvider: "opencode",
-        selectedModel: "openai/gpt-5-codex",
-        persistedModelSelection: {
-          provider: "opencode",
-          model: "openai/gpt-5.4",
-        },
-        draftModelSelection: null,
-        providerModelsLoading: true,
-      }),
-    ).toBe(true);
-  });
-
-  it("hides the skeleton once the persisted thread model is already selected", () => {
-    expect(
-      shouldShowComposerModelBootstrapSkeleton({
-        selectedProvider: "opencode",
-        selectedModel: "openai/gpt-5.4",
-        persistedModelSelection: {
-          provider: "opencode",
-          model: "openai/gpt-5.4",
-        },
-        draftModelSelection: null,
-        providerModelsLoading: true,
-      }),
-    ).toBe(false);
-  });
-
-  // #103: Cursor CLI missing must not leave the whole model control in a permanent loading state.
-  it("does not keep the Cursor bootstrap skeleton after discovery is no longer loading", () => {
-    expect(
-      shouldShowComposerModelBootstrapSkeleton({
-        selectedProvider: "cursor",
-        selectedModel: "auto",
-        persistedModelSelection: {
-          provider: "cursor",
-          model: "auto",
-        },
-        draftModelSelection: null,
-        providerModelsLoading: false,
-        requiresDiscoveredModels: true,
-      }),
-    ).toBe(false);
-  });
-
-  it("prefers an explicit draft selection over persisted thread state", () => {
-    expect(
-      shouldShowComposerModelBootstrapSkeleton({
-        selectedProvider: "opencode",
-        selectedModel: "opencode/minimax-m2.5-free",
-        persistedModelSelection: {
-          provider: "opencode",
-          model: "openai/gpt-5.4",
-        },
-        draftModelSelection: {
-          provider: "opencode",
-          model: "opencode/minimax-m2.5-free",
-        },
-        providerModelsLoading: true,
-      }),
-    ).toBe(false);
-  });
-
-  it("shows a skeleton when the provisional provider does not match the persisted thread provider", () => {
-    expect(
-      shouldShowComposerModelBootstrapSkeleton({
-        selectedProvider: "codex",
-        selectedModel: "gpt-5.4",
-        persistedModelSelection: {
-          provider: "opencode",
-          model: "openai/gpt-5.4",
-        },
-        draftModelSelection: null,
-        providerModelsLoading: false,
-      }),
-    ).toBe(true);
-  });
-});
-
 describe("resolveCommittedProviderModel", () => {
   it("preserves the exact runtime-discovered slug when the picker selected it", () => {
     expect(
@@ -1437,19 +1375,17 @@ describe("resolveCommittedProviderModel", () => {
             name: "Grok Code Fast 1 0825",
           },
         ],
-        fallback: () => "grok-build-0.1",
       }),
     ).toBe("grok-code-fast-1-0825");
   });
 
-  it("falls back to static alias resolution when the selected slug is not in the options", () => {
+  it("rejects a selected slug that is not in the authoritative options", () => {
     expect(
       resolveCommittedProviderModel({
         selectedModel: "code-fast" as ModelSlug,
         availableOptions: [],
-        fallback: () => "grok-build-0.1",
       }),
-    ).toBe("grok-build-0.1");
+    ).toBeNull();
   });
 });
 
@@ -2516,42 +2452,6 @@ describe("resolveRuntimeModeAfterApprovalDecision", () => {
     expect(
       resolveRuntimeModeAfterApprovalDecision("auto", "acceptForSession", "permissions"),
     ).toBeNull();
-  });
-});
-
-describe("commitAfterRuntimeModePersistence", () => {
-  it("does not commit an incompatible model when the canonical downgrade fails", async () => {
-    const calls: Array<string> = [];
-
-    const committed = await commitAfterRuntimeModePersistence({
-      currentRuntimeMode: "auto",
-      nextRuntimeMode: "approval-required",
-      persistRuntimeMode: async () => {
-        calls.push("persist");
-        return false;
-      },
-      commit: () => calls.push("commit"),
-    });
-
-    expect(committed).toBe(false);
-    expect(calls).toEqual(["persist"]);
-  });
-
-  it("commits the model only after the canonical downgrade succeeds", async () => {
-    const calls: Array<string> = [];
-
-    const committed = await commitAfterRuntimeModePersistence({
-      currentRuntimeMode: "auto",
-      nextRuntimeMode: "approval-required",
-      persistRuntimeMode: async () => {
-        calls.push("persist");
-        return true;
-      },
-      commit: () => calls.push("commit"),
-    });
-
-    expect(committed).toBe(true);
-    expect(calls).toEqual(["persist", "commit"]);
   });
 });
 

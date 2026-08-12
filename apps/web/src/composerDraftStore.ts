@@ -128,11 +128,15 @@ export function useEffectiveComposerModelState(input: {
   >;
 }): EffectiveComposerModelState {
   const draft = useComposerThreadDraft(input.threadId);
+  const stickyModelSelection = useComposerDraftStore(
+    (state) => state.stickyModelSelectionByProvider[input.selectedProvider] ?? null,
+  );
   return deriveEffectiveComposerModelState({
     draft,
     selectedProvider: input.selectedProvider,
     threadModelSelection: input.threadModelSelection,
     projectModelSelection: input.projectModelSelection,
+    stickyModelSelection,
     customModelsByProvider: input.customModelsByProvider,
     ...(input.availableModelOptionsByProvider !== undefined
       ? { availableModelOptionsByProvider: input.availableModelOptionsByProvider }

@@ -812,6 +812,36 @@ export const createComposerDraftStoreState =
         return { draftsByThreadId: nextDraftsByThreadId };
       });
     },
+    setActiveProviderAndSticky: (threadId, provider) => {
+      if (threadId.length === 0) {
+        return;
+      }
+      const normalizedProvider = normalizeProviderKind(provider);
+      if (!normalizedProvider) {
+        return;
+      }
+      set((state) => {
+        const existing = state.draftsByThreadId[threadId];
+        const base = existing ?? createEmptyThreadDraft();
+        if (
+          base.activeProvider === normalizedProvider &&
+          state.stickyActiveProvider === normalizedProvider
+        ) {
+          return state;
+        }
+        const nextDraft: ComposerThreadDraftState = {
+          ...base,
+          activeProvider: normalizedProvider,
+        };
+        return {
+          draftsByThreadId: {
+            ...state.draftsByThreadId,
+            [threadId]: nextDraft,
+          },
+          stickyActiveProvider: normalizedProvider,
+        };
+      });
+    },
     setModelSelectionAndSticky: (threadId, modelSelection) => {
       get().setModelSelection(threadId, modelSelection);
       const correctedSelection =
@@ -884,9 +914,8 @@ export const createComposerDraftStoreState =
         normalizedProvider,
       );
       const providerOpts = normalizedOpts?.[normalizedProvider];
-      const fallbackModel =
-        normalizeModelSlug(options?.model, normalizedProvider) ??
-        getDefaultModel(normalizedProvider);
+      const explicitModel = normalizeModelSlug(options?.model, normalizedProvider);
+      const fallbackModel = explicitModel ?? getDefaultModel(normalizedProvider);
 
       set((state) => {
         const existing = state.draftsByThreadId[threadId];
@@ -895,8 +924,13 @@ export const createComposerDraftStoreState =
         // Update the map entry for this provider
         const nextMap = { ...base.modelSelectionByProvider };
         const currentForProvider = nextMap[normalizedProvider];
+        const nextModel = explicitModel ?? currentForProvider?.model ?? fallbackModel;
+        const currentSupportsAutoMode =
+          currentForProvider?.provider === "claudeAgent" &&
+          currentForProvider.model === nextModel
+            ? currentForProvider.supportsAutoMode
+            : undefined;
         if (providerOpts) {
-          const nextModel = currentForProvider?.model ?? fallbackModel;
           if (!nextModel) {
             return state;
           }
@@ -904,18 +938,14 @@ export const createComposerDraftStoreState =
             normalizedProvider,
             nextModel,
             providerOpts,
-            currentForProvider?.provider === "claudeAgent"
-              ? currentForProvider.supportsAutoMode
-              : undefined,
+            currentSupportsAutoMode,
           );
-        } else if (currentForProvider?.options) {
+        } else if (nextModel && (explicitModel !== null || currentForProvider?.options)) {
           nextMap[normalizedProvider] = buildModelSelection(
             normalizedProvider,
-            currentForProvider.model,
+            nextModel,
             undefined,
-            currentForProvider.provider === "claudeAgent"
-              ? currentForProvider.supportsAutoMode
-              : undefined,
+            currentSupportsAutoMode,
           );
         }
 
@@ -924,10 +954,20 @@ export const createComposerDraftStoreState =
         let nextStickyActiveProvider = state.stickyActiveProvider;
         if (options?.persistSticky === true) {
           nextStickyMap = { ...state.stickyModelSelectionByProvider };
-          const stickyBase =
-            nextStickyMap[normalizedProvider] ??
-            base.modelSelectionByProvider[normalizedProvider] ??
-            (fallbackModel ? makeModelSelection(normalizedProvider, fallbackModel) : null);
+          const existingSticky = nextStickyMap[normalizedProvider];
+          const stickyCandidate = existingSticky ?? base.modelSelectionByProvider[normalizedProvider];
+          const stickyBase = explicitModel
+            ? makeModelSelection(
+                normalizedProvider,
+                explicitModel,
+                undefined,
+                stickyCandidate?.provider === "claudeAgent" &&
+                  stickyCandidate.model === explicitModel
+                  ? stickyCandidate.supportsAutoMode
+                  : undefined,
+              )
+            : (stickyCandidate ??
+              (fallbackModel ? makeModelSelection(normalizedProvider, fallbackModel) : null));
           if (!stickyBase) {
             return state;
           }
@@ -940,7 +980,7 @@ export const createComposerDraftStoreState =
                 stickyBase.provider === "claudeAgent" ? stickyBase.supportsAutoMode : undefined,
               ),
             );
-          } else if (stickyBase.options) {
+          } else if (explicitModel !== null || stickyBase.options) {
             nextStickyMap[normalizedProvider] = buildModelSelection(
               normalizedProvider,
               stickyBase.model,

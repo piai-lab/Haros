@@ -12,6 +12,8 @@ import {
   ORCHESTRATION_WS_METHODS,
   type OrchestrationReadModel,
   type ProjectId,
+  type ProviderKind,
+  type ProviderListModelsResult,
   type ServerConfig,
   ThreadId,
   TurnId,
@@ -112,6 +114,7 @@ interface TestFixture {
   serverConfig: ServerConfig;
   welcome: WsWelcomePayload;
   gitBranchByCwd: Record<string, string>;
+  providerModelsByProvider: Partial<Record<ProviderKind, ProviderListModelsResult>>;
 }
 
 let fixture: TestFixture;
@@ -494,6 +497,12 @@ function buildFixture(snapshot: OrchestrationReadModel): TestFixture {
     snapshot,
     serverConfig: createBaseServerConfig(),
     gitBranchByCwd: {},
+    providerModelsByProvider: {
+      codex: {
+        source: "browser.fixture",
+        models: ["gpt-5.5", "gpt-5.4", "gpt-5.2"].map((slug) => ({ slug, name: slug })),
+      },
+    },
     welcome: {
       cwd: "/repo/project",
       projectName: "Project",
@@ -1203,6 +1212,18 @@ function resolveWsRpc(body: WsRequestEnvelope["body"]): unknown {
   }
   if (tag === WS_METHODS.serverGetConfig) {
     return fixture.serverConfig;
+  }
+  if (tag === WS_METHODS.providerListModels) {
+    const provider = typeof body.provider === "string" ? (body.provider as ProviderKind) : null;
+    return provider
+      ? (fixture.providerModelsByProvider[provider] ?? {
+          source: "browser.fixture",
+          models: [],
+        })
+      : { source: "browser.fixture", models: [] };
+  }
+  if (tag === WS_METHODS.providerListAgents) {
+    return { source: "browser.fixture", agents: [] };
   }
   if (tag === WS_METHODS.projectsListDevServers) {
     return { servers: [] };
@@ -2378,7 +2399,7 @@ describe("ChatView timeline estimator parity (full app)", () => {
     ).toBeLessThan(short.reactCommitTotalMs * 1.6);
   });
 
-  it("dispatches a rapid access-mode reversal while the server projection is stale", async () => {
+  it("keeps a rapid access-mode reversal draft-only while a Session is active", async () => {
     const baseSnapshot = createSnapshotForTargetUser({
       targetMessageId: "msg-user-runtime-reversal" as MessageId,
       targetText: "runtime reversal",
@@ -2430,16 +2451,16 @@ describe("ChatView timeline estimator parity (full app)", () => {
       );
       supervisedOption.click();
 
-      await vi.waitFor(
-        () => {
-          const runtimeModes = wsRequests
-            .map(readDispatchedCommand)
-            .filter((command) => command?.type === "thread.runtime-mode.set")
-            .map((command) => command?.runtimeMode);
-          expect(runtimeModes).toEqual(["auto", "approval-required"]);
-        },
-        { timeout: 8_000, interval: 16 },
-      );
+      await vi.waitFor(() => {
+        expect(useComposerDraftStore.getState().draftsByThreadId[THREAD_ID]?.runtimeMode).toBe(
+          "approval-required",
+        );
+      });
+      expect(
+        wsRequests
+          .map(readDispatchedCommand)
+          .filter((command) => command?.type === "thread.runtime-mode.set"),
+      ).toHaveLength(0);
     } finally {
       await mounted.cleanup();
     }
@@ -4550,6 +4571,203 @@ describe("ChatView timeline estimator parity (full app)", () => {
     }
   });
 
+  it("does not inspect stock Pi until the user explicitly selects that Engine", async () => {
+    const mounted = await mountChatView({
+      viewport: DEFAULT_VIEWPORT,
+      snapshot: createSnapshotForTargetUser({
+        targetMessageId: "msg-user-pi-engine-intent" as MessageId,
+        targetText: "Pi Engine intent",
+      }),
+      configureFixture: (nextFixture) => {
+        nextFixture.providerModelsByProvider.pi = {
+          source: "browser.fixture",
+          models: [],
+        };
+      },
+    });
+
+    const countPiModelRequests = () =>
+      wsRequests.filter(
+        (request) => request._tag === WS_METHODS.providerListModels && request.provider === "pi",
+      ).length;
+
+    try {
+      await waitForServerConfigToApply();
+      await expect
+        .element(page.getByRole("button", { name: "Change engine. Current: Codex" }))
+        .toBeVisible();
+      expect(countPiModelRequests()).toBe(0);
+
+      await page.getByRole("button", { name: "Change engine. Current: Codex" }).click();
+      await expect.element(page.getByRole("menuitemradio", { name: /Pi/ })).toBeVisible();
+      expect(countPiModelRequests()).toBe(0);
+
+      await page.getByRole("menuitemradio", { name: /Pi/ }).click();
+      await vi.waitFor(() => {
+        expect(countPiModelRequests()).toBe(1);
+        expect(useComposerDraftStore.getState().draftsByThreadId[THREAD_ID]?.activeProvider).toBe(
+          "pi",
+        );
+      });
+    } finally {
+      await mounted.cleanup();
+    }
+  });
+
+  it.each(["empty", "started"] as const)(
+    "keeps the same Engine and Model/options controls in an %s Thread",
+    async (threadState) => {
+      const draftThreadId = ThreadId.makeUnsafe("thread-composer-control-parity");
+      if (threadState === "empty") {
+        seedLocalDraftThread({ threadId: draftThreadId, projectId: PROJECT_ID });
+      }
+      const mounted = await mountChatView({
+        viewport: DEFAULT_VIEWPORT,
+        snapshot:
+          threadState === "empty"
+            ? createDraftOnlySnapshot()
+            : createSnapshotForTargetUser({
+                targetMessageId: "msg-user-composer-control-parity" as MessageId,
+                targetText: "composer control parity",
+              }),
+        ...(threadState === "empty" ? { initialEntry: `/${draftThreadId}` } : {}),
+      });
+
+      try {
+        const footer = await waitForElement(
+          () => document.querySelector<HTMLElement>('[data-chat-composer-footer="true"]'),
+          "Unable to find composer footer.",
+        );
+        const engineTrigger = footer.querySelector<HTMLButtonElement>(
+          'button[aria-label^="Change engine. Current:"]',
+        );
+        const modelOptionsTrigger = footer.querySelector<HTMLButtonElement>(
+          'button[aria-label="Model and options"]',
+        );
+
+        expect(engineTrigger).not.toBeNull();
+        expect(modelOptionsTrigger).not.toBeNull();
+        await expect
+          .element(page.getByRole("button", { name: /^Change engine\. Current:/ }))
+          .toBeVisible();
+        await expect.element(page.getByRole("button", { name: "Model and options" })).toBeVisible();
+      } finally {
+        await mounted.cleanup();
+      }
+    },
+  );
+
+  it("keeps Engine and Send visible inside the narrow composer footer", async () => {
+    const mounted = await mountChatView({
+      viewport: {
+        ...DEFAULT_VIEWPORT,
+        name: "narrow-composer-controls",
+        width: 320,
+        height: 700,
+      },
+      snapshot: createSnapshotForTargetUser({
+        targetMessageId: "msg-user-narrow-composer-controls" as MessageId,
+        targetText: "narrow composer controls",
+      }),
+    });
+
+    try {
+      await waitForServerConfigToApply();
+      const footer = await waitForElement(
+        () => document.querySelector<HTMLElement>('[data-chat-composer-footer="true"]'),
+        "Unable to find composer footer.",
+      );
+      await vi.waitFor(() => {
+        const engineTrigger = footer.querySelector<HTMLButtonElement>(
+          'button[aria-label^="Change engine. Current:"]',
+        );
+        const sendButton = footer.querySelector<HTMLButtonElement>('button[type="submit"]');
+        expect(engineTrigger).not.toBeNull();
+        expect(sendButton).not.toBeNull();
+
+        const footerRect = footer.getBoundingClientRect();
+        const engineRect = engineTrigger!.getBoundingClientRect();
+        const sendRect = sendButton!.getBoundingClientRect();
+        expect(engineRect.left).toBeGreaterThanOrEqual(footerRect.left - 1);
+        expect(engineRect.right).toBeLessThanOrEqual(footerRect.right + 1);
+        expect(sendRect.left).toBeGreaterThanOrEqual(footerRect.left - 1);
+        expect(sendRect.right).toBeLessThanOrEqual(footerRect.right + 1);
+      });
+      await expect
+        .element(page.getByRole("button", { name: /^Change engine\. Current:/ }))
+        .toBeVisible();
+      await expect.element(page.getByRole("button", { name: "Send" })).toBeVisible();
+    } finally {
+      await mounted.cleanup();
+    }
+  });
+
+  it.each(["ready", "running"] as const)(
+    "keeps manual access-mode changes draft-only after a %s Session switches desired Engine",
+    async (sessionStatus) => {
+      const mounted = await mountChatView({
+        viewport: DEFAULT_VIEWPORT,
+        snapshot: createSnapshotForTargetUser({
+          targetMessageId: `msg-user-runtime-next-turn-${sessionStatus}` as MessageId,
+          targetText: `runtime next turn ${sessionStatus}`,
+          sessionStatus,
+        }),
+        configureFixture: (nextFixture) => {
+          nextFixture.providerModelsByProvider.pi = {
+            source: "browser.fixture",
+            models: [],
+          };
+        },
+      });
+
+      try {
+        await waitForServerConfigToApply();
+        await page.getByRole("button", { name: "Change engine. Current: Codex" }).click();
+        await page.getByRole("menuitemradio", { name: /Pi/ }).click();
+        await vi.waitFor(() => {
+          expect(useComposerDraftStore.getState().draftsByThreadId[THREAD_ID]?.activeProvider).toBe(
+            "pi",
+          );
+        });
+
+        const commandCountBeforeModeChange = wsRequests
+          .map(readDispatchedCommand)
+          .filter(
+            (command) =>
+              command?.type === "thread.meta.update" || command?.type === "thread.runtime-mode.set",
+          ).length;
+        const fullAccessTrigger = await waitForElement(
+          () => document.querySelector<HTMLButtonElement>('button[title^="Full access:"]'),
+          "Unable to find the Full access trigger after switching desired Engine.",
+        );
+        fullAccessTrigger.click();
+        const supervisedOption = await waitForElement(
+          () =>
+            Array.from(
+              document.querySelectorAll<HTMLElement>('[data-slot="menu-radio-item"]'),
+            ).find((item) => item.textContent?.trim().startsWith("Ask for approval")) ?? null,
+          "Unable to find the Ask for approval option.",
+        );
+        supervisedOption.click();
+
+        await vi.waitFor(() => {
+          expect(useComposerDraftStore.getState().draftsByThreadId[THREAD_ID]?.runtimeMode).toBe(
+            "approval-required",
+          );
+        });
+        const commandsAfterModeChange = wsRequests
+          .map(readDispatchedCommand)
+          .filter(
+            (command) =>
+              command?.type === "thread.meta.update" || command?.type === "thread.runtime-mode.set",
+          );
+        expect(commandsAfterModeChange).toHaveLength(commandCountBeforeModeChange);
+      } finally {
+        await mounted.cleanup();
+      }
+    },
+  );
+
   it("cycles the active provider model without opening the picker", async () => {
     const mounted = await mountChatView({
       viewport: DEFAULT_VIEWPORT,
@@ -4569,11 +4787,43 @@ describe("ChatView timeline estimator parity (full app)", () => {
         expect(
           useComposerDraftStore.getState().draftsByThreadId[THREAD_ID]?.modelSelectionByProvider
             .codex,
-        ).toMatchObject({ provider: "codex", model: "gpt-5.5" });
+        ).toMatchObject({ provider: "codex", model: "gpt-5.4" });
       });
       expect(document.querySelector('[data-slot="menu-popup"]')).toBeNull();
 
       await dispatchModelCycleShortcutWhenReady(composerEditor, "[");
+      await vi.waitFor(() => {
+        expect(
+          useComposerDraftStore.getState().draftsByThreadId[THREAD_ID]?.modelSelectionByProvider
+            .codex,
+        ).toMatchObject({ provider: "codex", model: "gpt-5.5" });
+      });
+    } finally {
+      await mounted.cleanup();
+    }
+  });
+
+  it("cycles only through authoritative selectable models", async () => {
+    const mounted = await mountChatView({
+      viewport: DEFAULT_VIEWPORT,
+      snapshot: createSnapshotForTargetUser({
+        targetMessageId: "msg-user-model-cycle-authoritative" as MessageId,
+        targetText: "model cycle authoritative",
+      }),
+      configureFixture: (nextFixture) => {
+        nextFixture.providerModelsByProvider.codex = {
+          source: "browser.fixture",
+          models: ["gpt-5.5", "gpt-5.2"].map((slug) => ({ slug, name: slug })),
+        };
+      },
+    });
+
+    try {
+      await waitForServerConfigToApply();
+      const composerEditor = await waitForComposerEditor();
+      composerEditor.focus();
+
+      await dispatchModelCycleShortcutWhenReady(composerEditor, "]");
       await vi.waitFor(() => {
         expect(
           useComposerDraftStore.getState().draftsByThreadId[THREAD_ID]?.modelSelectionByProvider
@@ -5212,7 +5462,7 @@ describe("ChatView timeline estimator parity (full app)", () => {
     }
   });
 
-  it("auto-dispatches a queued turn without wiping the live composer draft", async () => {
+  it("dispatches a queued binding unchanged while the current Engine has no model", async () => {
     const restoreNativeApi = installDeterministicSendNativeApi();
     const queuedPrompt = "queued prompt that should auto-send";
     const draftBeingTyped = "draft the user is still typing";
@@ -5226,11 +5476,45 @@ describe("ChatView timeline estimator parity (full app)", () => {
         // drains the queue, mirroring a turn that just finished.
         sessionStatus: "ready",
       }),
+      configureFixture: (nextFixture) => {
+        nextFixture.providerModelsByProvider.pi = {
+          source: "browser.fixture",
+          models: [],
+        };
+      },
     });
 
     try {
-      // The user is mid-draft in the composer while a turn-completion drain fires.
+      await waitForServerConfigToApply();
+      await page.getByRole("button", { name: "Change engine. Current: Codex" }).click();
+      await page.getByRole("menuitemradio", { name: /Pi/ }).click();
+      await vi.waitFor(() => {
+        expect(useComposerDraftStore.getState().draftsByThreadId[THREAD_ID]?.activeProvider).toBe(
+          "pi",
+        );
+        expect(
+          Array.from(document.querySelectorAll<HTMLButtonElement>("button")).some((button) =>
+            button.textContent?.includes("No available model"),
+          ),
+        ).toBe(true);
+      });
+
+      // A normal submission is blocked before any command, but the draft stays editable.
       useComposerDraftStore.getState().setPrompt(THREAD_ID, draftBeingTyped);
+      const turnStartCountBeforeSubmit = wsRequests
+        .map(readDispatchedCommand)
+        .filter((command) => command?.type === "thread.turn.start").length;
+      document
+        .querySelector<HTMLFormElement>('form[data-chat-composer-form="true"]')
+        ?.requestSubmit();
+      await waitForLayout();
+      expect(
+        wsRequests
+          .map(readDispatchedCommand)
+          .filter((command) => command?.type === "thread.turn.start"),
+      ).toHaveLength(turnStartCountBeforeSubmit);
+
+      // A previously admitted queue item owns its exact binding and can still drain.
       useComposerDraftStore.getState().enqueueQueuedTurn(THREAD_ID, {
         id: "queued-turn-auto",
         kind: "chat",
@@ -5252,6 +5536,10 @@ describe("ChatView timeline estimator parity (full app)", () => {
         modelSelection: {
           provider: "codex",
           model: "gpt-5",
+          options: {
+            reasoningEffort: "xhigh",
+            fastMode: true,
+          },
         },
         runtimeMode: "full-access",
         interactionMode: "default",
@@ -5277,6 +5565,14 @@ describe("ChatView timeline estimator parity (full app)", () => {
               request.command.message.text.includes(queuedPrompt),
           );
           expect(turnStartRequest).toBeTruthy();
+          expect(readDispatchedCommand(turnStartRequest!)?.modelSelection).toEqual({
+            provider: "codex",
+            model: "gpt-5",
+            options: {
+              reasoningEffort: "xhigh",
+              fastMode: true,
+            },
+          });
           // Queue drained...
           expect(document.querySelectorAll('[data-testid="queued-follow-up-row"]')).toHaveLength(0);
           // ...but the in-progress composer draft is left untouched.

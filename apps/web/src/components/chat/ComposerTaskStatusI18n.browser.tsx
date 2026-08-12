@@ -26,8 +26,7 @@ describe("task status i18n", () => {
           open
           onOpenChange={vi.fn()}
           selectedModel="mimo-v2-flash"
-          fastModeEnabled={false}
-          selectedPromptEffort={null}
+          nativeOptionsSummary="思考强度 · 高"
           interactionMode="default"
           envMode="local"
           envState="local"
@@ -41,9 +40,12 @@ describe("task status i18n", () => {
     );
 
     await expect.element(page.getByRole("heading", { name: "任务状态" })).toBeVisible();
+    await expect.element(page.getByText("思考强度 · 高", { exact: true })).toBeVisible();
     await expect.element(page.getByText("当前任务尚未上报上下文用量。")).toBeVisible();
     await expect.element(page.getByText("即将达到速率限制（已使用 80%）。")).toBeVisible();
     expect(document.body.textContent).not.toContain("Session Status");
+    expect(document.body.textContent).not.toContain("Fast mode");
+    expect(document.body.textContent).not.toContain("Reasoning");
     expect(document.body.textContent).not.toContain("thread");
 
     await screen.unmount();

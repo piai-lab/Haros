@@ -6,6 +6,15 @@ import { render } from "vitest-browser-react";
 import { ProviderModelPicker } from "./ProviderModelPicker";
 import type { ProviderModelOption } from "../../providerModelOptions";
 import { FAVORITE_MODEL_STORAGE_KEYS } from "../../lib/modelFavorites";
+import { I18nProvider } from "../../i18n";
+
+const i18nHarness = vi.hoisted((): { settings: { localePreference: "en" | "zh-CN" } } => ({
+  settings: { localePreference: "en" },
+}));
+
+vi.mock("../../appSettings", () => ({
+  useAppSettings: () => ({ settings: i18nHarness.settings }),
+}));
 
 const MODEL_OPTIONS_BY_PROVIDER = {
   omnimind: [],
@@ -131,6 +140,9 @@ const CURSOR_FAVORITE_SORT_MODELS = [
   },
 ] satisfies ReadonlyArray<ProviderModelOption & { slug: ModelSlug }>;
 
+const LONG_MODEL_NAME =
+  "Private deployment with a deliberately very long shared prefix and a final disambiguating suffix";
+
 const PI_FAVORITE_SORT_MODELS = [
   {
     slug: "anthropic/claude-pi-favorite-sort" as ModelSlug,
@@ -158,24 +170,30 @@ async function mountPicker(props: {
     ProviderKind,
     ReadonlyArray<ProviderModelOption & { slug: ModelSlug }>
   >;
+  locale?: "en" | "zh-CN";
 }) {
+  i18nHarness.settings.localePreference = props.locale ?? "en";
   const host = document.createElement("div");
   document.body.append(host);
   const onProviderModelChange = vi.fn();
   const screen = await render(
-    <ProviderModelPicker
-      provider={props.provider}
-      model={props.model}
-      lockedProvider={props.lockedProvider}
-      modelOptionsByProvider={props.modelOptionsByProvider ?? MODEL_OPTIONS_BY_PROVIDER}
-      {...(props.loadingModelProviders
-        ? { loadingModelProviders: props.loadingModelProviders }
-        : {})}
-      {...(props.providers ? { providers: props.providers } : {})}
-      {...(props.onSelectionCommitted ? { onSelectionCommitted: props.onSelectionCommitted } : {})}
-      {...(props.onProviderBrowse ? { onProviderBrowse: props.onProviderBrowse } : {})}
-      onProviderModelChange={onProviderModelChange}
-    />,
+    <I18nProvider>
+      <ProviderModelPicker
+        provider={props.provider}
+        model={props.model}
+        lockedProvider={props.lockedProvider}
+        modelOptionsByProvider={props.modelOptionsByProvider ?? MODEL_OPTIONS_BY_PROVIDER}
+        {...(props.loadingModelProviders
+          ? { loadingModelProviders: props.loadingModelProviders }
+          : {})}
+        {...(props.providers ? { providers: props.providers } : {})}
+        {...(props.onSelectionCommitted
+          ? { onSelectionCommitted: props.onSelectionCommitted }
+          : {})}
+        {...(props.onProviderBrowse ? { onProviderBrowse: props.onProviderBrowse } : {})}
+        onProviderModelChange={onProviderModelChange}
+      />
+    </I18nProvider>,
     { container: host },
   );
 
@@ -198,6 +216,7 @@ describe("ProviderModelPicker", () => {
   afterEach(() => {
     document.body.innerHTML = "";
     localStorage.clear();
+    i18nHarness.settings.localePreference = "en";
   });
 
   it("shows provider submenus when provider switching is allowed", async () => {
@@ -293,6 +312,30 @@ describe("ProviderModelPicker", () => {
     }
   });
 
+  it("keeps a long model label truncated without losing its full name or selected check", async () => {
+    const mounted = await mountPicker({
+      provider: "antigravity",
+      model: "private-long-model",
+      lockedProvider: "antigravity",
+      modelOptionsByProvider: {
+        ...MODEL_OPTIONS_BY_PROVIDER,
+        antigravity: [{ slug: "private-long-model", name: LONG_MODEL_NAME }],
+      },
+    });
+
+    try {
+      await page.getByRole("button").click();
+      const row = page.getByRole("menuitemradio", { name: LONG_MODEL_NAME });
+      await expect.element(row).toHaveAttribute("aria-checked", "true");
+      const element = row.element() as HTMLElement;
+      expect(element.getAttribute("title")).toBe(LONG_MODEL_NAME);
+      expect(element.querySelector(".truncate")).not.toBeNull();
+      expect(element.querySelector("svg")).not.toBeNull();
+    } finally {
+      await mounted.cleanup();
+    }
+  });
+
   it("shows live Droid cost multipliers without adding one to BYOK models", async () => {
     const mounted = await mountPicker({
       provider: "droid",
@@ -379,7 +422,7 @@ describe("ProviderModelPicker", () => {
     try {
       await page.getByRole("button").click();
 
-      await expect.element(page.getByPlaceholder("Search models or providers")).toBeInTheDocument();
+      await expect.element(page.getByPlaceholder("Search models or engines")).toBeInTheDocument();
     } finally {
       await mounted.cleanup();
     }
@@ -398,7 +441,7 @@ describe("ProviderModelPicker", () => {
 
     try {
       await page.getByRole("button").click();
-      await page.getByPlaceholder("Search models or providers").fill("Anthropic");
+      await page.getByPlaceholder("Search models or engines").fill("Anthropic");
 
       await vi.waitFor(() => {
         expect(document.body.textContent ?? "").toContain("Claude 2");
@@ -516,7 +559,7 @@ describe("ProviderModelPicker", () => {
 
     try {
       await page.getByRole("button").click();
-      await page.getByPlaceholder("Search models or providers").fill("Anthropic");
+      await page.getByPlaceholder("Search models or engines").fill("Anthropic");
 
       await vi.waitFor(() => {
         expect(document.body.textContent ?? "").toContain("Claude Cursor 2");
@@ -617,6 +660,36 @@ describe("ProviderModelPicker", () => {
     }
   });
 
+  it("localizes favorite grouping and favorite actions in zh-CN", async () => {
+    localStorage.setItem(
+      FAVORITE_MODEL_STORAGE_KEYS.opencode,
+      JSON.stringify([OPENCODE_FAVORITE_SORT_MODELS[0]!.slug]),
+    );
+    const mounted = await mountPicker({
+      provider: "opencode",
+      model: OPENCODE_FAVORITE_SORT_MODELS[0]!.slug,
+      lockedProvider: "opencode",
+      locale: "zh-CN",
+      modelOptionsByProvider: {
+        ...MODEL_OPTIONS_BY_PROVIDER,
+        opencode: OPENCODE_FAVORITE_SORT_MODELS,
+      },
+    });
+
+    try {
+      await page.getByRole("button").click();
+      await expect.element(page.getByText("收藏", { exact: true })).toBeVisible();
+      await expect
+        .element(page.getByRole("button", { name: "取消收藏 Claude Favorite Sort — Anthropic" }))
+        .toBeVisible();
+      await expect
+        .element(page.getByRole("button", { name: "收藏 GPT Favorite Sort" }))
+        .toBeVisible();
+    } finally {
+      await mounted.cleanup();
+    }
+  });
+
   it("shows a loading skeleton instead of fallback models for loading providers", async () => {
     const mounted = await mountPicker({
       provider: "cursor",
@@ -640,7 +713,7 @@ describe("ProviderModelPicker", () => {
     }
   });
 
-  it("shows unavailable providers as disabled rows", async () => {
+  it("shows sign-in state while keeping the desired Engine reachable", async () => {
     const mounted = await mountPicker({
       provider: "codex",
       model: "gpt-5-codex",
@@ -677,7 +750,7 @@ describe("ProviderModelPicker", () => {
     }
   });
 
-  it("does not make providers selectable before live status is known", async () => {
+  it("shows checking state while keeping the desired Engine reachable", async () => {
     const mounted = await mountPicker({
       provider: "codex",
       model: "gpt-5-codex",

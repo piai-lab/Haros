@@ -49,20 +49,20 @@ describe("composerDraftStore queued model binding", () => {
     store.setModelSelection(threadId, {
       provider: "codex",
       model: "gpt-5.4",
-      options: { effort: "xhigh", fastMode: true },
+      options: { reasoningEffort: "xhigh", fastMode: true },
     });
 
-    expect(useComposerDraftStore.getState().draftsByThreadId[threadId]?.queuedTurns[0]).toMatchObject(
-      {
-        selectedProvider: "claudeAgent",
-        selectedModel: "claude-sonnet-4-6",
-        modelSelection: {
-          provider: "claudeAgent",
-          model: "claude-sonnet-4-6",
-          options: { effort: "high" },
-        },
+    expect(
+      useComposerDraftStore.getState().draftsByThreadId[threadId]?.queuedTurns[0],
+    ).toMatchObject({
+      selectedProvider: "claudeAgent",
+      selectedModel: "claude-sonnet-4-6",
+      modelSelection: {
+        provider: "claudeAgent",
+        model: "claude-sonnet-4-6",
+        options: { effort: "high" },
       },
-    );
+    });
   });
 });
 

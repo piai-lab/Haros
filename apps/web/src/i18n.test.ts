@@ -54,6 +54,16 @@ describe("message catalogs", () => {
     expect(translate("zh-CN", "library.title", { provider: "Pi" })).toBe("Pi 能力库");
   });
 
+  it("localizes the reachable Fast command feedback", () => {
+    expect(translate("en", "composer.fastUnavailable")).toBe("Fast mode is unavailable");
+    expect(translate("zh-CN", "composer.fastUnavailable")).toBe("快速模式不可用");
+    expect(translate("en", "composer.fastStatus", { state: "on" })).toBe("Fast mode is on");
+    expect(translate("zh-CN", "composer.fastStatus", { state: "开启" })).toBe("快速模式当前为开启");
+    expect(translate("zh-CN", "composer.fastDiscoveryFailed")).toBe(
+      "Claude 命令检查失败，请重试。",
+    );
+  });
+
   it("localizes Markdown footnote navigation", () => {
     expect(translate("en", "markdown.footnotes.label")).toBe("Footnotes");
     expect(translate("en", "markdown.footnotes.backLabel", { reference: "2-2" })).toBe(

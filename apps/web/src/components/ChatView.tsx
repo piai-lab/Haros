@@ -2,7 +2,6 @@ import {
   type AutomationDefinition,
   type AutomationSchedule,
   type ApprovalRequestId,
-  DEFAULT_MODEL_BY_PROVIDER,
   EventId,
   MessageId,
   type ModelSelection,
@@ -41,7 +40,7 @@ import {
 import { automationRequiresTargetThread } from "@omnimind/shared/automationMode";
 import { respondingInteractionReclaimAt } from "@omnimind/shared/pendingInteractions";
 import { providerSupportsNativeTurnSteering } from "@omnimind/shared/providerMetadata";
-import { getDefaultModel, getModelCapabilities, normalizeModelSlug } from "@omnimind/shared/model";
+import { getDefaultModel, normalizeModelSlug } from "@omnimind/shared/model";
 import {
   resolveLatestTailUserMessageEditTarget,
   resolveTailUserMessageEditTarget,
@@ -89,6 +88,7 @@ import { resolveProviderDiscoveryCwd } from "~/lib/providerDiscovery";
 import {
   providerComposerCapabilitiesQueryOptions,
   providerCommandsQueryOptions,
+  providerDiscoveryQueryKeys,
   providerPluginsQueryOptions,
   providerSkillsQueryOptions,
   supportsNativeSlashCommandDiscovery,
@@ -176,9 +176,9 @@ import { useDiffRouteSearch } from "../hooks/useDiffRouteSearch";
 import {
   buildThreadBreadcrumbs,
   buildTranscriptAutoFollowSignal,
-  commitAfterRuntimeModePersistence,
   createRuntimeModePersistenceQueue,
   derivePromptHistoryFromMessages,
+  desiredBindingCanPersistWithoutActiveSession,
   enrichSubagentWorkEntries,
   hasFileUndoSettled,
   persistModelSelectionBeforeRuntimeMode,
@@ -203,7 +203,6 @@ import {
   shouldEnableComposerPastedTextCollapse,
   shouldConsumePendingCustomBinaryConfirmation,
   shouldShowActiveThreadHeaderIdentity,
-  shouldShowComposerModelBootstrapSkeleton,
 } from "./ChatView.logic";
 import {
   createRelevantWorkLogThreadsSelector,
@@ -321,7 +320,6 @@ import { ComposerQueuedHeader } from "./chat/ComposerQueuedHeader";
 import { ComposerLiveChangesHeader } from "./chat/ComposerLiveChangesHeader";
 import { ComposerPickerMenuPopup } from "./chat/ComposerPickerMenuPopup";
 import { Button } from "./ui/button";
-import { Skeleton } from "./ui/skeleton";
 import { Menu, MenuItem, MenuTrigger } from "./ui/menu";
 import { randomTerminalId } from "./terminal/terminalIds";
 import { cn, isMacPlatform, randomUUID } from "~/lib/utils";
@@ -345,7 +343,6 @@ import { readFavoriteModelSlugs } from "~/lib/modelFavorites";
 import {
   getCustomBinaryPathForProvider,
   getProviderStartOptions,
-  resolveAppModelSelection,
   resolveAssistantDeliveryMode,
   resolveFollowUpDispatchMode,
   useAppSettings,
@@ -477,13 +474,10 @@ import type { MessagesTimelineController } from "./chat/MessagesTimeline";
 import { buildTurnDiffSummaryByAssistantMessageId } from "./chat/MessagesTimeline.logic";
 import { deriveAgentActivityTimelineState } from "./chat/agentActivity.logic";
 import { ExpandedImagePreview } from "./chat/ExpandedImagePreview";
-import {
-  AVAILABLE_PROVIDER_OPTIONS,
-  ProviderModelPicker,
-  resolveProviderModelLabel,
-} from "./chat/ProviderModelPicker";
+import { AVAILABLE_PROVIDER_OPTIONS, resolveProviderModelLabel } from "./chat/ProviderModelPicker";
 import { ComposerModelEffortPicker } from "./chat/ComposerModelEffortPicker";
-import { resolveTraitsTriggerSummary, TraitsPicker } from "./chat/TraitsPicker";
+import { ComposerEnginePicker } from "./chat/ComposerEnginePicker";
+import { resolveTraitsTriggerSummary } from "./chat/TraitsPicker";
 import { ComposerCommandItem, ComposerCommandMenu } from "./chat/ComposerCommandMenu";
 import {
   ComposerLocalDirectoryMenu,
@@ -544,7 +538,10 @@ import {
   ENVIRONMENT_CONTENT_INSET_MOTION_CLASS,
 } from "./chat/composerPickerStyles";
 import { getComposerTraitSelection } from "./chat/composerTraits";
-import { resolveRuntimeModelDescriptor } from "./chat/runtimeModelCapabilities";
+import {
+  getRuntimeAwareModelCapabilities,
+  resolveRuntimeModelDescriptor,
+} from "./chat/runtimeModelCapabilities";
 import { ProjectPicker } from "./chat/ProjectPicker";
 import { FolderClosed } from "./FolderClosed";
 import { ProviderHealthBanner } from "./chat/ProviderHealthBanner";
@@ -1047,38 +1044,6 @@ function warnVoiceGuard(event: string, details?: Record<string, unknown>) {
   console.warn(`[voice] ${event}`);
 }
 
-function ComposerControlSkeleton(props: { widthClassName: string }) {
-  return (
-    <div
-      aria-hidden="true"
-      className={cn(
-        "flex h-8 shrink-0 items-center rounded-md border border-border/50 px-2",
-        props.widthClassName,
-      )}
-    >
-      <Skeleton className="h-3.5 w-full rounded-full" />
-    </div>
-  );
-}
-
-function ComposerModelLoadingControl(props: { widthClassName: string }) {
-  const { t } = useI18n();
-  return (
-    <div
-      aria-label={t("conversation.loadingModels")}
-      className={cn(
-        "flex h-8 shrink-0 items-center gap-2 rounded-md border border-border/50 px-2 text-muted-foreground",
-        props.widthClassName,
-      )}
-    >
-      <RefreshCwIcon aria-hidden="true" className="size-3.5 animate-spin" />
-      <span className="truncate text-[length:var(--app-font-size-ui-xs,11px)]">
-        {t("conversation.loadingModels")}
-      </span>
-    </div>
-  );
-}
-
 interface PlanFollowUpSubmission {
   text: string;
   interactionMode: "default" | "plan";
@@ -1217,6 +1182,9 @@ export default function ChatView({
     useDesktopTopBarWindowControlsGutterClassName();
   const setComposerDraftModelSelectionAndSticky = useComposerDraftStore(
     (store) => store.setModelSelectionAndSticky,
+  );
+  const setComposerDraftActiveProviderAndSticky = useComposerDraftStore(
+    (store) => store.setActiveProviderAndSticky,
   );
   const timestampFormat = settings.timestampFormat;
   // The composer floats over the transcript; its measured height becomes the
@@ -1557,6 +1525,7 @@ export default function ChatView({
   );
   const [isModelPickerOpen, setIsModelPickerOpen] = useState(false);
   const [isTraitsPickerOpen, setIsTraitsPickerOpen] = useState(false);
+  const [isEnginePickerOpen, setIsEnginePickerOpen] = useState(false);
   const [piDiscoveryRequested, setPiDiscoveryRequested] = useState(false);
   const legendListRef = useRef<LegendListRef | null>(null);
   const timelineControllerRef = useRef<MessagesTimelineController | null>(null);
@@ -1578,6 +1547,7 @@ export default function ChatView({
       setComposerCommandPicker(null);
       setIsModelPickerOpen(false);
       setIsTraitsPickerOpen(false);
+      setIsEnginePickerOpen(false);
       setPiDiscoveryRequested(false);
     }, 0);
     return () => window.clearTimeout(settle);
@@ -2230,18 +2200,9 @@ export default function ChatView({
   const sessionProvider = activeThread?.session?.provider ?? null;
   const selectedProviderByThreadId = composerDraft.activeProvider ?? null;
   const threadProvider =
-    activeThread?.modelSelection.provider ?? activeProject?.defaultModelSelection?.provider ?? null;
-  const hasThreadStarted = Boolean(
-    activeThread &&
-    (activeThread.latestTurn !== null ||
-      activeThread.messages.length > 0 ||
-      activeThread.session !== null),
-  );
-  const lockedProvider: ProviderKind | null = hasThreadStarted
-    ? (sessionProvider ?? threadProvider ?? selectedProviderByThreadId ?? null)
-    : null;
+    serverThread?.modelSelection.provider ?? activeProject?.defaultModelSelection?.provider ?? null;
   const selectedProvider: ProviderKind =
-    lockedProvider ?? selectedProviderByThreadId ?? threadProvider ?? settings.defaultProvider;
+    selectedProviderByThreadId ?? threadProvider ?? settings.defaultProvider;
   const previousSelectedProviderRef = useRef<{
     threadId: ThreadId;
     provider: ProviderKind;
@@ -2251,7 +2212,7 @@ export default function ChatView({
   const serverConfigQuery = useQuery(serverConfigQueryOptions());
   const serverSettingsQuery = useQuery(serverSettingsQueryOptions());
   const composerModelHintByProvider = useMemo<Record<ProviderKind, string | null>>(() => {
-    const threadModelSelection = activeThread?.modelSelection ?? null;
+    const threadModelSelection = serverThread?.modelSelection ?? null;
     const projectModelSelection = activeProject?.defaultModelSelection ?? null;
     const draftSelections = composerDraft.modelSelectionByProvider;
 
@@ -2274,8 +2235,8 @@ export default function ChatView({
     };
   }, [
     activeProject?.defaultModelSelection,
-    activeThread?.modelSelection,
     composerDraft.modelSelectionByProvider,
+    serverThread?.modelSelection,
   ]);
   const providerModelDiscoveryCwd = resolveProviderDiscoveryCwd({
     activeThreadWorktreePath: resolvedThreadWorktreePath,
@@ -2284,12 +2245,12 @@ export default function ChatView({
   });
   const {
     customModelsByProvider,
+    catalogStateByProvider,
     modelOptionsByProvider,
+    selectableModelOptionsByProvider,
     loadingModelProviders,
     runtimeModelsByProvider,
     selectedRuntimeAgents: dynamicAgents,
-    selectedProviderModelsLoading,
-    selectedProviderRuntimeModelDiscoveryPending,
   } = useProviderModelCatalog({
     selectedProvider,
     discoveryEnabled: isModelPickerOpen,
@@ -2301,10 +2262,10 @@ export default function ChatView({
   const { modelOptions: composerModelOptions, selectedModel } = useEffectiveComposerModelState({
     threadId,
     selectedProvider,
-    threadModelSelection: activeThread?.modelSelection,
+    threadModelSelection: serverThread?.modelSelection,
     projectModelSelection: activeProject?.defaultModelSelection,
     customModelsByProvider,
-    availableModelOptionsByProvider: modelOptionsByProvider,
+    availableModelOptionsByProvider: selectableModelOptionsByProvider,
   });
   const draftModelSelectionForSelectedProvider =
     composerDraft.modelSelectionByProvider[selectedProvider] ?? null;
@@ -2313,9 +2274,9 @@ export default function ChatView({
       ? draftModelSelectionForSelectedProvider?.provider === "claudeAgent" &&
         draftModelSelectionForSelectedProvider.model === selectedModel
         ? draftModelSelectionForSelectedProvider.supportsAutoMode
-        : activeThread?.modelSelection.provider === "claudeAgent" &&
-            activeThread.modelSelection.model === selectedModel
-          ? activeThread.modelSelection.supportsAutoMode
+        : serverThread?.modelSelection.provider === "claudeAgent" &&
+            serverThread.modelSelection.model === selectedModel
+          ? serverThread.modelSelection.supportsAutoMode
           : undefined
       : undefined;
   const selectedRuntimeModel = useMemo(() => {
@@ -2327,7 +2288,8 @@ export default function ChatView({
     if (discovered) {
       return discovered;
     }
-    return selectedProvider === "claudeAgent" &&
+    return selectedModel !== null &&
+      selectedProvider === "claudeAgent" &&
       typeof persistedClaudeSupportsAutoMode === "boolean"
       ? {
           slug: selectedModel,
@@ -2349,13 +2311,9 @@ export default function ChatView({
   );
   const selectedPromptEffort = composerProviderState.promptEffort;
   const selectedModelOptionsForDispatch = composerProviderState.modelOptionsForDispatch;
-  const selectedModelSelection = useMemo<ModelSelection>(() => {
-    if (selectedProvider === "pi" && draftModelSelectionForSelectedProvider?.provider === "pi") {
-      return buildModelSelection(
-        selectedProvider,
-        draftModelSelectionForSelectedProvider.model,
-        selectedModelOptionsForDispatch ?? draftModelSelectionForSelectedProvider.options,
-      );
+  const selectedModelSelection = useMemo<ModelSelection | null>(() => {
+    if (selectedModel === null) {
+      return null;
     }
     return buildModelSelection(
       selectedProvider,
@@ -2372,50 +2330,30 @@ export default function ChatView({
   ]);
   const providerOptionsForDispatch = useMemo(() => getProviderStartOptions(settings), [settings]);
   const selectedModelForPicker =
-    selectedModelSelection.provider === selectedProvider
+    selectedModelSelection?.provider === selectedProvider
       ? selectedModelSelection.model
       : selectedModel;
   const selectedModelForPickerWithCustomFallback = useMemo(() => {
     const currentOptions = modelOptionsByProvider[selectedProvider];
+    if (selectedModelForPicker === null) {
+      return null;
+    }
     return currentOptions.some((option) => option.slug === selectedModelForPicker)
       ? selectedModelForPicker
       : (normalizeModelSlug(selectedModelForPicker, selectedProvider) ?? selectedModelForPicker);
   }, [modelOptionsByProvider, selectedModelForPicker, selectedProvider]);
-  const persistedComposerModelSelection =
-    sessionProvider && activeThread?.modelSelection.provider !== sessionProvider
-      ? activeProject?.defaultModelSelection?.provider === selectedProvider
-        ? activeProject.defaultModelSelection
-        : null
-      : (activeThread?.modelSelection ?? activeProject?.defaultModelSelection ?? null);
-  const providerModelsLoading = selectedProviderModelsLoading;
-  const selectedProviderRequiresRuntimeModels =
-    selectedProvider === "cursor" ||
-    selectedProvider === "antigravity" ||
-    selectedProvider === "droid" ||
-    selectedProvider === "kilo" ||
-    selectedProvider === "opencode" ||
-    selectedProvider === "pi";
-  const showComposerModelBootstrapSkeleton = shouldShowComposerModelBootstrapSkeleton({
-    selectedProvider,
-    selectedModel,
-    persistedModelSelection: persistedComposerModelSelection,
-    draftModelSelection: draftModelSelectionForSelectedProvider,
-    providerModelsLoading,
-    requiresDiscoveredModels: selectedProviderRequiresRuntimeModels,
-  });
   const searchableModelOptions = useMemo(
     () =>
       buildSearchableModelOptions({
         providerOptions: AVAILABLE_PROVIDER_OPTIONS,
-        modelOptionsByProvider,
+        modelOptionsByProvider: selectableModelOptionsByProvider,
         providerOrder: settings.providerOrder,
         hiddenProviders: settings.hiddenProviders,
         protectedProviders: [selectedProvider],
-        lockedProvider,
+        lockedProvider: null,
       }),
     [
-      lockedProvider,
-      modelOptionsByProvider,
+      selectableModelOptionsByProvider,
       selectedProvider,
       settings.hiddenProviders,
       settings.providerOrder,
@@ -3636,6 +3574,10 @@ export default function ChatView({
   const providerComposerCapabilitiesQuery = useQuery(
     providerComposerCapabilitiesQueryOptions(selectedProvider),
   );
+  const canCompactActiveSession =
+    activeThread?.session?.provider === selectedProvider &&
+    activeThread.session.status !== "closed" &&
+    supportsThreadCompaction(providerComposerCapabilitiesQuery.data);
   const providerCommandsQuery = useQuery(
     providerCommandsQueryOptions({
       provider: selectedProvider,
@@ -3746,8 +3688,13 @@ export default function ChatView({
   );
   const providerSkills = providerSkillsQuery.data?.skills ?? EMPTY_PROVIDER_SKILLS;
   const selectedModelCaps = useMemo(
-    () => getModelCapabilities(selectedProvider, selectedModel),
-    [selectedModel, selectedProvider],
+    () =>
+      getRuntimeAwareModelCapabilities({
+        provider: selectedProvider,
+        model: selectedModel,
+        runtimeModel: selectedRuntimeModel,
+      }),
+    [selectedModel, selectedProvider, selectedRuntimeModel],
   );
   const supportsFastSlashCommand = selectedModelCaps.supportsFastMode;
   const currentProviderModelOptions = composerModelOptions?.[selectedProvider];
@@ -3806,11 +3753,7 @@ export default function ChatView({
     workspaceEntries,
     searchableModelOptions,
     supportsFastSlashCommand,
-    canOfferCompactCommand:
-      supportsThreadCompaction(providerComposerCapabilitiesQuery.data) &&
-      isServerThread &&
-      activeThread?.session !== null &&
-      activeThread?.session?.status !== "closed",
+    canOfferCompactCommand: isServerThread && canCompactActiveSession,
     canOfferReviewCommand,
     canOfferForkCommand,
     canOfferSideCommand,
@@ -3989,7 +3932,7 @@ export default function ChatView({
   const handoffTargetProviders = useMemo(
     () =>
       activeThread
-        ? resolveAvailableHandoffTargetProviders({
+          ? resolveAvailableHandoffTargetProviders({
             sourceProvider: activeThread.modelSelection.provider,
             providerSettings: serverSettingsQuery.data?.providers,
             providerStatuses,
@@ -4326,6 +4269,7 @@ export default function ChatView({
     }
     if (open) {
       setIsTraitsPickerOpen(false);
+      setIsEnginePickerOpen(false);
     }
   }, []);
   const handleProviderBrowse = useCallback((provider: ProviderKind) => {
@@ -4338,10 +4282,19 @@ export default function ChatView({
       setIsTraitsPickerOpen(open);
       if (open) {
         handleModelPickerOpenChange(false);
+        setIsEnginePickerOpen(false);
       }
     },
     [handleModelPickerOpenChange],
   );
+  const handleEnginePickerOpenChange = useCallback((open: boolean) => {
+    setIsEnginePickerOpen(open);
+    if (open) {
+      setIsModelPickerOpen(false);
+      setIsTraitsPickerOpen(false);
+      setPiDiscoveryRequested(false);
+    }
+  }, []);
   const appendVoiceTranscriptToComposer = useCallback(
     (transcript: string) => {
       const nextPrompt = appendVoiceTranscriptToPrompt(promptRef.current, transcript);
@@ -4916,6 +4869,14 @@ export default function ChatView({
       }
       return queue.persist(mode, async (currentMode, nextMode) => {
         if (serverThread) {
+          const nextModelSelection = nextMode === "auto" ? selectedModelSelection : undefined;
+          if (nextMode === "auto" && !nextModelSelection) {
+            toastManager.add({
+              type: "warning",
+              title: t("composer.modelRequiredToSend"),
+            });
+            return false;
+          }
           const api = readNativeApi();
           if (!api) {
             toastManager.add({
@@ -4927,7 +4888,7 @@ export default function ChatView({
           }
           const persistenceInput = {
             currentModelSelection: serverThread.modelSelection,
-            ...(nextMode === "auto" ? { nextModelSelection: selectedModelSelection } : {}),
+            ...(nextModelSelection ? { nextModelSelection } : {}),
             currentRuntimeMode: currentMode,
             nextRuntimeMode: nextMode,
             persistModelSelection: (modelSelection: ModelSelection) =>
@@ -4957,31 +4918,46 @@ export default function ChatView({
             return false;
           }
         }
-        setComposerDraftRuntimeMode(threadId, nextMode);
-        if (isLocalDraftThread) {
-          setDraftThreadContext(threadId, { runtimeMode: nextMode });
-        }
-        scheduleComposerFocus();
         return true;
       });
     },
+    [runtimeMode, selectedModelSelection, serverThread, t, threadId],
+  );
+  const setNextTurnRuntimeMode = useCallback(
+    (mode: RuntimeMode) => {
+      setComposerDraftRuntimeMode(threadId, mode);
+      if (isLocalDraftThread) {
+        setDraftThreadContext(threadId, { runtimeMode: mode });
+      }
+      scheduleComposerFocus();
+    },
     [
       isLocalDraftThread,
-      runtimeMode,
       scheduleComposerFocus,
-      selectedModelSelection,
-      serverThread,
       setComposerDraftRuntimeMode,
       setDraftThreadContext,
-      t,
       threadId,
     ],
   );
+  const desiredBindingCanPersistRuntimeMode = useMemo(
+    () =>
+      desiredBindingCanPersistWithoutActiveSession({
+        desiredModelSelection: selectedModelSelection,
+        serverModelSelection: serverThread?.modelSelection ?? null,
+        activeSession: serverThread?.session ?? null,
+      }),
+    [selectedModelSelection, serverThread?.modelSelection, serverThread?.session],
+  );
   const handleRuntimeModeChange = useCallback(
     (mode: RuntimeMode) => {
-      void persistRuntimeModeChange(mode);
+      // The Composer choice is the desired next-turn value and must win
+      // immediately, even if an older canonical write is still awaiting an ACK.
+      setNextTurnRuntimeMode(mode);
+      if (desiredBindingCanPersistRuntimeMode) {
+        void persistRuntimeModeChange(mode);
+      }
     },
-    [persistRuntimeModeChange],
+    [desiredBindingCanPersistRuntimeMode, persistRuntimeModeChange, setNextTurnRuntimeMode],
   );
 
   useEffect(() => {
@@ -6230,15 +6206,14 @@ export default function ChatView({
   const onProviderModelSelect = useCallback(
     async (provider: ProviderKind, model: ModelSlug) => {
       if (!activeThread) return;
-      if (lockedProvider !== null && provider !== lockedProvider) {
+      const resolvedModel = resolveCommittedProviderModel({
+        selectedModel: model,
+        availableOptions: selectableModelOptionsByProvider[provider],
+      });
+      if (!resolvedModel) {
         scheduleComposerFocus();
         return;
       }
-      const resolvedModel = resolveCommittedProviderModel({
-        selectedModel: model,
-        availableOptions: modelOptionsByProvider[provider],
-        fallback: () => resolveAppModelSelection(provider, customModelsByProvider, model),
-      });
       const runtimeModel = resolveRuntimeModelDescriptor({
         provider,
         model: resolvedModel,
@@ -6256,41 +6231,48 @@ export default function ChatView({
         !providerModelSupportsAutoRuntimeMode(provider, runtimeModel, providerStatus)
           ? "approval-required"
           : normalizeRuntimeModeForProvider(runtimeMode, provider);
-      // Commit the canonical downgrade before storing an incompatible model.
-      // On failure the Auto draft remains visible so compatibility checks can retry.
-      const didCommitSelection = await commitAfterRuntimeModePersistence({
-        currentRuntimeMode: runtimeMode,
-        nextRuntimeMode,
-        persistRuntimeMode: persistRuntimeModeChange,
-        commit: () => {
-          setComposerDraftModelSelectionAndSticky(activeThread.id, nextModelSelection);
-          if (provider === "cursor") {
-            setComposerDraftProviderModelOptions(activeThread.id, provider, undefined, {
-              persistSticky: true,
-              model: resolvedModel,
-            });
-          }
-        },
-      });
-      if (!didCommitSelection) {
-        scheduleComposerFocus();
-        return;
+      if (nextRuntimeMode !== runtimeMode) {
+        setNextTurnRuntimeMode(nextRuntimeMode);
+        if (
+          desiredBindingCanPersistWithoutActiveSession({
+            desiredModelSelection: nextModelSelection,
+            serverModelSelection: serverThread?.modelSelection ?? null,
+            activeSession: serverThread?.session ?? null,
+          })
+        ) {
+          void persistRuntimeModeChange(nextRuntimeMode);
+        }
+      }
+      setComposerDraftModelSelectionAndSticky(activeThread.id, nextModelSelection);
+      if (provider === "cursor") {
+        setComposerDraftProviderModelOptions(activeThread.id, provider, undefined, {
+          persistSticky: true,
+          model: resolvedModel,
+        });
       }
       scheduleComposerFocus();
     },
     [
       activeThread,
-      customModelsByProvider,
-      lockedProvider,
-      modelOptionsByProvider,
       persistRuntimeModeChange,
       providerStatuses,
       runtimeMode,
       runtimeModelsByProvider,
+      selectableModelOptionsByProvider,
       scheduleComposerFocus,
       setComposerDraftModelSelectionAndSticky,
       setComposerDraftProviderModelOptions,
+      serverThread,
+      setNextTurnRuntimeMode,
     ],
+  );
+  const onComposerEngineSelect = useCallback(
+    (provider: ProviderKind) => {
+      if (!activeThread) return;
+      setComposerDraftActiveProviderAndSticky(activeThread.id, provider);
+      scheduleComposerFocus();
+    },
+    [activeThread, scheduleComposerFocus, setComposerDraftActiveProviderAndSticky],
   );
 
   const copyThreadIdToClipboard = useCopyThreadIdToClipboard();
@@ -6381,7 +6363,7 @@ export default function ChatView({
         event.preventDefault();
         event.stopPropagation();
         const direction = command === "model.next" ? "next" : "previous";
-        const providerOptions = modelOptionsByProvider[selectedProvider] ?? [];
+        const providerOptions = selectableModelOptionsByProvider[selectedProvider] ?? [];
         const nextSlug = resolveCycledModelSlug({
           currentModel: selectedModel,
           options: providerOptions,
@@ -7092,6 +7074,13 @@ export default function ChatView({
 
       // Draft review can keep the local draft ID in the form; promote it only when
       // the automation is actually submitted so cancelling review leaves no empty thread.
+      if (!selectedModelSelection) {
+        toastManager.add({
+          type: "warning",
+          title: t("composer.modelRequiredToSend"),
+        });
+        return null;
+      }
       const targetThreadId = await ensureAutomationTargetThread({
         titleSeed: form.prompt || form.name,
         threadModelSelection: selectedModelSelection,
@@ -7113,6 +7102,7 @@ export default function ChatView({
       isServerThread,
       runtimeMode,
       selectedModelSelection,
+      t,
     ],
   );
 
@@ -7477,6 +7467,13 @@ export default function ChatView({
     // Queued chat turns already captured their intended mode. Live plan follow-ups
     // with attachments must use the normal send path so references are preserved.
     if (isLivePlanFollowUpSubmission) {
+      if (!selectedModelSelectionForSend) {
+        toastManager.add({
+          type: "warning",
+          title: t("composer.modelRequiredToSend"),
+        });
+        return false;
+      }
       const followUp = resolvePlanFollowUpSubmission({
         draftText: trimmed,
         planMarkdown: activeProposedPlan.planMarkdown,
@@ -7499,7 +7496,7 @@ export default function ChatView({
             selectedProvider,
             selectedModel,
             selectedPromptEffort,
-            modelSelection: selectedModelSelection,
+            modelSelection: selectedModelSelectionForSend,
             ...(providerOptionsForDispatch ? { providerOptionsForDispatch } : {}),
             runtimeMode,
           });
@@ -7535,6 +7532,13 @@ export default function ChatView({
         setPendingAutomationConversation(null);
         return true;
       }
+    }
+    if (!selectedModelSelectionForSend) {
+      toastManager.add({
+        type: "warning",
+        title: t("composer.modelRequiredToSend"),
+      });
+      return false;
     }
     const sourceProposedPlanForSend =
       queuedChatTurn?.sourceProposedPlan ??
@@ -8328,17 +8332,7 @@ export default function ChatView({
         }
       }
 
-      const threadCreateModelSelection: ModelSelection = buildModelSelection(
-        selectedModelSelectionForSend.provider,
-        selectedModelSelectionForSend.model ||
-          selectedModelForSend ||
-          targetProjectDefaultModelSelectionForSend?.model ||
-          DEFAULT_MODEL_BY_PROVIDER.codex,
-        selectedModelSelectionForSend.options,
-        selectedModelSelectionForSend.provider === "claudeAgent"
-          ? selectedModelSelectionForSend.supportsAutoMode
-          : undefined,
-      );
+      const threadCreateModelSelection: ModelSelection = selectedModelSelectionForSend;
 
       if (isLocalDraftThread) {
         const inheritedProjectInstructions =
@@ -8931,6 +8925,14 @@ export default function ChatView({
     if (!trimmed) {
       return false;
     }
+    const modelSelectionForPlanDispatch = queuedTurn?.modelSelection ?? selectedModelSelection;
+    if (!modelSelectionForPlanDispatch) {
+      toastManager.add({
+        type: "warning",
+        title: t("composer.modelRequiredToSend"),
+      });
+      return false;
+    }
 
     const threadIdForSend = activeThread.id;
     const messageIdForSend = newMessageId();
@@ -8967,7 +8969,7 @@ export default function ChatView({
       await persistThreadSettingsForNextTurn({
         threadId: threadIdForSend,
         createdAt: messageCreatedAt,
-        modelSelection: queuedTurn?.modelSelection ?? selectedModelSelection,
+        modelSelection: modelSelectionForPlanDispatch,
         runtimeMode: queuedTurn?.runtimeMode ?? runtimeMode,
         interactionMode: nextInteractionMode,
       });
@@ -8978,7 +8980,6 @@ export default function ChatView({
 
       const providerOptionsForPlanDispatch =
         queuedTurn?.providerOptionsForDispatch ?? providerOptionsForDispatch;
-      const modelSelectionForPlanDispatch = queuedTurn?.modelSelection ?? selectedModelSelection;
       const sourceProposedPlan =
         nextInteractionMode === "default"
           ? buildSourceProposedPlanReference({
@@ -9089,6 +9090,13 @@ export default function ChatView({
         setThreadError(activeThread.id, "Wait for the current send to start before editing.");
         return false;
       }
+      if (!selectedModelSelection) {
+        toastManager.add({
+          type: "warning",
+          title: t("composer.modelRequiredToSend"),
+        });
+        return false;
+      }
 
       setIsRevertingCheckpoint(true);
       setThreadError(activeThread.id, null);
@@ -9154,6 +9162,7 @@ export default function ChatView({
       selectedProvider,
       setThreadError,
       assistantDeliveryMode,
+      t,
     ],
   );
 
@@ -9184,6 +9193,13 @@ export default function ChatView({
     if (!workflowRunState?.scriptPath || !workflowRunState.runId) return;
     const lateSendHandlers = lateComposerSendHandlersRef.current;
     if (!lateSendHandlers) return;
+    if (!selectedModelSelection) {
+      toastManager.add({
+        type: "warning",
+        title: t("composer.modelRequiredToSend"),
+      });
+      return;
+    }
     const { workflowTaskId } = workflowRunState;
     const prompt = buildWorkflowResumePrompt(workflowRunState.scriptPath, workflowRunState.runId);
     const sent = await lateSendHandlers.send(undefined, "queue", {
@@ -9224,6 +9240,7 @@ export default function ChatView({
     selectedModelSelection,
     selectedPromptEffort,
     selectedProvider,
+    t,
     workflowRunState,
   ]);
 
@@ -9354,7 +9371,8 @@ export default function ChatView({
       !isServerThread ||
       isSendBusy ||
       isConnecting ||
-      sendInFlightRef.current
+      sendInFlightRef.current ||
+      !selectedModelSelection
     ) {
       return;
     }
@@ -9406,7 +9424,7 @@ export default function ChatView({
       .then(() => {
         rememberCustomBinaryPathForDispatch({
           threadId: nextThreadId,
-          provider: selectedModelSelection.provider,
+          provider: nextThreadModelSelection.provider,
           providerOptions: providerOptionsForDispatch,
         });
         return api.orchestration.dispatchCommand({
@@ -9419,7 +9437,7 @@ export default function ChatView({
             text: outgoingImplementationPrompt,
             attachments: [],
           },
-          modelSelection: selectedModelSelection,
+          modelSelection: nextThreadModelSelection,
           ...(providerOptionsForDispatch ? { providerOptions: providerOptionsForDispatch } : {}),
           assistantDeliveryMode,
           dispatchMode: "queue",
@@ -9532,7 +9550,6 @@ export default function ChatView({
       }),
     [runtimeUsageContextWindow, composerTraitSelection.contextWindow, selectedProvider],
   );
-  const useSplitComposerPickerControls = isLocalDraftThread && !hasThreadStarted;
   const composerFooterControlsPlan = useMemo(
     () => composerFooterPlanForTier(composerFooterTier, Boolean(runtimeUsageContextWindow)),
     [composerFooterTier, runtimeUsageContextWindow],
@@ -9540,12 +9557,14 @@ export default function ChatView({
   // The displayed labels changed (model switch, effort change, picker layout):
   // recorded overflow widths no longer apply, so reset to the richest tier and
   // let the measured-overflow loop demote again before paint if needed.
-  const composerFooterModelLabel = resolveProviderModelLabel({
-    provider: selectedProvider,
-    lockedProvider,
-    model: selectedModelForPickerWithCustomFallback,
-    modelOptionsByProvider,
-  });
+  const composerFooterModelLabel = selectedModelForPickerWithCustomFallback
+    ? resolveProviderModelLabel({
+        provider: selectedProvider,
+        lockedProvider: selectedProvider,
+        model: selectedModelForPickerWithCustomFallback,
+        modelOptionsByProvider: selectableModelOptionsByProvider,
+      })
+    : t("composer.noAvailableModel");
   const composerFooterTraitsSummary = resolveTraitsTriggerSummary({
     provider: selectedProvider,
     model: selectedModelForPickerWithCustomFallback,
@@ -9553,12 +9572,18 @@ export default function ChatView({
     modelOptions: selectedProviderModelOptions,
     ...(selectedRuntimeModel ? { runtimeModel: selectedRuntimeModel } : {}),
     runtimeAgents: dynamicAgents,
+    labels: {
+      fast: t("composer.fast"),
+      default: t("composer.default"),
+      ultrathink: t("composer.ultrathink"),
+      thinkingOn: t("composer.thinkingOn"),
+      thinkingOff: t("composer.thinkingOff"),
+    },
   });
   const composerFooterPlanInputsKey = [
     composerFooterModelLabel,
     composerFooterTraitsSummary.summaryText,
     Boolean(runtimeUsageContextWindow),
-    useSplitComposerPickerControls,
   ].join(":");
   useLayoutEffect(() => {
     composerFooterDemotionWidthsRef.current = [];
@@ -9571,8 +9596,6 @@ export default function ChatView({
   useLayoutEffect(() => {
     composerFooterLayoutSyncRef.current?.();
   }, [composerFooterTier]);
-  const composerModelPickerWidthClassName = isComposerFooterCompact ? "w-32" : "w-36 sm:w-44";
-  const composerOptionsPickerWidthClassName = isComposerFooterCompact ? "w-28" : "w-32";
   const composerModelEffortPickerWidthClassName = isComposerFooterCompact ? "w-40" : "w-44 sm:w-52";
   const isComposerModelEffortPickerOpen = isModelPickerOpen || isTraitsPickerOpen;
   const handleComposerModelEffortPickerOpenChange = useCallback(
@@ -9586,109 +9609,56 @@ export default function ChatView({
     },
     [handleModelPickerOpenChange],
   );
-  const composerPickerControls = showComposerModelBootstrapSkeleton ? (
-    useSplitComposerPickerControls ? (
-      <>
-        {selectedProviderRuntimeModelDiscoveryPending ? (
-          <ComposerModelLoadingControl widthClassName={composerModelPickerWidthClassName} />
-        ) : (
-          <ComposerControlSkeleton widthClassName={composerModelPickerWidthClassName} />
-        )}
-        <ComposerControlSkeleton widthClassName={composerOptionsPickerWidthClassName} />
-      </>
-    ) : selectedProviderRuntimeModelDiscoveryPending ? (
-      <ComposerModelLoadingControl widthClassName={composerModelEffortPickerWidthClassName} />
-    ) : (
-      <ComposerControlSkeleton widthClassName={composerModelEffortPickerWidthClassName} />
-    )
-  ) : useSplitComposerPickerControls ? (
+  const refreshSelectedProviderModels = useCallback(() => {
+    void queryClient.invalidateQueries({
+      queryKey: providerDiscoveryQueryKeys.modelsForProvider(selectedProvider),
+    });
+  }, [queryClient, selectedProvider]);
+  const openSelectedProviderSettings = useCallback(() => {
+    void navigate({
+      to: "/settings",
+      search: { section: selectedProvider === "omnimind" ? "models" : "providers" },
+    });
+  }, [navigate, selectedProvider]);
+  const composerPickerControls = (
     <>
-      <ProviderModelPicker
-        compact={isComposerFooterCompact}
-        hideLabel={!composerFooterControlsPlan.showModelLabel}
+      <ComposerEnginePicker
         provider={selectedProvider}
-        model={selectedModelForPickerWithCustomFallback}
-        lockedProvider={lockedProvider}
         providers={providerStatuses}
-        modelOptionsByProvider={modelOptionsByProvider}
-        loadingModelProviders={loadingModelProviders}
         hiddenProviders={settings.hiddenProviders}
         providerOrder={settings.providerOrder}
-        onProviderModelChange={onProviderModelSelect}
-        onProviderBrowse={handleProviderBrowse}
+        onProviderChange={onComposerEngineSelect}
+        onProviderIntent={handleProviderBrowse}
         onSelectionCommitted={scheduleComposerFocus}
-        open={isModelPickerOpen}
-        onOpenChange={handleModelPickerOpenChange}
-        shortcutLabel={modelPickerShortcutLabel}
+        open={isEnginePickerOpen}
+        onOpenChange={handleEnginePickerOpenChange}
       />
-      <TraitsPicker
+      <ComposerModelEffortPicker
+        compact={isComposerFooterCompact}
+        hideModelLabel={!composerFooterControlsPlan.showModelLabel}
+        hideStatusLabel={!composerFooterControlsPlan.showTraitsLabel}
         provider={selectedProvider}
-        threadId={threadId}
         model={selectedModelForPickerWithCustomFallback}
+        catalogState={catalogStateByProvider[selectedProvider]}
+        modelOptionsByProvider={selectableModelOptionsByProvider}
+        loadingModelProviders={loadingModelProviders}
+        threadId={threadId}
         runtimeModel={selectedRuntimeModel}
         runtimeModels={runtimeModelsByProvider[selectedProvider]}
         runtimeAgents={dynamicAgents}
         modelOptions={selectedProviderModelOptions}
         prompt={prompt}
         onPromptChange={setPromptFromTraits}
-        open={isTraitsPickerOpen}
-        onOpenChange={handleTraitsPickerOpenChange}
+        onProviderModelChange={onProviderModelSelect}
+        onRefreshModels={refreshSelectedProviderModels}
+        onOpenSettings={openSelectedProviderSettings}
         onSelectionCommitted={scheduleComposerFocus}
-        shortcutLabel={traitsPickerShortcutLabel}
-        hideLabel={!composerFooterControlsPlan.showTraitsLabel}
+        open={isComposerModelEffortPickerOpen}
+        onOpenChange={handleComposerModelEffortPickerOpenChange}
+        shortcutLabel={modelPickerShortcutLabel}
       />
     </>
-  ) : (
-    <ComposerModelEffortPicker
-      compact={isComposerFooterCompact}
-      hideModelLabel={!composerFooterControlsPlan.showModelLabel}
-      hideStatusLabel={!composerFooterControlsPlan.showTraitsLabel}
-      provider={selectedProvider}
-      model={selectedModelForPickerWithCustomFallback}
-      lockedProvider={lockedProvider}
-      providers={providerStatuses}
-      modelOptionsByProvider={modelOptionsByProvider}
-      loadingModelProviders={loadingModelProviders}
-      hiddenProviders={settings.hiddenProviders}
-      providerOrder={settings.providerOrder}
-      threadId={threadId}
-      runtimeModel={selectedRuntimeModel}
-      runtimeModels={runtimeModelsByProvider[selectedProvider]}
-      runtimeAgents={dynamicAgents}
-      modelOptions={selectedProviderModelOptions}
-      prompt={prompt}
-      onPromptChange={setPromptFromTraits}
-      onProviderModelChange={onProviderModelSelect}
-      onProviderBrowse={handleProviderBrowse}
-      onSelectionCommitted={scheduleComposerFocus}
-      open={isComposerModelEffortPickerOpen}
-      onOpenChange={handleComposerModelEffortPickerOpenChange}
-      shortcutLabel={modelPickerShortcutLabel}
-    />
   );
-  const toggleFastMode = useCallback(() => {
-    if (!composerTraitSelection.caps.supportsFastMode) {
-      scheduleComposerFocus();
-      return;
-    }
-    setComposerDraftProviderModelOptions(
-      threadId,
-      selectedProvider,
-      buildNextProviderOptions(selectedProvider, selectedProviderModelOptions, {
-        fastMode: !composerTraitSelection.fastModeEnabled,
-      }),
-      { persistSticky: true },
-    );
-    scheduleComposerFocus();
-  }, [
-    composerTraitSelection.caps.supportsFastMode,
-    composerTraitSelection.fastModeEnabled,
-    scheduleComposerFocus,
-    selectedProvider,
-    selectedProviderModelOptions,
-    setComposerDraftProviderModelOptions,
-    threadId,
-  ]);
   const onEnvModeChange = useCallback(
     (mode: DraftThreadEnvMode) => {
       const nextBranch =
@@ -9940,7 +9910,9 @@ export default function ChatView({
       if (!api) {
         throw new Error("App is still connecting. Try again in a moment.");
       }
-
+      if (!selectedModelSelection) {
+        throw new Error(t("composer.modelRequiredToSend"));
+      }
       const existingProject = useStore
         .getState()
         .projects.find(
@@ -9976,6 +9948,7 @@ export default function ChatView({
       moveEmptyDraftToLocalProject,
       selectedModelSelection,
       syncServerShellSnapshot,
+      t,
     ],
   );
 
@@ -9987,7 +9960,9 @@ export default function ChatView({
       if (!project) {
         throw new Error("Selected project is not available.");
       }
-
+      if (!selectedModelSelection) {
+        throw new Error(t("composer.modelRequiredToSend"));
+      }
       const targetThreadId = await handleNewThread(projectId, {
         fresh: true,
         provider: selectedProvider,
@@ -10009,7 +9984,9 @@ export default function ChatView({
       if (!api) {
         throw new Error("App is still connecting. Try again in a moment.");
       }
-
+      if (!selectedModelSelection) {
+        throw new Error(t("composer.modelRequiredToSend"));
+      }
       const existingProject = useStore
         .getState()
         .projects.find(
@@ -10039,7 +10016,7 @@ export default function ChatView({
       }
       await handleSendToAgentProject(creationResult.project.id);
     },
-    [handleSendToAgentProject, selectedModelSelection, syncServerShellSnapshot],
+    [handleSendToAgentProject, selectedModelSelection, syncServerShellSnapshot, t],
   );
 
   const applyPromptReplacement = useCallback(
@@ -10276,11 +10253,7 @@ export default function ChatView({
     activeRootBranch,
     isServerThread,
     supportsFastSlashCommand,
-    canOfferCompactCommand:
-      supportsThreadCompaction(providerComposerCapabilitiesQuery.data) &&
-      isServerThread &&
-      activeThread?.session !== null &&
-      activeThread?.session?.status !== "closed",
+    canOfferCompactCommand: isServerThread && canCompactActiveSession,
     canOfferSideCommand,
     canOfferExportCommand,
     supportsTextNativeReviewCommand,
@@ -11060,10 +11033,7 @@ export default function ChatView({
     <>
       <ComposerExtrasMenu
         interactionMode={interactionMode}
-        supportsFastMode={composerTraitSelection.caps.supportsFastMode}
-        fastModeEnabled={composerTraitSelection.fastModeEnabled}
         onAddAttachments={addComposerAttachments}
-        onToggleFastMode={toggleFastMode}
         onSetPlanMode={setPlanMode}
       />
       {!isVoiceRecording && !isVoiceTranscribing ? (
@@ -11716,7 +11686,7 @@ export default function ChatView({
                               type="submit"
                               size="sm"
                               className="h-9 rounded-full px-4 sm:h-8"
-                              disabled={isSendBusy || isConnecting}
+                              disabled={isSendBusy || isConnecting || !selectedModelSelection}
                             >
                               {isConnecting || isSendBusy
                                 ? t("conversation.sending")
@@ -11728,7 +11698,7 @@ export default function ChatView({
                                 type="submit"
                                 size="sm"
                                 className="h-9 rounded-l-full rounded-r-none px-4 sm:h-8"
-                                disabled={isSendBusy || isConnecting}
+                                disabled={isSendBusy || isConnecting || !selectedModelSelection}
                               >
                                 {isConnecting || isSendBusy
                                   ? t("conversation.sending")
@@ -11742,7 +11712,9 @@ export default function ChatView({
                                       variant="default"
                                       className="h-9 rounded-l-none rounded-r-full border-l-white/12 px-2 sm:h-8"
                                       aria-label={t("conversation.implementationActions")}
-                                      disabled={isSendBusy || isConnecting}
+                                      disabled={
+                                        isSendBusy || isConnecting || !selectedModelSelection
+                                      }
                                     />
                                   }
                                 >
@@ -11750,7 +11722,7 @@ export default function ChatView({
                                 </MenuTrigger>
                                 <ComposerPickerMenuPopup align="end" side="top">
                                   <MenuItem
-                                    disabled={isSendBusy || isConnecting}
+                                    disabled={isSendBusy || isConnecting || !selectedModelSelection}
                                     onClick={() => void onImplementPlanInNewThread()}
                                   >
                                     {t("conversation.implementInNewTask")}
@@ -11780,6 +11752,7 @@ export default function ChatView({
                                 isConnecting ||
                                 isVoiceTranscribing ||
                                 isPreparingComposerImages ||
+                                !selectedModelSelection ||
                                 !composerSendState.hasSendableContent
                               }
                               aria-label={
@@ -12358,8 +12331,7 @@ export default function ChatView({
         open={isSlashStatusDialogOpen}
         onOpenChange={setIsSlashStatusDialogOpen}
         selectedModel={selectedModel}
-        fastModeEnabled={fastModeEnabled}
-        selectedPromptEffort={selectedPromptEffort}
+        nativeOptionsSummary={composerFooterTraitsSummary.summaryText}
         interactionMode={interactionMode}
         envMode={envMode}
         envState={envState}

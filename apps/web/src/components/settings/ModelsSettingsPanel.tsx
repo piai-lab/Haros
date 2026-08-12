@@ -178,6 +178,7 @@ function ActiveModelsSettingsPanel({
   const { modelOptionsByProvider: gitWritingCatalogOptionsByProvider } = useProviderModelCatalog({
     selectedProvider: currentGitTextGenerationProvider,
     discoveryEnabled: active,
+    selectedProviderDiscoveryEnabled: active,
     cwd: providerModelDiscoveryCwd,
     modelHintByProvider: gitWritingModelHintByProvider,
     prefetchProviders: GIT_WRITING_DISCOVERY_PROVIDERS,

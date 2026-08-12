@@ -36,6 +36,7 @@ import { registerSidechatCreator } from "../lib/sidechatCreatorRegistry";
 import { downloadUrlAsBlob } from "../lib/browserDownload";
 import { resolveWsHttpUrl } from "../lib/wsHttpUrl";
 import { useFeedbackDialogStore } from "../feedbackDialogStore";
+import { useI18n } from "../i18n";
 import {
   createOrJoinSidechat,
   createSidechatThread,
@@ -70,7 +71,7 @@ export function useComposerSlashCommands(input: {
   providerCommandDiscoveryCwd: string | null;
   selectedProvider: ProviderKind;
   currentProviderModelOptions: ProviderModelOptions[ProviderKind] | undefined;
-  selectedModelSelection: ModelSelection;
+  selectedModelSelection: ModelSelection | null;
   environmentMode: string | null;
   runtimeMode: RuntimeMode;
   interactionMode: ProviderInteractionMode;
@@ -85,7 +86,7 @@ export function useComposerSlashCommands(input: {
     threadId: ThreadId,
     provider: ProviderKind,
     nextProviderOptions: ProviderModelOptions[ProviderKind],
-    options?: { persistSticky?: boolean },
+    options?: { model?: string | null; persistSticky?: boolean },
   ) => void;
   editorActions: {
     resolveActiveComposerTrigger: () => {
@@ -105,6 +106,7 @@ export function useComposerSlashCommands(input: {
   };
 }) {
   const [isSlashStatusDialogOpen, setIsSlashStatusDialogOpen] = useState(false);
+  const { t } = useI18n();
   const openGlobalFeedbackDialog = useFeedbackDialogStore((state) => state.openDialog);
   const {
     activeProject,
@@ -200,11 +202,18 @@ export function useComposerSlashCommands(input: {
           fastMode: enabled,
         }),
         {
+          ...(selectedModelSelection ? { model: selectedModelSelection.model } : {}),
           persistSticky: true,
         },
       );
     },
-    [currentProviderModelOptions, selectedProvider, setComposerDraftProviderModelOptions, threadId],
+    [
+      currentProviderModelOptions,
+      selectedModelSelection?.model,
+      selectedProvider,
+      setComposerDraftProviderModelOptions,
+      threadId,
+    ],
   );
 
   const runFastSlashCommand = useCallback(
@@ -216,23 +225,25 @@ export function useComposerSlashCommands(input: {
       if (!supportsFastSlashCommand) {
         toastManager.add({
           type: "warning",
-          title: "Fast mode is unavailable",
-          description: "The selected model does not support Fast mode.",
+          title: t("composer.fastUnavailable"),
+          description: t("composer.fastUnsupportedHint"),
         });
         return true;
       }
       if (action === "invalid") {
         toastManager.add({
           type: "warning",
-          title: "Invalid /fast command",
-          description: "Use /fast, /fast on, /fast off, or /fast status.",
+          title: t("composer.fastInvalid"),
+          description: t("composer.fastUsageHint"),
         });
         return true;
       }
       if (action === "status") {
         toastManager.add({
           type: "info",
-          title: `Fast mode is ${fastModeEnabled ? "on" : "off"}`,
+          title: t("composer.fastStatus", {
+            state: t(fastModeEnabled ? "common.on" : "common.off").toLocaleLowerCase(),
+          }),
         });
         return true;
       }
@@ -240,15 +251,19 @@ export function useComposerSlashCommands(input: {
       setFastModeFromSlashCommand(nextEnabled);
       toastManager.add({
         type: "success",
-        title: `Fast mode ${nextEnabled ? "enabled" : "disabled"}`,
+        title: t(nextEnabled ? "composer.fastEnabled" : "composer.fastDisabled"),
       });
       return true;
     },
-    [fastModeEnabled, supportsFastSlashCommand, setFastModeFromSlashCommand],
+    [fastModeEnabled, supportsFastSlashCommand, setFastModeFromSlashCommand, t],
   );
 
   const createForkThreadFromSlashCommand = useCallback(
     async (inputOptions?: { target?: ForkSlashCommandTarget }) => {
+      if (!selectedModelSelection) {
+        toastManager.add({ type: "warning", title: t("composer.modelRequiredToSend") });
+        return true;
+      }
       const api = readNativeApi();
       if (!api || !activeProject || !activeThread || !isServerThread) {
         toastManager.add({
@@ -305,12 +320,17 @@ export function useComposerSlashCommands(input: {
       runtimeMode,
       selectedModelSelection,
       syncServerShellSnapshot,
+      t,
     ],
   );
 
   const sidechatCreationBySourceThreadIdRef = useRef(new Map<ThreadId, SidechatCreationFlight>());
   const createSidechatFromSlashCommand = useCallback(
     (inputOptions?: { initialPrompt?: string }): Promise<true> => {
+      if (!selectedModelSelection) {
+        toastManager.add({ type: "warning", title: t("composer.modelRequiredToSend") });
+        return Promise.resolve(true);
+      }
       const api = readNativeApi();
       if (
         !api ||
@@ -378,7 +398,14 @@ export function useComposerSlashCommands(input: {
         },
       });
     },
-    [activeProject, activeThread, isServerThread, selectedModelSelection, syncServerShellSnapshot],
+    [
+      activeProject,
+      activeThread,
+      isServerThread,
+      selectedModelSelection,
+      syncServerShellSnapshot,
+      t,
+    ],
   );
 
   // Publish a stable host capability. Composer drafts, attachments, and modes only
@@ -392,6 +419,10 @@ export function useComposerSlashCommands(input: {
 
   const runCodexReviewStart = useCallback(
     async (target: "changes" | "base-branch") => {
+      if (!selectedModelSelection) {
+        toastManager.add({ type: "warning", title: t("composer.modelRequiredToSend") });
+        return false;
+      }
       const api = readNativeApi();
       if (!api || !activeThread || !activeProject) {
         toastManager.add({
@@ -496,6 +527,7 @@ export function useComposerSlashCommands(input: {
       runtimeMode,
       selectedModelSelection,
       syncServerShellSnapshot,
+      t,
     ],
   );
 
@@ -536,8 +568,8 @@ export function useComposerSlashCommands(input: {
       editorActions.clearComposerSlashDraft();
       toastManager.add({
         type: "warning",
-        title: "Fast mode could not be checked",
-        description: "Claude command discovery is unavailable right now.",
+        title: t("composer.fastCheckUnavailable"),
+        description: t("composer.fastDiscoveryUnavailable"),
       });
       return false;
     }
@@ -562,8 +594,8 @@ export function useComposerSlashCommands(input: {
       editorActions.clearComposerSlashDraft();
       toastManager.add({
         type: "warning",
-        title: "Fast mode could not be checked",
-        description: "Claude command discovery failed. Please try again.",
+        title: t("composer.fastCheckUnavailable"),
+        description: t("composer.fastDiscoveryFailed"),
       });
       return false;
     }
@@ -571,11 +603,11 @@ export function useComposerSlashCommands(input: {
     editorActions.clearComposerSlashDraft();
     toastManager.add({
       type: "info",
-      title: "Fast mode is unavailable",
-      description: "Claude did not expose /fast for this account or environment.",
+      title: t("composer.fastUnavailable"),
+      description: t("composer.fastClaudeUnavailableHint"),
     });
     return false;
-  }, [editorActions, providerCommandDiscoveryCwd, threadId]);
+  }, [editorActions, providerCommandDiscoveryCwd, t, threadId]);
 
   const runExportSlashCommand = useCallback(() => {
     // Re-validate at call time (mirrors /compact): menu selections and stale
@@ -606,7 +638,7 @@ export function useComposerSlashCommands(input: {
   const openFeedbackDialog = useCallback(() => {
     openGlobalFeedbackDialog({
       provider: selectedProvider,
-      model: selectedModelSelection.model,
+      model: selectedModelSelection?.model ?? null,
       projectKind: activeProject?.kind ?? null,
       environmentMode,
       runtimeMode,
@@ -626,7 +658,7 @@ export function useComposerSlashCommands(input: {
     interactionMode,
     openGlobalFeedbackDialog,
     runtimeMode,
-    selectedModelSelection.model,
+    selectedModelSelection?.model,
     selectedProvider,
   ]);
 

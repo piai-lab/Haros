@@ -76,6 +76,8 @@ export const providerDiscoveryQueryKeys = {
     agentDir: string | null,
     cwd: string | null,
   ) => ["provider-discovery", "models", provider, binaryPath, apiEndpoint, agentDir, cwd] as const,
+  modelsForProvider: (provider: ProviderKind) =>
+    ["provider-discovery", "models", provider] as const,
   agentsForProvider: (provider: ProviderKind) =>
     ["provider-discovery", "agents", provider] as const,
   agents: (provider: ProviderKind, binaryPath: string | null, cwd: string | null) =>

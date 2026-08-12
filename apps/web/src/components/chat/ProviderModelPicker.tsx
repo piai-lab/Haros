@@ -9,7 +9,11 @@ import * as Schema from "effect/Schema";
 import { useDeferredValue, useEffect, useRef, useState } from "react";
 import { type ProviderPickerKind, PROVIDER_OPTIONS } from "../../session-logic";
 import { formatProviderModelOptionName } from "../../providerModelOptions";
-import { compareProvidersByOrder } from "../../providerOrdering";
+import { compareProvidersByOrder, filterProviderOptionsByVisibility } from "../../providerOrdering";
+import {
+  deriveProviderPickerAvailability,
+  type ProviderPickerAvailabilityState,
+} from "../../lib/providerAvailability";
 import {
   Menu,
   MenuItem,
@@ -45,6 +49,7 @@ import {
   type FavoriteModelProvider,
 } from "../../lib/modelFavorites";
 import { Skeleton } from "../ui/skeleton";
+import { useI18n } from "~/i18n";
 
 function isAvailableProviderOption(option: (typeof PROVIDER_OPTIONS)[number]): option is {
   value: ProviderKind;
@@ -54,57 +59,8 @@ function isAvailableProviderOption(option: (typeof PROVIDER_OPTIONS)[number]): o
   return option.available;
 }
 
-function resolveLiveProviderAvailability(provider: ServerProviderStatus | undefined): {
-  disabled: boolean;
-  label: string | null;
-} {
-  if (!provider) {
-    return {
-      disabled: true,
-      label: "Checking",
-    };
-  }
-
-  if (!provider.available) {
-    return {
-      disabled: true,
-      label: provider.authStatus === "unauthenticated" ? "Sign in" : "Unavailable",
-    };
-  }
-
-  if (provider.authStatus === "unauthenticated") {
-    return {
-      disabled: true,
-      label: "Sign in",
-    };
-  }
-
-  return {
-    disabled: false,
-    label: null,
-  };
-}
-
 export const AVAILABLE_PROVIDER_OPTIONS = PROVIDER_OPTIONS.filter(isAvailableProviderOption);
 const UNAVAILABLE_PROVIDER_OPTIONS = PROVIDER_OPTIONS.filter((option) => !option.available);
-
-// Removes user-hidden providers from a provider option list while always
-// preserving any providers the caller marks as protected (the active and
-// locked provider for the current thread). Without that carve-out, hiding the
-// provider you're already using would erase the entry that lets you switch
-// away from it.
-function filterProviderOptionsByVisibility<T extends { value: ProviderKind }>(
-  options: ReadonlyArray<T>,
-  hiddenProviders: ReadonlySet<ProviderKind>,
-  protectedProviders: ReadonlySet<ProviderKind>,
-): ReadonlyArray<T> {
-  if (hiddenProviders.size === 0) {
-    return options;
-  }
-  return options.filter(
-    (option) => protectedProviders.has(option.value) || !hiddenProviders.has(option.value),
-  );
-}
 
 function providerIconClassName(
   provider: ProviderKind | ProviderPickerKind,
@@ -170,7 +126,7 @@ function buildModelSearchText(option: ProviderModelOption): string {
 
 type ProviderModelMenuItemsProps = {
   provider: ProviderKind;
-  model: ModelSlug;
+  model: ModelSlug | null;
   lockedProvider: ProviderKind | null;
   providers?: ReadonlyArray<ServerProviderStatus>;
   modelOptionsByProvider: Record<ProviderKind, ReadonlyArray<ProviderModelOption>>;
@@ -192,6 +148,7 @@ type ProviderModelMenuItemsProps = {
 export const ProviderModelMenuItems = function ProviderModelMenuItems(
   props: ProviderModelMenuItemsProps,
 ) {
+  const { t } = useI18n();
   const { onAfterSelection } = props;
   const [modelSearchQuery, setModelSearchQuery] = useState("");
   const [kiloFavoriteModelSlugs, setKiloFavoriteModelSlugs] = useLocalStorage(
@@ -274,7 +231,7 @@ export const ProviderModelMenuItems = function ProviderModelMenuItems(
   const renderModelRadioGroup = (provider: ProviderKind) => {
     if (props.loadingModelProviders?.[provider]) {
       return (
-        <div className="space-y-2 px-2 py-2" aria-label="Loading models">
+        <div className="space-y-2 px-2 py-2" aria-label={t("composer.loadingModels")}>
           {Array.from({ length: 6 }, (_, index) => (
             <div key={index} className="flex items-center gap-2 rounded-md px-2 py-1.5">
               <Skeleton className="size-3.5 rounded-full" />
@@ -307,19 +264,20 @@ export const ProviderModelMenuItems = function ProviderModelMenuItems(
         ? groupProviderModelOptionsWithFavorites({
             options: filteredOptions,
             favoriteSlugs: favoriteModelSlugSet,
+            favoriteLabel: t("composer.favorites"),
           })
         : groupProviderModelOptions(filteredOptions);
 
     const content =
       groupedOptions.length > 0 ? (
         <MenuRadioGroup
-          value={activeProvider === provider ? props.model : ""}
+          value={activeProvider === provider ? (props.model ?? "") : ""}
           onValueChange={(value) => handleModelChange(provider, value)}
         >
           <ProviderModelOptionGroupList
             groupedOptions={groupedOptions}
             provider={provider}
-            activeModel={props.model}
+            activeModel={props.model ?? ""}
             isSearching={normalizedModelSearchQuery.length > 0}
             favoriteProvider={favoriteProvider}
             favoriteModelSlugSet={favoriteModelSlugSet}
@@ -330,8 +288,8 @@ export const ProviderModelMenuItems = function ProviderModelMenuItems(
       ) : (
         <div className="px-2 py-2 text-muted-foreground text-sm">
           {provider === "pi" && normalizedModelSearchQuery.length === 0
-            ? "No Pi models found"
-            : "No matches"}
+            ? t("composer.noPiModelsFound")
+            : t("composer.noMatches")}
         </div>
       );
 
@@ -357,7 +315,7 @@ export const ProviderModelMenuItems = function ProviderModelMenuItems(
 
     return (
       <PickerPanelShell
-        searchPlaceholder="Search models or providers"
+        searchPlaceholder={t("composer.searchModelsOrProviders")}
         query={modelSearchQuery}
         onQueryChange={setModelSearchQuery}
         stopSearchKeyPropagation
@@ -380,7 +338,17 @@ export const ProviderModelMenuItems = function ProviderModelMenuItems(
       {visibleAvailableProviderOptions.map((option) => {
         const OptionIcon = PROVIDER_ICON_COMPONENT_BY_PROVIDER[option.value];
         const liveProvider = props.providers?.find((entry) => entry.provider === option.value);
-        const availability = resolveLiveProviderAvailability(liveProvider);
+        const availability = deriveProviderPickerAvailability(liveProvider);
+        const availabilityLabel = (
+          {
+            checking: t("composer.engineChecking"),
+            sign_in: t("composer.engineSignIn"),
+            not_installed: t("composer.engineNotInstalled"),
+            unavailable: t("composer.engineUnavailable"),
+            limited: t("composer.engineLimited"),
+            ready: null,
+          } satisfies Record<ProviderPickerAvailabilityState, string | null>
+        )[availability.state];
         if (availability.disabled) {
           return (
             <MenuItem key={option.value} disabled>
@@ -393,7 +361,7 @@ export const ProviderModelMenuItems = function ProviderModelMenuItems(
               />
               <span>{option.label}</span>
               <span className="ms-auto text-[11px] text-muted-foreground/80">
-                {availability.label}
+                {availabilityLabel}
               </span>
             </MenuItem>
           );
@@ -413,7 +381,12 @@ export const ProviderModelMenuItems = function ProviderModelMenuItems(
                   providerIconClassName(option.value, "text-muted-foreground/85"),
                 )}
               />
-              {option.label}
+              <span className="min-w-0 truncate">{option.label}</span>
+              {availabilityLabel ? (
+                <span className="ms-auto text-[11px] text-muted-foreground/80">
+                  {availabilityLabel}
+                </span>
+              ) : null}
             </MenuSubTrigger>
             <ComposerPickerMenuSubPopup
               fixedWidth
@@ -434,7 +407,9 @@ export const ProviderModelMenuItems = function ProviderModelMenuItems(
               className="size-3 shrink-0 text-muted-foreground/85 opacity-80"
             />
             <span>{option.label}</span>
-            <span className="ms-auto text-[11px] text-muted-foreground/80">Coming soon</span>
+            <span className="ms-auto text-[11px] text-muted-foreground/80">
+              {t("composer.engineComingSoon")}
+            </span>
           </MenuItem>
         );
       })}
@@ -466,7 +441,7 @@ export function getProviderIconClassName(
 
 type ProviderModelPickerProps = {
   provider: ProviderKind;
-  model: ModelSlug;
+  model: ModelSlug | null;
   lockedProvider: ProviderKind | null;
   providers?: ReadonlyArray<ServerProviderStatus>;
   modelOptionsByProvider: Record<ProviderKind, ReadonlyArray<ProviderModelOption>>;
@@ -487,17 +462,20 @@ type ProviderModelPickerProps = {
 };
 
 export const ProviderModelPicker = function ProviderModelPicker(props: ProviderModelPickerProps) {
+  const { t } = useI18n();
   const { onOpenChange, onSelectionCommitted, open } = props;
   const [uncontrolledMenuOpen, setUncontrolledMenuOpen] = useState(false);
   const selectionCommitTimerRef = useRef<number | null>(null);
   const isMenuOpen = open ?? uncontrolledMenuOpen;
   const activeProvider = props.lockedProvider ?? props.provider;
-  const selectedModelLabel = resolveProviderModelLabel({
-    provider: props.provider,
-    lockedProvider: props.lockedProvider,
-    model: props.model,
-    modelOptionsByProvider: props.modelOptionsByProvider,
-  });
+  const selectedModelLabel = props.model
+    ? resolveProviderModelLabel({
+        provider: props.provider,
+        lockedProvider: props.lockedProvider,
+        model: props.model,
+        modelOptionsByProvider: props.modelOptionsByProvider,
+      })
+    : t("composer.noAvailableModel");
   const ProviderIcon = PROVIDER_ICON_COMPONENT_BY_PROVIDER[activeProvider];
 
   const setMenuOpen = (nextOpen: boolean) => {
@@ -570,7 +548,7 @@ export const ProviderModelPicker = function ProviderModelPicker(props: ProviderM
           {!isMenuOpen ? (
             <TooltipPopup side="top" sideOffset={6} variant="picker">
               <span className="inline-flex items-center gap-2 px-1 py-0.5">
-                <span>Change model</span>
+                <span>{t("composer.changeModel")}</span>
                 <ShortcutKbd
                   shortcutLabel={props.shortcutLabel}
                   className="h-4 min-w-4 px-1 text-[length:var(--app-font-size-ui-2xs,9px)] text-muted-foreground"

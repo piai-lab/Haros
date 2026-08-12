@@ -32,7 +32,7 @@ import { getRuntimeAwareModelCapabilities } from "./runtimeModelCapabilities";
 
 export type ComposerProviderStateInput = {
   provider: ProviderKind;
-  model: ModelSlug;
+  model: ModelSlug | null;
   runtimeModel?: ProviderModelDescriptor | undefined;
   prompt: string;
   modelOptions: ProviderModelOptions | null | undefined;
@@ -57,6 +57,7 @@ type ProviderTraitRenderInput = {
   prompt: string;
   includeFastMode?: boolean;
   onPromptChange: (prompt: string) => void;
+  onSelectionComplete?: () => void;
 };
 
 type ProviderTraitPickerRenderInput = ProviderTraitRenderInput & {
@@ -87,6 +88,7 @@ function renderTraitsMenuContentForProvider(
       prompt={input.prompt}
       {...(input.includeFastMode === undefined ? {} : { includeFastMode: input.includeFastMode })}
       onPromptChange={input.onPromptChange}
+      {...(input.onSelectionComplete ? { onSelectionComplete: input.onSelectionComplete } : {})}
     />
   );
 }
@@ -233,8 +235,7 @@ function getProviderStateFromCapabilities(
     }
     case "omnimind":
     case "pi": {
-      const providerOptions =
-        provider === "omnimind" ? modelOptions?.omnimind : modelOptions?.pi;
+      const providerOptions = provider === "omnimind" ? modelOptions?.omnimind : modelOptions?.pi;
       rawEffort = trimOrNull(providerOptions?.thinkingLevel);
       normalizedOptions = normalizePiModelOptions(providerOptions);
       break;
@@ -343,6 +344,7 @@ export function renderProviderTraitsMenuContent(input: {
   prompt: string;
   includeFastMode?: boolean;
   onPromptChange: (prompt: string) => void;
+  onSelectionComplete?: () => void;
 }): ReactNode {
   const selection = getComposerTraitSelection(
     input.provider,
