@@ -292,7 +292,7 @@ E2 + E3 + E4 + E5/E6 required scope
 
 ### Outcome
 
-Settings 中的 `Model services / 模型服务` 显示 OmniMind 当前真实模型服务、auth 状态以及 known/available 模型数量；打开页面不读取 stock `.pi`，不执行 credential command，不联网刷新。
+Settings 中的 `Model services / 模型服务` 显示 OmniMind 当前真实模型服务、auth 状态以及 known/available 模型数量；打开页面除物理隔离所需的 stock `.pi` root metadata 解析外，不枚举、打开或读取 stock `.pi` 内的任何 state，不执行 credential command，不联网刷新。
 
 ### 设计映射
 
@@ -369,7 +369,8 @@ safe stale/error summary
 
 - list/get contract schema tests；
 - `.omnimind` physical agentDir、directory/leaf symlink fail-closed tests；
-- 隔离 fake `.pi` 的 physical zero-read/zero-write trace falsifier，而不是 lexical mock 断言；
+- 隔离 fake `.pi` root 的 symlink/junction alias falsifier：candidate 等于 alias target 或其子树时 typed fail；
+- 隔离 fake `.pi` 的 credential/config/catalog/package/Session zero-open、zero-content-read、zero-write trace falsifier；只允许精确 root containment metadata probe，而不是 lexical mock 断言；
 - oversized `models.json` 与 abort-during-read falsifier；
 - secret redaction tests；
 - `ModelsSettingsPanel` loading/empty/connected/stale/error tests；

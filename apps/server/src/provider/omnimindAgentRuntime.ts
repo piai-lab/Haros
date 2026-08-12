@@ -16,19 +16,58 @@ export const loadOmniMindCodingAgentModule: () => Promise<OmniMindCodingAgentMod
   () => import("@omnimind/pi-coding-agent") as unknown as Promise<OmniMindCodingAgentModule>,
 );
 
+function isMissingPathError(error: unknown): boolean {
+  return typeof error === "object" && error !== null && "code" in error && error.code === "ENOENT";
+}
+
+function canonicalPathForComparison(value: string): string {
+  return process.platform === "win32" ? value.toLocaleLowerCase("en-US") : value;
+}
+
+function isWithinPhysicalRoot(candidate: string, root: string): boolean {
+  const comparableCandidate = canonicalPathForComparison(candidate);
+  const comparableRoot = canonicalPathForComparison(root);
+  const relative = path.relative(comparableRoot, comparableCandidate);
+  return (
+    relative === "" ||
+    (relative !== ".." && !relative.startsWith(`..${path.sep}`) && !path.isAbsolute(relative))
+  );
+}
+
+function physicalRootsOverlap(left: string, right: string): boolean {
+  return isWithinPhysicalRoot(left, right) || isWithinPhysicalRoot(right, left);
+}
+
+function resolveExistingPhysicalPath(value: string): string | null {
+  try {
+    return realpathSync.native(value);
+  } catch (error) {
+    if (isMissingPathError(error)) {
+      return null;
+    }
+    throw new Error("OmniMind Agent state isolation could not be verified");
+  }
+}
+
 export function resolveOmniMindAgentDir(serverBaseDir: string): string {
   const resolvedBaseDir = path.resolve(serverBaseDir);
   const canonicalHomeDir = realpathSync.native(os.homedir());
-  const stockPiDir = path.join(canonicalHomeDir, ".pi");
-  if (resolvedBaseDir === stockPiDir || resolvedBaseDir.startsWith(`${stockPiDir}${path.sep}`)) {
+  const lexicalStockPiDir = path.join(canonicalHomeDir, ".pi");
+  if (isWithinPhysicalRoot(resolvedBaseDir, lexicalStockPiDir)) {
     throw new Error("OmniMind Agent state must be physically separate from stock Pi state");
   }
   const canonicalBaseDir = realpathSync.native(resolvedBaseDir);
-  if (canonicalBaseDir === stockPiDir || canonicalBaseDir.startsWith(`${stockPiDir}${path.sep}`)) {
+  const physicalStockPiDir = resolveExistingPhysicalPath(lexicalStockPiDir);
+  const agentDir = path.join(canonicalBaseDir, "agent");
+  if (
+    isWithinPhysicalRoot(canonicalBaseDir, lexicalStockPiDir) ||
+    (physicalStockPiDir !== null &&
+      (isWithinPhysicalRoot(canonicalBaseDir, physicalStockPiDir) ||
+        physicalRootsOverlap(agentDir, physicalStockPiDir)))
+  ) {
     throw new Error("OmniMind Agent state must be physically separate from stock Pi state");
   }
 
-  const agentDir = path.join(canonicalBaseDir, "agent");
   try {
     const metadata = lstatSync(agentDir);
     if (metadata.isSymbolicLink() || !metadata.isDirectory()) {
@@ -52,23 +91,13 @@ export function resolveOmniMindAgentDir(serverBaseDir: string): string {
           throw new Error("OmniMind Agent runtime file escapes its private directory");
         }
       } catch (error) {
-        if (
-          typeof error !== "object" ||
-          error === null ||
-          !("code" in error) ||
-          error.code !== "ENOENT"
-        ) {
+        if (!isMissingPathError(error)) {
           throw error;
         }
       }
     }
   } catch (error) {
-    if (
-      typeof error !== "object" ||
-      error === null ||
-      !("code" in error) ||
-      error.code !== "ENOENT"
-    ) {
+    if (!isMissingPathError(error)) {
       throw error;
     }
   }

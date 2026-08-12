@@ -1,5 +1,15 @@
 import { createHash } from "node:crypto";
-import { mkdir, mkdtemp, readFile, readdir, realpath, rm, stat, writeFile } from "node:fs/promises";
+import {
+  mkdir,
+  mkdtemp,
+  readFile,
+  readdir,
+  realpath,
+  rm,
+  stat,
+  symlink,
+  writeFile,
+} from "node:fs/promises";
 import os from "node:os";
 import path from "node:path";
 
@@ -110,6 +120,46 @@ function makeTestLayer(input: {
 }
 
 describe("OmniMindModelServicesLive", () => {
+  it.each(["product root", "product agent directory"] as const)(
+    "fails before reading when isolated stock Pi physically aliases the %s",
+    async (aliasTarget) => {
+      const root = await makeRoot();
+      const providerHome = await isolateProviderEnvironment(root);
+      const agentDir = path.join(root, "agent");
+      await mkdir(agentDir, { recursive: true });
+      await writeFile(
+        path.join(agentDir, "auth.json"),
+        JSON.stringify({ deepseek: { type: "api_key", key: "stock-pi-alias-secret" } }),
+        { mode: 0o600 },
+      );
+      await symlink(
+        aliasTarget === "product root" ? root : agentDir,
+        path.join(providerHome, ".pi"),
+        process.platform === "win32" ? "junction" : "dir",
+      );
+      const before = await snapshotDirectory(agentDir);
+      const readTextFile = vi.fn(async () => {
+        throw new Error("Aliased private state must not be opened");
+      });
+
+      const result = await loadService({ root, readTextFile });
+
+      expect(result.list).toEqual({
+        state: "error",
+        services: [],
+        errorCode: "projection_unavailable",
+      });
+      expect(result.deepseek).toEqual({
+        state: "error",
+        service: null,
+        errorCode: "projection_unavailable",
+      });
+      expect(readTextFile).not.toHaveBeenCalled();
+      expect(await snapshotDirectory(agentDir)).toEqual(before);
+      expect(JSON.stringify(result)).not.toContain("stock-pi-alias-secret");
+    },
+  );
+
   it("projects exact .omnimind built-in service facts without commands, network, or mutation", async () => {
     const root = await makeRoot();
     const providerHome = await isolateProviderEnvironment(root);

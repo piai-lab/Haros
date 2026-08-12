@@ -1035,7 +1035,7 @@ catalogError/stale summary（若 Pi 有真实证据）
 
 当前 Pi adapter 会按 Session/operation 创建隔离的 ModelRuntime，防止 project extension provider 注册泄漏到其他 Thread。Settings 不能为了方便把一个全局可变 ModelRuntime 注入所有 Session。
 
-被动 Settings operation 还必须以同一个 physically-contained、no-follow、byte-bounded、caller-cancellable reader 完成所有 config/cache 读取，且不加载 extension。Pi `v0.84.1` 的公开 `ModelRuntime`/`ModelConfig` 只接收 `modelsPath`，随后直接重新打开文件，没有 reader/content/max-bytes/signal 注入点；Host 预读无法消除 TOCTOU，临时副本可能复制 literal apiKey/header，自建 parser 又会形成第二 schema authority。因此完整 `models_json` 只读投影在采用独立上游 loader API 前是明确 stop：`modelsPath: null` 的 built-in characterization 不是本 Slice 的 Exit。
+被动 Settings operation 还必须以同一个 physically-contained、no-follow、byte-bounded、caller-cancellable reader 完成所有 config/cache 读取，且不加载 extension。物理 containment 同时解析存在的 stock `.pi` root metadata，拒绝 `.pi` symlink/junction target 与 candidate root 或其子树重合；该检查不得枚举、打开或读取 `.pi` 内的任何 state。Pi `v0.84.1` 的公开 `ModelRuntime`/`ModelConfig` 只接收 `modelsPath`，随后直接重新打开文件，没有 reader/content/max-bytes/signal 注入点；Host 预读无法消除 TOCTOU，临时副本可能复制 literal apiKey/header，自建 parser 又会形成第二 schema authority。因此完整 `models_json` 只读投影在采用独立上游 loader API 前是明确 stop：`modelsPath: null` 的 built-in characterization 不是本 Slice 的 Exit。
 
 建议：
 
@@ -1625,7 +1625,7 @@ OmniMind 要复制的是 **任务流质量**，不是 Proma 的维护负担。
 
 | Case                      | 预期                                                                    |
 | ------------------------- | ----------------------------------------------------------------------- |
-| 打开 Model services       | 物理 no-follow 读取 `.omnimind`；不触碰 `.pi`，symlink 逃逸 typed fail  |
+| 打开 Model services       | 物理 no-follow 读取 `.omnimind`；`.pi` 只做 root metadata 非别名证明，内部 state zero-open/read/write；symlink/junction 逃逸 typed fail |
 | 未配置任何 credential     | 显示 setup-required，不把 provider 误报为不存在                         |
 | 同供应商两个实例          | 行、credential、catalog、model slug 可独立区分                          |
 | API Key 保存              | 走 Pi api-key login 并在 packaged restart 后仍存在；renderer 不回读明文 |
