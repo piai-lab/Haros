@@ -1486,11 +1486,8 @@ export const decideOrchestrationCommand = Effect.fn("decideOrchestrationCommand"
         });
       }
       const sourceProposedPlan = command.sourceProposedPlan;
-      yield* validateAutoRuntimeMode(
-        command,
-        command.modelSelection ?? targetThread.modelSelection,
-        command.runtimeMode,
-      );
+      const admittedModelSelection = command.modelSelection ?? targetThread.modelSelection;
+      yield* validateAutoRuntimeMode(command, admittedModelSelection, command.runtimeMode);
       const sourceThread = sourceProposedPlan
         ? yield* requireThread({
             readModel,
@@ -1548,7 +1545,7 @@ export const decideOrchestrationCommand = Effect.fn("decideOrchestrationCommand"
       const turnRequestPayload = {
         threadId: command.threadId,
         messageId: command.message.messageId,
-        ...(command.modelSelection !== undefined ? { modelSelection: command.modelSelection } : {}),
+        modelSelection: admittedModelSelection,
         ...(command.providerOptions !== undefined
           ? { providerOptions: command.providerOptions }
           : {}),
@@ -1621,11 +1618,13 @@ export const decideOrchestrationCommand = Effect.fn("decideOrchestrationCommand"
           detail: checkpointRevertInProgressDetail(command.threadId),
         });
       }
-      yield* validateAutoRuntimeMode(
-        command,
-        command.modelSelection ?? thread.modelSelection,
-        command.runtimeMode,
-      );
+      if (command.modelSelection === undefined) {
+        return yield* new OrchestrationCommandInvariantError({
+          commandType: command.type,
+          detail: "Queued turn promotion is missing its admission-time model selection.",
+        });
+      }
+      yield* validateAutoRuntimeMode(command, command.modelSelection, command.runtimeMode);
       return {
         ...withEventBase({
           aggregateKind: "thread",
@@ -1637,9 +1636,7 @@ export const decideOrchestrationCommand = Effect.fn("decideOrchestrationCommand"
         payload: {
           threadId: command.threadId,
           messageId: command.messageId,
-          ...(command.modelSelection !== undefined
-            ? { modelSelection: command.modelSelection }
-            : {}),
+          modelSelection: command.modelSelection,
           ...(command.providerOptions !== undefined
             ? { providerOptions: command.providerOptions }
             : {}),
@@ -1896,11 +1893,8 @@ export const decideOrchestrationCommand = Effect.fn("decideOrchestrationCommand"
           detail: checkpointRevertInProgressDetail(command.threadId),
         });
       }
-      yield* validateAutoRuntimeMode(
-        command,
-        command.modelSelection ?? thread.modelSelection,
-        command.runtimeMode,
-      );
+      const admittedModelSelection = command.modelSelection ?? thread.modelSelection;
+      yield* validateAutoRuntimeMode(command, admittedModelSelection, command.runtimeMode);
       const editTarget = resolveTailUserMessageEditTarget({
         messages: thread.messages,
         messageId: command.messageId,
@@ -1927,9 +1921,7 @@ export const decideOrchestrationCommand = Effect.fn("decideOrchestrationCommand"
           text: command.text,
           rollbackTurnCount: editTarget.rollbackTurnCount,
           removedTurnIds: editTarget.removedTurnIds.map((turnId) => TurnId.makeUnsafe(turnId)),
-          ...(command.modelSelection !== undefined
-            ? { modelSelection: command.modelSelection }
-            : {}),
+          modelSelection: admittedModelSelection,
           ...(command.providerOptions !== undefined
             ? { providerOptions: command.providerOptions }
             : {}),
