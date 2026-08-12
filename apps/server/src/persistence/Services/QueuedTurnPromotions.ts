@@ -40,6 +40,7 @@ export interface QueuedTurnPromotionRepositoryShape {
     readonly claimOwner: string;
     readonly updatedAt: string;
   }) => Effect.Effect<boolean, PersistenceSqlError>;
+  /** Cancel a queued or currently claimed message without allowing claim release to resurrect it. */
   readonly cancelMessage: (input: {
     readonly threadId: string;
     readonly messageId: string;

@@ -32,6 +32,7 @@ import { Effect } from "effect";
 
 import { OrchestrationCommandInvariantError } from "./Errors.ts";
 import { buildForkThreadTitle } from "./forkThreadTitle.ts";
+import { turnStartBindingMatchesCommitted } from "./turnStartSession.ts";
 import { hasNativeHandoffMessages } from "./handoff.ts";
 import { resolveStableMessageTurnId } from "./messageTurnId.ts";
 import {
@@ -1562,6 +1563,14 @@ export const decideOrchestrationCommand = Effect.fn("decideOrchestrationCommand"
         targetThread.session?.providerName ?? targetThread.modelSelection.provider;
       const isThreadRunning =
         targetThread.session?.status === "running" && targetThread.session.activeTurnId !== null;
+      const admittedBindingMatchesCurrent = turnStartBindingMatchesCommitted({
+        currentModelSelection: targetThread.modelSelection,
+        currentRuntimeMode: targetThread.session?.runtimeMode ?? targetThread.runtimeMode,
+        currentInteractionMode: targetThread.interactionMode,
+        requestedModelSelection: admittedModelSelection,
+        requestedRuntimeMode: command.runtimeMode,
+        requestedInteractionMode: command.interactionMode,
+      });
       // Subagent threads never queue: their messages steer the running child task
       // through the parent session, so deferring until the turn settles would
       // deliver the message only after the subagent already finished.
@@ -1570,7 +1579,9 @@ export const decideOrchestrationCommand = Effect.fn("decideOrchestrationCommand"
       const shouldQueue =
         targetThread.parentThreadId === null &&
         isThreadRunning &&
-        (dispatchMode === "queue" || !providerSupportsNativeTurnSteering(activeProvider));
+        (dispatchMode === "queue" ||
+          !admittedBindingMatchesCurrent ||
+          !providerSupportsNativeTurnSteering(activeProvider));
       const queuedEvent: Omit<OrchestrationEvent, "sequence"> = {
         ...withEventBase({
           aggregateKind: "thread",

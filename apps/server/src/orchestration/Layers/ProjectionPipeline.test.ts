@@ -412,7 +412,7 @@ it.layer(BaseTestLayer)("OrchestrationProjectionPipeline", (it) => {
           messageId: MessageId.makeUnsafe("message-turn-settings-cross-provider"),
           modelSelection: { provider: "codex", model: "gpt-5-codex" },
           runtimeMode: "full-access",
-          interactionMode: "default",
+          interactionMode: "plan",
           createdAt: crossProviderRequestedAt,
         },
       });
@@ -421,10 +421,14 @@ it.layer(BaseTestLayer)("OrchestrationProjectionPipeline", (it) => {
       const providerRows = yield* sql<{
         readonly modelSelectionJson: string;
         readonly providerName: string | null;
+        readonly runtimeMode: string;
+        readonly interactionMode: string;
       }>`
         SELECT
           threads.model_selection_json AS "modelSelectionJson",
-          sessions.provider_name AS "providerName"
+          sessions.provider_name AS "providerName",
+          threads.runtime_mode AS "runtimeMode",
+          threads.interaction_mode AS "interactionMode"
         FROM projection_threads AS threads
         LEFT JOIN projection_thread_sessions AS sessions
           ON sessions.thread_id = threads.thread_id
@@ -435,6 +439,82 @@ it.layer(BaseTestLayer)("OrchestrationProjectionPipeline", (it) => {
         model: "openai/gpt-5.5",
       });
       assert.equal(providerRows[0]!.providerName, "pi");
+      assert.equal(providerRows[0]!.runtimeMode, "approval-required");
+      assert.equal(providerRows[0]!.interactionMode, "default");
+
+      const modelCommitAt = "2026-02-26T13:00:16.000Z";
+      const modelCommit = yield* eventStore.append({
+        type: "thread.meta-updated",
+        eventId: EventId.makeUnsafe("evt-turn-settings-model-commit"),
+        aggregateKind: "thread",
+        aggregateId: ThreadId.makeUnsafe("thread-turn-settings"),
+        occurredAt: modelCommitAt,
+        commandId: CommandId.makeUnsafe("cmd-turn-settings-model-commit"),
+        causationEventId: null,
+        correlationId: CommandId.makeUnsafe("cmd-turn-settings-model-commit"),
+        metadata: {},
+        payload: {
+          threadId: ThreadId.makeUnsafe("thread-turn-settings"),
+          modelSelection: { provider: "codex", model: "gpt-5-codex" },
+          updatedAt: modelCommitAt,
+        },
+      });
+      yield* projectionPipeline.projectEvent(modelCommit);
+      const runtimeCommitAt = "2026-02-26T13:00:17.000Z";
+      const runtimeCommit = yield* eventStore.append({
+        type: "thread.runtime-mode-set",
+        eventId: EventId.makeUnsafe("evt-turn-settings-runtime-commit"),
+        aggregateKind: "thread",
+        aggregateId: ThreadId.makeUnsafe("thread-turn-settings"),
+        occurredAt: runtimeCommitAt,
+        commandId: CommandId.makeUnsafe("cmd-turn-settings-runtime-commit"),
+        causationEventId: null,
+        correlationId: CommandId.makeUnsafe("cmd-turn-settings-runtime-commit"),
+        metadata: {},
+        payload: {
+          threadId: ThreadId.makeUnsafe("thread-turn-settings"),
+          runtimeMode: "full-access",
+          updatedAt: runtimeCommitAt,
+        },
+      });
+      yield* projectionPipeline.projectEvent(runtimeCommit);
+      const interactionCommitAt = "2026-02-26T13:00:18.000Z";
+      const interactionCommit = yield* eventStore.append({
+        type: "thread.interaction-mode-set",
+        eventId: EventId.makeUnsafe("evt-turn-settings-interaction-commit"),
+        aggregateKind: "thread",
+        aggregateId: ThreadId.makeUnsafe("thread-turn-settings"),
+        occurredAt: interactionCommitAt,
+        commandId: CommandId.makeUnsafe("cmd-turn-settings-interaction-commit"),
+        causationEventId: null,
+        correlationId: CommandId.makeUnsafe("cmd-turn-settings-interaction-commit"),
+        metadata: {},
+        payload: {
+          threadId: ThreadId.makeUnsafe("thread-turn-settings"),
+          interactionMode: "plan",
+          updatedAt: interactionCommitAt,
+        },
+      });
+      yield* projectionPipeline.projectEvent(interactionCommit);
+
+      const committedRows = yield* sql<{
+        readonly modelSelectionJson: string;
+        readonly runtimeMode: string;
+        readonly interactionMode: string;
+      }>`
+        SELECT
+          model_selection_json AS "modelSelectionJson",
+          runtime_mode AS "runtimeMode",
+          interaction_mode AS "interactionMode"
+        FROM projection_threads
+        WHERE thread_id = 'thread-turn-settings'
+      `;
+      assert.deepEqual(JSON.parse(committedRows[0]!.modelSelectionJson), {
+        provider: "codex",
+        model: "gpt-5-codex",
+      });
+      assert.equal(committedRows[0]!.runtimeMode, "full-access");
+      assert.equal(committedRows[0]!.interactionMode, "plan");
 
       // Automation-dispatched turns run with the automation's modes but must not
       // repaint the thread's persisted runtime/interaction modes.
@@ -471,7 +551,7 @@ it.layer(BaseTestLayer)("OrchestrationProjectionPipeline", (it) => {
         WHERE thread_id = 'thread-turn-settings'
       `;
       assert.equal(automationRows[0]!.runtimeMode, "full-access");
-      assert.equal(automationRows[0]!.interactionMode, "default");
+      assert.equal(automationRows[0]!.interactionMode, "plan");
     }),
   );
 
