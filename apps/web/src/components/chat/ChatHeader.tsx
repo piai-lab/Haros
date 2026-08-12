@@ -719,7 +719,7 @@ export function ChatHeader({
                   ) : null}
                   <h2
                     data-slot="chat-thread-title"
-                    className="max-w-[clamp(12rem,42vw,36rem)] truncate font-system-ui text-[length:var(--app-font-size-ui,14px)] font-medium text-foreground"
+                    className="max-w-[clamp(12rem,42vw,36rem)] cursor-text truncate font-system-ui text-[length:var(--app-font-size-ui,14px)] font-medium text-foreground [-webkit-app-region:no-drag]"
                     title={activeThreadTitle}
                     onDoubleClick={() => onRenameThread()}
                   >
