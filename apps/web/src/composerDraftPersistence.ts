@@ -290,6 +290,7 @@ type LegacyPersistedComposerDraftStoreState = PersistedComposerDraftStoreState &
 
 const PersistedDraftThreadState = Schema.Struct({
   projectId: ProjectId,
+  title: Schema.optionalKey(Schema.String),
   createdAt: Schema.String,
   runtimeMode: RuntimeMode,
   interactionMode: ProviderInteractionMode,
@@ -708,6 +709,7 @@ function normalizePersistedDraftThreads(
       }
       const candidateDraftThread = rawDraftThread as Record<string, unknown>;
       const projectId = candidateDraftThread.projectId;
+      const title = candidateDraftThread.title;
       const createdAt = candidateDraftThread.createdAt;
       const branch = candidateDraftThread.branch;
       const worktreePath = candidateDraftThread.worktreePath;
@@ -737,6 +739,7 @@ function normalizePersistedDraftThreads(
       }
       draftThreadsByThreadId[threadId as ThreadId] = {
         projectId: projectId as ProjectId,
+        ...(typeof title === "string" && title.trim().length > 0 ? { title: title.trim() } : {}),
         createdAt:
           typeof createdAt === "string" && createdAt.length > 0
             ? createdAt

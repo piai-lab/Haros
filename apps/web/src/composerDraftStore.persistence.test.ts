@@ -102,6 +102,7 @@ describe("composerDraftStore persisted-state hydration", () => {
       draftThreadsByThreadId: {
         [threadId]: {
           projectId,
+          title: "Local Pi terminal",
           createdAt: "2026-07-25T00:00:00.000Z",
           runtimeMode: "auto",
           interactionMode: "default",
@@ -117,6 +118,7 @@ describe("composerDraftStore persisted-state hydration", () => {
 
     expect(hydrated.draftsByThreadId[threadId]?.runtimeMode).toBe("auto");
     expect(hydrated.draftThreadsByThreadId[threadId]?.runtimeMode).toBe("auto");
+    expect(hydrated.draftThreadsByThreadId[threadId]?.title).toBe("Local Pi terminal");
   });
 });
 

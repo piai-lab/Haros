@@ -11149,6 +11149,7 @@ export default function ChatView({
     // selectable binding. The synthetic Thread used for presentation is not a
     // durable model authority.
     if (isLocalDraftThread && localDraftPromotion === null) {
+      setDraftThreadContext(activeThread.id, { title: newTitle });
       return;
     }
     const outcome = await dispatchThreadRename({

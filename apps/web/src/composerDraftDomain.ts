@@ -188,6 +188,7 @@ export interface ComposerThreadDraftState {
 
 export interface DraftThreadState {
   projectId: ProjectId;
+  title?: string;
   createdAt: string;
   runtimeMode: RuntimeMode;
   interactionMode: ProviderInteractionMode;
@@ -202,6 +203,7 @@ export interface DraftThreadState {
 }
 
 interface DraftThreadMutationOptions {
+  title?: string;
   branch?: string | null;
   worktreePath?: string | null;
   workingDirectory?: string | null;
@@ -434,9 +436,14 @@ export function buildDraftThreadState(input: {
         ? false
         : existingThread?.isTemporary === true;
   const nextPromotedTo = existingThread?.promotedTo;
+  const nextTitle =
+    options?.title === undefined
+      ? existingThread?.title
+      : options.title.trim() || existingThread?.title;
 
   return {
     projectId: input.projectId,
+    ...(nextTitle ? { title: nextTitle } : {}),
     createdAt: resolveDraftThreadCreatedAt({
       createdAt: options?.createdAt,
       existingThread,
@@ -474,6 +481,7 @@ export function draftThreadStatesEqual(
 
   return (
     left.projectId === right.projectId &&
+    (left.title ?? null) === (right.title ?? null) &&
     left.createdAt === right.createdAt &&
     left.runtimeMode === right.runtimeMode &&
     left.interactionMode === right.interactionMode &&

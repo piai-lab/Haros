@@ -431,6 +431,17 @@ describe("composerDraftStore project draft thread mapping", () => {
     });
   });
 
+  it("keeps a local draft title in the existing draft-thread owner", () => {
+    const store = useComposerDraftStore.getState();
+    store.setProjectDraftThreadId(projectId, threadId, { entryPoint: "terminal" });
+
+    store.setDraftThreadContext(threadId, { title: "Local Pi terminal" });
+
+    expect(useComposerDraftStore.getState().getDraftThread(threadId)?.title).toBe(
+      "Local Pi terminal",
+    );
+  });
+
   it("moves an empty draft to another project while preserving composer content", () => {
     const store = useComposerDraftStore.getState();
     store.setProjectDraftThreadId(projectId, threadId, {

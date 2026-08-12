@@ -7842,10 +7842,7 @@ describe("ChatView timeline estimator parity (full app)", () => {
   it.each(["omnimind", "pi"] as const)(
     "keeps a no-model Pi terminal rename local when the app default is %s",
     async (defaultProvider) => {
-      localStorage.setItem(
-        "omnimind:app-settings:v1",
-        JSON.stringify({ defaultProvider }),
-      );
+      localStorage.setItem("omnimind:app-settings:v1", JSON.stringify({ defaultProvider }));
       const draftThreadId = ThreadId.makeUnsafe(`thread-terminal-pi-rename-${defaultProvider}`);
       seedLocalDraftThread({
         threadId: draftThreadId,
@@ -7885,14 +7882,23 @@ describe("ChatView timeline estimator parity (full app)", () => {
         const renameInput = page.getByRole("textbox");
         await renameInput.fill("Local Pi terminal");
         await userEvent.keyboard("{Enter}");
-        await waitForLayout();
+        await vi.waitFor(() => {
+          expect(
+            document.querySelector<HTMLElement>('[data-slot="chat-thread-title"]')?.textContent,
+          ).toBe("Local Pi terminal");
+        });
 
         expect(hasDispatchedCommandType("thread.create")).toBe(false);
         expect(hasDispatchedCommandType("thread.meta.update")).toBe(false);
-        expect(useComposerDraftStore.getState().draftThreadsByThreadId[draftThreadId]).toBeDefined();
+        expect(
+          useComposerDraftStore.getState().draftThreadsByThreadId[draftThreadId],
+        ).toBeDefined();
         expect(
           useComposerDraftStore.getState().draftsByThreadId[draftThreadId]?.activeProvider,
         ).toBe("pi");
+        expect(useComposerDraftStore.getState().draftThreadsByThreadId[draftThreadId]?.title).toBe(
+          "Local Pi terminal",
+        );
         expect(mounted.router.state.location.pathname).toBe(`/${draftThreadId}`);
       } finally {
         await mounted.cleanup();
@@ -7937,6 +7943,7 @@ describe("ChatView timeline estimator parity (full app)", () => {
       draftThreadsByThreadId: {
         [draftThreadId]: {
           projectId: PROJECT_ID,
+          title: "Local terminal title",
           createdAt: NOW_ISO,
           runtimeMode: "approval-required",
           interactionMode: "default",
@@ -8011,6 +8018,7 @@ describe("ChatView timeline estimator parity (full app)", () => {
 
           expect(createRequest).toBeTruthy();
           expect(createRequest?.command).toMatchObject({
+            title: "Local terminal title",
             branch: "feature/terminal-title",
             worktreePath: "/repo/project/.worktrees/terminal-title",
             runtimeMode: "approval-required",

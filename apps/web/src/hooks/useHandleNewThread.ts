@@ -174,7 +174,7 @@ export function useHandleNewThread() {
           commandId: newCommandId(),
           threadId,
           projectId,
-          title: "New terminal",
+          title: creationState.title,
           modelSelection: creationState.modelSelection,
           runtimeMode: creationState.runtimeMode,
           interactionMode: creationState.interactionMode,

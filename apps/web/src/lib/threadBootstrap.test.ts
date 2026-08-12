@@ -296,6 +296,7 @@ describe("threadBootstrap", () => {
         projectId: PROJECT_ID,
       }),
     ).toEqual({
+      title: "New terminal",
       modelSelection: modelSelection("claudeAgent", "claude-opus-4-6", {
         effort: "max",
       }),
@@ -368,6 +369,20 @@ describe("threadBootstrap", () => {
         projectId: PROJECT_ID,
       }).interactionMode,
     ).toBe("plan");
+  });
+
+  it("preserves a local terminal title when resolving its durable creation payload", () => {
+    expect(
+      resolveTerminalThreadCreationState({
+        activeDraftThread: null,
+        activeThread: null,
+        draftComposerState: makeComposerDraftState(),
+        draftThread: makeDraftThread({ title: "Local terminal title" }),
+        options: undefined,
+        projectDefaultModelSelection: null,
+        projectId: PROJECT_ID,
+      }).title,
+    ).toBe("Local terminal title");
   });
 
   it("clears inherited worktree state when an explicit local env override is requested", () => {
