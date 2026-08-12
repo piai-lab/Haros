@@ -764,7 +764,7 @@ export function resolvePreferredComposerModelSelection(input: {
   threadModelSelection: ModelSelection | null | undefined;
   projectModelSelection: ModelSelection | null | undefined;
   defaultProvider?: ProviderKind | null | undefined;
-}): ModelSelection {
+}): ModelSelection | null {
   const draftProviderWithSelection =
     COMPOSER_PROVIDER_KINDS.find(
       (provider) => input.draft?.modelSelectionByProvider?.[provider] !== undefined,
@@ -784,9 +784,12 @@ export function resolvePreferredComposerModelSelection(input: {
       : null) ??
     (input.projectModelSelection?.provider === preferredProvider
       ? input.projectModelSelection
-      : null) ?? {
-      provider: preferredProvider === "pi" ? "codex" : preferredProvider,
-      model: getDefaultModel(preferredProvider === "pi" ? "codex" : preferredProvider),
-    }
+      : null) ??
+    (preferredProvider === "pi"
+      ? null
+      : {
+          provider: preferredProvider,
+          model: getDefaultModel(preferredProvider),
+        })
   );
 }

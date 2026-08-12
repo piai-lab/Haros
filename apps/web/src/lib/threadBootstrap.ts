@@ -117,7 +117,7 @@ export interface TerminalThreadCreationState {
   envMode: DraftThreadEnvMode;
   interactionMode: ProviderInteractionMode;
   lastKnownPr: OrchestrationThreadPullRequest | null;
-  modelSelection: ModelSelection;
+  modelSelection: ModelSelection | null;
   runtimeMode: RuntimeMode;
   worktreePath: string | null;
   workingDirectory: string | null;

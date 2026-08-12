@@ -151,6 +151,9 @@ async function dispatchKanbanDraftThreadOnce(
     projectModelSelection: project?.defaultModelSelection ?? null,
     defaultProvider: input.defaultProvider,
   });
+  if (!modelSelection) {
+    return { kind: "open-thread", reason: "model-unavailable" };
+  }
   const draftThread = composerStore.getDraftThread(threadId);
   // Worktree creation is owned by the full chat composer path. Kanban stays a
   // control surface and opens chat when a draft still needs that preflight.

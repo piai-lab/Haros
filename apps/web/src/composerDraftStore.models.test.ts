@@ -67,6 +67,20 @@ describe("resolvePreferredComposerModelSelection", () => {
     ).toEqual(cursorSelection);
   });
 
+  it("keeps an unbound Pi intent fail-closed instead of falling back to Codex", () => {
+    expect(
+      resolvePreferredComposerModelSelection({
+        draft: {
+          modelSelectionByProvider: {},
+          activeProvider: "pi",
+        },
+        threadModelSelection: modelSelection("codex", "gpt-5.5"),
+        projectModelSelection: null,
+        defaultProvider: "codex",
+      }),
+    ).toBeNull();
+  });
+
 });
 
 describe("composerDraftStore modelSelection", () => {

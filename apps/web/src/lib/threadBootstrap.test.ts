@@ -309,6 +309,29 @@ describe("threadBootstrap", () => {
     });
   });
 
+  it("keeps a no-model Pi terminal local instead of creating a Codex binding", () => {
+    expect(
+      resolveTerminalThreadCreationState({
+        activeDraftThread: null,
+        activeThread: {
+          projectId: PROJECT_ID,
+          modelSelection: modelSelection("codex", "gpt-5.5"),
+          runtimeMode: "full-access",
+          interactionMode: "default",
+        },
+        draftComposerState: {
+          ...makeComposerDraftState(),
+          activeProvider: "pi",
+          modelSelectionByProvider: {},
+        },
+        draftThread: makeDraftThread(),
+        options: undefined,
+        projectDefaultModelSelection: null,
+        projectId: PROJECT_ID,
+      }).modelSelection,
+    ).toBeNull();
+  });
+
   it("does not inherit plan mode from the previously active thread for a fresh creation", () => {
     expect(
       resolveTerminalThreadCreationState({

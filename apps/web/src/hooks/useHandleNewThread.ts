@@ -161,6 +161,9 @@ export function useHandleNewThread() {
       threadId: ThreadId,
       creationState: ReturnType<typeof resolveCreationState>,
     ): Promise<void> => {
+      if (!creationState.modelSelection) {
+        return;
+      }
       const api = readNativeApi();
       if (!api) {
         return;
