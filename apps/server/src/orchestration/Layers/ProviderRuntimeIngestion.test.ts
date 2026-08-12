@@ -27,6 +27,7 @@ import { OrchestrationEventStoreLive } from "../../persistence/Layers/Orchestrat
 import { OrchestrationCommandReceiptRepositoryLive } from "../../persistence/Layers/OrchestrationCommandReceipts.ts";
 import { SqlitePersistenceMemory } from "../../persistence/Layers/Sqlite.ts";
 import { ProviderRuntimeEventRepositoryLive } from "../../persistence/Layers/ProviderRuntimeEvents.ts";
+import { ProviderSessionRuntimeRepositoryLive } from "../../persistence/Layers/ProviderSessionRuntime.ts";
 import {
   PROVIDER_RUNTIME_INGESTION_CONSUMER,
   ProviderRuntimeEventRepository,
@@ -35,6 +36,8 @@ import {
   ProviderService,
   type ProviderServiceShape,
 } from "../../provider/Services/ProviderService.ts";
+import { ProviderSessionDirectoryLive } from "../../provider/Layers/ProviderSessionDirectory.ts";
+import { ProviderSessionDirectory } from "../../provider/Services/ProviderSessionDirectory.ts";
 import { OrchestrationEngineLive } from "./OrchestrationEngine.ts";
 import { OrchestrationProjectionPipelineLive } from "./ProjectionPipeline.ts";
 import { OrchestrationProjectionSnapshotQueryLive } from "./ProjectionSnapshotQuery.ts";
@@ -226,7 +229,10 @@ describe("ProviderRuntimeIngestion", () => {
   });
 
   let runtime: ManagedRuntime.ManagedRuntime<
-    OrchestrationEngineService | ProviderRuntimeIngestionService | ProviderRuntimeEventRepository,
+    | OrchestrationEngineService
+    | ProviderRuntimeIngestionService
+    | ProviderRuntimeEventRepository
+    | ProviderSessionDirectory,
     unknown
   > | null = null;
   let scope: Scope.Closeable | null = null;
@@ -265,11 +271,18 @@ describe("ProviderRuntimeIngestion", () => {
     const runtimeEventRepositoryLayer = ProviderRuntimeEventRepositoryLive.pipe(
       Layer.provideMerge(SqlitePersistenceMemory),
     );
+    const providerSessionRuntimeRepositoryLayer = ProviderSessionRuntimeRepositoryLive.pipe(
+      Layer.provide(SqlitePersistenceMemory),
+    );
+    const providerSessionDirectoryLayer = ProviderSessionDirectoryLive.pipe(
+      Layer.provide(providerSessionRuntimeRepositoryLayer),
+    );
     const layer = ProviderRuntimeIngestionLive.pipe(
       Layer.provideMerge(orchestrationLayer),
       Layer.provideMerge(OrchestrationProjectionSnapshotQueryLive),
       Layer.provideMerge(SqlitePersistenceMemory),
       Layer.provideMerge(runtimeEventRepositoryLayer),
+      Layer.provideMerge(providerSessionDirectoryLayer),
       Layer.provideMerge(Layer.succeed(ProviderService, provider.service)),
       Layer.provideMerge(ServerConfig.layerTest(process.cwd(), process.cwd())),
       Layer.provideMerge(NodeServices.layer),
@@ -279,6 +292,9 @@ describe("ProviderRuntimeIngestion", () => {
     const ingestion = await runtime.runPromise(Effect.service(ProviderRuntimeIngestionService));
     const runtimeEventRepository = await runtime.runPromise(
       Effect.service(ProviderRuntimeEventRepository),
+    );
+    const providerSessionDirectory = await runtime.runPromise(
+      Effect.service(ProviderSessionDirectory),
     );
     scope = await Effect.runPromise(Scope.make("sequential"));
     let ingestionStarted = false;
@@ -358,8 +374,178 @@ describe("ProviderRuntimeIngestion", () => {
       drain,
       startIngestion,
       runtimeEventRepository,
+      providerSessionDirectory,
     };
   }
+
+  it("fences delayed replacement rows against the restored provider binding", async () => {
+    const harness = await createHarness({ startIngestion: false });
+    const threadId = asThreadId("thread-1");
+    const restoredGeneration = "generation-restored-codex";
+
+    await Effect.runPromise(
+      harness.providerSessionDirectory.upsert({
+        threadId,
+        provider: "codex",
+        status: "running",
+        lifecycleGeneration: restoredGeneration,
+      }),
+    );
+
+    const delayedTargetStart = await Effect.runPromise(
+      harness.runtimeEventRepository.append({
+        type: "session.started",
+        eventId: asEventId("evt-delayed-target-session-started"),
+        provider: "claudeAgent",
+        threadId,
+        createdAt: "2026-08-12T08:00:00.000Z",
+        lifecycleGeneration: "generation-failed-target",
+        payload: {},
+      }),
+    );
+    const delayedOldExit = await Effect.runPromise(
+      harness.runtimeEventRepository.append({
+        type: "session.exited",
+        eventId: asEventId("evt-delayed-old-session-exited"),
+        provider: "codex",
+        threadId,
+        createdAt: "2026-08-12T08:00:01.000Z",
+        lifecycleGeneration: "generation-retired-codex",
+        payload: { reason: "late old runtime exit" },
+      }),
+    );
+    const delayedTargetWarning = await Effect.runPromise(
+      harness.runtimeEventRepository.append({
+        type: "runtime.warning",
+        eventId: asEventId("evt-delayed-target-runtime-warning"),
+        provider: "claudeAgent",
+        threadId,
+        createdAt: "2026-08-12T08:00:01.500Z",
+        lifecycleGeneration: "generation-failed-target",
+        payload: { message: "Stale target runtime" },
+      }),
+    );
+    const currentRow = await Effect.runPromise(
+      harness.runtimeEventRepository.append({
+        type: "runtime.warning",
+        eventId: asEventId("evt-current-restored-runtime-warning"),
+        provider: "codex",
+        threadId,
+        createdAt: "2026-08-12T08:00:02.000Z",
+        lifecycleGeneration: restoredGeneration,
+        payload: { message: "Current restored runtime" },
+      }),
+    );
+    const legacyRow = await Effect.runPromise(
+      harness.runtimeEventRepository.append({
+        type: "runtime.warning",
+        eventId: asEventId("evt-legacy-runtime-warning"),
+        provider: "codex",
+        threadId,
+        createdAt: "2026-08-12T08:00:03.000Z",
+        payload: { message: "Legacy runtime event" },
+      }),
+    );
+
+    await harness.startIngestion();
+    await harness.drain();
+
+    const readModel = await Effect.runPromise(harness.engine.getReadModel());
+    const thread = readModel.threads.find((entry) => entry.id === threadId);
+    expect(thread?.session).toMatchObject({
+      providerName: "codex",
+      status: "ready",
+    });
+    expect(thread?.activities.some((activity) => activity.id === currentRow.event.eventId)).toBe(
+      true,
+    );
+    expect(thread?.activities.some((activity) => activity.id === legacyRow.event.eventId)).toBe(
+      true,
+    );
+    expect(
+      thread?.activities.some((activity) => activity.id === delayedTargetStart.event.eventId),
+    ).toBe(false);
+    expect(
+      thread?.activities.some((activity) => activity.id === delayedOldExit.event.eventId),
+    ).toBe(false);
+    expect(
+      thread?.activities.some((activity) => activity.id === delayedTargetWarning.event.eventId),
+    ).toBe(false);
+    expect(
+      await Effect.runPromise(
+        harness.runtimeEventRepository.getConsumerCursor(PROVIDER_RUNTIME_INGESTION_CONSUMER),
+      ),
+    ).toBe(legacyRow.sequence);
+  });
+
+  it("keeps matching delayed rows quarantined after replacement restore becomes uncertain", async () => {
+    const harness = await createHarness({ startIngestion: false });
+    const threadId = asThreadId("thread-1");
+    const restoreGeneration = "generation-uncertain-restored-codex";
+    const failureAt = "2026-08-12T08:09:59.000Z";
+
+    await Effect.runPromise(
+      harness.engine.dispatch({
+        type: "thread.session.set",
+        commandId: CommandId.makeUnsafe("cmd-uncertain-restore-session-error"),
+        threadId,
+        session: {
+          threadId,
+          status: "error",
+          providerName: "codex",
+          runtimeMode: "approval-required",
+          activeTurnId: null,
+          lastError: "Provider replacement restore is uncertain.",
+          updatedAt: failureAt,
+        },
+        createdAt: failureAt,
+      }),
+    );
+
+    await Effect.runPromise(
+      harness.providerSessionDirectory.upsert({
+        threadId,
+        provider: "codex",
+        status: "error",
+        lifecycleGeneration: restoreGeneration,
+        runtimePayload: {
+          lastRuntimeEvent: "provider.replacement.restore.failed",
+          lifecycleGeneration: restoreGeneration,
+        },
+      }),
+    );
+
+    const delayedRestoreStart = await Effect.runPromise(
+      harness.runtimeEventRepository.append({
+        type: "session.started",
+        eventId: asEventId("evt-delayed-uncertain-restore-start"),
+        provider: "codex",
+        threadId,
+        createdAt: "2026-08-12T08:10:00.000Z",
+        lifecycleGeneration: restoreGeneration,
+        payload: {},
+      }),
+    );
+
+    await harness.startIngestion();
+    await harness.drain();
+
+    const readModel = await Effect.runPromise(harness.engine.getReadModel());
+    const thread = readModel.threads.find((entry) => entry.id === threadId);
+    expect(thread?.session).toMatchObject({
+      providerName: "codex",
+      status: "error",
+      lastError: "Provider replacement restore is uncertain.",
+    });
+    expect(
+      thread?.activities.some((activity) => activity.id === delayedRestoreStart.event.eventId),
+    ).toBe(false);
+    expect(
+      await Effect.runPromise(
+        harness.runtimeEventRepository.getConsumerCursor(PROVIDER_RUNTIME_INGESTION_CONSUMER),
+      ),
+    ).toBe(delayedRestoreStart.sequence);
+  });
 
   it("REL-01C gate: replays output persisted before subscription without duplicate acceptance", async () => {
     const harness = await createHarness({ startIngestion: false });
@@ -3686,6 +3872,7 @@ describe("ProviderRuntimeIngestion", () => {
         commandId: CommandId.makeUnsafe("cmd-dispatch-active-b"),
         threadId: asThreadId("thread-1"),
         messageId: asMessageId("message-active-b"),
+        modelSelection: { provider: "codex", model: "gpt-5-codex" },
         assistantDeliveryMode: "streaming",
         dispatchMode: "queue",
         runtimeMode: "approval-required",

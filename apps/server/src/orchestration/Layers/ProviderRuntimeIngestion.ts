@@ -37,7 +37,10 @@ import {
 } from "../../codexGeneratedImages.ts";
 import { copyAndAttributeStudioGeneratedImage } from "../../studioGeneratedImages.ts";
 import { parseCheckpointFilesFromUnifiedDiff } from "../../checkpointing/Diffs.ts";
+import { ProviderSessionRuntimeRepositoryLive } from "../../persistence/Layers/ProviderSessionRuntime.ts";
+import { ProviderSessionDirectoryLive } from "../../provider/Layers/ProviderSessionDirectory.ts";
 import { ProviderService } from "../../provider/Services/ProviderService.ts";
+import { ProviderSessionDirectory } from "../../provider/Services/ProviderSessionDirectory.ts";
 import {
   classifyTerminalTurnApplicability,
   isStartedTurnApplicable,
@@ -90,6 +93,7 @@ const providerCommandId = (event: ProviderRuntimeEvent, tag: string, target = "e
   CommandId.makeUnsafe(`provider:${event.eventId}:${tag}:${target}`);
 
 const DEFAULT_ASSISTANT_DELIVERY_MODE: AssistantDeliveryMode = "buffered";
+const PROVIDER_REPLACEMENT_RESTORE_FAILED_EVENT = "provider.replacement.restore.failed";
 const PROVIDER_RUNTIME_INGESTION_CAPACITY = 1_024;
 const PROVIDER_RUNTIME_REPLAY_PAGE_SIZE = 128;
 const PROVIDER_RUNTIME_REPLAY_POLL_MIN_MS = 250;
@@ -612,6 +616,7 @@ const make = Effect.gen(function* () {
   const orchestrationEngine = yield* OrchestrationEngineService;
   const projectionSnapshotQuery = yield* ProjectionSnapshotQuery;
   const providerService = yield* ProviderService;
+  const providerSessionDirectory = yield* ProviderSessionDirectory;
   const projectionTurnRepository = yield* ProjectionTurnRepository;
   const pendingInteractions = yield* ProjectionPendingInteractionRepository;
   const runtimeEvents = yield* ProviderRuntimeEventRepository;
@@ -1774,6 +1779,44 @@ const make = Effect.gen(function* () {
 
   const processRuntimeEvent = (event: ProviderRuntimeEvent) =>
     Effect.gen(function* () {
+      // ProviderService fences adapter events before journaling, but an event
+      // accepted while a replacement generation was current can remain in the
+      // durable journal until after that target fails and the old provider is
+      // restored under a fresh generation. Re-check the durable routing owner
+      // before *any* Product effect (Session, pending interaction, transcript,
+      // Tool/Activity or bounded cache) so delayed target/old-runtime rows
+      // cannot seize or contaminate the restored Thread.
+      //
+      // A generation-less legacy row remains compatible when it belongs to the
+      // bound provider. The narrow first-start window can have no binding yet;
+      // absence alone therefore does not reject the row. A directory read
+      // failure is deliberately not caught here: journal retry is safer than
+      // silently dropping a possibly-current provider event.
+      const binding = Option.getOrUndefined(
+        yield* providerSessionDirectory.getBinding(event.threadId),
+      );
+      const bindingRuntimePayload =
+        binding === undefined ? undefined : asObject(binding.runtimePayload);
+      if (
+        binding !== undefined &&
+        (bindingRuntimePayload?.lastRuntimeEvent ===
+          PROVIDER_REPLACEMENT_RESTORE_FAILED_EVENT ||
+          binding.provider !== event.provider ||
+          (event.lifecycleGeneration !== undefined &&
+            binding.lifecycleGeneration !== event.lifecycleGeneration))
+      ) {
+        yield* Effect.logWarning("provider.runtime.stale_binding_event_projection_skipped", {
+          eventId: event.eventId,
+          eventType: event.type,
+          threadId: event.threadId,
+          eventProvider: event.provider,
+          eventLifecycleGeneration: event.lifecycleGeneration,
+          bindingProvider: binding?.provider,
+          bindingLifecycleGeneration: binding?.lifecycleGeneration,
+        });
+        return;
+      }
+
       const now = event.createdAt;
       // Load the full (heavy) detail only when this event's handlers actually read
       // thread.messages / proposedPlans / checkpoints; otherwise use the cheap
@@ -3049,6 +3092,7 @@ export const ProviderRuntimeIngestionLive = Layer.effect(
       ProjectionPendingInteractionRepositoryLive,
       ProviderRuntimeEventRepositoryLive,
       OrchestrationCommandReceiptRepositoryLive,
+      ProviderSessionDirectoryLive.pipe(Layer.provide(ProviderSessionRuntimeRepositoryLive)),
     ),
   ),
 );
