@@ -77,6 +77,7 @@ import {
   detailFromResult,
   extractAuthBoolean,
   extractAuthMethod,
+  makeCommandMissingCause,
   nonEmptyTrimmed,
   PROVIDER_COMMAND_TIMEOUT_DETAIL,
   toTitleCaseWords,
@@ -711,7 +712,7 @@ const runCodexCommand = (
   runProviderCommand(executable, args, env).pipe(
     Effect.flatMap((result) =>
       isWindowsShellCommandMissingResult({ code: result.code, stderr: result.stderr })
-        ? Effect.fail(new Error(`spawn ${executable} ENOENT`))
+        ? Effect.fail(makeCommandMissingCause(executable))
         : Effect.succeed(result),
     ),
   );
@@ -724,7 +725,7 @@ const runClaudeCommand = (
   runProviderCommand(executable, args, env).pipe(
     Effect.flatMap((result) =>
       isWindowsShellCommandMissingResult({ code: result.code, stderr: result.stderr })
-        ? Effect.fail(new Error(`spawn ${executable} ENOENT`))
+        ? Effect.fail(makeCommandMissingCause(executable))
         : Effect.succeed(result),
     ),
   );
@@ -733,7 +734,7 @@ const runGrokCommand = (args: ReadonlyArray<string>, executable = "grok") =>
   runProviderCommand(executable, args, providerCommandEnv(GROK_PROVIDER)).pipe(
     Effect.flatMap((result) =>
       isWindowsShellCommandMissingResult({ code: result.code, stderr: result.stderr })
-        ? Effect.fail(new Error(`spawn ${executable} ENOENT`))
+        ? Effect.fail(makeCommandMissingCause(executable))
         : Effect.succeed(result),
     ),
   );
@@ -742,7 +743,7 @@ const runOpenCodeCommand = (args: ReadonlyArray<string>, executable = "opencode"
   runProviderCommand(executable, args, providerCommandEnv(OPENCODE_PROVIDER)).pipe(
     Effect.flatMap((result) =>
       isWindowsShellCommandMissingResult({ code: result.code, stderr: result.stderr })
-        ? Effect.fail(new Error(`spawn ${executable} ENOENT`))
+        ? Effect.fail(makeCommandMissingCause(executable))
         : Effect.succeed(result),
     ),
   );
@@ -751,7 +752,7 @@ const runKiloCommand = (args: ReadonlyArray<string>, executable = "kilo") =>
   runProviderCommand(executable, args, providerCommandEnv(KILO_PROVIDER)).pipe(
     Effect.flatMap((result) =>
       isWindowsShellCommandMissingResult({ code: result.code, stderr: result.stderr })
-        ? Effect.fail(new Error(`spawn ${executable} ENOENT`))
+        ? Effect.fail(makeCommandMissingCause(executable))
         : Effect.succeed(result),
     ),
   );
@@ -764,7 +765,7 @@ const runCursorCommand = (
   return runProviderCommand(command.command, command.args, buildCursorAgentHeadlessEnv()).pipe(
     Effect.flatMap((result) =>
       isWindowsShellCommandMissingResult({ code: result.code, stderr: result.stderr })
-        ? Effect.fail(new Error(`spawn ${command.command} ENOENT`))
+        ? Effect.fail(makeCommandMissingCause(command.command))
         : Effect.succeed(result),
     ),
   );
@@ -846,7 +847,7 @@ const runAntigravityCommand = (args: ReadonlyArray<string>, executable = "agy") 
   runProviderCommand(executable, args, providerCommandEnv(ANTIGRAVITY_PROVIDER)).pipe(
     Effect.flatMap((result) =>
       isWindowsShellCommandMissingResult({ code: result.code, stderr: result.stderr })
-        ? Effect.fail(new Error(`spawn ${executable} ENOENT`))
+        ? Effect.fail(makeCommandMissingCause(executable))
         : Effect.succeed(result),
     ),
   );
@@ -909,6 +910,9 @@ export const makeCheckCodexProviderStatus = (
         status: "error" as const,
         available: false,
         authStatus: "unknown" as const,
+        ...(versionProbe.outcome === "missing"
+          ? { unavailableReason: "not_installed" as const }
+          : {}),
         checkedAt,
         message:
           versionProbe.outcome === "missing"
@@ -1046,6 +1050,7 @@ export const makeCheckCodexProviderStatus = (
   }).pipe(
     Effect.map((status) => ({
       ...status,
+      checkedBinaryPath: executable,
       autoRuntimeModeBinaryPath: executable,
     })),
   );
@@ -1083,6 +1088,9 @@ export const makeCheckClaudeProviderStatus = (
         status: "error" as const,
         available: false,
         authStatus: "unknown" as const,
+        ...(versionProbe.outcome === "missing"
+          ? { unavailableReason: "not_installed" as const }
+          : {}),
         checkedAt,
         message:
           versionProbe.outcome === "missing"
@@ -1242,12 +1250,16 @@ export const makeCheckClaudeProviderStatus = (
   }).pipe(
     Effect.map((status) => ({
       ...status,
+      checkedBinaryPath: executable,
       autoRuntimeModeBinaryPath: executable,
     })),
   );
 };
 
 export const checkClaudeProviderStatus = makeCheckClaudeProviderStatus();
+
+const withCheckedBinaryPath = (checkedBinaryPath: string) =>
+  Effect.map((value: ServerProviderStatus) => ({ ...value, checkedBinaryPath }));
 
 // ── Grok health check ───────────────────────────────────────────────
 
@@ -1270,6 +1282,9 @@ export const makeCheckGrokProviderStatus = (
         status: "error" as const,
         available: false,
         authStatus: "unknown" as const,
+        ...(versionProbe.outcome === "missing"
+          ? { unavailableReason: "not_installed" as const }
+          : {}),
         checkedAt,
         message:
           versionProbe.outcome === "missing"
@@ -1321,14 +1336,20 @@ export const makeCheckGrokProviderStatus = (
               "Grok CLI is installed. Run `grok` to authenticate locally, or set XAI_API_KEY before starting a session.",
           }),
     } satisfies ServerProviderStatus;
-  });
+  }).pipe(withCheckedBinaryPath(nonEmptyTrimmed(binaryPath) ?? "grok"));
 
 export const checkGrokProviderStatus = makeCheckGrokProviderStatus();
 
 // ── Droid health check ─────────────────────────────────────────────
 
 const runDroidCommand = (args: ReadonlyArray<string>, executable = "droid") =>
-  runProviderCommand(executable, args, providerCommandEnv(DROID_PROVIDER));
+  runProviderCommand(executable, args, providerCommandEnv(DROID_PROVIDER)).pipe(
+    Effect.flatMap((result) =>
+      isWindowsShellCommandMissingResult({ code: result.code, stderr: result.stderr })
+        ? Effect.fail(makeCommandMissingCause(executable))
+        : Effect.succeed(result),
+    ),
+  );
 
 export const makeCheckDroidProviderStatus = (
   binaryPath?: string,
@@ -1349,6 +1370,9 @@ export const makeCheckDroidProviderStatus = (
         status: "error" as const,
         available: false,
         authStatus: "unknown" as const,
+        ...(versionProbe.outcome === "missing"
+          ? { unavailableReason: "not_installed" as const }
+          : {}),
         checkedAt,
         message:
           versionProbe.outcome === "missing"
@@ -1400,7 +1424,7 @@ export const makeCheckDroidProviderStatus = (
               "Droid CLI is installed. OmniMind can use the CLI's cached device-pairing login; run `droid` to authenticate locally if needed, or set FACTORY_API_KEY.",
           }),
     } satisfies ServerProviderStatus;
-  });
+  }).pipe(withCheckedBinaryPath(nonEmptyTrimmed(binaryPath) ?? "droid"));
 
 export const checkDroidProviderStatus = makeCheckDroidProviderStatus();
 
@@ -1425,6 +1449,9 @@ export const makeCheckOpenCodeProviderStatus = (
         status: "error" as const,
         available: false,
         authStatus: "unknown" as const,
+        ...(versionProbe.outcome === "missing"
+          ? { unavailableReason: "not_installed" as const }
+          : {}),
         checkedAt,
         message:
           versionProbe.outcome === "missing"
@@ -1471,7 +1498,7 @@ export const makeCheckOpenCodeProviderStatus = (
       message:
         "OpenCode CLI is installed. Configure provider credentials inside OpenCode as needed.",
     } satisfies ServerProviderStatus;
-  });
+  }).pipe(withCheckedBinaryPath(nonEmptyTrimmed(binaryPath) ?? "opencode"));
 
 export const checkOpenCodeProviderStatus = makeCheckOpenCodeProviderStatus();
 
@@ -1496,6 +1523,9 @@ export const makeCheckKiloProviderStatus = (
         status: "error" as const,
         available: false,
         authStatus: "unknown" as const,
+        ...(versionProbe.outcome === "missing"
+          ? { unavailableReason: "not_installed" as const }
+          : {}),
         checkedAt,
         message:
           versionProbe.outcome === "missing"
@@ -1541,7 +1571,7 @@ export const makeCheckKiloProviderStatus = (
       checkedAt,
       message: "Kilo CLI is installed. Configure provider credentials inside Kilo as needed.",
     } satisfies ServerProviderStatus;
-  });
+  }).pipe(withCheckedBinaryPath(nonEmptyTrimmed(binaryPath) ?? "kilo"));
 
 export const checkKiloProviderStatus = makeCheckKiloProviderStatus();
 
@@ -1597,6 +1627,9 @@ export const checkAntigravityProviderStatus = (
         status: "error",
         available: false,
         authStatus: "unknown",
+        ...(versionProbe.outcome === "missing"
+          ? { unavailableReason: "not_installed" as const }
+          : {}),
         checkedAt,
         message:
           versionProbe.outcome === "missing"
@@ -1671,7 +1704,7 @@ export const checkAntigravityProviderStatus = (
       message:
         "Antigravity CLI is installed, but OmniMind could not verify login by listing models.",
     } satisfies ServerProviderStatus;
-  });
+  }).pipe(withCheckedBinaryPath(nonEmptyTrimmed(binaryPath) ?? "agy"));
 
 // ── Cursor health check ─────────────────────────────────────────────
 
@@ -1694,6 +1727,9 @@ export const makeCheckCursorProviderStatus = (
         status: "error" as const,
         available: false,
         authStatus: "unknown" as const,
+        ...(versionProbe.outcome === "missing"
+          ? { unavailableReason: "not_installed" as const }
+          : {}),
         checkedAt,
         message:
           versionProbe.outcome === "missing"
@@ -1873,7 +1909,9 @@ export const makeCheckCursorProviderStatus = (
       version: parsedVersion,
       checkedAt,
     } satisfies ServerProviderStatus;
-  });
+  }).pipe(
+    withCheckedBinaryPath(nonEmptyTrimmed(binaryPath) ?? DEFAULT_CURSOR_AGENT_BINARY),
+  );
 
 export const checkCursorProviderStatus = makeCheckCursorProviderStatus();
 
@@ -1904,6 +1942,8 @@ export function providerStatusesEqual(
       status.status === next.status &&
       status.available === next.available &&
       status.authStatus === next.authStatus &&
+      (status.unavailableReason ?? null) === (next.unavailableReason ?? null) &&
+      (status.checkedBinaryPath ?? null) === (next.checkedBinaryPath ?? null) &&
       (status.authType ?? null) === (next.authType ?? null) &&
       (status.authLabel ?? null) === (next.authLabel ?? null) &&
       status.voiceTranscriptionAvailable === next.voiceTranscriptionAvailable &&
@@ -1947,7 +1987,13 @@ export function stabilizeProviderStatusesAgainstTransientTimeouts(
     if (
       !previous ||
       !wasPreviouslyUsableProviderStatus(previous) ||
-      !isTransientProviderCommandTimeout(status)
+      !isTransientProviderCommandTimeout(status) ||
+      !(
+        (previous.checkedBinaryPath === undefined && status.checkedBinaryPath === undefined) ||
+        (previous.checkedBinaryPath !== undefined &&
+          status.checkedBinaryPath !== undefined &&
+          previous.checkedBinaryPath === status.checkedBinaryPath)
+      )
     ) {
       return status;
     }

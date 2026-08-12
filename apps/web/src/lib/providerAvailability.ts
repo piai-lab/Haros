@@ -11,6 +11,40 @@ export interface ProviderSendAvailability {
   readonly unavailableReason: string;
 }
 
+export type ProviderPickerAvailabilityState =
+  | "checking"
+  | "ready"
+  | "limited"
+  | "sign_in"
+  | "not_installed"
+  | "unavailable";
+
+export interface ProviderPickerAvailability {
+  readonly disabled: boolean;
+  readonly state: ProviderPickerAvailabilityState;
+}
+
+export function deriveProviderPickerAvailability(
+  status: ServerProviderStatus | null | undefined,
+): ProviderPickerAvailability {
+  if (!status) {
+    return { disabled: false, state: "checking" };
+  }
+  if (status.authStatus === "unauthenticated") {
+    return { disabled: false, state: "sign_in" };
+  }
+  if (!status.available) {
+    if (status.unavailableReason === "not_installed") {
+      return { disabled: false, state: "not_installed" };
+    }
+    return { disabled: false, state: "unavailable" };
+  }
+  if (status.status === "warning") {
+    return { disabled: false, state: "limited" };
+  }
+  return { disabled: false, state: "ready" };
+}
+
 export type ProviderStatusRefresh = () => Promise<
   readonly ServerProviderStatus[] | null | undefined
 >;
@@ -39,18 +73,39 @@ export function normalizeProviderStatusForLocalConfig(input: {
     return status;
   }
 
-  if (normalizeCustomBinaryPath(status.autoRuntimeModeBinaryPath) === customBinaryPath) {
-    return status;
+  const checkedBinaryPath = normalizeCustomBinaryPath(status.checkedBinaryPath);
+  const legacyAutoBinaryPath = normalizeCustomBinaryPath(status.autoRuntimeModeBinaryPath);
+  const hasExactLegacyProbeIdentity =
+    checkedBinaryPath === null &&
+    (input.provider === "codex" || input.provider === "claudeAgent") &&
+    legacyAutoBinaryPath === customBinaryPath;
+  if (checkedBinaryPath === customBinaryPath || hasExactLegacyProbeIdentity) {
+    if (
+      status.supportsAutoRuntimeMode === undefined ||
+      normalizeCustomBinaryPath(status.autoRuntimeModeBinaryPath) === customBinaryPath
+    ) {
+      return status;
+    }
+    const {
+      supportsAutoRuntimeMode: _staleAutoSupport,
+      autoRuntimeModeBinaryPath: _staleAutoBinaryPath,
+      ...statusWithoutStaleAutoCapability
+    } = status;
+    return statusWithoutStaleAutoCapability;
   }
 
   const {
     supportsAutoRuntimeMode: _staleAutoSupport,
     autoRuntimeModeBinaryPath: _staleAutoBinaryPath,
-    ...statusWithoutStaleAutoCapability
+    unavailableReason: _staleUnavailableReason,
+    checkedBinaryPath: _staleCheckedBinaryPath,
+    ...statusWithoutStaleProbeFacts
   } = status;
 
-  if (status.available || status.authStatus !== "unknown") {
-    return statusWithoutStaleAutoCapability;
+  // Older servers had no general probe identity. Preserve their positive facts
+  // for compatibility, but never carry a fact across an explicit new-path mismatch.
+  if (checkedBinaryPath === null && (status.available || status.authStatus !== "unknown")) {
+    return statusWithoutStaleProbeFacts;
   }
 
   if (normalizeCustomBinaryPath(input.confirmedCustomBinaryPath) === customBinaryPath) {
@@ -70,7 +125,7 @@ export function normalizeProviderStatusForLocalConfig(input: {
   }
 
   return {
-    ...statusWithoutStaleAutoCapability,
+    ...statusWithoutStaleProbeFacts,
     available: true,
     status: "warning",
     message: `${PROVIDER_DISPLAY_NAMES[input.provider]} uses a custom local binary path in this app. Availability will be confirmed when you start a session.`,
@@ -85,7 +140,9 @@ export function isProviderUsable(status: ServerProviderStatus | null | undefined
   return status.available && status.authStatus !== "unauthenticated";
 }
 
-export function providerUnavailableReason(status: ServerProviderStatus | null | undefined): string {
+export function providerUnavailableReason(
+  status: ServerProviderStatus | null | undefined,
+): string {
   if (!status) {
     return "Provider status is still loading.";
   }
