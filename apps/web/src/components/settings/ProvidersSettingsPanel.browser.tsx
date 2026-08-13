@@ -123,4 +123,40 @@ describe("ProvidersSettingsPanel provider update feedback", () => {
     await screen.unmount();
     queryClient.clear();
   });
+
+  it("keeps custom model management reachable inside the owning Engine detail", async () => {
+    const config = createBrowserTestServerConfig(checkedAt);
+    window.nativeApi = {
+      server: {
+        getConfig: vi.fn().mockResolvedValue(config),
+        getSettings: vi.fn().mockResolvedValue(DEFAULT_SERVER_SETTINGS_VIEW),
+      },
+    } as unknown as NativeApi;
+    const queryClient = new QueryClient({
+      defaultOptions: { queries: { retry: false } },
+    });
+    queryClient.setQueryData(serverQueryKeys.config(), config);
+    queryClient.setQueryData(serverQueryKeys.settings(), DEFAULT_SERVER_SETTINGS_VIEW);
+    const settings = AppSettingsSchema.makeUnsafe({});
+    const updateSettings = vi.fn();
+    const screen = await render(
+      <QueryClientProvider client={queryClient}>
+        <ProvidersSettingsPanel
+          active
+          resetEpoch={0}
+          settings={settings}
+          defaults={settings}
+          updateSettings={updateSettings}
+        />
+      </QueryClientProvider>,
+    );
+
+    await screen.getByRole("button", { name: "Codex" }).last().click();
+    await screen.getByRole("textbox", { name: "Engine model slug" }).fill("custom/codex-next");
+    await screen.getByRole("button", { name: "Add" }).click();
+    expect(updateSettings).toHaveBeenCalledWith({ customCodexModels: ["custom/codex-next"] });
+
+    await screen.unmount();
+    queryClient.clear();
+  });
 });

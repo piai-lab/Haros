@@ -323,6 +323,15 @@ export const SETTINGS_SEARCH_ENTRIES: readonly SettingsSearchEntry[] = [
     target: null,
   },
 
+  // Independent Engine model controls live inside the existing Agent engines details.
+  {
+    id: "providers:independent-engine-models",
+    section: "providers",
+    title: "Independent engine models",
+    keywords: "Add remove reset custom model slugs managed by each engine.",
+    target: null,
+  },
+
   // ── Providers ─────────────────────────────────────────────────────────────────
   {
     id: "providers:automatic-cli-update-checks",
@@ -466,6 +475,7 @@ const SETTINGS_SEARCH_TITLE_KEY_BY_TITLE: Readonly<Record<string, MessageKey>> =
   "Follow-up behavior": "settings.followUpBehavior",
   "Font smoothing": "settings.fontSmoothing",
   "Installed CLIs": "settings.installedClis",
+  "Independent engine models": "settings.independentEngineModels",
   Keybindings: "settings.keybindings",
   "Managed worktrees": "settings.worktrees",
   "Model services": "settings.models",

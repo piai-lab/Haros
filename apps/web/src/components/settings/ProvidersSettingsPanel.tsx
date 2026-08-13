@@ -28,9 +28,18 @@ import { CSS } from "@dnd-kit/utilities";
 import { useQuery, useQueryClient } from "@tanstack/react-query";
 import { type MouseEvent, useCallback, useMemo, useState } from "react";
 
-import type { AppSettings, AppSettingsBinding } from "~/appSettings";
+import {
+  CUSTOM_MODEL_EDITOR_PROVIDER_SETTINGS,
+  MAX_CUSTOM_MODEL_LENGTH,
+  getCustomModelsForProvider,
+  getDefaultCustomModelsForProvider,
+  patchCustomModels,
+  type AppSettings,
+  type AppSettingsBinding,
+} from "~/appSettings";
+import { getModelOptions, normalizeModelSlug } from "@omnimind/shared/model";
 import { CentralIcon } from "~/lib/central-icons";
-import { DownloadIcon, ExternalLinkIcon, Loader2Icon } from "~/lib/icons";
+import { DownloadIcon, ExternalLinkIcon, Loader2Icon, PlusIcon, XIcon } from "~/lib/icons";
 import {
   reconcileServerProviderStatuses,
   serverConfigQueryOptions,
@@ -64,6 +73,7 @@ import { useI18n, type MessageKey } from "~/i18n";
 import { Button } from "../ui/button";
 import { Collapsible, CollapsiblePanel, CollapsibleTrigger } from "../ui/collapsible";
 import { DisclosureChevron } from "../ui/DisclosureChevron";
+import { Input } from "../ui/input";
 import { Switch } from "../ui/switch";
 import { toastManager } from "../ui/toast";
 import { DebouncedSettingTextInput } from "./DebouncedSettingTextInput";
@@ -128,6 +138,29 @@ type ProviderInstallSettings = {
   readonly docs: ReadonlyArray<{ readonly labelKey: MessageKey; readonly href: string }>;
   readonly fields: readonly ProviderInstallField[];
 };
+
+type CustomModelValidationResult =
+  | { readonly model: string; readonly error?: never }
+  | { readonly model?: never; readonly error: string };
+
+export function validateProviderCustomModelInput(input: {
+  readonly provider: ProviderKind;
+  readonly value: string;
+  readonly savedModels: readonly string[];
+}): CustomModelValidationResult {
+  const normalized = normalizeModelSlug(input.value, input.provider);
+  if (!normalized) return { error: "Enter a model slug." };
+  if (getModelOptions(input.provider).some((option) => option.slug === normalized)) {
+    return { error: "That model is already built in." };
+  }
+  if (normalized.length > MAX_CUSTOM_MODEL_LENGTH) {
+    return { error: `Model slugs must be ${MAX_CUSTOM_MODEL_LENGTH} characters or less.` };
+  }
+  if (input.savedModels.includes(normalized)) {
+    return { error: "That custom model is already saved." };
+  }
+  return { model: normalized };
+}
 
 const PROVIDER_VISIBILITY_OPTIONS: ReadonlyArray<{ provider: ProviderKind; title: string }> =
   PROVIDER_DESCRIPTORS.map((descriptor) => ({
@@ -664,6 +697,119 @@ function ProviderInstallFieldControl(props: {
   );
 }
 
+function ProviderCustomModelsEditor(props: {
+  provider: ProviderKind;
+  settings: AppSettings;
+  defaults: AppSettings;
+  updateSettings: (patch: Partial<AppSettings>) => void;
+}) {
+  const { t } = useI18n();
+  const config = CUSTOM_MODEL_EDITOR_PROVIDER_SETTINGS.find(
+    (candidate) => candidate.provider === props.provider,
+  );
+  const [input, setInput] = useState("");
+  const [error, setError] = useState<string | null>(null);
+  if (!config || config.provider === "omnimind") return null;
+
+  const savedModels = getCustomModelsForProvider(props.settings, props.provider);
+  const defaultModels = getDefaultCustomModelsForProvider(props.defaults, props.provider);
+  const isDirty = JSON.stringify(savedModels) !== JSON.stringify(defaultModels);
+  const addModel = () => {
+    const result = validateProviderCustomModelInput({
+      provider: props.provider,
+      value: input,
+      savedModels,
+    });
+    if ("error" in result) {
+      setError(
+        result.error === "Enter a model slug."
+          ? t("settings.enterModelSlug")
+          : result.error === "That model is already built in."
+            ? t("settings.modelAlreadyBuiltIn")
+            : result.error === "That custom model is already saved."
+              ? t("settings.customModelAlreadySaved")
+              : t("settings.modelSlugTooLong", { max: MAX_CUSTOM_MODEL_LENGTH }),
+      );
+      return;
+    }
+    props.updateSettings(patchCustomModels(props.provider, [...savedModels, result.model]));
+    setInput("");
+    setError(null);
+  };
+
+  return (
+    <div className="border-t border-border/70 pt-3">
+      <div className="flex items-start justify-between gap-3">
+        <div>
+          <div className="text-xs font-medium text-foreground">{t("settings.customModels")}</div>
+          <div className="mt-1 text-xs text-muted-foreground">
+            {t("settings.independentEngineModelsDescription")}
+          </div>
+        </div>
+        {isDirty ? (
+          <SettingResetButton
+            label={t("settings.customModels")}
+            onClick={() =>
+              props.updateSettings(patchCustomModels(props.provider, [...defaultModels]))
+            }
+          />
+        ) : null}
+      </div>
+      <div className="mt-2 flex items-center gap-2">
+        <Input
+          size="sm"
+          variant="soft"
+          value={input}
+          onChange={(event) => {
+            setInput(event.target.value);
+            setError(null);
+          }}
+          onKeyDown={(event) => {
+            if (event.key !== "Enter") return;
+            event.preventDefault();
+            addModel();
+          }}
+          placeholder={config.example}
+          aria-label={t("settings.engineModelSlug")}
+          spellCheck={false}
+        />
+        <Button size="sm" variant="outline" onClick={addModel}>
+          <PlusIcon className="size-3.5" />
+          {t("settings.add")}
+        </Button>
+      </div>
+      {error ? <p className="mt-2 text-xs text-destructive">{error}</p> : null}
+      {savedModels.length > 0 ? (
+        <div className="mt-2 space-y-1">
+          {savedModels.map((model) => (
+            <div
+              key={model}
+              className="flex items-center justify-between gap-2 rounded-md border border-border/70 bg-background/60 px-3 py-2"
+            >
+              <code className="min-w-0 truncate text-xs text-foreground">{model}</code>
+              <Button
+                size="icon-xs"
+                variant="ghost"
+                aria-label={t("settings.removeModel", { model })}
+                onClick={() =>
+                  props.updateSettings(
+                    patchCustomModels(
+                      props.provider,
+                      savedModels.filter((candidate) => candidate !== model),
+                    ),
+                  )
+                }
+              >
+                <XIcon className="size-3.5" />
+              </Button>
+            </div>
+          ))}
+        </div>
+      ) : null}
+    </div>
+  );
+}
+
 function ProviderToolRow(props: {
   config: ProviderInstallSettings;
   open: boolean;
@@ -793,6 +939,12 @@ function ProviderToolRow(props: {
                   updateSettings={props.updateSettings}
                 />
               ))}
+              <ProviderCustomModelsEditor
+                provider={props.config.provider}
+                settings={props.settings}
+                defaults={props.defaults}
+                updateSettings={props.updateSettings}
+              />
             </div>
           </div>
         </CollapsiblePanel>
