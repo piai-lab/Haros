@@ -6,6 +6,8 @@
 >
 > 权威边界：本文不是产品架构 owner、施工顺序或 Campaign 状态。若与 `architecture/*`、`execution-brief.md` 或 active Campaign 冲突，以对应 sole owner 为准并停止实施。
 
+本文混合三类内容，但权力不同：**产品合同**只由链接的 `architecture/*` 拥有；**当前代码观察**是证据日期下对完整路径、symbol、contract 和 wiring 的可失效记录；**设计假设/来源处置**只是待 Gate、proof 与 stop-loss 证伪的 candidate。新会话不得把后两者改写成 architecture，也不得把本文的“应”当成当前施工授权。
+
 ## 0. 给新会话的结论
 
 OmniMind 不应该再造一个“拥有 Agent Team、Goal、Workflow、Memory、Wiki、Resume、Computer Use 的超级 Agent 平台”。那会把本来可以组合的行为固化成多个 registry、数据库、scheduler 和状态机，既昂贵又难维护。
@@ -172,7 +174,7 @@ Core 的核心不变量：
 
 ### 5.2 Usage 与 cache truth
 
-`packages/contracts/src/providerRuntime.ts` 的 `ThreadTokenUsageSnapshot` 有 `cachedInputTokens`，但没有 `cacheWrite` 字段；`PiAdapter.ts` 只投影 Pi `cacheRead`。这会丢失 cache 写入与真实费用，不能用当前 Product 快照证明“高 cache、低成本”。
+`packages/contracts/src/providerRuntime.ts` 的 `ThreadTokenUsageSnapshot` 有 `cachedInputTokens`，但没有 `cacheWrite` 字段；`apps/server/src/provider/Layers/PiAdapter.ts` 只投影 Pi `cacheRead`。这会丢失 cache 写入与真实费用，不能用当前 Product 快照证明“高 cache、低成本”。
 
 应先修投影真实性，再讨论策略：
 
@@ -215,7 +217,7 @@ Core 的核心不变量：
 ### 5.5 Provider-native child 与 workflow 已有投影
 
 - `apps/server/src/orchestration/Layers/ProviderRuntimeIngestion.ts` 已把 Provider-native child materialize 成带真实 `creationSource` 的 Product Thread；
-- `apps/server/src/provider/Layers/ClaudeAdapter.ts`、`claudeWorkflowRuntime.ts`、`claudeWorkflowScript.ts` 已处理 Claude private workflow projection。
+- `apps/server/src/provider/Layers/ClaudeAdapter.ts`、`apps/server/src/provider/claudeWorkflowRuntime.ts`、`apps/server/src/provider/claudeWorkflowScript.ts` 已处理 Claude private workflow projection。
 
 这些实现证明 OmniMind 已有 Workbench truth 层，不需要再建 Team/Workflow registry。Claude workflowScript 是 provider-private 能力，不应被提升为所有 Engine 的默认 workflow 原语。
 
@@ -497,7 +499,7 @@ Engine native ecosystem
 接入必须从 OmniMind 当前 adapter 往里延伸，不能另起一个 CLI launcher 绕过既有 Session、credential、cancel 和 projection owner。
 
 - **Codex**：当前产品已经通过 `codexAppServerManager.ts` 使用 app-server，并用 `skills/extraRoots/set` 挂 OmniMind Skill root、用 native skill turn input 调用。官方 app-server 文档当前确认 `skills/list`、process-scoped `skills/extraRoots/set` 和 explicit skill input；`dynamicTools` 等实验表面只能 feature-detect。产品路径是扩展既有 app-server contract，并为 process-scoped roots 证明 dedicated process 或严格 replace/reset；不能写 source `~/.codex`，也不能把官方文档未稳定列出的字段写成生产依赖。[Codex app-server protocol](https://developers.openai.com/codex/app-server/)
-- **Claude Code**：当前 `ClaudeAdapter.ts` 通过锁定的 `@anthropic-ai/claude-agent-sdk@0.3.207` 执行 `query({ options })`，已经使用 `settingSources`、hooks、agents 与 session MCP，但尚未接入 OmniMind plugin bundle。官方当前 SDK 文档支持 `plugins: [{ type: "local", path }]`，并在 `system/init` 回报 loaded plugins 和 commands；未来 Capability Pack 应沿现有 `queryOptions` 证明这一 seam，而不是另启 `claude --plugin-dir`。文档能力不能自动外推到锁定 `0.3.207`，实施前必须核 exact type/runtime 或单独升级 intake。CLI flags 只能作为手工 comparator 证据，不是产品 implementation seam。[Claude Agent SDK plugins](https://code.claude.com/docs/en/agent-sdk/plugins)
+- **Claude Code**：当前 `apps/server/src/provider/Layers/ClaudeAdapter.ts` 通过锁定的 `@anthropic-ai/claude-agent-sdk@0.3.207` 执行 `query({ options })`，已经使用 `settingSources`、hooks、agents 与 session MCP，但尚未接入 OmniMind plugin bundle。官方当前 SDK 文档支持 `plugins: [{ type: "local", path }]`，并在 `system/init` 回报 loaded plugins 和 commands；未来 Capability Pack 应沿现有 `queryOptions` 证明这一 seam，而不是另启 `claude --plugin-dir`。文档能力不能自动外推到锁定 `0.3.207`，实施前必须核 exact type/runtime 或单独升级 intake。CLI flags 只能作为手工 comparator 证据，不是产品 implementation seam。[Claude Agent SDK plugins](https://code.claude.com/docs/en/agent-sdk/plugins)
 - **OpenCode**：当前产品拥有 managed `opencode serve` process pool 和 `@opencode-ai/sdk/v2` client（workspace lock 当前解析 `1.15.13`），并用 `client.mcp.add` 管理 thread-isolated Gateway。SDK 版本不等于实际 spawned CLI/server 版本，两者都要记录。显式 Skill/config 如需 process-start 注入，应扩展现有 `buildOpenCodeServerProcessEnv` 和 managed process contract；不能再起平行 launcher。OpenCode 配置会与 global/project sources 合并，Skills 还会发现 `.claude/.agents` compatibility roots，V2 plugin API 仍是 beta，因此不存在 Claude strict-MCP 等价的隔离声明；必须 exact-version、fresh-profile、loaded inventory 实证。[OpenCode config](https://opencode.ai/v2/docs/config) · [Skills](https://opencode.ai/v2/docs/skills) · [Plugins](https://opencode.ai/v2/docs/build/plugins)
 
 这些是证据日期的 seam 观察，不是永久兼容承诺。Engine binary/SDK、官方协议、当前 adapter 调用路径或 init/status 回报任一变化，都要只重验受影响路径。
@@ -571,7 +573,7 @@ Skill 与 Plugin 属于全局一致的基础概念，不应为每个 Engine 或�
 
 `agent` 只表示“子智能体集合/入口”，不能成为每个 child 的相同头像。每个真实 child 需要一个确定性的低密度身份纹样，并在 Environment、right dock、Timeline、Composer 和来源引用中连续；首个候选池从现有 Central 资产策展 24 个 16px 仍清晰的 glyph，与 `subagentPresentation.ts` 现有 8 色 palette 组合成 192 个候选，并在同一 parent/workflow 内稳定消碰撞。它属于现有 UI identity projection，不是 Agent Core 状态。
 
-Workflow 复用的是 canonical Provider activities、现有 `WorkflowRunCard.logic.ts` projection、`WorkflowRunCard.tsx` action wiring 和 `workflowRunUiStore.ts` 的 bounded paused/dismissed flags，不是冻结现有密集 card 的视觉形态。当前 pause 是 mark+stop，resume 是携带 script/run identity 的新 Composer turn 并 dismiss 旧 run；UI 不得把这套补偿文案伪装成新的 Provider runtime state。当前 selector 又把 latest run、Composer visibility 与 snapshot construction 黏在一起，RightDock/旧 Timeline milestone 正式实现前必须先提取按 exact `workflowTaskId` 重建的共享纯 selector，不能复制 parser。
+Workflow 复用的是 canonical Provider activities、现有 `apps/web/src/components/chat/WorkflowRunCard.logic.ts` projection、`apps/web/src/components/chat/WorkflowRunCard.tsx` action wiring 和 `apps/web/src/workflowRunUiStore.ts` 的 bounded paused/dismissed flags，不是冻结现有密集 card 的视觉形态。当前 pause 是 mark+stop，resume 是携带 script/run identity 的新 Composer turn 并 dismiss 旧 run；UI 不得把这套补偿文案伪装成新的 Provider runtime state。当前 selector 又把 latest run、Composer visibility 与 snapshot construction 黏在一起，RightDock/旧 Timeline milestone 正式实现前必须先提取按 exact `workflowTaskId` 重建的共享纯 selector，不能复制 parser。
 
 同一个 Engine-owned run 只做四个职责互斥的投影：Timeline 从 persisted activities 去重投影有意义里程碑；Composer 只在 running 或 paused/failed/stopped 且 exact run 可 resume 时保留一条近手控制行；Environment 是当前任务的 latest index；existing right dock 承担 topology/Agent 空间详情、搜索、筛选与 terminal result。四者不得复制状态、timer、Agent list 或 optimistic command state；已包含在 `WorkflowRunState.taskIds` 的 member 继续从 generic background/subagent 摘要排除，同一 child 不重复计数。normal completed 或无可行动恢复后 Composer 退场，Timeline 封存；Environment 将 latest Run 原位冻结为一行 terminal receipt，直到用户收起或被新同类 Run 替换。当前 contract 没有 waiting status，不能从 `runningCount` 猜。
 
@@ -609,7 +611,7 @@ Workflow 复用的是 canonical Provider activities、现有 `WorkflowRunCard.lo
 
 - bundled Pi、Provider SDK、Engine app-server/CLI seam 变化；
 - package exact version、source、dependency、installer 或 license 变化；
-- `PiAdapter` settlement、usage、skill discovery、Gateway 注入实现变化；
+- `apps/server/src/provider/Layers/PiAdapter.ts` settlement/usage、Skill discovery 或 Gateway 注入实现变化；
 - `architecture/*` 改变 Product Thread、private home、capability composition 或 Workbench owner；
 - `execution-brief.md` 正式准入某个 Agent Core/Capability Pack 切片；
 - upstream 出现 true execution-only profile、host-owned state sink、ambient disable、safe capture 或 atomic writer；

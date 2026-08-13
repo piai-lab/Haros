@@ -71,6 +71,7 @@ exact artifact
 + exact dependency closure
 + exact runtime/profile/config
 + exact host adapter / Engine binary or SDK / protocol seam
++ exact current OmniMind integration path and stable symbol, or explicit absence/proposed owner
 + exact OmniMind journey
 + explicit owner boundary
 ```
@@ -408,6 +409,8 @@ OmniMind 不静默轮询并采用上游变化。每次升级重新锁定 exact a
 
 不要在多个文档复制版本表、施工状态或完整风险登记。使用链接和精确路径，避免未来同步漂移。
 
+代码证据必须记录仓库完整路径与稳定 symbol，不以 basename 或旧行号作为唯一定位。若 `Layers/` 与 `Services/` 存在同名文件，必须明确区分运行实现与接口/tag；若代码只是移动而 owner 不变，只更新 evidence 路由，不改写产品 architecture。外部 README、官方文档和类型声明只能证明候选能力；OmniMind 已接入与否仍必须由当前 adapter wiring、init/list/status 或真实 journey 证明。
+
 研究设计与执行指南不得保存施工阶段名、next action 或当日进度快照。新会话必须实时读取 `execution-brief.md` 并引用当时原文；本文只规定未被 sole owner 明确准入时不得实施。这样修改施工顺序时无需同步重写研究文档。
 
 ## 12. Stop conditions
@@ -437,6 +440,7 @@ Workspace / branch / HEAD / dirty paths:
 Applicable authority owners:
 Current execution-brief admission:
 Candidate exact artifact/source/dependencies:
+Exact OmniMind integration path/symbol: existing | absent/proposed owner
 User journey and simplest baseline:
 Owners touched:
 Primary falsifier:
