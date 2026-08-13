@@ -1,4 +1,4 @@
-import { link, mkdir, mkdtemp, realpath, rm, symlink, writeFile } from "node:fs/promises";
+import { link, mkdir, mkdtemp, realpath, rename, rm, symlink, writeFile } from "node:fs/promises";
 import os from "node:os";
 import path from "node:path";
 
@@ -194,6 +194,38 @@ describe("readOmniMindPrivateTextFile", () => {
     await expect(createOmniMindModelsConfigReader(agentDir)({})).rejects.toThrow(
       "OmniMind Agent state changed during the safe read",
     );
+  });
+
+  it("rejects deletion after the same reader accepted the models config", async () => {
+    const root = await makeRoot();
+    await isolateProviderHome(root);
+    const agentDir = path.join(root, "agent");
+    const modelsPath = path.join(agentDir, "models.json");
+    await mkdir(agentDir);
+    await writeFile(modelsPath, "{}");
+    const reader = createOmniMindModelsConfigReader(agentDir);
+
+    await expect(reader({})).resolves.toBe("{}");
+    await rm(modelsPath);
+
+    await expect(reader({})).rejects.toThrow("OmniMind Agent state changed during the safe read");
+  });
+
+  it("rejects replacement after the same reader accepted the models config", async () => {
+    const root = await makeRoot();
+    await isolateProviderHome(root);
+    const agentDir = path.join(root, "agent");
+    const modelsPath = path.join(agentDir, "models.json");
+    const replacementPath = path.join(agentDir, "models.next.json");
+    await mkdir(agentDir);
+    await writeFile(modelsPath, '{"version":1}');
+    const reader = createOmniMindModelsConfigReader(agentDir);
+
+    await expect(reader({})).resolves.toBe('{"version":1}');
+    await writeFile(replacementPath, '{"version":2}');
+    await rename(replacementPath, modelsPath);
+
+    await expect(reader({})).rejects.toThrow("OmniMind Agent state changed during the safe read");
   });
 
   it.each(["symbolic link", "hard link"] as const)("rejects a %s leaf", async (kind) => {

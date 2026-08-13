@@ -414,6 +414,11 @@ describe("getPiDiscoverableModels", () => {
       expect(runtime.getModelConfigProviderIds()).toEqual(["custom-two"]);
       expect(runtime.getModel("custom-one", "model-one")).toBeUndefined();
       expect(runtime.getModel("custom-two", "model-two")).toBeDefined();
+
+      rmSync(modelsPath);
+      await runtime.refresh({ allowNetwork: false });
+
+      expect(runtime.getError()).toBeDefined();
     } finally {
       rmSync(agentDir, { recursive: true, force: true });
     }

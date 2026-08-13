@@ -136,15 +136,13 @@ function sameFileIdentity(
   return left.dev === right.dev && left.ino === right.ino;
 }
 
-/**
- * Reads one fixed OmniMind Agent state leaf without following links or copying
- * secret-bearing bytes to a second path. Parsing remains the caller's owner.
- */
-export async function readOmniMindPrivateTextFile(input: {
+type OmniMindPrivateFileIdentity = Pick<Awaited<ReturnType<typeof lstat>>, "dev" | "ino">;
+
+async function readOmniMindPrivateTextFileWithIdentity(input: {
   readonly agentDir: string;
   readonly filename: OmniMindPrivateRuntimeFilename;
   readonly signal?: AbortSignal;
-}): Promise<string> {
+}): Promise<{ readonly content: string; readonly identity: OmniMindPrivateFileIdentity }> {
   input.signal?.throwIfAborted();
   const expectedAgentDir = path.resolve(input.agentDir);
   const rootBefore = await lstat(expectedAgentDir);
@@ -222,29 +220,56 @@ export async function readOmniMindPrivateTextFile(input: {
       content.set(chunk, offset);
       offset += chunk.byteLength;
     }
-    return new TextDecoder("utf-8", { fatal: true }).decode(content);
+    return {
+      content: new TextDecoder("utf-8", { fatal: true }).decode(content),
+      identity: { dev: handleMetadata.dev, ino: handleMetadata.ino },
+    };
   } finally {
     await handle.close();
   }
 }
 
+/**
+ * Reads one fixed OmniMind Agent state leaf without following links or copying
+ * secret-bearing bytes to a second path. Parsing remains the caller's owner.
+ */
+export async function readOmniMindPrivateTextFile(input: {
+  readonly agentDir: string;
+  readonly filename: OmniMindPrivateRuntimeFilename;
+  readonly signal?: AbortSignal;
+}): Promise<string> {
+  return (await readOmniMindPrivateTextFileWithIdentity(input)).content;
+}
+
 export function createOmniMindModelsConfigReader(agentDir: string): ModelConfigReader {
+  let observedIdentity: OmniMindPrivateFileIdentity | undefined;
   return async ({ signal }) => {
     signal?.throwIfAborted();
     const modelsPath = path.join(path.resolve(agentDir), "models.json");
     try {
-      await lstat(modelsPath);
+      const currentIdentity = await lstat(modelsPath);
+      if (observedIdentity && !sameFileIdentity(currentIdentity, observedIdentity)) {
+        throw new Error("OmniMind Agent state changed during the safe read");
+      }
     } catch (error) {
-      if (isMissingPathError(error)) return undefined;
+      if (isMissingPathError(error) && !observedIdentity) return undefined;
+      if (isMissingPathError(error)) {
+        throw new Error("OmniMind Agent state changed during the safe read");
+      }
       throw error;
     }
 
     try {
-      return await readOmniMindPrivateTextFile({
+      const result = await readOmniMindPrivateTextFileWithIdentity({
         agentDir,
         filename: "models.json",
         ...(signal ? { signal } : {}),
       });
+      if (observedIdentity && !sameFileIdentity(result.identity, observedIdentity)) {
+        throw new Error("OmniMind Agent state changed during the safe read");
+      }
+      observedIdentity ??= result.identity;
+      return result.content;
     } catch (error) {
       if (isMissingPathError(error)) {
         throw new Error("OmniMind Agent state changed during the safe read");
