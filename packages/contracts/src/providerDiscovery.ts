@@ -279,6 +279,9 @@ export const ProviderModelDescriptor = Schema.Struct({
   description: Schema.optional(TrimmedNonEmptyString),
   upstreamProviderId: Schema.optional(TrimmedNonEmptyString),
   upstreamProviderName: Schema.optional(TrimmedNonEmptyString),
+  upstreamProviderOrigin: Schema.optional(
+    Schema.Literals(["builtin", "models_json", "extension", "unknown"]),
+  ),
   optionDescriptors: Schema.optional(Schema.Array(ProviderOptionDescriptor)),
   // Codex model/list results are normalized here so the web app can consume both
   // the legacy string array and Remodex-style reasoning objects uniformly.

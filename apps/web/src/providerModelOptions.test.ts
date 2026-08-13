@@ -86,10 +86,16 @@ describe("mergeDynamicModelOptions", () => {
             name: "GLM 5.2",
             upstreamProviderId: "local",
             upstreamProviderName: "Local",
+            upstreamProviderOrigin: "models_json",
           },
         ],
-      }).map((option) => option.slug),
-    ).toEqual(["local/glm-5.2"]);
+      }),
+    ).toEqual([
+      expect.objectContaining({
+        slug: "local/glm-5.2",
+        upstreamProviderOrigin: "models_json",
+      }),
+    ]);
   });
 
   it("offers Pi Fable and Opus when authenticated discovery returns them", () => {

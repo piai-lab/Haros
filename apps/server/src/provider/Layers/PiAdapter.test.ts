@@ -273,6 +273,7 @@ describe("getPiDiscoverableModels", () => {
         reasoning: false,
       } as Model<Api>,
       () => " OpenRouter ",
+      () => "extension",
     );
 
     expect(descriptor).toMatchObject({
@@ -280,6 +281,7 @@ describe("getPiDiscoverableModels", () => {
       name: "Google: Gemma 4 26B A4B",
       upstreamProviderId: "openrouter",
       upstreamProviderName: "OpenRouter",
+      upstreamProviderOrigin: "extension",
     });
   });
 
@@ -293,6 +295,7 @@ describe("getPiDiscoverableModels", () => {
           reasoning: false,
         } as Model<Api>,
         () => "OpenRouter",
+        () => "builtin",
       ),
     ).toBeNull();
     expect(
@@ -304,6 +307,7 @@ describe("getPiDiscoverableModels", () => {
           reasoning: false,
         } as Model<Api>,
         () => "OpenRouter",
+        () => "builtin",
       ),
     ).toBeNull();
   });

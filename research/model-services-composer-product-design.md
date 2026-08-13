@@ -1172,7 +1172,7 @@ Pi 当前没有公开的持久 custom-provider mutation API
 
 其余 Pi-supported provider 放在“可连接的服务 / 添加服务”入口中搜索。是否“已连接”必须来自 `getProviderAuthStatus()`/`checkAuth()` 的安全投影，不能只看 auth.json：环境变量、AWS/ADC 等 ambient auth、models.json fallback 都可能令 service 可用。
 
-Logo 不是 provider identity 的前提。Pi provider metadata 当前保证 id/name/auth/model 行为，不保证完整品牌图标。维护者已选择 [LobeHub Icons](https://github.com/lobehub/lobe-icons) 作为 Model services 的品牌视觉资产来源：其官方 React package支持按需/tree-shakable组件并以 MIT 许可发布。E7 使用精确锁定版本的 `@lobehub/icons`、显式导入实际资产并随 App 本地打包；不使用 CDN、`latest` URL、远程图片或未知 Extension URL，也不把 package 的品牌集合复制成 OmniMind Provider Registry。
+Logo 不是 provider identity 的前提。Pi provider metadata 当前保证 id/name/auth/model 行为，不保证完整品牌图标。维护者已选择 [LobeHub Icons](https://github.com/lobehub/lobe-icons) 作为 Model services 的品牌视觉资产来源。E7 使用精确锁定、零运行时依赖的官方 `@lobehub/icons-static-svg`、显式导入实际资产并随 App 本地打包；不得为图标引入 `@lobehub/ui`、Ant Design、CDN、`latest` URL、远程图片或未知 Extension URL，也不把 package 的品牌集合复制成 OmniMind Provider Registry。
 
 实现上只允许一个 Web-owned、presentation-only 的 model-service icon resolver：输入是 Pi 已投影的稳定 service/provider identity与origin，输出是已打包的图标组件或中性 fallback。resolver 不决定服务是否存在、display name、认证、catalog、模型、capability或send gate，不进入 Server contract，不把品牌命中当 identity 证明。OpenAI、Anthropic、DeepSeek、Xiaomi、Google 等已知服务默认使用彩色资产；custom API 使用中性 API/连接 glyph；Extension 仅在既有 trusted provenance owner提供安全本地资产时采用，否则使用统一 Extension glyph。状态仍用文字/check/结构表达，不能只靠颜色。
 
@@ -1731,7 +1731,7 @@ ComposerEnginePicker.tsx
 
 Model services 可以新增页面内的局部 list/detail/form composition，但它们只消费 typed Host projection。认证、catalog refresh、custom provider persistence 和 secret redaction 必须留在 Server/Pi owner，不能放进 React component。
 
-E7 可以新增一个局部 `ModelServiceIcon`/resolver，精确锁定并显式导入 `@lobehub/icons`。它只服务overview、添加搜索、detail与Composer service-group presentation；Engine `ProviderIcon`保持原owner，Server contract不增加icon slug/URL，unknown/custom/Extension按§10.8本地fallback。同一提交必须闭合lockfile、MIT legal/SBOM、tree-shaking与packaged offline证据。
+E7 可以新增一个局部 `ModelServiceIcon`/resolver，精确锁定并显式导入 `@lobehub/icons-static-svg`。它只服务overview、添加搜索、detail与Composer service-group presentation；Engine `ProviderIcon`保持原owner，Server contract不增加icon slug/URL，unknown/custom/Extension按§10.8本地fallback。同一提交必须闭合lockfile、MIT legal/SBOM、静态资产裁剪与packaged offline证据。
 
 ### 11.3 不应新增
 
@@ -2096,7 +2096,7 @@ fresh launch
 
 - Pi package 版本、vendor tarball 或 `ModelRuntime` API 变化；
 - `ProviderKind`、display name、icon registry 变化；
-- `@lobehub/icons` version/export/license、model-service resolver或packaged asset closure变化；
+- `@lobehub/icons-static-svg` version/export/license、model-service resolver或packaged asset closure变化；
 - `ModelSelection` schema 或 draft persistence 变化；
 - `useProviderModelCatalog` discovery/prefetch/intent gating 变化；
 - `ProviderService` replacement/generation/restore 变化；

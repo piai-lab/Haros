@@ -2,6 +2,20 @@
   "schemaVersion": 1,
   "entries": [
     {
+      "packageIds": ["@lobehub/icons-static-svg@1.94.0"],
+      "license": "MIT",
+      "kind": "exact-upstream",
+      "assetPath": "assets/licenses/lobehub-icons-MIT.txt",
+      "sha256": "db8d8147d12d587d85759000375ef7656f7e5932350e93e3db69108b0405a54f",
+      "manifestSha256ByPackageId": {
+        "@lobehub/icons-static-svg@1.94.0": "c8c6df0db77ac286baa2a363773c4f8c64b80e5f2a2e0566fc66b4927999db95"
+      },
+      "revision": "fbd2d56e3f734e889f1373e71c8368cc4e60e0d7",
+      "sourcePath": "LICENSE",
+      "sourceUrl": "https://github.com/lobehub/lobe-icons/blob/fbd2d56e3f734e889f1373e71c8368cc4e60e0d7/LICENSE",
+      "upstreamLegalTextAbsent": false
+    },
+    {
       "packageIds": [
         "@earendil-works/pi-agent-core@0.84.1",
         "@earendil-works/pi-ai@0.84.1",

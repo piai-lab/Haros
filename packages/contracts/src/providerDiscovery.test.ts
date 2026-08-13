@@ -14,6 +14,7 @@ describe("ProviderListModelsResult", () => {
           resolvedModel: "gpt-5.6-luna-2026-07-01",
           name: "GPT-5.6 Luna",
           description: "0.4x Factory token rate",
+          upstreamProviderOrigin: "extension",
         },
         {
           slug: "custom:GPT-5.6-Luna-0",
@@ -25,6 +26,7 @@ describe("ProviderListModelsResult", () => {
 
     expect(result.models[0]?.description).toBe("0.4x Factory token rate");
     expect(result.models[0]?.resolvedModel).toBe("gpt-5.6-luna-2026-07-01");
+    expect(result.models[0]?.upstreamProviderOrigin).toBe("extension");
     expect(result.models[1]?.description).toBeUndefined();
     expect(result.models[1]?.resolvedModel).toBeUndefined();
   });

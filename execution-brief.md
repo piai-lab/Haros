@@ -122,7 +122,7 @@ E6 的 Pi-owned typed persistent mutation、四种 generic API、test/save/reope
 
 因此当前唯一下一动作是冻结上述 cumulative product/evidence bytes，由 fresh judge 对 E5 与 E6 分别做 scope、source、secret、packaged-evidence 与 Exit 审核。CLEAN 时只记录对应 Exit，不重新施工已闭合能力；真实 P0/P1 只在现有 OAuth/Pi ModelConfig/credential/Model services owner内做最小修正。不得把审计扩成 E3/E4、Extension loader、Settings taxonomy、签名或发行工程，也不得把当前工作树中的独立 CI/release 修改混入审计 SHA。
 
-E5/E6 均独立 CLEAN 后才进入 E7。E7 的最小产品收口依次是：在现有 Web presentation owner 中接入精确锁定、随 App 本地打包的 `@lobehub/icons` 彩色模型服务资产；完成 intent-scoped Pi Extension 服务投影；让锁定 OmniMind Agent runtime 已暴露的 package/ecosystem lifecycle 可达；并在 Git writing 迁移到真实调用功能与明确退休之间形成维护者裁决。图标只做 presentation，Engine 继续使用 `ProviderIcon`，Pi 继续拥有 service/model/capability truth；不允许 CDN、远程图标、第二 Provider/Model Registry 或静态 model-slug 镜像。E7 完成后进入 E8 exact-SHA focused/live/packaged 与独立 completion proof。
+E5/E6 均独立 CLEAN 后才进入 E7。E7 的最小产品收口依次是：在现有 Web presentation owner 中接入精确锁定、随 App 本地打包且零运行时依赖的 `@lobehub/icons-static-svg` 彩色模型服务资产；完成 intent-scoped Pi Extension 服务投影；让锁定 OmniMind Agent runtime 已暴露的 package/ecosystem lifecycle 可达；并在 Git writing 迁移到真实调用功能与明确退休之间形成维护者裁决。图标只做 presentation，Engine 继续使用 `ProviderIcon`，Pi 继续拥有 service/model/capability truth；不允许 CDN、远程图标、第二 Provider/Model Registry、静态 model-slug 镜像，或为图标引入 LobeHub UI/Ant Design runtime。E7 完成后进入 E8 exact-SHA focused/live/packaged 与独立 completion proof。
 
 进入门是：`Model services / 模型服务`、普通展示名 `OmniMind`、Pi ModelRuntime authority、`.omnimind/.pi` 隔离和 next-turn/stop-first 语义已在 Workbench、Product State 与 Execution sole owner 中唯一；当前 snapshot 与 Pi stable `v0.84.1` 仍匹配。停止门是任何方案需要第二 Provider/Model Registry、静态供应商能力镜像、通用推理策略、跨 Engine Session continuation、新 switch RPC、未举证的持久化，或越出已授权 Pi-owned typed mutation seam 转而建立 Host parser/writer/store/fetcher。
 

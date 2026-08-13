@@ -22,6 +22,7 @@
     "@xterm/headless",
     "effect",
     "electron-updater",
+    "jsonc-parser",
     "node-pty",
     "open",
     "tree-kill",

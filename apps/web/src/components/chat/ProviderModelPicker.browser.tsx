@@ -403,6 +403,7 @@ describe("ProviderModelPicker", () => {
         expect(text).toContain("OpenAI");
         expect(text).toContain("GPT-5");
       });
+      expect(document.querySelector('[data-model-service-icon="brand"]')).not.toBeNull();
     } finally {
       await mounted.cleanup();
     }

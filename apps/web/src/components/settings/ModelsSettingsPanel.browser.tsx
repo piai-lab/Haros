@@ -537,6 +537,7 @@ describe("ModelsSettingsPanel model services", () => {
     await search.fill("deepseek");
     expect(document.body.textContent).toContain("DeepSeek");
     expect(document.body.textContent).not.toContain("Service 39");
+    expect(document.querySelector('[data-model-service-icon="brand"]')).not.toBeNull();
     expect(
       mounted.screen.getByRole("button", { name: "settings.connectByApiAddress" }).query(),
     ).toBeNull();
@@ -551,6 +552,7 @@ describe("ModelsSettingsPanel model services", () => {
       .toContain("settings.modelServiceAuthentication");
     expect(document.body.textContent).toContain("DeepSeek V4 Flash");
     expect(document.body.textContent).toContain("DeepSeek V4 Pro");
+    expect(document.querySelector('[data-model-service-icon="brand"]')).not.toBeNull();
     expect(document.body.textContent).toContain("settings.modelServiceModelThinking");
     expect(document.body.textContent).toContain("settings.modelServiceModelImages");
     expect(document.body.textContent).not.toContain("settings.searchModelServices");

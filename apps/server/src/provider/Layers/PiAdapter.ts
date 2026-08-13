@@ -134,6 +134,9 @@ const PI_DEFAULT_SUPPORTED_THINKING_LEVELS = new Set<ThinkingLevel>([
 ]);
 
 type PiModelRegistry = Pick<ModelRegistry, "find" | "getAll" | "getAvailable">;
+type ModelConfigProviderIdentityRuntime = ModelRuntime & {
+  readonly getModelConfigProviderIds: () => ReadonlyArray<string>;
+};
 type StockPiCodingAgentModule = typeof import("@earendil-works/pi-coding-agent");
 type PiCodingAgentModule = Pick<
   StockPiCodingAgentModule,
@@ -603,6 +606,15 @@ export function getPiDiscoverableModels(
   return registry.getAvailable();
 }
 
+function hasModelConfigProviderIdentity(
+  runtime: ModelRuntime,
+): runtime is ModelConfigProviderIdentityRuntime {
+  return (
+    "getModelConfigProviderIds" in runtime &&
+    typeof runtime.getModelConfigProviderIds === "function"
+  );
+}
+
 /**
  * Pi extensions own their provider catalogs, so normalize their display metadata
  * before it crosses OmniMind's trimmed-string RPC contract. A single malformed
@@ -611,6 +623,7 @@ export function getPiDiscoverableModels(
 export function toPiProviderModelDescriptor(
   model: Model<Api>,
   getProviderDisplayName: (provider: string) => string,
+  getProviderOrigin: (provider: string) => "builtin" | "models_json" | "extension" | "unknown",
 ): ProviderListModelsResult["models"][number] | null {
   const provider = trimToUndefined(model.provider);
   const modelId = trimToUndefined(model.id);
@@ -625,6 +638,7 @@ export function toPiProviderModelDescriptor(
     name: trimToUndefined(model.name) ?? slug,
     upstreamProviderId: provider,
     upstreamProviderName: trimToUndefined(getProviderDisplayName(model.provider)) ?? provider,
+    upstreamProviderOrigin: getProviderOrigin(provider),
     ...(supportedThinkingOptions.length > 0
       ? {
           supportedReasoningEfforts: supportedThinkingOptions.map((option) => ({
@@ -2951,11 +2965,25 @@ const makePiAdapter = <P extends PiFamilyProvider>(
             modelRuntime,
           });
           const registry = modelRegistryFacade(services.modelRuntime, piSdk);
+          const extensionProviderIds = new Set(services.modelRuntime.getRegisteredProviderIds());
+          const configuredProviderIds = new Set(
+            hasModelConfigProviderIdentity(services.modelRuntime)
+              ? services.modelRuntime.getModelConfigProviderIds()
+              : [],
+          );
           const extensionCount = services.resourceLoader.getExtensions().extensions.length;
           const models = getPiDiscoverableModels(registry).flatMap((model) => {
             const descriptor = toPiProviderModelDescriptor(
               model,
               registry.getProviderDisplayName.bind(registry),
+              (providerId) =>
+                extensionProviderIds.has(providerId)
+                  ? "extension"
+                  : configuredProviderIds.has(providerId)
+                    ? "models_json"
+                    : family.provider === "omnimind" && services.modelRuntime.getProvider(providerId)
+                      ? "builtin"
+                      : "unknown",
             );
             return descriptor ? [descriptor] : [];
           });

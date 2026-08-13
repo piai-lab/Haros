@@ -36,6 +36,7 @@ export interface ProviderModelOption {
   description?: string;
   upstreamProviderId?: string;
   upstreamProviderName?: string;
+  upstreamProviderOrigin?: "builtin" | "models_json" | "extension" | "unknown";
 }
 
 export interface ProviderModelOptionGroup {
@@ -124,6 +125,7 @@ export function mergeDynamicModelOptions(input: {
     description?: string | null | undefined;
     upstreamProviderId?: string | null | undefined;
     upstreamProviderName?: string | null | undefined;
+    upstreamProviderOrigin?: "builtin" | "models_json" | "extension" | "unknown" | undefined;
   }>;
 }): ReadonlyArray<ProviderModelOption & { isCustom?: boolean }> {
   const staticNameBySlug = new Map(input.staticOptions.map((model) => [model.slug, model.name]));
@@ -166,6 +168,9 @@ export function mergeDynamicModelOptions(input: {
         : {}),
       ...(dynamicModel.upstreamProviderName?.trim()
         ? { upstreamProviderName: dynamicModel.upstreamProviderName.trim() }
+        : {}),
+      ...(dynamicModel.upstreamProviderOrigin
+        ? { upstreamProviderOrigin: dynamicModel.upstreamProviderOrigin }
         : {}),
     });
   }

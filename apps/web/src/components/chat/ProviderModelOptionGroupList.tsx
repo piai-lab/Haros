@@ -19,6 +19,7 @@ import {
 import type { ProviderKind } from "@omnimind/contracts";
 import { Collapsible, CollapsiblePanel, CollapsibleTrigger } from "../ui/collapsible";
 import { DisclosureChevron } from "../ui/DisclosureChevron";
+import { ModelServiceIcon } from "../ModelServiceIcon";
 import { MenuGroup, MenuGroupLabel, MenuRadioItem } from "../ui/menu";
 import {
   COMPOSER_PICKER_MODEL_GROUP_HEADER_CLASS_NAME,
@@ -162,7 +163,18 @@ function CollapsibleModelGroup(
       >
         <DisclosureChevron open={open} className="col-start-1 size-3 shrink-0 opacity-50" />
         <span className="col-start-2 min-w-0 truncate normal-case tracking-normal">
-          {props.group.label}
+          <span className="flex min-w-0 items-center gap-1.5">
+            {props.group.key === "__favorites__" ? null : (
+              <ModelServiceIcon
+                serviceId={props.group.key}
+                {...(props.group.options[0]?.upstreamProviderOrigin
+                  ? { origin: props.group.options[0].upstreamProviderOrigin }
+                  : {})}
+                className="size-3.5"
+              />
+            )}
+            <span className="truncate">{props.group.label}</span>
+          </span>
         </span>
         <span className="col-start-3 shrink-0 justify-self-end rounded-full bg-[color-mix(in_srgb,var(--foreground)_6%,transparent)] px-1.5 py-px text-[9px] font-normal tabular-nums normal-case tracking-normal text-muted-foreground/70">
           {props.group.options.length}
@@ -225,7 +237,18 @@ export function ProviderModelOptionGroupList(props: ProviderModelOptionGroupList
 
         return (
           <MenuGroup key={`${props.provider}:${group.key}`} className="flex flex-col gap-px px-0.5">
-            <MenuGroupLabel>{group.label}</MenuGroupLabel>
+            <MenuGroupLabel className="flex items-center gap-1.5">
+              {group.key === "__favorites__" ? null : (
+                <ModelServiceIcon
+                  serviceId={group.key}
+                  {...(group.options[0]?.upstreamProviderOrigin
+                    ? { origin: group.options[0].upstreamProviderOrigin }
+                    : {})}
+                  className="size-3.5"
+                />
+              )}
+              <span className="truncate">{group.label}</span>
+            </MenuGroupLabel>
             {groupItems}
           </MenuGroup>
         );

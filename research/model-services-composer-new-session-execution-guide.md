@@ -104,7 +104,7 @@ Timeline 保留每个 turn 的 Engine/Model provenance。
 
 维护者已选择 [LobeHub Icons](https://github.com/lobehub/lobe-icons) 作为模型服务/模型品牌视觉资产来源。实施必须：
 
-- 使用精确锁定版本的 `@lobehub/icons`，显式按需导入，随 Desktop App 本地打包；不得使用 CDN、`latest` URL 或运行时远程请求；
+- 使用精确锁定版本、零运行时依赖的 `@lobehub/icons-static-svg`，显式按需导入静态资产，随 Desktop App 本地打包；不得使用 `@lobehub/ui`、Ant Design、CDN、`latest` URL 或运行时远程请求；
 - 默认使用彩色品牌图标，但颜色只帮助识别，不代表 connected/error/selected；文本、check、状态摘要与 accessible name 仍是 authority；
 - 在 Web presentation owner 中建立一个薄的 model-service icon resolver；resolver 只把已知的稳定 runtime identity 映射为本地组件，不向 Server contract回写 icon slug/URL，也不参与 auth、catalog、capability、default 或 send gate；
 - overview、添加搜索、详情页与 Composer model-service 分组复用同一 resolver；同品牌多实例共享品牌图标，以用户命名和非敏感实例标签消歧，不展示完整 UUID；
@@ -903,7 +903,7 @@ fresh launch
 | --------------------- | --------------------------------------------------------------------------------- |
 | 普通显示名 `OmniMind` | `packages/contracts/src/model.ts`、明确的 UI-only hardcoded consumers、i18n/tests |
 | Engine icon           | `apps/web/src/components/ProviderIcon.tsx`（通常不改）                            |
-| Model service icon    | Web presentation 内局部 `ModelServiceIcon`/resolver、`@lobehub/icons` explicit imports；不进入 Server Registry/contract |
+| Model service icon    | Web presentation 内局部 `ModelServiceIcon`/resolver、`@lobehub/icons-static-svg` explicit imports；不进入 Server Registry/contract |
 | Engine picker         | `ChatView.tsx`、`ProviderModelPicker.tsx` 或局部 `ComposerEnginePicker.tsx`       |
 | Model + options       | `ComposerModelEffortPicker.tsx`、`TraitsPicker.tsx`、`composerTraits.ts`          |
 | Footer 响应式         | `composerFooterLayout.ts`                                                         |

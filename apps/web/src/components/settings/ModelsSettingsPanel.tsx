@@ -66,6 +66,7 @@ import { Checkbox } from "../ui/checkbox";
 import { SearchInput } from "../ui/search-input";
 import { Select, SelectItem, SelectTrigger, SelectValue } from "../ui/select";
 import { ArrowLeftIcon, ChevronRightIcon, PlusIcon } from "~/lib/icons";
+import { ModelServiceIcon } from "../ModelServiceIcon";
 import { useSettingsRestoreSignal } from "./SettingControls";
 import {
   SettingsCard,
@@ -1028,7 +1029,16 @@ function ActiveModelsSettingsPanel({
                   return (
                     <SettingsListRow
                       key={service.serviceId}
-                      title={instanceLabel}
+                      title={
+                        <span className="flex min-w-0 items-center gap-2.5">
+                          <ModelServiceIcon
+                            serviceId={service.serviceId}
+                            origin={service.origin}
+                            className="size-6"
+                          />
+                          <span className="truncate">{instanceLabel}</span>
+                        </span>
+                      }
                       description={
                         <span>
                           {modelServiceAuthLabel(service)}
@@ -1165,6 +1175,11 @@ function ActiveModelsSettingsPanel({
                         })}
                         onClick={() => openModelServiceDetails(service.serviceId, "browser")}
                       >
+                        <ModelServiceIcon
+                          serviceId={service.serviceId}
+                          origin={service.origin}
+                          className="size-7"
+                        />
                         <span className="min-w-0 flex-1">
                           <span className="block truncate text-sm font-medium text-foreground">
                             {instanceLabel}
@@ -1581,6 +1596,14 @@ function ActiveModelsSettingsPanel({
               </SettingsEmptyState>
             ) : selectedModelService ? (
               <div className="space-y-4">
+                <div className="flex items-center gap-2.5 text-sm font-medium text-foreground">
+                  <ModelServiceIcon
+                    serviceId={selectedModelService.serviceId}
+                    origin={selectedModelService.origin}
+                    className="size-7"
+                  />
+                  <span className="truncate">{modelServiceInstanceLabel(selectedModelService)}</span>
+                </div>
                 {selectedCustomConfig ? (
                   <div className="flex flex-wrap items-center justify-end gap-2">
                     <Button
