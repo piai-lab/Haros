@@ -249,6 +249,9 @@ describe("ModelsSettingsPanel model services", () => {
     resolveList({ state: "empty", services: [], connectableServices: [], errorCode: null });
     await expect.poll(() => document.body.textContent).toContain("settings.noModelServices");
     expect(document.body.textContent).not.toContain("settings.modelServicesUnavailable");
+    expect(document.body.textContent).not.toContain("settings.gitWritingModel");
+    expect(document.body.textContent).not.toContain("settings.independentEngineModels");
+    expect(catalogHarness.useProviderModelCatalog).not.toHaveBeenCalled();
 
     await mounted.screen.unmount();
     mounted.queryClient.clear();

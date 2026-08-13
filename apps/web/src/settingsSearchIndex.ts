@@ -322,19 +322,6 @@ export const SETTINGS_SEARCH_ENTRIES: readonly SettingsSearchEntry[] = [
       "Configure OmniMind model services credentials authentication available models catalog provider API key OAuth.",
     target: null,
   },
-  {
-    id: "models:git-writing-model",
-    section: "models",
-    title: "Git writing model",
-    keywords: "Used for generated commit messages, PR titles, and branch names.",
-  },
-  {
-    id: "models:saved-model-slugs",
-    section: "models",
-    title: "Independent engine models",
-    keywords: "Review custom model slugs managed by each engine. legacy saved model identifiers",
-    target: "setting-saved-model-slugs",
-  },
 
   // ── Providers ─────────────────────────────────────────────────────────────────
   {
@@ -478,8 +465,6 @@ const SETTINGS_SEARCH_TITLE_KEY_BY_TITLE: Readonly<Record<string, MessageKey>> =
   "External MCP integrations": "settings.integrations",
   "Follow-up behavior": "settings.followUpBehavior",
   "Font smoothing": "settings.fontSmoothing",
-  "Git writing model": "settings.gitWritingModel",
-  "Independent engine models": "settings.independentEngineModels",
   "Installed CLIs": "settings.installedClis",
   Keybindings: "settings.keybindings",
   "Managed worktrees": "settings.worktrees",
