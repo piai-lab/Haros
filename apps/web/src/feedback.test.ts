@@ -148,6 +148,7 @@ describe("buildFeedbackSubmission", () => {
     expect(submission).toMatchObject({
       category: "bug",
       details: "The composer stopped responding.",
+      contactEmail: null,
       diagnostics: {
         provider: "codex",
         model: "gpt-5.6-sol",
@@ -183,6 +184,19 @@ describe("buildFeedbackSubmission", () => {
         viewport: { width: 1, height: 1 },
       }),
     ).toThrow(RangeError);
+  });
+
+  it("normalizes an optional contact email without adding it to diagnostics", () => {
+    const submission = buildFeedbackSubmission({
+      category: "idea",
+      details: "Please reply when this is available.",
+      contactEmail: "  Scientist@Example.org ",
+      context: CONTEXT,
+      viewport: { width: 1_440, height: 900 },
+    });
+
+    expect(submission.contactEmail).toBe("scientist@example.org");
+    expect(submission.diagnostics).not.toHaveProperty("contactEmail");
   });
 });
 
@@ -248,8 +262,10 @@ describe("submitFeedback", () => {
     expect(request?.referrerPolicy).toBe("no-referrer");
     expect(request?.redirect).toBe("error");
     expect(JSON.parse(String(request?.body))).toEqual({
+      source: "desktop",
       category: submission.category,
       details: submission.details,
+      contactEmail: null,
       summary: formatFeedbackSummary({
         category: submission.category,
         diagnostics: submission.diagnostics,

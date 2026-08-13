@@ -10,6 +10,7 @@ import {
   FEEDBACK_CATEGORIES,
   isFeedbackDeliveryAvailable,
   MAX_FEEDBACK_DETAILS_LENGTH,
+  MAX_FEEDBACK_EMAIL_LENGTH,
   submitFeedback,
   type FeedbackCategory,
   type FeedbackDeliveryOptions,
@@ -19,6 +20,7 @@ import { Button } from "./ui/button";
 import { Dialog, DialogHeader, DialogPopup, DialogTitle } from "./ui/dialog";
 import { Spinner } from "./ui/spinner";
 import { Textarea } from "./ui/textarea";
+import { Input } from "./ui/input";
 import { toastManager } from "./ui/toast";
 import { useI18n } from "../i18n";
 
@@ -50,12 +52,16 @@ export function FeedbackDialog({
   const requestControllerRef = useRef<AbortController | null>(null);
   const deliveryAvailable = isFeedbackDeliveryAvailable(deliveryOptions);
 
-  const handleSubmit = async (category: FeedbackCategory | null, details: string) => {
+  const handleSubmit = async (
+    category: FeedbackCategory | null,
+    details: string,
+    contactEmail: string,
+  ) => {
     const requestController = new AbortController();
     requestControllerRef.current = requestController;
     setIsSending(true);
     try {
-      await submitFeedback(buildFeedbackSubmission({ category, details, context }), {
+      await submitFeedback(buildFeedbackSubmission({ category, details, contactEmail, context }), {
         ...deliveryOptions,
         signal: requestController.signal,
       });
@@ -106,12 +112,17 @@ function FeedbackDialogForm({
 }: {
   isSending: boolean;
   deliveryAvailable: boolean;
-  onSubmit: (category: FeedbackCategory | null, details: string) => Promise<void>;
+  onSubmit: (
+    category: FeedbackCategory | null,
+    details: string,
+    contactEmail: string,
+  ) => Promise<void>;
   onCancel: () => void;
 }) {
   const { t } = useI18n();
   const [category, setCategory] = useState<FeedbackCategory | null>(null);
   const [details, setDetails] = useState("");
+  const [contactEmail, setContactEmail] = useState("");
   const [deliveryError, setDeliveryError] = useState<string | null>(null);
   const textareaRef = useRef<HTMLTextAreaElement>(null);
 
@@ -126,11 +137,9 @@ function FeedbackDialogForm({
     if (!canSubmit) return;
     setDeliveryError(null);
     try {
-      await onSubmit(category, details);
+      await onSubmit(category, details, contactEmail);
     } catch (error) {
-      setDeliveryError(
-        error instanceof Error ? error.message : "",
-      );
+      setDeliveryError(error instanceof Error ? error.message : "");
     }
   };
 
@@ -182,6 +191,28 @@ function FeedbackDialogForm({
         }}
       />
 
+      <div className="space-y-1.5">
+        <label htmlFor="feedback-contact-email" className="text-xs font-medium text-foreground">
+          {t("feedback.contactEmail")}
+        </label>
+        <Input
+          id="feedback-contact-email"
+          type="email"
+          autoComplete="email"
+          maxLength={MAX_FEEDBACK_EMAIL_LENGTH}
+          value={contactEmail}
+          placeholder={t("feedback.contactEmailPlaceholder")}
+          disabled={isSending}
+          onChange={(event) => {
+            setContactEmail(event.target.value);
+            if (deliveryError) setDeliveryError(null);
+          }}
+        />
+        <p className="text-xs leading-relaxed text-muted-foreground">
+          {t("feedback.contactEmailPrivacy")}
+        </p>
+      </div>
+
       {!deliveryAvailable ? (
         <p role="status" className="text-xs leading-relaxed text-muted-foreground">
           {t("feedback.unavailable")}
@@ -198,7 +229,8 @@ function FeedbackDialogForm({
       <p className="text-xs leading-relaxed text-muted-foreground">
         {deliveryAvailable
           ? t("feedback.recipientPrivacy", { recipient: FEEDBACK_RECIPIENT_LABEL })
-          : t("feedback.futurePrivacy")} {t("feedback.neverSends")}
+          : t("feedback.futurePrivacy")}{" "}
+        {t("feedback.neverSends")}
       </p>
 
       {isSending ? (

@@ -55,6 +55,7 @@ export type FeedbackDiagnostics = FeedbackThreadContext & {
 export interface FeedbackSubmission {
   category: FeedbackCategory | null;
   details: string;
+  contactEmail?: string | null;
   /** Reader-facing rendering of `diagnostics`; the reporter never sees or edits it. */
   summary: string;
   diagnostics: FeedbackDiagnostics;
@@ -62,6 +63,7 @@ export interface FeedbackSubmission {
 
 const FEEDBACK_REQUEST_TIMEOUT_MS = 20_000;
 export const MAX_FEEDBACK_DETAILS_LENGTH = 5_000;
+export const MAX_FEEDBACK_EMAIL_LENGTH = 254;
 export const MAX_FEEDBACK_BODY_BYTES = 64 * 1_024;
 export { FEEDBACK_RECIPIENT_LABEL };
 
@@ -160,6 +162,7 @@ export function formatFeedbackSummary(input: {
 export function buildFeedbackSubmission(input: {
   category: FeedbackCategory | null;
   details: string;
+  contactEmail?: string;
   context: FeedbackThreadContext;
   now?: Date;
   userAgent?: string;
@@ -174,6 +177,14 @@ export function buildFeedbackSubmission(input: {
     );
   }
   const viewport = input.viewport ?? { width: window.innerWidth, height: window.innerHeight };
+  const contactEmail = input.contactEmail?.trim().toLowerCase() || null;
+  if (
+    contactEmail &&
+    (contactEmail.length > MAX_FEEDBACK_EMAIL_LENGTH ||
+      !/^[^\s@]+@[^\s@]+\.[^\s@]+$/u.test(contactEmail))
+  ) {
+    throw new TypeError("Contact email is invalid.");
+  }
   const diagnostics: FeedbackDiagnostics = {
     provider: input.context.provider,
     model: input.context.model,
@@ -199,6 +210,7 @@ export function buildFeedbackSubmission(input: {
   return {
     category: input.category,
     details,
+    contactEmail,
     summary: formatFeedbackSummary({
       category: input.category,
       diagnostics,
@@ -230,7 +242,7 @@ function requireBoundedString(
   maximumLength: number,
   options: { nullable?: boolean; multiline?: boolean } = {},
 ): string | null {
-  if (options.nullable && value === null) return null;
+  if (options.nullable && (value === null || value === undefined)) return null;
   if (typeof value !== "string") throw new TypeError(`${label} must be a string.`);
   const normalized = value.trim();
   if (normalized.length > maximumLength) {
@@ -324,6 +336,15 @@ function serializeFeedbackSubmission(submission: FeedbackSubmission): string {
     MAX_FEEDBACK_DETAILS_LENGTH,
     { multiline: true },
   )!;
+  const contactEmail = requireBoundedString(
+    (submission as unknown as Record<string, unknown>).contactEmail,
+    "Contact email",
+    MAX_FEEDBACK_EMAIL_LENGTH,
+    { nullable: true },
+  );
+  if (contactEmail && !/^[^\s@]+@[^\s@]+\.[^\s@]+$/u.test(contactEmail)) {
+    throw new TypeError("Contact email is invalid.");
+  }
   if (details.length > MAX_FEEDBACK_DETAILS_LENGTH) {
     throw new RangeError(
       `Feedback details must be ${MAX_FEEDBACK_DETAILS_LENGTH} characters or fewer.`,
@@ -334,8 +355,10 @@ function serializeFeedbackSubmission(submission: FeedbackSubmission): string {
     (submission as unknown as Record<string, unknown>).diagnostics,
   );
   const body = JSON.stringify({
+    source: "desktop",
     category,
     details,
+    contactEmail: contactEmail?.toLowerCase() ?? null,
     summary: formatFeedbackSummary({ category, diagnostics }),
     diagnostics,
   });

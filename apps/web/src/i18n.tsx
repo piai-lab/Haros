@@ -456,6 +456,9 @@ export const EN_MESSAGES = {
   "feedback.categoryOther": "Other",
   "feedback.detailsPlaceholder": "Share details (required)",
   "feedback.details": "Feedback details",
+  "feedback.contactEmail": "Contact email · Optional",
+  "feedback.contactEmailPlaceholder": "Only if you want a reply",
+  "feedback.contactEmailPrivacy": "Encrypted at rest and removed 90 days after the report closes.",
   "feedback.deliveryFailed": "Feedback could not be delivered. Your draft has been kept.",
   "feedback.unavailable":
     "Feedback delivery is unavailable in this build. You can draft here, but Submit stays disabled and no request will be sent.",
@@ -3199,6 +3202,9 @@ export const ZH_CN_MESSAGES = {
   "feedback.categoryOther": "其他",
   "feedback.detailsPlaceholder": "请填写详细信息（必填）",
   "feedback.details": "反馈详情",
+  "feedback.contactEmail": "联系邮箱 · 选填",
+  "feedback.contactEmailPlaceholder": "仅在你希望收到回复时填写",
+  "feedback.contactEmailPrivacy": "静态存储时加密，并在反馈关闭 90 天后删除。",
   "feedback.deliveryFailed": "反馈未能送达，草稿已保留。",
   "feedback.unavailable":
     "此版本暂未启用反馈发送。你可以先填写草稿，但提交按钮会保持禁用，也不会发送请求。",
