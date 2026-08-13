@@ -18,7 +18,7 @@ index f6fc21a3d..1e293a821 100644
 @@ -60,0 +61 @@
 +		"jsonc-parser": "3.3.1",
 diff --git a/packages/coding-agent/src/core/model-config.ts b/packages/coding-agent/src/core/model-config.ts
-index 7f679a494..5f7591a40 100644
+index 7f679a494..a0b041675 100644
 --- a/packages/coding-agent/src/core/model-config.ts
 +++ b/packages/coding-agent/src/core/model-config.ts
 @@ -3 +3,6 @@
@@ -221,7 +221,7 @@ index 7f679a494..5f7591a40 100644
 +		return ModelConfig.fromContent(content, normalizedPath);
 +	}
 +
-@@ -296,0 +457,114 @@ export class ModelConfig {
+@@ -296,0 +457,115 @@ export class ModelConfig {
 +
 +	static validateContent(content: string): ModelConfig {
 +		return ModelConfig.fromContent(content);
@@ -289,6 +289,7 @@ index 7f679a494..5f7591a40 100644
 +			);
 +		} else {
 +			for (const field of MODEL_CONFIG_PROVIDER_FIELDS) {
++				if (!Object.hasOwn(mutation.provider, field)) continue;
 +				nextContent = applyEdits(
 +					nextContent,
 +					modify(nextContent, ["providers", mutation.providerId, field], mutation.provider[field], {
@@ -469,10 +470,10 @@ index 3d05c2af4..a7df13424 100644
 +	type ModelConfigReadOptions,
 diff --git a/packages/coding-agent/test/model-config-mutation.test.ts b/packages/coding-agent/test/model-config-mutation.test.ts
 new file mode 100644
-index 000000000..b8eaaa38c
+index 000000000..7db1e09a6
 --- /dev/null
 +++ b/packages/coding-agent/test/model-config-mutation.test.ts
-@@ -0,0 +1,289 @@
+@@ -0,0 +1,322 @@
 +import { link, lstat, mkdtemp, readFile, rm, symlink, writeFile } from "node:fs/promises";
 +import { tmpdir } from "node:os";
 +import { join } from "node:path";
@@ -594,6 +595,39 @@ index 000000000..b8eaaa38c
 +		expect(content).toContain('"futureTargetField": { "keep": true }');
 +		expect(content).toContain('"Untouched"');
 +		expect(content).toContain('"keep-model"');
++	});
++
++	it("preserves existing credential and compatibility fields omitted by an edit", async () => {
++		const root = await createRoot();
++		const modelsPath = join(root, "models.json");
++		await writeFile(
++			modelsPath,
++			JSON.stringify({
++				providers: {
++					target: {
++						...provider("Old Target", "old-model"),
++						apiKey: "existing-safe-reference",
++						headers: { "X-Existing": "keep" },
++						compat: { supportsStore: false },
++					},
++				},
++			}),
++			{ encoding: "utf8", mode: 0o600 },
++		);
++
++		await mutateModelConfigProvider(modelsPath, {
++			type: "upsert",
++			providerId: "target",
++			provider: provider("New Target", "new-model"),
++		});
++
++		const content = await readFile(modelsPath, "utf8");
++		expect(content).toContain('"New Target"');
++		expect(content).toContain('"new-model"');
++		const target = JSON.parse(content).providers.target;
++		expect(target.apiKey).toBe("existing-safe-reference");
++		expect(target.headers).toEqual({ "X-Existing": "keep" });
++		expect(target.compat).toEqual({ supportsStore: false });
 +	});
 +
 +	it("removes only the target provider and treats a missing target as an exact no-op", async () => {
