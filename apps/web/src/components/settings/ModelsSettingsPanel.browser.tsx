@@ -13,6 +13,7 @@ import type {
 } from "@omnimind/contracts";
 import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
 import { afterEach, describe, expect, it, vi } from "vitest";
+import { userEvent } from "vitest/browser";
 import { render } from "vitest-browser-react";
 
 import { AppSettingsSchema } from "~/appSettings";
@@ -202,6 +203,18 @@ async function renderPanel(input: {
   };
 }
 
+async function openConnectableService(
+  screen: Awaited<ReturnType<typeof renderPanel>>["screen"],
+  name: string,
+) {
+  await screen.getByRole("button", { name: "settings.addModelService" }).click();
+  const connectButton = screen.getByRole("button", {
+    name: `settings.connectModelServiceNamed:{"name":"${name}"}`,
+  });
+  connectButton.element().focus();
+  await userEvent.keyboard("{Enter}");
+}
+
 afterEach(() => {
   delete window.nativeApi;
   document.body.innerHTML = "";
@@ -281,10 +294,8 @@ describe("ModelsSettingsPanel model services", () => {
     });
 
     await expect.poll(() => document.body.textContent).toContain("settings.noModelServices");
-    expect(document.body.textContent).toContain("settings.connectableModelServices");
-    await mounted.screen
-      .getByRole("button", { name: 'settings.connectModelServiceNamed:{"name":"DeepSeek"}' })
-      .click();
+    expect(document.body.textContent).not.toContain("DeepSeek");
+    await openConnectableService(mounted.screen, "DeepSeek");
     await expect
       .poll(() => mounted.calls.get)
       .toHaveBeenCalledWith(
@@ -295,6 +306,75 @@ describe("ModelsSettingsPanel model services", () => {
       .poll(() => document.body.textContent)
       .toContain("settings.modelServiceAuthentication");
     expect(mounted.screen.getByRole("button", { name: "settings.addApiKey" })).toBeTruthy();
+
+    await mounted.screen.unmount();
+    mounted.queryClient.clear();
+  });
+
+  it("keeps the runtime service catalog behind a searchable add flow and returns from details", async () => {
+    const connectableServices = Array.from({ length: 40 }, (_, index) =>
+      service({
+        serviceId: index === 7 ? "deepseek" : `service-${index}`,
+        providerId: index === 7 ? "deepseek" : `service-${index}`,
+        displayName: index === 7 ? "DeepSeek" : `Service ${index}`,
+        authMethods: [
+          {
+            type: "api_key",
+            label: index === 7 ? "DeepSeek API key" : `Service ${index} API key`,
+            canLogin: true,
+            subscription: false,
+          },
+        ],
+        authState: "setup_required",
+        authSource: null,
+        storedCredentialType: null,
+        knownModelCount: 0,
+        availableModelCount: 0,
+        catalogState: "empty",
+        catalogErrorCode: null,
+      }),
+    );
+    const deepSeek = connectableServices[7]!;
+    const mounted = await renderPanel({
+      list: async () => ({
+        state: "empty",
+        services: [],
+        connectableServices,
+        errorCode: null,
+      }),
+      get: async ({ serviceId }) =>
+        serviceId === deepSeek.serviceId
+          ? { state: "ready", service: deepSeek, errorCode: null }
+          : { state: "empty", service: null, errorCode: null },
+    });
+
+    await expect.poll(() => document.body.textContent).toContain("settings.addModelService");
+    expect(document.body.textContent).not.toContain("Service 39");
+
+    await mounted.screen.getByRole("button", { name: "settings.addModelService" }).click();
+    const search = mounted.screen.getByRole("textbox", { name: "settings.searchModelServices" });
+    await search.fill("deepseek");
+    expect(document.body.textContent).toContain("DeepSeek");
+    expect(document.body.textContent).not.toContain("Service 39");
+    expect(
+      mounted.screen.getByRole("button", { name: "settings.connectByApiAddress" }).element(),
+    ).toBeDisabled();
+
+    const connectButton = mounted.screen.getByRole("button", {
+      name: 'settings.connectModelServiceNamed:{"name":"DeepSeek"}',
+    });
+    connectButton.element().focus();
+    await userEvent.keyboard("{Enter}");
+    await expect
+      .poll(() => document.body.textContent)
+      .toContain("settings.modelServiceAuthentication");
+    expect(document.body.textContent).not.toContain("settings.searchModelServices");
+
+    await mounted.screen.getByRole("button", { name: "common.back" }).click();
+    expect(
+      mounted.screen.getByRole("textbox", { name: "settings.searchModelServices" }),
+    ).toHaveValue("deepseek");
+    expect(document.body.textContent).toContain("DeepSeek");
 
     await mounted.screen.unmount();
     mounted.queryClient.clear();
@@ -591,9 +671,7 @@ describe("ModelsSettingsPanel model services", () => {
       cancelLogin,
     });
 
-    await mounted.screen
-      .getByRole("button", { name: 'settings.connectModelServiceNamed:{"name":"OpenAI Codex"}' })
-      .click();
+    await openConnectableService(mounted.screen, "OpenAI Codex");
     await mounted.screen.getByRole("button", { name: "settings.signInWithBrowser" }).click();
     await expect.poll(() => pollLogin).toHaveBeenCalled();
     const pollSignal = pollLogin.mock.calls[0]?.[1]?.signal;
@@ -684,9 +762,7 @@ describe("ModelsSettingsPanel model services", () => {
       openExternal,
     });
 
-    await mounted.screen
-      .getByRole("button", { name: 'settings.connectModelServiceNamed:{"name":"OpenAI Codex"}' })
-      .click();
+    await openConnectableService(mounted.screen, "OpenAI Codex");
     await mounted.screen.getByRole("button", { name: "settings.signInWithBrowser" }).click();
     await expect
       .poll(() => mounted.screen.getByRole("button", { name: /auth\.example\.test/u }))
@@ -776,9 +852,7 @@ describe("ModelsSettingsPanel model services", () => {
       openExternal,
     });
 
-    await mounted.screen
-      .getByRole("button", { name: 'settings.connectModelServiceNamed:{"name":"OpenAI Codex"}' })
-      .click();
+    await openConnectableService(mounted.screen, "OpenAI Codex");
     await mounted.screen.getByRole("button", { name: "settings.signInWithBrowser" }).click();
     await expect.poll(() => openExternal).toHaveBeenCalledWith(authUrl);
     await expect
@@ -892,9 +966,7 @@ describe("ModelsSettingsPanel model services", () => {
       openExternal,
     });
 
-    await mounted.screen
-      .getByRole("button", { name: 'settings.connectModelServiceNamed:{"name":"OpenAI Codex"}' })
-      .click();
+    await openConnectableService(mounted.screen, "OpenAI Codex");
     await mounted.screen.getByRole("button", { name: "settings.signInWithBrowser" }).click();
     await mounted.screen
       .getByRole("button", { name: "settings.modelServiceOtherSignInOptions" })
@@ -1038,7 +1110,7 @@ describe("ModelsSettingsPanel model services", () => {
     mounted.queryClient.clear();
   });
 
-  it("keeps independent engine model editing folded and excludes new OmniMind hints", async () => {
+  it("keeps independent Engine model editing out of Model services", async () => {
     const mounted = await renderPanel({
       list: async () => ({
         state: "empty",
@@ -1048,18 +1120,10 @@ describe("ModelsSettingsPanel model services", () => {
       }),
     });
 
-    const disclosure = mounted.screen.getByRole("button", { name: "settings.reviewAction" });
-    await expect.element(disclosure).toHaveAttribute("aria-expanded", "false");
-    expect(
-      mounted.screen.getByLabelText("settings.engineModelSlug").element().closest("[inert]"),
-    ).not.toBeNull();
-
-    await disclosure.click();
-    await expect.element(disclosure).toHaveAttribute("aria-expanded", "true");
-    await mounted.screen.getByLabelText("settings.engineModelProvider").click();
-    expect(
-      [...document.querySelectorAll('[role="option"]')].map((option) => option.textContent),
-    ).not.toContain("OmniMind");
+    await expect.poll(() => document.body.textContent).toContain("settings.noModelServices");
+    expect(document.body.textContent).not.toContain("settings.reviewAction");
+    expect(document.querySelector('[aria-label="settings.engineModelSlug"]')).toBeNull();
+    expect(document.querySelector('[aria-label="settings.engineModelProvider"]')).toBeNull();
 
     await mounted.screen.unmount();
     mounted.queryClient.clear();

@@ -31,6 +31,9 @@ export type SettingsNavGroupId = "personal" | "integrations" | "coding" | "syste
  */
 export const SETTINGS_TARGETS = {
   providerUpdates: "provider-updates",
+  // Keep the original Installed CLIs deep-link byte stable while the visible row broadens to
+  // Engine details. Existing shared URLs must not break when product copy changes.
+  engineDetails: "setting-installed-clis",
   environmentPanel: "environment-panel",
 } as const;
 

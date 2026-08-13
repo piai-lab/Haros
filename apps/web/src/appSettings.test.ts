@@ -644,10 +644,16 @@ describe("provider-indexed custom model settings", () => {
     ]);
   });
 
-  it("keeps Droid persistence compatible without advertising unsupported custom slugs", () => {
-    expect(CUSTOM_MODEL_EDITOR_PROVIDER_SETTINGS.map((config) => config.provider)).not.toContain(
-      "droid",
-    );
+  it("keeps runtime-catalog persistence compatible without advertising unsupported editors", () => {
+    expect(CUSTOM_MODEL_EDITOR_PROVIDER_SETTINGS.map((config) => config.provider)).toEqual([
+      "codex",
+      "claudeAgent",
+      "cursor",
+      "antigravity",
+      "grok",
+      "kilo",
+      "opencode",
+    ]);
   });
 
   it("reads custom models for each provider", () => {

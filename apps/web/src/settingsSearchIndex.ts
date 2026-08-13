@@ -9,6 +9,7 @@ import type { MessageKey } from "~/i18n";
 import {
   settingRowAnchorId,
   SETTINGS_NAV_ITEMS,
+  SETTINGS_TARGETS,
   type SettingsSectionId,
 } from "./settingsNavigation";
 
@@ -329,7 +330,7 @@ export const SETTINGS_SEARCH_ENTRIES: readonly SettingsSearchEntry[] = [
     section: "providers",
     title: "Independent engine models",
     keywords: "Add remove reset custom model slugs managed by each engine.",
-    target: null,
+    target: SETTINGS_TARGETS.engineDetails,
   },
 
   // ── Providers ─────────────────────────────────────────────────────────────────
@@ -356,8 +357,10 @@ export const SETTINGS_SEARCH_ENTRIES: readonly SettingsSearchEntry[] = [
   {
     id: "providers:installed-clis",
     section: "providers",
-    title: "Installed CLIs",
-    keywords: "Review provider versions and update tools. binary overrides path install",
+    title: "Engine details",
+    keywords:
+      "Review engine versions, paths, update tools, and custom model slugs. binary overrides install",
+    target: SETTINGS_TARGETS.engineDetails,
   },
 
   // ── Skills ────────────────────────────────────────────────────────────────────
@@ -474,7 +477,7 @@ const SETTINGS_SEARCH_TITLE_KEY_BY_TITLE: Readonly<Record<string, MessageKey>> =
   "External MCP integrations": "settings.integrations",
   "Follow-up behavior": "settings.followUpBehavior",
   "Font smoothing": "settings.fontSmoothing",
-  "Installed CLIs": "settings.installedClis",
+  "Engine details": "settings.installedClis",
   "Independent engine models": "settings.independentEngineModels",
   Keybindings: "settings.keybindings",
   "Managed worktrees": "settings.worktrees",

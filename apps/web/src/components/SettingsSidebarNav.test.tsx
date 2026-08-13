@@ -8,6 +8,7 @@ import { describe, expect, it, vi } from "vitest";
 
 import { SettingsSidebarNav } from "./SettingsSidebarNav";
 import { settingRowAnchorId } from "../settingsNavigation";
+import { SETTINGS_TARGETS } from "../settingsNavigation";
 import {
   SETTINGS_SEARCH_ENTRIES,
   rankSettingsSearchEntries,
@@ -79,6 +80,14 @@ describe("rankSettingsSearchEntries", () => {
         expect(settingsSearchEntryTarget(entry)?.startsWith("setting-")).toBe(true);
       }
     }
+  });
+
+  it("keeps the former Installed CLIs deep link stable after the row broadens", () => {
+    expect(SETTINGS_TARGETS.engineDetails).toBe("setting-installed-clis");
+    const customModelsEntry = SETTINGS_SEARCH_ENTRIES.find(
+      (entry) => entry.id === "providers:independent-engine-models",
+    )!;
+    expect(settingsSearchEntryTarget(customModelsEntry)).toBe("setting-installed-clis");
   });
 });
 

@@ -127,6 +127,11 @@ function ActiveModelsSettingsPanel({
     readServerModelServicesCapability,
   );
   const [selectedModelServiceId, setSelectedModelServiceId] = useState<string | null>(null);
+  const [modelServiceBrowserOpen, setModelServiceBrowserOpen] = useState(false);
+  const [modelServiceSearch, setModelServiceSearch] = useState("");
+  const [modelServiceDetailReturnView, setModelServiceDetailReturnView] = useState<
+    "overview" | "browser"
+  >("overview");
   const [authDialog, setAuthDialog] = useState<ModelServiceAuthDialogState | null>(null);
   const [logoutService, setLogoutService] = useState<OmniMindModelServiceDescriptor | null>(null);
   const [modelServiceMutation, setModelServiceMutation] = useState<string | null>(null);
@@ -165,6 +170,9 @@ function ActiveModelsSettingsPanel({
 
   useSettingsRestoreSignal(resetEpoch, () => {
     setSelectedModelServiceId(null);
+    setModelServiceBrowserOpen(false);
+    setModelServiceSearch("");
+    setModelServiceDetailReturnView("overview");
     void cancelCurrentAuthRequest();
     setAuthDialog(null);
     setLogoutService(null);
@@ -544,143 +552,217 @@ function ActiveModelsSettingsPanel({
     }
   }, [invalidateModelServiceConsumers, logoutService, t]);
 
+  const connectableModelServices = modelServicesQuery.data?.connectableServices ?? [];
+  const filteredConnectableModelServices = useMemo(() => {
+    const query = modelServiceSearch.trim().toLocaleLowerCase();
+    if (!query) return connectableModelServices;
+    return connectableModelServices.filter((service) =>
+      [
+        modelServiceInstanceLabel(service),
+        service.serviceId,
+        service.providerId,
+        ...service.authMethods.map((method) => method.label),
+      ].some((value) => value.toLocaleLowerCase().includes(query)),
+    );
+  }, [connectableModelServices, modelServiceInstanceLabel, modelServiceSearch]);
+
+  const openModelServiceDetails = useCallback(
+    (serviceId: string, returnView: "overview" | "browser") => {
+      setModelServiceDetailReturnView(returnView);
+      setSelectedModelServiceId(serviceId);
+    },
+    [],
+  );
+
+  const closeModelServiceDetails = useCallback(() => {
+    setSelectedModelServiceId(null);
+    setModelServiceBrowserOpen(modelServiceDetailReturnView === "browser");
+  }, [modelServiceDetailReturnView]);
+
   return (
     <div className="space-y-6">
-      <SettingsSectionShell
-        title={t("settings.configuredModelServices")}
-        action={
-          modelServicesQuery.isFetching && !modelServicesQuery.isPending ? (
-            <span role="status" className="text-xs text-muted-foreground">
-              {t("settings.modelServicesChecking")}
-            </span>
-          ) : null
-        }
-      >
-        <div
-          aria-live="polite"
-          aria-busy={modelServicesCapability === null || modelServicesQuery.isPending}
+      {!selectedModelServiceId && !modelServiceBrowserOpen ? (
+        <SettingsSectionShell
+          title={t("settings.configuredModelServices")}
+          action={
+            <div className="flex flex-wrap items-center justify-end gap-2">
+              {modelServicesQuery.isFetching && !modelServicesQuery.isPending ? (
+                <span role="status" className="text-xs text-muted-foreground">
+                  {t("settings.modelServicesChecking")}
+                </span>
+              ) : null}
+              {connectableModelServices.length > 0 ? (
+                <Button
+                  size="sm"
+                  onClick={() => {
+                    setModelServiceSearch("");
+                    setModelServiceBrowserOpen(true);
+                  }}
+                >
+                  {t("settings.addModelService")}
+                </Button>
+              ) : null}
+            </div>
+          }
         >
-          {modelServicesCapability === null ? (
-            <SettingsEmptyState layout="status">
-              {t("settings.modelServicesCapabilityChecking")}
-            </SettingsEmptyState>
-          ) : modelServicesCapability === false ? (
-            <SettingsEmptyState layout="status" tone="destructive">
-              <div role="alert">{t("settings.modelServicesServerUpdateRequired")}</div>
-            </SettingsEmptyState>
-          ) : modelServicesQuery.isPending ? (
-            <SettingsEmptyState layout="status">
-              {t("settings.modelServicesLoading")}
-            </SettingsEmptyState>
-          ) : modelServicesQuery.isError ? (
-            <SettingsEmptyState layout="status" tone="destructive">
-              <div role="alert" className="flex flex-wrap items-center justify-between gap-3">
-                <span>{t("settings.modelServicesConnectionUnavailable")}</span>
-                <Button
-                  size="sm"
-                  variant="outline"
-                  onClick={() => void modelServicesQuery.refetch()}
-                >
-                  {t("common.tryAgain")}
-                </Button>
-              </div>
-            </SettingsEmptyState>
-          ) : modelServicesQuery.data?.state === "error" ? (
-            <SettingsEmptyState layout="status" tone="destructive">
-              <div role="alert" className="flex flex-wrap items-center justify-between gap-3">
-                <span>{t("settings.modelServicesUnavailable")}</span>
-                <Button
-                  size="sm"
-                  variant="outline"
-                  onClick={() => void modelServicesQuery.refetch()}
-                >
-                  {t("common.tryAgain")}
-                </Button>
-              </div>
-            </SettingsEmptyState>
-          ) : modelServicesQuery.data?.services.length ? (
-            <SettingsCard>
-              {modelServicesQuery.data.services.map((service) => {
-                const detailOpen = selectedModelServiceId === service.serviceId;
-                const instanceLabel = modelServiceInstanceLabel(service);
-                return (
-                  <SettingsListRow
-                    key={service.serviceId}
-                    title={instanceLabel}
-                    description={
-                      <span>
-                        {modelServiceAuthLabel(service)}
-                        {" · "}
-                        {t("settings.modelServiceModelCounts", {
-                          known: service.knownModelCount,
-                          available: service.availableModelCount,
-                        })}
-                        {service.catalogState === "ready"
-                          ? null
-                          : ` · ${modelServiceCatalogLabel(service)}`}
-                      </span>
-                    }
-                    actions={
-                      <Button
-                        size="sm"
-                        variant="outline"
-                        aria-expanded={detailOpen}
-                        aria-controls={modelServiceDetailRegionId}
-                        aria-label={
-                          detailOpen
-                            ? t("settings.hideDetailsNamed", { name: instanceLabel })
-                            : t("settings.viewDetailsNamed", { name: instanceLabel })
-                        }
-                        onClick={() =>
-                          setSelectedModelServiceId((current) =>
-                            current === service.serviceId ? null : service.serviceId,
-                          )
-                        }
-                      >
-                        {detailOpen ? t("settings.hideDetails") : t("settings.viewDetails")}
-                      </Button>
-                    }
-                  />
-                );
-              })}
-            </SettingsCard>
-          ) : (
-            <SettingsEmptyState>
-              <p className="font-medium text-foreground">{t("settings.noModelServices")}</p>
-              <p className="mt-1">{t("settings.noModelServicesDescription")}</p>
-            </SettingsEmptyState>
-          )}
-        </div>
-      </SettingsSectionShell>
+          <div
+            aria-live="polite"
+            aria-busy={modelServicesCapability === null || modelServicesQuery.isPending}
+          >
+            {modelServicesCapability === null ? (
+              <SettingsEmptyState layout="status">
+                {t("settings.modelServicesCapabilityChecking")}
+              </SettingsEmptyState>
+            ) : modelServicesCapability === false ? (
+              <SettingsEmptyState layout="status" tone="destructive">
+                <div role="alert">{t("settings.modelServicesServerUpdateRequired")}</div>
+              </SettingsEmptyState>
+            ) : modelServicesQuery.isPending ? (
+              <SettingsEmptyState layout="status">
+                {t("settings.modelServicesLoading")}
+              </SettingsEmptyState>
+            ) : modelServicesQuery.isError ? (
+              <SettingsEmptyState layout="status" tone="destructive">
+                <div role="alert" className="flex flex-wrap items-center justify-between gap-3">
+                  <span>{t("settings.modelServicesConnectionUnavailable")}</span>
+                  <Button
+                    size="sm"
+                    variant="outline"
+                    onClick={() => void modelServicesQuery.refetch()}
+                  >
+                    {t("common.tryAgain")}
+                  </Button>
+                </div>
+              </SettingsEmptyState>
+            ) : modelServicesQuery.data?.state === "error" ? (
+              <SettingsEmptyState layout="status" tone="destructive">
+                <div role="alert" className="flex flex-wrap items-center justify-between gap-3">
+                  <span>{t("settings.modelServicesUnavailable")}</span>
+                  <Button
+                    size="sm"
+                    variant="outline"
+                    onClick={() => void modelServicesQuery.refetch()}
+                  >
+                    {t("common.tryAgain")}
+                  </Button>
+                </div>
+              </SettingsEmptyState>
+            ) : modelServicesQuery.data?.services.length ? (
+              <SettingsCard>
+                {modelServicesQuery.data.services.map((service) => {
+                  const detailOpen = selectedModelServiceId === service.serviceId;
+                  const instanceLabel = modelServiceInstanceLabel(service);
+                  return (
+                    <SettingsListRow
+                      key={service.serviceId}
+                      title={instanceLabel}
+                      description={
+                        <span>
+                          {modelServiceAuthLabel(service)}
+                          {" · "}
+                          {t("settings.modelServiceModelCounts", {
+                            known: service.knownModelCount,
+                            available: service.availableModelCount,
+                          })}
+                          {service.catalogState === "ready"
+                            ? null
+                            : ` · ${modelServiceCatalogLabel(service)}`}
+                        </span>
+                      }
+                      actions={
+                        <Button
+                          size="sm"
+                          variant="outline"
+                          aria-expanded={detailOpen}
+                          aria-controls={modelServiceDetailRegionId}
+                          aria-label={
+                            detailOpen
+                              ? t("settings.hideDetailsNamed", { name: instanceLabel })
+                              : t("settings.viewDetailsNamed", { name: instanceLabel })
+                          }
+                          onClick={() => openModelServiceDetails(service.serviceId, "overview")}
+                        >
+                          {detailOpen ? t("settings.hideDetails") : t("settings.viewDetails")}
+                        </Button>
+                      }
+                    />
+                  );
+                })}
+              </SettingsCard>
+            ) : (
+              <SettingsEmptyState>
+                <p className="font-medium text-foreground">{t("settings.noModelServices")}</p>
+                <p className="mt-1">{t("settings.noModelServicesDescription")}</p>
+              </SettingsEmptyState>
+            )}
+          </div>
+        </SettingsSectionShell>
+      ) : null}
 
-      {modelServicesQuery.data?.connectableServices.length ? (
-        <SettingsSectionShell title={t("settings.connectableModelServices")}>
-          <SettingsCard>
-            {modelServicesQuery.data.connectableServices.map((service) => {
-              const instanceLabel = modelServiceInstanceLabel(service);
-              return (
-                <SettingsListRow
-                  key={service.serviceId}
-                  title={instanceLabel}
-                  description={
-                    service.authMethods.length > 0
-                      ? service.authMethods.map((method) => method.label).join(" · ")
-                      : modelServiceAuthLabel(service)
-                  }
-                  actions={
-                    <Button
-                      size="sm"
-                      variant="outline"
-                      aria-label={t("settings.connectModelServiceNamed", { name: instanceLabel })}
-                      onClick={() => setSelectedModelServiceId(service.serviceId)}
-                    >
-                      {t("settings.connectModelService")}
-                    </Button>
-                  }
-                />
-              );
-            })}
-          </SettingsCard>
+      {!selectedModelServiceId && modelServiceBrowserOpen ? (
+        <SettingsSectionShell
+          title={t("settings.connectableModelServices")}
+          action={
+            <Button size="sm" variant="ghost" onClick={() => setModelServiceBrowserOpen(false)}>
+              {t("common.back")}
+            </Button>
+          }
+        >
+          <div className="space-y-3">
+            <Input
+              autoFocus
+              value={modelServiceSearch}
+              onChange={(event) => setModelServiceSearch(event.target.value)}
+              placeholder={t("settings.searchModelServices")}
+              aria-label={t("settings.searchModelServices")}
+              spellCheck={false}
+            />
+            {filteredConnectableModelServices.length > 0 ? (
+              <SettingsCard>
+                {filteredConnectableModelServices.map((service) => {
+                  const instanceLabel = modelServiceInstanceLabel(service);
+                  return (
+                    <SettingsListRow
+                      key={service.serviceId}
+                      title={instanceLabel}
+                      description={
+                        service.authMethods.length > 0
+                          ? service.authMethods.map((method) => method.label).join(" · ")
+                          : modelServiceAuthLabel(service)
+                      }
+                      actions={
+                        <Button
+                          size="sm"
+                          variant="outline"
+                          aria-label={t("settings.connectModelServiceNamed", {
+                            name: instanceLabel,
+                          })}
+                          onClick={() => openModelServiceDetails(service.serviceId, "browser")}
+                        >
+                          {t("settings.connectModelService")}
+                        </Button>
+                      }
+                    />
+                  );
+                })}
+              </SettingsCard>
+            ) : (
+              <SettingsEmptyState>{t("settings.noMatchingModelServices")}</SettingsEmptyState>
+            )}
+            <div className="border-t border-border/70 pt-3 text-sm text-muted-foreground">
+              <button
+                type="button"
+                disabled
+                className="cursor-not-allowed text-left opacity-70"
+                aria-describedby="model-service-api-address-unavailable"
+              >
+                {t("settings.connectByApiAddress")}
+              </button>
+              <p id="model-service-api-address-unavailable" className="mt-1 text-xs">
+                {t("settings.connectByApiAddressUnavailable")}
+              </p>
+            </div>
+          </div>
         </SettingsSectionShell>
       ) : null}
 
@@ -709,8 +791,8 @@ function ActiveModelsSettingsPanel({
                 : t("settings.modelServiceDetails")
             }
             action={
-              <Button size="sm" variant="ghost" onClick={() => setSelectedModelServiceId(null)}>
-                {t("settings.close")}
+              <Button size="sm" variant="ghost" onClick={closeModelServiceDetails}>
+                {t("common.back")}
               </Button>
             }
           >

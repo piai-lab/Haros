@@ -450,7 +450,11 @@ function createProviderInstallDisclosureState(
         field.kind === "password"
           ? settings[field.configuredKey]
           : Boolean(settings[field.settingsKey]),
-      ),
+      ) ||
+        (CUSTOM_MODEL_EDITOR_PROVIDER_SETTINGS.some(
+          (candidate) => candidate.provider === config.provider,
+        ) &&
+          getCustomModelsForProvider(settings, config.provider).length > 0),
     ]),
   ) as Record<ProviderKind, boolean>;
 }
@@ -709,7 +713,7 @@ function ProviderCustomModelsEditor(props: {
   );
   const [input, setInput] = useState("");
   const [error, setError] = useState<string | null>(null);
-  if (!config || config.provider === "omnimind") return null;
+  if (!config) return null;
 
   const savedModels = getCustomModelsForProvider(props.settings, props.provider);
   const defaultModels = getDefaultCustomModelsForProvider(props.defaults, props.provider);
@@ -1286,6 +1290,7 @@ export function ProvidersSettingsPanel({
       <div>
         <SettingsSection title={t("settings.providerTools")}>
           <SettingsRow
+            anchorId={SETTINGS_TARGETS.engineDetails}
             title={t("settings.installedClis")}
             description={t("settings.installedClisDescription")}
             status={
