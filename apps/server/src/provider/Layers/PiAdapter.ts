@@ -134,7 +134,20 @@ const PI_DEFAULT_SUPPORTED_THINKING_LEVELS = new Set<ThinkingLevel>([
 ]);
 
 type PiModelRegistry = Pick<ModelRegistry, "find" | "getAll" | "getAvailable">;
-type PiCodingAgentModule = typeof import("@earendil-works/pi-coding-agent");
+type StockPiCodingAgentModule = typeof import("@earendil-works/pi-coding-agent");
+type PiCodingAgentModule = Pick<
+  StockPiCodingAgentModule,
+  | "ModelRegistry"
+  | "ModelRuntime"
+  | "SessionManager"
+  | "createAgentSessionFromServices"
+  | "createAgentSessionRuntime"
+  | "createAgentSessionServices"
+  | "createBashToolDefinition"
+  | "defineTool"
+  | "getAgentDir"
+  | "getShellConfig"
+>;
 type PiAgentRuntime = Awaited<ReturnType<PiCodingAgentModule["createAgentSessionRuntime"]>>;
 type PiShellConfig = ReturnType<PiCodingAgentModule["getShellConfig"]>;
 
@@ -300,6 +313,27 @@ const loadPiCodingAgentModule: () => Promise<PiCodingAgentModule> = lazyModule(
   () => import("@earendil-works/pi-coding-agent"),
 );
 
+// The product-owned package is built from the same pinned Pi source, but its
+// classes are nominally distinct because it is a separate package instance.
+// Keep the compatibility boundary limited to the exact SDK members consumed by
+// this shared session adapter. Model-services code uses the product module's
+// real exported type and never casts the complete module to stock Pi.
+const loadOmniMindAdapterModule: () => Promise<PiCodingAgentModule> = lazyModule(async () => {
+  const sdk = await loadOmniMindCodingAgentModule();
+  return {
+    ModelRegistry: sdk.ModelRegistry,
+    ModelRuntime: sdk.ModelRuntime,
+    SessionManager: sdk.SessionManager,
+    createAgentSessionFromServices: sdk.createAgentSessionFromServices,
+    createAgentSessionRuntime: sdk.createAgentSessionRuntime,
+    createAgentSessionServices: sdk.createAgentSessionServices,
+    createBashToolDefinition: sdk.createBashToolDefinition,
+    defineTool: sdk.defineTool,
+    getAgentDir: sdk.getAgentDir,
+    getShellConfig: sdk.getShellConfig,
+  } as unknown as PiCodingAgentModule;
+});
+
 export async function createOmniMindModelRuntime(agentDir: string) {
   const sdk = await loadOmniMindCodingAgentModule();
   return sdk.ModelRuntime.create({
@@ -334,10 +368,11 @@ const STOCK_PI_FAMILY = {
 const OMNIMIND_AGENT_FAMILY = {
   provider: "omnimind",
   displayName: "OmniMind",
-  loadModule: loadOmniMindCodingAgentModule,
+  loadModule: loadOmniMindAdapterModule,
   // Product state is App-owned and cannot be redirected into stock Pi state.
   resolveAgentDir: (_requestedAgentDir, serverBaseDir) => resolveOmniMindAgentDir(serverBaseDir),
-  createModelRuntime: createOmniMindModelRuntime,
+  createModelRuntime: async (agentDir: string) =>
+    (await createOmniMindModelRuntime(agentDir)) as unknown as ModelRuntime,
 } satisfies PiFamilyAdapterConfig<"omnimind">;
 
 interface PiSessionContext {

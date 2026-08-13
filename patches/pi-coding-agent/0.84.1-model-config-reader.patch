@@ -18,7 +18,7 @@ index f6fc21a3d..1e293a821 100644
 @@ -60,0 +61 @@
 +		"jsonc-parser": "3.3.1",
 diff --git a/packages/coding-agent/src/core/model-config.ts b/packages/coding-agent/src/core/model-config.ts
-index 7f679a494..95ba58141 100644
+index 7f679a494..5f7591a40 100644
 --- a/packages/coding-agent/src/core/model-config.ts
 +++ b/packages/coding-agent/src/core/model-config.ts
 @@ -3 +3,6 @@
@@ -29,7 +29,7 @@ index 7f679a494..95ba58141 100644
 +import { basename, dirname, join } from "node:path";
 +import { applyEdits, modify } from "jsonc-parser";
 +import lockfile from "proper-lockfile";
-@@ -215,0 +221,114 @@ type ModelsJson = Static<typeof ModelsConfigSchema>;
+@@ -215,0 +221,130 @@ type ModelsJson = Static<typeof ModelsConfigSchema>;
 +export interface ModelConfigReadOptions {
 +	readonly signal?: AbortSignal;
 +}
@@ -51,6 +51,10 @@ index 7f679a494..95ba58141 100644
 +	readonly signal?: AbortSignal;
 +}
 +
++export interface ModelConfigFileMutationOptions extends ModelConfigMutationOptions {
++	readonly validateCandidate: (candidatePath: string, signal?: AbortSignal) => Promise<void>;
++}
++
 +export interface ModelConfigMutationResult {
 +	readonly changed: boolean;
 +	readonly providerIds: readonly string[];
@@ -58,6 +62,18 @@ index 7f679a494..95ba58141 100644
 +
 +const MAX_MODELS_CONFIG_BYTES = 4 * 1024 * 1024;
 +const MODELS_CONFIG_FILE_MODE = 0o600;
++const MODEL_CONFIG_PROVIDER_FIELDS = [
++	"name",
++	"baseUrl",
++	"apiKey",
++	"api",
++	"oauth",
++	"headers",
++	"compat",
++	"authHeader",
++	"models",
++	"modelOverrides",
++] as const satisfies readonly (keyof ModelsJsonProvider)[];
 +
 +function isMissingPathError(error: unknown): boolean {
 +	return typeof error === "object" && error !== null && "code" in error && error.code === "ENOENT";
@@ -144,7 +160,7 @@ index 7f679a494..95ba58141 100644
 +	}
 +}
 +
-@@ -245,14 +364 @@ export class ModelConfig {
+@@ -245,14 +380 @@ export class ModelConfig {
 -	static async load(modelsJsonPath: string | undefined): Promise<ModelConfig> {
 -		if (!modelsJsonPath) return new ModelConfig(new Map());
 -		const path = normalizePath(modelsJsonPath);
@@ -160,16 +176,16 @@ index 7f679a494..95ba58141 100644
 -		}
 -
 +	private static fromContent(content: string, sourceLabel?: string): ModelConfig {
-@@ -265 +371 @@ export class ModelConfig {
+@@ -265 +387 @@ export class ModelConfig {
 -				`Failed to parse models.json: ${error instanceof Error ? error.message : error}\n\nFile: ${path}`,
 +				`Failed to parse models.json: ${error instanceof Error ? error.message : error}${sourceLabel ? `\n\nFile: ${sourceLabel}` : ""}`,
-@@ -275 +381,4 @@ export class ModelConfig {
+@@ -275 +397,4 @@ export class ModelConfig {
 -			return new ModelConfig(new Map(), `Invalid models.json schema:\n${errors}\n\nFile: ${path}`);
 +			return new ModelConfig(
 +				new Map(),
 +				`Invalid models.json schema:\n${errors}${sourceLabel ? `\n\nFile: ${sourceLabel}` : ""}`,
 +			);
-@@ -285,0 +395,35 @@ export class ModelConfig {
+@@ -285,0 +411,35 @@ export class ModelConfig {
 +	static async load(
 +		modelsJsonPath: string | undefined,
 +		options: { reader?: ModelConfigReader; signal?: AbortSignal } = {},
@@ -205,7 +221,7 @@ index 7f679a494..95ba58141 100644
 +		return ModelConfig.fromContent(content, normalizedPath);
 +	}
 +
-@@ -296,0 +441,94 @@ export class ModelConfig {
+@@ -296,0 +457,114 @@ export class ModelConfig {
 +
 +	static validateContent(content: string): ModelConfig {
 +		return ModelConfig.fromContent(content);
@@ -217,10 +233,10 @@ index 7f679a494..95ba58141 100644
 + * The explicit file path is used only for this user-requested mutation; passive
 + * ModelRuntime reads continue to use the caller-owned content reader.
 + */
-+export async function mutateModelConfigProvider(
++export async function mutateModelConfigProviderFile(
 +	modelsJsonPath: string,
 +	mutation: ModelConfigProviderMutation,
-+	options: ModelConfigMutationOptions = {},
++	options: ModelConfigFileMutationOptions,
 +): Promise<ModelConfigMutationResult> {
 +	options.signal?.throwIfAborted();
 +	if (!mutation.providerId.trim() || mutation.providerId !== mutation.providerId.trim()) {
@@ -256,13 +272,31 @@ index 7f679a494..95ba58141 100644
 +			return { changed: false, providerIds: currentConfig.getProviderIds() };
 +		}
 +
-+		const edits = modify(
-+			currentContent,
-+			["providers", mutation.providerId],
-+			mutation.type === "upsert" ? mutation.provider : undefined,
-+			{ formattingOptions: formattingOptions(currentContent) },
-+		);
-+		const nextContent = applyEdits(currentContent, edits);
++		let nextContent = currentContent;
++		if (mutation.type === "remove") {
++			nextContent = applyEdits(
++				nextContent,
++				modify(nextContent, ["providers", mutation.providerId], undefined, {
++					formattingOptions: formattingOptions(nextContent),
++				}),
++			);
++		} else if (!currentConfig.getProvider(mutation.providerId)) {
++			nextContent = applyEdits(
++				nextContent,
++				modify(nextContent, ["providers", mutation.providerId], mutation.provider, {
++					formattingOptions: formattingOptions(nextContent),
++				}),
++			);
++		} else {
++			for (const field of MODEL_CONFIG_PROVIDER_FIELDS) {
++				nextContent = applyEdits(
++					nextContent,
++					modify(nextContent, ["providers", mutation.providerId, field], mutation.provider[field], {
++						formattingOptions: formattingOptions(nextContent),
++					}),
++				);
++			}
++		}
 +		if (Buffer.byteLength(nextContent, "utf8") > MAX_MODELS_CONFIG_BYTES) {
 +			throw new Error("models.json exceeds the safe mutation boundary");
 +		}
@@ -290,8 +324,10 @@ index 7f679a494..95ba58141 100644
 +		} finally {
 +			await handle.close();
 +		}
++		await options.validateCandidate(temporaryPath, options.signal);
 +		options.signal?.throwIfAborted();
 +		if (compromised) throw compromised;
++		await assertModelConfigUnchanged(normalizedPath, current.identity);
 +		await rename(temporaryPath, normalizedPath);
 +		temporaryPath = undefined;
 +		await chmod(normalizedPath, MODELS_CONFIG_FILE_MODE);
@@ -301,35 +337,72 @@ index 7f679a494..95ba58141 100644
 +		await release().catch(() => undefined);
 +	}
 diff --git a/packages/coding-agent/src/core/model-runtime.ts b/packages/coding-agent/src/core/model-runtime.ts
-index 6f4071b60..f7af451c8 100644
+index 6f4071b60..85ac091c0 100644
 --- a/packages/coding-agent/src/core/model-runtime.ts
 +++ b/packages/coding-agent/src/core/model-runtime.ts
-@@ -43 +43 @@ import { AuthStorage as DefaultAuthStorage } from "./auth-storage.ts";
+@@ -15,0 +16 @@ import {
++	InMemoryCredentialStore,
+@@ -43 +44,9 @@ import { AuthStorage as DefaultAuthStorage } from "./auth-storage.ts";
 -import { ModelConfig } from "./model-config.ts";
-+import { ModelConfig, type ModelConfigReader } from "./model-config.ts";
-@@ -57,0 +58,2 @@ import { RuntimeCredentials } from "./runtime-credentials.ts";
++import {
++	ModelConfig,
++	mutateModelConfigProviderFile,
++	type ModelConfigMutationOptions,
++	type ModelConfigMutationResult,
++	type ModelConfigProviderMutation,
++	type ModelConfigReader,
++	type ModelsJsonProvider,
++} from "./model-config.ts";
+@@ -57,0 +67,29 @@ import { RuntimeCredentials } from "./runtime-credentials.ts";
 +export type { ModelConfigReader, ModelConfigReadOptions } from "./model-config.ts";
 +
-@@ -70,0 +73,2 @@ export interface CreateModelRuntimeOptions {
++/**
++ * Persist one provider only after a fresh official runtime can reload and
++ * compose the complete candidate file. The candidate uses memory-only auth and
++ * catalog stores, so validation cannot read or mutate the user's credentials.
++ */
++export async function mutateModelConfigProvider(
++	modelsJsonPath: string,
++	mutation: ModelConfigProviderMutation,
++	options: ModelConfigMutationOptions = {},
++): Promise<ModelConfigMutationResult> {
++	return mutateModelConfigProviderFile(modelsJsonPath, mutation, {
++		...options,
++		validateCandidate: async (candidatePath, signal) => {
++			const runtime = await ModelRuntime.create({
++				credentials: new InMemoryCredentialStore(),
++				modelsPath: candidatePath,
++				modelsStore: new InMemoryCodingAgentModelsStore(),
++				allowModelNetwork: false,
++				refreshOnCreate: false,
++				signal,
++			});
++			const error = runtime.getError();
++			if (error) throw new Error(error);
++		},
++	});
++}
++
+@@ -70,0 +109,2 @@ export interface CreateModelRuntimeOptions {
 +	/** Read models.json content through a caller-owned safety boundary. Requires modelsPath: null. */
 +	modelsConfigReader?: ModelConfigReader;
-@@ -138,0 +143 @@ export class ModelRuntime implements Models {
+@@ -138,0 +179 @@ export class ModelRuntime implements Models {
 +	private readonly modelsConfigReader: ModelConfigReader | undefined;
-@@ -157,0 +163 @@ export class ModelRuntime implements Models {
+@@ -157,0 +199 @@ export class ModelRuntime implements Models {
 +		modelsConfigReader: ModelConfigReader | undefined,
-@@ -164,0 +171 @@ export class ModelRuntime implements Models {
+@@ -164,0 +207 @@ export class ModelRuntime implements Models {
 +		this.modelsConfigReader = modelsConfigReader;
-@@ -172,0 +180,3 @@ export class ModelRuntime implements Models {
+@@ -172,0 +216,3 @@ export class ModelRuntime implements Models {
 +		if (options.modelsConfigReader && options.modelsPath !== null) {
 +			throw new Error("modelsConfigReader requires modelsPath: null");
 +		}
-@@ -176 +186,4 @@ export class ModelRuntime implements Models {
+@@ -176 +222,4 @@ export class ModelRuntime implements Models {
 -		const config = await ModelConfig.load(modelsPath);
 +		const config = await ModelConfig.load(modelsPath, {
 +			reader: options.modelsConfigReader,
 +			signal: options.signal,
 +		});
-@@ -179,3 +192,5 @@ export class ModelRuntime implements Models {
+@@ -179,3 +228,5 @@ export class ModelRuntime implements Models {
 -			(modelsPath
 -				? new FileModelsStore(options.modelsStorePath ?? join(dirname(modelsPath), "models-store.json"))
 -				: new InMemoryCodingAgentModelsStore());
@@ -338,27 +411,51 @@ index 6f4071b60..f7af451c8 100644
 +				: modelsPath
 +					? new FileModelsStore(join(dirname(modelsPath), "models-store.json"))
 +					: new InMemoryCodingAgentModelsStore());
-@@ -193,0 +209 @@ export class ModelRuntime implements Models {
+@@ -193,0 +245 @@ export class ModelRuntime implements Models {
 +			options.modelsConfigReader,
-@@ -572,0 +589,5 @@ export class ModelRuntime implements Models {
+@@ -572,0 +625,13 @@ export class ModelRuntime implements Models {
 +	/** Provider IDs accepted from the current official models.json configuration snapshot. */
 +	getModelConfigProviderIds(): readonly string[] {
 +		return this.config.getProviderIds();
 +	}
 +
-@@ -691 +712,4 @@ export class ModelRuntime implements Models {
++	/** Credential-blind provider configuration accepted by ModelConfig. */
++	getModelConfigProvider(providerId: string): ModelsJsonProvider | undefined {
++		const provider = this.config.getProvider(providerId);
++		if (!provider) return undefined;
++		const { apiKey: _apiKey, headers: _headers, ...safeProvider } = provider;
++		return structuredClone(safeProvider);
++	}
++
+@@ -691 +756,4 @@ export class ModelRuntime implements Models {
 -		this.config = await ModelConfig.load(this.modelsPath);
 +		this.config = await ModelConfig.load(this.modelsPath, {
 +			reader: this.modelsConfigReader,
 +			signal: options.signal,
 +		});
+diff --git a/packages/coding-agent/src/core/provider-composer.ts b/packages/coding-agent/src/core/provider-composer.ts
+index 1be7fcdb5..04b8931c2 100644
+--- a/packages/coding-agent/src/core/provider-composer.ts
++++ b/packages/coding-agent/src/core/provider-composer.ts
+@@ -447,2 +447,10 @@ export function composeModelProvider(
+-	// Validate eagerly so registration/reload reports structural errors immediately.
+-	getModels();
++	// Validate eagerly so registration/reload reports structural and execution
++	// protocol errors before a provider becomes persistent or selectable.
++	const initialModels = getModels();
++	for (const model of initialModels) {
++		const extensionOwnsApi = extension?.streamSimple !== undefined && model.api === extension.api;
++		const baseOwnsApi = base?.getModels().some((entry) => entry.api === model.api) ?? false;
++		if (!extensionOwnsApi && !baseOwnsApi && !getApiProvider(model.api)) {
++			throw new Error(`No API provider registered for api: ${model.api}`);
++		}
++	}
 diff --git a/packages/coding-agent/src/index.ts b/packages/coding-agent/src/index.ts
-index 3d05c2af4..968aec186 100644
+index 3d05c2af4..a7df13424 100644
 --- a/packages/coding-agent/src/index.ts
 +++ b/packages/coding-agent/src/index.ts
-@@ -171,0 +172,9 @@ export { ModelRegistry } from "./core/model-registry.ts";
+@@ -171,0 +172,8 @@ export { ModelRegistry } from "./core/model-registry.ts";
 +export {
-+	mutateModelConfigProvider,
 +	type ModelConfigMutationOptions,
 +	type ModelConfigMutationResult,
 +	type ModelConfigProviderMutation,
@@ -366,20 +463,21 @@ index 3d05c2af4..968aec186 100644
 +	type ModelsJsonModelOverride,
 +	type ModelsJsonProvider,
 +} from "./core/model-config.ts";
-@@ -180,0 +190,2 @@ export {
+@@ -180,0 +189,3 @@ export {
++	mutateModelConfigProvider,
 +	type ModelConfigReader,
 +	type ModelConfigReadOptions,
 diff --git a/packages/coding-agent/test/model-config-mutation.test.ts b/packages/coding-agent/test/model-config-mutation.test.ts
 new file mode 100644
-index 000000000..022c7534d
+index 000000000..b8eaaa38c
 --- /dev/null
 +++ b/packages/coding-agent/test/model-config-mutation.test.ts
-@@ -0,0 +1,241 @@
+@@ -0,0 +1,289 @@
 +import { link, lstat, mkdtemp, readFile, rm, symlink, writeFile } from "node:fs/promises";
 +import { tmpdir } from "node:os";
 +import { join } from "node:path";
 +import { afterEach, describe, expect, it } from "vitest";
-+import { mutateModelConfigProvider } from "../src/core/model-config.ts";
++import { ModelRuntime, mutateModelConfigProvider } from "../src/core/model-runtime.ts";
 +
 +const roots: string[] = [];
 +
@@ -470,6 +568,11 @@ index 000000000..022c7534d
 +			providerId: "target",
 +			provider: provider("Old Target", "old-model"),
 +		});
++		const withFutureTargetField = (await readFile(modelsPath, "utf8")).replace(
++			'"name": "Old Target",',
++			'"name": "Old Target",\n\t\t"futureTargetField": { "keep": true },',
++		);
++		await writeFile(modelsPath, withFutureTargetField, { encoding: "utf8", mode: 0o600 });
 +		await mutateModelConfigProvider(modelsPath, {
 +			type: "upsert",
 +			providerId: "untouched",
@@ -488,6 +591,7 @@ index 000000000..022c7534d
 +		expect(content).toContain('"new-model"');
 +		expect(content).not.toContain('"Old Target"');
 +		expect(content).not.toContain('"old-model"');
++		expect(content).toContain('"futureTargetField": { "keep": true }');
 +		expect(content).toContain('"Untouched"');
 +		expect(content).toContain('"keep-model"');
 +	});
@@ -543,6 +647,48 @@ index 000000000..022c7534d
 +			}),
 +		).rejects.toThrow("Invalid models.json schema");
 +		expect(await readFile(modelsPath, "utf8")).toBe(before);
++	});
++
++	it("rejects a schema-valid provider that a fresh runtime cannot compose", async () => {
++		const root = await createRoot();
++		const modelsPath = join(root, "models.json");
++		await mutateModelConfigProvider(modelsPath, {
++			type: "upsert",
++			providerId: "valid",
++			provider: provider("Valid", "valid-model"),
++		});
++		const before = await readFile(modelsPath, "utf8");
++
++		await expect(
++			mutateModelConfigProvider(modelsPath, {
++				type: "upsert",
++				providerId: "cannot-compose",
++				provider: {
++					...provider("Cannot Compose", "broken-model"),
++					api: "not-a-real-pi-api",
++				} as never,
++			}),
++		).rejects.toThrow();
++		expect(await readFile(modelsPath, "utf8")).toBe(before);
++	});
++
++	it("is exactly reloadable by a fresh official runtime after replacement", async () => {
++		const root = await createRoot();
++		const modelsPath = join(root, "models.json");
++		await mutateModelConfigProvider(modelsPath, {
++			type: "upsert",
++			providerId: "reloadable",
++			provider: provider("Reloadable", "reload-model"),
++		});
++
++		const runtime = await ModelRuntime.create({
++			modelsPath,
++			allowModelNetwork: false,
++			refreshOnCreate: false,
++		});
++		expect(runtime.getError()).toBeUndefined();
++		expect(runtime.getModelConfigProviderIds()).toContain("reloadable");
++		expect(runtime.getModel("reloadable", "reload-model")).toBeDefined();
 +	});
 +
 +	it("rejects an invalid existing document without rewriting it", async () => {
@@ -618,10 +764,10 @@ index 000000000..022c7534d
 +});
 diff --git a/packages/coding-agent/test/model-runtime-config-reader.test.ts b/packages/coding-agent/test/model-runtime-config-reader.test.ts
 new file mode 100644
-index 000000000..afb21271a
+index 000000000..8dfa84304
 --- /dev/null
 +++ b/packages/coding-agent/test/model-runtime-config-reader.test.ts
-@@ -0,0 +1,194 @@
+@@ -0,0 +1,198 @@
 +import { mkdtemp, readFile, rm, writeFile } from "node:fs/promises";
 +import { tmpdir } from "node:os";
 +import { join } from "node:path";
@@ -666,6 +812,10 @@ index 000000000..afb21271a
 +
 +		expect(reader).toHaveBeenCalledTimes(1);
 +		expect(runtime.getModelConfigProviderIds()).toEqual(["custom-one"]);
++		expect(runtime.getModelConfigProvider("custom-one")).toMatchObject({
++			api: "openai-completions",
++			baseUrl: "https://example.test/v1",
++		});
 +		expect(runtime.getModel("custom-one", "model-one")).toBeDefined();
 +
 +		content = modelsJson("custom-two", "model-two");

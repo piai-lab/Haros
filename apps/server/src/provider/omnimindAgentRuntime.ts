@@ -7,34 +7,18 @@ import { lstat, open, realpath } from "node:fs/promises";
 import os from "node:os";
 import path from "node:path";
 
-import type { ModelRuntime as StockModelRuntime } from "@earendil-works/pi-coding-agent";
 import type { ModelConfigReader } from "@omnimind/pi-coding-agent";
 
 import { lazyModule } from "../lazyModule.ts";
 
-type OmniMindModelRuntime = StockModelRuntime & {
-  readonly getModelConfigProviderIds: () => readonly string[];
-};
-type OmniMindModelRuntimeConstructor = typeof StockModelRuntime & {
-  readonly create: (
-    options: Parameters<typeof StockModelRuntime.create>[0] & {
-      readonly modelsConfigReader?: ModelConfigReader;
-    },
-  ) => Promise<OmniMindModelRuntime>;
-};
-export type OmniMindCodingAgentModule = Omit<
-  typeof import("@earendil-works/pi-coding-agent"),
-  "ModelRuntime"
-> & {
-  readonly ModelRuntime: OmniMindModelRuntimeConstructor;
-};
+export type OmniMindCodingAgentModule = typeof import("@omnimind/pi-coding-agent");
 
 // Keep this lazy because the SDK includes native modules that should not load at
 // Server startup. The package is rebuilt from the same pinned source; this
-// explicit view describes only the two product additions instead of blindly
-// treating the divergent module as the stock package.
+// product-owned package now publishes its exact enhanced types, so this loader
+// does not cast through the stock module or maintain a parallel API description.
 export const loadOmniMindCodingAgentModule: () => Promise<OmniMindCodingAgentModule> = lazyModule(
-  () => import("@omnimind/pi-coding-agent") as unknown as Promise<OmniMindCodingAgentModule>,
+  () => import("@omnimind/pi-coding-agent"),
 );
 
 const MAX_PRIVATE_RUNTIME_FILE_BYTES = 4 * 1024 * 1024;
