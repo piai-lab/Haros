@@ -172,18 +172,24 @@ async function renderPanel(input: {
   if (input.primeServerConfig !== false) {
     queryClient.setQueryData(serverQueryKeys.config(), createBrowserTestServerConfig(checkedAt));
   }
-  const screen = await render(
+  const view = (active: boolean) => (
     <QueryClientProvider client={queryClient}>
       <ModelsSettingsPanel
-        active={input.active ?? true}
+        active={active}
         resetEpoch={0}
         settings={settings}
         defaults={settings}
         updateSettings={() => {}}
       />
-    </QueryClientProvider>,
+    </QueryClientProvider>
   );
-  return { calls, queryClient, screen };
+  const screen = await render(view(input.active ?? true));
+  return {
+    calls,
+    queryClient,
+    screen,
+    rerenderActive: (active: boolean) => screen.rerender(view(active)),
+  };
 }
 
 afterEach(() => {
@@ -460,6 +466,130 @@ describe("ModelsSettingsPanel model services", () => {
     await expect.poll(() => document.body.textContent).toContain("settings.modelServiceAuthSaved");
     expect(document.body.textContent).not.toContain("browser-test-secret");
     expect(document.querySelector('input[type="password"]')).toBeNull();
+
+    await mounted.screen.unmount();
+    mounted.queryClient.clear();
+  });
+
+  it("cancels a prompt request when Model services is deactivated", async () => {
+    const setupService = service({
+      authState: "setup_required",
+      authSource: null,
+      storedCredentialType: null,
+      availableModelCount: 0,
+    });
+    const requestId = "00000000-0000-4000-8000-000000000021";
+    const beginLogin = vi.fn(async () => ({
+      state: "prompt" as const,
+      requestId,
+      prompt: {
+        promptId: "00000000-0000-4000-8000-000000000022",
+        type: "secret" as const,
+        message: "Enter DeepSeek API key",
+      },
+      events: [],
+    }));
+    const cancelLogin = vi.fn(async () => ({
+      state: "cancelled" as const,
+      requestId,
+      errorCode: "cancelled" as const,
+      events: [],
+    }));
+    const mounted = await renderPanel({
+      list: async () => ({
+        state: "ready",
+        services: [setupService],
+        connectableServices: [],
+        errorCode: null,
+      }),
+      get: async () => ({ state: "ready", service: setupService, errorCode: null }),
+      beginLogin,
+      cancelLogin,
+    });
+
+    await mounted.screen
+      .getByRole("button", { name: 'settings.viewDetailsNamed:{"name":"DeepSeek"}' })
+      .click();
+    await mounted.screen.getByRole("button", { name: "settings.addApiKey" }).click();
+    await expect.poll(() => document.body.textContent).toContain("Enter DeepSeek API key");
+
+    await mounted.rerenderActive(false);
+
+    await expect.poll(() => cancelLogin).toHaveBeenCalledWith({ requestId });
+    expect(document.body.textContent?.trim()).toBe("");
+
+    await mounted.screen.unmount();
+    mounted.queryClient.clear();
+  });
+
+  it("aborts and cancels a pending OAuth request when Model services is deactivated", async () => {
+    const oauthService = service({
+      serviceId: "openai-codex",
+      providerId: "openai-codex",
+      displayName: "OpenAI Codex",
+      authMethods: [
+        { type: "oauth", label: "Sign in with ChatGPT", canLogin: true, subscription: true },
+      ],
+      authState: "setup_required",
+      authSource: null,
+      storedCredentialType: null,
+      availableModelCount: 0,
+    });
+    const requestId = "00000000-0000-4000-8000-000000000025";
+    const beginLogin = vi.fn(async () => ({
+      state: "pending" as const,
+      requestId,
+      events: [
+        {
+          type: "device_code" as const,
+          userCode: "ABCD-EFGH",
+          verificationUri: "https://auth.example.test/device",
+        },
+      ],
+    }));
+    const pollLogin = vi.fn(
+      (
+        _input: Parameters<NativeApi["omnimindModelServices"]["pollLogin"]>[0],
+        options?: Parameters<NativeApi["omnimindModelServices"]["pollLogin"]>[1],
+      ) =>
+        new Promise<never>((_resolve, reject) => {
+          const signal = options?.signal;
+          const rejectAbort = () => reject(new DOMException("Aborted", "AbortError"));
+          if (signal?.aborted) rejectAbort();
+          else signal?.addEventListener("abort", rejectAbort, { once: true });
+        }),
+    );
+    const cancelLogin = vi.fn(async () => ({
+      state: "cancelled" as const,
+      requestId,
+      errorCode: "cancelled" as const,
+      events: [],
+    }));
+    const mounted = await renderPanel({
+      list: async () => ({
+        state: "empty",
+        services: [],
+        connectableServices: [oauthService],
+        errorCode: null,
+      }),
+      get: async () => ({ state: "ready", service: oauthService, errorCode: null }),
+      beginLogin,
+      pollLogin,
+      cancelLogin,
+    });
+
+    await mounted.screen
+      .getByRole("button", { name: 'settings.connectModelServiceNamed:{"name":"OpenAI Codex"}' })
+      .click();
+    await mounted.screen.getByRole("button", { name: "settings.signInWithBrowser" }).click();
+    await expect.poll(() => pollLogin).toHaveBeenCalled();
+    const pollSignal = pollLogin.mock.calls[0]?.[1]?.signal;
+
+    await mounted.rerenderActive(false);
+
+    await expect.poll(() => cancelLogin).toHaveBeenCalledWith({ requestId });
+    expect(pollSignal?.aborted).toBe(true);
+    expect(document.body.textContent?.trim()).toBe("");
 
     await mounted.screen.unmount();
     mounted.queryClient.clear();

@@ -552,6 +552,47 @@ describe("OmniMindModelServicesLive", () => {
     expect(JSON.parse(await readFile(path.join(root, "agent", "auth.json"), "utf8"))).toEqual({});
   });
 
+  it("releases the serialized mutation queue when a pending prompt is cancelled", async () => {
+    const root = await makeRoot();
+    await isolateProviderEnvironment(root);
+    await mkdir(path.join(root, "agent"), { recursive: true });
+    const layer = makeTestLayer({ root });
+    const result = await Effect.runPromise(
+      Effect.gen(function* () {
+        const service = yield* OmniMindModelServices;
+        const first = yield* service.beginLogin(14, {
+          serviceId: "deepseek",
+          authType: "api_key",
+        });
+        if (first.state !== "prompt") throw new Error("Expected the first Pi API-key prompt");
+
+        let secondSettled = false;
+        const secondPromise = Effect.runPromise(
+          service.beginLogin(14, { serviceId: "deepseek", authType: "api_key" }),
+        ).then((value) => {
+          secondSettled = true;
+          return value;
+        });
+        yield* Effect.sleep("20 millis");
+        const settledBeforeCancellation = secondSettled;
+        const firstCancelled = yield* service.cancelLogin(14, {
+          requestId: first.requestId,
+        });
+        const second = yield* Effect.promise(() => secondPromise);
+        const secondCancelled =
+          second.state === "prompt"
+            ? yield* service.cancelLogin(14, { requestId: second.requestId })
+            : null;
+        return { settledBeforeCancellation, firstCancelled, second, secondCancelled };
+      }).pipe(Effect.provide(layer)),
+    );
+
+    expect(result.settledBeforeCancellation).toBe(false);
+    expect(result.firstCancelled).toMatchObject({ state: "cancelled" });
+    expect(result.second).toMatchObject({ state: "prompt" });
+    expect(result.secondCancelled).toMatchObject({ state: "cancelled" });
+  });
+
   it("refreshes only the requested Pi provider and persists its last-good catalog", async () => {
     const root = await makeRoot();
     await isolateProviderEnvironment(root);

@@ -14,7 +14,15 @@ import {
 } from "@omnimind/contracts";
 import { getModelOptions, normalizeModelSlug } from "@omnimind/shared/model";
 import { useQuery, useQueryClient } from "@tanstack/react-query";
-import { useCallback, useId, useMemo, useRef, useState, useSyncExternalStore } from "react";
+import {
+  useCallback,
+  useEffect,
+  useId,
+  useMemo,
+  useRef,
+  useState,
+  useSyncExternalStore,
+} from "react";
 
 import {
   CUSTOM_MODEL_EDITOR_PROVIDER_SETTINGS,
@@ -173,6 +181,7 @@ function ActiveModelsSettingsPanel({
   const { t } = useI18n();
   const queryClient = useQueryClient();
   const authRequestControllerRef = useRef<AbortController | null>(null);
+  const authRequestIdRef = useRef<string | null>(null);
   const modelServicesCapability = useSyncExternalStore(
     subscribeModelServicesCapability,
     readModelServicesCapability,
@@ -208,10 +217,28 @@ function ActiveModelsSettingsPanel({
   const [showAllCustomModels, setShowAllCustomModels] = useState(false);
   const [independentEngineModelsOpen, setIndependentEngineModelsOpen] = useState(false);
 
-  useSettingsRestoreSignal(resetEpoch, () => {
-    setSelectedModelServiceId(null);
+  const cancelCurrentAuthRequest = useCallback(() => {
     authRequestControllerRef.current?.abort();
     authRequestControllerRef.current = null;
+    const requestId = authRequestIdRef.current;
+    authRequestIdRef.current = null;
+    return requestId
+      ? ensureNativeApi()
+          .omnimindModelServices.cancelLogin({ requestId })
+          .catch(() => null)
+      : null;
+  }, []);
+
+  useEffect(
+    () => () => {
+      void cancelCurrentAuthRequest();
+    },
+    [cancelCurrentAuthRequest],
+  );
+
+  useSettingsRestoreSignal(resetEpoch, () => {
+    setSelectedModelServiceId(null);
+    void cancelCurrentAuthRequest();
     setAuthDialog(null);
     setLogoutService(null);
     setModelServiceMutation(null);
@@ -395,6 +422,7 @@ function ActiveModelsSettingsPanel({
   const applyAuthResult = useCallback(
     async (result: OmniMindModelServiceAuthResult, authType: "api_key" | "oauth") => {
       if (result.state === "pending") {
+        authRequestIdRef.current = result.requestId;
         setAuthDialog((current) =>
           current
             ? (({ prompt: _prompt, ...rest }) => ({
@@ -410,6 +438,7 @@ function ActiveModelsSettingsPanel({
         return;
       }
       if (result.state === "prompt") {
+        authRequestIdRef.current = result.requestId;
         setAuthDialog((current) =>
           current
             ? {
@@ -427,6 +456,7 @@ function ActiveModelsSettingsPanel({
       }
 
       authRequestControllerRef.current = null;
+      authRequestIdRef.current = null;
       if (result.state === "cancelled") {
         setAuthDialog(null);
         return;
@@ -495,7 +525,7 @@ function ActiveModelsSettingsPanel({
 
   const beginModelServiceLogin = useCallback(
     async (service: OmniMindModelServiceDescriptor, authType: "api_key" | "oauth") => {
-      authRequestControllerRef.current?.abort();
+      void cancelCurrentAuthRequest();
       const controller = new AbortController();
       authRequestControllerRef.current = controller;
       setModelServiceNotice(null);
@@ -531,7 +561,7 @@ function ActiveModelsSettingsPanel({
         }
       }
     },
-    [consumeAuthResult, modelServiceInstanceLabel, t],
+    [cancelCurrentAuthRequest, consumeAuthResult, modelServiceInstanceLabel, t],
   );
 
   const answerAuthPrompt = useCallback(async () => {
@@ -571,22 +601,15 @@ function ActiveModelsSettingsPanel({
   }, [authDialog, consumeAuthResult, t]);
 
   const closeAuthDialog = useCallback(() => {
-    const requestId = authDialog?.requestId;
     const authType = authDialog?.authType ?? "api_key";
-    authRequestControllerRef.current?.abort();
-    authRequestControllerRef.current = null;
+    const cancellation = cancelCurrentAuthRequest();
     setAuthDialog(null);
-    if (requestId) {
-      void ensureNativeApi()
-        .omnimindModelServices.cancelLogin({ requestId })
-        .then((result) => {
-          if (result.state !== "cancelled" && result.state !== "failed") {
-            return applyAuthResult(result, authType);
-          }
-        })
-        .catch(() => {});
-    }
-  }, [applyAuthResult, authDialog?.authType, authDialog?.requestId]);
+    void cancellation?.then((result) => {
+      if (result && result.state !== "cancelled" && result.state !== "failed") {
+        return applyAuthResult(result, authType);
+      }
+    });
+  }, [applyAuthResult, authDialog?.authType, cancelCurrentAuthRequest]);
 
   const refreshModelService = useCallback(
     async (service: OmniMindModelServiceDescriptor) => {
