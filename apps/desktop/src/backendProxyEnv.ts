@@ -1,6 +1,6 @@
 // FILE: backendProxyEnv.ts
 // Purpose: Projects Electron's resolved desktop proxy into the bundled Node backend.
-// Exports: resolveBackendProxyEnvironment, applyBackendProxyNodeArgs.
+// Exports: resolveBackendProxyEnvironment.
 
 const LOOPBACK_NO_PROXY_ENTRIES = ["localhost", "127.0.0.1", "::1"] as const;
 
@@ -67,18 +67,4 @@ export async function resolveBackendProxyEnvironment(
     NO_PROXY: noProxy,
     no_proxy: noProxy,
   };
-}
-
-/**
- * Electron's Node-mode child does not activate Node's env-proxy fetch dispatcher from
- * NODE_USE_ENV_PROXY alone. Pass the equivalent startup flag to the bundled backend only.
- */
-export function applyBackendProxyNodeArgs(
-  nodeArgs: readonly string[],
-  proxyEnvironment: NodeJS.ProcessEnv,
-): string[] {
-  if (proxyEnvironment.NODE_USE_ENV_PROXY !== "1" || nodeArgs.includes("--use-env-proxy")) {
-    return [...nodeArgs];
-  }
-  return [...nodeArgs, "--use-env-proxy"];
 }

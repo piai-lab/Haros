@@ -11,6 +11,10 @@ import { ServerLive } from "./effectServer";
 import { NetService } from "@omnimind/shared/Net";
 import { FetchHttpClient } from "effect/unstable/http";
 
+import { installServerEnvProxyDispatcher } from "./serverHttpProxy";
+
+installServerEnvProxyDispatcher();
+
 const RuntimeLayer = Layer.empty.pipe(
   Layer.provideMerge(CliConfig.layer),
   Layer.provideMerge(ServerLive),

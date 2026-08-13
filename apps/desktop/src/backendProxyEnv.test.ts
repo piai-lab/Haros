@@ -1,10 +1,6 @@
 import { describe, expect, it } from "vitest";
 
-import {
-  applyBackendProxyNodeArgs,
-  proxyDirectiveToUrl,
-  resolveBackendProxyEnvironment,
-} from "./backendProxyEnv";
+import { proxyDirectiveToUrl, resolveBackendProxyEnvironment } from "./backendProxyEnv";
 
 describe("backend proxy environment", () => {
   it("uses the operating-system HTTPS proxy and keeps local backend traffic direct", async () => {
@@ -42,17 +38,5 @@ describe("backend proxy environment", () => {
     await expect(resolveBackendProxyEnvironment({}, async () => "DIRECT")).resolves.toEqual({});
     expect(proxyDirectiveToUrl("SOCKS5 127.0.0.1:1080")).toBeNull();
     expect(proxyDirectiveToUrl("PROXY user:secret@proxy.test:8080")).toBeNull();
-  });
-
-  it("activates Node env-proxy fetch only for the bundled backend proxy projection", () => {
-    expect(applyBackendProxyNodeArgs(["--max-old-space-size=1024"], {})).toEqual([
-      "--max-old-space-size=1024",
-    ]);
-    expect(
-      applyBackendProxyNodeArgs(["--max-old-space-size=1024"], { NODE_USE_ENV_PROXY: "1" }),
-    ).toEqual(["--max-old-space-size=1024", "--use-env-proxy"]);
-    expect(applyBackendProxyNodeArgs(["--use-env-proxy"], { NODE_USE_ENV_PROXY: "1" })).toEqual([
-      "--use-env-proxy",
-    ]);
   });
 });

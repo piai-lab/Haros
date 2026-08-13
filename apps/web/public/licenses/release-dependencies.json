@@ -25,6 +25,7 @@
     "node-pty",
     "open",
     "tree-kill",
+    "undici",
     "ws"
   ],
   "components": [
