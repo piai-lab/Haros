@@ -277,6 +277,32 @@ describe("groupProviderModelOptions", () => {
 
     expect(groupedOptions.map((group) => group.label)).toEqual(["Anthropic", "OpenAI"]);
   });
+
+  it("disambiguates two model-service instances with the same display name", () => {
+    const groupedOptions = groupProviderModelOptions([
+      {
+        slug: "gateway-primary/shared-model",
+        name: "Shared Model",
+        upstreamProviderId: "gateway-primary",
+        upstreamProviderName: "Team Gateway",
+      },
+      {
+        slug: "gateway-secondary/shared-model",
+        name: "Shared Model",
+        upstreamProviderId: "gateway-secondary",
+        upstreamProviderName: "Team Gateway",
+      },
+    ]);
+
+    expect(groupedOptions.map((group) => ({ key: group.key, label: group.label }))).toEqual([
+      { key: "gateway-primary", label: "Team Gateway · gateway-primary" },
+      { key: "gateway-secondary", label: "Team Gateway · gateway-secondary" },
+    ]);
+    expect(groupedOptions.flatMap((group) => group.options.map((option) => option.slug))).toEqual([
+      "gateway-primary/shared-model",
+      "gateway-secondary/shared-model",
+    ]);
+  });
 });
 
 describe("groupProviderModelOptionsWithFavorites", () => {

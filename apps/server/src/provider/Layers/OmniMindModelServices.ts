@@ -1396,6 +1396,19 @@ export function makeOmniMindModelServicesLive(options: OmniMindModelServicesLive
               const agentDir = resolveOmniMindAgentDir(config.baseDir);
               const sdk = await (options.loadModule ?? loadOmniMindCodingAgentModule)();
               const { runtime } = await createMutationRuntime(signal);
+              let synchronizationFailed = false;
+              try {
+                await runtime.logout(input.serviceId, { signal });
+              } catch (error) {
+                if (!(error instanceof sdk.CredentialSynchronizationError)) throw error;
+                // Pi deletes the credential before it refreshes the in-memory
+                // provider projection. A synchronization error therefore still
+                // proves that the durable credential was removed; every other
+                // failure leaves models.json intact so the service remains
+                // visible and the cleanup can be retried.
+                synchronizationFailed = true;
+              }
+              publishOmniMindModelRuntimeMutation(agentDir);
               const mutation = await sdk.mutateModelConfigProvider(
                 path.join(agentDir, "models.json"),
                 { type: "remove", providerId: input.serviceId },
@@ -1403,16 +1416,6 @@ export function makeOmniMindModelServicesLive(options: OmniMindModelServicesLive
               );
               if (mutation.providerIds.includes(input.serviceId)) {
                 throw new Error("Custom model service removal was not accepted by Pi ModelConfig");
-              }
-              publishOmniMindModelRuntimeMutation(agentDir);
-              let synchronizationFailed = false;
-              try {
-                await runtime.logout(input.serviceId, { signal });
-              } catch {
-                // The Pi-owned config removal is already durable. Any credential
-                // cleanup failure must report that partial truth instead of
-                // claiming the connection was not deleted.
-                synchronizationFailed = true;
               }
               publishOmniMindModelRuntimeMutation(agentDir);
               return {

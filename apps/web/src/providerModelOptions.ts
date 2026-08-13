@@ -241,7 +241,17 @@ export function groupProviderModelOptions(
     });
   }
 
-  return groupedOptions;
+  const labelCounts = new Map<string, number>();
+  for (const group of groupedOptions) {
+    if (group.label === null) continue;
+    labelCounts.set(group.label, (labelCounts.get(group.label) ?? 0) + 1);
+  }
+
+  return groupedOptions.map((group) =>
+    group.label !== null && (labelCounts.get(group.label) ?? 0) > 1
+      ? { ...group, label: `${group.label} · ${group.key}` }
+      : group,
+  );
 }
 
 export function groupProviderModelOptionsWithFavorites(input: {

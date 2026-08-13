@@ -1405,6 +1405,197 @@ describe("OmniMindModelServicesLive", () => {
     expect(JSON.stringify(result)).not.toContain("persisted-custom-key");
   });
 
+  it("keeps a custom service visible when Pi cannot delete its credential", async () => {
+    const root = await makeRoot();
+    await isolateProviderEnvironment(root);
+    const sdk = await import("@omnimind/pi-coding-agent");
+    let rejectLogout = false;
+    const loadModule = async () =>
+      ({
+        ...sdk,
+        ModelRuntime: new Proxy(sdk.ModelRuntime, {
+          get(target, property, receiver) {
+            if (property !== "create") return Reflect.get(target, property, receiver);
+            return async (...args: Parameters<typeof sdk.ModelRuntime.create>) => {
+              const runtime = await sdk.ModelRuntime.create(...args);
+              return new Proxy(runtime, {
+                get(runtimeTarget, runtimeProperty, runtimeReceiver) {
+                  if (runtimeProperty === "logout" && rejectLogout) {
+                    return async () => {
+                      throw new Error("test credential cleanup failure");
+                    };
+                  }
+                  const value = Reflect.get(runtimeTarget, runtimeProperty, runtimeReceiver);
+                  return typeof value === "function" ? value.bind(runtimeTarget) : value;
+                },
+              });
+            };
+          },
+        }),
+      }) as OmniMindCodingAgentModule;
+    const layer = makeTestLayer({ root, loadModule });
+    const result = await Effect.runPromise(
+      Effect.gen(function* () {
+        const service = yield* OmniMindModelServices;
+        const saved = yield* service.saveCustom({
+          config: {
+            serviceId: null,
+            displayName: "Retryable gateway",
+            api: "openai-responses",
+            baseUrl: "https://gateway.example.test/v1",
+            models: [
+              {
+                modelId: "model-one",
+                displayName: "Model One",
+                reasoning: false,
+                input: ["text"],
+                contextWindow: 32_000,
+                maxTokens: 4_096,
+              },
+            ],
+          },
+          apiKey: "credential-that-must-remain-reachable",
+        });
+        if (!saved.service) throw new Error("Expected saved custom service projection");
+        rejectLogout = true;
+        const removal = yield* Effect.exit(
+          service.removeCustom({ serviceId: saved.service.serviceId }),
+        );
+        const reopened = yield* service.get({ serviceId: saved.service.serviceId });
+        return { saved, removal, reopened };
+      }).pipe(Effect.provide(layer)),
+    );
+
+    expect(result.removal._tag).toBe("Failure");
+    expect(result.reopened).toMatchObject({
+      state: "ready",
+      service: {
+        origin: "models_json",
+        authState: "configured",
+        storedCredentialType: "api_key",
+      },
+      customConfig: { displayName: "Retryable gateway" },
+    });
+    const agentDir = path.join(root, "agent");
+    expect(await readFile(path.join(agentDir, "models.json"), "utf8")).toContain(
+      result.saved.service!.serviceId,
+    );
+    const auth = JSON.parse(await readFile(path.join(agentDir, "auth.json"), "utf8"));
+    expect(auth[result.saved.service!.serviceId]).toMatchObject({ type: "api_key" });
+    expect(JSON.stringify(result)).not.toContain("credential-that-must-remain-reachable");
+  });
+
+  it("keeps two same-name service instances independent across reopen and removal", async () => {
+    const root = await makeRoot();
+    const providerHome = await isolateProviderEnvironment(root);
+    const stockPiDir = path.join(providerHome, ".pi");
+    await mkdir(stockPiDir, { recursive: true });
+    await writeFile(path.join(stockPiDir, "sentinel.json"), '{"owner":"stock-pi"}', {
+      mode: 0o600,
+    });
+    const stockBefore = await snapshotDirectory(stockPiDir);
+    const makeConfig = (serviceId: string, modelId: string) => ({
+      serviceId,
+      displayName: "Team Gateway",
+      api: "openai-responses" as const,
+      baseUrl: "https://gateway.example.test/v1",
+      models: [
+        {
+          modelId,
+          displayName: "Shared Model",
+          reasoning: false,
+          input: ["text" as const],
+          contextWindow: 32_000,
+          maxTokens: 4_096,
+        },
+      ],
+    });
+    const saveLayer = makeTestLayer({ root });
+    await Effect.runPromise(
+      Effect.gen(function* () {
+        const service = yield* OmniMindModelServices;
+        yield* service.saveCustom({
+          config: makeConfig("gateway-primary", "shared-model"),
+          apiKey: "primary-instance-key",
+        });
+        yield* service.saveCustom({
+          config: makeConfig("gateway-secondary", "shared-model"),
+          apiKey: "secondary-instance-key",
+        });
+      }).pipe(Effect.provide(saveLayer)),
+    );
+
+    const reopenLayer = makeTestLayer({ root });
+    const reopened = await Effect.runPromise(
+      Effect.gen(function* () {
+        const service = yield* OmniMindModelServices;
+        const list = yield* service.list();
+        const primary = yield* service.get({ serviceId: "gateway-primary" });
+        const secondary = yield* service.get({ serviceId: "gateway-secondary" });
+        return { list, primary, secondary };
+      }).pipe(Effect.provide(reopenLayer)),
+    );
+
+    expect(reopened.list.services).toEqual(
+      expect.arrayContaining([
+        expect.objectContaining({
+          serviceId: "gateway-primary",
+          displayName: "Team Gateway",
+          origin: "models_json",
+        }),
+        expect.objectContaining({
+          serviceId: "gateway-secondary",
+          displayName: "Team Gateway",
+          origin: "models_json",
+        }),
+      ]),
+    );
+    expect(reopened.primary).toMatchObject({
+      state: "ready",
+      models: [{ modelId: "shared-model" }],
+      customConfig: { serviceId: "gateway-primary" },
+    });
+    expect(reopened.secondary).toMatchObject({
+      state: "ready",
+      models: [{ modelId: "shared-model" }],
+      customConfig: { serviceId: "gateway-secondary" },
+    });
+
+    const removeLayer = makeTestLayer({ root });
+    await Effect.runPromise(
+      Effect.gen(function* () {
+        const service = yield* OmniMindModelServices;
+        yield* service.removeCustom({ serviceId: "gateway-primary" });
+      }).pipe(Effect.provide(removeLayer)),
+    );
+
+    const finalLayer = makeTestLayer({ root });
+    const afterRemoval = await Effect.runPromise(
+      Effect.gen(function* () {
+        const service = yield* OmniMindModelServices;
+        const primary = yield* service.get({ serviceId: "gateway-primary" });
+        const secondary = yield* service.get({ serviceId: "gateway-secondary" });
+        return { primary, secondary };
+      }).pipe(Effect.provide(finalLayer)),
+    );
+    expect(afterRemoval.primary).toEqual({ state: "empty", service: null, errorCode: null });
+    expect(afterRemoval.secondary).toMatchObject({
+      state: "ready",
+      service: { authState: "configured", storedCredentialType: "api_key" },
+      models: [{ modelId: "shared-model" }],
+      customConfig: { serviceId: "gateway-secondary" },
+    });
+    const agentDir = path.join(root, "agent");
+    const auth = JSON.parse(await readFile(path.join(agentDir, "auth.json"), "utf8"));
+    expect(auth["gateway-primary"]).toBeUndefined();
+    expect(auth["gateway-secondary"]).toMatchObject({ type: "api_key" });
+    const modelsContent = await readFile(path.join(agentDir, "models.json"), "utf8");
+    expect(modelsContent).not.toContain("gateway-primary");
+    expect(modelsContent).toContain("gateway-secondary");
+    expect(await snapshotDirectory(stockPiDir)).toEqual(stockBefore);
+    expect(JSON.stringify({ reopened, afterRemoval })).not.toContain("instance-key");
+  });
+
   it("propagates cancellation into an in-flight static credential read", async () => {
     const root = await makeRoot();
     await isolateProviderEnvironment(root);
