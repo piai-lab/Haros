@@ -2,23 +2,14 @@ diff --git a/packages/coding-agent/src/core/model-config.ts b/packages/coding-ag
 index 7f679a494..a7db4dafe 100644
 --- a/packages/coding-agent/src/core/model-config.ts
 +++ b/packages/coding-agent/src/core/model-config.ts
-@@ -213,6 +213,12 @@ export type ModelsJsonModelOverride = Static<typeof ModelOverrideSchema>;
- export type ModelsJsonProvider = Static<typeof ProviderConfigSchema>;
- type ModelsJson = Static<typeof ModelsConfigSchema>;
- 
+@@ -215,0 +216,6 @@ type ModelsJson = Static<typeof ModelsConfigSchema>;
 +export interface ModelConfigReadOptions {
 +	readonly signal?: AbortSignal;
 +}
 +
 +export type ModelConfigReader = (options: ModelConfigReadOptions) => Promise<string | undefined>;
 +
- function formatValidationPath(error: TLocalizedValidationError): string {
- 	if (error.keyword === "required") {
- 		const requiredProperties = (error.params as { requiredProperties?: string[] }).requiredProperties;
-@@ -242,19 +248,36 @@ export class ModelConfig {
- 		this.error = error;
- 	}
- 
+@@ -245,12 +251,27 @@ export class ModelConfig {
 -	static async load(modelsJsonPath: string | undefined): Promise<ModelConfig> {
 -		if (!modelsJsonPath) return new ModelConfig(new Map());
 -		const path = normalizePath(modelsJsonPath);
@@ -58,170 +49,93 @@ index 7f679a494..a7db4dafe 100644
 +					`Failed to load models.json: ${error instanceof Error ? error.message : error}\n\nFile: ${normalizedPath}`,
 +				);
 +			}
- 		}
+@@ -257,0 +279,2 @@ export class ModelConfig {
 +		if (content === undefined) return new ModelConfig(new Map());
 +		options.signal?.throwIfAborted();
- 
- 		let parsed: unknown;
- 		try {
-@@ -262,9 +285,10 @@ export class ModelConfig {
- 		} catch (error) {
- 			return new ModelConfig(
- 				new Map(),
+@@ -265 +288 @@ export class ModelConfig {
 -				`Failed to parse models.json: ${error instanceof Error ? error.message : error}\n\nFile: ${path}`,
 +				`Failed to parse models.json: ${error instanceof Error ? error.message : error}${normalizedPath ? `\n\nFile: ${normalizedPath}` : ""}`,
- 			);
- 		}
+@@ -267,0 +291 @@ export class ModelConfig {
 +		options.signal?.throwIfAborted();
- 
- 		if (!validateModelsConfig.Check(parsed)) {
- 			const errors =
-@@ -272,7 +296,10 @@ export class ModelConfig {
- 					.Errors(parsed)
- 					.map((error) => `  - ${formatValidationPath(error)}: ${error.message}`)
- 					.join("\n") || "Unknown schema error";
+@@ -275 +299,4 @@ export class ModelConfig {
 -			return new ModelConfig(new Map(), `Invalid models.json schema:\n${errors}\n\nFile: ${path}`);
 +			return new ModelConfig(
 +				new Map(),
 +				`Invalid models.json schema:\n${errors}${normalizedPath ? `\n\nFile: ${normalizedPath}` : ""}`,
 +			);
- 		}
- 
- 		const config = parsed as ModelsJson;
-@@ -280,6 +307,7 @@ export class ModelConfig {
- 		for (const [providerId, provider] of Object.entries(config.providers)) {
- 			providers.set(providerId, deepFreeze(structuredClone(provider)));
- 		}
+@@ -282,0 +310 @@ export class ModelConfig {
 +		options.signal?.throwIfAborted();
- 		return new ModelConfig(providers);
- 	}
- 
 diff --git a/packages/coding-agent/src/core/model-runtime.ts b/packages/coding-agent/src/core/model-runtime.ts
-index 6f4071b60..e3ea24238 100644
+index 6f4071b60..f7af451c8 100644
 --- a/packages/coding-agent/src/core/model-runtime.ts
 +++ b/packages/coding-agent/src/core/model-runtime.ts
-@@ -40,7 +40,7 @@ import * as builtinProviderCatalog from "@earendil-works/pi-ai/providers/all";
- import { getAgentDir } from "../config.ts";
- import { operationSignal, raceWithAbortSignal } from "../utils/abort.ts";
- import { AuthStorage as DefaultAuthStorage } from "./auth-storage.ts";
+@@ -43 +43 @@ import { AuthStorage as DefaultAuthStorage } from "./auth-storage.ts";
 -import { ModelConfig } from "./model-config.ts";
 +import { ModelConfig, type ModelConfigReader } from "./model-config.ts";
- import { FileModelsStore, InMemoryCodingAgentModelsStore } from "./models-store.ts";
- import {
- 	type AuthStatus,
-@@ -55,6 +55,8 @@ import {
- import { withRemoteCatalog } from "./remote-catalog-provider.ts";
- import { RuntimeCredentials } from "./runtime-credentials.ts";
- 
+@@ -57,0 +58,2 @@ import { RuntimeCredentials } from "./runtime-credentials.ts";
 +export type { ModelConfigReader, ModelConfigReadOptions } from "./model-config.ts";
 +
- interface ModelRuntimeSnapshot {
- 	all: readonly Model<Api>[];
- 	available: readonly Model<Api>[];
-@@ -68,6 +70,8 @@ export interface CreateModelRuntimeOptions {
- 	credentials?: CredentialStore;
- 	authPath?: string;
- 	modelsPath?: string | null;
+@@ -70,0 +73,2 @@ export interface CreateModelRuntimeOptions {
 +	/** Read models.json content through a caller-owned safety boundary. Requires modelsPath: null. */
 +	modelsConfigReader?: ModelConfigReader;
- 	modelsStore?: ModelsStore;
- 	modelsStorePath?: string;
- 	/** Allow create() to refresh model catalogs over the network. Defaults to false. */
-@@ -136,6 +140,7 @@ export class ModelRuntime implements Models {
- 	private readonly extensionProviders = new Map<string, ProviderConfigInput>();
- 	private readonly compositionErrors = new Map<string, string>();
- 	private readonly modelsPath: string | undefined;
+@@ -138,0 +143 @@ export class ModelRuntime implements Models {
 +	private readonly modelsConfigReader: ModelConfigReader | undefined;
- 	private readonly modelNetworkEnabled: boolean;
- 	private config: ModelConfig;
- 	private snapshot: ModelRuntimeSnapshot = {
-@@ -155,6 +160,7 @@ export class ModelRuntime implements Models {
- 		credentials: RuntimeCredentials,
- 		config: ModelConfig,
- 		modelsPath: string | undefined,
+@@ -157,0 +163 @@ export class ModelRuntime implements Models {
 +		modelsConfigReader: ModelConfigReader | undefined,
- 		modelsStore: ModelsStore,
- 		providers: readonly Provider[],
- 		modelNetworkEnabled: boolean,
-@@ -162,6 +168,7 @@ export class ModelRuntime implements Models {
- 		this.credentials = credentials;
- 		this.config = config;
- 		this.modelsPath = modelsPath;
+@@ -164,0 +171 @@ export class ModelRuntime implements Models {
 +		this.modelsConfigReader = modelsConfigReader;
- 		this.modelNetworkEnabled = modelNetworkEnabled;
- 		this.defaultBuiltins = new Map(providers.map((provider) => [provider.id, provider]));
- 		for (const [providerId, provider] of this.defaultBuiltins) this.builtins.set(providerId, provider);
-@@ -170,10 +177,16 @@ export class ModelRuntime implements Models {
- 	}
- 
- 	static async create(options: CreateModelRuntimeOptions = {}): Promise<ModelRuntime> {
+@@ -172,0 +180,3 @@ export class ModelRuntime implements Models {
 +		if (options.modelsConfigReader && options.modelsPath !== null) {
 +			throw new Error("modelsConfigReader requires modelsPath: null");
 +		}
- 		const credentials = new RuntimeCredentials(options.credentials ?? DefaultAuthStorage.create(options.authPath));
- 		const modelsPath =
- 			options.modelsPath === null ? undefined : (options.modelsPath ?? join(getAgentDir(), "models.json"));
+@@ -176 +186,4 @@ export class ModelRuntime implements Models {
 -		const config = await ModelConfig.load(modelsPath);
 +		const config = await ModelConfig.load(modelsPath, {
 +			reader: options.modelsConfigReader,
 +			signal: options.signal,
 +		});
- 		const modelsStore =
- 			options.modelsStore ??
- 			(modelsPath
-@@ -191,6 +204,7 @@ export class ModelRuntime implements Models {
- 			credentials,
- 			config,
- 			modelsPath,
+@@ -179,3 +192,5 @@ export class ModelRuntime implements Models {
+-			(modelsPath
+-				? new FileModelsStore(options.modelsStorePath ?? join(dirname(modelsPath), "models-store.json"))
+-				: new InMemoryCodingAgentModelsStore());
++			(options.modelsStorePath
++				? new FileModelsStore(options.modelsStorePath)
++				: modelsPath
++					? new FileModelsStore(join(dirname(modelsPath), "models-store.json"))
++					: new InMemoryCodingAgentModelsStore());
+@@ -193,0 +209 @@ export class ModelRuntime implements Models {
 +			options.modelsConfigReader,
- 			modelsStore,
- 			providers,
- 			process.env.PI_OFFLINE === undefined,
-@@ -570,6 +584,11 @@ export class ModelRuntime implements Models {
- 		return check ? { configured: true, source: "environment", label: check.source } : { configured: false };
- 	}
- 
+@@ -572,0 +589,5 @@ export class ModelRuntime implements Models {
 +	/** Provider IDs accepted from the current official models.json configuration snapshot. */
 +	getModelConfigProviderIds(): readonly string[] {
 +		return this.config.getProviderIds();
 +	}
 +
- 	private async prepareRequest<TOptions extends ProviderRequestOptions & ModelsRequestTransforms>(
- 		model: Model<Api>,
- 		options: TOptions | undefined,
-@@ -688,7 +707,10 @@ export class ModelRuntime implements Models {
- 	}
- 
- 	async refresh(options: ModelsRefreshOptions = {}): Promise<ModelsRefreshResult> {
+@@ -691 +712,4 @@ export class ModelRuntime implements Models {
 -		this.config = await ModelConfig.load(this.modelsPath);
 +		this.config = await ModelConfig.load(this.modelsPath, {
 +			reader: this.modelsConfigReader,
 +			signal: options.signal,
 +		});
- 		this.configureRadiusProviders();
- 		if (options.providers) {
- 			for (const providerId of new Set(options.providers)) this.recomposeProvider(providerId);
 diff --git a/packages/coding-agent/src/index.ts b/packages/coding-agent/src/index.ts
 index 3d05c2af4..84fc9d01a 100644
 --- a/packages/coding-agent/src/index.ts
 +++ b/packages/coding-agent/src/index.ts
-@@ -178,6 +178,8 @@ export {
- 	type ScopedModel,
- } from "./core/model-resolver.ts";
- export {
+@@ -180,0 +181,2 @@ export {
 +	type ModelConfigReader,
 +	type ModelConfigReadOptions,
- 	type CreateModelRuntimeOptions,
- 	CredentialSynchronizationError,
- 	type CredentialSynchronizationOperation,
 diff --git a/packages/coding-agent/test/model-runtime-config-reader.test.ts b/packages/coding-agent/test/model-runtime-config-reader.test.ts
 new file mode 100644
-index 000000000..47ecd046b
+index 000000000..ec6eab86f
 --- /dev/null
 +++ b/packages/coding-agent/test/model-runtime-config-reader.test.ts
-@@ -0,0 +1,92 @@
+@@ -0,0 +1,192 @@
++import { mkdtemp, readFile, rm, writeFile } from "node:fs/promises";
++import { tmpdir } from "node:os";
++import { join } from "node:path";
 +import { describe, expect, it, vi } from "vitest";
 +import { AuthStorage } from "../src/core/auth-storage.ts";
++import { ModelRegistry } from "../src/core/model-registry.ts";
 +import { ModelRuntime } from "../src/core/model-runtime.ts";
 +import { InMemoryCodingAgentModelsStore } from "../src/core/models-store.ts";
 +
@@ -311,5 +225,100 @@ index 000000000..47ecd046b
 +		expect(invalid.getError()).toContain("Invalid models.json schema");
 +		expect(invalid.getModelConfigProviderIds()).toEqual([]);
 +	});
++
++	it("keeps an explicit file catalog store when models config comes from a reader", async () => {
++		const root = await mkdtemp(join(tmpdir(), "omnimind-model-reader-store-"));
++		const modelsStorePath = join(root, "models-store.json");
++		const providerId = "reader-store-provider";
++		const storedModel = {
++			id: "stored-model",
++			name: "Stored Model",
++			api: "openai-responses" as const,
++			provider: providerId,
++			baseUrl: "https://example.test/v1",
++			reasoning: false,
++			input: ["text"] as const,
++			cost: { input: 0, output: 0, cacheRead: 0, cacheWrite: 0 },
++			contextWindow: 128_000,
++			maxTokens: 16_384,
++		};
++		const refreshedModel = { ...storedModel, id: "reopened-model", name: "Reopened Model" };
++		const observedStoredModelIds: string[][] = [];
++		const registerDynamicProvider = (runtime: ModelRuntime, publishRefreshed: boolean) => {
++			let models = [] as (typeof storedModel)[];
++			new ModelRegistry(runtime).registerProvider({
++				id: providerId,
++				name: "Reader Store Provider",
++				auth: {
++					apiKey: {
++						name: "Reader store key",
++						resolve: async () => ({ auth: { apiKey: "test-key" }, source: "test" }),
++					},
++				},
++				getModels: () => models,
++				refreshModels: async (context) => {
++					observedStoredModelIds.push(context.stored?.models.map((model) => model.id) ?? []);
++					if (context.stored) {
++						await context.publish({
++							update: () => {
++								models = [...context.stored!.models] as (typeof storedModel)[];
++							},
++						});
++					}
++					if (!publishRefreshed) return;
++					await context.publish({
++						persist: { models: [refreshedModel], checkedAt: Date.now() },
++						update: () => {
++							models = [refreshedModel];
++						},
++					});
++				},
++				stream: () => {
++					throw new Error("unused");
++				},
++				streamSimple: () => {
++					throw new Error("unused");
++				},
++			});
++		};
++
++		try {
++			await writeFile(
++				modelsStorePath,
++				JSON.stringify({
++					[providerId]: { models: [storedModel], checkedAt: 1 },
++				}),
++			);
++			const first = await ModelRuntime.create({
++				credentials: AuthStorage.inMemory(),
++				modelsPath: null,
++				modelsConfigReader: async () => undefined,
++				modelsStorePath,
++				allowModelNetwork: false,
++				refreshOnCreate: false,
++			});
++			registerDynamicProvider(first, true);
++			await first.refresh({ providers: [providerId], allowNetwork: false });
++			expect(observedStoredModelIds).toEqual([["stored-model"]]);
++			expect(first.getModel(providerId, "reopened-model")).toBeDefined();
++			const persisted = JSON.parse(await readFile(modelsStorePath, "utf8"));
++			expect(persisted[providerId].models.map((model: { id: string }) => model.id)).toEqual(["reopened-model"]);
++
++			const reopened = await ModelRuntime.create({
++				credentials: AuthStorage.inMemory(),
++				modelsPath: null,
++				modelsConfigReader: async () => undefined,
++				modelsStorePath,
++				allowModelNetwork: false,
++				refreshOnCreate: false,
++			});
++			registerDynamicProvider(reopened, false);
++			await reopened.refresh({ providers: [providerId], allowNetwork: false });
++			expect(observedStoredModelIds).toEqual([["stored-model"], ["reopened-model"]]);
++			expect(reopened.getModel(providerId, "stored-model")).toBeUndefined();
++			expect(reopened.getModel(providerId, "reopened-model")).toBeDefined();
++		} finally {
++			await rm(root, { recursive: true, force: true });
++		}
++	});
 +});
-

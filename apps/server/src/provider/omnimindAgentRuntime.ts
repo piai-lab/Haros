@@ -230,6 +230,15 @@ export async function readOmniMindPrivateTextFile(input: {
 
 export function createOmniMindModelsConfigReader(agentDir: string): ModelConfigReader {
   return async ({ signal }) => {
+    signal?.throwIfAborted();
+    const modelsPath = path.join(path.resolve(agentDir), "models.json");
+    try {
+      await lstat(modelsPath);
+    } catch (error) {
+      if (isMissingPathError(error)) return undefined;
+      throw error;
+    }
+
     try {
       return await readOmniMindPrivateTextFile({
         agentDir,
@@ -237,7 +246,9 @@ export function createOmniMindModelsConfigReader(agentDir: string): ModelConfigR
         ...(signal ? { signal } : {}),
       });
     } catch (error) {
-      if (isMissingPathError(error)) return undefined;
+      if (isMissingPathError(error)) {
+        throw new Error("OmniMind Agent state changed during the safe read");
+      }
       throw error;
     }
   };

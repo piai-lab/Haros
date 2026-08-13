@@ -305,6 +305,7 @@ export async function createOmniMindModelRuntime(agentDir: string) {
     authPath: path.join(agentDir, "auth.json"),
     modelsPath: null,
     modelsConfigReader: createOmniMindModelsConfigReader(agentDir),
+    modelsStorePath: path.join(agentDir, "models-store.json"),
   });
 }
 

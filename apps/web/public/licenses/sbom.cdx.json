@@ -29,7 +29,7 @@
       },
       {
         "name": "omnimind:inventory-sha256",
-        "value": "e8f7354083a4854c6d23db8f02f9be47437175897a41e620b753ccafb0e8ba37"
+        "value": "6fb35ae37c0ac5a3ec3706a832a2573ba2af662d6b774599ee19740b29b8e9a0"
       }
     ]
   },
@@ -1620,7 +1620,7 @@
       "hashes": [
         {
           "alg": "SHA-256",
-          "content": "fc8b90f4089c7f96541ff7dfa458f8551b0e9268cacc868f9d1f0c316aca588e"
+          "content": "0a401e13e04eb6daa729871e5e525621bd33decaa872deb981e5c65a67be0c96"
         }
       ],
       "author": "Mario Zechner",

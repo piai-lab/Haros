@@ -262,20 +262,21 @@ function validateBundledPiRuntimeAdoption(findings, documents) {
       "scripts/vendor-omnimind-pi-runtime.mjs",
     ],
     sourcePaths: ["packages/coding-agent"],
-    archiveSha256: "2bcf24828006114cd5960aa936cc64f745e1235549f3d624012387788a33f878",
+    archiveSha256: "294200d5106e86b4cd1e4e9c16c8b7e6a1300686c759a78eec94dcf2069e6f59",
     upstreamPackage: "@earendil-works/pi-coding-agent@0.84.1",
     upstreamPackageIntegrity:
       "sha512-ncAqFrG+iybuPGOhMiZoEHkEzTpJgz3guYD32pD+M7ucc0WeHmauP6wa7qwP8V/KWvsZDVNa5XGsdZ7fkC7w7A==",
     licenseFiles: ["LICENSES/pi-coding-agent-MIT.txt"],
     sharedRuntimeBytes: "patched",
     patchPath: "patches/pi-coding-agent/0.84.1-model-config-reader.patch",
-    patchSha256: "5ad58ec64da15d5ba893aa873c96826f7e285c92771238b209cdaec6dc3e226b",
+    patchSha256: "cc7fc8327130a42091022c6150e3fd4fb7005cd155a0802fb084589ac322361b",
     generatorPath: "scripts/vendor-omnimind-pi-runtime.mjs",
     behavioralDifferences: [
       "package identity",
       "piConfig.configDir",
       "injectable models.json content reader",
       "accepted model-config provider provenance",
+      "explicit reader-mode models store path remains file-backed",
     ],
   };
   const actual = record

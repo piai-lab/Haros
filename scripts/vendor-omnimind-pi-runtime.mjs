@@ -20,6 +20,7 @@ const PI_REVISION = "53fa77ccd8a279eb87e92294ef3687b03ff80112";
 const PI_VERSION = "0.84.1";
 const PI_AI_INTEGRITY =
   "sha512-wMsAdJMxuNri08vLqTyYVI201DQQezGhPSTkzYsHdw5dYX3rCNwEmSvpaAwhi7ELKI/2tE/CEgSWg/6iRxSgdQ==";
+const PATCH_SHA256 = "cc7fc8327130a42091022c6150e3fd4fb7005cd155a0802fb084589ac322361b";
 const PRODUCT_ARCHIVE_NAME = `omnimind-pi-coding-agent-${PI_VERSION}.tgz`;
 const SCRIPT_DIR = path.dirname(fileURLToPath(import.meta.url));
 const REPOSITORY_ROOT = path.resolve(SCRIPT_DIR, "..");
@@ -139,6 +140,11 @@ async function packProductArchive(worktree, destination) {
 
 async function main() {
   const { source: requestedSource, output } = parseArguments(process.argv.slice(2));
+  const patchBytes = await readFile(PATCH_PATH);
+  const patchSha256 = sha256(patchBytes);
+  if (patchSha256 !== PATCH_SHA256) {
+    fail(`Pi source patch digest must be ${PATCH_SHA256}; observed ${patchSha256}`);
+  }
   const source = await realpath(requestedSource);
   const revision = run("git", ["rev-parse", "HEAD"], { cwd: source });
   if (revision !== PI_REVISION) {
@@ -153,8 +159,8 @@ async function main() {
   try {
     run("git", ["clone", "--quiet", "--no-hardlinks", source, worktree]);
     run("git", ["checkout", "--quiet", PI_REVISION], { cwd: worktree });
-    run("git", ["apply", "--check", PATCH_PATH], { cwd: worktree });
-    run("git", ["apply", PATCH_PATH], { cwd: worktree });
+    run("git", ["apply", "--unidiff-zero", "--check", PATCH_PATH], { cwd: worktree });
+    run("git", ["apply", "--unidiff-zero", PATCH_PATH], { cwd: worktree });
     run("npm", ["ci", "--ignore-scripts"], { cwd: worktree, capture: false });
     await prepareGeneratedModelData(worktree, temporaryRoot);
     run("npm", ["run", "build:offline"], { cwd: worktree, capture: false });
@@ -184,6 +190,7 @@ async function main() {
         {
           revision: PI_REVISION,
           patch: path.relative(REPOSITORY_ROOT, PATCH_PATH),
+          patchSha256,
           output,
           bytes: firstBytes.byteLength,
           sha256: sha256(firstBytes),

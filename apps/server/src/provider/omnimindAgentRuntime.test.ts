@@ -4,6 +4,23 @@ import path from "node:path";
 
 import { afterEach, describe, expect, it, vi } from "vitest";
 
+const privateReadRace = vi.hoisted(() => ({
+  afterSuccessfulLstat: undefined as undefined | ((candidate: string) => Promise<void>),
+}));
+
+vi.mock("node:fs/promises", async () => {
+  const actual = await vi.importActual<typeof import("node:fs/promises")>("node:fs/promises");
+  return {
+    ...actual,
+    lstat: async (...args: Parameters<typeof actual.lstat>) => {
+      const metadata = await actual.lstat(...args);
+      const hook = privateReadRace.afterSuccessfulLstat;
+      if (hook) await hook(String(args[0]));
+      return metadata;
+    },
+  };
+});
+
 import {
   createOmniMindModelsConfigReader,
   readOmniMindPrivateTextFile,
@@ -13,6 +30,7 @@ import {
 const roots: string[] = [];
 
 afterEach(async () => {
+  privateReadRace.afterSuccessfulLstat = undefined;
   vi.unstubAllEnvs();
   await Promise.all(roots.splice(0).map((root) => rm(root, { recursive: true, force: true })));
 });
@@ -156,6 +174,26 @@ describe("readOmniMindPrivateTextFile", () => {
     );
     await rm(path.join(agentDir, "models.json"));
     await expect(createOmniMindModelsConfigReader(agentDir)({})).resolves.toBeUndefined();
+  });
+
+  it("rejects disappearance after the models config was observed", async () => {
+    const root = await makeRoot();
+    await isolateProviderHome(root);
+    const agentDir = path.join(root, "agent");
+    const modelsPath = path.join(agentDir, "models.json");
+    await mkdir(agentDir);
+    await writeFile(modelsPath, "{}");
+    let removed = false;
+    privateReadRace.afterSuccessfulLstat = async (candidate) => {
+      if (!removed && candidate === modelsPath) {
+        removed = true;
+        await rm(modelsPath);
+      }
+    };
+
+    await expect(createOmniMindModelsConfigReader(agentDir)({})).rejects.toThrow(
+      "OmniMind Agent state changed during the safe read",
+    );
   });
 
   it.each(["symbolic link", "hard link"] as const)("rejects a %s leaf", async (kind) => {

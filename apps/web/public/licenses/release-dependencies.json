@@ -1624,7 +1624,7 @@
       "author": "Mario Zechner",
       "repository": "https://github.com/earendil-works/pi.git",
       "homepage": null,
-      "manifestSha256": "fc8b90f4089c7f96541ff7dfa458f8551b0e9268cacc868f9d1f0c316aca588e",
+      "manifestSha256": "0a401e13e04eb6daa729871e5e525621bd33decaa872deb981e5c65a67be0c96",
       "locations": [
         "node_modules/.bun/@omnimind+pi-coding-agent@..+..+vendor+omnimind-pi-coding-agent-0.84.1.tgz+bfb712a8fa2951a7/node_modules/@omnimind/pi-coding-agent"
       ],
