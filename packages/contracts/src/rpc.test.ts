@@ -28,6 +28,11 @@ describe("WS RPC contracts", () => {
     );
     expect(WsFeatureRpcGroup.requests.has(WS_METHODS.omnimindModelServicesList)).toBe(true);
     expect(WsFeatureRpcGroup.requests.has(WS_METHODS.omnimindModelServicesGet)).toBe(true);
+    expect(WsFeatureRpcGroup.requests.has(WS_METHODS.omnimindModelServicesBeginLogin)).toBe(true);
+    expect(WsFeatureRpcGroup.requests.has(WS_METHODS.omnimindModelServicesAnswerLogin)).toBe(true);
+    expect(WsFeatureRpcGroup.requests.has(WS_METHODS.omnimindModelServicesCancelLogin)).toBe(true);
+    expect(WsFeatureRpcGroup.requests.has(WS_METHODS.omnimindModelServicesLogout)).toBe(true);
+    expect(WsFeatureRpcGroup.requests.has(WS_METHODS.omnimindModelServicesRefresh)).toBe(true);
   });
 
   it("uses a schema-backed transport error", () => {

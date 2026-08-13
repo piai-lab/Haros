@@ -248,6 +248,14 @@ import type {
 } from "./providerDiscovery";
 import type { ProviderCompactThreadInput } from "./provider";
 import type {
+  OmniMindModelServiceAnswerLoginInput,
+  OmniMindModelServiceAuthResult,
+  OmniMindModelServiceBeginLoginInput,
+  OmniMindModelServiceCancelLoginInput,
+  OmniMindModelServiceLogoutInput,
+  OmniMindModelServiceLogoutResult,
+  OmniMindModelServiceRefreshInput,
+  OmniMindModelServiceRefreshResult,
   OmniMindModelServicesGetInput,
   OmniMindModelServicesGetResult,
   OmniMindModelServicesListInput,
@@ -793,6 +801,22 @@ export interface NativeApi {
       input: OmniMindModelServicesGetInput,
       options?: { readonly signal?: AbortSignal },
     ) => Promise<OmniMindModelServicesGetResult>;
+    beginLogin: (
+      input: OmniMindModelServiceBeginLoginInput,
+      options?: { readonly signal?: AbortSignal },
+    ) => Promise<OmniMindModelServiceAuthResult>;
+    answerLogin: (
+      input: OmniMindModelServiceAnswerLoginInput,
+      options?: { readonly signal?: AbortSignal },
+    ) => Promise<OmniMindModelServiceAuthResult>;
+    cancelLogin: (
+      input: OmniMindModelServiceCancelLoginInput,
+    ) => Promise<OmniMindModelServiceAuthResult>;
+    logout: (input: OmniMindModelServiceLogoutInput) => Promise<OmniMindModelServiceLogoutResult>;
+    refresh: (
+      input: OmniMindModelServiceRefreshInput,
+      options?: { readonly signal?: AbortSignal },
+    ) => Promise<OmniMindModelServiceRefreshResult>;
   };
   orchestration: {
     getSnapshot: () => Promise<OrchestrationReadModel>;

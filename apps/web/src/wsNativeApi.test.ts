@@ -924,6 +924,60 @@ describe("wsNativeApi", () => {
     );
   });
 
+  it("forwards typed OmniMind model-service credential operations", async () => {
+    const requestId = "00000000-0000-4000-8000-000000000041";
+    const promptId = "00000000-0000-4000-8000-000000000042";
+    requestMock
+      .mockResolvedValueOnce({ state: "failed", requestId, errorCode: "auth_failed", events: [] })
+      .mockResolvedValueOnce({ state: "failed", requestId, errorCode: "auth_failed", events: [] })
+      .mockResolvedValueOnce({ state: "cancelled", requestId, errorCode: "cancelled", events: [] })
+      .mockResolvedValueOnce({ state: "complete", service: {} })
+      .mockResolvedValueOnce({ state: "failed", service: {} });
+    const { createWsNativeApi } = await import("./wsNativeApi");
+    const api = createWsNativeApi();
+    const controller = new AbortController();
+
+    await api.omnimindModelServices.beginLogin(
+      { serviceId: "deepseek", authType: "api_key" },
+      { signal: controller.signal },
+    );
+    await api.omnimindModelServices.answerLogin(
+      { requestId, promptId, value: "test-secret" },
+      { signal: controller.signal },
+    );
+    await api.omnimindModelServices.cancelLogin({ requestId });
+    await api.omnimindModelServices.logout({ serviceId: "deepseek" });
+    await api.omnimindModelServices.refresh(
+      { serviceId: "deepseek" },
+      { signal: controller.signal },
+    );
+
+    expect(requestMock).toHaveBeenNthCalledWith(
+      1,
+      WS_METHODS.omnimindModelServicesBeginLogin,
+      { serviceId: "deepseek", authType: "api_key" },
+      { signal: controller.signal, timeoutMs: null },
+    );
+    expect(requestMock).toHaveBeenNthCalledWith(
+      2,
+      WS_METHODS.omnimindModelServicesAnswerLogin,
+      { requestId, promptId, value: "test-secret" },
+      { signal: controller.signal, timeoutMs: null },
+    );
+    expect(requestMock).toHaveBeenNthCalledWith(3, WS_METHODS.omnimindModelServicesCancelLogin, {
+      requestId,
+    });
+    expect(requestMock).toHaveBeenNthCalledWith(4, WS_METHODS.omnimindModelServicesLogout, {
+      serviceId: "deepseek",
+    });
+    expect(requestMock).toHaveBeenNthCalledWith(
+      5,
+      WS_METHODS.omnimindModelServicesRefresh,
+      { serviceId: "deepseek" },
+      { signal: controller.signal, timeoutMs: null },
+    );
+  });
+
   it("forwards browser webview detach requests to the desktop bridge", async () => {
     const detachWebview = vi.fn().mockResolvedValue(undefined);
     Object.defineProperty(getWindowForTest(), "desktopBridge", {

@@ -116,6 +116,38 @@ it.effect("accepts credential-blind OmniMind model-services requests", () =>
   }),
 );
 
+it.effect("accepts typed OmniMind model-service credential operations", () =>
+  Effect.gen(function* () {
+    const requestId = "00000000-0000-4000-8000-000000000031";
+    const promptId = "00000000-0000-4000-8000-000000000032";
+    const begin = yield* decode(WebSocketRequest, {
+      id: "req-model-services-login",
+      body: {
+        _tag: WS_METHODS.omnimindModelServicesBeginLogin,
+        serviceId: "deepseek",
+        authType: "api_key",
+      },
+    });
+    const answer = yield* decode(WebSocketRequest, {
+      id: "req-model-services-answer",
+      body: {
+        _tag: WS_METHODS.omnimindModelServicesAnswerLogin,
+        requestId,
+        promptId,
+        value: "test-secret",
+      },
+    });
+    const refresh = yield* decode(WebSocketRequest, {
+      id: "req-model-services-refresh",
+      body: { _tag: WS_METHODS.omnimindModelServicesRefresh, serviceId: "deepseek" },
+    });
+
+    assert.strictEqual(begin.body._tag, WS_METHODS.omnimindModelServicesBeginLogin);
+    assert.strictEqual(answer.body._tag, WS_METHODS.omnimindModelServicesAnswerLogin);
+    assert.strictEqual(refresh.body._tag, WS_METHODS.omnimindModelServicesRefresh);
+  }),
+);
+
 it.effect("accepts automation create requests", () =>
   Effect.gen(function* () {
     const parsed = yield* decode(WebSocketRequest, {

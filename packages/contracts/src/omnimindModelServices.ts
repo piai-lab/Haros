@@ -144,3 +144,104 @@ export const OmniMindModelServicesGetResult = Schema.Union([
   }),
 ]);
 export type OmniMindModelServicesGetResult = typeof OmniMindModelServicesGetResult.Type;
+
+const AuthRequestId = Schema.String.check(Schema.isUUID(undefined));
+const AuthPromptId = Schema.String.check(Schema.isUUID(undefined));
+const BoundedInteractionText = Schema.String.check(Schema.isMinLength(1), Schema.isMaxLength(4096));
+const BoundedInteractionValue = Schema.String.check(Schema.isMaxLength(65536));
+
+export const OmniMindModelServiceAuthPrompt = Schema.Union([
+  Schema.Struct({
+    promptId: AuthPromptId,
+    type: Schema.Literals(["text", "secret", "manual_code"]),
+    message: BoundedInteractionText,
+    placeholder: Schema.optional(BoundedInteractionText),
+  }),
+  Schema.Struct({
+    promptId: AuthPromptId,
+    type: Schema.Literal("select"),
+    message: BoundedInteractionText,
+    options: Schema.Array(
+      Schema.Struct({
+        id: BoundedIdentifier,
+        label: BoundedDisplayName,
+        description: Schema.optional(BoundedInteractionText),
+      }),
+    ).check(Schema.isMinLength(1), Schema.isMaxLength(64)),
+  }),
+]);
+export type OmniMindModelServiceAuthPrompt = typeof OmniMindModelServiceAuthPrompt.Type;
+
+export const OmniMindModelServiceAuthEvent = Schema.Union([
+  Schema.Struct({ type: Schema.Literals(["info", "progress"]), message: BoundedInteractionText }),
+  Schema.Struct({
+    type: Schema.Literal("auth_url"),
+    url: Schema.String.check(Schema.isMaxLength(4096), Schema.isPattern(/^https?:\/\//iu)),
+    instructions: Schema.optional(BoundedInteractionText),
+  }),
+  Schema.Struct({
+    type: Schema.Literal("device_code"),
+    userCode: BoundedInteractionText,
+    verificationUri: Schema.String.check(
+      Schema.isMaxLength(4096),
+      Schema.isPattern(/^https?:\/\//iu),
+    ),
+    intervalSeconds: Schema.optional(NonNegativeInt),
+    expiresInSeconds: Schema.optional(NonNegativeInt),
+  }),
+]);
+export type OmniMindModelServiceAuthEvent = typeof OmniMindModelServiceAuthEvent.Type;
+
+export const OmniMindModelServiceAuthResult = Schema.Union([
+  Schema.Struct({
+    state: Schema.Literal("prompt"),
+    requestId: AuthRequestId,
+    prompt: OmniMindModelServiceAuthPrompt,
+    events: Schema.Array(OmniMindModelServiceAuthEvent).check(Schema.isMaxLength(64)),
+  }),
+  Schema.Struct({
+    state: Schema.Literals(["complete", "auth_updated_catalog_failed", "auth_updated_sync_failed"]),
+    requestId: AuthRequestId,
+    service: OmniMindModelServiceDescriptor,
+    events: Schema.Array(OmniMindModelServiceAuthEvent).check(Schema.isMaxLength(64)),
+  }),
+  Schema.Struct({
+    state: Schema.Literals(["cancelled", "failed"]),
+    requestId: AuthRequestId,
+    errorCode: Schema.Literals(["cancelled", "auth_failed", "request_expired"]),
+    events: Schema.Array(OmniMindModelServiceAuthEvent).check(Schema.isMaxLength(64)),
+  }),
+]);
+export type OmniMindModelServiceAuthResult = typeof OmniMindModelServiceAuthResult.Type;
+
+export const OmniMindModelServiceBeginLoginInput = Schema.Struct({
+  serviceId: BoundedIdentifier,
+  authType: OmniMindModelServiceAuthMethodType,
+});
+export type OmniMindModelServiceBeginLoginInput = typeof OmniMindModelServiceBeginLoginInput.Type;
+
+export const OmniMindModelServiceAnswerLoginInput = Schema.Struct({
+  requestId: AuthRequestId,
+  promptId: AuthPromptId,
+  value: BoundedInteractionValue,
+});
+export type OmniMindModelServiceAnswerLoginInput = typeof OmniMindModelServiceAnswerLoginInput.Type;
+
+export const OmniMindModelServiceCancelLoginInput = Schema.Struct({ requestId: AuthRequestId });
+export type OmniMindModelServiceCancelLoginInput = typeof OmniMindModelServiceCancelLoginInput.Type;
+
+export const OmniMindModelServiceLogoutInput = Schema.Struct({ serviceId: BoundedIdentifier });
+export type OmniMindModelServiceLogoutInput = typeof OmniMindModelServiceLogoutInput.Type;
+export const OmniMindModelServiceLogoutResult = Schema.Struct({
+  state: Schema.Literals(["complete", "credential_updated_sync_failed"]),
+  service: OmniMindModelServiceDescriptor,
+});
+export type OmniMindModelServiceLogoutResult = typeof OmniMindModelServiceLogoutResult.Type;
+
+export const OmniMindModelServiceRefreshInput = Schema.Struct({ serviceId: BoundedIdentifier });
+export type OmniMindModelServiceRefreshInput = typeof OmniMindModelServiceRefreshInput.Type;
+export const OmniMindModelServiceRefreshResult = Schema.Struct({
+  state: Schema.Literals(["success", "failed", "cancelled", "unsupported"]),
+  service: OmniMindModelServiceDescriptor,
+});
+export type OmniMindModelServiceRefreshResult = typeof OmniMindModelServiceRefreshResult.Type;

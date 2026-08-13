@@ -3,6 +3,14 @@
 // Layer: Server provider service contract
 
 import type {
+  OmniMindModelServiceAnswerLoginInput,
+  OmniMindModelServiceAuthResult,
+  OmniMindModelServiceBeginLoginInput,
+  OmniMindModelServiceCancelLoginInput,
+  OmniMindModelServiceLogoutInput,
+  OmniMindModelServiceLogoutResult,
+  OmniMindModelServiceRefreshInput,
+  OmniMindModelServiceRefreshResult,
   OmniMindModelServicesGetInput,
   OmniMindModelServicesGetResult,
   OmniMindModelServicesListResult,
@@ -15,6 +23,24 @@ export interface OmniMindModelServicesShape {
   readonly get: (
     input: OmniMindModelServicesGetInput,
   ) => Effect.Effect<OmniMindModelServicesGetResult>;
+  readonly beginLogin: (
+    clientId: number,
+    input: OmniMindModelServiceBeginLoginInput,
+  ) => Effect.Effect<OmniMindModelServiceAuthResult>;
+  readonly answerLogin: (
+    clientId: number,
+    input: OmniMindModelServiceAnswerLoginInput,
+  ) => Effect.Effect<OmniMindModelServiceAuthResult>;
+  readonly cancelLogin: (
+    clientId: number,
+    input: OmniMindModelServiceCancelLoginInput,
+  ) => Effect.Effect<OmniMindModelServiceAuthResult>;
+  readonly logout: (
+    input: OmniMindModelServiceLogoutInput,
+  ) => Effect.Effect<OmniMindModelServiceLogoutResult>;
+  readonly refresh: (
+    input: OmniMindModelServiceRefreshInput,
+  ) => Effect.Effect<OmniMindModelServiceRefreshResult>;
 }
 
 export class OmniMindModelServices extends ServiceMap.Service<

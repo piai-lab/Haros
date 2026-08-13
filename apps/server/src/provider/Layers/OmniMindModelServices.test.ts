@@ -245,6 +245,218 @@ describe("OmniMindModelServicesLive", () => {
     expect(await readdir(agentDir)).toEqual([]);
   });
 
+  it("uses Pi login and logout as the only API-key credential mutation owner", async () => {
+    const root = await makeRoot();
+    const providerHome = await isolateProviderEnvironment(root);
+    const agentDir = path.join(root, "agent");
+    await mkdir(agentDir, { recursive: true });
+    const layer = makeTestLayer({ root });
+    const request = await Effect.runPromise(
+      Effect.gen(function* () {
+        const service = yield* OmniMindModelServices;
+        const before = yield* service.get({ serviceId: "deepseek" });
+        const begin = yield* service.beginLogin(7, {
+          serviceId: "deepseek",
+          authType: "api_key",
+        });
+        if (begin.state !== "prompt") throw new Error("Expected the Pi API-key prompt");
+        const answer = yield* service.answerLogin(7, {
+          requestId: begin.requestId,
+          promptId: begin.prompt.promptId,
+          value: "test-only-api-key",
+        });
+        const after = yield* service.get({ serviceId: "deepseek" });
+        const logout = yield* service.logout({ serviceId: "deepseek" });
+        const removed = yield* service.get({ serviceId: "deepseek" });
+        return { before, begin, answer, after, logout, removed };
+      }).pipe(Effect.provide(layer)),
+    );
+
+    expect(request.before.service).toMatchObject({
+      authState: "setup_required",
+      storedCredentialType: null,
+    });
+    expect(request.begin.prompt.type).toBe("secret");
+    expect(request.answer).toMatchObject({
+      state: "complete",
+      service: { authState: "configured", storedCredentialType: "api_key" },
+    });
+    expect(request.after.service).toMatchObject({
+      authState: "configured",
+      storedCredentialType: "api_key",
+    });
+    expect(request.logout.state).toBe("complete");
+    expect(request.removed.service).toMatchObject({
+      authState: "setup_required",
+      storedCredentialType: null,
+    });
+    const stored = JSON.parse(await readFile(path.join(agentDir, "auth.json"), "utf8"));
+    expect(Object.keys(stored)).not.toContain("deepseek");
+    expect(JSON.stringify(request)).not.toContain("test-only-api-key");
+    await expect(stat(path.join(providerHome, ".pi"))).rejects.toMatchObject({ code: "ENOENT" });
+  });
+
+  it("binds pending auth prompts to the originating client and supports cancellation", async () => {
+    const root = await makeRoot();
+    await isolateProviderEnvironment(root);
+    await mkdir(path.join(root, "agent"), { recursive: true });
+    const layer = makeTestLayer({ root });
+    const result = await Effect.runPromise(
+      Effect.gen(function* () {
+        const service = yield* OmniMindModelServices;
+        const begin = yield* service.beginLogin(11, {
+          serviceId: "deepseek",
+          authType: "api_key",
+        });
+        if (begin.state !== "prompt") throw new Error("Expected the Pi API-key prompt");
+        const foreign = yield* service.answerLogin(12, {
+          requestId: begin.requestId,
+          promptId: begin.prompt.promptId,
+          value: "must-not-be-consumed",
+        });
+        const cancelled = yield* service.cancelLogin(11, { requestId: begin.requestId });
+        return { foreign, cancelled };
+      }).pipe(Effect.provide(layer)),
+    );
+
+    expect(result.foreign).toMatchObject({ state: "failed", errorCode: "request_expired" });
+    expect(result.cancelled).toMatchObject({ state: "cancelled", errorCode: "cancelled" });
+    expect(JSON.parse(await readFile(path.join(root, "agent", "auth.json"), "utf8"))).toEqual({});
+  });
+
+  it("refreshes only the requested Pi provider and persists its last-good catalog", async () => {
+    const root = await makeRoot();
+    await isolateProviderEnvironment(root);
+    const agentDir = path.join(root, "agent");
+    await mkdir(agentDir, { recursive: true });
+    const requests: Array<{ readonly path: string; readonly authenticated: boolean }> = [];
+    vi.spyOn(globalThis, "fetch").mockImplementation(async (request, init) => {
+      requests.push({
+        path: new URL(request instanceof Request ? request.url : String(request)).pathname,
+        authenticated: new Headers(init?.headers).has("authorization"),
+      });
+      return Response.json({
+        baseUrl: "https://gateway.example.test",
+        models: [
+          {
+            id: "radius-test-model",
+            name: "Radius Test Model",
+            reasoning: true,
+            input: ["text"],
+            cost: { input: 0, output: 0, cacheRead: 0, cacheWrite: 0 },
+            contextWindow: 128_000,
+            maxTokens: 16_384,
+          },
+        ],
+      });
+    });
+    const layer = makeTestLayer({ root });
+    const result = await Effect.runPromise(
+      Effect.gen(function* () {
+        const service = yield* OmniMindModelServices;
+        const begin = yield* service.beginLogin(21, {
+          serviceId: "radius",
+          authType: "api_key",
+        });
+        if (begin.state !== "prompt") throw new Error("Expected the Pi API-key prompt");
+        const login = yield* service.answerLogin(21, {
+          requestId: begin.requestId,
+          promptId: begin.prompt.promptId,
+          value: "test-only-radius-key",
+        });
+        const refreshed = yield* service.refresh({ serviceId: "radius" });
+        return { login, refreshed };
+      }).pipe(Effect.provide(layer)),
+    );
+
+    expect(result.login).toMatchObject({
+      state: "complete",
+      service: { serviceId: "radius", knownModelCount: 1, catalogState: "ready" },
+    });
+    expect(result.refreshed).toMatchObject({
+      state: "success",
+      service: { serviceId: "radius", knownModelCount: 1, catalogState: "ready" },
+    });
+    expect(requests).toEqual([
+      { path: "/v1/config", authenticated: true },
+      { path: "/v1/config", authenticated: true },
+    ]);
+    const storedCatalog = JSON.parse(
+      await readFile(path.join(agentDir, "models-store.json"), "utf8"),
+    );
+    expect(Object.keys(storedCatalog)).toEqual(["radius"]);
+    expect(JSON.stringify(storedCatalog)).not.toContain("test-only-radius-key");
+  });
+
+  it("reports authentication as saved when cancellation arrives during the post-login refresh", async () => {
+    const root = await makeRoot();
+    await isolateProviderEnvironment(root);
+    const agentDir = path.join(root, "agent");
+    await mkdir(agentDir, { recursive: true });
+    let refreshStarted = false;
+    let releaseRefresh!: () => void;
+    const refreshGate = new Promise<void>((resolve) => {
+      releaseRefresh = resolve;
+    });
+    vi.spyOn(globalThis, "fetch").mockImplementation(async () => {
+      refreshStarted = true;
+      await refreshGate;
+      return Response.json({
+        baseUrl: "https://gateway.example.test",
+        models: [
+          {
+            id: "radius-test-model",
+            name: "Radius Test Model",
+            reasoning: true,
+            input: ["text"],
+            cost: { input: 0, output: 0, cacheRead: 0, cacheWrite: 0 },
+            contextWindow: 128_000,
+            maxTokens: 16_384,
+          },
+        ],
+      });
+    });
+    const layer = makeTestLayer({ root });
+    const result = await Effect.runPromise(
+      Effect.scoped(
+        Effect.gen(function* () {
+          const service = yield* OmniMindModelServices;
+          const begin = yield* service.beginLogin(31, {
+            serviceId: "radius",
+            authType: "api_key",
+          });
+          if (begin.state !== "prompt") throw new Error("Expected the Pi API-key prompt");
+          const answerPromise = Effect.runPromise(
+            service.answerLogin(31, {
+              requestId: begin.requestId,
+              promptId: begin.prompt.promptId,
+              value: "test-only-radius-key",
+            }),
+          );
+          while (!refreshStarted) yield* Effect.sleep("5 millis");
+          const cancelPromise = Effect.runPromise(
+            service.cancelLogin(31, { requestId: begin.requestId }),
+          );
+          yield* Effect.sleep("5 millis");
+          yield* Effect.sync(releaseRefresh);
+          const [cancelled, answered] = yield* Effect.promise(() =>
+            Promise.all([cancelPromise, answerPromise]),
+          );
+          return { cancelled, answered };
+        }).pipe(Effect.provide(layer)),
+      ),
+    );
+
+    expect(result.cancelled).toMatchObject({
+      state: "auth_updated_catalog_failed",
+      service: { serviceId: "radius", authState: "configured" },
+    });
+    expect(result.answered).toEqual(result.cancelled);
+    const stored = JSON.parse(await readFile(path.join(agentDir, "auth.json"), "utf8"));
+    expect(stored.radius).toMatchObject({ type: "api_key" });
+    expect(JSON.stringify(result)).not.toContain("test-only-radius-key");
+  });
+
   it("maps malformed local configuration to a fixed credential-blind error", async () => {
     const root = await makeRoot();
     await isolateProviderEnvironment(root);

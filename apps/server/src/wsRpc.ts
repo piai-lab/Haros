@@ -1926,6 +1926,37 @@ const makeWsRpcHandlersLayer = () =>
             requireOwnerRole.pipe(Effect.andThen(omniMindModelServices.get(input))),
             "Failed to read an OmniMind model service",
           ),
+        [WS_METHODS.omnimindModelServicesBeginLogin]: (input, { clientId }) =>
+          rpcEffect(
+            requireOwnerRole.pipe(
+              Effect.andThen(omniMindModelServices.beginLogin(clientId, input)),
+            ),
+            "Failed to begin OmniMind model-service login",
+          ),
+        [WS_METHODS.omnimindModelServicesAnswerLogin]: (input, { clientId }) =>
+          rpcEffect(
+            requireOwnerRole.pipe(
+              Effect.andThen(omniMindModelServices.answerLogin(clientId, input)),
+            ),
+            "Failed to continue OmniMind model-service login",
+          ),
+        [WS_METHODS.omnimindModelServicesCancelLogin]: (input, { clientId }) =>
+          rpcEffect(
+            requireOwnerRole.pipe(
+              Effect.andThen(omniMindModelServices.cancelLogin(clientId, input)),
+            ),
+            "Failed to cancel OmniMind model-service login",
+          ),
+        [WS_METHODS.omnimindModelServicesLogout]: (input) =>
+          rpcEffect(
+            requireOwnerRole.pipe(Effect.andThen(omniMindModelServices.logout(input))),
+            "Failed to remove OmniMind model-service credentials",
+          ),
+        [WS_METHODS.omnimindModelServicesRefresh]: (input) =>
+          rpcEffect(
+            requireOwnerRole.pipe(Effect.andThen(omniMindModelServices.refresh(input))),
+            "Failed to refresh an OmniMind model service",
+          ),
         [WS_METHODS.automationList]: (input) =>
           rpcEffect(automationService.list(input), "Failed to list automations"),
         [WS_METHODS.automationGetMemory]: ({ automationId }) =>

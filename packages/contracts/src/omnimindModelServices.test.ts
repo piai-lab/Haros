@@ -2,6 +2,9 @@ import { Schema } from "effect";
 import { describe, expect, it } from "vitest";
 
 import {
+  OmniMindModelServiceAnswerLoginInput,
+  OmniMindModelServiceAuthResult,
+  OmniMindModelServiceBeginLoginInput,
   OmniMindModelServiceDescriptor,
   OmniMindModelServicesGetInput,
   OmniMindModelServicesListResult,
@@ -120,5 +123,31 @@ describe("OmniMind model-services contracts", () => {
     expect(serialized).not.toContain("secret.example.test");
     expect(serialized).not.toContain("Authorization");
     expect(serialized).not.toContain("auth.json");
+  });
+
+  it("decodes typed auth prompts while keeping credentials out of results", () => {
+    const requestId = "00000000-0000-4000-8000-000000000021";
+    const promptId = "00000000-0000-4000-8000-000000000022";
+    expect(
+      Schema.decodeUnknownSync(OmniMindModelServiceBeginLoginInput)({
+        serviceId: "deepseek",
+        authType: "api_key",
+      }),
+    ).toEqual({ serviceId: "deepseek", authType: "api_key" });
+    expect(
+      Schema.decodeUnknownSync(OmniMindModelServiceAnswerLoginInput)({
+        requestId,
+        promptId,
+        value: "test-secret",
+      }),
+    ).toEqual({ requestId, promptId, value: "test-secret" });
+    const result = Schema.encodeSync(OmniMindModelServiceAuthResult)({
+      state: "complete",
+      requestId,
+      service: descriptor,
+      events: [{ type: "progress", message: "Credential stored" }],
+      credential: { key: "must-not-cross-the-contract" },
+    } as never);
+    expect(JSON.stringify(result)).not.toContain("must-not-cross-the-contract");
   });
 });

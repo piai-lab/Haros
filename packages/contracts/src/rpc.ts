@@ -138,6 +138,14 @@ import {
 } from "./orchestration";
 import { ProviderCompactThreadInput } from "./provider";
 import {
+  OmniMindModelServiceAnswerLoginInput,
+  OmniMindModelServiceAuthResult,
+  OmniMindModelServiceBeginLoginInput,
+  OmniMindModelServiceCancelLoginInput,
+  OmniMindModelServiceLogoutInput,
+  OmniMindModelServiceLogoutResult,
+  OmniMindModelServiceRefreshInput,
+  OmniMindModelServiceRefreshResult,
   OmniMindModelServicesGetInput,
   OmniMindModelServicesGetResult,
   OmniMindModelServicesListInput,
@@ -1147,6 +1155,41 @@ export const WsOmniMindModelServicesGetRpc = Rpc.make(WS_METHODS.omnimindModelSe
   error: WsRpcError,
 });
 
+export const WsOmniMindModelServicesBeginLoginRpc = Rpc.make(
+  WS_METHODS.omnimindModelServicesBeginLogin,
+  {
+    payload: OmniMindModelServiceBeginLoginInput,
+    success: OmniMindModelServiceAuthResult,
+    error: WsRpcError,
+  },
+);
+export const WsOmniMindModelServicesAnswerLoginRpc = Rpc.make(
+  WS_METHODS.omnimindModelServicesAnswerLogin,
+  {
+    payload: OmniMindModelServiceAnswerLoginInput,
+    success: OmniMindModelServiceAuthResult,
+    error: WsRpcError,
+  },
+);
+export const WsOmniMindModelServicesCancelLoginRpc = Rpc.make(
+  WS_METHODS.omnimindModelServicesCancelLogin,
+  {
+    payload: OmniMindModelServiceCancelLoginInput,
+    success: OmniMindModelServiceAuthResult,
+    error: WsRpcError,
+  },
+);
+export const WsOmniMindModelServicesLogoutRpc = Rpc.make(WS_METHODS.omnimindModelServicesLogout, {
+  payload: OmniMindModelServiceLogoutInput,
+  success: OmniMindModelServiceLogoutResult,
+  error: WsRpcError,
+});
+export const WsOmniMindModelServicesRefreshRpc = Rpc.make(WS_METHODS.omnimindModelServicesRefresh, {
+  payload: OmniMindModelServiceRefreshInput,
+  success: OmniMindModelServiceRefreshResult,
+  error: WsRpcError,
+});
+
 export const WsAutomationListRpc = Rpc.make(WS_METHODS.automationList, {
   payload: AutomationListInput,
   success: AutomationListResult,
@@ -1327,6 +1370,11 @@ export const WsFeatureRpcGroup = RpcGroup.make(
   WsProviderListAgentsRpc,
   WsOmniMindModelServicesListRpc,
   WsOmniMindModelServicesGetRpc,
+  WsOmniMindModelServicesBeginLoginRpc,
+  WsOmniMindModelServicesAnswerLoginRpc,
+  WsOmniMindModelServicesCancelLoginRpc,
+  WsOmniMindModelServicesLogoutRpc,
+  WsOmniMindModelServicesRefreshRpc,
   WsAutomationListRpc,
   WsAutomationGetMemoryRpc,
   WsAutomationCreateRpc,

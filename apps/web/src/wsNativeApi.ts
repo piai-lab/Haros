@@ -755,6 +755,24 @@ export function createWsNativeApi(): NativeApi {
           input,
           options?.signal ? { signal: options.signal } : undefined,
         ),
+      beginLogin: (input, options) =>
+        transport.request(WS_METHODS.omnimindModelServicesBeginLogin, input, {
+          timeoutMs: null,
+          ...(options?.signal ? { signal: options.signal } : {}),
+        }),
+      answerLogin: (input, options) =>
+        transport.request(WS_METHODS.omnimindModelServicesAnswerLogin, input, {
+          timeoutMs: null,
+          ...(options?.signal ? { signal: options.signal } : {}),
+        }),
+      cancelLogin: (input) => transport.request(WS_METHODS.omnimindModelServicesCancelLogin, input),
+      logout: (input) => transport.request(WS_METHODS.omnimindModelServicesLogout, input),
+      refresh: (input, options) =>
+        transport.request(
+          WS_METHODS.omnimindModelServicesRefresh,
+          input,
+          options?.signal ? { signal: options.signal, timeoutMs: null } : { timeoutMs: null },
+        ),
     },
     orchestration: {
       getSnapshot: () => transport.request(ORCHESTRATION_WS_METHODS.getSnapshot),
