@@ -130,15 +130,15 @@ authority，也不得带入 donor branding、竞争编排、第二 Session 状�
       "revision": "53fa77ccd8a279eb87e92294ef3687b03ff80112",
       "paths": ["vendor/omnimind-pi-coding-agent-0.84.1.tgz", "patches/pi-coding-agent/0.84.1-model-config-reader.patch", "scripts/vendor-omnimind-pi-runtime.mjs"],
       "sourcePaths": ["packages/coding-agent"],
-      "archiveSha256": "46a6a6d6e3da9c2bab0f6e08eb82d17958548b82e0f603e98b2c281d13ef7d27",
+      "archiveSha256": "2d094e66b54d4a68a9baf4b36e6b74648a997b054566f497c5e65bcc75b16d60",
       "upstreamPackage": "@earendil-works/pi-coding-agent@0.84.1",
       "upstreamPackageIntegrity": "sha512-ncAqFrG+iybuPGOhMiZoEHkEzTpJgz3guYD32pD+M7ucc0WeHmauP6wa7qwP8V/KWvsZDVNa5XGsdZ7fkC7w7A==",
       "generation": {
         "sharedRuntimeBytes": "patched",
         "patchPath": "patches/pi-coding-agent/0.84.1-model-config-reader.patch",
-        "patchSha256": "2d423c40200631911355746fcc78068aa13c55a8f0f95433cd8a08936c7575fa",
+        "patchSha256": "d204cc0f8946fdb4e86c231abb9222e3d5ee913a2330d4ee8cc4ba4aaa78aafc",
         "generatorPath": "scripts/vendor-omnimind-pi-runtime.mjs",
-        "behavioralDifferences": ["package identity", "piConfig.configDir", "injectable models.json content reader", "accepted model-config provider provenance", "typed persistent model-config provider mutation", "explicit reader-mode models store path remains file-backed"],
+        "behavioralDifferences": ["package identity", "piConfig.configDir", "injectable models.json content reader", "accepted model-config provider provenance", "credential-blind model-config projection", "typed persistent model-config provider mutation with retained-model merge and preview", "explicit reader-mode models store path remains file-backed"],
         "archiveDisposition": "The product archive is rebuilt from exact Pi 0.84.1 source with the single committed ModelConfig reader/provenance/mutation patch, retains the upstream LICENSE, removes standalone CLI entrypoint exposure, omits development/public documentation and example payloads, and exact-pins the Pi-family dependency closure. Pi remains the sole parser, schema, provider-composition and persistent provider-mutation authority; the product patch adds no registry or second persisted configuration."
       },
       "rights": "The fixed Pi coding-agent source and generated runtime are MIT-licensed. The shipped archive retains its upstream LICENSE, and the exact root redistribution text is LICENSES/pi-coding-agent-MIT.txt.",

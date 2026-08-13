@@ -223,9 +223,9 @@ export function groupProviderModelOptions(
         : upstreamProviderId && upstreamProviderId.length > 0
           ? upstreamProviderId
           : null;
-    const groupKey = groupLabel
-      ? `${(upstreamProviderId ?? groupLabel).trim().toLowerCase()}`
-      : "__ungrouped__";
+    // Pi provider ids are opaque and case-sensitive. Only presentation/search
+    // text may be folded; grouping must retain the exact service identity.
+    const groupKey = groupLabel ? (upstreamProviderId ?? groupLabel).trim() : "__ungrouped__";
     const existingIndex = groupIndexByKey.get(groupKey);
 
     if (existingIndex !== undefined) {

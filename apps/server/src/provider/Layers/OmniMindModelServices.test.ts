@@ -112,10 +112,14 @@ function makeTestLayer(input: {
   readonly root: string;
   readonly loadModule?: () => Promise<OmniMindCodingAgentModule>;
   readonly readTextFile?: (filePath: string, signal?: AbortSignal) => Promise<string>;
+  readonly authRequestTimeoutMs?: number;
 }) {
   return makeOmniMindModelServicesLive({
     ...(input.loadModule ? { loadModule: input.loadModule } : {}),
     ...(input.readTextFile ? { readTextFile: input.readTextFile } : {}),
+    ...(input.authRequestTimeoutMs === undefined
+      ? {}
+      : { authRequestTimeoutMs: input.authRequestTimeoutMs }),
   }).pipe(
     Layer.provideMerge(ServerConfig.layerTest(process.cwd(), input.root)),
     Layer.provideMerge(NodeServices.layer),
@@ -753,6 +757,42 @@ describe("OmniMindModelServicesLive", () => {
     expect(result.secondCancelled).toMatchObject({ state: "cancelled" });
   });
 
+  it("expires a pending auth request honestly and releases the serialized mutation queue", async () => {
+    const root = await makeRoot();
+    await isolateProviderEnvironment(root);
+    await mkdir(path.join(root, "agent"), { recursive: true });
+    const layer = makeTestLayer({ root, authRequestTimeoutMs: 100 });
+    const result = await Effect.runPromise(
+      Effect.gen(function* () {
+        const service = yield* OmniMindModelServices;
+        const first = yield* service.beginLogin(24, {
+          serviceId: "deepseek",
+          authType: "api_key",
+        });
+        if (first.state !== "prompt") throw new Error("Expected the first Pi API-key prompt");
+
+        yield* Effect.sleep("120 millis");
+        const firstOutcome = yield* service.pollLogin(24, {
+          requestId: first.requestId,
+          afterEventCount: 0,
+        });
+        const second = yield* service.beginLogin(24, {
+          serviceId: "deepseek",
+          authType: "api_key",
+        });
+        const secondCancelled =
+          second.state === "prompt"
+            ? yield* service.cancelLogin(24, { requestId: second.requestId })
+            : null;
+        return { firstOutcome, second, secondCancelled };
+      }).pipe(Effect.provide(layer)),
+    );
+
+    expect(result.firstOutcome).toMatchObject({ state: "failed", errorCode: "request_expired" });
+    expect(result.second).toMatchObject({ state: "prompt" });
+    expect(result.secondCancelled).toMatchObject({ state: "cancelled" });
+  });
+
   it("cancels a pending prompt when its WebSocket connection closes", async () => {
     const root = await makeRoot();
     await isolateProviderEnvironment(root);
@@ -1327,6 +1367,82 @@ describe("OmniMindModelServicesLive", () => {
     expect(JSON.stringify(result)).not.toContain("test-only-custom-key");
   });
 
+  it("retests an existing custom connection with its retained Pi-owned credential", async () => {
+    const root = await makeRoot();
+    await isolateProviderEnvironment(root);
+    const agentDir = path.join(root, "agent");
+    await mkdir(agentDir, { recursive: true });
+    await writeFile(
+      path.join(agentDir, "models.json"),
+      JSON.stringify({
+        providers: {
+          retained: {
+            name: "Retained gateway",
+            api: "openai-completions",
+            baseUrl: "https://gateway.example.test/v1",
+            apiKey: "retained-config-reference",
+            models: [
+              {
+                id: "model-one",
+                name: "Original Model",
+                cost: { input: 1, output: 2, cacheRead: 3, cacheWrite: 4 },
+                samplingParams: { temperature: 0.25 },
+                headers: { "X-Model-Secret": "retained-model-header" },
+              },
+            ],
+          },
+        },
+      }),
+      { mode: 0o600 },
+    );
+    let authorization: string | null = null;
+    vi.spyOn(globalThis, "fetch").mockImplementation(async (request, init) => {
+      authorization = new Headers(request instanceof Request ? request.headers : init?.headers).get(
+        "authorization",
+      );
+      return new Response(
+        [
+          'data: {"id":"test","object":"chat.completion.chunk","created":1,"model":"model-one","choices":[{"index":0,"delta":{"role":"assistant","content":"OK"},"finish_reason":null}]}',
+          'data: {"id":"test","object":"chat.completion.chunk","created":1,"model":"model-one","choices":[{"index":0,"delta":{},"finish_reason":"stop"}]}',
+          "data: [DONE]",
+          "",
+        ].join("\n\n"),
+        { headers: { "content-type": "text/event-stream" } },
+      );
+    });
+    const layer = makeTestLayer({ root });
+    const result = await Effect.runPromise(
+      Effect.gen(function* () {
+        const service = yield* OmniMindModelServices;
+        return yield* service.testCustom({
+          config: {
+            serviceId: "retained",
+            displayName: "Retained gateway",
+            api: "openai-completions",
+            baseUrl: "https://gateway.example.test/v1",
+            models: [
+              {
+                modelId: "model-one",
+                displayName: "Edited Model",
+                reasoning: false,
+                input: ["text"],
+                contextWindow: 128_000,
+                maxTokens: 16_384,
+              },
+            ],
+          },
+          apiKey: null,
+          testModelId: "model-one",
+        });
+      }).pipe(Effect.provide(layer)),
+    );
+
+    expect(result).toMatchObject({ state: "success", errorCode: null });
+    expect(authorization).toBe("Bearer retained-config-reference");
+    expect(JSON.stringify(result)).not.toContain("retained-config-reference");
+    expect(JSON.stringify(result)).not.toContain("retained-model-header");
+  });
+
   it("saves, reopens, edits, and removes one custom service through Pi-owned state", async () => {
     const root = await makeRoot();
     await isolateProviderEnvironment(root);
@@ -1403,6 +1519,80 @@ describe("OmniMindModelServicesLive", () => {
       result.serviceId,
     );
     expect(JSON.stringify(result)).not.toContain("persisted-custom-key");
+  });
+
+  it("preserves Pi-owned rich model fields when editing only visible service fields", async () => {
+    const root = await makeRoot();
+    await isolateProviderEnvironment(root);
+    const agentDir = path.join(root, "agent");
+    await mkdir(agentDir, { recursive: true });
+    await writeFile(
+      path.join(agentDir, "models.json"),
+      JSON.stringify({
+        providers: {
+          rich: {
+            name: "Before",
+            api: "openai-completions",
+            baseUrl: "https://gateway.example.test/v1",
+            apiKey: "retained-reference",
+            models: [
+              {
+                id: "model-one",
+                name: "Before Model",
+                cost: { input: 1, output: 2, cacheRead: 3, cacheWrite: 4 },
+                samplingParams: { temperature: 0.25 },
+                headers: { "X-Retained": "hidden-value" },
+                compat: { supportsStore: false },
+              },
+              { id: "remove-model", samplingParams: { temperature: 0.75 } },
+            ],
+          },
+        },
+      }),
+      { mode: 0o600 },
+    );
+    const layer = makeTestLayer({ root });
+    const result = await Effect.runPromise(
+      Effect.gen(function* () {
+        const service = yield* OmniMindModelServices;
+        return yield* service.saveCustom({
+          config: {
+            serviceId: "rich",
+            displayName: "After",
+            api: "openai-completions",
+            baseUrl: "https://gateway.example.test/v1",
+            models: [
+              {
+                modelId: "model-one",
+                displayName: "After Model",
+                reasoning: false,
+                input: ["text"],
+                contextWindow: 128_000,
+                maxTokens: 16_384,
+              },
+            ],
+          },
+          apiKey: null,
+        });
+      }).pipe(Effect.provide(layer)),
+    );
+    const stored = JSON.parse(await readFile(path.join(agentDir, "models.json"), "utf8"));
+
+    expect(result).toMatchObject({ state: "complete" });
+    expect(stored.providers.rich.models).toEqual([
+      {
+        id: "model-one",
+        name: "After Model",
+        reasoning: false,
+        input: ["text"],
+        contextWindow: 128_000,
+        maxTokens: 16_384,
+        cost: { input: 1, output: 2, cacheRead: 3, cacheWrite: 4 },
+        samplingParams: { temperature: 0.25 },
+        headers: { "X-Retained": "hidden-value" },
+        compat: { supportsStore: false },
+      },
+    ]);
   });
 
   it("keeps a custom service visible when Pi cannot delete its credential", async () => {

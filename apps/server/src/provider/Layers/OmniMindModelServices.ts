@@ -81,6 +81,7 @@ type CustomApiProtocol = (typeof CUSTOM_API_PROTOCOLS)[number];
 export interface OmniMindModelServicesLiveOptions {
   readonly loadModule?: () => Promise<OmniMindCodingAgentModule>;
   readonly readTextFile?: ReadTextFile;
+  readonly authRequestTimeoutMs?: number;
 }
 
 function isMissingPathError(error: unknown): boolean {
@@ -149,7 +150,6 @@ function customProviderConfig(input: OmniMindCustomModelServiceConfigInput) {
       name: model.displayName,
       reasoning: model.reasoning,
       input: [...model.input],
-      cost: { input: 0, output: 0, cacheRead: 0, cacheWrite: 0 },
       contextWindow: model.contextWindow,
       maxTokens: model.maxTokens,
     })),
@@ -320,10 +320,11 @@ interface ModelServiceAuthRequest {
   readonly abortOnConnectionClose: () => void;
   readonly events: OmniMindModelServiceAuthEvent[];
   providerDefaultPromptConsumed: boolean;
+  deadlineExpired: boolean;
   pendingPrompt?: PendingAuthPrompt;
   outcome?: OmniMindModelServiceAuthResult;
   readonly checkpoints: Set<() => void>;
-  readonly timeout: ReturnType<typeof setTimeout>;
+  timeout?: ReturnType<typeof setTimeout>;
 }
 
 function isCredential(value: unknown): value is Credential {
@@ -866,7 +867,7 @@ export function makeOmniMindModelServicesLive(options: OmniMindModelServicesLive
         request.connectionSignal.removeEventListener("abort", request.abortOnConnectionClose);
         request.outcome = outcome;
         delete request.pendingPrompt;
-        clearTimeout(request.timeout);
+        if (request.timeout) clearTimeout(request.timeout);
         notifyRequest(request);
         setTimeout(() => {
           if (authRequests.get(request.requestId)?.outcome === outcome) {
@@ -1003,11 +1004,15 @@ export function makeOmniMindModelServicesLive(options: OmniMindModelServicesLive
               });
               return;
             }
-            const cancelled = request.controller.signal.aborted;
+            const cancelled = request.controller.signal.aborted && !request.deadlineExpired;
             finishRequest(request, {
               state: cancelled ? "cancelled" : "failed",
               requestId: request.requestId,
-              errorCode: cancelled ? "cancelled" : "auth_failed",
+              errorCode: cancelled
+                ? "cancelled"
+                : request.deadlineExpired
+                  ? "request_expired"
+                  : "auth_failed",
               events: [...request.events],
             });
           }
@@ -1100,11 +1105,13 @@ export function makeOmniMindModelServicesLive(options: OmniMindModelServicesLive
                 abortOnConnectionClose,
                 events: [],
                 providerDefaultPromptConsumed: false,
+                deadlineExpired: false,
                 checkpoints: new Set(),
-                timeout: setTimeout(() => {
-                  controller.abort();
-                }, AUTH_REQUEST_TIMEOUT_MS),
               };
+              request.timeout = setTimeout(() => {
+                request.deadlineExpired = true;
+                controller.abort();
+              }, options.authRequestTimeoutMs ?? AUTH_REQUEST_TIMEOUT_MS);
               authRequests.set(requestId, request);
               void runLogin(request);
               const result = await awaitRequestResult(request);
@@ -1269,11 +1276,17 @@ export function makeOmniMindModelServicesLive(options: OmniMindModelServicesLive
               const runtime = await sdk.ModelRuntime.create({
                 credentials,
                 modelsPath: null,
+                ...(input.config.serviceId === null
+                  ? {}
+                  : { modelsConfigReader: createOmniMindModelsConfigReader(agentDir) }),
                 allowModelNetwork: false,
                 refreshOnCreate: false,
                 signal,
               });
-              runtime.registerProvider(providerId, customProviderConfig(input.config));
+              runtime.registerModelConfigProviderPreview(
+                providerId,
+                customProviderConfig(input.config),
+              );
               const model = runtime.getModel(providerId, input.testModelId);
               if (!model) {
                 return {

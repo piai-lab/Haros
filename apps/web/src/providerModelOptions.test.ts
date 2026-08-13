@@ -303,6 +303,29 @@ describe("groupProviderModelOptions", () => {
       "gateway-secondary/shared-model",
     ]);
   });
+
+  it("keeps case-distinct opaque model-service ids in separate groups", () => {
+    const groupedOptions = groupProviderModelOptions([
+      {
+        slug: "Gateway/shared-model",
+        name: "Shared Model",
+        upstreamProviderId: "Gateway",
+        upstreamProviderName: "Team Gateway",
+      },
+      {
+        slug: "gateway/shared-model",
+        name: "Shared Model",
+        upstreamProviderId: "gateway",
+        upstreamProviderName: "Team Gateway",
+      },
+    ]);
+
+    expect(groupedOptions.map((group) => group.key)).toEqual(["Gateway", "gateway"]);
+    expect(groupedOptions.map((group) => group.label)).toEqual([
+      "Team Gateway · Gateway",
+      "Team Gateway · gateway",
+    ]);
+  });
 });
 
 describe("groupProviderModelOptionsWithFavorites", () => {
