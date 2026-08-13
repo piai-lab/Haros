@@ -240,6 +240,8 @@ jobs:
           AZURE_TRUSTED_SIGNING_SUBJECT_DN: ${{ secrets.AZURE_TRUSTED_SIGNING_SUBJECT_DN }}
           OMNIMIND_PUBLISH_RELEASE: ${{ needs.preflight.outputs.publish_release }}
           OMNIMIND_DESKTOP_UPDATE_REPOSITORY: ${{ env.OMNIMIND_RELEASE_REPOSITORY }}
+          VITE_PUBLIC_SITE_ORIGIN: https://omnimind.wisdomeyes.cn
+          VITE_FEEDBACK_ENDPOINT: https://omnimind.wisdomeyes.cn/api/v1/feedback
           ALLOW_UNSIGNED_WINDOWS_PUBLICATION: ${{ vars.OMNIMIND_ALLOW_UNSIGNED_WINDOWS_RELEASE == needs.preflight.outputs.version }}
           SOURCE_COMMIT: ${{ needs.preflight.outputs.source_commit }}
           SOURCE_TAG: ${{ needs.preflight.outputs.source_tag }}

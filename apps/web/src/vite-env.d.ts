@@ -4,6 +4,7 @@ import type { NativeApi, DesktopBridge } from "@omnimind/contracts";
 
 interface ImportMetaEnv {
   readonly APP_VERSION: string;
+  readonly VITE_PUBLIC_SITE_ORIGIN?: string;
   readonly VITE_FEEDBACK_ENDPOINT?: string;
 }
 
