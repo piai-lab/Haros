@@ -56,7 +56,9 @@ import {
   DialogTitle,
 } from "../ui/dialog";
 import { Input } from "../ui/input";
+import { SearchInput } from "../ui/search-input";
 import { Select, SelectItem, SelectTrigger, SelectValue } from "../ui/select";
+import { ArrowLeftIcon, ChevronRightIcon, PlusIcon } from "~/lib/icons";
 import { useSettingsRestoreSignal } from "./SettingControls";
 import {
   SettingsCard,
@@ -553,6 +555,7 @@ function ActiveModelsSettingsPanel({
   }, [invalidateModelServiceConsumers, logoutService, t]);
 
   const connectableModelServices = modelServicesQuery.data?.connectableServices ?? [];
+  const configuredModelServices = modelServicesQuery.data?.services ?? [];
   const filteredConnectableModelServices = useMemo(() => {
     const query = modelServiceSearch.trim().toLocaleLowerCase();
     if (!query) return connectableModelServices;
@@ -591,7 +594,7 @@ function ActiveModelsSettingsPanel({
                   {t("settings.modelServicesChecking")}
                 </span>
               ) : null}
-              {connectableModelServices.length > 0 ? (
+              {connectableModelServices.length > 0 && configuredModelServices.length > 0 ? (
                 <Button
                   size="sm"
                   onClick={() => {
@@ -599,6 +602,7 @@ function ActiveModelsSettingsPanel({
                     setModelServiceBrowserOpen(true);
                   }}
                 >
+                  <PlusIcon aria-hidden="true" />
                   {t("settings.addModelService")}
                 </Button>
               ) : null}
@@ -693,6 +697,18 @@ function ActiveModelsSettingsPanel({
               <SettingsEmptyState>
                 <p className="font-medium text-foreground">{t("settings.noModelServices")}</p>
                 <p className="mt-1">{t("settings.noModelServicesDescription")}</p>
+                {connectableModelServices.length > 0 ? (
+                  <Button
+                    className="mt-4"
+                    onClick={() => {
+                      setModelServiceSearch("");
+                      setModelServiceBrowserOpen(true);
+                    }}
+                  >
+                    <PlusIcon aria-hidden="true" />
+                    {t("settings.addModelService")}
+                  </Button>
+                ) : null}
               </SettingsEmptyState>
             )}
           </div>
@@ -701,67 +717,68 @@ function ActiveModelsSettingsPanel({
 
       {!selectedModelServiceId && modelServiceBrowserOpen ? (
         <SettingsSectionShell
-          title={t("settings.connectableModelServices")}
+          title={t("settings.addModelService")}
           action={
             <Button size="sm" variant="ghost" onClick={() => setModelServiceBrowserOpen(false)}>
+              <ArrowLeftIcon aria-hidden="true" />
               {t("common.back")}
             </Button>
           }
         >
-          <div className="space-y-3">
-            <Input
-              autoFocus
-              value={modelServiceSearch}
-              onChange={(event) => setModelServiceSearch(event.target.value)}
-              placeholder={t("settings.searchModelServices")}
-              aria-label={t("settings.searchModelServices")}
-              spellCheck={false}
-            />
+          <div className="space-y-4">
+            <div>
+              <p className="mb-3 text-sm text-muted-foreground">
+                {t("settings.chooseModelServiceDescription")}
+              </p>
+              <SearchInput
+                autoFocus
+                value={modelServiceSearch}
+                onChange={(event) => setModelServiceSearch(event.target.value)}
+                placeholder={t("settings.searchModelServices")}
+                aria-label={t("settings.searchModelServices")}
+                spellCheck={false}
+              />
+            </div>
             {filteredConnectableModelServices.length > 0 ? (
-              <SettingsCard>
+              <ul className="grid list-none gap-2 sm:grid-cols-2">
                 {filteredConnectableModelServices.map((service) => {
                   const instanceLabel = modelServiceInstanceLabel(service);
                   return (
-                    <SettingsListRow
-                      key={service.serviceId}
-                      title={instanceLabel}
-                      description={
-                        service.authMethods.length > 0
-                          ? service.authMethods.map((method) => method.label).join(" · ")
-                          : modelServiceAuthLabel(service)
-                      }
-                      actions={
-                        <Button
-                          size="sm"
-                          variant="outline"
-                          aria-label={t("settings.connectModelServiceNamed", {
-                            name: instanceLabel,
-                          })}
-                          onClick={() => openModelServiceDetails(service.serviceId, "browser")}
-                        >
-                          {t("settings.connectModelService")}
-                        </Button>
-                      }
-                    />
+                    <li key={service.serviceId}>
+                      <button
+                        type="button"
+                        className={cn(
+                          "group flex min-h-20 w-full items-center gap-3 rounded-xl border border-border bg-foreground/[0.025] px-4 py-3 text-left outline-none transition-colors",
+                          "hover:border-foreground/20 hover:bg-foreground/[0.045]",
+                          "focus-visible:border-foreground/30 focus-visible:ring-1 focus-visible:ring-ring/60 focus-visible:ring-offset-1 focus-visible:ring-offset-background",
+                        )}
+                        aria-label={t("settings.connectModelServiceNamed", {
+                          name: instanceLabel,
+                        })}
+                        onClick={() => openModelServiceDetails(service.serviceId, "browser")}
+                      >
+                        <span className="min-w-0 flex-1">
+                          <span className="block truncate text-sm font-medium text-foreground">
+                            {instanceLabel}
+                          </span>
+                          <span className="mt-1 line-clamp-2 block text-xs leading-relaxed text-muted-foreground">
+                            {service.authMethods.length > 0
+                              ? service.authMethods.map((method) => method.label).join(" · ")
+                              : modelServiceAuthLabel(service)}
+                          </span>
+                        </span>
+                        <ChevronRightIcon
+                          aria-hidden="true"
+                          className="size-4 shrink-0 text-muted-foreground/50 transition-transform group-hover:translate-x-0.5 group-hover:text-foreground/70"
+                        />
+                      </button>
+                    </li>
                   );
                 })}
-              </SettingsCard>
+              </ul>
             ) : (
               <SettingsEmptyState>{t("settings.noMatchingModelServices")}</SettingsEmptyState>
             )}
-            <div className="border-t border-border/70 pt-3 text-sm text-muted-foreground">
-              <button
-                type="button"
-                disabled
-                className="cursor-not-allowed text-left opacity-70"
-                aria-describedby="model-service-api-address-unavailable"
-              >
-                {t("settings.connectByApiAddress")}
-              </button>
-              <p id="model-service-api-address-unavailable" className="mt-1 text-xs">
-                {t("settings.connectByApiAddressUnavailable")}
-              </p>
-            </div>
           </div>
         </SettingsSectionShell>
       ) : null}

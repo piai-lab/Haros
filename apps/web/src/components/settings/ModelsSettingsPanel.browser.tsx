@@ -357,8 +357,8 @@ describe("ModelsSettingsPanel model services", () => {
     expect(document.body.textContent).toContain("DeepSeek");
     expect(document.body.textContent).not.toContain("Service 39");
     expect(
-      mounted.screen.getByRole("button", { name: "settings.connectByApiAddress" }).element(),
-    ).toBeDisabled();
+      mounted.screen.getByRole("button", { name: "settings.connectByApiAddress" }).query(),
+    ).toBeNull();
 
     const connectButton = mounted.screen.getByRole("button", {
       name: 'settings.connectModelServiceNamed:{"name":"DeepSeek"}',

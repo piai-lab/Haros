@@ -414,6 +414,7 @@ function validateModelServicesInformationArchitecture(findings, documents) {
     primaryAction: "select-runtime-model-service",
     secondaryAction: "connect-by-api-address",
     secondaryPlacement: "list-tail-lower-emphasis",
+    secondaryVisibility: "capability-gated-no-disabled-placeholder",
     genericApiProtocols: [
       "openai-completions",
       "openai-responses",
