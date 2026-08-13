@@ -9,6 +9,11 @@ import {
   onWsServerCapabilitiesChange,
   readWsServerCapabilities,
 } from "./wsNativeApi";
+import {
+  addWsTransportStateListener,
+  readLatestWsTransportState,
+  type WsTransportState,
+} from "./wsTransportEvents";
 
 let cachedDesktopApi: NativeApi | undefined;
 
@@ -67,4 +72,25 @@ export function onNativeApiServerCapabilitiesChange(
     return () => undefined;
   }
   return onWsServerCapabilitiesChange(listener, options);
+}
+
+export function readNativeApiTransportState(): WsTransportState | null {
+  if (typeof window === "undefined") return null;
+  if (window.nativeApi) return "open";
+  return readLatestWsTransportState();
+}
+
+export function onNativeApiTransportStateChange(
+  listener: () => void,
+  options?: { readonly replayCurrent?: boolean },
+): () => void {
+  if (typeof window === "undefined") {
+    if (options?.replayCurrent) listener();
+    return () => undefined;
+  }
+  if (window.nativeApi) {
+    if (options?.replayCurrent) listener();
+    return () => undefined;
+  }
+  return addWsTransportStateListener(() => listener(), options);
 }

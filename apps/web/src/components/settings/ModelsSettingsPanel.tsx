@@ -28,8 +28,10 @@ import {
 import { type AppSettingsBinding } from "~/appSettings";
 import {
   onNativeApiServerCapabilitiesChange,
+  onNativeApiTransportStateChange,
   ensureNativeApi,
   readNativeApiServerCapabilityState,
+  readNativeApiTransportState,
 } from "~/nativeApi";
 import {
   omniMindModelServicesQueryKeys,
@@ -153,6 +155,10 @@ const subscribeModelServicesCapability = (listener: () => void) =>
 const readModelServicesCapability = () =>
   readNativeApiServerCapabilityState(WS_OMNIMIND_MODEL_SERVICES_CAPABILITY);
 const readServerModelServicesCapability = () => null;
+const subscribeModelServicesTransport = (listener: () => void) =>
+  onNativeApiTransportStateChange(listener);
+const readModelServicesTransport = () => readNativeApiTransportState();
+const readServerModelServicesTransport = () => null;
 
 function authEventExternalUrl(event: OmniMindModelServiceAuthEvent): string | null {
   return event.type === "auth_url"
@@ -190,6 +196,13 @@ function ActiveModelsSettingsPanel({
     readModelServicesCapability,
     readServerModelServicesCapability,
   );
+  const modelServicesTransport = useSyncExternalStore(
+    subscribeModelServicesTransport,
+    readModelServicesTransport,
+    readServerModelServicesTransport,
+  );
+  const [confirmedOpenReadFailure, setConfirmedOpenReadFailure] = useState(false);
+  const openReadRetryAttemptedRef = useRef(false);
   const [selectedModelServiceId, setSelectedModelServiceId] = useState<string | null>(null);
   const [modelServiceBrowserOpen, setModelServiceBrowserOpen] = useState(false);
   const [modelServiceSearch, setModelServiceSearch] = useState("");
@@ -217,6 +230,34 @@ function ActiveModelsSettingsPanel({
       serviceId: selectedModelServiceId,
     }),
   );
+
+  useEffect(() => {
+    if (modelServicesTransport !== "open") {
+      openReadRetryAttemptedRef.current = false;
+      setConfirmedOpenReadFailure(false);
+      return;
+    }
+    if (
+      !modelServicesQuery.isError ||
+      modelServicesQuery.isFetching ||
+      openReadRetryAttemptedRef.current
+    ) {
+      return;
+    }
+    openReadRetryAttemptedRef.current = true;
+    let cancelled = false;
+    void modelServicesQuery.refetch().then((result) => {
+      if (!cancelled) setConfirmedOpenReadFailure(result.isError);
+    });
+    return () => {
+      cancelled = true;
+    };
+  }, [
+    modelServicesQuery.isError,
+    modelServicesQuery.isFetching,
+    modelServicesQuery.refetch,
+    modelServicesTransport,
+  ]);
 
   const cancelCurrentAuthRequest = useCallback(() => {
     authRequestControllerRef.current?.abort();
@@ -903,11 +944,11 @@ function ActiveModelsSettingsPanel({
               <SettingsEmptyState layout="status" tone="destructive">
                 <div role="alert">{t("settings.modelServicesServerUpdateRequired")}</div>
               </SettingsEmptyState>
-            ) : modelServicesQuery.isPending ? (
+            ) : modelServicesTransport !== "open" || modelServicesQuery.isPending ? (
               <SettingsEmptyState layout="status">
                 {t("settings.modelServicesLoading")}
               </SettingsEmptyState>
-            ) : modelServicesQuery.isError ? (
+            ) : modelServicesQuery.isError && confirmedOpenReadFailure ? (
               <SettingsEmptyState layout="status" tone="destructive">
                 <div role="alert" className="flex flex-wrap items-center justify-between gap-3">
                   <span>{t("settings.modelServicesConnectionUnavailable")}</span>
@@ -919,6 +960,10 @@ function ActiveModelsSettingsPanel({
                     {t("common.tryAgain")}
                   </Button>
                 </div>
+              </SettingsEmptyState>
+            ) : modelServicesQuery.isError ? (
+              <SettingsEmptyState layout="status">
+                {t("settings.modelServicesLoading")}
               </SettingsEmptyState>
             ) : modelServicesQuery.data?.state === "error" ? (
               <SettingsEmptyState layout="status" tone="destructive">
