@@ -217,7 +217,6 @@ const RAW_FACT_ALLOWLIST = [
   "useComposerCommandMenuItems.ts:property:`/${command.name}`",
   "useComposerCommandMenuItems.ts:property:`${providerLabel} · ${slug}`",
   // Persisted internal placeholder; ChatView maps it through the catalog at presentation time.
-  "useHandleNewThread.ts:property:New terminal",
   "TerminalSearch.tsx:text:Aa",
 ] as const satisfies readonly string[];
 
