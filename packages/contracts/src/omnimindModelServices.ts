@@ -219,7 +219,7 @@ export type OmniMindModelServiceAuthResult = typeof OmniMindModelServiceAuthResu
 
 export const OmniMindModelServiceBeginLoginInput = Schema.Struct({
   serviceId: BoundedIdentifier,
-  authType: OmniMindModelServiceAuthMethodType,
+  authType: Schema.Literal("api_key"),
 });
 export type OmniMindModelServiceBeginLoginInput = typeof OmniMindModelServiceBeginLoginInput.Type;
 

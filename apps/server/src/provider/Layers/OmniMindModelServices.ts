@@ -675,10 +675,7 @@ export function makeOmniMindModelServicesLive(options: OmniMindModelServicesLive
         }, 30_000).unref();
       };
 
-      const runLogin = async (
-        request: ModelServiceAuthRequest,
-        authType: OmniMindModelServiceAuthMethodType,
-      ) => {
+      const runLogin = async (request: ModelServiceAuthRequest) => {
         await serializeMutation(async () => {
           let authenticationUpdated = false;
           let previousService: OmniMindModelServiceDescriptor | undefined;
@@ -686,6 +683,11 @@ export function makeOmniMindModelServicesLive(options: OmniMindModelServicesLive
             const { agentDir, sdk, runtime } = await createMutationRuntime(
               request.controller.signal,
             );
+            const provider = runtime.getProvider(request.serviceId);
+            const isBuiltin = !runtime.getModelConfigProviderIds().includes(request.serviceId);
+            if (!isBuiltin || provider?.auth.apiKey?.login === undefined) {
+              throw new Error("Model service does not support API-key login");
+            }
             previousService = await getProjectedService(
               request.serviceId,
               request.controller.signal,
@@ -719,7 +721,7 @@ export function makeOmniMindModelServicesLive(options: OmniMindModelServicesLive
             };
             let synchronizationFailed = false;
             try {
-              await runtime.login(request.serviceId, authType, interaction);
+              await runtime.login(request.serviceId, "api_key", interaction);
             } catch (error) {
               if (!(error instanceof sdk.CredentialSynchronizationError)) throw error;
               synchronizationFailed = true;
@@ -852,7 +854,7 @@ export function makeOmniMindModelServicesLive(options: OmniMindModelServicesLive
               }, AUTH_REQUEST_TIMEOUT_MS),
             };
             authRequests.set(requestId, request);
-            void runLogin(request, input.authType);
+            void runLogin(request);
             const result = await awaitRequestResult(request);
             if (result.state !== "prompt") authRequests.delete(request.requestId);
             return result;

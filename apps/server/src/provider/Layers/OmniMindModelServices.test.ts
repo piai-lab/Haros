@@ -312,6 +312,27 @@ describe("OmniMindModelServicesLive", () => {
     await expect(stat(path.join(providerHome, ".pi"))).rejects.toMatchObject({ code: "ENOENT" });
   });
 
+  it("rejects OAuth-only services before entering Pi credential mutation", async () => {
+    const root = await makeRoot();
+    await isolateProviderEnvironment(root);
+    const agentDir = path.join(root, "agent");
+    await mkdir(agentDir, { recursive: true });
+    const layer = makeTestLayer({ root });
+
+    const result = await Effect.runPromise(
+      Effect.gen(function* () {
+        const service = yield* OmniMindModelServices;
+        return yield* service.beginLogin(8, {
+          serviceId: "openai-codex",
+          authType: "oauth",
+        } as never);
+      }).pipe(Effect.provide(layer)),
+    );
+
+    expect(result).toMatchObject({ state: "failed", errorCode: "auth_failed" });
+    expect(JSON.parse(await readFile(path.join(agentDir, "auth.json"), "utf8"))).toEqual({});
+  });
+
   it("binds pending auth prompts to the originating client and supports cancellation", async () => {
     const root = await makeRoot();
     await isolateProviderEnvironment(root);

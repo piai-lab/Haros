@@ -138,6 +138,12 @@ describe("OmniMind model-services contracts", () => {
         authType: "api_key",
       }),
     ).toEqual({ serviceId: "deepseek", authType: "api_key" });
+    expect(() =>
+      Schema.decodeUnknownSync(OmniMindModelServiceBeginLoginInput)({
+        serviceId: "openai-codex",
+        authType: "oauth",
+      }),
+    ).toThrow();
     expect(
       Schema.decodeUnknownSync(OmniMindModelServiceAnswerLoginInput)({
         requestId,
