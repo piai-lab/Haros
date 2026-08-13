@@ -502,6 +502,42 @@ index 1be7fcdb5..04b8931c2 100644
 +			throw new Error(`No API provider registered for api: ${model.api}`);
 +		}
 +	}
+diff --git a/packages/coding-agent/src/core/resource-loader.ts b/packages/coding-agent/src/core/resource-loader.ts
+index c24d0a210..4e8b22065 100644
+--- a/packages/coding-agent/src/core/resource-loader.ts
++++ b/packages/coding-agent/src/core/resource-loader.ts
+@@ -20 +20,6 @@ import { findGitPaths } from "./footer-data-provider.ts";
+-import { DefaultPackageManager, type PathMetadata, type ResolvedResource } from "./package-manager.ts";
++import {
++	DefaultPackageManager,
++	type MissingSourceAction,
++	type PathMetadata,
++	type ResolvedResource,
++} from "./package-manager.ts";
+@@ -36,0 +42 @@ export interface ResourceLoaderReloadOptions {
++	onMissingPackage?: (source: string) => Promise<MissingSourceAction>;
+@@ -379 +385,3 @@ export class DefaultResourceLoader implements ResourceLoader {
+-	async loadProjectTrustExtensions(): Promise<LoadExtensionsResult> {
++	async loadProjectTrustExtensions(
++		onMissingPackage?: (source: string) => Promise<MissingSourceAction>,
++	): Promise<LoadExtensionsResult> {
+@@ -384 +392 @@ export class DefaultResourceLoader implements ResourceLoader {
+-		return this.loadCurrentExtensionSet({ includeInlineFactories: true });
++		return this.loadCurrentExtensionSet({ includeInlineFactories: true }, onMissingPackage);
+@@ -396 +404 @@ export class DefaultResourceLoader implements ResourceLoader {
+-			preTrustExtensions = await this.loadProjectTrustExtensions();
++			preTrustExtensions = await this.loadProjectTrustExtensions(options.onMissingPackage);
+@@ -403 +411 @@ export class DefaultResourceLoader implements ResourceLoader {
+-		const resolvedPaths = await this.packageManager.resolve();
++		const resolvedPaths = await this.packageManager.resolve(options?.onMissingPackage);
+@@ -548,2 +556,5 @@ export class DefaultResourceLoader implements ResourceLoader {
+-	private async loadCurrentExtensionSet(options: { includeInlineFactories: boolean }): Promise<LoadExtensionsResult> {
+-		const resolvedPaths = await this.packageManager.resolve();
++	private async loadCurrentExtensionSet(
++		options: { includeInlineFactories: boolean },
++		onMissingPackage?: (source: string) => Promise<MissingSourceAction>,
++	): Promise<LoadExtensionsResult> {
++		const resolvedPaths = await this.packageManager.resolve(onMissingPackage);
 diff --git a/packages/coding-agent/src/index.ts b/packages/coding-agent/src/index.ts
 index 3d05c2af4..a7df13424 100644
 --- a/packages/coding-agent/src/index.ts
@@ -1157,3 +1193,29 @@ index 000000000..217cf2af5
 +		}
 +	});
 +});
+diff --git a/packages/coding-agent/test/resource-loader.test.ts b/packages/coding-agent/test/resource-loader.test.ts
+index 145eca3b2..f3890f18a 100644
+--- a/packages/coding-agent/test/resource-loader.test.ts
++++ b/packages/coding-agent/test/resource-loader.test.ts
+@@ -237,0 +238,21 @@ export default function(pi) {
++		it("should apply the missing-package policy to both trust passes without installing", async () => {
++			vi.stubEnv("PI_OFFLINE", "");
++			const missingPackage = "npm:@example/missing-extension@1.0.0";
++			const onMissingPackage = vi.fn(async () => "skip" as const);
++			const loader = new DefaultResourceLoader({
++				cwd,
++				agentDir,
++				settingsManager: SettingsManager.inMemory({ packages: [missingPackage] }),
++			});
++
++			await loader.reload({
++				resolveProjectTrust: async () => false,
++				onMissingPackage,
++			});
++
++			expect(onMissingPackage).toHaveBeenCalledTimes(2);
++			expect(onMissingPackage).toHaveBeenNthCalledWith(1, missingPackage);
++			expect(onMissingPackage).toHaveBeenNthCalledWith(2, missingPackage);
++			expect(loader.getExtensions().extensions).toEqual([]);
++		});
++

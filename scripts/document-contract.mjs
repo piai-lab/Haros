@@ -264,14 +264,14 @@ function validateBundledPiRuntimeAdoption(findings, documents) {
       "scripts/vendor-omnimind-pi-runtime.mjs",
     ],
     sourcePaths: ["packages/coding-agent"],
-    archiveSha256: "2d094e66b54d4a68a9baf4b36e6b74648a997b054566f497c5e65bcc75b16d60",
+    archiveSha256: "7bab9c40af93aff1b09f28bd8aa507c5600afc9b6794e7af949bf5e32a6813e7",
     upstreamPackage: "@earendil-works/pi-coding-agent@0.84.1",
     upstreamPackageIntegrity:
       "sha512-ncAqFrG+iybuPGOhMiZoEHkEzTpJgz3guYD32pD+M7ucc0WeHmauP6wa7qwP8V/KWvsZDVNa5XGsdZ7fkC7w7A==",
     licenseFiles: ["LICENSES/pi-coding-agent-MIT.txt"],
     sharedRuntimeBytes: "patched",
     patchPath: "patches/pi-coding-agent/0.84.1-model-config-reader.patch",
-    patchSha256: "a87b0d2712c5d55e9a1b85d236946f6e38e0a4b57e6fea4df41362ebfb7eeb44",
+    patchSha256: "7a2070f3a625c182f5383b02830cb1c4414065b1f8320c53636f832d7e2610ea",
     generatorPath: "scripts/vendor-omnimind-pi-runtime.mjs",
     behavioralDifferences: [
       "package identity",
@@ -281,6 +281,7 @@ function validateBundledPiRuntimeAdoption(findings, documents) {
       "credential-blind model-config projection",
       "typed persistent model-config provider mutation with retained-model merge and preview",
       "explicit reader-mode models store path remains file-backed",
+      "request-scoped missing-package policy for resource loading",
     ],
   };
   const actual = record
