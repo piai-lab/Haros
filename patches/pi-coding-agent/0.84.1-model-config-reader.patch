@@ -17,6 +17,94 @@ index f6fc21a3d..1e293a821 100644
 +++ b/packages/coding-agent/package.json
 @@ -60,0 +61 @@
 +		"jsonc-parser": "3.3.1",
+diff --git a/packages/coding-agent/src/core/agent-session-services.ts b/packages/coding-agent/src/core/agent-session-services.ts
+index 531f51d61..4c720a475 100644
+--- a/packages/coding-agent/src/core/agent-session-services.ts
++++ b/packages/coding-agent/src/core/agent-session-services.ts
+@@ -154 +154,3 @@ export async function createAgentSessionServices(
+-	await resourceLoader.reload(options.resourceLoaderReloadOptions);
++	let completed = false;
++	try {
++		await resourceLoader.reload(options.resourceLoaderReloadOptions);
+@@ -156,11 +158,12 @@ export async function createAgentSessionServices(
+-	const diagnostics: AgentSessionRuntimeDiagnostic[] = [];
+-	const extensionsResult = resourceLoader.getExtensions();
+-	for (const { name, config, extensionPath } of extensionsResult.runtime.pendingProviderRegistrations) {
+-		try {
+-			modelRuntime.registerProvider(name, config);
+-		} catch (error) {
+-			const message = error instanceof Error ? error.message : String(error);
+-			diagnostics.push({
+-				type: "error",
+-				message: `Extension "${extensionPath}" error: ${message}`,
+-			});
++		const diagnostics: AgentSessionRuntimeDiagnostic[] = [];
++		const extensionsResult = resourceLoader.getExtensions();
++		for (const { name, config, extensionPath } of extensionsResult.runtime.pendingProviderRegistrations) {
++			try {
++				modelRuntime.registerProvider(name, config);
++			} catch (error) {
++				const message = error instanceof Error ? error.message : String(error);
++				diagnostics.push({
++					type: "error",
++					message: `Extension "${extensionPath}" error: ${message}`,
++				});
++			}
+@@ -168,11 +171,11 @@ export async function createAgentSessionServices(
+-	}
+-	extensionsResult.runtime.pendingProviderRegistrations = [];
+-	for (const { provider, extensionPath } of extensionsResult.runtime.pendingNativeProviderRegistrations) {
+-		try {
+-			modelRuntime.registerNativeProvider(provider);
+-		} catch (error) {
+-			const message = error instanceof Error ? error.message : String(error);
+-			diagnostics.push({
+-				type: "error",
+-				message: `Extension "${extensionPath}" error: ${message}`,
+-			});
++		extensionsResult.runtime.pendingProviderRegistrations = [];
++		for (const { provider, extensionPath } of extensionsResult.runtime.pendingNativeProviderRegistrations) {
++			try {
++				modelRuntime.registerNativeProvider(provider);
++			} catch (error) {
++				const message = error instanceof Error ? error.message : String(error);
++				diagnostics.push({
++					type: "error",
++					message: `Extension "${extensionPath}" error: ${message}`,
++				});
++			}
+@@ -180,4 +183,3 @@ export async function createAgentSessionServices(
+-	}
+-	extensionsResult.runtime.pendingNativeProviderRegistrations = [];
+-	await modelRuntime.refresh({ allowNetwork: false });
+-	diagnostics.push(...applyExtensionFlagValues(resourceLoader, options.extensionFlagValues));
++		extensionsResult.runtime.pendingNativeProviderRegistrations = [];
++		await modelRuntime.refresh({ allowNetwork: false });
++		diagnostics.push(...applyExtensionFlagValues(resourceLoader, options.extensionFlagValues));
+@@ -185,8 +187,15 @@ export async function createAgentSessionServices(
+-	return {
+-		cwd,
+-		agentDir,
+-		modelRuntime,
+-		settingsManager,
+-		resourceLoader,
+-		diagnostics,
+-	};
++		const services = {
++			cwd,
++			agentDir,
++			modelRuntime,
++			settingsManager,
++			resourceLoader,
++			diagnostics,
++		};
++		completed = true;
++		return services;
++	} finally {
++		if (!completed) {
++			resourceLoader.getExtensions().runtime.invalidate("Session service creation failed");
++		}
++	}
 diff --git a/packages/coding-agent/src/core/model-config.ts b/packages/coding-agent/src/core/model-config.ts
 index 7f679a494..4a1a13597 100644
 --- a/packages/coding-agent/src/core/model-config.ts
@@ -1482,10 +1570,14 @@ index 000000000..217cf2af5
 +	});
 +});
 diff --git a/packages/coding-agent/test/resource-loader.test.ts b/packages/coding-agent/test/resource-loader.test.ts
-index 145eca3b2..df00665ed 100644
+index 145eca3b2..066e627d0 100644
 --- a/packages/coding-agent/test/resource-loader.test.ts
 +++ b/packages/coding-agent/test/resource-loader.test.ts
-@@ -237,0 +238,46 @@ export default function(pi) {
+@@ -6,0 +7 @@ import { AuthStorage } from "../src/core/auth-storage.ts";
++import { createAgentSessionServices } from "../src/core/agent-session-services.ts";
+@@ -7,0 +9 @@ import { ExtensionRunner } from "../src/core/extensions/runner.ts";
++import { ModelRuntime } from "../src/core/model-runtime.ts";
+@@ -237,0 +240,97 @@ export default function(pi) {
 +		it("should apply the missing-package policy to both trust passes without installing", async () => {
 +			vi.stubEnv("PI_OFFLINE", "");
 +			const missingPackage = "npm:@example/missing-extension@1.0.0";
@@ -1530,5 +1622,56 @@ index 145eca3b2..df00665ed 100644
 +
 +			expect(preTrustRuntime).toBeDefined();
 +			expect(() => preTrustRuntime?.assertActive()).toThrow("Resource reload failed");
++		});
++
++		it("should invalidate loaded extensions when session service creation fails", async () => {
++			let extensionApi:
++				| Parameters<
++						NonNullable<ConstructorParameters<typeof DefaultResourceLoader>[0]["extensionFactories"]>[number]
++				  >[0]
++				| undefined;
++			const runtime = await ModelRuntime.create({
++				credentials: AuthStorage.inMemory(),
++				modelsPath: null,
++				allowModelNetwork: false,
++			});
++			const failingRuntime = new Proxy(runtime, {
++				get(target, property, receiver) {
++					if (property === "refresh")
++						return async () => {
++							throw new Error("refresh failed");
++						};
++					const value = Reflect.get(target, property, receiver);
++					return typeof value === "function" ? value.bind(target) : value;
++				},
++			});
++
++			await expect(
++				createAgentSessionServices({
++					cwd,
++					agentDir,
++					modelRuntime: failingRuntime,
++					resourceLoaderOptions: {
++						extensionFactories: [
++							(pi) => {
++								extensionApi = pi;
++							},
++						],
++						noSkills: true,
++						noPromptTemplates: true,
++						noThemes: true,
++						noContextFiles: true,
++					},
++				}),
++			).rejects.toThrow("refresh failed");
++
++			expect(extensionApi).toBeDefined();
++			expect(() =>
++				extensionApi?.registerProvider("stale", {
++					baseUrl: "https://example.test",
++					api: "openai-completions",
++					models: [],
++				}),
++			).toThrow("Session service creation failed");
 +		});
 +

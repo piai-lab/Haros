@@ -11,7 +11,7 @@ const PI_REVISION = "53fa77ccd8a279eb87e92294ef3687b03ff80112";
 const PI_VERSION = "0.84.1";
 const PI_AI_INTEGRITY =
   "sha512-wMsAdJMxuNri08vLqTyYVI201DQQezGhPSTkzYsHdw5dYX3rCNwEmSvpaAwhi7ELKI/2tE/CEgSWg/6iRxSgdQ==";
-const PATCH_SHA256 = "d5de7d9aced0068ba984bffdb11badd8da89db9267a1e2db99612793b7eb747e";
+const PATCH_SHA256 = "8910d0c92e0755207745e13deedf190b2aeeb26ab27d00df51b2567ae5490d83";
 const PRODUCT_ARCHIVE_NAME = `omnimind-pi-coding-agent-${PI_VERSION}.tgz`;
 const SCRIPT_DIR = path.dirname(fileURLToPath(import.meta.url));
 const REPOSITORY_ROOT = path.resolve(SCRIPT_DIR, "..");

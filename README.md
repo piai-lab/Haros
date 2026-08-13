@@ -130,13 +130,13 @@ authority，也不得带入 donor branding、竞争编排、第二 Session 状�
       "revision": "53fa77ccd8a279eb87e92294ef3687b03ff80112",
       "paths": ["vendor/omnimind-pi-coding-agent-0.84.1.tgz", "patches/pi-coding-agent/0.84.1-model-config-reader.patch", "scripts/vendor-omnimind-pi-runtime.mjs"],
       "sourcePaths": ["packages/coding-agent"],
-      "archiveSha256": "c6db6090be8b6b8d978d9032e59207ef73f999e1f9916c8bc5fdd0147731c647",
+      "archiveSha256": "4eba55250523b4cd1d8af38a45df4bec0a2e70684acf1eade8d861676091491c",
       "upstreamPackage": "@earendil-works/pi-coding-agent@0.84.1",
       "upstreamPackageIntegrity": "sha512-ncAqFrG+iybuPGOhMiZoEHkEzTpJgz3guYD32pD+M7ucc0WeHmauP6wa7qwP8V/KWvsZDVNa5XGsdZ7fkC7w7A==",
       "generation": {
         "sharedRuntimeBytes": "patched",
         "patchPath": "patches/pi-coding-agent/0.84.1-model-config-reader.patch",
-        "patchSha256": "d5de7d9aced0068ba984bffdb11badd8da89db9267a1e2db99612793b7eb747e",
+        "patchSha256": "8910d0c92e0755207745e13deedf190b2aeeb26ab27d00df51b2567ae5490d83",
         "generatorPath": "scripts/vendor-omnimind-pi-runtime.mjs",
         "behavioralDifferences": ["package identity", "piConfig.configDir", "injectable models.json content reader", "accepted model-config provider provenance", "credential-blind model-config projection", "typed persistent model-config provider mutation with retained-model merge and preview", "explicit reader-mode models store path remains file-backed", "request-scoped missing-package policy for resource loading"],
         "archiveDisposition": "The product archive is rebuilt from exact Pi 0.84.1 source with the single committed ModelConfig reader/provenance/mutation patch, retains the upstream LICENSE, removes standalone CLI entrypoint exposure, omits development/public documentation and example payloads, and exact-pins the Pi-family dependency closure. Pi remains the sole parser, schema, provider-composition and persistent provider-mutation authority; the product patch adds no registry or second persisted configuration."
