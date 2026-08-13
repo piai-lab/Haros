@@ -136,7 +136,7 @@ authority，也不得带入 donor branding、竞争编排、第二 Session 状�
       "generation": {
         "sharedRuntimeBytes": "patched",
         "patchPath": "patches/pi-coding-agent/0.84.1-model-config-reader.patch",
-        "patchSha256": "d204cc0f8946fdb4e86c231abb9222e3d5ee913a2330d4ee8cc4ba4aaa78aafc",
+        "patchSha256": "a87b0d2712c5d55e9a1b85d236946f6e38e0a4b57e6fea4df41362ebfb7eeb44",
         "generatorPath": "scripts/vendor-omnimind-pi-runtime.mjs",
         "behavioralDifferences": ["package identity", "piConfig.configDir", "injectable models.json content reader", "accepted model-config provider provenance", "credential-blind model-config projection", "typed persistent model-config provider mutation with retained-model merge and preview", "explicit reader-mode models store path remains file-backed"],
         "archiveDisposition": "The product archive is rebuilt from exact Pi 0.84.1 source with the single committed ModelConfig reader/provenance/mutation patch, retains the upstream LICENSE, removes standalone CLI entrypoint exposure, omits development/public documentation and example payloads, and exact-pins the Pi-family dependency closure. Pi remains the sole parser, schema, provider-composition and persistent provider-mutation authority; the product patch adds no registry or second persisted configuration."

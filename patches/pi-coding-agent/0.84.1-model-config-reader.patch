@@ -519,3 +519,641 @@ index 3d05c2af4..a7df13424 100644
 +	mutateModelConfigProvider,
 +	type ModelConfigReader,
 +	type ModelConfigReadOptions,
+diff --git a/packages/coding-agent/test/model-config-mutation.test.ts b/packages/coding-agent/test/model-config-mutation.test.ts
+new file mode 100644
+index 000000000..f7f1ee402
+--- /dev/null
++++ b/packages/coding-agent/test/model-config-mutation.test.ts
+@@ -0,0 +1,372 @@
++import { link, lstat, mkdtemp, readFile, rm, symlink, writeFile } from "node:fs/promises";
++import { tmpdir } from "node:os";
++import { join } from "node:path";
++import { afterEach, describe, expect, it } from "vitest";
++import { ModelRuntime, mutateModelConfigProvider } from "../src/core/model-runtime.ts";
++
++const roots: string[] = [];
++
++async function createRoot(): Promise<string> {
++	const root = await mkdtemp(join(tmpdir(), "pi-model-config-mutation-"));
++	roots.push(root);
++	return root;
++}
++
++function provider(name: string, modelId: string) {
++	return {
++		name,
++		baseUrl: "https://example.test/v1",
++		api: "openai-completions",
++		models: [{ id: modelId }],
++	};
++}
++
++afterEach(async () => {
++	await Promise.all(roots.splice(0).map((root) => rm(root, { recursive: true, force: true })));
++});
++
++describe("persistent ModelConfig provider mutation", () => {
++	it("upserts one provider while preserving comments and unrelated unknown fields", async () => {
++		const root = await createRoot();
++		const modelsPath = join(root, "models.json");
++		const untouchedProvider = `"existing": {
++			// This comment and unknown field must survive byte-for-byte.
++			"baseUrl": "https://existing.test/v1",
++			"api": "openai-responses",
++			"futureProviderField": { "keep": true },
++			"models": [{ "id": "existing-model", "futureModelField": 7 }]
++		}`;
++		await writeFile(
++			modelsPath,
++			`{
++		// Root comments and future fields are not the mutation target.
++		"futureRootField": { "keep": true },
++		"providers": {
++			${untouchedProvider}
++		}
++	}\n`,
++			{ encoding: "utf8", mode: 0o600 },
++		);
++
++		const result = await mutateModelConfigProvider(modelsPath, {
++			type: "upsert",
++			providerId: "custom-one",
++			provider: provider("Custom One", "model-one"),
++		});
++		const content = await readFile(modelsPath, "utf8");
++
++		expect(result).toEqual({ changed: true, providerIds: ["existing", "custom-one"] });
++		expect(content).toContain("// Root comments and future fields are not the mutation target.");
++		expect(content).toContain('"futureRootField": { "keep": true }');
++		expect(content).toContain(untouchedProvider);
++		expect(content).toContain('"custom-one"');
++		expect((await lstat(modelsPath)).mode & 0o777).toBe(0o600);
++	});
++
++	it("serializes concurrent provider mutations without dropping either update", async () => {
++		const root = await createRoot();
++		const modelsPath = join(root, "models.json");
++
++		await Promise.all([
++			mutateModelConfigProvider(modelsPath, {
++				type: "upsert",
++				providerId: "custom-one",
++				provider: provider("Custom One", "model-one"),
++			}),
++			mutateModelConfigProvider(modelsPath, {
++				type: "upsert",
++				providerId: "custom-two",
++				provider: provider("Custom Two", "model-two"),
++			}),
++		]);
++
++		const content = await readFile(modelsPath, "utf8");
++		expect(content).toContain('"custom-one"');
++		expect(content).toContain('"custom-two"');
++	});
++
++	it("replaces only an existing target provider", async () => {
++		const root = await createRoot();
++		const modelsPath = join(root, "models.json");
++		await mutateModelConfigProvider(modelsPath, {
++			type: "upsert",
++			providerId: "target",
++			provider: provider("Old Target", "old-model"),
++		});
++		const withFutureTargetField = (await readFile(modelsPath, "utf8")).replace(
++			'"name": "Old Target",',
++			'"name": "Old Target",\n\t\t"futureTargetField": { "keep": true },',
++		);
++		await writeFile(modelsPath, withFutureTargetField, { encoding: "utf8", mode: 0o600 });
++		await mutateModelConfigProvider(modelsPath, {
++			type: "upsert",
++			providerId: "untouched",
++			provider: provider("Untouched", "keep-model"),
++		});
++
++		const result = await mutateModelConfigProvider(modelsPath, {
++			type: "upsert",
++			providerId: "target",
++			provider: provider("New Target", "new-model"),
++		});
++		const content = await readFile(modelsPath, "utf8");
++
++		expect(result).toEqual({ changed: true, providerIds: ["target", "untouched"] });
++		expect(content).toContain('"New Target"');
++		expect(content).toContain('"new-model"');
++		expect(content).not.toContain('"Old Target"');
++		expect(content).not.toContain('"old-model"');
++		expect(content).toContain('"futureTargetField": { "keep": true }');
++		expect(content).toContain('"Untouched"');
++		expect(content).toContain('"keep-model"');
++	});
++
++	it("preserves existing credential and compatibility fields omitted by an edit", async () => {
++		const root = await createRoot();
++		const modelsPath = join(root, "models.json");
++		await writeFile(
++			modelsPath,
++			JSON.stringify({
++				providers: {
++					target: {
++						...provider("Old Target", "old-model"),
++						apiKey: "existing-safe-reference",
++						headers: { "X-Existing": "keep" },
++						compat: { supportsStore: false },
++					},
++				},
++			}),
++			{ encoding: "utf8", mode: 0o600 },
++		);
++
++		await mutateModelConfigProvider(modelsPath, {
++			type: "upsert",
++			providerId: "target",
++			provider: provider("New Target", "new-model"),
++		});
++
++		const content = await readFile(modelsPath, "utf8");
++		expect(content).toContain('"New Target"');
++		expect(content).toContain('"new-model"');
++		const target = JSON.parse(content).providers.target;
++		expect(target.apiKey).toBe("existing-safe-reference");
++		expect(target.headers).toEqual({ "X-Existing": "keep" });
++		expect(target.compat).toEqual({ supportsStore: false });
++	});
++
++	it("preserves hidden fields on retained models while explicitly removing omitted models", async () => {
++		const root = await createRoot();
++		const modelsPath = join(root, "models.json");
++		await writeFile(
++			modelsPath,
++			JSON.stringify({
++				providers: {
++					target: {
++						...provider("Target", "rich-model"),
++						models: [
++							{
++								id: "rich-model",
++								name: "Before",
++								cost: { input: 1, output: 2, cacheRead: 3, cacheWrite: 4 },
++								samplingParams: { temperature: 0.25 },
++								headers: { Authorization: "Bearer hidden" },
++								compat: { supportsStore: false },
++							},
++							{ id: "remove-me", samplingParams: { keep: false } },
++						],
++					},
++				},
++			}),
++			{ encoding: "utf8", mode: 0o600 },
++		);
++
++		await mutateModelConfigProvider(modelsPath, {
++			type: "upsert",
++			providerId: "target",
++			provider: {
++				name: "Target",
++				baseUrl: "https://example.test/v1",
++				api: "openai-completions",
++				models: [{ id: "rich-model", name: "After" }],
++			},
++		});
++
++		const models = JSON.parse(await readFile(modelsPath, "utf8")).providers.target.models;
++		expect(models).toEqual([
++			{
++				id: "rich-model",
++				name: "After",
++				cost: { input: 1, output: 2, cacheRead: 3, cacheWrite: 4 },
++				samplingParams: { temperature: 0.25 },
++				headers: { Authorization: "Bearer hidden" },
++				compat: { supportsStore: false },
++			},
++		]);
++	});
++
++	it("removes only the target provider and treats a missing target as an exact no-op", async () => {
++		const root = await createRoot();
++		const modelsPath = join(root, "models.json");
++		await mutateModelConfigProvider(modelsPath, {
++			type: "upsert",
++			providerId: "keep",
++			provider: provider("Keep", "keep-model"),
++		});
++		await mutateModelConfigProvider(modelsPath, {
++			type: "upsert",
++			providerId: "remove",
++			provider: provider("Remove", "remove-model"),
++		});
++		const before = await readFile(modelsPath, "utf8");
++
++		const removed = await mutateModelConfigProvider(modelsPath, {
++			type: "remove",
++			providerId: "remove",
++		});
++		const after = await readFile(modelsPath, "utf8");
++		expect(removed).toEqual({ changed: true, providerIds: ["keep"] });
++		expect(after).toContain('"keep"');
++		expect(after).not.toContain('"remove"');
++
++		const missing = await mutateModelConfigProvider(modelsPath, {
++			type: "remove",
++			providerId: "missing",
++		});
++		expect(missing).toEqual({ changed: false, providerIds: ["keep"] });
++		expect(await readFile(modelsPath, "utf8")).toBe(after);
++		expect(before).not.toBe(after);
++	});
++
++	it("rejects invalid typed content without changing the last valid file", async () => {
++		const root = await createRoot();
++		const modelsPath = join(root, "models.json");
++		await mutateModelConfigProvider(modelsPath, {
++			type: "upsert",
++			providerId: "valid",
++			provider: provider("Valid", "valid-model"),
++		});
++		const before = await readFile(modelsPath, "utf8");
++
++		await expect(
++			mutateModelConfigProvider(modelsPath, {
++				type: "upsert",
++				providerId: "invalid",
++				provider: { models: "wrong" } as never,
++			}),
++		).rejects.toThrow("Invalid models.json schema");
++		expect(await readFile(modelsPath, "utf8")).toBe(before);
++	});
++
++	it("rejects a schema-valid provider that a fresh runtime cannot compose", async () => {
++		const root = await createRoot();
++		const modelsPath = join(root, "models.json");
++		await mutateModelConfigProvider(modelsPath, {
++			type: "upsert",
++			providerId: "valid",
++			provider: provider("Valid", "valid-model"),
++		});
++		const before = await readFile(modelsPath, "utf8");
++
++		await expect(
++			mutateModelConfigProvider(modelsPath, {
++				type: "upsert",
++				providerId: "cannot-compose",
++				provider: {
++					...provider("Cannot Compose", "broken-model"),
++					api: "not-a-real-pi-api",
++				} as never,
++			}),
++		).rejects.toThrow();
++		expect(await readFile(modelsPath, "utf8")).toBe(before);
++	});
++
++	it("is exactly reloadable by a fresh official runtime after replacement", async () => {
++		const root = await createRoot();
++		const modelsPath = join(root, "models.json");
++		await mutateModelConfigProvider(modelsPath, {
++			type: "upsert",
++			providerId: "reloadable",
++			provider: provider("Reloadable", "reload-model"),
++		});
++
++		const runtime = await ModelRuntime.create({
++			modelsPath,
++			allowModelNetwork: false,
++			refreshOnCreate: false,
++		});
++		expect(runtime.getError()).toBeUndefined();
++		expect(runtime.getModelConfigProviderIds()).toContain("reloadable");
++		expect(runtime.getModel("reloadable", "reload-model")).toBeDefined();
++	});
++
++	it("rejects an invalid existing document without rewriting it", async () => {
++		const root = await createRoot();
++		const modelsPath = join(root, "models.json");
++		const invalid = '{ "providers": { "broken": { "models": "wrong" } } }\n';
++		await writeFile(modelsPath, invalid, { encoding: "utf8", mode: 0o600 });
++
++		await expect(
++			mutateModelConfigProvider(modelsPath, {
++				type: "upsert",
++				providerId: "blocked",
++				provider: provider("Blocked", "blocked-model"),
++			}),
++		).rejects.toThrow("Invalid models.json schema");
++		expect(await readFile(modelsPath, "utf8")).toBe(invalid);
++	});
++
++	it("rejects a linked models.json leaf instead of replacing it", async () => {
++		const root = await createRoot();
++		const outside = join(root, "outside.json");
++		const modelsPath = join(root, "models.json");
++		await writeFile(outside, '{ "providers": {} }', { mode: 0o600 });
++		await symlink(outside, modelsPath);
++
++		await expect(
++			mutateModelConfigProvider(modelsPath, {
++				type: "upsert",
++				providerId: "blocked",
++				provider: provider("Blocked", "blocked-model"),
++			}),
++		).rejects.toThrow();
++		expect(await readFile(outside, "utf8")).toBe('{ "providers": {} }');
++	});
++
++	it("rejects a multiply linked models.json leaf", async () => {
++		const root = await createRoot();
++		const modelsPath = join(root, "models.json");
++		const aliasPath = join(root, "models-alias.json");
++		const original = '{ "providers": {} }';
++		await writeFile(modelsPath, original, { mode: 0o600 });
++		await link(modelsPath, aliasPath);
++
++		await expect(
++			mutateModelConfigProvider(modelsPath, {
++				type: "upsert",
++				providerId: "blocked",
++				provider: provider("Blocked", "blocked-model"),
++			}),
++		).rejects.toThrow("private regular file");
++		expect(await readFile(aliasPath, "utf8")).toBe(original);
++	});
++
++	it("honors caller cancellation before creating or changing the file", async () => {
++		const root = await createRoot();
++		const modelsPath = join(root, "models.json");
++		const controller = new AbortController();
++		controller.abort();
++
++		await expect(
++			mutateModelConfigProvider(
++				modelsPath,
++				{
++					type: "upsert",
++					providerId: "cancelled",
++					provider: provider("Cancelled", "cancelled-model"),
++				},
++				{ signal: controller.signal },
++			),
++		).rejects.toMatchObject({ name: "AbortError" });
++		await expect(readFile(modelsPath, "utf8")).rejects.toMatchObject({ code: "ENOENT" });
++	});
++});
+diff --git a/packages/coding-agent/test/model-runtime-config-reader.test.ts b/packages/coding-agent/test/model-runtime-config-reader.test.ts
+new file mode 100644
+index 000000000..217cf2af5
+--- /dev/null
++++ b/packages/coding-agent/test/model-runtime-config-reader.test.ts
+@@ -0,0 +1,254 @@
++import { mkdtemp, readFile, rm, writeFile } from "node:fs/promises";
++import { tmpdir } from "node:os";
++import { join } from "node:path";
++import { describe, expect, it, vi } from "vitest";
++import { AuthStorage } from "../src/core/auth-storage.ts";
++import { ModelRegistry } from "../src/core/model-registry.ts";
++import { ModelRuntime } from "../src/core/model-runtime.ts";
++import { InMemoryCodingAgentModelsStore } from "../src/core/models-store.ts";
++
++function modelsJson(provider: string, model: string): string {
++	return `{
++		// The product reader supplies bytes; Pi remains the parser and schema authority.
++		"providers": {
++			"${provider}": {
++				"baseUrl": "https://example.test/v1",
++				"api": "openai-completions",
++				"apiKey": "test-key",
++				"models": [{ "id": "${model}" }]
++			}
++		}
++	}`;
++}
++
++function createRuntime(
++	modelsConfigReader: NonNullable<Parameters<typeof ModelRuntime.create>[0]["modelsConfigReader"]>,
++) {
++	return ModelRuntime.create({
++		credentials: AuthStorage.inMemory(),
++		modelsPath: null,
++		modelsConfigReader,
++		modelsStore: new InMemoryCodingAgentModelsStore(),
++		allowModelNetwork: false,
++		refreshOnCreate: false,
++	});
++}
++
++describe("ModelRuntime modelsConfigReader", () => {
++	it("uses one official parser snapshot for create and refresh provenance", async () => {
++		let content = modelsJson("custom-one", "model-one");
++		const reader = vi.fn(async () => content);
++		const runtime = await createRuntime(reader);
++
++		expect(reader).toHaveBeenCalledTimes(1);
++		expect(runtime.getModelConfigProviderIds()).toEqual(["custom-one"]);
++		expect(runtime.getModelConfigProvider("custom-one")).toMatchObject({
++			api: "openai-completions",
++			baseUrl: "https://example.test/v1",
++		});
++		expect(runtime.getModel("custom-one", "model-one")).toBeDefined();
++
++		content = modelsJson("custom-two", "model-two");
++		await runtime.refresh({ allowNetwork: false });
++
++		expect(reader).toHaveBeenCalledTimes(2);
++		expect(runtime.getModelConfigProviderIds()).toEqual(["custom-two"]);
++		expect(runtime.getModel("custom-one", "model-one")).toBeUndefined();
++		expect(runtime.getModel("custom-two", "model-two")).toBeDefined();
++	});
++
++	it("keeps provider, model, and override credentials out of the host projection", async () => {
++		const runtime = await createRuntime(async () =>
++			JSON.stringify({
++				providers: {
++					private: {
++						baseUrl: "https://example.test/v1",
++						api: "openai-completions",
++						apiKey: "provider-secret",
++						headers: { Authorization: "provider-header" },
++						models: [{ id: "model", headers: { Authorization: "model-header" } }],
++						modelOverrides: { model: { headers: { Authorization: "override-header" } } },
++					},
++				},
++			}),
++		);
++
++		const projected = runtime.getModelConfigProvider("private") as Record<string, unknown>;
++		expect(JSON.stringify(projected)).not.toContain("secret");
++		expect(JSON.stringify(projected)).not.toContain("header");
++		expect(projected).toMatchObject({
++			baseUrl: "https://example.test/v1",
++			models: [{ id: "model" }],
++			modelOverrides: { model: {} },
++		});
++	});
++
++	it("tests a credential-blind edit with the retained configured credential", async () => {
++		const runtime = await createRuntime(async () =>
++			JSON.stringify({
++				providers: {
++					private: {
++						name: "Before",
++						baseUrl: "https://example.test/v1",
++						api: "openai-completions",
++						apiKey: "configured-reference",
++						models: [{ id: "model", samplingParams: { temperature: 0.25 } }],
++					},
++				},
++			}),
++		);
++
++		runtime.registerModelConfigProviderPreview("private", {
++			name: "After",
++			baseUrl: "https://example.test/v1",
++			api: "openai-completions",
++			models: [{ id: "model", name: "Edited" }],
++		});
++
++		expect(runtime.getProviderAuthStatus("private").configured).toBe(true);
++		expect(runtime.getModel("private", "model")?.name).toBe("Edited");
++		expect(runtime.getModelConfigProvider("private")?.models?.[0]).toMatchObject({
++			id: "model",
++			samplingParams: { temperature: 0.25 },
++		});
++	});
++
++	it("rejects path and reader dual authority", async () => {
++		const reader = async () => undefined;
++		await expect(ModelRuntime.create({ modelsConfigReader: reader })).rejects.toThrow(
++			"modelsConfigReader requires modelsPath: null",
++		);
++		await expect(ModelRuntime.create({ modelsPath: "/tmp/models.json", modelsConfigReader: reader })).rejects.toThrow(
++			"modelsConfigReader requires modelsPath: null",
++		);
++	});
++
++	it("propagates cancellation before and after the reader", async () => {
++		const before = new AbortController();
++		before.abort();
++		const unread = vi.fn(async () => modelsJson("unread", "unread"));
++		await expect(
++			ModelRuntime.create({ modelsPath: null, modelsConfigReader: unread, signal: before.signal }),
++		).rejects.toMatchObject({ name: "AbortError" });
++		expect(unread).not.toHaveBeenCalled();
++
++		const during = new AbortController();
++		await expect(
++			ModelRuntime.create({
++				modelsPath: null,
++				modelsConfigReader: async () => {
++					during.abort();
++					return modelsJson("cancelled", "cancelled");
++				},
++				signal: during.signal,
++			}),
++		).rejects.toMatchObject({ name: "AbortError" });
++	});
++
++	it("keeps reader failures private and invalid content under the official schema", async () => {
++		const failed = await createRuntime(async () => {
++			throw new Error("secret path and credential");
++		});
++		expect(failed.getError()).toBe("Failed to load models.json from configured reader");
++
++		const invalid = await createRuntime(async () => '{ "providers": { "broken": { "models": "wrong" } } }');
++		expect(invalid.getError()).toContain("Invalid models.json schema");
++		expect(invalid.getModelConfigProviderIds()).toEqual([]);
++	});
++
++	it("keeps an explicit file catalog store when models config comes from a reader", async () => {
++		const root = await mkdtemp(join(tmpdir(), "omnimind-model-reader-store-"));
++		const modelsStorePath = join(root, "models-store.json");
++		const providerId = "reader-store-provider";
++		const storedModel = {
++			id: "stored-model",
++			name: "Stored Model",
++			api: "openai-responses" as const,
++			provider: providerId,
++			baseUrl: "https://example.test/v1",
++			reasoning: false,
++			input: ["text"] as const,
++			cost: { input: 0, output: 0, cacheRead: 0, cacheWrite: 0 },
++			contextWindow: 128_000,
++			maxTokens: 16_384,
++		};
++		const refreshedModel = { ...storedModel, id: "reopened-model", name: "Reopened Model" };
++		const observedStoredModelIds: string[][] = [];
++		const registerDynamicProvider = (runtime: ModelRuntime, publishRefreshed: boolean) => {
++			let models = [] as (typeof storedModel)[];
++			new ModelRegistry(runtime).registerProvider({
++				id: providerId,
++				name: "Reader Store Provider",
++				auth: {
++					apiKey: {
++						name: "Reader store key",
++						resolve: async () => ({ auth: { apiKey: "test-key" }, source: "test" }),
++					},
++				},
++				getModels: () => models,
++				refreshModels: async (context) => {
++					observedStoredModelIds.push(context.stored?.models.map((model) => model.id) ?? []);
++					if (context.stored) {
++						await context.publish({
++							update: () => {
++								models = [...context.stored!.models] as (typeof storedModel)[];
++							},
++						});
++					}
++					if (!publishRefreshed) return;
++					await context.publish({
++						persist: { models: [refreshedModel], checkedAt: Date.now() },
++						update: () => {
++							models = [refreshedModel];
++						},
++					});
++				},
++				stream: () => {
++					throw new Error("unused");
++				},
++				streamSimple: () => {
++					throw new Error("unused");
++				},
++			});
++		};
++
++		try {
++			await writeFile(
++				modelsStorePath,
++				JSON.stringify({
++					[providerId]: { models: [storedModel], checkedAt: 1 },
++				}),
++			);
++			const first = await ModelRuntime.create({
++				credentials: AuthStorage.inMemory(),
++				modelsPath: null,
++				modelsConfigReader: async () => undefined,
++				modelsStorePath,
++				allowModelNetwork: false,
++				refreshOnCreate: false,
++			});
++			registerDynamicProvider(first, true);
++			await first.refresh({ providers: [providerId], allowNetwork: false });
++			expect(observedStoredModelIds).toEqual([["stored-model"]]);
++			expect(first.getModel(providerId, "reopened-model")).toBeDefined();
++			const persisted = JSON.parse(await readFile(modelsStorePath, "utf8"));
++			expect(persisted[providerId].models.map((model: { id: string }) => model.id)).toEqual(["reopened-model"]);
++
++			const reopened = await ModelRuntime.create({
++				credentials: AuthStorage.inMemory(),
++				modelsPath: null,
++				modelsConfigReader: async () => undefined,
++				modelsStorePath,
++				allowModelNetwork: false,
++				refreshOnCreate: false,
++			});
++			registerDynamicProvider(reopened, false);
++			await reopened.refresh({ providers: [providerId], allowNetwork: false });
++			expect(observedStoredModelIds).toEqual([["stored-model"], ["reopened-model"]]);
++			expect(reopened.getModel(providerId, "stored-model")).toBeUndefined();
++			expect(reopened.getModel(providerId, "reopened-model")).toBeDefined();
++		} finally {
++			await rm(root, { recursive: true, force: true });
++		}
++	});
++});

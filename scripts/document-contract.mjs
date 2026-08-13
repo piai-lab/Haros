@@ -271,7 +271,7 @@ function validateBundledPiRuntimeAdoption(findings, documents) {
     licenseFiles: ["LICENSES/pi-coding-agent-MIT.txt"],
     sharedRuntimeBytes: "patched",
     patchPath: "patches/pi-coding-agent/0.84.1-model-config-reader.patch",
-    patchSha256: "d204cc0f8946fdb4e86c231abb9222e3d5ee913a2330d4ee8cc4ba4aaa78aafc",
+    patchSha256: "a87b0d2712c5d55e9a1b85d236946f6e38e0a4b57e6fea4df41362ebfb7eeb44",
     generatorPath: "scripts/vendor-omnimind-pi-runtime.mjs",
     behavioralDifferences: [
       "package identity",
