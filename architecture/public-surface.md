@@ -6,15 +6,18 @@
 
 ## 1. 当前事实
 
-V1 canonical public origin 是 `https://omnimind.wisdomeyes.cn`。截至 2026-08-13，website 与 Feedback 的
-production candidate 已部署到仅供反向代理使用的 private upstream，并完成了页面、健康检查、反馈持久化、通知与
-管理面隔离 proof；但 canonical HTTPS 证书尚未覆盖该域名，外网真实 link probe 失败，因此 Public site origin 与
-Feedback 仍未激活。内部 upstream 不是用户入口，也不得成为产品 URL、文案、重定向或 fallback。
+V1 canonical public origin 是 `https://omnimind.wisdomeyes.cn`。截至 2026-08-13，Public site origin 与 Feedback
+service 已经激活：canonical HTTPS origin、`/`、`/docs`、`/changelog`、`/download`、`/privacy`、`/support` 和
+`/api/health` 已通过外网真实 probe；Desktop 允许来源的 Feedback CORS preflight、持久化、SMTP 通知与管理面隔离
+也已完成真实 proof。网站源码和部署实现由 [`SolvingLab/OmniMind-Web`](https://github.com/SolvingLab/OmniMind-Web)
+拥有。当前尚无 public Desktop artifact；因此 Desktop 的官网/反馈接线已有 source 与 release-workflow candidate，不能
+冒充已随公开安装包交付。private upstream 只服务反向代理，始终不是用户入口，也不得成为产品 URL、文案、配置、
+重定向或 fallback。
 
-独立的 public distribution authority `SolvingLab/OmniMind-Releases` 已建立，Desktop release workflow、website
-Changelog 与 Download 已接到该 authority；当前没有已发布 release、artifact 或 update manifest，因此 Download 与
-Update discovery 仍未激活。产品不得把部署 candidate、构建时配置、DNS 存在、空发行仓库或单项 proof 推断为另一项
-公共能力已激活。
+独立的 public distribution authority [`SolvingLab/OmniMind-Releases`](https://github.com/SolvingLab/OmniMind-Releases)
+已建立，Desktop release workflow、website Changelog 与 Download 已接到该 authority；当前没有已发布 release、
+artifact 或 update manifest，因此 Download 的信息页面可以访问，但 artifact actions 与 Update discovery 仍未激活。
+产品不得把官网上线、构建时配置、空发行仓库或单项 proof 推断为另一项公共能力已激活。
 
 下列 fixed-source destinations 只允许留在本 owner、来源证据和法定披露，不得进入 authored/built product
 surfaces：
@@ -57,7 +60,7 @@ OmniMind 即使完全没有公共网络能力，也必须保持本地 Agent/Chat
 | Download         | `/download`                                            | About/更新恢复中的手动下载入口                            | app → browser                        | platform、arch、目标版本可作为显式路径选择；不得包含 credential 或本机路径                                              | 已发布、可验证的精确 artifact，适用 license/notice，TLS 与下载校验                                                                                               | 不提供链接；保留本地使用与更新诊断                                                    | Distribution authority                     |
 | Privacy          | `/privacy`                                             | Feedback/About 的 Privacy 入口                            | app → browser                        | 无                                                                                                                      | 对实际产品数据流有效的已发布政策与真实 link probe                                                                                                                | 未激活时不得声称已有在线政策页                                                        | Public site origin + product privacy owner |
 | Support          | `/support`                                             | Help/About 的 Support 入口                                | app → browser                        | 默认无；用户主动发起的支持内容另行确认                                                                                  | 真实受理渠道、owner、隐私边界与 link probe                                                                                                                       | disabled 或隐藏；不得借用 donor 账号                                                  | Public site origin + support owner         |
-| Feedback         | **Future reserved candidate:** `POST /api/v1/feedback` | Help、Composer command 与全局 palette 的 Feedback dialog  | app → separately configured endpoint | 用户填写的 details；app/version、platform、language、viewport、Provider/Model、模式与非内容状态的 allowlist diagnostics | production build 中显式配置 approved canonical origin + candidate route，且具备 CORS/timeout/cancel、隐私文案、滥用防护与一次真实收件 proof；当前不是 public API | 对话框可保留；Submit 从首次渲染即 disabled，不发请求；保留 draft 并准确报 unavailable | Feedback endpoint                          |
+| Feedback         | `POST /api/v1/feedback`                                | Help、Composer command 与全局 palette 的 Feedback dialog  | app → separately configured endpoint | 用户填写的 details；app/version、platform、language、viewport、Provider/Model、模式与非内容状态的 allowlist diagnostics | production build 中显式配置 approved canonical endpoint，且具备 CORS/timeout/cancel、隐私文案、滥用防护与真实收件 proof | endpoint 缺失、非法或不可达时保留 dialog 与 draft；Submit fail closed，不后台重试、不假报 success | Feedback endpoint                          |
 | Share/social     | 未分配；由具体 destination 决定                        | 未来的显式分享动作                                        | app → browser/service                | 仅用户预览并确认的导出物；默认无自动上传                                                                                | 真实账号/目标、rights、隐私预览、撤销/失败语义与 delivery proof                                                                                                  | 不显示假账号、假卡片或假 success；能力 lineage 保留                                   | Share destination authority                |
 | Update discovery | 不是 public-site route；使用独立 signed channel/feed   | Desktop update check、download、install、retry 与手动恢复 | app ↔ update feed                    | app identity、platform、arch、current version、channel；不含用户内容或 credential                                       | 签名与 artifact identity、channel/feed、manifest、install、失败重试和重新安装恢复 proof                                                                          | 不检查猜测 feed；应用继续本地运行并提供诊断和手动下载入口                             | Release/update authority                   |
 | Future deep link | reserved；scheme/path 尚未分配                         | 未来 public-to-app 跳转                                   | browser/OS → app                     | 仅版本化 route 与不含秘密的 resource identifier                                                                         | 已注册 scheme/universal link、签名 app ownership、输入验证、未知 route 拒绝与恢复 proof                                                                          | 不注册、不解析、不接管 OS 链接                                                        | Deep-link authority                        |
@@ -105,7 +108,46 @@ source revision 与 vendored legal-text digest 同时匹配时才能使用补充
 `public-surface-lineage`，指向本 owner，并进入完整计数与排序 digest。不能以 `excluded-non-product` 或普通
 `adapted-removed` 洗掉这条 lineage，也不能把现存 re-entry anchors 误重分类为 marketing lineage。
 
-激活任何 capability 需要一次独立、可撤销的生产变更与对应 proof。当前 website/backend candidate 与 release
-authority 接线不等于公共激活：DNS/TLS、canonical 外网 probe、真实 release artifact、签名/manifest 与安装 proof
-仍按 Registry 分别裁决。在这些条件成立前，产品保持 fail-closed，不使用 private upstream，不提供虚假下载，也不把
-Changelog 页面替代 update authority。当前工作不注册 deep link，也不改变 Pi 或 Runtime topology。
+激活任何 capability 需要一次独立、可撤销的生产变更与对应 proof。Website 与 Feedback 当前已按各自 gate 激活；这
+不激活 Download artifact actions、Update discovery、deep link 或任何 Developer API。真实 release artifact、签名、
+manifest 与安装 proof 仍按 Registry 独立裁决。未激活表面继续 fail closed，不使用 private upstream，不提供虚假下载，
+也不把 Changelog 页面替代 update authority。当前工作不注册 deep link，也不改变 Pi 或 Runtime topology。
+
+## 6. 仓库与开发接线路由
+
+这张表只路由实现责任；本文件仍是公共表面合同的唯一 owner，网站仓库不得复制或改写产品边界。
+
+| 变更目标 | 修改位置 | 既有接线 | 不得顺手做 |
+| --- | --- | --- | --- |
+| 官网页面、双语内容、网站反馈接收与生产部署 | `SolvingLab/OmniMind-Web` | canonical routes、`POST /api/v1/feedback`、`GET /api/health`、release presentation | 读取 Desktop 本地状态、复用内部 RPC/MCP/IPC、发布 updater manifest |
+| Desktop 的官网/Docs/Changelog/Privacy/Support 出口 | 本仓库 `apps/web/src/publicSurface.ts` 与真实 UI consumer | `VITE_PUBLIC_SITE_ORIGIN` 只在 production release build 中注入 canonical origin | 把 public site origin 当 feedback、remote Server 或 updater authority |
+| Desktop Feedback dialog 与诊断 allowlist | 本仓库 `apps/web/src/feedback.ts` 及其 UI consumer | `VITE_FEEDBACK_ENDPOINT` 独立注入 exact canonical endpoint | 自动附带 prompt、文件、路径、日志、credential 或 private Provider state |
+| Release notes、artifact、签名、SBOM、notices 与 update feed | 本仓库 `release-notes/`、`.github/workflows/release.yml` 与 Desktop updater | 发布到 `SolvingLab/OmniMind-Releases`；网站只读取 reviewed public release record | 让网站生成 artifact、签名、feed 或替代 Desktop updater |
+| 网站到 App 的打开/分享 | 尚未分配 | Future deep-link gate | 从现有 Electron scheme、IPC channel 或内部 URL 猜公开协议 |
+
+开发任何相关能力前按以下真实链路定位，不从页面名称猜 owner：
+
+```text
+用户入口
+→ route / command
+→ production build configuration
+→ publicSurface / feedback resolver
+→ canonical website endpoint 或 release authority
+→ unavailable / failure behavior
+```
+
+当前 production release workflow 已分别注入 canonical `VITE_PUBLIC_SITE_ORIGIN` 与 exact
+`VITE_FEEDBACK_ENDPOINT`。普通开发构建没有 approved production 配置时，这些网络能力保持不可用；不得为了本地
+方便增加 private upstream 或非 canonical fallback。
+
+### 6.1 当前接线状态
+
+| 能力 | 状态 | 当前事实 | 下一次真实闭合点 |
+| --- | --- | --- | --- |
+| Public website 与健康检查 | 已存在 | canonical HTTPS 页面与 `/api/health` 在线 | route/contract 改变时重新 probe |
+| Desktop Docs / What’s New | 已存在于 source | Help 菜单经 `resolvePublicSiteLink` 打开 `/docs`、`/changelog` | 首个 public Desktop artifact 中复验 external-open journey |
+| Desktop Feedback | 部分存在 | dialog、命令入口、diagnostic allowlist、独立 endpoint 配置和 live receiver 已存在 | 首个 public Desktop artifact 完成一次真实提交、失败保留 draft 与重开 proof |
+| Home / Privacy / Support 的 Desktop 可见入口 | 部分存在 | Registry 与 resolver 已定义；当前普通 UI 尚未完整消费 | 只在对应 About/Feedback/Help 真实入口施工时接线，不新建平行菜单 |
+| Website Download / Changelog presentation | 部分存在 | 页面读取 public release authority；无 release 时 fail closed | 首个 reviewed public release record |
+| Signed artifact / updater | 缺少可公开产物 | pipeline 与 updater owner 已存在，但无已发布 artifact、manifest 或安装 proof | F-18 对精确三平台产物闭合后独立激活 |
+| Public deep link / Developer API | 缺失 | 只有 decision gate，没有公开合同 | 出现真实 consumer 后重新裁决 |
