@@ -1,5 +1,5 @@
 diff --git a/package-lock.json b/package-lock.json
-index 48e638d5e..c17a5db1e 100644
+index 48e638d..c17a5db 100644
 --- a/package-lock.json
 +++ b/package-lock.json
 @@ -3601,0 +3602,6 @@
@@ -12,13 +12,13 @@ index 48e638d5e..c17a5db1e 100644
 @@ -5557,0 +5564 @@
 +				"jsonc-parser": "3.3.1",
 diff --git a/packages/coding-agent/package.json b/packages/coding-agent/package.json
-index f6fc21a3d..1e293a821 100644
+index f6fc21a..1e293a8 100644
 --- a/packages/coding-agent/package.json
 +++ b/packages/coding-agent/package.json
 @@ -60,0 +61 @@
 +		"jsonc-parser": "3.3.1",
 diff --git a/packages/coding-agent/src/core/agent-session-services.ts b/packages/coding-agent/src/core/agent-session-services.ts
-index 531f51d61..4c720a475 100644
+index 531f51d..4c720a4 100644
 --- a/packages/coding-agent/src/core/agent-session-services.ts
 +++ b/packages/coding-agent/src/core/agent-session-services.ts
 @@ -154 +154,3 @@ export async function createAgentSessionServices(
@@ -106,7 +106,7 @@ index 531f51d61..4c720a475 100644
 +		}
 +	}
 diff --git a/packages/coding-agent/src/core/model-config.ts b/packages/coding-agent/src/core/model-config.ts
-index 7f679a494..4a1a13597 100644
+index 7f679a4..4a1a135 100644
 --- a/packages/coding-agent/src/core/model-config.ts
 +++ b/packages/coding-agent/src/core/model-config.ts
 @@ -3 +3,6 @@
@@ -462,7 +462,7 @@ index 7f679a494..4a1a13597 100644
 +		await release().catch(() => undefined);
 +	}
 diff --git a/packages/coding-agent/src/core/model-runtime.ts b/packages/coding-agent/src/core/model-runtime.ts
-index 6f4071b60..5746f6c2b 100644
+index 6f4071b..5746f6c 100644
 --- a/packages/coding-agent/src/core/model-runtime.ts
 +++ b/packages/coding-agent/src/core/model-runtime.ts
 @@ -15,0 +16 @@ import {
@@ -573,8 +573,93 @@ index 6f4071b60..5746f6c2b 100644
 +			reader: this.modelsConfigReader,
 +			signal: options.signal,
 +		});
+diff --git a/packages/coding-agent/src/core/package-manager.ts b/packages/coding-agent/src/core/package-manager.ts
+index e221d2e..c420dea 100644
+--- a/packages/coding-agent/src/core/package-manager.ts
++++ b/packages/coding-agent/src/core/package-manager.ts
+@@ -101,0 +102,13 @@ export interface ConfiguredPackage {
++export type PackageResourceType = "extensions" | "skills" | "prompts" | "themes";
++
++export interface PackageResourceSelection {
++	source: string;
++	scope: "user" | "project";
++	resourceType: PackageResourceType;
++	resourcePath: string;
++}
++
++export interface ConfiguredPackageResource extends PackageResourceSelection {
++	enabled: boolean;
++}
++
+@@ -109,0 +123,2 @@ export interface PackageManager {
++	listConfiguredPackageResources(): Promise<ConfiguredPackageResource[]>;
++	setPackageResourceEnabled(selection: PackageResourceSelection, enabled: boolean): Promise<boolean>;
+@@ -192 +207 @@ interface PackageFilter {
+-type ResourceType = "extensions" | "skills" | "prompts" | "themes";
++type ResourceType = PackageResourceType;
+@@ -977,0 +993,60 @@ export class DefaultPackageManager implements PackageManager {
++	async listConfiguredPackageResources(): Promise<ConfiguredPackageResource[]> {
++		const resolved = await this.resolve(async () => "error");
++		const resources: ConfiguredPackageResource[] = [];
++		for (const resourceType of RESOURCE_TYPES) {
++			for (const resource of resolved[resourceType]) {
++				if (resource.metadata.origin !== "package" || resource.metadata.scope === "temporary") continue;
++				const baseDir = resource.metadata.baseDir ?? dirname(resource.path);
++				resources.push({
++					source: resource.metadata.source,
++					scope: resource.metadata.scope,
++					resourceType,
++					resourcePath: toPosixPath(relative(baseDir, resource.path)),
++					enabled: resource.enabled,
++				});
++			}
++		}
++		return resources;
++	}
++
++	async setPackageResourceEnabled(selection: PackageResourceSelection, enabled: boolean): Promise<boolean> {
++		this.assertProjectTrustedForScope(selection.scope);
++		const resolved = await this.resolve(async () => "error");
++		const matches = resolved[selection.resourceType].filter((resource) => {
++			if (resource.metadata.origin !== "package" || resource.metadata.scope !== selection.scope) return false;
++			if (!this.packageSourcesMatch(resource.metadata.source, selection.source, selection.scope)) return false;
++			const baseDir = resource.metadata.baseDir ?? dirname(resource.path);
++			return toPosixPath(relative(baseDir, resource.path)) === selection.resourcePath;
++		});
++		if (matches.length !== 1) {
++			throw new Error(`Expected exactly one configured package resource; found ${matches.length}`);
++		}
++		if (matches[0].enabled === enabled) return false;
++
++		const settings =
++			selection.scope === "project"
++				? this.settingsManager.getProjectSettings()
++				: this.settingsManager.getGlobalSettings();
++		const packages = [...(settings.packages ?? [])];
++		const packageIndex = packages.findIndex((pkg) =>
++			this.packageSourcesMatch(pkg, selection.source, selection.scope),
++		);
++		if (packageIndex === -1) throw new Error("Configured package is no longer available");
++
++		const currentPackage = packages[packageIndex];
++		const packageConfig =
++			typeof currentPackage === "string" ? { source: currentPackage } : { ...currentPackage };
++		const currentPatterns = packageConfig[selection.resourceType] ?? [];
++		const nextPatterns = currentPatterns.filter((entry) => {
++			const target = entry.startsWith("!") || entry.startsWith("+") || entry.startsWith("-") ? entry.slice(1) : entry;
++			return target !== selection.resourcePath;
++		});
++		nextPatterns.push(`${enabled ? "+" : "-"}${selection.resourcePath}`);
++		packageConfig[selection.resourceType] = nextPatterns;
++		packages[packageIndex] = packageConfig;
++
++		if (selection.scope === "project") this.settingsManager.setProjectPackages(packages);
++		else this.settingsManager.setPackages(packages);
++		return true;
++	}
++
 diff --git a/packages/coding-agent/src/core/provider-composer.ts b/packages/coding-agent/src/core/provider-composer.ts
-index 1be7fcdb5..04b8931c2 100644
+index 1be7fcd..04b8931 100644
 --- a/packages/coding-agent/src/core/provider-composer.ts
 +++ b/packages/coding-agent/src/core/provider-composer.ts
 @@ -447,2 +447,10 @@ export function composeModelProvider(
@@ -591,7 +676,7 @@ index 1be7fcdb5..04b8931c2 100644
 +		}
 +	}
 diff --git a/packages/coding-agent/src/core/resource-loader.ts b/packages/coding-agent/src/core/resource-loader.ts
-index c24d0a210..1d1ba2afb 100644
+index c24d0a2..1d1ba2a 100644
 --- a/packages/coding-agent/src/core/resource-loader.ts
 +++ b/packages/coding-agent/src/core/resource-loader.ts
 @@ -20 +20,6 @@ import { findGitPaths } from "./footer-data-provider.ts";
@@ -915,7 +1000,7 @@ index c24d0a210..1d1ba2afb 100644
 +	): Promise<LoadExtensionsResult> {
 +		const resolvedPaths = await this.packageManager.resolve(onMissingPackage);
 diff --git a/packages/coding-agent/src/index.ts b/packages/coding-agent/src/index.ts
-index 3d05c2af4..a7df13424 100644
+index 3d05c2a..a7df134 100644
 --- a/packages/coding-agent/src/index.ts
 +++ b/packages/coding-agent/src/index.ts
 @@ -171,0 +172,8 @@ export { ModelRegistry } from "./core/model-registry.ts";
@@ -933,7 +1018,7 @@ index 3d05c2af4..a7df13424 100644
 +	type ModelConfigReadOptions,
 diff --git a/packages/coding-agent/test/model-config-mutation.test.ts b/packages/coding-agent/test/model-config-mutation.test.ts
 new file mode 100644
-index 000000000..f7f1ee402
+index 0000000..f7f1ee4
 --- /dev/null
 +++ b/packages/coding-agent/test/model-config-mutation.test.ts
 @@ -0,0 +1,372 @@
@@ -1311,7 +1396,7 @@ index 000000000..f7f1ee402
 +});
 diff --git a/packages/coding-agent/test/model-runtime-config-reader.test.ts b/packages/coding-agent/test/model-runtime-config-reader.test.ts
 new file mode 100644
-index 000000000..217cf2af5
+index 0000000..217cf2a
 --- /dev/null
 +++ b/packages/coding-agent/test/model-runtime-config-reader.test.ts
 @@ -0,0 +1,254 @@
@@ -1569,8 +1654,92 @@ index 000000000..217cf2af5
 +		}
 +	});
 +});
+diff --git a/packages/coding-agent/test/package-manager.test.ts b/packages/coding-agent/test/package-manager.test.ts
+index 31c89fa..82314bc 100644
+--- a/packages/coding-agent/test/package-manager.test.ts
++++ b/packages/coding-agent/test/package-manager.test.ts
+@@ -297,0 +298,79 @@ Content`,
++	});
++
++	describe("package resource lifecycle", () => {
++		it("uses resolved package identities and preserves sibling filters", async () => {
++			const packageDir = join(tempDir, "local-package");
++			const extensionPath = join(packageDir, "extensions", "entry.ts");
++			const skillPath = join(packageDir, "skills", "helper", "SKILL.md");
++			mkdirSync(join(packageDir, "extensions"), { recursive: true });
++			mkdirSync(join(packageDir, "skills", "helper"), { recursive: true });
++			writeFileSync(extensionPath, "export default function() {}");
++			writeFileSync(skillPath, "---\nname: helper\ndescription: helper\n---\n");
++			writeFileSync(
++				join(packageDir, "package.json"),
++				JSON.stringify({
++					name: "local-package",
++					pi: { extensions: ["./extensions/entry.ts"], skills: ["./skills"] },
++				}),
++			);
++			settingsManager.setPackages([{ source: packageDir, skills: ["+skills/helper/SKILL.md"] }]);
++
++			await expect(packageManager.listConfiguredPackageResources()).resolves.toEqual(
++				expect.arrayContaining([
++					{
++						source: packageDir,
++						scope: "user",
++						resourceType: "extensions",
++						resourcePath: "extensions/entry.ts",
++						enabled: true,
++					},
++					{
++						source: packageDir,
++						scope: "user",
++						resourceType: "skills",
++						resourcePath: "skills/helper/SKILL.md",
++						enabled: true,
++					},
++				]),
++			);
++
++			const selection = {
++				source: packageDir,
++				scope: "user" as const,
++				resourceType: "extensions" as const,
++				resourcePath: "extensions/entry.ts",
++			};
++			await expect(packageManager.setPackageResourceEnabled(selection, false)).resolves.toBe(true);
++			expect(settingsManager.getGlobalSettings().packages).toEqual([
++				{
++					source: packageDir,
++					skills: ["+skills/helper/SKILL.md"],
++					extensions: ["-extensions/entry.ts"],
++				},
++			]);
++			const disabled = await packageManager.resolve(async () => "error");
++			expect(disabled.extensions.find((resource) => resource.path === extensionPath)?.enabled).toBe(false);
++
++			await expect(packageManager.setPackageResourceEnabled(selection, true)).resolves.toBe(true);
++			const enabled = await packageManager.resolve(async () => "error");
++			expect(enabled.extensions.find((resource) => resource.path === extensionPath)?.enabled).toBe(true);
++			await expect(packageManager.setPackageResourceEnabled(selection, true)).resolves.toBe(false);
++		});
++
++		it("rejects stale or forged resource identities without changing settings", async () => {
++			settingsManager.setPackages(["npm:missing-package"]);
++			const before = settingsManager.getGlobalSettings().packages;
++
++			await expect(
++				packageManager.setPackageResourceEnabled(
++					{
++						source: "npm:missing-package",
++						scope: "user",
++						resourceType: "extensions",
++						resourcePath: "../../outside.ts",
++					},
++					false,
++				),
++			).rejects.toThrow();
++			expect(settingsManager.getGlobalSettings().packages).toEqual(before);
++		});
 diff --git a/packages/coding-agent/test/resource-loader.test.ts b/packages/coding-agent/test/resource-loader.test.ts
-index 145eca3b2..066e627d0 100644
+index 145eca3..066e627 100644
 --- a/packages/coding-agent/test/resource-loader.test.ts
 +++ b/packages/coding-agent/test/resource-loader.test.ts
 @@ -6,0 +7 @@ import { AuthStorage } from "../src/core/auth-storage.ts";

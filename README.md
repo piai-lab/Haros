@@ -130,16 +130,16 @@ authority，也不得带入 donor branding、竞争编排、第二 Session 状�
       "revision": "53fa77ccd8a279eb87e92294ef3687b03ff80112",
       "paths": ["vendor/omnimind-pi-coding-agent-0.84.1.tgz", "patches/pi-coding-agent/0.84.1-model-config-reader.patch", "scripts/vendor-omnimind-pi-runtime.mjs"],
       "sourcePaths": ["packages/coding-agent"],
-      "archiveSha256": "4eba55250523b4cd1d8af38a45df4bec0a2e70684acf1eade8d861676091491c",
+      "archiveSha256": "c7688a3a548fdaf2f9f99f496c75ada4f1eec17046f461dd19502a7e60f96d13",
       "upstreamPackage": "@earendil-works/pi-coding-agent@0.84.1",
       "upstreamPackageIntegrity": "sha512-ncAqFrG+iybuPGOhMiZoEHkEzTpJgz3guYD32pD+M7ucc0WeHmauP6wa7qwP8V/KWvsZDVNa5XGsdZ7fkC7w7A==",
       "generation": {
         "sharedRuntimeBytes": "patched",
         "patchPath": "patches/pi-coding-agent/0.84.1-model-config-reader.patch",
-        "patchSha256": "8910d0c92e0755207745e13deedf190b2aeeb26ab27d00df51b2567ae5490d83",
+        "patchSha256": "741fc195ed0036e822688e73f4415fbf18a4ac61b34f8e0f38670208a4037925",
         "generatorPath": "scripts/vendor-omnimind-pi-runtime.mjs",
         "behavioralDifferences": ["package identity", "piConfig.configDir", "injectable models.json content reader", "accepted model-config provider provenance", "credential-blind model-config projection", "typed persistent model-config provider mutation with retained-model merge and preview", "explicit reader-mode models store path remains file-backed", "request-scoped missing-package policy for resource loading"],
-        "archiveDisposition": "The product archive is rebuilt from exact Pi 0.84.1 source with the single committed ModelConfig reader/provenance/mutation patch, retains the upstream LICENSE, removes standalone CLI entrypoint exposure, omits development/public documentation and example payloads, and exact-pins the Pi-family dependency closure. Pi remains the sole parser, schema, provider-composition and persistent provider-mutation authority; the product patch adds no registry or second persisted configuration."
+        "archiveDisposition": "The product archive is rebuilt from exact Pi 0.84.1 source with the single committed ModelConfig reader/provenance/mutation/package-resource patch, retains the upstream LICENSE, removes standalone CLI entrypoint exposure, omits development/public documentation and example payloads, and exact-pins the Pi-family dependency closure. Pi remains the sole parser, schema, provider-composition, persistent provider-mutation and package-resource filtering authority; the product patch adds no registry, package state store or second persisted configuration."
       },
       "rights": "The fixed Pi coding-agent source and generated runtime are MIT-licensed. The shipped archive retains its upstream LICENSE, and the exact root redistribution text is LICENSES/pi-coding-agent-MIT.txt.",
       "mode": "adapt",
