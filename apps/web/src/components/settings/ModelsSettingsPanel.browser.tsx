@@ -6,6 +6,7 @@ import "../../index.css";
 
 import type {
   NativeApi,
+  OmniMindModelServiceAuthResult,
   OmniMindModelServiceDescriptor,
   OmniMindModelServicesGetResult,
   OmniMindModelServicesListResult,
@@ -106,7 +107,16 @@ function setNativeApi(input: {
       })),
   );
   const answerLogin = vi.fn(input.answerLogin ?? beginLogin);
-  const pollLogin = vi.fn(input.pollLogin ?? beginLogin);
+  const pollLogin = vi.fn(
+    input.pollLogin ??
+      ((_input, options) =>
+        new Promise<never>((_resolve, reject) => {
+          const signal = options?.signal;
+          const rejectAbort = () => reject(new DOMException("Aborted", "AbortError"));
+          if (signal?.aborted) rejectAbort();
+          else signal?.addEventListener("abort", rejectAbort, { once: true });
+        })),
+  );
   const cancelLogin = vi.fn(input.cancelLogin ?? beginLogin);
   const logout = vi.fn(
     input.logout ?? (async () => ({ state: "complete", service: service() }) as const),
@@ -623,16 +633,33 @@ describe("ModelsSettingsPanel model services", () => {
       requestId,
       events: [{ type: "auth_url" as const, url: authUrl, instructions: "Continue sign-in" }],
     }));
-    const pollLogin = vi.fn(async () => ({
-      state: "prompt" as const,
-      requestId,
-      prompt: {
-        promptId,
-        type: "manual_code" as const,
-        message: "Paste the authorization code",
+    let pollCount = 0;
+    const pollLogin = vi.fn(
+      (
+        _input: Parameters<NativeApi["omnimindModelServices"]["pollLogin"]>[0],
+        options?: Parameters<NativeApi["omnimindModelServices"]["pollLogin"]>[1],
+      ) => {
+        pollCount += 1;
+        if (pollCount === 1) {
+          return Promise.resolve({
+            state: "prompt" as const,
+            requestId,
+            prompt: {
+              promptId,
+              type: "manual_code" as const,
+              message: "Paste the authorization code",
+            },
+            events: [{ type: "auth_url" as const, url: authUrl, instructions: "Continue sign-in" }],
+          });
+        }
+        return new Promise<never>((_resolve, reject) => {
+          const signal = options?.signal;
+          const rejectAbort = () => reject(new DOMException("Aborted", "AbortError"));
+          if (signal?.aborted) rejectAbort();
+          else signal?.addEventListener("abort", rejectAbort, { once: true });
+        });
       },
-      events: [{ type: "auth_url" as const, url: authUrl, instructions: "Continue sign-in" }],
-    }));
+    );
     const answerLogin = vi.fn(async () => ({
       state: "complete" as const,
       requestId,
@@ -661,14 +688,17 @@ describe("ModelsSettingsPanel model services", () => {
     await expect
       .poll(() => mounted.screen.getByRole("button", { name: /auth\.example\.test/u }))
       .toBeTruthy();
-    await mounted.screen.getByRole("button", { name: /auth\.example\.test/u }).click();
-    expect(openExternal).toHaveBeenCalledWith(authUrl);
+    await expect.poll(() => openExternal).toHaveBeenCalledWith(authUrl);
     expect(beginLogin).toHaveBeenCalledWith(
-      { serviceId: "openai-codex", authType: "oauth" },
+      { serviceId: "openai-codex", authType: "oauth", promptMode: "provider_default" },
       expect.objectContaining({ signal: expect.any(AbortSignal) }),
     );
     expect(pollLogin).toHaveBeenCalledWith(
       { requestId, afterEventCount: 1 },
+      expect.objectContaining({ signal: expect.any(AbortSignal) }),
+    );
+    expect(pollLogin).toHaveBeenCalledWith(
+      { requestId, afterEventCount: 1, afterPromptId: promptId },
       expect.objectContaining({ signal: expect.any(AbortSignal) }),
     );
     const codeInput = mounted.screen.getByLabelText("Paste the authorization code");
@@ -682,6 +712,207 @@ describe("ModelsSettingsPanel model services", () => {
       );
     await expect.poll(() => document.body.textContent).toContain("settings.modelServiceOAuthSaved");
     expect(document.body.textContent).not.toContain("browser-test-code");
+
+    await mounted.screen.unmount();
+    mounted.queryClient.clear();
+  });
+
+  it("finishes browser login while the manual callback fallback remains visible", async () => {
+    const oauthService = service({
+      serviceId: "openai-codex",
+      providerId: "openai-codex",
+      displayName: "OpenAI Codex",
+      authMethods: [
+        { type: "oauth", label: "Sign in with ChatGPT", canLogin: true, subscription: true },
+      ],
+      authState: "setup_required",
+      authSource: null,
+      storedCredentialType: null,
+      availableModelCount: 0,
+    });
+    const configuredService = {
+      ...oauthService,
+      authState: "configured" as const,
+      authSource: "stored" as const,
+      storedCredentialType: "oauth" as const,
+      availableModelCount: 2,
+    };
+    const requestId = "00000000-0000-4000-8000-000000000035";
+    const promptId = "00000000-0000-4000-8000-000000000036";
+    const authUrl = "https://auth.example.test/oauth/authorize?opaque=redacted";
+    let finishBrowserLogin!: (result: OmniMindModelServiceAuthResult) => void;
+    const pollLogin = vi.fn(
+      () =>
+        new Promise<OmniMindModelServiceAuthResult>((resolve) => {
+          finishBrowserLogin = resolve;
+        }),
+    );
+    const openExternal = vi.fn(async () => {});
+    const mounted = await renderPanel({
+      list: async () => ({
+        state: "empty",
+        services: [],
+        connectableServices: [oauthService],
+        errorCode: null,
+      }),
+      get: async () => ({ state: "ready", service: oauthService, errorCode: null }),
+      beginLogin: async () => ({
+        state: "prompt",
+        requestId,
+        prompt: {
+          promptId,
+          type: "manual_code",
+          message: "Paste the authorization code",
+        },
+        events: [{ type: "auth_url", url: authUrl, instructions: "Continue sign-in" }],
+      }),
+      pollLogin,
+      answerLogin: async () => {
+        throw new Error("Browser completion must not submit the manual fallback");
+      },
+      openExternal,
+    });
+
+    await mounted.screen
+      .getByRole("button", { name: 'settings.connectModelServiceNamed:{"name":"OpenAI Codex"}' })
+      .click();
+    await mounted.screen.getByRole("button", { name: "settings.signInWithBrowser" }).click();
+    await expect.poll(() => openExternal).toHaveBeenCalledWith(authUrl);
+    await expect
+      .poll(() => pollLogin)
+      .toHaveBeenCalledWith(
+        { requestId, afterEventCount: 1, afterPromptId: promptId },
+        expect.objectContaining({ signal: expect.any(AbortSignal) }),
+      );
+    expect(mounted.screen.getByLabelText("Paste the authorization code")).toBeTruthy();
+
+    finishBrowserLogin({
+      state: "complete",
+      requestId,
+      service: configuredService,
+      events: [],
+    });
+
+    await expect.poll(() => document.body.textContent).toContain("settings.modelServiceOAuthSaved");
+    expect(mounted.calls.answerLogin).not.toHaveBeenCalled();
+    expect(document.body.textContent).not.toContain("settings.modelServiceAuthExpired");
+
+    await mounted.screen.unmount();
+    mounted.queryClient.clear();
+  });
+
+  it("keeps provider-owned device login available behind the one-click browser path", async () => {
+    const oauthService = service({
+      serviceId: "openai-codex",
+      providerId: "openai-codex",
+      displayName: "OpenAI Codex",
+      authMethods: [
+        { type: "oauth", label: "Sign in with ChatGPT", canLogin: true, subscription: true },
+      ],
+      authState: "setup_required",
+      authSource: null,
+      storedCredentialType: null,
+      availableModelCount: 0,
+    });
+    const browserRequestId = "00000000-0000-4000-8000-000000000041";
+    const choiceRequestId = "00000000-0000-4000-8000-000000000042";
+    const browserPromptId = "00000000-0000-4000-8000-000000000043";
+    const choicePromptId = "00000000-0000-4000-8000-000000000044";
+    const beginLogin = vi
+      .fn()
+      .mockResolvedValueOnce({
+        state: "prompt" as const,
+        requestId: browserRequestId,
+        prompt: {
+          promptId: browserPromptId,
+          type: "manual_code" as const,
+          message: "Paste the browser callback",
+        },
+        events: [],
+      })
+      .mockResolvedValueOnce({
+        state: "prompt" as const,
+        requestId: choiceRequestId,
+        prompt: {
+          promptId: choicePromptId,
+          type: "select" as const,
+          message: "Choose a login method",
+          options: [
+            { id: "browser", label: "Browser login" },
+            { id: "device_code", label: "Device code login" },
+          ],
+        },
+        events: [],
+      });
+    const pollLogin = vi.fn(
+      (
+        _input: Parameters<NativeApi["omnimindModelServices"]["pollLogin"]>[0],
+        options?: Parameters<NativeApi["omnimindModelServices"]["pollLogin"]>[1],
+      ) =>
+        new Promise<never>((_resolve, reject) => {
+          const signal = options?.signal;
+          const rejectAbort = () => reject(new DOMException("Aborted", "AbortError"));
+          if (signal?.aborted) rejectAbort();
+          else signal?.addEventListener("abort", rejectAbort, { once: true });
+        }),
+    );
+    const answerLogin = vi.fn(async () => ({
+      state: "pending" as const,
+      requestId: choiceRequestId,
+      events: [
+        {
+          type: "device_code" as const,
+          userCode: "ABCD-EFGH",
+          verificationUri: "https://auth.example.test/device",
+        },
+      ],
+    }));
+    const cancelLogin = vi.fn(async ({ requestId }: { readonly requestId: string }) => ({
+      state: "cancelled" as const,
+      requestId,
+      errorCode: "cancelled" as const,
+      events: [],
+    }));
+    const openExternal = vi.fn(async () => {});
+    const mounted = await renderPanel({
+      list: async () => ({
+        state: "empty",
+        services: [],
+        connectableServices: [oauthService],
+        errorCode: null,
+      }),
+      get: async () => ({ state: "ready", service: oauthService, errorCode: null }),
+      beginLogin,
+      pollLogin,
+      answerLogin,
+      cancelLogin,
+      openExternal,
+    });
+
+    await mounted.screen
+      .getByRole("button", { name: 'settings.connectModelServiceNamed:{"name":"OpenAI Codex"}' })
+      .click();
+    await mounted.screen.getByRole("button", { name: "settings.signInWithBrowser" }).click();
+    await mounted.screen
+      .getByRole("button", { name: "settings.modelServiceOtherSignInOptions" })
+      .click();
+    await expect
+      .poll(() => beginLogin)
+      .toHaveBeenLastCalledWith(
+        { serviceId: "openai-codex", authType: "oauth", promptMode: "interactive" },
+        expect.objectContaining({ signal: expect.any(AbortSignal) }),
+      );
+    await mounted.screen.getByLabelText("Choose a login method").click();
+    await mounted.screen.getByText("Device code login").click();
+    await mounted.screen.getByRole("button", { name: "settings.modelServiceContinue" }).click();
+    await expect
+      .poll(() => answerLogin)
+      .toHaveBeenCalledWith(
+        { requestId: choiceRequestId, promptId: choicePromptId, value: "device_code" },
+        expect.objectContaining({ signal: expect.any(AbortSignal) }),
+      );
+    await expect.poll(() => openExternal).toHaveBeenCalledWith("https://auth.example.test/device");
+    expect(cancelLogin).toHaveBeenCalledWith({ requestId: browserRequestId });
 
     await mounted.screen.unmount();
     mounted.queryClient.clear();

@@ -10,6 +10,7 @@ import {
   type OmniMindModelServiceAuthPrompt,
   type OmniMindModelServiceAuthResult,
   type OmniMindModelServiceDescriptor,
+  type OmniMindModelServiceOAuthPromptMode,
   type ProviderKind,
 } from "@omnimind/contracts";
 import { getModelOptions, normalizeModelSlug } from "@omnimind/shared/model";
@@ -102,6 +103,7 @@ interface ModelServiceAuthDialogState {
   readonly serviceId: string;
   readonly serviceName: string;
   readonly authType: "api_key" | "oauth";
+  readonly oauthPromptMode: OmniMindModelServiceOAuthPromptMode | null;
   readonly requestId?: string;
   readonly prompt?: OmniMindModelServiceAuthPrompt;
   readonly events: ReadonlyArray<OmniMindModelServiceAuthEvent>;
@@ -182,6 +184,7 @@ function ActiveModelsSettingsPanel({
   const queryClient = useQueryClient();
   const authRequestControllerRef = useRef<AbortController | null>(null);
   const authRequestIdRef = useRef<string | null>(null);
+  const openedAuthUrlsRef = useRef(new Set<string>());
   const modelServicesCapability = useSyncExternalStore(
     subscribeModelServicesCapability,
     readModelServicesCapability,
@@ -421,6 +424,19 @@ function ActiveModelsSettingsPanel({
 
   const applyAuthResult = useCallback(
     async (result: OmniMindModelServiceAuthResult, authType: "api_key" | "oauth") => {
+      let authUrlOpenFailed = false;
+      for (const event of result.events) {
+        const externalUrl = authEventExternalUrl(event);
+        if (!externalUrl) continue;
+        const eventKey = `${result.requestId}:${externalUrl}`;
+        if (openedAuthUrlsRef.current.has(eventKey)) continue;
+        openedAuthUrlsRef.current.add(eventKey);
+        try {
+          await ensureNativeApi().shell.openExternal(externalUrl);
+        } catch {
+          authUrlOpenFailed = true;
+        }
+      }
       if (result.state === "pending") {
         authRequestIdRef.current = result.requestId;
         setAuthDialog((current) =>
@@ -430,7 +446,7 @@ function ActiveModelsSettingsPanel({
                 requestId: result.requestId,
                 events: result.events,
                 busy: true,
-                error: null,
+                error: authUrlOpenFailed ? t("settings.modelServiceOAuthOpenFailed") : null,
                 value: "",
               }))(current)
             : null,
@@ -447,7 +463,7 @@ function ActiveModelsSettingsPanel({
                 prompt: result.prompt,
                 events: result.events,
                 busy: false,
-                error: null,
+                error: authUrlOpenFailed ? t("settings.modelServiceOAuthOpenFailed") : null,
                 value: "",
               }
             : null,
@@ -508,10 +524,17 @@ function ActiveModelsSettingsPanel({
       authType: "api_key" | "oauth",
     ) => {
       let result = initialResult;
-      while (result.state === "pending" && !controller.signal.aborted) {
+      while (
+        (result.state === "pending" || result.state === "prompt") &&
+        !controller.signal.aborted
+      ) {
         await applyAuthResult(result, authType);
         result = await ensureNativeApi().omnimindModelServices.pollLogin(
-          { requestId: result.requestId, afterEventCount: result.events.length },
+          {
+            requestId: result.requestId,
+            afterEventCount: result.events.length,
+            ...(result.state === "prompt" ? { afterPromptId: result.prompt.promptId } : {}),
+          },
           { signal: controller.signal },
         );
       }
@@ -524,15 +547,21 @@ function ActiveModelsSettingsPanel({
   );
 
   const beginModelServiceLogin = useCallback(
-    async (service: OmniMindModelServiceDescriptor, authType: "api_key" | "oauth") => {
-      void cancelCurrentAuthRequest();
+    async (
+      service: OmniMindModelServiceDescriptor,
+      authType: "api_key" | "oauth",
+      oauthPromptMode: OmniMindModelServiceOAuthPromptMode = "provider_default",
+    ) => {
+      await cancelCurrentAuthRequest();
       const controller = new AbortController();
       authRequestControllerRef.current = controller;
+      openedAuthUrlsRef.current.clear();
       setModelServiceNotice(null);
       setAuthDialog({
         serviceId: service.serviceId,
         serviceName: modelServiceInstanceLabel(service),
         authType,
+        oauthPromptMode: authType === "oauth" ? oauthPromptMode : null,
         events: [],
         busy: true,
         error: null,
@@ -540,7 +569,9 @@ function ActiveModelsSettingsPanel({
       });
       try {
         const result = await ensureNativeApi().omnimindModelServices.beginLogin(
-          { serviceId: service.serviceId, authType },
+          authType === "oauth"
+            ? { serviceId: service.serviceId, authType, promptMode: oauthPromptMode }
+            : { serviceId: service.serviceId, authType },
           { signal: controller.signal },
         );
         await consumeAuthResult(result, controller, authType);
@@ -1388,6 +1419,18 @@ function ActiveModelsSettingsPanel({
             ) : null}
           </DialogPanel>
           <DialogFooter>
+            {authDialog?.authType === "oauth" &&
+            authDialog.oauthPromptMode === "provider_default" &&
+            selectedModelService?.serviceId === authDialog.serviceId ? (
+              <Button
+                variant="ghost"
+                onClick={() =>
+                  void beginModelServiceLogin(selectedModelService, "oauth", "interactive")
+                }
+              >
+                {t("settings.modelServiceOtherSignInOptions")}
+              </Button>
+            ) : null}
             <Button variant="outline" onClick={closeAuthDialog}>
               {t("common.cancel")}
             </Button>

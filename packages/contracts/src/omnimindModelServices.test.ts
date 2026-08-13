@@ -143,14 +143,20 @@ describe("OmniMind model-services contracts", () => {
       Schema.decodeUnknownSync(OmniMindModelServiceBeginLoginInput)({
         serviceId: "openai-codex",
         authType: "oauth",
+        promptMode: "provider_default",
       }),
-    ).toEqual({ serviceId: "openai-codex", authType: "oauth" });
+    ).toEqual({
+      serviceId: "openai-codex",
+      authType: "oauth",
+      promptMode: "provider_default",
+    });
     expect(
       Schema.decodeUnknownSync(OmniMindModelServicePollLoginInput)({
         requestId,
         afterEventCount: 1,
+        afterPromptId: promptId,
       }),
-    ).toEqual({ requestId, afterEventCount: 1 });
+    ).toEqual({ requestId, afterEventCount: 1, afterPromptId: promptId });
     expect(
       Schema.decodeUnknownSync(OmniMindModelServiceAnswerLoginInput)({
         requestId,

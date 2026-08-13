@@ -22,6 +22,7 @@ import type {
   OmniMindModelServiceAuthPrompt,
   OmniMindModelServiceAuthResult,
   OmniMindModelServiceAuthMethodType,
+  OmniMindModelServiceOAuthPromptMode,
   OmniMindModelServiceAuthSource,
   OmniMindModelServiceDescriptor,
   OmniMindModelServicesListResult,
@@ -192,10 +193,12 @@ interface ModelServiceAuthRequest {
   readonly clientId: number;
   readonly serviceId: string;
   readonly authType: OmniMindModelServiceAuthMethodType;
+  readonly oauthPromptMode: OmniMindModelServiceOAuthPromptMode | null;
   readonly controller: AbortController;
   readonly connectionSignal: AbortSignal;
   readonly abortOnConnectionClose: () => void;
   readonly events: OmniMindModelServiceAuthEvent[];
+  providerDefaultPromptConsumed: boolean;
   pendingPrompt?: PendingAuthPrompt;
   outcome?: OmniMindModelServiceAuthResult;
   readonly checkpoints: Set<() => void>;
@@ -650,14 +653,31 @@ export function makeOmniMindModelServicesLive(options: OmniMindModelServicesLive
       const awaitRequestResult = async (
         request: ModelServiceAuthRequest,
         afterEventCount = 0,
+        afterPromptId?: string,
+        signal?: AbortSignal,
       ): Promise<OmniMindModelServiceAuthResult> => {
-        while (
-          !request.pendingPrompt &&
-          !request.outcome &&
-          request.events.length <= afterEventCount
-        ) {
-          await new Promise<void>((resolve) => {
-            request.checkpoints.add(resolve);
+        const hasUpdate = () =>
+          request.outcome !== undefined ||
+          request.events.length > afterEventCount ||
+          (request.pendingPrompt?.prompt.promptId ?? null) !== (afterPromptId ?? null);
+        while (!hasUpdate()) {
+          await new Promise<void>((resolve, reject) => {
+            const cleanup = () => {
+              request.checkpoints.delete(checkpoint);
+              signal?.removeEventListener("abort", onAbort);
+            };
+            const checkpoint = () => {
+              cleanup();
+              resolve();
+            };
+            const onAbort = () => {
+              cleanup();
+              reject(new DOMException("Authentication polling cancelled", "AbortError"));
+            };
+            request.checkpoints.add(checkpoint);
+            if (signal?.aborted) onAbort();
+            else signal?.addEventListener("abort", onAbort, { once: true });
+            if (hasUpdate()) checkpoint();
           });
         }
         if (request.outcome) return request.outcome;
@@ -717,6 +737,21 @@ export function makeOmniMindModelServicesLive(options: OmniMindModelServicesLive
               signal: request.controller.signal,
               prompt: async (prompt) => {
                 request.controller.signal.throwIfAborted();
+                if (
+                  request.authType === "oauth" &&
+                  request.oauthPromptMode === "provider_default" &&
+                  !request.providerDefaultPromptConsumed &&
+                  prompt.type === "select"
+                ) {
+                  const providerDefault = prompt.options[0];
+                  if (!providerDefault) {
+                    throw new Error("Authentication choices are unavailable");
+                  }
+                  // Pi's own interactive selector starts on the first provider-owned option.
+                  // Reuse that ordering instead of teaching the Host provider-specific choices.
+                  request.providerDefaultPromptConsumed = true;
+                  return providerDefault.id;
+                }
                 const projected = projectAuthPrompt(prompt);
                 return new Promise<string>((resolve, reject) => {
                   const onAbort = () =>
@@ -879,10 +914,13 @@ export function makeOmniMindModelServicesLive(options: OmniMindModelServicesLive
                 clientId,
                 serviceId: input.serviceId,
                 authType: input.authType,
+                oauthPromptMode:
+                  input.authType === "oauth" ? (input.promptMode ?? "interactive") : null,
                 controller,
                 connectionSignal,
                 abortOnConnectionClose,
                 events: [],
+                providerDefaultPromptConsumed: false,
                 checkpoints: new Set(),
                 timeout: setTimeout(() => {
                   controller.abort();
@@ -908,8 +946,12 @@ export function makeOmniMindModelServicesLive(options: OmniMindModelServicesLive
                 events: [],
               } as const;
             }
-            signal.addEventListener("abort", () => request.controller.abort(), { once: true });
-            const result = await awaitRequestResult(request, input.afterEventCount);
+            const result = await awaitRequestResult(
+              request,
+              input.afterEventCount,
+              input.afterPromptId,
+              signal,
+            );
             if (result.state !== "prompt" && result.state !== "pending") {
               authRequests.delete(request.requestId);
             }

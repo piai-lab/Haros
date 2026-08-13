@@ -222,15 +222,23 @@ export const OmniMindModelServiceAuthResult = Schema.Union([
 ]);
 export type OmniMindModelServiceAuthResult = typeof OmniMindModelServiceAuthResult.Type;
 
+export const OmniMindModelServiceOAuthPromptMode = Schema.Literals([
+  "provider_default",
+  "interactive",
+]);
+export type OmniMindModelServiceOAuthPromptMode = typeof OmniMindModelServiceOAuthPromptMode.Type;
+
 export const OmniMindModelServiceBeginLoginInput = Schema.Struct({
   serviceId: BoundedIdentifier,
   authType: OmniMindModelServiceAuthMethodType,
+  promptMode: Schema.optional(OmniMindModelServiceOAuthPromptMode),
 });
 export type OmniMindModelServiceBeginLoginInput = typeof OmniMindModelServiceBeginLoginInput.Type;
 
 export const OmniMindModelServicePollLoginInput = Schema.Struct({
   requestId: AuthRequestId,
   afterEventCount: NonNegativeInt,
+  afterPromptId: Schema.optional(AuthPromptId),
 });
 export type OmniMindModelServicePollLoginInput = typeof OmniMindModelServicePollLoginInput.Type;
 

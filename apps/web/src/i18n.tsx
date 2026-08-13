@@ -2078,6 +2078,7 @@ export const EN_MESSAGES = {
   "settings.modelServiceOpenOAuth": "Continue sign-in in your browser.",
   "settings.modelServiceOpenOAuthAt": "Open {host}",
   "settings.modelServiceOAuthOpenFailed": "The sign-in page could not be opened.",
+  "settings.modelServiceOtherSignInOptions": "Other sign-in options",
   "settings.modelServiceOAuthFailed": "Sign-in did not complete. Try again.",
   "settings.modelServiceOAuthSaved": "Signed in.",
   "settings.modelServiceOAuthSavedCatalogFailed":
@@ -4905,6 +4906,7 @@ export const ZH_CN_MESSAGES = {
   "settings.modelServiceOpenOAuth": "请在浏览器中继续登录。",
   "settings.modelServiceOpenOAuthAt": "打开 {host}",
   "settings.modelServiceOAuthOpenFailed": "无法打开登录页面。",
+  "settings.modelServiceOtherSignInOptions": "其他登录方式",
   "settings.modelServiceOAuthFailed": "登录未完成，请重试。",
   "settings.modelServiceOAuthSaved": "已登录。",
   "settings.modelServiceOAuthSavedCatalogFailed":

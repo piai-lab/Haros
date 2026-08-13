@@ -1,4 +1,5 @@
 import { createHash } from "node:crypto";
+import { get as httpGet } from "node:http";
 import {
   mkdir,
   mkdtemp,
@@ -348,6 +349,75 @@ describe("OmniMindModelServicesLive", () => {
     });
     expect(result.cancelled).toMatchObject({ state: "cancelled" });
     expect(JSON.parse(await readFile(path.join(agentDir, "auth.json"), "utf8"))).toEqual({});
+  });
+
+  it("uses the provider default OAuth choice and keeps polling past the manual fallback", async () => {
+    const root = await makeRoot();
+    await isolateProviderEnvironment(root);
+    const agentDir = path.join(root, "agent");
+    await mkdir(agentDir, { recursive: true });
+    const tokenPayload = Buffer.from(
+      JSON.stringify({
+        "https://api.openai.com/auth": { chatgpt_account_id: "test-account" },
+      }),
+    ).toString("base64url");
+    vi.spyOn(globalThis, "fetch").mockResolvedValueOnce(
+      Response.json({
+        access_token: `header.${tokenPayload}.signature`,
+        refresh_token: "refresh-secret",
+        expires_in: 3600,
+      }),
+    );
+    const layer = makeTestLayer({ root });
+
+    const result = await Effect.runPromise(
+      Effect.gen(function* () {
+        const service = yield* OmniMindModelServices;
+        const begin = yield* service.beginLogin(17, {
+          serviceId: "openai-codex",
+          authType: "oauth",
+          promptMode: "provider_default",
+        });
+        if (begin.state !== "prompt" || begin.prompt.type !== "manual_code") {
+          throw new Error("Expected the browser flow's manual fallback prompt");
+        }
+        const authUrl = begin.events.find((event) => event.type === "auth_url")?.url;
+        if (!authUrl) throw new Error("Expected the provider-owned browser URL");
+        const state = new URL(authUrl).searchParams.get("state");
+        if (!state) throw new Error("Expected OAuth state");
+        const pollPromise = Effect.runPromise(
+          service.pollLogin(17, {
+            requestId: begin.requestId,
+            afterEventCount: begin.events.length,
+            afterPromptId: begin.prompt.promptId,
+          }),
+        );
+        yield* Effect.promise(
+          () =>
+            new Promise<void>((resolve, reject) => {
+              httpGet(
+                `http://127.0.0.1:1455/auth/callback?code=test-code&state=${encodeURIComponent(state)}`,
+                (response) => {
+                  response.resume();
+                  response.on("end", resolve);
+                },
+              ).on("error", reject);
+            }),
+        );
+        return yield* Effect.promise(() => pollPromise);
+      }).pipe(Effect.provide(layer)),
+    );
+
+    expect(result).toMatchObject({
+      state: "complete",
+      service: {
+        serviceId: "openai-codex",
+        authState: "configured",
+        storedCredentialType: "oauth",
+      },
+    });
+    expect(JSON.stringify(result)).not.toContain("test-code");
+    expect(JSON.stringify(result)).not.toContain("refresh-secret");
   });
 
   it("long-polls provider-owned OAuth events and binds them to the originating client", async () => {
