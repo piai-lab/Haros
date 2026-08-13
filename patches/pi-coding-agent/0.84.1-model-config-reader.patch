@@ -574,15 +574,18 @@ index 6f4071b..5746f6c 100644
 +			signal: options.signal,
 +		});
 diff --git a/packages/coding-agent/src/core/package-manager.ts b/packages/coding-agent/src/core/package-manager.ts
-index e221d2e..c420dea 100644
+index e221d2e..345a796 100644
 --- a/packages/coding-agent/src/core/package-manager.ts
 +++ b/packages/coding-agent/src/core/package-manager.ts
-@@ -101,0 +102,13 @@ export interface ConfiguredPackage {
+@@ -101,0 +102,16 @@ export interface ConfiguredPackage {
 +export type PackageResourceType = "extensions" | "skills" | "prompts" | "themes";
 +
-+export interface PackageResourceSelection {
++export interface PackageResourceIntent {
 +	source: string;
 +	scope: "user" | "project";
++}
++
++export interface PackageResourceSelection extends PackageResourceIntent {
 +	resourceType: PackageResourceType;
 +	resourcePath: string;
 +}
@@ -591,15 +594,26 @@ index e221d2e..c420dea 100644
 +	enabled: boolean;
 +}
 +
-@@ -109,0 +123,2 @@ export interface PackageManager {
-+	listConfiguredPackageResources(): Promise<ConfiguredPackageResource[]>;
+@@ -109,0 +126,2 @@ export interface PackageManager {
++	listConfiguredPackageResources(intent: PackageResourceIntent): Promise<ConfiguredPackageResource[]>;
 +	setPackageResourceEnabled(selection: PackageResourceSelection, enabled: boolean): Promise<boolean>;
-@@ -192 +207 @@ interface PackageFilter {
+@@ -192 +210 @@ interface PackageFilter {
 -type ResourceType = "extensions" | "skills" | "prompts" | "themes";
 +type ResourceType = PackageResourceType;
-@@ -977,0 +993,60 @@ export class DefaultPackageManager implements PackageManager {
-+	async listConfiguredPackageResources(): Promise<ConfiguredPackageResource[]> {
-+		const resolved = await this.resolve(async () => "error");
+@@ -977,0 +996,68 @@ export class DefaultPackageManager implements PackageManager {
++	async listConfiguredPackageResources(intent: PackageResourceIntent): Promise<ConfiguredPackageResource[]> {
++		this.assertProjectTrustedForScope(intent.scope);
++		const settings =
++			intent.scope === "project" ? this.settingsManager.getProjectSettings() : this.settingsManager.getGlobalSettings();
++		const configured = (settings.packages ?? []).filter((pkg) =>
++			this.packageSourcesMatch(pkg, intent.source, intent.scope),
++		);
++		if (configured.length !== 1) {
++			throw new Error(`Expected exactly one configured package; found ${configured.length}`);
++		}
++		const accumulator = this.createAccumulator();
++		await this.resolvePackageSources([{ pkg: configured[0], scope: intent.scope }], accumulator, async () => "error");
++		const resolved = this.toResolvedPaths(accumulator);
 +		const resources: ConfiguredPackageResource[] = [];
 +		for (const resourceType of RESOURCE_TYPES) {
 +			for (const resource of resolved[resourceType]) {
@@ -619,13 +633,10 @@ index e221d2e..c420dea 100644
 +
 +	async setPackageResourceEnabled(selection: PackageResourceSelection, enabled: boolean): Promise<boolean> {
 +		this.assertProjectTrustedForScope(selection.scope);
-+		const resolved = await this.resolve(async () => "error");
-+		const matches = resolved[selection.resourceType].filter((resource) => {
-+			if (resource.metadata.origin !== "package" || resource.metadata.scope !== selection.scope) return false;
-+			if (!this.packageSourcesMatch(resource.metadata.source, selection.source, selection.scope)) return false;
-+			const baseDir = resource.metadata.baseDir ?? dirname(resource.path);
-+			return toPosixPath(relative(baseDir, resource.path)) === selection.resourcePath;
-+		});
++		const matches = (await this.listConfiguredPackageResources(selection)).filter(
++			(resource) =>
++				resource.resourceType === selection.resourceType && resource.resourcePath === selection.resourcePath,
++		);
 +		if (matches.length !== 1) {
 +			throw new Error(`Expected exactly one configured package resource; found ${matches.length}`);
 +		}
@@ -1655,10 +1666,10 @@ index 0000000..217cf2a
 +	});
 +});
 diff --git a/packages/coding-agent/test/package-manager.test.ts b/packages/coding-agent/test/package-manager.test.ts
-index 31c89fa..82314bc 100644
+index 31c89fa..3e51f5b 100644
 --- a/packages/coding-agent/test/package-manager.test.ts
 +++ b/packages/coding-agent/test/package-manager.test.ts
-@@ -297,0 +298,79 @@ Content`,
+@@ -297,0 +298,93 @@ Content`,
 +	});
 +
 +	describe("package resource lifecycle", () => {
@@ -1677,9 +1688,14 @@ index 31c89fa..82314bc 100644
 +					pi: { extensions: ["./extensions/entry.ts"], skills: ["./skills"] },
 +				}),
 +			);
-+			settingsManager.setPackages([{ source: packageDir, skills: ["+skills/helper/SKILL.md"] }]);
++			settingsManager.setPackages([
++				{ source: packageDir, skills: ["+skills/helper/SKILL.md"] },
++				"npm:missing-unrelated-package",
++			]);
 +
-+			await expect(packageManager.listConfiguredPackageResources()).resolves.toEqual(
++			await expect(
++				packageManager.listConfiguredPackageResources({ source: packageDir, scope: "user" }),
++			).resolves.toEqual(
 +				expect.arrayContaining([
 +					{
 +						source: packageDir,
@@ -1711,13 +1727,22 @@ index 31c89fa..82314bc 100644
 +					skills: ["+skills/helper/SKILL.md"],
 +					extensions: ["-extensions/entry.ts"],
 +				},
++				"npm:missing-unrelated-package",
 +			]);
-+			const disabled = await packageManager.resolve(async () => "error");
-+			expect(disabled.extensions.find((resource) => resource.path === extensionPath)?.enabled).toBe(false);
++			const disabled = await packageManager.listConfiguredPackageResources({ source: packageDir, scope: "user" });
++			expect(
++				disabled.find(
++					(resource) => resource.resourceType === "extensions" && resource.resourcePath === "extensions/entry.ts",
++				)?.enabled,
++			).toBe(false);
 +
 +			await expect(packageManager.setPackageResourceEnabled(selection, true)).resolves.toBe(true);
-+			const enabled = await packageManager.resolve(async () => "error");
-+			expect(enabled.extensions.find((resource) => resource.path === extensionPath)?.enabled).toBe(true);
++			const enabled = await packageManager.listConfiguredPackageResources({ source: packageDir, scope: "user" });
++			expect(
++				enabled.find(
++					(resource) => resource.resourceType === "extensions" && resource.resourcePath === "extensions/entry.ts",
++				)?.enabled,
++			).toBe(true);
 +			await expect(packageManager.setPackageResourceEnabled(selection, true)).resolves.toBe(false);
 +		});
 +

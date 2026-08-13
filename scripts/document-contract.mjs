@@ -264,14 +264,14 @@ function validateBundledPiRuntimeAdoption(findings, documents) {
       "scripts/vendor-omnimind-pi-runtime.mjs",
     ],
     sourcePaths: ["packages/coding-agent"],
-    archiveSha256: "c7688a3a548fdaf2f9f99f496c75ada4f1eec17046f461dd19502a7e60f96d13",
+    archiveSha256: "d93b26a7dc0b4e6b65574a4d40754efa21a7c74f1b09542f773569308e55f747",
     upstreamPackage: "@earendil-works/pi-coding-agent@0.84.1",
     upstreamPackageIntegrity:
       "sha512-ncAqFrG+iybuPGOhMiZoEHkEzTpJgz3guYD32pD+M7ucc0WeHmauP6wa7qwP8V/KWvsZDVNa5XGsdZ7fkC7w7A==",
     licenseFiles: ["LICENSES/pi-coding-agent-MIT.txt"],
     sharedRuntimeBytes: "patched",
     patchPath: "patches/pi-coding-agent/0.84.1-model-config-reader.patch",
-    patchSha256: "741fc195ed0036e822688e73f4415fbf18a4ac61b34f8e0f38670208a4037925",
+    patchSha256: "d8450b17f52aa162ae09aa589acc91452f7a6594b2fcd3f82fdce3caae700a67",
     generatorPath: "scripts/vendor-omnimind-pi-runtime.mjs",
     behavioralDifferences: [
       "package identity",
