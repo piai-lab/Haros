@@ -90,13 +90,29 @@ Timeline 保留每个 turn 的 Engine/Model provenance。
 
 普通 UI 不显示 `Synara`、`Pi-derived`、adapter、Host、native state 等实现词。`OmniMind` 与 `Pi` 是两个可区分 Engine，不合并 identity。
 
-### 3.2 图标
+### 3.2 Engine 图标（既有 owner）
 
 - 直接复用 `apps/web/src/components/ProviderIcon.tsx`；
 - 当前十个 Engine 已有完整 `Record<ProviderKind, Icon>` 映射；
 - Codex、Cursor、Grok、Droid、Kilo、Pi 的官方单色语言保持原样；
 - 不下载、不重绘、不重新着色、不建第二 icon registry；
 - 只在实际渲染证明 size/alignment/a11y 有缺口时改共享 owner。
+
+这组规则只约束 OmniMind、Codex、Pi 等 **Engine**，不拥有 OpenAI、Anthropic、DeepSeek、Xiaomi、Google 等 **模型服务**的视觉资产。
+
+### 3.2.1 模型服务图标（E7 presentation）
+
+维护者已选择 [LobeHub Icons](https://github.com/lobehub/lobe-icons) 作为模型服务/模型品牌视觉资产来源。实施必须：
+
+- 使用精确锁定版本的 `@lobehub/icons`，显式按需导入，随 Desktop App 本地打包；不得使用 CDN、`latest` URL 或运行时远程请求；
+- 默认使用彩色品牌图标，但颜色只帮助识别，不代表 connected/error/selected；文本、check、状态摘要与 accessible name 仍是 authority；
+- 在 Web presentation owner 中建立一个薄的 model-service icon resolver；resolver 只把已知的稳定 runtime identity 映射为本地组件，不向 Server contract回写 icon slug/URL，也不参与 auth、catalog、capability、default 或 send gate；
+- overview、添加搜索、详情页与 Composer model-service 分组复用同一 resolver；同品牌多实例共享品牌图标，以用户命名和非敏感实例标签消歧，不展示完整 UUID；
+- 未命中的 builtin/model 使用统一模型服务 glyph或所属 service 图标；custom API 使用中性 API/连接 glyph；Extension 没有既有 trusted 本地资产时使用统一 Extension glyph；
+- model-specific icon 只在 runtime model identity 与已打包 asset精确匹配时使用，绝不维护静态 model-slug catalog来追求覆盖率；
+- 同一 implementation commit 同步 package/lock、MIT license/legal/SBOM、tree-shaking/bundle-size 与 packaged offline proof。
+
+LobeHub 不是 Provider/Model authority，也不是新的产品 Registry。图标缺失必须安全退化为中性视觉，不能让真实 Pi service/model 从 UI 消失。
 
 ### 3.3 产品结构
 
@@ -669,6 +685,9 @@ E2 typed auth bridge 已稳定；Pi provider metadata 明确暴露 OAuth capabil
 - 同品牌 built-in 支持 OAuth，不代表任意 custom id 自动支持；
 - logout 只影响目标 service instance；
 - stock Pi OAuth 不进入此页面。
+- browser loopback completion/error 使用亮色 OmniMind品牌与OmniMind图标，并通过同一request-scoped renderer覆盖真实接线的browser callback providers；不为OpenAI或其他单一供应商复制页面；
+- callback收到授权只显示“已收到授权/Authorization received”，Pi完成token exchange和credential commit前不得声称“登录成功/已连接”；App中的同一typed login outcome仍是唯一成功authority；
+- renderer只接收安全展示状态，不接收code、token、Provider message/details或原始诊断；缺失/失败时保留stock页面，device-code、state validation、token exchange与callback server保持Pi owner。
 
 ### Exit
 
@@ -756,10 +775,14 @@ deepseek-research
 - Git writing default 的精确新归属可以在本slice内后定，但 E7 Exit 前必须二选一：迁移到真实调用功能并恢复可达搜索/deep-link，或由维护者明确退休该产品能力；不能以 `defer` 静默删除唯一入口；
 - 独立 Engine custom slug 控件归 `Agent engines` 对应 detail，底层 storage 不迁移；
 - Pi Extension 模型服务是 V1 必达能力：被动 Settings 页面不得执行 Extension；用户显式进入添加流程后，复用 Pi 既有 ResourceLoader/Session provenance owner 做 intent-scoped 加载，并让真实 Extension provider 可搜索、可进入 detail，origin准确为 `extension`；
+- 锁定 OmniMind Agent runtime 已暴露的 manager/loader/settings/trust 与 install/update/remove/reload/enable lifecycle 必须通过既有 Agent skills/Engine detail owner可发现、可操作、可恢复；只有runtime确实未暴露的动作才隐藏，不复制package manager、不建立跨Provider共享Package state；
 - legacy `customOmniMindModels` 不再由新 UI 创建，既有值无损读取并提供显式转化/移除；
 - 普通 UI `OmniMind`，技术 detail `OmniMind Agent`；
 - 不用可翻译 title 当稳定 anchor；
 - service deep-link 只携带非敏感 id。
+- overview、添加、详情在同一 Settings pane 内互斥；概览只列configured/recoverable/currently-blocking实例，添加页以搜索和紧凑键盘列表为主，详情替换列表并在返回时恢复query/scroll/focus；禁止四十项卡片墙或把详情追加到长列表底部；
+- 模型服务视觉使用 §3.2.1 的单一 presentation resolver：彩色 LobeHub 资产随 App 本地打包，Engine `ProviderIcon` 不改，unknown/custom/Extension 安全降级；正常 UI 不暴露完整 service UUID；
+- overview、添加搜索、详情页与 Composer service group 的 icon/name/status保持一致；logo缺失不影响真实service/model可见性，状态不只靠颜色；
 
 ### A11y/响应式
 
@@ -785,6 +808,7 @@ Settings 中不存在两个页面管理同一 credential/model-service lifecycle
 # Web unit
 bun test \
   apps/web/src/components/ProviderIcon.test.tsx \
+  apps/web/src/components/ModelServiceIcon.test.tsx \
   apps/web/src/components/composerFooterLayout.test.ts \
   apps/web/src/composerDraftStore.models.test.ts \
   apps/web/src/hooks/useProviderModelCatalog.test.tsx \
@@ -879,6 +903,7 @@ fresh launch
 | --------------------- | --------------------------------------------------------------------------------- |
 | 普通显示名 `OmniMind` | `packages/contracts/src/model.ts`、明确的 UI-only hardcoded consumers、i18n/tests |
 | Engine icon           | `apps/web/src/components/ProviderIcon.tsx`（通常不改）                            |
+| Model service icon    | Web presentation 内局部 `ModelServiceIcon`/resolver、`@lobehub/icons` explicit imports；不进入 Server Registry/contract |
 | Engine picker         | `ChatView.tsx`、`ProviderModelPicker.tsx` 或局部 `ComposerEnginePicker.tsx`       |
 | Model + options       | `ComposerModelEffortPicker.tsx`、`TraitsPicker.tsx`、`composerTraits.ts`          |
 | Footer 响应式         | `composerFooterLayout.ts`                                                         |
@@ -936,9 +961,10 @@ fresh launch
 11. 测试为了方便迫使生产增加第二状态/接口；
 12. packaged journey 使用默认 profile，无法证明 private-home isolation；
 13. UI diff 扩张成 Settings taxonomy 或视觉系统重做；
-14. 同一失败重复且没有新假设。
-15. 锁定 Pi runtime 对 `models.json` 只有 path-based direct reopen，无法注入 physically-contained、bounded、cancellable reader；此时不得 patch vendor、落 secret-bearing temp copy或复制 Pi schema。E1 保持 blocked，可按依赖图转入 E3；E2 仍 gated。
-16. Pi intake 后 `provider_default` 仍依赖 select prompt 首项；只有该首项继续由上游明确标为 default/recommended 时才可自动采用，否则 fail closed 到显式用户选择，不新增 Host auth Registry。
+14. 为图标覆盖开始维护第二 Provider/Model Registry、静态 model-slug 目录、远程 CDN/URL、运行时下载或 Server icon authority；缺失图标必须用本地中性 glyph fail soft；
+15. 同一失败重复且没有新假设；
+16. 锁定 Pi runtime 对 `models.json` 只有 path-based direct reopen，无法注入 physically-contained、bounded、cancellable reader；此时不得 patch vendor、落 secret-bearing temp copy或复制 Pi schema。E1 保持 blocked，可按依赖图转入 E3；E2 仍 gated；
+17. Pi intake 后 `provider_default` 仍依赖 select prompt 首项；只有该首项继续由上游明确标为 default/recommended 时才可自动采用，否则 fail closed 到显式用户选择，不新增 Host auth Registry。
 
 停止后只允许：
 
@@ -967,6 +993,7 @@ Stop condition: <本切片最可能触发的真实门>
 
 - 普通 UI 使用 `OmniMind`，技术语境保留 `OmniMind Agent`；
 - 所有 Engine 复用唯一 icon registry；
+- 模型服务视觉复用唯一、本地打包的 LobeHub presentation resolver；Engine icon owner 不变，unknown/custom/Extension 有本地 fallback，图标不参与 identity/capability；
 - Model services 真实调用 Pi ModelRuntime，不复制供应商实现；
 - API Key/OAuth/refresh/custom instance 只按 Pi capability 出现；
 - `.omnimind` 与 `.pi` 隔离；

@@ -38,7 +38,7 @@ Status: local source observation + maintainer-confirmed product direction + impl
 
 如果本文与上述 owner 冲突，不能凭本文“更详细”而选本文。应先修正 owner 或更新本文的过期观察。本文不得演变成第二份产品规范、第二份 Provider Registry 或第二份 Campaign。
 
-### 0.1 Owner 裁决已同步，产品实现尚未同步
+### 0.1 Owner 与当前 candidate 已同步，Exit 仍由执行门裁决
 
 维护者已明确选择设置页名称 **`Model services / 模型服务`**，并要求它成为 OmniMind Agent 的模型服务配置中心。该 UI 裁决已写入 [`../architecture/workbench.md`](../architecture/workbench.md#6-settings)，runtime/Host/private-state authority 已写入 [`../architecture/execution.md`](../architecture/execution.md#omnimind-agent-model-services-authority)，不再与 sole owner 冲突。Owner 同时固定以下最小边界：
 
@@ -46,11 +46,11 @@ Status: local source observation + maintainer-confirmed product direction + impl
 - 只重写这个 section 的产品职责和文案，不发起整个 Settings taxonomy 重构；
 - `Agent engines` 继续是独立 Engine 的安装、认证和原生配置入口；
 - `Model services` 主要配置 OmniMind Agent 的 Pi ModelRuntime；
-- Git writing default 退出 Model services；它属于实际调用 Git text generation 的功能设置。新归属尚未由 sole owner 固定前只保留底层字段与既有兼容，不在本切片猜测新的 Settings 位置；
-- “添加模型服务”以搜索/选择 Pi runtime 真实服务为主路径，以列表尾部弱一级的“通过 API 地址连接”为低频补充；后者在 E6 gate 打开前只定义 IA，不施工 mutation；
+- Git writing default 已退出 Model services，底层字段与兼容仍保留；E7 Exit 前必须迁入真实调用功能并恢复搜索/deep-link，或由维护者明确退休，不能把当前无入口状态永久化；
+- “添加模型服务”以搜索/选择 Pi runtime 真实服务为主路径，以列表尾部弱一级的“通过 API 地址连接”为低频补充；后者的 E6 typed mutation 与 packaged journey已形成candidate，是否Exit只按`execution-brief.md`的fresh audit门裁决；
 - 普通 UI、Composer、Engine menu、Model services、tooltip 与 aria-label 使用 `OmniMind`；`OmniMind Agent` 只作为技术实体全称进入 runtime、技术详情、诊断、About、Licenses 与来源语境。
 
-当前仍未同步的是部分产品代码：`apps/web/src/i18n.tsx`、`settingsNavigation.ts` 和 `ModelsSettingsPanel.tsx` 仍保留旧的“Git 写作 + 独立 Engine custom model slug”页面职责。它们是 E7 Settings cleanup 的实现缺口；在新归属未固定前不能为了移出页面而另造 taxonomy。
+当前 cumulative candidate 已完成 Model services职责收缩、built-in搜索/详情、独立Engine custom slug归位、OAuth与custom API主旅程、双实例消歧和正常产品语言；这些都是producer candidate，不由本文改写为Exit。尚未实现的E7产品面是：本地LobeHub视觉resolver、intent-scoped Extension服务投影、Pi native ecosystem/package lifecycle可达性，以及Git writing最终归属/退休裁决。任何新会话必须先读取`execution-brief.md`的精确SHA和audit门，不能按本文旧source snapshot重复施工已形成candidate的E5/E6。
 
 ## 1. 设计结论
 
@@ -773,7 +773,7 @@ trigger 应按 capability 生成最小摘要，例如：
 
 - `GPT-5.6 Sol · Max · ⚡`；
 - `Claude Opus 4.8 · High`；
-- `DeepSeek Chat · Medium`；
+- `DeepSeek V4 Pro · Thinking`；
 - `GPT-5 · Build`。
 
 默认值可省略，异常/显式值优先显示。不要显示：
@@ -1140,7 +1140,7 @@ Pi 当前没有公开的持久 custom-provider mutation API
 │ 小米 MiMo、OpenAI、Anthropic 等                         [查看]  │
 │                                                                 │
 │ [＋ 添加模型服务]                                                │
-│   搜索/选择 Pi runtime 服务                                     │
+│   搜索/选择模型服务                                             │
 │   没有找到？通过 API 地址连接 →                                 │
 └─────────────────────────────────────────────────────────────────┘
 ```
@@ -1154,6 +1154,16 @@ Pi 当前没有公开的持久 custom-provider mutation API
 - 当前可用模型数量；
 - disclosure chevron。
 
+这不是“给现有页面加 Logo”的装饰性修改，而是固定的信息层级：
+
+- 概览、添加、详情在同一 Settings pane 中互斥呈现，不纵向拼成一个超长页面；
+- 概览只有已配置/可恢复/当前阻塞的实例和一个主 CTA，不展示完整 supported-provider catalog；
+- 添加页以搜索为第一焦点，结果是紧凑、可键盘导航的 service rows，不是四十张同权大卡片；API 地址入口只在尾部以较弱文本动作出现；
+- 详情页替换添加/概览内容，返回时恢复搜索 query、scroll 与触发项 focus；不能把登录或配置表单追加在长列表尾部，再靠测试直接查询 DOM 假装用户能看见；
+- 单行只设一个明确的点击目标。图标与名称负责身份，文字状态负责可用性，模型数/来源负责补充判断；不同时堆叠“已连接”“内置”“OAuth”“API Key”“可用”等 badge；
+- 复用现有 Settings typography、spacing、divider、surface 和 focus token。默认保持轻、平、克制，用分组与留白表达层级，不增加每服务一张重边框/渐变/阴影卡片的视觉噪声；
+- 窄宽度下名称和主动作优先，次要元数据换行或下沉；不能横向滚动、截断恢复动作或把状态只压成颜色点。
+
 主列表不应把 Pi 的全部 built-in provider 都铺成几十条“需要配置”，那会把“Pi 支持范围”误作用户资产并制造噪声。主列表只包含：
 
 - 已有 stored/runtime/environment/models-json auth 的 service；
@@ -1162,7 +1172,11 @@ Pi 当前没有公开的持久 custom-provider mutation API
 
 其余 Pi-supported provider 放在“可连接的服务 / 添加服务”入口中搜索。是否“已连接”必须来自 `getProviderAuthStatus()`/`checkAuth()` 的安全投影，不能只看 auth.json：环境变量、AWS/ADC 等 ambient auth、models.json fallback 都可能令 service 可用。
 
-Logo 不是 provider identity 的前提。Pi provider metadata 当前保证 id/name/auth/model 行为，不保证完整品牌图标。优先复用 OmniMind 已有、经过审计的品牌资产；没有时使用统一模型服务 glyph + provider name，不复制 Proma 的大规模静态 logo map，也不从未知 URL 远程加载图标。
+Logo 不是 provider identity 的前提。Pi provider metadata 当前保证 id/name/auth/model 行为，不保证完整品牌图标。维护者已选择 [LobeHub Icons](https://github.com/lobehub/lobe-icons) 作为 Model services 的品牌视觉资产来源：其官方 React package支持按需/tree-shakable组件并以 MIT 许可发布。E7 使用精确锁定版本的 `@lobehub/icons`、显式导入实际资产并随 App 本地打包；不使用 CDN、`latest` URL、远程图片或未知 Extension URL，也不把 package 的品牌集合复制成 OmniMind Provider Registry。
+
+实现上只允许一个 Web-owned、presentation-only 的 model-service icon resolver：输入是 Pi 已投影的稳定 service/provider identity与origin，输出是已打包的图标组件或中性 fallback。resolver 不决定服务是否存在、display name、认证、catalog、模型、capability或send gate，不进入 Server contract，不把品牌命中当 identity 证明。OpenAI、Anthropic、DeepSeek、Xiaomi、Google 等已知服务默认使用彩色资产；custom API 使用中性 API/连接 glyph；Extension 仅在既有 trusted provenance owner提供安全本地资产时采用，否则使用统一 Extension glyph。状态仍用文字/check/结构表达，不能只靠颜色。
+
+模型专属图标是有界增强：只有 runtime model identity 与本地已打包 LobeHub asset精确匹配时显示，否则继承所属服务图标。不得为每个新 model slug 扩一张 Host 静态镜像，也不得让 icon miss 隐藏模型。同品牌多个实例共享品牌图标，以用户命名和稳定、非敏感的实例标签消歧；完整 UUID 只进入主动展开的技术详情。overview、添加搜索、详情页与 Composer 的model-service分组复用同一resolver，避免每个consumer各建一套品牌判断。
 
 不默认显示：
 
@@ -1192,7 +1206,7 @@ OmniMind Agent 即使有 Pi built-in providers，也可能没有 configured cred
 
 ```text
 还没有可用的模型服务
-连接一个 Pi 支持的模型服务后，OmniMind 才能发送消息。
+连接模型服务并选择可用模型后，OmniMind 才能发送消息。
 
 [添加模型服务]
 ```
@@ -1284,8 +1298,8 @@ DeepSeek Research  -> providerId: deepseek-research
 │                                                             │
 │ 模型                                      [从供应商获取]     │
 │ ┌─────────────────────────────────────────────────────────┐ │
-│ │ DeepSeek Chat                              可用          │ │
-│ │ DeepSeek Reasoner                          可用          │ │
+│ │ DeepSeek V4 Flash                          可用          │ │
+│ │ DeepSeek V4 Pro                            可用          │ │
 │ └─────────────────────────────────────────────────────────┘ │
 │                                                             │
 │ 高级设置                                                    │
@@ -1346,6 +1360,10 @@ DeepSeek Research  -> providerId: deepseek-research
 - stock Pi OAuth 仍由 stock Pi 自己拥有，不能借 OmniMind Agent 页面改 `.pi`。
 
 多实例 OAuth 还必须尊重 §10.11：只有该 instance 的有效 Pi provider/extension 真正暴露 OAuth capability 才显示登录；不能因为同品牌 built-in id 支持 OAuth，就把能力按品牌名复制给自定义 id。
+
+浏览器 loopback callback 页面属于同一 E5 产品旅程，但不拥有登录成功事实。OpenAI Codex、Anthropic、OpenRouter、Radius 等真实接线 provider共用一个request-scoped、default-preserving presentation seam；页面使用亮色 OmniMind视觉与OmniMind图标，不复制成单供应商品牌页。callback server 收到 authorization code 时只显示“已收到授权/Authorization received，请返回 OmniMind 完成连接”，因为部分Pi flow会在响应页面之后才进行token exchange。只有 App 内 `ModelRuntime.login()` 的最终typed outcome才能显示登录成功；exchange失败时页面历史文案不得被解释成已连接。
+
+renderer输入必须收窄为安全展示状态，例如`authorization_received | error`，不得接收code、token、Provider message/details或原始诊断。renderer缺失或失败时回到stock Pi页面；不得移动、复制或旁路Pi的callback server、state validation、token exchange、cancel与device-code owner。
 
 ### 10.15 “从供应商获取”
 
@@ -1514,7 +1532,7 @@ Proma 检查范围：
 - per-model enabled 语义；
 - 以 URL 域名猜 provider identity；
 - provider-specific compat 补偿；
-- Proma 的静态 model/provider logo mapping；
+- Proma 的静态 model/provider logo mapping和由logo推断provider能力；品牌视觉只按§10.8使用LobeHub的本地presentation resolver，Pi仍是identity/capability owner；
 - 硬编码中文、缺少统一 i18n 的实现方式。
 
 OmniMind 要复制的是 **任务流质量**，不是 Proma 的维护负担。
@@ -1664,6 +1682,7 @@ Composer 与所有 direct consumer 都必须先按现有优先级解析 exact se
 - [ ] independent Engine custom slugs 准确归位；
 - [ ] legacy `customOmniMindModels` 不再新增，既有值无损兼容且不自动伪造 Pi config；
 - [ ] 双语、响应式、键盘、screen reader 和 packaged restart 通过。
+- [ ] 模型服务彩色品牌图标来自单一、本地打包的LobeHub presentation resolver；Engine图标owner不变，unknown/custom/Extension安全fallback，状态不只靠颜色，legal/SBOM与offline package闭合。
 
 ## 11. 组件与 owner 复用决策
 
@@ -1711,6 +1730,8 @@ ComposerEnginePicker.tsx
 - 模型菜单或 traits schema。
 
 Model services 可以新增页面内的局部 list/detail/form composition，但它们只消费 typed Host projection。认证、catalog refresh、custom provider persistence 和 secret redaction 必须留在 Server/Pi owner，不能放进 React component。
+
+E7 可以新增一个局部 `ModelServiceIcon`/resolver，精确锁定并显式导入 `@lobehub/icons`。它只服务overview、添加搜索、detail与Composer service-group presentation；Engine `ProviderIcon`保持原owner，Server contract不增加icon slug/URL，unknown/custom/Extension按§10.8本地fallback。同一提交必须闭合lockfile、MIT legal/SBOM、tree-shaking与packaged offline证据。
 
 ### 11.3 不应新增
 
@@ -1814,11 +1835,12 @@ Model services 可以新增页面内的局部 list/detail/form composition，但
 
 1. 新增/修改用户可见字符串必须 zh-CN/en key 一一对应；
 2. 清理触达路径中的硬编码英文：Effort、Variant、Speed、Default、Fast、Agent、Mode、Checking、Sign in、Unavailable、Coming soon 等；
-3. browser test 覆盖窄宽、键盘和 focus；
-4. 完成 focused server/web tests；
-5. 按项目规则从 exact pushed SHA 重建 packaged App；
-6. 使用 fresh、任务专用 profile 验证启动、真实 journey、关闭和重开；
-7. 不读取或迁移真实用户 `.pi`、`.omnimind`。
+3. 按§10.8接入锁定、按需、本地打包的LobeHub彩色模型服务图标，保持Engine `ProviderIcon` owner不变并完成fallback/legal/SBOM；
+4. browser test 覆盖overview/add/detail/Composer图标一致性、窄宽、键盘、focus和非颜色状态；
+5. 完成 focused server/web tests；
+6. 按项目规则从 exact pushed SHA 重建 packaged App；
+7. 使用 fresh、任务专用 profile 验证启动、真实 journey、关闭和重开；
+8. 不读取或迁移真实用户 `.pi`、`.omnimind`。
 
 ## 13. 预计触达文件
 
@@ -1978,6 +2000,7 @@ fresh launch
 - [ ] Settings mutation 能正确刷新 Composer catalog/selection；
 - [ ] Context meter 右侧存在可访问的 Engine icon picker；
 - [ ] Engine menu 使用唯一 registry/display/icon source；
+- [ ] Model services 使用唯一、本地打包的LobeHub presentation resolver；overview/add/detail/Composer分组一致，Engine icon owner不变，unknown/custom/Extension安全fallback，logo不参与identity/capability；
 - [ ] 打开菜单不会越过 Pi intent gate；
 - [ ] 选择 Engine 后恢复/选择目标 Engine 的有效模型；
 - [ ] 无模型时 fail closed，不跨 Engine 猜默认；
@@ -2073,6 +2096,7 @@ fresh launch
 
 - Pi package 版本、vendor tarball 或 `ModelRuntime` API 变化；
 - `ProviderKind`、display name、icon registry 变化；
+- `@lobehub/icons` version/export/license、model-service resolver或packaged asset closure变化；
 - `ModelSelection` schema 或 draft persistence 变化；
 - `useProviderModelCatalog` discovery/prefetch/intent gating 变化；
 - `ProviderService` replacement/generation/restore 变化；
@@ -2119,6 +2143,7 @@ fresh launch
 | 切换只影响下一次发送，不破坏当前 turn                                             | §7                       | 已覆盖；包含 Queue、stop-first、失败恢复和 provenance          |
 | 奥卡姆剃刀与未来维护成本                                                          | §1.3、§11–§12、§16–§17   | 已覆盖；复用现有 owner 并写明 stop-loss                        |
 | 页面必须真正用户化、详细、双语、可访问                                            | §5、§10.8–10.21、§14–§15 | 已覆盖；含 ASCII、状态、错误、响应式和 packaged journey        |
+| 模型服务使用LobeHub彩色品牌图标，但不建立第二identity/capability authority         | §10.8、§11、§15          | 已覆盖；本地锁定、按需导入、fallback、legal/SBOM与offline边界  |
 
 审计结论：**修订后的本文已经同时覆盖 Model services Settings 与 Composer 两条主线；上一版“只深写 Composer、浅写 Settings”的问题已纠正。Workbench 与 Execution sole owner 均已完成同步；仍未生效的是后续产品实现与真实验收。**
 
