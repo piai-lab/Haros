@@ -23,6 +23,27 @@ const BoundedDisplayName = TrimmedNonEmptyString.check(
   ),
 );
 export const OMNIMIND_MODEL_SERVICES_MAX_COUNT = 512;
+export const OMNIMIND_MODEL_SERVICE_MODELS_MAX_COUNT = 4_096;
+
+const BoundedModelId = TrimmedNonEmptyString.check(
+  Schema.isMaxLength(512),
+  Schema.isPattern(/^[^\u0000-\u001f\u007f-\u009f\u061c\u200e\u200f\u202a-\u202e\u2066-\u2069]+$/u),
+);
+
+export const OmniMindModelServiceModel = Schema.Struct({
+  modelId: BoundedModelId,
+  displayName: BoundedDisplayName,
+  available: Schema.Boolean,
+  reasoning: Schema.Boolean,
+  input: Schema.Array(Schema.Literals(["text", "image"])).check(Schema.isMaxLength(2)),
+  contextWindow: NonNegativeInt,
+  maxTokens: NonNegativeInt,
+});
+export type OmniMindModelServiceModel = typeof OmniMindModelServiceModel.Type;
+
+const BoundedServiceModels = Schema.Array(OmniMindModelServiceModel).check(
+  Schema.isMaxLength(OMNIMIND_MODEL_SERVICE_MODELS_MAX_COUNT),
+);
 
 export const OmniMindModelServiceOrigin = Schema.Literals([
   "builtin",
@@ -133,6 +154,7 @@ export const OmniMindModelServicesGetResult = Schema.Union([
   Schema.Struct({
     state: Schema.Literal("ready"),
     service: OmniMindModelServiceDescriptor,
+    models: Schema.optional(BoundedServiceModels),
     errorCode: Schema.Null,
   }),
   Schema.Struct({

@@ -267,6 +267,20 @@ describe("OmniMindModelServicesLive", () => {
         authState: "setup_required",
         availableModelCount: 0,
       }),
+      models: expect.arrayContaining([
+        expect.objectContaining({
+          modelId: "deepseek-v4-flash",
+          displayName: "DeepSeek V4 Flash",
+          available: false,
+          reasoning: true,
+        }),
+        expect.objectContaining({
+          modelId: "deepseek-v4-pro",
+          displayName: "DeepSeek V4 Pro",
+          available: false,
+          reasoning: true,
+        }),
+      ]),
     });
     expect(await readdir(agentDir)).toEqual([]);
   });
@@ -1221,6 +1235,9 @@ describe("OmniMindModelServicesLive", () => {
         catalogState: "ready",
       }),
     );
+    expect(result.deepseek.state).toBe("ready");
+    if (result.deepseek.state !== "ready") throw new Error("Expected DeepSeek detail");
+    expect(result.deepseek.models).toBeDefined();
     expect(JSON.stringify(result)).not.toContain(agentDir);
     expect(JSON.stringify(result)).not.toContain("redacted.example.test");
     expect(JSON.stringify(result)).not.toContain("not-projected");

@@ -9,6 +9,7 @@ import {
   type OmniMindModelServiceAuthResult,
   type OmniMindModelServiceDescriptor,
   type OmniMindModelServiceOAuthPromptMode,
+  type OmniMindModelServiceModel,
 } from "@omnimind/contracts";
 import { useQuery, useQueryClient } from "@tanstack/react-query";
 import {
@@ -118,7 +119,7 @@ function ActiveModelsSettingsPanel({
   resetEpoch,
   active,
 }: AppSettingsBinding & { readonly resetEpoch: number; readonly active: boolean }) {
-  const { t } = useI18n();
+  const { locale, t } = useI18n();
   const queryClient = useQueryClient();
   const authRequestControllerRef = useRef<AbortController | null>(null);
   const authRequestIdRef = useRef<string | null>(null);
@@ -131,6 +132,7 @@ function ActiveModelsSettingsPanel({
   const [selectedModelServiceId, setSelectedModelServiceId] = useState<string | null>(null);
   const [modelServiceBrowserOpen, setModelServiceBrowserOpen] = useState(false);
   const [modelServiceSearch, setModelServiceSearch] = useState("");
+  const [modelServiceModelSearch, setModelServiceModelSearch] = useState("");
   const [modelServiceDetailReturnView, setModelServiceDetailReturnView] = useState<
     "overview" | "browser"
   >("overview");
@@ -174,6 +176,7 @@ function ActiveModelsSettingsPanel({
     setSelectedModelServiceId(null);
     setModelServiceBrowserOpen(false);
     setModelServiceSearch("");
+    setModelServiceModelSearch("");
     setModelServiceDetailReturnView("overview");
     void cancelCurrentAuthRequest();
     setAuthDialog(null);
@@ -182,6 +185,13 @@ function ActiveModelsSettingsPanel({
     setModelServiceNotice(null);
   });
   const selectedModelService = modelServiceDetailQuery.data?.service ?? null;
+  const projectedModelServiceModels =
+    modelServiceDetailQuery.data?.state === "ready"
+      ? modelServiceDetailQuery.data.models
+      : undefined;
+  const selectedModelServiceModelsKnown = projectedModelServiceModels !== undefined;
+  const selectedModelServiceModels: ReadonlyArray<OmniMindModelServiceModel> =
+    projectedModelServiceModels ?? [];
   const selectedModelServiceApiKeyMethod = selectedModelService?.authMethods.find(
     (method) => method.type === "api_key" && method.canLogin,
   );
@@ -569,9 +579,31 @@ function ActiveModelsSettingsPanel({
     );
   }, [connectableModelServices, modelServiceInstanceLabel, modelServiceSearch]);
 
+  const filteredSelectedModelServiceModels = useMemo(() => {
+    const query = modelServiceModelSearch.trim().toLocaleLowerCase(locale);
+    if (!query) return selectedModelServiceModels;
+    return selectedModelServiceModels.filter((model) =>
+      [model.displayName, model.modelId].some((value) =>
+        value.toLocaleLowerCase(locale).includes(query),
+      ),
+    );
+  }, [locale, modelServiceModelSearch, selectedModelServiceModels]);
+
+  const modelContextLabel = useCallback(
+    (model: OmniMindModelServiceModel) =>
+      t("settings.modelServiceContextWindow", {
+        count: new Intl.NumberFormat(locale, {
+          notation: "compact",
+          maximumFractionDigits: 1,
+        }).format(model.contextWindow),
+      }),
+    [locale, t],
+  );
+
   const openModelServiceDetails = useCallback(
     (serviceId: string, returnView: "overview" | "browser") => {
       setModelServiceDetailReturnView(returnView);
+      setModelServiceModelSearch("");
       setSelectedModelServiceId(serviceId);
     },
     [],
@@ -579,6 +611,7 @@ function ActiveModelsSettingsPanel({
 
   const closeModelServiceDetails = useCallback(() => {
     setSelectedModelServiceId(null);
+    setModelServiceModelSearch("");
     setModelServiceBrowserOpen(modelServiceDetailReturnView === "browser");
   }, [modelServiceDetailReturnView]);
 
@@ -844,115 +877,202 @@ function ActiveModelsSettingsPanel({
                 </div>
               </SettingsEmptyState>
             ) : selectedModelService ? (
-              <SettingsCard>
-                <SettingsListRow
-                  title={t("settings.modelServiceAuthentication")}
-                  description={modelServiceAuthLabel(selectedModelService)}
-                  actions={
-                    <div className="flex max-w-[min(24rem,55vw)] flex-wrap items-center justify-end gap-2">
-                      <span
-                        className="break-words text-right text-xs text-muted-foreground"
-                        title={
-                          selectedModelService.authMethods.length > 0
+              <div className="space-y-4">
+                <SettingsCard>
+                  <SettingsListRow
+                    title={t("settings.modelServiceAuthentication")}
+                    description={modelServiceAuthLabel(selectedModelService)}
+                    actions={
+                      <div className="flex max-w-[min(24rem,55vw)] flex-wrap items-center justify-end gap-2">
+                        <span
+                          className="break-words text-right text-xs text-muted-foreground"
+                          title={
+                            selectedModelService.authMethods.length > 0
+                              ? selectedModelService.authMethods
+                                  .map((method) => method.label)
+                                  .join(" · ")
+                              : undefined
+                          }
+                        >
+                          {selectedModelService.authMethods.length > 0
                             ? selectedModelService.authMethods
                                 .map((method) => method.label)
                                 .join(" · ")
-                            : undefined
-                        }
-                      >
-                        {selectedModelService.authMethods.length > 0
-                          ? selectedModelService.authMethods
-                              .map((method) => method.label)
-                              .join(" · ")
-                          : t("settings.modelServiceNoInteractiveAuth")}
-                      </span>
-                      {selectedModelServiceApiKeyMethod ? (
-                        <Button
-                          size="sm"
-                          variant="outline"
-                          disabled={modelServiceMutation !== null || authDialog !== null}
-                          onClick={() =>
-                            void beginModelServiceLogin(selectedModelService, "api_key")
-                          }
-                        >
-                          {selectedModelService.storedCredentialType === "api_key"
-                            ? t("settings.replaceApiKey")
-                            : t("settings.addApiKey")}
-                        </Button>
-                      ) : null}
-                      {selectedModelServiceOAuthMethod ? (
-                        <Button
-                          size="sm"
-                          variant="outline"
-                          disabled={modelServiceMutation !== null || authDialog !== null}
-                          onClick={() => void beginModelServiceLogin(selectedModelService, "oauth")}
-                        >
-                          {selectedModelService.storedCredentialType === "oauth"
-                            ? t("settings.signInAgain")
-                            : t("settings.signInWithBrowser")}
-                        </Button>
-                      ) : null}
-                      {selectedModelService.storedCredentialType === "api_key" ? (
-                        <Button
-                          size="sm"
-                          variant="ghost"
-                          disabled={modelServiceMutation !== null || authDialog !== null}
-                          onClick={() => setLogoutService(selectedModelService)}
-                        >
-                          {t("settings.removeApiKey")}
-                        </Button>
-                      ) : null}
-                      {selectedModelService.storedCredentialType === "oauth" ? (
-                        <Button
-                          size="sm"
-                          variant="ghost"
-                          disabled={modelServiceMutation !== null || authDialog !== null}
-                          onClick={() => setLogoutService(selectedModelService)}
-                        >
-                          {t("settings.signOutModelService")}
-                        </Button>
-                      ) : null}
-                    </div>
-                  }
-                />
-                <SettingsListRow
-                  title={t("settings.modelServiceCatalog")}
-                  description={t("settings.modelServiceModelCounts", {
-                    known: selectedModelService.knownModelCount,
-                    available: selectedModelService.availableModelCount,
-                  })}
-                  actions={
-                    <div className="flex flex-wrap items-center justify-end gap-2">
+                            : t("settings.modelServiceNoInteractiveAuth")}
+                        </span>
+                        {selectedModelServiceApiKeyMethod ? (
+                          <Button
+                            size="sm"
+                            variant="outline"
+                            disabled={modelServiceMutation !== null || authDialog !== null}
+                            onClick={() =>
+                              void beginModelServiceLogin(selectedModelService, "api_key")
+                            }
+                          >
+                            {selectedModelService.storedCredentialType === "api_key"
+                              ? t("settings.replaceApiKey")
+                              : t("settings.addApiKey")}
+                          </Button>
+                        ) : null}
+                        {selectedModelServiceOAuthMethod ? (
+                          <Button
+                            size="sm"
+                            variant="outline"
+                            disabled={modelServiceMutation !== null || authDialog !== null}
+                            onClick={() =>
+                              void beginModelServiceLogin(selectedModelService, "oauth")
+                            }
+                          >
+                            {selectedModelService.storedCredentialType === "oauth"
+                              ? t("settings.signInAgain")
+                              : t("settings.signInWithBrowser")}
+                          </Button>
+                        ) : null}
+                        {selectedModelService.storedCredentialType === "api_key" ? (
+                          <Button
+                            size="sm"
+                            variant="ghost"
+                            disabled={modelServiceMutation !== null || authDialog !== null}
+                            onClick={() => setLogoutService(selectedModelService)}
+                          >
+                            {t("settings.removeApiKey")}
+                          </Button>
+                        ) : null}
+                        {selectedModelService.storedCredentialType === "oauth" ? (
+                          <Button
+                            size="sm"
+                            variant="ghost"
+                            disabled={modelServiceMutation !== null || authDialog !== null}
+                            onClick={() => setLogoutService(selectedModelService)}
+                          >
+                            {t("settings.signOutModelService")}
+                          </Button>
+                        ) : null}
+                      </div>
+                    }
+                  />
+                  <SettingsListRow
+                    title={t("settings.modelServiceCatalog")}
+                    description={t("settings.modelServiceModelCounts", {
+                      known: selectedModelService.knownModelCount,
+                      available: selectedModelService.availableModelCount,
+                    })}
+                    actions={
+                      <div className="flex flex-wrap items-center justify-end gap-2">
+                        <span className="text-xs text-muted-foreground">
+                          {modelServiceCatalogLabel(selectedModelService)}
+                        </span>
+                        {selectedModelService.supportsNetworkRefresh ? (
+                          <Button
+                            size="sm"
+                            variant="outline"
+                            disabled={modelServiceMutation !== null || authDialog !== null}
+                            onClick={() => void refreshModelService(selectedModelService)}
+                          >
+                            {modelServiceMutation === `refresh:${selectedModelService.serviceId}`
+                              ? t("settings.modelServiceRefreshing")
+                              : t("settings.refreshModelCatalog")}
+                          </Button>
+                        ) : null}
+                      </div>
+                    }
+                  />
+                  <SettingsListRow
+                    title={t("settings.modelServiceSource")}
+                    description={modelServiceOriginLabel(selectedModelService)}
+                    actions={
                       <span className="text-xs text-muted-foreground">
-                        {modelServiceCatalogLabel(selectedModelService)}
+                        {selectedModelService.supportsNetworkRefresh
+                          ? t("settings.modelServiceSupportsRefresh")
+                          : t("settings.modelServiceStaticCatalog")}
                       </span>
-                      {selectedModelService.supportsNetworkRefresh ? (
-                        <Button
-                          size="sm"
-                          variant="outline"
-                          disabled={modelServiceMutation !== null || authDialog !== null}
-                          onClick={() => void refreshModelService(selectedModelService)}
-                        >
-                          {modelServiceMutation === `refresh:${selectedModelService.serviceId}`
-                            ? t("settings.modelServiceRefreshing")
-                            : t("settings.refreshModelCatalog")}
-                        </Button>
-                      ) : null}
+                    }
+                  />
+                </SettingsCard>
+
+                <div className="space-y-2">
+                  <div className="flex flex-wrap items-end justify-between gap-2 px-2">
+                    <div>
+                      <h3 className="text-sm font-medium text-foreground">
+                        {t("settings.modelServiceModels")}
+                      </h3>
+                      <p className="mt-0.5 text-xs text-muted-foreground">
+                        {t("settings.modelServiceModelsDescription", {
+                          known: selectedModelService.knownModelCount,
+                          available: selectedModelService.availableModelCount,
+                        })}
+                      </p>
                     </div>
-                  }
-                />
-                <SettingsListRow
-                  title={t("settings.modelServiceSource")}
-                  description={modelServiceOriginLabel(selectedModelService)}
-                  actions={
-                    <span className="text-xs text-muted-foreground">
-                      {selectedModelService.supportsNetworkRefresh
-                        ? t("settings.modelServiceSupportsRefresh")
-                        : t("settings.modelServiceStaticCatalog")}
-                    </span>
-                  }
-                />
-              </SettingsCard>
+                  </div>
+
+                  {selectedModelServiceModelsKnown && selectedModelServiceModels.length > 8 ? (
+                    <SearchInput
+                      value={modelServiceModelSearch}
+                      onChange={(event) => setModelServiceModelSearch(event.target.value)}
+                      placeholder={t("settings.searchServiceModels")}
+                      aria-label={t("settings.searchServiceModels")}
+                      spellCheck={false}
+                    />
+                  ) : null}
+
+                  {!selectedModelServiceModelsKnown ? (
+                    <SettingsEmptyState>
+                      {t("settings.modelServiceModelDetailsUnavailable")}
+                    </SettingsEmptyState>
+                  ) : filteredSelectedModelServiceModels.length > 0 ? (
+                    <ul className="grid list-none gap-2 sm:grid-cols-2">
+                      {filteredSelectedModelServiceModels.map((model) => (
+                        <li
+                          key={model.modelId}
+                          className="min-w-0 rounded-xl border border-border bg-foreground/[0.025] px-4 py-3"
+                        >
+                          <div className="min-w-0">
+                            <p className="truncate text-sm font-medium text-foreground">
+                              {model.displayName}
+                            </p>
+                            <p className="mt-0.5 truncate text-xs text-muted-foreground">
+                              {model.modelId}
+                            </p>
+                          </div>
+                          <div className="mt-2 flex flex-wrap gap-1.5">
+                            <span
+                              className={cn(
+                                "rounded-full border px-2 py-0.5 text-[10px]",
+                                model.available
+                                  ? "border-primary/20 bg-primary/5 text-primary"
+                                  : "border-border text-muted-foreground",
+                              )}
+                            >
+                              {model.available
+                                ? t("settings.modelServiceModelAvailable")
+                                : t("settings.modelServiceModelNeedsAuth")}
+                            </span>
+                            {model.reasoning ? (
+                              <span className="rounded-full border border-border px-2 py-0.5 text-[10px] text-muted-foreground">
+                                {t("settings.modelServiceModelThinking")}
+                              </span>
+                            ) : null}
+                            {model.input.includes("image") ? (
+                              <span className="rounded-full border border-border px-2 py-0.5 text-[10px] text-muted-foreground">
+                                {t("settings.modelServiceModelImages")}
+                              </span>
+                            ) : null}
+                            {model.contextWindow > 0 ? (
+                              <span className="rounded-full border border-border px-2 py-0.5 text-[10px] text-muted-foreground">
+                                {modelContextLabel(model)}
+                              </span>
+                            ) : null}
+                          </div>
+                        </li>
+                      ))}
+                    </ul>
+                  ) : selectedModelServiceModels.length > 0 ? (
+                    <SettingsEmptyState>{t("settings.noMatchingServiceModels")}</SettingsEmptyState>
+                  ) : (
+                    <SettingsEmptyState>{t("settings.noServiceModels")}</SettingsEmptyState>
+                  )}
+                </div>
+              </div>
             ) : (
               <SettingsEmptyState layout="status">
                 {t("settings.modelServiceNotFound")}

@@ -25,9 +25,13 @@ import type {
   OmniMindModelServiceOAuthPromptMode,
   OmniMindModelServiceAuthSource,
   OmniMindModelServiceDescriptor,
+  OmniMindModelServiceModel,
   OmniMindModelServicesListResult,
 } from "@omnimind/contracts";
-import { OMNIMIND_MODEL_SERVICES_MAX_COUNT } from "@omnimind/contracts";
+import {
+  OMNIMIND_MODEL_SERVICE_MODELS_MAX_COUNT,
+  OMNIMIND_MODEL_SERVICES_MAX_COUNT,
+} from "@omnimind/contracts";
 import { Effect, Layer } from "effect";
 
 import { ServerConfig } from "../../config.ts";
@@ -51,6 +55,7 @@ import {
 } from "../Services/OmniMindModelServices.ts";
 
 const MAX_SAFE_LABEL_LENGTH = 256;
+const MAX_SAFE_MODEL_ID_LENGTH = 512;
 const MAX_AUTH_INTERACTION_TEXT_LENGTH = 4_096;
 const AUTH_REQUEST_TIMEOUT_MS = 5 * 60 * 1_000;
 const MAX_PENDING_AUTH_REQUESTS = 32;
@@ -73,6 +78,15 @@ function safeIdentifier(value: string): string | null {
     /^(?!\.{1,2}$)[^/\\\u0000-\u001f\u007f-\u009f\u061c\u200e\u200f\u202a-\u202e\u2066-\u2069]+$/u.test(
       value,
     )
+    ? value
+    : null;
+}
+
+function safeModelId(value: string): string | null {
+  return value.length > 0 &&
+    value.length <= MAX_SAFE_MODEL_ID_LENGTH &&
+    value === value.trim() &&
+    /^[^\u0000-\u001f\u007f-\u009f\u061c\u200e\u200f\u202a-\u202e\u2066-\u2069]+$/u.test(value)
     ? value
     : null;
 }
@@ -426,6 +440,7 @@ async function projectModelServices(input: {
   readonly all: ReadonlyArray<OmniMindModelServiceDescriptor>;
   readonly listed: ReadonlyArray<OmniMindModelServiceDescriptor>;
   readonly connectable: ReadonlyArray<OmniMindModelServiceDescriptor>;
+  readonly modelsByServiceId: ReadonlyMap<string, ReadonlyArray<OmniMindModelServiceModel>>;
 }> {
   input.signal.throwIfAborted();
   const sdk = await input.loadModule();
@@ -487,9 +502,13 @@ async function projectModelServices(input: {
   const modelConfigProviderIds = new Set(runtime.getModelConfigProviderIds());
 
   const availableCounts = new Map<string, number>();
+  const availableModelKeys = new Set<string>();
   for (const model of runtime.getAvailableSnapshot()) {
     availableCounts.set(model.provider, (availableCounts.get(model.provider) ?? 0) + 1);
+    availableModelKeys.add(`${model.provider}\u0000${model.id}`);
   }
+
+  const modelsByServiceId = new Map<string, ReadonlyArray<OmniMindModelServiceModel>>();
 
   const descriptors = runtime.getProviders().map<OmniMindModelServiceDescriptor>((provider) => {
     const providerId = safeIdentifier(provider.id);
@@ -497,6 +516,33 @@ async function projectModelServices(input: {
       throw new Error("OmniMind model-services provider identity is invalid");
     }
     const knownModelCount = runtime.getModels(provider.id).length;
+    const projectedModels = runtime
+      .getModels(provider.id)
+      .flatMap<OmniMindModelServiceModel>((model) => {
+        const modelId = safeModelId(model.id);
+        if (!modelId) return [];
+        return [
+          {
+            modelId,
+            displayName: safeDisplayName(model.name, "Model"),
+            available: availableModelKeys.has(`${provider.id}\u0000${model.id}`),
+            reasoning: model.reasoning,
+            input: model.input.filter(
+              (kind): kind is "text" | "image" => kind === "text" || kind === "image",
+            ),
+            contextWindow: Number.isFinite(model.contextWindow)
+              ? Math.max(0, Math.trunc(model.contextWindow))
+              : 0,
+            maxTokens: Number.isFinite(model.maxTokens)
+              ? Math.max(0, Math.trunc(model.maxTokens))
+              : 0,
+          },
+        ];
+      });
+    if (projectedModels.length > OMNIMIND_MODEL_SERVICE_MODELS_MAX_COUNT) {
+      throw new Error("OmniMind model-service catalog is too large");
+    }
+    modelsByServiceId.set(providerId, projectedModels);
     const credentialInfo = credentials.info(provider.id);
     const authStatus = runtime.getProviderAuthStatus(provider.id);
     const authState = credentialInfo?.oauthAccessExpired
@@ -591,6 +637,7 @@ async function projectModelServices(input: {
         service.authState === "setup_required" &&
         service.authMethods.some((method) => method.canLogin),
     ),
+    modelsByServiceId,
   };
 }
 
@@ -886,7 +933,12 @@ export function makeOmniMindModelServicesLive(options: OmniMindModelServicesLive
               const projection = await project(signal);
               const service = projection.all.find((entry) => entry.serviceId === input.serviceId);
               return service
-                ? ({ state: "ready", service, errorCode: null } as const)
+                ? ({
+                    state: "ready",
+                    service,
+                    models: projection.modelsByServiceId.get(service.serviceId) ?? [],
+                    errorCode: null,
+                  } as const)
                 : ({ state: "empty", service: null, errorCode: null } as const);
             } catch {
               signal.throwIfAborted();

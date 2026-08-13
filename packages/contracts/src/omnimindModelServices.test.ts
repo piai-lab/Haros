@@ -7,6 +7,7 @@ import {
   OmniMindModelServiceBeginLoginInput,
   OmniMindModelServicePollLoginInput,
   OmniMindModelServiceDescriptor,
+  OmniMindModelServicesGetResult,
   OmniMindModelServicesGetInput,
   OmniMindModelServicesListResult,
 } from "./omnimindModelServices";
@@ -39,6 +40,41 @@ describe("OmniMind model-services contracts", () => {
     });
 
     expect(decoded.services[0]).toEqual(descriptor);
+  });
+
+  it("decodes bounded public model facts without accepting private runtime fields", () => {
+    const decoded = Schema.decodeUnknownSync(OmniMindModelServicesGetResult)({
+      state: "ready",
+      service: descriptor,
+      models: [
+        {
+          modelId: "deepseek/deepseek-v4-pro",
+          displayName: "DeepSeek V4 Pro",
+          available: true,
+          reasoning: true,
+          input: ["text", "image"],
+          contextWindow: 131_072,
+          maxTokens: 16_384,
+          baseUrl: "https://secret.example.test/v1",
+          headers: { Authorization: "Bearer secret" },
+        },
+      ],
+      errorCode: null,
+    });
+
+    expect(decoded.state).toBe("ready");
+    if (decoded.state !== "ready") throw new Error("Expected ready model-service detail");
+    expect(decoded.models?.[0]).toEqual({
+      modelId: "deepseek/deepseek-v4-pro",
+      displayName: "DeepSeek V4 Pro",
+      available: true,
+      reasoning: true,
+      input: ["text", "image"],
+      contextWindow: 131_072,
+      maxTokens: 16_384,
+    });
+    expect(JSON.stringify(decoded)).not.toContain("secret.example.test");
+    expect(JSON.stringify(decoded)).not.toContain("Authorization");
   });
 
   it("rejects path-shaped get inputs and invalid counts", () => {

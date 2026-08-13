@@ -306,6 +306,7 @@ describe("ModelsSettingsPanel model services", () => {
       .poll(() => document.body.textContent)
       .toContain("settings.modelServiceAuthentication");
     expect(mounted.screen.getByRole("button", { name: "settings.addApiKey" })).toBeTruthy();
+    expect(document.body.textContent).toContain("settings.modelServiceModelDetailsUnavailable");
 
     await mounted.screen.unmount();
     mounted.queryClient.clear();
@@ -344,7 +345,31 @@ describe("ModelsSettingsPanel model services", () => {
       }),
       get: async ({ serviceId }) =>
         serviceId === deepSeek.serviceId
-          ? { state: "ready", service: deepSeek, errorCode: null }
+          ? {
+              state: "ready",
+              service: deepSeek,
+              models: [
+                {
+                  modelId: "deepseek-v4-flash",
+                  displayName: "DeepSeek V4 Flash",
+                  available: true,
+                  reasoning: true,
+                  input: ["text"],
+                  contextWindow: 131_072,
+                  maxTokens: 16_384,
+                },
+                {
+                  modelId: "deepseek-v4-pro",
+                  displayName: "DeepSeek V4 Pro",
+                  available: true,
+                  reasoning: true,
+                  input: ["text", "image"],
+                  contextWindow: 131_072,
+                  maxTokens: 16_384,
+                },
+              ],
+              errorCode: null,
+            }
           : { state: "empty", service: null, errorCode: null },
     });
 
@@ -368,6 +393,10 @@ describe("ModelsSettingsPanel model services", () => {
     await expect
       .poll(() => document.body.textContent)
       .toContain("settings.modelServiceAuthentication");
+    expect(document.body.textContent).toContain("DeepSeek V4 Flash");
+    expect(document.body.textContent).toContain("DeepSeek V4 Pro");
+    expect(document.body.textContent).toContain("settings.modelServiceModelThinking");
+    expect(document.body.textContent).toContain("settings.modelServiceModelImages");
     expect(document.body.textContent).not.toContain("settings.searchModelServices");
 
     await mounted.screen.getByRole("button", { name: "common.back" }).click();
