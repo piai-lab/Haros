@@ -2074,7 +2074,7 @@ export const EN_MESSAGES = {
     "The key is sent directly to the local Pi credential owner and is never stored in OmniMind settings.",
   "settings.modelServiceOAuthTitle": "Sign in · {name}",
   "settings.modelServiceOAuthDescription":
-    "Continue with the provider-owned browser, device-code, or manual-code flow. OmniMind never receives the resulting token.",
+    "Complete sign-in in your browser, or use the device or manual code shown here. The resulting token stays with the local Pi credential store.",
   "settings.modelServiceOpenOAuth": "Continue sign-in in your browser.",
   "settings.modelServiceOpenOAuthAt": "Open {host}",
   "settings.modelServiceOAuthOpenFailed": "The sign-in page could not be opened.",
@@ -4901,7 +4901,7 @@ export const ZH_CN_MESSAGES = {
     "API Key 会直接交给本机 Pi 凭据 owner，不会保存到 OmniMind 设置中。",
   "settings.modelServiceOAuthTitle": "登录 · {name}",
   "settings.modelServiceOAuthDescription":
-    "继续使用供应商提供的浏览器、设备代码或手动代码流程；OmniMind 不会接收最终 token。",
+    "请在浏览器中完成登录，或使用此处显示的设备代码或手动代码；登录令牌只由本机 Pi 凭据存储管理。",
   "settings.modelServiceOpenOAuth": "请在浏览器中继续登录。",
   "settings.modelServiceOpenOAuthAt": "打开 {host}",
   "settings.modelServiceOAuthOpenFailed": "无法打开登录页面。",
