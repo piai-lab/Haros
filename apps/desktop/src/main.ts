@@ -81,7 +81,7 @@ import {
   type BundleSignature,
 } from "./bundleSwapDetection";
 import { waitForBackendStartupReady } from "./backendStartupReadiness";
-import { resolveBackendProxyEnvironment } from "./backendProxyEnv";
+import { applyBackendProxyNodeArgs, resolveBackendProxyEnvironment } from "./backendProxyEnv";
 import { showDesktopConfirmDialog } from "./confirmDialog";
 import {
   desktopAppIconResourceName,
@@ -3417,7 +3417,8 @@ function startBackend(): void {
     return;
   }
 
-  const child = ChildProcess.spawn(process.execPath, [...backendNodeArgs(), backendEntry], {
+  const nodeArgs = applyBackendProxyNodeArgs(backendNodeArgs(), backendProxyEnvironment);
+  const child = ChildProcess.spawn(process.execPath, [...nodeArgs, backendEntry], {
     cwd: resolveBackendCwd(),
     // In Electron main, process.execPath points to the Electron binary.
     // Run the child in Node mode so this backend process does not become a GUI app instance.
