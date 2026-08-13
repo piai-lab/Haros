@@ -102,7 +102,11 @@ import {
   registerEngineWebSurfaceIntent,
   sanitizeEngineWebSurfacePayload,
 } from "../../engineWebSurface/engineWebSurfaceHost.ts";
-import { loadOmniMindCodingAgentModule, resolveOmniMindAgentDir } from "../omnimindAgentRuntime.ts";
+import {
+  createOmniMindModelsConfigReader,
+  loadOmniMindCodingAgentModule,
+  resolveOmniMindAgentDir,
+} from "../omnimindAgentRuntime.ts";
 
 type PiFamilyProvider = Extract<ProviderKind, "pi" | "omnimind">;
 const DEFAULT_PI_THINKING_LEVEL: ThinkingLevel = "medium";
@@ -294,6 +298,16 @@ export function makePiBashProcessSupervisor(
 const loadPiCodingAgentModule: () => Promise<PiCodingAgentModule> = lazyModule(
   () => import("@earendil-works/pi-coding-agent"),
 );
+
+export async function createOmniMindModelRuntime(agentDir: string) {
+  const sdk = await loadOmniMindCodingAgentModule();
+  return sdk.ModelRuntime.create({
+    authPath: path.join(agentDir, "auth.json"),
+    modelsPath: null,
+    modelsConfigReader: createOmniMindModelsConfigReader(agentDir),
+  });
+}
+
 interface PiFamilyAdapterConfig<P extends PiFamilyProvider> {
   readonly provider: P;
   readonly displayName: string;
@@ -303,6 +317,7 @@ interface PiFamilyAdapterConfig<P extends PiFamilyProvider> {
     serverBaseDir: string,
     sdk: Pick<PiCodingAgentModule, "getAgentDir">,
   ) => string;
+  readonly createModelRuntime: (agentDir: string) => Promise<ModelRuntime>;
 }
 
 const STOCK_PI_FAMILY = {
@@ -310,6 +325,8 @@ const STOCK_PI_FAMILY = {
   displayName: "Pi",
   loadModule: loadPiCodingAgentModule,
   resolveAgentDir: (requestedAgentDir, _serverBaseDir, sdk) => makeAgentDir(requestedAgentDir, sdk),
+  createModelRuntime: async (agentDir) =>
+    createPiModelRuntime(agentDir, await loadPiCodingAgentModule()),
 } satisfies PiFamilyAdapterConfig<"pi">;
 
 const OMNIMIND_AGENT_FAMILY = {
@@ -318,6 +335,7 @@ const OMNIMIND_AGENT_FAMILY = {
   loadModule: loadOmniMindCodingAgentModule,
   // Product state is App-owned and cannot be redirected into stock Pi state.
   resolveAgentDir: (_requestedAgentDir, serverBaseDir) => resolveOmniMindAgentDir(serverBaseDir),
+  createModelRuntime: createOmniMindModelRuntime,
 } satisfies PiFamilyAdapterConfig<"omnimind">;
 
 interface PiSessionContext {
@@ -2157,7 +2175,7 @@ const makePiAdapter = <P extends PiFamilyProvider>(
       gatewayTools?: ReadonlyArray<ToolDefinition>;
       hostSystemPrompt: string;
     }) => {
-      const modelRuntime = await createPiModelRuntime(input.agentDir, input.sdk);
+      const modelRuntime = await family.createModelRuntime(input.agentDir);
       const createRuntime: CreateAgentSessionRuntimeFactory = async ({
         cwd,
         agentDir,
@@ -2857,7 +2875,7 @@ const makePiAdapter = <P extends PiFamilyProvider>(
           const piSdk = await family.loadModule();
           const agentDir = family.resolveAgentDir(input.agentDir, serverConfig.baseDir, piSdk);
           const cwd = trimToUndefined(input.cwd) ?? serverConfig.cwd;
-          const modelRuntime = await createPiModelRuntime(agentDir, piSdk);
+          const modelRuntime = await family.createModelRuntime(agentDir);
           const services = await piSdk.createAgentSessionServices({
             cwd,
             agentDir,
@@ -2902,9 +2920,12 @@ const makePiAdapter = <P extends PiFamilyProvider>(
             | undefined;
           if (!loader) {
             const piSdk = await family.loadModule();
+            const agentDir = family.resolveAgentDir(input.agentDir, serverConfig.baseDir, piSdk);
+            const modelRuntime = await family.createModelRuntime(agentDir);
             services = await piSdk.createAgentSessionServices({
               cwd: input.cwd,
-              agentDir: family.resolveAgentDir(input.agentDir, serverConfig.baseDir, piSdk),
+              agentDir,
+              modelRuntime,
             });
           }
           if (services && input.forceReload) {
@@ -2976,9 +2997,12 @@ const makePiAdapter = <P extends PiFamilyProvider>(
             } satisfies ProviderListCommandsResult;
           }
           const piSdk = await family.loadModule();
+          const agentDir = family.resolveAgentDir(input.agentDir, serverConfig.baseDir, piSdk);
+          const modelRuntime = await family.createModelRuntime(agentDir);
           const services = await piSdk.createAgentSessionServices({
             cwd: input.cwd,
-            agentDir: family.resolveAgentDir(input.agentDir, serverConfig.baseDir, piSdk),
+            agentDir,
+            modelRuntime,
           });
           if (input.forceReload) {
             await services.resourceLoader.reload();

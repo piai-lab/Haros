@@ -6,15 +6,21 @@
 import { EventEmitter } from "node:events";
 import { PassThrough } from "node:stream";
 import type { ChildProcess } from "node:child_process";
-import { mkdtempSync, rmSync, writeFileSync } from "node:fs";
+import { mkdirSync, mkdtempSync, rmSync, writeFileSync } from "node:fs";
 import { tmpdir } from "node:os";
 import path from "node:path";
 
+import * as NodeServices from "@effect/platform-node/NodeServices";
 import { ModelRegistry, ModelRuntime } from "@earendil-works/pi-coding-agent";
 import type { Api, Model } from "@earendil-works/pi-ai";
+import { ThreadId } from "@omnimind/contracts";
+import { Effect, Layer } from "effect";
 import { describe, expect, it } from "vitest";
+import { ServerConfig } from "../../config.ts";
+import { OmniMindAgentAdapter } from "../Services/OmniMindAgentAdapter.ts";
 import {
   createPiModelRuntime,
+  createOmniMindModelRuntime,
   findModelInRegistry,
   getPiDiscoverableModels,
   getPiSupportedThinkingOptions,
@@ -28,6 +34,7 @@ import {
   piToolTimelineDetail,
   PLAIN_PI_EXTENSION_THEME,
   toPiProviderModelDescriptor,
+  makeOmniMindAgentAdapterLive,
 } from "./PiAdapter";
 
 describe("Pi native resource projection", () => {
@@ -372,6 +379,104 @@ describe("getPiDiscoverableModels", () => {
       expect(models.some((model) => model.provider === "anthropic")).toBe(false);
     } finally {
       rmSync(agentDir, { recursive: true, force: true });
+    }
+  });
+
+  it("uses the product safe reader for OmniMind create and refresh", async () => {
+    const agentDir = mkdtempSync(path.join(tmpdir(), "omnimind-agent-model-reader-"));
+    const modelsPath = path.join(agentDir, "models.json");
+    const authPath = path.join(agentDir, "auth.json");
+    const modelConfig = (provider: string, model: string) =>
+      JSON.stringify({
+        providers: {
+          [provider]: {
+            api: "openai-completions",
+            baseUrl: "https://example.test/v1",
+            models: [{ id: model }],
+          },
+        },
+      });
+
+    try {
+      writeFileSync(modelsPath, modelConfig("custom-one", "model-one"));
+      writeFileSync(
+        authPath,
+        JSON.stringify({ "custom-one": { type: "api_key", key: "test-key" } }),
+      );
+      const runtime = await createOmniMindModelRuntime(agentDir);
+
+      expect(runtime.getModelConfigProviderIds()).toEqual(["custom-one"]);
+      expect(runtime.getModel("custom-one", "model-one")).toBeDefined();
+
+      writeFileSync(modelsPath, modelConfig("custom-two", "model-two"));
+      await runtime.refresh({ allowNetwork: false });
+
+      expect(runtime.getModelConfigProviderIds()).toEqual(["custom-two"]);
+      expect(runtime.getModel("custom-one", "model-one")).toBeUndefined();
+      expect(runtime.getModel("custom-two", "model-two")).toBeDefined();
+    } finally {
+      rmSync(agentDir, { recursive: true, force: true });
+    }
+  });
+
+  it("uses the accepted product catalog for discovery and Session creation", async () => {
+    const serverRoot = mkdtempSync(path.join(tmpdir(), "omnimind-agent-adapter-reader-"));
+    const agentDir = path.join(serverRoot, "agent");
+    const cwd = path.join(serverRoot, "workspace");
+    const threadId = ThreadId.makeUnsafe("omnimind-model-reader-thread");
+    mkdirSync(agentDir, { recursive: true });
+    mkdirSync(cwd, { recursive: true });
+
+    try {
+      writeFileSync(
+        path.join(agentDir, "models.json"),
+        JSON.stringify({
+          providers: {
+            local: {
+              api: "openai-completions",
+              baseUrl: "https://example.test/v1",
+              models: [{ id: "safe-model" }],
+            },
+          },
+        }),
+      );
+      writeFileSync(
+        path.join(agentDir, "auth.json"),
+        JSON.stringify({ local: { type: "api_key", key: "test-key" } }),
+      );
+      const layer = makeOmniMindAgentAdapterLive().pipe(
+        Layer.provideMerge(ServerConfig.layerTest(cwd, serverRoot)),
+        Layer.provideMerge(NodeServices.layer),
+      );
+
+      const result = await Effect.runPromise(
+        Effect.scoped(
+          Effect.gen(function* () {
+            const adapter = yield* OmniMindAgentAdapter;
+            const catalog = yield* adapter.listModels!({ provider: "omnimind", cwd });
+            const session = yield* adapter.startSession({
+              provider: "omnimind",
+              threadId,
+              cwd,
+              modelSelection: { provider: "omnimind", model: "local/safe-model" },
+              runtimeMode: "full-access",
+            });
+            yield* adapter.stopSession(threadId);
+            return { catalog, session };
+          }).pipe(Effect.provide(layer)),
+        ),
+      );
+
+      expect(result.catalog.models).toContainEqual(
+        expect.objectContaining({ slug: "local/safe-model", upstreamProviderId: "local" }),
+      );
+      expect(result.session).toMatchObject({
+        provider: "omnimind",
+        model: "local/safe-model",
+        status: "ready",
+      });
+    } finally {
+      rmSync(serverRoot, { recursive: true, force: true });
     }
   });
 

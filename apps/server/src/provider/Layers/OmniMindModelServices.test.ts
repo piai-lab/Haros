@@ -212,6 +212,7 @@ describe("OmniMindModelServicesLive", () => {
     expect(new Set(hostReadPaths)).toEqual(
       new Set([
         path.join(canonicalAgentDir, "auth.json"),
+        path.join(canonicalAgentDir, "models.json"),
         path.join(canonicalAgentDir, "models-store.json"),
       ]),
     );
@@ -468,7 +469,7 @@ describe("OmniMindModelServicesLive", () => {
     expect(JSON.stringify(result)).not.toContain("possibly-valid-refresh-secret");
   });
 
-  it("fails closed on a valid custom service until Pi exposes a safe models loader", async () => {
+  it("projects an accepted custom service through Pi without exposing private fields", async () => {
     const root = await makeRoot();
     await isolateProviderEnvironment(root);
     const agentDir = path.join(root, "agent");
@@ -490,13 +491,23 @@ describe("OmniMindModelServicesLive", () => {
     );
 
     const result = await loadService({ root });
-    expect(result.list).toEqual({
-      state: "error",
-      services: [],
-      errorCode: "projection_unavailable",
-    });
+    expect(result.list.state).toBe("ready");
+    expect(result.list.services).toContainEqual(
+      expect.objectContaining({
+        serviceId: "小米代理",
+        providerId: "小米代理",
+        displayName: "小米代理",
+        origin: "models_json",
+        authState: "configured",
+        authSource: "models_json_key",
+        knownModelCount: 1,
+        availableModelCount: 1,
+        catalogState: "ready",
+      }),
+    );
     expect(JSON.stringify(result)).not.toContain(agentDir);
     expect(JSON.stringify(result)).not.toContain("redacted.example.test");
+    expect(JSON.stringify(result)).not.toContain("not-projected");
   });
 
   it("propagates cancellation into an in-flight static credential read", async () => {

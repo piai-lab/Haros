@@ -4,7 +4,11 @@ import path from "node:path";
 
 import { afterEach, describe, expect, it, vi } from "vitest";
 
-import { resolveOmniMindAgentDir } from "./omnimindAgentRuntime.ts";
+import {
+  createOmniMindModelsConfigReader,
+  readOmniMindPrivateTextFile,
+  resolveOmniMindAgentDir,
+} from "./omnimindAgentRuntime.ts";
 
 const roots: string[] = [];
 
@@ -134,5 +138,88 @@ describe("resolveOmniMindAgentDir", () => {
     expect(() => resolveOmniMindAgentDir(root)).toThrow(
       "OmniMind Agent state must be physically separate from stock Pi state",
     );
+  });
+});
+
+describe("readOmniMindPrivateTextFile", () => {
+  it("reads one ordinary fixed leaf and treats a missing models config as absent", async () => {
+    const root = await makeRoot();
+    await isolateProviderHome(root);
+    const agentDir = path.join(root, "agent");
+    await mkdir(agentDir);
+    await writeFile(path.join(agentDir, "models.json"), "{\n  // Pi parses this\n}\n", {
+      mode: 0o600,
+    });
+
+    await expect(readOmniMindPrivateTextFile({ agentDir, filename: "models.json" })).resolves.toBe(
+      "{\n  // Pi parses this\n}\n",
+    );
+    await rm(path.join(agentDir, "models.json"));
+    await expect(createOmniMindModelsConfigReader(agentDir)({})).resolves.toBeUndefined();
+  });
+
+  it.each(["symbolic link", "hard link"] as const)("rejects a %s leaf", async (kind) => {
+    const root = await makeRoot();
+    await isolateProviderHome(root);
+    const agentDir = path.join(root, "agent");
+    const outside = path.join(root, "outside.json");
+    await mkdir(agentDir);
+    await writeFile(outside, '{ "providers": {} }');
+    if (kind === "symbolic link") {
+      await symlink(outside, path.join(agentDir, "models.json"), "file");
+    } else {
+      await link(outside, path.join(agentDir, "models.json"));
+    }
+
+    await expect(createOmniMindModelsConfigReader(agentDir)({})).rejects.toThrow(
+      "OmniMind Agent state is not a private regular file",
+    );
+  });
+
+  it("rejects a linked state root without relying on leaf path normalization", async () => {
+    const root = await makeRoot();
+    await isolateProviderHome(root);
+    const physicalAgentDir = path.join(root, "physical-agent");
+    const linkedAgentDir = path.join(root, "agent");
+    await mkdir(physicalAgentDir);
+    await writeFile(path.join(physicalAgentDir, "models.json"), "{}");
+    await symlink(
+      physicalAgentDir,
+      linkedAgentDir,
+      process.platform === "win32" ? "junction" : "dir",
+    );
+
+    await expect(createOmniMindModelsConfigReader(linkedAgentDir)({})).rejects.toThrow(
+      "OmniMind Agent state root is not a private directory",
+    );
+  });
+
+  it("rejects oversized and malformed UTF-8 content without returning partial text", async () => {
+    const root = await makeRoot();
+    await isolateProviderHome(root);
+    const agentDir = path.join(root, "agent");
+    const modelsPath = path.join(agentDir, "models.json");
+    await mkdir(agentDir);
+    await writeFile(modelsPath, new Uint8Array(4 * 1024 * 1024 + 1));
+    await expect(createOmniMindModelsConfigReader(agentDir)({})).rejects.toThrow(
+      "safe read boundary",
+    );
+
+    await writeFile(modelsPath, new Uint8Array([0xc3, 0x28]));
+    await expect(createOmniMindModelsConfigReader(agentDir)({})).rejects.toThrow();
+  });
+
+  it("honors cancellation before opening the private file", async () => {
+    const root = await makeRoot();
+    await isolateProviderHome(root);
+    const agentDir = path.join(root, "agent");
+    await mkdir(agentDir);
+    await writeFile(path.join(agentDir, "models.json"), "{}");
+    const controller = new AbortController();
+    controller.abort();
+
+    await expect(
+      createOmniMindModelsConfigReader(agentDir)({ signal: controller.signal }),
+    ).rejects.toMatchObject({ name: "AbortError" });
   });
 });

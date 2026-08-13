@@ -2,19 +2,44 @@
 // Purpose: Owns the bundled OmniMind Agent package loader and fixed private state root.
 // Layer: Server provider runtime
 
-import { lstatSync, realpathSync } from "node:fs";
+import { constants as fsConstants, lstatSync, realpathSync } from "node:fs";
+import { lstat, open, realpath } from "node:fs/promises";
 import os from "node:os";
 import path from "node:path";
 
+import type { ModelRuntime as StockModelRuntime } from "@earendil-works/pi-coding-agent";
+import type { ModelConfigReader } from "@omnimind/pi-coding-agent";
+
 import { lazyModule } from "../lazyModule.ts";
 
-export type OmniMindCodingAgentModule = typeof import("@earendil-works/pi-coding-agent");
+type OmniMindModelRuntime = StockModelRuntime & {
+  readonly getModelConfigProviderIds: () => readonly string[];
+};
+type OmniMindModelRuntimeConstructor = typeof StockModelRuntime & {
+  readonly create: (
+    options: Parameters<typeof StockModelRuntime.create>[0] & {
+      readonly modelsConfigReader?: ModelConfigReader;
+    },
+  ) => Promise<OmniMindModelRuntime>;
+};
+export type OmniMindCodingAgentModule = Omit<
+  typeof import("@earendil-works/pi-coding-agent"),
+  "ModelRuntime"
+> & {
+  readonly ModelRuntime: OmniMindModelRuntimeConstructor;
+};
 
-// The product package is API-compatible with the pinned Pi package. Keep this
-// lazy because the SDK includes native modules that should not load at Server startup.
+// Keep this lazy because the SDK includes native modules that should not load at
+// Server startup. The package is rebuilt from the same pinned source; this
+// explicit view describes only the two product additions instead of blindly
+// treating the divergent module as the stock package.
 export const loadOmniMindCodingAgentModule: () => Promise<OmniMindCodingAgentModule> = lazyModule(
   () => import("@omnimind/pi-coding-agent") as unknown as Promise<OmniMindCodingAgentModule>,
 );
+
+const MAX_PRIVATE_RUNTIME_FILE_BYTES = 4 * 1024 * 1024;
+const PRIVATE_RUNTIME_READ_CHUNK_BYTES = 64 * 1024;
+export type OmniMindPrivateRuntimeFilename = "auth.json" | "models.json" | "models-store.json";
 
 function isMissingPathError(error: unknown): boolean {
   return typeof error === "object" && error !== null && "code" in error && error.code === "ENOENT";
@@ -102,4 +127,118 @@ export function resolveOmniMindAgentDir(serverBaseDir: string): string {
     }
   }
   return agentDir;
+}
+
+function sameFileIdentity(
+  left: Pick<Awaited<ReturnType<typeof lstat>>, "dev" | "ino">,
+  right: Pick<Awaited<ReturnType<typeof lstat>>, "dev" | "ino">,
+): boolean {
+  return left.dev === right.dev && left.ino === right.ino;
+}
+
+/**
+ * Reads one fixed OmniMind Agent state leaf without following links or copying
+ * secret-bearing bytes to a second path. Parsing remains the caller's owner.
+ */
+export async function readOmniMindPrivateTextFile(input: {
+  readonly agentDir: string;
+  readonly filename: OmniMindPrivateRuntimeFilename;
+  readonly signal?: AbortSignal;
+}): Promise<string> {
+  input.signal?.throwIfAborted();
+  const expectedAgentDir = path.resolve(input.agentDir);
+  const rootBefore = await lstat(expectedAgentDir);
+  if (rootBefore.isSymbolicLink() || !rootBefore.isDirectory()) {
+    throw new Error("OmniMind Agent state root is not a private directory");
+  }
+  const physicalAgentDir = await realpath(expectedAgentDir);
+
+  const filePath = path.join(expectedAgentDir, input.filename);
+  if (path.dirname(filePath) !== expectedAgentDir) {
+    throw new Error("OmniMind Agent state read escaped its private directory");
+  }
+  const leafBefore = await lstat(filePath);
+  if (leafBefore.isSymbolicLink() || !leafBefore.isFile() || leafBefore.nlink !== 1) {
+    throw new Error("OmniMind Agent state is not a private regular file");
+  }
+  const physicalPath = await realpath(filePath);
+  if (
+    canonicalPathForComparison(path.dirname(physicalPath)) !==
+    canonicalPathForComparison(physicalAgentDir)
+  ) {
+    throw new Error("OmniMind Agent state escaped its private directory");
+  }
+
+  const flags = fsConstants.O_RDONLY | (fsConstants.O_NOFOLLOW ?? 0);
+  const handle = await open(filePath, flags);
+  try {
+    const handleMetadata = await handle.stat();
+    if (
+      !handleMetadata.isFile() ||
+      !sameFileIdentity(handleMetadata, leafBefore) ||
+      handleMetadata.nlink !== 1 ||
+      handleMetadata.size > MAX_PRIVATE_RUNTIME_FILE_BYTES
+    ) {
+      throw new Error("OmniMind Agent state changed or exceeds the safe read boundary");
+    }
+
+    const chunks: Uint8Array[] = [];
+    let bytesRead = 0;
+    while (bytesRead <= MAX_PRIVATE_RUNTIME_FILE_BYTES) {
+      input.signal?.throwIfAborted();
+      const remaining = MAX_PRIVATE_RUNTIME_FILE_BYTES + 1 - bytesRead;
+      const chunk = new Uint8Array(Math.min(PRIVATE_RUNTIME_READ_CHUNK_BYTES, remaining));
+      const read = await handle.read(chunk, 0, chunk.byteLength, bytesRead);
+      if (read.bytesRead === 0) break;
+      chunks.push(chunk.subarray(0, read.bytesRead));
+      bytesRead += read.bytesRead;
+    }
+    if (bytesRead > MAX_PRIVATE_RUNTIME_FILE_BYTES) {
+      throw new Error("OmniMind Agent state exceeds the safe read boundary");
+    }
+    input.signal?.throwIfAborted();
+
+    const leafAfter = await lstat(filePath);
+    const rootAfter = await lstat(expectedAgentDir);
+    if (
+      leafAfter.isSymbolicLink() ||
+      !leafAfter.isFile() ||
+      leafAfter.nlink !== 1 ||
+      !sameFileIdentity(leafAfter, handleMetadata) ||
+      rootAfter.isSymbolicLink() ||
+      !rootAfter.isDirectory() ||
+      !sameFileIdentity(rootAfter, rootBefore) ||
+      canonicalPathForComparison(await realpath(expectedAgentDir)) !==
+        canonicalPathForComparison(physicalAgentDir) ||
+      canonicalPathForComparison(path.dirname(await realpath(filePath))) !==
+        canonicalPathForComparison(physicalAgentDir)
+    ) {
+      throw new Error("OmniMind Agent state changed during the safe read");
+    }
+
+    const content = new Uint8Array(bytesRead);
+    let offset = 0;
+    for (const chunk of chunks) {
+      content.set(chunk, offset);
+      offset += chunk.byteLength;
+    }
+    return new TextDecoder("utf-8", { fatal: true }).decode(content);
+  } finally {
+    await handle.close();
+  }
+}
+
+export function createOmniMindModelsConfigReader(agentDir: string): ModelConfigReader {
+  return async ({ signal }) => {
+    try {
+      return await readOmniMindPrivateTextFile({
+        agentDir,
+        filename: "models.json",
+        ...(signal ? { signal } : {}),
+      });
+    } catch (error) {
+      if (isMissingPathError(error)) return undefined;
+      throw error;
+    }
+  };
 }

@@ -2,8 +2,6 @@
 // Purpose: Projects Pi ModelRuntime provider/auth/catalog facts without resolving secrets.
 // Layer: Server provider service implementation
 
-import { constants as fsConstants } from "node:fs";
-import { lstat, open, realpath } from "node:fs/promises";
 import path from "node:path";
 
 import type {
@@ -26,9 +24,12 @@ import { Effect, Layer } from "effect";
 
 import { ServerConfig } from "../../config.ts";
 import {
+  createOmniMindModelsConfigReader,
   loadOmniMindCodingAgentModule,
+  readOmniMindPrivateTextFile,
   resolveOmniMindAgentDir,
   type OmniMindCodingAgentModule,
+  type OmniMindPrivateRuntimeFilename,
 } from "../omnimindAgentRuntime.ts";
 import {
   OmniMindModelServices,
@@ -36,7 +37,6 @@ import {
 } from "../Services/OmniMindModelServices.ts";
 
 const MAX_SAFE_LABEL_LENGTH = 256;
-const MAX_LOCAL_CONFIG_BYTES = 4 * 1024 * 1024;
 
 type ReadTextFile = (filePath: string, signal?: AbortSignal) => Promise<string>;
 
@@ -45,77 +45,8 @@ export interface OmniMindModelServicesLiveOptions {
   readonly readTextFile?: ReadTextFile;
 }
 
-async function readBoundedPrivateTextFile(input: {
-  readonly agentDir: string;
-  readonly filePath: string;
-  readonly signal?: AbortSignal;
-}): Promise<string> {
-  input.signal?.throwIfAborted();
-  if (path.dirname(input.filePath) !== input.agentDir) {
-    throw new Error("Model-services read escaped the private agent directory");
-  }
-  const leaf = await lstat(input.filePath);
-  if (leaf.isSymbolicLink() || !leaf.isFile() || leaf.nlink !== 1) {
-    throw new Error("Model-services state is not a private regular file");
-  }
-  const physicalPath = await realpath(input.filePath);
-  if (path.dirname(physicalPath) !== input.agentDir) {
-    throw new Error("Model-services state escaped the private agent directory");
-  }
-
-  const flags = fsConstants.O_RDONLY | (fsConstants.O_NOFOLLOW ?? 0);
-  const handle = await open(input.filePath, flags);
-  try {
-    const metadata = await handle.stat();
-    if (
-      !metadata.isFile() ||
-      metadata.dev !== leaf.dev ||
-      metadata.ino !== leaf.ino ||
-      metadata.nlink !== 1 ||
-      metadata.size > MAX_LOCAL_CONFIG_BYTES
-    ) {
-      throw new Error("Model-services state changed or exceeds the safe read boundary");
-    }
-    const chunks: Uint8Array[] = [];
-    let bytesRead = 0;
-    while (bytesRead <= MAX_LOCAL_CONFIG_BYTES) {
-      input.signal?.throwIfAborted();
-      const remaining = MAX_LOCAL_CONFIG_BYTES + 1 - bytesRead;
-      const chunk = new Uint8Array(Math.min(64 * 1024, remaining));
-      const read = await handle.read(chunk, 0, chunk.byteLength, bytesRead);
-      if (read.bytesRead === 0) break;
-      chunks.push(chunk.subarray(0, read.bytesRead));
-      bytesRead += read.bytesRead;
-    }
-    if (bytesRead > MAX_LOCAL_CONFIG_BYTES) {
-      throw new Error("Model-services state exceeds the safe read boundary");
-    }
-    input.signal?.throwIfAborted();
-    const content = new Uint8Array(bytesRead);
-    let offset = 0;
-    for (const chunk of chunks) {
-      content.set(chunk, offset);
-      offset += chunk.byteLength;
-    }
-    return new TextDecoder("utf-8", { fatal: true }).decode(content);
-  } finally {
-    await handle.close();
-  }
-}
-
-async function assertPassiveModelsConfigAbsent(modelsPath: string): Promise<void> {
-  try {
-    const metadata = await lstat(modelsPath);
-    if (metadata.isSymbolicLink()) {
-      throw new Error("Model-services custom configuration is not physically isolated");
-    }
-    throw new Error("Model-services custom configuration requires a safe Pi loader");
-  } catch (error) {
-    if (typeof error === "object" && error !== null && "code" in error && error.code === "ENOENT") {
-      return;
-    }
-    throw error;
-  }
+function isMissingPathError(error: unknown): boolean {
+  return typeof error === "object" && error !== null && "code" in error && error.code === "ENOENT";
 }
 
 function safeIdentifier(value: string): string | null {
@@ -371,15 +302,32 @@ async function projectModelServices(input: {
   const agentDir = resolveOmniMindAgentDir(input.serverBaseDir);
   const readTextFile =
     input.readTextFile ??
-    ((filePath, signal) =>
-      readBoundedPrivateTextFile({
+    ((filePath, signal) => {
+      if (path.dirname(filePath) !== agentDir) {
+        throw new Error("Model-services read escaped the private agent directory");
+      }
+      const filename = path.basename(filePath) as OmniMindPrivateRuntimeFilename;
+      if (!(["auth.json", "models.json", "models-store.json"] as const).includes(filename)) {
+        throw new Error("Model-services requested an unknown private runtime file");
+      }
+      return readOmniMindPrivateTextFile({
         agentDir,
-        filePath,
+        filename,
         ...(signal ? { signal } : {}),
-      }));
+      });
+    });
   const authPath = path.join(agentDir, "auth.json");
   const modelsPath = path.join(agentDir, "models.json");
-  await assertPassiveModelsConfigAbsent(modelsPath);
+  const modelsConfigReader = input.readTextFile
+    ? async ({ signal }: { readonly signal?: AbortSignal }) => {
+        try {
+          return await readTextFile(modelsPath, signal);
+        } catch (error) {
+          if (isMissingPathError(error)) return undefined;
+          throw error;
+        }
+      }
+    : createOmniMindModelsConfigReader(agentDir);
   const credentials = await StaticCredentialStore.create({
     authPath,
     readTextFile,
@@ -388,10 +336,8 @@ async function projectModelServices(input: {
   const modelsStore = new StaticModelsStore(path.join(agentDir, "models-store.json"), readTextFile);
   const runtime = await sdk.ModelRuntime.create({
     credentials,
-    // Pi 0.84.1 reopens models.json without an injectable byte/cancellation/
-    // no-follow boundary. Passive Settings reads fail above when that file is
-    // present rather than duplicating its schema or making a secret-bearing copy.
     modelsPath: null,
+    modelsConfigReader,
     modelsStore,
     allowModelNetwork: false,
     refreshOnCreate: false,
@@ -407,6 +353,7 @@ async function projectModelServices(input: {
   if (runtime.getError() !== undefined) {
     throw new Error("OmniMind model-services availability is unavailable");
   }
+  const modelConfigProviderIds = new Set(runtime.getModelConfigProviderIds());
 
   const availableCounts = new Map<string, number>();
   for (const model of runtime.getAvailableSnapshot()) {
@@ -429,7 +376,9 @@ async function projectModelServices(input: {
     const availableModelCount =
       authState === "refresh_required" ? 0 : (availableCounts.get(provider.id) ?? 0);
     const hasCatalogError = refresh.errors.has(provider.id);
-    const origin = "builtin" as const;
+    const origin = modelConfigProviderIds.has(provider.id)
+      ? ("models_json" as const)
+      : ("builtin" as const);
     const authMethods: Array<OmniMindModelServiceDescriptor["authMethods"][number]> = [];
     if (provider.auth.apiKey) {
       authMethods.push({
