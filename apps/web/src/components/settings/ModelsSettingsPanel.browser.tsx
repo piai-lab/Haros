@@ -6,6 +6,7 @@ import "../../index.css";
 
 import type {
   NativeApi,
+  OmniMindCustomModelServiceModelInput,
   OmniMindModelServiceAuthResult,
   OmniMindModelServiceDescriptor,
   OmniMindModelServicesGetResult,
@@ -91,6 +92,9 @@ function setNativeApi(input: {
   readonly cancelLogin?: NativeApi["omnimindModelServices"]["cancelLogin"];
   readonly logout?: NativeApi["omnimindModelServices"]["logout"];
   readonly refresh?: NativeApi["omnimindModelServices"]["refresh"];
+  readonly testCustom?: NativeApi["omnimindModelServices"]["testCustom"];
+  readonly saveCustom?: NativeApi["omnimindModelServices"]["saveCustom"];
+  readonly removeCustom?: NativeApi["omnimindModelServices"]["removeCustom"];
   readonly openExternal?: NativeApi["shell"]["openExternal"];
 }) {
   const getConfig = vi.fn().mockResolvedValue(createBrowserTestServerConfig(checkedAt));
@@ -125,6 +129,29 @@ function setNativeApi(input: {
   const refresh = vi.fn(
     input.refresh ?? (async () => ({ state: "success", service: service() }) as const),
   );
+  const testCustom = vi.fn(
+    input.testCustom ??
+      (async ({ config }) => ({
+        state: "success",
+        models: config.models.map((model: OmniMindCustomModelServiceModelInput) => ({
+          modelId: model.modelId,
+          displayName: model.displayName,
+          available: true,
+          reasoning: model.reasoning,
+          input: [...model.input],
+          contextWindow: model.contextWindow,
+          maxTokens: model.maxTokens,
+        })),
+        errorCode: null,
+      })),
+  );
+  const saveCustom = vi.fn(
+    input.saveCustom ??
+      (async () => ({ state: "complete", service: service({ origin: "models_json" }) }) as const),
+  );
+  const removeCustom = vi.fn(
+    input.removeCustom ?? (async ({ serviceId }) => ({ state: "complete", serviceId }) as const),
+  );
   const openExternal = vi.fn(input.openExternal ?? (async () => {}));
   window.nativeApi = {
     server: { getConfig },
@@ -141,6 +168,9 @@ function setNativeApi(input: {
             cancelLogin,
             logout,
             refresh,
+            testCustom,
+            saveCustom,
+            removeCustom,
           },
         }),
   } as unknown as NativeApi;
@@ -154,6 +184,9 @@ function setNativeApi(input: {
     cancelLogin,
     logout,
     refresh,
+    testCustom,
+    saveCustom,
+    removeCustom,
     openExternal,
   };
 }
@@ -176,6 +209,9 @@ async function renderPanel(input: {
   readonly cancelLogin?: NativeApi["omnimindModelServices"]["cancelLogin"];
   readonly logout?: NativeApi["omnimindModelServices"]["logout"];
   readonly refresh?: NativeApi["omnimindModelServices"]["refresh"];
+  readonly testCustom?: NativeApi["omnimindModelServices"]["testCustom"];
+  readonly saveCustom?: NativeApi["omnimindModelServices"]["saveCustom"];
+  readonly removeCustom?: NativeApi["omnimindModelServices"]["removeCustom"];
   readonly openExternal?: NativeApi["shell"]["openExternal"];
 }) {
   const calls = setNativeApi(input);
@@ -404,6 +440,210 @@ describe("ModelsSettingsPanel model services", () => {
       mounted.screen.getByRole("textbox", { name: "settings.searchModelServices" }),
     ).toHaveValue("deepseek");
     expect(document.body.textContent).toContain("DeepSeek");
+
+    await mounted.screen.unmount();
+    mounted.queryClient.clear();
+  });
+
+  it("creates a Pi-owned API connection only after an exact successful test", async () => {
+    const customService = service({
+      serviceId: "custom-service",
+      providerId: "custom-service",
+      displayName: "Custom Service",
+      origin: "models_json",
+      supportsNetworkRefresh: false,
+    });
+    const testCustom = vi.fn(async ({ config }) => ({
+      state: "success" as const,
+      models: config.models.map((model: OmniMindCustomModelServiceModelInput) => ({
+        modelId: model.modelId,
+        displayName: model.displayName,
+        available: true,
+        reasoning: model.reasoning,
+        input: [...model.input],
+        contextWindow: model.contextWindow,
+        maxTokens: model.maxTokens,
+      })),
+      errorCode: null,
+    }));
+    const saveCustom = vi.fn(async () => ({ state: "complete" as const, service: customService }));
+    const mounted = await renderPanel({
+      list: async () => ({
+        state: "empty",
+        services: [],
+        connectableServices: [],
+        customApiConfiguration: {
+          protocols: [
+            "openai-completions",
+            "openai-responses",
+            "anthropic-messages",
+            "google-generative-ai",
+          ],
+        },
+        errorCode: null,
+      }),
+      get: async ({ serviceId }) =>
+        serviceId === customService.serviceId
+          ? { state: "ready", service: customService, errorCode: null }
+          : { state: "empty", service: null, errorCode: null },
+      testCustom,
+      saveCustom,
+    });
+
+    await mounted.screen.getByRole("button", { name: "settings.addModelService" }).click();
+    const apiEntry = mounted.screen.getByRole("button", {
+      name: /settings\.connectByApiAddress/,
+    });
+    expect(document.body.textContent).toContain("settings.customApiNotFoundPrompt");
+    await apiEntry.click();
+
+    await mounted.screen.getByLabelText("settings.customApiConnectionName").fill("Custom Service");
+    await mounted.screen
+      .getByLabelText("settings.customApiEndpoint")
+      .fill("https://api.example.test/v1");
+    await mounted.screen.getByLabelText("settings.customApiKey").fill("browser-secret");
+    await mounted.screen.getByLabelText("settings.customApiModelId").fill("custom-model");
+    await mounted.screen.getByLabelText("settings.customApiModelName").fill("Custom Model");
+    await mounted.screen.getByLabelText("settings.customApiContextWindow").fill("128000");
+    await mounted.screen.getByLabelText("settings.customApiMaxTokens").fill("8192");
+
+    const saveButton = mounted.screen.getByRole("button", { name: "settings.customApiSave" });
+    expect(saveButton).toBeDisabled();
+    await mounted.screen.getByRole("button", { name: "settings.customApiTestConnection" }).click();
+    await expect
+      .poll(() => testCustom)
+      .toHaveBeenCalledWith(
+        {
+          config: {
+            serviceId: null,
+            displayName: "Custom Service",
+            api: "openai-completions",
+            baseUrl: "https://api.example.test/v1",
+            models: [
+              {
+                modelId: "custom-model",
+                displayName: "Custom Model",
+                reasoning: false,
+                input: ["text"],
+                contextWindow: 128_000,
+                maxTokens: 8_192,
+              },
+            ],
+          },
+          apiKey: "browser-secret",
+          testModelId: "custom-model",
+        },
+        expect.objectContaining({ signal: expect.any(AbortSignal) }),
+      );
+    await expect.poll(() => document.body.textContent).toContain("settings.customApiTestSucceeded");
+    expect(saveButton).toBeEnabled();
+
+    await mounted.screen.getByLabelText("settings.customApiModelName").fill("Changed Model");
+    expect(saveButton).toBeDisabled();
+    await mounted.screen.getByRole("button", { name: "settings.customApiTestConnection" }).click();
+    await expect.poll(() => saveButton).toBeEnabled();
+    await saveButton.click();
+    await expect
+      .poll(() => saveCustom)
+      .toHaveBeenCalledWith(
+        expect.objectContaining({
+          config: expect.objectContaining({ serviceId: null, displayName: "Custom Service" }),
+          apiKey: "browser-secret",
+        }),
+      );
+    expect(document.body.textContent).not.toContain("browser-secret");
+
+    await mounted.screen.unmount();
+    mounted.queryClient.clear();
+  });
+
+  it("reopens, edits, retests, and deletes a saved API connection without returning its key", async () => {
+    const customService = service({
+      serviceId: "saved-custom",
+      providerId: "saved-custom",
+      displayName: "Saved Custom",
+      origin: "models_json",
+      supportsNetworkRefresh: false,
+    });
+    const customConfig = {
+      serviceId: "saved-custom",
+      displayName: "Saved Custom",
+      api: "anthropic-messages" as const,
+      baseUrl: "https://anthropic.example.test",
+      models: [
+        {
+          modelId: "saved-model",
+          displayName: "Saved Model",
+          reasoning: true,
+          input: ["text", "image"] as const,
+          contextWindow: 200_000,
+          maxTokens: 16_384,
+        },
+      ],
+    };
+    const saveCustom = vi.fn(async () => ({ state: "complete" as const, service: customService }));
+    const removeCustom = vi.fn(async ({ serviceId }) => ({
+      state: "complete" as const,
+      serviceId,
+    }));
+    const mounted = await renderPanel({
+      list: async () => ({
+        state: "ready",
+        services: [customService],
+        connectableServices: [],
+        customApiConfiguration: {
+          protocols: [
+            "openai-completions",
+            "openai-responses",
+            "anthropic-messages",
+            "google-generative-ai",
+          ],
+        },
+        errorCode: null,
+      }),
+      get: async ({ serviceId }) =>
+        serviceId === customService.serviceId
+          ? {
+              state: "ready",
+              service: customService,
+              models: [],
+              customConfig,
+              errorCode: null,
+            }
+          : { state: "empty", service: null, errorCode: null },
+      saveCustom,
+      removeCustom,
+    });
+
+    await mounted.screen
+      .getByRole("button", { name: 'settings.viewDetailsNamed:{"name":"Saved Custom"}' })
+      .click();
+    await mounted.screen.getByRole("button", { name: "common.edit" }).click();
+    expect(mounted.screen.getByLabelText("settings.customApiConnectionName")).toHaveValue(
+      "Saved Custom",
+    );
+    expect(mounted.screen.getByLabelText("settings.customApiKey")).toHaveValue("");
+    expect(document.body.textContent).not.toContain("browser-secret");
+    await mounted.screen.getByRole("button", { name: "settings.customApiTestConnection" }).click();
+    await mounted.screen.getByRole("button", { name: "settings.customApiSave" }).click();
+    await expect
+      .poll(() => saveCustom)
+      .toHaveBeenCalledWith(
+        expect.objectContaining({
+          config: expect.objectContaining({ serviceId: "saved-custom" }),
+          apiKey: null,
+        }),
+      );
+
+    await expect
+      .poll(() => document.body.textContent)
+      .toContain("settings.modelServiceDetailsNamed");
+    await mounted.screen.getByRole("button", { name: "common.delete" }).click();
+    await mounted.screen
+      .getByLabelText("settings.customApiDeleteTitle")
+      .getByRole("button", { name: "common.delete" })
+      .click();
+    await expect.poll(() => removeCustom).toHaveBeenCalledWith({ serviceId: "saved-custom" });
 
     await mounted.screen.unmount();
     mounted.queryClient.clear();

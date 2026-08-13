@@ -176,7 +176,9 @@ function isCustomApiProtocol(value: string | undefined): value is CustomApiProto
 
 function projectCustomConfig(
   serviceId: string,
-  provider: ReturnType<OmniMindCodingAgentModule["ModelRuntime"]["prototype"]["getModelConfigProvider"]>,
+  provider: ReturnType<
+    OmniMindCodingAgentModule["ModelRuntime"]["prototype"]["getModelConfigProvider"]
+  >,
 ): OmniMindCustomModelServiceConfig | undefined {
   if (!provider?.baseUrl || !isCustomApiProtocol(provider.api) || !provider.models?.length) {
     return undefined;
@@ -1293,8 +1295,7 @@ export function makeOmniMindModelServicesLive(options: OmniMindModelServicesLive
                 return {
                   state: response.stopReason === "aborted" ? "cancelled" : "failed",
                   models: [],
-                  errorCode:
-                    response.stopReason === "aborted" ? "cancelled" : "connection_failed",
+                  errorCode: response.stopReason === "aborted" ? "cancelled" : "connection_failed",
                 } satisfies OmniMindCustomModelServiceTestResult;
               }
               return {
@@ -1407,12 +1408,11 @@ export function makeOmniMindModelServicesLive(options: OmniMindModelServicesLive
               let synchronizationFailed = false;
               try {
                 await runtime.logout(input.serviceId, { signal });
-              } catch (error) {
-                if (error instanceof sdk.CredentialSynchronizationError) {
-                  synchronizationFailed = true;
-                } else {
-                  throw error;
-                }
+              } catch {
+                // The Pi-owned config removal is already durable. Any credential
+                // cleanup failure must report that partial truth instead of
+                // claiming the connection was not deleted.
+                synchronizationFailed = true;
               }
               publishOmniMindModelRuntimeMutation(agentDir);
               return {
