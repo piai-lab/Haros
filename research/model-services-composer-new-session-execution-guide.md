@@ -361,7 +361,7 @@ safe stale/error summary
 - 已配置/保存过的服务列表；只有 Product State 提供 exact stable service id 时才 join 被引用服务，否则延后到 E3，不从默认模型或 model slug 推导；
 - setup-required、checking、stale/error、empty；
 - 已知/可用模型数量口径；
-- Git writing default 仍在底部作为次级 section。
+- 不渲染 Git writing default；底层字段保留，新归属由调用功能 owner 在 E7 单独确定。
 
 不要把 Pi 所有 built-in provider 平铺成几十条资产。
 
@@ -689,6 +689,8 @@ E2 typed auth bridge 已稳定；Pi provider metadata 明确暴露 OAuth capabil
 
 同一商业供应商可存在多个 Pi 可表达的稳定 service instance，credential/config/catalog/model identity 隔离，Composer 能消歧；不新建 Channel runtime 或第二 catalog truth。
 
+产品入口必须保持分层：搜索/选择 Pi runtime 真实服务是主路径；列表尾部“没有找到？通过 API 地址连接”是弱一级补充。普通 API 地址配置只允许 Pi `models.json` 官方支持的 `openai-completions`、`openai-responses`、`anthropic-messages`、`google-generative-ai`；非标准 API 只来自 Pi Extension。Hard entry gate 未满足时只保留 IA/只读投影，不施工 mutation。
+
 ### 设计映射
 
 - 设计说明 §9.3；
@@ -753,7 +755,7 @@ deepseek-research
 - `settingsNavigation.ts`：label/description 改为 Model services，section id 仍为 `models`；
 - i18n：简中/英文 key 与 placeholder 一一对应；
 - search index：API Key、OAuth、从供应商获取、自定义服务、服务实例等可搜索；
-- Git writing default 保留并可搜索；
+- Git writing default 退出 Model services；底层字段保留，搜索/deep-link 在调用功能新归属确定后迁移，不能继续指向不存在 row；
 - 独立 Engine custom slug 控件归 `Agent engines` 对应 detail，底层 storage 不迁移；
 - legacy `customOmniMindModels` 不再由新 UI 创建，既有值无损读取并提供显式转化/移除；
 - 普通 UI `OmniMind`，技术 detail `OmniMind Agent`；
@@ -912,7 +914,7 @@ fresh launch
 4. Composer Engine/Model-options composition
 5. cross-Engine next-turn replacement
 6. OAuth
-7. custom provider/multi-instance（若 entry gate 满足）
+7. custom provider/multi-instance（若 entry gate 满足；主/次入口层级与四种 generic API 固定）
 8. Settings cleanup + i18n/a11y
 ```
 
@@ -937,6 +939,7 @@ fresh launch
 13. UI diff 扩张成 Settings taxonomy 或视觉系统重做；
 14. 同一失败重复且没有新假设。
 15. 锁定 Pi runtime 对 `models.json` 只有 path-based direct reopen，无法注入 physically-contained、bounded、cancellable reader；此时不得 patch vendor、落 secret-bearing temp copy或复制 Pi schema。E1 保持 blocked，可按依赖图转入 E3；E2 仍 gated。
+16. Pi intake 后 `provider_default` 仍依赖 select prompt 首项；只有该首项继续由上游明确标为 default/recommended 时才可自动采用，否则 fail closed 到显式用户选择，不新增 Host auth Registry。
 
 停止后只允许：
 

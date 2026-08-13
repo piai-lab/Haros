@@ -46,10 +46,11 @@ Status: local source observation + maintainer-confirmed product direction + impl
 - 只重写这个 section 的产品职责和文案，不发起整个 Settings taxonomy 重构；
 - `Agent engines` 继续是独立 Engine 的安装、认证和原生配置入口；
 - `Model services` 主要配置 OmniMind Agent 的 Pi ModelRuntime；
-- 现有 Git writing default 作为次级“产品默认值”保留，不再定义整页身份。
+- Git writing default 退出 Model services；它属于实际调用 Git text generation 的功能设置。新归属尚未由 sole owner 固定前只保留底层字段与既有兼容，不在本切片猜测新的 Settings 位置；
+- “添加模型服务”以搜索/选择 Pi runtime 真实服务为主路径，以列表尾部弱一级的“通过 API 地址连接”为低频补充；后者在 E6 gate 打开前只定义 IA，不施工 mutation；
 - 普通 UI、Composer、Engine menu、Model services、tooltip 与 aria-label 使用 `OmniMind`；`OmniMind Agent` 只作为技术实体全称进入 runtime、技术详情、诊断、About、Licenses 与来源语境。
 
-当前仍未同步的是产品代码：`packages/contracts/src/model.ts` 的普通展示名、少量 UI hardcoded consumer，以及 `apps/web/src/i18n.tsx`、`settingsNavigation.ts` 和 `ModelsSettingsPanel.tsx` 仍使用旧名称或“Git 写作 + 自定义模型 slug”职责。这是后续实现缺口，不再是架构裁决阻塞。
+当前仍未同步的是部分产品代码：`apps/web/src/i18n.tsx`、`settingsNavigation.ts` 和 `ModelsSettingsPanel.tsx` 仍保留旧的“Git 写作 + 独立 Engine custom model slug”页面职责。它们是 E7 Settings cleanup 的实现缺口；在新归属未固定前不能为了移出页面而另造 taxonomy。
 
 ## 1. 设计结论
 
@@ -236,7 +237,7 @@ OmniMind 可以把这些值规范化为各 adapter 所需的 dispatch payload，
 
 它能发现 OmniMind Agent、Codex、Claude、Cursor、Antigravity、Grok、Droid、Kilo、OpenCode 和 Pi 的真实目录。但当前公开返回值并不暴露 query error、auth status 或 catalog provenance 状态；它返回的是 options、loading 与 runtime descriptors。因此 Model services 需要复用同一 query key/catalog owner，却不能把这个 Composer projection 当成完整设置页状态 API。
 
-还有一个必须修复的现状：hook 只有在 dynamic `models.length > 0` 时才 merge runtime 目录；空 runtime 结果会继续保留静态/custom options。对 OmniMind Agent 而言，这可能让没有 credential 的 `deepseek/deepseek-chat` 仍出现在 picker，看起来像可用模型，而 Pi `listModels()` 实际只返回 authenticated `getAvailable()`。目标行为必须区分：
+还有一个必须守住的边界：runtime-catalog-only Engine 的空 runtime 结果不能回退到 Host 静态/default/custom 候选。否则没有 credential 的历史 slug 仍可能出现在 picker，看起来像可用模型，而 Pi `listModels()` 实际只返回 authenticated `getAvailable()`。目标行为必须区分：
 
 ```text
 static/model hint = 可识别候选
@@ -872,7 +873,7 @@ English: Model services
 English: Configure the model services, credentials, and models used by OmniMind.
 ```
 
-这比“模型与写作”准确，因为页面主任务是让 OmniMind Agent 获得可用模型，不是编辑文案。“Git 写作模型”只是使用模型的一个次级产品默认值。
+这比“模型与写作”准确，因为页面主任务是让 OmniMind Agent 获得可用模型，不是管理调用方的功能默认值。Git writing model 属于 Git text generation 的功能设置，不属于服务连接/catalog 控制面。
 
 保持：
 
@@ -924,7 +925,7 @@ Custom models
 
 目标不是继续向 `ModelsSettingsPanel` 堆输入框，而是把它改成 OmniMind Agent ModelRuntime 的真实投影，同时把现有次级设置重新归位：
 
-- `Git writing model` 保留在 Model services 页面底部的“产品默认值”；
+- `Git writing model` 退出 Model services；底层字段暂时保留，UI 新归属由调用功能的 sole owner 在 E7 单独裁决；
 - Codex、Claude、Cursor、Antigravity、Grok、Kilo、OpenCode 等 custom slug 属于独立 Engine，应在不迁移现有 storage 字段的前提下由 `Agent engines` 对应 detail 渲染；
 - stock Pi custom slug 继续属于 stock Pi Engine detail，不能迁入 OmniMind Agent 的 `.omnimind`；
 - 既有 `customOmniMindModels` 是 Composer 的 legacy model hint，不是完整 Pi provider/model config；Model services 上线后停止从新 UI 创建这种 hint，继续无损读取既有值，并提供“保留为兼容提示 / 转为 Pi custom model definition / 移除”的明确迁移路径。没有 `api`、`baseUrl`、capability 等必要数据时不得自动伪造 models.json 定义；
@@ -1138,10 +1139,9 @@ Pi 当前没有公开的持久 custom-provider mutation API
 │ 可连接的服务                                                     │
 │ 小米 MiMo、OpenAI、Anthropic 等                         [查看]  │
 │                                                                 │
-│ 产品默认值                                                      │
-│ ┌─────────────────────────────────────────────────────────────┐ │
-│ │ Git 写作模型                         Codex / GPT-5.6 Sol  › │ │
-│ └─────────────────────────────────────────────────────────────┘ │
+│ [＋ 添加模型服务]                                                │
+│   搜索/选择 Pi runtime 服务                                     │
+│   没有找到？通过 API 地址连接 →                                 │
 └─────────────────────────────────────────────────────────────────┘
 ```
 
@@ -1201,39 +1201,24 @@ OmniMind Agent 即使有 Pi built-in providers，也可能没有 configured cred
 
 ### 10.10 添加服务流程
 
-沿用 Proma “列表 -> 全页/内页编辑 -> 返回列表”的清晰结构，复用 OmniMind 现有 Settings primitives，而不是套多步 modal wizard。
+沿用 Proma “列表 -> 全页/内页编辑 -> 返回列表”的清晰结构，复用 OmniMind 现有 Settings primitives，而不是套多步 modal wizard。入口不平权：高频的 runtime 服务搜索是主路径，API 地址连接只在列表尾部作为清楚但弱一级的补充。
 
 ```text
 ┌─────────────────────────────────────────────────────────────┐
 │ ‹ 模型服务                         添加模型服务              │
 │                                                             │
-│ 服务                                                        │
-│ [选择 Pi 当前支持的服务…                               ⌄]   │
+│ [搜索模型服务…]                                              │
+│ DeepSeek · OpenAI · Anthropic · Xiaomi MiMo · …              │
+│ （built-in 与已加载 extension 均来自 Pi runtime metadata）   │
 │                                                             │
-│ 名称                                                        │
-│ [DeepSeek API                                            ]   │
-│ 同一供应商有多个实例时，用名称区分。                         │
-│                                                             │
-│ 认证（内容由 provider capability 决定）                      │
-│ [使用 API Key]  或  [使用浏览器登录]                         │
-│ 选择后按 Pi prompt 显示必要字段                              │
-│                                                             │
-│ 高级设置（仅 custom/configurable provider）                  │
-│ [Base URL] [Protocol/API] [Headers…]                          │
-│                                                             │
-│ 模型                                           [从供应商获取] │
-│ 获取成功后在这里预览，不要求先保存。                         │
-│                                                             │
-│                                      [取消] [添加模型服务]    │
+│ 没有找到你的服务？通过 API 地址连接 →                        │
 └─────────────────────────────────────────────────────────────┘
 ```
 
-选择 provider 后：
+选择 runtime service 后：
 
 - 使用 Pi `getProviders()` 的真实列表和 auth capability；
-- built-in provider 使用自身稳定 id；
-- 第二个同类实例生成/要求唯一 provider id，但默认只让用户编辑友好名称；
-- Base URL、API/protocol、headers 仅对 custom/provider-config surface 显示；
+- built-in/extension provider 使用自身稳定 id，Host 不维护厂商 enum、模型镜像或认证 Registry；
 - 同时支持 API Key 与 OAuth 的 provider 先显示两种真实 auth method；选择一种后才渲染 Pi prompt，不把二者同时伪装成必填；
 - ambient credential provider 只显示检测状态和说明；
 - API-key provider 的 secret 只向 Server 发送一次，保存后不回显；
@@ -1547,6 +1532,8 @@ OmniMind 要复制的是 **任务流质量**，不是 Proma 的维护负担。
 - “模型服务商”用于 OpenAI、DeepSeek、MiMo 等；“引擎”用于 Codex、Pi、OpenCode、OmniMind；`OmniMind Agent` 只用于技术详情、runtime、诊断与来源语境；
 - 不把内部 `Provider` 直接显示成普通中文页面主词。
 
+进入“通过 API 地址连接”后才显示连接名称、API 格式、API 地址、secret 输入、获取模型/手工添加与“测试并保存”。普通配置只列 Pi `models.json` 官方可表达的四种通用协议：OpenAI Chat Completions、OpenAI Responses、Anthropic Messages、Google Generative AI；不承诺自动猜协议。任意非标准 API、私有 OAuth/SSO 或自定义 discovery/stream/tool/usage 必须由真实 Pi Extension 注册。该持久 mutation 仍属于 E6 hard gate；当前只固定产品层级和 authority，不实现 Host writer/store/fetcher。
+
 #### 10.21.1 Settings 搜索与 deep-link 迁移
 
 保留 section id `models` 还不够。当前搜索索引只有 `models:git-writing-model` 和 `models:saved-model-slugs`，且 section label/description 仍是旧文案。实施必须同时处理：
@@ -1554,16 +1541,16 @@ OmniMind 要复制的是 **任务流质量**，不是 Proma 的维护负担。
 - `settingsNavigation.ts`：label 改为 `Model services`，description/eyebrow 使用普通展示名 OmniMind；内部 id 仍为 `models`；
 - `i18n.tsx`：`settings.models`、`settings.modelsDescription` 及新增状态/动作完整简中/英文对齐；
 - `settingsSearchIndex.ts`：新增“连接模型服务、API Key、OAuth、从供应商获取、自定义服务、服务实例”等可搜索入口；
-- 保留“Git writing model / Git 写作模型”搜索结果并指向页面底部真实 row；
+- 旧“Git writing model / Git 写作模型”搜索结果不能继续指向 Model services 的不存在 row；E7 在调用功能的新归属确定后迁移或 alias 到该真实位置，本切片不猜目的地；
 - 独立 Engine 的 saved custom slug 搜索结果迁移到 `providers` detail，旧 id/target 若曾形成外部 deep-link，应通过 alias 重定向而不是静默失效；
 - 不用可翻译 title 作为新稳定 identity；新 row 使用显式 target，避免改文案后 anchor 漂移；
 - 搜索结果若直接进入某个 service detail，只携带非敏感 provider/service id，不把 endpoint、account 或 credential source 放进 URL。
 
 #### 10.21.2 默认模型的奥卡姆裁决
 
-本轮不在 Model services 再添加一个“OmniMind Agent 全局默认模型”。当前已有 Thread/Provider draft、Project default、per-Engine sticky selection，以及 `DEFAULT_MODEL_BY_PROVIDER.omnimind` 的最终 fallback。再加一层 Settings default 会制造优先级冲突。
+本轮不在 Model services 添加“OmniMind Agent 全局默认模型”。当前已有 Thread/Provider draft、Project default 与 per-Engine sticky selection；OmniMind/Pi 这类 runtime-catalog-only Engine 没有 Host 静态默认。再加一层 Settings default 会制造优先级冲突。
 
-真正要修的是 fallback 的真实性：当前静态 OmniMind fallback 为 `deepseek/deepseek-chat`，但它可能没有 credential 或不在当前 available catalog。Composer 自动选择必须先按现有优先级解析，再验证目标 catalog；无可用模型时进入 setup/reselect，不让一个静态字符串伪装成可发送默认。只有未来证据证明现有 Project/sticky/fallback 无法表达明确用户需求，才在 Product State owner 中新增持久 default。
+Composer 与所有 direct consumer 都必须先按现有优先级解析 exact selection，再由 authoritative runtime catalog/admission 证明；无 exact model 时返回 null、进入 setup/reselect，并在任何 Thread/Project/command 持久化前 fail closed。Settings 的 provider-only patch 也不得沿用旧 Engine 的 model 形成 hybrid；切到 runtime-catalog-only Engine 必须同时携 authoritative exact model。只有未来证据证明现有 Project/sticky 无法表达明确用户需求，才在 Product State owner 中新增持久 default。
 
 ### 10.22 Settings 最小施工 Slice
 
@@ -1579,7 +1566,7 @@ OmniMind 要复制的是 **任务流质量**，不是 Proma 的维护负担。
 1. Host 以 Pi ModelRuntime 暴露 provider、auth status、known/available model count；
 2. renderer 建 Model services 列表页；
 3. 重命名 Settings label/description；
-4. 保留 Git writing default；
+4. 不渲染 Git writing default；底层字段与新归属明确 defer 到 E7；
 5. 不做 mutation，先证明真实数据、空态、错误和隔离。
 
 锁定 Pi `v0.84.1` 尚无 physically-contained、bounded、cancellable 的 `models.json` loader，因此本 Slice 当前只能安全 characterization built-in/auth metadata，并对存在 `models.json` 的 projection typed fail；不得把它称为 Slice 1 完成。恢复条件是一次独立授权并 adopted 的 Pi source/API intake，不能在本 UI diff 中 patch vendor、写 secret-bearing temp copy 或复制 Pi schema。
@@ -1604,13 +1591,15 @@ OmniMind 要复制的是 **任务流质量**，不是 Proma 的维护负担。
 
 进入条件：Pi 上游已有受支持的持久 provider-config mutation API，或维护者对 §10.7.3 的临时窄 adapter 给出独立授权并已有 unknown-field/atomicity fixture。
 
-1. 使用唯一 Pi providerId；
-2. 通过 Pi API或经授权的临时 adapter 原子更新 `models.json.providers`；
-3. 支持 display name、base URL、api、headers 和真实 model definitions；
-4. 只对 Pi config/extension 真能表达的 instance 显示 auth/refresh capability；
-5. 删除/重命名/selection impact；
-6. custom endpoint 风险确认；
-7. 不增加平行 Channel store。
+1. 主入口仍是搜索/选择 runtime 服务；API 地址入口在列表尾部弱一级呈现；
+2. generic API 只允许 `openai-completions`、`openai-responses`、`anthropic-messages`、`google-generative-ai`；非标准协议只来自 Pi Extension；
+3. 使用唯一 Pi providerId；
+4. 通过 Pi API或经授权的临时 adapter 原子更新 `models.json.providers`；
+5. 支持 display name、base URL、api、headers 和真实 model definitions；
+6. 只对 Pi config/extension 真能表达的 instance 显示 auth/refresh capability；
+7. 删除/重命名/selection impact；
+8. custom endpoint 风险确认；
+9. 不增加平行 Channel store。
 
 #### Settings Slice 5：独立 Engine 设置归位
 
@@ -1644,7 +1633,7 @@ OmniMind 要复制的是 **任务流质量**，不是 Proma 的维护负担。
 | active Session reconcile  | 当前 turn 不热切；下一次 send 前读到最新 auth/config/catalog            |
 | sync-after-commit failure | 重读 credential metadata，不重复提交 key/OAuth                          |
 | 删除被引用实例            | 明确影响并使 selection unavailable；不 silent fallback                  |
-| Git writing default       | 仍可配置，且不再定义页面 title                                          |
+| Git writing default       | 不出现在 Model services；底层字段保留，等待调用功能 owner 确定新归属     |
 | 独立 Engine custom slug   | 在 Agent engines detail 可达，storage 无迁移                            |
 | zh-CN / en                | title、description、state、action、error key 一一对应                   |
 | keyboard/screen reader    | list/detail/login/refresh/confirm/focus return 完整                     |
@@ -1671,7 +1660,7 @@ OmniMind 要复制的是 **任务流质量**，不是 Proma 的维护负担。
 - [ ] credential 不回显、不进日志/cache/Timeline；
 - [ ] Model services mutation 与 Composer catalog/selection 闭环；
 - [ ] active session 在下一 turn 前应用 agentDir mutation generation，不把 query invalidation 当 runtime 同步；
-- [ ] Git writing default 保留为次级 section；
+- [ ] Git writing default 从 Model services 移除；新归属未定前不新建 taxonomy；
 - [ ] independent Engine custom slugs 准确归位；
 - [ ] legacy `customOmniMindModels` 不再新增，既有值无损兼容且不自动伪造 Pi config；
 - [ ] 双语、响应式、键盘、screen reader 和 packaged restart 通过。
@@ -2105,7 +2094,7 @@ fresh launch
 | --------------------------------------------------------------------------------- | ------------------------ | -------------------------------------------------------------- |
 | 页面正式名称使用 `Model services / 模型服务`                                      | §0.1、§10.2              | 已覆盖；Workbench sole owner 已同步，产品代码尚未同步          |
 | 普通 UI 显示 `OmniMind`，技术语境保留 `OmniMind Agent`                            | §0.1、§2.1、§5、§10.2    | 已覆盖；Workbench sole owner 已同步，产品代码尚未同步          |
-| 不再让“模型与写作”定义整页                                                        | §10.2、§10.4             | 已覆盖；Git writing 降为次级产品默认值                         |
+| 不再让“模型与写作”定义整页                                                        | §10.2、§10.4             | 已覆盖；Git writing 退出 Model services，新归属明确 defer      |
 | OmniMind Agent 内置 Pi，模型体系无条件跟随 Pi                                     | §4.10、§9.2、§10.5–10.7  | 已覆盖；以 locked 0.84.1 source 为证据                         |
 | Pi 支持什么，OmniMind Agent 原则上就支持什么                                      | §9.2、§10.13–10.18       | 已覆盖；只做 Host/UX 产品化，不做能力镜像                      |
 | 只能比 Pi 更好，但不等于比 Pi 更多                                                | §9.2、§10.20             | 已覆盖；“更好”落在 IA、反馈、恢复、双语和多 Engine 协作        |

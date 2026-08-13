@@ -69,6 +69,7 @@ const MACHINE_BLOCKS = [
     format: "json",
   },
   { path: "architecture/workbench.md", tag: "work-surface-ia", format: "json" },
+  { path: "architecture/workbench.md", tag: "model-services-ia", format: "json" },
 ];
 
 function normalize(value) {
@@ -397,6 +398,43 @@ function validateWorkSurfaceInformationArchitecture(findings, documents) {
   }
 }
 
+function validateModelServicesInformationArchitecture(findings, documents) {
+  const documentPath = "architecture/workbench.md";
+  const blocks = blocksFor(documents.get(documentPath) ?? "", "model-services-ia");
+  if (blocks.length !== 1) return;
+
+  let policy;
+  try {
+    policy = JSON.parse(blocks[0]);
+  } catch {
+    return;
+  }
+  const expected = {
+    scope: ["connection", "authentication", "catalog", "models", "status-and-recovery"],
+    primaryAction: "select-runtime-model-service",
+    secondaryAction: "connect-by-api-address",
+    secondaryPlacement: "list-tail-lower-emphasis",
+    genericApiProtocols: [
+      "openai-completions",
+      "openai-responses",
+      "anthropic-messages",
+      "google-generative-ai",
+    ],
+    nonstandardApiOwner: "pi-extension",
+    gitWritingOwner: "calling-feature-settings",
+    omnimindDefaultModel: "none-runtime-catalog-only",
+    customMutationGate: "E6",
+  };
+  if (JSON.stringify(policy) !== JSON.stringify(expected)) {
+    addFinding(
+      findings,
+      "workbench.model-services-ia",
+      documentPath,
+      "Model services must keep runtime discovery primary, API-address setup secondary, and mutation authority with Pi",
+    );
+  }
+}
+
 /**
  * Validate only the durable document graph and machine-readable owner blocks.
  * Product semantics remain in the sole owners and are reviewed as prose/design;
@@ -431,6 +469,7 @@ export async function validateDocumentContract({ root, read = readFile }) {
   validateBundledPiRuntimeAdoption(findings, documents);
   validatePiAiOAuthPageRendererAdoption(findings, documents);
   validateWorkSurfaceInformationArchitecture(findings, documents);
+  validateModelServicesInformationArchitecture(findings, documents);
 
   return findings;
 }

@@ -257,6 +257,38 @@ test("generic Terminal titles remain localized presentation, not migrated state"
   );
 });
 
+test("Model services keeps API-address setup below runtime service discovery", async (t) => {
+  const root = await createFixture(t);
+  await replaceText(
+    root,
+    "architecture/workbench.md",
+    '"secondaryPlacement": "list-tail-lower-emphasis"',
+    '"secondaryPlacement": "equal-primary-card"',
+  );
+
+  assertFinding(
+    await validateDocumentContract({ root }),
+    "workbench.model-services-ia",
+    "architecture/workbench.md",
+  );
+});
+
+test("Model services cannot regain a static OmniMind model default", async (t) => {
+  const root = await createFixture(t);
+  await replaceText(
+    root,
+    "architecture/workbench.md",
+    '"omnimindDefaultModel": "none-runtime-catalog-only"',
+    '"omnimindDefaultModel": "deepseek/deepseek-chat"',
+  );
+
+  assertFinding(
+    await validateDocumentContract({ root }),
+    "workbench.model-services-ia",
+    "architecture/workbench.md",
+  );
+});
+
 test("Campaign canonical identity is structural", async (t) => {
   const root = await createFixture(t);
   await replaceText(root, "missions/independent-omnimind-v1.md", "Status: active", "Status: done");
