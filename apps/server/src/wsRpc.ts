@@ -1962,6 +1962,21 @@ const makeWsRpcHandlersLayer = () =>
             requireOwnerRole.pipe(Effect.andThen(omniMindModelServices.refresh(input))),
             "Failed to refresh an OmniMind model service",
           ),
+        [WS_METHODS.omnimindModelServicesTestCustom]: (input) =>
+          rpcEffect(
+            requireOwnerRole.pipe(Effect.andThen(omniMindModelServices.testCustom(input))),
+            "Failed to test an OmniMind custom model service",
+          ),
+        [WS_METHODS.omnimindModelServicesSaveCustom]: (input) =>
+          rpcEffect(
+            requireOwnerRole.pipe(Effect.andThen(omniMindModelServices.saveCustom(input))),
+            "Failed to save an OmniMind custom model service",
+          ),
+        [WS_METHODS.omnimindModelServicesRemoveCustom]: (input) =>
+          rpcEffect(
+            requireOwnerRole.pipe(Effect.andThen(omniMindModelServices.removeCustom(input))),
+            "Failed to remove an OmniMind custom model service",
+          ),
         [WS_METHODS.automationList]: (input) =>
           rpcEffect(automationService.list(input), "Failed to list automations"),
         [WS_METHODS.automationGetMemory]: ({ automationId }) =>

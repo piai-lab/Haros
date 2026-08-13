@@ -3,6 +3,12 @@
 // Layer: Server provider service contract
 
 import type {
+  OmniMindCustomModelServiceRemoveInput,
+  OmniMindCustomModelServiceRemoveResult,
+  OmniMindCustomModelServiceSaveInput,
+  OmniMindCustomModelServiceSaveResult,
+  OmniMindCustomModelServiceTestInput,
+  OmniMindCustomModelServiceTestResult,
   OmniMindModelServiceAnswerLoginInput,
   OmniMindModelServiceAuthResult,
   OmniMindModelServiceBeginLoginInput,
@@ -46,6 +52,15 @@ export interface OmniMindModelServicesShape {
   readonly refresh: (
     input: OmniMindModelServiceRefreshInput,
   ) => Effect.Effect<OmniMindModelServiceRefreshResult>;
+  readonly testCustom: (
+    input: OmniMindCustomModelServiceTestInput,
+  ) => Effect.Effect<OmniMindCustomModelServiceTestResult>;
+  readonly saveCustom: (
+    input: OmniMindCustomModelServiceSaveInput,
+  ) => Effect.Effect<OmniMindCustomModelServiceSaveResult>;
+  readonly removeCustom: (
+    input: OmniMindCustomModelServiceRemoveInput,
+  ) => Effect.Effect<OmniMindCustomModelServiceRemoveResult>;
 }
 
 export class OmniMindModelServices extends ServiceMap.Service<

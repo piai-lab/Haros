@@ -2,6 +2,8 @@ import { Schema } from "effect";
 import { describe, expect, it } from "vitest";
 
 import {
+  OmniMindCustomModelServiceSaveResult,
+  OmniMindCustomModelServiceTestInput,
   OmniMindModelServiceAnswerLoginInput,
   OmniMindModelServiceAuthResult,
   OmniMindModelServiceBeginLoginInput,
@@ -75,6 +77,91 @@ describe("OmniMind model-services contracts", () => {
     });
     expect(JSON.stringify(decoded)).not.toContain("secret.example.test");
     expect(JSON.stringify(decoded)).not.toContain("Authorization");
+  });
+
+  it("keeps custom configuration editable without accepting credentials or headers", () => {
+    const decoded = Schema.decodeUnknownSync(OmniMindModelServicesGetResult)({
+      state: "ready",
+      service: { ...descriptor, serviceId: "custom", providerId: "custom", origin: "models_json" },
+      models: [],
+      customConfig: {
+        serviceId: "custom",
+        displayName: "Private gateway",
+        api: "openai-responses",
+        baseUrl: "https://gateway.example.test/v1",
+        models: [
+          {
+            modelId: "model-one",
+            displayName: "Model One",
+            reasoning: true,
+            input: ["text"],
+            contextWindow: 128_000,
+            maxTokens: 16_384,
+          },
+        ],
+        apiKey: "must-not-decode",
+        headers: { Authorization: "must-not-decode" },
+      },
+      errorCode: null,
+    });
+
+    expect(decoded.state).toBe("ready");
+    if (decoded.state !== "ready") throw new Error("Expected ready custom service detail");
+    expect(decoded.customConfig).toEqual({
+      serviceId: "custom",
+      displayName: "Private gateway",
+      api: "openai-responses",
+      baseUrl: "https://gateway.example.test/v1",
+      models: [
+        {
+          modelId: "model-one",
+          displayName: "Model One",
+          reasoning: true,
+          input: ["text"],
+          contextWindow: 128_000,
+          maxTokens: 16_384,
+        },
+      ],
+    });
+    expect(JSON.stringify(decoded)).not.toContain("must-not-decode");
+  });
+
+  it("requires a bounded secret only at the custom test boundary and permits null on edit", () => {
+    expect(
+      Schema.decodeUnknownSync(OmniMindCustomModelServiceTestInput)({
+        config: {
+          serviceId: "custom",
+          displayName: "Custom",
+          api: "anthropic-messages",
+          baseUrl: "https://gateway.example.test",
+          models: [
+            {
+              modelId: "model-one",
+              displayName: "Model One",
+              reasoning: false,
+              input: ["text"],
+              contextWindow: 32_000,
+              maxTokens: 4_096,
+            },
+          ],
+        },
+        apiKey: null,
+        testModelId: "model-one",
+      }).apiKey,
+    ).toBeNull();
+    expect(() =>
+      Schema.decodeUnknownSync(OmniMindCustomModelServiceTestInput)({
+        config: {},
+        apiKey: "",
+        testModelId: "model-one",
+      }),
+    ).toThrow();
+    expect(
+      Schema.decodeUnknownSync(OmniMindCustomModelServiceSaveResult)({
+        state: "config_saved_sync_failed",
+        service: null,
+      }),
+    ).toEqual({ state: "config_saved_sync_failed", service: null });
   });
 
   it("rejects path-shaped get inputs and invalid counts", () => {

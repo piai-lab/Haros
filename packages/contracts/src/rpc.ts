@@ -138,6 +138,12 @@ import {
 } from "./orchestration";
 import { ProviderCompactThreadInput } from "./provider";
 import {
+  OmniMindCustomModelServiceRemoveInput,
+  OmniMindCustomModelServiceRemoveResult,
+  OmniMindCustomModelServiceSaveInput,
+  OmniMindCustomModelServiceSaveResult,
+  OmniMindCustomModelServiceTestInput,
+  OmniMindCustomModelServiceTestResult,
   OmniMindModelServiceAnswerLoginInput,
   OmniMindModelServiceAuthResult,
   OmniMindModelServiceBeginLoginInput,
@@ -1198,6 +1204,30 @@ export const WsOmniMindModelServicesRefreshRpc = Rpc.make(WS_METHODS.omnimindMod
   success: OmniMindModelServiceRefreshResult,
   error: WsRpcError,
 });
+export const WsOmniMindModelServicesTestCustomRpc = Rpc.make(
+  WS_METHODS.omnimindModelServicesTestCustom,
+  {
+    payload: OmniMindCustomModelServiceTestInput,
+    success: OmniMindCustomModelServiceTestResult,
+    error: WsRpcError,
+  },
+);
+export const WsOmniMindModelServicesSaveCustomRpc = Rpc.make(
+  WS_METHODS.omnimindModelServicesSaveCustom,
+  {
+    payload: OmniMindCustomModelServiceSaveInput,
+    success: OmniMindCustomModelServiceSaveResult,
+    error: WsRpcError,
+  },
+);
+export const WsOmniMindModelServicesRemoveCustomRpc = Rpc.make(
+  WS_METHODS.omnimindModelServicesRemoveCustom,
+  {
+    payload: OmniMindCustomModelServiceRemoveInput,
+    success: OmniMindCustomModelServiceRemoveResult,
+    error: WsRpcError,
+  },
+);
 
 export const WsAutomationListRpc = Rpc.make(WS_METHODS.automationList, {
   payload: AutomationListInput,
@@ -1385,6 +1415,9 @@ export const WsFeatureRpcGroup = RpcGroup.make(
   WsOmniMindModelServicesCancelLoginRpc,
   WsOmniMindModelServicesLogoutRpc,
   WsOmniMindModelServicesRefreshRpc,
+  WsOmniMindModelServicesTestCustomRpc,
+  WsOmniMindModelServicesSaveCustomRpc,
+  WsOmniMindModelServicesRemoveCustomRpc,
   WsAutomationListRpc,
   WsAutomationGetMemoryRpc,
   WsAutomationCreateRpc,

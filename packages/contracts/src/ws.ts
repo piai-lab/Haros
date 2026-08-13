@@ -139,6 +139,9 @@ import {
 } from "./providerDiscovery";
 import { ProviderCompactThreadInput } from "./provider";
 import {
+  OmniMindCustomModelServiceRemoveInput,
+  OmniMindCustomModelServiceSaveInput,
+  OmniMindCustomModelServiceTestInput,
   OmniMindModelServiceAnswerLoginInput,
   OmniMindModelServiceBeginLoginInput,
   OmniMindModelServiceCancelLoginInput,
@@ -291,6 +294,9 @@ export const WS_METHODS = {
   omnimindModelServicesCancelLogin: "omnimindModelServices.cancelLogin",
   omnimindModelServicesLogout: "omnimindModelServices.logout",
   omnimindModelServicesRefresh: "omnimindModelServices.refresh",
+  omnimindModelServicesTestCustom: "omnimindModelServices.testCustom",
+  omnimindModelServicesSaveCustom: "omnimindModelServices.saveCustom",
+  omnimindModelServicesRemoveCustom: "omnimindModelServices.removeCustom",
 
   // Automation methods
   automationList: "automation.list",
@@ -494,6 +500,12 @@ const WebSocketRequestBody = Schema.Union([
   tagRequestBody(WS_METHODS.omnimindModelServicesCancelLogin, OmniMindModelServiceCancelLoginInput),
   tagRequestBody(WS_METHODS.omnimindModelServicesLogout, OmniMindModelServiceLogoutInput),
   tagRequestBody(WS_METHODS.omnimindModelServicesRefresh, OmniMindModelServiceRefreshInput),
+  tagRequestBody(WS_METHODS.omnimindModelServicesTestCustom, OmniMindCustomModelServiceTestInput),
+  tagRequestBody(WS_METHODS.omnimindModelServicesSaveCustom, OmniMindCustomModelServiceSaveInput),
+  tagRequestBody(
+    WS_METHODS.omnimindModelServicesRemoveCustom,
+    OmniMindCustomModelServiceRemoveInput,
+  ),
 
   // Automation methods
   tagRequestBody(WS_METHODS.automationList, AutomationListInput),

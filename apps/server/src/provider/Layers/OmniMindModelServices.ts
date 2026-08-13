@@ -17,7 +17,14 @@ import type {
   ModelsStoreEntry,
   ModelsStoreOperationOptions,
 } from "@earendil-works/pi-ai";
+import { InMemoryCredentialStore } from "@earendil-works/pi-ai";
 import type {
+  OmniMindCustomModelServiceConfigInput,
+  OmniMindCustomModelServiceConfig,
+  OmniMindCustomModelServiceModelInput,
+  OmniMindCustomModelServiceRemoveResult,
+  OmniMindCustomModelServiceSaveResult,
+  OmniMindCustomModelServiceTestResult,
   OmniMindModelServiceAuthEvent,
   OmniMindModelServiceAuthPrompt,
   OmniMindModelServiceAuthResult,
@@ -59,8 +66,17 @@ const MAX_SAFE_MODEL_ID_LENGTH = 512;
 const MAX_AUTH_INTERACTION_TEXT_LENGTH = 4_096;
 const AUTH_REQUEST_TIMEOUT_MS = 5 * 60 * 1_000;
 const MAX_PENDING_AUTH_REQUESTS = 32;
+const CUSTOM_API_PROTOCOLS = [
+  "openai-completions",
+  "openai-responses",
+  "anthropic-messages",
+  "google-generative-ai",
+] as const;
+const CUSTOM_CONNECTION_TEST_PROMPT = "Reply with OK.";
 
 type ReadTextFile = (filePath: string, signal?: AbortSignal) => Promise<string>;
+
+type CustomApiProtocol = (typeof CUSTOM_API_PROTOCOLS)[number];
 
 export interface OmniMindModelServicesLiveOptions {
   readonly loadModule?: () => Promise<OmniMindCodingAgentModule>;
@@ -108,6 +124,91 @@ function safeDisplayName(value: string | undefined, fallback: string): string {
     .trim();
   const candidate = normalized.slice(0, MAX_SAFE_LABEL_LENGTH);
   return candidate && !isPathOrUrlShapedLabel(candidate) ? candidate : fallback;
+}
+
+function normalizedCustomBaseUrl(value: string): string {
+  const parsed = new URL(value);
+  if (
+    (parsed.protocol !== "https:" && parsed.protocol !== "http:") ||
+    parsed.username !== "" ||
+    parsed.password !== "" ||
+    parsed.hash !== ""
+  ) {
+    throw new Error("Custom model-service endpoint is invalid");
+  }
+  return parsed.toString().replace(/\/$/u, "");
+}
+
+function customProviderConfig(input: OmniMindCustomModelServiceConfigInput) {
+  return {
+    name: input.displayName,
+    baseUrl: normalizedCustomBaseUrl(input.baseUrl),
+    api: input.api,
+    models: input.models.map((model) => ({
+      id: model.modelId,
+      name: model.displayName,
+      reasoning: model.reasoning,
+      input: [...model.input],
+      cost: { input: 0, output: 0, cacheRead: 0, cacheWrite: 0 },
+      contextWindow: model.contextWindow,
+      maxTokens: model.maxTokens,
+    })),
+  } as const;
+}
+
+function projectCustomModels(
+  models: ReadonlyArray<OmniMindCustomModelServiceModelInput>,
+): ReadonlyArray<OmniMindModelServiceModel> {
+  return models.map((model) => ({
+    modelId: model.modelId,
+    displayName: model.displayName,
+    available: true,
+    reasoning: model.reasoning,
+    input: [...model.input],
+    contextWindow: model.contextWindow,
+    maxTokens: model.maxTokens,
+  }));
+}
+
+function isCustomApiProtocol(value: string | undefined): value is CustomApiProtocol {
+  return CUSTOM_API_PROTOCOLS.some((protocol) => protocol === value);
+}
+
+function projectCustomConfig(
+  serviceId: string,
+  provider: ReturnType<OmniMindCodingAgentModule["ModelRuntime"]["prototype"]["getModelConfigProvider"]>,
+): OmniMindCustomModelServiceConfig | undefined {
+  if (!provider?.baseUrl || !isCustomApiProtocol(provider.api) || !provider.models?.length) {
+    return undefined;
+  }
+  const models = provider.models.flatMap<OmniMindCustomModelServiceModelInput>((model) => {
+    const modelId = safeModelId(model.id);
+    if (!modelId) return [];
+    return [
+      {
+        modelId,
+        displayName: safeDisplayName(model.name, modelId),
+        reasoning: model.reasoning ?? false,
+        input: model.input?.filter(
+          (kind): kind is "text" | "image" => kind === "text" || kind === "image",
+        ).length
+          ? model.input.filter(
+              (kind): kind is "text" | "image" => kind === "text" || kind === "image",
+            )
+          : ["text"],
+        contextWindow: Math.max(1, Math.trunc(model.contextWindow ?? 128_000)),
+        maxTokens: Math.max(1, Math.trunc(model.maxTokens ?? 16_384)),
+      },
+    ];
+  });
+  if (models.length === 0) return undefined;
+  return {
+    serviceId,
+    displayName: safeDisplayName(provider.name, serviceId),
+    api: provider.api,
+    baseUrl: normalizedCustomBaseUrl(provider.baseUrl),
+    models,
+  };
 }
 
 function safeInteractionText(value: string | undefined, fallback: string): string {
@@ -441,6 +542,7 @@ async function projectModelServices(input: {
   readonly listed: ReadonlyArray<OmniMindModelServiceDescriptor>;
   readonly connectable: ReadonlyArray<OmniMindModelServiceDescriptor>;
   readonly modelsByServiceId: ReadonlyMap<string, ReadonlyArray<OmniMindModelServiceModel>>;
+  readonly customConfigsByServiceId: ReadonlyMap<string, OmniMindCustomModelServiceConfig>;
 }> {
   input.signal.throwIfAborted();
   const sdk = await input.loadModule();
@@ -509,6 +611,7 @@ async function projectModelServices(input: {
   }
 
   const modelsByServiceId = new Map<string, ReadonlyArray<OmniMindModelServiceModel>>();
+  const customConfigsByServiceId = new Map<string, OmniMindCustomModelServiceConfig>();
 
   const descriptors = runtime.getProviders().map<OmniMindModelServiceDescriptor>((provider) => {
     const providerId = safeIdentifier(provider.id);
@@ -543,6 +646,11 @@ async function projectModelServices(input: {
       throw new Error("OmniMind model-service catalog is too large");
     }
     modelsByServiceId.set(providerId, projectedModels);
+    const customConfig = projectCustomConfig(
+      providerId,
+      runtime.getModelConfigProvider(provider.id),
+    );
+    if (customConfig) customConfigsByServiceId.set(providerId, customConfig);
     const credentialInfo = credentials.info(provider.id);
     const authStatus = runtime.getProviderAuthStatus(provider.id);
     const authState = credentialInfo?.oauthAccessExpired
@@ -638,6 +746,7 @@ async function projectModelServices(input: {
         service.authMethods.some((method) => method.canLogin),
     ),
     modelsByServiceId,
+    customConfigsByServiceId,
   };
 }
 
@@ -914,12 +1023,14 @@ export function makeOmniMindModelServicesLive(options: OmniMindModelServicesLive
                     state: "ready",
                     services: [first, ...projection.listed.slice(1)],
                     connectableServices: projection.connectable,
+                    customApiConfiguration: { protocols: CUSTOM_API_PROTOCOLS },
                     errorCode: null,
                   } satisfies OmniMindModelServicesListResult)
                 : ({
                     state: "empty",
                     services: [],
                     connectableServices: projection.connectable,
+                    customApiConfiguration: { protocols: CUSTOM_API_PROTOCOLS },
                     errorCode: null,
                   } satisfies OmniMindModelServicesListResult);
             } catch {
@@ -937,6 +1048,11 @@ export function makeOmniMindModelServicesLive(options: OmniMindModelServicesLive
                     state: "ready",
                     service,
                     models: projection.modelsByServiceId.get(service.serviceId) ?? [],
+                    ...(projection.customConfigsByServiceId.get(service.serviceId)
+                      ? {
+                          customConfig: projection.customConfigsByServiceId.get(service.serviceId)!,
+                        }
+                      : {}),
                     errorCode: null,
                   } as const)
                 : ({ state: "empty", service: null, errorCode: null } as const);
@@ -1112,6 +1228,197 @@ export function makeOmniMindModelServicesLive(options: OmniMindModelServicesLive
                 state: "success",
                 service: await getProjectedService(input.serviceId, signal),
               } as const;
+            }),
+          ),
+        testCustom: (input) =>
+          Effect.promise(async (signal) => {
+            try {
+              const sdk = await (options.loadModule ?? loadOmniMindCodingAgentModule)();
+              signal.throwIfAborted();
+              if (input.config.serviceId === null && input.apiKey === null) {
+                return {
+                  state: "failed",
+                  models: [],
+                  errorCode: "authentication_failed",
+                } satisfies OmniMindCustomModelServiceTestResult;
+              }
+              const agentDir = resolveOmniMindAgentDir(config.baseDir);
+              const providerId = input.config.serviceId ?? "omnimind-custom-preview";
+              const credentials =
+                input.apiKey === null
+                  ? await StaticCredentialStore.create({
+                      authPath: path.join(agentDir, "auth.json"),
+                      readTextFile: (filePath, readSignal) =>
+                        readOmniMindPrivateTextFile({
+                          agentDir,
+                          filename: path.basename(filePath) as OmniMindPrivateRuntimeFilename,
+                          ...(readSignal ? { signal: readSignal } : {}),
+                        }),
+                      signal,
+                    })
+                  : new InMemoryCredentialStore();
+              if (input.apiKey !== null) {
+                await credentials.modify(
+                  providerId,
+                  async () => ({ type: "api_key", key: input.apiKey! }),
+                  { signal },
+                );
+              }
+              const runtime = await sdk.ModelRuntime.create({
+                credentials,
+                modelsPath: null,
+                allowModelNetwork: false,
+                refreshOnCreate: false,
+                signal,
+              });
+              runtime.registerProvider(providerId, customProviderConfig(input.config));
+              const model = runtime.getModel(providerId, input.testModelId);
+              if (!model) {
+                return {
+                  state: "failed",
+                  models: [],
+                  errorCode: "model_unavailable",
+                } satisfies OmniMindCustomModelServiceTestResult;
+              }
+              const response = await runtime.complete(
+                model,
+                {
+                  messages: [
+                    { role: "user", content: CUSTOM_CONNECTION_TEST_PROMPT, timestamp: Date.now() },
+                  ],
+                },
+                { signal, maxTokens: 8 },
+              );
+              if (response.stopReason === "error" || response.stopReason === "aborted") {
+                return {
+                  state: response.stopReason === "aborted" ? "cancelled" : "failed",
+                  models: [],
+                  errorCode:
+                    response.stopReason === "aborted" ? "cancelled" : "connection_failed",
+                } satisfies OmniMindCustomModelServiceTestResult;
+              }
+              return {
+                state: "success",
+                models: projectCustomModels(input.config.models),
+                errorCode: null,
+              } satisfies OmniMindCustomModelServiceTestResult;
+            } catch {
+              if (signal.aborted) {
+                return {
+                  state: "cancelled",
+                  models: [],
+                  errorCode: "cancelled",
+                } satisfies OmniMindCustomModelServiceTestResult;
+              }
+              return {
+                state: "failed",
+                models: [],
+                errorCode: "connection_failed",
+              } satisfies OmniMindCustomModelServiceTestResult;
+            }
+          }),
+        saveCustom: (input) =>
+          Effect.promise((signal) =>
+            serializeMutation(async () => {
+              const serviceId = input.config.serviceId ?? crypto.randomUUID();
+              if (input.config.serviceId === null && input.apiKey === null) {
+                throw new Error("A new custom model service requires an API key");
+              }
+              const agentDir = resolveOmniMindAgentDir(config.baseDir);
+              const sdk = await (options.loadModule ?? loadOmniMindCodingAgentModule)();
+              signal.throwIfAborted();
+              const mutation = await sdk.mutateModelConfigProvider(
+                path.join(agentDir, "models.json"),
+                {
+                  type: "upsert",
+                  providerId: serviceId,
+                  provider: customProviderConfig(input.config),
+                },
+                { signal },
+              );
+              if (!mutation.providerIds.includes(serviceId)) {
+                throw new Error("Custom model service was not accepted by Pi ModelConfig");
+              }
+              publishOmniMindModelRuntimeMutation(agentDir);
+              let authFailed = false;
+              let synchronizationFailed = false;
+              if (input.apiKey !== null) {
+                try {
+                  const { runtime } = await createMutationRuntime(signal);
+                  await runtime.login(serviceId, "api_key", {
+                    signal,
+                    prompt: async () => input.apiKey!,
+                    notify: () => undefined,
+                  });
+                } catch (error) {
+                  if (error instanceof sdk.CredentialSynchronizationError)
+                    synchronizationFailed = true;
+                  else authFailed = true;
+                }
+              }
+              publishOmniMindModelRuntimeMutation(agentDir);
+              let service: OmniMindModelServiceDescriptor | null = null;
+              try {
+                service = await getProjectedService(serviceId, new AbortController().signal);
+              } catch {
+                synchronizationFailed = true;
+              }
+              if (!service && !authFailed && !synchronizationFailed) {
+                throw new Error("Saved custom model service could not be projected");
+              }
+              if (authFailed) {
+                return {
+                  state: "config_saved_auth_failed",
+                  service,
+                } satisfies OmniMindCustomModelServiceSaveResult;
+              }
+              if (synchronizationFailed) {
+                return {
+                  state: "config_saved_sync_failed",
+                  service,
+                } satisfies OmniMindCustomModelServiceSaveResult;
+              }
+              if (!service) throw new Error("Saved custom model service could not be projected");
+              return {
+                state: "complete",
+                service,
+              } satisfies OmniMindCustomModelServiceSaveResult;
+            }),
+          ),
+        removeCustom: (input) =>
+          Effect.promise((signal) =>
+            serializeMutation(async () => {
+              const previous = await getProjectedService(input.serviceId, signal);
+              if (previous.origin !== "models_json") {
+                throw new Error("Only a models.json model service can be removed");
+              }
+              const agentDir = resolveOmniMindAgentDir(config.baseDir);
+              const sdk = await (options.loadModule ?? loadOmniMindCodingAgentModule)();
+              const { runtime } = await createMutationRuntime(signal);
+              const mutation = await sdk.mutateModelConfigProvider(
+                path.join(agentDir, "models.json"),
+                { type: "remove", providerId: input.serviceId },
+                { signal },
+              );
+              if (mutation.providerIds.includes(input.serviceId)) {
+                throw new Error("Custom model service removal was not accepted by Pi ModelConfig");
+              }
+              publishOmniMindModelRuntimeMutation(agentDir);
+              let synchronizationFailed = false;
+              try {
+                await runtime.logout(input.serviceId, { signal });
+              } catch (error) {
+                if (error instanceof sdk.CredentialSynchronizationError) {
+                  synchronizationFailed = true;
+                } else {
+                  throw error;
+                }
+              }
+              publishOmniMindModelRuntimeMutation(agentDir);
+              return {
+                state: synchronizationFailed ? "complete_with_sync_warning" : "complete",
+                serviceId: input.serviceId,
+              } satisfies OmniMindCustomModelServiceRemoveResult;
             }),
           ),
       } satisfies OmniMindModelServicesShape;

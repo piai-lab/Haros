@@ -778,6 +778,21 @@ export function createWsNativeApi(): NativeApi {
           input,
           options?.signal ? { signal: options.signal, timeoutMs: null } : { timeoutMs: null },
         ),
+      testCustom: (input, options) =>
+        transport.request(WS_METHODS.omnimindModelServicesTestCustom, input, {
+          timeoutMs: null,
+          ...(options?.signal ? { signal: options.signal } : {}),
+        }),
+      saveCustom: (input, options) =>
+        transport.request(WS_METHODS.omnimindModelServicesSaveCustom, input, {
+          timeoutMs: null,
+          ...(options?.signal ? { signal: options.signal } : {}),
+        }),
+      removeCustom: (input, options) =>
+        transport.request(WS_METHODS.omnimindModelServicesRemoveCustom, input, {
+          timeoutMs: null,
+          ...(options?.signal ? { signal: options.signal } : {}),
+        }),
     },
     orchestration: {
       getSnapshot: () => transport.request(ORCHESTRATION_WS_METHODS.getSnapshot),

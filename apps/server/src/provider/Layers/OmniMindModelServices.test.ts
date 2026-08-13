@@ -1220,7 +1220,16 @@ describe("OmniMindModelServicesLive", () => {
       { mode: 0o600 },
     );
 
-    const result = await loadService({ root });
+    const layer = makeTestLayer({ root });
+    const result = await Effect.runPromise(
+      Effect.gen(function* () {
+        const service = yield* OmniMindModelServices;
+        return {
+          list: yield* service.list(),
+          detail: yield* service.get({ serviceId: "小米代理" }),
+        };
+      }).pipe(Effect.provide(layer)),
+    );
     expect(result.list.state).toBe("ready");
     expect(result.list.services).toContainEqual(
       expect.objectContaining({
@@ -1235,12 +1244,165 @@ describe("OmniMindModelServicesLive", () => {
         catalogState: "ready",
       }),
     );
-    expect(result.deepseek.state).toBe("ready");
-    if (result.deepseek.state !== "ready") throw new Error("Expected DeepSeek detail");
-    expect(result.deepseek.models).toBeDefined();
+    expect(result.detail).toMatchObject({
+      state: "ready",
+      customConfig: {
+        serviceId: "小米代理",
+        displayName: "小米代理",
+        api: "openai-completions",
+        baseUrl: "https://redacted.example.test/v1",
+        models: [
+          {
+            modelId: "mimo",
+            displayName: "mimo",
+            reasoning: false,
+            input: ["text"],
+            contextWindow: 128_000,
+            maxTokens: 16_384,
+          },
+        ],
+      },
+    });
     expect(JSON.stringify(result)).not.toContain(agentDir);
-    expect(JSON.stringify(result)).not.toContain("redacted.example.test");
+    expect(result.detail).toMatchObject({
+      state: "ready",
+      customConfig: { baseUrl: "https://redacted.example.test/v1" },
+    });
     expect(JSON.stringify(result)).not.toContain("not-projected");
+  });
+
+  it("tests a custom connection without persisting its process-local API key", async () => {
+    const root = await makeRoot();
+    await isolateProviderEnvironment(root);
+    const agentDir = path.join(root, "agent");
+    await mkdir(agentDir, { recursive: true });
+    const authPath = path.join(agentDir, "auth.json");
+    const originalAuth = JSON.stringify({ deepseek: { type: "api_key", key: "keep-existing" } });
+    await writeFile(authPath, originalAuth, { mode: 0o600 });
+    let authorization: string | null = null;
+    vi.spyOn(globalThis, "fetch").mockImplementation(async (request, init) => {
+      authorization = new Headers(request instanceof Request ? request.headers : init?.headers).get(
+        "authorization",
+      );
+      return new Response(
+        [
+          'data: {"id":"test","object":"chat.completion.chunk","created":1,"model":"model-one","choices":[{"index":0,"delta":{"role":"assistant","content":"OK"},"finish_reason":null}]}',
+          'data: {"id":"test","object":"chat.completion.chunk","created":1,"model":"model-one","choices":[{"index":0,"delta":{},"finish_reason":"stop"}]}',
+          "data: [DONE]",
+          "",
+        ].join("\n\n"),
+        { headers: { "content-type": "text/event-stream" } },
+      );
+    });
+    const layer = makeTestLayer({ root });
+    const result = await Effect.runPromise(
+      Effect.gen(function* () {
+        const service = yield* OmniMindModelServices;
+        return yield* service.testCustom({
+          config: {
+            serviceId: null,
+            displayName: "Test gateway",
+            api: "openai-completions",
+            baseUrl: "https://gateway.example.test/v1",
+            models: [
+              {
+                modelId: "model-one",
+                displayName: "Model One",
+                reasoning: false,
+                input: ["text"],
+                contextWindow: 32_000,
+                maxTokens: 4_096,
+              },
+            ],
+          },
+          apiKey: "test-only-custom-key",
+          testModelId: "model-one",
+        });
+      }).pipe(Effect.provide(layer)),
+    );
+
+    expect(result).toMatchObject({ state: "success", errorCode: null });
+    expect(authorization).toBe("Bearer test-only-custom-key");
+    expect(await readFile(authPath, "utf8")).toBe(originalAuth);
+    expect(JSON.stringify(result)).not.toContain("test-only-custom-key");
+  });
+
+  it("saves, reopens, edits, and removes one custom service through Pi-owned state", async () => {
+    const root = await makeRoot();
+    await isolateProviderEnvironment(root);
+    const layer = makeTestLayer({ root });
+    const firstModel = {
+      modelId: "model-one",
+      displayName: "Model One",
+      reasoning: true,
+      input: ["text" as const],
+      contextWindow: 64_000,
+      maxTokens: 8_192,
+    };
+    const firstConfig = {
+      serviceId: null,
+      displayName: "Custom gateway",
+      api: "openai-responses" as const,
+      baseUrl: "https://gateway.example.test/v1",
+      models: [firstModel],
+    };
+    const result = await Effect.runPromise(
+      Effect.gen(function* () {
+        const service = yield* OmniMindModelServices;
+        const saved = yield* service.saveCustom({
+          config: firstConfig,
+          apiKey: "persisted-custom-key",
+        });
+        if (!saved.service) throw new Error("Expected saved custom service projection");
+        const serviceId = saved.service.serviceId;
+        const reopened = yield* service.get({ serviceId });
+        const edited = yield* service.saveCustom({
+          config: {
+            ...firstConfig,
+            serviceId,
+            displayName: "Edited gateway",
+            models: [
+              {
+                ...firstModel,
+                displayName: "Edited Model",
+              },
+            ],
+          },
+          apiKey: null,
+        });
+        const reopenedAfterEdit = yield* service.get({ serviceId });
+        const removed = yield* service.removeCustom({ serviceId });
+        const absent = yield* service.get({ serviceId });
+        return { saved, reopened, edited, reopenedAfterEdit, removed, absent, serviceId };
+      }).pipe(Effect.provide(layer)),
+    );
+
+    expect(result.saved).toMatchObject({
+      state: "complete",
+      service: { origin: "models_json", storedCredentialType: "api_key" },
+    });
+    expect(result.reopened).toMatchObject({
+      state: "ready",
+      customConfig: { displayName: "Custom gateway", api: "openai-responses" },
+    });
+    expect(result.edited).toMatchObject({ state: "complete" });
+    expect(result.reopenedAfterEdit).toMatchObject({
+      state: "ready",
+      service: { storedCredentialType: "api_key" },
+      customConfig: {
+        displayName: "Edited gateway",
+        models: [{ displayName: "Edited Model" }],
+      },
+    });
+    expect(result.removed).toEqual({ state: "complete", serviceId: result.serviceId });
+    expect(result.absent).toEqual({ state: "empty", service: null, errorCode: null });
+    const agentDir = path.join(root, "agent");
+    const storedAuth = JSON.parse(await readFile(path.join(agentDir, "auth.json"), "utf8"));
+    expect(storedAuth[result.serviceId]).toBeUndefined();
+    expect(await readFile(path.join(agentDir, "models.json"), "utf8")).not.toContain(
+      result.serviceId,
+    );
+    expect(JSON.stringify(result)).not.toContain("persisted-custom-key");
   });
 
   it("propagates cancellation into an in-flight static credential read", async () => {

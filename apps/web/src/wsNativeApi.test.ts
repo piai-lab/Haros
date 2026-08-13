@@ -989,6 +989,64 @@ describe("wsNativeApi", () => {
     );
   });
 
+  it("forwards typed custom model-service test, save, and remove operations", async () => {
+    requestMock
+      .mockResolvedValueOnce({ state: "failed", models: [], errorCode: "connection_failed" })
+      .mockResolvedValueOnce({ state: "config_saved_sync_failed", service: null })
+      .mockResolvedValueOnce({ state: "complete", serviceId: "custom" });
+    const { createWsNativeApi } = await import("./wsNativeApi");
+    const api = createWsNativeApi();
+    const controller = new AbortController();
+    const config = {
+      serviceId: null,
+      displayName: "Custom",
+      api: "openai-completions" as const,
+      baseUrl: "https://gateway.example.test/v1",
+      models: [
+        {
+          modelId: "model-one",
+          displayName: "Model One",
+          reasoning: false,
+          input: ["text" as const],
+          contextWindow: 32_000,
+          maxTokens: 4_096,
+        },
+      ],
+    };
+
+    await api.omnimindModelServices.testCustom(
+      { config, apiKey: "test-secret", testModelId: "model-one" },
+      { signal: controller.signal },
+    );
+    await api.omnimindModelServices.saveCustom(
+      { config, apiKey: "test-secret" },
+      { signal: controller.signal },
+    );
+    await api.omnimindModelServices.removeCustom(
+      { serviceId: "custom" },
+      { signal: controller.signal },
+    );
+
+    expect(requestMock).toHaveBeenNthCalledWith(
+      1,
+      WS_METHODS.omnimindModelServicesTestCustom,
+      { config, apiKey: "test-secret", testModelId: "model-one" },
+      { signal: controller.signal, timeoutMs: null },
+    );
+    expect(requestMock).toHaveBeenNthCalledWith(
+      2,
+      WS_METHODS.omnimindModelServicesSaveCustom,
+      { config, apiKey: "test-secret" },
+      { signal: controller.signal, timeoutMs: null },
+    );
+    expect(requestMock).toHaveBeenNthCalledWith(
+      3,
+      WS_METHODS.omnimindModelServicesRemoveCustom,
+      { serviceId: "custom" },
+      { signal: controller.signal, timeoutMs: null },
+    );
+  });
+
   it("forwards browser webview detach requests to the desktop bridge", async () => {
     const detachWebview = vi.fn().mockResolvedValue(undefined);
     Object.defineProperty(getWindowForTest(), "desktopBridge", {
