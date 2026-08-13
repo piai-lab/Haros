@@ -1030,7 +1030,7 @@ catalogError/stale summary（若 Pi 有真实证据）
 
 不得返回 stored key/token、完整 credential、任意 command 展开结果或未经脱敏的 headers。`ServerProviderStatus` 的 Engine-level `ready/authStatus: unknown` 不能填充这些 service-level 字段。
 
-这里的 `origin` union 是最终 provenance contract，不是允许 Settings mount 执行 extension 的授权。`extension` 只能来自已经由显式 intent scope 加载的 Pi runtime/provenance；被动只读页面不能为了补齐一行而运行第三方 extension。静态发现 OAuth access token 已到期只证明需要 refresh/check，不能证明 refresh token 或登录整体已经失效，因此此时只能投影 `refresh_required`，`sign_in_expired` 保留给 Pi provider-owned auth/refresh 的明确失败证据。
+这里的 `origin` union 是最终 provenance contract，不是允许 Settings mount 执行 extension 的授权。`extension` 只能来自已经由显式 intent scope 加载的 Pi runtime/provenance；被动只读页面不能为了补齐一行而运行第三方 extension。但 Extension provider 的产品可达性是 V1 必达结果，不是 optional enhancement：用户进入添加流程后应复用 Pi 既有 ResourceLoader/Session owner完成安全加载和来源投影。静态发现 OAuth access token 已到期只证明需要 refresh/check，不能证明 refresh token 或登录整体已经失效，因此此时只能投影 `refresh_required`，`sign_in_expired` 保留给 Pi provider-owned auth/refresh 的明确失败证据。
 
 ### 10.7 ModelRuntime 生命周期与持久化
 
@@ -1115,10 +1115,10 @@ Pi 当前没有公开的持久 custom-provider mutation API
 因此 `omnimindModelServices.upsertCustom/removeCustom` 不能假装只是“薄调用一个现成 Pi 方法”。按维护成本从优到劣：
 
 1. **优先向 Pi 上游补最小持久 mutation API**：由 Pi 拥有 schema、locking、unknown-field preservation、atomic write 和 reload validation；OmniMind 只调用。这最符合无条件跟随上游和长期免维护目标。
-2. 在上游 API 可用前，可以先交付 built-in provider 的 auth、OAuth、catalog refresh 和只读 custom-provider 投影；custom edit 暂不伪装完成。
-3. 只有维护者明确要求提前交付 custom edit 时，OmniMind 才临时拥有一个极窄 models.json adapter：对单个 `providers[providerId]` 做 locked read-modify-write，保留根级及其他 provider 的全部未知字段，写临时文件后以 Pi 新 runtime 验证，再原子替换；删除也只删目标 key。该 adapter 不能复制 schema、不能格式化重写用户无关内容、不能处理 credential，并应在 Pi API adopted 后删除。
+2. 在上游 API 可用前，built-in provider 的 auth、OAuth、catalog refresh 和只读 custom-provider 投影仍可独立交付，但不能把缺少 custom edit 说成 Model services 完成。
+3. 维护者已于 2026-08-13 明确要求提前交付 custom edit，并授权在既有 product-owned Pi source adoption 内给 ModelConfig/ModelRuntime owner增加一个极窄、typed、可删除的持久 mutation seam。该 seam 对单个 `providers[providerId]` 做 locked read-modify-write，保留根级及其他 provider的全部未知字段，写临时文件后以Pi新runtime验证，再原子替换；删除也只删目标key。它不能变成Host parser/writer、不能格式化重写用户无关内容、不能处理明文credential，并应在Pi上游API adopted后删除。
 
-这是一个明确 stop-loss：在没有上游 API或临时 adapter 的独立授权与 round-trip fixture 前，Settings Slice 4 不进入产品施工；不能从 React 直接编辑 models.json，也不能建立 `model-services.json` 绕开缺口。
+这是一个明确 stop-loss：授权已经满足，但round-trip、unknown-field、locking、atomic replace与reload fixture仍是进入条件；不能从React或Host service直接编辑models.json，也不能建立`model-services.json`绕开缺口。真实产品结果必须包括test/save、packaged restart后仍存在、edit/retest/refresh/delete；禁用占位或永久隐藏不能替代这条旅程。
 
 ### 10.8 列表页 IA
 
@@ -1566,7 +1566,7 @@ Composer 与所有 direct consumer 都必须先按现有优先级解析 exact se
 1. Host 以 Pi ModelRuntime 暴露 provider、auth status、known/available model count；
 2. renderer 建 Model services 列表页；
 3. 重命名 Settings label/description；
-4. 不渲染 Git writing default；底层字段与新归属明确 defer 到 E7；
+4. 不渲染 Git writing default；底层字段保留；新归属可以延后到 E7，但 E7 Exit 前必须迁移到真实调用功能或由维护者明确退休，不能静默失去唯一入口；
 5. 不做 mutation，先证明真实数据、空态、错误和隔离。
 
 锁定 Pi `v0.84.1` 尚无 physically-contained、bounded、cancellable 的 `models.json` loader，因此本 Slice 当前只能安全 characterization built-in/auth metadata，并对存在 `models.json` 的 projection typed fail；不得把它称为 Slice 1 完成。恢复条件是一次独立授权并 adopted 的 Pi source/API intake，不能在本 UI diff 中 patch vendor、写 secret-bearing temp copy 或复制 Pi schema。
@@ -1589,12 +1589,12 @@ Composer 与所有 direct consumer 都必须先按现有优先级解析 exact se
 
 #### Settings Slice 4：custom provider 与多实例
 
-进入条件：Pi 上游已有受支持的持久 provider-config mutation API，或维护者对 §10.7.3 的临时窄 adapter 给出独立授权并已有 unknown-field/atomicity fixture。
+进入条件：维护者已授权 §10.7.3 的 Pi-owned typed mutation seam；施工前仍须具备 unknown-field/locking/atomicity/reload fixture。若Pi上游先提供受支持API，直接采用上游并删除补丁。
 
 1. 主入口仍是搜索/选择 runtime 服务；API 地址入口在列表尾部弱一级呈现；
 2. generic API 只允许 `openai-completions`、`openai-responses`、`anthropic-messages`、`google-generative-ai`；非标准协议只来自 Pi Extension；
 3. 使用唯一 Pi providerId；
-4. 通过 Pi API或经授权的临时 adapter 原子更新 `models.json.providers`；
+4. 通过 Pi 上游 API或已授权的 product-owned Pi typed mutation seam 原子更新 `models.json.providers`；
 5. 支持 display name、base URL、api、headers 和真实 model definitions；
 6. 只对 Pi config/extension 真能表达的 instance 显示 auth/refresh capability；
 7. 删除/重命名/selection impact；
@@ -2108,7 +2108,7 @@ fresh launch
 | Pi auth 可能多 prompt/device/manual-code，不是一张固定 key 表单                   | §10.6、§10.10、§10.14    | 已覆盖；Host 必须桥接 typed interaction                        |
 | 当前 listModels 只返回 available，空动态目录会退回静态 UI options                 | §4.2、§10.5、§10.16      | 已覆盖；Settings/Composer 不再把静态候选当可发送证据           |
 | query invalidation 不会自动刷新 active Session ModelRuntime snapshot              | §10.7、§10.19            | 已覆盖；下一 turn 前按 agentDir mutation generation reconcile  |
-| Pi 当前没有公开的 models.json 持久 custom-provider mutation API                   | §10.7.3、§10.22          | 已覆盖；优先补上游，临时 adapter 需单独授权与 stop-loss        |
+| Pi 当前没有公开的 models.json 持久 custom-provider mutation API                   | §10.7.3、§10.22          | 已覆盖；维护者已授权既有product-owned Pi内的窄typed seam，上游等价API出现后删除 |
 | Codex/Claude/OpenCode 等独立 Engine 怎么办                                        | §9.1、§10.3              | 已覆盖；保留 Agent engines/native owner，不塞进 Model services |
 | 现有统一模型发现 Hook 应复用                                                      | §4.2、§10.19、§11.1      | 已覆盖；mutation 后失效同一 catalog query                      |
 | Composer Context ring 右侧增加 Engine icon                                        | §1.1、§5.1–5.2           | 已覆盖                                                         |

@@ -1,16 +1,7 @@
 #!/usr/bin/env node
 
 import { createHash } from "node:crypto";
-import {
-  copyFile,
-  cp,
-  mkdtemp,
-  mkdir,
-  readFile,
-  realpath,
-  rm,
-  writeFile,
-} from "node:fs/promises";
+import { copyFile, cp, mkdtemp, mkdir, readFile, realpath, rm, writeFile } from "node:fs/promises";
 import os from "node:os";
 import path from "node:path";
 import { fileURLToPath } from "node:url";
@@ -20,7 +11,7 @@ const PI_REVISION = "53fa77ccd8a279eb87e92294ef3687b03ff80112";
 const PI_VERSION = "0.84.1";
 const PI_AI_INTEGRITY =
   "sha512-wMsAdJMxuNri08vLqTyYVI201DQQezGhPSTkzYsHdw5dYX3rCNwEmSvpaAwhi7ELKI/2tE/CEgSWg/6iRxSgdQ==";
-const PATCH_SHA256 = "cc7fc8327130a42091022c6150e3fd4fb7005cd155a0802fb084589ac322361b";
+const PATCH_SHA256 = "86b19ad2a6f8b8fd785a65d3a3278ac29162f223365c07560cd9ad76cadaa6d9";
 const PRODUCT_ARCHIVE_NAME = `omnimind-pi-coding-agent-${PI_VERSION}.tgz`;
 const SCRIPT_DIR = path.dirname(fileURLToPath(import.meta.url));
 const REPOSITORY_ROOT = path.resolve(SCRIPT_DIR, "..");
@@ -38,6 +29,7 @@ function fail(message) {
 function run(command, args, options = {}) {
   const result = spawnSync(command, args, {
     cwd: options.cwd,
+    env: options.env ? { ...process.env, ...options.env } : process.env,
     encoding: options.encoding ?? "utf8",
     input: options.input,
     maxBuffer: 64 * 1024 * 1024,
@@ -64,7 +56,8 @@ function parseArguments(argv) {
       fail(`Unknown argument: ${argument}`);
     }
   }
-  if (!source) fail("Usage: node scripts/vendor-omnimind-pi-runtime.mjs --source <clean-pi-checkout>");
+  if (!source)
+    fail("Usage: node scripts/vendor-omnimind-pi-runtime.mjs --source <clean-pi-checkout>");
   return { source: path.resolve(source), output };
 }
 
@@ -74,6 +67,14 @@ function sha256(bytes) {
 
 function sha512Integrity(bytes) {
   return `sha512-${createHash("sha512").update(bytes).digest("base64")}`;
+}
+
+export function assertPatchDigest(patchBytes) {
+  const observed = sha256(patchBytes);
+  if (observed !== PATCH_SHA256) {
+    fail(`Pi source patch digest must be ${PATCH_SHA256}; observed ${observed}`);
+  }
+  return observed;
 }
 
 async function prepareGeneratedModelData(worktree, temporaryRoot) {
@@ -119,11 +120,15 @@ async function writeProductManifest(worktree) {
     "@earendil-works/pi-protocol",
     "@earendil-works/pi-tui",
   ]) {
-    if (!(dependency in manifest.dependencies)) fail(`Missing expected Pi-family dependency: ${dependency}`);
+    if (!(dependency in manifest.dependencies))
+      fail(`Missing expected Pi-family dependency: ${dependency}`);
     manifest.dependencies[dependency] = PI_VERSION;
   }
   await writeFile(manifestPath, `${JSON.stringify(manifest, null, "\t")}\n`, "utf8");
-  await copyFile(path.join(worktree, "LICENSE"), path.join(worktree, "packages", "coding-agent", "LICENSE"));
+  await copyFile(
+    path.join(worktree, "LICENSE"),
+    path.join(worktree, "packages", "coding-agent", "LICENSE"),
+  );
 }
 
 async function packProductArchive(worktree, destination) {
@@ -141,10 +146,7 @@ async function packProductArchive(worktree, destination) {
 async function main() {
   const { source: requestedSource, output } = parseArguments(process.argv.slice(2));
   const patchBytes = await readFile(PATCH_PATH);
-  const patchSha256 = sha256(patchBytes);
-  if (patchSha256 !== PATCH_SHA256) {
-    fail(`Pi source patch digest must be ${PATCH_SHA256}; observed ${patchSha256}`);
-  }
+  const patchSha256 = assertPatchDigest(patchBytes);
   const source = await realpath(requestedSource);
   const revision = run("git", ["rev-parse", "HEAD"], { cwd: source });
   if (revision !== PI_REVISION) {
@@ -169,11 +171,16 @@ async function main() {
       [
         "vitest",
         "run",
+        "test/model-config-mutation.test.ts",
         "test/model-runtime-config-reader.test.ts",
         "test/model-registry.test.ts",
         "test/model-runtime-modify-models-compat.test.ts",
       ],
-      { cwd: path.join(worktree, "packages", "coding-agent"), capture: false },
+      {
+        cwd: path.join(worktree, "packages", "coding-agent"),
+        capture: false,
+        env: { PI_OFFLINE: "1" },
+      },
     );
     await writeProductManifest(worktree);
 
@@ -181,7 +188,8 @@ async function main() {
     const secondArchive = await packProductArchive(worktree, path.join(temporaryRoot, "pack-two"));
     const firstBytes = await readFile(firstArchive);
     const secondBytes = await readFile(secondArchive);
-    if (!firstBytes.equals(secondBytes)) fail("Product runtime archive generation is not deterministic");
+    if (!firstBytes.equals(secondBytes))
+      fail("Product runtime archive generation is not deterministic");
 
     await mkdir(path.dirname(output), { recursive: true });
     await copyFile(firstArchive, output);
@@ -205,4 +213,6 @@ async function main() {
   }
 }
 
-await main();
+if (process.argv[1] && path.resolve(process.argv[1]) === fileURLToPath(import.meta.url)) {
+  await main();
+}

@@ -676,20 +676,17 @@ E2 typed auth bridge 已稳定；Pi provider metadata 明确暴露 OAuth capabil
 
 ## 12. E6 — custom provider 与同供应商多实例
 
-### Hard entry gate
+### Entry decision（已满足）
 
-只有满足其一才能进入：
+维护者于 2026-08-13 明确要求并授权真实的 custom-provider 持久配置；“无法保存”、禁用占位或永久隐藏都不是可接受产品结果。锁定 Pi 尚无公开 persistent mutation API，因此本轮只能在既有 product-owned Pi source adoption 内，为 Pi 自己的 ModelConfig/ModelRuntime owner增加一个窄、typed、可删除的持久 mutation seam。stock Pi保持原样；上游出现等价 API 后删除补丁，不保留双轨。
 
-1. 已采用的 Pi 版本公开提供受支持的 provider-config persistent mutation API；或
-2. 维护者对单一临时 `models.json` adapter 给出明确授权，并已有 unknown-field preservation、locking、atomic replace、reload validation fixture。
-
-否则只交付 built-in auth/refresh 和 custom provider 只读投影，停止本切片。
+这项授权不允许 Host 自建 `models.json` parser/writer、第二配置 store、Provider Registry、catalog fetcher或数据库。Pi继续唯一拥有 comments/JSON/schema/composition/validation、unknown-field preservation、locking、atomic replace、reload validation与错误；Host只负责typed输入、physical containment、secret边界和mutation后的runtime/catalog reconcile。实现若无法保持这个边界，E6仍应停止并报告精确 blocker，而不是退化成假入口。
 
 ### Outcome
 
 同一商业供应商可存在多个 Pi 可表达的稳定 service instance，credential/config/catalog/model identity 隔离，Composer 能消歧；不新建 Channel runtime 或第二 catalog truth。
 
-产品入口必须保持分层：搜索/选择 Pi runtime 真实服务是主路径；列表尾部“没有找到？通过 API 地址连接”是弱一级补充。普通 API 地址配置只允许 Pi `models.json` 官方支持的 `openai-completions`、`openai-responses`、`anthropic-messages`、`google-generative-ai`；非标准 API 只来自 Pi Extension。Hard entry gate 未满足时只保留 IA/只读投影，不施工 mutation。
+产品入口必须保持分层：搜索/选择 Pi runtime 真实服务是主路径；列表尾部“没有找到？通过 API 地址连接”是弱一级补充。普通 API 地址配置只允许 Pi `models.json` 官方支持的 `openai-completions`、`openai-responses`、`anthropic-messages`、`google-generative-ai`；非标准 API 只来自 Pi Extension。次路径必须完成“填写 → 测试 → 保存 → 重开仍存在 → 编辑/重新测试/刷新/删除”的完整旅程；精确build尚未拥有capability时不显示入口，不能显示“尚未开放”的死操作，也不能把隐藏当成E6完成。
 
 ### 设计映射
 
@@ -725,14 +722,14 @@ deepseek-research
 - renderer 不直接写 `models.json`；
 - 不建立 `model-services.json`。
 
-### 临时 adapter（只有已授权时）
+### Pi-owned persistent mutation seam
 
-- 只对 `providers[providerId]` locked read-modify-write；
-- 保留根和其他 provider 全部未知字段；
-- temp file + Pi reload validation + atomic replace；
-- credential 仍由 Pi credential store 拥有；
-- 不格式化重写无关内容；
-- Pi API adopted 后删除 adapter，不保留永久双轨。
+- seam 位于既有 product-owned Pi adoption 的 ModelConfig/ModelRuntime owner，不位于 React、Host service 或另一个配置包；
+- 只对目标 `providers[providerId]` 做 typed upsert/remove，并保留根和其他 provider全部未知字段；
+- locked read-modify-write、temp file、Pi reload validation与atomic replace由同一Pi owner完成；
+- credential继续遵循Pi credential store/reference语义，不把明文secret写进renderer、日志或Host产品配置；
+- 不格式化重写无关内容；stock Pi默认行为不变；
+- Pi上游API adopted后删除该seam，不保留永久兼容双轨。
 
 ### Exit
 
@@ -756,7 +753,9 @@ deepseek-research
 - i18n：简中/英文 key 与 placeholder 一一对应；
 - search index：API Key、OAuth、从供应商获取、自定义服务、服务实例等可搜索；
 - Git writing default 退出 Model services；底层字段保留，搜索/deep-link 在调用功能新归属确定后迁移，不能继续指向不存在 row；
+- Git writing default 的精确新归属可以在本slice内后定，但 E7 Exit 前必须二选一：迁移到真实调用功能并恢复可达搜索/deep-link，或由维护者明确退休该产品能力；不能以 `defer` 静默删除唯一入口；
 - 独立 Engine custom slug 控件归 `Agent engines` 对应 detail，底层 storage 不迁移；
+- Pi Extension 模型服务是 V1 必达能力：被动 Settings 页面不得执行 Extension；用户显式进入添加流程后，复用 Pi 既有 ResourceLoader/Session provenance owner 做 intent-scoped 加载，并让真实 Extension provider 可搜索、可进入 detail，origin准确为 `extension`；
 - legacy `customOmniMindModels` 不再由新 UI 创建，既有值无损读取并提供显式转化/移除；
 - 普通 UI `OmniMind`，技术 detail `OmniMind Agent`；
 - 不用可翻译 title 当稳定 anchor；
@@ -931,7 +930,7 @@ fresh launch
 5. 为 Model services 准备增加通用 ProviderAdapter CRUD/auth；
 6. 开始维护静态供应商 enum、URL、模型镜像或 `/models` parser；
 7. query invalidation 被当成 active Session runtime 同步；
-8. custom provider 没有 Pi persistent API，也没有临时 adapter 明确授权；
+8. custom provider 实现需要越出已授权的 Pi-owned typed seam，转而新增 Host parser/writer、第二配置 store、Registry 或 catalog fetcher；
 9. Queue binding 时点无法从 owner/代码唯一推出；
 10. failure 后 UI 与 runtime rollback 语义不唯一；
 11. 测试为了方便迫使生产增加第二状态/接口；

@@ -1,15 +1,150 @@
+diff --git a/package-lock.json b/package-lock.json
+index 48e638d5e..c17a5db1e 100644
+--- a/package-lock.json
++++ b/package-lock.json
+@@ -3601,0 +3602,6 @@
++		"node_modules/jsonc-parser": {
++			"version": "3.3.1",
++			"resolved": "https://registry.npmjs.org/jsonc-parser/-/jsonc-parser-3.3.1.tgz",
++			"integrity": "sha512-HUgH65KyejrUFPvHFPbqOY0rsFip3Bo5wb4ngvdi1EpCYWUQDC5V+Y7mZws+DLkr4M//zQJoanu1SP+87Dv1oQ==",
++			"license": "MIT"
++		},
+@@ -5557,0 +5564 @@
++				"jsonc-parser": "3.3.1",
+diff --git a/packages/coding-agent/package.json b/packages/coding-agent/package.json
+index f6fc21a3d..1e293a821 100644
+--- a/packages/coding-agent/package.json
++++ b/packages/coding-agent/package.json
+@@ -60,0 +61 @@
++		"jsonc-parser": "3.3.1",
 diff --git a/packages/coding-agent/src/core/model-config.ts b/packages/coding-agent/src/core/model-config.ts
-index 7f679a494..a7db4dafe 100644
+index 7f679a494..95ba58141 100644
 --- a/packages/coding-agent/src/core/model-config.ts
 +++ b/packages/coding-agent/src/core/model-config.ts
-@@ -215,0 +216,6 @@ type ModelsJson = Static<typeof ModelsConfigSchema>;
+@@ -3 +3,6 @@
+-import { readFile } from "node:fs/promises";
++import { constants as fsConstants } from "node:fs";
++import { randomUUID } from "node:crypto";
++import { chmod, lstat, mkdir, open, readFile, realpath, rename, rm } from "node:fs/promises";
++import { basename, dirname, join } from "node:path";
++import { applyEdits, modify } from "jsonc-parser";
++import lockfile from "proper-lockfile";
+@@ -215,0 +221,114 @@ type ModelsJson = Static<typeof ModelsConfigSchema>;
 +export interface ModelConfigReadOptions {
 +	readonly signal?: AbortSignal;
 +}
 +
 +export type ModelConfigReader = (options: ModelConfigReadOptions) => Promise<string | undefined>;
 +
-@@ -245,12 +251,27 @@ export class ModelConfig {
++export type ModelConfigProviderMutation =
++	| {
++			type: "upsert";
++			providerId: string;
++			provider: ModelsJsonProvider;
++	  }
++	| {
++			type: "remove";
++			providerId: string;
++	  };
++
++export interface ModelConfigMutationOptions {
++	readonly signal?: AbortSignal;
++}
++
++export interface ModelConfigMutationResult {
++	readonly changed: boolean;
++	readonly providerIds: readonly string[];
++}
++
++const MAX_MODELS_CONFIG_BYTES = 4 * 1024 * 1024;
++const MODELS_CONFIG_FILE_MODE = 0o600;
++
++function isMissingPathError(error: unknown): boolean {
++	return typeof error === "object" && error !== null && "code" in error && error.code === "ENOENT";
++}
++
++function formattingOptions(content: string): {
++	insertSpaces: boolean;
++	tabSize: number;
++	eol: string;
++} {
++	const indentation = content.match(/(?:^|\r?\n)([ \t]+)"providers"\s*:/)?.[1] ?? "\t";
++	return {
++		insertSpaces: !indentation.includes("\t"),
++		tabSize: indentation.includes("\t") ? 4 : Math.max(1, indentation.length),
++		eol: content.includes("\r\n") ? "\r\n" : "\n",
++	};
++}
++
++type ModelConfigFileSnapshot = {
++	readonly content: string | undefined;
++	readonly identity:
++		| {
++				readonly dev: number;
++				readonly ino: number;
++				readonly size: number;
++				readonly mtimeMs: number;
++		  }
++		| undefined;
++};
++
++async function readModelConfigFile(modelsJsonPath: string, signal?: AbortSignal): Promise<ModelConfigFileSnapshot> {
++	signal?.throwIfAborted();
++	const flags = fsConstants.O_RDONLY | (fsConstants.O_NOFOLLOW ?? 0);
++	let handle: Awaited<ReturnType<typeof open>>;
++	try {
++		handle = await open(modelsJsonPath, flags);
++	} catch (error) {
++		if (isMissingPathError(error)) return { content: undefined, identity: undefined };
++		throw error;
++	}
++	try {
++		const metadata = await handle.stat();
++		if (!metadata.isFile() || metadata.nlink !== 1 || metadata.size > MAX_MODELS_CONFIG_BYTES) {
++			throw new Error("models.json is not a private regular file or exceeds the safe mutation boundary");
++		}
++		const bytes = await handle.readFile();
++		signal?.throwIfAborted();
++		return {
++			content: new TextDecoder("utf-8", { fatal: true }).decode(bytes),
++			identity: {
++				dev: metadata.dev,
++				ino: metadata.ino,
++				size: metadata.size,
++				mtimeMs: metadata.mtimeMs,
++			},
++		};
++	} finally {
++		await handle.close();
++	}
++}
++
++async function assertModelConfigUnchanged(
++	modelsJsonPath: string,
++	identity: ModelConfigFileSnapshot["identity"],
++): Promise<void> {
++	try {
++		const current = await lstat(modelsJsonPath);
++		if (
++			!identity ||
++			current.isSymbolicLink() ||
++			!current.isFile() ||
++			current.nlink !== 1 ||
++			current.dev !== identity.dev ||
++			current.ino !== identity.ino ||
++			current.size !== identity.size ||
++			current.mtimeMs !== identity.mtimeMs
++		) {
++			throw new Error("models.json changed during the persistent mutation");
++		}
++	} catch (error) {
++		if (isMissingPathError(error) && !identity) return;
++		if (isMissingPathError(error)) throw new Error("models.json changed during the persistent mutation");
++		throw error;
++	}
++}
++
+@@ -245,14 +364 @@ export class ModelConfig {
 -	static async load(modelsJsonPath: string | undefined): Promise<ModelConfig> {
 -		if (!modelsJsonPath) return new ModelConfig(new Map());
 -		const path = normalizePath(modelsJsonPath);
@@ -22,6 +157,19 @@ index 7f679a494..a7db4dafe 100644
 -				new Map(),
 -				`Failed to load models.json: ${error instanceof Error ? error.message : error}\n\nFile: ${path}`,
 -			);
+-		}
+-
++	private static fromContent(content: string, sourceLabel?: string): ModelConfig {
+@@ -265 +371 @@ export class ModelConfig {
+-				`Failed to parse models.json: ${error instanceof Error ? error.message : error}\n\nFile: ${path}`,
++				`Failed to parse models.json: ${error instanceof Error ? error.message : error}${sourceLabel ? `\n\nFile: ${sourceLabel}` : ""}`,
+@@ -275 +381,4 @@ export class ModelConfig {
+-			return new ModelConfig(new Map(), `Invalid models.json schema:\n${errors}\n\nFile: ${path}`);
++			return new ModelConfig(
++				new Map(),
++				`Invalid models.json schema:\n${errors}${sourceLabel ? `\n\nFile: ${sourceLabel}` : ""}`,
++			);
+@@ -285,0 +395,35 @@ export class ModelConfig {
 +	static async load(
 +		modelsJsonPath: string | undefined,
 +		options: { reader?: ModelConfigReader; signal?: AbortSignal } = {},
@@ -49,22 +197,109 @@ index 7f679a494..a7db4dafe 100644
 +					`Failed to load models.json: ${error instanceof Error ? error.message : error}\n\nFile: ${normalizedPath}`,
 +				);
 +			}
-@@ -257,0 +279,2 @@ export class ModelConfig {
++		}
 +		if (content === undefined) return new ModelConfig(new Map());
 +		options.signal?.throwIfAborted();
-@@ -265 +288 @@ export class ModelConfig {
--				`Failed to parse models.json: ${error instanceof Error ? error.message : error}\n\nFile: ${path}`,
-+				`Failed to parse models.json: ${error instanceof Error ? error.message : error}${normalizedPath ? `\n\nFile: ${normalizedPath}` : ""}`,
-@@ -267,0 +291 @@ export class ModelConfig {
++
 +		options.signal?.throwIfAborted();
-@@ -275 +299,4 @@ export class ModelConfig {
--			return new ModelConfig(new Map(), `Invalid models.json schema:\n${errors}\n\nFile: ${path}`);
-+			return new ModelConfig(
-+				new Map(),
-+				`Invalid models.json schema:\n${errors}${normalizedPath ? `\n\nFile: ${normalizedPath}` : ""}`,
-+			);
-@@ -282,0 +310 @@ export class ModelConfig {
++		return ModelConfig.fromContent(content, normalizedPath);
++	}
++
+@@ -296,0 +441,94 @@ export class ModelConfig {
++
++	static validateContent(content: string): ModelConfig {
++		return ModelConfig.fromContent(content);
++	}
++}
++
++/**
++ * Persist one typed provider mutation while preserving unrelated JSONC bytes.
++ * The explicit file path is used only for this user-requested mutation; passive
++ * ModelRuntime reads continue to use the caller-owned content reader.
++ */
++export async function mutateModelConfigProvider(
++	modelsJsonPath: string,
++	mutation: ModelConfigProviderMutation,
++	options: ModelConfigMutationOptions = {},
++): Promise<ModelConfigMutationResult> {
++	options.signal?.throwIfAborted();
++	if (!mutation.providerId.trim() || mutation.providerId !== mutation.providerId.trim()) {
++		throw new Error("Model provider id must not be empty or padded");
++	}
++	const requestedPath = normalizePath(modelsJsonPath);
++	const parentDir = dirname(requestedPath);
++	await mkdir(parentDir, { recursive: true, mode: 0o700 });
++	const parentMetadata = await lstat(parentDir);
++	if (parentMetadata.isSymbolicLink() || !parentMetadata.isDirectory()) {
++		throw new Error("models.json parent is not a private directory");
++	}
++	const normalizedPath = join(await realpath(parentDir), basename(requestedPath));
++
++	let compromised: Error | undefined;
++	const release = await lockfile.lock(normalizedPath, {
++		realpath: false,
++		retries: { retries: 10, factor: 1.5, minTimeout: 10, maxTimeout: 100 },
++		stale: 30_000,
++		onCompromised: (error) => {
++			compromised = error;
++		},
++	});
++	let temporaryPath: string | undefined;
++	try {
 +		options.signal?.throwIfAborted();
++		if (compromised) throw compromised;
++		const current = await readModelConfigFile(normalizedPath, options.signal);
++		const currentContent = current.content ?? '{\n\t"providers": {}\n}\n';
++		const currentConfig = ModelConfig.validateContent(currentContent);
++		if (currentConfig.getError()) throw new Error(currentConfig.getError());
++		if (mutation.type === "remove" && !currentConfig.getProvider(mutation.providerId)) {
++			return { changed: false, providerIds: currentConfig.getProviderIds() };
++		}
++
++		const edits = modify(
++			currentContent,
++			["providers", mutation.providerId],
++			mutation.type === "upsert" ? mutation.provider : undefined,
++			{ formattingOptions: formattingOptions(currentContent) },
++		);
++		const nextContent = applyEdits(currentContent, edits);
++		if (Buffer.byteLength(nextContent, "utf8") > MAX_MODELS_CONFIG_BYTES) {
++			throw new Error("models.json exceeds the safe mutation boundary");
++		}
++		const nextConfig = ModelConfig.validateContent(nextContent);
++		if (nextConfig.getError()) throw new Error(nextConfig.getError());
++		if (mutation.type === "upsert" && !nextConfig.getProvider(mutation.providerId)) {
++			throw new Error("Model provider mutation was not accepted by the official schema");
++		}
++		if (mutation.type === "remove" && nextConfig.getProvider(mutation.providerId)) {
++			throw new Error("Model provider removal was not accepted by the official schema");
++		}
++		if (nextContent === currentContent) {
++			return { changed: false, providerIds: nextConfig.getProviderIds() };
++		}
++
++		options.signal?.throwIfAborted();
++		if (compromised) throw compromised;
++		await assertModelConfigUnchanged(normalizedPath, current.identity);
++		temporaryPath = `${normalizedPath}.${randomUUID()}.tmp`;
++		const flags = fsConstants.O_CREAT | fsConstants.O_EXCL | fsConstants.O_WRONLY | (fsConstants.O_NOFOLLOW ?? 0);
++		const handle = await open(temporaryPath, flags, MODELS_CONFIG_FILE_MODE);
++		try {
++			await handle.writeFile(nextContent, "utf8");
++			await handle.sync();
++		} finally {
++			await handle.close();
++		}
++		options.signal?.throwIfAborted();
++		if (compromised) throw compromised;
++		await rename(temporaryPath, normalizedPath);
++		temporaryPath = undefined;
++		await chmod(normalizedPath, MODELS_CONFIG_FILE_MODE);
++		return { changed: true, providerIds: nextConfig.getProviderIds() };
++	} finally {
++		if (temporaryPath) await rm(temporaryPath, { force: true });
++		await release().catch(() => undefined);
++	}
 diff --git a/packages/coding-agent/src/core/model-runtime.ts b/packages/coding-agent/src/core/model-runtime.ts
 index 6f4071b60..f7af451c8 100644
 --- a/packages/coding-agent/src/core/model-runtime.ts
@@ -118,18 +353,275 @@ index 6f4071b60..f7af451c8 100644
 +			signal: options.signal,
 +		});
 diff --git a/packages/coding-agent/src/index.ts b/packages/coding-agent/src/index.ts
-index 3d05c2af4..84fc9d01a 100644
+index 3d05c2af4..968aec186 100644
 --- a/packages/coding-agent/src/index.ts
 +++ b/packages/coding-agent/src/index.ts
-@@ -180,0 +181,2 @@ export {
+@@ -171,0 +172,9 @@ export { ModelRegistry } from "./core/model-registry.ts";
++export {
++	mutateModelConfigProvider,
++	type ModelConfigMutationOptions,
++	type ModelConfigMutationResult,
++	type ModelConfigProviderMutation,
++	type ModelsJsonModel,
++	type ModelsJsonModelOverride,
++	type ModelsJsonProvider,
++} from "./core/model-config.ts";
+@@ -180,0 +190,2 @@ export {
 +	type ModelConfigReader,
 +	type ModelConfigReadOptions,
+diff --git a/packages/coding-agent/test/model-config-mutation.test.ts b/packages/coding-agent/test/model-config-mutation.test.ts
+new file mode 100644
+index 000000000..022c7534d
+--- /dev/null
++++ b/packages/coding-agent/test/model-config-mutation.test.ts
+@@ -0,0 +1,241 @@
++import { link, lstat, mkdtemp, readFile, rm, symlink, writeFile } from "node:fs/promises";
++import { tmpdir } from "node:os";
++import { join } from "node:path";
++import { afterEach, describe, expect, it } from "vitest";
++import { mutateModelConfigProvider } from "../src/core/model-config.ts";
++
++const roots: string[] = [];
++
++async function createRoot(): Promise<string> {
++	const root = await mkdtemp(join(tmpdir(), "pi-model-config-mutation-"));
++	roots.push(root);
++	return root;
++}
++
++function provider(name: string, modelId: string) {
++	return {
++		name,
++		baseUrl: "https://example.test/v1",
++		api: "openai-completions",
++		models: [{ id: modelId }],
++	};
++}
++
++afterEach(async () => {
++	await Promise.all(roots.splice(0).map((root) => rm(root, { recursive: true, force: true })));
++});
++
++describe("persistent ModelConfig provider mutation", () => {
++	it("upserts one provider while preserving comments and unrelated unknown fields", async () => {
++		const root = await createRoot();
++		const modelsPath = join(root, "models.json");
++		const untouchedProvider = `"existing": {
++			// This comment and unknown field must survive byte-for-byte.
++			"baseUrl": "https://existing.test/v1",
++			"api": "openai-responses",
++			"futureProviderField": { "keep": true },
++			"models": [{ "id": "existing-model", "futureModelField": 7 }]
++		}`;
++		await writeFile(
++			modelsPath,
++			`{
++		// Root comments and future fields are not the mutation target.
++		"futureRootField": { "keep": true },
++		"providers": {
++			${untouchedProvider}
++		}
++	}\n`,
++			{ encoding: "utf8", mode: 0o600 },
++		);
++
++		const result = await mutateModelConfigProvider(modelsPath, {
++			type: "upsert",
++			providerId: "custom-one",
++			provider: provider("Custom One", "model-one"),
++		});
++		const content = await readFile(modelsPath, "utf8");
++
++		expect(result).toEqual({ changed: true, providerIds: ["existing", "custom-one"] });
++		expect(content).toContain("// Root comments and future fields are not the mutation target.");
++		expect(content).toContain('"futureRootField": { "keep": true }');
++		expect(content).toContain(untouchedProvider);
++		expect(content).toContain('"custom-one"');
++		expect((await lstat(modelsPath)).mode & 0o777).toBe(0o600);
++	});
++
++	it("serializes concurrent provider mutations without dropping either update", async () => {
++		const root = await createRoot();
++		const modelsPath = join(root, "models.json");
++
++		await Promise.all([
++			mutateModelConfigProvider(modelsPath, {
++				type: "upsert",
++				providerId: "custom-one",
++				provider: provider("Custom One", "model-one"),
++			}),
++			mutateModelConfigProvider(modelsPath, {
++				type: "upsert",
++				providerId: "custom-two",
++				provider: provider("Custom Two", "model-two"),
++			}),
++		]);
++
++		const content = await readFile(modelsPath, "utf8");
++		expect(content).toContain('"custom-one"');
++		expect(content).toContain('"custom-two"');
++	});
++
++	it("replaces only an existing target provider", async () => {
++		const root = await createRoot();
++		const modelsPath = join(root, "models.json");
++		await mutateModelConfigProvider(modelsPath, {
++			type: "upsert",
++			providerId: "target",
++			provider: provider("Old Target", "old-model"),
++		});
++		await mutateModelConfigProvider(modelsPath, {
++			type: "upsert",
++			providerId: "untouched",
++			provider: provider("Untouched", "keep-model"),
++		});
++
++		const result = await mutateModelConfigProvider(modelsPath, {
++			type: "upsert",
++			providerId: "target",
++			provider: provider("New Target", "new-model"),
++		});
++		const content = await readFile(modelsPath, "utf8");
++
++		expect(result).toEqual({ changed: true, providerIds: ["target", "untouched"] });
++		expect(content).toContain('"New Target"');
++		expect(content).toContain('"new-model"');
++		expect(content).not.toContain('"Old Target"');
++		expect(content).not.toContain('"old-model"');
++		expect(content).toContain('"Untouched"');
++		expect(content).toContain('"keep-model"');
++	});
++
++	it("removes only the target provider and treats a missing target as an exact no-op", async () => {
++		const root = await createRoot();
++		const modelsPath = join(root, "models.json");
++		await mutateModelConfigProvider(modelsPath, {
++			type: "upsert",
++			providerId: "keep",
++			provider: provider("Keep", "keep-model"),
++		});
++		await mutateModelConfigProvider(modelsPath, {
++			type: "upsert",
++			providerId: "remove",
++			provider: provider("Remove", "remove-model"),
++		});
++		const before = await readFile(modelsPath, "utf8");
++
++		const removed = await mutateModelConfigProvider(modelsPath, {
++			type: "remove",
++			providerId: "remove",
++		});
++		const after = await readFile(modelsPath, "utf8");
++		expect(removed).toEqual({ changed: true, providerIds: ["keep"] });
++		expect(after).toContain('"keep"');
++		expect(after).not.toContain('"remove"');
++
++		const missing = await mutateModelConfigProvider(modelsPath, {
++			type: "remove",
++			providerId: "missing",
++		});
++		expect(missing).toEqual({ changed: false, providerIds: ["keep"] });
++		expect(await readFile(modelsPath, "utf8")).toBe(after);
++		expect(before).not.toBe(after);
++	});
++
++	it("rejects invalid typed content without changing the last valid file", async () => {
++		const root = await createRoot();
++		const modelsPath = join(root, "models.json");
++		await mutateModelConfigProvider(modelsPath, {
++			type: "upsert",
++			providerId: "valid",
++			provider: provider("Valid", "valid-model"),
++		});
++		const before = await readFile(modelsPath, "utf8");
++
++		await expect(
++			mutateModelConfigProvider(modelsPath, {
++				type: "upsert",
++				providerId: "invalid",
++				provider: { models: "wrong" } as never,
++			}),
++		).rejects.toThrow("Invalid models.json schema");
++		expect(await readFile(modelsPath, "utf8")).toBe(before);
++	});
++
++	it("rejects an invalid existing document without rewriting it", async () => {
++		const root = await createRoot();
++		const modelsPath = join(root, "models.json");
++		const invalid = '{ "providers": { "broken": { "models": "wrong" } } }\n';
++		await writeFile(modelsPath, invalid, { encoding: "utf8", mode: 0o600 });
++
++		await expect(
++			mutateModelConfigProvider(modelsPath, {
++				type: "upsert",
++				providerId: "blocked",
++				provider: provider("Blocked", "blocked-model"),
++			}),
++		).rejects.toThrow("Invalid models.json schema");
++		expect(await readFile(modelsPath, "utf8")).toBe(invalid);
++	});
++
++	it("rejects a linked models.json leaf instead of replacing it", async () => {
++		const root = await createRoot();
++		const outside = join(root, "outside.json");
++		const modelsPath = join(root, "models.json");
++		await writeFile(outside, '{ "providers": {} }', { mode: 0o600 });
++		await symlink(outside, modelsPath);
++
++		await expect(
++			mutateModelConfigProvider(modelsPath, {
++				type: "upsert",
++				providerId: "blocked",
++				provider: provider("Blocked", "blocked-model"),
++			}),
++		).rejects.toThrow();
++		expect(await readFile(outside, "utf8")).toBe('{ "providers": {} }');
++	});
++
++	it("rejects a multiply linked models.json leaf", async () => {
++		const root = await createRoot();
++		const modelsPath = join(root, "models.json");
++		const aliasPath = join(root, "models-alias.json");
++		const original = '{ "providers": {} }';
++		await writeFile(modelsPath, original, { mode: 0o600 });
++		await link(modelsPath, aliasPath);
++
++		await expect(
++			mutateModelConfigProvider(modelsPath, {
++				type: "upsert",
++				providerId: "blocked",
++				provider: provider("Blocked", "blocked-model"),
++			}),
++		).rejects.toThrow("private regular file");
++		expect(await readFile(aliasPath, "utf8")).toBe(original);
++	});
++
++	it("honors caller cancellation before creating or changing the file", async () => {
++		const root = await createRoot();
++		const modelsPath = join(root, "models.json");
++		const controller = new AbortController();
++		controller.abort();
++
++		await expect(
++			mutateModelConfigProvider(
++				modelsPath,
++				{
++					type: "upsert",
++					providerId: "cancelled",
++					provider: provider("Cancelled", "cancelled-model"),
++				},
++				{ signal: controller.signal },
++			),
++		).rejects.toMatchObject({ name: "AbortError" });
++		await expect(readFile(modelsPath, "utf8")).rejects.toMatchObject({ code: "ENOENT" });
++	});
++});
 diff --git a/packages/coding-agent/test/model-runtime-config-reader.test.ts b/packages/coding-agent/test/model-runtime-config-reader.test.ts
 new file mode 100644
-index 000000000..ec6eab86f
+index 000000000..afb21271a
 --- /dev/null
 +++ b/packages/coding-agent/test/model-runtime-config-reader.test.ts
-@@ -0,0 +1,192 @@
+@@ -0,0 +1,194 @@
 +import { mkdtemp, readFile, rm, writeFile } from "node:fs/promises";
 +import { tmpdir } from "node:os";
 +import { join } from "node:path";
@@ -153,7 +645,9 @@ index 000000000..ec6eab86f
 +	}`;
 +}
 +
-+function createRuntime(modelsConfigReader: NonNullable<Parameters<typeof ModelRuntime.create>[0]["modelsConfigReader"]>) {
++function createRuntime(
++	modelsConfigReader: NonNullable<Parameters<typeof ModelRuntime.create>[0]["modelsConfigReader"]>,
++) {
 +	return ModelRuntime.create({
 +		credentials: AuthStorage.inMemory(),
 +		modelsPath: null,

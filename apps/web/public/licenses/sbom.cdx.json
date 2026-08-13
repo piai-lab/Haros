@@ -29,7 +29,7 @@
       },
       {
         "name": "omnimind:inventory-sha256",
-        "value": "fa0a45dc9c5f10b5253cc5f6c279a55fcc2246ff539d98385b2ba419cf5309da"
+        "value": "8251e6b4cb3e530269fbe44134d030642b92c6c331e4504adc2f7ba4c2f72999"
       }
     ]
   },
@@ -1620,7 +1620,7 @@
       "hashes": [
         {
           "alg": "SHA-256",
-          "content": "0a401e13e04eb6daa729871e5e525621bd33decaa872deb981e5c65a67be0c96"
+          "content": "9d3cab9471afb52ca9e45b8805ea87656f4aec930843ab8b35e5ac9806a243ba"
         }
       ],
       "author": "Mario Zechner",
@@ -5198,6 +5198,39 @@
     },
     {
       "type": "library",
+      "name": "jsonc-parser",
+      "version": "3.3.1",
+      "bom-ref": "pkg:npm/jsonc-parser@3.3.1",
+      "purl": "pkg:npm/jsonc-parser@3.3.1",
+      "licenses": [
+        {
+          "license": {
+            "id": "MIT"
+          }
+        }
+      ],
+      "hashes": [
+        {
+          "alg": "SHA-256",
+          "content": "cf6445756037684847a4fb57fad0847750d82a7573eb62e257ec1d78b73647b7"
+        }
+      ],
+      "author": "Microsoft Corporation",
+      "externalReferences": [
+        {
+          "type": "vcs",
+          "url": "https://github.com/microsoft/node-jsonc-parser"
+        }
+      ],
+      "properties": [
+        {
+          "name": "omnimind:artifact-location",
+          "value": "node_modules/.bun/jsonc-parser@3.3.1/node_modules/jsonc-parser"
+        }
+      ]
+    },
+    {
+      "type": "library",
       "name": "jsonfile",
       "version": "6.2.0",
       "bom-ref": "pkg:npm/jsonfile@6.2.0",
@@ -8478,6 +8511,7 @@
         "pkg:npm/hosted-git-info@9.0.3",
         "pkg:npm/ignore@7.0.5",
         "pkg:npm/jiti@2.7.0",
+        "pkg:npm/jsonc-parser@3.3.1",
         "pkg:npm/minimatch@10.2.5",
         "pkg:npm/proper-lockfile@4.1.2",
         "pkg:npm/semver@7.8.0",
@@ -9114,6 +9148,10 @@
         "pkg:npm/%40babel/runtime@7.28.6",
         "pkg:npm/ts-algebra@2.0.0"
       ]
+    },
+    {
+      "ref": "pkg:npm/jsonc-parser@3.3.1",
+      "dependsOn": []
     },
     {
       "ref": "pkg:npm/jsonfile@6.2.0",

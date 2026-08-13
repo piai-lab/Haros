@@ -223,6 +223,7 @@ function validateEngineCapabilityComposition(findings, documents) {
   if (
     JSON.stringify(policy.effectiveCapabilities) !== JSON.stringify(expectedCapabilities) ||
     policy.nativeEcosystemDisposition !== "preserve" ||
+    policy.nativeCapabilityReachability !== "required-when-runtime-exposes" ||
     policy.omnimindAssetDelivery !== "adapter-or-session-mount" ||
     policy.enginePrivateHomeMutation !== "forbidden" ||
     policy.identityConflict !== "explicit" ||
@@ -263,20 +264,21 @@ function validateBundledPiRuntimeAdoption(findings, documents) {
       "scripts/vendor-omnimind-pi-runtime.mjs",
     ],
     sourcePaths: ["packages/coding-agent"],
-    archiveSha256: "294200d5106e86b4cd1e4e9c16c8b7e6a1300686c759a78eec94dcf2069e6f59",
+    archiveSha256: "2dd45b68d7d4311a4e68968c07d1a0604ab85ef9380d385742f8afd4d882480a",
     upstreamPackage: "@earendil-works/pi-coding-agent@0.84.1",
     upstreamPackageIntegrity:
       "sha512-ncAqFrG+iybuPGOhMiZoEHkEzTpJgz3guYD32pD+M7ucc0WeHmauP6wa7qwP8V/KWvsZDVNa5XGsdZ7fkC7w7A==",
     licenseFiles: ["LICENSES/pi-coding-agent-MIT.txt"],
     sharedRuntimeBytes: "patched",
     patchPath: "patches/pi-coding-agent/0.84.1-model-config-reader.patch",
-    patchSha256: "cc7fc8327130a42091022c6150e3fd4fb7005cd155a0802fb084589ac322361b",
+    patchSha256: "86b19ad2a6f8b8fd785a65d3a3278ac29162f223365c07560cd9ad76cadaa6d9",
     generatorPath: "scripts/vendor-omnimind-pi-runtime.mjs",
     behavioralDifferences: [
       "package identity",
       "piConfig.configDir",
       "injectable models.json content reader",
       "accepted model-config provider provenance",
+      "typed persistent model-config provider mutation",
       "explicit reader-mode models store path remains file-backed",
     ],
   };
@@ -422,6 +424,10 @@ function validateModelServicesInformationArchitecture(findings, documents) {
       "google-generative-ai",
     ],
     nonstandardApiOwner: "pi-extension",
+    extensionServiceOutcome: "required-intent-scoped-runtime-projection",
+    customMutationOwner: "pi-model-config",
+    customMutationOutcome: "test-save-reopen-edit-refresh-delete",
+    customMutationAuthorization: "maintainer-approved-narrow-pi-owned-seam",
     gitWritingOwner: "calling-feature-settings",
     omnimindDefaultModel: "none-runtime-catalog-only",
     customMutationGate: "E6",
@@ -431,7 +437,7 @@ function validateModelServicesInformationArchitecture(findings, documents) {
       findings,
       "workbench.model-services-ia",
       documentPath,
-      "Model services must keep runtime discovery primary, API-address setup secondary, and mutation authority with Pi",
+      "Model services must keep runtime discovery primary, make API-address setup persistable, and keep mutation authority with Pi",
     );
   }
 }
