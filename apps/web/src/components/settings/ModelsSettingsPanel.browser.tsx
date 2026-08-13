@@ -78,11 +78,11 @@ function service(overrides: ServiceOverrides = {}): OmniMindModelServiceDescript
 
 function setNativeApi(input: {
   readonly list: (
-    input?: Record<string, never>,
+    input?: { readonly intent?: "add_service" },
     options?: { readonly signal?: AbortSignal },
   ) => Promise<OmniMindModelServicesListResult>;
   readonly get?: (
-    input: { readonly serviceId: string },
+    input: { readonly serviceId: string; readonly intent?: "add_service" },
     options?: { readonly signal?: AbortSignal },
   ) => Promise<OmniMindModelServicesGetResult>;
   readonly supported?: boolean;
@@ -194,11 +194,11 @@ function setNativeApi(input: {
 async function renderPanel(input: {
   readonly active?: boolean;
   readonly list: (
-    input?: Record<string, never>,
+    input?: { readonly intent?: "add_service" },
     options?: { readonly signal?: AbortSignal },
   ) => Promise<OmniMindModelServicesListResult>;
   readonly get?: (
-    input: { readonly serviceId: string },
+    input: { readonly serviceId: string; readonly intent?: "add_service" },
     options?: { readonly signal?: AbortSignal },
   ) => Promise<OmniMindModelServicesGetResult>;
   readonly primeServerConfig?: boolean;
@@ -335,7 +335,7 @@ describe("ModelsSettingsPanel model services", () => {
     await expect
       .poll(() => mounted.calls.get)
       .toHaveBeenCalledWith(
-        { serviceId: "deepseek" },
+        { serviceId: "deepseek", intent: "add_service" },
         expect.objectContaining({ signal: expect.any(AbortSignal) }),
       );
     await expect
@@ -343,6 +343,126 @@ describe("ModelsSettingsPanel model services", () => {
       .toContain("settings.modelServiceAuthentication");
     expect(mounted.screen.getByRole("button", { name: "settings.addApiKey" })).toBeTruthy();
     expect(document.body.textContent).toContain("settings.modelServiceModelDetailsUnavailable");
+
+    await mounted.screen.unmount();
+    mounted.queryClient.clear();
+  });
+
+  it("loads installed Extension services only after Add is opened and keeps built-ins on failure", async () => {
+    const builtin = service({
+      serviceId: "deepseek",
+      providerId: "deepseek",
+      displayName: "DeepSeek",
+      authState: "setup_required",
+      authSource: null,
+      storedCredentialType: null,
+      knownModelCount: 0,
+      availableModelCount: 0,
+      catalogState: "empty",
+      catalogErrorCode: null,
+    });
+    const extension = service({
+      serviceId: "team-extension",
+      providerId: "team-extension",
+      displayName: "Team Extension",
+      origin: "extension",
+      authState: "setup_required",
+      authSource: null,
+      storedCredentialType: null,
+      knownModelCount: 1,
+      availableModelCount: 0,
+      catalogState: "ready",
+      catalogErrorCode: null,
+    });
+    const list = vi.fn(
+      async (input: { intent?: "add_service" } = {}): Promise<OmniMindModelServicesListResult> =>
+        input.intent === "add_service"
+          ? {
+              state: "empty" as const,
+              services: [] as const,
+              connectableServices: [builtin, extension],
+              extensionProjectionState: "ready" as const,
+              errorCode: null,
+            }
+          : {
+              state: "empty" as const,
+              services: [] as const,
+              connectableServices: [builtin],
+              errorCode: null,
+            },
+    );
+    const mounted = await renderPanel({ list });
+
+    await expect.poll(() => document.body.textContent).toContain("settings.addModelService");
+    expect(list).toHaveBeenCalledTimes(1);
+    expect(list).toHaveBeenLastCalledWith(
+      {},
+      expect.objectContaining({ signal: expect.any(AbortSignal) }),
+    );
+    expect(document.body.textContent).not.toContain("Team Extension");
+
+    await mounted.screen.getByRole("button", { name: "settings.addModelService" }).click();
+    await expect.poll(() => document.body.textContent).toContain("Team Extension");
+    expect(list).toHaveBeenLastCalledWith(
+      { intent: "add_service" },
+      expect.objectContaining({ signal: expect.any(AbortSignal) }),
+    );
+
+    await mounted.screen.unmount();
+    mounted.queryClient.clear();
+  });
+
+  it("keeps a configured Extension searchable in the explicit Add flow", async () => {
+    const extension = service({
+      serviceId: "team-extension",
+      providerId: "team-extension",
+      displayName: "Team Extension",
+      origin: "extension",
+      authState: "configured",
+      authSource: "stored",
+      storedCredentialType: "api_key",
+    });
+    const mounted = await renderPanel({
+      list: async (input = {}) =>
+        input.intent === "add_service"
+          ? {
+              state: "ready" as const,
+              services: [extension],
+              connectableServices: [] as const,
+              extensionProjectionState: "ready" as const,
+              errorCode: null,
+            }
+          : {
+              state: "empty" as const,
+              services: [] as const,
+              connectableServices: [] as const,
+              errorCode: null,
+            },
+      get: async (input) =>
+        input.intent === "add_service"
+          ? {
+              state: "ready" as const,
+              service: extension,
+              models: [],
+              extensionProjectionState: "ready" as const,
+              errorCode: null,
+            }
+          : { state: "empty" as const, service: null, errorCode: null },
+    });
+
+    await mounted.screen.getByRole("button", { name: "settings.addModelService" }).click();
+    await expect.poll(() => document.body.textContent).toContain("Team Extension");
+    await mounted.screen
+      .getByRole("button", {
+        name: 'settings.connectModelServiceNamed:{"name":"Team Extension"}',
+      })
+      .click();
+    await expect
+      .poll(() => mounted.calls.get)
+      .toHaveBeenCalledWith(
+        { serviceId: "team-extension", intent: "add_service" },
+        expect.objectContaining({ signal: expect.any(AbortSignal) }),
+      );
 
     await mounted.screen.unmount();
     mounted.queryClient.clear();

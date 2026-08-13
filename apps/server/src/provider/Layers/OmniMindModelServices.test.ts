@@ -96,13 +96,17 @@ async function loadService(input: {
   readonly root: string;
   readonly loadModule?: () => Promise<OmniMindCodingAgentModule>;
   readonly readTextFile?: (filePath: string, signal?: AbortSignal) => Promise<string>;
+  readonly intent?: "add_service";
 }) {
   const layer = makeTestLayer(input);
   return Effect.runPromise(
     Effect.gen(function* () {
       const service = yield* OmniMindModelServices;
-      const list = yield* service.list();
-      const deepseek = yield* service.get({ serviceId: "deepseek" });
+      const list = yield* service.list(input.intent ? { intent: input.intent } : {});
+      const deepseek = yield* service.get({
+        serviceId: "deepseek",
+        ...(input.intent ? { intent: input.intent } : {}),
+      });
       return { list, deepseek };
     }).pipe(Effect.provide(layer)),
   );
@@ -289,12 +293,510 @@ describe("OmniMindModelServicesLive", () => {
     expect(await readdir(agentDir)).toEqual([]);
   });
 
+  it("does not execute Extension resources for passive model-service projection", async () => {
+    const root = await makeRoot();
+    await isolateProviderEnvironment(root);
+    await mkdir(path.join(root, "agent"), { recursive: true });
+    const sdk = await import("@omnimind/pi-coding-agent");
+    const createAgentSessionServices = vi.fn(sdk.createAgentSessionServices);
+
+    const result = await loadService({
+      root,
+      loadModule: async () => ({ ...sdk, createAgentSessionServices }) as OmniMindCodingAgentModule,
+    });
+
+    expect(result.list.state).toBe("empty");
+    expect(result.list).not.toHaveProperty("extensionProjectionState");
+    expect(createAgentSessionServices).not.toHaveBeenCalled();
+  });
+
+  it("projects Extension providers only for add-service intent and retires the task runtime", async () => {
+    const root = await makeRoot();
+    await isolateProviderEnvironment(root);
+    const agentDir = path.join(root, "agent");
+    await mkdir(agentDir, { recursive: true });
+    const sdk = await import("@omnimind/pi-coding-agent");
+    const invalidate = vi.fn();
+    const createAgentSessionServices = vi.fn(
+      async (options: Parameters<typeof sdk.createAgentSessionServices>[0]) => {
+        options.modelRuntime!.registerProvider("extension-service", {
+          name: "Extension Service",
+          baseUrl: "https://extension.invalid/v1",
+          api: "openai-responses",
+          apiKey: "$OMNIMIND_EXTENSION_TEST_KEY",
+          models: [
+            {
+              id: "extension-model",
+              name: "Extension Model",
+              reasoning: false,
+              input: ["text"],
+              cost: { input: 0, output: 0, cacheRead: 0, cacheWrite: 0 },
+              contextWindow: 32_000,
+              maxTokens: 4_096,
+            },
+          ],
+        });
+        const nativeProvider = options.modelRuntime!.getProvider("deepseek");
+        if (!nativeProvider) {
+          throw new Error("Expected the built-in DeepSeek provider in the test runtime");
+        }
+        options.modelRuntime!.registerNativeProvider({
+          ...nativeProvider,
+          id: "extension-without-login",
+          name: "Extension Without Login",
+          auth: {},
+        });
+        return {
+          cwd: options.cwd,
+          agentDir: options.agentDir!,
+          modelRuntime: options.modelRuntime!,
+          settingsManager: options.settingsManager!,
+          resourceLoader: {
+            getExtensions: () => ({ extensions: [], errors: [], runtime: { invalidate } }),
+          },
+          diagnostics: [],
+        } as unknown as Awaited<ReturnType<typeof sdk.createAgentSessionServices>>;
+      },
+    );
+    const layer = makeTestLayer({
+      root,
+      loadModule: async () => ({ ...sdk, createAgentSessionServices }) as OmniMindCodingAgentModule,
+    });
+
+    const result = await Effect.runPromise(
+      Effect.gen(function* () {
+        const service = yield* OmniMindModelServices;
+        const list = yield* service.list({ intent: "add_service" });
+        const detail = yield* service.get({
+          serviceId: "extension-service",
+          intent: "add_service",
+        });
+        return { list, detail };
+      }).pipe(Effect.provide(layer)),
+    );
+
+    expect(result.list).toMatchObject({
+      state: "empty",
+      extensionProjectionState: "ready",
+      connectableServices: expect.arrayContaining([
+        expect.objectContaining({
+          serviceId: "extension-service",
+          origin: "extension",
+          authState: "setup_required",
+          authMethods: [expect.objectContaining({ type: "api_key", canLogin: true })],
+        }),
+      ]),
+    });
+    expect(result.detail).toMatchObject({
+      state: "ready",
+      extensionProjectionState: "ready",
+      service: { serviceId: "extension-service", origin: "extension" },
+      models: [expect.objectContaining({ modelId: "extension-model" })],
+    });
+    expect(result.list.connectableServices).not.toEqual(
+      expect.arrayContaining([expect.objectContaining({ serviceId: "extension-without-login" })]),
+    );
+    expect(result.list.services).not.toEqual(
+      expect.arrayContaining([expect.objectContaining({ serviceId: "extension-without-login" })]),
+    );
+    expect(createAgentSessionServices).toHaveBeenCalledTimes(2);
+    const canonicalAgentDir = await realpath(agentDir);
+    for (const [options] of createAgentSessionServices.mock.calls) {
+      expect(options.cwd).toBe(canonicalAgentDir);
+      expect(options.agentDir).toBe(canonicalAgentDir);
+      expect(options.settingsManager?.isProjectTrusted()).toBe(false);
+      expect(options.resourceLoaderOptions).toMatchObject({
+        noSkills: true,
+        noPromptTemplates: true,
+        noThemes: true,
+        noContextFiles: true,
+      });
+      await expect(
+        options.resourceLoaderReloadOptions?.resolveProjectTrust?.({} as never),
+      ).resolves.toBe(false);
+      await expect(
+        options.resourceLoaderReloadOptions?.onMissingPackage?.("missing-package"),
+      ).resolves.toBe("error");
+    }
+    expect(invalidate).toHaveBeenCalledTimes(2);
+  });
+
+  it("retires an Extension runtime when add-service projection is cancelled after loading", async () => {
+    const root = await makeRoot();
+    await isolateProviderEnvironment(root);
+    await mkdir(path.join(root, "agent"), { recursive: true });
+    const sdk = await import("@omnimind/pi-coding-agent");
+    const controller = new AbortController();
+    const invalidate = vi.fn();
+    const createAgentSessionServices = vi.fn(
+      async (options: Parameters<typeof sdk.createAgentSessionServices>[0]) => {
+        controller.abort(new Error("cancel intent-scoped Extension projection"));
+        return {
+          cwd: options.cwd,
+          agentDir: options.agentDir!,
+          modelRuntime: options.modelRuntime!,
+          settingsManager: options.settingsManager!,
+          resourceLoader: {
+            getExtensions: () => ({ extensions: [], errors: [], runtime: { invalidate } }),
+          },
+          diagnostics: [],
+        } as unknown as Awaited<ReturnType<typeof sdk.createAgentSessionServices>>;
+      },
+    );
+    const layer = makeTestLayer({
+      root,
+      loadModule: async () => ({ ...sdk, createAgentSessionServices }) as OmniMindCodingAgentModule,
+    });
+
+    const running = Effect.runPromise(
+      Effect.gen(function* () {
+        const service = yield* OmniMindModelServices;
+        return yield* service.list({ intent: "add_service" });
+      }).pipe(Effect.provide(layer)),
+      { signal: controller.signal },
+    );
+
+    await expect(running).rejects.toThrow();
+    expect(createAgentSessionServices).toHaveBeenCalledTimes(1);
+    expect(invalidate).toHaveBeenCalledTimes(1);
+  });
+
+  it("keeps the passive catalog when intent-scoped Extension loading fails", async () => {
+    const root = await makeRoot();
+    await isolateProviderEnvironment(root);
+    await mkdir(path.join(root, "agent"), { recursive: true });
+    const sdk = await import("@omnimind/pi-coding-agent");
+    const createAgentSessionServices = vi.fn(
+      async (options: Parameters<typeof sdk.createAgentSessionServices>[0]) => {
+        expect(
+          await options.resourceLoaderReloadOptions?.onMissingPackage?.("missing-package"),
+        ).toBe("error");
+        throw new Error("Extension package is unavailable");
+      },
+    );
+
+    const result = await loadService({
+      root,
+      intent: "add_service",
+      loadModule: async () => ({ ...sdk, createAgentSessionServices }) as OmniMindCodingAgentModule,
+    });
+    const auth = await Effect.runPromise(
+      Effect.gen(function* () {
+        const service = yield* OmniMindModelServices;
+        return yield* service.beginLogin(40, {
+          serviceId: "missing-extension-service",
+          authType: "api_key",
+          origin: "extension",
+        });
+      }).pipe(
+        Effect.provide(
+          makeTestLayer({
+            root,
+            loadModule: async () =>
+              ({ ...sdk, createAgentSessionServices }) as OmniMindCodingAgentModule,
+          }),
+        ),
+      ),
+    );
+
+    expect(result.list).toMatchObject({
+      state: "empty",
+      services: [],
+      extensionProjectionState: "unavailable",
+      connectableServices: expect.arrayContaining([
+        expect.objectContaining({ serviceId: "deepseek", origin: "builtin" }),
+      ]),
+    });
+    expect(result.deepseek).toMatchObject({
+      state: "ready",
+      extensionProjectionState: "unavailable",
+      service: { serviceId: "deepseek", origin: "builtin" },
+    });
+    expect(auth).toMatchObject({ state: "failed", errorCode: "auth_failed" });
+    expect(createAgentSessionServices).toHaveBeenCalledTimes(3);
+    expect(JSON.stringify(result)).not.toContain("missing-package");
+  });
+
+  it("keeps Extension services alive through login, refresh, and logout, then retires them", async () => {
+    const root = await makeRoot();
+    await isolateProviderEnvironment(root);
+    await mkdir(path.join(root, "agent"), { recursive: true });
+    const sdk = await import("@omnimind/pi-coding-agent");
+    const invalidate = vi.fn();
+    const extensionModels = [
+      {
+        id: "extension-model",
+        name: "Extension Model",
+        reasoning: false,
+        input: ["text"] as const,
+        cost: { input: 0, output: 0, cacheRead: 0, cacheWrite: 0 },
+        contextWindow: 32_000,
+        maxTokens: 4_096,
+      },
+    ];
+    const createAgentSessionServices = vi.fn(
+      async (options: Parameters<typeof sdk.createAgentSessionServices>[0]) => {
+        options.modelRuntime!.registerProvider("extension-auth", {
+          name: "Extension Auth",
+          baseUrl: "https://extension.invalid/v1",
+          api: "openai-responses",
+          apiKey: "$OMNIMIND_EXTENSION_TEST_KEY",
+          oauth: {
+            name: "Extension OAuth",
+            login: async () => ({
+              access: "extension-access",
+              refresh: "extension-refresh",
+              expires: Date.now() + 60_000,
+            }),
+            refreshToken: async (credentials) => credentials,
+            getApiKey: (credentials) => credentials.access,
+          },
+          models: extensionModels.map((model) => ({ ...model, input: [...model.input] })),
+          refreshModels: async () =>
+            extensionModels.map((model) => ({ ...model, input: [...model.input] })),
+        });
+        return {
+          cwd: options.cwd,
+          agentDir: options.agentDir!,
+          modelRuntime: options.modelRuntime!,
+          settingsManager: options.settingsManager!,
+          resourceLoader: {
+            getExtensions: () => ({ extensions: [], errors: [], runtime: { invalidate } }),
+          },
+          diagnostics: [],
+        } as unknown as Awaited<ReturnType<typeof sdk.createAgentSessionServices>>;
+      },
+    );
+    const layer = makeTestLayer({
+      root,
+      loadModule: async () => ({ ...sdk, createAgentSessionServices }) as OmniMindCodingAgentModule,
+    });
+
+    const result = await Effect.runPromise(
+      Effect.gen(function* () {
+        const service = yield* OmniMindModelServices;
+        const apiKeyBegin = yield* service.beginLogin(41, {
+          serviceId: "extension-auth",
+          authType: "api_key",
+          origin: "extension",
+        });
+        if (apiKeyBegin.state !== "prompt") throw new Error("Expected Extension API-key prompt");
+        const apiKeyLogin = yield* service.answerLogin(41, {
+          requestId: apiKeyBegin.requestId,
+          promptId: apiKeyBegin.prompt.promptId,
+          value: "extension-test-key",
+        });
+        const apiKeyRefresh = yield* service.refresh({
+          serviceId: "extension-auth",
+          origin: "extension",
+        });
+        const apiKeyLogout = yield* service.logout({
+          serviceId: "extension-auth",
+          origin: "extension",
+        });
+        const oauthLogin = yield* service.beginLogin(42, {
+          serviceId: "extension-auth",
+          authType: "oauth",
+          origin: "extension",
+        });
+        const oauthRefresh = yield* service.refresh({
+          serviceId: "extension-auth",
+          origin: "extension",
+        });
+        const oauthLogout = yield* service.logout({
+          serviceId: "extension-auth",
+          origin: "extension",
+        });
+        return {
+          apiKeyLogin,
+          apiKeyRefresh,
+          apiKeyLogout,
+          oauthLogin,
+          oauthRefresh,
+          oauthLogout,
+        };
+      }).pipe(Effect.provide(layer)),
+    );
+
+    expect(result.apiKeyLogin).toMatchObject({
+      state: "complete",
+      service: { serviceId: "extension-auth", origin: "extension", authState: "configured" },
+    });
+    expect(result.apiKeyRefresh).toMatchObject({
+      state: "success",
+      service: { serviceId: "extension-auth", origin: "extension" },
+    });
+    expect(result.apiKeyLogout).toMatchObject({
+      state: "complete",
+      service: { serviceId: "extension-auth", origin: "extension" },
+    });
+    expect(result.oauthLogin).toMatchObject({
+      state: "complete",
+      service: {
+        serviceId: "extension-auth",
+        origin: "extension",
+        storedCredentialType: "oauth",
+      },
+    });
+    expect(result.oauthRefresh.state).toBe("success");
+    expect(result.oauthLogout.state).toBe("complete");
+    expect(createAgentSessionServices).toHaveBeenCalledTimes(6);
+    expect(invalidate).toHaveBeenCalledTimes(6);
+    expect(JSON.stringify(result)).not.toContain("extension-test-key");
+    expect(JSON.stringify(result)).not.toContain("extension-access");
+  });
+
+  it("keeps a configured Extension discoverable in later add-service projections", async () => {
+    const root = await makeRoot();
+    await isolateProviderEnvironment(root);
+    await mkdir(path.join(root, "agent"), { recursive: true });
+    const sdk = await import("@omnimind/pi-coding-agent");
+    const invalidate = vi.fn();
+    const createAgentSessionServices = vi.fn(
+      async (options: Parameters<typeof sdk.createAgentSessionServices>[0]) => {
+        options.modelRuntime!.registerProvider("configured-extension", {
+          name: "Configured Extension",
+          baseUrl: "https://extension.invalid/v1",
+          api: "openai-responses",
+          apiKey: "$OMNIMIND_CONFIGURED_EXTENSION_KEY",
+          models: [],
+        });
+        await options.modelRuntime!.setRuntimeApiKey(
+          "configured-extension",
+          "configured-extension-key",
+        );
+        return {
+          cwd: options.cwd,
+          agentDir: options.agentDir!,
+          modelRuntime: options.modelRuntime!,
+          settingsManager: options.settingsManager!,
+          resourceLoader: {
+            getExtensions: () => ({ extensions: [], errors: [], runtime: { invalidate } }),
+          },
+          diagnostics: [],
+        } as unknown as Awaited<ReturnType<typeof sdk.createAgentSessionServices>>;
+      },
+    );
+    const layer = makeTestLayer({
+      root,
+      loadModule: async () => ({ ...sdk, createAgentSessionServices }) as OmniMindCodingAgentModule,
+    });
+
+    const result = await Effect.runPromise(
+      Effect.gen(function* () {
+        const service = yield* OmniMindModelServices;
+        return yield* service.list({ intent: "add_service" });
+      }).pipe(Effect.provide(layer)),
+    );
+
+    expect(result.services).toEqual(
+      expect.arrayContaining([
+        expect.objectContaining({
+          serviceId: "configured-extension",
+          origin: "extension",
+          authState: "configured",
+        }),
+      ]),
+    );
+    expect(result.connectableServices).not.toEqual(
+      expect.arrayContaining([expect.objectContaining({ serviceId: "configured-extension" })]),
+    );
+    expect(invalidate).toHaveBeenCalledTimes(1);
+  });
+
+  it("uses the selected Extension overlay instead of the colliding built-in provider", async () => {
+    const root = await makeRoot();
+    await isolateProviderEnvironment(root);
+    await mkdir(path.join(root, "agent"), { recursive: true });
+    const sdk = await import("@omnimind/pi-coding-agent");
+    const invalidate = vi.fn();
+    const extensionRefresh = vi.fn(async () => []);
+    const createAgentSessionServices = vi.fn(
+      async (options: Parameters<typeof sdk.createAgentSessionServices>[0]) => {
+        options.modelRuntime!.registerProvider("deepseek", {
+          name: "DeepSeek Extension Overlay",
+          baseUrl: "https://extension.invalid/v1",
+          api: "openai-responses",
+          oauth: {
+            name: "Extension Overlay OAuth",
+            login: async () => ({
+              access: "extension-overlay-access",
+              refresh: "extension-overlay-refresh",
+              expires: Date.now() + 60_000,
+            }),
+            refreshToken: async (credentials) => credentials,
+            getApiKey: (credentials) => credentials.access,
+          },
+          refreshModels: extensionRefresh,
+        });
+        if (!options.modelRuntime!.getRegisteredProviderIds().includes("deepseek")) {
+          throw new Error("Extension overlay registration was not retained");
+        }
+        return {
+          cwd: options.cwd,
+          agentDir: options.agentDir!,
+          modelRuntime: options.modelRuntime!,
+          settingsManager: options.settingsManager!,
+          resourceLoader: {
+            getExtensions: () => ({ extensions: [], errors: [], runtime: { invalidate } }),
+          },
+          diagnostics: [],
+        } as unknown as Awaited<ReturnType<typeof sdk.createAgentSessionServices>>;
+      },
+    );
+    const loadModule = async () =>
+      ({ ...sdk, createAgentSessionServices }) as OmniMindCodingAgentModule;
+    const layer = makeTestLayer({ root, loadModule });
+
+    const result = await Effect.runPromise(
+      Effect.gen(function* () {
+        const service = yield* OmniMindModelServices;
+        const addList = yield* service.list({ intent: "add_service" });
+        const login = yield* service.beginLogin(43, {
+          serviceId: "deepseek",
+          authType: "oauth",
+          origin: "extension",
+        });
+        const refresh = yield* service.refresh({
+          serviceId: "deepseek",
+          origin: "extension",
+        });
+        const logout = yield* service.logout({
+          serviceId: "deepseek",
+          origin: "extension",
+        });
+        return { addList, login, refresh, logout };
+      }).pipe(Effect.provide(layer)),
+    );
+
+    expect(result.login).toMatchObject({
+      state: "complete",
+      service: { serviceId: "deepseek", origin: "extension" },
+    });
+    expect(result.refresh).toMatchObject({
+      state: "success",
+      service: { serviceId: "deepseek", origin: "extension" },
+    });
+    expect(result.logout).toMatchObject({
+      state: "complete",
+      service: { serviceId: "deepseek", origin: "extension" },
+    });
+    expect(extensionRefresh).toHaveBeenCalled();
+    expect(createAgentSessionServices).toHaveBeenCalledTimes(4);
+    expect(invalidate).toHaveBeenCalledTimes(4);
+  });
+
   it("uses Pi login and logout as the only API-key credential mutation owner", async () => {
     const root = await makeRoot();
     const providerHome = await isolateProviderEnvironment(root);
     const agentDir = path.join(root, "agent");
     await mkdir(agentDir, { recursive: true });
-    const layer = makeTestLayer({ root });
+    const sdk = await import("@omnimind/pi-coding-agent");
+    const createAgentSessionServices = vi.fn(sdk.createAgentSessionServices);
+    const layer = makeTestLayer({
+      root,
+      loadModule: async () => ({ ...sdk, createAgentSessionServices }) as OmniMindCodingAgentModule,
+    });
     const request = await Effect.runPromise(
       Effect.gen(function* () {
         const service = yield* OmniMindModelServices;
@@ -337,6 +839,7 @@ describe("OmniMindModelServicesLive", () => {
     const stored = JSON.parse(await readFile(path.join(agentDir, "auth.json"), "utf8"));
     expect(Object.keys(stored)).not.toContain("deepseek");
     expect(JSON.stringify(request)).not.toContain("test-only-api-key");
+    expect(createAgentSessionServices).not.toHaveBeenCalled();
     await expect(stat(path.join(providerHome, ".pi"))).rejects.toMatchObject({ code: "ENOENT" });
   });
 

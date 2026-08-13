@@ -20,13 +20,16 @@ import type {
   OmniMindModelServiceRefreshResult,
   OmniMindModelServicesGetInput,
   OmniMindModelServicesGetResult,
+  OmniMindModelServicesListInput,
   OmniMindModelServicesListResult,
 } from "@omnimind/contracts";
 import type { Effect } from "effect";
 import { ServiceMap } from "effect";
 
 export interface OmniMindModelServicesShape {
-  readonly list: () => Effect.Effect<OmniMindModelServicesListResult>;
+  readonly list: (
+    input?: OmniMindModelServicesListInput,
+  ) => Effect.Effect<OmniMindModelServicesListResult>;
   readonly get: (
     input: OmniMindModelServicesGetInput,
   ) => Effect.Effect<OmniMindModelServicesGetResult>;

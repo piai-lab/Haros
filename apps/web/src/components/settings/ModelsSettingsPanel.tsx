@@ -224,10 +224,17 @@ function ActiveModelsSettingsPanel({
       enabled: active && modelServicesCapability === true,
     }),
   );
+  const addModelServicesQuery = useQuery(
+    omniMindModelServicesListQueryOptions({
+      enabled: active && modelServicesCapability === true && modelServiceBrowserOpen,
+      intent: "add_service",
+    }),
+  );
   const modelServiceDetailQuery = useQuery(
     omniMindModelServiceDetailQueryOptions({
       enabled: active && modelServicesCapability === true,
       serviceId: selectedModelServiceId,
+      ...(modelServiceDetailReturnView === "browser" ? { intent: "add_service" as const } : {}),
     }),
   );
 
@@ -318,12 +325,22 @@ function ActiveModelsSettingsPanel({
     const counts = new Map<string, number>();
     for (const service of [
       ...(modelServicesQuery.data?.services ?? []),
-      ...(modelServicesQuery.data?.connectableServices ?? []),
+      ...(addModelServicesQuery.data?.services ?? []).filter(
+        (service) => service.origin === "extension",
+      ),
+      ...(addModelServicesQuery.data?.connectableServices ??
+        modelServicesQuery.data?.connectableServices ??
+        []),
     ]) {
       counts.set(service.displayName, (counts.get(service.displayName) ?? 0) + 1);
     }
     return counts;
-  }, [modelServicesQuery.data?.connectableServices, modelServicesQuery.data?.services]);
+  }, [
+    addModelServicesQuery.data?.connectableServices,
+    addModelServicesQuery.data?.services,
+    modelServicesQuery.data?.connectableServices,
+    modelServicesQuery.data?.services,
+  ]);
 
   const modelServiceInstanceLabel = useCallback(
     (service: OmniMindModelServiceDescriptor) =>
@@ -541,8 +558,17 @@ function ActiveModelsSettingsPanel({
       try {
         const result = await ensureNativeApi().omnimindModelServices.beginLogin(
           authType === "oauth"
-            ? { serviceId: service.serviceId, authType, promptMode: oauthPromptMode }
-            : { serviceId: service.serviceId, authType },
+            ? {
+                serviceId: service.serviceId,
+                authType,
+                promptMode: oauthPromptMode,
+                ...(service.origin === "extension" ? { origin: "extension" as const } : {}),
+              }
+            : {
+                serviceId: service.serviceId,
+                authType,
+                ...(service.origin === "extension" ? { origin: "extension" as const } : {}),
+              },
           { signal: controller.signal },
         );
         await consumeAuthResult(result, controller, authType);
@@ -620,6 +646,7 @@ function ActiveModelsSettingsPanel({
       try {
         const result = await ensureNativeApi().omnimindModelServices.refresh({
           serviceId: service.serviceId,
+          ...(service.origin === "extension" ? { origin: "extension" as const } : {}),
         });
         setModelServiceNotice({
           tone: result.state === "success" ? "status" : "error",
@@ -654,6 +681,7 @@ function ActiveModelsSettingsPanel({
     try {
       const result = await ensureNativeApi().omnimindModelServices.logout({
         serviceId: service.serviceId,
+        ...(service.origin === "extension" ? { origin: "extension" as const } : {}),
       });
       setLogoutService(null);
       setModelServiceNotice({
@@ -830,14 +858,28 @@ function ActiveModelsSettingsPanel({
     }
   }, [invalidateModelServiceConsumers, removeCustomService, t]);
 
-  const connectableModelServices = modelServicesQuery.data?.connectableServices ?? [];
+  const connectableModelServices = useMemo(() => {
+    const candidates = [
+      ...(addModelServicesQuery.data?.connectableServices ??
+        modelServicesQuery.data?.connectableServices ??
+        []),
+      ...(addModelServicesQuery.data?.services ?? []).filter(
+        (service) => service.origin === "extension",
+      ),
+    ];
+    return [...new Map(candidates.map((service) => [service.serviceId, service])).values()];
+  }, [
+    addModelServicesQuery.data?.connectableServices,
+    addModelServicesQuery.data?.services,
+    modelServicesQuery.data?.connectableServices,
+  ]);
   const configuredModelServices = modelServicesQuery.data?.services ?? [];
   const customApiCapability =
     modelServicesQuery.data?.state === "ready" || modelServicesQuery.data?.state === "empty"
       ? modelServicesQuery.data.customApiConfiguration
       : undefined;
   const canAddModelService =
-    connectableModelServices.length > 0 || customApiCapability !== undefined;
+    modelServicesQuery.data?.state === "ready" || modelServicesQuery.data?.state === "empty";
   const filteredConnectableModelServices = useMemo(() => {
     const query = modelServiceSearch.trim().toLocaleLowerCase();
     if (!query) return connectableModelServices;
@@ -1066,6 +1108,45 @@ function ActiveModelsSettingsPanel({
                 spellCheck={false}
               />
             </div>
+            {addModelServicesQuery.isPending ? (
+              <div role="status" className="text-sm text-muted-foreground">
+                {t("settings.modelServiceSourcesChecking")}
+              </div>
+            ) : addModelServicesQuery.isError ? (
+              <div
+                role="alert"
+                className="flex flex-wrap items-center justify-between gap-3 rounded-lg border border-destructive/30 bg-destructive/5 px-3 py-2 text-sm text-destructive"
+              >
+                <span>{t("settings.modelServiceSourcesUnavailable")}</span>
+                <Button
+                  size="sm"
+                  variant="outline"
+                  onClick={() => void addModelServicesQuery.refetch()}
+                >
+                  {t("common.tryAgain")}
+                </Button>
+              </div>
+            ) : addModelServicesQuery.data?.state !== "error" &&
+              (addModelServicesQuery.data?.extensionProjectionState === "partial" ||
+                addModelServicesQuery.data?.extensionProjectionState === "unavailable") ? (
+              <div
+                role="alert"
+                className="flex flex-wrap items-center justify-between gap-3 rounded-lg border border-border bg-muted/40 px-3 py-2 text-sm text-muted-foreground"
+              >
+                <span>
+                  {addModelServicesQuery.data?.extensionProjectionState === "partial"
+                    ? t("settings.modelServiceSourcesPartial")
+                    : t("settings.modelServiceSourcesUnavailable")}
+                </span>
+                <Button
+                  size="sm"
+                  variant="outline"
+                  onClick={() => void addModelServicesQuery.refetch()}
+                >
+                  {t("common.tryAgain")}
+                </Button>
+              </div>
+            ) : null}
             {filteredConnectableModelServices.length > 0 ? (
               <ul className="grid list-none gap-2 sm:grid-cols-2">
                 {filteredConnectableModelServices.map((service) => {

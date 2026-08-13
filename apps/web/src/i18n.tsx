@@ -2102,6 +2102,11 @@ export const EN_MESSAGES = {
   "settings.chooseModelServiceDescription":
     "Choose a service to connect. OmniMind will discover its available models after authentication.",
   "settings.searchModelServices": "Search model services…",
+  "settings.modelServiceSourcesChecking": "Checking installed model services…",
+  "settings.modelServiceSourcesPartial":
+    "Some installed model services could not be loaded. The services shown below are still available.",
+  "settings.modelServiceSourcesUnavailable":
+    "Installed model services could not be checked. Built-in services remain available.",
   "settings.noMatchingModelServices": "No model services match this search.",
   "settings.connectModelService": "Connect",
   "settings.connectModelServiceNamed": "Connect {name}",
@@ -2112,8 +2117,7 @@ export const EN_MESSAGES = {
   "settings.modelServiceInstanceNamed": "{name} · {id}",
   "settings.modelServiceModelCounts": "{known} known · {available} available",
   "settings.modelServiceModels": "Models",
-  "settings.modelServiceModelsDescription":
-    "{known} known · {available} currently available",
+  "settings.modelServiceModelsDescription": "{known} known · {available} currently available",
   "settings.searchServiceModels": "Search this service’s models…",
   "settings.noMatchingServiceModels": "No models match this search.",
   "settings.noServiceModels": "This service has not reported any models yet.",
@@ -4955,8 +4959,7 @@ export const ZH_CN_MESSAGES = {
   "settings.customApiNotFoundPrompt": "没有找到你的服务？",
   "settings.connectByApiAddress": "通过 API 地址连接 →",
   "settings.editCustomApiService": "编辑 API 连接",
-  "settings.customApiDescription":
-    "请选择 API 格式，添加至少一个模型，并在保存前测试连接。",
+  "settings.customApiDescription": "请选择 API 格式，添加至少一个模型，并在保存前测试连接。",
   "settings.customApiConnectionName": "连接名称",
   "settings.customApiConnectionNamePlaceholder": "我的模型服务",
   "settings.customApiProtocol": "API 格式",
@@ -5019,6 +5022,9 @@ export const ZH_CN_MESSAGES = {
   "settings.chooseModelServiceDescription":
     "选择要连接的服务，认证后 OmniMind 会自动发现可用模型。",
   "settings.searchModelServices": "搜索模型服务…",
+  "settings.modelServiceSourcesChecking": "正在检查已安装的模型服务…",
+  "settings.modelServiceSourcesPartial": "部分已安装的模型服务未能加载，下方已显示的服务仍可使用。",
+  "settings.modelServiceSourcesUnavailable": "暂时无法检查已安装的模型服务，内置服务仍可使用。",
   "settings.noMatchingModelServices": "没有匹配的模型服务。",
   "settings.connectModelService": "连接",
   "settings.connectModelServiceNamed": "连接 {name}",
@@ -5113,8 +5119,7 @@ export const ZH_CN_MESSAGES = {
   "settings.modelServiceRefreshCancelled": "已取消刷新模型目录。",
   "settings.modelServiceRefreshFailed": "无法刷新模型目录；上一次可用目录仍会保留。",
   "settings.modelServiceCredentialRemoved": "已移除保存的 API Key。",
-  "settings.modelServiceCredentialRemovedSyncFailed":
-    "API Key 已移除，但无法载入最新模型状态。",
+  "settings.modelServiceCredentialRemovedSyncFailed": "API Key 已移除，但无法载入最新模型状态。",
   "settings.modelServiceCredentialRemoveFailed": "无法移除保存的 API Key。",
   "settings.modelServiceSignedOut": "已退出登录。",
   "settings.modelServiceSignedOutSyncFailed": "已退出登录，但无法载入最新模型状态。",

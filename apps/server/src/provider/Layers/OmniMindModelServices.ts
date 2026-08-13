@@ -33,7 +33,9 @@ import type {
   OmniMindModelServiceAuthSource,
   OmniMindModelServiceDescriptor,
   OmniMindModelServiceModel,
+  OmniMindModelServicesExtensionProjectionState,
   OmniMindModelServicesListResult,
+  OmniMindModelServicesProjectionIntent,
 } from "@omnimind/contracts";
 import {
   OMNIMIND_MODEL_SERVICE_MODELS_MAX_COUNT,
@@ -314,6 +316,7 @@ interface ModelServiceAuthRequest {
   readonly clientId: number;
   readonly serviceId: string;
   readonly authType: OmniMindModelServiceAuthMethodType;
+  readonly origin: "extension" | null;
   readonly oauthPromptMode: OmniMindModelServiceOAuthPromptMode | null;
   readonly controller: AbortController;
   readonly connectionSignal: AbortSignal;
@@ -535,17 +538,70 @@ function normalizeAuthSource(source: string | undefined): OmniMindModelServiceAu
   }
 }
 
+type OmniMindModelRuntime = Awaited<
+  ReturnType<OmniMindCodingAgentModule["ModelRuntime"]["create"]>
+>;
+type OmniMindExtensionServices = Awaited<
+  ReturnType<OmniMindCodingAgentModule["createAgentSessionServices"]>
+>;
+
+async function loadIntentScopedExtensionServices(input: {
+  readonly sdk: OmniMindCodingAgentModule;
+  readonly runtime: OmniMindModelRuntime;
+  readonly agentDir: string;
+  readonly signal: AbortSignal;
+}): Promise<OmniMindExtensionServices> {
+  const services = await input.sdk.createAgentSessionServices({
+    cwd: input.agentDir,
+    agentDir: input.agentDir,
+    modelRuntime: input.runtime,
+    settingsManager: input.sdk.SettingsManager.create(input.agentDir, input.agentDir, {
+      projectTrusted: false,
+    }),
+    resourceLoaderOptions: {
+      noSkills: true,
+      noPromptTemplates: true,
+      noThemes: true,
+      noContextFiles: true,
+    },
+    resourceLoaderReloadOptions: {
+      resolveProjectTrust: async () => false,
+      onMissingPackage: async () => "error",
+    },
+  });
+  try {
+    input.signal.throwIfAborted();
+    return services;
+  } catch (error) {
+    services.resourceLoader
+      .getExtensions()
+      .runtime.invalidate("Model-service Extension operation cancelled");
+    throw error;
+  }
+}
+
+function retireIntentScopedExtensionServices(services: OmniMindExtensionServices | undefined) {
+  if (!services) return;
+  services.resourceLoader
+    .getExtensions()
+    .runtime.invalidate("Model-service Extension operation completed");
+}
+
 async function projectModelServices(input: {
   readonly serverBaseDir: string;
   readonly loadModule: () => Promise<OmniMindCodingAgentModule>;
   readonly readTextFile?: ReadTextFile;
   readonly signal: AbortSignal;
+  readonly intent?: OmniMindModelServicesProjectionIntent;
+  readonly preparedRuntime?: OmniMindModelRuntime;
+  readonly preparedExtensionProjectionState?: OmniMindModelServicesExtensionProjectionState;
 }): Promise<{
   readonly all: ReadonlyArray<OmniMindModelServiceDescriptor>;
   readonly listed: ReadonlyArray<OmniMindModelServiceDescriptor>;
   readonly connectable: ReadonlyArray<OmniMindModelServiceDescriptor>;
   readonly modelsByServiceId: ReadonlyMap<string, ReadonlyArray<OmniMindModelServiceModel>>;
   readonly customConfigsByServiceId: ReadonlyMap<string, OmniMindCustomModelServiceConfig>;
+  readonly extensionProjectionState?: OmniMindModelServicesExtensionProjectionState;
 }> {
   input.signal.throwIfAborted();
   const sdk = await input.loadModule();
@@ -585,26 +641,66 @@ async function projectModelServices(input: {
     signal: input.signal,
   });
   const modelsStore = new StaticModelsStore(path.join(agentDir, "models-store.json"), readTextFile);
-  const runtime = await sdk.ModelRuntime.create({
-    credentials,
-    modelsPath: null,
-    modelsConfigReader,
-    modelsStore,
-    allowModelNetwork: false,
-    refreshOnCreate: false,
-    signal: input.signal,
-  });
-  // ModelConfig deliberately retains path-rich parse/composition diagnostics.
-  // The read projection cannot serialize those; fail this query with a fixed code.
-  if (runtime.getError() !== undefined) {
-    throw new Error("OmniMind model-services configuration is unavailable");
-  }
-  const refresh = await runtime.refresh({ allowNetwork: false, signal: input.signal });
-  if (refresh.aborted) input.signal.throwIfAborted();
-  if (runtime.getError() !== undefined) {
-    throw new Error("OmniMind model-services availability is unavailable");
+  const createProjectionRuntime = async () =>
+    sdk.ModelRuntime.create({
+      credentials,
+      modelsPath: null,
+      modelsConfigReader,
+      modelsStore,
+      allowModelNetwork: false,
+      refreshOnCreate: false,
+      signal: input.signal,
+    });
+  const refreshProjectionRuntime = async (
+    runtime: Awaited<ReturnType<typeof createProjectionRuntime>>,
+  ) => {
+    // ModelConfig deliberately retains path-rich parse/composition diagnostics.
+    // The read projection cannot serialize those; fail this query with a fixed code.
+    if (runtime.getError() !== undefined) {
+      throw new Error("OmniMind model-services configuration is unavailable");
+    }
+    const refresh = await runtime.refresh({ allowNetwork: false, signal: input.signal });
+    if (refresh.aborted) input.signal.throwIfAborted();
+    if (runtime.getError() !== undefined) {
+      throw new Error("OmniMind model-services availability is unavailable");
+    }
+    return refresh;
+  };
+
+  let runtime = input.preparedRuntime ?? (await createProjectionRuntime());
+  let refresh = await refreshProjectionRuntime(runtime);
+  let extensionProjectionState = input.preparedExtensionProjectionState;
+  if (input.intent === "add_service" && !input.preparedRuntime) {
+    let extensionServices: OmniMindExtensionServices | undefined;
+    try {
+      extensionServices = await loadIntentScopedExtensionServices({
+        sdk,
+        runtime,
+        agentDir,
+        signal: input.signal,
+      });
+      if (runtime.getError() !== undefined) {
+        throw new Error("Extension model-service projection is unavailable");
+      }
+      const extensionResult = extensionServices.resourceLoader.getExtensions();
+      extensionProjectionState =
+        extensionResult.errors.length > 0 ||
+        extensionServices.diagnostics.some((diagnostic) => diagnostic.type === "error")
+          ? "partial"
+          : "ready";
+    } catch {
+      input.signal.throwIfAborted();
+      extensionProjectionState = "unavailable";
+      // A failed extension may have registered providers before throwing. Rebuild the
+      // passive projection so half-loaded code cannot become an authority for this response.
+      runtime = await createProjectionRuntime();
+      refresh = await refreshProjectionRuntime(runtime);
+    } finally {
+      retireIntentScopedExtensionServices(extensionServices);
+    }
   }
   const modelConfigProviderIds = new Set(runtime.getModelConfigProviderIds());
+  const registeredProviderIds = new Set(runtime.getRegisteredProviderIds());
 
   const availableCounts = new Map<string, number>();
   const availableModelKeys = new Set<string>();
@@ -664,9 +760,11 @@ async function projectModelServices(input: {
     const availableModelCount =
       authState === "refresh_required" ? 0 : (availableCounts.get(provider.id) ?? 0);
     const hasCatalogError = refresh.errors.has(provider.id);
-    const origin = modelConfigProviderIds.has(provider.id)
-      ? ("models_json" as const)
-      : ("builtin" as const);
+    const origin = registeredProviderIds.has(provider.id)
+      ? ("extension" as const)
+      : modelConfigProviderIds.has(provider.id)
+        ? ("models_json" as const)
+        : ("builtin" as const);
     const authMethods: Array<OmniMindModelServiceDescriptor["authMethods"][number]> = [];
     if (provider.auth.apiKey) {
       authMethods.push({
@@ -740,16 +838,18 @@ async function projectModelServices(input: {
         service.authState === "configured" ||
         service.authState === "refresh_required" ||
         service.availableModelCount > 0 ||
-        service.origin !== "builtin",
+        service.origin === "models_json" ||
+        service.origin === "unknown",
     ),
     connectable: sorted.filter(
       (service) =>
-        service.origin === "builtin" &&
+        (service.origin === "builtin" || service.origin === "extension") &&
         service.authState === "setup_required" &&
         service.authMethods.some((method) => method.canLogin),
     ),
     modelsByServiceId,
     customConfigsByServiceId,
+    ...(extensionProjectionState ? { extensionProjectionState } : {}),
   };
 }
 
@@ -770,12 +870,13 @@ export function makeOmniMindModelServicesLive(options: OmniMindModelServicesLive
       const authRequests = new Map<string, ModelServiceAuthRequest>();
       const oauthLogoDataUrl = loadOmniMindOAuthLogoDataUrl(config.staticDir);
       let mutationTail: Promise<void> = Promise.resolve();
-      const project = (signal: AbortSignal) =>
+      const project = (signal: AbortSignal, intent?: OmniMindModelServicesProjectionIntent) =>
         projectModelServices({
           serverBaseDir: config.baseDir,
           loadModule: options.loadModule ?? loadOmniMindCodingAgentModule,
           ...(options.readTextFile ? { readTextFile: options.readTextFile } : {}),
           signal,
+          ...(intent ? { intent } : {}),
         });
 
       const serializeMutation = <A>(operation: () => Promise<A>): Promise<A> => {
@@ -800,6 +901,63 @@ export function makeOmniMindModelServicesLive(options: OmniMindModelServicesLive
           signal,
         });
         return { agentDir, sdk, runtime };
+      };
+
+      const withMutationRuntimeForService = async <A>(
+        serviceId: string,
+        origin: "extension" | undefined,
+        signal: AbortSignal,
+        operation: (input: {
+          readonly agentDir: string;
+          readonly sdk: OmniMindCodingAgentModule;
+          readonly runtime: OmniMindModelRuntime;
+          readonly extensionLoaded: boolean;
+        }) => Promise<A>,
+      ): Promise<A> => {
+        const mutationRuntime = await createMutationRuntime(signal);
+        let extensionServices: OmniMindExtensionServices | undefined;
+        try {
+          if (origin === "extension") {
+            extensionServices = await loadIntentScopedExtensionServices({
+              sdk: mutationRuntime.sdk,
+              runtime: mutationRuntime.runtime,
+              agentDir: mutationRuntime.agentDir,
+              signal,
+            });
+            if (!mutationRuntime.runtime.getRegisteredProviderIds().includes(serviceId)) {
+              throw new Error("Extension model service is unavailable");
+            }
+          }
+          signal.throwIfAborted();
+          if (!mutationRuntime.runtime.getProvider(serviceId)) {
+            throw new Error("Model service is unavailable");
+          }
+          return await operation({
+            ...mutationRuntime,
+            extensionLoaded: extensionServices !== undefined,
+          });
+        } finally {
+          retireIntentScopedExtensionServices(extensionServices);
+        }
+      };
+
+      const projectPreparedService = async (input: {
+        readonly serviceId: string;
+        readonly runtime: OmniMindModelRuntime;
+        readonly extensionLoaded: boolean;
+        readonly signal: AbortSignal;
+      }) => {
+        const projection = await projectModelServices({
+          serverBaseDir: config.baseDir,
+          loadModule: options.loadModule ?? loadOmniMindCodingAgentModule,
+          ...(options.readTextFile ? { readTextFile: options.readTextFile } : {}),
+          signal: input.signal,
+          preparedRuntime: input.runtime,
+          ...(input.extensionLoaded ? { preparedExtensionProjectionState: "ready" } : {}),
+        });
+        const service = projection.all.find((entry) => entry.serviceId === input.serviceId);
+        if (!service) throw new Error("Model service is unavailable");
+        return service;
       };
 
       const getProjectedService = async (serviceId: string, signal: AbortSignal) => {
@@ -881,119 +1039,131 @@ export function makeOmniMindModelServicesLive(options: OmniMindModelServicesLive
           let authenticationUpdated = false;
           let previousService: OmniMindModelServiceDescriptor | undefined;
           try {
-            const { agentDir, sdk, runtime } = await createMutationRuntime(
-              request.controller.signal,
-            );
-            const provider = runtime.getProvider(request.serviceId);
-            const isBuiltin = !runtime.getModelConfigProviderIds().includes(request.serviceId);
-            const supportsRequestedAuth =
-              request.authType === "api_key"
-                ? provider?.auth.apiKey?.login !== undefined
-                : provider?.auth.oauth?.login !== undefined;
-            if (!provider || !isBuiltin || !supportsRequestedAuth) {
-              throw new Error("Model service does not support the requested login method");
-            }
-            previousService = await getProjectedService(
+            await withMutationRuntimeForService(
               request.serviceId,
+              request.origin ?? undefined,
               request.controller.signal,
-            );
-            const interaction: AuthInteraction = {
-              signal: request.controller.signal,
-              renderOAuthPage: createOmniMindOAuthPageRenderer({
-                serviceName: safeDisplayName(provider.name, request.serviceId),
-                logoDataUrl: oauthLogoDataUrl,
-              }),
-              prompt: async (prompt) => {
-                request.controller.signal.throwIfAborted();
-                if (
-                  request.authType === "oauth" &&
-                  request.oauthPromptMode === "provider_default" &&
-                  !request.providerDefaultPromptConsumed &&
-                  prompt.type === "select"
-                ) {
-                  const providerDefault = prompt.options[0];
-                  if (!providerDefault) {
-                    throw new Error("Authentication choices are unavailable");
-                  }
-                  // Pi's own interactive selector starts on the first provider-owned option.
-                  // Reuse that ordering instead of teaching the Host provider-specific choices.
-                  request.providerDefaultPromptConsumed = true;
-                  return providerDefault.id;
+              async ({ agentDir, sdk, runtime, extensionLoaded }) => {
+                const provider = runtime.getProvider(request.serviceId);
+                const isConnectableProvider =
+                  runtime.getRegisteredProviderIds().includes(request.serviceId) ||
+                  !runtime.getModelConfigProviderIds().includes(request.serviceId);
+                const supportsRequestedAuth =
+                  request.authType === "api_key"
+                    ? provider?.auth.apiKey?.login !== undefined
+                    : provider?.auth.oauth?.login !== undefined;
+                if (!provider || !isConnectableProvider || !supportsRequestedAuth) {
+                  throw new Error("Model service does not support the requested login method");
                 }
-                const projected = projectAuthPrompt(prompt);
-                return new Promise<string>((resolve, reject) => {
-                  const onAbort = () =>
-                    reject(new DOMException("Authentication cancelled", "AbortError"));
-                  request.controller.signal.addEventListener("abort", onAbort, { once: true });
-                  prompt.signal?.addEventListener("abort", onAbort, { once: true });
-                  request.pendingPrompt = {
-                    prompt: projected,
-                    resolve: (value) => {
-                      request.controller.signal.removeEventListener("abort", onAbort);
-                      prompt.signal?.removeEventListener("abort", onAbort);
-                      resolve(value);
-                    },
-                    reject,
-                  };
-                  notifyRequest(request);
-                });
-              },
-              notify: (event) => {
-                const projected = projectAuthEvent(event);
-                if (projected && request.events.length < 64) {
-                  request.events.push(projected);
-                  notifyRequest(request);
-                }
-              },
-            };
-            let synchronizationFailed = false;
-            try {
-              await runtime.login(request.serviceId, request.authType, interaction);
-            } catch (error) {
-              if (!(error instanceof sdk.CredentialSynchronizationError)) throw error;
-              synchronizationFailed = true;
-            }
-            authenticationUpdated = true;
-            publishOmniMindModelRuntimeMutation(agentDir);
-            let service = await getProjectedService(
-              request.serviceId,
-              new AbortController().signal,
-            );
-            if (synchronizationFailed) {
-              finishRequest(request, {
-                state: "auth_updated_sync_failed",
-                requestId: request.requestId,
-                service,
-                events: [...request.events],
-              });
-              return;
-            }
-            let catalogFailed = false;
-            if (runtime.getProvider(request.serviceId)?.refreshModels) {
-              if (request.controller.signal.aborted) {
-                catalogFailed = true;
-              } else {
-                const refreshed = await runtime.refresh({
-                  providers: [request.serviceId],
-                  allowNetwork: true,
-                  force: true,
+                previousService = await projectPreparedService({
+                  serviceId: request.serviceId,
+                  runtime,
+                  extensionLoaded,
                   signal: request.controller.signal,
                 });
-                catalogFailed = refreshed.aborted || refreshed.errors.has(request.serviceId);
-                if (!catalogFailed) {
-                  service = await getProjectedService(
-                    request.serviceId,
-                    new AbortController().signal,
-                  );
+                const interaction: AuthInteraction = {
+                  signal: request.controller.signal,
+                  renderOAuthPage: createOmniMindOAuthPageRenderer({
+                    serviceName: safeDisplayName(provider.name, request.serviceId),
+                    logoDataUrl: oauthLogoDataUrl,
+                  }),
+                  prompt: async (prompt) => {
+                    request.controller.signal.throwIfAborted();
+                    if (
+                      request.authType === "oauth" &&
+                      request.oauthPromptMode === "provider_default" &&
+                      !request.providerDefaultPromptConsumed &&
+                      prompt.type === "select"
+                    ) {
+                      const providerDefault = prompt.options[0];
+                      if (!providerDefault) {
+                        throw new Error("Authentication choices are unavailable");
+                      }
+                      // Pi's own interactive selector starts on the first provider-owned option.
+                      // Reuse that ordering instead of teaching the Host provider-specific choices.
+                      request.providerDefaultPromptConsumed = true;
+                      return providerDefault.id;
+                    }
+                    const projected = projectAuthPrompt(prompt);
+                    return new Promise<string>((resolve, reject) => {
+                      const onAbort = () =>
+                        reject(new DOMException("Authentication cancelled", "AbortError"));
+                      request.controller.signal.addEventListener("abort", onAbort, { once: true });
+                      prompt.signal?.addEventListener("abort", onAbort, { once: true });
+                      request.pendingPrompt = {
+                        prompt: projected,
+                        resolve: (value) => {
+                          request.controller.signal.removeEventListener("abort", onAbort);
+                          prompt.signal?.removeEventListener("abort", onAbort);
+                          resolve(value);
+                        },
+                        reject,
+                      };
+                      notifyRequest(request);
+                    });
+                  },
+                  notify: (event) => {
+                    const projected = projectAuthEvent(event);
+                    if (projected && request.events.length < 64) {
+                      request.events.push(projected);
+                      notifyRequest(request);
+                    }
+                  },
+                };
+                let synchronizationFailed = false;
+                try {
+                  await runtime.login(request.serviceId, request.authType, interaction);
+                } catch (error) {
+                  if (!(error instanceof sdk.CredentialSynchronizationError)) throw error;
+                  synchronizationFailed = true;
                 }
-              }
-            }
-            finishRequest(request, {
-              state: catalogFailed ? "auth_updated_catalog_failed" : "complete",
-              requestId: request.requestId,
-              service,
-              events: [...request.events],
-            });
+                authenticationUpdated = true;
+                publishOmniMindModelRuntimeMutation(agentDir);
+                let service = await projectPreparedService({
+                  serviceId: request.serviceId,
+                  runtime,
+                  extensionLoaded,
+                  signal: new AbortController().signal,
+                });
+                if (synchronizationFailed) {
+                  finishRequest(request, {
+                    state: "auth_updated_sync_failed",
+                    requestId: request.requestId,
+                    service,
+                    events: [...request.events],
+                  });
+                  return;
+                }
+                let catalogFailed = false;
+                if (runtime.getProvider(request.serviceId)?.refreshModels) {
+                  if (request.controller.signal.aborted) {
+                    catalogFailed = true;
+                  } else {
+                    const refreshed = await runtime.refresh({
+                      providers: [request.serviceId],
+                      allowNetwork: true,
+                      force: true,
+                      signal: request.controller.signal,
+                    });
+                    catalogFailed = refreshed.aborted || refreshed.errors.has(request.serviceId);
+                    if (!catalogFailed) {
+                      service = await projectPreparedService({
+                        serviceId: request.serviceId,
+                        runtime,
+                        extensionLoaded,
+                        signal: new AbortController().signal,
+                      });
+                    }
+                  }
+                }
+                finishRequest(request, {
+                  state: catalogFailed ? "auth_updated_catalog_failed" : "complete",
+                  requestId: request.requestId,
+                  service,
+                  events: [...request.events],
+                });
+              },
+            );
           } catch (error) {
             if (authenticationUpdated && previousService) {
               finishRequest(request, {
@@ -1020,10 +1190,10 @@ export function makeOmniMindModelServicesLive(options: OmniMindModelServicesLive
       };
 
       return {
-        list: () =>
+        list: (input = {}) =>
           Effect.promise(async (signal) => {
             try {
-              const projection = await project(signal);
+              const projection = await project(signal, input.intent);
               const first = projection.listed[0];
               return first
                 ? ({
@@ -1031,6 +1201,9 @@ export function makeOmniMindModelServicesLive(options: OmniMindModelServicesLive
                     services: [first, ...projection.listed.slice(1)],
                     connectableServices: projection.connectable,
                     customApiConfiguration: { protocols: CUSTOM_API_PROTOCOLS },
+                    ...(projection.extensionProjectionState
+                      ? { extensionProjectionState: projection.extensionProjectionState }
+                      : {}),
                     errorCode: null,
                   } satisfies OmniMindModelServicesListResult)
                 : ({
@@ -1038,6 +1211,9 @@ export function makeOmniMindModelServicesLive(options: OmniMindModelServicesLive
                     services: [],
                     connectableServices: projection.connectable,
                     customApiConfiguration: { protocols: CUSTOM_API_PROTOCOLS },
+                    ...(projection.extensionProjectionState
+                      ? { extensionProjectionState: projection.extensionProjectionState }
+                      : {}),
                     errorCode: null,
                   } satisfies OmniMindModelServicesListResult);
             } catch {
@@ -1048,7 +1224,7 @@ export function makeOmniMindModelServicesLive(options: OmniMindModelServicesLive
         get: (input) =>
           Effect.promise(async (signal) => {
             try {
-              const projection = await project(signal);
+              const projection = await project(signal, input.intent);
               const service = projection.all.find((entry) => entry.serviceId === input.serviceId);
               return service
                 ? ({
@@ -1060,9 +1236,19 @@ export function makeOmniMindModelServicesLive(options: OmniMindModelServicesLive
                           customConfig: projection.customConfigsByServiceId.get(service.serviceId)!,
                         }
                       : {}),
+                    ...(projection.extensionProjectionState
+                      ? { extensionProjectionState: projection.extensionProjectionState }
+                      : {}),
                     errorCode: null,
                   } as const)
-                : ({ state: "empty", service: null, errorCode: null } as const);
+                : ({
+                    state: "empty",
+                    service: null,
+                    ...(projection.extensionProjectionState
+                      ? { extensionProjectionState: projection.extensionProjectionState }
+                      : {}),
+                    errorCode: null,
+                  } as const);
             } catch {
               signal.throwIfAborted();
               return {
@@ -1098,6 +1284,7 @@ export function makeOmniMindModelServicesLive(options: OmniMindModelServicesLive
                 clientId,
                 serviceId: input.serviceId,
                 authType: input.authType,
+                origin: input.origin ?? null,
                 oauthPromptMode:
                   input.authType === "oauth" ? (input.promptMode ?? "interactive") : null,
                 controller,
@@ -1191,53 +1378,85 @@ export function makeOmniMindModelServicesLive(options: OmniMindModelServicesLive
           }),
         logout: (input) =>
           Effect.promise((signal) =>
-            serializeMutation(async () => {
-              const previous = await getProjectedService(input.serviceId, signal);
-              const { agentDir, sdk, runtime } = await createMutationRuntime(signal);
-              let synchronizationFailed = false;
-              try {
-                await runtime.logout(input.serviceId, { signal });
-              } catch (error) {
-                if (!(error instanceof sdk.CredentialSynchronizationError)) throw error;
-                synchronizationFailed = true;
-              }
-              publishOmniMindModelRuntimeMutation(agentDir);
-              let service = previous;
-              try {
-                service = await getProjectedService(input.serviceId, new AbortController().signal);
-              } catch {
-                synchronizationFailed = true;
-              }
-              return {
-                state: synchronizationFailed ? "credential_updated_sync_failed" : "complete",
-                service,
-              } as const;
-            }),
+            serializeMutation(() =>
+              withMutationRuntimeForService(
+                input.serviceId,
+                input.origin,
+                signal,
+                async ({ agentDir, sdk, runtime, extensionLoaded }) => {
+                  const previous = await projectPreparedService({
+                    serviceId: input.serviceId,
+                    runtime,
+                    extensionLoaded,
+                    signal,
+                  });
+                  let synchronizationFailed = false;
+                  try {
+                    await runtime.logout(input.serviceId, { signal });
+                  } catch (error) {
+                    if (!(error instanceof sdk.CredentialSynchronizationError)) throw error;
+                    synchronizationFailed = true;
+                  }
+                  publishOmniMindModelRuntimeMutation(agentDir);
+                  let service = previous;
+                  try {
+                    service = await projectPreparedService({
+                      serviceId: input.serviceId,
+                      runtime,
+                      extensionLoaded,
+                      signal: new AbortController().signal,
+                    });
+                  } catch {
+                    synchronizationFailed = true;
+                  }
+                  return {
+                    state: synchronizationFailed ? "credential_updated_sync_failed" : "complete",
+                    service,
+                  } as const;
+                },
+              ),
+            ),
           ),
         refresh: (input) =>
           Effect.promise((signal) =>
-            serializeMutation(async () => {
-              const previous = await getProjectedService(input.serviceId, signal);
-              const { agentDir, runtime } = await createMutationRuntime(signal);
-              if (!runtime.getProvider(input.serviceId)?.refreshModels) {
-                return { state: "unsupported", service: previous } as const;
-              }
-              const refreshed = await runtime.refresh({
-                providers: [input.serviceId],
-                allowNetwork: true,
-                force: true,
+            serializeMutation(() =>
+              withMutationRuntimeForService(
+                input.serviceId,
+                input.origin,
                 signal,
-              });
-              if (refreshed.aborted) return { state: "cancelled", service: previous } as const;
-              if (refreshed.errors.has(input.serviceId)) {
-                return { state: "failed", service: previous } as const;
-              }
-              publishOmniMindModelRuntimeMutation(agentDir);
-              return {
-                state: "success",
-                service: await getProjectedService(input.serviceId, signal),
-              } as const;
-            }),
+                async ({ agentDir, runtime, extensionLoaded }) => {
+                  const previous = await projectPreparedService({
+                    serviceId: input.serviceId,
+                    runtime,
+                    extensionLoaded,
+                    signal,
+                  });
+                  if (!runtime.getProvider(input.serviceId)?.refreshModels) {
+                    return { state: "unsupported", service: previous } as const;
+                  }
+                  const refreshed = await runtime.refresh({
+                    providers: [input.serviceId],
+                    allowNetwork: true,
+                    force: true,
+                    signal,
+                  });
+                  if (refreshed.aborted) return { state: "cancelled", service: previous } as const;
+                  if (refreshed.errors.has(input.serviceId)) {
+                    return { state: "failed", service: previous } as const;
+                  }
+                  publishOmniMindModelRuntimeMutation(agentDir);
+                  return {
+                    state: "success",
+                    service: await projectPreparedService({
+                      serviceId: input.serviceId,
+                      runtime,
+                      extensionLoaded,
+                      signal,
+                    }),
+                  } as const;
+                },
+              ),
+            ),
           ),
         testCustom: (input) =>
           Effect.promise(async (signal) => {

@@ -1916,9 +1916,9 @@ const makeWsRpcHandlersLayer = () =>
           rpcEffect(providerDiscoveryService.listModels(input), "Failed to list models"),
         [WS_METHODS.providerListAgents]: (input) =>
           rpcEffect(providerDiscoveryService.listAgents(input), "Failed to list agents"),
-        [WS_METHODS.omnimindModelServicesList]: () =>
+        [WS_METHODS.omnimindModelServicesList]: (input) =>
           rpcEffect(
-            requireOwnerRole.pipe(Effect.andThen(omniMindModelServices.list())),
+            requireOwnerRole.pipe(Effect.andThen(omniMindModelServices.list(input))),
             "Failed to list OmniMind model services",
           ),
         [WS_METHODS.omnimindModelServicesGet]: (input) =>

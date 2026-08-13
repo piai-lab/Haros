@@ -69,8 +69,7 @@ export const OmniMindCustomModelServiceModelInput = Schema.Struct({
   contextWindow: PositiveInt,
   maxTokens: PositiveInt,
 });
-export type OmniMindCustomModelServiceModelInput =
-  typeof OmniMindCustomModelServiceModelInput.Type;
+export type OmniMindCustomModelServiceModelInput = typeof OmniMindCustomModelServiceModelInput.Type;
 
 const BoundedCustomModels = Schema.Array(OmniMindCustomModelServiceModelInput)
   .check(Schema.isMinLength(1))
@@ -103,8 +102,7 @@ export const OmniMindCustomModelServiceCapability = Schema.Struct({
     Schema.Literal("google-generative-ai"),
   ]),
 });
-export type OmniMindCustomModelServiceCapability =
-  typeof OmniMindCustomModelServiceCapability.Type;
+export type OmniMindCustomModelServiceCapability = typeof OmniMindCustomModelServiceCapability.Type;
 
 export const OmniMindModelServiceOrigin = Schema.Literals([
   "builtin",
@@ -176,7 +174,21 @@ export const OmniMindModelServicesProjectionErrorCode = Schema.Literal("projecti
 export type OmniMindModelServicesProjectionErrorCode =
   typeof OmniMindModelServicesProjectionErrorCode.Type;
 
-export const OmniMindModelServicesListInput = Schema.Struct({});
+export const OmniMindModelServicesProjectionIntent = Schema.Literal("add_service");
+export type OmniMindModelServicesProjectionIntent =
+  typeof OmniMindModelServicesProjectionIntent.Type;
+
+export const OmniMindModelServicesExtensionProjectionState = Schema.Literals([
+  "ready",
+  "partial",
+  "unavailable",
+]);
+export type OmniMindModelServicesExtensionProjectionState =
+  typeof OmniMindModelServicesExtensionProjectionState.Type;
+
+export const OmniMindModelServicesListInput = Schema.Struct({
+  intent: Schema.optional(OmniMindModelServicesProjectionIntent),
+});
 export type OmniMindModelServicesListInput = typeof OmniMindModelServicesListInput.Type;
 
 const BoundedModelServices = Schema.Array(OmniMindModelServiceDescriptor).check(
@@ -190,6 +202,7 @@ export const OmniMindModelServicesListResult = Schema.Union([
     services: BoundedNonEmptyModelServices,
     connectableServices: BoundedModelServices,
     customApiConfiguration: Schema.optional(OmniMindCustomModelServiceCapability),
+    extensionProjectionState: Schema.optional(OmniMindModelServicesExtensionProjectionState),
     errorCode: Schema.Null,
   }),
   Schema.Struct({
@@ -197,6 +210,7 @@ export const OmniMindModelServicesListResult = Schema.Union([
     services: Schema.Tuple([]),
     connectableServices: BoundedModelServices,
     customApiConfiguration: Schema.optional(OmniMindCustomModelServiceCapability),
+    extensionProjectionState: Schema.optional(OmniMindModelServicesExtensionProjectionState),
     errorCode: Schema.Null,
   }),
   Schema.Struct({
@@ -210,6 +224,7 @@ export type OmniMindModelServicesListResult = typeof OmniMindModelServicesListRe
 
 export const OmniMindModelServicesGetInput = Schema.Struct({
   serviceId: BoundedIdentifier,
+  intent: Schema.optional(OmniMindModelServicesProjectionIntent),
 });
 export type OmniMindModelServicesGetInput = typeof OmniMindModelServicesGetInput.Type;
 
@@ -219,11 +234,13 @@ export const OmniMindModelServicesGetResult = Schema.Union([
     service: OmniMindModelServiceDescriptor,
     models: Schema.optional(BoundedServiceModels),
     customConfig: Schema.optional(OmniMindCustomModelServiceConfig),
+    extensionProjectionState: Schema.optional(OmniMindModelServicesExtensionProjectionState),
     errorCode: Schema.Null,
   }),
   Schema.Struct({
     state: Schema.Literal("empty"),
     service: Schema.Null,
+    extensionProjectionState: Schema.optional(OmniMindModelServicesExtensionProjectionState),
     errorCode: Schema.Null,
   }),
   Schema.Struct({
@@ -318,6 +335,7 @@ export const OmniMindModelServiceBeginLoginInput = Schema.Struct({
   serviceId: BoundedIdentifier,
   authType: OmniMindModelServiceAuthMethodType,
   promptMode: Schema.optional(OmniMindModelServiceOAuthPromptMode),
+  origin: Schema.optional(Schema.Literal("extension")),
 });
 export type OmniMindModelServiceBeginLoginInput = typeof OmniMindModelServiceBeginLoginInput.Type;
 
@@ -338,7 +356,10 @@ export type OmniMindModelServiceAnswerLoginInput = typeof OmniMindModelServiceAn
 export const OmniMindModelServiceCancelLoginInput = Schema.Struct({ requestId: AuthRequestId });
 export type OmniMindModelServiceCancelLoginInput = typeof OmniMindModelServiceCancelLoginInput.Type;
 
-export const OmniMindModelServiceLogoutInput = Schema.Struct({ serviceId: BoundedIdentifier });
+export const OmniMindModelServiceLogoutInput = Schema.Struct({
+  serviceId: BoundedIdentifier,
+  origin: Schema.optional(Schema.Literal("extension")),
+});
 export type OmniMindModelServiceLogoutInput = typeof OmniMindModelServiceLogoutInput.Type;
 export const OmniMindModelServiceLogoutResult = Schema.Struct({
   state: Schema.Literals(["complete", "credential_updated_sync_failed"]),
@@ -346,7 +367,10 @@ export const OmniMindModelServiceLogoutResult = Schema.Struct({
 });
 export type OmniMindModelServiceLogoutResult = typeof OmniMindModelServiceLogoutResult.Type;
 
-export const OmniMindModelServiceRefreshInput = Schema.Struct({ serviceId: BoundedIdentifier });
+export const OmniMindModelServiceRefreshInput = Schema.Struct({
+  serviceId: BoundedIdentifier,
+  origin: Schema.optional(Schema.Literal("extension")),
+});
 export type OmniMindModelServiceRefreshInput = typeof OmniMindModelServiceRefreshInput.Type;
 export const OmniMindModelServiceRefreshResult = Schema.Struct({
   state: Schema.Literals(["success", "failed", "cancelled", "unsupported"]),
@@ -363,8 +387,7 @@ export const OmniMindCustomModelServiceTestInput = Schema.Struct({
   apiKey: Schema.NullOr(BoundedSecret),
   testModelId: BoundedModelId,
 });
-export type OmniMindCustomModelServiceTestInput =
-  typeof OmniMindCustomModelServiceTestInput.Type;
+export type OmniMindCustomModelServiceTestInput = typeof OmniMindCustomModelServiceTestInput.Type;
 
 export const OmniMindCustomModelServiceTestResult = Schema.Union([
   Schema.Struct({
@@ -384,16 +407,14 @@ export const OmniMindCustomModelServiceTestResult = Schema.Union([
     ]),
   }),
 ]);
-export type OmniMindCustomModelServiceTestResult =
-  typeof OmniMindCustomModelServiceTestResult.Type;
+export type OmniMindCustomModelServiceTestResult = typeof OmniMindCustomModelServiceTestResult.Type;
 
 export const OmniMindCustomModelServiceSaveInput = Schema.Struct({
   config: OmniMindCustomModelServiceConfigInput,
   // Null preserves the existing Pi-owned credential during an edit.
   apiKey: Schema.NullOr(BoundedSecret),
 });
-export type OmniMindCustomModelServiceSaveInput =
-  typeof OmniMindCustomModelServiceSaveInput.Type;
+export type OmniMindCustomModelServiceSaveInput = typeof OmniMindCustomModelServiceSaveInput.Type;
 
 export const OmniMindCustomModelServiceSaveResult = Schema.Union([
   Schema.Struct({
@@ -405,8 +426,7 @@ export const OmniMindCustomModelServiceSaveResult = Schema.Union([
     service: Schema.NullOr(OmniMindModelServiceDescriptor),
   }),
 ]);
-export type OmniMindCustomModelServiceSaveResult =
-  typeof OmniMindCustomModelServiceSaveResult.Type;
+export type OmniMindCustomModelServiceSaveResult = typeof OmniMindCustomModelServiceSaveResult.Type;
 
 export const OmniMindCustomModelServiceRemoveInput = Schema.Struct({
   serviceId: BoundedIdentifier,

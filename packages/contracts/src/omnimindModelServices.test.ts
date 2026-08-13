@@ -11,6 +11,7 @@ import {
   OmniMindModelServiceDescriptor,
   OmniMindModelServicesGetResult,
   OmniMindModelServicesGetInput,
+  OmniMindModelServicesListInput,
   OmniMindModelServicesListResult,
 } from "./omnimindModelServices";
 
@@ -42,6 +43,32 @@ describe("OmniMind model-services contracts", () => {
     });
 
     expect(decoded.services[0]).toEqual(descriptor);
+  });
+
+  it("only admits the explicit add-service intent and a bounded extension outcome", () => {
+    expect(
+      Schema.decodeUnknownSync(OmniMindModelServicesListInput)({ intent: "add_service" }),
+    ).toEqual({ intent: "add_service" });
+    expect(
+      Schema.decodeUnknownSync(OmniMindModelServicesGetInput)({
+        serviceId: "extension-service",
+        intent: "add_service",
+      }),
+    ).toEqual({ serviceId: "extension-service", intent: "add_service" });
+    expect(() =>
+      Schema.decodeUnknownSync(OmniMindModelServicesListInput)({ intent: "settings_open" }),
+    ).toThrow();
+
+    const decoded = Schema.decodeUnknownSync(OmniMindModelServicesListResult)({
+      state: "empty",
+      services: [],
+      connectableServices: [],
+      extensionProjectionState: "unavailable",
+      errorCode: null,
+    });
+    expect(decoded.state === "empty" ? decoded.extensionProjectionState : undefined).toBe(
+      "unavailable",
+    );
   });
 
   it("decodes bounded public model facts without accepting private runtime fields", () => {
@@ -267,11 +294,13 @@ describe("OmniMind model-services contracts", () => {
         serviceId: "openai-codex",
         authType: "oauth",
         promptMode: "provider_default",
+        origin: "extension",
       }),
     ).toEqual({
       serviceId: "openai-codex",
       authType: "oauth",
       promptMode: "provider_default",
+      origin: "extension",
     });
     expect(
       Schema.decodeUnknownSync(OmniMindModelServicePollLoginInput)({
