@@ -1765,18 +1765,36 @@ function ActiveModelsSettingsPanel({
                 {authDialog.events.map((event, index) => {
                   const externalUrl = authEventExternalUrl(event);
                   const externalHost = authEventExternalHost(event);
+                  const providerDetail =
+                    event.type === "auth_url"
+                      ? event.instructions
+                      : event.type === "info" || event.type === "progress"
+                        ? event.message
+                        : undefined;
                   return (
                     <div
                       key={`${event.type}:${index}`}
-                      className="flex flex-wrap items-center justify-between gap-2 text-xs text-muted-foreground"
+                      className="flex flex-wrap items-start justify-between gap-2 text-xs text-muted-foreground"
                     >
-                      <span>
-                        {event.type === "device_code"
-                          ? t("settings.modelServiceDeviceCode", { code: event.userCode })
-                          : event.type === "auth_url"
-                            ? (event.instructions ?? t("settings.modelServiceOpenOAuth"))
-                            : event.message}
-                      </span>
+                      <div className="min-w-0 space-y-1">
+                        <span>
+                          {event.type === "device_code"
+                            ? t("settings.modelServiceDeviceCode", { code: event.userCode })
+                            : event.type === "auth_url"
+                              ? t("settings.modelServiceOpenOAuth")
+                              : event.type === "progress"
+                                ? t("settings.modelServiceProviderProgress")
+                                : t("settings.modelServiceProviderNotice")}
+                        </span>
+                        {providerDetail ? (
+                          <details>
+                            <summary className="cursor-pointer select-none">
+                              {t("settings.modelServiceProviderDetails")}
+                            </summary>
+                            <p className="mt-1 break-words">{providerDetail}</p>
+                          </details>
+                        ) : null}
+                      </div>
                       {externalUrl && externalHost ? (
                         <Button
                           size="xs"
@@ -1806,13 +1824,31 @@ function ActiveModelsSettingsPanel({
             ) : null}
             {authDialog?.busy ? (
               <p role="status" className="text-sm text-muted-foreground">
-                {t("settings.modelServiceAuthWorking")}
+                {t(
+                  authDialog.authType === "oauth"
+                    ? "settings.modelServiceOAuthWorking"
+                    : "settings.modelServiceApiKeyWorking",
+                )}
               </p>
             ) : authDialog?.prompt ? (
               <div className="space-y-2">
                 <label htmlFor="model-service-auth-value" className="text-sm font-medium">
-                  {authDialog.prompt.message}
+                  {t(
+                    authDialog.prompt.type === "secret"
+                      ? "settings.modelServicePromptSecret"
+                      : authDialog.prompt.type === "manual_code"
+                        ? "settings.modelServicePromptManualCode"
+                        : authDialog.prompt.type === "select"
+                          ? "settings.modelServicePromptSelect"
+                          : "settings.modelServicePromptText",
+                  )}
                 </label>
+                <details className="text-xs text-muted-foreground">
+                  <summary className="cursor-pointer select-none">
+                    {t("settings.modelServiceProviderDetails")}
+                  </summary>
+                  <p className="mt-1 break-words">{authDialog.prompt.message}</p>
+                </details>
                 {authDialog.prompt.type === "select" ? (
                   <Select
                     value={authDialog.value}
@@ -1825,7 +1861,7 @@ function ActiveModelsSettingsPanel({
                     <SelectTrigger
                       id="model-service-auth-value"
                       className="w-full"
-                      aria-label={authDialog.prompt.message}
+                      aria-label={t("settings.modelServicePromptSelect")}
                     >
                       <SelectValue>
                         {authDialog.prompt.options.find((option) => option.id === authDialog.value)
@@ -1846,7 +1882,13 @@ function ActiveModelsSettingsPanel({
                     id="model-service-auth-value"
                     type={authDialog.prompt.type === "secret" ? "password" : "text"}
                     value={authDialog.value}
-                    placeholder={authDialog.prompt.placeholder}
+                    placeholder={t(
+                      authDialog.prompt.type === "secret"
+                        ? "settings.modelServicePromptSecret"
+                        : authDialog.prompt.type === "manual_code"
+                          ? "settings.modelServicePromptManualCode"
+                          : "settings.modelServicePromptText",
+                    )}
                     autoComplete="off"
                     spellCheck={false}
                     onChange={(event) =>

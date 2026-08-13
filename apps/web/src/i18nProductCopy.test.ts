@@ -3,6 +3,8 @@ import { basename, resolve } from "node:path";
 import ts from "typescript";
 import { describe, expect, it } from "vitest";
 
+import { EN_MESSAGES, ZH_CN_MESSAGES } from "./i18n";
+
 const PRODUCT_COPY_SOURCES = [
   "routes/_chat.settings.tsx",
   "routes/-automations.shared.tsx",
@@ -346,5 +348,41 @@ describe("reachable OmniMind-owned product copy", () => {
       ),
       "translate product copy with useI18n(); allow only exact reviewed raw facts",
     ).toEqual([]);
+  });
+
+  it("keeps normal Model services copy in product language", () => {
+    const forbidden = [
+      /\bPi\b/u,
+      /credential owner/iu,
+      /models\.json/iu,
+      /ModelRuntime/u,
+      /runtime projection/iu,
+      /local model snapshot/iu,
+      /凭据\s*owner/iu,
+      /本地模型快照/u,
+    ];
+    const catalogs = [EN_MESSAGES, ZH_CN_MESSAGES] as const;
+
+    for (const catalog of catalogs) {
+      const modelServiceCopy = Object.entries(catalog).filter(
+        ([key]) => key.startsWith("settings.modelService") || key.startsWith("settings.customApi"),
+      );
+      expect(
+        modelServiceCopy.flatMap(([key, message]) =>
+          forbidden.flatMap((pattern) =>
+            pattern.test(message) ? [`${key}: ${message}`] : [],
+          ),
+        ),
+      ).toEqual([]);
+    }
+
+    expect(EN_MESSAGES["settings.customApiKeyDescription"]).toContain("saved on this device");
+    expect(ZH_CN_MESSAGES["settings.customApiKeyDescription"]).toContain("保存在这台设备上");
+    expect(EN_MESSAGES["settings.modelServiceOriginModelsJson"]).toBe(
+      "Connected with an API endpoint",
+    );
+    expect(ZH_CN_MESSAGES["settings.modelServiceOriginModelsJson"]).toBe("通过 API 地址连接");
+    expect(EN_MESSAGES["settings.noServiceModels"]).toContain("service");
+    expect(ZH_CN_MESSAGES["settings.noServiceModels"]).toContain("服务");
   });
 });

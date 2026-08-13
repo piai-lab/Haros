@@ -2031,7 +2031,7 @@ export const EN_MESSAGES = {
   "settings.connectByApiAddress": "Connect with an API endpoint →",
   "settings.editCustomApiService": "Edit API connection",
   "settings.customApiDescription":
-    "Choose the API format explicitly, then test one model before saving. Pi owns validation, credentials, and the saved model configuration.",
+    "Choose the API format, add at least one model, then test the connection before saving.",
   "settings.customApiConnectionName": "Connection name",
   "settings.customApiConnectionNamePlaceholder": "My model service",
   "settings.customApiProtocol": "API format",
@@ -2056,7 +2056,7 @@ export const EN_MESSAGES = {
   "settings.customApiKeyPlaceholder": "Enter the API key",
   "settings.customApiKeyPreservePlaceholder": "Leave blank to keep the saved key",
   "settings.customApiKeyDescription":
-    "The key is sent only to the local Pi credential owner. It is never returned to this form.",
+    "This API key is used only to connect this model service and is saved on this device. It won’t be shown again after you save.",
   "settings.customApiModels": "Models",
   "settings.customApiModelsDescription":
     "Add the model identities and capabilities exposed by this endpoint.",
@@ -2083,16 +2083,16 @@ export const EN_MESSAGES = {
     "The service did not complete the test request.",
   "settings.customApiTestFailed.model_unavailable": "The selected test model is unavailable.",
   "settings.customApiTestFailed.cancelled": "The connection test was cancelled.",
-  "settings.customApiSaved": "The API connection was saved and reloaded by Pi.",
+  "settings.customApiSaved": "The API connection was saved and reloaded.",
   "settings.customApiSavedAuthFailed":
-    "The configuration was saved, but Pi could not store the new credential. Edit the connection and try again.",
+    "The connection was saved, but the API key could not be stored. Edit the connection and try again.",
   "settings.customApiSavedSyncFailed":
-    "The configuration was saved, but the latest runtime projection is unavailable. Reload and review it before use.",
+    "The connection was saved, but its latest model state could not be loaded. Reload and review it before use.",
   "settings.customApiSaveFailed": "The connection was not saved. Review the fields and try again.",
   "settings.customApiReload": "Reload",
   "settings.customApiDeleteTitle": "Delete API connection?",
   "settings.customApiDeleteDescription":
-    "Delete {name} and its Pi-owned credential? Existing conversations are not changed; future sends can no longer use this service.",
+    "Delete {name} and its saved API key? Existing conversations are not changed; future sends can no longer use this service.",
   "settings.customApiDeleting": "Deleting…",
   "settings.customApiRemoved": "The API connection and its credential were deleted.",
   "settings.customApiRemovedSyncWarning":
@@ -2113,10 +2113,10 @@ export const EN_MESSAGES = {
   "settings.modelServiceModelCounts": "{known} known · {available} available",
   "settings.modelServiceModels": "Models",
   "settings.modelServiceModelsDescription":
-    "{known} known from Pi · {available} currently available",
+    "{known} known · {available} currently available",
   "settings.searchServiceModels": "Search this service’s models…",
   "settings.noMatchingServiceModels": "No models match this search.",
-  "settings.noServiceModels": "Pi has not reported any models for this service yet.",
+  "settings.noServiceModels": "This service has not reported any models yet.",
   "settings.modelServiceModelDetailsUnavailable":
     "Model details are not available from this Server version.",
   "settings.modelServiceModelAvailable": "Available",
@@ -2160,10 +2160,10 @@ export const EN_MESSAGES = {
   "settings.modelServiceRefreshing": "Refreshing…",
   "settings.modelServiceApiKeyTitle": "API key · {name}",
   "settings.modelServiceApiKeyDescription":
-    "The key is sent directly to the local Pi credential owner and is never stored in OmniMind settings.",
+    "This API key is used only to connect this model service and is saved on this device. It won’t be shown again after you save.",
   "settings.modelServiceOAuthTitle": "Sign in · {name}",
   "settings.modelServiceOAuthDescription":
-    "Complete sign-in in your browser, or use the device or manual code shown here. The resulting token stays with the local Pi credential store.",
+    "Complete sign-in in your browser, or use the device or manual code shown here. Sign-in details stay on this device.",
   "settings.modelServiceOpenOAuth": "Continue sign-in in your browser.",
   "settings.modelServiceOpenOAuthAt": "Open {host}",
   "settings.modelServiceOAuthOpenFailed": "The sign-in page could not be opened.",
@@ -2173,8 +2173,16 @@ export const EN_MESSAGES = {
   "settings.modelServiceOAuthSavedCatalogFailed":
     "Signed in, but the model catalog could not be refreshed. The last good catalog remains available.",
   "settings.modelServiceOAuthSavedSyncFailed":
-    "Sign-in completed, but the current local model snapshot could not be synchronized. Retry before sending.",
-  "settings.modelServiceAuthWorking": "Waiting for the model service…",
+    "Sign-in completed, but the latest model state could not be loaded. Retry before sending.",
+  "settings.modelServiceOAuthWorking": "Waiting for browser sign-in…",
+  "settings.modelServiceApiKeyWorking": "Saving the API key…",
+  "settings.modelServiceProviderProgress": "The model service is processing this request.",
+  "settings.modelServiceProviderNotice": "The model service provided additional information.",
+  "settings.modelServiceProviderDetails": "Service message",
+  "settings.modelServicePromptSecret": "Enter the API key",
+  "settings.modelServicePromptManualCode": "Enter the authorization code or redirect URL",
+  "settings.modelServicePromptSelect": "Choose a sign-in option",
+  "settings.modelServicePromptText": "Enter the requested value",
   "settings.modelServiceChooseAuthOption": "Choose an option",
   "settings.modelServiceContinue": "Continue",
   "settings.modelServiceDeviceCode": "Device code: {code}",
@@ -2184,7 +2192,7 @@ export const EN_MESSAGES = {
   "settings.modelServiceAuthSavedCatalogFailed":
     "API key saved, but the model catalog could not be refreshed. The last good catalog remains available.",
   "settings.modelServiceAuthSavedSyncFailed":
-    "API key changed, but the current local model snapshot could not be synchronized. Retry before sending.",
+    "API key changed, but the latest model state could not be loaded. Retry before sending.",
   "settings.modelServiceRefreshComplete": "Model catalog refreshed.",
   "settings.modelServiceRefreshUnsupported": "This service has a static model catalog.",
   "settings.modelServiceRefreshCancelled": "Model catalog refresh cancelled.",
@@ -2192,14 +2200,14 @@ export const EN_MESSAGES = {
     "The model catalog could not be refreshed. The last good catalog remains available.",
   "settings.modelServiceCredentialRemoved": "Stored API key removed.",
   "settings.modelServiceCredentialRemovedSyncFailed":
-    "The API key was removed, but the current local model snapshot could not be synchronized.",
+    "The API key was removed, but the latest model state could not be loaded.",
   "settings.modelServiceCredentialRemoveFailed": "The stored API key could not be removed.",
   "settings.modelServiceSignedOut": "Signed out.",
   "settings.modelServiceSignedOutSyncFailed":
-    "Signed out, but the current local model snapshot could not be synchronized.",
+    "Signed out, but the latest model state could not be loaded.",
   "settings.modelServiceSignOutFailed": "The model service could not be signed out.",
   "settings.modelServiceOriginBuiltIn": "Built into OmniMind",
-  "settings.modelServiceOriginModelsJson": "Custom service from models.json",
+  "settings.modelServiceOriginModelsJson": "Connected with an API endpoint",
   "settings.modelServiceOriginExtension": "Provided by an OmniMind extension",
   "settings.modelServiceOriginUnknown": "Source unavailable",
   "settings.generationDefaults": "Generation defaults",
@@ -4948,7 +4956,7 @@ export const ZH_CN_MESSAGES = {
   "settings.connectByApiAddress": "通过 API 地址连接 →",
   "settings.editCustomApiService": "编辑 API 连接",
   "settings.customApiDescription":
-    "请明确选择 API 格式，并在保存前测试一个模型。配置校验、凭据和模型配置均由 Pi 管理。",
+    "请选择 API 格式，添加至少一个模型，并在保存前测试连接。",
   "settings.customApiConnectionName": "连接名称",
   "settings.customApiConnectionNamePlaceholder": "我的模型服务",
   "settings.customApiProtocol": "API 格式",
@@ -4969,7 +4977,8 @@ export const ZH_CN_MESSAGES = {
   "settings.customApiKey": "API Key",
   "settings.customApiKeyPlaceholder": "输入 API Key",
   "settings.customApiKeyPreservePlaceholder": "留空以保留已保存的 Key",
-  "settings.customApiKeyDescription": "Key 仅发送给本机 Pi 凭据管理器，不会回传到此表单。",
+  "settings.customApiKeyDescription":
+    "API Key 仅用于连接此模型服务，并保存在这台设备上；保存后不会再次显示。",
   "settings.customApiModels": "模型",
   "settings.customApiModelsDescription": "添加此地址实际提供的模型身份与能力。",
   "settings.customApiAddModel": "添加模型",
@@ -4992,15 +5001,15 @@ export const ZH_CN_MESSAGES = {
   "settings.customApiTestFailed.connection_failed": "服务未能完成测试请求。",
   "settings.customApiTestFailed.model_unavailable": "用于测试的模型不可用。",
   "settings.customApiTestFailed.cancelled": "连接测试已取消。",
-  "settings.customApiSaved": "API 连接已保存，并由 Pi 重新载入。",
-  "settings.customApiSavedAuthFailed": "配置已保存，但 Pi 未能保存新凭据。请编辑连接后重试。",
+  "settings.customApiSaved": "API 连接已保存并重新载入。",
+  "settings.customApiSavedAuthFailed": "连接已保存，但无法保存 API Key。请编辑连接后重试。",
   "settings.customApiSavedSyncFailed":
-    "配置已保存，但最新运行时状态暂不可用。请重新载入并确认后再使用。",
+    "连接已保存，但无法载入最新模型状态。请重新载入并确认后再使用。",
   "settings.customApiSaveFailed": "连接未保存，请检查字段后重试。",
   "settings.customApiReload": "重新载入",
   "settings.customApiDeleteTitle": "删除 API 连接？",
   "settings.customApiDeleteDescription":
-    "要删除 {name} 及其由 Pi 管理的凭据吗？现有对话不会改变；之后的新发送将不能再使用此服务。",
+    "要删除 {name} 及其已保存的 API Key 吗？现有对话不会改变；之后的新发送将不能再使用此服务。",
   "settings.customApiDeleting": "正在删除…",
   "settings.customApiRemoved": "API 连接及其凭据已删除。",
   "settings.customApiRemovedSyncWarning":
@@ -5020,10 +5029,10 @@ export const ZH_CN_MESSAGES = {
   "settings.modelServiceInstanceNamed": "{name} · {id}",
   "settings.modelServiceModelCounts": "已知 {known} 个 · 当前可用 {available} 个",
   "settings.modelServiceModels": "模型",
-  "settings.modelServiceModelsDescription": "Pi 已知 {known} 个 · 当前可用 {available} 个",
+  "settings.modelServiceModelsDescription": "已知 {known} 个 · 当前可用 {available} 个",
   "settings.searchServiceModels": "搜索该服务的模型…",
   "settings.noMatchingServiceModels": "没有匹配的模型。",
-  "settings.noServiceModels": "Pi 尚未报告该服务的模型。",
+  "settings.noServiceModels": "此服务尚未报告任何模型。",
   "settings.modelServiceModelDetailsUnavailable": "当前 Server 版本尚不提供模型详情。",
   "settings.modelServiceModelAvailable": "可用",
   "settings.modelServiceModelNeedsAuth": "需要认证",
@@ -5066,10 +5075,10 @@ export const ZH_CN_MESSAGES = {
   "settings.modelServiceRefreshing": "正在刷新…",
   "settings.modelServiceApiKeyTitle": "API Key · {name}",
   "settings.modelServiceApiKeyDescription":
-    "API Key 会直接交给本机 Pi 凭据 owner，不会保存到 OmniMind 设置中。",
+    "API Key 仅用于连接此模型服务，并保存在这台设备上；保存后不会再次显示。",
   "settings.modelServiceOAuthTitle": "登录 · {name}",
   "settings.modelServiceOAuthDescription":
-    "请在浏览器中完成登录，或使用此处显示的设备代码或手动代码；登录令牌只由本机 Pi 凭据存储管理。",
+    "请在浏览器中完成登录，或使用此处显示的设备代码或手动代码；登录信息只保存在这台设备上。",
   "settings.modelServiceOpenOAuth": "请在浏览器中继续登录。",
   "settings.modelServiceOpenOAuthAt": "打开 {host}",
   "settings.modelServiceOAuthOpenFailed": "无法打开登录页面。",
@@ -5079,8 +5088,16 @@ export const ZH_CN_MESSAGES = {
   "settings.modelServiceOAuthSavedCatalogFailed":
     "已登录，但无法刷新模型目录；上一次可用目录仍会保留。",
   "settings.modelServiceOAuthSavedSyncFailed":
-    "登录已完成，但当前本地模型快照无法同步；请在发送前重试。",
-  "settings.modelServiceAuthWorking": "正在等待模型服务…",
+    "登录已完成，但无法载入最新模型状态；请在发送前重试。",
+  "settings.modelServiceOAuthWorking": "正在等待浏览器登录…",
+  "settings.modelServiceApiKeyWorking": "正在保存 API Key…",
+  "settings.modelServiceProviderProgress": "模型服务正在处理此请求。",
+  "settings.modelServiceProviderNotice": "模型服务提供了补充信息。",
+  "settings.modelServiceProviderDetails": "服务消息",
+  "settings.modelServicePromptSecret": "输入 API Key",
+  "settings.modelServicePromptManualCode": "输入授权代码或重定向地址",
+  "settings.modelServicePromptSelect": "选择登录方式",
+  "settings.modelServicePromptText": "输入服务要求的内容",
   "settings.modelServiceChooseAuthOption": "请选择",
   "settings.modelServiceContinue": "继续",
   "settings.modelServiceDeviceCode": "设备代码：{code}",
@@ -5090,20 +5107,20 @@ export const ZH_CN_MESSAGES = {
   "settings.modelServiceAuthSavedCatalogFailed":
     "API Key 已保存，但无法刷新模型目录；上一次可用目录仍会保留。",
   "settings.modelServiceAuthSavedSyncFailed":
-    "API Key 已更改，但当前本地模型快照无法同步；请在发送前重试。",
+    "API Key 已更改，但无法载入最新模型状态；请在发送前重试。",
   "settings.modelServiceRefreshComplete": "模型目录已刷新。",
   "settings.modelServiceRefreshUnsupported": "此服务使用静态模型目录。",
   "settings.modelServiceRefreshCancelled": "已取消刷新模型目录。",
   "settings.modelServiceRefreshFailed": "无法刷新模型目录；上一次可用目录仍会保留。",
   "settings.modelServiceCredentialRemoved": "已移除保存的 API Key。",
   "settings.modelServiceCredentialRemovedSyncFailed":
-    "API Key 已移除，但当前本地模型快照无法同步。",
+    "API Key 已移除，但无法载入最新模型状态。",
   "settings.modelServiceCredentialRemoveFailed": "无法移除保存的 API Key。",
   "settings.modelServiceSignedOut": "已退出登录。",
-  "settings.modelServiceSignedOutSyncFailed": "已退出登录，但当前本地模型快照无法同步。",
+  "settings.modelServiceSignedOutSyncFailed": "已退出登录，但无法载入最新模型状态。",
   "settings.modelServiceSignOutFailed": "无法退出此模型服务。",
   "settings.modelServiceOriginBuiltIn": "OmniMind 内置",
-  "settings.modelServiceOriginModelsJson": "来自 models.json 的自定义服务",
+  "settings.modelServiceOriginModelsJson": "通过 API 地址连接",
   "settings.modelServiceOriginExtension": "由 OmniMind 扩展提供",
   "settings.modelServiceOriginUnknown": "来源不可用",
   "settings.generationDefaults": "生成默认值",

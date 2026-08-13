@@ -811,7 +811,7 @@ describe("ModelsSettingsPanel model services", () => {
       .getByRole("button", { name: 'settings.viewDetailsNamed:{"name":"DeepSeek"}' })
       .click();
     await mounted.screen.getByRole("button", { name: "settings.addApiKey" }).click();
-    const secretInput = mounted.screen.getByLabelText("Enter DeepSeek API key");
+    const secretInput = mounted.screen.getByLabelText("settings.modelServicePromptSecret");
     await secretInput.fill("browser-test-secret");
     await mounted.screen.getByRole("button", { name: "settings.modelServiceContinue" }).click();
 
@@ -873,7 +873,9 @@ describe("ModelsSettingsPanel model services", () => {
       .getByRole("button", { name: 'settings.viewDetailsNamed:{"name":"DeepSeek"}' })
       .click();
     await mounted.screen.getByRole("button", { name: "settings.addApiKey" }).click();
-    await expect.poll(() => document.body.textContent).toContain("Enter DeepSeek API key");
+    await expect
+      .poll(() => document.body.textContent)
+      .toContain("settings.modelServicePromptSecret");
 
     await mounted.rerenderActive(false);
 
@@ -1049,7 +1051,9 @@ describe("ModelsSettingsPanel model services", () => {
       { requestId, afterEventCount: 1, afterPromptId: promptId },
       expect.objectContaining({ signal: expect.any(AbortSignal) }),
     );
-    const codeInput = mounted.screen.getByLabelText("Paste the authorization code");
+    expect(document.body.textContent).toContain("settings.modelServiceOpenOAuth");
+    expect(document.body.textContent).toContain("settings.modelServiceProviderDetails");
+    const codeInput = mounted.screen.getByLabelText("settings.modelServicePromptManualCode");
     await codeInput.fill("browser-test-code");
     await mounted.screen.getByRole("button", { name: "settings.modelServiceContinue" }).click();
     await expect
@@ -1130,7 +1134,7 @@ describe("ModelsSettingsPanel model services", () => {
         { requestId, afterEventCount: 1, afterPromptId: promptId },
         expect.objectContaining({ signal: expect.any(AbortSignal) }),
       );
-    expect(mounted.screen.getByLabelText("Paste the authorization code")).toBeTruthy();
+    expect(mounted.screen.getByLabelText("settings.modelServicePromptManualCode")).toBeTruthy();
 
     finishBrowserLogin({
       state: "complete",
@@ -1246,7 +1250,7 @@ describe("ModelsSettingsPanel model services", () => {
         { serviceId: "openai-codex", authType: "oauth", promptMode: "interactive" },
         expect.objectContaining({ signal: expect.any(AbortSignal) }),
       );
-    await mounted.screen.getByLabelText("Choose a login method").click();
+    await mounted.screen.getByLabelText("settings.modelServicePromptSelect").click();
     await mounted.screen.getByText("Device code login").click();
     await mounted.screen.getByRole("button", { name: "settings.modelServiceContinue" }).click();
     await expect
