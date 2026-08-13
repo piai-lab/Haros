@@ -6,12 +6,15 @@ import {
   DEFAULT_GIT_TEXT_GENERATION_MODEL,
   PROVIDER_DISPLAY_NAMES,
   WS_OMNIMIND_MODEL_SERVICES_CAPABILITY,
+  type OmniMindModelServiceAuthEvent,
+  type OmniMindModelServiceAuthPrompt,
+  type OmniMindModelServiceAuthResult,
   type OmniMindModelServiceDescriptor,
   type ProviderKind,
 } from "@omnimind/contracts";
 import { getModelOptions, normalizeModelSlug } from "@omnimind/shared/model";
-import { useQuery } from "@tanstack/react-query";
-import { useCallback, useId, useMemo, useState, useSyncExternalStore } from "react";
+import { useQuery, useQueryClient } from "@tanstack/react-query";
+import { useCallback, useId, useMemo, useRef, useState, useSyncExternalStore } from "react";
 
 import {
   CUSTOM_MODEL_EDITOR_PROVIDER_SETTINGS,
@@ -27,13 +30,16 @@ import { useProviderModelCatalog } from "~/hooks/useProviderModelCatalog";
 import { PlusIcon, XIcon } from "~/lib/icons";
 import {
   onNativeApiServerCapabilitiesChange,
+  ensureNativeApi,
   readNativeApiServerCapabilityState,
 } from "~/nativeApi";
 import {
+  omniMindModelServicesQueryKeys,
   omniMindModelServiceDetailQueryOptions,
   omniMindModelServicesListQueryOptions,
 } from "~/lib/omnimindModelServicesReactQuery";
 import { resolveProviderDiscoveryCwd } from "~/lib/providerDiscovery";
+import { providerDiscoveryQueryKeys } from "~/lib/providerDiscoveryReactQuery";
 import { serverConfigQueryOptions } from "~/lib/serverReactQuery";
 import { cn } from "~/lib/utils";
 import { useI18n } from "~/i18n";
@@ -43,6 +49,24 @@ import {
 } from "~/settingsPanelStyles";
 
 import { Button } from "../ui/button";
+import {
+  AlertDialog,
+  AlertDialogClose,
+  AlertDialogDescription,
+  AlertDialogFooter,
+  AlertDialogHeader,
+  AlertDialogPopup,
+  AlertDialogTitle,
+} from "../ui/alert-dialog";
+import {
+  Dialog,
+  DialogDescription,
+  DialogFooter,
+  DialogHeader,
+  DialogPanel,
+  DialogPopup,
+  DialogTitle,
+} from "../ui/dialog";
 import { DisclosureChevron } from "../ui/DisclosureChevron";
 import { DisclosureRegion } from "../ui/DisclosureRegion";
 import { Input } from "../ui/input";
@@ -65,6 +89,22 @@ import {
 type CustomModelValidationResult =
   | { readonly model: string; readonly error?: never }
   | { readonly model?: never; readonly error: string };
+
+interface ModelServiceAuthDialogState {
+  readonly serviceId: string;
+  readonly serviceName: string;
+  readonly requestId?: string;
+  readonly prompt?: OmniMindModelServiceAuthPrompt;
+  readonly events: ReadonlyArray<OmniMindModelServiceAuthEvent>;
+  readonly busy: boolean;
+  readonly error: string | null;
+  readonly value: string;
+}
+
+interface ModelServiceNotice {
+  readonly tone: "status" | "error";
+  readonly text: string;
+}
 
 const GIT_WRITING_DISCOVERY_PROVIDERS = ["codex", "kilo", "opencode"] as const;
 const INDEPENDENT_ENGINE_MODEL_EDITOR_SETTINGS = CUSTOM_MODEL_EDITOR_PROVIDER_SETTINGS.filter(
@@ -117,6 +157,8 @@ function ActiveModelsSettingsPanel({
   active,
 }: AppSettingsBinding & { readonly resetEpoch: number; readonly active: boolean }) {
   const { t } = useI18n();
+  const queryClient = useQueryClient();
+  const authRequestControllerRef = useRef<AbortController | null>(null);
   const modelServicesCapability = useSyncExternalStore(
     subscribeModelServicesCapability,
     readModelServicesCapability,
@@ -124,6 +166,10 @@ function ActiveModelsSettingsPanel({
   );
   const serverConfigQuery = useQuery({ ...serverConfigQueryOptions(), enabled: active });
   const [selectedModelServiceId, setSelectedModelServiceId] = useState<string | null>(null);
+  const [authDialog, setAuthDialog] = useState<ModelServiceAuthDialogState | null>(null);
+  const [logoutService, setLogoutService] = useState<OmniMindModelServiceDescriptor | null>(null);
+  const [modelServiceMutation, setModelServiceMutation] = useState<string | null>(null);
+  const [modelServiceNotice, setModelServiceNotice] = useState<ModelServiceNotice | null>(null);
   const modelServiceDetailRegionId = useId();
   const independentEngineModelsRegionId = useId();
   const modelServicesQuery = useQuery(
@@ -150,6 +196,12 @@ function ActiveModelsSettingsPanel({
 
   useSettingsRestoreSignal(resetEpoch, () => {
     setSelectedModelServiceId(null);
+    authRequestControllerRef.current?.abort();
+    authRequestControllerRef.current = null;
+    setAuthDialog(null);
+    setLogoutService(null);
+    setModelServiceMutation(null);
+    setModelServiceNotice(null);
     setSelectedCustomModelProvider("codex");
     setCustomModelInputByProvider({});
     setCustomModelErrorByProvider({});
@@ -241,6 +293,9 @@ function ActiveModelsSettingsPanel({
     (row) => row.provider !== "omnimind",
   ).length;
   const selectedModelService = modelServiceDetailQuery.data?.service ?? null;
+  const selectedModelServiceApiKeyMethod = selectedModelService?.authMethods.find(
+    (method) => method.type === "api_key" && method.canLogin,
+  );
   const modelServiceDisplayNameCounts = useMemo(() => {
     const counts = new Map<string, number>();
     for (const service of modelServicesQuery.data?.services ?? []) {
@@ -307,6 +362,218 @@ function ActiveModelsSettingsPanel({
     },
     [t],
   );
+
+  const invalidateModelServiceConsumers = useCallback(async () => {
+    await Promise.all([
+      queryClient.invalidateQueries({ queryKey: omniMindModelServicesQueryKeys.all }),
+      queryClient.invalidateQueries({
+        queryKey: providerDiscoveryQueryKeys.modelsForProvider("omnimind"),
+      }),
+    ]);
+  }, [queryClient]);
+
+  const applyAuthResult = useCallback(
+    async (result: OmniMindModelServiceAuthResult) => {
+      if (result.state === "prompt") {
+        setAuthDialog((current) =>
+          current
+            ? {
+                ...current,
+                requestId: result.requestId,
+                prompt: result.prompt,
+                events: result.events,
+                busy: false,
+                error: null,
+                value: "",
+              }
+            : null,
+        );
+        return;
+      }
+
+      authRequestControllerRef.current = null;
+      if (result.state === "cancelled") {
+        setAuthDialog(null);
+        return;
+      }
+      if (result.state === "failed") {
+        setAuthDialog((current) =>
+          current
+            ? {
+                ...current,
+                events: result.events,
+                busy: false,
+                error:
+                  result.errorCode === "request_expired"
+                    ? t("settings.modelServiceAuthExpired")
+                    : t("settings.modelServiceAuthFailed"),
+              }
+            : null,
+        );
+        return;
+      }
+
+      setAuthDialog(null);
+      setModelServiceNotice({
+        tone: result.state === "complete" ? "status" : "error",
+        text:
+          result.state === "auth_updated_catalog_failed"
+            ? t("settings.modelServiceAuthSavedCatalogFailed")
+            : result.state === "auth_updated_sync_failed"
+              ? t("settings.modelServiceAuthSavedSyncFailed")
+              : t("settings.modelServiceAuthSaved"),
+      });
+      await invalidateModelServiceConsumers();
+    },
+    [invalidateModelServiceConsumers, t],
+  );
+
+  const beginApiKeyLogin = useCallback(
+    async (service: OmniMindModelServiceDescriptor) => {
+      authRequestControllerRef.current?.abort();
+      const controller = new AbortController();
+      authRequestControllerRef.current = controller;
+      setModelServiceNotice(null);
+      setAuthDialog({
+        serviceId: service.serviceId,
+        serviceName: modelServiceInstanceLabel(service),
+        events: [],
+        busy: true,
+        error: null,
+        value: "",
+      });
+      try {
+        const result = await ensureNativeApi().omnimindModelServices.beginLogin(
+          { serviceId: service.serviceId, authType: "api_key" },
+          { signal: controller.signal },
+        );
+        if (!controller.signal.aborted) {
+          authRequestControllerRef.current = null;
+          await applyAuthResult(result);
+        }
+      } catch {
+        if (!controller.signal.aborted) {
+          setAuthDialog((current) =>
+            current
+              ? {
+                  ...current,
+                  busy: false,
+                  error: t("settings.modelServiceAuthFailed"),
+                }
+              : null,
+          );
+        }
+      }
+    },
+    [applyAuthResult, modelServiceInstanceLabel, t],
+  );
+
+  const answerAuthPrompt = useCallback(async () => {
+    const current = authDialog;
+    if (!current?.requestId || !current.prompt || current.busy || !current.value) return;
+    authRequestControllerRef.current?.abort();
+    const controller = new AbortController();
+    authRequestControllerRef.current = controller;
+    const value = current.value;
+    setAuthDialog({ ...current, busy: true, error: null, value: "" });
+    try {
+      const result = await ensureNativeApi().omnimindModelServices.answerLogin(
+        {
+          requestId: current.requestId,
+          promptId: current.prompt.promptId,
+          value,
+        },
+        { signal: controller.signal },
+      );
+      if (!controller.signal.aborted) {
+        authRequestControllerRef.current = null;
+        await applyAuthResult(result);
+      }
+    } catch {
+      if (!controller.signal.aborted) {
+        setAuthDialog((dialog) =>
+          dialog ? { ...dialog, busy: false, error: t("settings.modelServiceAuthFailed") } : null,
+        );
+      }
+    }
+  }, [applyAuthResult, authDialog, t]);
+
+  const closeAuthDialog = useCallback(() => {
+    const requestId = authDialog?.requestId;
+    authRequestControllerRef.current?.abort();
+    authRequestControllerRef.current = null;
+    setAuthDialog(null);
+    if (requestId) {
+      void ensureNativeApi()
+        .omnimindModelServices.cancelLogin({ requestId })
+        .then((result) => {
+          if (result.state !== "cancelled" && result.state !== "failed") {
+            return applyAuthResult(result);
+          }
+        })
+        .catch(() => {});
+    }
+  }, [applyAuthResult, authDialog?.requestId]);
+
+  const refreshModelService = useCallback(
+    async (service: OmniMindModelServiceDescriptor) => {
+      setModelServiceMutation(`refresh:${service.serviceId}`);
+      setModelServiceNotice(null);
+      try {
+        const result = await ensureNativeApi().omnimindModelServices.refresh({
+          serviceId: service.serviceId,
+        });
+        setModelServiceNotice({
+          tone: result.state === "success" ? "status" : "error",
+          text:
+            result.state === "success"
+              ? t("settings.modelServiceRefreshComplete")
+              : result.state === "unsupported"
+                ? t("settings.modelServiceRefreshUnsupported")
+                : result.state === "cancelled"
+                  ? t("settings.modelServiceRefreshCancelled")
+                  : t("settings.modelServiceRefreshFailed"),
+        });
+        if (result.state === "success") await invalidateModelServiceConsumers();
+      } catch {
+        setModelServiceNotice({
+          tone: "error",
+          text: t("settings.modelServiceRefreshFailed"),
+        });
+      } finally {
+        setModelServiceMutation(null);
+      }
+    },
+    [invalidateModelServiceConsumers, t],
+  );
+
+  const logoutModelService = useCallback(async () => {
+    const service = logoutService;
+    if (!service) return;
+    setModelServiceMutation(`logout:${service.serviceId}`);
+    setModelServiceNotice(null);
+    try {
+      const result = await ensureNativeApi().omnimindModelServices.logout({
+        serviceId: service.serviceId,
+      });
+      setLogoutService(null);
+      setModelServiceNotice({
+        tone: result.state === "complete" ? "status" : "error",
+        text:
+          result.state === "complete"
+            ? t("settings.modelServiceCredentialRemoved")
+            : t("settings.modelServiceCredentialRemovedSyncFailed"),
+      });
+      await invalidateModelServiceConsumers();
+    } catch {
+      setModelServiceNotice({
+        tone: "error",
+        text: t("settings.modelServiceCredentialRemoveFailed"),
+      });
+    } finally {
+      setModelServiceMutation(null);
+    }
+  }, [invalidateModelServiceConsumers, logoutService, t]);
 
   const addCustomModel = useCallback(
     (provider: ProviderKind) => {
@@ -499,6 +766,20 @@ function ActiveModelsSettingsPanel({
         </div>
       </SettingsSectionShell>
 
+      {modelServiceNotice ? (
+        <div
+          role={modelServiceNotice.tone === "error" ? "alert" : "status"}
+          className={cn(
+            "rounded-lg border px-3 py-2 text-sm",
+            modelServiceNotice.tone === "error"
+              ? "border-destructive/30 text-destructive"
+              : "border-[color:var(--color-border)] text-muted-foreground",
+          )}
+        >
+          {modelServiceNotice.text}
+        </div>
+      ) : null}
+
       {selectedModelServiceId ? (
         <div id={modelServiceDetailRegionId} aria-live="polite">
           <SettingsSectionShell
@@ -551,20 +832,46 @@ function ActiveModelsSettingsPanel({
                   title={t("settings.modelServiceAuthentication")}
                   description={modelServiceAuthLabel(selectedModelService)}
                   actions={
-                    <span
-                      className="max-w-[min(18rem,45vw)] break-words text-right text-xs text-muted-foreground"
-                      title={
-                        selectedModelService.authMethods.length > 0
+                    <div className="flex max-w-[min(24rem,55vw)] flex-wrap items-center justify-end gap-2">
+                      <span
+                        className="break-words text-right text-xs text-muted-foreground"
+                        title={
+                          selectedModelService.authMethods.length > 0
+                            ? selectedModelService.authMethods
+                                .map((method) => method.label)
+                                .join(" · ")
+                            : undefined
+                        }
+                      >
+                        {selectedModelService.authMethods.length > 0
                           ? selectedModelService.authMethods
                               .map((method) => method.label)
                               .join(" · ")
-                          : undefined
-                      }
-                    >
-                      {selectedModelService.authMethods.length > 0
-                        ? selectedModelService.authMethods.map((method) => method.label).join(" · ")
-                        : t("settings.modelServiceNoInteractiveAuth")}
-                    </span>
+                          : t("settings.modelServiceNoInteractiveAuth")}
+                      </span>
+                      {selectedModelServiceApiKeyMethod ? (
+                        <Button
+                          size="sm"
+                          variant="outline"
+                          disabled={modelServiceMutation !== null || authDialog !== null}
+                          onClick={() => void beginApiKeyLogin(selectedModelService)}
+                        >
+                          {selectedModelService.storedCredentialType === "api_key"
+                            ? t("settings.replaceApiKey")
+                            : t("settings.addApiKey")}
+                        </Button>
+                      ) : null}
+                      {selectedModelService.storedCredentialType === "api_key" ? (
+                        <Button
+                          size="sm"
+                          variant="ghost"
+                          disabled={modelServiceMutation !== null || authDialog !== null}
+                          onClick={() => setLogoutService(selectedModelService)}
+                        >
+                          {t("settings.removeApiKey")}
+                        </Button>
+                      ) : null}
+                    </div>
                   }
                 />
                 <SettingsListRow
@@ -574,20 +881,34 @@ function ActiveModelsSettingsPanel({
                     available: selectedModelService.availableModelCount,
                   })}
                   actions={
-                    <span className="text-xs text-muted-foreground">
-                      {modelServiceCatalogLabel(selectedModelService)}
-                    </span>
+                    <div className="flex flex-wrap items-center justify-end gap-2">
+                      <span className="text-xs text-muted-foreground">
+                        {modelServiceCatalogLabel(selectedModelService)}
+                      </span>
+                      {selectedModelService.supportsNetworkRefresh ? (
+                        <Button
+                          size="sm"
+                          variant="outline"
+                          disabled={modelServiceMutation !== null || authDialog !== null}
+                          onClick={() => void refreshModelService(selectedModelService)}
+                        >
+                          {modelServiceMutation === `refresh:${selectedModelService.serviceId}`
+                            ? t("settings.modelServiceRefreshing")
+                            : t("settings.refreshModelCatalog")}
+                        </Button>
+                      ) : null}
+                    </div>
                   }
                 />
                 <SettingsListRow
                   title={t("settings.modelServiceSource")}
                   description={modelServiceOriginLabel(selectedModelService)}
                   actions={
-                    selectedModelService.supportsNetworkRefresh ? (
-                      <span className="text-xs text-muted-foreground">
-                        {t("settings.modelServiceSupportsRefresh")}
-                      </span>
-                    ) : null
+                    <span className="text-xs text-muted-foreground">
+                      {selectedModelService.supportsNetworkRefresh
+                        ? t("settings.modelServiceSupportsRefresh")
+                        : t("settings.modelServiceStaticCatalog")}
+                    </span>
                   }
                 />
               </SettingsCard>
@@ -774,6 +1095,145 @@ function ActiveModelsSettingsPanel({
           }
         />
       </SettingsSection>
+
+      <Dialog
+        open={authDialog !== null}
+        onOpenChange={(open) => {
+          if (!open) closeAuthDialog();
+        }}
+      >
+        <DialogPopup>
+          <DialogHeader>
+            <DialogTitle>
+              {t("settings.modelServiceApiKeyTitle", {
+                name: authDialog?.serviceName ?? "",
+              })}
+            </DialogTitle>
+            <DialogDescription>{t("settings.modelServiceApiKeyDescription")}</DialogDescription>
+          </DialogHeader>
+          <DialogPanel>
+            {authDialog?.events.length ? (
+              <div className="mb-3 space-y-2" aria-live="polite">
+                {authDialog.events.map((event, index) => (
+                  <p key={`${event.type}:${index}`} className="text-xs text-muted-foreground">
+                    {event.type === "device_code"
+                      ? t("settings.modelServiceDeviceCode", { code: event.userCode })
+                      : event.type === "auth_url"
+                        ? (event.instructions ?? event.url)
+                        : event.message}
+                  </p>
+                ))}
+              </div>
+            ) : null}
+            {authDialog?.busy ? (
+              <p role="status" className="text-sm text-muted-foreground">
+                {t("settings.modelServiceAuthWorking")}
+              </p>
+            ) : authDialog?.prompt ? (
+              <div className="space-y-2">
+                <label htmlFor="model-service-auth-value" className="text-sm font-medium">
+                  {authDialog.prompt.message}
+                </label>
+                {authDialog.prompt.type === "select" ? (
+                  <Select
+                    value={authDialog.value}
+                    onValueChange={(value) =>
+                      setAuthDialog((current) =>
+                        current ? { ...current, value: value ?? "" } : null,
+                      )
+                    }
+                  >
+                    <SelectTrigger
+                      id="model-service-auth-value"
+                      className="w-full"
+                      aria-label={authDialog.prompt.message}
+                    >
+                      <SelectValue>
+                        {authDialog.prompt.options.find((option) => option.id === authDialog.value)
+                          ?.label ?? t("settings.modelServiceChooseAuthOption")}
+                      </SelectValue>
+                    </SelectTrigger>
+                    <SettingsSelectPopup align="start">
+                      {authDialog.prompt.options.map((option) => (
+                        <SelectItem key={option.id} value={option.id}>
+                          {option.label}
+                        </SelectItem>
+                      ))}
+                    </SettingsSelectPopup>
+                  </Select>
+                ) : (
+                  <Input
+                    autoFocus
+                    id="model-service-auth-value"
+                    type={authDialog.prompt.type === "secret" ? "password" : "text"}
+                    value={authDialog.value}
+                    placeholder={authDialog.prompt.placeholder}
+                    autoComplete="off"
+                    spellCheck={false}
+                    onChange={(event) =>
+                      setAuthDialog((current) =>
+                        current ? { ...current, value: event.target.value, error: null } : null,
+                      )
+                    }
+                    onKeyDown={(event) => {
+                      if (event.key !== "Enter" || !authDialog.value) return;
+                      event.preventDefault();
+                      void answerAuthPrompt();
+                    }}
+                  />
+                )}
+              </div>
+            ) : null}
+            {authDialog?.error ? (
+              <p role="alert" className="mt-3 text-sm text-destructive">
+                {authDialog.error}
+              </p>
+            ) : null}
+          </DialogPanel>
+          <DialogFooter>
+            <Button variant="outline" onClick={closeAuthDialog}>
+              {t("common.cancel")}
+            </Button>
+            <Button
+              disabled={!authDialog?.prompt || authDialog.busy || !authDialog.value}
+              onClick={() => void answerAuthPrompt()}
+            >
+              {t("settings.modelServiceContinue")}
+            </Button>
+          </DialogFooter>
+        </DialogPopup>
+      </Dialog>
+
+      <AlertDialog
+        open={logoutService !== null}
+        onOpenChange={(open) => !open && setLogoutService(null)}
+      >
+        <AlertDialogPopup>
+          <AlertDialogHeader>
+            <AlertDialogTitle>{t("settings.removeApiKey")}</AlertDialogTitle>
+            <AlertDialogDescription>
+              {t("settings.removeApiKeyDescription", {
+                name: logoutService ? modelServiceInstanceLabel(logoutService) : "",
+              })}
+            </AlertDialogDescription>
+          </AlertDialogHeader>
+          <AlertDialogFooter>
+            <AlertDialogClose render={<Button variant="outline" size="sm" />}>
+              {t("common.cancel")}
+            </AlertDialogClose>
+            <Button
+              size="sm"
+              variant="destructive"
+              disabled={modelServiceMutation !== null}
+              onClick={() => void logoutModelService()}
+            >
+              {modelServiceMutation?.startsWith("logout:")
+                ? t("settings.removingApiKey")
+                : t("settings.removeApiKey")}
+            </Button>
+          </AlertDialogFooter>
+        </AlertDialogPopup>
+      </AlertDialog>
     </div>
   );
 }

@@ -83,17 +83,51 @@ function setNativeApi(input: {
     options?: { readonly signal?: AbortSignal },
   ) => Promise<OmniMindModelServicesGetResult>;
   readonly supported?: boolean;
+  readonly beginLogin?: NativeApi["omnimindModelServices"]["beginLogin"];
+  readonly answerLogin?: NativeApi["omnimindModelServices"]["answerLogin"];
+  readonly cancelLogin?: NativeApi["omnimindModelServices"]["cancelLogin"];
+  readonly logout?: NativeApi["omnimindModelServices"]["logout"];
+  readonly refresh?: NativeApi["omnimindModelServices"]["refresh"];
 }) {
   const getConfig = vi.fn().mockResolvedValue(createBrowserTestServerConfig(checkedAt));
   const list = vi.fn(input.list);
   const get = vi.fn(
     input.get ?? (async () => ({ state: "empty", service: null, errorCode: null }) as const),
   );
+  const beginLogin = vi.fn(
+    input.beginLogin ??
+      (async () => ({
+        state: "failed",
+        requestId: "00000000-0000-4000-8000-000000000001",
+        errorCode: "auth_failed",
+        events: [],
+      })),
+  );
+  const answerLogin = vi.fn(input.answerLogin ?? beginLogin);
+  const cancelLogin = vi.fn(input.cancelLogin ?? beginLogin);
+  const logout = vi.fn(
+    input.logout ?? (async () => ({ state: "complete", service: service() }) as const),
+  );
+  const refresh = vi.fn(
+    input.refresh ?? (async () => ({ state: "success", service: service() }) as const),
+  );
   window.nativeApi = {
     server: { getConfig },
-    ...(input.supported === false ? {} : { omnimindModelServices: { list, get } }),
+    ...(input.supported === false
+      ? {}
+      : {
+          omnimindModelServices: {
+            list,
+            get,
+            beginLogin,
+            answerLogin,
+            cancelLogin,
+            logout,
+            refresh,
+          },
+        }),
   } as unknown as NativeApi;
-  return { getConfig, list, get };
+  return { getConfig, list, get, beginLogin, answerLogin, cancelLogin, logout, refresh };
 }
 
 async function renderPanel(input: {
@@ -108,6 +142,11 @@ async function renderPanel(input: {
   ) => Promise<OmniMindModelServicesGetResult>;
   readonly primeServerConfig?: boolean;
   readonly supported?: boolean;
+  readonly beginLogin?: NativeApi["omnimindModelServices"]["beginLogin"];
+  readonly answerLogin?: NativeApi["omnimindModelServices"]["answerLogin"];
+  readonly cancelLogin?: NativeApi["omnimindModelServices"]["cancelLogin"];
+  readonly logout?: NativeApi["omnimindModelServices"]["logout"];
+  readonly refresh?: NativeApi["omnimindModelServices"]["refresh"];
 }) {
   const calls = setNativeApi(input);
   const queryClient = new QueryClient({ defaultOptions: { queries: { retry: false } } });
@@ -278,6 +317,142 @@ describe("ModelsSettingsPanel model services", () => {
     expect(document.body.textContent).toContain("DeepSeek API key");
     expect(document.body.textContent).toContain("settings.modelServiceOriginModelsJson");
     expect(document.body.textContent).toContain("settings.modelServiceSupportsRefresh");
+
+    await mounted.screen.unmount();
+    mounted.queryClient.clear();
+  });
+
+  it("sends API-key prompts only to Pi and clears the secret after completion", async () => {
+    const setupService = service({
+      authState: "setup_required",
+      authSource: null,
+      storedCredentialType: null,
+      availableModelCount: 0,
+    });
+    const configuredService = service();
+    const requestId = "00000000-0000-4000-8000-000000000011";
+    const promptId = "00000000-0000-4000-8000-000000000012";
+    const beginLogin = vi.fn(async () => ({
+      state: "prompt" as const,
+      requestId,
+      prompt: {
+        promptId,
+        type: "secret" as const,
+        message: "Enter DeepSeek API key",
+        placeholder: "API key",
+      },
+      events: [],
+    }));
+    const answerLogin = vi.fn(async () => ({
+      state: "complete" as const,
+      requestId,
+      service: configuredService,
+      events: [],
+    }));
+    const mounted = await renderPanel({
+      list: async () => ({ state: "ready", services: [setupService], errorCode: null }),
+      get: async () => ({ state: "ready", service: setupService, errorCode: null }),
+      beginLogin,
+      answerLogin,
+    });
+
+    await mounted.screen
+      .getByRole("button", { name: 'settings.viewDetailsNamed:{"name":"DeepSeek"}' })
+      .click();
+    await mounted.screen.getByRole("button", { name: "settings.addApiKey" }).click();
+    const secretInput = mounted.screen.getByLabelText("Enter DeepSeek API key");
+    await secretInput.fill("browser-test-secret");
+    await mounted.screen.getByRole("button", { name: "settings.modelServiceContinue" }).click();
+
+    await expect
+      .poll(() => answerLogin)
+      .toHaveBeenCalledWith(
+        { requestId, promptId, value: "browser-test-secret" },
+        expect.objectContaining({ signal: expect.any(AbortSignal) }),
+      );
+    expect(beginLogin).toHaveBeenCalledWith(
+      { serviceId: "deepseek", authType: "api_key" },
+      expect.objectContaining({ signal: expect.any(AbortSignal) }),
+    );
+    await expect.poll(() => document.body.textContent).toContain("settings.modelServiceAuthSaved");
+    expect(document.body.textContent).not.toContain("browser-test-secret");
+    expect(document.querySelector('input[type="password"]')).toBeNull();
+
+    await mounted.screen.unmount();
+    mounted.queryClient.clear();
+  });
+
+  it("refreshes only the selected service and confirms stored-key removal", async () => {
+    const configuredService = service();
+    const refresh = vi.fn(async () => ({
+      state: "success" as const,
+      service: configuredService,
+    }));
+    const logout = vi.fn(async () => ({
+      state: "complete" as const,
+      service: service({
+        authState: "setup_required",
+        authSource: null,
+        storedCredentialType: null,
+        availableModelCount: 0,
+      }),
+    }));
+    const mounted = await renderPanel({
+      list: async () => ({ state: "ready", services: [configuredService], errorCode: null }),
+      get: async () => ({ state: "ready", service: configuredService, errorCode: null }),
+      refresh,
+      logout,
+    });
+
+    await mounted.screen
+      .getByRole("button", { name: 'settings.viewDetailsNamed:{"name":"DeepSeek"}' })
+      .click();
+    await mounted.screen.getByRole("button", { name: "settings.refreshModelCatalog" }).click();
+    await expect.poll(() => refresh).toHaveBeenCalledWith({ serviceId: "deepseek" });
+    await expect
+      .poll(() => document.body.textContent)
+      .toContain("settings.modelServiceRefreshComplete");
+
+    await mounted.screen.getByRole("button", { name: "settings.removeApiKey" }).click();
+    await expect
+      .element(mounted.screen.getByText('settings.removeApiKeyDescription:{"name":"DeepSeek"}'))
+      .toBeVisible();
+    const removeButtons = mounted.screen.getByRole("button", { name: "settings.removeApiKey" });
+    await removeButtons.last().click();
+    await expect.poll(() => logout).toHaveBeenCalledWith({ serviceId: "deepseek" });
+    await expect
+      .poll(() => document.body.textContent)
+      .toContain("settings.modelServiceCredentialRemoved");
+
+    await mounted.screen.unmount();
+    mounted.queryClient.clear();
+  });
+
+  it("does not invent credential or refresh actions for a static service", async () => {
+    const staticService = service({
+      authMethods: [
+        { type: "api_key", label: "Environment API key", canLogin: false, subscription: false },
+      ],
+      authState: "configured",
+      authSource: "environment",
+      storedCredentialType: null,
+      supportsNetworkRefresh: false,
+    });
+    const mounted = await renderPanel({
+      list: async () => ({ state: "ready", services: [staticService], errorCode: null }),
+      get: async () => ({ state: "ready", service: staticService, errorCode: null }),
+    });
+
+    await mounted.screen
+      .getByRole("button", { name: 'settings.viewDetailsNamed:{"name":"DeepSeek"}' })
+      .click();
+    await expect
+      .poll(() => document.body.textContent)
+      .toContain("settings.modelServiceStaticCatalog");
+    expect(document.body.textContent).not.toContain("settings.addApiKey");
+    expect(document.body.textContent).not.toContain("settings.replaceApiKey");
+    expect(document.body.textContent).not.toContain("settings.removeApiKey");
+    expect(document.body.textContent).not.toContain("settings.refreshModelCatalog");
 
     await mounted.screen.unmount();
     mounted.queryClient.clear();
