@@ -15,9 +15,10 @@ import { ModelRegistry, ModelRuntime } from "@earendil-works/pi-coding-agent";
 import type { Api, Model } from "@earendil-works/pi-ai";
 import { ThreadId } from "@omnimind/contracts";
 import { Effect, Layer } from "effect";
-import { describe, expect, it } from "vitest";
+import { describe, expect, it, vi } from "vitest";
 import { ServerConfig } from "../../config.ts";
 import { OmniMindAgentAdapter } from "../Services/OmniMindAgentAdapter.ts";
+import { publishOmniMindModelRuntimeMutation } from "../omnimindModelRuntimeMutation.ts";
 import {
   createPiModelRuntime,
   createOmniMindModelRuntime,
@@ -481,6 +482,207 @@ describe("getPiDiscoverableModels", () => {
         status: "ready",
       });
     } finally {
+      rmSync(serverRoot, { recursive: true, force: true });
+    }
+  });
+
+  it("reconciles an existing OmniMind Session on the next send after credential mutation", async () => {
+    const serverRoot = mkdtempSync(path.join(tmpdir(), "omnimind-agent-credential-reconcile-"));
+    const agentDir = path.join(serverRoot, "agent");
+    const cwd = path.join(serverRoot, "workspace");
+    const threadId = ThreadId.makeUnsafe("omnimind-credential-reconcile-thread");
+    mkdirSync(agentDir, { recursive: true });
+    mkdirSync(cwd, { recursive: true });
+    writeFileSync(
+      path.join(agentDir, "models.json"),
+      JSON.stringify({
+        providers: {
+          local: {
+            api: "openai-completions",
+            baseUrl: "https://local-model.example.test/v1",
+            models: [{ id: "safe-model" }],
+          },
+        },
+      }),
+    );
+    const requests: string[] = [];
+    vi.spyOn(globalThis, "fetch").mockImplementation(async (request) => {
+      requests.push(request instanceof Request ? request.url : String(request));
+      return new Response(
+        [
+          'data: {"id":"chatcmpl-test","object":"chat.completion.chunk","created":1,"model":"safe-model","choices":[{"index":0,"delta":{"role":"assistant","content":"ok"},"finish_reason":null}]}',
+          'data: {"id":"chatcmpl-test","object":"chat.completion.chunk","created":1,"model":"safe-model","choices":[{"index":0,"delta":{},"finish_reason":"stop"}]}',
+          "data: [DONE]",
+          "",
+        ].join("\n\n"),
+        { headers: { "content-type": "text/event-stream" } },
+      );
+    });
+
+    try {
+      const layer = makeOmniMindAgentAdapterLive().pipe(
+        Layer.provideMerge(ServerConfig.layerTest(cwd, serverRoot)),
+        Layer.provideMerge(NodeServices.layer),
+      );
+      const result = await Effect.runPromise(
+        Effect.scoped(
+          Effect.gen(function* () {
+            const adapter = yield* OmniMindAgentAdapter;
+            yield* adapter.startSession({
+              provider: "omnimind",
+              threadId,
+              cwd,
+              modelSelection: { provider: "omnimind", model: "local/safe-model" },
+              runtimeMode: "full-access",
+            });
+            const before = yield* Effect.exit(
+              adapter.sendTurn({
+                threadId,
+                input: "before credential mutation",
+                attachments: [],
+                modelSelection: { provider: "omnimind", model: "local/safe-model" },
+              }),
+            );
+            yield* Effect.sync(() => {
+              writeFileSync(
+                path.join(agentDir, "auth.json"),
+                JSON.stringify({ local: { type: "api_key", key: "test-only-api-key" } }),
+              );
+              publishOmniMindModelRuntimeMutation(agentDir);
+            });
+            const after = yield* adapter.sendTurn({
+              threadId,
+              input: "after credential mutation",
+              attachments: [],
+              modelSelection: { provider: "omnimind", model: "local/safe-model" },
+            });
+            yield* Effect.sleep("50 millis");
+            yield* adapter.stopSession(threadId);
+            return { before, after };
+          }).pipe(Effect.provide(layer)),
+        ),
+      );
+
+      expect(result.before._tag).toBe("Failure");
+      expect(result.after.turnId).toBeDefined();
+      expect(requests).toHaveLength(1);
+      expect(new URL(requests[0]!).pathname).toBe("/v1/chat/completions");
+    } finally {
+      vi.restoreAllMocks();
+      rmSync(serverRoot, { recursive: true, force: true });
+    }
+  });
+
+  it("keeps an active OmniMind turn on its original credentials and reconciles only the next send", async () => {
+    const serverRoot = mkdtempSync(
+      path.join(tmpdir(), "omnimind-agent-active-credential-reconcile-"),
+    );
+    const agentDir = path.join(serverRoot, "agent");
+    const cwd = path.join(serverRoot, "workspace");
+    const threadId = ThreadId.makeUnsafe("00000000-0000-4000-8000-000000000043");
+    mkdirSync(agentDir, { recursive: true });
+    mkdirSync(cwd, { recursive: true });
+    writeFileSync(
+      path.join(agentDir, "models.json"),
+      JSON.stringify({
+        providers: {
+          local: {
+            api: "openai-completions",
+            baseUrl: "https://local-model.example.test/v1",
+            models: [{ id: "safe-model" }],
+          },
+        },
+      }),
+    );
+    writeFileSync(
+      path.join(agentDir, "auth.json"),
+      JSON.stringify({ local: { type: "api_key", key: "test-old-key" } }),
+    );
+    const authorizationHeaders: Array<string | null> = [];
+    let releaseFirstRequest!: () => void;
+    const firstRequestGate = new Promise<void>((resolve) => {
+      releaseFirstRequest = resolve;
+    });
+    let requestCount = 0;
+    vi.spyOn(globalThis, "fetch").mockImplementation(async (request, init) => {
+      requestCount += 1;
+      authorizationHeaders.push(
+        new Headers(request instanceof Request ? request.headers : init?.headers).get(
+          "authorization",
+        ),
+      );
+      if (requestCount === 1) await firstRequestGate;
+      return new Response(
+        [
+          'data: {"id":"chatcmpl-test","object":"chat.completion.chunk","created":1,"model":"safe-model","choices":[{"index":0,"delta":{"role":"assistant","content":"ok"},"finish_reason":null}]}',
+          'data: {"id":"chatcmpl-test","object":"chat.completion.chunk","created":1,"model":"safe-model","choices":[{"index":0,"delta":{},"finish_reason":"stop"}]}',
+          "data: [DONE]",
+          "",
+        ].join("\n\n"),
+        { headers: { "content-type": "text/event-stream" } },
+      );
+    });
+
+    try {
+      const layer = makeOmniMindAgentAdapterLive().pipe(
+        Layer.provideMerge(ServerConfig.layerTest(cwd, serverRoot)),
+        Layer.provideMerge(NodeServices.layer),
+      );
+      const result = await Effect.runPromise(
+        Effect.scoped(
+          Effect.gen(function* () {
+            const adapter = yield* OmniMindAgentAdapter;
+            yield* adapter.startSession({
+              provider: "omnimind",
+              threadId,
+              cwd,
+              modelSelection: { provider: "omnimind", model: "local/safe-model" },
+              runtimeMode: "full-access",
+            });
+            const first = yield* adapter.sendTurn({
+              threadId,
+              input: "active turn",
+              attachments: [],
+              modelSelection: { provider: "omnimind", model: "local/safe-model" },
+            });
+            yield* Effect.sleep("20 millis");
+            yield* Effect.sync(() => {
+              writeFileSync(
+                path.join(agentDir, "auth.json"),
+                JSON.stringify({ local: { type: "api_key", key: "test-new-key" } }),
+              );
+              publishOmniMindModelRuntimeMutation(agentDir);
+            });
+            const overlapping = yield* Effect.exit(
+              adapter.sendTurn({
+                threadId,
+                input: "must not hot-switch",
+                attachments: [],
+                modelSelection: { provider: "omnimind", model: "local/safe-model" },
+              }),
+            );
+            yield* Effect.sync(releaseFirstRequest);
+            yield* Effect.sleep("50 millis");
+            const next = yield* adapter.sendTurn({
+              threadId,
+              input: "next turn",
+              attachments: [],
+              modelSelection: { provider: "omnimind", model: "local/safe-model" },
+            });
+            yield* Effect.sleep("50 millis");
+            yield* adapter.stopSession(threadId);
+            return { first, overlapping, next };
+          }).pipe(Effect.provide(layer)),
+        ),
+      );
+
+      expect(result.first.turnId).toBeDefined();
+      expect(result.overlapping._tag).toBe("Failure");
+      expect(result.next.turnId).toBeDefined();
+      expect(authorizationHeaders).toEqual(["Bearer test-old-key", "Bearer test-new-key"]);
+    } finally {
+      releaseFirstRequest();
+      vi.restoreAllMocks();
       rmSync(serverRoot, { recursive: true, force: true });
     }
   });

@@ -107,6 +107,7 @@ import {
   loadOmniMindCodingAgentModule,
   resolveOmniMindAgentDir,
 } from "../omnimindAgentRuntime.ts";
+import { getOmniMindModelRuntimeMutationRevision } from "../omnimindModelRuntimeMutation.ts";
 
 type PiFamilyProvider = Extract<ProviderKind, "pi" | "omnimind">;
 const DEFAULT_PI_THINKING_LEVEL: ThinkingLevel = "medium";
@@ -340,6 +341,8 @@ const OMNIMIND_AGENT_FAMILY = {
 } satisfies PiFamilyAdapterConfig<"omnimind">;
 
 interface PiSessionContext {
+  readonly agentDir: string;
+  appliedModelRuntimeMutationRevision: number;
   readonly gatewayControlAvailable: boolean;
   gatewaySessionLease?: AgentGatewaySessionLease;
   gatewayConnection?: AgentGatewayMcpConnection;
@@ -2372,6 +2375,9 @@ const makePiAdapter = <P extends PiFamilyProvider>(
             ? { lifecycleGeneration: input.lifecycleGeneration }
             : {}),
           runtime,
+          agentDir,
+          appliedModelRuntimeMutationRevision:
+            provider === "omnimind" ? getOmniMindModelRuntimeMutationRevision(agentDir) : 0,
           gatewayControlAvailable,
           ...(gatewayControlAvailable && agentGatewaySessionLease
             ? {
@@ -2549,6 +2555,33 @@ const makePiAdapter = <P extends PiFamilyProvider>(
             operation: "sendTurn",
             issue: `A ${displayName} turn is already active for this thread.`,
           });
+        }
+        if (provider === "omnimind") {
+          const currentRevision = getOmniMindModelRuntimeMutationRevision(context.agentDir);
+          if (currentRevision > context.appliedModelRuntimeMutationRevision) {
+            yield* Effect.tryPromise({
+              try: async () => {
+                await context.runtime.services.modelRuntime.refresh({ allowNetwork: false });
+                const configurationError = context.runtime.services.modelRuntime.getError();
+                if (configurationError !== undefined) {
+                  throw new Error("OmniMind model-service state could not be reconciled.");
+                }
+                const piSdk = await family.loadModule();
+                context.modelRegistry = modelRegistryFacade(
+                  context.runtime.services.modelRuntime,
+                  piSdk,
+                );
+                context.appliedModelRuntimeMutationRevision = currentRevision;
+              },
+              catch: (cause) =>
+                new ProviderAdapterRequestError({
+                  provider,
+                  method: "model-services/reconcile",
+                  detail: "OmniMind model-service changes could not be applied to this session.",
+                  cause,
+                }),
+            });
+          }
         }
         if (input.modelSelection?.provider === provider) {
           const model = findModelInRegistry(context.modelRegistry, input.modelSelection.model);
