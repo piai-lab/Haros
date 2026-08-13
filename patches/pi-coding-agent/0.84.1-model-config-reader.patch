@@ -503,7 +503,7 @@ index 1be7fcdb5..04b8931c2 100644
 +		}
 +	}
 diff --git a/packages/coding-agent/src/core/resource-loader.ts b/packages/coding-agent/src/core/resource-loader.ts
-index c24d0a210..4e8b22065 100644
+index c24d0a210..1d1ba2afb 100644
 --- a/packages/coding-agent/src/core/resource-loader.ts
 +++ b/packages/coding-agent/src/core/resource-loader.ts
 @@ -20 +20,6 @@ import { findGitPaths } from "./footer-data-provider.ts";
@@ -524,13 +524,301 @@ index c24d0a210..4e8b22065 100644
 @@ -384 +392 @@ export class DefaultResourceLoader implements ResourceLoader {
 -		return this.loadCurrentExtensionSet({ includeInlineFactories: true });
 +		return this.loadCurrentExtensionSet({ includeInlineFactories: true }, onMissingPackage);
-@@ -396 +404 @@ export class DefaultResourceLoader implements ResourceLoader {
+@@ -388,0 +397,6 @@ export class DefaultResourceLoader implements ResourceLoader {
++		let preTrustExtensions: LoadExtensionsResult | undefined;
++		let completed = false;
++		try {
++			if (this.loaded) {
++				clearExtensionCache();
++			}
+@@ -390,3 +404,5 @@ export class DefaultResourceLoader implements ResourceLoader {
+-		if (this.loaded) {
+-			clearExtensionCache();
+-		}
++			if (options?.resolveProjectTrust) {
++				preTrustExtensions = await this.loadProjectTrustExtensions(options.onMissingPackage);
++				const projectTrusted = await options.resolveProjectTrust({ extensionsResult: preTrustExtensions });
++				this.settingsManager.setProjectTrusted(projectTrusted);
++			}
+@@ -394,6 +410,23 @@ export class DefaultResourceLoader implements ResourceLoader {
+-		let preTrustExtensions: LoadExtensionsResult | undefined;
+-		if (options?.resolveProjectTrust) {
 -			preTrustExtensions = await this.loadProjectTrustExtensions();
-+			preTrustExtensions = await this.loadProjectTrustExtensions(options.onMissingPackage);
-@@ -403 +411 @@ export class DefaultResourceLoader implements ResourceLoader {
+-			const projectTrusted = await options.resolveProjectTrust({ extensionsResult: preTrustExtensions });
+-			this.settingsManager.setProjectTrusted(projectTrusted);
+-		}
++			// reload() preserves SettingsManager.projectTrusted and reloads settings for that trust state.
++			await this.settingsManager.reload();
++			const resolvedPaths = await this.packageManager.resolve(options?.onMissingPackage);
++			const cliExtensionPaths = await this.packageManager.resolveExtensionSources(this.additionalExtensionPaths, {
++				temporary: true,
++			});
++			// Kept on the instance so post-reload passes (extendResources) can still resolve package metadata.
++			this.resourceMetadataByPath = new Map();
++			const metadataByPath = this.resourceMetadataByPath;
++
++			this.extensionSkillSourceInfos = new Map();
++			this.extensionPromptSourceInfos = new Map();
++			this.extensionThemeSourceInfos = new Map();
++
++			// Helper to extract enabled paths and store metadata
++			const getEnabledResources = (resources: ResolvedResource[]): ResolvedResource[] => {
++				for (const r of resources) {
++					if (!metadataByPath.has(r.path)) {
++						metadataByPath.set(r.path, r.metadata);
++					}
++				}
++				return resources.filter((r) => r.enabled);
++			};
+@@ -401,9 +434,6 @@ export class DefaultResourceLoader implements ResourceLoader {
+-		// reload() preserves SettingsManager.projectTrusted and reloads settings for that trust state.
+-		await this.settingsManager.reload();
 -		const resolvedPaths = await this.packageManager.resolve();
-+		const resolvedPaths = await this.packageManager.resolve(options?.onMissingPackage);
-@@ -548,2 +556,5 @@ export class DefaultResourceLoader implements ResourceLoader {
+-		const cliExtensionPaths = await this.packageManager.resolveExtensionSources(this.additionalExtensionPaths, {
+-			temporary: true,
+-		});
+-		// Kept on the instance so post-reload passes (extendResources) can still resolve package metadata.
+-		this.resourceMetadataByPath = new Map();
+-		const metadataByPath = this.resourceMetadataByPath;
++			const getEnabledPaths = (resources: ResolvedResource[]): string[] =>
++				getEnabledResources(resources).map((r) => r.path);
++			const enabledExtensions = getEnabledPaths(resolvedPaths.extensions);
++			const enabledSkillResources = getEnabledResources(resolvedPaths.skills);
++			const enabledPrompts = getEnabledPaths(resolvedPaths.prompts);
++			const enabledThemes = getEnabledPaths(resolvedPaths.themes);
+@@ -411,3 +441 @@ export class DefaultResourceLoader implements ResourceLoader {
+-		this.extensionSkillSourceInfos = new Map();
+-		this.extensionPromptSourceInfos = new Map();
+-		this.extensionThemeSourceInfos = new Map();
++			const enabledSkills = enabledSkillResources.map((resource) => this.mapSkillPath(resource, metadataByPath));
+@@ -415,3 +443,2 @@ export class DefaultResourceLoader implements ResourceLoader {
+-		// Helper to extract enabled paths and store metadata
+-		const getEnabledResources = (resources: ResolvedResource[]): ResolvedResource[] => {
+-			for (const r of resources) {
++			// Add CLI paths metadata
++			for (const r of cliExtensionPaths.extensions) {
+@@ -419 +446 @@ export class DefaultResourceLoader implements ResourceLoader {
+-					metadataByPath.set(r.path, r.metadata);
++					metadataByPath.set(r.path, { source: "cli", scope: "temporary", origin: "top-level" });
+@@ -422,21 +449,4 @@ export class DefaultResourceLoader implements ResourceLoader {
+-			return resources.filter((r) => r.enabled);
+-		};
+-
+-		const getEnabledPaths = (resources: ResolvedResource[]): string[] =>
+-			getEnabledResources(resources).map((r) => r.path);
+-		const enabledExtensions = getEnabledPaths(resolvedPaths.extensions);
+-		const enabledSkillResources = getEnabledResources(resolvedPaths.skills);
+-		const enabledPrompts = getEnabledPaths(resolvedPaths.prompts);
+-		const enabledThemes = getEnabledPaths(resolvedPaths.themes);
+-
+-		const enabledSkills = enabledSkillResources.map((resource) => this.mapSkillPath(resource, metadataByPath));
+-
+-		// Add CLI paths metadata
+-		for (const r of cliExtensionPaths.extensions) {
+-			if (!metadataByPath.has(r.path)) {
+-				metadataByPath.set(r.path, { source: "cli", scope: "temporary", origin: "top-level" });
+-			}
+-		}
+-		for (const r of cliExtensionPaths.skills) {
+-			if (!metadataByPath.has(r.path)) {
+-				metadataByPath.set(r.path, { source: "cli", scope: "temporary", origin: "top-level" });
++			for (const r of cliExtensionPaths.skills) {
++				if (!metadataByPath.has(r.path)) {
++					metadataByPath.set(r.path, { source: "cli", scope: "temporary", origin: "top-level" });
++				}
+@@ -444,10 +453,0 @@ export class DefaultResourceLoader implements ResourceLoader {
+-		}
+-
+-		const cliEnabledExtensions = getEnabledPaths(cliExtensionPaths.extensions);
+-		const cliEnabledSkills = getEnabledPaths(cliExtensionPaths.skills);
+-		const cliEnabledPrompts = getEnabledPaths(cliExtensionPaths.prompts);
+-		const cliEnabledThemes = getEnabledPaths(cliExtensionPaths.themes);
+-
+-		const extensionPaths = this.noExtensions
+-			? cliEnabledExtensions
+-			: this.mergePaths(cliEnabledExtensions, enabledExtensions);
+@@ -455,6 +455,33 @@ export class DefaultResourceLoader implements ResourceLoader {
+-		const extensionsResult = await this.loadFinalExtensionSet(extensionPaths, preTrustExtensions);
+-		for (const p of this.additionalExtensionPaths) {
+-			if (isLocalPath(p)) {
+-				const resolved = this.resolveResourcePath(p);
+-				if (!existsSync(resolved)) {
+-					extensionsResult.errors.push({ path: resolved, error: `Extension path does not exist: ${resolved}` });
++			const cliEnabledExtensions = getEnabledPaths(cliExtensionPaths.extensions);
++			const cliEnabledSkills = getEnabledPaths(cliExtensionPaths.skills);
++			const cliEnabledPrompts = getEnabledPaths(cliExtensionPaths.prompts);
++			const cliEnabledThemes = getEnabledPaths(cliExtensionPaths.themes);
++
++			const extensionPaths = this.noExtensions
++				? cliEnabledExtensions
++				: this.mergePaths(cliEnabledExtensions, enabledExtensions);
++
++			const extensionsResult = await this.loadFinalExtensionSet(extensionPaths, preTrustExtensions);
++			for (const p of this.additionalExtensionPaths) {
++				if (isLocalPath(p)) {
++					const resolved = this.resolveResourcePath(p);
++					if (!existsSync(resolved)) {
++						extensionsResult.errors.push({ path: resolved, error: `Extension path does not exist: ${resolved}` });
++					}
++				}
++			}
++			this.extensionsResult = this.extensionsOverride ? this.extensionsOverride(extensionsResult) : extensionsResult;
++			this.applyExtensionSourceInfo(this.extensionsResult.extensions, metadataByPath);
++
++			const skillPaths = this.noSkills
++				? this.mergePaths(cliEnabledSkills, this.additionalSkillPaths)
++				: this.mergePaths([...cliEnabledSkills, ...enabledSkills], this.additionalSkillPaths);
++
++			this.lastSkillPaths = skillPaths;
++			this.updateSkillsFromPaths(skillPaths, metadataByPath);
++			for (const p of this.additionalSkillPaths) {
++				if (isLocalPath(p)) {
++					const resolved = this.resolveResourcePath(p);
++					if (!existsSync(resolved) && !this.skillDiagnostics.some((d) => d.path === resolved)) {
++						this.skillDiagnostics.push({ type: "error", message: "Skill path does not exist", path: resolved });
++					}
+@@ -463,7 +489,0 @@ export class DefaultResourceLoader implements ResourceLoader {
+-		}
+-		this.extensionsResult = this.extensionsOverride ? this.extensionsOverride(extensionsResult) : extensionsResult;
+-		this.applyExtensionSourceInfo(this.extensionsResult.extensions, metadataByPath);
+-
+-		const skillPaths = this.noSkills
+-			? this.mergePaths(cliEnabledSkills, this.additionalSkillPaths)
+-			: this.mergePaths([...cliEnabledSkills, ...enabledSkills], this.additionalSkillPaths);
+@@ -471,7 +491,16 @@ export class DefaultResourceLoader implements ResourceLoader {
+-		this.lastSkillPaths = skillPaths;
+-		this.updateSkillsFromPaths(skillPaths, metadataByPath);
+-		for (const p of this.additionalSkillPaths) {
+-			if (isLocalPath(p)) {
+-				const resolved = this.resolveResourcePath(p);
+-				if (!existsSync(resolved) && !this.skillDiagnostics.some((d) => d.path === resolved)) {
+-					this.skillDiagnostics.push({ type: "error", message: "Skill path does not exist", path: resolved });
++			const promptPaths = this.noPromptTemplates
++				? this.mergePaths(cliEnabledPrompts, this.additionalPromptTemplatePaths)
++				: this.mergePaths([...cliEnabledPrompts, ...enabledPrompts], this.additionalPromptTemplatePaths);
++
++			this.lastPromptPaths = promptPaths;
++			this.updatePromptsFromPaths(promptPaths, metadataByPath);
++			for (const p of this.additionalPromptTemplatePaths) {
++				if (isLocalPath(p)) {
++					const resolved = this.resolveResourcePath(p);
++					if (!existsSync(resolved) && !this.promptDiagnostics.some((d) => d.path === resolved)) {
++						this.promptDiagnostics.push({
++							type: "error",
++							message: "Prompt template path does not exist",
++							path: resolved,
++						});
++					}
+@@ -480 +508,0 @@ export class DefaultResourceLoader implements ResourceLoader {
+-		}
+@@ -482,3 +510,3 @@ export class DefaultResourceLoader implements ResourceLoader {
+-		const promptPaths = this.noPromptTemplates
+-			? this.mergePaths(cliEnabledPrompts, this.additionalPromptTemplatePaths)
+-			: this.mergePaths([...cliEnabledPrompts, ...enabledPrompts], this.additionalPromptTemplatePaths);
++			const themePaths = this.noThemes
++				? this.mergePaths(cliEnabledThemes, this.additionalThemePaths)
++				: this.mergePaths([...cliEnabledThemes, ...enabledThemes], this.additionalThemePaths);
+@@ -486,4 +514,3 @@ export class DefaultResourceLoader implements ResourceLoader {
+-		this.lastPromptPaths = promptPaths;
+-		this.updatePromptsFromPaths(promptPaths, metadataByPath);
+-		for (const p of this.additionalPromptTemplatePaths) {
+-			if (isLocalPath(p)) {
++			this.lastThemePaths = themePaths;
++			this.updateThemesFromPaths(themePaths, metadataByPath);
++			for (const p of this.additionalThemePaths) {
+@@ -491,6 +518,2 @@ export class DefaultResourceLoader implements ResourceLoader {
+-				if (!existsSync(resolved) && !this.promptDiagnostics.some((d) => d.path === resolved)) {
+-					this.promptDiagnostics.push({
+-						type: "error",
+-						message: "Prompt template path does not exist",
+-						path: resolved,
+-					});
++				if (!existsSync(resolved) && !this.themeDiagnostics.some((d) => d.path === resolved)) {
++					this.themeDiagnostics.push({ type: "error", message: "Theme path does not exist", path: resolved });
+@@ -499 +521,0 @@ export class DefaultResourceLoader implements ResourceLoader {
+-		}
+@@ -501,10 +523,36 @@ export class DefaultResourceLoader implements ResourceLoader {
+-		const themePaths = this.noThemes
+-			? this.mergePaths(cliEnabledThemes, this.additionalThemePaths)
+-			: this.mergePaths([...cliEnabledThemes, ...enabledThemes], this.additionalThemePaths);
+-
+-		this.lastThemePaths = themePaths;
+-		this.updateThemesFromPaths(themePaths, metadataByPath);
+-		for (const p of this.additionalThemePaths) {
+-			const resolved = this.resolveResourcePath(p);
+-			if (!existsSync(resolved) && !this.themeDiagnostics.some((d) => d.path === resolved)) {
+-				this.themeDiagnostics.push({ type: "error", message: "Theme path does not exist", path: resolved });
++			const agentsFiles = {
++				agentsFiles: this.noContextFiles
++					? []
++					: loadProjectContextFiles({
++							cwd: this.cwd,
++							agentDir: this.agentDir,
++						}),
++			};
++			const resolvedAgentsFiles = this.agentsFilesOverride ? this.agentsFilesOverride(agentsFiles) : agentsFiles;
++			this.agentsFiles = resolvedAgentsFiles.agentsFiles;
++
++			const systemPromptSource = this.systemPromptSource ?? this.discoverSystemPromptFile();
++			const baseSystemPrompt = resolvePromptInput(systemPromptSource, "system prompt");
++			this.systemPrompt = this.systemPromptOverride ? this.systemPromptOverride(baseSystemPrompt) : baseSystemPrompt;
++			this.systemPromptSourcePath =
++				systemPromptSource && existsSync(systemPromptSource) ? resolvePath(systemPromptSource) : undefined;
++
++			let appendSources = this.appendSystemPromptSource;
++			if (!appendSources) {
++				const discoveredAppendSystemPromptFile = this.discoverAppendSystemPromptFile();
++				appendSources = discoveredAppendSystemPromptFile ? [discoveredAppendSystemPromptFile] : [];
++			}
++			const baseAppend = appendSources
++				.map((s) => resolvePromptInput(s, "append system prompt"))
++				.filter((s): s is string => s !== undefined);
++			this.appendSystemPrompt = this.appendSystemPromptOverride
++				? this.appendSystemPromptOverride(baseAppend)
++				: baseAppend;
++			this.appendSystemPromptSourcePaths = appendSources
++				.filter((source) => existsSync(source))
++				.map((source) => resolvePath(source));
++			this.loaded = true;
++			completed = true;
++		} finally {
++			if (!completed) {
++				preTrustExtensions?.runtime.invalidate("Resource reload failed");
+@@ -513,33 +560,0 @@ export class DefaultResourceLoader implements ResourceLoader {
+-
+-		const agentsFiles = {
+-			agentsFiles: this.noContextFiles
+-				? []
+-				: loadProjectContextFiles({
+-						cwd: this.cwd,
+-						agentDir: this.agentDir,
+-					}),
+-		};
+-		const resolvedAgentsFiles = this.agentsFilesOverride ? this.agentsFilesOverride(agentsFiles) : agentsFiles;
+-		this.agentsFiles = resolvedAgentsFiles.agentsFiles;
+-
+-		const systemPromptSource = this.systemPromptSource ?? this.discoverSystemPromptFile();
+-		const baseSystemPrompt = resolvePromptInput(systemPromptSource, "system prompt");
+-		this.systemPrompt = this.systemPromptOverride ? this.systemPromptOverride(baseSystemPrompt) : baseSystemPrompt;
+-		this.systemPromptSourcePath =
+-			systemPromptSource && existsSync(systemPromptSource) ? resolvePath(systemPromptSource) : undefined;
+-
+-		let appendSources = this.appendSystemPromptSource;
+-		if (!appendSources) {
+-			const discoveredAppendSystemPromptFile = this.discoverAppendSystemPromptFile();
+-			appendSources = discoveredAppendSystemPromptFile ? [discoveredAppendSystemPromptFile] : [];
+-		}
+-		const baseAppend = appendSources
+-			.map((s) => resolvePromptInput(s, "append system prompt"))
+-			.filter((s): s is string => s !== undefined);
+-		this.appendSystemPrompt = this.appendSystemPromptOverride
+-			? this.appendSystemPromptOverride(baseAppend)
+-			: baseAppend;
+-		this.appendSystemPromptSourcePaths = appendSources
+-			.filter((source) => existsSync(source))
+-			.map((source) => resolvePath(source));
+-		this.loaded = true;
+@@ -548,2 +563,5 @@ export class DefaultResourceLoader implements ResourceLoader {
 -	private async loadCurrentExtensionSet(options: { includeInlineFactories: boolean }): Promise<LoadExtensionsResult> {
 -		const resolvedPaths = await this.packageManager.resolve();
 +	private async loadCurrentExtensionSet(
@@ -1194,10 +1482,10 @@ index 000000000..217cf2af5
 +	});
 +});
 diff --git a/packages/coding-agent/test/resource-loader.test.ts b/packages/coding-agent/test/resource-loader.test.ts
-index 145eca3b2..f3890f18a 100644
+index 145eca3b2..df00665ed 100644
 --- a/packages/coding-agent/test/resource-loader.test.ts
 +++ b/packages/coding-agent/test/resource-loader.test.ts
-@@ -237,0 +238,21 @@ export default function(pi) {
+@@ -237,0 +238,46 @@ export default function(pi) {
 +		it("should apply the missing-package policy to both trust passes without installing", async () => {
 +			vi.stubEnv("PI_OFFLINE", "");
 +			const missingPackage = "npm:@example/missing-extension@1.0.0";
@@ -1217,5 +1505,30 @@ index 145eca3b2..f3890f18a 100644
 +			expect(onMissingPackage).toHaveBeenNthCalledWith(1, missingPackage);
 +			expect(onMissingPackage).toHaveBeenNthCalledWith(2, missingPackage);
 +			expect(loader.getExtensions().extensions).toEqual([]);
++		});
++
++		it("should invalidate the pre-trust extension runtime when final package resolution fails", async () => {
++			vi.stubEnv("PI_OFFLINE", "");
++			const missingPackage = "npm:@example/missing-extension@1.0.0";
++			let preTrustRuntime: ReturnType<DefaultResourceLoader["getExtensions"]>["runtime"] | undefined;
++			let missingPass = 0;
++			const loader = new DefaultResourceLoader({
++				cwd,
++				agentDir,
++				settingsManager: SettingsManager.inMemory({ packages: [missingPackage] }),
++			});
++
++			await expect(
++				loader.reload({
++					resolveProjectTrust: async ({ extensionsResult }) => {
++						preTrustRuntime = extensionsResult.runtime;
++						return false;
++					},
++					onMissingPackage: async () => (++missingPass === 1 ? "skip" : "error"),
++				}),
++			).rejects.toThrow("Missing source");
++
++			expect(preTrustRuntime).toBeDefined();
++			expect(() => preTrustRuntime?.assertActive()).toThrow("Resource reload failed");
 +		});
 +
