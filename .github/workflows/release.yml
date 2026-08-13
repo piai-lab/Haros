@@ -24,6 +24,9 @@ concurrency:
   group: omnimind-desktop-release
   cancel-in-progress: false
 
+env:
+  OMNIMIND_RELEASE_REPOSITORY: SolvingLab/OmniMind-Releases
+
 jobs:
   preflight:
     name: Preflight
@@ -89,11 +92,26 @@ jobs:
             "$SOURCE_REF_TYPE" \
             "$SOURCE_REF_NAME"
 
+      - name: Verify curated public release notes
+        if: ${{ steps.release_mode.outputs.publish_release == 'true' }}
+        env:
+          RELEASE_TAG: ${{ steps.release_meta.outputs.tag }}
+        run: |
+          release_notes="release-notes/${RELEASE_TAG}.md"
+          if [[ ! -s "$release_notes" ]]; then
+            echo "Publication requires reviewed bilingual notes at $release_notes." >&2
+            exit 1
+          fi
+          if ! grep -q '^## English$' "$release_notes" || ! grep -q '^## 中文$' "$release_notes"; then
+            echo "Release notes must contain exact English and 中文 sections." >&2
+            exit 1
+          fi
+
       - name: Verify public updater repository
         env:
           GH_TOKEN: ${{ github.token }}
         run: |
-          visibility="$(gh api "repos/${GITHUB_REPOSITORY}" --jq .visibility)"
+          visibility="$(gh api "repos/${OMNIMIND_RELEASE_REPOSITORY}" --jq .visibility)"
           if [[ "$visibility" != "public" ]]; then
             echo "The dedicated updater channel requires the public GitHub provider; repository visibility is $visibility." >&2
             exit 1
@@ -106,16 +124,16 @@ jobs:
           BRIDGE_TAG: ${{ steps.release_meta.outputs.bridge_tag }}
           UPDATE_CHANNEL: ${{ steps.release_meta.outputs.update_channel }}
         run: |
-          actual_latest="$(gh api "repos/${GITHUB_REPOSITORY}/releases/latest" --jq .tag_name)"
+          actual_latest="$(gh api "repos/${OMNIMIND_RELEASE_REPOSITORY}/releases/latest" --jq .tag_name)"
           if [[ "$actual_latest" != "$BRIDGE_TAG" ]]; then
             echo "Expected GitHub Latest to remain pinned to $BRIDGE_TAG, got $actual_latest." >&2
             exit 1
           fi
 
-          bridge_release_id="$(gh api "repos/${GITHUB_REPOSITORY}/releases/tags/${BRIDGE_TAG}" --jq .id)"
+          bridge_release_id="$(gh api "repos/${OMNIMIND_RELEASE_REPOSITORY}/releases/tags/${BRIDGE_TAG}" --jq .id)"
           bridge_assets="$(
             gh api --paginate \
-              "repos/${GITHUB_REPOSITORY}/releases/${bridge_release_id}/assets?per_page=100" \
+              "repos/${OMNIMIND_RELEASE_REPOSITORY}/releases/${bridge_release_id}/assets?per_page=100" \
               --jq '.[].name'
           )"
           required_assets=(
@@ -221,6 +239,7 @@ jobs:
           AZURE_TRUSTED_SIGNING_PUBLISHER_NAME: ${{ secrets.AZURE_TRUSTED_SIGNING_PUBLISHER_NAME }}
           AZURE_TRUSTED_SIGNING_SUBJECT_DN: ${{ secrets.AZURE_TRUSTED_SIGNING_SUBJECT_DN }}
           OMNIMIND_PUBLISH_RELEASE: ${{ needs.preflight.outputs.publish_release }}
+          OMNIMIND_DESKTOP_UPDATE_REPOSITORY: ${{ env.OMNIMIND_RELEASE_REPOSITORY }}
           ALLOW_UNSIGNED_WINDOWS_PUBLICATION: ${{ vars.OMNIMIND_ALLOW_UNSIGNED_WINDOWS_RELEASE == needs.preflight.outputs.version }}
           SOURCE_COMMIT: ${{ needs.preflight.outputs.source_commit }}
           SOURCE_TAG: ${{ needs.preflight.outputs.source_tag }}
@@ -422,6 +441,15 @@ jobs:
     runs-on: ubuntu-24.04
     timeout-minutes: 10
     steps:
+      - id: release_app
+        name: Mint release repository token
+        uses: actions/create-github-app-token@v2
+        with:
+          app-id: ${{ secrets.RELEASE_APP_ID }}
+          private-key: ${{ secrets.RELEASE_APP_PRIVATE_KEY }}
+          owner: SolvingLab
+          repositories: OmniMind-Releases
+
       - name: Checkout
         uses: actions/checkout@v6
         with:
@@ -452,7 +480,7 @@ jobs:
       - name: Prevent compatibility channel rollback
         if: ${{ needs.preflight.outputs.release_lane == 'bridge' }}
         env:
-          GH_TOKEN: ${{ github.token }}
+          GH_TOKEN: ${{ steps.release_app.outputs.token }}
           BRIDGE_TAG: ${{ needs.preflight.outputs.bridge_tag }}
           BRIDGE_VERSION: ${{ needs.preflight.outputs.version }}
           UPDATE_CHANNEL: ${{ needs.preflight.outputs.update_channel }}
@@ -460,7 +488,7 @@ jobs:
           set -euo pipefail
 
           if ! bridge_release_json="$(
-            gh api "repos/${GITHUB_REPOSITORY}/releases/tags/${BRIDGE_TAG}" 2>&1
+            gh api "repos/${OMNIMIND_RELEASE_REPOSITORY}/releases/tags/${BRIDGE_TAG}" 2>&1
           )"; then
             if grep -q "HTTP 404" <<< "$bridge_release_json"; then
               exit 0
@@ -472,7 +500,7 @@ jobs:
 
           bridge_assets="$(
             gh api --paginate \
-              "repos/${GITHUB_REPOSITORY}/releases/${bridge_release_id}/assets?per_page=100" \
+              "repos/${OMNIMIND_RELEASE_REPOSITORY}/releases/${bridge_release_id}/assets?per_page=100" \
               --jq '.[].name'
           )"
           channel_manifests=(
@@ -499,7 +527,7 @@ jobs:
           trap 'rm -rf "$manifest_directory"' EXIT
           for manifest in "${channel_manifests[@]}"; do
             gh release download "$BRIDGE_TAG" \
-              --repo "$GITHUB_REPOSITORY" \
+              --repo "$OMNIMIND_RELEASE_REPOSITORY" \
               --pattern "$manifest" \
               --dir "$manifest_directory"
             manifest_version="$(
@@ -516,10 +544,10 @@ jobs:
       - name: Recheck pinned compatibility feed
         if: ${{ needs.preflight.outputs.release_lane == 'clean' && needs.preflight.outputs.mirror_to_stable_channel == 'true' }}
         env:
-          GH_TOKEN: ${{ github.token }}
+          GH_TOKEN: ${{ steps.release_app.outputs.token }}
           BRIDGE_TAG: ${{ needs.preflight.outputs.bridge_tag }}
         run: |
-          actual_latest="$(gh api "repos/${GITHUB_REPOSITORY}/releases/latest" --jq .tag_name)"
+          actual_latest="$(gh api "repos/${OMNIMIND_RELEASE_REPOSITORY}/releases/latest" --jq .tag_name)"
           if [[ "$actual_latest" != "$BRIDGE_TAG" ]]; then
             echo "Expected GitHub Latest to remain pinned to $BRIDGE_TAG, got $actual_latest." >&2
             exit 1
@@ -529,9 +557,11 @@ jobs:
         uses: softprops/action-gh-release@v2
         with:
           tag_name: ${{ needs.preflight.outputs.tag }}
-          target_commitish: ${{ needs.preflight.outputs.ref }}
+          target_commitish: main
+          repository: ${{ env.OMNIMIND_RELEASE_REPOSITORY }}
+          token: ${{ steps.release_app.outputs.token }}
           name: OmniMind v${{ needs.preflight.outputs.version }}
-          generate_release_notes: true
+          body_path: release-notes/${{ needs.preflight.outputs.tag }}.md
           prerelease: ${{ needs.preflight.outputs.is_prerelease }}
           make_latest: ${{ needs.preflight.outputs.make_latest }}
           files: |
@@ -548,13 +578,13 @@ jobs:
         if: ${{ needs.preflight.outputs.mirror_to_stable_channel == 'true' }}
         shell: bash
         env:
-          GH_TOKEN: ${{ github.token }}
+          GH_TOKEN: ${{ steps.release_app.outputs.token }}
           BRIDGE_TAG: ${{ needs.preflight.outputs.bridge_tag }}
           UPDATE_CHANNEL: ${{ needs.preflight.outputs.update_channel }}
         run: |
           set -euo pipefail
 
-          actual_latest="$(gh api "repos/${GITHUB_REPOSITORY}/releases/latest" --jq .tag_name)"
+          actual_latest="$(gh api "repos/${OMNIMIND_RELEASE_REPOSITORY}/releases/latest" --jq .tag_name)"
           if [[ "$actual_latest" != "$BRIDGE_TAG" ]]; then
             echo "Expected GitHub Latest to remain pinned to $BRIDGE_TAG, got $actual_latest." >&2
             exit 1
@@ -587,10 +617,10 @@ jobs:
 
           # Payloads must exist before a manifest is visible, otherwise an
           # updater can observe a version whose installer is not uploaded yet.
-          gh release upload "$BRIDGE_TAG" "${payloads[@]}" --clobber --repo "$GITHUB_REPOSITORY"
-          gh release upload "$BRIDGE_TAG" "${manifests[@]}" --clobber --repo "$GITHUB_REPOSITORY"
+          gh release upload "$BRIDGE_TAG" "${payloads[@]}" --clobber --repo "$OMNIMIND_RELEASE_REPOSITORY"
+          gh release upload "$BRIDGE_TAG" "${manifests[@]}" --clobber --repo "$OMNIMIND_RELEASE_REPOSITORY"
 
-          actual_latest="$(gh api "repos/${GITHUB_REPOSITORY}/releases/latest" --jq .tag_name)"
+          actual_latest="$(gh api "repos/${OMNIMIND_RELEASE_REPOSITORY}/releases/latest" --jq .tag_name)"
           if [[ "$actual_latest" != "$BRIDGE_TAG" ]]; then
             echo "Pinned updater feed moved during publication: $actual_latest." >&2
             exit 1
