@@ -33,6 +33,7 @@ describe("OmniMind model-services contracts", () => {
     const decoded = Schema.decodeUnknownSync(OmniMindModelServicesListResult)({
       state: "ready",
       services: [descriptor],
+      connectableServices: [],
       errorCode: null,
     });
 
@@ -83,6 +84,7 @@ describe("OmniMind model-services contracts", () => {
       Schema.decodeUnknownSync(OmniMindModelServicesListResult)({
         state: "error",
         services: [],
+        connectableServices: [],
         errorCode: null,
       }),
     ).toThrow();
@@ -97,6 +99,7 @@ describe("OmniMind model-services contracts", () => {
       Schema.decodeUnknownSync(OmniMindModelServicesListResult)({
         state: "ready",
         services: [],
+        connectableServices: [],
         errorCode: null,
       }),
     ).toThrow();
@@ -104,6 +107,7 @@ describe("OmniMind model-services contracts", () => {
       Schema.decodeUnknownSync(OmniMindModelServicesListResult)({
         state: "empty",
         services: [descriptor],
+        connectableServices: [],
         errorCode: null,
       }),
     ).toThrow();

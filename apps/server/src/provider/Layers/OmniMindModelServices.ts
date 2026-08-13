@@ -414,6 +414,7 @@ async function projectModelServices(input: {
 }): Promise<{
   readonly all: ReadonlyArray<OmniMindModelServiceDescriptor>;
   readonly listed: ReadonlyArray<OmniMindModelServiceDescriptor>;
+  readonly connectable: ReadonlyArray<OmniMindModelServiceDescriptor>;
 }> {
   input.signal.throwIfAborted();
   const sdk = await input.loadModule();
@@ -573,11 +574,22 @@ async function projectModelServices(input: {
         service.availableModelCount > 0 ||
         service.origin !== "builtin",
     ),
+    connectable: sorted.filter(
+      (service) =>
+        service.origin === "builtin" &&
+        service.authState === "setup_required" &&
+        service.authMethods.some((method) => method.type === "api_key" && method.canLogin),
+    ),
   };
 }
 
 function unavailableListResult(): OmniMindModelServicesListResult {
-  return { state: "error", services: [], errorCode: "projection_unavailable" };
+  return {
+    state: "error",
+    services: [],
+    connectableServices: [],
+    errorCode: "projection_unavailable",
+  };
 }
 
 export function makeOmniMindModelServicesLive(options: OmniMindModelServicesLiveOptions = {}) {
@@ -784,11 +796,13 @@ export function makeOmniMindModelServicesLive(options: OmniMindModelServicesLive
                 ? ({
                     state: "ready",
                     services: [first, ...projection.listed.slice(1)],
+                    connectableServices: projection.connectable,
                     errorCode: null,
                   } satisfies OmniMindModelServicesListResult)
                 : ({
                     state: "empty",
                     services: [],
+                    connectableServices: projection.connectable,
                     errorCode: null,
                   } satisfies OmniMindModelServicesListResult);
             } catch {

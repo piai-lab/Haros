@@ -178,7 +178,12 @@ describe("ModelsSettingsPanel model services", () => {
     const mounted = await renderPanel({
       active: false,
       primeServerConfig: false,
-      list: async () => ({ state: "empty", services: [], errorCode: null }),
+      list: async () => ({
+        state: "empty",
+        services: [],
+        connectableServices: [],
+        errorCode: null,
+      }),
     });
 
     await new Promise((resolve) => window.setTimeout(resolve, 0));
@@ -206,9 +211,52 @@ describe("ModelsSettingsPanel model services", () => {
     );
     expect(document.body.textContent).not.toContain("settings.noModelServices");
 
-    resolveList({ state: "empty", services: [], errorCode: null });
+    resolveList({ state: "empty", services: [], connectableServices: [], errorCode: null });
     await expect.poll(() => document.body.textContent).toContain("settings.noModelServices");
     expect(document.body.textContent).not.toContain("settings.modelServicesUnavailable");
+
+    await mounted.screen.unmount();
+    mounted.queryClient.clear();
+  });
+
+  it("offers Pi login-capable built-ins without treating them as connected services", async () => {
+    const connectable = service({
+      authState: "setup_required",
+      authSource: null,
+      storedCredentialType: null,
+      knownModelCount: 0,
+      availableModelCount: 0,
+      catalogState: "empty",
+      catalogErrorCode: null,
+    });
+    const mounted = await renderPanel({
+      list: async () => ({
+        state: "empty",
+        services: [],
+        connectableServices: [connectable],
+        errorCode: null,
+      }),
+      get: async ({ serviceId }) =>
+        serviceId === connectable.serviceId
+          ? { state: "ready", service: connectable, errorCode: null }
+          : { state: "empty", service: null, errorCode: null },
+    });
+
+    await expect.poll(() => document.body.textContent).toContain("settings.noModelServices");
+    expect(document.body.textContent).toContain("settings.connectableModelServices");
+    await mounted.screen
+      .getByRole("button", { name: 'settings.connectModelServiceNamed:{"name":"DeepSeek"}' })
+      .click();
+    await expect
+      .poll(() => mounted.calls.get)
+      .toHaveBeenCalledWith(
+        { serviceId: "deepseek" },
+        expect.objectContaining({ signal: expect.any(AbortSignal) }),
+      );
+    await expect
+      .poll(() => document.body.textContent)
+      .toContain("settings.modelServiceAuthentication");
+    expect(mounted.screen.getByRole("button", { name: "settings.addApiKey" })).toBeTruthy();
 
     await mounted.screen.unmount();
     mounted.queryClient.clear();
@@ -232,7 +280,12 @@ describe("ModelsSettingsPanel model services", () => {
   it("does not call an older Server that lacks the optional Model services capability", async () => {
     const mounted = await renderPanel({
       supported: false,
-      list: async () => ({ state: "empty", services: [], errorCode: null }),
+      list: async () => ({
+        state: "empty",
+        services: [],
+        connectableServices: [],
+        errorCode: null,
+      }),
     });
 
     await expect
@@ -267,6 +320,7 @@ describe("ModelsSettingsPanel model services", () => {
       list: async () => ({
         state: "error",
         services: [],
+        connectableServices: [],
         errorCode: "projection_unavailable",
       }),
     });
@@ -288,7 +342,12 @@ describe("ModelsSettingsPanel model services", () => {
       catalogErrorCode: "catalog_unavailable",
     });
     const mounted = await renderPanel({
-      list: async () => ({ state: "ready", services: [staleService], errorCode: null }),
+      list: async () => ({
+        state: "ready",
+        services: [staleService],
+        connectableServices: [],
+        errorCode: null,
+      }),
       get: async ({ serviceId }) =>
         serviceId === staleService.serviceId
           ? { state: "ready", service: staleService, errorCode: null }
@@ -350,7 +409,12 @@ describe("ModelsSettingsPanel model services", () => {
       events: [],
     }));
     const mounted = await renderPanel({
-      list: async () => ({ state: "ready", services: [setupService], errorCode: null }),
+      list: async () => ({
+        state: "ready",
+        services: [setupService],
+        connectableServices: [],
+        errorCode: null,
+      }),
       get: async () => ({ state: "ready", service: setupService, errorCode: null }),
       beginLogin,
       answerLogin,
@@ -398,7 +462,12 @@ describe("ModelsSettingsPanel model services", () => {
       }),
     }));
     const mounted = await renderPanel({
-      list: async () => ({ state: "ready", services: [configuredService], errorCode: null }),
+      list: async () => ({
+        state: "ready",
+        services: [configuredService],
+        connectableServices: [],
+        errorCode: null,
+      }),
       get: async () => ({ state: "ready", service: configuredService, errorCode: null }),
       refresh,
       logout,
@@ -439,7 +508,12 @@ describe("ModelsSettingsPanel model services", () => {
       supportsNetworkRefresh: false,
     });
     const mounted = await renderPanel({
-      list: async () => ({ state: "ready", services: [staticService], errorCode: null }),
+      list: async () => ({
+        state: "ready",
+        services: [staticService],
+        connectableServices: [],
+        errorCode: null,
+      }),
       get: async () => ({ state: "ready", service: staticService, errorCode: null }),
     });
 
@@ -473,7 +547,12 @@ describe("ModelsSettingsPanel model services", () => {
       displayName: "DeepSeek",
     });
     const mounted = await renderPanel({
-      list: async () => ({ state: "ready", services: [primary, secondary], errorCode: null }),
+      list: async () => ({
+        state: "ready",
+        services: [primary, secondary],
+        connectableServices: [],
+        errorCode: null,
+      }),
     });
 
     await expect.poll(() => document.body.textContent).toContain("deepseek-primary");
@@ -486,7 +565,12 @@ describe("ModelsSettingsPanel model services", () => {
 
   it("keeps independent engine model editing folded and excludes new OmniMind hints", async () => {
     const mounted = await renderPanel({
-      list: async () => ({ state: "empty", services: [], errorCode: null }),
+      list: async () => ({
+        state: "empty",
+        services: [],
+        connectableServices: [],
+        errorCode: null,
+      }),
     });
 
     const disclosure = mounted.screen.getByRole("button", { name: "settings.reviewAction" });

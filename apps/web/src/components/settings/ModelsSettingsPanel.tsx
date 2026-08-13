@@ -298,11 +298,14 @@ function ActiveModelsSettingsPanel({
   );
   const modelServiceDisplayNameCounts = useMemo(() => {
     const counts = new Map<string, number>();
-    for (const service of modelServicesQuery.data?.services ?? []) {
+    for (const service of [
+      ...(modelServicesQuery.data?.services ?? []),
+      ...(modelServicesQuery.data?.connectableServices ?? []),
+    ]) {
       counts.set(service.displayName, (counts.get(service.displayName) ?? 0) + 1);
     }
     return counts;
-  }, [modelServicesQuery.data?.services]);
+  }, [modelServicesQuery.data?.connectableServices, modelServicesQuery.data?.services]);
 
   const modelServiceInstanceLabel = useCallback(
     (service: OmniMindModelServiceDescriptor) =>
@@ -765,6 +768,37 @@ function ActiveModelsSettingsPanel({
           )}
         </div>
       </SettingsSectionShell>
+
+      {modelServicesQuery.data?.connectableServices.length ? (
+        <SettingsSectionShell title={t("settings.connectableModelServices")}>
+          <SettingsCard>
+            {modelServicesQuery.data.connectableServices.map((service) => {
+              const instanceLabel = modelServiceInstanceLabel(service);
+              return (
+                <SettingsListRow
+                  key={service.serviceId}
+                  title={instanceLabel}
+                  description={
+                    service.authMethods.length > 0
+                      ? service.authMethods.map((method) => method.label).join(" · ")
+                      : modelServiceAuthLabel(service)
+                  }
+                  actions={
+                    <Button
+                      size="sm"
+                      variant="outline"
+                      aria-label={t("settings.connectModelServiceNamed", { name: instanceLabel })}
+                      onClick={() => setSelectedModelServiceId(service.serviceId)}
+                    >
+                      {t("settings.connectModelService")}
+                    </Button>
+                  }
+                />
+              );
+            })}
+          </SettingsCard>
+        </SettingsSectionShell>
+      ) : null}
 
       {modelServiceNotice ? (
         <div

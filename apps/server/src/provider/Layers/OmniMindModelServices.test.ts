@@ -147,6 +147,7 @@ describe("OmniMindModelServicesLive", () => {
       expect(result.list).toEqual({
         state: "error",
         services: [],
+        connectableServices: [],
         errorCode: "projection_unavailable",
       });
       expect(result.deepseek).toEqual({
@@ -224,7 +225,7 @@ describe("OmniMindModelServicesLive", () => {
     expect(JSON.stringify(result)).not.toContain(agentDir);
   });
 
-  it("returns an honest empty list and does not create files when local state is absent", async () => {
+  it("keeps the connected list empty while exposing Pi login-capable services", async () => {
     const root = await makeRoot();
     await isolateProviderEnvironment(root);
     const agentDir = path.join(root, "agent");
@@ -232,7 +233,22 @@ describe("OmniMindModelServicesLive", () => {
 
     const result = await loadService({ root });
 
-    expect(result.list).toEqual({ state: "empty", services: [], errorCode: null });
+    expect(result.list).toMatchObject({ state: "empty", services: [], errorCode: null });
+    expect(result.list.connectableServices).toContainEqual(
+      expect.objectContaining({
+        serviceId: "deepseek",
+        origin: "builtin",
+        authState: "setup_required",
+        authMethods: expect.arrayContaining([
+          expect.objectContaining({ type: "api_key", canLogin: true }),
+        ]),
+      }),
+    );
+    expect(
+      result.list.connectableServices.every((service) =>
+        service.authMethods.some((method) => method.type === "api_key" && method.canLogin),
+      ),
+    ).toBe(true);
     expect(result.deepseek).toMatchObject({
       state: "ready",
       service: expect.objectContaining({
@@ -475,6 +491,7 @@ describe("OmniMindModelServicesLive", () => {
     expect(result.list).toEqual({
       state: "error",
       services: [],
+      connectableServices: [],
       errorCode: "projection_unavailable",
     });
     expect(result.deepseek).toEqual({
@@ -504,6 +521,7 @@ describe("OmniMindModelServicesLive", () => {
     expect(result.list).toEqual({
       state: "error",
       services: [],
+      connectableServices: [],
       errorCode: "projection_unavailable",
     });
     expect(serialized).not.toContain(secret);
@@ -532,6 +550,7 @@ describe("OmniMindModelServicesLive", () => {
     expect(result.list).toEqual({
       state: "error",
       services: [],
+      connectableServices: [],
       errorCode: "projection_unavailable",
     });
   });
@@ -559,6 +578,7 @@ describe("OmniMindModelServicesLive", () => {
     expect(result.list).toEqual({
       state: "error",
       services: [],
+      connectableServices: [],
       errorCode: "projection_unavailable",
     });
     expect(JSON.stringify(result)).not.toContain("credential-must-not-escape");
@@ -582,6 +602,7 @@ describe("OmniMindModelServicesLive", () => {
     expect(result.list).toEqual({
       state: "error",
       services: [],
+      connectableServices: [],
       errorCode: "projection_unavailable",
     });
   });

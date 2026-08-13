@@ -106,16 +106,19 @@ export const OmniMindModelServicesListResult = Schema.Union([
   Schema.Struct({
     state: Schema.Literal("ready"),
     services: BoundedNonEmptyModelServices,
+    connectableServices: BoundedModelServices,
     errorCode: Schema.Null,
   }),
   Schema.Struct({
     state: Schema.Literal("empty"),
     services: Schema.Tuple([]),
+    connectableServices: BoundedModelServices,
     errorCode: Schema.Null,
   }),
   Schema.Struct({
     state: Schema.Literal("error"),
     services: Schema.Tuple([]),
+    connectableServices: Schema.Tuple([]),
     errorCode: OmniMindModelServicesProjectionErrorCode,
   }),
 ]);
