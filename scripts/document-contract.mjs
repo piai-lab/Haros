@@ -306,6 +306,57 @@ function validateBundledPiRuntimeAdoption(findings, documents) {
   }
 }
 
+function validatePiAiOAuthPageRendererAdoption(findings, documents) {
+  const documentPath = "README.md";
+  const blocks = blocksFor(documents.get(documentPath) ?? "", "source-adoptions");
+  if (blocks.length !== 1) return;
+
+  let record;
+  try {
+    const parsed = JSON.parse(blocks[0]);
+    record = parsed?.adopted?.find((entry) => entry?.id === "pi-ai-oauth-page-renderer");
+  } catch {
+    return;
+  }
+
+  const expected = {
+    url: "https://github.com/earendil-works/pi.git",
+    revision: "53fa77ccd8a279eb87e92294ef3687b03ff80112",
+    paths: ["patches/@earendil-works%2Fpi-ai@0.84.1.patch", "package.json", "bun.lock"],
+    sourcePaths: [
+      "packages/ai/src/auth/types.ts",
+      "packages/ai/src/auth/oauth/oauth-page.ts",
+      "packages/ai/src/auth/oauth/openai-codex.ts",
+      "packages/ai/src/auth/oauth/anthropic.ts",
+      "packages/ai/src/auth/oauth/openrouter.ts",
+      "packages/ai/src/auth/oauth/radius.ts",
+    ],
+    upstreamPackage: "@earendil-works/pi-ai@0.84.1",
+    upstreamPackageIntegrity:
+      "sha512-wMsAdJMxuNri08vLqTyYVI201DQQezGhPSTkzYsHdw5dYX3rCNwEmSvpaAwhi7ELKI/2tE/CEgSWg/6iRxSgdQ==",
+    licenseFiles: ["LICENSES/pi-coding-agent-MIT.txt"],
+  };
+  const actual = record
+    ? {
+        url: record.url,
+        revision: record.revision,
+        paths: record.paths,
+        sourcePaths: record.sourcePaths,
+        upstreamPackage: record.upstreamPackage,
+        upstreamPackageIntegrity: record.upstreamPackageIntegrity,
+        licenseFiles: record.licenseFiles,
+      }
+    : null;
+  if (JSON.stringify(actual) !== JSON.stringify(expected)) {
+    addFinding(
+      findings,
+      "source-adoption.pi-ai-oauth-page-renderer",
+      documentPath,
+      "Pi AI OAuth page renderer must retain its exact source, package, patch, and legal identity",
+    );
+  }
+}
+
 function validateWorkSurfaceInformationArchitecture(findings, documents) {
   const documentPath = "architecture/workbench.md";
   const blocks = blocksFor(documents.get(documentPath) ?? "", "work-surface-ia");
@@ -378,6 +429,7 @@ export async function validateDocumentContract({ root, read = readFile }) {
   validateCurrentState(findings, documents);
   validateEngineCapabilityComposition(findings, documents);
   validateBundledPiRuntimeAdoption(findings, documents);
+  validatePiAiOAuthPageRendererAdoption(findings, documents);
   validateWorkSurfaceInformationArchitecture(findings, documents);
 
   return findings;

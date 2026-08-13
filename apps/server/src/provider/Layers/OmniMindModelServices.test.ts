@@ -369,6 +369,7 @@ describe("OmniMindModelServicesLive", () => {
       }),
     );
     const layer = makeTestLayer({ root });
+    let callbackHtml = "";
 
     const result = await Effect.runPromise(
       Effect.gen(function* () {
@@ -398,7 +399,10 @@ describe("OmniMindModelServicesLive", () => {
               httpGet(
                 `http://127.0.0.1:1455/auth/callback?code=test-code&state=${encodeURIComponent(state)}`,
                 (response) => {
-                  response.resume();
+                  response.setEncoding("utf8");
+                  response.on("data", (chunk) => {
+                    callbackHtml += chunk;
+                  });
                   response.on("end", resolve);
                 },
               ).on("error", reject);
@@ -418,6 +422,76 @@ describe("OmniMindModelServicesLive", () => {
     });
     expect(JSON.stringify(result)).not.toContain("test-code");
     expect(JSON.stringify(result)).not.toContain("refresh-secret");
+    expect(callbackHtml).toContain("OmniMind");
+    expect(callbackHtml).toContain("Authorization from OpenAI Codex was received");
+    expect(callbackHtml).toContain("已收到来自 OpenAI Codex 的授权");
+    expect(callbackHtml).not.toContain("Signed in");
+    expect(callbackHtml).not.toContain("is connected");
+    expect(callbackHtml).toContain('meta name="color-scheme" content="light"');
+    expect(callbackHtml).not.toContain("Authentication successful");
+    expect(callbackHtml).not.toContain("#09090b");
+  });
+
+  it("does not claim connection success before the browser authorization is exchanged", async () => {
+    const root = await makeRoot();
+    await isolateProviderEnvironment(root);
+    const agentDir = path.join(root, "agent");
+    await mkdir(agentDir, { recursive: true });
+    vi.spyOn(globalThis, "fetch").mockResolvedValueOnce(
+      new Response("exchange unavailable", { status: 502 }),
+    );
+    const layer = makeTestLayer({ root });
+    let callbackHtml = "";
+
+    const result = await Effect.runPromise(
+      Effect.gen(function* () {
+        const service = yield* OmniMindModelServices;
+        const begin = yield* service.beginLogin(18, {
+          serviceId: "openai-codex",
+          authType: "oauth",
+          promptMode: "provider_default",
+        });
+        if (begin.state !== "prompt" || begin.prompt.type !== "manual_code") {
+          throw new Error("Expected the browser flow's manual fallback prompt");
+        }
+        const authUrl = begin.events.find((event) => event.type === "auth_url")?.url;
+        if (!authUrl) throw new Error("Expected the provider-owned browser URL");
+        const state = new URL(authUrl).searchParams.get("state");
+        if (!state) throw new Error("Expected OAuth state");
+        const pollPromise = Effect.runPromise(
+          service.pollLogin(18, {
+            requestId: begin.requestId,
+            afterEventCount: begin.events.length,
+            afterPromptId: begin.prompt.promptId,
+          }),
+        );
+        yield* Effect.promise(
+          () =>
+            new Promise<void>((resolve, reject) => {
+              httpGet(
+                `http://127.0.0.1:1455/auth/callback?code=test-code&state=${encodeURIComponent(state)}`,
+                (response) => {
+                  response.setEncoding("utf8");
+                  response.on("data", (chunk) => {
+                    callbackHtml += chunk;
+                  });
+                  response.on("end", resolve);
+                },
+              ).on("error", reject);
+            }),
+        );
+        return yield* Effect.promise(() => pollPromise);
+      }).pipe(Effect.provide(layer)),
+    );
+
+    expect(result).toMatchObject({ state: "failed", errorCode: "auth_failed" });
+    expect(callbackHtml).toContain("Authorization received");
+    expect(callbackHtml).toContain("已收到授权");
+    expect(callbackHtml).not.toContain("Signed in");
+    expect(callbackHtml).not.toContain("登录成功");
+    expect(callbackHtml).not.toContain("is connected");
+    expect(callbackHtml).not.toContain("exchange unavailable");
+    expect(JSON.parse(await readFile(path.join(agentDir, "auth.json"), "utf8"))).toEqual({});
   });
 
   it("long-polls provider-owned OAuth events and binds them to the originating client", async () => {

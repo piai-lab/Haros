@@ -148,6 +148,20 @@ authority，也不得带入 donor branding、竞争编排、第二 Session 状�
       "licenseFiles": ["LICENSES/pi-coding-agent-MIT.txt"]
     },
     {
+      "id": "pi-ai-oauth-page-renderer",
+      "url": "https://github.com/earendil-works/pi.git",
+      "revision": "53fa77ccd8a279eb87e92294ef3687b03ff80112",
+      "paths": ["patches/@earendil-works%2Fpi-ai@0.84.1.patch", "package.json", "bun.lock"],
+      "sourcePaths": ["packages/ai/src/auth/types.ts", "packages/ai/src/auth/oauth/oauth-page.ts", "packages/ai/src/auth/oauth/openai-codex.ts", "packages/ai/src/auth/oauth/anthropic.ts", "packages/ai/src/auth/oauth/openrouter.ts", "packages/ai/src/auth/oauth/radius.ts"],
+      "upstreamPackage": "@earendil-works/pi-ai@0.84.1",
+      "upstreamPackageIntegrity": "sha512-wMsAdJMxuNri08vLqTyYVI201DQQezGhPSTkzYsHdw5dYX3rCNwEmSvpaAwhi7ELKI/2tE/CEgSWg/6iRxSgdQ==",
+      "rights": "The fixed Pi AI source and patched dependency remain MIT-licensed under the retained Pi redistribution text. No OAuth protocol, credential store or Provider identity is adopted as OmniMind product authority.",
+      "mode": "adapt",
+      "changes": "A per-login optional AuthInteraction renderer may replace only the browser loopback completion/error HTML. It receives only the safe authorization-received/error state, never Provider messages, diagnostics, codes or token-exchange results. OpenAI Codex, Anthropic, OpenRouter and Radius pass the same request-scoped renderer through their existing callback servers; absent or failing renderers retain the stock Pi page. Provider authorization, state validation, token exchange, cancellation and device-code flows remain unchanged.",
+      "updatePolicy": "Pinned package integrity plus Bun patchedDependencies. Every install applies the committed patch or fails on conflict; remove it when upstream exposes an equivalent request-scoped renderer. A Pi update must re-check all four browser callback providers and prove the stock default and device-code paths remain unchanged before changing the pinned package or patch.",
+      "licenseFiles": ["LICENSES/pi-coding-agent-MIT.txt"]
+    },
+    {
       "id": "pi-todo-headless-package",
       "url": "https://github.com/earendil-works/pi.git",
       "revision": "20be4b18d4c57487f8993d2762bace129f0cf7c6",

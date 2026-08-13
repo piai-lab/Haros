@@ -40,6 +40,10 @@ import {
   type OmniMindCodingAgentModule,
   type OmniMindPrivateRuntimeFilename,
 } from "../omnimindAgentRuntime.ts";
+import {
+  createOmniMindOAuthPageRenderer,
+  loadOmniMindOAuthLogoDataUrl,
+} from "../omnimindOAuthCallbackPage.ts";
 import { publishOmniMindModelRuntimeMutation } from "../omnimindModelRuntimeMutation.ts";
 import {
   OmniMindModelServices,
@@ -605,6 +609,7 @@ export function makeOmniMindModelServicesLive(options: OmniMindModelServicesLive
     Effect.gen(function* () {
       const config = yield* ServerConfig;
       const authRequests = new Map<string, ModelServiceAuthRequest>();
+      const oauthLogoDataUrl = loadOmniMindOAuthLogoDataUrl(config.staticDir);
       let mutationTail: Promise<void> = Promise.resolve();
       const project = (signal: AbortSignal) =>
         projectModelServices({
@@ -726,7 +731,7 @@ export function makeOmniMindModelServicesLive(options: OmniMindModelServicesLive
               request.authType === "api_key"
                 ? provider?.auth.apiKey?.login !== undefined
                 : provider?.auth.oauth?.login !== undefined;
-            if (!isBuiltin || !supportsRequestedAuth) {
+            if (!provider || !isBuiltin || !supportsRequestedAuth) {
               throw new Error("Model service does not support the requested login method");
             }
             previousService = await getProjectedService(
@@ -735,6 +740,10 @@ export function makeOmniMindModelServicesLive(options: OmniMindModelServicesLive
             );
             const interaction: AuthInteraction = {
               signal: request.controller.signal,
+              renderOAuthPage: createOmniMindOAuthPageRenderer({
+                serviceName: safeDisplayName(provider.name, request.serviceId),
+                logoDataUrl: oauthLogoDataUrl,
+              }),
               prompt: async (prompt) => {
                 request.controller.signal.throwIfAborted();
                 if (

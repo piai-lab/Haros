@@ -1,0 +1,313 @@
+diff --git a/dist/auth/oauth/anthropic.js b/dist/auth/oauth/anthropic.js
+index 8692e906caa2609396bdccae98d4d593e024ecf6..94f0ddefc84863e178d088d81f923f0d8bf2606f 100644
+--- a/dist/auth/oauth/anthropic.js
++++ b/dist/auth/oauth/anthropic.js
+@@ -77,7 +77,7 @@ function formatErrorDetails(error) {
+     }
+     return String(error);
+ }
+-async function startCallbackServer(expectedState) {
++async function startCallbackServer(expectedState, renderOAuthPage) {
+     const { createServer } = await getNodeApis();
+     return new Promise((resolve, reject) => {
+         let settleWait;
+@@ -95,7 +95,7 @@ async function startCallbackServer(expectedState) {
+                 const url = new URL(req.url || "", "http://localhost");
+                 if (url.pathname !== CALLBACK_PATH) {
+                     res.writeHead(404, { "Content-Type": "text/html; charset=utf-8" });
+-                    res.end(oauthErrorHtml("Callback route not found."));
++                    res.end(oauthErrorHtml("Callback route not found.", undefined, renderOAuthPage));
+                     return;
+                 }
+                 const code = url.searchParams.get("code");
+@@ -103,21 +103,21 @@ async function startCallbackServer(expectedState) {
+                 const error = url.searchParams.get("error");
+                 if (error) {
+                     res.writeHead(400, { "Content-Type": "text/html; charset=utf-8" });
+-                    res.end(oauthErrorHtml("Anthropic authentication did not complete.", `Error: ${error}`));
++                    res.end(oauthErrorHtml("Anthropic authentication did not complete.", `Error: ${error}`, renderOAuthPage));
+                     return;
+                 }
+                 if (!code || !state) {
+                     res.writeHead(400, { "Content-Type": "text/html; charset=utf-8" });
+-                    res.end(oauthErrorHtml("Missing code or state parameter."));
++                    res.end(oauthErrorHtml("Missing code or state parameter.", undefined, renderOAuthPage));
+                     return;
+                 }
+                 if (state !== expectedState) {
+                     res.writeHead(400, { "Content-Type": "text/html; charset=utf-8" });
+-                    res.end(oauthErrorHtml("State mismatch."));
++                    res.end(oauthErrorHtml("State mismatch.", undefined, renderOAuthPage));
+                     return;
+                 }
+                 res.writeHead(200, { "Content-Type": "text/html; charset=utf-8" });
+-                res.end(oauthSuccessHtml("Anthropic authentication completed. You can close this window."));
++                res.end(oauthSuccessHtml("Anthropic authentication completed. You can close this window.", renderOAuthPage));
+                 settleWait?.({ code, state });
+             }
+             catch {
+@@ -187,7 +187,7 @@ async function exchangeAuthorizationCode(code, state, verifier, redirectUri, sig
+ }
+ async function loginAnthropic(interaction) {
+     const { verifier, challenge } = await generatePKCE();
+-    const server = await startCallbackServer(verifier);
++    const server = await startCallbackServer(verifier, interaction.renderOAuthPage);
+     const manualAbort = new AbortController();
+     const onAbort = () => server.cancelWait();
+     interaction.signal.addEventListener("abort", onAbort, { once: true });
+diff --git a/dist/auth/oauth/oauth-page.d.ts b/dist/auth/oauth/oauth-page.d.ts
+index 2fe1a29d9f2d69bfcbe39ee80f4f1f1668cffb3f..da87e84678d3c856a3c103db4f5a85399935f082 100644
+--- a/dist/auth/oauth/oauth-page.d.ts
++++ b/dist/auth/oauth/oauth-page.d.ts
+@@ -1,3 +1,4 @@
+-export declare function oauthSuccessHtml(message: string): string;
+-export declare function oauthErrorHtml(message: string, details?: string): string;
++import type { OAuthPageRenderer } from "../types.js";
++export declare function oauthSuccessHtml(message: string, renderer?: OAuthPageRenderer): string;
++export declare function oauthErrorHtml(message: string, details?: string, renderer?: OAuthPageRenderer): string;
+ //# sourceMappingURL=oauth-page.d.ts.map
+diff --git a/dist/auth/oauth/oauth-page.js b/dist/auth/oauth/oauth-page.js
+index 101153587266e9ef2e7864f8aab9b5fd485a6aa1..e1545c3940cfbb5fbbb8e3933109dcc380c6310a 100644
+--- a/dist/auth/oauth/oauth-page.js
++++ b/dist/auth/oauth/oauth-page.js
+@@ -87,19 +87,34 @@ function renderPage(options) {
+ </body>
+ </html>`;
+ }
+-export function oauthSuccessHtml(message) {
+-    return renderPage({
++function renderOAuthPage(options, renderer) {
++    if (renderer) {
++        try {
++            return renderer({
++                kind: options.kind === "success" ? "authorization_received" : "error",
++            });
++        }
++        catch {
++            // Presentation must never prevent the provider-owned callback from completing.
++        }
++    }
++    return renderPage(options);
++}
++export function oauthSuccessHtml(message, renderer) {
++    return renderOAuthPage({
++        kind: "success",
+         title: "Authentication successful",
+         heading: "Authentication successful",
+         message,
+-    });
++    }, renderer);
+ }
+-export function oauthErrorHtml(message, details) {
+-    return renderPage({
++export function oauthErrorHtml(message, details, renderer) {
++    return renderOAuthPage({
++        kind: "error",
+         title: "Authentication failed",
+         heading: "Authentication failed",
+         message,
+         details,
+-    });
++    }, renderer);
+ }
+ //# sourceMappingURL=oauth-page.js.map
+diff --git a/dist/auth/oauth/openai-codex.js b/dist/auth/oauth/openai-codex.js
+index 04813e44dde0d5cd2a828aa0a2fbc0ed1dfc2df9..59245888ba236029a860930b159633589b4421a8 100644
+--- a/dist/auth/oauth/openai-codex.js
++++ b/dist/auth/oauth/openai-codex.js
+@@ -242,7 +242,7 @@ async function createAuthorizationFlow(originator = "pi") {
+     url.searchParams.set("originator", originator);
+     return { verifier, state, url: url.toString() };
+ }
+-function startLocalOAuthServer(state) {
++function startLocalOAuthServer(state, renderOAuthPage) {
+     if (!_http) {
+         throw new Error("OpenAI Codex OAuth is only available in Node.js environments");
+     }
+@@ -262,31 +262,31 @@ function startLocalOAuthServer(state) {
+             if (url.pathname !== "/auth/callback") {
+                 res.statusCode = 404;
+                 res.setHeader("Content-Type", "text/html; charset=utf-8");
+-                res.end(oauthErrorHtml("Callback route not found."));
++                res.end(oauthErrorHtml("Callback route not found.", undefined, renderOAuthPage));
+                 return;
+             }
+             if (url.searchParams.get("state") !== state) {
+                 res.statusCode = 400;
+                 res.setHeader("Content-Type", "text/html; charset=utf-8");
+-                res.end(oauthErrorHtml("State mismatch."));
++                res.end(oauthErrorHtml("State mismatch.", undefined, renderOAuthPage));
+                 return;
+             }
+             const code = url.searchParams.get("code");
+             if (!code) {
+                 res.statusCode = 400;
+                 res.setHeader("Content-Type", "text/html; charset=utf-8");
+-                res.end(oauthErrorHtml("Missing authorization code."));
++                res.end(oauthErrorHtml("Missing authorization code.", undefined, renderOAuthPage));
+                 return;
+             }
+             res.statusCode = 200;
+             res.setHeader("Content-Type", "text/html; charset=utf-8");
+-            res.end(oauthSuccessHtml("OpenAI authentication completed. You can close this window."));
++            res.end(oauthSuccessHtml("OpenAI authentication completed. You can close this window.", renderOAuthPage));
+             settleWait?.({ code });
+         }
+         catch {
+             res.statusCode = 500;
+             res.setHeader("Content-Type", "text/html; charset=utf-8");
+-            res.end(oauthErrorHtml("Internal error while processing OAuth callback."));
++            res.end(oauthErrorHtml("Internal error while processing OAuth callback.", undefined, renderOAuthPage));
+         }
+     });
+     return new Promise((resolve) => {
+@@ -353,7 +353,7 @@ async function loginOpenAICodexDeviceCode(interaction) {
+ }
+ async function loginOpenAICodex(interaction) {
+     const { verifier, state, url } = await createAuthorizationFlow();
+-    const server = await startLocalOAuthServer(state);
++    const server = await startLocalOAuthServer(state, interaction.renderOAuthPage);
+     const manualAbort = new AbortController();
+     const onAbort = () => server.cancelWait();
+     interaction.signal.addEventListener("abort", onAbort, { once: true });
+diff --git a/dist/auth/oauth/openrouter.js b/dist/auth/oauth/openrouter.js
+index 865bb5a6758ba27cd92f00fa61d0f0153185082b..e1685f5bd4f3bbcfea07815f90e5d2d3a84d3a96 100644
+--- a/dist/auth/oauth/openrouter.js
++++ b/dist/auth/oauth/openrouter.js
+@@ -107,7 +107,7 @@ async function exchangeAuthorizationCode(code, verifier, signal) {
+         expires: Number.MAX_SAFE_INTEGER,
+     };
+ }
+-async function startCallbackServer(callbackPath, verifier, signal) {
++async function startCallbackServer(callbackPath, verifier, signal, renderOAuthPage) {
+     if (signal.aborted)
+         throw new Error("Login cancelled");
+     const callbackHost = getCallbackHost();
+@@ -143,34 +143,34 @@ async function startCallbackServer(callbackPath, verifier, signal) {
+         void (async () => {
+             const requestUrl = new URL(request.url ?? "/", `http://${callbackHost}`);
+             if (request.method !== "GET" || requestUrl.pathname !== callbackPath) {
+-                sendHtml(response, 404, oauthErrorHtml("OAuth callback route not found."));
++                sendHtml(response, 404, oauthErrorHtml("OAuth callback route not found.", undefined, renderOAuthPage));
+                 return;
+             }
+             if (claimed || settled) {
+-                sendHtml(response, 409, oauthErrorHtml("This OAuth callback has already been used."));
++                sendHtml(response, 409, oauthErrorHtml("This OAuth callback has already been used.", undefined, renderOAuthPage));
+                 return;
+             }
+             const oauthError = requestUrl.searchParams.get("error");
+             if (oauthError) {
+                 const description = requestUrl.searchParams.get("error_description") ?? oauthError;
+-                sendHtml(response, 400, oauthErrorHtml("OpenRouter authorization was denied.", description));
++                sendHtml(response, 400, oauthErrorHtml("OpenRouter authorization was denied.", description, renderOAuthPage));
+                 finish({ error: new Error(`OpenRouter authorization failed: ${description}`) });
+                 return;
+             }
+             const code = requestUrl.searchParams.get("code");
+             if (!code) {
+-                sendHtml(response, 400, oauthErrorHtml("OpenRouter returned no authorization code."));
++                sendHtml(response, 400, oauthErrorHtml("OpenRouter returned no authorization code.", undefined, renderOAuthPage));
+                 return;
+             }
+             claimed = true;
+             try {
+                 const result = await exchangeAuthorizationCode(code, verifier, signal);
+-                sendHtml(response, 200, oauthSuccessHtml("Signed in to OpenRouter. You may now close this page."));
++                sendHtml(response, 200, oauthSuccessHtml("Signed in to OpenRouter. You may now close this page.", renderOAuthPage));
+                 finish({ credential: result });
+             }
+             catch (error) {
+                 const message = error instanceof Error ? error.message : "Unknown token exchange error";
+-                sendHtml(response, 502, oauthErrorHtml("OpenRouter key exchange failed.", message));
++                sendHtml(response, 502, oauthErrorHtml("OpenRouter key exchange failed.", message, renderOAuthPage));
+                 finish({ error: error instanceof Error ? error : new Error(message) });
+             }
+         })();
+@@ -209,7 +209,7 @@ async function startCallbackServer(callbackPath, verifier, signal) {
+ async function loginOpenRouter(interaction) {
+     const { verifier, challenge } = await generatePKCE();
+     const callbackPath = `/oauth/callback/${crypto.randomUUID()}`;
+-    const callback = await startCallbackServer(callbackPath, verifier, interaction.signal);
++    const callback = await startCallbackServer(callbackPath, verifier, interaction.signal, interaction.renderOAuthPage);
+     const manualAbort = new AbortController();
+     let manualInput;
+     let manualError;
+diff --git a/dist/auth/oauth/radius.js b/dist/auth/oauth/radius.js
+index f66d637e858e49d876cd52aae35916488229c04d..6730ae97cdd68af879e3d106187678ca8aa2dedb 100644
+--- a/dist/auth/oauth/radius.js
++++ b/dist/auth/oauth/radius.js
+@@ -101,7 +101,7 @@ async function requestOAuthToken(gateway, body, signal) {
+         scope: data.scope,
+     };
+ }
+-function startOAuthCallbackServer(expectedState, signal) {
++function startOAuthCallbackServer(expectedState, signal, renderOAuthPage) {
+     if (!_http) {
+         throw new Error("Radius OAuth is only available in Node.js environments");
+     }
+@@ -128,25 +128,25 @@ function startOAuthCallbackServer(expectedState, signal) {
+     const server = _http.createServer((request, response) => {
+         const url = new URL(request.url ?? "/", REDIRECT_URI);
+         if (url.pathname !== CALLBACK_PATH) {
+-            sendPage(response, 404, oauthErrorHtml("Callback route not found."));
++            sendPage(response, 404, oauthErrorHtml("Callback route not found.", undefined, renderOAuthPage));
+             return;
+         }
+         if (url.searchParams.get("state") !== expectedState) {
+-            sendPage(response, 400, oauthErrorHtml("OAuth state mismatch."));
++            sendPage(response, 400, oauthErrorHtml("OAuth state mismatch.", undefined, renderOAuthPage));
+             return;
+         }
+         const error = url.searchParams.get("error");
+         if (error) {
+-            sendPage(response, 400, oauthErrorHtml(url.searchParams.get("error_description") ?? error));
++            sendPage(response, 400, oauthErrorHtml(url.searchParams.get("error_description") ?? error, undefined, renderOAuthPage));
+             finish(null);
+             return;
+         }
+         const code = url.searchParams.get("code");
+         if (!code) {
+-            sendPage(response, 400, oauthErrorHtml("Missing authorization code."));
++            sendPage(response, 400, oauthErrorHtml("Missing authorization code.", undefined, renderOAuthPage));
+             return;
+         }
+-        sendPage(response, 200, oauthSuccessHtml("Signed in to Radius. You may now close this page."));
++        sendPage(response, 200, oauthSuccessHtml("Signed in to Radius. You may now close this page.", renderOAuthPage));
+         finish(code);
+     });
+     return new Promise((resolve) => {
+@@ -180,7 +180,7 @@ async function loginWithBrowser(gateway, authorizationEndpoint, interaction) {
+         handoff: "url",
+         state,
+     }).toString();
+-    const callbackServer = await startOAuthCallbackServer(state, interaction.signal);
++    const callbackServer = await startOAuthCallbackServer(state, interaction.signal, interaction.renderOAuthPage);
+     interaction.notify({ type: "progress", message: `Listening for OAuth callback on ${REDIRECT_URI}` });
+     interaction.notify({
+         type: "auth_url",
+diff --git a/dist/auth/types.d.ts b/dist/auth/types.d.ts
+index 4183f993631b48627c6803bf73e2882e62353455..654b0a4c46c9f61f79de174f0e5dfc7e0a9d0b2f 100644
+--- a/dist/auth/types.d.ts
++++ b/dist/auth/types.d.ts
+@@ -147,6 +147,11 @@ export type AuthEvent = {
+     type: "progress";
+     message: string;
+ };
++export interface OAuthPageRenderInput {
++    kind: "authorization_received" | "error";
++}
++/** Optional app-owned presentation for browser OAuth loopback completion pages. */
++export type OAuthPageRenderer = (input: OAuthPageRenderInput) => string;
+ /**
+  * Login interaction callbacks serving both api-key and OAuth flows.
+  *
+@@ -158,6 +163,8 @@ export interface AuthInteraction {
+     signal?: AbortSignal;
+     prompt(prompt: AuthPrompt): Promise<string>;
+     notify(event: AuthEvent): void;
++    /** Overrides only the local browser completion page; OAuth protocol and callbacks remain provider-owned. */
++    renderOAuthPage?: OAuthPageRenderer;
+ }
+ /** Normalized interaction passed to provider login implementations. */
+ export type ProviderAuthInteraction = AuthInteraction & {
