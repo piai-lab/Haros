@@ -785,11 +785,9 @@ export function resolvePreferredComposerModelSelection(input: {
     (input.projectModelSelection?.provider === preferredProvider
       ? input.projectModelSelection
       : null) ??
-    (preferredProvider === "pi"
-      ? null
-      : {
-          provider: preferredProvider,
-          model: getDefaultModel(preferredProvider),
-        })
+    (() => {
+      const model = getDefaultModel(preferredProvider);
+      return model ? { provider: preferredProvider, model } : null;
+    })()
   );
 }

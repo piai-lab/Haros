@@ -65,6 +65,7 @@ export function useHandleNewThread() {
       }
       const defaultModel = getDefaultModel(options.provider);
       if (!defaultModel) {
+        useComposerDraftStore.getState().setActiveProviderAndSticky(threadId, options.provider);
         return;
       }
       setModelSelection(threadId, {

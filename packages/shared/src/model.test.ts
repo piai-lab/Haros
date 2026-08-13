@@ -134,6 +134,8 @@ describe("resolveModelSlug", () => {
 
   it("keeps codex defaults for backward compatibility", () => {
     expect(getDefaultModel()).toBe(DEFAULT_MODEL);
+    expect(getDefaultModel("omnimind")).toBeNull();
+    expect(getDefaultModel("pi")).toBeNull();
     expect(getModelOptions()).toEqual(MODEL_OPTIONS);
     expect(getModelOptions("claudeAgent")).toEqual(MODEL_OPTIONS_BY_PROVIDER.claudeAgent);
   });

@@ -305,6 +305,11 @@ describe("resolveAppModelSelection", () => {
     ).toBe("gpt-5.5");
   });
 
+  it("keeps runtime-catalog-only providers unbound without an exact selection", () => {
+    expect(resolveAppModelSelection("omnimind", { omnimind: [] }, "")).toBeNull();
+    expect(resolveAppModelSelection("pi", { pi: [] }, "")).toBeNull();
+  });
+
   it("resolves display names through the shared resolver", () => {
     expect(
       resolveAppModelSelection(

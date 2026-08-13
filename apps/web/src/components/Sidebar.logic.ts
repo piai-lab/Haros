@@ -59,8 +59,8 @@ export type SidebarActionBadge = {
 export function resolveNewProjectDefaultModelSelection(
   provider: ProviderKind,
 ): ModelSelection | null {
-  if (provider === "pi") return null;
-  return { provider, model: getDefaultModel(provider) };
+  const model = getDefaultModel(provider);
+  return model ? { provider, model } : null;
 }
 
 export function isProjectsSidebarSurface(input: {

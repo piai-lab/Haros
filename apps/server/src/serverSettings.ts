@@ -16,7 +16,10 @@ import {
   type ServerSettingsView,
 } from "@omnimind/contracts";
 import { deepMerge, type DeepPartial } from "@omnimind/shared/Struct";
-import { applyServerSettingsPatch } from "@omnimind/shared/serverSettings";
+import {
+  applyServerSettingsPatch,
+  validateServerSettingsPatch,
+} from "@omnimind/shared/serverSettings";
 import {
   Cause,
   Deferred,
@@ -161,6 +164,15 @@ function normalizeSettings(
   current: ServerSettings,
   patch: ServerSettingsPatch,
 ): Effect.Effect<ServerSettings, ServerSettingsError> {
+  const patchError = validateServerSettingsPatch(current, patch);
+  if (patchError !== null) {
+    return Effect.fail(
+      new ServerSettingsError({
+        settingsPath,
+        detail: `failed to normalize server settings: ${patchError}`,
+      }),
+    );
+  }
   return Schema.decodeUnknownEffect(ServerSettings)(applyServerSettingsPatch(current, patch)).pipe(
     Effect.mapError(
       (cause) =>
@@ -417,6 +429,11 @@ const makeServerSettings = Effect.gen(function* () {
       Effect.gen(function* () {
         const disk = yield* loadSettingsFromDisk;
         const current = disk.settings;
+        const normalized = yield* normalizeSettings(
+          settingsPath,
+          current,
+          omitProviderPasswords(patch),
+        );
         for (const provider of EXTERNAL_SERVER_PROVIDERS) {
           const password = patch.providers?.[provider]?.serverPassword;
           if (password !== undefined) {
@@ -432,11 +449,6 @@ const makeServerSettings = Effect.gen(function* () {
             );
           }
         }
-        const normalized = yield* normalizeSettings(
-          settingsPath,
-          current,
-          omitProviderPasswords(patch),
-        );
         const next = yield* withCredentialState(normalized);
         const nextRevision = Math.max(disk.revision, yield* Ref.get(revisionRef)) + 1;
         yield* writeSettingsAtomically({

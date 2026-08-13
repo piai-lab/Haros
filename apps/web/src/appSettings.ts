@@ -338,7 +338,7 @@ const PROVIDER_CUSTOM_MODEL_CONFIG: Record<ProviderKind, ProviderCustomModelConf
     title: "OmniMind",
     description: "Save additional upstream model slugs for OmniMind.",
     placeholder: "provider/model",
-    example: "deepseek/deepseek-chat",
+    example: "provider/model",
   },
   codex: {
     provider: "codex",
@@ -1043,12 +1043,10 @@ export function resolveAppModelSelection(
   provider: ProviderKind,
   customModels: Partial<Record<ProviderKind, readonly string[]>>,
   selectedModel: string | null | undefined,
-): string {
+): string | null {
   const customModelsForProvider = customModels[provider] ?? [];
   const options = getAppModelOptions(provider, customModelsForProvider, selectedModel);
-  return (
-    resolveSelectableModel(provider, selectedModel, options) ?? getDefaultModel(provider) ?? ""
-  );
+  return resolveSelectableModel(provider, selectedModel, options) ?? getDefaultModel(provider);
 }
 
 export function getCustomModelOptionsByProvider(

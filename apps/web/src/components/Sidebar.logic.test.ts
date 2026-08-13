@@ -93,6 +93,10 @@ describe("resolveNewProjectDefaultModelSelection", () => {
     expect(resolveNewProjectDefaultModelSelection("pi")).toBeNull();
   });
 
+  it("keeps an OmniMind project unbound until the runtime catalog supplies an exact model", () => {
+    expect(resolveNewProjectDefaultModelSelection("omnimind")).toBeNull();
+  });
+
   it("preserves the existing default for other Engines", () => {
     expect(resolveNewProjectDefaultModelSelection("codex")).toEqual({
       provider: "codex",

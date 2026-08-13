@@ -81,6 +81,20 @@ describe("resolvePreferredComposerModelSelection", () => {
     ).toBeNull();
   });
 
+  it("keeps an unbound OmniMind intent fail-closed until its runtime catalog provides a model", () => {
+    expect(
+      resolvePreferredComposerModelSelection({
+        draft: {
+          modelSelectionByProvider: {},
+          activeProvider: "omnimind",
+        },
+        threadModelSelection: null,
+        projectModelSelection: null,
+        defaultProvider: "codex",
+      }),
+    ).toBeNull();
+  });
+
 });
 
 describe("composerDraftStore modelSelection", () => {
