@@ -148,12 +148,12 @@ Composer 已经显示当前 runtime mode，权限卡不能与它自相矛盾：
 
 2026-08-12 维护者提供的四张 Codex app 截图不是新母版，也不授权照抄视觉资产；它们揭示了四个可迁移的产品结构：
 
-| 截图事实                                                                                | 深层作用                                 | OmniMind target                                                                                                               | 不应误读为                                              |
-| --------------------------------------------------------------------------------------- | ---------------------------------------- | ----------------------------------------------------------------------------------------------------------------------------- | ------------------------------------------------------- |
-| Environment card 把 changes、local/git、子智能体和 sources 分 section 压在约 288px 卡中 | 当前任务的“目录/索引”，不是详情面        | 继续扩展现有 `EnvironmentPanel` row/section；Workflow 也只占一行摘要                                                          | 把所有能力塞进新 dashboard                              |
-| “子智能体”右侧详情按运行中/完成分组，每个 Agent 有不同彩色小纹样                        | identity 是跨表面的视觉 join key         | 集合 tab 用 `agent-duo`，实例用 deterministic identity glyph；同一 glyph 贯穿 Environment、right dock、Timeline、child Thread | 为每种 role 画一个能力 icon；用一个机器人图标复制所有行 |
-| Timeline 用带 identity glyph 的 Agent chip 串起“谁读取、谁更新、谁完成”                 | 低成本表达 causality/provenance          | 只有真正需要 attribution 的 activity 才出现 chip；名称与 glyph 同时保留                                                       | 给每条工具事件加彩色 badge 制造噪声                     |
-| Todo 平时只有 `第 x/n 步` 一行，点击后向上展开完整步骤                                  | Composer 只保留 glanceable current truth | 收敛现有 `ActiveTaskListCard` 的 compact mode；详情用 anchored popover/disclosure，状态仍来自原 task owner                    | 新建 Todo 页面、Goal card 或第二任务 store              |
+| 截图事实                                                                                | 深层作用                                 | OmniMind target                                                                                                           | 不应误读为                                              |
+| --------------------------------------------------------------------------------------- | ---------------------------------------- | ------------------------------------------------------------------------------------------------------------------------- | ------------------------------------------------------- |
+| Environment card 把 changes、local/git、子智能体和 sources 分 section 压在约 288px 卡中 | 当前任务的“目录/索引”，不是详情面        | 继续扩展现有 `EnvironmentPanel` row/section；Workflow 也只占一行摘要                                                      | 把所有能力塞进新 dashboard                              |
+| “子智能体”右侧详情按运行中/完成分组，每个 Agent 有不同彩色小纹样                        | identity 是跨表面的视觉 join key         | 集合 tab 用 `agent`，实例用 deterministic identity glyph；同一 glyph 贯穿 Environment、right dock、Timeline、child Thread | 为每种 role 画一个能力 icon；用一个机器人图标复制所有行 |
+| Timeline 用带 identity glyph 的 Agent chip 串起“谁读取、谁更新、谁完成”                 | 低成本表达 causality/provenance          | 只有真正需要 attribution 的 activity 才出现 chip；名称与 glyph 同时保留                                                   | 给每条工具事件加彩色 badge 制造噪声                     |
+| Todo 平时只有 `第 x/n 步` 一行，点击后向上展开完整步骤                                  | Composer 只保留 glanceable current truth | 收敛现有 `ActiveTaskListCard` 的 compact mode；详情用 anchored popover/disclosure，状态仍来自原 task owner                | 新建 Todo 页面、Goal card 或第二任务 store              |
 
 由此形成统一空间语法：
 
@@ -208,7 +208,7 @@ Workflow 正好遵循这套语法，但不是“四处重复同一句”：Timel
 
 但“不做 team builder”不等于把所有 child 压成同一个机器人图标。Codex 的成熟点在于把**集合语义**和**实例身份**分开：标题/tab 使用统一“子智能体”图标；每个 child 使用稳定、不同、低密度的彩色几何纹样。这个纹样在 Environment 小簇、子智能体列表、Timeline chip、来源引用和 child Thread 间保持连续，因此用户无需反复读长名称也能追踪“谁做了什么”。
 
-OmniMind 已有 `subagentPresentation.ts` 的确定性 `accentColor`，正确实现是为同一 presentation 增加 `glyphVariant`/identity seed，并由 canonical child/thread id 保持稳定；不是随机 emoji，不是按 role 固定一个头像，也不是另建 avatar registry。首批候选从现有 Central 库策展 24 个 16px 仍清晰的低密度纹样，与现有 8 色 palette 组合为 192 个确定性候选，再在同一 parent/workflow 内做 collision 顺延。名称永远同时出现，glyph 只是视觉 join key。`agent-duo` 继续只表示集合。
+OmniMind 已有 `subagentPresentation.ts` 的确定性 `accentColor`，正确实现是为同一 presentation 增加 `glyphVariant`/identity seed，并由 canonical child/thread id 保持稳定；不是随机 emoji，不是按 role 固定一个头像，也不是另建 avatar registry。首批候选从现有 Central 库策展 24 个 16px 仍清晰的低密度纹样，与现有 8 色 palette 组合为 192 个确定性候选，再在同一 parent/workflow 内做 collision 顺延。名称永远同时出现，glyph 只是视觉 join key。`agent` 继续只表示集合。
 
 ### 3.3 动态工作流必须保留 Engine provenance
 
@@ -562,27 +562,27 @@ Knowledge 是 Bundled Capability Pack，不是 Agent Runtime Core，也不是 Me
 
 - 普通行最多一个 leading visual。Agent 行的 identity glyph 就是 leading visual，状态使用相邻文字/tone，不再叠一个抢眼状态图标；
 - 不给每个能力设计品牌徽章；图标用于导航和操作，不用于证明“能力很多”；
-- 不用数据库图标表达 Memory/Knowledge；两者不是两个 database product；
+- 不用数据库图标把 Memory/Knowledge 伪装成两个 database product；经典书籍和大脑图标只承担入口语义，不改变两者共用一个可审查 file-world 的事实；
 - 不用紫色 AI glow、魔法棒、星光、bento 能力墙和高饱和渐变；
 - 成功后的控制与提示快速退场；Environment 可保留一行 latest receipt，Timeline 保留历史，不能用大完成卡或 Toast 反复庆祝；冲突/失败保留到可恢复；
 - pill 只用于需要并排比较的短状态，不把每段文字装进 pill。
 
 ### 8.3 已锁定图标，不再临时替换
 
-维护者已经从同一轮候选中选择以下映射；原型和未来 UI 有真实语义槽位时必须使用它们，不得再用 emoji、圆点、数据库、大脑、通用 users/history 或 CSS 临时图形代替：
+维护者已经完成二次选择。原型和未来 UI 有真实语义槽位时必须直接复用以下现有 Central reversed 资产，不得再造 custom SVG，也不得用 emoji、圆点或 CSS 临时图形代替：
 
-| 语义       | Asset              | 选择   | 冲突边界                                                                   |
-| ---------- | ------------------ | ------ | -------------------------------------------------------------------------- |
-| 目标       | `target-arrow`     | 第一项 | 现有 Central reversed；只用于 objective state                              |
-| Agent 团队 | `agent-duo`        | 第一项 | custom Central-compatible；不用于人类 collaborators                        |
-| 动态工作流 | `agent-network`    | 第一项 | 现有 Central reversed；不替代 Agent 团队、child 身份、Git 图或 Automations |
-| 知识库     | `knowledge-linked` | 第三项 | custom；不替代普通 files/link                                              |
-| 记忆       | `memory-bookmark`  | 第二项 | custom；不替代普通 bookmark/pin                                            |
-| 会话恢复   | `resume-chat`      | 第一项 | custom；不用于 send/forward/handoff                                        |
+| 语义       | Asset           | 冲突边界                                                                                          |
+| ---------- | --------------- | ------------------------------------------------------------------------------------------------- |
+| 目标       | `target-arrow`  | 只用于 objective state                                                                            |
+| Agent 团队 | `agent`         | 只用于 team/subagent 集合；不用于人类 collaborators，也不复制到每个 child                         |
+| 动态工作流 | `agent-network` | 只用于 workflow 集合/入口；不替代 Agent 团队、child identity、Git 图或 Automations                |
+| 知识库     | `books`         | 经典书籍语义；不替代普通 files、document action 或 Library navigation                             |
+| 记忆       | `brain-2`       | 计算脑形；只用于 OmniMind project memory，不替代模型服务设置使用的 `brain`                        |
+| 会话恢复   | `history`       | 只用于已证明的 resume/recovery；不替代 Usage history、Timeline 或 Automations 的 rotate-clockwise |
 
 这六个是能力/集合图标，不是 child avatar 集。子智能体必须另用确定性实例纹样：从现有 Central 资产库策展 24 个在 16/20/24px 都保持清晰、低填充、低节点密度的 glyph，与现有 8 色 `SUBAGENT_ACCENT_PALETTE` 组合为 192 个候选；以 canonical child/thread id 为 seed，同一 parent/workflow 内遇到碰撞就按稳定顺序寻找下一组合，同一 resumed child 保持稳定。名称始终与 glyph 同时出现。纹样不得编码 running/completed、角色、模型或 Engine，避免身份随着状态变化；状态仍有文字，不能只靠颜色。若邻接复核中两个 glyph 过于相似，应从池中剔除并换 Central 候选，不得靠加粗、填满或加饱和度补救。
 
-2026-08-13 对 `apps/web/src` 和 `apps/web/public` 的扫描未发现上述六个 asset 的现有产品调用；`target-arrow.svg` 与 `agent-network.svg` 已存在于 Central reversed asset owner，但尚无 wrapper/consumer，其余四个 custom glyph 尚未 materialize。这个结论只证明当前调用占用，正式实现仍须在当次 HEAD 做 16/20/24px、light/dark、邻接图标和语义 collision review。动态工作流必须直接复用现有 `agent-network.svg`，不得复制、重画或创建第二个近义资产；其语义租约只覆盖工作流集合/入口，不覆盖 Agent 团队、单个 child 身份、通用网络/集成或 Git branch/merge。四个 custom glyph 的维护者已选 24×24 path 已作为同名 `<symbol>` 保存在 [`research/prototypes/omnimind-agent-capability-surface.html`](prototypes/omnimind-agent-capability-surface.html) 的 hidden SVG sprite 中；它是物化前的精确 research geometry，不是生产 asset owner。实现时从这些 exact paths 生成 existing icon owner 下的一份 canonical SVG，保留 `currentColor`、约 1.5px stroke 与低节点密度，不得根据名字重画或“顺手优化”成另一套图形；物化并通过视觉复核后，以产品 asset 替代 prototype symbol 作为唯一 owner。
+2026-08-13 对 `apps/web/src` 和 `apps/web/public` 的扫描确认：六个锁定 asset 都已存在于 Central reversed asset owner，且当前没有产品 consumer，因此没有名称或调用冲突，也不需要物化新文件。近义占用分别是模型服务设置的 `brain`、通用 `BookIcon` 的 `book-simple` 和 Automations 的 `arrow-rotate-clockwise`；这些既有语义保持不变。正式实现仍须在当次 HEAD 做 usage scan，以及 16/20/24px、light/dark、邻接图标和语义 collision review。Workflow 研究原型只嵌入它实际渲染的 `agent-network` exact geometry；其余锁定资产直接引用产品 Central owner，不在原型复制一份未使用的 sprite。
 
 ### 8.4 文案
 

@@ -567,9 +567,9 @@ Skill 与 Plugin 属于全局一致的基础概念，不应为每个 Engine 或�
 
 完整的能力表面映射、状态矩阵、现有组件复用与方向原型见 [`omnimind-agent-capability-surface.md`](omnimind-agent-capability-surface.md)。它仍是 research 设计，不取代 `architecture/workbench.md`。
 
-图标资产的最终 owner 是 `architecture/workbench.md` 和对应 UI 实现。维护者已经锁定：目标 `target-arrow`、Agent 团队 `agent-duo`、动态工作流 `agent-network`、知识库 `knowledge-linked`、记忆 `memory-bookmark`、会话恢复 `resume-chat`。目标与动态工作流直接复用现有 Central reversed asset，其余四项为已确认的低密度 Central-compatible SVG；正式进入产品前在当次 HEAD 复验占用和视觉冲突。`agent-network` 只表示工作流集合/入口，不得与 Agent 团队、单个 child 身份、通用网络/集成或 Git 图混用。知识库/记忆不得改成 database/brain glyph，Skill/Plugin 的同一概念必须跨入口保持同名、同义和同一图标词汇。能力强度不能靠 icon 数量和色彩密度表达。
+图标资产的最终 owner 是 `architecture/workbench.md` 和对应 UI 实现。维护者已经锁定并要求直接复用现有 Central reversed 资产：目标 `target-arrow`、Agent 团队 `agent`、动态工作流 `agent-network`、知识库 `books`、记忆 `brain-2`、会话恢复 `history`。不新增 custom SVG；正式进入产品前在当次 HEAD 复验占用、邻接语义和 16/20/24px 视觉冲突。`agent-network` 只表示工作流集合/入口，不得与 Agent 团队、单个 child 身份、通用网络/集成或 Git 图混用；`brain-2` 不替代模型服务设置的 `brain`，`books` 不替代通用 `book-simple`，`history` 不替代 Automations 的 `arrow-rotate-clockwise`。Skill/Plugin 的同一概念必须跨入口保持同名、同义和同一图标词汇。能力强度不能靠 icon 数量和色彩密度表达。
 
-`agent-duo` 只表示“子智能体集合/入口”，不能成为每个 child 的相同头像。每个真实 child 需要一个确定性的低密度身份纹样，并在 Environment、right dock、Timeline、Composer 和来源引用中连续；首个候选池从现有 Central 资产策展 24 个 16px 仍清晰的 glyph，与 `subagentPresentation.ts` 现有 8 色 palette 组合成 192 个候选，并在同一 parent/workflow 内稳定消碰撞。它属于现有 UI identity projection，不是 Agent Core 状态。
+`agent` 只表示“子智能体集合/入口”，不能成为每个 child 的相同头像。每个真实 child 需要一个确定性的低密度身份纹样，并在 Environment、right dock、Timeline、Composer 和来源引用中连续；首个候选池从现有 Central 资产策展 24 个 16px 仍清晰的 glyph，与 `subagentPresentation.ts` 现有 8 色 palette 组合成 192 个候选，并在同一 parent/workflow 内稳定消碰撞。它属于现有 UI identity projection，不是 Agent Core 状态。
 
 Workflow 复用的是 canonical Provider activities、现有 `WorkflowRunCard.logic.ts` projection、`WorkflowRunCard.tsx` action wiring 和 `workflowRunUiStore.ts` 的 bounded paused/dismissed flags，不是冻结现有密集 card 的视觉形态。当前 pause 是 mark+stop，resume 是携带 script/run identity 的新 Composer turn 并 dismiss 旧 run；UI 不得把这套补偿文案伪装成新的 Provider runtime state。当前 selector 又把 latest run、Composer visibility 与 snapshot construction 黏在一起，RightDock/旧 Timeline milestone 正式实现前必须先提取按 exact `workflowTaskId` 重建的共享纯 selector，不能复制 parser。
 

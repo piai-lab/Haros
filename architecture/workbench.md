@@ -211,18 +211,18 @@ iOS Simulator 作为现有 right dock 的 `device` pane 呈现，不新增顶层
 2. **实例身份纹样**：表示某一个真实 child Agent。它不是能力图标，必须按 canonical child identity 确定性生成，并在 Environment、right dock、Timeline chip、Composer strip 和重开后的同一 child 中保持同一颜色与几何纹样；同一 parent 下发生碰撞时确定性顺延到下一候选；
 3. **状态语义**：running、queued、completed、failed、blocked 由文字、tone 和必要的轻量 motion 表达，不能靠更换身份纹样或只靠颜色表达。
 
-`apps/web/src/lib/subagentPresentation.ts` 已经以 label seed 生成八色 `accentColor`，因此实例纹样应扩展这一 owner，增加稳定 `glyphVariant`/identity seed，而不是新建 avatar store。`agent-duo` 只属于第一层：用于“子智能体”集合标题、tab 或入口，不能复制到每个 Agent 行。Skill、Plugin、MCP 与所有既有全局概念继续复用当前统一图标，不做 Engine-specific 变体。
+`apps/web/src/lib/subagentPresentation.ts` 已经以 label seed 生成八色 `accentColor`，因此实例纹样应扩展这一 owner，增加稳定 `glyphVariant`/identity seed，而不是新建 avatar store。`agent` 只属于第一层：用于“子智能体”集合标题、tab 或入口，不能复制到每个 Agent 行。Skill、Plugin、MCP 与所有既有全局概念继续复用当前统一图标，不做 Engine-specific 变体。
 
 以下六项是维护者已锁定的能力/集合语义映射：
 
-| 语义       | 锁定资产           | 来源与使用限制                                                                                          |
-| ---------- | ------------------ | ------------------------------------------------------------------------------------------------------- |
-| 目标       | `target-arrow`     | 现有 Central reversed asset；仅在目标状态确实可行动时出现                                               |
-| Agent 团队 | `agent-duo`        | 已确认的 Central-compatible 低密度 custom SVG；只用于 team/subagent 集合语义                            |
-| 动态工作流 | `agent-network`    | 现有 Central reversed asset；只用于工作流集合/入口，不替代 Agent 团队、child 身份、Git 图或 Automations |
-| 知识库     | `knowledge-linked` | 已确认的 Central-compatible custom SVG；表达关联页面，不使用 database glyph                             |
-| 记忆       | `memory-bookmark`  | 已确认的 Central-compatible custom SVG；表达精选、可复用记忆，不使用 brain/database                     |
-| 会话恢复   | `resume-chat`      | 已确认的 Central-compatible custom SVG；只用于已证明的 resume/recovery，不用于 send/handoff             |
+| 语义       | 锁定资产        | 来源与使用限制                                                                                          |
+| ---------- | --------------- | ------------------------------------------------------------------------------------------------------- |
+| 目标       | `target-arrow`  | 现有 Central reversed asset；仅在目标状态确实可行动时出现                                               |
+| Agent 团队 | `agent`         | 现有 Central reversed asset；只用于 team/subagent 集合语义，不复制到每个 child，也不用于人类协作者      |
+| 动态工作流 | `agent-network` | 现有 Central reversed asset；只用于工作流集合/入口，不替代 Agent 团队、child 身份、Git 图或 Automations |
+| 知识库     | `books`         | 现有 Central reversed asset；经典书籍语义，只用于知识集合，不替代普通文件、文档或 Library navigation    |
+| 记忆       | `brain-2`       | 现有 Central reversed asset；计算脑形，只用于 OmniMind project memory，不替代模型服务设置所用的 `brain` |
+| 会话恢复   | `history`       | 现有 Central reversed asset；只用于已证明的 resume/recovery，不用于历史用量、Timeline 或 Automations    |
 
 子智能体身份纹样采用小尺寸、低填充密度的确定性候选池，而不是为每个 Agent 维护一份手工 SVG。首个 production 候选池应从现有 Central 资产中策展 **24 个在 16px 仍可辨的低密度几何纹样 × 8 个 restrained accent**，提供 192 个组合后再按同一 parent/workflow 内 collision rule 顺延；名称始终同时出现，因此纹样是视觉 join key，不是唯一身份凭证。以 canonical child/thread id 取 seed，同一 resumed child 保持连续。纹样不编码角色、模型、Engine 或状态；这些信息由旁边文字和 provenance 承担。若 24 个候选在 16/20/24px 的邻接复核中不可区分，应删除相似项并补充更清晰的 Central 资产，而不是靠加粗、填满或提高饱和度制造差别。
 
@@ -248,7 +248,7 @@ right dock 是既有宿主；实现时只在现有 `RightDockPaneKind` owner 中
 
 focused proof 至少覆盖 4/20/120 Agent、3–8 groups、四种结构原语的单独与混合组合，以及 running/paused/completed/failed/stopped。100+ Agent 默认只渲染 group overview、current/selected group 的 bounded children 和搜索命中；其余 group 聚合为 `done/running/failed/total`，不把 120 个节点同时动画或塞进 Timeline/Environment。completed fixture 必须验证 Environment latest receipt 仍可重开、RightDock frozen result 可读、Composer 已退场；branch/loop/handoff 只有 explicit fact fixture 才画。不能用官网 demo 选美替代真实 fixture，也不能让研究原型成为 production component donor。
 
-当前代码扫描中 `target-arrow.svg` 与 `agent-network.svg` 已存在于 Central reversed asset owner，但尚无产品调用点；其余四个 custom 名称尚未进入 `apps/web`。因此当前名称层面没有现有调用冲突，且动态工作流无需新增 SVG。四个 custom glyph 正式 materialize 到 `apps/web/public/central-icons-reversed` 前仍要在当次 HEAD 重跑 usage/visual collision scan，并在 16/20/24px、light/dark、currentColor、1x/2x 下校验。图形保持单色、轻描边、低节点密度；不得再用 emoji、CSS 假图标、临时通用 glyph 或未经维护者确认的重画版本代替。`agent-network` 的语义租约只覆盖工作流集合/入口；它不得成为 Agent 团队、单个 child 身份、通用网络/集成或 Git branch/merge 的别名。
+2026-08-13 对当前 HEAD 的代码扫描确认：六个锁定资产都已存在于 `apps/web/public/central-icons-reversed`，且 `apps/web/src` 尚无产品调用，因此不需要新增或重画 SVG。近义现有占用必须保持分离：模型服务设置继续使用 `brain`，通用 Book wrapper 继续使用 `book-simple`，Automations 继续使用 `arrow-rotate-clockwise`；本表的 `brain-2`、`books`、`history` 不替换这些既有语义。正式接入仍须在当次 HEAD 重跑 usage/visual collision scan，并在 16/20/24px、light/dark、currentColor、1x/2x 与真实邻接环境下校验。不得再用 emoji、CSS 假图标、临时通用 glyph 或 custom 重画版本代替。`agent-network` 的语义租约只覆盖工作流集合/入口；它不得成为 Agent 团队、单个 child 身份、通用网络/集成或 Git branch/merge 的别名。
 
 性能以真实 journey/profile 验证：startup、Thread switch、continuous stream、long thread、large list/output、Viewer/Diff、Terminal、watcher storm、background work、memory growth 与 IME。不设任意 100k 字符门槛。
 
@@ -259,7 +259,7 @@ Settings 提供 `System / 简体中文 / English`，默认跟随 OS/browser；�
 双语以用户语义和内容 ownership 为边界，而不是逐词翻译：
 
 - `OmniMind`、`Agent`、`Chat` 保留产品身份；Agent 域使用“新建任务 / New Task”和“任务”，Chat 域使用“新建对话 / New Chat”和“对话”。`OmniMind Agent` 只在技术详情、runtime、诊断、About、Licenses 与来源语境中作为完整技术实体名。`Thread` 不进入普通用户语言，`Session` 只在真实认证、连接、恢复 ID 或诊断语境出现。
-- “Agent 团队 / Agent Team”是能力与研究语义；运行时集合标题使用更具体的“子智能体 / Subagents”，单个实例直接显示其 nickname/任务名，不把“团队”重复到每一行。`agent-duo` 表示集合，实例身份纹样表示具体 child。
+- “Agent 团队 / Agent Team”是能力与研究语义；运行时集合标题使用更具体的“子智能体 / Subagents”，单个实例直接显示其 nickname/任务名，不把“团队”重复到每一行。`agent` 表示集合，实例身份纹样表示具体 child。
 - Codex、Pi、OpenCode 与 OmniMind 在普通界面称为“引擎”；OpenAI、MiMo、DeepSeek 等模型/API 来源称为“模型服务商”。`Provider` 只在内部 API 或主动展开的技术详情中保留。
 - Workbench、Library、Project、Group、Kanban、Terminal、Skill、Plugin、Repository、Branch、Commit、Push、Diff、Worktree、Pull Request 等采用自然中文产品词；`Git`、`MCP`、`API`、`CLI`、`JSON`、`URL`、`ID` 与 AI 计量单位 `token` 保留标准写法。命令、参数、环境变量、路径、文件名、模型名和品牌名保持原文。
 - 技能、插件、工具与 MCP 服务的真实名称始终保留来源原文。OmniMind-owned 资产的名称说明与操作文案完整双语；Engine-native 或第三方资产的原始简介保留 provenance，不由 Host 擅自翻译或运行时机翻。

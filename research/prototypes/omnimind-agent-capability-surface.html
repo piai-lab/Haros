@@ -23,10 +23,8 @@
         --line: #dedfdb;
         --line-soft: #e9eae7;
         --line-strong: #d1d3ce;
-        --shadow:
-          0 18px 48px rgba(22, 24, 21, 0.11), 0 2px 7px rgba(22, 24, 21, 0.05);
-        --shadow-soft:
-          0 10px 32px rgba(22, 24, 21, 0.09), 0 1px 4px rgba(22, 24, 21, 0.05);
+        --shadow: 0 18px 48px rgba(22, 24, 21, 0.11), 0 2px 7px rgba(22, 24, 21, 0.05);
+        --shadow-soft: 0 10px 32px rgba(22, 24, 21, 0.09), 0 1px 4px rgba(22, 24, 21, 0.05);
         --green: #368563;
         --green-soft: #e9f3ed;
         --amber: #a16d28;
@@ -56,8 +54,7 @@
         --line-soft: #2a2e2a;
         --line-strong: #424742;
         --shadow: 0 20px 55px rgba(0, 0, 0, 0.4), 0 2px 8px rgba(0, 0, 0, 0.25);
-        --shadow-soft:
-          0 13px 36px rgba(0, 0, 0, 0.31), 0 1px 5px rgba(0, 0, 0, 0.2);
+        --shadow-soft: 0 13px 36px rgba(0, 0, 0, 0.31), 0 1px 5px rgba(0, 0, 0, 0.2);
         --green: #70b18e;
         --green-soft: #23372b;
         --amber: #d09b55;
@@ -468,11 +465,7 @@
         z-index: 6;
         inset: auto 0 0;
         padding: 0 14px 14px;
-        background: linear-gradient(
-          transparent,
-          var(--shell) 22%,
-          var(--shell)
-        );
+        background: linear-gradient(transparent, var(--shell) 22%, var(--shell));
       }
       .composer-stack {
         width: min(760px, 100%);
@@ -751,10 +744,7 @@
             color-mix(in srgb, var(--green) 5%, transparent),
             transparent 17rem
           ),
-          linear-gradient(
-            color-mix(in srgb, var(--line) 33%, transparent) 1px,
-            transparent 1px
-          ),
+          linear-gradient(color-mix(in srgb, var(--line) 33%, transparent) 1px, transparent 1px),
           linear-gradient(
             90deg,
             color-mix(in srgb, var(--line) 33%, transparent) 1px,
@@ -1271,45 +1261,6 @@
           d="M12 6.8501L16 7.2501M17.75 10.0001L16.55 14.0001M13.5 14.3572L12 12.0001L10.4091 9.5001M6.25 14.0001L7.45 10.0001M8 16.7501L12 17.1501"
         />
       </symbol>
-      <!--
-        Locked research geometry for the other selected capability glyphs.
-        These symbols are not extra UI in this Workflow storyboard. They preserve the
-        maintainer-approved 24x24 paths until production materializes one canonical asset
-        per name under the existing icon owner; do not redraw them from the names alone.
-      -->
-      <symbol id="agent-duo" viewBox="0 0 24 24">
-        <rect x="2.5" y="7.5" width="8.5" height="8" rx="2" />
-        <path d="M6.75 7.5V5.8" />
-        <circle cx="6.75" cy="4.9" r=".7" />
-        <circle class="dot" cx="5.4" cy="11.4" r=".55" />
-        <circle class="dot" cx="8.1" cy="11.4" r=".55" />
-        <path d="M5.2 14h3.1" />
-        <rect x="13" y="7.5" width="8.5" height="8" rx="2" />
-        <path d="M17.25 7.5V5.8" />
-        <circle cx="17.25" cy="4.9" r=".7" />
-        <circle class="dot" cx="15.9" cy="11.4" r=".55" />
-        <circle class="dot" cx="18.6" cy="11.4" r=".55" />
-        <path d="M15.7 14h3.1M11 11.5h2" />
-      </symbol>
-      <symbol id="knowledge-linked" viewBox="0 0 24 24">
-        <rect x="3" y="4" width="7" height="8" rx="1.5" />
-        <path d="M5.2 7h2.6M5.2 9h1.8" />
-        <rect x="14" y="12" width="7" height="8" rx="1.5" />
-        <path d="M16.2 15h2.6M16.2 17h1.8M10 8h2.2c1 0 1.8.8 1.8 1.8V12" />
-        <circle cx="12" cy="8" r="1" />
-      </symbol>
-      <symbol id="memory-bookmark" viewBox="0 0 24 24">
-        <path d="M6 3.5h12v17l-6-3.6-6 3.6v-17Z" />
-        <path
-          d="M12 7.2 12.8 9l1.8.8-1.8.8-.8 1.8-.8-1.8-1.8-.8 1.8-.8.8-1.8Z"
-        />
-      </symbol>
-      <symbol id="resume-chat" viewBox="0 0 24 24">
-        <path
-          d="M4 4.5h11A3.5 3.5 0 0 1 18.5 8v4A3.5 3.5 0 0 1 15 15.5H9l-4.5 3v-14Z"
-        />
-        <path d="M11 10h9M17.5 7.5 20 10l-2.5 2.5" />
-      </symbol>
     </svg>
 
     <header class="review-bar">
@@ -1350,18 +1301,15 @@
       <div class="app state-running" id="app">
         <aside class="sidebar" aria-label="OmniMind 主导航">
           <div class="brand-row">
-            <img
-              src="../../apps/web/public/brand/omnimind-logo-flat.svg"
-              alt=""
-            /><strong>OmniMind</strong>
+            <img src="../../apps/web/public/brand/omnimind-logo-flat.svg" alt="" /><strong
+              >OmniMind</strong
+            >
           </div>
           <button class="sidebar-action">
-            <svg class="icon icon-sm"><use href="#i-plus" /></svg
-            ><span>新建任务</span>
+            <svg class="icon icon-sm"><use href="#i-plus" /></svg><span>新建任务</span>
           </button>
           <button class="sidebar-action">
-            <svg class="icon icon-sm"><use href="#i-search" /></svg
-            ><span>搜索</span>
+            <svg class="icon icon-sm"><use href="#i-search" /></svg><span>搜索</span>
           </button>
           <div class="sidebar-section">今天</div>
           <button class="thread-row active">
@@ -1379,8 +1327,7 @@
           </button>
           <div class="sidebar-footer">
             <button class="sidebar-action">
-              <svg class="icon icon-sm"><use href="#i-folder" /></svg
-              ><span>OmniMind</span>
+              <svg class="icon icon-sm"><use href="#i-folder" /></svg><span>OmniMind</span>
             </button>
           </div>
         </aside>
@@ -1390,15 +1337,10 @@
             <span class="chat-title">深度 review Agent Core 与前端投影</span>
             <span class="header-spacer"></span>
             <button class="header-button">
-              <svg class="icon icon-sm"><use href="#i-folder" /></svg
-              ><span>打开位置</span
+              <svg class="icon icon-sm"><use href="#i-folder" /></svg><span>打开位置</span
               ><svg class="icon icon-sm"><use href="#i-chevron" /></svg>
             </button>
-            <button
-              id="environment-toggle"
-              class="icon-button"
-              aria-label="切换环境信息"
-            >
+            <button id="environment-toggle" class="icon-button" aria-label="切换环境信息">
               <svg class="icon icon-sm"><use href="#i-panel" /></svg>
             </button>
           </header>
@@ -1406,49 +1348,36 @@
           <div class="transcript">
             <article class="message user-row">
               <div class="user-bubble">
-                深度 review 当前 Agent Core，按真实 OmniMind
-                架构拆分检查；过程别刷过去，我需要知道 workflow 在怎么推进。
+                深度 review 当前 Agent Core，按真实 OmniMind 架构拆分检查；过程别刷过去，我需要知道
+                workflow 在怎么推进。
               </div>
             </article>
             <article class="message">
               <div class="assistant-copy">
-                <p>
-                  保留现有 owner；工作流只投影到对话、Composer、环境与右侧详情。
-                </p>
+                <p>保留现有 owner；工作流只投影到对话、Composer、环境与右侧详情。</p>
               </div>
               <div class="activity-stack">
                 <div class="activity-row">
                   <svg class="icon icon-sm"><use href="#i-check" /></svg>
                   <span class="activity-label">已完成架构与运行边界复核</span>
                   <span class="agent-chip"
-                    ><span class="agent-glyph tiny" data-agent="0"></span
-                    >Kepler</span
+                    ><span class="agent-glyph tiny" data-agent="0"></span>Kepler</span
                   >
                   <span class="agent-chip"
-                    ><span class="agent-glyph tiny" data-agent="1"></span
-                    >Zeno</span
+                    ><span class="agent-glyph tiny" data-agent="1"></span>Zeno</span
                   >
                 </div>
                 <button class="activity-row open-workflow" type="button">
                   <svg class="flow-icon"><use href="#agent-network" /></svg>
-                  <span class="activity-label" id="timeline-label"
-                    >Agent Core 深度复核</span
-                  >
-                  <span class="activity-detail" id="timeline-progress"
-                    >运行中 · 7/20</span
-                  >
-                  <span class="activity-arrow" id="timeline-action"
-                    >查看 ›</span
-                  >
+                  <span class="activity-label" id="timeline-label">Agent Core 深度复核</span>
+                  <span class="activity-detail" id="timeline-progress">运行中 · 7/20</span>
+                  <span class="activity-arrow" id="timeline-action">查看 ›</span>
                 </button>
                 <div class="activity-row">
                   <svg class="icon icon-sm"><use href="#i-code" /></svg>
-                  <span class="activity-label"
-                    >编辑了文档并复核实际组件 owner</span
-                  >
+                  <span class="activity-label">编辑了文档并复核实际组件 owner</span>
                   <span class="agent-chip"
-                    ><span class="agent-glyph tiny" data-agent="2"></span
-                    >Dewey</span
+                    ><span class="agent-glyph tiny" data-agent="2"></span>Dewey</span
                   >
                   <span class="activity-detail">已更新</span>
                 </div>
@@ -1460,21 +1389,18 @@
             <div class="environment-title"><span>环境信息</span></div>
             <div class="env-section">
               <button class="env-row">
-                <svg class="icon icon-sm"><use href="#i-code" /></svg
-                ><span>变更</span
+                <svg class="icon icon-sm"><use href="#i-code" /></svg><span>变更</span
                 ><span class="env-trailing"
-                  ><span class="diff-plus">+5,883</span
-                  ><span class="diff-minus">-1,455</span></span
+                  ><span class="diff-plus">+5,883</span><span class="diff-minus">-1,455</span></span
                 >
               </button>
               <button class="env-row">
-                <svg class="icon icon-sm"><use href="#i-folder" /></svg
-                ><span>本地</span><span class="env-trailing">⌄</span>
+                <svg class="icon icon-sm"><use href="#i-folder" /></svg><span>本地</span
+                ><span class="env-trailing">⌄</span>
               </button>
               <button class="env-row">
                 <svg class="icon icon-sm"><use href="#i-branch" /></svg
-                ><span>codex/agent-core-ui-spec</span
-                ><span class="env-trailing">⌄</span>
+                ><span>codex/agent-core-ui-spec</span><span class="env-trailing">⌄</span>
               </button>
             </div>
             <div class="env-section">
@@ -1506,8 +1432,7 @@
               <div class="stack-row">
                 <span class="status-dot"></span>
                 <div class="stack-label">
-                  <strong>第 3/6 步</strong
-                  ><span>重构四投影合同与 100+ Agent 层级</span>
+                  <strong>第 3/6 步</strong><span>重构四投影合同与 100+ Agent 层级</span>
                 </div>
                 <button class="stack-action">展开</button>
               </div>
@@ -1521,11 +1446,7 @@
                 <button class="stack-action" id="pause" aria-label="暂停工作流">
                   <svg class="icon icon-sm"><use href="#i-pause" /></svg>
                 </button>
-                <button
-                  class="stack-action danger"
-                  id="stop"
-                  aria-label="停止工作流"
-                >
+                <button class="stack-action danger" id="stop" aria-label="停止工作流">
                   <svg class="icon icon-sm"><use href="#i-stop" /></svg>
                 </button>
               </div>
@@ -1547,14 +1468,9 @@
         <aside class="dock" aria-label="动态工作流详情">
           <div class="dock-tabs">
             <div class="dock-tab">
-              <svg class="flow-icon"><use href="#agent-network" /></svg
-              ><span>动态工作流</span>
+              <svg class="flow-icon"><use href="#agent-network" /></svg><span>动态工作流</span>
             </div>
-            <button
-              id="close-dock"
-              class="icon-button"
-              aria-label="关闭右侧详情"
-            >
+            <button id="close-dock" class="icon-button" aria-label="关闭右侧详情">
               <svg class="icon icon-sm"><use href="#i-x" /></svg>
             </button>
           </div>
@@ -1564,10 +1480,8 @@
               <span class="origin" id="dock-origin">OmniMind Agent</span>
             </div>
             <div class="dock-summary">
-              <span class="status-dot"></span
-              ><span id="dock-status">运行中 · 取舍</span
-              ><span id="dock-count">7/20</span
-              ><span id="dock-time">12:48</span>
+              <span class="status-dot"></span><span id="dock-status">运行中 · 取舍</span
+              ><span id="dock-count">7/20</span><span id="dock-time">12:48</span>
             </div>
             <div class="outcome-summary" id="outcome-summary" hidden>
               <strong id="outcome-title">已完成</strong>
@@ -1623,9 +1537,7 @@
                   <span class="region-count" id="region-count">11 Agent</span>
                 </div>
                 <div class="agent-grid" id="agent-grid"></div>
-                <div class="region-empty" id="region-empty">
-                  没有匹配的 Agent
-                </div>
+                <div class="region-empty" id="region-empty">没有匹配的 Agent</div>
                 <div class="region-foot">
                   <span id="region-foot-copy">其余分组保持聚合。</span
                   ><button class="show-more" id="show-more">显示更多</button>
@@ -1635,11 +1547,7 @@
                 <div class="agent-detail-head">
                   <span class="agent-glyph" id="detail-glyph"></span
                   ><strong id="detail-name">Agent</strong
-                  ><button
-                    class="icon-button"
-                    id="close-detail"
-                    aria-label="关闭 Agent 详情"
-                  >
+                  ><button class="icon-button" id="close-detail" aria-label="关闭 Agent 详情">
                     <svg class="icon icon-sm"><use href="#i-x" /></svg>
                   </button>
                 </div>
@@ -1647,12 +1555,8 @@
                 <div class="detail-row">
                   <span>状态</span><span id="detail-status">运行中</span>
                 </div>
-                <div class="detail-row">
-                  <span>模型</span><span>Claude Sonnet 4.5</span>
-                </div>
-                <div class="detail-row">
-                  <span>最近工具</span><span>Read · rg · test</span>
-                </div>
+                <div class="detail-row"><span>模型</span><span>Claude Sonnet 4.5</span></div>
+                <div class="detail-row"><span>最近工具</span><span>Read · rg · test</span></div>
                 <button class="open-thread">打开子任务</button>
               </aside>
             </div>
@@ -1966,9 +1870,7 @@
           };
         }
         function activeTemplate() {
-          return pattern.value === "phase"
-            ? phaseTemplate()
-            : workflowTemplates[pattern.value];
+          return pattern.value === "phase" ? phaseTemplate() : workflowTemplates[pattern.value];
         }
         function maxOrder(template) {
           return template.nodes.reduce(function (max, node) {
@@ -1998,9 +1900,7 @@
           }, 0);
           var assigned = 0;
           weighted.forEach(function (entry) {
-            counts[entry.index] = Math.floor(
-              (size * entry.weight) / totalWeight,
-            );
+            counts[entry.index] = Math.floor((size * entry.weight) / totalWeight);
             assigned += counts[entry.index];
           });
           for (var i = 0; assigned < size; i += 1, assigned += 1) {
@@ -2016,8 +1916,7 @@
             var node = template.nodes[index];
             if (node.muted) return done;
             if (node.order < currentPhase) return done + count;
-            if (node.order === currentPhase)
-              return done + Math.floor(count * 0.42);
+            if (node.order === currentPhase) return done + Math.floor(count * 0.42);
             return done;
           }, 0);
         }
@@ -2027,22 +1926,15 @@
           if (node.muted) return "queued";
           if (state === "completed") {
             var exceptionTarget = Math.max(0, maxOrder(template) - 1);
-            if (
-              Number(scale.value) > 4 &&
-              node.order === exceptionTarget &&
-              localIndex < 2
-            )
+            if (Number(scale.value) > 4 && node.order === exceptionTarget && localIndex < 2)
               return "failed";
             return "completed";
           }
           if (node.order < currentPhase) return "completed";
           if (node.order > currentPhase) return "queued";
-          if (state === "failed")
-            return localIndex % 3 === 0 ? "failed" : "completed";
-          if (state === "stopped")
-            return localIndex % 5 === 0 ? "failed" : "queued";
-          if (state === "paused")
-            return localIndex % 3 === 0 ? "completed" : "paused";
+          if (state === "failed") return localIndex % 3 === 0 ? "failed" : "completed";
+          if (state === "stopped") return localIndex % 5 === 0 ? "failed" : "queued";
+          if (state === "paused") return localIndex % 3 === 0 ? "completed" : "paused";
           if (localIndex % 11 === 0 && localIndex > 0) return "failed";
           if (localIndex % 4 === 0) return "completed";
           return "running";
@@ -2082,11 +1974,7 @@
           if (value === "failed") return "失败";
           if (value === "muted") return "未选择";
           if (value === "waiting") return "等待";
-          return state === "paused"
-            ? "已暂停"
-            : state === "stopped"
-              ? "已停止"
-              : "运行中";
+          return state === "paused" ? "已暂停" : state === "stopped" ? "已停止" : "运行中";
         }
         function edgePath(from, to) {
           var fromX = from.x + nodeWidth(from);
@@ -2148,10 +2036,7 @@
               state === "completed" ||
               (from.order <= currentPhase && to.order <= currentPhase) ||
               (edge[2] === "retry" && currentPhase >= from.order);
-            var path = document.createElementNS(
-              "http://www.w3.org/2000/svg",
-              "path",
-            );
+            var path = document.createElementNS("http://www.w3.org/2000/svg", "path");
             path.setAttribute("d", edgePath(from, to));
             path.setAttribute(
               "class",
@@ -2180,10 +2065,7 @@
             button.type = "button";
             button.style.left = node.x + "px";
             button.style.top = node.y + "px";
-            button.setAttribute(
-              "aria-label",
-              node.label + "，" + nodeStateLabel(node),
-            );
+            button.setAttribute("aria-label", node.label + "，" + nodeStateLabel(node));
             var meta = node.muted
               ? "未选择"
               : state === "completed" && exceptions > 0
@@ -2215,27 +2097,17 @@
           var startY = selected.y + 58;
           var membership = document.getElementById("membership-line");
           membership.style.display =
-            selected.kind === "result" || selectedCount === 0
-              ? "none"
-              : "block";
+            selected.kind === "result" || selectedCount === 0 ? "none" : "block";
           membership.setAttribute(
             "d",
-            "M" +
-              center +
-              " " +
-              startY +
-              " C" +
-              center +
-              " 188 470 188 470 225",
+            "M" + center + " " + startY + " C" + center + " 188 470 188 470 225",
           );
         }
         function makeAgent(index, groupIndex, localIndex) {
           var status = statusFor(groupIndex, localIndex);
           var name =
             agentNames[index % agentNames.length] +
-            (index >= agentNames.length
-              ? " " + (Math.floor(index / agentNames.length) + 1)
-              : "");
+            (index >= agentNames.length ? " " + (Math.floor(index / agentNames.length) + 1) : "");
           return {
             index: index,
             name: name,
@@ -2264,12 +2136,8 @@
           var agents = agentsForPhase(size, selectedPhase);
           var query = agentSearch.value.trim().toLowerCase();
           var matching = agents.filter(function (agent) {
-            var statusMatch =
-              currentFilter === "all" || agent.status === currentFilter;
-            return (
-              statusMatch &&
-              (!query || agent.name.toLowerCase().indexOf(query) >= 0)
-            );
+            var statusMatch = currentFilter === "all" || agent.status === currentFilter;
+            return statusMatch && (!query || agent.name.toLowerCase().indexOf(query) >= 0);
           });
           var limit = expanded ? 24 : size >= 120 ? 12 : 12;
           agentGrid.innerHTML = "";
@@ -2284,11 +2152,7 @@
             var copy = document.createElement("span");
             copy.className = "agent-copy";
             copy.innerHTML =
-              "<strong>" +
-              agent.name +
-              "</strong><span>" +
-              statusLabel(agent.status) +
-              "</span>";
+              "<strong>" + agent.name + "</strong><span>" + statusLabel(agent.status) + "</span>";
             button.appendChild(glyph);
             button.appendChild(copy);
             button.addEventListener("click", function () {
@@ -2312,26 +2176,18 @@
             return agent.status === "completed";
           }).length;
           document.getElementById("region-title").textContent = selected.label;
-          document.getElementById("region-subtitle").textContent =
-            selected.muted
-              ? "未选择"
-              : selected.order === currentPhase && state !== "completed"
-                ? nodeStateLabel(selected) +
-                  " · " +
-                  selectedDone +
-                  "/" +
-                  agents.length
-                : nodeStateLabel(selected);
-          document.getElementById("region-foot-copy").textContent =
-            "其余分组保持聚合。";
+          document.getElementById("region-subtitle").textContent = selected.muted
+            ? "未选择"
+            : selected.order === currentPhase && state !== "completed"
+              ? nodeStateLabel(selected) + " · " + selectedDone + "/" + agents.length
+              : nodeStateLabel(selected);
+          document.getElementById("region-foot-copy").textContent = "其余分组保持聚合。";
         }
         function openAgent(agent) {
           var detail = document.getElementById("agent-detail");
           detail.classList.remove("hidden");
           document.getElementById("detail-name").textContent = agent.name;
-          document.getElementById("detail-status").textContent = statusLabel(
-            agent.status,
-          );
+          document.getElementById("detail-status").textContent = statusLabel(agent.status);
           decorateGlyph(document.getElementById("detail-glyph"), agent.index);
         }
         function renderClusters() {
@@ -2386,8 +2242,7 @@
               : "查看 ›";
           document.getElementById("composer-progress").textContent =
             currentNode.label + " · " + done + "/" + size;
-          document.getElementById("env-count").textContent =
-            stateText + " · " + done + "/" + size;
+          document.getElementById("env-count").textContent = stateText + " · " + done + "/" + size;
           document.getElementById("dock-count").textContent = done + "/" + size;
           document.getElementById("dock-status").textContent =
             stateText + " · " + currentNode.label;
@@ -2397,8 +2252,7 @@
           document.getElementById("workflow-control").style.display =
             state === "completed" ? "none" : "flex";
           var outcome = document.getElementById("outcome-summary");
-          var showOutcome =
-            state === "completed" || state === "failed" || state === "stopped";
+          var showOutcome = state === "completed" || state === "failed" || state === "stopped";
           outcome.hidden = !showOutcome;
           if (showOutcome) {
             document.getElementById("outcome-title").textContent = stateText;
@@ -2427,17 +2281,13 @@
           document.getElementById("stop").style.display =
             state === "stopped" || state === "failed" ? "none" : "inline-flex";
           app.className =
-            "app state-" +
-            state +
-            (app.classList.contains("dock-closed") ? " dock-closed" : "");
+            "app state-" + state + (app.classList.contains("dock-closed") ? " dock-closed" : "");
         }
         function renderAll() {
           var size = Number(scale.value);
           var template = activeTemplate();
-          if (selectedPhase >= template.nodes.length)
-            selectedPhase = template.nodes.length - 1;
-          if (currentPhase > maxOrder(template))
-            currentPhase = maxOrder(template);
+          if (selectedPhase >= template.nodes.length) selectedPhase = template.nodes.length - 1;
+          if (currentPhase > maxOrder(template)) currentPhase = maxOrder(template);
           renderPhases();
           renderAgents();
           renderClusters();
@@ -2450,32 +2300,22 @@
             app.classList.remove("dock-closed");
           });
         });
-        document
-          .getElementById("close-dock")
-          .addEventListener("click", function () {
-            app.classList.add("dock-closed");
-          });
-        document
-          .getElementById("environment-toggle")
-          .addEventListener("click", function () {
-            document.getElementById("environment").classList.toggle("hidden");
-          });
-        document
-          .getElementById("close-detail")
-          .addEventListener("click", function () {
-            document.getElementById("agent-detail").classList.add("hidden");
-          });
-        document
-          .getElementById("show-more")
-          .addEventListener("click", function () {
-            expanded = !expanded;
-            renderAgents();
-          });
+        document.getElementById("close-dock").addEventListener("click", function () {
+          app.classList.add("dock-closed");
+        });
+        document.getElementById("environment-toggle").addEventListener("click", function () {
+          document.getElementById("environment").classList.toggle("hidden");
+        });
+        document.getElementById("close-detail").addEventListener("click", function () {
+          document.getElementById("agent-detail").classList.add("hidden");
+        });
+        document.getElementById("show-more").addEventListener("click", function () {
+          expanded = !expanded;
+          renderAgents();
+        });
         document.getElementById("pause").addEventListener("click", function () {
           state =
-            state === "paused" || state === "stopped" || state === "failed"
-              ? "running"
-              : "paused";
+            state === "paused" || state === "stopped" || state === "failed" ? "running" : "paused";
           stateSelect.value = state;
           renderAll();
         });
@@ -2484,29 +2324,23 @@
           stateSelect.value = state;
           renderAll();
         });
-        document
-          .getElementById("advance")
-          .addEventListener("click", function () {
-            var last = maxOrder(activeTemplate());
-            if (
-              state === "completed" ||
-              state === "stopped" ||
-              state === "failed"
-            ) {
-              state = "running";
-              currentPhase = 0;
-            } else if (currentPhase < last) currentPhase += 1;
-            else state = "completed";
-            var template = activeTemplate();
-            selectedPhase = Math.max(
-              0,
-              template.nodes.findIndex(function (node) {
-                return node.order === currentPhase && !node.muted;
-              }),
-            );
-            stateSelect.value = state;
-            renderAll();
-          });
+        document.getElementById("advance").addEventListener("click", function () {
+          var last = maxOrder(activeTemplate());
+          if (state === "completed" || state === "stopped" || state === "failed") {
+            state = "running";
+            currentPhase = 0;
+          } else if (currentPhase < last) currentPhase += 1;
+          else state = "completed";
+          var template = activeTemplate();
+          selectedPhase = Math.max(
+            0,
+            template.nodes.findIndex(function (node) {
+              return node.order === currentPhase && !node.muted;
+            }),
+          );
+          stateSelect.value = state;
+          renderAll();
+        });
         document.getElementById("theme").addEventListener("click", function () {
           var root = document.documentElement;
           var dark = root.getAttribute("data-theme") === "dark";
@@ -2538,8 +2372,7 @@
               return node.kind === "result";
             });
             currentPhase = maxOrder(template);
-            selectedPhase =
-              resultIndex >= 0 ? resultIndex : template.nodes.length - 1;
+            selectedPhase = resultIndex >= 0 ? resultIndex : template.nodes.length - 1;
           }
           renderAll();
         });

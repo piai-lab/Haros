@@ -332,7 +332,7 @@ Codex、Claude Code、OpenCode 等能力必须通过各自官方 seam 评估：
 
 对 subagent/workflow 类候选还要额外证明：集合图标与实例 identity 分离；同一 child 在 Timeline、Environment、详情和 child Thread 保持稳定 identity；100+ Agent 时使用分组、聚合、按需展开和搜索，不把所有节点同时渲染/动画。只有 source contract 真正提供 dependency edge 才画 Agent 因果边，不能从时间顺序、文案或 tool activity 猜 DAG。成熟 renderer 可以进入 focused bake-off，但它只拥有纯 projection，不得借机引入 editor、canvas document、第二 Workflow runtime 或 layout database。
 
-名称与图标属于产品词汇 owner，而不是 package/Engine 私有皮肤：Skill、Plugin 以及同一 canonical asset 跨入口保持同名、同义、同一图标；`native / projected / unavailable / conflict` 可以准确显示来源差异，但不得把一个概念复制成多个用户对象。任何新用户可见文案同时闭合简体中文和英文。
+名称与图标属于产品词汇 owner，而不是 package/Engine 私有皮肤：Skill、Plugin 以及同一 canonical asset 跨入口保持同名、同义、同一图标；`native / projected / unavailable / conflict` 可以准确显示来源差异，但不得把一个概念复制成多个用户对象。图标先审计并复用现有产品/Central 资产；只有没有语义可用、尺寸可读且不冲突的既有资产时，才允许提出 custom glyph，并且必须先证明新增资产比经典行业语义更清楚。任何新用户可见文案同时闭合简体中文和英文。
 
 ## 9. Gate B：实施与晋级
 
