@@ -128,20 +128,23 @@ authority，也不得带入 donor branding、竞争编排、第二 Session 状�
       "id": "bundled-omnimind-agent-runtime",
       "url": "https://github.com/earendil-works/pi.git",
       "revision": "53fa77ccd8a279eb87e92294ef3687b03ff80112",
-      "paths": ["vendor/omnimind-pi-coding-agent-0.84.1.tgz"],
+      "paths": ["vendor/omnimind-pi-coding-agent-0.84.1.tgz", "patches/pi-coding-agent/0.84.1-model-config-reader.patch", "scripts/vendor-omnimind-pi-runtime.mjs"],
       "sourcePaths": ["packages/coding-agent"],
-      "archiveSha256": "16b3ae817e700684e58be750b2edb5a14bc4aac4ac318fcd949e1c9e9ba934a9",
+      "archiveSha256": "2bcf24828006114cd5960aa936cc64f745e1235549f3d624012387788a33f878",
       "upstreamPackage": "@earendil-works/pi-coding-agent@0.84.1",
       "upstreamPackageIntegrity": "sha512-ncAqFrG+iybuPGOhMiZoEHkEzTpJgz3guYD32pD+M7ucc0WeHmauP6wa7qwP8V/KWvsZDVNa5XGsdZ7fkC7w7A==",
       "generation": {
-        "sharedRuntimeBytes": "unchanged",
-        "behavioralDifferences": ["package identity", "piConfig.configDir"],
-        "archiveDisposition": "The product archive keeps the shared built runtime files byte-identical to the exact 0.84.1 npm artifact, adds the upstream LICENSE, removes standalone CLI entrypoint exposure, omits development/public documentation and example payloads, and exact-pins the Pi-family dependency closure. Those archive-only manifest changes do not add a second runtime implementation."
+        "sharedRuntimeBytes": "patched",
+        "patchPath": "patches/pi-coding-agent/0.84.1-model-config-reader.patch",
+        "patchSha256": "5ad58ec64da15d5ba893aa873c96826f7e285c92771238b209cdaec6dc3e226b",
+        "generatorPath": "scripts/vendor-omnimind-pi-runtime.mjs",
+        "behavioralDifferences": ["package identity", "piConfig.configDir", "injectable models.json content reader", "accepted model-config provider provenance"],
+        "archiveDisposition": "The product archive is rebuilt from exact Pi 0.84.1 source with the single committed ModelConfig reader/provenance patch, retains the upstream LICENSE, removes standalone CLI entrypoint exposure, omits development/public documentation and example payloads, and exact-pins the Pi-family dependency closure. Pi remains the sole parser, schema and provider-composition authority; the product patch adds no registry or persisted configuration."
       },
       "rights": "The fixed Pi coding-agent source and generated runtime are MIT-licensed. The shipped archive retains its upstream LICENSE, and the exact root redistribution text is LICENSES/pi-coding-agent-MIT.txt.",
       "mode": "adapt",
-      "changes": "The product-owned physical module is generated from packages/coding-agent at the fixed revision. Shared executable runtime bytes are unchanged from the exact npm artifact whose gitHead is the same revision; runtime behavior differs only through the @omnimind package identity and piConfig configDir/name that route private state to .omnimind. Packaging metadata removes the standalone pi bin and development-only scripts/dependencies, omits unshipped docs/examples, and pins the Pi-family dependency closure without adding runtime code.",
-      "updatePolicy": "Pinned revision, upstream npm integrity and product archive SHA-256. Reproduction uses the immutable Git tree in a task-only temporary directory, rebuilds packages/coding-agent, verifies shared runtime byte identity and retained LICENSE, applies only the recorded package identity/configDir and archive-closure metadata changes, and proves temporary input cleanup. Pi post-tag code is excluded. Any source, version, generation rule, dependency closure, archive digest, rights or license change requires explicit source intake and affected runtime/ecosystem revalidation before replacement.",
+      "changes": "The product-owned physical module is generated from packages/coding-agent at the fixed revision. One source patch lets a caller inject raw models.json UTF-8 content into Pi's existing ModelConfig parser and read back only accepted provider IDs; create and refresh share that reader, while non-null modelsPath remains mutually exclusive. Package identity and piConfig configDir/name route private state to .omnimind. Packaging metadata removes the standalone pi bin and development-only scripts/dependencies, omits unshipped docs/examples, and pins the Pi-family dependency closure.",
+      "updatePolicy": "Pinned revision, upstream npm integrity, single patch digest and product archive SHA-256. Reproduction runs `node scripts/vendor-omnimind-pi-runtime.mjs --source <clean-exact-pi-checkout>`: the generator rejects the wrong or dirty revision, applies the sole patch with a conflict check, restores pinned generated model data, builds and runs focused Pi tests, applies the recorded identity/configDir/archive closure, verifies deterministic packing and cleans its temporary tree. On every Pi intake, first remove the patch if upstream exposes equivalent safe reader/provenance APIs; otherwise replay this one patch, and stop loudly on any conflict. Pi post-tag code is excluded until separately adopted. Any source, version, generation rule, dependency closure, archive digest, rights or license change requires explicit source intake and affected runtime/ecosystem revalidation before replacement.",
       "licenseFiles": ["LICENSES/pi-coding-agent-MIT.txt"]
     },
     {

@@ -256,15 +256,27 @@ function validateBundledPiRuntimeAdoption(findings, documents) {
   const expected = {
     url: "https://github.com/earendil-works/pi.git",
     revision: "53fa77ccd8a279eb87e92294ef3687b03ff80112",
-    paths: ["vendor/omnimind-pi-coding-agent-0.84.1.tgz"],
+    paths: [
+      "vendor/omnimind-pi-coding-agent-0.84.1.tgz",
+      "patches/pi-coding-agent/0.84.1-model-config-reader.patch",
+      "scripts/vendor-omnimind-pi-runtime.mjs",
+    ],
     sourcePaths: ["packages/coding-agent"],
-    archiveSha256: "16b3ae817e700684e58be750b2edb5a14bc4aac4ac318fcd949e1c9e9ba934a9",
+    archiveSha256: "2bcf24828006114cd5960aa936cc64f745e1235549f3d624012387788a33f878",
     upstreamPackage: "@earendil-works/pi-coding-agent@0.84.1",
     upstreamPackageIntegrity:
       "sha512-ncAqFrG+iybuPGOhMiZoEHkEzTpJgz3guYD32pD+M7ucc0WeHmauP6wa7qwP8V/KWvsZDVNa5XGsdZ7fkC7w7A==",
     licenseFiles: ["LICENSES/pi-coding-agent-MIT.txt"],
-    sharedRuntimeBytes: "unchanged",
-    behavioralDifferences: ["package identity", "piConfig.configDir"],
+    sharedRuntimeBytes: "patched",
+    patchPath: "patches/pi-coding-agent/0.84.1-model-config-reader.patch",
+    patchSha256: "5ad58ec64da15d5ba893aa873c96826f7e285c92771238b209cdaec6dc3e226b",
+    generatorPath: "scripts/vendor-omnimind-pi-runtime.mjs",
+    behavioralDifferences: [
+      "package identity",
+      "piConfig.configDir",
+      "injectable models.json content reader",
+      "accepted model-config provider provenance",
+    ],
   };
   const actual = record
     ? {
@@ -277,6 +289,9 @@ function validateBundledPiRuntimeAdoption(findings, documents) {
         upstreamPackageIntegrity: record.upstreamPackageIntegrity,
         licenseFiles: record.licenseFiles,
         sharedRuntimeBytes: record.generation?.sharedRuntimeBytes,
+        patchPath: record.generation?.patchPath,
+        patchSha256: record.generation?.patchSha256,
+        generatorPath: record.generation?.generatorPath,
         behavioralDifferences: record.generation?.behavioralDifferences,
       }
     : null;

@@ -1,0 +1,315 @@
+diff --git a/packages/coding-agent/src/core/model-config.ts b/packages/coding-agent/src/core/model-config.ts
+index 7f679a494..a7db4dafe 100644
+--- a/packages/coding-agent/src/core/model-config.ts
++++ b/packages/coding-agent/src/core/model-config.ts
+@@ -213,6 +213,12 @@ export type ModelsJsonModelOverride = Static<typeof ModelOverrideSchema>;
+ export type ModelsJsonProvider = Static<typeof ProviderConfigSchema>;
+ type ModelsJson = Static<typeof ModelsConfigSchema>;
+ 
++export interface ModelConfigReadOptions {
++	readonly signal?: AbortSignal;
++}
++
++export type ModelConfigReader = (options: ModelConfigReadOptions) => Promise<string | undefined>;
++
+ function formatValidationPath(error: TLocalizedValidationError): string {
+ 	if (error.keyword === "required") {
+ 		const requiredProperties = (error.params as { requiredProperties?: string[] }).requiredProperties;
+@@ -242,19 +248,36 @@ export class ModelConfig {
+ 		this.error = error;
+ 	}
+ 
+-	static async load(modelsJsonPath: string | undefined): Promise<ModelConfig> {
+-		if (!modelsJsonPath) return new ModelConfig(new Map());
+-		const path = normalizePath(modelsJsonPath);
+-		let content: string;
+-		try {
+-			content = await readFile(path, "utf-8");
+-		} catch (error) {
+-			if ((error as NodeJS.ErrnoException).code === "ENOENT") return new ModelConfig(new Map());
+-			return new ModelConfig(
+-				new Map(),
+-				`Failed to load models.json: ${error instanceof Error ? error.message : error}\n\nFile: ${path}`,
+-			);
++	static async load(
++		modelsJsonPath: string | undefined,
++		options: { reader?: ModelConfigReader; signal?: AbortSignal } = {},
++	): Promise<ModelConfig> {
++		options.signal?.throwIfAborted();
++		let content: string | undefined;
++		let normalizedPath: string | undefined;
++		if (options.reader) {
++			try {
++				content = await options.reader({ signal: options.signal });
++				options.signal?.throwIfAborted();
++			} catch {
++				options.signal?.throwIfAborted();
++				return new ModelConfig(new Map(), "Failed to load models.json from configured reader");
++			}
++		} else {
++			if (!modelsJsonPath) return new ModelConfig(new Map());
++			normalizedPath = normalizePath(modelsJsonPath);
++			try {
++				content = await readFile(normalizedPath, "utf-8");
++			} catch (error) {
++				if ((error as NodeJS.ErrnoException).code === "ENOENT") return new ModelConfig(new Map());
++				return new ModelConfig(
++					new Map(),
++					`Failed to load models.json: ${error instanceof Error ? error.message : error}\n\nFile: ${normalizedPath}`,
++				);
++			}
+ 		}
++		if (content === undefined) return new ModelConfig(new Map());
++		options.signal?.throwIfAborted();
+ 
+ 		let parsed: unknown;
+ 		try {
+@@ -262,9 +285,10 @@ export class ModelConfig {
+ 		} catch (error) {
+ 			return new ModelConfig(
+ 				new Map(),
+-				`Failed to parse models.json: ${error instanceof Error ? error.message : error}\n\nFile: ${path}`,
++				`Failed to parse models.json: ${error instanceof Error ? error.message : error}${normalizedPath ? `\n\nFile: ${normalizedPath}` : ""}`,
+ 			);
+ 		}
++		options.signal?.throwIfAborted();
+ 
+ 		if (!validateModelsConfig.Check(parsed)) {
+ 			const errors =
+@@ -272,7 +296,10 @@ export class ModelConfig {
+ 					.Errors(parsed)
+ 					.map((error) => `  - ${formatValidationPath(error)}: ${error.message}`)
+ 					.join("\n") || "Unknown schema error";
+-			return new ModelConfig(new Map(), `Invalid models.json schema:\n${errors}\n\nFile: ${path}`);
++			return new ModelConfig(
++				new Map(),
++				`Invalid models.json schema:\n${errors}${normalizedPath ? `\n\nFile: ${normalizedPath}` : ""}`,
++			);
+ 		}
+ 
+ 		const config = parsed as ModelsJson;
+@@ -280,6 +307,7 @@ export class ModelConfig {
+ 		for (const [providerId, provider] of Object.entries(config.providers)) {
+ 			providers.set(providerId, deepFreeze(structuredClone(provider)));
+ 		}
++		options.signal?.throwIfAborted();
+ 		return new ModelConfig(providers);
+ 	}
+ 
+diff --git a/packages/coding-agent/src/core/model-runtime.ts b/packages/coding-agent/src/core/model-runtime.ts
+index 6f4071b60..e3ea24238 100644
+--- a/packages/coding-agent/src/core/model-runtime.ts
++++ b/packages/coding-agent/src/core/model-runtime.ts
+@@ -40,7 +40,7 @@ import * as builtinProviderCatalog from "@earendil-works/pi-ai/providers/all";
+ import { getAgentDir } from "../config.ts";
+ import { operationSignal, raceWithAbortSignal } from "../utils/abort.ts";
+ import { AuthStorage as DefaultAuthStorage } from "./auth-storage.ts";
+-import { ModelConfig } from "./model-config.ts";
++import { ModelConfig, type ModelConfigReader } from "./model-config.ts";
+ import { FileModelsStore, InMemoryCodingAgentModelsStore } from "./models-store.ts";
+ import {
+ 	type AuthStatus,
+@@ -55,6 +55,8 @@ import {
+ import { withRemoteCatalog } from "./remote-catalog-provider.ts";
+ import { RuntimeCredentials } from "./runtime-credentials.ts";
+ 
++export type { ModelConfigReader, ModelConfigReadOptions } from "./model-config.ts";
++
+ interface ModelRuntimeSnapshot {
+ 	all: readonly Model<Api>[];
+ 	available: readonly Model<Api>[];
+@@ -68,6 +70,8 @@ export interface CreateModelRuntimeOptions {
+ 	credentials?: CredentialStore;
+ 	authPath?: string;
+ 	modelsPath?: string | null;
++	/** Read models.json content through a caller-owned safety boundary. Requires modelsPath: null. */
++	modelsConfigReader?: ModelConfigReader;
+ 	modelsStore?: ModelsStore;
+ 	modelsStorePath?: string;
+ 	/** Allow create() to refresh model catalogs over the network. Defaults to false. */
+@@ -136,6 +140,7 @@ export class ModelRuntime implements Models {
+ 	private readonly extensionProviders = new Map<string, ProviderConfigInput>();
+ 	private readonly compositionErrors = new Map<string, string>();
+ 	private readonly modelsPath: string | undefined;
++	private readonly modelsConfigReader: ModelConfigReader | undefined;
+ 	private readonly modelNetworkEnabled: boolean;
+ 	private config: ModelConfig;
+ 	private snapshot: ModelRuntimeSnapshot = {
+@@ -155,6 +160,7 @@ export class ModelRuntime implements Models {
+ 		credentials: RuntimeCredentials,
+ 		config: ModelConfig,
+ 		modelsPath: string | undefined,
++		modelsConfigReader: ModelConfigReader | undefined,
+ 		modelsStore: ModelsStore,
+ 		providers: readonly Provider[],
+ 		modelNetworkEnabled: boolean,
+@@ -162,6 +168,7 @@ export class ModelRuntime implements Models {
+ 		this.credentials = credentials;
+ 		this.config = config;
+ 		this.modelsPath = modelsPath;
++		this.modelsConfigReader = modelsConfigReader;
+ 		this.modelNetworkEnabled = modelNetworkEnabled;
+ 		this.defaultBuiltins = new Map(providers.map((provider) => [provider.id, provider]));
+ 		for (const [providerId, provider] of this.defaultBuiltins) this.builtins.set(providerId, provider);
+@@ -170,10 +177,16 @@ export class ModelRuntime implements Models {
+ 	}
+ 
+ 	static async create(options: CreateModelRuntimeOptions = {}): Promise<ModelRuntime> {
++		if (options.modelsConfigReader && options.modelsPath !== null) {
++			throw new Error("modelsConfigReader requires modelsPath: null");
++		}
+ 		const credentials = new RuntimeCredentials(options.credentials ?? DefaultAuthStorage.create(options.authPath));
+ 		const modelsPath =
+ 			options.modelsPath === null ? undefined : (options.modelsPath ?? join(getAgentDir(), "models.json"));
+-		const config = await ModelConfig.load(modelsPath);
++		const config = await ModelConfig.load(modelsPath, {
++			reader: options.modelsConfigReader,
++			signal: options.signal,
++		});
+ 		const modelsStore =
+ 			options.modelsStore ??
+ 			(modelsPath
+@@ -191,6 +204,7 @@ export class ModelRuntime implements Models {
+ 			credentials,
+ 			config,
+ 			modelsPath,
++			options.modelsConfigReader,
+ 			modelsStore,
+ 			providers,
+ 			process.env.PI_OFFLINE === undefined,
+@@ -570,6 +584,11 @@ export class ModelRuntime implements Models {
+ 		return check ? { configured: true, source: "environment", label: check.source } : { configured: false };
+ 	}
+ 
++	/** Provider IDs accepted from the current official models.json configuration snapshot. */
++	getModelConfigProviderIds(): readonly string[] {
++		return this.config.getProviderIds();
++	}
++
+ 	private async prepareRequest<TOptions extends ProviderRequestOptions & ModelsRequestTransforms>(
+ 		model: Model<Api>,
+ 		options: TOptions | undefined,
+@@ -688,7 +707,10 @@ export class ModelRuntime implements Models {
+ 	}
+ 
+ 	async refresh(options: ModelsRefreshOptions = {}): Promise<ModelsRefreshResult> {
+-		this.config = await ModelConfig.load(this.modelsPath);
++		this.config = await ModelConfig.load(this.modelsPath, {
++			reader: this.modelsConfigReader,
++			signal: options.signal,
++		});
+ 		this.configureRadiusProviders();
+ 		if (options.providers) {
+ 			for (const providerId of new Set(options.providers)) this.recomposeProvider(providerId);
+diff --git a/packages/coding-agent/src/index.ts b/packages/coding-agent/src/index.ts
+index 3d05c2af4..84fc9d01a 100644
+--- a/packages/coding-agent/src/index.ts
++++ b/packages/coding-agent/src/index.ts
+@@ -178,6 +178,8 @@ export {
+ 	type ScopedModel,
+ } from "./core/model-resolver.ts";
+ export {
++	type ModelConfigReader,
++	type ModelConfigReadOptions,
+ 	type CreateModelRuntimeOptions,
+ 	CredentialSynchronizationError,
+ 	type CredentialSynchronizationOperation,
+diff --git a/packages/coding-agent/test/model-runtime-config-reader.test.ts b/packages/coding-agent/test/model-runtime-config-reader.test.ts
+new file mode 100644
+index 000000000..47ecd046b
+--- /dev/null
++++ b/packages/coding-agent/test/model-runtime-config-reader.test.ts
+@@ -0,0 +1,92 @@
++import { describe, expect, it, vi } from "vitest";
++import { AuthStorage } from "../src/core/auth-storage.ts";
++import { ModelRuntime } from "../src/core/model-runtime.ts";
++import { InMemoryCodingAgentModelsStore } from "../src/core/models-store.ts";
++
++function modelsJson(provider: string, model: string): string {
++	return `{
++		// The product reader supplies bytes; Pi remains the parser and schema authority.
++		"providers": {
++			"${provider}": {
++				"baseUrl": "https://example.test/v1",
++				"api": "openai-completions",
++				"apiKey": "test-key",
++				"models": [{ "id": "${model}" }]
++			}
++		}
++	}`;
++}
++
++function createRuntime(modelsConfigReader: NonNullable<Parameters<typeof ModelRuntime.create>[0]["modelsConfigReader"]>) {
++	return ModelRuntime.create({
++		credentials: AuthStorage.inMemory(),
++		modelsPath: null,
++		modelsConfigReader,
++		modelsStore: new InMemoryCodingAgentModelsStore(),
++		allowModelNetwork: false,
++		refreshOnCreate: false,
++	});
++}
++
++describe("ModelRuntime modelsConfigReader", () => {
++	it("uses one official parser snapshot for create and refresh provenance", async () => {
++		let content = modelsJson("custom-one", "model-one");
++		const reader = vi.fn(async () => content);
++		const runtime = await createRuntime(reader);
++
++		expect(reader).toHaveBeenCalledTimes(1);
++		expect(runtime.getModelConfigProviderIds()).toEqual(["custom-one"]);
++		expect(runtime.getModel("custom-one", "model-one")).toBeDefined();
++
++		content = modelsJson("custom-two", "model-two");
++		await runtime.refresh({ allowNetwork: false });
++
++		expect(reader).toHaveBeenCalledTimes(2);
++		expect(runtime.getModelConfigProviderIds()).toEqual(["custom-two"]);
++		expect(runtime.getModel("custom-one", "model-one")).toBeUndefined();
++		expect(runtime.getModel("custom-two", "model-two")).toBeDefined();
++	});
++
++	it("rejects path and reader dual authority", async () => {
++		const reader = async () => undefined;
++		await expect(ModelRuntime.create({ modelsConfigReader: reader })).rejects.toThrow(
++			"modelsConfigReader requires modelsPath: null",
++		);
++		await expect(ModelRuntime.create({ modelsPath: "/tmp/models.json", modelsConfigReader: reader })).rejects.toThrow(
++			"modelsConfigReader requires modelsPath: null",
++		);
++	});
++
++	it("propagates cancellation before and after the reader", async () => {
++		const before = new AbortController();
++		before.abort();
++		const unread = vi.fn(async () => modelsJson("unread", "unread"));
++		await expect(
++			ModelRuntime.create({ modelsPath: null, modelsConfigReader: unread, signal: before.signal }),
++		).rejects.toMatchObject({ name: "AbortError" });
++		expect(unread).not.toHaveBeenCalled();
++
++		const during = new AbortController();
++		await expect(
++			ModelRuntime.create({
++				modelsPath: null,
++				modelsConfigReader: async () => {
++					during.abort();
++					return modelsJson("cancelled", "cancelled");
++				},
++				signal: during.signal,
++			}),
++		).rejects.toMatchObject({ name: "AbortError" });
++	});
++
++	it("keeps reader failures private and invalid content under the official schema", async () => {
++		const failed = await createRuntime(async () => {
++			throw new Error("secret path and credential");
++		});
++		expect(failed.getError()).toBe("Failed to load models.json from configured reader");
++
++		const invalid = await createRuntime(async () => '{ "providers": { "broken": { "models": "wrong" } } }');
++		expect(invalid.getError()).toContain("Invalid models.json schema");
++		expect(invalid.getModelConfigProviderIds()).toEqual([]);
++	});
++});
+
