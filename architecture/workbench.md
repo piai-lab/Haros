@@ -215,14 +215,14 @@ iOS Simulator 作为现有 right dock 的 `device` pane 呈现，不新增顶层
 
 以下六项是维护者已锁定的能力/集合语义映射：
 
-| 语义       | 锁定资产           | 来源与使用限制                                                                              |
-| ---------- | ------------------ | ------------------------------------------------------------------------------------------- |
-| 目标       | `target-arrow`     | 现有 Central reversed asset；仅在目标状态确实可行动时出现                                   |
-| Agent 团队 | `agent-duo`        | 已确认的 Central-compatible 低密度 custom SVG；只用于 team/subagent 集合语义                |
-| 动态工作流 | `flow-adaptive`    | 已确认的 Central-compatible custom SVG；不替代 Git branch/Automations                       |
-| 知识库     | `knowledge-linked` | 已确认的 Central-compatible custom SVG；表达关联页面，不使用 database glyph                 |
-| 记忆       | `memory-bookmark`  | 已确认的 Central-compatible custom SVG；表达精选、可复用记忆，不使用 brain/database         |
-| 会话恢复   | `resume-chat`      | 已确认的 Central-compatible custom SVG；只用于已证明的 resume/recovery，不用于 send/handoff |
+| 语义       | 锁定资产           | 来源与使用限制                                                                                          |
+| ---------- | ------------------ | ------------------------------------------------------------------------------------------------------- |
+| 目标       | `target-arrow`     | 现有 Central reversed asset；仅在目标状态确实可行动时出现                                               |
+| Agent 团队 | `agent-duo`        | 已确认的 Central-compatible 低密度 custom SVG；只用于 team/subagent 集合语义                            |
+| 动态工作流 | `agent-network`    | 现有 Central reversed asset；只用于工作流集合/入口，不替代 Agent 团队、child 身份、Git 图或 Automations |
+| 知识库     | `knowledge-linked` | 已确认的 Central-compatible custom SVG；表达关联页面，不使用 database glyph                             |
+| 记忆       | `memory-bookmark`  | 已确认的 Central-compatible custom SVG；表达精选、可复用记忆，不使用 brain/database                     |
+| 会话恢复   | `resume-chat`      | 已确认的 Central-compatible custom SVG；只用于已证明的 resume/recovery，不用于 send/handoff             |
 
 子智能体身份纹样采用小尺寸、低填充密度的确定性候选池，而不是为每个 Agent 维护一份手工 SVG。首个 production 候选池应从现有 Central 资产中策展 **24 个在 16px 仍可辨的低密度几何纹样 × 8 个 restrained accent**，提供 192 个组合后再按同一 parent/workflow 内 collision rule 顺延；名称始终同时出现，因此纹样是视觉 join key，不是唯一身份凭证。以 canonical child/thread id 取 seed，同一 resumed child 保持连续。纹样不编码角色、模型、Engine 或状态；这些信息由旁边文字和 provenance 承担。若 24 个候选在 16/20/24px 的邻接复核中不可区分，应删除相似项并补充更清晰的 Central 资产，而不是靠加粗、填满或提高饱和度制造差别。
 
@@ -248,7 +248,7 @@ right dock 是既有宿主；实现时只在现有 `RightDockPaneKind` owner 中
 
 focused proof 至少覆盖 4/20/120 Agent、3–8 groups、四种结构原语的单独与混合组合，以及 running/paused/completed/failed/stopped。100+ Agent 默认只渲染 group overview、current/selected group 的 bounded children 和搜索命中；其余 group 聚合为 `done/running/failed/total`，不把 120 个节点同时动画或塞进 Timeline/Environment。completed fixture 必须验证 Environment latest receipt 仍可重开、RightDock frozen result 可读、Composer 已退场；branch/loop/handoff 只有 explicit fact fixture 才画。不能用官网 demo 选美替代真实 fixture，也不能让研究原型成为 production component donor。
 
-当前代码扫描中 `target-arrow` 尚无产品调用点，其余五个名称尚未进入 `apps/web`；因此名称层面没有现有占用。正式 materialize 到 `apps/web/public/central-icons-reversed` 前仍要在当次 HEAD 重跑 usage/visual collision scan，并在 16/20/24px、light/dark、currentColor、1x/2x 下校验。图形保持单色、轻描边、低节点密度；不得再用 emoji、CSS 假图标、临时通用 glyph 或未经维护者确认的重画版本代替。
+当前代码扫描中 `target-arrow.svg` 与 `agent-network.svg` 已存在于 Central reversed asset owner，但尚无产品调用点；其余四个 custom 名称尚未进入 `apps/web`。因此当前名称层面没有现有调用冲突，且动态工作流无需新增 SVG。四个 custom glyph 正式 materialize 到 `apps/web/public/central-icons-reversed` 前仍要在当次 HEAD 重跑 usage/visual collision scan，并在 16/20/24px、light/dark、currentColor、1x/2x 下校验。图形保持单色、轻描边、低节点密度；不得再用 emoji、CSS 假图标、临时通用 glyph 或未经维护者确认的重画版本代替。`agent-network` 的语义租约只覆盖工作流集合/入口；它不得成为 Agent 团队、单个 child 身份、通用网络/集成或 Git branch/merge 的别名。
 
 性能以真实 journey/profile 验证：startup、Thread switch、continuous stream、long thread、large list/output、Viewer/Diff、Terminal、watcher storm、background work、memory growth 与 IME。不设任意 100k 字符门槛。
 

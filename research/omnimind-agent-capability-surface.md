@@ -571,18 +571,18 @@ Knowledge 是 Bundled Capability Pack，不是 Agent Runtime Core，也不是 Me
 
 维护者已经从同一轮候选中选择以下映射；原型和未来 UI 有真实语义槽位时必须使用它们，不得再用 emoji、圆点、数据库、大脑、通用 users/history 或 CSS 临时图形代替：
 
-| 语义       | Asset              | 选择   | 冲突边界                                            |
-| ---------- | ------------------ | ------ | --------------------------------------------------- |
-| 目标       | `target-arrow`     | 第一项 | 现有 Central reversed；只用于 objective state       |
-| Agent 团队 | `agent-duo`        | 第一项 | custom Central-compatible；不用于人类 collaborators |
-| 动态工作流 | `flow-adaptive`    | 第二项 | custom；不替代 Git branch/merge 或 Automations      |
-| 知识库     | `knowledge-linked` | 第三项 | custom；不替代普通 files/link                       |
-| 记忆       | `memory-bookmark`  | 第二项 | custom；不替代普通 bookmark/pin                     |
-| 会话恢复   | `resume-chat`      | 第一项 | custom；不用于 send/forward/handoff                 |
+| 语义       | Asset              | 选择   | 冲突边界                                                                   |
+| ---------- | ------------------ | ------ | -------------------------------------------------------------------------- |
+| 目标       | `target-arrow`     | 第一项 | 现有 Central reversed；只用于 objective state                              |
+| Agent 团队 | `agent-duo`        | 第一项 | custom Central-compatible；不用于人类 collaborators                        |
+| 动态工作流 | `agent-network`    | 第一项 | 现有 Central reversed；不替代 Agent 团队、child 身份、Git 图或 Automations |
+| 知识库     | `knowledge-linked` | 第三项 | custom；不替代普通 files/link                                              |
+| 记忆       | `memory-bookmark`  | 第二项 | custom；不替代普通 bookmark/pin                                            |
+| 会话恢复   | `resume-chat`      | 第一项 | custom；不用于 send/forward/handoff                                        |
 
 这六个是能力/集合图标，不是 child avatar 集。子智能体必须另用确定性实例纹样：从现有 Central 资产库策展 24 个在 16/20/24px 都保持清晰、低填充、低节点密度的 glyph，与现有 8 色 `SUBAGENT_ACCENT_PALETTE` 组合为 192 个候选；以 canonical child/thread id 为 seed，同一 parent/workflow 内遇到碰撞就按稳定顺序寻找下一组合，同一 resumed child 保持稳定。名称始终与 glyph 同时出现。纹样不得编码 running/completed、角色、模型或 Engine，避免身份随着状态变化；状态仍有文字，不能只靠颜色。若邻接复核中两个 glyph 过于相似，应从池中剔除并换 Central 候选，不得靠加粗、填满或加饱和度补救。
 
-2026-08-12 对 `apps/web/src` 和 `apps/web/public` 的名称扫描未发现上述六个 asset 的现有产品调用；`target-arrow.svg` 已存在但尚无 wrapper/consumer，其余五个尚未 materialize。这个结论只证明当前名称占用，正式实现仍须在当次 HEAD 做 16/20/24px、light/dark、邻接图标和语义 collision review。五个 custom glyph 的维护者已选 24×24 path 已作为同名 `<symbol>` 保存在 [`research/prototypes/omnimind-agent-capability-surface.html`](prototypes/omnimind-agent-capability-surface.html) 的 hidden SVG sprite 中；它是物化前的精确 research geometry，不是生产 asset owner。实现时从这些 exact paths 生成 existing icon owner 下的一份 canonical SVG，保留 `currentColor`、约 1.5px stroke 与低节点密度，不得根据名字重画或“顺手优化”成另一套图形；物化并通过视觉复核后，以产品 asset 替代 prototype symbol 作为唯一 owner。
+2026-08-13 对 `apps/web/src` 和 `apps/web/public` 的扫描未发现上述六个 asset 的现有产品调用；`target-arrow.svg` 与 `agent-network.svg` 已存在于 Central reversed asset owner，但尚无 wrapper/consumer，其余四个 custom glyph 尚未 materialize。这个结论只证明当前调用占用，正式实现仍须在当次 HEAD 做 16/20/24px、light/dark、邻接图标和语义 collision review。动态工作流必须直接复用现有 `agent-network.svg`，不得复制、重画或创建第二个近义资产；其语义租约只覆盖工作流集合/入口，不覆盖 Agent 团队、单个 child 身份、通用网络/集成或 Git branch/merge。四个 custom glyph 的维护者已选 24×24 path 已作为同名 `<symbol>` 保存在 [`research/prototypes/omnimind-agent-capability-surface.html`](prototypes/omnimind-agent-capability-surface.html) 的 hidden SVG sprite 中；它是物化前的精确 research geometry，不是生产 asset owner。实现时从这些 exact paths 生成 existing icon owner 下的一份 canonical SVG，保留 `currentColor`、约 1.5px stroke 与低节点密度，不得根据名字重画或“顺手优化”成另一套图形；物化并通过视觉复核后，以产品 asset 替代 prototype symbol 作为唯一 owner。
 
 ### 8.4 文案
 

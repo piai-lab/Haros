@@ -131,7 +131,7 @@
         color: var(--ink-2);
         fill: none;
         stroke: currentColor;
-        stroke-width: 1.45;
+        stroke-width: 1.5;
         stroke-linecap: round;
         stroke-linejoin: round;
       }
@@ -1261,14 +1261,14 @@
       <symbol id="i-chevron" viewBox="0 0 24 24">
         <path d="m9 10 3 3 3-3" />
       </symbol>
-      <symbol id="flow-adaptive" viewBox="0 0 24 24">
-        <circle cx="5" cy="17" r="2" />
-        <circle cx="12" cy="7" r="2" />
-        <circle cx="19" cy="17" r="2" />
-        <path d="M6.2 15.4 10.8 8.6M13.2 8.6l4.6 6.8M16.8 17H9" />
-        <path d="m10.5 15.5-1.5 1.5 1.5 1.5" />
+      <!-- Exact geometry from the existing Central reversed agent-network.svg asset. -->
+      <symbol id="agent-network" viewBox="0 0 24 24">
+        <circle cx="18.5" cy="7.5" r="2.5" />
+        <circle cx="5.5" cy="16.5" r="2.5" />
+        <circle cx="8.5" cy="6.5" r="3.5" />
+        <circle cx="15.5" cy="17.5" r="3.5" />
         <path
-          d="M3.2 10.2 4 8l2.2-.8L4 6.4 3.2 4.2 2.4 6.4.2 7.2l2.2.8.8 2.2Z"
+          d="M12 6.8501L16 7.2501M17.75 10.0001L16.55 14.0001M13.5 14.3572L12 12.0001L10.4091 9.5001M6.25 14.0001L7.45 10.0001M8 16.7501L12 17.1501"
         />
       </symbol>
       <!--
@@ -1430,7 +1430,7 @@
                   >
                 </div>
                 <button class="activity-row open-workflow" type="button">
-                  <svg class="flow-icon"><use href="#flow-adaptive" /></svg>
+                  <svg class="flow-icon"><use href="#agent-network" /></svg>
                   <span class="activity-label" id="timeline-label"
                     >Agent Core 深度复核</span
                   >
@@ -1480,7 +1480,7 @@
             <div class="env-section">
               <div class="env-label">工作流</div>
               <button class="env-row open-workflow">
-                <svg class="flow-icon"><use href="#flow-adaptive" /></svg>
+                <svg class="flow-icon"><use href="#agent-network" /></svg>
                 <span>Agent Core 深度复核</span>
                 <span class="env-trailing"
                   ><span class="glyph-cluster" id="env-glyphs"></span
@@ -1512,7 +1512,7 @@
                 <button class="stack-action">展开</button>
               </div>
               <div class="stack-row" id="workflow-control">
-                <svg class="flow-icon"><use href="#flow-adaptive" /></svg>
+                <svg class="flow-icon"><use href="#agent-network" /></svg>
                 <div class="stack-label">
                   <strong>Agent Core 深度复核</strong
                   ><span id="composer-progress">前端与可维护性复核 · 7/20</span>
@@ -1547,7 +1547,7 @@
         <aside class="dock" aria-label="动态工作流详情">
           <div class="dock-tabs">
             <div class="dock-tab">
-              <svg class="flow-icon"><use href="#flow-adaptive" /></svg
+              <svg class="flow-icon"><use href="#agent-network" /></svg
               ><span>动态工作流</span>
             </div>
             <button

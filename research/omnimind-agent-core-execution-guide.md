@@ -1014,7 +1014,7 @@ React Flow profile 必须关闭 drag/connect/delete/editor，只保留 select、
 - 只在 `RightDockPaneKind`/meta owner 增加 `workflow` 和 bounded `workflowTaskId`，同步更新 `RightDockPane`、constructor、persisted sanitizer、`singletonPaneReopenPatch`、singleton/meta/label/i18n 与 tests；点击另一个 Timeline milestone 必须替换同一 singleton pane 的 `workflowTaskId`，不能只激活后继续显示旧 run。RightDock selection/filter 不进入 persisted pane identity；
 - persisted pane 指向的 run 已不在 retained activities 时，pane 显示一条可关闭的 unavailable state，并保留 exact task identity 供诊断；不得静默回退到 latest workflow；
 - 新 presentation component 只接收 projection；search/filter/selection/viewport 属于 pane-local state；若 terminal summary/usage 已在 `task.completed` activity 中存在但 current snapshot builder 丢弃，应在同一纯 selector 中透传，不建 outcome store；
-- 文案同时交付 zh-CN/en；集合图标用已锁定 `flow-adaptive`，Agent 实例只用 deterministic identity glyph；
+- 文案同时交付 zh-CN/en；工作流集合/入口直接复用已锁定的现有 Central `agent-network`，Agent 实例只用 deterministic identity glyph；不得让 `agent-network` 兼任 Agent 团队、child identity、通用网络/集成或 Git 图；
 - 不新增 route、workflow registry/database、layout persistence、editor、DSL、第二 Run、第二 action handler 或第二 settlement owner。
 
 ### 12.7 Proof / Exit / Stop
