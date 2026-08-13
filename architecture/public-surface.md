@@ -6,9 +6,15 @@
 
 ## 1. 当前事实
 
-V1 canonical public origin 是 `https://omnimind.wisdomeyes.cn`。截至 2026-08-04，它只被保留，尚未激活。
-仓库没有证据证明 website、Docs、Changelog、Privacy、Support、Feedback API、download service 或 update
-service 已上线。产品不得把保留域名、构建时字符串、DNS 存在或某一发行配置推断为另一项公共能力已激活。
+V1 canonical public origin 是 `https://omnimind.wisdomeyes.cn`。截至 2026-08-13，website 与 Feedback 的
+production candidate 已部署到仅供反向代理使用的 private upstream，并完成了页面、健康检查、反馈持久化、通知与
+管理面隔离 proof；但 canonical HTTPS 证书尚未覆盖该域名，外网真实 link probe 失败，因此 Public site origin 与
+Feedback 仍未激活。内部 upstream 不是用户入口，也不得成为产品 URL、文案、重定向或 fallback。
+
+独立的 public distribution authority `SolvingLab/OmniMind-Releases` 已建立，Desktop release workflow、website
+Changelog 与 Download 已接到该 authority；当前没有已发布 release、artifact 或 update manifest，因此 Download 与
+Update discovery 仍未激活。产品不得把部署 candidate、构建时配置、DNS 存在、空发行仓库或单项 proof 推断为另一项
+公共能力已激活。
 
 下列 fixed-source destinations 只允许留在本 owner、来源证据和法定披露，不得进入 authored/built product
 surfaces：
@@ -99,6 +105,7 @@ source revision 与 vendored legal-text digest 同时匹配时才能使用补充
 `public-surface-lineage`，指向本 owner，并进入完整计数与排序 digest。不能以 `excluded-non-product` 或普通
 `adapted-removed` 洗掉这条 lineage，也不能把现存 re-entry anchors 误重分类为 marketing lineage。
 
-激活任何 capability 需要一次独立、可撤销的生产变更与对应 proof。当前 Work 只保全权威、lineage 与
-fail-closed 产品行为；它不部署 website/backend，不改 DNS/TLS，不发布下载/更新，不注册 deep link，也不改变
-Pi 或 Runtime topology。
+激活任何 capability 需要一次独立、可撤销的生产变更与对应 proof。当前 website/backend candidate 与 release
+authority 接线不等于公共激活：DNS/TLS、canonical 外网 probe、真实 release artifact、签名/manifest 与安装 proof
+仍按 Registry 分别裁决。在这些条件成立前，产品保持 fail-closed，不使用 private upstream，不提供虚假下载，也不把
+Changelog 页面替代 update authority。当前工作不注册 deep link，也不改变 Pi 或 Runtime topology。
