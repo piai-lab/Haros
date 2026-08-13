@@ -142,6 +142,7 @@ import {
   OmniMindModelServiceAuthResult,
   OmniMindModelServiceBeginLoginInput,
   OmniMindModelServiceCancelLoginInput,
+  OmniMindModelServicePollLoginInput,
   OmniMindModelServiceLogoutInput,
   OmniMindModelServiceLogoutResult,
   OmniMindModelServiceRefreshInput,
@@ -1163,6 +1164,14 @@ export const WsOmniMindModelServicesBeginLoginRpc = Rpc.make(
     error: WsRpcError,
   },
 );
+export const WsOmniMindModelServicesPollLoginRpc = Rpc.make(
+  WS_METHODS.omnimindModelServicesPollLogin,
+  {
+    payload: OmniMindModelServicePollLoginInput,
+    success: OmniMindModelServiceAuthResult,
+    error: WsRpcError,
+  },
+);
 export const WsOmniMindModelServicesAnswerLoginRpc = Rpc.make(
   WS_METHODS.omnimindModelServicesAnswerLogin,
   {
@@ -1371,6 +1380,7 @@ export const WsFeatureRpcGroup = RpcGroup.make(
   WsOmniMindModelServicesListRpc,
   WsOmniMindModelServicesGetRpc,
   WsOmniMindModelServicesBeginLoginRpc,
+  WsOmniMindModelServicesPollLoginRpc,
   WsOmniMindModelServicesAnswerLoginRpc,
   WsOmniMindModelServicesCancelLoginRpc,
   WsOmniMindModelServicesLogoutRpc,

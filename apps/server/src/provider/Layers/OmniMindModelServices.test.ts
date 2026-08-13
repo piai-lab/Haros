@@ -245,10 +245,17 @@ describe("OmniMindModelServicesLive", () => {
       }),
     );
     expect(
-      result.list.connectableServices.every((service) =>
-        service.authMethods.some((method) => method.type === "api_key" && method.canLogin),
+      result.list.connectableServices.every(
+        (service) =>
+          service.origin === "builtin" && service.authMethods.some((method) => method.canLogin),
       ),
     ).toBe(true);
+    expect(result.list.connectableServices).toContainEqual(
+      expect.objectContaining({
+        serviceId: "openai-codex",
+        authMethods: [expect.objectContaining({ type: "oauth", canLogin: true })],
+      }),
+    );
     expect(result.deepseek).toMatchObject({
       state: "ready",
       service: expect.objectContaining({
@@ -312,7 +319,7 @@ describe("OmniMindModelServicesLive", () => {
     await expect(stat(path.join(providerHome, ".pi"))).rejects.toMatchObject({ code: "ENOENT" });
   });
 
-  it("rejects OAuth-only services before entering Pi credential mutation", async () => {
+  it("exposes builtin OAuth without inventing API-key capability", async () => {
     const root = await makeRoot();
     await isolateProviderEnvironment(root);
     const agentDir = path.join(root, "agent");
@@ -322,10 +329,194 @@ describe("OmniMindModelServicesLive", () => {
     const result = await Effect.runPromise(
       Effect.gen(function* () {
         const service = yield* OmniMindModelServices;
-        return yield* service.beginLogin(8, {
+        const begin = yield* service.beginLogin(8, {
           serviceId: "openai-codex",
           authType: "oauth",
-        } as never);
+        });
+        if (begin.state !== "prompt") return { begin, cancelled: null };
+        const cancelled = yield* service.cancelLogin(8, { requestId: begin.requestId });
+        return { begin, cancelled };
+      }).pipe(Effect.provide(layer)),
+    );
+
+    expect(result.begin).toMatchObject({
+      state: "prompt",
+      prompt: { type: "select" },
+      events: [],
+    });
+    expect(result.cancelled).toMatchObject({ state: "cancelled" });
+    expect(JSON.parse(await readFile(path.join(agentDir, "auth.json"), "utf8"))).toEqual({});
+  });
+
+  it("long-polls provider-owned OAuth events and binds them to the originating client", async () => {
+    const root = await makeRoot();
+    await isolateProviderEnvironment(root);
+    const agentDir = path.join(root, "agent");
+    await mkdir(agentDir, { recursive: true });
+    vi.spyOn(globalThis, "fetch")
+      .mockResolvedValueOnce(
+        Response.json({
+          device_auth_id: "test-device-auth",
+          user_code: "ABCD-EFGH",
+          interval: 60,
+        }),
+      )
+      .mockImplementation(
+        (_request, init) =>
+          new Promise<Response>((_resolve, reject) => {
+            const signal = init?.signal;
+            const onAbort = () => reject(new DOMException("Aborted", "AbortError"));
+            if (signal?.aborted) onAbort();
+            else signal?.addEventListener("abort", onAbort, { once: true });
+          }),
+      );
+    const layer = makeTestLayer({ root });
+
+    const result = await Effect.runPromise(
+      Effect.gen(function* () {
+        const service = yield* OmniMindModelServices;
+        const begin = yield* service.beginLogin(9, {
+          serviceId: "openai-codex",
+          authType: "oauth",
+        });
+        if (begin.state !== "prompt" || begin.prompt.type !== "select") {
+          throw new Error("Expected the provider-owned OAuth method prompt");
+        }
+        const pending = yield* service.answerLogin(9, {
+          requestId: begin.requestId,
+          promptId: begin.prompt.promptId,
+          value: "device_code",
+        });
+        if (pending.state !== "pending") {
+          throw new Error("Expected the provider-owned OAuth URL event");
+        }
+        const foreign = yield* service.pollLogin(10, {
+          requestId: pending.requestId,
+          afterEventCount: pending.events.length,
+        });
+        const pollPromise = Effect.runPromise(
+          service.pollLogin(9, {
+            requestId: pending.requestId,
+            afterEventCount: pending.events.length,
+          }),
+        );
+        const cancelled = yield* service.cancelLogin(9, { requestId: pending.requestId });
+        const polled = yield* Effect.promise(() => pollPromise);
+        return { pending, foreign, polled, cancelled };
+      }).pipe(Effect.provide(layer)),
+    );
+
+    expect(result.pending.events).toEqual([
+      expect.objectContaining({
+        type: "device_code",
+        userCode: "ABCD-EFGH",
+        verificationUri: expect.stringMatching(/^https:\/\//u),
+      }),
+    ]);
+    expect(JSON.stringify(result.pending)).not.toContain("access_token");
+    expect(result.foreign).toMatchObject({ state: "failed", errorCode: "request_expired" });
+    expect(result.cancelled).toMatchObject({ state: "cancelled" });
+    expect(result.polled).toMatchObject({ state: "cancelled" });
+    expect(JSON.parse(await readFile(path.join(agentDir, "auth.json"), "utf8"))).toEqual({});
+  });
+
+  it("persists completed provider-owned OAuth without returning tokens", async () => {
+    const root = await makeRoot();
+    await isolateProviderEnvironment(root);
+    const agentDir = path.join(root, "agent");
+    await mkdir(agentDir, { recursive: true });
+    const tokenPayload = Buffer.from(
+      JSON.stringify({
+        "https://api.openai.com/auth": { chatgpt_account_id: "test-account" },
+      }),
+    ).toString("base64url");
+    vi.spyOn(globalThis, "fetch")
+      .mockResolvedValueOnce(
+        Response.json({
+          device_auth_id: "test-device-auth",
+          user_code: "ABCD-EFGH",
+          interval: 0,
+        }),
+      )
+      .mockResolvedValueOnce(
+        Response.json({ authorization_code: "authorization-secret", code_verifier: "verifier" }),
+      )
+      .mockResolvedValueOnce(
+        Response.json({
+          access_token: `header.${tokenPayload}.signature`,
+          refresh_token: "refresh-secret",
+          expires_in: 3600,
+        }),
+      );
+    const layer = makeTestLayer({ root });
+
+    const result = await Effect.runPromise(
+      Effect.gen(function* () {
+        const service = yield* OmniMindModelServices;
+        const begin = yield* service.beginLogin(14, {
+          serviceId: "openai-codex",
+          authType: "oauth",
+        });
+        if (begin.state !== "prompt" || begin.prompt.type !== "select") {
+          throw new Error("Expected the provider-owned OAuth method prompt");
+        }
+        const pending = yield* service.answerLogin(14, {
+          requestId: begin.requestId,
+          promptId: begin.prompt.promptId,
+          value: "device_code",
+        });
+        if (pending.state !== "pending") {
+          throw new Error("Expected the provider-owned device-code event");
+        }
+        return yield* service.pollLogin(14, {
+          requestId: pending.requestId,
+          afterEventCount: pending.events.length,
+        });
+      }).pipe(Effect.provide(layer)),
+    );
+
+    expect(result).toMatchObject({
+      state: "complete",
+      service: {
+        serviceId: "openai-codex",
+        authState: "configured",
+        storedCredentialType: "oauth",
+      },
+    });
+    expect(JSON.stringify(result)).not.toContain("authorization-secret");
+    expect(JSON.stringify(result)).not.toContain("refresh-secret");
+    const stored = JSON.parse(await readFile(path.join(agentDir, "auth.json"), "utf8"));
+    expect(stored["openai-codex"]).toMatchObject({ type: "oauth", accountId: "test-account" });
+  });
+
+  it("rejects OAuth mutation for models.json service identities", async () => {
+    const root = await makeRoot();
+    await isolateProviderEnvironment(root);
+    const agentDir = path.join(root, "agent");
+    await mkdir(agentDir, { recursive: true });
+    await writeFile(
+      path.join(agentDir, "models.json"),
+      JSON.stringify({
+        providers: {
+          "custom-radius": {
+            name: "Custom Radius",
+            api: "openai-completions",
+            baseUrl: "https://example.invalid/v1",
+            oauth: "radius",
+            models: [{ id: "custom-model" }],
+          },
+        },
+      }),
+      { mode: 0o600 },
+    );
+    const layer = makeTestLayer({ root });
+    const result = await Effect.runPromise(
+      Effect.gen(function* () {
+        const service = yield* OmniMindModelServices;
+        return yield* service.beginLogin(13, {
+          serviceId: "custom-radius",
+          authType: "oauth",
+        });
       }).pipe(Effect.provide(layer)),
     );
 
@@ -689,6 +880,48 @@ describe("OmniMindModelServicesLive", () => {
     expect(JSON.stringify(result)).not.toContain("access-secret");
     expect(JSON.stringify(result)).not.toContain("refresh-secret");
     expect(JSON.stringify(result)).not.toContain("private-enterprise.example.test");
+  });
+
+  it("logs out only the exact OAuth service without exposing or deleting other credentials", async () => {
+    const root = await makeRoot();
+    const providerHome = await isolateProviderEnvironment(root);
+    const agentDir = path.join(root, "agent");
+    await mkdir(agentDir, { recursive: true });
+    await writeFile(
+      path.join(agentDir, "auth.json"),
+      JSON.stringify({
+        "openai-codex": {
+          type: "oauth",
+          access: "oauth-access-secret",
+          refresh: "oauth-refresh-secret",
+          expires: Date.now() + 60 * 60 * 1000,
+          accountId: "account-redacted",
+        },
+        deepseek: { type: "api_key", key: "other-service-secret" },
+      }),
+      { mode: 0o600 },
+    );
+    const layer = makeTestLayer({ root });
+    const result = await Effect.runPromise(
+      Effect.gen(function* () {
+        const service = yield* OmniMindModelServices;
+        return yield* service.logout({ serviceId: "openai-codex" });
+      }).pipe(Effect.provide(layer)),
+    );
+
+    expect(result).toMatchObject({
+      state: "complete",
+      service: {
+        serviceId: "openai-codex",
+        authState: "setup_required",
+        storedCredentialType: null,
+      },
+    });
+    const stored = JSON.parse(await readFile(path.join(agentDir, "auth.json"), "utf8"));
+    expect(stored).toEqual({ deepseek: { type: "api_key", key: "other-service-secret" } });
+    expect(JSON.stringify(result)).not.toContain("oauth-access-secret");
+    expect(JSON.stringify(result)).not.toContain("oauth-refresh-secret");
+    await expect(stat(path.join(providerHome, ".pi"))).rejects.toMatchObject({ code: "ENOENT" });
   });
 
   it("marks an expired OAuth access token as refresh-required without claiming availability", async () => {

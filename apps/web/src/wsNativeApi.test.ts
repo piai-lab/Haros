@@ -929,6 +929,7 @@ describe("wsNativeApi", () => {
     const promptId = "00000000-0000-4000-8000-000000000042";
     requestMock
       .mockResolvedValueOnce({ state: "failed", requestId, errorCode: "auth_failed", events: [] })
+      .mockResolvedValueOnce({ state: "pending", requestId, events: [] })
       .mockResolvedValueOnce({ state: "failed", requestId, errorCode: "auth_failed", events: [] })
       .mockResolvedValueOnce({ state: "cancelled", requestId, errorCode: "cancelled", events: [] })
       .mockResolvedValueOnce({ state: "complete", service: {} })
@@ -939,6 +940,10 @@ describe("wsNativeApi", () => {
 
     await api.omnimindModelServices.beginLogin(
       { serviceId: "deepseek", authType: "api_key" },
+      { signal: controller.signal },
+    );
+    await api.omnimindModelServices.pollLogin(
+      { requestId, afterEventCount: 0 },
       { signal: controller.signal },
     );
     await api.omnimindModelServices.answerLogin(
@@ -960,18 +965,24 @@ describe("wsNativeApi", () => {
     );
     expect(requestMock).toHaveBeenNthCalledWith(
       2,
+      WS_METHODS.omnimindModelServicesPollLogin,
+      { requestId, afterEventCount: 0 },
+      { signal: controller.signal, timeoutMs: null },
+    );
+    expect(requestMock).toHaveBeenNthCalledWith(
+      3,
       WS_METHODS.omnimindModelServicesAnswerLogin,
       { requestId, promptId, value: "test-secret" },
       { signal: controller.signal, timeoutMs: null },
     );
-    expect(requestMock).toHaveBeenNthCalledWith(3, WS_METHODS.omnimindModelServicesCancelLogin, {
+    expect(requestMock).toHaveBeenNthCalledWith(4, WS_METHODS.omnimindModelServicesCancelLogin, {
       requestId,
     });
-    expect(requestMock).toHaveBeenNthCalledWith(4, WS_METHODS.omnimindModelServicesLogout, {
+    expect(requestMock).toHaveBeenNthCalledWith(5, WS_METHODS.omnimindModelServicesLogout, {
       serviceId: "deepseek",
     });
     expect(requestMock).toHaveBeenNthCalledWith(
-      5,
+      6,
       WS_METHODS.omnimindModelServicesRefresh,
       { serviceId: "deepseek" },
       { signal: controller.signal, timeoutMs: null },

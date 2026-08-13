@@ -7,6 +7,7 @@ import type {
   OmniMindModelServiceAuthResult,
   OmniMindModelServiceBeginLoginInput,
   OmniMindModelServiceCancelLoginInput,
+  OmniMindModelServicePollLoginInput,
   OmniMindModelServiceLogoutInput,
   OmniMindModelServiceLogoutResult,
   OmniMindModelServiceRefreshInput,
@@ -26,6 +27,10 @@ export interface OmniMindModelServicesShape {
   readonly beginLogin: (
     clientId: number,
     input: OmniMindModelServiceBeginLoginInput,
+  ) => Effect.Effect<OmniMindModelServiceAuthResult>;
+  readonly pollLogin: (
+    clientId: number,
+    input: OmniMindModelServicePollLoginInput,
   ) => Effect.Effect<OmniMindModelServiceAuthResult>;
   readonly answerLogin: (
     clientId: number,

@@ -1933,6 +1933,11 @@ const makeWsRpcHandlersLayer = () =>
             ),
             "Failed to begin OmniMind model-service login",
           ),
+        [WS_METHODS.omnimindModelServicesPollLogin]: (input, { clientId }) =>
+          rpcEffect(
+            requireOwnerRole.pipe(Effect.andThen(omniMindModelServices.pollLogin(clientId, input))),
+            "Failed to poll OmniMind model-service login",
+          ),
         [WS_METHODS.omnimindModelServicesAnswerLogin]: (input, { clientId }) =>
           rpcEffect(
             requireOwnerRole.pipe(

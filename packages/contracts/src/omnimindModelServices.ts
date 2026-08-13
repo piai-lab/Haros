@@ -197,6 +197,11 @@ export type OmniMindModelServiceAuthEvent = typeof OmniMindModelServiceAuthEvent
 
 export const OmniMindModelServiceAuthResult = Schema.Union([
   Schema.Struct({
+    state: Schema.Literal("pending"),
+    requestId: AuthRequestId,
+    events: Schema.Array(OmniMindModelServiceAuthEvent).check(Schema.isMaxLength(64)),
+  }),
+  Schema.Struct({
     state: Schema.Literal("prompt"),
     requestId: AuthRequestId,
     prompt: OmniMindModelServiceAuthPrompt,
@@ -219,9 +224,15 @@ export type OmniMindModelServiceAuthResult = typeof OmniMindModelServiceAuthResu
 
 export const OmniMindModelServiceBeginLoginInput = Schema.Struct({
   serviceId: BoundedIdentifier,
-  authType: Schema.Literal("api_key"),
+  authType: OmniMindModelServiceAuthMethodType,
 });
 export type OmniMindModelServiceBeginLoginInput = typeof OmniMindModelServiceBeginLoginInput.Type;
+
+export const OmniMindModelServicePollLoginInput = Schema.Struct({
+  requestId: AuthRequestId,
+  afterEventCount: NonNegativeInt,
+});
+export type OmniMindModelServicePollLoginInput = typeof OmniMindModelServicePollLoginInput.Type;
 
 export const OmniMindModelServiceAnswerLoginInput = Schema.Struct({
   requestId: AuthRequestId,

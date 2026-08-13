@@ -760,6 +760,11 @@ export function createWsNativeApi(): NativeApi {
           timeoutMs: null,
           ...(options?.signal ? { signal: options.signal } : {}),
         }),
+      pollLogin: (input, options) =>
+        transport.request(WS_METHODS.omnimindModelServicesPollLogin, input, {
+          timeoutMs: null,
+          ...(options?.signal ? { signal: options.signal } : {}),
+        }),
       answerLogin: (input, options) =>
         transport.request(WS_METHODS.omnimindModelServicesAnswerLogin, input, {
           timeoutMs: null,

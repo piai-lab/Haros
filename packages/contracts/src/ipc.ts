@@ -252,6 +252,7 @@ import type {
   OmniMindModelServiceAuthResult,
   OmniMindModelServiceBeginLoginInput,
   OmniMindModelServiceCancelLoginInput,
+  OmniMindModelServicePollLoginInput,
   OmniMindModelServiceLogoutInput,
   OmniMindModelServiceLogoutResult,
   OmniMindModelServiceRefreshInput,
@@ -803,6 +804,10 @@ export interface NativeApi {
     ) => Promise<OmniMindModelServicesGetResult>;
     beginLogin: (
       input: OmniMindModelServiceBeginLoginInput,
+      options?: { readonly signal?: AbortSignal },
+    ) => Promise<OmniMindModelServiceAuthResult>;
+    pollLogin: (
+      input: OmniMindModelServicePollLoginInput,
       options?: { readonly signal?: AbortSignal },
     ) => Promise<OmniMindModelServiceAuthResult>;
     answerLogin: (

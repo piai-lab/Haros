@@ -190,6 +190,7 @@ interface ModelServiceAuthRequest {
   readonly requestId: string;
   readonly clientId: number;
   readonly serviceId: string;
+  readonly authType: OmniMindModelServiceAuthMethodType;
   readonly controller: AbortController;
   readonly events: OmniMindModelServiceAuthEvent[];
   pendingPrompt?: PendingAuthPrompt;
@@ -578,7 +579,7 @@ async function projectModelServices(input: {
       (service) =>
         service.origin === "builtin" &&
         service.authState === "setup_required" &&
-        service.authMethods.some((method) => method.type === "api_key" && method.canLogin),
+        service.authMethods.some((method) => method.canLogin),
     ),
   };
 }
@@ -645,13 +646,25 @@ export function makeOmniMindModelServicesLive(options: OmniMindModelServicesLive
 
       const awaitRequestResult = async (
         request: ModelServiceAuthRequest,
+        afterEventCount = 0,
       ): Promise<OmniMindModelServiceAuthResult> => {
-        while (!request.pendingPrompt && !request.outcome) {
+        while (
+          !request.pendingPrompt &&
+          !request.outcome &&
+          request.events.length <= afterEventCount
+        ) {
           await new Promise<void>((resolve) => {
             request.checkpoints.add(resolve);
           });
         }
         if (request.outcome) return request.outcome;
+        if (!request.pendingPrompt) {
+          return {
+            state: "pending",
+            requestId: request.requestId,
+            events: [...request.events],
+          };
+        }
         return {
           state: "prompt",
           requestId: request.requestId,
@@ -685,8 +698,12 @@ export function makeOmniMindModelServicesLive(options: OmniMindModelServicesLive
             );
             const provider = runtime.getProvider(request.serviceId);
             const isBuiltin = !runtime.getModelConfigProviderIds().includes(request.serviceId);
-            if (!isBuiltin || provider?.auth.apiKey?.login === undefined) {
-              throw new Error("Model service does not support API-key login");
+            const supportsRequestedAuth =
+              request.authType === "api_key"
+                ? provider?.auth.apiKey?.login !== undefined
+                : provider?.auth.oauth?.login !== undefined;
+            if (!isBuiltin || !supportsRequestedAuth) {
+              throw new Error("Model service does not support the requested login method");
             }
             previousService = await getProjectedService(
               request.serviceId,
@@ -716,12 +733,15 @@ export function makeOmniMindModelServicesLive(options: OmniMindModelServicesLive
               },
               notify: (event) => {
                 const projected = projectAuthEvent(event);
-                if (projected && request.events.length < 64) request.events.push(projected);
+                if (projected && request.events.length < 64) {
+                  request.events.push(projected);
+                  notifyRequest(request);
+                }
               },
             };
             let synchronizationFailed = false;
             try {
-              await runtime.login(request.serviceId, "api_key", interaction);
+              await runtime.login(request.serviceId, request.authType, interaction);
             } catch (error) {
               if (!(error instanceof sdk.CredentialSynchronizationError)) throw error;
               synchronizationFailed = true;
@@ -846,6 +866,7 @@ export function makeOmniMindModelServicesLive(options: OmniMindModelServicesLive
               requestId,
               clientId,
               serviceId: input.serviceId,
+              authType: input.authType,
               controller,
               events: [],
               checkpoints: new Set(),
@@ -856,7 +877,27 @@ export function makeOmniMindModelServicesLive(options: OmniMindModelServicesLive
             authRequests.set(requestId, request);
             void runLogin(request);
             const result = await awaitRequestResult(request);
-            if (result.state !== "prompt") authRequests.delete(request.requestId);
+            if (result.state !== "prompt" && result.state !== "pending") {
+              authRequests.delete(request.requestId);
+            }
+            return result;
+          }),
+        pollLogin: (clientId, input) =>
+          Effect.promise(async (signal) => {
+            const request = authRequests.get(input.requestId);
+            if (!request || request.clientId !== clientId) {
+              return {
+                state: "failed",
+                requestId: input.requestId,
+                errorCode: "request_expired",
+                events: [],
+              } as const;
+            }
+            signal.addEventListener("abort", () => request.controller.abort(), { once: true });
+            const result = await awaitRequestResult(request, input.afterEventCount);
+            if (result.state !== "prompt" && result.state !== "pending") {
+              authRequests.delete(request.requestId);
+            }
             return result;
           }),
         answerLogin: (clientId, input) =>
@@ -883,7 +924,9 @@ export function makeOmniMindModelServicesLive(options: OmniMindModelServicesLive
             delete request.pendingPrompt;
             pending.resolve(input.value);
             const result = await awaitRequestResult(request);
-            if (result.state !== "prompt") authRequests.delete(request.requestId);
+            if (result.state !== "prompt" && result.state !== "pending") {
+              authRequests.delete(request.requestId);
+            }
             return result;
           }),
         cancelLogin: (clientId, input) =>
@@ -899,7 +942,7 @@ export function makeOmniMindModelServicesLive(options: OmniMindModelServicesLive
             }
             delete request.pendingPrompt;
             request.controller.abort();
-            const result = await awaitRequestResult(request);
+            const result = await awaitRequestResult(request, Number.MAX_SAFE_INTEGER);
             authRequests.delete(request.requestId);
             return result;
           }),

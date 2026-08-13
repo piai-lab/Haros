@@ -5,6 +5,7 @@ import {
   OmniMindModelServiceAnswerLoginInput,
   OmniMindModelServiceAuthResult,
   OmniMindModelServiceBeginLoginInput,
+  OmniMindModelServicePollLoginInput,
   OmniMindModelServiceDescriptor,
   OmniMindModelServicesGetInput,
   OmniMindModelServicesListResult,
@@ -138,12 +139,18 @@ describe("OmniMind model-services contracts", () => {
         authType: "api_key",
       }),
     ).toEqual({ serviceId: "deepseek", authType: "api_key" });
-    expect(() =>
+    expect(
       Schema.decodeUnknownSync(OmniMindModelServiceBeginLoginInput)({
         serviceId: "openai-codex",
         authType: "oauth",
       }),
-    ).toThrow();
+    ).toEqual({ serviceId: "openai-codex", authType: "oauth" });
+    expect(
+      Schema.decodeUnknownSync(OmniMindModelServicePollLoginInput)({
+        requestId,
+        afterEventCount: 1,
+      }),
+    ).toEqual({ requestId, afterEventCount: 1 });
     expect(
       Schema.decodeUnknownSync(OmniMindModelServiceAnswerLoginInput)({
         requestId,

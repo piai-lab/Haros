@@ -2059,13 +2059,31 @@ export const EN_MESSAGES = {
   "settings.replaceApiKey": "Replace API key",
   "settings.removeApiKey": "Remove API key",
   "settings.removingApiKey": "Removing…",
+  "settings.signInWithBrowser": "Sign in",
+  "settings.signInAgain": "Sign in again",
+  "settings.signOutModelService": "Sign out",
+  "settings.signingOutModelService": "Signing out…",
   "settings.removeApiKeyDescription":
     "Remove the stored API key for {name}? The current turn is not changed; the next send will use the updated credential state.",
+  "settings.signOutModelServiceDescription":
+    "Sign out of {name}? The current turn is not changed; the next send will use the updated credential state.",
   "settings.refreshModelCatalog": "Refresh catalog",
   "settings.modelServiceRefreshing": "Refreshing…",
   "settings.modelServiceApiKeyTitle": "API key · {name}",
   "settings.modelServiceApiKeyDescription":
     "The key is sent directly to the local Pi credential owner and is never stored in OmniMind settings.",
+  "settings.modelServiceOAuthTitle": "Sign in · {name}",
+  "settings.modelServiceOAuthDescription":
+    "Continue with the provider-owned browser, device-code, or manual-code flow. OmniMind never receives the resulting token.",
+  "settings.modelServiceOpenOAuth": "Continue sign-in in your browser.",
+  "settings.modelServiceOpenOAuthAt": "Open {host}",
+  "settings.modelServiceOAuthOpenFailed": "The sign-in page could not be opened.",
+  "settings.modelServiceOAuthFailed": "Sign-in did not complete. Try again.",
+  "settings.modelServiceOAuthSaved": "Signed in.",
+  "settings.modelServiceOAuthSavedCatalogFailed":
+    "Signed in, but the model catalog could not be refreshed. The last good catalog remains available.",
+  "settings.modelServiceOAuthSavedSyncFailed":
+    "Sign-in completed, but the current local model snapshot could not be synchronized. Retry before sending.",
   "settings.modelServiceAuthWorking": "Waiting for the model service…",
   "settings.modelServiceChooseAuthOption": "Choose an option",
   "settings.modelServiceContinue": "Continue",
@@ -2086,6 +2104,10 @@ export const EN_MESSAGES = {
   "settings.modelServiceCredentialRemovedSyncFailed":
     "The API key was removed, but the current local model snapshot could not be synchronized.",
   "settings.modelServiceCredentialRemoveFailed": "The stored API key could not be removed.",
+  "settings.modelServiceSignedOut": "Signed out.",
+  "settings.modelServiceSignedOutSyncFailed":
+    "Signed out, but the current local model snapshot could not be synchronized.",
+  "settings.modelServiceSignOutFailed": "The model service could not be signed out.",
   "settings.modelServiceOriginBuiltIn": "Built into OmniMind",
   "settings.modelServiceOriginModelsJson": "Custom service from models.json",
   "settings.modelServiceOriginExtension": "Provided by an OmniMind extension",
@@ -4864,13 +4886,31 @@ export const ZH_CN_MESSAGES = {
   "settings.replaceApiKey": "更换 API Key",
   "settings.removeApiKey": "移除 API Key",
   "settings.removingApiKey": "正在移除…",
+  "settings.signInWithBrowser": "登录",
+  "settings.signInAgain": "重新登录",
+  "settings.signOutModelService": "退出登录",
+  "settings.signingOutModelService": "正在退出…",
   "settings.removeApiKeyDescription":
     "要移除 {name} 已保存的 API Key 吗？当前轮次不会改变；下一次发送将使用更新后的凭据状态。",
+  "settings.signOutModelServiceDescription":
+    "要退出 {name} 吗？当前轮次不会改变；下一次发送将使用更新后的凭据状态。",
   "settings.refreshModelCatalog": "刷新模型目录",
   "settings.modelServiceRefreshing": "正在刷新…",
   "settings.modelServiceApiKeyTitle": "API Key · {name}",
   "settings.modelServiceApiKeyDescription":
     "API Key 会直接交给本机 Pi 凭据 owner，不会保存到 OmniMind 设置中。",
+  "settings.modelServiceOAuthTitle": "登录 · {name}",
+  "settings.modelServiceOAuthDescription":
+    "继续使用供应商提供的浏览器、设备代码或手动代码流程；OmniMind 不会接收最终 token。",
+  "settings.modelServiceOpenOAuth": "请在浏览器中继续登录。",
+  "settings.modelServiceOpenOAuthAt": "打开 {host}",
+  "settings.modelServiceOAuthOpenFailed": "无法打开登录页面。",
+  "settings.modelServiceOAuthFailed": "登录未完成，请重试。",
+  "settings.modelServiceOAuthSaved": "已登录。",
+  "settings.modelServiceOAuthSavedCatalogFailed":
+    "已登录，但无法刷新模型目录；上一次可用目录仍会保留。",
+  "settings.modelServiceOAuthSavedSyncFailed":
+    "登录已完成，但当前本地模型快照无法同步；请在发送前重试。",
   "settings.modelServiceAuthWorking": "正在等待模型服务…",
   "settings.modelServiceChooseAuthOption": "请选择",
   "settings.modelServiceContinue": "继续",
@@ -4890,6 +4930,9 @@ export const ZH_CN_MESSAGES = {
   "settings.modelServiceCredentialRemovedSyncFailed":
     "API Key 已移除，但当前本地模型快照无法同步。",
   "settings.modelServiceCredentialRemoveFailed": "无法移除保存的 API Key。",
+  "settings.modelServiceSignedOut": "已退出登录。",
+  "settings.modelServiceSignedOutSyncFailed": "已退出登录，但当前本地模型快照无法同步。",
+  "settings.modelServiceSignOutFailed": "无法退出此模型服务。",
   "settings.modelServiceOriginBuiltIn": "OmniMind 内置",
   "settings.modelServiceOriginModelsJson": "来自 models.json 的自定义服务",
   "settings.modelServiceOriginExtension": "由 OmniMind 扩展提供",
