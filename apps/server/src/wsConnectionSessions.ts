@@ -22,10 +22,16 @@ export const CurrentWsSessionRole = ServiceMap.Reference<WsSessionRole>(
   "omnimind/ws/CurrentSessionRole",
   { defaultValue: () => "client" },
 );
+const detachedConnectionSignal = new AbortController().signal;
+export const CurrentWsConnectionSignal = ServiceMap.Reference<AbortSignal>(
+  "omnimind/ws/CurrentConnectionSignal",
+  { defaultValue: () => detachedConnectionSignal },
+);
 
 export interface WsConnectionSession {
   readonly role: WsSessionRole;
   readonly attachmentPrincipal: ManagedAttachmentPrincipal;
+  readonly signal: AbortSignal;
 }
 
 /**
@@ -77,6 +83,7 @@ export function provideWsConnectionSession<A, E, R>(
   return session
     ? effect.pipe(
         Effect.provideService(CurrentWsSessionRole, session.role),
+        Effect.provideService(CurrentWsConnectionSignal, session.signal),
         Effect.provideService(CurrentManagedAttachmentPrincipal, session.attachmentPrincipal),
       )
     : effect;

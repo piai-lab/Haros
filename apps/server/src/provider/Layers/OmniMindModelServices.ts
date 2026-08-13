@@ -30,6 +30,7 @@ import { OMNIMIND_MODEL_SERVICES_MAX_COUNT } from "@omnimind/contracts";
 import { Effect, Layer } from "effect";
 
 import { ServerConfig } from "../../config.ts";
+import { CurrentWsConnectionSignal } from "../../wsConnectionSessions.ts";
 import {
   createOmniMindModelsConfigReader,
   loadOmniMindCodingAgentModule,
@@ -192,6 +193,8 @@ interface ModelServiceAuthRequest {
   readonly serviceId: string;
   readonly authType: OmniMindModelServiceAuthMethodType;
   readonly controller: AbortController;
+  readonly connectionSignal: AbortSignal;
+  readonly abortOnConnectionClose: () => void;
   readonly events: OmniMindModelServiceAuthEvent[];
   pendingPrompt?: PendingAuthPrompt;
   outcome?: OmniMindModelServiceAuthResult;
@@ -677,6 +680,7 @@ export function makeOmniMindModelServicesLive(options: OmniMindModelServicesLive
         request: ModelServiceAuthRequest,
         outcome: OmniMindModelServiceAuthResult,
       ) => {
+        request.connectionSignal.removeEventListener("abort", request.abortOnConnectionClose);
         request.outcome = outcome;
         delete request.pendingPrompt;
         clearTimeout(request.timeout);
@@ -850,37 +854,48 @@ export function makeOmniMindModelServicesLive(options: OmniMindModelServicesLive
             }
           }),
         beginLogin: (clientId, input) =>
-          Effect.promise(async (signal) => {
-            const requestId = crypto.randomUUID();
-            if (authRequests.size >= MAX_PENDING_AUTH_REQUESTS) {
-              return {
-                state: "failed",
+          Effect.gen(function* () {
+            const connectionSignal = yield* CurrentWsConnectionSignal;
+            return yield* Effect.promise(async (signal) => {
+              const requestId = crypto.randomUUID();
+              if (authRequests.size >= MAX_PENDING_AUTH_REQUESTS) {
+                return {
+                  state: "failed",
+                  requestId,
+                  errorCode: "request_expired",
+                  events: [],
+                } as const;
+              }
+              const controller = new AbortController();
+              signal.addEventListener("abort", () => controller.abort(), { once: true });
+              const abortOnConnectionClose = () => controller.abort();
+              if (connectionSignal.aborted) abortOnConnectionClose();
+              else
+                connectionSignal.addEventListener("abort", abortOnConnectionClose, {
+                  once: true,
+                });
+              const request: ModelServiceAuthRequest = {
                 requestId,
-                errorCode: "request_expired",
+                clientId,
+                serviceId: input.serviceId,
+                authType: input.authType,
+                controller,
+                connectionSignal,
+                abortOnConnectionClose,
                 events: [],
-              } as const;
-            }
-            const controller = new AbortController();
-            signal.addEventListener("abort", () => controller.abort(), { once: true });
-            const request: ModelServiceAuthRequest = {
-              requestId,
-              clientId,
-              serviceId: input.serviceId,
-              authType: input.authType,
-              controller,
-              events: [],
-              checkpoints: new Set(),
-              timeout: setTimeout(() => {
-                controller.abort();
-              }, AUTH_REQUEST_TIMEOUT_MS),
-            };
-            authRequests.set(requestId, request);
-            void runLogin(request);
-            const result = await awaitRequestResult(request);
-            if (result.state !== "prompt" && result.state !== "pending") {
-              authRequests.delete(request.requestId);
-            }
-            return result;
+                checkpoints: new Set(),
+                timeout: setTimeout(() => {
+                  controller.abort();
+                }, AUTH_REQUEST_TIMEOUT_MS),
+              };
+              authRequests.set(requestId, request);
+              void runLogin(request);
+              const result = await awaitRequestResult(request);
+              if (result.state !== "prompt" && result.state !== "pending") {
+                authRequests.delete(request.requestId);
+              }
+              return result;
+            });
           }),
         pollLogin: (clientId, input) =>
           Effect.promise(async (signal) => {

@@ -6,6 +6,7 @@ import {
   LOCAL_LOOPBACK_ATTACHMENT_PRINCIPAL,
 } from "./managedAttachmentPrincipal.ts";
 import {
+  CurrentWsConnectionSignal,
   CurrentWsSessionRole,
   makeWsConnectionSessions,
   provideWsConnectionSession,
@@ -15,6 +16,7 @@ import {
 const OWNER_SESSION: WsConnectionSession = {
   role: "owner",
   attachmentPrincipal: LOCAL_LOOPBACK_ATTACHMENT_PRINCIPAL,
+  signal: new AbortController().signal,
 };
 
 describe("WsConnectionSessions", () => {
@@ -40,6 +42,7 @@ describe("WsConnectionSessions", () => {
         sessions.register({
           role: "client",
           attachmentPrincipal: { ownerKind: "session", ownerId: "session-1" },
+          signal: new AbortController().signal,
         }),
         scope,
       ),
@@ -55,18 +58,22 @@ describe("WsConnectionSessions", () => {
       return {
         role: yield* CurrentWsSessionRole,
         principal: yield* CurrentManagedAttachmentPrincipal,
+        signal: yield* CurrentWsConnectionSignal,
       };
     });
 
+    const controller = new AbortController();
     const withSession = await Effect.runPromise(
       provideWsConnectionSession(read, {
         role: "owner",
         attachmentPrincipal: { ownerKind: "session", ownerId: "session-9" },
+        signal: controller.signal,
       }),
     );
     expect(withSession).toEqual({
       role: "owner",
       principal: { ownerKind: "session", ownerId: "session-9" },
+      signal: controller.signal,
     });
 
     // Without a session the conservative defaults must apply.
@@ -74,6 +81,7 @@ describe("WsConnectionSessions", () => {
     expect(withoutSession).toEqual({
       role: "client",
       principal: LOCAL_LOOPBACK_ATTACHMENT_PRINCIPAL,
+      signal: expect.objectContaining({ aborted: false }),
     });
   });
 });

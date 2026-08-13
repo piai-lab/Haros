@@ -18,6 +18,8 @@ import { Effect, Layer } from "effect";
 import { afterEach, describe, expect, it, vi } from "vitest";
 
 import { ServerConfig } from "../../config.ts";
+import { LOCAL_LOOPBACK_ATTACHMENT_PRINCIPAL } from "../../managedAttachmentPrincipal.ts";
+import { provideWsConnectionSession } from "../../wsConnectionSessions.ts";
 import type { OmniMindCodingAgentModule } from "../omnimindAgentRuntime.ts";
 import { OmniMindModelServices } from "../Services/OmniMindModelServices.ts";
 import { makeOmniMindModelServicesLive } from "./OmniMindModelServices.ts";
@@ -589,6 +591,48 @@ describe("OmniMindModelServicesLive", () => {
 
     expect(result.settledBeforeCancellation).toBe(false);
     expect(result.firstCancelled).toMatchObject({ state: "cancelled" });
+    expect(result.second).toMatchObject({ state: "prompt" });
+    expect(result.secondCancelled).toMatchObject({ state: "cancelled" });
+  });
+
+  it("cancels a pending prompt when its WebSocket connection closes", async () => {
+    const root = await makeRoot();
+    await isolateProviderEnvironment(root);
+    await mkdir(path.join(root, "agent"), { recursive: true });
+    const connection = new AbortController();
+    const layer = makeTestLayer({ root });
+    const result = await Effect.runPromise(
+      Effect.gen(function* () {
+        const service = yield* OmniMindModelServices;
+        const first = yield* provideWsConnectionSession(
+          service.beginLogin(15, { serviceId: "deepseek", authType: "api_key" }),
+          {
+            role: "owner",
+            attachmentPrincipal: LOCAL_LOOPBACK_ATTACHMENT_PRINCIPAL,
+            signal: connection.signal,
+          },
+        );
+        if (first.state !== "prompt") throw new Error("Expected the first Pi API-key prompt");
+
+        const secondPromise = Effect.runPromise(
+          service.beginLogin(16, { serviceId: "deepseek", authType: "api_key" }),
+        );
+        yield* Effect.sleep("20 millis");
+        connection.abort();
+        const second = yield* Effect.promise(() => secondPromise);
+        const firstOutcome = yield* service.pollLogin(15, {
+          requestId: first.requestId,
+          afterEventCount: 0,
+        });
+        const secondCancelled =
+          second.state === "prompt"
+            ? yield* service.cancelLogin(16, { requestId: second.requestId })
+            : null;
+        return { firstOutcome, second, secondCancelled };
+      }).pipe(Effect.provide(layer)),
+    );
+
+    expect(result.firstOutcome).toMatchObject({ state: "cancelled" });
     expect(result.second).toMatchObject({ state: "prompt" });
     expect(result.secondCancelled).toMatchObject({ state: "cancelled" });
   });

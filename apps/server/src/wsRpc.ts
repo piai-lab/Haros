@@ -2153,10 +2153,15 @@ export function makeWebsocketRpcRouteLayer<R>(
       // resolves it back into handler-scoped services on every request.
       const runWithConnectionSession = (
         request: HttpServerRequest.HttpServerRequest,
-        session: WsConnectionSession,
+        session: Omit<WsConnectionSession, "signal">,
       ) =>
         Effect.gen(function* () {
-          const sessionKey = yield* connectionSessions.register(session);
+          const controller = new AbortController();
+          yield* Effect.addFinalizer(() => Effect.sync(() => controller.abort()));
+          const sessionKey = yield* connectionSessions.register({
+            ...session,
+            signal: controller.signal,
+          });
           return yield* rpcWebSocketHttpEffect.pipe(
             Effect.provideService(
               HttpServerRequest.HttpServerRequest,

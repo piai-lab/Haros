@@ -821,14 +821,17 @@ describe("websocketRpcRouteLayer connection lifecycle", () => {
 
       expect(server.observedConnectionSessionKeys).toHaveLength(1);
       const sessionKey = server.observedConnectionSessionKeys[0]!;
-      expect(server.connectionSessions.lookup(sessionKey)).toEqual({
+      const registeredSession = server.connectionSessions.lookup(sessionKey);
+      expect(registeredSession).toMatchObject({
         role: "owner",
         attachmentPrincipal: { ownerKind: "session", ownerId: issued.sessionId },
       });
+      expect(registeredSession?.signal.aborted).toBe(false);
 
       socket.close();
       await waitForClose(socket);
       await waitForObserved(() => server.connectionSessions.lookup(sessionKey) === undefined);
+      expect(registeredSession?.signal.aborted).toBe(true);
     } finally {
       await server.close();
     }
