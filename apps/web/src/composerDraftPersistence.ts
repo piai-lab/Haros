@@ -1,8 +1,10 @@
 // FILE: composerDraftPersistence.ts
-// Purpose: Owns composer draft schema v6, migrations, partialization, merge normalization, and hydration.
+// Purpose: Owns composer draft schema v7, migrations, partialization, merge normalization, and hydration.
 // Exports: Persist middleware transitions and persisted state type.
 
 import {
+  CommandId,
+  MessageId,
   ModelSelection,
   OrchestrationProposedPlanId,
   OrchestrationThreadPullRequest,
@@ -39,6 +41,7 @@ import {
   type ComposerThreadDraftState,
   type DraftThreadEnvMode,
   type QueuedComposerTurn,
+  type PendingDirectTurnRecovery,
 } from "./composerDraftDomain";
 import {
   LegacyCodexFields,
@@ -52,6 +55,10 @@ import {
 } from "./composerDraftModels";
 import { normalizeAssistantSelectionAttachment } from "./lib/assistantSelections";
 import { type BrowserAnnotationDraft, normalizeBrowserAnnotations } from "./lib/browserAnnotations";
+import {
+  normalizeComposerImageSource,
+  toPersistedComposerImageSource,
+} from "./lib/composerImageSource";
 import { normalizePastedTextContent } from "./lib/composerPastedText";
 import { normalizeFileCommentSelection } from "./lib/fileComments";
 import {
@@ -202,6 +209,35 @@ const PersistedQueuedComposerTurn = Schema.Union([
 
 type PersistedQueuedComposerTurn = typeof PersistedQueuedComposerTurn.Type;
 
+const PersistedComposerBindingSnapshot = Schema.Struct({
+  modelSelection: ModelSelection,
+  runtimeMode: RuntimeMode,
+  interactionMode: ProviderInteractionMode,
+});
+
+const PersistedPendingDirectTurnRecovery = Schema.Struct({
+  recoveryId: CommandId,
+  commandId: CommandId,
+  messageId: MessageId,
+  previousBinding: PersistedComposerBindingSnapshot,
+  targetBinding: PersistedComposerBindingSnapshot,
+  queuedTurn: PersistedQueuedComposerChatTurn,
+  persistedImageAttachments: Schema.Array(PersistedComposerImageAttachment),
+  binaryAttachments: Schema.Array(
+    Schema.Struct({
+      type: Schema.Literals(["image", "file"]),
+      name: Schema.String,
+      mimeType: Schema.String,
+      sizeBytes: Schema.Number,
+      source: Schema.optionalKey(Schema.Unknown),
+    }),
+  ),
+  contentSuperseded: Schema.Boolean,
+  bindingSuperseded: Schema.Boolean,
+});
+
+type PersistedPendingDirectTurnRecovery = typeof PersistedPendingDirectTurnRecovery.Type;
+
 const PersistedComposerPromptHistorySavedDraft = Schema.Union([
   Schema.String,
   Schema.Struct({
@@ -242,6 +278,7 @@ const PersistedComposerThreadDraftState = Schema.Struct({
   skills: Schema.optionalKey(Schema.Array(ProviderSkillReference)),
   mentions: Schema.optionalKey(Schema.Array(ProviderMentionReference)),
   queuedTurns: Schema.optionalKey(Schema.Array(PersistedQueuedComposerTurn)),
+  pendingDirectTurnRecovery: Schema.optionalKey(PersistedPendingDirectTurnRecovery),
   restoredSourceProposedPlan: Schema.optionalKey(PersistedRestoredSourceProposedPlan),
   modelSelectionByProvider: Schema.optionalKey(
     Schema.Record(ProviderKind, Schema.optionalKey(ModelSelection)),
@@ -679,6 +716,75 @@ function normalizePersistedQueuedTurns(
   return normalizedTurns.length > 0 ? normalizedTurns : undefined;
 }
 
+function normalizePersistedPendingDirectTurnRecovery(
+  rawRecovery: unknown,
+): DeepMutable<PersistedPendingDirectTurnRecovery> | undefined {
+  if (!rawRecovery || typeof rawRecovery !== "object") return undefined;
+  const candidate = rawRecovery as Record<string, unknown>;
+  if (
+    !Schema.is(CommandId)(candidate.recoveryId) ||
+    !Schema.is(CommandId)(candidate.commandId) ||
+    !Schema.is(MessageId)(candidate.messageId) ||
+    !Schema.is(PersistedComposerBindingSnapshot)(candidate.previousBinding) ||
+    !Schema.is(PersistedComposerBindingSnapshot)(candidate.targetBinding)
+  ) {
+    return undefined;
+  }
+  const queuedTurn = normalizePersistedQueuedTurns([candidate.queuedTurn])?.[0];
+  if (!queuedTurn || queuedTurn.kind !== "chat") return undefined;
+
+  const persistedImageAttachments = Array.isArray(candidate.persistedImageAttachments)
+    ? candidate.persistedImageAttachments.flatMap((entry) => {
+        const normalized = normalizePersistedAttachment(entry);
+        return normalized ? [normalized] : [];
+      })
+    : [];
+  if (!Array.isArray(candidate.binaryAttachments)) return undefined;
+  const binaryAttachments: DeepMutable<PersistedPendingDirectTurnRecovery["binaryAttachments"]> =
+    [];
+  for (const rawAttachment of candidate.binaryAttachments) {
+    if (!rawAttachment || typeof rawAttachment !== "object") return undefined;
+    const attachment = rawAttachment as Record<string, unknown>;
+    const type = attachment.type;
+    const name = typeof attachment.name === "string" ? attachment.name.trim() : "";
+    const mimeType = typeof attachment.mimeType === "string" ? attachment.mimeType.trim() : "";
+    const sizeBytes = attachment.sizeBytes;
+    if (
+      (type !== "image" && type !== "file") ||
+      name.length === 0 ||
+      name.length > 255 ||
+      mimeType.length === 0 ||
+      mimeType.length > 100 ||
+      typeof sizeBytes !== "number" ||
+      !Number.isSafeInteger(sizeBytes) ||
+      sizeBytes < 0
+    ) {
+      return undefined;
+    }
+    const source = type === "image" ? normalizeComposerImageSource(attachment.source) : undefined;
+    const persistedSource = source ? toPersistedComposerImageSource(source) : undefined;
+    binaryAttachments.push({
+      type,
+      name,
+      mimeType,
+      sizeBytes,
+      ...(persistedSource ? { source: persistedSource } : {}),
+    });
+  }
+  return {
+    recoveryId: candidate.recoveryId,
+    commandId: candidate.commandId,
+    messageId: candidate.messageId,
+    previousBinding: candidate.previousBinding,
+    targetBinding: candidate.targetBinding,
+    queuedTurn,
+    persistedImageAttachments,
+    binaryAttachments,
+    contentSuperseded: candidate.contentSuperseded === true,
+    bindingSuperseded: candidate.bindingSuperseded === true,
+  };
+}
+
 function normalizeDraftThreadEnvMode(
   value: unknown,
   fallbackWorktreePath: string | null,
@@ -872,6 +978,9 @@ function normalizePersistedDraftsByThreadId(
       ? draftCandidate.mentions.filter(Schema.is(ProviderMentionReference))
       : [];
     const queuedTurns = normalizePersistedQueuedTurns(draftCandidate.queuedTurns);
+    const pendingDirectTurnRecovery = normalizePersistedPendingDirectTurnRecovery(
+      draftCandidate.pendingDirectTurnRecovery,
+    );
     const runtimeMode = Schema.is(RuntimeMode)(draftCandidate.runtimeMode)
       ? draftCandidate.runtimeMode
       : null;
@@ -938,6 +1047,7 @@ function normalizePersistedDraftsByThreadId(
     const hasModelData =
       Object.keys(modelSelectionByProvider).length > 0 || activeProvider !== null;
     const hasQueuedTurns = normalizedQueuedTurns.length > 0;
+    const hasPendingDirectTurnRecovery = pendingDirectTurnRecovery !== undefined;
     const hasReferenceData = skills.length > 0 || mentions.length > 0;
     if (
       promptCandidate.length === 0 &&
@@ -950,6 +1060,7 @@ function normalizePersistedDraftsByThreadId(
       pastedTexts.length === 0 &&
       !hasReferenceData &&
       !hasQueuedTurns &&
+      !hasPendingDirectTurnRecovery &&
       restoredSourceProposedPlan === null &&
       !hasModelData &&
       !runtimeMode &&
@@ -969,6 +1080,7 @@ function normalizePersistedDraftsByThreadId(
       ...(skills.length > 0 ? { skills } : {}),
       ...(mentions.length > 0 ? { mentions } : {}),
       ...(hasQueuedTurns ? { queuedTurns: normalizedQueuedTurns } : {}),
+      ...(pendingDirectTurnRecovery ? { pendingDirectTurnRecovery } : {}),
       ...(restoredSourceProposedPlan ? { restoredSourceProposedPlan } : {}),
       ...(hasModelData ? { modelSelectionByProvider, activeProvider } : {}),
       ...(runtimeMode ? { runtimeMode } : {}),
@@ -985,6 +1097,97 @@ export function migratePersistedComposerDraftStoreState(
   // Version bumps should sanitize persisted data without forcing users back
   // through the legacy sticky-model fields.
   return normalizeCurrentPersistedComposerDraftStoreState(persistedState);
+}
+
+function persistPendingDirectTurnRecovery(
+  recovery: PendingDirectTurnRecovery,
+): DeepMutable<PersistedPendingDirectTurnRecovery> {
+  const queuedTurn = recovery.queuedTurn;
+  const persistedQueuedTurn: DeepMutable<PersistedQueuedComposerChatTurn> = {
+    id: queuedTurn.id,
+    kind: "chat",
+    createdAt: queuedTurn.createdAt,
+    previewText: queuedTurn.previewText,
+    prompt: queuedTurn.prompt,
+    // Binary bytes are recovered from the exact accepted Product message.
+    // Persisting local File values here would create a second blob owner.
+    images: [],
+    assistantSelections: queuedTurn.assistantSelections.map((selection) => ({
+      id: selection.id,
+      assistantMessageId: selection.assistantMessageId,
+      text: selection.text,
+    })),
+    ...(queuedTurn.browserAnnotations.length > 0
+      ? { browserAnnotations: queuedTurn.browserAnnotations.map(cloneBrowserAnnotation) }
+      : {}),
+    terminalContexts: queuedTurn.terminalContexts.map((context) => ({
+      id: context.id,
+      threadId: context.threadId,
+      createdAt: context.createdAt,
+      terminalId: context.terminalId,
+      terminalLabel: context.terminalLabel,
+      lineStart: context.lineStart,
+      lineEnd: context.lineEnd,
+      text: context.text,
+    })),
+    ...(queuedTurn.fileComments.length > 0
+      ? {
+          fileComments: queuedTurn.fileComments.map((comment) => ({
+            id: comment.id,
+            path: comment.path,
+            startLine: comment.startLine,
+            endLine: comment.endLine,
+            text: comment.text,
+          })),
+        }
+      : {}),
+    ...(queuedTurn.pastedTexts.length > 0
+      ? {
+          pastedTexts: queuedTurn.pastedTexts.map((pasted) => ({
+            id: pasted.id,
+            createdAt: pasted.createdAt,
+            text: pasted.text,
+          })),
+        }
+      : {}),
+    skills: [...queuedTurn.skills],
+    mentions: [...queuedTurn.mentions],
+    selectedProvider: queuedTurn.selectedProvider,
+    selectedModel: queuedTurn.selectedModel,
+    selectedPromptEffort: queuedTurn.selectedPromptEffort,
+    modelSelection: queuedTurn.modelSelection,
+    ...(queuedTurn.providerOptionsForDispatch
+      ? { providerOptionsForDispatch: queuedTurn.providerOptionsForDispatch }
+      : {}),
+    ...(queuedTurn.sourceProposedPlan ? { sourceProposedPlan: queuedTurn.sourceProposedPlan } : {}),
+    runtimeMode: queuedTurn.runtimeMode,
+    interactionMode: queuedTurn.interactionMode,
+    envMode: queuedTurn.envMode,
+  };
+  return {
+    recoveryId: recovery.recoveryId,
+    commandId: recovery.commandId,
+    messageId: recovery.messageId,
+    previousBinding: recovery.previousBinding,
+    targetBinding: recovery.targetBinding,
+    queuedTurn: persistedQueuedTurn,
+    persistedImageAttachments: recovery.persistedImageAttachments.map(
+      toStorageSafePersistedAttachment,
+    ),
+    binaryAttachments: recovery.binaryAttachments.map((attachment) => {
+      const source =
+        attachment.type === "image" ? toPersistedComposerImageSource(attachment.source) : undefined;
+      return {
+        type: attachment.type,
+        name: attachment.name,
+        mimeType: attachment.mimeType,
+        sizeBytes: attachment.sizeBytes,
+        ...(source ? { source } : {}),
+      };
+    }),
+    contentSuperseded: recovery.contentSuperseded,
+    bindingSuperseded: recovery.bindingSuperseded,
+  };
 }
 
 export function partializeComposerDraftStoreState(
@@ -1096,6 +1299,10 @@ export function partializeComposerDraftStoreState(
     const hasModelData =
       Object.keys(draft.modelSelectionByProvider).length > 0 || draft.activeProvider !== null;
     const hasQueuedTurns = persistedQueuedTurns.length > 0;
+    const pendingDirectTurnRecovery = draft.pendingDirectTurnRecovery
+      ? persistPendingDirectTurnRecovery(draft.pendingDirectTurnRecovery)
+      : undefined;
+    const hasPendingDirectTurnRecovery = pendingDirectTurnRecovery !== undefined;
     const hasReferenceData = draft.skills.length > 0 || draft.mentions.length > 0;
     if (
       draft.prompt.length === 0 &&
@@ -1108,6 +1315,7 @@ export function partializeComposerDraftStoreState(
       draft.pastedTexts.length === 0 &&
       !hasReferenceData &&
       !hasQueuedTurns &&
+      !hasPendingDirectTurnRecovery &&
       draft.restoredSourceProposedPlan == null &&
       !hasModelData &&
       draft.runtimeMode === null &&
@@ -1236,6 +1444,7 @@ export function partializeComposerDraftStoreState(
       ...(draft.skills.length > 0 ? { skills: [...draft.skills] } : {}),
       ...(draft.mentions.length > 0 ? { mentions: [...draft.mentions] } : {}),
       ...(hasQueuedTurns ? { queuedTurns: persistedQueuedTurns } : {}),
+      ...(pendingDirectTurnRecovery ? { pendingDirectTurnRecovery } : {}),
       ...(draft.restoredSourceProposedPlan
         ? { restoredSourceProposedPlan: draft.restoredSourceProposedPlan }
         : {}),
@@ -1346,6 +1555,37 @@ function hydrateQueuedTurnsFromPersisted(
   });
 }
 
+function hydratePendingDirectTurnRecovery(
+  threadId: ThreadId,
+  recovery: PersistedPendingDirectTurnRecovery | undefined,
+): PendingDirectTurnRecovery | null {
+  if (!recovery) return null;
+  const queuedTurn = hydrateQueuedTurnsFromPersisted(threadId, [recovery.queuedTurn])[0];
+  if (!queuedTurn || queuedTurn.kind !== "chat") return null;
+  return {
+    recoveryId: recovery.recoveryId,
+    commandId: recovery.commandId,
+    messageId: recovery.messageId,
+    previousBinding: recovery.previousBinding,
+    targetBinding: recovery.targetBinding,
+    queuedTurn,
+    persistedImageAttachments: [...recovery.persistedImageAttachments],
+    binaryAttachments: recovery.binaryAttachments.map((attachment) => {
+      const source =
+        attachment.type === "image" ? normalizeComposerImageSource(attachment.source) : undefined;
+      return {
+        type: attachment.type,
+        name: attachment.name,
+        mimeType: attachment.mimeType,
+        sizeBytes: attachment.sizeBytes,
+        ...(source ? { source } : {}),
+      };
+    }),
+    contentSuperseded: recovery.contentSuperseded,
+    bindingSuperseded: recovery.bindingSuperseded,
+  };
+}
+
 function hydratePromptHistorySavedDraft(
   savedDraft: PersistedComposerPromptHistorySavedDraft | undefined,
 ): ComposerPromptHistorySavedDraft | null {
@@ -1417,6 +1657,10 @@ export function toHydratedThreadDraft(
     skills: [...(persistedDraft.skills ?? [])],
     mentions: [...(persistedDraft.mentions ?? [])],
     queuedTurns: hydrateQueuedTurnsFromPersisted(threadId, persistedDraft.queuedTurns),
+    pendingDirectTurnRecovery: hydratePendingDirectTurnRecovery(
+      threadId,
+      persistedDraft.pendingDirectTurnRecovery,
+    ),
     restoredSourceProposedPlan: persistedDraft.restoredSourceProposedPlan ?? null,
     modelSelectionByProvider,
     activeProvider,

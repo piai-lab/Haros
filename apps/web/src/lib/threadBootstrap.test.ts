@@ -60,6 +60,7 @@ function makeComposerDraftState(
     skills: [],
     mentions: [],
     queuedTurns: [],
+    pendingDirectTurnRecovery: null,
     modelSelectionByProvider: {
       claudeAgent: modelSelection("claudeAgent", "claude-opus-4-6", { effort: "max" }),
     },

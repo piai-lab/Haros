@@ -24,6 +24,7 @@ import {
   revokeDraftComposerImagePreviewUrls,
   revokeDraftPreviewUrls,
   revokeObjectPreviewUrl,
+  revokePendingDirectTurnRecoveryPreviewUrls,
   revokePromptHistorySavedDraftPreviewUrls,
   revokeQueuedTurnPreviewUrls,
   syncPersistedAttachmentsForSlot,
@@ -35,6 +36,7 @@ import {
   type ComposerThreadDraftState,
   type DraftThreadState,
   type PersistedComposerImageAttachment,
+  type PendingDirectTurnRecovery,
   assistantSelectionDedupKey,
   buildDraftThreadState,
   buildTransferredComposerDraft,
@@ -926,8 +928,7 @@ export const createComposerDraftStoreState =
         const currentForProvider = nextMap[normalizedProvider];
         const nextModel = explicitModel ?? currentForProvider?.model ?? fallbackModel;
         const currentSupportsAutoMode =
-          currentForProvider?.provider === "claudeAgent" &&
-          currentForProvider.model === nextModel
+          currentForProvider?.provider === "claudeAgent" && currentForProvider.model === nextModel
             ? currentForProvider.supportsAutoMode
             : undefined;
         if (providerOpts) {
@@ -955,7 +956,8 @@ export const createComposerDraftStoreState =
         if (options?.persistSticky === true) {
           nextStickyMap = { ...state.stickyModelSelectionByProvider };
           const existingSticky = nextStickyMap[normalizedProvider];
-          const stickyCandidate = existingSticky ?? base.modelSelectionByProvider[normalizedProvider];
+          const stickyCandidate =
+            existingSticky ?? base.modelSelectionByProvider[normalizedProvider];
           const stickyBase = explicitModel
             ? makeModelSelection(
                 normalizedProvider,
@@ -1933,6 +1935,138 @@ export const createComposerDraftStoreState =
         }
         return { draftsByThreadId: nextDraftsByThreadId };
       });
+    },
+    armPendingDirectTurnRecovery: (threadId, recovery) => {
+      if (threadId.length === 0) {
+        revokePendingDirectTurnRecoveryPreviewUrls(recovery);
+        return;
+      }
+      const previousDraft = get().draftsByThreadId[threadId];
+      if (previousDraft?.pendingDirectTurnRecovery) {
+        revokePendingDirectTurnRecoveryPreviewUrls(previousDraft.pendingDirectTurnRecovery);
+      }
+      // Blob cleanup is deferred until after the mutation; the recovery marker
+      // becomes the remaining reference for any AppSnap blobs transferred out
+      // of the visible Composer.
+      deleteDraftComposerImageBlobs(previousDraft, () => get().draftsByThreadId);
+      set((state) => {
+        const current = state.draftsByThreadId[threadId] ?? createEmptyThreadDraft();
+        return {
+          draftsByThreadId: {
+            ...state.draftsByThreadId,
+            [threadId]: {
+              ...current,
+              prompt: "",
+              promptHistorySavedDraft: null,
+              images: [],
+              files: [],
+              nonPersistedImageIds: [],
+              persistedAttachments: [],
+              assistantSelections: [],
+              browserAnnotations: [],
+              terminalContexts: [],
+              fileComments: [],
+              pastedTexts: [],
+              skills: [],
+              mentions: [],
+              restoredSourceProposedPlan: null,
+              pendingDirectTurnRecovery: recovery,
+            },
+          },
+        };
+      });
+      // The accepted command may outlive this renderer. Persist the one-shot
+      // marker before dispatch; malformed or never-admitted markers remain
+      // inert until the exact durable message and terminal projection exist.
+      flushPersistStorage();
+    },
+    clearPendingDirectTurnRecovery: (threadId, recoveryId, options) => {
+      let cleared = false;
+      let removedRecovery: ComposerThreadDraftState["pendingDirectTurnRecovery"] = null;
+      set((state) => {
+        const current = state.draftsByThreadId[threadId];
+        if (!current || current.pendingDirectTurnRecovery?.recoveryId !== recoveryId) {
+          return state;
+        }
+        removedRecovery = current.pendingDirectTurnRecovery;
+        const nextDraft: ComposerThreadDraftState = {
+          ...current,
+          pendingDirectTurnRecovery: null,
+        };
+        const nextDraftsByThreadId = { ...state.draftsByThreadId };
+        if (shouldRemoveDraft(nextDraft)) {
+          delete nextDraftsByThreadId[threadId];
+        } else {
+          nextDraftsByThreadId[threadId] = nextDraft;
+        }
+        cleared = true;
+        return { draftsByThreadId: nextDraftsByThreadId };
+      });
+      const recoveryToRemove = removedRecovery as PendingDirectTurnRecovery | null;
+      if (recoveryToRemove) {
+        if (options?.preservePreviewUrls !== true) {
+          revokePendingDirectTurnRecoveryPreviewUrls(recoveryToRemove);
+        }
+        deletePersistedComposerImageBlobs(
+          recoveryToRemove.persistedImageAttachments,
+          () => get().draftsByThreadId,
+        );
+      }
+      if (cleared) flushPersistStorage();
+      return cleared;
+    },
+    supersedePendingDirectTurnRecovery: (threadId, recoveryId, mutation) => {
+      set((state) => {
+        const current = state.draftsByThreadId[threadId];
+        const recovery = current?.pendingDirectTurnRecovery;
+        if (!current || !recovery || recovery.recoveryId !== recoveryId) {
+          return state;
+        }
+        if (
+          (mutation === "content" && recovery.contentSuperseded) ||
+          (mutation === "binding" && recovery.bindingSuperseded)
+        ) {
+          return state;
+        }
+        return {
+          draftsByThreadId: {
+            ...state.draftsByThreadId,
+            [threadId]: {
+              ...current,
+              pendingDirectTurnRecovery: {
+                ...recovery,
+                ...(mutation === "content"
+                  ? { contentSuperseded: true }
+                  : { bindingSuperseded: true }),
+              },
+            },
+          },
+        };
+      });
+      flushPersistStorage();
+    },
+    takePendingDirectTurnRecovery: (threadId, recoveryId) => {
+      let taken: ComposerThreadDraftState["pendingDirectTurnRecovery"] = null;
+      set((state) => {
+        const current = state.draftsByThreadId[threadId];
+        if (!current || current.pendingDirectTurnRecovery?.recoveryId !== recoveryId) {
+          return state;
+        }
+        taken = current.pendingDirectTurnRecovery;
+        const nextDraft: ComposerThreadDraftState = {
+          ...current,
+          pendingDirectTurnRecovery: null,
+        };
+        const nextDraftsByThreadId = { ...state.draftsByThreadId };
+        if (shouldRemoveDraft(nextDraft)) {
+          delete nextDraftsByThreadId[threadId];
+        } else {
+          nextDraftsByThreadId[threadId] = nextDraft;
+        }
+        return { draftsByThreadId: nextDraftsByThreadId };
+      });
+      if (taken) flushPersistStorage();
+      return taken;
     },
     clearComposerContent: (threadId, options) => {
       if (threadId.length === 0) {

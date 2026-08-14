@@ -5,6 +5,7 @@ import {
   AutomationId,
   type AutomationCreateInput,
   type AutomationDefinition,
+  type ChatAttachment,
   CheckpointRef,
   EventId,
   MessageId,
@@ -33,7 +34,12 @@ import { Profiler, type ProfilerOnRenderCallback } from "react";
 import { afterAll, afterEach, beforeAll, beforeEach, describe, expect, it, vi } from "vitest";
 import { render } from "vitest-browser-react";
 
-import { type ComposerImageAttachment, useComposerDraftStore } from "../composerDraftStore";
+import {
+  partializeComposerDraftStoreState,
+  type ComposerFileAttachment,
+  type ComposerImageAttachment,
+  useComposerDraftStore,
+} from "../composerDraftStore";
 import { appHistory } from "../appNavigation";
 import { EN_MESSAGES, ZH_CN_MESSAGES } from "../i18n";
 import {
@@ -100,6 +106,11 @@ const NOW_ISO = "2026-03-04T12:00:00.000Z";
 const BASE_TIME_MS = Date.parse(NOW_ISO);
 const ATTACHMENT_SVG = "<svg xmlns='http://www.w3.org/2000/svg' width='120' height='300'></svg>";
 let attachmentResponseDelayMs = 0;
+const attachmentDownloadFixtures = new Map<
+  string,
+  { readonly bytes: Uint8Array; readonly mimeType: string }
+>();
+const attachmentDownloadRequestIds: string[] = [];
 let attachmentUploadSequence = 0;
 let attachmentUploadBarrier: Promise<void> | null = null;
 
@@ -186,13 +197,7 @@ function createUserMessage(options: {
   id: MessageId;
   text: string;
   offsetSeconds: number;
-  attachments?: Array<{
-    type: "image";
-    id: string;
-    name: string;
-    mimeType: string;
-    sizeBytes: number;
-  }>;
+  attachments?: ChatAttachment[];
 }) {
   return {
     id: options.id,
@@ -260,6 +265,29 @@ function createComposerImage(input: {
     mimeType,
     sizeBytes: file.size,
     previewUrl: input.previewUrl,
+    file,
+  };
+}
+
+function createComposerFile(input: {
+  id: string;
+  name?: string;
+  mimeType?: string;
+  sizeBytes?: number;
+}): ComposerFileAttachment {
+  const name = input.name ?? "notes.txt";
+  const mimeType = input.mimeType ?? "text/plain";
+  const sizeBytes = input.sizeBytes ?? 8;
+  const file = new File([new Uint8Array(sizeBytes).fill(2)], name, {
+    type: mimeType,
+    lastModified: BASE_TIME_MS,
+  });
+  return {
+    type: "file",
+    id: input.id,
+    name,
+    mimeType,
+    sizeBytes: file.size,
     file,
   };
 }
@@ -366,7 +394,7 @@ function createSnapshotForTargetUser(options: {
 
 function withTurnStartFailureRestoredToCodex(
   snapshot: OrchestrationReadModel,
-  input: { messageId: MessageId; messageText: string },
+  input: { messageId: MessageId; messageText: string; attachments?: ChatAttachment[] },
 ): OrchestrationReadModel {
   const failedAt = isoAt(2_000);
   return {
@@ -385,6 +413,7 @@ function withTurnStartFailureRestoredToCodex(
                 id: input.messageId,
                 text: input.messageText,
                 offsetSeconds: 1_999,
+                ...(input.attachments ? { attachments: input.attachments } : {}),
               }),
             ],
             activities: [
@@ -410,6 +439,60 @@ function withTurnStartFailureRestoredToCodex(
                   runtimeMode: "full-access" as const,
                   activeTurnId: null,
                   lastError: null,
+                  updatedAt: failedAt,
+                }
+              : null,
+            updatedAt: failedAt,
+          }
+        : thread,
+    ),
+    updatedAt: failedAt,
+  };
+}
+
+function withTurnStartFailureUnrecovered(
+  snapshot: OrchestrationReadModel,
+  input: { messageId: MessageId; messageText: string; attachments?: ChatAttachment[] },
+): OrchestrationReadModel {
+  const failedAt = isoAt(2_500);
+  return {
+    ...snapshot,
+    snapshotSequence: snapshot.snapshotSequence + 1,
+    threads: snapshot.threads.map((thread) =>
+      thread.id === THREAD_ID
+        ? {
+            ...thread,
+            messages: [
+              ...thread.messages,
+              createUserMessage({
+                id: input.messageId,
+                text: input.messageText,
+                offsetSeconds: 2_499,
+                ...(input.attachments ? { attachments: input.attachments } : {}),
+              }),
+            ],
+            activities: [
+              ...thread.activities,
+              {
+                id: EventId.makeUnsafe(`activity-unrecovered-failure-${input.messageId}`),
+                createdAt: failedAt,
+                kind: "provider.turn.start.failed",
+                summary: "Provider turn start failed",
+                tone: "error" as const,
+                turnId: null,
+                payload: {
+                  messageId: input.messageId,
+                  detail: "Target provider failed to start and the prior runtime did not recover.",
+                },
+              },
+            ],
+            session: thread.session
+              ? {
+                  ...thread.session,
+                  status: "error" as const,
+                  providerName: "claudeAgent" as const,
+                  activeTurnId: null,
+                  lastError: "Target provider failed to start.",
                   updatedAt: failedAt,
                 }
               : null,
@@ -1551,10 +1634,20 @@ const worker = setupWorker(
   http.post(`*${ATTACHMENT_CANCEL_ROUTE_PATH}`, () =>
     HttpResponse.json({ cancelled: true }, { status: 200 }),
   ),
-  http.get("*/attachments/:attachmentId", async () => {
+  http.get("*/attachments/:attachmentId", async ({ params }) => {
+    attachmentDownloadRequestIds.push(String(params.attachmentId));
     if (attachmentResponseDelayMs > 0) {
       await new Promise<void>((resolve) => {
         globalThis.setTimeout(() => resolve(), attachmentResponseDelayMs);
+      });
+    }
+    const fixture = attachmentDownloadFixtures.get(String(params.attachmentId));
+    if (fixture) {
+      return new HttpResponse(fixture.bytes, {
+        headers: {
+          "Content-Length": String(fixture.bytes.byteLength),
+          "Content-Type": fixture.mimeType,
+        },
       });
     }
     return HttpResponse.text(ATTACHMENT_SVG, {
@@ -2182,6 +2275,8 @@ describe("ChatView timeline estimator parity (full app)", () => {
     await resetStudioProjectPrewarmStateForTests();
     await setViewport(DEFAULT_VIEWPORT);
     attachmentResponseDelayMs = 0;
+    attachmentDownloadFixtures.clear();
+    attachmentDownloadRequestIds.length = 0;
     attachmentUploadSequence = 0;
     attachmentUploadBarrier = null;
     localStorage.clear();
@@ -4907,29 +5002,35 @@ describe("ChatView timeline estimator parity (full app)", () => {
       previewUrl: "blob:cross-provider-recovery-image",
       name: "cross-provider-recovery.png",
     });
-    const mounted = await mountChatView({
+    const failedFile = createComposerFile({
+      id: "cross-provider-recovery-file",
+      name: "cross-provider-recovery.txt",
+      sizeBytes: 11,
+    });
+    const configureClaudeFixture = (nextFixture: TestFixture) => {
+      nextFixture.providerModelsByProvider.claudeAgent = {
+        source: "browser.fixture",
+        models: [{ slug: "claude-sonnet-4-5", name: "Claude Sonnet 4.5" }],
+      };
+      nextFixture.serverConfig = {
+        ...nextFixture.serverConfig,
+        providers: [
+          ...nextFixture.serverConfig.providers,
+          {
+            provider: "claudeAgent",
+            status: "ready",
+            available: true,
+            authStatus: "authenticated",
+            supportsAutoRuntimeMode: false,
+            checkedAt: NOW_ISO,
+          },
+        ],
+      };
+    };
+    let mounted = await mountChatView({
       viewport: DEFAULT_VIEWPORT,
       snapshot: currentSnapshot,
-      configureFixture: (nextFixture) => {
-        nextFixture.providerModelsByProvider.claudeAgent = {
-          source: "browser.fixture",
-          models: [{ slug: "claude-sonnet-4-5", name: "Claude Sonnet 4.5" }],
-        };
-        nextFixture.serverConfig = {
-          ...nextFixture.serverConfig,
-          providers: [
-            ...nextFixture.serverConfig.providers,
-            {
-              provider: "claudeAgent",
-              status: "ready",
-              available: true,
-              authStatus: "authenticated",
-              supportsAutoRuntimeMode: false,
-              checkedAt: NOW_ISO,
-            },
-          ],
-        };
-      },
+      configureFixture: configureClaudeFixture,
     });
 
     try {
@@ -4953,6 +5054,13 @@ describe("ChatView timeline estimator parity (full app)", () => {
 
       useComposerDraftStore.getState().setPrompt(THREAD_ID, failedPrompt);
       useComposerDraftStore.getState().addImage(THREAD_ID, failedImage);
+      useComposerDraftStore.getState().addFiles(THREAD_ID, [failedFile]);
+      useComposerDraftStore.getState().addAssistantSelection(THREAD_ID, {
+        type: "assistant-selection",
+        id: "cross-provider-recovery-selection",
+        assistantMessageId: "msg-assistant-3",
+        text: "preserve this referenced answer",
+      });
       await vi.waitFor(() => {
         expect(document.querySelector('[contenteditable="true"]')?.textContent).toContain(
           failedPrompt,
@@ -4963,6 +5071,7 @@ describe("ChatView timeline estimator parity (full app)", () => {
       firstSendButton.click();
 
       let failedMessageId: MessageId | null = null;
+      let failedAttachments: ChatAttachment[] = [];
       await vi.waitFor(
         () => {
           const turnStart = wsRequests
@@ -4981,20 +5090,114 @@ describe("ChatView timeline estimator parity (full app)", () => {
             provider: "claudeAgent",
             model: "claude-sonnet-4-5",
           });
-          const message = turnStart?.message as { messageId?: unknown } | undefined;
+          const message = turnStart?.message as
+            | { messageId?: unknown; attachments?: ChatAttachment[] }
+            | undefined;
           expect(typeof message?.messageId).toBe("string");
           failedMessageId = MessageId.makeUnsafe(message!.messageId as string);
-          expect(useComposerDraftStore.getState().draftsByThreadId[THREAD_ID]?.prompt ?? "").toBe(
-            "",
-          );
+          failedAttachments = message?.attachments ?? [];
+          expect(useComposerDraftStore.getState().draftsByThreadId[THREAD_ID]).toMatchObject({
+            prompt: "",
+            activeProvider: "claudeAgent",
+            pendingDirectTurnRecovery: {
+              messageId: failedMessageId,
+              contentSuperseded: false,
+              bindingSuperseded: false,
+            },
+          });
         },
         { timeout: 8_000, interval: 16 },
       );
 
+      let failedFileAttachmentId: string | null = null;
+      let failedFileBytes: Uint8Array | null = null;
+      for (const attachment of failedAttachments) {
+        if (attachment.type !== "image" && attachment.type !== "file") continue;
+        const sourceFile =
+          attachment.name === failedImage.name ? failedImage.file : failedFile.file;
+        const sourceBytes = new Uint8Array(await sourceFile.arrayBuffer());
+        if (attachment.type === "file") {
+          failedFileAttachmentId = attachment.id;
+          failedFileBytes = sourceBytes;
+        }
+        attachmentDownloadFixtures.set(attachment.id, {
+          bytes:
+            attachment.type === "file"
+              ? new Uint8Array(sourceBytes.byteLength + 1).fill(9)
+              : sourceBytes,
+          mimeType: sourceFile.type,
+        });
+      }
+      const persistedDrafts = partializeComposerDraftStoreState(useComposerDraftStore.getState());
+      await mounted.cleanup();
+      const persistApi = useComposerDraftStore.persist as unknown as {
+        getOptions: () => {
+          merge: (
+            persistedState: unknown,
+            currentState: ReturnType<typeof useComposerDraftStore.getState>,
+          ) => ReturnType<typeof useComposerDraftStore.getState>;
+        };
+      };
+      const hydratedState = persistApi
+        .getOptions()
+        .merge(persistedDrafts, useComposerDraftStore.getInitialState());
+      useComposerDraftStore.setState({
+        draftsByThreadId: hydratedState.draftsByThreadId,
+        draftThreadsByThreadId: hydratedState.draftThreadsByThreadId,
+        projectDraftThreadIdByProjectId: hydratedState.projectDraftThreadIdByProjectId,
+        stickyModelSelectionByProvider: hydratedState.stickyModelSelectionByProvider,
+        stickyActiveProvider: hydratedState.stickyActiveProvider,
+      });
+      expect(
+        useComposerDraftStore.getState().draftsByThreadId[THREAD_ID]?.pendingDirectTurnRecovery,
+      ).toMatchObject({
+        messageId: failedMessageId,
+        queuedTurn: { images: [], files: [] },
+      });
+      mounted = await mountChatView({
+        viewport: DEFAULT_VIEWPORT,
+        snapshot: currentSnapshot,
+        configureFixture: configureClaudeFixture,
+      });
+      await waitForServerConfigToApply();
+      expect(
+        useComposerDraftStore.getState().draftsByThreadId[THREAD_ID]?.pendingDirectTurnRecovery,
+      ).toMatchObject({
+        messageId: failedMessageId,
+        contentSuperseded: false,
+        bindingSuperseded: false,
+      });
+
       currentSnapshot = withTurnStartFailureRestoredToCodex(currentSnapshot, {
         messageId: failedMessageId!,
         messageText: failedPrompt,
+        attachments: failedAttachments,
       });
+      fixture = { ...fixture, snapshot: currentSnapshot };
+      useStore.getState().syncServerReadModel(currentSnapshot);
+
+      await vi.waitFor(() => {
+        expect(attachmentDownloadRequestIds).toContain(failedFileAttachmentId);
+        const draft = useComposerDraftStore.getState().draftsByThreadId[THREAD_ID];
+        expect(draft?.prompt ?? "").toBe("");
+        expect(draft?.images).toEqual([]);
+        expect(draft?.files).toEqual([]);
+        expect(draft?.pendingDirectTurnRecovery?.messageId).toBe(failedMessageId);
+      });
+      expect(failedFileAttachmentId).not.toBeNull();
+      expect(failedFileBytes).not.toBeNull();
+      attachmentDownloadFixtures.set(failedFileAttachmentId!, {
+        bytes: failedFileBytes!,
+        mimeType: failedFile.file.type,
+      });
+      currentSnapshot = {
+        ...currentSnapshot,
+        snapshotSequence: currentSnapshot.snapshotSequence + 1,
+        threads: currentSnapshot.threads.map((thread) =>
+          thread.id === THREAD_ID ? { ...thread, updatedAt: isoAt(2_001) } : thread,
+        ),
+        updatedAt: isoAt(2_001),
+      };
       fixture = { ...fixture, snapshot: currentSnapshot };
       useStore.getState().syncServerReadModel(currentSnapshot);
 
@@ -5009,6 +5212,13 @@ describe("ChatView timeline estimator parity (full app)", () => {
           });
           expect(draft?.runtimeMode).toBe("full-access");
           expect(draft?.images.map((image) => image.name)).toEqual(["cross-provider-recovery.png"]);
+          expect(draft?.files.map((file) => file.name)).toEqual(["cross-provider-recovery.txt"]);
+          expect(draft?.assistantSelections).toEqual([
+            expect.objectContaining({
+              id: "cross-provider-recovery-selection",
+              text: "preserve this referenced answer",
+            }),
+          ]);
           expect(
             wsRequests
               .map(readDispatchedCommand)
@@ -5038,6 +5248,7 @@ describe("ChatView timeline estimator parity (full app)", () => {
       secondSendButton.click();
 
       let secondFailedMessageId: MessageId | null = null;
+      let secondFailedAttachments: ChatAttachment[] = [];
       await vi.waitFor(
         () => {
           const turnStart = wsRequests
@@ -5051,9 +5262,12 @@ describe("ChatView timeline estimator parity (full app)", () => {
                 typeof command.message.text === "string" &&
                 command.message.text.includes(secondFailedPrompt),
             );
-          const message = turnStart?.message as { messageId?: unknown } | undefined;
+          const message = turnStart?.message as
+            | { messageId?: unknown; attachments?: ChatAttachment[] }
+            | undefined;
           expect(typeof message?.messageId).toBe("string");
           secondFailedMessageId = MessageId.makeUnsafe(message!.messageId as string);
+          secondFailedAttachments = message?.attachments ?? [];
           expect(useComposerDraftStore.getState().draftsByThreadId[THREAD_ID]?.prompt ?? "").toBe(
             "",
           );
@@ -5076,6 +5290,7 @@ describe("ChatView timeline estimator parity (full app)", () => {
       currentSnapshot = withTurnStartFailureRestoredToCodex(currentSnapshot, {
         messageId: secondFailedMessageId!,
         messageText: secondFailedPrompt,
+        attachments: secondFailedAttachments,
       });
       fixture = { ...fixture, snapshot: currentSnapshot };
       useStore.getState().syncServerReadModel(currentSnapshot);
@@ -5099,6 +5314,53 @@ describe("ChatView timeline estimator parity (full app)", () => {
         },
         { timeout: 8_000, interval: 16 },
       );
+
+      const terminalPrompt = "restore content when neither runtime can recover";
+      useComposerDraftStore.getState().setPrompt(THREAD_ID, terminalPrompt);
+      await page.getByRole("button", { name: "Change engine. Current: Codex" }).click();
+      await page.getByRole("menuitemradio", { name: /Claude/ }).click();
+      const terminalSendButton = await waitForSendButton();
+      await vi.waitFor(() => expect(terminalSendButton.disabled).toBe(false));
+      terminalSendButton.click();
+      let terminalMessageId: MessageId | null = null;
+      let terminalAttachments: ChatAttachment[] = [];
+      await vi.waitFor(() => {
+        const turnStart = wsRequests
+          .map(readDispatchedCommand)
+          .find(
+            (command) =>
+              command?.type === "thread.turn.start" &&
+              typeof command.message === "object" &&
+              command.message !== null &&
+              "text" in command.message &&
+              typeof command.message.text === "string" &&
+              command.message.text.includes(terminalPrompt),
+          );
+        const message = turnStart?.message as
+          | { messageId?: unknown; attachments?: ChatAttachment[] }
+          | undefined;
+        expect(typeof message?.messageId).toBe("string");
+        terminalMessageId = MessageId.makeUnsafe(message!.messageId as string);
+        terminalAttachments = message?.attachments ?? [];
+      });
+      currentSnapshot = withTurnStartFailureUnrecovered(currentSnapshot, {
+        messageId: terminalMessageId!,
+        messageText: terminalPrompt,
+        attachments: terminalAttachments,
+      });
+      fixture = { ...fixture, snapshot: currentSnapshot };
+      useStore.getState().syncServerReadModel(currentSnapshot);
+      await vi.waitFor(() => {
+        const draft = useComposerDraftStore.getState().draftsByThreadId[THREAD_ID];
+        expect(draft?.prompt).toBe(terminalPrompt);
+        expect(draft?.activeProvider).toBe("claudeAgent");
+        expect(draft?.pendingDirectTurnRecovery ?? null).toBeNull();
+        expect(
+          wsRequests
+            .map(readDispatchedCommand)
+            .filter((command) => command?.type === "thread.turn.start"),
+        ).toHaveLength(3);
+      });
     } finally {
       await mounted.cleanup();
       restoreNativeApi();

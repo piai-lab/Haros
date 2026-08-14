@@ -189,7 +189,6 @@ import {
   createRuntimeModePersistenceQueue,
   derivePromptHistoryFromMessages,
   desiredBindingCanPersistWithoutActiveSession,
-  resolveComposerDraftTurnStartRecoveryMutation,
   enrichSubagentWorkEntries,
   hasFileUndoSettled,
   persistModelSelectionBeforeRuntimeMode,
@@ -293,6 +292,7 @@ import {
   DEFAULT_INTERACTION_MODE,
   DEFAULT_RUNTIME_MODE,
   DEFAULT_THREAD_TERMINAL_ID,
+  type ChatAttachment,
   type ChatMessage,
   type Thread,
   type WorktreeSetupResolutionAction,
@@ -373,18 +373,21 @@ import {
   type ComposerFileAttachment,
   type ComposerImageAttachment,
   type ComposerAssistantSelectionAttachment,
+  type ComposerBindingSnapshot,
   type BrowserAnnotationDraft,
   type DraftThreadEnvMode,
   type PersistedComposerImageAttachment,
   type QueuedComposerChatTurn,
   type QueuedComposerPlanFollowUp,
   type QueuedComposerTurn,
+  type PendingDirectTurnRecovery,
   type RestoredComposerSourceProposedPlan,
   captureComposerPromptHistorySavedDraft,
   useComposerDraftStore,
   useComposerThreadDraft,
   useEffectiveComposerModelState,
 } from "../composerDraftStore";
+import { resolveWsHttpUrl } from "../lib/wsHttpUrl";
 import { COMPOSER_PROVIDER_KINDS } from "../composerDraftModels";
 import { useTemporaryThreadStore } from "../temporaryThreadStore";
 import { useComposerFocusRequestStore } from "../composerFocusRequestStore";
@@ -895,6 +898,149 @@ async function stagePersistedComposerImageAttachments(input: {
   }
 }
 
+const DIRECT_TURN_RECOVERY_ATTACHMENT_TIMEOUT_MS = 15_000;
+
+class DirectTurnRecoveryAttachmentError extends Error {
+  constructor() {
+    super("The accepted turn attachments are not available for recovery yet.");
+    this.name = "DirectTurnRecoveryAttachmentError";
+  }
+}
+
+function binaryChatAttachments(
+  attachments: ReadonlyArray<ChatAttachment> | undefined,
+): Array<Extract<ChatAttachment, { type: "image" | "file" }>> {
+  return (attachments ?? []).filter(
+    (attachment): attachment is Extract<ChatAttachment, { type: "image" | "file" }> =>
+      attachment.type === "image" || attachment.type === "file",
+  );
+}
+
+function recoveryAttachmentMetadataMatches(
+  expected: PendingDirectTurnRecovery["binaryAttachments"][number],
+  actual: Extract<ChatAttachment, { type: "image" | "file" }>,
+): boolean {
+  return (
+    expected.type === actual.type &&
+    expected.name === actual.name &&
+    expected.mimeType.toLowerCase() === actual.mimeType.toLowerCase() &&
+    expected.sizeBytes === actual.sizeBytes
+  );
+}
+
+async function fetchDirectTurnRecoveryFile(input: {
+  attachment: Extract<ChatAttachment, { type: "image" | "file" }>;
+  signal: AbortSignal;
+}): Promise<File> {
+  const timeoutController = new AbortController();
+  const onAbort = () => timeoutController.abort();
+  input.signal.addEventListener("abort", onAbort, { once: true });
+  const timeoutId = window.setTimeout(
+    () => timeoutController.abort(),
+    DIRECT_TURN_RECOVERY_ATTACHMENT_TIMEOUT_MS,
+  );
+  try {
+    const response = await fetch(
+      resolveWsHttpUrl(`/attachments/${encodeURIComponent(input.attachment.id)}`),
+      { credentials: "include", signal: timeoutController.signal },
+    );
+    const declaredLengthHeader = response.headers.get("content-length");
+    const declaredLength = declaredLengthHeader === null ? null : Number(declaredLengthHeader);
+    if (
+      !response.ok ||
+      (declaredLength !== null &&
+        Number.isFinite(declaredLength) &&
+        declaredLength >= 0 &&
+        declaredLength !== input.attachment.sizeBytes)
+    ) {
+      throw new DirectTurnRecoveryAttachmentError();
+    }
+    const blob = await response.blob();
+    const responseMimeType = blob.type.split(";", 1)[0]?.trim().toLowerCase() ?? "";
+    if (
+      blob.size !== input.attachment.sizeBytes ||
+      (responseMimeType.length > 0 && responseMimeType !== input.attachment.mimeType.toLowerCase())
+    ) {
+      throw new DirectTurnRecoveryAttachmentError();
+    }
+    return new File([blob], input.attachment.name, { type: input.attachment.mimeType });
+  } catch (error) {
+    if (error instanceof DirectTurnRecoveryAttachmentError) throw error;
+    throw new DirectTurnRecoveryAttachmentError();
+  } finally {
+    window.clearTimeout(timeoutId);
+    input.signal.removeEventListener("abort", onAbort);
+  }
+}
+
+async function materializeDirectTurnRecovery(input: {
+  recovery: PendingDirectTurnRecovery;
+  sourceMessage: ChatMessage | undefined;
+  signal: AbortSignal;
+}): Promise<QueuedComposerChatTurn> {
+  if (!input.sourceMessage || input.sourceMessage.id !== input.recovery.messageId) {
+    throw new DirectTurnRecoveryAttachmentError();
+  }
+  const acceptedBinaryAttachments = binaryChatAttachments(input.sourceMessage.attachments);
+  if (
+    acceptedBinaryAttachments.length !== input.recovery.binaryAttachments.length ||
+    acceptedBinaryAttachments.some(
+      (attachment, index) =>
+        !recoveryAttachmentMetadataMatches(input.recovery.binaryAttachments[index]!, attachment),
+    )
+  ) {
+    throw new DirectTurnRecoveryAttachmentError();
+  }
+
+  const liveBinaryAttachments = [
+    ...input.recovery.queuedTurn.images,
+    ...input.recovery.queuedTurn.files,
+  ];
+  if (
+    liveBinaryAttachments.length === input.recovery.binaryAttachments.length &&
+    liveBinaryAttachments.every((attachment, index) =>
+      recoveryAttachmentMetadataMatches(input.recovery.binaryAttachments[index]!, attachment),
+    )
+  ) {
+    return input.recovery.queuedTurn;
+  }
+
+  const files = await Promise.all(
+    acceptedBinaryAttachments.map((attachment) =>
+      fetchDirectTurnRecoveryFile({ attachment, signal: input.signal }),
+    ),
+  );
+  const images: ComposerImageAttachment[] = [];
+  const restoredFiles: ComposerFileAttachment[] = [];
+  for (const [index, attachment] of acceptedBinaryAttachments.entries()) {
+    const file = files[index];
+    const expected = input.recovery.binaryAttachments[index];
+    if (!file || !expected) throw new DirectTurnRecoveryAttachmentError();
+    if (attachment.type === "image") {
+      images.push({
+        type: "image",
+        id: attachment.id,
+        name: attachment.name,
+        mimeType: attachment.mimeType,
+        sizeBytes: attachment.sizeBytes,
+        previewUrl: URL.createObjectURL(file),
+        file,
+        ...(expected.type === "image" && expected.source ? { source: expected.source } : {}),
+      });
+    } else {
+      restoredFiles.push({
+        type: "file",
+        id: attachment.id,
+        name: attachment.name,
+        mimeType: attachment.mimeType,
+        sizeBytes: attachment.sizeBytes,
+        file,
+      });
+    }
+  }
+  return { ...input.recovery.queuedTurn, images, files: restoredFiles };
+}
+
 function eventTargetsComposer(
   event: globalThis.KeyboardEvent,
   composerForm: HTMLFormElement | null,
@@ -1090,21 +1236,6 @@ interface PlanFollowUpSubmission {
   queuedTurn?: QueuedComposerPlanFollowUp;
 }
 
-interface ComposerBindingSnapshot {
-  readonly modelSelection: ModelSelection;
-  readonly runtimeMode: RuntimeMode;
-  readonly interactionMode: ProviderInteractionMode;
-}
-
-interface PendingTurnStartRecovery {
-  readonly threadId: ThreadId;
-  readonly messageId: MessageId;
-  readonly previousBinding: ComposerBindingSnapshot;
-  readonly targetBinding: ComposerBindingSnapshot;
-  readonly queuedTurn: QueuedComposerChatTurn;
-  bindingSuperseded: boolean;
-}
-
 /**
  * Send-path handlers that are declared *after* `onSend` in the component body (they depend on
  * state and callbacks that are set up later) yet have to be reachable from it — and, for
@@ -1280,6 +1411,7 @@ export default function ChatView({
   const composerMentions = composerDraft.mentions;
   const composerActiveProvider = composerDraft.activeProvider;
   const queuedComposerTurns = composerDraft.queuedTurns;
+  const pendingDirectTurnRecovery = composerDraft.pendingDirectTurnRecovery;
   const restoredSourceProposedPlan = composerDraft.restoredSourceProposedPlan;
   const composerSendState = useMemo(
     () =>
@@ -1373,6 +1505,15 @@ export default function ChatView({
     (store) => store.setRestoredSourceProposedPlan,
   );
   const clearComposerDraftContent = useComposerDraftStore((store) => store.clearComposerContent);
+  const armPendingDirectTurnRecovery = useComposerDraftStore(
+    (store) => store.armPendingDirectTurnRecovery,
+  );
+  const clearPendingDirectTurnRecovery = useComposerDraftStore(
+    (store) => store.clearPendingDirectTurnRecovery,
+  );
+  const takePendingDirectTurnRecovery = useComposerDraftStore(
+    (store) => store.takePendingDirectTurnRecovery,
+  );
   const setDraftThreadContext = useComposerDraftStore((store) => store.setDraftThreadContext);
   const moveDraftThreadToProject = useComposerDraftStore((store) => store.moveDraftThreadToProject);
   const getDraftThreadByProjectId = useComposerDraftStore(
@@ -1446,24 +1587,7 @@ export default function ChatView({
   const [expandedImage, setExpandedImage] = useState<ExpandedImagePreview | null>(null);
   const [optimisticUserMessages, setOptimisticUserMessages] = useState<ChatMessage[]>([]);
   const optimisticUserMessagesRef = useRef(optimisticUserMessages);
-  const pendingTurnStartRecoveryRef = useRef<PendingTurnStartRecovery | null>(null);
-  useEffect(
-    () =>
-      useComposerDraftStore.subscribe((state, previousState) => {
-        const pendingRecovery = pendingTurnStartRecoveryRef.current;
-        if (!pendingRecovery) return;
-        const mutation = resolveComposerDraftTurnStartRecoveryMutation(
-          previousState.draftsByThreadId[pendingRecovery.threadId],
-          state.draftsByThreadId[pendingRecovery.threadId],
-        );
-        if (mutation === "content") {
-          pendingTurnStartRecoveryRef.current = null;
-        } else if (mutation === "binding") {
-          pendingRecovery.bindingSuperseded = true;
-        }
-      }),
-    [],
-  );
+  const pendingDirectTurnRecoveryMaterializationRef = useRef<string | null>(null);
   // Mirror during the commit, before events or async continuations can observe
   // the new UI with the previous render's preview URLs.
   useLayoutEffect(() => {
@@ -7577,8 +7701,8 @@ export default function ChatView({
   );
 
   useEffect(() => {
-    const pendingRecovery = pendingTurnStartRecoveryRef.current;
-    if (!pendingRecovery || !serverThread || pendingRecovery.threadId !== serverThread.id) {
+    const pendingRecovery = pendingDirectTurnRecovery;
+    if (!pendingRecovery || !serverThread) {
       return;
     }
 
@@ -7597,67 +7721,91 @@ export default function ChatView({
       activities: serverThread.activities,
     });
     if (disposition === "target-committed") {
-      pendingTurnStartRecoveryRef.current = null;
+      clearPendingDirectTurnRecovery(threadId, pendingRecovery.recoveryId);
       return;
     }
-    if (disposition === "terminal-unrecovered") {
-      pendingTurnStartRecoveryRef.current = null;
+    if (disposition !== "old-binding-restored" && disposition !== "terminal-unrecovered") {
       return;
     }
-    if (disposition !== "old-binding-restored") {
+    if (pendingRecovery.contentSuperseded) {
+      clearPendingDirectTurnRecovery(threadId, pendingRecovery.recoveryId);
       return;
     }
-
-    const composerIsEmpty =
-      prompt.length === 0 &&
-      composerPromptHistorySavedDraft === null &&
-      composerImages.length === 0 &&
-      composerFiles.length === 0 &&
-      composerAssistantSelections.length === 0 &&
-      composerBrowserAnnotations.length === 0 &&
-      composerFileComments.length === 0 &&
-      composerTerminalContexts.length === 0 &&
-      composerPastedTexts.length === 0 &&
-      selectedComposerSkills.length === 0 &&
-      selectedComposerMentions.length === 0;
-    if (!composerIsEmpty) {
-      // Any new draft content is a newer user intent. Permanently supersede
-      // the old send snapshot now so typing and then clearing cannot revive it
-      // when a delayed provider-start failure finally projects.
-      pendingTurnStartRecoveryRef.current = null;
-      return;
-    }
-
-    const desiredBindingIsStillFailedTarget =
-      !pendingRecovery.bindingSuperseded &&
-      composerActiveProvider === pendingRecovery.targetBinding.modelSelection.provider &&
-      selectedModelSelection !== null &&
-      modelSelectionsEqual(selectedModelSelection, pendingRecovery.targetBinding.modelSelection) &&
-      runtimeMode === pendingRecovery.targetBinding.runtimeMode &&
-      interactionMode === pendingRecovery.targetBinding.interactionMode;
-    pendingTurnStartRecoveryRef.current = null;
-    restoreQueuedTurnToComposer(
-      pendingRecovery.queuedTurn,
-      desiredBindingIsStillFailedTarget ? pendingRecovery.previousBinding : null,
+    const sourceMessage = serverThread.messages.find(
+      (message) => message.id === pendingRecovery.messageId && message.role === "user",
     );
+    if (!sourceMessage) {
+      // The durable message projection is the attachment authority. An event
+      // can arrive before its detail row; wait instead of trusting persisted
+      // attachment ids or partially restoring the draft.
+      return;
+    }
+    if (pendingDirectTurnRecoveryMaterializationRef.current === pendingRecovery.recoveryId) {
+      return;
+    }
+    pendingDirectTurnRecoveryMaterializationRef.current = pendingRecovery.recoveryId;
+    const controller = new AbortController();
+    void materializeDirectTurnRecovery({
+      recovery: pendingRecovery,
+      sourceMessage,
+      signal: controller.signal,
+    })
+      .then((queuedTurn) => {
+        const latestDraft = useComposerDraftStore.getState().draftsByThreadId[threadId];
+        const latestRecovery = latestDraft?.pendingDirectTurnRecovery;
+        if (
+          !latestDraft ||
+          latestRecovery?.recoveryId !== pendingRecovery.recoveryId ||
+          latestRecovery.contentSuperseded
+        ) {
+          for (const image of queuedTurn.images) {
+            if (!pendingRecovery.queuedTurn.images.includes(image)) {
+              URL.revokeObjectURL(image.previewUrl);
+            }
+          }
+          return;
+        }
+        const desiredBindingIsStillFailedTarget =
+          disposition === "old-binding-restored" && !latestRecovery.bindingSuperseded;
+        const taken = takePendingDirectTurnRecovery(threadId, latestRecovery.recoveryId);
+        if (!taken) {
+          for (const image of queuedTurn.images) {
+            if (!pendingRecovery.queuedTurn.images.includes(image)) {
+              URL.revokeObjectURL(image.previewUrl);
+            }
+          }
+          return;
+        }
+        restoreQueuedTurnToComposer(
+          queuedTurn,
+          desiredBindingIsStillFailedTarget ? taken.previousBinding : null,
+        );
+      })
+      .catch((error: unknown) => {
+        if (controller.signal.aborted) return;
+        toastManager.add({
+          type: "warning",
+          title: t("chat.turnRecoveryAttachmentTitle"),
+          description: t("chat.turnRecoveryAttachmentDescription"),
+        });
+        if (import.meta.env.DEV && !(error instanceof DirectTurnRecoveryAttachmentError)) {
+          console.warn("[composer-recovery] Could not restore accepted attachments", error);
+        }
+      })
+      .finally(() => {
+        if (pendingDirectTurnRecoveryMaterializationRef.current === pendingRecovery.recoveryId) {
+          pendingDirectTurnRecoveryMaterializationRef.current = null;
+        }
+      });
+    return () => controller.abort();
   }, [
-    composerAssistantSelections.length,
-    composerActiveProvider,
-    composerBrowserAnnotations.length,
-    composerFileComments.length,
-    composerFiles.length,
-    composerImages.length,
-    composerPastedTexts.length,
-    composerPromptHistorySavedDraft,
-    composerTerminalContexts.length,
-    interactionMode,
-    prompt,
+    clearPendingDirectTurnRecovery,
+    pendingDirectTurnRecovery,
     restoreQueuedTurnToComposer,
-    runtimeMode,
-    selectedComposerMentions.length,
-    selectedComposerSkills.length,
-    selectedModelSelection,
     serverThread,
+    t,
+    takePendingDirectTurnRecovery,
+    threadId,
   ]);
 
   const removeQueuedComposerTurn = useCallback(
@@ -8444,13 +8592,15 @@ export default function ChatView({
       messageIdForSend,
     );
     const messageCreatedAt = new Date().toISOString();
-    let pendingTurnStartRecoveryCandidate: PendingTurnStartRecovery | null = null;
+    const turnStartCommandId = newCommandId();
+    let pendingTurnStartRecoveryCandidate: PendingDirectTurnRecovery | null = null;
     if (queuedChatTurn === null) {
-      // A newer direct send supersedes any unresolved component-local
-      // recovery snapshot. Exact message ids still fence late activities, but
-      // keeping the old ref would let a delayed old failure restore stale
-      // content after this newer send has already cleared the Composer.
-      pendingTurnStartRecoveryRef.current = null;
+      const existingRecovery =
+        useComposerDraftStore.getState().draftsByThreadId[threadIdForSend]
+          ?.pendingDirectTurnRecovery ?? null;
+      if (existingRecovery) {
+        clearPendingDirectTurnRecovery(threadIdForSend, existingRecovery.recoveryId);
+      }
     }
     const currentThreadForRecovery = isServerThread
       ? getThreadFromState(useStore.getState(), threadIdForSend)
@@ -8471,7 +8621,8 @@ export default function ChatView({
         currentThreadForRecovery.interactionMode !== interactionModeForSend)
     ) {
       pendingTurnStartRecoveryCandidate = {
-        threadId: threadIdForSend,
+        recoveryId: newCommandId(),
+        commandId: turnStartCommandId,
         messageId: messageIdForSend,
         previousBinding: {
           modelSelection: currentThreadForRecovery.modelSelection,
@@ -8483,6 +8634,25 @@ export default function ChatView({
           runtimeMode: nextRuntimeModeForSend,
           interactionMode: interactionModeForSend,
         },
+        persistedImageAttachments: durablyPersistedComposerImageIds.filter((attachment) =>
+          composerImagesSnapshot.some((image) => image.id === attachment.id),
+        ),
+        binaryAttachments: [
+          ...composerImagesSnapshot.map((image) => ({
+            type: "image" as const,
+            name: image.name,
+            mimeType: image.mimeType,
+            sizeBytes: image.sizeBytes,
+            ...(image.source ? { source: image.source } : {}),
+          })),
+          ...composerFilesSnapshot.map((file) => ({
+            type: "file" as const,
+            name: file.name,
+            mimeType: file.mimeType,
+            sizeBytes: file.sizeBytes,
+          })),
+        ],
+        contentSuperseded: false,
         bindingSuperseded: false,
         queuedTurn: {
           id: `turn-start-recovery:${messageIdForSend}`,
@@ -8619,7 +8789,11 @@ export default function ChatView({
       applyingPromptHistoryNavigationRef.current = false;
       expectedPromptHistoryPromptRef.current = null;
       promptRef.current = "";
-      clearComposerDraftContent(threadIdForSend, { preservePreviewUrls: true });
+      if (pendingTurnStartRecoveryCandidate) {
+        armPendingDirectTurnRecovery(threadIdForSend, pendingTurnStartRecoveryCandidate);
+      } else {
+        clearComposerDraftContent(threadIdForSend, { preservePreviewUrls: true });
+      }
       if (isLivePlanFollowUpSubmission) {
         setComposerDraftInteractionMode(threadIdForSend, interactionModeForSend);
       }
@@ -8630,13 +8804,6 @@ export default function ChatView({
       // draft reset so rapid follow-up typing lands in the composer.
       scheduleComposerFocus();
     }
-    // Arm only after the send-owned reset. From this point onward, the store
-    // subscription treats the first semantic draft mutation as newer intent
-    // and permanently supersedes this one-shot recovery snapshot.
-    if (pendingTurnStartRecoveryCandidate !== null) {
-      pendingTurnStartRecoveryRef.current = pendingTurnStartRecoveryCandidate;
-    }
-
     let createdServerThreadForLocalDraft = false;
     let createdWorktreeForSendPath: string | null = null;
     let switchedToLocalCheckout = false;
@@ -8906,7 +9073,7 @@ export default function ChatView({
       await stagedTurnAttachments.runWithDispatch((turnAttachments) =>
         api.orchestration.dispatchCommand({
           type: "thread.turn.start",
-          commandId: newCommandId(),
+          commandId: turnStartCommandId,
           threadId: threadIdForSend,
           message: {
             messageId: messageIdForSend,
@@ -8975,8 +9142,11 @@ export default function ChatView({
         // The turn RPC never resolved, so no server turn exists for the
         // watchdog to recover — drop the marker armed when the dispatch began.
         clearPendingTurnDispatch(threadIdForSend);
-        if (pendingTurnStartRecoveryRef.current?.messageId === messageIdForSend) {
-          pendingTurnStartRecoveryRef.current = null;
+        const pendingRecovery =
+          useComposerDraftStore.getState().draftsByThreadId[threadIdForSend]
+            ?.pendingDirectTurnRecovery ?? null;
+        if (pendingRecovery?.messageId === messageIdForSend) {
+          clearPendingDirectTurnRecovery(threadIdForSend, pendingRecovery.recoveryId);
         }
       }
       if (createdServerThreadForLocalDraft && !turnStartSucceeded) {

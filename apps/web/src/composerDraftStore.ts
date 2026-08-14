@@ -15,6 +15,7 @@ import { createComposerDraftStoreState } from "./composerDraftActions";
 import {
   COMPOSER_DRAFT_STORAGE_KEY,
   COMPOSER_DRAFT_STORAGE_VERSION,
+  resolvePendingDirectTurnRecoveryMutation,
   selectComposerThreadDraft,
   type ComposerDraftStoreState,
   type ComposerThreadDraftState,
@@ -49,6 +50,7 @@ export {
 } from "./composerDraftDomain";
 export type {
   ComposerAssistantSelectionAttachment,
+  ComposerBindingSnapshot,
   ComposerAttachmentPersistenceResult,
   ComposerDraftStoreState,
   ComposerFileAttachment,
@@ -57,6 +59,7 @@ export type {
   ComposerThreadDraftState,
   DraftThreadEnvMode,
   DraftThreadState,
+  PendingDirectTurnRecovery,
   QueuedComposerChatTurn,
   QueuedComposerPlanFollowUp,
   QueuedComposerTurn,
@@ -117,6 +120,29 @@ export const useComposerDraftStore = create<ComposerDraftStoreState>()(
     },
   ),
 );
+
+// Recovery supersession belongs to the persisted Composer owner rather than a
+// mounted ChatView. Only compare a marker that existed on both sides of the
+// mutation: arming, hydration, settlement, and replacement are owner actions,
+// not newer user intent.
+useComposerDraftStore.subscribe((state, previousState) => {
+  for (const [threadId, currentDraft] of Object.entries(state.draftsByThreadId)) {
+    const currentRecovery = currentDraft.pendingDirectTurnRecovery;
+    if (!currentRecovery) continue;
+    const previousDraft = previousState.draftsByThreadId[threadId as ThreadId];
+    if (previousDraft?.pendingDirectTurnRecovery?.recoveryId !== currentRecovery.recoveryId) {
+      continue;
+    }
+    const mutation = resolvePendingDirectTurnRecoveryMutation(previousDraft, currentDraft);
+    if (mutation !== "none") {
+      state.supersedePendingDirectTurnRecovery(
+        threadId as ThreadId,
+        currentRecovery.recoveryId,
+        mutation,
+      );
+    }
+  }
+});
 
 export function useComposerThreadDraft(threadId: ThreadId): ComposerThreadDraftState {
   return useComposerDraftStore((state) => selectComposerThreadDraft(state, threadId));

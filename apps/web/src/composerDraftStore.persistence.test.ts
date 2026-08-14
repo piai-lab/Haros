@@ -1,9 +1,20 @@
-import { OrchestrationProposedPlanId, ProjectId, ThreadId } from "@omnimind/contracts";
+import {
+  CommandId,
+  MessageId,
+  OrchestrationProposedPlanId,
+  ProjectId,
+  ThreadId,
+} from "@omnimind/contracts";
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
-import { partializeComposerDraftStoreState, useComposerDraftStore } from "./composerDraftStore";
+import {
+  partializeComposerDraftStoreState,
+  useComposerDraftStore,
+  type PendingDirectTurnRecovery,
+} from "./composerDraftStore";
 import { normalizeCurrentPersistedComposerDraftStoreState } from "./composerDraftPersistence";
 import {
   makeImage,
+  makeFile,
   makeQueuedChatTurn,
   makeQueuedTurn,
   makeTerminalContext,
@@ -15,6 +26,67 @@ import {
   INLINE_TERMINAL_CONTEXT_PLACEHOLDER,
   insertInlineTerminalContextPlaceholder,
 } from "./lib/terminalContext";
+
+function makePendingDirectTurnRecovery(
+  id: string,
+  options?: { image?: ReturnType<typeof makeImage>; file?: ReturnType<typeof makeFile> },
+): PendingDirectTurnRecovery {
+  const queuedTurn = makeQueuedChatTurn(`recovery-${id}`, options?.image);
+  if (queuedTurn.kind !== "chat") throw new Error("Expected a chat turn fixture");
+  if (options?.file) queuedTurn.files = [options.file];
+  queuedTurn.prompt = `recover ${id}`;
+  return {
+    recoveryId: CommandId.makeUnsafe(`recovery-${id}`),
+    commandId: CommandId.makeUnsafe(`command-${id}`),
+    messageId: MessageId.makeUnsafe(`message-${id}`),
+    previousBinding: {
+      modelSelection: modelSelection("codex", "gpt-5"),
+      runtimeMode: "full-access",
+      interactionMode: "default",
+    },
+    targetBinding: {
+      modelSelection: modelSelection("omnimind", "gateway/model"),
+      runtimeMode: "auto",
+      interactionMode: "plan",
+    },
+    queuedTurn,
+    persistedImageAttachments: options?.image
+      ? [
+          {
+            id: options.image.id,
+            name: options.image.name,
+            mimeType: options.image.mimeType,
+            sizeBytes: options.image.sizeBytes,
+            blobKey: `composer-image/thread-recovery/${options.image.id}`,
+          },
+        ]
+      : [],
+    binaryAttachments: [
+      ...(options?.image
+        ? [
+            {
+              type: "image" as const,
+              name: options.image.name,
+              mimeType: options.image.mimeType,
+              sizeBytes: options.image.sizeBytes,
+            },
+          ]
+        : []),
+      ...(options?.file
+        ? [
+            {
+              type: "file" as const,
+              name: options.file.name,
+              mimeType: options.file.mimeType,
+              sizeBytes: options.file.sizeBytes,
+            },
+          ]
+        : []),
+    ],
+    contentSuperseded: false,
+    bindingSuperseded: false,
+  };
+}
 
 describe("composerDraftStore persisted-state hydration", () => {
   it("normalizes null and empty persisted states", () => {
@@ -670,6 +742,130 @@ describe("composerDraftStore queued follow-ups", () => {
     store.clearDraftThread(threadId);
 
     expect(revokeSpy).toHaveBeenCalledWith("blob:queued-image-thread-clear");
+  });
+});
+
+describe("composerDraftStore direct turn recovery", () => {
+  const threadId = ThreadId.makeUnsafe("thread-direct-recovery");
+
+  beforeEach(() => {
+    resetComposerDraftStore();
+  });
+
+  it("arms and clears the visible Composer atomically without changing Queue", () => {
+    const store = useComposerDraftStore.getState();
+    store.setPrompt(threadId, "visible prompt");
+    store.enqueueQueuedTurn(threadId, makeQueuedTurn("queued-unchanged"));
+
+    const recovery = makePendingDirectTurnRecovery("arm");
+    store.armPendingDirectTurnRecovery(threadId, recovery);
+
+    expect(useComposerDraftStore.getState().draftsByThreadId[threadId]).toMatchObject({
+      prompt: "",
+      queuedTurns: [{ id: "queued-unchanged" }],
+      pendingDirectTurnRecovery: {
+        recoveryId: recovery.recoveryId,
+        queuedTurn: { prompt: "recover arm" },
+      },
+    });
+  });
+
+  it("persists the recovery snapshot without File bytes or preview URLs and rehydrates it", () => {
+    const image = makeImage({ id: "recovery-image", previewUrl: "blob:recovery-image" });
+    const file = makeFile({ id: "recovery-file", sizeBytes: 7 });
+    const recovery = makePendingDirectTurnRecovery("restart", { image, file });
+    useComposerDraftStore.getState().armPendingDirectTurnRecovery(threadId, recovery);
+
+    const persistedState = partializeComposerDraftStoreState(useComposerDraftStore.getState());
+    const serialized = JSON.stringify(persistedState);
+    expect(serialized).not.toContain("blob:recovery-image");
+    expect(serialized).toContain(file.name);
+    const persistedRecovery = persistedState.draftsByThreadId[threadId]
+      ?.pendingDirectTurnRecovery as { queuedTurn?: { files?: unknown } } | undefined;
+    expect(persistedRecovery?.queuedTurn?.files).toBeUndefined();
+
+    const persistApi = useComposerDraftStore.persist as unknown as {
+      getOptions: () => {
+        merge: (
+          persistedState: unknown,
+          currentState: ReturnType<typeof useComposerDraftStore.getState>,
+        ) => ReturnType<typeof useComposerDraftStore.getState>;
+      };
+    };
+    const merged = persistApi
+      .getOptions()
+      .merge(persistedState, useComposerDraftStore.getInitialState());
+    const hydrated = merged.draftsByThreadId[threadId]?.pendingDirectTurnRecovery;
+
+    expect(hydrated).toMatchObject({
+      recoveryId: recovery.recoveryId,
+      commandId: recovery.commandId,
+      messageId: recovery.messageId,
+      queuedTurn: {
+        prompt: "recover restart",
+        images: [],
+        files: [],
+        terminalContexts: [{ text: "git status\nOn branch main" }],
+      },
+      binaryAttachments: [
+        { type: "image", name: image.name, sizeBytes: image.sizeBytes },
+        { type: "file", name: file.name, sizeBytes: file.sizeBytes },
+      ],
+    });
+  });
+
+  it("drops a malformed recovery marker without poisoning the remaining draft", () => {
+    const normalized = normalizeCurrentPersistedComposerDraftStoreState({
+      draftsByThreadId: {
+        [threadId]: {
+          prompt: "keep me",
+          attachments: [],
+          pendingDirectTurnRecovery: {
+            recoveryId: "",
+            commandId: "bad",
+            messageId: "bad",
+          },
+        },
+      },
+      draftThreadsByThreadId: {},
+      projectDraftThreadIdByProjectId: {},
+    });
+
+    expect(normalized.draftsByThreadId[threadId]).toMatchObject({ prompt: "keep me" });
+    expect(normalized.draftsByThreadId[threadId]?.pendingDirectTurnRecovery).toBeUndefined();
+  });
+
+  it("marks content and binding ABA changes monotonically across component lifetimes", () => {
+    const recovery = makePendingDirectTurnRecovery("aba");
+    const store = useComposerDraftStore.getState();
+    store.armPendingDirectTurnRecovery(threadId, recovery);
+    store.setPrompt(threadId, "newer intent");
+    store.setPrompt(threadId, "");
+    store.setModelSelection(threadId, recovery.previousBinding.modelSelection);
+    store.setModelSelection(threadId, recovery.targetBinding.modelSelection);
+
+    expect(
+      useComposerDraftStore.getState().draftsByThreadId[threadId]?.pendingDirectTurnRecovery,
+    ).toMatchObject({
+      recoveryId: recovery.recoveryId,
+      contentSuperseded: true,
+      bindingSuperseded: true,
+    });
+  });
+
+  it("prevents an older recovery from clearing or taking a replacement marker", () => {
+    const first = makePendingDirectTurnRecovery("r1");
+    const second = makePendingDirectTurnRecovery("r2");
+    const store = useComposerDraftStore.getState();
+    store.armPendingDirectTurnRecovery(threadId, first);
+    store.armPendingDirectTurnRecovery(threadId, second);
+
+    expect(store.clearPendingDirectTurnRecovery(threadId, first.recoveryId)).toBe(false);
+    expect(store.takePendingDirectTurnRecovery(threadId, first.recoveryId)).toBeNull();
+    expect(
+      useComposerDraftStore.getState().draftsByThreadId[threadId]?.pendingDirectTurnRecovery
+        ?.recoveryId,
+    ).toBe(second.recoveryId);
   });
 });
 

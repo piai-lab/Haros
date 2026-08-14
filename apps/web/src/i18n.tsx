@@ -871,6 +871,9 @@ export const EN_MESSAGES = {
   "chat.chooseSplitDescription": "Pick which Chat should appear in the focused split pane.",
   "chat.unknownProject": "Project",
   "chat.untitled": "Chat",
+  "chat.turnRecoveryAttachmentTitle": "Attachments are not ready to restore",
+  "chat.turnRecoveryAttachmentDescription":
+    "The original message is safe, but its attachments could not be restored yet. Reopen this task to try again.",
   "chat.openForkSource": "Open source Chat {title}",
   "chat.continuedFromChat": "Continued from Chat",
   "conversation.loadingModels": "Loading models",
@@ -4133,6 +4136,9 @@ export const ZH_CN_MESSAGES = {
   "chat.chooseSplitDescription": "选择要在当前拆分窗格中显示的 Chat。",
   "chat.unknownProject": "项目",
   "chat.untitled": "Chat",
+  "chat.turnRecoveryAttachmentTitle": "附件暂时无法恢复",
+  "chat.turnRecoveryAttachmentDescription":
+    "原消息仍然安全，但附件暂时无法恢复。请重新打开此任务后再试。",
   "chat.openForkSource": "打开来源 Chat“{title}”",
   "chat.continuedFromChat": "从来源 Chat 继续",
   "conversation.loadingModels": "正在加载模型",

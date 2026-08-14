@@ -8,7 +8,6 @@ import {
   type ModelSlug,
   type OrchestrationThreadActivity,
   type ProviderApprovalDecision,
-  type ProviderKind,
   type ProviderRequestKind,
   type RuntimeMode,
   type ServerProviderAuthStatus,
@@ -29,7 +28,7 @@ import {
   type WorktreeSetupSnapshot,
   type WorktreeSetupStepId,
 } from "../types";
-import { type ComposerThreadDraftState, type DraftThreadState } from "../composerDraftStore";
+import { type DraftThreadState } from "../composerDraftStore";
 import { resolveThreadDisplayTitle } from "../lib/threadDisplayTitle";
 import { Schema } from "effect";
 import {
@@ -265,45 +264,6 @@ export function resolveTurnStartRecoveryDisposition(input: {
     input.threadRuntimeMode === input.previousRuntimeMode &&
     input.threadInteractionMode === input.previousInteractionMode;
   return oldBindingIsRestored ? "old-binding-restored" : "pending";
-}
-
-/**
- * A mounted send snapshot is one-shot recovery state. Any semantic Composer
- * mutation after the send-owned clear permanently supersedes it, including an
- * add-then-remove attachment or a binding B -> C -> B cycle that happens to
- * end at the failed target again.
- */
-export function resolveComposerDraftTurnStartRecoveryMutation(
-  previous: ComposerThreadDraftState | undefined,
-  current: ComposerThreadDraftState | undefined,
-): "none" | "content" | "binding" {
-  if (previous === current) return "none";
-  if (previous === undefined || current === undefined) return "content";
-
-  if (
-    previous.prompt !== current.prompt ||
-    previous.promptHistorySavedDraft !== current.promptHistorySavedDraft ||
-    previous.images !== current.images ||
-    previous.files !== current.files ||
-    previous.assistantSelections !== current.assistantSelections ||
-    previous.browserAnnotations !== current.browserAnnotations ||
-    previous.terminalContexts !== current.terminalContexts ||
-    previous.fileComments !== current.fileComments ||
-    previous.pastedTexts !== current.pastedTexts ||
-    previous.skills !== current.skills ||
-    previous.mentions !== current.mentions
-  ) {
-    return "content";
-  }
-  if (
-    previous.modelSelectionByProvider !== current.modelSelectionByProvider ||
-    previous.activeProvider !== current.activeProvider ||
-    previous.runtimeMode !== current.runtimeMode ||
-    previous.interactionMode !== current.interactionMode
-  ) {
-    return "binding";
-  }
-  return "none";
 }
 
 /**

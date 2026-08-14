@@ -21,7 +21,6 @@ import {
   buildTranscriptAutoFollowSignal,
   createRuntimeModePersistenceQueue,
   desiredBindingCanPersistWithoutActiveSession,
-  resolveComposerDraftTurnStartRecoveryMutation,
   persistModelSelectionBeforeRuntimeMode,
   createLocalDispatchSnapshot,
   createWorktreeSetupResolution,
@@ -75,11 +74,12 @@ import {
   shouldRenderTerminalWorkspace,
   worktreeSetupHasError,
 } from "./ChatView.logic";
+import { resolvePendingDirectTurnRecoveryMutation } from "../composerDraftDomain";
 
-describe("resolveComposerDraftTurnStartRecoveryMutation", () => {
+describe("resolvePendingDirectTurnRecoveryMutation", () => {
   it("is monotonic for content and exact-binding intent changes", () => {
     const baseline = createEmptyThreadDraft();
-    expect(resolveComposerDraftTurnStartRecoveryMutation(baseline, baseline)).toBe("none");
+    expect(resolvePendingDirectTurnRecoveryMutation(baseline, baseline)).toBe("none");
 
     const withAttachmentIntent = {
       ...baseline,
@@ -94,7 +94,7 @@ describe("resolveComposerDraftTurnStartRecoveryMutation", () => {
         },
       ],
     };
-    expect(resolveComposerDraftTurnStartRecoveryMutation(baseline, withAttachmentIntent)).toBe(
+    expect(resolvePendingDirectTurnRecoveryMutation(baseline, withAttachmentIntent)).toBe(
       "content",
     );
 
@@ -111,9 +111,7 @@ describe("resolveComposerDraftTurnStartRecoveryMutation", () => {
         codex: { provider: "codex" as const, model: "gpt-5.5" },
       },
     };
-    expect(resolveComposerDraftTurnStartRecoveryMutation(targetBinding, newerBinding)).toBe(
-      "binding",
-    );
+    expect(resolvePendingDirectTurnRecoveryMutation(targetBinding, newerBinding)).toBe("binding");
   });
 });
 
@@ -207,7 +205,7 @@ describe("turn-start recovery disposition", () => {
     ).toBe("old-binding-restored");
   });
 
-  it("settles the snapshot without restoring stale content when the old Session restore failed", () => {
+  it("reports terminal recovery so content can return without reviving the old binding", () => {
     expect(
       resolveTurnStartRecoveryDisposition({
         messageId: CROSS_PROVIDER_MESSAGE_ID,
