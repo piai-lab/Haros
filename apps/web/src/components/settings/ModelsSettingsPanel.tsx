@@ -215,12 +215,14 @@ function ActiveModelsSettingsPanel({
   const openedAuthUrlsRef = useRef(new Set<string>());
   const setupCompletionArmedRef = useRef(false);
   const addModelServiceButtonRef = useRef<HTMLButtonElement | null>(null);
+  const modelServiceDetailBackButtonRef = useRef<HTMLButtonElement | null>(null);
   const modelServiceBrowserListRef = useRef<HTMLUListElement | null>(null);
   const modelServiceBrowserItemRefs = useRef(new Map<string, HTMLButtonElement>());
   const modelServiceBrowserRestoreRef = useRef<{
     readonly serviceId: string;
     readonly scrollTop: number;
   } | null>(null);
+  const modelServiceDetailShouldFocusRef = useRef(false);
   const modelServicesCapability = useSyncExternalStore(
     subscribeModelServicesCapability,
     readModelServicesCapability,
@@ -984,6 +986,7 @@ function ActiveModelsSettingsPanel({
       }
       setModelServiceDetailReturnView(returnView);
       setModelServiceModelSearch("");
+      modelServiceDetailShouldFocusRef.current = true;
       setSelectedModelServiceId(serviceId);
     },
     [],
@@ -1019,6 +1022,15 @@ function ActiveModelsSettingsPanel({
     });
     return () => cancelAnimationFrame(frame);
   }, [modelServiceBrowserOpen, selectedModelServiceId]);
+
+  useEffect(() => {
+    if (!selectedModelServiceId || !modelServiceDetailShouldFocusRef.current) return;
+    const frame = requestAnimationFrame(() => {
+      modelServiceDetailBackButtonRef.current?.focus();
+      modelServiceDetailShouldFocusRef.current = false;
+    });
+    return () => cancelAnimationFrame(frame);
+  }, [selectedModelServiceId]);
 
   const customServiceFormValid = useMemo(() => {
     if (!customServiceEditor) return false;
@@ -1309,10 +1321,15 @@ function ActiveModelsSettingsPanel({
               <div className="border-t border-border/70 pt-4">
                 <button
                   type="button"
-                  className="group flex w-full items-center justify-between gap-3 rounded-lg px-2 py-2 text-left text-sm text-muted-foreground outline-none transition-colors hover:bg-foreground/[0.035] hover:text-foreground focus-visible:ring-1 focus-visible:ring-ring/60"
+                  className="group flex w-full items-center gap-2.5 rounded-lg px-2 py-2 text-left text-sm text-muted-foreground outline-none transition-colors hover:bg-foreground/[0.035] hover:text-foreground focus-visible:ring-1 focus-visible:ring-ring/60"
                   onClick={() => openCustomServiceEditor()}
                 >
-                  <span>
+                  <ModelServiceIcon
+                    serviceId="custom-api"
+                    origin="models_json"
+                    className="size-4"
+                  />
+                  <span className="min-w-0 flex-1">
                     {t("settings.customApiNotFoundPrompt")}{" "}
                     <span className="font-medium text-foreground">
                       {t("settings.connectByApiAddress")}
@@ -1662,7 +1679,12 @@ function ActiveModelsSettingsPanel({
                 : t("settings.modelServiceDetails")
             }
             action={
-              <Button size="sm" variant="ghost" onClick={closeModelServiceDetails}>
+              <Button
+                ref={modelServiceDetailBackButtonRef}
+                size="sm"
+                variant="ghost"
+                onClick={closeModelServiceDetails}
+              >
                 {t("common.back")}
               </Button>
             }
@@ -1883,13 +1905,22 @@ function ActiveModelsSettingsPanel({
                       {t("settings.modelServiceModelDetailsUnavailable")}
                     </SettingsEmptyState>
                   ) : filteredSelectedModelServiceModels.length > 0 ? (
-                    <ul className="grid list-none gap-2 sm:grid-cols-2">
+                    <ul
+                      data-model-service-model-list="compact-list"
+                      className="list-none divide-y divide-border/70 overflow-hidden rounded-xl border border-border bg-background"
+                    >
                       {filteredSelectedModelServiceModels.map((model) => (
                         <li
                           key={model.modelId}
-                          className="min-w-0 rounded-xl border border-border bg-foreground/[0.025] px-4 py-3"
+                          className="flex min-w-0 items-center gap-3 px-3 py-2.5"
                         >
-                          <div className="min-w-0">
+                          <ModelServiceIcon
+                            serviceId={selectedModelService.serviceId}
+                            modelId={model.modelId}
+                            origin={selectedModelService.origin}
+                            className="size-5"
+                          />
+                          <div className="min-w-0 flex-1">
                             <p className="truncate text-sm font-medium text-foreground">
                               {model.displayName}
                             </p>
@@ -1897,13 +1928,13 @@ function ActiveModelsSettingsPanel({
                               {model.modelId}
                             </p>
                           </div>
-                          <div className="mt-2 flex flex-wrap gap-1.5">
+                          <div className="flex shrink-0 flex-wrap justify-end gap-x-2 gap-y-0.5 text-[10px] text-muted-foreground">
                             <span
                               className={cn(
-                                "rounded-full border px-2 py-0.5 text-[10px]",
+                                "font-medium",
                                 model.available
-                                  ? "border-primary/20 bg-primary/5 text-primary"
-                                  : "border-border text-muted-foreground",
+                                  ? "text-primary"
+                                  : "text-muted-foreground",
                               )}
                             >
                               {model.available
@@ -1911,19 +1942,13 @@ function ActiveModelsSettingsPanel({
                                 : t("settings.modelServiceModelNeedsAuth")}
                             </span>
                             {model.reasoning ? (
-                              <span className="rounded-full border border-border px-2 py-0.5 text-[10px] text-muted-foreground">
-                                {t("settings.modelServiceModelThinking")}
-                              </span>
+                              <span>{t("settings.modelServiceModelThinking")}</span>
                             ) : null}
                             {model.input.includes("image") ? (
-                              <span className="rounded-full border border-border px-2 py-0.5 text-[10px] text-muted-foreground">
-                                {t("settings.modelServiceModelImages")}
-                              </span>
+                              <span>{t("settings.modelServiceModelImages")}</span>
                             ) : null}
                             {model.contextWindow > 0 ? (
-                              <span className="rounded-full border border-border px-2 py-0.5 text-[10px] text-muted-foreground">
-                                {modelContextLabel(model)}
-                              </span>
+                              <span>{modelContextLabel(model)}</span>
                             ) : null}
                           </div>
                         </li>

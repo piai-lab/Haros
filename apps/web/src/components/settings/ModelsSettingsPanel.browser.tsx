@@ -629,6 +629,8 @@ describe("ModelsSettingsPanel model services", () => {
     });
     connectButton.element().focus();
     await userEvent.keyboard("{Enter}");
+    const detailBackButton = mounted.screen.getByRole("button", { name: "common.back" });
+    await expect.poll(() => document.activeElement).toBe(detailBackButton.element());
     await expect
       .poll(() => document.body.textContent)
       .toContain("settings.modelServiceAuthentication");
@@ -638,6 +640,12 @@ describe("ModelsSettingsPanel model services", () => {
     expect(document.body.textContent).toContain("settings.modelServiceModelThinking");
     expect(document.body.textContent).toContain("settings.modelServiceModelImages");
     expect(document.body.textContent).not.toContain("settings.searchModelServices");
+    const modelList = document.querySelector<HTMLUListElement>(
+      '[data-model-service-model-list="compact-list"]',
+    );
+    expect(modelList).not.toBeNull();
+    expect(modelList?.querySelectorAll("li")).toHaveLength(2);
+    expect(modelList?.querySelectorAll('[data-model-service-icon="brand"]')).toHaveLength(2);
 
     await mounted.screen.getByRole("button", { name: "common.back" }).click();
     expect(
@@ -707,6 +715,7 @@ describe("ModelsSettingsPanel model services", () => {
       name: /settings\.connectByApiAddress/,
     });
     expect(document.body.textContent).toContain("settings.customApiNotFoundPrompt");
+    expect(apiEntry.element().querySelector('[data-model-service-icon="custom"]')).not.toBeNull();
     await apiEntry.click();
 
     await mounted.screen.getByLabelText("settings.customApiConnectionName").fill("Custom Service");

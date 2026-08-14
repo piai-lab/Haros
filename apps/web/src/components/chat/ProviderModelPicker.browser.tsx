@@ -404,6 +404,14 @@ describe("ProviderModelPicker", () => {
         expect(text).toContain("GPT-5");
       });
       expect(document.querySelector('[data-model-service-icon="brand"]')).not.toBeNull();
+      for (const modelName of ["Nemotron 3 Super Free", "GPT-5"]) {
+        expect(
+          page
+            .getByRole("menuitemradio", { name: modelName })
+            .element()
+            .querySelector('[data-model-service-icon="brand"]'),
+        ).not.toBeNull();
+      }
     } finally {
       await mounted.cleanup();
     }

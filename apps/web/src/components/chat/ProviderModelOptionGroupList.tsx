@@ -126,19 +126,31 @@ function ProviderModelRadioItem(
     >
       <span
         className={cn(
-          "flex min-w-0 flex-col",
+          "flex min-w-0 items-center gap-1.5",
           supportsFavorites && COMPOSER_PICKER_MODEL_ROW_LABEL_INDENT_CLASS_NAME,
         )}
       >
-        <span className="block min-w-0 truncate">{modelOption.name}</span>
-        {provenanceLabel ? (
-          <span
-            aria-hidden="true"
-            className="block min-w-0 truncate text-[10px] leading-tight text-muted-foreground/60"
-          >
-            {provenanceLabel}
-          </span>
+        {modelOption.upstreamProviderId ? (
+          <ModelServiceIcon
+            serviceId={modelOption.upstreamProviderId}
+            modelId={modelOption.slug}
+            {...(modelOption.upstreamProviderOrigin
+              ? { origin: modelOption.upstreamProviderOrigin }
+              : {})}
+            className="size-3.5"
+          />
         ) : null}
+        <span className="flex min-w-0 flex-col">
+          <span className="block min-w-0 truncate">{modelOption.name}</span>
+          {provenanceLabel ? (
+            <span
+              aria-hidden="true"
+              className="block min-w-0 truncate text-[10px] leading-tight text-muted-foreground/60"
+            >
+              {provenanceLabel}
+            </span>
+          ) : null}
+        </span>
       </span>
     </MenuRadioItem>
   );
