@@ -41,6 +41,7 @@ import type {
   OmniMindModelServicesProjectionIntent,
 } from "@omnimind/contracts";
 import {
+  OMNIMIND_CUSTOM_MODEL_COST_TIERS_MAX_COUNT,
   OMNIMIND_CUSTOM_MODEL_SERVICE_MODELS_MAX_COUNT,
   OMNIMIND_MODEL_SERVICE_MODELS_MAX_COUNT,
   OMNIMIND_MODEL_SERVICES_MAX_COUNT,
@@ -190,11 +191,24 @@ function customProviderConfig(input: OmniMindCustomModelServiceConfigInput) {
         ...(model.reasoning !== undefined ? { reasoning: model.reasoning } : {}),
         ...(thinkingLevelMap ? { thinkingLevelMap } : {}),
         ...(model.input ? { input: [...model.input] } : {}),
+        ...(model.cost
+          ? {
+              cost: {
+                input: model.cost.input,
+                output: model.cost.output,
+                cacheRead: model.cost.cacheRead,
+                cacheWrite: model.cost.cacheWrite,
+                ...(model.cost.tiers
+                  ? { tiers: model.cost.tiers.map((tier) => ({ ...tier })) }
+                  : {}),
+              },
+            }
+          : {}),
         ...(model.contextWindow !== undefined ? { contextWindow: model.contextWindow } : {}),
         ...(model.maxTokens !== undefined ? { maxTokens: model.maxTokens } : {}),
       };
     }),
-  } as const;
+  };
 }
 
 function customProviderDiscoveryConfig(input: OmniMindCustomModelServiceDiscoveryConfigInput) {
@@ -228,6 +242,29 @@ function isCustomApiProtocol(value: string | undefined): value is CustomApiProto
   return CUSTOM_API_PROTOCOLS.some((protocol) => protocol === value);
 }
 
+function isPublicCustomModelCost(cost: {
+  readonly input: number;
+  readonly output: number;
+  readonly cacheRead: number;
+  readonly cacheWrite: number;
+  readonly tiers?: ReadonlyArray<{
+    readonly inputTokensAbove: number;
+    readonly input: number;
+    readonly output: number;
+    readonly cacheRead: number;
+    readonly cacheWrite: number;
+  }>;
+}): boolean {
+  const rates = [cost.input, cost.output, cost.cacheRead, cost.cacheWrite];
+  if (rates.some((rate) => !Number.isFinite(rate) || rate < 0)) return false;
+  if ((cost.tiers?.length ?? 0) > OMNIMIND_CUSTOM_MODEL_COST_TIERS_MAX_COUNT) return false;
+  return (cost.tiers ?? []).every((tier) =>
+    [tier.inputTokensAbove, tier.input, tier.output, tier.cacheRead, tier.cacheWrite].every(
+      (value) => Number.isFinite(value) && value >= 0,
+    ),
+  );
+}
+
 function projectCustomConfig(
   serviceId: string,
   provider: ReturnType<
@@ -235,6 +272,13 @@ function projectCustomConfig(
   >,
 ): OmniMindCustomModelServiceConfig | undefined {
   if (!provider?.baseUrl || !isCustomApiProtocol(provider.api) || !provider.models?.length) {
+    return undefined;
+  }
+  if (
+    provider.models.some(
+      (model) => model.cost !== undefined && !isPublicCustomModelCost(model.cost),
+    )
+  ) {
     return undefined;
   }
   const models = provider.models.flatMap<OmniMindCustomModelServiceModelInput>((model) => {
@@ -256,6 +300,21 @@ function projectCustomConfig(
               input: model.input.filter(
                 (kind): kind is "text" | "image" => kind === "text" || kind === "image",
               ),
+            }
+          : {}),
+        ...(model.cost && isPublicCustomModelCost(model.cost)
+          ? {
+              cost: {
+                input: model.cost.input,
+                output: model.cost.output,
+                cacheRead: model.cost.cacheRead,
+                cacheWrite: model.cost.cacheWrite,
+                ...(model.cost.tiers?.length
+                  ? {
+                      tiers: model.cost.tiers.map((tier) => ({ ...tier })),
+                    }
+                  : {}),
+              },
             }
           : {}),
         ...(model.contextWindow !== undefined

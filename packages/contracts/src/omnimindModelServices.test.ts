@@ -278,6 +278,21 @@ describe("OmniMind model-services contracts", () => {
             api: "openai-responses",
             baseUrl: "https://model.example.test/v1",
             thinkingLevelMap: { off: null, low: "low", high: "high" },
+            cost: {
+              input: 1,
+              output: 2,
+              cacheRead: 0.25,
+              cacheWrite: 0.5,
+              tiers: [
+                {
+                  inputTokensAbove: 0,
+                  input: 3,
+                  output: 4,
+                  cacheRead: 0.75,
+                  cacheWrite: 1,
+                },
+              ],
+            },
           },
         ],
       },
@@ -291,6 +306,21 @@ describe("OmniMind model-services contracts", () => {
           api: "openai-responses",
           baseUrl: "https://model.example.test/v1",
           thinkingLevelMap: { off: null, low: "low", high: "high" },
+          cost: {
+            input: 1,
+            output: 2,
+            cacheRead: 0.25,
+            cacheWrite: 0.5,
+            tiers: [
+              {
+                inputTokensAbove: 0,
+                input: 3,
+                output: 4,
+                cacheRead: 0.75,
+                cacheWrite: 1,
+              },
+            ],
+          },
         },
       ],
     });
@@ -306,6 +336,24 @@ describe("OmniMind model-services contracts", () => {
             {
               modelId: "model-one",
               baseUrl: "file:///private/model",
+            },
+          ],
+        },
+        credential: { type: "preserve" },
+        testModelId: "model-one",
+      }),
+    ).toThrow();
+    expect(() =>
+      Schema.decodeUnknownSync(OmniMindCustomModelServiceTestInput)({
+        config: {
+          serviceId: "custom",
+          displayName: "Custom",
+          api: "openai-completions",
+          baseUrl: "https://gateway.example.test/v1",
+          models: [
+            {
+              modelId: "model-one",
+              cost: { input: -1, output: 2, cacheRead: 0, cacheWrite: 0 },
             },
           ],
         },

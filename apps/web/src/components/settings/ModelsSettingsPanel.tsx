@@ -3,6 +3,7 @@
 // Layer: Settings panel
 
 import {
+  OMNIMIND_CUSTOM_MODEL_COST_TIERS_MAX_COUNT,
   WS_OMNIMIND_MODEL_SERVICES_CAPABILITY,
   type OmniMindModelServiceAuthEvent,
   type OmniMindModelServiceAuthPrompt,
@@ -204,6 +205,14 @@ function customModelServiceConfig(
       ...(model.reasoning !== undefined ? { reasoning: model.reasoning } : {}),
       ...(model.thinkingLevelMap ? { thinkingLevelMap: { ...model.thinkingLevelMap } } : {}),
       ...(model.input ? { input: [...model.input] } : {}),
+      ...(model.cost
+        ? {
+            cost: {
+              ...model.cost,
+              ...(model.cost.tiers ? { tiers: model.cost.tiers.map((tier) => ({ ...tier })) } : {}),
+            },
+          }
+        : {}),
       ...(model.contextWindow !== undefined ? { contextWindow: model.contextWindow } : {}),
       ...(model.maxTokens !== undefined ? { maxTokens: model.maxTokens } : {}),
     })),
@@ -1081,6 +1090,16 @@ function ActiveModelsSettingsPanel({
               ...(model.input ? { input: [...model.input] } : {}),
               ...(model.thinkingLevelMap
                 ? { thinkingLevelMap: { ...model.thinkingLevelMap } }
+                : {}),
+              ...(model.cost
+                ? {
+                    cost: {
+                      ...model.cost,
+                      ...(model.cost.tiers
+                        ? { tiers: model.cost.tiers.map((tier) => ({ ...tier })) }
+                        : {}),
+                    },
+                  }
                 : {}),
             })),
             testedFingerprint: null,
@@ -2504,6 +2523,228 @@ function ActiveModelsSettingsPanel({
                             }}
                           />
                         </label>
+                      </div>
+                      <div className="mt-4 space-y-3 border-t border-border pt-3">
+                        <div>
+                          <h5 className="text-xs font-medium text-foreground">
+                            {t("settings.customApiModelPricing")}
+                          </h5>
+                          <p className="mt-1 text-xs leading-relaxed text-muted-foreground">
+                            {t("settings.customApiModelPricingDescription")}
+                          </p>
+                        </div>
+                        <Select
+                          value={model.cost ? "custom" : "provider_default"}
+                          onValueChange={(value) =>
+                            updateCustomServiceEditor((current) => ({
+                              ...current,
+                              models: current.models.map((entry, modelIndex) =>
+                                modelIndex === index
+                                  ? {
+                                      ...entry,
+                                      cost:
+                                        value === "custom"
+                                          ? (entry.cost ?? {
+                                              input: 0,
+                                              output: 0,
+                                              cacheRead: 0,
+                                              cacheWrite: 0,
+                                            })
+                                          : undefined,
+                                    }
+                                  : entry,
+                              ),
+                            }))
+                          }
+                        >
+                          <SelectTrigger aria-label={t("settings.customApiModelPricingMode")}>
+                            <SelectValue />
+                          </SelectTrigger>
+                          <SettingsSelectPopup align="start">
+                            <SelectItem value="provider_default">
+                              {t("settings.customApiModelPricingNone")}
+                            </SelectItem>
+                            <SelectItem value="custom">
+                              {t("settings.customApiModelPricingCustom")}
+                            </SelectItem>
+                          </SettingsSelectPopup>
+                        </Select>
+                        {model.cost ? (
+                          <div className="space-y-3">
+                            <div className="grid gap-3 sm:grid-cols-2">
+                              {(["input", "output", "cacheRead", "cacheWrite"] as const).map(
+                                (rate) => (
+                                  <label
+                                    key={rate}
+                                    className="space-y-1.5 text-xs font-medium text-foreground"
+                                  >
+                                    <span>{t(`settings.customApiModelCost.${rate}`)}</span>
+                                    <Input
+                                      type="number"
+                                      min={0}
+                                      step="any"
+                                      value={model.cost?.[rate] ?? 0}
+                                      onChange={(event) => {
+                                        if (event.target.value === "") return;
+                                        const value = Number(event.target.value);
+                                        if (!Number.isFinite(value) || value < 0) return;
+                                        updateCustomServiceEditor((current) => ({
+                                          ...current,
+                                          models: current.models.map((entry, modelIndex) =>
+                                            modelIndex === index && entry.cost
+                                              ? {
+                                                  ...entry,
+                                                  cost: { ...entry.cost, [rate]: value },
+                                                }
+                                              : entry,
+                                          ),
+                                        }));
+                                      }}
+                                    />
+                                  </label>
+                                ),
+                              )}
+                            </div>
+                            <div className="space-y-2">
+                              <div className="flex items-center justify-between gap-3">
+                                <div>
+                                  <h6 className="text-xs font-medium text-foreground">
+                                    {t("settings.customApiModelCostTiers")}
+                                  </h6>
+                                  <p className="mt-1 text-xs text-muted-foreground">
+                                    {t("settings.customApiModelCostTiersDescription")}
+                                  </p>
+                                </div>
+                                <Button
+                                  size="xs"
+                                  variant="outline"
+                                  disabled={
+                                    (model.cost.tiers?.length ?? 0) >=
+                                    OMNIMIND_CUSTOM_MODEL_COST_TIERS_MAX_COUNT
+                                  }
+                                  onClick={() =>
+                                    updateCustomServiceEditor((current) => ({
+                                      ...current,
+                                      models: current.models.map((entry, modelIndex) =>
+                                        modelIndex === index && entry.cost
+                                          ? {
+                                              ...entry,
+                                              cost: {
+                                                ...entry.cost,
+                                                tiers: [
+                                                  ...(entry.cost.tiers ?? []),
+                                                  {
+                                                    inputTokensAbove: 0,
+                                                    input: entry.cost.input,
+                                                    output: entry.cost.output,
+                                                    cacheRead: entry.cost.cacheRead,
+                                                    cacheWrite: entry.cost.cacheWrite,
+                                                  },
+                                                ],
+                                              },
+                                            }
+                                          : entry,
+                                      ),
+                                    }))
+                                  }
+                                >
+                                  <PlusIcon aria-hidden="true" />
+                                  {t("settings.customApiModelAddCostTier")}
+                                </Button>
+                              </div>
+                              {model.cost.tiers?.map((tier, tierIndex) => (
+                                <div
+                                  key={tierIndex}
+                                  className="space-y-2 rounded-lg border border-border p-3"
+                                >
+                                  <div className="flex items-center justify-between gap-3">
+                                    <span className="text-xs font-medium text-foreground">
+                                      {t("settings.customApiModelCostTier", {
+                                        number: tierIndex + 1,
+                                      })}
+                                    </span>
+                                    <Button
+                                      size="xs"
+                                      variant="ghost"
+                                      onClick={() =>
+                                        updateCustomServiceEditor((current) => ({
+                                          ...current,
+                                          models: current.models.map((entry, modelIndex) =>
+                                            modelIndex === index && entry.cost
+                                              ? {
+                                                  ...entry,
+                                                  cost: {
+                                                    ...entry.cost,
+                                                    tiers: entry.cost.tiers?.filter(
+                                                      (_, currentTierIndex) =>
+                                                        currentTierIndex !== tierIndex,
+                                                    ),
+                                                  },
+                                                }
+                                              : entry,
+                                          ),
+                                        }))
+                                      }
+                                    >
+                                      {t("common.remove")}
+                                    </Button>
+                                  </div>
+                                  <div className="grid gap-3 sm:grid-cols-2">
+                                    {(
+                                      [
+                                        "inputTokensAbove",
+                                        "input",
+                                        "output",
+                                        "cacheRead",
+                                        "cacheWrite",
+                                      ] as const
+                                    ).map((field) => (
+                                      <label
+                                        key={field}
+                                        className="space-y-1.5 text-xs font-medium text-foreground"
+                                      >
+                                        <span>{t(`settings.customApiModelCostTier.${field}`)}</span>
+                                        <Input
+                                          type="number"
+                                          min={0}
+                                          step="any"
+                                          value={tier[field]}
+                                          onChange={(event) => {
+                                            if (event.target.value === "") return;
+                                            const value = Number(event.target.value);
+                                            if (!Number.isFinite(value) || value < 0) return;
+                                            updateCustomServiceEditor((current) => ({
+                                              ...current,
+                                              models: current.models.map((entry, modelIndex) =>
+                                                modelIndex === index && entry.cost
+                                                  ? {
+                                                      ...entry,
+                                                      cost: {
+                                                        ...entry.cost,
+                                                        tiers: entry.cost.tiers?.map(
+                                                          (currentTier, currentTierIndex) =>
+                                                            currentTierIndex === tierIndex
+                                                              ? {
+                                                                  ...currentTier,
+                                                                  [field]: value,
+                                                                }
+                                                              : currentTier,
+                                                        ),
+                                                      },
+                                                    }
+                                                  : entry,
+                                              ),
+                                            }));
+                                          }}
+                                        />
+                                      </label>
+                                    ))}
+                                  </div>
+                                </div>
+                              ))}
+                            </div>
+                          </div>
+                        ) : null}
                       </div>
                       <div className="mt-4">
                         <h5 className="text-xs font-medium text-foreground">

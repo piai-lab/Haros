@@ -1824,7 +1824,27 @@ describe("OmniMindModelServicesLive", () => {
             api: "openai-completions",
             baseUrl: "https://redacted.example.test/v1",
             apiKey: "not-projected",
-            models: [{ id: "mimo" }],
+            models: [
+              {
+                id: "mimo",
+                cost: {
+                  input: 1,
+                  output: 2,
+                  cacheRead: 3,
+                  cacheWrite: 4,
+                  tiers: [
+                    {
+                      inputTokensAbove: 0,
+                      input: 5,
+                      output: 6,
+                      cacheRead: 7,
+                      cacheWrite: 8,
+                    },
+                  ],
+                },
+                headers: { Authorization: "Bearer nested-secret" },
+              },
+            ],
           },
         },
       }),
@@ -1862,7 +1882,26 @@ describe("OmniMindModelServicesLive", () => {
         displayName: "小米代理",
         api: "openai-completions",
         baseUrl: "https://redacted.example.test/v1",
-        models: [{ modelId: "mimo" }],
+        models: [
+          {
+            modelId: "mimo",
+            cost: {
+              input: 1,
+              output: 2,
+              cacheRead: 3,
+              cacheWrite: 4,
+              tiers: [
+                {
+                  inputTokensAbove: 0,
+                  input: 5,
+                  output: 6,
+                  cacheRead: 7,
+                  cacheWrite: 8,
+                },
+              ],
+            },
+          },
+        ],
       },
     });
     expect(JSON.stringify(result)).not.toContain(agentDir);
@@ -1871,6 +1910,7 @@ describe("OmniMindModelServicesLive", () => {
       customConfig: { baseUrl: "https://redacted.example.test/v1" },
     });
     expect(JSON.stringify(result)).not.toContain("not-projected");
+    expect(JSON.stringify(result)).not.toContain("nested-secret");
   });
 
   it("tests a custom connection without persisting its process-local API key", async () => {
@@ -2206,7 +2246,21 @@ describe("OmniMindModelServicesLive", () => {
               {
                 id: "model-one",
                 name: "Original Model",
-                cost: { input: 1, output: 2, cacheRead: 3, cacheWrite: 4 },
+                cost: {
+                  input: 1,
+                  output: 2,
+                  cacheRead: 3,
+                  cacheWrite: 4,
+                  tiers: [
+                    {
+                      inputTokensAbove: 0,
+                      input: 5,
+                      output: 6,
+                      cacheRead: 7,
+                      cacheWrite: 8,
+                    },
+                  ],
+                },
                 samplingParams: { temperature: 0.25 },
                 headers: { "X-Model-Secret": "retained-model-header" },
               },
@@ -2247,6 +2301,21 @@ describe("OmniMindModelServicesLive", () => {
                 displayName: "Edited Model",
                 reasoning: false,
                 input: ["text"],
+                cost: {
+                  input: 9,
+                  output: 10,
+                  cacheRead: 11,
+                  cacheWrite: 12,
+                  tiers: [
+                    {
+                      inputTokensAbove: 64_000,
+                      input: 13,
+                      output: 14,
+                      cacheRead: 15,
+                      cacheWrite: 16,
+                    },
+                  ],
+                },
                 contextWindow: 128_000,
                 maxTokens: 16_384,
               },
@@ -2446,7 +2515,7 @@ describe("OmniMindModelServicesLive", () => {
     expect(loadModule).not.toHaveBeenCalled();
   });
 
-  it("preserves Pi-owned rich model fields when editing only visible service fields", async () => {
+  it("edits full model cost while preserving Pi-owned hidden fields", async () => {
     const root = await makeRoot();
     await isolateProviderEnvironment(root);
     const agentDir = path.join(root, "agent");
@@ -2500,6 +2569,21 @@ describe("OmniMindModelServicesLive", () => {
                 reasoning: false,
                 thinkingLevelMap: { off: null, medium: "medium", high: "high" },
                 input: ["text"],
+                cost: {
+                  input: 9,
+                  output: 10,
+                  cacheRead: 11,
+                  cacheWrite: 12,
+                  tiers: [
+                    {
+                      inputTokensAbove: 64_000,
+                      input: 13,
+                      output: 14,
+                      cacheRead: 15,
+                      cacheWrite: 16,
+                    },
+                  ],
+                },
                 contextWindow: 128_000,
                 maxTokens: 16_384,
               },
@@ -2524,7 +2608,91 @@ describe("OmniMindModelServicesLive", () => {
         input: ["text"],
         contextWindow: 128_000,
         maxTokens: 16_384,
-        cost: { input: 1, output: 2, cacheRead: 3, cacheWrite: 4 },
+        cost: {
+          input: 9,
+          output: 10,
+          cacheRead: 11,
+          cacheWrite: 12,
+          tiers: [
+            {
+              inputTokensAbove: 64_000,
+              input: 13,
+              output: 14,
+              cacheRead: 15,
+              cacheWrite: 16,
+            },
+          ],
+        },
+        samplingParams: { temperature: 0.25 },
+        headers: { "X-Retained": "hidden-value" },
+        compat: { supportsStore: false },
+      },
+    ]);
+  });
+
+  it("clears public model cost while preserving credential-blind hidden fields", async () => {
+    const root = await makeRoot();
+    await isolateProviderEnvironment(root);
+    const agentDir = path.join(root, "agent");
+    await mkdir(agentDir, { recursive: true });
+    await writeFile(
+      path.join(agentDir, "models.json"),
+      JSON.stringify({
+        providers: {
+          rich: {
+            name: "Rich",
+            api: "openai-completions",
+            baseUrl: "https://gateway.example.test/v1",
+            models: [
+              {
+                id: "model-one",
+                cost: {
+                  input: 1,
+                  output: 2,
+                  cacheRead: 3,
+                  cacheWrite: 4,
+                  tiers: [
+                    {
+                      inputTokensAbove: 0,
+                      input: 5,
+                      output: 6,
+                      cacheRead: 7,
+                      cacheWrite: 8,
+                    },
+                  ],
+                },
+                samplingParams: { temperature: 0.25 },
+                headers: { "X-Retained": "hidden-value" },
+                compat: { supportsStore: false },
+              },
+            ],
+          },
+        },
+      }),
+      { mode: 0o600 },
+    );
+    const layer = makeTestLayer({ root });
+    const result = await Effect.runPromise(
+      Effect.gen(function* () {
+        const service = yield* OmniMindModelServices;
+        return yield* service.saveCustom({
+          config: {
+            serviceId: "rich",
+            displayName: "Rich",
+            api: "openai-completions",
+            baseUrl: "https://gateway.example.test/v1",
+            models: [{ modelId: "model-one" }],
+          },
+          credential: { type: "preserve" },
+        });
+      }).pipe(Effect.provide(layer)),
+    );
+    const stored = JSON.parse(await readFile(path.join(agentDir, "models.json"), "utf8"));
+
+    expect(result).toMatchObject({ state: "complete" });
+    expect(stored.providers.rich.models).toEqual([
+      {
+        id: "model-one",
         samplingParams: { temperature: 0.25 },
         headers: { "X-Retained": "hidden-value" },
         compat: { supportsStore: false },

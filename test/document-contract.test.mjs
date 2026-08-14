@@ -182,7 +182,7 @@ test("bundled Pi runtime adoption cannot lose its exact artifact identity", asyn
   await replaceText(
     root,
     "README.md",
-    "cd468c4665a173b7edc6f54b4c4b4d362c64de385c1fa8d6b1b41a3b215c4004",
+    "b5fcc1ce5ca6202a41a40d0b39e11213d34e419b90315284f224eb33de842cec",
     "0".repeat(64),
   );
 

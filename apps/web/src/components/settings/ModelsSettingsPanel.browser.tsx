@@ -905,6 +905,32 @@ describe("ModelsSettingsPanel model services", () => {
     await mounted.screen
       .getByLabelText("settings.customApiModelEndpoint")
       .fill("https://model.example.test/v1");
+    await mounted.screen.getByLabelText("settings.customApiModelPricingMode").click();
+    await mounted.screen
+      .getByRole("option", { name: "settings.customApiModelPricingCustom" })
+      .click();
+    await mounted.screen.getByLabelText("settings.customApiModelCost.input").fill("1");
+    await mounted.screen.getByLabelText("settings.customApiModelCost.output").fill("2");
+    await mounted.screen.getByLabelText("settings.customApiModelCost.cacheRead").fill("0.25");
+    await mounted.screen.getByLabelText("settings.customApiModelCost.cacheWrite").fill("0.5");
+    await mounted.screen
+      .getByRole("button", { name: "settings.customApiModelAddCostTier" })
+      .click();
+    await mounted.screen
+      .getByLabelText("settings.customApiModelCostTier.inputTokensAbove", { exact: true })
+      .fill("64000");
+    await mounted.screen
+      .getByLabelText("settings.customApiModelCostTier.input", { exact: true })
+      .fill("3");
+    await mounted.screen
+      .getByLabelText("settings.customApiModelCostTier.output", { exact: true })
+      .fill("4");
+    await mounted.screen
+      .getByLabelText("settings.customApiModelCostTier.cacheRead", { exact: true })
+      .fill("0.75");
+    await mounted.screen
+      .getByLabelText("settings.customApiModelCostTier.cacheWrite", { exact: true })
+      .fill("1");
     await mounted.screen
       .getByRole("combobox", {
         name: 'settings.customApiThinkingMapControl:{"level":"settings.customApiThinkingLevel.high"}',
@@ -956,6 +982,21 @@ describe("ModelsSettingsPanel model services", () => {
                 reasoning: false,
                 thinkingLevelMap: { high: "high-budget" },
                 input: ["text"],
+                cost: {
+                  input: 1,
+                  output: 2,
+                  cacheRead: 0.25,
+                  cacheWrite: 0.5,
+                  tiers: [
+                    {
+                      inputTokensAbove: 64_000,
+                      input: 3,
+                      output: 4,
+                      cacheRead: 0.75,
+                      cacheWrite: 1,
+                    },
+                  ],
+                },
                 contextWindow: 128_000,
                 maxTokens: 8_192,
               },
@@ -1414,6 +1455,21 @@ describe("ModelsSettingsPanel model services", () => {
           input: ["text", "image"] as const,
           contextWindow: 200_000,
           maxTokens: 16_384,
+          cost: {
+            input: 0,
+            output: 2.5,
+            cacheRead: 0.25,
+            cacheWrite: 0.5,
+            tiers: [
+              {
+                inputTokensAbove: 0,
+                input: 1.25,
+                output: 3.5,
+                cacheRead: 0.125,
+                cacheWrite: 0.75,
+              },
+            ],
+          },
         },
       ],
     };
@@ -1463,6 +1519,21 @@ describe("ModelsSettingsPanel model services", () => {
     );
     expect(document.body.textContent).toContain("settings.customApiCredentialPreserveDescription");
     expect(document.body.textContent).not.toContain("browser-secret");
+    await mounted.screen.getByText("settings.customApiModelAdvanced", { exact: true }).click();
+    expect(mounted.screen.getByLabelText("settings.customApiModelCost.input")).toHaveValue(0);
+    expect(mounted.screen.getByLabelText("settings.customApiModelCost.output")).toHaveValue(2.5);
+    expect(
+      mounted.screen.getByLabelText("settings.customApiModelCostTier.inputTokensAbove", {
+        exact: true,
+      }),
+    ).toHaveValue(0);
+    expect(
+      mounted.screen.getByLabelText("settings.customApiModelCostTier.output", { exact: true }),
+    ).toHaveValue(3.5);
+    await mounted.screen.getByLabelText("settings.customApiModelPricingMode").click();
+    await mounted.screen
+      .getByRole("option", { name: "settings.customApiModelPricingNone" })
+      .click();
     await mounted.screen.getByRole("button", { name: "settings.customApiTestConnection" }).click();
     await confirmCustomApiRisk(mounted.screen);
     await expect
@@ -1473,7 +1544,10 @@ describe("ModelsSettingsPanel model services", () => {
       .poll(() => saveCustom)
       .toHaveBeenCalledWith(
         expect.objectContaining({
-          config: expect.objectContaining({ serviceId: "saved-custom" }),
+          config: expect.objectContaining({
+            serviceId: "saved-custom",
+            models: [expect.not.objectContaining({ cost: expect.anything() })],
+          }),
           credential: { type: "preserve" },
         }),
       );

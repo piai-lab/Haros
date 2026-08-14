@@ -25,6 +25,7 @@ const BoundedDisplayName = TrimmedNonEmptyString.check(
 export const OMNIMIND_MODEL_SERVICES_MAX_COUNT = 512;
 export const OMNIMIND_MODEL_SERVICE_MODELS_MAX_COUNT = 4_096;
 export const OMNIMIND_CUSTOM_MODEL_SERVICE_MODELS_MAX_COUNT = 256;
+export const OMNIMIND_CUSTOM_MODEL_COST_TIERS_MAX_COUNT = 256;
 
 const BoundedModelId = TrimmedNonEmptyString.check(
   Schema.isMaxLength(512),
@@ -72,6 +73,26 @@ const BoundedEndpointUrl = TrimmedNonEmptyString.check(
   Schema.isPattern(/^https?:\/\/[^\s]+$/iu),
 );
 
+const NonNegativeFiniteNumber = Schema.Finite.check(Schema.isGreaterThanOrEqualTo(0));
+const OmniMindCustomModelCostRates = {
+  input: NonNegativeFiniteNumber,
+  output: NonNegativeFiniteNumber,
+  cacheRead: NonNegativeFiniteNumber,
+  cacheWrite: NonNegativeFiniteNumber,
+} as const;
+const OmniMindCustomModelCostTier = Schema.Struct({
+  inputTokensAbove: NonNegativeFiniteNumber,
+  ...OmniMindCustomModelCostRates,
+});
+const OmniMindCustomModelCost = Schema.Struct({
+  ...OmniMindCustomModelCostRates,
+  tiers: Schema.optional(
+    Schema.Array(OmniMindCustomModelCostTier).check(
+      Schema.isMaxLength(OMNIMIND_CUSTOM_MODEL_COST_TIERS_MAX_COUNT),
+    ),
+  ),
+});
+
 export const OmniMindCustomModelServiceModelInput = Schema.Struct({
   modelId: BoundedModelId,
   displayName: Schema.optional(BoundedDisplayName),
@@ -84,6 +105,7 @@ export const OmniMindCustomModelServiceModelInput = Schema.Struct({
       .check(Schema.isMinLength(1))
       .check(Schema.isMaxLength(2)),
   ),
+  cost: Schema.optional(OmniMindCustomModelCost),
   contextWindow: Schema.optional(PositiveInt),
   maxTokens: Schema.optional(PositiveInt),
 });
