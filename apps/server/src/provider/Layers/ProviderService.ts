@@ -265,6 +265,10 @@ function modelServiceIdFromSelection(selection: ModelSelection | undefined): str
   return separatorIndex > 0 ? selection.model.slice(0, separatorIndex) : undefined;
 }
 
+function unboundModelServiceAdmissionKey(threadId: ThreadId): string {
+  return `\u0000${threadId}`;
+}
+
 function readPersistedProviderOptions(
   runtimePayload: ProviderRuntimeBinding["runtimePayload"],
 ): ProviderStartOptions | undefined {
@@ -376,6 +380,16 @@ const makeProviderService = (options?: ProviderServiceLiveOptions) =>
     const directory = yield* ProviderSessionDirectory;
     const lifecycle = makeProviderLifecycleCoordinator();
     const modelServiceAdmissionLock = makeKeyedLock<string>();
+    const withModelServiceAdmissionLocks = <A, E, R>(
+      keys: ReadonlyArray<string | undefined>,
+      effect: Effect.Effect<A, E, R>,
+    ): Effect.Effect<A, E, R> =>
+      [...new Set(keys.filter((key): key is string => key !== undefined))]
+        .toSorted()
+        .reduceRight(
+          (current, key) => modelServiceAdmissionLock.withLock(key, current),
+          effect,
+        );
     for (const binding of yield* directory.listBindings()) {
       if (
         binding.lifecycleGeneration !== undefined &&
@@ -1443,10 +1457,6 @@ const makeProviderService = (options?: ProviderServiceLiveOptions) =>
           }),
         );
 
-        const bindingForAdmission = yield* getCurrentBinding();
-        const modelServiceId = modelServiceIdFromSelection(
-          readPersistedModelSelection(bindingForAdmission.runtimePayload),
-        );
         const recovery = lifecycle.run(threadId, (lease) =>
           Effect.gen(function* () {
             const binding = yield* getCurrentBinding();
@@ -1532,9 +1542,26 @@ const makeProviderService = (options?: ProviderServiceLiveOptions) =>
             return adapter;
           }),
         );
-        return yield* modelServiceId === undefined
-          ? recovery
-          : modelServiceAdmissionLock.withLock(modelServiceId, recovery);
+        while (true) {
+          const admissionBinding = yield* getCurrentBinding();
+          const admissionServiceId = modelServiceIdFromSelection(
+            readPersistedModelSelection(admissionBinding.runtimePayload),
+          );
+          const outcome = yield* withModelServiceAdmissionLocks(
+            [admissionServiceId ?? unboundModelServiceAdmissionKey(threadId)],
+            Effect.gen(function* () {
+              const currentBinding = yield* getCurrentBinding();
+              const currentServiceId = modelServiceIdFromSelection(
+                readPersistedModelSelection(currentBinding.runtimePayload),
+              );
+              if (currentServiceId !== admissionServiceId) {
+                return { retry: true } as const;
+              }
+              return { retry: false, value: yield* recovery } as const;
+            }),
+          );
+          if (!outcome.retry) return outcome.value;
+        }
       });
 
     const retiredGatewaySessionRecoveries = new Set<ThreadId>();
@@ -1718,15 +1745,6 @@ const makeProviderService = (options?: ProviderServiceLiveOptions) =>
         const replacementFence = yield* waitForCurrentInterruptionFence(threadId);
         clearRuntimeIdleTimer(threadId);
         yield* waitForRuntimeIdleStop(threadId);
-        const persistedSelectionForAdmission = Option.getOrUndefined(
-          yield* directory.getBinding(threadId),
-        );
-        const modelServiceId = modelServiceIdFromSelection(
-          input.modelSelection ??
-            (persistedSelectionForAdmission === undefined
-              ? undefined
-              : readPersistedModelSelection(persistedSelectionForAdmission.runtimePayload)),
-        );
         const start = lifecycle.run(threadId, (lease) =>
           Effect.gen(function* () {
             const persistedBinding = Option.getOrUndefined(yield* directory.getBinding(threadId));
@@ -2143,9 +2161,33 @@ const makeProviderService = (options?: ProviderServiceLiveOptions) =>
             });
           }),
         );
-        return yield* modelServiceId === undefined
-          ? start
-          : modelServiceAdmissionLock.withLock(modelServiceId, start);
+        while (true) {
+          const admissionBinding = Option.getOrUndefined(yield* directory.getBinding(threadId));
+          const previousServiceId = modelServiceIdFromSelection(
+            admissionBinding === undefined
+              ? undefined
+              : readPersistedModelSelection(admissionBinding.runtimePayload),
+          );
+          const targetServiceId = modelServiceIdFromSelection(input.modelSelection);
+          const outcome = yield* withModelServiceAdmissionLocks(
+            [previousServiceId ?? unboundModelServiceAdmissionKey(threadId), targetServiceId],
+            Effect.gen(function* () {
+              const currentBinding = Option.getOrUndefined(
+                yield* directory.getBinding(threadId),
+              );
+              const currentServiceId = modelServiceIdFromSelection(
+                currentBinding === undefined
+                  ? undefined
+                  : readPersistedModelSelection(currentBinding.runtimePayload),
+              );
+              if (currentServiceId !== previousServiceId) {
+                return { retry: true } as const;
+              }
+              return { retry: false, value: yield* start } as const;
+            }),
+          );
+          if (!outcome.retry) return outcome.value;
+        }
       });
 
     const forkThread: NonNullable<ProviderServiceShape["forkThread"]> = (rawInput) =>

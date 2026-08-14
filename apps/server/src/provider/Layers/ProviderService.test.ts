@@ -865,6 +865,175 @@ modelServiceAdmission.layer("ProviderServiceLive model-service admission fence",
       yield* provider.stopSession({ threadId });
     }),
   );
+
+  it.effect(
+    "holds both custom-service fences while a failed replacement restores the previous service",
+    () =>
+      Effect.gen(function* () {
+        const provider = yield* ProviderService;
+        const threadId = asThreadId("thread-model-service-replacement-restore");
+        yield* provider.startSession(threadId, {
+          provider: "omnimind",
+          threadId,
+          modelSelection: { provider: "omnimind", model: "gateway-a/model-one" },
+          runtimeMode: "full-access",
+        });
+
+        const defaultStart = modelServiceAdmission.omnimind.startSession.getMockImplementation();
+        if (!defaultStart) assert.fail("Expected the fake OmniMind start implementation");
+        const replacementFailure = new ProviderAdapterSessionNotFoundError({
+          provider: "omnimind",
+          threadId,
+        });
+        const restoreEntered = yield* Deferred.make<void>();
+        const releaseRestore = yield* Deferred.make<void>();
+        modelServiceAdmission.omnimind.startSession
+          .mockImplementationOnce(() => Effect.fail(replacementFailure))
+          .mockImplementationOnce((input) =>
+            Deferred.succeed(restoreEntered, undefined).pipe(
+              Effect.andThen(Deferred.await(releaseRestore)),
+              Effect.andThen(defaultStart(input)),
+            ),
+          );
+
+        const replacementFiber = yield* provider
+          .startSession(threadId, {
+            provider: "omnimind",
+            threadId,
+            modelSelection: { provider: "omnimind", model: "gateway-b/model-two" },
+            runtimeMode: "full-access",
+          })
+          .pipe(Effect.result, Effect.forkChild);
+        yield* Deferred.await(restoreEntered);
+
+        const mutationEntered = yield* Deferred.make<void>();
+        const mutationFiber = yield* provider
+          .withModelServiceMutationFence(
+            "gateway-a",
+            Deferred.succeed(mutationEntered, undefined),
+          )
+          .pipe(Effect.forkChild);
+        yield* sleep(25);
+        assert.equal(yield* Deferred.isDone(mutationEntered), false);
+
+        yield* Deferred.succeed(releaseRestore, undefined);
+        assertFailure(yield* Fiber.join(replacementFiber), replacementFailure);
+        yield* Fiber.join(mutationFiber);
+        assert.equal(yield* Deferred.isDone(mutationEntered), true);
+        yield* provider.stopSession({ threadId });
+      }),
+  );
+
+  it.effect("rechecks the current custom service after a queued recovery acquires its fence", () =>
+    Effect.gen(function* () {
+      const provider = yield* ProviderService;
+      const directory = yield* ProviderSessionDirectory;
+      const threadId = asThreadId("thread-model-service-recovery-current-binding");
+      yield* provider.startSession(threadId, {
+        provider: "omnimind",
+        threadId,
+        modelSelection: { provider: "omnimind", model: "gateway-a/model-one" },
+        runtimeMode: "full-access",
+      });
+      yield* provider.stopRuntimeSession!({ threadId });
+
+      const aEntered = yield* Deferred.make<void>();
+      const releaseA = yield* Deferred.make<void>();
+      const aFenceFiber = yield* provider
+        .withModelServiceMutationFence(
+          "gateway-a",
+          Deferred.succeed(aEntered, undefined).pipe(Effect.andThen(Deferred.await(releaseA))),
+        )
+        .pipe(Effect.forkChild);
+      yield* Deferred.await(aEntered);
+
+      const startCallCount = modelServiceAdmission.omnimind.startSession.mock.calls.length;
+      const recoveryFiber = yield* provider
+        .sendTurn({ threadId, input: "recover current binding", attachments: [] })
+        .pipe(Effect.forkChild);
+      yield* sleep(25);
+
+      const binding = Option.getOrUndefined(yield* directory.getBinding(threadId));
+      if (!binding) assert.fail("Expected a persisted OmniMind binding");
+      yield* directory.upsert({
+        ...binding,
+        runtimePayload: {
+          ...asRuntimePayloadRecord(binding.runtimePayload),
+          modelSelection: { provider: "omnimind", model: "gateway-b/model-two" },
+        },
+      });
+
+      const bEntered = yield* Deferred.make<void>();
+      const releaseB = yield* Deferred.make<void>();
+      const bFenceFiber = yield* provider
+        .withModelServiceMutationFence(
+          "gateway-b",
+          Deferred.succeed(bEntered, undefined).pipe(Effect.andThen(Deferred.await(releaseB))),
+        )
+        .pipe(Effect.forkChild);
+      yield* Deferred.await(bEntered);
+
+      yield* Deferred.succeed(releaseA, undefined);
+      yield* Fiber.join(aFenceFiber);
+      yield* sleep(25);
+      assert.equal(modelServiceAdmission.omnimind.startSession.mock.calls.length, startCallCount);
+
+      yield* Deferred.succeed(releaseB, undefined);
+      yield* Fiber.join(bFenceFiber);
+      yield* Fiber.join(recoveryFiber);
+      assert.equal(
+        modelServiceAdmission.omnimind.startSession.mock.calls.length,
+        startCallCount + 1,
+      );
+      assert.equal(
+        modelServiceAdmission.omnimind.startSession.mock.calls.at(-1)?.[0].modelSelection?.model,
+        "gateway-b/model-two",
+      );
+      yield* provider.stopSession({ threadId });
+    }),
+  );
+
+  it.effect("orders opposite custom-service replacements without deadlock", () =>
+    Effect.gen(function* () {
+      const provider = yield* ProviderService;
+      const aThreadId = asThreadId("thread-model-service-a-to-b");
+      const bThreadId = asThreadId("thread-model-service-b-to-a");
+      yield* provider.startSession(aThreadId, {
+        provider: "omnimind",
+        threadId: aThreadId,
+        modelSelection: { provider: "omnimind", model: "gateway-a/model-one" },
+        runtimeMode: "full-access",
+      });
+      yield* provider.startSession(bThreadId, {
+        provider: "omnimind",
+        threadId: bThreadId,
+        modelSelection: { provider: "omnimind", model: "gateway-b/model-two" },
+        runtimeMode: "full-access",
+      });
+
+      const replacements = yield* Effect.all(
+        [
+          provider.startSession(aThreadId, {
+            provider: "omnimind",
+            threadId: aThreadId,
+            modelSelection: { provider: "omnimind", model: "gateway-b/model-two" },
+            runtimeMode: "full-access",
+          }),
+          provider.startSession(bThreadId, {
+            provider: "omnimind",
+            threadId: bThreadId,
+            modelSelection: { provider: "omnimind", model: "gateway-a/model-one" },
+            runtimeMode: "full-access",
+          }),
+        ],
+        { concurrency: "unbounded" },
+      ).pipe(Effect.timeoutOption("2 seconds"));
+      assert.equal(Option.isSome(replacements), true);
+
+      yield* provider.stopSession({ threadId: aThreadId });
+      yield* provider.stopSession({ threadId: bThreadId });
+    }),
+  );
 });
 
 routing.layer("ProviderServiceLive routing", (it) => {
