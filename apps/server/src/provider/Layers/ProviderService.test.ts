@@ -68,7 +68,10 @@ import {
   makeSqlitePersistenceLive,
   SqlitePersistenceMemory,
 } from "../../persistence/Layers/Sqlite.ts";
-import { AGENT_GATEWAY_TURN_AUTHORITY_RETIRED } from "../../agentGateway/sessionLease.ts";
+import {
+  AGENT_GATEWAY_CREDENTIAL_ROTATION_REQUIRED,
+  AGENT_GATEWAY_TURN_AUTHORITY_RETIRED,
+} from "../../agentGateway/sessionLease.ts";
 
 const asRequestId = (value: string): ApprovalRequestId => ApprovalRequestId.makeUnsafe(value);
 const asEventId = (value: string): EventId => EventId.makeUnsafe(value);
@@ -1571,6 +1574,163 @@ routing.layer("ProviderServiceLive routing", (it) => {
     }),
   );
 
+  it.effect("publishes the restored cross-provider generation before the adapter can emit", () =>
+    Effect.gen(function* () {
+      const provider = yield* ProviderService;
+      const directory = yield* ProviderSessionDirectory;
+      const threadId = asThreadId("thread-cross-provider-restore-owner");
+      yield* provider.startSession(threadId, {
+        provider: "codex",
+        threadId,
+        cwd: "/tmp/cross-provider-restore-owner",
+        runtimeMode: "full-access",
+        modelSelection: { provider: "codex", model: "gpt-5-codex" },
+      });
+      const defaultCodexStart = routing.codex.startSession.getMockImplementation();
+      if (!defaultCodexStart) assert.fail("Expected the fake Codex start implementation");
+      const replacementFailure = new ProviderAdapterSessionNotFoundError({
+        provider: "claudeAgent",
+        threadId,
+      });
+      routing.claude.startSession.mockImplementationOnce(() => Effect.fail(replacementFailure));
+      const restoreEntered = yield* Deferred.make<ProviderSessionStartInput>();
+      const releaseRestore = yield* Deferred.make<void>();
+      routing.codex.startSession.mockImplementationOnce((input) =>
+        Deferred.succeed(restoreEntered, input).pipe(
+          Effect.andThen(Deferred.await(releaseRestore)),
+          Effect.andThen(defaultCodexStart(input)),
+        ),
+      );
+
+      const replacementFiber = yield* provider
+        .startSession(threadId, {
+          provider: "claudeAgent",
+          threadId,
+          runtimeMode: "approval-required",
+          modelSelection: { provider: "claudeAgent", model: "claude-opus-4-6" },
+        })
+        .pipe(Effect.result, Effect.forkChild);
+      const restoreInput = yield* Deferred.await(restoreEntered);
+      const starting = Option.getOrUndefined(yield* directory.getBinding(threadId));
+      assert.equal(starting?.provider, "codex");
+      assert.equal(starting?.status, "starting");
+      assert.equal(starting?.lifecycleGeneration, restoreInput.lifecycleGeneration);
+
+      yield* routing.codex.waitForRuntimeSubscribers();
+      routing.codex.emit({
+        type: "session.started",
+        eventId: asEventId("runtime-cross-provider-restore-started"),
+        provider: "codex",
+        threadId,
+        createdAt: "2026-08-12T08:13:00.000Z",
+        lifecycleGeneration: restoreInput.lifecycleGeneration,
+        payload: {},
+      });
+      yield* sleep(25);
+      const bindingAfterEarlyEvent = Option.getOrUndefined(yield* directory.getBinding(threadId));
+      assert.equal(
+        asRuntimePayloadRecord(bindingAfterEarlyEvent?.runtimePayload).lastRuntimeEvent,
+        "session.started",
+      );
+
+      yield* Deferred.succeed(releaseRestore, undefined);
+      assertFailure(yield* Fiber.join(replacementFiber), replacementFailure);
+      yield* provider.stopSession({ threadId });
+    }),
+  );
+
+  it.effect("publishes the restored same-provider generation before the adapter can emit", () =>
+    Effect.gen(function* () {
+      const provider = yield* ProviderService;
+      const directory = yield* ProviderSessionDirectory;
+      const threadId = asThreadId("thread-same-provider-restore-owner");
+      yield* provider.startSession(threadId, {
+        provider: "codex",
+        threadId,
+        cwd: "/tmp/same-provider-restore-owner",
+        runtimeMode: "full-access",
+        modelSelection: { provider: "codex", model: "gpt-5-codex" },
+      });
+      const defaultCodexStart = routing.codex.startSession.getMockImplementation();
+      if (!defaultCodexStart) assert.fail("Expected the fake Codex start implementation");
+      const replacementFailure = new ProviderAdapterSessionNotFoundError({
+        provider: "codex",
+        threadId,
+      });
+      const restoreEntered = yield* Deferred.make<ProviderSessionStartInput>();
+      const releaseRestore = yield* Deferred.make<void>();
+      routing.codex.startSession
+        .mockImplementationOnce(() =>
+          directory
+            .upsert({
+              provider: "codex",
+              threadId,
+              runtimePayload: {
+                [AGENT_GATEWAY_CREDENTIAL_ROTATION_REQUIRED]: true,
+              },
+            })
+            .pipe(Effect.orDie, Effect.andThen(Effect.fail(replacementFailure))),
+        )
+        .mockImplementationOnce((input) =>
+          Deferred.succeed(restoreEntered, input).pipe(
+            Effect.andThen(Deferred.await(releaseRestore)),
+            Effect.andThen(defaultCodexStart(input)),
+          ),
+        );
+
+      const replacementFiber = yield* provider
+        .startSession(threadId, {
+          provider: "codex",
+          threadId,
+          cwd: "/tmp/same-provider-restore-owner-new",
+          runtimeMode: "full-access",
+          modelSelection: { provider: "codex", model: "gpt-5.1-codex" },
+        })
+        .pipe(Effect.result, Effect.forkChild);
+      const restoreInput = yield* Deferred.await(restoreEntered);
+      const starting = Option.getOrUndefined(yield* directory.getBinding(threadId));
+      assert.equal(starting?.provider, "codex");
+      assert.equal(starting?.status, "starting");
+      assert.equal(starting?.lifecycleGeneration, restoreInput.lifecycleGeneration);
+      assert.equal(
+        asRuntimePayloadRecord(starting?.runtimePayload)[
+          AGENT_GATEWAY_CREDENTIAL_ROTATION_REQUIRED
+        ],
+        false,
+      );
+
+      yield* routing.codex.waitForRuntimeSubscribers();
+      routing.codex.emit({
+        type: "session.started",
+        eventId: asEventId("runtime-same-provider-restore-started"),
+        provider: "codex",
+        threadId,
+        createdAt: "2026-08-12T08:14:00.000Z",
+        lifecycleGeneration: restoreInput.lifecycleGeneration,
+        payload: {},
+      });
+      yield* sleep(25);
+      const bindingAfterEarlyEvent = Option.getOrUndefined(yield* directory.getBinding(threadId));
+      assert.equal(
+        asRuntimePayloadRecord(bindingAfterEarlyEvent?.runtimePayload).lastRuntimeEvent,
+        "session.started",
+      );
+
+      yield* Deferred.succeed(releaseRestore, undefined);
+      assertFailure(yield* Fiber.join(replacementFiber), replacementFailure);
+      const startCountBeforeSend = routing.codex.startSession.mock.calls.length;
+      const stopCountBeforeSend = routing.codex.stopSession.mock.calls.length;
+      yield* provider.sendTurn({
+        threadId,
+        input: "restored runtime remains current",
+        attachments: [],
+      });
+      assert.equal(routing.codex.startSession.mock.calls.length, startCountBeforeSend);
+      assert.equal(routing.codex.stopSession.mock.calls.length, stopCountBeforeSend);
+      yield* provider.stopSession({ threadId });
+    }),
+  );
+
   it.effect(
     "keeps ownership unknown when a half-started replacement cannot be retired",
     () =>
@@ -1680,6 +1840,47 @@ routing.layer("ProviderServiceLive routing", (it) => {
     }),
   );
 
+  it.effect("publishes the starting generation before an initial adapter can emit", () =>
+    Effect.gen(function* () {
+      const provider = yield* ProviderService;
+      const directory = yield* ProviderSessionDirectory;
+      const threadId = asThreadId("thread-initial-start-owner");
+      const defaultStart = routing.codex.startSession.getMockImplementation();
+      if (!defaultStart) assert.fail("Expected the fake Codex start implementation");
+      const entered = yield* Deferred.make<void>();
+      const release = yield* Deferred.make<void>();
+      routing.codex.startSession.mockImplementationOnce((input) =>
+        Deferred.succeed(entered, undefined).pipe(
+          Effect.andThen(Deferred.await(release)),
+          Effect.andThen(defaultStart(input)),
+        ),
+      );
+
+      const startFiber = yield* provider
+        .startSession(threadId, {
+          provider: "codex",
+          threadId,
+          cwd: "/tmp/initial-start-owner",
+          runtimeMode: "full-access",
+        })
+        .pipe(Effect.forkChild);
+      yield* Deferred.await(entered);
+
+      const starting = Option.getOrUndefined(yield* directory.getBinding(threadId));
+      assert.equal(starting?.provider, "codex");
+      assert.equal(starting?.status, "starting");
+      assert.equal(typeof starting?.lifecycleGeneration, "string");
+
+      yield* Deferred.succeed(release, undefined);
+      yield* Fiber.join(startFiber);
+      const ready = Option.getOrUndefined(yield* directory.getBinding(threadId));
+      assert.equal(ready?.provider, "codex");
+      assert.equal(ready?.status, "running");
+      assert.equal(ready?.lifecycleGeneration, starting?.lifecycleGeneration);
+      yield* provider.stopSession({ threadId });
+    }),
+  );
+
   it.effect(
     "retires a same-provider runtime and restores its exact binding after persistence fails",
     () =>
@@ -1782,6 +1983,23 @@ routing.layer("ProviderServiceLive routing", (it) => {
           replacementTargetProvider: "claudeAgent",
         },
       });
+      yield* routing.codex.waitForRuntimeSubscribers();
+      routing.codex.emit({
+        type: "session.started",
+        eventId: asEventId("runtime-generationless-after-restore-failed"),
+        provider: "codex",
+        threadId,
+        createdAt: "2026-08-12T08:12:00.000Z",
+        payload: {},
+      });
+      yield* sleep(25);
+      const bindingAfterGenerationlessEvent = Option.getOrUndefined(
+        yield* directory.getBinding(threadId),
+      );
+      assert.equal(
+        asRuntimePayloadRecord(bindingAfterGenerationlessEvent?.runtimePayload).lastRuntimeEvent,
+        "provider.replacement.restore.failed",
+      );
       const stopFailure = new ProviderAdapterSessionNotFoundError({
         provider: "claudeAgent",
         threadId,

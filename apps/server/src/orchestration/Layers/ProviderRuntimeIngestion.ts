@@ -20,7 +20,10 @@ import {
 } from "@omnimind/contracts";
 import { Cache, Cause, Deferred, Duration, Effect, Layer, Option, Ref, Stream } from "effect";
 import * as Semaphore from "effect/Semaphore";
-import { makeDrainableWorker, startDrainableWorkerProducers } from "@omnimind/shared/DrainableWorker";
+import {
+  makeDrainableWorker,
+  startDrainableWorkerProducers,
+} from "@omnimind/shared/DrainableWorker";
 import { providerSupportsNativeTurnSteering } from "@omnimind/shared/providerMetadata";
 import { buildStalePendingRequestFailureDetail } from "@omnimind/shared/threadSummary";
 import {
@@ -1787,23 +1790,26 @@ const make = Effect.gen(function* () {
       // Tool/Activity or bounded cache) so delayed target/old-runtime rows
       // cannot seize or contaminate the restored Thread.
       //
-      // A generation-less legacy row remains compatible when it belongs to the
-      // bound provider. The narrow first-start window can have no binding yet;
-      // absence alone therefore does not reject the row. A directory read
-      // failure is deliberately not caught here: journal retry is safer than
-      // silently dropping a possibly-current provider event.
+      // ProviderService publishes a generation-scoped `starting` binding
+      // before current adapters can emit. A generation-stamped row with no
+      // binding is therefore orphaned (for example, an early row whose first
+      // start later failed and was cleaned up). Generation-less legacy rows
+      // retain their compatibility path; when a binding exists they must still
+      // belong to that provider. A directory read failure is deliberately not
+      // caught here: journal retry is safer than silently dropping a
+      // possibly-current provider event.
       const binding = Option.getOrUndefined(
         yield* providerSessionDirectory.getBinding(event.threadId),
       );
       const bindingRuntimePayload =
         binding === undefined ? undefined : asObject(binding.runtimePayload);
       if (
-        binding !== undefined &&
-        (bindingRuntimePayload?.lastRuntimeEvent ===
-          PROVIDER_REPLACEMENT_RESTORE_FAILED_EVENT ||
-          binding.provider !== event.provider ||
-          (event.lifecycleGeneration !== undefined &&
-            binding.lifecycleGeneration !== event.lifecycleGeneration))
+        (binding === undefined && event.lifecycleGeneration !== undefined) ||
+        (binding !== undefined &&
+          (bindingRuntimePayload?.lastRuntimeEvent === PROVIDER_REPLACEMENT_RESTORE_FAILED_EVENT ||
+            binding.provider !== event.provider ||
+            (event.lifecycleGeneration !== undefined &&
+              binding.lifecycleGeneration !== event.lifecycleGeneration)))
       ) {
         yield* Effect.logWarning("provider.runtime.stale_binding_event_projection_skipped", {
           eventId: event.eventId,

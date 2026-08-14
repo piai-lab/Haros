@@ -1066,6 +1066,19 @@ const makeProviderService = (options?: ProviderServiceLiveOptions) =>
         }),
       );
 
+    const recordRuntimeEventDispatchState = (event: ProviderRuntimeEvent): void => {
+      if (event.type === "turn.started" && event.turnId !== undefined) {
+        getDispatchState(event.threadId).outstandingTurnIds.add(String(event.turnId));
+      }
+      if (
+        (event.type === "turn.completed" || event.type === "turn.aborted") &&
+        event.turnId !== undefined &&
+        (dispatchStateByThread.get(event.threadId)?.inFlightGenerations.size ?? 0) > 0
+      ) {
+        recordRecentlyCompletedTurn(event.threadId, String(event.turnId));
+      }
+    };
+
     const updateSessionBindingFromRuntimeEvent = (
       event: ProviderRuntimeEvent,
     ): Effect.Effect<void> => {
@@ -1097,18 +1110,12 @@ const makeProviderService = (options?: ProviderServiceLiveOptions) =>
       return withBindingWriteLock(
         event.threadId,
         Effect.gen(function* () {
-          if (event.type === "turn.started" && event.turnId !== undefined) {
-            getDispatchState(event.threadId).outstandingTurnIds.add(String(event.turnId));
-          }
-          if (
-            (event.type === "turn.completed" || event.type === "turn.aborted") &&
-            event.turnId !== undefined &&
-            (dispatchStateByThread.get(event.threadId)?.inFlightGenerations.size ?? 0) > 0
-          ) {
-            recordRecentlyCompletedTurn(event.threadId, String(event.turnId));
-          }
           const binding = Option.getOrUndefined(yield* directory.getBinding(event.threadId));
           if (!binding) {
+            // A dispatch may settle before sendTurn persists the first binding.
+            // Preserve that live-fallback marker, but do not project runtime
+            // ownership without the generation-scoped directory row.
+            recordRuntimeEventDispatchState(event);
             reconcileRuntimeIdleTimer(event);
             return;
           }
@@ -1121,6 +1128,15 @@ const makeProviderService = (options?: ProviderServiceLiveOptions) =>
           ) {
             return;
           }
+          // A restore-failed binding is an ownership quarantine, not a live
+          // runtime snapshot. Generation-less legacy events cannot prove they
+          // belong to either of the suspected physical runtimes, so none of
+          // them may replace the durable quarantine marker. Explicit cleanup
+          // or a fresh lifecycle start is the only way out of this state.
+          if (isReplacementRestoreFailedBinding(binding)) {
+            return;
+          }
+          recordRuntimeEventDispatchState(event);
 
           const currentActiveTurnId = runtimeActiveTurnId(binding.runtimePayload);
           if (
@@ -1854,6 +1870,34 @@ const makeProviderService = (options?: ProviderServiceLiveOptions) =>
                 : undefined);
             const adapter = yield* registry.getByProvider(input.provider);
             const startAndPersistReplacement = Effect.gen(function* () {
+              // Publish the lifecycle owner before entering adapter code. An
+              // adapter may synchronously persist runtime events before its
+              // start call returns; without this starting binding those rows
+              // can outlive a failed start and later be projected as if they
+              // belonged to a current runtime. Failure paths below restore the
+              // exact previous snapshot (or remove this first-start binding).
+              yield* withBindingWriteLock(
+                threadId,
+                directory.upsert({
+                  threadId,
+                  provider: input.provider,
+                  runtimeMode: input.runtimeMode,
+                  status: "starting",
+                  lifecycleGeneration: lease.generation,
+                  runtimePayload: {
+                    activeTurnId: null,
+                    lastRuntimeEvent: "provider.startSession.requested",
+                    lastRuntimeEventAt: new Date().toISOString(),
+                    ...(input.cwd === undefined ? {} : { cwd: input.cwd }),
+                    ...(input.modelSelection === undefined
+                      ? {}
+                      : { modelSelection: input.modelSelection }),
+                    ...(effectiveProviderOptions === undefined
+                      ? {}
+                      : { providerOptions: effectiveProviderOptions }),
+                  },
+                }),
+              );
               // A provider start that never returns holds this thread's
               // lifecycle lock and the caller's command slot forever. Bound it;
               // the single attempt wrapper below owns retirement for every
@@ -2121,8 +2165,41 @@ const makeProviderService = (options?: ProviderServiceLiveOptions) =>
             // or their delayed events could seize the restored binding.
             const restoreGeneration = lease.renewGeneration();
             const restoreExit = yield* Effect.exit(
-              previousAdapter
-                .startSession({
+              Effect.gen(function* () {
+                // The restored adapter can emit before startSession returns,
+                // exactly like a fresh target. Publish its new generation and
+                // previous exact facts first so those legitimate rows cannot
+                // be consumed against the failed target's provisional owner.
+                yield* withBindingWriteLock(
+                  threadId,
+                  directory.replace({
+                    threadId,
+                    provider: persistedBinding.provider,
+                    ...(persistedBinding.adapterKey !== undefined
+                      ? { adapterKey: persistedBinding.adapterKey }
+                      : {}),
+                    runtimeMode: previousRuntimeMode,
+                    status: "starting",
+                    lifecycleGeneration: restoreGeneration,
+                    ...(previousResumeCursor !== undefined
+                      ? { resumeCursor: previousResumeCursor }
+                      : {}),
+                    runtimePayload: {
+                      ...runtimePayloadRecord(persistedBinding.runtimePayload),
+                      activeTurnId: null,
+                      lastRuntimeEvent: "provider.restoreSession.requested",
+                      lastRuntimeEventAt: new Date().toISOString(),
+                      ...(previousCwd !== undefined ? { cwd: previousCwd } : {}),
+                      ...(previousModelSelection !== undefined
+                        ? { modelSelection: previousModelSelection }
+                        : {}),
+                      ...(previousProviderOptions !== undefined
+                        ? { providerOptions: previousProviderOptions }
+                        : {}),
+                    },
+                  }),
+                );
+                return yield* previousAdapter.startSession({
                   threadId,
                   provider: persistedBinding.provider,
                   lifecycleGeneration: restoreGeneration,
@@ -2137,8 +2214,8 @@ const makeProviderService = (options?: ProviderServiceLiveOptions) =>
                   ...(previousResumeCursor !== undefined
                     ? { resumeCursor: previousResumeCursor }
                     : {}),
-                })
-                .pipe(Effect.timeoutOption(PROVIDER_START_SESSION_TIMEOUT)),
+                });
+              }).pipe(Effect.timeoutOption(PROVIDER_START_SESSION_TIMEOUT)),
             );
             const restored =
               Exit.isSuccess(restoreExit) && Option.isSome(restoreExit.value)

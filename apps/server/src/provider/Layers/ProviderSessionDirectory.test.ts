@@ -133,6 +133,40 @@ it.layer(makeDirectoryLayer(SqlitePersistenceMemory))("ProviderSessionDirectoryL
       }
     }));
 
+  it("atomically replaces runtime payload instead of retaining prior control fields", () =>
+    Effect.gen(function* () {
+      const directory = yield* ProviderSessionDirectory;
+      const threadId = ThreadId.makeUnsafe("thread-runtime-replace");
+
+      yield* directory.upsert({
+        provider: "omnimind",
+        threadId,
+        status: "starting",
+        lifecycleGeneration: "failed-target-generation",
+        runtimePayload: {
+          agentGatewayCredentialRotationRequired: true,
+          replacementTargetProvider: "omnimind",
+        },
+      });
+      yield* directory.replace({
+        provider: "omnimind",
+        threadId,
+        status: "starting",
+        lifecycleGeneration: "restore-generation",
+        runtimePayload: {
+          agentGatewayCredentialRotationRequired: false,
+          lastRuntimeEvent: "provider.restoreSession.requested",
+        },
+      });
+
+      const binding = Option.getOrUndefined(yield* directory.getBinding(threadId));
+      assert.deepEqual(binding?.runtimePayload, {
+        agentGatewayCredentialRotationRequired: false,
+        lastRuntimeEvent: "provider.restoreSession.requested",
+      });
+      assert.equal(binding?.lifecycleGeneration, "restore-generation");
+    }));
+
   it("resets adapterKey to the new provider when provider changes without an explicit adapter key", () =>
     Effect.gen(function* () {
       const directory = yield* ProviderSessionDirectory;

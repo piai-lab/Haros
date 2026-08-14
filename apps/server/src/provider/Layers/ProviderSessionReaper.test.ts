@@ -64,6 +64,7 @@ describe("ProviderSessionReaperLive", () => {
     const stopSession = vi.fn<ProviderServiceShape["stopSession"]>(() => Effect.void);
     const directory: ProviderSessionDirectoryShape = {
       upsert: () => Effect.void,
+      replace: () => Effect.void,
       getProvider: () => unsupported(),
       getBinding: () => unsupported(),
       remove: () => Effect.void,
@@ -130,6 +131,7 @@ describe("ProviderSessionReaperLive", () => {
     const stopSession = vi.fn<ProviderServiceShape["stopSession"]>(() => Effect.void);
     const directory: ProviderSessionDirectoryShape = {
       upsert: () => Effect.void,
+      replace: () => Effect.void,
       getProvider: () => unsupported(),
       getBinding: () => unsupported(),
       remove: () => Effect.void,

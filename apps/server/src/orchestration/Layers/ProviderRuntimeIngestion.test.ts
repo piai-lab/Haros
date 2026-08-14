@@ -550,6 +550,61 @@ describe("ProviderRuntimeIngestion", () => {
     ).toBe(delayedRestoreStart.sequence);
   });
 
+  it("does not project an early runtime row after its first start binding was removed", async () => {
+    const harness = await createHarness({ startIngestion: false });
+    const threadId = asThreadId("thread-1");
+    const failedAt = "2026-08-12T08:11:00.000Z";
+
+    await Effect.runPromise(harness.providerSessionDirectory.remove(threadId));
+    await Effect.runPromise(
+      harness.engine.dispatch({
+        type: "thread.session.set",
+        commandId: CommandId.makeUnsafe("cmd-first-start-failed-session-error"),
+        threadId,
+        session: {
+          threadId,
+          status: "error",
+          providerName: "codex",
+          runtimeMode: "approval-required",
+          activeTurnId: null,
+          lastError: "The provider failed to start.",
+          updatedAt: failedAt,
+        },
+        createdAt: failedAt,
+      }),
+    );
+    const orphanedStart = await Effect.runPromise(
+      harness.runtimeEventRepository.append({
+        type: "session.started",
+        eventId: asEventId("evt-orphaned-first-start"),
+        provider: "codex",
+        threadId,
+        createdAt: "2026-08-12T08:10:59.000Z",
+        lifecycleGeneration: "generation-failed-first-start",
+        payload: {},
+      }),
+    );
+
+    await harness.startIngestion();
+    await harness.drain();
+
+    const readModel = await Effect.runPromise(harness.engine.getReadModel());
+    const thread = readModel.threads.find((entry) => entry.id === threadId);
+    expect(thread?.session).toMatchObject({
+      providerName: "codex",
+      status: "error",
+      lastError: "The provider failed to start.",
+    });
+    expect(thread?.activities.some((activity) => activity.id === orphanedStart.event.eventId)).toBe(
+      false,
+    );
+    expect(
+      await Effect.runPromise(
+        harness.runtimeEventRepository.getConsumerCursor(PROVIDER_RUNTIME_INGESTION_CONSUMER),
+      ),
+    ).toBe(orphanedStart.sequence);
+  });
+
   it("REL-01C gate: replays output persisted before subscription without duplicate acceptance", async () => {
     const harness = await createHarness({ startIngestion: false });
     const event: ProviderRuntimeEvent = {
@@ -5302,6 +5357,14 @@ describe("ProviderRuntimeIngestion", () => {
   it("maps canonical request events into approval activities with requestKind", async () => {
     const harness = await createHarness();
     const now = new Date().toISOString();
+    await Effect.runPromise(
+      harness.providerSessionDirectory.upsert({
+        threadId: asThreadId("thread-1"),
+        provider: "codex",
+        status: "running",
+        lifecycleGeneration: "approval-generation",
+      }),
+    );
 
     harness.emit({
       type: "request.opened",
@@ -6631,6 +6694,14 @@ describe("ProviderRuntimeIngestion", () => {
   it("projects structured user input request and resolution as thread activities", async () => {
     const harness = await createHarness();
     const now = new Date().toISOString();
+    await Effect.runPromise(
+      harness.providerSessionDirectory.upsert({
+        threadId: asThreadId("thread-1"),
+        provider: "codex",
+        status: "running",
+        lifecycleGeneration: "user-input-generation",
+      }),
+    );
 
     harness.emit({
       type: "user-input.requested",

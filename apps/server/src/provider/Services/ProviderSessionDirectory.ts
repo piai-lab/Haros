@@ -35,6 +35,11 @@ export interface ProviderSessionDirectoryShape {
     binding: ProviderRuntimeBinding,
   ) => Effect.Effect<void, ProviderSessionDirectoryWriteError>;
 
+  /** Atomically replaces the complete row without merging runtime payload. */
+  readonly replace: (
+    binding: ProviderRuntimeBinding,
+  ) => Effect.Effect<void, ProviderSessionDirectoryWriteError>;
+
   readonly getProvider: (
     threadId: ThreadId,
   ) => Effect.Effect<ProviderKind, ProviderSessionDirectoryReadError>;
