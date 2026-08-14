@@ -99,6 +99,13 @@ describe("ModelServiceIcon", () => {
     ).not.toBeNull();
     expect(
       resolveModelSpecificIcon({
+        serviceId: "amazon-bedrock",
+        modelId: "amazon-bedrock/anthropic-claude-sonnet-4.5",
+        origin: "builtin",
+      }),
+    ).not.toBeNull();
+    expect(
+      resolveModelSpecificIcon({
         serviceId: "vercel-ai-gateway",
         modelId: "deepseek/deepseek-r1",
         origin: "builtin",

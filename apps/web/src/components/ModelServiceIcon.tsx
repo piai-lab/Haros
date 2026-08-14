@@ -110,7 +110,10 @@ const BUILTIN_MODEL_FAMILY_ICONS: ReadonlyArray<{
   readonly pattern: RegExp;
   readonly src: string;
 }> = [
-  { pattern: /^(?:anthropic\/)?claude-[a-z0-9][a-z0-9.-]*$/u, src: claudeIconUrl },
+  {
+    pattern: /^(?:(?:anthropic\/)|anthropic-)?claude-[a-z0-9][a-z0-9.-]*$/u,
+    src: claudeIconUrl,
+  },
   { pattern: /^(?:google\/)?gemini-[a-z0-9][a-z0-9.-]*$/u, src: geminiIconUrl },
   { pattern: /^(?:google\/)?gemma-[a-z0-9][a-z0-9.-]*$/u, src: gemmaIconUrl },
   {
