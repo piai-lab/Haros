@@ -462,7 +462,7 @@ index 7f679a49..4a1a1359 100644
 +		await release().catch(() => undefined);
 +	}
 diff --git a/packages/coding-agent/src/core/model-runtime.ts b/packages/coding-agent/src/core/model-runtime.ts
-index 6f4071b6..ae2ad996 100644
+index 6f4071b6..1edc564c 100644
 --- a/packages/coding-agent/src/core/model-runtime.ts
 +++ b/packages/coding-agent/src/core/model-runtime.ts
 @@ -19,0 +20 @@ import {
@@ -512,7 +512,7 @@ index 6f4071b6..ae2ad996 100644
 @@ -70,0 +110,2 @@ export interface CreateModelRuntimeOptions {
 +	/** Read models.json content through a caller-owned safety boundary. Requires modelsPath: null. */
 +	modelsConfigReader?: ModelConfigReader;
-@@ -92,0 +134,98 @@ export type CredentialSynchronizationOperation = "login" | "logout" | "setRuntim
+@@ -92,0 +134,121 @@ export type CredentialSynchronizationOperation = "login" | "logout" | "setRuntim
 +export interface ModelConfigProviderDiscoveryOptions {
 +	readonly signal?: AbortSignal;
 +}
@@ -599,10 +599,33 @@ index 6f4071b6..ae2ad996 100644
 +	if (Number.isFinite(declaredLength) && declaredLength > MAX_DISCOVERY_RESPONSE_BYTES) {
 +		throw new Error("Model discovery response exceeds the size limit");
 +	}
-+	const bytes = await response.arrayBuffer();
-+	signal?.throwIfAborted();
-+	if (bytes.byteLength > MAX_DISCOVERY_RESPONSE_BYTES) {
-+		throw new Error("Model discovery response exceeds the size limit");
++	const reader = response.body?.getReader();
++	if (!reader) throw new Error("Model discovery response is invalid");
++	const chunks: Uint8Array[] = [];
++	let totalBytes = 0;
++	const abortRead = () => void reader.cancel(signal?.reason).catch(() => undefined);
++	signal?.addEventListener("abort", abortRead, { once: true });
++	try {
++		while (true) {
++			signal?.throwIfAborted();
++			const { done, value } = await reader.read();
++			if (done) break;
++			totalBytes += value.byteLength;
++			if (totalBytes > MAX_DISCOVERY_RESPONSE_BYTES) {
++				await reader.cancel();
++				throw new Error("Model discovery response exceeds the size limit");
++			}
++			chunks.push(value);
++		}
++	} finally {
++		signal?.removeEventListener("abort", abortRead);
++		reader.releaseLock();
++	}
++	const bytes = new Uint8Array(totalBytes);
++	let offset = 0;
++	for (const chunk of chunks) {
++		bytes.set(chunk, offset);
++		offset += chunk.byteLength;
 +	}
 +	try {
 +		return JSON.parse(new TextDecoder("utf-8", { fatal: true }).decode(bytes));
@@ -611,23 +634,23 @@ index 6f4071b6..ae2ad996 100644
 +	}
 +}
 +
-@@ -138,0 +278 @@ export class ModelRuntime implements Models {
+@@ -138,0 +301 @@ export class ModelRuntime implements Models {
 +	private readonly modelsConfigReader: ModelConfigReader | undefined;
-@@ -157,0 +298 @@ export class ModelRuntime implements Models {
+@@ -157,0 +321 @@ export class ModelRuntime implements Models {
 +		modelsConfigReader: ModelConfigReader | undefined,
-@@ -164,0 +306 @@ export class ModelRuntime implements Models {
+@@ -164,0 +329 @@ export class ModelRuntime implements Models {
 +		this.modelsConfigReader = modelsConfigReader;
-@@ -172,0 +315,3 @@ export class ModelRuntime implements Models {
+@@ -172,0 +338,3 @@ export class ModelRuntime implements Models {
 +		if (options.modelsConfigReader && options.modelsPath !== null) {
 +			throw new Error("modelsConfigReader requires modelsPath: null");
 +		}
-@@ -176 +321,4 @@ export class ModelRuntime implements Models {
+@@ -176 +344,4 @@ export class ModelRuntime implements Models {
 -		const config = await ModelConfig.load(modelsPath);
 +		const config = await ModelConfig.load(modelsPath, {
 +			reader: options.modelsConfigReader,
 +			signal: options.signal,
 +		});
-@@ -179,3 +327,5 @@ export class ModelRuntime implements Models {
+@@ -179,3 +350,5 @@ export class ModelRuntime implements Models {
 -			(modelsPath
 -				? new FileModelsStore(options.modelsStorePath ?? join(dirname(modelsPath), "models-store.json"))
 -				: new InMemoryCodingAgentModelsStore());
@@ -636,9 +659,9 @@ index 6f4071b6..ae2ad996 100644
 +				: modelsPath
 +					? new FileModelsStore(join(dirname(modelsPath), "models-store.json"))
 +					: new InMemoryCodingAgentModelsStore());
-@@ -193,0 +344 @@ export class ModelRuntime implements Models {
+@@ -193,0 +367 @@ export class ModelRuntime implements Models {
 +			options.modelsConfigReader,
-@@ -572,0 +724,67 @@ export class ModelRuntime implements Models {
+@@ -572,0 +747,72 @@ export class ModelRuntime implements Models {
 +	/** Provider IDs accepted from the current official models.json configuration snapshot. */
 +	getModelConfigProviderIds(): readonly string[] {
 +		return this.config.getProviderIds();
@@ -702,11 +725,16 @@ index 6f4071b6..ae2ad996 100644
 +			endpoint = appendDiscoveryPath(auth.auth.baseUrl ?? config.baseUrl, "v1");
 +			setHeaderUnlessPresent(headers, "Authorization", auth.auth.apiKey ? `Bearer ${auth.auth.apiKey}` : undefined);
 +		}
-+		const response = await fetch(endpoint, { method: "GET", headers, signal });
++		const response = await fetch(endpoint, {
++			method: "GET",
++			headers,
++			redirect: "error",
++			signal,
++		});
 +		return discoveredModelsFromPayload(api, await readBoundedDiscoveryResponse(response, signal));
 +	}
 +
-@@ -691 +909,4 @@ export class ModelRuntime implements Models {
+@@ -691 +937,4 @@ export class ModelRuntime implements Models {
 -		this.config = await ModelConfig.load(this.modelsPath);
 +		this.config = await ModelConfig.load(this.modelsPath, {
 +			reader: this.modelsConfigReader,
@@ -1790,10 +1818,10 @@ index 00000000..f7f1ee40
 +});
 diff --git a/packages/coding-agent/test/model-runtime-config-reader.test.ts b/packages/coding-agent/test/model-runtime-config-reader.test.ts
 new file mode 100644
-index 00000000..c750d67f
+index 00000000..4e78c2e6
 --- /dev/null
 +++ b/packages/coding-agent/test/model-runtime-config-reader.test.ts
-@@ -0,0 +1,353 @@
+@@ -0,0 +1,393 @@
 +import { mkdtemp, readFile, rm, writeFile } from "node:fs/promises";
 +import { tmpdir } from "node:os";
 +import { join } from "node:path";
@@ -1953,6 +1981,7 @@ index 00000000..c750d67f
 +	] as const)("discovers $api model identities without mutating the preview", async (testCase) => {
 +		const fetchMock = vi.fn(async (input: string | URL | Request, init?: RequestInit) => {
 +			expect(String(input)).toBe(testCase.expectedUrl);
++			expect(init?.redirect).toBe("error");
 +			const headers = new Headers(init?.headers);
 +			expect(headers.get(testCase.header)).toBe(testCase.headerValue);
 +			if (testCase.api === "anthropic-messages") {
@@ -2006,6 +2035,45 @@ index 00000000..c750d67f
 +			"does not support generic model discovery",
 +		);
 +		expect(fetchMock).not.toHaveBeenCalled();
++	});
++
++	it("stops reading an unbounded chunked discovery response at the byte limit", async () => {
++		let pulls = 0;
++		let cancelled = false;
++		vi.stubGlobal(
++			"fetch",
++			vi.fn(
++				async () =>
++					new Response(
++						new ReadableStream<Uint8Array>({
++							pull(controller) {
++								pulls += 1;
++								controller.enqueue(new Uint8Array(1024 * 1024));
++							},
++							cancel() {
++								cancelled = true;
++							},
++						}),
++						{ status: 200 },
++					),
++			),
++		);
++		const runtime = await createRuntime(async () =>
++			JSON.stringify({
++				providers: {
++					custom: {
++						baseUrl: "https://example.test/v1",
++						api: "openai-completions",
++						apiKey: "test-key",
++						models: [],
++					},
++				},
++			}),
++		);
++
++		await expect(runtime.discoverModelConfigProviderModels("custom")).rejects.toThrow("exceeds the size limit");
++		expect(pulls).toBeLessThanOrEqual(6);
++		expect(cancelled).toBe(true);
 +	});
 +
 +	it("rejects path and reader dual authority", async () => {
