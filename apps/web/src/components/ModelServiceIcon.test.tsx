@@ -13,19 +13,13 @@ import {
 
 describe("ModelServiceIcon", () => {
   it("resolves known service identities to bundled local brand assets", () => {
-    expect(
-      resolveModelServiceIcon({ serviceId: "deepseek", origin: "builtin" }),
-    ).toMatchObject({
+    expect(resolveModelServiceIcon({ serviceId: "deepseek", origin: "builtin" })).toMatchObject({
       kind: "brand",
     });
-    expect(
-      resolveModelServiceIcon({ serviceId: "xiaomi-token-plan-cn" }),
-    ).toMatchObject({
+    expect(resolveModelServiceIcon({ serviceId: "xiaomi-token-plan-cn" })).toMatchObject({
       kind: "brand",
     });
-    const markup = renderToStaticMarkup(
-      <ModelServiceIcon serviceId="openai-codex" />,
-    );
+    const markup = renderToStaticMarkup(<ModelServiceIcon serviceId="openai-codex" />);
     expect(markup).toContain('data-model-service-icon="brand"');
     expect(markup).toContain('data-model-service-icon-render="mask"');
     expect(markup).toContain("bg-current");
@@ -63,8 +57,9 @@ describe("ModelServiceIcon", () => {
   });
 
   it("keeps verified aliases narrow and unknown runtime identities visible via fallback", () => {
-    expect(resolveModelServiceIcon({ serviceId: "cloudflare-workers-ai", origin: "builtin" }).kind)
-      .toBe("brand");
+    expect(
+      resolveModelServiceIcon({ serviceId: "cloudflare-workers-ai", origin: "builtin" }).kind,
+    ).toBe("brand");
     expect(resolveModelServiceIcon({ serviceId: "ant-ling", origin: "builtin" })).toEqual({
       kind: "generic",
       src: null,
@@ -111,10 +106,25 @@ describe("ModelServiceIcon", () => {
         origin: "builtin",
       }),
     ).not.toBeNull();
+    for (const [serviceId, modelId] of [
+      ["amazon-bedrock", "openai.gpt-5.6-sol"],
+      ["amazon-bedrock", "us.meta.llama4-maverick-17b-instruct-v1:0"],
+      ["openrouter", "cohere/command-r-plus-08-2024"],
+      ["openrouter", "ai21/jamba-large-1.7"],
+    ] as const) {
+      expect(resolveModelSpecificIcon({ serviceId, modelId, origin: "builtin" })).not.toBeNull();
+    }
     expect(
       resolveModelSpecificIcon({
         serviceId: "openrouter",
         modelId: "anthropic/claudeish-sonnet",
+        origin: "builtin",
+      }),
+    ).toBeNull();
+    expect(
+      resolveModelSpecificIcon({
+        serviceId: "openrouter",
+        modelId: "vendor/gptish-5",
         origin: "builtin",
       }),
     ).toBeNull();
@@ -150,15 +160,11 @@ describe("ModelServiceIcon", () => {
   });
 
   it("uses origin-owned local fallbacks without changing the service identity", () => {
-    expect(
-      resolveModelServiceIcon({ serviceId: "deepseek", origin: "models_json" }),
-    ).toEqual({
+    expect(resolveModelServiceIcon({ serviceId: "deepseek", origin: "models_json" })).toEqual({
       kind: "custom",
       src: null,
     });
-    expect(
-      resolveModelServiceIcon({ serviceId: "deepseek", origin: "extension" }),
-    ).toEqual({
+    expect(resolveModelServiceIcon({ serviceId: "deepseek", origin: "extension" })).toEqual({
       kind: "extension",
       src: null,
     });

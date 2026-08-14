@@ -3,12 +3,14 @@
 // Layer: Shared Web presentation
 
 import anthropicIconUrl from "@lobehub/icons-static-svg/icons/anthropic.svg";
+import ai21IconUrl from "@lobehub/icons-static-svg/icons/ai21-brand-color.svg";
 import azureIconUrl from "@lobehub/icons-static-svg/icons/azure-color.svg";
 import basetenIconUrl from "@lobehub/icons-static-svg/icons/baseten.svg";
 import bedrockIconUrl from "@lobehub/icons-static-svg/icons/bedrock-color.svg";
 import cerebrasIconUrl from "@lobehub/icons-static-svg/icons/cerebras-brand-color.svg";
 import claudeIconUrl from "@lobehub/icons-static-svg/icons/claude-color.svg";
 import cloudflareIconUrl from "@lobehub/icons-static-svg/icons/cloudflare-color.svg";
+import cohereIconUrl from "@lobehub/icons-static-svg/icons/cohere-color.svg";
 import deepSeekIconUrl from "@lobehub/icons-static-svg/icons/deepseek-color.svg";
 import fireworksIconUrl from "@lobehub/icons-static-svg/icons/fireworks-color.svg";
 import githubCopilotIconUrl from "@lobehub/icons-static-svg/icons/githubcopilot.svg";
@@ -22,6 +24,7 @@ import groqIconUrl from "@lobehub/icons-static-svg/icons/groq.svg";
 import huggingFaceIconUrl from "@lobehub/icons-static-svg/icons/huggingface-color.svg";
 import kimiIconUrl from "@lobehub/icons-static-svg/icons/kimi-color.svg";
 import minimaxIconUrl from "@lobehub/icons-static-svg/icons/minimax-color.svg";
+import metaIconUrl from "@lobehub/icons-static-svg/icons/meta-color.svg";
 import mistralIconUrl from "@lobehub/icons-static-svg/icons/mistral-color.svg";
 import moonshotIconUrl from "@lobehub/icons-static-svg/icons/moonshot.svg";
 import nvidiaIconUrl from "@lobehub/icons-static-svg/icons/nvidia-color.svg";
@@ -133,6 +136,20 @@ const BUILTIN_MODEL_FAMILY_ICONS: ReadonlyArray<{
     src: glmIconUrl,
   },
   { pattern: /^(?:xai\/)?grok-[a-z0-9][a-z0-9.-]*$/u, src: grokIconUrl },
+  {
+    pattern: /^(?:(?:openai\/)|openai\.)?gpt-[a-z0-9][a-z0-9.:-]*$/u,
+    src: openAIIconUrl,
+  },
+  {
+    pattern:
+      /^(?:(?:meta-llama|meta)\/|(?:us\.)?meta\.)?llama(?:[.-]|(?=[0-9]))[a-z0-9][a-z0-9.:-]*$/u,
+    src: metaIconUrl,
+  },
+  {
+    pattern: /^(?:cohere\/)?command-r(?:-plus)?-[a-z0-9][a-z0-9.-]*$/u,
+    src: cohereIconUrl,
+  },
+  { pattern: /^(?:ai21\/)?jamba-[a-z0-9][a-z0-9.-]*$/u, src: ai21IconUrl },
 ];
 
 function resolveKnownBrandIcon(serviceId: string): string | null {
@@ -237,14 +254,8 @@ export function ModelServiceIcon({
         ? PluginIcon
         : BrainIcon;
   return (
-    <span
-      data-model-service-icon={resolution.kind}
-      className="inline-flex shrink-0"
-    >
-      <FallbackIcon
-        aria-hidden="true"
-        className={cn(sharedClassName, "text-muted-foreground")}
-      />
+    <span data-model-service-icon={resolution.kind} className="inline-flex shrink-0">
+      <FallbackIcon aria-hidden="true" className={cn(sharedClassName, "text-muted-foreground")} />
     </span>
   );
 }
