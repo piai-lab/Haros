@@ -193,6 +193,8 @@ describe("model readiness prompt", () => {
     expect(
       hasUsableOmniMindModelServiceBinding({
         selection,
+        selectionIsExplicit: true,
+        catalogState: "ready",
         modelOptions,
         services: [configuredBuiltin],
       }),
@@ -200,10 +202,79 @@ describe("model readiness prompt", () => {
     expect(
       hasUsableOmniMindModelServiceBinding({
         selection,
+        selectionIsExplicit: true,
+        catalogState: "ready",
         modelOptions,
         services: [{ ...configuredBuiltin, origin: "extension" }],
       }),
     ).toBe(true);
+  });
+
+  it("accepts only an explicitly selected available Extension backed by a stored orphan", () => {
+    const selection = {
+      provider: "omnimind",
+      model: "extension-service/extension-model",
+    } satisfies ModelSelection;
+    const modelOptions = [
+      {
+        slug: selection.model,
+        name: "Extension Model",
+        upstreamProviderId: "extension-service",
+        upstreamProviderOrigin: "extension" as const,
+      },
+    ];
+    const storedOrphan = {
+      serviceId: "extension-service",
+      providerId: "extension-service",
+      displayName: "extension-service",
+      origin: "unknown" as const,
+      authMethods: [],
+      authState: "unavailable" as const,
+      authSource: "stored" as const,
+      storedCredentialType: "api_key" as const,
+      knownModelCount: 0,
+      availableModelCount: 0,
+      supportsNetworkRefresh: false,
+      catalogState: "error" as const,
+      catalogErrorCode: "catalog_unavailable" as const,
+    };
+
+    expect(
+      hasUsableOmniMindModelServiceBinding({
+        selection,
+        selectionIsExplicit: true,
+        catalogState: "ready",
+        modelOptions,
+        services: [storedOrphan],
+      }),
+    ).toBe(true);
+    expect(
+      hasUsableOmniMindModelServiceBinding({
+        selection,
+        selectionIsExplicit: false,
+        catalogState: "ready",
+        modelOptions,
+        services: [storedOrphan],
+      }),
+    ).toBe(false);
+    expect(
+      hasUsableOmniMindModelServiceBinding({
+        selection,
+        selectionIsExplicit: true,
+        catalogState: "ready",
+        modelOptions,
+        services: [{ ...storedOrphan, origin: "builtin" }],
+      }),
+    ).toBe(false);
+    expect(
+      hasUsableOmniMindModelServiceBinding({
+        selection,
+        selectionIsExplicit: true,
+        catalogState: "stale",
+        modelOptions,
+        services: [storedOrphan],
+      }),
+    ).toBe(false);
   });
 
   it("selects the first catalog model owned by a configured exact service", () => {

@@ -7323,6 +7323,113 @@ describe("ChatView timeline estimator parity (full app)", () => {
     }
   });
 
+  it("keeps an explicitly selected stored Extension model ready without passive execution", async () => {
+    localStorage.setItem(
+      "omnimind:app-settings:v1",
+      JSON.stringify({ defaultProvider: "omnimind" }),
+    );
+    seedLocalDraftThread({ threadId: THREAD_ID, projectId: PROJECT_ID });
+    useComposerDraftStore.getState().setModelSelectionAndSticky(THREAD_ID, {
+      provider: "omnimind",
+      model: "extension-service/extension-model",
+    });
+    const restoreNativeApi = installDeterministicSendNativeApi();
+    const nativeApi = window.nativeApi!;
+    const listModelServices = vi.fn(async () => ({
+      state: "ready" as const,
+      services: [
+        {
+          serviceId: "extension-service",
+          providerId: "extension-service",
+          displayName: "extension-service",
+          origin: "unknown" as const,
+          authMethods: [] as const,
+          authState: "unavailable" as const,
+          authSource: "stored" as const,
+          storedCredentialType: "api_key" as const,
+          knownModelCount: 0,
+          availableModelCount: 0,
+          supportsNetworkRefresh: false,
+          catalogState: "error" as const,
+          catalogErrorCode: "catalog_unavailable" as const,
+        },
+      ],
+      connectableServices: [] as const,
+      errorCode: null,
+    }));
+    Object.defineProperty(window, "nativeApi", {
+      configurable: true,
+      value: {
+        ...nativeApi,
+        omnimindModelServices: {
+          ...nativeApi.omnimindModelServices,
+          list: listModelServices,
+        },
+      },
+    });
+
+    const mounted = await mountChatView({
+      viewport: DEFAULT_VIEWPORT,
+      snapshot: createDraftOnlySnapshot(),
+      configureFixture: (nextFixture) => {
+        nextFixture.serverConfig = {
+          ...nextFixture.serverConfig,
+          providers: [
+            {
+              provider: "omnimind",
+              status: "ready",
+              available: true,
+              authStatus: "unknown",
+              supportsAutoRuntimeMode: true,
+              checkedAt: NOW_ISO,
+            },
+          ],
+        };
+        nextFixture.providerPassivePresence = ["omnimind"];
+        nextFixture.providerModelsByProvider = {
+          ...nextFixture.providerModelsByProvider,
+          omnimind: {
+            source: "pi.sdk+extensions",
+            models: [
+              {
+                slug: "extension-service/extension-model",
+                name: "Extension Model",
+                upstreamProviderId: "extension-service",
+                upstreamProviderName: "Extension Service",
+                upstreamProviderOrigin: "extension",
+              },
+            ],
+          },
+          pi: { source: "browser.fixture", models: [] },
+        };
+      },
+    });
+
+    try {
+      await vi.waitFor(() => expect(listModelServices).toHaveBeenCalledTimes(1));
+      await expect.element(page.getByTestId("model-readiness-prompt")).not.toBeInTheDocument();
+      await page.getByRole("textbox").fill("Use the selected Extension model.");
+      const sendButton = await waitForSendButton();
+      await vi.waitFor(() => expect(sendButton.disabled).toBe(false));
+      sendButton.click();
+      await vi.waitFor(() => {
+        const turnStarts = wsRequests
+          .map(readDispatchedCommand)
+          .filter((command) => command?.type === "thread.turn.start");
+        expect(turnStarts).toHaveLength(1);
+        expect(turnStarts[0]).toMatchObject({
+          modelSelection: {
+            provider: "omnimind",
+            model: "extension-service/extension-model",
+          },
+        });
+      });
+    } finally {
+      await mounted.cleanup();
+      restoreNativeApi();
+    }
+  });
+
   it("routes a settled installed-but-unavailable Engine to recovery", async () => {
     seedLocalDraftThread({ threadId: THREAD_ID, projectId: PROJECT_ID });
     const restoreNativeApi = installDeterministicSendNativeApi();

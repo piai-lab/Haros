@@ -4166,13 +4166,15 @@ export default function ChatView({
             : "error"
         : "unknown";
   const hasUsableOmniMindServiceBinding =
-    passiveModelServicesQuery.data?.state === "ready" &&
+    cachedPassiveModelServices?.state === "ready" &&
     hasUsableOmniMindModelServiceBinding({
       selection:
         exactModelSelectionsByProvider.omnimind ??
         (selectedModelSelection?.provider === "omnimind" ? selectedModelSelection : undefined),
+      selectionIsExplicit: explicitExactModelSelectionsByProvider.omnimind !== undefined,
+      catalogState: catalogStateByProvider.omnimind,
       modelOptions: selectableModelOptionsByProvider.omnimind,
-      services: passiveModelServicesQuery.data.services,
+      services: cachedPassiveModelServices.services,
     });
   const hasUsableProductModelBinding =
     hasUsableProviderModelBinding || hasUsableOmniMindServiceBinding;
