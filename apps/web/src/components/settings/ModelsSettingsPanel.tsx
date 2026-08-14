@@ -246,6 +246,11 @@ function customModelServiceRiskFingerprint(editor: CustomModelServiceEditorState
   return JSON.stringify({
     api: editor.api,
     baseUrl: editor.baseUrl.trim(),
+    models: editor.models.map((model) => ({
+      modelId: model.modelId.trim(),
+      api: model.api ?? null,
+      baseUrl: model.baseUrl?.trim() ?? null,
+    })),
   });
 }
 

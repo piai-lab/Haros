@@ -960,6 +960,30 @@ describe("ModelsSettingsPanel model services", () => {
     await expect.poll(() => document.body.textContent).toContain("settings.customApiTestSucceeded");
     expect(saveButton).toBeEnabled();
 
+    await mounted.screen
+      .getByLabelText("settings.customApiModelEndpoint")
+      .fill("https://other-model.example.test/v1");
+    await mounted.screen.getByRole("button", { name: "settings.customApiTestConnection" }).click();
+    expect(testCustom).toHaveBeenCalledTimes(1);
+    await mounted.screen
+      .getByLabelText("settings.customApiRiskTitle")
+      .getByRole("button", { name: "common.cancel" })
+      .click();
+    expect(testCustom).toHaveBeenCalledTimes(1);
+    await mounted.screen.getByRole("button", { name: "settings.customApiTestConnection" }).click();
+    await confirmCustomApiRisk(mounted.screen);
+    await expect.poll(() => testCustom).toHaveBeenCalledTimes(2);
+    expect(testCustom).toHaveBeenLastCalledWith(
+      expect.objectContaining({
+        config: expect.objectContaining({
+          models: [
+            expect.objectContaining({ baseUrl: "https://other-model.example.test/v1" }),
+          ],
+        }),
+      }),
+      expect.objectContaining({ signal: expect.any(AbortSignal) }),
+    );
+
     await mounted.screen.getByLabelText("settings.customApiModelName").fill("Changed Model");
     expect(saveButton).toBeDisabled();
     await mounted.screen.getByRole("button", { name: "settings.customApiTestConnection" }).click();
