@@ -162,19 +162,19 @@ describe("model readiness prompt", () => {
     expect(
       areUsableProviderCatalogsSettled({
         providerStatuses: statuses,
-        loadingModelProviders: { codex: true, omnimind: false },
+        catalogStateByProvider: { codex: "checking", omnimind: "empty" },
       }),
     ).toBe(false);
     expect(
       areUsableProviderCatalogsSettled({
         providerStatuses: statuses,
-        loadingModelProviders: { codex: false, omnimind: false },
+        catalogStateByProvider: { codex: "ready", omnimind: "empty" },
       }),
     ).toBe(true);
     expect(
       areUsableProviderCatalogsSettled({
         providerStatuses: [providerStatus("codex", { available: false })],
-        loadingModelProviders: { codex: true },
+        catalogStateByProvider: { codex: "checking" },
       }),
     ).toBe(true);
   });

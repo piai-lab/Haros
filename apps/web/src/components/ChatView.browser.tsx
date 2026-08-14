@@ -7254,6 +7254,71 @@ describe("ChatView timeline estimator parity (full app)", () => {
     }
   });
 
+  it("keeps an unrequested stock Pi catalog with a remembered exact model out of first-run setup", async () => {
+    seedLocalDraftThread({ threadId: THREAD_ID, projectId: PROJECT_ID });
+    useComposerDraftStore.getState().setStickyModelSelection({
+      provider: "pi",
+      model: "pi/provider-model",
+    });
+    const restoreNativeApi = installDeterministicSendNativeApi();
+    const nativeApi = window.nativeApi!;
+    const listModelServices = vi.fn(async () => ({
+      state: "empty" as const,
+      services: [] as const,
+      connectableServices: [] as const,
+      errorCode: null,
+    }));
+    Object.defineProperty(window, "nativeApi", {
+      configurable: true,
+      value: {
+        ...nativeApi,
+        omnimindModelServices: {
+          ...nativeApi.omnimindModelServices,
+          list: listModelServices,
+        },
+      },
+    });
+
+    const mounted = await mountChatView({
+      viewport: DEFAULT_VIEWPORT,
+      snapshot: createDraftOnlySnapshot(),
+      configureFixture: (nextFixture) => {
+        nextFixture.serverConfig = {
+          ...nextFixture.serverConfig,
+          providers: [
+            {
+              provider: "pi",
+              status: "ready",
+              available: true,
+              authStatus: "unknown",
+              supportsAutoRuntimeMode: false,
+              checkedAt: NOW_ISO,
+            },
+          ],
+        };
+        nextFixture.providerPassivePresence = ["pi"];
+        nextFixture.providerModelsByProvider = {
+          ...nextFixture.providerModelsByProvider,
+          omnimind: { source: "browser.fixture", models: [] },
+          pi: { source: "browser.fixture", models: [] },
+        };
+      },
+    });
+
+    try {
+      await expect
+        .element(page.getByRole("button", { name: EN_MESSAGES["composer.modelRecoveryAction"] }))
+        .toBeInTheDocument();
+      await expect
+        .element(page.getByRole("button", { name: EN_MESSAGES["composer.modelSetupAction"] }))
+        .not.toBeInTheDocument();
+      expect(listModelServices).toHaveBeenCalledTimes(1);
+    } finally {
+      await mounted.cleanup();
+      restoreNativeApi();
+    }
+  });
+
   it("creates and selects a new project from an empty project draft without navigating away", async () => {
     const mounted = await mountChatView({
       viewport: DEFAULT_VIEWPORT,

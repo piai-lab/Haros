@@ -4000,7 +4000,7 @@ export default function ChatView({
         .flatMap((status) => (status ? [status] : [])),
     [confirmedCustomBinaryPathsByProvider, serverConfigQuery.data?.providers, settings],
   );
-  const exactModelSelectionsByProvider = useMemo(() => {
+  const rememberedExactModelSelectionsByProvider = useMemo(() => {
     const result: Partial<Record<ProviderKind, ModelSelection>> = {};
     for (const provider of COMPOSER_PROVIDER_KINDS) {
       const candidates = [
@@ -4013,19 +4013,6 @@ export default function ChatView({
         stickyModelSelectionByProvider[provider] ?? null,
       ];
       let selection = candidates.find((candidate) => candidate !== null) ?? null;
-
-      // OmniMind and stock Pi are runtime-catalog-only. A remembered slug is not
-      // authoritative after the catalog changes, so it only counts when the passive
-      // catalog still exposes that exact model.
-      if (provider === "omnimind" || provider === "pi") {
-        const availableModels = selectableModelOptionsByProvider[provider] ?? [];
-        selection =
-          candidates.find(
-            (candidate) =>
-              candidate !== null && availableModels.some((model) => model.slug === candidate.model),
-          ) ?? null;
-      }
-
       if (!selection) {
         const defaultModel = getDefaultModel(provider);
         if (defaultModel) selection = buildModelSelection(provider, defaultModel);
@@ -4036,11 +4023,23 @@ export default function ChatView({
   }, [
     activeProject?.defaultModelSelection,
     composerDraft.modelSelectionByProvider,
-    selectableModelOptionsByProvider,
     selectedModelSelection,
     serverThread?.modelSelection,
     stickyModelSelectionByProvider,
   ]);
+  const exactModelSelectionsByProvider = useMemo(() => {
+    const result = { ...rememberedExactModelSelectionsByProvider };
+    // OmniMind and stock Pi are runtime-catalog-only. A remembered slug is a
+    // recovery fact, not send authority: only the current catalog can validate it.
+    for (const provider of ["omnimind", "pi"] as const) {
+      const remembered = rememberedExactModelSelectionsByProvider[provider];
+      const availableModels = selectableModelOptionsByProvider[provider] ?? [];
+      if (!remembered || !availableModels.some((model) => model.slug === remembered.model)) {
+        delete result[provider];
+      }
+    }
+    return result;
+  }, [rememberedExactModelSelectionsByProvider, selectableModelOptionsByProvider]);
   const passiveProviderPresence = readPassiveProviderPresence(queryClient);
   const hasUsableProductModelBinding = useMemo(
     () =>
@@ -4055,17 +4054,17 @@ export default function ChatView({
       passiveProviderPresence !== null &&
       hasRecoverableExactModelBinding({
         recoverableProviders: passiveProviderPresence,
-        exactModelSelections: exactModelSelectionsByProvider,
+        exactModelSelections: rememberedExactModelSelectionsByProvider,
       }),
-    [exactModelSelectionsByProvider, passiveProviderPresence],
+    [passiveProviderPresence, rememberedExactModelSelectionsByProvider],
   );
   const usableProviderCatalogsSettled = useMemo(
     () =>
       areUsableProviderCatalogsSettled({
         providerStatuses,
-        loadingModelProviders,
+        catalogStateByProvider,
       }),
-    [loadingModelProviders, providerStatuses],
+    [catalogStateByProvider, providerStatuses],
   );
   const refreshProviderStatuses = useRefreshProviderStatusesNow();
   const providerHealthSnapshotSettled = hasReceivedProviderStatusSnapshot(queryClient);

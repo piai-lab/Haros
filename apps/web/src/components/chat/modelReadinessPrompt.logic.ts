@@ -5,6 +5,7 @@ import {
 } from "@omnimind/contracts";
 
 import { COMPOSER_PROVIDER_KINDS } from "~/composerDraftModels";
+import type { ProviderModelCatalogState } from "~/hooks/useProviderModelCatalog";
 import { findProviderStatus, isProviderUsable } from "~/lib/providerAvailability";
 
 export type PassiveModelServicesState = "unknown" | "empty" | "configured" | "error";
@@ -36,12 +37,12 @@ export function hasRecoverableExactModelBinding(input: {
 
 export function areUsableProviderCatalogsSettled(input: {
   readonly providerStatuses: readonly ServerProviderStatus[];
-  readonly loadingModelProviders: Partial<Record<ProviderKind, boolean>>;
+  readonly catalogStateByProvider: Partial<Record<ProviderKind, ProviderModelCatalogState>>;
 }): boolean {
   return COMPOSER_PROVIDER_KINDS.every(
     (provider) =>
       !isProviderUsable(findProviderStatus(input.providerStatuses, provider)) ||
-      input.loadingModelProviders[provider] !== true,
+      input.catalogStateByProvider[provider] !== "checking",
   );
 }
 
