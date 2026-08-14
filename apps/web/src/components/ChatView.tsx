@@ -2482,25 +2482,34 @@ export default function ChatView({
     }
     return turnIds;
   }, [activeLatestTurnId, activeThread?.messages]);
-  const rawWorkLogEntries = useMemo(
-    () =>
-      deriveWorkLogEntries(threadActivities, activeLatestTurnId ?? undefined, {
-        visibleTurnIds: workLogVisibleTurnIds,
-        activeTurnId: latestTurnLive ? activeLatestTurnId : null,
-        activeTurnStartedAt: activeLatestTurnStartedAt,
-        latestTurnState: activeLatestTurnState,
-        latestTurnCompletedAt: activeLatestTurnCompletedAt,
-      }),
-    [
-      activeLatestTurnCompletedAt,
-      activeLatestTurnId,
-      activeLatestTurnStartedAt,
-      activeLatestTurnState,
-      latestTurnLive,
-      threadActivities,
-      workLogVisibleTurnIds,
-    ],
-  );
+  const rawWorkLogEntries = useMemo(() => {
+    const entries = deriveWorkLogEntries(threadActivities, activeLatestTurnId ?? undefined, {
+      visibleTurnIds: workLogVisibleTurnIds,
+      activeTurnId: latestTurnLive ? activeLatestTurnId : null,
+      activeTurnStartedAt: activeLatestTurnStartedAt,
+      latestTurnState: activeLatestTurnState,
+      latestTurnCompletedAt: activeLatestTurnCompletedAt,
+    });
+    return entries.map((entry) =>
+      entry.activityKind === "provider.turn.start.failed" &&
+      entry.failureReason === "active-edit-requires-stop"
+        ? {
+            ...entry,
+            label: t("conversation.editRestartRequired"),
+            detail: t("conversation.editRestartRequiredDescription"),
+          }
+        : entry,
+    );
+  }, [
+    activeLatestTurnCompletedAt,
+    activeLatestTurnId,
+    activeLatestTurnStartedAt,
+    activeLatestTurnState,
+    latestTurnLive,
+    t,
+    threadActivities,
+    workLogVisibleTurnIds,
+  ]);
   const hasWorkLogSubagents = useMemo(
     () => rawWorkLogEntries.some((entry) => (entry.subagents?.length ?? 0) > 0),
     [rawWorkLogEntries],

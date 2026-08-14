@@ -580,6 +580,9 @@ export const OrchestrationThreadActivityTone = Schema.Literals([
 ]);
 export type OrchestrationThreadActivityTone = typeof OrchestrationThreadActivityTone.Type;
 
+export const ProviderTurnStartFailureReason = Schema.Literals(["active-edit-requires-stop"]);
+export type ProviderTurnStartFailureReason = typeof ProviderTurnStartFailureReason.Type;
+
 export const OrchestrationThreadActivity = Schema.Struct({
   id: EventId,
   tone: OrchestrationThreadActivityTone,

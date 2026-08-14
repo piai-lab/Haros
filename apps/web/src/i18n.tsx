@@ -902,6 +902,9 @@ export const EN_MESSAGES = {
     "Include a few more words so OmniMind can find the exact place.",
   "conversation.stopFailed": "Could not stop the response",
   "conversation.stopFailedDescription": "The current response could not be interrupted.",
+  "conversation.editRestartRequired": "Stop the current response before editing",
+  "conversation.editRestartRequiredDescription":
+    "This change needs to restart the Engine. Stop the current response, then edit and resend.",
   "conversation.nothingToCommit": "Nothing to commit or push.",
   "conversation.answerPlanBeforeImages": "Answer the plan questions before adding images.",
   "conversation.answerPlanBeforeFiles": "Answer the plan questions before adding files.",
@@ -3145,7 +3148,8 @@ export const EN_MESSAGES = {
   "library.reloadRequiresActiveTask":
     "Open Library from an active OmniMind Agent task to reload its resources.",
   "library.reloadState.reloaded": "Resources were reloaded for the current task.",
-  "library.reloadState.no_active_session": "This task is no longer running. Reopen it and try again.",
+  "library.reloadState.no_active_session":
+    "This task is no longer running. Reopen it and try again.",
   "library.reloadState.different_engine": "This task is not using OmniMind Agent.",
   "library.reloadState.busy": "Wait for the current task activity to finish, then reload again.",
   "library.manageResources": "Manage resources",
@@ -4159,6 +4163,9 @@ export const ZH_CN_MESSAGES = {
   "conversation.markerSelectUniqueDescription": "多选择几个字词，以便 OmniMind 准确定位。",
   "conversation.stopFailed": "无法停止回复",
   "conversation.stopFailedDescription": "当前回复未能中断。",
+  "conversation.editRestartRequired": "请先停止当前回复再编辑",
+  "conversation.editRestartRequiredDescription":
+    "这项修改需要重新启动引擎。请先停止当前回复，再编辑并重新发送。",
   "conversation.nothingToCommit": "没有可提交或推送的更改。",
   "conversation.answerPlanBeforeImages": "请先回答规划问题，再添加图片。",
   "conversation.answerPlanBeforeFiles": "请先回答规划问题，再添加文件。",

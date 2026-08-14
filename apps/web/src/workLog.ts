@@ -3,10 +3,13 @@ import {
   STUDIO_OUTPUTS_ACTIVITY_KIND,
   type OrchestrationLatestTurnState,
   type OrchestrationThreadActivity,
+  ProviderTurnStartFailureReason,
+  type ProviderTurnStartFailureReason as ProviderTurnStartFailureReasonValue,
   type ProviderKind,
   type ToolLifecycleItemType,
   type TurnId,
 } from "@omnimind/contracts";
+import { Schema } from "effect";
 import {
   decodeSubagentAgentStates,
   extractSubagentIdentityHints,
@@ -77,6 +80,7 @@ export interface WorkLogEntry {
   // (e.g. user-input.requested -> question glyph) instead of the generic
   // tone fallback. Same rationale as `toolName` below.
   activityKind?: OrchestrationThreadActivity["kind"];
+  failureReason?: ProviderTurnStartFailureReasonValue;
   // Provider-native event type carried through the activity payload (e.g.
   // "background_tasks_changed") so the timeline can pick a specific icon.
   nativeEventType?: string;
@@ -465,6 +469,9 @@ function toDerivedWorkLogEntry(activity: OrchestrationThreadActivity): DerivedWo
     ...(toolCallId ? { toolCallId } : {}),
     ...(toolStatus ? { toolStatus } : {}),
     ...(engineWebSurface ? { engineWebSurface } : {}),
+    ...(payload && Schema.is(ProviderTurnStartFailureReason)(payload.failureReason)
+      ? { failureReason: payload.failureReason }
+      : {}),
   };
   const itemType = extractWorkLogItemType(payload);
   const requestKind = extractWorkLogRequestKind(payload);

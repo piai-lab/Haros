@@ -3457,6 +3457,119 @@ describe("ProviderCommandReactor", () => {
     });
   });
 
+  it("keeps an active same-provider turn unchanged when the edit requires a restart", async () => {
+    const harness = await createHarness({ sessionModelSwitch: "restart-session" });
+    const now = new Date().toISOString();
+    const threadId = ThreadId.makeUnsafe("thread-1");
+    const messageId = asMessageId("user-message-same-provider-active-edit");
+    const activeTurnId = asTurnId("turn-same-provider-active-edit");
+    await Effect.runPromise(
+      harness.engine.dispatch({
+        type: "thread.turn.start",
+        commandId: CommandId.makeUnsafe("cmd-same-provider-active-edit-original"),
+        threadId,
+        message: {
+          messageId,
+          role: "user",
+          text: "old prompt",
+          attachments: [],
+        },
+        runtimeMode: "approval-required",
+        interactionMode: DEFAULT_PROVIDER_INTERACTION_MODE,
+        createdAt: now,
+      }),
+    );
+    await waitFor(() => harness.sendTurn.mock.calls.length === 1);
+    harness.setRuntimeSessionTurnState({
+      threadId,
+      status: "running",
+      activeTurnId,
+    });
+    await Effect.runPromise(
+      harness.engine.dispatch({
+        type: "thread.session.set",
+        commandId: CommandId.makeUnsafe("cmd-same-provider-active-edit-running"),
+        threadId,
+        session: {
+          threadId,
+          status: "running",
+          providerName: "codex",
+          runtimeMode: "approval-required",
+          activeTurnId,
+          lastError: null,
+          updatedAt: now,
+        },
+        createdAt: now,
+      }),
+    );
+    harness.sendTurn.mockClear();
+    harness.startSession.mockClear();
+    harness.stopRuntimeSession.mockClear();
+    harness.stopSession.mockClear();
+    harness.clearSessionResumeCursor.mockClear();
+    harness.rollbackConversation.mockClear();
+
+    await Effect.runPromise(
+      harness.engine.dispatch({
+        type: "thread.message.edit-and-resend",
+        commandId: CommandId.makeUnsafe("cmd-same-provider-active-edit-resend"),
+        threadId,
+        messageId,
+        text: "edited prompt",
+        modelSelection: { provider: "codex", model: "gpt-5.1-codex" },
+        runtimeMode: "approval-required",
+        interactionMode: DEFAULT_PROVIDER_INTERACTION_MODE,
+        createdAt: now,
+      }),
+    );
+    await waitFor(
+      async () =>
+        (await readHarnessThread(harness))?.activities.some(
+          (activity) =>
+            activity.kind === "provider.turn.start.failed" &&
+            activity.payload &&
+            typeof activity.payload === "object" &&
+            "failureReason" in activity.payload &&
+            activity.payload.failureReason === "active-edit-requires-stop",
+        ) ?? false,
+    );
+
+    expect(harness.stopRuntimeSession).not.toHaveBeenCalled();
+    expect(harness.stopSession).not.toHaveBeenCalled();
+    expect(harness.clearSessionResumeCursor).not.toHaveBeenCalled();
+    expect(harness.rollbackConversation).not.toHaveBeenCalled();
+    expect(harness.startSession).not.toHaveBeenCalled();
+    expect(harness.sendTurn).not.toHaveBeenCalled();
+    const thread = await readHarnessThread(harness);
+    expect(thread?.messages.map((message) => message.text)).toEqual(["old prompt"]);
+    expect(thread?.modelSelection).toEqual({ provider: "codex", model: "gpt-5-codex" });
+    expect(thread?.session).toMatchObject({
+      providerName: "codex",
+      status: "running",
+      activeTurnId,
+    });
+    const events = await Effect.runPromise(
+      Stream.runCollect(harness.engine.readEvents(0)).pipe(
+        Effect.map((items) => Array.from(items)),
+      ),
+    );
+    const editEvent = events.find(
+      (event) =>
+        event.commandId === "cmd-same-provider-active-edit-resend" &&
+        event.type === "thread.message-edit-resend-requested",
+    );
+    expect(editEvent).toBeDefined();
+    await waitFor(async () => {
+      const delivery = await Effect.runPromise(
+        harness.deliveryRepository.getDelivery({
+          consumerName: "provider-command-reactor.v1",
+          eventSequence: editEvent!.sequence,
+        }),
+      );
+      return Option.isSome(delivery) && delivery.value.state === "succeeded";
+    });
+  });
+
   it("keeps the previous exact binding when a same-provider model restart fails", async () => {
     const harness = await createHarness({ sessionModelSwitch: "restart-session" });
     const now = new Date().toISOString();
@@ -3587,7 +3700,7 @@ describe("ProviderCommandReactor", () => {
     ).toBe(storagePath);
   });
 
-  it("restarts Droid edits and bootstraps only the retained transcript", async () => {
+  it("keeps an active Droid edit unchanged until its restart-based response stops", async () => {
     const harness = await createHarness({
       threadModelSelection: { provider: "droid", model: "claude-opus-4-8" },
       conversationRollback: "restart-session",
@@ -3666,18 +3779,31 @@ describe("ProviderCommandReactor", () => {
       }),
     );
 
-    await waitFor(() => harness.clearSessionResumeCursor.mock.calls.length === 1);
-    await waitFor(() => harness.sendTurn.mock.calls.length === 1);
+    await waitFor(
+      async () =>
+        (await readHarnessThread(harness))?.activities.some(
+          (activity) =>
+            activity.kind === "provider.turn.start.failed" &&
+            activity.payload &&
+            typeof activity.payload === "object" &&
+            "failureReason" in activity.payload &&
+            activity.payload.failureReason === "active-edit-requires-stop",
+        ) ?? false,
+    );
     expect(harness.stopRuntimeSession).not.toHaveBeenCalled();
-    expect(harness.clearSessionResumeCursor.mock.calls[0]?.[0]).toEqual({
-      threadId: ThreadId.makeUnsafe("thread-1"),
+    expect(harness.clearSessionResumeCursor).not.toHaveBeenCalled();
+    expect(harness.sendTurn).not.toHaveBeenCalled();
+    const thread = await readHarnessThread(harness);
+    expect(thread?.messages.map((message) => message.text)).toEqual([
+      "Earlier question",
+      "Earlier answer",
+      "old prompt",
+    ]);
+    expect(thread?.session).toMatchObject({
+      providerName: "droid",
+      status: "running",
+      activeTurnId: asTurnId("turn-droid-active-edit"),
     });
-    const resent = harness.sendTurn.mock.calls[0]?.[0] as { input?: string } | undefined;
-    expect(resent?.input).toContain("<thread_context>");
-    expect(resent?.input).toContain("Earlier question");
-    expect(resent?.input).toContain("Earlier answer");
-    expect(resent?.input).toContain("edited prompt");
-    expect(resent?.input).not.toContain("old prompt");
   });
 
   it("keeps queued-message edits queued while an active provider turn continues", async () => {

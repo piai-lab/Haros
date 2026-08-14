@@ -11,6 +11,26 @@ import {
 import { makeActivity } from "./storeTestFixtures";
 
 describe("deriveWorkLogEntries", () => {
+  it("keeps the typed active-edit failure reason for localized presentation", () => {
+    const [entry] = deriveWorkLogEntries(
+      [
+        makeActivity({
+          id: "active-edit-requires-stop",
+          kind: "provider.turn.start.failed",
+          summary: "Message edit requires the current response to stop",
+          tone: "error",
+          payload: {
+            detail: "The current response must stop before this edit can restart the Engine.",
+            failureReason: "active-edit-requires-stop",
+          },
+        }),
+      ],
+      undefined,
+    );
+
+    expect(entry?.failureReason).toBe("active-edit-requires-stop");
+  });
+
   it("keeps a sanitized Engine-native web-surface presentation marker", () => {
     const entries = deriveWorkLogEntries(
       [

@@ -15,6 +15,7 @@ import {
   type ProviderMentionReference,
   type ProviderRuntimeEvent,
   ProviderKind,
+  type ProviderTurnStartFailureReason,
   type ProviderReviewTarget,
   type ProviderStartOptions,
   type ProviderSkillReference,
@@ -764,6 +765,7 @@ const make = Effect.gen(function* () {
     readonly lifecycleGeneration?: string;
     readonly responseCommandId?: CommandId;
     readonly settlementStatus?: "retryable" | "uncertain";
+    readonly failureReason?: ProviderTurnStartFailureReason;
   }) =>
     orchestrationEngine.dispatch({
       type: "thread.activity.append",
@@ -781,6 +783,7 @@ const make = Effect.gen(function* () {
           ...(input.lifecycleGeneration ? { lifecycleGeneration: input.lifecycleGeneration } : {}),
           ...(input.responseCommandId ? { responseCommandId: input.responseCommandId } : {}),
           ...(input.settlementStatus ? { settlementStatus: input.settlementStatus } : {}),
+          ...(input.failureReason ? { failureReason: input.failureReason } : {}),
         },
         turnId: input.turnId,
         createdAt: input.createdAt,
@@ -976,10 +979,11 @@ const make = Effect.gen(function* () {
     const providerChanged =
       input.activeProvider !== undefined && targetProvider !== input.activeProvider;
     const runtimeModeChanged = input.desiredRuntimeMode !== input.currentRuntimeMode;
-    const sessionModelSwitch =
+    const activeProviderCapabilities =
       input.activeProvider === undefined || providerChanged
-        ? "in-session"
-        : (yield* providerService.getCapabilities(input.activeProvider)).sessionModelSwitch;
+        ? undefined
+        : yield* providerService.getCapabilities(input.activeProvider);
+    const sessionModelSwitch = activeProviderCapabilities?.sessionModelSwitch ?? "in-session";
     const modelChanged =
       input.requestedModelSelection !== undefined &&
       input.requestedModelSelection.model !== input.activeModel;
@@ -1001,6 +1005,7 @@ const make = Effect.gen(function* () {
       runtimeModeChanged,
       shouldRestartForModelChange,
       shouldRestartForModelSelectionChange,
+      conversationRollback: activeProviderCapabilities?.conversationRollback,
       shouldReplaceSession:
         runtimeModeChanged ||
         providerChanged ||
@@ -3503,9 +3508,9 @@ const make = Effect.gen(function* () {
       (Schema.is(ProviderKind)(providerThread?.session?.providerName)
         ? providerThread.session.providerName
         : thread?.modelSelection.provider);
-    const providerServiceOwnsReplacement =
+    const replacementRequirement =
       thread !== undefined
-        ? (yield* resolveSessionReplacementRequirement({
+        ? yield* resolveSessionReplacementRequirement({
             threadId: event.payload.threadId,
             activeProvider,
             activeModel: liveSession?.model,
@@ -3516,12 +3521,34 @@ const make = Effect.gen(function* () {
               providerThread?.session?.runtimeMode ??
               thread.runtimeMode,
             desiredRuntimeMode: event.payload.runtimeMode,
-          })).providerChanged
-        : false;
+          })
+        : undefined;
+    const providerServiceOwnsReplacement = replacementRequirement?.providerChanged === true;
     const isQueuedMessageEdit = yield* queuedTurnPromotions.hasPendingMessage({
       threadId: event.payload.threadId,
       messageId: event.payload.messageId,
     });
+    const sameProviderEditRequiresNativeContextRestart =
+      thread !== undefined &&
+      activeTurnId !== null &&
+      !isQueuedMessageEdit &&
+      replacementRequirement !== undefined &&
+      replacementRequirement.providerChanged === false &&
+      (replacementRequirement.shouldReplaceSession ||
+        replacementRequirement.conversationRollback === "restart-session");
+    if (sameProviderEditRequiresNativeContextRestart) {
+      yield* appendProviderFailureActivity({
+        threadId: event.payload.threadId,
+        kind: "provider.turn.start.failed",
+        summary: "Message edit requires the current response to stop",
+        detail: "The current response must stop before this edit can restart the Engine.",
+        failureReason: "active-edit-requires-stop",
+        turnId: activeTurnId,
+        messageId: event.payload.messageId,
+        createdAt: event.payload.createdAt,
+      });
+      return;
+    }
     if (thread && !isQueuedMessageEdit) {
       yield* setThreadSession({
         threadId: event.payload.threadId,

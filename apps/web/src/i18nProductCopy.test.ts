@@ -428,5 +428,9 @@ describe("reachable OmniMind-owned product copy", () => {
     expect(ZH_CN_MESSAGES["composer.modelSetupDescription"]).toContain("草稿和附件");
     expect(EN_MESSAGES["composer.modelRecoveryDescription"]).toContain("existing connection");
     expect(ZH_CN_MESSAGES["composer.modelRecoveryDescription"]).toContain("现有连接");
+    expect(EN_MESSAGES["conversation.editRestartRequired"]).toContain("Stop");
+    expect(ZH_CN_MESSAGES["conversation.editRestartRequired"]).toContain("停止");
+    expect(EN_MESSAGES["conversation.editRestartRequiredDescription"]).toContain("restart");
+    expect(ZH_CN_MESSAGES["conversation.editRestartRequiredDescription"]).toContain("重新启动");
   });
 });
