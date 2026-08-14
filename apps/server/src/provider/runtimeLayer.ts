@@ -20,6 +20,7 @@ import { makeKiloAdapterLive, makeOpenCodeAdapterLive } from "./Layers/OpenCodeA
 import { makeOmniMindAgentAdapterLive, makePiAdapterLive } from "./Layers/PiAdapter";
 import { ProviderAdapterRegistryLive } from "./Layers/ProviderAdapterRegistry";
 import { ProviderDiscoveryServiceLive } from "./Layers/ProviderDiscoveryService";
+import { OmniMindEcosystemLive } from "./Layers/OmniMindEcosystem";
 import { OmniMindModelServicesLive } from "./Layers/OmniMindModelServices";
 import { makeDurableProviderServiceLive } from "./Layers/ProviderService";
 import { ProviderSessionDirectoryLive } from "./Layers/ProviderSessionDirectory";
@@ -117,6 +118,7 @@ export function makeServerProviderLayer(
     return Layer.mergeAll(
       providerServiceLayer,
       providerDiscoveryLayer,
+      OmniMindEcosystemLive,
       OmniMindModelServicesLive,
       adapterRegistryLayer,
       providerSessionDirectoryLayer,

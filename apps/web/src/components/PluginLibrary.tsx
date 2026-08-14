@@ -5,12 +5,21 @@
 
 import {
   PROVIDER_DISPLAY_NAMES,
+  WS_OMNIMIND_ECOSYSTEM_CAPABILITY,
+  type OmniMindPackageDescriptor,
+  type OmniMindPackageResourceDescriptor,
   type ProviderKind,
   type ProviderPluginDescriptor,
   type ProviderSkillDescriptor,
 } from "@omnimind/contracts";
-import { useQuery } from "@tanstack/react-query";
-import React, { useMemo, type ReactNode, useDeferredValue, useState } from "react";
+import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
+import React, {
+  useMemo,
+  type ReactNode,
+  useDeferredValue,
+  useState,
+  useSyncExternalStore,
+} from "react";
 import type { IconType } from "react-icons";
 import {
   SiCanva,
@@ -66,10 +75,26 @@ import {
 } from "~/hooks/useDesktopTopBarGutter";
 import { Skeleton } from "./ui/skeleton";
 import { useI18n } from "~/i18n";
+import {
+  ensureNativeApi,
+  onNativeApiServerCapabilitiesChange,
+  readNativeApiServerCapabilityState,
+} from "~/nativeApi";
+import { Button } from "./ui/button";
+import {
+  Dialog,
+  DialogClose,
+  DialogDescription,
+  DialogFooter,
+  DialogHeader,
+  DialogPanel,
+  DialogPopup,
+  DialogTitle,
+} from "./ui/dialog";
 
 // ── Types ──────────────────────────────────────────────────────────────────
 
-type DiscoveryTab = "plugins" | "skills";
+type DiscoveryTab = "plugins" | "skills" | "packages";
 type ProviderCapabilities = { plugins: boolean; skills: boolean };
 type PluginEntry = {
   marketplaceName: string;
@@ -81,6 +106,12 @@ type PluginBrandArtwork = {
   color: string;
   icon: IconType;
 };
+type PackageMutation =
+  | { type: "install"; source: string }
+  | { type: "update"; packageId: string }
+  | { type: "remove"; packageId: string }
+  | { type: "toggle"; resource: OmniMindPackageResourceDescriptor; enabled: boolean }
+  | { type: "reload" };
 
 // ── Constants ──────────────────────────────────────────────────────────────
 
@@ -102,6 +133,19 @@ const KNOWN_PLUGIN_BRANDS: Record<string, PluginBrandArtwork> = {
   stripe: { icon: SiStripe, color: "#635BFF" },
   vercel: { icon: SiVercel, color: "#111111" },
 };
+const ecosystemQueryKey = ["omnimind-ecosystem"] as const;
+
+function subscribeToEcosystemCapability(listener: () => void): () => void {
+  return onNativeApiServerCapabilitiesChange(listener);
+}
+
+function readEcosystemCapability(): boolean {
+  return readNativeApiServerCapabilityState(WS_OMNIMIND_ECOSYSTEM_CAPABILITY) === true;
+}
+
+function readServerEcosystemCapability(): boolean {
+  return false;
+}
 
 // ── Utilities ──────────────────────────────────────────────────────────────
 
@@ -403,10 +447,139 @@ function SectionHeader({ title }: { title: string }) {
   return <h2 className="px-3 pb-1 pt-2 text-[15px] font-semibold text-foreground">{title}</h2>;
 }
 
+function PackageRow({
+  item,
+  busy,
+  onManage,
+  onRemove,
+  onUpdate,
+}: {
+  item: OmniMindPackageDescriptor;
+  busy: boolean;
+  onManage: () => void;
+  onRemove: () => void;
+  onUpdate: () => void;
+}) {
+  const { t } = useI18n();
+  const canAct = item.manageable && item.installed;
+  return (
+    <div className="flex min-w-0 items-center gap-3 rounded-xl border border-border/55 bg-background/45 px-3 py-3">
+      <span className="inline-flex size-11 shrink-0 items-center justify-center rounded-[14px] bg-foreground/[0.06]">
+        <PluginIcon className="size-5 text-foreground/70" />
+      </span>
+      <div className="min-w-0 flex-1">
+        <div className="flex min-w-0 items-center gap-2">
+          <p className="truncate text-[13px] font-semibold text-foreground">{item.displayName}</p>
+          {item.updateAvailable ? (
+            <span className="shrink-0 rounded-full bg-amber-500/10 px-2 py-0.5 text-[10px] font-medium text-amber-600 dark:text-amber-400">
+              {t("library.updateAvailable")}
+            </span>
+          ) : null}
+        </div>
+        <p className="mt-0.5 text-[11px] text-muted-foreground">
+          {item.manageable ? item.kind.toUpperCase() : t("library.packageUnavailable")}
+        </p>
+      </div>
+      <div className="flex shrink-0 items-center gap-1.5">
+        <Button variant="outline" size="sm" disabled={!canAct || busy} onClick={onManage}>
+          {t("library.manageResources")}
+        </Button>
+        {item.updateAvailable ? (
+          <Button variant="outline" size="sm" disabled={!canAct || busy} onClick={onUpdate}>
+            {t("library.update")}
+          </Button>
+        ) : null}
+        <Button
+          variant="destructive-outline"
+          size="sm"
+          disabled={!canAct || busy}
+          onClick={onRemove}
+        >
+          {t("common.remove")}
+        </Button>
+      </div>
+    </div>
+  );
+}
+
+function PackageResourceDialog({
+  busy,
+  error,
+  loading,
+  open,
+  packageName,
+  resources,
+  onOpenChange,
+  onToggle,
+}: {
+  busy: boolean;
+  error: boolean;
+  loading: boolean;
+  open: boolean;
+  packageName: string;
+  resources: readonly OmniMindPackageResourceDescriptor[];
+  onOpenChange: (open: boolean) => void;
+  onToggle: (resource: OmniMindPackageResourceDescriptor, enabled: boolean) => void;
+}) {
+  const { t } = useI18n();
+  return (
+    <Dialog open={open} onOpenChange={onOpenChange}>
+      <DialogPopup className="max-w-xl">
+        <DialogHeader>
+          <DialogTitle>{t("library.packageResources")}</DialogTitle>
+          <DialogDescription>{packageName}</DialogDescription>
+        </DialogHeader>
+        <DialogPanel className="space-y-2">
+          {loading ? (
+            <div className="space-y-2 py-2">
+              <Skeleton className="h-12 w-full rounded-xl" />
+              <Skeleton className="h-12 w-full rounded-xl" />
+            </div>
+          ) : error ? (
+            <InlineWarning>{t("library.packageResourcesFailed")}</InlineWarning>
+          ) : resources.length === 0 ? (
+            <EmptyPanel
+              title={t("library.packageResources")}
+              description={t("library.noPackageResources")}
+            />
+          ) : (
+            resources.map((resource) => (
+              <label
+                key={`${resource.resourceType}:${resource.resourcePath}`}
+                className="flex cursor-pointer items-center gap-3 rounded-xl border border-border/55 px-3 py-2.5"
+              >
+                <input
+                  type="checkbox"
+                  checked={resource.enabled}
+                  disabled={busy}
+                  onChange={(event) => onToggle(resource, event.currentTarget.checked)}
+                  className="size-4 accent-foreground"
+                />
+                <span className="min-w-0 flex-1">
+                  <span className="block text-[12px] font-medium text-foreground">
+                    {t(`library.resourceType.${resource.resourceType}`)}
+                  </span>
+                  <span className="block truncate text-[11px] text-muted-foreground">
+                    {resource.resourcePath}
+                  </span>
+                </span>
+              </label>
+            ))
+          )}
+        </DialogPanel>
+        <DialogFooter>
+          <DialogClose render={<Button variant="outline" />}>{t("common.done")}</DialogClose>
+        </DialogFooter>
+      </DialogPopup>
+    </Dialog>
+  );
+}
+
 // ── Main component ─────────────────────────────────────────────────────────
 
 export function PluginLibrary() {
   const { t } = useI18n();
+  const queryClient = useQueryClient();
   const desktopTopBarTrafficLightGutterClassName = useDesktopTopBarTrafficLightGutterClassName();
   const desktopTopBarWindowControlsGutterClassName =
     useDesktopTopBarWindowControlsGutterClassName();
@@ -420,9 +593,73 @@ export function PluginLibrary() {
   const [selectedTab, setSelectedTab] = useState<DiscoveryTab>("skills");
   const [pluginSearch, setPluginSearch] = useState("");
   const [skillSearch, setSkillSearch] = useState("");
+  const [packageSource, setPackageSource] = useState("");
+  const [managedPackageId, setManagedPackageId] = useState<string | null>(null);
+  const [packageError, setPackageError] = useState(false);
   const deferredPluginSearch = useDeferredValue(pluginSearch);
   const deferredSkillSearch = useDeferredValue(skillSearch);
   const providerThreadId = focusedThreadId;
+  const ecosystemAvailable = useSyncExternalStore(
+    subscribeToEcosystemCapability,
+    readEcosystemCapability,
+    readServerEcosystemCapability,
+  );
+
+  const ecosystemQuery = useQuery({
+    queryKey: ecosystemQueryKey,
+    enabled: selectedTab === "packages" && ecosystemAvailable,
+    queryFn: () => ensureNativeApi().omnimindEcosystem.list(),
+  });
+  const resourcesQuery = useQuery({
+    queryKey: [...ecosystemQueryKey, "resources", managedPackageId],
+    enabled: managedPackageId !== null && ecosystemAvailable,
+    queryFn: () =>
+      ensureNativeApi().omnimindEcosystem.listResources({ packageId: managedPackageId! }),
+  });
+  const ecosystemMutation = useMutation({
+    mutationFn: async (action: PackageMutation) => {
+      const ecosystem = ensureNativeApi().omnimindEcosystem;
+      switch (action.type) {
+        case "install":
+          return ecosystem.install({ source: action.source });
+        case "update":
+          return ecosystem.update({ packageId: action.packageId });
+        case "remove":
+          return ecosystem.remove({ packageId: action.packageId });
+        case "toggle":
+          return ecosystem.setResourceEnabled({
+            packageId: action.resource.packageId,
+            resourceType: action.resource.resourceType,
+            resourcePath: action.resource.resourcePath,
+            enabled: action.enabled,
+          });
+        case "reload":
+          return ecosystem.reload();
+      }
+    },
+    onMutate: () => setPackageError(false),
+    onSuccess: async (_result, action) => {
+      if (action.type === "install") setPackageSource("");
+      await queryClient.invalidateQueries({ queryKey: ecosystemQueryKey });
+    },
+    onError: () => setPackageError(true),
+  });
+
+  const checkPackageUpdates = async () => {
+    setPackageError(false);
+    try {
+      const snapshot = await ensureNativeApi().omnimindEcosystem.list({ checkUpdates: true });
+      queryClient.setQueryData(ecosystemQueryKey, snapshot);
+    } catch {
+      setPackageError(true);
+    }
+  };
+
+  const removePackage = async (item: OmniMindPackageDescriptor) => {
+    const confirmed = await ensureNativeApi().dialogs.confirm(t("library.removePackageConfirm"));
+    if (!confirmed) return;
+    ecosystemMutation.mutate({ type: "remove", packageId: item.packageId });
+  };
 
   const serverConfigQuery = useQuery(serverConfigQueryOptions());
   const omniMindCapabilitiesQuery = useQuery(providerComposerCapabilitiesQueryOptions("omnimind"));
@@ -584,9 +821,21 @@ export function PluginLibrary() {
               active={selectedTab === "skills"}
               onClick={() => setSelectedTab("skills")}
             />
+            {ecosystemAvailable ? (
+              <TabButton
+                label={t("library.packages")}
+                active={selectedTab === "packages"}
+                onClick={() => setSelectedTab("packages")}
+              />
+            ) : null}
           </div>
           <div className="flex-1" />
-          <div className="inline-flex rounded-full border border-border/60 bg-background/60 p-0.5">
+          <div
+            className={cn(
+              "inline-flex rounded-full border border-border/60 bg-background/60 p-0.5",
+              selectedTab === "packages" && "invisible pointer-events-none",
+            )}
+          >
             {DEFAULT_PROVIDER_ORDER.map((provider) => {
               const capabilities = providerCapabilities[provider];
               const label = PROVIDER_DISPLAY_NAMES[provider];
@@ -617,9 +866,13 @@ export function PluginLibrary() {
           {/* Hero */}
           <div className="px-6 py-10 text-center">
             <h1 className="text-[28px] font-semibold text-foreground">
-              {t("library.title", { provider: providerLabel })}
+              {selectedTab === "packages"
+                ? t("library.packageTitle")
+                : t("library.title", { provider: providerLabel })}
             </h1>
-            <p className="mt-2 text-sm text-muted-foreground">{t("library.subtitle")}</p>
+            <p className="mt-2 text-sm text-muted-foreground">
+              {selectedTab === "packages" ? t("library.packageSubtitle") : t("library.subtitle")}
+            </p>
           </div>
 
           {/* Search */}
@@ -631,17 +884,57 @@ export function PluginLibrary() {
                 </InputGroupText>
               </InputGroupAddon>
               <InputGroupInput
-                value={selectedTab === "plugins" ? pluginSearch : skillSearch}
+                value={
+                  selectedTab === "plugins"
+                    ? pluginSearch
+                    : selectedTab === "skills"
+                      ? skillSearch
+                      : packageSource
+                }
                 onChange={(e) => {
                   if (selectedTab === "plugins") setPluginSearch(e.target.value);
-                  else setSkillSearch(e.target.value);
+                  else if (selectedTab === "skills") setSkillSearch(e.target.value);
+                  else setPackageSource(e.target.value);
                 }}
                 placeholder={
-                  selectedTab === "plugins" ? t("library.searchPlugins") : t("library.searchSkills")
+                  selectedTab === "plugins"
+                    ? t("library.searchPlugins")
+                    : selectedTab === "skills"
+                      ? t("library.searchSkills")
+                      : t("library.packageSourcePlaceholder")
                 }
                 className="text-sm"
               />
             </InputGroup>
+            {selectedTab === "packages" ? (
+              <div className="mt-3 flex flex-wrap items-center justify-end gap-2">
+                <Button
+                  variant="outline"
+                  size="sm"
+                  disabled={ecosystemMutation.isPending}
+                  onClick={() => void checkPackageUpdates()}
+                >
+                  {t("library.checkUpdates")}
+                </Button>
+                <Button
+                  variant="outline"
+                  size="sm"
+                  disabled={ecosystemMutation.isPending}
+                  onClick={() => ecosystemMutation.mutate({ type: "reload" })}
+                >
+                  {t("library.reloadResources")}
+                </Button>
+                <Button
+                  size="sm"
+                  disabled={packageSource.trim().length === 0 || ecosystemMutation.isPending}
+                  onClick={() =>
+                    ecosystemMutation.mutate({ type: "install", source: packageSource.trim() })
+                  }
+                >
+                  {t("library.installPackage")}
+                </Button>
+              </div>
+            ) : null}
           </div>
 
           {/* Warnings */}
@@ -682,7 +975,42 @@ export function PluginLibrary() {
 
           {/* Grid content */}
           <div className="px-3 pb-10 sm:px-5">
-            {selectedTab === "plugins" ? (
+            {selectedTab === "packages" ? (
+              <div className="mx-auto max-w-3xl space-y-2">
+                {packageError ? (
+                  <InlineWarning>{t("library.packageOperationFailed")}</InlineWarning>
+                ) : null}
+                {!ecosystemAvailable ? (
+                  <EmptyPanel
+                    title={t("library.packagesUnavailable")}
+                    description={t("library.packagesUnavailableDescription")}
+                  />
+                ) : ecosystemQuery.isLoading && !ecosystemQuery.data ? (
+                  <div className="space-y-2">
+                    <Skeleton className="h-[70px] w-full rounded-xl" />
+                    <Skeleton className="h-[70px] w-full rounded-xl" />
+                  </div>
+                ) : (ecosystemQuery.data?.packages.length ?? 0) === 0 ? (
+                  <EmptyPanel
+                    title={t("library.noPackages")}
+                    description={t("library.noPackagesDescription")}
+                  />
+                ) : (
+                  ecosystemQuery.data?.packages.map((item) => (
+                    <PackageRow
+                      key={item.packageId}
+                      item={item}
+                      busy={ecosystemMutation.isPending}
+                      onManage={() => setManagedPackageId(item.packageId)}
+                      onUpdate={() =>
+                        ecosystemMutation.mutate({ type: "update", packageId: item.packageId })
+                      }
+                      onRemove={() => void removePackage(item)}
+                    />
+                  ))
+                )}
+              </div>
+            ) : selectedTab === "plugins" ? (
               <>
                 {!canListPlugins ? (
                   <div className="mx-auto max-w-2xl">
@@ -756,6 +1084,23 @@ export function PluginLibrary() {
           </div>
         </div>
       </div>
+      <PackageResourceDialog
+        open={managedPackageId !== null}
+        onOpenChange={(open) => {
+          if (!open) setManagedPackageId(null);
+        }}
+        packageName={
+          ecosystemQuery.data?.packages.find((item) => item.packageId === managedPackageId)
+            ?.displayName ?? ""
+        }
+        resources={resourcesQuery.data?.resources ?? []}
+        loading={resourcesQuery.isLoading}
+        error={resourcesQuery.isError}
+        busy={ecosystemMutation.isPending}
+        onToggle={(resource, enabled) =>
+          ecosystemMutation.mutate({ type: "toggle", resource, enabled })
+        }
+      />
     </SidebarInset>
   );
 }

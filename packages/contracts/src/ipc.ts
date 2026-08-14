@@ -269,6 +269,16 @@ import type {
   OmniMindModelServicesListResult,
 } from "./omnimindModelServices";
 import type {
+  OmniMindEcosystemInstallInput,
+  OmniMindEcosystemListInput,
+  OmniMindEcosystemListResourcesResult,
+  OmniMindEcosystemMutationResult,
+  OmniMindEcosystemPackageInput,
+  OmniMindEcosystemReloadResult,
+  OmniMindEcosystemResourceToggleInput,
+  OmniMindEcosystemSnapshot,
+} from "./omnimindEcosystem";
+import type {
   StatsGetProfileStatsInput,
   StatsGetProfileStatsResult,
   StatsGetProfileTokenStatsInput,
@@ -840,6 +850,19 @@ export interface NativeApi {
       input: OmniMindCustomModelServiceRemoveInput,
       options?: { readonly signal?: AbortSignal },
     ) => Promise<OmniMindCustomModelServiceRemoveResult>;
+  };
+  omnimindEcosystem: {
+    list: (input?: OmniMindEcosystemListInput) => Promise<OmniMindEcosystemSnapshot>;
+    listResources: (
+      input: OmniMindEcosystemPackageInput,
+    ) => Promise<OmniMindEcosystemListResourcesResult>;
+    install: (input: OmniMindEcosystemInstallInput) => Promise<OmniMindEcosystemMutationResult>;
+    update: (input: OmniMindEcosystemPackageInput) => Promise<OmniMindEcosystemMutationResult>;
+    remove: (input: OmniMindEcosystemPackageInput) => Promise<OmniMindEcosystemMutationResult>;
+    setResourceEnabled: (
+      input: OmniMindEcosystemResourceToggleInput,
+    ) => Promise<OmniMindEcosystemMutationResult>;
+    reload: () => Promise<OmniMindEcosystemReloadResult>;
   };
   orchestration: {
     getSnapshot: () => Promise<OrchestrationReadModel>;

@@ -152,6 +152,13 @@ import {
   OmniMindModelServicesListInput,
 } from "./omnimindModelServices";
 import {
+  OmniMindEcosystemInstallInput,
+  OmniMindEcosystemListInput,
+  OmniMindEcosystemPackageInput,
+  OmniMindEcosystemReloadInput,
+  OmniMindEcosystemResourceToggleInput,
+} from "./omnimindEcosystem";
+import {
   PullRequestActionInput,
   PullRequestCommentInput,
   PullRequestDetailInput,
@@ -297,6 +304,13 @@ export const WS_METHODS = {
   omnimindModelServicesTestCustom: "omnimindModelServices.testCustom",
   omnimindModelServicesSaveCustom: "omnimindModelServices.saveCustom",
   omnimindModelServicesRemoveCustom: "omnimindModelServices.removeCustom",
+  omnimindEcosystemList: "omnimindEcosystem.list",
+  omnimindEcosystemListResources: "omnimindEcosystem.listResources",
+  omnimindEcosystemInstall: "omnimindEcosystem.install",
+  omnimindEcosystemUpdate: "omnimindEcosystem.update",
+  omnimindEcosystemRemove: "omnimindEcosystem.remove",
+  omnimindEcosystemSetResourceEnabled: "omnimindEcosystem.setResourceEnabled",
+  omnimindEcosystemReload: "omnimindEcosystem.reload",
 
   // Automation methods
   automationList: "automation.list",
@@ -346,6 +360,16 @@ const WebSocketRequestBody = Schema.Union([
     ORCHESTRATION_WS_METHODS.dispatchCommand,
     Schema.Struct({ command: ClientOrchestrationCommand }),
   ),
+  tagRequestBody(WS_METHODS.omnimindEcosystemList, OmniMindEcosystemListInput),
+  tagRequestBody(WS_METHODS.omnimindEcosystemListResources, OmniMindEcosystemPackageInput),
+  tagRequestBody(WS_METHODS.omnimindEcosystemInstall, OmniMindEcosystemInstallInput),
+  tagRequestBody(WS_METHODS.omnimindEcosystemUpdate, OmniMindEcosystemPackageInput),
+  tagRequestBody(WS_METHODS.omnimindEcosystemRemove, OmniMindEcosystemPackageInput),
+  tagRequestBody(
+    WS_METHODS.omnimindEcosystemSetResourceEnabled,
+    OmniMindEcosystemResourceToggleInput,
+  ),
+  tagRequestBody(WS_METHODS.omnimindEcosystemReload, OmniMindEcosystemReloadInput),
   tagRequestBody(ORCHESTRATION_WS_METHODS.importThread, OrchestrationImportThreadInput),
   tagRequestBody(ORCHESTRATION_WS_METHODS.getSnapshot, OrchestrationGetSnapshotInput),
   tagRequestBody(ORCHESTRATION_WS_METHODS.getShellSnapshot, OrchestrationGetShellSnapshotInput),

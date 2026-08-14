@@ -924,6 +924,33 @@ describe("wsNativeApi", () => {
     );
   });
 
+  it("forwards public package installs and opaque package actions", async () => {
+    requestMock.mockResolvedValue({ changed: true, snapshot: { packages: [] } });
+    const { createWsNativeApi } = await import("./wsNativeApi");
+    const api = createWsNativeApi();
+    const packageId = "a".repeat(64);
+
+    await api.omnimindEcosystem.install({ source: "npm:@scope/package@1.2.3" });
+    await api.omnimindEcosystem.listResources({ packageId });
+    await api.omnimindEcosystem.update({ packageId });
+
+    expect(requestMock).toHaveBeenNthCalledWith(
+      1,
+      WS_METHODS.omnimindEcosystemInstall,
+      { source: "npm:@scope/package@1.2.3" },
+      { timeoutMs: null },
+    );
+    expect(requestMock).toHaveBeenNthCalledWith(2, WS_METHODS.omnimindEcosystemListResources, {
+      packageId,
+    });
+    expect(requestMock).toHaveBeenNthCalledWith(
+      3,
+      WS_METHODS.omnimindEcosystemUpdate,
+      { packageId },
+      { timeoutMs: null },
+    );
+  });
+
   it("forwards typed OmniMind model-service credential operations", async () => {
     const requestId = "00000000-0000-4000-8000-000000000041";
     const promptId = "00000000-0000-4000-8000-000000000042";

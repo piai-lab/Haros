@@ -794,6 +794,19 @@ export function createWsNativeApi(): NativeApi {
           ...(options?.signal ? { signal: options.signal } : {}),
         }),
     },
+    omnimindEcosystem: {
+      list: (input = {}) => transport.request(WS_METHODS.omnimindEcosystemList, input),
+      listResources: (input) => transport.request(WS_METHODS.omnimindEcosystemListResources, input),
+      install: (input) =>
+        transport.request(WS_METHODS.omnimindEcosystemInstall, input, { timeoutMs: null }),
+      update: (input) =>
+        transport.request(WS_METHODS.omnimindEcosystemUpdate, input, { timeoutMs: null }),
+      remove: (input) =>
+        transport.request(WS_METHODS.omnimindEcosystemRemove, input, { timeoutMs: null }),
+      setResourceEnabled: (input) =>
+        transport.request(WS_METHODS.omnimindEcosystemSetResourceEnabled, input),
+      reload: () => transport.request(WS_METHODS.omnimindEcosystemReload, {}, { timeoutMs: null }),
+    },
     orchestration: {
       getSnapshot: () => transport.request(ORCHESTRATION_WS_METHODS.getSnapshot),
       getShellSnapshot: () => transport.request(ORCHESTRATION_WS_METHODS.getShellSnapshot),

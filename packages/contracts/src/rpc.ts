@@ -159,6 +159,17 @@ import {
   OmniMindModelServicesListResult,
 } from "./omnimindModelServices";
 import {
+  OmniMindEcosystemInstallInput,
+  OmniMindEcosystemListInput,
+  OmniMindEcosystemListResourcesResult,
+  OmniMindEcosystemMutationResult,
+  OmniMindEcosystemPackageInput,
+  OmniMindEcosystemReloadInput,
+  OmniMindEcosystemReloadResult,
+  OmniMindEcosystemResourceToggleInput,
+  OmniMindEcosystemSnapshot,
+} from "./omnimindEcosystem";
+import {
   ProviderGetComposerCapabilitiesInput,
   ProviderComposerCapabilities,
   ProviderListAgentsInput,
@@ -1229,6 +1240,48 @@ export const WsOmniMindModelServicesRemoveCustomRpc = Rpc.make(
   },
 );
 
+export const WsOmniMindEcosystemListRpc = Rpc.make(WS_METHODS.omnimindEcosystemList, {
+  payload: OmniMindEcosystemListInput,
+  success: OmniMindEcosystemSnapshot,
+  error: WsRpcError,
+});
+export const WsOmniMindEcosystemListResourcesRpc = Rpc.make(
+  WS_METHODS.omnimindEcosystemListResources,
+  {
+    payload: OmniMindEcosystemPackageInput,
+    success: OmniMindEcosystemListResourcesResult,
+    error: WsRpcError,
+  },
+);
+export const WsOmniMindEcosystemInstallRpc = Rpc.make(WS_METHODS.omnimindEcosystemInstall, {
+  payload: OmniMindEcosystemInstallInput,
+  success: OmniMindEcosystemMutationResult,
+  error: WsRpcError,
+});
+export const WsOmniMindEcosystemUpdateRpc = Rpc.make(WS_METHODS.omnimindEcosystemUpdate, {
+  payload: OmniMindEcosystemPackageInput,
+  success: OmniMindEcosystemMutationResult,
+  error: WsRpcError,
+});
+export const WsOmniMindEcosystemRemoveRpc = Rpc.make(WS_METHODS.omnimindEcosystemRemove, {
+  payload: OmniMindEcosystemPackageInput,
+  success: OmniMindEcosystemMutationResult,
+  error: WsRpcError,
+});
+export const WsOmniMindEcosystemSetResourceEnabledRpc = Rpc.make(
+  WS_METHODS.omnimindEcosystemSetResourceEnabled,
+  {
+    payload: OmniMindEcosystemResourceToggleInput,
+    success: OmniMindEcosystemMutationResult,
+    error: WsRpcError,
+  },
+);
+export const WsOmniMindEcosystemReloadRpc = Rpc.make(WS_METHODS.omnimindEcosystemReload, {
+  payload: OmniMindEcosystemReloadInput,
+  success: OmniMindEcosystemReloadResult,
+  error: WsRpcError,
+});
+
 export const WsAutomationListRpc = Rpc.make(WS_METHODS.automationList, {
   payload: AutomationListInput,
   success: AutomationListResult,
@@ -1418,6 +1471,13 @@ export const WsFeatureRpcGroup = RpcGroup.make(
   WsOmniMindModelServicesTestCustomRpc,
   WsOmniMindModelServicesSaveCustomRpc,
   WsOmniMindModelServicesRemoveCustomRpc,
+  WsOmniMindEcosystemListRpc,
+  WsOmniMindEcosystemListResourcesRpc,
+  WsOmniMindEcosystemInstallRpc,
+  WsOmniMindEcosystemUpdateRpc,
+  WsOmniMindEcosystemRemoveRpc,
+  WsOmniMindEcosystemSetResourceEnabledRpc,
+  WsOmniMindEcosystemReloadRpc,
   WsAutomationListRpc,
   WsAutomationGetMemoryRpc,
   WsAutomationCreateRpc,

@@ -1,5 +1,6 @@
 import {
   WS_GITHUB_PROJECT_PROVISIONING_CAPABILITY,
+  WS_OMNIMIND_ECOSYSTEM_CAPABILITY,
   WS_OMNIMIND_MODEL_SERVICES_CAPABILITY,
   type NativeApi,
 } from "@omnimind/contracts";
@@ -47,6 +48,12 @@ export function readNativeApiServerCapabilityState(capability: string): boolean 
       return (
         typeof window.nativeApi.omnimindModelServices?.list === "function" &&
         typeof window.nativeApi.omnimindModelServices?.get === "function"
+      );
+    }
+    if (capability === WS_OMNIMIND_ECOSYSTEM_CAPABILITY) {
+      return (
+        typeof window.nativeApi.omnimindEcosystem?.list === "function" &&
+        typeof window.nativeApi.omnimindEcosystem?.listResources === "function"
       );
     }
     return false;

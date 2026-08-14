@@ -95,6 +95,7 @@ import { ProviderCommandReactor } from "./orchestration/Services/ProviderCommand
 import { ProjectionSnapshotQuery } from "./orchestration/Services/ProjectionSnapshotQuery";
 import { shouldPublishThreadShellForEvent } from "./orchestration/threadShellEvents";
 import { ProviderDiscoveryService } from "./provider/Services/ProviderDiscoveryService";
+import { OmniMindEcosystem } from "./provider/Services/OmniMindEcosystem";
 import { OmniMindModelServices } from "./provider/Services/OmniMindModelServices";
 import { discoverSkillsCatalog, omnimindSkillsDir } from "./provider/skillsCatalog";
 import { recoverUnregisteredGitHubCheckout } from "./project/githubProjectRegistration";
@@ -336,6 +337,7 @@ const makeWsRpcHandlersLayer = () =>
       const projectionReadModelQuery = yield* ProjectionSnapshotQuery;
       const providerAdapterRegistry = yield* ProviderAdapterRegistry;
       const providerDiscoveryService = yield* ProviderDiscoveryService;
+      const omniMindEcosystem = yield* OmniMindEcosystem;
       const omniMindModelServices = yield* OmniMindModelServices;
       const providerHealth = yield* ProviderHealth;
       const providerService = yield* ProviderService;
@@ -1916,6 +1918,41 @@ const makeWsRpcHandlersLayer = () =>
           rpcEffect(providerDiscoveryService.listModels(input), "Failed to list models"),
         [WS_METHODS.providerListAgents]: (input) =>
           rpcEffect(providerDiscoveryService.listAgents(input), "Failed to list agents"),
+        [WS_METHODS.omnimindEcosystemList]: (input) =>
+          rpcEffect(
+            requireOwnerRole.pipe(Effect.andThen(omniMindEcosystem.list(input))),
+            "Failed to list OmniMind Agent packages",
+          ),
+        [WS_METHODS.omnimindEcosystemListResources]: (input) =>
+          rpcEffect(
+            requireOwnerRole.pipe(Effect.andThen(omniMindEcosystem.listResources(input))),
+            "Failed to list OmniMind Agent package resources",
+          ),
+        [WS_METHODS.omnimindEcosystemInstall]: (input) =>
+          rpcEffect(
+            requireOwnerRole.pipe(Effect.andThen(omniMindEcosystem.install(input))),
+            "Failed to install an OmniMind Agent package",
+          ),
+        [WS_METHODS.omnimindEcosystemUpdate]: (input) =>
+          rpcEffect(
+            requireOwnerRole.pipe(Effect.andThen(omniMindEcosystem.update(input))),
+            "Failed to update an OmniMind Agent package",
+          ),
+        [WS_METHODS.omnimindEcosystemRemove]: (input) =>
+          rpcEffect(
+            requireOwnerRole.pipe(Effect.andThen(omniMindEcosystem.remove(input))),
+            "Failed to remove an OmniMind Agent package",
+          ),
+        [WS_METHODS.omnimindEcosystemSetResourceEnabled]: (input) =>
+          rpcEffect(
+            requireOwnerRole.pipe(Effect.andThen(omniMindEcosystem.setResourceEnabled(input))),
+            "Failed to change an OmniMind Agent package resource",
+          ),
+        [WS_METHODS.omnimindEcosystemReload]: () =>
+          rpcEffect(
+            requireOwnerRole.pipe(Effect.andThen(omniMindEcosystem.reload())),
+            "Failed to reload OmniMind Agent resources",
+          ),
         [WS_METHODS.omnimindModelServicesList]: (input) =>
           rpcEffect(
             requireOwnerRole.pipe(Effect.andThen(omniMindModelServices.list(input))),
