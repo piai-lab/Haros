@@ -3,6 +3,7 @@
 // Layer: Shared Web presentation
 
 import anthropicIconUrl from "@lobehub/icons-static-svg/icons/anthropic.svg";
+import antGroupIconUrl from "@lobehub/icons-static-svg/icons/antgroup-brand-color.svg";
 import ai21IconUrl from "@lobehub/icons-static-svg/icons/ai21-brand-color.svg";
 import azureIconUrl from "@lobehub/icons-static-svg/icons/azure-color.svg";
 import basetenIconUrl from "@lobehub/icons-static-svg/icons/baseten.svg";
@@ -51,6 +52,7 @@ type ModelServiceIconResolution =
 
 const EXACT_BRAND_ICONS: Readonly<Record<string, string>> = {
   anthropic: anthropicIconUrl,
+  "ant-ling": antGroupIconUrl,
   "amazon-bedrock": bedrockIconUrl,
   "azure-openai-responses": azureIconUrl,
   baseten: basetenIconUrl,
@@ -115,46 +117,54 @@ const BUILTIN_MODEL_FAMILY_ICONS: ReadonlyArray<{
 }> = [
   {
     pattern:
-      /^(?:(?:anthropic\/|anthropic-)?claude-|(?:(?:[a-z]+)\.)?anthropic\.claude-)[a-z0-9][a-z0-9.:-]*$/u,
+      /^(?:(?:~?anthropic\/|anthropic-)?claude-|(?:(?:[a-z]+)\.)?anthropic\.claude-)[a-z0-9][a-z0-9.:-]*$/u,
     src: claudeIconUrl,
   },
-  { pattern: /^(?:google\/)?gemini-[a-z0-9][a-z0-9.-]*$/u, src: geminiIconUrl },
-  { pattern: /^(?:google\/)?gemma-[a-z0-9][a-z0-9.-]*$/u, src: gemmaIconUrl },
+  {
+    pattern: /^(?:~?google\/)?gemini-[a-z0-9][a-z0-9.:-]*$/u,
+    src: geminiIconUrl,
+  },
+  {
+    pattern:
+      /^(?:(?:~?google\/|(?:workers-ai\/)?@cf\/google\/)?gemma-|google\.gemma-)[a-z0-9][a-z0-9.:-]*$/u,
+    src: gemmaIconUrl,
+  },
   {
     pattern: /^(?:(?:amazon\/)|amazon\.)?nova-[a-z0-9][a-z0-9.:-]*$/u,
     src: novaIconUrl,
   },
   {
     pattern:
-      /^(?:(?:(?:deepseek(?:-ai)?|@cf\/deepseek-ai)\/|accounts\/fireworks\/(?:models|routers)\/)?deepseek-|(?:(?:[a-z]+)\.)?deepseek\.(?:r1|v3))[a-z0-9.:-]*$/u,
+      /^(?:(?:(?:~?deepseek(?:-ai)?|(?:workers-ai\/)?@cf\/deepseek-ai)\/|accounts\/fireworks\/(?:models|routers)\/)?deepseek-|(?:(?:[a-z]+)\.)?deepseek\.(?:r1|v3))[a-z0-9.:-]*$/u,
     src: deepSeekIconUrl,
   },
   {
     pattern:
-      /^(?:(?:qwen\/|@cf\/qwen\/|accounts\/fireworks\/(?:models|routers)\/)?qwen(?:[-.]|(?=[0-9]))|(?:(?:[a-z]+)\.)?qwen\.qwen)[a-z0-9.:-]*$/u,
+      /^(?:(?:(?:qwen|alibaba)\/|(?:workers-ai\/)?@cf\/qwen\/|accounts\/fireworks\/(?:models|routers)\/)?qwen(?:[-.]|(?=[0-9]))|(?:(?:[a-z]+)\.)?qwen\.qwen)[a-z0-9.:-]*$/u,
     src: qwenIconUrl,
   },
   {
     pattern:
-      /^(?:(?:moonshotai\/|@cf\/moonshotai\/|accounts\/fireworks\/(?:models|routers)\/)?kimi-)[a-z0-9][a-z0-9.:-]*$/u,
+      /^(?:(?:~?moonshotai\/|(?:workers-ai\/)?@cf\/moonshotai\/|accounts\/fireworks\/(?:models|routers)\/)?kimi-|(?:moonshot|moonshotai)\.kimi-)[a-z0-9][a-z0-9.:-]*$/u,
     src: kimiIconUrl,
   },
   {
-    pattern: /^(?:mistralai\/)?(?:mistral|codestral)-[a-z0-9][a-z0-9.-]*$/u,
+    pattern:
+      /^(?:(?:mistralai|mistral)\/|(?:workers-ai\/)?@cf\/mistralai\/)?(?:open-)?(?:mistral|codestral)-[a-z0-9][a-z0-9.:-]*$|^mistral\.(?:codestral|devstral|magistral|ministral|mistral|pixtral|voxtral)[a-z0-9.:-]*$/u,
     src: mistralIconUrl,
   },
   {
     pattern:
-      /^(?:(?:minimax|minimaxai)\/|accounts\/fireworks\/(?:models|routers)\/)?minimax-[a-z0-9][a-z0-9.:-]*$/u,
+      /^(?:(?:minimax|minimaxai)\/|accounts\/fireworks\/(?:models|routers)\/)?minimax-[a-z0-9][a-z0-9.:-]*$|^minimax\.minimax-[a-z0-9][a-z0-9.:-]*$/u,
     src: minimaxIconUrl,
   },
   {
     pattern:
-      /^(?:(?:(?:zai|z-ai|zhipuai)\/|@cf\/zai-org\/|accounts\/fireworks\/(?:models|routers)\/)?(?:glm|chatglm)-|(?:zai|zhipuai)\.(?:glm|chatglm)-)[a-z0-9][a-z0-9.:-]*$/u,
+      /^(?:(?:(?:zai|z-ai|zhipuai|zai-org)\/|(?:workers-ai\/)?@cf\/zai-org\/|accounts\/fireworks\/(?:models|routers)\/)?(?:glm|chatglm)-|(?:zai|zhipuai)[.-](?:glm|chatglm)-)[a-z0-9][a-z0-9.:-]*$/u,
     src: glmIconUrl,
   },
   {
-    pattern: /^(?:(?:xai\/)?grok-|xai\.grok-)[a-z0-9][a-z0-9.:-]*$/u,
+    pattern: /^(?:(?:xai|~?x-ai)\/grok-|xai\.grok-)[a-z0-9][a-z0-9.:-]*$/u,
     src: grokIconUrl,
   },
   {
@@ -172,7 +182,10 @@ const BUILTIN_MODEL_FAMILY_ICONS: ReadonlyArray<{
     src: cohereIconUrl,
   },
   { pattern: /^(?:ai21\/)?jamba-[a-z0-9][a-z0-9.-]*$/u, src: ai21IconUrl },
-  { pattern: /^(?:xiaomimimo\/)?mimo-[a-z0-9][a-z0-9.-]*$/u, src: xiaomiIconUrl },
+  {
+    pattern: /^(?:(?:xiaomimimo|xiaomi)\/)?mimo-[a-z0-9][a-z0-9.:-]*$/u,
+    src: xiaomiIconUrl,
+  },
 ];
 
 function resolveKnownBrandIcon(serviceId: string): string | null {
@@ -194,6 +207,7 @@ export function resolveModelSpecificIcon(input: {
       ? input.modelId.trim().slice(serviceId.length + 1)
       : input.modelId.trim()
   ).toLocaleLowerCase("en-US");
+  // Normalization is presentation-only. Runtime service/model identity remains exact and opaque.
   // Nemotron is an NVIDIA model line despite carrying "llama" in its slug.
   if (modelId.startsWith("llama-nemotron")) return null;
   return BUILTIN_MODEL_FAMILY_ICONS.find(({ pattern }) => pattern.test(modelId))?.src ?? null;
