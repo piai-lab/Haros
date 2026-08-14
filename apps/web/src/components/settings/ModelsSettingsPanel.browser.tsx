@@ -609,6 +609,12 @@ describe("ModelsSettingsPanel model services", () => {
     expect(document.body.textContent).not.toContain("Service 39");
 
     await mounted.screen.getByRole("button", { name: "settings.addModelService" }).click();
+    const results = document.querySelector<HTMLUListElement>(
+      '[data-model-service-results="compact-list"]',
+    );
+    expect(results).not.toBeNull();
+    expect(results?.querySelectorAll("li")).toHaveLength(40);
+    expect(results?.className).not.toContain("grid-cols");
     const search = mounted.screen.getByRole("textbox", { name: "settings.searchModelServices" });
     await search.fill("deepseek");
     expect(document.body.textContent).toContain("DeepSeek");
@@ -638,6 +644,14 @@ describe("ModelsSettingsPanel model services", () => {
       mounted.screen.getByRole("textbox", { name: "settings.searchModelServices" }),
     ).toHaveValue("deepseek");
     expect(document.body.textContent).toContain("DeepSeek");
+    await expect.poll(() => document.activeElement).toBe(connectButton.element());
+
+    await userEvent.keyboard("{Escape}");
+    expect(search).toHaveValue("");
+    await userEvent.keyboard("{Escape}");
+    const addButton = mounted.screen.getByRole("button", { name: "settings.addModelService" });
+    await expect.poll(() => document.activeElement).toBe(addButton.element());
+    expect(document.body.textContent).not.toContain("Service 39");
 
     await mounted.screen.unmount();
     mounted.queryClient.clear();

@@ -214,6 +214,13 @@ function ActiveModelsSettingsPanel({
   const authRequestIdRef = useRef<string | null>(null);
   const openedAuthUrlsRef = useRef(new Set<string>());
   const setupCompletionArmedRef = useRef(false);
+  const addModelServiceButtonRef = useRef<HTMLButtonElement | null>(null);
+  const modelServiceBrowserListRef = useRef<HTMLUListElement | null>(null);
+  const modelServiceBrowserItemRefs = useRef(new Map<string, HTMLButtonElement>());
+  const modelServiceBrowserRestoreRef = useRef<{
+    readonly serviceId: string;
+    readonly scrollTop: number;
+  } | null>(null);
   const modelServicesCapability = useSyncExternalStore(
     subscribeModelServicesCapability,
     readModelServicesCapability,
@@ -969,6 +976,12 @@ function ActiveModelsSettingsPanel({
 
   const openModelServiceDetails = useCallback(
     (serviceId: string, returnView: "overview" | "browser") => {
+      if (returnView === "browser") {
+        modelServiceBrowserRestoreRef.current = {
+          serviceId,
+          scrollTop: modelServiceBrowserListRef.current?.scrollTop ?? 0,
+        };
+      }
       setModelServiceDetailReturnView(returnView);
       setModelServiceModelSearch("");
       setSelectedModelServiceId(serviceId);
@@ -976,11 +989,36 @@ function ActiveModelsSettingsPanel({
     [],
   );
 
+  const openModelServiceBrowser = useCallback(() => {
+    modelServiceBrowserRestoreRef.current = null;
+    setModelServiceSearch("");
+    setModelServiceBrowserOpen(true);
+  }, []);
+
+  const closeModelServiceBrowser = useCallback(() => {
+    setModelServiceBrowserOpen(false);
+    requestAnimationFrame(() => addModelServiceButtonRef.current?.focus());
+  }, []);
+
   const closeModelServiceDetails = useCallback(() => {
     setSelectedModelServiceId(null);
     setModelServiceModelSearch("");
     setModelServiceBrowserOpen(modelServiceDetailReturnView === "browser");
   }, [modelServiceDetailReturnView]);
+
+  useEffect(() => {
+    if (selectedModelServiceId || !modelServiceBrowserOpen) return;
+    const restore = modelServiceBrowserRestoreRef.current;
+    if (!restore) return;
+    const frame = requestAnimationFrame(() => {
+      if (modelServiceBrowserListRef.current) {
+        modelServiceBrowserListRef.current.scrollTop = restore.scrollTop;
+      }
+      modelServiceBrowserItemRefs.current.get(restore.serviceId)?.focus();
+      modelServiceBrowserRestoreRef.current = null;
+    });
+    return () => cancelAnimationFrame(frame);
+  }, [modelServiceBrowserOpen, selectedModelServiceId]);
 
   const customServiceFormValid = useMemo(() => {
     if (!customServiceEditor) return false;
@@ -1013,13 +1051,7 @@ function ActiveModelsSettingsPanel({
                 </span>
               ) : null}
               {canAddModelService && configuredModelServices.length > 0 ? (
-                <Button
-                  size="sm"
-                  onClick={() => {
-                    setModelServiceSearch("");
-                    setModelServiceBrowserOpen(true);
-                  }}
-                >
+                <Button ref={addModelServiceButtonRef} size="sm" onClick={openModelServiceBrowser}>
                   <PlusIcon aria-hidden="true" />
                   {t("settings.addModelService")}
                 </Button>
@@ -1130,11 +1162,9 @@ function ActiveModelsSettingsPanel({
                 <p className="mt-1">{t("settings.noModelServicesDescription")}</p>
                 {canAddModelService ? (
                   <Button
+                    ref={addModelServiceButtonRef}
                     className="mt-4"
-                    onClick={() => {
-                      setModelServiceSearch("");
-                      setModelServiceBrowserOpen(true);
-                    }}
+                    onClick={openModelServiceBrowser}
                   >
                     <PlusIcon aria-hidden="true" />
                     {t("settings.addModelService")}
@@ -1150,13 +1180,24 @@ function ActiveModelsSettingsPanel({
         <SettingsSectionShell
           title={t("settings.addModelService")}
           action={
-            <Button size="sm" variant="ghost" onClick={() => setModelServiceBrowserOpen(false)}>
+            <Button size="sm" variant="ghost" onClick={closeModelServiceBrowser}>
               <ArrowLeftIcon aria-hidden="true" />
               {t("common.back")}
             </Button>
           }
         >
-          <div className="space-y-4">
+          <div
+            className="space-y-4"
+            onKeyDown={(event) => {
+              if (event.key !== "Escape" || event.defaultPrevented) return;
+              event.preventDefault();
+              if (modelServiceSearch.length > 0) {
+                setModelServiceSearch("");
+                return;
+              }
+              closeModelServiceBrowser();
+            }}
+          >
             <div>
               <p className="mb-3 text-sm text-muted-foreground">
                 {t("settings.chooseModelServiceDescription")}
@@ -1210,18 +1251,28 @@ function ActiveModelsSettingsPanel({
               </div>
             ) : null}
             {filteredConnectableModelServices.length > 0 ? (
-              <ul className="grid list-none gap-2 sm:grid-cols-2">
+              <ul
+                ref={modelServiceBrowserListRef}
+                data-model-service-results="compact-list"
+                className="max-h-[min(24rem,calc(100vh-18rem))] list-none divide-y divide-border/70 overflow-y-auto rounded-xl border border-border bg-background"
+              >
                 {filteredConnectableModelServices.map((service) => {
                   const instanceLabel = modelServiceInstanceLabel(service);
                   return (
                     <li key={service.serviceId}>
                       <button
+                        ref={(node) => {
+                          if (node)
+                            modelServiceBrowserItemRefs.current.set(service.serviceId, node);
+                          else modelServiceBrowserItemRefs.current.delete(service.serviceId);
+                        }}
                         type="button"
                         className={cn(
-                          "group flex min-h-20 w-full items-center gap-3 rounded-xl border border-border bg-foreground/[0.025] px-4 py-3 text-left outline-none transition-colors",
-                          "hover:border-foreground/20 hover:bg-foreground/[0.045]",
-                          "focus-visible:border-foreground/30 focus-visible:ring-1 focus-visible:ring-ring/60 focus-visible:ring-offset-1 focus-visible:ring-offset-background",
+                          "group flex min-h-14 w-full items-center gap-3 px-3 py-2.5 text-left outline-none transition-colors",
+                          "hover:bg-foreground/[0.04]",
+                          "focus-visible:bg-foreground/[0.045] focus-visible:ring-2 focus-visible:ring-inset focus-visible:ring-ring/60",
                         )}
+                        data-model-service-result={service.serviceId}
                         aria-label={t("settings.connectModelServiceNamed", {
                           name: instanceLabel,
                         })}
@@ -1230,13 +1281,13 @@ function ActiveModelsSettingsPanel({
                         <ModelServiceIcon
                           serviceId={service.serviceId}
                           origin={service.origin}
-                          className="size-7"
+                          className="size-6"
                         />
                         <span className="min-w-0 flex-1">
                           <span className="block truncate text-sm font-medium text-foreground">
                             {instanceLabel}
                           </span>
-                          <span className="mt-1 line-clamp-2 block text-xs leading-relaxed text-muted-foreground">
+                          <span className="mt-0.5 block truncate text-xs text-muted-foreground">
                             {service.authMethods.length > 0
                               ? service.authMethods.map((method) => method.label).join(" · ")
                               : modelServiceAuthLabel(service)}
