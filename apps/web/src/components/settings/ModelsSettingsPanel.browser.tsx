@@ -889,6 +889,33 @@ describe("ModelsSettingsPanel model services", () => {
     await mounted.screen.getByText("settings.customApiModelAdvanced", { exact: true }).click();
     await mounted.screen.getByLabelText("settings.customApiContextWindow").fill("128000");
     await mounted.screen.getByLabelText("settings.customApiMaxTokens").fill("8192");
+    await mounted.screen.getByText("settings.customApiCredentialAdvanced", { exact: true }).click();
+    await mounted.screen.getByLabelText("settings.customApiAuthHeader").click();
+    await mounted.screen
+      .getByRole("option", { name: "settings.customApiAuthHeader.bearer" })
+      .click();
+    await mounted.screen.getByLabelText("settings.customApiModelProtocol").click();
+    await mounted.screen
+      .getByRole("option", { name: "settings.customApiProtocol.openai-responses" })
+      .click();
+    await mounted.screen
+      .getByLabelText("settings.customApiModelEndpoint")
+      .fill("https://model.example.test/v1");
+    await mounted.screen
+      .getByRole("combobox", { name: "high settings.customApiThinkingMap", exact: true })
+      .click();
+    await mounted.screen
+      .getByRole("option", { name: "settings.customApiThinkingMap.mapped" })
+      .click();
+    await mounted.screen
+      .getByLabelText("high settings.customApiThinkingMap.mapped")
+      .fill("high-budget");
+    await mounted.screen.getByLabelText("settings.customApiModelThinking").click();
+    await mounted.screen.getByRole("option", { name: "common.off" }).click();
+    await mounted.screen.getByLabelText("settings.customApiModelInput").click();
+    await mounted.screen
+      .getByRole("option", { name: "settings.customApiModelInput.text", exact: true })
+      .click();
 
     const saveButton = mounted.screen.getByRole("button", { name: "settings.customApiSave" });
     expect(saveButton).toBeDisabled();
@@ -910,10 +937,16 @@ describe("ModelsSettingsPanel model services", () => {
             displayName: "Custom Service",
             api: "openai-completions",
             baseUrl: "https://api.example.test/v1",
+            authHeader: true,
             models: [
               {
                 modelId: "custom-model",
                 displayName: "Custom Model",
+                api: "openai-responses",
+                baseUrl: "https://model.example.test/v1",
+                reasoning: false,
+                thinkingLevelMap: { high: "high-budget" },
+                input: ["text"],
                 contextWindow: 128_000,
                 maxTokens: 8_192,
               },

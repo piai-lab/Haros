@@ -254,6 +254,60 @@ describe("OmniMind model-services contracts", () => {
     ).toEqual({ state: "config_saved_sync_failed", service: null });
   });
 
+  it("admits only the closed credential-blind advanced model surface", () => {
+    const decoded = Schema.decodeUnknownSync(OmniMindCustomModelServiceTestInput)({
+      config: {
+        serviceId: "custom",
+        displayName: "Custom",
+        api: "openai-completions",
+        baseUrl: "https://gateway.example.test/v1",
+        authHeader: false,
+        models: [
+          {
+            modelId: "model-one",
+            api: "openai-responses",
+            baseUrl: "https://model.example.test/v1",
+            thinkingLevelMap: { off: null, low: "low", high: "high" },
+          },
+        ],
+      },
+      credential: { type: "preserve" },
+      testModelId: "model-one",
+    });
+    expect(decoded.config).toMatchObject({
+      authHeader: false,
+      models: [
+        {
+          api: "openai-responses",
+          baseUrl: "https://model.example.test/v1",
+          thinkingLevelMap: { off: null, low: "low", high: "high" },
+        },
+      ],
+    });
+
+    expect(() =>
+      Schema.decodeUnknownSync(OmniMindCustomModelServiceTestInput)({
+        config: {
+          serviceId: "custom",
+          displayName: "Custom",
+          api: "openai-completions",
+          baseUrl: "https://gateway.example.test/v1",
+          models: [
+            {
+              modelId: "model-one",
+              baseUrl: "file:///private/model",
+            },
+          ],
+        },
+        credential: { type: "preserve" },
+        testModelId: "model-one",
+      }),
+    ).toThrow();
+    expect(JSON.stringify(decoded)).not.toContain("headers");
+    expect(JSON.stringify(decoded)).not.toContain("samplingParams");
+    expect(JSON.stringify(decoded)).not.toContain("compat");
+  });
+
   it("keeps generic model discovery bounded and credential-blind", () => {
     expect(
       Schema.decodeUnknownSync(OmniMindCustomModelServiceDiscoverInput)({

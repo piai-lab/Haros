@@ -54,6 +54,19 @@ export const OmniMindCustomModelServiceApi = Schema.Literals([
 ]);
 export type OmniMindCustomModelServiceApi = typeof OmniMindCustomModelServiceApi.Type;
 
+const BoundedThinkingLevelValue = Schema.NullOr(
+  TrimmedNonEmptyString.check(Schema.isMaxLength(64)),
+);
+const OmniMindCustomModelThinkingLevelMap = Schema.Struct({
+  off: Schema.optional(BoundedThinkingLevelValue),
+  minimal: Schema.optional(BoundedThinkingLevelValue),
+  low: Schema.optional(BoundedThinkingLevelValue),
+  medium: Schema.optional(BoundedThinkingLevelValue),
+  high: Schema.optional(BoundedThinkingLevelValue),
+  xhigh: Schema.optional(BoundedThinkingLevelValue),
+  max: Schema.optional(BoundedThinkingLevelValue),
+});
+
 const BoundedEndpointUrl = TrimmedNonEmptyString.check(
   Schema.isMaxLength(4_096),
   Schema.isPattern(/^https?:\/\/[^\s]+$/iu),
@@ -62,7 +75,10 @@ const BoundedEndpointUrl = TrimmedNonEmptyString.check(
 export const OmniMindCustomModelServiceModelInput = Schema.Struct({
   modelId: BoundedModelId,
   displayName: Schema.optional(BoundedDisplayName),
+  api: Schema.optional(OmniMindCustomModelServiceApi),
+  baseUrl: Schema.optional(BoundedEndpointUrl),
   reasoning: Schema.optional(Schema.Boolean),
+  thinkingLevelMap: Schema.optional(OmniMindCustomModelThinkingLevelMap),
   input: Schema.optional(
     Schema.Array(Schema.Literals(["text", "image"]))
       .check(Schema.isMinLength(1))
@@ -82,6 +98,7 @@ export const OmniMindCustomModelServiceConfigInput = Schema.Struct({
   displayName: BoundedDisplayName,
   api: OmniMindCustomModelServiceApi,
   baseUrl: BoundedEndpointUrl,
+  authHeader: Schema.optional(Schema.Boolean),
   models: BoundedCustomModels,
 });
 export type OmniMindCustomModelServiceConfigInput =
@@ -92,6 +109,7 @@ export const OmniMindCustomModelServiceConfig = Schema.Struct({
   displayName: BoundedDisplayName,
   api: OmniMindCustomModelServiceApi,
   baseUrl: BoundedEndpointUrl,
+  authHeader: Schema.optional(Schema.Boolean),
   models: BoundedCustomModels,
 });
 export type OmniMindCustomModelServiceConfig = typeof OmniMindCustomModelServiceConfig.Type;

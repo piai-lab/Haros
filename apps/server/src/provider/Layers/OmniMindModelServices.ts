@@ -81,12 +81,33 @@ const CUSTOM_API_PROTOCOLS = [
 const CUSTOM_CONNECTION_TEST_PROMPT = "Reply with OK.";
 const CUSTOM_CONNECTION_TEST_TIMEOUT_MS = 20_000;
 const CUSTOM_MODEL_DISCOVERY_TIMEOUT_MS = 20_000;
+const CUSTOM_MODEL_THINKING_LEVELS = [
+  "off",
+  "minimal",
+  "low",
+  "medium",
+  "high",
+  "xhigh",
+  "max",
+] as const;
 
 class InvalidCustomServiceEditError extends Error {}
 
 type ReadTextFile = (filePath: string, signal?: AbortSignal) => Promise<string>;
 
 type CustomApiProtocol = (typeof CUSTOM_API_PROTOCOLS)[number];
+
+function compactThinkingLevelMap(
+  value:
+    | Partial<Record<(typeof CUSTOM_MODEL_THINKING_LEVELS)[number], string | null | undefined>>
+    | undefined,
+): Partial<Record<(typeof CUSTOM_MODEL_THINKING_LEVELS)[number], string | null>> | undefined {
+  if (!value) return undefined;
+  const entries = CUSTOM_MODEL_THINKING_LEVELS.flatMap((level) =>
+    value[level] === undefined ? [] : ([[level, value[level]]] as const),
+  );
+  return entries.length > 0 ? Object.fromEntries(entries) : undefined;
+}
 
 export interface OmniMindModelServicesLiveOptions {
   readonly loadModule?: () => Promise<OmniMindCodingAgentModule>;
@@ -157,14 +178,21 @@ function customProviderConfig(input: OmniMindCustomModelServiceConfigInput) {
     name: input.displayName,
     baseUrl: normalizedCustomBaseUrl(input.baseUrl),
     api: input.api,
-    models: input.models.map((model) => ({
-      id: model.modelId,
-      ...(model.displayName ? { name: model.displayName } : {}),
-      ...(model.reasoning !== undefined ? { reasoning: model.reasoning } : {}),
-      ...(model.input ? { input: [...model.input] } : {}),
-      ...(model.contextWindow !== undefined ? { contextWindow: model.contextWindow } : {}),
-      ...(model.maxTokens !== undefined ? { maxTokens: model.maxTokens } : {}),
-    })),
+    ...(input.authHeader !== undefined ? { authHeader: input.authHeader } : {}),
+    models: input.models.map((model) => {
+      const thinkingLevelMap = compactThinkingLevelMap(model.thinkingLevelMap);
+      return {
+        id: model.modelId,
+        ...(model.displayName ? { name: model.displayName } : {}),
+        ...(model.api ? { api: model.api } : {}),
+        ...(model.baseUrl ? { baseUrl: normalizedCustomBaseUrl(model.baseUrl) } : {}),
+        ...(model.reasoning !== undefined ? { reasoning: model.reasoning } : {}),
+        ...(thinkingLevelMap ? { thinkingLevelMap } : {}),
+        ...(model.input ? { input: [...model.input] } : {}),
+        ...(model.contextWindow !== undefined ? { contextWindow: model.contextWindow } : {}),
+        ...(model.maxTokens !== undefined ? { maxTokens: model.maxTokens } : {}),
+      };
+    }),
   } as const;
 }
 
@@ -211,11 +239,15 @@ function projectCustomConfig(
   const models = provider.models.flatMap<OmniMindCustomModelServiceModelInput>((model) => {
     const modelId = safeModelId(model.id);
     if (!modelId) return [];
+    const thinkingLevelMap = compactThinkingLevelMap(model.thinkingLevelMap);
     return [
       {
         modelId,
         ...(model.name ? { displayName: safeDisplayName(model.name, modelId) } : {}),
+        ...(isCustomApiProtocol(model.api) ? { api: model.api } : {}),
+        ...(model.baseUrl ? { baseUrl: normalizedCustomBaseUrl(model.baseUrl) } : {}),
         ...(model.reasoning !== undefined ? { reasoning: model.reasoning } : {}),
+        ...(thinkingLevelMap ? { thinkingLevelMap } : {}),
         ...(model.input?.filter(
           (kind): kind is "text" | "image" => kind === "text" || kind === "image",
         ).length
@@ -240,6 +272,7 @@ function projectCustomConfig(
     displayName: safeDisplayName(provider.name, serviceId),
     api: provider.api,
     baseUrl: normalizedCustomBaseUrl(provider.baseUrl),
+    ...(provider.authHeader !== undefined ? { authHeader: provider.authHeader } : {}),
     models,
   };
 }

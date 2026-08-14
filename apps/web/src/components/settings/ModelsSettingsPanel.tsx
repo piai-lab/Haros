@@ -106,6 +106,7 @@ interface CustomModelServiceEditorState {
   readonly displayName: string;
   readonly api: OmniMindCustomModelServiceApi;
   readonly baseUrl: string;
+  readonly authHeader: boolean | undefined;
   readonly credentialMode: "preserve" | "stored_key" | "environment" | "command";
   readonly apiKey: string;
   readonly environmentVariableName: string;
@@ -131,6 +132,15 @@ const EMPTY_CUSTOM_MODEL_DISCOVERY: CustomModelDiscoveryState = {
 const DEFAULT_CUSTOM_MODEL: OmniMindCustomModelServiceModelInput = {
   modelId: "",
 };
+const CUSTOM_MODEL_THINKING_LEVELS = [
+  "off",
+  "minimal",
+  "low",
+  "medium",
+  "high",
+  "xhigh",
+  "max",
+] as const;
 
 // Presentation preference only. Runtime projection remains the sole authority for
 // whether a service exists and what it can do; unknown and Extension services stay
@@ -154,6 +164,7 @@ function createCustomModelServiceEditor(): CustomModelServiceEditorState {
     displayName: "",
     api: "openai-completions",
     baseUrl: "",
+    authHeader: undefined,
     credentialMode: "stored_key",
     apiKey: "",
     environmentVariableName: "",
@@ -173,10 +184,14 @@ function customModelServiceConfig(
     displayName: editor.displayName.trim(),
     api: editor.api,
     baseUrl: editor.baseUrl.trim(),
+    ...(editor.authHeader !== undefined ? { authHeader: editor.authHeader } : {}),
     models: editor.models.map((model) => ({
       modelId: model.modelId.trim(),
       ...(model.displayName?.trim() ? { displayName: model.displayName.trim() } : {}),
+      ...(model.api ? { api: model.api } : {}),
+      ...(model.baseUrl?.trim() ? { baseUrl: model.baseUrl.trim() } : {}),
       ...(model.reasoning !== undefined ? { reasoning: model.reasoning } : {}),
+      ...(model.thinkingLevelMap ? { thinkingLevelMap: { ...model.thinkingLevelMap } } : {}),
       ...(model.input ? { input: [...model.input] } : {}),
       ...(model.contextWindow !== undefined ? { contextWindow: model.contextWindow } : {}),
       ...(model.maxTokens !== undefined ? { maxTokens: model.maxTokens } : {}),
@@ -975,6 +990,7 @@ function ActiveModelsSettingsPanel({
             displayName: config.displayName,
             api: config.api,
             baseUrl: config.baseUrl,
+            authHeader: config.authHeader,
             credentialMode: "preserve",
             apiKey: "",
             environmentVariableName: "",
@@ -983,6 +999,9 @@ function ActiveModelsSettingsPanel({
             models: config.models.map((model) => ({
               ...model,
               ...(model.input ? { input: [...model.input] } : {}),
+              ...(model.thinkingLevelMap
+                ? { thinkingLevelMap: { ...model.thinkingLevelMap } }
+                : {}),
             })),
             testedFingerprint: null,
             testState: "idle",
@@ -2030,6 +2049,40 @@ function ActiveModelsSettingsPanel({
                     <p className="mt-2 text-xs leading-relaxed text-muted-foreground">
                       {t("settings.customApiCredentialAdvancedDescription")}
                     </p>
+                    <label className="mt-3 block space-y-1.5 text-xs font-medium text-foreground">
+                      <span>{t("settings.customApiAuthHeader")}</span>
+                      <Select
+                        value={
+                          customServiceEditor.authHeader === undefined
+                            ? "provider_default"
+                            : String(customServiceEditor.authHeader)
+                        }
+                        onValueChange={(value) =>
+                          updateCustomServiceEditor((current) => ({
+                            ...current,
+                            authHeader: value === "provider_default" ? undefined : value === "true",
+                          }))
+                        }
+                      >
+                        <SelectTrigger aria-label={t("settings.customApiAuthHeader")}>
+                          <SelectValue />
+                        </SelectTrigger>
+                        <SettingsSelectPopup align="start">
+                          <SelectItem value="provider_default">
+                            {t("settings.customApiAuthHeader.default")}
+                          </SelectItem>
+                          <SelectItem value="true">
+                            {t("settings.customApiAuthHeader.bearer")}
+                          </SelectItem>
+                          <SelectItem value="false">
+                            {t("settings.customApiAuthHeader.none")}
+                          </SelectItem>
+                        </SettingsSelectPopup>
+                      </Select>
+                      <span className="block font-normal text-muted-foreground">
+                        {t("settings.customApiAuthHeaderDescription")}
+                      </span>
+                    </label>
                     <div className="mt-3 flex flex-wrap gap-2">
                       <Button
                         type="button"
@@ -2267,6 +2320,61 @@ function ActiveModelsSettingsPanel({
                       </p>
                       <div className="mt-3 grid gap-3 sm:grid-cols-2">
                         <label className="space-y-1.5 text-xs font-medium text-foreground">
+                          <span>{t("settings.customApiModelProtocol")}</span>
+                          <Select
+                            value={model.api ?? "provider_default"}
+                            onValueChange={(value) =>
+                              updateCustomServiceEditor((current) => ({
+                                ...current,
+                                models: current.models.map((entry, modelIndex) =>
+                                  modelIndex === index
+                                    ? {
+                                        ...entry,
+                                        api:
+                                          value === "provider_default"
+                                            ? undefined
+                                            : (value as OmniMindCustomModelServiceApi),
+                                      }
+                                    : entry,
+                                ),
+                              }))
+                            }
+                          >
+                            <SelectTrigger aria-label={t("settings.customApiModelProtocol")}>
+                              <SelectValue />
+                            </SelectTrigger>
+                            <SettingsSelectPopup align="start">
+                              <SelectItem value="provider_default">
+                                {t("settings.customApiModelUseDefault")}
+                              </SelectItem>
+                              {customApiCapability?.protocols.map((protocol) => (
+                                <SelectItem key={protocol} value={protocol}>
+                                  {t(`settings.customApiProtocol.${protocol}`)}
+                                </SelectItem>
+                              ))}
+                            </SettingsSelectPopup>
+                          </Select>
+                        </label>
+                        <label className="space-y-1.5 text-xs font-medium text-foreground">
+                          <span>{t("settings.customApiModelEndpoint")}</span>
+                          <Input
+                            value={model.baseUrl ?? ""}
+                            placeholder={t("settings.customApiModelUseDefault")}
+                            inputMode="url"
+                            spellCheck={false}
+                            onChange={(event) =>
+                              updateCustomServiceEditor((current) => ({
+                                ...current,
+                                models: current.models.map((entry, modelIndex) =>
+                                  modelIndex === index
+                                    ? { ...entry, baseUrl: event.target.value || undefined }
+                                    : entry,
+                                ),
+                              }))
+                            }
+                          />
+                        </label>
+                        <label className="space-y-1.5 text-xs font-medium text-foreground">
                           <span>{t("settings.customApiContextWindow")}</span>
                           <Input
                             type="number"
@@ -2313,41 +2421,169 @@ function ActiveModelsSettingsPanel({
                           />
                         </label>
                       </div>
-                      <div className="mt-3 flex flex-wrap items-center gap-x-5 gap-y-2">
-                        <label className="flex items-center gap-2 text-xs text-foreground">
-                          <Checkbox
-                            checked={model.reasoning === true}
-                            onCheckedChange={(checked) =>
+                      <div className="mt-4">
+                        <h5 className="text-xs font-medium text-foreground">
+                          {t("settings.customApiThinkingMap")}
+                        </h5>
+                        <p className="mt-1 text-xs text-muted-foreground">
+                          {t("settings.customApiThinkingMapDescription")}
+                        </p>
+                        <div className="mt-2 grid gap-2">
+                          {CUSTOM_MODEL_THINKING_LEVELS.map((level) => {
+                            const levelValue = model.thinkingLevelMap?.[level];
+                            const levelMode =
+                              levelValue === undefined
+                                ? "provider_default"
+                                : levelValue === null
+                                  ? "disabled"
+                                  : "mapped";
+                            const updateLevel = (value: string | null | undefined) =>
                               updateCustomServiceEditor((current) => ({
                                 ...current,
-                                models: current.models.map((entry, modelIndex) =>
-                                  modelIndex === index
-                                    ? { ...entry, reasoning: checked === true || undefined }
-                                    : entry,
-                                ),
-                              }))
+                                models: current.models.map((entry, modelIndex) => {
+                                  if (modelIndex !== index) return entry;
+                                  const nextMap = { ...entry.thinkingLevelMap };
+                                  if (value === undefined) delete nextMap[level];
+                                  else nextMap[level] = value;
+                                  return {
+                                    ...entry,
+                                    thinkingLevelMap:
+                                      Object.keys(nextMap).length > 0 ? nextMap : undefined,
+                                  };
+                                }),
+                              }));
+                            return (
+                              <div
+                                key={level}
+                                className="grid grid-cols-[4rem_minmax(0,8rem)_1fr] items-center gap-2 text-xs"
+                              >
+                                <span className="text-muted-foreground">{level}</span>
+                                <Select
+                                  value={levelMode}
+                                  onValueChange={(value) =>
+                                    updateLevel(
+                                      value === "provider_default"
+                                        ? undefined
+                                        : value === "disabled"
+                                          ? null
+                                          : (levelValue ?? level),
+                                    )
+                                  }
+                                >
+                                  <SelectTrigger
+                                    aria-label={`${level} ${t("settings.customApiThinkingMap")}`}
+                                  >
+                                    <SelectValue />
+                                  </SelectTrigger>
+                                  <SettingsSelectPopup align="start">
+                                    <SelectItem value="provider_default">
+                                      {t("settings.customApiThinkingMap.default")}
+                                    </SelectItem>
+                                    <SelectItem value="disabled">
+                                      {t("settings.customApiThinkingMap.disabled")}
+                                    </SelectItem>
+                                    <SelectItem value="mapped">
+                                      {t("settings.customApiThinkingMap.mapped")}
+                                    </SelectItem>
+                                  </SettingsSelectPopup>
+                                </Select>
+                                {levelMode === "mapped" ? (
+                                  <Input
+                                    aria-label={`${level} ${t("settings.customApiThinkingMap.mapped")}`}
+                                    value={levelValue ?? ""}
+                                    spellCheck={false}
+                                    onChange={(event) =>
+                                      updateLevel(event.target.value || undefined)
+                                    }
+                                  />
+                                ) : null}
+                              </div>
+                            );
+                          })}
+                        </div>
+                      </div>
+                      <div className="mt-3 grid gap-3 sm:grid-cols-2">
+                        <label className="space-y-1.5 text-xs font-medium text-foreground">
+                          <span>{t("settings.customApiModelThinking")}</span>
+                          <Select
+                            value={
+                              model.reasoning === undefined
+                                ? "provider_default"
+                                : String(model.reasoning)
                             }
-                          />
-                          {t("settings.customApiModelThinking")}
-                        </label>
-                        <label className="flex items-center gap-2 text-xs text-foreground">
-                          <Checkbox
-                            checked={model.input?.includes("image") ?? false}
-                            onCheckedChange={(checked) =>
+                            onValueChange={(value) =>
                               updateCustomServiceEditor((current) => ({
                                 ...current,
                                 models: current.models.map((entry, modelIndex) =>
                                   modelIndex === index
                                     ? {
                                         ...entry,
-                                        input: checked === true ? ["text", "image"] : undefined,
+                                        reasoning:
+                                          value === "provider_default"
+                                            ? undefined
+                                            : value === "true",
                                       }
                                     : entry,
                                 ),
                               }))
                             }
-                          />
-                          {t("settings.customApiModelImages")}
+                          >
+                            <SelectTrigger aria-label={t("settings.customApiModelThinking")}>
+                              <SelectValue />
+                            </SelectTrigger>
+                            <SettingsSelectPopup align="start">
+                              <SelectItem value="provider_default">
+                                {t("settings.customApiModelUseDefault")}
+                              </SelectItem>
+                              <SelectItem value="true">{t("common.on")}</SelectItem>
+                              <SelectItem value="false">{t("common.off")}</SelectItem>
+                            </SettingsSelectPopup>
+                          </Select>
+                        </label>
+                        <label className="space-y-1.5 text-xs font-medium text-foreground">
+                          <span>{t("settings.customApiModelInput")}</span>
+                          <Select
+                            value={
+                              model.input === undefined
+                                ? "provider_default"
+                                : model.input.includes("image")
+                                  ? "text_image"
+                                  : "text"
+                            }
+                            onValueChange={(value) =>
+                              updateCustomServiceEditor((current) => ({
+                                ...current,
+                                models: current.models.map((entry, modelIndex) =>
+                                  modelIndex === index
+                                    ? {
+                                        ...entry,
+                                        input:
+                                          value === "provider_default"
+                                            ? undefined
+                                            : value === "text_image"
+                                              ? ["text", "image"]
+                                              : ["text"],
+                                      }
+                                    : entry,
+                                ),
+                              }))
+                            }
+                          >
+                            <SelectTrigger aria-label={t("settings.customApiModelInput")}>
+                              <SelectValue />
+                            </SelectTrigger>
+                            <SettingsSelectPopup align="start">
+                              <SelectItem value="provider_default">
+                                {t("settings.customApiModelUseDefault")}
+                              </SelectItem>
+                              <SelectItem value="text">
+                                {t("settings.customApiModelInput.text")}
+                              </SelectItem>
+                              <SelectItem value="text_image">
+                                {t("settings.customApiModelInput.text_image")}
+                              </SelectItem>
+                            </SettingsSelectPopup>
+                          </Select>
                         </label>
                       </div>
                     </details>

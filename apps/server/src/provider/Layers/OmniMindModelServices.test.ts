@@ -2340,11 +2340,15 @@ describe("OmniMindModelServicesLive", () => {
             name: "Before",
             api: "openai-completions",
             baseUrl: "https://gateway.example.test/v1",
+            authHeader: true,
             apiKey: "retained-reference",
             models: [
               {
                 id: "model-one",
                 name: "Before Model",
+                api: "openai-completions",
+                baseUrl: "https://old-model.example.test/v1",
+                thinkingLevelMap: { off: null, low: "low" },
                 cost: { input: 1, output: 2, cacheRead: 3, cacheWrite: 4 },
                 samplingParams: { temperature: 0.25 },
                 headers: { "X-Retained": "hidden-value" },
@@ -2367,11 +2371,15 @@ describe("OmniMindModelServicesLive", () => {
             displayName: "After",
             api: "openai-completions",
             baseUrl: "https://gateway.example.test/v1",
+            authHeader: false,
             models: [
               {
                 modelId: "model-one",
                 displayName: "After Model",
+                api: "openai-responses",
+                baseUrl: "https://model.example.test/v1",
                 reasoning: false,
+                thinkingLevelMap: { off: null, medium: "medium", high: "high" },
                 input: ["text"],
                 contextWindow: 128_000,
                 maxTokens: 16_384,
@@ -2385,11 +2393,15 @@ describe("OmniMindModelServicesLive", () => {
     const stored = JSON.parse(await readFile(path.join(agentDir, "models.json"), "utf8"));
 
     expect(result).toMatchObject({ state: "complete" });
+    expect(stored.providers.rich.authHeader).toBe(false);
     expect(stored.providers.rich.models).toEqual([
       {
         id: "model-one",
         name: "After Model",
+        api: "openai-responses",
+        baseUrl: "https://model.example.test/v1",
         reasoning: false,
+        thinkingLevelMap: { off: null, medium: "medium", high: "high" },
         input: ["text"],
         contextWindow: 128_000,
         maxTokens: 16_384,
