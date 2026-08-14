@@ -129,6 +129,15 @@ V1 保留 `Agent | Chat`，但 Agent/Chat/Groups 直接复用 Projects/Threads/S
 - Local control-plane proof：两个workflow YAML parse、release smoke、scripts typecheck、7个release owner test files `40/40`、format与diff-check通过。当前branch没有PR且CI只对PR/main push触发，因此本commit推送后没有伪造GitHub-hosted运行证据。该改动不进入Desktop shipped bytes，不重建packaged App。
 - Stop boundary：丢失side work不再是blocker，但Apple signing/notary、Windows Trusted Signing、GitHub-hosted Windows/Linux/macOS native journey与full V1 audit仍OPEN/blocked；Actions artifact不是Release，未改update feed，完整Run仍non-candidate。
 
+### Model services whole-product readiness and fresh-install candidate addendum — 2026-08-14
+
+- 影响 claim：F-01、F-07、F-08、F-17、F-18、F-19；各行继续保持既有 `candidate / blocked`，producer 不由本 addendum 自证 `verified` 或完整 V1。Exact pushed product SHA `6cfd93b2dc32c353a2206fb941589c23335202cd`。
+- Whole-product readiness：Chat 首启不再把 OmniMind/Pi 的 runtime catalog 首项或仅安装的独立 Engine 当作用户已明确选择的可发送绑定；first-use、configured-but-unavailable 与 authoritative exact ready 保持分流。无 remembered selection 时，OmniMind fallback 只能来自同一被动 Model-services snapshot 中 exact `serviceId + origin` 匹配、`configured` 且有可用模型的服务；query 仍在 fetch、失效或非成功态时 fail closed，不消费缓存 last-good 猜测。明确 remembered selection 删除后继续显示恢复/重新选择，不静默切到另一服务；被动 Chat 不触发 Extension intent、Session 或 Provider refresh。
+- Source proof：独立 cumulative audit 首轮复现“目录首项属于未配置服务、第二项才已配置”与 invalidated last-good 两条 P1；`6cfd93b2…` 在既有 Composer/Model-services projection owner 内闭合且无第二 registry/store。focused readiness/unit `69/69`、exact Chromium `3/3`（真正空态、configured second service 以 exact DeepSeek selection 发出一次 `thread.turn.start`、stale OmniMind 仅恢复不 silent fallback）、Web typecheck、targeted format/diff-check与lint通过；fresh judge复核最终delta结论 `CLEAN`、P0/P1=0。
+- Exact build/install proof：因共享工作树保留两条用户拥有的 Agent Core research 修改，构建从 exact clean clone 执行且未stash/reset/覆盖这些路径。arm64 DMG `244,937,726` bytes、SHA-256 `40ca172e2774df4329d7bcf152ad977e561a52cfa9a2905444f032ceef994872`，`hdiutil verify`有效；installed ASAR `242,178,515` bytes、SHA-256 `f46ca69eb9c3900d03a3b2cd907bcb9d8fe8b93a2db0e07ef97de58d881493f2`，内嵌 exact product SHA。
+- Fresh packaged journey：fresh `env -i` root `/var/tmp/omnimind-6cfd-true-empty.yypIWu` 中Main、GPU/Network Helper、Renderer与bundled Server均在任何窗口操作前证明使用task-specific HOME、userData、`OMNIMIND_HOME`、XDG、TMP与minimal PATH，命令行无默认profile路径。真正零配置Chat稳定显示“配置模型后开始”，进入Add后为单列紧凑的“推荐/其他服务”分组，API地址连接保持弱一级真实入口；DeepSeek进入独立detail且返回按钮获焦，目录显示runtime-owned V4 Flash/Pro。完全退出后同一隔离root重开仍显示正确setup surface，没有短暂连接错误、错误恢复页或默认profile串入；测试实例随后全部退出为零。
+- Stop boundary：本项只证明当前exact bytes的首启资格、Add IA/detail与完整退出重开；没有在`6cfd93b2…`安装App中输入真实credential并完成auth/catalog→原Chat首发→再重开，因此旧SHA live证据不得冒充本SHA全链。真实Extension install→Add/auth/catalog→reopen/refresh/logout/package journey、Package install→update/reload/toggle/remove→reopen journey、legacy `customOmniMindModels` 显式转化/移除UI及final zh/en、窄宽度、键盘、light/dark visual review仍为evidence OPEN。Apple signing/notary、Windows Trusted Signing、Windows/Linux native journey与full fresh completion audit继续blocked；未创建Release、未发布artifact、未改update feed。
+
 F-13 与 F-15 保留为历史 ID，不复用。Remote/SSH 继续 V2。
 
 ## 4. Internal acceptance priority
