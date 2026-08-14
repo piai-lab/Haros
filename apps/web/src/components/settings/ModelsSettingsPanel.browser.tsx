@@ -321,6 +321,13 @@ describe("ModelsSettingsPanel model services", () => {
       availableModelCount: 0,
     });
     const configuredService = service({ availableModelCount: 2 });
+    const ambientExtension = service({
+      serviceId: "ambient-extension",
+      providerId: "ambient-extension",
+      displayName: "Ambient Extension",
+      origin: "extension",
+      availableModelCount: 1,
+    });
     let catalogProjected = false;
     const requestId = "00000000-0000-4000-8000-000000000071";
     const promptId = "00000000-0000-4000-8000-000000000072";
@@ -328,39 +335,65 @@ describe("ModelsSettingsPanel model services", () => {
     const mounted = await renderPanel({
       startInAddFlow: true,
       onSetupReady,
-      list: async (input) =>
-        catalogProjected && !input?.intent
-          ? {
+      list: async (input) => {
+        if (input?.intent) {
+          return {
+            state: "ready",
+            services: [ambientExtension],
+            connectableServices: [setupService],
+            errorCode: null,
+          } as const;
+        }
+        return catalogProjected
+          ? ({
               state: "ready",
               services: [configuredService],
               connectableServices: [],
               errorCode: null,
-            }
-          : {
+            } as const)
+          : ({
               state: "empty",
               services: [],
               connectableServices: [setupService],
               errorCode: null,
-            },
-      get: async () =>
-        catalogProjected
+            } as const);
+      },
+      get: async ({ serviceId }) =>
+        serviceId === ambientExtension.serviceId
           ? {
               state: "ready",
-              service: configuredService,
+              service: ambientExtension,
               models: [
                 {
-                  modelId: "deepseek-v4-flash",
-                  displayName: "DeepSeek V4 Flash",
+                  modelId: "ambient-model",
+                  displayName: "Ambient Model",
                   available: true,
-                  reasoning: true,
+                  reasoning: false,
                   input: ["text"],
-                  contextWindow: 128_000,
-                  maxTokens: 16_384,
+                  contextWindow: 32_000,
+                  maxTokens: 4_096,
                 },
               ],
               errorCode: null,
             }
-          : { state: "ready", service: setupService, errorCode: null },
+          : catalogProjected
+            ? {
+                state: "ready",
+                service: configuredService,
+                models: [
+                  {
+                    modelId: "deepseek-v4-flash",
+                    displayName: "DeepSeek V4 Flash",
+                    available: true,
+                    reasoning: true,
+                    input: ["text"],
+                    contextWindow: 128_000,
+                    maxTokens: 16_384,
+                  },
+                ],
+                errorCode: null,
+              }
+            : { state: "ready", service: setupService, errorCode: null },
       beginLogin: async () => ({
         state: "prompt",
         requestId,

@@ -332,6 +332,7 @@ function ActiveModelsSettingsPanel({
   const authRequestIdRef = useRef<string | null>(null);
   const openedAuthUrlsRef = useRef(new Set<string>());
   const setupCompletionArmedRef = useRef(false);
+  const setupTargetServiceIdRef = useRef<string | null>(null);
   const addModelServiceButtonRef = useRef<HTMLButtonElement | null>(null);
   const modelServiceSearchInputRef = useRef<HTMLInputElement | null>(null);
   const modelServiceDetailBackButtonRef = useRef<HTMLButtonElement | null>(null);
@@ -439,6 +440,7 @@ function ActiveModelsSettingsPanel({
           setupCompletionArmedRef.current = true;
           return;
         }
+        setupTargetServiceIdRef.current = null;
         onSetupReady({
           provider: "omnimind",
           model: `${service.serviceId}/${model.modelId}`,
@@ -451,10 +453,12 @@ function ActiveModelsSettingsPanel({
   );
 
   useEffect(() => {
+    const targetServiceId = setupTargetServiceIdRef.current;
+    if (!targetServiceId) return;
     const readyService = [
       ...(modelServicesQuery.data?.services ?? []),
       ...(addModelServicesQuery.data?.services ?? []),
-    ].find((service) => service.availableModelCount > 0);
+    ].find((service) => service.serviceId === targetServiceId && service.availableModelCount > 0);
     void finishSetupIfReady(readyService);
   }, [addModelServicesQuery.data?.services, finishSetupIfReady, modelServicesQuery.data?.services]);
 
@@ -511,6 +515,7 @@ function ActiveModelsSettingsPanel({
 
   useSettingsRestoreSignal(resetEpoch, () => {
     setupCompletionArmedRef.current = false;
+    setupTargetServiceIdRef.current = null;
     setSelectedModelServiceId(null);
     setModelServiceBrowserOpen(false);
     setModelServiceSearch("");
@@ -718,7 +723,10 @@ function ActiveModelsSettingsPanel({
       if (!("service" in result)) return;
       const completedService = result.service;
       setAuthDialog(null);
-      if (result.state === "complete") setupCompletionArmedRef.current = true;
+      if (result.state === "complete") {
+        setupCompletionArmedRef.current = true;
+        setupTargetServiceIdRef.current = completedService.serviceId;
+      }
       setModelServiceNotice({
         tone: result.state === "complete" ? "status" : "error",
         text:
@@ -1191,7 +1199,10 @@ function ActiveModelsSettingsPanel({
       });
       const completed =
         result.state === "complete" || result.state === "complete_with_sync_warning";
-      if (completed) setupCompletionArmedRef.current = true;
+      if (completed) {
+        setupCompletionArmedRef.current = true;
+        setupTargetServiceIdRef.current = result.service?.serviceId ?? editor.serviceId;
+      }
       await invalidateModelServiceConsumers();
       if (!completed) {
         setModelServiceNotice({
