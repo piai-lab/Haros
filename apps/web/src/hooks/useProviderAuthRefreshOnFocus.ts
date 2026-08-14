@@ -14,6 +14,11 @@ export const PROVIDER_AUTH_REFRESH_MIN_INTERVAL_MS = 15_000;
 export function useProviderAuthRefreshOnFocus(options?: { readonly enabled?: boolean }): void {
   useProviderStatusRefresh({
     ...(options?.enabled !== undefined ? { enabled: options.enabled } : {}),
+    // When automatic version checks are disabled this loop is the only startup
+    // health owner. Run one bounded local/auth probe so an empty cache becomes
+    // an authoritative snapshot instead of leaving first-run UI unknown forever.
+    // ProviderHealth suppresses version-advisory network work for this setting.
+    initialDelayMs: 0,
     minIntervalMs: PROVIDER_AUTH_REFRESH_MIN_INTERVAL_MS,
     refreshOnFocus: true,
   });
