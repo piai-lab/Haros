@@ -1437,7 +1437,7 @@ Advanced: api, baseUrl override, reasoning, thinkingLevelMap,
 
 - `cost` 与按 effective `api` 判别的通用标量 `compat` 可逐字段投影和编辑；恢复默认只清这些公开字段，Pi 必须继续保留未公开的 routing、template、session/cache 与未来字段；
 - `google-generative-ai` 当前没有真实 compat consumer，不显示假开关；改变数据保留、会话亲和或外发 identity 的 compat 必须另行裁决；
-- `headers` 保持 secret-blind。普通读取不返回值、环境变量名或 command；只有 Pi-owned、write-only、reference-aware 的定向 mutation seam 存在后才可施工，Host 不得用 raw JSON 或第二 parser 补洞。
+- `headers` 保持 secret-blind。当前 Pi-owned typed seam 只投影 header 名称与来源类别，并允许在 provider/model scope 定向新增或替换环境变量引用、清除既有项；普通读取不返回值、环境变量名或 command。导入的 literal/template/command 只可保留或清除，新建 command-backed header 仍不开放；Pi 继续拒绝与认证/传输 owner 冲突的 reserved header。Host 不得用 raw JSON、第二 parser 或 Renderer 侧 secret state 补洞。
 
 因此“hidden rich fields 无损保留”和“用户可编辑”是两个不同 claim。已安全公开的字段必须可 set/clear/reopen；未公开字段必须继续准确标为未交付，不能以 round-trip 测试冒充产品可达。
 
@@ -1460,7 +1460,7 @@ Pi models.json 的 `apiKey`/header 值还支持 literal、环境变量插值和�
 - 打开 Model services、列出服务、搜索或显示 auth metadata 时不得解析 secret、执行 command 或触发外部进程；
 - 普通 API Key 保存使用 Pi credential store，不把明文复制到 models.json；
 - imported config 中已有的 env/command 表达式必须 round-trip 保留，但默认只显示“由环境/命令提供”，不回显展开结果；
-- 若未来 UI 允许新建 command-backed credential，必须放在高级技术入口，明确说明命令会在模型请求时由 Pi 执行，并复用 Pi 原生解析/错误语义；不得自行增加 TTL、shell 包装或静默 last-good；
+- command-backed credential 只在高级技术入口创建，并明确说明命令会在 test/discovery/send intent 中由 Pi 执行；不得自行增加 TTL、shell 包装或静默 last-good。header command 因当前执行不可取消且错误可能包含原命令，只对 imported 配置提供来源类别、保留与清除，不提供新建入口；
 - “测试连接”和“从供应商获取”是用户显式网络/command intent，页面 mount 不是。
 
 ### 10.18 删除与断开
@@ -1621,7 +1621,7 @@ Composer 与所有 direct consumer 都必须先按现有优先级解析 exact se
 2. generic API 只允许 `openai-completions`、`openai-responses`、`anthropic-messages`、`google-generative-ai`；非标准协议只来自 Pi Extension；
 3. 使用唯一 Pi providerId；
 4. 通过 Pi 上游 API或已授权的 product-owned Pi typed mutation seam 原子更新 `models.json.providers`；
-5. 支持 display name、base URL、api 和真实 model definitions；高级 compat 只开放 §10.16 的安全 typed subset，headers 必须等待 Pi-owned write-only reference mutation seam；
+5. 支持 display name、base URL、api 和真实 model definitions；高级 compat 只开放 §10.16 的安全 typed subset；headers 使用同节的 Pi-owned write-only environment-reference set/clear 与 value-blind metadata，不回传原值，也不开放新 command header；
 6. 只对 Pi config/extension 真能表达的 instance 显示 auth/refresh capability；
 7. 删除/重命名/selection impact；
 8. custom endpoint 风险确认；

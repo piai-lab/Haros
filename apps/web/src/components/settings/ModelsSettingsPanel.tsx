@@ -3,6 +3,7 @@
 // Layer: Settings panel
 
 import {
+  OMNIMIND_CUSTOM_MODEL_HEADERS_MAX_COUNT,
   OMNIMIND_CUSTOM_MODEL_COST_TIERS_MAX_COUNT,
   OMNIMIND_CUSTOM_MODEL_COMPAT_FIELDS_BY_API,
   WS_OMNIMIND_MODEL_SERVICES_CAPABILITY,
@@ -16,6 +17,8 @@ import {
   type OmniMindCustomModelServiceConfigInput,
   type OmniMindCustomModelServiceCredentialInput,
   type OmniMindCustomModelServiceDiscoveredModel,
+  type OmniMindCustomModelHeaderMetadata,
+  type OmniMindCustomModelHeaderMutation,
   type OmniMindCustomModelServiceModelInput,
   type ModelSelection,
 } from "@omnimind/contracts";
@@ -104,6 +107,17 @@ interface ModelServiceNotice {
   readonly text: string;
 }
 
+interface CustomHeaderEditorEntry {
+  readonly name: string;
+  readonly existingSource: OmniMindCustomModelHeaderMetadata["source"] | null;
+  readonly mode: "preserve" | "environment" | "clear";
+  readonly variableName: string;
+}
+
+type CustomModelEditorModel = Omit<OmniMindCustomModelServiceModelInput, "headerMutations"> & {
+  readonly headers: ReadonlyArray<CustomHeaderEditorEntry>;
+};
+
 interface CustomModelServiceEditorState {
   readonly mode: "create" | "edit";
   readonly serviceId: string | null;
@@ -116,7 +130,8 @@ interface CustomModelServiceEditorState {
   readonly environmentVariableName: string;
   readonly credentialCommand: string;
   readonly existingAuthSource: OmniMindModelServiceDescriptor["authSource"];
-  readonly models: ReadonlyArray<OmniMindCustomModelServiceModelInput>;
+  readonly headers: ReadonlyArray<CustomHeaderEditorEntry>;
+  readonly models: ReadonlyArray<CustomModelEditorModel>;
   readonly testedFingerprint: string | null;
   readonly testState: "idle" | "testing" | "success" | "failed";
 }
@@ -127,15 +142,20 @@ interface CustomModelDiscoveryState {
   readonly selectedModelIds: ReadonlySet<string>;
 }
 
+type CustomModelServiceAction = "discover" | "test" | "save";
+
 const EMPTY_CUSTOM_MODEL_DISCOVERY: CustomModelDiscoveryState = {
   status: "idle",
   models: [],
   selectedModelIds: new Set(),
 };
 
-const DEFAULT_CUSTOM_MODEL: OmniMindCustomModelServiceModelInput = {
+const DEFAULT_CUSTOM_MODEL: CustomModelEditorModel = {
   modelId: "",
+  headers: [],
 };
+const CUSTOM_HEADER_NAME = /^[!#$%&'*+.^_`|~0-9A-Za-z-]+$/u;
+const CUSTOM_HEADER_ENVIRONMENT_VARIABLE_NAME = /^[A-Za-z_][A-Za-z0-9_]*$/u;
 const CUSTOM_MODEL_THINKING_LEVELS = [
   "off",
   "minimal",
@@ -192,6 +212,60 @@ const PREFERRED_MODEL_SERVICE_RANK = new Map<string, number>(
   PREFERRED_MODEL_SERVICE_IDS.map((serviceId, index) => [serviceId, index]),
 );
 
+function customHeaderEditorEntries(
+  headers: ReadonlyArray<OmniMindCustomModelHeaderMetadata> | undefined,
+): ReadonlyArray<CustomHeaderEditorEntry> {
+  return (headers ?? []).map((header) => ({
+    name: header.name,
+    existingSource: header.source,
+    mode: "preserve",
+    variableName: "",
+  }));
+}
+
+function customHeaderMutations(
+  entries: ReadonlyArray<CustomHeaderEditorEntry>,
+): ReadonlyArray<OmniMindCustomModelHeaderMutation> {
+  return entries.flatMap<OmniMindCustomModelHeaderMutation>((entry) => {
+    if (entry.mode === "preserve") return [];
+    const name = entry.name.trim();
+    if (entry.mode === "clear") return [{ name, type: "clear" as const }];
+    return [
+      {
+        name,
+        type: "environment" as const,
+        variableName: entry.variableName.trim(),
+      },
+    ];
+  });
+}
+
+function customHeaderEntriesValid(entries: ReadonlyArray<CustomHeaderEditorEntry>): boolean {
+  if (entries.length > OMNIMIND_CUSTOM_MODEL_HEADERS_MAX_COUNT) return false;
+  const names = new Set<string>();
+  for (const entry of entries) {
+    const name = entry.name.trim();
+    const normalizedName = name.toLowerCase();
+    if (
+      name.length === 0 ||
+      name.length > 128 ||
+      !CUSTOM_HEADER_NAME.test(name) ||
+      names.has(normalizedName)
+    ) {
+      return false;
+    }
+    names.add(normalizedName);
+    if (entry.mode === "preserve" && entry.existingSource === null) return false;
+    if (
+      entry.mode === "environment" &&
+      !CUSTOM_HEADER_ENVIRONMENT_VARIABLE_NAME.test(entry.variableName.trim())
+    ) {
+      return false;
+    }
+  }
+  return true;
+}
+
 function createCustomModelServiceEditor(): CustomModelServiceEditorState {
   return {
     mode: "create",
@@ -205,6 +279,7 @@ function createCustomModelServiceEditor(): CustomModelServiceEditorState {
     environmentVariableName: "",
     credentialCommand: "",
     existingAuthSource: null,
+    headers: [],
     models: [{ ...DEFAULT_CUSTOM_MODEL }],
     testedFingerprint: null,
     testState: "idle",
@@ -214,41 +289,51 @@ function createCustomModelServiceEditor(): CustomModelServiceEditorState {
 function customModelServiceConfig(
   editor: CustomModelServiceEditorState,
 ): OmniMindCustomModelServiceConfigInput {
+  const headerMutations = customHeaderMutations(editor.headers);
   return {
     serviceId: editor.serviceId,
     displayName: editor.displayName.trim(),
     api: editor.api,
     baseUrl: editor.baseUrl.trim(),
     ...(editor.authHeader !== undefined ? { authHeader: editor.authHeader } : {}),
-    models: editor.models.map((model) => ({
-      modelId: model.modelId.trim(),
-      ...(model.displayName?.trim() ? { displayName: model.displayName.trim() } : {}),
-      ...(model.api ? { api: model.api } : {}),
-      ...(model.baseUrl?.trim() ? { baseUrl: model.baseUrl.trim() } : {}),
-      ...(model.reasoning !== undefined ? { reasoning: model.reasoning } : {}),
-      ...(model.thinkingLevelMap ? { thinkingLevelMap: { ...model.thinkingLevelMap } } : {}),
-      ...(model.input ? { input: [...model.input] } : {}),
-      ...(model.cost
-        ? {
-            cost: {
-              ...model.cost,
-              ...(model.cost.tiers ? { tiers: model.cost.tiers.map((tier) => ({ ...tier })) } : {}),
-            },
-          }
-        : {}),
-      ...(model.compat ? { compat: { ...model.compat } } : {}),
-      ...(model.contextWindow !== undefined ? { contextWindow: model.contextWindow } : {}),
-      ...(model.maxTokens !== undefined ? { maxTokens: model.maxTokens } : {}),
-    })),
+    ...(headerMutations.length > 0 ? { headerMutations } : {}),
+    models: editor.models.map((model) => {
+      const modelHeaderMutations = customHeaderMutations(model.headers);
+      return {
+        modelId: model.modelId.trim(),
+        ...(model.displayName?.trim() ? { displayName: model.displayName.trim() } : {}),
+        ...(model.api ? { api: model.api } : {}),
+        ...(model.baseUrl?.trim() ? { baseUrl: model.baseUrl.trim() } : {}),
+        ...(model.reasoning !== undefined ? { reasoning: model.reasoning } : {}),
+        ...(model.thinkingLevelMap ? { thinkingLevelMap: { ...model.thinkingLevelMap } } : {}),
+        ...(model.input ? { input: [...model.input] } : {}),
+        ...(model.cost
+          ? {
+              cost: {
+                ...model.cost,
+                ...(model.cost.tiers
+                  ? { tiers: model.cost.tiers.map((tier) => ({ ...tier })) }
+                  : {}),
+              },
+            }
+          : {}),
+        ...(model.compat ? { compat: { ...model.compat } } : {}),
+        ...(model.contextWindow !== undefined ? { contextWindow: model.contextWindow } : {}),
+        ...(model.maxTokens !== undefined ? { maxTokens: model.maxTokens } : {}),
+        ...(modelHeaderMutations.length > 0 ? { headerMutations: modelHeaderMutations } : {}),
+      };
+    }),
   };
 }
 
 function customModelServiceDiscoveryConfig(editor: CustomModelServiceEditorState) {
+  const headerMutations = customHeaderMutations(editor.headers);
   return {
     serviceId: editor.serviceId,
     displayName: editor.displayName.trim(),
     api: editor.api,
     baseUrl: editor.baseUrl.trim(),
+    ...(headerMutations.length > 0 ? { headerMutations } : {}),
   } as const;
 }
 
@@ -361,8 +446,33 @@ function customApiDeleteDescriptionKey(
 
 function customModelServiceCommandFingerprint(
   editor: CustomModelServiceEditorState,
+  action: CustomModelServiceAction,
 ): string | null {
-  return editor.credentialMode === "command" ? editor.credentialCommand : null;
+  if (action === "save") return null;
+  const commandSources: string[] = [];
+  if (editor.credentialMode === "command") {
+    commandSources.push(`credential:new:${editor.credentialCommand}`);
+  } else if (
+    editor.credentialMode === "preserve" &&
+    editor.existingAuthSource === "models_json_command"
+  ) {
+    commandSources.push("credential:preserved");
+  }
+  for (const entry of editor.headers) {
+    if (entry.mode === "preserve" && entry.existingSource === "command") {
+      commandSources.push(`provider:${entry.name.toLowerCase()}`);
+    }
+  }
+  if (action === "test") {
+    for (const entry of editor.models[0]?.headers ?? []) {
+      if (entry.mode === "preserve" && entry.existingSource === "command") {
+        commandSources.push(`model:${entry.name.toLowerCase()}`);
+      }
+    }
+  }
+  return commandSources.length > 0
+    ? JSON.stringify({ action, commandSources: commandSources.toSorted() })
+    : null;
 }
 
 function customCredentialSourceKind(
@@ -382,6 +492,270 @@ function customCredentialSourceKind(
     default:
       return "unknown";
   }
+}
+
+function CustomHeaderEditor({
+  entries,
+  scope,
+  onChange,
+}: {
+  readonly entries: ReadonlyArray<CustomHeaderEditorEntry>;
+  readonly scope: "provider" | "model";
+  readonly onChange: (entries: ReadonlyArray<CustomHeaderEditorEntry>) => void;
+}) {
+  const { t } = useI18n();
+  const normalizedNameCounts = new Map<string, number>();
+  for (const entry of entries) {
+    const normalized = entry.name.trim().toLowerCase();
+    if (normalized)
+      normalizedNameCounts.set(normalized, (normalizedNameCounts.get(normalized) ?? 0) + 1);
+  }
+  const hasPreservedCommand = entries.some(
+    (entry) => entry.mode === "preserve" && entry.existingSource === "command",
+  );
+
+  return (
+    <div className="mt-4 space-y-2 border-t border-border pt-3">
+      <div className="flex flex-wrap items-start justify-between gap-2">
+        <div className="min-w-0">
+          <h5 className="text-xs font-medium text-foreground">{t("settings.customApiHeaders")}</h5>
+          <p className="mt-1 text-xs leading-relaxed text-muted-foreground">
+            {t(
+              scope === "provider"
+                ? "settings.customApiHeadersDescription.provider"
+                : "settings.customApiHeadersDescription.model",
+            )}
+          </p>
+        </div>
+        <Button
+          type="button"
+          size="xs"
+          variant="outline"
+          aria-label={t(
+            scope === "provider"
+              ? "settings.customApiHeaderAdd.provider"
+              : "settings.customApiHeaderAdd.model",
+          )}
+          disabled={entries.length >= OMNIMIND_CUSTOM_MODEL_HEADERS_MAX_COUNT}
+          onClick={() =>
+            onChange([
+              ...entries,
+              {
+                name: "",
+                existingSource: null,
+                mode: "environment",
+                variableName: "",
+              },
+            ])
+          }
+        >
+          <PlusIcon aria-hidden="true" />
+          {t("settings.customApiHeaderAdd")}
+        </Button>
+      </div>
+
+      {entries.length > 0 ? (
+        <div className="divide-y divide-border rounded-lg border border-border">
+          {entries.map((entry, index) => {
+            const name = entry.name.trim();
+            const nameInvalid =
+              name.length === 0 || name.length > 128 || !CUSTOM_HEADER_NAME.test(name);
+            const duplicate =
+              name.length > 0 && (normalizedNameCounts.get(name.toLowerCase()) ?? 0) > 1;
+            const variableInvalid =
+              entry.mode === "environment" &&
+              !CUSTOM_HEADER_ENVIRONMENT_VARIABLE_NAME.test(entry.variableName.trim());
+            return (
+              <div key={index} className="space-y-2 p-2.5">
+                <div className="grid min-w-0 gap-2 sm:grid-cols-[minmax(0,1fr)_minmax(0,1fr)_auto] sm:items-start">
+                  {entry.existingSource === null ? (
+                    <label className="min-w-0 space-y-1 text-xs font-medium text-foreground">
+                      <span>{t("settings.customApiHeaderName")}</span>
+                      <Input
+                        value={entry.name}
+                        aria-label={t(
+                          scope === "provider"
+                            ? "settings.customApiHeaderName.provider"
+                            : "settings.customApiHeaderName.model",
+                          { number: index + 1 },
+                        )}
+                        aria-invalid={nameInvalid || duplicate}
+                        autoComplete="off"
+                        spellCheck={false}
+                        placeholder={t("settings.customApiHeaderNamePlaceholder")}
+                        onChange={(event) =>
+                          onChange(
+                            entries.map((current, currentIndex) =>
+                              currentIndex === index
+                                ? { ...current, name: event.target.value }
+                                : current,
+                            ),
+                          )
+                        }
+                      />
+                    </label>
+                  ) : (
+                    <div className="min-w-0 space-y-1">
+                      <span className="block text-xs font-medium text-foreground">
+                        {t("settings.customApiHeaderName")}
+                      </span>
+                      <code className="block truncate text-xs text-foreground" title={entry.name}>
+                        {entry.name}
+                      </code>
+                      <span className="block text-[11px] text-muted-foreground">
+                        {t(`settings.customApiHeaderSource.${entry.existingSource}`)}
+                      </span>
+                    </div>
+                  )}
+
+                  {entry.existingSource === null ? (
+                    <label className="min-w-0 space-y-1 text-xs font-medium text-foreground">
+                      <span>{t("settings.customApiHeaderEnvironmentVariable")}</span>
+                      <Input
+                        value={entry.variableName}
+                        aria-label={t(
+                          scope === "provider"
+                            ? "settings.customApiHeaderEnvironmentVariable.provider"
+                            : "settings.customApiHeaderEnvironmentVariable.model",
+                          { number: index + 1 },
+                        )}
+                        aria-invalid={variableInvalid}
+                        autoComplete="off"
+                        spellCheck={false}
+                        placeholder={t("settings.customApiHeaderEnvironmentVariablePlaceholder")}
+                        onChange={(event) =>
+                          onChange(
+                            entries.map((current, currentIndex) =>
+                              currentIndex === index
+                                ? { ...current, variableName: event.target.value }
+                                : current,
+                            ),
+                          )
+                        }
+                      />
+                    </label>
+                  ) : (
+                    <label className="min-w-0 space-y-1 text-xs font-medium text-foreground">
+                      <span>{t("settings.customApiHeaderAction")}</span>
+                      <Select
+                        value={entry.mode}
+                        onValueChange={(value) =>
+                          onChange(
+                            entries.map((current, currentIndex) =>
+                              currentIndex === index
+                                ? {
+                                    ...current,
+                                    mode: value as CustomHeaderEditorEntry["mode"],
+                                    variableName:
+                                      value === "environment" ? current.variableName : "",
+                                  }
+                                : current,
+                            ),
+                          )
+                        }
+                      >
+                        <SelectTrigger
+                          aria-label={t("settings.customApiHeaderActionNamed", {
+                            name: entry.name,
+                          })}
+                        >
+                          <SelectValue />
+                        </SelectTrigger>
+                        <SettingsSelectPopup align="start">
+                          <SelectItem value="preserve">
+                            {t("settings.customApiHeaderAction.preserve")}
+                          </SelectItem>
+                          <SelectItem value="environment">
+                            {t("settings.customApiHeaderAction.environment")}
+                          </SelectItem>
+                          <SelectItem value="clear">
+                            {t("settings.customApiHeaderAction.clear")}
+                          </SelectItem>
+                        </SettingsSelectPopup>
+                      </Select>
+                    </label>
+                  )}
+
+                  {entry.existingSource === null ? (
+                    <Button
+                      type="button"
+                      size="xs"
+                      variant="ghost"
+                      aria-label={t(
+                        scope === "provider"
+                          ? "settings.customApiHeaderRemove.provider"
+                          : "settings.customApiHeaderRemove.model",
+                        { number: index + 1 },
+                      )}
+                      className="self-end justify-self-start text-destructive hover:text-destructive sm:justify-self-end"
+                      onClick={() =>
+                        onChange(entries.filter((_, currentIndex) => currentIndex !== index))
+                      }
+                    >
+                      {t("common.remove")}
+                    </Button>
+                  ) : null}
+                </div>
+
+                {entry.existingSource !== null && entry.mode === "environment" ? (
+                  <label className="block space-y-1 text-xs font-medium text-foreground">
+                    <span>{t("settings.customApiHeaderEnvironmentVariable")}</span>
+                    <Input
+                      value={entry.variableName}
+                      aria-label={t(
+                        scope === "provider"
+                          ? "settings.customApiHeaderEnvironmentVariable.provider"
+                          : "settings.customApiHeaderEnvironmentVariable.model",
+                        { number: index + 1 },
+                      )}
+                      aria-invalid={variableInvalid}
+                      autoComplete="off"
+                      spellCheck={false}
+                      placeholder={t("settings.customApiHeaderEnvironmentVariablePlaceholder")}
+                      onChange={(event) =>
+                        onChange(
+                          entries.map((current, currentIndex) =>
+                            currentIndex === index
+                              ? { ...current, variableName: event.target.value }
+                              : current,
+                          ),
+                        )
+                      }
+                    />
+                  </label>
+                ) : null}
+
+                {nameInvalid || duplicate || variableInvalid ? (
+                  <p role="alert" className="text-xs text-destructive">
+                    {t(
+                      duplicate
+                        ? "settings.customApiHeaderError.duplicate"
+                        : variableInvalid
+                          ? "settings.customApiHeaderError.variable"
+                          : "settings.customApiHeaderError.name",
+                    )}
+                  </p>
+                ) : null}
+              </div>
+            );
+          })}
+        </div>
+      ) : null}
+
+      <p className="text-xs leading-relaxed text-muted-foreground">
+        {t("settings.customApiHeadersPrivacy")}
+      </p>
+      {hasPreservedCommand ? (
+        <p className="text-xs leading-relaxed text-muted-foreground">
+          {t(
+            scope === "provider"
+              ? "settings.customApiHeaderCommandDescription.provider"
+              : "settings.customApiHeaderCommandDescription.model",
+          )}
+        </p>
+      ) : null}
+    </div>
+  );
 }
 
 function stableModelServiceInstanceSuffix(serviceId: string): string {
@@ -508,9 +882,9 @@ function ActiveModelsSettingsPanel({
   const [confirmedCustomServiceEndpoint, setConfirmedCustomServiceEndpoint] = useState<
     string | null
   >(null);
-  const [confirmedCustomServiceCommand, setConfirmedCustomServiceCommand] = useState<string | null>(
-    null,
-  );
+  const [confirmedCustomServiceCommands, setConfirmedCustomServiceCommands] = useState<
+    ReadonlySet<string>
+  >(new Set());
   const [modelServiceMutation, setModelServiceMutation] = useState<string | null>(null);
   const [modelServiceNotice, setModelServiceNotice] = useState<ModelServiceNotice | null>(null);
   const modelServiceDetailRegionId = useId();
@@ -664,6 +1038,7 @@ function ActiveModelsSettingsPanel({
     setCustomServiceDiscardRequested(false);
     setPendingCustomServiceRiskAction(null);
     setConfirmedCustomServiceEndpoint(null);
+    setConfirmedCustomServiceCommands(new Set());
     setModelServiceMutation(null);
     setModelServiceNotice(null);
   });
@@ -1109,24 +1484,29 @@ function ActiveModelsSettingsPanel({
             environmentVariableName: "",
             credentialCommand: "",
             existingAuthSource: selectedModelService?.authSource ?? null,
-            models: config.models.map((model) => ({
-              ...model,
-              ...(model.input ? { input: [...model.input] } : {}),
-              ...(model.thinkingLevelMap
-                ? { thinkingLevelMap: { ...model.thinkingLevelMap } }
-                : {}),
-              ...(model.cost
-                ? {
-                    cost: {
-                      ...model.cost,
-                      ...(model.cost.tiers
-                        ? { tiers: model.cost.tiers.map((tier) => ({ ...tier })) }
-                        : {}),
-                    },
-                  }
-                : {}),
-              ...(model.compat ? { compat: { ...model.compat } } : {}),
-            })),
+            headers: customHeaderEditorEntries(config.configuredHeaders),
+            models: config.models.map((model) => {
+              const { configuredHeaders, ...modelFields } = model;
+              return {
+                ...modelFields,
+                headers: customHeaderEditorEntries(configuredHeaders),
+                ...(model.input ? { input: [...model.input] } : {}),
+                ...(model.thinkingLevelMap
+                  ? { thinkingLevelMap: { ...model.thinkingLevelMap } }
+                  : {}),
+                ...(model.cost
+                  ? {
+                      cost: {
+                        ...model.cost,
+                        ...(model.cost.tiers
+                          ? { tiers: model.cost.tiers.map((tier) => ({ ...tier })) }
+                          : {}),
+                      },
+                    }
+                  : {}),
+                ...(model.compat ? { compat: { ...model.compat } } : {}),
+              };
+            }),
             testedFingerprint: null,
             testState: "idle",
           }
@@ -1138,7 +1518,7 @@ function ActiveModelsSettingsPanel({
       setCustomServiceDiscardRequested(false);
       setPendingCustomServiceRiskAction(null);
       setConfirmedCustomServiceEndpoint(null);
-      setConfirmedCustomServiceCommand(null);
+      setConfirmedCustomServiceCommands(new Set());
       setCustomServiceEditor(nextEditor);
     },
     [selectedModelService?.authSource],
@@ -1156,7 +1536,7 @@ function ActiveModelsSettingsPanel({
     setCustomServiceDiscardRequested(false);
     setPendingCustomServiceRiskAction(null);
     setConfirmedCustomServiceEndpoint(null);
-    setConfirmedCustomServiceCommand(null);
+    setConfirmedCustomServiceCommands(new Set());
   }, []);
 
   const requestCloseCustomServiceEditor = useCallback(() => {
@@ -1389,16 +1769,14 @@ function ActiveModelsSettingsPanel({
   ]);
 
   const requestCustomServiceAction = useCallback(
-    (action: "discover" | "test" | "save") => {
+    (action: CustomModelServiceAction) => {
       const editor = customServiceEditor;
       if (!editor) return;
       const endpointNeedsConfirmation =
         confirmedCustomServiceEndpoint !== customModelServiceRiskFingerprint(editor);
-      const commandFingerprint = customModelServiceCommandFingerprint(editor);
+      const commandFingerprint = customModelServiceCommandFingerprint(editor, action);
       const commandNeedsConfirmation =
-        action !== "save" &&
-        commandFingerprint !== null &&
-        confirmedCustomServiceCommand !== commandFingerprint;
+        commandFingerprint !== null && !confirmedCustomServiceCommands.has(commandFingerprint);
       if (endpointNeedsConfirmation || commandNeedsConfirmation) {
         setPendingCustomServiceRiskAction(action);
         return;
@@ -1409,7 +1787,7 @@ function ActiveModelsSettingsPanel({
     },
     [
       confirmedCustomServiceEndpoint,
-      confirmedCustomServiceCommand,
+      confirmedCustomServiceCommands,
       customServiceEditor,
       discoverCustomServiceModels,
       saveCustomService,
@@ -1422,8 +1800,9 @@ function ActiveModelsSettingsPanel({
     const editor = customServiceEditor;
     if (!action || !editor) return;
     setConfirmedCustomServiceEndpoint(customModelServiceRiskFingerprint(editor));
-    if (action !== "save") {
-      setConfirmedCustomServiceCommand(customModelServiceCommandFingerprint(editor));
+    const commandFingerprint = customModelServiceCommandFingerprint(editor, action);
+    if (commandFingerprint) {
+      setConfirmedCustomServiceCommands((current) => new Set(current).add(commandFingerprint));
     }
     setPendingCustomServiceRiskAction(null);
     if (action === "discover") void discoverCustomServiceModels();
@@ -1644,6 +2023,8 @@ function ActiveModelsSettingsPanel({
       /^https?:\/\/\S+$/iu.test(config.baseUrl) &&
       config.models.length > 0 &&
       config.models.every((model) => model.modelId.length > 0) &&
+      customHeaderEntriesValid(customServiceEditor.headers) &&
+      customServiceEditor.models.every((model) => customHeaderEntriesValid(model.headers)) &&
       customModelServiceCredentialInput(customServiceEditor) !== null
     );
   }, [customServiceEditor]);
@@ -1653,6 +2034,7 @@ function ActiveModelsSettingsPanel({
     return (
       config.displayName.length > 0 &&
       /^https?:\/\/\S+$/iu.test(config.baseUrl) &&
+      customHeaderEntriesValid(customServiceEditor.headers) &&
       customModelServiceCredentialInput(customServiceEditor) !== null
     );
   }, [customServiceEditor]);
@@ -1662,10 +2044,13 @@ function ActiveModelsSettingsPanel({
     confirmedCustomServiceEndpoint !== customModelServiceRiskFingerprint(customServiceEditor);
   const pendingCustomServiceRiskNeedsCommand =
     pendingCustomServiceRiskAction !== null &&
-    pendingCustomServiceRiskAction !== "save" &&
     customServiceEditor !== null &&
-    customModelServiceCommandFingerprint(customServiceEditor) !== null &&
-    confirmedCustomServiceCommand !== customModelServiceCommandFingerprint(customServiceEditor);
+    customModelServiceCommandFingerprint(customServiceEditor, pendingCustomServiceRiskAction) !==
+      null &&
+    !confirmedCustomServiceCommands.has(
+      customModelServiceCommandFingerprint(customServiceEditor, pendingCustomServiceRiskAction) ??
+        "",
+    );
 
   return (
     <div className="space-y-6">
@@ -2302,6 +2687,14 @@ function ActiveModelsSettingsPanel({
                         </span>
                       </label>
                     ) : null}
+
+                    <CustomHeaderEditor
+                      scope="provider"
+                      entries={customServiceEditor.headers}
+                      onChange={(headers) =>
+                        updateCustomServiceEditor((current) => ({ ...current, headers }))
+                      }
+                    />
                   </details>
                 </div>
               </div>
@@ -2560,6 +2953,18 @@ function ActiveModelsSettingsPanel({
                           />
                         </label>
                       </div>
+                      <CustomHeaderEditor
+                        scope="model"
+                        entries={model.headers}
+                        onChange={(headers) =>
+                          updateCustomServiceEditor((current) => ({
+                            ...current,
+                            models: current.models.map((entry, modelIndex) =>
+                              modelIndex === index ? { ...entry, headers } : entry,
+                            ),
+                          }))
+                        }
+                      />
                       <div className="mt-4 space-y-3 border-t border-border pt-3">
                         <div>
                           <h5 className="text-xs font-medium text-foreground">

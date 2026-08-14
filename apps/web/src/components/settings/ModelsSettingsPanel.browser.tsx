@@ -22,7 +22,7 @@ import {
   createRouter,
 } from "@tanstack/react-router";
 import { afterEach, describe, expect, it, vi } from "vitest";
-import { userEvent } from "vitest/browser";
+import { page, userEvent } from "vitest/browser";
 import { render } from "vitest-browser-react";
 
 import { AppSettingsSchema } from "~/appSettings";
@@ -309,7 +309,8 @@ async function confirmCustomApiRisk(
     .click();
 }
 
-afterEach(() => {
+afterEach(async () => {
+  await page.viewport(1280, 720);
   resetComposerDraftStore();
   delete window.nativeApi;
   document.body.innerHTML = "";
@@ -898,6 +899,47 @@ describe("ModelsSettingsPanel model services", () => {
     await mounted.screen
       .getByRole("option", { name: "settings.customApiAuthHeader.bearer" })
       .click();
+    await mounted.screen
+      .getByRole("button", { name: "settings.customApiHeaderAdd.provider" })
+      .click();
+    await mounted.screen
+      .getByLabelText('settings.customApiHeaderName.provider:{"number":1}')
+      .fill("Bad Header");
+    await mounted.screen
+      .getByLabelText('settings.customApiHeaderEnvironmentVariable.provider:{"number":1}')
+      .fill("CUSTOM_TENANT");
+    expect(document.body.textContent).toContain("settings.customApiHeaderError.name");
+    expect(
+      mounted.screen.getByRole("button", { name: "settings.customApiTestConnection" }),
+    ).toBeDisabled();
+    await mounted.screen
+      .getByLabelText('settings.customApiHeaderName.provider:{"number":1}')
+      .fill("X-Tenant");
+    await mounted.screen
+      .getByRole("button", { name: "settings.customApiHeaderAdd.provider" })
+      .click();
+    await mounted.screen
+      .getByLabelText('settings.customApiHeaderName.provider:{"number":2}')
+      .fill("x-tenant");
+    await mounted.screen
+      .getByLabelText('settings.customApiHeaderEnvironmentVariable.provider:{"number":2}')
+      .fill("SECOND_TENANT");
+    expect(document.body.textContent).toContain("settings.customApiHeaderError.duplicate");
+    expect(
+      mounted.screen.getByRole("button", { name: "settings.customApiTestConnection" }),
+    ).toBeDisabled();
+    await mounted.screen
+      .getByRole("button", {
+        name: 'settings.customApiHeaderRemove.provider:{"number":2}',
+      })
+      .click();
+    await mounted.screen.getByRole("button", { name: "settings.customApiHeaderAdd.model" }).click();
+    await mounted.screen
+      .getByLabelText('settings.customApiHeaderName.model:{"number":1}')
+      .fill("X-Model-Route");
+    await mounted.screen
+      .getByLabelText('settings.customApiHeaderEnvironmentVariable.model:{"number":1}')
+      .fill("MODEL_ROUTE");
     await mounted.screen.getByLabelText("settings.customApiModelProtocol").click();
     await mounted.screen
       .getByRole("option", { name: "settings.customApiProtocol.openai-responses" })
@@ -978,6 +1020,9 @@ describe("ModelsSettingsPanel model services", () => {
             api: "openai-completions",
             baseUrl: "https://api.example.test/v1",
             authHeader: true,
+            headerMutations: [
+              { name: "X-Tenant", type: "environment", variableName: "CUSTOM_TENANT" },
+            ],
             models: [
               {
                 modelId: "custom-model",
@@ -1005,6 +1050,9 @@ describe("ModelsSettingsPanel model services", () => {
                 compat: { supportsDeveloperRole: false, supportsToolSearch: true },
                 contextWindow: 128_000,
                 maxTokens: 8_192,
+                headerMutations: [
+                  { name: "X-Model-Route", type: "environment", variableName: "MODEL_ROUTE" },
+                ],
               },
             ],
           },
@@ -1017,18 +1065,37 @@ describe("ModelsSettingsPanel model services", () => {
     expect(saveButton).toBeEnabled();
 
     await mounted.screen
+      .getByLabelText('settings.customApiHeaderEnvironmentVariable.provider:{"number":1}')
+      .fill("CUSTOM_TENANT_NEXT");
+    expect(saveButton).toBeDisabled();
+    await mounted.screen.getByRole("button", { name: "settings.customApiTestConnection" }).click();
+    await expect.poll(() => testCustom).toHaveBeenCalledTimes(2);
+    expect(document.body.textContent).not.toContain("settings.customApiRiskTitle");
+    expect(testCustom).toHaveBeenLastCalledWith(
+      expect.objectContaining({
+        config: expect.objectContaining({
+          headerMutations: [
+            { name: "X-Tenant", type: "environment", variableName: "CUSTOM_TENANT_NEXT" },
+          ],
+        }),
+      }),
+      expect.objectContaining({ signal: expect.any(AbortSignal) }),
+    );
+    await expect.poll(() => saveButton).toBeEnabled();
+
+    await mounted.screen
       .getByLabelText("settings.customApiModelEndpoint")
       .fill("https://other-model.example.test/v1");
     await mounted.screen.getByRole("button", { name: "settings.customApiTestConnection" }).click();
-    expect(testCustom).toHaveBeenCalledTimes(1);
+    expect(testCustom).toHaveBeenCalledTimes(2);
     await mounted.screen
       .getByLabelText("settings.customApiRiskTitle")
       .getByRole("button", { name: "common.cancel" })
       .click();
-    expect(testCustom).toHaveBeenCalledTimes(1);
+    expect(testCustom).toHaveBeenCalledTimes(2);
     await mounted.screen.getByRole("button", { name: "settings.customApiTestConnection" }).click();
     await confirmCustomApiRisk(mounted.screen);
-    await expect.poll(() => testCustom).toHaveBeenCalledTimes(2);
+    await expect.poll(() => testCustom).toHaveBeenCalledTimes(3);
     expect(testCustom).toHaveBeenLastCalledWith(
       expect.objectContaining({
         config: expect.objectContaining({
@@ -1274,6 +1341,173 @@ describe("ModelsSettingsPanel model services", () => {
         }),
       );
     expect(document.body.textContent).not.toContain("settings.customApiSaveRiskTitle");
+
+    await mounted.screen.unmount();
+    mounted.queryClient.clear();
+  });
+
+  it("edits hidden header references without revealing values or executing commands on open or save", async () => {
+    await page.viewport(320, 720);
+    const customService = service({
+      serviceId: "header-service",
+      providerId: "header-service",
+      displayName: "Header Service",
+      origin: "models_json",
+      supportsNetworkRefresh: false,
+    });
+    const customConfig = {
+      serviceId: "header-service",
+      displayName: "Header Service",
+      api: "openai-completions" as const,
+      baseUrl: "https://headers.example.test/v1",
+      configuredHeaders: [
+        { name: "X-Tenant", source: "environment" as const },
+        { name: "X-Imported", source: "external" as const },
+        { name: "X-Catalog-Command", source: "command" as const },
+      ],
+      models: [
+        {
+          modelId: "header-model",
+          configuredHeaders: [
+            { name: "X-Model-Command", source: "command" as const },
+            { name: "X-Model-Imported", source: "external" as const },
+          ],
+        },
+      ],
+    };
+    const discoverCustom = vi.fn(async () => ({
+      state: "success" as const,
+      models: [{ modelId: "header-model", displayName: "Header Model" }],
+      errorCode: null,
+    }));
+    const testCustom = vi.fn(async ({ config }) => ({
+      state: "success" as const,
+      models: config.models.map((model: OmniMindCustomModelServiceModelInput) => ({
+        modelId: model.modelId,
+        displayName: model.modelId,
+        available: true,
+        reasoning: false,
+        input: ["text" as const],
+        contextWindow: 128_000,
+        maxTokens: 16_384,
+      })),
+      errorCode: null,
+    }));
+    const saveCustom = vi.fn(async () => ({ state: "complete" as const, service: customService }));
+    const mounted = await renderPanel({
+      list: async () => ({
+        state: "ready",
+        services: [customService],
+        connectableServices: [],
+        customApiConfiguration: {
+          protocols: [
+            "openai-completions",
+            "openai-responses",
+            "anthropic-messages",
+            "google-generative-ai",
+          ],
+        },
+        errorCode: null,
+      }),
+      get: async ({ serviceId }) =>
+        serviceId === customService.serviceId
+          ? { state: "ready", service: customService, models: [], customConfig, errorCode: null }
+          : { state: "empty", service: null, errorCode: null },
+      discoverCustom,
+      testCustom,
+      saveCustom,
+    });
+
+    await mounted.screen
+      .getByRole("button", { name: 'settings.viewDetailsNamed:{"name":"Header Service"}' })
+      .click();
+    await mounted.screen.getByRole("button", { name: "common.edit" }).click();
+    await mounted.screen.getByText("settings.customApiCredentialAdvanced", { exact: true }).click();
+    expect(document.body.textContent).toContain("X-Tenant");
+    expect(document.body.textContent).toContain("X-Catalog-Command");
+    expect(document.body.textContent).toContain("settings.customApiHeaderSource.environment");
+    expect(document.body.textContent).toContain("settings.customApiHeaderSource.command");
+    expect(document.body.textContent).not.toMatch(/PRIVATE_HEADER|hidden-command|literal-secret/u);
+
+    await mounted.screen
+      .getByLabelText('settings.customApiHeaderActionNamed:{"name":"X-Tenant"}')
+      .click();
+    await mounted.screen
+      .getByRole("option", { name: "settings.customApiHeaderAction.environment" })
+      .click();
+    await mounted.screen
+      .getByLabelText('settings.customApiHeaderEnvironmentVariable.provider:{"number":1}')
+      .fill("NEXT_TENANT");
+    await mounted.screen
+      .getByLabelText('settings.customApiHeaderActionNamed:{"name":"X-Imported"}')
+      .click();
+    await mounted.screen
+      .getByRole("option", { name: "settings.customApiHeaderAction.clear" })
+      .click();
+
+    await mounted.screen.getByText("settings.customApiModelAdvanced", { exact: true }).click();
+    expect(document.body.textContent).toContain("X-Model-Command");
+    expect(document.documentElement.scrollWidth).toBeLessThanOrEqual(
+      document.documentElement.clientWidth,
+    );
+    await mounted.screen
+      .getByLabelText('settings.customApiHeaderActionNamed:{"name":"X-Model-Imported"}')
+      .click();
+    await mounted.screen
+      .getByRole("option", { name: "settings.customApiHeaderAction.clear" })
+      .click();
+
+    await mounted.screen.getByRole("button", { name: "settings.customApiDiscoverModels" }).click();
+    expect(discoverCustom).not.toHaveBeenCalled();
+    expect(document.body.textContent).toContain(
+      "settings.customApiCredentialCommandExecutionWarning",
+    );
+    await confirmCustomApiRisk(mounted.screen, "discover");
+    await expect.poll(() => discoverCustom).toHaveBeenCalledTimes(1);
+    expect(discoverCustom).toHaveBeenCalledWith(
+      expect.objectContaining({
+        config: expect.objectContaining({
+          headerMutations: [
+            { name: "X-Tenant", type: "environment", variableName: "NEXT_TENANT" },
+            { name: "X-Imported", type: "clear" },
+          ],
+        }),
+      }),
+      expect.objectContaining({ signal: expect.any(AbortSignal) }),
+    );
+
+    await mounted.screen.getByRole("button", { name: "settings.customApiTestConnection" }).click();
+    expect(testCustom).not.toHaveBeenCalled();
+    expect(document.body.textContent).toContain(
+      "settings.customApiCredentialCommandExecutionWarning",
+    );
+    await mounted.screen
+      .getByLabelText("settings.customApiCommandRiskTitle")
+      .getByRole("button", { name: "settings.customApiRiskContinueTest" })
+      .click();
+    await expect.poll(() => testCustom).toHaveBeenCalledTimes(1);
+    expect(testCustom).toHaveBeenCalledWith(
+      expect.objectContaining({
+        config: expect.objectContaining({
+          headerMutations: [
+            { name: "X-Tenant", type: "environment", variableName: "NEXT_TENANT" },
+            { name: "X-Imported", type: "clear" },
+          ],
+          models: [
+            expect.objectContaining({
+              headerMutations: [{ name: "X-Model-Imported", type: "clear" }],
+            }),
+          ],
+        }),
+      }),
+      expect.objectContaining({ signal: expect.any(AbortSignal) }),
+    );
+
+    const saveButton = mounted.screen.getByRole("button", { name: "settings.customApiSave" });
+    await expect.poll(() => saveButton).toBeEnabled();
+    await saveButton.click();
+    await expect.poll(() => saveCustom).toHaveBeenCalledTimes(1);
+    expect(document.body.textContent).not.toContain("settings.customApiCommandRiskTitle");
 
     await mounted.screen.unmount();
     mounted.queryClient.clear();

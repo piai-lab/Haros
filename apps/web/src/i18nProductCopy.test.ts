@@ -390,6 +390,20 @@ describe("reachable OmniMind-owned product copy", () => {
     expect(ZH_CN_MESSAGES["settings.modelServiceAuthMethodApiKey"]).toBe("API Key");
     expect(EN_MESSAGES["settings.modelServiceAuthMethodSignIn"]).toBe("Sign in");
     expect(ZH_CN_MESSAGES["settings.modelServiceAuthMethodSignIn"]).toBe("登录");
+    expect(EN_MESSAGES["settings.customApiCommandRiskTitle"]).toBe("Run a local command?");
+    expect(ZH_CN_MESSAGES["settings.customApiCommandRiskTitle"]).toBe("执行本机命令？");
+    expect(EN_MESSAGES["settings.customApiCredentialCommandExecutionWarning"]).toContain(
+      "provide a hidden value",
+    );
+    expect(ZH_CN_MESSAGES["settings.customApiCredentialCommandExecutionWarning"]).toContain(
+      "提供隐藏值",
+    );
+    expect(EN_MESSAGES["settings.customApiHeaderCommandDescription.provider"]).toContain(
+      "without another Settings confirmation",
+    );
+    expect(ZH_CN_MESSAGES["settings.customApiHeaderCommandDescription.provider"]).toContain(
+      "不会再次经过设置页确认",
+    );
   });
 
   it("distinguishes first-run setup from recovery in both supported languages", () => {
